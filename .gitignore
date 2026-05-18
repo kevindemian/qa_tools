@@ -1,0 +1,25 @@
+# Logs
+logs
+*.log
+
+# Dependencies and others
+__pycache__
+node_modules
+package.json
+package-lock.json
+
+# Generated files
+cypress/screenshots
+cypress/videos
+cypress/reports
+cypress/fixtures/tmp/
+cypress/downloads
+mochawesome-report/
+cypress/e2e/tmp
+
+# Sensitive vars
+.env
+
+# Docker
+shared_docker/docker-compose.yml
+shared_docker/.selected_project

@@ -1,0 +1,56 @@
+# docker-compose-template.yml
+services:
+  REPLACE_ME_service:
+    image: REPLACE_ME_image
+    build:
+      context: ../../REPLACE_ME # get out of qa_tools and go to path of your project root
+      dockerfile_inline: |
+        FROM cypress/browsers:node-22.21.0-chrome-141.0.7390.107-1-ff-144.0-edge-141.0.3537.92-1
+
+        WORKDIR /REPLACE_ME
+
+        # --- Zscaler cert ---
+        # Install required tools
+        RUN apt-get update && apt-get install -y ca-certificates libnss3-tools vim curl
+
+        COPY cypress/fixtures/tmp/zscaler.crt /usr/local/share/ca-certificates/zscaler.crt
+        RUN update-ca-certificates \
+            && mkdir -p /root/.pki/nssdb \
+            && certutil -N -d sql:/root/.pki/nssdb --empty-password \
+            && certutil -A -n "zscaler.crt" -t "C,," -i /usr/local/share/ca-certificates/zscaler.crt -d sql:/root/.pki/nssdb
+
+        # Copy only package.json and package-lock.json first for layer caching
+        COPY package*.json ./
+
+        # Install dependencies inside the image
+        RUN npm ci --no-fund
+
+        # Force Cypress install and cache
+        RUN npx cypress install
+        RUN npx cypress cache list
+
+    container_name: REPLACE_ME_cypress
+    working_dir: /REPLACE_ME
+    volumes:
+      - ../../REPLACE_ME:/REPLACE_ME
+      - REPLACE_ME_node_modules:/REPLACE_ME/node_modules
+      - REPLACE_ME_downloads:/REPLACE_ME/cypress/downloads
+      - REPLACE_ME_videos:/REPLACE_ME/cypress/videos
+      - REPLACE_ME_screenshots:/REPLACE_ME/cypress/screenshots
+      - /tmp/.X11-unix:/tmp/.X11-unix
+    environment:
+      - DISPLAY=${DISPLAY}
+      - XDG_RUNTIME_DIR=${XDG_RUNTIME_DIR}
+      - PULSE_SERVER=${PULSE_SERVER}
+      - CHOKIDAR_USEPOLLING=1
+      - HTTPS_PROXY=http://127.0.0.1:9000
+      - HTTP_PROXY=http://127.0.0.1:9000
+    tty: true
+    stdin_open: true
+    network_mode: host
+
+volumes:
+  REPLACE_ME_node_modules:
+  REPLACE_ME_downloads:
+  REPLACE_ME_videos:
+  REPLACE_ME_screenshots:

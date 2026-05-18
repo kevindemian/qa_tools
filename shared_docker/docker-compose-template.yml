@@ -1,0 +1,48 @@
+# docker-compose-template.yml
+services:
+  REPLACE_ME_service:
+    image: REPLACE_ME_image
+    build:
+      context: ../../REPLACE_ME # get out of qa_tools and go to path of your project root
+      dockerfile_inline: |
+        FROM cypress/browsers:node-24.13.0-chrome-143.0.7499.192-1-ff-147.0-edge-143.0.3650.139-1
+
+        WORKDIR /REPLACE_ME
+
+        # Install required tools
+        RUN apt-get update && apt-get install -y vim curl
+
+        # Copy only package.json and package-lock.json first for layer caching
+        COPY package*.json ./
+
+        # Install dependencies inside the image
+        RUN npm ci --no-fund
+
+        # Force Cypress install and cache
+        RUN npx cypress install
+        RUN npx cypress cache list
+
+    container_name: REPLACE_ME_cypress
+    working_dir: /REPLACE_ME
+    volumes:
+      - ../../REPLACE_ME:/REPLACE_ME
+      - REPLACE_ME_node_modules:/REPLACE_ME/node_modules
+      - REPLACE_ME_downloads:/REPLACE_ME/cypress/downloads
+      - REPLACE_ME_videos:/REPLACE_ME/cypress/videos
+      - REPLACE_ME_screenshots:/REPLACE_ME/cypress/screenshots
+      - /tmp/.X11-unix:/tmp/.X11-unix
+    environment:
+      - DISPLAY=${DISPLAY}
+      - XDG_RUNTIME_DIR=${XDG_RUNTIME_DIR}
+      - PULSE_SERVER=${PULSE_SERVER}
+      - CHOKIDAR_USEPOLLING=1
+      - CYPRESS_BROWSER_ARGS=--no-sandbox --disable-dev-shm-usage
+    tty: true
+    stdin_open: true
+    network_mode: host
+
+volumes:
+  REPLACE_ME_node_modules:
+  REPLACE_ME_downloads:
+  REPLACE_ME_videos:
+  REPLACE_ME_screenshots:

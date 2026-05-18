@@ -1,0 +1,48 @@
+Title: [POLICY-HISTORY]-[EXPORT] - Export action is available in Policy history page
+Action,Data,Expected Result
+Access Policy history page,,Policy history page is displayed
+Locate Export action,,Export action control is displayed
+---
+Title: [POLICY-HISTORY]-[EXPORT] - Export action generates downloadable file
+Action,Data,Expected Result
+Access Policy history page,,Policy history page is displayed
+Click Export action,,Downloaded file is available to the user
+---
+Title: [POLICY-HISTORY]-[EXPORT] - Exported file has CSV format identifiable by file type
+Action,Data,Expected Result
+Access Policy history page,,Policy history page is displayed
+Click Export action,,Downloaded file is available to the user
+Identify downloaded file,,Correct exported file is selected
+Observe file extension,,Exported file has CSV file extension
+---
+Title: [POLICY-HISTORY]-[EXPORT] - Exported file includes version name column
+Action,Data,Expected Result
+Access Policy history page,,Policy history page is displayed
+Click Export action,,Downloaded file is available to the user
+Identify downloaded file,,Correct exported file is selected
+Open exported file,,Exported file content is displayed
+Observe column header,,Version name column header is present in exported file
+---
+Title: [POLICY-HISTORY]-[EXPORT] - Exported file includes published date column
+Action,Data,Expected Result
+Access Policy history page,,Policy history page is displayed
+Click Export action,,Downloaded file is available to the user
+Identify downloaded file,,Correct exported file is selected
+Open exported file,,Exported file content is displayed
+Observe column header,,Published date column header is present in exported file
+---
+Title: [POLICY-HISTORY]-[EXPORT] - Exported file includes published by column
+Action,Data,Expected Result
+Access Policy history page,,Policy history page is displayed
+Click Export action,,Downloaded file is available to the user
+Identify downloaded file,,Correct exported file is selected
+Open exported file,,Exported file content is displayed
+Observe column header,,Published by column header is present in exported file
+---
+Title: [POLICY-HISTORY]-[EXPORT] - Exported file includes actions performed column
+Action,Data,Expected Result
+Access Policy history page,,Policy history page is displayed
+Click Export action,,Downloaded file is available to the user
+Identify downloaded file,,Correct exported file is selected
+Open exported file,,Exported file content is displayed
+Observe column header,,Actions performed column header is present in exported file
