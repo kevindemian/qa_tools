@@ -4,12 +4,17 @@ const { createHttpClient } = require('../shared/http-client');
 const { rootLogger } = require('../shared/logger');
 require('dotenv').config({ path: path.resolve(__dirname, '../.env') });
 
+function sanitizeUrl(url) {
+    return url.replace(/token=[^&]+/, 'token=****');
+}
+
 class CypressResource {
     /** @param {string} baseUrl @param {string} personalToken */
     constructor(baseUrl, personalToken) {
-        this.baseUrl = baseUrl;
-        this.personalToken = personalToken;
-        this.client = createHttpClient({ baseUrl: '/' });
+        this.client = createHttpClient({
+            baseUrl,
+            authHeader: { 'Authorization': `Bearer ${personalToken}` },
+        });
     }
 
     /** @param {string} resourceUrl */
@@ -18,22 +23,25 @@ class CypressResource {
             const response = await this.client.get(resourceUrl);
             return response.data;
         } catch (err) {
-            rootLogger.error(`Erro HTTP GET ${resourceUrl}: ${err.message}`, { resourceUrl });
+            rootLogger.error(`Erro HTTP GET ${sanitizeUrl(resourceUrl)}: ${err.message}`, { resourceUrl: sanitizeUrl(resourceUrl) });
             return null;
         }
     }
 
-    async fetchReport({ cypressUrl, cypressToken, startDate, branch = 'main', projects = [] } = {}) {
+    /** @param {{ cypressUrl: string, cypressToken: string, startDate: string, branch?: string, projects?: string[] }} [opts] */
+    async fetchReport({ cypressUrl, cypressToken, startDate, branch = 'main', projects = [] } = { cypressUrl: '', cypressToken: '', startDate: '' }) {
         const report_id = 'status-per-test-daily';
         const format = 'json';
 
         const endpoint = `${cypressUrl}/enterprise-reporting/report?token=${cypressToken}&report_id=${report_id}&export_format=${format}&start_date=${startDate}&branch=${branch}&projects=__PROJECT__`;
+        rootLogger.info(`Fetching report: ${sanitizeUrl(endpoint)}`);
 
         for (const project of projects) {
-            const data = await this.getCypressResource(endpoint.replace('__PROJECT__', project));
+            const url = endpoint.replace('__PROJECT__', project);
+            const data = await this.getCypressResource(url);
 
             if (!Array.isArray(data)) {
-                rootLogger.error('Resposta invalida para o projeto: ' + project);
+                rootLogger.error(`Resposta invalida para o projeto ${project} de ${sanitizeUrl(url)}`);
                 continue;
             }
 

@@ -10,8 +10,10 @@ const { rootLogger } = require('../shared/logger');
 require('dotenv').config({ path: path.resolve(__dirname, '../.env') });
 
 let projectId;
-let apiToken = process.env.GIT_TOKEN;
-let gitlabBaseUrl = process.env.GIT_BASE_URL;
+/** @type {string} */
+let apiToken = /** @type {string} */ (process.env.GIT_TOKEN);
+/** @type {string} */
+let gitlabBaseUrl = /** @type {string} */ (process.env.GIT_BASE_URL);
 
 const sessionLog = rootLogger.child({ session: 'gitlab' });
 let sessionCounters = [];
@@ -32,8 +34,8 @@ function printSessionSummary() {
     console.log('');
     console.log('='.repeat(50));
     info('Sessao encerrada.');
-    const ok = sessionCounters.filter(c => c.status === 'OK').length;
-    const er = sessionCounters.filter(c => c.status === 'ERR').length;
+    const ok = sessionCounters.filter(c => c.status === 'ok').length;
+    const er = sessionCounters.filter(c => c.status === 'error').length;
     if (ok > 0 || er > 0) {
         if (ok > 0) success(ok + ' operacao(oes) concluida(s)');
         if (er > 0) error(er + ' operacao(oes) com erro');
@@ -41,13 +43,13 @@ function printSessionSummary() {
     if (lastOperation) info('Ultima operacao: ' + lastOperation);
     if (logPath) info('Log: ' + logPath);
     console.log('='.repeat(50));
-    rootLogger._writeFile('INFO', 'Sessao encerrada. ' +
+    rootLogger.writeFileOnly('INFO', 'Sessao encerrada. ' +
         (ok > 0 ? ok + ' ok, ' : '') +
         (er > 0 ? er + ' erro(s), ' : '') +
         'ultima: ' + (lastOperation || 'nenhuma'));
 }
 
-setupSigint(null, () => printSessionSummary());
+setupSigint(() => false, () => printSessionSummary());
 
 const projectsPath = path.resolve(__dirname, '../config/projects.json');
 let projects;
@@ -93,6 +95,10 @@ function displayActions() {
 }
 
 async function main() {
+    if (!projects) {
+        process.exitCode = 1;
+        return;
+    }
     validateEnv();
     sessionLog.info('Sessao iniciada');
 
@@ -106,7 +112,7 @@ async function main() {
     });
     const firstIdx = !firstChoice.trim()
         ? names.indexOf(firstDefault) + 1
-        : parseInt(firstChoice);
+        : parseInt(firstChoice, 10);
     if (isNaN(firstIdx) || firstIdx < 1 || firstIdx > names.length) {
         error('Projeto invalido.');
         process.exitCode = 1;
@@ -136,6 +142,7 @@ async function main() {
         switch (finalChoice) {
             case '1': {
                 currentBranch = prompt('Branch para disparar pipeline');
+                /** @type {{ ref: string, variables: {key:string, value:string}[] }} */
                 const payload = { ref: currentBranch, variables: [] };
 
                 const addVars = confirm('Adicionar variaveis?');
@@ -161,9 +168,9 @@ async function main() {
                     spinner.start('Disparando pipeline em ' + currentBranch);
                     const result = await gitlab.triggerPipeline(payload);
                     spinner.stop();
-                    if (result) { success('Pipeline disparado: ' + result.web_url); pushHistory('pipeline', currentBranch, 'OK'); }
+                    if (result) { success('Pipeline disparado: ' + result.web_url); pushHistory('pipeline', currentBranch, 'ok'); }
                 } catch (err) {
-                    printError('Falha ao disparar pipeline', err); pushHistory('pipeline', currentBranch, 'ERR');
+                    printError('Falha ao disparar pipeline', err); pushHistory('pipeline', currentBranch, 'error');
                 }
                 break;
             }
@@ -179,13 +186,13 @@ async function main() {
                         schedules.forEach(s => {
                             console.log('  ID: ' + s.id + '  ' + (s.description || 'sem descricao') + '  (proxima execucao: ' + (s.next_run_at || 'N/A') + ')');
                         });
-                        pushHistory('list-schedules', schedules.length + ' schedules', 'OK');
+                        pushHistory('list-schedules', schedules.length + ' schedules', 'ok');
                     } else {
                         warn('Nenhum schedule encontrado.');
-                        pushHistory('list-schedules', 'vazio', 'OK');
+                        pushHistory('list-schedules', 'vazio', 'ok');
                     }
                 } catch (err) {
-                    printError('Erro ao listar schedules', err); pushHistory('list-schedules', 'erro', 'ERR');
+                    printError('Erro ao listar schedules', err); pushHistory('list-schedules', 'erro', 'error');
                 }
                 break;
             }
@@ -197,9 +204,9 @@ async function main() {
                     spinner.start('Disparando schedule ' + scheduleId + '...');
                     const result = await gitlab.runSchedule(scheduleId);
                     spinner.stop();
-                    if (result) { success('Schedule disparado: ' + scheduleId); pushHistory('schedule-run', scheduleId, 'OK'); }
+                    if (result) { success('Schedule disparado: ' + scheduleId); pushHistory('schedule-run', scheduleId, 'ok'); }
                 } catch (err) {
-                    printError('Erro ao disparar schedule', err); pushHistory('schedule-run', scheduleId, 'ERR');
+                    printError('Erro ao disparar schedule', err); pushHistory('schedule-run', scheduleId, 'error');
                 }
                 break;
             }
@@ -215,10 +222,10 @@ async function main() {
                     const result = await gitlab.createMergeRequest(sourceBranch, targetBranch, mrTitle, description);
                     spinner.stop();
                     if (result) {
-                        success('MR criado: ' + result.web_url); pushHistory('mr-create', sourceBranch + '->' + targetBranch, 'OK');
+                        success('MR criado: ' + result.web_url); pushHistory('mr-create', sourceBranch + '->' + targetBranch, 'ok');
                     }
                 } catch (err) {
-                    printError('Falha ao criar MR', err); pushHistory('mr-create', sourceBranch + '->' + targetBranch, 'ERR');
+                    printError('Falha ao criar MR', err); pushHistory('mr-create', sourceBranch + '->' + targetBranch, 'error');
                 }
                 break;
             }
@@ -231,13 +238,13 @@ async function main() {
                     if (approved.length > 0) {
                         info('MRs aprovados:');
                         approved.forEach(mr => console.log('  MR #' + mr.iid + ': ' + mr.title));
-                        pushHistory('mrs-approved', approved.length + ' MRs', 'OK');
+                        pushHistory('mrs-approved', approved.length + ' MRs', 'ok');
                     } else {
                         warn('Nenhum MR aprovado encontrado.');
-                        pushHistory('mrs-approved', 'vazio', 'OK');
+                        pushHistory('mrs-approved', 'vazio', 'ok');
                     }
                 } catch (err) {
-                    printError('Erro ao listar MRs aprovados', err); pushHistory('mrs-approved', status, 'ERR');
+                    printError('Erro ao listar MRs aprovados', err); pushHistory('mrs-approved', status, 'error');
                 }
                 break;
             }
@@ -249,9 +256,9 @@ async function main() {
                     spinner.start('Fazendo merge de MR #' + iid + '...');
                     const result = await gitlab.acceptMergeRequest(iid);
                     spinner.stop();
-                    if (result) { success('Merge realizado: ' + result.web_url); pushHistory('mr-merge', iid, 'OK'); }
+                    if (result) { success('Merge realizado: ' + result.web_url); pushHistory('mr-merge', iid, 'ok'); }
                 } catch (err) {
-                    printError('Falha ao fazer merge', err); pushHistory('mr-merge', iid, 'ERR');
+                    printError('Falha ao fazer merge', err); pushHistory('mr-merge', iid, 'error');
                 }
                 break;
             }
@@ -272,7 +279,7 @@ async function main() {
                     spinner.stop();
                     if (mr1) info('MR criado: ' + mr1.web_url);
                 } catch (err) {
-                    printError('Falha no nivelamento (primeiro MR)', err); pushHistory('nivelamento', mainBranch + '->' + rcBranch, 'ERR');
+                    printError('Falha no nivelamento (primeiro MR)', err); pushHistory('nivelamento', mainBranch + '->' + rcBranch, 'error');
                 }
 
                 try {
@@ -285,9 +292,9 @@ async function main() {
                     );
                     spinner.stop();
                     if (mr2) success('Segundo MR criado: ' + mr2.web_url);
-                    pushHistory('nivelamento', mainBranch + '->' + rcBranch + ', ' + rcBranch + '->' + devBranch, 'OK');
+                    pushHistory('nivelamento', mainBranch + '->' + rcBranch + ', ' + rcBranch + '->' + devBranch, 'ok');
                 } catch (err) {
-                    printError('Falha no nivelamento (segundo MR)', err); pushHistory('nivelamento', rcBranch + '->' + devBranch, 'ERR');
+                    printError('Falha no nivelamento (segundo MR)', err); pushHistory('nivelamento', rcBranch + '->' + devBranch, 'error');
                 }
                 break;
             }
@@ -304,10 +311,10 @@ async function main() {
                         fs.writeFileSync(exportPath, envContent, 'utf8');
                         console.log(envContent);
                         success('Variaveis exportadas para ' + exportPath);
-                        pushHistory('export-vars', variables.length + ' variaveis', 'OK');
+                        pushHistory('export-vars', variables.length + ' variaveis', 'ok');
                     }
                 } catch (err) {
-                    printError('Falha ao buscar variaveis CI/CD', err); pushHistory('export-vars', 'erro', 'ERR');
+                    printError('Falha ao buscar variaveis CI/CD', err); pushHistory('export-vars', 'erro', 'error');
                 }
                 break;
             }
@@ -315,14 +322,14 @@ async function main() {
             case '9': {
                 displayProjects();
                 const newChoice = prompt('Escolha um projeto', { hint: '1-' + names.length });
-                const newIdx = parseInt(newChoice);
+                const newIdx = parseInt(newChoice, 10);
                 if (!isNaN(newIdx) && newIdx >= 1 && newIdx <= names.length) {
                     const newName = names[newIdx - 1];
                     projectId = projects[newName];
                     gitlab.projectId = projectId;
                     updateState(s => { s.lastProject = newName; });
                     success('Projeto alterado para: ' + newName);
-                    pushHistory('trocar-projeto', newName, 'OK');
+                    pushHistory('trocar-projeto', newName, 'ok');
                 } else {
                     warn('Opcao invalida.');
                 }
@@ -332,7 +339,7 @@ async function main() {
             case '0':
                 title('Ate logo!');
                 printSessionSummary();
-                if (sessionCounters.some(c => c.status === 'ERR')) process.exitCode = 1;
+                if (sessionCounters.some(c => c.status === 'error')) process.exitCode = 1;
                 return;
 
             default:

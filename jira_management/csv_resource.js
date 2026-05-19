@@ -42,6 +42,7 @@ class CsvResource {
         return value || null;
     }
 
+    /** @returns {{ type: 'reference'|'inline', value: string } | null} */
     parsePrecondition(lines) {
         const line = lines.find(l => l.startsWith('Pre-condition:'));
         if (!line) return null;
@@ -49,9 +50,13 @@ class CsvResource {
         const value = line.replace('Pre-condition:', '').trim();
         if (!value) return null;
 
-        if (JIRA_KEY_PATTERN.test(value)) {
-            return { type: 'reference', value };
+        const KEY_MATCH = /^([A-Z][A-Z0-9]+(?:-[A-Z0-9]+)*-\d+)/;
+        const keyMatch = value.match(KEY_MATCH);
+
+        if (keyMatch) {
+            return { type: 'reference', value: keyMatch[1] };
         }
+
         return { type: 'inline', value };
     }
 
@@ -112,7 +117,7 @@ class CsvResource {
                 results.push({
                     title,
                     description: this.parseDescription(lines),
-                    precondition: this.parsePrecondition(lines),
+                    precondition: this.parsePrecondition(lines) ?? undefined,
                     linkedIssues: this.parseLinkedIssues(lines),
                     group: this.parseGroup(lines),
                     steps

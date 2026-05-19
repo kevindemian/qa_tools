@@ -1,0 +1,18 @@
+Title: TC01 - Login valido
+Description: Testa login com credenciais corretas
+Pre-condition: KEY-100
+Linked Issues: KEY-200 (is tested by)
+Group: LOGIN
+Action,Data,Expected Result
+Acessar /login,https://app.com,Formulario exibido
+Preencher email,admin@test.com,Campo aceita
+Preencher senha,123456,Campo aceita
+Clicar em Entrar,,Dashboard exibido
+---
+Title: TC02 - Login invalido
+Description: Testa login com senha errada
+Pre-condition: User must be logged out
+Group: LOGIN
+Action,Data,Expected Result
+Acessar /login,https://app.com,Formulario exibido
+Digitar senha,senha_errada,Mensagem de erro

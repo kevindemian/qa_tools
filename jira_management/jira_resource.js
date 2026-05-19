@@ -1,14 +1,7 @@
 // @ts-check
 const { createHttpClient } = require('../shared/http-client');
-const { error: logError, success, info, extractErrorMessage } = require('../shared/prompt');
+const { error: logError, success, info, warn, extractErrorMessage } = require('../shared/prompt');
 const { Logger } = require('../shared/logger');
-
-const TRANSITIONS = {
-    CODING_DONE: 61,
-    DONE: 141,
-    APPROVE: 21,
-    USE_TEST_CASE: 41,
-};
 
 function sanitizeJqlValue(value) {
     if (!/^[\w\s.:/-]+$/.test(value)) {
@@ -57,7 +50,19 @@ class JiraResource {
         return { issues: allIssues, total: allIssues.length };
     }
 
-    /** @param {string} resourceUrl @returns {Promise<Object>} */
+    async getTransitionsForIssue(issueKey) {
+        const data = await this.getJiraResource(`issue/${issueKey}/transitions`);
+        if (!data || !data.transitions) return {};
+        const map = {};
+        for (const t of data.transitions) {
+            if (t.to && t.to.name) {
+                map[t.to.name.toLowerCase()] = t.id;
+            }
+        }
+        return map;
+    }
+
+    /** @param {string} resourceUrl @returns {Promise<Object|null>} */
     async getJiraResource(resourceUrl) {
         try {
             const response = await this.axiosInstance.get(`/${resourceUrl}`);
@@ -67,10 +72,16 @@ class JiraResource {
                 resourceUrl,
                 status: err.response?.status
             });
+            return null;
         }
     }
 
-    /** @param {string} resourceUrl @param {Object} data @returns {Promise<Object>} */
+    /**
+     * @param {string} resourceUrl
+     * @param {Object} data
+     * @returns {Promise<Object>}
+     * @throws {Error} em falha de rede ou HTTP 4xx/5xx
+     */
     async postJiraResource(resourceUrl, data) {
         const opLog = this.log.child({ resourceUrl });
         try {
@@ -86,7 +97,7 @@ class JiraResource {
         }
     }
 
-    /** @param {string} resourceUrl @param {Object} data @returns {Promise<Object>} */
+    /** @param {string} resourceUrl @param {Object} data @returns {Promise<Object|null>} */
     async putJiraResource(resourceUrl, data) {
         try {
             const response = await this.axiosInstance.put(`/${resourceUrl}`, data);
@@ -137,6 +148,7 @@ class JiraResource {
         } else {
             logError('Falha ao criar versao.');
         }
+        return response;
     }
 
     async checkReleaseTasksStatus(projectName, versionName) {
@@ -186,7 +198,7 @@ class JiraResource {
 
         const releasedVersions = allVersions
             .filter(v => v.released && v.releaseDate)
-            .sort((a, b) => new Date(b.releaseDate) - new Date(a.releaseDate));
+            .sort((a, b) => new Date(b.releaseDate).getTime() - new Date(a.releaseDate).getTime());
 
         const latestReleasedVersions = releasedVersions.slice(0, numReleases);
         const unreleasedVersions = allVersions.filter(v => !v.released);
@@ -265,6 +277,8 @@ class JiraResource {
 
     /** @param {string[]} taskIds */
     async moveCardsToDone(taskIds) {
+        let transitionsMap = {};
+
         for (const taskId of taskIds) {
             const issueData = await this.getJiraResource(`issue/${taskId}`);
             if (!issueData || !issueData.fields || !issueData.fields.status) {
@@ -275,35 +289,69 @@ class JiraResource {
             const currentStatus = issueData.fields.status.name;
             this.log.info(`Tarefa ${taskId} — status atual: ${currentStatus}`);
 
+            if (Object.keys(transitionsMap).length === 0) {
+                transitionsMap = await this.getTransitionsForIssue(taskId);
+                if (Object.keys(transitionsMap).length === 0) {
+                    this.log.warn(`Nao foi possivel obter transicoes para ${taskId}. Pulando todas as tarefas.`);
+                    return;
+                }
+            }
+
             const statusLower = currentStatus.toLowerCase();
             try {
                 switch (statusLower) {
-                    case 'coding in progress':
+                    case 'coding in progress': {
+                        const toCodingDone = transitionsMap['coding done'];
+                        const toDone = transitionsMap['done'];
+                        if (!toCodingDone || !toDone) {
+                            warn(`Transicao nao encontrada para ${taskId} (Coding In Progress -> Done). Verifique o workflow.`);
+                            break;
+                        }
                         this.log.info(`   ${taskId}: Coding In Progress -> Coding Done`);
-                        await this.transitionIssue(taskId, TRANSITIONS.CODING_DONE);
+                        await this.transitionIssue(taskId, toCodingDone);
                         this.log.info(`   ${taskId}: Coding Done -> Done`);
-                        await this.transitionIssue(taskId, TRANSITIONS.DONE);
+                        await this.transitionIssue(taskId, toDone);
                         break;
+                    }
 
-                    case 'coding done':
+                    case 'coding done': {
+                        const toDone = transitionsMap['done'];
+                        if (!toDone) {
+                            warn(`Transicao nao encontrada para ${taskId} (Coding Done -> Done).`);
+                            break;
+                        }
                         this.log.info(`   ${taskId}: Coding Done -> Done`);
-                        await this.transitionIssue(taskId, TRANSITIONS.DONE);
+                        await this.transitionIssue(taskId, toDone);
                         break;
+                    }
 
-                    case 'new':
+                    case 'new': {
+                        const toApprove = transitionsMap['approve'];
+                        const toUseTestCase = transitionsMap['use test case'];
+                        if (!toApprove || !toUseTestCase) {
+                            warn(`Transicao nao encontrada para ${taskId} (New -> Use Test Case). Verifique os nomes das transicoes.`);
+                            break;
+                        }
                         this.log.info(`   ${taskId}: New -> Approve`);
-                        await this.transitionIssue(taskId, TRANSITIONS.APPROVE);
+                        await this.transitionIssue(taskId, toApprove);
                         this.log.info(`   ${taskId}: Approve -> Use test case`);
-                        await this.transitionIssue(taskId, TRANSITIONS.USE_TEST_CASE);
+                        await this.transitionIssue(taskId, toUseTestCase);
                         break;
+                    }
 
-                    case 'approve':
+                    case 'approve': {
+                        const toUseTestCase = transitionsMap['use test case'];
+                        if (!toUseTestCase) {
+                            warn(`Transicao nao encontrada para ${taskId} (Approve -> Use Test Case).`);
+                            break;
+                        }
                         this.log.info(`   ${taskId}: Approve -> Use test case`);
-                        await this.transitionIssue(taskId, TRANSITIONS.USE_TEST_CASE);
+                        await this.transitionIssue(taskId, toUseTestCase);
                         break;
+                    }
 
                     default:
-                        this.log.info(`   ${taskId}: nao esta em estado movivel.`);
+                        warn(`   ${taskId}: status "${currentStatus}" nao mapeado para fechamento automatico.`);
                 }
             } catch (err) {
                 this.log.error(`Erro ao mover ${taskId}: ${extractErrorMessage(err)}`, {

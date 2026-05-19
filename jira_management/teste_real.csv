@@ -1,0 +1,18 @@
+Title: TC01 - Busca de politica
+Pre-condition: ECSPOL-1202
+Linked Issues: ECSPOL-366 (is a test for)
+Group: POLICIES
+Action,Data,Expected Result
+Acessar pagina de politicas,,Pagina carregada
+Buscar por nome de politica,,Resultados exibidos
+Selecionar politica,,Detalhes da politica abertos
+---
+Title: TC02 - Edicao de politica
+Pre-condition: ECSPOL-1050
+Linked Issues: ECSPOL-366 (is a test for)
+Group: POLICIES
+Action,Data,Expected Result
+Acessar pagina de politicas,,Pagina carregada
+Localizar politica existente,,Politica encontrada
+Editar descricao,Nova descricao,Campo atualizado
+Salvar alteracoes,,Confirmacao exibida

@@ -45,6 +45,22 @@ describe('CsvResource', () => {
       const lines = ['Title: Test', 'Action,Data,Expected'];
       expect(csvResource.parsePrecondition(lines)).toBeNull();
     });
+
+    it('extracts key from Pre-condition: KEY-100 (descricao)', () => {
+      const lines = ['Title: Test', 'Pre-condition: ECSPOL-PRE-42 (descricao do pre-cond)', 'Action,Data,Expected'];
+      expect(csvResource.parsePrecondition(lines)).toEqual({
+        type: 'reference',
+        value: 'ECSPOL-PRE-42'
+      });
+    });
+
+    it('extracts key from Pre-condition: KEY-100 (with extra parenthetical info)', () => {
+      const lines = ['Title: Test', 'Pre-condition: ABC-123 (some context here)', 'Action,Data,Expected'];
+      expect(csvResource.parsePrecondition(lines)).toEqual({
+        type: 'reference',
+        value: 'ABC-123'
+      });
+    });
   });
 
   describe('parseGroup', () => {

@@ -2,6 +2,7 @@
 const fs = require('fs');
 const path = require('path');
 const os = require('os');
+const { rootLogger } = require('./logger');
 
 const STATE_PATH = path.join(os.homedir(), '.qa_tools_state.json');
 const TMP_PATH = STATE_PATH + '.tmp';
@@ -14,7 +15,7 @@ function load() {
       return JSON.parse(fs.readFileSync(STATE_PATH, 'utf8'));
     }
   } catch (err) {
-    console.error('[state] Arquivo corrompido, recuperando backup...');
+    rootLogger.warn('Arquivo de estado corrompido, recuperando backup...');
     try {
       if (fs.existsSync(BAK_PATH)) {
         const backup = JSON.parse(fs.readFileSync(BAK_PATH, 'utf8'));
@@ -23,13 +24,13 @@ function load() {
         return backup;
       }
     } catch (err) {
-      console.error('[state] Falha ao recuperar backup: ' + err.message);
+      rootLogger.error('Falha ao recuperar backup de estado: ' + err.message);
     }
     try {
       fs.renameSync(STATE_PATH, BAK_PATH);
-      console.error('[state] Backup salvo em ' + BAK_PATH + '. Criando novo estado.');
+      rootLogger.warn('Backup salvo em ' + BAK_PATH + '. Criando novo estado.');
     } catch (err) {
-      console.error('[state] Falha ao salvar backup: ' + err.message);
+      rootLogger.error('Falha ao salvar backup de estado: ' + err.message);
     }
   }
   return {};
@@ -42,7 +43,7 @@ function save(state) {
     fs.writeFileSync(TMP_PATH, JSON.stringify(state, null, 2), 'utf8');
     fs.renameSync(TMP_PATH, STATE_PATH);
   } catch (err) {
-    console.error('[state] Falha ao salvar estado: ' + err.message);
+    rootLogger.error('Falha ao salvar estado: ' + err.message);
   }
 }
 

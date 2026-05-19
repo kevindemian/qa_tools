@@ -3,7 +3,7 @@ const fs = require('fs');
 const path = require('path');
 
 const LEVELS = { DEBUG: 0, INFO: 1, WARN: 2, ERROR: 3 };
-const PREFIXES = { DEBUG: 'i', INFO: 'i', WARN: '!', ERROR: 'ERR' };
+const PREFIXES = { DEBUG: '\u00b7', INFO: 'i', WARN: '!', ERROR: 'ERR' };
 const COLORS = {
   DEBUG: '\x1b[36m',
   INFO: '\x1b[32m',
@@ -91,6 +91,7 @@ class Logger {
     const dataStr = data ? ' | ' + JSON.stringify(maskDeep(data)) : '';
     const line = `[${timestamp}] [${level}]${ctxStr} ${msg}${dataStr}\n`;
 
+    if (!this._filePathCached) return;
     try {
       fs.appendFileSync(this._filePathCached, line);
     } catch (err) {
@@ -104,9 +105,14 @@ class Logger {
     this._writeFile(level, msg, data);
   }
 
-  /** @param {Object} extra @returns {Logger} */
+    /** @param {Object} extra @returns {Logger} */
   child(extra) {
     return new Logger({ ...this.context, ...extra });
+  }
+
+  /** Escreve apenas no arquivo de log, sem saida no console */
+  writeFileOnly(level, msg) {
+    this._writeFile(level, msg);
   }
 
   /** @param {string} msg @param {Object} [data] */
