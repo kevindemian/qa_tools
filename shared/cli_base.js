@@ -1,23 +1,35 @@
+// @ts-check
 const { error, warn, info } = require('./prompt');
 const { rootLogger } = require('./logger');
 
+/** @param {string} v @returns {string} */
 function mask(v) {
   return v ? v.slice(0, 4) + '****' : '';
 }
 
+/** @param {{key:string,label:string,example:string}[]} configs @returns {Function} */
 function createValidateEnv(configs) {
   return function validateEnv() {
     const missing = configs.filter(c => !process.env[c.key]);
-    if (missing.length === 0) return;
+    if (missing.length === 0) {
+      for (const c of configs) {
+        const val = process.env[c.key] || '';
+        if (val.length > 20 && !val.includes('placeholder') && !val.includes('seu-') && !val.includes('your-')) {
+          rootLogger.warn(`VARIAVEL COM CREDENCIAL REAL: ${c.key}=${mask(val)}`);
+        }
+      }
+      return;
+    }
     error('Variaveis obrigatorias nao configuradas:');
     missing.forEach(c => warn(`  * ${c.label}`));
     warn('Crie um arquivo .env na raiz do projeto com:');
     configs.forEach(c => info(`${c.key}=${c.example}`));
-    rootLogger._writeFile('ERROR', `Variaveis faltando: ${missing.map(c => c.key).join(', ')}`);
-    process.exit(1);
+    rootLogger.error(`Variaveis faltando: ${missing.map(c => c.key).join(', ')}`);
+    process.exitCode = 1;
   };
 }
 
+/** @param {Function} getIsBusy @param {Function} onExit */
 function setupSigint(getIsBusy, onExit) {
   process.on('SIGINT', () => {
     if (getIsBusy && getIsBusy()) {

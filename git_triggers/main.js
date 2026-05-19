@@ -1,8 +1,9 @@
+// @ts-check
 const path = require('path');
 const fs = require('fs');
 const { success, error, warn, info, title, divider, prompt, confirm, printError, printSummary, Spinner } = require('../shared/prompt');
 const { load: loadState, update: updateState } = require('../shared/state');
-const { mask, createValidateEnv, setupSigint } = require('../shared/cli_base');
+const { createValidateEnv, setupSigint } = require('../shared/cli_base');
 const GitLabManager = require('./gitlab_manager');
 const { rootLogger } = require('../shared/logger');
 
@@ -49,7 +50,17 @@ function printSessionSummary() {
 setupSigint(null, () => printSessionSummary());
 
 const projectsPath = path.resolve(__dirname, '../config/projects.json');
-const projects = JSON.parse(fs.readFileSync(projectsPath, 'utf8'));
+let projects;
+try {
+    projects = JSON.parse(fs.readFileSync(projectsPath, 'utf8'));
+} catch (err) {
+    rootLogger.error(
+        `Falha ao carregar configuração de projetos de "${projectsPath}": ${err.message}`,
+        { configPath: projectsPath }
+    );
+    error(`Configuração inválida em "${projectsPath}". Verifique o JSON.`);
+    process.exitCode = 1;
+}
 
 function displayProjects() {
     title('Projetos GitLab');
@@ -98,7 +109,8 @@ async function main() {
         : parseInt(firstChoice);
     if (isNaN(firstIdx) || firstIdx < 1 || firstIdx > names.length) {
         error('Projeto invalido.');
-        process.exit(1);
+        process.exitCode = 1;
+        return;
     }
     const projectName = names[firstIdx - 1];
     projectId = projects[projectName];

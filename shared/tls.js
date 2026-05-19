@@ -1,9 +1,9 @@
+// @ts-check
 const https = require('https');
 
+/** @returns {https.Agent} */
 function createAgent() {
-  return new https.Agent({
-    rejectUnauthorized: process.env.NODE_TLS_REJECT_UNAUTHORIZED !== '0'
-  });
+  return new https.Agent({ keepAlive: true });
 }
 
 module.exports = { createAgent };

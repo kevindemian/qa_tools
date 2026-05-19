@@ -1,3 +1,4 @@
+// @ts-check
 const readlineSync = require('readline-sync');
 const { rootLogger } = require('./logger');
 
@@ -12,22 +13,22 @@ const isQuiet = () => process.env.QUIET === 'true';
 
 function success(msg) {
   console.log(`${GREEN}OK${RESET} ${msg}`);
-  rootLogger._writeFile('INFO', msg);
+  rootLogger.info(msg);
 }
 
 function error(msg) {
   console.log(`${RED}ERR${RESET} ${msg}`);
-  rootLogger._writeFile('ERROR', msg);
+  rootLogger.error(msg);
 }
 
 function warn(msg) {
   console.log(`${YELLOW}!${RESET} ${msg}`);
-  rootLogger._writeFile('WARN', msg);
+  rootLogger.warn(msg);
 }
 
 function info(msg) {
   if (!isQuiet()) console.log(`${CYAN}i${RESET} ${msg}`);
-  rootLogger._writeFile('INFO', msg);
+  rootLogger.info(msg);
 }
 
 function title(msg) {
@@ -175,6 +176,7 @@ function printError(context, err) {
   }
 }
 
+/** @param {import('./types').TestResult[]} results */
 function printSummary(results) {
   divider();
   const passed = results.filter(r => r.status === 'ok').length;
@@ -183,7 +185,7 @@ function printSummary(results) {
   if (failed === 0) {
     console.log(`  ${GREEN}${BOLD}TUDO CERTO!${RESET}`);
     success(`${passed} de ${results.length} operacao(oes) concluida(s) com sucesso`);
-    rootLogger._writeFile('INFO', `Resumo: ${passed}/${results.length} ok`);
+    rootLogger.info(`Resumo: ${passed}/${results.length} ok`);
     if (passed >= 5 && Math.random() < 0.33) {
       const cheers = ['', ' > Tudo nos conformes!', '', ' > Show de bola!', ''];
       console.log(`  ${GREEN}${cheers[Math.floor(Math.random() * cheers.length)]}${RESET}`);
@@ -198,11 +200,12 @@ function printSummary(results) {
     if (logPath) {
       console.log(`  ${YELLOW}->${RESET} Consulte o log: ${logPath}`);
     }
-    rootLogger._writeFile('WARN', `Resumo: ${passed}/${results.length} ok, ${failed} erro(s)`);
+    rootLogger.warn(`Resumo: ${passed}/${results.length} ok, ${failed} erro(s)`);
   }
   divider();
 }
 
+/** @param {string} context @param {Error} err @param {{retry?:boolean,details?:boolean}} [options] @returns {Promise<'abort'|'skip'|'retry'>} */
 async function onError(context, err, options = {}) {
   const { retry: canRetry = false, details: canDetails = false } = options;
   const raw = extractErrorMessage(err);

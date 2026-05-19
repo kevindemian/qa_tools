@@ -1,6 +1,6 @@
-const axios = require('axios');
-const { createAgent } = require('../shared/tls');
-const { error: logError, success, info, extractErrorMessage, Spinner } = require('../shared/prompt');
+// @ts-check
+const { createHttpClient } = require('../shared/http-client');
+const { error: logError, success, info, extractErrorMessage } = require('../shared/prompt');
 const { Logger } = require('../shared/logger');
 
 const TRANSITIONS = {
@@ -20,16 +20,12 @@ function sanitizeJqlValue(value) {
 }
 
 class JiraResource {
+    /** @param {string} personalToken @param {string} baseUrl */
     constructor(personalToken, baseUrl) {
         this.baseUrl = baseUrl;
-        this.headers = {
-            'Authorization': `Bearer ${personalToken}`,
-            'Content-Type': 'application/json',
-        };
-        this.axiosInstance = axios.create({
-            baseURL: baseUrl,
-            headers: this.headers,
-            httpsAgent: createAgent()
+        this.axiosInstance = createHttpClient({
+            baseUrl,
+            authHeader: { 'Authorization': `Bearer ${personalToken}` },
         });
         this.log = new Logger({ resource: 'JiraAPI' });
     }
@@ -61,64 +57,42 @@ class JiraResource {
         return { issues: allIssues, total: allIssues.length };
     }
 
+    /** @param {string} resourceUrl @returns {Promise<Object>} */
     async getJiraResource(resourceUrl) {
         try {
             const response = await this.axiosInstance.get(`/${resourceUrl}`);
             return response.data;
         } catch (err) {
-            this.log.error('Erro na consulta: ' + extractErrorMessage(err), {
+            this.log.error(`Erro GET /${resourceUrl}: ${extractErrorMessage(err)}`, {
                 resourceUrl,
                 status: err.response?.status
             });
         }
     }
 
-    async postJiraResource(resourceUrl, data, maxRetries = 10) {
-        let attempt = 0;
+    /** @param {string} resourceUrl @param {Object} data @returns {Promise<Object>} */
+    async postJiraResource(resourceUrl, data) {
         const opLog = this.log.child({ resourceUrl });
-
-        while (attempt < maxRetries) {
-            try {
-                const response = await this.axiosInstance.post(`/${resourceUrl}`, data);
-                return response.data;
-            } catch (err) {
-                const status = err.response?.status;
-                const message = extractErrorMessage(err).toLowerCase();
-
-                const isRateLimit =
-                    status === 429 ||
-                    message.includes('rate limit') ||
-                    message.includes('too many requests') ||
-                    message.includes('econnreset');
-
-                if (isRateLimit) {
-                    const waitTime = 2000 * (attempt + 1);
-                    opLog.warn(`Rate limit (tentativa ${attempt + 1}), aguardando ${waitTime}ms...`);
-                    const spinner = new Spinner();
-                    spinner.start(`Rate limit (tentativa ${attempt + 1}/${maxRetries}), aguardando ${waitTime}ms`);
-                    await JiraResource.delay(waitTime);
-                    spinner.stop();
-                    attempt++;
-                    continue;
-                }
-
-                opLog.error('Erro na criacao: ' + extractErrorMessage(err), {
-                    status,
-                    attempt: attempt + 1
-                });
-                throw err;
-            }
+        try {
+            const response = await this.axiosInstance.post(`/${resourceUrl}`, data);
+            return response.data;
+        } catch (err) {
+            const status = err.response?.status;
+            opLog.error(`Erro POST /${resourceUrl}: ${extractErrorMessage(err)}`, {
+                status,
+                resourceUrl
+            });
+            throw err;
         }
-
-        opLog.error(`Falha apos ${maxRetries} tentativas (rate limit): ${resourceUrl}`);
     }
 
+    /** @param {string} resourceUrl @param {Object} data @returns {Promise<Object>} */
     async putJiraResource(resourceUrl, data) {
         try {
             const response = await this.axiosInstance.put(`/${resourceUrl}`, data);
             return response.status === 204 ? null : response.data;
         } catch (err) {
-            this.log.error('Erro na atualizacao: ' + extractErrorMessage(err), {
+            this.log.error(`Erro PUT /${resourceUrl}: ${extractErrorMessage(err)}`, {
                 resourceUrl,
                 status: err.response?.status
             });
@@ -289,6 +263,7 @@ class JiraResource {
         success(`Versao '${versionName}' publicada.`);
     }
 
+    /** @param {string[]} taskIds */
     async moveCardsToDone(taskIds) {
         for (const taskId of taskIds) {
             const issueData = await this.getJiraResource(`issue/${taskId}`);
@@ -338,6 +313,7 @@ class JiraResource {
         }
     }
 
+    /** @param {string} issueId @param {number} transitionId */
     async transitionIssue(issueId, transitionId) {
         const payload = { transition: { id: transitionId } };
         this.log.info(`   Movendo ${issueId} (transicao ${transitionId})...`);

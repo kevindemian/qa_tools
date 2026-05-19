@@ -1,3 +1,4 @@
+// @ts-check
 const fs = require('fs');
 const path = require('path');
 const os = require('os');
@@ -11,12 +12,14 @@ const FALLBACK_LINK_TYPES = [
 ];
 
 class JiraLinkManager {
+  /** @param {import('./jira_resource')} jiraResource */
   constructor(jiraResource) {
     this.jiraResource = jiraResource;
     this.linkTypesCache = null;
     this.cacheFilePath = path.join(os.homedir(), '.qa_tools_link_types_cache.json');
   }
 
+  /** @returns {Promise<Object[]>} */
   async getIssueLinkTypes() {
     if (this.linkTypesCache) return this.linkTypesCache;
 
@@ -26,7 +29,9 @@ class JiraLinkManager {
         this.linkTypesCache = data.issueLinkTypes;
         try {
           fs.writeFileSync(this.cacheFilePath, JSON.stringify(data.issueLinkTypes), 'utf8');
-        } catch (_) {}
+        } catch (err) {
+          rootLogger.warn('Falha ao escrever cache de link types: ' + err.message);
+        }
         return this.linkTypesCache;
       }
     } catch (err) {
@@ -38,12 +43,15 @@ class JiraLinkManager {
         this.linkTypesCache = JSON.parse(fs.readFileSync(this.cacheFilePath, 'utf8'));
         return this.linkTypesCache;
       }
-    } catch (_) {}
+    } catch (err) {
+      rootLogger.warn('Falha ao ler cache de link types: ' + err.message);
+    }
 
     this.linkTypesCache = FALLBACK_LINK_TYPES;
     return this.linkTypesCache;
   }
 
+  /** @param {string} linkTypeName @returns {Promise<string>} */
   async resolveLinkTypeId(linkTypeName) {
     const types = await this.getIssueLinkTypes();
     const lowerName = linkTypeName.toLowerCase().trim();
@@ -60,6 +68,7 @@ class JiraLinkManager {
     return '11701';
   }
 
+  /** @param {string} sourceKey @param {Array<{key:string,linkType:string}>} linkedIssues @returns {Promise<void>} */
   async linkIssues(sourceKey, linkedIssues) {
     for (const li of linkedIssues) {
       const linkTypeId = await this.resolveLinkTypeId(li.linkType);
@@ -73,6 +82,7 @@ class JiraLinkManager {
     }
   }
 
+  /** @param {string} testKey @param {string} preconditionKey @returns {Promise<Object>} */
   async associatePrecondition(testKey, preconditionKey) {
     const payload = { issueKey: preconditionKey };
     info(`Associando pre-condition ${preconditionKey} ao teste ${testKey}...`);

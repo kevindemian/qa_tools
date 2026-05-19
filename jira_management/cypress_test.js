@@ -1,8 +1,15 @@
+// @ts-check
 const fs = require('fs');
 const path = require('path');
 require('dotenv').config({ path: path.resolve(__dirname, '../.env') });
 
 class CypressTest {
+    /** @param {string} reportDir */
+    constructor(reportDir) {
+        this.reportDir = reportDir;
+    }
+
+    /** @param {string} filePath */
     parseResults(filePath) {
         return new Promise((resolve, reject) => {
             fs.readFile(filePath, 'utf8', (err, data) => {

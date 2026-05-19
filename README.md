@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 # QA Tools
 
 Ferramentas internas de automação QA para gerenciamento de releases no Jira/Xray, triggers de pipeline no GitLab e reporting Cypress.
@@ -28,18 +27,27 @@ qa_tools/
 │   ├── projects.json          # IDs dos projetos GitLab
 │   └── reviewers.json         # IDs dos revisores para MRs
 ├── jira_management/
-│   ├── main.js                # CLI entry point (menu 0-10)
+│   ├── main.js                # CLI entry point (menu 0-12)
+│   ├── create_tests.js        # Criação de testes via CSV (extraído de main.js)
 │   ├── jira_resource.js       # Wrapper REST para API Jira Server
-│   ├── jira_link_manager.js   # Gerenciamento de link types + pre-conditions
+│   ├── jira_link_manager.js   # Link types + pre-conditions
 │   ├── csv_resource.js        # Parser de CSV no formato QA Tools
+│   ├── cypress_resource.js    # Relatórios Cypress
+│   ├── cypress_test.js        # Parse de resultados de teste Cypress
 │   ├── package_version_manager.js  # Atualização de package.json + release notes
-│   ├── csv_resource.test.js   # Testes do parser CSV
-│   └── jira_resource.test.js  # Testes do link manager
+│   ├── csv_resource.test.js   # Testes do parser CSV (12)
+│   ├── jira_resource.test.js  # Testes do link manager (8)
+│   └── jira_validator.test.js # Testes de validação CSV + Jira (14)
 ├── git_triggers/
 │   ├── main.js                # CLI entry point (menu 0-9)
 │   └── gitlab_manager.js      # Wrapper REST para API GitLab
 └── shared/
-    ├── prompt.js              # Helpers de UX (cores, confirmação, erros)
+    ├── http-client.js         # Cliente HTTP unificado (timeout 120s + retry 3× com jitter)
+    ├── state.js               # Estado persistente JSON (copy-on-write + backup .bak)
+    ├── types.js               # JSDoc typedefs compartilhados (StateSchema, TestCase, etc.)
+    ├── logger.js              # Logger estruturado (console + arquivo, níveis, masking)
+    ├── logger.test.js         # Testes do logger (17)
+    ├── prompt.js              # UX (cores, prompts, confirmação, progresso)
     ├── cli_base.js            # Bootstrap compartilhado (validateEnv, SIGINT, mask)
     └── tls.js                 # Factory de agente HTTPS corporativo
 ```
@@ -48,11 +56,11 @@ qa_tools/
 
 ## Jira Management
 
+Menu interativo com opções categorizadas em **TESTES**, **RELEASES**, **CONFIGURAÇÃO** e **UTILITÁRIOS**.
+
 ```bash
 node jira_management/main.js
 ```
-
-Menu categorizado em **TESTES**, **RELEASES** e **CONFIGURAÇÃO**.
 
 ### TESTES
 
@@ -79,11 +87,25 @@ Menu categorizado em **TESTES**, **RELEASES** e **CONFIGURAÇÃO**.
 | 9 | **Alterar projeto Jira** — muda o projeto alvo |
 | 10 | **Alterar diretório git** — muda pasta para atualização de package.json |
 
+### UTILITÁRIOS
+
+| Opção | Descrição |
+|-------|-----------|
+| 11 | **Gerar template CSV** — cria arquivo `test_steps_template.csv` com exemplo didático |
+| 12 | **Diagnosticar conexão** — testa conectividade com Jira API, Xray API e projeto |
+
 ### Comandos Especiais
 
 - `/help` ou `/h` — exibe ajuda contextual
 - `/back` ou `/menu` — volta ao menu principal
 - Em prompts de entrada (caminho CSV, nome da versão, etc.), `/help` também funciona
+
+### Execução Automática (CI/CD)
+
+```bash
+# Pula confirmações e executa a opção do menu automaticamente
+AUTO_CONFIRM=true AUTO_CHOICE=1 node jira_management/main.js
+```
 
 ---
 
@@ -92,6 +114,8 @@ Menu categorizado em **TESTES**, **RELEASES** e **CONFIGURAÇÃO**.
 ```bash
 node git_triggers/main.js
 ```
+
+Primeiro seleciona um projeto da lista em `config/projects.json`, depois apresenta o menu de ações.
 
 ### PIPELINES
 
@@ -121,78 +145,84 @@ node git_triggers/main.js
 
 ## Formato CSV (Test Creation)
 
-O formato é usado pela opção **1 (Criar testes a partir de CSV)** no Jira Management.
+O formato é usado pela opção **1 (Criar testes a partir de CSV)** no Jira Management. O arquivo pode ser gerado manualmente, por script ou por ferramenta externa (Excel, Google Sheets, etc.).
 
-### Visão Geral
+### Especificação Técnica
 
-O arquivo CSV contém **blocos** separados por `---`. Cada bloco representa **um teste** e consiste em:
+| Aspecto | Regra |
+|---------|-------|
+| **Codificação** | UTF-8 (sem BOM) |
+| **Line ending** | LF (Unix) ou CRLF (Windows) |
+| **Delimitador** | Vírgula (`,`) |
+| **Separador de blocos** | `---` em linha isolada |
+| **Cabeçalho de steps** | `Action,Data,Expected Result` (exato, primeira linha após metadados) |
+| **Parsing de aspas** | Aspas duplas para valores com vírgula; `""` para aspas literais |
+| **Colunas faltantes** | Preenchidas com string vazia |
 
-1. **Metadados**: cabeçalhos opcionais que descrevem o teste
-2. **Steps**: dados tabulares com as ações do teste
+### Anatomia do Arquivo
+
+O arquivo é dividido em **blocos** separados por `---`. Cada bloco representa um caso de teste e contém:
+
+1. **Metadados** (opcionais, exceto `Title:`) — linhas com `Chave: Valor` no início do bloco
+2. **Steps** — linhas CSV a partir do cabeçalho `Action,Data,Expected Result`
 
 ```
-Title: Nome do teste
-Description: (opcional) Descrição detalhada
-Pre-condition: (opcional) Texto livre ou chave Jira
-Linked Issues: (opcional) KEY-123 (tipo), KEY-456 (tipo)
+Title: Nome do teste (OBRIGATÓRIO)
+Description: Descrição detalhada (opcional)
+Pre-condition: Texto livre ou chave Jira (opcional)
+Linked Issues: KEY-100 (tipo), KEY-200 (tipo) (opcional)
+Group: NOME-DO-GRUPO (opcional)
 ---
 Action,Data,Expected Result
-Ação do passo 1,dado do passo 1,resultado esperado 1
-Ação do passo 2,dado do passo 2,resultado esperado 2
+Ação 1,dado 1,resultado esperado 1
+Ação 2,dado 2,resultado esperado 2
 ```
 
-### Anatomia de um Bloco
-
-#### Separador `---`
-- Deve estar **isolado** em sua própria linha
-- Divide os blocos de teste
-- Pode haver quantos blocos desejar
+### Metadados por Bloco
 
 #### `Title:` **(obrigatório)**
 ```
 Title: ECSPOL-TC42 - Verificar login com credenciais válidas
 ```
-- Se um bloco não tiver `Title:`, ele é **ignorado** com um warning
 - O valor é o texto após `Title:` com espaços removidos
+- Bloco sem `Title:` é **ignorado** com warning
+- O prefixo do projeto (ex: `ECSPOL-`) é usado para detectar o projeto Jira automaticamente
 
 #### `Description:` **(opcional)**
 ```
-Description: Este teste verifica o fluxo completo de login do usuário administrador
+Description: Este teste verifica o fluxo completo de login
 ```
 - Texto livre
-- Pode conter `\n` literal para múltiplas linhas (ex: `Line 1\nLine 2`)
+- `\n` literal para múltiplas linhas
 
 #### `Pre-condition:` **(opcional)**
 
-**Modo referência** — se o valor for uma chave Jira válida:
+**Modo referência** — se o valor for uma chave Jira (`/^[A-Z][A-Z0-9]+(?:-[A-Z0-9]+)*-\d+$/`):
 ```
 Pre-condition: ECSPOL-PRE-42
 ```
-O parser detecta automaticamente pelo padrão: letra maiúscula → alfanumérico → opcional traço + alfanumérico → traço + número.
 
-**Modo inline** — se o valor for texto livre:
+**Modo inline** — se for texto livre:
 ```
 Pre-condition: User must be logged in with admin privileges
 ```
-O texto é **concatenado à descrição** do teste no Jira (não cria uma issue de pre-condition separada).
+O texto é concatenado à descrição do teste no Jira.
 
 #### `Linked Issues:` **(opcional)**
 ```
 Linked Issues: ECSPOL-100 (is tested by), ECSPOL-200 (relates to)
 ```
-Formato: `CHAVE (tipo de link)` separado por vírgula.
+Formato: `CHAVE (tipo de link)` separado por vírgula. O tipo de link é resolvido dinamicamente via API (case-insensitive, fallback para `relates to`).
 
-O tipo de link é resolvido dinamicamente via API do Jira e pode ser:
-- Nome exato do link type: `Tests`, `Relates`, `is tested by`
-- Case-insensitive
-- Se não encontrar, usa **relates to** como fallback
+#### `Group:` **(opcional)**
+```
+Group: LOGIN-FLOW
+```
+Identificador de grupo para organização dos testes.
 
 ### CSV de Steps
 
-Após os metadados, as linhas restantes (que não começam com `Title:`, `Description:`, `Pre-condition:` ou `Linked Issues:`) são interpretadas como CSV.
-
-**A primeira linha é o cabeçalho** e DEVE ser exatamente:
-
+A primeira linha após os metadados **deve** ser exatamente:
 ```
 Action,Data,Expected Result
 ```
@@ -203,100 +233,163 @@ Action,Data,Expected Result
 | `Data` | Dados de entrada | Não (vazio se omitido) |
 | `Expected Result` | Resultado esperado | Não (vazio se omitido) |
 
-**Regras do CSV:**
-- Delimitador: vírgula (`,`)
-- Aspas duplas (`"`) para valores com vírgula interna
-- Para aspas literais, duplicar: `"""aspas"""`
-- Linhas com colunas a menos são aceitas (colunas faltantes viram string vazia)
-- A biblioteca utilizada é `csv-parser@^3.2.0`
-
-### Exemplo Completo (2 testes)
+### Exemplo Completo
 
 ```
 Title: ECSPOL-TC01 - Login com credenciais válidas
 Description: Verifica fluxo feliz de login do administrador
 Pre-condition: User must be logged out
 Linked Issues: ECSPOL-100 (is tested by)
+Group: LOGIN-FLOW
 ---
 Action,Data,Expected Result
 Acessar /login,https://app.example.com,Formulário de login exibido
 Preencher email,admin@test.com,Campo aceita o valor
 Preencher senha,******,Campo aceita o valor
 Clicar em Entrar,,Redirecionado para dashboard
+```
+
 ---
-Title: ECSPOL-TC02 - Login com senha inválida
-Description: Verifica mensagem de erro ao usar senha incorreta
-Pre-condition: ECSPOL-PRE-42
+
+### CSV de Origem Externa
+
+O formato é compatível com exportação de qualquer ferramenta. Abaixo, orientações para geração programática e exportação a partir de planilhas.
+
+#### Geração Programática (Python)
+
+```python
+import csv
+
+testes = [
+    {
+        "title": "TC01 - Login",
+        "desc": "Teste de login válido",
+        "group": "LOGIN",
+        "steps": [
+            ("Acessar URL", "https://app.com", "Página carregada"),
+            ("Clicar em Entrar", "", "Dashboard exibido"),
+        ],
+    },
+    {
+        "title": "TC02 - Login inválido",
+        "desc": "Teste de login com senha errada",
+        "precondition": "Usuário cadastrado",
+        "linked": "KEY-100 (relates to)",
+        "group": "LOGIN",
+        "steps": [
+            ("Acessar URL", "https://app.com", "Página carregada"),
+            ("Digitar senha", "wrong", "Mensagem de erro exibida"),
+        ],
+    },
+]
+
+with open("testes.csv", "w", newline="", encoding="utf-8") as f:
+    for t in testes:
+        f.write(f"Title: {t['title']}\n")
+        f.write(f"Description: {t['desc']}\n")
+        if "group" in t:
+            f.write(f"Group: {t['group']}\n")
+        if "precondition" in t:
+            f.write(f"Pre-condition: {t['precondition']}\n")
+        if "linked" in t:
+            f.write(f"Linked Issues: {t['linked']}\n")
+        f.write("---\n")
+        w = csv.writer(f)
+        w.writerow(["Action", "Data", "Expected Result"])
+        for step in t["steps"]:
+            w.writerow(step)
+```
+
+#### Geração Programática (JavaScript/Node.js)
+
+```javascript
+const fs = require("fs");
+const tests = [
+  {
+    title: "TC01 - Login",
+    steps: [
+      ["Acessar URL", "https://app.com", "Página carregada"],
+    ],
+  },
+];
+const lines = [];
+for (const t of tests) {
+  lines.push(`Title: ${t.title}`);
+  lines.push("---");
+  lines.push("Action,Data,Expected Result");
+  for (const s of t.steps) {
+    lines.push(s.map(v => (v.includes(",") ? `"${v}"` : v)).join(","));
+  }
+}
+fs.writeFileSync("testes.csv", lines.join("\n"), "utf8");
+```
+
+#### Geração Programática (Shell/Bash)
+
+```bash
+cat > testes.csv << 'CSV'
+Title: TC01 - Login
+Description: Teste via script
 ---
 Action,Data,Expected Result
-Acessar /login,https://app.example.com,Formulário de login exibido
-Preencher email,admin@test.com,Campo aceita o valor
-Preencher senha,wrong_password,Campo aceita o valor
-Clicar em Entrar,,Mensagem "Credenciais inválidas" exibida
+Acessar URL,https://app.com,Página carregada
+Clicar em Entrar,,Dashboard
+CSV
 ```
 
-**Resultado do parse:**
+#### Exportação de Planilhas (Excel / Google Sheets / LibreOffice)
 
-Para o primeiro bloco (`ECSPOL-TC01`):
-```javascript
-{
-  title: 'ECSPOL-TC01 - Login com credenciais válidas',
-  description: 'Verifica fluxo feliz de login do administrador',
-  precondition: { type: 'inline', value: 'User must be logged out' },
-  linkedIssues: [{ key: 'ECSPOL-100', linkType: 'is tested by' }],
-  steps: [
-    { fields: { Action: 'Acessar /login', Data: 'https://app.example.com', 'Expected Result': 'Formulário de login exibido' } },
-    { fields: { Action: 'Preencher email', Data: 'admin@test.com', 'Expected Result': 'Campo aceita o valor' } },
-    { fields: { Action: 'Preencher senha', Data: '******', 'Expected Result': 'Campo aceita o valor' } },
-    { fields: { Action: 'Clicar em Entrar', Data: '', 'Expected Result': 'Redirecionado para dashboard' } }
-  ]
-}
-```
+1. Crie colunas `Title`, `Description`, `Pre-condition`, `Linked Issues`, `Group`, `---`, `Action`, `Data`, `Expected Result`
+2. Preencha os metadados nas primeiras linhas (apenas as colunas desejadas)
+3. Separe blocos com `---` em linha própria
+4. Exporte como **CSV UTF-8 (delimitado por vírgulas)**
 
-Para o segundo bloco (`ECSPOL-TC02`):
-```javascript
-{
-  title: 'ECSPOL-TC02 - Login com senha inválida',
-  description: 'Verifica mensagem de erro ao usar senha incorreta',
-  precondition: { type: 'reference', value: 'ECSPOL-PRE-42' },
-  linkedIssues: [],
-  steps: [
-    { fields: { Action: 'Acessar /login', Data: 'https://app.example.com', 'Expected Result': 'Formulário de login exibido' } },
-    { fields: { Action: 'Preencher email', Data: 'admin@test.com', 'Expected Result': 'Campo aceita o valor' } },
-    { fields: { Action: 'Preencher senha', Data: 'wrong_password', 'Expected Result': 'Campo aceita o valor' } },
-    { fields: { Action: 'Clicar em Entrar', Data: '', 'Expected Result': 'Mensagem "Credenciais inválidas" exibida' } }
-  ]
-}
-```
+**Atenção:** Ferramentas de planilha podem adicionar BOM ou usar ponto-e-vírgula. Verifique:
+- **Excel** salva como `CSV UTF-8 (delimitado por vírgulas)` — compatível
+- **Google Sheets** → Arquivo → Download → CSV — compatível
+- **LibreOffice** → Salvar como CSV → marque "UTF-8" e vírgula como delimitador
 
 ### Armadilhas Comuns
 
 | Situação | Consequência |
 |----------|-------------|
 | Esquecer `Title:` no bloco | Bloco ignorado com warning |
-| `Pre-condition:` com minúscula ou com espaço extra | Não reconhecido — vira linha de CSV (polui os steps) |
+| `Pre-condition:` com minúscula (`pre-condition:`) | Não reconhecido — vira linha de CSV |
 | `---` grudado em texto (`---texto`) | Separador não é detectado |
-| Metadado depois do CSV | Vira linha de CSV (step indesejado) |
-| Pre-condition que parece chave Jira mas não é | Se encaixar na regex `^[A-Z][A-Z0-9]+(?:-[A-Z0-9]+)*-\d+$`, será tratado como referência |
+| Metadado depois do CSV | Vira linha de step indesejado |
+| Pre-condition que parece chave Jira mas não é | Se encaixar na regex, será tratado como referência |
 | Coluna `Data` com vírgula sem aspas | CSV corrompido — use `"dado, com vírgula"` |
-| Linha em branco dentro do bloco | Linha é removida antes do parse — seguro |
+| BOM no início do arquivo (UTF-8 com BOM) | Pode causar parsing incorreto |
+| Linha em branco dentro do bloco | Removida antes do parse — seguro |
+| `\r` (CR) sem `\n` | Pode quebrar o parse de linhas |
+| `Action,Data,Expected Result` com espaços extras | Cabeçalho não detectado |
 
 ---
 
 ## Variáveis de Ambiente
 
-| Variável | Obrigatória | Descrição | Exemplo |
-|----------|-------------|-----------|---------|
-| `JIRA_BASE_URL` | ✅ Jira | URL base do servidor Jira Server | `https://jira.empresa.com` |
-| `JIRA_PERSONAL_TOKEN` | ✅ Jira | Token de autenticação (Bearer) | `seu-token` |
-| `XRAY_BASE_URL` | ✅ Xray | URL base do Xray para criação de testes | `https://xray.empresa.com` |
-| `GIT_BASE_URL` | ✅ GitLab | URL base do servidor GitLab | `https://gitlab.empresa.com` |
-| `GIT_TOKEN` | ✅ GitLab | Token de autenticação (PRIVATE-TOKEN) | `seu-token` |
-| `CSV_DEFAULT_PATH` | ❌ | Caminho padrão do CSV na opção 1 | `./testes.csv` |
-| `DEBUG` | ❌ | Ativa logs de debug (`true`/`false`) | `true` |
-| `NODE_TLS_REJECT_UNAUTHORIZED` | ❌ | Desabilita verificação TLS (`0` para desabilitar) | `0` |
+### Obrigatórias por Contexto
 
-**Nota:** `NODE_TLS_REJECT_UNAUTHORIZED=0` é necessário em ambientes corporativos com certificados auto-assinados. Use com cautela.
+| Variável | Contexto | Descrição | Exemplo |
+|----------|----------|-----------|---------|
+| `JIRA_BASE_URL` | Jira | URL base do servidor Jira Server | `https://jira.empresa.com` |
+| `JIRA_PERSONAL_TOKEN` | Jira | Token de autenticação (Bearer) | `seu-token` |
+| `XRAY_BASE_URL` | Xray | URL base do Xray para criação de testes | `https://xray.empresa.com` |
+| `GIT_BASE_URL` | GitLab | URL base do servidor GitLab | `https://gitlab.empresa.com` |
+| `GIT_TOKEN` | GitLab | Token de autenticação (PRIVATE-TOKEN) | `seu-token` |
+
+### Opcionais
+
+| Variável | Padrão | Descrição |
+|----------|--------|-----------|
+| `JIRA_PROJECT` | — | Nome do projeto Jira (pula prompt inicial) |
+| `CSV_DEFAULT_PATH` | — | Caminho padrão do CSV na opção 1 |
+| `LOG_LEVEL` | `INFO` | Nível mínimo de log (`DEBUG`, `INFO`, `WARN`, `ERROR`) |
+| `LOG_FILE` | `false` | Habilita log em arquivo (`true`/`false`) |
+| `LOG_DIR` | `logs` | Diretório para arquivos de log |
+| `DEBUG` | `false` | Ativa logs de diagnóstico no console (`true`/`false`) |
+| `AUTO_CONFIRM` | `false` | Pula confirmações (útil em CI) (`true`/`false`) |
+| `AUTO_CHOICE` | — | Pré-seleciona opção do menu na inicialização |
 
 ---
 
@@ -306,14 +399,18 @@ Para o segundo bloco (`ECSPOL-TC02`):
 npm test
 ```
 
-**2 suites, 16 testes:**
+**4 suites, 51 testes** (~8s):
 
 | Suite | Testes | O que cobre |
 |-------|--------|-------------|
-| `csv_resource.test.js` | 8 | `parseDescription`, `parsePrecondition` (reference/inline/null), `parseLinkedIssues` (single/multiple/empty) |
-| `jira_resource.test.js` | 8 | `JiraResource` constructor, `JiraLinkManager` getIssueLinkTypes (fallback + API), resolveLinkTypeId (name/inward/case/fallback) |
+| `logger.test.js` | 17 | Logger root/child, _writeFile, filePath, maskDeep, level filtering |
+| `csv_resource.test.js` | 12 | parseDescription, parsePrecondition (reference/inline/null), parseGroup, parseLinkedIssues (single/multiple/empty) |
+| `jira_resource.test.js` | 8 | JiraResource constructor, JiraLinkManager getIssueLinkTypes (fallback + API), resolveLinkTypeId (name/inward/case/fallback) |
+| `jira_validator.test.js` | 14 | Validação local de CSV (existência, blocos, steps, metadados) + validação contra Jira (projeto, issue types, pre-conditions, linked issues) — testes Jira são skipped sem credenciais |
 
-Para adicionar testes, crie arquivos `*.test.js` no diretório `jira_management/` — o Jest os detecta automaticamente.
+Os testes Jira em `jira_validator.test.js` utilizam as credenciais do `.env` e o CSV em `CSV_DEFAULT_PATH` (padrão: `test_steps.csv`).
+
+Para adicionar testes, crie arquivos `*.test.js` — o Jest os detecta automaticamente.
 
 ---
 
@@ -326,15 +423,9 @@ Para adicionar testes, crie arquivos `*.test.js` no diretório `jira_management/
 cp .env.example .env
 # Edite com suas URLs e tokens
 
-# 2. Crie um CSV de testes
-cat > testes.csv << 'EOF'
-Title: ECSPOL-TC01 - Teste de exemplo
-Description: Teste criado via CSV
-Pre-condition: ECSPOL-PRE-42
----
-Action,Data,Expected Result
-Passo 1,dado 1,resultado 1
-EOF
+# 2. Crie um CSV de testes manualmente ou via template
+node jira_management/main.js
+# Opção 11 → gera test_steps_template.csv com exemplo
 
 # 3. Execute
 node jira_management/main.js
@@ -359,7 +450,11 @@ node git_triggers/main.js
 # Opção 4 → criar MR com revisores
 # Opção 7 → nivelar branches main → rel_cand → dev
 ```
-=======
-# qa_tools
-Ferramenta de automação para QA
->>>>>>> 0149eae0b3f358f6cdaec19860883c1e65dfc58e
+
+### Diagnóstico rápido
+
+```bash
+node jira_management/main.js
+# Opção 12 → testa conexão com Jira API, Xray API e projeto
+```
+

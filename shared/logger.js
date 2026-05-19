@@ -1,3 +1,4 @@
+// @ts-check
 const fs = require('fs');
 const path = require('path');
 
@@ -70,7 +71,13 @@ class Logger {
       if (dataStr.length < 160) text += `  ${color}${dataStr}${reset}`;
     }
 
-    console.log(text);
+    if (level === 'ERROR') {
+      console.error(text);
+    } else if (level === 'WARN') {
+      console.warn(text);
+    } else {
+      console.log(text);
+    }
   }
 
   _writeFile(level, msg, data) {
@@ -97,13 +104,18 @@ class Logger {
     this._writeFile(level, msg, data);
   }
 
+  /** @param {Object} extra @returns {Logger} */
   child(extra) {
     return new Logger({ ...this.context, ...extra });
   }
 
+  /** @param {string} msg @param {Object} [data] */
   debug(msg, data) { this._write('DEBUG', msg, data); }
+  /** @param {string} msg @param {Object} [data] */
   info(msg, data) { this._write('INFO', msg, data); }
+  /** @param {string} msg @param {Object} [data] */
   warn(msg, data) { this._write('WARN', msg, data); }
+  /** @param {string} msg @param {Object} [data] */
   error(msg, data) { this._write('ERROR', msg, data); }
 
   get filePath() {
