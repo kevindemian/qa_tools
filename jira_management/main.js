@@ -1,14 +1,15 @@
+// @ts-check
 const path = require('path');
 const fs = require('fs');
-const crypto = require('crypto');
 const JiraResource = require('./jira_resource');
 const JiraLinkManager = require('./jira_link_manager');
 const CsvResource = require('./csv_resource');
 const PackageVersionManager = require('./package_version_manager');
-const { success, error, warn, info, title, divider, prompt, confirm, printError, printSummary, smartPrompt, onError, Spinner, ProgressBar, isQuiet } = require('../shared/prompt');
+const { success, error, warn, info, title, divider, prompt, confirm, printError, printSummary, smartPrompt } = require('../shared/prompt');
 const { mask, createValidateEnv, setupSigint } = require('../shared/cli_base');
 const { rootLogger } = require('../shared/logger');
-const { load: loadState, save: saveState, STATE_PATH } = require('../shared/state');
+const { load: loadState, update: updateState, STATE_PATH } = require('../shared/state');
+const { createTestsFromCsv } = require('./create_tests');
 
 require('dotenv').config({ path: path.resolve(__dirname, '../.env') });
 
@@ -17,7 +18,6 @@ let personal_token = process.env.JIRA_PERSONAL_TOKEN;
 let xray_url = process.env.XRAY_BASE_URL;
 let default_project = 'ECSPOL';
 let git_directory = 'no_dir_selected';
-let csvDefaultPath = process.env.CSV_DEFAULT_PATH || path.join(__dirname, 'test_steps.csv');
 let isBusy = false;
 let lastOperation = '';
 let sessionCounters = [];
@@ -69,11 +69,11 @@ function printSessionSummary() {
 
 function pushHistory(op, detail, status) {
     sessionCounters.push({ op, detail, status });
-    const state = loadState();
-    if (!state.history) state.history = [];
-    state.history.push({ op, detail, status, ts: new Date().toISOString() });
-    if (state.history.length > 50) state.history = state.history.slice(-50);
-    save(state);
+    updateState(state => {
+        if (!state.history) state.history = [];
+        state.history.push({ op, detail, status, ts: new Date().toISOString() });
+        if (state.history.length > 50) state.history = state.history.slice(-50);
+    });
 }
 
 setupSigint(() => isBusy, () => printSessionSummary());
@@ -86,7 +86,9 @@ const HELP_TOPICS = {
     project: 'Projeto Jira:\n  Chave do projeto (ex: ECSPOL, PROJ).\n  Deve estar definido no Jira com permissao de criacao de issues.',
     version: 'Versao:\n  Nome da versao (ex: v2.7.0).\n  Criada no projeto Jira para organizar releases.',
     transitions: 'Transicoes:\n  Fluxo: New -> Approve -> Coding In Progress -> Coding Done -> Done\n  Use a opcao 7 para fechamento automatico.',
-    template: 'Template CSV:\n  Use a opcao 11 para gerar um arquivo CSV de exemplo.'
+    template: 'Template CSV:\n  Use a opcao 11 para gerar um arquivo CSV de exemplo.',
+    diagnostics: 'Diagnostico de conexao:\n  Opcao 12 no menu. Testa conectividade com Jira API, Xray API,\n  e valida o projeto atual. Mostra tempos de resposta e status HTTP.',
+    rede: 'Diagnostico de conexao:\n  Opcao 12 no menu. Testa conectividade com Jira API, Xray API,\n  e valida o projeto atual. Mostra tempos de resposta e status HTTP.'
 };
 
 function showHelp(topic) {
@@ -97,13 +99,31 @@ function showHelp(topic) {
             info(HELP_TOPICS[lower]);
             return;
         }
-        warn('Topico nao encontrado: "' + topic + '". Tente: ' + Object.keys(HELP_TOPICS).join(', '));
+        // search mode
+        if (lower.startsWith('search ')) {
+            const term = lower.slice(7).trim();
+            if (term) {
+                title('HELP — busca por "' + term + '"');
+                const found = Object.entries(HELP_TOPICS)
+                    .filter(([_, v]) => v.toLowerCase().includes(term));
+                if (found.length > 0) {
+                    found.forEach(([k, v]) => {
+                        info(k + ': ' + v.split('\n')[0]);
+                    });
+                } else {
+                    warn('Nenhum topico encontrado para "' + term + '".');
+                }
+                return;
+            }
+        }
+        warn('Topico nao encontrado: "' + topic + '". Tente: ' + Object.keys(HELP_TOPICS).join(', ') + ' ou /help search <termo>');
         return;
     }
     title('HELP — Jira Tools');
     info('Escolha uma opcao do menu e siga as instrucoes.');
     info('Em qualquer prompt de texto, digite /help para ver esta ajuda.');
     info('Digite /help <topico> para ajuda especifica: ' + Object.keys(HELP_TOPICS).join(', '));
+    info('Digite /help search <termo> para buscar em todos os topicos.');
     info('Digite /back ou /menu para voltar ao menu principal.');
     divider();
     title('Fluxo comum:');
@@ -140,9 +160,6 @@ function displayMenu(proj, gitDir) {
     if (lastOperation) {
         info('Ultima operacao: ' + lastOperation);
     }
-    const state = loadState();
-    const hint = state.lastChoice && state.lastChoice !== '0'
-        ? 'Enter = ' + state.lastChoice : '0-12 ou /help';
     title('Jira Tools — Projeto: ' + proj);
     divider();
     console.log('  TESTES');
@@ -187,101 +204,7 @@ async function handleSpecialInput(input) {
     return false;
 }
 
-function estimateRemaining(tests, startIdx, elapsedMs, testDurations) {
-    if (testDurations.length === 0) return '';
-    const avg = testDurations.reduce((a, b) => a + b, 0) / testDurations.length;
-    const remaining = tests.length - startIdx;
-    const est = Math.round(avg * remaining / 1000);
-    if (est < 5) return '~' + est + 's';
-    if (est < 120) return '~' + Math.round(est / 5) * 5 + 's';
-    return '~' + Math.round(est / 60) + 'm';
-}
 
-function csvChecksum(content) {
-    return crypto.createHash('sha256').update(content).digest('hex').slice(0, 16);
-}
-
-function validateCsvTests(tests) {
-    const errors = [];
-    const warnings = [];
-    const titles = new Set();
-
-    tests.forEach((test, i) => {
-        const idx = i + 1;
-
-        if (!test.title || !test.title.trim()) {
-            errors.push('Teste ' + idx + ': Titulo vazio');
-        }
-
-        if (test.title && titles.has(test.title.trim())) {
-            warnings.push('Teste ' + idx + ': Titulo duplicado "' + test.title.trim() + '"');
-        }
-        if (test.title) titles.add(test.title.trim());
-
-        if (!test.steps || test.steps.length === 0) {
-            errors.push('Teste ' + idx + ' "' + (test.title || '(sem titulo)') + '": Nenhum step definido');
-        } else {
-            test.steps.forEach((step, si) => {
-                const action = step.fields?.Action || '';
-                if (!action.trim()) {
-                    warnings.push('Teste ' + idx + ' "' + test.title + '": Step ' + (si + 1) + ' sem Action');
-                }
-            });
-        }
-    });
-
-    return { errors, warnings };
-}
-
-async function updateCrossReferences(jiraResource, tests, ids) {
-    const valid = tests.map((t, i) => ({ test: t, id: ids[i] }))
-        .filter(x => x.id && x.test.group);
-
-    const groups = {};
-    for (const { test, id } of valid) {
-        const key = test.group.toUpperCase();
-        if (!groups[key]) groups[key] = { name: test.group, members: [] };
-        groups[key].members.push({ id, description: test.description || '' });
-    }
-
-    const crossLog = rootLogger.child({ operation: 'cross-ref' });
-
-    for (const group of Object.values(groups)) {
-        if (group.members.length < 2) continue;
-
-        crossLog.info('Atualizando descricoes do grupo "' + group.name + '" (' + group.members.length + ' issues)');
-
-        await JiraResource.delay(500);
-
-        for (const member of group.members) {
-            const others = group.members
-                .filter(m => m.id !== member.id)
-                .map(m => m.id)
-                .join(', ');
-            const refText = '\n\nEste caso de teste faz parte do conjunto ' + group.name + ': ' + others;
-
-            try {
-                const current = await jiraResource.getJiraResource('issue/' + member.id);
-                const currentDesc = current?.fields?.description || '';
-                if (currentDesc.includes('faz parte do conjunto')) {
-                    crossLog.info('  ' + member.id + ': ja atualizado, pulando');
-                    continue;
-                }
-
-                await jiraResource.putJiraResource('issue/' + member.id, {
-                    fields: { description: currentDesc + refText }
-                });
-                process.stdout.write('+');
-                crossLog.info('  ' + member.id + ': descricao atualizada');
-            } catch (err) {
-                crossLog.error('Falha ao atualizar descricao de ' + member.id + ' no grupo "' + group.name + '"', {
-                    status: err.response?.status
-                });
-                process.stdout.write('x');
-            }
-        }
-    }
-}
 
 function generateCsvTemplate(filePath) {
     const content = 'Title: [QA] Login - credenciais validas\n' +
@@ -336,6 +259,8 @@ async function main() {
         prompt('Nome do projeto Jira', { default: state.lastProject || default_project })
     ).toUpperCase();
 
+    let results = [];
+
     while (true) {
         let choice;
         if (process.env.AUTO_CHOICE) {
@@ -360,325 +285,29 @@ async function main() {
             choice = resolved;
         }
 
-        save(state => { state.lastChoice = choice; });
+        updateState(state => { state.lastChoice = choice; });
 
         const opLog = sessionLog.child({ menuOption: choice });
 
         switch (choice) {
             case '1': {
-                const state = loadState();
-                const csvPath = process.env.CSV_PATH || smartPrompt(
-                    'Caminho do arquivo CSV',
-                    { default: state.lastCsvPath || csvDefaultPath },
-                    () => showHelp('csv')
-                );
-                const labelsHint = state.lastLabels
-                    ? 'ultimo: ' + state.lastLabels : 'vazio para nenhuma';
-                const jiraLabelsInput = process.env.CSV_LABELS || prompt(
-                    'Labels Jira (separadas por virgula)',
-                    { hint: labelsHint, default: state.lastLabels || '' }
-                );
-                const jiraLabels = jiraLabelsInput
-                    .split(',')
-                    .map(l => l.trim())
-                    .filter(l => l.length > 0);
-
-                if (!isQuiet()) info('Lendo CSV...');
-                let tests;
-                let rawCsvContent;
-                try {
-                    rawCsvContent = fs.readFileSync(csvPath, 'utf8');
-                    tests = await csvResource.readBulkCsv(csvPath);
-                } catch (err) {
-                    printError('Erro ao ler CSV', err);
-                    continue;
-                }
-
-                if (tests.length === 0) {
-                    warn('Nenhum teste encontrado no CSV.');
-                    continue;
-                }
-
-                // Checkpoint resume
-                const cp = loadState()._checkpoint;
-                let resumeFrom = 0;
-                if (cp && cp.csvPath === csvPath && cp.project === project_name && cp.csvLength === tests.length) {
-                    const age = Date.now() - new Date(cp.ts).getTime();
-                    if (age < 86400000 && cp.done.length < tests.length) {
-                        const ans = confirm(
-                            cp.done.length + '/' + tests.length + ' testes ja criados. Continuar?',
-                            true
-                        );
-                        if (ans) {
-                            resumeFrom = cp.done.length;
-                            inMemoryTasksId = cp.done.map(d => d.key);
-                            inMemoryTasksText = cp.done.map(d => d.title);
-                            info('Retomando do teste ' + (resumeFrom + 1) + '...');
-                        }
-                    }
-                }
-
-                // CSV pre-validation
-                if (resumeFrom === 0) {
-                    const { errors, warnings } = validateCsvTests(tests);
-                    if (warnings.length > 0) {
-                        warn('Avisos no CSV (' + warnings.length + '):');
-                        warnings.slice(0, 5).forEach(w => warn('  ' + w));
-                        if (warnings.length > 5) warn('  ... e mais ' + (warnings.length - 5) + ' aviso(s)');
-                    }
-                    if (errors.length > 0) {
-                        error('Erros no CSV (' + errors.length + '):');
-                        errors.forEach(e => error('  ' + e));
-                        warn('Corrija o CSV antes de importar.');
-                        continue;
-                    }
-                }
-
-                const batchLog = opLog.child({ operation: 'csv-import', csvPath });
-
-                const totalSteps = tests.reduce((sum, t) => sum + t.steps.length, 0);
-                const groupsCount = new Set(tests.map(t => t.group).filter(Boolean)).size;
-
-                title('Preview dos testes a serem criados');
-                tests.forEach((test, i) => {
-                    const desc = test.description ? ' — ' + test.description.substring(0, 60) : '';
-                    const pre = test.precondition ? ' [pre: ' + test.precondition.value.substring(0, 30) + ']' : '';
-                    const links = test.linkedIssues?.length ? ' [' + test.linkedIssues.length + ' link(s)]' : '';
-                    const group = test.group ? ' [grupo: ' + test.group + ']' : '';
-                    const stepsInfo = test.steps.length + ' step(s)';
-                    const firstStep = test.steps[0]?.fields?.Action?.substring(0, 30) || '';
-                    const lastStep = test.steps.length > 1
-                        ? test.steps[test.steps.length - 1]?.fields?.Action?.substring(0, 30) || ''
-                        : '';
-                    const stepPreview = ' [' + stepsInfo + ': "' + firstStep + '"...' +
-                        (lastStep && lastStep !== firstStep ? ' "' + lastStep + '"' : '') + ']';
-                    console.log('  ' + (i + 1) + '. ' + test.title + desc + pre + links + group + stepPreview);
+                const result = await createTestsFromCsv({
+                    jiraResource,
+                    jiraResourceXray,
+                    linkManager,
+                    linkManagerXray,
+                    csvResource,
+                    project_name,
+                    base_url,
+                    sessionLog,
+                    onPushHistory: (op, detail, status) => pushHistory(op, detail, status),
+                    onLastOperation: (val) => { lastOperation = val; },
+                    onBusy: (val) => { isBusy = val; }
                 });
-                divider();
-
-                if (jiraLabels.length > 0) {
-                    info('Labels: ' + jiraLabels.join(', '));
+                if (result) {
+                    inMemoryTasksId = result.inMemoryTasksId;
+                    inMemoryTasksText = result.inMemoryTasksText;
                 }
-                info('Total: ' + tests.length + ' teste(s), ' + totalSteps + ' step(s)' +
-                    (groupsCount > 0 ? ', ' + groupsCount + ' grupo(s)' : ''));
-
-                // CSV filter
-                if (process.env.AUTO_CONFIRM !== 'true') {
-                    const filterText = prompt('Filtrar testes por titulo? (Enter para todos)');
-                    if (filterText.trim()) {
-                        const filtered = tests.filter(t =>
-                            t.title.toLowerCase().includes(filterText.trim().toLowerCase())
-                        );
-                        if (filtered.length === 0) {
-                            warn('Nenhum teste corresponde a "' + filterText.trim() + '".');
-                            continue;
-                        }
-                        info(filtered.length + '/' + tests.length + ' testes correspondem a "' + filterText.trim() + '"');
-                        if (!confirm('Criar apenas estes ' + filtered.length + ' testes?')) {
-                            warn('Operacao cancelada.');
-                            continue;
-                        }
-                        tests = filtered;
-                    }
-                }
-
-                if (process.env.AUTO_CONFIRM !== 'true' && !confirm('Criar estes testes no Jira?')) {
-                    warn('Operacao cancelada.');
-                    continue;
-                }
-
-                batchLog.info('Iniciando criacao de ' + tests.length + ' teste(s)');
-
-                const results = [];
-                const testDurations = [];
-                let testStart = Date.now();
-                isBusy = true;
-                const testBar = !isQuiet() ? new ProgressBar(tests.length, { width: 20 }) : null;
-
-                outer: for (let t = resumeFrom; t < tests.length; t++) {
-                    const test = tests[t];
-                    const testTitle = test.title;
-                    const validSteps = test.steps;
-                    if (testBar) testBar.update(t + 1);
-
-                    let description = test.description || '';
-                    if (test.precondition && test.precondition.type === 'inline') {
-                        description += (description ? '\n\n' : '') + 'Pre-condition: ' + test.precondition.value;
-                    }
-
-                    const testLog = batchLog.child({ test: t + 1, title: testTitle });
-                    if (!isQuiet()) info('Criando: ' + testTitle);
-
-                    inMemoryTasksText.push(testTitle);
-
-                    const testData = {
-                        fields: {
-                            project: { key: project_name },
-                            summary: testTitle,
-                            description,
-                            issuetype: { name: 'Test' }
-                        }
-                    };
-
-                    if (jiraLabels.length > 0) {
-                        testData.fields.labels = jiraLabels;
-                    }
-
-                    let createdTestIssue;
-                    try {
-                        createdTestIssue = await jiraResource.postJiraResource('issue', testData);
-                        if (!isQuiet()) success('Issue criada: ' + createdTestIssue.key);
-                        testLog.info('Issue criada', { key: createdTestIssue.key });
-                    } catch (err) {
-                        const action = await onError(
-                            '[' + (t + 1) + '/' + tests.length + '] Criar issue "' + testTitle + '"',
-                            err,
-                            { retry: true, details: true }
-                        );
-                        results.push({ status: 'error', label: testTitle, message: 'Falha na criacao da issue' });
-                        if (action === 'abort') {
-                            batchLog.warn('Usuario abortou apos falha na criacao da issue');
-                            break outer;
-                        }
-                        if (action === 'retry') {
-                            results.pop();
-                            t--;
-                            continue;
-                        }
-                        continue;
-                    }
-
-                    inMemoryTasksId.push(createdTestIssue.key);
-
-                    // Save checkpoint
-                    update(state => {
-                        if (!state._checkpoint) state._checkpoint = {};
-                        state._checkpoint.csvPath = csvPath;
-                        state._checkpoint.project = project_name;
-                        state._checkpoint.ts = new Date().toISOString();
-                        state._checkpoint.csvLength = tests.length;
-                        state._checkpoint.done = inMemoryTasksId.map((key, idx) => ({
-                            key,
-                            title: inMemoryTasksText[idx]
-                        }));
-                    });
-
-                    const testReport = { status: 'ok', label: testTitle, message: '' };
-                    const testErrors = [];
-
-                    if (test.precondition && test.precondition.type === 'reference') {
-                        try {
-                            await linkManagerXray.associatePrecondition(createdTestIssue.key, test.precondition.value);
-                            if (!isQuiet()) success('  Pre-condition ' + test.precondition.value + ' associada');
-                        } catch (err) {
-                            testErrors.push('Falha ao associar pre-condition');
-                            const action = await onError(
-                                '  Pre-condition de "' + testTitle + '"',
-                                err,
-                                { details: true }
-                            );
-                            if (action === 'abort') {
-                                batchLog.warn('Usuario abortou apos falha na pre-condition');
-                                testReport.status = 'error';
-                                testReport.message = testErrors.join('; ');
-                                results.push(testReport);
-                                break outer;
-                            }
-                        }
-                    }
-
-                    let abortSteps = false;
-                    const stepBar = !isQuiet() ? new ProgressBar(validSteps.length, { width: 15 }) : null;
-                    for (let i = 0; i < validSteps.length; i++) {
-                        const step = validSteps[i];
-                        try {
-                            await jiraResourceXray.postJiraResource('test/' + createdTestIssue.key + '/steps', step);
-                            if (stepBar) stepBar.update(i + 1);
-                        } catch (err) {
-                            testErrors.push('Falha no step ' + (i + 1) + ': ' + step.fields.Action);
-                            const action = await onError(
-                                '  Step ' + (i + 1) + ' de "' + testTitle + '"',
-                                err,
-                                { details: true }
-                            );
-                            if (action === 'abort') {
-                                abortSteps = true;
-                                break;
-                            }
-                        }
-                    }
-                    if (stepBar) stepBar.stop();
-                    if (abortSteps) {
-                        batchLog.warn('Usuario abortou apos falha no step');
-                        testReport.status = 'error';
-                        testReport.message = testErrors.join('; ');
-                        results.push(testReport);
-                        break outer;
-                    }
-
-                    if (testErrors.length > 0) {
-                        warn('Issue ' + createdTestIssue.key + ' criada com ' + testErrors.length + ' erro(s)');
-                        testErrors.forEach(e => warn('  ' + e));
-                        testReport.status = 'error';
-                        testReport.message = testErrors.length + ' step(s) falharam';
-                    }
-
-                    if (test.linkedIssues && test.linkedIssues.length > 0) {
-                        try {
-                            await linkManager.linkIssues(createdTestIssue.key, test.linkedIssues);
-                            if (!isQuiet()) success('  ' + test.linkedIssues.length + ' linked issue(s) criados');
-                        } catch (err) {
-                            testErrors.push('Falha ao criar linked issues');
-                            const action = await onError(
-                                '  Linked issues de "' + testTitle + '"',
-                                err,
-                                { details: true }
-                            );
-                            if (action === 'abort') {
-                                testReport.status = 'error';
-                                testReport.message = testErrors.join('; ');
-                                results.push(testReport);
-                                break outer;
-                            }
-                        }
-                    }
-
-                    if (!isQuiet()) console.log('  -> ' + base_url + '/browse/' + createdTestIssue.key);
-                    results.push(testReport);
-
-                    testDurations.push(Date.now() - testStart);
-                    testStart = Date.now();
-                }
-
-                if (testBar) testBar.stop();
-
-                // Clear checkpoint on success
-                if (results.filter(r => r.status === 'ok').length === tests.length) {
-                    update(state => { delete state._checkpoint; });
-                }
-
-                if (tests.some(t => t.group) && results.length > 0) {
-                    info('Atualizando descricoes com cross-references...');
-                    await updateCrossReferences(jiraResource, tests, inMemoryTasksId);
-                }
-
-                printSummary(results);
-                lastOperation = results.filter(r => r.status === 'ok').length + '/' + tests.length + ' testes criados';
-                pushHistory('csv-import', lastOperation,
-                    results.some(r => r.status === 'error') ? 'error' : 'ok');
-                batchLog.info('Operacao concluida', {
-                    passed: results.filter(r => r.status === 'ok').length,
-                    failed: results.filter(r => r.status === 'error').length,
-                    total: tests.length
-                });
-
-                save(state => {
-                    state.lastLabels = jiraLabels.join(',');
-                    state.lastCsvPath = csvPath;
-                    state.lastProject = project_name;
-                });
-
-                isBusy = false;
                 break;
             }
 
@@ -702,8 +331,15 @@ async function main() {
             case '3': {
                 const name = smartPrompt('Nome da versao', { hint: 'ex: v2.7.0' }, () => showHelp('version'));
                 const desc = smartPrompt('Descricao da versao', {}, () => showHelp('version'));
-                await jiraResource.createVersion(project_name, name, desc);
-                pushHistory('criar-versao', name, 'ok');
+                try {
+                    await jiraResource.createVersion(project_name, name, desc);
+                    pushHistory('criar-versao', name, 'ok');
+                } catch (err) {
+                    const msg = `Erro ao criar versão "${name}" no projeto "${project_name}"`;
+                    printError(msg, err);
+                    rootLogger.error(msg, { version: name, project: project_name, status: err.response?.status });
+                    pushHistory('criar-versao', name, 'error');
+                }
                 break;
             }
 
@@ -739,7 +375,7 @@ async function main() {
                 }
 
                 isBusy = true;
-                const results = [];
+                results = [];
                 for (const taskId of taskIds) {
                     try {
                         await jiraResource.updateFixVersions([taskId], project_name, version);
@@ -769,26 +405,40 @@ async function main() {
                     git_directory = dir;
                 }
                 const version = smartPrompt('Nome da versao', { hint: 'ex: v2.7.0' }, () => showHelp('version'));
-                const tasks = await jiraResource.getReleaseTasks(project_name, version, true);
-                if (!Array.isArray(tasks)) {
-                    warn('Nenhuma tarefa encontrada para esta versao.');
-                    break;
-                }
-                const versionNumber = version.split(' ').pop();
-                packageManager.updateReleaseNotes(versionNumber, tasks);
+                try {
+                    const tasks = await jiraResource.getReleaseTasks(project_name, version, true);
+                    if (!Array.isArray(tasks)) {
+                        warn('Nenhuma tarefa encontrada para esta versao.');
+                        break;
+                    }
+                    const versionNumber = version.split(' ').pop();
+                    packageManager.updateReleaseNotes(versionNumber, tasks);
 
-                const pkgVersion = version.split(' ').pop().split('v').pop();
-                packageManager.updateVersion(pkgVersion);
-                lastOperation = 'Package atualizado para v' + pkgVersion;
-                pushHistory('atualizar-package', lastOperation, 'ok');
-                success('Package version e release notes atualizados.');
+                    const pkgVersion = version.split(' ').pop().split('v').pop();
+                    packageManager.updateVersion(pkgVersion);
+                    lastOperation = 'Package atualizado para v' + pkgVersion;
+                    pushHistory('atualizar-package', lastOperation, 'ok');
+                    success('Package version e release notes atualizados.');
+                } catch (err) {
+                    const msg = `Erro ao atualizar package para versão "${version}" no projeto "${project_name}"`;
+                    printError(msg, err);
+                    rootLogger.error(msg, { version, project: project_name, status: err.response?.status });
+                    pushHistory('atualizar-package', version, 'error');
+                }
                 break;
             }
 
             case '6': {
                 const version = smartPrompt('Nome da versao', {}, () => showHelp('version'));
-                await jiraResource.checkReleaseTasksStatus(project_name, version);
-                pushHistory('verificar-status', version, 'ok');
+                try {
+                    await jiraResource.checkReleaseTasksStatus(project_name, version);
+                    pushHistory('verificar-status', version, 'ok');
+                } catch (err) {
+                    const msg = `Erro ao verificar status da versão "${version}" no projeto "${project_name}"`;
+                    printError(msg, err);
+                    rootLogger.error(msg, { version, project: project_name, status: err.response?.status });
+                    pushHistory('verificar-status', version, 'error');
+                }
                 break;
             }
 
@@ -852,7 +502,7 @@ async function main() {
                 project_name = newName;
                 lastOperation = 'Projeto alterado para ' + project_name;
                 pushHistory('trocar-projeto', project_name, 'ok');
-                save(state => { state.lastProject = project_name; });
+                updateState(state => { state.lastProject = project_name; });
                 success('Projeto alterado para: ' + project_name);
                 break;
             }
@@ -918,7 +568,7 @@ async function main() {
                 return;
 
             default:
-                warn('Opcao invalida. Escolha entre 0-11, alias ou digite /help.');
+                warn('Opcao invalida. Escolha entre 0-12, alias ou digite /help.');
         }
 
         const longOps = ['1', '4', '5', '7', '8'];

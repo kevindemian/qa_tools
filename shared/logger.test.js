@@ -177,7 +177,8 @@ describe('Logger', () => {
             const prevLevel = process.env.LOG_LEVEL;
             process.env.LOG_LEVEL = 'ERROR';
 
-            const spy = jest.spyOn(console, 'log').mockImplementation(() => {});
+            const spyLog = jest.spyOn(console, 'log').mockImplementation(() => {});
+            const spyError = jest.spyOn(console, 'error').mockImplementation(() => {});
             const logger = new Logger({ test: 'filter' });
 
             logger.debug('debug msg');
@@ -185,11 +186,14 @@ describe('Logger', () => {
             logger.warn('warn msg');
 
             expect(console.log).not.toHaveBeenCalled();
+            expect(console.error).not.toHaveBeenCalled();
 
             logger.error('error msg');
-            expect(console.log).toHaveBeenCalledTimes(1);
+            expect(console.log).not.toHaveBeenCalled();
+            expect(console.error).toHaveBeenCalledTimes(1);
 
-            spy.mockRestore();
+            spyLog.mockRestore();
+            spyError.mockRestore();
             if (prevLevel) process.env.LOG_LEVEL = prevLevel;
             else delete process.env.LOG_LEVEL;
         });

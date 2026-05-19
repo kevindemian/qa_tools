@@ -1,3 +1,4 @@
+// @ts-check
 const fs = require('fs');
 const csv = require('csv-parser');
 const { Readable } = require('stream');
@@ -75,6 +76,7 @@ class CsvResource {
         return results;
     }
 
+    /** @param {string} filePath @returns {Promise<import('../shared/types').TestCase[]>} */
     async readBulkCsv(filePath) {
         const raw = fs.readFileSync(filePath, 'utf-8');
 

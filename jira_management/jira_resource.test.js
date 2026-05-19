@@ -1,7 +1,18 @@
 const JiraResource = require('./jira_resource');
 const JiraLinkManager = require('./jira_link_manager');
 
-jest.mock('axios');
+jest.mock('axios', () => {
+    const mockInstance = {
+        interceptors: {
+            request: { use: jest.fn() },
+            response: { use: jest.fn() },
+        },
+        get: jest.fn(),
+        post: jest.fn(),
+        put: jest.fn(),
+    };
+    return { create: jest.fn(() => mockInstance) };
+});
 
 describe('JiraResource', () => {
   let jiraResource;

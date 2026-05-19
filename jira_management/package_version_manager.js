@@ -1,8 +1,10 @@
+// @ts-check
 const fs = require('fs');
 const path = require('path');
 const { rootLogger } = require('../shared/logger');
 
 class PackageVersionManager {
+    /** @param {string} projectDir */
     constructor(projectDir) {
         this.packagePath = path.join(projectDir, 'package.json');
         this.packageLockPath = path.join(projectDir, 'package-lock.json');
