@@ -1,0 +1,26 @@
+{
+  "skills": {
+    "paths": ["./skills"]
+  },
+  "agent": {
+    "qa_automation": {
+      "description": "Generates manual test cases in Xray CSV format",
+      "mode": "all",
+      "temperature": 0.1,
+      "tools": {
+        "write": true,
+        "edit": true,
+        "bash": true,
+        "skill": true
+      },
+      "permission": {
+        "task": { "*": "allow" },
+        "skill": {
+          "write-tests": "allow",
+          "run-jira-auto": "allow"
+        }
+      },
+      "prompt": "{file:prompts/qa_automation.md}"
+    }
+  }
+}

@@ -1,104 +1,70 @@
 const fs = require('fs');
 const path = require('path');
+const { rootLogger } = require('../shared/logger');
 
 class PackageVersionManager {
     constructor(projectDir) {
-        // Use projectDir for dynamic path initialization
         this.packagePath = path.join(projectDir, 'package.json');
         this.packageLockPath = path.join(projectDir, 'package-lock.json');
         this.releaseNotesPath = path.join(projectDir, 'release_notes', 'ReleaseNotes.txt');
     }
 
-    // Function to update version in both package.json and package-lock.json
     updateVersion(newVersion) {
-        // Read and update package.json
-        this.updatePackageJsonVersion(newVersion);
-
-        // Read and update package-lock.json
-        this.updatePackageLockVersion(newVersion);
-    }
-
-    // Helper function to update package.json
-    updatePackageJsonVersion(newVersion) {
-        try {
-            const packageData = fs.readFileSync(this.packagePath, 'utf8');
-            const packageJson = JSON.parse(packageData);
-            console.log(`Old version in package.json: ${packageJson.version}`);
-
-            // Update version in package.json
-            packageJson.version = newVersion;
-
-            // Write the updated package.json back
-            fs.writeFileSync(this.packagePath, JSON.stringify(packageJson, null, 2), 'utf8');
-            console.log(`Updated version in package.json: ${newVersion}`);
-        } catch (err) {
-            console.error('Error updating package.json:', err.message);
-        }
-    }
-
-    // Helper function to update package-lock.json
-    updatePackageLockVersion(newVersion) {
-        try {
-            const packageLockData = fs.readFileSync(this.packageLockPath, 'utf8');
-            const packageLockJson = JSON.parse(packageLockData);
-            console.log(`Old version in package-lock.json: ${packageLockJson.version}`);
-
-            // Update the root version in package-lock.json
-            packageLockJson.version = newVersion;
-
-            // Update the version inside the "packages" section if it exists
-            if (packageLockJson.packages && packageLockJson.packages['']) {
-                packageLockJson.packages[''].version = newVersion;
+        this._updateJsonFile(this.packagePath, newVersion);
+        this._updateJsonFile(this.packageLockPath, newVersion, (json) => {
+            if (json.packages && json.packages['']) {
+                json.packages[''].version = newVersion;
             }
+        });
+    }
 
-            // Write the updated package-lock.json back
-            fs.writeFileSync(this.packageLockPath, JSON.stringify(packageLockJson, null, 2), 'utf8');
-            console.log(`Updated version in package-lock.json: ${newVersion}`);
+    _updateJsonFile(filePath, newVersion, extraUpdate) {
+        try {
+            const data = fs.readFileSync(filePath, 'utf8');
+            const json = JSON.parse(data);
+            json.version = newVersion;
+            if (extraUpdate) extraUpdate(json);
+            fs.writeFileSync(filePath, JSON.stringify(json, null, 2), 'utf8');
+            rootLogger.info(`Versao atualizada em ${path.basename(filePath)}: ${newVersion}`);
         } catch (err) {
-            console.error('Error updating package-lock.json:', err.message);
+            rootLogger.error(`Erro ao atualizar ${path.basename(filePath)}: ${err.message}`);
         }
     }
 
-    // Function to update ReleaseNotes.txt
-	updateReleaseNotes(versionNumber, tasks) {
-		try {
-			// Read the existing release notes
-			const releaseNotesContent = fs.readFileSync(this.releaseNotesPath, 'utf8');
-			const lines = releaseNotesContent.split('\n');
+    updateReleaseNotes(versionNumber, tasks) {
+        if (!Array.isArray(tasks)) {
+            rootLogger.error('updateReleaseNotes: tasks deve ser um array.');
+            return;
+        }
 
-			// Skip the first two lines (Application info)
-			const releaseNotesHeader = lines.slice(0, 2).join('\n');  // Keep the header intact
-			const oldReleaseNotes = lines.slice(2).join('\n');  // Keep old release notes intact
+        if (!fs.existsSync(this.releaseNotesPath)) {
+            rootLogger.error(`Arquivo de release notes nao encontrado: ${this.releaseNotesPath}`);
+            return;
+        }
 
-			// Format new release notes
-			let newReleaseNotes = "-------------------------------------------------------------------------------------------------------------------\n";
-			newReleaseNotes += `Release ${versionNumber}:\n\n`;
+        try {
+            const releaseNotesContent = fs.readFileSync(this.releaseNotesPath, 'utf8');
+            const lines = releaseNotesContent.split('\n');
+            const releaseNotesHeader = lines.slice(0, 2).join('\n');
+            const oldReleaseNotes = lines.slice(2).join('\n');
 
-			// Debugging: Print the tasks to check their structure
-			console.log("Tasks to be added:");
-			tasks.forEach(task => console.log(task));
+            let newReleaseNotes = "-------------------------------------------------------------------------------------------------------------------\n";
+            newReleaseNotes += `Release ${versionNumber}:\n\n`;
 
-			// Ensure tasks are treated correctly as a list of strings and append to newReleaseNotes
-			tasks.forEach(task => {
-				if (typeof task === 'string') {
-					newReleaseNotes += `${task}\n`;  // Append each task with a newline
-				}
-			});
+            tasks.forEach(task => {
+                if (typeof task === 'string') {
+                    newReleaseNotes += `${task}\n`;
+                }
+            });
 
-			// Combine everything into a single content string
-			// Add the new release notes immediately after the header, then append old release notes
-			const updatedReleaseNotes = `${releaseNotesHeader}\n\n${newReleaseNotes}${oldReleaseNotes}\n`;
+            const updatedReleaseNotes = `${releaseNotesHeader}\n\n${newReleaseNotes}${oldReleaseNotes}\n`;
+            fs.writeFileSync(this.releaseNotesPath, updatedReleaseNotes, 'utf8');
+            rootLogger.info(`Release notes atualizadas com versao ${versionNumber}.`);
 
-			// Write the updated release notes back to the file
-			fs.writeFileSync(this.releaseNotesPath, updatedReleaseNotes, 'utf8');
-
-			console.log(`Release notes updated with version ${versionNumber}.`);
-
-		} catch (error) {
-			console.error(`Error updating release notes: ${error.message}`);
-		}
-	}
-
+        } catch (error) {
+            rootLogger.error(`Erro ao atualizar release notes: ${error.message}`);
+        }
+    }
 }
 
 module.exports = PackageVersionManager;

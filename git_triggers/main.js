@@ -1,319 +1,332 @@
-const readlineSync = require('readline-sync');
-const os = require('os');
-const GitLabManager = require('./gitlab_manager'); // Import the GitLabManager class
-
-// Load the dotenv package
 const path = require('path');
-require('dotenv').config({ path: path.resolve(__dirname, '../.env') }); // Load the .env file from the parent directory
+const fs = require('fs');
+const { success, error, warn, info, title, divider, prompt, confirm, printError, printSummary, Spinner } = require('../shared/prompt');
+const { load: loadState, update: updateState } = require('../shared/state');
+const { mask, createValidateEnv, setupSigint } = require('../shared/cli_base');
+const GitLabManager = require('./gitlab_manager');
+const { rootLogger } = require('../shared/logger');
 
-// Set your Git details
-let gitlabApiToken = process.env.GIT_TOKEN;
+require('dotenv').config({ path: path.resolve(__dirname, '../.env') });
+
+let projectId;
+let apiToken = process.env.GIT_TOKEN;
 let gitlabBaseUrl = process.env.GIT_BASE_URL;
 
-// Log the variables to verify they are loaded
-const mask = (v) => v ? v.slice(0, 4) + "****" : "";
+const sessionLog = rootLogger.child({ session: 'gitlab' });
+let sessionCounters = [];
+let lastOperation = '';
 
-if (process.env.DEBUG === 'true') {
-	console.log('Git Base URL:', gitlabBaseUrl);
-	console.log('Git Base URL:', mask(gitlabApiToken));
+function pushHistory(op, detail, status) {
+    sessionCounters.push({ op, detail, status });
+    lastOperation = op + ': ' + detail;
 }
 
-// Define your GitLab projects with their IDs
-const projects = {
-	'qa_ibabs': '47849962',
-	'qa_ibabs_cast': '64210552',
-	'qa_insiderlog': '39673943',
-	'qa_policylog': '62454464',
-	'qa_integritylog': '43908945',
-	'qa_irmanager': '41268567',
-	'qa_newslog': '62454464',
-	'qa_tools': '62689551'
-};
+const validateEnv = createValidateEnv([
+    { key: 'GIT_TOKEN', label: 'GIT_TOKEN (token de autenticacao GitLab)', example: 'GIT_TOKEN=seu-token-aqui' },
+    { key: 'GIT_BASE_URL', label: 'GIT_BASE_URL (URL base do GitLab)', example: 'GIT_BASE_URL=https://gitlab.seusite.com' },
+]);
 
-// Cesar // Antonio // Joao // Carlos // Lucas // Leonardo // Gonçalo // Tiago //G 25080915, T 25081138
-let reviewers = [12161752, 14566471, 23136801, 23422965, 23515703, 24922000]
-
-// Function to display the initial project selection menu
-function displayProjectSelectionMenu() {
-	console.log("\nSelect a GitLab Project:");
-	Object.keys(projects).forEach((projectName, index) => {
-		console.log(`${index + 1} - ${projectName}`);
-	});
-	console.log(`${Object.keys(projects).length + 1} - exit`);
+function printSessionSummary() {
+    const logPath = rootLogger.filePath;
+    console.log('');
+    console.log('='.repeat(50));
+    info('Sessao encerrada.');
+    const ok = sessionCounters.filter(c => c.status === 'OK').length;
+    const er = sessionCounters.filter(c => c.status === 'ERR').length;
+    if (ok > 0 || er > 0) {
+        if (ok > 0) success(ok + ' operacao(oes) concluida(s)');
+        if (er > 0) error(er + ' operacao(oes) com erro');
+    }
+    if (lastOperation) info('Ultima operacao: ' + lastOperation);
+    if (logPath) info('Log: ' + logPath);
+    console.log('='.repeat(50));
+    rootLogger._writeFile('INFO', 'Sessao encerrada. ' +
+        (ok > 0 ? ok + ' ok, ' : '') +
+        (er > 0 ? er + ' erro(s), ' : '') +
+        'ultima: ' + (lastOperation || 'nenhuma'));
 }
 
-// Function to display GitLab actions menu
-function displayGitLabMenu(proj) {
-	console.log("\nGitLab Project Trigger Menu for '" + proj + "':");
-	console.log("1 - Trigger a new pipeline");
-	console.log("2 - List pipeline schedules");
-	console.log("3 - Trigger pipeline schedule");
-	console.log("4 - Create a merge request");
-	console.log("5 - List approved merge requests");
-	console.log("6 - Merge by MR_id");
-	console.log("7 - Level the Branches, main into rel_cand and rel_cand into dev");
-	console.log("8 - Print project CI/CD variables (.env format)");
-	console.log("9 - Switch project");
-	console.log("0 - Exit\n");
+setupSigint(null, () => printSessionSummary());
+
+const projectsPath = path.resolve(__dirname, '../config/projects.json');
+const projects = JSON.parse(fs.readFileSync(projectsPath, 'utf8'));
+
+function displayProjects() {
+    title('Projetos GitLab');
+    const names = Object.keys(projects);
+    names.forEach((name, i) => console.log('  ' + (i + 1) + '  ' + name));
+    console.log('  ' + (names.length + 1) + '  Sair');
 }
 
-// Main function
+function displayActions() {
+    title('GITLAB TOOLS');
+    if (lastOperation) info('Ultima operacao: ' + lastOperation);
+    divider();
+    console.log('  PIPELINES');
+    console.log('   1  Disparar pipeline');
+    console.log('   2  Listar schedules');
+    console.log('   3  Disparar schedule');
+    console.log('');
+    console.log('  MERGE REQUESTS');
+    console.log('   4  Criar merge request');
+    console.log('   5  Listar MRs aprovados');
+    console.log('   6  Fazer merge por ID');
+    console.log('   7  Nivelar branches (main -> rel_cand -> dev)');
+    console.log('');
+    console.log('  UTILITARIOS');
+    console.log('   8  Exportar variaveis CI/CD');
+    console.log('   9  Trocar de projeto');
+    console.log('');
+    console.log('   0  Sair');
+    divider();
+}
+
 async function main() {
-	if (os.platform() === 'win32') {
-		console.clear();  // Clear the console on Windows
-	}
+    validateEnv();
+    sessionLog.info('Sessao iniciada');
 
-	let selectedProject = null;
-	let gitlabManager = null;
+    const state = loadState();
+    displayProjects();
+    const names = Object.keys(projects);
+    const firstDefault = state.lastProject || '';
+    const firstChoice = prompt('Escolha um projeto', {
+        hint: '1-' + names.length,
+        default: firstDefault
+    });
+    const firstIdx = !firstChoice.trim()
+        ? names.indexOf(firstDefault) + 1
+        : parseInt(firstChoice);
+    if (isNaN(firstIdx) || firstIdx < 1 || firstIdx > names.length) {
+        error('Projeto invalido.');
+        process.exit(1);
+    }
+    const projectName = names[firstIdx - 1];
+    projectId = projects[projectName];
+    updateState(s => { s.lastProject = projectName; });
+    success('Projeto selecionado: ' + projectName);
 
-	while (true) {
-		if (!selectedProject) {
-			// If no project is selected, show the project selection menu
-			displayProjectSelectionMenu();
-			const projectChoice = readlineSync.question('Please select a project (1-X): ');
+    const gitlab = new GitLabManager(projectId, apiToken, gitlabBaseUrl);
+    let currentBranch = '';
 
-			const projectIndex = parseInt(projectChoice) - 1;
-			if (projectIndex >= 0 && projectIndex < Object.keys(projects).length) {
-				const projectName = Object.keys(projects)[projectIndex];
-				const projectId = projects[projectName];
+    const stateHint = loadState().lastChoice && loadState().lastChoice !== '0'
+        ? 'Enter = ' + loadState().lastChoice : '0-9';
 
-				// Initialize GitLabManager with the selected project ID
-				gitlabManager = new GitLabManager(projectId, gitlabApiToken, gitlabBaseUrl);
-				selectedProject = projectName;
-				console.log(`Project selected: ${selectedProject}`);
-			} else if (projectChoice === `${Object.keys(projects).length + 1}`) {
-				console.log('Exiting program.');
-				return;
-			} else {
-				console.log('Invalid selection. Please choose a valid project.');
-			}
-		} else {
-			// Once a project is selected, display GitLab actions menu
-			displayGitLabMenu(selectedProject);
-			const choice = readlineSync.question('Please select an option (1-X): ');
+    while (true) {
+        displayActions();
+        const choice = prompt('Escolha uma opcao', { hint: stateHint });
+        const resolved = !choice.trim() && loadState().lastChoice && loadState().lastChoice !== '0'
+            ? loadState().lastChoice : choice;
+        if (resolved !== choice) info('Repetindo ultima opcao: ' + resolved);
+        const finalChoice = resolved;
 
-			switch (choice) {
-				case '1':
-					// Trigger a pipeline
-					const branch = readlineSync.question('\nEnter branch name to trigger pipeline: ').trim(); // Trim to avoid spaces
-					console.log('Branch name provided:', branch + '\n'); // Log the branch name for debugging
+        updateState(s => { s.lastChoice = finalChoice; });
 
-					// Collect variables as an array of objects with key-value pairs
-					const variables = [
-						{
-							key: 'PARALLEL_EXECUTION_DEV',
-							value: readlineSync.question('PARALLEL_EXECUTION_DEV (true/false), default false: ', { defaultInput: 'false' }),
-						},
-						{
-							key: 'RECORD_VIDEO',
-							value: readlineSync.question('RECORD_VIDEO (true/false), default false: ', { defaultInput: 'false' }),
-						},
-						{
-							key: 'SEND_EMAIL_DEV',
-							value: readlineSync.question('SEND_EMAIL_DEV (true/false), default false: ', { defaultInput: 'false' }),
-						},
-						{
-							key: 'NPM_SCRIPT',
-							value: readlineSync.question('NPM_SCRIPT, default cy-all-dashboard: ', { defaultInput: 'cy-all-dashboard' }),
-						}
-					];
+        switch (finalChoice) {
+            case '1': {
+                currentBranch = prompt('Branch para disparar pipeline');
+                const payload = { ref: currentBranch, variables: [] };
 
-					// Check if NPM_SCRIPT is 'cy-run-specific-specs-dashboard-dev' or other
-					if (variables.find(v => v.key === 'NPM_SCRIPT').value !== 'cy-all-dashboard') {
-						let userInput = readlineSync.question('RUN_SPECIFIC_SPECS, no default: ');
+                const addVars = confirm('Adicionar variaveis?');
+                if (addVars) {
+                    const varsInput = prompt('Variaveis (chave=valor separadas por virgula)');
+                    varsInput.split(',').forEach(v => {
+                        const [key, ...rest] = v.trim().split('=');
+                        if (key) payload.variables.push({ key, value: rest.join('=') });
+                    });
+                }
 
-						// Replace all backslashes with forward slashes
-						userInput = userInput.replace(/\\/g, '/');
+                title('Preview');
+                console.log('  Projeto: ' + projectName);
+                console.log('  Branch: ' + currentBranch);
+                console.log('  Variaveis: ' + payload.variables.length);
+                if (!confirm('Confirmar disparo de pipeline?')) {
+                    warn('Operacao cancelada.');
+                    continue;
+                }
 
-						variables.push({
-							key: 'RUN_SPECIFIC_SPECS',
-							value: userInput
-						});
-					}
+                try {
+                    const spinner = new Spinner();
+                    spinner.start('Disparando pipeline em ' + currentBranch);
+                    const result = await gitlab.triggerPipeline(payload);
+                    spinner.stop();
+                    if (result) { success('Pipeline disparado: ' + result.web_url); pushHistory('pipeline', currentBranch, 'OK'); }
+                } catch (err) {
+                    printError('Falha ao disparar pipeline', err); pushHistory('pipeline', currentBranch, 'ERR');
+                }
+                break;
+            }
 
-					console.log('\nVariables:', variables); // Log the variables for debugging
+            case '2': {
+                try {
+                    const spinner = new Spinner();
+                    spinner.start('Buscando schedules...');
+                    const schedules = await gitlab.getSchedules();
+                    spinner.stop();
+                    if (schedules && schedules.length > 0) {
+                        info('Schedules encontrados:');
+                        schedules.forEach(s => {
+                            console.log('  ID: ' + s.id + '  ' + (s.description || 'sem descricao') + '  (proxima execucao: ' + (s.next_run_at || 'N/A') + ')');
+                        });
+                        pushHistory('list-schedules', schedules.length + ' schedules', 'OK');
+                    } else {
+                        warn('Nenhum schedule encontrado.');
+                        pushHistory('list-schedules', 'vazio', 'OK');
+                    }
+                } catch (err) {
+                    printError('Erro ao listar schedules', err); pushHistory('list-schedules', 'erro', 'ERR');
+                }
+                break;
+            }
 
-					// Prepare the payload for triggering the pipeline
-					const payload = {
-						ref: branch,
-						variables: variables
-					};
+            case '3': {
+                const scheduleId = prompt('ID do schedule');
+                try {
+                    const spinner = new Spinner();
+                    spinner.start('Disparando schedule ' + scheduleId + '...');
+                    const result = await gitlab.runSchedule(scheduleId);
+                    spinner.stop();
+                    if (result) { success('Schedule disparado: ' + scheduleId); pushHistory('schedule-run', scheduleId, 'OK'); }
+                } catch (err) {
+                    printError('Erro ao disparar schedule', err); pushHistory('schedule-run', scheduleId, 'ERR');
+                }
+                break;
+            }
 
-					try {
-						await gitlabManager.triggerPipeline(payload); // Pass the entire payload to the trigger function
-					} catch (error) {
-						console.error('Failed to trigger pipeline:', error.message);
-					}
-					break;
+            case '4': {
+                const sourceBranch = prompt('Branch de origem');
+                const targetBranch = prompt('Branch de destino');
+                const mrTitle = prompt('Titulo do MR');
+                const description = prompt('Descricao do MR');
+                try {
+                    const spinner = new Spinner();
+                    spinner.start('Criando MR ' + sourceBranch + ' -> ' + targetBranch + '...');
+                    const result = await gitlab.createMergeRequest(sourceBranch, targetBranch, mrTitle, description);
+                    spinner.stop();
+                    if (result) {
+                        success('MR criado: ' + result.web_url); pushHistory('mr-create', sourceBranch + '->' + targetBranch, 'OK');
+                    }
+                } catch (err) {
+                    printError('Falha ao criar MR', err); pushHistory('mr-create', sourceBranch + '->' + targetBranch, 'ERR');
+                }
+                break;
+            }
 
-				case '2':
-					// List available pipeline schedules
-					try {
-						const schedules = await gitlabManager.getPipelineSchedules();
-						console.log('\nAvailable Pipeline Schedules:\n');
+            case '5': {
+                const status = prompt('Status dos MRs', { default: 'opened' });
+                try {
+                    const approved = (await gitlab.searchMergeRequests('', '', status))
+                        .filter(mr => mr.approved === true);
+                    if (approved.length > 0) {
+                        info('MRs aprovados:');
+                        approved.forEach(mr => console.log('  MR #' + mr.iid + ': ' + mr.title));
+                        pushHistory('mrs-approved', approved.length + ' MRs', 'OK');
+                    } else {
+                        warn('Nenhum MR aprovado encontrado.');
+                        pushHistory('mrs-approved', 'vazio', 'OK');
+                    }
+                } catch (err) {
+                    printError('Erro ao listar MRs aprovados', err); pushHistory('mrs-approved', status, 'ERR');
+                }
+                break;
+            }
 
-						schedules.forEach(schedule => {
-							console.log(`ID: ${schedule.id}, Description: ${schedule.description}, Next Run: ${schedule.next_run_at}`);
-						});
-					} catch (error) {
-						console.error('Error fetching pipeline schedules:', error.message);
-					}
-					break;
+            case '6': {
+                const iid = prompt('ID do MR para merge');
+                try {
+                    const spinner = new Spinner();
+                    spinner.start('Fazendo merge de MR #' + iid + '...');
+                    const result = await gitlab.acceptMergeRequest(iid);
+                    spinner.stop();
+                    if (result) { success('Merge realizado: ' + result.web_url); pushHistory('mr-merge', iid, 'OK'); }
+                } catch (err) {
+                    printError('Falha ao fazer merge', err); pushHistory('mr-merge', iid, 'ERR');
+                }
+                break;
+            }
 
-				case '3':
-					// Trigger a pipeline schedule by ID
-					const scheduleId = readlineSync.question('\nEnter the pipeline schedule ID: ');
-					try {
-						await gitlabManager.triggerPipelineSchedule(scheduleId);
-					} catch (error) {
-						console.error('Error triggering pipeline schedule:', error.message);
-					}
-					break;
+            case '7': {
+                const mainBranch = prompt('Branch principal', { default: 'main' });
+                const rcBranch = prompt('Branch release candidate', { default: 'rel_cand' });
+                const devBranch = prompt('Branch dev', { default: 'dev' });
 
-				case '4':
-					// Create a merge request
-					const sourceBranch = readlineSync.question('\nEnter the source branch: ');
-					const targetBranch = readlineSync.question('Enter the target branch: [default: dev]: ', { defaultInput: 'dev' });
-					// Construct the default title
-					const defaultTitle = `${sourceBranch} into ${targetBranch}`;
+                try {
+                    const spinner = new Spinner();
+                    spinner.start('Criando MR ' + mainBranch + ' -> ' + rcBranch + '...');
+                    const mr1 = await gitlab.createMergeRequest(
+                        mainBranch, rcBranch,
+                        'chore: nivelamento ' + mainBranch + ' -> ' + rcBranch,
+                        'Nivelamento automatico de branches: ' + mainBranch + ' -> ' + rcBranch
+                    );
+                    spinner.stop();
+                    if (mr1) info('MR criado: ' + mr1.web_url);
+                } catch (err) {
+                    printError('Falha no nivelamento (primeiro MR)', err); pushHistory('nivelamento', mainBranch + '->' + rcBranch, 'ERR');
+                }
 
-					// Prompt the user for the merge request title with the constructed default input
-					const title = readlineSync.question(`Enter the merge request title: [default: ${defaultTitle}]: `, { defaultInput: defaultTitle });
-					const description = readlineSync.question('Enter the merge request description (optional): ', { defaultInput: '' });
-					const removeSourceBranch = true;
+                try {
+                    const spinner = new Spinner();
+                    spinner.start('Criando MR ' + rcBranch + ' -> ' + devBranch + '...');
+                    const mr2 = await gitlab.createMergeRequest(
+                        rcBranch, devBranch,
+                        'chore: nivelamento ' + rcBranch + ' -> ' + devBranch,
+                        'Nivelamento automatico de branches: ' + rcBranch + ' -> ' + devBranch
+                    );
+                    spinner.stop();
+                    if (mr2) success('Segundo MR criado: ' + mr2.web_url);
+                    pushHistory('nivelamento', mainBranch + '->' + rcBranch + ', ' + rcBranch + '->' + devBranch, 'OK');
+                } catch (err) {
+                    printError('Falha no nivelamento (segundo MR)', err); pushHistory('nivelamento', rcBranch + '->' + devBranch, 'ERR');
+                }
+                break;
+            }
 
-					// Send to review
-					const alsoReview = readlineSync.question(`\nWith reviewers?  (y or n, defaultInput: y) `, { defaultInput: 'y' });
+            case '8': {
+                try {
+                    const spinner = new Spinner();
+                    spinner.start('Buscando variaveis CI/CD...');
+                    const variables = await gitlab.getCICDVariables();
+                    spinner.stop();
+                    if (variables) {
+                        const exportPath = path.resolve(__dirname, '../exported_variables.env');
+                        const envContent = variables.map(v => v.key + '=' + v.value).join('\n');
+                        fs.writeFileSync(exportPath, envContent, 'utf8');
+                        console.log(envContent);
+                        success('Variaveis exportadas para ' + exportPath);
+                        pushHistory('export-vars', variables.length + ' variaveis', 'OK');
+                    }
+                } catch (err) {
+                    printError('Falha ao buscar variaveis CI/CD', err); pushHistory('export-vars', 'erro', 'ERR');
+                }
+                break;
+            }
 
-					try {
+            case '9': {
+                displayProjects();
+                const newChoice = prompt('Escolha um projeto', { hint: '1-' + names.length });
+                const newIdx = parseInt(newChoice);
+                if (!isNaN(newIdx) && newIdx >= 1 && newIdx <= names.length) {
+                    const newName = names[newIdx - 1];
+                    projectId = projects[newName];
+                    gitlab.projectId = projectId;
+                    updateState(s => { s.lastProject = newName; });
+                    success('Projeto alterado para: ' + newName);
+                    pushHistory('trocar-projeto', newName, 'OK');
+                } else {
+                    warn('Opcao invalida.');
+                }
+                break;
+            }
 
-						if( alsoReview === 'n' ) {
-							reviewers = []
-						}
+            case '0':
+                title('Ate logo!');
+                printSessionSummary();
+                if (sessionCounters.some(c => c.status === 'ERR')) process.exitCode = 1;
+                return;
 
-						const result_case4 = await gitlabManager.createMergeRequest(sourceBranch, targetBranch, title, {
-							description: description,
-							removeSourceBranch: removeSourceBranch,
-							reviewer_ids: reviewers
-						});
-
-						console.log('Copy next message and Past into Teams:\n');
-						console.log(selectedProject + ': ' + result_case4.title + ', ' + result_case4.web_url + '\n');
-
-						if( alsoReview === 'n' ) {
-							console.log("Wait 5 seconds to merge");
-							await GitLabManager.delay(5000);
-							await gitlabManager.mergeMergeRequest(result_case4.iid);
-						}
-
-					} catch (error) {
-						console.error('Failed to create merge request:', error.message);
-					}
-					break;
-
-				case '5':
-					// List approved merge requests
-					try {
-						const approvedMergeRequests = await gitlabManager.getApprovedMergeRequests();
-						if (approvedMergeRequests.length > 0) {
-							console.log('\nApproved Merge Requests:\n');
-							for (const aproved of approvedMergeRequests) {
-								console.log('MR_id: ' + aproved.iid + ', MR_title: ' + aproved.title);
-							}
-						}
-						else {
-							console.log('\nNo Approved Merge Requests to list\n');
-						}
-					} catch (error) {
-						console.error('Error fetching approved merge requests:', error.message);
-					}
-					break;
-
-				case '6':
-					// Merge by MR_id
-					const mr_id = readlineSync.question('\nEnter the MR id: ').toString();;
-					await gitlabManager.mergeMergeRequest(mr_id);
-					break;
-
-				case '7':
-					//Level all branches
-					main_branch = 'main';
-					rel_cand_branch = 'rel_cand';
-					dev_branch = 'dev';
-					let title_leveling = `${main_branch} into ${rel_cand_branch}`;
-					let title_leveling2 = `${rel_cand_branch} into ${dev_branch}`;
-					let failed = false;
-
-					try {
-						// First MR and Merge
-						const result1 = await gitlabManager.createMergeRequest(main_branch, rel_cand_branch, title_leveling, {
-							removeSourceBranch: false
-						});
-
-						// Wait and check for mergeable status
-						await GitLabManager.delay(10000); // Use GitLabManager.delay instead of gitlabManager.delay cause its static
-						const canMerge = await gitlabManager.isMergeRequestMergeable(result1.iid);
-
-						if (canMerge) {
-							await gitlabManager.mergeMergeRequest(result1.iid);
-						} else {
-							console.log('Merge request not ready for merging.');
-							failed = true;
-						}
-					} catch (error) {
-						console.error('Failed to create or merge the first merge request:', error.response ? error.response.data : error.message);
-						failed = true;
-					}
-
-					if (!failed) {
-						try {
-							// Second MR and Merge
-							const result2 = await gitlabManager.createMergeRequest(rel_cand_branch, dev_branch, title_leveling2, {
-								removeSourceBranch: false
-							});
-
-							await GitLabManager.delay(10000);
-							const canMerge2 = await gitlabManager.isMergeRequestMergeable(result2.iid);
-							if (canMerge2) {
-								await gitlabManager.mergeMergeRequest(result2.iid);
-								console.log(`\n${selectedProject}: All Branches are now leveled\n`);
-							} else {
-								console.log('Second merge request not ready for merging.');
-							}
-						} catch (error) {
-							console.error('Failed to create or merge the second merge request:', error.response ? error.response.data : error.message);
-						}
-					}
-					break;
-
-				case '8':
-					// Print project CI/CD variables (.env format)
-					try {
-						const envContent = await gitlabManager.getCICDVariablesAsEnv();
-						console.log('\nProject CI/CD variables (.env format):\n');
-						console.log(envContent);
-						console.log('\nYou can copy this into a local .env file for testing.\n');
-					} catch (error) {
-						console.error('Failed to fetch CI/CD variables:', error.message);
-					}
-					break;
-
-				case '9':
-					// Switch project
-					selectedProject = null;  // Reset project selection
-					gitlabManager = null;  // Reset GitLabManager instance
-					break;
-
-				case '0':
-					// Exit
-					console.log('Exiting program.');
-					return;
-
-				default:
-					console.log('Invalid option, please choose between 1-4.');
-			}
-		}
-	}
+            default:
+                warn('Opcao invalida.');
+        }
+    }
 }
 
 main();

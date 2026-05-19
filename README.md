@@ -1,97 +1,360 @@
-# qa_tools
+# QA Tools
 
-install dependencies for python and js
+Ferramentas internas de automação QA para gerenciamento de releases no Jira/Xray, triggers de pipeline no GitLab e reporting Cypress.
 
-python -m pip install requests python-dotenv prompt_toolkit
+## Setup
 
-npm install dotenv readline-sync axios base-64
-
-## Getting started
-
-To make it easy for you to get started with GitLab, here's a list of recommended next steps.
-
-Already a pro? Just edit this README.md and make it your own. Want to make it easy? [Use the template at the bottom](#editing-this-readme)!
-
-## Add your files
-
-- [ ] [Create](https://docs.gitlab.com/ee/user/project/repository/web_editor.html#create-a-file) or [upload](https://docs.gitlab.com/ee/user/project/repository/web_editor.html#upload-a-file) files
-- [ ] [Add files using the command line](https://docs.gitlab.com/ee/gitlab-basics/add-file.html#add-a-file-using-the-command-line) or push an existing Git repository with the following command:
-
-```
-cd existing_repo
-git remote add origin https://gitlab.com/enxcs/workload/qa_ecs_cloud_devops/qa_tools.git
-git branch -M main
-git push -uf origin main
+```bash
+cp .env.example .env   # edite com seus tokens
+npm install            # instala dependências
 ```
 
-## Integrate with your tools
+**Pré-requisitos:** Node.js 18+, npm 9+.
 
-- [ ] [Set up project integrations](https://gitlab.com/enxcs/workload/qa_ecs_cloud_devops/qa_tools/-/settings/integrations)
+Dependências instaladas:
+- `axios` — requisições HTTP para APIs REST
+- `csv-parser` — parsing de CSV de steps de teste
+- `dotenv` — carregamento de variáveis de ambiente
+- `readline-sync` — input interativo no terminal
 
-## Collaborate with your team
+---
 
-- [ ] [Invite team members and collaborators](https://docs.gitlab.com/ee/user/project/members/)
-- [ ] [Create a new merge request](https://docs.gitlab.com/ee/user/project/merge_requests/creating_merge_requests.html)
-- [ ] [Automatically close issues from merge requests](https://docs.gitlab.com/ee/user/project/issues/managing_issues.html#closing-issues-automatically)
-- [ ] [Enable merge request approvals](https://docs.gitlab.com/ee/user/project/merge_requests/approvals/)
-- [ ] [Set auto-merge](https://docs.gitlab.com/ee/user/project/merge_requests/merge_when_pipeline_succeeds.html)
+## Arquitetura
 
-## Test and Deploy
+```
+qa_tools/
+├── config/
+│   ├── projects.json          # IDs dos projetos GitLab
+│   └── reviewers.json         # IDs dos revisores para MRs
+├── jira_management/
+│   ├── main.js                # CLI entry point (menu 0-10)
+│   ├── jira_resource.js       # Wrapper REST para API Jira Server
+│   ├── jira_link_manager.js   # Gerenciamento de link types + pre-conditions
+│   ├── csv_resource.js        # Parser de CSV no formato QA Tools
+│   ├── package_version_manager.js  # Atualização de package.json + release notes
+│   ├── csv_resource.test.js   # Testes do parser CSV
+│   └── jira_resource.test.js  # Testes do link manager
+├── git_triggers/
+│   ├── main.js                # CLI entry point (menu 0-9)
+│   └── gitlab_manager.js      # Wrapper REST para API GitLab
+└── shared/
+    ├── prompt.js              # Helpers de UX (cores, confirmação, erros)
+    ├── cli_base.js            # Bootstrap compartilhado (validateEnv, SIGINT, mask)
+    └── tls.js                 # Factory de agente HTTPS corporativo
+```
 
-Use the built-in continuous integration in GitLab.
+---
 
-- [ ] [Get started with GitLab CI/CD](https://docs.gitlab.com/ee/ci/quick_start/index.html)
-- [ ] [Analyze your code for known vulnerabilities with Static Application Security Testing (SAST)](https://docs.gitlab.com/ee/user/application_security/sast/)
-- [ ] [Deploy to Kubernetes, Amazon EC2, or Amazon ECS using Auto Deploy](https://docs.gitlab.com/ee/topics/autodevops/requirements.html)
-- [ ] [Use pull-based deployments for improved Kubernetes management](https://docs.gitlab.com/ee/user/clusters/agent/)
-- [ ] [Set up protected environments](https://docs.gitlab.com/ee/ci/environments/protected_environments.html)
+## Jira Management
 
-***
+```bash
+node jira_management/main.js
+```
 
-# Editing this README
+Menu categorizado em **TESTES**, **RELEASES** e **CONFIGURAÇÃO**.
 
-When you're ready to make this README your own, just edit this file and use the handy template below (or feel free to structure it however you want - this is just a starting point!). Thanks to [makeareadme.com](https://www.makeareadme.com/) for this template.
+### TESTES
 
-## Suggestions for a good README
+| Opção | Descrição |
+|-------|-----------|
+| 1 | **Criar testes a partir de CSV** — lê arquivo CSV, mostra preview, cria issues no Jira com steps, pre-conditions e linked issues |
+| 2 | **Listar versões de release** — exibe últimas N versões lançadas + não lançadas |
 
-Every project is different, so consider which of these sections apply to yours. The sections used in the template are suggestions for most open source projects. Also keep in mind that while a README can be too long and detailed, too long is better than too short. If you think your README is too long, consider utilizing another form of documentation rather than cutting out information.
+### RELEASES
 
-## Name
-Choose a self-explaining name for your project.
+| Opção | Descrição |
+|-------|-----------|
+| 3 | **Criar nova versão** — cria versão não lançada no projeto |
+| 4 | **Atribuir fixVersion** — adiciona tarefas a uma versão (com preview + sprint opcional) |
+| 5 | **Atualizar package.json + release notes** — lê tarefas da versão, atualiza versão e release notes |
+| 6 | **Verificar status das tarefas** — checa se todas as tarefas de uma versão estão Done/In Use |
+| 7 | **Fechar tarefas automaticamente** — move tarefas de uma versão através do workflow até Done |
+| 8 | **Publicar versão** — marca versão como released (valida se todas as tarefas estão concluídas) |
 
-## Description
-Let people know what your project can do specifically. Provide context and add a link to any reference visitors might be unfamiliar with. A list of Features or a Background subsection can also be added here. If there are alternatives to your project, this is a good place to list differentiating factors.
+### CONFIGURAÇÃO
 
-## Badges
-On some READMEs, you may see small images that convey metadata, such as whether or not all the tests are passing for the project. You can use Shields to add some to your README. Many services also have instructions for adding a badge.
+| Opção | Descrição |
+|-------|-----------|
+| 9 | **Alterar projeto Jira** — muda o projeto alvo |
+| 10 | **Alterar diretório git** — muda pasta para atualização de package.json |
 
-## Visuals
-Depending on what you are making, it can be a good idea to include screenshots or even a video (you'll frequently see GIFs rather than actual videos). Tools like ttygif can help, but check out Asciinema for a more sophisticated method.
+### Comandos Especiais
 
-## Installation
-Within a particular ecosystem, there may be a common way of installing things, such as using Yarn, NuGet, or Homebrew. However, consider the possibility that whoever is reading your README is a novice and would like more guidance. Listing specific steps helps remove ambiguity and gets people to using your project as quickly as possible. If it only runs in a specific context like a particular programming language version or operating system or has dependencies that have to be installed manually, also add a Requirements subsection.
+- `/help` ou `/h` — exibe ajuda contextual
+- `/back` ou `/menu` — volta ao menu principal
+- Em prompts de entrada (caminho CSV, nome da versão, etc.), `/help` também funciona
 
-## Usage
-Use examples liberally, and show the expected output if you can. It's helpful to have inline the smallest example of usage that you can demonstrate, while providing links to more sophisticated examples if they are too long to reasonably include in the README.
+---
 
-## Support
-Tell people where they can go to for help. It can be any combination of an issue tracker, a chat room, an email address, etc.
+## GitLab Triggers
 
-## Roadmap
-If you have ideas for releases in the future, it is a good idea to list them in the README.
+```bash
+node git_triggers/main.js
+```
 
-## Contributing
-State if you are open to contributions and what your requirements are for accepting them.
+### PIPELINES
 
-For people who want to make changes to your project, it's helpful to have some documentation on how to get started. Perhaps there is a script that they should run or some environment variables that they need to set. Make these steps explicit. These instructions could also be useful to your future self.
+| Opção | Descrição |
+|-------|-----------|
+| 1 | **Disparar pipeline** — executa pipeline em branch específica com variáveis customizadas |
+| 2 | **Listar schedules** — exibe todos os pipeline schedules do projeto |
+| 3 | **Disparar schedule** — executa um schedule específico pelo ID |
 
-You can also document commands to lint the code or run tests. These steps help to ensure high code quality and reduce the likelihood that the changes inadvertently break something. Having instructions for running tests is especially helpful if it requires external setup, such as starting a Selenium server for testing in a browser.
+### MERGE REQUESTS
 
-## Authors and acknowledgment
-Show your appreciation to those who have contributed to the project.
+| Opção | Descrição |
+|-------|-----------|
+| 4 | **Criar merge request** — cria MR com revisores opcionais; sem revisores, faz auto-merge após 5s |
+| 5 | **Listar MRs aprovados** — exibe MRs com 2+ aprovações |
+| 6 | **Fazer merge por ID** — merge de MR específico |
+| 7 | **Nivelar branches** — `main → rel_cand → dev` com espera de 10s entre merges |
 
-## License
-For open source projects, say how it is licensed.
+### UTILITÁRIOS
 
-## Project status
-If you have run out of energy or time for your project, put a note at the top of the README saying that development has slowed down or stopped completely. Someone may choose to fork your project or volunteer to step in as a maintainer or owner, allowing your project to keep going. You can also make an explicit request for maintainers.
+| Opção | Descrição |
+|-------|-----------|
+| 8 | **Exportar variáveis CI/CD** — exibe variáveis do projeto em formato `.env` |
+| 9 | **Trocar de projeto** — volta à seleção de projetos |
+
+---
+
+## Formato CSV (Test Creation)
+
+O formato é usado pela opção **1 (Criar testes a partir de CSV)** no Jira Management.
+
+### Visão Geral
+
+O arquivo CSV contém **blocos** separados por `---`. Cada bloco representa **um teste** e consiste em:
+
+1. **Metadados**: cabeçalhos opcionais que descrevem o teste
+2. **Steps**: dados tabulares com as ações do teste
+
+```
+Title: Nome do teste
+Description: (opcional) Descrição detalhada
+Pre-condition: (opcional) Texto livre ou chave Jira
+Linked Issues: (opcional) KEY-123 (tipo), KEY-456 (tipo)
+---
+Action,Data,Expected Result
+Ação do passo 1,dado do passo 1,resultado esperado 1
+Ação do passo 2,dado do passo 2,resultado esperado 2
+```
+
+### Anatomia de um Bloco
+
+#### Separador `---`
+- Deve estar **isolado** em sua própria linha
+- Divide os blocos de teste
+- Pode haver quantos blocos desejar
+
+#### `Title:` **(obrigatório)**
+```
+Title: ECSPOL-TC42 - Verificar login com credenciais válidas
+```
+- Se um bloco não tiver `Title:`, ele é **ignorado** com um warning
+- O valor é o texto após `Title:` com espaços removidos
+
+#### `Description:` **(opcional)**
+```
+Description: Este teste verifica o fluxo completo de login do usuário administrador
+```
+- Texto livre
+- Pode conter `\n` literal para múltiplas linhas (ex: `Line 1\nLine 2`)
+
+#### `Pre-condition:` **(opcional)**
+
+**Modo referência** — se o valor for uma chave Jira válida:
+```
+Pre-condition: ECSPOL-PRE-42
+```
+O parser detecta automaticamente pelo padrão: letra maiúscula → alfanumérico → opcional traço + alfanumérico → traço + número.
+
+**Modo inline** — se o valor for texto livre:
+```
+Pre-condition: User must be logged in with admin privileges
+```
+O texto é **concatenado à descrição** do teste no Jira (não cria uma issue de pre-condition separada).
+
+#### `Linked Issues:` **(opcional)**
+```
+Linked Issues: ECSPOL-100 (is tested by), ECSPOL-200 (relates to)
+```
+Formato: `CHAVE (tipo de link)` separado por vírgula.
+
+O tipo de link é resolvido dinamicamente via API do Jira e pode ser:
+- Nome exato do link type: `Tests`, `Relates`, `is tested by`
+- Case-insensitive
+- Se não encontrar, usa **relates to** como fallback
+
+### CSV de Steps
+
+Após os metadados, as linhas restantes (que não começam com `Title:`, `Description:`, `Pre-condition:` ou `Linked Issues:`) são interpretadas como CSV.
+
+**A primeira linha é o cabeçalho** e DEVE ser exatamente:
+
+```
+Action,Data,Expected Result
+```
+
+| Coluna | Descrição | Obrigatório |
+|--------|-----------|-------------|
+| `Action` | Ação a ser executada | Sim |
+| `Data` | Dados de entrada | Não (vazio se omitido) |
+| `Expected Result` | Resultado esperado | Não (vazio se omitido) |
+
+**Regras do CSV:**
+- Delimitador: vírgula (`,`)
+- Aspas duplas (`"`) para valores com vírgula interna
+- Para aspas literais, duplicar: `"""aspas"""`
+- Linhas com colunas a menos são aceitas (colunas faltantes viram string vazia)
+- A biblioteca utilizada é `csv-parser@^3.2.0`
+
+### Exemplo Completo (2 testes)
+
+```
+Title: ECSPOL-TC01 - Login com credenciais válidas
+Description: Verifica fluxo feliz de login do administrador
+Pre-condition: User must be logged out
+Linked Issues: ECSPOL-100 (is tested by)
+---
+Action,Data,Expected Result
+Acessar /login,https://app.example.com,Formulário de login exibido
+Preencher email,admin@test.com,Campo aceita o valor
+Preencher senha,******,Campo aceita o valor
+Clicar em Entrar,,Redirecionado para dashboard
+---
+Title: ECSPOL-TC02 - Login com senha inválida
+Description: Verifica mensagem de erro ao usar senha incorreta
+Pre-condition: ECSPOL-PRE-42
+---
+Action,Data,Expected Result
+Acessar /login,https://app.example.com,Formulário de login exibido
+Preencher email,admin@test.com,Campo aceita o valor
+Preencher senha,wrong_password,Campo aceita o valor
+Clicar em Entrar,,Mensagem "Credenciais inválidas" exibida
+```
+
+**Resultado do parse:**
+
+Para o primeiro bloco (`ECSPOL-TC01`):
+```javascript
+{
+  title: 'ECSPOL-TC01 - Login com credenciais válidas',
+  description: 'Verifica fluxo feliz de login do administrador',
+  precondition: { type: 'inline', value: 'User must be logged out' },
+  linkedIssues: [{ key: 'ECSPOL-100', linkType: 'is tested by' }],
+  steps: [
+    { fields: { Action: 'Acessar /login', Data: 'https://app.example.com', 'Expected Result': 'Formulário de login exibido' } },
+    { fields: { Action: 'Preencher email', Data: 'admin@test.com', 'Expected Result': 'Campo aceita o valor' } },
+    { fields: { Action: 'Preencher senha', Data: '******', 'Expected Result': 'Campo aceita o valor' } },
+    { fields: { Action: 'Clicar em Entrar', Data: '', 'Expected Result': 'Redirecionado para dashboard' } }
+  ]
+}
+```
+
+Para o segundo bloco (`ECSPOL-TC02`):
+```javascript
+{
+  title: 'ECSPOL-TC02 - Login com senha inválida',
+  description: 'Verifica mensagem de erro ao usar senha incorreta',
+  precondition: { type: 'reference', value: 'ECSPOL-PRE-42' },
+  linkedIssues: [],
+  steps: [
+    { fields: { Action: 'Acessar /login', Data: 'https://app.example.com', 'Expected Result': 'Formulário de login exibido' } },
+    { fields: { Action: 'Preencher email', Data: 'admin@test.com', 'Expected Result': 'Campo aceita o valor' } },
+    { fields: { Action: 'Preencher senha', Data: 'wrong_password', 'Expected Result': 'Campo aceita o valor' } },
+    { fields: { Action: 'Clicar em Entrar', Data: '', 'Expected Result': 'Mensagem "Credenciais inválidas" exibida' } }
+  ]
+}
+```
+
+### Armadilhas Comuns
+
+| Situação | Consequência |
+|----------|-------------|
+| Esquecer `Title:` no bloco | Bloco ignorado com warning |
+| `Pre-condition:` com minúscula ou com espaço extra | Não reconhecido — vira linha de CSV (polui os steps) |
+| `---` grudado em texto (`---texto`) | Separador não é detectado |
+| Metadado depois do CSV | Vira linha de CSV (step indesejado) |
+| Pre-condition que parece chave Jira mas não é | Se encaixar na regex `^[A-Z][A-Z0-9]+(?:-[A-Z0-9]+)*-\d+$`, será tratado como referência |
+| Coluna `Data` com vírgula sem aspas | CSV corrompido — use `"dado, com vírgula"` |
+| Linha em branco dentro do bloco | Linha é removida antes do parse — seguro |
+
+---
+
+## Variáveis de Ambiente
+
+| Variável | Obrigatória | Descrição | Exemplo |
+|----------|-------------|-----------|---------|
+| `JIRA_BASE_URL` | ✅ Jira | URL base do servidor Jira Server | `https://jira.empresa.com` |
+| `JIRA_PERSONAL_TOKEN` | ✅ Jira | Token de autenticação (Bearer) | `seu-token` |
+| `XRAY_BASE_URL` | ✅ Xray | URL base do Xray para criação de testes | `https://xray.empresa.com` |
+| `GIT_BASE_URL` | ✅ GitLab | URL base do servidor GitLab | `https://gitlab.empresa.com` |
+| `GIT_TOKEN` | ✅ GitLab | Token de autenticação (PRIVATE-TOKEN) | `seu-token` |
+| `CSV_DEFAULT_PATH` | ❌ | Caminho padrão do CSV na opção 1 | `./testes.csv` |
+| `DEBUG` | ❌ | Ativa logs de debug (`true`/`false`) | `true` |
+| `NODE_TLS_REJECT_UNAUTHORIZED` | ❌ | Desabilita verificação TLS (`0` para desabilitar) | `0` |
+
+**Nota:** `NODE_TLS_REJECT_UNAUTHORIZED=0` é necessário em ambientes corporativos com certificados auto-assinados. Use com cautela.
+
+---
+
+## Testes
+
+```bash
+npm test
+```
+
+**2 suites, 16 testes:**
+
+| Suite | Testes | O que cobre |
+|-------|--------|-------------|
+| `csv_resource.test.js` | 8 | `parseDescription`, `parsePrecondition` (reference/inline/null), `parseLinkedIssues` (single/multiple/empty) |
+| `jira_resource.test.js` | 8 | `JiraResource` constructor, `JiraLinkManager` getIssueLinkTypes (fallback + API), resolveLinkTypeId (name/inward/case/fallback) |
+
+Para adicionar testes, crie arquivos `*.test.js` no diretório `jira_management/` — o Jest os detecta automaticamente.
+
+---
+
+## Fluxos Típicos
+
+### Criar testes do zero
+
+```bash
+# 1. Configure o .env
+cp .env.example .env
+# Edite com suas URLs e tokens
+
+# 2. Crie um CSV de testes
+cat > testes.csv << 'EOF'
+Title: ECSPOL-TC01 - Teste de exemplo
+Description: Teste criado via CSV
+Pre-condition: ECSPOL-PRE-42
+---
+Action,Data,Expected Result
+Passo 1,dado 1,resultado 1
+EOF
+
+# 3. Execute
+node jira_management/main.js
+# Opção 1 → caminho do CSV → confirma preview → testes criados
+```
+
+### Criar release + fechar tarefas
+
+```bash
+node jira_management/main.js
+# Opção 3 → criar versão
+# Opção 4 → atribuir tarefas à versão
+# Opção 7 → fechar tarefas (move workflow até Done)
+# Opção 8 → publicar versão
+```
+
+### Disparar pipeline + merge
+
+```bash
+node git_triggers/main.js
+# Opção 1 → disparar pipeline em branch
+# Opção 4 → criar MR com revisores
+# Opção 7 → nivelar branches main → rel_cand → dev
+```

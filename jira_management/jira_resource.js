@@ -1,5 +1,23 @@
 const axios = require('axios');
-const https = require('https');
+const { createAgent } = require('../shared/tls');
+const { error: logError, success, info, extractErrorMessage, Spinner } = require('../shared/prompt');
+const { Logger } = require('../shared/logger');
+
+const TRANSITIONS = {
+    CODING_DONE: 61,
+    DONE: 141,
+    APPROVE: 21,
+    USE_TEST_CASE: 41,
+};
+
+function sanitizeJqlValue(value) {
+    if (!/^[\w\s.:/-]+$/.test(value)) {
+        throw new Error(
+            `Valor invalido para consulta JQL: "${value}". Use apenas letras, numeros, espacos, pontos, dois-pontos, barras e hifens.`
+        );
+    }
+    return value;
+}
 
 class JiraResource {
     constructor(personalToken, baseUrl) {
@@ -11,31 +29,53 @@ class JiraResource {
         this.axiosInstance = axios.create({
             baseURL: baseUrl,
             headers: this.headers,
-            httpsAgent: new https.Agent({
-                rejectUnauthorized: false
-            })
+            httpsAgent: createAgent()
         });
+        this.log = new Logger({ resource: 'JiraAPI' });
     }
 
-    // Method to add a delay
     static delay(ms) {
         return new Promise(resolve => setTimeout(resolve, ms));
     }
 
+    async searchJiraIssues(jql, maxResults = 200) {
+        let allIssues = [];
+        let startAt = 0;
+        let total = null;
 
-    // Function to GET Jira Resource
+        while (total === null || startAt < total) {
+            const url = `search?jql=${encodeURIComponent(jql)}&maxResults=${maxResults}&startAt=${startAt}`;
+            const data = await this.getJiraResource(url);
+
+            if (!data) break;
+
+            if (total === null) {
+                total = data.total;
+                if (total > 0) this.log.info(`Buscando ${total} issues...`);
+            }
+
+            allIssues = allIssues.concat(data.issues || []);
+            startAt += maxResults;
+        }
+
+        return { issues: allIssues, total: allIssues.length };
+    }
+
     async getJiraResource(resourceUrl) {
         try {
             const response = await this.axiosInstance.get(`/${resourceUrl}`);
             return response.data;
-        } catch (error) {
-            console.error('getJiraResource - HTTP error occurred:', error.response ? error.response.data : error.message);
+        } catch (err) {
+            this.log.error('Erro na consulta: ' + extractErrorMessage(err), {
+                resourceUrl,
+                status: err.response?.status
+            });
         }
     }
 
-    // Function to POST Jira Resource (create issues, etc.)
     async postJiraResource(resourceUrl, data, maxRetries = 10) {
         let attempt = 0;
+        const opLog = this.log.child({ resourceUrl });
 
         while (attempt < maxRetries) {
             try {
@@ -43,53 +83,57 @@ class JiraResource {
                 return response.data;
             } catch (err) {
                 const status = err.response?.status;
-                const message = err.message || err.response?.data?.message || '';
+                const message = extractErrorMessage(err).toLowerCase();
 
                 const isRateLimit =
                     status === 429 ||
-                    message.toLowerCase().includes('rate limit') ||
-                    message.toLowerCase().includes('too many requests') ||
-                    message.toLowerCase().includes('econnreset');
+                    message.includes('rate limit') ||
+                    message.includes('too many requests') ||
+                    message.includes('econnreset');
 
                 if (isRateLimit) {
                     const waitTime = 2000 * (attempt + 1);
-                    console.warn(`postJiraResource - Rate limit detected (attempt ${attempt + 1}). Waiting ${waitTime}ms...`);
+                    opLog.warn(`Rate limit (tentativa ${attempt + 1}), aguardando ${waitTime}ms...`);
+                    const spinner = new Spinner();
+                    spinner.start(`Rate limit (tentativa ${attempt + 1}/${maxRetries}), aguardando ${waitTime}ms`);
                     await JiraResource.delay(waitTime);
+                    spinner.stop();
                     attempt++;
                     continue;
                 }
 
-                // Not a rate limit → real error
-                console.error(`postJiraResource - HTTP error occurred:`, err.response ? err.response.data : err.message);
+                opLog.error('Erro na criacao: ' + extractErrorMessage(err), {
+                    status,
+                    attempt: attempt + 1
+                });
                 throw err;
             }
         }
 
-        throw new Error(`postJiraResource - Failed to post to ${resourceUrl} after ${maxRetries} retries due to rate limits.`);
+        opLog.error(`Falha apos ${maxRetries} tentativas (rate limit): ${resourceUrl}`);
     }
 
-    // Function to PUT Jira Resource (edit issues, etc.)
     async putJiraResource(resourceUrl, data) {
         try {
             const response = await this.axiosInstance.put(`/${resourceUrl}`, data);
             return response.status === 204 ? null : response.data;
-        } catch (error) {
-            console.error('putJiraResource - HTTP error occurred:', error.response ? error.response.data : error.message);
+        } catch (err) {
+            this.log.error('Erro na atualizacao: ' + extractErrorMessage(err), {
+                resourceUrl,
+                status: err.response?.status
+            });
         }
     }
 
-    // Get project id by name
     async getProjectId(projectName) {
         const projectData = await this.getJiraResource(`project/${projectName}`);
         return projectData ? projectData.id : null;
     }
 
-    // Get versions of a project
     async getProjectVersions(projectId) {
         return await this.getJiraResource(`project/${projectId}/versions`);
     }
 
-    // Get version id by version name for a project
     async getVersionId(projectName, versionName) {
         const projectId = await this.getProjectId(projectName);
         const versions = await this.getProjectVersions(projectId);
@@ -97,45 +141,38 @@ class JiraResource {
         const version = versions.find(v => v.name.toLowerCase() === versionName.toLowerCase());
         if (version) {
             return version.id;
-        } else {
-            console.log(`Version '${versionName}' not found in project '${projectName}'.`);
-            return null;
         }
+        info(`Versao '${versionName}' nao encontrada no projeto '${projectName}'.`);
+        return null;
     }
 
-    // Function to create a version
     async createVersion(projectName, versionName, description) {
         const versionId = await this.getVersionId(projectName, versionName);
         if (versionId) {
-            console.log(`Version '${versionName}' already exists.`);
+            info(`Versao '${versionName}' ja existe.`);
             return null;
         }
 
-        const payload = {
-            description,
-            name: versionName,
-            project: projectName,
-            released: false
-        };
+        const payload = { description, name: versionName, project: projectName, released: false };
 
-        console.log(`Creating version with payload: ${JSON.stringify(payload)}`);
+        info(`Criando versao: ${versionName}`);
         const response = await this.postJiraResource('version', payload);
 
         if (response) {
-            console.log('Version created successfully:', response);
+            success('Versao criada com sucesso: ' + response.name);
         } else {
-            console.log('Failed to create version.');
+            logError('Falha ao criar versao.');
         }
     }
 
-    // Function to check if all tasks in a version are 'Done' or 'IN USE'
     async checkReleaseTasksStatus(projectName, versionName) {
+        const safeVersion = sanitizeJqlValue(versionName);
         const projectId = await this.getProjectId(projectName);
-        const jql = `project = ${projectId} AND fixVersion = "${versionName}"`;
+        const jql = `project = ${projectId} AND fixVersion = "${safeVersion}"`;
 
-        const issuesData = await this.getJiraResource(`search?jql=${encodeURIComponent(jql)}`);
+        const issuesData = await this.searchJiraIssues(jql);
         if (!issuesData || !issuesData.issues || issuesData.issues.length === 0) {
-            console.log(`No issues found for version '${versionName}' in project '${projectName}'.`);
+            info(`Nenhuma issue encontrada para versao '${versionName}' no projeto '${projectName}'.`);
             return false;
         }
 
@@ -143,200 +180,176 @@ class JiraResource {
         for (const issue of issuesData.issues) {
             const status = issue.fields.status.name;
             if (!['done', 'in use'].includes(status.toLowerCase())) {
-                console.log(` - Issue '${issue.key}' is NOT completed. Status: ${status}`);
+                info(` - Issue '${issue.key}' NAO concluida. Status: ${status}`);
                 allTasksCompleted = false;
             } else {
-                console.log(` - Issue '${issue.key}' is completed (Status: ${status}).`);
+                info(` - Issue '${issue.key}' concluida (Status: ${status}).`);
             }
         }
 
         return allTasksCompleted;
     }
 
-    // Method to get release tasks for a given project and version
-    async getReleaseTasks(projectName, versionName, typeTestOnly=false) {
+    async getReleaseTasks(projectName, versionName, testOnly = false) {
+        const safeVersion = sanitizeJqlValue(versionName);
         const projectId = await this.getProjectId(projectName);
 
-        let jql = ''
+        const typeFilter = testOnly ? ' AND type = "Test"' : '';
+        const jql = `project = ${projectId} AND fixVersion = "${safeVersion}"${typeFilter}`;
 
-        if ( typeTestOnly ) {
-            jql = `project = ${projectId} AND fixVersion = "${versionName}" AND type = "Test"`;
-        }
-        else {
-            jql = `project = ${projectId} AND fixVersion = "${versionName}"`;
-        }
-
-        const issuesData = await this.getJiraResource(`search?jql=${encodeURIComponent(jql)}`);
+        const issuesData = await this.searchJiraIssues(jql);
         if (!issuesData || !issuesData.issues || issuesData.issues.length === 0) {
-            console.log(`No issues found for version '${versionName}' in project '${projectName}'.`);
-            return false;
+            info(`Nenhuma issue encontrada para versao '${versionName}' no projeto '${projectName}'.`);
+            return [];
         }
 
-        // Initialize the releaseTasks array
-        const releaseTasks = [];
-
-        // Loop through all issues and add to the releaseTasks array
-        issuesData.issues.forEach(issue => {
-            const taskString = `[${issue.key}] - ${issue.fields.summary}`;
-            releaseTasks.push(taskString);
-        });
-
-        // Return the list of tasks
-        return releaseTasks;
+        return issuesData.issues.map(issue => `[${issue.key}] - ${issue.fields.summary}`);
     }
 
-    // Function to get the latest X releases
     async getLatestReleases(projectName, numReleases) {
         const projectId = await this.getProjectId(projectName);
         const allVersions = await this.getProjectVersions(projectId);
 
-        // Filter and sort released versions
         const releasedVersions = allVersions
             .filter(v => v.released && v.releaseDate)
             .sort((a, b) => new Date(b.releaseDate) - new Date(a.releaseDate));
 
-        // Get the latest X released versions
         const latestReleasedVersions = releasedVersions.slice(0, numReleases);
-
-        // Filter unreleased versions
         const unreleasedVersions = allVersions.filter(v => !v.released);
 
-        // Print formatted released versions
-        console.log(`Latest ${latestReleasedVersions.length} released versions for project '${projectName}':`);
+        info(`Ultimas ${latestReleasedVersions.length} versoes lancadas do projeto '${projectName}':`);
         latestReleasedVersions.forEach(v => {
-            console.log(`Version: ${v.name} (Release Date: ${v.releaseDate})`);
+            info(`Versao: ${v.name} (Data: ${v.releaseDate})`);
         });
 
-        // Print formatted unreleased versions
-        console.log("\nUnreleased versions for project '" + projectName + "':");
+        info("\nVersoes nao lancadas do projeto '" + projectName + "':");
         if (unreleasedVersions.length > 0) {
             unreleasedVersions.forEach(v => {
-                const description = v.description || 'No description';
-                console.log(`Version: ${v.name} (Description: ${description})`);
+                const description = v.description || 'Sem descricao';
+                info(`Versao: ${v.name} (Descricao: ${description})`);
             });
         } else {
-            console.log("No unreleased versions found.");
+            info("Nenhuma versao nao lancada encontrada.");
         }
 
         return { latestReleasedVersions, unreleasedVersions };
     }
 
-    // Function to add a list of tasks to a sprint, supports sprint name or numeric ID
     async addTasksToSprint(taskIds, sprintId) {
-
-        const payload = {
-            issues: taskIds
-        };
+        const payload = { issues: taskIds };
 
         try {
-            console.log(`\nAssigning tasks to sprint ${sprintId}:`, taskIds);
+            info(`Adicionando ${taskIds.length} tarefa(s) a sprint ${sprintId}...`);
             await this.postJiraResource(`sprint/${sprintId}/issue`, payload);
-            console.log('Tasks successfully added to the sprint.');
-        } catch (error) {
-            console.error(`addTasksToSprint - Failed to assign tasks to sprint ${sprintId}`, error.response?.data || error);
+            success('Tarefas adicionadas a sprint.');
+        } catch (err) {
+            this.log.error('Erro ao adicionar a sprint: ' + extractErrorMessage(err), {
+                sprintId,
+                taskCount: taskIds.length,
+                status: err.response?.status
+            });
         }
     }
 
-    // Function to insert a list of tasks in a sprint
     async updateFixVersions(taskIds, projectName, versionName) {
         const versionId = await this.getVersionId(projectName, versionName);
         if (!versionId) {
-            console.log(`Version '${versionName}' not found in project '${projectName}'.`);
+            this.log.error(`Versao '${versionName}' nao encontrada no projeto '${projectName}'.`);
             return;
         }
 
         const payload = {
-            update: {
-                fixVersions: [
-                    { set: [{ id: versionId }] }
-                ]
-            }
+            update: { fixVersions: [{ set: [{ id: versionId }] }] }
         };
 
         for (const taskId of taskIds) {
-            console.log(`Updating task: ${taskId}`);
+            info(`Atualizando tarefa: ${taskId}`);
             await this.putJiraResource(`issue/${taskId}`, payload);
         }
     }
 
-    // Function to release a version
     async releaseVersion(projectName, versionName) {
         const versionId = await this.getVersionId(projectName, versionName);
         if (!versionId) {
-            console.log(`Version '${versionName}' not found, cannot release.`);
+            this.log.error(`Versao '${versionName}' nao encontrada, nao e possivel publicar.`);
             return;
         }
 
         const allTasksCompleted = await this.checkReleaseTasksStatus(projectName, versionName);
         if (!allTasksCompleted) {
-            console.log(`Cannot release version '${versionName}' as not all tasks are completed.`);
+            this.log.error(`Nao e possivel publicar versao '${versionName}', nem todas as tarefas estao concluidas.`);
             return;
         }
 
-        const releaseDate = new Date().toISOString().split('T')[0]; // Format as 'YYYY-MM-DD'
+        const releaseDate = new Date().toISOString().split('T')[0];
         const payload = { releaseDate, released: true };
 
-        console.log(`Releasing version '${versionName}' with payload: ${JSON.stringify(payload)}`);
+        info(`Publicando versao '${versionName}'...`);
         await this.putJiraResource(`version/${versionId}`, payload);
+        success(`Versao '${versionName}' publicada.`);
     }
 
-    // Function to move tasks to "Done"
     async moveCardsToDone(taskIds) {
         for (const taskId of taskIds) {
-            // Fetch issue details to get the current status
             const issueData = await this.getJiraResource(`issue/${taskId}`);
             if (!issueData || !issueData.fields || !issueData.fields.status) {
-                console.log(`Skipping task ${taskId}: Unable to retrieve status.`);
+                this.log.warn(`Pulando tarefa ${taskId}: nao foi possivel obter o status.`);
                 continue;
             }
 
-            const currentStatus = issueData.fields.status.name.toLowerCase();
-            console.log(`Task ${taskId} current status: ${currentStatus}`);
+            const currentStatus = issueData.fields.status.name;
+            this.log.info(`Tarefa ${taskId} — status atual: ${currentStatus}`);
 
-            // Move card based on its current status
-            switch (currentStatus) {
-				case 'coding in progress':
-                    console.log(` - Moving task ${taskId} from In Progress to Review`);
-                    await this.transitionIssue(taskId, 61); // Move to "Coding Done"
-                    console.log(` - Moving task ${taskId} from Review to Done`);
-                    await this.transitionIssue(taskId, 141); // Move to "Done"
-                    break;
+            const statusLower = currentStatus.toLowerCase();
+            try {
+                switch (statusLower) {
+                    case 'coding in progress':
+                        this.log.info(`   ${taskId}: Coding In Progress -> Coding Done`);
+                        await this.transitionIssue(taskId, TRANSITIONS.CODING_DONE);
+                        this.log.info(`   ${taskId}: Coding Done -> Done`);
+                        await this.transitionIssue(taskId, TRANSITIONS.DONE);
+                        break;
 
-                case 'coding done':
-                    console.log(` - Moving task ${taskId} from Review to Done`);
-                    await this.transitionIssue(taskId, 141); // Move to "Done"
-                    break;
+                    case 'coding done':
+                        this.log.info(`   ${taskId}: Coding Done -> Done`);
+                        await this.transitionIssue(taskId, TRANSITIONS.DONE);
+                        break;
 
-                // case 3 and 4 are specific for Test type tasks
-                case 'new':
-                    console.log(` - Moving task ${taskId} from New to Approve`);
-                    await this.transitionIssue(taskId, 21); // Move to "Approve"
-                    console.log(` - Moving task ${taskId} from Approve to Use test case`);
-                    await this.transitionIssue(taskId, 41); // Move to "Use test case"
-                    break;
+                    case 'new':
+                        this.log.info(`   ${taskId}: New -> Approve`);
+                        await this.transitionIssue(taskId, TRANSITIONS.APPROVE);
+                        this.log.info(`   ${taskId}: Approve -> Use test case`);
+                        await this.transitionIssue(taskId, TRANSITIONS.USE_TEST_CASE);
+                        break;
 
-                case 'approve':
-                    console.log(` - Moving task ${taskId} from Approve to Use test case`);
-                    await this.transitionIssue(taskId, 41); // Move to "Use test case"
-                    break;
+                    case 'approve':
+                        this.log.info(`   ${taskId}: Approve -> Use test case`);
+                        await this.transitionIssue(taskId, TRANSITIONS.USE_TEST_CASE);
+                        break;
 
-                default:
-                    console.log(`Task ${taskId} is not in a movable state.`);
+                    default:
+                        this.log.info(`   ${taskId}: nao esta em estado movivel.`);
+                }
+            } catch (err) {
+                this.log.error(`Erro ao mover ${taskId}: ${extractErrorMessage(err)}`, {
+                    status: err.response?.status
+                });
             }
-
         }
     }
 
-    // Helper function to transition an issue
     async transitionIssue(issueId, transitionId) {
         const payload = { transition: { id: transitionId } };
-        console.log(`    - Moving ${issueId} with transition ${transitionId}...`);
+        this.log.info(`   Movendo ${issueId} (transicao ${transitionId})...`);
 
         try {
             await this.postJiraResource(`issue/${issueId}/transitions`, payload);
-            console.log(` - Task ${issueId} moved successfully.`);
-        } catch (error) {
-            console.error(`transitionIssue - Failed to move task ${issueId}:`, error.response ? error.response.data : error.message);
+        } catch (err) {
+            this.log.error('Erro ao mover tarefa: ' + extractErrorMessage(err), {
+                issueId,
+                transitionId,
+                status: err.response?.status
+            });
         }
     }
 }

@@ -1,31 +1,12 @@
 const fs = require('fs');
 const csv = require('csv-parser');
 const { Readable } = require('stream');
+const { rootLogger } = require('../shared/logger');
+
+const JIRA_KEY_PATTERN = /^[A-Z][A-Z0-9]+(?:-[A-Z0-9]+)*-\d+$/;
 
 class CsvResource {
 
-    // Function to read CSV file and convert to JSON
-    readCsvToJson(filePath) {
-        return new Promise((resolve, reject) => {
-            const results = [];
-
-            fs.createReadStream(filePath)
-                .pipe(csv())
-                .on('data', (data) => {
-                    results.push({
-                        fields: {
-                            Action: data.Action || "",
-                            Data: data.Data || "",
-                            "Expected Result": data["Expected Result"] || ""
-                        }
-                    });
-                })
-                .on('end', () => resolve(results))
-                .on('error', reject);
-        });
-    }
-
-    // Reusable: read CSV from string
     readCsvFromString(csvString) {
         return new Promise((resolve, reject) => {
             const results = [];
@@ -48,7 +29,52 @@ class CsvResource {
         });
     }
 
-    // Bulk CSV reader (Title + steps blocks)
+    parseDescription(lines) {
+        const line = lines.find(l => l.startsWith('Description:'));
+        return line ? line.replace('Description:', '').trim() : '';
+    }
+
+    parseGroup(lines) {
+        const line = lines.find(l => l.startsWith('Group:'));
+        if (!line) return null;
+        const value = line.replace('Group:', '').trim();
+        return value || null;
+    }
+
+    parsePrecondition(lines) {
+        const line = lines.find(l => l.startsWith('Pre-condition:'));
+        if (!line) return null;
+
+        const value = line.replace('Pre-condition:', '').trim();
+        if (!value) return null;
+
+        if (JIRA_KEY_PATTERN.test(value)) {
+            return { type: 'reference', value };
+        }
+        return { type: 'inline', value };
+    }
+
+    parseLinkedIssues(lines) {
+        const line = lines.find(l => l.startsWith('Linked Issues:'));
+        if (!line) return [];
+
+        const value = line.replace('Linked Issues:', '').trim();
+        if (!value) return [];
+
+        const LINKED_ISSUE_PATTERN = /(\w+-\d+)\s*\(([^)]+)\)/g;
+        const results = [];
+        let match;
+
+        while ((match = LINKED_ISSUE_PATTERN.exec(value)) !== null) {
+            results.push({
+                key: match[1],
+                linkType: match[2].trim()
+            });
+        }
+
+        return results;
+    }
+
     async readBulkCsv(filePath) {
         const raw = fs.readFileSync(filePath, 'utf-8');
 
@@ -68,13 +94,14 @@ class CsvResource {
             const titleLine = lines.find(l => l.startsWith('Title:'));
 
             if (!titleLine) {
-                console.warn('Skipping block without Title:\n', block);
+                rootLogger.warn('Pulando bloco sem Title:\n' + block);
                 continue;
             }
 
             const title = titleLine.replace('Title:', '').trim();
 
-            const csvLines = lines.filter(l => !l.startsWith('Title:'));
+            const metadataPrefixes = ['Title:', 'Description:', 'Pre-condition:', 'Linked Issues:', 'Group:'];
+            const csvLines = lines.filter(l => !metadataPrefixes.some(p => l.startsWith(p)));
             const csvString = csvLines.join('\n');
 
             try {
@@ -82,11 +109,15 @@ class CsvResource {
 
                 results.push({
                     title,
+                    description: this.parseDescription(lines),
+                    precondition: this.parsePrecondition(lines),
+                    linkedIssues: this.parseLinkedIssues(lines),
+                    group: this.parseGroup(lines),
                     steps
                 });
 
             } catch (error) {
-                console.error(`Error parsing CSV block for "${title}":`, error);
+                rootLogger.error(`Erro ao analisar bloco CSV "${title}": ${error.message}`);
                 throw error;
             }
         }
