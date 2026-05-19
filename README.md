@@ -7,6 +7,7 @@ Ferramentas internas de automação QA para gerenciamento de releases no Jira/Xr
 ```bash
 cp .env.example .env   # edite com seus tokens
 npm install            # instala dependências
+npm run typecheck      # verifica tipos (opcional, 0 erros esperado)
 ```
 
 **Pré-requisitos:** Node.js 18+, npm 9+.
@@ -146,6 +147,8 @@ Primeiro seleciona um projeto da lista em `config/projects.json`, depois apresen
 ## Formato CSV (Test Creation)
 
 O formato é usado pela opção **1 (Criar testes a partir de CSV)** no Jira Management. O arquivo pode ser gerado manualmente, por script ou por ferramenta externa (Excel, Google Sheets, etc.).
+
+> Um arquivo modelo completo está disponível em [`test_steps_template.csv`](test_steps_template.csv) — copie e edite para começar.
 
 ### Especificação Técnica
 
@@ -396,17 +399,24 @@ CSV
 ## Testes
 
 ```bash
-npm test
+npm test               # 94 testes, 10 suites
+npm run typecheck      # verificação de tipos (0 erros)
 ```
 
-**4 suites, 51 testes** (~8s):
+**10 suites, 94 testes** (~5s):
 
 | Suite | Testes | O que cobre |
 |-------|--------|-------------|
 | `logger.test.js` | 17 | Logger root/child, _writeFile, filePath, maskDeep, level filtering |
-| `csv_resource.test.js` | 12 | parseDescription, parsePrecondition (reference/inline/null), parseGroup, parseLinkedIssues (single/multiple/empty) |
+| `csv_resource.test.js` | 14 | parseDescription, parsePrecondition (reference/inline/null/key+desc), parseGroup, parseLinkedIssues (single/multiple/empty) |
 | `jira_resource.test.js` | 8 | JiraResource constructor, JiraLinkManager getIssueLinkTypes (fallback + API), resolveLinkTypeId (name/inward/case/fallback) |
-| `jira_validator.test.js` | 14 | Validação local de CSV (existência, blocos, steps, metadados) + validação contra Jira (projeto, issue types, pre-conditions, linked issues) — testes Jira são skipped sem credenciais |
+| `jira_validator.test.js` | 14 | Validação local de CSV + validação contra Jira — testes Jira são skipped sem credenciais |
+| `state.test.js` | 5 | load (vazio/existente), save, update, backup recovery |
+| `prompt.test.js` | 8 | success/error/warn/info, isQuiet, title, divider, printSummary, ProgressBar |
+| `cli_base.test.js` | 4 | mask, validateEnv (missing + placeholder detection), setupSigint |
+| `http-client.test.js` | 7 | createHttpClient config, interceptor registration, GET retry 5×, PUT retry 5×, POST no-retry, 4xx no-retry |
+| `csv-import.test.js` | 1 | E2E: CSV import com nock — 2 issues, preconditions, steps, linked issues, cross-ref |
+| `csv-import-errors.test.js` | 7 | E2E: Error paths — POST 500 (skip/abort), issueLink 403, linkType 404, precondition 500, PUT 403, steps abort |
 
 Os testes Jira em `jira_validator.test.js` utilizam as credenciais do `.env` e o CSV em `CSV_DEFAULT_PATH` (padrão: `test_steps.csv`).
 
@@ -423,9 +433,10 @@ Para adicionar testes, crie arquivos `*.test.js` — o Jest os detecta automatic
 cp .env.example .env
 # Edite com suas URLs e tokens
 
-# 2. Crie um CSV de testes manualmente ou via template
-node jira_management/main.js
-# Opção 11 → gera test_steps_template.csv com exemplo
+# 2. Crie um CSV de testes
+#    Opção A: copie test_steps_template.csv (modelo canônico) e edite
+#    Opção B: use o menu → Opção 11 → gera template básico
+#    Opção C: exporte de planilha (veja seção abaixo)
 
 # 3. Execute
 node jira_management/main.js

@@ -13,9 +13,12 @@ const { createTestsFromCsv } = require('./create_tests');
 
 require('dotenv').config({ path: path.resolve(__dirname, '../.env') });
 
-let base_url = process.env.JIRA_BASE_URL;
-let personal_token = process.env.JIRA_PERSONAL_TOKEN;
-let xray_url = process.env.XRAY_BASE_URL;
+/** @type {string} */
+let base_url = /** @type {string} */ (process.env.JIRA_BASE_URL);
+/** @type {string} */
+let personal_token = /** @type {string} */ (process.env.JIRA_PERSONAL_TOKEN);
+/** @type {string} */
+let xray_url = /** @type {string} */ (process.env.XRAY_BASE_URL);
 let default_project = 'ECSPOL';
 let git_directory = 'no_dir_selected';
 let isBusy = false;
@@ -61,7 +64,7 @@ function printSessionSummary() {
     if (lastOperation) info('Ultima operacao: ' + lastOperation);
     if (logPath) info('Log: ' + logPath);
     console.log('='.repeat(50));
-    rootLogger._writeFile('INFO', 'Sessao encerrada. ' +
+    rootLogger.writeFileOnly('INFO', 'Sessao encerrada. ' +
         (ok > 0 ? ok + ' ok, ' : '') +
         (er > 0 ? er + ' erro(s), ' : '') +
         'ultima: ' + (lastOperation || 'nenhuma'));
@@ -87,8 +90,7 @@ const HELP_TOPICS = {
     version: 'Versao:\n  Nome da versao (ex: v2.7.0).\n  Criada no projeto Jira para organizar releases.',
     transitions: 'Transicoes:\n  Fluxo: New -> Approve -> Coding In Progress -> Coding Done -> Done\n  Use a opcao 7 para fechamento automatico.',
     template: 'Template CSV:\n  Use a opcao 11 para gerar um arquivo CSV de exemplo.',
-    diagnostics: 'Diagnostico de conexao:\n  Opcao 12 no menu. Testa conectividade com Jira API, Xray API,\n  e valida o projeto atual. Mostra tempos de resposta e status HTTP.',
-    rede: 'Diagnostico de conexao:\n  Opcao 12 no menu. Testa conectividade com Jira API, Xray API,\n  e valida o projeto atual. Mostra tempos de resposta e status HTTP.'
+    diagnostics: 'Diagnostico de conexao:\n  Opcao 12 no menu. Testa conectividade com Jira API, Xray API,\n  e valida o projeto atual. Mostra tempos de resposta e status HTTP.'
 };
 
 function showHelp(topic) {
@@ -261,6 +263,11 @@ async function main() {
 
     let results = [];
 
+    async function withBusy(fn) {
+        isBusy = true;
+        try { return await fn(); } finally { isBusy = false; }
+    }
+
     while (true) {
         let choice;
         if (process.env.AUTO_CHOICE) {
@@ -300,13 +307,13 @@ async function main() {
                     project_name,
                     base_url,
                     sessionLog,
-                    onPushHistory: (op, detail, status) => pushHistory(op, detail, status),
-                    onLastOperation: (val) => { lastOperation = val; },
                     onBusy: (val) => { isBusy = val; }
                 });
                 if (result) {
                     inMemoryTasksId = result.inMemoryTasksId;
                     inMemoryTasksText = result.inMemoryTasksText;
+                    pushHistory('csv-import', result.summary, result.status);
+                    lastOperation = result.summary;
                 }
                 break;
             }
@@ -374,17 +381,19 @@ async function main() {
                     continue;
                 }
 
-                isBusy = true;
                 results = [];
-                for (const taskId of taskIds) {
-                    try {
-                        await jiraResource.updateFixVersions([taskId], project_name, version);
-                        results.push({ status: 'ok', label: taskId, message: '' });
-                    } catch (err) {
-                        results.push({ status: 'error', label: taskId, message: 'Falha ao atualizar fixVersion' });
+                await withBusy(async () => {
+                    for (const taskId of taskIds) {
+                        try {
+                            await jiraResource.updateFixVersions([taskId], project_name, version);
+                            results.push({ status: 'ok', label: taskId, message: '' });
+                        } catch (err) {
+                            results.push({ status: 'error', label: taskId, message: 'Falha ao atualizar fixVersion' });
+                        }
                     }
-                }
-                printSummary(results);
+                });
+                printSummary(
+                    /** @type {import('../shared/types').TestResult[]} */ (results));
                 lastOperation = results.filter(r => r.status === 'ok').length + '/' + taskIds.length + ' tarefas atualizadas';
                 pushHistory('atribuir-fixversion', lastOperation,
                     results.some(r => r.status === 'error') ? 'error' : 'ok');
@@ -394,7 +403,6 @@ async function main() {
                     const agileResource = new JiraResource(personal_token, base_url + '/rest/agile/1.0');
                     await agileResource.addTasksToSprint(taskIds, sprintId);
                 }
-                isBusy = false;
                 break;
             }
 
@@ -453,25 +461,29 @@ async function main() {
                     warn('Nenhuma tarefa encontrada para esta versao.');
                     continue;
                 }
-                const taskIds = tasks.map(task => task.match(/\[(.*?)\]/)?.[1]).filter(Boolean);
+                const taskIds = tasks
+                    .map(task => task.match(/\[(.*?)\]/)?.[1])
+                    .filter(id => id !== undefined);
                 if (taskIds.length === 0) {
                     warn('Nenhuma tarefa encontrada.');
                     continue;
                 }
                 info('Fechando ' + taskIds.length + ' tarefa(s)...');
-                isBusy = true;
-                try {
-                    await jiraResource.moveCardsToDone(taskIds);
-                    const summary = taskIds.map(id => ({ status: 'ok', label: id, message: '' }));
-                    printSummary(summary);
-                    pushHistory('fechar-tarefas', taskIds.length + ' tarefa(s)', 'ok');
-                } catch (err) {
-                    const summary = taskIds.map(id => ({ status: 'error', label: id, message: 'Falha ao fechar tarefa' }));
-                    printSummary(summary);
-                    pushHistory('fechar-tarefas', 'erro', 'error');
-                }
-                lastOperation = taskIds.length + ' tarefa(s) fechadas';
-                isBusy = false;
+                await withBusy(async () => {
+                    try {
+                        await jiraResource.moveCardsToDone(taskIds);
+                        const summary = taskIds.map(id => ({ status: 'ok', label: id, message: '' }));
+                        printSummary(
+                            /** @type {import('../shared/types').TestResult[]} */ (summary));
+                        pushHistory('fechar-tarefas', taskIds.length + ' tarefa(s)', 'ok');
+                    } catch (err) {
+                        const summary = taskIds.map(id => ({ status: 'error', label: id, message: 'Falha ao fechar tarefa' }));
+                        printSummary(
+                            /** @type {import('../shared/types').TestResult[]} */ (summary));
+                        pushHistory('fechar-tarefas', 'erro', 'error');
+                    }
+                    lastOperation = taskIds.length + ' tarefa(s) fechadas';
+                });
                 break;
             }
 
@@ -483,7 +495,8 @@ async function main() {
                 }
                 try {
                     await jiraResource.releaseVersion(project_name, version);
-                    printSummary([{ status: 'ok', label: 'Versao ' + version, message: 'Publicada com sucesso' }]);
+                    printSummary(
+                        /** @type {import('../shared/types').TestResult[]} */ ([{ status: 'ok', label: 'Versao ' + version, message: 'Publicada com sucesso' }]));
                     lastOperation = 'Versao ' + version + ' publicada';
                     pushHistory('publicar-versao', version, 'ok');
                 } catch (err) {
@@ -554,7 +567,8 @@ async function main() {
                         results.push({ status: 'error', label: ep.label, message: st + ' ' + ms + 'ms' });
                     }
                 }
-                printSummary(results);
+                printSummary(
+                    /** @type {import('../shared/types').TestResult[]} */ (results));
                 pushHistory('diagnostico',
                     results.filter(r => r.status === 'ok').length + '/' + results.length + ' ok',
                     results.some(r => r.status === 'error') ? 'error' : 'ok');

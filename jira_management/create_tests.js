@@ -102,11 +102,9 @@ function delay(ms) {
  * @param {string} options.project_name
  * @param {string} options.base_url
  * @param {import('../shared/logger').Logger} options.sessionLog
- * @param {Function} options.onPushHistory
- * @param {Function} options.onLastOperation
  * @param {Function} options.onBusy
  */
-async function createTestsFromCsv({ jiraResource, jiraResourceXray, linkManager, linkManagerXray, csvResource, project_name, base_url, sessionLog, onPushHistory, onLastOperation, onBusy }) {
+async function createTestsFromCsv({ jiraResource, jiraResourceXray, linkManager, linkManagerXray, csvResource, project_name, base_url, sessionLog, onBusy }) {
     const state = loadState();
     const csvPath = process.env.CSV_PATH || smartPrompt(
         'Caminho do arquivo CSV',
@@ -141,8 +139,8 @@ async function createTestsFromCsv({ jiraResource, jiraResourceXray, linkManager,
     let resumeFrom = 0;
     let inMemoryTasksId = [];
     let inMemoryTasksText = [];
-    if (cp && cp.csvPath === csvPath && cp.project === project_name && cp.csvLength === tests.length) {
-        const age = Date.now() - new Date(cp.ts).getTime();
+    if (cp && cp.csvPath === csvPath && cp.project === project_name && cp.csvLength === tests.length && cp.done) {
+        const age = Date.now() - new Date(cp.ts ?? '').getTime();
         if (age < 86400000 && cp.done.length < tests.length) {
             const ans = confirm(
                 cp.done.length + '/' + tests.length + ' testes ja criados. Continuar?',
@@ -304,7 +302,7 @@ async function createTestsFromCsv({ jiraResource, jiraResourceXray, linkManager,
 
         if (test.precondition && test.precondition.type === 'reference') {
             try {
-                await linkManagerXray.associatePrecondition(createdTestIssue.key, test.precondition.value);
+                await linkManager.associatePrecondition(createdTestIssue.key, test.precondition.value);
                 if (!isQuiet()) success('  Pre-condition ' + test.precondition.value + ' associada');
             } catch (err) {
                 testErrors.push('Falha ao associar pre-condition');
@@ -328,7 +326,7 @@ async function createTestsFromCsv({ jiraResource, jiraResourceXray, linkManager,
         for (let i = 0; i < validSteps.length; i++) {
             const step = validSteps[i];
             try {
-                await jiraResourceXray.postJiraResource('test/' + createdTestIssue.key + '/steps', step);
+                await jiraResourceXray.postJiraResource('test/' + createdTestIssue.key + '/steps', { index: i + 1, ...step });
                 if (stepBar) stepBar.update(i + 1);
             } catch (err) {
                 testErrors.push('Falha no step ' + (i + 1) + ': ' + step.fields.Action);
@@ -397,14 +395,13 @@ async function createTestsFromCsv({ jiraResource, jiraResourceXray, linkManager,
         await updateCrossReferences(jiraResource, tests, inMemoryTasksId);
     }
 
-    printSummary(results);
-    const opResult = results.filter(r => r.status === 'ok').length + '/' + tests.length + ' testes criados';
-    onLastOperation(opResult);
-    onPushHistory('csv-import', opResult,
-        results.some(r => r.status === 'error') ? 'error' : 'ok');
+    printSummary(/** @type {import('../shared/types').TestResult[]} */ (results));
+    const okCount = results.filter(r => r.status === 'ok').length;
+    const errored = results.some(r => r.status === 'error');
+    const summary = okCount + '/' + tests.length + ' testes criados';
     opLog.info('Operacao concluida', {
-        passed: results.filter(r => r.status === 'ok').length,
-        failed: results.filter(r => r.status === 'error').length,
+        passed: okCount,
+        failed: results.length - okCount,
         total: tests.length
     });
 
@@ -416,7 +413,12 @@ async function createTestsFromCsv({ jiraResource, jiraResourceXray, linkManager,
 
     onBusy(false);
 
-    return { inMemoryTasksId, inMemoryTasksText };
+    return {
+        inMemoryTasksId,
+        inMemoryTasksText,
+        summary,
+        status: errored ? 'error' : 'ok'
+    };
 }
 
 module.exports = { createTestsFromCsv, validateCsvTests, updateCrossReferences };

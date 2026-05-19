@@ -13,22 +13,22 @@ const isQuiet = () => process.env.QUIET === 'true';
 
 function success(msg) {
   console.log(`${GREEN}OK${RESET} ${msg}`);
-  rootLogger.info(msg);
+  rootLogger.writeFileOnly('INFO', msg);
 }
 
 function error(msg) {
   console.log(`${RED}ERR${RESET} ${msg}`);
-  rootLogger.error(msg);
+  rootLogger.writeFileOnly('ERROR', msg);
 }
 
 function warn(msg) {
   console.log(`${YELLOW}!${RESET} ${msg}`);
-  rootLogger.warn(msg);
+  rootLogger.writeFileOnly('WARN', msg);
 }
 
 function info(msg) {
   if (!isQuiet()) console.log(`${CYAN}i${RESET} ${msg}`);
-  rootLogger.info(msg);
+  rootLogger.writeFileOnly('INFO', msg);
 }
 
 function title(msg) {
@@ -186,10 +186,6 @@ function printSummary(results) {
     console.log(`  ${GREEN}${BOLD}TUDO CERTO!${RESET}`);
     success(`${passed} de ${results.length} operacao(oes) concluida(s) com sucesso`);
     rootLogger.info(`Resumo: ${passed}/${results.length} ok`);
-    if (passed >= 5 && Math.random() < 0.33) {
-      const cheers = ['', ' > Tudo nos conformes!', '', ' > Show de bola!', ''];
-      console.log(`  ${GREEN}${cheers[Math.floor(Math.random() * cheers.length)]}${RESET}`);
-    }
   } else {
     const logPath = rootLogger.filePath;
     console.log(`  ${YELLOW}${BOLD}OPERACAO PARCIAL${RESET}`);
@@ -218,7 +214,7 @@ async function onError(context, err, options = {}) {
     const autoAction = process.env.ON_ERROR || 'abort';
     if (autoAction === 'skip') warn('Modo automatico: pulando...');
     else error('Modo automatico: abortando...');
-    return autoAction;
+    return /** @type {'abort' | 'skip' | 'retry'} */ (autoAction);
   }
 
   while (true) {
@@ -238,9 +234,9 @@ async function onError(context, err, options = {}) {
     if (answer === 'a') return 'abort';
     if (answer === 'd' && canDetails) {
       divider();
-      console.log(`  Status: ${err.response?.status || 'N/A'}`);
-      if (err.response?.data) {
-        console.log(`  Resposta: ${JSON.stringify(err.response.data, null, 2)}`);
+      console.log(`  Status: ${/** @type {any} */ (err).response?.status || 'N/A'}`);
+      if (/** @type {any} */ (err).response?.data) {
+        console.log(`  Resposta: ${JSON.stringify(/** @type {any} */ (err).response.data, null, 2)}`);
       }
       if (err.stack) {
         const lines = err.stack.split('\n').slice(0, 4);

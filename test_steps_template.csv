@@ -1,0 +1,65 @@
+# =============================================================================
+# MODELO CANÔNICO — Criação de Testes no Jira via CSV
+# Use este arquivo como base. Copie, edite e utilize com a opção 1 do menu.
+# =============================================================================
+# Regras:
+#   • Codificação: UTF-8 sem BOM
+#   • Separador: vírgula (,)
+#   • Aspas duplas para valores com vírgula: "texto, com vírgula"
+#   • Blocos separados por "---" em linha isolada
+#   • Title: é o ÚNICO campo obrigatório por bloco
+#   • Metadados ANTES do cabeçalho de steps (Action,Data,Expected Result)
+# =============================================================================
+
+# ── Bloco 1: Teste com todos os campos opcionais ─────────────────────────────
+Title: ECSPOL-TC01 - Login com credenciais validas
+Description: Verifica o fluxo feliz de login do administrador no sistema.
+Pre-condition: ECSPOL-PRE-42
+Linked Issues: ECSPOL-100 (is tested by), ECSPOL-200 (relates to)
+Group: LOGIN-FLOW
+Action,Data,Expected Result
+Acessar /login,https://app.example.com,Formulario de login exibido
+Preencher email,admin@test.com,Campo aceita o valor
+Preencher senha,******,Campo aceita o valor
+Clicar em Entrar,,Redirecionado para dashboard
+
+# ── Bloco 2: Pre-condition inline (texto livre, sem chave Jira) ──────────────
+Title: ECSPOL-TC02 - Login com senha incorreta
+Description: Testa a mensagem de erro ao usar senha invalida.
+Pre-condition: User must be logged out
+Group: LOGIN-FLOW
+Action,Data,Expected Result
+Acessar /login,https://app.example.com,Formulario de login exibido
+Digitar senha,senha_errada,Mensagem de erro "Credenciais invalidas" exibida
+
+# ── Bloco 3: Teste sem pre-condition nem linked issues ──────────────────────
+Title: ECSPOL-TC03 - Logout do sistema
+Description: Verifica se o logout encerra a sessao corretamente.
+Group: LOGIN-FLOW
+Action,Data,Expected Result
+Clicar no avatar,,Menu do usuario exibido
+Clicar em Sair,,Redirecionado para pagina de login
+
+# ── Bloco 4: Teste com step unico e Description multilinha ───────────────────
+Title: ECSPOL-TC04 - Health check da pagina inicial
+Description: Teste basico de fumaca.\nVerifica se a pagina carrega sem erros.
+Action,Data,Expected Result
+Acessar /,https://app.example.com,Status 200 e pagina carregada
+
+# ── Bloco 5: Teste sem steps (apenas validacao de metadados) ─────────────────
+Title: ECSPOL-TC05 - Validacao de template
+Description: Teste conceitual apenas para documentacao.
+Pre-condition: N/A
+Group: DOCUMENTATION
+Action,Data,Expected Result
+
+# ── Bloco 6: Pre-condition como chave Jira com descricao entre parenteses ───
+Title: ECSPOL-TC06 - Fluxo de recuperacao de senha
+Description: Testa o fluxo completo de "esqueci minha senha".
+Pre-condition: ECSPOL-PRE-100 (Usuario cadastrado e logado)
+Linked Issues: ECSPOL-300 (is tested by)
+Group: PASSWORD-FLOW
+Action,Data,Expected Result
+Acessar /login,https://app.example.com,Formulario de login exibido
+Clicar em "Esqueci minha senha",,Pagina de recuperacao exibida
+Preencher email,user@test.com,Mensagem de confirmacao enviada

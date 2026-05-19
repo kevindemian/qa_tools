@@ -1,13 +1,12 @@
 #!/bin/bash
 
-WIN_CONFIG="/mnt/c/Users/$USER/.wslconfig"
+unset http_proxy
+unset https_proxy
+unset ftp_proxy
+unset all_proxy
+unset HTTP_PROXY
+unset HTTPS_PROXY
+unset FTP_PROXY
+unset ALL_PROXY
 
-# Desabilitar autoProxy no Windows
-echo -e "[wsl2]\nautoProxy=false" > "$WIN_CONFIG"
-
-# Limpar variáveis no WSL
-unset http_proxy https_proxy ftp_proxy all_proxy
-unset HTTP_PROXY HTTPS_PROXY FTP_PROXY ALL_PROXY
-
-echo "autoProxy desabilitado no Windows e proxy limpo no WSL."
-echo "Execute: wsl --shutdown no Windows para aplicar."
+echo "Proxy desabilitado nesta sessão."

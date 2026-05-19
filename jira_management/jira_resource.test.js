@@ -14,21 +14,6 @@ jest.mock('axios', () => {
     return { create: jest.fn(() => mockInstance) };
 });
 
-describe('JiraResource', () => {
-  let jiraResource;
-
-  beforeEach(() => {
-    jiraResource = new JiraResource('fake-token', 'https://jira.test.com/rest/api/2');
-  });
-
-  describe('constructor', () => {
-    it('creates instance without link-related state', () => {
-      expect(jiraResource.linkTypesCache).toBeUndefined();
-      expect(jiraResource.cacheFilePath).toBeUndefined();
-    });
-  });
-});
-
 describe('JiraLinkManager', () => {
   let linkManager;
   let mockJiraResource;

@@ -82,11 +82,42 @@ class JiraLinkManager {
     }
   }
 
+  async _getPreconditionFieldId() {
+    if (this._preconditionFieldId) return this._preconditionFieldId;
+    try {
+      const fields = await this.jiraResource.getJiraResource('field');
+      if (Array.isArray(fields)) {
+        const match = fields.find(
+          f => f.schema?.custom === 'com.xpandit.plugins.xray:test-precondition-custom-field'
+        );
+        if (match) {
+          this._preconditionFieldId = match.id;
+          return match.id;
+        }
+      }
+    } catch {
+      rootLogger.warn('Nao foi possivel descobrir field ID para pre-condition, usando fallback 13708');
+    }
+    this._preconditionFieldId = 'customfield_13708';
+    return this._preconditionFieldId;
+  }
+
   /** @param {string} testKey @param {string} preconditionKey @returns {Promise<Object>} */
   async associatePrecondition(testKey, preconditionKey) {
-    const payload = { issueKey: preconditionKey };
+    const fieldId = await this._getPreconditionFieldId();
     info(`Associando pre-condition ${preconditionKey} ao teste ${testKey}...`);
-    return await this.jiraResource.postJiraResource(`test/${testKey}/precondition`, payload);
+    const testIssue = await this.jiraResource.getJiraResource(`issue/${testKey}`);
+    const current = (testIssue && testIssue.fields && testIssue.fields[fieldId]) || [];
+    if (!current.includes(preconditionKey)) {
+      current.push(preconditionKey);
+    }
+    const payload = {};
+    payload[fieldId] = current;
+    const result = await this.jiraResource.putJiraResource(`issue/${testKey}`, { fields: payload });
+    if (result === undefined) {
+      throw new Error(`Falha ao associar pre-condition ${preconditionKey} ao teste ${testKey}`);
+    }
+    return result;
   }
 }
 

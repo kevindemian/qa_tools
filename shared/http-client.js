@@ -25,15 +25,17 @@ function createHttpClient({ baseUrl, authHeader, timeout = 120000 }) {
       if (!cfg || cfg.__retryAttempts == null) {
         cfg.__retryAttempts = 0;
       }
+      const method = (cfg.method || 'get').toLowerCase();
+      const maxRetries = (method === 'get' || method === 'put') ? 5 : 0;
       const isRetryable = !error.response
         || error.response.status >= 500
         || error.response.status === 429
         || error.code === 'ECONNRESET'
         || error.code === 'ETIMEDOUT'
         || error.code === 'ECONNABORTED';
-      if (cfg.__retryAttempts < 3 && isRetryable) {
+      if (cfg.__retryAttempts < maxRetries && isRetryable) {
         cfg.__retryAttempts++;
-        const baseWait = Math.min(1000 * Math.pow(2, cfg.__retryAttempts - 1), 8000);
+        const baseWait = Math.min(2000 * Math.pow(2, cfg.__retryAttempts - 1), 30000);
         const jitter = Math.random() * 1000;
         await sleep(baseWait + jitter);
         return instance(cfg);
