@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 # QA Tools
 
 Ferramentas internas de automação QA para gerenciamento de releases no Jira/Xray, triggers de pipeline no GitLab e reporting Cypress.
@@ -358,3 +359,7 @@ node git_triggers/main.js
 # Opção 4 → criar MR com revisores
 # Opção 7 → nivelar branches main → rel_cand → dev
 ```
+=======
+# qa_tools
+Ferramenta de automação para QA
+>>>>>>> 0149eae0b3f358f6cdaec19860883c1e65dfc58e
