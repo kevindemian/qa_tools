@@ -26,40 +26,104 @@ describe('CsvResource', () => {
 
   describe('parsePrecondition', () => {
     it('detects reference type for Jira keys', () => {
-      const lines = ['Title: Test', 'Pre-condition: ECSPOL-PRE-42', 'Action,Data,Expected'];
-      expect(csvResource.parsePrecondition(lines)).toEqual({
+      expect(csvResource.parsePrecondition('ECSPOL-PRE-42')).toEqual({
         type: 'reference',
         value: 'ECSPOL-PRE-42'
       });
     });
 
     it('detects inline type for plain text', () => {
-      const lines = ['Title: Test', 'Pre-condition: User must be logged in', 'Action,Data,Expected'];
-      expect(csvResource.parsePrecondition(lines)).toEqual({
+      expect(csvResource.parsePrecondition('User must be logged in')).toEqual({
         type: 'inline',
         value: 'User must be logged in'
       });
     });
 
-    it('returns null when no Pre-condition header', () => {
-      const lines = ['Title: Test', 'Action,Data,Expected'];
-      expect(csvResource.parsePrecondition(lines)).toBeNull();
+    it('returns null for null/undefined/empty', () => {
+      expect(csvResource.parsePrecondition(null)).toBeNull();
+      expect(csvResource.parsePrecondition(undefined)).toBeNull();
+      expect(csvResource.parsePrecondition('')).toBeNull();
+      expect(csvResource.parsePrecondition('   ')).toBeNull();
     });
 
-    it('extracts key from Pre-condition: KEY-100 (descricao)', () => {
-      const lines = ['Title: Test', 'Pre-condition: ECSPOL-PRE-42 (descricao do pre-cond)', 'Action,Data,Expected'];
-      expect(csvResource.parsePrecondition(lines)).toEqual({
+    it('extracts key from KEY-100 (descricao)', () => {
+      expect(csvResource.parsePrecondition('ECSPOL-PRE-42 (descricao do pre-cond)')).toEqual({
         type: 'reference',
         value: 'ECSPOL-PRE-42'
       });
     });
 
-    it('extracts key from Pre-condition: KEY-100 (with extra parenthetical info)', () => {
-      const lines = ['Title: Test', 'Pre-condition: ABC-123 (some context here)', 'Action,Data,Expected'];
-      expect(csvResource.parsePrecondition(lines)).toEqual({
+    it('extracts key from KEY-100 (with extra parenthetical info)', () => {
+      expect(csvResource.parsePrecondition('ABC-123 (some context here)')).toEqual({
         type: 'reference',
         value: 'ABC-123'
       });
+    });
+
+    it('returns inline for multi-line text (already extracted)', () => {
+      expect(csvResource.parsePrecondition('User must be logged in\nwith admin privileges')).toEqual({
+        type: 'inline',
+        value: 'User must be logged in\nwith admin privileges'
+      });
+    });
+  });
+
+  describe('readBulkCsv with quoted Pre-condition', () => {
+    it('parses multi-line quoted Pre-condition', async () => {
+      const fs = require('fs');
+      const tmp = '/tmp/test-pre-quoted.csv';
+      fs.writeFileSync(tmp, [
+        'Title: TC - Pre quoted',
+        'Description: Test',
+        'Pre-condition: "User must be logged in',
+        'with admin privileges',
+        'and valid SSL cert"',
+        'Action,Data,Expected',
+        'x,y,z',
+      ].join('\n'), 'utf-8');
+      const results = await csvResource.readBulkCsv(tmp);
+      expect(results[0].precondition).toEqual({
+        type: 'inline',
+        value: 'User must be logged in\nwith admin privileges\nand valid SSL cert'
+      });
+      expect(results[0].steps.length).toBe(1);
+      fs.unlinkSync(tmp);
+    });
+
+    it('parses single-line quoted Pre-condition', async () => {
+      const fs = require('fs');
+      const tmp = '/tmp/test-pre-quoted-single.csv';
+      fs.writeFileSync(tmp, [
+        'Title: TC - Pre quoted single',
+        'Description: Test',
+        'Pre-condition: "User must be logged in"',
+        'Action,Data,Expected',
+        'x,y,z',
+      ].join('\n'), 'utf-8');
+      const results = await csvResource.readBulkCsv(tmp);
+      expect(results[0].precondition).toEqual({
+        type: 'inline',
+        value: 'User must be logged in'
+      });
+      fs.unlinkSync(tmp);
+    });
+
+    it('parses unquoted Pre-condition (range mode fallback)', async () => {
+      const fs = require('fs');
+      const tmp = '/tmp/test-pre-range.csv';
+      fs.writeFileSync(tmp, [
+        'Title: TC - Pre range',
+        'Description: Test',
+        'Pre-condition: User must be logged in',
+        'Action,Data,Expected',
+        'x,y,z',
+      ].join('\n'), 'utf-8');
+      const results = await csvResource.readBulkCsv(tmp);
+      expect(results[0].precondition).toEqual({
+        type: 'inline',
+        value: 'User must be logged in'
+      });
+      fs.unlinkSync(tmp);
     });
   });
 

@@ -12,6 +12,37 @@ npm run typecheck      # verifica tipos (opcional, 0 erros esperado)
 
 **Pré-requisitos:** Node.js 18+, npm 9+.
 
+## Quick Start
+
+```bash
+cp .env.example .env       # edite com seus tokens Jira/Xray
+npm install                # instala dependencias
+```
+
+Crie um arquivo `testes.csv`:
+```csv
+Title: TC01 - Login valido
+Description: "Verifica login com credenciais validas."
+Pre-condition: "User must be logged out"
+Action,Data,Expected Result
+Acessar /login,https://app.com,Formulario exibido
+Preencher email,admin@test.com,Campo aceita valor
+Clicar em Entrar,,Redirecionado para dashboard
+---
+Title: TC02 - Login invalido
+Description: "Testa mensagem de erro com senha incorreta."
+Pre-condition: "User must be logged out"
+Action,Data,Expected Result
+Acessar /login,https://app.com,Formulario exibido
+Digitar senha,senha_errada,Mensagem de erro exibida
+```
+
+Execute a importacao:
+```bash
+AUTO_CONFIRM=false node jira_management/main.js
+# Escolha opcao 1 e informe o caminho do CSV
+```
+
 Dependências instaladas:
 - `axios` — requisições HTTP para APIs REST
 - `csv-parser` — parsing de CSV de steps de teste
@@ -171,8 +202,8 @@ O arquivo é dividido em **blocos** separados por `---`. Cada bloco representa u
 
 ```
 Title: Nome do teste (OBRIGATÓRIO)
-Description: Descrição detalhada (opcional)
-Pre-condition: Texto livre ou chave Jira (opcional)
+Description: "Descrição detalhada (opcional — aspas duplas para multilinha)"
+Pre-condition: "Texto livre (opcional — aspas para multilinha)" ou KEY-123
 Linked Issues: KEY-100 (tipo), KEY-200 (tipo) (opcional)
 Group: NOME-DO-GRUPO (opcional)
 ---
@@ -192,22 +223,28 @@ Title: ECSPOL-TC42 - Verificar login com credenciais válidas
 - O prefixo do projeto (ex: `ECSPOL-`) é usado para detectar o projeto Jira automaticamente
 
 #### `Description:` **(opcional)**
+
+**Modo aspas (recomendado)** — use `"..."` para delimitar o texto. Multilinha aceito. `""` para aspas literais:
+```
+Description: "Este teste verifica o fluxo completo
+de login do administrador."
+```
+
+**Modo range (fallback)** — sem aspas, o texto se estende até o próximo metadado ou `Action,Data`:
 ```
 Description: Este teste verifica o fluxo completo de login
 ```
-- Texto livre
-- `\n` literal para múltiplas linhas
 
 #### `Pre-condition:` **(opcional)**
 
-**Modo referência** — se o valor for uma chave Jira (`/^[A-Z][A-Z0-9]+(?:-[A-Z0-9]+)*-\d+$/`):
+**Modo referência** — chave Jira (`/^[A-Z][A-Z0-9]+(?:-[A-Z0-9]+)*-\d+$/`):
 ```
 Pre-condition: ECSPOL-PRE-42
 ```
 
-**Modo inline** — se for texto livre:
+**Modo inline** — texto livre (quote mode recomendado para multilinha):
 ```
-Pre-condition: User must be logged in with admin privileges
+Pre-condition: "User must be logged in with admin privileges"
 ```
 O texto é concatenado à descrição do teste no Jira.
 
@@ -240,8 +277,8 @@ Action,Data,Expected Result
 
 ```
 Title: ECSPOL-TC01 - Login com credenciais válidas
-Description: Verifica fluxo feliz de login do administrador
-Pre-condition: User must be logged out
+Description: "Verifica fluxo feliz de login do administrador"
+Pre-condition: "User must be logged out"
 Linked Issues: ECSPOL-100 (is tested by)
 Group: LOGIN-FLOW
 ---

@@ -113,11 +113,7 @@ class JiraLinkManager {
     }
     const payload = {};
     payload[fieldId] = current;
-    const result = await this.jiraResource.putJiraResource(`issue/${testKey}`, { fields: payload });
-    if (result === undefined) {
-      throw new Error(`Falha ao associar pre-condition ${preconditionKey} ao teste ${testKey}`);
-    }
-    return result;
+    return await this.jiraResource.putJiraResource(`issue/${testKey}`, { fields: payload });
   }
 }
 

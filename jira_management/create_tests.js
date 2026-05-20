@@ -63,12 +63,12 @@ async function updateCrossReferences(jiraResource, tests, ids) {
                 .filter(m => m.id !== member.id)
                 .map(m => m.id)
                 .join(', ');
-            const refText = '\n\nEste caso de teste faz parte do conjunto ' + group.name + ': ' + others;
+            const refText = '\n\nThis test case is part of the set ' + group.name + ': ' + others;
 
             try {
                 const current = await jiraResource.getJiraResource('issue/' + member.id);
                 const currentDesc = current?.fields?.description || '';
-                if (currentDesc.includes('faz parte do conjunto')) {
+                if (currentDesc.includes('faz parte do conjunto') || currentDesc.includes('This test case is part of the set')) {
                     crossLog.info('  ' + member.id + ': ja atualizado, pulando');
                     continue;
                 }
@@ -85,6 +85,73 @@ async function updateCrossReferences(jiraResource, tests, ids) {
                 process.stdout.write('x');
             }
         }
+    }
+}
+
+async function _createIssue(jiraResource, testData, testTitle, testIdx, totalTests, opLog) {
+    try {
+        const issue = await jiraResource.postJiraResource('issue', testData);
+        if (!isQuiet()) success('Issue criada: ' + issue.key);
+        opLog.info('Issue criada', { key: issue.key });
+        return { key: issue.key };
+    } catch (err) {
+        const action = await onError(
+            '[' + (testIdx + 1) + '/' + totalTests + '] Criar issue "' + testTitle + '"',
+            err,
+            { retry: true, details: true }
+        );
+        return { action };
+    }
+}
+
+async function _associatePrecondition(linkManager, test, issueKey, opLog) {
+    try {
+        await linkManager.associatePrecondition(issueKey, test.precondition.value);
+        if (!isQuiet()) success('  Pre-condition ' + test.precondition.value + ' associada');
+        return null;
+    } catch (err) {
+        const action = await onError(
+            '  Pre-condition de "' + test.title + '"',
+            err,
+            { details: true }
+        );
+        return { action };
+    }
+}
+
+async function _postSteps(jiraResourceXray, issueKey, test, opLog) {
+    let abortSteps = false;
+    const stepBar = !isQuiet() ? new ProgressBar(test.steps.length, { width: 15 }) : null;
+    for (let i = 0; i < test.steps.length; i++) {
+        try {
+            await jiraResourceXray.postJiraResource('test/' + issueKey + '/steps', { index: i + 1, ...test.steps[i] });
+            if (stepBar) stepBar.update(i + 1);
+        } catch (err) {
+            const action = await onError(
+                '  Step ' + (i + 1) + ' de "' + test.title + '"',
+                err,
+                { details: true }
+            );
+            if (action === 'abort') { abortSteps = true; break; }
+        }
+    }
+    if (stepBar) stepBar.stop();
+    return abortSteps ? { action: 'abort' } : null;
+}
+
+async function _linkIssues(linkManager, issueKey, test) {
+    try {
+        await linkManager.linkIssues(issueKey, test.linkedIssues);
+        if (!isQuiet()) success('  ' + test.linkedIssues.length + ' linked issue(s) criados');
+        return null;
+    } catch (err) {
+        return {
+            action: await onError(
+                '  Linked issues de "' + test.title + '"',
+                err,
+                { details: true }
+            )
+        };
     }
 }
 
@@ -259,29 +326,18 @@ async function createTestsFromCsv({ jiraResource, jiraResourceXray, linkManager,
             testData.fields.labels = jiraLabels;
         }
 
-        let createdTestIssue;
-        try {
-            createdTestIssue = await jiraResource.postJiraResource('issue', testData);
-            if (!isQuiet()) success('Issue criada: ' + createdTestIssue.key);
-            testLog.info('Issue criada', { key: createdTestIssue.key });
-        } catch (err) {
-            const action = await onError(
-                '[' + (t + 1) + '/' + tests.length + '] Criar issue "' + testTitle + '"',
-                err,
-                { retry: true, details: true }
-            );
-            results.push({ status: 'error', label: testTitle, message: 'Falha na criacao da issue' });
-            if (action === 'abort') {
+        const issueResult = await _createIssue(jiraResource, testData, testTitle, t, tests.length, opLog);
+        if ('action' in issueResult) {
+            if (issueResult.action === 'abort') {
                 opLog.warn('Usuario abortou apos falha na criacao da issue');
+                results.push({ status: 'error', label: testTitle, message: 'Falha na criacao da issue' });
                 break outer;
             }
-            if (action === 'retry') {
-                results.pop();
-                t--;
-                continue;
-            }
+            if (issueResult.action === 'retry') { t--; continue; }
+            results.push({ status: 'error', label: testTitle, message: 'Falha na criacao da issue' });
             continue;
         }
+        const createdTestIssue = { key: issueResult.key };
 
         inMemoryTasksId.push(createdTestIssue.key);
 
@@ -298,82 +354,34 @@ async function createTestsFromCsv({ jiraResource, jiraResourceXray, linkManager,
         });
 
         const testReport = { status: 'ok', label: testTitle, message: '' };
-        const testErrors = [];
 
         if (test.precondition && test.precondition.type === 'reference') {
-            try {
-                await linkManager.associatePrecondition(createdTestIssue.key, test.precondition.value);
-                if (!isQuiet()) success('  Pre-condition ' + test.precondition.value + ' associada');
-            } catch (err) {
-                testErrors.push('Falha ao associar pre-condition');
-                const action = await onError(
-                    '  Pre-condition de "' + testTitle + '"',
-                    err,
-                    { details: true }
-                );
-                if (action === 'abort') {
-                    opLog.warn('Usuario abortou apos falha na pre-condition');
-                    testReport.status = 'error';
-                    testReport.message = testErrors.join('; ');
+            const precResult = await _associatePrecondition(linkManager, test, createdTestIssue.key, opLog);
+            if (precResult) {
+                testReport.status = 'error';
+                if (precResult.action === 'abort') {
+                    testReport.message = 'Falha ao associar pre-condition';
                     results.push(testReport);
                     break outer;
                 }
             }
         }
 
-        let abortSteps = false;
-        const stepBar = !isQuiet() ? new ProgressBar(validSteps.length, { width: 15 }) : null;
-        for (let i = 0; i < validSteps.length; i++) {
-            const step = validSteps[i];
-            try {
-                await jiraResourceXray.postJiraResource('test/' + createdTestIssue.key + '/steps', { index: i + 1, ...step });
-                if (stepBar) stepBar.update(i + 1);
-            } catch (err) {
-                testErrors.push('Falha no step ' + (i + 1) + ': ' + step.fields.Action);
-                const action = await onError(
-                    '  Step ' + (i + 1) + ' de "' + testTitle + '"',
-                    err,
-                    { details: true }
-                );
-                if (action === 'abort') {
-                    abortSteps = true;
-                    break;
-                }
-            }
-        }
-        if (stepBar) stepBar.stop();
-        if (abortSteps) {
-            opLog.warn('Usuario abortou apos falha no step');
+        const stepsResult = await _postSteps(jiraResourceXray, createdTestIssue.key, test, opLog);
+        if (stepsResult && stepsResult.action === 'abort') {
             testReport.status = 'error';
-            testReport.message = testErrors.join('; ');
+            testReport.message = 'Falha ao criar steps';
             results.push(testReport);
             break outer;
         }
 
-        if (testErrors.length > 0) {
-            warn('Issue ' + createdTestIssue.key + ' criada com ' + testErrors.length + ' erro(s)');
-            testErrors.forEach(e => warn('  ' + e));
-            testReport.status = 'error';
-            testReport.message = testErrors.length + ' step(s) falharam';
-        }
-
         if (test.linkedIssues && test.linkedIssues.length > 0) {
-            try {
-                await linkManager.linkIssues(createdTestIssue.key, test.linkedIssues);
-                if (!isQuiet()) success('  ' + test.linkedIssues.length + ' linked issue(s) criados');
-            } catch (err) {
-                testErrors.push('Falha ao criar linked issues');
-                const action = await onError(
-                    '  Linked issues de "' + testTitle + '"',
-                    err,
-                    { details: true }
-                );
-                if (action === 'abort') {
-                    testReport.status = 'error';
-                    testReport.message = testErrors.join('; ');
-                    results.push(testReport);
-                    break outer;
-                }
+            const linkResult = await _linkIssues(linkManager, createdTestIssue.key, test);
+            if (linkResult && linkResult.action === 'abort') {
+                testReport.status = 'error';
+                testReport.message = 'Falha ao criar linked issues';
+                results.push(testReport);
+                break outer;
             }
         }
 

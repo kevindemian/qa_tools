@@ -7,17 +7,11 @@ class PackageVersionManager {
     /** @param {string} projectDir */
     constructor(projectDir) {
         this.packagePath = path.join(projectDir, 'package.json');
-        this.packageLockPath = path.join(projectDir, 'package-lock.json');
         this.releaseNotesPath = path.join(projectDir, 'release_notes', 'ReleaseNotes.txt');
     }
 
     updateVersion(newVersion) {
         this._updateJsonFile(this.packagePath, newVersion);
-        this._updateJsonFile(this.packageLockPath, newVersion, (json) => {
-            if (json.packages && json.packages['']) {
-                json.packages[''].version = newVersion;
-            }
-        });
     }
 
     _updateJsonFile(filePath, newVersion, extraUpdate) {
