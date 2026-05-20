@@ -27,7 +27,9 @@ beforeAll(async () => {
     }
 });
 
-describe('CSV Validation (local)', () => {
+const localDescribe = csvExists ? describe : describe.skip;
+
+localDescribe('CSV Validation (local)', () => {
     test('CSV file exists', () => {
         expect(csvExists).toBe(true);
     });

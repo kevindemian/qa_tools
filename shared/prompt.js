@@ -62,7 +62,6 @@ function smartPrompt(label, options = {}, helpCallback) {
     const trimmed = value.trim().toLowerCase();
     if (trimmed === '/help' || trimmed === '/h') {
       if (helpCallback) helpCallback();
-      retries++;
       continue;
     }
     return value;

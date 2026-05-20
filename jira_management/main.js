@@ -166,9 +166,9 @@ function displayMenu(proj, gitDir) {
     divider();
     console.log('  TESTES');
     console.log('   1  Criar testes a partir de CSV');
-    console.log('   2  Listar versoes de release');
     console.log('');
     console.log('  RELEASES');
+    console.log('   2  Listar versoes de release');
     console.log('   3  Criar nova versao');
     console.log('   4  Atribuir fixVersion as tarefas');
     console.log('   5  Atualizar package.json + release notes');
@@ -209,30 +209,12 @@ async function handleSpecialInput(input) {
 
 
 function generateCsvTemplate(filePath) {
-    const content = 'Title: [QA] Login - credenciais validas\n' +
-        'Description: Verifica o fluxo de login com usuario e senha corretos\n' +
-        'Pre-condition: Usuario cadastrado no sistema\n' +
-        'Group: LOGIN-FLOW\n' +
-        'Linked Issues: KEY-123 (relates to)\n' +
-        '---\n' +
-        'Action,Data,Expected Result\n' +
-        'Acessar pagina de login,,Pagina de login exibida corretamente\n' +
-        'Preencher usuario,usuario_teste@email.com,Campo preenchido\n' +
-        'Preencher senha,senha123,Campo preenchido (oculto)\n' +
-        'Clicar em "Entrar",,Redirecionado para o dashboard\n' +
-        '---\n' +
-        'Title: [QA] Login - campo vazio\n' +
-        'Description: Verifica a validacao de campo obrigatorio\n' +
-        'Group: LOGIN-FLOW\n' +
-        '---\n' +
-        'Action,Data,Expected Result\n' +
-        'Acessar pagina de login,,Pagina de login exibida\n' +
-        'Deixar usuario em branco,,"Mensagem: ""Campo obrigatorio"""\n' +
-        'Clicar em "Entrar",,Mensagem de erro exibida\n';
+    const src = path.join(__dirname, 'test_steps_template.csv');
     try {
-        fs.writeFileSync(filePath, content, 'utf8');
+        fs.copyFileSync(src, filePath);
         return true;
     } catch (err) {
+        error('Nao foi possivel copiar template de "' + src + '": ' + err.message);
         return false;
     }
 }
@@ -462,7 +444,7 @@ async function main() {
                     continue;
                 }
                 const taskIds = tasks
-                    .map(task => task.match(/\[(.*?)\]/)?.[1])
+                    .map(task => task.match(/\[([A-Z][A-Z0-9]+-\d+)\]/)?.[1])
                     .filter(id => id !== undefined);
                 if (taskIds.length === 0) {
                     warn('Nenhuma tarefa encontrada.');

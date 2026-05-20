@@ -28,11 +28,14 @@ class JiraResource {
     }
 
     async searchJiraIssues(jql, maxResults = 200) {
+        const MAX_PAGES = 1000;
         let allIssues = [];
         let startAt = 0;
         let total = null;
+        let pages = 0;
 
-        while (total === null || startAt < total) {
+        while ((total === null || startAt < total) && pages < MAX_PAGES) {
+            pages++;
             const url = `search?jql=${encodeURIComponent(jql)}&maxResults=${maxResults}&startAt=${startAt}`;
             const data = await this.getJiraResource(url);
 
@@ -107,6 +110,7 @@ class JiraResource {
                 resourceUrl,
                 status: err.response?.status
             });
+            throw err;
         }
     }
 
@@ -275,9 +279,18 @@ class JiraResource {
         success(`Versao '${versionName}' publicada.`);
     }
 
+    /** @type {Object.<string, string[]>} */
+    workflowMap = {
+        'new': ['approve', 'use test case'],
+        'coding in progress': ['coding done', 'done'],
+        'coding done': ['done'],
+        'approve': ['use test case'],
+    };
+
     /** @param {string[]} taskIds */
     async moveCardsToDone(taskIds) {
         let transitionsMap = {};
+        const wf = this.workflowMap;
 
         for (const taskId of taskIds) {
             const issueData = await this.getJiraResource(`issue/${taskId}`);
@@ -299,59 +312,19 @@ class JiraResource {
 
             const statusLower = currentStatus.toLowerCase();
             try {
-                switch (statusLower) {
-                    case 'coding in progress': {
-                        const toCodingDone = transitionsMap['coding done'];
-                        const toDone = transitionsMap['done'];
-                        if (!toCodingDone || !toDone) {
-                            warn(`Transicao nao encontrada para ${taskId} (Coding In Progress -> Done). Verifique o workflow.`);
-                            break;
+                const targets = wf[statusLower];
+                if (!targets) {
+                    warn(`   ${taskId}: status "${currentStatus}" nao mapeado para fechamento automatico.`);
+                } else {
+                    for (const target of targets) {
+                        const transitionId = transitionsMap[target];
+                        if (!transitionId) {
+                            warn(`Transicao "${target}" nao encontrada para ${taskId}. Verifique workflowMap.`);
+                            continue;
                         }
-                        this.log.info(`   ${taskId}: Coding In Progress -> Coding Done`);
-                        await this.transitionIssue(taskId, toCodingDone);
-                        this.log.info(`   ${taskId}: Coding Done -> Done`);
-                        await this.transitionIssue(taskId, toDone);
-                        break;
+                        this.log.info(`   ${taskId}: -> ${target}`);
+                        await this.transitionIssue(taskId, transitionId);
                     }
-
-                    case 'coding done': {
-                        const toDone = transitionsMap['done'];
-                        if (!toDone) {
-                            warn(`Transicao nao encontrada para ${taskId} (Coding Done -> Done).`);
-                            break;
-                        }
-                        this.log.info(`   ${taskId}: Coding Done -> Done`);
-                        await this.transitionIssue(taskId, toDone);
-                        break;
-                    }
-
-                    case 'new': {
-                        const toApprove = transitionsMap['approve'];
-                        const toUseTestCase = transitionsMap['use test case'];
-                        if (!toApprove || !toUseTestCase) {
-                            warn(`Transicao nao encontrada para ${taskId} (New -> Use Test Case). Verifique os nomes das transicoes.`);
-                            break;
-                        }
-                        this.log.info(`   ${taskId}: New -> Approve`);
-                        await this.transitionIssue(taskId, toApprove);
-                        this.log.info(`   ${taskId}: Approve -> Use test case`);
-                        await this.transitionIssue(taskId, toUseTestCase);
-                        break;
-                    }
-
-                    case 'approve': {
-                        const toUseTestCase = transitionsMap['use test case'];
-                        if (!toUseTestCase) {
-                            warn(`Transicao nao encontrada para ${taskId} (Approve -> Use Test Case).`);
-                            break;
-                        }
-                        this.log.info(`   ${taskId}: Approve -> Use test case`);
-                        await this.transitionIssue(taskId, toUseTestCase);
-                        break;
-                    }
-
-                    default:
-                        warn(`   ${taskId}: status "${currentStatus}" nao mapeado para fechamento automatico.`);
                 }
             } catch (err) {
                 this.log.error(`Erro ao mover ${taskId}: ${extractErrorMessage(err)}`, {

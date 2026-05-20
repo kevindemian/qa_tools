@@ -3,6 +3,7 @@ const fs = require('fs');
 const path = require('path');
 const os = require('os');
 const { rootLogger } = require('./logger');
+const { warn } = require('./prompt');
 
 const STATE_PATH = path.join(os.homedir(), '.qa_tools_state.json');
 const TMP_PATH = STATE_PATH + '.tmp';
@@ -43,6 +44,7 @@ function save(state) {
     fs.writeFileSync(TMP_PATH, JSON.stringify(state, null, 2), 'utf8');
     fs.renameSync(TMP_PATH, STATE_PATH);
   } catch (err) {
+    warn('Falha ao salvar estado. Alteracoes podem ser perdidas.');
     rootLogger.error('Falha ao salvar estado: ' + err.message);
   }
 }
