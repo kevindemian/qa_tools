@@ -5,7 +5,7 @@ jest.mock('../shared/http-client', () => ({
 }));
 
 jest.mock('../shared/logger', () => ({
-    rootLogger: { info: jest.fn(), error: jest.fn(), warn: jest.fn() }
+    rootLogger: { info: jest.fn(), error: jest.fn(), warn: jest.fn(), writeFileOnly: jest.fn() }
 }));
 
 const CypressResource = require('./cypress_resource');
