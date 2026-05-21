@@ -160,7 +160,7 @@ function delay(ms) {
     return new Promise(resolve => setTimeout(resolve, ms));
 }
 
-function generateMappingFiles(csvPath, project_name, tasksId, tasksText) {
+function generateMappingFiles(csvPath, project_name, tasksId, tests) {
     const cypressDir = process.env.CYPRESS_PROJECT_PATH || loadState().lastCypressPath;
     if (!cypressDir || !tasksId.length) return;
 
@@ -176,10 +176,24 @@ function generateMappingFiles(csvPath, project_name, tasksId, tasksText) {
         return;
     }
 
-    const mappings = tasksId.map((key, i) => ({
-        title: tasksText[i] || '',
-        key
-    }));
+    const createdTests = tests.slice(0, tasksId.length);
+    const mappings = tasksId.map((key, i) => {
+        const test = createdTests[i] || {};
+        /** @type {{title:string, key:string, description?:string, precondition?:string, steps?:Array<{Action:string, Data:string, ExpectedResult:string}>}} */
+        const m = { title: test.title || '', key };
+        if (test.description) m.description = test.description;
+        if (test.precondition && test.precondition.value) {
+            m.precondition = test.precondition.value;
+        }
+        if (test.steps && test.steps.length > 0) {
+            m.steps = test.steps.map(s => ({
+                Action: s.fields?.Action || '',
+                Data: s.fields?.Data || '',
+                ExpectedResult: s.fields?.ExpectedResult || '',
+            }));
+        }
+        return m;
+    });
 
     const jsonPath = path.join(outDir, csvName + '-jira-mapping.json');
     const jsonContent = JSON.stringify({
@@ -191,11 +205,23 @@ function generateMappingFiles(csvPath, project_name, tasksId, tasksText) {
     fs.writeFileSync(jsonPath, jsonContent, 'utf8');
 
     const mdPath = path.join(outDir, csvName + '-jira-mapping.md');
-    const mdContent = '# Mapeamento Jira: ' + csvName + '.csv\n' +
-        '*Gerado em ' + new Date().toLocaleString('pt-BR') + '*\n\n' +
-        '| Status | Chave | Titulo |\n' +
-        '|--------|-------|--------|\n' +
-        mappings.map(m => '| | ' + m.key + ' | ' + m.title + ' |').join('\n') + '\n';
+    let mdContent = '# Mapeamento Jira: ' + csvName + '.csv\n' +
+        '*Gerado em ' + new Date().toLocaleString('pt-BR') + '*\n\n';
+
+    for (const m of mappings) {
+        mdContent += '## ' + m.key + ' — ' + m.title + '\n\n';
+        if (m.description) mdContent += '**Descrição:** ' + m.description + '\n\n';
+        if (m.precondition) mdContent += '**Pre-condition:** ' + m.precondition + '\n\n';
+        if (m.steps && m.steps.length > 0) {
+            mdContent += '| # | Action | Data | Expected Result |\n';
+            mdContent += '|---|--------|------|-----------------|\n';
+            m.steps.forEach((s, i) => {
+                mdContent += '| ' + (i + 1) + ' | ' + s.Action + ' | ' + s.Data + ' | ' + s.ExpectedResult + ' |\n';
+            });
+        }
+        mdContent += '\n---\n\n';
+    }
+
     fs.writeFileSync(mdPath, mdContent, 'utf8');
 
     if (!isQuiet()) {
@@ -561,7 +587,7 @@ async function createTestsFromCsv({ jiraResource, jiraResourceXray, linkManager,
         await updateCrossReferences(jiraResource, tests, inMemoryTasksId);
     }
 
-    generateMappingFiles(csvPath, project_name, inMemoryTasksId, inMemoryTasksText);
+    generateMappingFiles(csvPath, project_name, inMemoryTasksId, tests);
 
     printSummary(/** @type {import('../shared/types').TestResult[]} */ (results));
     const okCount = results.filter(r => r.status === 'ok').length;

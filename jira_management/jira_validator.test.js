@@ -6,6 +6,11 @@ const JiraResource = require('./jira_resource');
 
 dotenv.config({ path: path.resolve(__dirname, '../.env') });
 
+const hadRealJira = !!(process.env.JIRA_BASE_URL && process.env.JIRA_PERSONAL_TOKEN);
+
+if (!process.env.JIRA_BASE_URL) process.env.JIRA_BASE_URL = 'http://ci-mock-jira';
+if (!process.env.JIRA_PERSONAL_TOKEN) process.env.JIRA_PERSONAL_TOKEN = 'ci-token';
+
 const JIRA_BASE_URL = process.env.JIRA_BASE_URL;
 const JIRA_TOKEN = process.env.JIRA_PERSONAL_TOKEN;
 const csvPath = process.env.CSV_DEFAULT_PATH || path.join(__dirname, 'test_steps.csv');
@@ -91,6 +96,7 @@ localDescribe('CSV Validation (local)', () => {
     });
 });
 
+const isMockMode = !hadRealJira;
 const jiraSuite = hasJiraConfig ? describe : describe.skip;
 
 jiraSuite('CSV Validation against Jira', () => {
@@ -101,6 +107,23 @@ jiraSuite('CSV Validation against Jira', () => {
     let validationErrors = [];
 
     beforeAll(async () => {
+        if (isMockMode) {
+            const nock = require('nock');
+            nock.disableNetConnect();
+            nock(JIRA_BASE_URL + '/rest/api/2')
+                .get('/project/ECSPOL')
+                .reply(200, {
+                    id: '12345',
+                    issueTypes: [{ id: '11800', name: 'Test' }]
+                })
+                .get(/\/issue\/.*/)
+                .reply(200, (uri) => ({
+                    key: uri.split('/')[2],
+                    id: '99999',
+                    fields: { summary: 'Mocked ' + uri.split('/')[2] }
+                }));
+        }
+
         jiraResource = new JiraResource(JIRA_TOKEN, JIRA_BASE_URL + '/rest/api/2');
 
         const projectFromTitle = tests.length > 0
@@ -117,6 +140,18 @@ jiraSuite('CSV Validation against Jira', () => {
         } catch (e) {
             projectId = null;
             issueTypes = null;
+        }
+    });
+
+    afterAll(() => {
+        if (isMockMode) {
+            try {
+                const nock = require('nock');
+                nock.cleanAll();
+                nock.enableNetConnect();
+            } catch (e) {
+                // ignore
+            }
         }
     });
 

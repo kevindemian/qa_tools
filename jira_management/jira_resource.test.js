@@ -21,7 +21,8 @@ describe('JiraLinkManager', () => {
   beforeEach(() => {
     mockJiraResource = {
       getJiraResource: jest.fn(),
-      postJiraResource: jest.fn()
+      postJiraResource: jest.fn(),
+      putJiraResource: jest.fn(),
     };
     linkManager = new JiraLinkManager(mockJiraResource);
     linkManager.linkTypesCache = null;
@@ -85,6 +86,113 @@ describe('JiraLinkManager', () => {
 
       const id = await linkManager.resolveLinkTypeId('nonexistent');
       expect(id).toBe('11701');
+    });
+  });
+
+  describe('createIssueLink', () => {
+    it('posts correct issueLink payload', async () => {
+      jest.spyOn(linkManager, 'resolveLinkTypeId').mockResolvedValue('10201');
+      mockJiraResource.postJiraResource.mockResolvedValue({});
+
+      await linkManager.createIssueLink('TEST-1', 'TEST-2', 'Tests');
+
+      expect(mockJiraResource.postJiraResource).toHaveBeenCalledWith('issueLink', {
+        type: { id: '10201' },
+        inwardIssue: { key: 'TEST-2' },
+        outwardIssue: { key: 'TEST-1' }
+      });
+    });
+
+    it('throws when post fails', async () => {
+      jest.spyOn(linkManager, 'resolveLinkTypeId').mockResolvedValue('10201');
+      mockJiraResource.postJiraResource.mockRejectedValue(new Error('API error'));
+
+      await expect(linkManager.createIssueLink('TEST-1', 'TEST-2', 'Tests'))
+        .rejects.toThrow('API error');
+    });
+  });
+
+  describe('linkIssues', () => {
+    it('links all provided issues', async () => {
+      jest.spyOn(linkManager, 'resolveLinkTypeId').mockResolvedValue('10201');
+      mockJiraResource.postJiraResource.mockResolvedValue({});
+
+      await linkManager.linkIssues('TEST-1', [
+        { key: 'TEST-2', linkType: 'Tests' },
+        { key: 'TEST-3', linkType: 'Tests' },
+      ]);
+
+      expect(mockJiraResource.postJiraResource).toHaveBeenCalledTimes(2);
+      expect(mockJiraResource.postJiraResource).toHaveBeenCalledWith('issueLink', {
+        type: { id: '10201' },
+        inwardIssue: { key: 'TEST-1' },
+        outwardIssue: { key: 'TEST-2' }
+      });
+    });
+
+    it('does nothing for empty array', async () => {
+      await linkManager.linkIssues('TEST-1', []);
+      expect(mockJiraResource.postJiraResource).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('_getPreconditionFieldId', () => {
+    it('discovers field from API', async () => {
+      mockJiraResource.getJiraResource.mockResolvedValue([
+        { id: 'customfield_13715', name: 'testexec-tests', schema: { custom: 'com.xpandit.plugins.xray:testexec-tests-custom-field' } },
+        { id: 'customfield_13708', name: 'test-precondition', schema: { custom: 'com.xpandit.plugins.xray:test-precondition-custom-field' } },
+      ]);
+
+      const id = await linkManager._getPreconditionFieldId();
+      expect(id).toBe('customfield_13708');
+    });
+
+    it('caches result after first call', async () => {
+      mockJiraResource.getJiraResource.mockResolvedValue([
+        { id: 'customfield_13708', name: 'test-precondition', schema: { custom: 'com.xpandit.plugins.xray:test-precondition-custom-field' } },
+      ]);
+
+      await linkManager._getPreconditionFieldId();
+      await linkManager._getPreconditionFieldId();
+
+      expect(mockJiraResource.getJiraResource).toHaveBeenCalledTimes(1);
+    });
+
+    it('falls back to customfield_13708 when API fails', async () => {
+      mockJiraResource.getJiraResource.mockRejectedValue(new Error('API error'));
+
+      const id = await linkManager._getPreconditionFieldId();
+      expect(id).toBe('customfield_13708');
+    });
+  });
+
+  describe('associatePrecondition', () => {
+    it('appends key to existing array', async () => {
+      jest.spyOn(linkManager, '_getPreconditionFieldId').mockResolvedValue('customfield_13708');
+      mockJiraResource.getJiraResource.mockResolvedValue({
+        fields: { customfield_13708: ['PRE-1'] }
+      });
+      mockJiraResource.putJiraResource.mockResolvedValue({});
+
+      await linkManager.associatePrecondition('TEST-1', 'PRE-2');
+
+      expect(mockJiraResource.putJiraResource).toHaveBeenCalledWith('issue/TEST-1', {
+        fields: { customfield_13708: ['PRE-1', 'PRE-2'] }
+      });
+    });
+
+    it('creates array when field is empty', async () => {
+      jest.spyOn(linkManager, '_getPreconditionFieldId').mockResolvedValue('customfield_13708');
+      mockJiraResource.getJiraResource.mockResolvedValue({
+        fields: { customfield_13708: [] }
+      });
+      mockJiraResource.putJiraResource.mockResolvedValue({});
+
+      await linkManager.associatePrecondition('TEST-1', 'PRE-1');
+
+      expect(mockJiraResource.putJiraResource).toHaveBeenCalledWith('issue/TEST-1', {
+        fields: { customfield_13708: ['PRE-1'] }
+      });
     });
   });
 });

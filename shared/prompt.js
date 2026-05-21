@@ -347,6 +347,6 @@ function tableView(data, columns) {
 module.exports = {
   success, error, warn, info, title, divider,
   prompt, confirm, printError, printSummary, smartPrompt, extractErrorMessage,
-  onError, Spinner, ProgressBar, isQuiet,
+  humanizeError, onError, Spinner, ProgressBar, isQuiet,
   showSelect, tableView
 };

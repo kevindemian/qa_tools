@@ -1,6 +1,6 @@
 const JiraResource = require('./jira_resource');
 const JiraLinkManager = require('./jira_link_manager');
-const { createTestExecution, createTestExecutionWithLinks } = require('./create_tests');
+const { createTestExecution, createTestExecutionWithLinks, generateMappingFiles } = require('./create_tests');
 
 jest.mock('axios', () => {
     const mockInstance = {
@@ -236,5 +236,102 @@ describe('createTestExecutionWithLinks', () => {
         );
 
         expect(result.key).toBe('EXEC-1');
+    });
+});
+
+describe('generateMappingFiles', () => {
+    const tmpDir = '/tmp/qa-tools-test-mapping-' + Date.now();
+    const csvPath = '/tmp/test-csv.csv';
+    let testIdx = 0;
+    const nextBase = () => '/tmp/test-csv-' + (++testIdx);
+
+    beforeAll(() => {
+        require('fs').writeFileSync(csvPath, 'Title: X\nAction,Data,Expected\nx,y,z\n', 'utf8');
+        process.env.CYPRESS_PROJECT_PATH = tmpDir;
+    });
+
+    afterAll(() => {
+        delete process.env.CYPRESS_PROJECT_PATH;
+        try { require('fs').rmSync(tmpDir, { recursive: true, force: true }); } catch (e) { /* ignore */ }
+        try { require('fs').unlinkSync(csvPath); } catch (e) { /* ignore */ }
+    });
+
+    function makeSteps(...actions) {
+        return actions.map(a => ({ fields: { Action: a, Data: '', ExpectedResult: '' } }));
+    }
+
+    it('creates JSON and MD mapping files', () => {
+        const fs = require('fs');
+        const base = nextBase();
+        const testCases = [
+            { title: 'TC1', description: 'Descricao do TC1', steps: makeSteps('a1', 'a2') },
+            { title: 'TC2' },
+        ];
+        generateMappingFiles(base + '.csv', 'PROJ', ['TEST-1', 'TEST-2'], testCases);
+
+        const jsonPath = tmpDir + '/test-csv-' + testIdx + '-jira-mapping.json';
+        const mdPath = tmpDir + '/test-csv-' + testIdx + '-jira-mapping.md';
+
+        expect(fs.existsSync(jsonPath)).toBe(true);
+        expect(fs.existsSync(mdPath)).toBe(true);
+
+        const json = JSON.parse(fs.readFileSync(jsonPath, 'utf8'));
+        expect(json.project).toBe('PROJ');
+        expect(json.tests).toHaveLength(2);
+        expect(json.tests[0].title).toBe('TC1');
+        expect(json.tests[0].key).toBe('TEST-1');
+        expect(json.tests[0].description).toBe('Descricao do TC1');
+        expect(json.tests[0].steps).toHaveLength(2);
+    });
+
+    it('returns early when no cypress dir configured', () => {
+        delete process.env.CYPRESS_PROJECT_PATH;
+        expect(() => generateMappingFiles(nextBase() + '.csv', 'PROJ', ['TEST-1'], [{}])).not.toThrow();
+        process.env.CYPRESS_PROJECT_PATH = tmpDir;
+    });
+
+    it('returns early when tasksId is empty', () => {
+        const capture = jest.fn();
+        jest.spyOn(console, 'log').mockImplementation(capture);
+        generateMappingFiles(nextBase() + '.csv', 'PROJ', [], []);
+        expect(capture).not.toHaveBeenCalled();
+        jest.restoreAllMocks();
+    });
+
+    it('includes steps and precondition in JSON mapping', () => {
+        const fs = require('fs');
+        const base = nextBase();
+        const testCases = [
+            {
+                title: 'TC3',
+                description: 'Desc',
+                precondition: { type: 'inline', value: 'User must be logged in' },
+                steps: makeSteps('Click login')
+            },
+        ];
+        generateMappingFiles(base + '.csv', 'PROJ', ['TEST-3'], testCases);
+        const json = JSON.parse(fs.readFileSync(tmpDir + '/test-csv-' + testIdx + '-jira-mapping.json', 'utf8'));
+        expect(json.tests[0].precondition).toBe('User must be logged in');
+        expect(json.tests[0].steps).toHaveLength(1);
+        expect(json.tests[0].steps[0].Action).toBe('Click login');
+    });
+
+    it('generates MD with full table for each test', () => {
+        const fs = require('fs');
+        const base = nextBase();
+        const testCases = [
+            { title: 'TC1', description: 'Descricao do TC1', steps: makeSteps('a1') },
+            { title: 'TC2' },
+        ];
+        generateMappingFiles(base + '.csv', 'PROJ', ['TEST-1', 'TEST-2'], testCases);
+        const md = fs.readFileSync(tmpDir + '/test-csv-' + testIdx + '-jira-mapping.md', 'utf8');
+        const mdLines = md.split('\n');
+        expect(md).toContain('## TEST-1 — TC1');
+        expect(md).toContain('**Descrição:** Descricao do TC1');
+        expect(md).toContain('| 1 | a1 |  |  |');
+        expect(md).toContain('## TEST-2 — TC2');
+        const tc2Section = mdLines.indexOf('## TEST-2 — TC2');
+        const tc2Block = md.slice(md.indexOf('## TEST-2 — TC2'), md.indexOf('\n---\n\n', tc2Section));
+        expect(tc2Block).not.toContain('**Descrição:**');
     });
 });

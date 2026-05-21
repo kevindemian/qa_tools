@@ -173,6 +173,61 @@ class GitLabManager {
         }
     }
 
+    /** @param {string|number} pipelineId @returns {Promise<Array<{id:string|number, name:string, stage:string, status:string}>>} */
+    async getPipelineJobs(pipelineId) {
+        try {
+            const response = await this.client.get('/pipelines/' + pipelineId + '/jobs');
+            return (response.data || []).map((/** @type {any} */ j) => ({
+                id: j.id,
+                name: j.name,
+                stage: j.stage,
+                status: j.status,
+            }));
+        } catch (err) {
+            this.log.error('Erro ao listar jobs: ' + (err.response?.data?.message || err.message), {
+                pipelineId,
+                status: err.response?.status
+            });
+            return [];
+        }
+    }
+
+    /** @param {string|number} pipelineId @returns {Promise<Array<{id:string|number, name:string}>>} */
+    async listPipelineArtifacts(pipelineId) {
+        try {
+            const response = await this.client.get('/pipelines/' + pipelineId + '/jobs');
+            const jobs = response.data || [];
+            return jobs
+                .filter((/** @type {any} */ j) => j.artifacts_file || (j.artifacts && j.artifacts.length > 0))
+                .map((/** @type {any} */ j) => ({ id: j.id, name: j.name }));
+        } catch (err) {
+            this.log.error('Erro ao listar artifacts: ' + (err.response?.data?.message || err.message), {
+                pipelineId,
+                status: err.response?.status
+            });
+            return [];
+        }
+    }
+
+    /** @param {string|number} jobId @returns {Promise<{buffer: Buffer, filename: string}>} */
+    async downloadArtifact(jobId) {
+        try {
+            const response = await this.client.get('/jobs/' + jobId + '/artifacts', {
+                responseType: 'arraybuffer',
+            });
+            const disposition = response.headers['content-disposition'] || '';
+            const match = disposition.match(/filename="?(.+?)"?$/);
+            const filename = match ? match[1] : 'artifacts.zip';
+            return { buffer: Buffer.from(response.data), filename };
+        } catch (err) {
+            this.log.error('Erro ao baixar artifact: ' + (err.response?.data?.message || err.message), {
+                jobId,
+                status: err.response?.status
+            });
+            throw err;
+        }
+    }
+
     async getCICDVariables() {
         try {
             const response = await this.client.get('/variables', {

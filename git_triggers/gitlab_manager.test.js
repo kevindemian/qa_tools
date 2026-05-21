@@ -245,6 +245,80 @@ describe('GitLabManager', () => {
         });
     });
 
+    describe('getPipelineJobs', () => {
+        it('returns formatted jobs from /pipelines/{id}/jobs', async () => {
+            mockClient.get.mockResolvedValue({
+                data: [
+                    { id: 101, name: 'test', stage: 'test', status: 'success' },
+                    { id: 102, name: 'build', stage: 'build', status: 'success' },
+                ]
+            });
+            const result = await manager.getPipelineJobs('42');
+            expect(mockClient.get).toHaveBeenCalledWith('/pipelines/42/jobs');
+            expect(result).toEqual([
+                { id: 101, name: 'test', stage: 'test', status: 'success' },
+                { id: 102, name: 'build', stage: 'build', status: 'success' },
+            ]);
+        });
+
+        it('returns [] on API error', async () => {
+            mockClient.get.mockRejectedValue(new Error('API error'));
+            const result = await manager.getPipelineJobs('42');
+            expect(result).toEqual([]);
+        });
+    });
+
+    describe('listPipelineArtifacts', () => {
+        it('returns jobs with artifacts from pipeline jobs', async () => {
+            mockClient.get.mockResolvedValue({
+                data: [
+                    { id: 101, name: 'test', stage: 'test', status: 'success', artifacts_file: { filename: 'results.zip' } },
+                    { id: 102, name: 'build', stage: 'build', status: 'success', artifacts: [] },
+                    { id: 103, name: 'lint', stage: 'lint', status: 'success' },
+                ]
+            });
+            const result = await manager.listPipelineArtifacts('42');
+            expect(result).toEqual([
+                { id: 101, name: 'test' },
+            ]);
+        });
+
+        it('returns [] on API error', async () => {
+            mockClient.get.mockRejectedValue(new Error('API error'));
+            const result = await manager.listPipelineArtifacts('42');
+            expect(result).toEqual([]);
+        });
+    });
+
+    describe('downloadArtifact', () => {
+        it('returns buffer and filename from /jobs/{id}/artifacts', async () => {
+            mockClient.get.mockResolvedValue({
+                data: Buffer.from('fake-zip-content'),
+                headers: { 'content-disposition': 'attachment; filename="artifacts.zip"' },
+            });
+            const result = await manager.downloadArtifact('101');
+            expect(mockClient.get).toHaveBeenCalledWith('/jobs/101/artifacts', {
+                responseType: 'arraybuffer',
+            });
+            expect(Buffer.isBuffer(result.buffer)).toBe(true);
+            expect(result.filename).toBe('artifacts.zip');
+        });
+
+        it('falls back to artifacts.zip when no content-disposition', async () => {
+            mockClient.get.mockResolvedValue({
+                data: Buffer.from('data'),
+                headers: {},
+            });
+            const result = await manager.downloadArtifact('101');
+            expect(result.filename).toBe('artifacts.zip');
+        });
+
+        it('throws on API error (mutation)', async () => {
+            mockClient.get.mockRejectedValue(new Error('Download failed'));
+            await expect(manager.downloadArtifact('999')).rejects.toThrow('Download failed');
+        });
+    });
+
     describe('getCICDVariables', () => {
         it('calls GET /variables with per_page=100', async () => {
             mockClient.get.mockResolvedValue({ data: [{ key: 'VAR1', value: 'val1' }] });
