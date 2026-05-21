@@ -1,7 +1,5 @@
-# === Dependencies (npm install on checkout) ===
+# === Dependencies ===
 node_modules
-package.json
-package-lock.json
 
 # === Generated / Temp ===
 logs
