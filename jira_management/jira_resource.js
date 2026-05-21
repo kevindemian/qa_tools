@@ -4,12 +4,10 @@ const { error: logError, success, info, warn, extractErrorMessage, ProgressBar }
 const { Logger } = require('../shared/logger');
 
 function sanitizeJqlValue(value) {
-    if (!/^[\w\s.:/-]+$/.test(value)) {
-        throw new Error(
-            `Valor invalido para consulta JQL: "${value}". Use apenas letras, numeros, espacos, pontos, dois-pontos, barras e hifens.`
-        );
+    if (!value || typeof value !== 'string') {
+        throw new Error('Valor invalido para consulta JQL.');
     }
-    return value;
+    return value.replace(/[^\w\s.:/-]/g, '');
 }
 
 class JiraResource {

@@ -6,7 +6,7 @@ const JiraLinkManager = require('./jira_link_manager');
 const CsvResource = require('./csv_resource');
 const PackageVersionManager = require('./package_version_manager');
 const { success, error, warn, info, title, divider, prompt, confirm, printError, printSummary, smartPrompt, showSelect, tableView } = require('../shared/prompt');
-const { mask, createValidateEnv, setupSigint } = require('../shared/cli_base');
+const { mask, createValidateEnv, setupSigint, sanitizeUrl } = require('../shared/cli_base');
 const { rootLogger } = require('../shared/logger');
 const { load: loadState, update: updateState, STATE_PATH } = require('../shared/state');
 const { createTestsFromCsv, createTestsFromJson, createTestExecution, createTestExecutionWithLinks } = require('./create_tests');
@@ -640,9 +640,9 @@ async function main() {
                 title('Diagnostico de Conexao');
                 const results = [];
                 const endpoints = [
-                    { url: base_url + '/rest/api/2/myself', label: 'Jira API' },
-                    { url: xray_url, label: 'Xray API' },
-                    { url: base_url + '/rest/api/2/project/' + project_name, label: 'Projeto ' + project_name }
+                    { url: sanitizeUrl(base_url + '/rest/api/2/myself'), label: 'Jira API' },
+                    { url: sanitizeUrl(xray_url), label: 'Xray API' },
+                    { url: sanitizeUrl(base_url + '/rest/api/2/project/' + project_name), label: 'Projeto ' + project_name }
                 ];
                 for (const ep of endpoints) {
                     const start = Date.now();
