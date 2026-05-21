@@ -717,11 +717,12 @@ async function main() {
                         results = result.inMemoryTasksId.map(key => ({ status: 'ok', label: key, message: '' }));
                         pushHistory('importar-json', okCount + ' testes', 'ok');
 
-                        if (confirm('Criar Test Execution para estes testes?')) {
+                        if (confirm('Criar Test Execution para estes testes?', true)) {
                             try {
                                 const keys = result.inMemoryTasksId;
-                                const nameInput = prompt('Nome da execucao', { hint: 'Enter = ' + path.basename(process.env.JSON_PATH || 'testes') });
-                                const csvName = nameInput.trim() || (process.env.JSON_PATH ? path.basename(process.env.JSON_PATH, '.json') : 'json-import');
+                                const srcName = result.sourcePath ? path.basename(result.sourcePath, '.json') : 'json-import';
+                                const nameInput = prompt('Nome da execucao', { hint: 'Enter = ' + srcName });
+                                const csvName = nameInput.trim() || srcName;
                                 const execTitle = prompt('Titulo do Test Execution', { hint: 'Enter = ' + csvName });
                                 const execDesc = prompt('Descricao (opcional)');
                                 const execResult = await createTestExecutionWithLinks(

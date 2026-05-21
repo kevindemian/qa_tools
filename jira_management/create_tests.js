@@ -585,7 +585,8 @@ async function _createTestsFromTestCases({
         inMemoryTasksId,
         inMemoryTasksText,
         summary,
-        status: errored ? 'error' : 'ok'
+        status: errored ? 'error' : 'ok',
+        sourcePath
     };
 }
 
@@ -658,6 +659,10 @@ async function createTestsFromJson({ jiraResource, jiraResourceXray, linkManager
     );
 
     let jsonPath = jsonPathInput.trim();
+    if (!jsonPath) {
+        warn('Caminho do JSON vazio. Operacao cancelada.');
+        return;
+    }
     if (state.lastJsonDir && !path.isAbsolute(jsonPath)) {
         const potential = path.resolve(state.lastJsonDir, jsonPath);
         if (fs.existsSync(potential)) {
@@ -697,13 +702,16 @@ async function createTestsFromJson({ jiraResource, jiraResourceXray, linkManager
                     }
                 })),
                 precondition: item.precondition
-                    ? item.precondition.match(/^[A-Z][A-Z0-9]+-\d+$/)
+                    ? item.precondition.match(/^[A-Z][A-Z0-9]+(?:-[A-Z0-9]+)*-\d+$/)
                         ? { type: 'reference', value: item.precondition }
                         : { type: 'inline', value: item.precondition }
                     : undefined,
                 group: item.group || '',
                 linkedIssues: Array.isArray(item.linkedIssues)
-                    ? item.linkedIssues.map(key => ({ key, linkType: 'Tests' }))
+                    ? item.linkedIssues.map(li => {
+                        if (typeof li === 'string') return { key: li, linkType: 'Tests' };
+                        return { key: li.key, linkType: li.linkType || 'Tests' };
+                      })
                     : []
             };
         });

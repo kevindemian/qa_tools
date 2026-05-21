@@ -1,6 +1,34 @@
 const JiraResource = require('./jira_resource');
 const JiraLinkManager = require('./jira_link_manager');
-const { createTestExecution, createTestExecutionWithLinks, generateMappingFiles, validateCsvTests } = require('./create_tests');
+const { createTestExecution, createTestExecutionWithLinks, generateMappingFiles, validateCsvTests, createTestsFromJson } = require('./create_tests');
+
+jest.mock('../shared/prompt', () => ({
+    success: jest.fn(),
+    error: jest.fn(),
+    warn: jest.fn(),
+    info: jest.fn(),
+    title: jest.fn(),
+    divider: jest.fn(),
+    prompt: jest.fn(),
+    confirm: jest.fn(),
+    smartPrompt: jest.fn(),
+    printError: jest.fn(),
+    printSummary: jest.fn(),
+    onError: jest.fn(),
+    ProgressBar: jest.fn(),
+    Spinner: jest.fn(),
+    isQuiet: jest.fn().mockReturnValue(true),
+}));
+
+jest.mock('fs', () => {
+    const actual = jest.requireActual('fs');
+    return { ...actual, readFileSync: jest.fn(), existsSync: jest.fn() };
+});
+
+jest.mock('../shared/state', () => ({
+    load: jest.fn().mockReturnValue({}),
+    update: jest.fn(),
+}));
 
 jest.mock('axios', () => {
     const mockInstance = {
@@ -240,20 +268,21 @@ describe('createTestExecutionWithLinks', () => {
 });
 
 describe('generateMappingFiles', () => {
+    const realFs = jest.requireActual('fs');
     const tmpDir = '/tmp/qa-tools-test-mapping-' + Date.now();
     const csvPath = '/tmp/test-csv.csv';
     let testIdx = 0;
     const nextBase = () => '/tmp/test-csv-' + (++testIdx);
 
     beforeAll(() => {
-        require('fs').writeFileSync(csvPath, 'Title: X\nAction,Data,Expected\nx,y,z\n', 'utf8');
+        realFs.writeFileSync(csvPath, 'Title: X\nAction,Data,Expected\nx,y,z\n', 'utf8');
         process.env.CYPRESS_PROJECT_PATH = tmpDir;
     });
 
     afterAll(() => {
         delete process.env.CYPRESS_PROJECT_PATH;
-        try { require('fs').rmSync(tmpDir, { recursive: true, force: true }); } catch (e) { /* ignore */ }
-        try { require('fs').unlinkSync(csvPath); } catch (e) { /* ignore */ }
+        try { realFs.rmSync(tmpDir, { recursive: true, force: true }); } catch (e) { /* ignore */ }
+        try { realFs.unlinkSync(csvPath); } catch (e) { /* ignore */ }
     });
 
     function makeSteps(...actions) {
@@ -261,7 +290,6 @@ describe('generateMappingFiles', () => {
     }
 
     it('creates JSON and MD mapping files', () => {
-        const fs = require('fs');
         const base = nextBase();
         const testCases = [
             { title: 'TC1', description: 'Descricao do TC1', steps: makeSteps('a1', 'a2') },
@@ -272,10 +300,10 @@ describe('generateMappingFiles', () => {
         const jsonPath = tmpDir + '/test-csv-' + testIdx + '-jira-mapping.json';
         const mdPath = tmpDir + '/test-csv-' + testIdx + '-jira-mapping.md';
 
-        expect(fs.existsSync(jsonPath)).toBe(true);
-        expect(fs.existsSync(mdPath)).toBe(true);
+        expect(realFs.existsSync(jsonPath)).toBe(true);
+        expect(realFs.existsSync(mdPath)).toBe(true);
 
-        const json = JSON.parse(fs.readFileSync(jsonPath, 'utf8'));
+        const json = JSON.parse(realFs.readFileSync(jsonPath, 'utf8'));
         expect(json.project).toBe('PROJ');
         expect(json.tests).toHaveLength(2);
         expect(json.tests[0].title).toBe('TC1');
@@ -299,7 +327,6 @@ describe('generateMappingFiles', () => {
     });
 
     it('includes steps and precondition in JSON mapping', () => {
-        const fs = require('fs');
         const base = nextBase();
         const testCases = [
             {
@@ -310,21 +337,20 @@ describe('generateMappingFiles', () => {
             },
         ];
         generateMappingFiles(base + '.csv', 'PROJ', ['TEST-3'], testCases);
-        const json = JSON.parse(fs.readFileSync(tmpDir + '/test-csv-' + testIdx + '-jira-mapping.json', 'utf8'));
+        const json = JSON.parse(realFs.readFileSync(tmpDir + '/test-csv-' + testIdx + '-jira-mapping.json', 'utf8'));
         expect(json.tests[0].precondition).toBe('User must be logged in');
         expect(json.tests[0].steps).toHaveLength(1);
         expect(json.tests[0].steps[0].Action).toBe('Click login');
     });
 
     it('generates MD with full table for each test', () => {
-        const fs = require('fs');
         const base = nextBase();
         const testCases = [
             { title: 'TC1', description: 'Descricao do TC1', steps: makeSteps('a1') },
             { title: 'TC2' },
         ];
         generateMappingFiles(base + '.csv', 'PROJ', ['TEST-1', 'TEST-2'], testCases);
-        const md = fs.readFileSync(tmpDir + '/test-csv-' + testIdx + '-jira-mapping.md', 'utf8');
+        const md = realFs.readFileSync(tmpDir + '/test-csv-' + testIdx + '-jira-mapping.md', 'utf8');
         const mdLines = md.split('\n');
         expect(md).toContain('## TEST-1 — TC1');
         expect(md).toContain('**Descrição:** Descricao do TC1');
@@ -364,5 +390,142 @@ describe('validateCsvTests', () => {
         const { errors, warnings } = validateCsvTests([{ title: 'TC1', steps: [{ fields: { Action: 'Click' } }] }]);
         expect(errors).toHaveLength(0);
         expect(warnings).toHaveLength(0);
+    });
+});
+
+describe('createTestsFromJson', () => {
+    const PROMPT = require('../shared/prompt');
+    const STATE = require('../shared/state');
+    const FS = require('fs');
+
+    function makeJiraResource() {
+        const r = new JiraResource('fake-token', 'http://jira/rest/api/2');
+        r.getJiraResource = jest.fn();
+        r.postJiraResource = jest.fn();
+        return r;
+    }
+
+    function makeLinkManager() {
+        const lm = new JiraLinkManager({ get: jest.fn(), post: jest.fn() });
+        lm.postLink = jest.fn();
+        return lm;
+    }
+
+    const BASE_PARAMS = () => ({
+        jiraResource: makeJiraResource(),
+        jiraResourceXray: makeJiraResource(),
+        linkManager: makeLinkManager(),
+        linkManagerXray: makeLinkManager(),
+        project_name: 'TESTPROJ',
+        base_url: 'http://jira',
+        sessionLog: { log: jest.fn() },
+        onBusy: jest.fn(),
+    });
+
+    afterEach(() => {
+        delete process.env.JSON_PATH;
+        delete process.env.AUTO_CONFIRM;
+        delete process.env.DRY_RUN;
+        delete process.env.JSON_LABELS;
+        jest.clearAllMocks();
+    });
+
+    it('cancela com caminho vazio', async () => {
+        PROMPT.smartPrompt.mockReturnValue('');
+        const result = await createTestsFromJson(BASE_PARAMS());
+        expect(result).toBeUndefined();
+        expect(PROMPT.warn).toHaveBeenCalledWith(expect.stringContaining('vazio'));
+    });
+
+    it('cancela com JSON invalido', async () => {
+        PROMPT.smartPrompt.mockReturnValue('/fake/path.json');
+        FS.readFileSync.mockReturnValue('not json');
+        const result = await createTestsFromJson(BASE_PARAMS());
+        expect(result).toBeUndefined();
+        expect(PROMPT.printError).toHaveBeenCalledWith('Erro ao ler JSON', expect.any(Error));
+    });
+
+    it('cancela com array vazio', async () => {
+        PROMPT.smartPrompt.mockReturnValue('/fake/path.json');
+        FS.readFileSync.mockReturnValue('[]');
+        const result = await createTestsFromJson(BASE_PARAMS());
+        expect(result).toBeUndefined();
+        expect(PROMPT.warn).toHaveBeenCalledWith(expect.stringContaining('Nenhum teste'));
+    });
+
+    it('cancela com item sem title/steps', async () => {
+        PROMPT.smartPrompt.mockReturnValue('/fake/path.json');
+        FS.readFileSync.mockReturnValue(JSON.stringify([{}]));
+        const result = await createTestsFromJson(BASE_PARAMS());
+        expect(result).toBeUndefined();
+        expect(PROMPT.printError).toHaveBeenCalledWith('Erro ao ler JSON', expect.any(Error));
+    });
+
+    it('executa dry-run com JSON valido', async () => {
+        process.env.AUTO_CONFIRM = 'true';
+        process.env.DRY_RUN = 'true';
+        PROMPT.smartPrompt.mockReturnValue('/fake/path.json');
+        FS.readFileSync.mockReturnValue(JSON.stringify([
+            { title: 'TC1', steps: [{ Action: 'Click' }] },
+            { title: 'TC2', steps: [{ Action: 'Type' }] },
+        ]));
+        const result = await createTestsFromJson(BASE_PARAMS());
+        expect(result).toBeDefined();
+        expect(result.summary).toContain('2');
+        expect(result.sourcePath).toBe('/fake/path.json');
+    });
+
+    it('usa state.lastJsonDir para resolver caminho relativo', async () => {
+        process.env.AUTO_CONFIRM = 'true';
+        process.env.DRY_RUN = 'true';
+        STATE.load.mockReturnValue({ lastJsonDir: '/base/dir' });
+        PROMPT.smartPrompt.mockReturnValue('sub/testes.json');
+        FS.existsSync.mockReturnValue(true);
+        FS.readFileSync.mockImplementation((p) => {
+            if (p === '/base/dir/sub/testes.json') {
+                return JSON.stringify([{ title: 'TC1', steps: [{ Action: 'Click' }] }]);
+            }
+            return '[]';
+        });
+        const result = await createTestsFromJson(BASE_PARAMS());
+        expect(result).toBeDefined();
+        expect(result.summary).toContain('1');
+        expect(result.sourcePath).toBe('/base/dir/sub/testes.json');
+    });
+
+    it('parseia precondition como reference (formato ABC-123)', async () => {
+        process.env.AUTO_CONFIRM = 'true';
+        process.env.DRY_RUN = 'true';
+        PROMPT.smartPrompt.mockReturnValue('/fake/path.json');
+        FS.readFileSync.mockReturnValue(JSON.stringify([
+            { title: 'TC1', steps: [{ Action: 'Click' }], precondition: 'PREC-001' },
+        ]));
+        const result = await createTestsFromJson(BASE_PARAMS());
+        expect(result).toBeDefined();
+        expect(result.summary).toContain('1');
+    });
+
+    it('parseia linkedIssues como strings', async () => {
+        process.env.AUTO_CONFIRM = 'true';
+        process.env.DRY_RUN = 'true';
+        PROMPT.smartPrompt.mockReturnValue('/fake/path.json');
+        FS.readFileSync.mockReturnValue(JSON.stringify([
+            { title: 'TC1', steps: [{ Action: 'Click' }], linkedIssues: ['BUG-1', 'BUG-2'] },
+        ]));
+        const result = await createTestsFromJson(BASE_PARAMS());
+        expect(result).toBeDefined();
+        expect(result.summary).toContain('1');
+    });
+
+    it('parseia linkedIssues como objetos', async () => {
+        process.env.AUTO_CONFIRM = 'true';
+        process.env.DRY_RUN = 'true';
+        PROMPT.smartPrompt.mockReturnValue('/fake/path.json');
+        FS.readFileSync.mockReturnValue(JSON.stringify([
+            { title: 'TC1', steps: [{ Action: 'Click' }], linkedIssues: [{ key: 'BUG-1', linkType: 'Blocks' }] },
+        ]));
+        const result = await createTestsFromJson(BASE_PARAMS());
+        expect(result).toBeDefined();
+        expect(result.summary).toContain('1');
     });
 });
