@@ -1,7 +1,7 @@
 // @ts-check
 const path = require('path');
 const fs = require('fs');
-const { success, error, warn, info, title, divider, prompt, confirm, printError, printSummary, Spinner } = require('../shared/prompt');
+const { success, error, warn, info, title, divider, prompt, confirm, printError, printSummary, Spinner, showSelect, tableView } = require('../shared/prompt');
 const { load: loadState, update: updateState } = require('../shared/state');
 const { createValidateEnv, setupSigint } = require('../shared/cli_base');
 const GitLabManager = require('./gitlab_manager');
@@ -57,6 +57,11 @@ function createManagerForProject(projectName, id) {
 function pushHistory(op, detail, status) {
     sessionCounters.push({ op, detail, status });
     lastOperation = op + ': ' + detail;
+    updateState(state => {
+        if (!state.history) state.history = [];
+        state.history.push({ op, detail, status, ts: new Date().toISOString() });
+        if (state.history.length > 50) state.history = state.history.slice(-50);
+    });
 }
 
 const validateEnv = createValidateEnv([
@@ -142,7 +147,10 @@ function providerLabel() {
 }
 
 function displayActions() {
-    title(providerLabel().toUpperCase() + ' TOOLS');
+    const ok = sessionCounters.filter(c => c.status === 'ok').length;
+    const er = sessionCounters.filter(c => c.status === 'error').length;
+    const counts = ok > 0 || er > 0 ? ' | ' + ok + ' ok' + (er > 0 ? ' · ' + er + ' erro' : '') : '';
+    title(providerLabel().toUpperCase() + ' TOOLS' + counts);
     if (lastOperation) info('Ultima operacao: ' + lastOperation);
     divider();
     console.log('  PIPELINES');
@@ -163,8 +171,50 @@ function displayActions() {
     console.log('   8  Exportar variaveis CI/CD');
     console.log('   9  Trocar de projeto');
     console.log('');
+    if (ok > 0 || er > 0) {
+        console.log('  ' + ok + ' ok' + (er > 0 ? ' · ' + er + ' erro' : ''));
+    }
     console.log('   0  Sair');
+    console.log('  /h  Ajuda');
     divider();
+}
+
+function buildContextLine() {
+    const ok = sessionCounters.filter(c => c.status === 'ok').length;
+    const er = sessionCounters.filter(c => c.status === 'error').length;
+    const counts = ok > 0 || er > 0 ? ' | ' + ok + ' ok' + (er > 0 ? ' · ' + er + ' erro' : '') : '';
+    return providerLabel().toUpperCase() + ' TOOLS' + (lastOperation ? ' | ' + lastOperation : '') + counts;
+}
+
+/** @returns {Array<any>} */
+function buildActionChoices() {
+    const prLabel = currentProvider === 'github' ? 'PR' : 'MR';
+    const choices = [
+        { type: 'separator', line: ' PIPELINES' },
+        { name: '1  Disparar pipeline', value: '1' },
+    ];
+    if (currentProvider === 'gitlab') {
+        choices.push(
+            { name: '2  Listar schedules', value: '2' },
+            { name: '3  Disparar schedule', value: '3' },
+        );
+    }
+    choices.push(
+        { type: 'separator', line: ' ' + prLabel + 'S' },
+        { name: '4  Criar ' + prLabel, value: '4' },
+        { name: '5  Listar ' + prLabel + 's aprovados', value: '5' },
+        { name: '6  Fazer merge por ID', value: '6' },
+        { name: '7  Nivelar branches', value: '7' },
+        { type: 'separator', line: ' UTILITARIOS' },
+        { name: '8  Exportar variaveis CI/CD', value: '8' },
+        { name: '9  Trocar de projeto', value: '9' },
+        { type: 'separator', line: '' },
+        { name: '0  Sair', value: '0' },
+        { type: 'separator', line: '' },
+        { name: '/help  Ajuda', value: '/help' },
+        { name: '/history  Historico', value: '/history' },
+    );
+    return choices;
 }
 
 async function displayRecentPipelines(m) {
@@ -225,14 +275,40 @@ async function main() {
         ? 'Enter = ' + loadState().lastChoice : '0-9';
 
     while (true) {
-        displayActions();
-        const choice = prompt('Escolha uma opcao', { hint: stateHint });
-        const resolved = !choice.trim() && loadState().lastChoice && loadState().lastChoice !== '0'
-            ? loadState().lastChoice : choice;
-        if (resolved !== choice) info('Repetindo ultima opcao: ' + resolved);
-        const finalChoice = resolved;
+        let finalChoice;
+        if (process.stdout.isTTY && process.env.QUIET !== 'true') {
+            const ctx = buildContextLine();
+            console.log('== ' + ctx + ' ==');
+            divider();
+            const stateHint2 = loadState().lastChoice && loadState().lastChoice !== '0'
+                ? loadState().lastChoice : undefined;
+            finalChoice = await showSelect('Escolha uma opcao', buildActionChoices(), {
+                default: stateHint2,
+            });
+        } else {
+            displayActions();
+            const choice = prompt('Escolha uma opcao', { hint: stateHint });
+            const resolved = !choice.trim() && loadState().lastChoice && loadState().lastChoice !== '0'
+                ? loadState().lastChoice : choice;
+            if (resolved !== choice) info('Repetindo ultima opcao: ' + resolved);
+            finalChoice = resolved;
+        }
 
         updateState(s => { s.lastChoice = finalChoice; });
+
+        const cmd = finalChoice.trim().toLowerCase();
+        if (cmd === '/h' || cmd === '/help' || cmd === '/history') {
+            const history = loadState().history || [];
+            title('Historico de operacoes');
+            const last10 = history.slice(-10);
+            if (last10.length === 0) {
+                warn('Nenhuma operacao registrada.');
+            } else {
+                tableView(last10, ['ts', 'op', 'detail', 'status']);
+            }
+            divider();
+            continue;
+        }
 
         switch (finalChoice) {
             case '1': {

@@ -248,8 +248,105 @@ async function onError(context, err, options = {}) {
   }
 }
 
+// ---------------------------------------------------------------------------
+// TUI wrappers (async, @inquirer/select when TTY)
+// ---------------------------------------------------------------------------
+
+/** @type {any} */
+let _inquirerMod = null;
+
+async function _loadInquirer() {
+    if (_inquirerMod !== null) return _inquirerMod;
+    try {
+        _inquirerMod = await import('@inquirer/select');
+        return _inquirerMod;
+    } catch {
+        _inquirerMod = false;
+        return false;
+    }
+}
+
+const isTTY = () => process.stdout.isTTY && process.env.QUIET !== 'true';
+
+/**
+ * @typedef {Object} SelectChoice
+ * @property {string} [name]
+ * @property {string} [value]
+ * @property {string} [description]
+ * @property {boolean|string} [disabled]
+ * @property {'separator'} [type]
+ * @property {string} [line]
+ */
+
+/**
+ * @param {string} label
+ * @param {Array<SelectChoice>} choices
+ * @param {{pageSize?:number, default?:string}} [options]
+ * @returns {Promise<string>}
+ */
+async function showSelect(label, choices, options = {}) {
+    const mod = await _loadInquirer();
+    if (mod && isTTY()) {
+        const processed = choices.map(c => {
+            if (c.type === 'separator') return new mod.Separator(c.line);
+            return c;
+        });
+        try {
+            const answer = await mod.default({
+                message: label,
+                choices: processed,
+                pageSize: options.pageSize || 14,
+                loop: false,
+                default: options.default,
+            });
+            return answer;
+        } catch (err) {
+            if (err.name === 'ExitPromptError' || err.message?.includes('cancel')) {
+                return '0';
+            }
+            throw err;
+        }
+    }
+    // Fallback: plain numbered list + readline-sync
+    console.log('');
+    for (const c of choices) {
+        if (c.type === 'separator') {
+            if (c.line) console.log(' ' + c.line);
+            continue;
+        }
+        const desc = c.description ? '  ' + c.description : '';
+        console.log('  ' + c.name + desc);
+    }
+    return prompt(label).trim();
+}
+
+/**
+ * @param {Array<Object>} data
+ * @param {string[]} [columns]
+ */
+function tableView(data, columns) {
+    if (!data || data.length === 0) {
+        warn('Nenhum dado para exibir.');
+        return;
+    }
+    if (columns) {
+        const filtered = data.map(row => {
+            /** @type {Record<string, any>} */
+            const obj = {};
+            for (const col of columns) {
+                if (col in row) obj[col] = row[col];
+            }
+            return obj;
+        });
+        console.table(filtered);
+    } else {
+        console.table(data);
+    }
+}
+
 module.exports = {
   success, error, warn, info, title, divider,
   prompt, confirm, printError, printSummary, smartPrompt, extractErrorMessage,
-  onError, Spinner, ProgressBar, isQuiet
+  onError, Spinner, ProgressBar, isQuiet,
+  showSelect, tableView
 };

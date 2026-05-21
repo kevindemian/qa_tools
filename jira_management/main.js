@@ -5,7 +5,7 @@ const JiraResource = require('./jira_resource');
 const JiraLinkManager = require('./jira_link_manager');
 const CsvResource = require('./csv_resource');
 const PackageVersionManager = require('./package_version_manager');
-const { success, error, warn, info, title, divider, prompt, confirm, printError, printSummary, smartPrompt } = require('../shared/prompt');
+const { success, error, warn, info, title, divider, prompt, confirm, printError, printSummary, smartPrompt, showSelect, tableView } = require('../shared/prompt');
 const { mask, createValidateEnv, setupSigint } = require('../shared/cli_base');
 const { rootLogger } = require('../shared/logger');
 const { load: loadState, update: updateState, STATE_PATH } = require('../shared/state');
@@ -161,7 +161,10 @@ function resolveAlias(choice) {
 }
 
 function displayMenu(proj, gitDir) {
-    const ctx = proj + (lastOperation ? ' | ' + lastOperation : '');
+    const ok = sessionCounters.filter(c => c.status === 'ok').length;
+    const er = sessionCounters.filter(c => c.status === 'error').length;
+    const counts = ok > 0 || er > 0 ? ' | ' + ok + ' ok' + (er > 0 ? ' · ' + er + ' erro' : '') : '';
+    const ctx = proj + (lastOperation ? ' | ' + lastOperation : '') + counts;
     console.log('== ' + ctx + ' ==');
     divider();
     console.log('  TESTES');
@@ -187,9 +190,46 @@ function displayMenu(proj, gitDir) {
     console.log('  12  Diagnosticar conexao');
     console.log('  13  Criar Test Execution para testes existentes');
     console.log('');
+    if (ok > 0 || er > 0) {
+        console.log('  ' + ok + ' ok' + (er > 0 ? ' · ' + er + ' erro' : ''));
+    }
     console.log('   0  Sair');
     console.log('  /h  Ajuda');
     divider();
+}
+
+function buildContextLine(proj) {
+    const ok = sessionCounters.filter(c => c.status === 'ok').length;
+    const er = sessionCounters.filter(c => c.status === 'error').length;
+    const counts = ok > 0 || er > 0 ? ' | ' + ok + ' ok' + (er > 0 ? ' · ' + er + ' erro' : '') : '';
+    return proj + (lastOperation ? ' | ' + lastOperation : '') + counts;
+}
+
+/** @returns {Array<any>} */
+function buildMenuChoices(proj, gitDir) {
+    const cyn = process.env.CYPRESS_PROJECT_PATH || loadState().lastCypressPath || 'nao configurado';
+    return [
+        { type: 'separator', line: ' TESTES' },
+        { name: '1  Criar testes a partir de CSV', value: '1' },
+        { type: 'separator', line: ' RELEASES' },
+        { name: '2  Listar versoes de release', value: '2' },
+        { name: '3  Criar nova versao', value: '3' },
+        { name: '4  Atribuir fixVersion', value: '4' },
+        { name: '5  Atualizar package + release notes', value: '5' },
+        { name: '6  Verificar status das tarefas', value: '6' },
+        { name: '7  Fechar tarefas automaticamente', value: '7' },
+        { name: '8  Publicar versao', value: '8' },
+        { type: 'separator', line: ' CONFIGURACAO' },
+        { name: '9  Alterar projeto Jira', value: '9', description: proj },
+        { name: '10  Alterar diretorio git', value: '10', description: gitDir },
+        { name: '14  Alterar diretorio Cypress', value: '14', description: cyn },
+        { type: 'separator', line: ' UTILITARIOS' },
+        { name: '11  Gerar template CSV', value: '11' },
+        { name: '12  Diagnosticar conexao', value: '12' },
+        { name: '13  Criar Test Execution', value: '13' },
+        { type: 'separator', line: '' },
+        { name: '0  Sair', value: '0' },
+    ];
 }
 
 async function handleSpecialInput(input) {
@@ -204,6 +244,18 @@ async function handleSpecialInput(input) {
         return true;
     }
     if (cmd === '/back' || cmd === '/menu' || cmd === '/exit') {
+        return true;
+    }
+    if (cmd === '/history') {
+        const hist = loadState().history || [];
+        title('Historico de operacoes');
+        const last10 = hist.slice(-10);
+        if (last10.length === 0) {
+            warn('Nenhuma operacao registrada.');
+        } else {
+            tableView(last10, ['ts', 'op', 'detail', 'status']);
+        }
+        divider();
         return true;
     }
     return false;
@@ -257,6 +309,20 @@ async function main() {
         let choice;
         if (process.env.AUTO_CHOICE) {
             choice = process.env.AUTO_CHOICE;
+        } else if (process.stdout.isTTY && process.env.QUIET !== 'true') {
+            const ctx = buildContextLine(project_name);
+            console.log('== ' + ctx + ' ==');
+            divider();
+            const choices = buildMenuChoices(project_name, git_directory);
+            choices.push(
+                { type: 'separator', line: '' },
+                { name: '/help  Ajuda', value: '/help' },
+                { name: '/history  Historico', value: '/history' },
+            );
+            const menuState = loadState();
+            choice = await showSelect('Selecione uma opcao', choices, {
+                default: menuState.lastChoice && menuState.lastChoice !== '0' ? menuState.lastChoice : undefined,
+            });
         } else {
             divider();
             displayMenu(project_name, git_directory);
