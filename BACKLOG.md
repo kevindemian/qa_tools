@@ -4,13 +4,9 @@ Apenas itens com valor futuro condicional. Os demais foram arquivados (custo > b
 
 ---
 
-### [TITLE-001] Criar Test Execution automaticamente
-**Gatilho:** Quando houver demanda por fluxo ponta-a-ponta CSV → Jira completo.
-**Descrição:** Após criar testes via opção 1 (CSV), criar automaticamente um Test Execution e adicionar os testes criados.
-**Próximos passos:**
-  - Descobrir endpoint Xray para Test Execution
-  - Validar se issue type "Test Execution" existe no projeto
-  - Decidir fonte do nome da execução
+### ~~[TITLE-001] Criar Test Execution automaticamente~~ ✅ Concluído
+**Implementado em:** `create_tests.js:createTestExecution()` + `main.js` case 13 + prompt pós-opção 1.
+**Detalhes:** Usa `POST /rest/api/2/issue` com descoberta dinâmica de issue type ("Test Execution") e custom field (`testexec-tests-custom-field`). Raven API indisponível neste servidor. Payload auto-descoberto, portável entre instâncias.
 
 ---
 

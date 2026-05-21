@@ -102,6 +102,17 @@ class JiraLinkManager {
     return this._preconditionFieldId;
   }
 
+  /** @param {string} sourceKey @param {string} targetKey @param {string} linkTypeName @returns {Promise<Object>} */
+  async createIssueLink(sourceKey, targetKey, linkTypeName) {
+    const linkTypeId = await this.resolveLinkTypeId(linkTypeName);
+    const payload = {
+      type: { id: linkTypeId },
+      inwardIssue: { key: targetKey },
+      outwardIssue: { key: sourceKey }
+    };
+    return await this.jiraResource.postJiraResource('issueLink', payload);
+  }
+
   /** @param {string} testKey @param {string} preconditionKey @returns {Promise<Object>} */
   async associatePrecondition(testKey, preconditionKey) {
     const fieldId = await this._getPreconditionFieldId();

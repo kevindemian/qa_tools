@@ -1,0 +1,9 @@
+#!/bin/sh
+set -e
+
+echo "=== Running pre-push checks (typecheck + tests) ==="
+
+npm run typecheck
+npm test
+
+echo "=== Pre-push checks passed ==="

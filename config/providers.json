@@ -1,0 +1,10 @@
+{
+  "qa_ibabs": { "provider": "gitlab" },
+  "qa_ibabs_cast": { "provider": "gitlab" },
+  "qa_insiderlog": { "provider": "gitlab" },
+  "qa_policylog": { "provider": "gitlab" },
+  "qa_integritylog": { "provider": "gitlab" },
+  "qa_irmanager": { "provider": "gitlab" },
+  "qa_newslog": { "provider": "gitlab" },
+  "qa_tools": { "provider": "gitlab" }
+}

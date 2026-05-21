@@ -40,6 +40,7 @@
  * @typedef {Object} StateSchema
  * @property {string} [lastChoice]
  * @property {string} [lastProject]
+ * @property {string} [lastCypressPath]
  * @property {string} [lastLabels]
  * @property {string} [lastCsvPath]
  * @property {Array<{op:string,detail:string,status:string,ts:string}>} [history]
@@ -56,6 +57,22 @@
  * @property {string} baseUrl
  * @property {string} token
  * @property {import('./logger').Logger} [logger]
+ */
+
+/**
+ * @typedef {Object} GitProvider
+ * @property {(payload: {ref: string, variables: Array<{key:string, value:string}>, workflow_id?: string}) => Promise<Object>} triggerPipeline
+ * @property {() => Promise<Array<Object>>} getSchedules
+ * @property {(scheduleId: string|number) => Promise<Object>} runSchedule
+ * @property {(sourceBranch: string, targetBranch: string, title: string, description?: string) => Promise<Object>} createMergeRequest
+ * @property {(iid: string|number, sourceBranch: string, targetBranch: string, title: string, description?: string) => Promise<Object>} updateMergeRequest
+ * @property {(iid: string|number) => Promise<Object|null>} getMergeRequest
+ * @property {(sourceBranch: string, targetBranch: string, status: string) => Promise<Array<Object>>} searchMergeRequests
+ * @property {(iid: string|number, removeSourceBranch?: boolean) => Promise<Object>} acceptMergeRequest
+ * @property {() => Promise<Array<Object>>} getCICDVariables
+ * @property {(count?: number) => Promise<Array<Object>>} getRecentPipelines
+ * @property {(id: string|number) => Promise<Object|null>} getPipeline
+ * @property {'gitlab'|'github'} provider
  */
 
 module.exports = {};

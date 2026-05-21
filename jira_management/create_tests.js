@@ -1,6 +1,7 @@
 // @ts-check
+const fs = require('fs');
 const path = require('path');
-const { success, error, warn, info, title, divider, prompt, confirm, smartPrompt, printError, printSummary, onError, ProgressBar, isQuiet } = require('../shared/prompt');
+const { success, error, warn, info, title, divider, prompt, confirm, smartPrompt, printError, printSummary, onError, ProgressBar, Spinner, isQuiet } = require('../shared/prompt');
 const { rootLogger } = require('../shared/logger');
 const { load: loadState, update: updateState } = require('../shared/state');
 
@@ -159,6 +160,146 @@ function delay(ms) {
     return new Promise(resolve => setTimeout(resolve, ms));
 }
 
+function generateMappingFiles(csvPath, project_name, tasksId, tasksText) {
+    const cypressDir = process.env.CYPRESS_PROJECT_PATH || loadState().lastCypressPath;
+    if (!cypressDir || !tasksId.length) return;
+
+    const csvName = path.basename(csvPath, '.csv');
+    const outDir = path.resolve(cypressDir);
+
+    try {
+        if (!fs.existsSync(outDir)) {
+            fs.mkdirSync(outDir, { recursive: true });
+        }
+    } catch (err) {
+        rootLogger.warn('Nao foi possivel criar diretorio de saida: ' + outDir);
+        return;
+    }
+
+    const mappings = tasksId.map((key, i) => ({
+        title: tasksText[i] || '',
+        key
+    }));
+
+    const jsonPath = path.join(outDir, csvName + '-jira-mapping.json');
+    const jsonContent = JSON.stringify({
+        project: project_name,
+        csv: csvName + '.csv',
+        timestamp: new Date().toISOString(),
+        tests: mappings
+    }, null, 2);
+    fs.writeFileSync(jsonPath, jsonContent, 'utf8');
+
+    const mdPath = path.join(outDir, csvName + '-jira-mapping.md');
+    const mdContent = '# Mapeamento Jira: ' + csvName + '.csv\n' +
+        '*Gerado em ' + new Date().toLocaleString('pt-BR') + '*\n\n' +
+        '| Status | Chave | Titulo |\n' +
+        '|--------|-------|--------|\n' +
+        mappings.map(m => '| | ' + m.key + ' | ' + m.title + ' |').join('\n') + '\n';
+    fs.writeFileSync(mdPath, mdContent, 'utf8');
+
+    if (!isQuiet()) {
+        info('Mapeamento salvo: ' + path.basename(jsonPath));
+    }
+}
+
+async function createTestExecution(jiraResource, project_name, testKeys, csvName, titleOverride) {
+    const timestamp = new Date().toLocaleString('pt-BR', {
+        year: 'numeric', month: '2-digit', day: '2-digit',
+        hour: '2-digit', minute: '2-digit'
+    });
+    const summary = titleOverride || (csvName || 'Automated Execution') + ' - ' + timestamp;
+
+    const execLog = rootLogger.child({ operation: 'create-testexec' });
+    execLog.info('Descobrindo issue type "Test Execution"...');
+    const issueTypes = await jiraResource.getJiraResource('issuetype');
+    if (!Array.isArray(issueTypes)) throw new Error('Falha ao obter tipos de issue do Jira');
+
+    const execType = issueTypes.find(t => t.name === 'Test Execution');
+    if (!execType) throw new Error(
+        'Issue type "Test Execution" nao encontrado. ' +
+        'Verifique se o Xray esta instalado e o issue type existe no scheme do projeto.'
+    );
+    execLog.info('Issue type encontrado: id=' + execType.id);
+
+    execLog.info('Descobrindo custom field para tests...');
+    const fields = await jiraResource.getJiraResource('field');
+    if (!Array.isArray(fields)) throw new Error('Falha ao obter campos customizados do Jira');
+
+    const testField = fields.find(
+        f => f.schema?.custom === 'com.xpandit.plugins.xray:testexec-tests-custom-field'
+    );
+    if (!testField) throw new Error(
+        'Campo "Tests association with a Test Execution" nao encontrado. ' +
+        'Verifique se o Xray esta instalado corretamente.'
+    );
+    execLog.info('Custom field encontrado: ' + testField.id + ' (' + testField.name + ')');
+
+    const payload = {
+        fields: {
+            project: { key: project_name },
+            summary,
+            issuetype: { id: execType.id },
+            [testField.id]: testKeys
+        }
+    };
+
+    const created = await jiraResource.postJiraResource('issue', payload);
+    success('Test Execution criado: ' + created.key + ' — ' + summary);
+    execLog.info('Test Execution criado', { key: created.key, summary });
+    return { key: created.key, summary };
+}
+
+async function createTestExecutionWithLinks(jiraResource, linkManager, project_name, testKeys, csvName, execOpts) {
+    const title = execOpts?.title || '';
+    const description = execOpts?.description || '';
+    const result = await createTestExecution(jiraResource, project_name, testKeys, csvName, title);
+
+    if (result.key && testKeys.length > 0) {
+        try {
+            info('Vinculando testes ao Test Execution (link type: Tests)...');
+            const linkedKeys = [];
+            const keysToLink = [...testKeys];
+
+            try {
+                const te = await jiraResource.getJiraResource('issue/' + result.key);
+                if (te?.fields?.issuelinks) {
+                    for (const link of te.fields.issuelinks) {
+                        if (link.outwardIssue?.key && keysToLink.includes(link.outwardIssue.key)) {
+                            linkedKeys.push(link.outwardIssue.key);
+                        }
+                    }
+                }
+            } catch (err) {
+                rootLogger.warn('Nao foi possivel verificar links existentes: ' + err.message);
+            }
+
+            const unlinked = keysToLink.filter(k => !linkedKeys.includes(k));
+            if (unlinked.length === 0) {
+                info('Todos os testes ja estao vinculados ao Test Execution.');
+            } else {
+                const spinner = !isQuiet() ? new Spinner() : null;
+                if (spinner) spinner.start('Linkando ' + unlinked.length + ' teste(s)...');
+                let linkCount = 0;
+                for (const key of unlinked) {
+                    try {
+                        await linkManager.createIssueLink(key, result.key, 'Tests');
+                        linkCount++;
+                    } catch (err) {
+                        rootLogger.warn('Falha ao linkar ' + key + ': ' + err.message);
+                    }
+                }
+                if (spinner) spinner.stop();
+                if (linkCount > 0) success(linkCount + '/' + unlinked.length + ' testes vinculados.');
+            }
+        } catch (err) {
+            rootLogger.error('Erro ao vincular testes: ' + err.message);
+        }
+    }
+
+    return result;
+}
+
 /**
  * @param {Object} options
  * @param {import('./jira_resource')} options.jiraResource
@@ -289,6 +430,23 @@ async function createTestsFromCsv({ jiraResource, jiraResourceXray, linkManager,
         return;
     }
 
+    const isDryRun = process.env.DRY_RUN === 'true';
+    if (isDryRun) {
+        warn('MODO DRY-RUN: Nenhuma operacao sera executada.');
+        printSummary(
+            /** @type {import('../shared/types').TestResult[]} */ (
+                tests.map(t => ({ status: 'ok', label: t.title, message: 'simulado' }))
+            )
+        );
+        onBusy(false);
+        return {
+            inMemoryTasksId: [],
+            inMemoryTasksText: [],
+            summary: 'DRY-RUN: ' + tests.length + ' testes simulados',
+            status: 'ok'
+        };
+    }
+
     opLog.info('Iniciando criacao de ' + tests.length + ' teste(s)');
 
     const results = [];
@@ -403,6 +561,8 @@ async function createTestsFromCsv({ jiraResource, jiraResourceXray, linkManager,
         await updateCrossReferences(jiraResource, tests, inMemoryTasksId);
     }
 
+    generateMappingFiles(csvPath, project_name, inMemoryTasksId, inMemoryTasksText);
+
     printSummary(/** @type {import('../shared/types').TestResult[]} */ (results));
     const okCount = results.filter(r => r.status === 'ok').length;
     const errored = results.some(r => r.status === 'error');
@@ -429,4 +589,4 @@ async function createTestsFromCsv({ jiraResource, jiraResourceXray, linkManager,
     };
 }
 
-module.exports = { createTestsFromCsv, validateCsvTests, updateCrossReferences };
+module.exports = { createTestsFromCsv, validateCsvTests, updateCrossReferences, createTestExecution, createTestExecutionWithLinks, generateMappingFiles };

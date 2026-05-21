@@ -1,25 +1,24 @@
-# Logs
-logs
-*.log
-
-# Dependencies and others
-__pycache__
+# === Dependencies (npm install on checkout) ===
 node_modules
 package.json
 package-lock.json
 
-# Generated files
-cypress/screenshots
-cypress/videos
-cypress/reports
-cypress/fixtures/tmp/
-cypress/downloads
-mochawesome-report/
-cypress/e2e/tmp
+# === Generated / Temp ===
+logs
+*.log
+__pycache__
 
-# Sensitive vars
+# === Sensitive ===
 .env
 
-# Docker
+# === Dev Tooling (OpenCode agents, commands, briefing) ===
+.opencode/
+PROJECT.md
+install-opencode.sh
+
+# === Docker Generated ===
 shared_docker/docker-compose.yml
 shared_docker/.selected_project
+
+# === Windows artifacts ===
+nul
