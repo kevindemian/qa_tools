@@ -42,22 +42,21 @@ Issues registradas durante refatorações, postergadas por escopo.
 - **Contexto**: `setupSigint` existe em `cli_base.js` mas nem todos os fluxos tratam interrupção de forma consistente.
 - **Ação futura**: Revisar todos os `while(true)` loops para responder a SIGINT com grace period.
 
-### ARQ-001 — SessionContext como classe (P3)
+### ARQ-001 — SessionContext como classe (CONCLUÍDO)
 
-- **Contexto**: `SessionContext` foi implementado como objeto literal em `jira_management/main.js`. Idealmente seria uma classe com métodos (ex: `ctx.pushHistory()`, `ctx.withBusy()`).
-- **Motivo**: Simplicidade da refatoração atual. Objeto literal é suficiente para extrair o switch.
-- **Ação futura**: Converter para classe em `shared/session_context.js`.
+- **Ação**: `shared/session-context.js` criado com class `SessionContext` (métodos: `resetResults()`, `withBusy()`, `pushHistory()`). `main.js` refatorado para usar a classe.
+- **Testes**: `shared/session-context.test.js` — 6 testes unitários.
 
 ### ARQ-002 — Mover PromptBar/ProgressBar para shared/ (P3)
 
 - **Contexto**: `ProgressBar` e `PromptBar` estão definidos dentro de `shared/prompt.js`. Poderiam ser módulos separados.
 - **Ação futura**: Extrair para `shared/progress_bar.js` e `shared/prompt_bar.js`.
 
-### ARQ-003 — Testes para SessionContext e handleCases (P2)
+### ARQ-003 — Testes para handleCases (P2)
 
-- **Contexto**: As funções extraídas (`handleCase1`, `handleCaseN`) e o `SessionContext` não têm testes unitários.
-- **Motivo**: Dependem de mocks complexos (jiraResource, linkManager, etc.). Postergado para evitar crescer o escopo.
-- **Ação futura**: Criar `jira_management/__tests__/session_context.test.js` e `jira_management/__tests__/handlers.test.js`.
+- **Contexto**: As funções extraídas (`handleCase1`–`handleCaseN`) não têm testes unitários.
+- **Motivo**: Dependem de mocks complexos (jiraResource, linkManager, prompt). Bloqueado enquanto handlers estiverem como closures em `main.js`. TS-002 (commands/) desbloquearia.
+- **Ação futura**: Após TS-002, criar `jira_management/commands/__tests__/handlers.test.js`.
 
 ---
 
