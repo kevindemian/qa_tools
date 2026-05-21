@@ -1,7 +1,15 @@
 // @ts-check
 const { createHttpClient } = require('../shared/http-client');
-const { info } = require('../shared/prompt');
+const { info, extractErrorMessage } = require('../shared/prompt');
 const { Logger } = require('../shared/logger');
+
+/** @param {import('../shared/logger').Logger} log @param {string} op @param {any} err @param {{ returnNull?: boolean }} [opts] */
+function handleError(log, op, err, opts) {
+  const msg = extractErrorMessage(err);
+  log.error(`Erro ao ${op}: ${msg}`, { status: err.response?.status });
+  if (opts?.returnNull) return null;
+  throw err;
+}
 
 class GitLabManager {
     /** @param {string} projectId @param {string} apiToken @param {string} gitlabBaseUrl */
@@ -18,43 +26,60 @@ class GitLabManager {
         this.log = new Logger({ resource: 'GitLab', projectId });
     }
 
-    async triggerPipeline(payload) {
+    /**
+     * @param {string} url
+     * @param {{ operation?: string, returnNull?: boolean, params?: Record<string, any> }} [opts]
+     */
+    async _get(url, opts) {
         try {
-            const response = await this.client.post('/pipeline', payload);
+            const args = opts?.params ? [{ params: opts.params }] : [];
+            const response = await this.client.get(url, ...args);
             return response.data;
         } catch (err) {
-            this.log.error('Erro ao disparar pipeline: ' + (err.response?.data?.message || err.message), {
-                status: err.response?.status
-            });
-            throw err;
+            return /** @type {null} */ (handleError(this.log, opts?.operation || url, err, { returnNull: opts?.returnNull }));
         }
+    }
+
+    /**
+     * @param {string} url
+     * @param {any} [body]
+     * @param {{ operation?: string }} [opts]
+     */
+    async _post(url, body, opts) {
+        try {
+            const args = body !== undefined ? [body] : [];
+            const response = await this.client.post(url, ...args);
+            return response.data;
+        } catch (err) {
+            return handleError(this.log, opts?.operation || url, err);
+        }
+    }
+
+    /**
+     * @param {string} url
+     * @param {any} [body]
+     * @param {{ operation?: string }} [opts]
+     */
+    async _put(url, body, opts) {
+        try {
+            const args = body !== undefined ? [body] : [];
+            const response = await this.client.put(url, ...args);
+            return response.status === 204 ? null : response.data;
+        } catch (err) {
+            return handleError(this.log, opts?.operation || url, err);
+        }
+    }
+
+    async triggerPipeline(payload) {
+        return await this._post('/pipeline', payload, { operation: 'disparar pipeline' });
     }
 
     async getSchedules() {
-        try {
-            const response = await this.client.get('/pipeline_schedules', {
-                params: { per_page: 100 }
-            });
-            return response.data;
-        } catch (err) {
-            this.log.error('Erro ao listar schedules: ' + (err.response?.data?.message || err.message), {
-                status: err.response?.status
-            });
-            return [];
-        }
+        return await this._get('/pipeline_schedules', { operation: 'listar schedules', params: { per_page: 100 }, returnNull: true }) || [];
     }
 
     async runSchedule(scheduleId) {
-        try {
-            const response = await this.client.post(`/pipeline_schedules/${scheduleId}/play`);
-            return response.data;
-        } catch (err) {
-            this.log.error('Erro ao disparar schedule: ' + (err.response?.data?.message || err.message), {
-                scheduleId,
-                status: err.response?.status
-            });
-            throw err;
-        }
+        return await this._post(`/pipeline_schedules/${scheduleId}/play`, undefined, { operation: 'disparar schedule' });
     }
 
     async createMergeRequest(sourceBranch, targetBranch, title, description) {
@@ -67,8 +92,7 @@ class GitLabManager {
         };
 
         try {
-            const response = await this.client.post('/merge_requests', body);
-            return response.data;
+            return await this._post('/merge_requests', body, { operation: 'criar MR' });
         } catch (err) {
             if (err.response?.status === 409) {
                 info('MR already exists. Searching for existing...');
@@ -77,53 +101,24 @@ class GitLabManager {
                     return await this.updateMergeRequest(existing[0].iid, sourceBranch, targetBranch, title, description);
                 }
             }
-            this.log.error('Erro ao criar MR: ' + JSON.stringify(err.response?.data?.message || err.message), {
-                status: err.response?.status
-            });
             throw err;
         }
     }
 
     async updateMergeRequest(iid, sourceBranch, targetBranch, title, description) {
-        const body = { title, description };
-
-        try {
-            const response = await this.client.put(`/merge_requests/${iid}`, body);
-            return response.data;
-        } catch (err) {
-            this.log.error('Erro ao atualizar MR: ' + JSON.stringify(err.response?.data?.message || err.message), {
-                iid,
-                status: err.response?.status
-            });
-            throw err;
-        }
+        return await this._put(`/merge_requests/${iid}`, { title, description }, { operation: 'atualizar MR' });
     }
 
     async getMergeRequest(iid) {
-        try {
-            const response = await this.client.get(`/merge_requests/${iid}`);
-            return response.data;
-        } catch (err) {
-            this.log.error('Erro ao buscar MR: ' + (err.response?.data?.message || err.message), {
-                iid,
-                status: err.response?.status
-            });
-            return null;
-        }
+        return await this._get(`/merge_requests/${iid}`, { operation: 'buscar MR', returnNull: true });
     }
 
     async searchMergeRequests(sourceBranch, targetBranch, searchStatus) {
-        try {
-            const response = await this.client.get('/merge_requests', {
-                params: { state: searchStatus, source_branch: sourceBranch, target_branch: targetBranch, per_page: 100 }
-            });
-            return response.data;
-        } catch (err) {
-            this.log.error('Erro ao buscar MRs: ' + (err.response?.data?.message || err.message), {
-                status: err.response?.status
-            });
-            return [];
-        }
+        return await this._get('/merge_requests', {
+            operation: 'buscar MRs',
+            params: { state: searchStatus, source_branch: sourceBranch, target_branch: targetBranch, per_page: 100 },
+            returnNull: true,
+        }) || [];
     }
 
     async acceptMergeRequest(iid, shouldRemoveSourceBranch = true) {
@@ -134,60 +129,31 @@ class GitLabManager {
                 info(`MR #${iid} already merged`);
                 return mr;
             }
-            const body = { should_remove_source_branch: shouldRemoveSourceBranch };
-            const response = await this.client.put(`/merge_requests/${iid}/merge`, body);
-            return response.data;
+            return await this._put(`/merge_requests/${iid}/merge`, { should_remove_source_branch: shouldRemoveSourceBranch }, { operation: 'fazer merge' });
         } catch (err) {
-            this.log.error('Erro ao fazer merge: ' + JSON.stringify(err.response?.data?.message || err.message), {
-                iid,
-                status: err.response?.status
-            });
-            throw err;
+            return handleError(this.log, 'fazer merge', err);
         }
     }
 
     async getRecentPipelines(count = 5) {
-        try {
-            const response = await this.client.get('/pipelines', {
-                params: { per_page: count, order_by: 'updated_at' }
-            });
-            return response.data;
-        } catch (err) {
-            this.log.error('Erro ao buscar pipelines: ' + (err.response?.data?.message || err.message), {
-                status: err.response?.status
-            });
-            return [];
-        }
+        return await this._get('/pipelines', { operation: 'buscar pipelines', params: { per_page: count, order_by: 'updated_at' }, returnNull: true }) || [];
     }
 
     async getPipeline(pipelineId) {
-        try {
-            const response = await this.client.get('/pipelines/' + pipelineId);
-            return response.data;
-        } catch (err) {
-            this.log.error('Erro ao buscar pipeline: ' + (err.response?.data?.message || err.message), {
-                pipelineId,
-                status: err.response?.status
-            });
-            return null;
-        }
+        return await this._get(`/pipelines/${pipelineId}`, { operation: 'buscar pipeline', returnNull: true });
     }
 
     /** @param {string|number} pipelineId @returns {Promise<Array<{id:string|number, name:string, stage:string, status:string}>>} */
     async getPipelineJobs(pipelineId) {
         try {
-            const response = await this.client.get('/pipelines/' + pipelineId + '/jobs');
-            return (response.data || []).map((/** @type {any} */ j) => ({
+            const data = await this._get(`/pipelines/${pipelineId}/jobs`, { operation: 'listar jobs', returnNull: true });
+            return (data || []).map((/** @type {any} */ j) => ({
                 id: j.id,
                 name: j.name,
                 stage: j.stage,
                 status: j.status,
             }));
         } catch (err) {
-            this.log.error('Erro ao listar jobs: ' + (err.response?.data?.message || err.message), {
-                pipelineId,
-                status: err.response?.status
-            });
             return [];
         }
     }
@@ -195,16 +161,12 @@ class GitLabManager {
     /** @param {string|number} pipelineId @returns {Promise<Array<{id:string|number, name:string}>>} */
     async listPipelineArtifacts(pipelineId) {
         try {
-            const response = await this.client.get('/pipelines/' + pipelineId + '/jobs');
-            const jobs = response.data || [];
+            const data = await this._get(`/pipelines/${pipelineId}/jobs`, { operation: 'listar artifacts', returnNull: true });
+            const jobs = data || [];
             return jobs
                 .filter((/** @type {any} */ j) => j.artifacts_file || (j.artifacts && j.artifacts.length > 0))
                 .map((/** @type {any} */ j) => ({ id: j.id, name: j.name }));
         } catch (err) {
-            this.log.error('Erro ao listar artifacts: ' + (err.response?.data?.message || err.message), {
-                pipelineId,
-                status: err.response?.status
-            });
             return [];
         }
     }
@@ -220,10 +182,7 @@ class GitLabManager {
             const filename = match ? match[1] : 'artifacts.zip';
             return { buffer: Buffer.from(response.data), filename };
         } catch (err) {
-            this.log.error('Erro ao baixar artifact: ' + (err.response?.data?.message || err.message), {
-                jobId,
-                status: err.response?.status
-            });
+            handleError(this.log, 'baixar artifact', err);
             throw err;
         }
     }
@@ -233,25 +192,13 @@ class GitLabManager {
             const res = await this.client.get(`/merge_requests/${mrIid}/approvals`);
             return res.data.approved === true;
         } catch (err) {
-            this.log.error(`Erro ao verificar approvals do MR #${mrIid}: ${err.message}`, {
-                status: err.response?.status
-            });
+            this.log.error(`Erro ao verificar approvals do MR #${mrIid}: ${extractErrorMessage(err)}`, { status: err.response?.status });
             return false;
         }
     }
 
     async getCICDVariables() {
-        try {
-            const response = await this.client.get('/variables', {
-                params: { per_page: 100 }
-            });
-            return response.data;
-        } catch (err) {
-            this.log.error('Erro ao buscar variaveis CI/CD: ' + (err.response?.data?.message || err.message), {
-                status: err.response?.status
-            });
-            return [];
-        }
+        return await this._get('/variables', { operation: 'buscar variaveis CI/CD', params: { per_page: 100 }, returnNull: true }) || [];
     }
 }
 

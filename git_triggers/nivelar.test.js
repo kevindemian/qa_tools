@@ -4,6 +4,7 @@ jest.mock('../shared/prompt', () => ({
     success: jest.fn(),
     printError: jest.fn(),
     Spinner: jest.fn().mockImplementation(() => ({ start: jest.fn(), stop: jest.fn() })),
+    withSpinner: jest.fn().mockImplementation(async (label, fn) => fn()),
 }));
 
 const prompt = require('../shared/prompt');

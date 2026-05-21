@@ -1,4 +1,4 @@
-const { prompt, info, success, printError, Spinner } = require('../shared/prompt');
+const { prompt, info, success, printError, withSpinner } = require('../shared/prompt');
 
 /**
  * @param {import('../shared/types').GitProvider} gitlab
@@ -14,36 +14,28 @@ async function nivelarBranches(gitlab, opts = {}) {
     const details = [];
 
     {
-        const spinner = new Spinner();
-        spinner.start('Criando MR ' + mainBranch + ' -> ' + rcBranch + '...');
         try {
-            const mr1 = await gitlab.createMergeRequest(
+            const mr1 = await withSpinner('Criando MR ' + mainBranch + ' -> ' + rcBranch + '...', () => gitlab.createMergeRequest(
                 mainBranch, rcBranch,
                 'chore: nivelamento ' + mainBranch + ' -> ' + rcBranch,
                 'Nivelamento automatico de branches: ' + mainBranch + ' -> ' + rcBranch
-            );
-            spinner.stop();
+            ));
             if (mr1) { info('MR criado: ' + mr1.web_url); okCount++; details.push(mainBranch + '->' + rcBranch + ':ok'); }
         } catch (err) {
-            spinner.stop();
             printError('Falha no nivelamento (primeiro MR)', err);
             errCount++; details.push(mainBranch + '->' + rcBranch + ':error');
         }
     }
 
     {
-        const spinner = new Spinner();
-        spinner.start('Criando MR ' + rcBranch + ' -> ' + devBranch + '...');
         try {
-            const mr2 = await gitlab.createMergeRequest(
+            const mr2 = await withSpinner('Criando MR ' + rcBranch + ' -> ' + devBranch + '...', () => gitlab.createMergeRequest(
                 rcBranch, devBranch,
                 'chore: nivelamento ' + rcBranch + ' -> ' + devBranch,
                 'Nivelamento automatico de branches: ' + rcBranch + ' -> ' + devBranch
-            );
-            spinner.stop();
+            ));
             if (mr2) { success('Segundo MR criado: ' + mr2.web_url); okCount++; details.push(rcBranch + '->' + devBranch + ':ok'); }
         } catch (err) {
-            spinner.stop();
             printError('Falha no nivelamento (segundo MR)', err);
             errCount++; details.push(rcBranch + '->' + devBranch + ':error');
         }

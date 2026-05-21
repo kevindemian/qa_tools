@@ -9,7 +9,8 @@ jest.mock('../shared/logger', () => ({
 }));
 
 jest.mock('../shared/prompt', () => ({
-    info: jest.fn()
+    info: jest.fn(),
+    extractErrorMessage: jest.fn(err => err?.message || 'Erro desconhecido'),
 }));
 
 const GitHubManager = require('./github_manager');

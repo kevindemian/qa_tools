@@ -182,12 +182,9 @@ function displayMenu(proj, ctx) {
     divider();
 }
 
-/** @param {string} proj @param {{ lastOperation: string, sessionCounters: Array<{status:string}> }} ctx */
+/** @param {string} proj @param {import('../shared/session-context').SessionContext} ctx */
 function buildContextLine(proj, ctx) {
-    const ok = ctx.sessionCounters.filter(c => c.status === 'ok').length;
-    const er = ctx.sessionCounters.filter(c => c.status === 'error').length;
-    const counts = ok > 0 || er > 0 ? ' | ' + ok + ' ok' + (er > 0 ? ' · ' + er + ' erro' : '') : '';
-    return proj + (ctx.lastOperation ? ' | ' + ctx.lastOperation : '') + counts;
+    return ctx.buildContextLine(proj);
 }
 
 /** @param {string} proj @param {{ git_directory: string }} ctx */

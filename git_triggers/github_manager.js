@@ -1,7 +1,15 @@
 // @ts-check
 const { createHttpClient } = require('../shared/http-client');
-const { info } = require('../shared/prompt');
+const { info, extractErrorMessage } = require('../shared/prompt');
 const { Logger } = require('../shared/logger');
+
+/** @param {import('../shared/logger').Logger} log @param {string} op @param {any} err @param {{ returnNull?: boolean }} [opts] */
+function handleError(log, op, err, opts) {
+  const msg = extractErrorMessage(err);
+  log.error(`Erro ao ${op}: ${msg}`, { status: err.response?.status });
+  if (opts?.returnNull) return null;
+  throw err;
+}
 
 class GitHubManager {
     /** @param {string} repoFullName @param {string} apiToken @param {string} [baseUrl] */
@@ -31,6 +39,50 @@ class GitHubManager {
         return '/repos/' + this.owner + '/' + this.repo;
     }
 
+    /**
+     * @param {string} url
+     * @param {{ operation?: string, returnNull?: boolean, params?: Record<string, any> }} [opts]
+     */
+    async _get(url, opts) {
+        try {
+            const args = opts?.params ? [{ params: opts.params }] : [];
+            const response = await this.client.get(url, ...args);
+            return response.data;
+        } catch (err) {
+            return /** @type {null} */ (handleError(this.log, opts?.operation || url, err, { returnNull: opts?.returnNull }));
+        }
+    }
+
+    /**
+     * @param {string} url
+     * @param {any} [body]
+     * @param {{ operation?: string }} [opts]
+     */
+    async _post(url, body, opts) {
+        try {
+            const args = body !== undefined ? [body] : [];
+            const response = await this.client.post(url, ...args);
+            return response.data;
+        } catch (err) {
+            return handleError(this.log, opts?.operation || url, err);
+        }
+    }
+
+    /**
+     * @param {string} url
+     * @param {any} [body]
+     * @param {{ operation?: string }} [opts]
+     */
+    async _patch(url, body, opts) {
+        try {
+            const args = body !== undefined ? [body] : [];
+            const response = await this.client.patch(url, ...args);
+            return response.data;
+        } catch (err) {
+            return handleError(this.log, opts?.operation || url, err);
+        }
+    }
+
     async triggerPipeline(payload) {
         try {
             const workflowId = payload.workflow_id;
@@ -40,37 +92,31 @@ class GitHubManager {
                     throw new Error('No workflows found in repository');
                 }
                 const workflow = workflows[0];
-                const response = await this.client.post(
+                await this._post(
                     this._repoPath + '/actions/workflows/' + workflow.id + '/dispatches',
-                    { ref: payload.ref, inputs: this._toInputs(payload.variables) }
+                    { ref: payload.ref, inputs: this._toInputs(payload.variables) },
+                    { operation: 'disparar workflow' }
                 );
                 return { id: workflow.id, web_url: this.apiUrl + '/' + this.repoFullName + '/actions/runs' };
             }
-            const response = await this.client.post(
+            await this._post(
                 this._repoPath + '/actions/workflows/' + workflowId + '/dispatches',
-                { ref: payload.ref, inputs: this._toInputs(payload.variables) }
+                { ref: payload.ref, inputs: this._toInputs(payload.variables) },
+                { operation: 'disparar workflow' }
             );
             return { id: workflowId, web_url: this.apiUrl + '/' + this.repoFullName + '/actions/runs' };
         } catch (err) {
-            this.log.error('Erro ao disparar workflow: ' + (err.response?.data?.message || err.message), {
-                status: err.response?.status
-            });
-            throw err;
+            return handleError(this.log, 'disparar workflow', err);
         }
     }
 
     async _listWorkflows() {
-        try {
-            const response = await this.client.get(this._repoPath + '/actions/workflows', {
-                params: { per_page: 10 }
-            });
-            return response.data.workflows || [];
-        } catch (err) {
-            this.log.error('Erro ao listar workflows: ' + (err.response?.data?.message || err.message), {
-                status: err.response?.status
-            });
-            return [];
-        }
+        const data = await this._get(this._repoPath + '/actions/workflows', {
+            operation: 'listar workflows',
+            params: { per_page: 10 },
+            returnNull: true,
+        });
+        return (data && data.workflows) || [];
     }
 
     _toInputs(variables) {
@@ -103,8 +149,8 @@ class GitHubManager {
         };
 
         try {
-            const response = await this.client.post(this._repoPath + '/pulls', body);
-            return this._formatPR(response.data);
+            const data = await this._post(this._repoPath + '/pulls', body, { operation: 'criar PR' });
+            return this._formatPR(data);
         } catch (err) {
             if (err.response?.status === 422) {
                 const errors = err.response?.data?.errors || [];
@@ -121,37 +167,20 @@ class GitHubManager {
                     }
                 }
             }
-            this.log.error('Erro ao criar PR: ' + JSON.stringify(err.response?.data?.message || err.message), {
-                status: err.response?.status
-            });
-            throw err;
+            return handleError(this.log, 'criar PR', err);
         }
     }
 
     async updateMergeRequest(iid, sourceBranch, targetBranch, title, description) {
-        const body = { title, body: description };
-
-        try {
-            const response = await this.client.patch(this._repoPath + '/pulls/' + iid, body);
-            return this._formatPR(response.data);
-        } catch (err) {
-            this.log.error('Erro ao atualizar PR: ' + JSON.stringify(err.response?.data?.message || err.message), {
-                iid,
-                status: err.response?.status
-            });
-            throw err;
-        }
+        const data = await this._patch(this._repoPath + '/pulls/' + iid, { title, body: description }, { operation: 'atualizar PR' });
+        return this._formatPR(data);
     }
 
     async getMergeRequest(iid) {
         try {
-            const response = await this.client.get(this._repoPath + '/pulls/' + iid);
-            return this._formatPR(response.data);
+            const data = await this._get(this._repoPath + '/pulls/' + iid, { operation: 'buscar PR', returnNull: true });
+            return this._formatPR(data);
         } catch (err) {
-            this.log.error('Erro ao buscar PR: ' + (err.response?.data?.message || err.message), {
-                iid,
-                status: err.response?.status
-            });
             return null;
         }
     }
@@ -163,12 +192,9 @@ class GitHubManager {
             if (targetBranch) params.base = targetBranch;
             if (searchStatus) params.state = searchStatus === 'opened' ? 'open' : searchStatus;
 
-            const response = await this.client.get(this._repoPath + '/pulls', { params });
-            return (response.data || []).map((pr) => this._formatPR(pr));
+            const data = await this._get(this._repoPath + '/pulls', { operation: 'buscar PRs', params, returnNull: true });
+            return (data || []).map((pr) => this._formatPR(pr));
         } catch (err) {
-            this.log.error('Erro ao buscar PRs: ' + (err.response?.data?.message || err.message), {
-                status: err.response?.status
-            });
             return [];
         }
     }
@@ -186,46 +212,35 @@ class GitHubManager {
             const response = await this.client.put(this._repoPath + '/pulls/' + iid + '/merge', body);
             return this._formatPR(response.data);
         } catch (err) {
-            this.log.error('Erro ao fazer merge: ' + JSON.stringify(err.response?.data?.message || err.message), {
-                iid,
-                status: err.response?.status
-            });
-            throw err;
+            return handleError(this.log, 'fazer merge', err);
         }
     }
 
     async getRecentPipelines(count = 5) {
         try {
-            const response = await this.client.get(this._repoPath + '/actions/runs', {
-                params: { per_page: count }
+            const data = await this._get(this._repoPath + '/actions/runs', {
+                operation: 'buscar runs',
+                params: { per_page: count },
+                returnNull: true,
             });
-            return response.data.workflow_runs || [];
+            return (data && data.workflow_runs) || [];
         } catch (err) {
-            this.log.error('Erro ao buscar runs: ' + (err.response?.data?.message || err.message), {
-                status: err.response?.status
-            });
             return [];
         }
     }
 
     async getPipeline(runId) {
-        try {
-            const response = await this.client.get(this._repoPath + '/actions/runs/' + runId);
-            return response.data;
-        } catch (err) {
-            this.log.error('Erro ao buscar run: ' + (err.response?.data?.message || err.message), {
-                runId,
-                status: err.response?.status
-            });
-            return null;
-        }
+        return await this._get(this._repoPath + '/actions/runs/' + runId, { operation: 'buscar run', returnNull: true });
     }
 
     /** @param {string|number} pipelineId @returns {Promise<Array<{id:string|number, name:string, stage:string, status:string}>>} */
     async getPipelineJobs(pipelineId) {
         try {
-            const response = await this.client.get(this._repoPath + '/actions/runs/' + pipelineId + '/jobs');
-            const jobs = response.data.jobs || [];
+            const data = await this._get(this._repoPath + '/actions/runs/' + pipelineId + '/jobs', {
+                operation: 'listar jobs',
+                returnNull: true,
+            });
+            const jobs = (data && data.jobs) || [];
             return jobs.map((/** @type {any} */ j) => ({
                 id: j.id,
                 name: j.name,
@@ -233,10 +248,6 @@ class GitHubManager {
                 status: j.conclusion || j.status || '',
             }));
         } catch (err) {
-            this.log.error('Erro ao listar jobs: ' + (err.response?.data?.message || err.message), {
-                pipelineId,
-                status: err.response?.status
-            });
             return [];
         }
     }
@@ -244,14 +255,13 @@ class GitHubManager {
     /** @param {string|number} pipelineId @returns {Promise<Array<{id:string|number, name:string}>>} */
     async listPipelineArtifacts(pipelineId) {
         try {
-            const response = await this.client.get(this._repoPath + '/actions/runs/' + pipelineId + '/artifacts');
-            const artifacts = response.data.artifacts || [];
+            const data = await this._get(this._repoPath + '/actions/runs/' + pipelineId + '/artifacts', {
+                operation: 'listar artifacts',
+                returnNull: true,
+            });
+            const artifacts = (data && data.artifacts) || [];
             return artifacts.map((/** @type {any} */ a) => ({ id: a.id, name: a.name }));
         } catch (err) {
-            this.log.error('Erro ao listar artifacts: ' + (err.response?.data?.message || err.message), {
-                pipelineId,
-                status: err.response?.status
-            });
             return [];
         }
     }
@@ -265,41 +275,37 @@ class GitHubManager {
             });
             return { buffer: Buffer.from(response.data), filename: 'artifact.zip' };
         } catch (err) {
-            this.log.error('Erro ao baixar artifact: ' + (err.response?.data?.message || err.message), {
-                artifactId,
-                status: err.response?.status
-            });
+            handleError(this.log, 'baixar artifact', err);
             throw err;
         }
     }
 
     async getCICDVariables() {
         try {
-            const response = await this.client.get(this._repoPath + '/actions/variables', {
-                params: { per_page: 100 }
+            const data = await this._get(this._repoPath + '/actions/variables', {
+                operation: 'buscar variaveis',
+                params: { per_page: 100 },
+                returnNull: true,
             });
-            const variables = response.data.variables || [];
+            const variables = (data && data.variables) || [];
             return variables.map((v) => ({
                 key: v.name,
                 value: v.value,
                 type: 'variable',
             }));
         } catch (err) {
-            this.log.error('Erro ao buscar variaveis: ' + (err.response?.data?.message || err.message), {
-                status: err.response?.status
-            });
             return [];
         }
     }
 
     async isApproved(prNumber) {
         try {
-            const res = await this.client.get(`${this._repoPath}/pulls/${prNumber}/reviews`);
-            return res.data.some(r => r.state === 'APPROVED');
-        } catch (err) {
-            this.log.error(`Erro ao verificar reviews do PR #${prNumber}: ${err.message}`, {
-                status: err.response?.status
+            const data = await this._get(this._repoPath + '/pulls/' + prNumber + '/reviews', {
+                operation: 'verificar reviews',
+                returnNull: true,
             });
+            return (data || []).some(r => r.state === 'APPROVED');
+        } catch (err) {
             return false;
         }
     }
