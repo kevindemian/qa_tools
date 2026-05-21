@@ -9,7 +9,7 @@ jest.mock('../shared/prompt', () => ({
     info: jest.fn(),
     title: jest.fn(),
     divider: jest.fn(),
-    prompt: jest.fn(),
+    prompt: jest.fn().mockReturnValue(''),
     confirm: jest.fn(),
     smartPrompt: jest.fn(),
     printError: jest.fn(),

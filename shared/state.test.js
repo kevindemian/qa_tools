@@ -1,5 +1,5 @@
 jest.mock('./logger', () => ({
-  rootLogger: { warn: jest.fn(), error: jest.fn(), info: jest.fn() },
+  rootLogger: { warn: jest.fn(), error: jest.fn(), info: jest.fn(), writeFileOnly: jest.fn() },
   Logger: function() {},
 }));
 

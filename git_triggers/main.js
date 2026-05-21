@@ -111,7 +111,13 @@ function isComplete(status) {
 
 async function pollPipeline(m, pipelineId, interval = 5000, timeout = 300000) {
     const start = Date.now();
+    let lastLog = 0;
     while (Date.now() - start < timeout) {
+        const elapsed = Math.floor((Date.now() - start) / 1000);
+        if (elapsed - lastLog >= 15) {
+            lastLog = elapsed;
+            info('Aguardando pipeline #' + pipelineId + ' (' + elapsed + 's)...');
+        }
         const p = await m.getPipeline(pipelineId);
         if (!p) { await delay(interval); continue; }
         const status = p.status || p.state || '';

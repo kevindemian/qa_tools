@@ -16,6 +16,7 @@ function load() {
       return JSON.parse(fs.readFileSync(STATE_PATH, 'utf8'));
     }
   } catch (err) {
+    warn('Arquivo de estado corrompido. Recuperando backup...');
     rootLogger.warn('Arquivo de estado corrompido, recuperando backup...');
     try {
       if (fs.existsSync(BAK_PATH)) {
@@ -25,12 +26,15 @@ function load() {
         return backup;
       }
     } catch (err) {
+      warn('Falha ao recuperar backup de estado.');
       rootLogger.error('Falha ao recuperar backup de estado: ' + err.message);
     }
     try {
       fs.renameSync(STATE_PATH, BAK_PATH);
+      warn('Backup salvo. Criando novo estado.');
       rootLogger.warn('Backup salvo em ' + BAK_PATH + '. Criando novo estado.');
     } catch (err) {
+      warn('Falha ao salvar backup de estado.');
       rootLogger.error('Falha ao salvar backup de estado: ' + err.message);
     }
   }
