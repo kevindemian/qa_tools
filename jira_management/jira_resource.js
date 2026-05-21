@@ -1,6 +1,6 @@
 // @ts-check
 const { createHttpClient } = require('../shared/http-client');
-const { error: logError, success, info, warn, extractErrorMessage } = require('../shared/prompt');
+const { error: logError, success, info, warn, extractErrorMessage, ProgressBar } = require('../shared/prompt');
 const { Logger } = require('../shared/logger');
 
 function sanitizeJqlValue(value) {
@@ -268,10 +268,12 @@ class JiraResource {
             update: { fixVersions: [{ set: [{ id: versionId }] }] }
         };
 
+        const bar = new ProgressBar(taskIds.length);
         for (const taskId of taskIds) {
-            info(`Atualizando tarefa: ${taskId}`);
             await this.putJiraResource(`issue/${taskId}`, payload);
+            bar.update(bar.current + 1);
         }
+        bar.stop();
     }
 
     async releaseVersion(projectName, versionName) {

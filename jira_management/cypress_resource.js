@@ -2,6 +2,7 @@
 const path = require('path');
 const { createHttpClient } = require('../shared/http-client');
 const { rootLogger } = require('../shared/logger');
+const { info, warn, success } = require('../shared/prompt');
 require('dotenv').config({ path: path.resolve(__dirname, '../.env') });
 
 function sanitizeUrl(url) {
@@ -36,7 +37,7 @@ class CypressResource {
         const format = 'json';
 
         const endpoint = `${cypressUrl}/enterprise-reporting/report?report_id=${report_id}&export_format=${format}&start_date=${startDate}&branch=${branch}&projects=__PROJECT__`;
-        rootLogger.info(`Fetching report: ${sanitizeUrl(endpoint)}`);
+        info(`Buscando relatorio Cypress (${projects.length} projeto(s))...`);
 
         for (const project of projects) {
             const url = endpoint.replace('__PROJECT__', project);
@@ -45,7 +46,7 @@ class CypressResource {
             });
 
             if (!Array.isArray(data)) {
-                rootLogger.error(`Resposta invalida para o projeto ${project} de ${sanitizeUrl(url)}`);
+                warn(`Resposta invalida para o projeto ${project}`);
                 continue;
             }
 
@@ -61,10 +62,7 @@ class CypressResource {
             const total = avgPassed + avgFailed;
             const pctPassed = total ? ((avgPassed / total) * 100).toFixed(2) : '0.00';
 
-            rootLogger.info(`Projeto: ${project}`);
-            rootLogger.info(`   Passed medio: ${avgPassed.toFixed(2)}`);
-            rootLogger.info(`   Failed medio: ${avgFailed.toFixed(2)}`);
-            rootLogger.info(`   % Passed: ${pctPassed}%`);
+            success(`${project}: ${pctPassed}% passed (${avgPassed.toFixed(2)} avg pass / ${avgFailed.toFixed(2)} avg fail)`);
         }
     }
 }

@@ -40,7 +40,7 @@ function prompt(label, options = {}) {
   let text = `\n${CYAN}->${RESET} ${label}`;
   if (hint) text += ` ${YELLOW}(${hint})${RESET}`;
   if (def) text += ` ${YELLOW}[${def}]${RESET}`;
-  return readlineSync.question(text + ': ', { defaultInput: def });
+  return readlineSync.question(text + ': ', { defaultInput: def }).trim();
 }
 
 function confirm(label, defaultYes = false) {
@@ -62,6 +62,9 @@ function smartPrompt(label, options = {}, helpCallback) {
     const trimmed = value.trim().toLowerCase();
     if (trimmed === '/help' || trimmed === '/h') {
       if (helpCallback) helpCallback();
+      continue;
+    }
+    if (!trimmed) {
       retries++;
       continue;
     }
@@ -102,7 +105,7 @@ class ProgressBar {
   }
 
   stop() {
-    process.stdout.write('\n');
+    process.stdout.write('\r\x1b[K\n');
   }
 }
 
@@ -139,7 +142,7 @@ const KNOWN_ERRORS = [
   { test: /field.*not found|unknown field/i, msg: 'Campo nao encontrado', hint: 'Verifique se o campo existe no schema do projeto.' },
   { test: /permission|forbidden|403/i, msg: 'Sem permissao', hint: 'Verifique se seu token tem acesso a esta operacao.' },
   { test: /unauthorized|401/i, msg: 'Token invalido ou expirado', hint: 'Verifique seu token de autenticacao no arquivo .env.' },
-  { test: /econnreset|econnrefused|enotfound|timeout/i, msg: 'Erro de conexao', hint: 'Verifique se a URL do Jira esta correta e acessivel.' },
+  { test: /econnreset|econnrefused|enotfound|timeout|econnaborted/i, msg: 'Erro de conexao', hint: 'Verifique se a URL do Jira esta correta e acessivel.' },
   { test: /version.*not found/i, msg: 'Versao nao encontrada', hint: 'Verifique se o nome da versao esta correto.' },
   { test: /already exists/i, msg: 'Item ja existe', hint: 'Escolha um nome diferente.' },
 ];

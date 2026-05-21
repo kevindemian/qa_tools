@@ -772,4 +772,8 @@ async function main() {
     }
 }
 
-main();
+main().catch(err => {
+    printError('Erro inesperado', err);
+    printSessionSummary();
+    process.exitCode = 1;
+});

@@ -254,12 +254,22 @@ describe('Prompt', () => {
       expect(result).toBe('final-value');
     });
 
-    it('returns empty after max retries with /help', () => {
-      const helpCb = jest.fn();
-      jest.spyOn(readlineSync, 'question').mockReturnValue('/help');
-      const result = prompt.smartPrompt('Enter', { maxRetries: 2 }, helpCb);
+    it('returns empty after max retries with empty input', () => {
+      jest.spyOn(readlineSync, 'question').mockReturnValue('');
+      const result = prompt.smartPrompt('Enter', { maxRetries: 2 });
       expect(result).toBe('');
-      expect(helpCb).toHaveBeenCalledTimes(2);
+    });
+
+    it('allows unlimited /help and returns on valid input', () => {
+      const helpCb = jest.fn();
+      jest.spyOn(readlineSync, 'question')
+        .mockReturnValueOnce('/help')
+        .mockReturnValueOnce('/help')
+        .mockReturnValueOnce('/help')
+        .mockReturnValueOnce('final-value');
+      const result = prompt.smartPrompt('Enter', {}, helpCb);
+      expect(result).toBe('final-value');
+      expect(helpCb).toHaveBeenCalledTimes(3);
     });
   });
 
