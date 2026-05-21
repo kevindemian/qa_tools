@@ -196,3 +196,78 @@ describe('JiraLinkManager', () => {
     });
   });
 });
+
+describe('moveCardsToDone', () => {
+  let jiraResource;
+
+  beforeEach(() => {
+    jiraResource = new JiraResource('token', 'http://jira');
+    jiraResource.getJiraResource = jest.fn();
+    jiraResource.postJiraResource = jest.fn();
+    jiraResource.transitionIssue = jest.fn();
+  });
+
+  it('moves single task from New through workflow', async () => {
+    jiraResource.getJiraResource
+      .mockResolvedValueOnce({ fields: { status: { name: 'New' } } })
+      .mockResolvedValueOnce({ transitions: [{ id: 31, to: { name: 'approve' } }, { id: 41, to: { name: 'use test case' } }] });
+
+    await jiraResource.moveCardsToDone(['TASK-1']);
+
+    expect(jiraResource.transitionIssue).toHaveBeenCalledTimes(2);
+    expect(jiraResource.transitionIssue).toHaveBeenNthCalledWith(1, 'TASK-1', 31);
+    expect(jiraResource.transitionIssue).toHaveBeenNthCalledWith(2, 'TASK-1', 41);
+  });
+
+  it('skips task when status fetch returns null', async () => {
+    jiraResource.getJiraResource.mockResolvedValue(null);
+
+    await jiraResource.moveCardsToDone(['TASK-1']);
+
+    expect(jiraResource.transitionIssue).not.toHaveBeenCalled();
+  });
+
+  it('skips task when status is not in workflowMap', async () => {
+    jiraResource.getJiraResource
+      .mockResolvedValueOnce({ fields: { status: { name: 'Unknown Status' } } });
+
+    await jiraResource.moveCardsToDone(['TASK-1']);
+
+    expect(jiraResource.transitionIssue).not.toHaveBeenCalled();
+  });
+
+  it('reuses transitionsMap after resolving for first task', async () => {
+    jiraResource.getJiraResource
+      .mockResolvedValueOnce({ fields: { status: { name: 'New' } } })
+      .mockResolvedValueOnce({ transitions: [{ id: 31, to: { name: 'approve' } }] })
+      .mockResolvedValueOnce({ fields: { status: { name: 'New' } } });
+
+    await jiraResource.moveCardsToDone(['TASK-1', 'TASK-2']);
+
+    expect(jiraResource.getJiraResource).toHaveBeenCalledTimes(3);
+    expect(jiraResource.transitionIssue).toHaveBeenCalledTimes(2);
+  });
+
+  it('handles API error during transition gracefully', async () => {
+    jiraResource.getJiraResource
+      .mockResolvedValueOnce({ fields: { status: { name: 'New' } } })
+      .mockResolvedValueOnce({ transitions: [{ id: 31, to: { name: 'approve' } }] });
+    jiraResource.transitionIssue.mockRejectedValue(new Error('API error'));
+
+    await expect(jiraResource.moveCardsToDone(['TASK-1'])).resolves.not.toThrow();
+    expect(jiraResource.transitionIssue).toHaveBeenCalledTimes(1);
+  });
+
+  it('skips only the failed task when transitions not found (continue not return)', async () => {
+    jiraResource.getJiraResource
+      .mockResolvedValueOnce({ fields: { status: { name: 'New' } } })
+      .mockResolvedValueOnce({ transitions: [] })
+      .mockResolvedValueOnce({ fields: { status: { name: 'New' } } })
+      .mockResolvedValueOnce({ transitions: [{ id: 31, to: { name: 'approve' } }] });
+
+    await jiraResource.moveCardsToDone(['TASK-1', 'TASK-2']);
+
+    expect(jiraResource.transitionIssue).toHaveBeenCalledTimes(1);
+    expect(jiraResource.transitionIssue).toHaveBeenCalledWith('TASK-2', 31);
+  });
+});

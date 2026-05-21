@@ -1,6 +1,6 @@
 const JiraResource = require('./jira_resource');
 const JiraLinkManager = require('./jira_link_manager');
-const { createTestExecution, createTestExecutionWithLinks, generateMappingFiles } = require('./create_tests');
+const { createTestExecution, createTestExecutionWithLinks, generateMappingFiles, validateCsvTests } = require('./create_tests');
 
 jest.mock('axios', () => {
     const mockInstance = {
@@ -333,5 +333,36 @@ describe('generateMappingFiles', () => {
         const tc2Section = mdLines.indexOf('## TEST-2 — TC2');
         const tc2Block = md.slice(md.indexOf('## TEST-2 — TC2'), md.indexOf('\n---\n\n', tc2Section));
         expect(tc2Block).not.toContain('**Descrição:**');
+    });
+});
+
+describe('validateCsvTests', () => {
+    it('returns error for empty title', () => {
+        const { errors } = validateCsvTests([{ title: '', steps: [{ fields: { Action: 'x' } }] }]);
+        expect(errors).toContain('Teste 1: Titulo vazio');
+    });
+
+    it('returns warning for duplicate titles', () => {
+        const { warnings } = validateCsvTests([
+            { title: 'TC1', steps: [{ fields: { Action: 'x' } }] },
+            { title: 'TC1', steps: [{ fields: { Action: 'y' } }] },
+        ]);
+        expect(warnings).toContain('Teste 2: Titulo duplicado "TC1"');
+    });
+
+    it('returns error for no steps', () => {
+        const { errors } = validateCsvTests([{ title: 'TC1', steps: [] }]);
+        expect(errors[0]).toContain('Nenhum step definido');
+    });
+
+    it('returns warning for empty Action in step', () => {
+        const { warnings } = validateCsvTests([{ title: 'TC1', steps: [{ fields: { Action: '' } }] }]);
+        expect(warnings[0]).toContain('sem Action');
+    });
+
+    it('returns no errors for valid test', () => {
+        const { errors, warnings } = validateCsvTests([{ title: 'TC1', steps: [{ fields: { Action: 'Click' } }] }]);
+        expect(errors).toHaveLength(0);
+        expect(warnings).toHaveLength(0);
     });
 });

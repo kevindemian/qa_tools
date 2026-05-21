@@ -227,6 +227,82 @@ describe('Prompt', () => {
     });
   });
 
+  describe('smartPrompt', () => {
+    let readlineSync;
+
+    beforeAll(() => {
+      readlineSync = require('readline-sync');
+    });
+
+    afterEach(() => {
+      jest.restoreAllMocks();
+    });
+
+    it('returns value on first attempt', () => {
+      jest.spyOn(readlineSync, 'question').mockReturnValue('my-value');
+      const result = prompt.smartPrompt('Enter value');
+      expect(result).toBe('my-value');
+    });
+
+    it('calls helpCallback on /help and retries', () => {
+      const helpCb = jest.fn();
+      jest.spyOn(readlineSync, 'question')
+        .mockReturnValueOnce('/help')
+        .mockReturnValueOnce('final-value');
+      const result = prompt.smartPrompt('Enter', {}, helpCb);
+      expect(helpCb).toHaveBeenCalledTimes(1);
+      expect(result).toBe('final-value');
+    });
+
+    it('returns empty after max retries with /help', () => {
+      const helpCb = jest.fn();
+      jest.spyOn(readlineSync, 'question').mockReturnValue('/help');
+      const result = prompt.smartPrompt('Enter', { maxRetries: 2 }, helpCb);
+      expect(result).toBe('');
+      expect(helpCb).toHaveBeenCalledTimes(2);
+    });
+  });
+
+  describe('confirm', () => {
+    let readlineSync;
+
+    beforeAll(() => {
+      readlineSync = require('readline-sync');
+    });
+
+    afterEach(() => {
+      jest.restoreAllMocks();
+    });
+
+    it('returns true for y input', () => {
+      jest.spyOn(readlineSync, 'question').mockReturnValue('y');
+      expect(prompt.confirm('Continue?', true)).toBe(true);
+    });
+
+    it('returns false for n input', () => {
+      jest.spyOn(readlineSync, 'question').mockReturnValue('n');
+      expect(prompt.confirm('Continue?', false)).toBe(false);
+    });
+  });
+
+  describe('printError', () => {
+    it('calls error with known humanized message', () => {
+      const testErr = { response: { data: { errorMessages: ['rate limit exceeded'] } } };
+      prompt.printError('Contexto', testErr);
+      expect(mockLog).toHaveBeenCalledWith(
+        expect.stringContaining('Rate limit')
+      );
+    });
+
+    it('calls error with unknown error fallback', () => {
+      const testErr = new Error('something weird');
+      prompt.printError('Contexto', testErr);
+      expect(mockLog).toHaveBeenCalledWith(
+        expect.stringContaining('Erro inesperado')
+      );
+    });
+  });
+
   describe('tableView', () => {
     it('calls console.table with all columns by default', () => {
       const spy = jest.spyOn(console, 'table').mockImplementation(() => {});

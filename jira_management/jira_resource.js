@@ -125,7 +125,15 @@ class JiraResource {
 
     async getVersionId(projectName, versionName) {
         const projectId = await this.getProjectId(projectName);
+        if (!projectId) {
+            info(`Projeto '${projectName}' nao encontrado.`);
+            return null;
+        }
         const versions = await this.getProjectVersions(projectId);
+        if (!versions || !Array.isArray(versions)) {
+            info(`Nenhuma versao encontrada para o projeto '${projectName}'.`);
+            return null;
+        }
 
         const version = versions.find(v => v.name.toLowerCase() === versionName.toLowerCase());
         if (version) {
@@ -198,7 +206,15 @@ class JiraResource {
 
     async getLatestReleases(projectName, numReleases) {
         const projectId = await this.getProjectId(projectName);
+        if (!projectId) {
+            info(`Projeto '${projectName}' nao encontrado.`);
+            return { latestReleasedVersions: [], unreleasedVersions: [] };
+        }
         const allVersions = await this.getProjectVersions(projectId);
+        if (!allVersions || !Array.isArray(allVersions)) {
+            info(`Nenhuma versao encontrada para o projeto '${projectName}'.`);
+            return { latestReleasedVersions: [], unreleasedVersions: [] };
+        }
 
         const releasedVersions = allVersions
             .filter(v => v.released && v.releaseDate)
@@ -302,13 +318,13 @@ class JiraResource {
             const currentStatus = issueData.fields.status.name;
             this.log.info(`Tarefa ${taskId} — status atual: ${currentStatus}`);
 
-            if (Object.keys(transitionsMap).length === 0) {
-                transitionsMap = await this.getTransitionsForIssue(taskId);
                 if (Object.keys(transitionsMap).length === 0) {
-                    this.log.warn(`Nao foi possivel obter transicoes para ${taskId}. Pulando todas as tarefas.`);
-                    return;
+                    transitionsMap = await this.getTransitionsForIssue(taskId);
+                    if (Object.keys(transitionsMap).length === 0) {
+                        this.log.warn(`Nao foi possivel obter transicoes para ${taskId}. Pulando tarefa.`);
+                        continue;
+                    }
                 }
-            }
 
             const statusLower = currentStatus.toLowerCase();
             try {

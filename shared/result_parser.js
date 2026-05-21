@@ -60,13 +60,20 @@ function parseMochawesome(jsonData) {
 
 /**
  * @param {string} filePath
- * @returns {{tests: Array<{title:string, state:'passed'|'failed'|'skipped', duration:number}>, stats: {passed:number, failed:number, skipped:number, total:number, duration:number}}}
+ * @returns {{tests: Array<{title:string, state:'passed'|'failed'|'skipped', duration:number}>, stats: {passed:number, failed:number, skipped:number, total:number, duration:number}, error?: string}}
  */
 function parseCypressResults(filePath) {
     const fs = require('fs');
-    const raw = fs.readFileSync(filePath, 'utf8');
-    const json = JSON.parse(raw);
-    return parseMochawesome(json);
+    try {
+        const raw = fs.readFileSync(filePath, 'utf8');
+        const json = JSON.parse(raw);
+        return parseMochawesome(json);
+    } catch (err) {
+        const msg = err.code === 'ENOENT'
+            ? 'Arquivo nao encontrado: ' + filePath
+            : 'Erro ao ler/parsear arquivo: ' + filePath + ' (' + err.message + ')';
+        return { tests: [], stats: { passed: 0, failed: 0, skipped: 0, total: 0, duration: 0 }, error: msg };
+    }
 }
 
 module.exports = { parseMochawesome, parseCypressResults };

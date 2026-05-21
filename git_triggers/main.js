@@ -596,10 +596,15 @@ async function main() {
                 const prLabel = currentProvider === 'github' ? 'PR' : 'MR';
                 try {
                     const results = await m.searchMergeRequests('', '', status);
-                    const approved = results.filter(r => r.approved === true);
+                    const approved = [];
+                    for (const r of results) {
+                        if (typeof m.isApproved === 'function' && await m.isApproved(r.iid || r.number)) {
+                            approved.push(r);
+                        }
+                    }
                     if (approved.length > 0) {
                         info(prLabel + 's aprovados:');
-                        approved.forEach(r => console.log('  ' + prLabel + ' #' + r.iid + ': ' + r.title));
+                        approved.forEach(r => console.log('  ' + prLabel + ' #' + (r.iid || r.number) + ': ' + r.title));
                         pushHistory('prs-approved', approved.length + ' ' + prLabel + 's', 'ok');
                     } else {
                         warn('Nenhum ' + prLabel + ' aprovado encontrado.');
@@ -638,9 +643,20 @@ async function main() {
                     spinner.stop();
                     if (variables) {
                         const exportPath = path.resolve(__dirname, '../exported_variables.env');
-                        const envContent = variables.map(v => v.key + '=' + v.value).join('\n');
-                        fs.writeFileSync(exportPath, envContent, 'utf8');
-                        success('Variaveis exportadas para ' + exportPath);
+                        const envContent = variables.map(v => {
+                            const safeValue = (v.value || '').replace(/\n/g, '\\n');
+                            if (safeValue.includes('=')) {
+                                return v.key + '="' + safeValue.replace(/"/g, '\\"') + '"';
+                            }
+                            return v.key + '=' + safeValue;
+                        }).join('\n');
+                        fs.writeFileSync(exportPath, envContent, { mode: 0o600, encoding: 'utf8' });
+                        const cleanup = () => {
+                            try { fs.unlinkSync(exportPath); } catch {}
+                        };
+                        process.on('exit', cleanup);
+                        process.on('SIGINT', cleanup);
+                        success('Variaveis exportadas para ' + exportPath + ' (modo 600, cleanup no exit)');
                         pushHistory('export-vars', variables.length + ' variaveis', 'ok');
                     }
                 } catch (err) {

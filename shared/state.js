@@ -40,9 +40,9 @@ function load() {
 /** @param {import('./types').StateSchema} state */
 function save(state) {
   try {
-    fs.writeFileSync(BAK_PATH, JSON.stringify(state, null, 2), 'utf8');
     fs.writeFileSync(TMP_PATH, JSON.stringify(state, null, 2), 'utf8');
     fs.renameSync(TMP_PATH, STATE_PATH);
+    fs.writeFileSync(BAK_PATH, JSON.stringify(state, null, 2), 'utf8');
   } catch (err) {
     warn('Falha ao salvar estado. Alteracoes podem ser perdidas.');
     rootLogger.error('Falha ao salvar estado: ' + err.message);

@@ -83,7 +83,18 @@ describe('parseCypressResults', () => {
         expect(result.stats.passed).toBe(2);
     });
 
-    it('throws for nonexistent file', () => {
-        expect(() => parseCypressResults('/nonexistent.json')).toThrow();
+    it('returns error object for nonexistent file', () => {
+        const result = parseCypressResults('/nonexistent-' + Date.now() + '.json');
+        expect(result.error).toContain('Arquivo nao encontrado');
+        expect(result.stats.total).toBe(0);
+        expect(result.tests).toEqual([]);
+    });
+
+    it('returns error for invalid JSON content', () => {
+        const invalidFile = tmpFile + '-invalid.json';
+        require('fs').writeFileSync(invalidFile, 'not json', 'utf8');
+        const result = parseCypressResults(invalidFile);
+        expect(result.error).toContain('Erro ao ler/parsear');
+        try { require('fs').unlinkSync(invalidFile); } catch (e) { /* ignore */ }
     });
 });

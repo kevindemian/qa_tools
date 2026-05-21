@@ -11,6 +11,12 @@ class GitHubManager {
         this.repoFullName = repoFullName;
         this.apiToken = apiToken;
         this.apiUrl = (baseUrl || 'https://api.github.com').replace(/\/+$/, '');
+        if (!apiToken) {
+            throw new Error('GitHub: apiToken é obrigatório');
+        }
+        if (!repoFullName || !repoFullName.includes('/')) {
+            throw new Error('GitHub: repoFullName deve estar no formato "owner/repo"');
+        }
         this.client = createHttpClient({
             baseUrl: this.apiUrl,
             authHeader: { Authorization: 'Bearer ' + apiToken },
@@ -286,6 +292,18 @@ class GitHubManager {
         }
     }
 
+    async isApproved(prNumber) {
+        try {
+            const res = await this.client.get(`${this._repoPath}/pulls/${prNumber}/reviews`);
+            return res.data.some(r => r.state === 'APPROVED');
+        } catch (err) {
+            this.log.error(`Erro ao verificar reviews do PR #${prNumber}: ${err.message}`, {
+                status: err.response?.status
+            });
+            return false;
+        }
+    }
+
     _formatPR(data) {
         if (!data) return null;
         return {
@@ -297,7 +315,7 @@ class GitHubManager {
             description: data.body,
             source_branch: (data.head || {}).ref,
             target_branch: (data.base || {}).ref,
-            approved: (data.requested_reviewers || []).length === 0 && data.state === 'open',
+            approved: false,
         };
     }
 }

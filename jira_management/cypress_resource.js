@@ -17,10 +17,12 @@ class CypressResource {
         });
     }
 
-    /** @param {string} resourceUrl */
-    async getCypressResource(resourceUrl) {
+    /** @param {string} resourceUrl @param {Object} [opts] */
+    async getCypressResource(resourceUrl, opts = {}) {
         try {
-            const response = await this.client.get(resourceUrl);
+            const config = {};
+            if (opts.headers) config.headers = opts.headers;
+            const response = await this.client.get(resourceUrl, config);
             return response.data;
         } catch (err) {
             rootLogger.error(`Erro HTTP GET ${sanitizeUrl(resourceUrl)}: ${err.message}`, { resourceUrl: sanitizeUrl(resourceUrl) });
@@ -33,12 +35,14 @@ class CypressResource {
         const report_id = 'status-per-test-daily';
         const format = 'json';
 
-        const endpoint = `${cypressUrl}/enterprise-reporting/report?token=${cypressToken}&report_id=${report_id}&export_format=${format}&start_date=${startDate}&branch=${branch}&projects=__PROJECT__`;
+        const endpoint = `${cypressUrl}/enterprise-reporting/report?report_id=${report_id}&export_format=${format}&start_date=${startDate}&branch=${branch}&projects=__PROJECT__`;
         rootLogger.info(`Fetching report: ${sanitizeUrl(endpoint)}`);
 
         for (const project of projects) {
             const url = endpoint.replace('__PROJECT__', project);
-            const data = await this.getCypressResource(url);
+            const data = await this.getCypressResource(url, {
+                headers: { 'Authorization': `Bearer ${cypressToken}` }
+            });
 
             if (!Array.isArray(data)) {
                 rootLogger.error(`Resposta invalida para o projeto ${project} de ${sanitizeUrl(url)}`);

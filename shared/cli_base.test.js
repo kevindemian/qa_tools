@@ -5,19 +5,24 @@ jest.mock('./logger', () => ({
   Logger: function() { this.info = jest.fn(); this.error = jest.fn(); this.warn = jest.fn(); this.debug = jest.fn(); },
 }));
 
+const MOCK_PROMPT = { error: jest.fn(), warn: jest.fn(), info: jest.fn() };
+jest.mock('./prompt', () => MOCK_PROMPT);
+
+const ENV_BACKUP = { ...process.env };
+
 describe('CLI Base', () => {
   let cliBase;
-  let mockLog, mockError, mockWarn;
-
-  const MOCK_PROMPT = { error: jest.fn(), warn: jest.fn(), info: jest.fn() };
 
   beforeAll(() => {
-    jest.mock('./prompt', () => MOCK_PROMPT);
     cliBase = require('./cli_base');
   });
 
   beforeEach(() => {
     jest.clearAllMocks();
+  });
+
+  afterEach(() => {
+    process.env = { ...ENV_BACKUP };
   });
 
   describe('mask', () => {

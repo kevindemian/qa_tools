@@ -228,6 +228,18 @@ class GitLabManager {
         }
     }
 
+    async isApproved(mrIid) {
+        try {
+            const res = await this.client.get(`/merge_requests/${mrIid}/approvals`);
+            return res.data.approved === true;
+        } catch (err) {
+            this.log.error(`Erro ao verificar approvals do MR #${mrIid}: ${err.message}`, {
+                status: err.response?.status
+            });
+            return false;
+        }
+    }
+
     async getCICDVariables() {
         try {
             const response = await this.client.get('/variables', {

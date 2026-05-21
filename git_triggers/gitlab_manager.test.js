@@ -319,6 +319,27 @@ describe('GitLabManager', () => {
         });
     });
 
+    describe('isApproved', () => {
+        it('returns true when approved', async () => {
+            mockClient.get.mockResolvedValue({ data: { approved: true } });
+            const result = await manager.isApproved(42);
+            expect(result).toBe(true);
+            expect(mockClient.get).toHaveBeenCalledWith('/merge_requests/42/approvals');
+        });
+
+        it('returns false when not approved', async () => {
+            mockClient.get.mockResolvedValue({ data: { approved: false } });
+            const result = await manager.isApproved(42);
+            expect(result).toBe(false);
+        });
+
+        it('returns false on API error', async () => {
+            mockClient.get.mockRejectedValue(new Error('API error'));
+            const result = await manager.isApproved(42);
+            expect(result).toBe(false);
+        });
+    });
+
     describe('getCICDVariables', () => {
         it('calls GET /variables with per_page=100', async () => {
             mockClient.get.mockResolvedValue({ data: [{ key: 'VAR1', value: 'val1' }] });
