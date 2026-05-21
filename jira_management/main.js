@@ -9,7 +9,7 @@ const { success, error, warn, info, title, divider, prompt, confirm, printError,
 const { mask, createValidateEnv, setupSigint } = require('../shared/cli_base');
 const { rootLogger } = require('../shared/logger');
 const { load: loadState, update: updateState, STATE_PATH } = require('../shared/state');
-const { createTestsFromCsv, createTestExecution, createTestExecutionWithLinks } = require('./create_tests');
+const { createTestsFromCsv, createTestsFromJson, createTestExecution, createTestExecutionWithLinks } = require('./create_tests');
 
 require('dotenv').config({ path: path.resolve(__dirname, '../.env') });
 
@@ -150,6 +150,8 @@ const ALIASES = {
     'template': '11', 'gerar-template': '11',
     'testexec': '13', 'criar-testexec': '13', 'execucao': '13',
     'diretorio-cypress': '14', 'cypress': '14',
+    'importar-json': '15', 'json': '15',
+    'diretorio-json': '16',
     'sair': '0', 'exit': '0',
     'voltar': 'menu',
     'ajuda': '/help', 'help': '/help'
@@ -169,6 +171,7 @@ function displayMenu(proj, gitDir) {
     divider();
     console.log('  TESTES');
     console.log('   1  Criar testes a partir de CSV');
+    console.log('  15  Importar testes de JSON');
     console.log('');
     console.log('  RELEASES');
     console.log('   2  Listar versoes de release');
@@ -184,6 +187,8 @@ function displayMenu(proj, gitDir) {
     console.log('  10  Alterar diretorio git (atual: ' + gitDir + ')');
     const cypressDir = process.env.CYPRESS_PROJECT_PATH || loadState().lastCypressPath || 'nao configurado';
     console.log('  14  Alterar diretorio Cypress (atual: ' + cypressDir + ')');
+    const jsonDir = loadState().lastJsonDir || 'nao configurado';
+    console.log('  16  Alterar diretorio JSON (atual: ' + jsonDir + ')');
     console.log('');
     console.log('  UTILITARIOS');
     console.log('  11  Gerar template CSV');
@@ -208,9 +213,11 @@ function buildContextLine(proj) {
 /** @returns {Array<any>} */
 function buildMenuChoices(proj, gitDir) {
     const cyn = process.env.CYPRESS_PROJECT_PATH || loadState().lastCypressPath || 'nao configurado';
+    const jsonDir = loadState().lastJsonDir || 'nao configurado';
     return [
         { type: 'separator', line: ' TESTES' },
         { name: '1  Criar testes a partir de CSV', value: '1' },
+        { name: '15  Importar testes de JSON', value: '15' },
         { type: 'separator', line: ' RELEASES' },
         { name: '2  Listar versoes de release', value: '2' },
         { name: '3  Criar nova versao', value: '3' },
@@ -223,6 +230,7 @@ function buildMenuChoices(proj, gitDir) {
         { name: '9  Alterar projeto Jira', value: '9', description: proj },
         { name: '10  Alterar diretorio git', value: '10', description: gitDir },
         { name: '14  Alterar diretorio Cypress', value: '14', description: cyn },
+        { name: '16  Alterar diretorio JSON', value: '16', description: jsonDir },
         { type: 'separator', line: ' UTILITARIOS' },
         { name: '11  Gerar template CSV', value: '11' },
         { name: '12  Diagnosticar conexao', value: '12' },
@@ -328,7 +336,7 @@ async function main() {
             displayMenu(project_name, git_directory);
             const menuState = loadState();
             const lastHint = menuState.lastChoice && menuState.lastChoice !== '0'
-                ? 'Enter = ' + menuState.lastChoice : '0-14 ou /help';
+                ? 'Enter = ' + menuState.lastChoice : '0-15 ou /help';
             choice = prompt('Selecione uma opcao', { hint: lastHint });
             if (!choice.trim() && menuState.lastChoice && menuState.lastChoice !== '0') {
                 choice = menuState.lastChoice;
@@ -691,6 +699,61 @@ async function main() {
                 break;
             }
 
+            case '15': {
+                try {
+                    const result = await createTestsFromJson({
+                        jiraResource, jiraResourceXray, linkManager, linkManagerXray,
+                        project_name, base_url, sessionLog,
+                        onBusy: (val) => { isBusy = val; }
+                    });
+                    if (result) {
+                        inMemoryTasksId = result.inMemoryTasksId;
+                        inMemoryTasksText = result.inMemoryTasksText;
+                        const okCount = result.inMemoryTasksId.length;
+                        success('Importacao JSON concluida: ' + okCount + ' testes');
+                        results = result.inMemoryTasksId.map(key => ({ status: 'ok', label: key, message: '' }));
+                        pushHistory('importar-json', okCount + ' testes', 'ok');
+
+                        if (confirm('Criar Test Execution para estes testes?')) {
+                            try {
+                                const keys = result.inMemoryTasksId;
+                                const nameInput = prompt('Nome da execucao', { hint: 'Enter = ' + path.basename(process.env.JSON_PATH || 'testes') });
+                                const csvName = nameInput.trim() || (process.env.JSON_PATH ? path.basename(process.env.JSON_PATH, '.json') : 'json-import');
+                                const execTitle = prompt('Titulo do Test Execution', { hint: 'Enter = ' + csvName });
+                                const execDesc = prompt('Descricao (opcional)');
+                                const execResult = await createTestExecutionWithLinks(
+                                    jiraResource, linkManager, project_name, keys, csvName,
+                                    { title: execTitle, description: execDesc }
+                                );
+                                success('Test Execution criado: ' + execResult.key);
+                                pushHistory('create-testexec', execResult.key, 'ok');
+                            } catch (err) {
+                                printError('Erro ao criar Test Execution', err);
+                            }
+                        }
+
+                        lastOperation = okCount + ' testes importados via JSON';
+                    }
+                } catch (err) {
+                    printError('Erro ao importar JSON', err);
+                    pushHistory('importar-json', 'erro', 'error');
+                }
+                break;
+            }
+
+            case '16': {
+                const dir = prompt('Caminho do diretorio padrão de JSON');
+                if (!dir.trim()) {
+                    warn('Caminho vazio, ignorando.');
+                    break;
+                }
+                const resolved = path.resolve(dir.trim());
+                updateState(state => { state.lastJsonDir = resolved; });
+                success('Diretorio padrao JSON alterado para: ' + resolved);
+                pushHistory('config-json-dir', resolved, 'ok');
+                break;
+            }
+
             case '0':
                 title('Ate logo!');
                 printSessionSummary();
@@ -698,10 +761,10 @@ async function main() {
                 return;
 
             default:
-                warn('Opcao invalida. Escolha entre 0-14, alias ou digite /help.');
+                warn('Opcao invalida. Escolha entre 0-16, alias ou digite /help.');
         }
 
-        const longOps = ['1', '4', '5', '7', '8'];
+        const longOps = ['1', '15', '4', '5', '7', '8'];
         const hasResults = typeof results !== 'undefined' && results && results.some(r => r.status === 'error');
         if (process.env.AUTO_CONFIRM !== 'true' && choice !== '0' && longOps.includes(choice) && hasResults) {
             prompt('Pressione Enter para continuar');
