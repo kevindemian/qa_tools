@@ -162,43 +162,67 @@ function resolveAlias(choice) {
     return ALIASES[trimmed] || choice;
 }
 
-function displayMenu(proj, gitDir) {
+/**
+ * @typedef {{ section?: string, id?: string, label: string, configKey?: string }} MenuItem
+ * @type {MenuItem[]}
+ */
+const MENU_ITEMS = [
+    { section: 'TESTES' },
+    { id: '1', label: 'Criar testes a partir de CSV' },
+    { id: '15', label: 'Importar testes de JSON' },
+    { section: 'RELEASES' },
+    { id: '2', label: 'Listar versoes de release' },
+    { id: '3', label: 'Criar nova versao' },
+    { id: '4', label: 'Atribuir fixVersion as tarefas' },
+    { id: '5', label: 'Atualizar package.json + release notes' },
+    { id: '6', label: 'Verificar status das tarefas' },
+    { id: '7', label: 'Fechar tarefas automaticamente' },
+    { id: '8', label: 'Publicar versao' },
+    { section: 'CONFIGURACAO' },
+    { id: '9', label: 'Alterar projeto Jira' },
+    { id: '10', label: 'Alterar diretorio git', configKey: 'gitDir' },
+    { id: '14', label: 'Alterar diretorio Cypress', configKey: 'cypressDir' },
+    { id: '16', label: 'Alterar diretorio JSON', configKey: 'jsonDir' },
+    { section: 'UTILITARIOS' },
+    { id: '11', label: 'Gerar template CSV' },
+    { id: '12', label: 'Diagnosticar conexao' },
+    { id: '13', label: 'Criar Test Execution para testes existentes' },
+    { id: '0', label: 'Sair' },
+];
+
+/** @param {string} key */
+function _configHint(key) {
+    if (key === 'gitDir') return '(atual: ' + git_directory + ')';
+    if (key === 'cypressDir') {
+        const d = process.env.CYPRESS_PROJECT_PATH || loadState().lastCypressPath || 'nao configurado';
+        return '(atual: ' + d + ')';
+    }
+    if (key === 'jsonDir') {
+        const d = loadState().lastJsonDir || 'nao configurado';
+        return '(atual: ' + d + ')';
+    }
+    return '';
+}
+
+function displayMenu(proj) {
     const ok = sessionCounters.filter(c => c.status === 'ok').length;
     const er = sessionCounters.filter(c => c.status === 'error').length;
     const counts = ok > 0 || er > 0 ? ' | ' + ok + ' ok' + (er > 0 ? ' · ' + er + ' erro' : '') : '';
     const ctx = proj + (lastOperation ? ' | ' + lastOperation : '') + counts;
     console.log('== ' + ctx + ' ==');
     divider();
-    console.log('  TESTES');
-    console.log('   1  Criar testes a partir de CSV');
-    console.log('  15  Importar testes de JSON');
-    console.log('');
-    console.log('  RELEASES');
-    console.log('   2  Listar versoes de release');
-    console.log('   3  Criar nova versao');
-    console.log('   4  Atribuir fixVersion as tarefas');
-    console.log('   5  Atualizar package.json + release notes');
-    console.log('   6  Verificar status das tarefas');
-    console.log('   7  Fechar tarefas automaticamente');
-    console.log('   8  Publicar versao');
-    console.log('');
-    console.log('  CONFIGURACAO');
-    console.log('   9  Alterar projeto Jira');
-    console.log('  10  Alterar diretorio git (atual: ' + gitDir + ')');
-    const cypressDir = process.env.CYPRESS_PROJECT_PATH || loadState().lastCypressPath || 'nao configurado';
-    console.log('  14  Alterar diretorio Cypress (atual: ' + cypressDir + ')');
-    const jsonDir = loadState().lastJsonDir || 'nao configurado';
-    console.log('  16  Alterar diretorio JSON (atual: ' + jsonDir + ')');
-    console.log('');
-    console.log('  UTILITARIOS');
-    console.log('  11  Gerar template CSV');
-    console.log('  12  Diagnosticar conexao');
-    console.log('  13  Criar Test Execution para testes existentes');
-    console.log('');
+    for (const item of MENU_ITEMS) {
+        if (item.section) {
+            console.log('  ' + item.section);
+        } else {
+            if (item.id === '0') console.log('');
+            const hint = item.configKey ? ' ' + _configHint(item.configKey) : '';
+            console.log('   ' + item.id + '  ' + item.label + hint);
+        }
+    }
     if (ok > 0 || er > 0) {
         console.log('  ' + ok + ' ok' + (er > 0 ? ' · ' + er + ' erro' : ''));
     }
-    console.log('   0  Sair');
     console.log('  /h  Ajuda');
     divider();
 }
@@ -211,33 +235,24 @@ function buildContextLine(proj) {
 }
 
 /** @returns {Array<any>} */
-function buildMenuChoices(proj, gitDir) {
-    const cyn = process.env.CYPRESS_PROJECT_PATH || loadState().lastCypressPath || 'nao configurado';
-    const jsonDir = loadState().lastJsonDir || 'nao configurado';
-    return [
-        { type: 'separator', line: ' TESTES' },
-        { name: '1  Criar testes a partir de CSV', value: '1' },
-        { name: '15  Importar testes de JSON', value: '15' },
-        { type: 'separator', line: ' RELEASES' },
-        { name: '2  Listar versoes de release', value: '2' },
-        { name: '3  Criar nova versao', value: '3' },
-        { name: '4  Atribuir fixVersion', value: '4' },
-        { name: '5  Atualizar package + release notes', value: '5' },
-        { name: '6  Verificar status das tarefas', value: '6' },
-        { name: '7  Fechar tarefas automaticamente', value: '7' },
-        { name: '8  Publicar versao', value: '8' },
-        { type: 'separator', line: ' CONFIGURACAO' },
-        { name: '9  Alterar projeto Jira', value: '9', description: proj },
-        { name: '10  Alterar diretorio git', value: '10', description: gitDir },
-        { name: '14  Alterar diretorio Cypress', value: '14', description: cyn },
-        { name: '16  Alterar diretorio JSON', value: '16', description: jsonDir },
-        { type: 'separator', line: ' UTILITARIOS' },
-        { name: '11  Gerar template CSV', value: '11' },
-        { name: '12  Diagnosticar conexao', value: '12' },
-        { name: '13  Criar Test Execution', value: '13' },
-        { type: 'separator', line: '' },
-        { name: '0  Sair', value: '0' },
-    ];
+function buildMenuChoices(proj) {
+    const choices = [];
+    for (const item of MENU_ITEMS) {
+        if (item.section) {
+            choices.push({ type: 'separator', line: ' ' + item.section });
+        } else if (item.id === '0') {
+            choices.push({ type: 'separator', line: '' });
+            choices.push({ name: '0  ' + item.label, value: '0' });
+        } else {
+            const entry = { name: item.id + '  ' + item.label, value: item.id };
+            if (item.configKey === 'gitDir') entry.description = git_directory;
+            else if (item.configKey === 'cypressDir') entry.description = process.env.CYPRESS_PROJECT_PATH || loadState().lastCypressPath || 'nao configurado';
+            else if (item.configKey === 'jsonDir') entry.description = loadState().lastJsonDir || 'nao configurado';
+            else if (item.id === '9') entry.description = proj;
+            choices.push(entry);
+        }
+    }
+    return choices;
 }
 
 async function handleSpecialInput(input) {
@@ -322,7 +337,7 @@ async function main() {
             const ctx = buildContextLine(project_name);
             console.log('== ' + ctx + ' ==');
             divider();
-            const choices = buildMenuChoices(project_name, git_directory);
+            const choices = buildMenuChoices(project_name);
             choices.push(
                 { type: 'separator', line: '' },
                 { name: '/help  Ajuda', value: '/help' },
@@ -334,7 +349,7 @@ async function main() {
             });
         } else {
             divider();
-            displayMenu(project_name, git_directory);
+            displayMenu(project_name);
             const menuState = loadState();
             const lastHint = menuState.lastChoice && menuState.lastChoice !== '0'
                 ? 'Enter = ' + menuState.lastChoice : '0-15 ou /help';
