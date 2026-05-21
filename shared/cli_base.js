@@ -15,17 +15,17 @@ function createValidateEnv(configs) {
       for (const c of configs) {
         const val = process.env[c.key] || '';
         if (val.length > 20 && !val.includes('placeholder') && !val.includes('seu-') && !val.includes('your-')) {
-          rootLogger.warn(`VARIAVEL COM CREDENCIAL REAL: ${c.key}=${mask(val)}`);
+          rootLogger.warn(`VARIÁVEL COM CREDENCIAL REAL: ${c.key}=${mask(val)}`);
         }
       }
       return;
     }
-    error('Variaveis obrigatórias nao configuradas:');
+    error('Variáveis obrigatórias não configuradas:');
     missing.forEach(c => warn(`  * ${c.label}`));
     warn('Crie um arquivo .env na raiz do projeto com:');
     configs.forEach(c => info(`${c.key}=${c.example}`));
-    rootLogger.error(`Variaveis faltando: ${missing.map(c => c.key).join(', ')}`);
-    throw new Error('Variaveis de ambiente faltando. Configure o .env.');
+    rootLogger.error(`Variáveis faltando: ${missing.map(c => c.key).join(', ')}`);
+    throw new Error('Variáveis de ambiente faltando. Configure o .env.');
   };
 }
 

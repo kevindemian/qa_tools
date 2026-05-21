@@ -1,86 +1,73 @@
-# Backlog - QA Tools
+# Backlog — Débitos Técnicos
 
-Apenas itens com valor futuro condicional. Os demais foram arquivados (custo > benefício em qualquer cenário).
+Issues registradas durante refatorações, postergadas por escopo.
 
----
+## Critério de prioridade
 
-### ~~[TITLE-001] Criar Test Execution automaticamente~~ ✅ Concluído
-**Implementado em:** `create_tests.js:createTestExecution()` + `main.js` case 13 + prompt pós-opção 1.
-**Detalhes:** Usa `POST /rest/api/2/issue` com descoberta dinâmica de issue type ("Test Execution") e custom field (`testexec-tests-custom-field`). Raven API indisponível neste servidor. Payload auto-descoberto, portável entre instâncias.
-
----
-
-### [TITLE-006] Testes de integração contra Jira real em CI
-**Gatilho:** Quando houver projeto Jira staging disponível.
-**Descrição:** Criar pipeline que executa o `jira_validator.test.js` contra um ambiente de staging Jira + Xray, garantindo que mudanças no código não quebram a comunicação.
-**Próximos passos:**
-  - Configurar projeto Jira de staging com Xray
-  - Adicionar script de CI que executa validação com .env de staging
+- **P0**: Bloqueia CI ou funcionalidade crítica
+- **P1**: Impacto alto em manutenibilidade, risco médio
+- **P2**: Melhoria desejável, baixo risco
+- **P3**: Nice-to-have, oportunidade futura
 
 ---
 
-### [TITLE-010] Migrar para Jira Cloud (ADF)
-**Gatilho:** Quando houver decisão de migrar para Jira Cloud.
-**Descrição:** Adaptar código para suportar Jira Cloud, que exige ADF (Atlassian Document Format) no campo `description` em vez de texto plano.
-**Pró-requisitos:**
-  - Decisão de migrar para Cloud
-  - Biblioteca ADF builder
-**Próximos passos:**
-  - Criar módulo `shared/adf.js`
-  - Adicionar flag `JIRA_CLOUD=true` no .env
+## Dívida técnica
+
+### TS-001 — Tipar 486 erros do strict mode (P2)
+
+- **Contexto**: `tsconfig.json` foi revertido de `strict: true` para `strict: false + strictNullChecks: true` (config original que passava CI).
+- **Motivo**: `strict: true` ativou `noImplicitAny` + `useUnknownInCatchVariables` + 5 outras flags, gerando 486 erros em 17 arquivos. Correção completa está fora do escopo desta refatoração.
+- **Distribuição**: `create_tests.js` (109), `github_manager.js` (70), `gitlab_manager.js` (63), `main.js` (git_triggers, 55), `jira_resource.js` (43), `main.js` (jira_management, 42), `prompt.js` (24), `logger.js` (21), +9 arquivos menores (~59).
+- **Ação futura**: Ativar strict gradualmente: `noImplicitAny` → `useUnknownInCatchVariables` → ... ou adicionar JSDoc `@param`/`@type` file-by-file até `strict: true` passar limpo.
+
+### TS-002 — Extrair switch restante para commands/ (P3)
+
+- **Contexto**: Os 16 cases do switch em `jira_management/main.js` foram extraídos para funções nomeadas no mesmo arquivo. A movimentação para `jira_management/commands/caseN.js` foi postergada.
+- **Motivo**: Manter diff gerenciável no PR atual. A separação em módulos individuais é puramente organizacional.
+- **Ação futura**: Criar `jira_management/commands/`, mover cada `handleCaseN` para seu arquivo, exportar e importar no `main.js`.
+
+### TS-003 — Unificar null-vs-throw em getJiraResource (P3)
+
+- **Contexto**: `getJiraResource()` retorna `null` em vez de lançar exceção quando o recurso não é encontrado. 56 callers tratam o null. Comportamento documentado via `@note` em `jira_management/jira_resource.js:28`.
+- **Motivo**: Mudança quebraria 56 callers. Requer refatoração coordenada.
+- **Ação futura**: Mudar para `throw` e ajustar todos os callers, ou manter `null` mas adicionar type narrowing nos callers.
+
+### UX-001 — Feedback visual de operações longas (P2)
+
+- **Contexto**: Operações como CSV import e JSON import não têm feedback de progresso além do `isBusy`. O usuário fica sem saber se o processo está vivo.
+- **Ação futura**: Adicionar spinner ou barra de progresso nas operações `withBusy`.
+
+### UX-002 — Tratamento de Ctrl+C uniforme (P2)
+
+- **Contexto**: `setupSigint` existe em `cli_base.js` mas nem todos os fluxos tratam interrupção de forma consistente.
+- **Ação futura**: Revisar todos os `while(true)` loops para responder a SIGINT com grace period.
+
+### ARQ-001 — SessionContext como classe (P3)
+
+- **Contexto**: `SessionContext` foi implementado como objeto literal em `jira_management/main.js`. Idealmente seria uma classe com métodos (ex: `ctx.pushHistory()`, `ctx.withBusy()`).
+- **Motivo**: Simplicidade da refatoração atual. Objeto literal é suficiente para extrair o switch.
+- **Ação futura**: Converter para classe em `shared/session_context.js`.
+
+### ARQ-002 — Mover PromptBar/ProgressBar para shared/ (P3)
+
+- **Contexto**: `ProgressBar` e `PromptBar` estão definidos dentro de `shared/prompt.js`. Poderiam ser módulos separados.
+- **Ação futura**: Extrair para `shared/progress_bar.js` e `shared/prompt_bar.js`.
+
+### ARQ-003 — Testes para SessionContext e handleCases (P2)
+
+- **Contexto**: As funções extraídas (`handleCase1`, `handleCaseN`) e o `SessionContext` não têm testes unitários.
+- **Motivo**: Dependem de mocks complexos (jiraResource, linkManager, etc.). Postergado para evitar crescer o escopo.
+- **Ação futura**: Criar `jira_management/__tests__/session_context.test.js` e `jira_management/__tests__/handlers.test.js`.
 
 ---
 
-### [TITLE-011] Migrar para TypeScript
-**Gatilho:** Se bugs de tipo frequentes ou time crescer.
-**Descrição:** Substituir `// @ts-check` + JSDoc por `.ts` + `tsconfig.json`. Benefícios: tipos reais, interfaces formais, elimina `@ts-check` espalhados.
-**Esforço estimado:** 3h (rename + ajustes de import)
-**Pró-requisito:** Nenhum (JSDoc já cobre ~95%)
+## Legado (pré-refatoração)
 
----
+Estes existiam antes das nossas alterações e não foram tratados:
 
-### [UX-P2-001] Polimento de acentuação pt-BR
-**Gatilho:** Quando houver revisão geral de mensagens.
-**Descrição:** Mensagens em pt-BR têm acentuação inconsistente (ex: "concluida" vs "concluída", "operacao" vs "operação"). ~15 arquivos afetados.
-**Esforço:** 30 min (busca + substituição guiada por diffs).
-**Impacto:** Baixo (cosmético).
-
----
-
-### [UX-P2-002] Unificar definições de menu (displayMenu vs buildMenuChoices)
-**Gatilho:** Quando houver adição de nova opção de menu.
-**Descrição:** `displayMenu` (texto) e `buildMenuChoices` (TUI) em `jira_management/main.js` já têm pequenas divergências (ex: contagem inline). Extrair definição central.
-**Esforço:** 20 min.
-**Impacto:** Médio (manutenibilidade futura).
-
----
-
-### [UX-P2-003] Wizard de primeira execução
-**Gatilho:** Quando onboarding for priorizado.
-**Descrição:** Novo usuário não tem guia interativo. Detectar `.env` ausente e oferecer wizard de configuração guiada.
-**Esforço:** 45 min.
-**Impacto:** Alto (reduz barreira de entrada).
-
----
-
-### [UX-P2-004] Paginação no preview de CSV
-**Gatilho:** Quando houver relato de overflow visual com muitos testes.
-**Descrição:** Preview de criação de testes (CSV) pode ocupar tela inteira com dezenas de itens sem paginação.
-**Esforço:** 30 min.
-**Impacto:** Médio (polimento).
-
----
-
-### [UX-P2-005] Notificação visual de estado corrompido
-**Gatilho:** Próxima alteração em `state.js`.
-**Descrição:** Quando `state.json` está corrompido, recupera de `.bak` mas só loga em arquivo (`rootLogger.warn`). Adicionar `warn()` no console.
-**Esforço:** 5 min.
-**Impacto:** Médio (evita confusão).
-
----
-
-### [UX-P2-006] Feedback incremental no polling de pipeline
-**Gatilho:** Quando houver relato de "pipeline travada".
-**Descrição:** `pollPipeline` só mostra spinner sem tempo decorrido. Adicionar elapsed time: `Aguardando pipeline #42 (30s)...`.
-**Esforço:** 10 min.
-**Impacto:** Médio (reduz ansiedade).
+- `jira_management/create_tests.js`: 109 erros TS (falta JSDoc generalizada)
+- `git_triggers/github_manager.js`: 70 erros TS (catch blocks sem tipo, parâmetros sem `@param`)
+- `git_triggers/gitlab_manager.js`: 63 erros TS (mesmo padrão)
+- `shared/logger.js`: `_logDir` com inferência cíclica (linha 33)
+- `shared/prompt.js`: módulo `readline-sync` sem tipos (falta `@types/readline-sync`)
+- `shared/result_parser.js`: propriedades de objeto sem declaração

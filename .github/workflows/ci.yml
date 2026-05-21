@@ -20,4 +20,4 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npx tsc --noEmit
-      - run: npx jest --forceExit
+      - run: npx jest --forceExit --detectOpenHandles

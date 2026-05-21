@@ -20,10 +20,6 @@ let personal_token = /** @type {string} */ (process.env.JIRA_PERSONAL_TOKEN);
 /** @type {string} */
 let xray_url = /** @type {string} */ (process.env.XRAY_BASE_URL);
 let default_project = 'ECSPOL';
-let git_directory = 'no_dir_selected';
-let isBusy = false;
-let lastOperation = '';
-let sessionCounters = [];
 
 const sessionLog = rootLogger.child({ session: 'jira' });
 
@@ -37,22 +33,6 @@ const validateEnv = createValidateEnv([
     { key: 'JIRA_PERSONAL_TOKEN', label: 'JIRA_PERSONAL_TOKEN (token de autenticacao)', example: 'JIRA_PERSONAL_TOKEN=seu-token-aqui' },
     { key: 'XRAY_BASE_URL', label: 'XRAY_BASE_URL (obrigatorio para criar testes)', example: 'XRAY_BASE_URL=https://seu-xray-server' },
 ]);
-
-function printSessionSummary() {
-    const history = loadState().history || [];
-    sharedPrintSessionSummary(sessionCounters, lastOperation, history);
-}
-
-function pushHistory(op, detail, status) {
-    sessionCounters.push({ op, detail, status });
-    updateState(state => {
-        if (!state.history) state.history = [];
-        state.history.push({ op, detail, status, ts: new Date().toISOString() });
-        if (state.history.length > 50) state.history = state.history.slice(-50);
-    });
-}
-
-setupSigint(() => isBusy, () => printSessionSummary());
 
 const HELP_TOPICS = {
     csv: 'Formato CSV:\n  Cada teste e um bloco separado por "---"\n  Campos obrigatorios: Title, Action/Data/Expected Result\n  Opcionais: Description, Pre-condition, Linked Issues, Group\n  Exemplo em test_steps.csv',
@@ -163,9 +143,9 @@ const MENU_ITEMS = [
     { id: '0', label: 'Sair' },
 ];
 
-/** @param {string} key */
-function _configHint(key) {
-    if (key === 'gitDir') return '(atual: ' + git_directory + ')';
+/** @param {string} key @param {{ git_directory: string }} ctx */
+function _configHint(key, ctx) {
+    if (key === 'gitDir') return '(atual: ' + ctx.git_directory + ')';
     if (key === 'cypressDir') {
         const d = process.env.CYPRESS_PROJECT_PATH || loadState().lastCypressPath || 'nao configurado';
         return '(atual: ' + d + ')';
@@ -177,19 +157,20 @@ function _configHint(key) {
     return '';
 }
 
-function displayMenu(proj) {
-    const ok = sessionCounters.filter(c => c.status === 'ok').length;
-    const er = sessionCounters.filter(c => c.status === 'error').length;
+/** @param {string} proj @param {{ lastOperation: string, sessionCounters: Array<{status:string}>, git_directory: string }} ctx */
+function displayMenu(proj, ctx) {
+    const ok = ctx.sessionCounters.filter(c => c.status === 'ok').length;
+    const er = ctx.sessionCounters.filter(c => c.status === 'error').length;
     const counts = ok > 0 || er > 0 ? ' | ' + ok + ' ok' + (er > 0 ? ' · ' + er + ' erro' : '') : '';
-    const ctx = proj + (lastOperation ? ' | ' + lastOperation : '') + counts;
-    console.log('== ' + ctx + ' ==');
+    const ctxLine = proj + (ctx.lastOperation ? ' | ' + ctx.lastOperation : '') + counts;
+    console.log('== ' + ctxLine + ' ==');
     divider();
     for (const item of MENU_ITEMS) {
         if (item.section) {
             console.log('  ' + item.section);
         } else {
             if (item.id === '0') console.log('');
-            const hint = item.configKey ? ' ' + _configHint(item.configKey) : '';
+            const hint = item.configKey ? ' ' + _configHint(item.configKey, ctx) : '';
             console.log('   ' + item.id + '  ' + item.label + hint);
         }
     }
@@ -200,15 +181,16 @@ function displayMenu(proj) {
     divider();
 }
 
-function buildContextLine(proj) {
-    const ok = sessionCounters.filter(c => c.status === 'ok').length;
-    const er = sessionCounters.filter(c => c.status === 'error').length;
+/** @param {string} proj @param {{ lastOperation: string, sessionCounters: Array<{status:string}> }} ctx */
+function buildContextLine(proj, ctx) {
+    const ok = ctx.sessionCounters.filter(c => c.status === 'ok').length;
+    const er = ctx.sessionCounters.filter(c => c.status === 'error').length;
     const counts = ok > 0 || er > 0 ? ' | ' + ok + ' ok' + (er > 0 ? ' · ' + er + ' erro' : '') : '';
-    return proj + (lastOperation ? ' | ' + lastOperation : '') + counts;
+    return proj + (ctx.lastOperation ? ' | ' + ctx.lastOperation : '') + counts;
 }
 
-/** @returns {Array<any>} */
-function buildMenuChoices(proj) {
+/** @param {string} proj @param {{ git_directory: string }} ctx */
+function buildMenuChoices(proj, ctx) {
     const choices = [];
     for (const item of MENU_ITEMS) {
         if (item.section) {
@@ -218,7 +200,7 @@ function buildMenuChoices(proj) {
             choices.push({ name: '0  ' + item.label, value: '0' });
         } else {
             const entry = { name: item.id + '  ' + item.label, value: item.id };
-            if (item.configKey === 'gitDir') entry.description = git_directory;
+            if (item.configKey === 'gitDir') entry.description = ctx.git_directory;
             else if (item.configKey === 'cypressDir') entry.description = process.env.CYPRESS_PROJECT_PATH || loadState().lastCypressPath || 'nao configurado';
             else if (item.configKey === 'jsonDir') entry.description = loadState().lastJsonDir || 'nao configurado';
             else if (item.id === '9') entry.description = proj;
@@ -284,33 +266,59 @@ async function main() {
     const linkManager = new JiraLinkManager(jiraResource);
     const linkManagerXray = new JiraLinkManager(jiraResourceXray);
     const csvResource = new CsvResource();
-    let packageManager;
-    let inMemoryTasksId = [];
-    let inMemoryTasksText = [];
+
+    /** @type {{ isBusy: boolean, lastOperation: string, sessionCounters: Array<{op:string,detail:string,status:string}>, packageManager: (import('./package_version_manager')|undefined), git_directory: string, inMemoryTasksId: string[], inMemoryTasksText: string[], project_name: string, results: Array<{status:string,label:string,message:string}> }} */
+    const ctx = {
+        isBusy: false,
+        lastOperation: '',
+        sessionCounters: [],
+        packageManager: undefined,
+        git_directory: 'no_dir_selected',
+        inMemoryTasksId: [],
+        inMemoryTasksText: [],
+        project_name: '',
+        results: [],
+    };
 
     const state = loadState();
-    let project_name = (
+    ctx.project_name = (
         process.env.JIRA_PROJECT ||
         prompt('Nome do projeto Jira', { default: state.lastProject || default_project })
     ).toUpperCase();
 
-    let results = [];
-    function resetResults() { results = []; }
+    function resetResults() { ctx.results = []; }
 
     async function withBusy(fn) {
-        isBusy = true;
-        try { return await fn(); } finally { isBusy = false; }
+        ctx.isBusy = true;
+        try { return await fn(); } finally { ctx.isBusy = false; }
     }
+
+    function printSessionSummary() {
+        const history = loadState().history || [];
+        sharedPrintSessionSummary(ctx.sessionCounters, ctx.lastOperation, history);
+    }
+
+    function pushHistory(op, detail, status) {
+        ctx.sessionCounters.push({ op, detail, status });
+        updateState(state => {
+            if (!state.history) state.history = [];
+            state.history.push({ op, detail, status, ts: new Date().toISOString() });
+            if (state.history.length > 50) state.history = state.history.slice(-50);
+        });
+    }
+
+    setupSigint(() => ctx.isBusy, () => printSessionSummary());
 
     while (true) {
         let choice;
         if (process.env.AUTO_CHOICE) {
             choice = process.env.AUTO_CHOICE;
         } else if (process.stdout.isTTY && process.env.QUIET !== 'true') {
-            const ctx = buildContextLine(project_name);
-            console.log('== ' + ctx + ' ==');
+            const ctxLine = buildContextLine(ctx.project_name, ctx);
+            console.log('== ' + ctxLine + ' ==');
             divider();
-            const choices = buildMenuChoices(project_name);
+            /** @type {Array<any>} */
+            const choices = buildMenuChoices(ctx.project_name, ctx);
             choices.push(
                 { type: 'separator', line: '' },
                 { name: '/help  Ajuda', value: '/help' },
@@ -322,7 +330,7 @@ async function main() {
             });
         } else {
             divider();
-            displayMenu(project_name);
+            displayMenu(ctx.project_name, ctx);
             const menuState = loadState();
             const lastHint = menuState.lastChoice && menuState.lastChoice !== '0'
                 ? 'Enter = ' + menuState.lastChoice : '0-15 ou /help';
@@ -345,411 +353,27 @@ async function main() {
         const opLog = sessionLog.child({ menuOption: choice });
 
         switch (choice) {
-            case '1': {
-                resetResults();
-                const result = await createTestsFromCsv({
-                    jiraResource,
-                    jiraResourceXray,
-                    linkManager,
-                    linkManagerXray,
-                    csvResource,
-                    project_name,
-                    base_url,
-                    sessionLog,
-                    onBusy: (val) => { isBusy = val; }
-                });
-                if (result) {
-                    inMemoryTasksId = result.inMemoryTasksId;
-                    inMemoryTasksText = result.inMemoryTasksText;
-                    pushHistory('csv-import', result.summary, result.status);
-                    lastOperation = result.summary;
-                }
-                if (result && inMemoryTasksId.length > 0) {
-                    const execState = loadState();
-                    const csvPathHint = execState.lastCsvPath || '';
-                    const csvName = csvPathHint ? path.basename(csvPathHint, '.csv') : '';
-                    if (confirm('Criar Test Execution para ' + inMemoryTasksId.length + ' testes criados?', true)) {
-                        const execTitle = prompt('Titulo do Test Execution', { hint: 'Enter = ' + (csvName || 'Automated Execution') });
-                        const execDesc = prompt('Descrição (opcional)');
-                        try {
-                            const execResult = await createTestExecutionWithLinks(
-                                jiraResource, linkManager, project_name, inMemoryTasksId, csvName,
-                                { title: execTitle, description: execDesc }
-                            );
-                            pushHistory('create-testexec', execResult.key, 'ok');
-                        } catch (err) {
-                            printError('Erro ao criar Test Execution', err);
-                            pushHistory('create-testexec', 'erro', 'error');
-                        }
-                    }
-                }
-                break;
-            }
-
-            case '2': {
-                const howMany = prompt('Quantas releases listar?', { hint: 'ex: 5' });
-                const num = parseInt(howMany);
-                if (isNaN(num) || num < 1) {
-                    warn('Numero inválido.');
-                    continue;
-                }
-                try {
-                    await jiraResource.getLatestReleases(project_name, num);
-                    pushHistory('listar-versoes', num + ' versoes', 'ok');
-                } catch (err) {
-                    printError('Erro ao listar versoes', err);
-                    pushHistory('listar-versoes', 'erro', 'error');
-                }
-                break;
-            }
-
-            case '3': {
-                const name = smartPrompt('Nome da versão', { hint: 'ex: v2.7.0' }, () => showHelp('version'));
-                const desc = smartPrompt('Descrição da versão', {}, () => showHelp('version'));
-                try {
-                    await jiraResource.createVersion(project_name, name, desc);
-                    pushHistory('criar-versão', name, 'ok');
-                } catch (err) {
-                    const msg = `Erro ao criar versão "${name}" no projeto "${project_name}"`;
-                    printError(msg, err);
-                    rootLogger.error(msg, { version: name, project: project_name, status: err.response?.status });
-                    pushHistory('criar-versão', name, 'error');
-                }
-                break;
-            }
-
-            case '4': {
-                const useInMemory = confirm('Usar tarefas criadas anteriormente?', true);
-                let taskIds = [];
-
-                if (useInMemory) {
-                    if (inMemoryTasksId.length === 0) {
-                        warn('Nenhuma tarefa criada anteriormente. Insira manualmente.');
-                        const input = prompt('IDs das tarefas (separadas por espaco)');
-                        taskIds = input.split(' ').filter(Boolean);
-                    } else {
-                        inMemoryTasksId.forEach((id, idx) => {
-                            console.log('  ' + id + ' — ' + inMemoryTasksText[idx]);
-                            taskIds.push(id);
-                        });
-                    }
-                } else {
-                    const input = prompt('IDs das tarefas (separadas por espaco)');
-                    taskIds = input.split(' ').filter(Boolean);
-                }
-
-                const version = smartPrompt('Nome da versão', {}, () => showHelp('version'));
-
-                title('Preview da operação');
-                console.log('  Versão: ' + version);
-                console.log('  Tarefas (' + taskIds.length + '):');
-                taskIds.forEach(id => console.log('    - ' + id));
-                if (!confirm('Confirmar atribuicao de fixVersion?')) {
-                    warn('Operação cancelada.');
-                    continue;
-                }
-
-                results = [];
-                await withBusy(async () => {
-                    for (const taskId of taskIds) {
-                        try {
-                            await jiraResource.updateFixVersions([taskId], project_name, version);
-                            results.push({ status: 'ok', label: taskId, message: '' });
-                        } catch (err) {
-                            results.push({ status: 'error', label: taskId, message: 'Falha ao atualizar fixVersion' });
-                        }
-                    }
-                });
-                printSummary(
-                    /** @type {import('../shared/types').TestResult[]} */ (results));
-                lastOperation = results.filter(r => r.status === 'ok').length + '/' + taskIds.length + ' tarefas atualizadas';
-                pushHistory('atribuir-fixversion', lastOperation,
-                    results.some(r => r.status === 'error') ? 'error' : 'ok');
-
-                if (confirm('Adicionar tarefas a uma sprint?')) {
-                    const sprintId = prompt('ID da sprint', { hint: 'ex: 6991 (encontrado na URL do board)' });
-                    const agileResource = new JiraResource(personal_token, base_url + '/rest/agile/1.0');
-                    await agileResource.addTasksToSprint(taskIds, sprintId);
-                }
-                break;
-            }
-
-            case '5': {
-                if (!packageManager) {
-                    const dir = smartPrompt('Diretório do projeto git', { default: process.cwd() }, () => showHelp('version'));
-                    packageManager = new PackageVersionManager(dir);
-                    git_directory = dir;
-                }
-                const version = smartPrompt('Nome da versão', { hint: 'ex: v2.7.0' }, () => showHelp('version'));
-                try {
-                    const tasks = await jiraResource.getReleaseTasks(project_name, version, true);
-                    if (!Array.isArray(tasks)) {
-                        warn('Nenhuma tarefa encontrada para esta versão.');
-                        break;
-                    }
-                    const versionNumber = version.split(' ').pop();
-                    packageManager.updateReleaseNotes(versionNumber, tasks);
-
-                    const pkgVersion = version.split(' ').pop().split('v').pop();
-                    packageManager.updateVersion(pkgVersion);
-                    lastOperation = 'Package atualizado para v' + pkgVersion;
-                    pushHistory('atualizar-package', lastOperation, 'ok');
-                    success('Package version e release notes atualizados.');
-                } catch (err) {
-                    const msg = `Erro ao atualizar package para versão "${version}" no projeto "${project_name}"`;
-                    printError(msg, err);
-                    rootLogger.error(msg, { version, project: project_name, status: err.response?.status });
-                    pushHistory('atualizar-package', version, 'error');
-                }
-                break;
-            }
-
-            case '6': {
-                const version = smartPrompt('Nome da versão', {}, () => showHelp('version'));
-                try {
-                    await jiraResource.checkReleaseTasksStatus(project_name, version);
-                    pushHistory('verificar-status', version, 'ok');
-                } catch (err) {
-                    const msg = `Erro ao verificar status da versão "${version}" no projeto "${project_name}"`;
-                    printError(msg, err);
-                    rootLogger.error(msg, { version, project: project_name, status: err.response?.status });
-                    pushHistory('verificar-status', version, 'error');
-                }
-                break;
-            }
-
-            case '7': {
-                const version = smartPrompt('Versão a fechar', {}, () => showHelp('version'));
-                if (!confirm('Fechar todas as tarefas da versão ' + version + '? Esta operação nao pode ser desfeita.')) {
-                    warn('Operação cancelada.');
-                    continue;
-                }
-                const tasks = await jiraResource.getReleaseTasks(project_name, version);
-                if (!Array.isArray(tasks) || tasks.length === 0) {
-                    warn('Nenhuma tarefa encontrada para esta versão.');
-                    continue;
-                }
-                const taskIds = tasks
-                    .map(task => task.match(/\[([A-Z][A-Z0-9]+-\d+)\]/)?.[1])
-                    .filter(id => id !== undefined);
-                if (taskIds.length === 0) {
-                    warn('Nenhuma tarefa encontrada.');
-                    continue;
-                }
-                info('Fechando ' + taskIds.length + ' tarefa(s)...');
-                await withBusy(async () => {
-                    try {
-                        await jiraResource.moveCardsToDone(taskIds);
-                        const summary = taskIds.map(id => ({ status: 'ok', label: id, message: '' }));
-                        printSummary(
-                            /** @type {import('../shared/types').TestResult[]} */ (summary));
-                        pushHistory('fechar-tarefas', taskIds.length + ' tarefa(s)', 'ok');
-                    } catch (err) {
-                        const summary = taskIds.map(id => ({ status: 'error', label: id, message: 'Falha ao fechar tarefa' }));
-                        printSummary(
-                            /** @type {import('../shared/types').TestResult[]} */ (summary));
-                        pushHistory('fechar-tarefas', 'erro', 'error');
-                    }
-                    lastOperation = taskIds.length + ' tarefa(s) fechadas';
-                });
-                break;
-            }
-
-            case '8': {
-                const version = smartPrompt('Versão a publicar', {}, () => showHelp('version'));
-                if (!confirm('Publicar versão ' + version + '? Isso marcara a versão como released.')) {
-                    warn('Operação cancelada.');
-                    continue;
-                }
-                try {
-                    await jiraResource.releaseVersion(project_name, version);
-                    printSummary(
-                        /** @type {import('../shared/types').TestResult[]} */ ([{ status: 'ok', label: 'Versão ' + version, message: 'Publicada com sucesso' }]));
-                    lastOperation = 'Versão ' + version + ' publicada';
-                    pushHistory('publicar-versão', version, 'ok');
-                } catch (err) {
-                    printError('Erro ao publicar versão', err);
-                    pushHistory('publicar-versão', 'erro', 'error');
-                }
-                break;
-            }
-
-            case '9': {
-                const newName = prompt('Novo nome do projeto Jira').toUpperCase().trim();
-                if (!newName) {
-                    warn('Nome do projeto nao pode ser vazio.');
-                    break;
-                }
-                project_name = newName;
-                lastOperation = 'Projeto alterado para ' + project_name;
-                pushHistory('trocar-projeto', project_name, 'ok');
-                updateState(state => { state.lastProject = project_name; });
-                success('Projeto alterado para: ' + project_name);
-                break;
-            }
-
-            case '10': {
-                const dir = prompt('Caminho do diretório git');
-                packageManager = new PackageVersionManager(dir);
-                git_directory = dir;
-                success('Diretório alterado para: ' + dir);
-                break;
-            }
-
-            case '11': {
-                const tmplPath = prompt('Caminho para salvar o template', {
-                    default: path.join(__dirname, 'test_steps_template.csv')
-                });
-                if (generateCsvTemplate(tmplPath)) {
-                    success('Template CSV gerado em: ' + tmplPath);
-                    pushHistory('gerar-template', tmplPath, 'ok');
-                } else {
-                    error('Falha ao gerar template CSV.');
-                }
-                break;
-            }
-
-            case '12': {
-                title('Diagnostico de Conexao');
-                const results = [];
-                const endpoints = [
-                    { url: sanitizeUrl(base_url + '/rest/api/2/myself'), label: 'Jira API' },
-                    { url: sanitizeUrl(xray_url), label: 'Xray API' },
-                    { url: sanitizeUrl(base_url + '/rest/api/2/project/' + project_name), label: 'Projeto ' + project_name }
-                ];
-                for (const ep of endpoints) {
-                    const start = Date.now();
-                    try {
-                        const resp = await jiraResource.axiosInstance.get(ep.url);
-                        const ms = Date.now() - start;
-                        info(ep.label + ': ' + resp.status + ' (' + ms + 'ms)');
-                        results.push({ status: 'ok', label: ep.label, message: ms + 'ms' });
-                    } catch (err) {
-                        const ms = Date.now() - start;
-                        const st = err.response?.status || 'ERR';
-                        if (st === 401 || st === 403) {
-                            warn(ep.label + ': ' + st + ' (token pode estar inválido)');
-                        } else {
-                            error(ep.label + ': ' + st + ' (' + ms + 'ms)');
-                        }
-                        results.push({ status: 'error', label: ep.label, message: st + ' ' + ms + 'ms' });
-                    }
-                }
-                printSummary(
-                    /** @type {import('../shared/types').TestResult[]} */ (results));
-                pushHistory('diagnostico',
-                    results.filter(r => r.status === 'ok').length + '/' + results.length + ' ok',
-                    results.some(r => r.status === 'error') ? 'error' : 'ok');
-                break;
-            }
-
-            case '13': {
-                let keys = [];
-                if (inMemoryTasksId.length > 0) {
-                    info('Testes da sessão atual: ' + inMemoryTasksId.join(', '));
-                    if (confirm('Usar estes ' + inMemoryTasksId.length + ' testes?', true)) {
-                        keys = inMemoryTasksId;
-                    }
-                }
-                if (keys.length === 0) {
-                    const input = prompt('Keys dos testes (separadas por espaco)', { hint: 'ex: TEST-1 TEST-2' });
-                    keys = input.split(/\s+/).filter(Boolean);
-                }
-                if (keys.length === 0) {
-                    warn('Nenhuma key informada.');
-                    break;
-                }
-                const nameInput = prompt('Nome da execução', { hint: 'Enter = "Automated Execution"' });
-                const csvName = nameInput.trim() || '';
-                const execTitle = prompt('Titulo do Test Execution', { hint: 'Enter = ' + (csvName || 'Automated Execution') });
-                const execDesc = prompt('Descrição (opcional)');
-                try {
-                    const execResult = await createTestExecutionWithLinks(
-                        jiraResource, linkManager, project_name, keys, csvName,
-                        { title: execTitle, description: execDesc }
-                    );
-                    pushHistory('create-testexec', execResult.key, 'ok');
-                } catch (err) {
-                    printError('Erro ao criar Test Execution', err);
-                    pushHistory('create-testexec', 'erro', 'error');
-                }
-                break;
-            }
-
-            case '14': {
-                const dir = prompt('Caminho do diretório Cypress');
-                if (!dir.trim()) {
-                    warn('Caminho vazio, ignorando.');
-                    break;
-                }
-                const resolved = path.resolve(dir.trim());
-                updateState(state => { state.lastCypressPath = resolved; });
-                success('Diretório Cypress alterado para: ' + resolved);
-                pushHistory('config-cypress', resolved, 'ok');
-                break;
-            }
-
-            case '15': {
-                resetResults();
-                try {
-                    const result = await createTestsFromJson({
-                        jiraResource, jiraResourceXray, linkManager, linkManagerXray,
-                        project_name, base_url, sessionLog,
-                        onBusy: (val) => { isBusy = val; }
-                    });
-                    if (result) {
-                        inMemoryTasksId = result.inMemoryTasksId;
-                        inMemoryTasksText = result.inMemoryTasksText;
-                        const okCount = result.inMemoryTasksId.length;
-                        success('Importacao JSON concluída: ' + okCount + ' testes');
-                        results = result.inMemoryTasksId.map(key => ({ status: 'ok', label: key, message: '' }));
-                        pushHistory('importar-json', okCount + ' testes', 'ok');
-
-                        if (confirm('Criar Test Execution para estes testes?', true)) {
-                            try {
-                                const keys = result.inMemoryTasksId;
-                                const srcName = result.sourcePath ? path.basename(result.sourcePath, '.json') : 'json-import';
-                                const nameInput = prompt('Nome da execução', { hint: 'Enter = ' + srcName });
-                                const csvName = nameInput.trim() || srcName;
-                                const execTitle = prompt('Titulo do Test Execution', { hint: 'Enter = ' + csvName });
-                                const execDesc = prompt('Descrição (opcional)');
-                                const execResult = await createTestExecutionWithLinks(
-                                    jiraResource, linkManager, project_name, keys, csvName,
-                                    { title: execTitle, description: execDesc }
-                                );
-                                success('Test Execution criado: ' + execResult.key);
-                                pushHistory('create-testexec', execResult.key, 'ok');
-                            } catch (err) {
-                                printError('Erro ao criar Test Execution', err);
-                            }
-                        }
-
-                        lastOperation = okCount + ' testes importados via JSON';
-                    }
-                } catch (err) {
-                    printError('Erro ao importar JSON', err);
-                    pushHistory('importar-json', 'erro', 'error');
-                }
-                break;
-            }
-
-            case '16': {
-                const dir = prompt('Caminho do diretório padrão de JSON');
-                if (!dir.trim()) {
-                    warn('Caminho vazio, ignorando.');
-                    break;
-                }
-                const resolved = path.resolve(dir.trim());
-                updateState(state => { state.lastJsonDir = resolved; });
-                success('Diretório padrao JSON alterado para: ' + resolved);
-                pushHistory('config-json-dir', resolved, 'ok');
-                break;
-            }
+            case '1': await handleCase1(); break;
+            case '2': if (await handleCase2()) continue; break;
+            case '3': await handleCase3(); break;
+            case '4': if (await handleCase4()) continue; break;
+            case '5': await handleCase5(); break;
+            case '6': await handleCase6(); break;
+            case '7': if (await handleCase7()) continue; break;
+            case '8': if (await handleCase8()) continue; break;
+            case '9': await handleCase9(); break;
+            case '10': await handleCase10(); break;
+            case '11': await handleCase11(); break;
+            case '12': await handleCase12(); break;
+            case '13': await handleCase13(); break;
+            case '14': await handleCase14(); break;
+            case '15': await handleCase15(); break;
+            case '16': await handleCase16(); break;
 
             case '0':
                 title('Ate logo!');
                 printSessionSummary();
-                if (sessionCounters.some(c => c.status === 'error')) process.exitCode = 1;
+                if (ctx.sessionCounters.some(c => c.status === 'error')) process.exitCode = 1;
                 return;
 
             default:
@@ -757,15 +381,399 @@ async function main() {
         }
 
         const longOps = ['1', '15', '4', '5', '7', '8'];
-        const hasResults = typeof results !== 'undefined' && results && results.some(r => r.status === 'error');
+        const hasResults = ctx.results.length > 0 && ctx.results.some(r => r.status === 'error');
         if (process.env.AUTO_CONFIRM !== 'true' && choice !== '0' && longOps.includes(choice) && hasResults) {
             prompt('Pressione Enter para continuar');
         }
+    }
+
+    async function handleCase1() {
+        resetResults();
+        const result = await createTestsFromCsv({
+            jiraResource, jiraResourceXray, linkManager, linkManagerXray, csvResource,
+            project_name: ctx.project_name, base_url, sessionLog,
+            onBusy: (val) => { ctx.isBusy = val; }
+        });
+        if (result) {
+            ctx.inMemoryTasksId = result.inMemoryTasksId;
+            ctx.inMemoryTasksText = result.inMemoryTasksText;
+            pushHistory('csv-import', result.summary, result.status);
+            ctx.lastOperation = result.summary;
+        }
+        if (result && ctx.inMemoryTasksId.length > 0) {
+            const execState = loadState();
+            const csvPathHint = execState.lastCsvPath || '';
+            const csvName = csvPathHint ? path.basename(csvPathHint, '.csv') : '';
+            if (confirm('Criar Test Execution para ' + ctx.inMemoryTasksId.length + ' testes criados?', true)) {
+                const execTitle = prompt('Titulo do Test Execution', { hint: 'Enter = ' + (csvName || 'Automated Execution') });
+                const execDesc = prompt('Descrição (opcional)');
+                try {
+                    const execResult = await createTestExecutionWithLinks(
+                        jiraResource, linkManager, ctx.project_name, ctx.inMemoryTasksId, csvName,
+                        { title: execTitle, description: execDesc }
+                    );
+                    pushHistory('create-testexec', execResult.key, 'ok');
+                } catch (err) {
+                    printError('Erro ao criar Test Execution', err);
+                    pushHistory('create-testexec', 'erro', 'error');
+                }
+            }
+        }
+    }
+
+    async function handleCase2() {
+        const howMany = prompt('Quantas releases listar?', { hint: 'ex: 5' });
+        const num = parseInt(howMany);
+        if (isNaN(num) || num < 1) {
+            warn('Numero inválido.');
+            return true;
+        }
+        try {
+            await jiraResource.getLatestReleases(ctx.project_name, num);
+            pushHistory('listar-versoes', num + ' versoes', 'ok');
+        } catch (err) {
+            printError('Erro ao listar versoes', err);
+            pushHistory('listar-versoes', 'erro', 'error');
+        }
+        return false;
+    }
+
+    async function handleCase3() {
+        const name = smartPrompt('Nome da versão', { hint: 'ex: v2.7.0' }, () => showHelp('version'));
+        const desc = smartPrompt('Descrição da versão', {}, () => showHelp('version'));
+        try {
+            await jiraResource.createVersion(ctx.project_name, name, desc);
+            pushHistory('criar-versão', name, 'ok');
+        } catch (err) {
+            const msg = `Erro ao criar versão "${name}" no projeto "${ctx.project_name}"`;
+            printError(msg, err);
+            rootLogger.error(msg, { version: name, project: ctx.project_name, status: err.response?.status });
+            pushHistory('criar-versão', name, 'error');
+        }
+    }
+
+    async function handleCase4() {
+        const useInMemory = confirm('Usar tarefas criadas anteriormente?', true);
+        let taskIds = [];
+
+        if (useInMemory) {
+            if (ctx.inMemoryTasksId.length === 0) {
+                warn('Nenhuma tarefa criada anteriormente. Insira manualmente.');
+                const input = prompt('IDs das tarefas (separadas por espaco)');
+                taskIds = input.split(' ').filter(Boolean);
+            } else {
+                ctx.inMemoryTasksId.forEach((id, idx) => {
+                    console.log('  ' + id + ' — ' + ctx.inMemoryTasksText[idx]);
+                    taskIds.push(id);
+                });
+            }
+        } else {
+            const input = prompt('IDs das tarefas (separadas por espaco)');
+            taskIds = input.split(' ').filter(Boolean);
+        }
+
+        const version = smartPrompt('Nome da versão', {}, () => showHelp('version'));
+
+        title('Preview da operação');
+        console.log('  Versão: ' + version);
+        console.log('  Tarefas (' + taskIds.length + '):');
+        taskIds.forEach(id => console.log('    - ' + id));
+        if (!confirm('Confirmar atribuicao de fixVersion?')) {
+            warn('Operação cancelada.');
+            return true;
+        }
+
+        ctx.results = [];
+        await withBusy(async () => {
+            for (const taskId of taskIds) {
+                try {
+                    await jiraResource.updateFixVersions([taskId], ctx.project_name, version);
+                    ctx.results.push({ status: 'ok', label: taskId, message: '' });
+                } catch (err) {
+                    ctx.results.push({ status: 'error', label: taskId, message: 'Falha ao atualizar fixVersion' });
+                }
+            }
+        });
+        printSummary(
+            /** @type {import('../shared/types').TestResult[]} */ (ctx.results));
+        ctx.lastOperation = ctx.results.filter(r => r.status === 'ok').length + '/' + taskIds.length + ' tarefas atualizadas';
+        pushHistory('atribuir-fixversion', ctx.lastOperation,
+            ctx.results.some(r => r.status === 'error') ? 'error' : 'ok');
+
+        if (confirm('Adicionar tarefas a uma sprint?')) {
+            const sprintId = prompt('ID da sprint', { hint: 'ex: 6991 (encontrado na URL do board)' });
+            const agileResource = new JiraResource(personal_token, base_url + '/rest/agile/1.0');
+            await agileResource.addTasksToSprint(taskIds, sprintId);
+        }
+        return false;
+    }
+
+    async function handleCase5() {
+        if (!ctx.packageManager) {
+            const dir = smartPrompt('Diretório do projeto git', { default: process.cwd() }, () => showHelp('version'));
+            ctx.packageManager = new PackageVersionManager(dir);
+            ctx.git_directory = dir;
+        }
+        const version = smartPrompt('Nome da versão', { hint: 'ex: v2.7.0' }, () => showHelp('version'));
+        try {
+            const tasks = await jiraResource.getReleaseTasks(ctx.project_name, version, true);
+            if (!Array.isArray(tasks)) {
+                warn('Nenhuma tarefa encontrada para esta versão.');
+                return;
+            }
+            const versionNumber = version.split(' ').pop();
+            ctx.packageManager.updateReleaseNotes(versionNumber, tasks);
+
+            const pkgVersion = version.split(' ').pop().split('v').pop();
+            ctx.packageManager.updateVersion(pkgVersion);
+            ctx.lastOperation = 'Package atualizado para v' + pkgVersion;
+            pushHistory('atualizar-package', ctx.lastOperation, 'ok');
+            success('Package version e release notes atualizados.');
+        } catch (err) {
+            const msg = `Erro ao atualizar package para versão "${version}" no projeto "${ctx.project_name}"`;
+            printError(msg, err);
+            rootLogger.error(msg, { version, project: ctx.project_name, status: err.response?.status });
+            pushHistory('atualizar-package', version, 'error');
+        }
+    }
+
+    async function handleCase6() {
+        const version = smartPrompt('Nome da versão', {}, () => showHelp('version'));
+        try {
+            await jiraResource.checkReleaseTasksStatus(ctx.project_name, version);
+            pushHistory('verificar-status', version, 'ok');
+        } catch (err) {
+            const msg = `Erro ao verificar status da versão "${version}" no projeto "${ctx.project_name}"`;
+            printError(msg, err);
+            rootLogger.error(msg, { version, project: ctx.project_name, status: err.response?.status });
+            pushHistory('verificar-status', version, 'error');
+        }
+    }
+
+    async function handleCase7() {
+        const version = smartPrompt('Versão a fechar', {}, () => showHelp('version'));
+        if (!confirm('Fechar todas as tarefas da versão ' + version + '? Esta operação nao pode ser desfeita.')) {
+            warn('Operação cancelada.');
+            return true;
+        }
+        const tasks = await jiraResource.getReleaseTasks(ctx.project_name, version);
+        if (!Array.isArray(tasks) || tasks.length === 0) {
+            warn('Nenhuma tarefa encontrada para esta versão.');
+            return true;
+        }
+        const taskIds = tasks
+            .map(task => task.match(/\[([A-Z][A-Z0-9]+-\d+)\]/)?.[1])
+            .filter(id => id !== undefined);
+        if (taskIds.length === 0) {
+            warn('Nenhuma tarefa encontrada.');
+            return true;
+        }
+        info('Fechando ' + taskIds.length + ' tarefa(s)...');
+        await withBusy(async () => {
+            try {
+                await jiraResource.moveCardsToDone(taskIds);
+                const summary = taskIds.map(id => ({ status: 'ok', label: id, message: '' }));
+                printSummary(
+                    /** @type {import('../shared/types').TestResult[]} */ (summary));
+                pushHistory('fechar-tarefas', taskIds.length + ' tarefa(s)', 'ok');
+            } catch (err) {
+                const summary = taskIds.map(id => ({ status: 'error', label: id, message: 'Falha ao fechar tarefa' }));
+                printSummary(
+                    /** @type {import('../shared/types').TestResult[]} */ (summary));
+                pushHistory('fechar-tarefas', 'erro', 'error');
+            }
+            ctx.lastOperation = taskIds.length + ' tarefa(s) fechadas';
+        });
+        return false;
+    }
+
+    async function handleCase8() {
+        const version = smartPrompt('Versão a publicar', {}, () => showHelp('version'));
+        if (!confirm('Publicar versão ' + version + '? Isso marcara a versão como released.')) {
+            warn('Operação cancelada.');
+            return true;
+        }
+        try {
+            await jiraResource.releaseVersion(ctx.project_name, version);
+            printSummary(
+                /** @type {import('../shared/types').TestResult[]} */ ([{ status: 'ok', label: 'Versão ' + version, message: 'Publicada com sucesso' }]));
+            ctx.lastOperation = 'Versão ' + version + ' publicada';
+            pushHistory('publicar-versão', version, 'ok');
+        } catch (err) {
+            printError('Erro ao publicar versão', err);
+            pushHistory('publicar-versão', 'erro', 'error');
+        }
+        return false;
+    }
+
+    function handleCase9() {
+        const newName = prompt('Novo nome do projeto Jira').toUpperCase().trim();
+        if (!newName) {
+            warn('Nome do projeto nao pode ser vazio.');
+            return;
+        }
+        ctx.project_name = newName;
+        ctx.lastOperation = 'Projeto alterado para ' + ctx.project_name;
+        pushHistory('trocar-projeto', ctx.project_name, 'ok');
+        updateState(state => { state.lastProject = ctx.project_name; });
+        success('Projeto alterado para: ' + ctx.project_name);
+    }
+
+    function handleCase10() {
+        const dir = prompt('Caminho do diretório git');
+        ctx.packageManager = new PackageVersionManager(dir);
+        ctx.git_directory = dir;
+        success('Diretório alterado para: ' + dir);
+    }
+
+    function handleCase11() {
+        const tmplPath = prompt('Caminho para salvar o template', {
+            default: path.join(__dirname, 'test_steps_template.csv')
+        });
+        if (generateCsvTemplate(tmplPath)) {
+            success('Template CSV gerado em: ' + tmplPath);
+            pushHistory('gerar-template', tmplPath, 'ok');
+        } else {
+            error('Falha ao gerar template CSV.');
+        }
+    }
+
+    async function handleCase12() {
+        title('Diagnostico de Conexao');
+        const diagResults = [];
+        const endpoints = [
+            { url: sanitizeUrl(base_url + '/rest/api/2/myself'), label: 'Jira API' },
+            { url: sanitizeUrl(xray_url), label: 'Xray API' },
+            { url: sanitizeUrl(base_url + '/rest/api/2/project/' + ctx.project_name), label: 'Projeto ' + ctx.project_name }
+        ];
+        for (const ep of endpoints) {
+            const start = Date.now();
+            try {
+                const resp = await jiraResource.axiosInstance.get(ep.url);
+                const ms = Date.now() - start;
+                info(ep.label + ': ' + resp.status + ' (' + ms + 'ms)');
+                diagResults.push({ status: 'ok', label: ep.label, message: ms + 'ms' });
+            } catch (err) {
+                const ms = Date.now() - start;
+                const st = err.response?.status || 'ERR';
+                if (st === 401 || st === 403) {
+                    warn(ep.label + ': ' + st + ' (token pode estar inválido)');
+                } else {
+                    error(ep.label + ': ' + st + ' (' + ms + 'ms)');
+                }
+                diagResults.push({ status: 'error', label: ep.label, message: st + ' ' + ms + 'ms' });
+            }
+        }
+        printSummary(
+            /** @type {import('../shared/types').TestResult[]} */ (diagResults));
+        pushHistory('diagnostico',
+            diagResults.filter(r => r.status === 'ok').length + '/' + diagResults.length + ' ok',
+            diagResults.some(r => r.status === 'error') ? 'error' : 'ok');
+    }
+
+    async function handleCase13() {
+        let keys = [];
+        if (ctx.inMemoryTasksId.length > 0) {
+            info('Testes da sessão atual: ' + ctx.inMemoryTasksId.join(', '));
+            if (confirm('Usar estes ' + ctx.inMemoryTasksId.length + ' testes?', true)) {
+                keys = ctx.inMemoryTasksId;
+            }
+        }
+        if (keys.length === 0) {
+            const input = prompt('Keys dos testes (separadas por espaco)', { hint: 'ex: TEST-1 TEST-2' });
+            keys = input.split(/\s+/).filter(Boolean);
+        }
+        if (keys.length === 0) {
+            warn('Nenhuma key informada.');
+            return;
+        }
+        const nameInput = prompt('Nome da execução', { hint: 'Enter = "Automated Execution"' });
+        const csvName = nameInput.trim() || '';
+        const execTitle = prompt('Titulo do Test Execution', { hint: 'Enter = ' + (csvName || 'Automated Execution') });
+        const execDesc = prompt('Descrição (opcional)');
+        try {
+            const execResult = await createTestExecutionWithLinks(
+                jiraResource, linkManager, ctx.project_name, keys, csvName,
+                { title: execTitle, description: execDesc }
+            );
+            pushHistory('create-testexec', execResult.key, 'ok');
+        } catch (err) {
+            printError('Erro ao criar Test Execution', err);
+            pushHistory('create-testexec', 'erro', 'error');
+        }
+    }
+
+    function handleCase14() {
+        const dir = prompt('Caminho do diretório Cypress');
+        if (!dir.trim()) {
+            warn('Caminho vazio, ignorando.');
+            return;
+        }
+        const resolved = path.resolve(dir.trim());
+        updateState(state => { state.lastCypressPath = resolved; });
+        success('Diretório Cypress alterado para: ' + resolved);
+        pushHistory('config-cypress', resolved, 'ok');
+    }
+
+    async function handleCase15() {
+        resetResults();
+        try {
+            const result = await createTestsFromJson({
+                jiraResource, jiraResourceXray, linkManager, linkManagerXray,
+                project_name: ctx.project_name, base_url, sessionLog,
+                onBusy: (val) => { ctx.isBusy = val; }
+            });
+            if (result) {
+                ctx.inMemoryTasksId = result.inMemoryTasksId;
+                ctx.inMemoryTasksText = result.inMemoryTasksText;
+                const okCount = result.inMemoryTasksId.length;
+                success('Importacao JSON concluída: ' + okCount + ' testes');
+                ctx.results = result.inMemoryTasksId.map(key => ({ status: 'ok', label: key, message: '' }));
+                pushHistory('importar-json', okCount + ' testes', 'ok');
+
+                if (confirm('Criar Test Execution para estes testes?', true)) {
+                    try {
+                        const keys = result.inMemoryTasksId;
+                        const srcName = result.sourcePath ? path.basename(result.sourcePath, '.json') : 'json-import';
+                        const nameInput = prompt('Nome da execução', { hint: 'Enter = ' + srcName });
+                        const csvName = nameInput.trim() || srcName;
+                        const execTitle = prompt('Titulo do Test Execution', { hint: 'Enter = ' + csvName });
+                        const execDesc = prompt('Descrição (opcional)');
+                        const execResult = await createTestExecutionWithLinks(
+                            jiraResource, linkManager, ctx.project_name, keys, csvName,
+                            { title: execTitle, description: execDesc }
+                        );
+                        success('Test Execution criado: ' + execResult.key);
+                        pushHistory('create-testexec', execResult.key, 'ok');
+                    } catch (err) {
+                        printError('Erro ao criar Test Execution', err);
+                    }
+                }
+
+                ctx.lastOperation = okCount + ' testes importados via JSON';
+            }
+        } catch (err) {
+            printError('Erro ao importar JSON', err);
+            pushHistory('importar-json', 'erro', 'error');
+        }
+    }
+
+    function handleCase16() {
+        const dir = prompt('Caminho do diretório padrão de JSON');
+        if (!dir.trim()) {
+            warn('Caminho vazio, ignorando.');
+            return;
+        }
+        const resolved = path.resolve(dir.trim());
+        updateState(state => { state.lastJsonDir = resolved; });
+        success('Diretório padrao JSON alterado para: ' + resolved);
+        pushHistory('config-json-dir', resolved, 'ok');
     }
 }
 
 main().catch(err => {
     printError('Erro inesperado', err);
-    printSessionSummary();
+    const state = loadState();
+    sharedPrintSessionSummary([], '', state.history || []);
     process.exitCode = 1;
 });
