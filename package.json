@@ -1,7 +1,7 @@
 {
   "name": "qa_tools",
   "version": "1.0.0",
-  "description": "install dependencies for python and js",
+  "description": "QA automation tools for Jira/Xray, GitLab, and GitHub",
   "main": "jira_management/main.js",
   "scripts": {
     "setup": "bash setup.sh",

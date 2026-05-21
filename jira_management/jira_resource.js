@@ -65,7 +65,12 @@ class JiraResource {
         return map;
     }
 
-    /** @param {string} resourceUrl @returns {Promise<Object|null>} */
+    /**
+     * @param {string} resourceUrl
+     * @returns {Promise<Object|null>}
+     * @note Diferente de post/put, retorna null em vez de lançar erro.
+     *       Manter por compatibilidade. Unificar no futuro (#28).
+     */
     async getJiraResource(resourceUrl) {
         try {
             const response = await this.axiosInstance.get(`/${resourceUrl}`);
@@ -100,7 +105,12 @@ class JiraResource {
         }
     }
 
-    /** @param {string} resourceUrl @param {Object} data @returns {Promise<Object|null>} */
+    /**
+     * @param {string} resourceUrl
+     * @param {Object} data
+     * @returns {Promise<Object|null>}
+     * @throws {Error} em falha de rede ou HTTP 4xx/5xx
+     */
     async putJiraResource(resourceUrl, data) {
         try {
             const response = await this.axiosInstance.put(`/${resourceUrl}`, data);
