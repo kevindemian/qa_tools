@@ -314,13 +314,34 @@ describe('GitHubManager', () => {
         });
     });
 
+    describe('isApproved', () => {
+        it('returns true when review is APPROVED', async () => {
+            mockClient.get.mockResolvedValue({ data: [{ state: 'APPROVED' }] });
+            const result = await manager.isApproved(42);
+            expect(result).toBe(true);
+            expect(mockClient.get).toHaveBeenCalledWith('/repos/myorg/myrepo/pulls/42/reviews');
+        });
+
+        it('returns false when no APPROVED review', async () => {
+            mockClient.get.mockResolvedValue({ data: [{ state: 'COMMENTED' }, { state: 'CHANGES_REQUESTED' }] });
+            const result = await manager.isApproved(42);
+            expect(result).toBe(false);
+        });
+
+        it('returns false on API error', async () => {
+            mockClient.get.mockRejectedValue(new Error('API error'));
+            const result = await manager.isApproved(42);
+            expect(result).toBe(false);
+        });
+    });
+
     describe('_formatPR', () => {
         it('formats open PR', () => {
             const raw = { number: 1, title: 'T', body: 'D', html_url: 'url', state: 'open', merged: false, head: { ref: 'f' }, base: { ref: 'm' }, requested_reviewers: [] };
             const result = manager._formatPR(raw);
             expect(result.iid).toBe(1);
             expect(result.state).toBe('opened');
-            expect(result.approved).toBe(true);
+            expect(result.approved).toBe(false);
         });
 
         it('formats merged PR', () => {

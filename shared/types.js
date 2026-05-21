@@ -72,6 +72,7 @@
  * @property {(iid: string|number) => Promise<Object|null>} getMergeRequest
  * @property {(sourceBranch: string, targetBranch: string, status: string) => Promise<Array<Object>>} searchMergeRequests
  * @property {(iid: string|number, removeSourceBranch?: boolean) => Promise<Object>} acceptMergeRequest
+ * @property {(id: string|number) => Promise<boolean>} isApproved
  * @property {() => Promise<Array<Object>>} getCICDVariables
  * @property {(count?: number) => Promise<Array<Object>>} getRecentPipelines
  * @property {(id: string|number) => Promise<Object|null>} getPipeline
