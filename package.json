@@ -1,0 +1,25 @@
+{
+  "name": "qa_tools",
+  "version": "1.0.0",
+  "description": "install dependencies for python and js",
+  "main": "jira_management/main.js",
+  "scripts": {
+    "test": "jest",
+    "typecheck": "tsc"
+  },
+  "license": "ISC",
+  "type": "commonjs",
+  "dependencies": {
+    "@inquirer/input": "^5.0.13",
+    "@inquirer/select": "^5.1.5",
+    "axios": "^1.15.2",
+    "csv-parser": "^3.2.0",
+    "dotenv": "^17.4.2",
+    "readline-sync": "^1.4.10"
+  },
+  "devDependencies": {
+    "jest": "^30.4.2",
+    "nock": "^14.0.15",
+    "typescript": "^6.0.3"
+  }
+}
