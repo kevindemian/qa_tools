@@ -45,7 +45,7 @@ function setupJiraMocks(base) {
         return { key: 'RESULT-' + teCount, id: '3000' + teCount };
     });
 
-    api.post('/issueLink').reply(201);
+    api.post('/issueLink').times(3).reply(201);
 }
 
 describe('E2E: Result Processing Pipeline', () => {
