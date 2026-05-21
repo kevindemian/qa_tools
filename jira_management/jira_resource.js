@@ -176,7 +176,7 @@ class JiraResource {
 
         let allTasksCompleted = true;
         for (const issue of issuesData.issues) {
-            const status = issue.fields.status.name;
+            const status = issue.fields?.status?.name || '';
             if (!['done', 'in use'].includes(status.toLowerCase())) {
                 info(` - Issue '${issue.key}' NAO concluida. Status: ${status}`);
                 allTasksCompleted = false;
@@ -307,7 +307,6 @@ class JiraResource {
 
     /** @param {string[]} taskIds */
     async moveCardsToDone(taskIds) {
-        let transitionsMap = {};
         const wf = this.workflowMap;
 
         for (const taskId of taskIds) {
@@ -320,13 +319,11 @@ class JiraResource {
             const currentStatus = issueData.fields.status.name;
             this.log.info(`Tarefa ${taskId} — status atual: ${currentStatus}`);
 
-                if (Object.keys(transitionsMap).length === 0) {
-                    transitionsMap = await this.getTransitionsForIssue(taskId);
-                    if (Object.keys(transitionsMap).length === 0) {
-                        this.log.warn(`Nao foi possivel obter transicoes para ${taskId}. Pulando tarefa.`);
-                        continue;
-                    }
-                }
+            const transitionsMap = await this.getTransitionsForIssue(taskId);
+            if (Object.keys(transitionsMap).length === 0) {
+                this.log.warn(`Nao foi possivel obter transicoes para ${taskId}. Pulando tarefa.`);
+                continue;
+            }
 
             const statusLower = currentStatus.toLowerCase();
             try {

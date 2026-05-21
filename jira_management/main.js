@@ -307,6 +307,7 @@ async function main() {
     ).toUpperCase();
 
     let results = [];
+    function resetResults() { results = []; }
 
     async function withBusy(fn) {
         isBusy = true;
@@ -357,6 +358,7 @@ async function main() {
 
         switch (choice) {
             case '1': {
+                resetResults();
                 const result = await createTestsFromCsv({
                     jiraResource,
                     jiraResourceXray,
@@ -700,6 +702,7 @@ async function main() {
             }
 
             case '15': {
+                resetResults();
                 try {
                     const result = await createTestsFromJson({
                         jiraResource, jiraResourceXray, linkManager, linkManagerXray,

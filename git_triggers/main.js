@@ -169,11 +169,11 @@ async function collectTestResults(m, pipelineId, branch, projectName) {
     const artifacts = await m.listPipelineArtifacts(pipelineId);
     spinner.stop();
 
-    const art = artifacts.find(a => /mochawesome|test-result/i.test(a.name)) || artifacts[0];
-    if (!art || artifacts.length === 0) {
+    if (!Array.isArray(artifacts) || artifacts.length === 0) {
         warn('Nenhum artifact encontrado na pipeline #' + pipelineId);
         return;
     }
+    const art = artifacts.find(a => /mochawesome|test-result/i.test(a.name)) || artifacts[0];
     info('Artifact: ' + art.name + ' (id=' + art.id + ')');
 
     let buffer;
@@ -238,8 +238,8 @@ async function collectTestResults(m, pipelineId, branch, projectName) {
 
     spinner.start('Criando Test Execution no Jira...');
     try {
-        const jiraRes = new JiraResource(jira.token, jira.base);
-        const linkJiraRes = new JiraResource(jira.token, jira.base);
+        const jiraRes = new JiraResource(jira.token, jira.base + '/rest/api/2');
+        const linkJiraRes = new JiraResource(jira.token, jira.base + '/rest/api/2');
         const linkMgr = new JiraLinkManager(linkJiraRes);
         const te = await createTestExecutionFromResults(jiraRes, linkMgr, projectName, matched, csvName, { pipelineId, branch, provider: currentProvider });
         spinner.stop();
@@ -664,8 +664,8 @@ async function main() {
                         const cleanup = () => {
                             try { fs.unlinkSync(exportPath); } catch {}
                         };
-                        process.on('exit', cleanup);
-                        process.on('SIGINT', cleanup);
+                        process.once('exit', cleanup);
+                        process.once('SIGINT', cleanup);
                         success('Variaveis exportadas para ' + exportPath + ' (modo 600, cleanup no exit)');
                         pushHistory('export-vars', variables.length + ' variaveis', 'ok');
                     }
