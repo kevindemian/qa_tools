@@ -5,7 +5,7 @@ const { Logger } = require('../shared/logger');
 
 function sanitizeJqlValue(value) {
     if (!value || typeof value !== 'string') {
-        throw new Error('Valor invalido para consulta JQL.');
+        throw new Error('Valor inválido para consulta JQL.');
     }
     return value.replace(/[^\w\s.:/-]/g, '');
 }
@@ -139,7 +139,7 @@ class JiraResource {
         }
         const versions = await this.getProjectVersions(projectId);
         if (!versions || !Array.isArray(versions)) {
-            info(`Nenhuma versao encontrada para o projeto '${projectName}'.`);
+            info(`Nenhuma versão encontrada para o projeto '${projectName}'.`);
             return null;
         }
 
@@ -147,26 +147,26 @@ class JiraResource {
         if (version) {
             return version.id;
         }
-        info(`Versao '${versionName}' nao encontrada no projeto '${projectName}'.`);
+        info(`Versão '${versionName}' nao encontrada no projeto '${projectName}'.`);
         return null;
     }
 
     async createVersion(projectName, versionName, description) {
         const versionId = await this.getVersionId(projectName, versionName);
         if (versionId) {
-            info(`Versao '${versionName}' ja existe.`);
+            info(`Versão '${versionName}' ja existe.`);
             return null;
         }
 
         const payload = { description, name: versionName, project: projectName, released: false };
 
-        info(`Criando versao: ${versionName}`);
+        info(`Criando versão: ${versionName}`);
         const response = await this.postJiraResource('version', payload);
 
         if (response) {
-            success('Versao criada com sucesso: ' + response.name);
+            success('Versão criada com sucesso: ' + response.name);
         } else {
-            logError('Falha ao criar versao.');
+            logError('Falha ao criar versão.');
         }
         return response;
     }
@@ -178,7 +178,7 @@ class JiraResource {
 
         const issuesData = await this.searchJiraIssues(jql);
         if (!issuesData || !issuesData.issues || issuesData.issues.length === 0) {
-            info(`Nenhuma issue encontrada para versao '${versionName}' no projeto '${projectName}'.`);
+            info(`Nenhuma issue encontrada para versão '${versionName}' no projeto '${projectName}'.`);
             return false;
         }
 
@@ -186,10 +186,10 @@ class JiraResource {
         for (const issue of issuesData.issues) {
             const status = issue.fields?.status?.name || '';
             if (!['done', 'in use'].includes(status.toLowerCase())) {
-                info(` - Issue '${issue.key}' NAO concluida. Status: ${status}`);
+                info(` - Issue '${issue.key}' NAO concluída. Status: ${status}`);
                 allTasksCompleted = false;
             } else {
-                info(` - Issue '${issue.key}' concluida (Status: ${status}).`);
+                info(` - Issue '${issue.key}' concluída (Status: ${status}).`);
             }
         }
 
@@ -205,7 +205,7 @@ class JiraResource {
 
         const issuesData = await this.searchJiraIssues(jql);
         if (!issuesData || !issuesData.issues || issuesData.issues.length === 0) {
-            info(`Nenhuma issue encontrada para versao '${versionName}' no projeto '${projectName}'.`);
+            info(`Nenhuma issue encontrada para versão '${versionName}' no projeto '${projectName}'.`);
             return [];
         }
 
@@ -220,7 +220,7 @@ class JiraResource {
         }
         const allVersions = await this.getProjectVersions(projectId);
         if (!allVersions || !Array.isArray(allVersions)) {
-            info(`Nenhuma versao encontrada para o projeto '${projectName}'.`);
+            info(`Nenhuma versão encontrada para o projeto '${projectName}'.`);
             return { latestReleasedVersions: [], unreleasedVersions: [] };
         }
 
@@ -231,19 +231,19 @@ class JiraResource {
         const latestReleasedVersions = releasedVersions.slice(0, numReleases);
         const unreleasedVersions = allVersions.filter(v => !v.released);
 
-        info(`Ultimas ${latestReleasedVersions.length} versoes lancadas do projeto '${projectName}':`);
+        info(`Últimas ${latestReleasedVersions.length} versoes lancadas do projeto '${projectName}':`);
         latestReleasedVersions.forEach(v => {
-            info(`Versao: ${v.name} (Data: ${v.releaseDate})`);
+            info(`Versão: ${v.name} (Data: ${v.releaseDate})`);
         });
 
         info("\nVersoes nao lancadas do projeto '" + projectName + "':");
         if (unreleasedVersions.length > 0) {
             unreleasedVersions.forEach(v => {
-                const description = v.description || 'Sem descricao';
-                info(`Versao: ${v.name} (Descricao: ${description})`);
+                const description = v.description || 'Sem descrição';
+                info(`Versão: ${v.name} (Descrição: ${description})`);
             });
         } else {
-            info("Nenhuma versao nao lancada encontrada.");
+            info("Nenhuma versão nao lancada encontrada.");
         }
 
         return { latestReleasedVersions, unreleasedVersions };
@@ -268,7 +268,7 @@ class JiraResource {
     async updateFixVersions(taskIds, projectName, versionName) {
         const versionId = await this.getVersionId(projectName, versionName);
         if (!versionId) {
-            this.log.error(`Versao '${versionName}' nao encontrada no projeto '${projectName}'.`);
+            this.log.error(`Versão '${versionName}' nao encontrada no projeto '${projectName}'.`);
             return;
         }
 
@@ -287,22 +287,22 @@ class JiraResource {
     async releaseVersion(projectName, versionName) {
         const versionId = await this.getVersionId(projectName, versionName);
         if (!versionId) {
-            this.log.error(`Versao '${versionName}' nao encontrada, nao e possivel publicar.`);
+            this.log.error(`Versão '${versionName}' nao encontrada, nao e possivel publicar.`);
             return;
         }
 
         const allTasksCompleted = await this.checkReleaseTasksStatus(projectName, versionName);
         if (!allTasksCompleted) {
-            this.log.error(`Nao e possivel publicar versao '${versionName}', nem todas as tarefas estao concluidas.`);
+            this.log.error(`Nao e possivel publicar versão '${versionName}', nem todas as tarefas estao concluídas.`);
             return;
         }
 
         const releaseDate = new Date().toISOString().split('T')[0];
         const payload = { releaseDate, released: true };
 
-        info(`Publicando versao '${versionName}'...`);
+        info(`Publicando versão '${versionName}'...`);
         await this.putJiraResource(`version/${versionId}`, payload);
-        success(`Versao '${versionName}' publicada.`);
+        success(`Versão '${versionName}' publicada.`);
     }
 
     /** @type {Object.<string, string[]>} */
@@ -329,7 +329,7 @@ class JiraResource {
 
             const transitionsMap = await this.getTransitionsForIssue(taskId);
             if (Object.keys(transitionsMap).length === 0) {
-                this.log.warn(`Nao foi possivel obter transicoes para ${taskId}. Pulando tarefa.`);
+                this.log.warn(`Nao foi possivel obter transições para ${taskId}. Pulando tarefa.`);
                 continue;
             }
 

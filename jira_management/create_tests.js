@@ -78,9 +78,9 @@ async function updateCrossReferences(jiraResource, tests, ids) {
                     fields: { description: currentDesc + refText }
                 });
                 process.stdout.write('+');
-                crossLog.info('  ' + member.id + ': descricao atualizada');
+                crossLog.info('  ' + member.id + ': descrição atualizada');
             } catch (err) {
-                crossLog.error('Falha ao atualizar descricao de ' + member.id + ' no grupo "' + group.name + '"', {
+                crossLog.error('Falha ao atualizar descrição de ' + member.id + ' no grupo "' + group.name + '"', {
                     status: err.response?.status
                 });
                 process.stdout.write('x');
@@ -172,7 +172,7 @@ function generateMappingFiles(sourcePath, project_name, tasksId, tests) {
             fs.mkdirSync(outDir, { recursive: true });
         }
     } catch (err) {
-        rootLogger.warn('Nao foi possivel criar diretorio de saida: ' + outDir);
+        rootLogger.warn('Nao foi possivel criar diretório de saida: ' + outDir);
         return;
     }
 
@@ -416,7 +416,7 @@ async function _createTestsFromTestCases({
             }
             info(filtered.length + '/' + tests.length + ' testes correspondem a "' + filterText.trim() + '"');
             if (!confirm('Criar apenas estes ' + filtered.length + ' testes?')) {
-                warn('Operacao cancelada.');
+                warn('Operação cancelada.');
                 return;
             }
             tests = filtered;
@@ -424,13 +424,13 @@ async function _createTestsFromTestCases({
     }
 
     if (process.env.AUTO_CONFIRM !== 'true' && !confirm('Criar estes testes no Jira?')) {
-        warn('Operacao cancelada.');
+        warn('Operação cancelada.');
         return;
     }
 
     const isDryRun = process.env.DRY_RUN === 'true';
     if (isDryRun) {
-        warn('MODO DRY-RUN: Nenhuma operacao sera executada.');
+        warn('MODO DRY-RUN: Nenhuma operação sera executada.');
         printSummary(
             /** @type {import('../shared/types').TestResult[]} */ (
                 tests.map(t => ({ status: 'ok', label: t.title, message: 'simulado' }))
@@ -446,7 +446,7 @@ async function _createTestsFromTestCases({
         };
     }
 
-    opLog.info('Iniciando criacao de ' + tests.length + ' teste(s)');
+    opLog.info('Iniciando criação de ' + tests.length + ' teste(s)');
 
     const results = [];
     const testDurations = [];
@@ -486,12 +486,12 @@ async function _createTestsFromTestCases({
         const issueResult = await _createIssue(jiraResource, testData, testTitle, t, tests.length, opLog);
         if ('action' in issueResult) {
             if (issueResult.action === 'abort') {
-                opLog.warn('Usuario abortou apos falha na criacao da issue');
-                results.push({ status: 'error', label: testTitle, message: 'Falha na criacao da issue' });
+                opLog.warn('Usuario abortou apos falha na criação da issue');
+                results.push({ status: 'error', label: testTitle, message: 'Falha na criação da issue' });
                 break outer;
             }
             if (issueResult.action === 'retry') { t--; continue; }
-            results.push({ status: 'error', label: testTitle, message: 'Falha na criacao da issue' });
+            results.push({ status: 'error', label: testTitle, message: 'Falha na criação da issue' });
             continue;
         }
         const createdTestIssue = { key: issueResult.key };
@@ -565,7 +565,7 @@ async function _createTestsFromTestCases({
     const okCount = results.filter(r => r.status === 'ok').length;
     const errored = results.some(r => r.status === 'error');
     const summary = okCount + '/' + tests.length + ' testes criados';
-    opLog.info('Operacao concluida', {
+    opLog.info('Operação concluída', {
         passed: okCount,
         failed: results.length - okCount,
         total: tests.length
@@ -610,7 +610,7 @@ async function createTestsFromCsv({ jiraResource, jiraResourceXray, linkManager,
         { default: state.lastCsvPath || csvDefaultPath }
     );
     const labelsHint = state.lastLabels
-        ? 'ultimo: ' + state.lastLabels : 'vazio para nenhuma';
+        ? 'último: ' + state.lastLabels : 'vazio para nenhuma';
     const jiraLabelsInput = process.env.CSV_LABELS || prompt(
         'Labels Jira (separadas por virgula)',
         { hint: labelsHint, default: state.lastLabels || '' }
@@ -661,7 +661,7 @@ async function createTestsFromJson({ jiraResource, jiraResourceXray, linkManager
 
     let jsonPath = jsonPathInput.trim();
     if (!jsonPath) {
-        warn('Caminho do JSON vazio. Operacao cancelada.');
+        warn('Caminho do JSON vazio. Operação cancelada.');
         return;
     }
     if (state.lastJsonDir && !path.isAbsolute(jsonPath)) {
@@ -672,7 +672,7 @@ async function createTestsFromJson({ jiraResource, jiraResourceXray, linkManager
     }
 
     const labelsHint = state.lastLabels
-        ? 'ultimo: ' + state.lastLabels : 'vazio para nenhuma';
+        ? 'último: ' + state.lastLabels : 'vazio para nenhuma';
     const jiraLabelsInput = process.env.JSON_LABELS || prompt(
         'Labels Jira (separadas por virgula)',
         { hint: labelsHint, default: state.lastLabels || '' }

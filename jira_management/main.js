@@ -6,7 +6,7 @@ const JiraLinkManager = require('./jira_link_manager');
 const CsvResource = require('./csv_resource');
 const PackageVersionManager = require('./package_version_manager');
 const { success, error, warn, info, title, divider, prompt, confirm, printError, printSummary, smartPrompt, showSelect, tableView } = require('../shared/prompt');
-const { mask, createValidateEnv, setupSigint, sanitizeUrl } = require('../shared/cli_base');
+const { mask, createValidateEnv, setupSigint, sanitizeUrl, printSessionSummary: sharedPrintSessionSummary } = require('../shared/cli_base');
 const { rootLogger } = require('../shared/logger');
 const { load: loadState, update: updateState, STATE_PATH } = require('../shared/state');
 const { createTestsFromCsv, createTestsFromJson, createTestExecution, createTestExecutionWithLinks } = require('./create_tests');
@@ -39,35 +39,8 @@ const validateEnv = createValidateEnv([
 ]);
 
 function printSessionSummary() {
-    const logPath = rootLogger.filePath;
-    console.log('');
-    console.log('='.repeat(50));
-    info('Sessao encerrada.');
-
-    const ok = sessionCounters.filter(c => c.status === 'ok').length;
-    const er = sessionCounters.filter(c => c.status === 'error').length;
-    if (ok > 0 || er > 0) {
-        if (ok > 0) success(ok + ' operacao(oes) concluida(s)');
-        if (er > 0) error(er + ' operacao(oes) com erro');
-    }
-
     const history = loadState().history || [];
-    if (history.length > 0) {
-        const last5 = history.slice(-5);
-        info('Ultimas operacoes:');
-        last5.forEach(h => {
-            const icon = h.status === 'error' ? 'ERR' : 'OK';
-            console.log(`  ${icon} ${h.op}: ${h.detail}`);
-        });
-    }
-
-    if (lastOperation) info('Ultima operacao: ' + lastOperation);
-    if (logPath) info('Log: ' + logPath);
-    console.log('='.repeat(50));
-    rootLogger.writeFileOnly('INFO', 'Sessao encerrada. ' +
-        (ok > 0 ? ok + ' ok, ' : '') +
-        (er > 0 ? er + ' erro(s), ' : '') +
-        'ultima: ' + (lastOperation || 'nenhuma'));
+    sharedPrintSessionSummary(sessionCounters, lastOperation, history);
 }
 
 function pushHistory(op, detail, status) {
@@ -84,13 +57,13 @@ setupSigint(() => isBusy, () => printSessionSummary());
 const HELP_TOPICS = {
     csv: 'Formato CSV:\n  Cada teste e um bloco separado por "---"\n  Campos obrigatorios: Title, Action/Data/Expected Result\n  Opcionais: Description, Pre-condition, Linked Issues, Group\n  Exemplo em test_steps.csv',
     labels: 'Labels Jira:\n  Separadas por virgula. Sem acentos, sem espacos.\n  Ex: qa,regression,smoke,sprint-30',
-    group: 'Group: agrupa testes para cross-reference.\n  Testes com mesmo Group: tem descricoes atualizadas automaticamente\n  apos criacao com referencia mutua.',
-    precondition: 'Pre-condition:\n  Referencia: "KEY-123" (issue Jira)\n  Inline: texto descritivo (aparece na descricao do teste)',
-    project: 'Projeto Jira:\n  Chave do projeto (ex: ECSPOL, PROJ).\n  Deve estar definido no Jira com permissao de criacao de issues.',
-    version: 'Versao:\n  Nome da versao (ex: v2.7.0).\n  Criada no projeto Jira para organizar releases.',
-    transitions: 'Transicoes:\n  Fluxo: New -> Approve -> Coding In Progress -> Coding Done -> Done\n  Use a opcao 7 para fechamento automatico.',
-    template: 'Template CSV:\n  Use a opcao 11 para gerar um arquivo CSV de exemplo.',
-    diagnostics: 'Diagnostico de conexao:\n  Opcao 12 no menu. Testa conectividade com Jira API, Xray API,\n  e valida o projeto atual. Mostra tempos de resposta e status HTTP.'
+    group: 'Group: agrupa testes para cross-reference.\n  Testes com mesmo Group: tem descricoes atualizadas automaticamente\n  apos criação com referencia mutua.',
+    precondition: 'Pre-condition:\n  Referencia: "KEY-123" (issue Jira)\n  Inline: texto descritivo (aparece na descrição do teste)',
+    project: 'Projeto Jira:\n  Chave do projeto (ex: ECSPOL, PROJ).\n  Deve estar definido no Jira com permissao de criação de issues.',
+    version: 'Versão:\n  Nome da versão (ex: v2.7.0).\n  Criada no projeto Jira para organizar releases.',
+    transitions: 'Transicoes:\n  Fluxo: New -> Approve -> Coding In Progress -> Coding Done -> Done\n  Use a opção 7 para fechamento automatico.',
+    template: 'Template CSV:\n  Use a opção 11 para gerar um arquivo CSV de exemplo.',
+    diagnostics: 'Diagnostico de conexão:\n  Opção 12 no menu. Testa conectividade com Jira API, Xray API,\n  e valida o projeto atual. Mostra tempos de resposta e status HTTP.'
 };
 
 function showHelp(topic) {
@@ -122,7 +95,7 @@ function showHelp(topic) {
         return;
     }
     title('HELP — Jira Tools');
-    info('Escolha uma opcao do menu e siga as instrucoes.');
+    info('Escolha uma opção do menu e siga as instrucoes.');
     info('Em qualquer prompt de texto, digite /help para ver esta ajuda.');
     info('Digite /help <topico> para ajuda especifica: ' + Object.keys(HELP_TOPICS).join(', '));
     info('Digite /help search <termo> para buscar em todos os topicos.');
@@ -130,28 +103,28 @@ function showHelp(topic) {
     divider();
     title('Fluxo comum:');
     info('1. Crie seu CSV de testes (veja test_steps.csv como exemplo)');
-    info('2. Opcao 1 -> Cria os testes no Jira com steps, pre-conditions e links');
+    info('2. Opção 1 -> Cria os testes no Jira com steps, pre-conditions e links');
     info('3. Opcoes 3-4-8 -> Gerencie versoes de release');
-    info('4. Opcao 7 -> Feche tarefas automaticamente');
+    info('4. Opção 7 -> Feche tarefas automaticamente');
     divider();
 }
 
 const ALIASES = {
     'criar': '1', 'criar-teste': '1', 'criar-testes': '1',
     'listar-versoes': '2', 'versoes': '2',
-    'criar-versao': '3',
+    'criar-versão': '3',
     'atribuir-fixversion': '4', 'fixversion': '4',
     'atualizar-package': '5', 'package': '5',
     'verificar': '6', 'status': '6',
     'fechar': '7',
     'publicar': '8', 'release': '8',
     'trocar-projeto': '9', 'projeto': '9',
-    'trocar-diretorio': '10', 'diretorio': '10',
+    'trocar-diretório': '10', 'diretório': '10',
     'template': '11', 'gerar-template': '11',
-    'testexec': '13', 'criar-testexec': '13', 'execucao': '13',
-    'diretorio-cypress': '14', 'cypress': '14',
+    'testexec': '13', 'criar-testexec': '13', 'execução': '13',
+    'diretório-cypress': '14', 'cypress': '14',
     'importar-json': '15', 'json': '15',
-    'diretorio-json': '16',
+    'diretório-json': '16',
     'sair': '0', 'exit': '0',
     'voltar': 'menu',
     'ajuda': '/help', 'help': '/help'
@@ -172,20 +145,20 @@ const MENU_ITEMS = [
     { id: '15', label: 'Importar testes de JSON' },
     { section: 'RELEASES' },
     { id: '2', label: 'Listar versoes de release' },
-    { id: '3', label: 'Criar nova versao' },
+    { id: '3', label: 'Criar nova versão' },
     { id: '4', label: 'Atribuir fixVersion as tarefas' },
     { id: '5', label: 'Atualizar package.json + release notes' },
     { id: '6', label: 'Verificar status das tarefas' },
     { id: '7', label: 'Fechar tarefas automaticamente' },
-    { id: '8', label: 'Publicar versao' },
+    { id: '8', label: 'Publicar versão' },
     { section: 'CONFIGURACAO' },
     { id: '9', label: 'Alterar projeto Jira' },
-    { id: '10', label: 'Alterar diretorio git', configKey: 'gitDir' },
-    { id: '14', label: 'Alterar diretorio Cypress', configKey: 'cypressDir' },
-    { id: '16', label: 'Alterar diretorio JSON', configKey: 'jsonDir' },
+    { id: '10', label: 'Alterar diretório git', configKey: 'gitDir' },
+    { id: '14', label: 'Alterar diretório Cypress', configKey: 'cypressDir' },
+    { id: '16', label: 'Alterar diretório JSON', configKey: 'jsonDir' },
     { section: 'UTILITARIOS' },
     { id: '11', label: 'Gerar template CSV' },
-    { id: '12', label: 'Diagnosticar conexao' },
+    { id: '12', label: 'Diagnosticar conexão' },
     { id: '13', label: 'Criar Test Execution para testes existentes' },
     { id: '0', label: 'Sair' },
 ];
@@ -274,7 +247,7 @@ async function handleSpecialInput(input) {
         title('Historico de operacoes');
         const last10 = hist.slice(-10);
         if (last10.length === 0) {
-            warn('Nenhuma operacao registrada.');
+            warn('Nenhuma operação registrada.');
         } else {
             tableView(last10, ['ts', 'op', 'detail', 'status']);
         }
@@ -304,7 +277,7 @@ async function main() {
     info('Digite /help a qualquer momento para obter ajuda.');
     info('State: ' + STATE_PATH);
     divider();
-    sessionLog.info('Sessao iniciada');
+    sessionLog.info('Sessão iniciada');
 
     const jiraResource = new JiraResource(personal_token, base_url + '/rest/api/2');
     const jiraResourceXray = new JiraResource(personal_token, xray_url);
@@ -344,7 +317,7 @@ async function main() {
                 { name: '/history  Historico', value: '/history' },
             );
             const menuState = loadState();
-            choice = await showSelect('Selecione uma opcao', choices, {
+            choice = await showSelect('Selecione uma opção', choices, {
                 default: menuState.lastChoice && menuState.lastChoice !== '0' ? menuState.lastChoice : undefined,
             });
         } else {
@@ -353,10 +326,10 @@ async function main() {
             const menuState = loadState();
             const lastHint = menuState.lastChoice && menuState.lastChoice !== '0'
                 ? 'Enter = ' + menuState.lastChoice : '0-15 ou /help';
-            choice = prompt('Selecione uma opcao', { hint: lastHint });
+            choice = prompt('Selecione uma opção', { hint: lastHint });
             if (!choice.trim() && menuState.lastChoice && menuState.lastChoice !== '0') {
                 choice = menuState.lastChoice;
-                info('Repetindo ultima opcao: ' + choice);
+                info('Repetindo última opção: ' + choice);
             }
         }
 
@@ -397,7 +370,7 @@ async function main() {
                     const csvName = csvPathHint ? path.basename(csvPathHint, '.csv') : '';
                     if (confirm('Criar Test Execution para ' + inMemoryTasksId.length + ' testes criados?', true)) {
                         const execTitle = prompt('Titulo do Test Execution', { hint: 'Enter = ' + (csvName || 'Automated Execution') });
-                        const execDesc = prompt('Descricao (opcional)');
+                        const execDesc = prompt('Descrição (opcional)');
                         try {
                             const execResult = await createTestExecutionWithLinks(
                                 jiraResource, linkManager, project_name, inMemoryTasksId, csvName,
@@ -417,7 +390,7 @@ async function main() {
                 const howMany = prompt('Quantas releases listar?', { hint: 'ex: 5' });
                 const num = parseInt(howMany);
                 if (isNaN(num) || num < 1) {
-                    warn('Numero invalido.');
+                    warn('Numero inválido.');
                     continue;
                 }
                 try {
@@ -431,16 +404,16 @@ async function main() {
             }
 
             case '3': {
-                const name = smartPrompt('Nome da versao', { hint: 'ex: v2.7.0' }, () => showHelp('version'));
-                const desc = smartPrompt('Descricao da versao', {}, () => showHelp('version'));
+                const name = smartPrompt('Nome da versão', { hint: 'ex: v2.7.0' }, () => showHelp('version'));
+                const desc = smartPrompt('Descrição da versão', {}, () => showHelp('version'));
                 try {
                     await jiraResource.createVersion(project_name, name, desc);
-                    pushHistory('criar-versao', name, 'ok');
+                    pushHistory('criar-versão', name, 'ok');
                 } catch (err) {
                     const msg = `Erro ao criar versão "${name}" no projeto "${project_name}"`;
                     printError(msg, err);
                     rootLogger.error(msg, { version: name, project: project_name, status: err.response?.status });
-                    pushHistory('criar-versao', name, 'error');
+                    pushHistory('criar-versão', name, 'error');
                 }
                 break;
             }
@@ -465,14 +438,14 @@ async function main() {
                     taskIds = input.split(' ').filter(Boolean);
                 }
 
-                const version = smartPrompt('Nome da versao', {}, () => showHelp('version'));
+                const version = smartPrompt('Nome da versão', {}, () => showHelp('version'));
 
-                title('Preview da operacao');
-                console.log('  Versao: ' + version);
+                title('Preview da operação');
+                console.log('  Versão: ' + version);
                 console.log('  Tarefas (' + taskIds.length + '):');
                 taskIds.forEach(id => console.log('    - ' + id));
                 if (!confirm('Confirmar atribuicao de fixVersion?')) {
-                    warn('Operacao cancelada.');
+                    warn('Operação cancelada.');
                     continue;
                 }
 
@@ -503,15 +476,15 @@ async function main() {
 
             case '5': {
                 if (!packageManager) {
-                    const dir = smartPrompt('Diretorio do projeto git', { default: process.cwd() }, () => showHelp('version'));
+                    const dir = smartPrompt('Diretório do projeto git', { default: process.cwd() }, () => showHelp('version'));
                     packageManager = new PackageVersionManager(dir);
                     git_directory = dir;
                 }
-                const version = smartPrompt('Nome da versao', { hint: 'ex: v2.7.0' }, () => showHelp('version'));
+                const version = smartPrompt('Nome da versão', { hint: 'ex: v2.7.0' }, () => showHelp('version'));
                 try {
                     const tasks = await jiraResource.getReleaseTasks(project_name, version, true);
                     if (!Array.isArray(tasks)) {
-                        warn('Nenhuma tarefa encontrada para esta versao.');
+                        warn('Nenhuma tarefa encontrada para esta versão.');
                         break;
                     }
                     const versionNumber = version.split(' ').pop();
@@ -532,7 +505,7 @@ async function main() {
             }
 
             case '6': {
-                const version = smartPrompt('Nome da versao', {}, () => showHelp('version'));
+                const version = smartPrompt('Nome da versão', {}, () => showHelp('version'));
                 try {
                     await jiraResource.checkReleaseTasksStatus(project_name, version);
                     pushHistory('verificar-status', version, 'ok');
@@ -546,14 +519,14 @@ async function main() {
             }
 
             case '7': {
-                const version = smartPrompt('Versao a fechar', {}, () => showHelp('version'));
-                if (!confirm('Fechar todas as tarefas da versao ' + version + '? Esta operacao nao pode ser desfeita.')) {
-                    warn('Operacao cancelada.');
+                const version = smartPrompt('Versão a fechar', {}, () => showHelp('version'));
+                if (!confirm('Fechar todas as tarefas da versão ' + version + '? Esta operação nao pode ser desfeita.')) {
+                    warn('Operação cancelada.');
                     continue;
                 }
                 const tasks = await jiraResource.getReleaseTasks(project_name, version);
                 if (!Array.isArray(tasks) || tasks.length === 0) {
-                    warn('Nenhuma tarefa encontrada para esta versao.');
+                    warn('Nenhuma tarefa encontrada para esta versão.');
                     continue;
                 }
                 const taskIds = tasks
@@ -583,20 +556,20 @@ async function main() {
             }
 
             case '8': {
-                const version = smartPrompt('Versao a publicar', {}, () => showHelp('version'));
-                if (!confirm('Publicar versao ' + version + '? Isso marcara a versao como released.')) {
-                    warn('Operacao cancelada.');
+                const version = smartPrompt('Versão a publicar', {}, () => showHelp('version'));
+                if (!confirm('Publicar versão ' + version + '? Isso marcara a versão como released.')) {
+                    warn('Operação cancelada.');
                     continue;
                 }
                 try {
                     await jiraResource.releaseVersion(project_name, version);
                     printSummary(
-                        /** @type {import('../shared/types').TestResult[]} */ ([{ status: 'ok', label: 'Versao ' + version, message: 'Publicada com sucesso' }]));
-                    lastOperation = 'Versao ' + version + ' publicada';
-                    pushHistory('publicar-versao', version, 'ok');
+                        /** @type {import('../shared/types').TestResult[]} */ ([{ status: 'ok', label: 'Versão ' + version, message: 'Publicada com sucesso' }]));
+                    lastOperation = 'Versão ' + version + ' publicada';
+                    pushHistory('publicar-versão', version, 'ok');
                 } catch (err) {
-                    printError('Erro ao publicar versao', err);
-                    pushHistory('publicar-versao', 'erro', 'error');
+                    printError('Erro ao publicar versão', err);
+                    pushHistory('publicar-versão', 'erro', 'error');
                 }
                 break;
             }
@@ -616,10 +589,10 @@ async function main() {
             }
 
             case '10': {
-                const dir = prompt('Caminho do diretorio git');
+                const dir = prompt('Caminho do diretório git');
                 packageManager = new PackageVersionManager(dir);
                 git_directory = dir;
-                success('Diretorio alterado para: ' + dir);
+                success('Diretório alterado para: ' + dir);
                 break;
             }
 
@@ -655,7 +628,7 @@ async function main() {
                         const ms = Date.now() - start;
                         const st = err.response?.status || 'ERR';
                         if (st === 401 || st === 403) {
-                            warn(ep.label + ': ' + st + ' (token pode estar invalido)');
+                            warn(ep.label + ': ' + st + ' (token pode estar inválido)');
                         } else {
                             error(ep.label + ': ' + st + ' (' + ms + 'ms)');
                         }
@@ -673,7 +646,7 @@ async function main() {
             case '13': {
                 let keys = [];
                 if (inMemoryTasksId.length > 0) {
-                    info('Testes da sessao atual: ' + inMemoryTasksId.join(', '));
+                    info('Testes da sessão atual: ' + inMemoryTasksId.join(', '));
                     if (confirm('Usar estes ' + inMemoryTasksId.length + ' testes?', true)) {
                         keys = inMemoryTasksId;
                     }
@@ -686,10 +659,10 @@ async function main() {
                     warn('Nenhuma key informada.');
                     break;
                 }
-                const nameInput = prompt('Nome da execucao', { hint: 'Enter = "Automated Execution"' });
+                const nameInput = prompt('Nome da execução', { hint: 'Enter = "Automated Execution"' });
                 const csvName = nameInput.trim() || '';
                 const execTitle = prompt('Titulo do Test Execution', { hint: 'Enter = ' + (csvName || 'Automated Execution') });
-                const execDesc = prompt('Descricao (opcional)');
+                const execDesc = prompt('Descrição (opcional)');
                 try {
                     const execResult = await createTestExecutionWithLinks(
                         jiraResource, linkManager, project_name, keys, csvName,
@@ -704,14 +677,14 @@ async function main() {
             }
 
             case '14': {
-                const dir = prompt('Caminho do diretorio Cypress');
+                const dir = prompt('Caminho do diretório Cypress');
                 if (!dir.trim()) {
                     warn('Caminho vazio, ignorando.');
                     break;
                 }
                 const resolved = path.resolve(dir.trim());
                 updateState(state => { state.lastCypressPath = resolved; });
-                success('Diretorio Cypress alterado para: ' + resolved);
+                success('Diretório Cypress alterado para: ' + resolved);
                 pushHistory('config-cypress', resolved, 'ok');
                 break;
             }
@@ -728,7 +701,7 @@ async function main() {
                         inMemoryTasksId = result.inMemoryTasksId;
                         inMemoryTasksText = result.inMemoryTasksText;
                         const okCount = result.inMemoryTasksId.length;
-                        success('Importacao JSON concluida: ' + okCount + ' testes');
+                        success('Importacao JSON concluída: ' + okCount + ' testes');
                         results = result.inMemoryTasksId.map(key => ({ status: 'ok', label: key, message: '' }));
                         pushHistory('importar-json', okCount + ' testes', 'ok');
 
@@ -736,10 +709,10 @@ async function main() {
                             try {
                                 const keys = result.inMemoryTasksId;
                                 const srcName = result.sourcePath ? path.basename(result.sourcePath, '.json') : 'json-import';
-                                const nameInput = prompt('Nome da execucao', { hint: 'Enter = ' + srcName });
+                                const nameInput = prompt('Nome da execução', { hint: 'Enter = ' + srcName });
                                 const csvName = nameInput.trim() || srcName;
                                 const execTitle = prompt('Titulo do Test Execution', { hint: 'Enter = ' + csvName });
-                                const execDesc = prompt('Descricao (opcional)');
+                                const execDesc = prompt('Descrição (opcional)');
                                 const execResult = await createTestExecutionWithLinks(
                                     jiraResource, linkManager, project_name, keys, csvName,
                                     { title: execTitle, description: execDesc }
@@ -761,14 +734,14 @@ async function main() {
             }
 
             case '16': {
-                const dir = prompt('Caminho do diretorio padrão de JSON');
+                const dir = prompt('Caminho do diretório padrão de JSON');
                 if (!dir.trim()) {
                     warn('Caminho vazio, ignorando.');
                     break;
                 }
                 const resolved = path.resolve(dir.trim());
                 updateState(state => { state.lastJsonDir = resolved; });
-                success('Diretorio padrao JSON alterado para: ' + resolved);
+                success('Diretório padrao JSON alterado para: ' + resolved);
                 pushHistory('config-json-dir', resolved, 'ok');
                 break;
             }
@@ -780,7 +753,7 @@ async function main() {
                 return;
 
             default:
-                warn('Opcao invalida. Escolha entre 0-16, alias ou digite /help.');
+                warn('Opção invalida. Escolha entre 0-16, alias ou digite /help.');
         }
 
         const longOps = ['1', '15', '4', '5', '7', '8'];

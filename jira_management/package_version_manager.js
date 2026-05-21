@@ -21,7 +21,7 @@ class PackageVersionManager {
             json.version = newVersion;
             if (extraUpdate) extraUpdate(json);
             fs.writeFileSync(filePath, JSON.stringify(json, null, 2), 'utf8');
-            rootLogger.info(`Versao atualizada em ${path.basename(filePath)}: ${newVersion}`);
+            rootLogger.info(`Versão atualizada em ${path.basename(filePath)}: ${newVersion}`);
         } catch (err) {
             rootLogger.error(`Erro ao atualizar ${path.basename(filePath)}: ${err.message}`);
         }
@@ -55,7 +55,7 @@ class PackageVersionManager {
 
             const updatedReleaseNotes = `${releaseNotesHeader}\n\n${newReleaseNotes}${oldReleaseNotes}\n`;
             fs.writeFileSync(this.releaseNotesPath, updatedReleaseNotes, 'utf8');
-            rootLogger.info(`Release notes atualizadas com versao ${versionNumber}.`);
+            rootLogger.info(`Release notes atualizadas com versão ${versionNumber}.`);
 
         } catch (error) {
             rootLogger.error(`Erro ao atualizar release notes: ${error.message}`);

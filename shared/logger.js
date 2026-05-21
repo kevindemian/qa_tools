@@ -50,7 +50,7 @@ class Logger {
       return true;
     } catch (err) {
       this._fileError = true;
-      console.error(`[logger] Falha ao criar diretorio de log: ${err.message}`);
+      console.error(`[logger] Falha ao criar diretório de log: ${err.message}`);
       return false;
     }
   }
