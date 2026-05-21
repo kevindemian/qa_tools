@@ -163,7 +163,7 @@ function resolveAlias(choice) {
 }
 
 /**
- * @typedef {{ section?: string, id?: string, label: string, configKey?: string }} MenuItem
+ * @typedef {{ section?: string, id?: string, label?: string, configKey?: string }} MenuItem
  * @type {MenuItem[]}
  */
 const MENU_ITEMS = [
