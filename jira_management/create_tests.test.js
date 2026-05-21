@@ -418,7 +418,7 @@ describe('createTestsFromJson', () => {
         linkManagerXray: makeLinkManager(),
         project_name: 'TESTPROJ',
         base_url: 'http://jira',
-        sessionLog: { log: jest.fn() },
+        sessionLog: { log: jest.fn(), child: jest.fn().mockReturnValue({ log: jest.fn(), warn: jest.fn(), info: jest.fn(), error: jest.fn() }) },
         onBusy: jest.fn(),
     });
 
