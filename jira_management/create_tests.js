@@ -441,7 +441,8 @@ async function _createTestsFromTestCases({
             inMemoryTasksId: [],
             inMemoryTasksText: [],
             summary: 'DRY-RUN: ' + tests.length + ' testes simulados',
-            status: 'ok'
+            status: 'ok',
+            sourcePath
         };
     }
 
