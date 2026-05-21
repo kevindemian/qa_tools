@@ -88,7 +88,14 @@ class Logger {
     const ctxStr = ctxKeys.length > 0
       ? ' [' + ctxKeys.map(k => this.context[k]).join('] [') + ']'
       : '';
-    const dataStr = data ? ' | ' + JSON.stringify(maskDeep(data)) : '';
+    let dataStr = '';
+    if (data) {
+        try {
+            dataStr = ' | ' + JSON.stringify(maskDeep(data));
+        } catch (_) {
+            dataStr = ' | [data serialization error]';
+        }
+    }
     const line = `[${timestamp}] [${level}]${ctxStr} ${msg}${dataStr}\n`;
 
     if (!this._filePathCached) return;

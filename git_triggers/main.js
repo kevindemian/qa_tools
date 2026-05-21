@@ -112,19 +112,21 @@ function isComplete(status) {
 async function pollPipeline(m, pipelineId, interval = 5000, timeout = 300000) {
     const start = Date.now();
     let lastLog = 0;
-    while (Date.now() - start < timeout) {
+    let aborted = false;
+    while (Date.now() - start < timeout && !aborted) {
         const elapsed = Math.floor((Date.now() - start) / 1000);
         if (elapsed - lastLog >= 15) {
             lastLog = elapsed;
             info('Aguardando pipeline #' + pipelineId + ' (' + elapsed + 's)...');
         }
         const p = await m.getPipeline(pipelineId);
-        if (!p) { await delay(interval); continue; }
+        if (aborted || !p) { await delay(interval); if (aborted) break; continue; }
         const status = p.status || p.state || '';
         if (isComplete(status)) {
             return { status, web_url: p.web_url || '' };
         }
         await delay(interval);
+        if (aborted) break;
     }
     return { status: 'timeout', web_url: '' };
 }

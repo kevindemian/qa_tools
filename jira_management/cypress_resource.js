@@ -3,11 +3,8 @@ const path = require('path');
 const { createHttpClient } = require('../shared/http-client');
 const { rootLogger } = require('../shared/logger');
 const { info, warn, success } = require('../shared/prompt');
+const { sanitizeUrl } = require('../shared/cli_base');
 require('dotenv').config({ path: path.resolve(__dirname, '../.env') });
-
-function sanitizeUrl(url) {
-    return url.replace(/token=[^&]+/, 'token=****');
-}
 
 class CypressResource {
     /** @param {string} baseUrl @param {string} personalToken */

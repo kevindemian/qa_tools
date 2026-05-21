@@ -29,6 +29,11 @@ function createValidateEnv(configs) {
   };
 }
 
+/** @param {string} url @returns {string} */
+function sanitizeUrl(url) {
+    return url.replace(/token=[^&]+/, 'token=****');
+}
+
 /** @param {Function} getIsBusy @param {Function} onExit */
 function setupSigint(getIsBusy, onExit) {
   const handler = () => {
@@ -43,4 +48,4 @@ function setupSigint(getIsBusy, onExit) {
   process.on('SIGINT', handler);
 }
 
-module.exports = { mask, createValidateEnv, setupSigint };
+module.exports = { mask, createValidateEnv, setupSigint, sanitizeUrl };

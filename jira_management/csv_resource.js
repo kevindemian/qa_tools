@@ -81,7 +81,7 @@ class CsvResource {
 
     /** @param {string} filePath @returns {Promise<import('../shared/types').TestCase[]>} */
     async readBulkCsv(filePath) {
-        const raw = fs.readFileSync(filePath, 'utf-8');
+        const raw = await fs.promises.readFile(filePath, 'utf-8');
 
         const blocks = raw
             .split(/^---$/m)
