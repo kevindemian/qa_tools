@@ -45,12 +45,11 @@ describe('CLI Base', () => {
       { key: 'TOKEN_B', label: 'Token B', example: 'TOKEN_B=def' },
     ];
 
-    it('sets exitCode when required vars are missing', () => {
+    it('throws when required vars are missing', () => {
       delete process.env.TOKEN_A;
       delete process.env.TOKEN_B;
       const validate = cliBase.createValidateEnv(configs);
-      validate();
-      expect(process.exitCode).toBe(1);
+      expect(() => validate()).toThrow('Variaveis de ambiente faltando');
       expect(MOCK_PROMPT.error).toHaveBeenCalledWith(
         expect.stringContaining('Variaveis obrigatorias')
       );

@@ -47,7 +47,7 @@ function confirm(label, defaultYes = false) {
   const def = defaultYes ? 'Y' : 'N';
   const text = `\n${YELLOW}?${RESET} ${label} ${YELLOW}(${def})${RESET}`;
   const answer = readlineSync.question(text + ': ', { defaultInput: def.toLowerCase() });
-  return answer.toLowerCase() === 'y';
+  return ['y', 'yes', 'sim', 's'].includes(answer.toLowerCase().trim());
 }
 
 function divider() {

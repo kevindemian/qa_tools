@@ -25,13 +25,13 @@ function createValidateEnv(configs) {
     warn('Crie um arquivo .env na raiz do projeto com:');
     configs.forEach(c => info(`${c.key}=${c.example}`));
     rootLogger.error(`Variaveis faltando: ${missing.map(c => c.key).join(', ')}`);
-    process.exitCode = 1;
+    throw new Error('Variaveis de ambiente faltando. Configure o .env.');
   };
 }
 
 /** @param {Function} getIsBusy @param {Function} onExit */
 function setupSigint(getIsBusy, onExit) {
-  process.on('SIGINT', () => {
+  const handler = () => {
     if (getIsBusy && getIsBusy()) {
       info('Operacao em andamento. Use Ctrl+C novamente para forcar saida.');
       return;
@@ -39,7 +39,8 @@ function setupSigint(getIsBusy, onExit) {
     if (onExit) onExit();
     info('Ate logo!');
     process.exit(0);
-  });
+  };
+  process.on('SIGINT', handler);
 }
 
 module.exports = { mask, createValidateEnv, setupSigint };

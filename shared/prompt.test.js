@@ -289,6 +289,18 @@ describe('Prompt', () => {
       expect(prompt.confirm('Continue?', true)).toBe(true);
     });
 
+    it('accepts yes and sim as confirmation', () => {
+      jest.spyOn(readlineSync, 'question')
+        .mockReturnValueOnce('yes')
+        .mockReturnValueOnce('sim')
+        .mockReturnValueOnce('Y')
+        .mockReturnValueOnce('s');
+      expect(prompt.confirm('?', false)).toBe(true);
+      expect(prompt.confirm('?', false)).toBe(true);
+      expect(prompt.confirm('?', false)).toBe(true);
+      expect(prompt.confirm('?', false)).toBe(true);
+    });
+
     it('returns false for n input', () => {
       jest.spyOn(readlineSync, 'question').mockReturnValue('n');
       expect(prompt.confirm('Continue?', false)).toBe(false);

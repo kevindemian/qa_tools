@@ -236,15 +236,16 @@ describe('moveCardsToDone', () => {
     expect(jiraResource.transitionIssue).not.toHaveBeenCalled();
   });
 
-  it('reuses transitionsMap after resolving for first task', async () => {
+  it('fetches transitions per task (no cache)', async () => {
     jiraResource.getJiraResource
       .mockResolvedValueOnce({ fields: { status: { name: 'New' } } })
       .mockResolvedValueOnce({ transitions: [{ id: 31, to: { name: 'approve' } }] })
-      .mockResolvedValueOnce({ fields: { status: { name: 'New' } } });
+      .mockResolvedValueOnce({ fields: { status: { name: 'New' } } })
+      .mockResolvedValueOnce({ transitions: [{ id: 31, to: { name: 'approve' } }] });
 
     await jiraResource.moveCardsToDone(['TASK-1', 'TASK-2']);
 
-    expect(jiraResource.getJiraResource).toHaveBeenCalledTimes(3);
+    expect(jiraResource.getJiraResource).toHaveBeenCalledTimes(4);
     expect(jiraResource.transitionIssue).toHaveBeenCalledTimes(2);
   });
 
