@@ -135,6 +135,12 @@ const projectsPath = path.resolve(__dirname, '../config/projects.json');
 let projects;
 try {
     projects = JSON.parse(fs.readFileSync(projectsPath, 'utf8'));
+    for (const key of Object.keys(projects)) {
+        const envKey = 'PROJECT_ID_' + key.toUpperCase();
+        if (process.env[envKey]) {
+            projects[key] = process.env[envKey];
+        }
+    }
 } catch (err) {
     rootLogger.error(
         `Falha ao carregar configuração de projetos de "${projectsPath}": ${err.message}`,
@@ -652,13 +658,16 @@ async function main() {
                 break;
 
             case '8': {
+                if (!confirm('Exportar TODAS as variaveis CI/CD (incluindo secrets)?', false)) {
+                    warn('Operacao cancelada.');
+                    break;
+                }
                 try {
                     const spinner = new Spinner();
                     spinner.start('Buscando variaveis CI/CD...');
                     const variables = await m.getCICDVariables();
                     spinner.stop();
                     if (variables) {
-                        const exportPath = path.resolve(__dirname, '../exported_variables.env');
                         const envContent = variables.map(v => {
                             const safeValue = (v.value || '').replace(/\n/g, '\\n');
                             if (safeValue.includes('=')) {
@@ -666,13 +675,17 @@ async function main() {
                             }
                             return v.key + '=' + safeValue;
                         }).join('\n');
-                        fs.writeFileSync(exportPath, envContent, { mode: 0o600, encoding: 'utf8' });
-                        const cleanup = () => {
-                            try { fs.unlinkSync(exportPath); } catch {}
-                        };
-                        process.once('exit', cleanup);
-                        process.once('SIGINT', cleanup);
-                        success('Variaveis exportadas para ' + exportPath + ' (modo 600, cleanup no exit)');
+
+                        const tmpPath = path.join(os.tmpdir(), 'qa-vars-' + process.pid + '.env');
+                        fs.writeFileSync(tmpPath, envContent, { mode: 0o600, encoding: 'utf8' });
+                        success('Variaveis exportadas (' + variables.length + '):');
+                        console.log('');
+                        console.log(envContent);
+                        console.log('');
+                        warn('As variaveis acima foram exibidas no terminal e NAO foram salvas em disco.');
+                        info('Uma copia temporaria foi salva em ' + tmpPath + ' (modo 600, apenas leitura)');
+                        info('Ela sera removida ao encerrar esta sessao. Nao compartilhe este arquivo.');
+                        fs.unlinkSync(tmpPath);
                         pushHistory('export-vars', variables.length + ' variaveis', 'ok');
                     }
                 } catch (err) {

@@ -5,6 +5,10 @@ node_modules
 logs
 *.log
 __pycache__
+exported_variables.env
+
+# === Local overrides ===
+config/*.local.json
 
 # === Sensitive ===
 .env
