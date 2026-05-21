@@ -149,7 +149,7 @@ const KNOWN_ERRORS = [
   { test: /issue type.*not found|not a valid issue type/i, msg: 'Tipo de issue nao encontrado', hint: 'Verifique se o tipo esta habilitado nas configuracoes do projeto Jira.' },
   { test: /project.*not found/i, msg: 'Projeto nao encontrado', hint: 'Verifique se o nome do projeto esta correto.' },
   { test: /field.*not found|unknown field/i, msg: 'Campo nao encontrado', hint: 'Verifique se o campo existe no schema do projeto.' },
-  { test: /permission|forbidden|403/i, msg: 'Sem permissao', hint: 'Verifique se seu token tem acesso a esta operação.' },
+  { test: /permission|forbidden|403/i, msg: 'Sem permissão', hint: 'Verifique se seu token tem acesso a esta operação.' },
   { test: /unauthorized|401/i, msg: 'Token inválido ou expirado', hint: 'Verifique seu token de autenticacao no arquivo .env.' },
   { test: /econnreset|econnrefused|enotfound|timeout|econnaborted/i, msg: 'Erro de conexão', hint: 'Verifique se a URL do Jira esta correta e acessivel.' },
   { test: /version.*not found/i, msg: 'Versão nao encontrada', hint: 'Verifique se o nome da versão esta correto.' },

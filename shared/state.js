@@ -5,9 +5,27 @@ const os = require('os');
 const { rootLogger } = require('./logger');
 const { warn } = require('./prompt');
 
-const STATE_PATH = path.join(os.homedir(), '.qa_tools_state.json');
+const STATE_DIR = process.env.XDG_STATE_HOME
+    ? path.join(process.env.XDG_STATE_HOME, 'qa-tools')
+    : path.join(os.homedir(), '.local', 'state', 'qa-tools');
+
+try { fs.mkdirSync(STATE_DIR, { recursive: true }); } catch (_) {}
+
+const STATE_PATH = path.join(STATE_DIR, 'state.json');
 const TMP_PATH = STATE_PATH + '.tmp';
 const BAK_PATH = STATE_PATH + '.bak';
+
+const OLD_STATE_PATH = path.join(os.homedir(), '.qa_tools_state.json');
+try {
+    if (fs.existsSync(OLD_STATE_PATH) && !fs.existsSync(STATE_PATH)) {
+        const oldData = fs.readFileSync(OLD_STATE_PATH, 'utf8');
+        fs.writeFileSync(TMP_PATH, oldData, 'utf8');
+        fs.renameSync(TMP_PATH, STATE_PATH);
+        try { fs.unlinkSync(OLD_STATE_PATH + '.bak'); } catch (_) {}
+        try { fs.unlinkSync(OLD_STATE_PATH + '.tmp'); } catch (_) {}
+        try { fs.unlinkSync(OLD_STATE_PATH); } catch (_) {}
+    }
+} catch (_) {}
 
 /** @returns {import('./types').StateSchema} */
 function load() {

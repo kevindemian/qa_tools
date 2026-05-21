@@ -49,9 +49,9 @@ describe('CLI Base', () => {
       delete process.env.TOKEN_A;
       delete process.env.TOKEN_B;
       const validate = cliBase.createValidateEnv(configs);
-      expect(() => validate()).toThrow('Variaveis de ambiente faltando');
+      expect(() => validate()).toThrow('Variáveis de ambiente faltando');
       expect(MOCK_PROMPT.error).toHaveBeenCalledWith(
-        expect.stringContaining('Variaveis obrigatorias')
+        expect.stringContaining('Variáveis obrigatórias')
       );
     });
 
@@ -61,7 +61,7 @@ describe('CLI Base', () => {
       const validate = cliBase.createValidateEnv(configs);
       validate();
       expect(mockRootLogger.warn).toHaveBeenCalledWith(
-        expect.stringContaining('VARIAVEL COM CREDENCIAL REAL')
+        expect.stringContaining('VARIÁVEL COM CREDENCIAL REAL')
       );
     });
 

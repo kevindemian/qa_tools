@@ -7,7 +7,8 @@ const fs = require('fs');
 const path = require('path');
 const os = require('os');
 
-const STATE_PATH = path.join(os.homedir(), '.qa_tools_state.json');
+const XDG_HOME = '/tmp/test-xdg-state';
+const STATE_PATH = path.join(XDG_HOME, 'qa-tools', 'state.json');
 
 function mockFs(files) {
   const exists = jest.fn(p => p in files);
@@ -26,14 +27,22 @@ function mockFs(files) {
   return { exists, read, write, rename };
 }
 
-describe('State', () => {
-  let state;
+  describe('State', () => {
+    let state;
 
-  beforeEach(() => {
-    jest.isolateModules(() => {
-      state = require('./state');
+    beforeAll(() => {
+      process.env.XDG_STATE_HOME = XDG_HOME;
     });
-  });
+
+    afterAll(() => {
+      delete process.env.XDG_STATE_HOME;
+    });
+
+    beforeEach(() => {
+      jest.isolateModules(() => {
+        state = require('./state');
+      });
+    });
 
   afterEach(() => {
     jest.restoreAllMocks();

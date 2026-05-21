@@ -155,17 +155,17 @@ describe('Prompt', () => {
 
     it('returns known error for 403/permission', () => {
       const result = prompt.humanizeError('permission denied');
-      expect(result.msg).toContain('Sem permissao');
+      expect(result.msg).toContain('Sem permissão');
     });
 
     it('returns known error for 401/unauthorized', () => {
       const result = prompt.humanizeError('401 unauthorized');
-      expect(result.msg).toContain('Token invalido');
+      expect(result.msg).toContain('Token inválido');
     });
 
     it('returns known error for connection issues', () => {
       const result = prompt.humanizeError('ECONNREFUSED');
-      expect(result.msg).toContain('Erro de conexao');
+      expect(result.msg).toContain('Erro de conexão');
     });
 
     it('returns null for unknown errors', () => {
