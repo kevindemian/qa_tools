@@ -44,19 +44,53 @@ Issues registradas durante refatorações, postergadas por escopo.
 
 ### ARQ-001 — SessionContext como classe (CONCLUÍDO)
 
-- **Ação**: `shared/session-context.js` criado com class `SessionContext` (métodos: `resetResults()`, `withBusy()`, `pushHistory()`). `main.js` refatorado para usar a classe.
+- **Ação**: `shared/session-context.js` criado com class `SessionContext` (métodos: `resetResults()`, `withBusy()`, `pushHistory()`, `buildContextLine()`). `git_triggers/main.js` e `jira_management/main.js` refatorados para usar a classe.
 - **Testes**: `shared/session-context.test.js` — 6 testes unitários.
 
-### ARQ-002 — Mover PromptBar/ProgressBar para shared/ (P3)
+### ARQ-002 — withSpinner exportado + consolidado (CONCLUÍDO)
 
-- **Contexto**: `ProgressBar` e `PromptBar` estão definidos dentro de `shared/prompt.js`. Poderiam ser módulos separados.
-- **Ação futura**: Extrair para `shared/progress_bar.js` e `shared/prompt_bar.js`.
+- **Ação**: `withSpinner(label, fn)` exportado de `shared/prompt.js`. 12 usos manuais de `new Spinner()` substituídos em `git_triggers/main.js` (9), `git_triggers/nivelar.js` (2) e `jira_management/create_tests.js` (1). `session-context.withBusy(label)` delega para `withSpinner`.
+- **Testes**: Mocks atualizados — `jest.mock('../shared/prompt', () => ({ withSpinner: jest.fn().mockImplementation(async (l, fn) => fn()) }))`.
 
-### ARQ-003 — Testes para handleCases (P2)
+### ARQ-003 — Manager helpers + error handling (CONCLUÍDO)
+
+- **Ação**: Helpers `_get/_post/_put/_patch` + `handleError()` em `gitlab_manager.js` e `github_manager.js`. Erro logging centralizado, ~45 linhas economizadas.
+- **Testes**: 86 testes passando nos 3 arquivos (`gitlab_manager`, `github_manager`, `gitlab_integration`).
+
+### ARQ-004 — sleep() exportado de http-client (CONCLUÍDO)
+
+- **Ação**: `sleep(ms)` exportado via `module.exports = { createHttpClient, sleep }`.
+
+### ARQ-005 — Testes para handleCases (P2)
 
 - **Contexto**: As funções extraídas (`handleCase1`–`handleCaseN`) não têm testes unitários.
 - **Motivo**: Dependem de mocks complexos (jiraResource, linkManager, prompt). Bloqueado enquanto handlers estiverem como closures em `main.js`. TS-002 (commands/) desbloquearia.
 - **Ação futura**: Após TS-002, criar `jira_management/commands/__tests__/handlers.test.js`.
+
+### ARQ-006 — Duplicação de delay/sleep (P1)
+
+- **Contexto**: `function delay(ms)` em `git_triggers/main.js` é idêntica a `function sleep(ms)` em `shared/http-client.js`. Ambas fazem `new Promise(resolve => setTimeout(resolve, ms))`.
+- **Ação futura**: Importar `sleep` de `shared/http-client.js` em `git_triggers/main.js` e remover `delay`.
+
+### ARQ-007 — Duplicação de glob resolver (P2)
+
+- **Contexto**: `_resolveGlob(pattern)` em `git_triggers/main.js` faz regex manual para resolver globs de arquivos. Poderia usar módulo `glob` ou `fast-glob`.
+- **Ação futura**: Substituir por `require('glob').sync(pattern)` ou similar.
+
+### ARQ-008 — Duplicação de parseMochawesome/matchResultsToTests (P2)
+
+- **Contexto**: Funções implementadas localmente em `git_triggers/main.js` que fazem parsing de relatório Mochawesome. Não movidas para `shared/` por escopo.
+- **Ação futura**: Mover para `shared/mochawesome-parser.js`.
+
+### ARQ-009 — withBusy sem label ambiguidade (P1)
+
+- **Contexto**: `withBusy(fn, label)` aceita label mas casos sem label passam `undefined`. `withSpinner` também aceita label. Quando usado sem label, o código ainda cria `isBusy = true` sem feedback visual.
+- **Ação futura**: Revisar todos os `withBusy(fn)` sem label e decidir se adicionam label ou se é intencional.
+
+### ARQ-010 — withSpinner sem quiet respect (P2)
+
+- **Contexto**: `withSpinner` chama `isQuiet()` internamente, mas nenhum teste cobre o branch quiet (apenas o `spinner.start`/`stop` são verificados).
+- **Ação futura**: Adicionar teste para `withSpinner` em modo quiet.
 
 ---
 

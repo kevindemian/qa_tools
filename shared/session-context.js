@@ -24,20 +24,27 @@ class SessionContext {
   }
 
   async withBusy(fn, label) {
-    const { Spinner } = require('./prompt');
+    const { withSpinner } = require('./prompt');
     this.isBusy = true;
-    const spinner = label ? new Spinner() : null;
-    if (spinner) spinner.start(label);
     try {
+      if (label) return await withSpinner(label, fn);
       return await fn();
     } finally {
-      if (spinner) spinner.stop();
       this.isBusy = false;
     }
   }
 
   pushHistory(op, detail, status) {
     this.sessionCounters.push({ op, detail, status });
+    this.lastOperation = op + ': ' + detail;
+  }
+
+  buildContextLine(projectName) {
+    const ok = this.sessionCounters.filter(c => c.status === 'ok').length;
+    const er = this.sessionCounters.filter(c => c.status === 'error').length;
+    const counts = ok > 0 || er > 0 ? ' | ' + ok + ' ok' + (er > 0 ? ' · ' + er + ' erro' : '') : '';
+    const prefix = projectName || '';
+    return prefix + (this.lastOperation ? ' | ' + this.lastOperation : '') + counts;
   }
 }
 

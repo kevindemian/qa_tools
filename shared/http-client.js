@@ -59,4 +59,4 @@ function createHttpClient({ baseUrl, authHeader, timeout = 120000 }) {
   return instance;
 }
 
-module.exports = { createHttpClient };
+module.exports = { createHttpClient, sleep };

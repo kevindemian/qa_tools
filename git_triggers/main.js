@@ -3,7 +3,7 @@ const path = require('path');
 const fs = require('fs');
 const os = require('os');
 const AdmZip = require('adm-zip');
-const { success, error, warn, info, title, divider, prompt, confirm, printError, printSummary, Spinner, showSelect, tableView } = require('../shared/prompt');
+const { success, error, warn, info, title, divider, prompt, confirm, printError, printSummary, withSpinner, showSelect, tableView } = require('../shared/prompt');
 const { load: loadState, update: updateState } = require('../shared/state');
 const { createValidateEnv, setupSigint, printSessionSummary: sharedPrintSessionSummary } = require('../shared/cli_base');
 const GitLabManager = require('./gitlab_manager');
@@ -27,8 +27,7 @@ let currentProvider = 'gitlab';
 let isBusy = false;
 
 const sessionLog = rootLogger.child({ session: 'gitlab' });
-let sessionCounters = [];
-let lastOperation = '';
+const sessionContext = new (require('../shared/session-context').SessionContext)();
 
 /** @type {import('../shared/types').GitProvider|null} */
 let manager = null;
@@ -62,8 +61,7 @@ function createManagerForProject(projectName, id) {
 }
 
 function pushHistory(op, detail, status) {
-    sessionCounters.push({ op, detail, status });
-    lastOperation = op + ': ' + detail;
+    sessionContext.pushHistory(op, detail, status);
     updateState(state => {
         if (!state.history) state.history = [];
         state.history.push({ op, detail, status, ts: new Date().toISOString() });
@@ -78,7 +76,7 @@ const validateEnv = createValidateEnv([
 ]);
 
 function printSessionSummary() {
-    sharedPrintSessionSummary(sessionCounters, lastOperation);
+    sharedPrintSessionSummary(sessionContext.sessionCounters, sessionContext.lastOperation);
 }
 
 async function nivelarBranchesWrapper(gitlab) {
@@ -162,10 +160,7 @@ async function collectTestResults(m, pipelineId, branch, projectName) {
         return;
     }
 
-    const spinner = new Spinner();
-    spinner.start('Buscando artifacts...');
-    const artifacts = await m.listPipelineArtifacts(pipelineId);
-    spinner.stop();
+    const artifacts = await withSpinner('Buscando artifacts...', () => m.listPipelineArtifacts(pipelineId));
 
     if (!Array.isArray(artifacts) || artifacts.length === 0) {
         warn('Nenhum artifact encontrado na pipeline #' + pipelineId);
@@ -176,12 +171,11 @@ async function collectTestResults(m, pipelineId, branch, projectName) {
 
     let buffer;
     try {
-        spinner.start('Baixando artifact...');
-        const dl = await m.downloadArtifact(art.id);
-        buffer = dl.buffer;
-        spinner.stop();
+        buffer = await withSpinner('Baixando artifact...', async () => {
+            const dl = await m.downloadArtifact(art.id);
+            return dl.buffer;
+        });
     } catch (err) {
-        spinner.stop();
         printError('Falha ao baixar artifact', err);
         return;
     }
@@ -234,18 +228,17 @@ async function collectTestResults(m, pipelineId, branch, projectName) {
 
     const csvName = resolvedPath.replace(/-jira-mapping\.json$/, '').split(/[/\\]/).pop() || 'pipeline';
 
-    spinner.start('Criando Test Execution no Jira...');
     try {
-        const jiraRes = new JiraResource(jira.token, jira.base + '/rest/api/2');
-        const linkJiraRes = new JiraResource(jira.token, jira.base + '/rest/api/2');
-        const linkMgr = new JiraLinkManager(linkJiraRes);
-        const te = await createTestExecutionFromResults(jiraRes, linkMgr, projectName, matched, csvName, { pipelineId, branch, provider: currentProvider });
-        spinner.stop();
+        const te = await withSpinner('Criando Test Execution no Jira...', async () => {
+            const jiraRes = new JiraResource(jira.token, jira.base + '/rest/api/2');
+            const linkJiraRes = new JiraResource(jira.token, jira.base + '/rest/api/2');
+            const linkMgr = new JiraLinkManager(linkJiraRes);
+            return await createTestExecutionFromResults(jiraRes, linkMgr, projectName, matched, csvName, { pipelineId, branch, provider: currentProvider });
+        });
         success('Test Execution criado: ' + jira.base + '/browse/' + te.key);
         success(te.passed + ' passed / ' + te.failed + ' failed / ' + te.skipped + ' skipped');
         pushHistory('resultados', te.key + ': ' + te.passed + '/' + te.failed, 'ok');
     } catch (err) {
-        spinner.stop();
         printError('Falha ao criar Test Execution', err);
         pushHistory('resultados', 'erro', 'error');
     }
@@ -269,11 +262,8 @@ function providerLabel() {
 }
 
 function displayActions() {
-    const ok = sessionCounters.filter(c => c.status === 'ok').length;
-    const er = sessionCounters.filter(c => c.status === 'error').length;
-    const counts = ok > 0 || er > 0 ? ' | ' + ok + ' ok' + (er > 0 ? ' · ' + er + ' erro' : '') : '';
-    title(providerLabel().toUpperCase() + ' TOOLS' + counts);
-    if (lastOperation) info('Última operação: ' + lastOperation);
+    title(providerLabel().toUpperCase() + ' TOOLS' + sessionContext.buildContextLine());
+    if (sessionContext.lastOperation) info('Última operação: ' + sessionContext.lastOperation);
     divider();
     console.log('  PIPELINES');
     console.log('   1  Disparar pipeline');
@@ -293,6 +283,8 @@ function displayActions() {
     console.log('   8  Exportar variaveis CI/CD');
     console.log('   9  Trocar de projeto');
     console.log('');
+    const ok = sessionContext.sessionCounters.filter(c => c.status === 'ok').length;
+    const er = sessionContext.sessionCounters.filter(c => c.status === 'error').length;
     if (ok > 0 || er > 0) {
         console.log('  ' + ok + ' ok' + (er > 0 ? ' · ' + er + ' erro' : ''));
     }
@@ -302,10 +294,7 @@ function displayActions() {
 }
 
 function buildContextLine() {
-    const ok = sessionCounters.filter(c => c.status === 'ok').length;
-    const er = sessionCounters.filter(c => c.status === 'error').length;
-    const counts = ok > 0 || er > 0 ? ' | ' + ok + ' ok' + (er > 0 ? ' · ' + er + ' erro' : '') : '';
-    return providerLabel().toUpperCase() + ' TOOLS' + (lastOperation ? ' | ' + lastOperation : '') + counts;
+    return providerLabel().toUpperCase() + ' TOOLS' + sessionContext.buildContextLine();
 }
 
 /** @returns {Array<any>} */
@@ -471,10 +460,7 @@ async function main() {
                 /** @type {any} */
                 let pipelineResult = null;
                 try {
-                    const spinner = new Spinner();
-                    spinner.start('Disparando pipeline em ' + currentBranch + '...');
-                    pipelineResult = await m.triggerPipeline(payload);
-                    spinner.stop();
+                    pipelineResult = await withSpinner('Disparando pipeline em ' + currentBranch + '...', () => m.triggerPipeline(payload));
                     if (pipelineResult) { success('Pipeline disparado: ' + pipelineResult.web_url); pushHistory('pipeline', currentBranch, 'ok'); }
                 } catch (err) {
                     printError('Falha ao disparar pipeline', err); pushHistory('pipeline', currentBranch, 'error');
@@ -501,20 +487,14 @@ async function main() {
                             const prLabel = currentProvider === 'github' ? 'PR' : 'MR';
                             const mrTitle = prompt('Titulo do ' + prLabel, { default: 'chore: merge ' + currentBranch + ' -> ' + target });
                             try {
-                                const spinner = new Spinner();
-                                spinner.start('Criando ' + prLabel + ' ' + currentBranch + ' -> ' + target + '...');
-                                const mr = await m.createMergeRequest(currentBranch, target, mrTitle, '');
-                                spinner.stop();
+                                const mr = await withSpinner('Criando ' + prLabel + ' ' + currentBranch + ' -> ' + target + '...', () => m.createMergeRequest(currentBranch, target, mrTitle, ''));
                                 if (mr) {
                                     success(prLabel + ' criado: ' + mr.web_url);
                                     pushHistory('quick-mr', currentBranch + '->' + target, 'ok');
 
                                     if (confirm('Fazer merge de ' + currentBranch + ' em ' + target + ' agora?', false)) {
                                         try {
-                                            const spinner2 = new Spinner();
-                                            spinner2.start('Fazendo merge de ' + prLabel + ' #' + mr.iid + '...');
-                                            const mergeResult = await m.acceptMergeRequest(mr.iid);
-                                            spinner2.stop();
+                                            const mergeResult = await withSpinner('Fazendo merge de ' + prLabel + ' #' + mr.iid + '...', () => m.acceptMergeRequest(mr.iid));
                                             if (mergeResult) {
                                                 success('Merge realizado: ' + mergeResult.web_url);
                                                 pushHistory('quick-merge', mr.iid, 'ok');
@@ -543,10 +523,7 @@ async function main() {
                     continue;
                 }
                 try {
-                    const spinner = new Spinner();
-                    spinner.start('Buscando schedules...');
-                    const schedules = await m.getSchedules();
-                    spinner.stop();
+                    const schedules = await withSpinner('Buscando schedules...', () => m.getSchedules());
                     if (schedules && schedules.length > 0) {
                         info('Schedules encontrados:');
                         schedules.forEach(s => {
@@ -570,10 +547,7 @@ async function main() {
                 }
                 const scheduleId = prompt('ID do schedule');
                 try {
-                    const spinner = new Spinner();
-                    spinner.start('Disparando schedule ' + scheduleId + '...');
-                    const result = await m.runSchedule(scheduleId);
-                    spinner.stop();
+                    const result = await withSpinner('Disparando schedule ' + scheduleId + '...', () => m.runSchedule(scheduleId));
                     if (result) { success('Schedule disparado: ' + scheduleId); pushHistory('schedule-run', scheduleId, 'ok'); }
                 } catch (err) {
                     printError('Erro ao disparar schedule', err); pushHistory('schedule-run', scheduleId, 'error');
@@ -588,10 +562,7 @@ async function main() {
                 const description = prompt('Descrição');
                 const prLabel = currentProvider === 'github' ? 'PR' : 'MR';
                 try {
-                    const spinner = new Spinner();
-                    spinner.start('Criando ' + prLabel + ' ' + sourceBranch + ' -> ' + targetBranch + '...');
-                    const result = await m.createMergeRequest(sourceBranch, targetBranch, mrTitle, description);
-                    spinner.stop();
+                    const result = await withSpinner('Criando ' + prLabel + ' ' + sourceBranch + ' -> ' + targetBranch + '...', () => m.createMergeRequest(sourceBranch, targetBranch, mrTitle, description));
                     if (result) {
                         success(prLabel + ' criado: ' + result.web_url); pushHistory('pr-create', sourceBranch + '->' + targetBranch, 'ok');
                     }
@@ -630,10 +601,7 @@ async function main() {
                 const iid = prompt('ID do ' + (currentProvider === 'github' ? 'PR' : 'MR') + ' para merge');
                 const prLabel = currentProvider === 'github' ? 'PR' : 'MR';
                 try {
-                    const spinner = new Spinner();
-                    spinner.start('Fazendo merge de ' + prLabel + ' #' + iid + '...');
-                    const result = await m.acceptMergeRequest(iid);
-                    spinner.stop();
+                    const result = await withSpinner('Fazendo merge de ' + prLabel + ' #' + iid + '...', () => m.acceptMergeRequest(iid));
                     if (result) { success('Merge realizado: ' + result.web_url); pushHistory('pr-merge', iid, 'ok'); }
                 } catch (err) {
                     printError('Falha ao fazer merge', err); pushHistory('pr-merge', iid, 'error');
@@ -651,10 +619,7 @@ async function main() {
                     break;
                 }
                 try {
-                    const spinner = new Spinner();
-                    spinner.start('Buscando variaveis CI/CD...');
-                    const variables = await m.getCICDVariables();
-                    spinner.stop();
+                    const variables = await withSpinner('Buscando variaveis CI/CD...', () => m.getCICDVariables());
                     if (variables) {
                         const envContent = variables.map(v => {
                             const safeValue = (v.value || '').replace(/\n/g, '\\n');
@@ -704,7 +669,7 @@ async function main() {
             case '0':
                 title('Ate logo!');
                 printSessionSummary();
-                if (sessionCounters.some(c => c.status === 'error')) process.exitCode = 1;
+                if (sessionContext.sessionCounters.some(c => c.status === 'error')) process.exitCode = 1;
                 return;
 
             default:

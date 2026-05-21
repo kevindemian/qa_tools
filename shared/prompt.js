@@ -144,6 +144,16 @@ class Spinner {
   }
 }
 
+async function withSpinner(label, fn) {
+  const spinner = isQuiet() ? null : new Spinner();
+  if (spinner) spinner.start(label);
+  try {
+    return await fn();
+  } finally {
+    if (spinner) spinner.stop();
+  }
+}
+
 const KNOWN_ERRORS = [
   { test: /rate limit|too many requests/i, msg: 'Rate limit atingido', hint: 'Aguarde alguns segundos e tente novamente.' },
   { test: /issue type.*not found|not a valid issue type/i, msg: 'Tipo de issue nao encontrado', hint: 'Verifique se o tipo esta habilitado nas configuracoes do projeto Jira.' },
@@ -362,5 +372,5 @@ module.exports = {
   success, error, warn, info, title, divider,
   prompt, confirm, printError, printSummary, smartPrompt, extractErrorMessage,
   humanizeError, onError, Spinner, ProgressBar, isQuiet,
-  showSelect, tableView
+  showSelect, tableView, withSpinner
 };

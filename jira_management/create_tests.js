@@ -1,7 +1,7 @@
 // @ts-check
 const fs = require('fs');
 const path = require('path');
-const { success, error, warn, info, title, divider, prompt, confirm, smartPrompt, printError, printSummary, onError, ProgressBar, Spinner, isQuiet } = require('../shared/prompt');
+const { success, error, warn, info, title, divider, prompt, confirm, smartPrompt, printError, printSummary, onError, ProgressBar, withSpinner, isQuiet } = require('../shared/prompt');
 const { rootLogger } = require('../shared/logger');
 const { load: loadState, update: updateState } = require('../shared/state');
 
@@ -313,18 +313,17 @@ async function createTestExecutionWithLinks(jiraResource, linkManager, project_n
             if (unlinked.length === 0) {
                 info('Todos os testes ja estao vinculados ao Test Execution.');
             } else {
-                const spinner = !isQuiet() ? new Spinner() : null;
-                if (spinner) spinner.start('Linkando ' + unlinked.length + ' teste(s)...');
                 let linkCount = 0;
-                for (const key of unlinked) {
-                    try {
-                        await linkManager.createIssueLink(key, result.key, 'Tests');
-                        linkCount++;
-                    } catch (err) {
-                        rootLogger.warn('Falha ao linkar ' + key + ': ' + err.message);
+                await withSpinner('Linkando ' + unlinked.length + ' teste(s)...', async () => {
+                    for (const key of unlinked) {
+                        try {
+                            await linkManager.createIssueLink(key, result.key, 'Tests');
+                            linkCount++;
+                        } catch (err) {
+                            rootLogger.warn('Falha ao linkar ' + key + ': ' + err.message);
+                        }
                     }
-                }
-                if (spinner) spinner.stop();
+                });
                 if (linkCount > 0) success(linkCount + '/' + unlinked.length + ' testes vinculados.');
             }
         } catch (err) {
