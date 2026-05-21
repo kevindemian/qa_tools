@@ -12,15 +12,16 @@ const mockInstance = Object.assign(
   }
 );
 
-jest.mock('axios', () => ({ create: jest.fn(() => mockInstance) }));
-
 describe('HTTP Client', () => {
   let httpClient;
   let axios;
 
   beforeAll(() => {
-    httpClient = require('./http-client');
-    axios = require('axios');
+    jest.isolateModules(() => {
+      jest.doMock('axios', () => ({ create: jest.fn(() => mockInstance) }));
+      httpClient = require('./http-client');
+      axios = require('axios');
+    });
   });
 
   beforeEach(() => {
@@ -77,9 +78,11 @@ describe('HTTP Client', () => {
     it('retries GET up to 5 times', async () => {
       httpClient.createHttpClient({ baseUrl: 'https://api.test.com' });
       const err = makeError('get', 500, 0);
-      mockInstance.mockImplementation(cfg =>
-        errorHandler(makeError('get', 500, cfg.__retryAttempts))
-      );
+      mockInstance.mockImplementation(cfg => {
+        const err = makeError('get', 500, cfg.__retryAttempts);
+        err.config = cfg;
+        return errorHandler(err);
+      });
       try { await errorHandler(err); } catch (e) { }
       expect(mockInstance).toHaveBeenCalledTimes(5);
     });
@@ -87,9 +90,11 @@ describe('HTTP Client', () => {
     it('retries PUT up to 5 times', async () => {
       httpClient.createHttpClient({ baseUrl: 'https://api.test.com' });
       const err = makeError('put', 500, 0);
-      mockInstance.mockImplementation(cfg =>
-        errorHandler(makeError('put', 500, cfg.__retryAttempts))
-      );
+      mockInstance.mockImplementation(cfg => {
+        const err = makeError('put', 500, cfg.__retryAttempts);
+        err.config = cfg;
+        return errorHandler(err);
+      });
       try { await errorHandler(err); } catch (e) { }
       expect(mockInstance).toHaveBeenCalledTimes(5);
     });
