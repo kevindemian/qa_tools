@@ -5,7 +5,7 @@ const os = require('os');
 const AdmZip = require('adm-zip');
 const { success, error, warn, info, title, divider, prompt, confirm, printError, printSummary, Spinner, showSelect, tableView } = require('../shared/prompt');
 const { load: loadState, update: updateState } = require('../shared/state');
-const { createValidateEnv, setupSigint } = require('../shared/cli_base');
+const { createValidateEnv, setupSigint, printSessionSummary: sharedPrintSessionSummary } = require('../shared/cli_base');
 const GitLabManager = require('./gitlab_manager');
 const GitHubManager = require('./github_manager');
 const { nivelarBranches } = require('./nivelar');
@@ -78,23 +78,7 @@ const validateEnv = createValidateEnv([
 ]);
 
 function printSessionSummary() {
-    const logPath = rootLogger.filePath;
-    console.log('');
-    console.log('='.repeat(50));
-    info('Sessao encerrada.');
-    const ok = sessionCounters.filter(c => c.status === 'ok').length;
-    const er = sessionCounters.filter(c => c.status === 'error').length;
-    if (ok > 0 || er > 0) {
-        if (ok > 0) success(ok + ' operacao(oes) concluida(s)');
-        if (er > 0) error(er + ' operacao(oes) com erro');
-    }
-    if (lastOperation) info('Ultima operacao: ' + lastOperation);
-    if (logPath) info('Log: ' + logPath);
-    console.log('='.repeat(50));
-    rootLogger.writeFileOnly('INFO', 'Sessao encerrada. ' +
-        (ok > 0 ? ok + ' ok, ' : '') +
-        (er > 0 ? er + ' erro(s), ' : '') +
-        'ultima: ' + (lastOperation || 'nenhuma'));
+    sharedPrintSessionSummary(sessionCounters, lastOperation);
 }
 
 async function nivelarBranchesWrapper(gitlab) {
@@ -269,9 +253,11 @@ async function collectTestResults(m, pipelineId, branch, projectName) {
 
 function _resolveGlob(pattern) {
     try {
+        const escaped = pattern.replace(/[.+?^${}()|\[\]\\]/g, '\\$&').replace(/\*/g, '.*');
+        const regex = new RegExp('^' + escaped + '$');
         const baseDir = path.dirname(pattern.replace(/\*/g, ''));
         const files = fs.readdirSync(baseDir);
-        const match = files.find(f => f.endsWith('-jira-mapping.json'));
+        const match = files.find(f => regex.test(f));
         return match ? path.join(baseDir, match) : null;
     } catch (e) {
         return null;
@@ -287,7 +273,7 @@ function displayActions() {
     const er = sessionCounters.filter(c => c.status === 'error').length;
     const counts = ok > 0 || er > 0 ? ' | ' + ok + ' ok' + (er > 0 ? ' · ' + er + ' erro' : '') : '';
     title(providerLabel().toUpperCase() + ' TOOLS' + counts);
-    if (lastOperation) info('Ultima operacao: ' + lastOperation);
+    if (lastOperation) info('Última operação: ' + lastOperation);
     divider();
     console.log('  PIPELINES');
     console.log('   1  Disparar pipeline');
@@ -357,7 +343,7 @@ async function displayRecentPipelines(m) {
     try {
         const pipelines = await m.getRecentPipelines(5);
         if (pipelines && pipelines.length > 0) {
-            console.log('  Ultimas pipelines:');
+            console.log('  Últimas pipelines:');
             pipelines.slice(0, 3).forEach(p => {
                 const id = p.id || p.run_number || '?';
                 const ref = p.ref || (p.head_branch || '');
@@ -378,7 +364,7 @@ async function main() {
         return;
     }
     validateEnv();
-    sessionLog.info('Sessao iniciada');
+    sessionLog.info('Sessão iniciada');
 
     const state = loadState();
     displayProjects();
@@ -392,7 +378,7 @@ async function main() {
         ? names.indexOf(firstDefault) + 1
         : parseInt(firstChoice, 10);
     if (isNaN(firstIdx) || firstIdx < 1 || firstIdx > names.length) {
-        error('Projeto invalido.');
+        error('Projeto inválido.');
         process.exitCode = 1;
         return;
     }
@@ -418,15 +404,15 @@ async function main() {
             divider();
             const stateHint2 = loadState().lastChoice && loadState().lastChoice !== '0'
                 ? loadState().lastChoice : undefined;
-            finalChoice = await showSelect('Escolha uma opcao', buildActionChoices(), {
+            finalChoice = await showSelect('Escolha uma opção', buildActionChoices(), {
                 default: stateHint2,
             });
         } else {
             displayActions();
-            const choice = prompt('Escolha uma opcao', { hint: stateHint });
+            const choice = prompt('Escolha uma opção', { hint: stateHint });
             const resolved = !choice.trim() && loadState().lastChoice && loadState().lastChoice !== '0'
                 ? loadState().lastChoice : choice;
-            if (resolved !== choice) info('Repetindo ultima opcao: ' + resolved);
+            if (resolved !== choice) info('Repetindo última opção: ' + resolved);
             finalChoice = resolved;
         }
 
@@ -436,7 +422,7 @@ async function main() {
         if (cmd === '/h' || cmd === '/help') {
             title('Ajuda — Git Tools');
             info('Opcoes disponiveis no menu numerado acima.');
-            info('/history - Exibe historico de operacoes da sessao.');
+            info('/history - Exibe historico de operacoes da sessão.');
             divider();
             continue;
         }
@@ -445,7 +431,7 @@ async function main() {
             title('Historico de operacoes');
             const last10 = history.slice(-10);
             if (last10.length === 0) {
-                warn('Nenhuma operacao registrada.');
+                warn('Nenhuma operação registrada.');
             } else {
                 tableView(last10, ['ts', 'op', 'detail', 'status']);
             }
@@ -478,7 +464,7 @@ async function main() {
                 console.log('  Branch: ' + currentBranch);
                 console.log('  Variaveis: ' + payload.variables.length);
                 if (!confirm('Confirmar disparo de pipeline?')) {
-                    warn('Operacao cancelada.');
+                    warn('Operação cancelada.');
                     continue;
                 }
 
@@ -553,7 +539,7 @@ async function main() {
 
             case '2': {
                 if (currentProvider !== 'gitlab') {
-                    warn('Opcao nao disponivel para GitHub.');
+                    warn('Opção nao disponivel para GitHub.');
                     continue;
                 }
                 try {
@@ -564,7 +550,7 @@ async function main() {
                     if (schedules && schedules.length > 0) {
                         info('Schedules encontrados:');
                         schedules.forEach(s => {
-                            console.log('  ID: ' + s.id + '  ' + (s.description || 'sem descricao') + '  (proxima execucao: ' + (s.next_run_at || 'N/A') + ')');
+                            console.log('  ID: ' + s.id + '  ' + (s.description || 'sem descrição') + '  (proxima execução: ' + (s.next_run_at || 'N/A') + ')');
                         });
                         pushHistory('list-schedules', schedules.length + ' schedules', 'ok');
                     } else {
@@ -579,7 +565,7 @@ async function main() {
 
             case '3': {
                 if (currentProvider !== 'gitlab') {
-                    warn('Opcao nao disponivel para GitHub.');
+                    warn('Opção nao disponivel para GitHub.');
                     continue;
                 }
                 const scheduleId = prompt('ID do schedule');
@@ -599,7 +585,7 @@ async function main() {
                 const sourceBranch = prompt('Branch de origem');
                 const targetBranch = prompt('Branch de destino');
                 const mrTitle = prompt('Titulo do ' + (currentProvider === 'github' ? 'PR' : 'MR'));
-                const description = prompt('Descricao');
+                const description = prompt('Descrição');
                 const prLabel = currentProvider === 'github' ? 'PR' : 'MR';
                 try {
                     const spinner = new Spinner();
@@ -661,7 +647,7 @@ async function main() {
 
             case '8': {
                 if (!confirm('Exportar TODAS as variaveis CI/CD (incluindo secrets)?', false)) {
-                    warn('Operacao cancelada.');
+                    warn('Operação cancelada.');
                     break;
                 }
                 try {
@@ -686,7 +672,7 @@ async function main() {
                         console.log('');
                         warn('As variaveis acima foram exibidas no terminal e NAO foram salvas em disco.');
                         info('Uma copia temporaria foi salva em ' + tmpPath + ' (modo 600, apenas leitura)');
-                        info('Ela sera removida ao encerrar esta sessao. Nao compartilhe este arquivo.');
+                        info('Ela sera removida ao encerrar esta sessão. Nao compartilhe este arquivo.');
                         fs.unlinkSync(tmpPath);
                         pushHistory('export-vars', variables.length + ' variaveis', 'ok');
                     }
@@ -710,7 +696,7 @@ async function main() {
                     await displayRecentPipelines(newM);
                     pushHistory('trocar-projeto', newName, 'ok');
                 } else {
-                    warn('Opcao invalida.');
+                    warn('Opção invalida.');
                 }
                 break;
             }
@@ -722,7 +708,7 @@ async function main() {
                 return;
 
             default:
-                warn('Opcao invalida.');
+                warn('Opção invalida.');
         }
     }
 }

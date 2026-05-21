@@ -54,6 +54,8 @@ function divider() {
   console.log('-'.repeat(50));
 }
 
+const NAV_CMDS = ['/back', '/menu', '/exit', '/sair'];
+
 function smartPrompt(label, options = {}, helpCallback) {
   let retries = 0;
   const maxRetries = options.maxRetries || 3;
@@ -63,6 +65,9 @@ function smartPrompt(label, options = {}, helpCallback) {
     if (trimmed === '/help' || trimmed === '/h') {
       if (helpCallback) helpCallback();
       continue;
+    }
+    if (NAV_CMDS.includes(trimmed)) {
+      return value;
     }
     if (!trimmed) {
       retries++;
@@ -101,11 +106,15 @@ class ProgressBar {
     } else {
       eta = Math.round(elapsed / current * (this.total - current));
     }
-    process.stdout.write('\r[' + bar + '] ' + current + '/' + this.total + ' ' + eta + 's');
+    if (process.stdout.isTTY) {
+      process.stdout.write('\r[' + bar + '] ' + current + '/' + this.total + ' ' + eta + 's');
+    }
   }
 
   stop() {
-    process.stdout.write('\r\x1b[K\n');
+    if (process.stdout.isTTY) {
+      process.stdout.write('\r\x1b[K\n');
+    }
   }
 }
 
@@ -140,10 +149,10 @@ const KNOWN_ERRORS = [
   { test: /issue type.*not found|not a valid issue type/i, msg: 'Tipo de issue nao encontrado', hint: 'Verifique se o tipo esta habilitado nas configuracoes do projeto Jira.' },
   { test: /project.*not found/i, msg: 'Projeto nao encontrado', hint: 'Verifique se o nome do projeto esta correto.' },
   { test: /field.*not found|unknown field/i, msg: 'Campo nao encontrado', hint: 'Verifique se o campo existe no schema do projeto.' },
-  { test: /permission|forbidden|403/i, msg: 'Sem permissao', hint: 'Verifique se seu token tem acesso a esta operacao.' },
-  { test: /unauthorized|401/i, msg: 'Token invalido ou expirado', hint: 'Verifique seu token de autenticacao no arquivo .env.' },
-  { test: /econnreset|econnrefused|enotfound|timeout|econnaborted/i, msg: 'Erro de conexao', hint: 'Verifique se a URL do Jira esta correta e acessivel.' },
-  { test: /version.*not found/i, msg: 'Versao nao encontrada', hint: 'Verifique se o nome da versao esta correto.' },
+  { test: /permission|forbidden|403/i, msg: 'Sem permissao', hint: 'Verifique se seu token tem acesso a esta operação.' },
+  { test: /unauthorized|401/i, msg: 'Token inválido ou expirado', hint: 'Verifique seu token de autenticacao no arquivo .env.' },
+  { test: /econnreset|econnrefused|enotfound|timeout|econnaborted/i, msg: 'Erro de conexão', hint: 'Verifique se a URL do Jira esta correta e acessivel.' },
+  { test: /version.*not found/i, msg: 'Versão nao encontrada', hint: 'Verifique se o nome da versão esta correto.' },
   { test: /already exists/i, msg: 'Item ja existe', hint: 'Escolha um nome diferente.' },
 ];
 
@@ -176,7 +185,7 @@ function printError(context, err) {
     console.log(`  ${YELLOW}->${RESET} ${known.hint}`);
   } else {
     error(`${context}: ${raw || 'Erro inesperado'}`);
-    console.log(`  ${YELLOW}->${RESET} Verifique sua configuracao e tente novamente.`);
+    console.log(`  ${YELLOW}->${RESET} Verifique sua configuração e tente novamente.`);
   }
 }
 
@@ -188,12 +197,12 @@ function printSummary(results) {
 
   if (failed === 0) {
     console.log(`  ${GREEN}${BOLD}TUDO CERTO!${RESET}`);
-    success(`${passed} de ${results.length} operacao(oes) concluida(s) com sucesso`);
+    success(`${passed} de ${results.length} operação(oes) concluída(s) com sucesso`);
     rootLogger.info(`Resumo: ${passed}/${results.length} ok`);
   } else {
     const logPath = rootLogger.filePath;
     console.log(`  ${YELLOW}${BOLD}OPERACAO PARCIAL${RESET}`);
-    warn(`${passed} concluidas, ${failed} com erro`);
+    warn(`${passed} concluídas, ${failed} com erro`);
     results.filter(r => r.status === 'error').forEach(r => {
       console.log(`  ${RED}*${RESET} ${r.label}: ${r.message}`);
     });
@@ -249,7 +258,7 @@ async function onError(context, err, options = {}) {
       divider();
       continue;
     }
-    warn('Opcao invalida. Escolha ' + opts.join(', '));
+    warn('Opção invalida. Escolha ' + opts.join(', '));
   }
 }
 
