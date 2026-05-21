@@ -5,6 +5,8 @@ const { success, error, warn, info, title, divider, prompt, confirm, printError,
 const { load: loadState, update: updateState } = require('../shared/state');
 const { createValidateEnv, setupSigint } = require('../shared/cli_base');
 const GitLabManager = require('./gitlab_manager');
+const GitHubManager = require('./github_manager');
+const { nivelarBranches } = require('./nivelar');
 const { rootLogger } = require('../shared/logger');
 
 require('dotenv').config({ path: path.resolve(__dirname, '../.env') });
@@ -14,10 +16,43 @@ let projectId;
 let apiToken = /** @type {string} */ (process.env.GIT_TOKEN);
 /** @type {string} */
 let gitlabBaseUrl = /** @type {string} */ (process.env.GIT_BASE_URL);
+/** @type {'gitlab'|'github'} */
+let currentProvider = 'gitlab';
 
 const sessionLog = rootLogger.child({ session: 'gitlab' });
 let sessionCounters = [];
 let lastOperation = '';
+
+/** @type {import('../shared/types').GitProvider|null} */
+let manager = null;
+
+const PROVIDERS_PATH = path.resolve(__dirname, '../config/providers.json');
+let providersConfig = {};
+try {
+    providersConfig = JSON.parse(fs.readFileSync(PROVIDERS_PATH, 'utf8'));
+} catch (err) {
+    rootLogger.warn('Falha ao carregar providers.json. Usando GitLab como padrao.');
+}
+
+/** @returns {'gitlab'|'github'} */
+function getProviderForProject(projectName) {
+    const cfg = providersConfig[projectName];
+    return /** @type {'gitlab'|'github'} */ ((cfg && cfg.provider) || 'gitlab');
+}
+
+/** @returns {import('../shared/types').GitProvider} */
+function createManagerForProject(projectName, id) {
+    const provider = getProviderForProject(projectName);
+    currentProvider = provider;
+    if (provider === 'github') {
+        const cfg = providersConfig[projectName];
+        const repo = (cfg && cfg.repo) || id;
+        const ghToken = process.env.GITHUB_TOKEN || process.env.GIT_TOKEN || '';
+        const ghApiUrl = process.env.GITHUB_API_URL || 'https://api.github.com';
+        return new GitHubManager(repo, ghToken, ghApiUrl);
+    }
+    return new GitLabManager(id, apiToken, gitlabBaseUrl);
+}
 
 function pushHistory(op, detail, status) {
     sessionCounters.push({ op, detail, status });
@@ -27,6 +62,7 @@ function pushHistory(op, detail, status) {
 const validateEnv = createValidateEnv([
     { key: 'GIT_TOKEN', label: 'GIT_TOKEN (token de autenticacao GitLab)', example: 'GIT_TOKEN=seu-token-aqui' },
     { key: 'GIT_BASE_URL', label: 'GIT_BASE_URL (URL base do GitLab)', example: 'GIT_BASE_URL=https://gitlab.seusite.com' },
+    { key: 'GITHUB_TOKEN', label: 'GITHUB_TOKEN (token GitHub, opcional se usar GitHub)', example: 'GITHUB_TOKEN=seu-token-github' },
 ]);
 
 function printSessionSummary() {
@@ -49,6 +85,32 @@ function printSessionSummary() {
         'ultima: ' + (lastOperation || 'nenhuma'));
 }
 
+async function nivelarBranchesWrapper(gitlab) {
+    await nivelarBranches(gitlab, { pushHistory });
+}
+
+function delay(ms) {
+    return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+function isComplete(status) {
+    return ['success', 'failed', 'canceled', 'skipped'].includes(status);
+}
+
+async function pollPipeline(m, pipelineId, interval = 5000, timeout = 300000) {
+    const start = Date.now();
+    while (Date.now() - start < timeout) {
+        const p = await m.getPipeline(pipelineId);
+        if (!p) { await delay(interval); continue; }
+        const status = p.status || p.state || '';
+        if (isComplete(status)) {
+            return { status, web_url: p.web_url || '' };
+        }
+        await delay(interval);
+    }
+    return { status: 'timeout', web_url: '' };
+}
+
 setupSigint(() => false, () => printSessionSummary());
 
 const projectsPath = path.resolve(__dirname, '../config/projects.json');
@@ -65,24 +127,35 @@ try {
 }
 
 function displayProjects() {
-    title('Projetos GitLab');
+    title('Projetos');
     const names = Object.keys(projects);
-    names.forEach((name, i) => console.log('  ' + (i + 1) + '  ' + name));
+    names.forEach((name, i) => {
+        const p = getProviderForProject(name);
+        const tag = p === 'github' ? ' [GH]' : ' [GL]';
+        console.log('  ' + (i + 1) + '  ' + name + tag);
+    });
     console.log('  ' + (names.length + 1) + '  Sair');
 }
 
+function providerLabel() {
+    return currentProvider === 'github' ? 'GitHub' : 'GitLab';
+}
+
 function displayActions() {
-    title('GITLAB TOOLS');
+    title(providerLabel().toUpperCase() + ' TOOLS');
     if (lastOperation) info('Ultima operacao: ' + lastOperation);
     divider();
     console.log('  PIPELINES');
     console.log('   1  Disparar pipeline');
-    console.log('   2  Listar schedules');
-    console.log('   3  Disparar schedule');
+    if (currentProvider === 'gitlab') {
+        console.log('   2  Listar schedules');
+        console.log('   3  Disparar schedule');
+    }
+    const prLabel = currentProvider === 'github' ? 'PR' : 'MR';
     console.log('');
-    console.log('  MERGE REQUESTS');
-    console.log('   4  Criar merge request');
-    console.log('   5  Listar MRs aprovados');
+    console.log('  ' + prLabel + 's');
+    console.log('   4  Criar ' + prLabel);
+    console.log('   5  Listar ' + prLabel + 's aprovados');
     console.log('   6  Fazer merge por ID');
     console.log('   7  Nivelar branches (main -> rel_cand -> dev)');
     console.log('');
@@ -92,6 +165,25 @@ function displayActions() {
     console.log('');
     console.log('   0  Sair');
     divider();
+}
+
+async function displayRecentPipelines(m) {
+    try {
+        const pipelines = await m.getRecentPipelines(5);
+        if (pipelines && pipelines.length > 0) {
+            console.log('  Ultimas pipelines:');
+            pipelines.slice(0, 3).forEach(p => {
+                const id = p.id || p.run_number || '?';
+                const ref = p.ref || (p.head_branch || '');
+                const s = p.status || p.conclusion || '?';
+                const icon = s === 'success' ? '\u2713' : (s === 'failed' ? '\u2717' : '~');
+                console.log('    #' + id + ' ' + ref + ' — ' + icon + ' ' + s);
+            });
+            console.log('');
+        }
+    } catch (err) {
+        // non-critical
+    }
 }
 
 async function main() {
@@ -121,10 +213,13 @@ async function main() {
     const projectName = names[firstIdx - 1];
     projectId = projects[projectName];
     updateState(s => { s.lastProject = projectName; });
-    success('Projeto selecionado: ' + projectName);
+    success('Projeto selecionado: ' + projectName + ' (' + getProviderForProject(projectName) + ')');
 
-    const gitlab = new GitLabManager(projectId, apiToken, gitlabBaseUrl);
+    manager = createManagerForProject(projectName, projectId);
+    const m = /** @type {import('../shared/types').GitProvider} */ (manager);
     let currentBranch = '';
+
+    await displayRecentPipelines(m);
 
     const stateHint = loadState().lastChoice && loadState().lastChoice !== '0'
         ? 'Enter = ' + loadState().lastChoice : '0-9';
@@ -142,8 +237,13 @@ async function main() {
         switch (finalChoice) {
             case '1': {
                 currentBranch = prompt('Branch para disparar pipeline');
-                /** @type {{ ref: string, variables: {key:string, value:string}[] }} */
+                /** @type {{ ref: string, variables: {key:string, value:string}[], workflow_id?: string }} */
                 const payload = { ref: currentBranch, variables: [] };
+
+                if (currentProvider === 'github') {
+                    const wfId = prompt('Workflow ID (deixe vazio para auto-detectar)');
+                    if (wfId.trim()) payload.workflow_id = wfId.trim();
+                }
 
                 const addVars = confirm('Adicionar variaveis?');
                 if (addVars) {
@@ -163,23 +263,77 @@ async function main() {
                     continue;
                 }
 
+                /** @type {any} */
+                let pipelineResult = null;
                 try {
                     const spinner = new Spinner();
-                    spinner.start('Disparando pipeline em ' + currentBranch);
-                    const result = await gitlab.triggerPipeline(payload);
+                    spinner.start('Disparando pipeline em ' + currentBranch + '...');
+                    pipelineResult = await m.triggerPipeline(payload);
                     spinner.stop();
-                    if (result) { success('Pipeline disparado: ' + result.web_url); pushHistory('pipeline', currentBranch, 'ok'); }
+                    if (pipelineResult) { success('Pipeline disparado: ' + pipelineResult.web_url); pushHistory('pipeline', currentBranch, 'ok'); }
                 } catch (err) {
                     printError('Falha ao disparar pipeline', err); pushHistory('pipeline', currentBranch, 'error');
+                    break;
                 }
+
+                if (pipelineResult && confirm('Aguardar conclusao da pipeline?', true)) {
+                    const id = pipelineResult.id || pipelineResult.run_number || '';
+                    if (id) {
+                        info('Aguardando pipeline #' + id + '...');
+                        const pollResult = await pollPipeline(m, id);
+                        const icon = pollResult.status === 'success' ? '\u2713' : '\u2717';
+                        info('Pipeline #' + id + ': ' + icon + ' ' + pollResult.status);
+
+                        if (pollResult.status === 'success' && confirm('Criar merge request de ' + currentBranch + ' para?', false)) {
+                            const target = prompt('Branch de destino', { default: 'main' });
+                            const prLabel = currentProvider === 'github' ? 'PR' : 'MR';
+                            const mrTitle = prompt('Titulo do ' + prLabel, { default: 'chore: merge ' + currentBranch + ' -> ' + target });
+                            try {
+                                const spinner = new Spinner();
+                                spinner.start('Criando ' + prLabel + ' ' + currentBranch + ' -> ' + target + '...');
+                                const mr = await m.createMergeRequest(currentBranch, target, mrTitle, '');
+                                spinner.stop();
+                                if (mr) {
+                                    success(prLabel + ' criado: ' + mr.web_url);
+                                    pushHistory('quick-mr', currentBranch + '->' + target, 'ok');
+
+                                    if (confirm('Fazer merge de ' + currentBranch + ' em ' + target + ' agora?', false)) {
+                                        try {
+                                            const spinner2 = new Spinner();
+                                            spinner2.start('Fazendo merge de ' + prLabel + ' #' + mr.iid + '...');
+                                            const mergeResult = await m.acceptMergeRequest(mr.iid);
+                                            spinner2.stop();
+                                            if (mergeResult) {
+                                                success('Merge realizado: ' + mergeResult.web_url);
+                                                pushHistory('quick-merge', mr.iid, 'ok');
+                                            }
+                                        } catch (err) {
+                                            printError('Falha ao fazer merge', err);
+                                            pushHistory('quick-merge', mr.iid, 'error');
+                                        }
+                                    }
+                                }
+                            } catch (err) {
+                                printError('Falha ao criar ' + prLabel, err);
+                                pushHistory('quick-mr', currentBranch + '->' + target, 'error');
+                            }
+                        }
+                    }
+                }
+
+                await displayRecentPipelines(m);
                 break;
             }
 
             case '2': {
+                if (currentProvider !== 'gitlab') {
+                    warn('Opcao nao disponivel para GitHub.');
+                    continue;
+                }
                 try {
                     const spinner = new Spinner();
                     spinner.start('Buscando schedules...');
-                    const schedules = await gitlab.getSchedules();
+                    const schedules = await m.getSchedules();
                     spinner.stop();
                     if (schedules && schedules.length > 0) {
                         info('Schedules encontrados:');
@@ -198,11 +352,15 @@ async function main() {
             }
 
             case '3': {
+                if (currentProvider !== 'gitlab') {
+                    warn('Opcao nao disponivel para GitHub.');
+                    continue;
+                }
                 const scheduleId = prompt('ID do schedule');
                 try {
                     const spinner = new Spinner();
                     spinner.start('Disparando schedule ' + scheduleId + '...');
-                    const result = await gitlab.runSchedule(scheduleId);
+                    const result = await m.runSchedule(scheduleId);
                     spinner.stop();
                     if (result) { success('Schedule disparado: ' + scheduleId); pushHistory('schedule-run', scheduleId, 'ok'); }
                 } catch (err) {
@@ -214,102 +372,72 @@ async function main() {
             case '4': {
                 const sourceBranch = prompt('Branch de origem');
                 const targetBranch = prompt('Branch de destino');
-                const mrTitle = prompt('Titulo do MR');
-                const description = prompt('Descricao do MR');
+                const mrTitle = prompt('Titulo do ' + (currentProvider === 'github' ? 'PR' : 'MR'));
+                const description = prompt('Descricao');
+                const prLabel = currentProvider === 'github' ? 'PR' : 'MR';
                 try {
                     const spinner = new Spinner();
-                    spinner.start('Criando MR ' + sourceBranch + ' -> ' + targetBranch + '...');
-                    const result = await gitlab.createMergeRequest(sourceBranch, targetBranch, mrTitle, description);
+                    spinner.start('Criando ' + prLabel + ' ' + sourceBranch + ' -> ' + targetBranch + '...');
+                    const result = await m.createMergeRequest(sourceBranch, targetBranch, mrTitle, description);
                     spinner.stop();
                     if (result) {
-                        success('MR criado: ' + result.web_url); pushHistory('mr-create', sourceBranch + '->' + targetBranch, 'ok');
+                        success(prLabel + ' criado: ' + result.web_url); pushHistory('pr-create', sourceBranch + '->' + targetBranch, 'ok');
                     }
                 } catch (err) {
-                    printError('Falha ao criar MR', err); pushHistory('mr-create', sourceBranch + '->' + targetBranch, 'error');
+                    printError('Falha ao criar ' + prLabel, err); pushHistory('pr-create', sourceBranch + '->' + targetBranch, 'error');
                 }
                 break;
             }
 
             case '5': {
-                const status = prompt('Status dos MRs', { default: 'opened' });
+                const status = prompt('Status dos ' + (currentProvider === 'github' ? 'PRs' : 'MRs'), { default: 'opened' });
+                const prLabel = currentProvider === 'github' ? 'PR' : 'MR';
                 try {
-                    const approved = (await gitlab.searchMergeRequests('', '', status))
-                        .filter(mr => mr.approved === true);
+                    const results = await m.searchMergeRequests('', '', status);
+                    const approved = results.filter(r => r.approved === true);
                     if (approved.length > 0) {
-                        info('MRs aprovados:');
-                        approved.forEach(mr => console.log('  MR #' + mr.iid + ': ' + mr.title));
-                        pushHistory('mrs-approved', approved.length + ' MRs', 'ok');
+                        info(prLabel + 's aprovados:');
+                        approved.forEach(r => console.log('  ' + prLabel + ' #' + r.iid + ': ' + r.title));
+                        pushHistory('prs-approved', approved.length + ' ' + prLabel + 's', 'ok');
                     } else {
-                        warn('Nenhum MR aprovado encontrado.');
-                        pushHistory('mrs-approved', 'vazio', 'ok');
+                        warn('Nenhum ' + prLabel + ' aprovado encontrado.');
+                        pushHistory('prs-approved', 'vazio', 'ok');
                     }
                 } catch (err) {
-                    printError('Erro ao listar MRs aprovados', err); pushHistory('mrs-approved', status, 'error');
+                    printError('Erro ao listar ' + prLabel + 's aprovados', err); pushHistory('prs-approved', status, 'error');
                 }
                 break;
             }
 
             case '6': {
-                const iid = prompt('ID do MR para merge');
+                const iid = prompt('ID do ' + (currentProvider === 'github' ? 'PR' : 'MR') + ' para merge');
+                const prLabel = currentProvider === 'github' ? 'PR' : 'MR';
                 try {
                     const spinner = new Spinner();
-                    spinner.start('Fazendo merge de MR #' + iid + '...');
-                    const result = await gitlab.acceptMergeRequest(iid);
+                    spinner.start('Fazendo merge de ' + prLabel + ' #' + iid + '...');
+                    const result = await m.acceptMergeRequest(iid);
                     spinner.stop();
-                    if (result) { success('Merge realizado: ' + result.web_url); pushHistory('mr-merge', iid, 'ok'); }
+                    if (result) { success('Merge realizado: ' + result.web_url); pushHistory('pr-merge', iid, 'ok'); }
                 } catch (err) {
-                    printError('Falha ao fazer merge', err); pushHistory('mr-merge', iid, 'error');
+                    printError('Falha ao fazer merge', err); pushHistory('pr-merge', iid, 'error');
                 }
                 break;
             }
 
-            case '7': {
-                const mainBranch = prompt('Branch principal', { default: 'main' });
-                const rcBranch = prompt('Branch release candidate', { default: 'rel_cand' });
-                const devBranch = prompt('Branch dev', { default: 'dev' });
-
-                try {
-                    const spinner = new Spinner();
-                    spinner.start('Criando MR ' + mainBranch + ' -> ' + rcBranch + '...');
-                    const mr1 = await gitlab.createMergeRequest(
-                        mainBranch, rcBranch,
-                        'chore: nivelamento ' + mainBranch + ' -> ' + rcBranch,
-                        'Nivelamento automatico de branches: ' + mainBranch + ' -> ' + rcBranch
-                    );
-                    spinner.stop();
-                    if (mr1) info('MR criado: ' + mr1.web_url);
-                } catch (err) {
-                    printError('Falha no nivelamento (primeiro MR)', err); pushHistory('nivelamento', mainBranch + '->' + rcBranch, 'error');
-                }
-
-                try {
-                    const spinner = new Spinner();
-                    spinner.start('Criando MR ' + rcBranch + ' -> ' + devBranch + '...');
-                    const mr2 = await gitlab.createMergeRequest(
-                        rcBranch, devBranch,
-                        'chore: nivelamento ' + rcBranch + ' -> ' + devBranch,
-                        'Nivelamento automatico de branches: ' + rcBranch + ' -> ' + devBranch
-                    );
-                    spinner.stop();
-                    if (mr2) success('Segundo MR criado: ' + mr2.web_url);
-                    pushHistory('nivelamento', mainBranch + '->' + rcBranch + ', ' + rcBranch + '->' + devBranch, 'ok');
-                } catch (err) {
-                    printError('Falha no nivelamento (segundo MR)', err); pushHistory('nivelamento', rcBranch + '->' + devBranch, 'error');
-                }
+            case '7':
+                await nivelarBranchesWrapper(m);
                 break;
-            }
 
             case '8': {
                 try {
                     const spinner = new Spinner();
                     spinner.start('Buscando variaveis CI/CD...');
-                    const variables = await gitlab.getCICDVariables();
+                    const variables = await m.getCICDVariables();
                     spinner.stop();
                     if (variables) {
                         const exportPath = path.resolve(__dirname, '../exported_variables.env');
                         const envContent = variables.map(v => v.key + '=' + v.value).join('\n');
                         fs.writeFileSync(exportPath, envContent, 'utf8');
-                        console.log(envContent);
                         success('Variaveis exportadas para ' + exportPath);
                         pushHistory('export-vars', variables.length + ' variaveis', 'ok');
                     }
@@ -326,9 +454,11 @@ async function main() {
                 if (!isNaN(newIdx) && newIdx >= 1 && newIdx <= names.length) {
                     const newName = names[newIdx - 1];
                     projectId = projects[newName];
-                    gitlab.projectId = projectId;
+                    manager = createManagerForProject(newName, projectId);
                     updateState(s => { s.lastProject = newName; });
-                    success('Projeto alterado para: ' + newName);
+                    success('Projeto alterado para: ' + newName + ' (' + getProviderForProject(newName) + ')');
+                    const newM = /** @type {import('../shared/types').GitProvider} */ (manager);
+                    await displayRecentPipelines(newM);
                     pushHistory('trocar-projeto', newName, 'ok');
                 } else {
                     warn('Opcao invalida.');
@@ -349,3 +479,5 @@ async function main() {
 }
 
 main();
+
+module.exports = { nivelarBranchesWrapper };

@@ -12,11 +12,27 @@ npm run typecheck      # verifica tipos (opcional, 0 erros esperado)
 
 **Pré-requisitos:** Node.js 18+, npm 9+.
 
+### Git Hooks (opcional, recomendado)
+
+Hooks rodam `typecheck + tests` antes de cada push. Configuração única:
+
+```bash
+git config core.hooksPath .githooks
+```
+
+Para pular hooks (emergência): `git push --no-verify`.
+
+O CI (`test` job no `.gitlab-ci.yml`) cobre o mesmo escopo — hooks são complementares (falham rápido localmente antes de enviar).
+
 ## Quick Start
+
+**Pré-requisitos:** Node.js 18+, npm 9+.
 
 ```bash
 cp .env.example .env       # edite com seus tokens Jira/Xray
 npm install                # instala dependencias
+npm run typecheck          # verifica tipos (0 erros)
+npm test                   # 134 testes, 14 suites
 ```
 
 Crie um arquivo `testes.csv`:
@@ -56,7 +72,8 @@ Dependências instaladas:
 ```
 qa_tools/
 ├── config/
-│   ├── projects.json          # IDs dos projetos GitLab
+│   ├── projects.json          # IDs dos projetos (GitLab) ou owner/repo (GitHub)
+│   ├── providers.json         # Tipo de provedor por projeto (gitlab|github)
 │   └── reviewers.json         # IDs dos revisores para MRs
 ├── jira_management/
 │   ├── main.js                # CLI entry point (menu 0-12)
@@ -72,7 +89,9 @@ qa_tools/
 │   └── jira_validator.test.js # Testes de validação CSV + Jira (14)
 ├── git_triggers/
 │   ├── main.js                # CLI entry point (menu 0-9)
-│   └── gitlab_manager.js      # Wrapper REST para API GitLab
+│   ├── gitlab_manager.js      # Wrapper REST para API GitLab
+│   ├── github_manager.js      # Wrapper REST para API GitHub
+│   └── nivelar.js             # Nivelamento de branches (main→rel_cand→dev)
 └── shared/
     ├── http-client.js         # Cliente HTTP unificado (timeout 120s + retry 3× com jitter)
     ├── state.js               # Estado persistente JSON (copy-on-write + backup .bak)
@@ -118,6 +137,7 @@ node jira_management/main.js
 |-------|-----------|
 | 9 | **Alterar projeto Jira** — muda o projeto alvo |
 | 10 | **Alterar diretório git** — muda pasta para atualização de package.json |
+| 14 | **Alterar diretório Cypress** — muda pasta para geração de mapping JSON+MD |
 
 ### UTILITÁRIOS
 
@@ -125,6 +145,9 @@ node jira_management/main.js
 |-------|-----------|
 | 11 | **Gerar template CSV** — cria arquivo `test_steps_template.csv` com exemplo didático |
 | 12 | **Diagnosticar conexão** — testa conectividade com Jira API, Xray API e projeto |
+| 13 | **Criar Test Execution** — agrupa testes criados em uma execução Xray (usa `inMemoryTasksId` da sessão ou input manual) |
+
+Após a **opção 1**, a ferramenta pergunta se deseja criar um **Test Execution** automaticamente com os testes recém-criados. O Test Execution é uma issue do tipo "Test Execution" que agrupa os testes para execução.
 
 ### Comandos Especiais
 
@@ -147,7 +170,7 @@ AUTO_CONFIRM=true AUTO_CHOICE=1 node jira_management/main.js
 node git_triggers/main.js
 ```
 
-Primeiro seleciona um projeto da lista em `config/projects.json`, depois apresenta o menu de ações.
+Primeiro seleciona um projeto da lista em `config/projects.json`. O tipo de provedor (GitLab/GitHub) é definido em `config/providers.json`. Provedores GitLab usam `GIT_TOKEN` e `GIT_BASE_URL`; GitHub usa `GITHUB_TOKEN` e `GITHUB_API_URL` (padrão `https://api.github.com`).
 
 ### PIPELINES
 
@@ -164,7 +187,7 @@ Primeiro seleciona um projeto da lista em `config/projects.json`, depois apresen
 | 4 | **Criar merge request** — cria MR com revisores opcionais; sem revisores, faz auto-merge após 5s |
 | 5 | **Listar MRs aprovados** — exibe MRs com 2+ aprovações |
 | 6 | **Fazer merge por ID** — merge de MR específico |
-| 7 | **Nivelar branches** — `main → rel_cand → dev` com espera de 10s entre merges |
+| 7 | **Nivelar branches** — `main → rel_cand → dev` |
 
 ### UTILITÁRIOS
 
@@ -417,6 +440,8 @@ CSV
 | `XRAY_BASE_URL` | Xray | URL base do Xray para criação de testes | `https://xray.empresa.com` |
 | `GIT_BASE_URL` | GitLab | URL base do servidor GitLab | `https://gitlab.empresa.com` |
 | `GIT_TOKEN` | GitLab | Token de autenticação (PRIVATE-TOKEN) | `seu-token` |
+| `GITHUB_TOKEN` | GitHub | Token de autenticação (Bearer) para GitHub API | `ghp_xxx` |
+| `GITHUB_API_URL` | GitHub | URL da API GitHub (padrão `https://api.github.com`) | `https://api.github.com` |
 
 ### Opcionais
 
@@ -428,6 +453,8 @@ CSV
 | `LOG_FILE` | `false` | Habilita log em arquivo (`true`/`false`) |
 | `LOG_DIR` | `logs` | Diretório para arquivos de log |
 | `DEBUG` | `false` | Ativa logs de diagnóstico no console (`true`/`false`) |
+| `DRY_RUN` | `false` | Simula criação de testes (nenhuma chamada API) (`true`/`false`) |
+| `CYPRESS_PROJECT_PATH` | — | Caminho do projeto Cypress externo (gera mapping JSON+MD) |
 | `AUTO_CONFIRM` | `false` | Pula confirmações (útil em CI) (`true`/`false`) |
 | `AUTO_CHOICE` | — | Pré-seleciona opção do menu na inicialização |
 
@@ -436,24 +463,29 @@ CSV
 ## Testes
 
 ```bash
-npm test               # 94 testes, 10 suites
+npm test               # 168 testes, 14 suites (9 skipped sem .env)
 npm run typecheck      # verificação de tipos (0 erros)
 ```
 
-**10 suites, 94 testes** (~5s):
+**14 suites, 159/168 passam** (9 skipped — dependem de `.env` com Jira real + CSV):
 
 | Suite | Testes | O que cobre |
 |-------|--------|-------------|
 | `logger.test.js` | 17 | Logger root/child, _writeFile, filePath, maskDeep, level filtering |
-| `csv_resource.test.js` | 14 | parseDescription, parsePrecondition (reference/inline/null/key+desc), parseGroup, parseLinkedIssues (single/multiple/empty) |
-| `jira_resource.test.js` | 8 | JiraResource constructor, JiraLinkManager getIssueLinkTypes (fallback + API), resolveLinkTypeId (name/inward/case/fallback) |
-| `jira_validator.test.js` | 14 | Validação local de CSV + validação contra Jira — testes Jira são skipped sem credenciais |
-| `state.test.js` | 5 | load (vazio/existente), save, update, backup recovery |
+| `csv_resource.test.js` | 14 | parseDescription (quote+range), parsePrecondition (reference/inline/quoted/null), parseGroup, parseLinkedIssues |
+| `jira_resource.test.js` | 8 | JiraResource constructor, JiraLinkManager getIssueLinkTypes (fallback + API), resolveLinkTypeId |
+| `jira_validator.test.js` | 14 (9 skip) | Validação local CSV + contra Jira — testes Jira skipped sem credenciais |
+| `state.test.js` | 5 | load, save, update, backup recovery |
 | `prompt.test.js` | 8 | success/error/warn/info, isQuiet, title, divider, printSummary, ProgressBar |
-| `cli_base.test.js` | 4 | mask, validateEnv (missing + placeholder detection), setupSigint |
-| `http-client.test.js` | 7 | createHttpClient config, interceptor registration, GET retry 5×, PUT retry 5×, POST no-retry, 4xx no-retry |
-| `csv-import.test.js` | 1 | E2E: CSV import com nock — 2 issues, preconditions, steps, linked issues, cross-ref |
-| `csv-import-errors.test.js` | 7 | E2E: Error paths — POST 500 (skip/abort), issueLink 403, linkType 404, precondition 500, PUT 403, steps abort |
+| `cli_base.test.js` | 4 | mask, validateEnv, setupSigint |
+| `http-client.test.js` | 7 | createHttpClient, interceptor, GET/PUT retry 5×, POST/4xx no-retry |
+| `csv-import.test.js` | 1 | E2E: CSV import com nock — issues, preconditions, steps, cross-ref |
+| `csv-import-errors.test.js` | 7 | E2E: Error paths — POST 500, issueLink 403, linkType 404, precondition 500, PUT 403, steps abort |
+| `gitlab_manager.test.js` | 23 | GitLabManager: triggerPipeline, createMergeRequest, getMergeRequest, acceptMergeRequest, getProjectVariables, setVariable, removeVariable, listProjectBranches |
+| `nivelar.test.js` | 4 | nivelarBranches: success, one branch fails, both fail, param forwarding |
+| `github_manager.test.js` | 30 | GitHubManager: triggerPipeline (auto-detect, workflow_id, no workflows), createPR, getPR, searchPRs, acceptPR, getCICDVariables, _formatPR |
+| `create_tests.test.js` | 11 | createTestExecution (7): success, default name, issuetype/field not found, API errors; createTestExecutionWithLinks (4): links all keys, skips already linked, API failure gracefully |
+| `testexec.test.js` | 2 | E2E: Test Execution creation com nock — 2 keys, single key default name |
 
 Os testes Jira em `jira_validator.test.js` utilizam as credenciais do `.env` e o CSV em `CSV_DEFAULT_PATH` (padrão: `test_steps.csv`).
 
@@ -490,13 +522,14 @@ node jira_management/main.js
 # Opção 8 → publicar versão
 ```
 
-### Disparar pipeline + merge
+### Disparar pipeline + merge (multi-provider)
 
 ```bash
 node git_triggers/main.js
-# Opção 1 → disparar pipeline em branch
-# Opção 4 → criar MR com revisores
+# Opção 1 → disparar pipeline (GitLab) / workflow (GitHub)
+# Opção 4 → criar MR (GitLab) / PR (GitHub)
 # Opção 7 → nivelar branches main → rel_cand → dev
+# Opção 8 → exportar variáveis CI/CD (GitLab) / Actions Variables (GitHub)
 ```
 
 ### Diagnóstico rápido

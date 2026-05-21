@@ -9,7 +9,7 @@ const { success, error, warn, info, title, divider, prompt, confirm, printError,
 const { mask, createValidateEnv, setupSigint } = require('../shared/cli_base');
 const { rootLogger } = require('../shared/logger');
 const { load: loadState, update: updateState, STATE_PATH } = require('../shared/state');
-const { createTestsFromCsv } = require('./create_tests');
+const { createTestsFromCsv, createTestExecution, createTestExecutionWithLinks } = require('./create_tests');
 
 require('dotenv').config({ path: path.resolve(__dirname, '../.env') });
 
@@ -148,6 +148,8 @@ const ALIASES = {
     'trocar-projeto': '9', 'projeto': '9',
     'trocar-diretorio': '10', 'diretorio': '10',
     'template': '11', 'gerar-template': '11',
+    'testexec': '13', 'criar-testexec': '13', 'execucao': '13',
+    'diretorio-cypress': '14', 'cypress': '14',
     'sair': '0', 'exit': '0',
     'voltar': 'menu',
     'ajuda': '/help', 'help': '/help'
@@ -159,10 +161,8 @@ function resolveAlias(choice) {
 }
 
 function displayMenu(proj, gitDir) {
-    if (lastOperation) {
-        info('Ultima operacao: ' + lastOperation);
-    }
-    title('Jira Tools — Projeto: ' + proj);
+    const ctx = proj + (lastOperation ? ' | ' + lastOperation : '');
+    console.log('== ' + ctx + ' ==');
     divider();
     console.log('  TESTES');
     console.log('   1  Criar testes a partir de CSV');
@@ -179,10 +179,13 @@ function displayMenu(proj, gitDir) {
     console.log('  CONFIGURACAO');
     console.log('   9  Alterar projeto Jira');
     console.log('  10  Alterar diretorio git (atual: ' + gitDir + ')');
+    const cypressDir = process.env.CYPRESS_PROJECT_PATH || loadState().lastCypressPath || 'nao configurado';
+    console.log('  14  Alterar diretorio Cypress (atual: ' + cypressDir + ')');
     console.log('');
     console.log('  UTILITARIOS');
     console.log('  11  Gerar template CSV');
     console.log('  12  Diagnosticar conexao');
+    console.log('  13  Criar Test Execution para testes existentes');
     console.log('');
     console.log('   0  Sair');
     console.log('  /h  Ajuda');
@@ -259,7 +262,7 @@ async function main() {
             displayMenu(project_name, git_directory);
             const menuState = loadState();
             const lastHint = menuState.lastChoice && menuState.lastChoice !== '0'
-                ? 'Enter = ' + menuState.lastChoice : '0-12 ou /help';
+                ? 'Enter = ' + menuState.lastChoice : '0-14 ou /help';
             choice = prompt('Selecione uma opcao', { hint: lastHint });
             if (!choice.trim() && menuState.lastChoice && menuState.lastChoice !== '0') {
                 choice = menuState.lastChoice;
@@ -296,6 +299,25 @@ async function main() {
                     inMemoryTasksText = result.inMemoryTasksText;
                     pushHistory('csv-import', result.summary, result.status);
                     lastOperation = result.summary;
+                }
+                if (result && inMemoryTasksId.length > 0) {
+                    const execState = loadState();
+                    const csvPathHint = execState.lastCsvPath || '';
+                    const csvName = csvPathHint ? path.basename(csvPathHint, '.csv') : '';
+                    if (confirm('Criar Test Execution para ' + inMemoryTasksId.length + ' testes criados?', true)) {
+                        const execTitle = prompt('Titulo do Test Execution', { hint: 'Enter = ' + (csvName || 'Automated Execution') });
+                        const execDesc = prompt('Descricao (opcional)');
+                        try {
+                            const execResult = await createTestExecutionWithLinks(
+                                jiraResource, linkManager, project_name, inMemoryTasksId, csvName,
+                                { title: execTitle, description: execDesc }
+                            );
+                            pushHistory('create-testexec', execResult.key, 'ok');
+                        } catch (err) {
+                            printError('Erro ao criar Test Execution', err);
+                            pushHistory('create-testexec', 'erro', 'error');
+                        }
+                    }
                 }
                 break;
             }
@@ -557,6 +579,52 @@ async function main() {
                 break;
             }
 
+            case '13': {
+                let keys = [];
+                if (inMemoryTasksId.length > 0) {
+                    info('Testes da sessao atual: ' + inMemoryTasksId.join(', '));
+                    if (confirm('Usar estes ' + inMemoryTasksId.length + ' testes?', true)) {
+                        keys = inMemoryTasksId;
+                    }
+                }
+                if (keys.length === 0) {
+                    const input = prompt('Keys dos testes (separadas por espaco)', { hint: 'ex: TEST-1 TEST-2' });
+                    keys = input.split(/\s+/).filter(Boolean);
+                }
+                if (keys.length === 0) {
+                    warn('Nenhuma key informada.');
+                    break;
+                }
+                const nameInput = prompt('Nome da execucao', { hint: 'Enter = "Automated Execution"' });
+                const csvName = nameInput.trim() || '';
+                const execTitle = prompt('Titulo do Test Execution', { hint: 'Enter = ' + (csvName || 'Automated Execution') });
+                const execDesc = prompt('Descricao (opcional)');
+                try {
+                    const execResult = await createTestExecutionWithLinks(
+                        jiraResource, linkManager, project_name, keys, csvName,
+                        { title: execTitle, description: execDesc }
+                    );
+                    pushHistory('create-testexec', execResult.key, 'ok');
+                } catch (err) {
+                    printError('Erro ao criar Test Execution', err);
+                    pushHistory('create-testexec', 'erro', 'error');
+                }
+                break;
+            }
+
+            case '14': {
+                const dir = prompt('Caminho do diretorio Cypress');
+                if (!dir.trim()) {
+                    warn('Caminho vazio, ignorando.');
+                    break;
+                }
+                const resolved = path.resolve(dir.trim());
+                updateState(state => { state.lastCypressPath = resolved; });
+                success('Diretorio Cypress alterado para: ' + resolved);
+                pushHistory('config-cypress', resolved, 'ok');
+                break;
+            }
+
             case '0':
                 title('Ate logo!');
                 printSessionSummary();
@@ -564,7 +632,7 @@ async function main() {
                 return;
 
             default:
-                warn('Opcao invalida. Escolha entre 0-12, alias ou digite /help.');
+                warn('Opcao invalida. Escolha entre 0-14, alias ou digite /help.');
         }
 
         const longOps = ['1', '4', '5', '7', '8'];
