@@ -4,6 +4,7 @@
   "description": "install dependencies for python and js",
   "main": "jira_management/main.js",
   "scripts": {
+    "setup": "bash setup.sh",
     "test": "jest",
     "typecheck": "tsc"
   },

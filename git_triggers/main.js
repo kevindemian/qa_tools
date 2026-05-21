@@ -24,6 +24,7 @@ let apiToken = /** @type {string} */ (process.env.GIT_TOKEN);
 let gitlabBaseUrl = /** @type {string} */ (process.env.GIT_BASE_URL);
 /** @type {'gitlab'|'github'} */
 let currentProvider = 'gitlab';
+let isBusy = false;
 
 const sessionLog = rootLogger.child({ session: 'gitlab' });
 let sessionCounters = [];
@@ -122,7 +123,7 @@ async function pollPipeline(m, pipelineId, interval = 5000, timeout = 300000) {
     return { status: 'timeout', web_url: '' };
 }
 
-setupSigint(() => false, () => printSessionSummary());
+setupSigint(() => isBusy, () => printSessionSummary());
 
 const projectsPath = path.resolve(__dirname, '../config/projects.json');
 let projects;
@@ -418,7 +419,14 @@ async function main() {
         updateState(s => { s.lastChoice = finalChoice; });
 
         const cmd = finalChoice.trim().toLowerCase();
-        if (cmd === '/h' || cmd === '/help' || cmd === '/history') {
+        if (cmd === '/h' || cmd === '/help') {
+            title('Ajuda — Git Tools');
+            info('Opcoes disponiveis no menu numerado acima.');
+            info('/history - Exibe historico de operacoes da sessao.');
+            divider();
+            continue;
+        }
+        if (cmd === '/history') {
             const history = loadState().history || [];
             title('Historico de operacoes');
             const last10 = history.slice(-10);
@@ -476,8 +484,10 @@ async function main() {
                 if (pipelineResult && confirm('Aguardar conclusao da pipeline?', true)) {
                     const id = pipelineResult.id || pipelineResult.run_number || '';
                     if (id) {
+                        isBusy = true;
                         info('Aguardando pipeline #' + id + '...');
                         const pollResult = await pollPipeline(m, id);
+                        isBusy = false;
                         const icon = pollResult.status === 'success' ? '\u2713' : '\u2717';
                         info('Pipeline #' + id + ': ' + icon + ' ' + pollResult.status);
 
@@ -696,6 +706,10 @@ async function main() {
     }
 }
 
-main();
+main().catch(err => {
+    printError('Erro inesperado', err);
+    printSessionSummary();
+    process.exitCode = 1;
+});
 
 module.exports = { nivelarBranchesWrapper };
