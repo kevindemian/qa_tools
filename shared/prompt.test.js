@@ -294,15 +294,15 @@ describe('Prompt', () => {
       );
     });
 
-    it('calls error with unknown error fallback when no message', () => {
+    it('calls error with unknown fallback when error has no message', () => {
       const testErr = { response: { data: {} } };
       prompt.printError('Contexto', testErr);
       expect(mockLog).toHaveBeenCalledWith(
-        expect.stringContaining('Erro inesperado')
+        expect.stringContaining('Erro desconhecido')
       );
     });
 
-    it('calls error with raw error message when known', () => {
+    it('calls error with raw error message when not humanized', () => {
       const testErr = new Error('something weird');
       prompt.printError('Contexto', testErr);
       expect(mockLog).toHaveBeenCalledWith(
