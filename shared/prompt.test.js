@@ -294,11 +294,19 @@ describe('Prompt', () => {
       );
     });
 
-    it('calls error with unknown error fallback', () => {
-      const testErr = new Error('something weird');
+    it('calls error with unknown error fallback when no message', () => {
+      const testErr = { response: { data: {} } };
       prompt.printError('Contexto', testErr);
       expect(mockLog).toHaveBeenCalledWith(
         expect.stringContaining('Erro inesperado')
+      );
+    });
+
+    it('calls error with raw error message when known', () => {
+      const testErr = new Error('something weird');
+      prompt.printError('Contexto', testErr);
+      expect(mockLog).toHaveBeenCalledWith(
+        expect.stringContaining('something weird')
       );
     });
   });
