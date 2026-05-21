@@ -160,11 +160,11 @@ function delay(ms) {
     return new Promise(resolve => setTimeout(resolve, ms));
 }
 
-function generateMappingFiles(csvPath, project_name, tasksId, tests) {
+function generateMappingFiles(sourcePath, project_name, tasksId, tests) {
     const cypressDir = process.env.CYPRESS_PROJECT_PATH || loadState().lastCypressPath;
     if (!cypressDir || !tasksId.length) return;
 
-    const csvName = path.basename(csvPath, '.csv');
+    const baseName = path.basename(sourcePath, path.extname(sourcePath));
     const outDir = path.resolve(cypressDir);
 
     try {
@@ -195,17 +195,18 @@ function generateMappingFiles(csvPath, project_name, tasksId, tests) {
         return m;
     });
 
-    const jsonPath = path.join(outDir, csvName + '-jira-mapping.json');
+    const jsonPath = path.join(outDir, baseName + '-jira-mapping.json');
     const jsonContent = JSON.stringify({
         project: project_name,
-        csv: csvName + '.csv',
+        source: baseName + path.extname(sourcePath),
+        csv: baseName + '.csv',
         timestamp: new Date().toISOString(),
         tests: mappings
     }, null, 2);
     fs.writeFileSync(jsonPath, jsonContent, 'utf8');
 
-    const mdPath = path.join(outDir, csvName + '-jira-mapping.md');
-    let mdContent = '# Mapeamento Jira: ' + csvName + '.csv\n' +
+    const mdPath = path.join(outDir, baseName + '-jira-mapping.md');
+    let mdContent = '# Mapeamento Jira: ' + baseName + path.extname(sourcePath) + '\n' +
         '*Gerado em ' + new Date().toLocaleString('pt-BR') + '*\n\n';
 
     for (const m of mappings) {
@@ -224,8 +225,16 @@ function generateMappingFiles(csvPath, project_name, tasksId, tests) {
 
     fs.writeFileSync(mdPath, mdContent, 'utf8');
 
+    const txtPath = path.join(outDir, baseName + '-summary.txt');
+    const txtContent = tasksId.map((key, i) => {
+        const test = createdTests[i] || {};
+        return key + ': ' + (test.title || '(sem titulo)');
+    }).join('\n') + '\n';
+    fs.writeFileSync(txtPath, txtContent, 'utf8');
+
     if (!isQuiet()) {
         info('Mapeamento salvo: ' + path.basename(jsonPath));
+        info('Sumario salvo: ' + path.basename(txtPath));
     }
 }
 
@@ -326,54 +335,17 @@ async function createTestExecutionWithLinks(jiraResource, linkManager, project_n
     return result;
 }
 
-/**
- * @param {Object} options
- * @param {import('./jira_resource')} options.jiraResource
- * @param {import('./jira_resource')} options.jiraResourceXray
- * @param {import('./jira_link_manager')} options.linkManager
- * @param {import('./jira_link_manager')} options.linkManagerXray
- * @param {import('./csv_resource')} options.csvResource
- * @param {string} options.project_name
- * @param {string} options.base_url
- * @param {import('../shared/logger').Logger} options.sessionLog
- * @param {Function} options.onBusy
- */
-async function createTestsFromCsv({ jiraResource, jiraResourceXray, linkManager, linkManagerXray, csvResource, project_name, base_url, sessionLog, onBusy }) {
-    const state = loadState();
-    const csvPath = process.env.CSV_PATH || smartPrompt(
-        'Caminho do arquivo CSV',
-        { default: state.lastCsvPath || csvDefaultPath }
-    );
-    const labelsHint = state.lastLabels
-        ? 'ultimo: ' + state.lastLabels : 'vazio para nenhuma';
-    const jiraLabelsInput = process.env.CSV_LABELS || prompt(
-        'Labels Jira (separadas por virgula)',
-        { hint: labelsHint, default: state.lastLabels || '' }
-    );
-    const jiraLabels = jiraLabelsInput
-        .split(',')
-        .map(l => l.trim())
-        .filter(l => l.length > 0);
-
-    if (!isQuiet()) info('Lendo CSV...');
-    let tests;
-    try {
-        tests = await csvResource.readBulkCsv(csvPath);
-    } catch (err) {
-        printError('Erro ao ler CSV', err);
-        return;
-    }
-
-    if (tests.length === 0) {
-        warn('Nenhum teste encontrado no CSV.');
-        return;
-    }
-
+async function _createTestsFromTestCases({
+    tests, jiraResource, jiraResourceXray, linkManager, linkManagerXray,
+    project_name, base_url, sessionLog, onBusy,
+    sourcePath, sourceType, jiraLabels
+}) {
     const cp = loadState()._checkpoint;
+    const cpKey = sourceType === 'json' ? 'jsonPath' : 'csvPath';
     let resumeFrom = 0;
     let inMemoryTasksId = [];
     let inMemoryTasksText = [];
-    if (cp && cp.csvPath === csvPath && cp.project === project_name && cp.csvLength === tests.length && cp.done) {
+    if (cp && cp[cpKey] === sourcePath && cp.project === project_name && cp.testCount === tests.length && cp.done) {
         const age = Date.now() - new Date(cp.ts ?? '').getTime();
         if (age < 86400000 && cp.done.length < tests.length) {
             const ans = confirm(
@@ -392,19 +364,19 @@ async function createTestsFromCsv({ jiraResource, jiraResourceXray, linkManager,
     if (resumeFrom === 0) {
         const { errors, warnings } = validateCsvTests(tests);
         if (warnings.length > 0) {
-            warn('Avisos no CSV (' + warnings.length + '):');
+            warn('Avisos (' + warnings.length + '):');
             warnings.slice(0, 5).forEach(w => warn('  ' + w));
             if (warnings.length > 5) warn('  ... e mais ' + (warnings.length - 5) + ' aviso(s)');
         }
         if (errors.length > 0) {
-            error('Erros no CSV (' + errors.length + '):');
+            error('Erros (' + errors.length + '):');
             errors.forEach(e => error('  ' + e));
-            warn('Corrija o CSV antes de importar.');
+            warn('Corrija os dados antes de importar.');
             return;
         }
     }
 
-    const opLog = sessionLog.child({ operation: 'csv-import', csvPath });
+    const opLog = sessionLog.child({ operation: sourceType + '-import', sourcePath });
 
     const totalSteps = tests.reduce((sum, t) => sum + t.steps.length, 0);
     const groupsCount = new Set(tests.map(t => t.group).filter(Boolean)).size;
@@ -525,16 +497,15 @@ async function createTestsFromCsv({ jiraResource, jiraResourceXray, linkManager,
 
         inMemoryTasksId.push(createdTestIssue.key);
 
+        const cpSave = {};
+        cpSave[cpKey] = sourcePath;
+        cpSave.project = project_name;
+        cpSave.ts = new Date().toISOString();
+        cpSave.testCount = tests.length;
+        cpSave.done = inMemoryTasksId.map((key, idx) => ({ key, title: inMemoryTasksText[idx] }));
         updateState(state => {
             if (!state._checkpoint) state._checkpoint = {};
-            state._checkpoint.csvPath = csvPath;
-            state._checkpoint.project = project_name;
-            state._checkpoint.ts = new Date().toISOString();
-            state._checkpoint.csvLength = tests.length;
-            state._checkpoint.done = inMemoryTasksId.map((key, idx) => ({
-                key,
-                title: inMemoryTasksText[idx]
-            }));
+            Object.assign(state._checkpoint, cpSave);
         });
 
         const testReport = { status: 'ok', label: testTitle, message: '' };
@@ -587,7 +558,7 @@ async function createTestsFromCsv({ jiraResource, jiraResourceXray, linkManager,
         await updateCrossReferences(jiraResource, tests, inMemoryTasksId);
     }
 
-    generateMappingFiles(csvPath, project_name, inMemoryTasksId, tests);
+    generateMappingFiles(sourcePath, project_name, inMemoryTasksId, tests);
 
     printSummary(/** @type {import('../shared/types').TestResult[]} */ (results));
     const okCount = results.filter(r => r.status === 'ok').length;
@@ -599,11 +570,14 @@ async function createTestsFromCsv({ jiraResource, jiraResourceXray, linkManager,
         total: tests.length
     });
 
-    updateState(state => {
-        state.lastLabels = jiraLabels.join(',');
-        state.lastCsvPath = csvPath;
-        state.lastProject = project_name;
-    });
+    const stateUpdate = { lastLabels: jiraLabels.join(',') };
+    if (sourceType === 'json') {
+        stateUpdate.lastJsonPath = sourcePath;
+    } else {
+        stateUpdate.lastCsvPath = sourcePath;
+    }
+    stateUpdate.lastProject = project_name;
+    updateState(state => Object.assign(state, stateUpdate));
 
     onBusy(false);
 
@@ -615,4 +589,139 @@ async function createTestsFromCsv({ jiraResource, jiraResourceXray, linkManager,
     };
 }
 
-module.exports = { createTestsFromCsv, validateCsvTests, updateCrossReferences, createTestExecution, createTestExecutionWithLinks, generateMappingFiles };
+/**
+ * @param {Object} options
+ * @param {import('./jira_resource')} options.jiraResource
+ * @param {import('./jira_resource')} options.jiraResourceXray
+ * @param {import('./jira_link_manager')} options.linkManager
+ * @param {import('./jira_link_manager')} options.linkManagerXray
+ * @param {import('./csv_resource')} options.csvResource
+ * @param {string} options.project_name
+ * @param {string} options.base_url
+ * @param {import('../shared/logger').Logger} options.sessionLog
+ * @param {Function} options.onBusy
+ */
+async function createTestsFromCsv({ jiraResource, jiraResourceXray, linkManager, linkManagerXray, csvResource, project_name, base_url, sessionLog, onBusy }) {
+    const state = loadState();
+    const csvPath = process.env.CSV_PATH || smartPrompt(
+        'Caminho do arquivo CSV',
+        { default: state.lastCsvPath || csvDefaultPath }
+    );
+    const labelsHint = state.lastLabels
+        ? 'ultimo: ' + state.lastLabels : 'vazio para nenhuma';
+    const jiraLabelsInput = process.env.CSV_LABELS || prompt(
+        'Labels Jira (separadas por virgula)',
+        { hint: labelsHint, default: state.lastLabels || '' }
+    );
+    const jiraLabels = jiraLabelsInput
+        .split(',')
+        .map(l => l.trim())
+        .filter(l => l.length > 0);
+
+    if (!isQuiet()) info('Lendo CSV...');
+    let tests;
+    try {
+        tests = await csvResource.readBulkCsv(csvPath);
+    } catch (err) {
+        printError('Erro ao ler CSV', err);
+        return;
+    }
+
+    if (tests.length === 0) {
+        warn('Nenhum teste encontrado no CSV.');
+        return;
+    }
+
+    return _createTestsFromTestCases({
+        tests, jiraResource, jiraResourceXray, linkManager, linkManagerXray,
+        project_name, base_url, sessionLog, onBusy,
+        sourcePath: csvPath, sourceType: 'csv', jiraLabels
+    });
+}
+
+/**
+ * @param {Object} options
+ * @param {import('./jira_resource')} options.jiraResource
+ * @param {import('./jira_resource')} options.jiraResourceXray
+ * @param {import('./jira_link_manager')} options.linkManager
+ * @param {import('./jira_link_manager')} options.linkManagerXray
+ * @param {string} options.project_name
+ * @param {string} options.base_url
+ * @param {import('../shared/logger').Logger} options.sessionLog
+ * @param {Function} options.onBusy
+ */
+async function createTestsFromJson({ jiraResource, jiraResourceXray, linkManager, linkManagerXray, project_name, base_url, sessionLog, onBusy }) {
+    const state = loadState();
+    const jsonPathInput = process.env.JSON_PATH || smartPrompt(
+        'Caminho do arquivo JSON ou TXT (formato JSON)',
+        { default: state.lastJsonPath || '' }
+    );
+
+    let jsonPath = jsonPathInput.trim();
+    if (state.lastJsonDir && !path.isAbsolute(jsonPath)) {
+        const potential = path.resolve(state.lastJsonDir, jsonPath);
+        if (fs.existsSync(potential)) {
+            jsonPath = potential;
+        }
+    }
+
+    const labelsHint = state.lastLabels
+        ? 'ultimo: ' + state.lastLabels : 'vazio para nenhuma';
+    const jiraLabelsInput = process.env.JSON_LABELS || prompt(
+        'Labels Jira (separadas por virgula)',
+        { hint: labelsHint, default: state.lastLabels || '' }
+    );
+    const jiraLabels = jiraLabelsInput
+        .split(',')
+        .map(l => l.trim())
+        .filter(l => l.length > 0);
+
+    if (!isQuiet()) info('Lendo JSON...');
+    let tests;
+    try {
+        const raw = fs.readFileSync(jsonPath, 'utf8');
+        const parsed = JSON.parse(raw);
+        if (!Array.isArray(parsed)) throw new Error('JSON deve ser um array de casos de teste');
+        tests = parsed.map((item, i) => {
+            if (!item.title || !item.steps || !Array.isArray(item.steps)) {
+                throw new Error('Item ' + (i + 1) + ': campos obrigatorios: title (string), steps (array)');
+            }
+            return {
+                title: item.title,
+                description: item.description || '',
+                steps: item.steps.map(s => ({
+                    fields: {
+                        Action: s.Action || '',
+                        Data: s.Data || '',
+                        ExpectedResult: s.ExpectedResult || ''
+                    }
+                })),
+                precondition: item.precondition
+                    ? item.precondition.match(/^[A-Z][A-Z0-9]+-\d+$/)
+                        ? { type: 'reference', value: item.precondition }
+                        : { type: 'inline', value: item.precondition }
+                    : undefined,
+                group: item.group || '',
+                linkedIssues: Array.isArray(item.linkedIssues)
+                    ? item.linkedIssues.map(key => ({ key, linkType: 'Tests' }))
+                    : []
+            };
+        });
+    } catch (err) {
+        printError('Erro ao ler JSON', err);
+        return;
+    }
+
+    if (tests.length === 0) {
+        warn('Nenhum teste encontrado no JSON.');
+        return;
+    }
+
+    return _createTestsFromTestCases({
+        tests, jiraResource, jiraResourceXray, linkManager, linkManagerXray,
+        project_name, base_url, sessionLog, onBusy,
+        sourcePath: jsonPath, sourceType: 'json', jiraLabels
+    });
+}
+
+module.exports = { createTestsFromCsv, createTestsFromJson, validateCsvTests, updateCrossReferences, createTestExecution, createTestExecutionWithLinks, generateMappingFiles };
