@@ -9,6 +9,7 @@ const { success, error, warn, info, title, divider, prompt, confirm, printError,
 const { mask, createValidateEnv, setupSigint, sanitizeUrl, printSessionSummary: sharedPrintSessionSummary } = require('../shared/cli_base');
 const { rootLogger } = require('../shared/logger');
 const { load: loadState, update: updateState, STATE_PATH } = require('../shared/state');
+const { SessionContext } = require('../shared/session-context');
 const { createTestsFromCsv, createTestsFromJson, createTestExecution, createTestExecutionWithLinks } = require('./create_tests');
 
 require('dotenv').config({ path: path.resolve(__dirname, '../.env') });
@@ -267,31 +268,13 @@ async function main() {
     const linkManagerXray = new JiraLinkManager(jiraResourceXray);
     const csvResource = new CsvResource();
 
-    /** @type {{ isBusy: boolean, lastOperation: string, sessionCounters: Array<{op:string,detail:string,status:string}>, packageManager: (import('./package_version_manager')|undefined), git_directory: string, inMemoryTasksId: string[], inMemoryTasksText: string[], project_name: string, results: Array<{status:string,label:string,message:string}> }} */
-    const ctx = {
-        isBusy: false,
-        lastOperation: '',
-        sessionCounters: [],
-        packageManager: undefined,
-        git_directory: 'no_dir_selected',
-        inMemoryTasksId: [],
-        inMemoryTasksText: [],
-        project_name: '',
-        results: [],
-    };
+    const ctx = new SessionContext();
 
     const state = loadState();
     ctx.project_name = (
         process.env.JIRA_PROJECT ||
         prompt('Nome do projeto Jira', { default: state.lastProject || default_project })
     ).toUpperCase();
-
-    function resetResults() { ctx.results = []; }
-
-    async function withBusy(fn) {
-        ctx.isBusy = true;
-        try { return await fn(); } finally { ctx.isBusy = false; }
-    }
 
     function printSessionSummary() {
         const history = loadState().history || [];
@@ -388,7 +371,7 @@ async function main() {
     }
 
     async function handleCase1() {
-        resetResults();
+        ctx.resetResults();
         const result = await createTestsFromCsv({
             jiraResource, jiraResourceXray, linkManager, linkManagerXray, csvResource,
             project_name: ctx.project_name, base_url, sessionLog,
@@ -484,7 +467,7 @@ async function main() {
         }
 
         ctx.results = [];
-        await withBusy(async () => {
+        await ctx.withBusy(async () => {
             for (const taskId of taskIds) {
                 try {
                     await jiraResource.updateFixVersions([taskId], ctx.project_name, version);
@@ -493,7 +476,7 @@ async function main() {
                     ctx.results.push({ status: 'error', label: taskId, message: 'Falha ao atualizar fixVersion' });
                 }
             }
-        });
+        }, "Atribuindo fixVersion...");
         printSummary(
             /** @type {import('../shared/types').TestResult[]} */ (ctx.results));
         ctx.lastOperation = ctx.results.filter(r => r.status === 'ok').length + '/' + taskIds.length + ' tarefas atualizadas';
@@ -568,8 +551,7 @@ async function main() {
             warn('Nenhuma tarefa encontrada.');
             return true;
         }
-        info('Fechando ' + taskIds.length + ' tarefa(s)...');
-        await withBusy(async () => {
+        await ctx.withBusy(async () => {
             try {
                 await jiraResource.moveCardsToDone(taskIds);
                 const summary = taskIds.map(id => ({ status: 'ok', label: id, message: '' }));
@@ -583,7 +565,7 @@ async function main() {
                 pushHistory('fechar-tarefas', 'erro', 'error');
             }
             ctx.lastOperation = taskIds.length + ' tarefa(s) fechadas';
-        });
+        }, "Fechando " + taskIds.length + " tarefa(s)...");
         return false;
     }
 
@@ -716,7 +698,7 @@ async function main() {
     }
 
     async function handleCase15() {
-        resetResults();
+        ctx.resetResults();
         try {
             const result = await createTestsFromJson({
                 jiraResource, jiraResourceXray, linkManager, linkManagerXray,
