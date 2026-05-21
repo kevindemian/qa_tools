@@ -1,0 +1,9 @@
+{
+  "csvFile": "testes-simples.csv",
+  "createdAt": "2026-05-20T12:00:00.000Z",
+  "tests": [
+    { "title": "TC01 - Login valido", "key": "TEST-1" },
+    { "title": "TC02 - Login invalido", "key": "TEST-2" },
+    { "title": "TC03 - Logout", "key": "TEST-3" }
+  ]
+}

@@ -12,6 +12,7 @@
   "dependencies": {
     "@inquirer/input": "^5.0.13",
     "@inquirer/select": "^5.1.5",
+    "adm-zip": "^0.5.17",
     "axios": "^1.15.2",
     "csv-parser": "^3.2.0",
     "dotenv": "^17.4.2",

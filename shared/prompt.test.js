@@ -129,4 +129,123 @@ describe('Prompt', () => {
       expect(bar.width).toBe(20);
     });
   });
+
+  describe('Spinner', () => {
+    it('start/stop does not throw', () => {
+      const spinner = new prompt.Spinner();
+      expect(() => spinner.start('working')).not.toThrow();
+      expect(() => spinner.stop()).not.toThrow();
+    });
+
+    it('start is noop when QUIET=true', () => {
+      process.env.QUIET = 'true';
+      const spinner = new prompt.Spinner();
+      const spy = jest.spyOn(process.stdout, 'write').mockImplementation(() => {});
+      spinner.start('quiet test');
+      expect(spy).toHaveBeenCalledWith('quiet test...\n');
+      spy.mockRestore();
+    });
+  });
+
+  describe('humanizeError', () => {
+    it('returns known error for rate limit', () => {
+      const result = prompt.humanizeError('rate limit exceeded');
+      expect(result.msg).toContain('Rate limit');
+    });
+
+    it('returns known error for 403/permission', () => {
+      const result = prompt.humanizeError('permission denied');
+      expect(result.msg).toContain('Sem permissao');
+    });
+
+    it('returns known error for 401/unauthorized', () => {
+      const result = prompt.humanizeError('401 unauthorized');
+      expect(result.msg).toContain('Token invalido');
+    });
+
+    it('returns known error for connection issues', () => {
+      const result = prompt.humanizeError('ECONNREFUSED');
+      expect(result.msg).toContain('Erro de conexao');
+    });
+
+    it('returns null for unknown errors', () => {
+      expect(prompt.humanizeError('some random error')).toBeNull();
+    });
+
+    it('returns unknown for null/empty', () => {
+      const r = prompt.humanizeError('');
+      expect(r && r.msg).toBe('Erro desconhecido');
+    });
+  });
+
+  describe('extractErrorMessage', () => {
+    it('extracts from axios error response', () => {
+      const err = { response: { data: { errorMessages: ['Issue not found'] } } };
+      expect(prompt.extractErrorMessage(err)).toBe('Issue not found');
+    });
+
+    it('extracts from err.message', () => {
+      expect(prompt.extractErrorMessage(new Error('simple error'))).toBe('simple error');
+    });
+
+    it('returns unknown for null', () => {
+      expect(prompt.extractErrorMessage(null)).toBe('Erro desconhecido');
+    });
+  });
+
+  describe('showSelect', () => {
+    let readlineSync;
+
+    beforeAll(() => {
+      readlineSync = require('readline-sync');
+    });
+
+    afterEach(() => {
+      jest.restoreAllMocks();
+    });
+
+    it('uses fallback when not TTY', async () => {
+      const spy = jest.spyOn(readlineSync, 'question').mockReturnValue('2');
+      const result = await prompt.showSelect('Test', [
+        { name: '1', value: '1' },
+        { name: '2', value: '2' },
+        { name: '3', value: '3' },
+      ]);
+      expect(result).toBe('2');
+      expect(spy).toHaveBeenCalled();
+    });
+
+    it('handles separator in fallback', async () => {
+      const spy = jest.spyOn(readlineSync, 'question').mockReturnValue('3');
+      const result = await prompt.showSelect('With sep', [
+        { name: '1', value: '1' },
+        { type: 'separator', line: '---' },
+        { name: '2', value: '2' },
+      ]);
+      expect(result).toBe('3');
+      expect(spy).toHaveBeenCalled();
+    });
+  });
+
+  describe('tableView', () => {
+    it('calls console.table with all columns by default', () => {
+      const spy = jest.spyOn(console, 'table').mockImplementation(() => {});
+      prompt.tableView([{ a: 1, b: 2 }]);
+      expect(spy).toHaveBeenCalledWith([{ a: 1, b: 2 }]);
+      spy.mockRestore();
+    });
+
+    it('filters columns when specified', () => {
+      const spy = jest.spyOn(console, 'table').mockImplementation(() => {});
+      prompt.tableView([{ a: 1, b: 2, c: 3 }], ['a', 'c']);
+      expect(spy).toHaveBeenCalledWith([{ a: 1, c: 3 }]);
+      spy.mockRestore();
+    });
+
+    it('does not throw on empty data', () => {
+      const spy = jest.spyOn(console, 'table').mockImplementation(() => {});
+      expect(() => prompt.tableView([])).not.toThrow();
+      spy.mockRestore();
+    });
+  });
 });

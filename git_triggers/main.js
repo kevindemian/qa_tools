@@ -1,6 +1,8 @@
 // @ts-check
 const path = require('path');
 const fs = require('fs');
+const os = require('os');
+const AdmZip = require('adm-zip');
 const { success, error, warn, info, title, divider, prompt, confirm, printError, printSummary, Spinner, showSelect, tableView } = require('../shared/prompt');
 const { load: loadState, update: updateState } = require('../shared/state');
 const { createValidateEnv, setupSigint } = require('../shared/cli_base');
@@ -8,6 +10,10 @@ const GitLabManager = require('./gitlab_manager');
 const GitHubManager = require('./github_manager');
 const { nivelarBranches } = require('./nivelar');
 const { rootLogger } = require('../shared/logger');
+const JiraResource = require('../jira_management/jira_resource');
+const JiraLinkManager = require('../jira_management/jira_link_manager');
+const { parseMochawesome } = require('../shared/result_parser');
+const { matchResultsToTests, createTestExecutionFromResults } = require('../jira_management/result_reporter');
 
 require('dotenv').config({ path: path.resolve(__dirname, '../.env') });
 
@@ -140,6 +146,121 @@ function displayProjects() {
         console.log('  ' + (i + 1) + '  ' + name + tag);
     });
     console.log('  ' + (names.length + 1) + '  Sair');
+}
+
+function _jiraEnv() {
+    const base = process.env.JIRA_BASE_URL;
+    const token = process.env.JIRA_PERSONAL_TOKEN;
+    const xray = process.env.XRAY_BASE_URL;
+    if (!base || !token || !xray) return null;
+    return { base, token, xray };
+}
+
+async function collectTestResults(m, pipelineId, branch, projectName) {
+    const jira = _jiraEnv();
+    if (!jira) {
+        warn('Variaveis JIRA nao configuradas. Defina JIRA_BASE_URL, JIRA_PERSONAL_TOKEN e XRAY_BASE_URL.');
+        return;
+    }
+
+    const spinner = new Spinner();
+    spinner.start('Buscando artifacts...');
+    const artifacts = await m.listPipelineArtifacts(pipelineId);
+    spinner.stop();
+
+    const art = artifacts.find(a => /mochawesome|test-result/i.test(a.name)) || artifacts[0];
+    if (!art || artifacts.length === 0) {
+        warn('Nenhum artifact encontrado na pipeline #' + pipelineId);
+        return;
+    }
+    info('Artifact: ' + art.name + ' (id=' + art.id + ')');
+
+    let buffer;
+    try {
+        spinner.start('Baixando artifact...');
+        const dl = await m.downloadArtifact(art.id);
+        buffer = dl.buffer;
+        spinner.stop();
+    } catch (err) {
+        spinner.stop();
+        printError('Falha ao baixar artifact', err);
+        return;
+    }
+
+    let jsonData;
+    try {
+        const zip = new AdmZip(buffer);
+        const entries = zip.getEntries();
+        const mochaEntry = entries.find(e => e.entryName.includes('mochawesome.json') && !e.isDirectory);
+        if (!mochaEntry) {
+            warn('mochawesome.json nao encontrado no artifact. Entradas: ' + entries.map(e => e.entryName).join(', '));
+            return;
+        }
+        const raw = mochaEntry.getData().toString('utf8');
+        jsonData = JSON.parse(raw);
+    } catch (err) {
+        printError('Falha ao ler mochawesome.json', err);
+        return;
+    }
+
+    const parsed = parseMochawesome(jsonData);
+    info('Resultados: ' + parsed.stats.passed + ' pass, ' + parsed.stats.failed + ' fail, ' + parsed.stats.skipped + ' skip');
+    if (parsed.tests.length === 0) {
+        warn('Nenhum teste encontrado no report.');
+        return;
+    }
+
+    const cypressDir = process.env.CYPRESS_PROJECT_PATH || loadState().lastCypressPath || '';
+    const defaultMapping = cypressDir ? path.join(path.resolve(cypressDir), '*jira-mapping.json') : '';
+    const mappingPath = prompt('Caminho do mapping JSON', { default: defaultMapping });
+    if (!mappingPath.trim()) {
+        warn('Mapping necessario para criar Test Execution.');
+        return;
+    }
+
+    const resolvedPath = mappingPath.includes('*')
+        ? _resolveGlob(mappingPath) || mappingPath
+        : mappingPath;
+
+    const { matched, unmatched, stats } = matchResultsToTests(parsed.tests, resolvedPath);
+    if (matched.length === 0) {
+        warn('Nenhum teste pode ser mapeado. Mapping: ' + resolvedPath);
+        return;
+    }
+    info('Mapeados: ' + matched.length + '/' + parsed.tests.length + ' testes');
+    if (unmatched.length > 0) {
+        warn(unmatched.length + ' teste(s) nao encontrados no mapping');
+        unmatched.slice(0, 3).forEach(u => warn('  - ' + u.title));
+    }
+
+    const csvName = resolvedPath.replace(/-jira-mapping\.json$/, '').split(/[/\\]/).pop() || 'pipeline';
+
+    spinner.start('Criando Test Execution no Jira...');
+    try {
+        const jiraRes = new JiraResource(jira.token, jira.base);
+        const linkJiraRes = new JiraResource(jira.token, jira.base);
+        const linkMgr = new JiraLinkManager(linkJiraRes);
+        const te = await createTestExecutionFromResults(jiraRes, linkMgr, projectName, matched, csvName, { pipelineId, branch, provider: currentProvider });
+        spinner.stop();
+        success('Test Execution criado: ' + jira.base + '/browse/' + te.key);
+        success(te.passed + ' passed / ' + te.failed + ' failed / ' + te.skipped + ' skipped');
+        pushHistory('resultados', te.key + ': ' + te.passed + '/' + te.failed, 'ok');
+    } catch (err) {
+        spinner.stop();
+        printError('Falha ao criar Test Execution', err);
+        pushHistory('resultados', 'erro', 'error');
+    }
+}
+
+function _resolveGlob(pattern) {
+    try {
+        const baseDir = path.dirname(pattern.replace(/\*/g, ''));
+        const files = fs.readdirSync(baseDir);
+        const match = files.find(f => f.endsWith('-jira-mapping.json'));
+        return match ? path.join(baseDir, match) : null;
+    } catch (e) {
+        return null;
+    }
 }
 
 function providerLabel() {
@@ -359,6 +480,11 @@ async function main() {
                         const pollResult = await pollPipeline(m, id);
                         const icon = pollResult.status === 'success' ? '\u2713' : '\u2717';
                         info('Pipeline #' + id + ': ' + icon + ' ' + pollResult.status);
+
+                        if (pollResult.status !== 'canceled' && pollResult.status !== 'skipped'
+                            && confirm('Coletar resultados para Jira?', false)) {
+                            await collectTestResults(m, id, currentBranch, projectName);
+                        }
 
                         if (pollResult.status === 'success' && confirm('Criar merge request de ' + currentBranch + ' para?', false)) {
                             const target = prompt('Branch de destino', { default: 'main' });

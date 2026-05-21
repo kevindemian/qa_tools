@@ -234,6 +234,71 @@ describe('GitHubManager', () => {
         });
     });
 
+    describe('getPipelineJobs', () => {
+        it('returns jobs from /actions/runs/{id}/jobs', async () => {
+            mockClient.get.mockResolvedValue({
+                data: {
+                    jobs: [
+                        { id: 201, name: 'test (22)', runner_group_name: 'ubuntu', status: 'completed', conclusion: 'success' },
+                        { id: 202, name: 'test (24)', runner_group_name: 'ubuntu', status: 'completed', conclusion: 'failure' },
+                    ]
+                }
+            });
+            const result = await manager.getPipelineJobs('42');
+            expect(mockClient.get).toHaveBeenCalledWith('/repos/myorg/myrepo/actions/runs/42/jobs');
+            expect(result).toHaveLength(2);
+            expect(result[0].name).toContain('test');
+            expect(result[1].status).toBe('failure');
+        });
+
+        it('returns [] on API error', async () => {
+            mockClient.get.mockRejectedValue(new Error('API error'));
+            const result = await manager.getPipelineJobs('42');
+            expect(result).toEqual([]);
+        });
+    });
+
+    describe('listPipelineArtifacts', () => {
+        it('returns artifacts from /actions/runs/{id}/artifacts', async () => {
+            mockClient.get.mockResolvedValue({
+                data: {
+                    artifacts: [
+                        { id: 301, name: 'mochawesome-report', size: 12345 },
+                    ]
+                }
+            });
+            const result = await manager.listPipelineArtifacts('42');
+            expect(mockClient.get).toHaveBeenCalledWith('/repos/myorg/myrepo/actions/runs/42/artifacts');
+            expect(result).toEqual([{ id: 301, name: 'mochawesome-report' }]);
+        });
+
+        it('returns [] on API error', async () => {
+            mockClient.get.mockRejectedValue(new Error('API error'));
+            const result = await manager.listPipelineArtifacts('42');
+            expect(result).toEqual([]);
+        });
+    });
+
+    describe('downloadArtifact', () => {
+        it('returns buffer from /actions/artifacts/{id}/zip', async () => {
+            mockClient.get.mockResolvedValue({
+                data: Buffer.from('zip-data'),
+            });
+            const result = await manager.downloadArtifact('301');
+            expect(mockClient.get).toHaveBeenCalledWith('/repos/myorg/myrepo/actions/artifacts/301/zip', {
+                responseType: 'arraybuffer',
+                maxRedirects: 5,
+            });
+            expect(Buffer.isBuffer(result.buffer)).toBe(true);
+            expect(result.filename).toBe('artifact.zip');
+        });
+
+        it('throws on API error (mutation)', async () => {
+            mockClient.get.mockRejectedValue(new Error('Download failed'));
+            await expect(manager.downloadArtifact('999')).rejects.toThrow('Download failed');
+        });
+    });
+
     describe('getCICDVariables', () => {
         it('calls GET /actions/variables', async () => {
             mockClient.get.mockResolvedValue({ data: { variables: [{ name: 'MY_VAR', value: 'myval' }] } });

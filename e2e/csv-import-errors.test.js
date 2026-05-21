@@ -286,4 +286,21 @@ describe('E2E: CSV Import - Error Paths', () => {
     expect(result.summary).toBe('0/1 testes criados');
     expect(nock.isDone()).toBe(true);
   });
+
+  it('C8: DRY_RUN=true — simulates without API calls', async () => {
+    process.env.DRY_RUN = 'true';
+    process.env.CSV_PATH = writeCsv('c8', [
+      'Title: TC Dry',
+      'Action,Data,Expected Result',
+      'Step1,,R1',
+    ].join('\n'));
+
+    const result = await createTestsFromCsv(makeState());
+
+    expect(result.status).toBe('ok');
+    expect(result.summary).toContain('DRY-RUN');
+    expect(result.inMemoryTasksId).toEqual([]);
+    expect(nock.isDone()).toBe(true);
+    delete process.env.DRY_RUN;
+  });
 });

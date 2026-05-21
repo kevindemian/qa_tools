@@ -72,6 +72,9 @@
  * @property {() => Promise<Array<Object>>} getCICDVariables
  * @property {(count?: number) => Promise<Array<Object>>} getRecentPipelines
  * @property {(id: string|number) => Promise<Object|null>} getPipeline
+ * @property {(pipelineId: string|number) => Promise<Array<{id:string|number, name:string, stage:string, status:string}>>} getPipelineJobs
+ * @property {(pipelineId: string|number) => Promise<Array<{id:string|number, name:string}>>} listPipelineArtifacts
+ * @property {(artifactId: string|number) => Promise<{buffer: Buffer, filename: string}>} downloadArtifact
  * @property {'gitlab'|'github'} provider
  */
 
