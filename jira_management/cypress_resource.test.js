@@ -1,8 +1,8 @@
-const { createHttpClient } = require('../shared/http-client');
-
 jest.mock('../shared/http-client', () => ({
     createHttpClient: jest.fn()
 }));
+
+const { createHttpClient } = require('../shared/http-client');
 
 jest.mock('../shared/logger', () => ({
     rootLogger: { info: jest.fn(), error: jest.fn(), warn: jest.fn(), writeFileOnly: jest.fn() }

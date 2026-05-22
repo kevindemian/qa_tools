@@ -1,7 +1,4 @@
-const JiraResource = require('./jira_resource');
-const JiraLinkManager = require('./jira_link_manager');
-const { createTestExecution, createTestExecutionWithLinks, generateMappingFiles, validateCsvTests, createTestsFromJson } = require('./create_tests');
-
+// 1. Define mock factory values FIRST (before jest.mock)
 const mockPrompt = {
     success: jest.fn(),
     error: jest.fn(),
@@ -21,6 +18,8 @@ const mockPrompt = {
     withSpinner: jest.fn().mockImplementation(async (label, fn) => fn()),
     print: jest.fn(),
 };
+
+// 2. jest.mock BEFORE any require that uses those modules
 jest.mock('../shared/prompt', () => mockPrompt);
 
 jest.mock('fs', () => {
@@ -45,6 +44,11 @@ jest.mock('axios', () => {
     };
     return { create: jest.fn(() => mockInstance) };
 });
+
+// 3. THEN require the source modules (they'll get the mocked dependencies)
+const JiraResource = require('./jira_resource');
+const JiraLinkManager = require('./jira_link_manager');
+const { createTestExecution, createTestExecutionWithLinks, generateMappingFiles, validateCsvTests, createTestsFromJson } = require('./create_tests');
 
 const MOCK_ISSUE_TYPES = [
     { id: '11200', name: 'Epic' },
