@@ -9,6 +9,7 @@
 #   • Blocos separados por "---" em linha isolada
 #   • Title: é o ÚNICO campo obrigatório por bloco
 #   • Metadados ANTES do cabeçalho de steps (Action,Data,Expected Result)
+#   • Alternativa JSON: veja test_cases_template.json (opção 15 do menu)
 # =============================================================================
 
 # ── Bloco 1: Teste com todos os campos opcionais ─────────────────────────────
