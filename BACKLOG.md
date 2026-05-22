@@ -20,12 +20,10 @@ Issues registradas durante refatorações, postergadas por escopo.
 - **Impacto**: Testes podem mockar `Config` em vez de poluir `process.env`. Reduz acoplamento global. Facilita tipagem centralizada.
 - **Estimativa**: 1-2h.
 
-### ARC-011 — JiraResource coverage (Lote 4, P2)
+### ARC-011 — JiraResource coverage (Lote 4, CONCLUÍDO)
 
-- **Contexto**: `jira_resource.ts` (~402 linhas, 8 métodos públicos, dependência crítica para 95% dos comandos) não possui testes unitários.
-- **Ação**: Criar `jira_resource.test.js` com testes para: `getProjectId`, `getProjectVersions`, `updateFixVersions`, `getReleaseTasks`, `moveCardsToDone`, `releaseVersion`, `getIssueLinkTypes`, `getJiraResource` error handling.
-- **Estimativa**: 2-3h. Postergado — não está no caminho crítico das demais melhorias. Bloqueios de CI e handler de erros já foram cobertos pelos Lotes 1-3.
-- **Observação**: Precisa mockar `createHttpClient` e `axiosInstance`. Aproveitar padrão de mock de `handlers.test.js`. Pendente para próxima sessão.
+- **Ação**: Criado `jira_resource.test.ts` com 74 testes cobrindo todos os 17 métodos públicos (feliz + erro + edge case).
+- **Resultado**: 100% dos métodos cobertos, 0 erros de tipo.
 
 ### ARC-003 — Unificar sleep() (P3)
 
