@@ -1,0 +1,86 @@
+[
+    {
+        "title": "ECSPOL-TC01 - Login com credenciais validas",
+        "description": "Verifica o fluxo feliz de login do administrador no sistema.",
+        "precondition": "ECSPOL-PRE-42",
+        "group": "LOGIN-FLOW",
+        "steps": [
+            {
+                "Action": "Acessar /login",
+                "Data": "https://app.example.com",
+                "ExpectedResult": "Formulario de login exibido"
+            },
+            {
+                "Action": "Preencher email",
+                "Data": "admin@test.com",
+                "ExpectedResult": "Campo aceita o valor"
+            },
+            {
+                "Action": "Clicar em Entrar",
+                "Data": "",
+                "ExpectedResult": "Redirecionado para dashboard"
+            }
+        ],
+        "linkedIssues": [
+            "ECSPOL-100",
+            {
+                "key": "ECSPOL-200",
+                "linkType": "is tested by"
+            }
+        ]
+    },
+    {
+        "title": "ECSPOL-TC02 - Login com senha incorreta",
+        "description": "Testa a mensagem de erro ao usar senha invalida.",
+        "precondition": "User must be logged out",
+        "group": "LOGIN-FLOW",
+        "steps": [
+            {
+                "Action": "Acessar /login",
+                "Data": "https://app.example.com",
+                "ExpectedResult": "Formulario de login exibido"
+            },
+            {
+                "Action": "Digitar senha",
+                "Data": "senha_errada",
+                "ExpectedResult": "Mensagem de erro \"Credenciais invalidas\" exibida"
+            }
+        ]
+    },
+    {
+        "title": "ECSPOL-TC03 - Multi-linha em description e steps",
+        "description": "As an Auditor\nI want to verify the system health endpoint\nSo I can ensure platform availability.\n\nACCEPTANCE CRITERIA\n- System returns HTTP 200 with expected response body.",
+        "group": "MULTILINE",
+        "steps": [
+            {
+                "Action": "Preencher nome\ne sobrenome",
+                "Data": "Joao Silva\nRua ABC 123",
+                "ExpectedResult": "Campos aceitam\nmultiplas linhas"
+            },
+            {
+                "Action": "Validar erro\nde CPF",
+                "Data": "123.456.789-00",
+                "ExpectedResult": "Erro:\nCPF invalido"
+            }
+        ]
+    },
+    {
+        "title": "ECSPOL-TC04 - Pre-condition inline sem issue key",
+        "description": "Teste com pre-condition definida como texto livre, sem chave Jira.",
+        "precondition": "User must be authenticated",
+        "group": "AUTH",
+        "steps": [
+            {
+                "Action": "Acessar recurso protegido",
+                "Data": "/admin/users",
+                "ExpectedResult": "Pagina exibida com dados do usuario"
+            }
+        ]
+    },
+    {
+        "title": "ECSPOL-TC05 - Teste sem steps",
+        "description": "Teste conceitual apenas para documentacao.",
+        "group": "DOCUMENTATION",
+        "steps": []
+    }
+]
