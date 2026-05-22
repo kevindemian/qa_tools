@@ -10,6 +10,8 @@ const GitLabManager = require('./gitlab_manager');
 const GitHubManager = require('./github_manager');
 const { nivelarBranches } = require('./nivelar');
 const { rootLogger } = require('../shared/logger');
+const { sleep } = require('../shared/http-client');
+const glob = require('glob');
 const JiraResource = require('../jira_management/jira_resource');
 const JiraLinkManager = require('../jira_management/jira_link_manager');
 const { parseMochawesome } = require('../shared/result_parser');
@@ -83,10 +85,6 @@ async function nivelarBranchesWrapper(gitlab) {
     await nivelarBranches(gitlab, { pushHistory });
 }
 
-function delay(ms) {
-    return new Promise(resolve => setTimeout(resolve, ms));
-}
-
 function isComplete(status) {
     return ['success', 'failed', 'canceled', 'skipped'].includes(status);
 }
@@ -102,12 +100,12 @@ async function pollPipeline(m, pipelineId, interval = 5000, timeout = 300000) {
             info('Aguardando pipeline #' + pipelineId + ' (' + elapsed + 's)...');
         }
         const p = await m.getPipeline(pipelineId);
-        if (aborted || !p) { await delay(interval); if (aborted) break; continue; }
+        if (aborted || !p) { await sleep(interval); if (aborted) break; continue; }
         const status = p.status || p.state || '';
         if (isComplete(status)) {
             return { status, web_url: p.web_url || '' };
         }
-        await delay(interval);
+        await sleep(interval);
         if (aborted) break;
     }
     return { status: 'timeout', web_url: '' };
@@ -246,12 +244,8 @@ async function collectTestResults(m, pipelineId, branch, projectName) {
 
 function _resolveGlob(pattern) {
     try {
-        const escaped = pattern.replace(/[.+?^${}()|\[\]\\]/g, '\\$&').replace(/\*/g, '.*');
-        const regex = new RegExp('^' + escaped + '$');
-        const baseDir = path.dirname(pattern.replace(/\*/g, ''));
-        const files = fs.readdirSync(baseDir);
-        const match = files.find(f => regex.test(f));
-        return match ? path.join(baseDir, match) : null;
+        const matches = glob.sync(pattern);
+        return matches.length > 0 ? path.resolve(matches[0]) : null;
     } catch (e) {
         return null;
     }

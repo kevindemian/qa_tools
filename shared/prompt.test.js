@@ -147,6 +147,19 @@ describe('Prompt', () => {
     });
   });
 
+  describe('withSpinner', () => {
+    it('executes fn and returns result when QUIET=true', async () => {
+      process.env.QUIET = 'true';
+      const result = await prompt.withSpinner('label', () => Promise.resolve(42));
+      expect(result).toBe(42);
+    });
+
+    it('executes fn and returns result when QUIET=false', async () => {
+      const result = await prompt.withSpinner('label', () => Promise.resolve('ok'));
+      expect(result).toBe('ok');
+    });
+  });
+
   describe('humanizeError', () => {
     it('returns known error for rate limit', () => {
       const result = prompt.humanizeError('rate limit exceeded');

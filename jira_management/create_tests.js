@@ -3,6 +3,7 @@ const fs = require('fs');
 const path = require('path');
 const { success, error, warn, info, title, divider, prompt, confirm, smartPrompt, printError, printSummary, onError, ProgressBar, withSpinner, isQuiet } = require('../shared/prompt');
 const { rootLogger } = require('../shared/logger');
+const { sleep } = require('../shared/http-client');
 const { load: loadState, update: updateState } = require('../shared/state');
 
 const csvDefaultPath = process.env.CSV_DEFAULT_PATH || path.join(__dirname, 'test_steps.csv');
@@ -57,7 +58,7 @@ async function updateCrossReferences(jiraResource, tests, ids) {
 
         crossLog.info('Atualizando descricoes do grupo "' + group.name + '" (' + group.members.length + ' issues)');
 
-        await delay(500);
+        await sleep(500);
 
         for (const member of group.members) {
             const others = group.members
@@ -154,10 +155,6 @@ async function _linkIssues(linkManager, issueKey, test) {
             )
         };
     }
-}
-
-function delay(ms) {
-    return new Promise(resolve => setTimeout(resolve, ms));
 }
 
 function generateMappingFiles(sourcePath, project_name, tasksId, tests) {
