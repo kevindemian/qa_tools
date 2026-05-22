@@ -1,9 +1,9 @@
-// @ts-check
-const fs = require('fs');
-const path = require('path');
-const os = require('os');
-const { info, warn } = require('../shared/prompt');
-const { rootLogger } = require('../shared/logger');
+import fs from 'fs';
+import path from 'path';
+import os from 'os';
+import { info, warn } from '../shared/prompt';
+import { rootLogger } from '../shared/logger';
+import type JiraResource from './jira_resource';
 
 const FALLBACK_LINK_TYPES = [
   { id: '11701', name: 'Relates', inward: 'relates to', outward: 'relates to' },
@@ -11,48 +11,63 @@ const FALLBACK_LINK_TYPES = [
   { id: '10200', name: 'Tested by', inward: 'tested by', outward: 'tests' },
 ];
 
+interface LinkType {
+  id: string;
+  name?: string;
+  inward?: string;
+  outward?: string;
+}
+
+interface IssueField {
+  id: string;
+  schema?: { custom?: string };
+  [key: string]: unknown;
+}
+
 class JiraLinkManager {
-  /** @param {import('./jira_resource')} jiraResource */
-  constructor(jiraResource) {
+  jiraResource: JiraResource;
+  linkTypesCache: LinkType[] | null;
+  cacheFilePath: string;
+  _preconditionFieldId?: string;
+
+  constructor(jiraResource: JiraResource) {
     this.jiraResource = jiraResource;
     this.linkTypesCache = null;
     this.cacheFilePath = path.join(os.homedir(), '.qa_tools_link_types_cache.json');
   }
 
-  /** @returns {Promise<Object[]>} */
-  async getIssueLinkTypes() {
+  async getIssueLinkTypes(): Promise<LinkType[]> {
     if (this.linkTypesCache) return this.linkTypesCache;
 
     try {
-      const data = await this.jiraResource.getJiraResource('issueLinkType');
+      const data = await this.jiraResource.getJiraResource<{ issueLinkTypes?: LinkType[] }>('issueLinkType');
       if (data && data.issueLinkTypes) {
         this.linkTypesCache = data.issueLinkTypes;
         try {
           fs.writeFileSync(this.cacheFilePath, JSON.stringify(data.issueLinkTypes), 'utf8');
         } catch (err) {
-          rootLogger.warn('Falha ao escrever cache de link types: ' + err.message);
+          rootLogger.warn('Falha ao escrever cache de link types: ' + (err as Error).message);
         }
         return this.linkTypesCache;
       }
-    } catch (err) {
+    } catch {
       rootLogger.warn('getIssueLinkTypes — API falhou, verificando cache local...');
     }
 
     try {
       if (fs.existsSync(this.cacheFilePath)) {
-        this.linkTypesCache = JSON.parse(fs.readFileSync(this.cacheFilePath, 'utf8'));
+        this.linkTypesCache = JSON.parse(fs.readFileSync(this.cacheFilePath, 'utf8')) as LinkType[];
         return this.linkTypesCache;
       }
     } catch (err) {
-      rootLogger.warn('Falha ao ler cache de link types: ' + err.message);
+      rootLogger.warn('Falha ao ler cache de link types: ' + (err as Error).message);
     }
 
     this.linkTypesCache = FALLBACK_LINK_TYPES;
     return this.linkTypesCache;
   }
 
-  /** @param {string} linkTypeName @returns {Promise<string>} */
-  async resolveLinkTypeId(linkTypeName) {
+  async resolveLinkTypeId(linkTypeName: string): Promise<string> {
     const types = await this.getIssueLinkTypes();
     const lowerName = linkTypeName.toLowerCase().trim();
 
@@ -68,24 +83,23 @@ class JiraLinkManager {
     return '11701';
   }
 
-  /** @param {string} sourceKey @param {Array<{key:string,linkType:string}>} linkedIssues @returns {Promise<void>} */
-  async linkIssues(sourceKey, linkedIssues) {
+  async linkIssues(sourceKey: string, linkedIssues: Array<{ key: string; linkType: string }>): Promise<void> {
     for (const li of linkedIssues) {
       const linkTypeId = await this.resolveLinkTypeId(li.linkType);
       const payload = {
         type: { id: linkTypeId },
         inwardIssue: { key: sourceKey },
-        outwardIssue: { key: li.key }
+        outwardIssue: { key: li.key },
       };
       info(`Linkando ${sourceKey} -> ${li.key} (tipo: ${li.linkType})...`);
       await this.jiraResource.postJiraResource('issueLink', payload);
     }
   }
 
-  async _getPreconditionFieldId() {
+  async _getPreconditionFieldId(): Promise<string> {
     if (this._preconditionFieldId) return this._preconditionFieldId;
     try {
-      const fields = await this.jiraResource.getJiraResource('field');
+      const fields = await this.jiraResource.getJiraResource<IssueField[]>('field');
       if (Array.isArray(fields)) {
         const match = fields.find(
           f => f.schema?.custom === 'com.xpandit.plugins.xray:test-precondition-custom-field'
@@ -102,30 +116,28 @@ class JiraLinkManager {
     return this._preconditionFieldId;
   }
 
-  /** @param {string} sourceKey @param {string} targetKey @param {string} linkTypeName @returns {Promise<Object>} */
-  async createIssueLink(sourceKey, targetKey, linkTypeName) {
+  async createIssueLink(sourceKey: string, targetKey: string, linkTypeName: string): Promise<Record<string, unknown>> {
     const linkTypeId = await this.resolveLinkTypeId(linkTypeName);
     const payload = {
       type: { id: linkTypeId },
       inwardIssue: { key: targetKey },
-      outwardIssue: { key: sourceKey }
+      outwardIssue: { key: sourceKey },
     };
-    return await this.jiraResource.postJiraResource('issueLink', payload);
+    return await this.jiraResource.postJiraResource('issueLink', payload) as Record<string, unknown>;
   }
 
-  /** @param {string} testKey @param {string} preconditionKey @returns {Promise<Object>} */
-  async associatePrecondition(testKey, preconditionKey) {
+  async associatePrecondition(testKey: string, preconditionKey: string): Promise<Record<string, unknown> | null> {
     const fieldId = await this._getPreconditionFieldId();
     info(`Associando pre-condition ${preconditionKey} ao teste ${testKey}...`);
-    const testIssue = await this.jiraResource.getJiraResource(`issue/${testKey}`);
-    const current = (testIssue && testIssue.fields && testIssue.fields[fieldId]) || [];
+    const testIssue = await this.jiraResource.getJiraResource<{ fields?: Record<string, unknown> }>(`issue/${testKey}`);
+    const current = (testIssue && testIssue.fields && testIssue.fields[fieldId]) as string[] || [];
     if (!current.includes(preconditionKey)) {
       current.push(preconditionKey);
     }
-    const payload = {};
+    const payload: Record<string, unknown> = {};
     payload[fieldId] = current;
     return await this.jiraResource.putJiraResource(`issue/${testKey}`, { fields: payload });
   }
 }
 
-module.exports = JiraLinkManager;
+export = JiraLinkManager;
