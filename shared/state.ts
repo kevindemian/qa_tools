@@ -1,11 +1,12 @@
 import fs from 'fs';
 import path from 'path';
 import os from 'os';
+import Config from './config';
 import { rootLogger } from './logger';
 import { warn } from './prompt';
 
-const STATE_DIR = process.env.XDG_STATE_HOME
-    ? path.join(process.env.XDG_STATE_HOME, 'qa-tools')
+const STATE_DIR = Config.xdgStateHome
+    ? path.join(Config.xdgStateHome, 'qa-tools')
     : path.join(os.homedir(), '.local', 'state', 'qa-tools');
 
 try { fs.mkdirSync(STATE_DIR, { recursive: true }); } catch {}

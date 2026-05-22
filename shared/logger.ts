@@ -1,5 +1,6 @@
 import fs from 'fs';
 import path from 'path';
+import Config from './config';
 
 const LEVELS: Record<string, number> = { DEBUG: 0, INFO: 1, WARN: 2, ERROR: 3 };
 const PREFIXES: Record<string, string> = { DEBUG: '\u00b7', INFO: 'i', WARN: '!', ERROR: 'ERR' };
@@ -11,7 +12,7 @@ const COLORS: Record<string, string> = {
   RESET: '\x1b[0m'
 };
 const SECRET_RE = /token|secret|key|password|authorization/i;
-export const MAX_LOG_SIZE = parseInt(process.env.LOG_MAX_SIZE || '', 10) || 5 * 1024 * 1024;
+export const MAX_LOG_SIZE = Config.logMaxSize;
 
 function maskValue(v: unknown): unknown {
   if (typeof v !== 'string') return v;
@@ -51,9 +52,9 @@ export class Logger {
 
   _ensureDir(): boolean {
     if (this._fileError) return false;
-    if (process.env.LOG_FILE !== 'true') return false;
+    if (!Config.logFile) return false;
 
-    const logDir = process.env.LOG_DIR || 'logs';
+    const logDir = Config.logDir;
     if (this._logDir === logDir && this._filePathCached) return true;
 
     try {
@@ -95,7 +96,7 @@ export class Logger {
 
   _writeConsole(level: string, msg: string, data?: unknown): void {
     const levelNum = LEVELS[level] ?? 1;
-    const envLevel = process.env.LOG_LEVEL || 'INFO';
+    const envLevel = Config.logLevel;
     const envLevelNum = LEVELS[envLevel] ?? 1;
     if (levelNum < envLevelNum) return;
 
@@ -166,7 +167,7 @@ export class Logger {
   error(msg: string, data?: unknown): void { this._write('ERROR', msg, data); }
 
   get filePath(): string | null {
-    if (process.env.LOG_FILE !== 'true') return null;
+    if (!Config.logFile) return null;
     this._ensureDir();
     return this._filePathCached;
   }

@@ -2,7 +2,7 @@ import path from 'path';
 import fs from 'fs';
 import os from 'os';
 import AdmZip from 'adm-zip';
-import dotenv from 'dotenv';
+import Config from '../shared/config';
 import glob from 'glob';
 import JiraResource from '../jira_management/jira_resource';
 import JiraLinkManager from '../jira_management/jira_link_manager';
@@ -22,11 +22,9 @@ import { matchResultsToTests, createTestExecutionFromResults } from '../jira_man
 import { SessionContext } from '../shared/session-context';
 import type { GitProvider } from '../shared/types';
 
-dotenv.config({ path: path.resolve(__dirname, '../.env') });
-
 let projectId: string;
-let apiToken: string = (process.env.GIT_TOKEN as string) || '';
-let gitlabBaseUrl: string = (process.env.GIT_BASE_URL as string) || '';
+let apiToken: string = (Config.gitToken as string) || '';
+let gitlabBaseUrl: string = (Config.gitBaseUrl as string) || '';
 let currentProvider: 'gitlab' | 'github' = 'gitlab';
 let isBusy = false;
 
@@ -54,8 +52,8 @@ function createManagerForProject(projectName: string, id: string): GitProvider {
     if (provider === 'github') {
         const cfg = providersConfig[projectName];
         const repo = (cfg && cfg.repo) || id;
-        const ghToken = process.env.GITHUB_TOKEN || process.env.GIT_TOKEN || '';
-        const ghApiUrl = process.env.GITHUB_API_URL || 'https://api.github.com';
+        const ghToken = Config.githubToken || Config.gitToken || '';
+        const ghApiUrl = Config.githubApiUrl || 'https://api.github.com';
         return new GitHubManager(repo, ghToken, ghApiUrl) as unknown as GitProvider;
     }
     return new GitLabManager(id, apiToken, gitlabBaseUrl);
@@ -144,11 +142,11 @@ function displayProjects() {
 }
 
 function _jiraEnv(): { base: string; token: string; xray: string } | null {
-    const base = process.env.JIRA_BASE_URL;
-    const token = process.env.JIRA_PERSONAL_TOKEN;
-    const xray = process.env.XRAY_BASE_URL;
+    const base = Config.jiraBaseUrl;
+    const token = Config.jiraPersonalToken;
+    const xray = Config.xrayBaseUrl;
     if (!base || !token || !xray) return null;
-    return { base: base as string, token: token as string, xray: xray as string };
+    return { base, token, xray };
 }
 
 async function collectTestResults(m: GitProvider, pipelineId: string | number, branch: string, projectName: string) {
@@ -201,7 +199,7 @@ async function collectTestResults(m: GitProvider, pipelineId: string | number, b
         return;
     }
 
-    const cypressDir = process.env.CYPRESS_PROJECT_PATH || (loadState().lastCypressPath as string) || '';
+    const cypressDir = Config.cypressProjectPath || (loadState().lastCypressPath as string) || '';
     const defaultMapping = cypressDir ? path.join(path.resolve(cypressDir), '*jira-mapping.json') : '';
     const mappingPath = prompt('Caminho do mapping JSON', { default: defaultMapping });
     if (!mappingPath.trim()) {
@@ -380,7 +378,7 @@ async function main() {
 
     while (true) {
         let finalChoice: string;
-        if (process.stdout.isTTY && process.env.QUIET !== 'true') {
+        if (process.stdout.isTTY && !Config.quiet) {
             const ctx = buildContextLine();
             print('== ' + ctx + ' ==');
             divider();
