@@ -6,7 +6,10 @@
   "scripts": {
     "setup": "bash setup.sh",
     "test": "jest",
-    "typecheck": "tsc"
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint . --ext .ts",
+    "format": "prettier --write '**/*.{ts,js,json,md}'",
+    "prepare": "husky"
   },
   "license": "ISC",
   "type": "commonjs",
@@ -19,9 +22,28 @@
     "dotenv": "^17.4.2",
     "readline-sync": "^1.4.10"
   },
+  "lint-staged": {
+    "*.ts": [
+      "eslint --fix",
+      "prettier --write"
+    ],
+    "*.js": [
+      "prettier --write"
+    ]
+  },
   "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "@types/jest": "^30.0.0",
+    "@types/node": "^25.9.1",
+    "eslint": "^10.4.0",
+    "eslint-config-prettier": "^10.1.8",
+    "husky": "^9.1.7",
     "jest": "^30.4.2",
+    "lint-staged": "^17.0.5",
     "nock": "^14.0.15",
-    "typescript": "^6.0.3"
+    "prettier": "^3.8.3",
+    "ts-jest": "^29.4.11",
+    "typescript": "^6.0.3",
+    "typescript-eslint": "^8.59.4"
   }
 }
