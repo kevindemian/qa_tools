@@ -1,55 +1,54 @@
-// @ts-check
-const path = require('path');
-const fs = require('fs');
-const os = require('os');
-const AdmZip = require('adm-zip');
-const { print, success, error, warn, info, title, divider, prompt, confirm, printError, printSummary, withSpinner, showSelect, tableView } = require('../shared/prompt');
-const { load: loadState, update: updateState } = require('../shared/state');
-const { createValidateEnv, setupSigint, printSessionSummary: sharedPrintSessionSummary } = require('../shared/cli_base');
-const GitLabManager = require('./gitlab_manager');
-const GitHubManager = require('./github_manager');
-const { nivelarBranches } = require('./nivelar');
-const { rootLogger } = require('../shared/logger');
-const { sleep } = require('../shared/http-client');
-const glob = require('glob');
-const JiraResource = require('../jira_management/jira_resource');
-const JiraLinkManager = require('../jira_management/jira_link_manager');
-const { parseMochawesome } = require('../shared/result_parser');
-const { matchResultsToTests, createTestExecutionFromResults } = require('../jira_management/result_reporter');
+import path from 'path';
+import fs from 'fs';
+import os from 'os';
+import AdmZip from 'adm-zip';
+import dotenv from 'dotenv';
+import glob from 'glob';
+import JiraResource from '../jira_management/jira_resource';
+import JiraLinkManager from '../jira_management/jira_link_manager';
+import GitLabManager from './gitlab_manager';
+import GitHubManager from './github_manager';
+import { nivelarBranches } from './nivelar';
+import {
+    print, success, error, warn, info, title, divider, prompt,
+    confirm, printError, printSummary, withSpinner, showSelect, tableView,
+} from '../shared/prompt';
+import { load as loadState, update as updateState } from '../shared/state';
+import { createValidateEnv, setupSigint, printSessionSummary as sharedPrintSessionSummary } from '../shared/cli_base';
+import { rootLogger } from '../shared/logger';
+import { sleep } from '../shared/http-client';
+import { parseMochawesome } from '../shared/result_parser';
+import { matchResultsToTests, createTestExecutionFromResults } from '../jira_management/result_reporter';
+import { SessionContext } from '../shared/session-context';
+import type { GitProvider } from '../shared/types';
 
-require('dotenv').config({ path: path.resolve(__dirname, '../.env') });
+dotenv.config({ path: path.resolve(__dirname, '../.env') });
 
-let projectId;
-/** @type {string} */
-let apiToken = /** @type {string} */ (process.env.GIT_TOKEN);
-/** @type {string} */
-let gitlabBaseUrl = /** @type {string} */ (process.env.GIT_BASE_URL);
-/** @type {'gitlab'|'github'} */
-let currentProvider = 'gitlab';
+let projectId: string;
+let apiToken: string = (process.env.GIT_TOKEN as string) || '';
+let gitlabBaseUrl: string = (process.env.GIT_BASE_URL as string) || '';
+let currentProvider: 'gitlab' | 'github' = 'gitlab';
 let isBusy = false;
 
 const sessionLog = rootLogger.child({ session: 'gitlab' });
-const sessionContext = new (require('../shared/session-context').SessionContext)();
+const sessionContext = new SessionContext();
 
-/** @type {import('../shared/types').GitProvider|null} */
-let manager = null;
+let manager: GitProvider | null = null;
 
 const PROVIDERS_PATH = path.resolve(__dirname, '../config/providers.json');
-let providersConfig = {};
+let providersConfig: Record<string, any> = {};
 try {
     providersConfig = JSON.parse(fs.readFileSync(PROVIDERS_PATH, 'utf8'));
 } catch (err) {
     rootLogger.warn('Falha ao carregar providers.json. Usando GitLab como padrao.');
 }
 
-/** @returns {'gitlab'|'github'} */
-function getProviderForProject(projectName) {
+function getProviderForProject(projectName: string): 'gitlab' | 'github' {
     const cfg = providersConfig[projectName];
-    return /** @type {'gitlab'|'github'} */ ((cfg && cfg.provider) || 'gitlab');
+    return (cfg && cfg.provider) || 'gitlab';
 }
 
-/** @returns {import('../shared/types').GitProvider} */
-function createManagerForProject(projectName, id) {
+function createManagerForProject(projectName: string, id: string): GitProvider {
     const provider = getProviderForProject(projectName);
     currentProvider = provider;
     if (provider === 'github') {
@@ -57,17 +56,17 @@ function createManagerForProject(projectName, id) {
         const repo = (cfg && cfg.repo) || id;
         const ghToken = process.env.GITHUB_TOKEN || process.env.GIT_TOKEN || '';
         const ghApiUrl = process.env.GITHUB_API_URL || 'https://api.github.com';
-        return new GitHubManager(repo, ghToken, ghApiUrl);
+        return new GitHubManager(repo, ghToken, ghApiUrl) as unknown as GitProvider;
     }
     return new GitLabManager(id, apiToken, gitlabBaseUrl);
 }
 
-function pushHistory(op, detail, status) {
+function pushHistory(op: string, detail: string, status: string) {
     sessionContext.pushHistory(op, detail, status);
     updateState(state => {
         if (!state.history) state.history = [];
-        state.history.push({ op, detail, status, ts: new Date().toISOString() });
-        if (state.history.length > 50) state.history = state.history.slice(-50);
+        (state.history as Array<any>).push({ op, detail, status, ts: new Date().toISOString() });
+        if ((state.history as Array<any>).length > 50) (state.history as Array<any>) = (state.history as Array<any>).slice(-50);
     });
 }
 
@@ -81,15 +80,15 @@ function printSessionSummary() {
     sharedPrintSessionSummary(sessionContext.sessionCounters, sessionContext.lastOperation);
 }
 
-async function nivelarBranchesWrapper(gitlab) {
+async function nivelarBranchesWrapper(gitlab: GitProvider) {
     await nivelarBranches(gitlab, { pushHistory });
 }
 
-function isComplete(status) {
+function isComplete(status: string): boolean {
     return ['success', 'failed', 'canceled', 'skipped'].includes(status);
 }
 
-async function pollPipeline(m, pipelineId, interval = 5000, timeout = 300000) {
+async function pollPipeline(m: GitProvider, pipelineId: string | number, interval = 5000, timeout = 300000) {
     const start = Date.now();
     let lastLog = 0;
     let aborted = false;
@@ -101,9 +100,9 @@ async function pollPipeline(m, pipelineId, interval = 5000, timeout = 300000) {
         }
         const p = await m.getPipeline(pipelineId);
         if (aborted || !p) { await sleep(interval); if (aborted) break; continue; }
-        const status = p.status || p.state || '';
+        const status = (p as any).status || (p as any).state || '';
         if (isComplete(status)) {
-            return { status, web_url: p.web_url || '' };
+            return { status, web_url: (p as any).web_url || '' };
         }
         await sleep(interval);
         if (aborted) break;
@@ -114,22 +113,23 @@ async function pollPipeline(m, pipelineId, interval = 5000, timeout = 300000) {
 setupSigint(() => isBusy, () => printSessionSummary());
 
 const projectsPath = path.resolve(__dirname, '../config/projects.json');
-let projects;
+let projects: Record<string, string>;
 try {
     projects = JSON.parse(fs.readFileSync(projectsPath, 'utf8'));
     for (const key of Object.keys(projects)) {
         const envKey = 'PROJECT_ID_' + key.toUpperCase();
         if (process.env[envKey]) {
-            projects[key] = process.env[envKey];
+            projects[key] = process.env[envKey] as string;
         }
     }
-} catch (err) {
+} catch (err: any) {
     rootLogger.error(
         `Falha ao carregar configuração de projetos de "${projectsPath}": ${err.message}`,
         { configPath: projectsPath }
     );
     error(`Configuração inválida em "${projectsPath}". Verifique o JSON.`);
     process.exitCode = 1;
+    projects = {};
 }
 
 function displayProjects() {
@@ -143,15 +143,15 @@ function displayProjects() {
     print('  ' + (names.length + 1) + '  Sair');
 }
 
-function _jiraEnv() {
+function _jiraEnv(): { base: string; token: string; xray: string } | null {
     const base = process.env.JIRA_BASE_URL;
     const token = process.env.JIRA_PERSONAL_TOKEN;
     const xray = process.env.XRAY_BASE_URL;
     if (!base || !token || !xray) return null;
-    return { base, token, xray };
+    return { base: base as string, token: token as string, xray: xray as string };
 }
 
-async function collectTestResults(m, pipelineId, branch, projectName) {
+async function collectTestResults(m: GitProvider, pipelineId: string | number, branch: string, projectName: string) {
     const jira = _jiraEnv();
     if (!jira) {
         warn('Variaveis JIRA nao configuradas. Defina JIRA_BASE_URL, JIRA_PERSONAL_TOKEN e XRAY_BASE_URL.');
@@ -164,10 +164,10 @@ async function collectTestResults(m, pipelineId, branch, projectName) {
         warn('Nenhum artifact encontrado na pipeline #' + pipelineId);
         return;
     }
-    const art = artifacts.find(a => /mochawesome|test-result/i.test(a.name)) || artifacts[0];
+    const art = artifacts.find(a => /mochawesome|test-result/i.test(a.name as string)) || artifacts[0];
     info('Artifact: ' + art.name + ' (id=' + art.id + ')');
 
-    let buffer;
+    let buffer: Buffer;
     try {
         buffer = await withSpinner('Baixando artifact...', async () => {
             const dl = await m.downloadArtifact(art.id);
@@ -178,13 +178,13 @@ async function collectTestResults(m, pipelineId, branch, projectName) {
         return;
     }
 
-    let jsonData;
+    let jsonData: any;
     try {
         const zip = new AdmZip(buffer);
         const entries = zip.getEntries();
         const mochaEntry = entries.find(e => e.entryName.includes('mochawesome.json') && !e.isDirectory);
         if (!mochaEntry) {
-            warn('mochawesome.json nao encontrado no artifact. Entradas: ' + entries.map(e => e.entryName).join(', '));
+            warn('mochawesome.json nao encontrado no artifact. Entradas: ' + entries.map((e: any) => e.entryName).join(', '));
             return;
         }
         const raw = mochaEntry.getData().toString('utf8');
@@ -201,7 +201,7 @@ async function collectTestResults(m, pipelineId, branch, projectName) {
         return;
     }
 
-    const cypressDir = process.env.CYPRESS_PROJECT_PATH || loadState().lastCypressPath || '';
+    const cypressDir = process.env.CYPRESS_PROJECT_PATH || (loadState().lastCypressPath as string) || '';
     const defaultMapping = cypressDir ? path.join(path.resolve(cypressDir), '*jira-mapping.json') : '';
     const mappingPath = prompt('Caminho do mapping JSON', { default: defaultMapping });
     if (!mappingPath.trim()) {
@@ -221,7 +221,7 @@ async function collectTestResults(m, pipelineId, branch, projectName) {
     info('Mapeados: ' + matched.length + '/' + parsed.tests.length + ' testes');
     if (unmatched.length > 0) {
         warn(unmatched.length + ' teste(s) nao encontrados no mapping');
-        unmatched.slice(0, 3).forEach(u => warn('  - ' + u.title));
+        unmatched.slice(0, 3).forEach((u: any) => warn('  - ' + u.title));
     }
 
     const csvName = resolvedPath.replace(/-jira-mapping\.json$/, '').split(/[/\\]/).pop() || 'pipeline';
@@ -231,7 +231,7 @@ async function collectTestResults(m, pipelineId, branch, projectName) {
             const jiraRes = new JiraResource(jira.token, jira.base + '/rest/api/2');
             const linkJiraRes = new JiraResource(jira.token, jira.base + '/rest/api/2');
             const linkMgr = new JiraLinkManager(linkJiraRes);
-            return await createTestExecutionFromResults(jiraRes, linkMgr, projectName, matched, csvName, { pipelineId, branch, provider: currentProvider });
+            return await createTestExecutionFromResults(jiraRes, linkMgr, projectName, matched as any, csvName, { pipelineId, branch, provider: currentProvider });
         });
         success('Test Execution criado: ' + jira.base + '/browse/' + te.key);
         success(te.passed + ' passed / ' + te.failed + ' failed / ' + te.skipped + ' skipped');
@@ -242,7 +242,7 @@ async function collectTestResults(m, pipelineId, branch, projectName) {
     }
 }
 
-function _resolveGlob(pattern) {
+function _resolveGlob(pattern: string): string | null {
     try {
         const matches = glob.sync(pattern);
         return matches.length > 0 ? path.resolve(matches[0]) : null;
@@ -251,7 +251,7 @@ function _resolveGlob(pattern) {
     }
 }
 
-function providerLabel() {
+function providerLabel(): string {
     return currentProvider === 'github' ? 'GitHub' : 'GitLab';
 }
 
@@ -287,14 +287,13 @@ function displayActions() {
     divider();
 }
 
-function buildContextLine() {
+function buildContextLine(): string {
     return providerLabel().toUpperCase() + ' TOOLS' + sessionContext.buildContextLine();
 }
 
-/** @returns {Array<any>} */
-function buildActionChoices() {
+function buildActionChoices(): Array<any> {
     const prLabel = currentProvider === 'github' ? 'PR' : 'MR';
-    const choices = [
+    const choices: Array<any> = [
         { type: 'separator', line: ' PIPELINES' },
         { name: '1  Disparar pipeline', value: '1' },
     ];
@@ -322,12 +321,12 @@ function buildActionChoices() {
     return choices;
 }
 
-async function displayRecentPipelines(m) {
+async function displayRecentPipelines(m: GitProvider) {
     try {
         const pipelines = await m.getRecentPipelines(5);
         if (pipelines && pipelines.length > 0) {
             print('  Últimas pipelines:');
-            pipelines.slice(0, 3).forEach(p => {
+            pipelines.slice(0, 3).forEach((p: any) => {
                 const id = p.id || p.run_number || '?';
                 const ref = p.ref || (p.head_branch || '');
                 const s = p.status || p.conclusion || '?';
@@ -352,7 +351,7 @@ async function main() {
     const state = loadState();
     displayProjects();
     const names = Object.keys(projects);
-    const firstDefault = state.lastProject || '';
+    const firstDefault = (state.lastProject as string) || '';
     const firstChoice = prompt('Escolha um projeto', {
         hint: '1-' + names.length,
         default: firstDefault
@@ -371,30 +370,30 @@ async function main() {
     success('Projeto selecionado: ' + projectName + ' (' + getProviderForProject(projectName) + ')');
 
     manager = createManagerForProject(projectName, projectId);
-    const m = /** @type {import('../shared/types').GitProvider} */ (manager);
+    const m = manager as GitProvider;
     let currentBranch = '';
 
     await displayRecentPipelines(m);
 
-    const stateHint = loadState().lastChoice && loadState().lastChoice !== '0'
-        ? 'Enter = ' + loadState().lastChoice : '0-9';
+    const stateHint = (loadState().lastChoice && (loadState().lastChoice as string) !== '0')
+        ? 'Enter = ' + (loadState().lastChoice as string) : '0-9';
 
     while (true) {
-        let finalChoice;
+        let finalChoice: string;
         if (process.stdout.isTTY && process.env.QUIET !== 'true') {
             const ctx = buildContextLine();
             print('== ' + ctx + ' ==');
             divider();
-            const stateHint2 = loadState().lastChoice && loadState().lastChoice !== '0'
-                ? loadState().lastChoice : undefined;
+            const stateHint2 = (loadState().lastChoice && (loadState().lastChoice as string) !== '0')
+                ? (loadState().lastChoice as string) : undefined;
             finalChoice = await showSelect('Escolha uma opção', buildActionChoices(), {
                 default: stateHint2,
             });
         } else {
             displayActions();
             const choice = prompt('Escolha uma opção', { hint: stateHint });
-            const resolved = !choice.trim() && loadState().lastChoice && loadState().lastChoice !== '0'
-                ? loadState().lastChoice : choice;
+            const resolved = !choice.trim() && (loadState().lastChoice as string) && (loadState().lastChoice as string) !== '0'
+                ? (loadState().lastChoice as string) : choice;
             if (resolved !== choice) info('Repetindo última opção: ' + resolved);
             finalChoice = resolved;
         }
@@ -410,7 +409,7 @@ async function main() {
             continue;
         }
         if (cmd === '/history') {
-            const history = loadState().history || [];
+            const history = (loadState().history as Array<any>) || [];
             title('Historico de operacoes');
             const last10 = history.slice(-10);
             if (last10.length === 0) {
@@ -425,8 +424,7 @@ async function main() {
         switch (finalChoice) {
             case '1': {
                 currentBranch = prompt('Branch para disparar pipeline');
-                /** @type {{ ref: string, variables: {key:string, value:string}[], workflow_id?: string }} */
-                const payload = { ref: currentBranch, variables: [] };
+                const payload: { ref: string; variables: Array<{key: string; value: string}>; workflow_id?: string } = { ref: currentBranch, variables: [] };
 
                 if (currentProvider === 'github') {
                     const wfId = prompt('Workflow ID (deixe vazio para auto-detectar)');
@@ -451,8 +449,7 @@ async function main() {
                     continue;
                 }
 
-                /** @type {any} */
-                let pipelineResult = null;
+                let pipelineResult: any = null;
                 try {
                     pipelineResult = await withSpinner('Disparando pipeline em ' + currentBranch + '...', () => m.triggerPipeline(payload));
                     if (pipelineResult) { success('Pipeline disparado: ' + pipelineResult.web_url); pushHistory('pipeline', currentBranch, 'ok'); }
@@ -483,19 +480,19 @@ async function main() {
                             try {
                                 const mr = await withSpinner('Criando ' + prLabel + ' ' + currentBranch + ' -> ' + target + '...', () => m.createMergeRequest(currentBranch, target, mrTitle, ''));
                                 if (mr) {
-                                    success(prLabel + ' criado: ' + mr.web_url);
+                                    success(prLabel + ' criado: ' + (mr as any).web_url);
                                     pushHistory('quick-mr', currentBranch + '->' + target, 'ok');
 
                                     if (confirm('Fazer merge de ' + currentBranch + ' em ' + target + ' agora?', false)) {
                                         try {
-                                            const mergeResult = await withSpinner('Fazendo merge de ' + prLabel + ' #' + mr.iid + '...', () => m.acceptMergeRequest(mr.iid));
+                                            const mergeResult = await withSpinner('Fazendo merge de ' + prLabel + ' #' + (mr as any).iid + '...', () => m.acceptMergeRequest((mr as any).iid));
                                             if (mergeResult) {
-                                                success('Merge realizado: ' + mergeResult.web_url);
-                                                pushHistory('quick-merge', mr.iid, 'ok');
+                                                success('Merge realizado: ' + (mergeResult as any).web_url);
+                                                pushHistory('quick-merge', (mr as any).iid, 'ok');
                                             }
                                         } catch (err) {
                                             printError('Falha ao fazer merge', err);
-                                            pushHistory('quick-merge', mr.iid, 'error');
+                                            pushHistory('quick-merge', (mr as any).iid, 'error');
                                         }
                                     }
                                 }
@@ -520,7 +517,7 @@ async function main() {
                     const schedules = await withSpinner('Buscando schedules...', () => m.getSchedules());
                     if (schedules && schedules.length > 0) {
                         info('Schedules encontrados:');
-                        schedules.forEach(s => {
+                        schedules.forEach((s: any) => {
                             print('  ID: ' + s.id + '  ' + (s.description || 'sem descrição') + '  (proxima execução: ' + (s.next_run_at || 'N/A') + ')');
                         });
                         pushHistory('list-schedules', schedules.length + ' schedules', 'ok');
@@ -558,7 +555,7 @@ async function main() {
                 try {
                     const result = await withSpinner('Criando ' + prLabel + ' ' + sourceBranch + ' -> ' + targetBranch + '...', () => m.createMergeRequest(sourceBranch, targetBranch, mrTitle, description));
                     if (result) {
-                        success(prLabel + ' criado: ' + result.web_url); pushHistory('pr-create', sourceBranch + '->' + targetBranch, 'ok');
+                        success(prLabel + ' criado: ' + (result as any).web_url); pushHistory('pr-create', sourceBranch + '->' + targetBranch, 'ok');
                     }
                 } catch (err) {
                     printError('Falha ao criar ' + prLabel, err); pushHistory('pr-create', sourceBranch + '->' + targetBranch, 'error');
@@ -571,15 +568,15 @@ async function main() {
                 const prLabel = currentProvider === 'github' ? 'PR' : 'MR';
                 try {
                     const results = await m.searchMergeRequests('', '', status);
-                    const approved = [];
+                    const approved: Array<any> = [];
                     for (const r of results) {
-                        if (typeof m.isApproved === 'function' && await m.isApproved(r.iid || r.number)) {
+                        if (typeof m.isApproved === 'function' && await m.isApproved((r as any).iid || (r as any).number)) {
                             approved.push(r);
                         }
                     }
                     if (approved.length > 0) {
                         info(prLabel + 's aprovados:');
-                        approved.forEach(r => print('  ' + prLabel + ' #' + (r.iid || r.number) + ': ' + r.title));
+                        approved.forEach(r => print('  ' + prLabel + ' #' + ((r as any).iid || (r as any).number) + ': ' + (r as any).title));
                         pushHistory('prs-approved', approved.length + ' ' + prLabel + 's', 'ok');
                     } else {
                         warn('Nenhum ' + prLabel + ' aprovado encontrado.');
@@ -596,7 +593,7 @@ async function main() {
                 const prLabel = currentProvider === 'github' ? 'PR' : 'MR';
                 try {
                     const result = await withSpinner('Fazendo merge de ' + prLabel + ' #' + iid + '...', () => m.acceptMergeRequest(iid));
-                    if (result) { success('Merge realizado: ' + result.web_url); pushHistory('pr-merge', iid, 'ok'); }
+                    if (result) { success('Merge realizado: ' + (result as any).web_url); pushHistory('pr-merge', iid, 'ok'); }
                 } catch (err) {
                     printError('Falha ao fazer merge', err); pushHistory('pr-merge', iid, 'error');
                 }
@@ -615,7 +612,7 @@ async function main() {
                 try {
                     const variables = await withSpinner('Buscando variaveis CI/CD...', () => m.getCICDVariables());
                     if (variables) {
-                        const envContent = variables.map(v => {
+                        const envContent = variables.map((v: any) => {
                             const safeValue = (v.value || '').replace(/\n/g, '\\n');
                             if (safeValue.includes('=')) {
                                 return v.key + '="' + safeValue.replace(/"/g, '\\"') + '"';
@@ -651,7 +648,7 @@ async function main() {
                     manager = createManagerForProject(newName, projectId);
                     updateState(s => { s.lastProject = newName; });
                     success('Projeto alterado para: ' + newName + ' (' + getProviderForProject(newName) + ')');
-                    const newM = /** @type {import('../shared/types').GitProvider} */ (manager);
+                    const newM = manager as GitProvider;
                     await displayRecentPipelines(newM);
                     pushHistory('trocar-projeto', newName, 'ok');
                 } else {
@@ -672,7 +669,7 @@ async function main() {
     }
 }
 
-process.on('unhandledRejection', reason => {
+process.on('unhandledRejection', (reason: any) => {
     rootLogger.error('Unhandled Rejection', { reason: String(reason) });
     process.exitCode = 1;
 });
@@ -683,4 +680,4 @@ main().catch(err => {
     process.exitCode = 1;
 });
 
-module.exports = { nivelarBranchesWrapper };
+export = { nivelarBranchesWrapper };
