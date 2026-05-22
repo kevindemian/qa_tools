@@ -1,13 +1,12 @@
-// @ts-check
-const { success, error, warn, info, title, divider, prompt, confirm, smartPrompt, printError, printSummary } = require('../../shared/prompt');
-const { load: loadState, update: updateState } = require('../../shared/state');
-const { rootLogger } = require('../../shared/logger');
-const path = require('path');
-const fs = require('fs');
+import { success, error, warn, info, title, divider, prompt, confirm, smartPrompt, printError, printSummary } from '../../shared/prompt';
+import { load as loadState, update as updateState } from '../../shared/state';
+import { rootLogger } from '../../shared/logger';
+import path from 'path';
+import fs from 'fs';
+import type { CommandContext } from './context';
 
-/** @param {import('./context').CommandContext} c */
-async function handler(c) {
-    const state = loadState();
+async function handler(c: CommandContext): Promise<void> {
+    const state = loadState() as Record<string, string | undefined>;
     const jsonPathInput = process.env.JSON_PATH || smartPrompt(
         'Caminho do arquivo JSON ou TXT (formato JSON)',
         { default: state.lastJsonPath || '' }
@@ -31,14 +30,14 @@ async function handler(c) {
         linkManager: c.linkManager, linkManagerXray: c.linkManagerXray,
         project_name: c.ctx.project_name, base_url: c.base_url,
         sessionLog: c.sessionLog,
-        onBusy: (val) => { c.ctx.isBusy = val; }
+        onBusy: (val: boolean) => { c.ctx.isBusy = val; }
     });
     if (result) {
         c.ctx.inMemoryTasksId = result.inMemoryTasksId;
         c.ctx.inMemoryTasksText = result.inMemoryTasksText;
         const okCount = result.inMemoryTasksId.length;
         success('Importacao JSON concluída: ' + okCount + ' testes');
-        c.ctx.results = result.inMemoryTasksId.map(key => ({ status: 'ok', label: key, message: '' }));
+        c.ctx.results = result.inMemoryTasksId.map((key: string) => ({ status: 'ok' as const, label: key, message: '' }));
         c.pushHistory('importar-json', okCount + ' testes', 'ok');
 
         if (confirm('Criar Test Execution para estes testes?', true)) {
@@ -63,4 +62,5 @@ async function handler(c) {
     }
 }
 
+export { handler };
 module.exports = { handler };

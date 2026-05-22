@@ -1,9 +1,8 @@
-// @ts-check
-const { success, error, warn, info, prompt, smartPrompt, printError } = require('../../shared/prompt');
-const { rootLogger } = require('../../shared/logger');
+import { success, error, warn, info, prompt, smartPrompt, printError } from '../../shared/prompt';
+import { rootLogger } from '../../shared/logger';
+import type { CommandContext } from './context';
 
-/** @param {import('./context').CommandContext} c */
-async function handler(c) {
+async function handler(c: CommandContext): Promise<void> {
     const name = prompt('Nome da nova versão');
     if (!name.trim()) {
         warn('Nome da versão não pode ser vazio.');
@@ -16,9 +15,10 @@ async function handler(c) {
     } catch (err) {
         const msg = 'Erro ao criar versão "' + name + '" no projeto "' + c.ctx.project_name + '"';
         printError(msg, err);
-        rootLogger.error(msg, { version: name, project: c.ctx.project_name, status: err.response?.status });
+        rootLogger.error(msg, { version: name, project: c.ctx.project_name, status: (err as any).response?.status });
         c.pushHistory('criar-versão', name, 'error');
     }
 }
 
+export { handler };
 module.exports = { handler };

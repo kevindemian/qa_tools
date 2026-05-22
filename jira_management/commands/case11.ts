@@ -1,10 +1,9 @@
-// @ts-check
-const { success, error, prompt } = require('../../shared/prompt');
-const fs = require('fs');
-const path = require('path');
+import { success, error, prompt } from '../../shared/prompt';
+import fs from 'fs';
+import path from 'path';
+import type { CommandContext } from './context';
 
-/** @param {import('./context').CommandContext} c */
-function handler(c) {
+function handler(c: CommandContext): void {
     const tmplPath = prompt('Caminho para salvar o template', {
         default: path.join(__dirname, '../test_steps_template.csv')
     });
@@ -14,8 +13,9 @@ function handler(c) {
         success('Template CSV gerado em: ' + tmplPath);
         c.pushHistory('gerar-template', tmplPath, 'ok');
     } catch (err) {
-        error('Nao foi possivel copiar template de "' + src + '": ' + err.message);
+        error('Nao foi possivel copiar template de "' + src + '": ' + (err as Error).message);
     }
 }
 
+export { handler };
 module.exports = { handler };

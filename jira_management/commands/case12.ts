@@ -1,11 +1,10 @@
-// @ts-check
-const { success, error, warn, info, title, printSummary } = require('../../shared/prompt');
-const { sanitizeUrl } = require('../../shared/cli_base');
+import { success, error, warn, info, title, printSummary } from '../../shared/prompt';
+import { sanitizeUrl } from '../../shared/cli_base';
+import type { CommandContext } from './context';
 
-/** @param {import('./context').CommandContext} c */
-async function handler(c) {
+async function handler(c: CommandContext): Promise<void> {
     title('Diagnostico de Conexao');
-    const diagResults = [];
+    const diagResults: Array<{ status: string; label: string; message: string }> = [];
     const endpoints = [
         { url: sanitizeUrl(c.base_url + '/rest/api/2/myself'), label: 'Jira API' },
         { url: sanitizeUrl(c.base_url), label: 'Xray API' },
@@ -20,7 +19,7 @@ async function handler(c) {
             diagResults.push({ status: 'ok', label: ep.label, message: ms + 'ms' });
         } catch (err) {
             const ms = Date.now() - start;
-            const st = err.response?.status || 'ERR';
+            const st = (err as any).response?.status || 'ERR';
             if (st === 401 || st === 403) {
                 warn(ep.label + ': ' + st + ' (token pode estar inválido)');
             } else {
@@ -29,11 +28,11 @@ async function handler(c) {
             diagResults.push({ status: 'error', label: ep.label, message: st + ' ' + ms + 'ms' });
         }
     }
-    printSummary(
-        /** @type {import('../../shared/types').TestResult[]} */ (diagResults));
+    printSummary(diagResults as import('../../shared/prompt').TestResult[]);
     c.pushHistory('diagnostico',
         diagResults.filter(r => r.status === 'ok').length + '/' + diagResults.length + ' ok',
         diagResults.some(r => r.status === 'error') ? 'error' : 'ok');
 }
 
+export { handler };
 module.exports = { handler };
