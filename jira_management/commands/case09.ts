@@ -1,9 +1,8 @@
-// @ts-check
-const { success, error, warn, info, prompt } = require('../../shared/prompt');
-const { update: updateState } = require('../../shared/state');
+import { success, error, warn, info, prompt } from '../../shared/prompt';
+import { update as updateState } from '../../shared/state';
+import type { CommandContext } from './context';
 
-/** @param {import('./context').CommandContext} c */
-function handler(c) {
+function handler(c: CommandContext): void {
     const newName = prompt('Novo nome do projeto Jira').toUpperCase().trim();
     if (!newName) {
         warn('Nome do projeto nao pode ser vazio.');
@@ -16,4 +15,5 @@ function handler(c) {
     success('Projeto alterado para: ' + c.ctx.project_name);
 }
 
+export { handler };
 module.exports = { handler };

@@ -1,11 +1,10 @@
-// @ts-check
-const { print, success, error, warn, info, title, divider, prompt, confirm, smartPrompt, printError, printSummary } = require('../../shared/prompt');
-const { rootLogger } = require('../../shared/logger');
+import { print, success, error, warn, info, title, divider, prompt, confirm, smartPrompt, printError, printSummary } from '../../shared/prompt';
+import { rootLogger } from '../../shared/logger';
+import type { CommandContext } from './context';
 
-/** @param {import('./context').CommandContext} c */
-async function handler(c) {
+async function handler(c: CommandContext): Promise<boolean | void> {
     const useInMemory = confirm('Usar tarefas criadas anteriormente?', true);
-    let taskIds = [];
+    let taskIds: string[] = [];
 
     if (useInMemory) {
         if (c.ctx.inMemoryTasksId.length === 0) {
@@ -45,8 +44,7 @@ async function handler(c) {
             }
         }
     }, "Atribuindo fixVersion...");
-    printSummary(
-        /** @type {import('../../shared/types').TestResult[]} */ (c.ctx.results));
+    printSummary(c.ctx.results);
     c.ctx.lastOperation = c.ctx.results.filter(r => r.status === 'ok').length + '/' + taskIds.length + ' tarefas atualizadas';
     c.pushHistory('atribuir-fixversion', c.ctx.lastOperation,
         c.ctx.results.some(r => r.status === 'error') ? 'error' : 'ok');
@@ -54,7 +52,7 @@ async function handler(c) {
     if (confirm('Adicionar tarefas a uma sprint?')) {
         const sprintId = prompt('ID da sprint', { hint: 'ex: 6991 (encontrado na URL do board)' });
         try {
-            const moveResult = await c.jiraResource.axiosInstance.post(
+            await c.jiraResource.axiosInstance.post(
                 '/rest/api/2/sprint/' + sprintId + '/issue',
                 { issues: taskIds }
             );
@@ -66,4 +64,5 @@ async function handler(c) {
     return false;
 }
 
+export { handler };
 module.exports = { handler };

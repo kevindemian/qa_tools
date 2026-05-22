@@ -1,10 +1,9 @@
-// @ts-check
-const { success, warn, prompt } = require('../../shared/prompt');
-const { update: updateState } = require('../../shared/state');
-const path = require('path');
+import { success, warn, prompt } from '../../shared/prompt';
+import { update as updateState } from '../../shared/state';
+import path from 'path';
+import type { CommandContext } from './context';
 
-/** @param {import('./context').CommandContext} c */
-function handler(c) {
+function handler(c: CommandContext): void {
     const dir = prompt('Caminho do diretório padrão de JSON');
     if (!dir.trim()) {
         warn('Caminho vazio, ignorando.');
@@ -16,4 +15,5 @@ function handler(c) {
     c.pushHistory('config-json-dir', resolved, 'ok');
 }
 
+export { handler };
 module.exports = { handler };

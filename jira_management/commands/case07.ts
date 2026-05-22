@@ -1,9 +1,8 @@
-// @ts-check
-const { success, error, warn, info, title, divider, prompt, confirm, smartPrompt, printError, printSummary } = require('../../shared/prompt');
-const { rootLogger } = require('../../shared/logger');
+import { success, error, warn, info, title, divider, prompt, confirm, smartPrompt, printError, printSummary } from '../../shared/prompt';
+import { rootLogger } from '../../shared/logger';
+import type { CommandContext } from './context';
 
-/** @param {import('./context').CommandContext} c */
-async function handler(c) {
+async function handler(c: CommandContext): Promise<boolean | void> {
     const version = smartPrompt('Versão a fechar', {}, () => {});
     if (!confirm('Fechar todas as tarefas da versão ' + version + '? Esta operação nao pode ser desfeita.')) {
         warn('Operação cancelada.');
@@ -14,9 +13,9 @@ async function handler(c) {
         warn('Nenhuma tarefa encontrada para esta versão.');
         return true;
     }
-    const taskIds = tasks
-        .map(task => task.match(/\[([A-Z][A-Z0-9]+-\d+)\]/)?.[1])
-        .filter(id => id !== undefined);
+    const taskIds: string[] = tasks
+        .map((task: string) => task.match(/\[([A-Z][A-Z0-9]+-\d+)\]/)?.[1])
+        .filter((id: string | undefined): id is string => id !== undefined);
     if (taskIds.length === 0) {
         warn('Nenhuma tarefa encontrada.');
         return true;
@@ -24,14 +23,12 @@ async function handler(c) {
     await c.ctx.withBusy(async () => {
         try {
             await c.jiraResource.moveCardsToDone(taskIds);
-            const summary = taskIds.map(id => ({ status: 'ok', label: id, message: '' }));
-            printSummary(
-                /** @type {import('../../shared/types').TestResult[]} */ (summary));
+            const summary = taskIds.map(id => ({ status: 'ok' as const, label: id, message: '' }));
+            printSummary(summary);
             c.pushHistory('fechar-tarefas', taskIds.length + ' tarefa(s)', 'ok');
         } catch (err) {
-            const summary = taskIds.map(id => ({ status: 'error', label: id, message: 'Falha ao fechar tarefa' }));
-            printSummary(
-                /** @type {import('../../shared/types').TestResult[]} */ (summary));
+            const summary = taskIds.map(id => ({ status: 'error' as const, label: id, message: 'Falha ao fechar tarefa' }));
+            printSummary(summary);
             c.pushHistory('fechar-tarefas', 'erro', 'error');
         }
         c.ctx.lastOperation = taskIds.length + ' tarefa(s) fechadas';
@@ -39,4 +36,5 @@ async function handler(c) {
     return false;
 }
 
+export { handler };
 module.exports = { handler };

@@ -1,9 +1,8 @@
-// @ts-check
-const { success, error, warn, info, prompt, confirm, printError } = require('../../shared/prompt');
+import { success, error, warn, info, prompt, confirm, printError } from '../../shared/prompt';
+import type { CommandContext } from './context';
 
-/** @param {import('./context').CommandContext} c */
-async function handler(c) {
-    let keys = [];
+async function handler(c: CommandContext): Promise<void> {
+    let keys: string[] = [];
     if (c.ctx.inMemoryTasksId.length > 0) {
         info('Testes da sessão atual: ' + c.ctx.inMemoryTasksId.join(', '));
         if (confirm('Usar estes ' + c.ctx.inMemoryTasksId.length + ' testes?', true)) {
@@ -35,4 +34,5 @@ async function handler(c) {
     }
 }
 
+export { handler };
 module.exports = { handler };

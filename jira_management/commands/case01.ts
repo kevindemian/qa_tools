@@ -1,12 +1,11 @@
-// @ts-check
-const { success, error, warn, info, title, divider, prompt, confirm, smartPrompt, printError, printSummary, isQuiet } = require('../../shared/prompt');
-const { load: loadState, update: updateState } = require('../../shared/state');
-const { rootLogger } = require('../../shared/logger');
-const path = require('path');
+import { success, error, warn, info, title, divider, prompt, confirm, smartPrompt, printError, printSummary, isQuiet } from '../../shared/prompt';
+import { load as loadState, update as updateState } from '../../shared/state';
+import { rootLogger } from '../../shared/logger';
+import path from 'path';
+import type { CommandContext } from './context';
 
-/** @param {import('./context').CommandContext} c */
-async function handler(c) {
-    const state = loadState();
+async function handler(c: CommandContext): Promise<void> {
+    const state = loadState() as Record<string, string | undefined>;
     const csvDefaultPath = process.env.CSV_DEFAULT_PATH || path.join(__dirname, '../test_steps.csv');
     const csvPath = process.env.CSV_PATH || smartPrompt(
         'Caminho do arquivo CSV',
@@ -30,7 +29,7 @@ async function handler(c) {
         csvResource: c.csvResource,
         project_name: c.ctx.project_name, base_url: c.base_url,
         sessionLog: c.sessionLog,
-        onBusy: (val) => { c.ctx.isBusy = val; }
+        onBusy: (val: boolean) => { c.ctx.isBusy = val; }
     });
     if (result) {
         c.ctx.inMemoryTasksId = result.inMemoryTasksId;
@@ -39,7 +38,7 @@ async function handler(c) {
         c.ctx.lastOperation = result.summary;
     }
     if (result && c.ctx.inMemoryTasksId.length > 0) {
-        const execState = loadState();
+        const execState = loadState() as Record<string, string | undefined>;
         const csvPathHint = execState.lastCsvPath || '';
         const csvName = csvPathHint ? path.basename(csvPathHint, '.csv') : '';
         if (confirm('Criar Test Execution para ' + c.ctx.inMemoryTasksId.length + ' testes criados?', true)) {
@@ -60,4 +59,5 @@ async function handler(c) {
     }
 }
 
+export { handler };
 module.exports = { handler };

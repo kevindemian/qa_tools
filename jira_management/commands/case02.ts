@@ -1,9 +1,8 @@
-// @ts-check
-const { info, error, divider, printError } = require('../../shared/prompt');
-const { rootLogger } = require('../../shared/logger');
+import { info, error, divider, printError } from '../../shared/prompt';
+import { rootLogger } from '../../shared/logger';
+import type { CommandContext } from './context';
 
-/** @param {import('./context').CommandContext} c */
-async function handler(c) {
+async function handler(c: CommandContext): Promise<void> {
     try {
         const projectId = await c.jiraResource.getProjectId(c.ctx.project_name);
         if (!projectId) {
@@ -25,9 +24,10 @@ async function handler(c) {
         }
     } catch (err) {
         printError('Erro ao listar versões', err);
-        rootLogger.error('Erro ao listar versões', { project: c.ctx.project_name, status: err.response?.status });
+        rootLogger.error('Erro ao listar versões', { project: c.ctx.project_name, status: (err as any).response?.status });
         c.pushHistory('listar-versoes', 'erro', 'error');
     }
 }
 
+export { handler };
 module.exports = { handler };

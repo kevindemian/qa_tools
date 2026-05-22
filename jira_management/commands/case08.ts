@@ -1,9 +1,8 @@
-// @ts-check
-const { success, error, warn, info, prompt, confirm, smartPrompt, printError, printSummary } = require('../../shared/prompt');
-const { rootLogger } = require('../../shared/logger');
+import { success, error, warn, info, prompt, confirm, smartPrompt, printError, printSummary } from '../../shared/prompt';
+import { rootLogger } from '../../shared/logger';
+import type { CommandContext } from './context';
 
-/** @param {import('./context').CommandContext} c */
-async function handler(c) {
+async function handler(c: CommandContext): Promise<boolean | void> {
     const version = smartPrompt('Versão a publicar', {}, () => {});
     if (!confirm('Publicar versão ' + version + '? Isso marcara a versão como released.')) {
         warn('Operação cancelada.');
@@ -11,8 +10,7 @@ async function handler(c) {
     }
     try {
         await c.jiraResource.releaseVersion(c.ctx.project_name, version);
-        printSummary(
-            /** @type {import('../../shared/types').TestResult[]} */ ([{ status: 'ok', label: 'Versão ' + version, message: 'Publicada com sucesso' }]));
+        printSummary([{ status: 'ok' as const, label: 'Versão ' + version, message: 'Publicada com sucesso' }]);
         c.ctx.lastOperation = 'Versão ' + version + ' publicada';
         c.pushHistory('publicar-versão', version, 'ok');
     } catch (err) {
@@ -22,4 +20,5 @@ async function handler(c) {
     return false;
 }
 
+export { handler };
 module.exports = { handler };
