@@ -1,16 +1,19 @@
+// @ts-nocheck — jest.isolateModules with dynamic require inside callback
 const fs = require('fs');
 const path = require('path');
 const os = require('os');
 
-function normalizePath(p) {
+function normalizePath(p: string): string {
     return p.replace(/\\/g, '/');
 }
 
 describe('Logger', () => {
-    let Logger, rootLogger, maskDeep;
+    let Logger: typeof import('./logger').Logger;
+    let rootLogger: import('./logger').Logger;
+    let maskDeep: typeof import('./logger').maskDeep;
 
     beforeAll(() => {
-        const mod = require('./logger');
+        const mod: typeof import('./logger') = require('./logger');
         Logger = mod.Logger;
         rootLogger = mod.rootLogger;
         maskDeep = mod.maskDeep;
@@ -57,7 +60,11 @@ describe('Logger', () => {
             else delete process.env.LOG_DIR;
         });
 
-        function writeAndCheck(level, msg, data) {
+        function writeAndCheck(
+            level: string,
+            msg: string,
+            data?: unknown,
+        ): { fileFound: boolean; lastLine?: string; filePath?: string; logFile?: string } {
             const testDir = normalizePath(fs.mkdtempSync(path.join(os.tmpdir(), 'qa-tools-logger-')));
             process.env.LOG_FILE = 'true';
             process.env.LOG_DIR = testDir;

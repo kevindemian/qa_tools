@@ -1,5 +1,4 @@
-import { success, error, warn, info, title, divider, prompt, confirm, smartPrompt, printError, printSummary } from '../../shared/prompt';
-import { rootLogger } from '../../shared/logger';
+import { warn, confirm, smartPrompt, printSummary } from '../../shared/prompt';
 import type { CommandContext } from './context';
 
 async function handler(c: CommandContext): Promise<boolean | void> {
@@ -20,19 +19,26 @@ async function handler(c: CommandContext): Promise<boolean | void> {
         warn('Nenhuma tarefa encontrada.');
         return true;
     }
-    await c.ctx.withBusy(async () => {
-        try {
-            await c.jiraResource.moveCardsToDone(taskIds);
-            const summary = taskIds.map(id => ({ status: 'ok' as const, label: id, message: '' }));
-            printSummary(summary);
-            c.pushHistory('fechar-tarefas', taskIds.length + ' tarefa(s)', 'ok');
-        } catch (err) {
-            const summary = taskIds.map(id => ({ status: 'error' as const, label: id, message: 'Falha ao fechar tarefa' }));
-            printSummary(summary);
-            c.pushHistory('fechar-tarefas', 'erro', 'error');
-        }
-        c.ctx.lastOperation = taskIds.length + ' tarefa(s) fechadas';
-    }, "Fechando " + taskIds.length + " tarefa(s)...");
+    await c.ctx.withBusy(
+        async () => {
+            try {
+                await c.jiraResource.moveCardsToDone(taskIds);
+                const summary = taskIds.map((id) => ({ status: 'ok' as const, label: id, message: '' }));
+                printSummary(summary);
+                c.pushHistory('fechar-tarefas', taskIds.length + ' tarefa(s)', 'ok');
+            } catch {
+                const summary = taskIds.map((id) => ({
+                    status: 'error' as const,
+                    label: id,
+                    message: 'Falha ao fechar tarefa',
+                }));
+                printSummary(summary);
+                c.pushHistory('fechar-tarefas', 'erro', 'error');
+            }
+            c.ctx.lastOperation = taskIds.length + ' tarefa(s) fechadas';
+        },
+        'Fechando ' + taskIds.length + ' tarefa(s)...',
+    );
     return false;
 }
 

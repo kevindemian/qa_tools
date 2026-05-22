@@ -1,32 +1,30 @@
-import path from 'path';
-import fs from 'fs';
 import Config from '../shared/config';
 import JiraResource from './jira_resource';
 import JiraLinkManager from './jira_link_manager';
 import CsvResource from './csv_resource';
-import PackageVersionManager from './package_version_manager';
+import { print, warn, info, title, divider, prompt, printError, showSelect, tableView } from '../shared/prompt';
 import {
-    print, success, error, warn, info, title, divider, prompt,
-    confirm, printError, printSummary, smartPrompt, showSelect, tableView,
-} from '../shared/prompt';
-import { mask, createValidateEnv, setupSigint, sanitizeUrl, printSessionSummary as sharedPrintSessionSummary } from '../shared/cli_base';
+    mask,
+    createValidateEnv,
+    setupSigint,
+    printSessionSummary as sharedPrintSessionSummary,
+} from '../shared/cli_base';
 import { rootLogger } from '../shared/logger';
 import { load as loadState, update as updateState, STATE_PATH } from '../shared/state';
 import { SessionContext } from '../shared/session-context';
-import createTestsModule = require('./create_tests');
-const { createTestsFromCsv, createTestsFromJson, createTestExecution, createTestExecutionWithLinks } = createTestsModule;
 import type { Logger } from '../shared/logger';
 import type { StateSchema } from '../shared/types';
 import type { CommandContext } from './commands/context';
 
+// eslint-disable-next-line @typescript-eslint/no-require-imports
 const { getHandler } = require('./commands') as {
     getHandler: (caseNumber: string) => ((ctx: CommandContext) => Promise<boolean | void> | boolean | void) | null;
 };
 
-let base_url: string = Config.jiraBaseUrl as string;
-let personal_token: string = Config.jiraPersonalToken as string;
-let xray_url: string = Config.xrayBaseUrl as string;
-let default_project = 'ECSPOL';
+const base_url: string = Config.jiraBaseUrl;
+const personal_token: string = Config.jiraPersonalToken;
+const xray_url: string = Config.xrayBaseUrl;
+const default_project = 'ECSPOL';
 
 const sessionLog: Logger = rootLogger.child({ session: 'jira' });
 
@@ -37,20 +35,32 @@ if (Config.debug) {
 
 const validateEnv: () => void = createValidateEnv([
     { key: 'JIRA_BASE_URL', label: 'JIRA_BASE_URL', example: 'JIRA_BASE_URL=https://seu-jira-server' },
-    { key: 'JIRA_PERSONAL_TOKEN', label: 'JIRA_PERSONAL_TOKEN (token de autenticacao)', example: 'JIRA_PERSONAL_TOKEN=seu-token-aqui' },
-    { key: 'XRAY_BASE_URL', label: 'XRAY_BASE_URL (obrigatorio para criar testes)', example: 'XRAY_BASE_URL=https://seu-xray-server' },
+    {
+        key: 'JIRA_PERSONAL_TOKEN',
+        label: 'JIRA_PERSONAL_TOKEN (token de autenticacao)',
+        example: 'JIRA_PERSONAL_TOKEN=seu-token-aqui',
+    },
+    {
+        key: 'XRAY_BASE_URL',
+        label: 'XRAY_BASE_URL (obrigatorio para criar testes)',
+        example: 'XRAY_BASE_URL=https://seu-xray-server',
+    },
 ]);
 
 const HELP_TOPICS: Record<string, string> = {
     csv: 'Formato CSV:\n  Cada teste e um bloco separado por "---"\n  Campos obrigatorios: Title, Action/Data/Expected Result\n  Opcionais: Description, Pre-condition, Linked Issues, Group\n  Exemplo em test_steps.csv',
     labels: 'Labels Jira:\n  Separadas por virgula. Sem acentos, sem espacos.\n  Ex: qa,regression,smoke,sprint-30',
     group: 'Group: agrupa testes para cross-reference.\n  Testes com mesmo Group: tem descricoes atualizadas automaticamente\n  apos criação com referencia mutua.',
-    precondition: 'Pre-condition:\n  Referencia: "KEY-123" (issue Jira)\n  Inline: texto descritivo (aparece na descrição do teste)',
-    project: 'Projeto Jira:\n  Chave do projeto (ex: ECSPOL, PROJ).\n  Deve estar definido no Jira com permissao de criação de issues.',
+    precondition:
+        'Pre-condition:\n  Referencia: "KEY-123" (issue Jira)\n  Inline: texto descritivo (aparece na descrição do teste)',
+    project:
+        'Projeto Jira:\n  Chave do projeto (ex: ECSPOL, PROJ).\n  Deve estar definido no Jira com permissao de criação de issues.',
     version: 'Versão:\n  Nome da versão (ex: v2.7.0).\n  Criada no projeto Jira para organizar releases.',
-    transitions: 'Transicoes:\n  Fluxo: New -> Approve -> Coding In Progress -> Coding Done -> Done\n  Use a opção 7 para fechamento automatico.',
+    transitions:
+        'Transicoes:\n  Fluxo: New -> Approve -> Coding In Progress -> Coding Done -> Done\n  Use a opção 7 para fechamento automatico.',
     template: 'Template CSV:\n  Use a opção 11 para gerar um arquivo CSV de exemplo.',
-    diagnostics: 'Diagnostico de conexão:\n  Opção 12 no menu. Testa conectividade com Jira API, Xray API,\n  e valida o projeto atual. Mostra tempos de resposta e status HTTP.',
+    diagnostics:
+        'Diagnostico de conexão:\n  Opção 12 no menu. Testa conectividade com Jira API, Xray API,\n  e valida o projeto atual. Mostra tempos de resposta e status HTTP.',
 };
 
 function showHelp(topic?: string): void {
@@ -65,8 +75,7 @@ function showHelp(topic?: string): void {
             const term = lower.slice(7).trim();
             if (term) {
                 title('HELP — busca por "' + term + '"');
-                const found = Object.entries(HELP_TOPICS)
-                    .filter(([_, v]) => v.toLowerCase().includes(term));
+                const found = Object.entries(HELP_TOPICS).filter(([_, v]) => v.toLowerCase().includes(term));
                 if (found.length > 0) {
                     found.forEach(([k, v]) => {
                         info(k + ': ' + v.split('\n')[0]);
@@ -77,7 +86,13 @@ function showHelp(topic?: string): void {
                 return;
             }
         }
-        warn('Topico não encontrado: "' + topic + '". Tente: ' + Object.keys(HELP_TOPICS).join(', ') + ' ou /help search <termo>');
+        warn(
+            'Topico não encontrado: "' +
+                topic +
+                '". Tente: ' +
+                Object.keys(HELP_TOPICS).join(', ') +
+                ' ou /help search <termo>',
+        );
         return;
     }
     title('HELP — Jira Tools');
@@ -96,24 +111,40 @@ function showHelp(topic?: string): void {
 }
 
 const ALIASES: Record<string, string> = {
-    'criar': '1', 'criar-teste': '1', 'criar-testes': '1',
-    'listar-versoes': '2', 'versoes': '2',
+    criar: '1',
+    'criar-teste': '1',
+    'criar-testes': '1',
+    'listar-versoes': '2',
+    versoes: '2',
     'criar-versão': '3',
-    'atribuir-fixversion': '4', 'fixversion': '4',
-    'atualizar-package': '5', 'package': '5',
-    'verificar': '6', 'status': '6',
-    'fechar': '7',
-    'publicar': '8', 'release': '8',
-    'trocar-projeto': '9', 'projeto': '9',
-    'trocar-diretório': '10', 'diretório': '10',
-    'template': '11', 'gerar-template': '11',
-    'testexec': '13', 'criar-testexec': '13', 'execução': '13',
-    'diretório-cypress': '14', 'cypress': '14',
-    'importar-json': '15', 'json': '15',
+    'atribuir-fixversion': '4',
+    fixversion: '4',
+    'atualizar-package': '5',
+    package: '5',
+    verificar: '6',
+    status: '6',
+    fechar: '7',
+    publicar: '8',
+    release: '8',
+    'trocar-projeto': '9',
+    projeto: '9',
+    'trocar-diretório': '10',
+    diretório: '10',
+    template: '11',
+    'gerar-template': '11',
+    testexec: '13',
+    'criar-testexec': '13',
+    execução: '13',
+    'diretório-cypress': '14',
+    cypress: '14',
+    'importar-json': '15',
+    json: '15',
     'diretório-json': '16',
-    'sair': '0', 'exit': '0',
-    'voltar': 'menu',
-    'ajuda': '/help', 'help': '/help',
+    sair: '0',
+    exit: '0',
+    voltar: 'menu',
+    ajuda: '/help',
+    help: '/help',
 };
 
 function resolveAlias(choice: string): string {
@@ -174,9 +205,12 @@ function _configHint(key: string, ctx: { git_directory: string }): string {
     return '';
 }
 
-function displayMenu(proj: string, ctx: { lastOperation: string; sessionCounters: Array<{ status: string }>; git_directory: string }): void {
-    const ok = ctx.sessionCounters.filter(c => c.status === 'ok').length;
-    const er = ctx.sessionCounters.filter(c => c.status === 'error').length;
+function displayMenu(
+    proj: string,
+    ctx: { lastOperation: string; sessionCounters: Array<{ status: string }>; git_directory: string },
+): void {
+    const ok = ctx.sessionCounters.filter((c) => c.status === 'ok').length;
+    const er = ctx.sessionCounters.filter((c) => c.status === 'error').length;
     const counts = ok > 0 || er > 0 ? ' | ' + ok + ' ok' + (er > 0 ? ' · ' + er + ' erro' : '') : '';
     const ctxLine = proj + (ctx.lastOperation ? ' | ' + ctx.lastOperation : '') + counts;
     print('== ' + ctxLine + ' ==');
@@ -212,8 +246,11 @@ function buildMenuChoices(proj: string, ctx: { git_directory: string }): MenuCho
         } else {
             const entry: MenuChoice = { name: item.id + '  ' + item.label, value: item.id };
             if (item.configKey === 'gitDir') entry.description = ctx.git_directory;
-            else if (item.configKey === 'cypressDir') entry.description = Config.cypressProjectPath || (loadState() as StateSchema).lastCypressPath || 'não configurado';
-            else if (item.configKey === 'jsonDir') entry.description = (loadState() as StateSchema).lastJsonDir || 'não configurado';
+            else if (item.configKey === 'cypressDir')
+                entry.description =
+                    Config.cypressProjectPath || (loadState() as StateSchema).lastCypressPath || 'não configurado';
+            else if (item.configKey === 'jsonDir')
+                entry.description = (loadState() as StateSchema).lastJsonDir || 'não configurado';
             else if (item.id === '9') entry.description = proj;
             choices.push(entry);
         }
@@ -221,7 +258,7 @@ function buildMenuChoices(proj: string, ctx: { git_directory: string }): MenuCho
     return choices;
 }
 
-async function handleSpecialInput(input: string): Promise<boolean> {
+function handleSpecialInput(input: string): boolean {
     const cmd = input.trim().toLowerCase();
     if (cmd.startsWith('/help') || cmd.startsWith('/h')) {
         const parts = cmd.split(/\s+/);
@@ -250,17 +287,6 @@ async function handleSpecialInput(input: string): Promise<boolean> {
     return false;
 }
 
-function generateCsvTemplate(filePath: string): boolean {
-    const src = path.join(__dirname, 'test_steps_template.csv');
-    try {
-        fs.copyFileSync(src, filePath);
-        return true;
-    } catch (err) {
-        error('Não foi possivel copiar template de "' + src + '": ' + (err as Error).message);
-        return false;
-    }
-}
-
 function initializeSession() {
     const jiraResource = new JiraResource(personal_token, base_url + '/rest/api/2');
     const jiraResourceXray = new JiraResource(personal_token, xray_url);
@@ -271,8 +297,7 @@ function initializeSession() {
 
     const state = loadState() as StateSchema;
     ctx.project_name = (
-        Config.jiraProject ||
-        prompt('Nome do projeto Jira', { default: state.lastProject || default_project })
+        Config.jiraProject || prompt('Nome do projeto Jira', { default: state.lastProject || default_project })
     ).toUpperCase();
 
     function printSessionSummary(): void {
@@ -282,7 +307,7 @@ function initializeSession() {
 
     function pushHistory(op: string, detail: string, status: string): void {
         ctx.sessionCounters.push({ op, detail, status });
-        updateState(s => {
+        updateState((s) => {
             const st = s as StateSchema;
             if (!st.history) st.history = [];
             st.history.push({ op, detail, status, ts: new Date().toISOString() });
@@ -290,7 +315,16 @@ function initializeSession() {
         });
     }
 
-    return { jiraResource, jiraResourceXray, linkManager, linkManagerXray, csvResource, ctx, pushHistory, printSessionSummary };
+    return {
+        jiraResource,
+        jiraResourceXray,
+        linkManager,
+        linkManagerXray,
+        csvResource,
+        ctx,
+        pushHistory,
+        printSessionSummary,
+    };
 }
 
 async function getUserChoice(proj: string, ctx: SessionContext): Promise<string> {
@@ -308,15 +342,15 @@ async function getUserChoice(proj: string, ctx: SessionContext): Promise<string>
             { name: '/history  Historico', value: '/history' },
         );
         const menuState = loadState() as StateSchema;
-        return await showSelect('Selecione uma opção', choices, {
+        return showSelect('Selecione uma opção', choices, {
             default: menuState.lastChoice && menuState.lastChoice !== '0' ? menuState.lastChoice : undefined,
         });
     }
     divider();
     displayMenu(proj, ctx);
     const menuState = loadState() as StateSchema;
-    const lastHint = menuState.lastChoice && menuState.lastChoice !== '0'
-        ? 'Enter = ' + menuState.lastChoice : '0-15 ou /help';
+    const lastHint =
+        menuState.lastChoice && menuState.lastChoice !== '0' ? 'Enter = ' + menuState.lastChoice : '0-15 ou /help';
     let choice = prompt('Selecione uma opção', { hint: lastHint });
     if (!choice.trim() && menuState.lastChoice && menuState.lastChoice !== '0') {
         choice = menuState.lastChoice;
@@ -326,32 +360,42 @@ async function getUserChoice(proj: string, ctx: SessionContext): Promise<string>
 }
 
 async function runMainLoop(
-    ctx: SessionContext, jiraResource: JiraResource, jiraResourceXray: JiraResource,
-    linkManager: JiraLinkManager, linkManagerXray: JiraLinkManager, csvResource: CsvResource,
+    ctx: SessionContext,
+    jiraResource: JiraResource,
+    jiraResourceXray: JiraResource,
+    linkManager: JiraLinkManager,
+    linkManagerXray: JiraLinkManager,
+    csvResource: CsvResource,
     pushHistory: (op: string, detail: string, status: string) => void,
     printSessionSummary: () => void,
 ): Promise<void> {
     while (true) {
         let choice = await getUserChoice(ctx.project_name, ctx);
 
-        if (await handleSpecialInput(choice)) continue;
+        if (handleSpecialInput(choice)) continue;
 
         const resolved = resolveAlias(choice);
         if (resolved !== choice && !isNaN(Number(resolved))) {
             choice = resolved;
         }
 
-        updateState(s => { (s as StateSchema).lastChoice = choice; });
-
-        const opLog = sessionLog.child({ menuOption: choice });
+        updateState((s) => {
+            (s as StateSchema).lastChoice = choice;
+        });
 
         const cmdHandler = getHandler(choice);
         if (cmdHandler) {
             const cmdCtx: CommandContext = {
-                jiraResource, jiraResourceXray, linkManager, linkManagerXray, csvResource,
+                jiraResource,
+                jiraResourceXray,
+                linkManager,
+                linkManagerXray,
+                csvResource,
                 ctx,
-                pushHistory, printSessionSummary,
-                base_url, sessionLog,
+                pushHistory,
+                printSessionSummary,
+                base_url,
+                sessionLog,
             };
             const shouldContinue = await cmdHandler(cmdCtx);
             if (shouldContinue) continue;
@@ -362,12 +406,12 @@ async function runMainLoop(
         if (choice === '0') {
             title('Até logo!');
             printSessionSummary();
-            if (ctx.sessionCounters.some(c => c.status === 'error')) process.exitCode = 1;
+            if (ctx.sessionCounters.some((c) => c.status === 'error')) process.exitCode = 1;
             return;
         }
 
         const longOps = ['1', '15', '4', '5', '7', '8'];
-        const hasResults = ctx.results.length > 0 && ctx.results.some(r => r.status === 'error');
+        const hasResults = ctx.results.length > 0 && ctx.results.some((r) => r.status === 'error');
         if (!Config.autoConfirm && choice !== '0' && longOps.includes(choice) && hasResults) {
             prompt('Pressione Enter para continuar');
         }
@@ -384,16 +428,30 @@ async function main(): Promise<void> {
     sessionLog.info('Sessão iniciada');
 
     const {
-        jiraResource, jiraResourceXray, linkManager, linkManagerXray, csvResource,
-        ctx, pushHistory, printSessionSummary,
+        jiraResource,
+        jiraResourceXray,
+        linkManager,
+        linkManagerXray,
+        csvResource,
+        ctx,
+        pushHistory,
+        printSessionSummary,
     } = initializeSession();
 
-    setupSigint(() => ctx.isBusy, () => printSessionSummary());
+    setupSigint(
+        () => ctx.isBusy,
+        () => printSessionSummary(),
+    );
 
     await runMainLoop(
-        ctx, jiraResource, jiraResourceXray,
-        linkManager, linkManagerXray, csvResource,
-        pushHistory, printSessionSummary,
+        ctx,
+        jiraResource,
+        jiraResourceXray,
+        linkManager,
+        linkManagerXray,
+        csvResource,
+        pushHistory,
+        printSessionSummary,
     );
 }
 
