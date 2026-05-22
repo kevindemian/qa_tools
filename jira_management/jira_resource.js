@@ -37,8 +37,6 @@ class JiraResource {
             const url = `search?jql=${encodeURIComponent(jql)}&maxResults=${maxResults}&startAt=${startAt}`;
             const data = await this.getJiraResource(url);
 
-            if (!data) break;
-
             if (total === null) {
                 total = data.total;
                 if (total > 0) this.log.info(`Buscando ${total} issues...`);
@@ -53,7 +51,7 @@ class JiraResource {
 
     async getTransitionsForIssue(issueKey) {
         const data = await this.getJiraResource(`issue/${issueKey}/transitions`);
-        if (!data || !data.transitions) return {};
+        if (!data.transitions) return {};
         const map = {};
         for (const t of data.transitions) {
             if (t.to && t.to.name) {
@@ -65,21 +63,12 @@ class JiraResource {
 
     /**
      * @param {string} resourceUrl
-     * @returns {Promise<Object|null>}
-     * @note Diferente de post/put, retorna null em vez de lançar erro.
-     *       Manter por compatibilidade. Unificar no futuro (#28).
+     * @returns {Promise<Object>}
+     * @throws {Error} em falha de rede ou HTTP 4xx/5xx
      */
     async getJiraResource(resourceUrl) {
-        try {
-            const response = await this.axiosInstance.get(`/${resourceUrl}`);
-            return response.data;
-        } catch (err) {
-            this.log.error(`Erro GET /${resourceUrl}: ${extractErrorMessage(err)}`, {
-                resourceUrl,
-                status: err.response?.status
-            });
-            return null;
-        }
+        const response = await this.axiosInstance.get(`/${resourceUrl}`);
+        return response.data;
     }
 
     /**
@@ -124,7 +113,7 @@ class JiraResource {
 
     async getProjectId(projectName) {
         const projectData = await this.getJiraResource(`project/${projectName}`);
-        return projectData ? projectData.id : null;
+        return projectData.id;
     }
 
     async getProjectVersions(projectId) {
@@ -132,13 +121,21 @@ class JiraResource {
     }
 
     async getVersionId(projectName, versionName) {
-        const projectId = await this.getProjectId(projectName);
-        if (!projectId) {
+        let projectId;
+        try {
+            projectId = await this.getProjectId(projectName);
+        } catch {
             info(`Projeto '${projectName}' nao encontrado.`);
             return null;
         }
-        const versions = await this.getProjectVersions(projectId);
-        if (!versions || !Array.isArray(versions)) {
+        let versions;
+        try {
+            versions = await this.getProjectVersions(projectId);
+        } catch {
+            info(`Nenhuma versão encontrada para o projeto '${projectName}'.`);
+            return null;
+        }
+        if (!Array.isArray(versions)) {
             info(`Nenhuma versão encontrada para o projeto '${projectName}'.`);
             return null;
         }
@@ -213,13 +210,21 @@ class JiraResource {
     }
 
     async getLatestReleases(projectName, numReleases) {
-        const projectId = await this.getProjectId(projectName);
-        if (!projectId) {
+        let projectId;
+        try {
+            projectId = await this.getProjectId(projectName);
+        } catch {
             info(`Projeto '${projectName}' nao encontrado.`);
             return { latestReleasedVersions: [], unreleasedVersions: [] };
         }
-        const allVersions = await this.getProjectVersions(projectId);
-        if (!allVersions || !Array.isArray(allVersions)) {
+        let allVersions;
+        try {
+            allVersions = await this.getProjectVersions(projectId);
+        } catch {
+            info(`Nenhuma versão encontrada para o projeto '${projectName}'.`);
+            return { latestReleasedVersions: [], unreleasedVersions: [] };
+        }
+        if (!Array.isArray(allVersions)) {
             info(`Nenhuma versão encontrada para o projeto '${projectName}'.`);
             return { latestReleasedVersions: [], unreleasedVersions: [] };
         }
@@ -318,9 +323,15 @@ class JiraResource {
         const wf = this.workflowMap;
 
         for (const taskId of taskIds) {
-            const issueData = await this.getJiraResource(`issue/${taskId}`);
-            if (!issueData || !issueData.fields || !issueData.fields.status) {
-                this.log.warn(`Pulando tarefa ${taskId}: nao foi possivel obter o status.`);
+            let issueData;
+            try {
+                issueData = await this.getJiraResource(`issue/${taskId}`);
+            } catch (err) {
+                this.log.warn(`Pulando tarefa ${taskId}: nao foi possivel obter dados.`);
+                continue;
+            }
+            if (!issueData.fields || !issueData.fields.status) {
+                this.log.warn(`Pulando tarefa ${taskId}: dados incompletos.`);
                 continue;
             }
 

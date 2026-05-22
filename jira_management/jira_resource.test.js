@@ -219,8 +219,8 @@ describe('moveCardsToDone', () => {
     expect(jiraResource.transitionIssue).toHaveBeenNthCalledWith(2, 'TASK-1', 41);
   });
 
-  it('skips task when status fetch returns null', async () => {
-    jiraResource.getJiraResource.mockResolvedValue(null);
+  it('skips task when status fetch throws', async () => {
+    jiraResource.getJiraResource.mockRejectedValue(new Error('Not found'));
 
     await jiraResource.moveCardsToDone(['TASK-1']);
 
@@ -229,7 +229,8 @@ describe('moveCardsToDone', () => {
 
   it('skips task when status is not in workflowMap', async () => {
     jiraResource.getJiraResource
-      .mockResolvedValueOnce({ fields: { status: { name: 'Unknown Status' } } });
+      .mockResolvedValueOnce({ fields: { status: { name: 'Unknown Status' } } })
+      .mockResolvedValueOnce({});
 
     await jiraResource.moveCardsToDone(['TASK-1']);
 
