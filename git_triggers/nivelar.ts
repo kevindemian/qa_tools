@@ -17,6 +17,13 @@ export async function nivelarBranches(
         warn('Branches devem ser diferentes entre si.');
         return;
     }
+    const branches = [mainBranch, rcBranch, devBranch];
+    const existing = await Promise.all(branches.map((b) => gitlab.getBranch(b)));
+    const missing = branches.filter((_, i) => !existing[i]);
+    if (missing.length > 0) {
+        warn('Branch(es) não encontrada(s): ' + missing.join(', '));
+        return;
+    }
     const details: string[] = [];
 
     {
