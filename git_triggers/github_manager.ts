@@ -1,10 +1,8 @@
-// @ts-check
-const { createHttpClient } = require('../shared/http-client');
-const { info, extractErrorMessage } = require('../shared/prompt');
-const { Logger } = require('../shared/logger');
+import { createHttpClient } from '../shared/http-client';
+import { info, extractErrorMessage } from '../shared/prompt';
+import { Logger } from '../shared/logger';
 
-/** @param {import('../shared/logger').Logger} log @param {string} op @param {any} err @param {{ returnNull?: boolean }} [opts] */
-function handleError(log, op, err, opts) {
+function handleError(log: Logger, op: string, err: any, opts?: { returnNull?: boolean }) {
   const msg = extractErrorMessage(err);
   log.error(`Erro ao ${op}: ${msg}`, { status: err.response?.status });
   if (opts?.returnNull) return null;
@@ -12,10 +10,16 @@ function handleError(log, op, err, opts) {
 }
 
 class GitHubManager {
-    /** @param {string} repoFullName @param {string} apiToken @param {string} [baseUrl] */
-    constructor(repoFullName, apiToken, baseUrl) {
-        /** @type {'github'} */
-        this.provider = 'github';
+    provider: 'github' = 'github';
+    repoFullName: string;
+    apiToken: string;
+    apiUrl: string;
+    client: ReturnType<typeof createHttpClient>;
+    log: Logger;
+    owner: string;
+    repo: string;
+
+    constructor(repoFullName: string, apiToken: string, baseUrl?: string) {
         this.repoFullName = repoFullName;
         this.apiToken = apiToken;
         this.apiUrl = (baseUrl || 'https://api.github.com').replace(/\/+$/, '');
@@ -39,26 +43,17 @@ class GitHubManager {
         return '/repos/' + this.owner + '/' + this.repo;
     }
 
-    /**
-     * @param {string} url
-     * @param {{ operation?: string, returnNull?: boolean, params?: Record<string, any> }} [opts]
-     */
-    async _get(url, opts) {
+    async _get(url: string, opts?: { operation?: string; returnNull?: boolean; params?: Record<string, any> }) {
         try {
             const args = opts?.params ? [{ params: opts.params }] : [];
             const response = await this.client.get(url, ...args);
             return response.data;
         } catch (err) {
-            return /** @type {null} */ (handleError(this.log, opts?.operation || url, err, { returnNull: opts?.returnNull }));
+            return (handleError(this.log, opts?.operation || url, err, { returnNull: opts?.returnNull }));
         }
     }
 
-    /**
-     * @param {string} url
-     * @param {any} [body]
-     * @param {{ operation?: string }} [opts]
-     */
-    async _post(url, body, opts) {
+    async _post(url: string, body?: any, opts?: { operation?: string }) {
         try {
             const args = body !== undefined ? [body] : [];
             const response = await this.client.post(url, ...args);
@@ -68,12 +63,7 @@ class GitHubManager {
         }
     }
 
-    /**
-     * @param {string} url
-     * @param {any} [body]
-     * @param {{ operation?: string }} [opts]
-     */
-    async _patch(url, body, opts) {
+    async _patch(url: string, body?: any, opts?: { operation?: string }) {
         try {
             const args = body !== undefined ? [body] : [];
             const response = await this.client.patch(url, ...args);
@@ -83,7 +73,7 @@ class GitHubManager {
         }
     }
 
-    async triggerPipeline(payload) {
+    async triggerPipeline(payload: { ref: string; variables: Array<{ key: string; value: string }>; workflow_id?: string }) {
         try {
             const workflowId = payload.workflow_id;
             if (!workflowId) {
@@ -119,10 +109,9 @@ class GitHubManager {
         return (data && data.workflows) || [];
     }
 
-    _toInputs(variables) {
+    _toInputs(variables: Array<{ key: string; value: string }>) {
         if (!variables || !Array.isArray(variables)) return {};
-        /** @type {Record<string, string>} */
-        const inputs = {};
+        const inputs: Record<string, string> = {};
         for (const v of variables) {
             if (v.key) inputs[v.key] = v.value;
         }
@@ -134,13 +123,13 @@ class GitHubManager {
         return [];
     }
 
-    async runSchedule(scheduleId) {
+    async runSchedule(scheduleId: string | number) {
         const err = new Error('GitHub Actions schedules not available via REST API. Use workflow_dispatch or repository_dispatch.');
         this.log.error(err.message, { scheduleId });
         throw err;
     }
 
-    async createMergeRequest(sourceBranch, targetBranch, title, description) {
+    async createMergeRequest(sourceBranch: string, targetBranch: string, title: string, description?: string) {
         const body = {
             head: sourceBranch,
             base: targetBranch,
@@ -151,11 +140,11 @@ class GitHubManager {
         try {
             const data = await this._post(this._repoPath + '/pulls', body, { operation: 'criar PR' });
             return this._formatPR(data);
-        } catch (err) {
+        } catch (err: any) {
             if (err.response?.status === 422) {
                 const errors = err.response?.data?.errors || [];
                 const alreadyExists = errors.some(
-                    (e) => e.message && e.message.includes('already exists')
+                    (e: any) => e.message && e.message.includes('already exists')
                 );
                 if (alreadyExists) {
                     info('PR already exists. Searching for existing...');
@@ -171,12 +160,12 @@ class GitHubManager {
         }
     }
 
-    async updateMergeRequest(iid, sourceBranch, targetBranch, title, description) {
+    async updateMergeRequest(iid: string | number, sourceBranch: string, targetBranch: string, title: string, description?: string) {
         const data = await this._patch(this._repoPath + '/pulls/' + iid, { title, body: description }, { operation: 'atualizar PR' });
         return this._formatPR(data);
     }
 
-    async getMergeRequest(iid) {
+    async getMergeRequest(iid: string | number) {
         try {
             const data = await this._get(this._repoPath + '/pulls/' + iid, { operation: 'buscar PR', returnNull: true });
             return this._formatPR(data);
@@ -185,21 +174,21 @@ class GitHubManager {
         }
     }
 
-    async searchMergeRequests(sourceBranch, targetBranch, searchStatus) {
+    async searchMergeRequests(sourceBranch: string, targetBranch: string, searchStatus: string) {
         try {
-            const params = { per_page: 100 };
+            const params: Record<string, any> = { per_page: 100 };
             if (sourceBranch) params.head = this.owner + ':' + sourceBranch;
             if (targetBranch) params.base = targetBranch;
             if (searchStatus) params.state = searchStatus === 'opened' ? 'open' : searchStatus;
 
             const data = await this._get(this._repoPath + '/pulls', { operation: 'buscar PRs', params, returnNull: true });
-            return (data || []).map((pr) => this._formatPR(pr));
+            return (data || []).map((pr: any) => this._formatPR(pr));
         } catch (err) {
             return [];
         }
     }
 
-    async acceptMergeRequest(iid, shouldRemoveSourceBranch = true) {
+    async acceptMergeRequest(iid: string | number, shouldRemoveSourceBranch = true) {
         try {
             const pr = await this.getMergeRequest(iid);
             if (!pr) throw new Error('PR #' + iid + ' not found');
@@ -207,7 +196,7 @@ class GitHubManager {
                 info('PR #' + iid + ' already merged');
                 return pr;
             }
-            const body = {};
+            const body: Record<string, any> = {};
             if (shouldRemoveSourceBranch) body.delete_branch_on_merge = true;
             const response = await this.client.put(this._repoPath + '/pulls/' + iid + '/merge', body);
             return this._formatPR(response.data);
@@ -229,19 +218,18 @@ class GitHubManager {
         }
     }
 
-    async getPipeline(runId) {
+    async getPipeline(runId: string | number) {
         return await this._get(this._repoPath + '/actions/runs/' + runId, { operation: 'buscar run', returnNull: true });
     }
 
-    /** @param {string|number} pipelineId @returns {Promise<Array<{id:string|number, name:string, stage:string, status:string}>>} */
-    async getPipelineJobs(pipelineId) {
+    async getPipelineJobs(pipelineId: string | number) {
         try {
             const data = await this._get(this._repoPath + '/actions/runs/' + pipelineId + '/jobs', {
                 operation: 'listar jobs',
                 returnNull: true,
             });
             const jobs = (data && data.jobs) || [];
-            return jobs.map((/** @type {any} */ j) => ({
+            return jobs.map((j: any) => ({
                 id: j.id,
                 name: j.name,
                 stage: j.runner_group_name || '',
@@ -252,22 +240,20 @@ class GitHubManager {
         }
     }
 
-    /** @param {string|number} pipelineId @returns {Promise<Array<{id:string|number, name:string}>>} */
-    async listPipelineArtifacts(pipelineId) {
+    async listPipelineArtifacts(pipelineId: string | number) {
         try {
             const data = await this._get(this._repoPath + '/actions/runs/' + pipelineId + '/artifacts', {
                 operation: 'listar artifacts',
                 returnNull: true,
             });
             const artifacts = (data && data.artifacts) || [];
-            return artifacts.map((/** @type {any} */ a) => ({ id: a.id, name: a.name }));
+            return artifacts.map((a: any) => ({ id: a.id, name: a.name }));
         } catch (err) {
             return [];
         }
     }
 
-    /** @param {string|number} artifactId @returns {Promise<{buffer: Buffer, filename: string}>} */
-    async downloadArtifact(artifactId) {
+    async downloadArtifact(artifactId: string | number) {
         try {
             const response = await this.client.get(this._repoPath + '/actions/artifacts/' + artifactId + '/zip', {
                 responseType: 'arraybuffer',
@@ -288,7 +274,7 @@ class GitHubManager {
                 returnNull: true,
             });
             const variables = (data && data.variables) || [];
-            return variables.map((v) => ({
+            return variables.map((v: any) => ({
                 key: v.name,
                 value: v.value,
                 type: 'variable',
@@ -298,19 +284,19 @@ class GitHubManager {
         }
     }
 
-    async isApproved(prNumber) {
+    async isApproved(prNumber: string | number) {
         try {
             const data = await this._get(this._repoPath + '/pulls/' + prNumber + '/reviews', {
                 operation: 'verificar reviews',
                 returnNull: true,
             });
-            return (data || []).some(r => r.state === 'APPROVED');
+            return (data || []).some((r: any) => r.state === 'APPROVED');
         } catch (err) {
             return false;
         }
     }
 
-    _formatPR(data) {
+    _formatPR(data: any) {
         if (!data) return null;
         return {
             iid: data.number,
@@ -326,4 +312,4 @@ class GitHubManager {
     }
 }
 
-module.exports = GitHubManager;
+export = GitHubManager;
