@@ -19,6 +19,7 @@ jest.mock('../shared/prompt', () => ({
     Spinner: jest.fn(),
     isQuiet: jest.fn().mockReturnValue(true),
     withSpinner: jest.fn().mockImplementation(async (label, fn) => fn()),
+    print: jest.fn(),
 }));
 
 jest.mock('fs', () => {

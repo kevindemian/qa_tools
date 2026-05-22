@@ -3,14 +3,6 @@ const path = require('path');
 const os = require('os');
 
 const tmpHome = fs.mkdtempSync(path.join(os.tmpdir(), 'qa-e2e-err-'));
-process.env.HOME = tmpHome;
-process.env.JIRA_BASE_URL = 'http://localhost:1999/jira';
-process.env.JIRA_PERSONAL_TOKEN = 'e2e-token';
-process.env.XRAY_BASE_URL = 'http://localhost:1999/xray';
-process.env.CSV_LABELS = 'e2e';
-process.env.QUIET = 'true';
-process.env.AUTO_CONFIRM = 'true';
-process.env.ON_ERROR = 'skip';
 
 jest.setTimeout(30000);
 
@@ -52,6 +44,14 @@ function writeCsv(name, content) {
 
 describe('E2E: CSV Import - Error Paths', () => {
   beforeAll(() => {
+    process.env.HOME = tmpHome;
+    process.env.JIRA_BASE_URL = 'http://localhost:1999/jira';
+    process.env.JIRA_PERSONAL_TOKEN = 'e2e-token';
+    process.env.XRAY_BASE_URL = 'http://localhost:1999/xray';
+    process.env.CSV_LABELS = 'e2e';
+    process.env.QUIET = 'true';
+    process.env.AUTO_CONFIRM = 'true';
+    process.env.ON_ERROR = 'skip';
     const home = path.join(os.homedir(), '.qa_tools_link_types_cache.json');
     try { fs.unlinkSync(home); } catch {}
   });

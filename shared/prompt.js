@@ -31,6 +31,10 @@ function info(msg) {
   rootLogger.writeFileOnly('INFO', msg);
 }
 
+function print(msg) {
+  console.log(msg);
+}
+
 function title(msg) {
   console.log(`\n${BOLD}${msg}${RESET}`);
 }
@@ -369,7 +373,7 @@ function tableView(data, columns) {
 }
 
 module.exports = {
-  success, error, warn, info, title, divider,
+  print, success, error, warn, info, title, divider,
   prompt, confirm, printError, printSummary, smartPrompt, extractErrorMessage,
   humanizeError, onError, Spinner, ProgressBar, isQuiet,
   showSelect, tableView, withSpinner

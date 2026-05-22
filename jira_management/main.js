@@ -5,7 +5,7 @@ const JiraResource = require('./jira_resource');
 const JiraLinkManager = require('./jira_link_manager');
 const CsvResource = require('./csv_resource');
 const PackageVersionManager = require('./package_version_manager');
-const { success, error, warn, info, title, divider, prompt, confirm, printError, printSummary, smartPrompt, showSelect, tableView } = require('../shared/prompt');
+const { print, success, error, warn, info, title, divider, prompt, confirm, printError, printSummary, smartPrompt, showSelect, tableView } = require('../shared/prompt');
 const { mask, createValidateEnv, setupSigint, sanitizeUrl, printSessionSummary: sharedPrintSessionSummary } = require('../shared/cli_base');
 const { rootLogger } = require('../shared/logger');
 const { load: loadState, update: updateState, STATE_PATH } = require('../shared/state');
@@ -165,21 +165,21 @@ function displayMenu(proj, ctx) {
     const er = ctx.sessionCounters.filter(c => c.status === 'error').length;
     const counts = ok > 0 || er > 0 ? ' | ' + ok + ' ok' + (er > 0 ? ' · ' + er + ' erro' : '') : '';
     const ctxLine = proj + (ctx.lastOperation ? ' | ' + ctx.lastOperation : '') + counts;
-    console.log('== ' + ctxLine + ' ==');
+    print('== ' + ctxLine + ' ==');
     divider();
     for (const item of MENU_ITEMS) {
         if (item.section) {
-            console.log('  ' + item.section);
+            print('  ' + item.section);
         } else {
-            if (item.id === '0') console.log('');
+            if (item.id === '0') print('');
             const hint = item.configKey ? ' ' + _configHint(item.configKey, ctx) : '';
-            console.log('   ' + item.id + '  ' + item.label + hint);
+            print('   ' + item.id + '  ' + item.label + hint);
         }
     }
     if (ok > 0 || er > 0) {
-        console.log('  ' + ok + ' ok' + (er > 0 ? ' · ' + er + ' erro' : ''));
+        print('  ' + ok + ' ok' + (er > 0 ? ' · ' + er + ' erro' : ''));
     }
-    console.log('  /h  Ajuda');
+    print('  /h  Ajuda');
     divider();
 }
 
@@ -238,8 +238,6 @@ async function handleSpecialInput(input) {
     return false;
 }
 
-
-
 function generateCsvTemplate(filePath) {
     const src = path.join(__dirname, 'test_steps_template.csv');
     try {
@@ -296,7 +294,7 @@ async function main() {
             choice = process.env.AUTO_CHOICE;
         } else if (process.stdout.isTTY && process.env.QUIET !== 'true') {
             const ctxLine = buildContextLine(ctx.project_name, ctx);
-            console.log('== ' + ctxLine + ' ==');
+            print('== ' + ctxLine + ' ==');
             divider();
             /** @type {Array<any>} */
             const choices = buildMenuChoices(ctx.project_name, ctx);
@@ -362,6 +360,11 @@ async function main() {
     }
 }
 
+
+process.on('unhandledRejection', reason => {
+    rootLogger.error('Unhandled Rejection', { reason: String(reason) });
+    process.exitCode = 1;
+});
 
 main().catch(err => {
     printError('Erro inesperado', err);

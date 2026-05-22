@@ -21,18 +21,15 @@ class JiraResource {
         this.log = new Logger({ resource: 'JiraAPI' });
     }
 
-    static delay(ms) {
-        return new Promise(resolve => setTimeout(resolve, ms));
-    }
-
     async searchJiraIssues(jql, maxResults = 200) {
         const MAX_PAGES = 1000;
+        const MAX_TOTAL = 10000;
         let allIssues = [];
         let startAt = 0;
         let total = null;
         let pages = 0;
 
-        while ((total === null || startAt < total) && pages < MAX_PAGES) {
+        while ((total === null || startAt < total) && pages < MAX_PAGES && allIssues.length < MAX_TOTAL) {
             pages++;
             const url = `search?jql=${encodeURIComponent(jql)}&maxResults=${maxResults}&startAt=${startAt}`;
             const data = await this.getJiraResource(url);
@@ -40,6 +37,7 @@ class JiraResource {
             if (total === null) {
                 total = data.total;
                 if (total > 0) this.log.info(`Buscando ${total} issues...`);
+                if (total > MAX_TOTAL) this.log.warn(`Total (${total}) excede limite de ${MAX_TOTAL}, truncando.`);
             }
 
             allIssues = allIssues.concat(data.issues || []);
@@ -51,7 +49,7 @@ class JiraResource {
 
     async getTransitionsForIssue(issueKey) {
         const data = await this.getJiraResource(`issue/${issueKey}/transitions`);
-        if (!data.transitions) return {};
+        if (!data || !data.transitions) return {};
         const map = {};
         for (const t of data.transitions) {
             if (t.to && t.to.name) {

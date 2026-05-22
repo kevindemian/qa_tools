@@ -367,4 +367,13 @@ describe('Prompt', () => {
       spy.mockRestore();
     });
   });
+
+  describe('print', () => {
+    it('calls console.log with the message', () => {
+      const spy = jest.spyOn(console, 'log').mockImplementation(() => {});
+      prompt.print('Hello');
+      expect(spy).toHaveBeenCalledWith('Hello');
+      spy.mockRestore();
+    });
+  });
 });

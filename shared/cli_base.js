@@ -1,5 +1,5 @@
 // @ts-check
-const { success, error, warn, info } = require('./prompt');
+const { print, success, error, warn, info } = require('./prompt');
 const { rootLogger } = require('./logger');
 
 /** @param {string} v @returns {string} */
@@ -41,9 +41,11 @@ function setupSigint(getIsBusy, onExit) {
       info('Operação em andamento. Use Ctrl+C novamente para forcar saida.');
       return;
     }
+    process.removeListener('SIGINT', handler);
     if (onExit) onExit();
     info('Ate logo!');
-    process.exit(0);
+    process.exitCode = 0;
+    setTimeout(() => process.exit(), 2000).unref();
   };
   process.on('SIGINT', handler);
 }
@@ -55,8 +57,8 @@ function setupSigint(getIsBusy, onExit) {
  */
 function printSessionSummary(sessionCounters, lastOperation, history) {
     const logPath = rootLogger.filePath;
-    console.log('');
-    console.log('='.repeat(50));
+    print('');
+    print('='.repeat(50));
     info('Sessão encerrada.');
     const ok = sessionCounters.filter(c => c.status === 'ok').length;
     const er = sessionCounters.filter(c => c.status === 'error').length;
@@ -69,12 +71,12 @@ function printSessionSummary(sessionCounters, lastOperation, history) {
         info('Últimas operacoes:');
         last5.forEach(h => {
             const icon = h.status === 'error' ? 'ERR' : 'OK';
-            console.log(`  ${icon} ${h.op}: ${h.detail}`);
+            print(`  ${icon} ${h.op}: ${h.detail}`);
         });
     }
     if (lastOperation) info('Última operação: ' + lastOperation);
     if (logPath) info('Log: ' + logPath);
-    console.log('='.repeat(50));
+    print('='.repeat(50));
     rootLogger.writeFileOnly('INFO', 'Sessão encerrada. ' +
         (ok > 0 ? ok + ' ok, ' : '') +
         (er > 0 ? er + ' erro(s), ' : '') +

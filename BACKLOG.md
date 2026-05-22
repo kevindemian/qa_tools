@@ -13,6 +13,30 @@ Issues registradas durante refatorações, postergadas por escopo.
 
 ## Dívida técnica
 
+### ARC-001 — Centralizar configuração (process.env → Config) (P2)
+
+- **Contexto**: 150+ referências a `process.env.XXX` espalhadas por 15+ arquivos. Dificulta testar, rastrear e migrar para TS. Testes precisam mutar `process.env` globalmente.
+- **Ação**: Criar `shared/config.js` com objeto `Config` que lê env vars uma vez. Substituir `process.env.JIRA_BASE_URL` por `Config.jiraBaseUrl`, etc.
+- **Impacto**: Testes podem mockar `Config` em vez de poluir `process.env`. Reduz acoplamento global.
+- **Estimativa**: 1-2h. Tocar após migração TS ou junto dela.
+
+### ARC-011 — JiraResource coverage (Lote 4, P2)
+
+- **Contexto**: `jira_resource.js` (~250 linhas, 8 métodos públicos, dependência crítica para 95% dos comandos) não possui testes unitários. MockRouter pattern já está implementado e validado pela Fase 7.
+- **Ação**: Criar `jira_resource.test.js` com testes para: `getProjectId`, `getProjectVersions`, `updateFixVersions`, `getReleaseTasks`, `moveCardsToDone`, `releaseVersion`, `getIssueLinkTypes`, `getJiraResource` error handling.
+- **Estimativa**: 2-3h. Postergado — não está no caminho crítico das demais melhorias. Bloqueios de CI e handler de erros já foram cobertos pelos Lotes 1-3.
+- **Observação**: Precisa mockar `createHttpClient` e `axiosInstance`. Aproveitar padrão de mock de `handlers.test.js`. Pendente para próxima sessão.
+
+### ARC-003 — Unificar sleep() (P3)
+
+- **Contexto**: Após ARQ-006, `sleep()` de `shared/http-client.js` substituiu `delay()` nos módulos principais. Verificar se não há `new Promise(resolve => setTimeout(resolve, ms))` residual.
+- **Ação**: Remover implementações duplicadas de sleep.
+
+### ARC-004 — Typo: "Variaveis" → "Variáveis" (P3)
+
+- **Contexto**: Acentos PT-BR inconsistentes em strings de UI. Ex: "Variaveis", "criar-versão" (com acento) vs outros sem.
+- **Arquivos**: `git_triggers/main.js:277,448`, `qatools.sh:72-74`, `jira_management/main.js:97`
+
 ### TS-001 — Migrar de JSDoc para TypeScript (.ts) (P2)
 
 - **Contexto**: `tsconfig.json` usa `strict: false + strictNullChecks: true`. `strict: true` geraria 486 erros em 17 arquivos. Em vez de remar JSDoc, a estratégia correta é migrar para `.ts`.
@@ -32,6 +56,15 @@ Issues registradas durante refatorações, postergadas por escopo.
 ## Resolvidos
 
 Estes foram resolvidos durante a sessão de refatoração de Maio/2026:
+
+### ARC-002 (CONCLUÍDO)
+
+- **Ação**: `console.log` migrado para `print()` de `shared/prompt.js` em:
+  - `jira_management/commands/case04.js` (4 usos)
+  - `jira_management/create_tests.js` (2 usos)
+  - `shared/cli_base.js` (4 usos em `printSessionSummary`)
+- **Testes**: Mocks atualizados em `handlers.test.js`, `create_tests.test.js`. 295+ testes passando.
+- **Observação**: `e2e/real-import.js` mantido como está — script standalone de baixa prioridade.
 
 ### ARQ-001 (CONCLUÍDO)
 

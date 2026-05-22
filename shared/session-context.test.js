@@ -59,4 +59,25 @@ describe('SessionContext', () => {
     expect(ctx.sessionCounters[0].op).toBe('op1');
     expect(ctx.sessionCounters[1].op).toBe('op2');
   });
+
+  describe('buildContextLine', () => {
+    it('returns project name when no operations', () => {
+      expect(ctx.buildContextLine('PROJ')).toBe('PROJ');
+    });
+
+    it('includes counter summary when operations exist', () => {
+      ctx.pushHistory('op1', 'd1', 'ok');
+      ctx.pushHistory('op2', 'd2', 'error');
+      const line = ctx.buildContextLine('PROJ');
+      expect(line).toContain('PROJ');
+      expect(line).toContain('1 ok');
+      expect(line).toContain('1 erro');
+    });
+
+    it('includes lastOperation when set', () => {
+      ctx.pushHistory('test-op', 'detail-1', 'ok');
+      const line = ctx.buildContextLine('PROJ');
+      expect(line).toContain('test-op');
+    });
+  });
 });

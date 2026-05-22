@@ -1,5 +1,5 @@
 // @ts-check
-const { success, error, warn, info, title, divider, prompt, confirm, smartPrompt, printError, printSummary } = require('../../shared/prompt');
+const { print, success, error, warn, info, title, divider, prompt, confirm, smartPrompt, printError, printSummary } = require('../../shared/prompt');
 const { rootLogger } = require('../../shared/logger');
 
 /** @param {import('./context').CommandContext} c */
@@ -14,7 +14,7 @@ async function handler(c) {
             taskIds = input.split(' ').filter(Boolean);
         } else {
             c.ctx.inMemoryTasksId.forEach((id, idx) => {
-                console.log('  ' + id + ' — ' + c.ctx.inMemoryTasksText[idx]);
+                print('  ' + id + ' — ' + c.ctx.inMemoryTasksText[idx]);
                 taskIds.push(id);
             });
         }
@@ -26,9 +26,9 @@ async function handler(c) {
     const version = smartPrompt('Nome da versão', {}, () => {});
 
     title('Preview da operação');
-    console.log('  Versão: ' + version);
-    console.log('  Tarefas (' + taskIds.length + '):');
-    taskIds.forEach(id => console.log('    - ' + id));
+    print('  Versão: ' + version);
+    print('  Tarefas (' + taskIds.length + '):');
+    taskIds.forEach(id => print('    - ' + id));
     if (!confirm('Confirmar atribuicao de fixVersion?')) {
         warn('Operação cancelada.');
         return true;

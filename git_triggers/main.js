@@ -3,7 +3,7 @@ const path = require('path');
 const fs = require('fs');
 const os = require('os');
 const AdmZip = require('adm-zip');
-const { success, error, warn, info, title, divider, prompt, confirm, printError, printSummary, withSpinner, showSelect, tableView } = require('../shared/prompt');
+const { print, success, error, warn, info, title, divider, prompt, confirm, printError, printSummary, withSpinner, showSelect, tableView } = require('../shared/prompt');
 const { load: loadState, update: updateState } = require('../shared/state');
 const { createValidateEnv, setupSigint, printSessionSummary: sharedPrintSessionSummary } = require('../shared/cli_base');
 const GitLabManager = require('./gitlab_manager');
@@ -138,9 +138,9 @@ function displayProjects() {
     names.forEach((name, i) => {
         const p = getProviderForProject(name);
         const tag = p === 'github' ? ' [GH]' : ' [GL]';
-        console.log('  ' + (i + 1) + '  ' + name + tag);
+        print('  ' + (i + 1) + '  ' + name + tag);
     });
-    console.log('  ' + (names.length + 1) + '  Sair');
+    print('  ' + (names.length + 1) + '  Sair');
 }
 
 function _jiraEnv() {
@@ -259,31 +259,31 @@ function displayActions() {
     title(providerLabel().toUpperCase() + ' TOOLS' + sessionContext.buildContextLine());
     if (sessionContext.lastOperation) info('Última operação: ' + sessionContext.lastOperation);
     divider();
-    console.log('  PIPELINES');
-    console.log('   1  Disparar pipeline');
+    print('  PIPELINES');
+    print('   1  Disparar pipeline');
     if (currentProvider === 'gitlab') {
-        console.log('   2  Listar schedules');
-        console.log('   3  Disparar schedule');
+        print('   2  Listar schedules');
+        print('   3  Disparar schedule');
     }
     const prLabel = currentProvider === 'github' ? 'PR' : 'MR';
-    console.log('');
-    console.log('  ' + prLabel + 's');
-    console.log('   4  Criar ' + prLabel);
-    console.log('   5  Listar ' + prLabel + 's aprovados');
-    console.log('   6  Fazer merge por ID');
-    console.log('   7  Nivelar branches (main -> rel_cand -> dev)');
-    console.log('');
-    console.log('  UTILITARIOS');
-    console.log('   8  Exportar variaveis CI/CD');
-    console.log('   9  Trocar de projeto');
-    console.log('');
+    print('');
+    print('  ' + prLabel + 's');
+    print('   4  Criar ' + prLabel);
+    print('   5  Listar ' + prLabel + 's aprovados');
+    print('   6  Fazer merge por ID');
+    print('   7  Nivelar branches (main -> rel_cand -> dev)');
+    print('');
+    print('  UTILITARIOS');
+    print('   8  Exportar variaveis CI/CD');
+    print('   9  Trocar de projeto');
+    print('');
     const ok = sessionContext.sessionCounters.filter(c => c.status === 'ok').length;
     const er = sessionContext.sessionCounters.filter(c => c.status === 'error').length;
     if (ok > 0 || er > 0) {
-        console.log('  ' + ok + ' ok' + (er > 0 ? ' · ' + er + ' erro' : ''));
+        print('  ' + ok + ' ok' + (er > 0 ? ' · ' + er + ' erro' : ''));
     }
-    console.log('   0  Sair');
-    console.log('  /h  Ajuda');
+    print('   0  Sair');
+    print('  /h  Ajuda');
     divider();
 }
 
@@ -326,15 +326,15 @@ async function displayRecentPipelines(m) {
     try {
         const pipelines = await m.getRecentPipelines(5);
         if (pipelines && pipelines.length > 0) {
-            console.log('  Últimas pipelines:');
+            print('  Últimas pipelines:');
             pipelines.slice(0, 3).forEach(p => {
                 const id = p.id || p.run_number || '?';
                 const ref = p.ref || (p.head_branch || '');
                 const s = p.status || p.conclusion || '?';
                 const icon = s === 'success' ? '\u2713' : (s === 'failed' ? '\u2717' : '~');
-                console.log('    #' + id + ' ' + ref + ' — ' + icon + ' ' + s);
+                print('    #' + id + ' ' + ref + ' — ' + icon + ' ' + s);
             });
-            console.log('');
+            print('');
         }
     } catch (err) {
         // non-critical
@@ -383,7 +383,7 @@ async function main() {
         let finalChoice;
         if (process.stdout.isTTY && process.env.QUIET !== 'true') {
             const ctx = buildContextLine();
-            console.log('== ' + ctx + ' ==');
+            print('== ' + ctx + ' ==');
             divider();
             const stateHint2 = loadState().lastChoice && loadState().lastChoice !== '0'
                 ? loadState().lastChoice : undefined;
@@ -443,9 +443,9 @@ async function main() {
                 }
 
                 title('Preview');
-                console.log('  Projeto: ' + projectName);
-                console.log('  Branch: ' + currentBranch);
-                console.log('  Variaveis: ' + payload.variables.length);
+                print('  Projeto: ' + projectName);
+                print('  Branch: ' + currentBranch);
+                print('  Variaveis: ' + payload.variables.length);
                 if (!confirm('Confirmar disparo de pipeline?')) {
                     warn('Operação cancelada.');
                     continue;
@@ -521,7 +521,7 @@ async function main() {
                     if (schedules && schedules.length > 0) {
                         info('Schedules encontrados:');
                         schedules.forEach(s => {
-                            console.log('  ID: ' + s.id + '  ' + (s.description || 'sem descrição') + '  (proxima execução: ' + (s.next_run_at || 'N/A') + ')');
+                            print('  ID: ' + s.id + '  ' + (s.description || 'sem descrição') + '  (proxima execução: ' + (s.next_run_at || 'N/A') + ')');
                         });
                         pushHistory('list-schedules', schedules.length + ' schedules', 'ok');
                     } else {
@@ -579,7 +579,7 @@ async function main() {
                     }
                     if (approved.length > 0) {
                         info(prLabel + 's aprovados:');
-                        approved.forEach(r => console.log('  ' + prLabel + ' #' + (r.iid || r.number) + ': ' + r.title));
+                        approved.forEach(r => print('  ' + prLabel + ' #' + (r.iid || r.number) + ': ' + r.title));
                         pushHistory('prs-approved', approved.length + ' ' + prLabel + 's', 'ok');
                     } else {
                         warn('Nenhum ' + prLabel + ' aprovado encontrado.');
@@ -626,9 +626,9 @@ async function main() {
                         const tmpPath = path.join(os.tmpdir(), 'qa-vars-' + process.pid + '.env');
                         fs.writeFileSync(tmpPath, envContent, { mode: 0o600, encoding: 'utf8' });
                         success('Variaveis exportadas (' + variables.length + '):');
-                        console.log('');
-                        console.log(envContent);
-                        console.log('');
+                        print('');
+                        print(envContent);
+                        print('');
                         warn('As variaveis acima foram exibidas no terminal e NAO foram salvas em disco.');
                         info('Uma copia temporaria foi salva em ' + tmpPath + ' (modo 600, apenas leitura)');
                         info('Ela sera removida ao encerrar esta sessão. Nao compartilhe este arquivo.');
@@ -671,6 +671,11 @@ async function main() {
         }
     }
 }
+
+process.on('unhandledRejection', reason => {
+    rootLogger.error('Unhandled Rejection', { reason: String(reason) });
+    process.exitCode = 1;
+});
 
 main().catch(err => {
     printError('Erro inesperado', err);

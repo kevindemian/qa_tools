@@ -4,11 +4,6 @@ const os = require('os');
 const nock = require('nock');
 
 const tmpHome = fs.mkdtempSync(path.join(os.tmpdir(), 'qa-e2e-'));
-process.env.HOME = tmpHome;
-process.env.JIRA_BASE_URL = 'http://localhost:1997/jira';
-process.env.JIRA_PERSONAL_TOKEN = 'e2e-token';
-process.env.XRAY_BASE_URL = 'http://localhost:1997/xray';
-process.env.QUIET = 'true';
 
 jest.setTimeout(30000);
 
@@ -50,6 +45,11 @@ function setupJiraMocks(base) {
 
 describe('E2E: Result Processing Pipeline', () => {
     beforeAll(() => {
+        process.env.HOME = tmpHome;
+        process.env.JIRA_BASE_URL = 'http://localhost:1997/jira';
+        process.env.JIRA_PERSONAL_TOKEN = 'e2e-token';
+        process.env.XRAY_BASE_URL = 'http://localhost:1997/xray';
+        process.env.QUIET = 'true';
         setupJiraMocks('http://localhost:1997/jira');
     });
 
