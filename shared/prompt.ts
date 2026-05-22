@@ -69,6 +69,11 @@ export function info(msg: string): void {
     rootLogger.writeFileOnly('INFO', msg);
 }
 
+export function helpLine(msg: string): void {
+    console.log(chalk.cyan.bold(icon('info')) + ' ' + msg);
+    rootLogger.writeFileOnly('HELP', msg);
+}
+
 export function print(msg: string): void {
     console.log(msg);
 }
@@ -446,6 +451,7 @@ export async function showSelect(label: string, choices: SelectChoice[], options
     }
     while (true) {
         const answer = prompt(label).trim();
+        if (answer.startsWith('/')) return answer;
         const parsed = parseInt(answer, 10);
         if (parsed >= 1 && parsed <= flatChoices.length) {
             const selected = flatChoices[parsed - 1];

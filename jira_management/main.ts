@@ -4,7 +4,18 @@ import Config from '../shared/config';
 import JiraResource from './jira_resource';
 import JiraLinkManager from './jira_link_manager';
 import CsvResource from './csv_resource';
-import { print, warn, info, title, divider, prompt, printError, showSelect, tableView } from '../shared/prompt';
+import {
+    print,
+    warn,
+    info,
+    helpLine,
+    title,
+    divider,
+    prompt,
+    printError,
+    showSelect,
+    tableView,
+} from '../shared/prompt';
 import {
     mask,
     createValidateEnv,
@@ -70,7 +81,7 @@ function showHelp(topic?: string): void {
         const lower = topic.toLowerCase().trim();
         if (HELP_TOPICS[lower]) {
             title('HELP — ' + lower);
-            info(HELP_TOPICS[lower]);
+            helpLine(HELP_TOPICS[lower]);
             return;
         }
         if (lower.startsWith('search ')) {
@@ -80,7 +91,7 @@ function showHelp(topic?: string): void {
                 const found = Object.entries(HELP_TOPICS).filter(([_, v]) => v.toLowerCase().includes(term));
                 if (found.length > 0) {
                     found.forEach(([k, v]) => {
-                        info(k + ': ' + v.split('\n')[0]);
+                        helpLine(k + ': ' + v.split('\n')[0]);
                     });
                 } else {
                     warn('Nenhum topico encontrado para "' + term + '".');
@@ -98,17 +109,17 @@ function showHelp(topic?: string): void {
         return;
     }
     title('HELP — Jira Tools');
-    info('Escolha uma opção do menu e siga as instrucoes.');
-    info('Em qualquer prompt de texto, digite /help para ver esta ajuda.');
-    info('Digite /help <topico> para ajuda especifica: ' + Object.keys(HELP_TOPICS).join(', '));
-    info('Digite /help search <termo> para buscar em todos os topicos.');
-    info('Digite /back ou /menu para voltar ao menu principal.');
+    helpLine('Escolha uma opção do menu e siga as instrucoes.');
+    helpLine('Em qualquer prompt de texto, digite /help para ver esta ajuda.');
+    helpLine('Digite /help <topico> para ajuda especifica: ' + Object.keys(HELP_TOPICS).join(', '));
+    helpLine('Digite /help search <termo> para buscar em todos os topicos.');
+    helpLine('Digite /back ou /menu para voltar ao menu principal.');
     divider();
     title('Fluxo comum:');
-    info('1. Crie seu CSV de testes (veja test_steps.csv como exemplo)');
-    info('2. Opção 1 -> Cria os testes no Jira com steps, pre-conditions e links');
-    info('3. Opcoes 3-4-8 -> Gerencie versoes de release');
-    info('4. Opção 7 -> Feche tarefas automaticamente');
+    helpLine('1. Crie seu CSV de testes (veja test_steps.csv como exemplo)');
+    helpLine('2. Opção 1 -> Cria os testes no Jira com steps, pre-conditions e links');
+    helpLine('3. Opcoes 3-4-8 -> Gerencie versoes de release');
+    helpLine('4. Opção 7 -> Feche tarefas automaticamente');
     divider();
 }
 
@@ -272,6 +283,8 @@ function handleSpecialInput(input: string): boolean {
         } else {
             showHelp();
         }
+        divider();
+        prompt('Pressione Enter para continuar');
         return true;
     }
     if (cmd === '/back' || cmd === '/menu' || cmd === '/exit') {

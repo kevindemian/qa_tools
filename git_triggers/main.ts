@@ -15,6 +15,7 @@ import {
     error,
     warn,
     info,
+    helpLine,
     title,
     divider,
     prompt,
@@ -496,9 +497,10 @@ async function main() {
         const cmd = finalChoice.trim().toLowerCase();
         if (cmd === '/h' || cmd === '/help') {
             title('Ajuda — Git Tools');
-            info('Opcoes disponiveis no menu numerado acima.');
-            info('/history - Exibe historico de operacoes da sessão.');
+            helpLine('Opcoes disponiveis no menu numerado acima.');
+            helpLine('/history - Exibe historico de operacoes da sessão.');
             divider();
+            prompt('Pressione Enter para continuar');
             continue;
         }
         if (cmd === '/history') {
