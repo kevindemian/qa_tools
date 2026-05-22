@@ -2,7 +2,7 @@ import { info, error, divider, printError } from '../../shared/prompt';
 import { rootLogger } from '../../shared/logger';
 import type { CommandContext } from './context';
 
-async function handler(c: CommandContext): Promise<void> {
+async function handler(c: CommandContext): Promise<boolean | void> {
     try {
         const projectId = await c.jiraResource.getProjectId(c.ctx.project_name);
         if (!projectId) {
@@ -15,7 +15,7 @@ async function handler(c: CommandContext): Promise<void> {
         } else {
             const now = new Date();
             divider();
-            results.forEach(v => {
+            results.forEach((v) => {
                 const released = v.released ? ' (RELEASED)' : '';
                 const overdue = !v.released && v.releaseDate && new Date(v.releaseDate) < now ? ' (ATRASADA!)' : '';
                 info(v.name + ' — ' + (v.description || 'sem descrição') + released + overdue);
@@ -24,7 +24,7 @@ async function handler(c: CommandContext): Promise<void> {
         }
     } catch (err) {
         printError('Erro ao listar versões', err);
-        rootLogger.error('Erro ao listar versões', { project: c.ctx.project_name, status: (err as any).response?.status });
+        rootLogger.error('Erro ao listar versões', { project: c.ctx.project_name, status: err.response?.status });
         c.pushHistory('listar-versoes', 'erro', 'error');
     }
 }

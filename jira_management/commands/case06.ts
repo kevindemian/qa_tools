@@ -1,8 +1,8 @@
-import { success, error, warn, info, prompt, smartPrompt, printError } from '../../shared/prompt';
+import { smartPrompt, printError } from '../../shared/prompt';
 import { rootLogger } from '../../shared/logger';
 import type { CommandContext } from './context';
 
-async function handler(c: CommandContext): Promise<void> {
+async function handler(c: CommandContext): Promise<boolean | void> {
     const version = smartPrompt('Nome da versão', {}, () => {});
     try {
         await c.jiraResource.checkReleaseTasksStatus(c.ctx.project_name, version);
@@ -10,7 +10,7 @@ async function handler(c: CommandContext): Promise<void> {
     } catch (err) {
         const msg = 'Erro ao verificar status da versão "' + version + '" no projeto "' + c.ctx.project_name + '"';
         printError(msg, err);
-        rootLogger.error(msg, { version, project: c.ctx.project_name, status: (err as any).response?.status });
+        rootLogger.error(msg, { version, project: c.ctx.project_name, status: err.response?.status });
         c.pushHistory('verificar-status', version, 'error');
     }
 }

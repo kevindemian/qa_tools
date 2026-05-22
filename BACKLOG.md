@@ -13,7 +13,7 @@ Issues registradas durante refatorações, postergadas por escopo.
 
 ## Dívida técnica
 
-### UX-001 — Melhorias de UI/UX na CLI (Fases 1-3 ✅, Fase 4 pendente)
+### UX-001 — Melhorias de UI/UX na CLI (CONCLUÍDO)
 
 **Prioridade**: P1 (impacto direto na experiência do usuário)
 
@@ -60,14 +60,14 @@ Issues registradas durante refatorações, postergadas por escopo.
 
 ---
 
-#### 🔵 Fase 4 — Arquitetural (viabiliza UX)
+#### 🔵 Fase 4 — Arquitetural ✅
 
-| # | Item | Motivo |
-|---|------|--------|
-| 19 | Extrair `createTestExecutionAfterImport` para helper compartilhado | Elimina duplicação case01/case13/case15 |
-| 20 | `SessionContext.packageManager` tipado corretamente (eliminar `as any`) | Permite refatoração segura |
-| 21 | Padronizar retorno de handlers (`boolean \| void`) | Controle de fluxo previsível |
-| 22 | Adicionar elapsed time no `printSessionSummary()` | Fechamento informativo da sessão |
+| # | Item | Motivo | Status |
+|---|------|--------|--------|
+| 19 | Extrair `createTestExecutionAfterImport` para helper compartilhado | Elimina duplicação case01/case13/case15 | ✅ |
+| 20 | `SessionContext.packageManager` tipado corretamente (eliminar `as any`) | Permite refatoração segura | ✅ |
+| 21 | Padronizar retorno de handlers (`boolean \| void`) | Controle de fluxo previsível | ✅ |
+| 22 | Adicionar elapsed time no `printSessionSummary()` | Fechamento informativo da sessão | ✅ |
 
 ---
 
