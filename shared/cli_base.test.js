@@ -92,7 +92,7 @@ describe('CLI Base', () => {
       const onExit = jest.fn();
       cliBase.setupSigint(null, onExit);
       expect(onExit).toHaveBeenCalled();
-      expect(MOCK_PROMPT.info).toHaveBeenCalledWith('Ate logo!');
+      expect(MOCK_PROMPT.info).toHaveBeenCalledWith('Até logo!');
       expect(removeListenerSpy).toHaveBeenCalledWith('SIGINT', expect.any(Function));
       jest.advanceTimersByTime(2000);
       expect(exitSpy).toHaveBeenCalled();

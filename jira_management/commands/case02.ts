@@ -6,7 +6,7 @@ async function handler(c: CommandContext): Promise<void> {
     try {
         const projectId = await c.jiraResource.getProjectId(c.ctx.project_name);
         if (!projectId) {
-            error('Projeto nao encontrado: ' + c.ctx.project_name);
+            error('Projeto não encontrado: ' + c.ctx.project_name);
             return;
         }
         const results = await c.jiraResource.getProjectVersions(projectId);

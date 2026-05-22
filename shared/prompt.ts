@@ -201,13 +201,13 @@ export async function withSpinner<T>(label: string, fn: () => Promise<T>): Promi
 
 const KNOWN_ERRORS: KnownError[] = [
   { test: /rate limit|too many requests/i, msg: 'Rate limit atingido', hint: 'Aguarde alguns segundos e tente novamente.' },
-  { test: /issue type.*not found|not a valid issue type/i, msg: 'Tipo de issue nao encontrado', hint: 'Verifique se o tipo esta habilitado nas configuracoes do projeto Jira.' },
-  { test: /project.*not found/i, msg: 'Projeto nao encontrado', hint: 'Verifique se o nome do projeto esta correto.' },
-  { test: /field.*not found|unknown field/i, msg: 'Campo nao encontrado', hint: 'Verifique se o campo existe no schema do projeto.' },
+  { test: /issue type.*not found|not a valid issue type/i, msg: 'Tipo de issue não encontrado', hint: 'Verifique se o tipo esta habilitado nas configuracoes do projeto Jira.' },
+  { test: /project.*not found/i, msg: 'Projeto não encontrado', hint: 'Verifique se o nome do projeto esta correto.' },
+  { test: /field.*not found|unknown field/i, msg: 'Campo não encontrado', hint: 'Verifique se o campo existe no schema do projeto.' },
   { test: /permission|forbidden|403/i, msg: 'Sem permissão', hint: 'Verifique se seu token tem acesso a esta operação.' },
   { test: /unauthorized|401/i, msg: 'Token inválido ou expirado', hint: 'Verifique seu token de autenticacao no arquivo .env.' },
   { test: /econnreset|econnrefused|enotfound|timeout|econnaborted/i, msg: 'Erro de conexão', hint: 'Verifique se a URL do Jira esta correta e acessivel.' },
-  { test: /version.*not found/i, msg: 'Versão nao encontrada', hint: 'Verifique se o nome da versão esta correto.' },
+  { test: /version.*not found/i, msg: 'Versão não encontrada', hint: 'Verifique se o nome da versão esta correto.' },
   { test: /already exists/i, msg: 'Item ja existe', hint: 'Escolha um nome diferente.' },
 ];
 

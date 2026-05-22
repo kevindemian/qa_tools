@@ -6,14 +6,14 @@ CACHE_FILE="${TMPDIR:-/tmp}/qa_tools_last_choice.txt"
 
 # Node check
 if ! command -v node &>/dev/null; then
-    echo "  ERRO: Node.js nao encontrado." >&2
+    echo "  ERRO: Node.js não encontrado." >&2
     echo "  Instale em: https://nodejs.org" >&2
     exit 1
 fi
 
 # Warn if .env missing
 if [ ! -f "$SCRIPT_DIR/.env" ]; then
-    echo "  AVISO: .env nao encontrado em $SCRIPT_DIR" >&2
+    echo "  AVISO: .env não encontrado em $SCRIPT_DIR" >&2
     echo "  Copie .env.example para .env e configure." >&2
     if [ "$1" != "0" ]; then
         read -rp "  Continuar? (S/N) " resp
@@ -83,14 +83,14 @@ if [ -z "$1" ]; then
     echo ""
     echo "  ========================================"
     if [ "$last_index" -ge 0 ]; then
-        echo "  Ultima escolha: ${tool_names[$((last_index - 1))]} ($last_index) - Enter para repetir"
+        echo "  Última escolha: ${tool_names[$((last_index - 1))]} ($last_index) - Enter para repetir"
     fi
     echo ""
     read -rp "  Escolha: " choice
     if [ -z "$choice" ] && [ "$last_index" -ge 0 ]; then
         choice="$last_index"
     fi
-    [ "$choice" = "0" ] && echo "  Ate logo!" && exit
+    [ "$choice" = "0" ] && echo "  Até logo!" && exit
     if [ "$choice" -ge 1 ] && [ "$choice" -le ${#tools[@]} ] 2>/dev/null; then
         run_tool $((choice - 1))
     else
@@ -102,7 +102,7 @@ if [ -z "$1" ]; then
                 break
             fi
         done
-        $matched || { echo "  Opcao invalida." >&2; exit 1; }
+        $matched || { echo "  Opção inválida." >&2; exit 1; }
     fi
 else
     # Direct argument
@@ -117,6 +117,6 @@ else
                 break
             fi
         done
-        $matched || { echo "  Ferramenta '$1' nao encontrada." >&2; exit 1; }
+        $matched || { echo "  Ferramenta '$1' não encontrada." >&2; exit 1; }
     fi
 fi

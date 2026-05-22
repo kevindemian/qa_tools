@@ -35,7 +35,7 @@ class PackageVersionManager {
     }
 
     if (!fs.existsSync(this.releaseNotesPath)) {
-      rootLogger.error(`Arquivo de release notes nao encontrado: ${this.releaseNotesPath}`);
+      rootLogger.error(`Arquivo de release notes não encontrado: ${this.releaseNotesPath}`);
       return;
     }
 
