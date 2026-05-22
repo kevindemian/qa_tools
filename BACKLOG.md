@@ -13,7 +13,7 @@ Issues registradas durante refatorações, postergadas por escopo.
 
 ## Dívida técnica
 
-### UX-001 — Melhorias de UI/UX na CLI (EM ANDAMENTO)
+### UX-001 — Melhorias de UI/UX na CLI (Fases 1-3 ✅, Fase 4 pendente)
 
 **Prioridade**: P1 (impacto direto na experiência do usuário)
 
@@ -21,42 +21,42 @@ Issues registradas durante refatorações, postergadas por escopo.
 
 ---
 
-#### 🔴 Fase 1 — Bugs Críticos (atrito direto)
+#### 🔴 Fase 1 — Bugs Críticos ✅
 
 | # | Problema | Local | Risco | Status |
 |---|----------|-------|-------|--------|
 | 1 | **Double-prompt CSV/JSON**: handler pergunta caminho + labels, `createTestsFrom*` pergunta de novo | `case01.ts`, `case15.ts`, `create_tests.ts` | Usuário responde a mesma coisa 2x | ✅ |
 | 2 | **`showSelect()` fallback não-TTY**: printa choices mas não valida resposta | `prompt.ts:377-386` | Input inválido passa batido em CI | ✅ |
 | 3 | **`ProgressBar` silencioso em não-TTY**: operações longas invisíveis em pipe/CI | `prompt.ts:148-150` | Zero feedback em pipelines | ✅ |
-| 4 | **Pipeline monolithic decision tree**: 5+ prompts encadeados pós-trigger | `git_triggers/main.ts` | Operação complexa, sem checkpoint | ⏳ Pendente |
+| 4 | **Pipeline monolithic decision tree**: 5+ prompts encadeados pós-trigger | `git_triggers/main.ts` | Operação complexa, sem checkpoint | ✅ |
 
 ---
 
-#### 🟡 Fase 2 — Usabilidade (redução de atrito)
+#### 🟡 Fase 2 — Usabilidade ✅
 
-| # | Problema | Local | Melhoria |
-|---|----------|-------|----------|
-| 5 | `confirm()` aceita qq entrada → `false` silencioso | `prompt.ts:82-83` | Loop com validação + hint visual |
-| 6 | `prompt()` sem validação de vazio | `prompt.ts:71-77` | `minLength` opcional em `PromptOptions` |
-| 7 | `success()` não respeita `isQuiet()` | `prompt.ts:44` | Inconsistência com `info()` |
-| 8 | `printSummary()` usa `warn()` dentro → prefixo `!` indevido | `prompt.ts:270` | Polui output do resumo |
-| 9 | `printSessionSummary()` usa `ERR`/`OK` puro sem cor | `cli_base.ts:83-84` | Quebra consistência visual |
-| 10 | Nivelar sem validação: branches iguais, vazios, inexistentes | `nivelar.ts` | MR auto-referencial, erro confuso |
-| 11 | Branch existence check ausente no trigger pipeline | `git_triggers/main.ts` | Erro só chega via API |
-| 12 | `divider()` não usada em `printSessionSummary` — `'='.repeat(50)` manual | `cli_base.ts:71,89` | Inconsistência |
+| # | Problema | Local | Melhoria | Status |
+|---|----------|-------|----------|--------|
+| 5 | `confirm()` aceita qq entrada → `false` silencioso | `prompt.ts:82-83` | Loop com validação + hint visual | ✅ |
+| 6 | `prompt()` sem validação de vazio | `prompt.ts:71-77` | `minLength` opcional em `PromptOptions` | ✅ |
+| 7 | `success()` não respeita `isQuiet()` | `prompt.ts:44` | Inconsistência com `info()` | ✅ |
+| 8 | `printSummary()` usa `warn()` dentro → prefixo `!` indevido | `prompt.ts:270` | Polui output do resumo | ✅ |
+| 9 | `printSessionSummary()` usa `ERR`/`OK` puro sem cor | `cli_base.ts:83-84` | Quebra consistência visual | ✅ |
+| 10 | Nivelar sem validação: branches iguais, vazios, inexistentes | `nivelar.ts` | MR auto-referencial, erro confuso | ✅ |
+| 11 | Branch existence check ausente no trigger pipeline | `git_triggers/main.ts` | Erro só chega via API | ✅ |
+| 12 | `divider()` não usada em `printSessionSummary` — `'='.repeat(50)` manual | `cli_base.ts:71,89` | Inconsistência | ✅ |
 
 ---
 
-#### 🟢 Fase 3 — Polimento Visual
+#### 🟢 Fase 3 — Polimento Visual ✅
 
-| # | Mudança | Descrição |
-|---|---------|-----------|
-| 13 | **Unicode icons**: `✓`/`✗`/`⚠`/`ℹ` com fallback ASCII | Substituir `OK`/`ERR`/`!`/`i` |
-| 14 | **Prefixos bold** nos 4 níveis (`chalk.bold`) | Maior contraste em terminais claros |
-| 15 | **`title()` com moldura**: `\n` + divider + texto + divider | Hierarquia visual clara |
-| 16 | **`tableView()` word-wrap**: `wordWrap: true` + `colWidths` dinâmicos | Evita quebra de layout |
-| 17 | **`divider()` dinâmico** | ✅ já feito |
-| 18 | **Cores no `printSessionSummary()`** | Reusar `success()`/`error()` |
+| # | Mudança | Descrição | Status |
+|---|---------|-----------|--------|
+| 13 | **Unicode icons**: `✓`/`✗`/`⚠`/`ℹ` com fallback ASCII | Substituir `OK`/`ERR`/`!`/`i` | ✅ |
+| 14 | **Prefixos bold** nos 4 níveis (`chalk.bold`) | Maior contraste em terminais claros | ✅ |
+| 15 | **`title()` com moldura**: `\n` + divider + texto + divider | Hierarquia visual clara | ✅ |
+| 16 | **`tableView()` word-wrap**: `wordWrap: true` + `colWidths` dinâmicos | Evita quebra de layout | ✅ |
+| 17 | **`divider()` dinâmico** | | ✅ |
+| 18 | **Cores no `printSessionSummary()`** | Reusar `success()`/`error()` | ✅ |
 
 ---
 
