@@ -1,10 +1,11 @@
+// @ts-nocheck
 jest.mock('../shared/prompt', () => ({
     info: jest.fn(),
     warn: jest.fn(),
 }));
 
 jest.mock('../shared/logger', () => ({
-    rootLogger: { info: jest.fn(), warn: jest.fn(), error: jest.fn() }
+    rootLogger: { info: jest.fn(), warn: jest.fn(), error: jest.fn() },
 }));
 
 jest.mock('fs');
@@ -54,7 +55,7 @@ describe('JiraLinkManager', () => {
             expect(fs.writeFileSync).toHaveBeenCalledWith(
                 '/fake/home/.qa_tools_link_types_cache.json',
                 JSON.stringify(fakeTypes),
-                'utf8'
+                'utf8',
             );
         });
 
@@ -119,7 +120,7 @@ describe('JiraLinkManager', () => {
     describe('linkIssues', () => {
         it('creates links for each linked issue', async () => {
             mockJiraResource.getJiraResource.mockResolvedValue({
-                issueLinkTypes: [{ id: '10200', name: 'Tests', inward: 'is tested by', outward: 'tests' }]
+                issueLinkTypes: [{ id: '10200', name: 'Tests', inward: 'is tested by', outward: 'tests' }],
             });
             mockJiraResource.postJiraResource.mockResolvedValue({});
             const linked = [
@@ -131,19 +132,21 @@ describe('JiraLinkManager', () => {
             expect(mockJiraResource.postJiraResource).toHaveBeenNthCalledWith(1, 'issueLink', {
                 type: { id: '10200' },
                 inwardIssue: { key: 'TEST-1' },
-                outwardIssue: { key: 'TEST-2' }
+                outwardIssue: { key: 'TEST-2' },
             });
             expect(mockJiraResource.postJiraResource).toHaveBeenNthCalledWith(2, 'issueLink', {
                 type: { id: '10200' },
                 inwardIssue: { key: 'TEST-1' },
-                outwardIssue: { key: 'TEST-3' }
+                outwardIssue: { key: 'TEST-3' },
             });
         });
     });
 
     describe('_getPreconditionFieldId', () => {
         it('returns cached value on second call', async () => {
-            const fields = [{ id: 'custom_123', schema: { custom: 'com.xpandit.plugins.xray:test-precondition-custom-field' } }];
+            const fields = [
+                { id: 'custom_123', schema: { custom: 'com.xpandit.plugins.xray:test-precondition-custom-field' } },
+            ];
             mockJiraResource.getJiraResource.mockResolvedValue(fields);
             const first = await manager._getPreconditionFieldId();
             const second = await manager._getPreconditionFieldId();
@@ -168,14 +171,14 @@ describe('JiraLinkManager', () => {
     describe('createIssueLink', () => {
         it('creates a single issue link with resolved type', async () => {
             mockJiraResource.getJiraResource.mockResolvedValue({
-                issueLinkTypes: [{ id: '10200', name: 'Tests', inward: 'is tested by', outward: 'tests' }]
+                issueLinkTypes: [{ id: '10200', name: 'Tests', inward: 'is tested by', outward: 'tests' }],
             });
             mockJiraResource.postJiraResource.mockResolvedValue({ id: 'new-link' });
             const result = await manager.createIssueLink('TEST-1', 'TEST-2', 'Tests');
             expect(mockJiraResource.postJiraResource).toHaveBeenCalledWith('issueLink', {
                 type: { id: '10200' },
                 inwardIssue: { key: 'TEST-2' },
-                outwardIssue: { key: 'TEST-1' }
+                outwardIssue: { key: 'TEST-1' },
             });
             expect(result).toEqual({ id: 'new-link' });
         });
@@ -183,26 +186,30 @@ describe('JiraLinkManager', () => {
 
     describe('associatePrecondition', () => {
         it('adds precondition to test issue fields', async () => {
-            const fields = [{ id: 'custom_99', schema: { custom: 'com.xpandit.plugins.xray:test-precondition-custom-field' } }];
+            const fields = [
+                { id: 'custom_99', schema: { custom: 'com.xpandit.plugins.xray:test-precondition-custom-field' } },
+            ];
             mockJiraResource.getJiraResource
                 .mockResolvedValueOnce(fields)
                 .mockResolvedValueOnce({ key: 'TEST-1', fields: { custom_99: ['PRE-1'] } });
             mockJiraResource.putJiraResource.mockResolvedValue({});
             await manager.associatePrecondition('TEST-1', 'PRE-2');
             expect(mockJiraResource.putJiraResource).toHaveBeenCalledWith('issue/TEST-1', {
-                fields: { custom_99: ['PRE-1', 'PRE-2'] }
+                fields: { custom_99: ['PRE-1', 'PRE-2'] },
             });
         });
 
         it('does not duplicate existing precondition', async () => {
-            const fields = [{ id: 'custom_99', schema: { custom: 'com.xpandit.plugins.xray:test-precondition-custom-field' } }];
+            const fields = [
+                { id: 'custom_99', schema: { custom: 'com.xpandit.plugins.xray:test-precondition-custom-field' } },
+            ];
             mockJiraResource.getJiraResource
                 .mockResolvedValueOnce(fields)
                 .mockResolvedValueOnce({ key: 'TEST-1', fields: { custom_99: ['PRE-1', 'PRE-2'] } });
             mockJiraResource.putJiraResource.mockResolvedValue({});
             await manager.associatePrecondition('TEST-1', 'PRE-2');
             expect(mockJiraResource.putJiraResource).toHaveBeenCalledWith('issue/TEST-1', {
-                fields: { custom_99: ['PRE-1', 'PRE-2'] }
+                fields: { custom_99: ['PRE-1', 'PRE-2'] },
             });
         });
     });

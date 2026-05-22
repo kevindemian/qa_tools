@@ -1,16 +1,17 @@
+// @ts-nocheck
 jest.mock('../shared/http-client', () => ({
-    createHttpClient: jest.fn()
+    createHttpClient: jest.fn(),
 }));
 
 const { createHttpClient } = require('../shared/http-client');
 
 jest.mock('../shared/logger', () => ({
-    Logger: jest.fn().mockImplementation(() => ({ error: jest.fn(), warn: jest.fn() }))
+    Logger: jest.fn().mockImplementation(() => ({ error: jest.fn(), warn: jest.fn() })),
 }));
 
 jest.mock('../shared/prompt', () => ({
     info: jest.fn(),
-    extractErrorMessage: jest.fn(err => err?.message || 'Erro desconhecido'),
+    extractErrorMessage: jest.fn((err) => err?.message || 'Erro desconhecido'),
 }));
 
 const GitHubManager = require('./github_manager');
@@ -46,11 +47,15 @@ describe('GitHubManager', () => {
     describe('triggerPipeline', () => {
         it('calls workflow dispatch with workflow_id', async () => {
             mockClient.post.mockResolvedValue({ data: {} });
-            const result = await manager.triggerPipeline({ ref: 'main', variables: [{ key: 'VAR', value: 'val' }], workflow_id: '123' });
-            expect(mockClient.post).toHaveBeenCalledWith(
-                '/repos/myorg/myrepo/actions/workflows/123/dispatches',
-                { ref: 'main', inputs: { VAR: 'val' } }
-            );
+            const result = await manager.triggerPipeline({
+                ref: 'main',
+                variables: [{ key: 'VAR', value: 'val' }],
+                workflow_id: '123',
+            });
+            expect(mockClient.post).toHaveBeenCalledWith('/repos/myorg/myrepo/actions/workflows/123/dispatches', {
+                ref: 'main',
+                inputs: { VAR: 'val' },
+            });
             expect(result.id).toBe('123');
             expect(result.web_url).toContain('actions/runs');
         });
@@ -59,11 +64,13 @@ describe('GitHubManager', () => {
             mockClient.get.mockResolvedValue({ data: { workflows: [{ id: 42, name: 'ci' }] } });
             mockClient.post.mockResolvedValue({ data: {} });
             const result = await manager.triggerPipeline({ ref: 'dev', variables: [] });
-            expect(mockClient.get).toHaveBeenCalledWith('/repos/myorg/myrepo/actions/workflows', { params: { per_page: 10 } });
-            expect(mockClient.post).toHaveBeenCalledWith(
-                '/repos/myorg/myrepo/actions/workflows/42/dispatches',
-                { ref: 'dev', inputs: {} }
-            );
+            expect(mockClient.get).toHaveBeenCalledWith('/repos/myorg/myrepo/actions/workflows', {
+                params: { per_page: 10 },
+            });
+            expect(mockClient.post).toHaveBeenCalledWith('/repos/myorg/myrepo/actions/workflows/42/dispatches', {
+                ref: 'dev',
+                inputs: {},
+            });
             expect(result.id).toBe(42);
         });
 
@@ -74,7 +81,9 @@ describe('GitHubManager', () => {
 
         it('throws on API error', async () => {
             mockClient.post.mockRejectedValue(new Error('API error'));
-            await expect(manager.triggerPipeline({ ref: 'main', variables: [], workflow_id: '1' })).rejects.toThrow('API error');
+            await expect(manager.triggerPipeline({ ref: 'main', variables: [], workflow_id: '1' })).rejects.toThrow(
+                'API error',
+            );
         });
     });
 
@@ -93,13 +102,26 @@ describe('GitHubManager', () => {
 
     describe('createMergeRequest (PR)', () => {
         const args = ['feature', 'main', 'PR Title', 'PR Desc'];
-        const mockPR = { number: 10, title: 'PR Title', body: 'PR Desc', html_url: 'https://...', state: 'open', merged: false, head: { ref: 'feature' }, base: { ref: 'main' }, requested_reviewers: [] };
+        const mockPR = {
+            number: 10,
+            title: 'PR Title',
+            body: 'PR Desc',
+            html_url: 'https://...',
+            state: 'open',
+            merged: false,
+            head: { ref: 'feature' },
+            base: { ref: 'main' },
+            requested_reviewers: [],
+        };
 
         it('calls POST /pulls on success', async () => {
             mockClient.post.mockResolvedValue({ data: mockPR });
             const result = await manager.createMergeRequest(...args);
             expect(mockClient.post).toHaveBeenCalledWith('/repos/myorg/myrepo/pulls', {
-                head: 'feature', base: 'main', title: 'PR Title', body: 'PR Desc'
+                head: 'feature',
+                base: 'main',
+                title: 'PR Title',
+                body: 'PR Desc',
             });
             expect(result.iid).toBe(10);
             expect(result.web_url).toBe('https://...');
@@ -107,22 +129,37 @@ describe('GitHubManager', () => {
 
         it('handles 422 (already exists) by searching and updating existing PR', async () => {
             const err = Object.assign(new Error('Unprocessable'), {
-                response: { status: 422, data: { errors: [{ message: 'already exists' }] } }
+                response: { status: 422, data: { errors: [{ message: 'already exists' }] } },
             });
             mockClient.post.mockRejectedValue(err);
-            mockClient.get.mockResolvedValue({ data: [{ number: 5, title: 'old', body: 'old', html_url: '', state: 'open', merged: false, head: { ref: 'feature' }, base: { ref: 'main' }, requested_reviewers: [] }] });
+            mockClient.get.mockResolvedValue({
+                data: [
+                    {
+                        number: 5,
+                        title: 'old',
+                        body: 'old',
+                        html_url: '',
+                        state: 'open',
+                        merged: false,
+                        head: { ref: 'feature' },
+                        base: { ref: 'main' },
+                        requested_reviewers: [],
+                    },
+                ],
+            });
             mockClient.patch.mockResolvedValue({ data: { ...mockPR, number: 5 } });
 
             const result = await manager.createMergeRequest(...args);
             expect(mockClient.patch).toHaveBeenCalledWith('/repos/myorg/myrepo/pulls/5', {
-                title: 'PR Title', body: 'PR Desc'
+                title: 'PR Title',
+                body: 'PR Desc',
             });
             expect(result.iid).toBe(5);
         });
 
         it('re-throws on 422 without already_exists error', async () => {
             const err = Object.assign(new Error('Unprocessable'), {
-                response: { status: 422, data: { errors: [{ message: 'other error' }] } }
+                response: { status: 422, data: { errors: [{ message: 'other error' }] } },
             });
             mockClient.post.mockRejectedValue(err);
             await expect(manager.createMergeRequest(...args)).rejects.toThrow('Unprocessable');
@@ -137,10 +174,23 @@ describe('GitHubManager', () => {
 
     describe('updateMergeRequest', () => {
         it('calls PATCH /pulls/{iid}', async () => {
-            mockClient.patch.mockResolvedValue({ data: { number: 5, title: 'New', body: 'New Desc', html_url: '', state: 'open', merged: false, head: { ref: 'dev' }, base: { ref: 'main' }, requested_reviewers: [] } });
+            mockClient.patch.mockResolvedValue({
+                data: {
+                    number: 5,
+                    title: 'New',
+                    body: 'New Desc',
+                    html_url: '',
+                    state: 'open',
+                    merged: false,
+                    head: { ref: 'dev' },
+                    base: { ref: 'main' },
+                    requested_reviewers: [],
+                },
+            });
             const result = await manager.updateMergeRequest('5', 'dev', 'main', 'New Title', 'New Desc');
             expect(mockClient.patch).toHaveBeenCalledWith('/repos/myorg/myrepo/pulls/5', {
-                title: 'New Title', body: 'New Desc'
+                title: 'New Title',
+                body: 'New Desc',
             });
             expect(result.iid).toBe(5);
         });
@@ -153,7 +203,19 @@ describe('GitHubManager', () => {
 
     describe('getMergeRequest', () => {
         it('calls GET /pulls/{iid}', async () => {
-            mockClient.get.mockResolvedValue({ data: { number: 5, state: 'open', merged: false, title: 'T', body: 'D', html_url: '', head: { ref: 'f' }, base: { ref: 'm' }, requested_reviewers: [] } });
+            mockClient.get.mockResolvedValue({
+                data: {
+                    number: 5,
+                    state: 'open',
+                    merged: false,
+                    title: 'T',
+                    body: 'D',
+                    html_url: '',
+                    head: { ref: 'f' },
+                    base: { ref: 'm' },
+                    requested_reviewers: [],
+                },
+            });
             const result = await manager.getMergeRequest('5');
             expect(mockClient.get).toHaveBeenCalledWith('/repos/myorg/myrepo/pulls/5');
             expect(result.iid).toBe(5);
@@ -169,13 +231,33 @@ describe('GitHubManager', () => {
     describe('searchMergeRequests', () => {
         it('calls GET /pulls with head:owner prefix', async () => {
             const mockPRs = [
-                { number: 1, state: 'open', merged: false, title: 'T1', body: '', html_url: '', head: { ref: 'dev' }, base: { ref: 'main' }, requested_reviewers: [] },
-                { number: 2, state: 'open', merged: false, title: 'T2', body: '', html_url: '', head: { ref: 'feat' }, base: { ref: 'main' }, requested_reviewers: [] },
+                {
+                    number: 1,
+                    state: 'open',
+                    merged: false,
+                    title: 'T1',
+                    body: '',
+                    html_url: '',
+                    head: { ref: 'dev' },
+                    base: { ref: 'main' },
+                    requested_reviewers: [],
+                },
+                {
+                    number: 2,
+                    state: 'open',
+                    merged: false,
+                    title: 'T2',
+                    body: '',
+                    html_url: '',
+                    head: { ref: 'feat' },
+                    base: { ref: 'main' },
+                    requested_reviewers: [],
+                },
             ];
             mockClient.get.mockResolvedValue({ data: mockPRs });
             const result = await manager.searchMergeRequests('dev', 'main', 'opened');
             expect(mockClient.get).toHaveBeenCalledWith('/repos/myorg/myrepo/pulls', {
-                params: { head: 'myorg:dev', base: 'main', state: 'open', per_page: 100 }
+                params: { head: 'myorg:dev', base: 'main', state: 'open', per_page: 100 },
             });
             expect(result).toHaveLength(2);
         });
@@ -184,7 +266,7 @@ describe('GitHubManager', () => {
             mockClient.get.mockResolvedValue({ data: [] });
             await manager.searchMergeRequests('', '', 'opened');
             expect(mockClient.get).toHaveBeenCalledWith(expect.any(String), {
-                params: expect.objectContaining({ state: 'open', per_page: 100 })
+                params: expect.objectContaining({ state: 'open', per_page: 100 }),
             });
         });
 
@@ -197,18 +279,54 @@ describe('GitHubManager', () => {
 
     describe('acceptMergeRequest', () => {
         it('calls GET then PUT /pulls/{iid}/merge when open', async () => {
-            mockClient.get.mockResolvedValue({ data: { number: 5, state: 'open', merged: false, title: 'T', body: '', html_url: '', head: { ref: 'f' }, base: { ref: 'm' }, requested_reviewers: [] } });
-            mockClient.put.mockResolvedValue({ data: { number: 5, state: 'open', merged: true, title: 'T', body: '', html_url: 'https://merge', head: { ref: 'f' }, base: { ref: 'm' }, requested_reviewers: [] } });
+            mockClient.get.mockResolvedValue({
+                data: {
+                    number: 5,
+                    state: 'open',
+                    merged: false,
+                    title: 'T',
+                    body: '',
+                    html_url: '',
+                    head: { ref: 'f' },
+                    base: { ref: 'm' },
+                    requested_reviewers: [],
+                },
+            });
+            mockClient.put.mockResolvedValue({
+                data: {
+                    number: 5,
+                    state: 'open',
+                    merged: true,
+                    title: 'T',
+                    body: '',
+                    html_url: 'https://merge',
+                    head: { ref: 'f' },
+                    base: { ref: 'm' },
+                    requested_reviewers: [],
+                },
+            });
 
             const result = await manager.acceptMergeRequest('5');
             expect(mockClient.put).toHaveBeenCalledWith('/repos/myorg/myrepo/pulls/5/merge', {
-                delete_branch_on_merge: true
+                delete_branch_on_merge: true,
             });
             expect(result.web_url).toBe('https://merge');
         });
 
         it('returns early without PUT when already merged', async () => {
-            mockClient.get.mockResolvedValue({ data: { number: 5, state: 'closed', merged: true, title: 'T', body: '', html_url: 'https://...', head: { ref: 'f' }, base: { ref: 'm' }, requested_reviewers: [] } });
+            mockClient.get.mockResolvedValue({
+                data: {
+                    number: 5,
+                    state: 'closed',
+                    merged: true,
+                    title: 'T',
+                    body: '',
+                    html_url: 'https://...',
+                    head: { ref: 'f' },
+                    base: { ref: 'm' },
+                    requested_reviewers: [],
+                },
+            });
 
             const result = await manager.acceptMergeRequest('5');
             expect(mockClient.put).not.toHaveBeenCalled();
@@ -221,14 +339,50 @@ describe('GitHubManager', () => {
         });
 
         it('throws on merge API failure', async () => {
-            mockClient.get.mockResolvedValue({ data: { number: 5, state: 'open', merged: false, title: 'T', body: '', html_url: '', head: { ref: 'f' }, base: { ref: 'm' }, requested_reviewers: [] } });
+            mockClient.get.mockResolvedValue({
+                data: {
+                    number: 5,
+                    state: 'open',
+                    merged: false,
+                    title: 'T',
+                    body: '',
+                    html_url: '',
+                    head: { ref: 'f' },
+                    base: { ref: 'm' },
+                    requested_reviewers: [],
+                },
+            });
             mockClient.put.mockRejectedValue(new Error('Merge failed'));
             await expect(manager.acceptMergeRequest('5')).rejects.toThrow('Merge failed');
         });
 
         it('omits delete_branch_on_merge when false', async () => {
-            mockClient.get.mockResolvedValue({ data: { number: 5, state: 'open', merged: false, title: 'T', body: '', html_url: '', head: { ref: 'f' }, base: { ref: 'm' }, requested_reviewers: [] } });
-            mockClient.put.mockResolvedValue({ data: { number: 5, state: 'open', merged: true, title: 'T', body: '', html_url: '', head: { ref: 'f' }, base: { ref: 'm' }, requested_reviewers: [] } });
+            mockClient.get.mockResolvedValue({
+                data: {
+                    number: 5,
+                    state: 'open',
+                    merged: false,
+                    title: 'T',
+                    body: '',
+                    html_url: '',
+                    head: { ref: 'f' },
+                    base: { ref: 'm' },
+                    requested_reviewers: [],
+                },
+            });
+            mockClient.put.mockResolvedValue({
+                data: {
+                    number: 5,
+                    state: 'open',
+                    merged: true,
+                    title: 'T',
+                    body: '',
+                    html_url: '',
+                    head: { ref: 'f' },
+                    base: { ref: 'm' },
+                    requested_reviewers: [],
+                },
+            });
 
             await manager.acceptMergeRequest('5', false);
             expect(mockClient.put).toHaveBeenCalledWith('/repos/myorg/myrepo/pulls/5/merge', {});
@@ -240,10 +394,22 @@ describe('GitHubManager', () => {
             mockClient.get.mockResolvedValue({
                 data: {
                     jobs: [
-                        { id: 201, name: 'test (22)', runner_group_name: 'ubuntu', status: 'completed', conclusion: 'success' },
-                        { id: 202, name: 'test (24)', runner_group_name: 'ubuntu', status: 'completed', conclusion: 'failure' },
-                    ]
-                }
+                        {
+                            id: 201,
+                            name: 'test (22)',
+                            runner_group_name: 'ubuntu',
+                            status: 'completed',
+                            conclusion: 'success',
+                        },
+                        {
+                            id: 202,
+                            name: 'test (24)',
+                            runner_group_name: 'ubuntu',
+                            status: 'completed',
+                            conclusion: 'failure',
+                        },
+                    ],
+                },
             });
             const result = await manager.getPipelineJobs('42');
             expect(mockClient.get).toHaveBeenCalledWith('/repos/myorg/myrepo/actions/runs/42/jobs');
@@ -263,10 +429,8 @@ describe('GitHubManager', () => {
         it('returns artifacts from /actions/runs/{id}/artifacts', async () => {
             mockClient.get.mockResolvedValue({
                 data: {
-                    artifacts: [
-                        { id: 301, name: 'mochawesome-report', size: 12345 },
-                    ]
-                }
+                    artifacts: [{ id: 301, name: 'mochawesome-report', size: 12345 }],
+                },
             });
             const result = await manager.listPipelineArtifacts('42');
             expect(mockClient.get).toHaveBeenCalledWith('/repos/myorg/myrepo/actions/runs/42/artifacts');
@@ -304,7 +468,9 @@ describe('GitHubManager', () => {
         it('calls GET /actions/variables', async () => {
             mockClient.get.mockResolvedValue({ data: { variables: [{ name: 'MY_VAR', value: 'myval' }] } });
             const result = await manager.getCICDVariables();
-            expect(mockClient.get).toHaveBeenCalledWith('/repos/myorg/myrepo/actions/variables', { params: { per_page: 100 } });
+            expect(mockClient.get).toHaveBeenCalledWith('/repos/myorg/myrepo/actions/variables', {
+                params: { per_page: 100 },
+            });
             expect(result).toEqual([{ key: 'MY_VAR', value: 'myval', type: 'variable' }]);
         });
 
@@ -338,7 +504,17 @@ describe('GitHubManager', () => {
 
     describe('_formatPR', () => {
         it('formats open PR', () => {
-            const raw = { number: 1, title: 'T', body: 'D', html_url: 'url', state: 'open', merged: false, head: { ref: 'f' }, base: { ref: 'm' }, requested_reviewers: [] };
+            const raw = {
+                number: 1,
+                title: 'T',
+                body: 'D',
+                html_url: 'url',
+                state: 'open',
+                merged: false,
+                head: { ref: 'f' },
+                base: { ref: 'm' },
+                requested_reviewers: [],
+            };
             const result = manager._formatPR(raw);
             expect(result.iid).toBe(1);
             expect(result.state).toBe('opened');
@@ -346,7 +522,17 @@ describe('GitHubManager', () => {
         });
 
         it('formats merged PR', () => {
-            const raw = { number: 2, title: 'T', body: 'D', html_url: 'url', state: 'closed', merged: true, head: { ref: 'f' }, base: { ref: 'm' }, requested_reviewers: [{ id: 1 }] };
+            const raw = {
+                number: 2,
+                title: 'T',
+                body: 'D',
+                html_url: 'url',
+                state: 'closed',
+                merged: true,
+                head: { ref: 'f' },
+                base: { ref: 'm' },
+                requested_reviewers: [{ id: 1 }],
+            };
             const result = manager._formatPR(raw);
             expect(result.state).toBe('merged');
             expect(result.approved).toBe(false);
@@ -359,10 +545,16 @@ describe('GitHubManager', () => {
 
     describe('getRecentPipelines', () => {
         it('calls GET /actions/runs with per_page', async () => {
-            mockClient.get.mockResolvedValue({ data: { workflow_runs: [{ id: 1, run_number: 123, head_branch: 'main', status: 'completed', conclusion: 'success' }] } });
+            mockClient.get.mockResolvedValue({
+                data: {
+                    workflow_runs: [
+                        { id: 1, run_number: 123, head_branch: 'main', status: 'completed', conclusion: 'success' },
+                    ],
+                },
+            });
             const result = await manager.getRecentPipelines(3);
             expect(mockClient.get).toHaveBeenCalledWith('/repos/myorg/myrepo/actions/runs', {
-                params: { per_page: 3 }
+                params: { per_page: 3 },
             });
             expect(result).toHaveLength(1);
         });
@@ -371,7 +563,7 @@ describe('GitHubManager', () => {
             mockClient.get.mockResolvedValue({ data: { workflow_runs: [] } });
             await manager.getRecentPipelines();
             expect(mockClient.get).toHaveBeenCalledWith(expect.any(String), {
-                params: { per_page: 5 }
+                params: { per_page: 5 },
             });
         });
 

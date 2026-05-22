@@ -1,3 +1,4 @@
+// @ts-nocheck
 jest.mock('../shared/prompt', () => ({
     prompt: jest.fn(),
     info: jest.fn(),

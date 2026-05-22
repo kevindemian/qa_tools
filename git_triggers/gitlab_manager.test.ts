@@ -1,16 +1,17 @@
+// @ts-nocheck
 jest.mock('../shared/http-client', () => ({
-    createHttpClient: jest.fn()
+    createHttpClient: jest.fn(),
 }));
 
 const { createHttpClient } = require('../shared/http-client');
 
 jest.mock('../shared/logger', () => ({
-    Logger: jest.fn().mockImplementation(() => ({ error: jest.fn() }))
+    Logger: jest.fn().mockImplementation(() => ({ error: jest.fn() })),
 }));
 
 jest.mock('../shared/prompt', () => ({
     info: jest.fn(),
-    extractErrorMessage: jest.fn(err => err?.message || 'Erro desconhecido'),
+    extractErrorMessage: jest.fn((err) => err?.message || 'Erro desconhecido'),
 }));
 
 const GitLabManager = require('./gitlab_manager');
@@ -75,8 +76,11 @@ describe('GitLabManager', () => {
             mockClient.post.mockResolvedValue({ data: { iid: 10, web_url: 'https://...' } });
             const result = await manager.createMergeRequest(...args);
             expect(mockClient.post).toHaveBeenCalledWith('/merge_requests', {
-                id: 'project-123', source_branch: 'feature', target_branch: 'main',
-                title: 'MR Title', description: 'MR Desc'
+                id: 'project-123',
+                source_branch: 'feature',
+                target_branch: 'main',
+                title: 'MR Title',
+                description: 'MR Desc',
             });
             expect(result).toEqual({ iid: 10, web_url: 'https://...' });
         });
@@ -89,10 +93,11 @@ describe('GitLabManager', () => {
 
             const result = await manager.createMergeRequest(...args);
             expect(mockClient.get).toHaveBeenCalledWith('/merge_requests', {
-                params: { state: 'opened', source_branch: 'feature', target_branch: 'main', per_page: 100 }
+                params: { state: 'opened', source_branch: 'feature', target_branch: 'main', per_page: 100 },
             });
             expect(mockClient.put).toHaveBeenCalledWith('/merge_requests/5', {
-                title: 'MR Title', description: 'MR Desc'
+                title: 'MR Title',
+                description: 'MR Desc',
             });
             expect(result).toEqual({ iid: 5 });
         });
@@ -118,7 +123,8 @@ describe('GitLabManager', () => {
             mockClient.put.mockResolvedValue({ data: { iid: 5 } });
             const result = await manager.updateMergeRequest('5', 'dev', 'main', 'New Title', 'New Desc');
             expect(mockClient.put).toHaveBeenCalledWith('/merge_requests/5', {
-                title: 'New Title', description: 'New Desc'
+                title: 'New Title',
+                description: 'New Desc',
             });
             expect(result).toEqual({ iid: 5 });
         });
@@ -149,7 +155,7 @@ describe('GitLabManager', () => {
             mockClient.get.mockResolvedValue({ data: [{ iid: 1 }, { iid: 2 }] });
             const result = await manager.searchMergeRequests('dev', 'main', 'opened');
             expect(mockClient.get).toHaveBeenCalledWith('/merge_requests', {
-                params: { state: 'opened', source_branch: 'dev', target_branch: 'main', per_page: 100 }
+                params: { state: 'opened', source_branch: 'dev', target_branch: 'main', per_page: 100 },
             });
             expect(result).toEqual([{ iid: 1 }, { iid: 2 }]);
         });
@@ -169,7 +175,7 @@ describe('GitLabManager', () => {
             const result = await manager.acceptMergeRequest('5');
             expect(mockClient.get).toHaveBeenCalledWith('/merge_requests/5');
             expect(mockClient.put).toHaveBeenCalledWith('/merge_requests/5/merge', {
-                should_remove_source_branch: true
+                should_remove_source_branch: true,
             });
             expect(result).toEqual({ web_url: 'https://merge' });
         });
@@ -201,7 +207,7 @@ describe('GitLabManager', () => {
 
             await manager.acceptMergeRequest('5', false);
             expect(mockClient.put).toHaveBeenCalledWith('/merge_requests/5/merge', {
-                should_remove_source_branch: false
+                should_remove_source_branch: false,
             });
         });
     });
@@ -211,7 +217,7 @@ describe('GitLabManager', () => {
             mockClient.get.mockResolvedValue({ data: [{ id: 1, ref: 'main', status: 'success' }] });
             const result = await manager.getRecentPipelines(3);
             expect(mockClient.get).toHaveBeenCalledWith('/pipelines', {
-                params: { per_page: 3, order_by: 'updated_at' }
+                params: { per_page: 3, order_by: 'updated_at' },
             });
             expect(result).toEqual([{ id: 1, ref: 'main', status: 'success' }]);
         });
@@ -220,7 +226,7 @@ describe('GitLabManager', () => {
             mockClient.get.mockResolvedValue({ data: [] });
             await manager.getRecentPipelines();
             expect(mockClient.get).toHaveBeenCalledWith('/pipelines', {
-                params: { per_page: 5, order_by: 'updated_at' }
+                params: { per_page: 5, order_by: 'updated_at' },
             });
         });
 
@@ -252,7 +258,7 @@ describe('GitLabManager', () => {
                 data: [
                     { id: 101, name: 'test', stage: 'test', status: 'success' },
                     { id: 102, name: 'build', stage: 'build', status: 'success' },
-                ]
+                ],
             });
             const result = await manager.getPipelineJobs('42');
             expect(mockClient.get).toHaveBeenCalledWith('/pipelines/42/jobs');
@@ -273,15 +279,19 @@ describe('GitLabManager', () => {
         it('returns jobs with artifacts from pipeline jobs', async () => {
             mockClient.get.mockResolvedValue({
                 data: [
-                    { id: 101, name: 'test', stage: 'test', status: 'success', artifacts_file: { filename: 'results.zip' } },
+                    {
+                        id: 101,
+                        name: 'test',
+                        stage: 'test',
+                        status: 'success',
+                        artifacts_file: { filename: 'results.zip' },
+                    },
                     { id: 102, name: 'build', stage: 'build', status: 'success', artifacts: [] },
                     { id: 103, name: 'lint', stage: 'lint', status: 'success' },
-                ]
+                ],
             });
             const result = await manager.listPipelineArtifacts('42');
-            expect(result).toEqual([
-                { id: 101, name: 'test' },
-            ]);
+            expect(result).toEqual([{ id: 101, name: 'test' }]);
         });
 
         it('returns [] on API error', async () => {

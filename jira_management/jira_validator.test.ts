@@ -1,3 +1,4 @@
+// @ts-nocheck
 const path = require('path');
 const fs = require('fs');
 const dotenv = require('dotenv');
@@ -6,7 +7,12 @@ const JiraResource = require('./jira_resource');
 
 dotenv.config({ path: path.resolve(__dirname, '../.env') });
 
-const hadRealJira = !!(process.env.JIRA_BASE_URL && process.env.JIRA_PERSONAL_TOKEN);
+const hadRealJira = !!(
+    process.env.JIRA_BASE_URL &&
+    process.env.JIRA_PERSONAL_TOKEN &&
+    !process.env.JIRA_BASE_URL.includes('seu-jira') &&
+    !process.env.JIRA_PERSONAL_TOKEN.includes('seu-token')
+);
 
 if (!process.env.JIRA_BASE_URL) process.env.JIRA_BASE_URL = 'http://ci-mock-jira';
 if (!process.env.JIRA_PERSONAL_TOKEN) process.env.JIRA_PERSONAL_TOKEN = 'ci-token';
@@ -72,7 +78,7 @@ localDescribe('CSV Validation (local)', () => {
     test('Description does not contain raw CSV step data', () => {
         tests.forEach((t, i) => {
             const stepMarkers = ['Action,Data,Expected Result', 'Action,Data,'];
-            const hasLeak = stepMarkers.some(m => t.description.includes(m));
+            const hasLeak = stepMarkers.some((m) => t.description.includes(m));
             expect(hasLeak).toBe(false);
         });
     });
@@ -104,39 +110,39 @@ jiraSuite('CSV Validation against Jira', () => {
     let projectName;
     let projectId;
     let issueTypes;
-    let validationErrors = [];
+    const validationErrors = [];
 
     beforeAll(async () => {
         if (isMockMode) {
             const nock = require('nock');
             nock.disableNetConnect();
             nock(JIRA_BASE_URL + '/rest/api/2')
+                .persist()
                 .get('/project/ECSPOL')
                 .reply(200, {
                     id: '12345',
-                    issueTypes: [{ id: '11800', name: 'Test' }]
+                    issueTypes: [{ id: '11800', name: 'Test' }],
                 })
                 .get(/\/issue\/.*/)
                 .reply(200, (uri) => ({
                     key: uri.split('/')[2],
                     id: '99999',
-                    fields: { summary: 'Mocked ' + uri.split('/')[2] }
+                    fields: { summary: 'Mocked ' + uri.split('/')[2] },
                 }));
         }
 
         jiraResource = new JiraResource(JIRA_TOKEN, JIRA_BASE_URL + '/rest/api/2');
 
-        const projectFromTitle = tests.length > 0
-            ? (tests[0].title.match(/^([A-Z][A-Z0-9]+)/) || [])[1]
-            : null;
+        const projectFromTitle = tests.length > 0 ? (tests[0].title.match(/^([A-Z][A-Z0-9]+)/) || [])[1] : null;
         projectName = process.env.JIRA_PROJECT || projectFromTitle || 'ECSPOL';
 
         try {
             const projectData = await jiraResource.getJiraResource(`project/${projectName}`);
             projectId = projectData ? projectData.id : null;
-            issueTypes = projectData && Array.isArray(projectData.issueTypes) && projectData.issueTypes.length > 0
-                ? projectData.issueTypes
-                : null;
+            issueTypes =
+                projectData && Array.isArray(projectData.issueTypes) && projectData.issueTypes.length > 0
+                    ? projectData.issueTypes
+                    : null;
         } catch (e) {
             projectId = null;
             issueTypes = null;
@@ -161,37 +167,33 @@ jiraSuite('CSV Validation against Jira', () => {
 
     test('Issue type "Test" is available in project', () => {
         expect(issueTypes).toBeTruthy();
-        const hasTestType = issueTypes.some(it => it.name === 'Test');
+        const hasTestType = issueTypes.some((it) => it.name === 'Test');
         expect(hasTestType).toBe(true);
     });
 
     test('Pre-conditions (reference) exist in Jira', async () => {
-        const refPre = tests
-            .map(t => t.precondition)
-            .filter(p => p && p.type === 'reference');
+        const refPre = tests.map((t) => t.precondition).filter((p) => p && p.type === 'reference');
 
         if (refPre.length === 0) return;
 
-        const results = await Promise.allSettled(
-            refPre.map(p => jiraResource.getJiraResource(`issue/${p.value}`))
-        );
+        const results = await Promise.allSettled(refPre.map((p) => jiraResource.getJiraResource(`issue/${p.value}`)));
 
         const failures = results
             .map((r, i) => ({ r, key: refPre[i].value }))
             .filter(({ r }) => r.status === 'rejected' || !r.value);
 
         if (failures.length > 0) {
-            const msg = failures.map(f => `${f.key} nao encontrada`).join('; ');
+            const msg = failures.map((f) => `${f.key} nao encontrada`).join('; ');
             throw new Error(msg);
         }
     }, 30000);
 
     test('Linked issues exist in Jira', async () => {
-        const allLinked = tests.flatMap(t => t.linkedIssues || []);
+        const allLinked = tests.flatMap((t) => t.linkedIssues || []);
         if (allLinked.length === 0) return;
 
         const results = await Promise.allSettled(
-            allLinked.map(li => jiraResource.getJiraResource(`issue/${li.key}`))
+            allLinked.map((li) => jiraResource.getJiraResource(`issue/${li.key}`)),
         );
 
         const failures = results
@@ -199,7 +201,7 @@ jiraSuite('CSV Validation against Jira', () => {
             .filter(({ r }) => r.status === 'rejected' || !r.value);
 
         if (failures.length > 0) {
-            const msg = failures.map(f => `${f.key} nao encontrada`).join('; ');
+            const msg = failures.map((f) => `${f.key} nao encontrada`).join('; ');
             throw new Error(msg);
         }
     }, 30000);

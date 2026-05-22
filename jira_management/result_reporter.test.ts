@@ -1,3 +1,4 @@
+// @ts-nocheck
 const path = require('path');
 const fs = require('fs');
 const os = require('os');
@@ -33,8 +34,16 @@ const MOCK_ISSUE_TYPES = [
 ];
 
 const MOCK_FIELDS = [
-    { id: 'customfield_13715', name: 'Tests association with a Test Execution', schema: { custom: 'com.xpandit.plugins.xray:testexec-tests-custom-field' } },
-    { id: 'customfield_13708', name: 'Pre-Conditions association with a Test', schema: { custom: 'com.xpandit.plugins.xray:test-precondition-custom-field' } },
+    {
+        id: 'customfield_13715',
+        name: 'Tests association with a Test Execution',
+        schema: { custom: 'com.xpandit.plugins.xray:testexec-tests-custom-field' },
+    },
+    {
+        id: 'customfield_13708',
+        name: 'Pre-Conditions association with a Test',
+        schema: { custom: 'com.xpandit.plugins.xray:test-precondition-custom-field' },
+    },
 ];
 
 describe('matchResultsToTests', () => {
@@ -56,7 +65,11 @@ describe('matchResultsToTests', () => {
     });
 
     afterAll(() => {
-        try { fs.rmSync(tmpDir, { recursive: true, force: true }); } catch (e) { /* ignore */ }
+        try {
+            fs.rmSync(tmpDir, { recursive: true, force: true });
+        } catch (e) {
+            /* ignore */
+        }
     });
 
     it('matches exact titles to Jira keys', () => {
@@ -74,9 +87,7 @@ describe('matchResultsToTests', () => {
     });
 
     it('flags unmatched titles', () => {
-        const results = [
-            { title: 'TC99 - Unknown', state: 'passed', duration: 100 },
-        ];
+        const results = [{ title: 'TC99 - Unknown', state: 'passed', duration: 100 }];
         const result = matchResultsToTests(results, mappingPath);
         expect(result.matched).toHaveLength(0);
         expect(result.unmatched).toHaveLength(1);
@@ -102,9 +113,7 @@ describe('matchResultsToTests', () => {
     });
 
     it('performs fuzzy match when title differs slightly', () => {
-        const results = [
-            { title: 'Login valido', state: 'passed', duration: 100 },
-        ];
+        const results = [{ title: 'Login valido', state: 'passed', duration: 100 }];
         const result = matchResultsToTests(results, mappingPath);
         expect(result.matched).toHaveLength(1);
         expect(result.matched[0].key).toBe('TEST-1');
@@ -125,9 +134,10 @@ describe('createTestExecutionFromResults', () => {
         linkJiraRes.getJiraResource = jest.fn();
         linkJiraRes.postJiraResource = jest.fn();
         linkJiraRes.getJiraResource.mockImplementation((url) => {
-            if (url === 'issueLinkType') return Promise.resolve({
-                issueLinkTypes: [{ id: '10201', name: 'Tests', inward: 'is tested by', outward: 'tests' }],
-            });
+            if (url === 'issueLinkType')
+                return Promise.resolve({
+                    issueLinkTypes: [{ id: '10201', name: 'Tests', inward: 'is tested by', outward: 'tests' }],
+                });
             return Promise.resolve({});
         });
         linkManager = new JiraLinkManager(linkJiraRes);
@@ -147,16 +157,23 @@ describe('createTestExecutionFromResults', () => {
             { key: 'TEST-2', title: 'TC02', status: 'failed', duration: 200 },
         ];
 
-        const result = await createTestExecutionFromResults(jiraResource, linkManager, 'PROJ', matched, 'test-csv', { pipelineId: 42, branch: 'main', provider: 'gitlab' });
+        const result = await createTestExecutionFromResults(jiraResource, linkManager, 'PROJ', matched, 'test-csv', {
+            pipelineId: 42,
+            branch: 'main',
+            provider: 'gitlab',
+        });
 
         expect(result.key).toBe('EXEC-1');
         expect(result.passed).toBe(1);
         expect(result.failed).toBe(1);
-        expect(jiraResource.postJiraResource).toHaveBeenCalledWith('issue', expect.objectContaining({
-            fields: expect.objectContaining({
-                summary: expect.stringContaining('Resultados:'),
+        expect(jiraResource.postJiraResource).toHaveBeenCalledWith(
+            'issue',
+            expect.objectContaining({
+                fields: expect.objectContaining({
+                    summary: expect.stringContaining('Resultados:'),
+                }),
             }),
-        }));
+        );
     });
 
     it('skips linking for skipped tests', async () => {
@@ -178,7 +195,7 @@ describe('createTestExecutionFromResults', () => {
         expect(result.key).toBe('EXEC-2');
         expect(result.passed).toBe(1);
         expect(result.skipped).toBe(1);
-        const linkCalls = linkJiraRes.postJiraResource.mock.calls.filter(c => c[0] === 'issueLink');
+        const linkCalls = linkJiraRes.postJiraResource.mock.calls.filter((c) => c[0] === 'issueLink');
         expect(linkCalls).toHaveLength(1);
         expect(linkCalls[0][1].outwardIssue.key).toBe('TEST-1');
     });
