@@ -1,3 +1,5 @@
+import path from 'path';
+import { spawnSync } from 'child_process';
 import Config from '../shared/config';
 import JiraResource from './jira_resource';
 import JiraLinkManager from './jira_link_manager';
@@ -140,6 +142,8 @@ const ALIASES: Record<string, string> = {
     'importar-json': '15',
     json: '15',
     'diretório-json': '16',
+    documentação: 'docs',
+    docs: 'docs',
     sair: '0',
     exit: '0',
     voltar: 'menu',
@@ -189,6 +193,7 @@ const MENU_ITEMS: MenuItem[] = [
     { id: '11', label: 'Gerar template CSV' },
     { id: '12', label: 'Diagnosticar conexão' },
     { id: '13', label: 'Criar Test Execution para testes existentes' },
+    { id: 'd', label: 'Ver documentação' },
     { id: '0', label: 'Sair' },
 ];
 
@@ -272,6 +277,10 @@ function handleSpecialInput(input: string): boolean {
     if (cmd === '/back' || cmd === '/menu' || cmd === '/exit') {
         return true;
     }
+    if (cmd === '/docs' || cmd === '/d') {
+        showDocs();
+        return true;
+    }
     if (cmd === '/history') {
         const hist = (loadState() as StateSchema).history || [];
         title('Historico de operacoes');
@@ -285,6 +294,17 @@ function handleSpecialInput(input: string): boolean {
         return true;
     }
     return false;
+}
+
+function showDocs(): void {
+    const script = path.join(__dirname, '../docs/help-docs.ts');
+    divider();
+    const result = spawnSync('npx', ['tsx', script], { stdio: 'inherit' });
+    if (result.error) {
+        printError('Erro ao abrir documentação', result.error);
+    }
+    divider();
+    info('Pressione Enter para voltar ao menu.');
 }
 
 function initializeSession() {
@@ -382,6 +402,11 @@ async function runMainLoop(
         updateState((s) => {
             (s as StateSchema).lastChoice = choice;
         });
+
+        if (choice === 'd' || choice === 'docs') {
+            showDocs();
+            continue;
+        }
 
         const cmdHandler = getHandler(choice);
         if (cmdHandler) {
