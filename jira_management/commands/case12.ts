@@ -22,7 +22,7 @@ async function handler(c: CommandContext): Promise<boolean | void> {
             diagResults.push({ status: 'ok', label: ep.label, message: ms + 'ms' });
         } catch (err) {
             const ms = Date.now() - start;
-            const st = err.response?.status || 'ERR';
+            const st = (err as { response?: { status?: number } }).response?.status || 'ERR';
             if (st === 401 || st === 403) {
                 warn(ep.label + ': ' + st + ' (token pode estar inválido)');
             } else {

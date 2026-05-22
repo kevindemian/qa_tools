@@ -15,7 +15,11 @@ async function handler(c: CommandContext): Promise<boolean | void> {
     } catch (err) {
         const msg = 'Erro ao criar versão "' + name + '" no projeto "' + c.ctx.project_name + '"';
         printError(msg, err);
-        rootLogger.error(msg, { version: name, project: c.ctx.project_name, status: err.response?.status });
+        rootLogger.error(msg, {
+            version: name,
+            project: c.ctx.project_name,
+            status: (err as { response?: { status?: number } }).response?.status,
+        });
         c.pushHistory('criar-versão', name, 'error');
     }
 }

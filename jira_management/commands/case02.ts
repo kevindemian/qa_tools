@@ -24,7 +24,10 @@ async function handler(c: CommandContext): Promise<boolean | void> {
         }
     } catch (err) {
         printError('Erro ao listar versões', err);
-        rootLogger.error('Erro ao listar versões', { project: c.ctx.project_name, status: err.response?.status });
+        rootLogger.error('Erro ao listar versões', {
+            project: c.ctx.project_name,
+            status: (err as { response?: { status?: number } }).response?.status,
+        });
         c.pushHistory('listar-versoes', 'erro', 'error');
     }
 }
