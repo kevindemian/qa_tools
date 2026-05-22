@@ -29,6 +29,7 @@ import { createValidateEnv, setupSigint, printSessionSummary as sharedPrintSessi
 import { rootLogger } from '../shared/logger';
 import { sleep } from '../shared/http-client';
 import { parseMochawesome } from '../shared/result_parser';
+import type { MochawesomeData } from '../shared/result_parser';
 import { matchResultsToTests, createTestExecutionFromResults } from '../jira_management/result_reporter';
 import { SessionContext } from '../shared/session-context';
 import type { GitProvider } from '../shared/types';
@@ -53,16 +54,16 @@ try {
 }
 
 function getProviderForProject(projectName: string): 'gitlab' | 'github' {
-    const cfg = providersConfig[projectName];
-    return (cfg && cfg.provider) || 'gitlab';
+    const cfg = providersConfig[projectName] as Record<string, unknown> | undefined;
+    return cfg?.provider === 'github' ? 'github' : 'gitlab';
 }
 
 function createManagerForProject(projectName: string, id: string): GitProvider {
     const provider = getProviderForProject(projectName);
     currentProvider = provider;
     if (provider === 'github') {
-        const cfg = providersConfig[projectName];
-        const repo = (cfg && cfg.repo) || id;
+        const cfg = providersConfig[projectName] as Record<string, unknown> | undefined;
+        const repo = (cfg?.repo as string) || id;
         const ghToken = Config.githubToken || Config.gitToken || '';
         const ghApiUrl = Config.githubApiUrl || 'https://api.github.com';
         return new GitHubManager(repo, ghToken, ghApiUrl) as unknown as GitProvider;
@@ -122,9 +123,10 @@ async function pollPipeline(m: GitProvider, pipelineId: string | number, interva
             if (aborted) break;
             continue;
         }
-        const status = (p as unknown).status || (p as unknown).state || '';
+        const pRec = p;
+        const status = (pRec.status as string) || (pRec.state as string) || '';
         if (isComplete(status)) {
-            return { status, web_url: (p as unknown).web_url || '' };
+            return { status, web_url: (pRec.web_url as string) || '' };
         }
         await sleep(interval);
         if (aborted) break;
@@ -148,7 +150,7 @@ try {
         }
     }
 } catch (err: unknown) {
-    rootLogger.error(`Falha ao carregar configuração de projetos de "${projectsPath}": ${err.message}`, {
+    rootLogger.error(`Falha ao carregar configuração de projetos de "${projectsPath}": ${(err as Error).message}`, {
         configPath: projectsPath,
     });
     error(`Configuração inválida em "${projectsPath}". Verifique o JSON.`);
@@ -209,8 +211,7 @@ async function collectTestResults(m: GitProvider, pipelineId: string | number, b
         const mochaEntry = entries.find((e) => e.entryName.includes('mochawesome.json') && !e.isDirectory);
         if (!mochaEntry) {
             warn(
-                'mochawesome.json não encontrado no artifact. Entradas: ' +
-                    entries.map((e: unknown) => e.entryName).join(', '),
+                'mochawesome.json não encontrado no artifact. Entradas: ' + entries.map((e) => e.entryName).join(', '),
             );
             return;
         }
@@ -221,7 +222,7 @@ async function collectTestResults(m: GitProvider, pipelineId: string | number, b
         return;
     }
 
-    const parsed = parseMochawesome(jsonData);
+    const parsed = parseMochawesome(jsonData as MochawesomeData);
     info(
         'Resultados: ' +
             parsed.stats.passed +
@@ -254,7 +255,7 @@ async function collectTestResults(m: GitProvider, pipelineId: string | number, b
     info('Mapeados: ' + matched.length + '/' + parsed.tests.length + ' testes');
     if (unmatched.length > 0) {
         warn(unmatched.length + ' teste(s) não encontrados no mapping');
-        unmatched.slice(0, 3).forEach((u: unknown) => warn('  - ' + u.title));
+        unmatched.slice(0, 3).forEach((u: { title?: string }) => warn('  - ' + u.title));
     }
 
     const csvName =
@@ -312,22 +313,22 @@ async function _postPipeline(
                 m.createMergeRequest(branch, target, mrTitle, ''),
             );
             if (mr) {
-                success(prLabel + ' criado: ' + (mr as unknown).web_url);
+                success(prLabel + ' criado: ' + String(mr.web_url));
                 pushHistory('quick-mr', branch + '->' + target, 'ok');
 
                 if (confirm('Fazer merge de ' + branch + ' em ' + target + ' agora?', false)) {
                     try {
                         const mergeResult = await withSpinner(
-                            'Fazendo merge de ' + prLabel + ' #' + (mr as unknown).iid + '...',
-                            () => m.acceptMergeRequest((mr as unknown).iid),
+                            'Fazendo merge de ' + prLabel + ' #' + String(mr.iid) + '...',
+                            () => m.acceptMergeRequest(mr.iid as string | number),
                         );
                         if (mergeResult) {
-                            success('Merge realizado: ' + (mergeResult as unknown).web_url);
-                            pushHistory('quick-merge', (mr as unknown).iid, 'ok');
+                            success('Merge realizado: ' + String(mergeResult.web_url));
+                            pushHistory('quick-merge', String(mr.iid), 'ok');
                         }
                     } catch (err) {
                         printError('Falha ao fazer merge', err);
-                        pushHistory('quick-merge', (mr as unknown).iid, 'error');
+                        pushHistory('quick-merge', String(mr.iid), 'error');
                     }
                 }
             }
@@ -378,9 +379,9 @@ function buildContextLine(): string {
     return providerLabel().toUpperCase() + ' TOOLS' + sessionContext.buildContextLine();
 }
 
-function buildActionChoices(): Array<unknown> {
+function buildActionChoices(): Array<Record<string, unknown>> {
     const prLabel = currentProvider === 'github' ? 'PR' : 'MR';
-    const choices: Array<unknown> = [
+    const choices: Array<Record<string, unknown>> = [
         { type: 'separator', line: ' PIPELINES' },
         { name: '1  Disparar pipeline', value: '1' },
     ];
@@ -410,10 +411,10 @@ async function displayRecentPipelines(m: GitProvider) {
         const pipelines = await m.getRecentPipelines(5);
         if (pipelines && pipelines.length > 0) {
             print('  Últimas pipelines:');
-            pipelines.slice(0, 3).forEach((p: unknown) => {
-                const id = p.id || p.run_number || '?';
-                const ref = p.ref || p.head_branch || '';
-                const s = p.status || p.conclusion || '?';
+            pipelines.slice(0, 3).forEach((p: Record<string, unknown>) => {
+                const id = (p.id as string) || (p.run_number as string) || '?';
+                const ref = (p.ref as string) || (p.head_branch as string) || '';
+                const s = (p.status as string) || (p.conclusion as string) || '?';
                 const icon = s === 'success' ? '\u2713' : s === 'failed' ? '\u2717' : '~';
                 print('    #' + id + ' ' + ref + ' — ' + icon + ' ' + s);
             });
@@ -501,7 +502,7 @@ async function main() {
             continue;
         }
         if (cmd === '/history') {
-            const history = (loadState().history as Array<unknown>) || [];
+            const history = (loadState().history as Array<Record<string, unknown>>) || [];
             title('Historico de operacoes');
             const last10 = history.slice(-10);
             if (last10.length === 0) {
@@ -586,13 +587,13 @@ async function main() {
                     continue;
                 }
 
-                let pipelineResult: unknown;
+                let pipelineResult: Record<string, unknown> | undefined;
                 try {
                     pipelineResult = await withSpinner('Disparando pipeline em ' + currentBranch + '...', () =>
                         m.triggerPipeline(payload),
                     );
                     if (pipelineResult) {
-                        success('Pipeline disparado: ' + pipelineResult.web_url);
+                        success('Pipeline disparado: ' + String(pipelineResult.web_url));
                         pushHistory('pipeline', currentBranch, 'ok');
                     }
                 } catch (err) {
@@ -602,7 +603,7 @@ async function main() {
                 }
 
                 if (pipelineResult && confirm('Aguardar conclusao da pipeline?', true)) {
-                    const id = pipelineResult.id || pipelineResult.run_number || '';
+                    const id = (pipelineResult.id as string) || (pipelineResult.run_number as string) || '';
                     if (id) {
                         // Item 4: Save checkpoint before polling
                         updateState((s) => {
@@ -637,14 +638,14 @@ async function main() {
                     const schedules = await withSpinner('Buscando schedules...', () => m.getSchedules());
                     if (schedules && schedules.length > 0) {
                         info('Schedules encontrados:');
-                        schedules.forEach((s: unknown) => {
+                        schedules.forEach((s: Record<string, unknown>) => {
                             print(
                                 '  ID: ' +
-                                    s.id +
+                                    (s.id as string) +
                                     '  ' +
-                                    (s.description || 'sem descrição') +
+                                    ((s.description as string) || 'sem descrição') +
                                     '  (proxima execução: ' +
-                                    (s.next_run_at || 'N/A') +
+                                    ((s.next_run_at as string) || 'N/A') +
                                     ')',
                             );
                         });
@@ -693,7 +694,7 @@ async function main() {
                         () => m.createMergeRequest(sourceBranch, targetBranch, mrTitle, description),
                     );
                     if (result) {
-                        success(prLabel + ' criado: ' + (result as unknown).web_url);
+                        success(prLabel + ' criado: ' + String(result.web_url));
                         pushHistory('pr-create', sourceBranch + '->' + targetBranch, 'ok');
                     }
                 } catch (err) {
@@ -710,18 +711,20 @@ async function main() {
                 const prLabel = currentProvider === 'github' ? 'PR' : 'MR';
                 try {
                     const results = await m.searchMergeRequests('', '', status);
-                    const approved: Array<unknown> = [];
+                    const approved: Array<Record<string, unknown>> = [];
                     for (const r of results) {
                         if (
                             typeof m.isApproved === 'function' &&
-                            (await m.isApproved((r as unknown).iid || (r as unknown).number))
+                            (await m.isApproved((r.iid as string | number) || (r.number as string | number)))
                         ) {
                             approved.push(r);
                         }
                     }
                     if (approved.length > 0) {
                         info(prLabel + 's aprovados:');
-                        approved.forEach((r) => print('  ' + prLabel + ' #' + (r.iid || r.number) + ': ' + r.title));
+                        approved.forEach((r) =>
+                            print('  ' + prLabel + ' #' + (String(r.iid) || String(r.number)) + ': ' + String(r.title)),
+                        );
                         pushHistory('prs-approved', approved.length + ' ' + prLabel + 's', 'ok');
                     } else {
                         warn('Nenhum ' + prLabel + ' aprovado encontrado.');
@@ -742,7 +745,7 @@ async function main() {
                         m.acceptMergeRequest(iid),
                     );
                     if (result) {
-                        success('Merge realizado: ' + (result as unknown).web_url);
+                        success('Merge realizado: ' + String(result.web_url));
                         pushHistory('pr-merge', iid, 'ok');
                     }
                 } catch (err) {
@@ -765,12 +768,12 @@ async function main() {
                     const variables = await withSpinner('Buscando variaveis CI/CD...', () => m.getCICDVariables());
                     if (variables) {
                         const envContent = variables
-                            .map((v: unknown) => {
-                                const safeValue = (v.value || '').replace(/\n/g, '\\n');
+                            .map((v: Record<string, unknown>) => {
+                                const safeValue = ((v.value as string) || '').replace(/\n/g, '\\n');
                                 if (safeValue.includes('=')) {
-                                    return v.key + '="' + safeValue.replace(/"/g, '\\"') + '"';
+                                    return (v.key as string) + '="' + safeValue.replace(/"/g, '\\"') + '"';
                                 }
-                                return v.key + '=' + safeValue;
+                                return (v.key as string) + '=' + safeValue;
                             })
                             .join('\n');
 

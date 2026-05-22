@@ -30,7 +30,7 @@ export async function nivelarBranches(
                 ),
             );
             if (mr1) {
-                info('MR criado: ' + (mr1 as unknown).web_url);
+                info('MR criado: ' + String(mr1.web_url));
                 details.push(mainBranch + '->' + rcBranch + ':ok');
             }
         } catch (err) {
@@ -50,7 +50,7 @@ export async function nivelarBranches(
                 ),
             );
             if (mr2) {
-                success('Segundo MR criado: ' + (mr2 as unknown).web_url);
+                success('Segundo MR criado: ' + String(mr2.web_url));
                 details.push(rcBranch + '->' + devBranch + ':ok');
             }
         } catch (err) {
