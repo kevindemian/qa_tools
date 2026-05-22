@@ -17,7 +17,6 @@ export async function nivelarBranches(
         warn('Branches devem ser diferentes entre si.');
         return;
     }
-    let okCount = 0;
     const details: string[] = [];
 
     {
@@ -32,7 +31,6 @@ export async function nivelarBranches(
             );
             if (mr1) {
                 info('MR criado: ' + (mr1 as unknown).web_url);
-                okCount++;
                 details.push(mainBranch + '->' + rcBranch + ':ok');
             }
         } catch (err) {
@@ -53,7 +51,6 @@ export async function nivelarBranches(
             );
             if (mr2) {
                 success('Segundo MR criado: ' + (mr2 as unknown).web_url);
-                okCount++;
                 details.push(rcBranch + '->' + devBranch + ':ok');
             }
         } catch (err) {
@@ -63,6 +60,7 @@ export async function nivelarBranches(
     }
 
     if (pushHistory) {
-        pushHistory('nivelamento', details.join(', ') + ' (ok=' + okCount + ')', okCount > 0 ? 'ok' : 'error');
+        const totalErr = details.filter((d) => d.endsWith(':error')).length;
+        pushHistory('nivelamento', details.join(', '), totalErr === 0 ? 'ok' : 'error');
     }
 }

@@ -108,6 +108,7 @@ export interface GitProvider {
     isApproved: (id: string | number) => Promise<boolean>;
     getCICDVariables: () => Promise<Array<Record<string, unknown>>>;
     getRecentPipelines: (count?: number) => Promise<Array<Record<string, unknown>>>;
+    getBranch: (branch: string) => Promise<{ name: string } | null>;
     getPipeline: (id: string | number) => Promise<Record<string, unknown> | null>;
     getPipelineJobs: (pipelineId: string | number) => Promise<
         Array<{

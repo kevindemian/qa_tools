@@ -2,15 +2,15 @@ import { createHttpClient } from '../shared/http-client';
 import { info, extractErrorMessage } from '../shared/prompt';
 import { Logger } from '../shared/logger';
 
-function handleError(log: Logger, op: string, err: any, opts?: { returnNull?: boolean }) {
-  const msg = extractErrorMessage(err);
-  log.error(`Erro ao ${op}: ${msg}`, { status: err.response?.status });
-  if (opts?.returnNull) return null;
-  throw err;
+function handleError(log: Logger, op: string, err: unknown, opts?: { returnNull?: boolean }) {
+    const msg = extractErrorMessage(err);
+    log.error(`Erro ao ${op}: ${msg}`, { status: err.response?.status });
+    if (opts?.returnNull) return null;
+    throw err;
 }
 
 class GitHubManager {
-    provider: 'github' = 'github';
+    provider = 'github' as const;
     repoFullName: string;
     apiToken: string;
     apiUrl: string;
@@ -43,17 +43,17 @@ class GitHubManager {
         return '/repos/' + this.owner + '/' + this.repo;
     }
 
-    async _get(url: string, opts?: { operation?: string; returnNull?: boolean; params?: Record<string, any> }) {
+    async _get(url: string, opts?: { operation?: string; returnNull?: boolean; params?: Record<string, unknown> }) {
         try {
             const args = opts?.params ? [{ params: opts.params }] : [];
             const response = await this.client.get(url, ...args);
             return response.data;
         } catch (err) {
-            return (handleError(this.log, opts?.operation || url, err, { returnNull: opts?.returnNull }));
+            return handleError(this.log, opts?.operation || url, err, { returnNull: opts?.returnNull });
         }
     }
 
-    async _post(url: string, body?: any, opts?: { operation?: string }) {
+    async _post(url: string, body?: unknown, opts?: { operation?: string }) {
         try {
             const args = body !== undefined ? [body] : [];
             const response = await this.client.post(url, ...args);
@@ -63,7 +63,7 @@ class GitHubManager {
         }
     }
 
-    async _patch(url: string, body?: any, opts?: { operation?: string }) {
+    async _patch(url: string, body?: unknown, opts?: { operation?: string }) {
         try {
             const args = body !== undefined ? [body] : [];
             const response = await this.client.patch(url, ...args);
@@ -73,7 +73,11 @@ class GitHubManager {
         }
     }
 
-    async triggerPipeline(payload: { ref: string; variables: Array<{ key: string; value: string }>; workflow_id?: string }) {
+    async triggerPipeline(payload: {
+        ref: string;
+        variables: Array<{ key: string; value: string }>;
+        workflow_id?: string;
+    }) {
         try {
             const workflowId = payload.workflow_id;
             if (!workflowId) {
@@ -85,14 +89,14 @@ class GitHubManager {
                 await this._post(
                     this._repoPath + '/actions/workflows/' + workflow.id + '/dispatches',
                     { ref: payload.ref, inputs: this._toInputs(payload.variables) },
-                    { operation: 'disparar workflow' }
+                    { operation: 'disparar workflow' },
                 );
                 return { id: workflow.id, web_url: this.apiUrl + '/' + this.repoFullName + '/actions/runs' };
             }
             await this._post(
                 this._repoPath + '/actions/workflows/' + workflowId + '/dispatches',
                 { ref: payload.ref, inputs: this._toInputs(payload.variables) },
-                { operation: 'disparar workflow' }
+                { operation: 'disparar workflow' },
             );
             return { id: workflowId, web_url: this.apiUrl + '/' + this.repoFullName + '/actions/runs' };
         } catch (err) {
@@ -118,13 +122,19 @@ class GitHubManager {
         return inputs;
     }
 
+    // eslint-disable-next-line @typescript-eslint/require-await
     async getSchedules() {
-        this.log.warn('GitHub Actions schedules not available via REST API. Use workflow_dispatch or repository_dispatch.');
+        this.log.warn(
+            'GitHub Actions schedules not available via REST API. Use workflow_dispatch or repository_dispatch.',
+        );
         return [];
     }
 
+    // eslint-disable-next-line @typescript-eslint/require-await
     async runSchedule(scheduleId: string | number) {
-        const err = new Error('GitHub Actions schedules not available via REST API. Use workflow_dispatch or repository_dispatch.');
+        const err = new Error(
+            'GitHub Actions schedules not available via REST API. Use workflow_dispatch or repository_dispatch.',
+        );
         this.log.error(err.message, { scheduleId });
         throw err;
     }
@@ -140,18 +150,20 @@ class GitHubManager {
         try {
             const data = await this._post(this._repoPath + '/pulls', body, { operation: 'criar PR' });
             return this._formatPR(data);
-        } catch (err: any) {
+        } catch (err: unknown) {
             if (err.response?.status === 422) {
                 const errors = err.response?.data?.errors || [];
-                const alreadyExists = errors.some(
-                    (e: any) => e.message && e.message.includes('already exists')
-                );
+                const alreadyExists = errors.some((e: unknown) => e.message && e.message.includes('already exists'));
                 if (alreadyExists) {
                     info('PR already exists. Searching for existing...');
                     const existing = await this.searchMergeRequests(sourceBranch, targetBranch, 'open');
                     if (existing && existing.length > 0) {
-                        return await this.updateMergeRequest(
-                            existing[0].number, sourceBranch, targetBranch, title, description
+                        return this.updateMergeRequest(
+                            existing[0].number,
+                            sourceBranch,
+                            targetBranch,
+                            title,
+                            description,
                         );
                     }
                 }
@@ -160,30 +172,47 @@ class GitHubManager {
         }
     }
 
-    async updateMergeRequest(iid: string | number, sourceBranch: string, targetBranch: string, title: string, description?: string) {
-        const data = await this._patch(this._repoPath + '/pulls/' + iid, { title, body: description }, { operation: 'atualizar PR' });
+    async updateMergeRequest(
+        iid: string | number,
+        sourceBranch: string,
+        targetBranch: string,
+        title: string,
+        description?: string,
+    ) {
+        const data = await this._patch(
+            this._repoPath + '/pulls/' + iid,
+            { title, body: description },
+            { operation: 'atualizar PR' },
+        );
         return this._formatPR(data);
     }
 
     async getMergeRequest(iid: string | number) {
         try {
-            const data = await this._get(this._repoPath + '/pulls/' + iid, { operation: 'buscar PR', returnNull: true });
+            const data = await this._get(this._repoPath + '/pulls/' + iid, {
+                operation: 'buscar PR',
+                returnNull: true,
+            });
             return this._formatPR(data);
-        } catch (err) {
+        } catch {
             return null;
         }
     }
 
     async searchMergeRequests(sourceBranch: string, targetBranch: string, searchStatus: string) {
         try {
-            const params: Record<string, any> = { per_page: 100 };
+            const params: Record<string, unknown> = { per_page: 100 };
             if (sourceBranch) params.head = this.owner + ':' + sourceBranch;
             if (targetBranch) params.base = targetBranch;
             if (searchStatus) params.state = searchStatus === 'opened' ? 'open' : searchStatus;
 
-            const data = await this._get(this._repoPath + '/pulls', { operation: 'buscar PRs', params, returnNull: true });
-            return (data || []).map((pr: any) => this._formatPR(pr));
-        } catch (err) {
+            const data = await this._get(this._repoPath + '/pulls', {
+                operation: 'buscar PRs',
+                params,
+                returnNull: true,
+            });
+            return (data || []).map((pr: unknown) => this._formatPR(pr));
+        } catch {
             return [];
         }
     }
@@ -196,7 +225,7 @@ class GitHubManager {
                 info('PR #' + iid + ' already merged');
                 return pr;
             }
-            const body: Record<string, any> = {};
+            const body: Record<string, unknown> = {};
             if (shouldRemoveSourceBranch) body.delete_branch_on_merge = true;
             const response = await this.client.put(this._repoPath + '/pulls/' + iid + '/merge', body);
             return this._formatPR(response.data);
@@ -213,13 +242,13 @@ class GitHubManager {
                 returnNull: true,
             });
             return (data && data.workflow_runs) || [];
-        } catch (err) {
+        } catch {
             return [];
         }
     }
 
     async getPipeline(runId: string | number) {
-        return await this._get(this._repoPath + '/actions/runs/' + runId, { operation: 'buscar run', returnNull: true });
+        return this._get(this._repoPath + '/actions/runs/' + runId, { operation: 'buscar run', returnNull: true });
     }
 
     async getPipelineJobs(pipelineId: string | number) {
@@ -229,13 +258,13 @@ class GitHubManager {
                 returnNull: true,
             });
             const jobs = (data && data.jobs) || [];
-            return jobs.map((j: any) => ({
+            return jobs.map((j: unknown) => ({
                 id: j.id,
                 name: j.name,
                 stage: j.runner_group_name || '',
                 status: j.conclusion || j.status || '',
             }));
-        } catch (err) {
+        } catch {
             return [];
         }
     }
@@ -247,8 +276,8 @@ class GitHubManager {
                 returnNull: true,
             });
             const artifacts = (data && data.artifacts) || [];
-            return artifacts.map((a: any) => ({ id: a.id, name: a.name }));
-        } catch (err) {
+            return artifacts.map((a: unknown) => ({ id: a.id, name: a.name }));
+        } catch {
             return [];
         }
     }
@@ -266,6 +295,15 @@ class GitHubManager {
         }
     }
 
+    async getBranch(branch: string): Promise<{ name: string } | null> {
+        try {
+            const { data } = await this.client.get(`${this._repoPath}/branches/${encodeURIComponent(branch)}`);
+            return { name: data.name as string };
+        } catch {
+            return null;
+        }
+    }
+
     async getCICDVariables() {
         try {
             const data = await this._get(this._repoPath + '/actions/variables', {
@@ -274,12 +312,12 @@ class GitHubManager {
                 returnNull: true,
             });
             const variables = (data && data.variables) || [];
-            return variables.map((v: any) => ({
+            return variables.map((v: unknown) => ({
                 key: v.name,
                 value: v.value,
                 type: 'variable',
             }));
-        } catch (err) {
+        } catch {
             return [];
         }
     }
@@ -290,19 +328,19 @@ class GitHubManager {
                 operation: 'verificar reviews',
                 returnNull: true,
             });
-            return (data || []).some((r: any) => r.state === 'APPROVED');
-        } catch (err) {
+            return (data || []).some((r: unknown) => r.state === 'APPROVED');
+        } catch {
             return false;
         }
     }
 
-    _formatPR(data: any) {
+    _formatPR(data: unknown) {
         if (!data) return null;
         return {
             iid: data.number,
             number: data.number,
             title: data.title,
-            state: data.merged ? 'merged' : (data.state === 'closed' ? 'closed' : 'opened'),
+            state: data.merged ? 'merged' : data.state === 'closed' ? 'closed' : 'opened',
             web_url: data.html_url,
             description: data.body,
             source_branch: (data.head || {}).ref,
