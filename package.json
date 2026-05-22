@@ -9,6 +9,9 @@
     "typecheck": "tsc --noEmit",
     "lint": "eslint . --ext .ts",
     "format": "prettier --write '**/*.{ts,js,json,md}'",
+    "docs": "npx tsx docs/help-docs.ts",
+    "jira": "npx tsx jira_management/main.ts",
+    "git": "npx tsx git_triggers/main.ts",
     "prepare": "husky"
   },
   "license": "ISC",
