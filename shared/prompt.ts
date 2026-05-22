@@ -1,6 +1,37 @@
-// @ts-check
-const readlineSync = require('readline-sync');
-const { rootLogger } = require('./logger');
+import readlineSync from 'readline-sync';
+import { rootLogger } from './logger';
+
+export interface TestResult {
+  status: 'ok' | 'error';
+  label: string;
+  message: string;
+}
+
+interface PromptOptions {
+  default?: string;
+  hint?: string;
+  maxRetries?: number;
+}
+
+interface SelectChoice {
+  name?: string;
+  value?: string;
+  description?: string;
+  disabled?: boolean | string;
+  type?: 'separator';
+  line?: string;
+}
+
+interface SelectOptions {
+  pageSize?: number;
+  default?: string;
+}
+
+interface KnownError {
+  test: RegExp;
+  msg: string;
+  hint: string;
+}
 
 const GREEN = '\x1b[32m';
 const RED = '\x1b[31m';
@@ -9,37 +40,37 @@ const CYAN = '\x1b[36m';
 const BOLD = '\x1b[1m';
 const RESET = '\x1b[0m';
 
-const isQuiet = () => process.env.QUIET === 'true';
+export const isQuiet = (): boolean => process.env.QUIET === 'true';
 
-function success(msg) {
+export function success(msg: string): void {
   console.log(`${GREEN}OK${RESET} ${msg}`);
   rootLogger.writeFileOnly('INFO', msg);
 }
 
-function error(msg) {
+export function error(msg: string): void {
   console.log(`${RED}ERR${RESET} ${msg}`);
   rootLogger.writeFileOnly('ERROR', msg);
 }
 
-function warn(msg) {
+export function warn(msg: string): void {
   console.log(`${YELLOW}!${RESET} ${msg}`);
   rootLogger.writeFileOnly('WARN', msg);
 }
 
-function info(msg) {
+export function info(msg: string): void {
   if (!isQuiet()) console.log(`${CYAN}i${RESET} ${msg}`);
   rootLogger.writeFileOnly('INFO', msg);
 }
 
-function print(msg) {
+export function print(msg: string): void {
   console.log(msg);
 }
 
-function title(msg) {
+export function title(msg: string): void {
   console.log(`\n${BOLD}${msg}${RESET}`);
 }
 
-function prompt(label, options = {}) {
+export function prompt(label: string, options: PromptOptions = {}): string {
   const { default: def, hint } = options;
   let text = `\n${CYAN}->${RESET} ${label}`;
   if (hint) text += ` ${YELLOW}(${hint})${RESET}`;
@@ -47,20 +78,20 @@ function prompt(label, options = {}) {
   return readlineSync.question(text + ': ', { defaultInput: def }).trim();
 }
 
-function confirm(label, defaultYes = false) {
+export function confirm(label: string, defaultYes = false): boolean {
   const def = defaultYes ? 'Y' : 'N';
   const text = `\n${YELLOW}?${RESET} ${label} ${YELLOW}(${def})${RESET}`;
   const answer = readlineSync.question(text + ': ', { defaultInput: def.toLowerCase() });
   return ['y', 'yes', 'sim', 's'].includes(answer.toLowerCase().trim());
 }
 
-function divider() {
+export function divider(): void {
   console.log('-'.repeat(50));
 }
 
 const NAV_CMDS = ['/back', '/menu', '/exit', '/sair'];
 
-function smartPrompt(label, options = {}, helpCallback) {
+export function smartPrompt(label: string, options: PromptOptions = {}, helpCallback?: () => void): string {
   let retries = 0;
   const maxRetries = options.maxRetries || 3;
   while (retries < maxRetries) {
@@ -83,19 +114,24 @@ function smartPrompt(label, options = {}, helpCallback) {
   return '';
 }
 
-class ProgressBar {
-  constructor(total, options = {}) {
+export class ProgressBar {
+  total: number;
+  current: number;
+  startTime: number;
+  width: number;
+
+  constructor(total: number, options: { width?: number } = {}) {
     this.total = total;
     this.current = 0;
     this.startTime = Date.now();
     this.width = options.width || 20;
   }
 
-  update(current) {
+  update(current: number): void {
     this.current = current;
     const pct = this.total > 0 ? current / this.total : 0;
     const filled = Math.round(pct * this.width);
-    let bar;
+    let bar: string;
     if (filled >= this.width) {
       bar = '='.repeat(this.width);
     } else if (filled <= 0) {
@@ -104,32 +140,36 @@ class ProgressBar {
       bar = '='.repeat(filled) + '>' + ' '.repeat(this.width - filled - 1);
     }
     const elapsed = Math.round((Date.now() - this.startTime) / 1000);
-    let eta;
+    let eta: string;
     if (current === 0 || elapsed === 0) {
       eta = '?';
     } else {
-      eta = Math.round(elapsed / current * (this.total - current));
+      eta = Math.round(elapsed / current * (this.total - current)).toString();
     }
     if (process.stdout.isTTY) {
       process.stdout.write('\r[' + bar + '] ' + current + '/' + this.total + ' ' + eta + 's');
     }
   }
 
-  stop() {
+  stop(): void {
     if (process.stdout.isTTY) {
       process.stdout.write('\r\x1b[K\n');
     }
   }
 }
 
-class Spinner {
+export class Spinner {
+  frames: string[];
+  interval: ReturnType<typeof setInterval> | null;
+  i: number;
+
   constructor() {
     this.frames = ['-', '\\', '|', '/'];
     this.interval = null;
     this.i = 0;
   }
 
-  start(msg) {
+  start(msg: string): void {
     if (isQuiet()) { process.stdout.write(msg + '...\n'); return; }
     this.i = 0;
     process.stdout.write(this.frames[0] + ' ' + msg);
@@ -139,7 +179,7 @@ class Spinner {
     }, 200);
   }
 
-  stop() {
+  stop(): void {
     if (this.interval) {
       clearInterval(this.interval);
       this.interval = null;
@@ -148,7 +188,7 @@ class Spinner {
   }
 }
 
-async function withSpinner(label, fn) {
+export async function withSpinner<T>(label: string, fn: () => Promise<T>): Promise<T> {
   const spinner = isQuiet() ? null : new Spinner();
   if (spinner) spinner.start(label);
   try {
@@ -158,7 +198,7 @@ async function withSpinner(label, fn) {
   }
 }
 
-const KNOWN_ERRORS = [
+const KNOWN_ERRORS: KnownError[] = [
   { test: /rate limit|too many requests/i, msg: 'Rate limit atingido', hint: 'Aguarde alguns segundos e tente novamente.' },
   { test: /issue type.*not found|not a valid issue type/i, msg: 'Tipo de issue nao encontrado', hint: 'Verifique se o tipo esta habilitado nas configuracoes do projeto Jira.' },
   { test: /project.*not found/i, msg: 'Projeto nao encontrado', hint: 'Verifique se o nome do projeto esta correto.' },
@@ -170,7 +210,7 @@ const KNOWN_ERRORS = [
   { test: /already exists/i, msg: 'Item ja existe', hint: 'Escolha um nome diferente.' },
 ];
 
-function humanizeError(message) {
+export function humanizeError(message: string | null | undefined): { msg: string; hint: string } | null {
   if (!message) return { msg: 'Erro desconhecido', hint: 'Verifique os logs acima para mais detalhes.' };
   for (const known of KNOWN_ERRORS) {
     if (known.test.test(message)) return known;
@@ -178,20 +218,33 @@ function humanizeError(message) {
   return null;
 }
 
-function extractErrorMessage(err) {
+interface AxiosErrorData {
+  errorMessages?: string[];
+  message?: string;
+}
+
+function isAxiosErrorData(data: unknown): data is AxiosErrorData {
+  return typeof data === 'object' && data !== null && !Array.isArray(data);
+}
+
+export function extractErrorMessage(err: unknown): string {
   if (!err) return 'Erro desconhecido';
   try {
-    return (err.response?.data?.errorMessages?.[0]
-      || err.response?.data?.message
-      || (typeof err.response?.data === 'string' ? err.response.data : null)
-      || err.message
-      || '').toString();
+    const axiosErr = err as { response?: { data?: unknown }; message?: string };
+    const data = axiosErr.response?.data;
+    let msg = '';
+    if (isAxiosErrorData(data)) {
+      msg = data.errorMessages?.[0] || data.message || '';
+    } else if (typeof data === 'string') {
+      msg = data;
+    }
+    return msg || axiosErr.message || '';
   } catch {
     return 'Erro desconhecido';
   }
 }
 
-function printError(context, err) {
+export function printError(context: string, err: unknown): void {
   const raw = extractErrorMessage(err);
   const known = humanizeError(raw);
   if (known) {
@@ -203,8 +256,7 @@ function printError(context, err) {
   }
 }
 
-/** @param {import('./types').TestResult[]} results */
-function printSummary(results) {
+export function printSummary(results: TestResult[]): void {
   divider();
   const passed = results.filter(r => r.status === 'ok').length;
   const failed = results.filter(r => r.status === 'error').length;
@@ -228,8 +280,11 @@ function printSummary(results) {
   divider();
 }
 
-/** @param {string} context @param {Error} err @param {{retry?:boolean,details?:boolean}} [options] @returns {Promise<'abort'|'skip'|'retry'>} */
-async function onError(context, err, options = {}) {
+export async function onError(
+  context: string,
+  err: unknown,
+  options: { retry?: boolean; details?: boolean } = {}
+): Promise<'abort' | 'skip' | 'retry'> {
   const { retry: canRetry = false, details: canDetails = false } = options;
   const raw = extractErrorMessage(err);
   const known = humanizeError(raw);
@@ -241,11 +296,11 @@ async function onError(context, err, options = {}) {
     const autoAction = process.env.ON_ERROR || 'abort';
     if (autoAction === 'skip') warn('Modo automatico: pulando...');
     else error('Modo automatico: abortando...');
-    return /** @type {'abort' | 'skip' | 'retry'} */ (autoAction);
+    return autoAction as 'abort' | 'skip' | 'retry';
   }
 
   while (true) {
-    const opts = [];
+    const opts: string[] = [];
     if (canRetry) opts.push('[R]etry');
     opts.push('[S]kip');
     opts.push('[A]bort');
@@ -261,11 +316,12 @@ async function onError(context, err, options = {}) {
     if (answer === 'a') return 'abort';
     if (answer === 'd' && canDetails) {
       divider();
-      console.log(`  Status: ${/** @type {any} */ (err).response?.status || 'N/A'}`);
-      if (/** @type {any} */ (err).response?.data) {
-        console.log(`  Resposta: ${JSON.stringify(/** @type {any} */ (err).response.data, null, 2)}`);
+      const axiosErr = err as { response?: { status?: number; data?: unknown }; stack?: string };
+      console.log(`  Status: ${axiosErr.response?.status || 'N/A'}`);
+      if (axiosErr.response?.data) {
+        console.log(`  Resposta: ${JSON.stringify(axiosErr.response.data, null, 2)}`);
       }
-      if (err.stack) {
+      if (err instanceof Error && err.stack) {
         const lines = err.stack.split('\n').slice(0, 4);
         console.log(`  Stack: ${lines.join('\n    ')}`);
       }
@@ -276,105 +332,76 @@ async function onError(context, err, options = {}) {
   }
 }
 
-// ---------------------------------------------------------------------------
-// TUI wrappers (async, @inquirer/select when TTY)
-// ---------------------------------------------------------------------------
+let _inquirerMod: unknown = null;
 
-/** @type {any} */
-let _inquirerMod = null;
+async function _loadInquirer(): Promise<unknown> {
+  if (_inquirerMod !== null) return _inquirerMod;
+  try {
+    _inquirerMod = await import('@inquirer/select');
+    return _inquirerMod;
+  } catch {
+    _inquirerMod = false;
+    return false;
+  }
+}
 
-async function _loadInquirer() {
-    if (_inquirerMod !== null) return _inquirerMod;
+const isTTY = (): boolean => !!(process.stdout.isTTY && process.env.QUIET !== 'true');
+
+export async function showSelect(
+  label: string,
+  choices: SelectChoice[],
+  options: SelectOptions = {}
+): Promise<string> {
+  const mod: any = await _loadInquirer();
+  if (mod && isTTY()) {
+    const processed = choices.map(c => {
+      if (c.type === 'separator') return new mod.Separator(c.line);
+      return c;
+    });
     try {
-        _inquirerMod = await import('@inquirer/select');
-        return _inquirerMod;
-    } catch {
-        _inquirerMod = false;
-        return false;
+      const answer = await mod.default({
+        message: label,
+        choices: processed,
+        pageSize: options.pageSize || 14,
+        loop: false,
+        default: options.default,
+      });
+      return answer;
+    } catch (err: unknown) {
+      const promptErr = err as { name?: string; message?: string };
+      if (promptErr.name === 'ExitPromptError' || promptErr.message?.includes('cancel')) {
+        return '0';
+      }
+      throw err;
     }
+  }
+  console.log('');
+  for (const c of choices) {
+    if (c.type === 'separator') {
+      if (c.line) console.log(' ' + c.line);
+      continue;
+    }
+    const desc = c.description ? '  ' + c.description : '';
+    console.log('  ' + c.name + desc);
+  }
+  return prompt(label).trim();
 }
 
-const isTTY = () => process.stdout.isTTY && process.env.QUIET !== 'true';
-
-/**
- * @typedef {Object} SelectChoice
- * @property {string} [name]
- * @property {string} [value]
- * @property {string} [description]
- * @property {boolean|string} [disabled]
- * @property {'separator'} [type]
- * @property {string} [line]
- */
-
-/**
- * @param {string} label
- * @param {Array<SelectChoice>} choices
- * @param {{pageSize?:number, default?:string}} [options]
- * @returns {Promise<string>}
- */
-async function showSelect(label, choices, options = {}) {
-    const mod = await _loadInquirer();
-    if (mod && isTTY()) {
-        const processed = choices.map(c => {
-            if (c.type === 'separator') return new mod.Separator(c.line);
-            return c;
-        });
-        try {
-            const answer = await mod.default({
-                message: label,
-                choices: processed,
-                pageSize: options.pageSize || 14,
-                loop: false,
-                default: options.default,
-            });
-            return answer;
-        } catch (err) {
-            if (err.name === 'ExitPromptError' || err.message?.includes('cancel')) {
-                return '0';
-            }
-            throw err;
-        }
-    }
-    // Fallback: plain numbered list + readline-sync
-    console.log('');
-    for (const c of choices) {
-        if (c.type === 'separator') {
-            if (c.line) console.log(' ' + c.line);
-            continue;
-        }
-        const desc = c.description ? '  ' + c.description : '';
-        console.log('  ' + c.name + desc);
-    }
-    return prompt(label).trim();
+export function tableView<T extends Record<string, unknown>>(data: T[] | null | undefined, columns?: string[]): void {
+  if (!data || data.length === 0) {
+    warn('Nenhum dado para exibir.');
+    return;
+  }
+  if (columns) {
+    const filtered = data.map(row => {
+      const obj: Record<string, unknown> = {};
+      for (const col of columns) {
+        if (col in row) obj[col] = row[col];
+      }
+      return obj;
+    });
+    console.table(filtered);
+  } else {
+    console.table(data);
+  }
 }
-
-/**
- * @param {Array<Object>} data
- * @param {string[]} [columns]
- */
-function tableView(data, columns) {
-    if (!data || data.length === 0) {
-        warn('Nenhum dado para exibir.');
-        return;
-    }
-    if (columns) {
-        const filtered = data.map(row => {
-            /** @type {Record<string, any>} */
-            const obj = {};
-            for (const col of columns) {
-                if (col in row) obj[col] = row[col];
-            }
-            return obj;
-        });
-        console.table(filtered);
-    } else {
-        console.table(data);
-    }
-}
-
-module.exports = {
-  print, success, error, warn, info, title, divider,
-  prompt, confirm, printError, printSummary, smartPrompt, extractErrorMessage,
-  humanizeError, onError, Spinner, ProgressBar, isQuiet,
-  showSelect, tableView, withSpinner
-};

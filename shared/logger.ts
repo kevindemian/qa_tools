@@ -1,10 +1,9 @@
-// @ts-check
-const fs = require('fs');
-const path = require('path');
+import fs from 'fs';
+import path from 'path';
 
-const LEVELS = { DEBUG: 0, INFO: 1, WARN: 2, ERROR: 3 };
-const PREFIXES = { DEBUG: '\u00b7', INFO: 'i', WARN: '!', ERROR: 'ERR' };
-const COLORS = {
+const LEVELS: Record<string, number> = { DEBUG: 0, INFO: 1, WARN: 2, ERROR: 3 };
+const PREFIXES: Record<string, string> = { DEBUG: '\u00b7', INFO: 'i', WARN: '!', ERROR: 'ERR' };
+const COLORS: Record<string, string> = {
   DEBUG: '\x1b[36m',
   INFO: '\x1b[32m',
   WARN: '\x1b[33m',
@@ -12,24 +11,37 @@ const COLORS = {
   RESET: '\x1b[0m'
 };
 const SECRET_RE = /token|secret|key|password|authorization/i;
-const MAX_LOG_SIZE = parseInt(process.env.LOG_MAX_SIZE || '', 10) || 5 * 1024 * 1024;
+export const MAX_LOG_SIZE = parseInt(process.env.LOG_MAX_SIZE || '', 10) || 5 * 1024 * 1024;
 
-function maskValue(v) {
+function maskValue(v: unknown): unknown {
   if (typeof v !== 'string') return v;
   return v.length > 8 ? v.slice(0, 4) + '****' : '****';
 }
 
-function maskDeep(obj) {
+export function maskDeep(obj: unknown): unknown {
   if (!obj || typeof obj !== 'object') return obj;
-  const masked = Array.isArray(obj) ? [...obj] : { ...obj };
-  for (const key of Object.keys(masked)) {
-    if (SECRET_RE.test(key)) masked[key] = maskValue(masked[key]);
+  const masked: Record<string, unknown> = {};
+  for (const key of Object.keys(obj)) {
+    const val = (obj as Record<string, unknown>)[key];
+    if (Array.isArray(val)) {
+      masked[key] = val.map(item => maskDeep(item));
+    } else if (SECRET_RE.test(key)) {
+      masked[key] = maskValue(val);
+    } else {
+      masked[key] = val;
+    }
   }
   return masked;
 }
 
-class Logger {
-  constructor(context = {}) {
+export class Logger {
+  context: Record<string, unknown>;
+  _logDir: string | null;
+  _filePathCached: string | null;
+  _fileError: boolean;
+  _bytesWritten: number;
+
+  constructor(context: Record<string, unknown> = {}) {
     this.context = context;
     this._logDir = null;
     this._filePathCached = null;
@@ -37,7 +49,7 @@ class Logger {
     this._bytesWritten = 0;
   }
 
-  _ensureDir() {
+  _ensureDir(): boolean {
     if (this._fileError) return false;
     if (process.env.LOG_FILE !== 'true') return false;
 
@@ -58,12 +70,12 @@ class Logger {
       return true;
     } catch (err) {
       this._fileError = true;
-      console.error(`[logger] Falha ao criar diretório de log: ${err.message}`);
+      console.error(`[logger] Falha ao criar diretório de log: ${(err as Error).message}`);
       return false;
     }
   }
 
-  _rotateIfNeeded() {
+  _rotateIfNeeded(): void {
     if (!this._filePathCached || this._bytesWritten < MAX_LOG_SIZE) return;
     const dir = path.dirname(this._filePathCached);
     const ext = path.extname(this._filePathCached);
@@ -77,11 +89,11 @@ class Logger {
       fs.renameSync(this._filePathCached, rotated);
       this._bytesWritten = 0;
     } catch (err) {
-      console.error(`[logger] Falha ao rotacionar log: ${err.message}`);
+      console.error(`[logger] Falha ao rotacionar log: ${(err as Error).message}`);
     }
   }
 
-  _writeConsole(level, msg, data) {
+  _writeConsole(level: string, msg: string, data?: unknown): void {
     const levelNum = LEVELS[level] ?? 1;
     const envLevel = process.env.LOG_LEVEL || 'INFO';
     const envLevelNum = LEVELS[envLevel] ?? 1;
@@ -106,7 +118,7 @@ class Logger {
     }
   }
 
-  _writeFile(level, msg, data) {
+  _writeFile(level: string, msg: string, data?: unknown): void {
     if (!this._ensureDir()) return;
 
     const timestamp = new Date().toISOString();
@@ -116,11 +128,11 @@ class Logger {
       : '';
     let dataStr = '';
     if (data) {
-        try {
-            dataStr = ' | ' + JSON.stringify(maskDeep(data));
-        } catch (_) {
-            dataStr = ' | [data serialization error]';
-        }
+      try {
+        dataStr = ' | ' + JSON.stringify(maskDeep(data));
+      } catch {
+        dataStr = ' | [data serialization error]';
+      }
     }
     const line = `[${timestamp}] [${level}]${ctxStr} ${msg}${dataStr}\n`;
 
@@ -131,41 +143,33 @@ class Logger {
       this._bytesWritten += Buffer.byteLength(line);
     } catch (err) {
       this._fileError = true;
-      console.error(`[logger] Falha ao escrever no arquivo de log: ${err.message}`);
+      console.error(`[logger] Falha ao escrever no arquivo de log: ${(err as Error).message}`);
     }
   }
 
-  _write(level, msg, data) {
+  _write(level: string, msg: string, data?: unknown): void {
     this._writeConsole(level, msg, data);
     this._writeFile(level, msg, data);
   }
 
-    /** @param {Object} extra @returns {Logger} */
-  child(extra) {
+  child(extra: Record<string, unknown>): Logger {
     return new Logger({ ...this.context, ...extra });
   }
 
-  /** Escreve apenas no arquivo de log, sem saida no console */
-  writeFileOnly(level, msg) {
+  writeFileOnly(level: string, msg: string): void {
     this._writeFile(level, msg);
   }
 
-  /** @param {string} msg @param {Object} [data] */
-  debug(msg, data) { this._write('DEBUG', msg, data); }
-  /** @param {string} msg @param {Object} [data] */
-  info(msg, data) { this._write('INFO', msg, data); }
-  /** @param {string} msg @param {Object} [data] */
-  warn(msg, data) { this._write('WARN', msg, data); }
-  /** @param {string} msg @param {Object} [data] */
-  error(msg, data) { this._write('ERROR', msg, data); }
+  debug(msg: string, data?: unknown): void { this._write('DEBUG', msg, data); }
+  info(msg: string, data?: unknown): void { this._write('INFO', msg, data); }
+  warn(msg: string, data?: unknown): void { this._write('WARN', msg, data); }
+  error(msg: string, data?: unknown): void { this._write('ERROR', msg, data); }
 
-  get filePath() {
+  get filePath(): string | null {
     if (process.env.LOG_FILE !== 'true') return null;
     this._ensureDir();
     return this._filePathCached;
   }
 }
 
-const rootLogger = new Logger();
-
-module.exports = { Logger, rootLogger, maskDeep, MAX_LOG_SIZE };
+export const rootLogger = new Logger();

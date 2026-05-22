@@ -1,17 +1,16 @@
-// @ts-check
-const fs = require('fs');
-const path = require('path');
-const os = require('os');
-const { rootLogger } = require('./logger');
-const { warn } = require('./prompt');
+import fs from 'fs';
+import path from 'path';
+import os from 'os';
+import { rootLogger } from './logger';
+import { warn } from './prompt';
 
 const STATE_DIR = process.env.XDG_STATE_HOME
     ? path.join(process.env.XDG_STATE_HOME, 'qa-tools')
     : path.join(os.homedir(), '.local', 'state', 'qa-tools');
 
-try { fs.mkdirSync(STATE_DIR, { recursive: true }); } catch (_) {}
+try { fs.mkdirSync(STATE_DIR, { recursive: true }); } catch {}
 
-const STATE_PATH = path.join(STATE_DIR, 'state.json');
+export const STATE_PATH = path.join(STATE_DIR, 'state.json');
 const TMP_PATH = STATE_PATH + '.tmp';
 const BAK_PATH = STATE_PATH + '.bak';
 
@@ -21,14 +20,13 @@ try {
         const oldData = fs.readFileSync(OLD_STATE_PATH, 'utf8');
         fs.writeFileSync(TMP_PATH, oldData, 'utf8');
         fs.renameSync(TMP_PATH, STATE_PATH);
-        try { fs.unlinkSync(OLD_STATE_PATH + '.bak'); } catch (_) {}
-        try { fs.unlinkSync(OLD_STATE_PATH + '.tmp'); } catch (_) {}
-        try { fs.unlinkSync(OLD_STATE_PATH); } catch (_) {}
+        try { fs.unlinkSync(OLD_STATE_PATH + '.bak'); } catch {}
+        try { fs.unlinkSync(OLD_STATE_PATH + '.tmp'); } catch {}
+        try { fs.unlinkSync(OLD_STATE_PATH); } catch {}
     }
-} catch (_) {}
+} catch {}
 
-/** @returns {import('./types').StateSchema} */
-function load() {
+export function load(): Record<string, unknown> {
   try {
     if (fs.existsSync(STATE_PATH)) {
       return JSON.parse(fs.readFileSync(STATE_PATH, 'utf8'));
@@ -43,44 +41,37 @@ function load() {
         fs.renameSync(TMP_PATH, STATE_PATH);
         return backup;
       }
-    } catch (err) {
+    } catch (err2) {
       warn('Falha ao recuperar backup de estado.');
-      rootLogger.error('Falha ao recuperar backup de estado: ' + err.message);
+      rootLogger.error('Falha ao recuperar backup de estado: ' + (err2 as Error).message);
     }
     try {
       fs.renameSync(STATE_PATH, BAK_PATH);
       warn('Backup salvo. Criando novo estado.');
       rootLogger.warn('Backup salvo em ' + BAK_PATH + '. Criando novo estado.');
-    } catch (err) {
+    } catch (err3) {
       warn('Falha ao salvar backup de estado.');
-      rootLogger.error('Falha ao salvar backup de estado: ' + err.message);
+      rootLogger.error('Falha ao salvar backup de estado: ' + (err3 as Error).message);
     }
   }
   return {};
 }
 
-/** @param {import('./types').StateSchema} state */
-function save(state) {
+export function save(state: Record<string, unknown>): void {
   try {
     fs.writeFileSync(TMP_PATH, JSON.stringify(state, null, 2), 'utf8');
     fs.renameSync(TMP_PATH, STATE_PATH);
     fs.writeFileSync(BAK_PATH, JSON.stringify(state, null, 2), 'utf8');
   } catch (err) {
     warn('Falha ao salvar estado. Alteracoes podem ser perdidas.');
-    rootLogger.error('Falha ao salvar estado: ' + err.message);
+    rootLogger.error('Falha ao salvar estado: ' + (err as Error).message);
   }
 }
 
-/**
- * @param {(state: import('./types').StateSchema) => void} fn
- * @returns {import('./types').StateSchema}
- */
-function update(fn) {
+export function update(fn: (state: Record<string, unknown>) => void): Record<string, unknown> {
   const state = load();
   const copy = JSON.parse(JSON.stringify(state));
   fn(copy);
   save(copy);
   return copy;
 }
-
-module.exports = { load, save, update, STATE_PATH };
