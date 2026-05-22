@@ -2,7 +2,7 @@ const JiraResource = require('./jira_resource');
 const JiraLinkManager = require('./jira_link_manager');
 const { createTestExecution, createTestExecutionWithLinks, generateMappingFiles, validateCsvTests, createTestsFromJson } = require('./create_tests');
 
-jest.mock('../shared/prompt', () => ({
+const mockPrompt = {
     success: jest.fn(),
     error: jest.fn(),
     warn: jest.fn(),
@@ -20,7 +20,8 @@ jest.mock('../shared/prompt', () => ({
     isQuiet: jest.fn().mockReturnValue(true),
     withSpinner: jest.fn().mockImplementation(async (label, fn) => fn()),
     print: jest.fn(),
-}));
+};
+jest.mock('../shared/prompt', () => mockPrompt);
 
 jest.mock('fs', () => {
     const actual = jest.requireActual('fs');
