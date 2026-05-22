@@ -1,9 +1,10 @@
+// @ts-nocheck
 const fs = require('fs');
 const path = require('path');
 const os = require('os');
 
 jest.mock('../shared/logger', () => ({
-    rootLogger: { info: jest.fn(), error: jest.fn(), warn: jest.fn(), writeFileOnly: jest.fn() }
+    rootLogger: { info: jest.fn(), error: jest.fn(), warn: jest.fn(), writeFileOnly: jest.fn() },
 }));
 
 const PackageVersionManager = require('./package_version_manager');

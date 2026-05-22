@@ -1,3 +1,4 @@
+// @ts-nocheck
 // 1. Define mock factory values FIRST (before jest.mock)
 const mockPrompt = {
     success: jest.fn(),
@@ -48,7 +49,13 @@ jest.mock('axios', () => {
 // 3. THEN require the source modules (they'll get the mocked dependencies)
 const JiraResource = require('./jira_resource');
 const JiraLinkManager = require('./jira_link_manager');
-const { createTestExecution, createTestExecutionWithLinks, generateMappingFiles, validateCsvTests, createTestsFromJson } = require('./create_tests');
+const {
+    createTestExecution,
+    createTestExecutionWithLinks,
+    generateMappingFiles,
+    validateCsvTests,
+    createTestsFromJson,
+} = require('./create_tests');
 
 const MOCK_ISSUE_TYPES = [
     { id: '11200', name: 'Epic' },
@@ -58,8 +65,16 @@ const MOCK_ISSUE_TYPES = [
 ];
 
 const MOCK_FIELDS = [
-    { id: 'customfield_13715', name: 'Tests association with a Test Execution', schema: { custom: 'com.xpandit.plugins.xray:testexec-tests-custom-field' } },
-    { id: 'customfield_13708', name: 'Pre-Conditions association with a Test', schema: { custom: 'com.xpandit.plugins.xray:test-precondition-custom-field' } },
+    {
+        id: 'customfield_13715',
+        name: 'Tests association with a Test Execution',
+        schema: { custom: 'com.xpandit.plugins.xray:testexec-tests-custom-field' },
+    },
+    {
+        id: 'customfield_13708',
+        name: 'Pre-Conditions association with a Test',
+        schema: { custom: 'com.xpandit.plugins.xray:test-precondition-custom-field' },
+    },
 ];
 
 const PROJECT = 'TESTPROJ';
@@ -92,7 +107,7 @@ describe('createTestExecution', () => {
                 summary: expect.stringMatching(/^meus-testes - /),
                 issuetype: { id: '11802' },
                 customfield_13715: ['TEST-1', 'TEST-2'],
-            }
+            },
         });
     });
 
@@ -113,7 +128,7 @@ describe('createTestExecution', () => {
                 summary: expect.stringMatching(/^Automated Execution - /),
                 issuetype: { id: '11802' },
                 customfield_13715: ['TEST-3'],
-            }
+            },
         });
     });
 
@@ -123,8 +138,9 @@ describe('createTestExecution', () => {
             { id: '11800', name: 'Test' },
         ]);
 
-        await expect(createTestExecution(jiraResource, PROJECT, ['TEST-1']))
-            .rejects.toThrow('Issue type "Test Execution" não encontrado');
+        await expect(createTestExecution(jiraResource, PROJECT, ['TEST-1'])).rejects.toThrow(
+            'Issue type "Test Execution" não encontrado',
+        );
     });
 
     it('throws when custom field not found', async () => {
@@ -134,15 +150,15 @@ describe('createTestExecution', () => {
             return Promise.reject(new Error('unexpected url: ' + url));
         });
 
-        await expect(createTestExecution(jiraResource, PROJECT, ['TEST-1']))
-            .rejects.toThrow('Campo "Tests association with a Test Execution" não encontrado');
+        await expect(createTestExecution(jiraResource, PROJECT, ['TEST-1'])).rejects.toThrow(
+            'Campo "Tests association with a Test Execution" não encontrado',
+        );
     });
 
     it('throws when issuetype API fails', async () => {
         jiraResource.getJiraResource.mockRejectedValue(new Error('API error'));
 
-        await expect(createTestExecution(jiraResource, PROJECT, ['TEST-1']))
-            .rejects.toThrow();
+        await expect(createTestExecution(jiraResource, PROJECT, ['TEST-1'])).rejects.toThrow();
     });
 
     it('throws when field API returns non-array', async () => {
@@ -152,15 +168,17 @@ describe('createTestExecution', () => {
             return Promise.reject(new Error('unexpected url: ' + url));
         });
 
-        await expect(createTestExecution(jiraResource, PROJECT, ['TEST-1']))
-            .rejects.toThrow('Falha ao obter campos customizados');
+        await expect(createTestExecution(jiraResource, PROJECT, ['TEST-1'])).rejects.toThrow(
+            'Falha ao obter campos customizados',
+        );
     });
 
     it('throws when issuetype API returns non-array', async () => {
         jiraResource.getJiraResource.mockResolvedValue(null);
 
-        await expect(createTestExecution(jiraResource, PROJECT, ['TEST-1']))
-            .rejects.toThrow('Falha ao obter tipos de issue');
+        await expect(createTestExecution(jiraResource, PROJECT, ['TEST-1'])).rejects.toThrow(
+            'Falha ao obter tipos de issue',
+        );
     });
 
     it('accepts titleOverride as 5th param', async () => {
@@ -175,7 +193,7 @@ describe('createTestExecution', () => {
         expect(jiraResource.postJiraResource).toHaveBeenCalledWith('issue', {
             fields: expect.objectContaining({
                 summary: 'Custom Title',
-            })
+            }),
         });
         expect(result.key).toBe('EXEC-3');
     });
@@ -198,11 +216,10 @@ describe('createTestExecutionWithLinks', () => {
         linkJiraRes.getJiraResource = jest.fn();
         linkJiraRes.postJiraResource = jest.fn();
         linkJiraRes.getJiraResource.mockImplementation((url) => {
-            if (url === 'issueLinkType') return Promise.resolve({
-                issueLinkTypes: [
-                    { id: '10201', name: 'Tests', inward: 'is tested by', outward: 'tests' },
-                ]
-            });
+            if (url === 'issueLinkType')
+                return Promise.resolve({
+                    issueLinkTypes: [{ id: '10201', name: 'Tests', inward: 'is tested by', outward: 'tests' }],
+                });
             if (url === 'issueLink') return Promise.resolve({});
             return Promise.reject(new Error('unexpected: ' + url));
         });
@@ -220,14 +237,19 @@ describe('createTestExecutionWithLinks', () => {
         linkJiraRes.postJiraResource.mockResolvedValue({});
 
         const result = await createTestExecutionWithLinks(
-            jiraResource, linkManager, PROJECT, ['TEST-1', 'TEST-2'], 'meus-testes', {}
+            jiraResource,
+            linkManager,
+            PROJECT,
+            ['TEST-1', 'TEST-2'],
+            'meus-testes',
+            {},
         );
 
         expect(result.key).toBe('EXEC-1');
         expect(linkJiraRes.postJiraResource).toHaveBeenCalledWith('issueLink', {
             type: { id: '10201' },
             inwardIssue: { key: 'EXEC-1' },
-            outwardIssue: { key: 'TEST-1' }
+            outwardIssue: { key: 'TEST-1' },
         });
     });
 
@@ -235,23 +257,20 @@ describe('createTestExecutionWithLinks', () => {
         jiraResource.getJiraResource.mockImplementation((url) => {
             if (url === 'issuetype') return Promise.resolve(MOCK_ISSUE_TYPES);
             if (url === 'field') return Promise.resolve(MOCK_FIELDS);
-            if (url === 'issue/EXEC-1') return Promise.resolve({
-                fields: {
-                    issuelinks: [
-                        { outwardIssue: { key: 'TEST-1' } }
-                    ]
-                }
-            });
+            if (url === 'issue/EXEC-1')
+                return Promise.resolve({
+                    fields: {
+                        issuelinks: [{ outwardIssue: { key: 'TEST-1' } }],
+                    },
+                });
             return Promise.reject(new Error('unexpected url: ' + url));
         });
         jiraResource.postJiraResource.mockResolvedValue({ key: 'EXEC-1' });
         linkJiraRes.postJiraResource.mockResolvedValue({});
 
-        await createTestExecutionWithLinks(
-            jiraResource, linkManager, PROJECT, ['TEST-1', 'TEST-2'], '', {}
-        );
+        await createTestExecutionWithLinks(jiraResource, linkManager, PROJECT, ['TEST-1', 'TEST-2'], '', {});
 
-        const linkCalls = linkJiraRes.postJiraResource.mock.calls.filter(c => c[0] === 'issueLink');
+        const linkCalls = linkJiraRes.postJiraResource.mock.calls.filter((c) => c[0] === 'issueLink');
         expect(linkCalls).toHaveLength(1);
         expect(linkCalls[0][1].outwardIssue.key).toBe('TEST-2');
     });
@@ -266,9 +285,7 @@ describe('createTestExecutionWithLinks', () => {
         jiraResource.postJiraResource.mockResolvedValue({ key: 'EXEC-1' });
         linkJiraRes.postJiraResource.mockRejectedValue(new Error('Link failed'));
 
-        const result = await createTestExecutionWithLinks(
-            jiraResource, linkManager, PROJECT, ['TEST-1'], '', {}
-        );
+        const result = await createTestExecutionWithLinks(jiraResource, linkManager, PROJECT, ['TEST-1'], '', {});
 
         expect(result.key).toBe('EXEC-1');
     });
@@ -279,7 +296,7 @@ describe('generateMappingFiles', () => {
     const tmpDir = '/tmp/qa-tools-test-mapping-' + Date.now();
     const csvPath = '/tmp/test-csv.csv';
     let testIdx = 0;
-    const nextBase = () => '/tmp/test-csv-' + (++testIdx);
+    const nextBase = () => '/tmp/test-csv-' + ++testIdx;
 
     beforeAll(() => {
         realFs.writeFileSync(csvPath, 'Title: X\nAction,Data,Expected\nx,y,z\n', 'utf8');
@@ -288,12 +305,20 @@ describe('generateMappingFiles', () => {
 
     afterAll(() => {
         delete process.env.CYPRESS_PROJECT_PATH;
-        try { realFs.rmSync(tmpDir, { recursive: true, force: true }); } catch (e) { /* ignore */ }
-        try { realFs.unlinkSync(csvPath); } catch (e) { /* ignore */ }
+        try {
+            realFs.rmSync(tmpDir, { recursive: true, force: true });
+        } catch (e) {
+            /* ignore */
+        }
+        try {
+            realFs.unlinkSync(csvPath);
+        } catch (e) {
+            /* ignore */
+        }
     });
 
     function makeSteps(...actions) {
-        return actions.map(a => ({ fields: { Action: a, Data: '', ExpectedResult: '' } }));
+        return actions.map((a) => ({ fields: { Action: a, Data: '', ExpectedResult: '' } }));
     }
 
     it('creates JSON and MD mapping files', () => {
@@ -340,7 +365,7 @@ describe('generateMappingFiles', () => {
                 title: 'TC3',
                 description: 'Desc',
                 precondition: { type: 'inline', value: 'User must be logged in' },
-                steps: makeSteps('Click login')
+                steps: makeSteps('Click login'),
             },
         ];
         generateMappingFiles(base + '.csv', 'PROJ', ['TEST-3'], testCases);
@@ -352,10 +377,7 @@ describe('generateMappingFiles', () => {
 
     it('generates MD with full table for each test', () => {
         const base = nextBase();
-        const testCases = [
-            { title: 'TC1', description: 'Descricao do TC1', steps: makeSteps('a1') },
-            { title: 'TC2' },
-        ];
+        const testCases = [{ title: 'TC1', description: 'Descricao do TC1', steps: makeSteps('a1') }, { title: 'TC2' }];
         generateMappingFiles(base + '.csv', 'PROJ', ['TEST-1', 'TEST-2'], testCases);
         const md = realFs.readFileSync(tmpDir + '/test-csv-' + testIdx + '-jira-mapping.md', 'utf8');
         const mdLines = md.split('\n');
@@ -425,7 +447,10 @@ describe('createTestsFromJson', () => {
         linkManagerXray: makeLinkManager(),
         project_name: 'TESTPROJ',
         base_url: 'http://jira',
-        sessionLog: { log: jest.fn(), child: jest.fn().mockReturnValue({ log: jest.fn(), warn: jest.fn(), info: jest.fn(), error: jest.fn() }) },
+        sessionLog: {
+            log: jest.fn(),
+            child: jest.fn().mockReturnValue({ log: jest.fn(), warn: jest.fn(), info: jest.fn(), error: jest.fn() }),
+        },
         onBusy: jest.fn(),
     });
 
@@ -472,10 +497,12 @@ describe('createTestsFromJson', () => {
         process.env.AUTO_CONFIRM = 'true';
         process.env.DRY_RUN = 'true';
         PROMPT.smartPrompt.mockReturnValue('/fake/path.json');
-        FS.readFileSync.mockReturnValue(JSON.stringify([
-            { title: 'TC1', steps: [{ Action: 'Click' }] },
-            { title: 'TC2', steps: [{ Action: 'Type' }] },
-        ]));
+        FS.readFileSync.mockReturnValue(
+            JSON.stringify([
+                { title: 'TC1', steps: [{ Action: 'Click' }] },
+                { title: 'TC2', steps: [{ Action: 'Type' }] },
+            ]),
+        );
         const result = await createTestsFromJson(BASE_PARAMS());
         expect(result).toBeDefined();
         expect(result.summary).toContain('2');
@@ -504,9 +531,9 @@ describe('createTestsFromJson', () => {
         process.env.AUTO_CONFIRM = 'true';
         process.env.DRY_RUN = 'true';
         PROMPT.smartPrompt.mockReturnValue('/fake/path.json');
-        FS.readFileSync.mockReturnValue(JSON.stringify([
-            { title: 'TC1', steps: [{ Action: 'Click' }], precondition: 'PREC-001' },
-        ]));
+        FS.readFileSync.mockReturnValue(
+            JSON.stringify([{ title: 'TC1', steps: [{ Action: 'Click' }], precondition: 'PREC-001' }]),
+        );
         const result = await createTestsFromJson(BASE_PARAMS());
         expect(result).toBeDefined();
         expect(result.summary).toContain('1');
@@ -516,9 +543,9 @@ describe('createTestsFromJson', () => {
         process.env.AUTO_CONFIRM = 'true';
         process.env.DRY_RUN = 'true';
         PROMPT.smartPrompt.mockReturnValue('/fake/path.json');
-        FS.readFileSync.mockReturnValue(JSON.stringify([
-            { title: 'TC1', steps: [{ Action: 'Click' }], linkedIssues: ['BUG-1', 'BUG-2'] },
-        ]));
+        FS.readFileSync.mockReturnValue(
+            JSON.stringify([{ title: 'TC1', steps: [{ Action: 'Click' }], linkedIssues: ['BUG-1', 'BUG-2'] }]),
+        );
         const result = await createTestsFromJson(BASE_PARAMS());
         expect(result).toBeDefined();
         expect(result.summary).toContain('1');
@@ -528,9 +555,11 @@ describe('createTestsFromJson', () => {
         process.env.AUTO_CONFIRM = 'true';
         process.env.DRY_RUN = 'true';
         PROMPT.smartPrompt.mockReturnValue('/fake/path.json');
-        FS.readFileSync.mockReturnValue(JSON.stringify([
-            { title: 'TC1', steps: [{ Action: 'Click' }], linkedIssues: [{ key: 'BUG-1', linkType: 'Blocks' }] },
-        ]));
+        FS.readFileSync.mockReturnValue(
+            JSON.stringify([
+                { title: 'TC1', steps: [{ Action: 'Click' }], linkedIssues: [{ key: 'BUG-1', linkType: 'Blocks' }] },
+            ]),
+        );
         const result = await createTestsFromJson(BASE_PARAMS());
         expect(result).toBeDefined();
         expect(result.summary).toContain('1');
