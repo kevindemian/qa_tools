@@ -11,6 +11,28 @@ if ! command -v node &>/dev/null; then
     exit 1
 fi
 
+# Dependency check — auto-install if missing
+if [ ! -d "$SCRIPT_DIR/node_modules" ]; then
+    echo "  Dependências não encontradas." >&2
+    if [ "$1" != "-y" ]; then
+        read -rp "  Instalar agora? (S/N) " resp
+    else
+        resp="S"
+    fi
+    if [ "$resp" = "S" ] || [ "$resp" = "s" ]; then
+        echo ""
+        npm install
+    else
+        echo "  Execute 'npm install' na raiz do projeto e tente novamente." >&2
+        exit 1
+    fi
+fi
+
+# Filter -y from args (not a tool argument)
+if [ "$1" = "-y" ]; then
+    shift
+fi
+
 # Warn if .env missing
 if [ ! -f "$SCRIPT_DIR/.env" ]; then
     echo "  AVISO: .env não encontrado em $SCRIPT_DIR" >&2
@@ -21,18 +43,18 @@ if [ ! -f "$SCRIPT_DIR/.env" ]; then
     fi
 fi
 
-# Auto-discover tools (dirs with main.js)
+# Auto-discover tools (dirs with main.ts)
 tools=()
 tool_names=()
 while IFS= read -r -d '' dir; do
     name=$(basename "$dir")
     case "$name" in node_modules|config|shared|.git) continue ;; esac
-    tools+=("$dir/main.js")
+    tools+=("$dir/main.ts")
     tool_names+=("$name")
-done < <(find "$SCRIPT_DIR" -maxdepth 2 -name "main.js" -not -path "*/node_modules/*" -printf '%h\0' | sort -u)
+done < <(find "$SCRIPT_DIR" -maxdepth 2 -name "main.ts" -not -path "*/node_modules/*" -printf '%h\0' | sort -u)
 
 if [ ${#tools[@]} -eq 0 ]; then
-    echo "  ERRO: Nenhuma ferramenta encontrada (nenhum */main.js)." >&2
+    echo "  ERRO: Nenhuma ferramenta encontrada (nenhum */main.ts)." >&2
     exit 1
 fi
 
@@ -55,7 +77,7 @@ save_choice() {
 
 run_tool() {
     save_choice "${tool_names[$1]}"
-    node "${tools[$1]}" "${@:2}"
+    npx tsx "${tools[$1]}" "${@:2}"
     rc=$?
     if [ $rc -ne 0 ]; then
         echo ""

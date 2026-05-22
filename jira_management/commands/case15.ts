@@ -1,17 +1,15 @@
 import Config from '../../shared/config';
-import { success, error, warn, info, title, divider, prompt, confirm, smartPrompt, printError, printSummary } from '../../shared/prompt';
-import { load as loadState, update as updateState } from '../../shared/state';
-import { rootLogger } from '../../shared/logger';
+import { prompt, confirm, smartPrompt, printError, warn, success } from '../../shared/prompt';
+import { load as loadState } from '../../shared/state';
 import path from 'path';
 import fs from 'fs';
 import type { CommandContext } from './context';
 
 async function handler(c: CommandContext): Promise<void> {
     const state = loadState() as Record<string, string | undefined>;
-    const jsonPathInput = Config.jsonPath || smartPrompt(
-        'Caminho do arquivo JSON ou TXT (formato JSON)',
-        { default: state.lastJsonPath || '' }
-    );
+    const jsonPathInput =
+        Config.jsonPath ||
+        smartPrompt('Caminho do arquivo JSON ou TXT (formato JSON)', { default: state.lastJsonPath || '' });
 
     let jsonPath = jsonPathInput.trim();
     if (!jsonPath) {
@@ -25,20 +23,31 @@ async function handler(c: CommandContext): Promise<void> {
         }
     }
 
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
     const createTestsFromJson = require('../create_tests').createTestsFromJson;
     const result = await createTestsFromJson({
-        jiraResource: c.jiraResource, jiraResourceXray: c.jiraResourceXray,
-        linkManager: c.linkManager, linkManagerXray: c.linkManagerXray,
-        project_name: c.ctx.project_name, base_url: c.base_url,
+        jiraResource: c.jiraResource,
+        jiraResourceXray: c.jiraResourceXray,
+        linkManager: c.linkManager,
+        linkManagerXray: c.linkManagerXray,
+        project_name: c.ctx.project_name,
+        base_url: c.base_url,
         sessionLog: c.sessionLog,
-        onBusy: (val: boolean) => { c.ctx.isBusy = val; }
+        onBusy: (val: boolean) => {
+            c.ctx.isBusy = val;
+        },
+        jsonPath: jsonPath,
     });
     if (result) {
         c.ctx.inMemoryTasksId = result.inMemoryTasksId;
         c.ctx.inMemoryTasksText = result.inMemoryTasksText;
         const okCount = result.inMemoryTasksId.length;
         success('Importacao JSON concluída: ' + okCount + ' testes');
-        c.ctx.results = result.inMemoryTasksId.map((key: string) => ({ status: 'ok' as const, label: key, message: '' }));
+        c.ctx.results = result.inMemoryTasksId.map((key: string) => ({
+            status: 'ok' as const,
+            label: key,
+            message: '',
+        }));
         c.pushHistory('importar-json', okCount + ' testes', 'ok');
 
         if (confirm('Criar Test Execution para estes testes?', true)) {
@@ -48,11 +57,16 @@ async function handler(c: CommandContext): Promise<void> {
             const csvName = nameInput.trim() || srcName;
             const execTitle = prompt('Titulo do Test Execution', { hint: 'Enter = ' + csvName });
             const execDesc = prompt('Descrição (opcional)');
+            // eslint-disable-next-line @typescript-eslint/no-require-imports
             const createTestExecutionWithLinks = require('../create_tests').createTestExecutionWithLinks;
             try {
                 const execResult = await createTestExecutionWithLinks(
-                    c.jiraResource, c.linkManager, c.ctx.project_name, keys, csvName,
-                    { title: execTitle, description: execDesc }
+                    c.jiraResource,
+                    c.linkManager,
+                    c.ctx.project_name,
+                    keys,
+                    csvName,
+                    { title: execTitle, description: execDesc },
                 );
                 c.pushHistory('create-testexec', execResult.key, 'ok');
             } catch (err) {
