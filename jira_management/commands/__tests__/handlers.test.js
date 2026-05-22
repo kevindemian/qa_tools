@@ -11,6 +11,7 @@ jest.mock('../../../shared/prompt', () => ({
   printError: jest.fn(),
   printSummary: jest.fn(),
   isQuiet: jest.fn().mockReturnValue(true),
+  print: jest.fn(),
 }));
 
 jest.mock('../../../shared/state', () => ({

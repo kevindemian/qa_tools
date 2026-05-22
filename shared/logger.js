@@ -12,6 +12,7 @@ const COLORS = {
   RESET: '\x1b[0m'
 };
 const SECRET_RE = /token|secret|key|password|authorization/i;
+const MAX_LOG_SIZE = parseInt(process.env.LOG_MAX_SIZE || '', 10) || 5 * 1024 * 1024;
 
 function maskValue(v) {
   if (typeof v !== 'string') return v;
@@ -33,6 +34,7 @@ class Logger {
     this._logDir = null;
     this._filePathCached = null;
     this._fileError = false;
+    this._bytesWritten = 0;
   }
 
   _ensureDir() {
@@ -40,18 +42,42 @@ class Logger {
     if (process.env.LOG_FILE !== 'true') return false;
 
     const logDir = process.env.LOG_DIR || 'logs';
-    if (this._logDir === logDir) return true;
+    if (this._logDir === logDir && this._filePathCached) return true;
 
     try {
       if (!fs.existsSync(logDir)) fs.mkdirSync(logDir, { recursive: true });
       this._logDir = logDir;
       const date = new Date().toISOString().split('T')[0];
       this._filePathCached = path.join(logDir, `qa-tools-${date}.log`);
+      try {
+        const stat = fs.statSync(this._filePathCached);
+        this._bytesWritten = stat.size;
+      } catch {
+        this._bytesWritten = 0;
+      }
       return true;
     } catch (err) {
       this._fileError = true;
       console.error(`[logger] Falha ao criar diretório de log: ${err.message}`);
       return false;
+    }
+  }
+
+  _rotateIfNeeded() {
+    if (!this._filePathCached || this._bytesWritten < MAX_LOG_SIZE) return;
+    const dir = path.dirname(this._filePathCached);
+    const ext = path.extname(this._filePathCached);
+    const base = path.basename(this._filePathCached, ext);
+    let seq = 1;
+    while (fs.existsSync(path.join(dir, `${base}.${seq}${ext}`))) {
+      seq++;
+    }
+    const rotated = path.join(dir, `${base}.${seq}${ext}`);
+    try {
+      fs.renameSync(this._filePathCached, rotated);
+      this._bytesWritten = 0;
+    } catch (err) {
+      console.error(`[logger] Falha ao rotacionar log: ${err.message}`);
     }
   }
 
@@ -99,8 +125,10 @@ class Logger {
     const line = `[${timestamp}] [${level}]${ctxStr} ${msg}${dataStr}\n`;
 
     if (!this._filePathCached) return;
+    this._rotateIfNeeded();
     try {
       fs.appendFileSync(this._filePathCached, line);
+      this._bytesWritten += Buffer.byteLength(line);
     } catch (err) {
       this._fileError = true;
       console.error(`[logger] Falha ao escrever no arquivo de log: ${err.message}`);
@@ -140,4 +168,4 @@ class Logger {
 
 const rootLogger = new Logger();
 
-module.exports = { Logger, rootLogger, maskDeep };
+module.exports = { Logger, rootLogger, maskDeep, MAX_LOG_SIZE };

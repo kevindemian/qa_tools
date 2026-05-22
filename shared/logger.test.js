@@ -119,6 +119,33 @@ describe('Logger', () => {
             expect(result.lastLine).toContain('[ERROR]');
             expect(result.lastLine).toContain('Erro grave');
         });
+
+        it('rotates log file when size exceeds limit', () => {
+            jest.isolateModules(() => {
+                const testDir = normalizePath(fs.mkdtempSync(path.join(os.tmpdir(), 'qa-tools-logger-rot-')));
+                process.env.LOG_FILE = 'true';
+                process.env.LOG_DIR = testDir;
+                process.env.LOG_MAX_SIZE = '100';
+
+                const { Logger: LoggerSmall } = require('./logger');
+                const logger = new LoggerSmall({ test: 'rotate' });
+                logger.info('x'.repeat(120));
+                const firstFile = logger.filePath;
+
+                logger.info('more data after rotation');
+                const dir = path.dirname(firstFile);
+                const ext = path.extname(firstFile);
+                const base = path.basename(firstFile, ext);
+                const rotated = path.join(dir, `${base}.1${ext}`);
+
+                expect(fs.existsSync(rotated)).toBe(true);
+                const rotatedContent = fs.readFileSync(rotated, 'utf8');
+                expect(rotatedContent).toContain('[INFO]');
+
+                delete process.env.LOG_MAX_SIZE;
+                fs.rmSync(testDir, { recursive: true, force: true });
+            });
+        });
     });
 
     describe('filePath getter', () => {

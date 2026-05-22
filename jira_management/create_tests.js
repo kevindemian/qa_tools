@@ -1,7 +1,7 @@
 // @ts-check
 const fs = require('fs');
 const path = require('path');
-const { success, error, warn, info, title, divider, prompt, confirm, smartPrompt, printError, printSummary, onError, ProgressBar, withSpinner, isQuiet } = require('../shared/prompt');
+const { print, success, error, warn, info, title, divider, prompt, confirm, smartPrompt, printError, printSummary, onError, ProgressBar, withSpinner, isQuiet } = require('../shared/prompt');
 const { rootLogger } = require('../shared/logger');
 const { sleep } = require('../shared/http-client');
 const { load: loadState, update: updateState } = require('../shared/state');
@@ -390,7 +390,7 @@ async function _createTestsFromTestCases({
             : '';
         const stepPreview = ' [' + stepsInfo + ': "' + firstStep + '"...' +
             (lastStep && lastStep !== firstStep ? ' "' + lastStep + '"' : '') + ']';
-        console.log('  ' + (i + 1) + '. ' + test.title + desc + pre + links + group + stepPreview);
+        print('  ' + (i + 1) + '. ' + test.title + desc + pre + links + group + stepPreview);
     });
     divider();
 
@@ -537,7 +537,7 @@ async function _createTestsFromTestCases({
             }
         }
 
-        if (!isQuiet()) console.log('  -> ' + base_url + '/browse/' + createdTestIssue.key);
+        if (!isQuiet()) print('  -> ' + base_url + '/browse/' + createdTestIssue.key);
         results.push(testReport);
 
         testDurations.push(Date.now() - testStart);

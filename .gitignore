@@ -6,6 +6,7 @@ logs
 *.log
 __pycache__
 exported_variables.env
+coverage/
 
 # === Local overrides ===
 config/*.local.json

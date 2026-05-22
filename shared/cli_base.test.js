@@ -81,5 +81,38 @@ describe('CLI Base', () => {
       expect(onSpy).toHaveBeenCalledWith('SIGINT', expect.any(Function));
       onSpy.mockRestore();
     });
+
+    it('calls onExit and sets exitCode on SIGINT', () => {
+      jest.useFakeTimers();
+      const exitSpy = jest.spyOn(process, 'exit').mockImplementation(() => {});
+      const removeListenerSpy = jest.spyOn(process, 'removeListener').mockImplementation(() => {});
+      const onSpy = jest.spyOn(process, 'on').mockImplementation((evt, handler) => {
+        if (evt === 'SIGINT') handler();
+      });
+      const onExit = jest.fn();
+      cliBase.setupSigint(null, onExit);
+      expect(onExit).toHaveBeenCalled();
+      expect(MOCK_PROMPT.info).toHaveBeenCalledWith('Ate logo!');
+      expect(removeListenerSpy).toHaveBeenCalledWith('SIGINT', expect.any(Function));
+      jest.advanceTimersByTime(2000);
+      expect(exitSpy).toHaveBeenCalled();
+      exitSpy.mockRestore();
+      removeListenerSpy.mockRestore();
+      onSpy.mockRestore();
+      jest.useRealTimers();
+    });
+
+    it('does not exit if isBusy returns true', () => {
+      const onSpy = jest.spyOn(process, 'on').mockImplementation((evt, handler) => {
+        if (evt === 'SIGINT') handler();
+      });
+      const onExit = jest.fn();
+      cliBase.setupSigint(() => true, onExit);
+      expect(MOCK_PROMPT.info).toHaveBeenCalledWith(
+        expect.stringContaining('Operação em andamento')
+      );
+      expect(onExit).not.toHaveBeenCalled();
+      onSpy.mockRestore();
+    });
   });
 });

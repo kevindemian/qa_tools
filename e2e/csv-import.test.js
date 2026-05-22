@@ -3,15 +3,6 @@ const path = require('path');
 const os = require('os');
 
 const tmpHome = fs.mkdtempSync(path.join(os.tmpdir(), 'qa-e2e-'));
-process.env.HOME = tmpHome;
-process.env.JIRA_BASE_URL = 'http://localhost:9999/jira';
-process.env.JIRA_PERSONAL_TOKEN = 'e2e-token';
-process.env.XRAY_BASE_URL = 'http://localhost:9999/xray';
-process.env.CSV_PATH = path.join(__dirname, 'fixtures', 'testes-simples.csv');
-process.env.CSV_LABELS = 'e2e,automated';
-process.env.AUTO_CONFIRM = 'true';
-process.env.ON_ERROR = 'skip';
-process.env.QUIET = 'true';
 
 jest.setTimeout(30000);
 
@@ -25,6 +16,15 @@ const { setupHandlers, resetHandlers } = require('./handlers');
 
 describe('E2E: CSV Import', () => {
   beforeAll(() => {
+    process.env.HOME = tmpHome;
+    process.env.JIRA_BASE_URL = 'http://localhost:9999/jira';
+    process.env.JIRA_PERSONAL_TOKEN = 'e2e-token';
+    process.env.XRAY_BASE_URL = 'http://localhost:9999/xray';
+    process.env.CSV_PATH = path.join(__dirname, 'fixtures', 'testes-simples.csv');
+    process.env.CSV_LABELS = 'e2e,automated';
+    process.env.AUTO_CONFIRM = 'true';
+    process.env.ON_ERROR = 'skip';
+    process.env.QUIET = 'true';
     setupHandlers();
   });
 
