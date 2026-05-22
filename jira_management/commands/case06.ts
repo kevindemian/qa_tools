@@ -10,7 +10,11 @@ async function handler(c: CommandContext): Promise<boolean | void> {
     } catch (err) {
         const msg = 'Erro ao verificar status da versão "' + version + '" no projeto "' + c.ctx.project_name + '"';
         printError(msg, err);
-        rootLogger.error(msg, { version, project: c.ctx.project_name, status: err.response?.status });
+        rootLogger.error(msg, {
+            version,
+            project: c.ctx.project_name,
+            status: (err as { response?: { status?: number } }).response?.status,
+        });
         c.pushHistory('verificar-status', version, 'error');
     }
 }

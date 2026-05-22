@@ -439,14 +439,11 @@ async function createTestsFromCsv({
         jiraLabelsInput ||
         (
             Config.csvLabels ||
-            prompt(
-                'Labels Jira (separadas por virgula)',
-                // eslint-disable-next-line @typescript-eslint/no-base-to-string, @typescript-eslint/restrict-plus-operands
-                {
-                    hint: state.lastLabels ? 'último: ' + state.lastLabels : 'vazio para nenhuma',
-                    default: (state.lastLabels as string) || '',
-                },
-            )
+            prompt('Labels Jira (separadas por virgula)', {
+                // eslint-disable-next-line @typescript-eslint/no-base-to-string
+                hint: state.lastLabels ? 'último: ' + String(state.lastLabels) : 'vazio para nenhuma',
+                default: (state.lastLabels as string) || '',
+            })
         )
             .split(',')
             .map((l) => l.trim())
@@ -528,14 +525,11 @@ async function createTestsFromJson({
         jiraLabelsInput ||
         (
             Config.jsonLabels ||
-            prompt(
-                'Labels Jira (separadas por virgula)',
-                // eslint-disable-next-line @typescript-eslint/no-base-to-string, @typescript-eslint/restrict-plus-operands
-                {
-                    hint: state.lastLabels ? 'último: ' + state.lastLabels : 'vazio para nenhuma',
-                    default: (state.lastLabels as string) || '',
-                },
-            )
+            prompt('Labels Jira (separadas por virgula)', {
+                // eslint-disable-next-line @typescript-eslint/no-base-to-string
+                hint: state.lastLabels ? 'último: ' + String(state.lastLabels) : 'vazio para nenhuma',
+                default: (state.lastLabels as string) || '',
+            })
         )
             .split(',')
             .map((l) => l.trim())
