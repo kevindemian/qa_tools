@@ -1,5 +1,7 @@
 param(
-    [string]$tool = ""
+    [string]$tool = "",
+    [Alias('y')]
+    [switch]$yes
 )
 
 [Console]::OutputEncoding = [System.Text.UTF8Encoding]::new()
@@ -11,6 +13,20 @@ if (!(Get-Command node -ErrorAction SilentlyContinue)) {
     Write-Host "`n  ERRO: Node.js nao encontrado." -ForegroundColor Red
     Write-Host "  Instale em: https://nodejs.org" -ForegroundColor Yellow
     exit 1
+}
+
+# Feature 1b: Dependency check — auto-install if missing
+$modulesPath = Join-Path $scriptRoot "node_modules"
+if (-not (Test-Path $modulesPath)) {
+    Write-Host "`n  Dependencias nao encontradas." -ForegroundColor Yellow
+    $resp = if ($yes) { "S" } else { Read-Host "  Instalar agora? (S/N)" }
+    if ($resp -eq "S" -or $resp -eq "s") {
+        Write-Host ""
+        npm install
+    } else {
+        Write-Host "  Execute 'npm install' na raiz do projeto e tente novamente." -ForegroundColor Yellow
+        exit 1
+    }
 }
 
 # Feature 2: Warn if .env missing
@@ -27,15 +43,15 @@ if (!(Test-Path $envFile)) {
 # Feature 4: Auto-discover tools
 $tools = Get-ChildItem -Path $scriptRoot -Directory | Where-Object {
     $_.Name -notin @("node_modules", "config", "shared", ".git") -and
-    (Test-Path (Join-Path $_.FullName "main.js"))
+    (Test-Path (Join-Path $_.FullName "main.ts"))
 } | ForEach-Object {
     $display = $_.Name -replace '_', ' '
     $display = (Get-Culture).TextInfo.ToTitleCase($display.ToLower())
-    @{ Name = $_.Name; Display = $display; Path = Join-Path $_.FullName "main.js" }
+    @{ Name = $_.Name; Display = $display; Path = Join-Path $_.FullName "main.ts" }
 }
 
 if ($tools.Count -eq 0) {
-    Write-Host "`n  ERRO: Nenhuma ferramenta encontrada (nenhum */main.js)." -ForegroundColor Red
+    Write-Host "`n  ERRO: Nenhuma ferramenta encontrada (nenhum */main.ts)." -ForegroundColor Red
     exit 1
 }
 
@@ -57,8 +73,8 @@ function Save-Choice($name) {
 
 function Run-Tool($selected) {
     Save-Choice $selected.Name
-    $nodeArgs = @($selected.Path) + $extraArgs
-    & "node" $nodeArgs
+    $tsxArgs = @("tsx") + @($selected.Path) + $extraArgs
+    & "npx" $tsxArgs
     if ($LASTEXITCODE -ne 0) {
         Write-Host "`n  Erro ao executar. Pressione Enter para sair." -ForegroundColor Red
         Read-Host

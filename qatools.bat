@@ -15,6 +15,21 @@ if %errorlevel% neq 0 (
     exit /b 1
 )
 
+REM Feature 1b: Dependency check — auto-install if missing
+if not exist "%SCRIPT_DIR%node_modules\" (
+    echo.
+    echo   Dependencias nao encontradas.
+    set /p "resp=  Instalar agora? (S/N): "
+    if /i not "!resp!"=="S" (
+        echo.
+        echo   Execute 'npm install' na raiz do projeto e tente novamente.
+        pause
+        exit /b 1
+    )
+    echo.
+    call npm install
+)
+
 REM Feature 2: Warn if .env missing
 if not exist "%SCRIPT_DIR%.env" (
     echo.
@@ -29,7 +44,7 @@ set count=0
 for /d %%i in ("%SCRIPT_DIR%*") do (
     set "dname=%%~nxi"
     if /i not "!dname!"=="node_modules" if /i not "!dname!"=="config" if /i not "!dname!"=="shared" if /i not "!dname!"==".git" (
-        if exist "%%i\main.js" (
+        if exist "%%i\main.ts" (
             set /a count+=1
             set "tool_!count!=%%i"
             set "tname_!count!=!dname:_= !"
@@ -39,7 +54,7 @@ for /d %%i in ("%SCRIPT_DIR%*") do (
 
 if %count% equ 0 (
     echo.
-    echo   ERRO: Nenhuma ferramenta encontrada (nenhum */main.js).
+    echo   ERRO: Nenhuma ferramenta encontrada (nenhum */main.ts).
     pause
     exit /b 1
 )
@@ -117,8 +132,8 @@ set "saveName=!tname_%selected%!"
 set "selectedPath=!tool_%selected%!"
 
 :run_selected
-REM Feature 3: Pass remaining args to node
-node "!selectedPath!\main.js" %*
+REM Feature 3: Pass remaining args to tsx
+npx tsx "!selectedPath!\main.ts" %*
 if %errorlevel% neq 0 (
     echo.
     echo   Erro ao executar.
