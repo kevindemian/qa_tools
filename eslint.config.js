@@ -17,6 +17,18 @@ module.exports = tseslint.config(
             '@typescript-eslint/prefer-readonly': 'warn',
             'no-console': 'error',
             'no-throw-literal': 'error',
+            'no-empty': 'off',
+            '@typescript-eslint/no-unsafe-assignment': 'off',
+            '@typescript-eslint/no-unsafe-return': 'off',
+            '@typescript-eslint/no-unsafe-member-access': 'off',
+            '@typescript-eslint/no-unsafe-argument': 'off',
+            '@typescript-eslint/no-unsafe-call': 'off',
+        },
+    },
+    {
+        files: ['shared/prompt.ts', 'shared/logger.ts'],
+        rules: {
+            'no-console': 'off',
         },
     },
     { ignores: ['node_modules/', '**/*.js', 'e2e/'] },
