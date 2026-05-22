@@ -14,6 +14,7 @@ interface PromptOptions {
     default?: string;
     hint?: string;
     maxRetries?: number;
+    minLength?: number;
 }
 
 interface SelectChoice {
@@ -38,23 +39,33 @@ interface KnownError {
 
 export const isQuiet = (): boolean => Config.quiet;
 
+function icon(name: 'ok' | 'err' | 'warn' | 'info'): string {
+    const useUnicode = !Config.quiet && process.stdout.isTTY;
+    if (useUnicode) {
+        const map: Record<string, string> = { ok: '\u2713', err: '\u2717', warn: '\u26A0', info: '\u2139' };
+        return map[name];
+    }
+    const fallback: Record<string, string> = { ok: 'OK', err: 'ERR', warn: '!', info: 'i' };
+    return fallback[name];
+}
+
 export function success(msg: string): void {
-    console.log(chalk.green('OK') + ' ' + msg);
+    if (!isQuiet()) console.log(chalk.green.bold(icon('ok')) + ' ' + msg);
     rootLogger.writeFileOnly('INFO', msg);
 }
 
 export function error(msg: string): void {
-    console.log(chalk.red('ERR') + ' ' + msg);
+    console.log(chalk.red.bold(icon('err')) + ' ' + msg);
     rootLogger.writeFileOnly('ERROR', msg);
 }
 
 export function warn(msg: string): void {
-    console.log(chalk.yellow('!') + ' ' + msg);
+    console.log(chalk.yellow.bold(icon('warn')) + ' ' + msg);
     rootLogger.writeFileOnly('WARN', msg);
 }
 
 export function info(msg: string): void {
-    if (!isQuiet()) console.log(chalk.cyan('i') + ' ' + msg);
+    if (!isQuiet()) console.log(chalk.cyan.bold(icon('info')) + ' ' + msg);
     rootLogger.writeFileOnly('INFO', msg);
 }
 
@@ -63,22 +74,38 @@ export function print(msg: string): void {
 }
 
 export function title(msg: string): void {
-    console.log('\n' + chalk.bold(msg));
+    divider();
+    console.log(chalk.bold(msg));
+    divider();
 }
 
 export function prompt(label: string, options: PromptOptions = {}): string {
-    const { default: def, hint } = options;
-    let text = '\n' + chalk.cyan('->') + ' ' + label;
-    if (hint) text += ' ' + chalk.yellow('(' + hint + ')');
-    if (def) text += ' ' + chalk.yellow('[' + def + ']');
-    return readlineSync.question(text + ': ', { defaultInput: def }).trim();
+    const { default: def, hint, minLength } = options;
+    while (true) {
+        let text = '\n' + chalk.cyan('->') + ' ' + label;
+        if (hint) text += ' ' + chalk.yellow('(' + hint + ')');
+        if (def) text += ' ' + chalk.yellow('[' + def + ']');
+        const answer = readlineSync.question(text + ': ', { defaultInput: def }).trim();
+        if (minLength !== undefined && answer.length < minLength) {
+            warn('Mínimo de ' + minLength + ' caractere(s).');
+            continue;
+        }
+        return answer;
+    }
 }
 
 export function confirm(label: string, defaultYes = false): boolean {
     const def = defaultYes ? 'Y' : 'N';
-    const text = '\n' + chalk.yellow('?') + ' ' + label + ' ' + chalk.yellow('(' + def + ')');
-    const answer = readlineSync.question(text + ': ', { defaultInput: def.toLowerCase() });
-    return ['y', 'yes', 'sim', 's'].includes(answer.toLowerCase().trim());
+    while (true) {
+        const text = '\n' + chalk.yellow('?') + ' ' + label + ' ' + chalk.yellow('(' + def + ')');
+        const answer = readlineSync
+            .question(text + ': ', { defaultInput: def.toLowerCase() })
+            .trim()
+            .toLowerCase();
+        if (['y', 'yes', 'sim', 's'].includes(answer)) return true;
+        if (['n', 'no', 'nao', 'não'].includes(answer)) return false;
+        console.log('  ' + chalk.yellow('!') + ' Resposta inválida. Digite S/sim ou N/não.');
+    }
 }
 
 export function divider(): void {
@@ -298,7 +325,7 @@ export function printSummary(results: TestResult[]): void {
     } else {
         const logPath = rootLogger.filePath;
         console.log('  ' + chalk.yellow.bold('OPERACAO PARCIAL'));
-        warn(passed + ' concluídas, ' + failed + ' com erro');
+        console.log('  ' + chalk.yellow('!') + ' ' + passed + ' concluídas, ' + failed + ' com erro');
         results
             .filter((r) => r.status === 'error')
             .forEach((r) => {
@@ -381,7 +408,8 @@ async function _loadInquirer(): Promise<unknown> {
 const isTTY = (): boolean => !!(process.stdout.isTTY && !Config.quiet);
 
 export async function showSelect(label: string, choices: SelectChoice[], options: SelectOptions = {}): Promise<string> {
-    const mod: unknown = await _loadInquirer();
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const mod: any = await _loadInquirer();
     if (mod && isTTY()) {
         const processed = choices.map((c) => {
             if (c.type === 'separator') return new mod.Separator(c.line);
@@ -447,6 +475,7 @@ export function tableView<T extends Record<string, unknown>>(data: T[] | null | 
     const table = new CliTable3({
         head: keys,
         style: { head: ['cyan'] },
+        wordWrap: true,
     });
     for (const row of rows) {
         table.push(

@@ -29,6 +29,7 @@ describe('Prompt', () => {
         mockLog = jest.spyOn(console, 'log').mockImplementation(() => {});
         mockError = jest.spyOn(console, 'error').mockImplementation(() => {});
         mockWarn = jest.spyOn(console, 'warn').mockImplementation(() => {});
+        process.stdout.isTTY = false;
         delete process.env.QUIET;
     });
 
@@ -42,6 +43,18 @@ describe('Prompt', () => {
         it('logs with green OK prefix', () => {
             prompt.success('Operacao concluida');
             expect(mockLog).toHaveBeenCalledWith(expect.stringContaining('OK'));
+        });
+
+        it('does not log to console when QUIET=true', () => {
+            process.env.QUIET = 'true';
+            prompt.success('Silenciada');
+            expect(mockLog).not.toHaveBeenCalled();
+        });
+
+        it('always logs via writeFileOnly even when quiet', () => {
+            process.env.QUIET = 'true';
+            prompt.success('Logada mesmo quiet');
+            expect(mockRootLogger.writeFileOnly).toHaveBeenCalledWith('INFO', 'Logada mesmo quiet');
         });
     });
 
@@ -315,6 +328,13 @@ describe('Prompt', () => {
         it('returns false for n input', () => {
             jest.spyOn(readlineSync, 'question').mockReturnValue('n');
             expect(prompt.confirm('Continue?', false)).toBe(false);
+        });
+
+        it('loops on invalid input until valid', () => {
+            const spy = jest.spyOn(readlineSync, 'question').mockReturnValueOnce('x').mockReturnValueOnce('y');
+            expect(prompt.confirm('Continue?', false)).toBe(true);
+            expect(spy).toHaveBeenCalledTimes(2);
+            expect(mockLog).toHaveBeenCalledWith(expect.stringContaining('Resposta inválida'));
         });
     });
 
