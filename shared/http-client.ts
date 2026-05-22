@@ -1,18 +1,24 @@
-const axios = require('axios');
-const { createAgent } = require('./tls');
-const { rootLogger } = require('./logger');
+import axios from 'axios';
+import { createAgent } from './tls';
+import { rootLogger } from './logger';
 
-function sleep(ms) {
+export interface HttpClientConfig {
+  baseUrl: string;
+  authHeader?: Record<string, string>;
+  timeout?: number;
+}
+
+export function sleep(ms: number): Promise<void> {
   return new Promise(resolve => setTimeout(resolve, ms));
 }
 
-function retryKey(cfg) {
+function retryKey(cfg: { method?: string; url?: string }): string {
   return `${(cfg.method || 'get').toLowerCase()}:${cfg.url || ''}`;
 }
 
-const retryCounts = new Map();
+const retryCounts = new Map<string, number>();
 
-function createHttpClient({ baseUrl, authHeader, timeout = 120000 }) {
+export function createHttpClient({ baseUrl, authHeader, timeout = 120000 }: HttpClientConfig) {
   const instance = axios.create({
     baseURL: baseUrl,
     timeout,
@@ -29,19 +35,20 @@ function createHttpClient({ baseUrl, authHeader, timeout = 120000 }) {
       retryCounts.delete(key);
       return response;
     },
-    async error => {
-      const cfg = error.config;
+    async (error: unknown) => {
+      const axiosErr = error as { config?: { method?: string; url?: string }; response?: { status: number }; code?: string };
+      const cfg = axiosErr.config;
       if (!cfg) throw error;
       const key = retryKey(cfg);
       let attempts = retryCounts.get(key) || 0;
       const method = (cfg.method || 'get').toLowerCase();
       const maxRetries = (method === 'get' || method === 'put') ? 5 : 0;
-      const isRetryable = !error.response
-        || error.response.status >= 500
-        || error.response.status === 429
-        || error.code === 'ECONNRESET'
-        || error.code === 'ETIMEDOUT'
-        || error.code === 'ECONNABORTED';
+      const isRetryable = !axiosErr.response
+        || axiosErr.response.status >= 500
+        || axiosErr.response.status === 429
+        || axiosErr.code === 'ECONNRESET'
+        || axiosErr.code === 'ETIMEDOUT'
+        || axiosErr.code === 'ECONNABORTED';
       if (attempts < maxRetries && isRetryable) {
         attempts++;
         retryCounts.set(key, attempts);
@@ -58,5 +65,3 @@ function createHttpClient({ baseUrl, authHeader, timeout = 120000 }) {
 
   return instance;
 }
-
-module.exports = { createHttpClient, sleep };

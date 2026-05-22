@@ -1,3 +1,5 @@
+import type { Logger } from './logger';
+
 export interface TestResult {
     status: 'ok' | 'error';
     label: string;
@@ -72,7 +74,7 @@ export interface StateSchema {
 export interface ApiConfig {
     baseUrl: string;
     token: string;
-    logger?: import('./logger').Logger;
+    logger?: Logger;
 }
 
 export interface GitProvider {
@@ -157,5 +159,3 @@ export class JiraResourceError extends Error {
         this.body = options?.body;
     }
 }
-
-module.exports = {};
