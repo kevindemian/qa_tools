@@ -1,7 +1,8 @@
-import { success, error, warn, info, prompt, confirm, printError } from '../../shared/prompt';
+import { warn, info, prompt, confirm } from '../../shared/prompt';
 import type { CommandContext } from './context';
+import { createTestExecutionWithLinksWrapper } from './helpers';
 
-async function handler(c: CommandContext): Promise<void> {
+async function handler(c: CommandContext): Promise<boolean | void> {
     let keys: string[] = [];
     if (c.ctx.inMemoryTasksId.length > 0) {
         info('Testes da sessão atual: ' + c.ctx.inMemoryTasksId.join(', '));
@@ -21,17 +22,7 @@ async function handler(c: CommandContext): Promise<void> {
     const csvName = nameInput.trim() || '';
     const execTitle = prompt('Titulo do Test Execution', { hint: 'Enter = ' + (csvName || 'Automated Execution') });
     const execDesc = prompt('Descrição (opcional)');
-    const createTestExecutionWithLinks = require('../create_tests').createTestExecutionWithLinks;
-    try {
-        const execResult = await createTestExecutionWithLinks(
-            c.jiraResource, c.linkManager, c.ctx.project_name, keys, csvName,
-            { title: execTitle, description: execDesc }
-        );
-        c.pushHistory('create-testexec', execResult.key, 'ok');
-    } catch (err) {
-        printError('Erro ao criar Test Execution', err);
-        c.pushHistory('create-testexec', 'erro', 'error');
-    }
+    await createTestExecutionWithLinksWrapper(c, keys, csvName, execTitle, execDesc);
 }
 
 export { handler };

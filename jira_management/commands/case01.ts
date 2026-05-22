@@ -1,10 +1,11 @@
 import Config from '../../shared/config';
-import { prompt, confirm, smartPrompt, printError } from '../../shared/prompt';
+import { prompt, confirm, smartPrompt } from '../../shared/prompt';
 import { load as loadState } from '../../shared/state';
 import path from 'path';
 import type { CommandContext } from './context';
+import { createTestExecutionWithLinksWrapper } from './helpers';
 
-async function handler(c: CommandContext): Promise<void> {
+async function handler(c: CommandContext): Promise<boolean | void> {
     const state = loadState() as Record<string, string | undefined>;
     const csvDefaultPath = Config.csvDefaultPath || path.join(__dirname, '../test_steps.csv');
     const csvPath =
@@ -55,22 +56,7 @@ async function handler(c: CommandContext): Promise<void> {
                 hint: 'Enter = ' + (csvName || 'Automated Execution'),
             });
             const execDesc = prompt('Descrição (opcional)');
-            // eslint-disable-next-line @typescript-eslint/no-require-imports
-            const createTestExecutionWithLinks = require('../create_tests').createTestExecutionWithLinks;
-            try {
-                const execResult = await createTestExecutionWithLinks(
-                    c.jiraResource,
-                    c.linkManager,
-                    c.ctx.project_name,
-                    c.ctx.inMemoryTasksId,
-                    csvName,
-                    { title: execTitle, description: execDesc },
-                );
-                c.pushHistory('create-testexec', execResult.key, 'ok');
-            } catch (err) {
-                printError('Erro ao criar Test Execution', err);
-                c.pushHistory('create-testexec', 'erro', 'error');
-            }
+            await createTestExecutionWithLinksWrapper(c, c.ctx.inMemoryTasksId, csvName, execTitle, execDesc);
         }
     }
 }

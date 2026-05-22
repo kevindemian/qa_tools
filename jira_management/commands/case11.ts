@@ -3,9 +3,9 @@ import fs from 'fs';
 import path from 'path';
 import type { CommandContext } from './context';
 
-function handler(c: CommandContext): void {
+function handler(c: CommandContext): boolean | void {
     const tmplPath = prompt('Caminho para salvar o template', {
-        default: path.join(__dirname, '../test_steps_template.csv')
+        default: path.join(__dirname, '../test_steps_template.csv'),
     });
     const src = path.join(__dirname, '../test_steps_template.csv');
     try {
