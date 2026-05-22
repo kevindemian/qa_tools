@@ -17,7 +17,8 @@
   "include": [
     "shared/**/*.ts",
     "jira_management/**/*.ts",
-    "git_triggers/**/*.ts"
+    "git_triggers/**/*.ts",
+    "docs/**/*.ts"
   ],
   "exclude": [
     "node_modules"

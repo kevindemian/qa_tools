@@ -26,7 +26,7 @@ module.exports = tseslint.config(
         },
     },
     {
-        files: ['shared/prompt.ts', 'shared/logger.ts'],
+        files: ['shared/prompt.ts', 'shared/logger.ts', 'docs/**/*.ts'],
         rules: {
             'no-console': 'off',
         },
