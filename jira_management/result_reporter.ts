@@ -66,7 +66,7 @@ function matchResultsToTests(results: TestResultItem[], mappingJsonPath: string)
       key: t.key || '',
     }));
   } catch (err) {
-    rootLogger.warn('Nao foi possivel ler mapping JSON: ' + (err as Error).message);
+    rootLogger.warn('Não foi possivel ler mapping JSON: ' + (err as Error).message);
     return { matched: [], unmatched: [], stats: { passed: 0, failed: 0, skipped: 0, total: 0 } };
   }
 

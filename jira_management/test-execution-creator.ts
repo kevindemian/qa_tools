@@ -31,7 +31,7 @@ class TestExecutionCreator {
 
     const execType = issueTypes.find(t => t.name === 'Test Execution');
     if (!execType) throw new Error(
-      'Issue type "Test Execution" nao encontrado. ' +
+      'Issue type "Test Execution" não encontrado. ' +
       'Verifique se o Xray esta instalado e o issue type existe no scheme do projeto.'
     );
     execLog.info('Issue type encontrado: id=' + execType.id);
@@ -44,7 +44,7 @@ class TestExecutionCreator {
       f => f.schema?.custom === 'com.xpandit.plugins.xray:testexec-tests-custom-field'
     );
     if (!testField) throw new Error(
-      'Campo "Tests association with a Test Execution" nao encontrado. ' +
+      'Campo "Tests association with a Test Execution" não encontrado. ' +
       'Verifique se o Xray esta instalado corretamente.'
     );
     execLog.info('Custom field encontrado: ' + testField.id + ' (' + testField.name + ')');
@@ -85,7 +85,7 @@ class TestExecutionCreator {
             }
           }
         } catch (err) {
-          rootLogger.warn('Nao foi possivel verificar links existentes: ' + (err as Error).message);
+          rootLogger.warn('Não foi possivel verificar links existentes: ' + (err as Error).message);
         }
 
         const unlinked = keysToLink.filter(k => !linkedKeys.includes(k));

@@ -13,7 +13,7 @@ function handler(c: CommandContext): void {
         success('Template CSV gerado em: ' + tmplPath);
         c.pushHistory('gerar-template', tmplPath, 'ok');
     } catch (err) {
-        error('Nao foi possivel copiar template de "' + src + '": ' + (err as Error).message);
+        error('Não foi possivel copiar template de "' + src + '": ' + (err as Error).message);
     }
 }
 

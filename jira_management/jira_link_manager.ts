@@ -79,7 +79,7 @@ class JiraLinkManager {
 
     if (match) return match.id;
 
-    rootLogger.warn(`Tipo de link '${linkTypeName}' nao encontrado, usando 'relates to' como fallback`);
+    rootLogger.warn(`Tipo de link '${linkTypeName}' não encontrado, usando 'relates to' como fallback`);
     return '11701';
   }
 
@@ -110,7 +110,7 @@ class JiraLinkManager {
         }
       }
     } catch {
-      rootLogger.warn('Nao foi possivel descobrir field ID para pre-condition, usando fallback 13708');
+      rootLogger.warn('Não foi possivel descobrir field ID para pre-condition, usando fallback 13708');
     }
     this._preconditionFieldId = 'customfield_13708';
     return this._preconditionFieldId;

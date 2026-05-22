@@ -77,7 +77,7 @@ function showHelp(topic?: string): void {
                 return;
             }
         }
-        warn('Topico nao encontrado: "' + topic + '". Tente: ' + Object.keys(HELP_TOPICS).join(', ') + ' ou /help search <termo>');
+        warn('Topico não encontrado: "' + topic + '". Tente: ' + Object.keys(HELP_TOPICS).join(', ') + ' ou /help search <termo>');
         return;
     }
     title('HELP — Jira Tools');
@@ -164,11 +164,11 @@ const MENU_ITEMS: MenuItem[] = [
 function _configHint(key: string, ctx: { git_directory: string }): string {
     if (key === 'gitDir') return '(atual: ' + ctx.git_directory + ')';
     if (key === 'cypressDir') {
-        const d = Config.cypressProjectPath || (loadState() as StateSchema).lastCypressPath || 'nao configurado';
+        const d = Config.cypressProjectPath || (loadState() as StateSchema).lastCypressPath || 'não configurado';
         return '(atual: ' + d + ')';
     }
     if (key === 'jsonDir') {
-        const d = (loadState() as StateSchema).lastJsonDir || 'nao configurado';
+        const d = (loadState() as StateSchema).lastJsonDir || 'não configurado';
         return '(atual: ' + d + ')';
     }
     return '';
@@ -212,8 +212,8 @@ function buildMenuChoices(proj: string, ctx: { git_directory: string }): MenuCho
         } else {
             const entry: MenuChoice = { name: item.id + '  ' + item.label, value: item.id };
             if (item.configKey === 'gitDir') entry.description = ctx.git_directory;
-            else if (item.configKey === 'cypressDir') entry.description = Config.cypressProjectPath || (loadState() as StateSchema).lastCypressPath || 'nao configurado';
-            else if (item.configKey === 'jsonDir') entry.description = (loadState() as StateSchema).lastJsonDir || 'nao configurado';
+            else if (item.configKey === 'cypressDir') entry.description = Config.cypressProjectPath || (loadState() as StateSchema).lastCypressPath || 'não configurado';
+            else if (item.configKey === 'jsonDir') entry.description = (loadState() as StateSchema).lastJsonDir || 'não configurado';
             else if (item.id === '9') entry.description = proj;
             choices.push(entry);
         }
@@ -256,7 +256,7 @@ function generateCsvTemplate(filePath: string): boolean {
         fs.copyFileSync(src, filePath);
         return true;
     } catch (err) {
-        error('Nao foi possivel copiar template de "' + src + '": ' + (err as Error).message);
+        error('Não foi possivel copiar template de "' + src + '": ' + (err as Error).message);
         return false;
     }
 }
@@ -360,7 +360,7 @@ async function runMainLoop(
         }
 
         if (choice === '0') {
-            title('Ate logo!');
+            title('Até logo!');
             printSessionSummary();
             if (ctx.sessionCounters.some(c => c.status === 'error')) process.exitCode = 1;
             return;

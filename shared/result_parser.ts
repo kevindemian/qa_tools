@@ -97,7 +97,7 @@ export function parseCypressResults(filePath: string): ParseResultWithError {
   } catch (err: unknown) {
     const e = err as NodeJS.ErrnoException & { message: string };
     const msg = e.code === 'ENOENT'
-      ? 'Arquivo nao encontrado: ' + filePath
+      ? 'Arquivo não encontrado: ' + filePath
       : 'Erro ao ler/parsear arquivo: ' + filePath + ' (' + e.message + ')';
     return { tests: [], stats: { passed: 0, failed: 0, skipped: 0, total: 0, duration: 0 }, error: msg };
   }

@@ -5,7 +5,7 @@ import type { CommandContext } from './context';
 function handler(c: CommandContext): void {
     const newName = prompt('Novo nome do projeto Jira').toUpperCase().trim();
     if (!newName) {
-        warn('Nome do projeto nao pode ser vazio.');
+        warn('Nome do projeto não pode ser vazio.');
         return;
     }
     c.ctx.project_name = newName;

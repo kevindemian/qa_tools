@@ -4,7 +4,7 @@ import type { CommandContext } from './context';
 
 async function handler(c: CommandContext): Promise<boolean | void> {
     const version = smartPrompt('Versão a fechar', {}, () => {});
-    if (!confirm('Fechar todas as tarefas da versão ' + version + '? Esta operação nao pode ser desfeita.')) {
+    if (!confirm('Fechar todas as tarefas da versão ' + version + '? Esta operação não pode ser desfeita.')) {
         warn('Operação cancelada.');
         return true;
     }

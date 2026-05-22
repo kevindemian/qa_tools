@@ -143,7 +143,7 @@ class JiraResource {
     try {
       projectId = await this.getProjectId(projectName);
     } catch {
-      info(`Projeto '${projectName}' nao encontrado.`);
+      info(`Projeto '${projectName}' não encontrado.`);
       return null;
     }
     let versions: VersionData[];
@@ -162,7 +162,7 @@ class JiraResource {
     if (version) {
       return version.id;
     }
-    info(`Versão '${versionName}' nao encontrada no projeto '${projectName}'.`);
+    info(`Versão '${versionName}' não encontrada no projeto '${projectName}'.`);
     return null;
   }
 
@@ -235,7 +235,7 @@ class JiraResource {
     try {
       projectId = await this.getProjectId(projectName);
     } catch {
-      info(`Projeto '${projectName}' nao encontrado.`);
+      info(`Projeto '${projectName}' não encontrado.`);
       return { latestReleasedVersions: [], unreleasedVersions: [] };
     }
     let allVersions: VersionData[];
@@ -262,14 +262,14 @@ class JiraResource {
       info(`Versão: ${v.name} (Data: ${v.releaseDate})`);
     });
 
-    info("\nVersoes nao lancadas do projeto '" + projectName + "':");
+    info("\nVersoes não lancadas do projeto '" + projectName + "':");
     if (unreleasedVersions.length > 0) {
       unreleasedVersions.forEach(v => {
         const description = v.description || 'Sem descrição';
         info(`Versão: ${v.name} (Descrição: ${description})`);
       });
     } else {
-      info("Nenhuma versão nao lancada encontrada.");
+      info("Nenhuma versão não lancada encontrada.");
     }
 
     return { latestReleasedVersions, unreleasedVersions };
@@ -295,7 +295,7 @@ class JiraResource {
   async updateFixVersions(taskIds: string[], projectName: string, versionName: string): Promise<void> {
     const versionId = await this.getVersionId(projectName, versionName);
     if (!versionId) {
-      this.log.error(`Versão '${versionName}' nao encontrada no projeto '${projectName}'.`);
+      this.log.error(`Versão '${versionName}' não encontrada no projeto '${projectName}'.`);
       return;
     }
 
@@ -314,13 +314,13 @@ class JiraResource {
   async releaseVersion(projectName: string, versionName: string): Promise<void> {
     const versionId = await this.getVersionId(projectName, versionName);
     if (!versionId) {
-      this.log.error(`Versão '${versionName}' nao encontrada, nao e possivel publicar.`);
+      this.log.error(`Versão '${versionName}' não encontrada, não e possivel publicar.`);
       return;
     }
 
     const allTasksCompleted = await this.checkReleaseTasksStatus(projectName, versionName);
     if (!allTasksCompleted) {
-      this.log.error(`Nao e possivel publicar versão '${versionName}', nem todas as tarefas estao concluídas.`);
+      this.log.error(`Não e possivel publicar versão '${versionName}', nem todas as tarefas estao concluídas.`);
       return;
     }
 
@@ -340,7 +340,7 @@ class JiraResource {
       try {
         issueData = await this.getJiraResource(`issue/${taskId}`);
       } catch {
-        this.log.warn(`Pulando tarefa ${taskId}: nao foi possivel obter dados.`);
+        this.log.warn(`Pulando tarefa ${taskId}: não foi possivel obter dados.`);
         continue;
       }
       if (!issueData.fields || !issueData.fields.status) {
@@ -353,7 +353,7 @@ class JiraResource {
 
       const transitionsMap = await this.getTransitionsForIssue(taskId);
       if (Object.keys(transitionsMap).length === 0) {
-        this.log.warn(`Nao foi possivel obter transições para ${taskId}. Pulando tarefa.`);
+        this.log.warn(`Não foi possivel obter transições para ${taskId}. Pulando tarefa.`);
         continue;
       }
 
@@ -361,12 +361,12 @@ class JiraResource {
       try {
         const targets = wf[statusLower];
         if (!targets) {
-          warn(`   ${taskId}: status "${currentStatus}" nao mapeado para fechamento automatico.`);
+          warn(`   ${taskId}: status "${currentStatus}" não mapeado para fechamento automatico.`);
         } else {
           for (const target of targets) {
             const transitionId = transitionsMap[target];
             if (!transitionId) {
-              warn(`Transicao "${target}" nao encontrada para ${taskId}. Verifique workflowMap.`);
+              warn(`Transicao "${target}" não encontrada para ${taskId}. Verifique workflowMap.`);
               continue;
             }
             this.log.info(`   ${taskId}: -> ${target}`);

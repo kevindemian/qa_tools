@@ -152,7 +152,7 @@ function _jiraEnv(): { base: string; token: string; xray: string } | null {
 async function collectTestResults(m: GitProvider, pipelineId: string | number, branch: string, projectName: string) {
     const jira = _jiraEnv();
     if (!jira) {
-        warn('Variaveis JIRA nao configuradas. Defina JIRA_BASE_URL, JIRA_PERSONAL_TOKEN e XRAY_BASE_URL.');
+        warn('Variáveis JIRA não configuradas. Defina JIRA_BASE_URL, JIRA_PERSONAL_TOKEN e XRAY_BASE_URL.');
         return;
     }
 
@@ -182,7 +182,7 @@ async function collectTestResults(m: GitProvider, pipelineId: string | number, b
         const entries = zip.getEntries();
         const mochaEntry = entries.find(e => e.entryName.includes('mochawesome.json') && !e.isDirectory);
         if (!mochaEntry) {
-            warn('mochawesome.json nao encontrado no artifact. Entradas: ' + entries.map((e: any) => e.entryName).join(', '));
+            warn('mochawesome.json não encontrado no artifact. Entradas: ' + entries.map((e: any) => e.entryName).join(', '));
             return;
         }
         const raw = mochaEntry.getData().toString('utf8');
@@ -218,7 +218,7 @@ async function collectTestResults(m: GitProvider, pipelineId: string | number, b
     }
     info('Mapeados: ' + matched.length + '/' + parsed.tests.length + ' testes');
     if (unmatched.length > 0) {
-        warn(unmatched.length + ' teste(s) nao encontrados no mapping');
+        warn(unmatched.length + ' teste(s) não encontrados no mapping');
         unmatched.slice(0, 3).forEach((u: any) => warn('  - ' + u.title));
     }
 
@@ -429,9 +429,9 @@ async function main() {
                     if (wfId.trim()) payload.workflow_id = wfId.trim();
                 }
 
-                const addVars = confirm('Adicionar variaveis?');
+                const addVars = confirm('Adicionar variáveis?');
                 if (addVars) {
-                    const varsInput = prompt('Variaveis (chave=valor separadas por virgula)');
+                    const varsInput = prompt('Variáveis (chave=valor separadas por vírgula)');
                     varsInput.split(',').forEach(v => {
                         const [key, ...rest] = v.trim().split('=');
                         if (key) payload.variables.push({ key, value: rest.join('=') });
@@ -441,7 +441,7 @@ async function main() {
                 title('Preview');
                 print('  Projeto: ' + projectName);
                 print('  Branch: ' + currentBranch);
-                print('  Variaveis: ' + payload.variables.length);
+                print('  Variáveis: ' + payload.variables.length);
                 if (!confirm('Confirmar disparo de pipeline?')) {
                     warn('Operação cancelada.');
                     continue;
@@ -508,7 +508,7 @@ async function main() {
 
             case '2': {
                 if (currentProvider !== 'gitlab') {
-                    warn('Opção nao disponivel para GitHub.');
+                    warn('Opção não disponivel para GitHub.');
                     continue;
                 }
                 try {
@@ -531,7 +531,7 @@ async function main() {
 
             case '3': {
                 if (currentProvider !== 'gitlab') {
-                    warn('Opção nao disponivel para GitHub.');
+                    warn('Opção não disponivel para GitHub.');
                     continue;
                 }
                 const scheduleId = prompt('ID do schedule');
@@ -620,13 +620,13 @@ async function main() {
 
                         const tmpPath = path.join(os.tmpdir(), 'qa-vars-' + process.pid + '.env');
                         fs.writeFileSync(tmpPath, envContent, { mode: 0o600, encoding: 'utf8' });
-                        success('Variaveis exportadas (' + variables.length + '):');
+                        success('Variáveis exportadas (' + variables.length + '):');
                         print('');
                         print(envContent);
                         print('');
                         warn('As variaveis acima foram exibidas no terminal e NAO foram salvas em disco.');
                         info('Uma copia temporaria foi salva em ' + tmpPath + ' (modo 600, apenas leitura)');
-                        info('Ela sera removida ao encerrar esta sessão. Nao compartilhe este arquivo.');
+                        info('Ela sera removida ao encerrar esta sessão. Não compartilhe este arquivo.');
                         fs.unlinkSync(tmpPath);
                         pushHistory('export-vars', variables.length + ' variaveis', 'ok');
                     }
@@ -656,7 +656,7 @@ async function main() {
             }
 
             case '0':
-                title('Ate logo!');
+                title('Até logo!');
                 printSessionSummary();
                 if (sessionContext.sessionCounters.some(c => c.status === 'error')) process.exitCode = 1;
                 return;

@@ -124,7 +124,7 @@ describe('createTestExecution', () => {
         ]);
 
         await expect(createTestExecution(jiraResource, PROJECT, ['TEST-1']))
-            .rejects.toThrow('Issue type "Test Execution" nao encontrado');
+            .rejects.toThrow('Issue type "Test Execution" não encontrado');
     });
 
     it('throws when custom field not found', async () => {
@@ -135,7 +135,7 @@ describe('createTestExecution', () => {
         });
 
         await expect(createTestExecution(jiraResource, PROJECT, ['TEST-1']))
-            .rejects.toThrow('Campo "Tests association with a Test Execution" nao encontrado');
+            .rejects.toThrow('Campo "Tests association with a Test Execution" não encontrado');
     });
 
     it('throws when issuetype API fails', async () => {

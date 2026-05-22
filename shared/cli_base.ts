@@ -44,7 +44,7 @@ export function setupSigint(getIsBusy: (() => boolean) | null, onExit: (() => vo
     }
     process.removeListener('SIGINT', handler);
     if (onExit) onExit();
-    info('Ate logo!');
+    info('Até logo!');
     process.exitCode = 0;
     setTimeout(() => process.exit(), 2000).unref();
   };

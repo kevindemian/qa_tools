@@ -27,7 +27,7 @@ class MappingFileGenerator {
         fs.mkdirSync(outDir, { recursive: true });
       }
     } catch (err) {
-      rootLogger.warn('Nao foi possivel criar diretório de saida: ' + outDir);
+      rootLogger.warn('Não foi possivel criar diretório de saida: ' + outDir);
       return;
     }
 

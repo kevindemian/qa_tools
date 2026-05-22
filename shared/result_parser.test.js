@@ -85,7 +85,7 @@ describe('parseCypressResults', () => {
 
     it('returns error object for nonexistent file', () => {
         const result = parseCypressResults('/nonexistent-' + Date.now() + '.json');
-        expect(result.error).toContain('Arquivo nao encontrado');
+        expect(result.error).toContain('Arquivo não encontrado');
         expect(result.stats.total).toBe(0);
         expect(result.tests).toEqual([]);
     });
