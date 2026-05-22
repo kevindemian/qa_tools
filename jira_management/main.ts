@@ -1,6 +1,6 @@
 import path from 'path';
 import fs from 'fs';
-import dotenv from 'dotenv';
+import Config from '../shared/config';
 import JiraResource from './jira_resource';
 import JiraLinkManager from './jira_link_manager';
 import CsvResource from './csv_resource';
@@ -23,16 +23,14 @@ const { getHandler } = require('./commands') as {
     getHandler: (caseNumber: string) => ((ctx: CommandContext) => Promise<boolean | void> | boolean | void) | null;
 };
 
-dotenv.config({ path: path.resolve(__dirname, '../.env') });
-
-let base_url: string = process.env.JIRA_BASE_URL as string;
-let personal_token: string = process.env.JIRA_PERSONAL_TOKEN as string;
-let xray_url: string = process.env.XRAY_BASE_URL as string;
+let base_url: string = Config.jiraBaseUrl as string;
+let personal_token: string = Config.jiraPersonalToken as string;
+let xray_url: string = Config.xrayBaseUrl as string;
 let default_project = 'ECSPOL';
 
 const sessionLog: Logger = rootLogger.child({ session: 'jira' });
 
-if (process.env.DEBUG === 'true') {
+if (Config.debug) {
     info('Jira Base URL: ' + base_url);
     info('Jira Token: ' + mask(personal_token));
 }
@@ -166,7 +164,7 @@ const MENU_ITEMS: MenuItem[] = [
 function _configHint(key: string, ctx: { git_directory: string }): string {
     if (key === 'gitDir') return '(atual: ' + ctx.git_directory + ')';
     if (key === 'cypressDir') {
-        const d = process.env.CYPRESS_PROJECT_PATH || (loadState() as StateSchema).lastCypressPath || 'nao configurado';
+        const d = Config.cypressProjectPath || (loadState() as StateSchema).lastCypressPath || 'nao configurado';
         return '(atual: ' + d + ')';
     }
     if (key === 'jsonDir') {
@@ -214,7 +212,7 @@ function buildMenuChoices(proj: string, ctx: { git_directory: string }): MenuCho
         } else {
             const entry: MenuChoice = { name: item.id + '  ' + item.label, value: item.id };
             if (item.configKey === 'gitDir') entry.description = ctx.git_directory;
-            else if (item.configKey === 'cypressDir') entry.description = process.env.CYPRESS_PROJECT_PATH || (loadState() as StateSchema).lastCypressPath || 'nao configurado';
+            else if (item.configKey === 'cypressDir') entry.description = Config.cypressProjectPath || (loadState() as StateSchema).lastCypressPath || 'nao configurado';
             else if (item.configKey === 'jsonDir') entry.description = (loadState() as StateSchema).lastJsonDir || 'nao configurado';
             else if (item.id === '9') entry.description = proj;
             choices.push(entry);
@@ -273,7 +271,7 @@ function initializeSession() {
 
     const state = loadState() as StateSchema;
     ctx.project_name = (
-        process.env.JIRA_PROJECT ||
+        Config.jiraProject ||
         prompt('Nome do projeto Jira', { default: state.lastProject || default_project })
     ).toUpperCase();
 
@@ -296,10 +294,10 @@ function initializeSession() {
 }
 
 async function getUserChoice(proj: string, ctx: SessionContext): Promise<string> {
-    if (process.env.AUTO_CHOICE) {
-        return process.env.AUTO_CHOICE;
+    if (Config.autoChoice) {
+        return Config.autoChoice;
     }
-    if (process.stdout.isTTY && process.env.QUIET !== 'true') {
+    if (process.stdout.isTTY && !Config.quiet) {
         const ctxLine = buildContextLine(proj, ctx);
         print('== ' + ctxLine + ' ==');
         divider();
@@ -370,7 +368,7 @@ async function runMainLoop(
 
         const longOps = ['1', '15', '4', '5', '7', '8'];
         const hasResults = ctx.results.length > 0 && ctx.results.some(r => r.status === 'error');
-        if (process.env.AUTO_CONFIRM !== 'true' && choice !== '0' && longOps.includes(choice) && hasResults) {
+        if (!Config.autoConfirm && choice !== '0' && longOps.includes(choice) && hasResults) {
             prompt('Pressione Enter para continuar');
         }
     }

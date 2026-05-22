@@ -1,3 +1,4 @@
+import Config from '../../shared/config';
 import { success, error, warn, info, title, divider, prompt, confirm, smartPrompt, printError, printSummary, isQuiet } from '../../shared/prompt';
 import { load as loadState, update as updateState } from '../../shared/state';
 import { rootLogger } from '../../shared/logger';
@@ -6,14 +7,14 @@ import type { CommandContext } from './context';
 
 async function handler(c: CommandContext): Promise<void> {
     const state = loadState() as Record<string, string | undefined>;
-    const csvDefaultPath = process.env.CSV_DEFAULT_PATH || path.join(__dirname, '../test_steps.csv');
-    const csvPath = process.env.CSV_PATH || smartPrompt(
+    const csvDefaultPath = Config.csvDefaultPath || path.join(__dirname, '../test_steps.csv');
+    const csvPath = Config.csvPath || smartPrompt(
         'Caminho do arquivo CSV',
         { default: state.lastCsvPath || csvDefaultPath }
     );
     const labelsHint = state.lastLabels
         ? 'último: ' + state.lastLabels : 'vazio para nenhuma';
-    const jiraLabelsInput = process.env.CSV_LABELS || prompt(
+    const jiraLabelsInput = Config.csvLabels || prompt(
         'Labels Jira (separadas por virgula)',
         { hint: labelsHint, default: state.lastLabels || '' }
     );

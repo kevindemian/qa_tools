@@ -1,5 +1,6 @@
 import * as fs from 'fs';
 import * as path from 'path';
+import Config from '../shared/config';
 import type JiraResource from './jira_resource';
 import type JiraLinkManager from './jira_link_manager';
 import type CsvResource from './csv_resource';
@@ -34,7 +35,7 @@ interface CreateTestsFromTestCasesParams {
   jiraLabels: string[];
 }
 
-const csvDefaultPath = process.env.CSV_DEFAULT_PATH || path.join(__dirname, 'test_steps.csv');
+const csvDefaultPath = Config.csvDefaultPath || path.join(__dirname, 'test_steps.csv');
 
 function _getPm(): typeof import('../shared/prompt') {
   return require('../shared/prompt');
@@ -107,7 +108,7 @@ function _showPreview(
 
 function _filterTests(tests: TestCase[]): TestCase[] | null {
   const { prompt, warn, info, confirm } = _getPm();
-  if (process.env.AUTO_CONFIRM === 'true') return tests;
+  if (Config.autoConfirm) return tests;
 
   const filterText = prompt('Filtrar testes por titulo? (Enter para todos)');
   if (!filterText.trim()) return tests;
@@ -129,7 +130,7 @@ function _filterTests(tests: TestCase[]): TestCase[] | null {
 
 function _confirmOrCancel(): boolean {
   const { confirm } = _getPm();
-  if (process.env.AUTO_CONFIRM === 'true') return true;
+  if (Config.autoConfirm) return true;
   return confirm('Criar estes testes no Jira?');
 }
 
@@ -139,7 +140,7 @@ function _handleDryRun(
   sourcePath: string
 ): { inMemoryTasksId: string[]; inMemoryTasksText: string[]; summary: string; status: string; sourcePath: string } | null {
   const { warn, printSummary } = _getPm();
-  if (process.env.DRY_RUN !== 'true') return null;
+  if (!Config.dryRun) return null;
 
   warn('MODO DRY-RUN: Nenhuma operação sera executada.');
   printSummary(tests.map(t => ({ status: 'ok' as const, label: t.title, message: 'simulado' })));
@@ -386,13 +387,13 @@ async function createTestsFromCsv({
 }): Promise<ReturnType<typeof _createTestsFromTestCases>> {
   const { smartPrompt, prompt, isQuiet, info, warn, printError } = _getPm();
   const state = loadState();
-  const csvPath = process.env.CSV_PATH || smartPrompt(
+  const csvPath = Config.csvPath || smartPrompt(
     'Caminho do arquivo CSV',
     { default: state.lastCsvPath as string || csvDefaultPath }
   );
   const labelsHint = state.lastLabels
     ? 'último: ' + state.lastLabels : 'vazio para nenhuma';
-  const jiraLabelsInput = process.env.CSV_LABELS || prompt(
+  const jiraLabelsInput = Config.csvLabels || prompt(
     'Labels Jira (separadas por virgula)',
     { hint: labelsHint, default: (state.lastLabels as string) || '' }
   );
@@ -437,7 +438,7 @@ async function createTestsFromJson({
 }): Promise<ReturnType<typeof _createTestsFromTestCases>> {
   const { smartPrompt, prompt, isQuiet, info, warn, printError } = _getPm();
   const state = loadState();
-  const jsonPathInput = process.env.JSON_PATH || smartPrompt(
+  const jsonPathInput = Config.jsonPath || smartPrompt(
     'Caminho do arquivo JSON ou TXT (formato JSON)',
     { default: (state.lastJsonPath as string) || '' }
   );
@@ -456,7 +457,7 @@ async function createTestsFromJson({
 
   const labelsHint = state.lastLabels
     ? 'último: ' + state.lastLabels : 'vazio para nenhuma';
-  const jiraLabelsInput = process.env.JSON_LABELS || prompt(
+  const jiraLabelsInput = Config.jsonLabels || prompt(
     'Labels Jira (separadas por virgula)',
     { hint: labelsHint, default: (state.lastLabels as string) || '' }
   );

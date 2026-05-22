@@ -1,11 +1,9 @@
 import path from 'path';
-import dotenv from 'dotenv';
+import Config from '../shared/config';
 import { createHttpClient } from '../shared/http-client';
 import { rootLogger } from '../shared/logger';
 import { info, warn, success } from '../shared/prompt';
 import { sanitizeUrl } from '../shared/cli_base';
-
-dotenv.config({ path: path.resolve(__dirname, '../.env') });
 
 interface CypressReportOptions {
   cypressUrl: string;

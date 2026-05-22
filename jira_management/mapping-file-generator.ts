@@ -1,5 +1,6 @@
 import fs from 'fs';
 import path from 'path';
+import Config from '../shared/config';
 import { load } from '../shared/state';
 import { rootLogger } from '../shared/logger';
 import { info, isQuiet } from '../shared/prompt';
@@ -15,7 +16,7 @@ interface MappingEntry {
 
 class MappingFileGenerator {
   generate(sourcePath: string, projectName: string, tasksId: string[], tests: TestCase[]): void {
-    const cypressDir = process.env.CYPRESS_PROJECT_PATH || (load().lastCypressPath as string | undefined);
+    const cypressDir = Config.cypressProjectPath || (load().lastCypressPath as string | undefined);
     if (!cypressDir || !tasksId.length) return;
 
     const baseName = path.basename(sourcePath, path.extname(sourcePath));

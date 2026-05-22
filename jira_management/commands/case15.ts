@@ -1,3 +1,4 @@
+import Config from '../../shared/config';
 import { success, error, warn, info, title, divider, prompt, confirm, smartPrompt, printError, printSummary } from '../../shared/prompt';
 import { load as loadState, update as updateState } from '../../shared/state';
 import { rootLogger } from '../../shared/logger';
@@ -7,7 +8,7 @@ import type { CommandContext } from './context';
 
 async function handler(c: CommandContext): Promise<void> {
     const state = loadState() as Record<string, string | undefined>;
-    const jsonPathInput = process.env.JSON_PATH || smartPrompt(
+    const jsonPathInput = Config.jsonPath || smartPrompt(
         'Caminho do arquivo JSON ou TXT (formato JSON)',
         { default: state.lastJsonPath || '' }
     );

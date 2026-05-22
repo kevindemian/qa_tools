@@ -1,4 +1,5 @@
 import readlineSync from 'readline-sync';
+import Config from './config';
 import { rootLogger } from './logger';
 
 export interface TestResult {
@@ -40,7 +41,7 @@ const CYAN = '\x1b[36m';
 const BOLD = '\x1b[1m';
 const RESET = '\x1b[0m';
 
-export const isQuiet = (): boolean => process.env.QUIET === 'true';
+export const isQuiet = (): boolean => Config.quiet;
 
 export function success(msg: string): void {
   console.log(`${GREEN}OK${RESET} ${msg}`);
@@ -292,8 +293,8 @@ export async function onError(
 
   error(`${context}: ${msg}`);
 
-  if (process.env.AUTO_CONFIRM === 'true') {
-    const autoAction = process.env.ON_ERROR || 'abort';
+  if (Config.autoConfirm) {
+    const autoAction = Config.onError;
     if (autoAction === 'skip') warn('Modo automatico: pulando...');
     else error('Modo automatico: abortando...');
     return autoAction as 'abort' | 'skip' | 'retry';
@@ -345,7 +346,7 @@ async function _loadInquirer(): Promise<unknown> {
   }
 }
 
-const isTTY = (): boolean => !!(process.stdout.isTTY && process.env.QUIET !== 'true');
+const isTTY = (): boolean => !!(process.stdout.isTTY && !Config.quiet);
 
 export async function showSelect(
   label: string,
