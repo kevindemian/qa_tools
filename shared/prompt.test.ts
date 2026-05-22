@@ -1,3 +1,4 @@
+// @ts-nocheck
 const mockRootLogger = {
     info: jest.fn(),
     error: jest.fn(),
@@ -18,8 +19,8 @@ jest.mock('./logger', () => ({
 }));
 
 describe('Prompt', () => {
-    let prompt;
-    let mockLog, mockError, mockWarn;
+    let prompt: typeof import('./prompt');
+    let mockLog: jest.SpyInstance, mockError: jest.SpyInstance, mockWarn: jest.SpyInstance;
 
     beforeAll(() => {
         prompt = require('./prompt');
@@ -220,7 +221,7 @@ describe('Prompt', () => {
     });
 
     describe('showSelect', () => {
-        let readlineSync;
+        let readlineSync: typeof import('readline-sync');
 
         beforeAll(() => {
             readlineSync = require('readline-sync');
@@ -254,7 +255,7 @@ describe('Prompt', () => {
     });
 
     describe('smartPrompt', () => {
-        let readlineSync;
+        let readlineSync: typeof import('readline-sync');
 
         beforeAll(() => {
             readlineSync = require('readline-sync');
@@ -298,7 +299,7 @@ describe('Prompt', () => {
     });
 
     describe('confirm', () => {
-        let readlineSync;
+        let readlineSync: typeof import('readline-sync');
 
         beforeAll(() => {
             readlineSync = require('readline-sync');

@@ -1,29 +1,38 @@
-const path = require('path');
-const fs = require('fs');
-const { parseMochawesome, parseCypressResults } = require('./result_parser');
+// @ts-nocheck
+const path: typeof import('path') = require('path');
+const fs: typeof import('fs') = require('fs');
+const { parseMochawesome, parseCypressResults }: typeof import('./result_parser') = require('./result_parser');
 
 const SAMPLE_MOCHAWESOME = {
     stats: { passes: 2, failures: 1, pending: 1, tests: 4, duration: 5000 },
-    results: [{
-        suites: [{
-            title: 'Login Tests',
-            tests: [
-                { title: 'TC01 - Login valido', state: 'passed', duration: 300 },
-                { title: 'TC02 - Login invalido', state: 'failed', duration: 200, err: [{ message: 'AssertionError' }] },
+    results: [
+        {
+            suites: [
+                {
+                    title: 'Login Tests',
+                    tests: [
+                        { title: 'TC01 - Login valido', state: 'passed', duration: 300 },
+                        {
+                            title: 'TC02 - Login invalido',
+                            state: 'failed',
+                            duration: 200,
+                            err: [{ message: 'AssertionError' }],
+                        },
+                    ],
+                    suites: [
+                        {
+                            title: 'Edge cases',
+                            tests: [{ title: 'TC03 - Empty password', state: 'pending', duration: 0 }],
+                        },
+                    ],
+                },
+                {
+                    title: 'Logout Tests',
+                    tests: [{ title: 'TC04 - Logout', state: 'passed', duration: 150 }],
+                },
             ],
-            suites: [{
-                title: 'Edge cases',
-                tests: [
-                    { title: 'TC03 - Empty password', state: 'pending', duration: 0 },
-                ],
-            }],
-        }, {
-            title: 'Logout Tests',
-            tests: [
-                { title: 'TC04 - Logout', state: 'passed', duration: 150 },
-            ],
-        }],
-    }],
+        },
+    ],
 };
 
 describe('parseMochawesome', () => {
@@ -74,7 +83,11 @@ describe('parseCypressResults', () => {
     });
 
     afterEach(() => {
-        try { fs.unlinkSync(tmpFile); } catch (e) { /* ignore */ }
+        try {
+            fs.unlinkSync(tmpFile);
+        } catch (e) {
+            /* ignore */
+        }
     });
 
     it('reads JSON file and parses it', () => {
@@ -95,6 +108,10 @@ describe('parseCypressResults', () => {
         require('fs').writeFileSync(invalidFile, 'not json', 'utf8');
         const result = parseCypressResults(invalidFile);
         expect(result.error).toContain('Erro ao ler/parsear');
-        try { require('fs').unlinkSync(invalidFile); } catch (e) { /* ignore */ }
+        try {
+            require('fs').unlinkSync(invalidFile);
+        } catch (e) {
+            /* ignore */
+        }
     });
 });

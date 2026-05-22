@@ -1,5 +1,14 @@
-import { print, success, error, warn, info, title, divider, prompt, confirm, smartPrompt, printError, printSummary } from '../../shared/prompt';
-import { rootLogger } from '../../shared/logger';
+import {
+    print,
+    success,
+    warn,
+    title,
+    prompt,
+    confirm,
+    smartPrompt,
+    printError,
+    printSummary,
+} from '../../shared/prompt';
 import type { CommandContext } from './context';
 
 async function handler(c: CommandContext): Promise<boolean | void> {
@@ -27,7 +36,7 @@ async function handler(c: CommandContext): Promise<boolean | void> {
     title('Preview da operação');
     print('  Versão: ' + version);
     print('  Tarefas (' + taskIds.length + '):');
-    taskIds.forEach(id => print('    - ' + id));
+    taskIds.forEach((id) => print('    - ' + id));
     if (!confirm('Confirmar atribuicao de fixVersion?')) {
         warn('Operação cancelada.');
         return true;
@@ -39,25 +48,26 @@ async function handler(c: CommandContext): Promise<boolean | void> {
             try {
                 await c.jiraResource.updateFixVersions([taskId], c.ctx.project_name, version);
                 c.ctx.results.push({ status: 'ok', label: taskId, message: '' });
-            } catch (err) {
+            } catch {
                 c.ctx.results.push({ status: 'error', label: taskId, message: 'Falha ao atualizar fixVersion' });
             }
         }
-    }, "Atribuindo fixVersion...");
+    }, 'Atribuindo fixVersion...');
     printSummary(c.ctx.results);
-    c.ctx.lastOperation = c.ctx.results.filter(r => r.status === 'ok').length + '/' + taskIds.length + ' tarefas atualizadas';
-    c.pushHistory('atribuir-fixversion', c.ctx.lastOperation,
-        c.ctx.results.some(r => r.status === 'error') ? 'error' : 'ok');
+    c.ctx.lastOperation =
+        c.ctx.results.filter((r) => r.status === 'ok').length + '/' + taskIds.length + ' tarefas atualizadas';
+    c.pushHistory(
+        'atribuir-fixversion',
+        c.ctx.lastOperation,
+        c.ctx.results.some((r) => r.status === 'error') ? 'error' : 'ok',
+    );
 
     if (confirm('Adicionar tarefas a uma sprint?')) {
         const sprintId = prompt('ID da sprint', { hint: 'ex: 6991 (encontrado na URL do board)' });
         try {
-            await c.jiraResource.axiosInstance.post(
-                '/rest/api/2/sprint/' + sprintId + '/issue',
-                { issues: taskIds }
-            );
+            await c.jiraResource.axiosInstance.post('/rest/api/2/sprint/' + sprintId + '/issue', { issues: taskIds });
             success('Tarefas adicionadas a sprint ' + sprintId);
-        } catch (err) {
+        } catch (err: unknown) {
             printError('Erro ao adicionar tarefas a sprint', err);
         }
     }

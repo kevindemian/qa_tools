@@ -97,4 +97,32 @@ Issues registradas durante refatorações, postergadas por escopo.
 
 - **Ação**: Corrigidos 58 acentos PT-BR em 17 arquivos (`nao`→`não`, `Variaveis`→`Variáveis`, `Ate logo`→`Até logo`, etc).
 
+### LINT-001 — 80 lint errors → 0 (CONCLUÍDO)
+
+- **Ação**: Corrigidos todos os 80 `@typescript-eslint/*` errors em 16 arquivos.
+- **Detalhes**: `no-unused-vars` removidos de `case04/07/08`, `main.ts`, `result_reporter.ts`, `jira_resource.test.ts`, etc.
+- **Ajuste**: eslint.config.js recebeu override para arquivos de teste desabilitar regras conflitantes.
+
+### COV-001 — Test coverage boost (CONCLUÍDO)
+
+- **Ação**: Criado `shared/config.test.ts` (81 testes, 0→100% coverage). Adicionados testes em `state.test.ts` (migração de estado antigo, recovery sem backup) e `cli_base.test.js` (`sanitizeUrl`, `setupSigint`, `createValidateEnv` edge cases, `printSessionSummary`).
+- **Bug fix**: `logMaxSize` não tratava `'0'` corretamente (`parseInt('0')` é falsy → `||` dava fallback). Corrigido com `isNaN()`.
+- **Resultado**: 502 testes (antes 400), 25 suites (antes 24).
+
+### TS-TEST-001 — Migrar shared/ test files .js → .ts (CONCLUÍDO)
+
+- **Ação**: 7 arquivos migrados (`cli_base`, `http-client`, `logger`, `prompt`, `result_parser`, `session-context`, `state`).
+- **Padrão**: `const X = require('./x')` com `typeof import('./x')` type annotation + `// @ts-nocheck`.
+
+---
+
+## Pendências
+
+| # | Item | Prioridade | Esforço |
+|---|------|-----------|---------|
+| 1 | Migrar `jira_management/` e `git_triggers/` .test.js → .ts (13 arquivos) | P2 | Médio |
+| 2 | Cobertura de testes em `jira_management/commands/` handlers (20-45% → 70%+) | P2 | Alto |
+| 3 | Cobertura de testes em `git_triggers/main.ts` | P2 | Alto |
+| 4 | Remover `@ts-nocheck` dos shared/ test files e tipá-los corretamente | P3 | Baixo |
+
 ---
