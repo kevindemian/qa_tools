@@ -4,7 +4,8 @@ import { Logger } from '../shared/logger';
 
 function handleError(log: Logger, op: string, err: unknown, opts?: { returnNull?: boolean }) {
     const msg = extractErrorMessage(err);
-    log.error(`Erro ao ${op}: ${msg}`, { status: err.response?.status });
+    const axiosErr = err as { response?: { status?: number } };
+    log.error(`Erro ao ${op}: ${msg}`, { status: axiosErr.response?.status });
     if (opts?.returnNull) return null;
     throw err;
 }
@@ -151,9 +152,12 @@ class GitHubManager {
             const data = await this._post(this._repoPath + '/pulls', body, { operation: 'criar PR' });
             return this._formatPR(data);
         } catch (err: unknown) {
-            if (err.response?.status === 422) {
-                const errors = err.response?.data?.errors || [];
-                const alreadyExists = errors.some((e: unknown) => e.message && e.message.includes('already exists'));
+            const ghErr = err as { response?: { status?: number; data?: { errors?: Array<{ message: string }> } } };
+            if (ghErr.response?.status === 422) {
+                const errors = ghErr.response?.data?.errors || [];
+                const alreadyExists = errors.some(
+                    (e: { message: string }) => e.message && e.message.includes('already exists'),
+                );
                 if (alreadyExists) {
                     info('PR already exists. Searching for existing...');
                     const existing = await this.searchMergeRequests(sourceBranch, targetBranch, 'open');
@@ -211,7 +215,7 @@ class GitHubManager {
                 params,
                 returnNull: true,
             });
-            return (data || []).map((pr: unknown) => this._formatPR(pr));
+            return (data || []).map((pr: Record<string, unknown>) => this._formatPR(pr));
         } catch {
             return [];
         }
@@ -258,7 +262,7 @@ class GitHubManager {
                 returnNull: true,
             });
             const jobs = (data && data.jobs) || [];
-            return jobs.map((j: unknown) => ({
+            return jobs.map((j: Record<string, unknown>) => ({
                 id: j.id,
                 name: j.name,
                 stage: j.runner_group_name || '',
@@ -276,7 +280,7 @@ class GitHubManager {
                 returnNull: true,
             });
             const artifacts = (data && data.artifacts) || [];
-            return artifacts.map((a: unknown) => ({ id: a.id, name: a.name }));
+            return artifacts.map((a: Record<string, unknown>) => ({ id: a.id, name: a.name }));
         } catch {
             return [];
         }
@@ -312,7 +316,7 @@ class GitHubManager {
                 returnNull: true,
             });
             const variables = (data && data.variables) || [];
-            return variables.map((v: unknown) => ({
+            return variables.map((v: Record<string, unknown>) => ({
                 key: v.name,
                 value: v.value,
                 type: 'variable',
@@ -328,13 +332,13 @@ class GitHubManager {
                 operation: 'verificar reviews',
                 returnNull: true,
             });
-            return (data || []).some((r: unknown) => r.state === 'APPROVED');
+            return (data || []).some((r: Record<string, unknown>) => r.state === 'APPROVED');
         } catch {
             return false;
         }
     }
 
-    _formatPR(data: unknown) {
+    _formatPR(data: Record<string, unknown>) {
         if (!data) return null;
         return {
             iid: data.number,
@@ -343,8 +347,8 @@ class GitHubManager {
             state: data.merged ? 'merged' : data.state === 'closed' ? 'closed' : 'opened',
             web_url: data.html_url,
             description: data.body,
-            source_branch: (data.head || {}).ref,
-            target_branch: (data.base || {}).ref,
+            source_branch: ((data.head as Record<string, unknown>) || {}).ref,
+            target_branch: ((data.base as Record<string, unknown>) || {}).ref,
             approved: false,
         };
     }

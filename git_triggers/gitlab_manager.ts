@@ -4,7 +4,8 @@ import { Logger } from '../shared/logger';
 
 function handleError(log: Logger, op: string, err: unknown, opts?: { returnNull?: boolean }) {
     const msg = extractErrorMessage(err);
-    log.error(`Erro ao ${op}: ${msg}`, { status: err.response?.status });
+    const axiosErr = err as { response?: { status?: number } };
+    log.error(`Erro ao ${op}: ${msg}`, { status: axiosErr.response?.status });
     if (opts?.returnNull) return null;
     throw err;
 }
@@ -92,7 +93,8 @@ class GitLabManager {
         try {
             return await this._post('/merge_requests', body, { operation: 'criar MR' });
         } catch (err: unknown) {
-            if (err.response?.status === 409) {
+            const glErr = err as { response?: { status?: number } };
+            if (glErr.response?.status === 409) {
                 info('MR already exists. Searching for existing...');
                 const existing = await this.searchMergeRequests(sourceBranch, targetBranch, 'opened');
                 if (existing && existing.length > 0) {
@@ -170,7 +172,7 @@ class GitLabManager {
                 operation: 'listar jobs',
                 returnNull: true,
             });
-            return (data || []).map((j: unknown) => ({
+            return (data || []).map((j: Record<string, unknown>) => ({
                 id: j.id,
                 name: j.name,
                 stage: j.stage,
@@ -189,8 +191,11 @@ class GitLabManager {
             });
             const jobs = data || [];
             return jobs
-                .filter((j: unknown) => j.artifacts_file || (j.artifacts && j.artifacts.length > 0))
-                .map((j: unknown) => ({ id: j.id, name: j.name }));
+                .filter(
+                    (j: Record<string, unknown>) =>
+                        j.artifacts_file || (j.artifacts && (j.artifacts as Array<unknown>).length > 0),
+                )
+                .map((j: Record<string, unknown>) => ({ id: j.id, name: j.name }));
         } catch {
             return [];
         }
@@ -204,6 +209,44 @@ class GitLabManager {
                 returnNull: true,
             })) || []
         );
+    }
+
+    async getBranch(branch: string): Promise<{ name: string } | null> {
+        try {
+            const data = await this._get(`/repository/branches/${encodeURIComponent(branch)}`, {
+                operation: 'buscar branch',
+                returnNull: true,
+            });
+            return data ? { name: data.name as string } : null;
+        } catch {
+            return null;
+        }
+    }
+
+    async isApproved(mergeRequestIid: string | number): Promise<boolean> {
+        try {
+            const data = await this._get(`/merge_requests/${mergeRequestIid}/approvals`, {
+                operation: 'verificar aprovação',
+                returnNull: true,
+            });
+            return !!data?.approved;
+        } catch {
+            return false;
+        }
+    }
+
+    async downloadArtifact(artifactId: string | number): Promise<{ buffer: Buffer; filename: string }> {
+        try {
+            const response = await this.client.get(`/jobs/${artifactId}/artifacts`, {
+                responseType: 'arraybuffer',
+            });
+            const disposition = (response.headers['content-disposition'] as string) || '';
+            const match = disposition.match(/filename="?(.+?)"?$/);
+            const filename = match ? match[1] : 'artifacts.zip';
+            return { buffer: Buffer.from(response.data as ArrayBuffer), filename };
+        } catch (err) {
+            return handleError(this.log, 'baixar artifact', err) as never;
+        }
     }
 }
 
