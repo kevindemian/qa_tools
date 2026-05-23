@@ -129,30 +129,30 @@ jest.mock('glob', () => ({ sync: globSyncMock }));
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const mockProvider: Record<string, jest.Mock<any>> = {
-    getSchedules: jest.fn<unknown>(),
-    runSchedule: jest.fn<unknown>(),
-    createMergeRequest: jest.fn<unknown>(),
-    searchMergeRequests: jest.fn<unknown>(),
-    isApproved: jest.fn<unknown>(),
-    acceptMergeRequest: jest.fn<unknown>(),
-    getCICDVariables: jest.fn<unknown>(),
-    getPipeline: jest.fn<unknown>(),
-    triggerPipeline: jest.fn<unknown>(),
-    getRecentPipelines: jest.fn<unknown>(),
-    getBranch: jest.fn<unknown>(),
-    listPipelineArtifacts: jest.fn<unknown>(),
-    downloadArtifact: jest.fn<unknown>(),
+    getSchedules: jest.fn(),
+    runSchedule: jest.fn(),
+    createMergeRequest: jest.fn(),
+    searchMergeRequests: jest.fn(),
+    isApproved: jest.fn(),
+    acceptMergeRequest: jest.fn(),
+    getCICDVariables: jest.fn(),
+    getPipeline: jest.fn(),
+    triggerPipeline: jest.fn(),
+    getRecentPipelines: jest.fn(),
+    getBranch: jest.fn(),
+    listPipelineArtifacts: jest.fn(),
+    downloadArtifact: jest.fn(),
 };
 
 let mainModule: MainModule;
 
 beforeAll(() => {
-    jest.spyOn(fs, 'readFileSync').mockImplementation(((p: string, ...args: unknown[]) => {
+    jest.spyOn(fs, 'readFileSync').mockImplementation(((p: string) => {
         if (p.includes('providers.json')) return '{"proj-a":{"provider":"github"},"proj-b":{}}';
         if (p.includes('projects.json')) return '{"proj-a":"111","proj-b":"222"}';
+
         return jest.requireActual('fs').readFileSync(p, 'utf8');
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    }) as any);
+    }) as unknown);
     jest.spyOn(fs, 'writeFileSync').mockImplementation(() => {});
     jest.spyOn(fs, 'unlinkSync').mockImplementation(() => {});
 
