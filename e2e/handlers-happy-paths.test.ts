@@ -144,13 +144,13 @@ describe('case02 — list versions', () => {
         expect(nock.isDone()).toBe(true);
     });
 
-    it('project not found — catches error and pushes error history', async () => {
+    it('project not found — returns early without pushHistory', async () => {
         const { api } = freshScope();
         api.get('/project/ECSPOL').reply(404);
         const c = buildContext();
         const mod = require('../jira_management/commands/case02');
         await mod.handler(c);
-        expect(c.pushHistory).toHaveBeenCalledWith('listar-versoes', 'erro', 'error');
+        expect(c.pushHistory).not.toHaveBeenCalled();
         expect(nock.isDone()).toBe(true);
     });
 });
