@@ -14,13 +14,21 @@ import os from 'os';
 
 import JiraLinkManager from './jira_link_manager';
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any -- jest.mock('fs') makes all fs methods jest.Mock; os.homedir is overridden for test
-(os as any).homedir = jest.fn(() => '/fake/home');
+let originalHomedir: typeof os.homedir;
 
 describe('JiraLinkManager', () => {
     let manager: InstanceType<typeof JiraLinkManager>;
     // eslint-disable-next-line @typescript-eslint/no-explicit-any -- partial mock for JiraResource in tests
     let mockJiraResource: any;
+
+    beforeAll(() => {
+        originalHomedir = os.homedir;
+        jest.spyOn(os, 'homedir').mockReturnValue('/fake/home');
+    });
+
+    afterAll(() => {
+        jest.restoreAllMocks();
+    });
 
     beforeEach(() => {
         jest.clearAllMocks();

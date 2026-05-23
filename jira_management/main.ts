@@ -23,7 +23,7 @@ import {
     printSessionSummary as sharedPrintSessionSummary,
 } from '../shared/cli_base';
 import { rootLogger } from '../shared/logger';
-import { load as loadState, update as updateState, STATE_PATH } from '../shared/state';
+import { load as loadState, update as updateState, getStatePath } from '../shared/state';
 import { SessionContext } from '../shared/session-context';
 import type { Logger } from '../shared/logger';
 import type { StateSchema } from '../shared/types';
@@ -461,7 +461,7 @@ async function main(): Promise<void> {
 
     title('Bem-vindo ao QA Tools — Jira Management');
     info('Digite /help a qualquer momento para obter ajuda.');
-    info('State: ' + STATE_PATH);
+    info('State: ' + getStatePath());
     divider();
     sessionLog.info('Sessão iniciada');
 

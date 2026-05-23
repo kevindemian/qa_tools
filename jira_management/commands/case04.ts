@@ -64,11 +64,15 @@ async function handler(c: CommandContext): Promise<boolean | void> {
 
     if (confirm('Adicionar tarefas a uma sprint?')) {
         const sprintId = prompt('ID da sprint', { hint: 'ex: 6991 (encontrado na URL do board)' });
-        try {
-            await c.jiraResource.postJiraResource('sprint/' + sprintId + '/issue', { issues: taskIds });
-            success('Tarefas adicionadas a sprint ' + sprintId);
-        } catch (err: unknown) {
-            printError('Erro ao adicionar tarefas a sprint', err);
+        if (!sprintId.trim()) {
+            warn('Sprint ID vazio. Pulando...');
+        } else {
+            try {
+                await c.jiraResource.postJiraResource('sprint/' + sprintId + '/issue', { issues: taskIds });
+                success('Tarefas adicionadas a sprint ' + sprintId);
+            } catch (err: unknown) {
+                printError('Erro ao adicionar tarefas a sprint', err);
+            }
         }
     }
     return false;
