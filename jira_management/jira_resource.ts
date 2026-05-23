@@ -220,7 +220,7 @@ class JiraResource {
             for (const issue of issuesData.issues) {
                 const status = issue.fields?.status?.name || '';
                 if (!['done', 'in use'].includes(status.toLowerCase())) {
-                    info(` - Issue '${issue.key}' NAO concluída. Status: ${status}`);
+                    info(` - Issue '${issue.key}' NÃO concluída. Status: ${status}`);
                     allTasksCompleted = false;
                 } else {
                     info(` - Issue '${issue.key}' concluída (Status: ${status}).`);
@@ -292,7 +292,7 @@ class JiraResource {
                 info(`Versão: ${v.name} (Descrição: ${description})`);
             });
         } else {
-            info('Nenhuma versão não lancada encontrada.');
+            info('Nenhuma versão não lançada encontrada.');
         }
 
         return { latestReleasedVersions, unreleasedVersions };
@@ -385,12 +385,12 @@ class JiraResource {
             try {
                 const targets = wf[statusLower];
                 if (!targets) {
-                    warn(`   ${taskId}: status "${currentStatus}" não mapeado para fechamento automatico.`);
+                    warn(`   ${taskId}: status "${currentStatus}" não mapeado para fechamento automático.`);
                 } else {
                     for (const target of targets) {
                         const transitionId = transitionsMap[target];
                         if (!transitionId) {
-                            warn(`Transicao "${target}" não encontrada para ${taskId}. Verifique workflowMap.`);
+                            warn(`Transição "${target}" não encontrada para ${taskId}. Verifique workflowMap.`);
                             continue;
                         }
                         this.log.info(`   ${taskId}: -> ${target}`);
@@ -408,7 +408,7 @@ class JiraResource {
 
     async transitionIssue(issueId: string, transitionId: string): Promise<void> {
         const payload = { transition: { id: transitionId } };
-        this.log.info(`   Movendo ${issueId} (transicao ${transitionId})...`);
+        this.log.info(`   Movendo ${issueId} (transição ${transitionId})...`);
 
         try {
             await this.postJiraResource(`issue/${issueId}/transitions`, payload);

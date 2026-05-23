@@ -761,17 +761,10 @@ function handleShowHistory() {
     divider();
 }
 
-async function main() {
-    if (!projects) {
-        process.exitCode = 1;
-        return;
-    }
-    validateEnv();
-    sessionLog.info('Sessão iniciada');
-
+function _selectProject(): { projectName: string; names: string[] } {
     const state = loadState();
     displayProjects();
-    const names = Object.keys(projects);
+    const names = Object.keys(projects!);
     const firstDefault = (state.lastProject as string) || '';
     const firstChoice = prompt('Escolha um projeto', {
         hint: '1-' + names.length,
@@ -781,15 +774,91 @@ async function main() {
     if (isNaN(firstIdx) || firstIdx < 1 || firstIdx > names.length) {
         error('Projeto inválido.');
         process.exitCode = 1;
-        return;
+        throw new Error('Invalid project');
     }
     const projectName = names[firstIdx - 1];
-    projectId = projects[projectName];
+    projectId = projects![projectName];
     updateState((s) => {
         s.lastProject = projectName;
     });
     success('Projeto selecionado: ' + projectName + ' (' + getProviderForProject(projectName) + ')');
+    return { projectName, names };
+}
 
+async function _promptChoice(stateHint: string): Promise<string> {
+    if (process.stdout.isTTY && !Config.quiet) {
+        const ctx = buildContextLine();
+        print('== ' + ctx + ' ==');
+        divider();
+        const stateHint2 =
+            loadState().lastChoice && (loadState().lastChoice as string) !== '0'
+                ? (loadState().lastChoice as string)
+                : undefined;
+        return showSelect('Escolha uma opção', buildActionChoices(), {
+            default: stateHint2,
+        });
+    }
+    displayActions();
+    const choice = prompt('Escolha uma opção', { hint: stateHint });
+    const resolved =
+        !choice.trim() && (loadState().lastChoice as string) && (loadState().lastChoice as string) !== '0'
+            ? (loadState().lastChoice as string)
+            : choice;
+    if (resolved !== choice) info('Repetindo última opção: ' + resolved);
+    return resolved;
+}
+
+const ACTION_HANDLERS: Record<string, (m: GitProvider, pn: string, ns: string[]) => Promise<boolean>> = {
+    '1': (m, pn) => handleTriggerPipeline(sessionContext, m, pn).then(() => false),
+    '2': (m) => handleListSchedules(sessionContext, m).then(() => false),
+    '3': (m) => handleRunSchedule(sessionContext, m).then(() => false),
+    '4': (m) => handleCreateMR(sessionContext, m).then(() => false),
+    '5': (m) => handleListApprovedMRs(sessionContext, m).then(() => false),
+    '6': (m) => handleMergeMR(sessionContext, m).then(() => false),
+    '7': (m) => nivelarBranchesWrapper(m).then(() => false),
+    '8': (m) => handleExportVariables(sessionContext, m).then(() => false),
+    '9': (m, _pn, ns) => handleChangeProject(sessionContext, m, ns).then(() => false),
+};
+
+function _handleExit(): boolean {
+    title('Até logo!');
+    printSessionSummary();
+    if (sessionContext.sessionCounters.some((c) => c.status === 'error')) process.exitCode = 1;
+    return true;
+}
+
+async function _dispatchAction(
+    finalChoice: string,
+    m: GitProvider,
+    projectName: string,
+    names: string[],
+): Promise<boolean> {
+    const cmd = finalChoice.trim().toLowerCase();
+    if (cmd === '/h' || cmd === '/help') {
+        handleHelp();
+        return false;
+    }
+    if (cmd === '/history') {
+        handleShowHistory();
+        return false;
+    }
+    if (finalChoice === '0') return _handleExit();
+
+    const handlerFn = ACTION_HANDLERS[finalChoice];
+    if (handlerFn) return handlerFn(m, projectName, names);
+    warn('Opção inválida.');
+    return false;
+}
+
+async function main() {
+    if (!projects) {
+        process.exitCode = 1;
+        return;
+    }
+    validateEnv();
+    sessionLog.info('Sessão iniciada');
+
+    const { projectName, names } = _selectProject();
     manager = createManagerForProject(projectName, projectId);
     const m = manager;
 
@@ -801,79 +870,12 @@ async function main() {
             : '0-9';
 
     while (true) {
-        let finalChoice: string;
-        if (process.stdout.isTTY && !Config.quiet) {
-            const ctx = buildContextLine();
-            print('== ' + ctx + ' ==');
-            divider();
-            const stateHint2 =
-                loadState().lastChoice && (loadState().lastChoice as string) !== '0'
-                    ? (loadState().lastChoice as string)
-                    : undefined;
-            finalChoice = await showSelect('Escolha uma opção', buildActionChoices(), {
-                default: stateHint2,
-            });
-        } else {
-            displayActions();
-            const choice = prompt('Escolha uma opção', { hint: stateHint });
-            const resolved =
-                !choice.trim() && (loadState().lastChoice as string) && (loadState().lastChoice as string) !== '0'
-                    ? (loadState().lastChoice as string)
-                    : choice;
-            if (resolved !== choice) info('Repetindo última opção: ' + resolved);
-            finalChoice = resolved;
-        }
-
+        const finalChoice = await _promptChoice(stateHint);
         updateState((s) => {
             s.lastChoice = finalChoice;
         });
-
-        const cmd = finalChoice.trim().toLowerCase();
-        if (cmd === '/h' || cmd === '/help') {
-            handleHelp();
-            continue;
-        }
-        if (cmd === '/history') {
-            handleShowHistory();
-            continue;
-        }
-
-        switch (finalChoice) {
-            case '1':
-                await handleTriggerPipeline(sessionContext, m, projectName);
-                break;
-            case '2':
-                await handleListSchedules(sessionContext, m);
-                break;
-            case '3':
-                await handleRunSchedule(sessionContext, m);
-                break;
-            case '4':
-                await handleCreateMR(sessionContext, m);
-                break;
-            case '5':
-                await handleListApprovedMRs(sessionContext, m);
-                break;
-            case '6':
-                await handleMergeMR(sessionContext, m);
-                break;
-            case '7':
-                await nivelarBranchesWrapper(m);
-                break;
-            case '8':
-                await handleExportVariables(sessionContext, m);
-                break;
-            case '9':
-                await handleChangeProject(sessionContext, m, names);
-                break;
-            case '0':
-                title('Até logo!');
-                printSessionSummary();
-                if (sessionContext.sessionCounters.some((c) => c.status === 'error')) process.exitCode = 1;
-                return;
-            default:
-                warn('Opção inválida.');
-        }
+        const shouldExit = await _dispatchAction(finalChoice, m, projectName, names);
+        if (shouldExit) return;
     }
 }
 

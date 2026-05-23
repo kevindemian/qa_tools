@@ -63,7 +63,7 @@ class IssueLinker {
         for (const group of Object.values(groups)) {
             if (group.members.length < 2) continue;
 
-            crossLog.info('Atualizando descricoes do grupo "' + group.name + '" (' + group.members.length + ' issues)');
+            crossLog.info('Atualizando descrições do grupo "' + group.name + '" (' + group.members.length + ' issues)');
 
             await sleep(500);
 

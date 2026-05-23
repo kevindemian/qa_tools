@@ -144,15 +144,16 @@ const mockProvider: Record<string, jest.Mock<any>> = {
     downloadArtifact: jest.fn(),
 };
 
+const _realReadFileSync = fs.readFileSync.bind(fs);
+
 let mainModule: MainModule;
 
 beforeAll(() => {
     jest.spyOn(fs, 'readFileSync').mockImplementation(((p: string) => {
         if (p.includes('providers.json')) return '{"proj-a":{"provider":"github"},"proj-b":{}}';
         if (p.includes('projects.json')) return '{"proj-a":"111","proj-b":"222"}';
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        return (jest.requireActual('fs') as any).readFileSync(p, 'utf8');
-    }) as any);
+        return _realReadFileSync(p, 'utf8');
+    }) as unknown);
     jest.spyOn(fs, 'writeFileSync').mockImplementation(() => {});
     jest.spyOn(fs, 'unlinkSync').mockImplementation(() => {});
 
