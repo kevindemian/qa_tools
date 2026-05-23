@@ -85,11 +85,14 @@ const PROJECT = 'TESTPROJ';
 describe('createTestExecution', () => {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any -- methods replaced with jest.fn()
     let jiraResource: any;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- JiraLinkManager with mocked jiraResource
+    let linkManager: any;
 
     beforeEach(() => {
         jiraResource = new JiraResource('fake-token', 'http://jira/rest/api/2');
         jiraResource.getJiraResource = jest.fn();
         jiraResource.postJiraResource = jest.fn();
+        linkManager = new JiraLinkManager(jiraResource);
     });
 
     it('creates a Test Execution with given keys', async () => {
@@ -100,7 +103,13 @@ describe('createTestExecution', () => {
         });
         jiraResource.postJiraResource.mockResolvedValue({ key: 'EXEC-1', id: '999' });
 
-        const result = await createTestExecution(jiraResource, PROJECT, ['TEST-1', 'TEST-2'], 'meus-testes');
+        const result = await createTestExecution(
+            jiraResource,
+            linkManager,
+            PROJECT,
+            ['TEST-1', 'TEST-2'],
+            'meus-testes',
+        );
 
         expect(result.key).toBe('EXEC-1');
         expect(jiraResource.getJiraResource).toHaveBeenCalledWith('issuetype');
@@ -123,7 +132,7 @@ describe('createTestExecution', () => {
         });
         jiraResource.postJiraResource.mockResolvedValue({ key: 'EXEC-2' });
 
-        const result = await createTestExecution(jiraResource, PROJECT, ['TEST-3'], '');
+        const result = await createTestExecution(jiraResource, linkManager, PROJECT, ['TEST-3'], '');
 
         expect(result.key).toBe('EXEC-2');
         expect(jiraResource.postJiraResource).toHaveBeenCalledWith('issue', {
@@ -142,7 +151,7 @@ describe('createTestExecution', () => {
             { id: '11800', name: 'Test' },
         ]);
 
-        await expect(createTestExecution(jiraResource, PROJECT, ['TEST-1'], '')).rejects.toThrow(
+        await expect(createTestExecution(jiraResource, linkManager, PROJECT, ['TEST-1'], '')).rejects.toThrow(
             'Issue type "Test Execution" não encontrado',
         );
     });
@@ -154,7 +163,7 @@ describe('createTestExecution', () => {
             return Promise.reject(new Error('unexpected url: ' + url));
         });
 
-        await expect(createTestExecution(jiraResource, PROJECT, ['TEST-1'], '')).rejects.toThrow(
+        await expect(createTestExecution(jiraResource, linkManager, PROJECT, ['TEST-1'], '')).rejects.toThrow(
             'Campo "Tests association with a Test Execution" não encontrado',
         );
     });
@@ -162,7 +171,7 @@ describe('createTestExecution', () => {
     it('throws when issuetype API fails', async () => {
         jiraResource.getJiraResource.mockRejectedValue(new Error('API error'));
 
-        await expect(createTestExecution(jiraResource, PROJECT, ['TEST-1'], '')).rejects.toThrow();
+        await expect(createTestExecution(jiraResource, linkManager, PROJECT, ['TEST-1'], '')).rejects.toThrow();
     });
 
     it('throws when field API returns non-array', async () => {
@@ -172,7 +181,7 @@ describe('createTestExecution', () => {
             return Promise.reject(new Error('unexpected url: ' + url));
         });
 
-        await expect(createTestExecution(jiraResource, PROJECT, ['TEST-1'], '')).rejects.toThrow(
+        await expect(createTestExecution(jiraResource, linkManager, PROJECT, ['TEST-1'], '')).rejects.toThrow(
             'Falha ao obter campos customizados',
         );
     });
@@ -180,7 +189,7 @@ describe('createTestExecution', () => {
     it('throws when issuetype API returns non-array', async () => {
         jiraResource.getJiraResource.mockResolvedValue(null);
 
-        await expect(createTestExecution(jiraResource, PROJECT, ['TEST-1'], '')).rejects.toThrow(
+        await expect(createTestExecution(jiraResource, linkManager, PROJECT, ['TEST-1'], '')).rejects.toThrow(
             'Falha ao obter tipos de issue',
         );
     });
@@ -193,7 +202,7 @@ describe('createTestExecution', () => {
         });
         jiraResource.postJiraResource.mockResolvedValue({ key: 'EXEC-3' });
 
-        const result = await createTestExecution(jiraResource, PROJECT, ['TEST-1'], '', 'Custom Title');
+        const result = await createTestExecution(jiraResource, linkManager, PROJECT, ['TEST-1'], '', 'Custom Title');
         expect(jiraResource.postJiraResource).toHaveBeenCalledWith('issue', {
             fields: expect.objectContaining({
                 summary: 'Custom Title',

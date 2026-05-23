@@ -457,10 +457,11 @@ describe('checkReleaseTasksStatus', () => {
         expect(result).toBe(false);
     });
 
-    it('propagates error from getProjectId', async () => {
+    it('returns false on error from getProjectId', async () => {
         jest.spyOn(jiraResource, 'getProjectId').mockRejectedValueOnce(new Error('Project error'));
 
-        await expect(jiraResource.checkReleaseTasksStatus('TEST', 'v1.0')).rejects.toThrow('Project error');
+        const result = await jiraResource.checkReleaseTasksStatus('TEST', 'v1.0');
+        expect(result).toBe(false);
     });
 });
 
@@ -512,10 +513,11 @@ describe('getReleaseTasks', () => {
         expect(jql).not.toContain('AND type = "Test"');
     });
 
-    it('propagates error from getProjectId', async () => {
+    it('returns empty array on error from getProjectId', async () => {
         jest.spyOn(jiraResource, 'getProjectId').mockRejectedValueOnce(new Error('Project error'));
 
-        await expect(jiraResource.getReleaseTasks('TEST', 'v1.0')).rejects.toThrow('Project error');
+        const result = await jiraResource.getReleaseTasks('TEST', 'v1.0');
+        expect(result).toEqual([]);
     });
 });
 
@@ -612,10 +614,10 @@ describe('addTasksToSprint', () => {
         });
     });
 
-    it('handles error gracefully without throwing', async () => {
+    it('re-throws error after logging', async () => {
         mockClient.post.mockRejectedValue(new Error('Sprint error'));
 
-        await expect(jiraResource.addTasksToSprint(['TASK-1'], 'sprint-1')).resolves.toBeUndefined();
+        await expect(jiraResource.addTasksToSprint(['TASK-1'], 'sprint-1')).rejects.toThrow('Sprint error');
     });
 
     it('handles empty task list', async () => {
@@ -863,10 +865,10 @@ describe('transitionIssue', () => {
         expect(mockClient.post).toHaveBeenCalledWith('/issue/TASK-1/transitions', { transition: { id: '31' } });
     });
 
-    it('handles error gracefully without throwing', async () => {
+    it('re-throws error after logging', async () => {
         mockClient.post.mockRejectedValue(new Error('Transition error'));
 
-        await expect(jiraResource.transitionIssue('TASK-1', '31')).resolves.toBeUndefined();
+        await expect(jiraResource.transitionIssue('TASK-1', '31')).rejects.toThrow('Transition error');
     });
 
     it('passes correct transition id', async () => {

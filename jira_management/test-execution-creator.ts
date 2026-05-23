@@ -104,12 +104,12 @@ class TestExecutionCreator {
                         }
                     }
                 } catch (err) {
-                    rootLogger.warn('Não foi possivel verificar links existentes: ' + (err as Error).message);
+                    rootLogger.warn('Não foi possível verificar links existentes: ' + (err as Error).message);
                 }
 
                 const unlinked = keysToLink.filter((k) => !linkedKeys.includes(k));
                 if (unlinked.length === 0) {
-                    info('Todos os testes ja estao vinculados ao Test Execution.');
+                    info('Todos os testes já estão vinculados ao Test Execution.');
                 } else {
                     let linkCount = 0;
                     await withSpinner('Linkando ' + unlinked.length + ' teste(s)...', async () => {

@@ -17,5 +17,4 @@ function handler(c: CommandContext): boolean | void {
     success('Projeto alterado para: ' + c.ctx.project_name);
 }
 
-export { handler };
-module.exports = { handler };
+export = { handler };

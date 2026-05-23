@@ -185,7 +185,7 @@ jiraSuite('CSV Validation against Jira', () => {
             .filter(({ r }) => r.status === 'rejected' || !r.value);
 
         if (failures.length > 0) {
-            const msg = failures.map((f) => `${f.key} nao encontrada`).join('; ');
+            const msg = failures.map((f) => `${f.key} não encontrada`).join('; ');
             throw new Error(msg);
         }
     }, 30000);
@@ -203,7 +203,7 @@ jiraSuite('CSV Validation against Jira', () => {
             .filter(({ r }) => r.status === 'rejected' || !r.value);
 
         if (failures.length > 0) {
-            const msg = failures.map((f) => `${f.key} nao encontrada`).join('; ');
+            const msg = failures.map((f) => `${f.key} não encontrada`).join('; ');
             throw new Error(msg);
         }
     }, 30000);

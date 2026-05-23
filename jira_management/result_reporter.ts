@@ -64,7 +64,7 @@ function matchResultsToTests(results: TestResultItem[], mappingJsonPath: string)
             key: t.key || '',
         }));
     } catch (err) {
-        rootLogger.warn('Não foi possivel ler mapping JSON: ' + (err as Error).message);
+        rootLogger.warn('Não foi possível ler mapping JSON: ' + (err as Error).message);
         return { matched: [], unmatched: [], stats: { passed: 0, failed: 0, skipped: 0, total: 0 } };
     }
 
@@ -127,13 +127,14 @@ async function createTestExecutionFromResults(
     const { createTestExecution } = require('./create_tests') as {
         createTestExecution: (
             jiraResource: JiraResource,
+            linkManager: import('./jira_link_manager'),
             projectName: string,
             testKeys: string[],
             csvName: string,
             titleOverride?: string,
         ) => Promise<{ key: string }>;
     };
-    const te = await createTestExecution(jiraResource, project_name, testKeys, csvName, summary);
+    const te = await createTestExecution(jiraResource, linkManager, project_name, testKeys, csvName, summary);
 
     if (te.key && matchedResults.length > 0) {
         try {

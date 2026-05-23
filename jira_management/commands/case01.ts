@@ -61,5 +61,4 @@ async function handler(c: CommandContext): Promise<boolean | void> {
     }
 }
 
-export { handler };
-module.exports = { handler };
+export = { handler };

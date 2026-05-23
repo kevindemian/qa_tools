@@ -17,5 +17,4 @@ function handler(c: CommandContext): boolean | void {
     c.pushHistory('config-json-dir', resolved, 'ok');
 }
 
-export { handler };
-module.exports = { handler };
+export = { handler };

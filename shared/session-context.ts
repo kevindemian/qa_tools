@@ -17,6 +17,7 @@ export class SessionContext {
     lastOperation: string;
     sessionCounters: SessionCountersItem[];
     packageManager: unknown;
+    createPackageManager?: (dir: string) => unknown;
     git_directory: string;
     inMemoryTasksId: string[];
     inMemoryTasksText: string[];

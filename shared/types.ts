@@ -1,4 +1,9 @@
-import type { Logger } from './logger';
+export interface LoggerLike {
+    info(msg: string, ctx?: Record<string, unknown>): void;
+    warn(msg: string, ctx?: Record<string, unknown>): void;
+    error(msg: string, ctx?: Record<string, unknown>): void;
+    child?(context: Record<string, unknown>): LoggerLike;
+}
 
 export interface TestResult {
     status: 'ok' | 'error';
@@ -74,7 +79,7 @@ export interface StateSchema {
 export interface ApiConfig {
     baseUrl: string;
     token: string;
-    logger?: Logger;
+    logger?: LoggerLike;
 }
 
 export interface GitProvider {

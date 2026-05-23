@@ -655,7 +655,7 @@ describe('Prompt', () => {
             jest.spyOn(readlineSync, 'question').mockReturnValueOnce('x').mockReturnValueOnce('a');
             const result = await prompt.onError('ctx', new Error('fail'));
             expect(result).toBe('abort');
-            expect(mockLog).toHaveBeenCalledWith(expect.stringContaining('Opção invalida'));
+            expect(mockLog).toHaveBeenCalledWith(expect.stringContaining('Opção inválida'));
         });
     });
 

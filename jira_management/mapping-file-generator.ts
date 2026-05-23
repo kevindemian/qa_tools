@@ -6,6 +6,8 @@ import { rootLogger } from '../shared/logger';
 import { info, isQuiet } from '../shared/prompt';
 import type { TestCase } from '../shared/types';
 
+const UTF8_ENCODING = 'utf8';
+
 interface MappingEntry {
     title: string;
     key: string;
@@ -27,7 +29,7 @@ class MappingFileGenerator {
                 fs.mkdirSync(outDir, { recursive: true });
             }
         } catch {
-            rootLogger.warn('Não foi possivel criar diretório de saida: ' + outDir);
+            rootLogger.warn('Não foi possível criar diretório de saida: ' + outDir);
             return;
         }
 
@@ -77,7 +79,7 @@ class MappingFileGenerator {
             null,
             2,
         );
-        fs.writeFileSync(jsonPath, jsonContent, 'utf8');
+        fs.writeFileSync(jsonPath, jsonContent, UTF8_ENCODING);
         if (!isQuiet()) {
             info('Mapeamento salvo: ' + path.basename(jsonPath));
         }
@@ -108,7 +110,7 @@ class MappingFileGenerator {
             mdContent += '\n---\n\n';
         }
 
-        fs.writeFileSync(mdPath, mdContent, 'utf8');
+        fs.writeFileSync(mdPath, mdContent, UTF8_ENCODING);
         if (!isQuiet()) {
             info('Sumario salvo: ' + path.basename(mdPath));
         }
@@ -123,7 +125,7 @@ class MappingFileGenerator {
                     return key + ': ' + (test.title || '(sem titulo)');
                 })
                 .join('\n') + '\n';
-        fs.writeFileSync(txtPath, txtContent, 'utf8');
+        fs.writeFileSync(txtPath, txtContent, UTF8_ENCODING);
     }
 }
 

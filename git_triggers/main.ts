@@ -30,7 +30,7 @@ import { createValidateEnv, setupSigint, printSessionSummary as sharedPrintSessi
 import { rootLogger } from '../shared/logger';
 import { sleep } from '../shared/http-client';
 import { parseMochawesome } from '../shared/result_parser';
-import type { MochawesomeData } from '../shared/result_parser';
+import type { MochawesomeData, ParseResult } from '../shared/result_parser';
 import { matchResultsToTests, createTestExecutionFromResults } from '../jira_management/result_reporter';
 import { SessionContext } from '../shared/session-context';
 import type { GitProvider } from '../shared/types';
@@ -83,7 +83,7 @@ function pushHistory(op: string, detail: string, status: string) {
 }
 
 const validateEnv = createValidateEnv([
-    { key: 'GIT_TOKEN', label: 'GIT_TOKEN (token de autenticacao GitLab)', example: 'GIT_TOKEN=seu-token-aqui' },
+    { key: 'GIT_TOKEN', label: 'GIT_TOKEN (token de autenticação GitLab)', example: 'GIT_TOKEN=seu-token-aqui' },
     {
         key: 'GIT_BASE_URL',
         label: 'GIT_BASE_URL (URL base do GitLab)',
@@ -144,10 +144,11 @@ const projectsPath = path.resolve(__dirname, '../config/projects.json');
 let projects: Record<string, string>;
 try {
     projects = JSON.parse(fs.readFileSync(projectsPath, 'utf8'));
+    const projectOverrides = Config.getAllPrefixed('PROJECT_ID_');
     for (const key of Object.keys(projects)) {
         const envKey = 'PROJECT_ID_' + key.toUpperCase();
-        if (process.env[envKey]) {
-            projects[key] = process.env[envKey];
+        if (projectOverrides[envKey]) {
+            projects[key] = projectOverrides[envKey];
         }
     }
 } catch (err: unknown) {
@@ -178,18 +179,11 @@ function _jiraEnv(): { base: string; token: string; xray: string } | null {
     return { base, token, xray };
 }
 
-async function collectTestResults(m: GitProvider, pipelineId: string | number, branch: string, projectName: string) {
-    const jira = _jiraEnv();
-    if (!jira) {
-        warn('Variáveis JIRA não configuradas. Defina JIRA_BASE_URL, JIRA_PERSONAL_TOKEN e XRAY_BASE_URL.');
-        return;
-    }
-
+async function downloadTestArtifacts(m: GitProvider, pipelineId: string | number) {
     const artifacts = await withSpinner('Buscando artifacts...', () => m.listPipelineArtifacts(pipelineId));
-
     if (!Array.isArray(artifacts) || artifacts.length === 0) {
         warn('Nenhum artifact encontrado na pipeline #' + pipelineId);
-        return;
+        return null;
     }
     const art = artifacts.find((a) => /mochawesome|test-result/i.test(a.name)) || artifacts[0];
     info('Artifact: ' + art.name + ' (id=' + art.id + ')');
@@ -202,7 +196,7 @@ async function collectTestResults(m: GitProvider, pipelineId: string | number, b
         });
     } catch (err) {
         printError('Falha ao baixar artifact', err);
-        return;
+        return null;
     }
 
     let jsonData: unknown;
@@ -214,13 +208,13 @@ async function collectTestResults(m: GitProvider, pipelineId: string | number, b
             warn(
                 'mochawesome.json não encontrado no artifact. Entradas: ' + entries.map((e) => e.entryName).join(', '),
             );
-            return;
+            return null;
         }
         const raw = mochaEntry.getData().toString('utf8');
         jsonData = JSON.parse(raw);
     } catch (err) {
         printError('Falha ao ler mochawesome.json', err);
-        return;
+        return null;
     }
 
     const parsed = parseMochawesome(jsonData as MochawesomeData);
@@ -235,15 +229,18 @@ async function collectTestResults(m: GitProvider, pipelineId: string | number, b
     );
     if (parsed.tests.length === 0) {
         warn('Nenhum teste encontrado no report.');
-        return;
+        return null;
     }
+    return parsed;
+}
 
+function parseTestResults(parsed: ParseResult) {
     const cypressDir = Config.cypressProjectPath || (loadState().lastCypressPath as string) || '';
     const defaultMapping = cypressDir ? path.join(path.resolve(cypressDir), '*jira-mapping.json') : '';
     const mappingPath = prompt('Caminho do mapping JSON', { default: defaultMapping });
     if (!mappingPath.trim()) {
         warn('Mapping necessario para criar Test Execution.');
-        return;
+        return null;
     }
 
     const resolvedPath = mappingPath.includes('*') ? _resolveGlob(mappingPath) || mappingPath : mappingPath;
@@ -251,7 +248,7 @@ async function collectTestResults(m: GitProvider, pipelineId: string | number, b
     const { matched, unmatched } = matchResultsToTests(parsed.tests, resolvedPath);
     if (matched.length === 0) {
         warn('Nenhum teste pode ser mapeado. Mapping: ' + resolvedPath);
-        return;
+        return null;
     }
     info('Mapeados: ' + matched.length + '/' + parsed.tests.length + ' testes');
     if (unmatched.length > 0) {
@@ -264,7 +261,24 @@ async function collectTestResults(m: GitProvider, pipelineId: string | number, b
             .replace(/-jira-mapping\.json$/, '')
             .split(/[/\\]/)
             .pop() || 'pipeline';
+    return { matched, unmatched, csvName };
+}
 
+interface MatchedTestItem {
+    key: string;
+    title: string;
+    status: 'passed' | 'failed' | 'skipped';
+    duration: number;
+}
+
+async function createTestExecution(
+    matched: MatchedTestItem[],
+    csvName: string,
+    jira: { base: string; token: string; xray: string },
+    projectName: string,
+    pipelineId: string | number,
+    branch: string,
+) {
     try {
         const te = await withSpinner('Criando Test Execution no Jira...', async () => {
             const jiraRes = new JiraResource(jira.token, jira.base + '/rest/api/2');
@@ -283,6 +297,22 @@ async function collectTestResults(m: GitProvider, pipelineId: string | number, b
         printError('Falha ao criar Test Execution', err);
         pushHistory('resultados', 'erro', 'error');
     }
+}
+
+async function collectTestResults(m: GitProvider, pipelineId: string | number, branch: string, projectName: string) {
+    const jira = _jiraEnv();
+    if (!jira) {
+        warn('Variáveis JIRA não configuradas. Defina JIRA_BASE_URL, JIRA_PERSONAL_TOKEN e XRAY_BASE_URL.');
+        return;
+    }
+
+    const parsed = await downloadTestArtifacts(m, pipelineId);
+    if (!parsed) return;
+
+    const mapping = parseTestResults(parsed);
+    if (!mapping) return;
+
+    await createTestExecution(mapping.matched, mapping.csvName, jira, projectName, pipelineId, branch);
 }
 
 function _resolveGlob(pattern: string): string | null {
@@ -363,7 +393,7 @@ function displayActions() {
     print('   7  Nivelar branches (main -> rel_cand -> dev)');
     print('');
     print('  UTILITARIOS');
-    print('   8  Exportar variaveis CI/CD');
+    print('   8  Exportar variáveis CI/CD');
     print('   9  Trocar de projeto');
     print('');
     const ok = sessionContext.sessionCounters.filter((c) => c.status === 'ok').length;
@@ -396,13 +426,13 @@ function buildActionChoices(): Array<Record<string, unknown>> {
         { name: '6  Fazer merge por ID', value: '6' },
         { name: '7  Nivelar branches', value: '7' },
         { type: 'separator', line: ' UTILITARIOS' },
-        { name: '8  Exportar variaveis CI/CD', value: '8' },
+        { name: '8  Exportar variáveis CI/CD', value: '8' },
         { name: '9  Trocar de projeto', value: '9' },
         { type: 'separator', line: '' },
         { name: '0  Sair', value: '0' },
         { type: 'separator', line: '' },
         { name: '/help  Ajuda', value: '/help' },
-        { name: '/history  Historico', value: '/history' },
+        { name: '/history  Histórico', value: '/history' },
     );
     return choices;
 }
@@ -424,6 +454,311 @@ async function displayRecentPipelines(m: GitProvider) {
     } catch {
         // non-critical
     }
+}
+
+async function handleListSchedules(ctx: SessionContext, m: GitProvider) {
+    if (currentProvider !== 'gitlab') {
+        warn('Opção não disponivel para GitHub.');
+        return;
+    }
+    try {
+        const schedules = await withSpinner('Buscando schedules...', () => m.getSchedules());
+        if (schedules && schedules.length > 0) {
+            info('Schedules encontrados:');
+            schedules.forEach((s: Record<string, unknown>) => {
+                print(
+                    '  ID: ' +
+                        (s.id as string) +
+                        '  ' +
+                        ((s.description as string) || 'sem descrição') +
+                        '  (proxima execução: ' +
+                        ((s.next_run_at as string) || 'N/A') +
+                        ')',
+                );
+            });
+            pushHistory('list-schedules', schedules.length + ' schedules', 'ok');
+        } else {
+            warn('Nenhum schedule encontrado.');
+            pushHistory('list-schedules', 'vazio', 'ok');
+        }
+    } catch (err) {
+        printError('Erro ao listar schedules', err);
+        pushHistory('list-schedules', 'erro', 'error');
+    }
+}
+
+async function handleRunSchedule(ctx: SessionContext, m: GitProvider) {
+    if (currentProvider !== 'gitlab') {
+        warn('Opção não disponivel para GitHub.');
+        return;
+    }
+    const scheduleId = prompt('ID do schedule');
+    try {
+        const result = await withSpinner('Disparando schedule ' + scheduleId + '...', () => m.runSchedule(scheduleId));
+        if (result) {
+            success('Schedule disparado: ' + scheduleId);
+            pushHistory('schedule-run', scheduleId, 'ok');
+        }
+    } catch (err) {
+        printError('Erro ao disparar schedule', err);
+        pushHistory('schedule-run', scheduleId, 'error');
+    }
+}
+
+async function handleCreateMR(ctx: SessionContext, m: GitProvider) {
+    const sourceBranch = prompt('Branch de origem');
+    const targetBranch = prompt('Branch de destino');
+    const mrTitle = prompt('Titulo do ' + (currentProvider === 'github' ? 'PR' : 'MR'));
+    const description = prompt('Descrição');
+    const prLabel = currentProvider === 'github' ? 'PR' : 'MR';
+    try {
+        const result = await withSpinner(
+            'Criando ' + prLabel + ' ' + sourceBranch + ' -> ' + targetBranch + '...',
+            () => m.createMergeRequest(sourceBranch, targetBranch, mrTitle, description),
+        );
+        if (result) {
+            success(prLabel + ' criado: ' + String(result.web_url));
+            pushHistory('pr-create', sourceBranch + '->' + targetBranch, 'ok');
+        }
+    } catch (err) {
+        printError('Falha ao criar ' + prLabel, err);
+        pushHistory('pr-create', sourceBranch + '->' + targetBranch, 'error');
+    }
+}
+
+async function handleListApprovedMRs(ctx: SessionContext, m: GitProvider) {
+    const status = prompt('Status dos ' + (currentProvider === 'github' ? 'PRs' : 'MRs'), { default: 'opened' });
+    const prLabel = currentProvider === 'github' ? 'PR' : 'MR';
+    try {
+        const results = await m.searchMergeRequests('', '', status);
+        const approved: Array<Record<string, unknown>> = [];
+        for (const r of results) {
+            if (
+                typeof m.isApproved === 'function' &&
+                (await m.isApproved((r.iid as string | number) || (r.number as string | number)))
+            ) {
+                approved.push(r);
+            }
+        }
+        if (approved.length > 0) {
+            info(prLabel + 's aprovados:');
+            approved.forEach((r) =>
+                print('  ' + prLabel + ' #' + (String(r.iid) || String(r.number)) + ': ' + String(r.title)),
+            );
+            pushHistory('prs-approved', approved.length + ' ' + prLabel + 's', 'ok');
+        } else {
+            warn('Nenhum ' + prLabel + ' aprovado encontrado.');
+            pushHistory('prs-approved', 'vazio', 'ok');
+        }
+    } catch (err) {
+        printError('Erro ao listar ' + prLabel + 's aprovados', err);
+        pushHistory('prs-approved', status, 'error');
+    }
+}
+
+async function handleMergeMR(ctx: SessionContext, m: GitProvider) {
+    const iid = prompt('ID do ' + (currentProvider === 'github' ? 'PR' : 'MR') + ' para merge');
+    const prLabel = currentProvider === 'github' ? 'PR' : 'MR';
+    try {
+        const result = await withSpinner('Fazendo merge de ' + prLabel + ' #' + iid + '...', () =>
+            m.acceptMergeRequest(iid),
+        );
+        if (result) {
+            success('Merge realizado: ' + String(result.web_url));
+            pushHistory('pr-merge', iid, 'ok');
+        }
+    } catch (err) {
+        printError('Falha ao fazer merge', err);
+        pushHistory('pr-merge', iid, 'error');
+    }
+}
+
+async function handleExportVariables(ctx: SessionContext, m: GitProvider) {
+    if (!confirm('Exportar TODAS as variáveis CI/CD (incluindo secrets)?', false)) {
+        warn('Operação cancelada.');
+        return;
+    }
+    try {
+        const variables = await withSpinner('Buscando variáveis CI/CD...', () => m.getCICDVariables());
+        if (variables) {
+            const envContent = variables
+                .map((v: Record<string, unknown>) => {
+                    const safeValue = ((v.value as string) || '').replace(/\n/g, '\\n');
+                    if (safeValue.includes('=')) {
+                        return (v.key as string) + '="' + safeValue.replace(/"/g, '\\"') + '"';
+                    }
+                    return (v.key as string) + '=' + safeValue;
+                })
+                .join('\n');
+
+            const tmpPath = path.join(os.tmpdir(), 'qa-vars-' + process.pid + '.env');
+            fs.writeFileSync(tmpPath, envContent, { mode: 0o600, encoding: 'utf8' });
+            success('Variáveis exportadas (' + variables.length + '):');
+            print('');
+            print(envContent);
+            print('');
+            warn('As variáveis acima foram exibidas no terminal e NÃO foram salvas em disco.');
+            info('Uma copia temporaria foi salva em ' + tmpPath + ' (modo 600, apenas leitura)');
+            info('Ela sera removida ao encerrar esta sessão. Não compartilhe este arquivo.');
+            fs.unlinkSync(tmpPath);
+            pushHistory('export-vars', variables.length + ' variáveis', 'ok');
+        }
+    } catch (err) {
+        printError('Falha ao buscar variáveis CI/CD', err);
+        pushHistory('export-vars', 'erro', 'error');
+    }
+}
+
+async function handleChangeProject(ctx: SessionContext, m: GitProvider, names: string[]) {
+    displayProjects();
+    const newChoice = prompt('Escolha um projeto', { hint: '1-' + names.length });
+    const newIdx = parseInt(newChoice, 10);
+    if (!isNaN(newIdx) && newIdx >= 1 && newIdx <= names.length) {
+        const newName = names[newIdx - 1];
+        projectId = projects[newName];
+        manager = createManagerForProject(newName, projectId);
+        updateState((s) => {
+            s.lastProject = newName;
+        });
+        success('Projeto alterado para: ' + newName + ' (' + getProviderForProject(newName) + ')');
+        const newM = manager;
+        await displayRecentPipelines(newM);
+        pushHistory('trocar-projeto', newName, 'ok');
+    } else {
+        warn('Opção inválida.');
+    }
+}
+
+async function handleTriggerPipeline(ctx: SessionContext, m: GitProvider, projectName: string) {
+    const savedState = loadState();
+    const pending = savedState.pendingPipeline as
+        | { branch?: string; pipelineId?: string; projectName?: string }
+        | undefined;
+    let currentBranch = '';
+
+    if (pending && pending.projectName === projectName && pending.pipelineId) {
+        if (
+            confirm(
+                'Pipeline pendente encontrada: #' +
+                    pending.pipelineId +
+                    ' (' +
+                    pending.branch +
+                    '). Continuar deste ponto?',
+                true,
+            )
+        ) {
+            currentBranch = pending.branch || '';
+            const id = pending.pipelineId;
+            info('Retomando pipeline #' + id + '...');
+            updateState((s) => {
+                delete s.pendingPipeline;
+            });
+            const pollResult = await pollPipeline(m, id);
+            isBusy = false;
+            const icon = pollResult.status === 'success' ? '\u2713' : '\u2717';
+            info('Pipeline #' + id + ': ' + icon + ' ' + pollResult.status);
+            if (pollResult.status !== 'canceled' && pollResult.status !== 'skipped') {
+                await _postPipeline(m, id, currentBranch, projectName);
+            }
+            await displayRecentPipelines(m);
+            return;
+        }
+        updateState((s) => {
+            delete s.pendingPipeline;
+        });
+    }
+
+    currentBranch = prompt('Branch para disparar pipeline');
+    const branchCheck = await m.getBranch(currentBranch);
+    if (!branchCheck) {
+        warn('Branch "' + currentBranch + '" não encontrada.');
+        pushHistory('pipeline', 'branch-not-found: ' + currentBranch, 'error');
+        return;
+    }
+    const payload: { ref: string; variables: Array<{ key: string; value: string }>; workflow_id?: string } = {
+        ref: currentBranch,
+        variables: [],
+    };
+
+    if (currentProvider === 'github') {
+        const wfId = prompt('Workflow ID (deixe vazio para auto-detectar)');
+        if (wfId.trim()) payload.workflow_id = wfId.trim();
+    }
+
+    const addVars = confirm('Adicionar variáveis?');
+    if (addVars) {
+        const varsInput = prompt('Variáveis (chave=valor separadas por vírgula)');
+        varsInput.split(',').forEach((v) => {
+            const [key, ...rest] = v.trim().split('=');
+            if (key) payload.variables.push({ key, value: rest.join('=') });
+        });
+    }
+
+    title('Preview');
+    print('  Projeto: ' + projectName);
+    print('  Branch: ' + currentBranch);
+    print('  Variáveis: ' + payload.variables.length);
+    if (!confirm('Confirmar disparo de pipeline?')) {
+        warn('Operação cancelada.');
+        return;
+    }
+
+    let pipelineResult: Record<string, unknown> | undefined;
+    try {
+        pipelineResult = await withSpinner('Disparando pipeline em ' + currentBranch + '...', () =>
+            m.triggerPipeline(payload),
+        );
+        if (pipelineResult) {
+            success('Pipeline disparado: ' + String(pipelineResult.web_url));
+            pushHistory('pipeline', currentBranch, 'ok');
+        }
+    } catch (err) {
+        printError('Falha ao disparar pipeline', err);
+        pushHistory('pipeline', currentBranch, 'error');
+        return;
+    }
+
+    if (pipelineResult && confirm('Aguardar conclusao da pipeline?', true)) {
+        const id = (pipelineResult.id as string) || (pipelineResult.run_number as string) || '';
+        if (id) {
+            updateState((s) => {
+                s.pendingPipeline = { branch: currentBranch, pipelineId: id, projectName };
+            });
+            isBusy = true;
+            info('Aguardando pipeline #' + id + '...');
+            const pollResult = await pollPipeline(m, id);
+            isBusy = false;
+            const icon = pollResult.status === 'success' ? '\u2713' : '\u2717';
+            info('Pipeline #' + id + ': ' + icon + ' ' + pollResult.status);
+            updateState((s) => {
+                delete s.pendingPipeline;
+            });
+            if (pollResult.status !== 'canceled' && pollResult.status !== 'skipped') {
+                await _postPipeline(m, id, currentBranch, projectName);
+            }
+        }
+    }
+    await displayRecentPipelines(m);
+}
+
+function handleHelp() {
+    title('Ajuda — Git Tools');
+    helpLine('Opcoes disponiveis no menu numerado acima.');
+    helpLine('/history - Exibe historico de operacoes da sessão.');
+    divider();
+    prompt('Pressione Enter para continuar');
+}
+
+function handleShowHistory() {
+    const history = (loadState().history as Array<Record<string, unknown>>) || [];
+    title('Histórico de operações');
+    const last10 = history.slice(-10);
+    if (last10.length === 0) {
+        warn('Nenhuma operação registrada.');
+    } else {
+        tableView(last10, ['ts', 'op', 'detail', 'status']);
+    }
+    divider();
 }
 
 async function main() {
@@ -457,7 +792,6 @@ async function main() {
 
     manager = createManagerForProject(projectName, projectId);
     const m = manager;
-    let currentBranch = '';
 
     await displayRecentPipelines(m);
 
@@ -496,337 +830,49 @@ async function main() {
 
         const cmd = finalChoice.trim().toLowerCase();
         if (cmd === '/h' || cmd === '/help') {
-            title('Ajuda — Git Tools');
-            helpLine('Opcoes disponiveis no menu numerado acima.');
-            helpLine('/history - Exibe historico de operacoes da sessão.');
-            divider();
-            prompt('Pressione Enter para continuar');
+            handleHelp();
             continue;
         }
         if (cmd === '/history') {
-            const history = (loadState().history as Array<Record<string, unknown>>) || [];
-            title('Historico de operacoes');
-            const last10 = history.slice(-10);
-            if (last10.length === 0) {
-                warn('Nenhuma operação registrada.');
-            } else {
-                tableView(last10, ['ts', 'op', 'detail', 'status']);
-            }
-            divider();
+            handleShowHistory();
             continue;
         }
 
         switch (finalChoice) {
-            case '1': {
-                // Item 4: Check for pending pipeline checkpoint
-                const savedState = loadState();
-                const pending = savedState.pendingPipeline as
-                    | { branch?: string; pipelineId?: string; projectName?: string }
-                    | undefined;
-                if (pending && pending.projectName === projectName && pending.pipelineId) {
-                    if (
-                        confirm(
-                            'Pipeline pendente encontrada: #' +
-                                pending.pipelineId +
-                                ' (' +
-                                pending.branch +
-                                '). Continuar deste ponto?',
-                            true,
-                        )
-                    ) {
-                        currentBranch = pending.branch || '';
-                        const id = pending.pipelineId;
-                        info('Retomando pipeline #' + id + '...');
-                        updateState((s) => {
-                            delete s.pendingPipeline;
-                        });
-                        const pollResult = await pollPipeline(m, id);
-                        isBusy = false;
-                        const icon = pollResult.status === 'success' ? '\u2713' : '\u2717';
-                        info('Pipeline #' + id + ': ' + icon + ' ' + pollResult.status);
-                        // Skip to post-poll flow
-                        if (pollResult.status !== 'canceled' && pollResult.status !== 'skipped') {
-                            await _postPipeline(m, id, currentBranch, projectName);
-                        }
-                        await displayRecentPipelines(m);
-                        break;
-                    }
-                    updateState((s) => {
-                        delete s.pendingPipeline;
-                    });
-                }
-                currentBranch = prompt('Branch para disparar pipeline');
-                // Item 11: check branch exists before triggering
-                const branchCheck = await m.getBranch(currentBranch);
-                if (!branchCheck) {
-                    warn('Branch "' + currentBranch + '" não encontrada.');
-                    pushHistory('pipeline', 'branch-not-found: ' + currentBranch, 'error');
-                    continue;
-                }
-                const payload: { ref: string; variables: Array<{ key: string; value: string }>; workflow_id?: string } =
-                    { ref: currentBranch, variables: [] };
-
-                if (currentProvider === 'github') {
-                    const wfId = prompt('Workflow ID (deixe vazio para auto-detectar)');
-                    if (wfId.trim()) payload.workflow_id = wfId.trim();
-                }
-
-                const addVars = confirm('Adicionar variáveis?');
-                if (addVars) {
-                    const varsInput = prompt('Variáveis (chave=valor separadas por vírgula)');
-                    varsInput.split(',').forEach((v) => {
-                        const [key, ...rest] = v.trim().split('=');
-                        if (key) payload.variables.push({ key, value: rest.join('=') });
-                    });
-                }
-
-                title('Preview');
-                print('  Projeto: ' + projectName);
-                print('  Branch: ' + currentBranch);
-                print('  Variáveis: ' + payload.variables.length);
-                if (!confirm('Confirmar disparo de pipeline?')) {
-                    warn('Operação cancelada.');
-                    continue;
-                }
-
-                let pipelineResult: Record<string, unknown> | undefined;
-                try {
-                    pipelineResult = await withSpinner('Disparando pipeline em ' + currentBranch + '...', () =>
-                        m.triggerPipeline(payload),
-                    );
-                    if (pipelineResult) {
-                        success('Pipeline disparado: ' + String(pipelineResult.web_url));
-                        pushHistory('pipeline', currentBranch, 'ok');
-                    }
-                } catch (err) {
-                    printError('Falha ao disparar pipeline', err);
-                    pushHistory('pipeline', currentBranch, 'error');
-                    break;
-                }
-
-                if (pipelineResult && confirm('Aguardar conclusao da pipeline?', true)) {
-                    const id = (pipelineResult.id as string) || (pipelineResult.run_number as string) || '';
-                    if (id) {
-                        // Item 4: Save checkpoint before polling
-                        updateState((s) => {
-                            s.pendingPipeline = { branch: currentBranch, pipelineId: id, projectName };
-                        });
-                        isBusy = true;
-                        info('Aguardando pipeline #' + id + '...');
-                        const pollResult = await pollPipeline(m, id);
-                        isBusy = false;
-                        const icon = pollResult.status === 'success' ? '\u2713' : '\u2717';
-                        info('Pipeline #' + id + ': ' + icon + ' ' + pollResult.status);
-                        updateState((s) => {
-                            delete s.pendingPipeline;
-                        });
-
-                        if (pollResult.status !== 'canceled' && pollResult.status !== 'skipped') {
-                            await _postPipeline(m, id, currentBranch, projectName);
-                        }
-                    }
-                }
-
-                await displayRecentPipelines(m);
+            case '1':
+                await handleTriggerPipeline(sessionContext, m, projectName);
                 break;
-            }
-
-            case '2': {
-                if (currentProvider !== 'gitlab') {
-                    warn('Opção não disponivel para GitHub.');
-                    continue;
-                }
-                try {
-                    const schedules = await withSpinner('Buscando schedules...', () => m.getSchedules());
-                    if (schedules && schedules.length > 0) {
-                        info('Schedules encontrados:');
-                        schedules.forEach((s: Record<string, unknown>) => {
-                            print(
-                                '  ID: ' +
-                                    (s.id as string) +
-                                    '  ' +
-                                    ((s.description as string) || 'sem descrição') +
-                                    '  (proxima execução: ' +
-                                    ((s.next_run_at as string) || 'N/A') +
-                                    ')',
-                            );
-                        });
-                        pushHistory('list-schedules', schedules.length + ' schedules', 'ok');
-                    } else {
-                        warn('Nenhum schedule encontrado.');
-                        pushHistory('list-schedules', 'vazio', 'ok');
-                    }
-                } catch (err) {
-                    printError('Erro ao listar schedules', err);
-                    pushHistory('list-schedules', 'erro', 'error');
-                }
+            case '2':
+                await handleListSchedules(sessionContext, m);
                 break;
-            }
-
-            case '3': {
-                if (currentProvider !== 'gitlab') {
-                    warn('Opção não disponivel para GitHub.');
-                    continue;
-                }
-                const scheduleId = prompt('ID do schedule');
-                try {
-                    const result = await withSpinner('Disparando schedule ' + scheduleId + '...', () =>
-                        m.runSchedule(scheduleId),
-                    );
-                    if (result) {
-                        success('Schedule disparado: ' + scheduleId);
-                        pushHistory('schedule-run', scheduleId, 'ok');
-                    }
-                } catch (err) {
-                    printError('Erro ao disparar schedule', err);
-                    pushHistory('schedule-run', scheduleId, 'error');
-                }
+            case '3':
+                await handleRunSchedule(sessionContext, m);
                 break;
-            }
-
-            case '4': {
-                const sourceBranch = prompt('Branch de origem');
-                const targetBranch = prompt('Branch de destino');
-                const mrTitle = prompt('Titulo do ' + (currentProvider === 'github' ? 'PR' : 'MR'));
-                const description = prompt('Descrição');
-                const prLabel = currentProvider === 'github' ? 'PR' : 'MR';
-                try {
-                    const result = await withSpinner(
-                        'Criando ' + prLabel + ' ' + sourceBranch + ' -> ' + targetBranch + '...',
-                        () => m.createMergeRequest(sourceBranch, targetBranch, mrTitle, description),
-                    );
-                    if (result) {
-                        success(prLabel + ' criado: ' + String(result.web_url));
-                        pushHistory('pr-create', sourceBranch + '->' + targetBranch, 'ok');
-                    }
-                } catch (err) {
-                    printError('Falha ao criar ' + prLabel, err);
-                    pushHistory('pr-create', sourceBranch + '->' + targetBranch, 'error');
-                }
+            case '4':
+                await handleCreateMR(sessionContext, m);
                 break;
-            }
-
-            case '5': {
-                const status = prompt('Status dos ' + (currentProvider === 'github' ? 'PRs' : 'MRs'), {
-                    default: 'opened',
-                });
-                const prLabel = currentProvider === 'github' ? 'PR' : 'MR';
-                try {
-                    const results = await m.searchMergeRequests('', '', status);
-                    const approved: Array<Record<string, unknown>> = [];
-                    for (const r of results) {
-                        if (
-                            typeof m.isApproved === 'function' &&
-                            (await m.isApproved((r.iid as string | number) || (r.number as string | number)))
-                        ) {
-                            approved.push(r);
-                        }
-                    }
-                    if (approved.length > 0) {
-                        info(prLabel + 's aprovados:');
-                        approved.forEach((r) =>
-                            print('  ' + prLabel + ' #' + (String(r.iid) || String(r.number)) + ': ' + String(r.title)),
-                        );
-                        pushHistory('prs-approved', approved.length + ' ' + prLabel + 's', 'ok');
-                    } else {
-                        warn('Nenhum ' + prLabel + ' aprovado encontrado.');
-                        pushHistory('prs-approved', 'vazio', 'ok');
-                    }
-                } catch (err) {
-                    printError('Erro ao listar ' + prLabel + 's aprovados', err);
-                    pushHistory('prs-approved', status, 'error');
-                }
+            case '5':
+                await handleListApprovedMRs(sessionContext, m);
                 break;
-            }
-
-            case '6': {
-                const iid = prompt('ID do ' + (currentProvider === 'github' ? 'PR' : 'MR') + ' para merge');
-                const prLabel = currentProvider === 'github' ? 'PR' : 'MR';
-                try {
-                    const result = await withSpinner('Fazendo merge de ' + prLabel + ' #' + iid + '...', () =>
-                        m.acceptMergeRequest(iid),
-                    );
-                    if (result) {
-                        success('Merge realizado: ' + String(result.web_url));
-                        pushHistory('pr-merge', iid, 'ok');
-                    }
-                } catch (err) {
-                    printError('Falha ao fazer merge', err);
-                    pushHistory('pr-merge', iid, 'error');
-                }
+            case '6':
+                await handleMergeMR(sessionContext, m);
                 break;
-            }
-
             case '7':
                 await nivelarBranchesWrapper(m);
                 break;
-
-            case '8': {
-                if (!confirm('Exportar TODAS as variaveis CI/CD (incluindo secrets)?', false)) {
-                    warn('Operação cancelada.');
-                    break;
-                }
-                try {
-                    const variables = await withSpinner('Buscando variaveis CI/CD...', () => m.getCICDVariables());
-                    if (variables) {
-                        const envContent = variables
-                            .map((v: Record<string, unknown>) => {
-                                const safeValue = ((v.value as string) || '').replace(/\n/g, '\\n');
-                                if (safeValue.includes('=')) {
-                                    return (v.key as string) + '="' + safeValue.replace(/"/g, '\\"') + '"';
-                                }
-                                return (v.key as string) + '=' + safeValue;
-                            })
-                            .join('\n');
-
-                        const tmpPath = path.join(os.tmpdir(), 'qa-vars-' + process.pid + '.env');
-                        fs.writeFileSync(tmpPath, envContent, { mode: 0o600, encoding: 'utf8' });
-                        success('Variáveis exportadas (' + variables.length + '):');
-                        print('');
-                        print(envContent);
-                        print('');
-                        warn('As variaveis acima foram exibidas no terminal e NAO foram salvas em disco.');
-                        info('Uma copia temporaria foi salva em ' + tmpPath + ' (modo 600, apenas leitura)');
-                        info('Ela sera removida ao encerrar esta sessão. Não compartilhe este arquivo.');
-                        fs.unlinkSync(tmpPath);
-                        pushHistory('export-vars', variables.length + ' variaveis', 'ok');
-                    }
-                } catch (err) {
-                    printError('Falha ao buscar variaveis CI/CD', err);
-                    pushHistory('export-vars', 'erro', 'error');
-                }
+            case '8':
+                await handleExportVariables(sessionContext, m);
                 break;
-            }
-
-            case '9': {
-                displayProjects();
-                const newChoice = prompt('Escolha um projeto', { hint: '1-' + names.length });
-                const newIdx = parseInt(newChoice, 10);
-                if (!isNaN(newIdx) && newIdx >= 1 && newIdx <= names.length) {
-                    const newName = names[newIdx - 1];
-                    projectId = projects[newName];
-                    manager = createManagerForProject(newName, projectId);
-                    updateState((s) => {
-                        s.lastProject = newName;
-                    });
-                    success('Projeto alterado para: ' + newName + ' (' + getProviderForProject(newName) + ')');
-                    const newM = manager;
-                    await displayRecentPipelines(newM);
-                    pushHistory('trocar-projeto', newName, 'ok');
-                } else {
-                    warn('Opção invalida.');
-                }
+            case '9':
+                await handleChangeProject(sessionContext, m, names);
                 break;
-            }
-
             case '0':
                 title('Até logo!');
                 printSessionSummary();
                 if (sessionContext.sessionCounters.some((c) => c.status === 'error')) process.exitCode = 1;
                 return;
-
             default:
-                warn('Opção invalida.');
+                warn('Opção inválida.');
         }
     }
 }
@@ -842,4 +888,31 @@ main().catch((err) => {
     process.exitCode = 1;
 });
 
-export = { nivelarBranchesWrapper };
+export = {
+    nivelarBranchesWrapper,
+    isComplete,
+    providerLabel,
+    buildActionChoices,
+    getProviderForProject,
+    _jiraEnv,
+    _resolveGlob,
+    pushHistory,
+    pollPipeline,
+    handleListSchedules,
+    handleRunSchedule,
+    handleCreateMR,
+    handleListApprovedMRs,
+    handleMergeMR,
+    handleExportVariables,
+    handleChangeProject,
+    handleTriggerPipeline,
+    handleHelp,
+    handleShowHistory,
+    parseTestResults,
+    downloadTestArtifacts,
+    createTestExecution,
+    collectTestResults,
+    printSessionSummary,
+    displayProjects,
+    displayRecentPipelines,
+};

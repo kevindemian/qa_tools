@@ -129,3 +129,52 @@ Issues registradas durante refatorações, postergadas por escopo.
 | 7 | Cobertura ≥90% lines + ≥85% branches (94.89% / 85.14%) | P2 | Alto | ✅ |
 
 ---
+
+## 🔴 Plano de Ataque — Limpeza Geral
+
+Estratégia: paralelizar por camada (shared → jira_management → git_triggers), cada lote independente.
+
+### Batch A — shared/ foundation (P0)
+
+| # | Item | Local | Ação |
+|---|------|-------|------|
+| A1 | **Config sprawl: cli_base.ts** | `shared/cli_base.ts:19-22` | Mover reads de `process.env` para `Config` class |
+| A2 | **PROJECT_ID_* env vars ausentes** | `git_triggers/main.ts:149-150`, `shared/config.ts` | Adicionar getters em `Config` para `PROJECT_ID_*` |
+| A3 | **types.ts importa Logger concreto** | `shared/types.ts:1` | `import type { Logger }` → interface pura ou reexportar tipo |
+| A4 | **`handleError()` duplicado** | `github_manager.ts:5-11`, `gitlab_manager.ts:5-11` | Extrair para `shared/git-provider-error.ts` |
+| A5 | **Strings duplicadas + PT-BR** | shared/ todos arquivos | Constantes nomeadas + acentos |
+
+### Batch B — jira_management/ (P0)
+
+| # | Item | Local | Ação |
+|---|------|-------|------|
+| B1 | **R5: GET sem catch** | `jira_resource.ts:98-101,60-84,132-139,218-232` | `getJiraResource()` deve retornar null/[] em erro |
+| B2 | **R5: POST engole erro** | `jira_resource.ts:285-300,392-406` | `addTasksToSprint()`, `transitionIssue()` devem re-throw |
+| B3 | **DIP: case05/case10 instanciam PackageVersionManager** | `commands/case05.ts:9`, `case10.ts:7` | Receber via `CommandContext` |
+| B4 | **DIP: create_tests instancia JiraLinkManager** | `create_tests.ts:599-602` | Receber via parâmetro |
+| B5 | **Export redundante** | 16 `commands/case*.ts` | Remover `export { handler }` (só `module.exports` necessita) |
+| B6 | **cypress_test.ts export default** | `cypress_test.ts:69` | Mudar para `export =` |
+| B7 | **Functions >50L: csv_resource.ts** | `csv_resource.ts:85` | Quebrar `readBulkCsv()` (128L) |
+| B8 | **Functions >50L: create_tests.ts** | `create_tests.ts:228,407,482` | Quebrar `_createTestsFromTestCases()` (177L), `createTestsFromCsv()` (74L), `createTestsFromJson()` (116L) |
+| B9 | **Strings duplicadas + PT-BR** | jira_management/ | Constantes + acentos |
+
+### Batch C — git_triggers/ (P0)
+
+| # | Item | Local | Ação |
+|---|------|-------|------|
+| C1 | **main() 404L** | `git_triggers/main.ts:429` | Extrair helpers nomeados |
+| C2 | **collectTestResults() 106L** | `git_triggers/main.ts:181` | Extrair helpers |
+| C3 | **Strings duplicadas + PT-BR** | git_triggers/ | Constantes + acentos |
+
+### Batch D — Testes (CONCLUÍDO)
+
+| # | Item | Local | Tests | Status |
+|---|------|-------|-------|--------|
+| D1 | `mapping-file-generator.test.ts` | `jira_management/` | 11 | ✅ |
+| D2 | `test-case-validator.test.ts` | `jira_management/` | 9 | ✅ |
+| D3 | `test-execution-creator.test.ts` | `jira_management/` | 15 | ✅ |
+| D4 | `cypress_test.test.ts` | `jira_management/` | 6 | ✅ |
+| D5 | `git_triggers/main.test.ts` | `git_triggers/` | 44 | ✅ |
+| D6 | `jira_management/main.test.ts` | `jira_management/` | 37 | ✅ |
+
+---

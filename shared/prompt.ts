@@ -139,7 +139,7 @@ export function smartPrompt(label: string, options: PromptOptions = {}, helpCall
         }
         return value;
     }
-    warn('Numero maximo de tentativas excedido.');
+    warn('Número máximo de tentativas excedido.');
     return '';
 }
 
@@ -241,12 +241,12 @@ const KNOWN_ERRORS: KnownError[] = [
     {
         test: /issue type.*not found|not a valid issue type/i,
         msg: 'Tipo de issue não encontrado',
-        hint: 'Verifique se o tipo esta habilitado nas configuracoes do projeto Jira.',
+        hint: 'Verifique se o tipo está habilitado nas configurações do projeto Jira.',
     },
     {
         test: /project.*not found/i,
         msg: 'Projeto não encontrado',
-        hint: 'Verifique se o nome do projeto esta correto.',
+        hint: 'Verifique se o nome do projeto está correto.',
     },
     {
         test: /field.*not found|unknown field/i,
@@ -261,14 +261,14 @@ const KNOWN_ERRORS: KnownError[] = [
     {
         test: /unauthorized|401/i,
         msg: 'Token inválido ou expirado',
-        hint: 'Verifique seu token de autenticacao no arquivo .env.',
+        hint: 'Verifique seu token de autenticação no arquivo .env.',
     },
     {
         test: /econnreset|econnrefused|enotfound|timeout|econnaborted/i,
         msg: 'Erro de conexão',
-        hint: 'Verifique se a URL do Jira esta correta e acessivel.',
+        hint: 'Verifique se a URL do Jira está correta e acessível.',
     },
-    { test: /version.*not found/i, msg: 'Versão não encontrada', hint: 'Verifique se o nome da versão esta correto.' },
+    { test: /version.*not found/i, msg: 'Versão não encontrada', hint: 'Verifique se o nome da versão está correto.' },
     { test: /already exists/i, msg: 'Item ja existe', hint: 'Escolha um nome diferente.' },
 ];
 
@@ -393,7 +393,7 @@ export async function onError(
             divider();
             continue;
         }
-        warn('Opção invalida. Escolha ' + opts.join(', '));
+        warn('Opção inválida. Escolha ' + opts.join(', '));
     }
 }
 
