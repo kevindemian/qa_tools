@@ -6,6 +6,8 @@ import * as state from '../shared/state';
 import * as nivelar from './nivelar';
 import * as cliBase from '../shared/cli_base';
 
+const _realReadFileSync = fs.readFileSync.bind(fs);
+
 jest.mock('../shared/config', () => {
     const cfg: Record<string, unknown> = {
         jiraBaseUrl: 'https://jira.example.com',
@@ -144,14 +146,13 @@ const mockProvider: Record<string, jest.Mock<any>> = {
     downloadArtifact: jest.fn(),
 };
 
-const _realReadFileSync = fs.readFileSync.bind(fs);
-
 let mainModule: MainModule;
 
 beforeAll(() => {
     jest.spyOn(fs, 'readFileSync').mockImplementation(((p: string) => {
         if (p.includes('providers.json')) return '{"proj-a":{"provider":"github"},"proj-b":{}}';
         if (p.includes('projects.json')) return '{"proj-a":"111","proj-b":"222"}';
+
         return _realReadFileSync(p, 'utf8');
     }) as unknown);
     jest.spyOn(fs, 'writeFileSync').mockImplementation(() => {});
