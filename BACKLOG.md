@@ -125,5 +125,7 @@ Issues registradas durante refatorações, postergadas por escopo.
 | 3 | Cobertura de testes em `git_triggers/` (atual 90.64%) | P2 | Alto | ✅ |
 | 4 | Remover `@ts-nocheck` de todos os .test.ts (17 arquivos) e tipá-los corretamente | P3 | Médio | ✅ |
 | 5 | Migrar `e2e/` .test.js → .ts (6 arquivos) | P3 | Médio | ✅ |
+| 6 | Migrar `e2e/real-import.js` → .ts | P3 | Baixo | ✅ |
+| 7 | Cobertura ≥90% lines + ≥85% branches (94.89% / 85.14%) | P2 | Alto | ✅ |
 
 ---
