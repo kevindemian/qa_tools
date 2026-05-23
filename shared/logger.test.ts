@@ -1,24 +1,13 @@
-// @ts-nocheck — jest.isolateModules with dynamic require inside callback
-const fs = require('fs');
-const path = require('path');
-const os = require('os');
+import fs from 'fs';
+import path from 'path';
+import os from 'os';
+import { Logger, rootLogger, maskDeep } from './logger';
 
 function normalizePath(p: string): string {
     return p.replace(/\\/g, '/');
 }
 
 describe('Logger', () => {
-    let Logger: typeof import('./logger').Logger;
-    let rootLogger: import('./logger').Logger;
-    let maskDeep: typeof import('./logger').maskDeep;
-
-    beforeAll(() => {
-        const mod: typeof import('./logger') = require('./logger');
-        Logger = mod.Logger;
-        rootLogger = mod.rootLogger;
-        maskDeep = mod.maskDeep;
-    });
-
     describe('rootLogger', () => {
         it('is a Logger instance', () => {
             expect(rootLogger).toBeInstanceOf(Logger);
@@ -70,14 +59,15 @@ describe('Logger', () => {
             process.env.LOG_DIR = testDir;
 
             const logger = new Logger({ test: 'write' });
-            logger[level](msg, data);
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any -- dynamic method dispatch by level string
+            (logger as any)[level](msg, data);
 
             const date = new Date().toISOString().split('T')[0];
             const logFile = path.join(testDir, `qa-tools-${date}.log`);
 
             if (!fs.existsSync(logFile)) {
                 const fp = logger.filePath;
-                return { fileFound: false, filePath: fp, logFile };
+                return { fileFound: false, filePath: fp ?? undefined, logFile };
             }
 
             const content = fs.readFileSync(logFile, 'utf8');
@@ -134,15 +124,15 @@ describe('Logger', () => {
                 process.env.LOG_DIR = testDir;
                 process.env.LOG_MAX_SIZE = '100';
 
-                const { Logger: LoggerSmall } = require('./logger');
+                const { Logger: LoggerSmall } = require('./logger') as { Logger: typeof import('./logger').Logger };
                 const logger = new LoggerSmall({ test: 'rotate' });
                 logger.info('x'.repeat(120));
                 const firstFile = logger.filePath;
 
                 logger.info('more data after rotation');
-                const dir = path.dirname(firstFile);
-                const ext = path.extname(firstFile);
-                const base = path.basename(firstFile, ext);
+                const dir = path.dirname(firstFile!);
+                const ext = path.extname(firstFile!);
+                const base = path.basename(firstFile!, ext);
                 const rotated = path.join(dir, `${base}.1${ext}`);
 
                 expect(fs.existsSync(rotated)).toBe(true);
@@ -182,7 +172,7 @@ describe('Logger', () => {
     describe('maskDeep', () => {
         it('masks values for keys matching token/secret/key', () => {
             const input = { token: 'abcdefghij', name: 'public', secret: 'my-secret-value!' };
-            const result = maskDeep(input);
+            const result = maskDeep(input) as { token: string; name: string; secret: string };
             expect(result.token).toBe('abcd****');
             expect(result.name).toBe('public');
             expect(result.secret).toBe('my-s****');
@@ -190,7 +180,7 @@ describe('Logger', () => {
 
         it('does not mutate the original object', () => {
             const input = { token: 'abcdefghij' };
-            const result = maskDeep(input);
+            const result = maskDeep(input) as { token: string };
             expect(input.token).toBe('abcdefghij');
             expect(result.token).toBe('abcd****');
         });

@@ -1,28 +1,37 @@
-// @ts-nocheck
-const mockRootLogger = { info: jest.fn(), error: jest.fn(), warn: jest.fn() };
+const mockRootLogger: {
+    info: jest.Mock;
+    error: jest.Mock;
+    warn: jest.Mock;
+    debug?: jest.Mock;
+    writeFileOnly?: jest.Mock;
+    filePath?: string;
+} = { info: jest.fn(), error: jest.fn(), warn: jest.fn() };
 
 jest.mock('./logger', () => ({
     rootLogger: mockRootLogger,
-    Logger: function () {
-        this.info = jest.fn();
-        this.error = jest.fn();
-        this.warn = jest.fn();
-        this.debug = jest.fn();
+    Logger: class {
+        info = jest.fn();
+        error = jest.fn();
+        warn = jest.fn();
+        debug = jest.fn();
     },
 }));
 
-const MOCK_PROMPT = { error: jest.fn(), warn: jest.fn(), info: jest.fn() };
+const MOCK_PROMPT: {
+    error: jest.Mock;
+    warn: jest.Mock;
+    info: jest.Mock;
+    print?: jest.Mock;
+    success?: jest.Mock;
+    divider?: jest.Mock;
+} = { error: jest.fn(), warn: jest.fn(), info: jest.fn() };
 jest.mock('./prompt', () => MOCK_PROMPT);
+
+import * as cliBase from './cli_base';
 
 const ENV_BACKUP = { ...process.env };
 
 describe('CLI Base', () => {
-    let cliBase: typeof import('./cli_base');
-
-    beforeAll(() => {
-        cliBase = require('./cli_base');
-    });
-
     beforeEach(() => {
         jest.clearAllMocks();
     });
@@ -78,7 +87,7 @@ describe('CLI Base', () => {
 
     describe('setupSigint', () => {
         it('registers SIGINT handler', () => {
-            const onSpy = jest.spyOn(process, 'on').mockImplementation(() => {});
+            const onSpy = jest.spyOn(process, 'on').mockImplementation(() => process);
             cliBase.setupSigint(null, () => {});
             expect(onSpy).toHaveBeenCalledWith('SIGINT', expect.any(Function));
             onSpy.mockRestore();
@@ -86,10 +95,11 @@ describe('CLI Base', () => {
 
         it('calls onExit and sets exitCode on SIGINT', () => {
             jest.useFakeTimers();
-            const exitSpy = jest.spyOn(process, 'exit').mockImplementation(() => {});
-            const removeListenerSpy = jest.spyOn(process, 'removeListener').mockImplementation(() => {});
+            const exitSpy = jest.spyOn(process, 'exit').mockImplementation(() => undefined as never);
+            const removeListenerSpy = jest.spyOn(process, 'removeListener').mockImplementation(() => process);
             const onSpy = jest.spyOn(process, 'on').mockImplementation((evt, handler) => {
                 if (evt === 'SIGINT') handler();
+                return process;
             });
             const onExit = jest.fn();
             cliBase.setupSigint(null, onExit);
@@ -107,6 +117,7 @@ describe('CLI Base', () => {
         it('does not exit if isBusy returns true', () => {
             const onSpy = jest.spyOn(process, 'on').mockImplementation((evt, handler) => {
                 if (evt === 'SIGINT') handler();
+                return process;
             });
             const onExit = jest.fn();
             cliBase.setupSigint(() => true, onExit);
@@ -139,10 +150,11 @@ describe('CLI Base', () => {
     describe('setupSigint exit code', () => {
         it('sets exitCode to 0 on clean exit', () => {
             jest.useFakeTimers();
-            const exitSpy = jest.spyOn(process, 'exit').mockImplementation(() => {});
-            const removeListenerSpy = jest.spyOn(process, 'removeListener').mockImplementation(() => {});
+            const exitSpy = jest.spyOn(process, 'exit').mockImplementation(() => undefined as never);
+            const removeListenerSpy = jest.spyOn(process, 'removeListener').mockImplementation(() => process);
             const onSpy = jest.spyOn(process, 'on').mockImplementation((evt, handler) => {
                 if (evt === 'SIGINT') handler();
+                return process;
             });
             cliBase.setupSigint(null, jest.fn());
             expect(process.exitCode).toBe(0);
@@ -155,10 +167,11 @@ describe('CLI Base', () => {
 
         it('handles null onExit gracefully', () => {
             jest.useFakeTimers();
-            const exitSpy = jest.spyOn(process, 'exit').mockImplementation(() => {});
-            const removeListenerSpy = jest.spyOn(process, 'removeListener').mockImplementation(() => {});
+            const exitSpy = jest.spyOn(process, 'exit').mockImplementation(() => undefined as never);
+            const removeListenerSpy = jest.spyOn(process, 'removeListener').mockImplementation(() => process);
             const onSpy = jest.spyOn(process, 'on').mockImplementation((evt, handler) => {
                 if (evt === 'SIGINT') handler();
+                return process;
             });
             cliBase.setupSigint(null, null);
             expect(MOCK_PROMPT.info).toHaveBeenCalledWith('Até logo!');

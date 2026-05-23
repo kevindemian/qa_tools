@@ -1,12 +1,20 @@
-// @ts-nocheck
-let errorHandler;
-const mockInstance = Object.assign(
-    jest.fn(() => Promise.reject(new Error('still fails'))),
+let errorHandler: ((err: Error) => Promise<never>) | undefined;
+const mockInstance: jest.Mock<Promise<never>, unknown[]> & {
+    interceptors: {
+        request: { use: jest.Mock };
+        response: { use: jest.Mock };
+    };
+    get: jest.Mock;
+    post: jest.Mock;
+    put: jest.Mock;
+} = Object.assign(
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- mock needs flexible args for retry tests
+    jest.fn<any, any[]>(() => Promise.reject(new Error('still fails'))),
     {
         interceptors: {
             request: { use: jest.fn() },
             response: {
-                use: jest.fn((success, error) => {
+                use: jest.fn((success: unknown, error: (err: Error) => Promise<never>) => {
                     errorHandler = error;
                 }),
             },
@@ -15,26 +23,33 @@ const mockInstance = Object.assign(
         post: jest.fn(),
         put: jest.fn(),
     },
-);
+) as jest.Mock<Promise<never>, unknown[]> & {
+    interceptors: {
+        request: { use: jest.Mock };
+        response: { use: jest.Mock };
+    };
+    get: jest.Mock;
+    post: jest.Mock;
+    put: jest.Mock;
+};
+
+jest.mock('axios', () => ({ create: jest.fn(() => mockInstance) }));
+import * as httpClientModule from './http-client';
+import axios from 'axios';
 
 describe('HTTP Client', () => {
     let httpClient: typeof import('./http-client');
-    let axios: typeof import('axios');
 
     beforeAll(() => {
-        jest.isolateModules(() => {
-            jest.doMock('axios', () => ({ create: jest.fn(() => mockInstance) }));
-            httpClient = require('./http-client');
-            axios = require('axios');
-        });
+        httpClient = httpClientModule;
     });
 
     beforeEach(() => {
         jest.clearAllMocks();
-        jest.spyOn(global, 'setTimeout').mockImplementation((cb) => {
-            process.nextTick(cb);
-            return 123;
-        });
+        jest.spyOn(global, 'setTimeout').mockImplementation(((cb: (...args: unknown[]) => void) => {
+            process.nextTick(() => cb());
+            return {} as NodeJS.Timeout;
+        }) as typeof global.setTimeout);
     });
 
     afterEach(() => {
@@ -71,8 +86,17 @@ describe('HTTP Client', () => {
     });
 
     describe('retry interceptor', () => {
-        const makeError = (method, status, attempts) => ({
+        interface RetryError {
+            message: string;
+            name: string;
+            config: { method: string; __retryAttempts: number };
+            response: { status: number };
+            code: string | undefined;
+        }
+
+        const makeError = (method: string, status: number, attempts: number): RetryError => ({
             message: 'Request failed',
+            name: 'Error',
             config: { method, __retryAttempts: attempts },
             response: { status },
             code: undefined,
@@ -81,13 +105,14 @@ describe('HTTP Client', () => {
         it('retries GET up to 5 times', async () => {
             httpClient.createHttpClient({ baseUrl: 'https://api.test.com' });
             const err = makeError('get', 500, 0);
-            mockInstance.mockImplementation((cfg) => {
-                const err = makeError('get', 500, cfg.__retryAttempts);
-                err.config = cfg;
-                return errorHandler(err);
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any -- mock cfg can be any shape from retry
+            mockInstance.mockImplementation((cfg: any) => {
+                const newErr = makeError('get', 500, cfg.__retryAttempts);
+                newErr.config = cfg;
+                return errorHandler!(newErr);
             });
             try {
-                await errorHandler(err);
+                await errorHandler!(err);
             } catch (e) {}
             expect(mockInstance).toHaveBeenCalledTimes(5);
         });
@@ -95,13 +120,14 @@ describe('HTTP Client', () => {
         it('retries PUT up to 5 times', async () => {
             httpClient.createHttpClient({ baseUrl: 'https://api.test.com' });
             const err = makeError('put', 500, 0);
-            mockInstance.mockImplementation((cfg) => {
-                const err = makeError('put', 500, cfg.__retryAttempts);
-                err.config = cfg;
-                return errorHandler(err);
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any -- mock cfg can be any shape from retry
+            mockInstance.mockImplementation((cfg: any) => {
+                const newErr = makeError('put', 500, cfg.__retryAttempts);
+                newErr.config = cfg;
+                return errorHandler!(newErr);
             });
             try {
-                await errorHandler(err);
+                await errorHandler!(err);
             } catch (e) {}
             expect(mockInstance).toHaveBeenCalledTimes(5);
         });
@@ -110,21 +136,22 @@ describe('HTTP Client', () => {
             httpClient.createHttpClient({ baseUrl: 'https://api.test.com' });
             const err = makeError('post', 500, 0);
             try {
-                await errorHandler(err);
+                await errorHandler!(err);
             } catch (e) {}
             expect(mockInstance).not.toHaveBeenCalled();
         });
 
         it('does not retry non-retryable errors (4xx)', async () => {
             httpClient.createHttpClient({ baseUrl: 'https://api.test.com' });
-            const err = {
+            const err: RetryError = {
                 message: 'Bad request',
+                name: 'Error',
                 config: { method: 'get', __retryAttempts: 2 },
                 response: { status: 400 },
                 code: undefined,
             };
             try {
-                await errorHandler(err);
+                await errorHandler!(err);
             } catch (e) {}
             expect(mockInstance).not.toHaveBeenCalled();
         });

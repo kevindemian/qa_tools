@@ -1,4 +1,3 @@
-// @ts-nocheck
 // 1. Define mock factory values FIRST (before jest.mock)
 const mockPrompt = {
     success: jest.fn(),
@@ -46,16 +45,20 @@ jest.mock('axios', () => {
     return { create: jest.fn(() => mockInstance) };
 });
 
-// 3. THEN require the source modules (they'll get the mocked dependencies)
-const JiraResource = require('./jira_resource');
-const JiraLinkManager = require('./jira_link_manager');
+// 3. THEN import the source modules (they'll get the mocked dependencies)
+import JiraResource from './jira_resource';
+import JiraLinkManager from './jira_link_manager';
+import createTestsModule from './create_tests';
 const {
     createTestExecution,
     createTestExecutionWithLinks,
     generateMappingFiles,
     validateCsvTests,
     createTestsFromJson,
-} = require('./create_tests');
+} = createTestsModule;
+import * as PROMPT from '../shared/prompt';
+import * as STATE from '../shared/state';
+import fs from 'fs';
 
 const MOCK_ISSUE_TYPES = [
     { id: '11200', name: 'Epic' },
@@ -80,7 +83,8 @@ const MOCK_FIELDS = [
 const PROJECT = 'TESTPROJ';
 
 describe('createTestExecution', () => {
-    let jiraResource;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- methods replaced with jest.fn()
+    let jiraResource: any;
 
     beforeEach(() => {
         jiraResource = new JiraResource('fake-token', 'http://jira/rest/api/2');
@@ -89,7 +93,7 @@ describe('createTestExecution', () => {
     });
 
     it('creates a Test Execution with given keys', async () => {
-        jiraResource.getJiraResource.mockImplementation((url) => {
+        jiraResource.getJiraResource.mockImplementation((url: string) => {
             if (url === 'issuetype') return Promise.resolve(MOCK_ISSUE_TYPES);
             if (url === 'field') return Promise.resolve(MOCK_FIELDS);
             return Promise.reject(new Error('unexpected url: ' + url));
@@ -112,7 +116,7 @@ describe('createTestExecution', () => {
     });
 
     it('uses default name when csvName is empty', async () => {
-        jiraResource.getJiraResource.mockImplementation((url) => {
+        jiraResource.getJiraResource.mockImplementation((url: string) => {
             if (url === 'issuetype') return Promise.resolve(MOCK_ISSUE_TYPES);
             if (url === 'field') return Promise.resolve(MOCK_FIELDS);
             return Promise.reject(new Error('unexpected url: ' + url));
@@ -138,19 +142,19 @@ describe('createTestExecution', () => {
             { id: '11800', name: 'Test' },
         ]);
 
-        await expect(createTestExecution(jiraResource, PROJECT, ['TEST-1'])).rejects.toThrow(
+        await expect(createTestExecution(jiraResource, PROJECT, ['TEST-1'], '')).rejects.toThrow(
             'Issue type "Test Execution" não encontrado',
         );
     });
 
     it('throws when custom field not found', async () => {
-        jiraResource.getJiraResource.mockImplementation((url) => {
+        jiraResource.getJiraResource.mockImplementation((url: string) => {
             if (url === 'issuetype') return Promise.resolve(MOCK_ISSUE_TYPES);
             if (url === 'field') return Promise.resolve([]);
             return Promise.reject(new Error('unexpected url: ' + url));
         });
 
-        await expect(createTestExecution(jiraResource, PROJECT, ['TEST-1'])).rejects.toThrow(
+        await expect(createTestExecution(jiraResource, PROJECT, ['TEST-1'], '')).rejects.toThrow(
             'Campo "Tests association with a Test Execution" não encontrado',
         );
     });
@@ -158,17 +162,17 @@ describe('createTestExecution', () => {
     it('throws when issuetype API fails', async () => {
         jiraResource.getJiraResource.mockRejectedValue(new Error('API error'));
 
-        await expect(createTestExecution(jiraResource, PROJECT, ['TEST-1'])).rejects.toThrow();
+        await expect(createTestExecution(jiraResource, PROJECT, ['TEST-1'], '')).rejects.toThrow();
     });
 
     it('throws when field API returns non-array', async () => {
-        jiraResource.getJiraResource.mockImplementation((url) => {
+        jiraResource.getJiraResource.mockImplementation((url: string) => {
             if (url === 'issuetype') return Promise.resolve(MOCK_ISSUE_TYPES);
             if (url === 'field') return Promise.resolve(null);
             return Promise.reject(new Error('unexpected url: ' + url));
         });
 
-        await expect(createTestExecution(jiraResource, PROJECT, ['TEST-1'])).rejects.toThrow(
+        await expect(createTestExecution(jiraResource, PROJECT, ['TEST-1'], '')).rejects.toThrow(
             'Falha ao obter campos customizados',
         );
     });
@@ -176,13 +180,13 @@ describe('createTestExecution', () => {
     it('throws when issuetype API returns non-array', async () => {
         jiraResource.getJiraResource.mockResolvedValue(null);
 
-        await expect(createTestExecution(jiraResource, PROJECT, ['TEST-1'])).rejects.toThrow(
+        await expect(createTestExecution(jiraResource, PROJECT, ['TEST-1'], '')).rejects.toThrow(
             'Falha ao obter tipos de issue',
         );
     });
 
     it('accepts titleOverride as 5th param', async () => {
-        jiraResource.getJiraResource.mockImplementation((url) => {
+        jiraResource.getJiraResource.mockImplementation((url: string) => {
             if (url === 'issuetype') return Promise.resolve(MOCK_ISSUE_TYPES);
             if (url === 'field') return Promise.resolve(MOCK_FIELDS);
             return Promise.reject(new Error('unexpected url: ' + url));
@@ -200,12 +204,12 @@ describe('createTestExecution', () => {
 });
 
 describe('createTestExecutionWithLinks', () => {
-    /** @type {JiraResource} */
-    let jiraResource;
-    /** @type {JiraResource} */
-    let linkJiraRes;
-    /** @type {JiraLinkManager} */
-    let linkManager;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- methods replaced with jest.fn()
+    let jiraResource: any;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- methods replaced with jest.fn()
+    let linkJiraRes: any;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- JiraLinkManager with mocked jiraResource
+    let linkManager: any;
 
     beforeEach(() => {
         jiraResource = new JiraResource('fake-token', 'http://jira/rest/api/2');
@@ -215,7 +219,7 @@ describe('createTestExecutionWithLinks', () => {
         linkJiraRes = new JiraResource('fake-token', 'http://jira/rest/api/2');
         linkJiraRes.getJiraResource = jest.fn();
         linkJiraRes.postJiraResource = jest.fn();
-        linkJiraRes.getJiraResource.mockImplementation((url) => {
+        linkJiraRes.getJiraResource.mockImplementation((url: string) => {
             if (url === 'issueLinkType')
                 return Promise.resolve({
                     issueLinkTypes: [{ id: '10201', name: 'Tests', inward: 'is tested by', outward: 'tests' }],
@@ -227,7 +231,7 @@ describe('createTestExecutionWithLinks', () => {
     });
 
     it('creates TE and links all test keys', async () => {
-        jiraResource.getJiraResource.mockImplementation((url) => {
+        jiraResource.getJiraResource.mockImplementation((url: string) => {
             if (url === 'issuetype') return Promise.resolve(MOCK_ISSUE_TYPES);
             if (url === 'field') return Promise.resolve(MOCK_FIELDS);
             if (url === 'issue/EXEC-1') return Promise.resolve({ fields: { issuelinks: [] } });
@@ -254,7 +258,7 @@ describe('createTestExecutionWithLinks', () => {
     });
 
     it('skips already linked test keys', async () => {
-        jiraResource.getJiraResource.mockImplementation((url) => {
+        jiraResource.getJiraResource.mockImplementation((url: string) => {
             if (url === 'issuetype') return Promise.resolve(MOCK_ISSUE_TYPES);
             if (url === 'field') return Promise.resolve(MOCK_FIELDS);
             if (url === 'issue/EXEC-1')
@@ -270,13 +274,14 @@ describe('createTestExecutionWithLinks', () => {
 
         await createTestExecutionWithLinks(jiraResource, linkManager, PROJECT, ['TEST-1', 'TEST-2'], '', {});
 
-        const linkCalls = linkJiraRes.postJiraResource.mock.calls.filter((c) => c[0] === 'issueLink');
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any -- accessing mock calls on replaced method
+        const linkCalls = linkJiraRes.postJiraResource.mock.calls.filter((c: any) => c[0] === 'issueLink');
         expect(linkCalls).toHaveLength(1);
         expect(linkCalls[0][1].outwardIssue.key).toBe('TEST-2');
     });
 
     it('handles link API failure gracefully', async () => {
-        jiraResource.getJiraResource.mockImplementation((url) => {
+        jiraResource.getJiraResource.mockImplementation((url: string) => {
             if (url === 'issuetype') return Promise.resolve(MOCK_ISSUE_TYPES);
             if (url === 'field') return Promise.resolve(MOCK_FIELDS);
             if (url === 'issue/EXEC-1') return Promise.resolve({ fields: { issuelinks: [] } });
@@ -317,13 +322,14 @@ describe('generateMappingFiles', () => {
         }
     });
 
-    function makeSteps(...actions) {
+    function makeSteps(...actions: string[]) {
         return actions.map((a) => ({ fields: { Action: a, Data: '', ExpectedResult: '' } }));
     }
 
     it('creates JSON and MD mapping files', () => {
         const base = nextBase();
-        const testCases = [
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any -- test data may be partial TestCase
+        const testCases: any = [
             { title: 'TC1', description: 'Descricao do TC1', steps: makeSteps('a1', 'a2') },
             { title: 'TC2' },
         ];
@@ -346,7 +352,8 @@ describe('generateMappingFiles', () => {
 
     it('returns early when no cypress dir configured', () => {
         delete process.env.CYPRESS_PROJECT_PATH;
-        expect(() => generateMappingFiles(nextBase() + '.csv', 'PROJ', ['TEST-1'], [{}])).not.toThrow();
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any -- partial empty test case
+        expect(() => generateMappingFiles(nextBase() + '.csv', 'PROJ', ['TEST-1'], [{} as any])).not.toThrow();
         process.env.CYPRESS_PROJECT_PATH = tmpDir;
     });
 
@@ -360,7 +367,8 @@ describe('generateMappingFiles', () => {
 
     it('includes steps and precondition in JSON mapping', () => {
         const base = nextBase();
-        const testCases = [
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any -- test data with precondition
+        const testCases: any = [
             {
                 title: 'TC3',
                 description: 'Desc',
@@ -377,7 +385,11 @@ describe('generateMappingFiles', () => {
 
     it('generates MD with full table for each test', () => {
         const base = nextBase();
-        const testCases = [{ title: 'TC1', description: 'Descricao do TC1', steps: makeSteps('a1') }, { title: 'TC2' }];
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any -- test data may be partial TestCase
+        const testCases: any = [
+            { title: 'TC1', description: 'Descricao do TC1', steps: makeSteps('a1') },
+            { title: 'TC2' },
+        ];
         generateMappingFiles(base + '.csv', 'PROJ', ['TEST-1', 'TEST-2'], testCases);
         const md = realFs.readFileSync(tmpDir + '/test-csv-' + testIdx + '-jira-mapping.md', 'utf8');
         const mdLines = md.split('\n');
@@ -423,24 +435,27 @@ describe('validateCsvTests', () => {
 });
 
 describe('createTestsFromJson', () => {
-    const PROMPT = require('../shared/prompt');
-    const STATE = require('../shared/state');
-    const FS = require('fs');
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- jest.mock('fs') replaces with mocked version
+    const FS: any = fs;
 
-    function makeJiraResource() {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- test helper; returns partially mocked instance
+    function makeJiraResource(): any {
         const r = new JiraResource('fake-token', 'http://jira/rest/api/2');
         r.getJiraResource = jest.fn();
         r.postJiraResource = jest.fn();
         return r;
     }
 
-    function makeLinkManager() {
-        const lm = new JiraLinkManager({ get: jest.fn(), post: jest.fn() });
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- test helper; returns partially mocked instance with extra postLink property
+    function makeLinkManager(): any {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any -- partial mock for JiraResource
+        const lm: any = new JiraLinkManager({ get: jest.fn(), post: jest.fn() } as any);
         lm.postLink = jest.fn();
         return lm;
     }
 
-    const BASE_PARAMS = () => ({
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- test helper returning partial mock params
+    const BASE_PARAMS = (): any => ({
         jiraResource: makeJiraResource(),
         jiraResourceXray: makeJiraResource(),
         linkManager: makeLinkManager(),
@@ -463,14 +478,14 @@ describe('createTestsFromJson', () => {
     });
 
     it('cancela com caminho vazio', async () => {
-        PROMPT.smartPrompt.mockReturnValue('');
+        jest.mocked(PROMPT.smartPrompt).mockReturnValue('');
         const result = await createTestsFromJson(BASE_PARAMS());
         expect(result).toBeUndefined();
         expect(PROMPT.warn).toHaveBeenCalledWith(expect.stringContaining('vazio'));
     });
 
     it('cancela com JSON invalido', async () => {
-        PROMPT.smartPrompt.mockReturnValue('/fake/path.json');
+        jest.mocked(PROMPT.smartPrompt).mockReturnValue('/fake/path.json');
         FS.readFileSync.mockReturnValue('not json');
         const result = await createTestsFromJson(BASE_PARAMS());
         expect(result).toBeUndefined();
@@ -478,7 +493,7 @@ describe('createTestsFromJson', () => {
     });
 
     it('cancela com array vazio', async () => {
-        PROMPT.smartPrompt.mockReturnValue('/fake/path.json');
+        jest.mocked(PROMPT.smartPrompt).mockReturnValue('/fake/path.json');
         FS.readFileSync.mockReturnValue('[]');
         const result = await createTestsFromJson(BASE_PARAMS());
         expect(result).toBeUndefined();
@@ -486,7 +501,7 @@ describe('createTestsFromJson', () => {
     });
 
     it('cancela com item sem title/steps', async () => {
-        PROMPT.smartPrompt.mockReturnValue('/fake/path.json');
+        jest.mocked(PROMPT.smartPrompt).mockReturnValue('/fake/path.json');
         FS.readFileSync.mockReturnValue(JSON.stringify([{}]));
         const result = await createTestsFromJson(BASE_PARAMS());
         expect(result).toBeUndefined();
@@ -496,7 +511,7 @@ describe('createTestsFromJson', () => {
     it('executa dry-run com JSON valido', async () => {
         process.env.AUTO_CONFIRM = 'true';
         process.env.DRY_RUN = 'true';
-        PROMPT.smartPrompt.mockReturnValue('/fake/path.json');
+        jest.mocked(PROMPT.smartPrompt).mockReturnValue('/fake/path.json');
         FS.readFileSync.mockReturnValue(
             JSON.stringify([
                 { title: 'TC1', steps: [{ Action: 'Click' }] },
@@ -505,17 +520,17 @@ describe('createTestsFromJson', () => {
         );
         const result = await createTestsFromJson(BASE_PARAMS());
         expect(result).toBeDefined();
-        expect(result.summary).toContain('2');
-        expect(result.sourcePath).toBe('/fake/path.json');
+        expect(result!.summary).toContain('2');
+        expect(result!.sourcePath).toBe('/fake/path.json');
     });
 
     it('usa state.lastJsonDir para resolver caminho relativo', async () => {
         process.env.AUTO_CONFIRM = 'true';
         process.env.DRY_RUN = 'true';
-        STATE.load.mockReturnValue({ lastJsonDir: '/base/dir' });
-        PROMPT.smartPrompt.mockReturnValue('sub/testes.json');
+        jest.mocked(STATE.load).mockReturnValue({ lastJsonDir: '/base/dir' });
+        jest.mocked(PROMPT.smartPrompt).mockReturnValue('sub/testes.json');
         FS.existsSync.mockReturnValue(true);
-        FS.readFileSync.mockImplementation((p) => {
+        FS.readFileSync.mockImplementation((p: string) => {
             if (p === '/base/dir/sub/testes.json') {
                 return JSON.stringify([{ title: 'TC1', steps: [{ Action: 'Click' }] }]);
             }
@@ -523,38 +538,38 @@ describe('createTestsFromJson', () => {
         });
         const result = await createTestsFromJson(BASE_PARAMS());
         expect(result).toBeDefined();
-        expect(result.summary).toContain('1');
-        expect(result.sourcePath).toBe('/base/dir/sub/testes.json');
+        expect(result!.summary).toContain('1');
+        expect(result!.sourcePath).toBe('/base/dir/sub/testes.json');
     });
 
     it('parseia precondition como reference (formato ABC-123)', async () => {
         process.env.AUTO_CONFIRM = 'true';
         process.env.DRY_RUN = 'true';
-        PROMPT.smartPrompt.mockReturnValue('/fake/path.json');
+        jest.mocked(PROMPT.smartPrompt).mockReturnValue('/fake/path.json');
         FS.readFileSync.mockReturnValue(
             JSON.stringify([{ title: 'TC1', steps: [{ Action: 'Click' }], precondition: 'PREC-001' }]),
         );
         const result = await createTestsFromJson(BASE_PARAMS());
         expect(result).toBeDefined();
-        expect(result.summary).toContain('1');
+        expect(result!.summary).toContain('1');
     });
 
     it('parseia linkedIssues como strings', async () => {
         process.env.AUTO_CONFIRM = 'true';
         process.env.DRY_RUN = 'true';
-        PROMPT.smartPrompt.mockReturnValue('/fake/path.json');
+        jest.mocked(PROMPT.smartPrompt).mockReturnValue('/fake/path.json');
         FS.readFileSync.mockReturnValue(
             JSON.stringify([{ title: 'TC1', steps: [{ Action: 'Click' }], linkedIssues: ['BUG-1', 'BUG-2'] }]),
         );
         const result = await createTestsFromJson(BASE_PARAMS());
         expect(result).toBeDefined();
-        expect(result.summary).toContain('1');
+        expect(result!.summary).toContain('1');
     });
 
     it('parseia linkedIssues como objetos', async () => {
         process.env.AUTO_CONFIRM = 'true';
         process.env.DRY_RUN = 'true';
-        PROMPT.smartPrompt.mockReturnValue('/fake/path.json');
+        jest.mocked(PROMPT.smartPrompt).mockReturnValue('/fake/path.json');
         FS.readFileSync.mockReturnValue(
             JSON.stringify([
                 { title: 'TC1', steps: [{ Action: 'Click' }], linkedIssues: [{ key: 'BUG-1', linkType: 'Blocks' }] },
@@ -562,6 +577,6 @@ describe('createTestsFromJson', () => {
         );
         const result = await createTestsFromJson(BASE_PARAMS());
         expect(result).toBeDefined();
-        expect(result.summary).toContain('1');
+        expect(result!.summary).toContain('1');
     });
 });

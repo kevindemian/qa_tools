@@ -1,4 +1,3 @@
-// @ts-nocheck
 const mockRootLogger = {
     info: jest.fn(),
     error: jest.fn(),
@@ -9,21 +8,23 @@ const mockRootLogger = {
 
 jest.mock('./logger', () => ({
     rootLogger: mockRootLogger,
-    Logger: function () {
-        this.info = jest.fn();
-        this.error = jest.fn();
-        this.warn = jest.fn();
-        this.debug = jest.fn();
-        this.writeFileOnly = jest.fn();
+    Logger: class {
+        info = jest.fn();
+        error = jest.fn();
+        warn = jest.fn();
+        debug = jest.fn();
+        writeFileOnly = jest.fn();
     },
 }));
+
+import * as promptModule from './prompt';
 
 describe('Prompt', () => {
     let prompt: typeof import('./prompt');
     let mockLog: jest.SpyInstance, mockError: jest.SpyInstance, mockWarn: jest.SpyInstance;
 
     beforeAll(() => {
-        prompt = require('./prompt');
+        prompt = promptModule;
     });
 
     beforeEach(() => {
@@ -154,7 +155,7 @@ describe('Prompt', () => {
         it('start is noop when QUIET=true', () => {
             process.env.QUIET = 'true';
             const spinner = new prompt.Spinner();
-            const spy = jest.spyOn(process.stdout, 'write').mockImplementation(() => {});
+            const spy = jest.spyOn(process.stdout, 'write').mockImplementation(() => true);
             spinner.start('quiet test');
             expect(spy).toHaveBeenCalledWith('quiet test...\n');
             spy.mockRestore();
@@ -176,22 +177,22 @@ describe('Prompt', () => {
 
     describe('humanizeError', () => {
         it('returns known error for rate limit', () => {
-            const result = prompt.humanizeError('rate limit exceeded');
+            const result = prompt.humanizeError('rate limit exceeded')!;
             expect(result.msg).toContain('Rate limit');
         });
 
         it('returns known error for 403/permission', () => {
-            const result = prompt.humanizeError('permission denied');
+            const result = prompt.humanizeError('permission denied')!;
             expect(result.msg).toContain('Sem permissão');
         });
 
         it('returns known error for 401/unauthorized', () => {
-            const result = prompt.humanizeError('401 unauthorized');
+            const result = prompt.humanizeError('401 unauthorized')!;
             expect(result.msg).toContain('Token inválido');
         });
 
         it('returns known error for connection issues', () => {
-            const result = prompt.humanizeError('ECONNREFUSED');
+            const result = prompt.humanizeError('ECONNREFUSED')!;
             expect(result.msg).toContain('Erro de conexão');
         });
 

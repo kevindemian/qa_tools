@@ -1,8 +1,7 @@
-// @ts-nocheck
-const CsvResource = require('./csv_resource');
+import CsvResource from './csv_resource';
 
 describe('CsvResource', () => {
-    let csvResource;
+    let csvResource: InstanceType<typeof CsvResource>;
 
     beforeEach(() => {
         csvResource = new CsvResource();
