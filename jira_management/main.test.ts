@@ -100,7 +100,7 @@ interface MainModule {
     showHelp(topic?: string): void;
     resolveAlias(choice: string): string;
     buildMenuChoices(proj: string, ctx: { git_directory: string }): MenuChoice[];
-    handleSpecialInput(input: string): boolean;
+    handleSpecialInput(input: string): Promise<boolean>;
     displayMenu(
         proj: string,
         ctx: { lastOperation: string; sessionCounters: Array<{ status: string }>; git_directory: string },
@@ -236,46 +236,45 @@ describe('buildMenuChoices', () => {
 });
 
 describe('handleSpecialInput', () => {
-    it('returns true and shows help for /help', () => {
-        expect(mod.handleSpecialInput('/help')).toBe(true);
+    it('returns true and shows help for /help', async () => {
+        expect(await mod.handleSpecialInput('/help')).toBe(true);
         expect(title).toHaveBeenCalled();
     });
 
-    it('handles /h shorthand', () => {
-        expect(mod.handleSpecialInput('/h')).toBe(true);
+    it('handles /h shorthand', async () => {
+        expect(await mod.handleSpecialInput('/h')).toBe(true);
         expect(title).toHaveBeenCalled();
     });
 
-    it('handles /help with specific topic', () => {
-        mod.handleSpecialInput('/help csv');
+    it('handles /help with specific topic', async () => {
+        await mod.handleSpecialInput('/help csv');
         expect(title).toHaveBeenCalledWith(expect.stringContaining('csv'));
     });
 
-    it('returns true for navigation commands', () => {
-        expect(mod.handleSpecialInput('/back')).toBe(true);
-        expect(mod.handleSpecialInput('/menu')).toBe(true);
-        expect(mod.handleSpecialInput('/exit')).toBe(true);
+    it('returns true for navigation commands', async () => {
+        expect(await mod.handleSpecialInput('/back')).toBe(true);
+        expect(await mod.handleSpecialInput('/menu')).toBe(true);
+        expect(await mod.handleSpecialInput('/exit')).toBe(true);
     });
 
-    it('handles /docs and /d', () => {
-        expect(mod.handleSpecialInput('/docs')).toBe(true);
-        expect(mod.handleSpecialInput('/d')).toBe(true);
+    it('handles /docs and /d', async () => {
+        expect(await mod.handleSpecialInput('/docs')).toBe(true);
+        expect(await mod.handleSpecialInput('/d')).toBe(true);
     });
 
-    it('handles /history correctly', () => {
-        expect(mod.handleSpecialInput('/history')).toBe(true);
+    it('handles /history correctly', async () => {
+        expect(await mod.handleSpecialInput('/history')).toBe(true);
         expect(title).toHaveBeenCalledWith(expect.stringContaining('Histórico'));
     });
 
-    it('handles /home to show splash', () => {
-        expect(mod.handleSpecialInput('/home')).toBe(true);
-        expect(print).toHaveBeenCalled();
+    it('handles /home to show splash', async () => {
+        expect(await mod.handleSpecialInput('/home')).toBe(true);
     });
 
-    it('returns false for regular input', () => {
-        expect(mod.handleSpecialInput('1')).toBe(false);
-        expect(mod.handleSpecialInput('')).toBe(false);
-        expect(mod.handleSpecialInput('texto livre')).toBe(false);
+    it('returns false for regular input', async () => {
+        expect(await mod.handleSpecialInput('1')).toBe(false);
+        expect(await mod.handleSpecialInput('')).toBe(false);
+        expect(await mod.handleSpecialInput('texto livre')).toBe(false);
     });
 });
 

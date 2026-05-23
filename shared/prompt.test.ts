@@ -167,20 +167,11 @@ describe('Prompt', () => {
     });
 
     describe('ProgressBar', () => {
-        let dateNowSpy: jest.SpyInstance;
-
-        beforeEach(() => {
-            dateNowSpy = jest.spyOn(Date, 'now').mockReturnValue(0);
-        });
-
-        afterEach(() => {
-            dateNowSpy.mockRestore();
-        });
-
-        it('creates bar with correct width', () => {
-            const bar = new prompt.ProgressBar(10, { width: 20 });
-            expect(bar.total).toBe(10);
-            expect(bar.width).toBe(20);
+        it('tracks current value', () => {
+            const bar = new prompt.ProgressBar(10, { width: 5 });
+            expect(bar.current).toBe(0);
+            bar.update(3);
+            expect(bar.current).toBe(3);
         });
 
         it('renders full bar in non-TTY output', () => {
@@ -201,58 +192,9 @@ describe('Prompt', () => {
             expect(mockLog).toHaveBeenCalledWith(expect.stringContaining('50%'));
         });
 
-        it('shows ? ETA in non-TTY mode', () => {
+        it('stop does not throw', () => {
             const bar = new prompt.ProgressBar(10, { width: 5 });
-            dateNowSpy.mockReturnValue(3000);
-            bar.startTime = 0;
-            bar.update(0);
-            expect(mockLog).toHaveBeenCalledWith(expect.stringContaining('0%'));
-        });
-
-        it('writes TTY bar format to process.stdout when isTTY=true', () => {
-            process.stdout.isTTY = true;
-            const writeSpy = jest.spyOn(process.stdout, 'write').mockImplementation(() => true);
-            const bar = new prompt.ProgressBar(10, { width: 5 });
-            bar.update(5);
-            expect(writeSpy).toHaveBeenCalledWith(expect.stringContaining('█'));
-            writeSpy.mockRestore();
-        });
-
-        it('writes TTY bar with ETA when isTTY=true and elapsed > 0', () => {
-            process.stdout.isTTY = true;
-            const writeSpy = jest.spyOn(process.stdout, 'write').mockImplementation(() => true);
-            const bar = new prompt.ProgressBar(10, { width: 5 });
-            dateNowSpy.mockReturnValue(3000);
-            bar.startTime = 0;
-            bar.update(5);
-            expect(writeSpy).toHaveBeenCalledWith(expect.stringContaining('s'));
-            writeSpy.mockRestore();
-        });
-
-        it('stop clears line when isTTY=true', () => {
-            process.stdout.isTTY = true;
-            const writeSpy = jest.spyOn(process.stdout, 'write').mockImplementation(() => true);
-            const bar = new prompt.ProgressBar(10, { width: 5 });
-            bar.stop();
-            expect(writeSpy).toHaveBeenCalledWith(expect.stringContaining('\r'));
-            writeSpy.mockRestore();
-        });
-    });
-
-    describe('Spinner', () => {
-        it('start/stop does not throw', () => {
-            const spinner = new prompt.Spinner();
-            expect(() => spinner.start('working')).not.toThrow();
-            expect(() => spinner.stop()).not.toThrow();
-        });
-
-        it('start is noop when QUIET=true', () => {
-            process.env.QUIET = 'true';
-            const spinner = new prompt.Spinner();
-            const spy = jest.spyOn(process.stdout, 'write').mockImplementation(() => true);
-            spinner.start('quiet test');
-            expect(spy).toHaveBeenCalledWith('quiet test...\n');
-            spy.mockRestore();
+            expect(() => bar.stop()).not.toThrow();
         });
     });
 

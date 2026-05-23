@@ -26,7 +26,15 @@ module.exports = tseslint.config(
         },
     },
     {
-        files: ['shared/prompt.ts', 'shared/logger.ts', 'docs/**/*.ts'],
+        files: [
+            'shared/prompt.ts',
+            'shared/logger.ts',
+            'shared/splash.ts',
+            'docs/**/*.ts',
+            'jira_management/main.ts',
+            'git_triggers/main.ts',
+            'shared/entry-menu.ts',
+        ],
         rules: {
             'no-console': 'off',
         },

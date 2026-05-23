@@ -64,7 +64,10 @@
     "max_lines": 500,
     "max_bytes": 20480
   },
-
+  "experimental": {
+    "batch_tool": true
+  },
+  "formatter": true,
   "permission": {
     "read": "allow",
     "glob": "allow",
