@@ -7,11 +7,19 @@ jest.mock('../shared/http-client', () => ({
 
 jest.mock('../shared/logger', () => ({
     Logger: jest.fn().mockImplementation(() => ({ error: jest.fn() })),
+    rootLogger: { error: jest.fn(), warn: jest.fn() },
 }));
 
 jest.mock('../shared/prompt', () => ({
     info: jest.fn(),
     extractErrorMessage: jest.fn((err: Error) => err?.message || 'Erro desconhecido'),
+}));
+
+jest.mock('../shared/git-provider-error', () => ({
+    handleError: jest.fn((err: unknown, opts?: { returnNull?: boolean }) => {
+        if (opts?.returnNull) return null;
+        throw err;
+    }),
 }));
 
 describe('GitLabManager', () => {

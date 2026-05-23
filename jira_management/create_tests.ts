@@ -2,7 +2,7 @@ import * as fs from 'fs';
 import * as path from 'path';
 import Config from '../shared/config';
 import type JiraResource from './jira_resource';
-import type JiraLinkManager from './jira_link_manager';
+import JiraLinkManager from './jira_link_manager';
 import type CsvResource from './csv_resource';
 import type { TestCase } from '../shared/types';
 import TestCaseFactory from './test-case-factory';
@@ -145,6 +145,47 @@ function _confirmOrCancel(): boolean {
     return confirm('Criar estes testes no Jira?');
 }
 
+function _validateImportBatch(
+    tests: TestCase[],
+    sourcePath: string,
+    sourceType: string,
+    projectName: string,
+):
+    | {
+          resumeFrom: number;
+          inMemoryTasksId: string[];
+          inMemoryTasksText: string[];
+          opLog: ReturnType<typeof rootLogger.child>;
+      }
+    | undefined {
+    const { warn, error } = _getPm();
+    const { resumeFrom, inMemoryTasksId, inMemoryTasksText } = _checkResumeCheckpoint(
+        tests,
+        sourcePath,
+        sourceType,
+        projectName,
+    );
+
+    if (resumeFrom === 0) {
+        const validator = new TestCaseValidator();
+        const { errors, warnings } = validator.validate(tests);
+        if (warnings.length > 0) {
+            warn('Avisos (' + warnings.length + '):');
+            warnings.slice(0, 5).forEach((w) => warn('  ' + w));
+            if (warnings.length > 5) warn('  ... e mais ' + (warnings.length - 5) + ' aviso(s)');
+        }
+        if (errors.length > 0) {
+            error('Erros (' + errors.length + '):');
+            errors.forEach((e) => error('  ' + e));
+            warn('Corrija os dados antes de importar.');
+            return;
+        }
+    }
+
+    const opLog = rootLogger.child({ operation: sourceType + '-import', sourcePath });
+    return { resumeFrom, inMemoryTasksId, inMemoryTasksText, opLog };
+}
+
 function _handleDryRun(
     tests: TestCase[],
     onBusy: (busy: boolean) => void,
@@ -169,6 +210,90 @@ function _handleDryRun(
         status: 'ok',
         sourcePath,
     };
+}
+
+async function _executeTestCreationLoop(
+    tests: TestCase[],
+    factory: TestCaseFactory,
+    linker: IssueLinker,
+    projectName: string,
+    jiraLabels: string[],
+    baseUrl: string,
+    opLog: ReturnType<typeof rootLogger.child>,
+    sourcePath: string,
+    sourceType: string,
+    inMemoryTasksId: string[],
+    inMemoryTasksText: string[],
+    results: TestResult[],
+    resumeFrom: number,
+    isQuiet: () => boolean,
+    info: (msg: string) => void,
+    print: (msg: string) => void,
+): Promise<void> {
+    outer: for (let t = resumeFrom; t < tests.length; t++) {
+        const test = tests[t];
+        const testTitle = test.title;
+
+        if (!isQuiet()) info('Criando: ' + testTitle);
+        inMemoryTasksText.push(testTitle);
+
+        const testData = _buildTestData(test, projectName, jiraLabels);
+
+        const issueResult = await factory.createIssue(testData, testTitle, t, tests.length, opLog);
+        if ('action' in issueResult) {
+            if (issueResult.action === 'abort') {
+                opLog.warn('Usuario abortou apos falha na criação da issue');
+                results.push({ status: 'error', label: testTitle, message: 'Falha na criação da issue' });
+                break outer;
+            }
+            if (issueResult.action === 'retry') {
+                t--;
+                continue;
+            }
+            results.push({ status: 'error', label: testTitle, message: 'Falha na criação da issue' });
+            continue;
+        }
+        const createdTestIssue = { key: issueResult.key! };
+
+        inMemoryTasksId.push(createdTestIssue.key);
+
+        _saveCheckpoint(sourcePath, sourceType, projectName, tests, inMemoryTasksId, inMemoryTasksText);
+
+        const testReport: TestResult = { status: 'ok', label: testTitle, message: '' };
+
+        if (test.precondition && test.precondition.type === 'reference') {
+            const precResult = await linker.associatePrecondition(test, createdTestIssue.key, opLog);
+            if (precResult) {
+                testReport.status = 'error';
+                if (precResult.action === 'abort') {
+                    testReport.message = 'Falha ao associar pre-condition';
+                    results.push(testReport);
+                    break outer;
+                }
+            }
+        }
+
+        const stepsResult = await factory.postSteps(createdTestIssue.key, test, opLog);
+        if (stepsResult && stepsResult.action === 'abort') {
+            testReport.status = 'error';
+            testReport.message = 'Falha ao criar steps';
+            results.push(testReport);
+            break outer;
+        }
+
+        if (test.linkedIssues && test.linkedIssues.length > 0) {
+            const linkResult = await linker.linkIssues(createdTestIssue.key, test);
+            if (linkResult && linkResult.action === 'abort') {
+                testReport.status = 'error';
+                testReport.message = 'Falha ao criar linked issues';
+                results.push(testReport);
+                break outer;
+            }
+        }
+
+        if (!isQuiet()) print('  -> ' + baseUrl + '/browse/' + createdTestIssue.key);
+        results.push(testReport);
+    }
 }
 
 function _buildTestData(test: TestCase, projectName: string, jiraLabels: string[]): Record<string, unknown> {
@@ -232,7 +357,7 @@ async function _createTestsFromTestCases({
     linkManager,
     project_name,
     base_url,
-    sessionLog,
+    sessionLog: _sessionLog,
     onBusy,
     sourcePath,
     sourceType,
@@ -247,31 +372,11 @@ async function _createTestsFromTestCases({
       }
     | undefined
 > {
-    const { warn, error, info, isQuiet, print, printSummary } = _getPm();
-    const { resumeFrom, inMemoryTasksId, inMemoryTasksText } = _checkResumeCheckpoint(
-        tests,
-        sourcePath,
-        sourceType,
-        project_name,
-    );
+    const { warn, info, isQuiet, print, printSummary } = _getPm();
 
-    if (resumeFrom === 0) {
-        const validator = new TestCaseValidator();
-        const { errors, warnings } = validator.validate(tests);
-        if (warnings.length > 0) {
-            warn('Avisos (' + warnings.length + '):');
-            warnings.slice(0, 5).forEach((w) => warn('  ' + w));
-            if (warnings.length > 5) warn('  ... e mais ' + (warnings.length - 5) + ' aviso(s)');
-        }
-        if (errors.length > 0) {
-            error('Erros (' + errors.length + '):');
-            errors.forEach((e) => error('  ' + e));
-            warn('Corrija os dados antes de importar.');
-            return;
-        }
-    }
-
-    const opLog = sessionLog.child({ operation: sourceType + '-import', sourcePath });
+    const validationResult = _validateImportBatch(tests, sourcePath, sourceType, project_name);
+    if (validationResult === undefined) return;
+    const { resumeFrom, inMemoryTasksId, inMemoryTasksText, opLog } = validationResult;
 
     const totalSteps = tests.reduce((sum, t) => sum + t.steps.length, 0);
     const groupsCount = new Set(tests.map((t) => t.group).filter(Boolean)).size;
@@ -295,77 +400,26 @@ async function _createTestsFromTestCases({
     const factory = new TestCaseFactory(jiraResource, jiraResourceXray);
     const linker = new IssueLinker(jiraResource, linkManager);
     const results: TestResult[] = [];
-    const testDurations: number[] = [];
-    let testStart = Date.now();
     onBusy(true);
 
-    outer: for (let t = resumeFrom; t < tests.length; t++) {
-        const test = tests[t];
-        const testTitle = test.title;
-
-        if (!isQuiet()) info('Criando: ' + testTitle);
-        inMemoryTasksText.push(testTitle);
-
-        const testData = _buildTestData(test, project_name, jiraLabels);
-
-        const issueResult = await factory.createIssue(testData, testTitle, t, tests.length, opLog);
-        if ('action' in issueResult) {
-            if (issueResult.action === 'abort') {
-                opLog.warn('Usuario abortou apos falha na criação da issue');
-                results.push({ status: 'error', label: testTitle, message: 'Falha na criação da issue' });
-                break outer;
-            }
-            if (issueResult.action === 'retry') {
-                t--;
-                continue;
-            }
-            results.push({ status: 'error', label: testTitle, message: 'Falha na criação da issue' });
-            continue;
-        }
-        const createdTestIssue = { key: issueResult.key! };
-
-        inMemoryTasksId.push(createdTestIssue.key);
-
-        _saveCheckpoint(sourcePath, sourceType, project_name, tests, inMemoryTasksId, inMemoryTasksText);
-
-        const testReport: TestResult = { status: 'ok', label: testTitle, message: '' };
-
-        if (test.precondition && test.precondition.type === 'reference') {
-            const precResult = await linker.associatePrecondition(test, createdTestIssue.key, opLog);
-            if (precResult) {
-                testReport.status = 'error';
-                if (precResult.action === 'abort') {
-                    testReport.message = 'Falha ao associar pre-condition';
-                    results.push(testReport);
-                    break outer;
-                }
-            }
-        }
-
-        const stepsResult = await factory.postSteps(createdTestIssue.key, test, opLog);
-        if (stepsResult && stepsResult.action === 'abort') {
-            testReport.status = 'error';
-            testReport.message = 'Falha ao criar steps';
-            results.push(testReport);
-            break outer;
-        }
-
-        if (test.linkedIssues && test.linkedIssues.length > 0) {
-            const linkResult = await linker.linkIssues(createdTestIssue.key, test);
-            if (linkResult && linkResult.action === 'abort') {
-                testReport.status = 'error';
-                testReport.message = 'Falha ao criar linked issues';
-                results.push(testReport);
-                break outer;
-            }
-        }
-
-        if (!isQuiet()) print('  -> ' + base_url + '/browse/' + createdTestIssue.key);
-        results.push(testReport);
-
-        testDurations.push(Date.now() - testStart);
-        testStart = Date.now();
-    }
+    await _executeTestCreationLoop(
+        tests,
+        factory,
+        linker,
+        project_name,
+        jiraLabels,
+        base_url,
+        opLog,
+        sourcePath,
+        sourceType,
+        inMemoryTasksId,
+        inMemoryTasksText,
+        results,
+        resumeFrom,
+        isQuiet,
+        info,
+        print,
+    );
 
     if (results.filter((r) => r.status === 'ok').length === tests.length) {
         updateState((state) => {
@@ -404,6 +458,32 @@ async function _createTestsFromTestCases({
     };
 }
 
+function _resolveCsvPath(csvPathInput: string | undefined): string {
+    const state = loadState();
+    return (
+        csvPathInput ||
+        Config.csvPath ||
+        _getPm().smartPrompt('Caminho do arquivo CSV', { default: (state.lastCsvPath as string) || csvDefaultPath })
+    );
+}
+
+function _resolveLabels(jiraLabelsInput: string[] | undefined, configKey: 'csvLabels' | 'jsonLabels'): string[] {
+    if (jiraLabelsInput) return jiraLabelsInput;
+    const state = loadState();
+    const configValue = Config[configKey === 'csvLabels' ? 'csvLabels' : 'jsonLabels'] as string | undefined;
+    const labels =
+        configValue ||
+        _getPm().prompt('Labels Jira (separadas por virgula)', {
+            // eslint-disable-next-line @typescript-eslint/no-base-to-string
+            hint: state.lastLabels ? 'último: ' + String(state.lastLabels) : 'vazio para nenhuma',
+            default: (state.lastLabels as string) || '',
+        });
+    return labels
+        .split(',')
+        .map((l) => l.trim())
+        .filter((l) => l.length > 0);
+}
+
 async function createTestsFromCsv({
     jiraResource,
     jiraResourceXray,
@@ -429,25 +509,9 @@ async function createTestsFromCsv({
     csvPath?: string;
     jiraLabels?: string[];
 }): Promise<ReturnType<typeof _createTestsFromTestCases>> {
-    const { smartPrompt, prompt, isQuiet, info, warn, printError } = _getPm();
-    const state = loadState();
-    const csvPath =
-        csvPathInput ||
-        Config.csvPath ||
-        smartPrompt('Caminho do arquivo CSV', { default: (state.lastCsvPath as string) || csvDefaultPath });
-    const jiraLabels: string[] =
-        jiraLabelsInput ||
-        (
-            Config.csvLabels ||
-            prompt('Labels Jira (separadas por virgula)', {
-                // eslint-disable-next-line @typescript-eslint/no-base-to-string
-                hint: state.lastLabels ? 'último: ' + String(state.lastLabels) : 'vazio para nenhuma',
-                default: (state.lastLabels as string) || '',
-            })
-        )
-            .split(',')
-            .map((l) => l.trim())
-            .filter((l) => l.length > 0);
+    const { isQuiet, info, warn, printError } = _getPm();
+    const csvPath = _resolveCsvPath(csvPathInput);
+    const jiraLabels = _resolveLabels(jiraLabelsInput, 'csvLabels');
 
     if (!isQuiet()) info('Lendo CSV...');
     let tests: TestCase[];
@@ -479,6 +543,63 @@ async function createTestsFromCsv({
     });
 }
 
+function _resolveJsonPath(jsonPathInput: string | undefined): string | undefined {
+    const state = loadState();
+    const { warn, smartPrompt } = _getPm();
+    const rawPath =
+        jsonPathInput ||
+        Config.jsonPath ||
+        smartPrompt('Caminho do arquivo JSON ou TXT (formato JSON)', { default: (state.lastJsonPath as string) || '' });
+
+    let jsonPath = rawPath.trim();
+    if (!jsonPath) {
+        warn('Caminho do JSON vazio. Operação cancelada.');
+        return;
+    }
+    if (state.lastJsonDir && !path.isAbsolute(jsonPath)) {
+        const potential = path.resolve(state.lastJsonDir as string, jsonPath);
+        if (fs.existsSync(potential)) {
+            jsonPath = potential;
+        }
+    }
+    return jsonPath;
+}
+
+function _parseJsonTests(jsonPath: string): TestCase[] {
+    const raw = fs.readFileSync(jsonPath, 'utf8');
+    const parsed = JSON.parse(raw);
+    if (!Array.isArray(parsed)) throw new Error('JSON deve ser um array de casos de teste');
+    return parsed.map((item: Record<string, unknown>, i: number) => {
+        if (!item.title || !item.steps || !Array.isArray(item.steps)) {
+            throw new Error('Item ' + (i + 1) + ': campos obrigatórios: title (string), steps (array)');
+        }
+        return {
+            title: item.title as string,
+            description: (item.description as string) || '',
+            steps: (item.steps as Array<Record<string, string>>).map((s) => ({
+                fields: {
+                    Action: s.Action || '',
+                    Data: s.Data || '',
+                    ExpectedResult: s.ExpectedResult || '',
+                },
+            })),
+            precondition: item.precondition
+                ? (item.precondition as string).match(/^[A-Z][A-Z0-9]+(?:-[A-Z0-9]+)*-\d+$/)
+                    ? { type: 'reference' as const, value: item.precondition as string }
+                    : { type: 'inline' as const, value: item.precondition as string }
+                : undefined,
+            group: (item.group as string) || '',
+            linkedIssues: Array.isArray(item.linkedIssues)
+                ? (item.linkedIssues as Array<unknown>).map((li) => {
+                      if (typeof li === 'string') return { key: li, linkType: 'Tests' };
+                      const liObj = li as { key: string; linkType?: string };
+                      return { key: liObj.key, linkType: liObj.linkType || 'Tests' };
+                  })
+                : [],
+        };
+    });
+}
+
 async function createTestsFromJson({
     jiraResource,
     jiraResourceXray,
@@ -502,74 +623,16 @@ async function createTestsFromJson({
     jsonPath?: string;
     jiraLabels?: string[];
 }): Promise<ReturnType<typeof _createTestsFromTestCases>> {
-    const { smartPrompt, prompt, isQuiet, info, warn, printError } = _getPm();
-    const state = loadState();
-    const rawPath =
-        jsonPathInput ||
-        Config.jsonPath ||
-        smartPrompt('Caminho do arquivo JSON ou TXT (formato JSON)', { default: (state.lastJsonPath as string) || '' });
+    const { isQuiet, info, warn, printError } = _getPm();
+    const jsonPath = _resolveJsonPath(jsonPathInput);
+    if (!jsonPath) return;
 
-    let jsonPath = rawPath.trim();
-    if (!jsonPath) {
-        warn('Caminho do JSON vazio. Operação cancelada.');
-        return;
-    }
-    if (state.lastJsonDir && !path.isAbsolute(jsonPath)) {
-        const potential = path.resolve(state.lastJsonDir as string, jsonPath);
-        if (fs.existsSync(potential)) {
-            jsonPath = potential;
-        }
-    }
-
-    const jiraLabels: string[] =
-        jiraLabelsInput ||
-        (
-            Config.jsonLabels ||
-            prompt('Labels Jira (separadas por virgula)', {
-                // eslint-disable-next-line @typescript-eslint/no-base-to-string
-                hint: state.lastLabels ? 'último: ' + String(state.lastLabels) : 'vazio para nenhuma',
-                default: (state.lastLabels as string) || '',
-            })
-        )
-            .split(',')
-            .map((l) => l.trim())
-            .filter((l) => l.length > 0);
+    const jiraLabels = _resolveLabels(jiraLabelsInput, 'jsonLabels');
 
     if (!isQuiet()) info('Lendo JSON...');
     let tests: TestCase[];
     try {
-        const raw = fs.readFileSync(jsonPath, 'utf8');
-        const parsed = JSON.parse(raw);
-        if (!Array.isArray(parsed)) throw new Error('JSON deve ser um array de casos de teste');
-        tests = parsed.map((item: Record<string, unknown>, i: number) => {
-            if (!item.title || !item.steps || !Array.isArray(item.steps)) {
-                throw new Error('Item ' + (i + 1) + ': campos obrigatorios: title (string), steps (array)');
-            }
-            return {
-                title: item.title as string,
-                description: (item.description as string) || '',
-                steps: (item.steps as Array<Record<string, string>>).map((s) => ({
-                    fields: {
-                        Action: s.Action || '',
-                        Data: s.Data || '',
-                        ExpectedResult: s.ExpectedResult || '',
-                    },
-                })),
-                precondition: item.precondition
-                    ? (item.precondition as string).match(/^[A-Z][A-Z0-9]+(?:-[A-Z0-9]+)*-\d+$/)
-                        ? { type: 'reference' as const, value: item.precondition as string }
-                        : { type: 'inline' as const, value: item.precondition as string }
-                    : undefined,
-                group: (item.group as string) || '',
-                linkedIssues: Array.isArray(item.linkedIssues)
-                    ? (item.linkedIssues as Array<unknown>).map((li) => {
-                          if (typeof li === 'string') return { key: li, linkType: 'Tests' };
-                          const liObj = li as { key: string; linkType?: string };
-                          return { key: liObj.key, linkType: liObj.linkType || 'Tests' };
-                      })
-                    : [],
-            };
-        });
+        tests = _parseJsonTests(jsonPath);
     } catch (err) {
         printError('Erro ao ler JSON', err);
         return;
@@ -596,20 +659,14 @@ async function createTestsFromJson({
     });
 }
 
-function _createLinkManager(jiraResource: JiraResource): JiraLinkManager {
-    // eslint-disable-next-line @typescript-eslint/no-require-imports
-    const JiraLinkManagerClass = require('./jira_link_manager');
-    return new JiraLinkManagerClass(jiraResource) as JiraLinkManager;
-}
-
 async function createTestExecution(
     jiraResource: JiraResource,
+    linkManager: JiraLinkManager,
     projectName: string,
     testKeys: string[],
     csvName: string,
     titleOverride?: string,
 ): Promise<{ key: string; summary: string }> {
-    const linkManager = _createLinkManager(jiraResource);
     const creator = new TestExecutionCreator(jiraResource, linkManager);
     return creator.create(projectName, testKeys, csvName, titleOverride);
 }
@@ -632,7 +689,7 @@ function validateCsvTests(tests: TestCase[]): { errors: string[]; warnings: stri
 }
 
 function updateCrossReferences(jiraResource: JiraResource, tests: TestCase[], ids: string[]): Promise<void> {
-    const linker = new IssueLinker(jiraResource, _createLinkManager(jiraResource));
+    const linker = new IssueLinker(jiraResource, new JiraLinkManager(jiraResource));
     return linker.updateCrossReferences(tests, ids);
 }
 

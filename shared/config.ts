@@ -122,6 +122,22 @@ class Config {
         return process.env.XDG_STATE_HOME || '';
     }
 
+    static get(key: string): string | undefined {
+        ensureDotenv();
+        return process.env[key];
+    }
+
+    static getAllPrefixed(prefix: string): Record<string, string> {
+        ensureDotenv();
+        const result: Record<string, string> = {};
+        for (const [key, value] of Object.entries(process.env)) {
+            if (key.startsWith(prefix) && value) {
+                result[key] = value;
+            }
+        }
+        return result;
+    }
+
     static load(): void {
         ensureDotenv();
     }

@@ -84,15 +84,22 @@ class JiraResource {
     }
 
     async getTransitionsForIssue(issueKey: string): Promise<Record<string, string>> {
-        const data = await this.getJiraResource<{ transitions?: TransitionData[] }>(`issue/${issueKey}/transitions`);
-        if (!data || !data.transitions) return {};
-        const map: Record<string, string> = {};
-        for (const t of data.transitions) {
-            if (t.to && t.to.name) {
-                map[t.to.name.toLowerCase()] = t.id;
+        try {
+            const data = await this.getJiraResource<{ transitions?: TransitionData[] }>(
+                `issue/${issueKey}/transitions`,
+            );
+            if (!data || !data.transitions) return {};
+            const map: Record<string, string> = {};
+            for (const t of data.transitions) {
+                if (t.to && t.to.name) {
+                    map[t.to.name.toLowerCase()] = t.id;
+                }
             }
+            return map;
+        } catch (err: unknown) {
+            this.log.error(`Erro GET issue/${issueKey}/transitions: ${extractErrorMessage(err)}`);
+            return {};
         }
-        return map;
     }
 
     async getJiraResource<T = Record<string, unknown>>(resourceUrl: string): Promise<T> {
@@ -191,44 +198,54 @@ class JiraResource {
     }
 
     async checkReleaseTasksStatus(projectName: string, versionName: string): Promise<boolean> {
-        const safeVersion = sanitizeJqlValue(versionName);
-        const projectId = await this.getProjectId(projectName);
-        const jql = `project = ${projectId} AND fixVersion = "${safeVersion}"`;
+        try {
+            const safeVersion = sanitizeJqlValue(versionName);
+            const projectId = await this.getProjectId(projectName);
+            const jql = `project = ${projectId} AND fixVersion = "${safeVersion}"`;
 
-        const issuesData = await this.searchJiraIssues(jql);
-        if (!issuesData || !issuesData.issues || issuesData.issues.length === 0) {
-            info(`Nenhuma issue encontrada para versão '${versionName}' no projeto '${projectName}'.`);
+            const issuesData = await this.searchJiraIssues(jql);
+            if (!issuesData || !issuesData.issues || issuesData.issues.length === 0) {
+                info(`Nenhuma issue encontrada para versão '${versionName}' no projeto '${projectName}'.`);
+                return false;
+            }
+
+            let allTasksCompleted = true;
+            for (const issue of issuesData.issues) {
+                const status = issue.fields?.status?.name || '';
+                if (!['done', 'in use'].includes(status.toLowerCase())) {
+                    info(` - Issue '${issue.key}' NAO concluída. Status: ${status}`);
+                    allTasksCompleted = false;
+                } else {
+                    info(` - Issue '${issue.key}' concluída (Status: ${status}).`);
+                }
+            }
+
+            return allTasksCompleted;
+        } catch (err: unknown) {
+            this.log.error(`Erro checkReleaseTasksStatus: ${extractErrorMessage(err)}`);
             return false;
         }
-
-        let allTasksCompleted = true;
-        for (const issue of issuesData.issues) {
-            const status = issue.fields?.status?.name || '';
-            if (!['done', 'in use'].includes(status.toLowerCase())) {
-                info(` - Issue '${issue.key}' NAO concluída. Status: ${status}`);
-                allTasksCompleted = false;
-            } else {
-                info(` - Issue '${issue.key}' concluída (Status: ${status}).`);
-            }
-        }
-
-        return allTasksCompleted;
     }
 
     async getReleaseTasks(projectName: string, versionName: string, testOnly = false): Promise<string[]> {
-        const safeVersion = sanitizeJqlValue(versionName);
-        const projectId = await this.getProjectId(projectName);
+        try {
+            const safeVersion = sanitizeJqlValue(versionName);
+            const projectId = await this.getProjectId(projectName);
 
-        const typeFilter = testOnly ? ' AND type = "Test"' : '';
-        const jql = `project = ${projectId} AND fixVersion = "${safeVersion}"${typeFilter}`;
+            const typeFilter = testOnly ? ' AND type = "Test"' : '';
+            const jql = `project = ${projectId} AND fixVersion = "${safeVersion}"${typeFilter}`;
 
-        const issuesData = await this.searchJiraIssues(jql);
-        if (!issuesData || !issuesData.issues || issuesData.issues.length === 0) {
-            info(`Nenhuma issue encontrada para versão '${versionName}' no projeto '${projectName}'.`);
+            const issuesData = await this.searchJiraIssues(jql);
+            if (!issuesData || !issuesData.issues || issuesData.issues.length === 0) {
+                info(`Nenhuma issue encontrada para versão '${versionName}' no projeto '${projectName}'.`);
+                return [];
+            }
+
+            return issuesData.issues.map((issue) => `[${issue.key}] - ${issue.fields.summary}`);
+        } catch (err: unknown) {
+            this.log.error(`Erro getReleaseTasks: ${extractErrorMessage(err)}`);
             return [];
         }
-
-        return issuesData.issues.map((issue) => `[${issue.key}] - ${issue.fields.summary}`);
     }
 
     async getLatestReleases(
@@ -264,12 +281,12 @@ class JiraResource {
         const latestReleasedVersions = releasedVersions.slice(0, numReleases);
         const unreleasedVersions = allVersions.filter((v) => !v.released);
 
-        info(`Últimas ${latestReleasedVersions.length} versoes lancadas do projeto '${projectName}':`);
+        info(`Últimas ${latestReleasedVersions.length} versões lançadas do projeto '${projectName}':`);
         latestReleasedVersions.forEach((v) => {
             info(`Versão: ${v.name} (Data: ${v.releaseDate})`);
         });
 
-        info("\nVersoes não lancadas do projeto '" + projectName + "':");
+        info("\nVersões não lançadas do projeto '" + projectName + "':");
         if (unreleasedVersions.length > 0) {
             unreleasedVersions.forEach((v) => {
                 const description = v.description || 'Sem descrição';
@@ -296,6 +313,7 @@ class JiraResource {
                 taskCount: taskIds.length,
                 status: axiosErr.response?.status,
             });
+            throw err;
         }
     }
 
@@ -321,13 +339,13 @@ class JiraResource {
     async releaseVersion(projectName: string, versionName: string): Promise<void> {
         const versionId = await this.getVersionId(projectName, versionName);
         if (!versionId) {
-            this.log.error(`Versão '${versionName}' não encontrada, não e possivel publicar.`);
+            this.log.error(`Versão '${versionName}' não encontrada, não é possível publicar.`);
             return;
         }
 
         const allTasksCompleted = await this.checkReleaseTasksStatus(projectName, versionName);
         if (!allTasksCompleted) {
-            this.log.error(`Não e possivel publicar versão '${versionName}', nem todas as tarefas estao concluídas.`);
+            this.log.error(`Não é possível publicar versão '${versionName}', nem todas as tarefas estão concluídas.`);
             return;
         }
 
@@ -347,7 +365,7 @@ class JiraResource {
             try {
                 issueData = await this.getJiraResource(`issue/${taskId}`);
             } catch {
-                this.log.warn(`Pulando tarefa ${taskId}: não foi possivel obter dados.`);
+                this.log.warn(`Pulando tarefa ${taskId}: não foi possível obter dados.`);
                 continue;
             }
             if (!issueData.fields || !issueData.fields.status) {
@@ -360,7 +378,7 @@ class JiraResource {
 
             const transitionsMap = await this.getTransitionsForIssue(taskId);
             if (Object.keys(transitionsMap).length === 0) {
-                this.log.warn(`Não foi possivel obter transições para ${taskId}. Pulando tarefa.`);
+                this.log.warn(`Não foi possível obter transições para ${taskId}. Pulando tarefa.`);
                 continue;
             }
 
@@ -402,6 +420,7 @@ class JiraResource {
                 transitionId,
                 status: axiosErr.response?.status,
             });
+            throw err;
         }
     }
 }

@@ -1,5 +1,6 @@
 import nock from 'nock';
 import JiraResource from '../jira_management/jira_resource';
+import JiraLinkManager from '../jira_management/jira_link_manager';
 import createTests from '../jira_management/create_tests';
 
 const { createTestExecution } = createTests;
@@ -46,20 +47,28 @@ afterAll(() => {
 
 describe('E2E: createTestExecution', () => {
     let jiraResource: JiraResource;
+    let linkManager: JiraLinkManager;
 
     beforeAll(() => {
         jiraResource = new JiraResource('e2e-token', JIRA + '/rest/api/2');
+        linkManager = new JiraLinkManager(jiraResource);
     });
 
     it('creates Test Execution with 2 test keys', async () => {
-        const result = await createTestExecution(jiraResource, 'EXECPROJ', ['TEST-1', 'TEST-2'], 'meus-testes');
+        const result = await createTestExecution(
+            jiraResource,
+            linkManager,
+            'EXECPROJ',
+            ['TEST-1', 'TEST-2'],
+            'meus-testes',
+        );
 
         expect(result.key).toBe('EXEC-2');
         expect(result.summary).toMatch(/^meus-testes - /);
     });
 
     it('creates Test Execution with single key and default name', async () => {
-        const result = await createTestExecution(jiraResource, 'EXECPROJ', ['TEST-3'], '');
+        const result = await createTestExecution(jiraResource, linkManager, 'EXECPROJ', ['TEST-3'], '');
 
         expect(result.key).toBe('EXEC-1');
         expect(result.summary).toMatch(/^Automated Execution - /);

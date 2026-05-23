@@ -25,5 +25,4 @@ async function handler(c: CommandContext): Promise<boolean | void> {
     await createTestExecutionWithLinksWrapper(c, keys, csvName, execTitle, execDesc);
 }
 
-export { handler };
-module.exports = { handler };
+export = { handler };

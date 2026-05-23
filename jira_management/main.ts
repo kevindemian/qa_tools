@@ -4,6 +4,7 @@ import Config from '../shared/config';
 import JiraResource from './jira_resource';
 import JiraLinkManager from './jira_link_manager';
 import CsvResource from './csv_resource';
+import PackageVersionManager from './package_version_manager';
 import {
     print,
     warn,
@@ -50,7 +51,7 @@ const validateEnv: () => void = createValidateEnv([
     { key: 'JIRA_BASE_URL', label: 'JIRA_BASE_URL', example: 'JIRA_BASE_URL=https://seu-jira-server' },
     {
         key: 'JIRA_PERSONAL_TOKEN',
-        label: 'JIRA_PERSONAL_TOKEN (token de autenticacao)',
+        label: 'JIRA_PERSONAL_TOKEN (token de autenticação)',
         example: 'JIRA_PERSONAL_TOKEN=seu-token-aqui',
     },
     {
@@ -61,7 +62,7 @@ const validateEnv: () => void = createValidateEnv([
 ]);
 
 const HELP_TOPICS: Record<string, string> = {
-    csv: 'Formato CSV:\n  Cada teste e um bloco separado por "---"\n  Campos obrigatorios: Title, Action/Data/Expected Result\n  Opcionais: Description, Pre-condition, Linked Issues, Group\n  Exemplo em test_steps.csv',
+    csv: 'Formato CSV:\n  Cada teste e um bloco separado por "---"\n  Campos obrigatórios: Title, Action/Data/Expected Result\n  Opcionais: Description, Pre-condition, Linked Issues, Group\n  Exemplo em test_steps.csv',
     labels: 'Labels Jira:\n  Separadas por virgula. Sem acentos, sem espacos.\n  Ex: qa,regression,smoke,sprint-30',
     group: 'Group: agrupa testes para cross-reference.\n  Testes com mesmo Group: tem descricoes atualizadas automaticamente\n  apos criação com referencia mutua.',
     precondition:
@@ -296,7 +297,7 @@ function handleSpecialInput(input: string): boolean {
     }
     if (cmd === '/history') {
         const hist = (loadState() as StateSchema).history || [];
-        title('Historico de operacoes');
+        title('Histórico de operações');
         const last10 = hist.slice(-10);
         if (last10.length === 0) {
             warn('Nenhuma operação registrada.');
@@ -327,6 +328,7 @@ function initializeSession() {
     const linkManagerXray = new JiraLinkManager(jiraResourceXray);
     const csvResource = new CsvResource();
     const ctx = new SessionContext();
+    ctx.createPackageManager = (dir: string) => new PackageVersionManager(dir);
 
     const state = loadState() as StateSchema;
     ctx.project_name = (
@@ -438,7 +440,7 @@ async function runMainLoop(
             const shouldContinue = await cmdHandler(cmdCtx);
             if (shouldContinue) continue;
         } else if (choice !== '0') {
-            warn('Opção invalida. Escolha entre 0-16, alias ou digite /help.');
+            warn('Opção inválida. Escolha entre 0-16, alias ou digite /help.');
         }
 
         if (choice === '0') {
@@ -505,4 +507,4 @@ main().catch((err: unknown) => {
     process.exitCode = 1;
 });
 
-module.exports = { main };
+module.exports = { main, showHelp, resolveAlias, buildMenuChoices, handleSpecialInput, displayMenu, _configHint };

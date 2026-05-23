@@ -1,14 +1,7 @@
 import { createHttpClient } from '../shared/http-client';
-import { info, extractErrorMessage } from '../shared/prompt';
+import { info } from '../shared/prompt';
 import { Logger } from '../shared/logger';
-
-function handleError(log: Logger, op: string, err: unknown, opts?: { returnNull?: boolean }) {
-    const msg = extractErrorMessage(err);
-    const axiosErr = err as { response?: { status?: number } };
-    log.error(`Erro ao ${op}: ${msg}`, { status: axiosErr.response?.status });
-    if (opts?.returnNull) return null;
-    throw err;
-}
+import { handleError } from '../shared/git-provider-error';
 
 class GitHubManager {
     provider = 'github' as const;
@@ -50,7 +43,7 @@ class GitHubManager {
             const response = await this.client.get(url, ...args);
             return response.data;
         } catch (err) {
-            return handleError(this.log, opts?.operation || url, err, { returnNull: opts?.returnNull });
+            return handleError(err, { context: opts?.operation || url, returnNull: opts?.returnNull });
         }
     }
 
@@ -60,7 +53,7 @@ class GitHubManager {
             const response = await this.client.post(url, ...args);
             return response.data;
         } catch (err) {
-            return handleError(this.log, opts?.operation || url, err);
+            return handleError(err, { context: opts?.operation || url });
         }
     }
 
@@ -70,7 +63,7 @@ class GitHubManager {
             const response = await this.client.patch(url, ...args);
             return response.data;
         } catch (err) {
-            return handleError(this.log, opts?.operation || url, err);
+            return handleError(err, { context: opts?.operation || url });
         }
     }
 
@@ -101,7 +94,7 @@ class GitHubManager {
             );
             return { id: workflowId, web_url: this.apiUrl + '/' + this.repoFullName + '/actions/runs' };
         } catch (err) {
-            return handleError(this.log, 'disparar workflow', err);
+            return handleError(err, { context: 'disparar workflow' });
         }
     }
 
@@ -172,7 +165,7 @@ class GitHubManager {
                     }
                 }
             }
-            return handleError(this.log, 'criar PR', err);
+            return handleError(err, { context: 'criar PR' });
         }
     }
 
@@ -234,7 +227,7 @@ class GitHubManager {
             const response = await this.client.put(this._repoPath + '/pulls/' + iid + '/merge', body);
             return this._formatPR(response.data);
         } catch (err) {
-            return handleError(this.log, 'fazer merge', err);
+            return handleError(err, { context: 'fazer merge' });
         }
     }
 
@@ -294,7 +287,7 @@ class GitHubManager {
             });
             return { buffer: Buffer.from(response.data), filename: 'artifact.zip' };
         } catch (err) {
-            handleError(this.log, 'baixar artifact', err);
+            handleError(err, { context: 'baixar artifact' });
             throw err;
         }
     }
@@ -311,7 +304,7 @@ class GitHubManager {
     async getCICDVariables() {
         try {
             const data = await this._get(this._repoPath + '/actions/variables', {
-                operation: 'buscar variaveis',
+                operation: 'buscar variáveis',
                 params: { per_page: 100 },
                 returnNull: true,
             });

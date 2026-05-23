@@ -1,6 +1,7 @@
 import chalk from 'chalk';
 import { print, success, error, warn, info, divider } from './prompt';
 import { rootLogger } from './logger';
+import Config from './config';
 
 const _sessionStart = Date.now();
 
@@ -16,10 +17,10 @@ export function mask(v: string): string {
 
 export function createValidateEnv(configs: EnvConfig[]): () => void {
     return function validateEnv(): void {
-        const missing = configs.filter((c) => !process.env[c.key]);
+        const missing = configs.filter((c) => !Config.get(c.key));
         if (missing.length === 0) {
             for (const c of configs) {
-                const val = process.env[c.key] || '';
+                const val = Config.get(c.key) || '';
                 if (
                     val.length > 20 &&
                     !val.includes('placeholder') &&
@@ -47,7 +48,7 @@ export function sanitizeUrl(url: string): string {
 export function setupSigint(getIsBusy: (() => boolean) | null, onExit: (() => void) | null): void {
     const handler = () => {
         if (getIsBusy && getIsBusy()) {
-            info('Operação em andamento. Use Ctrl+C novamente para forcar saida.');
+            info('Operação em andamento. Use Ctrl+C novamente para forçar saída.');
             return;
         }
         process.removeListener('SIGINT', handler);
@@ -86,7 +87,7 @@ export function printSessionSummary(
     }
     if (history && history.length > 0) {
         const last5 = history.slice(-5);
-        info('Últimas operacoes:');
+        info('Últimas operações:');
         last5.forEach((h) => {
             const icon = h.status === 'error' ? chalk.red('ERR') : chalk.green('OK');
             print(`  ${icon} ${h.op}: ${h.detail}`);

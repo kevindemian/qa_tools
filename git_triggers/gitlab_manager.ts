@@ -1,14 +1,7 @@
 import { createHttpClient } from '../shared/http-client';
-import { info, extractErrorMessage } from '../shared/prompt';
+import { info } from '../shared/prompt';
 import { Logger } from '../shared/logger';
-
-function handleError(log: Logger, op: string, err: unknown, opts?: { returnNull?: boolean }) {
-    const msg = extractErrorMessage(err);
-    const axiosErr = err as { response?: { status?: number } };
-    log.error(`Erro ao ${op}: ${msg}`, { status: axiosErr.response?.status });
-    if (opts?.returnNull) return null;
-    throw err;
-}
+import { handleError } from '../shared/git-provider-error';
 
 class GitLabManager {
     provider = 'gitlab' as const;
@@ -35,7 +28,7 @@ class GitLabManager {
             const response = await this.client.get(url, ...args);
             return response.data;
         } catch (err) {
-            return handleError(this.log, opts?.operation || url, err, { returnNull: opts?.returnNull });
+            return handleError(err, { context: opts?.operation || url, returnNull: opts?.returnNull });
         }
     }
 
@@ -45,7 +38,7 @@ class GitLabManager {
             const response = await this.client.post(url, ...args);
             return response.data;
         } catch (err) {
-            return handleError(this.log, opts?.operation || url, err);
+            return handleError(err, { context: opts?.operation || url });
         }
     }
 
@@ -55,7 +48,7 @@ class GitLabManager {
             const response = await this.client.put(url, ...args);
             return response.status === 204 ? null : response.data;
         } catch (err) {
-            return handleError(this.log, opts?.operation || url, err);
+            return handleError(err, { context: opts?.operation || url });
         }
     }
 
@@ -148,7 +141,7 @@ class GitLabManager {
                 { operation: 'fazer merge' },
             );
         } catch (err) {
-            return handleError(this.log, 'fazer merge', err);
+            return handleError(err, { context: 'fazer merge' });
         }
     }
 
@@ -204,7 +197,7 @@ class GitLabManager {
     async getCICDVariables() {
         return (
             (await this._get('/variables', {
-                operation: 'buscar variaveis CI/CD',
+                operation: 'buscar variáveis CI/CD',
                 params: { per_page: 100 },
                 returnNull: true,
             })) || []
@@ -245,7 +238,7 @@ class GitLabManager {
             const filename = match ? match[1] : 'artifacts.zip';
             return { buffer: Buffer.from(response.data as ArrayBuffer), filename };
         } catch (err) {
-            return handleError(this.log, 'baixar artifact', err) as never;
+            return handleError(err, { context: 'baixar artifact' }) as never;
         }
     }
 }

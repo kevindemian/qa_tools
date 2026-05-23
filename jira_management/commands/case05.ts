@@ -1,12 +1,11 @@
 import { success, warn, smartPrompt, printError } from '../../shared/prompt';
 import { rootLogger } from '../../shared/logger';
-import PackageVersionManager from '../package_version_manager';
 import type { CommandContext } from './context';
 
 async function handler(c: CommandContext): Promise<boolean | void> {
     if (!c.ctx.packageManager) {
         const dir = smartPrompt('Diretório do projeto git', { default: process.cwd() }, () => {});
-        c.ctx.packageManager = new PackageVersionManager(dir);
+        c.ctx.packageManager = c.ctx.createPackageManager?.(dir);
         c.ctx.git_directory = dir;
     }
     const version = smartPrompt('Nome da versão', { hint: 'ex: v2.7.0' }, () => {});
@@ -16,7 +15,7 @@ async function handler(c: CommandContext): Promise<boolean | void> {
             warn('Nenhuma tarefa encontrada para esta versão.');
             return;
         }
-        const pm = c.ctx.packageManager as PackageVersionManager;
+        const pm = c.ctx.packageManager as import('../package_version_manager');
         const versionNumber = version.split(' ').pop() || '';
         pm.updateReleaseNotes(versionNumber, tasks);
 
@@ -37,5 +36,4 @@ async function handler(c: CommandContext): Promise<boolean | void> {
     }
 }
 
-export { handler };
-module.exports = { handler };
+export = { handler };

@@ -251,7 +251,7 @@ describe('CLI Base', () => {
                 { status: 'error', op: 'build', detail: 'failed' },
             ];
             cliBase.printSessionSummary([], null, history);
-            expect(MOCK_PROMPT.info).toHaveBeenCalledWith('Últimas operacoes:');
+            expect(MOCK_PROMPT.info).toHaveBeenCalledWith('Últimas operações:');
             expect(MOCK_PROMPT.print).toHaveBeenCalledTimes(3);
             expect(MOCK_PROMPT.print).toHaveBeenCalledWith(expect.stringContaining('test: passed'));
             expect(MOCK_PROMPT.print).toHaveBeenCalledWith(expect.stringContaining('build: failed'));

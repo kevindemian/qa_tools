@@ -111,7 +111,7 @@ class JiraLinkManager {
                 }
             }
         } catch {
-            rootLogger.warn('Não foi possivel descobrir field ID para pre-condition, usando fallback 13708');
+            rootLogger.warn('Não foi possível descobrir field ID para pre-condition, usando fallback 13708');
         }
         this._preconditionFieldId = 'customfield_13708';
         return this._preconditionFieldId;

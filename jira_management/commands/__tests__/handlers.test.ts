@@ -55,6 +55,7 @@ const mockSessionContext: Record<string, unknown> = {
     results: [],
     lastOperation: '',
     packageManager: undefined,
+    createPackageManager: jest.fn().mockReturnValue({ updateReleaseNotes: jest.fn(), updateVersion: jest.fn() }),
     pushHistory: jest.fn(),
     withBusy: jest.fn(async (fn: () => Promise<void>) => fn()),
 };

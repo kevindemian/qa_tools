@@ -51,7 +51,7 @@ class CypressResource {
             });
 
             if (!Array.isArray(data)) {
-                warn(`Resposta invalida para o projeto ${project}`);
+                warn(`Resposta inválida para o projeto ${project}`);
                 continue;
             }
 
