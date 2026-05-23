@@ -1,6 +1,20 @@
-const fs = require('fs');
-const path = require('path');
-const os = require('os');
+jest.mock('../shared/prompt', () => {
+    const actual = jest.requireActual('../shared/prompt');
+    return {
+        ...actual,
+        prompt: jest.fn().mockReturnValue(''),
+        confirm: jest.fn().mockReturnValue(true),
+        smartPrompt: jest.fn().mockReturnValue('v2.0.0'),
+    };
+});
+jest.mock('../shared/state', () => ({
+    load: jest.fn().mockReturnValue({}),
+    update: jest.fn(),
+}));
+
+import fs from 'fs';
+import path from 'path';
+import os from 'os';
 
 const tmpHome = fs.mkdtempSync(path.join(os.tmpdir(), 'qa-e2e-hp-'));
 const tmpGitDir = fs.mkdtempSync(path.join(os.tmpdir(), 'qa-e2e-git-'));
@@ -23,29 +37,15 @@ fs.writeFileSync(
 
 jest.setTimeout(30000);
 
-const nock = require('nock');
-const JiraResource = require('../jira_management/jira_resource');
-const JiraLinkManager = require('../jira_management/jira_link_manager');
-const CsvResource = require('../jira_management/csv_resource');
-const { rootLogger } = require('../shared/logger');
-const { SessionContext } = require('../shared/session-context');
+import nock from 'nock';
+import JiraResource from '../jira_management/jira_resource';
+import JiraLinkManager from '../jira_management/jira_link_manager';
+import CsvResource from '../jira_management/csv_resource';
+import { rootLogger } from '../shared/logger';
+import { SessionContext } from '../shared/session-context';
 
 const HOST = 'http://localhost:1996';
 const API = HOST + '/rest/api/2';
-
-jest.mock('../shared/prompt', () => {
-    const actual = jest.requireActual('../shared/prompt');
-    return {
-        ...actual,
-        prompt: jest.fn().mockReturnValue(''),
-        confirm: jest.fn().mockReturnValue(true),
-        smartPrompt: jest.fn().mockReturnValue('v2.0.0'),
-    };
-});
-jest.mock('../shared/state', () => ({
-    load: jest.fn().mockReturnValue({}),
-    update: jest.fn(),
-}));
 
 beforeAll(() => {
     process.env.HOME = tmpHome;
@@ -62,7 +62,9 @@ afterAll(() => {
     [tmpHome, tmpGitDir].forEach((d) => {
         try {
             fs.rmSync(d, { recursive: true, force: true });
-        } catch {}
+        } catch {
+            /* ignore */
+        }
     });
 });
 
@@ -71,7 +73,7 @@ beforeEach(() => {
     nock.cleanAll();
     nock.disableNetConnect();
     jest.spyOn(console, 'log').mockImplementation(() => {});
-    jest.spyOn(process.stdout, 'write').mockImplementation(() => {});
+    jest.spyOn(process.stdout, 'write').mockImplementation(() => true);
 });
 
 afterEach(() => {
@@ -97,14 +99,16 @@ function buildContext() {
         linkManagerXray: lmXray,
         csvResource: csv,
         ctx,
-        pushHistory: jest.fn((op, detail, status) => ctx.pushHistory(op, detail, status)),
+        pushHistory: jest.fn((op: string, detail: string, status: string) => ctx.pushHistory(op, detail, status)),
         printSessionSummary: jest.fn(),
         base_url: HOST,
         sessionLog: rootLogger.child({ session: 'e2e-hp' }),
     };
 }
 
-const prompt = () => require('../shared/prompt');
+// eslint-disable-next-line @typescript-eslint/no-require-imports -- lazy require to ensure jest.mock hoisting
+const getPrompt = () =>
+    require('../shared/prompt') as { prompt: jest.Mock; confirm: jest.Mock; smartPrompt: jest.Mock };
 
 // ──────────────────────────────────────────────
 // case02 — List versions  (GET project + versions)
@@ -157,8 +161,8 @@ describe('case03 — create version', () => {
         api.get('/project/ECSPOL').reply(200, { id: '123' });
         api.get('/project/123/versions').reply(200, []);
         api.post('/version').reply(201, { name: 'v2.0.0', id: '99' });
-        prompt().prompt.mockReturnValueOnce('v2.0.0');
-        prompt().prompt.mockReturnValueOnce('Release notes');
+        getPrompt().prompt.mockReturnValueOnce('v2.0.0');
+        getPrompt().prompt.mockReturnValueOnce('Release notes');
         const c = buildContext();
         const mod = require('../jira_management/commands/case03');
         await mod.handler(c);
@@ -167,7 +171,7 @@ describe('case03 — create version', () => {
     });
 
     it('empty name — returns early without history', async () => {
-        prompt().prompt.mockReturnValueOnce('');
+        getPrompt().prompt.mockReturnValueOnce('');
         const c = buildContext();
         const mod = require('../jira_management/commands/case03');
         await mod.handler(c);
@@ -190,15 +194,15 @@ describe('case04 — assign fixVersion', () => {
         api.put('/issue/IMT-1').reply(204);
         api.put('/issue/IMT-2').reply(204);
 
-        prompt().confirm.mockReturnValueOnce(true); // use in-memory
-        prompt().confirm.mockReturnValueOnce(true); // confirm fixVersion
-        prompt().confirm.mockReturnValueOnce(false); // no sprint
+        getPrompt().confirm.mockReturnValueOnce(true); // use in-memory
+        getPrompt().confirm.mockReturnValueOnce(true); // confirm fixVersion
+        getPrompt().confirm.mockReturnValueOnce(false); // no sprint
 
         const c = buildContext();
         const mod = require('../jira_management/commands/case04');
         await mod.handler(c);
         expect(c.pushHistory).toHaveBeenCalledWith('atribuir-fixversion', expect.stringContaining('2/2'), 'ok');
-        expect(c.ctx.results.filter((r) => r.status === 'ok')).toHaveLength(2);
+        expect(c.ctx.results.filter((r: { status: string }) => r.status === 'ok')).toHaveLength(2);
         expect(nock.isDone()).toBe(true);
     });
 });
@@ -219,8 +223,8 @@ describe('case05 — update package + release notes', () => {
                 ],
                 total: 2,
             });
-        prompt().smartPrompt.mockReturnValueOnce(tmpGitDir);
-        prompt().smartPrompt.mockReturnValueOnce('v2.0.0');
+        getPrompt().smartPrompt.mockReturnValueOnce(tmpGitDir);
+        getPrompt().smartPrompt.mockReturnValueOnce('v2.0.0');
         const c = buildContext();
         const mod = require('../jira_management/commands/case05');
         await mod.handler(c);
@@ -292,8 +296,8 @@ describe('case07 — close tasks', () => {
         api.post('/issue/TEST-1/transitions').times(2).reply(204);
         api.post('/issue/TEST-2/transitions').times(2).reply(204);
 
-        prompt().smartPrompt.mockReturnValueOnce('v2.0.0');
-        prompt().confirm.mockReturnValueOnce(true);
+        getPrompt().smartPrompt.mockReturnValueOnce('v2.0.0');
+        getPrompt().confirm.mockReturnValueOnce(true);
 
         const c = buildContext();
         const mod = require('../jira_management/commands/case07');
@@ -306,8 +310,8 @@ describe('case07 — close tasks', () => {
         const { api } = freshScope();
         api.get('/project/ECSPOL').reply(200, { id: '123' });
         api.get('/search').query(true).reply(200, { issues: [], total: 0 });
-        prompt().smartPrompt.mockReturnValueOnce('v2.0.0');
-        prompt().confirm.mockReturnValueOnce(true);
+        getPrompt().smartPrompt.mockReturnValueOnce('v2.0.0');
+        getPrompt().confirm.mockReturnValueOnce(true);
         const c = buildContext();
         const mod = require('../jira_management/commands/case07');
         await mod.handler(c);
@@ -334,8 +338,8 @@ describe('case08 — publish version', () => {
             });
         api.put('/version/99').reply(200);
 
-        prompt().smartPrompt.mockReturnValueOnce('v2.0.0');
-        prompt().confirm.mockReturnValueOnce(true);
+        getPrompt().smartPrompt.mockReturnValueOnce('v2.0.0');
+        getPrompt().confirm.mockReturnValueOnce(true);
 
         const c = buildContext();
         const mod = require('../jira_management/commands/case08');
@@ -349,8 +353,8 @@ describe('case08 — publish version', () => {
 // case09 — Switch project  (local — no HTTP)
 // ──────────────────────────────────────────────
 describe('case09 — switch project', () => {
-    it('updates ctx.project_name and persists to state', async () => {
-        prompt().prompt.mockReturnValueOnce('NEWPROJ');
+    it('updates ctx.project_name and persists to state', () => {
+        getPrompt().prompt.mockReturnValueOnce('NEWPROJ');
         const c = buildContext();
         const mod = require('../jira_management/commands/case09');
         mod.handler(c);
@@ -364,8 +368,8 @@ describe('case09 — switch project', () => {
 // case10 — Change git directory  (local — no HTTP)
 // ──────────────────────────────────────────────
 describe('case10 — change git directory', () => {
-    it('sets git directory and packageManager', async () => {
-        prompt().prompt.mockReturnValueOnce(tmpGitDir);
+    it('sets git directory and packageManager', () => {
+        getPrompt().prompt.mockReturnValueOnce(tmpGitDir);
         const c = buildContext();
         const mod = require('../jira_management/commands/case10');
         mod.handler(c);
@@ -378,9 +382,9 @@ describe('case10 — change git directory', () => {
 // case11 — Generate CSV template  (local — copies file)
 // ──────────────────────────────────────────────
 describe('case11 — generate CSV template', () => {
-    it('copies template file to target path', async () => {
+    it('copies template file to target path', () => {
         const dest = path.join(tmpHome, 'template.csv');
-        prompt().prompt.mockReturnValueOnce(dest);
+        getPrompt().prompt.mockReturnValueOnce(dest);
         const c = buildContext();
         const mod = require('../jira_management/commands/case11');
         mod.handler(c);
@@ -445,10 +449,10 @@ describe('case13 — create Test Execution', () => {
         });
         api.post('/issueLink').times(2).reply(201);
 
-        prompt().confirm.mockReturnValueOnce(true); // use in-memory
-        prompt().prompt.mockReturnValueOnce(''); // name (default '')
-        prompt().prompt.mockReturnValueOnce(''); // title
-        prompt().prompt.mockReturnValueOnce(''); // description
+        getPrompt().confirm.mockReturnValueOnce(true); // use in-memory
+        getPrompt().prompt.mockReturnValueOnce(''); // name (default '')
+        getPrompt().prompt.mockReturnValueOnce(''); // title
+        getPrompt().prompt.mockReturnValueOnce(''); // description
 
         const c = buildContext();
         const mod = require('../jira_management/commands/case13');
@@ -462,8 +466,8 @@ describe('case13 — create Test Execution', () => {
 // case14 — Change Cypress directory  (local — no HTTP)
 // ──────────────────────────────────────────────
 describe('case14 — change Cypress directory', () => {
-    it('sets cypress dir in state', async () => {
-        prompt().prompt.mockReturnValueOnce('/tmp/cypress');
+    it('sets cypress dir in state', () => {
+        getPrompt().prompt.mockReturnValueOnce('/tmp/cypress');
         const c = buildContext();
         const mod = require('../jira_management/commands/case14');
         mod.handler(c);
@@ -502,12 +506,12 @@ describe('case15 — import JSON tests', () => {
         });
         api.post('/issueLink').reply(201);
 
-        prompt().smartPrompt.mockReturnValueOnce(jsonFixture); // json path
-        prompt().prompt.mockReturnValueOnce('e2e,manual'); // labels
-        prompt().confirm.mockReturnValueOnce(true); // create TE
-        prompt().prompt.mockReturnValueOnce(''); // name
-        prompt().prompt.mockReturnValueOnce(''); // title
-        prompt().prompt.mockReturnValueOnce(''); // description
+        getPrompt().smartPrompt.mockReturnValueOnce(jsonFixture); // json path
+        getPrompt().prompt.mockReturnValueOnce('e2e,manual'); // labels
+        getPrompt().confirm.mockReturnValueOnce(true); // create TE
+        getPrompt().prompt.mockReturnValueOnce(''); // name
+        getPrompt().prompt.mockReturnValueOnce(''); // title
+        getPrompt().prompt.mockReturnValueOnce(''); // description
 
         const c = buildContext();
         c.ctx.packageManager = undefined;
@@ -523,8 +527,8 @@ describe('case15 — import JSON tests', () => {
 // case16 — Change JSON directory  (local — no HTTP)
 // ──────────────────────────────────────────────
 describe('case16 — change JSON directory', () => {
-    it('sets json dir in state', async () => {
-        prompt().prompt.mockReturnValueOnce('/tmp/json');
+    it('sets json dir in state', () => {
+        getPrompt().prompt.mockReturnValueOnce('/tmp/json');
         const c = buildContext();
         const mod = require('../jira_management/commands/case16');
         mod.handler(c);

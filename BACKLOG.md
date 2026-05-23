@@ -123,20 +123,7 @@ Issues registradas durante refatorações, postergadas por escopo.
 | 1 | Migrar `jira_management/` e `git_triggers/` .test.js → .ts (11 arquivos) | P2 | Médio | ✅ |
 | 2 | Cobertura de testes em `jira_management/commands/` handlers (20-45% → 70%+ — atual 83.22%) | P2 | Alto | ✅ |
 | 3 | Cobertura de testes em `git_triggers/` (atual 90.64%) | P2 | Alto | ✅ |
-| 4 | Remover `@ts-nocheck` de todos os .test.ts (17 arquivos) e tipá-los corretamente | P3 | Médio | ⏳ |
-| 5 | Migrar `e2e/` .test.js → .ts (6 arquivos — 3 existentes + 3 novos no working tree) | P3 | Médio | ⏳ |
-
-#### Item 4 — Arquivos afetados (17)
-
-**shared/** (7): `cli_base`, `http-client`, `logger`, `prompt`, `result_parser`, `session-context`, `state`
-**jira_management/** (7): `create_tests`, `csv_resource`, `cypress_resource`, `jira_link_manager`, `jira_validator`, `package_version_manager`, `result_reporter`
-**git_triggers/** (3): `github_manager`, `gitlab_manager`, `nivelar`
-
-> Nota: `state.test.ts` e `logger.test.ts` usam `jest.isolateModules` com `require()` dinâmico dentro de callback — remoção de `@ts-nocheck` requer refatoração (maior esforço). Demais 15 são remoção direta + tipagem.
-
-#### Item 5 — Arquivos e2e a migrar (6)
-
-**Existentes**: `csv-import`, `csv-import-errors`, `result-pipeline`, `testexec`
-**Novos (working tree)**: `_min-test`, `handlers-happy-paths`
+| 4 | Remover `@ts-nocheck` de todos os .test.ts (17 arquivos) e tipá-los corretamente | P3 | Médio | ✅ |
+| 5 | Migrar `e2e/` .test.js → .ts (6 arquivos) | P3 | Médio | ✅ |
 
 ---

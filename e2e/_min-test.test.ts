@@ -1,6 +1,3 @@
-const nock = require('nock');
-const { SessionContext } = require('../shared/session-context');
-
 jest.mock('../shared/prompt', () => {
     const actual = jest.requireActual('../shared/prompt');
     return {
@@ -11,6 +8,9 @@ jest.mock('../shared/prompt', () => {
     };
 });
 jest.mock('../shared/state', () => ({ load: jest.fn().mockReturnValue({}), update: jest.fn() }));
+
+import nock from 'nock';
+import { SessionContext } from '../shared/session-context';
 
 describe('case04', () => {
     beforeEach(() => {
@@ -24,6 +24,7 @@ describe('case04', () => {
     });
 
     it('happy path', async () => {
+        // eslint-disable-next-line @typescript-eslint/no-require-imports -- JiraResource used inside test to avoid jest.mock ordering issues
         const JiraResource = require('../jira_management/jira_resource');
         const API = 'http://localhost:1999/rest/api/2';
         const api = nock(API).defaultReplyHeaders({ 'Content-Type': 'application/json' });

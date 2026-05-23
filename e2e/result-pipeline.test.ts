@@ -1,20 +1,19 @@
-const fs = require('fs');
-const path = require('path');
-const os = require('os');
-const nock = require('nock');
+import fs from 'fs';
+import path from 'path';
+import os from 'os';
+import nock from 'nock';
+import JiraResource from '../jira_management/jira_resource';
+import JiraLinkManager from '../jira_management/jira_link_manager';
+import { parseMochawesome } from '../shared/result_parser';
+import { matchResultsToTests, createTestExecutionFromResults } from '../jira_management/result_reporter';
 
 const tmpHome = fs.mkdtempSync(path.join(os.tmpdir(), 'qa-e2e-'));
 
 jest.setTimeout(30000);
 
-const JiraResource = require('../jira_management/jira_resource');
-const JiraLinkManager = require('../jira_management/jira_link_manager');
-const { parseMochawesome } = require('../shared/result_parser');
-const { matchResultsToTests, createTestExecutionFromResults } = require('../jira_management/result_reporter');
-
 const FIXTURES = path.join(__dirname, 'fixtures');
 
-function setupJiraMocks(base) {
+function setupJiraMocks(base: string): void {
     const api = nock(base + '/rest/api/2');
 
     api.get('/issuetype').reply(200, [
@@ -36,9 +35,11 @@ function setupJiraMocks(base) {
     });
 
     let teCount = 0;
-    api.post('/issue').reply(201, (_, body) => {
+    api.post('/issue').reply(201, (_uri: string, body) => {
         teCount++;
-        const keys = body.fields?.customfield_13715 || [];
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any -- nock body type is a complex union; accessing Jira custom field
+        const b = body as any;
+        const keys = (b?.fields?.customfield_13715 as string[]) || [];
         return { key: 'RESULT-' + teCount, id: '3000' + teCount };
     });
 
@@ -65,7 +66,7 @@ describe('E2E: Result Processing Pipeline', () => {
 
     beforeEach(() => {
         jest.spyOn(console, 'log').mockImplementation(() => {});
-        jest.spyOn(process.stdout, 'write').mockImplementation(() => {});
+        jest.spyOn(process.stdout, 'write').mockImplementation(() => true);
         nock.cleanAll();
         setupJiraMocks('http://localhost:1997/jira');
     });

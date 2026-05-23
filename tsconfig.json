@@ -18,7 +18,8 @@
     "shared/**/*.ts",
     "jira_management/**/*.ts",
     "git_triggers/**/*.ts",
-    "docs/**/*.ts"
+    "docs/**/*.ts",
+    "e2e/**/*.ts"
   ],
   "exclude": [
     "node_modules"
