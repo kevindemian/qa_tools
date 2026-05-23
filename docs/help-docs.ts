@@ -1,6 +1,7 @@
 import fs from 'fs';
 import path from 'path';
-import { spawnSync } from 'child_process';
+import { mdBox } from '../shared/markdown';
+import { isQuiet, showSelect } from '../shared/prompt';
 
 const DOCS_DIR = __dirname;
 
@@ -39,17 +40,13 @@ function getDocs(): DocEntry[] {
 function displayFile(filePath: string): void {
     const content = fs.readFileSync(filePath, 'utf8');
 
-    const hasLess = spawnSync('which', ['less'], { stdio: 'ignore' }).status === 0;
-    const isTTY = process.stdout.isTTY;
-
-    if (hasLess && isTTY) {
-        const less = spawnSync('less', ['-R', '--prompt', 'Pressione q para sair', filePath], {
-            stdio: 'inherit',
-        });
-        if (less.error) {
-            console.log(content);
-        }
-    } else {
+    if (isQuiet()) {
+        console.log(content);
+        return;
+    }
+    try {
+        console.log(mdBox(content, { title: 'Documentação', border: 'round' }));
+    } catch {
         console.log(content);
     }
 }
@@ -80,8 +77,6 @@ async function main(): Promise<void> {
         process.exit(1);
     }
 
-    const { showSelect } = await import('../shared/prompt.js');
-
     try {
         const choice = await showSelect(
             '📚 Documentação — Selecione um tópico',
@@ -94,8 +89,8 @@ async function main(): Promise<void> {
         if (choice) {
             displayFile(path.join(DOCS_DIR, choice));
         }
-    } catch {
-        console.log('\nSeleção cancelada.');
+    } catch (err: unknown) {
+        console.log('\nSeleção cancelada.', err);
         process.exit(0);
     }
 }

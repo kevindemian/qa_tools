@@ -4,11 +4,16 @@ let dotenvLoaded = false;
 
 function ensureDotenv(): void {
     if (dotenvLoaded) return;
+    const _origWrite = process.stdout.write.bind(process.stdout);
     try {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        (process.stdout as any).write = () => true;
         // eslint-disable-next-line @typescript-eslint/no-require-imports
         require('dotenv').config({ path: path.resolve(__dirname, '../.env') });
     } catch {
         /* env file optional */
+    } finally {
+        process.stdout.write = _origWrite;
     }
     dotenvLoaded = true;
 }

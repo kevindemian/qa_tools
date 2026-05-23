@@ -2,6 +2,14 @@
 chcp 65001 >nul
 setlocal enabledelayedexpansion
 
+REM WSL detection — delegate to .sh
+wsl.exe -e bash -c "exit" >nul 2>&1
+if %errorlevel% equ 0 (
+    for %%I in ("%~dp0.") do set "SH_PATH=%%~dpIqatools.sh"
+    wsl.exe -e bash "!SH_PATH!" %*
+    exit /b !errorlevel!
+)
+
 set "SCRIPT_DIR=%~dp0"
 set "cacheFile=%TEMP%\qa_tools_last_choice.txt"
 

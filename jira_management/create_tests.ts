@@ -4,7 +4,7 @@ import Config from '../shared/config';
 import type JiraResource from './jira_resource';
 import JiraLinkManager from './jira_link_manager';
 import type CsvResource from './csv_resource';
-import type { TestCase } from '../shared/types';
+import type { TestCase, TestResult } from '../shared/types';
 import TestCaseFactory from './test-case-factory';
 import IssueLinker from './issue-linker';
 import TestExecutionCreator from './test-execution-creator';
@@ -13,12 +13,6 @@ import MappingFileGenerator from './mapping-file-generator';
 
 import { rootLogger } from '../shared/logger';
 import { load as loadState, update as updateState } from '../shared/state';
-
-interface TestResult {
-    status: 'ok' | 'error';
-    label: string;
-    message: string;
-}
 
 interface CreateTestsFromTestCasesParams {
     tests: TestCase[];

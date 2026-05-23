@@ -77,6 +77,7 @@ save_choice() {
 
 run_tool() {
     save_choice "${tool_names[$1]}"
+    clear 2>/dev/null || true
     npx tsx "${tools[$1]}" "${@:2}"
     rc=$?
     if [ $rc -ne 0 ]; then

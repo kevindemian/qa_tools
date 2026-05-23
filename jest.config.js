@@ -1,4 +1,4 @@
-/** @type {import('jest').Config} */
+/* * @type {import('jest').Config} */
 module.exports = {
     transform: { '^.+\\.ts$': 'ts-jest' },
     moduleFileExtensions: ['ts', 'js'],

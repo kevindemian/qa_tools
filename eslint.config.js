@@ -17,7 +17,7 @@ module.exports = tseslint.config(
             '@typescript-eslint/prefer-readonly': 'warn',
             'no-console': 'error',
             'no-throw-literal': 'error',
-            'no-empty': 'off',
+            'no-empty': ['error', { allowEmptyCatch: true }],
             '@typescript-eslint/no-unsafe-assignment': 'off',
             '@typescript-eslint/no-unsafe-return': 'off',
             '@typescript-eslint/no-unsafe-member-access': 'off',
