@@ -4,6 +4,7 @@ const mockRootLogger = {
     warn: jest.fn(),
     debug: jest.fn(),
     writeFileOnly: jest.fn(),
+    filePath: undefined as string | undefined,
 };
 
 jest.mock('./logger', () => ({
@@ -39,6 +40,7 @@ describe('Prompt', () => {
         mockLog.mockRestore();
         mockError.mockRestore();
         mockWarn.mockRestore();
+        process.stdout.isTTY = false;
     });
 
     describe('success', () => {
@@ -57,6 +59,12 @@ describe('Prompt', () => {
             process.env.QUIET = 'true';
             prompt.success('Logada mesmo quiet');
             expect(mockRootLogger.writeFileOnly).toHaveBeenCalledWith('INFO', 'Logada mesmo quiet');
+        });
+
+        it('uses unicode icon when isTTY=true and not quiet', () => {
+            process.stdout.isTTY = true;
+            prompt.success('Unicode');
+            expect(mockLog).toHaveBeenCalledWith(expect.stringContaining('\u2713'));
         });
     });
 
@@ -94,6 +102,20 @@ describe('Prompt', () => {
             process.env.QUIET = 'true';
             prompt.info('Logada mesmo quiet');
             expect(mockRootLogger.writeFileOnly).toHaveBeenCalledWith('INFO', 'Logada mesmo quiet');
+        });
+    });
+
+    describe('helpLine', () => {
+        it('logs with cyan i prefix regardless of quiet mode', () => {
+            process.env.QUIET = 'true';
+            prompt.helpLine('Ajuda');
+            expect(mockLog).toHaveBeenCalledWith(expect.stringContaining('Ajuda'));
+        });
+
+        it('logs via writeFileOnly HELP', () => {
+            process.env.QUIET = 'true';
+            prompt.helpLine('HELP text');
+            expect(mockRootLogger.writeFileOnly).toHaveBeenCalledWith('HELP', 'HELP text');
         });
     });
 
@@ -135,13 +157,85 @@ describe('Prompt', () => {
             ]);
             expect(mockLog).toHaveBeenCalledWith(expect.stringContaining('OPERACAO PARCIAL'));
         });
+
+        it('shows log path when filePath is set and some fail', () => {
+            mockRootLogger.filePath = '/tmp/qa-tools.log';
+            prompt.printSummary([{ status: 'error', label: 't1', message: 'erro' }]);
+            expect(mockLog).toHaveBeenCalledWith(expect.stringContaining('Consulte o log'));
+            mockRootLogger.filePath = undefined;
+        });
     });
 
     describe('ProgressBar', () => {
+        let dateNowSpy: jest.SpyInstance;
+
+        beforeEach(() => {
+            dateNowSpy = jest.spyOn(Date, 'now').mockReturnValue(0);
+        });
+
+        afterEach(() => {
+            dateNowSpy.mockRestore();
+        });
+
         it('creates bar with correct width', () => {
             const bar = new prompt.ProgressBar(10, { width: 20 });
             expect(bar.total).toBe(10);
             expect(bar.width).toBe(20);
+        });
+
+        it('renders full bar in non-TTY output', () => {
+            const bar = new prompt.ProgressBar(10, { width: 5 });
+            bar.update(10);
+            expect(mockLog).toHaveBeenCalledWith(expect.stringContaining('100%'));
+        });
+
+        it('renders empty bar in non-TTY output', () => {
+            const bar = new prompt.ProgressBar(10, { width: 5 });
+            bar.update(0);
+            expect(mockLog).toHaveBeenCalledWith(expect.stringContaining('0%'));
+        });
+
+        it('renders partial bar in non-TTY output', () => {
+            const bar = new prompt.ProgressBar(10, { width: 5 });
+            bar.update(5);
+            expect(mockLog).toHaveBeenCalledWith(expect.stringContaining('50%'));
+        });
+
+        it('shows ? ETA in non-TTY mode', () => {
+            const bar = new prompt.ProgressBar(10, { width: 5 });
+            dateNowSpy.mockReturnValue(3000);
+            bar.startTime = 0;
+            bar.update(0);
+            expect(mockLog).toHaveBeenCalledWith(expect.stringContaining('0%'));
+        });
+
+        it('writes TTY bar format to process.stdout when isTTY=true', () => {
+            process.stdout.isTTY = true;
+            const writeSpy = jest.spyOn(process.stdout, 'write').mockImplementation(() => true);
+            const bar = new prompt.ProgressBar(10, { width: 5 });
+            bar.update(5);
+            expect(writeSpy).toHaveBeenCalledWith(expect.stringContaining('['));
+            writeSpy.mockRestore();
+        });
+
+        it('writes TTY bar with ETA when isTTY=true and elapsed > 0', () => {
+            process.stdout.isTTY = true;
+            const writeSpy = jest.spyOn(process.stdout, 'write').mockImplementation(() => true);
+            const bar = new prompt.ProgressBar(10, { width: 5 });
+            dateNowSpy.mockReturnValue(3000);
+            bar.startTime = 0;
+            bar.update(5);
+            expect(writeSpy).toHaveBeenCalledWith(expect.stringMatching(/\d+s$/));
+            writeSpy.mockRestore();
+        });
+
+        it('stop clears line when isTTY=true', () => {
+            process.stdout.isTTY = true;
+            const writeSpy = jest.spyOn(process.stdout, 'write').mockImplementation(() => true);
+            const bar = new prompt.ProgressBar(10, { width: 5 });
+            bar.stop();
+            expect(writeSpy).toHaveBeenCalledWith(expect.stringContaining('\r'));
+            writeSpy.mockRestore();
         });
     });
 
@@ -216,8 +310,23 @@ describe('Prompt', () => {
             expect(prompt.extractErrorMessage(new Error('simple error'))).toBe('simple error');
         });
 
+        it('extracts data when response.data is a string', () => {
+            const err = { response: { data: 'rate limit exceeded' } };
+            expect(prompt.extractErrorMessage(err)).toBe('rate limit exceeded');
+        });
+
         it('returns unknown for null', () => {
             expect(prompt.extractErrorMessage(null)).toBe('Erro desconhecido');
+        });
+
+        it('returns unknown when error access throws', () => {
+            const throwingErr = {};
+            Object.defineProperty(throwingErr, 'response', {
+                get() {
+                    throw new Error('access error');
+                },
+            });
+            expect(prompt.extractErrorMessage(throwingErr)).toBe('Erro desconhecido');
         });
     });
 
@@ -253,6 +362,85 @@ describe('Prompt', () => {
             expect(result).toBe('2');
             expect(spy).toHaveBeenCalled();
         });
+
+        it('returns "0" for empty input in fallback', async () => {
+            jest.spyOn(readlineSync, 'question').mockReturnValue('');
+            const result = await prompt.showSelect('Test', [
+                { name: '1', value: '1' },
+                { name: '2', value: '2' },
+            ]);
+            expect(result).toBe('0');
+        });
+
+        it('returns selected value for numeric input in fallback', async () => {
+            jest.spyOn(readlineSync, 'question').mockReturnValue('1');
+            const result = await prompt.showSelect('Test', [
+                { name: 'One', value: '1v' },
+                { name: 'Two', value: '2v' },
+            ]);
+            expect(result).toBe('1v');
+        });
+
+        it('returns value from name when value is missing', async () => {
+            jest.spyOn(readlineSync, 'question').mockReturnValue('1');
+            const result = await prompt.showSelect('Test', [{ name: 'Alpha' }, { name: 'Beta' }]);
+            expect(result).toBe('Alpha');
+        });
+
+        it('returns "0" for zero input in fallback', async () => {
+            jest.spyOn(readlineSync, 'question').mockReturnValue('0');
+            const result = await prompt.showSelect('Test', [
+                { name: '1', value: '1' },
+                { name: '2', value: '2' },
+            ]);
+            expect(result).toBe('0');
+        });
+
+        it('loops on invalid number in fallback', async () => {
+            const spy = jest.spyOn(readlineSync, 'question').mockReturnValueOnce('999').mockReturnValueOnce('1');
+            const result = await prompt.showSelect('Test', [{ name: 'A', value: 'a' }]);
+            expect(result).toBe('a');
+            expect(spy).toHaveBeenCalledTimes(2);
+            expect(mockLog).toHaveBeenCalledWith(expect.stringContaining('Opção inválida'));
+        });
+    });
+
+    describe('prompt', () => {
+        let readlineSync: typeof import('readline-sync');
+
+        beforeAll(() => {
+            readlineSync = require('readline-sync');
+        });
+
+        afterEach(() => {
+            jest.restoreAllMocks();
+        });
+
+        it('returns answer on first prompt', () => {
+            jest.spyOn(readlineSync, 'question').mockReturnValue('my-answer');
+            const result = prompt.prompt('Enter value');
+            expect(result).toBe('my-answer');
+        });
+
+        it('includes hint in prompt text when provided', () => {
+            const spy = jest.spyOn(readlineSync, 'question').mockReturnValue('ok');
+            prompt.prompt('Label', { hint: 'optional' });
+            expect(spy).toHaveBeenCalledWith(expect.stringContaining('optional'), expect.any(Object));
+        });
+
+        it('includes default value in prompt text when provided', () => {
+            const spy = jest.spyOn(readlineSync, 'question').mockReturnValue('ok');
+            prompt.prompt('Label', { default: 'def' });
+            expect(spy).toHaveBeenCalledWith(expect.stringContaining('def'), { defaultInput: 'def' });
+        });
+
+        it('retries when answer is shorter than minLength', () => {
+            const spy = jest.spyOn(readlineSync, 'question').mockReturnValueOnce('ab').mockReturnValueOnce('abcdef');
+            const result = prompt.prompt('Label', { minLength: 5 });
+            expect(result).toBe('abcdef');
+            expect(mockLog).toHaveBeenCalledWith(expect.stringContaining('Mínimo de'));
+            expect(spy).toHaveBeenCalledTimes(2);
+        });
     });
 
     describe('smartPrompt', () => {
@@ -284,6 +472,24 @@ describe('Prompt', () => {
             jest.spyOn(readlineSync, 'question').mockReturnValue('');
             const result = prompt.smartPrompt('Enter', { maxRetries: 2 });
             expect(result).toBe('');
+        });
+
+        it('returns /back navigation command immediately', () => {
+            jest.spyOn(readlineSync, 'question').mockReturnValue('/back');
+            const result = prompt.smartPrompt('Enter');
+            expect(result).toBe('/back');
+        });
+
+        it('returns /exit navigation command immediately', () => {
+            jest.spyOn(readlineSync, 'question').mockReturnValue('/exit');
+            const result = prompt.smartPrompt('Enter');
+            expect(result).toBe('/exit');
+        });
+
+        it('returns /menu navigation command immediately', () => {
+            jest.spyOn(readlineSync, 'question').mockReturnValue('/menu');
+            const result = prompt.smartPrompt('Enter');
+            expect(result).toBe('/menu');
         });
 
         it('allows unlimited /help and returns on valid input', () => {
@@ -379,6 +585,77 @@ describe('Prompt', () => {
 
         it('does not throw on empty data', () => {
             expect(() => prompt.tableView([])).not.toThrow();
+        });
+    });
+
+    describe('onError', () => {
+        let readlineSync: typeof import('readline-sync');
+
+        beforeAll(() => {
+            readlineSync = require('readline-sync');
+        });
+
+        afterEach(() => {
+            jest.restoreAllMocks();
+            delete process.env.AUTO_CONFIRM;
+            delete process.env.ON_ERROR;
+        });
+
+        it('returns "skip" when autoConfirm and autoAction is skip', async () => {
+            process.env.AUTO_CONFIRM = 'true';
+            process.env.ON_ERROR = 'skip';
+            const result = await prompt.onError('ctx', new Error('fail'), { retry: true });
+            expect(result).toBe('skip');
+        });
+
+        it('returns "abort" when autoConfirm and autoAction is abort', async () => {
+            process.env.AUTO_CONFIRM = 'true';
+            process.env.ON_ERROR = 'abort';
+            const result = await prompt.onError('ctx', new Error('fail'));
+            expect(result).toBe('abort');
+        });
+
+        it('returns "abort" when user chooses A', async () => {
+            jest.spyOn(readlineSync, 'question').mockReturnValue('a');
+            const result = await prompt.onError('ctx', new Error('fail'));
+            expect(result).toBe('abort');
+        });
+
+        it('returns "skip" when user chooses S', async () => {
+            jest.spyOn(readlineSync, 'question').mockReturnValue('s');
+            const result = await prompt.onError('ctx', new Error('fail'));
+            expect(result).toBe('skip');
+        });
+
+        it('returns "retry" when user chooses R with canRetry', async () => {
+            jest.spyOn(readlineSync, 'question').mockReturnValue('r');
+            const result = await prompt.onError('ctx', new Error('fail'), { retry: true });
+            expect(result).toBe('retry');
+        });
+
+        it('shows details and loops when user chooses D with canDetails', async () => {
+            jest.spyOn(readlineSync, 'question').mockReturnValueOnce('d').mockReturnValueOnce('a');
+            const err = {
+                response: { status: 400, data: { detail: 'invalid' } },
+                message: 'bad request',
+            };
+            const result = await prompt.onError('ctx', err, { details: true });
+            expect(result).toBe('abort');
+            expect(mockLog).toHaveBeenCalledWith(expect.stringContaining('400'));
+        });
+
+        it('shows error with stack details when err is Error', async () => {
+            jest.spyOn(readlineSync, 'question').mockReturnValueOnce('d').mockReturnValueOnce('a');
+            const result = await prompt.onError('ctx', new Error('detail-error'), { details: true });
+            expect(result).toBe('abort');
+            expect(mockLog).toHaveBeenCalledWith(expect.stringContaining('Stack'));
+        });
+
+        it('warns on invalid option and retries', async () => {
+            jest.spyOn(readlineSync, 'question').mockReturnValueOnce('x').mockReturnValueOnce('a');
+            const result = await prompt.onError('ctx', new Error('fail'));
+            expect(result).toBe('abort');
+            expect(mockLog).toHaveBeenCalledWith(expect.stringContaining('Opção invalida'));
         });
     });
 

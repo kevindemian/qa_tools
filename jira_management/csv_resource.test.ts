@@ -175,4 +175,180 @@ describe('CsvResource', () => {
             expect(csvResource.parseLinkedIssues(lines)).toEqual([]);
         });
     });
+
+    describe('readBulkCsv edge cases', () => {
+        it('skips block without Title and warns', async () => {
+            const fs = require('fs');
+            const loggerModule = require('../shared/logger');
+            const warnSpy = jest.spyOn(loggerModule.rootLogger, 'warn').mockImplementation(() => {});
+            const tmp = '/tmp/test-no-title.csv';
+            fs.writeFileSync(
+                tmp,
+                'Action,Data,Expected\nx,y,z\n---\nTitle: Real\nAction,Data,Expected\na,b,c\n',
+                'utf-8',
+            );
+            const results = await csvResource.readBulkCsv(tmp);
+            expect(results).toHaveLength(1);
+            expect(results[0].title).toBe('Real');
+            expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining('Pulando bloco sem Title'));
+            warnSpy.mockRestore();
+            fs.unlinkSync(tmp);
+        });
+
+        it('parses single-line quoted description', async () => {
+            const fs = require('fs');
+            const tmp = '/tmp/test-desc-quoted.csv';
+            fs.writeFileSync(tmp, 'Title: TC\nDescription:"Quoted desc"\nAction,Data,Expected\nx,y,z\n', 'utf-8');
+            const results = await csvResource.readBulkCsv(tmp);
+            expect(results[0].description).toBe('Quoted desc');
+            fs.unlinkSync(tmp);
+        });
+
+        it('parses multi-line quoted description without closing quote', async () => {
+            const fs = require('fs');
+            const loggerModule = require('../shared/logger');
+            const warnSpy = jest.spyOn(loggerModule.rootLogger, 'warn').mockImplementation(() => {});
+            const tmp = '/tmp/test-desc-unclosed.csv';
+            fs.writeFileSync(
+                tmp,
+                ['Title: TC', 'Description:"Line 1', 'Line 2', 'Action,Data,Expected', 'x,y,z'].join('\n'),
+                'utf-8',
+            );
+            const results = await csvResource.readBulkCsv(tmp);
+            expect(results[0].description).toContain('Line 1');
+            expect(results[0].description).toContain('Line 2');
+            expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining('Description sem aspas de fechamento'));
+            warnSpy.mockRestore();
+            fs.unlinkSync(tmp);
+        });
+
+        it('parses multi-line quoted description with proper closing', async () => {
+            const fs = require('fs');
+            const tmp = '/tmp/test-desc-closed.csv';
+            fs.writeFileSync(
+                tmp,
+                ['Title: TC', 'Description:"Line 1', 'Line 2"', 'Action,Data,Expected', 'x,y,z'].join('\n'),
+                'utf-8',
+            );
+            const results = await csvResource.readBulkCsv(tmp);
+            expect(results[0].description).toBe('Line 1\nLine 2');
+            fs.unlinkSync(tmp);
+        });
+
+        it('parses multi-line description in range mode (no quotes)', async () => {
+            const fs = require('fs');
+            const tmp = '/tmp/test-desc-range-multi.csv';
+            fs.writeFileSync(
+                tmp,
+                [
+                    'Title: TC',
+                    'Description: First line',
+                    'Second line',
+                    'Third line',
+                    'Action,Data,Expected',
+                    'x,y,z',
+                ].join('\n'),
+                'utf-8',
+            );
+            const results = await csvResource.readBulkCsv(tmp);
+            expect(results[0].description).toBe('First line\nSecond line\nThird line');
+            fs.unlinkSync(tmp);
+        });
+
+        it('parses description in range mode with stop prefix adjacent', async () => {
+            const fs = require('fs');
+            const tmp = '/tmp/test-desc-range.csv';
+            fs.writeFileSync(
+                tmp,
+                ['Title: TC', 'Description:Some desc', 'Group: G1', 'Action,Data,Expected', 'x,y,z'].join('\n'),
+                'utf-8',
+            );
+            const results = await csvResource.readBulkCsv(tmp);
+            expect(results[0].description).toBe('Some desc');
+            expect(results[0].group).toBe('G1');
+            fs.unlinkSync(tmp);
+        });
+
+        it('parses empty description after Description: with metadata on next line', async () => {
+            const fs = require('fs');
+            const tmp = '/tmp/test-desc-empty.csv';
+            fs.writeFileSync(
+                tmp,
+                ['Title: TC', 'Description:', 'Pre-condition: LOGIN', 'Action,Data,Expected', 'x,y,z'].join('\n'),
+                'utf-8',
+            );
+            const results = await csvResource.readBulkCsv(tmp);
+            expect(results[0].description).toBe('');
+            expect(results[0].precondition).toBeDefined();
+            fs.unlinkSync(tmp);
+        });
+
+        it('warns on multi-line quoted pre-condition without closing quote', async () => {
+            const fs = require('fs');
+            const loggerModule = require('../shared/logger');
+            const warnSpy = jest.spyOn(loggerModule.rootLogger, 'warn').mockImplementation(() => {});
+            const tmp = '/tmp/test-pre-unclosed.csv';
+            fs.writeFileSync(
+                tmp,
+                [
+                    'Title: TC',
+                    'Description: Test',
+                    'Pre-condition: "Unclosed',
+                    'multiline',
+                    'Action,Data,Expected',
+                    'x,y,z',
+                ].join('\n'),
+                'utf-8',
+            );
+            const results = await csvResource.readBulkCsv(tmp);
+            expect(results[0].precondition).toBeDefined();
+            expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining('Pre-condition sem aspas de fechamento'));
+            warnSpy.mockRestore();
+            fs.unlinkSync(tmp);
+        });
+
+        it('throws on CSV parse error', async () => {
+            const loggerModule = require('../shared/logger');
+            const errorSpy = jest.spyOn(loggerModule.rootLogger, 'error').mockImplementation(() => {});
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any -- save original
+            const original = (csvResource as any).readCsvFromString;
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any -- mock for error test
+            (csvResource as any).readCsvFromString = jest.fn().mockRejectedValue(new Error('CSV parse error'));
+            const fs = require('fs');
+            const tmp = '/tmp/test-csv-error.csv';
+            fs.writeFileSync(tmp, 'Title: TC\nDescription: Test\nAction,Data,Expected\nx,y,z\n', 'utf-8');
+            await expect(csvResource.readBulkCsv(tmp)).rejects.toThrow('CSV parse error');
+            expect(errorSpy).toHaveBeenCalledWith(expect.stringContaining('Erro ao analisar bloco CSV'));
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any -- restore original
+            (csvResource as any).readCsvFromString = original;
+            errorSpy.mockRestore();
+            fs.unlinkSync(tmp);
+        });
+    });
+
+    describe('parseLinkedIssues edge cases', () => {
+        it('returns empty array when Linked Issues value is empty', () => {
+            const lines = ['Title: Test', 'Linked Issues:   ', 'Action,Data,Expected'];
+            expect(csvResource.parseLinkedIssues(lines)).toEqual([]);
+        });
+    });
+
+    describe('readCsvFromString', () => {
+        it('parses CSV with empty Action field', async () => {
+            const csvString = 'Action,Data,Expected Result\n,y,z';
+            const result = await csvResource.readCsvFromString(csvString);
+            expect(result).toHaveLength(1);
+            expect(result[0].fields.Action).toBe('');
+            expect(result[0].fields.Data).toBe('y');
+            expect(result[0].fields['Expected Result']).toBe('z');
+        });
+
+        it('parses CSV with empty Data field', async () => {
+            const csvString = 'Action,Data,Expected Result\nx,,z';
+            const result = await csvResource.readCsvFromString(csvString);
+            expect(result).toHaveLength(1);
+            expect(result[0].fields.Data).toBe('');
+            expect(result[0].fields['Expected Result']).toBe('z');
+        });
+    });
 });

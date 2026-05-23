@@ -168,4 +168,64 @@ describe('State', () => {
             expect(rootLogger.warn).toHaveBeenCalled();
         });
     });
+
+    describe('load error branches', () => {
+        let rootLogger: import('./logger').Logger;
+
+        afterEach(() => {
+            jest.restoreAllMocks();
+        });
+
+        it('warns when backup recovery fails (backup also corrupted)', () => {
+            jest.isolateModules(() => {
+                rootLogger = (require('./logger') as typeof import('./logger')).rootLogger;
+                state = require('./state') as typeof import('./state');
+            });
+            const bakPath = STATE_PATH + '.bak';
+            mockFs({
+                [STATE_PATH]: 'corrupted{json',
+                [bakPath]: 'also-bad{json',
+            });
+            const result = state.load();
+            expect(result).toEqual({});
+            expect(rootLogger.error).toHaveBeenCalledWith(expect.stringContaining('Falha ao recuperar backup'));
+        });
+
+        it('warns when backup rename fails', () => {
+            jest.isolateModules(() => {
+                rootLogger = (require('./logger') as typeof import('./logger')).rootLogger;
+                state = require('./state') as typeof import('./state');
+            });
+            mockFs({
+                [STATE_PATH]: 'corrupted{json',
+            });
+            jest.spyOn(fs, 'renameSync').mockImplementationOnce(() => {
+                throw new Error('rename denied');
+            });
+            const result = state.load();
+            expect(result).toEqual({});
+            expect(rootLogger.error).toHaveBeenCalledWith(expect.stringContaining('Falha ao salvar backup'));
+        });
+    });
+
+    describe('save error handling', () => {
+        let rootLogger: import('./logger').Logger;
+
+        afterEach(() => {
+            jest.restoreAllMocks();
+        });
+
+        it('warns and logs error when save write fails', () => {
+            jest.isolateModules(() => {
+                rootLogger = (require('./logger') as typeof import('./logger')).rootLogger;
+                state = require('./state') as typeof import('./state');
+            });
+            mockFs({});
+            jest.spyOn(fs, 'writeFileSync').mockImplementationOnce(() => {
+                throw new Error('disk full');
+            });
+            state.save({ key: 'value' });
+            expect(rootLogger.error).toHaveBeenCalledWith(expect.stringContaining('Falha ao salvar estado'));
+        });
+    });
 });
