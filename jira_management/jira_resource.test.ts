@@ -160,16 +160,18 @@ describe('getProjectId', () => {
         expect(result).toBe('12345');
     });
 
-    it('throws when project not found', async () => {
+    it('returns empty string when project not found', async () => {
         mockClient.get.mockRejectedValue(new Error('Project not found'));
 
-        await expect(jiraResource.getProjectId('UNKNOWN')).rejects.toThrow('Project not found');
+        const result = await jiraResource.getProjectId('UNKNOWN');
+        expect(result).toBe('');
     });
 
-    it('throws on network error', async () => {
+    it('returns empty string on network error', async () => {
         mockClient.get.mockRejectedValue(new Error('ECONNREFUSED'));
 
-        await expect(jiraResource.getProjectId('TEST')).rejects.toThrow('ECONNREFUSED');
+        const result = await jiraResource.getProjectId('TEST');
+        expect(result).toBe('');
     });
 });
 
@@ -190,10 +192,11 @@ describe('getProjectVersions', () => {
         expect(result).toEqual(versions);
     });
 
-    it('throws on API error', async () => {
+    it('returns empty array on API error', async () => {
         mockClient.get.mockRejectedValue(new Error('Not found'));
 
-        await expect(jiraResource.getProjectVersions('999')).rejects.toThrow('Not found');
+        const result = await jiraResource.getProjectVersions('999');
+        expect(result).toEqual([]);
     });
 
     it('returns whatever data shape comes from API', async () => {
@@ -292,10 +295,11 @@ describe('searchJiraIssues', () => {
         expect(result.total).toBe(2);
     });
 
-    it('propagates error from getJiraResource', async () => {
+    it('returns empty result on API error', async () => {
         mockClient.get.mockRejectedValue(new Error('Search failed'));
 
-        await expect(jiraResource.searchJiraIssues('project = TEST')).rejects.toThrow('Search failed');
+        const result = await jiraResource.searchJiraIssues('project = TEST');
+        expect(result).toEqual({ issues: [], total: 0 });
     });
 
     it('handles null issues in response gracefully', async () => {

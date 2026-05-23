@@ -58,29 +58,34 @@ class JiraResource {
     }
 
     async searchJiraIssues(jql: string, maxResults = 200): Promise<SearchResponse> {
-        const MAX_PAGES = 1000;
-        const MAX_TOTAL = 10000;
-        let allIssues: JiraIssue[] = [];
-        let startAt = 0;
-        let total: number | null = null;
-        let pages = 0;
+        try {
+            const MAX_PAGES = 1000;
+            const MAX_TOTAL = 10000;
+            let allIssues: JiraIssue[] = [];
+            let startAt = 0;
+            let total: number | null = null;
+            let pages = 0;
 
-        while ((total === null || startAt < total) && pages < MAX_PAGES && allIssues.length < MAX_TOTAL) {
-            pages++;
-            const url = `search?jql=${encodeURIComponent(jql)}&maxResults=${maxResults}&startAt=${startAt}`;
-            const data = await this.getJiraResource<SearchResponse>(url);
+            while ((total === null || startAt < total) && pages < MAX_PAGES && allIssues.length < MAX_TOTAL) {
+                pages++;
+                const url = `search?jql=${encodeURIComponent(jql)}&maxResults=${maxResults}&startAt=${startAt}`;
+                const data = await this.getJiraResource<SearchResponse>(url);
 
-            if (total === null) {
-                total = data.total;
-                if (total > 0) this.log.info(`Buscando ${total} issues...`);
-                if (total > MAX_TOTAL) this.log.warn(`Total (${total}) excede limite de ${MAX_TOTAL}, truncando.`);
+                if (total === null) {
+                    total = data.total;
+                    if (total > 0) this.log.info(`Buscando ${total} issues...`);
+                    if (total > MAX_TOTAL) this.log.warn(`Total (${total}) excede limite de ${MAX_TOTAL}, truncando.`);
+                }
+
+                allIssues = allIssues.concat(data.issues || []);
+                startAt += maxResults;
             }
 
-            allIssues = allIssues.concat(data.issues || []);
-            startAt += maxResults;
+            return { issues: allIssues, total: allIssues.length };
+        } catch (err: unknown) {
+            this.log.error(`Erro searchJiraIssues: ${extractErrorMessage(err)}`);
+            return { issues: [], total: 0 };
         }
-
-        return { issues: allIssues, total: allIssues.length };
     }
 
     async getTransitionsForIssue(issueKey: string): Promise<Record<string, string>> {
@@ -137,30 +142,32 @@ class JiraResource {
     }
 
     async getProjectId(projectName: string): Promise<string> {
-        const projectData = await this.getJiraResource<{ id: string }>(`project/${projectName}`);
-        return projectData.id;
+        try {
+            const projectData = await this.getJiraResource<{ id: string }>(`project/${projectName}`);
+            return projectData.id;
+        } catch (err: unknown) {
+            this.log.error(`Projeto '${projectName}' não encontrado: ${extractErrorMessage(err)}`);
+            return '';
+        }
     }
 
     async getProjectVersions(projectId: string): Promise<VersionData[]> {
-        return this.getJiraResource<VersionData[]>(`project/${projectId}/versions`);
+        try {
+            return await this.getJiraResource<VersionData[]>(`project/${projectId}/versions`);
+        } catch (err: unknown) {
+            this.log.error(`Erro ao buscar versões do projeto '${projectId}': ${extractErrorMessage(err)}`);
+            return [];
+        }
     }
 
     async getVersionId(projectName: string, versionName: string): Promise<string | null> {
-        let projectId: string;
-        try {
-            projectId = await this.getProjectId(projectName);
-        } catch {
+        const projectId = await this.getProjectId(projectName);
+        if (!projectId) {
             info(`Projeto '${projectName}' não encontrado.`);
             return null;
         }
-        let versions: VersionData[];
-        try {
-            versions = await this.getProjectVersions(projectId);
-        } catch {
-            info(`Nenhuma versão encontrada para o projeto '${projectName}'.`);
-            return null;
-        }
-        if (!Array.isArray(versions)) {
+        const versions = await this.getProjectVersions(projectId);
+        if (!Array.isArray(versions) || versions.length === 0) {
             info(`Nenhuma versão encontrada para o projeto '${projectName}'.`);
             return null;
         }
@@ -255,21 +262,13 @@ class JiraResource {
         latestReleasedVersions: VersionData[];
         unreleasedVersions: VersionData[];
     }> {
-        let projectId: string;
-        try {
-            projectId = await this.getProjectId(projectName);
-        } catch {
+        const projectId = await this.getProjectId(projectName);
+        if (!projectId) {
             info(`Projeto '${projectName}' não encontrado.`);
             return { latestReleasedVersions: [], unreleasedVersions: [] };
         }
-        let allVersions: VersionData[];
-        try {
-            allVersions = await this.getProjectVersions(projectId);
-        } catch {
-            info(`Nenhuma versão encontrada para o projeto '${projectName}'.`);
-            return { latestReleasedVersions: [], unreleasedVersions: [] };
-        }
-        if (!Array.isArray(allVersions)) {
+        const allVersions = await this.getProjectVersions(projectId);
+        if (!Array.isArray(allVersions) || allVersions.length === 0) {
             info(`Nenhuma versão encontrada para o projeto '${projectName}'.`);
             return { latestReleasedVersions: [], unreleasedVersions: [] };
         }
