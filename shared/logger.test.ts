@@ -145,6 +145,163 @@ describe('Logger', () => {
         });
     });
 
+    describe('_ensureDir error paths', () => {
+        const origFile = process.env.LOG_FILE;
+        const origDir = process.env.LOG_DIR;
+        let spyError: jest.SpyInstance;
+
+        afterEach(() => {
+            if (origFile) process.env.LOG_FILE = origFile;
+            else delete process.env.LOG_FILE;
+            if (origDir) process.env.LOG_DIR = origDir;
+            else delete process.env.LOG_DIR;
+            if (spyError) spyError.mockRestore();
+            jest.restoreAllMocks();
+        });
+
+        it('returns false when _fileError is already set', () => {
+            const logger = new Logger();
+            logger._fileError = true;
+            expect(logger._ensureDir()).toBe(false);
+        });
+
+        it('returns false when LOG_FILE is not true', () => {
+            delete process.env.LOG_FILE;
+            const logger = new Logger();
+            expect(logger._ensureDir()).toBe(false);
+        });
+
+        it('sets _fileError and console.error on mkdir failure', () => {
+            spyError = jest.spyOn(console, 'error').mockImplementation(() => {});
+            const testDir = normalizePath(fs.mkdtempSync(path.join(os.tmpdir(), 'qa-tools-logger-ensure-')));
+            process.env.LOG_FILE = 'true';
+            process.env.LOG_DIR = testDir;
+            const logger = new Logger();
+            jest.spyOn(fs, 'existsSync').mockReturnValue(false);
+            jest.spyOn(fs, 'mkdirSync').mockImplementation(() => {
+                throw new Error('permission denied');
+            });
+            const result = logger._ensureDir();
+            expect(result).toBe(false);
+            expect(logger._fileError).toBe(true);
+            expect(spyError).toHaveBeenCalledWith(expect.stringContaining('Falha ao criar diretório'));
+        });
+
+        it('reads _bytesWritten from statSync when log file already exists', () => {
+            const testDir = normalizePath(fs.mkdtempSync(path.join(os.tmpdir(), 'qa-tools-logger-stat-')));
+            process.env.LOG_FILE = 'true';
+            process.env.LOG_DIR = testDir;
+            const date = new Date().toISOString().split('T')[0];
+            const logFile = path.join(testDir, `qa-tools-${date}.log`);
+            fs.writeFileSync(logFile, 'existing content\n');
+            const logger = new Logger();
+            const result = logger._ensureDir();
+            expect(result).toBe(true);
+            expect(logger._bytesWritten).toBeGreaterThan(0);
+        });
+
+        afterAll(() => {
+            // cleanup handled in afterEach
+        });
+    });
+
+    describe('_rotateIfNeeded error paths', () => {
+        afterEach(() => {
+            jest.restoreAllMocks();
+            delete process.env.LOG_MAX_SIZE;
+            delete process.env.LOG_FILE;
+            delete process.env.LOG_DIR;
+        });
+
+        it('increments seq when rotated file already exists', () => {
+            jest.isolateModules(() => {
+                const testDir = normalizePath(fs.mkdtempSync(path.join(os.tmpdir(), 'qa-tools-logger-seq-')));
+                process.env.LOG_FILE = 'true';
+                process.env.LOG_DIR = testDir;
+                process.env.LOG_MAX_SIZE = '50';
+                const date = new Date().toISOString().split('T')[0];
+                const logFile = path.join(testDir, `qa-tools-${date}.log`);
+                fs.writeFileSync(logFile, 'x'.repeat(60));
+                fs.writeFileSync(path.join(testDir, `qa-tools-${date}.1.log`), 'rotated-1\n');
+                const { Logger: LoggerSeq } = require('./logger') as { Logger: typeof import('./logger').Logger };
+                const logger = new LoggerSeq();
+                logger._filePathCached = logFile;
+                logger._bytesWritten = 100;
+                logger._rotateIfNeeded();
+                expect(fs.existsSync(path.join(testDir, `qa-tools-${date}.2.log`))).toBe(true);
+                fs.rmSync(testDir, { recursive: true, force: true });
+            });
+        });
+
+        it('logs error on rename failure during rotation', () => {
+            jest.isolateModules(() => {
+                const spyError = jest.spyOn(console, 'error').mockImplementation(() => {});
+                const testDir = normalizePath(fs.mkdtempSync(path.join(os.tmpdir(), 'qa-tools-logger-rotfail-')));
+                process.env.LOG_FILE = 'true';
+                process.env.LOG_DIR = testDir;
+                process.env.LOG_MAX_SIZE = '50';
+                const date = new Date().toISOString().split('T')[0];
+                const logFile = path.join(testDir, `qa-tools-${date}.log`);
+                fs.writeFileSync(logFile, 'x'.repeat(60));
+                const { Logger: LoggerRotFail } = require('./logger') as {
+                    Logger: typeof import('./logger').Logger;
+                };
+                const logger = new LoggerRotFail();
+                logger._filePathCached = logFile;
+                logger._bytesWritten = 100;
+                jest.spyOn(fs, 'renameSync').mockImplementationOnce(() => {
+                    throw new Error('rename failed');
+                });
+                logger._rotateIfNeeded();
+                expect(spyError).toHaveBeenCalledWith(expect.stringContaining('Falha ao rotacionar log'));
+                spyError.mockRestore();
+                fs.rmSync(testDir, { recursive: true, force: true });
+            });
+        });
+    });
+
+    describe('_writeFile error paths', () => {
+        let spyError: jest.SpyInstance;
+
+        afterEach(() => {
+            if (spyError) spyError.mockRestore();
+            jest.restoreAllMocks();
+            delete process.env.LOG_FILE;
+            delete process.env.LOG_DIR;
+        });
+
+        it('handles data serialization error gracefully', () => {
+            const testDir = normalizePath(fs.mkdtempSync(path.join(os.tmpdir(), 'qa-tools-logger-serial-')));
+            process.env.LOG_FILE = 'true';
+            process.env.LOG_DIR = testDir;
+            const logger = new Logger();
+            const circular: Record<string, unknown> = { a: 1 };
+            circular.self = circular;
+            logger._writeFile('INFO', 'test', circular);
+            const logFile = logger.filePath;
+            if (logFile && fs.existsSync(logFile)) {
+                const content = fs.readFileSync(logFile, 'utf8');
+                expect(content).toContain('[data serialization error]');
+            }
+            fs.rmSync(testDir, { recursive: true, force: true });
+        });
+
+        it('sets _fileError and logs on append failure', () => {
+            spyError = jest.spyOn(console, 'error').mockImplementation(() => {});
+            const testDir = normalizePath(fs.mkdtempSync(path.join(os.tmpdir(), 'qa-tools-logger-append-')));
+            process.env.LOG_FILE = 'true';
+            process.env.LOG_DIR = testDir;
+            const logger = new Logger();
+            jest.spyOn(fs, 'appendFileSync').mockImplementationOnce(() => {
+                throw new Error('permission denied');
+            });
+            logger._writeFile('INFO', 'test');
+            expect(logger._fileError).toBe(true);
+            expect(spyError).toHaveBeenCalledWith(expect.stringContaining('Falha ao escrever no arquivo'));
+            fs.rmSync(testDir, { recursive: true, force: true });
+        });
+    });
+
     describe('filePath getter', () => {
         it('returns null when LOG_FILE is not true', () => {
             const prev = process.env.LOG_FILE;
@@ -193,6 +350,65 @@ describe('Logger', () => {
         it('handles non-object values', () => {
             expect(maskDeep('string')).toBe('string');
             expect(maskDeep(42)).toBe(42);
+        });
+
+        it('recursively masks nested arrays', () => {
+            const input = { items: [{ token: 'abcdefghij' }, { name: 'public' }] };
+            const result = maskDeep(input) as { items: Array<{ token: string; name: string }> };
+            expect(result.items[0].token).toBe('abcd****');
+            expect(result.items[1].name).toBe('public');
+        });
+
+        it('masks keys matching password/authorization patterns', () => {
+            const input = { password: 'supersecret!', authorization: 'Bearer tok12345' };
+            const result = maskDeep(input) as { password: string; authorization: string };
+            expect(result.password).toBe('supe****');
+            expect(result.authorization).toBe('Bear****');
+        });
+    });
+
+    describe('_writeConsole error with data', () => {
+        it('appends short JSON data to ERROR console output', () => {
+            const spyError = jest.spyOn(console, 'error').mockImplementation(() => {});
+            const logger = new Logger();
+            logger._writeConsole('ERROR', 'fail', { code: 500 });
+            expect(spyError).toHaveBeenCalledWith(expect.stringContaining('{"code":500}'));
+            spyError.mockRestore();
+        });
+
+        it('omits data when data is long for ERROR level', () => {
+            const spyError = jest.spyOn(console, 'error').mockImplementation(() => {});
+            const logger = new Logger();
+            const bigData = { big: 'x'.repeat(200) };
+            logger._writeConsole('ERROR', 'fail', bigData);
+            const text = spyError.mock.calls[0][0] as string;
+            expect(text.length).toBeLessThan(400);
+            spyError.mockRestore();
+        });
+    });
+
+    describe('writeFileOnly', () => {
+        afterEach(() => {
+            jest.restoreAllMocks();
+            delete process.env.LOG_FILE;
+            delete process.env.LOG_DIR;
+        });
+
+        it('writes to file without console output', () => {
+            const testDir = normalizePath(fs.mkdtempSync(path.join(os.tmpdir(), 'qa-tools-logger-wfo-')));
+            process.env.LOG_FILE = 'true';
+            process.env.LOG_DIR = testDir;
+            const logger = new Logger({ test: 'wfo' });
+            const spyLog = jest.spyOn(console, 'log').mockImplementation(() => {});
+            logger.writeFileOnly('INFO', 'file-only message');
+            expect(spyLog).not.toHaveBeenCalled();
+            const logFile = logger.filePath;
+            if (logFile && fs.existsSync(logFile)) {
+                const content = fs.readFileSync(logFile, 'utf8');
+                expect(content).toContain('file-only message');
+            }
+            spyLog.mockRestore();
+            fs.rmSync(testDir, { recursive: true, force: true });
         });
     });
 
