@@ -46,7 +46,7 @@ const mockJiraResource = {
     axiosInstance: { get: jest.fn().mockResolvedValue({ status: 200 }), post: jest.fn().mockResolvedValue({}) },
 };
 
-const mockSessionContext = {
+const mockSessionContext: Record<string, unknown> = {
     inMemoryTasksId: [],
     inMemoryTasksText: [],
     sessionCounters: [],
@@ -54,6 +54,7 @@ const mockSessionContext = {
     isBusy: false,
     results: [],
     lastOperation: '',
+    packageManager: undefined,
     pushHistory: jest.fn(),
     withBusy: jest.fn(async (fn: () => Promise<void>) => fn()),
 };
@@ -75,7 +76,7 @@ beforeEach(() => {
     jest.clearAllMocks();
     mockSessionContext.project_name = 'TEST';
     mockSessionContext.inMemoryTasksId = [];
-    mockSessionContext.packageManager = undefined as never;
+    mockSessionContext.packageManager = undefined;
 });
 
 describe('case02 — list versions', () => {
@@ -127,7 +128,7 @@ describe('case04 — assign fixVersion', () => {
 
 describe('case05 — update package version', () => {
     it('handles missing packageManager by prompting dir', async () => {
-        mockSessionContext.packageManager = undefined as never;
+        mockSessionContext.packageManager = undefined;
         mockJiraResource.getReleaseTasks.mockResolvedValueOnce(['TASK-1']);
         const prompt = require('../../../shared/prompt');
         prompt.smartPrompt.mockReturnValueOnce('/some/dir').mockReturnValueOnce('v2.0.0');
@@ -137,7 +138,7 @@ describe('case05 — update package version', () => {
     });
 
     it('handles no tasks for version', async () => {
-        mockSessionContext.packageManager = { updateReleaseNotes: jest.fn(), updateVersion: jest.fn() } as never;
+        mockSessionContext.packageManager = { updateReleaseNotes: jest.fn(), updateVersion: jest.fn() };
         mockJiraResource.getReleaseTasks.mockResolvedValueOnce(null);
         const prompt = require('../../../shared/prompt');
         const mod = require('../case05');
