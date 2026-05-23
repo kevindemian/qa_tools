@@ -682,8 +682,7 @@ function validateCsvTests(tests: TestCase[]): { errors: string[]; warnings: stri
     return validator.validate(tests);
 }
 
-function updateCrossReferences(jiraResource: JiraResource, tests: TestCase[], ids: string[]): Promise<void> {
-    const linker = new IssueLinker(jiraResource, new JiraLinkManager(jiraResource));
+function updateCrossReferences(linker: IssueLinker, tests: TestCase[], ids: string[]): Promise<void> {
     return linker.updateCrossReferences(tests, ids);
 }
 
