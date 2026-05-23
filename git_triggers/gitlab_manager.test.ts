@@ -1,9 +1,9 @@
-// @ts-nocheck
+import { createHttpClient } from '../shared/http-client';
+import GitLabManager from './gitlab_manager';
+
 jest.mock('../shared/http-client', () => ({
     createHttpClient: jest.fn(),
 }));
-
-const { createHttpClient } = require('../shared/http-client');
 
 jest.mock('../shared/logger', () => ({
     Logger: jest.fn().mockImplementation(() => ({ error: jest.fn() })),
@@ -11,18 +11,16 @@ jest.mock('../shared/logger', () => ({
 
 jest.mock('../shared/prompt', () => ({
     info: jest.fn(),
-    extractErrorMessage: jest.fn((err) => err?.message || 'Erro desconhecido'),
+    extractErrorMessage: jest.fn((err: Error) => err?.message || 'Erro desconhecido'),
 }));
 
-const GitLabManager = require('./gitlab_manager');
-
 describe('GitLabManager', () => {
-    let mockClient;
-    let manager;
+    let mockClient: { get: jest.Mock; post: jest.Mock; put: jest.Mock };
+    let manager: GitLabManager;
 
     beforeEach(() => {
         mockClient = { get: jest.fn(), post: jest.fn(), put: jest.fn() };
-        createHttpClient.mockReturnValue(mockClient);
+        (createHttpClient as jest.Mock).mockReturnValue(mockClient);
         manager = new GitLabManager('project-123', 'test-token', 'https://gitlab.test.com');
     });
 
@@ -36,7 +34,8 @@ describe('GitLabManager', () => {
 
         it('throws on API error (mutation)', async () => {
             mockClient.post.mockRejectedValue(new Error('API error'));
-            await expect(manager.triggerPipeline({})).rejects.toThrow('API error');
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any -- minimal payload for error test
+            await expect(manager.triggerPipeline({} as any)).rejects.toThrow('API error');
         });
     });
 
@@ -70,7 +69,7 @@ describe('GitLabManager', () => {
     });
 
     describe('createMergeRequest', () => {
-        const args = ['feature', 'main', 'MR Title', 'MR Desc'];
+        const args = ['feature', 'main', 'MR Title', 'MR Desc'] as const;
 
         it('calls POST /merge_requests on success', async () => {
             mockClient.post.mockResolvedValue({ data: { iid: 10, web_url: 'https://...' } });
@@ -131,7 +130,7 @@ describe('GitLabManager', () => {
 
         it('throws on API error (mutation)', async () => {
             mockClient.put.mockRejectedValue(new Error('Update failed'));
-            await expect(manager.updateMergeRequest('5')).rejects.toThrow('Update failed');
+            await expect(manager.updateMergeRequest('5', '', '', '')).rejects.toThrow('Update failed');
         });
     });
 

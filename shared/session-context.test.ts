@@ -1,7 +1,4 @@
-// @ts-nocheck
-const {
-    SessionContext,
-}: { SessionContext: typeof import('./session-context').SessionContext } = require('./session-context');
+import { SessionContext } from './session-context';
 
 describe('SessionContext', () => {
     let ctx: InstanceType<typeof SessionContext>;

@@ -1,23 +1,23 @@
-// @ts-nocheck
 jest.mock('../shared/http-client', () => ({
     createHttpClient: jest.fn(),
 }));
 
-const { createHttpClient } = require('../shared/http-client');
+import { createHttpClient } from '../shared/http-client';
 
 jest.mock('../shared/logger', () => ({
     rootLogger: { info: jest.fn(), error: jest.fn(), warn: jest.fn(), writeFileOnly: jest.fn() },
 }));
 
-const CypressResource = require('./cypress_resource');
+import CypressResource from './cypress_resource';
 
 describe('CypressResource', () => {
-    let mockClient;
-    let cypress;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- partial mock for AxiosInstance
+    let mockClient: any;
+    let cypress: InstanceType<typeof CypressResource>;
 
     beforeEach(() => {
         mockClient = { get: jest.fn() };
-        createHttpClient.mockReturnValue(mockClient);
+        jest.mocked(createHttpClient).mockReturnValue(mockClient);
         cypress = new CypressResource('http://cypress', 'token');
     });
 

@@ -1,9 +1,9 @@
-// @ts-nocheck
-const path = require('path');
-const fs = require('fs');
-const dotenv = require('dotenv');
-const CsvResource = require('./csv_resource');
-const JiraResource = require('./jira_resource');
+import path from 'path';
+import fs from 'fs';
+import dotenv from 'dotenv';
+import type { TestCase } from '../shared/types';
+import CsvResource from './csv_resource';
+import JiraResource from './jira_resource';
 
 dotenv.config({ path: path.resolve(__dirname, '../.env') });
 
@@ -24,8 +24,8 @@ const csvPath = process.env.CSV_DEFAULT_PATH || path.join(__dirname, 'test_steps
 const hasJiraConfig = !!(JIRA_BASE_URL && JIRA_TOKEN);
 const csvExists = fs.existsSync(csvPath);
 
-let csvResource;
-let tests = [];
+let csvResource: InstanceType<typeof CsvResource>;
+let tests: TestCase[] = [];
 
 beforeAll(async () => {
     csvResource = new CsvResource();
@@ -78,7 +78,7 @@ localDescribe('CSV Validation (local)', () => {
     test('Description does not contain raw CSV step data', () => {
         tests.forEach((t, i) => {
             const stepMarkers = ['Action,Data,Expected Result', 'Action,Data,'];
-            const hasLeak = stepMarkers.some((m) => t.description.includes(m));
+            const hasLeak = stepMarkers.some((m) => t.description!.includes(m));
             expect(hasLeak).toBe(false);
         });
     });
@@ -106,11 +106,11 @@ const isMockMode = !hadRealJira;
 const jiraSuite = hasJiraConfig ? describe : describe.skip;
 
 jiraSuite('CSV Validation against Jira', () => {
-    let jiraResource;
-    let projectName;
-    let projectId;
-    let issueTypes;
-    const validationErrors = [];
+    let jiraResource: InstanceType<typeof JiraResource>;
+    let projectName: string;
+    let projectId: string | null;
+    let issueTypes: Array<{ id: string; name: string }> | null;
+    const validationErrors: string[] = [];
 
     beforeAll(async () => {
         if (isMockMode) {
@@ -124,7 +124,7 @@ jiraSuite('CSV Validation against Jira', () => {
                     issueTypes: [{ id: '11800', name: 'Test' }],
                 })
                 .get(/\/issue\/.*/)
-                .reply(200, (uri) => ({
+                .reply(200, (uri: string) => ({
                     key: uri.split('/')[2],
                     id: '99999',
                     fields: { summary: 'Mocked ' + uri.split('/')[2] },
@@ -138,7 +138,7 @@ jiraSuite('CSV Validation against Jira', () => {
 
         try {
             const projectData = await jiraResource.getJiraResource(`project/${projectName}`);
-            projectId = projectData ? projectData.id : null;
+            projectId = projectData ? (projectData.id as string) : null;
             issueTypes =
                 projectData && Array.isArray(projectData.issueTypes) && projectData.issueTypes.length > 0
                     ? projectData.issueTypes
@@ -167,12 +167,14 @@ jiraSuite('CSV Validation against Jira', () => {
 
     test('Issue type "Test" is available in project', () => {
         expect(issueTypes).toBeTruthy();
-        const hasTestType = issueTypes.some((it) => it.name === 'Test');
+        const hasTestType = issueTypes!.some((it) => it.name === 'Test');
         expect(hasTestType).toBe(true);
     });
 
     test('Pre-conditions (reference) exist in Jira', async () => {
-        const refPre = tests.map((t) => t.precondition).filter((p) => p && p.type === 'reference');
+        const refPre = tests
+            .map((t) => t.precondition)
+            .filter((p): p is NonNullable<typeof p> => p !== null && p !== undefined && p.type === 'reference');
 
         if (refPre.length === 0) return;
 
@@ -212,7 +214,8 @@ jiraSuite('CSV Validation against Jira', () => {
                 expect(step.fields).toBeDefined();
                 expect(step.fields.Action).toBeDefined();
                 expect(step.fields.Data).toBeDefined();
-                expect(step.fields['Expected Result']).toBeDefined();
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any -- accessing dynamic field name from CSV
+                expect((step.fields as any)['Expected Result']).toBeDefined();
             });
         });
     });

@@ -1,4 +1,3 @@
-// @ts-nocheck
 jest.mock('../shared/prompt', () => ({
     info: jest.fn(),
     warn: jest.fn(),
@@ -10,14 +9,18 @@ jest.mock('../shared/logger', () => ({
 
 jest.mock('fs');
 
-const fs = require('fs');
-const os = require('os');
-os.homedir = jest.fn(() => '/fake/home');
-const JiraLinkManager = require('./jira_link_manager');
+import fs from 'fs';
+import os from 'os';
+
+import JiraLinkManager from './jira_link_manager';
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any -- jest.mock('fs') makes all fs methods jest.Mock; os.homedir is overridden for test
+(os as any).homedir = jest.fn(() => '/fake/home');
 
 describe('JiraLinkManager', () => {
-    let manager;
-    let mockJiraResource;
+    let manager: InstanceType<typeof JiraLinkManager>;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- partial mock for JiraResource in tests
+    let mockJiraResource: any;
 
     beforeEach(() => {
         jest.clearAllMocks();
@@ -62,15 +65,15 @@ describe('JiraLinkManager', () => {
         it('falls back to local cache when API fails', async () => {
             const cachedTypes = [{ id: '99', name: 'Cached' }];
             mockJiraResource.getJiraResource.mockRejectedValue(new Error('API down'));
-            fs.existsSync.mockReturnValue(true);
-            fs.readFileSync.mockReturnValue(JSON.stringify(cachedTypes));
+            jest.mocked(fs.existsSync).mockReturnValue(true);
+            jest.mocked(fs.readFileSync).mockReturnValue(JSON.stringify(cachedTypes));
             const result = await manager.getIssueLinkTypes();
             expect(result).toEqual(cachedTypes);
         });
 
         it('falls back to hardcoded types when API and cache fail', async () => {
             mockJiraResource.getJiraResource.mockRejectedValue(new Error('API down'));
-            fs.existsSync.mockReturnValue(false);
+            jest.mocked(fs.existsSync).mockReturnValue(false);
             const result = await manager.getIssueLinkTypes();
             expect(result).toHaveLength(3);
             expect(result[0].name).toBe('Relates');

@@ -1,9 +1,9 @@
-// @ts-nocheck
+import { createHttpClient } from '../shared/http-client';
+import GitHubManager from './github_manager';
+
 jest.mock('../shared/http-client', () => ({
     createHttpClient: jest.fn(),
 }));
-
-const { createHttpClient } = require('../shared/http-client');
 
 jest.mock('../shared/logger', () => ({
     Logger: jest.fn().mockImplementation(() => ({ error: jest.fn(), warn: jest.fn() })),
@@ -11,18 +11,16 @@ jest.mock('../shared/logger', () => ({
 
 jest.mock('../shared/prompt', () => ({
     info: jest.fn(),
-    extractErrorMessage: jest.fn((err) => err?.message || 'Erro desconhecido'),
+    extractErrorMessage: jest.fn((err: Error) => err?.message || 'Erro desconhecido'),
 }));
 
-const GitHubManager = require('./github_manager');
-
 describe('GitHubManager', () => {
-    let mockClient;
-    let manager;
+    let mockClient: { get: jest.Mock; post: jest.Mock; put: jest.Mock; patch: jest.Mock };
+    let manager: GitHubManager;
 
     beforeEach(() => {
         mockClient = { get: jest.fn(), post: jest.fn(), put: jest.fn(), patch: jest.fn() };
-        createHttpClient.mockReturnValue(mockClient);
+        (createHttpClient as jest.Mock).mockReturnValue(mockClient);
         manager = new GitHubManager('myorg/myrepo', 'ghp_test', 'https://api.github.com');
     });
 
@@ -47,11 +45,11 @@ describe('GitHubManager', () => {
     describe('triggerPipeline', () => {
         it('calls workflow dispatch with workflow_id', async () => {
             mockClient.post.mockResolvedValue({ data: {} });
-            const result = await manager.triggerPipeline({
+            const result: Record<string, unknown> = (await manager.triggerPipeline({
                 ref: 'main',
                 variables: [{ key: 'VAR', value: 'val' }],
                 workflow_id: '123',
-            });
+            })) as Record<string, unknown>;
             expect(mockClient.post).toHaveBeenCalledWith('/repos/myorg/myrepo/actions/workflows/123/dispatches', {
                 ref: 'main',
                 inputs: { VAR: 'val' },
@@ -63,7 +61,10 @@ describe('GitHubManager', () => {
         it('auto-detects first workflow when workflow_id not given', async () => {
             mockClient.get.mockResolvedValue({ data: { workflows: [{ id: 42, name: 'ci' }] } });
             mockClient.post.mockResolvedValue({ data: {} });
-            const result = await manager.triggerPipeline({ ref: 'dev', variables: [] });
+            const result: Record<string, unknown> = (await manager.triggerPipeline({
+                ref: 'dev',
+                variables: [],
+            })) as Record<string, unknown>;
             expect(mockClient.get).toHaveBeenCalledWith('/repos/myorg/myrepo/actions/workflows', {
                 params: { per_page: 10 },
             });
@@ -101,7 +102,7 @@ describe('GitHubManager', () => {
     });
 
     describe('createMergeRequest (PR)', () => {
-        const args = ['feature', 'main', 'PR Title', 'PR Desc'];
+        const args = ['feature', 'main', 'PR Title', 'PR Desc'] as const;
         const mockPR = {
             number: 10,
             title: 'PR Title',
@@ -116,7 +117,10 @@ describe('GitHubManager', () => {
 
         it('calls POST /pulls on success', async () => {
             mockClient.post.mockResolvedValue({ data: mockPR });
-            const result = await manager.createMergeRequest(...args);
+            const result: Record<string, unknown> = (await manager.createMergeRequest(...args)) as Record<
+                string,
+                unknown
+            >;
             expect(mockClient.post).toHaveBeenCalledWith('/repos/myorg/myrepo/pulls', {
                 head: 'feature',
                 base: 'main',
@@ -149,7 +153,10 @@ describe('GitHubManager', () => {
             });
             mockClient.patch.mockResolvedValue({ data: { ...mockPR, number: 5 } });
 
-            const result = await manager.createMergeRequest(...args);
+            const result: Record<string, unknown> = (await manager.createMergeRequest(...args)) as Record<
+                string,
+                unknown
+            >;
             expect(mockClient.patch).toHaveBeenCalledWith('/repos/myorg/myrepo/pulls/5', {
                 title: 'PR Title',
                 body: 'PR Desc',
@@ -187,7 +194,13 @@ describe('GitHubManager', () => {
                     requested_reviewers: [],
                 },
             });
-            const result = await manager.updateMergeRequest('5', 'dev', 'main', 'New Title', 'New Desc');
+            const result: Record<string, unknown> = (await manager.updateMergeRequest(
+                '5',
+                'dev',
+                'main',
+                'New Title',
+                'New Desc',
+            )) as Record<string, unknown>;
             expect(mockClient.patch).toHaveBeenCalledWith('/repos/myorg/myrepo/pulls/5', {
                 title: 'New Title',
                 body: 'New Desc',
@@ -197,7 +210,7 @@ describe('GitHubManager', () => {
 
         it('throws on API error', async () => {
             mockClient.patch.mockRejectedValue(new Error('Update failed'));
-            await expect(manager.updateMergeRequest('5')).rejects.toThrow('Update failed');
+            await expect(manager.updateMergeRequest('5', '', '', '')).rejects.toThrow('Update failed');
         });
     });
 
@@ -216,7 +229,7 @@ describe('GitHubManager', () => {
                     requested_reviewers: [],
                 },
             });
-            const result = await manager.getMergeRequest('5');
+            const result: Record<string, unknown> = (await manager.getMergeRequest('5')) as Record<string, unknown>;
             expect(mockClient.get).toHaveBeenCalledWith('/repos/myorg/myrepo/pulls/5');
             expect(result.iid).toBe(5);
         });
@@ -306,7 +319,7 @@ describe('GitHubManager', () => {
                 },
             });
 
-            const result = await manager.acceptMergeRequest('5');
+            const result: Record<string, unknown> = (await manager.acceptMergeRequest('5')) as Record<string, unknown>;
             expect(mockClient.put).toHaveBeenCalledWith('/repos/myorg/myrepo/pulls/5/merge', {
                 delete_branch_on_merge: true,
             });
@@ -328,7 +341,7 @@ describe('GitHubManager', () => {
                 },
             });
 
-            const result = await manager.acceptMergeRequest('5');
+            const result: Record<string, unknown> = (await manager.acceptMergeRequest('5')) as Record<string, unknown>;
             expect(mockClient.put).not.toHaveBeenCalled();
             expect(result.state).toBe('merged');
         });
@@ -515,7 +528,7 @@ describe('GitHubManager', () => {
                 base: { ref: 'm' },
                 requested_reviewers: [],
             };
-            const result = manager._formatPR(raw);
+            const result: Record<string, unknown> = manager._formatPR(raw) as Record<string, unknown>;
             expect(result.iid).toBe(1);
             expect(result.state).toBe('opened');
             expect(result.approved).toBe(false);
@@ -533,13 +546,13 @@ describe('GitHubManager', () => {
                 base: { ref: 'm' },
                 requested_reviewers: [{ id: 1 }],
             };
-            const result = manager._formatPR(raw);
+            const result: Record<string, unknown> = manager._formatPR(raw) as Record<string, unknown>;
             expect(result.state).toBe('merged');
             expect(result.approved).toBe(false);
         });
 
         it('returns null for null input', () => {
-            expect(manager._formatPR(null)).toBeNull();
+            expect(manager._formatPR(null as unknown as Record<string, unknown>)).toBeNull();
         });
     });
 

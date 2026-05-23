@@ -1,7 +1,7 @@
-// @ts-nocheck
-const path: typeof import('path') = require('path');
-const fs: typeof import('fs') = require('fs');
-const { parseMochawesome, parseCypressResults }: typeof import('./result_parser') = require('./result_parser');
+import path from 'path';
+import fs from 'fs';
+import os from 'os';
+import { parseMochawesome, parseCypressResults } from './result_parser';
 
 const SAMPLE_MOCHAWESOME = {
     stats: { passes: 2, failures: 1, pending: 1, tests: 4, duration: 5000 },
@@ -56,7 +56,7 @@ describe('parseMochawesome', () => {
     });
 
     it('returns empty for null input', () => {
-        const result = parseMochawesome(null);
+        const result = parseMochawesome(null as never);
         expect(result.tests).toEqual([]);
         expect(result.stats.total).toBe(0);
     });
@@ -76,7 +76,7 @@ describe('parseMochawesome', () => {
 });
 
 describe('parseCypressResults', () => {
-    const tmpFile = path.join(require('os').tmpdir(), 'qa-test-mochawesome-' + Date.now() + '.json');
+    const tmpFile = path.join(os.tmpdir(), 'qa-test-mochawesome-' + Date.now() + '.json');
 
     beforeEach(() => {
         fs.writeFileSync(tmpFile, JSON.stringify(SAMPLE_MOCHAWESOME), 'utf8');
@@ -105,11 +105,11 @@ describe('parseCypressResults', () => {
 
     it('returns error for invalid JSON content', () => {
         const invalidFile = tmpFile + '-invalid.json';
-        require('fs').writeFileSync(invalidFile, 'not json', 'utf8');
+        fs.writeFileSync(invalidFile, 'not json', 'utf8');
         const result = parseCypressResults(invalidFile);
         expect(result.error).toContain('Erro ao ler/parsear');
         try {
-            require('fs').unlinkSync(invalidFile);
+            fs.unlinkSync(invalidFile);
         } catch (e) {
             /* ignore */
         }

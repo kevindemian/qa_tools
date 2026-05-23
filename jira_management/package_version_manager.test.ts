@@ -1,17 +1,16 @@
-// @ts-nocheck
-const fs = require('fs');
-const path = require('path');
-const os = require('os');
+import fs from 'fs';
+import path from 'path';
+import os from 'os';
 
 jest.mock('../shared/logger', () => ({
     rootLogger: { info: jest.fn(), error: jest.fn(), warn: jest.fn(), writeFileOnly: jest.fn() },
 }));
 
-const PackageVersionManager = require('./package_version_manager');
+import PackageVersionManager from './package_version_manager';
 
 describe('PackageVersionManager', () => {
-    let tmpDir;
-    let pkg;
+    let tmpDir: string;
+    let pkg: InstanceType<typeof PackageVersionManager>;
 
     beforeEach(() => {
         tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'pvm-'));
@@ -61,7 +60,8 @@ describe('PackageVersionManager', () => {
 
         it('handles non-array tasks', () => {
             writeReleaseNotes();
-            expect(() => pkg.updateReleaseNotes('v2.0', 'task')).not.toThrow();
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any -- testing non-array passthrough
+            expect(() => pkg.updateReleaseNotes('v2.0', 'task' as any)).not.toThrow();
         });
     });
 });

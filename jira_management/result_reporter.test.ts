@@ -1,10 +1,9 @@
-// @ts-nocheck
-const path = require('path');
-const fs = require('fs');
-const os = require('os');
-const { matchResultsToTests, createTestExecutionFromResults } = require('./result_reporter');
-const JiraResource = require('./jira_resource');
-const JiraLinkManager = require('./jira_link_manager');
+import path from 'path';
+import fs from 'fs';
+import os from 'os';
+import { matchResultsToTests, createTestExecutionFromResults } from './result_reporter';
+import JiraResource from './jira_resource';
+import JiraLinkManager from './jira_link_manager';
 
 jest.mock('axios', () => {
     const mockInstance = {
@@ -74,8 +73,8 @@ describe('matchResultsToTests', () => {
 
     it('matches exact titles to Jira keys', () => {
         const results = [
-            { title: 'TC01 - Login valido', state: 'passed', duration: 300 },
-            { title: 'TC02 - Login invalido', state: 'failed', duration: 200 },
+            { title: 'TC01 - Login valido', state: 'passed' as const, duration: 300 },
+            { title: 'TC02 - Login invalido', state: 'failed' as const, duration: 200 },
         ];
         const result = matchResultsToTests(results, mappingPath);
         expect(result.matched).toHaveLength(2);
@@ -87,7 +86,7 @@ describe('matchResultsToTests', () => {
     });
 
     it('flags unmatched titles', () => {
-        const results = [{ title: 'TC99 - Unknown', state: 'passed', duration: 100 }];
+        const results = [{ title: 'TC99 - Unknown', state: 'passed' as const, duration: 100 }];
         const result = matchResultsToTests(results, mappingPath);
         expect(result.matched).toHaveLength(0);
         expect(result.unmatched).toHaveLength(1);
@@ -96,9 +95,9 @@ describe('matchResultsToTests', () => {
 
     it('calculates stats correctly', () => {
         const results = [
-            { title: 'TC01 - Login valido', state: 'passed', duration: 300 },
-            { title: 'TC02 - Login invalido', state: 'failed', duration: 200 },
-            { title: 'Extra', state: 'passed', duration: 100 },
+            { title: 'TC01 - Login valido', state: 'passed' as const, duration: 300 },
+            { title: 'TC02 - Login invalido', state: 'failed' as const, duration: 200 },
+            { title: 'Extra', state: 'passed' as const, duration: 100 },
         ];
         const result = matchResultsToTests(results, mappingPath);
         expect(result.stats.passed).toBe(1);
@@ -113,7 +112,7 @@ describe('matchResultsToTests', () => {
     });
 
     it('performs fuzzy match when title differs slightly', () => {
-        const results = [{ title: 'Login valido', state: 'passed', duration: 100 }];
+        const results = [{ title: 'Login valido', state: 'passed' as const, duration: 100 }];
         const result = matchResultsToTests(results, mappingPath);
         expect(result.matched).toHaveLength(1);
         expect(result.matched[0].key).toBe('TEST-1');
@@ -121,9 +120,12 @@ describe('matchResultsToTests', () => {
 });
 
 describe('createTestExecutionFromResults', () => {
-    let jiraResource;
-    let linkJiraRes;
-    let linkManager;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- methods replaced with jest.fn() in beforeEach
+    let jiraResource: any;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- methods replaced with jest.fn() in beforeEach
+    let linkJiraRes: any;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- JiraLinkManager used with mocked JiraResource
+    let linkManager: any;
 
     beforeEach(() => {
         jiraResource = new JiraResource('fake-token', 'http://jira/rest/api/2');
@@ -133,7 +135,7 @@ describe('createTestExecutionFromResults', () => {
         linkJiraRes = new JiraResource('fake-token', 'http://jira/rest/api/2');
         linkJiraRes.getJiraResource = jest.fn();
         linkJiraRes.postJiraResource = jest.fn();
-        linkJiraRes.getJiraResource.mockImplementation((url) => {
+        linkJiraRes.getJiraResource.mockImplementation((url: string) => {
             if (url === 'issueLinkType')
                 return Promise.resolve({
                     issueLinkTypes: [{ id: '10201', name: 'Tests', inward: 'is tested by', outward: 'tests' }],
@@ -144,7 +146,7 @@ describe('createTestExecutionFromResults', () => {
     });
 
     it('creates TE with matched results and links', async () => {
-        jiraResource.getJiraResource.mockImplementation((url) => {
+        jiraResource.getJiraResource.mockImplementation((url: string) => {
             if (url === 'issuetype') return Promise.resolve(MOCK_ISSUE_TYPES);
             if (url === 'field') return Promise.resolve(MOCK_FIELDS);
             return Promise.resolve({});
@@ -153,8 +155,8 @@ describe('createTestExecutionFromResults', () => {
         linkJiraRes.postJiraResource.mockResolvedValue({});
 
         const matched = [
-            { key: 'TEST-1', title: 'TC01', status: 'passed', duration: 300 },
-            { key: 'TEST-2', title: 'TC02', status: 'failed', duration: 200 },
+            { key: 'TEST-1', title: 'TC01', status: 'passed' as const, duration: 300 },
+            { key: 'TEST-2', title: 'TC02', status: 'failed' as const, duration: 200 },
         ];
 
         const result = await createTestExecutionFromResults(jiraResource, linkManager, 'PROJ', matched, 'test-csv', {
@@ -177,7 +179,7 @@ describe('createTestExecutionFromResults', () => {
     });
 
     it('skips linking for skipped tests', async () => {
-        jiraResource.getJiraResource.mockImplementation((url) => {
+        jiraResource.getJiraResource.mockImplementation((url: string) => {
             if (url === 'issuetype') return Promise.resolve(MOCK_ISSUE_TYPES);
             if (url === 'field') return Promise.resolve(MOCK_FIELDS);
             return Promise.resolve({});
@@ -186,8 +188,8 @@ describe('createTestExecutionFromResults', () => {
         linkJiraRes.postJiraResource.mockResolvedValue({});
 
         const matched = [
-            { key: 'TEST-1', title: 'TC01', status: 'passed', duration: 300 },
-            { key: 'TEST-3', title: 'TC03', status: 'skipped', duration: 0 },
+            { key: 'TEST-1', title: 'TC01', status: 'passed' as const, duration: 300 },
+            { key: 'TEST-3', title: 'TC03', status: 'skipped' as const, duration: 0 },
         ];
 
         const result = await createTestExecutionFromResults(jiraResource, linkManager, 'PROJ', matched, 'test-csv');
@@ -195,7 +197,8 @@ describe('createTestExecutionFromResults', () => {
         expect(result.key).toBe('EXEC-2');
         expect(result.passed).toBe(1);
         expect(result.skipped).toBe(1);
-        const linkCalls = linkJiraRes.postJiraResource.mock.calls.filter((c) => c[0] === 'issueLink');
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any -- mock.calls on replaced method
+        const linkCalls = linkJiraRes.postJiraResource.mock.calls.filter((c: any) => c[0] === 'issueLink');
         expect(linkCalls).toHaveLength(1);
         expect(linkCalls[0][1].outwardIssue.key).toBe('TEST-1');
     });
