@@ -65,7 +65,7 @@ async function handler(c: CommandContext): Promise<boolean | void> {
     if (confirm('Adicionar tarefas a uma sprint?')) {
         const sprintId = prompt('ID da sprint', { hint: 'ex: 6991 (encontrado na URL do board)' });
         try {
-            await c.jiraResource.axiosInstance.post('/rest/api/2/sprint/' + sprintId + '/issue', { issues: taskIds });
+            await c.jiraResource.postJiraResource('sprint/' + sprintId + '/issue', { issues: taskIds });
             success('Tarefas adicionadas a sprint ' + sprintId);
         } catch (err: unknown) {
             printError('Erro ao adicionar tarefas a sprint', err);

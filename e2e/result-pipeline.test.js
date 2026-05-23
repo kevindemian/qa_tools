@@ -24,13 +24,15 @@ function setupJiraMocks(base) {
     ]);
 
     api.get('/field').reply(200, [
-        { id: 'customfield_13715', name: 'Tests association with a Test Execution', schema: { custom: 'com.xpandit.plugins.xray:testexec-tests-custom-field' } },
+        {
+            id: 'customfield_13715',
+            name: 'Tests association with a Test Execution',
+            schema: { custom: 'com.xpandit.plugins.xray:testexec-tests-custom-field' },
+        },
     ]);
 
     api.get('/issueLinkType').reply(200, {
-        issueLinkTypes: [
-            { id: '10201', name: 'Tests', inward: 'is tested by', outward: 'tests' },
-        ],
+        issueLinkTypes: [{ id: '10201', name: 'Tests', inward: 'is tested by', outward: 'tests' }],
     });
 
     let teCount = 0;
@@ -62,12 +64,15 @@ describe('E2E: Result Processing Pipeline', () => {
     });
 
     beforeEach(() => {
-        jest.spyOn(console, 'log').mockImplementation(() => { });
-        jest.spyOn(process.stdout, 'write').mockImplementation(() => { });
+        jest.spyOn(console, 'log').mockImplementation(() => {});
+        jest.spyOn(process.stdout, 'write').mockImplementation(() => {});
+        nock.cleanAll();
+        setupJiraMocks('http://localhost:1997/jira');
     });
 
     afterEach(() => {
         jest.restoreAllMocks();
+        nock.cleanAll();
     });
 
     it('flows end-to-end: mochawesome → match → TE creation', async () => {
@@ -90,7 +95,12 @@ describe('E2E: Result Processing Pipeline', () => {
         const jiraResource = new JiraResource('e2e-token', 'http://localhost:1997/jira/rest/api/2');
         const linkManager = new JiraLinkManager(jiraResource);
         const result = await createTestExecutionFromResults(
-            jiraResource, linkManager, 'EXECPROJ', matched, 'testes-simples', { pipelineId: 42, branch: 'main', provider: 'gitlab' }
+            jiraResource,
+            linkManager,
+            'EXECPROJ',
+            matched,
+            'testes-simples',
+            { pipelineId: 42, branch: 'main', provider: 'gitlab' },
         );
 
         expect(result.key).toBe('RESULT-1');
@@ -120,7 +130,7 @@ describe('E2E: Result Processing Pipeline', () => {
     it('returns empty match for missing mapping file', () => {
         const result = matchResultsToTests(
             [{ title: 'TC01', state: 'passed', duration: 100 }],
-            '/tmp/nonexistent.json'
+            '/tmp/nonexistent.json',
         );
         expect(result.matched).toHaveLength(0);
         expect(result.stats.total).toBe(0);
