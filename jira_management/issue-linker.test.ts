@@ -1,4 +1,5 @@
 const mockPrompt = {
+    print: jest.fn(),
     success: jest.fn(),
     isQuiet: jest.fn().mockReturnValue(true),
     onError: jest.fn(),
@@ -174,7 +175,6 @@ describe('IssueLinker', () => {
 
         it('writes green char on success when not quiet', async () => {
             mockPrompt.isQuiet.mockReturnValue(false);
-            const writeSpy = jest.spyOn(process.stdout, 'write').mockImplementation(() => true);
             mockJiraResource.getJiraResource
                 .mockResolvedValueOnce({ fields: { description: 'Old' } })
                 .mockResolvedValueOnce({ fields: { description: 'Old' } });
@@ -184,13 +184,11 @@ describe('IssueLinker', () => {
                 { title: 'Test2', group: 'G1' },
             ] as never;
             await linker.updateCrossReferences(tests, ['TEST-1', 'TEST-2']);
-            expect(writeSpy).toHaveBeenCalledWith(expect.stringContaining('+'));
-            writeSpy.mockRestore();
+            expect(mockPrompt.print).toHaveBeenCalledWith(expect.stringContaining('+'));
         });
 
         it('writes red char on error when not quiet', async () => {
             mockPrompt.isQuiet.mockReturnValue(false);
-            const writeSpy = jest.spyOn(process.stdout, 'write').mockImplementation(() => true);
             mockJiraResource.getJiraResource
                 .mockResolvedValueOnce({ fields: { description: 'Old' } })
                 .mockResolvedValueOnce({ fields: { description: 'Old' } });
@@ -200,8 +198,7 @@ describe('IssueLinker', () => {
                 { title: 'Test2', group: 'G1' },
             ] as never;
             await linker.updateCrossReferences(tests, ['TEST-1', 'TEST-2']);
-            expect(writeSpy).toHaveBeenCalledWith(expect.stringContaining('x'));
-            writeSpy.mockRestore();
+            expect(mockPrompt.print).toHaveBeenCalledWith(expect.stringContaining('x'));
         });
     });
 });

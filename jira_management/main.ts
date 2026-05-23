@@ -5,6 +5,8 @@ import JiraResource from './jira_resource';
 import JiraLinkManager from './jira_link_manager';
 import CsvResource from './csv_resource';
 import PackageVersionManager from './package_version_manager';
+import { box } from '../shared/box';
+import { palette } from '../shared/palette';
 import {
     print,
     warn,
@@ -223,45 +225,22 @@ function _configHint(key: string, ctx: { git_directory: string }): string {
 }
 
 function displayMenu(
-    proj: string,
-    ctx: { lastOperation: string; sessionCounters: Array<{ status: string }>; git_directory: string },
+    _proj: string,
+    _ctx: { lastOperation: string; sessionCounters: Array<{ status: string }>; git_directory: string },
 ): void {
-    const ok = ctx.sessionCounters.filter((c) => c.status === 'ok').length;
-    const er = ctx.sessionCounters.filter((c) => c.status === 'error').length;
-    const counts = ok > 0 || er > 0 ? ' | ' + ok + ' ok' + (er > 0 ? ' · ' + er + ' erro' : '') : '';
-    const ctxLine = proj + (ctx.lastOperation ? ' | ' + ctx.lastOperation : '') + counts;
-    print('== ' + ctxLine + ' ==');
-    divider();
-    for (const item of MENU_ITEMS) {
-        if (item.section) {
-            print('  ' + item.section);
-        } else {
-            if (item.id === '0') print('');
-            const hint = item.configKey ? ' ' + _configHint(item.configKey, ctx) : '';
-            print('   ' + item.id + '  ' + item.label + hint);
-        }
-    }
-    if (ok > 0 || er > 0) {
-        print('  ' + ok + ' ok' + (er > 0 ? ' · ' + er + ' erro' : ''));
-    }
-    print('  /h  Ajuda');
-    divider();
-}
-
-function buildContextLine(proj: string, ctx: SessionContext): string {
-    return ctx.buildContextLine(proj);
+    // displayMenu() desativado — showSelect() substitui.
 }
 
 function buildMenuChoices(proj: string, ctx: { git_directory: string }): MenuChoice[] {
     const choices: MenuChoice[] = [];
     for (const item of MENU_ITEMS) {
         if (item.section) {
-            choices.push({ type: 'separator' as const, line: ' ' + item.section });
+            choices.push({ type: 'separator' as const, line: '  ' + item.section });
         } else if (item.id === '0') {
             choices.push({ type: 'separator' as const, line: '' });
-            choices.push({ name: '0  ' + item.label, value: '0' });
+            choices.push({ name: '  ' + item.label, value: '0' });
         } else {
-            const entry: MenuChoice = { name: item.id + '  ' + item.label, value: item.id };
+            const entry: MenuChoice = { name: '  ' + item.label, value: item.id };
             if (item.configKey === 'gitDir') entry.description = ctx.git_directory;
             else if (item.configKey === 'cypressDir')
                 entry.description =
@@ -277,7 +256,7 @@ function buildMenuChoices(proj: string, ctx: { git_directory: string }): MenuCho
 
 function handleSpecialInput(input: string): boolean {
     const cmd = input.trim().toLowerCase();
-    if (cmd.startsWith('/help') || cmd.startsWith('/h')) {
+    if (cmd.startsWith('/help') || cmd === '/h' || cmd.startsWith('/h ')) {
         const parts = cmd.split(/\s+/);
         if (parts.length > 1 && parts[1] !== '/help' && parts[1] !== '/h') {
             showHelp(parts.slice(1).join(' '));
@@ -286,6 +265,10 @@ function handleSpecialInput(input: string): boolean {
         }
         divider();
         prompt('Pressione Enter para continuar');
+        return true;
+    }
+    if (cmd === '/home') {
+        showSplash();
         return true;
     }
     if (cmd === '/back' || cmd === '/menu' || cmd === '/exit') {
@@ -366,32 +349,17 @@ async function getUserChoice(proj: string, ctx: SessionContext): Promise<string>
     if (Config.autoChoice) {
         return Config.autoChoice;
     }
-    if (process.stdout.isTTY && !Config.quiet) {
-        const ctxLine = buildContextLine(proj, ctx);
-        print('== ' + ctxLine + ' ==');
-        divider();
-        const choices = buildMenuChoices(proj, ctx);
-        choices.push(
-            { type: 'separator' as const, line: '' },
-            { name: '/help  Ajuda', value: '/help' },
-            { name: '/history  Historico', value: '/history' },
-        );
-        const menuState = loadState() as StateSchema;
-        return showSelect('Selecione uma opção', choices, {
-            default: menuState.lastChoice && menuState.lastChoice !== '0' ? menuState.lastChoice : undefined,
-        });
-    }
-    divider();
-    displayMenu(proj, ctx);
+    const choices = buildMenuChoices(proj, ctx);
+    choices.push(
+        { type: 'separator' as const, line: '' },
+        { name: '/help  Ajuda', value: '/help' },
+        { name: '/docs  Documentação', value: '/docs' },
+        { name: '/history  Historico', value: '/history' },
+    );
     const menuState = loadState() as StateSchema;
-    const lastHint =
-        menuState.lastChoice && menuState.lastChoice !== '0' ? 'Enter = ' + menuState.lastChoice : '0-15 ou /help';
-    let choice = prompt('Selecione uma opção', { hint: lastHint });
-    if (!choice.trim() && menuState.lastChoice && menuState.lastChoice !== '0') {
-        choice = menuState.lastChoice;
-        info('Repetindo última opção: ' + choice);
-    }
-    return choice;
+    return showSelect('Selecione uma opção', choices, {
+        default: menuState.lastChoice && menuState.lastChoice !== '0' ? menuState.lastChoice : undefined,
+    });
 }
 
 async function runMainLoop(
@@ -406,6 +374,7 @@ async function runMainLoop(
 ): Promise<void> {
     while (true) {
         let choice = await getUserChoice(ctx.project_name, ctx);
+        process.stdout.write('\x1b[2J\x1b[H');
 
         if (handleSpecialInput(choice)) continue;
 
@@ -458,14 +427,33 @@ async function runMainLoop(
     }
 }
 
+function showSplash(): void {
+    try {
+        const splash = [
+            '',
+            palette.purple.bold('          ● ● ●   QA TOOLS   ● ● ●'),
+            palette.muted('          Gestão de Testes & Automação de CI/CD'),
+            '',
+            palette.muted('  State: ' + getStatePath()),
+            '',
+            palette.blue('  /help  Ajuda'),
+            palette.blue('  d  Documentação'),
+            '',
+        ];
+        print(box(splash, { border: 'double', padding: 1 }));
+    } catch {
+        // non-TTY fallback — intentionally empty
+    }
+}
+
 async function main(): Promise<void> {
+    if (process.stdout.isTTY) {
+        process.stdout.write('\x1b[2J\x1b[H\x1b[3J');
+    }
     validateEnv();
 
-    title('Bem-vindo ao QA Tools — Jira Management');
-    info('Digite /help a qualquer momento para obter ajuda.');
-    info('State: ' + getStatePath());
-    divider();
-    sessionLog.info('Sessão iniciada');
+    showSplash();
+    rootLogger.writeFileOnly('INFO', 'Sessão iniciada');
 
     const {
         jiraResource,
@@ -507,4 +495,13 @@ main().catch((err: unknown) => {
     process.exitCode = 1;
 });
 
-module.exports = { main, showHelp, resolveAlias, buildMenuChoices, handleSpecialInput, displayMenu, _configHint };
+module.exports = {
+    main,
+    showSplash,
+    showHelp,
+    resolveAlias,
+    buildMenuChoices,
+    handleSpecialInput,
+    displayMenu,
+    _configHint,
+};

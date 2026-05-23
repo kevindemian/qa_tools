@@ -116,16 +116,14 @@ class GitHubManager {
         return inputs;
     }
 
-    // eslint-disable-next-line @typescript-eslint/require-await
-    async getSchedules() {
+    getSchedules() {
         this.log.warn(
             'GitHub Actions schedules not available via REST API. Use workflow_dispatch or repository_dispatch.',
         );
         return [];
     }
 
-    // eslint-disable-next-line @typescript-eslint/require-await
-    async runSchedule(scheduleId: string | number) {
+    runSchedule(scheduleId: string | number) {
         const err = new Error(
             'GitHub Actions schedules not available via REST API. Use workflow_dispatch or repository_dispatch.',
         );
@@ -295,7 +293,8 @@ class GitHubManager {
     async getBranch(branch: string): Promise<{ name: string } | null> {
         try {
             const { data } = await this.client.get(`${this._repoPath}/branches/${encodeURIComponent(branch)}`);
-            return { name: data.name as string };
+            if (!data?.name) return null;
+            return { name: data.name };
         } catch {
             return null;
         }

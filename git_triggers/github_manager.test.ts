@@ -97,15 +97,15 @@ describe('GitHubManager', () => {
     });
 
     describe('getSchedules', () => {
-        it('returns empty array', async () => {
-            const result = await manager.getSchedules();
+        it('returns empty array', () => {
+            const result = manager.getSchedules();
             expect(result).toEqual([]);
         });
     });
 
     describe('runSchedule', () => {
-        it('throws not-implemented error', async () => {
-            await expect(manager.runSchedule('1')).rejects.toThrow('not available via REST API');
+        it('throws not-implemented error', () => {
+            expect(() => manager.runSchedule('1')).toThrow('not available via REST API');
         });
     });
 

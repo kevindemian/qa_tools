@@ -42,4 +42,4 @@ function getHandler(caseNumber: string): HandlerFn | null {
     return mod ? mod.handler : null;
 }
 
-module.exports = { getHandler, handlers };
+module.exports = { getHandler };

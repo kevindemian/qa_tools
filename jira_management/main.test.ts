@@ -8,7 +8,7 @@ jest.mock('../shared/prompt', () => ({
     divider: jest.fn(),
     prompt: jest.fn().mockReturnValue('0'),
     printError: jest.fn(),
-    showSelect: jest.fn(),
+    showSelect: jest.fn().mockResolvedValue('0'),
     tableView: jest.fn(),
 }));
 
@@ -96,6 +96,7 @@ interface MenuChoice {
 
 interface MainModule {
     main(): Promise<void>;
+    showSplash(): void;
     showHelp(topic?: string): void;
     resolveAlias(choice: string): string;
     buildMenuChoices(proj: string, ctx: { git_directory: string }): MenuChoice[];
@@ -261,10 +262,14 @@ describe('handleSpecialInput', () => {
         expect(mod.handleSpecialInput('/d')).toBe(true);
     });
 
-    it('catches /history via /h prefix (showHelp) before history handler', () => {
-        // /history starts with /h, so it triggers showHelp before reaching /history branch
+    it('handles /history correctly', () => {
         expect(mod.handleSpecialInput('/history')).toBe(true);
-        expect(title).toHaveBeenCalledWith(expect.stringContaining('HELP'));
+        expect(title).toHaveBeenCalledWith(expect.stringContaining('Histórico'));
+    });
+
+    it('handles /home to show splash', () => {
+        expect(mod.handleSpecialInput('/home')).toBe(true);
+        expect(print).toHaveBeenCalled();
     });
 
     it('returns false for regular input', () => {
@@ -308,27 +313,10 @@ describe('displayMenu', () => {
         git_directory: '/tmp',
     };
 
-    it('prints context line with project and operation', () => {
+    it('is a no-op — prints nothing, calls nothing', () => {
         mod.displayMenu('ECSPOL', ctx);
-        expect(print).toHaveBeenCalledWith(expect.stringContaining('ECSPOL'));
-        expect(print).toHaveBeenCalledWith(expect.stringContaining('last-op'));
-    });
-
-    it('prints session counters', () => {
-        mod.displayMenu('ECSPOL', ctx);
-        expect(print).toHaveBeenCalledWith(expect.stringContaining('2 ok'));
-        expect(print).toHaveBeenCalledWith(expect.stringContaining('1 erro'));
-    });
-
-    it('calls divider', () => {
-        mod.displayMenu('ECSPOL', ctx);
-        expect(divider).toHaveBeenCalled();
-    });
-
-    it('prints menu items', () => {
-        mod.displayMenu('ECSPOL', { ...ctx, sessionCounters: [] });
-        expect(print).toHaveBeenCalledWith(expect.stringContaining('Criar testes'));
-        expect(print).toHaveBeenCalledWith(expect.stringContaining('Sair'));
+        expect(print).not.toHaveBeenCalled();
+        expect(divider).not.toHaveBeenCalled();
     });
 });
 

@@ -1,6 +1,7 @@
 import { error, warn, info, title, printSummary } from '../../shared/prompt';
 import { sanitizeUrl } from '../../shared/cli_base';
 import type { CommandContext } from './context';
+import type { TestResult } from '../../shared/types';
 
 async function handler(c: CommandContext): Promise<boolean | void> {
     title('Diagnostico de Conexao');
@@ -31,7 +32,7 @@ async function handler(c: CommandContext): Promise<boolean | void> {
             diagResults.push({ status: 'error', label: ep.label, message: st + ' ' + ms + 'ms' });
         }
     }
-    printSummary(diagResults as import('../../shared/prompt').TestResult[]);
+    printSummary(diagResults as TestResult[]);
     c.pushHistory(
         'diagnostico',
         diagResults.filter((r) => r.status === 'ok').length + '/' + diagResults.length + ' ok',

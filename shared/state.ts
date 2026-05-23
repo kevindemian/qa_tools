@@ -43,15 +43,23 @@ try {
         fs.renameSync(tmpPath(), statePath());
         try {
             fs.unlinkSync(OLD_STATE_PATH + '.bak');
-        } catch {}
+        } catch {
+            /* best-effort cleanup */
+        }
         try {
             fs.unlinkSync(OLD_STATE_PATH + '.tmp');
-        } catch {}
+        } catch {
+            /* best-effort cleanup */
+        }
         try {
             fs.unlinkSync(OLD_STATE_PATH);
-        } catch {}
+        } catch {
+            /* best-effort cleanup */
+        }
     }
-} catch {}
+} catch (err: unknown) {
+    rootLogger.warn('Falha na migração de estado', err);
+}
 
 export function getStatePath(): string {
     return statePath();

@@ -1,5 +1,5 @@
 import chalk from 'chalk';
-import { success, isQuiet, onError } from '../shared/prompt';
+import { success, isQuiet, onError, print } from '../shared/prompt';
 import { rootLogger } from '../shared/logger';
 import { sleep } from '../shared/http-client';
 import type JiraResource from './jira_resource';
@@ -90,14 +90,14 @@ class IssueLinker {
                     await this.jiraResource.putJiraResource('issue/' + member.id, {
                         fields: { description: currentDesc + refText },
                     });
-                    if (!isQuiet()) process.stdout.write(chalk.green('+'));
+                    if (!isQuiet()) print(chalk.green('+'));
                     crossLog.info('  ' + member.id + ': descrição atualizada');
                 } catch (err) {
                     const status = (err as { response?: { status?: number } }).response?.status;
                     crossLog.error('Falha ao atualizar descrição de ' + member.id + ' no grupo "' + group.name + '"', {
                         status,
                     });
-                    if (!isQuiet()) process.stdout.write(chalk.red('x'));
+                    if (!isQuiet()) print(chalk.red('x'));
                 }
             }
         }

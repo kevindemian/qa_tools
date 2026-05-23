@@ -5,6 +5,15 @@ param(
 )
 
 [Console]::OutputEncoding = [System.Text.UTF8Encoding]::new()
+
+# WSL detection — delegate to .sh
+$wsl = Get-Command wsl.exe -ErrorAction SilentlyContinue
+if ($wsl -or $env:WSL_DISTRO_NAME) {
+    $shPath = Join-Path $PSScriptRoot "qatools.sh"
+    wsl.exe -e bash $shPath $args
+    exit $LASTEXITCODE
+}
+
 $scriptRoot = $PSScriptRoot
 $cacheFile = Join-Path $env:TEMP "qa_tools_last_choice.txt"
 

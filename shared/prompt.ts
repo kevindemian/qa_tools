@@ -3,12 +3,9 @@ import CliTable3 from 'cli-table3';
 import readlineSync from 'readline-sync';
 import Config from './config';
 import { rootLogger } from './logger';
-
-export interface TestResult {
-    status: 'ok' | 'error';
-    label: string;
-    message: string;
-}
+import { box, divider as boxDivider } from './box';
+import { palette } from './palette';
+import type { TestResult } from './types';
 
 interface PromptOptions {
     default?: string;
@@ -79,9 +76,11 @@ export function print(msg: string): void {
 }
 
 export function title(msg: string): void {
-    divider();
-    console.log(chalk.bold(msg));
-    divider();
+    if (isQuiet()) {
+        console.log('--- ' + msg + ' ---');
+        return;
+    }
+    console.log(box([msg], { border: 'none', padding: 0, width: 60 }));
 }
 
 export function prompt(label: string, options: PromptOptions = {}): string {
@@ -114,8 +113,7 @@ export function confirm(label: string, defaultYes = false): boolean {
 }
 
 export function divider(): void {
-    const width = process.stdout.columns && process.stdout.columns > 20 ? process.stdout.columns : 50;
-    console.log('-'.repeat(width));
+    console.log(boxDivider());
 }
 
 const NAV_CMDS = ['/back', '/menu', '/exit', '/sair'];
@@ -160,14 +158,7 @@ export class ProgressBar {
         this.current = current;
         const pct = this.total > 0 ? current / this.total : 0;
         const filled = Math.round(pct * this.width);
-        let bar: string;
-        if (filled >= this.width) {
-            bar = '='.repeat(this.width);
-        } else if (filled <= 0) {
-            bar = '>' + ' '.repeat(this.width - 1);
-        } else {
-            bar = '='.repeat(filled) + '>' + ' '.repeat(this.width - filled - 1);
-        }
+
         const elapsed = Math.round((Date.now() - this.startTime) / 1000);
         let eta: string;
         if (current === 0 || elapsed === 0) {
@@ -175,15 +166,25 @@ export class ProgressBar {
         } else {
             eta = Math.round((elapsed / current) * (this.total - current)).toString();
         }
-        if (process.stdout.isTTY) {
-            process.stdout.write('\r[' + bar + '] ' + current + '/' + this.total + ' ' + eta + 's');
+
+        if (process.stdout.isTTY && !isQuiet()) {
+            const blocks = ['█', '▉', '▊', '▋', '▌', '▍', '▎', '▏', '░'];
+            const full = Math.floor(filled);
+            const frac = Math.round((filled - full) * blocks.length);
+            let bar = '█'.repeat(full);
+            if (full < this.width) {
+                bar += blocks[blocks.length - 1 - Math.min(frac, blocks.length - 1)];
+                bar += '░'.repeat(this.width - full - 1);
+            }
+            const color = pct >= 1 ? palette.green : pct > 0.5 ? palette.yellow : palette.blue;
+            process.stdout.write('\r' + color(bar) + ' ' + current + '/' + this.total + ' ' + palette.muted(eta + 's'));
         } else {
             console.log('  Progresso: ' + current + '/' + this.total + ' (' + Math.round(pct * 100) + '%)');
         }
     }
 
     stop(): void {
-        if (process.stdout.isTTY) {
+        if (process.stdout.isTTY && !isQuiet()) {
             process.stdout.write('\r\x1b[K\n');
         }
     }
@@ -195,7 +196,7 @@ export class Spinner {
     i: number;
 
     constructor() {
-        this.frames = ['-', '\\', '|', '/'];
+        this.frames = ['⠋', '⠙', '⠹', '⠸', '⠼', '⠴', '⠦', '⠧', '⠇', '⠏'];
         this.interval = null;
         this.i = 0;
     }
@@ -309,39 +310,79 @@ export function extractErrorMessage(err: unknown): string {
 export function printError(context: string, err: unknown): void {
     const raw = extractErrorMessage(err);
     const known = humanizeError(raw);
-    if (known) {
-        error(context + ': ' + known.msg);
-        console.log('  ' + chalk.yellow('->') + ' ' + known.hint);
-    } else {
-        error(context + ': ' + (raw || 'Erro inesperado'));
-        console.log('  ' + chalk.yellow('->') + ' Verifique sua configuração e tente novamente.');
+    const msg = known ? known.msg : raw || 'Erro inesperado';
+    const hint = known ? known.hint : 'Verifique sua configuração e tente novamente.';
+    if (isQuiet()) {
+        console.log(chalk.red.bold(icon('err')) + ' ' + context + ': ' + msg);
+        return;
     }
+    console.log(
+        box(
+            [
+                '',
+                chalk.bold(palette.red(icon('err') + '  ' + context + ': ' + msg)),
+                '',
+                palette.blue('→  ' + hint),
+                '',
+            ],
+            { border: 'single', color: 'red', padding: 0, width: 72 },
+        ),
+    );
 }
 
 export function printSummary(results: TestResult[]): void {
-    divider();
     const passed = results.filter((r) => r.status === 'ok').length;
     const failed = results.filter((r) => r.status === 'error').length;
 
     if (failed === 0) {
-        console.log('  ' + chalk.green.bold('TUDO CERTO!'));
-        success(passed + ' de ' + results.length + ' operação(oes) concluída(s) com sucesso');
+        if (isQuiet()) {
+            console.log('  ' + chalk.green.bold('TUDO CERTO!'));
+            success(passed + ' de ' + results.length + ' operação(oes) concluída(s) com sucesso');
+        } else {
+            console.log(
+                box(
+                    [
+                        '',
+                        chalk.bold(palette.green('●  TUDO CERTO!')),
+                        palette.fg('●  ' + passed + ' de ' + results.length + ' operação(ões) concluída(s)'),
+                        '',
+                    ],
+                    { border: 'single', color: 'green', padding: 0, width: 72 },
+                ),
+            );
+        }
         rootLogger.info('Resumo: ' + passed + '/' + results.length + ' ok');
     } else {
         const logPath = rootLogger.filePath;
-        console.log('  ' + chalk.yellow.bold('OPERACAO PARCIAL'));
-        console.log('  ' + chalk.yellow('!') + ' ' + passed + ' concluídas, ' + failed + ' com erro');
-        results
-            .filter((r) => r.status === 'error')
-            .forEach((r) => {
-                console.log('  ' + chalk.red('*') + ' ' + r.label + ': ' + r.message);
-            });
-        if (logPath) {
-            console.log('  ' + chalk.yellow('->') + ' Consulte o log: ' + logPath);
+        if (isQuiet()) {
+            console.log('  ' + chalk.yellow.bold('OPERACAO PARCIAL'));
+            console.log('  ' + chalk.yellow('!') + ' ' + passed + ' concluídas, ' + failed + ' com erro');
+            results
+                .filter((r) => r.status === 'error')
+                .forEach((r) => {
+                    console.log('  ' + chalk.red('*') + ' ' + r.label + ': ' + r.message);
+                });
+            if (logPath) {
+                console.log('  ' + chalk.yellow('->') + ' Consulte o log: ' + logPath);
+            }
+        } else {
+            const errorLines: string[] = [
+                '',
+                chalk.bold(palette.yellow('●  ' + passed + ' concluídas, ' + failed + ' com erro')),
+                '',
+            ];
+            results
+                .filter((r) => r.status === 'error')
+                .forEach((r) => {
+                    errorLines.push(palette.red('✗  ' + r.label + ': ' + r.message));
+                });
+            errorLines.push('');
+            errorLines.push(palette.blue('→  Consulte o log: ' + (logPath || 'ver logs acima')));
+            errorLines.push('');
+            console.log(box(errorLines, { border: 'single', color: 'yellow', padding: 0, width: 72 }));
         }
         rootLogger.warn(`Resumo: ${passed}/${results.length} ok, ${failed} erro(s)`);
     }
-    divider();
 }
 
 // eslint-disable-next-line @typescript-eslint/require-await
@@ -410,13 +451,85 @@ async function _loadInquirer(): Promise<unknown> {
     }
 }
 
+let _inputMod: unknown = null;
+
+async function _loadInput(): Promise<unknown> {
+    if (_inputMod !== null) return _inputMod;
+    try {
+        _inputMod = await import('@inquirer/input');
+        return _inputMod;
+    } catch {
+        _inputMod = false;
+        return false;
+    }
+}
+
+let _confirmMod: unknown = null;
+
+async function _loadConfirm(): Promise<unknown> {
+    if (_confirmMod !== null) return _confirmMod;
+    try {
+        _confirmMod = await import('@inquirer/confirm');
+        return _confirmMod;
+    } catch {
+        _confirmMod = false;
+        return false;
+    }
+}
+
+const inquirerTheme = {
+    prefix: palette.blue('  ◆'),
+    style: {
+        answer: (s: string) => palette.green.bold(s),
+        message: (s: string) => palette.fg.bold(s),
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        renderSelected: (s: any) => palette.purple('❯ ' + s),
+    },
+};
+
 const isTTY = (): boolean => !!(process.stdout.isTTY && !Config.quiet);
+
+export async function ask(label: string, options: PromptOptions = {}): Promise<string> {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const mod: any = await _loadInput();
+    if (mod && isTTY()) {
+        try {
+            const answer = await mod.default({
+                message: label,
+                default: options.default,
+                theme: inquirerTheme,
+            });
+            return (answer as string).trim();
+        } catch {
+            return prompt(label, options);
+        }
+    }
+    return prompt(label, options);
+}
+
+export async function askConfirm(label: string, defaultYes = false): Promise<boolean> {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const mod: any = await _loadConfirm();
+    if (mod && isTTY()) {
+        try {
+            const answer = await mod.default({
+                message: label,
+                default: defaultYes,
+                theme: inquirerTheme,
+            });
+            return answer as boolean;
+        } catch {
+            return confirm(label, defaultYes);
+        }
+    }
+    return confirm(label, defaultYes);
+}
 
 export async function showSelect(label: string, choices: SelectChoice[], options: SelectOptions = {}): Promise<string> {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const mod: any = await _loadInquirer();
     if (mod && isTTY()) {
-        const processed = choices.map((c) => {
+        const processed = choices.map((c: SelectChoice) => {
             if (c.type === 'separator') return new mod.Separator(c.line);
             return c;
         });
@@ -427,6 +540,7 @@ export async function showSelect(label: string, choices: SelectChoice[], options
                 pageSize: options.pageSize || 14,
                 loop: false,
                 default: options.default,
+                theme: inquirerTheme,
             });
             return answer;
         } catch (err: unknown) {
@@ -442,12 +556,12 @@ export async function showSelect(label: string, choices: SelectChoice[], options
     let idx = 0;
     for (const c of choices) {
         if (c.type === 'separator') {
-            if (c.line) console.log(' ' + c.line);
+            if (c.line) console.log('  ' + c.line);
             continue;
         }
         idx++;
         const desc = c.description ? '  ' + c.description : '';
-        console.log('  ' + idx + '. ' + c.name + desc);
+        console.log('   ' + idx + '.  ' + c.name + desc);
     }
     while (true) {
         const answer = prompt(label).trim();
@@ -478,8 +592,15 @@ export function tableView<T extends Record<string, unknown>>(data: T[] | null | 
         : data;
     if (rows.length === 0) return;
     const keys = columns || Object.keys(rows[0]);
+    const termWidth = process.stdout.columns || 80;
+    const borderChars = keys.length + 1;
+    const minAvail = keys.length * 3;
+    const avail = Math.max(termWidth - borderChars, minAvail);
+    const colWidths = keys.map(() => Math.floor(avail / keys.length));
+    colWidths[0] += avail - colWidths.reduce((a, b) => a + b, 0);
     const table = new CliTable3({
         head: keys,
+        colWidths,
         style: { head: ['cyan'] },
         wordWrap: true,
     });

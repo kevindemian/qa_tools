@@ -17,6 +17,7 @@
   "license": "ISC",
   "type": "commonjs",
   "dependencies": {
+    "@inquirer/confirm": "^6.0.13",
     "@inquirer/input": "^5.0.13",
     "@inquirer/select": "^5.1.5",
     "adm-zip": "^0.5.17",
@@ -25,6 +26,8 @@
     "cli-table3": "^0.6.5",
     "csv-parser": "^3.2.0",
     "dotenv": "^17.4.2",
+    "glob": "^10.5.0",
+    "marked": "^18.0.4",
     "readline-sync": "^1.4.10"
   },
   "lint-staged": {
@@ -38,6 +41,7 @@
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
+    "@jest/globals": "^30.4.1",
     "@types/adm-zip": "^0.5.8",
     "@types/jest": "^30.0.0",
     "@types/node": "^25.9.1",
