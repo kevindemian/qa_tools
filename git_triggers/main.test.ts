@@ -150,9 +150,9 @@ beforeAll(() => {
     jest.spyOn(fs, 'readFileSync').mockImplementation(((p: string) => {
         if (p.includes('providers.json')) return '{"proj-a":{"provider":"github"},"proj-b":{}}';
         if (p.includes('projects.json')) return '{"proj-a":"111","proj-b":"222"}';
-
-        return jest.requireActual('fs').readFileSync(p, 'utf8');
-    }) as unknown);
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        return (jest.requireActual('fs') as any).readFileSync(p, 'utf8');
+    }) as any);
     jest.spyOn(fs, 'writeFileSync').mockImplementation(() => {});
     jest.spyOn(fs, 'unlinkSync').mockImplementation(() => {});
 
