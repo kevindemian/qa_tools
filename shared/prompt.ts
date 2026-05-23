@@ -1,5 +1,6 @@
 import chalk from 'chalk';
 import CliTable3 from 'cli-table3';
+import cliProgress from 'cli-progress';
 import readlineSync from 'readline-sync';
 import Config from './config';
 import { rootLogger } from './logger';
@@ -142,94 +143,59 @@ export function smartPrompt(label: string, options: PromptOptions = {}, helpCall
 }
 
 export class ProgressBar {
-    total: number;
-    current: number;
-    startTime: number;
-    width: number;
+    current = 0;
+
+    private readonly bar: cliProgress.SingleBar | null = null;
+    private readonly total: number;
+    private readonly enabled: boolean;
 
     constructor(total: number, options: { width?: number } = {}) {
         this.total = total;
-        this.current = 0;
-        this.startTime = Date.now();
-        this.width = options.width || 20;
+        this.enabled = process.stdout.isTTY && !isQuiet();
+        if (this.enabled) {
+            this.bar = new cliProgress.SingleBar(
+                {
+                    format: `{bar} {percentage}% | {value}/{total} | {duration_formatted}`,
+                    barCompleteChar: '\u2588',
+                    barIncompleteChar: '\u2591',
+                    hideCursor: true,
+                    barsize: options.width || 20,
+                    noTTYOutput: false,
+                },
+                cliProgress.Presets.shades_classic,
+            );
+            this.bar.start(total, 0);
+        }
     }
 
-    update(current: number): void {
-        this.current = current;
-        const pct = this.total > 0 ? current / this.total : 0;
-        const filled = Math.round(pct * this.width);
-
-        const elapsed = Math.round((Date.now() - this.startTime) / 1000);
-        let eta: string;
-        if (current === 0 || elapsed === 0) {
-            eta = '?';
+    update(val: number): void {
+        this.current = val;
+        if (this.enabled && this.bar) {
+            this.bar.update(val);
         } else {
-            eta = Math.round((elapsed / current) * (this.total - current)).toString();
-        }
-
-        if (process.stdout.isTTY && !isQuiet()) {
-            const blocks = ['█', '▉', '▊', '▋', '▌', '▍', '▎', '▏', '░'];
-            const full = Math.floor(filled);
-            const frac = Math.round((filled - full) * blocks.length);
-            let bar = '█'.repeat(full);
-            if (full < this.width) {
-                bar += blocks[blocks.length - 1 - Math.min(frac, blocks.length - 1)];
-                bar += '░'.repeat(this.width - full - 1);
-            }
-            const color = pct >= 1 ? palette.green : pct > 0.5 ? palette.yellow : palette.blue;
-            process.stdout.write('\r' + color(bar) + ' ' + current + '/' + this.total + ' ' + palette.muted(eta + 's'));
-        } else {
-            console.log('  Progresso: ' + current + '/' + this.total + ' (' + Math.round(pct * 100) + '%)');
+            const pct = this.total > 0 ? Math.round((val / this.total) * 100) : 0;
+            console.log('  Progresso: ' + val + '/' + this.total + ' (' + pct + '%)');
         }
     }
 
     stop(): void {
-        if (process.stdout.isTTY && !isQuiet()) {
-            process.stdout.write('\r\x1b[K\n');
+        if (this.enabled && this.bar) {
+            this.bar.stop();
         }
     }
 }
 
-export class Spinner {
-    frames: string[];
-    interval: ReturnType<typeof setInterval> | null;
-    i: number;
-
-    constructor() {
-        this.frames = ['⠋', '⠙', '⠹', '⠸', '⠼', '⠴', '⠦', '⠧', '⠇', '⠏'];
-        this.interval = null;
-        this.i = 0;
-    }
-
-    start(msg: string): void {
-        if (isQuiet()) {
-            process.stdout.write(msg + '...\n');
-            return;
-        }
-        this.i = 0;
-        process.stdout.write(this.frames[0] + ' ' + msg);
-        this.interval = setInterval(() => {
-            this.i = (this.i + 1) % this.frames.length;
-            process.stdout.write('\r' + this.frames[this.i] + ' ' + msg);
-        }, 200);
-    }
-
-    stop(): void {
-        if (this.interval) {
-            clearInterval(this.interval);
-            this.interval = null;
-            process.stdout.write('\r');
-        }
-    }
-}
+// eslint-disable-next-line @typescript-eslint/no-explicit-any -- ora is ESM-only, dynamic import in CJS
+let _ora: any = null;
 
 export async function withSpinner<T>(label: string, fn: () => Promise<T>): Promise<T> {
-    const spinner = isQuiet() ? null : new Spinner();
-    if (spinner) spinner.start(label);
+    if (isQuiet() || !process.stdout.isTTY) return fn();
+    if (!_ora) _ora = (await import('ora')).default;
+    const spinner = _ora({ text: label, color: 'cyan', spinner: 'dots' }).start();
     try {
         return await fn();
     } finally {
-        if (spinner) spinner.stop();
+        spinner.stop();
     }
 }
 
@@ -325,7 +291,7 @@ export function printError(context: string, err: unknown): void {
                 palette.blue('→  ' + hint),
                 '',
             ],
-            { border: 'single', color: 'red', padding: 0, width: 72 },
+            { border: 'double', color: 'red', padding: 0, width: 72 },
         ),
     );
 }

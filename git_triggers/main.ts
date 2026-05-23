@@ -28,10 +28,13 @@ import {
 import { load as loadState, update as updateState } from '../shared/state';
 import { createValidateEnv, setupSigint, printSessionSummary as sharedPrintSessionSummary } from '../shared/cli_base';
 import { rootLogger } from '../shared/logger';
-import { sleep } from '../shared/http-client';
 import { parseMochawesome } from '../shared/result_parser';
 import type { MochawesomeData, ParseResult } from '../shared/result_parser';
 import { matchResultsToTests, createTestExecutionFromResults } from '../jira_management/result_reporter';
+import { showSplash } from '../shared/splash';
+import { box } from '../shared/box';
+import { palette } from '../shared/palette';
+import { sleep } from '../shared/http-client';
 import { SessionContext } from '../shared/session-context';
 import type { GitProvider } from '../shared/types';
 
@@ -413,26 +416,28 @@ function buildContextLine(): string {
 function buildActionChoices(): Array<Record<string, unknown>> {
     const prLabel = currentProvider === 'github' ? 'PR' : 'MR';
     const choices: Array<Record<string, unknown>> = [
-        { type: 'separator', line: ' PIPELINES' },
-        { name: '1  Disparar pipeline', value: '1' },
+        { type: 'separator', line: '        ' },
+        { type: 'separator', line: '       PIPELINES' },
+        { name: '      Disparar pipeline', value: '1' },
     ];
     if (currentProvider === 'gitlab') {
-        choices.push({ name: '2  Listar schedules', value: '2' }, { name: '3  Disparar schedule', value: '3' });
+        choices.push({ name: '      Listar schedules', value: '2' }, { name: '      Disparar schedule', value: '3' });
     }
     choices.push(
-        { type: 'separator', line: ' ' + prLabel + 'S' },
-        { name: '4  Criar ' + prLabel, value: '4' },
-        { name: '5  Listar ' + prLabel + 's aprovados', value: '5' },
-        { name: '6  Fazer merge por ID', value: '6' },
-        { name: '7  Nivelar branches', value: '7' },
-        { type: 'separator', line: ' UTILITARIOS' },
-        { name: '8  Exportar variáveis CI/CD', value: '8' },
-        { name: '9  Trocar de projeto', value: '9' },
-        { type: 'separator', line: '' },
-        { name: '0  Sair', value: '0' },
-        { type: 'separator', line: '' },
-        { name: '/help  Ajuda', value: '/help' },
-        { name: '/history  Histórico', value: '/history' },
+        { type: 'separator', line: '        ' },
+        { type: 'separator', line: '       ' + prLabel + 'S' },
+        { name: '      Criar ' + prLabel, value: '4' },
+        { name: '      Listar ' + prLabel + 's aprovados', value: '5' },
+        { name: '      Fazer merge por ID', value: '6' },
+        { name: '      Nivelar branches', value: '7' },
+        { type: 'separator', line: '        ' },
+        { type: 'separator', line: '       UTILITARIOS' },
+        { name: '      Exportar variáveis CI/CD', value: '8' },
+        { name: '      Trocar de projeto', value: '9' },
+        { name: '      Sair', value: '0' },
+        { type: 'separator', line: '        ' },
+        { name: '      /help  Ajuda', value: '/help' },
+        { name: '      /history  Histórico', value: '/history' },
     );
     return choices;
 }
@@ -788,14 +793,23 @@ function _selectProject(): { projectName: string; names: string[] } {
 async function _promptChoice(stateHint: string): Promise<string> {
     if (process.stdout.isTTY && !Config.quiet) {
         const ctx = buildContextLine();
-        print('== ' + ctx + ' ==');
-        divider();
+        const ok = sessionContext.sessionCounters.filter((c) => c.status === 'ok').length;
+        const err = sessionContext.sessionCounters.filter((c) => c.status === 'error').length;
+        const headerLines: string[] = [];
+        if (sessionContext.sessionCounters.length > 0) {
+            headerLines.push(
+                `   ${palette.muted(sessionContext.sessionCounters.length + ' operações')}  ·  ${palette.green('' + ok + ' ✓')}${err > 0 ? '  ' + palette.red('' + err + ' ✗') : ''}`,
+            );
+        }
+        console.log(box(headerLines, { border: 'double', padding: 1, title: 'QA Tools · ' + ctx, width: 80 }));
+
         const stateHint2 =
             loadState().lastChoice && (loadState().lastChoice as string) !== '0'
                 ? (loadState().lastChoice as string)
                 : undefined;
-        return showSelect('Escolha uma opção', buildActionChoices(), {
+        return showSelect('      Escolha uma opção', buildActionChoices(), {
             default: stateHint2,
+            pageSize: 99,
         });
     }
     displayActions();
@@ -856,6 +870,7 @@ async function main() {
         return;
     }
     validateEnv();
+    await showSplash();
     sessionLog.info('Sessão iniciada');
 
     const { projectName, names } = _selectProject();
@@ -870,6 +885,7 @@ async function main() {
             : '0-9';
 
     while (true) {
+        console.clear();
         const finalChoice = await _promptChoice(stateHint);
         updateState((s) => {
             s.lastChoice = finalChoice;

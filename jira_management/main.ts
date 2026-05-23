@@ -1,24 +1,15 @@
 import path from 'path';
-import { spawnSync } from 'child_process';
+import fs from 'fs';
+
 import Config from '../shared/config';
 import JiraResource from './jira_resource';
 import JiraLinkManager from './jira_link_manager';
 import CsvResource from './csv_resource';
 import PackageVersionManager from './package_version_manager';
+import { showSplash } from '../shared/splash';
 import { box } from '../shared/box';
 import { palette } from '../shared/palette';
-import {
-    print,
-    warn,
-    info,
-    helpLine,
-    title,
-    divider,
-    prompt,
-    printError,
-    showSelect,
-    tableView,
-} from '../shared/prompt';
+import { warn, info, helpLine, title, divider, prompt, printError, showSelect, tableView } from '../shared/prompt';
 import {
     mask,
     createValidateEnv,
@@ -28,6 +19,7 @@ import {
 import { rootLogger } from '../shared/logger';
 import { load as loadState, update as updateState, getStatePath } from '../shared/state';
 import { SessionContext } from '../shared/session-context';
+import { mdBox } from '../shared/markdown';
 import type { Logger } from '../shared/logger';
 import type { StateSchema } from '../shared/types';
 import type { CommandContext } from './commands/context';
@@ -156,6 +148,7 @@ const ALIASES: Record<string, string> = {
     'importar-json': '15',
     json: '15',
     'diretório-json': '16',
+    d: 'docs',
     documentação: 'docs',
     docs: 'docs',
     sair: '0',
@@ -224,23 +217,90 @@ function _configHint(key: string, ctx: { git_directory: string }): string {
     return '';
 }
 
+const SECTION_ICONS: Record<string, string> = {
+    TESTES: '🧪',
+    RELEASES: '🚀',
+    CONFIGURACAO: '⚙️',
+    UTILITARIOS: '🔧',
+};
+
+function renderMenuCards(proj: string, ctx: { sessionCounters: Array<{ status: string }> }): void {
+    const termCols = process.stdout.columns || 80;
+    const cardWidth = Math.max(termCols - 16, 52);
+
+    let currentSection = '';
+    let sectionLines: string[] = [];
+    const blocks: string[] = [];
+
+    for (const item of MENU_ITEMS) {
+        if (item.section) {
+            if (currentSection && sectionLines.length > 0) {
+                const icon = SECTION_ICONS[currentSection] || '';
+                const title = icon ? icon + '  ' + currentSection : currentSection;
+                const card = box(sectionLines, { title, border: 'round', color: 'blue', padding: 1, width: cardWidth });
+                blocks.push(card);
+            }
+            currentSection = item.section;
+            sectionLines = [];
+        } else if (item.id === '0') {
+            continue;
+        } else {
+            const id = item.id === 'd' ? ' d' : (item.id || '').padStart(2);
+            sectionLines.push(`  ${palette.blue.bold(id)}  ${item.label}`);
+        }
+    }
+
+    if (currentSection && sectionLines.length > 0) {
+        const icon = SECTION_ICONS[currentSection] || '';
+        const title = icon ? icon + '  ' + currentSection : currentSection;
+        const card = box(sectionLines, { title, border: 'round', color: 'blue', padding: 1, width: cardWidth });
+        blocks.push(card);
+    }
+
+    const allLines: string[] = [];
+    const ok = ctx.sessionCounters.filter((c) => c.status === 'ok').length;
+    const err = ctx.sessionCounters.filter((c) => c.status === 'error').length;
+    const total = ctx.sessionCounters.length;
+    if (total > 0) {
+        allLines.push(
+            `   ${palette.muted(total + ' operações')}  ·  ${palette.green('' + ok + ' ✓')}${err > 0 ? '  ' + palette.red('' + err + ' ✗') : ''}`,
+        );
+        allLines.push('');
+    }
+
+    for (let i = 0; i < blocks.length; i++) {
+        if (i > 0) allLines.push('');
+        const cardLines = blocks[i].split('\n');
+        for (const cl of cardLines) {
+            allLines.push(cl);
+        }
+    }
+
+    allLines.push('');
+    allLines.push(palette.muted('  /help  Ajuda  ·  /docs  Documentação  ·  /history  Histórico'));
+
+    console.log(box(allLines, { border: 'double', padding: 1, title: 'QA Tools · ' + proj }));
+}
+
 function displayMenu(
-    _proj: string,
-    _ctx: { lastOperation: string; sessionCounters: Array<{ status: string }>; git_directory: string },
+    proj: string,
+    ctx: { lastOperation: string; sessionCounters: Array<{ status: string }>; git_directory: string },
 ): void {
-    // displayMenu() desativado — showSelect() substitui.
+    renderMenuCards(proj, ctx);
 }
 
 function buildMenuChoices(proj: string, ctx: { git_directory: string }): MenuChoice[] {
     const choices: MenuChoice[] = [];
     for (const item of MENU_ITEMS) {
         if (item.section) {
-            choices.push({ type: 'separator' as const, line: '  ' + item.section });
+            const icon = SECTION_ICONS[item.section] || '';
+            const line = icon ? '       ' + icon + '  ' + item.section : '       ' + item.section;
+            choices.push({ type: 'separator' as const, line: '        ' });
+            choices.push({ type: 'separator' as const, line });
         } else if (item.id === '0') {
-            choices.push({ type: 'separator' as const, line: '' });
-            choices.push({ name: '  ' + item.label, value: '0' });
+            choices.push({ name: '      ' + item.label, value: '0' });
         } else {
-            const entry: MenuChoice = { name: '  ' + item.label, value: item.id };
+            const entry: MenuChoice = { name: '      ' + item.label, value: item.id };
             if (item.configKey === 'gitDir') entry.description = ctx.git_directory;
             else if (item.configKey === 'cypressDir')
                 entry.description =
@@ -254,7 +314,7 @@ function buildMenuChoices(proj: string, ctx: { git_directory: string }): MenuCho
     return choices;
 }
 
-function handleSpecialInput(input: string): boolean {
+async function handleSpecialInput(input: string): Promise<boolean> {
     const cmd = input.trim().toLowerCase();
     if (cmd.startsWith('/help') || cmd === '/h' || cmd.startsWith('/h ')) {
         const parts = cmd.split(/\s+/);
@@ -268,14 +328,14 @@ function handleSpecialInput(input: string): boolean {
         return true;
     }
     if (cmd === '/home') {
-        showSplash();
+        await showSplash(getStatePath());
         return true;
     }
     if (cmd === '/back' || cmd === '/menu' || cmd === '/exit') {
         return true;
     }
     if (cmd === '/docs' || cmd === '/d') {
-        showDocs();
+        await showDocs();
         return true;
     }
     if (cmd === '/history') {
@@ -293,15 +353,59 @@ function handleSpecialInput(input: string): boolean {
     return false;
 }
 
-function showDocs(): void {
-    const script = path.join(__dirname, '../docs/help-docs.ts');
-    divider();
-    const result = spawnSync('npx', ['tsx', script], { stdio: 'inherit' });
-    if (result.error) {
-        printError('Erro ao abrir documentação', result.error);
+async function showDocs(): Promise<void> {
+    const docsDir = path.join(__dirname, '../docs');
+    let files: string[];
+    try {
+        files = fs
+            .readdirSync(docsDir)
+            .filter((f) => /^\d{2}-.+\.md$/.test(f))
+            .sort();
+    } catch {
+        printError('Documentação', new Error('Diretório docs/ não encontrado em ' + docsDir));
+        return;
     }
-    divider();
-    info('Pressione Enter para voltar ao menu.');
+
+    if (files.length === 0) {
+        warn('Nenhum documento encontrado em docs/.');
+        divider();
+        return;
+    }
+
+    const docs: Array<{ label: string; file: string }> = files.map((f) => ({
+        label: f.replace(/^\d{2}-/, '').replace(/\.md$/, ''),
+        file: f,
+    }));
+
+    while (true) {
+        console.clear();
+        console.log(box([], { border: 'double', padding: 1, title: 'QA Tools · Documentação', width: 80 }));
+
+        const choices: MenuChoice[] = docs.map((d) => ({
+            name: '      ' + d.label,
+            value: d.file,
+        }));
+        choices.push(
+            { type: 'separator' as const, line: '        ' },
+            { name: '      /voltar  Menu principal', value: '0' },
+        );
+
+        const answer = await showSelect('      Selecione um documento', choices, { pageSize: 99 });
+        if (answer === '0') return;
+
+        const chosen = docs.find((d) => d.file === answer);
+        if (!chosen) continue;
+
+        const filePath = path.join(docsDir, chosen.file);
+        try {
+            const content = fs.readFileSync(filePath, 'utf8');
+            console.log(mdBox(content, { title: chosen.label, border: 'round' }));
+        } catch (e: unknown) {
+            printError('Erro ao ler ' + chosen.file, e);
+        }
+        divider();
+        prompt('Pressione Enter para voltar à lista');
+    }
 }
 
 function initializeSession() {
@@ -349,16 +453,29 @@ async function getUserChoice(proj: string, ctx: SessionContext): Promise<string>
     if (Config.autoChoice) {
         return Config.autoChoice;
     }
+
     const choices = buildMenuChoices(proj, ctx);
     choices.push(
-        { type: 'separator' as const, line: '' },
-        { name: '/help  Ajuda', value: '/help' },
-        { name: '/docs  Documentação', value: '/docs' },
-        { name: '/history  Historico', value: '/history' },
+        { type: 'separator' as const, line: '        ' },
+        { name: '      /help   Ajuda', value: '/help' },
+        { name: '      /docs   Documentação', value: '/docs' },
+        { name: '      /history  Histórico', value: '/history' },
     );
     const menuState = loadState() as StateSchema;
-    return showSelect('Selecione uma opção', choices, {
+
+    const ok = ctx.sessionCounters.filter((c) => c.status === 'ok').length;
+    const err = ctx.sessionCounters.filter((c) => c.status === 'error').length;
+    const headerLines: string[] = [];
+    if (ctx.sessionCounters.length > 0) {
+        headerLines.push(
+            `   ${palette.muted(ctx.sessionCounters.length + ' operações')}  ·  ${palette.green('' + ok + ' ✓')}${err > 0 ? '  ' + palette.red('' + err + ' ✗') : ''}`,
+        );
+    }
+    console.log(box(headerLines, { border: 'double', padding: 1, title: 'QA Tools · ' + proj, width: 80 }));
+
+    return showSelect('      Selecione uma opção', choices, {
         default: menuState.lastChoice && menuState.lastChoice !== '0' ? menuState.lastChoice : undefined,
+        pageSize: 99,
     });
 }
 
@@ -373,10 +490,10 @@ async function runMainLoop(
     printSessionSummary: () => void,
 ): Promise<void> {
     while (true) {
+        console.clear();
         let choice = await getUserChoice(ctx.project_name, ctx);
-        process.stdout.write('\x1b[2J\x1b[H');
 
-        if (handleSpecialInput(choice)) continue;
+        if (await handleSpecialInput(choice)) continue;
 
         const resolved = resolveAlias(choice);
         if (resolved !== choice && !isNaN(Number(resolved))) {
@@ -388,7 +505,7 @@ async function runMainLoop(
         });
 
         if (choice === 'd' || choice === 'docs') {
-            showDocs();
+            await showDocs();
             continue;
         }
 
@@ -427,32 +544,13 @@ async function runMainLoop(
     }
 }
 
-function showSplash(): void {
-    try {
-        const splash = [
-            '',
-            palette.purple.bold('          ● ● ●   QA TOOLS   ● ● ●'),
-            palette.muted('          Gestão de Testes & Automação de CI/CD'),
-            '',
-            palette.muted('  State: ' + getStatePath()),
-            '',
-            palette.blue('  /help  Ajuda'),
-            palette.blue('  d  Documentação'),
-            '',
-        ];
-        print(box(splash, { border: 'double', padding: 1 }));
-    } catch {
-        // non-TTY fallback — intentionally empty
-    }
-}
-
 async function main(): Promise<void> {
     if (process.stdout.isTTY) {
         process.stdout.write('\x1b[2J\x1b[H\x1b[3J');
     }
     validateEnv();
 
-    showSplash();
+    await showSplash(getStatePath());
     rootLogger.writeFileOnly('INFO', 'Sessão iniciada');
 
     const {
