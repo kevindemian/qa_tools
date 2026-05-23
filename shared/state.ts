@@ -5,24 +5,40 @@ import Config from './config';
 import { rootLogger } from './logger';
 import { warn } from './prompt';
 
-const STATE_DIR = Config.xdgStateHome
-    ? path.join(Config.xdgStateHome, 'qa-tools')
-    : path.join(os.homedir(), '.local', 'state', 'qa-tools');
+function getStateDir(): string {
+    return Config.xdgStateHome
+        ? path.join(Config.xdgStateHome, 'qa-tools')
+        : path.join(os.homedir(), '.local', 'state', 'qa-tools');
+}
 
-try {
-    fs.mkdirSync(STATE_DIR, { recursive: true });
-} catch {}
+function ensureStateDir(): boolean {
+    const dir = getStateDir();
+    try {
+        fs.mkdirSync(dir, { recursive: true });
+        return true;
+    } catch {
+        return false;
+    }
+}
 
-export const STATE_PATH = path.join(STATE_DIR, 'state.json');
-const TMP_PATH = STATE_PATH + '.tmp';
-const BAK_PATH = STATE_PATH + '.bak';
+function statePath(): string {
+    return path.join(getStateDir(), 'state.json');
+}
+function tmpPath(): string {
+    return statePath() + '.tmp';
+}
+function bakPath(): string {
+    return statePath() + '.bak';
+}
+
+ensureStateDir();
 
 const OLD_STATE_PATH = path.join(os.homedir(), '.qa_tools_state.json');
 try {
-    if (fs.existsSync(OLD_STATE_PATH) && !fs.existsSync(STATE_PATH)) {
+    if (fs.existsSync(OLD_STATE_PATH) && !fs.existsSync(statePath())) {
         const oldData = fs.readFileSync(OLD_STATE_PATH, 'utf8');
-        fs.writeFileSync(TMP_PATH, oldData, 'utf8');
-        fs.renameSync(TMP_PATH, STATE_PATH);
+        fs.writeFileSync(tmpPath(), oldData, 'utf8');
+        fs.renameSync(tmpPath(), statePath());
         try {
             fs.unlinkSync(OLD_STATE_PATH + '.bak');
         } catch {}
@@ -35,19 +51,27 @@ try {
     }
 } catch {}
 
+export function getStatePath(): string {
+    return statePath();
+}
+
 export function load(): Record<string, unknown> {
+    ensureStateDir();
+    const sp = statePath();
+    const bp = bakPath();
+    const tp = tmpPath();
     try {
-        if (fs.existsSync(STATE_PATH)) {
-            return JSON.parse(fs.readFileSync(STATE_PATH, 'utf8'));
+        if (fs.existsSync(sp)) {
+            return JSON.parse(fs.readFileSync(sp, 'utf8'));
         }
     } catch {
         warn('Arquivo de estado corrompido. Recuperando backup...');
         rootLogger.warn('Arquivo de estado corrompido, recuperando backup...');
         try {
-            if (fs.existsSync(BAK_PATH)) {
-                const backup = JSON.parse(fs.readFileSync(BAK_PATH, 'utf8'));
-                fs.writeFileSync(TMP_PATH, JSON.stringify(backup, null, 2), 'utf8');
-                fs.renameSync(TMP_PATH, STATE_PATH);
+            if (fs.existsSync(bp)) {
+                const backup = JSON.parse(fs.readFileSync(bp, 'utf8'));
+                fs.writeFileSync(tp, JSON.stringify(backup, null, 2), 'utf8');
+                fs.renameSync(tp, sp);
                 return backup;
             }
         } catch (err2) {
@@ -55,9 +79,9 @@ export function load(): Record<string, unknown> {
             rootLogger.error('Falha ao recuperar backup de estado: ' + (err2 as Error).message);
         }
         try {
-            fs.renameSync(STATE_PATH, BAK_PATH);
+            fs.renameSync(sp, bp);
             warn('Backup salvo. Criando novo estado.');
-            rootLogger.warn('Backup salvo em ' + BAK_PATH + '. Criando novo estado.');
+            rootLogger.warn('Backup salvo em ' + bp + '. Criando novo estado.');
         } catch (err3) {
             warn('Falha ao salvar backup de estado.');
             rootLogger.error('Falha ao salvar backup de estado: ' + (err3 as Error).message);
@@ -67,10 +91,14 @@ export function load(): Record<string, unknown> {
 }
 
 export function save(state: Record<string, unknown>): void {
+    ensureStateDir();
+    const sp = statePath();
+    const tp = tmpPath();
+    const bp = bakPath();
     try {
-        fs.writeFileSync(TMP_PATH, JSON.stringify(state, null, 2), 'utf8');
-        fs.renameSync(TMP_PATH, STATE_PATH);
-        fs.writeFileSync(BAK_PATH, JSON.stringify(state, null, 2), 'utf8');
+        fs.writeFileSync(tp, JSON.stringify(state, null, 2), 'utf8');
+        fs.renameSync(tp, sp);
+        fs.writeFileSync(bp, JSON.stringify(state, null, 2), 'utf8');
     } catch (err) {
         warn('Falha ao salvar estado. Alteracoes podem ser perdidas.');
         rootLogger.error('Falha ao salvar estado: ' + (err as Error).message);
