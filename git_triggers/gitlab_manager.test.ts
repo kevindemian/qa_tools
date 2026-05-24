@@ -32,6 +32,20 @@ describe('GitLabManager', () => {
         manager = new GitLabManager('project-123', 'test-token', 'https://gitlab.test.com');
     });
 
+    describe('constructor', () => {
+        it('throws when apiToken is empty string', () => {
+            expect(() => new GitLabManager('project-123', '', 'https://gitlab.test.com')).toThrow(
+                'apiToken é obrigatório',
+            );
+        });
+
+        it('throws when projectId is empty string', () => {
+            expect(() => new GitLabManager('', 'test-token', 'https://gitlab.test.com')).toThrow(
+                'projectId é obrigatório',
+            );
+        });
+    });
+
     describe('triggerPipeline', () => {
         it('calls POST /pipeline, returns data', async () => {
             mockClient.post.mockResolvedValue({ data: { id: 1, web_url: 'https://...' } });
@@ -42,8 +56,9 @@ describe('GitLabManager', () => {
 
         it('throws on API error (mutation)', async () => {
             mockClient.post.mockRejectedValue(new Error('API error'));
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any -- minimal payload for error test
-            await expect(manager.triggerPipeline({} as any)).rejects.toThrow('API error');
+            await expect(manager.triggerPipeline({} as { ref: string; variables: never[] })).rejects.toThrow(
+                'API error',
+            );
         });
     });
 
@@ -255,6 +270,26 @@ describe('GitLabManager', () => {
         it('returns null on API error', async () => {
             mockClient.get.mockRejectedValue(new Error('Not found'));
             const result = await manager.getPipeline('999');
+            expect(result).toBeNull();
+        });
+    });
+
+    describe('getBranch', () => {
+        it('returns { name } for valid branch', async () => {
+            mockClient.get.mockResolvedValue({ data: { name: 'main' } });
+            const result = await manager.getBranch('main');
+            expect(result).toEqual({ name: 'main' });
+        });
+
+        it('returns null when data is null', async () => {
+            mockClient.get.mockResolvedValue({ data: null });
+            const result = await manager.getBranch('main');
+            expect(result).toBeNull();
+        });
+
+        it('returns null on API error', async () => {
+            mockClient.get.mockRejectedValue(new Error('API error'));
+            const result = await manager.getBranch('main');
             expect(result).toBeNull();
         });
     });

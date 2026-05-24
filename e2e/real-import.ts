@@ -93,7 +93,7 @@ async function main() {
     } catch (err: unknown) {
         console.error('');
         console.error('ERRO nao tratado durante importacao:');
-        console.error('  ' + ((err as { message?: string }).message || err));
+        console.error('  ' + ((err as { message?: string }).message || String(err)));
         if ((err as { response?: { status?: number; data?: unknown } }).response) {
             const e = err as { response: { status: number; data: unknown } };
             console.error('  Status: ' + e.response.status);
@@ -103,4 +103,4 @@ async function main() {
     }
 }
 
-main();
+void main();

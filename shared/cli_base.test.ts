@@ -23,6 +23,7 @@ const MOCK_PROMPT: {
 jest.mock('./prompt', () => MOCK_PROMPT);
 
 import * as cliBase from './cli_base';
+import Config from './config';
 
 const ENV_BACKUP = { ...process.env };
 
@@ -201,6 +202,17 @@ describe('CLI Base', () => {
             const validate = cliBase.createValidateEnv(config);
             validate();
             expect(mockRootLogger.warn).not.toHaveBeenCalled();
+        });
+
+        it('uses || "" fallback when cfg.get() returns undefined on line 24', () => {
+            const getSpy = jest
+                .spyOn(Config, 'get')
+                .mockReturnValueOnce('some-long-enough-value-1234567890')
+                .mockReturnValueOnce(undefined);
+            const validate = cliBase.createValidateEnv(config);
+            validate();
+            expect(mockRootLogger.warn).not.toHaveBeenCalled();
+            getSpy.mockRestore();
         });
     });
 

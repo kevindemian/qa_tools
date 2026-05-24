@@ -78,4 +78,19 @@ describe('TestCaseValidator', () => {
         const result = validator.validate(tests as TestCase[]);
         expect(result.errors).toEqual(['Teste 1 "TC1": Nenhum step definido', 'Teste 2 "TC2": Nenhum step definido']);
     });
+
+    it('uses "(sem titulo)" fallback when steps missing and title is empty', () => {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any -- testing edge case
+        const tests: any = [
+            { title: '', steps: [] },
+            { title: '', steps: null },
+        ];
+        const result = validator.validate(tests as TestCase[]);
+        expect(result.errors).toEqual([
+            'Teste 1: Titulo vazio',
+            'Teste 1 "(sem titulo)": Nenhum step definido',
+            'Teste 2: Titulo vazio',
+            'Teste 2 "(sem titulo)": Nenhum step definido',
+        ]);
+    });
 });

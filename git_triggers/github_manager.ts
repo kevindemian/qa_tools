@@ -183,33 +183,25 @@ class GitHubManager {
     }
 
     async getMergeRequest(iid: string | number) {
-        try {
-            const data = await this._get(this._repoPath + '/pulls/' + iid, {
-                operation: 'buscar PR',
-                returnNull: true,
-            });
-            return this._formatPR(data);
-        } catch {
-            return null;
-        }
+        const data = await this._get(this._repoPath + '/pulls/' + iid, {
+            operation: 'buscar PR',
+            returnNull: true,
+        });
+        return this._formatPR(data);
     }
 
     async searchMergeRequests(sourceBranch: string, targetBranch: string, searchStatus: string) {
-        try {
-            const params: Record<string, unknown> = { per_page: 100 };
-            if (sourceBranch) params.head = this.owner + ':' + sourceBranch;
-            if (targetBranch) params.base = targetBranch;
-            if (searchStatus) params.state = searchStatus === 'opened' ? 'open' : searchStatus;
+        const params: Record<string, unknown> = { per_page: 100 };
+        if (sourceBranch) params.head = this.owner + ':' + sourceBranch;
+        if (targetBranch) params.base = targetBranch;
+        if (searchStatus) params.state = searchStatus === 'opened' ? 'open' : searchStatus;
 
-            const data = await this._get(this._repoPath + '/pulls', {
-                operation: 'buscar PRs',
-                params,
-                returnNull: true,
-            });
-            return (data || []).map((pr: Record<string, unknown>) => this._formatPR(pr));
-        } catch {
-            return [];
-        }
+        const data = await this._get(this._repoPath + '/pulls', {
+            operation: 'buscar PRs',
+            params,
+            returnNull: true,
+        });
+        return (data || []).map((pr: Record<string, unknown>) => this._formatPR(pr));
     }
 
     async acceptMergeRequest(iid: string | number, shouldRemoveSourceBranch = true) {
@@ -230,16 +222,12 @@ class GitHubManager {
     }
 
     async getRecentPipelines(count = 5) {
-        try {
-            const data = await this._get(this._repoPath + '/actions/runs', {
-                operation: 'buscar runs',
-                params: { per_page: count },
-                returnNull: true,
-            });
-            return (data && data.workflow_runs) || [];
-        } catch {
-            return [];
-        }
+        const data = await this._get(this._repoPath + '/actions/runs', {
+            operation: 'buscar runs',
+            params: { per_page: count },
+            returnNull: true,
+        });
+        return (data && data.workflow_runs) || [];
     }
 
     async getPipeline(runId: string | number) {
@@ -247,34 +235,26 @@ class GitHubManager {
     }
 
     async getPipelineJobs(pipelineId: string | number) {
-        try {
-            const data = await this._get(this._repoPath + '/actions/runs/' + pipelineId + '/jobs', {
-                operation: 'listar jobs',
-                returnNull: true,
-            });
-            const jobs = (data && data.jobs) || [];
-            return jobs.map((j: Record<string, unknown>) => ({
-                id: j.id,
-                name: j.name,
-                stage: j.runner_group_name || '',
-                status: j.conclusion || j.status || '',
-            }));
-        } catch {
-            return [];
-        }
+        const data = await this._get(this._repoPath + '/actions/runs/' + pipelineId + '/jobs', {
+            operation: 'listar jobs',
+            returnNull: true,
+        });
+        const jobs = (data && data.jobs) || [];
+        return jobs.map((j: Record<string, unknown>) => ({
+            id: j.id,
+            name: j.name,
+            stage: j.runner_group_name || '',
+            status: j.conclusion || j.status || '',
+        }));
     }
 
     async listPipelineArtifacts(pipelineId: string | number) {
-        try {
-            const data = await this._get(this._repoPath + '/actions/runs/' + pipelineId + '/artifacts', {
-                operation: 'listar artifacts',
-                returnNull: true,
-            });
-            const artifacts = (data && data.artifacts) || [];
-            return artifacts.map((a: Record<string, unknown>) => ({ id: a.id, name: a.name }));
-        } catch {
-            return [];
-        }
+        const data = await this._get(this._repoPath + '/actions/runs/' + pipelineId + '/artifacts', {
+            operation: 'listar artifacts',
+            returnNull: true,
+        });
+        const artifacts = (data && data.artifacts) || [];
+        return artifacts.map((a: Record<string, unknown>) => ({ id: a.id, name: a.name }));
     }
 
     async downloadArtifact(artifactId: string | number) {
@@ -285,8 +265,7 @@ class GitHubManager {
             });
             return { buffer: Buffer.from(response.data), filename: 'artifact.zip' };
         } catch (err) {
-            handleError(err, { context: 'baixar artifact' });
-            throw err;
+            return handleError(err, { context: 'baixar artifact' });
         }
     }
 
@@ -301,33 +280,25 @@ class GitHubManager {
     }
 
     async getCICDVariables() {
-        try {
-            const data = await this._get(this._repoPath + '/actions/variables', {
-                operation: 'buscar variáveis',
-                params: { per_page: 100 },
-                returnNull: true,
-            });
-            const variables = (data && data.variables) || [];
-            return variables.map((v: Record<string, unknown>) => ({
-                key: v.name,
-                value: v.value,
-                type: 'variable',
-            }));
-        } catch {
-            return [];
-        }
+        const data = await this._get(this._repoPath + '/actions/variables', {
+            operation: 'buscar variáveis',
+            params: { per_page: 100 },
+            returnNull: true,
+        });
+        const variables = (data && data.variables) || [];
+        return variables.map((v: Record<string, unknown>) => ({
+            key: v.name,
+            value: v.value,
+            type: 'variable',
+        }));
     }
 
     async isApproved(prNumber: string | number) {
-        try {
-            const data = await this._get(this._repoPath + '/pulls/' + prNumber + '/reviews', {
-                operation: 'verificar reviews',
-                returnNull: true,
-            });
-            return (data || []).some((r: Record<string, unknown>) => r.state === 'APPROVED');
-        } catch {
-            return false;
-        }
+        const data = await this._get(this._repoPath + '/pulls/' + prNumber + '/reviews', {
+            operation: 'verificar reviews',
+            returnNull: true,
+        });
+        return (data || []).some((r: Record<string, unknown>) => r.state === 'APPROVED');
     }
 
     _formatPR(data: Record<string, unknown>) {

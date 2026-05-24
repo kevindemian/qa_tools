@@ -13,6 +13,15 @@ jest.mock('./logger', () => ({
     },
 }));
 
+const mockSingleBar = { start: jest.fn(), update: jest.fn(), stop: jest.fn() };
+
+jest.mock('cli-progress', () => ({
+    SingleBar: jest.fn(() => mockSingleBar),
+    Presets: {
+        shades_classic: {},
+    },
+}));
+
 import Config from './config';
 import * as promptModule from './prompt';
 
@@ -230,10 +239,44 @@ describe('Prompt', () => {
             expect(mockLog).toHaveBeenCalledWith(expect.stringContaining('50%'));
         });
 
-        it('stop does not throw', () => {
+        it('stops with current at 0', () => {
             const bar = new prompt.ProgressBar(10, { width: 5 });
-            expect(() => bar.stop()).not.toThrow();
+            bar.stop();
             expect(bar.current).toBe(0);
+        });
+
+        describe('TTY mode', () => {
+            beforeEach(() => {
+                process.stdout.isTTY = true;
+                mockSingleBar.start.mockClear();
+                mockSingleBar.update.mockClear();
+                mockSingleBar.stop.mockClear();
+            });
+
+            it('constructs SingleBar with format config', () => {
+                const bar = new prompt.ProgressBar(100, { width: 30 });
+                const cliProgress = require('cli-progress');
+                expect(cliProgress.SingleBar).toHaveBeenCalledWith(
+                    expect.objectContaining({
+                        format: expect.stringContaining('{bar}'),
+                        barsize: 30,
+                    }),
+                    cliProgress.Presets.shades_classic,
+                );
+                expect(mockSingleBar.start).toHaveBeenCalledWith(100, 0);
+            });
+
+            it('calls bar.update in TTY mode', () => {
+                const bar = new prompt.ProgressBar(100);
+                bar.update(50);
+                expect(mockSingleBar.update).toHaveBeenCalledWith(50);
+            });
+
+            it('calls bar.stop in TTY mode', () => {
+                const bar = new prompt.ProgressBar(100);
+                bar.stop();
+                expect(mockSingleBar.stop).toHaveBeenCalled();
+            });
         });
     });
 
@@ -488,6 +531,33 @@ describe('Prompt', () => {
             const result = await prompt.showSelect('Test', [{ name: 'A', value: 'a' }]);
             expect(result).toBe('0');
         });
+
+        it('re-throws non-ExitPromptError in inquirer mode', async () => {
+            process.stdout.isTTY = true;
+            mockSelect.default.mockRejectedValueOnce(new Error('unexpected error'));
+            await expect(prompt.showSelect('Test', [{ name: 'A', value: 'a' }])).rejects.toThrow('unexpected error');
+        });
+
+        it('passes renderSelected style in theme', async () => {
+            process.stdout.isTTY = true;
+            await prompt.showSelect('Pick', [{ name: 'A', value: 'a' }]);
+            const callArgs = mockSelect.default.mock.calls[0][0];
+            const renderSelected = callArgs.theme.style.renderSelected;
+            const result = renderSelected('Item A');
+            expect(result).toContain('❯');
+            expect(result).toContain('Item A');
+        });
+
+        it('attempts import when _inquirerMod is null with TTY', async () => {
+            prompt.__setInquirerMod(null);
+            process.stdout.isTTY = true;
+            jest.spyOn(readlineSync, 'question').mockReturnValue('2');
+            const result = await prompt.showSelect('Test', [
+                { name: '1', value: '1' },
+                { name: '2', value: '2' },
+            ]);
+            expect(result).toBe('2');
+        });
     });
 
     describe('prompt', () => {
@@ -676,6 +746,14 @@ describe('Prompt', () => {
             const result = await promptModule.ask('Label');
             expect(result).toBe('cli-value');
         });
+
+        it('attempts import when _inputMod is null with TTY', async () => {
+            prompt.__setInputMod(null);
+            process.stdout.isTTY = true;
+            jest.spyOn(readlineSync, 'question').mockReturnValue('answer');
+            const result = await promptModule.ask('Name');
+            expect(result).toBe('answer');
+        });
     });
 
     describe('askConfirm', () => {
@@ -716,6 +794,14 @@ describe('Prompt', () => {
             jest.spyOn(readlineSync, 'question').mockReturnValue('n');
             const result = await promptModule.askConfirm('?');
             expect(result).toBe(false);
+        });
+
+        it('attempts import when _confirmMod is null with TTY', async () => {
+            prompt.__setConfirmMod(null);
+            process.stdout.isTTY = true;
+            jest.spyOn(readlineSync, 'question').mockReturnValue('y');
+            const result = await promptModule.askConfirm('Proceed?');
+            expect(result).toBe(true);
         });
     });
 
@@ -763,8 +849,7 @@ describe('Prompt', () => {
             expect(output).not.toContain('b');
         });
 
-        it('does not throw on empty data', () => {
-            expect(() => prompt.tableView([])).not.toThrow();
+        it('returns undefined on empty data', () => {
             expect(prompt.tableView([])).toBeUndefined();
         });
     });

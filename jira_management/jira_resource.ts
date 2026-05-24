@@ -1,7 +1,35 @@
 import { createHttpClient } from '../shared/http-client';
 import { error as logError, success, info, warn, extractErrorMessage, ProgressBar } from '../shared/prompt';
 import { Logger } from '../shared/logger';
-import { noIssuesFoundForVersion, noVersionFoundForProject, projectNotFound } from './constants';
+import {
+    noIssuesFoundForVersion,
+    noVersionFoundForProject,
+    projectNotFound,
+    versionNotFoundInProject,
+    versionAlreadyExists,
+    creatingVersion,
+    versionCreated,
+    FAILED_TO_CREATE_VERSION,
+    publishingVersion,
+    versionPublished,
+    addingTasksToSprint,
+    TASKS_ADDED_TO_SPRINT,
+    errorAddingToSprint,
+    versionNotFoundForProject,
+    issueNotCompleted,
+    issueCompleted,
+    latestVersions,
+    unreleasedVersions as unreleasedVersionsHeader,
+    NO_UNRELEASED_VERSIONS,
+    skippingTask,
+    taskIncompleteData,
+    taskCurrentStatus,
+    noTransitions,
+    statusNotMapped,
+    transitionNotFound,
+    errorMovingTask,
+    errorMovingTaskShort,
+} from './constants';
 
 function sanitizeJqlValue(value: string): string {
     if (!value || typeof value !== 'string') {
@@ -177,7 +205,7 @@ class JiraResource {
         if (version) {
             return version.id;
         }
-        info(`Versão '${versionName}' não encontrada no projeto '${projectName}'.`);
+        info(versionNotFoundInProject(versionName, projectName));
         return null;
     }
 
@@ -188,19 +216,19 @@ class JiraResource {
     ): Promise<Record<string, unknown> | null> {
         const versionId = await this.getVersionId(projectName, versionName);
         if (versionId) {
-            info(`Versão '${versionName}' ja existe.`);
+            info(versionAlreadyExists(versionName));
             return null;
         }
 
         const payload = { description, name: versionName, project: projectName, released: false };
 
-        info(`Criando versão: ${versionName}`);
+        info(creatingVersion(versionName));
         const response = await this.postJiraResource('version', payload);
 
         if (response) {
-            success('Versão criada com sucesso: ' + (response.name as string));
+            success(versionCreated(response.name as string));
         } else {
-            logError('Falha ao criar versão.');
+            logError(FAILED_TO_CREATE_VERSION);
         }
         return response;
     }
@@ -221,10 +249,10 @@ class JiraResource {
             for (const issue of issuesData.issues) {
                 const status = issue.fields?.status?.name || '';
                 if (!['done', 'in use'].includes(status.toLowerCase())) {
-                    info(` - Issue '${issue.key}' NÃO concluída. Status: ${status}`);
+                    info(issueNotCompleted(issue.key, status));
                     allTasksCompleted = false;
                 } else {
-                    info(` - Issue '${issue.key}' concluída (Status: ${status}).`);
+                    info(issueCompleted(issue.key, status));
                 }
             }
 
@@ -281,19 +309,19 @@ class JiraResource {
         const latestReleasedVersions = releasedVersions.slice(0, numReleases);
         const unreleasedVersions = allVersions.filter((v) => !v.released);
 
-        info(`Últimas ${latestReleasedVersions.length} versões lançadas do projeto '${projectName}':`);
+        info(latestVersions(latestReleasedVersions.length, projectName));
         latestReleasedVersions.forEach((v) => {
-            info(`Versão: ${v.name} (Data: ${v.releaseDate})`);
+            info(`  ${v.name} (${v.releaseDate})`);
         });
 
-        info("\nVersões não lançadas do projeto '" + projectName + "':");
+        info(unreleasedVersionsHeader(projectName));
         if (unreleasedVersions.length > 0) {
             unreleasedVersions.forEach((v) => {
                 const description = v.description || 'Sem descrição';
-                info(`Versão: ${v.name} (Descrição: ${description})`);
+                info(`  ${v.name} — ${description}`);
             });
         } else {
-            info('Nenhuma versão não lançada encontrada.');
+            info(NO_UNRELEASED_VERSIONS);
         }
 
         return { latestReleasedVersions, unreleasedVersions };
@@ -303,12 +331,12 @@ class JiraResource {
         const payload = { issues: taskIds };
 
         try {
-            info(`Adicionando ${taskIds.length} tarefa(s) a sprint ${sprintId}...`);
+            info(addingTasksToSprint(taskIds.length, sprintId));
             await this.postJiraResource(`sprint/${sprintId}/issue`, payload);
-            success('Tarefas adicionadas a sprint.');
+            success(TASKS_ADDED_TO_SPRINT);
         } catch (err: unknown) {
             const axiosErr = err as { response?: { status?: number } };
-            this.log.error('Erro ao adicionar a sprint: ' + extractErrorMessage(err), {
+            this.log.error(errorAddingToSprint(extractErrorMessage(err)), {
                 sprintId,
                 taskCount: taskIds.length,
                 status: axiosErr.response?.status,
@@ -320,7 +348,7 @@ class JiraResource {
     async updateFixVersions(taskIds: string[], projectName: string, versionName: string): Promise<void> {
         const versionId = await this.getVersionId(projectName, versionName);
         if (!versionId) {
-            this.log.error(`Versão '${versionName}' não encontrada no projeto '${projectName}'.`);
+            this.log.error(versionNotFoundForProject(versionName, projectName));
             return;
         }
 
@@ -339,22 +367,22 @@ class JiraResource {
     async releaseVersion(projectName: string, versionName: string): Promise<void> {
         const versionId = await this.getVersionId(projectName, versionName);
         if (!versionId) {
-            this.log.error(`Versão '${versionName}' não encontrada, não é possível publicar.`);
+            this.log.error(`Versão '${versionName}' não encontrada.`);
             return;
         }
 
         const allTasksCompleted = await this.checkReleaseTasksStatus(projectName, versionName);
         if (!allTasksCompleted) {
-            this.log.error(`Não é possível publicar versão '${versionName}', nem todas as tarefas estão concluídas.`);
+            this.log.error(`Tarefas da versão '${versionName}' não concluídas.`);
             return;
         }
 
         const releaseDate = new Date().toISOString().split('T')[0];
         const payload = { releaseDate, released: true };
 
-        info(`Publicando versão '${versionName}'...`);
+        info(publishingVersion(versionName));
         await this.putJiraResource(`version/${versionId}`, payload);
-        success(`Versão '${versionName}' publicada.`);
+        success(versionPublished(versionName));
     }
 
     async moveCardsToDone(taskIds: string[]): Promise<void> {
@@ -365,20 +393,20 @@ class JiraResource {
             try {
                 issueData = await this.getJiraResource(`issue/${taskId}`);
             } catch {
-                this.log.warn(`Pulando tarefa ${taskId}: não foi possível obter dados.`);
+                this.log.warn(skippingTask(taskId));
                 continue;
             }
             if (!issueData.fields || !issueData.fields.status) {
-                this.log.warn(`Pulando tarefa ${taskId}: dados incompletos.`);
+                this.log.warn(taskIncompleteData(taskId));
                 continue;
             }
 
             const currentStatus = issueData.fields.status.name;
-            this.log.info(`Tarefa ${taskId} — status atual: ${currentStatus}`);
+            this.log.info(taskCurrentStatus(taskId, currentStatus));
 
             const transitionsMap = await this.getTransitionsForIssue(taskId);
             if (Object.keys(transitionsMap).length === 0) {
-                this.log.warn(`Não foi possível obter transições para ${taskId}. Pulando tarefa.`);
+                this.log.warn(noTransitions(taskId));
                 continue;
             }
 
@@ -386,12 +414,12 @@ class JiraResource {
             try {
                 const targets = wf[statusLower];
                 if (!targets) {
-                    warn(`   ${taskId}: status "${currentStatus}" não mapeado para fechamento automático.`);
+                    warn(statusNotMapped(taskId, currentStatus));
                 } else {
                     for (const target of targets) {
                         const transitionId = transitionsMap[target];
                         if (!transitionId) {
-                            warn(`Transição "${target}" não encontrada para ${taskId}. Verifique workflowMap.`);
+                            warn(transitionNotFound(target, taskId));
                             continue;
                         }
                         this.log.info(`   ${taskId}: -> ${target}`);
@@ -400,7 +428,7 @@ class JiraResource {
                 }
             } catch (err: unknown) {
                 const axiosErr = err as { response?: { status?: number } };
-                this.log.error(`Erro ao mover ${taskId}: ${extractErrorMessage(err)}`, {
+                this.log.error(errorMovingTask(taskId, extractErrorMessage(err)), {
                     status: axiosErr.response?.status,
                 });
             }
@@ -415,7 +443,7 @@ class JiraResource {
             await this.postJiraResource(`issue/${issueId}/transitions`, payload);
         } catch (err: unknown) {
             const axiosErr = err as { response?: { status?: number } };
-            this.log.error('Erro ao mover tarefa: ' + extractErrorMessage(err), {
+            this.log.error(errorMovingTaskShort(extractErrorMessage(err)), {
                 issueId,
                 transitionId,
                 status: axiosErr.response?.status,

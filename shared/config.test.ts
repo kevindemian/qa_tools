@@ -62,7 +62,8 @@ describe('Config', () => {
                 throw new Error('fail');
             });
             jest.isolateModules(() => {
-                expect(() => require('./config')).not.toThrow();
+                const LocalConfig = require('./config');
+                expect(typeof LocalConfig.load).toBe('function');
             });
             expect(Config).toBeDefined();
         });
@@ -263,11 +264,8 @@ describe('Config', () => {
 
     describe('load', () => {
         it('is a static method that can be called multiple times without error', () => {
-            expect(() => Config.load()).not.toThrow();
             expect(Config.load()).toBeUndefined();
-            expect(() => Config.load()).not.toThrow();
             expect(Config.load()).toBeUndefined();
-            expect(() => Config.load()).not.toThrow();
             expect(Config.load()).toBeUndefined();
         });
     });
@@ -382,6 +380,21 @@ describe('Config', () => {
                 const cfg = require('./config');
                 expect(cfg.getAllPrefixed('NONEXISTENT_')).toEqual({});
             });
+        });
+    });
+
+    describe('reset', () => {
+        it('creates a new default instance', () => {
+            const before = Config.getDefault();
+            Config.reset();
+            const after = Config.getDefault();
+            expect(before).not.toBe(after);
+        });
+
+        it('getters return correct values after reset', () => {
+            Config.reset();
+            expect(Config.jiraBaseUrl).toBe('');
+            expect(Config.debug).toBe(false);
         });
     });
 });

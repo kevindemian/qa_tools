@@ -1,11 +1,7 @@
 import path from 'path';
 import fs from 'fs';
 import os from 'os';
-import AdmZip from 'adm-zip';
 import Config from '../shared/config';
-import glob from 'glob';
-import JiraResource from '../jira_management/jira_resource';
-import JiraLinkManager from '../jira_management/jira_link_manager';
 import GitLabManager from './gitlab_manager';
 import GitHubManager from './github_manager';
 import { nivelarBranches } from './nivelar';
@@ -16,26 +12,35 @@ import {
     warn,
     info,
     title,
-    divider,
     prompt,
     confirm,
     printError,
     withSpinner,
     showSelect,
-    tableView,
 } from '../shared/prompt';
 import { load as loadState, update as updateState } from '../shared/state';
 import { createValidateEnv, setupSigint, printSessionSummary as sharedPrintSessionSummary } from '../shared/cli_base';
 import { rootLogger } from '../shared/logger';
-import { parseMochawesome } from '../shared/result_parser';
-import type { MochawesomeData, ParseResult } from '../shared/result_parser';
-import { matchResultsToTests, createTestExecutionFromResults } from '../jira_management/result_reporter';
+import type { ParseResult } from '../shared/result_parser';
 import { showSplash } from '../shared/splash';
-import { box } from '../shared/box';
 import { palette } from '../shared/palette';
+import { defaultOutput } from '../shared/output';
 import { sleep } from '../shared/http-client';
 import { SessionContext } from '../shared/session-context';
 import type { GitProvider } from '../shared/types';
+import {
+    collectTestResults as _collectTestResults,
+    createTestExecution as _createTestExecution,
+    _jiraEnv as __jiraEnv,
+    _resolveGlob as __resolveGlob,
+    downloadTestArtifacts as _downloadTestArtifacts,
+    parseTestResults as _parseTestResults,
+} from './test-results';
+import {
+    providerLabel as _providerLabel,
+    handleHelp as _handleHelp,
+    handleShowHistory as _handleShowHistory,
+} from './ui-helpers';
 
 let projectId: string;
 const apiToken: string = Config.gitToken || '';
@@ -44,7 +49,6 @@ let currentProvider: 'gitlab' | 'github' = 'gitlab';
 let isBusy = false;
 
 const MSG_OPERATION_CANCELED = 'Operação cancelada.';
-const MSG_NO_OPERATION_RECORDED = 'Nenhuma operação registrada.';
 
 const sessionLog = rootLogger.child({ session: 'gitlab' });
 const sessionContext = new SessionContext();
@@ -169,156 +173,34 @@ function displayProjects() {
 }
 
 function _jiraEnv(): { base: string; token: string; xray: string } | null {
-    const base = Config.jiraBaseUrl;
-    const token = Config.jiraPersonalToken;
-    const xray = Config.xrayBaseUrl;
-    if (!base || !token || !xray) return null;
-    return { base, token, xray };
+    return __jiraEnv();
 }
 
 async function downloadTestArtifacts(m: GitProvider, pipelineId: string | number) {
-    const artifacts = await withSpinner('Buscando artifacts...', () => m.listPipelineArtifacts(pipelineId));
-    if (!Array.isArray(artifacts) || artifacts.length === 0) {
-        warn('Nenhum artifact encontrado na pipeline #' + pipelineId);
-        return null;
-    }
-    const art = artifacts.find((a) => /mochawesome|test-result/i.test(a.name)) || artifacts[0];
-    info('Artifact: ' + art.name + ' (id=' + art.id + ')');
+    return _downloadTestArtifacts(m, pipelineId);
+}
 
-    let buffer: Buffer;
-    try {
-        buffer = await withSpinner('Baixando artifact...', async () => {
-            const dl = await m.downloadArtifact(art.id);
-            return dl.buffer;
-        });
-    } catch (err) {
-        printError('Falha ao baixar artifact', err);
-        return null;
-    }
-
-    let jsonData: unknown;
-    try {
-        const zip = new AdmZip(buffer);
-        const entries = zip.getEntries();
-        const mochaEntry = entries.find((e) => e.entryName.includes('mochawesome.json') && !e.isDirectory);
-        if (!mochaEntry) {
-            warn(
-                'mochawesome.json não encontrado no artifact. Entradas: ' + entries.map((e) => e.entryName).join(', '),
-            );
-            return null;
-        }
-        const raw = mochaEntry.getData().toString('utf8');
-        jsonData = JSON.parse(raw);
-    } catch (err) {
-        printError('Falha ao ler mochawesome.json', err);
-        return null;
-    }
-
-    const parsed = parseMochawesome(jsonData as MochawesomeData);
-    info(
-        'Resultados: ' +
-            parsed.stats.passed +
-            ' pass, ' +
-            parsed.stats.failed +
-            ' fail, ' +
-            parsed.stats.skipped +
-            ' skip',
-    );
-    if (parsed.tests.length === 0) {
-        warn('Nenhum teste encontrado no report.');
-        return null;
-    }
-    return parsed;
+function _resolveGlob(pattern: string): string | null {
+    return __resolveGlob(pattern);
 }
 
 function parseTestResults(parsed: ParseResult) {
-    const cypressDir = Config.cypressProjectPath || (loadState().lastCypressPath as string) || '';
-    const defaultMapping = cypressDir ? path.join(path.resolve(cypressDir), '*jira-mapping.json') : '';
-    const mappingPath = prompt('Caminho do mapping JSON', { default: defaultMapping });
-    if (!mappingPath.trim()) {
-        warn('Mapping necessario para criar Test Execution.');
-        return null;
-    }
-
-    const resolvedPath = mappingPath.includes('*') ? _resolveGlob(mappingPath) || mappingPath : mappingPath;
-
-    const { matched, unmatched } = matchResultsToTests(parsed.tests, resolvedPath);
-    if (matched.length === 0) {
-        warn('Nenhum teste pode ser mapeado. Mapping: ' + resolvedPath);
-        return null;
-    }
-    info('Mapeados: ' + matched.length + '/' + parsed.tests.length + ' testes');
-    if (unmatched.length > 0) {
-        warn(unmatched.length + ' teste(s) não encontrados no mapping');
-        unmatched.slice(0, 3).forEach((u: { title?: string }) => warn('  - ' + u.title));
-    }
-
-    const csvName =
-        resolvedPath
-            .replace(/-jira-mapping\.json$/, '')
-            .split(/[/\\]/)
-            .pop() || 'pipeline';
-    return { matched, unmatched, csvName };
-}
-
-interface MatchedTestItem {
-    key: string;
-    title: string;
-    status: 'passed' | 'failed' | 'skipped';
-    duration: number;
+    return _parseTestResults(parsed);
 }
 
 async function createTestExecution(
-    matched: MatchedTestItem[],
+    matched: Array<{ key: string; title: string; status: 'passed' | 'failed' | 'skipped'; duration: number }>,
     csvName: string,
     jira: { base: string; token: string; xray: string },
     projectName: string,
     pipelineId: string | number,
     branch: string,
 ) {
-    try {
-        const te = await withSpinner('Criando Test Execution no Jira...', async () => {
-            const jiraRes = new JiraResource(jira.token, jira.base + '/rest/api/2');
-            const linkJiraRes = new JiraResource(jira.token, jira.base + '/rest/api/2');
-            const linkMgr = new JiraLinkManager(linkJiraRes);
-            return createTestExecutionFromResults(jiraRes, linkMgr, projectName, matched, csvName, {
-                pipelineId,
-                branch,
-                provider: currentProvider,
-            });
-        });
-        success('Test Execution criado: ' + jira.base + '/browse/' + te.key);
-        success(te.passed + ' passed / ' + te.failed + ' failed / ' + te.skipped + ' skipped');
-        pushHistory('resultados', te.key + ': ' + te.passed + '/' + te.failed, 'ok');
-    } catch (err) {
-        printError('Falha ao criar Test Execution', err);
-        pushHistory('resultados', 'erro', 'error');
-    }
+    await _createTestExecution(matched, csvName, jira, projectName, pipelineId, branch, currentProvider, pushHistory);
 }
 
 async function collectTestResults(m: GitProvider, pipelineId: string | number, branch: string, projectName: string) {
-    const jira = _jiraEnv();
-    if (!jira) {
-        warn('Variáveis JIRA não configuradas. Defina JIRA_BASE_URL, JIRA_PERSONAL_TOKEN e XRAY_BASE_URL.');
-        return;
-    }
-
-    const parsed = await downloadTestArtifacts(m, pipelineId);
-    if (!parsed) return;
-
-    const mapping = parseTestResults(parsed);
-    if (!mapping) return;
-
-    await createTestExecution(mapping.matched, mapping.csvName, jira, projectName, pipelineId, branch);
-}
-
-function _resolveGlob(pattern: string): string | null {
-    try {
-        const matches = glob.sync(pattern);
-        return matches.length > 0 ? path.resolve(matches[0]) : null;
-    } catch {
-        return null;
-    }
+    await _collectTestResults(m, pipelineId, branch, projectName, currentProvider, pushHistory);
 }
 
 async function _postPipeline(
@@ -368,7 +250,7 @@ async function _postPipeline(
 }
 
 function providerLabel(): string {
-    return currentProvider === 'github' ? 'GitHub' : 'GitLab';
+    return _providerLabel(currentProvider);
 }
 
 function buildContextLine(): string {
@@ -709,35 +591,11 @@ async function handleTriggerPipeline(ctx: SessionContext, m: GitProvider, projec
 }
 
 function handleHelp() {
-    console.log(
-        box(
-            [
-                'Opções disponíveis no menu numerado acima.',
-                '',
-                '  /history  - Exibe histórico de operações da sessão.',
-                '  /docs     - Documentação.',
-                '  /help     - Esta ajuda.',
-                '  /exit     - Sair do programa.',
-                '  /back     - Voltar ao menu principal.',
-            ],
-            { border: 'double', padding: 1, title: 'Ajuda — Git Tools' },
-        ),
-    );
-    divider();
-    prompt('Pressione Enter para continuar');
+    _handleHelp();
 }
 
 function handleShowHistory() {
-    const history = (loadState().history as Array<Record<string, unknown>>) || [];
-    title('Histórico de operações');
-    const last10 = history.slice(-10);
-    if (last10.length === 0) {
-        warn(MSG_NO_OPERATION_RECORDED);
-    } else {
-        tableView(last10, ['ts', 'op', 'detail', 'status']);
-    }
-    divider();
-    prompt('Pressione Enter para continuar');
+    _handleShowHistory();
 }
 
 function _selectProject(): { projectName: string; names: string[] } {
@@ -776,7 +634,7 @@ async function _promptChoice(stateHint: string): Promise<string> {
             );
         }
         if (headerLines.length > 0) {
-            console.log(box(headerLines, { border: 'double', padding: 1, title: 'QA Tools · ' + ctx, width: 80 }));
+            defaultOutput.box(headerLines, { border: 'double', padding: 1, title: 'QA Tools · ' + ctx, width: 80 });
         }
 
         const stateHint2 =
@@ -795,13 +653,11 @@ async function _promptChoice(stateHint: string): Promise<string> {
     nonTtyLines.push('  /help   Ajuda');
     nonTtyLines.push('  /exit   Voltar ao menu principal');
     nonTtyLines.push('');
-    console.log(
-        box(nonTtyLines, {
-            border: 'double',
-            padding: 1,
-            title: 'QA Tools · ' + providerLabel().toUpperCase() + ' TOOLS',
-        }),
-    );
+    defaultOutput.box(nonTtyLines, {
+        border: 'double',
+        padding: 1,
+        title: 'QA Tools · ' + providerLabel().toUpperCase() + ' TOOLS',
+    });
     const choice = prompt('Escolha uma opção', { hint: stateHint });
     const resolved =
         !choice.trim() && (loadState().lastChoice as string) && (loadState().lastChoice as string) !== '0'

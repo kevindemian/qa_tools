@@ -253,9 +253,8 @@ describe('case09 — switch project', () => {
 });
 
 describe('case10 — show counters', () => {
-    it('calls handler without error', () => {
+    it('returns undefined', () => {
         const mod = require('./case10');
-        expect(() => mod.handler(baseContext)).not.toThrow();
         expect(mod.handler(baseContext)).toBeUndefined();
     });
 });
@@ -263,7 +262,6 @@ describe('case10 — show counters', () => {
 describe('case11 — generate CSV template', () => {
     it('generates template file', () => {
         const mod = require('./case11');
-        expect(() => mod.handler(baseContext)).not.toThrow();
         expect(mod.handler(baseContext)).toBeUndefined();
     });
 

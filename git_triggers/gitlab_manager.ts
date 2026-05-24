@@ -12,6 +12,12 @@ class GitLabManager {
     log: Logger;
 
     constructor(projectId: string, apiToken: string, gitlabBaseUrl: string) {
+        if (!apiToken) {
+            throw new Error('GitLab: apiToken é obrigatório');
+        }
+        if (!projectId) {
+            throw new Error('GitLab: projectId é obrigatório');
+        }
         this.projectId = projectId;
         this.apiToken = apiToken;
         this.apiUrl = `${gitlabBaseUrl}/api/v4/projects/${this.projectId}`;
@@ -160,38 +166,30 @@ class GitLabManager {
     }
 
     async getPipelineJobs(pipelineId: string | number) {
-        try {
-            const data = await this._get(`/pipelines/${pipelineId}/jobs`, {
-                operation: 'listar jobs',
-                returnNull: true,
-            });
-            return (data || []).map((j: Record<string, unknown>) => ({
-                id: j.id,
-                name: j.name,
-                stage: j.stage,
-                status: j.status,
-            }));
-        } catch {
-            return [];
-        }
+        const data = await this._get(`/pipelines/${pipelineId}/jobs`, {
+            operation: 'listar jobs',
+            returnNull: true,
+        });
+        return (data || []).map((j: Record<string, unknown>) => ({
+            id: j.id,
+            name: j.name,
+            stage: j.stage,
+            status: j.status,
+        }));
     }
 
     async listPipelineArtifacts(pipelineId: string | number) {
-        try {
-            const data = await this._get(`/pipelines/${pipelineId}/jobs`, {
-                operation: 'listar artifacts',
-                returnNull: true,
-            });
-            const jobs = data || [];
-            return jobs
-                .filter(
-                    (j: Record<string, unknown>) =>
-                        j.artifacts_file || (j.artifacts && (j.artifacts as Array<unknown>).length > 0),
-                )
-                .map((j: Record<string, unknown>) => ({ id: j.id, name: j.name }));
-        } catch {
-            return [];
-        }
+        const data = await this._get(`/pipelines/${pipelineId}/jobs`, {
+            operation: 'listar artifacts',
+            returnNull: true,
+        });
+        const jobs = data || [];
+        return jobs
+            .filter(
+                (j: Record<string, unknown>) =>
+                    j.artifacts_file || (j.artifacts && (j.artifacts as Array<unknown>).length > 0),
+            )
+            .map((j: Record<string, unknown>) => ({ id: j.id, name: j.name }));
     }
 
     async getCICDVariables() {
@@ -205,27 +203,19 @@ class GitLabManager {
     }
 
     async getBranch(branch: string): Promise<{ name: string } | null> {
-        try {
-            const data = await this._get(`/repository/branches/${encodeURIComponent(branch)}`, {
-                operation: 'buscar branch',
-                returnNull: true,
-            });
-            return data ? { name: data.name as string } : null;
-        } catch {
-            return null;
-        }
+        const data = await this._get(`/repository/branches/${encodeURIComponent(branch)}`, {
+            operation: 'buscar branch',
+            returnNull: true,
+        });
+        return data ? { name: data.name as string } : null;
     }
 
     async isApproved(mergeRequestIid: string | number): Promise<boolean> {
-        try {
-            const data = await this._get(`/merge_requests/${mergeRequestIid}/approvals`, {
-                operation: 'verificar aprovação',
-                returnNull: true,
-            });
-            return !!data?.approved;
-        } catch {
-            return false;
-        }
+        const data = await this._get(`/merge_requests/${mergeRequestIid}/approvals`, {
+            operation: 'verificar aprovação',
+            returnNull: true,
+        });
+        return !!data?.approved;
     }
 
     async downloadArtifact(artifactId: string | number): Promise<{ buffer: Buffer; filename: string }> {

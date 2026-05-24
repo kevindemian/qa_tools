@@ -63,5 +63,37 @@ describe('CypressResource', () => {
             });
             expect(invalidResult).toBeUndefined();
         });
+
+        it('handles all-passed report (no failed items)', async () => {
+            mockClient.get.mockResolvedValue({
+                data: [
+                    { status: 'passed', test_run_count: 100 },
+                    { status: 'passed', test_run_count: 50 },
+                ],
+            });
+
+            await cypress.fetchReport({
+                cypressUrl: 'http://cypress',
+                cypressToken: 'tok',
+                startDate: '2024-01-01',
+                projects: ['PROJ'],
+            });
+        });
+
+        it('handles all-failed report (no passed items)', async () => {
+            mockClient.get.mockResolvedValue({
+                data: [
+                    { status: 'failed', test_run_count: 30 },
+                    { status: 'failed', test_run_count: 20 },
+                ],
+            });
+
+            await cypress.fetchReport({
+                cypressUrl: 'http://cypress',
+                cypressToken: 'tok',
+                startDate: '2024-01-01',
+                projects: ['PROJ'],
+            });
+        });
     });
 });

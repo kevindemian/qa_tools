@@ -188,4 +188,37 @@ describe('State', () => {
             expect(mockRootLogger.error).toHaveBeenCalledWith(expect.stringContaining('Falha ao salvar estado'));
         });
     });
+
+    describe('ensureStateDir', () => {
+        it('returns false when mkdirSync throws (tested via load)', () => {
+            const config = makeConfig();
+            mockFs({});
+            jest.spyOn(fs, 'mkdirSync').mockImplementation(() => {
+                throw new Error('permission denied');
+            });
+            const result = state.load(config);
+            expect(result).toEqual({});
+        });
+    });
+
+    describe('migrateOldState catch', () => {
+        it('logs warn when readFileSync throws during migration', () => {
+            const OLD_STATE_PATH = path.join(os.homedir(), '.qa_tools_state.json');
+            mockFs({
+                [OLD_STATE_PATH]: JSON.stringify({ lastProject: 'MIGRATED' }),
+            });
+            jest.spyOn(fs, 'readFileSync').mockImplementationOnce(() => {
+                throw new Error('read error');
+            });
+            state.migrateOldState(makeConfig());
+            expect(mockRootLogger.warn).toHaveBeenCalled();
+        });
+    });
+
+    describe('getStatePath', () => {
+        it('returns path ending in state.json', () => {
+            const result = state.getStatePath(makeConfig());
+            expect(result.endsWith('state.json')).toBe(true);
+        });
+    });
 });

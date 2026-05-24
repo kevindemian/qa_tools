@@ -40,7 +40,6 @@ describe('PackageVersionManager', () => {
         });
 
         it('handles missing package.json', () => {
-            expect(() => pkg.updateVersion('2.0.0')).not.toThrow();
             expect(pkg.updateVersion('2.0.0')).toBeUndefined();
         });
     });
@@ -56,16 +55,22 @@ describe('PackageVersionManager', () => {
         });
 
         it('handles missing release notes file', () => {
-            expect(() => pkg.updateReleaseNotes('v2.0', ['task'])).not.toThrow();
             expect(pkg.updateReleaseNotes('v2.0', ['task'])).toBeUndefined();
         });
 
         it('handles non-array tasks', () => {
             writeReleaseNotes();
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any -- testing non-array passthrough
-            expect(() => pkg.updateReleaseNotes('v2.0', 'task' as any)).not.toThrow();
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any -- testing non-array passthrough
-            expect(pkg.updateReleaseNotes('v2.0', 'task' as any)).toBeUndefined();
+            expect(pkg.updateReleaseNotes('v2.0', 'task' as unknown as string[])).toBeUndefined();
+        });
+
+        it('logs error when writeFileSync fails in release notes update', () => {
+            writeReleaseNotes();
+            const spy = jest.spyOn(fs, 'writeFileSync').mockImplementation(() => {
+                throw new Error('Write error');
+            });
+            pkg.updateReleaseNotes('v2.0', ['TASK-1']);
+            expect(spy).toHaveBeenCalled();
+            spy.mockRestore();
         });
     });
 });

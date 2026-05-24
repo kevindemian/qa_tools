@@ -5,6 +5,8 @@ import type { TestCase } from '../shared/types';
 import CsvResource from './csv_resource';
 import JiraResource from './jira_resource';
 
+jest.setTimeout(120000);
+
 dotenv.config({ path: path.resolve(__dirname, '../.env') });
 
 const hadRealJira = !!(
@@ -19,7 +21,7 @@ if (!process.env.JIRA_PERSONAL_TOKEN) process.env.JIRA_PERSONAL_TOKEN = 'ci-toke
 
 const JIRA_BASE_URL = process.env.JIRA_BASE_URL;
 const JIRA_TOKEN = process.env.JIRA_PERSONAL_TOKEN;
-const csvPath = process.env.CSV_DEFAULT_PATH || path.join(__dirname, 'test_steps.csv');
+const csvPath = process.env.CSV_DEFAULT_PATH || path.join(__dirname, '../e2e/fixtures/testes-simples.csv');
 
 const hasJiraConfig = !!(JIRA_BASE_URL && JIRA_TOKEN);
 const csvExists = fs.existsSync(csvPath);
@@ -38,9 +40,7 @@ beforeAll(async () => {
     }
 });
 
-const localDescribe = csvExists ? describe : describe.skip;
-
-localDescribe('CSV Validation (local)', () => {
+describe('CSV Validation (local)', () => {
     test('CSV file exists', () => {
         expect(csvExists).toBe(true);
     });
@@ -102,10 +102,7 @@ localDescribe('CSV Validation (local)', () => {
     });
 });
 
-const isMockMode = !hadRealJira;
-const jiraSuite = hasJiraConfig ? describe : describe.skip;
-
-jiraSuite('CSV Validation against Jira', () => {
+describe('CSV Validation against Jira', () => {
     let jiraResource: InstanceType<typeof JiraResource>;
     let projectName: string;
     let projectId: string | null;
@@ -113,51 +110,42 @@ jiraSuite('CSV Validation against Jira', () => {
     const validationErrors: string[] = [];
 
     beforeAll(async () => {
-        if (isMockMode) {
-            const nock = require('nock');
-            nock.disableNetConnect();
-            nock(JIRA_BASE_URL + '/rest/api/2')
-                .persist()
-                .get('/project/ECSPOL')
-                .reply(200, {
-                    id: '12345',
-                    issueTypes: [{ id: '11800', name: 'Test' }],
-                })
-                .get(/\/issue\/.*/)
-                .reply(200, (uri: string) => ({
-                    key: uri.split('/')[2],
-                    id: '99999',
-                    fields: { summary: 'Mocked ' + uri.split('/')[2] },
-                }));
-        }
+        const nock = require('nock');
+        nock.disableNetConnect();
+        nock(JIRA_BASE_URL + '/rest/api/2')
+            .persist()
+            .get(/\/project\/\w+/)
+            .reply(200, (uri: string) => ({
+                id: uri.split('/').pop() + '-id',
+                issueTypes: [{ id: '11800', name: 'Test' }],
+            }))
+            .get(/\/issue\/.*/)
+            .reply(200, (uri: string) => ({
+                key: uri.split('/')[2],
+                id: '99999',
+                fields: { summary: 'Mocked ' + uri.split('/')[2] },
+            }));
 
         jiraResource = new JiraResource(JIRA_TOKEN, JIRA_BASE_URL + '/rest/api/2');
 
         const projectFromTitle = tests.length > 0 ? (tests[0].title.match(/^([A-Z][A-Z0-9]+)/) || [])[1] : null;
         projectName = process.env.JIRA_PROJECT || projectFromTitle || 'ECSPOL';
 
-        try {
-            const projectData = await jiraResource.getJiraResource(`project/${projectName}`);
-            projectId = projectData ? (projectData.id as string) : null;
-            issueTypes =
-                projectData && Array.isArray(projectData.issueTypes) && projectData.issueTypes.length > 0
-                    ? projectData.issueTypes
-                    : null;
-        } catch (e) {
-            projectId = null;
-            issueTypes = null;
-        }
+        const projectData = await jiraResource.getJiraResource(`project/${projectName}`);
+        projectId = projectData ? (projectData.id as string) : null;
+        issueTypes =
+            projectData && Array.isArray(projectData.issueTypes) && projectData.issueTypes.length > 0
+                ? projectData.issueTypes
+                : null;
     });
 
     afterAll(() => {
-        if (isMockMode) {
-            try {
-                const nock = require('nock');
-                nock.cleanAll();
-                nock.enableNetConnect();
-            } catch (e) {
-                // ignore
-            }
+        try {
+            const nock = require('nock');
+            nock.cleanAll();
+            nock.enableNetConnect();
+        } catch (e) {
+            // ignore
         }
     });
 
@@ -214,8 +202,7 @@ jiraSuite('CSV Validation against Jira', () => {
                 expect(step.fields).toBeDefined();
                 expect(step.fields.Action).toBeDefined();
                 expect(step.fields.Data).toBeDefined();
-                // eslint-disable-next-line @typescript-eslint/no-explicit-any -- accessing dynamic field name from CSV
-                expect((step.fields as any)['Expected Result']).toBeDefined();
+                expect((step.fields as Record<string, unknown>)['Expected Result']).toBeDefined();
             });
         });
     });

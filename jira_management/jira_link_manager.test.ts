@@ -13,6 +13,7 @@ import fs from 'fs';
 import os from 'os';
 
 import JiraLinkManager from './jira_link_manager';
+import { rootLogger } from '../shared/logger';
 
 let originalHomedir: typeof os.homedir;
 
@@ -83,6 +84,28 @@ describe('JiraLinkManager', () => {
             mockJiraResource.getJiraResource.mockRejectedValue(new Error('API down'));
             jest.mocked(fs.existsSync).mockReturnValue(false);
             const result = await manager.getIssueLinkTypes();
+            expect(result).toHaveLength(3);
+            expect(result[0].name).toBe('Relates');
+        });
+
+        it('logs warning when cache write throws', async () => {
+            const fakeTypes = [{ id: '10200', name: 'Tested by' }];
+            mockJiraResource.getJiraResource.mockResolvedValue({ issueLinkTypes: fakeTypes });
+            jest.mocked(fs.writeFileSync).mockImplementation(() => {
+                throw new Error('Disk full');
+            });
+
+            await manager.getIssueLinkTypes();
+            expect(rootLogger.warn).toHaveBeenCalledWith(expect.stringContaining('Falha ao escrever cache'));
+        });
+
+        it('logs warning when cache read has invalid JSON', async () => {
+            mockJiraResource.getJiraResource.mockRejectedValue(new Error('API down'));
+            jest.mocked(fs.existsSync).mockReturnValue(true);
+            jest.mocked(fs.readFileSync).mockReturnValue('invalid json');
+
+            const result = await manager.getIssueLinkTypes();
+            expect(rootLogger.warn).toHaveBeenCalledWith(expect.stringContaining('Falha ao ler cache'));
             expect(result).toHaveLength(3);
             expect(result[0].name).toBe('Relates');
         });

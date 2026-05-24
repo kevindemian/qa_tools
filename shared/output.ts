@@ -1,3 +1,6 @@
+import type { BoxOptions } from './box';
+import { box as boxRender } from './box';
+
 export class Output {
     static isTTY(): boolean {
         return !!process.stdout.isTTY;
@@ -24,6 +27,10 @@ export class Output {
     warn(...args: Parameters<typeof console.warn>): void {
         // eslint-disable-next-line no-console
         console.warn(...args);
+    }
+
+    box(lines: string[], options?: BoxOptions): void {
+        this.print(boxRender(lines, options));
     }
 }
 

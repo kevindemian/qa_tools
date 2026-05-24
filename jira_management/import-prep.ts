@@ -268,6 +268,7 @@ function parseJsonTests(jsonPath: string): TestCase[] {
 }
 
 export {
+    _checkResumeCheckpoint,
     showPreview,
     filterTests,
     confirmOrCancel,

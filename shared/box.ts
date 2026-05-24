@@ -3,7 +3,7 @@ import { palette, applyPalette, type PaletteKey } from './palette';
 
 export type BoxBorder = 'single' | 'double' | 'round' | 'none';
 
-interface BoxOptions {
+export interface BoxOptions {
     title?: string;
     border?: BoxBorder;
     color?: PaletteKey;

@@ -73,6 +73,54 @@ describe('parseMochawesome', () => {
         const result = parseMochawesome(input);
         expect(result.tests[0].state).toBe('skipped');
     });
+
+    it('_flattenTests skips suite without tests and processes nested suites', () => {
+        const input = {
+            results: [
+                {
+                    suites: [
+                        {
+                            suites: [
+                                {
+                                    title: 'Nested',
+                                    tests: [{ title: 'TC01', state: 'passed', duration: 100 }],
+                                },
+                            ],
+                        },
+                    ],
+                },
+            ],
+        };
+        const result = parseMochawesome(input);
+        expect(result.tests).toHaveLength(1);
+        expect(result.tests[0].title).toBe('TC01');
+    });
+
+    it('defaults missing state to pending (mapped to skipped)', () => {
+        const input = {
+            results: [{ suites: [{ tests: [{ title: 'TC01' }] }] }],
+        };
+        const result = parseMochawesome(input);
+        expect(result.tests[0].state).toBe('skipped');
+    });
+
+    it('defaults missing title to empty string and missing duration to 0', () => {
+        const input = {
+            results: [{ suites: [{ tests: [{ state: 'passed' }] }] }],
+        };
+        const result = parseMochawesome(input);
+        expect(result.tests[0].title).toBe('');
+        expect(result.tests[0].duration).toBe(0);
+    });
+
+    it('handles result without suites property', () => {
+        const input = {
+            results: [{}],
+        };
+        const result = parseMochawesome(input);
+        expect(result.tests).toEqual([]);
+        expect(result.stats.total).toBe(0);
+    });
 });
 
 describe('parseCypressResults', () => {

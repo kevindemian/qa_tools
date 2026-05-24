@@ -15,6 +15,7 @@
     "types": ["node", "jest"]
   },
   "include": [
+    "jest-setup.ts",
     "shared/**/*.ts",
     "jira_management/**/*.ts",
     "git_triggers/**/*.ts",
