@@ -2,8 +2,13 @@ import { stripVTControlCharacters } from 'util';
 import { palette } from './palette';
 import { box, type BoxBorder } from './box';
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
+// eslint-disable-next-line @typescript-eslint/no-explicit-any -- ESM-only lazy-load in CJS
 let _lexer: ((src: string) => any[]) | null = null;
+
+export function __setLexer(mod: unknown): void {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    _lexer = mod as any;
+}
 
 function ensureLexer(): void {
     if (_lexer) return;

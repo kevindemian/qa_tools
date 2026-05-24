@@ -321,7 +321,7 @@ async function showDocs(): Promise<void> {
 
     while (true) {
         console.clear();
-        console.log(box([], { border: 'double', padding: 1, title: 'QA Tools · Documentação', width: 80 }));
+        console.log(box([], { border: 'double', padding: 1, title: 'QA Tools · Jira > Documentação', width: 80 }));
 
         const choices: MenuChoice[] = docs.map((d) => ({
             name: '      ' + d.label,
