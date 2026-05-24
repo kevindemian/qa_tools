@@ -1,6 +1,7 @@
 import fs from 'fs';
 import path from 'path';
 import os from 'os';
+import Config from './config';
 import { Logger, rootLogger, maskDeep } from './logger';
 
 function normalizePath(p: string): string {
@@ -39,26 +40,14 @@ describe('Logger', () => {
     });
 
     describe('_writeFile', () => {
-        const origFile = process.env.LOG_FILE;
-        const origDir = process.env.LOG_DIR;
-
-        afterAll(() => {
-            if (origFile) process.env.LOG_FILE = origFile;
-            else delete process.env.LOG_FILE;
-            if (origDir) process.env.LOG_DIR = origDir;
-            else delete process.env.LOG_DIR;
-        });
-
         function writeAndCheck(
             level: string,
             msg: string,
             data?: unknown,
         ): { fileFound: boolean; lastLine?: string; filePath?: string; logFile?: string } {
             const testDir = normalizePath(fs.mkdtempSync(path.join(os.tmpdir(), 'qa-tools-logger-')));
-            process.env.LOG_FILE = 'true';
-            process.env.LOG_DIR = testDir;
-
-            const logger = new Logger({ test: 'write' });
+            const cfg = Config.create({ logFile: true, logDir: testDir });
+            const logger = new Logger({ test: 'write' }, cfg);
             (logger as unknown as Record<string, jest.Mock>)[level](msg, data);
 
             const date = new Date().toISOString().split('T')[0];
@@ -119,12 +108,10 @@ describe('Logger', () => {
         it('rotates log file when size exceeds limit', () => {
             jest.isolateModules(() => {
                 const testDir = normalizePath(fs.mkdtempSync(path.join(os.tmpdir(), 'qa-tools-logger-rot-')));
-                process.env.LOG_FILE = 'true';
-                process.env.LOG_DIR = testDir;
-                process.env.LOG_MAX_SIZE = '100';
+                const cfg = Config.create({ logFile: true, logDir: testDir, logMaxSize: 100 });
 
                 const { Logger: LoggerSmall } = require('./logger') as { Logger: typeof import('./logger').Logger };
-                const logger = new LoggerSmall({ test: 'rotate' });
+                const logger = new LoggerSmall({ test: 'rotate' }, cfg);
                 logger.info('x'.repeat(120));
                 const firstFile = logger.filePath;
 
@@ -138,22 +125,15 @@ describe('Logger', () => {
                 const rotatedContent = fs.readFileSync(rotated, 'utf8');
                 expect(rotatedContent).toContain('[INFO]');
 
-                delete process.env.LOG_MAX_SIZE;
                 fs.rmSync(testDir, { recursive: true, force: true });
             });
         });
     });
 
     describe('_ensureDir error paths', () => {
-        const origFile = process.env.LOG_FILE;
-        const origDir = process.env.LOG_DIR;
         let spyError: jest.SpyInstance;
 
         afterEach(() => {
-            if (origFile) process.env.LOG_FILE = origFile;
-            else delete process.env.LOG_FILE;
-            if (origDir) process.env.LOG_DIR = origDir;
-            else delete process.env.LOG_DIR;
             if (spyError) spyError.mockRestore();
             jest.restoreAllMocks();
         });
@@ -165,17 +145,15 @@ describe('Logger', () => {
         });
 
         it('returns false when LOG_FILE is not true', () => {
-            delete process.env.LOG_FILE;
-            const logger = new Logger();
+            const logger = new Logger({}, Config.create({ logFile: false }));
             expect(logger._ensureDir()).toBe(false);
         });
 
         it('sets _fileError and console.error on mkdir failure', () => {
             spyError = jest.spyOn(console, 'error').mockImplementation(() => {});
             const testDir = normalizePath(fs.mkdtempSync(path.join(os.tmpdir(), 'qa-tools-logger-ensure-')));
-            process.env.LOG_FILE = 'true';
-            process.env.LOG_DIR = testDir;
-            const logger = new Logger();
+            const cfg = Config.create({ logFile: true, logDir: testDir });
+            const logger = new Logger({}, cfg);
             jest.spyOn(fs, 'existsSync').mockReturnValue(false);
             jest.spyOn(fs, 'mkdirSync').mockImplementation(() => {
                 throw new Error('permission denied');
@@ -188,42 +166,32 @@ describe('Logger', () => {
 
         it('reads _bytesWritten from statSync when log file already exists', () => {
             const testDir = normalizePath(fs.mkdtempSync(path.join(os.tmpdir(), 'qa-tools-logger-stat-')));
-            process.env.LOG_FILE = 'true';
-            process.env.LOG_DIR = testDir;
+            const cfg = Config.create({ logFile: true, logDir: testDir });
             const date = new Date().toISOString().split('T')[0];
             const logFile = path.join(testDir, `qa-tools-${date}.log`);
             fs.writeFileSync(logFile, 'existing content\n');
-            const logger = new Logger();
+            const logger = new Logger({}, cfg);
             const result = logger._ensureDir();
             expect(result).toBe(true);
             expect(logger._bytesWritten).toBeGreaterThan(0);
-        });
-
-        afterAll(() => {
-            // cleanup handled in afterEach
         });
     });
 
     describe('_rotateIfNeeded error paths', () => {
         afterEach(() => {
             jest.restoreAllMocks();
-            delete process.env.LOG_MAX_SIZE;
-            delete process.env.LOG_FILE;
-            delete process.env.LOG_DIR;
         });
 
         it('increments seq when rotated file already exists', () => {
             jest.isolateModules(() => {
                 const testDir = normalizePath(fs.mkdtempSync(path.join(os.tmpdir(), 'qa-tools-logger-seq-')));
-                process.env.LOG_FILE = 'true';
-                process.env.LOG_DIR = testDir;
-                process.env.LOG_MAX_SIZE = '50';
                 const date = new Date().toISOString().split('T')[0];
                 const logFile = path.join(testDir, `qa-tools-${date}.log`);
                 fs.writeFileSync(logFile, 'x'.repeat(60));
                 fs.writeFileSync(path.join(testDir, `qa-tools-${date}.1.log`), 'rotated-1\n');
+                const cfg = Config.create({ logFile: true, logDir: testDir, logMaxSize: 50 });
                 const { Logger: LoggerSeq } = require('./logger') as { Logger: typeof import('./logger').Logger };
-                const logger = new LoggerSeq();
+                const logger = new LoggerSeq({}, cfg);
                 logger._filePathCached = logFile;
                 logger._bytesWritten = 100;
                 logger._rotateIfNeeded();
@@ -236,16 +204,14 @@ describe('Logger', () => {
             jest.isolateModules(() => {
                 const spyError = jest.spyOn(console, 'error').mockImplementation(() => {});
                 const testDir = normalizePath(fs.mkdtempSync(path.join(os.tmpdir(), 'qa-tools-logger-rotfail-')));
-                process.env.LOG_FILE = 'true';
-                process.env.LOG_DIR = testDir;
-                process.env.LOG_MAX_SIZE = '50';
                 const date = new Date().toISOString().split('T')[0];
                 const logFile = path.join(testDir, `qa-tools-${date}.log`);
                 fs.writeFileSync(logFile, 'x'.repeat(60));
+                const cfg = Config.create({ logFile: true, logDir: testDir, logMaxSize: 50 });
                 const { Logger: LoggerRotFail } = require('./logger') as {
                     Logger: typeof import('./logger').Logger;
                 };
-                const logger = new LoggerRotFail();
+                const logger = new LoggerRotFail({}, cfg);
                 logger._filePathCached = logFile;
                 logger._bytesWritten = 100;
                 jest.spyOn(fs, 'renameSync').mockImplementationOnce(() => {
@@ -265,15 +231,11 @@ describe('Logger', () => {
         afterEach(() => {
             if (spyError) spyError.mockRestore();
             jest.restoreAllMocks();
-            delete process.env.LOG_FILE;
-            delete process.env.LOG_DIR;
         });
 
         it('handles data serialization error gracefully', () => {
             const testDir = normalizePath(fs.mkdtempSync(path.join(os.tmpdir(), 'qa-tools-logger-serial-')));
-            process.env.LOG_FILE = 'true';
-            process.env.LOG_DIR = testDir;
-            const logger = new Logger();
+            const logger = new Logger({}, Config.create({ logFile: true, logDir: testDir }));
             const circular: Record<string, unknown> = { a: 1 };
             circular.self = circular;
             logger._writeFile('INFO', 'test', circular);
@@ -288,9 +250,7 @@ describe('Logger', () => {
         it('sets _fileError and logs on append failure', () => {
             spyError = jest.spyOn(console, 'error').mockImplementation(() => {});
             const testDir = normalizePath(fs.mkdtempSync(path.join(os.tmpdir(), 'qa-tools-logger-append-')));
-            process.env.LOG_FILE = 'true';
-            process.env.LOG_DIR = testDir;
-            const logger = new Logger();
+            const logger = new Logger({}, Config.create({ logFile: true, logDir: testDir }));
             jest.spyOn(fs, 'appendFileSync').mockImplementationOnce(() => {
                 throw new Error('permission denied');
             });
@@ -303,19 +263,13 @@ describe('Logger', () => {
 
     describe('filePath getter', () => {
         it('returns null when LOG_FILE is not true', () => {
-            const prev = process.env.LOG_FILE;
-            delete process.env.LOG_FILE;
-            const logger = new Logger();
+            const logger = new Logger({}, Config.create({ logFile: false }));
             expect(logger.filePath).toBeNull();
-            if (prev) process.env.LOG_FILE = prev;
-            else delete process.env.LOG_FILE;
         });
 
         it('returns a path when LOG_FILE=true and file was written', () => {
             const testDir = normalizePath(fs.mkdtempSync(path.join(os.tmpdir(), 'qa-tools-logger-fp-')));
-            process.env.LOG_FILE = 'true';
-            process.env.LOG_DIR = testDir;
-            const logger = new Logger({ test: 'path' });
+            const logger = new Logger({ test: 'path' }, Config.create({ logFile: true, logDir: testDir }));
             logger.info('ativando filePath');
             const fp = logger.filePath;
             expect(fp).not.toBeNull();
@@ -389,15 +343,11 @@ describe('Logger', () => {
     describe('writeFileOnly', () => {
         afterEach(() => {
             jest.restoreAllMocks();
-            delete process.env.LOG_FILE;
-            delete process.env.LOG_DIR;
         });
 
         it('writes to file without console output', () => {
             const testDir = normalizePath(fs.mkdtempSync(path.join(os.tmpdir(), 'qa-tools-logger-wfo-')));
-            process.env.LOG_FILE = 'true';
-            process.env.LOG_DIR = testDir;
-            const logger = new Logger({ test: 'wfo' });
+            const logger = new Logger({ test: 'wfo' }, Config.create({ logFile: true, logDir: testDir }));
             const spyLog = jest.spyOn(console, 'log').mockImplementation(() => {});
             logger.writeFileOnly('INFO', 'file-only message');
             expect(spyLog).not.toHaveBeenCalled();
@@ -413,12 +363,9 @@ describe('Logger', () => {
 
     describe('level filtering', () => {
         it('does not call console.log for levels below LOG_LEVEL', () => {
-            const prevLevel = process.env.LOG_LEVEL;
-            process.env.LOG_LEVEL = 'ERROR';
-
             const spyLog = jest.spyOn(console, 'log').mockImplementation(() => {});
             const spyError = jest.spyOn(console, 'error').mockImplementation(() => {});
-            const logger = new Logger({ test: 'filter' });
+            const logger = new Logger({ test: 'filter' }, Config.create({ logLevel: 'ERROR' }));
 
             logger.debug('debug msg');
             logger.info('info msg');
@@ -433,8 +380,6 @@ describe('Logger', () => {
 
             spyLog.mockRestore();
             spyError.mockRestore();
-            if (prevLevel) process.env.LOG_LEVEL = prevLevel;
-            else delete process.env.LOG_LEVEL;
         });
     });
 });

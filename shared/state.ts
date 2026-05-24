@@ -7,14 +7,13 @@ import { warn } from './prompt';
 
 const UTF8 = 'utf8';
 
-function getStateDir(): string {
-    return Config.xdgStateHome
-        ? path.join(Config.xdgStateHome, 'qa-tools')
-        : path.join(os.homedir(), '.local', 'state', 'qa-tools');
+function getStateDir(config?: Config): string {
+    const xdg = config ? config.xdgStateHome : Config.xdgStateHome;
+    return xdg ? path.join(xdg, 'qa-tools') : path.join(os.homedir(), '.local', 'state', 'qa-tools');
 }
 
-function ensureStateDir(): boolean {
-    const dir = getStateDir();
+function ensureStateDir(config?: Config): boolean {
+    const dir = getStateDir(config);
     try {
         fs.mkdirSync(dir, { recursive: true });
         return true;
@@ -23,53 +22,56 @@ function ensureStateDir(): boolean {
     }
 }
 
-function statePath(): string {
-    return path.join(getStateDir(), 'state.json');
+function statePath(config?: Config): string {
+    return path.join(getStateDir(config), 'state.json');
 }
-function tmpPath(): string {
-    return statePath() + '.tmp';
+function tmpPath(config?: Config): string {
+    return statePath(config) + '.tmp';
 }
-function bakPath(): string {
-    return statePath() + '.bak';
+function bakPath(config?: Config): string {
+    return statePath(config) + '.bak';
+}
+
+export function migrateOldState(config?: Config): void {
+    const OLD_STATE_PATH = path.join(os.homedir(), '.qa_tools_state.json');
+    try {
+        if (fs.existsSync(OLD_STATE_PATH) && !fs.existsSync(statePath(config))) {
+            const oldData = fs.readFileSync(OLD_STATE_PATH, UTF8);
+            fs.writeFileSync(tmpPath(config), oldData, UTF8);
+            fs.renameSync(tmpPath(config), statePath(config));
+            try {
+                fs.unlinkSync(OLD_STATE_PATH + '.bak');
+            } catch {
+                /* best-effort cleanup */
+            }
+            try {
+                fs.unlinkSync(OLD_STATE_PATH + '.tmp');
+            } catch {
+                /* best-effort cleanup */
+            }
+            try {
+                fs.unlinkSync(OLD_STATE_PATH);
+            } catch {
+                /* best-effort cleanup */
+            }
+        }
+    } catch (err: unknown) {
+        rootLogger.warn('Falha na migração de estado', err);
+    }
 }
 
 ensureStateDir();
+migrateOldState();
 
-const OLD_STATE_PATH = path.join(os.homedir(), '.qa_tools_state.json');
-try {
-    if (fs.existsSync(OLD_STATE_PATH) && !fs.existsSync(statePath())) {
-        const oldData = fs.readFileSync(OLD_STATE_PATH, UTF8);
-        fs.writeFileSync(tmpPath(), oldData, UTF8);
-        fs.renameSync(tmpPath(), statePath());
-        try {
-            fs.unlinkSync(OLD_STATE_PATH + '.bak');
-        } catch {
-            /* best-effort cleanup */
-        }
-        try {
-            fs.unlinkSync(OLD_STATE_PATH + '.tmp');
-        } catch {
-            /* best-effort cleanup */
-        }
-        try {
-            fs.unlinkSync(OLD_STATE_PATH);
-        } catch {
-            /* best-effort cleanup */
-        }
-    }
-} catch (err: unknown) {
-    rootLogger.warn('Falha na migração de estado', err);
+export function getStatePath(config?: Config): string {
+    return statePath(config);
 }
 
-export function getStatePath(): string {
-    return statePath();
-}
-
-export function load(): Record<string, unknown> {
-    ensureStateDir();
-    const sp = statePath();
-    const bp = bakPath();
-    const tp = tmpPath();
+export function load(config?: Config): Record<string, unknown> {
+    ensureStateDir(config);
+    const sp = statePath(config);
+    const bp = bakPath(config);
+    const tp = tmpPath(config);
     try {
         if (fs.existsSync(sp)) {
             return JSON.parse(fs.readFileSync(sp, UTF8));
@@ -100,11 +102,11 @@ export function load(): Record<string, unknown> {
     return {};
 }
 
-export function save(state: Record<string, unknown>): void {
-    ensureStateDir();
-    const sp = statePath();
-    const tp = tmpPath();
-    const bp = bakPath();
+export function save(state: Record<string, unknown>, config?: Config): void {
+    ensureStateDir(config);
+    const sp = statePath(config);
+    const tp = tmpPath(config);
+    const bp = bakPath(config);
     try {
         fs.writeFileSync(tp, JSON.stringify(state, null, 2), UTF8);
         fs.renameSync(tp, sp);
@@ -115,10 +117,10 @@ export function save(state: Record<string, unknown>): void {
     }
 }
 
-export function update(fn: (state: Record<string, unknown>) => void): Record<string, unknown> {
-    const state = load();
+export function update(fn: (state: Record<string, unknown>) => void, config?: Config): Record<string, unknown> {
+    const state = load(config);
     const copy = JSON.parse(JSON.stringify(state));
     fn(copy);
-    save(copy);
+    save(copy, config);
     return copy;
 }

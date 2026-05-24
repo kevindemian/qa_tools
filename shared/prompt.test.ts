@@ -13,6 +13,7 @@ jest.mock('./logger', () => ({
     },
 }));
 
+import Config from './config';
 import * as promptModule from './prompt';
 
 describe('Prompt', () => {
@@ -28,7 +29,7 @@ describe('Prompt', () => {
         mockError = jest.spyOn(console, 'error').mockImplementation(() => {});
         mockWarn = jest.spyOn(console, 'warn').mockImplementation(() => {});
         process.stdout.isTTY = false;
-        delete process.env.QUIET;
+        prompt.__setConfig(Config.create({}));
     });
 
     afterEach(() => {
@@ -45,13 +46,13 @@ describe('Prompt', () => {
         });
 
         it('does not log to console when QUIET=true', () => {
-            process.env.QUIET = 'true';
+            prompt.__setConfig(Config.create({ quiet: true }));
             prompt.success('Silenciada');
             expect(mockLog).not.toHaveBeenCalled();
         });
 
         it('always logs via writeFileOnly even when quiet', () => {
-            process.env.QUIET = 'true';
+            prompt.__setConfig(Config.create({ quiet: true }));
             prompt.success('Logada mesmo quiet');
             expect(mockRootLogger.writeFileOnly).toHaveBeenCalledWith('INFO', 'Logada mesmo quiet');
         });
@@ -88,13 +89,13 @@ describe('Prompt', () => {
         });
 
         it('does not log to console when QUIET=true', () => {
-            process.env.QUIET = 'true';
+            prompt.__setConfig(Config.create({ quiet: true }));
             prompt.info('Silenciada');
             expect(mockLog).not.toHaveBeenCalled();
         });
 
         it('always logs via writeFileOnly even when quiet', () => {
-            process.env.QUIET = 'true';
+            prompt.__setConfig(Config.create({ quiet: true }));
             prompt.info('Logada mesmo quiet');
             expect(mockRootLogger.writeFileOnly).toHaveBeenCalledWith('INFO', 'Logada mesmo quiet');
         });
@@ -102,7 +103,7 @@ describe('Prompt', () => {
 
     describe('helpLine', () => {
         it('does not log to console when QUIET=true', () => {
-            process.env.QUIET = 'true';
+            prompt.__setConfig(Config.create({ quiet: true }));
             prompt.helpLine('Ajuda');
             expect(mockLog).not.toHaveBeenCalled();
         });
@@ -113,7 +114,7 @@ describe('Prompt', () => {
         });
 
         it('logs via writeFileOnly HELP even when quiet', () => {
-            process.env.QUIET = 'true';
+            prompt.__setConfig(Config.create({ quiet: true }));
             prompt.helpLine('HELP text');
             expect(mockRootLogger.writeFileOnly).toHaveBeenCalledWith('HELP', 'HELP text');
         });
@@ -125,14 +126,14 @@ describe('Prompt', () => {
         });
 
         it('returns true when QUIET=true', () => {
-            process.env.QUIET = 'true';
+            prompt.__setConfig(Config.create({ quiet: true }));
             expect(prompt.isQuiet()).toBe(true);
         });
     });
 
     describe('title', () => {
         beforeEach(() => {
-            delete process.env.QUIET;
+            prompt.__setConfig(Config.create({}));
         });
 
         it('logs bold text', () => {
@@ -141,7 +142,7 @@ describe('Prompt', () => {
         });
 
         it('logs plain text when QUIET=true', () => {
-            process.env.QUIET = 'true';
+            prompt.__setConfig(Config.create({ quiet: true }));
             prompt.title('Quieto');
             expect(mockLog).toHaveBeenCalledWith('--- Quieto ---');
         });
@@ -156,7 +157,7 @@ describe('Prompt', () => {
 
     describe('printSummary', () => {
         beforeEach(() => {
-            delete process.env.QUIET;
+            prompt.__setConfig(Config.create({}));
             mockRootLogger.filePath = undefined;
         });
 
@@ -180,13 +181,13 @@ describe('Prompt', () => {
         });
 
         it('shows compact when QUIET=true and all pass', () => {
-            process.env.QUIET = 'true';
+            prompt.__setConfig(Config.create({ quiet: true }));
             prompt.printSummary([{ status: 'ok', label: 't1', message: '' }]);
             expect(mockLog).toHaveBeenCalledWith(expect.stringContaining('TUDO CERTO!'));
         });
 
         it('shows error details when QUIET=true and some fail', () => {
-            process.env.QUIET = 'true';
+            prompt.__setConfig(Config.create({ quiet: true }));
             prompt.printSummary([
                 { status: 'ok', label: 't1', message: '' },
                 { status: 'error', label: 't2', message: 'Falhou' },
@@ -196,7 +197,7 @@ describe('Prompt', () => {
         });
 
         it('shows log path in quiet error mode when filePath set', () => {
-            process.env.QUIET = 'true';
+            prompt.__setConfig(Config.create({ quiet: true }));
             mockRootLogger.filePath = '/tmp/qa-tools.log';
             prompt.printSummary([{ status: 'error', label: 't1', message: 'erro' }]);
             expect(mockLog).toHaveBeenCalledWith(expect.stringContaining('Consulte o log'));
@@ -248,7 +249,7 @@ describe('Prompt', () => {
         });
 
         it('executes fn and returns result when QUIET=true', async () => {
-            process.env.QUIET = 'true';
+            prompt.__setConfig(Config.create({ quiet: true }));
             const result = await prompt.withSpinner('label', () => Promise.resolve(42));
             expect(result).toBe(42);
         });
@@ -738,7 +739,7 @@ describe('Prompt', () => {
         });
 
         it('uses quiet mode output when QUIET=true', () => {
-            process.env.QUIET = 'true';
+            prompt.__setConfig(Config.create({ quiet: true }));
             prompt.printError('Contexto', new Error('fail'));
             expect(mockLog).toHaveBeenCalledWith(expect.stringContaining('ERR'));
             expect(mockLog).toHaveBeenCalledWith(expect.stringContaining('Contexto'));
@@ -777,20 +778,17 @@ describe('Prompt', () => {
 
         afterEach(() => {
             jest.restoreAllMocks();
-            delete process.env.AUTO_CONFIRM;
-            delete process.env.ON_ERROR;
+            prompt.__setConfig(Config.create({}));
         });
 
         it('returns "skip" when autoConfirm and autoAction is skip', async () => {
-            process.env.AUTO_CONFIRM = 'true';
-            process.env.ON_ERROR = 'skip';
+            prompt.__setConfig(Config.create({ autoConfirm: true, onError: 'skip' }));
             const result = await prompt.onError('ctx', new Error('fail'), { retry: true });
             expect(result).toBe('skip');
         });
 
         it('returns "abort" when autoConfirm and autoAction is abort', async () => {
-            process.env.AUTO_CONFIRM = 'true';
-            process.env.ON_ERROR = 'abort';
+            prompt.__setConfig(Config.create({ autoConfirm: true, onError: 'abort' }));
             const result = await prompt.onError('ctx', new Error('fail'));
             expect(result).toBe('abort');
         });

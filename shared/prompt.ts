@@ -4,6 +4,17 @@ import cliProgress from 'cli-progress';
 import readlineSync from 'readline-sync';
 import Config from './config';
 import { rootLogger } from './logger';
+
+let _config: Config | null = null;
+
+export function __setConfig(c: Config): void {
+    _config = c;
+}
+
+function getConfig(): Config {
+    return _config || Config.getDefault();
+}
+
 import { box, divider as boxDivider } from './box';
 import { palette } from './palette';
 import { Output, defaultOutput as output } from './output';
@@ -36,13 +47,13 @@ interface KnownError {
     hint: string;
 }
 
-export const isQuiet = (): boolean => Config.quiet;
+export const isQuiet = (): boolean => getConfig().quiet;
 
 const MSG_UNKNOWN_ERROR = 'Erro desconhecido';
 const MSG_UNEXPECTED = 'Erro inesperado';
 
 function icon(name: 'ok' | 'err' | 'warn' | 'info'): string {
-    const useUnicode = !Config.quiet && Output.isTTY();
+    const useUnicode = !getConfig().quiet && Output.isTTY();
     if (useUnicode) {
         const map: Record<string, string> = { ok: '\u2713', err: '\u2717', warn: '\u26A0', info: '\u2139' };
         return map[name];
@@ -376,8 +387,8 @@ export async function onError(
 
     error(`${context}: ${msg}`);
 
-    if (Config.autoConfirm) {
-        const autoAction = Config.onError;
+    if (getConfig().autoConfirm) {
+        const autoAction = getConfig().onError;
         if (autoAction === 'skip') warn('Modo automatico: pulando...');
         else error('Modo automatico: abortando...');
         return autoAction as 'abort' | 'skip' | 'retry';
@@ -477,7 +488,7 @@ const inquirerTheme = {
     },
 };
 
-const isTTY = (): boolean => !!(process.stdout.isTTY && !Config.quiet);
+const isTTY = (): boolean => !!(process.stdout.isTTY && !getConfig().quiet);
 
 export async function ask(label: string, options: PromptOptions = {}): Promise<string> {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any

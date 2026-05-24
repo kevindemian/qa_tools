@@ -15,12 +15,13 @@ export function mask(v: string): string {
     return v ? v.slice(0, 4) + '****' : '';
 }
 
-export function createValidateEnv(configs: EnvConfig[]): () => void {
+export function createValidateEnv(configs: EnvConfig[], config?: Config): () => void {
     return function validateEnv(): void {
-        const missing = configs.filter((c) => !Config.get(c.key));
+        const cfg = config || Config;
+        const missing = configs.filter((c) => !cfg.get(c.key));
         if (missing.length === 0) {
             for (const c of configs) {
-                const val = Config.get(c.key) || '';
+                const val = cfg.get(c.key) || '';
                 if (
                     val.length > 20 &&
                     !val.includes('placeholder') &&

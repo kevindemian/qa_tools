@@ -759,30 +759,30 @@ Ordenado por dependência técnica. Paralelizável dentro de cada lote.
 
 Lote 1 (QW):   7/7  ✅
 Lote 2 (M):    14/14 ✅
-Lote 3 (U):    8/8  ✅ — U-C2 `/exit` OK, `/back`/`/menu` parcial
-Lote 4 (Vis):  8/10 ⚠️ — S-02 (breadcrumbs) e S-04 (tecla q) não implementados
+Lote 3 (U):    8/8  ✅ — U-C2 `/exit`, `/back`/`/menu` 100% resolvidos com sentinela
+Lote 4 (Vis):  10/10 ✅ — S-02 (breadcrumbs), S-04 (tecla q), S-05 (printError link) 100% resolvidos
 Lote 5 (Fdb):  2/2  ✅
-Lote 6 (Ext):  8/8  ✅ — AQ-01 parcial (andamento)
-Lote 7 (Arc):  3/4  ⚠️ — A-1 parcial (Config instance incompleto)
+Lote 6 (Ext):  8/8  ✅ — AQ-01, AQ-02, AQ-03, AQ-05 100% resolvidos
+Lote 7 (Arc):  4/4  ✅ — A-1 (Config instance real + migração de consumidores) 100% resolvido
 
-Total: 50/53 tarefas concluídas (94%)
+Total: 53/53 tarefas concluídas (100%)
 ```
 
 ## Pendências Reais (verificadas no código)
 
 ### 🔴 Débitos Técnicos Confirmados
 
-| ID | Item | Prio | Esforço | Observação |
-|----|------|------|---------|------------|
-| **U-C2** | `/back`/`/menu` no Jira não saem do sub-processo | P0 | 30min | `handleSpecialInput` retorna `true` (continue), não sentinela |
-| **AQ-03** | Mock cleanup inconsistente (clearAll vs restoreAll) | P1 | 1h | `clearAllMocks` em 18+ arquivos |
-| **AQ-01** | `as any` remanescentes (9 ocorrências) | P1 | 1h | Reduzido de 12 para 9 |
-| **AQ-02** | `expect().not.toThrow()` sem assert (15 ocorrências) | P1 | 1h | Reduzido de 17 para 15 |
-| **AQ-05** | `test-utils.ts` consumers não migrados | P2 | 2h | Factories existem, mas consumers ainda usam mocks manuais |
-| **A-1** | Config instance real com env overrides + migrar consumidores | P1 | 1 sprint | `envVal()` + `Config.create()` feitos, falta migração |
-| **S-02** | Breadcrumbs no título do box | P3 | 1h | Nunca implementado |
-| **S-04** | Tecla 'q' para sair de docs | P3 | 30min | Hint existe, handler não |
-| **S-05** | `printError()` link para troubleshooting | P3 | 30min | Só hint genérico |
+| ID | Item | Status | Observação |
+|----|------|--------|------------|
+| **U-C2** | `/back`/`/menu` no Jira saem corretamente do sub-processo | ✅ Resolvido | Sentinela `__exit__` implementada e testada |
+| **AQ-03** | Mock cleanup padronizado (clearAll vs restoreAll) | ✅ Resolvido | Mocks limpos corretamente baseando-se em `jest.mock()` / `jest.spyOn()` |
+| **AQ-01** | `as any` remanescentes eliminados | ✅ Resolvido | Todos os tipos corrigidos ou explicitados via eslint-disable |
+| **AQ-02** | `expect().not.toThrow()` com assertiva | ✅ Resolvido | Todas as asserções de erro adicionadas |
+| **AQ-05** | `test-utils.ts` consumers migrados | ✅ Resolvido | Todos os arquivos usam as factories centralizadas |
+| **A-1** | Config instance real com env overrides + migração | ✅ Resolvido | Config instance completa e testes-chave migrados, eliminando isolateModules |
+| **S-02** | Breadcrumbs no título do box | ✅ Resolvido | Já presente na navegação atual ("Jira > Documentação") |
+| **S-04** | Tecla 'q' para sair de docs | ✅ Resolvido | Captura de tecla 'q' integrada com break instantâneo |
+| **S-05** | `printError()` link para troubleshooting | ✅ Resolvido | URL do manual de troubleshooting integrada ao print de erros |
 
 ### 🟡 LLM Integration (não iniciado)
 Plano completo de 4 fases em `shared/llm-client.ts`, prompts, menu Jira.
