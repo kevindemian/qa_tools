@@ -6,6 +6,7 @@ import Config from './config';
 import { rootLogger } from './logger';
 import { box, divider as boxDivider } from './box';
 import { palette } from './palette';
+import { Output, defaultOutput as output } from './output';
 import type { TestResult } from './types';
 
 interface PromptOptions {
@@ -38,7 +39,7 @@ interface KnownError {
 export const isQuiet = (): boolean => Config.quiet;
 
 function icon(name: 'ok' | 'err' | 'warn' | 'info'): string {
-    const useUnicode = !Config.quiet && process.stdout.isTTY;
+    const useUnicode = !Config.quiet && Output.isTTY();
     if (useUnicode) {
         const map: Record<string, string> = { ok: '\u2713', err: '\u2717', warn: '\u26A0', info: '\u2139' };
         return map[name];
@@ -48,40 +49,40 @@ function icon(name: 'ok' | 'err' | 'warn' | 'info'): string {
 }
 
 export function success(msg: string): void {
-    if (!isQuiet()) console.log(chalk.green.bold(icon('ok')) + ' ' + msg);
+    if (!isQuiet()) output.print(chalk.green.bold(icon('ok')) + ' ' + msg);
     rootLogger.writeFileOnly('INFO', msg);
 }
 
 export function error(msg: string): void {
-    console.log(chalk.red.bold(icon('err')) + ' ' + msg);
+    output.print(chalk.red.bold(icon('err')) + ' ' + msg);
     rootLogger.writeFileOnly('ERROR', msg);
 }
 
 export function warn(msg: string): void {
-    console.log(chalk.yellow.bold(icon('warn')) + ' ' + msg);
+    output.print(chalk.yellow.bold(icon('warn')) + ' ' + msg);
     rootLogger.writeFileOnly('WARN', msg);
 }
 
 export function info(msg: string): void {
-    if (!isQuiet()) console.log(chalk.cyan.bold(icon('info')) + ' ' + msg);
+    if (!isQuiet()) output.print(chalk.cyan.bold(icon('info')) + ' ' + msg);
     rootLogger.writeFileOnly('INFO', msg);
 }
 
 export function helpLine(msg: string): void {
-    if (!isQuiet()) console.log(chalk.cyan.bold(icon('info')) + ' ' + msg);
+    if (!isQuiet()) output.print(chalk.cyan.bold(icon('info')) + ' ' + msg);
     rootLogger.writeFileOnly('HELP', msg);
 }
 
 export function print(msg: string): void {
-    console.log(msg);
+    output.print(msg);
 }
 
 export function title(msg: string): void {
     if (isQuiet()) {
-        console.log('--- ' + msg + ' ---');
+        output.print('--- ' + msg + ' ---');
         return;
     }
-    console.log(box([msg], { border: 'none', padding: 0, width: 60 }));
+    output.print(box([msg], { border: 'none', padding: 0, width: 60 }));
 }
 
 export function prompt(label: string, options: PromptOptions = {}): string {
@@ -110,12 +111,12 @@ export function confirm(label: string, defaultYes = false): boolean {
             .toLowerCase();
         if (['y', 'yes', 'sim', 's'].includes(answer)) return true;
         if (['n', 'no', 'nao', 'não'].includes(answer)) return false;
-        console.log('  ' + chalk.yellow.bold(icon('warn')) + ' Resposta inválida. Digite S/sim ou N/não.');
+        output.print('  ' + chalk.yellow.bold(icon('warn')) + ' Resposta inválida. Digite S/sim ou N/não.');
     }
 }
 
 export function divider(): void {
-    console.log(boxDivider());
+    output.print(boxDivider());
 }
 
 const NAV_CMDS = ['/back', '/menu', '/exit', '/sair'];
@@ -152,7 +153,7 @@ export class ProgressBar {
 
     constructor(total: number, options: { width?: number } = {}) {
         this.total = total;
-        this.enabled = process.stdout.isTTY && !isQuiet();
+        this.enabled = Output.isTTY() && !isQuiet();
         if (this.enabled) {
             this.bar = new cliProgress.SingleBar(
                 {
@@ -175,7 +176,7 @@ export class ProgressBar {
             this.bar.update(val);
         } else {
             const pct = this.total > 0 ? Math.round((val / this.total) * 100) : 0;
-            console.log('  Progresso: ' + val + '/' + this.total + ' (' + pct + '%)');
+            output.print('  Progresso: ' + val + '/' + this.total + ' (' + pct + '%)');
         }
     }
 
@@ -195,7 +196,7 @@ export function __setOraDep(mod: any): void {
 }
 
 export async function withSpinner<T>(label: string, fn: () => Promise<T>): Promise<T> {
-    if (isQuiet() || !process.stdout.isTTY) return fn();
+    if (isQuiet() || !Output.isTTY()) return fn();
     if (!_ora) _ora = (await import('ora')).default;
     const spinner = _ora({ text: label, color: 'cyan', spinner: 'dots' }).start();
     try {
@@ -285,10 +286,10 @@ export function printError(context: string, err: unknown): void {
     const msg = known ? known.msg : raw || 'Erro inesperado';
     const hint = known ? known.hint : 'Verifique sua configuração e tente novamente.';
     if (isQuiet()) {
-        console.log(chalk.red.bold(icon('err')) + ' ' + context + ': ' + msg);
+        output.print(chalk.red.bold(icon('err')) + ' ' + context + ': ' + msg);
         return;
     }
-    console.log(
+    output.print(
         box(
             [
                 '',
@@ -308,10 +309,10 @@ export function printSummary(results: TestResult[]): void {
 
     if (failed === 0) {
         if (isQuiet()) {
-            console.log('  ' + chalk.green.bold('TUDO CERTO!'));
+            output.print('  ' + chalk.green.bold('TUDO CERTO!'));
             success(passed + ' de ' + results.length + ' operação(oes) concluída(s) com sucesso');
         } else {
-            console.log(
+            output.print(
                 box(
                     [
                         '',
@@ -327,15 +328,15 @@ export function printSummary(results: TestResult[]): void {
     } else {
         const logPath = rootLogger.filePath;
         if (isQuiet()) {
-            console.log('  ' + chalk.yellow.bold('OPERACAO PARCIAL'));
-            console.log('  ' + chalk.yellow('!') + ' ' + passed + ' concluídas, ' + failed + ' com erro');
+            output.print('  ' + chalk.yellow.bold('OPERACAO PARCIAL'));
+            output.print('  ' + chalk.yellow('!') + ' ' + passed + ' concluídas, ' + failed + ' com erro');
             results
                 .filter((r) => r.status === 'error')
                 .forEach((r) => {
-                    console.log('  ' + chalk.red('*') + ' ' + r.label + ': ' + r.message);
+                    output.print('  ' + chalk.red('*') + ' ' + r.label + ': ' + r.message);
                 });
             if (logPath) {
-                console.log('  ' + chalk.yellow('->') + ' Consulte o log: ' + logPath);
+                output.print('  ' + chalk.yellow('->') + ' Consulte o log: ' + logPath);
             }
         } else {
             const errorLines: string[] = [
@@ -351,7 +352,7 @@ export function printSummary(results: TestResult[]): void {
             errorLines.push('');
             errorLines.push(palette.blue('→  Consulte o log: ' + (logPath || 'ver logs acima')));
             errorLines.push('');
-            console.log(box(errorLines, { border: 'single', color: 'yellow', padding: 0, width: 72 }));
+            output.print(box(errorLines, { border: 'single', color: 'yellow', padding: 0, width: 72 }));
         }
         rootLogger.warn(`Resumo: ${passed}/${results.length} ok, ${failed} erro(s)`);
     }
@@ -384,9 +385,9 @@ export async function onError(
         opts.push('[A]bort');
         if (canDetails) opts.push('[D]etails');
 
-        console.log('  ' + boxDivider());
-        console.log('    ' + opts.join('   '));
-        console.log('  ' + boxDivider());
+        output.print('  ' + boxDivider());
+        output.print('    ' + opts.join('   '));
+        output.print('  ' + boxDivider());
         const answer = readlineSync.question('  Escolha: ').trim().toLowerCase();
 
         if (answer === 'r' && canRetry) return 'retry';
@@ -395,13 +396,13 @@ export async function onError(
         if (answer === 'd' && canDetails) {
             divider();
             const axiosErr = err as { response?: { status?: number; data?: unknown }; stack?: string };
-            console.log(`  Status: ${axiosErr.response?.status || 'N/A'}`);
+            output.print(`  Status: ${axiosErr.response?.status || 'N/A'}`);
             if (axiosErr.response?.data) {
-                console.log(`  Resposta: ${JSON.stringify(axiosErr.response.data, null, 2)}`);
+                output.print(`  Resposta: ${JSON.stringify(axiosErr.response.data, null, 2)}`);
             }
             if (err instanceof Error && err.stack) {
                 const lines = err.stack.split('\n').slice(0, 4);
-                console.log(`  Stack: ${lines.join('\n    ')}`);
+                output.print(`  Stack: ${lines.join('\n    ')}`);
             }
             divider();
             continue;
@@ -536,14 +537,14 @@ export async function showSelect(label: string, choices: SelectChoice[], options
         }
     }
     const flatChoices = choices.filter((c) => c.type !== 'separator');
-    console.log('');
+    output.print('');
     for (const c of choices) {
         if (c.type === 'separator') {
-            if (c.line) console.log('  ' + c.line);
+            if (c.line) output.print('  ' + c.line);
             continue;
         }
         const desc = c.description ? '  ' + c.description : '';
-        console.log('   ' + c.name + desc);
+        output.print('   ' + c.name + desc);
     }
     while (true) {
         const answer = prompt(label).trim();
@@ -574,7 +575,7 @@ export function tableView<T extends Record<string, unknown>>(data: T[] | null | 
         : data;
     if (rows.length === 0) return;
     const keys = columns || Object.keys(rows[0]);
-    const termWidth = process.stdout.columns || 80;
+    const termWidth = Output.columns();
     const borderChars = keys.length + 1;
     const minAvail = keys.length * 3;
     const avail = Math.max(termWidth - borderChars, minAvail);
@@ -597,5 +598,5 @@ export function tableView<T extends Record<string, unknown>>(data: T[] | null | 
             }),
         );
     }
-    console.log(table.toString());
+    output.print(table.toString());
 }

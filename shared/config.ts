@@ -18,113 +18,101 @@ function ensureDotenv(): void {
     dotenvLoaded = true;
 }
 
+function envVal(key: string, fallback = ''): string {
+    ensureDotenv();
+    return process.env[key] || fallback;
+}
+
 class Config {
+    static create(): Config {
+        return new Config();
+    }
+
+    // ── Instance API ─────────────────────────────────────────────────────────
+
+    // ── Static API (delegates to default instance) ────────────────────────────
+
     static get jiraBaseUrl(): string {
-        ensureDotenv();
-        return process.env.JIRA_BASE_URL || '';
+        return envVal('JIRA_BASE_URL');
     }
     static get jiraPersonalToken(): string {
-        ensureDotenv();
-        return process.env.JIRA_PERSONAL_TOKEN || '';
+        return envVal('JIRA_PERSONAL_TOKEN');
     }
     static get xrayBaseUrl(): string {
-        ensureDotenv();
-        return process.env.XRAY_BASE_URL || '';
+        return envVal('XRAY_BASE_URL');
     }
     static get jiraProject(): string {
-        ensureDotenv();
-        return process.env.JIRA_PROJECT || 'ECSPOL';
+        return envVal('JIRA_PROJECT', 'ECSPOL');
     }
 
     static get gitToken(): string {
-        ensureDotenv();
-        return process.env.GIT_TOKEN || '';
+        return envVal('GIT_TOKEN');
     }
     static get gitBaseUrl(): string {
-        ensureDotenv();
-        return process.env.GIT_BASE_URL || '';
+        return envVal('GIT_BASE_URL');
     }
     static get githubToken(): string {
-        ensureDotenv();
-        return process.env.GITHUB_TOKEN || '';
+        return envVal('GITHUB_TOKEN');
     }
     static get githubApiUrl(): string {
-        ensureDotenv();
-        return process.env.GITHUB_API_URL || 'https://api.github.com';
+        return envVal('GITHUB_API_URL', 'https://api.github.com');
     }
 
     static get cypressProjectPath(): string {
-        ensureDotenv();
-        return process.env.CYPRESS_PROJECT_PATH || '';
+        return envVal('CYPRESS_PROJECT_PATH');
     }
     static get csvDefaultPath(): string {
-        ensureDotenv();
-        return process.env.CSV_DEFAULT_PATH || '';
+        return envVal('CSV_DEFAULT_PATH');
     }
 
     static get autoChoice(): string {
-        ensureDotenv();
-        return process.env.AUTO_CHOICE || '';
+        return envVal('AUTO_CHOICE');
     }
     static get autoConfirm(): boolean {
-        ensureDotenv();
-        return process.env.AUTO_CONFIRM === 'true';
+        return envVal('AUTO_CONFIRM') === 'true';
     }
     static get dryRun(): boolean {
-        ensureDotenv();
-        return process.env.DRY_RUN === 'true';
+        return envVal('DRY_RUN') === 'true';
     }
     static get debug(): boolean {
-        ensureDotenv();
-        return process.env.DEBUG === 'true';
+        return envVal('DEBUG') === 'true';
     }
     static get quiet(): boolean {
-        ensureDotenv();
-        return process.env.QUIET === 'true';
+        return envVal('QUIET') === 'true';
     }
     static get onError(): string {
-        ensureDotenv();
-        return process.env.ON_ERROR || 'abort';
+        return envVal('ON_ERROR', 'abort');
     }
 
     static get csvPath(): string {
-        ensureDotenv();
-        return process.env.CSV_PATH || '';
+        return envVal('CSV_PATH');
     }
     static get csvLabels(): string {
-        ensureDotenv();
-        return process.env.CSV_LABELS || '';
+        return envVal('CSV_LABELS');
     }
     static get jsonPath(): string {
-        ensureDotenv();
-        return process.env.JSON_PATH || '';
+        return envVal('JSON_PATH');
     }
     static get jsonLabels(): string {
-        ensureDotenv();
-        return process.env.JSON_LABELS || '';
+        return envVal('JSON_LABELS');
     }
 
     static get logLevel(): string {
-        ensureDotenv();
-        return process.env.LOG_LEVEL || 'INFO';
+        return envVal('LOG_LEVEL', 'INFO');
     }
     static get logFile(): boolean {
-        ensureDotenv();
-        return process.env.LOG_FILE === 'true';
+        return envVal('LOG_FILE') === 'true';
     }
     static get logDir(): string {
-        ensureDotenv();
-        return process.env.LOG_DIR || 'logs';
+        return envVal('LOG_DIR', 'logs');
     }
     static get logMaxSize(): number {
-        ensureDotenv();
-        const n = parseInt(process.env.LOG_MAX_SIZE || '', 10);
+        const n = parseInt(envVal('LOG_MAX_SIZE'), 10);
         return isNaN(n) ? 5 * 1024 * 1024 : n;
     }
 
     static get xdgStateHome(): string {
-        ensureDotenv();
-        return process.env.XDG_STATE_HOME || '';
+        return envVal('XDG_STATE_HOME');
     }
 
     static get(key: string): string | undefined {
