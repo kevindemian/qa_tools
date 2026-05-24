@@ -10,9 +10,54 @@ import IssueLinker from './issue-linker';
 import { resolveCsvPath, resolveJsonPath, resolveLabels, parseJsonTests } from './import-prep';
 import { createTestsFromTestCases } from './import-orchestrator';
 
+interface CreateFromFileParams {
+    jiraResource: JiraResource;
+    jiraResourceXray: JiraResource;
+    linkManager: JiraLinkManager;
+    linkManagerXray: JiraLinkManager;
+    project_name: string;
+    base_url: string;
+    sessionLog: ReturnType<typeof rootLogger.child>;
+    onBusy: (busy: boolean) => void;
+    filePath?: string;
+    jiraLabels?: string[];
+}
+
 function _getPm(): typeof import('../shared/prompt') {
     // eslint-disable-next-line @typescript-eslint/no-require-imports
     return require('../shared/prompt');
+}
+
+async function readCsvTests(csvResource: CsvResource, csvPath: string): Promise<TestCase[] | undefined> {
+    const { isQuiet, info, warn, printError } = _getPm();
+    if (!isQuiet()) info('Lendo CSV...');
+    try {
+        const tests = await csvResource.readBulkCsv(csvPath);
+        if (tests.length === 0) {
+            warn('Nenhum teste encontrado no CSV.');
+            return undefined;
+        }
+        return tests;
+    } catch (err) {
+        printError('Erro ao ler CSV', err);
+        return undefined;
+    }
+}
+
+function readJsonTests(jsonPath: string): TestCase[] | undefined {
+    const { isQuiet, info, warn, printError } = _getPm();
+    if (!isQuiet()) info('Lendo JSON...');
+    try {
+        const tests = parseJsonTests(jsonPath);
+        if (tests.length === 0) {
+            warn('Nenhum teste encontrado no JSON.');
+            return undefined;
+        }
+        return tests;
+    } catch (err) {
+        printError('Erro ao ler JSON', err);
+        return undefined;
+    }
 }
 
 async function createTestsFromCsv({
@@ -27,36 +72,14 @@ async function createTestsFromCsv({
     onBusy,
     csvPath: csvPathInput,
     jiraLabels: jiraLabelsInput,
-}: {
-    jiraResource: JiraResource;
-    jiraResourceXray: JiraResource;
-    linkManager: JiraLinkManager;
-    linkManagerXray: JiraLinkManager;
+}: CreateFromFileParams & {
     csvResource: CsvResource;
-    project_name: string;
-    base_url: string;
-    sessionLog: ReturnType<typeof rootLogger.child>;
-    onBusy: (busy: boolean) => void;
     csvPath?: string;
-    jiraLabels?: string[];
 }): Promise<ReturnType<typeof createTestsFromTestCases>> {
-    const { isQuiet, info, warn, printError } = _getPm();
     const csvPath = resolveCsvPath(csvPathInput);
     const jiraLabels = resolveLabels(jiraLabelsInput, 'csvLabels');
-
-    if (!isQuiet()) info('Lendo CSV...');
-    let tests: TestCase[];
-    try {
-        tests = await csvResource.readBulkCsv(csvPath);
-    } catch (err) {
-        printError('Erro ao ler CSV', err);
-        return;
-    }
-
-    if (tests.length === 0) {
-        warn('Nenhum teste encontrado no CSV.');
-        return;
-    }
+    const tests = await readCsvTests(csvResource, csvPath);
+    if (!tests) return;
 
     return createTestsFromTestCases({
         tests,
@@ -85,37 +108,15 @@ async function createTestsFromJson({
     onBusy,
     jsonPath: jsonPathInput,
     jiraLabels: jiraLabelsInput,
-}: {
-    jiraResource: JiraResource;
-    jiraResourceXray: JiraResource;
-    linkManager: JiraLinkManager;
-    linkManagerXray: JiraLinkManager;
-    project_name: string;
-    base_url: string;
-    sessionLog: ReturnType<typeof rootLogger.child>;
-    onBusy: (busy: boolean) => void;
+}: CreateFromFileParams & {
     jsonPath?: string;
-    jiraLabels?: string[];
 }): Promise<ReturnType<typeof createTestsFromTestCases>> {
-    const { isQuiet, info, warn, printError } = _getPm();
     const jsonPath = resolveJsonPath(jsonPathInput);
     if (!jsonPath) return;
 
     const jiraLabels = resolveLabels(jiraLabelsInput, 'jsonLabels');
-
-    if (!isQuiet()) info('Lendo JSON...');
-    let tests: TestCase[];
-    try {
-        tests = parseJsonTests(jsonPath);
-    } catch (err) {
-        printError('Erro ao ler JSON', err);
-        return;
-    }
-
-    if (tests.length === 0) {
-        warn('Nenhum teste encontrado no JSON.');
-        return;
-    }
+    const tests = readJsonTests(jsonPath);
+    if (!tests) return;
 
     return createTestsFromTestCases({
         tests,

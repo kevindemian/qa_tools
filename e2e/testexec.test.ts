@@ -33,9 +33,8 @@ beforeAll(() => {
     api.post('/issue')
         .times(2)
         .reply(201, (_, body) => {
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any -- nock body union type; accessing Jira custom field dynamically
-            const b = body as any;
-            const keys = (b?.fields?.customfield_13715 as string[]) || [];
+            const b = body as Record<string, unknown>;
+            const keys = ((b.fields as Record<string, unknown>)?.customfield_13715 as string[]) || [];
             return { key: 'EXEC-' + keys.length, id: '20001' };
         });
 });

@@ -48,6 +48,7 @@ function buildResource(): void {
 
 beforeEach(() => {
     jest.clearAllMocks();
+    jest.restoreAllMocks();
     buildResource();
 });
 
@@ -852,7 +853,8 @@ describe('moveCardsToDone', () => {
         });
         transitionSpy.mockRejectedValue(new Error('API error'));
 
-        await expect(jiraResource.moveCardsToDone(['TASK-1'])).resolves.not.toThrow();
+        const moveResult = await jiraResource.moveCardsToDone(['TASK-1']);
+        expect(moveResult).toBeUndefined();
         expect(transitionSpy).toHaveBeenCalledTimes(1);
     });
 });

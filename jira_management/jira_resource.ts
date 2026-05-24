@@ -1,6 +1,7 @@
 import { createHttpClient } from '../shared/http-client';
 import { error as logError, success, info, warn, extractErrorMessage, ProgressBar } from '../shared/prompt';
 import { Logger } from '../shared/logger';
+import { noIssuesFoundForVersion, noVersionFoundForProject, projectNotFound } from './constants';
 
 function sanitizeJqlValue(value: string): string {
     if (!value || typeof value !== 'string') {
@@ -163,12 +164,12 @@ class JiraResource {
     async getVersionId(projectName: string, versionName: string): Promise<string | null> {
         const projectId = await this.getProjectId(projectName);
         if (!projectId) {
-            info(`Projeto '${projectName}' não encontrado.`);
+            info(projectNotFound(projectName));
             return null;
         }
         const versions = await this.getProjectVersions(projectId);
         if (!Array.isArray(versions) || versions.length === 0) {
-            info(`Nenhuma versão encontrada para o projeto '${projectName}'.`);
+            info(noVersionFoundForProject(projectName));
             return null;
         }
 
@@ -212,7 +213,7 @@ class JiraResource {
 
             const issuesData = await this.searchJiraIssues(jql);
             if (!issuesData || !issuesData.issues || issuesData.issues.length === 0) {
-                info(`Nenhuma issue encontrada para versão '${versionName}' no projeto '${projectName}'.`);
+                info(noIssuesFoundForVersion(versionName, projectName));
                 return false;
             }
 
@@ -244,7 +245,7 @@ class JiraResource {
 
             const issuesData = await this.searchJiraIssues(jql);
             if (!issuesData || !issuesData.issues || issuesData.issues.length === 0) {
-                info(`Nenhuma issue encontrada para versão '${versionName}' no projeto '${projectName}'.`);
+                info(noIssuesFoundForVersion(versionName, projectName));
                 return [];
             }
 
@@ -264,12 +265,12 @@ class JiraResource {
     }> {
         const projectId = await this.getProjectId(projectName);
         if (!projectId) {
-            info(`Projeto '${projectName}' não encontrado.`);
+            info(projectNotFound(projectName));
             return { latestReleasedVersions: [], unreleasedVersions: [] };
         }
         const allVersions = await this.getProjectVersions(projectId);
         if (!Array.isArray(allVersions) || allVersions.length === 0) {
-            info(`Nenhuma versão encontrada para o projeto '${projectName}'.`);
+            info(noVersionFoundForProject(projectName));
             return { latestReleasedVersions: [], unreleasedVersions: [] };
         }
 

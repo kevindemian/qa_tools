@@ -12,6 +12,7 @@ describe('CypressTest', () => {
     beforeEach(() => {
         cypressTest = new CypressTest('/fake/report/dir');
         jest.clearAllMocks();
+        jest.restoreAllMocks();
     });
 
     describe('parseResults', () => {

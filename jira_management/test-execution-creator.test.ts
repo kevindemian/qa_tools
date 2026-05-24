@@ -70,6 +70,7 @@ describe('TestExecutionCreator', () => {
 
     afterEach(() => {
         jest.clearAllMocks();
+        jest.restoreAllMocks();
         dateSpy.mockRestore();
     });
 

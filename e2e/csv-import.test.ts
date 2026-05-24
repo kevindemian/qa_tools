@@ -13,8 +13,6 @@ const { createTestsFromCsv } = createTests;
 
 const tmpHome = fs.mkdtempSync(path.join(os.tmpdir(), 'qa-e2e-'));
 
-jest.setTimeout(30000);
-
 describe('E2E: CSV Import', () => {
     beforeAll(() => {
         process.env.HOME = tmpHome;

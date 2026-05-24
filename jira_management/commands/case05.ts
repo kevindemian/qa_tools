@@ -1,6 +1,7 @@
 import { success, warn, smartPrompt, printError } from '../../shared/prompt';
 import { rootLogger } from '../../shared/logger';
 import type { CommandContext } from './context';
+import { NO_TASKS_FOUND_FOR_VERSION } from '../constants';
 
 async function handler(c: CommandContext): Promise<boolean | void> {
     if (!c.ctx.packageManager) {
@@ -12,7 +13,7 @@ async function handler(c: CommandContext): Promise<boolean | void> {
     try {
         const tasks = await c.jiraResource.getReleaseTasks(c.ctx.project_name, version, true);
         if (!Array.isArray(tasks)) {
-            warn('Nenhuma tarefa encontrada para esta versão.');
+            warn(NO_TASKS_FOUND_FOR_VERSION);
             return;
         }
         const pm = c.ctx.packageManager as import('../package_version_manager');

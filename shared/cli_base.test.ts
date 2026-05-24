@@ -1,11 +1,6 @@
-const mockRootLogger: {
-    info: jest.Mock;
-    error: jest.Mock;
-    warn: jest.Mock;
-    debug?: jest.Mock;
-    writeFileOnly?: jest.Mock;
-    filePath?: string;
-} = { info: jest.fn(), error: jest.fn(), warn: jest.fn() };
+import { createMockRootLogger } from './test-utils';
+
+const mockRootLogger = createMockRootLogger();
 
 jest.mock('./logger', () => ({
     rootLogger: mockRootLogger,
@@ -214,7 +209,7 @@ describe('CLI Base', () => {
             MOCK_PROMPT.print = jest.fn();
             MOCK_PROMPT.success = jest.fn();
             MOCK_PROMPT.divider = jest.fn();
-            mockRootLogger.writeFileOnly = jest.fn();
+            mockRootLogger.writeFileOnly.mockReset();
         });
 
         beforeEach(() => {

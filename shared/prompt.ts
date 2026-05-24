@@ -38,6 +38,9 @@ interface KnownError {
 
 export const isQuiet = (): boolean => Config.quiet;
 
+const MSG_UNKNOWN_ERROR = 'Erro desconhecido';
+const MSG_UNEXPECTED = 'Erro inesperado';
+
 function icon(name: 'ok' | 'err' | 'warn' | 'info'): string {
     const useUnicode = !Config.quiet && Output.isTTY();
     if (useUnicode) {
@@ -247,7 +250,7 @@ const KNOWN_ERRORS: KnownError[] = [
 ];
 
 export function humanizeError(message: string | null | undefined): { msg: string; hint: string } | null {
-    if (!message) return { msg: 'Erro desconhecido', hint: 'Verifique os logs acima para mais detalhes.' };
+    if (!message) return { msg: MSG_UNKNOWN_ERROR, hint: 'Verifique os logs acima para mais detalhes.' };
     for (const known of KNOWN_ERRORS) {
         if (known.test.test(message)) return known;
     }
@@ -264,7 +267,7 @@ function isAxiosErrorData(data: unknown): data is AxiosErrorData {
 }
 
 export function extractErrorMessage(err: unknown): string {
-    if (!err) return 'Erro desconhecido';
+    if (!err) return MSG_UNKNOWN_ERROR;
     try {
         const axiosErr = err as { response?: { data?: unknown }; message?: string };
         const data = axiosErr.response?.data;
@@ -276,15 +279,17 @@ export function extractErrorMessage(err: unknown): string {
         }
         return msg || axiosErr.message || '';
     } catch {
-        return 'Erro desconhecido';
+        return MSG_UNKNOWN_ERROR;
     }
 }
 
 export function printError(context: string, err: unknown): void {
     const raw = extractErrorMessage(err);
     const known = humanizeError(raw);
-    const msg = known ? known.msg : raw || 'Erro inesperado';
-    const hint = known ? known.hint : 'Verifique sua configuração e tente novamente.';
+    const msg = known ? known.msg : raw || MSG_UNEXPECTED;
+    const hint = known
+        ? known.hint
+        : 'Verifique sua configuração e tente novamente.\nVeja https://github.com/kevindemian/qa_tools/blob/main/docs/09-troubleshooting.md';
     if (isQuiet()) {
         output.print(chalk.red.bold(icon('err')) + ' ' + context + ': ' + msg);
         return;
@@ -367,7 +372,7 @@ export async function onError(
     const { retry: canRetry = false, details: canDetails = false } = options;
     const raw = extractErrorMessage(err);
     const known = humanizeError(raw);
-    const msg = known ? known.msg : raw || 'Erro inesperado';
+    const msg = known ? known.msg : raw || MSG_UNEXPECTED;
 
     error(`${context}: ${msg}`);
 

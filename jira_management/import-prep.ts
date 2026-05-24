@@ -5,6 +5,7 @@ import type { TestCase } from '../shared/types';
 import TestCaseValidator from './test-case-validator';
 import { rootLogger } from '../shared/logger';
 import { load as loadState } from '../shared/state';
+import { OPERATION_CANCELLED } from './constants';
 
 const csvDefaultPath = Config.csvDefaultPath || path.join(__dirname, 'test_steps.csv');
 
@@ -104,7 +105,7 @@ function filterTests(tests: TestCase[]): TestCase[] | null {
     }
     info(filtered.length + '/' + tests.length + ' testes correspondem a "' + filterText.trim() + '"');
     if (!confirm('Criar apenas estes ' + filtered.length + ' testes?')) {
-        warn('Operação cancelada.');
+        warn(OPERATION_CANCELLED);
         return null;
     }
     return filtered;

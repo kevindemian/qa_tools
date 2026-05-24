@@ -35,8 +35,6 @@ fs.writeFileSync(
     JSON.stringify([{ title: 'TC E2E', description: 'e2e', steps: [{ Action: 'Step1', ExpectedResult: 'R1' }] }]),
 );
 
-jest.setTimeout(30000);
-
 import nock from 'nock';
 import JiraResource from '../jira_management/jira_resource';
 import JiraLinkManager from '../jira_management/jira_link_manager';
@@ -70,6 +68,7 @@ afterAll(() => {
 
 beforeEach(() => {
     jest.clearAllMocks();
+    jest.restoreAllMocks();
     nock.cleanAll();
     nock.disableNetConnect();
     jest.spyOn(console, 'log').mockImplementation(() => {});
@@ -77,6 +76,7 @@ beforeEach(() => {
 });
 
 afterEach(() => {
+    jest.clearAllMocks();
     jest.restoreAllMocks();
     nock.cleanAll();
     nock.enableNetConnect();

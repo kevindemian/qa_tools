@@ -41,6 +41,7 @@ describe('PackageVersionManager', () => {
 
         it('handles missing package.json', () => {
             expect(() => pkg.updateVersion('2.0.0')).not.toThrow();
+            expect(pkg.updateVersion('2.0.0')).toBeUndefined();
         });
     });
 
@@ -56,12 +57,15 @@ describe('PackageVersionManager', () => {
 
         it('handles missing release notes file', () => {
             expect(() => pkg.updateReleaseNotes('v2.0', ['task'])).not.toThrow();
+            expect(pkg.updateReleaseNotes('v2.0', ['task'])).toBeUndefined();
         });
 
         it('handles non-array tasks', () => {
             writeReleaseNotes();
             // eslint-disable-next-line @typescript-eslint/no-explicit-any -- testing non-array passthrough
             expect(() => pkg.updateReleaseNotes('v2.0', 'task' as any)).not.toThrow();
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any -- testing non-array passthrough
+            expect(pkg.updateReleaseNotes('v2.0', 'task' as any)).toBeUndefined();
         });
     });
 });

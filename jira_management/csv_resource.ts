@@ -180,6 +180,49 @@ class CsvResource {
         return csvLines.join('\n');
     }
 
+    private async _processBulkCsvBlock(block: string, results: TestCase[]): Promise<void> {
+        const lines = block.split('\n').map((l) => l.trim());
+
+        const titleLine = lines.find((l) => l.startsWith('Title:'));
+        if (!titleLine) {
+            rootLogger.warn('Pulando bloco sem Title:\n' + block);
+            return;
+        }
+
+        const title = titleLine.replace('Title:', '').trim();
+
+        const descIndex = lines.findIndex((l) => l.startsWith('Description:'));
+        const { description, descEndIndex } =
+            descIndex !== -1
+                ? this._parseBulkCsvDescription(lines, descIndex, title)
+                : { description: '', descEndIndex: descIndex + 1 };
+
+        const precIndex = lines.findIndex((l) => l.startsWith('Pre-condition:'));
+        const { precValue, precEndIndex } =
+            precIndex !== -1
+                ? this._parseBulkCsvPrecondition(lines, precIndex, title)
+                : { precValue: null, precEndIndex: precIndex + 1 };
+
+        const csvString = this._filterBulkCsvLines(lines, descIndex, descEndIndex, precIndex, precEndIndex);
+
+        try {
+            const steps = await this.readCsvFromString(csvString);
+
+            results.push({
+                title,
+                description,
+                precondition: this.parsePrecondition(precValue) ?? undefined,
+                linkedIssues: this.parseLinkedIssues(lines),
+                group: this.parseGroup(lines) ?? undefined,
+                steps,
+            });
+        } catch (error: unknown) {
+            const err = error as Error;
+            rootLogger.error(`Erro ao analisar bloco CSV "${title}": ${err.message}`);
+            throw error;
+        }
+    }
+
     async readBulkCsv(filePath: string): Promise<TestCase[]> {
         const raw = await fs.promises.readFile(filePath, 'utf-8');
 
@@ -191,46 +234,7 @@ class CsvResource {
         const results: TestCase[] = [];
 
         for (const block of blocks) {
-            const lines = block.split('\n').map((l) => l.trim());
-
-            const titleLine = lines.find((l) => l.startsWith('Title:'));
-            if (!titleLine) {
-                rootLogger.warn('Pulando bloco sem Title:\n' + block);
-                continue;
-            }
-
-            const title = titleLine.replace('Title:', '').trim();
-
-            const descIndex = lines.findIndex((l) => l.startsWith('Description:'));
-            const { description, descEndIndex } =
-                descIndex !== -1
-                    ? this._parseBulkCsvDescription(lines, descIndex, title)
-                    : { description: '', descEndIndex: descIndex + 1 };
-
-            const precIndex = lines.findIndex((l) => l.startsWith('Pre-condition:'));
-            const { precValue, precEndIndex } =
-                precIndex !== -1
-                    ? this._parseBulkCsvPrecondition(lines, precIndex, title)
-                    : { precValue: null, precEndIndex: precIndex + 1 };
-
-            const csvString = this._filterBulkCsvLines(lines, descIndex, descEndIndex, precIndex, precEndIndex);
-
-            try {
-                const steps = await this.readCsvFromString(csvString);
-
-                results.push({
-                    title,
-                    description,
-                    precondition: this.parsePrecondition(precValue) ?? undefined,
-                    linkedIssues: this.parseLinkedIssues(lines),
-                    group: this.parseGroup(lines) ?? undefined,
-                    steps,
-                });
-            } catch (error: unknown) {
-                const err = error as Error;
-                rootLogger.error(`Erro ao analisar bloco CSV "${title}": ${err.message}`);
-                throw error;
-            }
+            await this._processBulkCsvBlock(block, results);
         }
 
         return results;

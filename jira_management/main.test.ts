@@ -32,13 +32,11 @@ jest.mock('../shared/state', () => ({
     getStatePath: jest.fn().mockReturnValue('/tmp/state.json'),
 }));
 
+import { createMockRootLogger } from '../shared/test-utils';
+
 const mockRootLogger = {
-    info: jest.fn(),
-    warn: jest.fn(),
-    error: jest.fn(),
+    ...createMockRootLogger(),
     child: jest.fn().mockReturnThis(),
-    writeFileOnly: jest.fn(),
-    filePath: undefined as string | undefined,
 };
 
 jest.mock('../shared/logger', () => ({
@@ -251,9 +249,9 @@ describe('handleSpecialInput', () => {
         expect(title).toHaveBeenCalledWith(expect.stringContaining('csv'));
     });
 
-    it('returns true for navigation commands', async () => {
-        expect(await mod.handleSpecialInput('/back')).toBe(true);
-        expect(await mod.handleSpecialInput('/menu')).toBe(true);
+    it('returns __exit__ for /back and /menu, true for /exit', async () => {
+        expect(await mod.handleSpecialInput('/back')).toBe('__exit__');
+        expect(await mod.handleSpecialInput('/menu')).toBe('__exit__');
         expect(await mod.handleSpecialInput('/exit')).toBe(true);
     });
 

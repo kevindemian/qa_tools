@@ -9,8 +9,6 @@ import { matchResultsToTests, createTestExecutionFromResults } from '../jira_man
 
 const tmpHome = fs.mkdtempSync(path.join(os.tmpdir(), 'qa-e2e-'));
 
-jest.setTimeout(30000);
-
 const FIXTURES = path.join(__dirname, 'fixtures');
 
 function setupJiraMocks(base: string): void {
@@ -37,9 +35,8 @@ function setupJiraMocks(base: string): void {
     let teCount = 0;
     api.post('/issue').reply(201, (_uri: string, body) => {
         teCount++;
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any -- nock body type is a complex union; accessing Jira custom field
-        const b = body as any;
-        const keys = (b?.fields?.customfield_13715 as string[]) || [];
+        const b = body as Record<string, unknown>;
+        const keys = ((b.fields as Record<string, unknown>)?.customfield_13715 as string[]) || [];
         return { key: 'RESULT-' + teCount, id: '3000' + teCount };
     });
 

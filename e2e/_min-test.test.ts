@@ -15,6 +15,7 @@ import { SessionContext } from '../shared/session-context';
 describe('case04', () => {
     beforeEach(() => {
         jest.clearAllMocks();
+        jest.restoreAllMocks();
         nock.cleanAll();
         nock.disableNetConnect();
     });

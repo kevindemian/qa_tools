@@ -164,11 +164,13 @@ beforeAll(() => {
 });
 
 afterAll(() => {
+    jest.clearAllMocks();
     jest.restoreAllMocks();
 });
 
 beforeEach(() => {
     jest.clearAllMocks();
+    jest.restoreAllMocks();
     (prompt.prompt as jest.Mock).mockReturnValue('0');
     (prompt.confirm as jest.Mock).mockReturnValue(false);
 });
