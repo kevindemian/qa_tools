@@ -51,6 +51,7 @@ function displayFile(filePath: string): void {
     }
 }
 
+// eslint-disable-next-line @typescript-eslint/require-await
 async function main(): Promise<void> {
     const docs = getDocs();
 
@@ -78,7 +79,7 @@ async function main(): Promise<void> {
     }
 
     try {
-        const choice = await showSelect(
+        const choice = showSelect(
             '📚 Documentação — Selecione um tópico',
             docs.map((d) => ({
                 name: `${d.label}${d.description ? ` — ${d.description}` : ''}`,

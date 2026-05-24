@@ -15,10 +15,17 @@ function getConfig(): Config {
     return _config || Config.getDefault();
 }
 
-import { box, divider as boxDivider } from './box';
+import { box, divider as boxDivider, card, visibleWidth } from './box';
 import { palette } from './palette';
 import { Output, defaultOutput as output } from './output';
 import type { TestResult } from './types';
+
+export class CancelError extends Error {
+    constructor(cmd: string) {
+        super('User cancelled with ' + cmd);
+        this.name = 'CancelError';
+    }
+}
 
 interface PromptOptions {
     default?: string;
@@ -51,6 +58,18 @@ export const isQuiet = (): boolean => getConfig().quiet;
 
 const MSG_UNKNOWN_ERROR = 'Erro desconhecido';
 const MSG_UNEXPECTED = 'Erro inesperado';
+
+export function badge(count: number, label: string, status: 'ok' | 'error' | 'warn' | 'info'): string {
+    const colors: Record<string, chalk.Chalk> = {
+        ok: chalk.hex('#3fb950'),
+        error: chalk.hex('#f85149'),
+        warn: chalk.hex('#d29922'),
+        info: chalk.hex('#8b949e'),
+    };
+    const c = colors[status] || chalk.hex('#8b949e');
+    const icon = status === 'info' ? '○' : '●';
+    return `${c(icon)} ${c(count + ' ' + label)}`;
+}
 
 function icon(name: 'ok' | 'err' | 'warn' | 'info'): string {
     const useUnicode = !getConfig().quiet && Output.isTTY();
@@ -107,6 +126,8 @@ export function prompt(label: string, options: PromptOptions = {}): string {
         if (def) text += ' ' + chalk.yellow('[' + def + ']');
         text += chalk.dim('  (/help)');
         const answer = readlineSync.question(text + ': ', { defaultInput: def }).trim();
+        const trimmed = answer.toLowerCase();
+        if (NAV_CMDS.includes(trimmed)) throw new CancelError(trimmed);
         if (minLength !== undefined && answer.length < minLength) {
             warn('Mínimo de ' + minLength + ' caractere(s).');
             continue;
@@ -144,9 +165,6 @@ export function smartPrompt(label: string, options: PromptOptions = {}, helpCall
         if (trimmed === '/help' || trimmed === '/h') {
             if (helpCallback) helpCallback();
             continue;
-        }
-        if (NAV_CMDS.includes(trimmed)) {
-            return value;
         }
         if (!trimmed) {
             retries++;
@@ -209,14 +227,26 @@ export function __setOraDep(mod: any): void {
     _ora = mod;
 }
 
-export async function withSpinner<T>(label: string, fn: () => Promise<T>): Promise<T> {
-    if (isQuiet() || !Output.isTTY()) return fn();
+interface SpinnerOptions {
+    type?: 'dots' | 'bouncingBar' | 'earth';
+    color?: string;
+}
+
+export async function withSpinner<T>(label: string, fn: () => Promise<T>, options?: SpinnerOptions): Promise<T> {
+    if (isQuiet() || !Output.isTTY() || Output.isCI()) return fn();
     if (!_ora) _ora = (await import('ora')).default;
-    const spinner = _ora({ text: label, color: 'cyan', spinner: 'dots' }).start();
+    const spinner = _ora({
+        text: label,
+        color: options?.color || 'cyan',
+        spinner: options?.type || 'dots',
+    }).start();
     try {
-        return await fn();
-    } finally {
-        spinner.stop();
+        const result = await fn();
+        spinner.succeed();
+        return result;
+    } catch (err) {
+        spinner.fail();
+        throw err;
     }
 }
 
@@ -305,40 +335,47 @@ export function printError(context: string, err: unknown): void {
         output.print(chalk.red.bold(icon('err')) + ' ' + context + ': ' + msg);
         return;
     }
-    output.print(
-        box(
-            [
-                '',
-                chalk.bold(palette.red(icon('err') + '  ' + context + ': ' + msg)),
-                '',
-                palette.blue('→  ' + hint),
-                '',
-            ],
-            { border: 'double', color: 'red', padding: 1, width: 72 },
-        ),
-    );
+    const hintLines = hint.split('\n').filter(Boolean);
+    const hintBlock =
+        hintLines.length > 1
+            ? hintLines.map((h, i) => palette.blue(`  ${i + 1}. ${h.trim()}`)).join('\n')
+            : palette.blue('→  ' + hint);
+    const errorLines: string[] = [
+        '',
+        chalk.bold(palette.red(icon('err') + '  ' + context + ': ' + msg)),
+        '',
+        hintBlock,
+        '',
+    ];
+    output.print(box(errorLines, { border: 'double', color: 'red', padding: 1, width: 72 }));
 }
 
-export function printSummary(results: TestResult[]): void {
+export function printSummary(results: TestResult[], testExecution?: string): void {
     const passed = results.filter((r) => r.status === 'ok').length;
     const failed = results.filter((r) => r.status === 'error').length;
+    const pct = results.length > 0 ? Math.round((passed / results.length) * 100) : 0;
+
+    function addExtras(lines: string[]): void {
+        lines.push(palette.fg('📊  ' + pct + '% pass rate'));
+        if (testExecution) {
+            lines.push(palette.blue('📎  Test Execution: ' + testExecution));
+        }
+    }
 
     if (failed === 0) {
         if (isQuiet()) {
             output.print('  ' + chalk.green.bold('TUDO CERTO!'));
             success(passed + ' de ' + results.length + ' operação(oes) concluída(s) com sucesso');
         } else {
-            output.print(
-                box(
-                    [
-                        '',
-                        chalk.bold(palette.green('●  TUDO CERTO!')),
-                        palette.fg('●  ' + passed + ' de ' + results.length + ' operação(ões) concluída(s)'),
-                        '',
-                    ],
-                    { border: 'single', color: 'green', padding: 0, width: 72 },
-                ),
-            );
+            const lines: string[] = [
+                '',
+                chalk.bold(palette.green('●  TUDO CERTO!')),
+                palette.fg('●  ' + passed + ' de ' + results.length + ' operação(ões) concluída(s)'),
+                '',
+            ];
+            addExtras(lines);
+            lines.push('');
+            output.print(box(lines, { border: 'single', color: 'green', padding: 0, width: 72 }));
         }
         rootLogger.info('Resumo: ' + passed + '/' + results.length + ' ok');
     } else {
@@ -366,6 +403,7 @@ export function printSummary(results: TestResult[]): void {
                     errorLines.push(palette.red('✗  ' + r.label + ': ' + r.message));
                 });
             errorLines.push('');
+            addExtras(errorLines);
             errorLines.push(palette.blue('→  Consulte o log: ' + (logPath || 'ver logs acima')));
             errorLines.push('');
             output.print(box(errorLines, { border: 'single', color: 'yellow', padding: 0, width: 72 }));
@@ -424,23 +462,6 @@ export async function onError(
             continue;
         }
         warn('Opção inválida. Escolha ' + opts.join(', '));
-    }
-}
-
-let _inquirerMod: unknown = null;
-
-export function __setInquirerMod(mod: unknown): void {
-    _inquirerMod = mod;
-}
-
-async function _loadInquirer(): Promise<unknown> {
-    if (_inquirerMod !== null) return _inquirerMod;
-    try {
-        _inquirerMod = await import('@inquirer/select');
-        return _inquirerMod;
-    } catch {
-        _inquirerMod = false;
-        return false;
     }
 }
 
@@ -526,56 +547,149 @@ export async function askConfirm(label: string, defaultYes = false): Promise<boo
     return confirm(label, defaultYes);
 }
 
-export async function showSelect(label: string, choices: SelectChoice[], options: SelectOptions = {}): Promise<string> {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const mod: any = await _loadInquirer();
-    if (mod && isTTY()) {
-        const processed = choices.map((c: SelectChoice) => {
-            if (c.type === 'separator') return new mod.Separator(c.line);
-            return c;
-        });
-        try {
-            const answer = await mod.default({
-                message: label,
-                choices: processed,
-                pageSize: options.pageSize || 14,
-                loop: true,
-                default: options.default,
-                theme: inquirerTheme,
-            });
-            return answer;
-        } catch (err: unknown) {
-            const promptErr = err as { name?: string; message?: string };
-            if (promptErr.name === 'ExitPromptError' || promptErr.message?.includes('cancel')) {
-                return '0';
-            }
-            throw err;
-        }
-    }
-    const flatChoices = choices.filter((c) => c.type !== 'separator');
-    output.print('');
+interface SectionGroup {
+    title: string;
+    items: string[];
+    itemValues: Array<string | undefined>;
+}
+
+function groupChoices(choices: SelectChoice[]): { sections: SectionGroup[]; standaloneItems: string[] } {
+    const sections: SectionGroup[] = [];
+    const standaloneItems: string[] = [];
+    let current: SectionGroup | null = null;
+    let idx = 0;
+
     for (const c of choices) {
         if (c.type === 'separator') {
-            if (c.line) output.print('  ' + c.line);
+            const line = (c.line || '').trim();
+            if (!line) continue;
+            current = { title: line, items: [], itemValues: [] };
+            sections.push(current);
             continue;
         }
-        const desc = c.description ? '  ' + c.description : '';
-        output.print('   ' + c.name + desc);
-    }
-    while (true) {
-        const answer = prompt(label).trim();
-        if (answer.startsWith('/')) return answer;
-        const parsed = parseInt(answer, 10);
-        if (parsed >= 1 && parsed <= flatChoices.length) {
-            const selected = flatChoices[parsed - 1];
-            return selected.value || selected.name || answer;
+        if (!c.name) continue;
+        idx++;
+        const num = String(idx).padStart(2, ' ');
+        const desc = c.description ? palette.muted('  ' + c.description) : '';
+        const entry = num + '. ' + c.name + desc;
+        if (current) {
+            current.items.push(entry);
+            current.itemValues.push(c.value);
+        } else {
+            standaloneItems.push(entry);
         }
-        if (answer === '' || answer === '0') return '0';
-        warn('Opção inválida. Escolha um número entre 1 e ' + flatChoices.length + '.');
+    }
+    return { sections, standaloneItems };
+}
+
+export function showSelect(label: string, choices: SelectChoice[], options: SelectOptions = {}): string {
+    const flatChoices = choices
+        .filter((c): c is SelectChoice & { name: string } => c.type !== 'separator' && !!c.name)
+        .map((c) => ({ name: c.name, value: c.value ?? c.name }));
+    const { sections, standaloneItems } = groupChoices(choices);
+
+    const termWidth = process.stdout.columns || 80;
+    const renderedItems: string[] = [];
+    for (const section of sections) renderedItems.push(...section.items.map((i) => ' ' + i));
+    renderedItems.push(...standaloneItems.map((i) => '  ' + i));
+    const maxLineWidth = renderedItems.length > 0 ? Math.max(...renderedItems.map((l) => visibleWidth(l)), 20) : 20;
+    const overhead = 10;
+    const cardWidth = Math.min(maxLineWidth + overhead, termWidth - 2);
+
+    function padLine(line: string): string {
+        const w = visibleWidth(line);
+        if (w >= cardWidth - overhead) return line;
+        return line + ' '.repeat(cardWidth - overhead - w);
+    }
+
+    interface MenuBlock {
+        title: string;
+        items: string[];
+        height: number;
+    }
+
+    const blocks: MenuBlock[] = [];
+    for (const section of sections) {
+        blocks.push({
+            title: section.title,
+            items: section.items.map((i) => ' ' + padLine(i)),
+            height: 4 + section.items.length,
+        });
+    }
+    if (standaloneItems.length > 0) {
+        blocks.push({
+            title: '',
+            items: standaloneItems.map((i) => ' ' + padLine(i)),
+            height: 4 + standaloneItems.length,
+        });
+    }
+
+    const pageSize = blocks.length > 0 ? options.pageSize || Output.rows() - 5 : 999;
+
+    const pages: MenuBlock[][] = [];
+    let currentBlocks: MenuBlock[] = [];
+    let currentHeight = 0;
+
+    for (const block of blocks) {
+        if (currentBlocks.length > 0 && currentHeight + block.height > pageSize) {
+            pages.push(currentBlocks);
+            currentBlocks = [];
+            currentHeight = 0;
+        }
+        currentBlocks.push(block);
+        currentHeight += block.height;
+    }
+    if (currentBlocks.length > 0) pages.push(currentBlocks);
+
+    let pageIdx = 0;
+
+    function renderPage(): void {
+        const pageBlocks = pages[pageIdx] || [];
+        for (const block of pageBlocks) {
+            const rendered = card(block.title, block.items, { width: cardWidth });
+            output.print(rendered);
+        }
+        if (pages.length > 1) {
+            output.print(palette.muted('  (Página ' + (pageIdx + 1) + '/' + pages.length + ' — /n próx, /p ant)'));
+        }
+        output.print('');
+    }
+
+    const hint = options.default ? 'Enter = ' + options.default : undefined;
+
+    while (true) {
+        renderPage();
+        output.print(palette.muted('  Dica: digite o número da opção, alias (ex: criar, status, versões) ou /help'));
+        const answer = prompt(label, { default: options.default, hint }).trim();
+        const trimmed = answer.toLowerCase();
+        if (trimmed === '/n' && pageIdx < pages.length - 1) {
+            pageIdx++;
+            continue;
+        }
+        if (trimmed === '/p' && pageIdx > 0) {
+            pageIdx--;
+            continue;
+        }
+        if (answer === '') return options.default || '0';
+        if (trimmed === '0' || trimmed === 'exit' || trimmed === 'sair') return '0';
+        if (trimmed.startsWith('/')) return answer;
+        const num = parseInt(answer, 10);
+        if (num >= 1 && num <= flatChoices.length) {
+            return flatChoices[num - 1].value;
+        }
+        if (!isNaN(num)) {
+            warn('Opção inválida. Digite um número entre 0 e ' + flatChoices.length + ' ou /help.');
+            continue;
+        }
+        return answer;
     }
 }
 
-export function tableView<T extends Record<string, unknown>>(data: T[] | null | undefined, columns?: string[]): void {
+export function tableView<T extends Record<string, unknown>>(
+    data: T[] | null | undefined,
+    columns?: string[],
+    statusKey?: string,
+): void {
     if (!data || data.length === 0) {
         warn('Nenhum dado para exibir.');
         return;
@@ -600,19 +714,43 @@ export function tableView<T extends Record<string, unknown>>(data: T[] | null | 
     const table = new CliTable3({
         head: keys,
         colWidths,
-        style: { head: ['cyan'] },
+        style: { head: [palette.muted as unknown as string] },
+        chars: {
+            top: '─',
+            'top-mid': '┬',
+            'top-left': '┌',
+            'top-right': '┐',
+            bottom: '─',
+            'bottom-mid': '┴',
+            'bottom-left': '└',
+            'bottom-right': '┘',
+            left: '│',
+            'left-mid': '├',
+            mid: '─',
+            'mid-mid': '┼',
+            right: '│',
+            'right-mid': '┤',
+            middle: '│',
+        },
         wordWrap: true,
     });
+    const statusColIdx = statusKey ? keys.indexOf(statusKey) : -1;
     for (const row of rows) {
-        table.push(
-            keys.map((k) => {
-                const v = row[k];
-                if (v === null || v === undefined) return '';
-                if (typeof v === 'object') return JSON.stringify(v);
-                // eslint-disable-next-line @typescript-eslint/no-base-to-string
-                return String(v);
-            }),
-        );
+        const cells = keys.map((k, i) => {
+            const v = row[k];
+            if (v === null || v === undefined) return '';
+            if (typeof v === 'object') return JSON.stringify(v);
+            // eslint-disable-next-line @typescript-eslint/no-base-to-string -- known primitive
+            const cell = String(v);
+            if (i === statusColIdx) {
+                if (/✓|pass|ok|sucesso/i.test(cell)) return chalk.hex('#3fb950')(cell);
+                if (/✗|fail|error|erro/i.test(cell)) return chalk.hex('#f85149')(cell);
+                if (/⚠|warn|skip|pulad/i.test(cell)) return chalk.hex('#d29922')(cell);
+                return chalk.hex('#8b949e')(cell);
+            }
+            return cell;
+        });
+        table.push(cells);
     }
     output.print(table.toString());
 }

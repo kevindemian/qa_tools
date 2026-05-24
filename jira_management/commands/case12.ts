@@ -1,10 +1,12 @@
-import { error, warn, info, title, printSummary } from '../../shared/prompt';
+import { title, printSummary, divider, badge, tableView } from '../../shared/prompt';
 import { sanitizeUrl } from '../../shared/cli_base';
+import { palette } from '../../shared/palette';
+import { defaultOutput } from '../../shared/output';
 import type { CommandContext } from './context';
 import type { TestResult } from '../../shared/types';
 
 async function handler(c: CommandContext): Promise<boolean | void> {
-    title('Diagnostico de Conexao');
+    title('12 · Diagnosticar Conexão');
     const diagResults: Array<{ status: string; label: string; message: string }> = [];
     const endpoints = [
         { url: sanitizeUrl(c.base_url + '/rest/api/2/myself'), label: 'Jira API' },
@@ -17,21 +19,36 @@ async function handler(c: CommandContext): Promise<boolean | void> {
     for (const ep of endpoints) {
         const start = Date.now();
         try {
-            const resp = await c.jiraResource.axiosInstance.get(ep.url);
+            await c.jiraResource.axiosInstance.get(ep.url);
             const ms = Date.now() - start;
-            info(ep.label + ': ' + resp.status + ' (' + ms + 'ms)');
             diagResults.push({ status: 'ok', label: ep.label, message: ms + 'ms' });
         } catch (err) {
             const ms = Date.now() - start;
             const st = (err as { response?: { status?: number } }).response?.status || 'ERR';
-            if (st === 401 || st === 403) {
-                warn(ep.label + ': ' + st + ' (token pode estar inválido)');
-            } else {
-                error(ep.label + ': ' + st + ' (' + ms + 'ms)');
-            }
-            diagResults.push({ status: 'error', label: ep.label, message: st + ' ' + ms + 'ms' });
+            const detail = st === 401 || st === 403 ? 'token pode estar inválido' : 'falha na conexão';
+            diagResults.push({ status: 'error', label: ep.label, message: st + ' ' + ms + 'ms - ' + detail });
         }
     }
+
+    const tableData = diagResults.map((r) => ({
+        Endpoint: r.label,
+        Status: r.status === 'ok' ? '🟢 ' + r.message : '🔴 ' + r.message,
+        Time: r.message,
+    }));
+    tableView(tableData, ['Endpoint', 'Status', 'Time'], 'Status');
+
+    const okCount = diagResults.filter((r) => r.status === 'ok').length;
+    const errCount = diagResults.filter((r) => r.status === 'error').length;
+    defaultOutput.print('  ' + badge(okCount, 'ok', 'ok') + '  ' + badge(errCount, 'error', 'error'));
+
+    for (const r of diagResults) {
+        if (r.status === 'error') {
+            defaultOutput.print(palette.red('  ✖ ' + r.label + ': ' + r.message));
+            defaultOutput.print(palette.blue('    → Check JIRA_BASE_URL e JIRA_TOKEN no .env'));
+        }
+    }
+
+    divider();
     printSummary(diagResults as TestResult[]);
     c.pushHistory(
         'diagnostico',

@@ -6,6 +6,10 @@ export class Output {
         return !!process.stdout.isTTY;
     }
 
+    static isCI(): boolean {
+        return process.env.CI === 'true';
+    }
+
     static columns(): number {
         return process.stdout.columns || 80;
     }

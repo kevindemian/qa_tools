@@ -1,4 +1,4 @@
-import { buildSplashLines, showSplash, __setFigletDep, __setGradientDep } from './splash';
+import { buildSplashLines, showSplash, checkJiraStatus, __setFigletDep, __setGradientDep } from './splash';
 
 describe('buildSplashLines', () => {
     it('formats logo lines with help hint', () => {
@@ -32,20 +32,47 @@ describe('buildSplashLines', () => {
         const output = lines.join('\n');
         expect(output).toContain('Gestão');
     });
+
+    it('includes status checks when provided', () => {
+        const lines = buildSplashLines('QA TOOLS', undefined, [
+            { label: 'Jira API', status: 'ok', detail: 'online' },
+            { label: 'Token', status: 'info', detail: 'não configurado' },
+        ]);
+        const output = lines.join('\n');
+        expect(output).toContain('Jira API');
+        expect(output).toContain('Token');
+        expect(output).toContain('online');
+    });
 });
 
 jest.mock('./output', () => ({
-    defaultOutput: {
-        box: jest.fn(),
-    },
+    Output: { isTTY: jest.fn().mockReturnValue(true), isCI: jest.fn().mockReturnValue(false) },
+    defaultOutput: { box: jest.fn(), print: jest.fn() },
 }));
+
+describe('checkJiraStatus', () => {
+    it('returns info when URL is empty', async () => {
+        const result = await checkJiraStatus('', '');
+        expect(result.status).toBe('info');
+        expect(result.detail).toContain('não configurado');
+    });
+
+    it('returns info when token is empty', async () => {
+        const result = await checkJiraStatus('https://jira.example.com', '');
+        expect(result.status).toBe('info');
+        expect(result.detail).toContain('não configurado');
+    });
+});
 
 describe('showSplash', () => {
     const mockFiglet = { textSync: jest.fn().mockReturnValue('QA TOOLS\n======') };
     const mockGradientColor = jest.fn((text: string) => text);
     const mockGradient = jest.fn(() => mockGradientColor);
+    let outputMod: { Output: { isTTY: jest.Mock }; defaultOutput: { box: jest.Mock; print: jest.Mock } };
 
     beforeEach(() => {
+        outputMod = require('./output') as typeof outputMod;
+        outputMod.Output.isTTY.mockReturnValue(true);
         __setFigletDep(mockFiglet);
         __setGradientDep({ default: mockGradient });
     });
@@ -62,10 +89,16 @@ describe('showSplash', () => {
 
     it('includes statePath when provided', async () => {
         await expect(showSplash('/tmp/state.json')).resolves.not.toThrow();
-        const output = require('./output');
-        expect(output.defaultOutput.box).toHaveBeenCalled();
-        const [lines] = output.defaultOutput.box.mock.calls[0];
+        expect(outputMod.defaultOutput.box).toHaveBeenCalled();
+        const [lines] = outputMod.defaultOutput.box.mock.calls[0];
         expect(lines.join('\n')).toContain('/tmp/state.json');
+    });
+
+    it('shows token status check without jiraBaseUrl', async () => {
+        await expect(showSplash('/tmp/state.json')).resolves.not.toThrow();
+        expect(outputMod.defaultOutput.box).toHaveBeenCalled();
+        const [lines] = outputMod.defaultOutput.box.mock.calls[0];
+        expect(lines.join('\n')).toContain('Token');
     });
 
     it('handles figlet textSync failure', async () => {
@@ -80,5 +113,11 @@ describe('showSplash', () => {
             throw new Error('fail');
         });
         await expect(showSplash()).resolves.not.toThrow();
+    });
+
+    it('prints plain text when not TTY', async () => {
+        outputMod.Output.isTTY.mockReturnValue(false);
+        await expect(showSplash('/tmp/state.json')).resolves.not.toThrow();
+        expect(outputMod.defaultOutput.print).toHaveBeenCalledWith(expect.stringContaining('QA Tools'));
     });
 });

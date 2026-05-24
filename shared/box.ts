@@ -11,7 +11,7 @@ export interface BoxOptions {
     width?: number;
 }
 
-function visibleWidth(s: string): number {
+export function visibleWidth(s: string): number {
     return stripVTControlCharacters(s).length;
 }
 
@@ -26,6 +26,9 @@ const NONE = { tl: '', tr: '', bl: '', br: '', h: '', v: '' };
 export function box(lines: string[], options: BoxOptions = {}): string {
     const { title = '', border: borderStyle = 'single', color, padding = 0, width: maxWidth } = options;
 
+    const isCI = process.env.CI === 'true';
+    const effectiveBorder = isCI && borderStyle !== 'none' ? ('none' as const) : borderStyle;
+
     const termWidth = process.stdout.columns || 80;
     const contentWidth =
         maxWidth ||
@@ -35,7 +38,7 @@ export function box(lines: string[], options: BoxOptions = {}): string {
             return Math.min(longest + overhead, termWidth - 2);
         })();
     const totalWidth = contentWidth;
-    const b = borderStyle === 'none' ? NONE : BORDERS[borderStyle];
+    const b = effectiveBorder === 'none' ? NONE : BORDERS[effectiveBorder];
     const styled = color ? applyPalette(color) : palette.fg;
     const borderChalk = color ? applyPalette(color) : palette.border;
 
@@ -53,7 +56,7 @@ export function box(lines: string[], options: BoxOptions = {}): string {
 
     const rows: string[] = [];
 
-    if (borderStyle !== 'none') {
+    if (effectiveBorder !== 'none') {
         let top = leftPad + borderChalk(b.tl);
         if (title) {
             const titleText = ' ' + styled(title) + ' ';
@@ -80,7 +83,7 @@ export function box(lines: string[], options: BoxOptions = {}): string {
         rows.push(leftPad + borderChalk(b.v) + ' '.repeat(hArea) + borderChalk(b.v));
     }
 
-    if (borderStyle !== 'none') {
+    if (effectiveBorder !== 'none') {
         rows.push(leftPad + borderChalk(b.bl + b.h.repeat(hArea) + b.br));
     }
 
@@ -89,5 +92,19 @@ export function box(lines: string[], options: BoxOptions = {}): string {
 
 export function divider(width?: number): string {
     const w = width || process.stdout.columns || 80;
-    return palette.border('─'.repeat(Math.min(w - 2, 78)));
+    return palette['text-muted']('─'.repeat(Math.min(w - 2, 78)));
+}
+
+export function card(
+    title: string,
+    content: string[],
+    options: { border?: BoxBorder; color?: PaletteKey; width?: number } = {},
+): string {
+    return box(content, {
+        title,
+        border: options.border || 'round',
+        color: options.color || 'border',
+        padding: 1,
+        width: options.width,
+    });
 }
