@@ -130,6 +130,83 @@ Issues registradas durante refatorações, postergadas por escopo.
 
 ---
 
+## LLM Integration — Geração de Testes com IA
+
+**Prioridade**: P1 (feature nova, valor direto ao usuário)
+
+**Abordagem**: incremental, zero dependências novas (fetch nativo + marked).
+
+### Arquitetura
+
+**Providers** (dual-tier, config via `.env`):
+
+| Tier | Provider | Env | Model |
+|------|----------|-----|-------|
+| `main` | OpenRouter | `LLM_API_KEY` | `google/gemini-2.0-flash-exp` |
+| `small` | Gemini API | `LLM_SMALL_API_KEY` | `gemini-2.0-flash-lite` (grátis) |
+
+- `main` → tarefas pesadas (gerar casos, analisar falhas)
+- `small` → tarefas leves (classificar, extrair keywords, sanitizar)
+
+### Fases
+
+#### 🔶 Fase 1 — Core (`shared/llm-client.ts`)
+
+- Função `llmPrompt(tier: 'main'|'small', system: string, user: string): Promise<string>`
+- Abstrai diferenças entre APIs: OpenRouter (formato OpenAI `/v1/chat/completions`) vs Gemini (`/v1beta/models/{model}:generateContent`)
+- Retry via `http-client.js` (reuso), cache de respostas (hash do prompt, TTL)
+- Headers: `Authorization: Bearer {{key}}`, fallback tratado com `printError`
+
+#### 🔶 Fase 2 — Prompt Templates (`shared/prompts/*.md`)
+
+Arquivos markdown editáveis sem recompilar, placeholders `{{var}}`:
+- `user-story-to-tests.md` — user story + AC → CSV de casos de teste (steps, pre-conditions, tags)
+- `failure-analysis.md` — diff de execuções → causas raiz sugeridas
+- `classify.md` — descrição de bug → severidade/área (tier small)
+- Template carregado via `readFileSync` + `replace` simples
+
+#### 🔶 Fase 3 — Comando no Menu (`jira_management/main.ts`)
+
+Nova opção **"Gerar testes com IA"** (id `18`):
+1. Input: issue key (ex. `ECSPOL-123`)
+2. `JiraResource.getIssue(key)` → summary + description
+3. Carrega `user-story-to-tests.md` → substitui placeholders
+4. `llmPrompt('main', system, user)` → CSV como string
+5. Preview com `mdBox()` — aprovação do usuário
+6. Invoca pipeline de criação existente (CSV → Xray)
+
+#### 🔶 Fase 4 — Expansão
+
+- **Analisar falhas**: parse de resultados de teste → LLM sugere causas raiz
+- **Resumir execução**: resultado de teste → relatório legível para stakeholders
+- **Classificar bugs**: descrição → severidade/área (tier small)
+- **Traduzir planos**: PT-BR ↔ EN
+- **Mais provedores**: Anthropic, Ollama (local), outras chaves open-source
+
+### Config (`shared/config.ts` + `.env`)
+
+```
+LLM_API_KEY=sk-or-v1-...
+LLM_MODEL=google/gemini-2.0-flash-exp          # default
+LLM_BASE_URL=https://openrouter.ai/api/v1       # default
+LLM_SMALL_API_KEY=AIza...
+LLM_SMALL_MODEL=gemini-2.0-flash-lite           # default
+```
+
+### Arquivos envolvidos
+
+| Arquivo | Ação |
+|---------|------|
+| `shared/llm-client.ts` | Criar |
+| `shared/llm-client.test.ts` | Criar |
+| `shared/prompts/` | Criar diretório + templates .md |
+| `shared/config.ts` | Adicionar getters LLM |
+| `jira_management/main.ts` | Adicionar handler + opção no menu |
+| `.env.example` | Adicionar vars LLM |
+| `BACKLOG.md` | Este plano |
+
+---
+
 ## 🔴 Plano de Ataque — Limpeza Geral
 
 Estratégia: paralelizar por camada (shared → jira_management → git_triggers), cada lote independente.
