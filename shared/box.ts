@@ -26,8 +26,7 @@ const NONE = { tl: '', tr: '', bl: '', br: '', h: '', v: '' };
 export function box(lines: string[], options: BoxOptions = {}): string {
     const { title = '', border: borderStyle = 'single', color, padding = 0, width: maxWidth } = options;
 
-    const isCI = process.env.CI === 'true';
-    const effectiveBorder = isCI && borderStyle !== 'none' ? ('none' as const) : borderStyle;
+    const effectiveBorder = borderStyle;
 
     const termWidth = process.stdout.columns || 80;
     const contentWidth =
