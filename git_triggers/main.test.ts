@@ -483,10 +483,10 @@ describe('handleExportVariables', () => {
 // ---------- handleHelp ----------
 
 describe('handleHelp', () => {
-    it('prints help text and prompts to continue', () => {
+    it('prints help box and prompts to continue', () => {
+        jest.spyOn(console, 'log').mockImplementationOnce(() => {});
         mainModule.handleHelp();
-        expect(prompt.helpLine).toHaveBeenCalledTimes(2);
-        expect(prompt.title).toHaveBeenCalledWith('Ajuda — Git Tools');
+        expect(console.log).toHaveBeenCalledWith(expect.stringContaining('Ajuda'));
         expect(prompt.prompt).toHaveBeenCalledWith('Pressione Enter para continuar');
     });
 });

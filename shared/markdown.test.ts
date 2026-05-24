@@ -50,29 +50,33 @@ jest.mock('marked', () => {
                 tokens.push({ type: 'code', text: codeLines.join('\n') });
             } else {
                 const inline: Array<{ type: string; text?: string; tokens?: unknown[] }> = [];
-                let remaining = line;
-                const parts: Array<{ text: string }> = [];
-                const i = remaining.indexOf('**');
-                if (i >= 0) {
-                    const before = remaining.slice(0, i);
-                    const boldEnd = remaining.indexOf('**', i + 2);
-                    if (boldEnd >= 0) {
-                        if (before) parts.push({ text: before });
-                        parts.push({ text: remaining.slice(i + 2, boldEnd) });
-                        remaining = remaining.slice(boldEnd + 2);
+                const remaining = line;
+                const parseInline = (txt: string): Array<{ type: string; text?: string; tokens?: unknown[] }> => {
+                    const result: Array<{ type: string; text?: string; tokens?: unknown[] }> = [];
+                    let cursor = 0;
+                    const regex = /(\*\*(\w[\w\s]*\w|\w)\*\*)|(\*(\w[\w\s]*\w|\w)\*)|(`[^`]+`)/g;
+                    let match: RegExpExecArray | null;
+                    while ((match = regex.exec(txt)) !== null) {
+                        if (match.index > cursor) {
+                            result.push({ type: 'text', text: txt.slice(cursor, match.index) });
+                        }
+                        if (match[1]) {
+                            result.push({ type: 'strong', tokens: [{ type: 'text', text: match[2] }] });
+                        } else if (match[3]) {
+                            result.push({ type: 'em', tokens: [{ type: 'text', text: match[4] }] });
+                        } else if (match[5]) {
+                            result.push({ type: 'codespan', text: match[5].slice(1, -1) });
+                        }
+                        cursor = match.index + match[0].length;
                     }
-                }
-                if (remaining && !parts.length) parts.push({ text: remaining });
-                if (parts.length) {
-                    for (const p of parts) {
-                        if (p === parts[0] && p.text) inline.push({ type: 'text', text: p.text });
-                        else inline.push({ type: 'strong', tokens: [{ type: 'text', text: p.text }] });
+                    if (cursor < txt.length) {
+                        result.push({ type: 'text', text: txt.slice(cursor) });
                     }
-                } else if (line.trim()) {
-                    inline.push({ type: 'text', text: line });
-                }
-                if (inline.length) {
-                    tokens.push({ type: 'paragraph', tokens: inline });
+                    return result;
+                };
+                const inlineTokens = parseInline(line);
+                if (inlineTokens.length) {
+                    tokens.push({ type: 'paragraph', tokens: inlineTokens });
                 }
             }
         }
@@ -81,7 +85,7 @@ jest.mock('marked', () => {
     return { lexer };
 });
 
-import { md } from './markdown';
+import { md, mdBox } from './markdown';
 
 describe('md', () => {
     it('renders headings', () => {
@@ -133,5 +137,58 @@ describe('md', () => {
     it('renders codespan', () => {
         const result = md('use `code` inline');
         expect(result).toContain('code');
+    });
+
+    it('renders italic text', () => {
+        const result = md('this is *italic* text');
+        expect(result).toContain('italic');
+        expect(result).toContain('\x1b[3m');
+    });
+
+    it('renders strong text inside paragraph', () => {
+        const result = md('a **bold** word');
+        expect(result).toContain('bold');
+        expect(result).toContain('\x1b[1m');
+    });
+
+    it('renders mixed inline tokens', () => {
+        const result = md('text **bold** and *italic* and `code`');
+        expect(result).toContain('bold');
+        expect(result).toContain('italic');
+        expect(result).toContain('code');
+    });
+});
+
+describe('renderPipeTable edge cases', () => {
+    it('handles long cell content with word wrapping', () => {
+        const result = md('| a | b |\n|---|---|\n| ' + 'x'.repeat(50) + ' | short |');
+        expect(result).toContain('x'.repeat(50).slice(0, 10));
+    });
+
+    it('handles empty cell content', () => {
+        const result = md('| a | b |\n|---|---|\n|  | short |');
+        expect(result).toContain('a');
+        expect(result).toContain('b');
+    });
+});
+
+describe('mdBox', () => {
+    it('renders box with markdown content', () => {
+        const result = mdBox('# Title', { title: 'Doc', border: 'round' });
+        expect(result).toContain('Title');
+        expect(result).toContain('╭');
+        expect(result).toContain('╮');
+    });
+
+    it('uses round border by default', () => {
+        const result = mdBox('text');
+        expect(result).toContain('╭');
+        expect(result).toContain('╰');
+    });
+
+    it('accepts custom border style', () => {
+        const result = mdBox('text', { border: 'double' });
+        expect(result).toContain('╔');
+        expect(result).toContain('╚');
     });
 });

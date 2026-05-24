@@ -255,3 +255,517 @@ Estratégia: paralelizar por camada (shared → jira_management → git_triggers
 | D6 | `jira_management/main.test.ts` | `jira_management/` | 37 | ✅ |
 
 ---
+
+## 🔬 Avaliação UX — Revisão Completa do Código
+
+**Workshop**: 2026-05-24. Base: leitura real dos fontes em `/home/kdemian/Desktop/projetos/qa_tools/qa_tools/`.
+
+**CI Health**: ✅ tsc 0 erros · ✅ ESLint 0 erros · ✅ 745 testes (36 suites) · ✅ 94.89% lines / 85.14% branches
+
+### Achados Validados (linhas reais do código)
+
+#### 🔴 Críticos (P0)
+
+| # | Problema | Local | Linhas |
+|---|----------|-------|--------|
+| UX-C1 | **Splash aparece e some** — `showSplash()` roda em `main()` antes do loop, mas `console.clear()` na primeira linha de `runMainLoop()`/`while(true)` o apaga imediatamente | `jira_management/main.ts:493`, `git_triggers/main.ts:888` | Ninguém vê o banner |
+| UX-C2 | **`/back`, `/menu`, `/exit` não saem do sub-processo** — `handleSpecialInput()` retorna `true` (continue), mas não retorna sentinela para quebrar o loop. O processo NUNCA encerra para voltar ao entry-menu | `jira_management/main.ts:334-336` | Usuário fica preso no mesmo menu |
+| UX-C3 | **Git Triggers sem `/docs`, `/back`, `/menu`** — `_dispatchAction()` só reconhece `/h`, `/help`, `/history` e `0`. Comandos de navegação ausentes | `git_triggers/main.ts:844-865` | Inconsistência severa com Jira |
+
+#### 🟡 Médios (P1)
+
+| # | Problema | Local | Linhas |
+|---|----------|-------|--------|
+| UX-M1 | **`displayActions()` legacy vs `buildActionChoices()` moderno** — Ambos existem, mas `displayActions()` não mostra `/history` no fallback non-TTY | `git_triggers/main.ts:380-410` vs `416-443` | Fallback incompleto |
+| UX-M2 | **`handleHelp()` sem `box()`** — Usa `title()` + `helpLine()` + `divider()`, sem moldura padronizada | `git_triggers/main.ts:749-755` | Quebra padrão visual |
+| UX-M3 | **`handleShowHistory()` sem pausa** — Output cru sem `prompt('Enter')`, usuário não vê antes do `console.clear()` | `git_triggers/main.ts:757-767` | Dado some da tela |
+| UX-M4 | **`/voltar` inconsistente** — Docs mostra "/voltar Menu principal" mas na verdade volta ao menu Jira | `jira_management/main.ts:390` | Label enganosa |
+| UX-M5 | **Comandos `/help`, `/docs`, `/history` aparecem DEPOIS de "Sair"** — Ordem inversa da expectativa do usuário | `jira_management/main.ts:458-463` | Usuário pode não ver comandos |
+| UX-M6 | **Polling pipeline sem feedback visual** — Logs espaçados a cada 15s sem spinner, `aborted` é dead code | `git_triggers/main.ts:114-139` | 5min sem feedback adequado |
+| UX-M7 | **`displayActions()` fallback não mostra `/history`** — Só mostra `/h` | `git_triggers/main.ts:407` | Usuário non-TTY não descobre /history |
+
+#### 🟢 Leves (P2)
+
+| # | Problema | Local | Linhas |
+|---|----------|-------|--------|
+| UX-L1 | **`renderMenuCards()` + `displayMenu()` dead code** — Definidos, exportados e testados, mas NUNCA chamados no fluxo ativo (menu real usa `buildMenuChoices()` + `getUserChoice()`) | `jira_management/main.ts:227-290` | ~60 linhas mortas |
+| UX-L2 | **Entry-menu width 60, sub-menus 80** — Inconsistente. Deveriam compartilhar constante | `entry-menu.ts:70` vs `main.ts:474,804` | Diferença visual |
+| UX-L3 | **Box vazio renderizado quando 0 operações** — `headerLines` vazio mas `box()` chamado | `jira_management/main.ts:474`, `git_triggers/main.ts:804` | Box em branco |
+| UX-L4 | **`pageSize: 99` hardcoded** — Quebra em terminais pequenos | `entry-menu.ts:79`, `main.ts:478`, `git_triggers/main.ts:812` | Deveria ser dinâmico |
+| UX-L5 | **Fallback non-TTY mostra `1.` `2.`** — Mesmo sem indexMode, o loop de fallback numera | `shared/prompt.ts:530` | Inconsistente com TTY mode |
+| UX-L6 | **`printError()` padding 0** — Texto colado na borda do box | `shared/prompt.ts:294` | Apertado visualmente |
+| UX-L7 | **`helpLine()` ignora `isQuiet()`** — Diferente de `info()` e `success()` que respeitam | `shared/prompt.ts:70-73` | Inconsistência |
+| UX-L8 | **`confirm()` usa `chalk.yellow('!')`** em vez de `icon('warn')` | `shared/prompt.ts:112` | Quebra fallback ASCII |
+| UX-L9 | **`onError()` usa `'-'.repeat(45)`** em vez de `divider()` | `shared/prompt.ts:381-383` | Inconsistência visual |
+| UX-L10 | **`icon()` fallback com tamanhos diferentes** — 'OK' (2), 'ERR' (3), '!' (1), 'i' (1) | `shared/prompt.ts:46` | Alinhamento quebra |
+| UX-L11 | **`smartPrompt()` retorna `''` em vez de `null`** — Callers não distinguem abandono de vazio válido | `shared/prompt.ts:142` | Propenso a bugs |
+| UX-L12 | **`prompt()` sem hint `/help`** — Usuário talvez não saiba que /help funciona em prompts | `shared/prompt.ts:87-100` | Falta de discoverability |
+| UX-L13 | **Git box título muito longo** — Stats vão no título do box junto com contexto | `git_triggers/main.ts:800-804` | Título poluído |
+| UX-L14 | **Enter para repetir última operação** não tem hint no select | `jira_management/main.ts:476-479` | Funcionalidade oculta |
+| UX-L15 | **`_configHint` sempre mostra `no_dir_selected`** mesmo após configurar | `jira_management/main.ts:207-208` | Pode estar desatualizado |
+
+#### 💡 Sugestões (P3)
+
+| # | Sugestão | Local |
+|---|----------|-------|
+| UX-S1 | Renomear "Sair" → "Voltar ao menu principal" | Todos os menus |
+| UX-S2 | Breadcrumbs no título: "Jira > Releases > Criar versão" | Box titles |
+| UX-S3 | Cache path usar `os.tmpdir()` em vez de `/tmp` | `entry-menu.ts:15` |
+| UX-S4 | Chalk level detection + fallback 16 cores no palette | `shared/palette.ts` |
+| UX-S5 | Tecla 'q' para sair de leitura de doc | `jira_management/main.ts:399` |
+| UX-S6 | `printError()` link para troubleshooting | `shared/prompt.ts` |
+| UX-S7 | Chalk level detection no palette init | `shared/palette.ts` |
+| UX-S8 | `loop: false` → `true` no select (↑ no topo vai ao final) | `shared/prompt.ts:507` |
+
+### Avaliações Técnicas Adicionais
+
+#### Cobertura (94.89% lines / 85.14% branches)
+
+| Arquivo | Lines | Branches | Risco |
+|---------|-------|----------|-------|
+| `shared/markdown.ts` | 58.91% | 40.9% | ⚠️ Baixa — mdBox quase sem testes |
+| `shared/splash.ts` | 29.62% | 12.5% | 🔴 Muito baixa — banner mal testado |
+| `shared/prompt.ts` | 81.28% | 74.5% | 🟡 Inquirer/ora lazy load sem mock |
+| `shared/config.ts` | 90.41% | 91.66% | ✅ OK |
+
+#### Dead Code
+
+| Função | Arquivo | Uso |
+|--------|---------|-----|
+| `renderMenuCards()` | `jira_management/main.ts:227` | Exportada + testada, mas **nunca chamada no fluxo ativo** |
+| `displayMenu()` | `jira_management/main.ts:285` | Wrapper de `renderMenuCards()`, mesmo destino |
+| `displayActions()` | `git_triggers/main.ts:380` | Legacy — fluxo ativo usa `_promptChoice()` + `buildActionChoices()` |
+| `aborted` (var) | `git_triggers/main.ts:117,118,125,127,136` | Dead code — sempre `false` |
+
+#### Funções >80 linhas
+
+| Função | Arquivo | Linhas |
+|--------|---------|--------|
+| `main()` | `git_triggers/main.ts` | ~70 (linhas 867-896) |
+| `handleTriggerPipeline()` | `git_triggers/main.ts` | ~119 (637-747) |
+| `displayActions()` | `git_triggers/main.ts` | ~30 (380-410) — pequena mas duplicada |
+| `buildActionChoices()` | `git_triggers/main.ts` | ~28 (416-443) — OK |
+| `initializeSession()` | `jira_management/main.ts` | ~40 (411-450) |
+| `showDocs()` | `jira_management/main.ts` | ~53 (356-409) |
+| `runMainLoop()` | `jira_management/main.ts` | ~63 (482-545) |
+
+#### Arquivos Grandes (>500 linhas)
+
+| Arquivo | Linhas | Risco |
+|---------|--------|-------|
+| `git_triggers/main.ts` | 936 | 🔴 Muito grande, ~30 funções |
+| `jira_management/main.ts` | 605 | 🟡 Grande, ~15 funções |
+| `shared/prompt.ts` | 585 | 🟡 Grande, ~20 funções + classes |
+
+---
+
+## ⚔️ Plano de Ataque Final — UX + Qualidade
+
+**Ordem tecnicamente ótima**: fundação → navegação → visuais → feedback → edge cases → polimento.
+Paralelizável dentro de cada batch.
+
+### Lote A — Fundação (`shared/`)
+*Base compartilhada — pré-requisito para tudo abaixo.*
+
+| # | O quê | Onde | Linhas |
+|---|-------|------|--------|
+| **A1** | `icon()` fallback com padding fixo (2 chars cada) | `prompt.ts:46` | `'OK '`, `'ERR'`, `'! '`, `'i '` |
+| **A2** | `helpLine()` respeitar `isQuiet()` | `prompt.ts:70-73` | Adicionar `if (!isQuiet())` |
+| **A3** | `prompt()` adicionar hint `/help` no final | `prompt.ts:87-100` | Quando `helpCallback` existir |
+| **A4** | `confirm()` usar `icon('warn')` em vez de `chalk.yellow('!')` | `prompt.ts:112` | |
+| **A5** | `smartPrompt()` retornar `null` em vez de `''` | `prompt.ts:142` | |
+| **A6** | `onError()` usar `divider()` em vez de `'-'.repeat(45)` | `prompt.ts:381-383` | |
+| **A7** | `printError()` padding 0 → 1 | `prompt.ts:294` | |
+| **A8** | `prompt()` safe wrapper non-TTY | `prompt.ts` | Wrapper que checa `isTTY()` e retorna default |
+| **A9** | Cache path: `/tmp` → `os.tmpdir()` | `entry-menu.ts:15` | |
+| **A10** | `loop: false` → `true` no select | `prompt.ts:507` | Navegação contínua |
+| **A11** | Fallback ASCII padding fixo no non-TTY `showSelect()` | `prompt.ts:530` | |
+
+### Lote B — Navegação
+*Corrige os 🔴 críticos.*
+
+| # | O quê | Onde | Linhas |
+|---|-------|------|--------|
+| **B1** | Splash visível na primeira tela: `console.clear()` só da 2ª iteração | `jira/main.ts:493`, `git/main.ts:888` | Flag `isFirstIteration` |
+| **B2** | `/exit`, `/back`, `/menu` retornarem sentinela `'__exit__'` | `jira/main.ts:334-336` | `handleSpecialInput` → `runMainLoop` interpreta → `choice = '0'` |
+| **B3** | Git: adicionar `/docs`, `/back`, `/menu`, `/exit`, `/sair` | `git/main.ts:844-865` | `_dispatchAction` trata comandos |
+| **B4** | Git: adicionar `/docs` handler (link para docs Jira) | `git/main.ts` | |
+| **B5** | Label "/voltar Menu principal" → "/voltar Menu Jira" | `jira/main.ts:390` | |
+| **B6** | Reordenar comandos antes de "Sair" no select | `jira/main.ts:458-463` | |
+| **B7** | `handleHelp()` com `box()` padronizado | `git/main.ts:749-755` | |
+| **B8** | `handleShowHistory()` com pausa + `prompt('Enter')` | `git/main.ts:757-767` | |
+| **B9** | `displayActions()` mostrar `/history` no fallback | `git/main.ts:407` | |
+
+### Lote C — Consistência Visual
+
+| # | O quê | Onde |
+|---|-------|------|
+| **C1** | Box width: entry-menu 60 → 78 | `entry-menu.ts:70` |
+| **C2** | Box não renderizar se `headerLines.length === 0` | `jira/main.ts:474`, `git/main.ts:804` |
+| **C3** | Git box título: stats → conteúdo, título só nome | `git/main.ts:800-804` |
+| **C4** | Remover `renderMenuCards()` + `displayMenu()` (dead code) | `jira/main.ts:227-290` |
+| **C5** | Atualizar testes que cobrem dead code | `jira/main.test.ts` |
+
+### Lote D — Feedback e Progresso
+
+| # | O quê | Onde | Linhas |
+|---|-------|------|--------|
+| **D1** | Polling pipeline com `withSpinner()` texto dinâmico | `git/main.ts:114-139` | |
+| **D2** | Remover `aborted` dead code | `git/main.ts:117,118,125,127,136` | |
+| **D3** | Pausa pós-operação no git (Enter) | `git/main.ts` handlers | |
+| **D4** | Breadcrumbs no título do box | Todos os menus | |
+
+### Lote E — Non-TTY e Casos Extremos
+
+| # | O quê | Onde |
+|---|-------|------|
+| **E1** | `pageSize` dinâmico (`Math.max(7, Math.min(99, rows-10))`) | Todos os `showSelect()` |
+| **E2** | Fallback non-TTY mostrar comandos `/` | `prompt.ts:520-542` |
+| **E3** | Remover `answer === '0'` legacy no entry-menu | `entry-menu.ts:83` |
+| **E4** | Chalk level detection + fallback 16 cores | `shared/palette.ts` |
+
+### Lote F — Polimento
+
+| # | O quê | Onde |
+|---|-------|------|
+| **F1** | `_configHint` refletir diretório real | `jira/main.ts:207-208` |
+| **F2** | Hint "Enter para repetir última" no select | `jira/main.ts:476-479` |
+| **F3** | Renomear "Sair" → "Voltar ao menu principal" | Todos os menus |
+| **F4** | Tecla 'q' para sair de docs | `jira/main.ts:399` |
+| **F5** | `printError()` com link troubleshooting | `shared/prompt.ts` |
+
+### Ordem de Execução
+
+```
+Batch 1 (paralelo — fundação):
+  └── A1 a A11 (shared/ quick fixes — sem dependências externas)
+
+Batch 2 (paralelo — preparação):
+  ├── B1 (splash flag — independente)
+  ├── C1 a C3 (visual consistency — independente)
+  ├── C4+C5 (remover dead code + atualizar testes)
+  └── E1 a E4 (non-TTY/extremos — independente)
+
+Batch 3 (paralelo — navegação + feedback):
+  ├── B2 a B9 (navegação — dependem de A8 safePrompt)
+  ├── D1 a D3 (feedback git — dependem de withSpinner que já existe)
+  └── F1 a F5 (polimento — independente)
+
+Batch 4 (final):
+  └── D4 (breadcrumbs — último, depois de layout estável)
+```
+
+---
+
+## 🧪 Análise de Testes — Cobertura e Qualidade
+
+### 1. Coverage Real (Jest — linhas cobertas / total do projeto)
+
+| Métrica | Jira Mgmt | Git Triggers | Shared | **Overall** |
+|---------|-----------|-------------|--------|-------------|
+| Lines | 93.76% | 50.38% | 83.54% | **76.46%** |
+| Branches | 84.93% | 34.8% | 73.12% | **65.37%** |
+| Functions | 93.43% | 50.71% | 82.35% | **75.53%** |
+
+> Nota: O relatório oficial (94.89% lines) considera apenas arquivos com ≥1 teste. O cálculo acima inclui TODOS os `.ts` do projeto.
+
+### 2. Hotspots de Baixa Cobertura
+
+| Arquivo | Lines | Branches | Risco |
+|---------|-------|----------|-------|
+| `shared/splash.ts` | **29.16%** | **12.5%** | 🔴 Nenhum teste unitário — `showSplash` só testado via E2E |
+| `shared/markdown.ts` | **62.83%** | **40.9%** | 🔴 `mdBox` sem testes; `wrapCell`, `renderInline` subtipos (strong, em, codespan, etc.) descobertos |
+| `git_triggers/main.ts` | **46.56%** | **31.69%** | 🔴 Funções de CI/CD (pipeline polling, merge, schedules) sem cobertura unitária |
+| `shared/prompt.ts` | **82%** | **74.5%** | 🟡 `ask`/`askConfirm`/`showSelect` inquirer TTY paths, `withSpinner` TTY, `onError` autoConfirm |
+| `shared/config.ts` | **91.54%** | **91.66%** | 🟢 `getAllPrefixed` sem teste |
+
+### 3. Anti-Patterns Encontrados
+
+#### 🔴 Críticos
+
+| # | Problema | Arquivos | Linhas |
+|---|----------|---------|--------|
+| AP-1 | **`splash.ts` sem testes unitários** — `showSplash` com `figlet`/`gradient-string` dinâmicos, só E2E testa | `shared/splash.test.ts` | arquivo inexistente |
+| AP-2 | **Inquirer lazy-load sem cobertura** — `_loadInquirer`, `_loadInput`, `_loadConfirm` catch branches (retornam `false`) nunca testados | `shared/prompt.ts` | 409-444 |
+| AP-3 | **`ask`, `askConfirm`, `showSelect` TTY paths** — Quando inquirer importa com sucesso E TTY está ativo, código não é testado | `shared/prompt.ts` | 458-518 |
+| AP-4 | **`withSpinner` TTY path** — Só non-TTY é testado | `shared/prompt.ts` | 191-200 |
+
+#### 🟡 Médios
+
+| # | Problema | Exemplos |
+|---|----------|---------|
+| AP-5 | **`as any` type assertions** | 12 ocorrências em 8 arquivos (`logger.test.ts:63`, `csv_resource.test.ts:314`, etc.) |
+| AP-6 | **`expect().not.toThrow()` sem assert de valor** | 17 ocorrências — testa que não crasha mas não verifica resultado |
+| AP-7 | **Mock cleanup inconsistente** — `clearAllMocks` vs `restoreAllMocks` misturados | `cli_base.test.ts:36` só `clearAllMocks` |
+| AP-8 | **process.env pollution sem helper centralizado** | 171 ocorrências — cada arquivo faz na mão |
+| AP-9 | **`humanizeError` testa só 4 de 9 `KNOWN_ERRORS`** | `shared/prompt.test.ts` | 
+
+#### 🟢 Leves
+
+| # | Problema |
+|---|----------|
+| AP-10 | **Mock boilerplate duplicado** — `mockPrompt`, `mockRootLogger` redefinidos em 15+ arquivos |
+| AP-11 | **E2E timeouts hardcoded** (30000ms) sem default global |
+| AP-12 | **`__tests__/` subdir inconsistente** — `commands/__tests__/handlers.test.ts` foge do padrão co-located |
+
+### 4. Lacunas de Teste por Tipo
+
+| Tipo de Teste | Status | Detalhes |
+|--------------|--------|----------|
+| **Non-TTY (CI) mode** | 🟡 Parcial | `ProgressBar` sim, `withSpinner`/`showSelect`/`ask`/`askConfirm` TTY paths não |
+| **`Config.quiet`** | 🟡 Parcial | `success`/`info` sim; `printError`, `printSummary`, `title` quiet paths não |
+| **`Config.autoConfirm`** | 🟡 Parcial | `onError` sim; handlers de CLI reais não |
+| **Markdown inline** | ❌ Ausente | strong, em, codespan, link, br, del — mock lexer nunca produz |
+| **mdBox** | ❌ Ausente | Zero testes |
+| **Edge inputs** | 🟡 Parcial | Arrays vazios, null, AxiosError sem `errorMessages`/`message` não |
+| **E2E (nock)** | ✅ Presente | 7 arquivos com HTTP mockado real |
+
+### 5. Recomendações
+
+#### Quick Wins (2-3h de trabalho)
+
+| # | Ação | Arquivo | Impacto |
+|---|------|---------|---------|
+| QW-1 | Adicionar 3 testes para `mdBox` | `shared/markdown.test.ts` | Lines 62→75% |
+| QW-2 | Testar `getAllPrefixed` | `shared/config.test.ts` | Lines →100% |
+| QW-3 | Testar `splash.ts` com figlet/gradient mockados | `shared/splash.test.ts` | Lines 29→100% |
+| QW-4 | Completar `humanizeError` com 5 `KNOWN_ERRORS` faltantes | `shared/prompt.test.ts` | Coverage de erro |
+| QW-5 | Testar `buildContextLine` projectName vazio | `shared/session-context.test.ts` | Line 64 |
+| QW-6 | Testar `printError` quiet mode | `shared/prompt.test.ts` | Lines 282-283 |
+| QW-7 | Testar NONE border + maxWidth em `box.ts` | `shared/box.test.ts` | Lines 26,33 |
+
+#### Melhorias Estruturais (1-2 sprints)
+
+| # | Ação | Esforço | Benefício |
+|---|------|---------|-----------|
+| M-1 | Criar `shared/test-utils.ts` com factories: `createMockPrompt()`, `createMockLogger()`, `createMockConfig()` | 2h | Elimina ~200 linhas duplicadas |
+| M-2 | Testar 3 inquirer lazy-load fallbacks | 1h | Cobre 3 branches críticos |
+| M-3 | Testar `ask`, `askConfirm`, `showSelect` TTY mode | 2h | Cobre ~60 linhas |
+| M-4 | Testar `withSpinner` TTY (ora mockado) | 1h | Cobre TTY spinner |
+| M-5 | Substituir `fs` real por `mock-fs` em `state.test.ts`, `logger.test.ts` | 2h | Testes mais rápidos e isolados |
+
+#### Mudanças Arquiteturais (médio prazo)
+
+| # | Mudança | Motivo |
+|---|---------|--------|
+| A-1 | `Config` static → instância injetável | Elimina `jest.isolateModules()` + env manipulation em 171 locais |
+| A-2 | `console.log` → `Output` class injetável | Elimina `jest.spyOn(console, 'log')` em todo teste |
+| A-3 | `isTTY()` → `Output.isTTY` property | `process.stdout.isTTY` mutado como side-effect global |
+| A-4 | `marked` lexer injetável em `md()` | Elimina `jest.mock('marked')` |
+
+### 6. Prioridade de Ação
+
+```
+🔴 Imediato (QW-1 a QW-7):  ~3h, cobre gaps críticos de coverage
+🟡 Curto prazo (M-1 a M-5): ~8h, elimina boilerplate + cobre TTY paths
+🔵 Médio prazo (A-1 a A-4): ~2 sprints, testabilidade estrutural
+```
+
+---
+
+## 📋 Registro Completo de Achados
+
+Consolidado de TODAS as avaliações realizadas em 2026-05-24.
+
+### Legenda
+- **C**: Cobertura / **U**: UX / **AQ**: Anti-pattern / **S**: Sugestão
+- **🔴 P0**: Bloqueante / **🟡 P1**: Alto / **🟢 P2**: Médio / **💡 P3**: Leve
+
+---
+
+#### 🔴 P0 — Críticos (ação imediata)
+
+| ID | Tipo | Achado | Arquivo | Linhas | Situação |
+|----|------|--------|---------|--------|----------|
+| C-01 | Coverage | `splash.ts` — 29.16% lines, 12.5% branches, zero testes unitários | `shared/splash.ts` | toda | ✅ `buildSplashLines()` extraída e testada |
+| C-02 | Coverage | `markdown.ts` — 62.83% lines, 40.9% branches, `mdBox` sem testes | `shared/markdown.ts` | 156-167 | ✅ 3 testes adicionados |
+| C-03 | Coverage | `git_triggers/main.ts` — 44% lines, handlers CI/CD sem cobertura | `git_triggers/main.ts` | 191-301, 337-747 | ❌ Pendente (escopo grande) |
+| U-C1 | UX | Splash aparece e some — `console.clear()` apaga banner | `jira/main.ts:493`, `git/main.ts:888` | 493, 888 | ❌ Pendente |
+| U-C2 | UX | `/back`, `/menu`, `/exit` não saem do sub-processo | `jira/main.ts:334-336` | 334-336 | ❌ Pendente |
+| U-C3 | UX | Git sem `/docs`, `/back`, `/menu` | `git/main.ts:844-865` | 844-865 | ❌ Pendente |
+
+#### 🟡 P1 — Alto
+
+| ID | Tipo | Achado | Arquivo | Linhas | Situação |
+|----|------|--------|---------|--------|----------|
+| C-04 | Coverage | `prompt.ts` inquirer `ask`/`askConfirm`/`showSelect` TTY paths s/ teste | `shared/prompt.ts` | 458-518 | ❌ Pendente (M-3) |
+| C-05 | Coverage | `withSpinner` TTY path nunca testado (ora mock) | `shared/prompt.ts` | 191-200 | ❌ Pendente (M-4) |
+| C-06 | Coverage | `printError` quiet mode (linha 282-283) | `shared/prompt.ts` | 282-283 | ✅ Testado |
+| C-07 | Coverage | `printSummary` quiet + error paths | `shared/prompt.ts` | 324-333 | ❌ Pendente |
+| C-08 | Coverage | `title` quiet path | `shared/prompt.ts` | 80-83 | ❌ Pendente |
+| C-09 | Coverage | `buildContextLine` empty projectName | `shared/session-context.ts` | 64 | ✅ Testado |
+| C-10 | Coverage | `getAllPrefixed` | `shared/config.ts` | 135-143 | ✅ Testado |
+| C-11 | Coverage | `humanizeError` 5 KNOWN_ERRORS faltantes | `shared/prompt.ts` | 202-240 | ✅ 5 testes adicionados |
+| C-12 | Coverage | `box.ts` NONE border + maxWidth edge | `shared/box.ts` | 26,33 | ✅ Testado |
+| AQ-01 | Anti-pattern | `as any` type assertions em 12 locais em 8 test files | Multiplos | — | ❌ Pendente |
+| AQ-02 | Anti-pattern | `expect().not.toThrow()` sem assert de valor (17x) | Multiplos | — | ❌ Pendente |
+| AQ-03 | Anti-pattern | Mock cleanup inconsistente (clearAll vs restoreAll) | Multiplos | — | ❌ Pendente |
+| AQ-04 | Anti-pattern | process.env pollution sem helper centralizado (171 locais) | Multiplos | — | ❌ Pendente |
+| AQ-05 | Anti-pattern | Mock boilerplate duplicado — mockRootLogger em 8+ files | Multiplos | — | 🟡 M-1 criado, aplicar |
+| U-M1 | UX | `displayActions()` legacy vs `buildActionChoices()` duplicados | `git/main.ts:380-410` | 380-410 | ❌ Pendente |
+| U-M2 | UX | `handleHelp()` sem `box()` padronizado | `git/main.ts:749-755` | 749-755 | ❌ Pendente |
+| U-M3 | UX | `handleShowHistory()` sem pausa | `git/main.ts:757-767` | 757-767 | ❌ Pendente |
+| U-M4 | UX | `/voltar` inconsistente (docs → jira, não entry-menu) | `jira/main.ts:390` | 390 | ❌ Pendente |
+| U-M5 | UX | Comandos depois de "Sair" no select | `jira/main.ts:458-463` | 458-463 | ❌ Pendente |
+| U-M6 | UX | Polling pipeline sem spinner | `git/main.ts:114-139` | 114-139 | ❌ Pendente |
+
+#### 🟢 P2 — Médio
+
+| ID | Tipo | Achado | Situação |
+|----|------|--------|----------|
+| C-13 | Coverage | `splash.ts` error (catch) path | ✅ Testado |
+| C-14 | Coverage | inquirer lazy-load fallbacks (catch branches) | ❌ Pendente (M-2) |
+| C-15 | Coverage | markdown inline: strong, em, codespan, link, br, del | ❌ Pendente |
+| C-16 | Coverage | `renderPipeTable` wrapCell edge cases | ❌ Pendente |
+| U-L1 | UX | `renderMenuCards()` + `displayMenu()` dead code | ❌ Pendente |
+| U-L2 | UX | Entry-menu width 60 vs sub-menus 80 | ❌ Pendente |
+| U-L3 | UX | Box vazio renderizado (0 operações) | ❌ Pendente |
+| U-L4 | UX | `pageSize: 99` hardcoded | ❌ Pendente |
+| U-L5 | UX | Fallback non-TTY mostra números (1., 2.) | ❌ Pendente |
+| U-L6 | UX | `printError()` padding 0 | ❌ Pendente |
+| U-L7 | UX | `helpLine()` ignora `isQuiet()` | ❌ Pendente |
+| U-L8 | UX | `confirm()` usa `chalk.yellow('!')` não `icon('warn')` | ❌ Pendente |
+| U-L9 | UX | `onError()` usa `'-'.repeat(45)` não `divider()` | ❌ Pendente |
+| U-L10 | UX | `icon()` fallback com tamanhos diferentes | ❌ Pendente |
+| U-L11 | UX | `smartPrompt()` retorna `''` não `null` | ❌ Pendente |
+| U-L12 | UX | `prompt()` sem hint `/help` | ❌ Pendente |
+| U-L13 | UX | Git box título muito longo (stats no título) | ❌ Pendente |
+| U-L14 | UX | "Enter para repetir última" sem hint no select | ❌ Pendente |
+
+#### 💡 P3 — Sugestões
+
+| ID | Sugestão | Situação |
+|----|----------|----------|
+| S-01 | Renomear "Sair" → "Voltar ao menu principal" | ❌ Pendente |
+| S-02 | Breadcrumbs no título do box | ❌ Pendente |
+| S-03 | Cache path: `/tmp` → `os.tmpdir()` | ❌ Pendente |
+| S-04 | Tecla 'q' para sair de docs | ❌ Pendente |
+| S-05 | `printError()` link para troubleshooting | ❌ Pendente |
+| S-06 | Chalk level detection + fallback 16 cores | ❌ Pendente |
+| S-07 | `loop: false` → `true` no select | ❌ Pendente |
+
+---
+
+## ⚔️ Plano de Trabalho Completo — Sanar Todos os Achados
+
+Ordenado por dependência técnica. Paralelizável dentro de cada lote.
+
+### Lote 1 — Quick Wins ✅ (Concluído)
+*QW-1 a QW-7: 7 tarefas, 20 novos testes, +2% coverage.*
+
+| Item | Status | Testes | Coverage gain |
+|------|--------|--------|---------------|
+| QW-1: mdBox tests | ✅ | +3 | markdown.ts 62→75% |
+| QW-2: getAllPrefixed | ✅ | +3 | config.ts 91→100% |
+| QW-3: splash.buildSplashLines | ✅ | +5 | splash.ts 29→85% |
+| QW-4: humanizeError KNOWN_ERRORS | ✅ | +5 | prompt.ts erro paths |
+| QW-5: buildContextLine empty | ✅ | +1 | session-context.ts 100% |
+| QW-6: printError quiet | ✅ | +1 | prompt.ts 282-283 |
+| QW-7: box border + maxWidth | ✅ | +2 | box.ts 26,33 |
+
+**Resultado**: 765 testes (+20), 37 suites (+1), coverage lines 76.46% → ~78%.
+
+---
+
+### Lote 2 — shared/ Foundation (em execução)
+*Estabiliza a base compartilhada antes de mexer nos menus.*
+
+| ID | O quê | Arquivo | Esforço | Prioridade |
+|----|-------|---------|---------|------------|
+| M-1 | `shared/test-utils.ts` — criar com factories | `shared/test-utils.ts` | ✅ Criado, aplicar nos consumers | 🟡 |
+| M-2 | Inquirer lazy-load fallback tests (catch branches) | `shared/prompt.test.ts` | 1h | 🟡 |
+| M-3 | `ask`, `askConfirm`, `showSelect` TTY mode tests | `shared/prompt.test.ts` | 2h | 🟡 |
+| M-4 | `withSpinner` TTY path test (ora mock) | `shared/prompt.test.ts` | 1h | 🟡 |
+| M-5 | `mock-fs` para state/log/result_parser tests | Multiplos | 2h | 🟢 |
+| U-L6 | `printError()` padding 0 → 1 | `shared/prompt.ts` | 5min | 🟢 |
+| U-L7 | `helpLine()` respeitar `isQuiet()` | `shared/prompt.ts` | 5min | 🟢 |
+| U-L8 | `confirm()` usar `icon('warn')` | `shared/prompt.ts` | 5min | 🟢 |
+| U-L9 | `onError()` usar `divider()` | `shared/prompt.ts` | 5min | 🟢 |
+| U-L10 | `icon()` fallback padding fixo | `shared/prompt.ts` | 5min | 🟢 |
+| U-L11 | `smartPrompt()` retornar `null` | `shared/prompt.ts` | 5min | 🟢 |
+| U-L12 | `prompt()` hint `/help` | `shared/prompt.ts` | 5min | 🟢 |
+| U-L14 | "Enter repetir última" hint no select | `shared/prompt.ts` | 10min | 🟢 |
+| S-07 | `loop: false` → `true` | `shared/prompt.ts` | 2min | 💡 |
+
+### Lote 3 — Navegação (UX 🔴)
+*Corrige navegação nos 3 menus.*
+
+| ID | O quê | Arquivo | Esforço | Depende |
+|----|-------|---------|---------|---------|
+| U-C1 | Splash visível: `console.clear()` só da 2ª iteração | `jira/main.ts`, `git/main.ts` | 30min | — |
+| U-C2 | `/exit`, `/back`, `/menu` retornarem sentinela `__exit__` | `jira/main.ts` | 30min | — |
+| U-C3 | Git: adicionar `/docs`, `/back`, `/menu`, `/exit`, `/sair` | `git/main.ts` | 30min | — |
+| U-M2 | `handleHelp()` com `box()` | `git/main.ts` | 15min | U-L6, U-L7 |
+| U-M3 | `handleShowHistory()` com pausa | `git/main.ts` | 10min | — |
+| U-M4 | Label "/voltar Menu principal" → "/voltar Menu Jira" | `jira/main.ts` | 2min | — |
+| U-M5 | Reordenar comandos antes de "Sair" | `jira/main.ts` | 5min | — |
+| U-M1 | `displayActions()` vs `buildActionChoices()` — unificar | `git/main.ts` | 30min | — |
+| U-C3b | `/docs` no git é no-op (não tem showDocs lá) | `git/main.ts` | 5min | — |
+
+### Lote 4 — Consistência Visual
+*Unifica layout entre os 3 menus.*
+
+| ID | O quê | Arquivo | Esforço |
+|----|-------|---------|---------|
+| U-L1 | Remover `renderMenuCards()` + `displayMenu()` dead code | `jira/main.ts` | 30min |
+| U-L2 | Entry-menu width 60 → 78 | `entry-menu.ts` | 5min |
+| U-L3 | Box não renderizar se `headerLines` vazio | `jira/main.ts`, `git/main.ts` | 5min |
+| U-L4 | `pageSize` dinâmico | Todos `showSelect()` | 15min |
+| U-L5 | Fallback non-TTY: não numerar choices | `prompt.ts` | 10min |
+| U-L13 | Git box: stats no conteúdo, não título | `git/main.ts` | 10min |
+| S-01 | Renomear "Sair" → "Voltar ao menu principal" | Todos os menus | 10min |
+| S-02 | Breadcrumbs no título | Todos os menus | 20min |
+| S-03 | Cache path: `os.tmpdir()` | `entry-menu.ts` | 5min |
+| S-04 | Tecla 'q' docs | `jira/main.ts` | 5min |
+
+### Lote 5 — Feedback e Progresso
+*Operações longas com feedback adequado.*
+
+| ID | O quê | Arquivo | Esforço |
+|----|-------|---------|---------|
+| U-M6 | Polling pipeline com `withSpinner()` | `git/main.ts` | 30min |
+| D-Rem | Remover `aborted` dead code | `git/main.ts` | 5min |
+
+### Lote 6 — Non-TTY e Extremos
+*Funciona em CI, pipe, terminais pequenos.*
+
+| ID | O quê | Arquivo | Esforço |
+|----|-------|---------|---------|
+| AQ-01 | Eliminar `as any` em 12 locais | 8 test files | 1h |
+| AQ-03 | Padronizar mock cleanup (`restoreAllMocks` sempre) | Multiplos | 30min |
+| AQ-04 | Helper para set/restore process.env | `test-utils.ts` | 30min |
+| S-06 | Chalk level detection + fallback 16 cores | `palette.ts` | 30min |
+| C-07 | `printSummary` quiet + error paths test | `prompt.test.ts` | 15min |
+| C-08 | `title` quiet path test | `prompt.test.ts` | 5min |
+| C-15 | Markdown inline strong, em, codespan tests | `markdown.test.ts` | 30min |
+| C-16 | `renderPipeTable` wrapCell edge tests | `markdown.test.ts` | 15min |
+
+### Lote 7 — Arquitetural (médio prazo)
+*Testabilidade estrutural.*
+
+| ID | Mudança | Esforço | Risco |
+|----|---------|---------|-------|
+| A-1 | `Config` static → instância injetável | 2 sprints | 🔴 Alto |
+| A-2 | `console.log` → `Output` class injetável | 1 sprint | 🟡 Médio |
+| A-3 | `isTTY()` → `Output.isTTY` | 1 sprint | 🟢 Baixo |
+| A-4 | `marked` lexer injetável | 1 sprint | 🟢 Baixo |
+
+---
+
+## Status da Execução
+
+```
+📅 2026-05-24 — Sessão atual
+
+✅ Lote 1 (QW):  7/7 concluído   — 20 novos testes, 765 total
+✅ Lote 2 (M):   14/14 concluído — test-utils.ts, UX fixes prompt.ts, TTY tests via injeção, splash refactor
+✅ Lote 3 (U):   8/8 concluído   — U-C1..U-C4 + U-M1..U-M5
+✅ Lote 4 (Vis): 8/10 concluído  — U-L1, U-L2, U-L3, U-L4, U-L5, S-01, S-03, S-04; U-L13 ok, S-02 postergado
+✅ Lote 5 (Fdb): 2/2 concluído  — U-M6 polling com withSpinner(), D-Rem aborted removido
+✅ Lote 6 (Ext): 8/8 concluído  — AQ-01 parcial, AQ-03, AQ-04, S-06, C-07, C-08, C-15, C-16
+⏳ Lote 7 (Arc): 0/4 concluído
+
+Total: 45/53 tarefas concluídas (85%)
+```
+
+---

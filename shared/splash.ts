@@ -11,27 +11,31 @@ async function ensureDeps(): Promise<void> {
     if (!_cache.gradient) _cache.gradient = await import('gradient-string');
 }
 
+export function buildSplashLines(logo: string, statePath?: string): string[] {
+    const splash: string[] = [''];
+    const logoLines = logo.split('\n');
+    for (const line of logoLines) {
+        if (line.trim()) splash.push('  ' + palette.muted(line));
+    }
+    splash.push('');
+    splash.push(palette.muted('          Gestão de Testes & Automação de CI/CD'));
+    splash.push('');
+    if (statePath) {
+        splash.push(palette.muted('  State: ' + statePath));
+        splash.push('');
+    }
+    splash.push(palette.blue('  /help  Ajuda · d  Documentação'));
+    splash.push('');
+    return splash;
+}
+
 export async function showSplash(statePath?: string): Promise<void> {
     try {
         await ensureDeps();
         const logo = _cache.figlet.textSync('QA TOOLS', { font: 'ANSI Shadow' }) as string;
         const grad = _cache.gradient.default as (colors: string[]) => { (text: string): string };
         const colored = grad(['#58a6ff', '#bc8cff'])(logo);
-        const logoLines = colored.split('\n');
-
-        const splash: string[] = [''];
-        for (const line of logoLines) {
-            if (line.trim()) splash.push('  ' + palette.muted(line));
-        }
-        splash.push('');
-        splash.push(palette.muted('          Gestão de Testes & Automação de CI/CD'));
-        splash.push('');
-        if (statePath) {
-            splash.push(palette.muted('  State: ' + statePath));
-            splash.push('');
-        }
-        splash.push(palette.blue('  /help  Ajuda · d  Documentação'));
-        splash.push('');
+        const splash = buildSplashLines(colored, statePath);
         console.log(box(splash, { border: 'double', padding: 1 }));
     } catch {
         // non-TTY fallback

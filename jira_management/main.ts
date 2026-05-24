@@ -201,7 +201,7 @@ const MENU_ITEMS: MenuItem[] = [
     { id: '12', label: 'Diagnosticar conexão' },
     { id: '13', label: 'Criar Test Execution para testes existentes' },
     { id: 'd', label: 'Ver documentação' },
-    { id: '0', label: 'Sair' },
+    { id: '0', label: 'Voltar ao menu principal' },
 ];
 
 function _configHint(key: string, ctx: { git_directory: string }): string {
@@ -224,69 +224,11 @@ const SECTION_ICONS: Record<string, string> = {
     UTILITARIOS: '🔧',
 };
 
-function renderMenuCards(proj: string, ctx: { sessionCounters: Array<{ status: string }> }): void {
-    const termCols = process.stdout.columns || 80;
-    const cardWidth = Math.max(termCols - 16, 52);
-
-    let currentSection = '';
-    let sectionLines: string[] = [];
-    const blocks: string[] = [];
-
-    for (const item of MENU_ITEMS) {
-        if (item.section) {
-            if (currentSection && sectionLines.length > 0) {
-                const icon = SECTION_ICONS[currentSection] || '';
-                const title = icon ? icon + '  ' + currentSection : currentSection;
-                const card = box(sectionLines, { title, border: 'round', color: 'blue', padding: 1, width: cardWidth });
-                blocks.push(card);
-            }
-            currentSection = item.section;
-            sectionLines = [];
-        } else if (item.id === '0') {
-            continue;
-        } else {
-            const id = item.id === 'd' ? ' d' : (item.id || '').padStart(2);
-            sectionLines.push(`  ${palette.blue.bold(id)}  ${item.label}`);
-        }
-    }
-
-    if (currentSection && sectionLines.length > 0) {
-        const icon = SECTION_ICONS[currentSection] || '';
-        const title = icon ? icon + '  ' + currentSection : currentSection;
-        const card = box(sectionLines, { title, border: 'round', color: 'blue', padding: 1, width: cardWidth });
-        blocks.push(card);
-    }
-
-    const allLines: string[] = [];
-    const ok = ctx.sessionCounters.filter((c) => c.status === 'ok').length;
-    const err = ctx.sessionCounters.filter((c) => c.status === 'error').length;
-    const total = ctx.sessionCounters.length;
-    if (total > 0) {
-        allLines.push(
-            `   ${palette.muted(total + ' operações')}  ·  ${palette.green('' + ok + ' ✓')}${err > 0 ? '  ' + palette.red('' + err + ' ✗') : ''}`,
-        );
-        allLines.push('');
-    }
-
-    for (let i = 0; i < blocks.length; i++) {
-        if (i > 0) allLines.push('');
-        const cardLines = blocks[i].split('\n');
-        for (const cl of cardLines) {
-            allLines.push(cl);
-        }
-    }
-
-    allLines.push('');
-    allLines.push(palette.muted('  /help  Ajuda  ·  /docs  Documentação  ·  /history  Histórico'));
-
-    console.log(box(allLines, { border: 'double', padding: 1, title: 'QA Tools · ' + proj }));
-}
-
 function displayMenu(
-    proj: string,
-    ctx: { lastOperation: string; sessionCounters: Array<{ status: string }>; git_directory: string },
+    _proj: string,
+    _ctx: { lastOperation: string; sessionCounters: Array<{ status: string }>; git_directory: string },
 ): void {
-    renderMenuCards(proj, ctx);
+    // no-op — menu rendered via getUserChoice
 }
 
 function buildMenuChoices(proj: string, ctx: { git_directory: string }): MenuChoice[] {
@@ -387,10 +329,12 @@ async function showDocs(): Promise<void> {
         }));
         choices.push(
             { type: 'separator' as const, line: '        ' },
-            { name: '      /voltar  Menu principal', value: '0' },
+            { name: '      /voltar  Menu Jira', value: '0' },
         );
 
-        const answer = await showSelect('      Selecione um documento', choices, { pageSize: 99 });
+        const answer = await showSelect('      Selecione um documento', choices, {
+            pageSize: (process.stdout.rows || 24) - 4,
+        });
         if (answer === '0') return;
 
         const chosen = docs.find((d) => d.file === answer);
@@ -404,7 +348,7 @@ async function showDocs(): Promise<void> {
             printError('Erro ao ler ' + chosen.file, e);
         }
         divider();
-        prompt('Pressione Enter para voltar à lista');
+        prompt('Pressione Enter [ou q] para voltar à lista');
     }
 }
 
@@ -455,12 +399,13 @@ async function getUserChoice(proj: string, ctx: SessionContext): Promise<string>
     }
 
     const choices = buildMenuChoices(proj, ctx);
-    choices.push(
+    const cmdGroup = [
         { type: 'separator' as const, line: '        ' },
         { name: '      /help   Ajuda', value: '/help' },
         { name: '      /docs   Documentação', value: '/docs' },
         { name: '      /history  Histórico', value: '/history' },
-    );
+    ];
+    choices.splice(choices.length - 1, 0, ...cmdGroup);
     const menuState = loadState() as StateSchema;
 
     const ok = ctx.sessionCounters.filter((c) => c.status === 'ok').length;
@@ -471,11 +416,13 @@ async function getUserChoice(proj: string, ctx: SessionContext): Promise<string>
             `   ${palette.muted(ctx.sessionCounters.length + ' operações')}  ·  ${palette.green('' + ok + ' ✓')}${err > 0 ? '  ' + palette.red('' + err + ' ✗') : ''}`,
         );
     }
-    console.log(box(headerLines, { border: 'double', padding: 1, title: 'QA Tools · ' + proj, width: 80 }));
+    if (headerLines.length > 0) {
+        console.log(box(headerLines, { border: 'double', padding: 1, title: 'QA Tools · ' + proj, width: 80 }));
+    }
 
     return showSelect('      Selecione uma opção', choices, {
         default: menuState.lastChoice && menuState.lastChoice !== '0' ? menuState.lastChoice : undefined,
-        pageSize: 99,
+        pageSize: (process.stdout.rows || 24) - 4,
     });
 }
 
@@ -489,9 +436,18 @@ async function runMainLoop(
     pushHistory: (op: string, detail: string, status: string) => void,
     printSessionSummary: () => void,
 ): Promise<void> {
+    let firstIteration = true;
     while (true) {
-        console.clear();
+        if (firstIteration) {
+            firstIteration = false;
+        } else {
+            console.clear();
+        }
         let choice = await getUserChoice(ctx.project_name, ctx);
+
+        if (choice === '/exit' || choice === '/sair') {
+            choice = '0';
+        }
 
         if (await handleSpecialInput(choice)) continue;
 

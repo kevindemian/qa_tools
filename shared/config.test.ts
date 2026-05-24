@@ -341,4 +341,43 @@ describe('Config', () => {
             });
         });
     });
+
+    describe('getAllPrefixed', () => {
+        const TEST_VARS = ['QA_TEST_VAR1', 'QA_TEST_VAR2', 'QA_TEST_EMPTY', 'QA_TEST_FULL', 'OTHER_VAR'];
+
+        afterEach(() => {
+            TEST_VARS.forEach((v) => delete process.env[v]);
+        });
+
+        it('returns matching env vars', () => {
+            process.env.QA_TEST_VAR1 = 'value1';
+            process.env.QA_TEST_VAR2 = 'value2';
+            process.env.OTHER_VAR = 'other';
+            jest.isolateModules(() => {
+                const cfg = require('./config');
+                const result = cfg.getAllPrefixed('QA_TEST_');
+                expect(result).toEqual({
+                    QA_TEST_VAR1: 'value1',
+                    QA_TEST_VAR2: 'value2',
+                });
+            });
+        });
+
+        it('filters out empty values', () => {
+            process.env.QA_TEST_EMPTY = '';
+            process.env.QA_TEST_FULL = 'full';
+            jest.isolateModules(() => {
+                const cfg = require('./config');
+                const result = cfg.getAllPrefixed('QA_TEST_');
+                expect(result).toEqual({ QA_TEST_FULL: 'full' });
+            });
+        });
+
+        it('returns empty object when no match', () => {
+            jest.isolateModules(() => {
+                const cfg = require('./config');
+                expect(cfg.getAllPrefixed('NONEXISTENT_')).toEqual({});
+            });
+        });
+    });
 });

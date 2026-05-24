@@ -310,17 +310,14 @@ describe('CsvResource', () => {
         it('throws on CSV parse error', async () => {
             const loggerModule = require('../shared/logger');
             const errorSpy = jest.spyOn(loggerModule.rootLogger, 'error').mockImplementation(() => {});
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any -- save original
-            const original = (csvResource as any).readCsvFromString;
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any -- mock for error test
-            (csvResource as any).readCsvFromString = jest.fn().mockRejectedValue(new Error('CSV parse error'));
+            const orig = csvResource.readCsvFromString;
+            csvResource.readCsvFromString = jest.fn().mockRejectedValue(new Error('CSV parse error')) as never;
             const fs = require('fs');
             const tmp = '/tmp/test-csv-error.csv';
             fs.writeFileSync(tmp, 'Title: TC\nDescription: Test\nAction,Data,Expected\nx,y,z\n', 'utf-8');
             await expect(csvResource.readBulkCsv(tmp)).rejects.toThrow('CSV parse error');
             expect(errorSpy).toHaveBeenCalledWith(expect.stringContaining('Erro ao analisar bloco CSV'));
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any -- restore original
-            (csvResource as any).readCsvFromString = original;
+            csvResource.readCsvFromString = orig;
             errorSpy.mockRestore();
             fs.unlinkSync(tmp);
         });
