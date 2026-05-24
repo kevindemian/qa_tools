@@ -173,6 +173,7 @@ function generateMappingFiles(sourcePath: string, projectName: string, tasksId: 
 }
 
 export = {
+    readCsvTests,
     createTestsFromCsv,
     createTestsFromJson,
     createTestExecution,

@@ -33,7 +33,6 @@ module.exports = tseslint.config(
             'docs/**/*.ts',
             'jira_management/main.ts',
             'git_triggers/main.ts',
-            'shared/entry-menu.ts',
         ],
         rules: {
             'no-console': 'off',
@@ -52,6 +51,13 @@ module.exports = tseslint.config(
             'no-control-regex': 'off',
         },
     },
-    { ignores: ['node_modules/', '**/*.js', 'e2e/'] },
+    {
+        files: ['e2e/**/*.ts'],
+        rules: {
+            'no-console': 'off',
+            '@typescript-eslint/no-require-imports': 'off',
+        },
+    },
+    { ignores: ['node_modules/', '**/*.js'] },
     prettier,
 );

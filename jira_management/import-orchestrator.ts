@@ -245,4 +245,4 @@ async function createTestsFromTestCases({
     });
 }
 
-export { createTestsFromTestCases };
+export { createTestsFromTestCases, prepareTestRun, finalizeTestCreation, postProcessCheckpoint };

@@ -2,6 +2,12 @@ import { rootLogger } from '../shared/logger';
 import { success, info, withSpinner } from '../shared/prompt';
 import type JiraResource from './jira_resource';
 import type JiraLinkManager from './jira_link_manager';
+import {
+    ISSUE_TYPE_NOT_FOUND,
+    CUSTOM_FIELD_NOT_FOUND,
+    FAILED_TO_GET_ISSUE_TYPES,
+    FAILED_TO_GET_CUSTOM_FIELDS,
+} from './constants';
 
 interface TestExecutionResult {
     key: string;
@@ -35,14 +41,10 @@ class TestExecutionCreator {
         const execLog = rootLogger.child({ operation: 'create-testexec' });
         execLog.info('Descobrindo issue type "Test Execution"...');
         const issueTypes = await this.jiraResource.getJiraResource<Array<{ id: string; name: string }>>('issuetype');
-        if (!Array.isArray(issueTypes)) throw new Error('Falha ao obter tipos de issue do Jira');
+        if (!Array.isArray(issueTypes)) throw new Error(FAILED_TO_GET_ISSUE_TYPES);
 
         const execType = issueTypes.find((t) => t.name === 'Test Execution');
-        if (!execType)
-            throw new Error(
-                'Issue type "Test Execution" não encontrado. ' +
-                    'Verifique se o Xray esta instalado e o issue type existe no scheme do projeto.',
-            );
+        if (!execType) throw new Error(ISSUE_TYPE_NOT_FOUND);
         execLog.info('Issue type encontrado: id=' + execType.id);
 
         execLog.info('Descobrindo custom field para tests...');
@@ -50,16 +52,12 @@ class TestExecutionCreator {
             await this.jiraResource.getJiraResource<Array<{ id: string; name: string; schema?: { custom?: string } }>>(
                 'field',
             );
-        if (!Array.isArray(fields)) throw new Error('Falha ao obter campos customizados do Jira');
+        if (!Array.isArray(fields)) throw new Error(FAILED_TO_GET_CUSTOM_FIELDS);
 
         const testField = fields.find(
             (f) => f.schema?.custom === 'com.xpandit.plugins.xray:testexec-tests-custom-field',
         );
-        if (!testField)
-            throw new Error(
-                'Campo "Tests association with a Test Execution" não encontrado. ' +
-                    'Verifique se o Xray esta instalado corretamente.',
-            );
+        if (!testField) throw new Error(CUSTOM_FIELD_NOT_FOUND);
         execLog.info('Custom field encontrado: ' + testField.id + ' (' + testField.name + ')');
 
         const payload: Record<string, unknown> = {

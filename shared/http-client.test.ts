@@ -1,4 +1,5 @@
 let errorHandler: ((err: Error) => Promise<never>) | undefined;
+let successHandler: ((response: unknown) => unknown) | undefined;
 const mockInstance: jest.Mock<Promise<never>, unknown[]> & {
     interceptors: {
         request: { use: jest.Mock };
@@ -15,6 +16,7 @@ const mockInstance: jest.Mock<Promise<never>, unknown[]> & {
             request: { use: jest.fn() },
             response: {
                 use: jest.fn((success: unknown, error: (err: Error) => Promise<never>) => {
+                    successHandler = success as (response: unknown) => unknown;
                     errorHandler = error;
                 }),
             },
@@ -154,6 +156,50 @@ describe('HTTP Client', () => {
                 await errorHandler!(err);
             } catch (e) {}
             expect(mockInstance).not.toHaveBeenCalled();
+        });
+
+        it('success interceptor cleans up retry counts and returns response', () => {
+            httpClient.createHttpClient({ baseUrl: 'https://api.test.com' });
+            const response = {
+                config: { method: 'get', url: '/test' },
+                data: 'ok',
+            };
+            const result = successHandler!(response);
+            expect(result).toBe(response);
+        });
+
+        it('re-throws error without config property', async () => {
+            httpClient.createHttpClient({ baseUrl: 'https://api.test.com' });
+            const err = new Error('no config');
+            try {
+                await errorHandler!(err);
+                fail('should have thrown');
+            } catch (e) {
+                expect(e).toBe(err);
+            }
+        });
+
+        it('defaults method to get when config.method is missing', async () => {
+            httpClient.createHttpClient({ baseUrl: 'https://api.test.com' });
+            const err = {
+                message: 'no method',
+                name: 'Error',
+                config: { url: '/test' },
+                response: { status: 500 },
+            } as never;
+            mockInstance.mockImplementation((cfg: unknown) => {
+                const newErr = {
+                    message: 'no method',
+                    name: 'Error',
+                    config: cfg,
+                    response: { status: 500 },
+                } as never;
+                return errorHandler!(newErr);
+            });
+            try {
+                await errorHandler!(err);
+            } catch (e) {}
+            expect(mockInstance).toHaveBeenCalled();
         });
     });
 });

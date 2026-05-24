@@ -155,8 +155,7 @@ beforeAll(() => {
         if (p.includes('projects.json')) return '{"proj-a":"111","proj-b":"222"}';
 
         return _realReadFileSync(p, 'utf8');
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    }) as any);
+    }) as typeof fs.readFileSync);
     jest.spyOn(fs, 'writeFileSync').mockImplementation(() => {});
     jest.spyOn(fs, 'unlinkSync').mockImplementation(() => {});
 
@@ -401,6 +400,14 @@ describe('handleListSchedules', () => {
 
         expect(prompt.warn).toHaveBeenCalledWith(expect.stringContaining('Nenhum schedule'));
     });
+
+    it('calls printError when getSchedules throws', async () => {
+        mockProvider.getSchedules.mockRejectedValue(new Error('API fail'));
+
+        await mainModule.handleListSchedules(ctx as never, mockProvider as unknown as GitProvider);
+
+        expect(prompt.printError).toHaveBeenCalledWith('Erro ao listar schedules', expect.any(Error));
+    });
 });
 
 // ---------- handleRunSchedule ----------
@@ -590,5 +597,178 @@ describe('printSessionSummary', () => {
     it('calls shared printSessionSummary', () => {
         mainModule.printSessionSummary();
         expect(cliBase.printSessionSummary).toHaveBeenCalled();
+    });
+});
+
+// ---------- displayRecentPipelines ----------
+
+describe('displayRecentPipelines', () => {
+    it('prints pipelines when results exist', async () => {
+        mockProvider.getRecentPipelines.mockResolvedValue([
+            { id: '1', ref: 'main', status: 'success' },
+            { id: '2', ref: 'develop', status: 'failed' },
+        ]);
+
+        await mainModule.displayRecentPipelines(mockProvider as unknown as GitProvider);
+
+        expect(prompt.print).toHaveBeenCalledWith(expect.stringContaining('Últimas pipelines'));
+    });
+
+    it('does not print when pipelines array is empty', async () => {
+        mockProvider.getRecentPipelines.mockResolvedValue([]);
+
+        await mainModule.displayRecentPipelines(mockProvider as unknown as GitProvider);
+
+        expect(prompt.print).not.toHaveBeenCalledWith(expect.stringContaining('Últimas'));
+    });
+
+    it('silently catches getRecentPipelines error', async () => {
+        mockProvider.getRecentPipelines.mockRejectedValue(new Error('API error'));
+
+        await expect(
+            mainModule.displayRecentPipelines(mockProvider as unknown as GitProvider),
+        ).resolves.toBeUndefined();
+    });
+});
+
+// ---------- handleListApprovedMRs - error ----------
+
+describe('handleListApprovedMRs - error', () => {
+    const ctx = { pushHistory: jest.fn(), sessionCounters: [], lastOperation: '' };
+
+    it('calls printError when searchMergeRequests throws', async () => {
+        (prompt.prompt as jest.Mock).mockReturnValueOnce('opened');
+        mockProvider.searchMergeRequests.mockRejectedValue(new Error('API fail'));
+
+        await mainModule.handleListApprovedMRs(ctx as never, mockProvider as unknown as GitProvider);
+
+        expect(prompt.printError).toHaveBeenCalledWith(expect.stringContaining('Erro ao listar'), expect.any(Error));
+    });
+});
+
+// ---------- handleExportVariables - extended ----------
+
+describe('handleExportVariables - extended', () => {
+    const ctx = { pushHistory: jest.fn(), sessionCounters: [], lastOperation: '' };
+
+    it('calls printError when getCICDVariables throws', async () => {
+        (prompt.confirm as jest.Mock).mockReturnValueOnce(true);
+        mockProvider.getCICDVariables.mockRejectedValue(new Error('API fail'));
+
+        await mainModule.handleExportVariables(ctx as never, mockProvider as unknown as GitProvider);
+
+        expect(prompt.printError).toHaveBeenCalledWith('Falha ao buscar variáveis CI/CD', expect.any(Error));
+    });
+
+    it('escapes values containing = sign with double quotes', async () => {
+        (prompt.confirm as jest.Mock).mockReturnValueOnce(true);
+        mockProvider.getCICDVariables.mockResolvedValue([{ key: 'MY_VAR', value: 'foo=bar' }]);
+        const writeSpy = jest.spyOn(fs, 'writeFileSync').mockImplementation(() => {});
+        const unlinkSpy = jest.spyOn(fs, 'unlinkSync').mockImplementation(() => {});
+
+        await mainModule.handleExportVariables(ctx as never, mockProvider as unknown as GitProvider);
+
+        expect(prompt.print).toHaveBeenCalledWith('MY_VAR="foo=bar"');
+        writeSpy.mockRestore();
+        unlinkSpy.mockRestore();
+    });
+});
+
+// ---------- pushHistory - trim ----------
+
+describe('pushHistory - trim', () => {
+    it('trims state history to last 50 entries', () => {
+        mainModule.pushHistory('op', 'd', 'ok');
+        const callback = (state.update as jest.Mock).mock.calls[0][0] as (s: Record<string, unknown>) => void;
+        const testState = { history: Array(51).fill({}) };
+        callback(testState);
+        expect((testState.history as Array<unknown>).length).toBe(50);
+    });
+});
+
+// ---------- handleTriggerPipeline ----------
+
+describe('handleTriggerPipeline', () => {
+    const ctx = { pushHistory: jest.fn(), sessionCounters: [], lastOperation: '' };
+
+    it('warns when branch is not found', async () => {
+        (prompt.prompt as jest.Mock).mockReturnValueOnce('bad-branch');
+        mockProvider.getBranch.mockResolvedValue(null);
+
+        await mainModule.handleTriggerPipeline(ctx as never, mockProvider as unknown as GitProvider, 'proj-b');
+
+        expect(prompt.warn).toHaveBeenCalledWith(expect.stringContaining('não encontrada'));
+    });
+
+    it('triggers pipeline successfully without waiting', async () => {
+        (prompt.prompt as jest.Mock)
+            .mockReturnValueOnce('main') // branch
+            .mockReturnValueOnce(''); // workflow ID (empty = auto-detect, GitHub path)
+        (prompt.confirm as jest.Mock)
+            .mockReturnValueOnce(false) // add variables = no
+            .mockReturnValueOnce(true) // confirm trigger = yes
+            .mockReturnValueOnce(false); // wait for completion = no
+        mockProvider.getBranch.mockResolvedValue({ name: 'main' });
+        mockProvider.triggerPipeline.mockResolvedValue({ web_url: 'https://gitlab/pipe/1' });
+
+        await mainModule.handleTriggerPipeline(ctx as never, mockProvider as unknown as GitProvider, 'proj-b');
+
+        expect(mockProvider.triggerPipeline).toHaveBeenCalledWith(
+            expect.objectContaining({ ref: 'main', variables: [] }),
+        );
+        expect(prompt.success).toHaveBeenCalledWith(expect.stringContaining('https://gitlab/pipe/1'));
+    });
+
+    it('handles triggerPipeline error', async () => {
+        (prompt.prompt as jest.Mock)
+            .mockReturnValueOnce('main') // branch
+            .mockReturnValueOnce(''); // workflow ID (empty = auto-detect, GitHub path)
+        (prompt.confirm as jest.Mock)
+            .mockReturnValueOnce(false) // add variables = no
+            .mockReturnValueOnce(true); // confirm trigger = yes
+        mockProvider.getBranch.mockResolvedValue({ name: 'main' });
+        mockProvider.triggerPipeline.mockRejectedValue(new Error('Trigger fail'));
+
+        await mainModule.handleTriggerPipeline(ctx as never, mockProvider as unknown as GitProvider, 'proj-b');
+
+        expect(prompt.printError).toHaveBeenCalledWith('Falha ao disparar pipeline', expect.any(Error));
+    });
+
+    it('triggers with custom variables', async () => {
+        (prompt.prompt as jest.Mock)
+            .mockReturnValueOnce('main') // branch
+            .mockReturnValueOnce('') // workflow ID (empty = auto-detect, GitHub path)
+            .mockReturnValueOnce('VAR1=val1,VAR2=val2'); // variables
+        (prompt.confirm as jest.Mock)
+            .mockReturnValueOnce(true) // add variables = yes
+            .mockReturnValueOnce(true) // confirm trigger = yes
+            .mockReturnValueOnce(false); // wait = no
+        mockProvider.getBranch.mockResolvedValue({ name: 'main' });
+        mockProvider.triggerPipeline.mockResolvedValue({ web_url: 'https://gitlab/pipe/2' });
+
+        await mainModule.handleTriggerPipeline(ctx as never, mockProvider as unknown as GitProvider, 'proj-b');
+
+        expect(mockProvider.triggerPipeline).toHaveBeenCalledWith(
+            expect.objectContaining({
+                ref: 'main',
+                variables: [
+                    { key: 'VAR1', value: 'val1' },
+                    { key: 'VAR2', value: 'val2' },
+                ],
+            }),
+        );
+    });
+
+    it('resumes pending pipeline', async () => {
+        (state.load as jest.Mock).mockReturnValueOnce({
+            pendingPipeline: { branch: 'feature-x', pipelineId: '123', projectName: 'proj-b' },
+        });
+        (prompt.confirm as jest.Mock).mockReturnValueOnce(true); // confirm resume
+        mockProvider.getPipeline.mockResolvedValue({ status: 'success', web_url: 'https://pipe/1' });
+        mockProvider.getRecentPipelines.mockResolvedValue([]);
+
+        await mainModule.handleTriggerPipeline(ctx as never, mockProvider as unknown as GitProvider, 'proj-b');
+
+        expect(mockProvider.getPipeline).toHaveBeenCalledWith('123');
     });
 });

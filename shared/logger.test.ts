@@ -318,6 +318,16 @@ describe('Logger', () => {
             expect(result.password).toBe('supe****');
             expect(result.authorization).toBe('Bear****');
         });
+
+        it('maskValue with non-string value does not mask', () => {
+            const result = maskDeep({ secret: 123 }) as Record<string, unknown>;
+            expect(result.secret).toBe(123);
+        });
+
+        it('maskValue with short string (≤8 chars) returns ****', () => {
+            const result = maskDeep({ secret: 'ab' }) as Record<string, string>;
+            expect(result.secret).toBe('****');
+        });
     });
 
     describe('_writeConsole error with data', () => {
@@ -337,6 +347,15 @@ describe('Logger', () => {
             const text = spyError.mock.calls[0][0] as string;
             expect(text.length).toBeLessThan(400);
             spyError.mockRestore();
+        });
+
+        it('_writeConsole with unknown level uses default prefix "?" and default console.log', () => {
+            const spyLog = jest.spyOn(console, 'log').mockImplementation(() => {});
+            const logger = new Logger();
+            logger._writeConsole('TRACE', 'fallback test');
+            expect(spyLog).toHaveBeenCalledWith(expect.stringContaining('?'));
+            expect(spyLog).toHaveBeenCalledWith(expect.stringContaining('fallback test'));
+            spyLog.mockRestore();
         });
     });
 

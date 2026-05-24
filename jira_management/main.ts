@@ -7,8 +7,8 @@ import JiraLinkManager from './jira_link_manager';
 import CsvResource from './csv_resource';
 import PackageVersionManager from './package_version_manager';
 import { showSplash } from '../shared/splash';
-import { box } from '../shared/box';
 import { palette } from '../shared/palette';
+import { defaultOutput } from '../shared/output';
 import { warn, info, helpLine, title, divider, prompt, printError, showSelect, tableView } from '../shared/prompt';
 import {
     mask,
@@ -225,13 +225,6 @@ const SECTION_ICONS: Record<string, string> = {
     UTILITARIOS: '🔧',
 };
 
-function displayMenu(
-    _proj: string,
-    _ctx: { lastOperation: string; sessionCounters: Array<{ status: string }>; git_directory: string },
-): void {
-    // no-op — menu rendered via getUserChoice
-}
-
 function buildMenuChoices(proj: string, ctx: { git_directory: string }): MenuChoice[] {
     const choices: MenuChoice[] = [];
     for (const item of MENU_ITEMS) {
@@ -325,7 +318,7 @@ async function showDocs(): Promise<void> {
 
     while (true) {
         console.clear();
-        console.log(box([], { border: 'double', padding: 1, title: 'QA Tools · Jira > Documentação', width: 80 }));
+        defaultOutput.box([], { border: 'double', padding: 1, title: 'QA Tools · Jira > Documentação', width: 80 });
 
         const choices: MenuChoice[] = docs.map((d) => ({
             name: '      ' + d.label,
@@ -347,7 +340,7 @@ async function showDocs(): Promise<void> {
         const filePath = path.join(docsDir, chosen.file);
         try {
             const content = fs.readFileSync(filePath, 'utf8');
-            console.log(mdBox(content, { title: chosen.label, border: 'round' }));
+            defaultOutput.print(mdBox(content, { title: chosen.label, border: 'round' }));
         } catch (e: unknown) {
             printError('Erro ao ler ' + chosen.file, e);
         }
@@ -422,7 +415,7 @@ async function getUserChoice(proj: string, ctx: SessionContext): Promise<string>
         );
     }
     if (headerLines.length > 0) {
-        console.log(box(headerLines, { border: 'double', padding: 1, title: 'QA Tools · ' + proj, width: 80 }));
+        defaultOutput.box(headerLines, { border: 'double', padding: 1, title: 'QA Tools · ' + proj, width: 80 });
     }
 
     return showSelect('      Selecione uma opção', choices, {
@@ -561,6 +554,5 @@ module.exports = {
     resolveAlias,
     buildMenuChoices,
     handleSpecialInput,
-    displayMenu,
     _configHint,
 };

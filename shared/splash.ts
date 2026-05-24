@@ -1,10 +1,20 @@
-import { box } from './box';
 import { palette } from './palette';
+import { defaultOutput } from './output';
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any -- figlet is ESM-only
 type DepCache = { figlet?: any; gradient?: any };
 
 const _cache: DepCache = {};
+
+export function __setFigletDep(mod: unknown): void {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    _cache.figlet = mod as any;
+}
+
+export function __setGradientDep(mod: unknown): void {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    _cache.gradient = mod as any;
+}
 
 async function ensureDeps(): Promise<void> {
     if (!_cache.figlet) _cache.figlet = await import('figlet');
@@ -36,7 +46,7 @@ export async function showSplash(statePath?: string): Promise<void> {
         const grad = _cache.gradient.default as (colors: string[]) => { (text: string): string };
         const colored = grad(['#58a6ff', '#bc8cff'])(logo);
         const splash = buildSplashLines(colored, statePath);
-        console.log(box(splash, { border: 'double', padding: 1 }));
+        defaultOutput.box(splash, { border: 'double', padding: 1 });
     } catch {
         // non-TTY fallback
     }

@@ -94,6 +94,37 @@ describe('nivelarBranches', () => {
         expect(jest.mocked(prompt.warn)).toHaveBeenCalledWith(expect.stringContaining('inexistente'));
     });
 
+    it('warn quando branches são iguais', async () => {
+        (prompt.prompt as jest.Mock).mockReturnValueOnce('main').mockReturnValueOnce('main').mockReturnValueOnce('dev');
+
+        await nivelarBranches(mockGitlab as unknown as GitProvider, { pushHistory });
+
+        expect(jest.mocked(prompt.warn)).toHaveBeenCalledWith('Branches devem ser diferentes entre si.');
+        expect(mockGitlab.createMergeRequest).not.toHaveBeenCalled();
+    });
+
+    it('warn quando branches são vazios', async () => {
+        (prompt.prompt as jest.Mock).mockReturnValueOnce('').mockReturnValueOnce('rel_cand').mockReturnValueOnce('dev');
+
+        await nivelarBranches(mockGitlab as unknown as GitProvider, { pushHistory });
+
+        expect(jest.mocked(prompt.warn)).toHaveBeenCalledWith('Todas as branches devem ser preenchidas.');
+        expect(mockGitlab.createMergeRequest).not.toHaveBeenCalled();
+    });
+
+    it('warn quando todas as branches são inexistentes', async () => {
+        (prompt.prompt as jest.Mock)
+            .mockReturnValueOnce('main')
+            .mockReturnValueOnce('rel_cand')
+            .mockReturnValueOnce('dev');
+        mockGitlab.getBranch.mockResolvedValue(null);
+
+        await nivelarBranches(mockGitlab as unknown as GitProvider, { pushHistory });
+
+        expect(mockGitlab.createMergeRequest).not.toHaveBeenCalled();
+        expect(jest.mocked(prompt.warn)).toHaveBeenCalledWith('Branch(es) não encontrada(s): main, rel_cand, dev');
+    });
+
     it('passa parametros corretos para createMergeRequest', async () => {
         (prompt.prompt as jest.Mock)
             .mockReturnValueOnce('feature-x')

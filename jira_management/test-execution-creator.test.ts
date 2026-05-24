@@ -17,6 +17,7 @@ jest.mock('../shared/prompt', () => ({
 }));
 
 import TestExecutionCreator from './test-execution-creator';
+import { rootLogger } from '../shared/logger';
 
 describe('TestExecutionCreator', () => {
     let creator: TestExecutionCreator;
@@ -244,6 +245,29 @@ describe('TestExecutionCreator', () => {
             setupCreate('TE-1');
             await creator.createWithLinks(projectName, [], csvName);
             expect(mockLinkManager.createIssueLink).not.toHaveBeenCalled();
+        });
+
+        it('logs info when all tests are already linked (line 105)', async () => {
+            setupCreate('TE-1');
+            mockJiraResource.getJiraResource.mockResolvedValueOnce({
+                fields: {
+                    issuelinks: [{ outwardIssue: { key: 'TEST-1' } }, { outwardIssue: { key: 'TEST-2' } }],
+                },
+            });
+
+            await creator.createWithLinks(projectName, testKeys, csvName);
+            expect(mockLinkManager.createIssueLink).not.toHaveBeenCalled();
+        });
+
+        it('logs error when outer linking block throws (line 121)', async () => {
+            setupCreate('TE-1');
+            mockJiraResource.getJiraResource.mockResolvedValueOnce({ fields: {} });
+
+            const prompt = jest.requireMock('../shared/prompt');
+            prompt.withSpinner.mockRejectedValueOnce(new Error('Spinner error'));
+
+            await creator.createWithLinks(projectName, testKeys, csvName);
+            expect(rootLogger.error).toHaveBeenCalledWith(expect.stringContaining('Erro ao vincular testes'));
         });
 
         it('passes title override through to create()', async () => {

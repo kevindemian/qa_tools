@@ -110,7 +110,6 @@ function buildContext() {
     };
 }
 
-// eslint-disable-next-line @typescript-eslint/no-require-imports -- lazy require to ensure jest.mock hoisting
 const getPrompt = () =>
     require('../shared/prompt') as { prompt: jest.Mock; confirm: jest.Mock; smartPrompt: jest.Mock };
 

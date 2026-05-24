@@ -48,6 +48,18 @@ describe('GitHubManager', () => {
             const m = new GitHubManager('a/b', 'tok', 'https://ghe.test.com/');
             expect(m.apiUrl).toBe('https://ghe.test.com');
         });
+
+        it('throws when apiToken is empty string', () => {
+            expect(() => new GitHubManager('myorg/myrepo', '')).toThrow('apiToken é obrigatório');
+        });
+
+        it('throws when repoFullName has no "/"', () => {
+            expect(() => new GitHubManager('invalidrepo', 'ghp_test')).toThrow('repoFullName deve estar no formato');
+        });
+
+        it('throws when repoFullName is empty string', () => {
+            expect(() => new GitHubManager('', 'ghp_test')).toThrow('repoFullName deve estar no formato');
+        });
     });
 
     describe('triggerPipeline', () => {
@@ -475,8 +487,9 @@ describe('GitHubManager', () => {
                 responseType: 'arraybuffer',
                 maxRedirects: 5,
             });
-            expect(Buffer.isBuffer(result.buffer)).toBe(true);
-            expect(result.filename).toBe('artifact.zip');
+            expect(result).not.toBeNull();
+            expect(Buffer.isBuffer(result!.buffer)).toBe(true);
+            expect(result!.filename).toBe('artifact.zip');
         });
 
         it('throws on API error (mutation)', async () => {
@@ -592,6 +605,26 @@ describe('GitHubManager', () => {
             mockClient.get.mockRejectedValue(new Error('API error'));
             const result = await manager.getRecentPipelines();
             expect(result).toEqual([]);
+        });
+    });
+
+    describe('getBranch', () => {
+        it('returns { name } for valid branch', async () => {
+            mockClient.get.mockResolvedValue({ data: { name: 'main' } });
+            const result = await manager.getBranch('main');
+            expect(result).toEqual({ name: 'main' });
+        });
+
+        it('returns null on API error', async () => {
+            mockClient.get.mockRejectedValue(new Error('API error'));
+            const result = await manager.getBranch('main');
+            expect(result).toBeNull();
+        });
+
+        it('returns null when data.name is missing', async () => {
+            mockClient.get.mockResolvedValue({ data: {} });
+            const result = await manager.getBranch('main');
+            expect(result).toBeNull();
         });
     });
 

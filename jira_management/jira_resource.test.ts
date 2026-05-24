@@ -256,6 +256,13 @@ describe('getTransitionsForIssue', () => {
         const result = await jiraResource.getTransitionsForIssue('TEST-1');
         expect(result).toEqual({ approve: '31', done: '41' });
     });
+
+    it('returns empty object on API error (catch block)', async () => {
+        mockClient.get.mockRejectedValue(new Error('API error'));
+
+        const result = await jiraResource.getTransitionsForIssue('TEST-1');
+        expect(result).toEqual({});
+    });
 });
 
 // =====================================================================
@@ -416,6 +423,14 @@ describe('createVersion', () => {
 
         await expect(jiraResource.createVersion('TEST', 'v1.0')).rejects.toThrow('API error');
     });
+
+    it('handles null response from postJiraResource', async () => {
+        jest.spyOn(jiraResource, 'getVersionId').mockResolvedValueOnce(null);
+        mockClient.post.mockResolvedValue({ data: null });
+
+        const result = await jiraResource.createVersion('TEST', 'v1.0');
+        expect(result).toBeNull();
+    });
 });
 
 // =====================================================================
@@ -466,6 +481,11 @@ describe('checkReleaseTasksStatus', () => {
         jest.spyOn(jiraResource, 'getProjectId').mockRejectedValueOnce(new Error('Project error'));
 
         const result = await jiraResource.checkReleaseTasksStatus('TEST', 'v1.0');
+        expect(result).toBe(false);
+    });
+
+    it('returns false when versionName is empty (sanitizeJqlValue throws)', async () => {
+        const result = await jiraResource.checkReleaseTasksStatus('TEST', '');
         expect(result).toBe(false);
     });
 });
@@ -522,6 +542,11 @@ describe('getReleaseTasks', () => {
         jest.spyOn(jiraResource, 'getProjectId').mockRejectedValueOnce(new Error('Project error'));
 
         const result = await jiraResource.getReleaseTasks('TEST', 'v1.0');
+        expect(result).toEqual([]);
+    });
+
+    it('returns empty array when versionName is empty (sanitizeJqlValue throws)', async () => {
+        const result = await jiraResource.getReleaseTasks('TEST', '');
         expect(result).toEqual([]);
     });
 });
@@ -795,6 +820,17 @@ describe('moveCardsToDone', () => {
                 data: { fields: { status: { name: 'Unknown Status' } } },
             })
             .mockResolvedValueOnce({ data: {} });
+
+        await jiraResource.moveCardsToDone(['TASK-1']);
+        expect(transitionSpy).not.toHaveBeenCalled();
+    });
+
+    it('warns when status not in workflowMap even when transitions exist', async () => {
+        mockClient.get
+            .mockResolvedValueOnce({ data: { fields: { status: { name: 'Unknown Status' } } } })
+            .mockResolvedValueOnce({
+                data: { transitions: [{ id: '31', to: { name: 'approve' } }] },
+            });
 
         await jiraResource.moveCardsToDone(['TASK-1']);
         expect(transitionSpy).not.toHaveBeenCalled();

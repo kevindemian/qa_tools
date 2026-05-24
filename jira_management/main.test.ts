@@ -99,10 +99,6 @@ interface MainModule {
     resolveAlias(choice: string): string;
     buildMenuChoices(proj: string, ctx: { git_directory: string }): MenuChoice[];
     handleSpecialInput(input: string): Promise<boolean>;
-    displayMenu(
-        proj: string,
-        ctx: { lastOperation: string; sessionCounters: Array<{ status: string }>; git_directory: string },
-    ): void;
     _configHint(key: string, ctx: { git_directory: string }): string;
 }
 
@@ -300,20 +296,6 @@ describe('_configHint', () => {
 
     it('returns empty string for unknown key', () => {
         expect(mod._configHint('unknown', ctx)).toBe('');
-    });
-});
-
-describe('displayMenu', () => {
-    const ctx = {
-        lastOperation: 'last-op',
-        sessionCounters: [{ status: 'ok' }, { status: 'ok' }, { status: 'error' }],
-        git_directory: '/tmp',
-    };
-
-    it('is a no-op — prints nothing, calls nothing', () => {
-        mod.displayMenu('ECSPOL', ctx);
-        expect(print).not.toHaveBeenCalled();
-        expect(divider).not.toHaveBeenCalled();
     });
 });
 

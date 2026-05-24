@@ -4,6 +4,7 @@ import os from 'os';
 import { matchResultsToTests, createTestExecutionFromResults } from './result_reporter';
 import JiraResource from './jira_resource';
 import JiraLinkManager from './jira_link_manager';
+import { rootLogger } from '../shared/logger';
 
 jest.mock('axios', () => {
     const mockInstance = {
@@ -117,6 +118,16 @@ describe('matchResultsToTests', () => {
         expect(result.matched).toHaveLength(1);
         expect(result.matched[0].key).toBe('TEST-1');
     });
+
+    it('returns empty result and warns when tests array is empty', () => {
+        const emptyMappingPath = tmpDir + '/empty_mapping.json';
+        fs.writeFileSync(emptyMappingPath, JSON.stringify({ tests: [] }), 'utf8');
+
+        const result = matchResultsToTests([], emptyMappingPath);
+        expect(result.stats.total).toBe(0);
+        expect(result.matched).toEqual([]);
+        expect(rootLogger.warn).toHaveBeenCalledWith('Mapping JSON vazio');
+    });
 });
 
 describe('createTestExecutionFromResults', () => {
@@ -201,5 +212,21 @@ describe('createTestExecutionFromResults', () => {
         const linkCalls = linkJiraRes.postJiraResource.mock.calls.filter((c: any) => c[0] === 'issueLink');
         expect(linkCalls).toHaveLength(1);
         expect(linkCalls[0][1].outwardIssue.key).toBe('TEST-1');
+    });
+
+    it('logs warning when createIssueLink throws, but execution is still created', async () => {
+        jiraResource.getJiraResource.mockImplementation((url: string) => {
+            if (url === 'issuetype') return Promise.resolve(MOCK_ISSUE_TYPES);
+            if (url === 'field') return Promise.resolve(MOCK_FIELDS);
+            return Promise.resolve({});
+        });
+        jiraResource.postJiraResource.mockResolvedValue({ key: 'EXEC-3' });
+        linkJiraRes.postJiraResource.mockRejectedValue(new Error('Link error'));
+
+        const matched = [{ key: 'TEST-1', title: 'TC01', status: 'passed' as const, duration: 300 }];
+
+        const result = await createTestExecutionFromResults(jiraResource, linkManager, 'PROJ', matched, 'test-csv');
+        expect(result.key).toBe('EXEC-3');
+        expect(rootLogger.warn).toHaveBeenCalledWith(expect.stringContaining('Falha ao linkar'));
     });
 });
