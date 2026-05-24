@@ -792,7 +792,13 @@ async function _promptChoice(stateHint: string): Promise<string> {
     nonTtyLines.push('  /help   Ajuda');
     nonTtyLines.push('  /exit   Voltar ao menu principal');
     nonTtyLines.push('');
-    console.log(box(nonTtyLines, { border: 'double', padding: 1, title: providerLabel().toUpperCase() + ' TOOLS' }));
+    console.log(
+        box(nonTtyLines, {
+            border: 'double',
+            padding: 1,
+            title: 'QA Tools · ' + providerLabel().toUpperCase() + ' TOOLS',
+        }),
+    );
     const choice = prompt('Escolha uma opção', { hint: stateHint });
     const resolved =
         !choice.trim() && (loadState().lastChoice as string) && (loadState().lastChoice as string) !== '0'
@@ -837,6 +843,7 @@ async function _dispatchAction(
         return false;
     }
     if (cmd === '/docs' || cmd === '/d') {
+        warn('Documentação disponível apenas no módulo Jira.');
         return false;
     }
     if (cmd === '/back' || cmd === '/menu') {
