@@ -9,7 +9,18 @@ import PackageVersionManager from './package_version_manager';
 import { showSplash } from '../shared/splash';
 import { palette } from '../shared/palette';
 import { defaultOutput } from '../shared/output';
-import { warn, info, helpLine, title, divider, prompt, printError, showSelect, tableView } from '../shared/prompt';
+import {
+    warn,
+    info,
+    helpLine,
+    title,
+    divider,
+    prompt,
+    printError,
+    showSelect,
+    tableView,
+    CancelError,
+} from '../shared/prompt';
 import {
     mask,
     createValidateEnv,
@@ -157,6 +168,10 @@ const ALIASES: Record<string, string> = {
     voltar: 'menu',
     ajuda: '/help',
     help: '/help',
+    t: '1',
+    r: '2',
+    c: '9',
+    u: '11',
 };
 
 function resolveAlias(choice: string): string {
@@ -264,7 +279,7 @@ async function handleSpecialInput(input: string): Promise<boolean | '__exit__'> 
         return true;
     }
     if (cmd === '/home') {
-        await showSplash(getStatePath());
+        await showSplash(getStatePath(), base_url, personal_token);
         return true;
     }
     if (cmd === '/back' || cmd === '/menu') {
@@ -274,7 +289,7 @@ async function handleSpecialInput(input: string): Promise<boolean | '__exit__'> 
         return true;
     }
     if (cmd === '/docs' || cmd === '/d') {
-        await showDocs();
+        showDocs();
         return true;
     }
     if (cmd === '/history') {
@@ -292,7 +307,7 @@ async function handleSpecialInput(input: string): Promise<boolean | '__exit__'> 
     return false;
 }
 
-async function showDocs(): Promise<void> {
+function showDocs(): void {
     const docsDir = path.join(__dirname, '../docs');
     let files: string[];
     try {
@@ -329,7 +344,7 @@ async function showDocs(): Promise<void> {
             { name: '      /voltar  Menu Jira', value: '0' },
         );
 
-        const answer = await showSelect('      Selecione um documento', choices, {
+        const answer = showSelect('      Selecione um documento', choices, {
             pageSize: (process.stdout.rows || 24) - 4,
         });
         if (answer === '0') return;
@@ -391,7 +406,7 @@ function initializeSession() {
     };
 }
 
-async function getUserChoice(proj: string, ctx: SessionContext): Promise<string> {
+function getUserChoice(proj: string, ctx: SessionContext): string {
     if (Config.autoChoice) {
         return Config.autoChoice;
     }
@@ -434,14 +449,9 @@ async function runMainLoop(
     pushHistory: (op: string, detail: string, status: string) => void,
     printSessionSummary: () => void,
 ): Promise<void> {
-    let firstIteration = true;
     while (true) {
-        if (firstIteration) {
-            firstIteration = false;
-        } else {
-            console.clear();
-        }
-        let choice = await getUserChoice(ctx.project_name, ctx);
+        console.clear();
+        let choice = getUserChoice(ctx.project_name, ctx);
 
         if (choice === '/exit' || choice === '/sair') {
             choice = '0';
@@ -459,7 +469,7 @@ async function runMainLoop(
         });
 
         if (choice === 'd' || choice === 'docs') {
-            await showDocs();
+            showDocs();
             continue;
         }
 
@@ -477,8 +487,13 @@ async function runMainLoop(
                 base_url,
                 sessionLog,
             };
-            const shouldContinue = await cmdHandler(cmdCtx);
-            if (shouldContinue) continue;
+            try {
+                const shouldContinue = await cmdHandler(cmdCtx);
+                if (shouldContinue) continue;
+            } catch (e) {
+                if (e instanceof CancelError) continue;
+                throw e;
+            }
         } else if (choice !== '0') {
             warn('Opção inválida. Escolha entre 0-16, alias ou digite /help.');
         }

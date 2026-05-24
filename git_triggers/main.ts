@@ -17,6 +17,7 @@ import {
     printError,
     withSpinner,
     showSelect,
+    CancelError,
 } from '../shared/prompt';
 import { load as loadState, update as updateState } from '../shared/state';
 import { createValidateEnv, setupSigint, printSessionSummary as sharedPrintSessionSummary } from '../shared/cli_base';
@@ -622,7 +623,7 @@ function _selectProject(): { projectName: string; names: string[] } {
     return { projectName, names };
 }
 
-async function _promptChoice(stateHint: string): Promise<string> {
+function _promptChoice(stateHint: string): string {
     if (process.stdout.isTTY && !Config.quiet) {
         const ctx = buildContextLine();
         const ok = sessionContext.sessionCounters.filter((c) => c.status === 'ok').length;
@@ -736,19 +737,19 @@ async function main() {
             ? 'Enter = ' + (loadState().lastChoice as string)
             : '0-9';
 
-    let firstIteration = true;
     while (true) {
-        if (firstIteration) {
-            firstIteration = false;
-        } else {
-            console.clear();
-        }
-        const finalChoice = await _promptChoice(stateHint);
+        console.clear();
+        const finalChoice = _promptChoice(stateHint);
         updateState((s) => {
             s.lastChoice = finalChoice;
         });
-        const shouldExit = await _dispatchAction(finalChoice, m, projectName, names);
-        if (shouldExit) return;
+        try {
+            const shouldExit = await _dispatchAction(finalChoice, m, projectName, names);
+            if (shouldExit) return;
+        } catch (e) {
+            if (e instanceof CancelError) continue;
+            throw e;
+        }
     }
 }
 

@@ -164,6 +164,29 @@ describe('Prompt', () => {
         });
     });
 
+    describe('badge', () => {
+        it('returns formatted ok badge', () => {
+            const result = prompt.badge(5, 'passed', 'ok');
+            expect(result).toContain('●');
+            expect(result).toContain('5');
+            expect(result).toContain('passed');
+        });
+
+        it('returns formatted error badge', () => {
+            const result = prompt.badge(1, 'failed', 'error');
+            expect(result).toContain('●');
+            expect(result).toContain('1');
+            expect(result).toContain('failed');
+        });
+
+        it('returns formatted info badge with open circle', () => {
+            const result = prompt.badge(2, 'skipped', 'info');
+            expect(result).toContain('○');
+            expect(result).toContain('2');
+            expect(result).toContain('skipped');
+        });
+    });
+
     describe('printSummary', () => {
         beforeEach(() => {
             prompt.__setConfig(Config.create({}));
@@ -175,12 +198,31 @@ describe('Prompt', () => {
             expect(mockLog).toHaveBeenCalledWith(expect.stringContaining('TUDO CERTO!'));
         });
 
+        it('shows pass rate percentage', () => {
+            prompt.printSummary([{ status: 'ok', label: 't1', message: '' }]);
+            expect(mockLog).toHaveBeenCalledWith(expect.stringContaining('100% pass rate'));
+        });
+
+        it('shows Test Execution link when provided', () => {
+            prompt.printSummary([{ status: 'ok', label: 't1', message: '' }], 'TEST-130');
+            expect(mockLog).toHaveBeenCalledWith(expect.stringContaining('Test Execution'));
+            expect(mockLog).toHaveBeenCalledWith(expect.stringContaining('TEST-130'));
+        });
+
         it('shows partial when some fail', () => {
             prompt.printSummary([
                 { status: 'ok', label: 't1', message: '' },
                 { status: 'error', label: 't2', message: 'Falhou' },
             ]);
             expect(mockLog).toHaveBeenCalledWith(expect.stringContaining('Falhou'));
+        });
+
+        it('shows correct pass rate when some fail', () => {
+            prompt.printSummary([
+                { status: 'ok', label: 't1', message: '' },
+                { status: 'error', label: 't2', message: 'Falhou' },
+            ]);
+            expect(mockLog).toHaveBeenCalledWith(expect.stringContaining('50% pass rate'));
         });
 
         it('shows log path when filePath is set and some fail', () => {
@@ -395,17 +437,6 @@ describe('Prompt', () => {
         });
     });
 
-    function injectSelectMock(): { default: jest.Mock; Separator: new (line: string) => { line: string } } {
-        const mock = {
-            default: jest.fn().mockResolvedValue('selected-value'),
-            Separator: class {
-                constructor(public line: string) {}
-            },
-        };
-        promptModule.__setInquirerMod(mock);
-        return mock;
-    }
-
     function injectInputMock(): { default: jest.Mock } {
         const mock = { default: jest.fn().mockResolvedValue('input-value') };
         promptModule.__setInputMod(mock);
@@ -418,8 +449,8 @@ describe('Prompt', () => {
         return mock;
     }
 
-    function injectOraMock(): { start: jest.Mock; stop: jest.Mock } {
-        const inst = { start: jest.fn().mockReturnThis(), stop: jest.fn() };
+    function injectOraMock(): { start: jest.Mock; stop: jest.Mock; succeed: jest.Mock; fail: jest.Mock } {
+        const inst = { start: jest.fn().mockReturnThis(), stop: jest.fn(), succeed: jest.fn(), fail: jest.fn() };
         const ctr = jest.fn(() => inst);
         promptModule.__setOraDep(ctr);
         return inst;
@@ -427,24 +458,18 @@ describe('Prompt', () => {
 
     describe('showSelect', () => {
         let readlineSync: typeof import('readline-sync');
-        let mockSelect: ReturnType<typeof injectSelectMock>;
 
         beforeAll(() => {
             readlineSync = require('readline-sync');
         });
 
-        beforeEach(() => {
-            mockSelect = injectSelectMock();
-        });
-
         afterEach(() => {
             jest.restoreAllMocks();
-            promptModule.__setInquirerMod(null);
         });
 
-        it('uses fallback when not TTY', async () => {
+        it('selects by number', () => {
             const spy = jest.spyOn(readlineSync, 'question').mockReturnValue('2');
-            const result = await prompt.showSelect('Test', [
+            const result = prompt.showSelect('Test', [
                 { name: '1', value: '1' },
                 { name: '2', value: '2' },
                 { name: '3', value: '3' },
@@ -453,9 +478,9 @@ describe('Prompt', () => {
             expect(spy).toHaveBeenCalled();
         });
 
-        it('handles separator in fallback', async () => {
+        it('handles separator', () => {
             const spy = jest.spyOn(readlineSync, 'question').mockReturnValue('2');
-            const result = await prompt.showSelect('With sep', [
+            const result = prompt.showSelect('With sep', [
                 { name: '1', value: '1' },
                 { type: 'separator', line: '---' },
                 { name: '2', value: '2' },
@@ -464,99 +489,43 @@ describe('Prompt', () => {
             expect(spy).toHaveBeenCalled();
         });
 
-        it('returns "0" for empty input in fallback', async () => {
+        it('returns "0" for empty input', () => {
             jest.spyOn(readlineSync, 'question').mockReturnValue('');
-            const result = await prompt.showSelect('Test', [
+            const result = prompt.showSelect('Test', [
                 { name: '1', value: '1' },
                 { name: '2', value: '2' },
             ]);
             expect(result).toBe('0');
         });
 
-        it('returns selected value for numeric input in fallback', async () => {
+        it('returns selected value for numeric input', () => {
             jest.spyOn(readlineSync, 'question').mockReturnValue('1');
-            const result = await prompt.showSelect('Test', [
+            const result = prompt.showSelect('Test', [
                 { name: 'One', value: '1v' },
                 { name: 'Two', value: '2v' },
             ]);
             expect(result).toBe('1v');
         });
 
-        it('returns value from name when value is missing', async () => {
+        it('returns value from name when value is missing', () => {
             jest.spyOn(readlineSync, 'question').mockReturnValue('1');
-            const result = await prompt.showSelect('Test', [{ name: 'Alpha' }, { name: 'Beta' }]);
+            const result = prompt.showSelect('Test', [{ name: 'Alpha' }, { name: 'Beta' }]);
             expect(result).toBe('Alpha');
         });
 
-        it('returns "0" for zero input in fallback', async () => {
+        it('returns "0" for zero input', () => {
             jest.spyOn(readlineSync, 'question').mockReturnValue('0');
-            const result = await prompt.showSelect('Test', [
+            const result = prompt.showSelect('Test', [
                 { name: '1', value: '1' },
                 { name: '2', value: '2' },
             ]);
             expect(result).toBe('0');
         });
 
-        it('loops on invalid number in fallback', async () => {
-            const spy = jest.spyOn(readlineSync, 'question').mockReturnValueOnce('999').mockReturnValueOnce('1');
-            const result = await prompt.showSelect('Test', [{ name: 'A', value: 'a' }]);
-            expect(result).toBe('a');
-            expect(spy).toHaveBeenCalledTimes(2);
-            expect(mockLog).toHaveBeenCalledWith(expect.stringContaining('Opção inválida'));
-        });
-
-        it('uses inquirer when TTY mode', async () => {
-            process.stdout.isTTY = true;
-            const result = await prompt.showSelect('Pick', [
-                { name: 'A', value: 'a' },
-                { name: 'B', value: 'b' },
-            ]);
-            expect(result).toBe('selected-value');
-            expect(mockSelect.default).toHaveBeenCalledWith(expect.objectContaining({ message: 'Pick' }));
-        });
-
-        it('handles separator choices in inquirer mode', async () => {
-            process.stdout.isTTY = true;
-            await prompt.showSelect('Test', [
-                { name: 'A', value: 'a' },
-                { type: 'separator', line: '---' },
-                { name: 'B', value: 'b' },
-            ]);
-            expect(mockSelect.default).toHaveBeenCalled();
-        });
-
-        it('returns "0" on ExitPromptError in inquirer mode', async () => {
-            process.stdout.isTTY = true;
-            mockSelect.default.mockRejectedValueOnce({ name: 'ExitPromptError', message: 'cancel' });
-            const result = await prompt.showSelect('Test', [{ name: 'A', value: 'a' }]);
-            expect(result).toBe('0');
-        });
-
-        it('re-throws non-ExitPromptError in inquirer mode', async () => {
-            process.stdout.isTTY = true;
-            mockSelect.default.mockRejectedValueOnce(new Error('unexpected error'));
-            await expect(prompt.showSelect('Test', [{ name: 'A', value: 'a' }])).rejects.toThrow('unexpected error');
-        });
-
-        it('passes renderSelected style in theme', async () => {
-            process.stdout.isTTY = true;
-            await prompt.showSelect('Pick', [{ name: 'A', value: 'a' }]);
-            const callArgs = mockSelect.default.mock.calls[0][0];
-            const renderSelected = callArgs.theme.style.renderSelected;
-            const result = renderSelected('Item A');
-            expect(result).toContain('❯');
-            expect(result).toContain('Item A');
-        });
-
-        it('attempts import when _inquirerMod is null with TTY', async () => {
-            prompt.__setInquirerMod(null);
-            process.stdout.isTTY = true;
-            jest.spyOn(readlineSync, 'question').mockReturnValue('2');
-            const result = await prompt.showSelect('Test', [
-                { name: '1', value: '1' },
-                { name: '2', value: '2' },
-            ]);
-            expect(result).toBe('2');
+        it('returns raw value for non-numeric input', () => {
+            const spy = jest.spyOn(readlineSync, 'question').mockReturnValue('criar');
+            const result = prompt.showSelect('Test', [{ name: '1', value: '1' }]);
+            expect(result).toBe('criar');
         });
     });
 
@@ -635,22 +604,19 @@ describe('Prompt', () => {
             expect(result == null).toBe(true);
         });
 
-        it('returns /back navigation command immediately', () => {
+        it('throws CancelError for /back navigation command', () => {
             jest.spyOn(readlineSync, 'question').mockReturnValue('/back');
-            const result = prompt.smartPrompt('Enter');
-            expect(result).toBe('/back');
+            expect(() => prompt.smartPrompt('Enter')).toThrow(prompt.CancelError);
         });
 
-        it('returns /exit navigation command immediately', () => {
+        it('throws CancelError for /exit navigation command', () => {
             jest.spyOn(readlineSync, 'question').mockReturnValue('/exit');
-            const result = prompt.smartPrompt('Enter');
-            expect(result).toBe('/exit');
+            expect(() => prompt.smartPrompt('Enter')).toThrow(prompt.CancelError);
         });
 
-        it('returns /menu navigation command immediately', () => {
+        it('throws CancelError for /menu navigation command', () => {
             jest.spyOn(readlineSync, 'question').mockReturnValue('/menu');
-            const result = prompt.smartPrompt('Enter');
-            expect(result).toBe('/menu');
+            expect(() => prompt.smartPrompt('Enter')).toThrow(prompt.CancelError);
         });
 
         it('allows unlimited /help and returns on valid input', () => {
@@ -812,6 +778,12 @@ describe('Prompt', () => {
             expect(mockLog).toHaveBeenCalledWith(expect.stringContaining('Rate limit'));
         });
 
+        it('shows hint for known error', () => {
+            const testErr = { response: { data: { errorMessages: ['rate limit exceeded'] } } };
+            prompt.printError('Contexto', testErr);
+            expect(mockLog).toHaveBeenCalledWith(expect.stringContaining('Aguarde'));
+        });
+
         it('calls error with unknown fallback when error has no message', () => {
             const testErr = { response: { data: {} } };
             prompt.printError('Contexto', testErr);
@@ -851,6 +823,38 @@ describe('Prompt', () => {
 
         it('returns undefined on empty data', () => {
             expect(prompt.tableView([])).toBeUndefined();
+        });
+
+        it('uses custom border chars in table output', () => {
+            prompt.tableView([{ x: 1, y: 2 }]);
+            const output = mockLog.mock.calls.map((c) => c[0]).join(' ');
+            expect(output).toContain('┌');
+            expect(output).toContain('┐');
+            expect(output).toContain('└');
+            expect(output).toContain('┘');
+            expect(output).toContain('├');
+            expect(output).toContain('┤');
+            expect(output).toContain('┼');
+        });
+
+        it('colors status column cells by keyword', () => {
+            prompt.tableView(
+                [
+                    { name: 't1', result: 'pass' },
+                    { name: 't2', result: 'fail' },
+                    { name: 't3', result: 'skip' },
+                ],
+                ['name', 'result'],
+                'result',
+            );
+            const output = mockLog.mock.calls.map((c) => c[0]).join(' ');
+            expect(output).toContain('pass');
+            expect(output).toContain('fail');
+            expect(output).toContain('skip');
+        });
+
+        it('handles null data gracefully', () => {
+            expect(prompt.tableView(null)).toBeUndefined();
         });
     });
 
