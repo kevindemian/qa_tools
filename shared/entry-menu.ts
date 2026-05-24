@@ -14,6 +14,8 @@ interface Tool {
 
 const SCRIPT_DIR = dirname(__dirname);
 const CACHE_FILE = join(tmpdir(), 'qa_tools_last_choice.txt');
+const MSG_EXEC_ERROR = '  Erro ao executar. Pressione Enter para continuar.';
+const MSG_NO_TOOL = 'Nenhuma ferramenta encontrada.';
 
 function discoverTools(): Tool[] {
     const exclude = new Set(['node_modules', 'config', 'shared', '.git', '.github', 'e2e']);
@@ -58,7 +60,7 @@ function runTool(tool: Tool, args: string[]): void {
     });
     if (result.status !== 0) {
         print('');
-        print('  Erro ao executar. Pressione Enter para continuar.');
+        print(MSG_EXEC_ERROR);
         spawnSync('bash', ['-c', 'read -r'], { stdio: 'inherit' });
     }
 }
@@ -99,7 +101,7 @@ async function main(): Promise<void> {
     const tools = discoverTools();
 
     if (tools.length === 0) {
-        error('Nenhuma ferramenta encontrada.');
+        error(MSG_NO_TOOL);
         process.exit(1);
     }
 

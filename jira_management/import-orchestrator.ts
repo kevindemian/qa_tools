@@ -8,6 +8,7 @@ import { rootLogger } from '../shared/logger';
 import { update as updateState } from '../shared/state';
 import { showPreview, filterTests, confirmOrCancel, validateImportBatch, handleDryRun } from './import-prep';
 import { executeTestCreationLoop, updateFinalState } from './import-loop';
+import { OPERATION_CANCELLED } from './constants';
 
 interface CreateTestsFromTestCasesParams {
     tests: TestCase[];
@@ -70,7 +71,7 @@ function prepareTestRun(
     if (filtered === null) return;
 
     if (!confirmOrCancel()) {
-        warn('Operação cancelada.');
+        warn(OPERATION_CANCELLED);
         return;
     }
 

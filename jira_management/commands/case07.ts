@@ -1,15 +1,16 @@
 import { warn, confirm, smartPrompt, printSummary } from '../../shared/prompt';
 import type { CommandContext } from './context';
+import { NO_TASKS_FOUND_FOR_VERSION, OPERATION_CANCELLED } from '../constants';
 
 async function handler(c: CommandContext): Promise<boolean | void> {
     const version = smartPrompt('Versão a fechar', {}, () => {});
     if (!confirm('Fechar todas as tarefas da versão ' + version + '? Esta operação não pode ser desfeita.')) {
-        warn('Operação cancelada.');
+        warn(OPERATION_CANCELLED);
         return true;
     }
     const tasks = await c.jiraResource.getReleaseTasks(c.ctx.project_name, version);
     if (!Array.isArray(tasks) || tasks.length === 0) {
-        warn('Nenhuma tarefa encontrada para esta versão.');
+        warn(NO_TASKS_FOUND_FOR_VERSION);
         return true;
     }
     const taskIds: string[] = tasks

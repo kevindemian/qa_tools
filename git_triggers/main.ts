@@ -43,6 +43,9 @@ const gitlabBaseUrl: string = Config.gitBaseUrl || '';
 let currentProvider: 'gitlab' | 'github' = 'gitlab';
 let isBusy = false;
 
+const MSG_OPERATION_CANCELED = 'Operação cancelada.';
+const MSG_NO_OPERATION_RECORDED = 'Nenhuma operação registrada.';
+
 const sessionLog = rootLogger.child({ session: 'gitlab' });
 const sessionContext = new SessionContext();
 
@@ -539,7 +542,7 @@ async function handleMergeMR(ctx: SessionContext, m: GitProvider) {
 
 async function handleExportVariables(ctx: SessionContext, m: GitProvider) {
     if (!confirm('Exportar TODAS as variáveis CI/CD (incluindo secrets)?', false)) {
-        warn('Operação cancelada.');
+        warn(MSG_OPERATION_CANCELED);
         return;
     }
     try {
@@ -663,7 +666,7 @@ async function handleTriggerPipeline(ctx: SessionContext, m: GitProvider, projec
     print('  Branch: ' + currentBranch);
     print('  Variáveis: ' + payload.variables.length);
     if (!confirm('Confirmar disparo de pipeline?')) {
-        warn('Operação cancelada.');
+        warn(MSG_OPERATION_CANCELED);
         return;
     }
 
@@ -729,7 +732,7 @@ function handleShowHistory() {
     title('Histórico de operações');
     const last10 = history.slice(-10);
     if (last10.length === 0) {
-        warn('Nenhuma operação registrada.');
+        warn(MSG_NO_OPERATION_RECORDED);
     } else {
         tableView(last10, ['ts', 'op', 'detail', 'status']);
     }

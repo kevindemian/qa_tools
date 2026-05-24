@@ -12,8 +12,6 @@ const { createTestsFromCsv } = createTests;
 
 const tmpHome = fs.mkdtempSync(path.join(os.tmpdir(), 'qa-e2e-err-'));
 
-jest.setTimeout(30000);
-
 const BASE = 'http://localhost:1999/jira/rest/api/2';
 const XRAY = 'http://localhost:1999/xray';
 

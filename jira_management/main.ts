@@ -23,6 +23,7 @@ import { mdBox } from '../shared/markdown';
 import type { Logger } from '../shared/logger';
 import type { StateSchema } from '../shared/types';
 import type { CommandContext } from './commands/context';
+import { NOT_CONFIGURED } from './constants';
 
 // eslint-disable-next-line @typescript-eslint/no-require-imports
 const { getHandler } = require('./commands') as {
@@ -207,11 +208,11 @@ const MENU_ITEMS: MenuItem[] = [
 function _configHint(key: string, ctx: { git_directory: string }): string {
     if (key === 'gitDir') return '(atual: ' + ctx.git_directory + ')';
     if (key === 'cypressDir') {
-        const d = Config.cypressProjectPath || (loadState() as StateSchema).lastCypressPath || 'não configurado';
+        const d = Config.cypressProjectPath || (loadState() as StateSchema).lastCypressPath || NOT_CONFIGURED;
         return '(atual: ' + d + ')';
     }
     if (key === 'jsonDir') {
-        const d = (loadState() as StateSchema).lastJsonDir || 'não configurado';
+        const d = (loadState() as StateSchema).lastJsonDir || NOT_CONFIGURED;
         return '(atual: ' + d + ')';
     }
     return '';
@@ -246,9 +247,9 @@ function buildMenuChoices(proj: string, ctx: { git_directory: string }): MenuCho
             if (item.configKey === 'gitDir') entry.description = ctx.git_directory;
             else if (item.configKey === 'cypressDir')
                 entry.description =
-                    Config.cypressProjectPath || (loadState() as StateSchema).lastCypressPath || 'não configurado';
+                    Config.cypressProjectPath || (loadState() as StateSchema).lastCypressPath || NOT_CONFIGURED;
             else if (item.configKey === 'jsonDir')
-                entry.description = (loadState() as StateSchema).lastJsonDir || 'não configurado';
+                entry.description = (loadState() as StateSchema).lastJsonDir || NOT_CONFIGURED;
             else if (item.id === '9') entry.description = proj;
             choices.push(entry);
         }
@@ -256,7 +257,7 @@ function buildMenuChoices(proj: string, ctx: { git_directory: string }): MenuCho
     return choices;
 }
 
-async function handleSpecialInput(input: string): Promise<boolean> {
+async function handleSpecialInput(input: string): Promise<boolean | '__exit__'> {
     const cmd = input.trim().toLowerCase();
     if (cmd.startsWith('/help') || cmd === '/h' || cmd.startsWith('/h ')) {
         const parts = cmd.split(/\s+/);
@@ -273,7 +274,10 @@ async function handleSpecialInput(input: string): Promise<boolean> {
         await showSplash(getStatePath());
         return true;
     }
-    if (cmd === '/back' || cmd === '/menu' || cmd === '/exit') {
+    if (cmd === '/back' || cmd === '/menu') {
+        return '__exit__';
+    }
+    if (cmd === '/exit') {
         return true;
     }
     if (cmd === '/docs' || cmd === '/d') {
@@ -348,7 +352,8 @@ async function showDocs(): Promise<void> {
             printError('Erro ao ler ' + chosen.file, e);
         }
         divider();
-        prompt('Pressione Enter [ou q] para voltar à lista');
+        const input = prompt('Pressione Enter [ou q] para voltar à lista');
+        if (input.trim().toLowerCase() === 'q') break;
     }
 }
 
@@ -449,7 +454,7 @@ async function runMainLoop(
             choice = '0';
         }
 
-        if (await handleSpecialInput(choice)) continue;
+        if ((await handleSpecialInput(choice)) === '__exit__') return;
 
         const resolved = resolveAlias(choice);
         if (resolved !== choice && !isNaN(Number(resolved))) {

@@ -44,26 +44,24 @@ describe('CypressResource', () => {
                     { status: 'failed', test_run_count: 10 },
                 ],
             });
-            await expect(
-                cypress.fetchReport({
-                    cypressUrl: 'http://cypress',
-                    cypressToken: 'tok',
-                    startDate: '2024-01-01',
-                    projects: ['PROJ'],
-                }),
-            ).resolves.not.toThrow();
+            const reportResult = await cypress.fetchReport({
+                cypressUrl: 'http://cypress',
+                cypressToken: 'tok',
+                startDate: '2024-01-01',
+                projects: ['PROJ'],
+            });
+            expect(reportResult).toBeUndefined();
         });
 
         it('handles invalid response (non-array)', async () => {
             mockClient.get.mockResolvedValue({ data: { error: 'bad' } });
-            await expect(
-                cypress.fetchReport({
-                    cypressUrl: 'http://cypress',
-                    cypressToken: 'tok',
-                    startDate: '2024-01-01',
-                    projects: ['PROJ'],
-                }),
-            ).resolves.not.toThrow();
+            const invalidResult = await cypress.fetchReport({
+                cypressUrl: 'http://cypress',
+                cypressToken: 'tok',
+                startDate: '2024-01-01',
+                projects: ['PROJ'],
+            });
+            expect(invalidResult).toBeUndefined();
         });
     });
 });

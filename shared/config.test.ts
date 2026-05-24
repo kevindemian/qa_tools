@@ -64,6 +64,7 @@ describe('Config', () => {
             jest.isolateModules(() => {
                 expect(() => require('./config')).not.toThrow();
             });
+            expect(Config).toBeDefined();
         });
     });
 
@@ -263,8 +264,11 @@ describe('Config', () => {
     describe('load', () => {
         it('is a static method that can be called multiple times without error', () => {
             expect(() => Config.load()).not.toThrow();
+            expect(Config.load()).toBeUndefined();
             expect(() => Config.load()).not.toThrow();
+            expect(Config.load()).toBeUndefined();
             expect(() => Config.load()).not.toThrow();
+            expect(Config.load()).toBeUndefined();
         });
     });
 

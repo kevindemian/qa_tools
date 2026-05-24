@@ -59,8 +59,7 @@ describe('Logger', () => {
             process.env.LOG_DIR = testDir;
 
             const logger = new Logger({ test: 'write' });
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any -- dynamic method dispatch by level string
-            (logger as any)[level](msg, data);
+            (logger as unknown as Record<string, jest.Mock>)[level](msg, data);
 
             const date = new Date().toISOString().split('T')[0];
             const logFile = path.join(testDir, `qa-tools-${date}.log`);

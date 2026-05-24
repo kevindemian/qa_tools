@@ -363,6 +363,8 @@ describe('generateMappingFiles', () => {
         delete process.env.CYPRESS_PROJECT_PATH;
         // eslint-disable-next-line @typescript-eslint/no-explicit-any -- partial empty test case
         expect(() => generateMappingFiles(nextBase() + '.csv', 'PROJ', ['TEST-1'], [{} as any])).not.toThrow();
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any -- partial empty test case
+        expect(generateMappingFiles(nextBase() + '.csv', 'PROJ', ['TEST-1'], [{} as any])).toBeUndefined();
         process.env.CYPRESS_PROJECT_PATH = tmpDir;
     });
 
@@ -371,6 +373,7 @@ describe('generateMappingFiles', () => {
         jest.spyOn(console, 'log').mockImplementation(capture);
         generateMappingFiles(nextBase() + '.csv', 'PROJ', [], []);
         expect(capture).not.toHaveBeenCalled();
+        jest.clearAllMocks();
         jest.restoreAllMocks();
     });
 
@@ -458,8 +461,8 @@ describe('createTestsFromJson', () => {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any -- test helper; returns partially mocked instance with extra postLink property
     function makeLinkManager(): any {
         // eslint-disable-next-line @typescript-eslint/no-explicit-any -- partial mock for JiraResource
-        const lm: any = new JiraLinkManager({ get: jest.fn(), post: jest.fn() } as any);
-        lm.postLink = jest.fn();
+        const lm: unknown = new JiraLinkManager({ get: jest.fn(), post: jest.fn() } as any);
+        (lm as { postLink: jest.Mock }).postLink = jest.fn();
         return lm;
     }
 
@@ -484,6 +487,7 @@ describe('createTestsFromJson', () => {
         delete process.env.DRY_RUN;
         delete process.env.JSON_LABELS;
         jest.clearAllMocks();
+        jest.restoreAllMocks();
     });
 
     it('cancela com caminho vazio', async () => {

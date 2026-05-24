@@ -1,5 +1,9 @@
+import { createMockRootLogger } from './test-utils';
+
+const mockRootLogger = createMockRootLogger();
+
 jest.mock('./logger', () => ({
-    rootLogger: { warn: jest.fn(), error: jest.fn(), info: jest.fn(), writeFileOnly: jest.fn() },
+    rootLogger: mockRootLogger,
     Logger: function () {},
 }));
 

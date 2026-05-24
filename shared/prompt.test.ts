@@ -1,11 +1,6 @@
-const mockRootLogger = {
-    info: jest.fn(),
-    error: jest.fn(),
-    warn: jest.fn(),
-    debug: jest.fn(),
-    writeFileOnly: jest.fn(),
-    filePath: undefined as string | undefined,
-};
+import { createMockRootLogger } from './test-utils';
+
+const mockRootLogger = createMockRootLogger();
 
 jest.mock('./logger', () => ({
     rootLogger: mockRootLogger,
@@ -237,6 +232,7 @@ describe('Prompt', () => {
         it('stop does not throw', () => {
             const bar = new prompt.ProgressBar(10, { width: 5 });
             expect(() => bar.stop()).not.toThrow();
+            expect(bar.current).toBe(0);
         });
     });
 
@@ -768,6 +764,7 @@ describe('Prompt', () => {
 
         it('does not throw on empty data', () => {
             expect(() => prompt.tableView([])).not.toThrow();
+            expect(prompt.tableView([])).toBeUndefined();
         });
     });
 

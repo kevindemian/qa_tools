@@ -10,6 +10,7 @@ import {
     printSummary,
 } from '../../shared/prompt';
 import type { CommandContext } from './context';
+import { OPERATION_CANCELLED, ERR_ADD_TASKS_TO_SPRINT } from '../constants';
 
 async function handler(c: CommandContext): Promise<boolean | void> {
     const useInMemory = confirm('Usar tarefas criadas anteriormente?', true);
@@ -38,7 +39,7 @@ async function handler(c: CommandContext): Promise<boolean | void> {
     print('  Tarefas (' + taskIds.length + '):');
     taskIds.forEach((id) => print('    - ' + id));
     if (!confirm('Confirmar atribuicao de fixVersion?')) {
-        warn('Operação cancelada.');
+        warn(OPERATION_CANCELLED);
         return true;
     }
 
@@ -71,7 +72,7 @@ async function handler(c: CommandContext): Promise<boolean | void> {
                 await c.jiraResource.postJiraResource('sprint/' + sprintId + '/issue', { issues: taskIds });
                 success('Tarefas adicionadas a sprint ' + sprintId);
             } catch (err: unknown) {
-                printError('Erro ao adicionar tarefas a sprint', err);
+                printError(ERR_ADD_TASKS_TO_SPRINT, err);
             }
         }
     }
