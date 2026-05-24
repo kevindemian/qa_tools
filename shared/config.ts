@@ -23,104 +23,154 @@ function envVal(key: string, fallback = ''): string {
     return process.env[key] || fallback;
 }
 
+interface ConfigOverrides {
+    jiraBaseUrl?: string;
+    jiraPersonalToken?: string;
+    xrayBaseUrl?: string;
+    jiraProject?: string;
+    gitToken?: string;
+    gitBaseUrl?: string;
+    githubToken?: string;
+    githubApiUrl?: string;
+    cypressProjectPath?: string;
+    csvDefaultPath?: string;
+    autoChoice?: string;
+    autoConfirm?: string | boolean;
+    dryRun?: string | boolean;
+    debug?: string | boolean;
+    quiet?: string | boolean;
+    onError?: string;
+    csvPath?: string;
+    csvLabels?: string;
+    jsonPath?: string;
+    jsonLabels?: string;
+    logLevel?: string;
+    logFile?: string | boolean;
+    logDir?: string;
+    logMaxSize?: string | number;
+    xdgStateHome?: string;
+}
+
+function toBool(val: string | boolean | undefined): boolean {
+    if (val === undefined) return false;
+    if (typeof val === 'boolean') return val;
+    return val === 'true';
+}
+
+function toInt(val: string | number | undefined, fallback: number): number {
+    if (val === undefined) return fallback;
+    if (typeof val === 'number') return val;
+    const n = parseInt(val, 10);
+    return isNaN(n) ? fallback : n;
+}
+
 class Config {
-    static create(): Config {
-        return new Config();
+    private static defaultInstance: Config = new Config();
+
+    private readonly overrides: ConfigOverrides;
+
+    constructor(overrides: ConfigOverrides = {}) {
+        this.overrides = overrides;
     }
 
-    // ── Instance API ─────────────────────────────────────────────────────────
-
-    // ── Static API (delegates to default instance) ────────────────────────────
-
-    static get jiraBaseUrl(): string {
-        return envVal('JIRA_BASE_URL');
-    }
-    static get jiraPersonalToken(): string {
-        return envVal('JIRA_PERSONAL_TOKEN');
-    }
-    static get xrayBaseUrl(): string {
-        return envVal('XRAY_BASE_URL');
-    }
-    static get jiraProject(): string {
-        return envVal('JIRA_PROJECT', 'ECSPOL');
+    static create(overrides?: ConfigOverrides): Config {
+        return new Config(overrides);
     }
 
-    static get gitToken(): string {
-        return envVal('GIT_TOKEN');
-    }
-    static get gitBaseUrl(): string {
-        return envVal('GIT_BASE_URL');
-    }
-    static get githubToken(): string {
-        return envVal('GITHUB_TOKEN');
-    }
-    static get githubApiUrl(): string {
-        return envVal('GITHUB_API_URL', 'https://api.github.com');
+    static reset(): void {
+        Config.defaultInstance = new Config();
     }
 
-    static get cypressProjectPath(): string {
-        return envVal('CYPRESS_PROJECT_PATH');
+    // ── Instance getters ───────────────────────────────────────────────────
+
+    get jiraBaseUrl(): string {
+        return this.overrides.jiraBaseUrl ?? envVal('JIRA_BASE_URL');
     }
-    static get csvDefaultPath(): string {
-        return envVal('CSV_DEFAULT_PATH');
+    get jiraPersonalToken(): string {
+        return this.overrides.jiraPersonalToken ?? envVal('JIRA_PERSONAL_TOKEN');
+    }
+    get xrayBaseUrl(): string {
+        return this.overrides.xrayBaseUrl ?? envVal('XRAY_BASE_URL');
+    }
+    get jiraProject(): string {
+        return this.overrides.jiraProject ?? envVal('JIRA_PROJECT', 'ECSPOL');
     }
 
-    static get autoChoice(): string {
-        return envVal('AUTO_CHOICE');
+    get gitToken(): string {
+        return this.overrides.gitToken ?? envVal('GIT_TOKEN');
     }
-    static get autoConfirm(): boolean {
-        return envVal('AUTO_CONFIRM') === 'true';
+    get gitBaseUrl(): string {
+        return this.overrides.gitBaseUrl ?? envVal('GIT_BASE_URL');
     }
-    static get dryRun(): boolean {
-        return envVal('DRY_RUN') === 'true';
+    get githubToken(): string {
+        return this.overrides.githubToken ?? envVal('GITHUB_TOKEN');
     }
-    static get debug(): boolean {
-        return envVal('DEBUG') === 'true';
-    }
-    static get quiet(): boolean {
-        return envVal('QUIET') === 'true';
-    }
-    static get onError(): string {
-        return envVal('ON_ERROR', 'abort');
+    get githubApiUrl(): string {
+        return this.overrides.githubApiUrl ?? envVal('GITHUB_API_URL', 'https://api.github.com');
     }
 
-    static get csvPath(): string {
-        return envVal('CSV_PATH');
+    get cypressProjectPath(): string {
+        return this.overrides.cypressProjectPath ?? envVal('CYPRESS_PROJECT_PATH');
     }
-    static get csvLabels(): string {
-        return envVal('CSV_LABELS');
-    }
-    static get jsonPath(): string {
-        return envVal('JSON_PATH');
-    }
-    static get jsonLabels(): string {
-        return envVal('JSON_LABELS');
+    get csvDefaultPath(): string {
+        return this.overrides.csvDefaultPath ?? envVal('CSV_DEFAULT_PATH');
     }
 
-    static get logLevel(): string {
-        return envVal('LOG_LEVEL', 'INFO');
+    get autoChoice(): string {
+        return this.overrides.autoChoice ?? envVal('AUTO_CHOICE');
     }
-    static get logFile(): boolean {
-        return envVal('LOG_FILE') === 'true';
+    get autoConfirm(): boolean {
+        return toBool(this.overrides.autoConfirm ?? envVal('AUTO_CONFIRM'));
     }
-    static get logDir(): string {
-        return envVal('LOG_DIR', 'logs');
+    get dryRun(): boolean {
+        return toBool(this.overrides.dryRun ?? envVal('DRY_RUN'));
     }
-    static get logMaxSize(): number {
-        const n = parseInt(envVal('LOG_MAX_SIZE'), 10);
-        return isNaN(n) ? 5 * 1024 * 1024 : n;
+    get debug(): boolean {
+        return toBool(this.overrides.debug ?? envVal('DEBUG'));
+    }
+    get quiet(): boolean {
+        return toBool(this.overrides.quiet ?? envVal('QUIET'));
+    }
+    get onError(): string {
+        return this.overrides.onError ?? envVal('ON_ERROR', 'abort');
     }
 
-    static get xdgStateHome(): string {
-        return envVal('XDG_STATE_HOME');
+    get csvPath(): string {
+        return this.overrides.csvPath ?? envVal('CSV_PATH');
+    }
+    get csvLabels(): string {
+        return this.overrides.csvLabels ?? envVal('CSV_LABELS');
+    }
+    get jsonPath(): string {
+        return this.overrides.jsonPath ?? envVal('JSON_PATH');
+    }
+    get jsonLabels(): string {
+        return this.overrides.jsonLabels ?? envVal('JSON_LABELS');
     }
 
-    static get(key: string): string | undefined {
+    get logLevel(): string {
+        return this.overrides.logLevel ?? envVal('LOG_LEVEL', 'INFO');
+    }
+    get logFile(): boolean {
+        return toBool(this.overrides.logFile ?? envVal('LOG_FILE'));
+    }
+    get logDir(): string {
+        return this.overrides.logDir ?? envVal('LOG_DIR', 'logs');
+    }
+    get logMaxSize(): number {
+        return toInt(this.overrides.logMaxSize ?? envVal('LOG_MAX_SIZE'), 5 * 1024 * 1024);
+    }
+
+    get xdgStateHome(): string {
+        return this.overrides.xdgStateHome ?? envVal('XDG_STATE_HOME');
+    }
+
+    get(key: string): string | undefined {
         ensureDotenv();
         return process.env[key];
     }
 
-    static getAllPrefixed(prefix: string): Record<string, string> {
+    getAllPrefixed(prefix: string): Record<string, string> {
         ensureDotenv();
         const result: Record<string, string> = {};
         for (const [key, value] of Object.entries(process.env)) {
@@ -131,8 +181,104 @@ class Config {
         return result;
     }
 
-    static load(): void {
+    load(): void {
         ensureDotenv();
+    }
+
+    // ── Static API (delegates to default instance) ─────────────────────────
+
+    static get jiraBaseUrl(): string {
+        return Config.defaultInstance.jiraBaseUrl;
+    }
+    static get jiraPersonalToken(): string {
+        return Config.defaultInstance.jiraPersonalToken;
+    }
+    static get xrayBaseUrl(): string {
+        return Config.defaultInstance.xrayBaseUrl;
+    }
+    static get jiraProject(): string {
+        return Config.defaultInstance.jiraProject;
+    }
+
+    static get gitToken(): string {
+        return Config.defaultInstance.gitToken;
+    }
+    static get gitBaseUrl(): string {
+        return Config.defaultInstance.gitBaseUrl;
+    }
+    static get githubToken(): string {
+        return Config.defaultInstance.githubToken;
+    }
+    static get githubApiUrl(): string {
+        return Config.defaultInstance.githubApiUrl;
+    }
+
+    static get cypressProjectPath(): string {
+        return Config.defaultInstance.cypressProjectPath;
+    }
+    static get csvDefaultPath(): string {
+        return Config.defaultInstance.csvDefaultPath;
+    }
+
+    static get autoChoice(): string {
+        return Config.defaultInstance.autoChoice;
+    }
+    static get autoConfirm(): boolean {
+        return Config.defaultInstance.autoConfirm;
+    }
+    static get dryRun(): boolean {
+        return Config.defaultInstance.dryRun;
+    }
+    static get debug(): boolean {
+        return Config.defaultInstance.debug;
+    }
+    static get quiet(): boolean {
+        return Config.defaultInstance.quiet;
+    }
+    static get onError(): string {
+        return Config.defaultInstance.onError;
+    }
+
+    static get csvPath(): string {
+        return Config.defaultInstance.csvPath;
+    }
+    static get csvLabels(): string {
+        return Config.defaultInstance.csvLabels;
+    }
+    static get jsonPath(): string {
+        return Config.defaultInstance.jsonPath;
+    }
+    static get jsonLabels(): string {
+        return Config.defaultInstance.jsonLabels;
+    }
+
+    static get logLevel(): string {
+        return Config.defaultInstance.logLevel;
+    }
+    static get logFile(): boolean {
+        return Config.defaultInstance.logFile;
+    }
+    static get logDir(): string {
+        return Config.defaultInstance.logDir;
+    }
+    static get logMaxSize(): number {
+        return Config.defaultInstance.logMaxSize;
+    }
+
+    static get xdgStateHome(): string {
+        return Config.defaultInstance.xdgStateHome;
+    }
+
+    static get(key: string): string | undefined {
+        return Config.defaultInstance.get(key);
+    }
+
+    static getAllPrefixed(prefix: string): Record<string, string> {
+        return Config.defaultInstance.getAllPrefixed(prefix);
+    }
+
+    static load(): void {
+        Config.defaultInstance.load();
     }
 }
 
