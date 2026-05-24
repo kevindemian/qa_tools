@@ -49,6 +49,18 @@ describe('box', () => {
         expect(result).toContain('┌');
         expect(result).toContain('┘');
     });
+
+    it('uses default single border when no border specified', () => {
+        const result = box(['hello']);
+        expect(result).toContain('┌');
+        expect(result).toContain('hello');
+    });
+
+    it('handles empty content with auto-width computation', () => {
+        const result = box([]);
+        expect(result).toContain('┌');
+        expect(result).toContain('┘');
+    });
 });
 
 describe('divider', () => {

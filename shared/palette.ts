@@ -1,15 +1,21 @@
 import chalk from 'chalk';
 
+const level = chalk.level;
+
+function hexOrBasic(hex: string, basic: chalk.Chalk): chalk.Chalk {
+    return level >= 2 ? chalk.hex(hex) : basic;
+}
+
 export const palette = {
-    fg: chalk.hex('#e1e1e1'),
-    muted: chalk.hex('#8b949e'),
-    border: chalk.hex('#30363d'),
-    blue: chalk.hex('#58a6ff'),
-    green: chalk.hex('#3fb950'),
-    yellow: chalk.hex('#d29922'),
-    red: chalk.hex('#f85149'),
-    purple: chalk.hex('#bc8cff'),
-    orange: chalk.hex('#f0883e'),
+    fg: hexOrBasic('#e1e1e1', chalk.white),
+    muted: hexOrBasic('#8b949e', chalk.gray),
+    border: hexOrBasic('#30363d', chalk.dim),
+    blue: hexOrBasic('#58a6ff', chalk.blue),
+    green: hexOrBasic('#3fb950', chalk.green),
+    yellow: hexOrBasic('#d29922', chalk.yellow),
+    red: hexOrBasic('#f85149', chalk.red),
+    purple: hexOrBasic('#bc8cff', chalk.magenta),
+    orange: hexOrBasic('#f0883e', chalk.hex('#ff8800')),
 } as const;
 
 export type PaletteKey = keyof typeof palette;

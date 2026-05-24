@@ -79,5 +79,10 @@ describe('SessionContext', () => {
             const line = ctx.buildContextLine('PROJ');
             expect(line).toContain('test-op');
         });
+
+        it('returns empty string when projectName is empty', () => {
+            const line = ctx.buildContextLine('');
+            expect(line).toBe('');
+        });
     });
 });

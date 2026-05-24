@@ -106,13 +106,18 @@ describe('Prompt', () => {
     });
 
     describe('helpLine', () => {
-        it('logs with cyan i prefix regardless of quiet mode', () => {
+        it('does not log to console when QUIET=true', () => {
             process.env.QUIET = 'true';
+            prompt.helpLine('Ajuda');
+            expect(mockLog).not.toHaveBeenCalled();
+        });
+
+        it('logs to console when not quiet', () => {
             prompt.helpLine('Ajuda');
             expect(mockLog).toHaveBeenCalledWith(expect.stringContaining('Ajuda'));
         });
 
-        it('logs via writeFileOnly HELP', () => {
+        it('logs via writeFileOnly HELP even when quiet', () => {
             process.env.QUIET = 'true';
             prompt.helpLine('HELP text');
             expect(mockRootLogger.writeFileOnly).toHaveBeenCalledWith('HELP', 'HELP text');
@@ -131,9 +136,19 @@ describe('Prompt', () => {
     });
 
     describe('title', () => {
+        beforeEach(() => {
+            delete process.env.QUIET;
+        });
+
         it('logs bold text', () => {
             prompt.title('TITULO');
             expect(mockLog).toHaveBeenCalledWith(expect.stringContaining('TITULO'));
+        });
+
+        it('logs plain text when QUIET=true', () => {
+            process.env.QUIET = 'true';
+            prompt.title('Quieto');
+            expect(mockLog).toHaveBeenCalledWith('--- Quieto ---');
         });
     });
 
@@ -145,6 +160,11 @@ describe('Prompt', () => {
     });
 
     describe('printSummary', () => {
+        beforeEach(() => {
+            delete process.env.QUIET;
+            mockRootLogger.filePath = undefined;
+        });
+
         it('shows success when all pass', () => {
             prompt.printSummary([{ status: 'ok', label: 't1', message: '' }]);
             expect(mockLog).toHaveBeenCalledWith(expect.stringContaining('TUDO CERTO!'));
@@ -162,7 +182,29 @@ describe('Prompt', () => {
             mockRootLogger.filePath = '/tmp/qa-tools.log';
             prompt.printSummary([{ status: 'error', label: 't1', message: 'erro' }]);
             expect(mockLog).toHaveBeenCalledWith(expect.stringContaining('Consulte o log'));
-            mockRootLogger.filePath = undefined;
+        });
+
+        it('shows compact when QUIET=true and all pass', () => {
+            process.env.QUIET = 'true';
+            prompt.printSummary([{ status: 'ok', label: 't1', message: '' }]);
+            expect(mockLog).toHaveBeenCalledWith(expect.stringContaining('TUDO CERTO!'));
+        });
+
+        it('shows error details when QUIET=true and some fail', () => {
+            process.env.QUIET = 'true';
+            prompt.printSummary([
+                { status: 'ok', label: 't1', message: '' },
+                { status: 'error', label: 't2', message: 'Falhou' },
+            ]);
+            expect(mockLog).toHaveBeenCalledWith(expect.stringContaining('PARCIAL'));
+            expect(mockLog).toHaveBeenCalledWith(expect.stringContaining('Falhou'));
+        });
+
+        it('shows log path in quiet error mode when filePath set', () => {
+            process.env.QUIET = 'true';
+            mockRootLogger.filePath = '/tmp/qa-tools.log';
+            prompt.printSummary([{ status: 'error', label: 't1', message: 'erro' }]);
+            expect(mockLog).toHaveBeenCalledWith(expect.stringContaining('Consulte o log'));
         });
     });
 
@@ -199,6 +241,16 @@ describe('Prompt', () => {
     });
 
     describe('withSpinner', () => {
+        let mockOra: ReturnType<typeof injectOraMock>;
+
+        beforeEach(() => {
+            mockOra = injectOraMock();
+        });
+
+        afterEach(() => {
+            promptModule.__setOraDep(null);
+        });
+
         it('executes fn and returns result when QUIET=true', async () => {
             process.env.QUIET = 'true';
             const result = await prompt.withSpinner('label', () => Promise.resolve(42));
@@ -208,6 +260,12 @@ describe('Prompt', () => {
         it('executes fn and returns result when QUIET=false', async () => {
             const result = await prompt.withSpinner('label', () => Promise.resolve('ok'));
             expect(result).toBe('ok');
+        });
+
+        it('shows spinner when TTY mode', async () => {
+            process.stdout.isTTY = true;
+            const result = await prompt.withSpinner('loading...', () => Promise.resolve('done'));
+            expect(result).toBe('done');
         });
     });
 
@@ -239,6 +297,31 @@ describe('Prompt', () => {
         it('returns unknown for null/empty', () => {
             const r = prompt.humanizeError('');
             expect(r && r.msg).toBe('Erro desconhecido');
+        });
+
+        it('returns known error for issue type not found', () => {
+            const result = prompt.humanizeError('Issue type not found')!;
+            expect(result.msg).toContain('Tipo de issue');
+        });
+
+        it('returns known error for field not found', () => {
+            const result = prompt.humanizeError('Field customfield_123 not found')!;
+            expect(result.msg).toContain('Campo não encontrado');
+        });
+
+        it('returns known error for project not found', () => {
+            const result = prompt.humanizeError('Project PROJ not found')!;
+            expect(result.msg).toContain('Projeto não encontrado');
+        });
+
+        it('returns known error for version not found', () => {
+            const result = prompt.humanizeError('version not found')!;
+            expect(result.msg).toContain('Versão não encontrada');
+        });
+
+        it('returns known error for already exists', () => {
+            const result = prompt.humanizeError('already exists')!;
+            expect(result.msg).toContain('Item ja existe');
         });
     });
 
@@ -272,15 +355,51 @@ describe('Prompt', () => {
         });
     });
 
+    function injectSelectMock(): { default: jest.Mock; Separator: new (line: string) => { line: string } } {
+        const mock = {
+            default: jest.fn().mockResolvedValue('selected-value'),
+            Separator: class {
+                constructor(public line: string) {}
+            },
+        };
+        promptModule.__setInquirerMod(mock);
+        return mock;
+    }
+
+    function injectInputMock(): { default: jest.Mock } {
+        const mock = { default: jest.fn().mockResolvedValue('input-value') };
+        promptModule.__setInputMod(mock);
+        return mock;
+    }
+
+    function injectConfirmMock(): { default: jest.Mock } {
+        const mock = { default: jest.fn().mockResolvedValue(true) };
+        promptModule.__setConfirmMod(mock);
+        return mock;
+    }
+
+    function injectOraMock(): { start: jest.Mock; stop: jest.Mock } {
+        const inst = { start: jest.fn().mockReturnThis(), stop: jest.fn() };
+        const ctr = jest.fn(() => inst);
+        promptModule.__setOraDep(ctr);
+        return inst;
+    }
+
     describe('showSelect', () => {
         let readlineSync: typeof import('readline-sync');
+        let mockSelect: ReturnType<typeof injectSelectMock>;
 
         beforeAll(() => {
             readlineSync = require('readline-sync');
         });
 
+        beforeEach(() => {
+            mockSelect = injectSelectMock();
+        });
+
         afterEach(() => {
             jest.restoreAllMocks();
+            promptModule.__setInquirerMod(null);
         });
 
         it('uses fallback when not TTY', async () => {
@@ -344,6 +463,33 @@ describe('Prompt', () => {
             expect(result).toBe('a');
             expect(spy).toHaveBeenCalledTimes(2);
             expect(mockLog).toHaveBeenCalledWith(expect.stringContaining('Opção inválida'));
+        });
+
+        it('uses inquirer when TTY mode', async () => {
+            process.stdout.isTTY = true;
+            const result = await prompt.showSelect('Pick', [
+                { name: 'A', value: 'a' },
+                { name: 'B', value: 'b' },
+            ]);
+            expect(result).toBe('selected-value');
+            expect(mockSelect.default).toHaveBeenCalledWith(expect.objectContaining({ message: 'Pick' }));
+        });
+
+        it('handles separator choices in inquirer mode', async () => {
+            process.stdout.isTTY = true;
+            await prompt.showSelect('Test', [
+                { name: 'A', value: 'a' },
+                { type: 'separator', line: '---' },
+                { name: 'B', value: 'b' },
+            ]);
+            expect(mockSelect.default).toHaveBeenCalled();
+        });
+
+        it('returns "0" on ExitPromptError in inquirer mode', async () => {
+            process.stdout.isTTY = true;
+            mockSelect.default.mockRejectedValueOnce({ name: 'ExitPromptError', message: 'cancel' });
+            const result = await prompt.showSelect('Test', [{ name: 'A', value: 'a' }]);
+            expect(result).toBe('0');
         });
     });
 
@@ -410,10 +556,16 @@ describe('Prompt', () => {
             expect(result).toBe('final-value');
         });
 
-        it('returns empty after max retries with empty input', () => {
+        it('returns null after max retries with empty input', () => {
             jest.spyOn(readlineSync, 'question').mockReturnValue('');
             const result = prompt.smartPrompt('Enter', { maxRetries: 2 });
-            expect(result).toBe('');
+            expect(result).toBeNull();
+        });
+
+        it('returns null-like for aborted input', () => {
+            jest.spyOn(readlineSync, 'question').mockReturnValue('');
+            const result = prompt.smartPrompt('Enter', { maxRetries: 1 });
+            expect(result == null).toBe(true);
         });
 
         it('returns /back navigation command immediately', () => {
@@ -488,6 +640,88 @@ describe('Prompt', () => {
         });
     });
 
+    describe('ask', () => {
+        let mockInput: ReturnType<typeof injectInputMock>;
+        let readlineSync: typeof import('readline-sync');
+
+        beforeAll(() => {
+            readlineSync = require('readline-sync');
+        });
+
+        beforeEach(() => {
+            mockInput = injectInputMock();
+        });
+
+        afterEach(() => {
+            jest.restoreAllMocks();
+            promptModule.__setInputMod(null);
+        });
+
+        it('uses inquirer when TTY mode', async () => {
+            process.stdout.isTTY = true;
+            const result = await promptModule.ask('Enter name', { default: 'John' });
+            expect(result).toBe('input-value');
+            expect(mockInput.default).toHaveBeenCalledWith(
+                expect.objectContaining({ message: 'Enter name', default: 'John' }),
+            );
+        });
+
+        it('falls back to readline-sync when inquirer throws', async () => {
+            jest.spyOn(readlineSync, 'question').mockReturnValue('fallback');
+            process.stdout.isTTY = true;
+            mockInput.default.mockRejectedValueOnce(new Error('fail'));
+            const result = await promptModule.ask('Label');
+            expect(result).toBe('fallback');
+        });
+
+        it('uses readline-sync when not TTY', async () => {
+            jest.spyOn(readlineSync, 'question').mockReturnValue('cli-value');
+            const result = await promptModule.ask('Label');
+            expect(result).toBe('cli-value');
+        });
+    });
+
+    describe('askConfirm', () => {
+        let mockConfirm: ReturnType<typeof injectConfirmMock>;
+        let readlineSync: typeof import('readline-sync');
+
+        beforeAll(() => {
+            readlineSync = require('readline-sync');
+        });
+
+        beforeEach(() => {
+            mockConfirm = injectConfirmMock();
+        });
+
+        afterEach(() => {
+            jest.restoreAllMocks();
+            promptModule.__setConfirmMod(null);
+        });
+
+        it('uses inquirer when TTY mode', async () => {
+            process.stdout.isTTY = true;
+            const result = await promptModule.askConfirm('Proceed?', true);
+            expect(result).toBe(true);
+            expect(mockConfirm.default).toHaveBeenCalledWith(
+                expect.objectContaining({ message: 'Proceed?', default: true }),
+            );
+        });
+
+        it('falls back to readline-sync when inquirer throws', async () => {
+            jest.spyOn(readlineSync, 'question').mockReturnValue('y');
+            process.stdout.isTTY = true;
+            mockConfirm.default.mockRejectedValueOnce(new Error('fail'));
+            const result = await promptModule.askConfirm('?');
+            expect(result).toBe(true);
+        });
+
+        it('uses readline-sync when not TTY', async () => {
+            jest.spyOn(readlineSync, 'question').mockReturnValue('n');
+            const result = await promptModule.askConfirm('?');
+            expect(result).toBe(false);
+        });
+    });
+
     describe('printError', () => {
         it('calls error with known humanized message', () => {
             const testErr = { response: { data: { errorMessages: ['rate limit exceeded'] } } };
@@ -505,6 +739,13 @@ describe('Prompt', () => {
             const testErr = new Error('something weird');
             prompt.printError('Contexto', testErr);
             expect(mockLog).toHaveBeenCalledWith(expect.stringContaining('something weird'));
+        });
+
+        it('uses quiet mode output when QUIET=true', () => {
+            process.env.QUIET = 'true';
+            prompt.printError('Contexto', new Error('fail'));
+            expect(mockLog).toHaveBeenCalledWith(expect.stringContaining('ERR'));
+            expect(mockLog).toHaveBeenCalledWith(expect.stringContaining('Contexto'));
         });
     });
 

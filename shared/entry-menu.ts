@@ -1,5 +1,6 @@
 import { readFileSync, writeFileSync } from 'fs';
 import { join, dirname } from 'path';
+import { tmpdir } from 'os';
 import { spawnSync } from 'child_process';
 import { globSync } from 'glob';
 import { showSelect, print, error, printError } from './prompt';
@@ -12,7 +13,7 @@ interface Tool {
 }
 
 const SCRIPT_DIR = dirname(__dirname);
-const CACHE_FILE = join(process.env.TMPDIR || '/tmp', 'qa_tools_last_choice.txt');
+const CACHE_FILE = join(tmpdir(), 'qa_tools_last_choice.txt');
 
 function discoverTools(): Tool[] {
     const exclude = new Set(['node_modules', 'config', 'shared', '.git', '.github', 'e2e']);
@@ -67,17 +68,17 @@ async function showMenu(tools: Tool[]): Promise<void> {
 
     while (true) {
         console.clear();
-        print(box([], { border: 'double', padding: 1, title: 'QA Tools', width: 60 }));
+        print(box([], { border: 'double', padding: 1, title: 'QA Tools', width: 78 }));
 
         const choices: Array<Record<string, unknown>> = tools.map((t, i) => ({
             name: '      ' + t.displayName,
             value: String(i + 1),
         }));
-        choices.push({ type: 'separator' as const, line: '        ' }, { name: '      Sair', value: 'exit' });
+        choices.push({ type: 'separator' as const, line: '        ' }, { name: '      Voltar', value: 'exit' });
 
         const answer = await showSelect('      Selecione uma ferramenta', choices, {
             default: lastIdx >= 0 ? String(lastIdx + 1) : undefined,
-            pageSize: 99,
+            pageSize: (process.stdout.rows || 24) - 4,
         });
 
         if (answer === 'exit' || answer === '0') {

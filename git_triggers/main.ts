@@ -15,7 +15,6 @@ import {
     error,
     warn,
     info,
-    helpLine,
     title,
     divider,
     prompt,
@@ -112,30 +111,22 @@ function isComplete(status: string): boolean {
 }
 
 async function pollPipeline(m: GitProvider, pipelineId: string | number, interval = 5000, timeout = 300000) {
-    const start = Date.now();
-    let lastLog = 0;
-    const aborted = false;
-    while (Date.now() - start < timeout && !aborted) {
-        const elapsed = Math.floor((Date.now() - start) / 1000);
-        if (elapsed - lastLog >= 15) {
-            lastLog = elapsed;
-            info('Aguardando pipeline #' + pipelineId + ' (' + elapsed + 's)...');
-        }
-        const p = await m.getPipeline(pipelineId);
-        if (aborted || !p) {
+    return withSpinner('Aguardando pipeline #' + pipelineId, async () => {
+        const start = Date.now();
+        while (Date.now() - start < timeout) {
+            const p = await m.getPipeline(pipelineId);
+            if (!p) {
+                await sleep(interval);
+                continue;
+            }
+            const status = (p.status as string) || (p.state as string) || '';
+            if (isComplete(status)) {
+                return { status, web_url: (p.web_url as string) || '' };
+            }
             await sleep(interval);
-            if (aborted) break;
-            continue;
         }
-        const pRec = p;
-        const status = (pRec.status as string) || (pRec.state as string) || '';
-        if (isComplete(status)) {
-            return { status, web_url: (pRec.web_url as string) || '' };
-        }
-        await sleep(interval);
-        if (aborted) break;
-    }
-    return { status: 'timeout', web_url: '' };
+        return { status: 'timeout', web_url: '' };
+    });
 }
 
 setupSigint(
@@ -377,38 +368,6 @@ function providerLabel(): string {
     return currentProvider === 'github' ? 'GitHub' : 'GitLab';
 }
 
-function displayActions() {
-    title(providerLabel().toUpperCase() + ' TOOLS' + sessionContext.buildContextLine());
-    if (sessionContext.lastOperation) info('Última operação: ' + sessionContext.lastOperation);
-    divider();
-    print('  PIPELINES');
-    print('   1  Disparar pipeline');
-    if (currentProvider === 'gitlab') {
-        print('   2  Listar schedules');
-        print('   3  Disparar schedule');
-    }
-    const prLabel = currentProvider === 'github' ? 'PR' : 'MR';
-    print('');
-    print('  ' + prLabel + 's');
-    print('   4  Criar ' + prLabel);
-    print('   5  Listar ' + prLabel + 's aprovados');
-    print('   6  Fazer merge por ID');
-    print('   7  Nivelar branches (main -> rel_cand -> dev)');
-    print('');
-    print('  UTILITARIOS');
-    print('   8  Exportar variáveis CI/CD');
-    print('   9  Trocar de projeto');
-    print('');
-    const ok = sessionContext.sessionCounters.filter((c) => c.status === 'ok').length;
-    const er = sessionContext.sessionCounters.filter((c) => c.status === 'error').length;
-    if (ok > 0 || er > 0) {
-        print('  ' + ok + ' ok' + (er > 0 ? ' · ' + er + ' erro' : ''));
-    }
-    print('   0  Sair');
-    print('  /h  Ajuda');
-    divider();
-}
-
 function buildContextLine(): string {
     return providerLabel().toUpperCase() + ' TOOLS' + sessionContext.buildContextLine();
 }
@@ -434,7 +393,7 @@ function buildActionChoices(): Array<Record<string, unknown>> {
         { type: 'separator', line: '       UTILITARIOS' },
         { name: '      Exportar variáveis CI/CD', value: '8' },
         { name: '      Trocar de projeto', value: '9' },
-        { name: '      Sair', value: '0' },
+        { name: '      Voltar ao menu principal', value: '0' },
         { type: 'separator', line: '        ' },
         { name: '      /help  Ajuda', value: '/help' },
         { name: '      /history  Histórico', value: '/history' },
@@ -747,9 +706,20 @@ async function handleTriggerPipeline(ctx: SessionContext, m: GitProvider, projec
 }
 
 function handleHelp() {
-    title('Ajuda — Git Tools');
-    helpLine('Opcoes disponiveis no menu numerado acima.');
-    helpLine('/history - Exibe historico de operacoes da sessão.');
+    console.log(
+        box(
+            [
+                'Opções disponíveis no menu numerado acima.',
+                '',
+                '  /history  - Exibe histórico de operações da sessão.',
+                '  /docs     - Documentação.',
+                '  /help     - Esta ajuda.',
+                '  /exit     - Sair do programa.',
+                '  /back     - Voltar ao menu principal.',
+            ],
+            { border: 'double', padding: 1, title: 'Ajuda — Git Tools' },
+        ),
+    );
     divider();
     prompt('Pressione Enter para continuar');
 }
@@ -764,6 +734,7 @@ function handleShowHistory() {
         tableView(last10, ['ts', 'op', 'detail', 'status']);
     }
     divider();
+    prompt('Pressione Enter para continuar');
 }
 
 function _selectProject(): { projectName: string; names: string[] } {
@@ -801,7 +772,9 @@ async function _promptChoice(stateHint: string): Promise<string> {
                 `   ${palette.muted(sessionContext.sessionCounters.length + ' operações')}  ·  ${palette.green('' + ok + ' ✓')}${err > 0 ? '  ' + palette.red('' + err + ' ✗') : ''}`,
             );
         }
-        console.log(box(headerLines, { border: 'double', padding: 1, title: 'QA Tools · ' + ctx, width: 80 }));
+        if (headerLines.length > 0) {
+            console.log(box(headerLines, { border: 'double', padding: 1, title: 'QA Tools · ' + ctx, width: 80 }));
+        }
 
         const stateHint2 =
             loadState().lastChoice && (loadState().lastChoice as string) !== '0'
@@ -809,10 +782,17 @@ async function _promptChoice(stateHint: string): Promise<string> {
                 : undefined;
         return showSelect('      Escolha uma opção', buildActionChoices(), {
             default: stateHint2,
-            pageSize: 99,
+            pageSize: (process.stdout.rows || 24) - 4,
         });
     }
-    displayActions();
+    const nonTtyLines = buildActionChoices()
+        .filter((c: Record<string, unknown>) => c.name)
+        .map((c: Record<string, unknown>) => '  ' + String(c.name));
+    nonTtyLines.unshift('');
+    nonTtyLines.push('  /help   Ajuda');
+    nonTtyLines.push('  /exit   Voltar ao menu principal');
+    nonTtyLines.push('');
+    console.log(box(nonTtyLines, { border: 'double', padding: 1, title: providerLabel().toUpperCase() + ' TOOLS' }));
     const choice = prompt('Escolha uma opção', { hint: stateHint });
     const resolved =
         !choice.trim() && (loadState().lastChoice as string) && (loadState().lastChoice as string) !== '0'
@@ -856,7 +836,13 @@ async function _dispatchAction(
         handleShowHistory();
         return false;
     }
-    if (finalChoice === '0') return _handleExit();
+    if (cmd === '/docs' || cmd === '/d') {
+        return false;
+    }
+    if (cmd === '/back' || cmd === '/menu') {
+        return false;
+    }
+    if (finalChoice === '0' || cmd === '/exit' || cmd === '/sair') return _handleExit();
 
     const handlerFn = ACTION_HANDLERS[finalChoice];
     if (handlerFn) return handlerFn(m, projectName, names);
@@ -884,8 +870,13 @@ async function main() {
             ? 'Enter = ' + (loadState().lastChoice as string)
             : '0-9';
 
+    let firstIteration = true;
     while (true) {
-        console.clear();
+        if (firstIteration) {
+            firstIteration = false;
+        } else {
+            console.clear();
+        }
         const finalChoice = await _promptChoice(stateHint);
         updateState((s) => {
             s.lastChoice = finalChoice;

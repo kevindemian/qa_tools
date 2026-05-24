@@ -43,8 +43,8 @@ function icon(name: 'ok' | 'err' | 'warn' | 'info'): string {
         const map: Record<string, string> = { ok: '\u2713', err: '\u2717', warn: '\u26A0', info: '\u2139' };
         return map[name];
     }
-    const fallback: Record<string, string> = { ok: 'OK', err: 'ERR', warn: '!', info: 'i' };
-    return fallback[name];
+    const fallback: Record<string, string> = { ok: 'OK ', err: 'ERR', warn: '!  ', info: 'i  ' };
+    return fallback[name] || fallback.info;
 }
 
 export function success(msg: string): void {
@@ -68,7 +68,7 @@ export function info(msg: string): void {
 }
 
 export function helpLine(msg: string): void {
-    console.log(chalk.cyan.bold(icon('info')) + ' ' + msg);
+    if (!isQuiet()) console.log(chalk.cyan.bold(icon('info')) + ' ' + msg);
     rootLogger.writeFileOnly('HELP', msg);
 }
 
@@ -90,6 +90,7 @@ export function prompt(label: string, options: PromptOptions = {}): string {
         let text = '\n' + chalk.cyan('->') + ' ' + label;
         if (hint) text += ' ' + chalk.yellow('(' + hint + ')');
         if (def) text += ' ' + chalk.yellow('[' + def + ']');
+        text += chalk.dim('  (/help)');
         const answer = readlineSync.question(text + ': ', { defaultInput: def }).trim();
         if (minLength !== undefined && answer.length < minLength) {
             warn('Mínimo de ' + minLength + ' caractere(s).');
@@ -109,7 +110,7 @@ export function confirm(label: string, defaultYes = false): boolean {
             .toLowerCase();
         if (['y', 'yes', 'sim', 's'].includes(answer)) return true;
         if (['n', 'no', 'nao', 'não'].includes(answer)) return false;
-        console.log('  ' + chalk.yellow('!') + ' Resposta inválida. Digite S/sim ou N/não.');
+        console.log('  ' + chalk.yellow.bold(icon('warn')) + ' Resposta inválida. Digite S/sim ou N/não.');
     }
 }
 
@@ -139,7 +140,7 @@ export function smartPrompt(label: string, options: PromptOptions = {}, helpCall
         return value;
     }
     warn('Número máximo de tentativas excedido.');
-    return '';
+    return null as unknown as string;
 }
 
 export class ProgressBar {
@@ -187,6 +188,11 @@ export class ProgressBar {
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any -- ora is ESM-only, dynamic import in CJS
 let _ora: any = null;
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any -- injection API for ESM ora mock
+export function __setOraDep(mod: any): void {
+    _ora = mod;
+}
 
 export async function withSpinner<T>(label: string, fn: () => Promise<T>): Promise<T> {
     if (isQuiet() || !process.stdout.isTTY) return fn();
@@ -291,7 +297,7 @@ export function printError(context: string, err: unknown): void {
                 palette.blue('→  ' + hint),
                 '',
             ],
-            { border: 'double', color: 'red', padding: 0, width: 72 },
+            { border: 'double', color: 'red', padding: 1, width: 72 },
         ),
     );
 }
@@ -378,9 +384,9 @@ export async function onError(
         opts.push('[A]bort');
         if (canDetails) opts.push('[D]etails');
 
-        console.log('  ' + '-'.repeat(45));
+        console.log('  ' + boxDivider());
         console.log('    ' + opts.join('   '));
-        console.log('  ' + '-'.repeat(45));
+        console.log('  ' + boxDivider());
         const answer = readlineSync.question('  Escolha: ').trim().toLowerCase();
 
         if (answer === 'r' && canRetry) return 'retry';
@@ -406,6 +412,10 @@ export async function onError(
 
 let _inquirerMod: unknown = null;
 
+export function __setInquirerMod(mod: unknown): void {
+    _inquirerMod = mod;
+}
+
 async function _loadInquirer(): Promise<unknown> {
     if (_inquirerMod !== null) return _inquirerMod;
     try {
@@ -419,6 +429,10 @@ async function _loadInquirer(): Promise<unknown> {
 
 let _inputMod: unknown = null;
 
+export function __setInputMod(mod: unknown): void {
+    _inputMod = mod;
+}
+
 async function _loadInput(): Promise<unknown> {
     if (_inputMod !== null) return _inputMod;
     try {
@@ -431,6 +445,10 @@ async function _loadInput(): Promise<unknown> {
 }
 
 let _confirmMod: unknown = null;
+
+export function __setConfirmMod(mod: unknown): void {
+    _confirmMod = mod;
+}
 
 async function _loadConfirm(): Promise<unknown> {
     if (_confirmMod !== null) return _confirmMod;
@@ -504,7 +522,7 @@ export async function showSelect(label: string, choices: SelectChoice[], options
                 message: label,
                 choices: processed,
                 pageSize: options.pageSize || 14,
-                loop: false,
+                loop: true,
                 default: options.default,
                 theme: inquirerTheme,
             });
@@ -519,15 +537,13 @@ export async function showSelect(label: string, choices: SelectChoice[], options
     }
     const flatChoices = choices.filter((c) => c.type !== 'separator');
     console.log('');
-    let idx = 0;
     for (const c of choices) {
         if (c.type === 'separator') {
             if (c.line) console.log('  ' + c.line);
             continue;
         }
-        idx++;
         const desc = c.description ? '  ' + c.description : '';
-        console.log('   ' + idx + '.  ' + c.name + desc);
+        console.log('   ' + c.name + desc);
     }
     while (true) {
         const answer = prompt(label).trim();
