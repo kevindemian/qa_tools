@@ -11,7 +11,7 @@ function providerLabel(currentProvider: 'gitlab' | 'github'): string {
 function handleHelp() {
     defaultOutput.box(
         [
-            'Opções disponíveis no menu numerado acima.',
+            'Ajuda — Opções disponíveis no menu numerado acima.',
             '',
             '  /history  - Exibe histórico de operações da sessão.',
             '  /docs     - Documentação.',
