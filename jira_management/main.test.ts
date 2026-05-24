@@ -8,7 +8,7 @@ jest.mock('../shared/prompt', () => ({
     divider: jest.fn(),
     prompt: jest.fn().mockReturnValue('0'),
     printError: jest.fn(),
-    showSelect: jest.fn().mockResolvedValue('0'),
+    showSelect: jest.fn().mockReturnValue('0'),
     tableView: jest.fn(),
 }));
 
