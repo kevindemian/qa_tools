@@ -81,6 +81,10 @@ class Config {
         Config.defaultInstance = new Config();
     }
 
+    static getDefault(): Config {
+        return Config.defaultInstance;
+    }
+
     // ── Instance getters ───────────────────────────────────────────────────
 
     get jiraBaseUrl(): string {

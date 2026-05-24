@@ -12,7 +12,6 @@ const COLOR_FNS: Record<string, (s: string) => string> = {
     ERROR: chalk.red,
 };
 const SECRET_RE = /token|secret|key|password|authorization/i;
-export const MAX_LOG_SIZE = Config.logMaxSize;
 
 function maskValue(v: unknown): unknown {
     if (typeof v !== 'string') return v;
@@ -41,20 +40,25 @@ export class Logger {
     _filePathCached: string | null;
     _fileError: boolean;
     _bytesWritten: number;
+    _maxLogSize: number;
+    _config: Config | null;
 
-    constructor(context: Record<string, unknown> = {}) {
+    constructor(context: Record<string, unknown> = {}, config?: Config) {
         this.context = context;
         this._logDir = null;
         this._filePathCached = null;
         this._fileError = false;
         this._bytesWritten = 0;
+        this._maxLogSize = config?.logMaxSize ?? Config.logMaxSize;
+        this._config = config ?? null;
     }
 
     _ensureDir(): boolean {
         if (this._fileError) return false;
-        if (!Config.logFile) return false;
+        const logFile = this._config?.logFile ?? Config.logFile;
+        if (!logFile) return false;
 
-        const logDir = Config.logDir;
+        const logDir = this._config?.logDir ?? Config.logDir;
         if (this._logDir === logDir && this._filePathCached) return true;
 
         try {
@@ -77,7 +81,7 @@ export class Logger {
     }
 
     _rotateIfNeeded(): void {
-        if (!this._filePathCached || this._bytesWritten < MAX_LOG_SIZE) return;
+        if (!this._filePathCached || this._bytesWritten < this._maxLogSize) return;
         const dir = path.dirname(this._filePathCached);
         const ext = path.extname(this._filePathCached);
         const base = path.basename(this._filePathCached, ext);
@@ -96,7 +100,7 @@ export class Logger {
 
     _writeConsole(level: string, msg: string, data?: unknown): void {
         const levelNum = LEVELS[level] ?? 1;
-        const envLevel = Config.logLevel;
+        const envLevel = this._config?.logLevel ?? Config.logLevel;
         const envLevelNum = LEVELS[envLevel] ?? 1;
         if (levelNum < envLevelNum) return;
 
@@ -151,7 +155,7 @@ export class Logger {
     }
 
     child(extra: Record<string, unknown>): Logger {
-        return new Logger({ ...this.context, ...extra });
+        return new Logger({ ...this.context, ...extra }, this._config ?? undefined);
     }
 
     writeFileOnly(level: string, msg: string): void {
@@ -172,7 +176,8 @@ export class Logger {
     }
 
     get filePath(): string | null {
-        if (!Config.logFile) return null;
+        const logFile = this._config?.logFile ?? Config.logFile;
+        if (!logFile) return null;
         this._ensureDir();
         return this._filePathCached;
     }

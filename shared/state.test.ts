@@ -10,10 +10,15 @@ jest.mock('./logger', () => ({
 import fs from 'fs';
 import path from 'path';
 import os from 'os';
+import Config from './config';
 import * as stateModule from './state';
 
 const XDG_HOME = '/tmp/test-xdg-state';
 const STATE_PATH = path.join(XDG_HOME, 'qa-tools', 'state.json');
+
+function makeConfig(): Config {
+    return Config.create({ xdgStateHome: XDG_HOME });
+}
 
 function mockFs(files: Record<string, string>) {
     const exists = jest.fn((p: string) => p in files);
@@ -40,18 +45,8 @@ function mockFs(files: Record<string, string>) {
 describe('State', () => {
     let state: typeof import('./state');
 
-    beforeAll(() => {
-        process.env.XDG_STATE_HOME = XDG_HOME;
-    });
-
-    afterAll(() => {
-        delete process.env.XDG_STATE_HOME;
-    });
-
     beforeEach(() => {
-        jest.isolateModules(() => {
-            state = require('./state') as typeof import('./state');
-        });
+        state = stateModule;
     });
 
     afterEach(() => {
@@ -61,13 +56,13 @@ describe('State', () => {
     describe('load', () => {
         it('returns empty object when no state file', () => {
             mockFs({});
-            const result = state.load();
+            const result = state.load(makeConfig());
             expect(result).toEqual({});
         });
 
         it('returns parsed state when file exists', () => {
             mockFs({ [STATE_PATH]: JSON.stringify({ lastProject: 'ECSPOL' }) });
-            const result = state.load();
+            const result = state.load(makeConfig());
             expect(result).toEqual({ lastProject: 'ECSPOL' });
         });
     });
@@ -75,7 +70,7 @@ describe('State', () => {
     describe('save', () => {
         it('writes state to backup and main paths', () => {
             const mocks = mockFs({});
-            state.save({ lastProject: 'TEST' });
+            state.save({ lastProject: 'TEST' }, makeConfig());
             expect(mocks.write).toHaveBeenCalled();
         });
     });
@@ -85,7 +80,7 @@ describe('State', () => {
             mockFs({ [STATE_PATH]: JSON.stringify({ lastProject: 'OLD' }) });
             const result = state.update((s) => {
                 s.lastProject = 'NEW';
-            });
+            }, makeConfig());
             expect(result.lastProject).toBe('NEW');
         });
 
@@ -93,7 +88,7 @@ describe('State', () => {
             mockFs({ [STATE_PATH]: JSON.stringify({ lastProject: 'OLD' }) });
             const result = state.update((s) => {
                 s.lastProject = 'NEW';
-            });
+            }, makeConfig());
             expect(result.lastProject).toBe('NEW');
         });
     });
@@ -105,7 +100,7 @@ describe('State', () => {
                 [STATE_PATH]: 'corrupted{json',
                 [bakPath]: JSON.stringify({ lastProject: 'RECOVERED' }),
             });
-            const result = state.load();
+            const result = state.load(makeConfig());
             expect(result).toEqual({ lastProject: 'RECOVERED' });
         });
     });
@@ -113,19 +108,14 @@ describe('State', () => {
     describe('state migration from old path', () => {
         const OLD_STATE_PATH = path.join(os.homedir(), '.qa_tools_state.json');
 
-        afterEach(() => {
-            jest.restoreAllMocks();
-        });
-
         it('copies old state to new path when old exists and new does not', () => {
             const mocks = mockFs({
                 [OLD_STATE_PATH]: JSON.stringify({ lastProject: 'MIGRATED' }),
             });
-            jest.isolateModules(() => {
-                state = require('./state') as typeof import('./state');
-            });
+            const config = makeConfig();
+            state.migrateOldState(config);
             expect(mocks.rename).toHaveBeenCalledWith(STATE_PATH + '.tmp', STATE_PATH);
-            expect(state.load()).toEqual({ lastProject: 'MIGRATED' });
+            expect(state.load(config)).toEqual({ lastProject: 'MIGRATED' });
         });
 
         it('does not migrate when new state file already exists', () => {
@@ -133,103 +123,69 @@ describe('State', () => {
                 [OLD_STATE_PATH]: JSON.stringify({ lastProject: 'OLD' }),
                 [STATE_PATH]: JSON.stringify({ lastProject: 'NEW' }),
             });
-            jest.isolateModules(() => {
-                state = require('./state') as typeof import('./state');
-            });
+            const config = makeConfig();
+            state.migrateOldState(config);
             expect(mocks.rename).not.toHaveBeenCalled();
-            expect(state.load()).toEqual({ lastProject: 'NEW' });
+            expect(state.load(config)).toEqual({ lastProject: 'NEW' });
         });
     });
 
     describe('corrupted state without backup', () => {
-        let rootLogger: import('./logger').Logger;
-
-        afterEach(() => {
-            jest.restoreAllMocks();
-        });
-
         it('returns empty object when main file corrupted and no backup exists', () => {
-            jest.isolateModules(() => {
-                rootLogger = (require('./logger') as typeof import('./logger')).rootLogger;
-                state = require('./state') as typeof import('./state');
-            });
+            const config = makeConfig();
             mockFs({
                 [STATE_PATH]: 'corrupted{json',
             });
-            const result = state.load();
+            const result = state.load(config);
             expect(result).toEqual({});
         });
 
         it('calls rootLogger.warn when state file is corrupted', () => {
-            jest.isolateModules(() => {
-                rootLogger = (require('./logger') as typeof import('./logger')).rootLogger;
-                state = require('./state') as typeof import('./state');
-            });
+            const config = makeConfig();
             mockFs({
                 [STATE_PATH]: 'corrupted{json',
             });
-            state.load();
-            expect(rootLogger.warn).toHaveBeenCalled();
+            state.load(config);
+            expect(mockRootLogger.warn).toHaveBeenCalled();
         });
     });
 
     describe('load error branches', () => {
-        let rootLogger: import('./logger').Logger;
-
-        afterEach(() => {
-            jest.restoreAllMocks();
-        });
-
         it('warns when backup recovery fails (backup also corrupted)', () => {
-            jest.isolateModules(() => {
-                rootLogger = (require('./logger') as typeof import('./logger')).rootLogger;
-                state = require('./state') as typeof import('./state');
-            });
+            const config = makeConfig();
             const bakPath = STATE_PATH + '.bak';
             mockFs({
                 [STATE_PATH]: 'corrupted{json',
                 [bakPath]: 'also-bad{json',
             });
-            const result = state.load();
+            const result = state.load(config);
             expect(result).toEqual({});
-            expect(rootLogger.error).toHaveBeenCalledWith(expect.stringContaining('Falha ao recuperar backup'));
+            expect(mockRootLogger.error).toHaveBeenCalledWith(expect.stringContaining('Falha ao recuperar backup'));
         });
 
         it('warns when backup rename fails', () => {
-            jest.isolateModules(() => {
-                rootLogger = (require('./logger') as typeof import('./logger')).rootLogger;
-                state = require('./state') as typeof import('./state');
-            });
+            const config = makeConfig();
             mockFs({
                 [STATE_PATH]: 'corrupted{json',
             });
             jest.spyOn(fs, 'renameSync').mockImplementationOnce(() => {
                 throw new Error('rename denied');
             });
-            const result = state.load();
+            const result = state.load(config);
             expect(result).toEqual({});
-            expect(rootLogger.error).toHaveBeenCalledWith(expect.stringContaining('Falha ao salvar backup'));
+            expect(mockRootLogger.error).toHaveBeenCalledWith(expect.stringContaining('Falha ao salvar backup'));
         });
     });
 
     describe('save error handling', () => {
-        let rootLogger: import('./logger').Logger;
-
-        afterEach(() => {
-            jest.restoreAllMocks();
-        });
-
         it('warns and logs error when save write fails', () => {
-            jest.isolateModules(() => {
-                rootLogger = (require('./logger') as typeof import('./logger')).rootLogger;
-                state = require('./state') as typeof import('./state');
-            });
+            const config = makeConfig();
             mockFs({});
             jest.spyOn(fs, 'writeFileSync').mockImplementationOnce(() => {
                 throw new Error('disk full');
             });
-            state.save({ key: 'value' });
-            expect(rootLogger.error).toHaveBeenCalledWith(expect.stringContaining('Falha ao salvar estado'));
+            state.save({ key: 'value' }, config);
+            expect(mockRootLogger.error).toHaveBeenCalledWith(expect.stringContaining('Falha ao salvar estado'));
         });
     });
 });
