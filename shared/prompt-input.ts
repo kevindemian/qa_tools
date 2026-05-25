@@ -237,10 +237,15 @@ export async function showSelect(label: string, choices: SelectChoice[], options
 
     const mod: unknown = await _loadSelect();
     if (mod && isTTY()) {
+        const selectChoices = choices.map((c) => {
+            if (c.type === 'separator') return { type: 'separator' as const, separator: c.line || '' };
+            if (!c.name) return { type: 'separator' as const, separator: '' };
+            return { name: c.name, value: c.value ?? c.name };
+        });
         try {
             const answer = await (mod as { default: (...args: unknown[]) => unknown }).default({
                 message: label,
-                choices: flatChoices,
+                choices: selectChoices,
                 pageSize: options.pageSize || Output.rows() - 5,
                 loop: true,
                 theme: inquirerTheme,
@@ -253,7 +258,11 @@ export async function showSelect(label: string, choices: SelectChoice[], options
 
     const { sections, standaloneItems } = groupChoices(choices);
     const renderedItems: string[] = [];
-    for (const section of sections) renderedItems.push(...section.items.map((i) => ' ' + i));
+    for (const section of sections) {
+        renderedItems.push('');
+        renderedItems.push('  ' + section.title);
+        renderedItems.push(...section.items.map((i) => '  ' + i));
+    }
     renderedItems.push(...standaloneItems.map((i) => '  ' + i));
 
     if (renderedItems.length > 0) {
