@@ -1,3 +1,5 @@
+import type { CommandContext } from './context';
+
 jest.mock('../../shared/prompt', () => ({
     printError: jest.fn(),
 }));
@@ -11,13 +13,13 @@ import { createTestExecutionWithLinksWrapper } from './helpers';
 
 const mockCreateTests = jest.requireMock('../create_tests');
 
-function makeContext(overrides: Partial<CommandContext> = {}): CommandContext {
+function makeContext(): CommandContext {
     return {
-        jiraResource: {} as unknown,
-        jiraResourceXray: {} as unknown,
-        linkManager: {} as unknown,
-        linkManagerXray: {} as unknown,
-        csvResource: {} as unknown,
+        jiraResource: undefined as unknown as CommandContext['jiraResource'],
+        jiraResourceXray: undefined as unknown as CommandContext['jiraResourceXray'],
+        linkManager: undefined as unknown as CommandContext['linkManager'],
+        linkManagerXray: undefined as unknown as CommandContext['linkManagerXray'],
+        csvResource: undefined as unknown as CommandContext['csvResource'],
         ctx: {
             project_name: 'TEST',
             inMemoryTasksId: [],
@@ -27,19 +29,18 @@ function makeContext(overrides: Partial<CommandContext> = {}): CommandContext {
             isBusy: false,
             lastOperation: '',
             packageManager: undefined,
-            createPackageManager: jest.fn(),
+            createPackageManager: jest.fn() as unknown as undefined,
             pushHistory: jest.fn(),
             withBusy: jest.fn(async (fn: () => Promise<void>) => fn()),
-        } as unknown,
+        } as unknown as CommandContext['ctx'],
         pushHistory: jest.fn(),
         printSessionSummary: jest.fn(),
         base_url: 'https://jira.test.com',
-        sessionLog: { child: jest.fn().mockReturnValue({ info: jest.fn(), error: jest.fn() }) } as unknown,
-        ...overrides,
+        sessionLog: {
+            child: jest.fn().mockReturnValue({ info: jest.fn(), error: jest.fn() }),
+        } as unknown as CommandContext['sessionLog'],
     };
 }
-
-import type { CommandContext } from './context';
 
 beforeEach(() => {
     jest.clearAllMocks();
