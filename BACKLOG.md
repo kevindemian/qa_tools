@@ -756,3 +756,72 @@ Todos os 6 cenários passaram. Erros 404/403 são tratados corretamente por `han
 | 6a       | Testes para `shared/entry-menu.ts`                                | ✅     |
 | 6b       | Testes para `shared/tls.ts` + `shared/git-provider-error.ts`      | ✅     |
 | 6c       | Renomear `jira_validator.test.ts` → `test-case-validator.test.ts` | ✅     |
+
+---
+
+## ✅ Fase 7 — Testes para Módulos SRP Extraídos (CONCLUÍDA)
+
+**Data:** 2026-05-25
+
+**Objetivo:** Escrever testes para os 8 módulos criados durante as refatorações SRP (Fases 3-4) que nunca receberam `.test.ts` próprios.
+
+### Arquivos criados
+
+| Arquivo                                 | Linhas | Testes | Cobertura                                                                                                                                           |
+| --------------------------------------- | ------ | ------ | --------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `shared/spinner.test.ts`                | 97     | 9      | withSpinner (quiet/TTY/ora/error), ProgressBar (constructor/update/stop)                                                                            |
+| `shared/prompt-ui.test.ts`              | 416    | 38     | badge, icon, success/error/warn/info, title, divider, humanizeError, extractErrorMessage, printError, printSummary, onError, CancelError, tableView |
+| `shared/prompt-input.test.ts`           | 293    | 18     | prompt (value/default/CancelError/minLength), confirm (yes/no/autoConfirm/NAV_CMDS), smartPrompt (success/help/retry), ask, askConfirm, showSelect  |
+| `git_triggers/mr-handler.test.ts`       | 170    | 9      | nivelarBranchesWrapper, handleCreateMR (manual/AI/error/test-impact), handleListApprovedMRs, handleMergeMR                                          |
+| `git_triggers/session-state.test.ts`    | 170    | 12     | module defaults, setters, pushHistory, providerLabel, buildActionChoices                                                                            |
+| `git_triggers/pipeline-handler.test.ts` | 200    | 9      | isComplete, pollPipeline (success/null/timeout), handleTriggerPipeline (trigger/error/pending), handleExportVariables                               |
+| `git_triggers/schedule-handler.test.ts` | 194    | 11     | handleListSchedules (gitlab/empty/github/error), handleRunSchedule, handleChangeProject, handleFlakinessDashboard                                   |
+| `git_triggers/batch-mode.test.ts`       | 240    | 13     | parseBatchArgs (6 flags), tryBatchMode (no-args/no-projects/not-found/trigger/auto/error)                                                           |
+
+### Resultado
+
+| Métrica             | Antes                | Depois                   |
+| ------------------- | -------------------- | ------------------------ |
+| Testes              | 1105 pass, 61 suites | **1263 pass, 74 suites** |
+| `tsc --noEmit`      | 0 erros              | 0 erros                  |
+| `throw 'string'`    | zero                 | zero                     |
+| `.only()` em testes | zero                 | zero                     |
+
+---
+
+## ✅ Preview HTML Sidecar (CONCLUÍDO)
+
+**Data:** 2026-05-25
+
+**Objetivo:** Complementar o preview textual (`md()`) com um HTML sidecar em `/tmp/qa-preview.html` para revisão visual de suites geradas por IA, com cards estilo Jira/Xray mostrando passos individuais (ação, dados, resultado esperado), sumário e metadados.
+
+### Mudanças em `jira_management/import-prep.ts`
+
+| Função                      | Ação                                                                               |
+| --------------------------- | ---------------------------------------------------------------------------------- |
+| `escapeHtml()`              | **Nova** — sanitiza & < > " para HTML                                              |
+| `_renderHtmlHead()`         | **Nova** — head + CSS inline autocontido                                           |
+| `_renderSummaryCards()`     | **Nova** — cards de sumário (testes, steps, grupos, labels)                        |
+| `_renderTestCard()`         | **Nova** — card Jira-like com header, descrição, steps (ação/dados/esperado), meta |
+| `renderPreviewHtml()`       | **Nova** — orquestra head + summary + cards + footer                               |
+| `generatePreviewMarkdown()` | **Nova** — tabela pipe para terminal via `md()`                                    |
+| `showPreview()`             | **Modificada** — usa `generatePreviewMarkdown()` + `renderPreviewHtml()`           |
+
+### Testes (30 novos em `import-prep.test.ts`)
+
+| Suite                     | Testes | O quê                                                       |
+| ------------------------- | ------ | ----------------------------------------------------------- |
+| `escapeHtml`              | 3      | escaping seguro, passthrough, vazio                         |
+| `renderPreviewHtml`       | 12     | título, cards, steps, meta, empty, badge, footer, estrutura |
+| `generatePreviewMarkdown` | 5      | header, dados, empty, step counts, formato                  |
+| `showPreview`             | 6      | título, markdown, total, labels, arquivo HTML               |
+
+### Verificação final
+
+| Comando                                           | Resultado                    |
+| ------------------------------------------------- | ---------------------------- |
+| `npx tsc --noEmit`                                | 0 erros                      |
+| `npx jest --no-coverage`                          | 1265/1282 ⚠️ 17 pre-existing |
+| `grep -rn "throw '" jira_management/import-prep*` | zero                         |
+| `grep -rn ".only(" jira_management/import-prep*`  | zero                         |
+| R4 — funções >50 linhas em `import-prep.ts`       | **0** ✅                     |

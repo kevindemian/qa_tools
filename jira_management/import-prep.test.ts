@@ -41,12 +41,29 @@ jest.mock('../shared/logger', () => ({
     },
 }));
 
+jest.mock('fs', () => {
+    const actual = jest.requireActual('fs');
+    return { ...actual, writeFileSync: jest.fn() };
+});
+
+const mockMd = jest.fn((s: string) => s);
+jest.mock('../shared/markdown', () => ({ md: mockMd }));
+
 const mockValidatorValidate = jest.fn().mockReturnValue({ errors: [], warnings: [] });
 jest.mock('./test-case-validator', () => jest.fn(() => ({ validate: mockValidatorValidate })));
 
-import { _checkResumeCheckpoint, filterTests, validateImportBatch } from './import-prep';
+import {
+    _checkResumeCheckpoint,
+    filterTests,
+    validateImportBatch,
+    renderPreviewHtml,
+    generatePreviewMarkdown,
+    escapeHtml,
+    showPreview,
+} from './import-prep';
 import * as PROMPT from '../shared/prompt';
 import * as STATE from '../shared/state';
+import * as FS from 'fs';
 
 const makeTestCases = (count: number) =>
     Array.from({ length: count }, (_, i) => ({
@@ -173,5 +190,186 @@ describe('validateImportBatch', () => {
         const result = validateImportBatch(tests, '/path.csv', 'csv', 'TESTPROJ');
         expect(result).toBeUndefined();
         expect(PROMPT.error).toHaveBeenCalledWith(expect.stringContaining('Erros'));
+    });
+});
+
+describe('escapeHtml', () => {
+    it('escapes & < > "', () => {
+        expect(escapeHtml('&<>"')).toBe('&amp;&lt;&gt;&quot;');
+    });
+
+    it('passes through safe strings', () => {
+        expect(escapeHtml('hello world 123')).toBe('hello world 123');
+    });
+
+    it('handles empty string', () => {
+        expect(escapeHtml('')).toBe('');
+    });
+});
+
+describe('renderPreviewHtml', () => {
+    const tests = [
+        {
+            title: 'Login test',
+            description: 'Verifica login com credenciais validas',
+            steps: [
+                { fields: { Action: 'Navegar para /login', Data: '', ExpectedResult: 'Formulario exibido' } },
+                { fields: { Action: 'Preencher email', Data: 'user@test.com', ExpectedResult: 'Campos preenchidos' } },
+            ],
+            precondition: { type: 'inline' as const, value: 'Usuario existe no banco' },
+            group: 'Auth',
+            linkedIssues: [{ key: 'US-123', linkType: 'Tests' }],
+        },
+        {
+            title: 'Logout test',
+            description: '',
+            steps: [{ fields: { Action: 'Clicar em Sair', Data: '', ExpectedResult: 'Redirecionado para /login' } }],
+            group: '',
+            linkedIssues: [],
+        },
+    ];
+
+    it('contains title and summary cards', () => {
+        const html = renderPreviewHtml(tests, ['smoke', 'regression'], 3, 1);
+        expect(html).toContain('Preview dos testes a serem criados');
+        expect(html).toContain('<div class="summary">');
+        expect(html).toContain('Testes</div><div class="val">2');
+        expect(html).toContain('Steps</div><div class="val">3');
+        expect(html).toContain('Grupos</div><div class="val">1');
+        expect(html).toContain('Labels</div><div class="val sub">');
+    });
+
+    it('renders empty labels gracefully', () => {
+        const html = renderPreviewHtml(tests, [], 3, 0);
+        expect(html).not.toContain('Labels');
+        expect(html).not.toContain('Grupos</div><div class="val">');
+    });
+
+    it('renders test cards with title and steps', () => {
+        const html = renderPreviewHtml(tests, [], 3, 0);
+        expect(html).toContain('Login test');
+        expect(html).toContain('Logout test');
+        expect(html).toContain('Navegar para /login');
+        expect(html).toContain('Formulario exibido');
+        expect(html).toContain('user@test.com');
+    });
+
+    it('renders precondition and links in meta', () => {
+        const html = renderPreviewHtml(tests, [], 3, 0);
+        expect(html).toContain('Usuario existe no banco');
+        expect(html).toContain('US-123');
+    });
+
+    it('shows empty state for missing description', () => {
+        const html = renderPreviewHtml(tests, [], 3, 0);
+        expect(html).toContain('<div class="desc empty">');
+    });
+
+    it('renders group badge', () => {
+        const html = renderPreviewHtml(tests, [], 3, 0);
+        expect(html).toContain('<span class="badge group">Auth</span>');
+    });
+
+    it('contains footer', () => {
+        const html = renderPreviewHtml(tests, [], 3, 0);
+        expect(html).toContain('Gerado por QA Tools — import-prep');
+    });
+
+    it('html is valid full document', () => {
+        const html = renderPreviewHtml(tests, [], 3, 0);
+        expect(html).toMatch(/^<!DOCTYPE html>/);
+        expect(html).toContain('</html>');
+    });
+});
+
+describe('generatePreviewMarkdown', () => {
+    const tests = [
+        {
+            title: 'Login test',
+            description: 'Verifica login valido',
+            steps: [
+                { fields: { Action: 'a', Data: '', ExpectedResult: 'b' } },
+                { fields: { Action: 'c', Data: '', ExpectedResult: 'd' } },
+            ],
+            precondition: { type: 'inline' as const, value: 'Usuario existe' },
+            group: 'Auth',
+            linkedIssues: [{ key: 'US-123', linkType: 'Tests' }],
+        },
+        {
+            title: 'Logout test',
+            description: '',
+            steps: [{ fields: { Action: 'x', Data: '', ExpectedResult: 'y' } }],
+            group: '',
+            linkedIssues: [],
+        },
+    ];
+
+    it('renders pipe table with header', () => {
+        const md = generatePreviewMarkdown(tests);
+        expect(md).toContain('| # | Titulo | Descricao | Passos | Pre-cond. | Links | Grupo |');
+        expect(md).toContain('|---|');
+    });
+
+    it('includes test data in rows', () => {
+        const md = generatePreviewMarkdown(tests);
+        expect(md).toContain('Login test');
+        expect(md).toContain('Logout test');
+        expect(md).toContain('Auth');
+    });
+
+    it('shows — for empty fields', () => {
+        const md = generatePreviewMarkdown(tests);
+        expect(md).toContain('—');
+    });
+
+    it('includes step counts', () => {
+        const md = generatePreviewMarkdown(tests);
+        expect(md).toContain('| 2 |');
+        expect(md).toContain('| 1 |');
+    });
+});
+
+describe('showPreview', () => {
+    const tests = [
+        {
+            title: 'Login test',
+            description: 'desc',
+            steps: [{ fields: { Action: 'Acao', Data: '', ExpectedResult: 'OK' } }],
+            group: 'Auth',
+        },
+    ];
+
+    beforeEach(() => {
+        jest.clearAllMocks();
+        jest.mocked(PROMPT.isQuiet).mockReturnValue(true);
+    });
+
+    it('prints title and markdown table', () => {
+        showPreview(tests, ['smoke'], 2, 1);
+        expect(PROMPT.title).toHaveBeenCalledWith('Preview dos testes a serem criados');
+        expect(PROMPT.print).toHaveBeenCalled();
+        expect(mockMd).toHaveBeenCalled();
+        expect(PROMPT.divider).toHaveBeenCalled();
+    });
+
+    it('prints total info', () => {
+        showPreview(tests, ['smoke'], 2, 1);
+        expect(PROMPT.info).toHaveBeenCalledWith(expect.stringContaining('Total:'));
+        expect(PROMPT.info).toHaveBeenCalledWith(expect.stringContaining('2 step(s)'));
+        expect(PROMPT.info).toHaveBeenCalledWith(expect.stringContaining('1 grupo(s)'));
+    });
+
+    it('prints labels when provided', () => {
+        showPreview(tests, ['smoke', 'regression'], 2, 1);
+        expect(PROMPT.info).toHaveBeenCalledWith(expect.stringContaining('Labels'));
+    });
+
+    it('writes HTML sidecar to tmpdir', () => {
+        showPreview(tests, ['smoke'], 2, 1);
+        expect(FS.writeFileSync).toHaveBeenCalledTimes(1);
+        const args = jest.mocked(FS.writeFileSync).mock.calls[0];
+        expect(args[0]).toContain('qa-preview.html');
+        expect(args[1]).toContain('Login test');
+        expect(args[2]).toBe('utf8');
     });
 });

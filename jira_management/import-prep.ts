@@ -1,5 +1,7 @@
 import * as fs from 'fs';
+import * as os from 'os';
 import * as path from 'path';
+import { md } from '../shared/markdown';
 import Config from '../shared/config';
 import type { TestCase } from '../shared/types';
 import { isPreconditionKey } from '../shared/quoted-string';
@@ -50,27 +52,163 @@ function _checkResumeCheckpoint(
     return { resumeFrom, inMemoryTasksId, inMemoryTasksText };
 }
 
+function escapeHtml(s: string): string {
+    return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+}
+
+function _renderHtmlHead(): string {
+    return (
+        '<!DOCTYPE html>\n<html lang="pt-BR">\n<head>\n<meta charset="UTF-8">\n' +
+        '<meta name="viewport" content="width=device-width,initial-scale=1.0">\n' +
+        '<title>Preview — Importação de Testes</title>\n' +
+        '<style>\n' +
+        'body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;margin:0;padding:20px;background:#f9fafb;color:#111827;}\n' +
+        'h1{font-size:1.25rem;margin:0 0 16px 0;color:#111827;}\n' +
+        '.summary{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:20px;}\n' +
+        '.card{background:#fff;border-radius:6px;padding:12px 16px;box-shadow:0 1px 2px rgba(0,0,0,0.06);min-width:80px;flex:1;}\n' +
+        '.card .lbl{font-size:0.65rem;text-transform:uppercase;color:#9ca3af;letter-spacing:0.5px;}\n' +
+        '.card .val{font-size:1.25rem;font-weight:700;margin-top:2px;}\n' +
+        '.card .val.sub{font-size:0.85rem;font-weight:400;color:#6b7280;word-break:break-all;}\n' +
+        '.test-card{background:#fff;border-radius:6px;box-shadow:0 1px 2px rgba(0,0,0,0.06);margin-bottom:10px;border-left:4px solid #e5e7eb;overflow:hidden;}\n' +
+        '.test-card:hover{box-shadow:0 2px 8px rgba(0,0,0,0.1);}\n' +
+        '.card-header{padding:10px 14px;display:flex;align-items:center;gap:8px;background:#fafbfc;border-bottom:1px solid #f3f4f6;flex-wrap:wrap;}\n' +
+        '.card-header .num{color:#9ca3af;font-size:0.75rem;font-weight:600;min-width:24px;}\n' +
+        '.card-header .ttl{font-weight:600;font-size:0.9rem;flex:1;}\n' +
+        '.card-header .badge{display:inline-block;background:#e5e7eb;padding:1px 7px;border-radius:9999px;font-size:0.7rem;font-weight:600;color:#374151;white-space:nowrap;}\n' +
+        '.card-header .badge.group{background:#dbeafe;color:#1d4ed8;}\n' +
+        '.card-body{padding:10px 14px;font-size:0.8rem;line-height:1.5;}\n' +
+        '.card-body .desc{color:#4b5563;margin-bottom:8px;}\n' +
+        '.card-body .desc.empty{color:#d1d5db;font-style:italic;}\n' +
+        '.steps{margin:8px 0;padding:0;list-style:none;}\n' +
+        '.steps li{padding:4px 0;border-bottom:1px solid #f9fafb;}\n' +
+        '.steps li:last-child{border-bottom:none;}\n' +
+        '.steps .action{color:#111827;font-weight:500;}\n' +
+        '.steps .data{color:#6b7280;margin-left:12px;}\n' +
+        '.steps .expected{color:#059669;margin-left:12px;}\n' +
+        '.steps .label{color:#9ca3af;font-size:0.7rem;text-transform:uppercase;letter-spacing:0.3px;display:inline-block;min-width:60px;}\n' +
+        '.meta{display:flex;gap:12px;flex-wrap:wrap;font-size:0.75rem;color:#6b7280;margin-top:6px;border-top:1px solid #f3f4f6;padding-top:6px;}\n' +
+        '.meta .mlbl{color:#9ca3af;}\n' +
+        '.footer{margin-top:12px;font-size:0.7rem;color:#9ca3af;text-align:center;}\n' +
+        '</style>\n</head>\n<body>\n'
+    );
+}
+
+function _renderSummaryCards(tests: TestCase[], jiraLabels: string[], totalSteps: number, groupsCount: number): string {
+    const labelText =
+        jiraLabels.length <= 3
+            ? jiraLabels.join(', ')
+            : jiraLabels.slice(0, 3).join(', ') + ' +' + (jiraLabels.length - 3);
+    let html = '<h1>Preview dos testes a serem criados</h1>\n<div class="summary">\n';
+    html += '<div class="card"><div class="lbl">Testes</div><div class="val">' + tests.length + '</div></div>\n';
+    html += '<div class="card"><div class="lbl">Steps</div><div class="val">' + totalSteps + '</div></div>\n';
+    if (groupsCount > 0) {
+        html += '<div class="card"><div class="lbl">Grupos</div><div class="val">' + groupsCount + '</div></div>\n';
+    }
+    if (jiraLabels.length > 0) {
+        html +=
+            '<div class="card"><div class="lbl">Labels</div><div class="val sub">' +
+            escapeHtml(labelText) +
+            '</div></div>\n';
+    }
+    html += '</div>\n';
+    return html;
+}
+
+function _renderTestCard(test: TestCase, index: number): string {
+    const t = test;
+    let html = '<div class="test-card">\n<div class="card-header">\n';
+    html += '<span class="num">#' + (index + 1) + '</span>';
+    html += '<span class="ttl">' + escapeHtml(t.title) + '</span>';
+    if (t.group) {
+        html += '<span class="badge group">' + escapeHtml(t.group) + '</span>';
+    }
+    html += '<span class="badge">' + t.steps.length + ' step(s)</span>';
+    html += '</div>\n<div class="card-body">\n';
+
+    html += t.description
+        ? '<div class="desc">' + escapeHtml(t.description) + '</div>\n'
+        : '<div class="desc empty">—</div>\n';
+
+    html += '<ul class="steps">\n';
+    for (let j = 0; j < t.steps.length; j++) {
+        const s = t.steps[j];
+        html += '<li>';
+        html +=
+            '<div><span class="label">Acao</span><span class="action">' +
+            escapeHtml(s.fields.Action || '') +
+            '</span></div>';
+        if (s.fields.Data) {
+            html +=
+                '<div><span class="label">Dados</span><span class="data">' +
+                escapeHtml(s.fields.Data) +
+                '</span></div>';
+        }
+        html +=
+            '<div><span class="label">Esperado</span><span class="expected">' +
+            escapeHtml(s.fields.ExpectedResult || '') +
+            '</span></div>';
+        html += '</li>\n';
+    }
+    html += '</ul>\n';
+
+    html += '<div class="meta">\n';
+    if (t.precondition) {
+        html += '<span><span class="mlbl">Pre-cond:</span> ' + escapeHtml(t.precondition.value) + '</span>\n';
+    }
+    if (t.linkedIssues && t.linkedIssues.length > 0) {
+        const linkText = t.linkedIssues.map((li) => li.key).join(', ');
+        html += '<span><span class="mlbl">Links:</span> ' + escapeHtml(linkText) + '</span>\n';
+    }
+    html += '</div>\n</div>\n</div>\n';
+    return html;
+}
+
+function renderPreviewHtml(tests: TestCase[], jiraLabels: string[], totalSteps: number, groupsCount: number): string {
+    let html = _renderHtmlHead();
+    html += _renderSummaryCards(tests, jiraLabels, totalSteps, groupsCount);
+    for (let i = 0; i < tests.length; i++) {
+        html += _renderTestCard(tests[i], i);
+    }
+    html += '<div class="footer">Gerado por QA Tools — import-prep</div>\n';
+    html += '</body>\n</html>\n';
+    return html;
+}
+
+function generatePreviewMarkdown(tests: TestCase[]): string {
+    let markdown = '| # | Titulo | Descricao | Passos | Pre-cond. | Links | Grupo |\n';
+    markdown += '|---|--------|-----------|--------|-----------|-------|-------|\n';
+    for (let i = 0; i < tests.length; i++) {
+        const t = tests[i];
+        const desc = t.description ? t.description.substring(0, 50).replace(/\|/g, '\\|') : '—';
+        const pre = t.precondition ? escapeHtml(t.precondition.value.substring(0, 30)) : '—';
+        const links = t.linkedIssues?.length ? String(t.linkedIssues.length) : '0';
+        const group = t.group || '—';
+        markdown +=
+            '| ' +
+            (i + 1) +
+            ' | ' +
+            t.title.replace(/\|/g, '\\|') +
+            ' | ' +
+            desc +
+            ' | ' +
+            t.steps.length +
+            ' | ' +
+            pre +
+            ' | ' +
+            links +
+            ' | ' +
+            group +
+            ' |\n';
+    }
+    return markdown;
+}
+
 function showPreview(tests: TestCase[], jiraLabels: string[], totalSteps: number, groupsCount: number): void {
     title('Preview dos testes a serem criados');
-    tests.forEach((test, i) => {
-        const desc = test.description ? ' — ' + test.description.substring(0, 60) : '';
-        const pre = test.precondition ? ' [pre: ' + test.precondition.value.substring(0, 30) + ']' : '';
-        const links = test.linkedIssues?.length ? ' [' + test.linkedIssues.length + ' link(s)]' : '';
-        const group = test.group ? ' [grupo: ' + test.group + ']' : '';
-        const stepsInfo = test.steps.length + ' step(s)';
-        const firstStep = test.steps[0]?.fields?.Action?.substring(0, 30) || '';
-        const lastStep =
-            test.steps.length > 1 ? test.steps[test.steps.length - 1]?.fields?.Action?.substring(0, 30) || '' : '';
-        const stepPreview =
-            ' [' +
-            stepsInfo +
-            ': "' +
-            firstStep +
-            '"...' +
-            (lastStep && lastStep !== firstStep ? ' "' + lastStep + '"' : '') +
-            ']';
-        print('  ' + (i + 1) + '. ' + test.title + desc + pre + links + group + stepPreview);
-    });
+
+    const mdContent = generatePreviewMarkdown(tests);
+    print(md(mdContent));
+
     divider();
 
     if (jiraLabels.length > 0) {
@@ -84,6 +222,11 @@ function showPreview(tests: TestCase[], jiraLabels: string[], totalSteps: number
             ' step(s)' +
             (groupsCount > 0 ? ', ' + groupsCount + ' grupo(s)' : ''),
     );
+
+    const html = renderPreviewHtml(tests, jiraLabels, totalSteps, groupsCount);
+    const outPath = path.join(os.tmpdir(), 'qa-preview.html');
+    fs.writeFileSync(outPath, html, 'utf8');
+    info('Preview HTML: ' + outPath);
 }
 
 function filterTests(tests: TestCase[]): TestCase[] | null {
@@ -270,5 +413,8 @@ export {
     resolveLabels,
     resolveJsonPath,
     parseJsonTests,
+    renderPreviewHtml,
+    generatePreviewMarkdown,
+    escapeHtml,
 };
 export type { ValidationResult };

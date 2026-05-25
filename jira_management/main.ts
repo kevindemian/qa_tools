@@ -20,6 +20,7 @@ import {
     showSelect,
     tableView,
     CancelError,
+    print,
 } from '../shared/prompt';
 import {
     mask,
@@ -243,22 +244,12 @@ function _configHint(key: string, ctx: { git_directory: string }): string {
     return '';
 }
 
-const SECTION_ICONS: Record<string, string> = {
-    TESTES: '🧪',
-    RELEASES: '🚀',
-    CONFIGURACAO: '⚙️',
-    UTILITARIOS: '🔧',
-    IA: '🤖',
-};
-
 function buildMenuChoices(proj: string, ctx: { git_directory: string }): MenuChoice[] {
     const choices: MenuChoice[] = [];
     for (const item of MENU_ITEMS) {
         if (item.section) {
-            const icon = SECTION_ICONS[item.section] || '';
-            const line = icon ? '       ' + icon + '  ' + item.section : '       ' + item.section;
-            choices.push({ type: 'separator' as const, line: '        ' });
-            choices.push({ type: 'separator' as const, line });
+            choices.push({ type: 'separator' as const, line: '' });
+            choices.push({ type: 'separator' as const, line: item.section });
         } else if (item.id === '0') {
             choices.push({ name: '      ' + item.label, value: '0' });
         } else {
@@ -464,6 +455,12 @@ async function getUserChoice(proj: string, ctx: SessionContext): Promise<string>
     choices.splice(choices.length - 1, 0, ...cmdGroup);
     const menuState = loadState() as StateSchema;
 
+    print('');
+    print(palette.muted('  ─────────────────────────────────────────'));
+    print('  QA TOOLS');
+    print(palette.muted('  ─────────────────────────────────────────'));
+    print('');
+
     const ok = ctx.sessionCounters.filter((c) => c.status === 'ok').length;
     const err = ctx.sessionCounters.filter((c) => c.status === 'error').length;
     const headerLines: string[] = [];
@@ -520,7 +517,7 @@ async function runMainLoop(
 ): Promise<void> {
     const longOps = ['1', '15', '4', '5', '7', '8'];
     while (true) {
-        console.clear();
+        print(palette.muted('  ───'));
         let choice;
         try {
             choice = await getUserChoice(ctx.project_name, ctx);
