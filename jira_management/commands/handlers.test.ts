@@ -58,6 +58,7 @@ const mockJiraResource = {
     releaseVersion: jest.fn().mockResolvedValue({}),
     createVersion: jest.fn().mockResolvedValue({}),
     checkReleaseTasksStatus: jest.fn().mockResolvedValue(undefined),
+    postJiraResource: jest.fn().mockResolvedValue({}),
     axiosInstance: { get: jest.fn().mockResolvedValue({ status: 200 }), post: jest.fn().mockResolvedValue({}) },
 };
 
@@ -179,6 +180,80 @@ describe('case04 — assign fixVersion', () => {
             label: 'TEST-2',
             message: 'Falha ao atualizar fixVersion',
         });
+    });
+
+    it('accepts manual task entry when not using in-memory tasks', async () => {
+        mockSessionContext.inMemoryTasksId = ['TEST-1'];
+        mockSessionContext.inMemoryTasksText = ['Existing task'];
+        const prompt = require('../../shared/prompt');
+        prompt.askConfirm
+            .mockResolvedValueOnce(false) // useInMemory = false
+            .mockResolvedValueOnce(true) // confirm fixVersion
+            .mockResolvedValueOnce(false); // don't add to sprint
+        prompt.ask.mockResolvedValueOnce('MANUAL-1 MANUAL-2');
+        prompt.ask.mockResolvedValueOnce('v2.0.0');
+        const mod = require('./case04');
+        await mod.handler(baseContext);
+        // updateFixVersions is called per-taskId, not with all IDs at once
+        expect(mockJiraResource.updateFixVersions).toHaveBeenNthCalledWith(
+            1,
+            ['MANUAL-1'],
+            expect.any(String),
+            'v2.0.0',
+        );
+        expect(mockJiraResource.updateFixVersions).toHaveBeenNthCalledWith(
+            2,
+            ['MANUAL-2'],
+            expect.any(String),
+            'v2.0.0',
+        );
+    });
+
+    it('adds tasks to sprint when confirmed', async () => {
+        mockSessionContext.inMemoryTasksId = ['TEST-1'];
+        mockSessionContext.inMemoryTasksText = ['Task one'];
+        mockJiraResource.postJiraResource = jest.fn().mockResolvedValueOnce({});
+        const prompt = require('../../shared/prompt');
+        prompt.ask.mockResolvedValueOnce('v2.0.0'); // version name
+        prompt.ask.mockResolvedValueOnce('6991'); // sprint ID
+        prompt.askConfirm
+            .mockResolvedValueOnce(true) // useInMemory = true
+            .mockResolvedValueOnce(true) // confirm fixVersion
+            .mockResolvedValueOnce(true); // add to sprint
+        const mod = require('./case04');
+        await mod.handler(baseContext);
+        expect(mockJiraResource.postJiraResource).toHaveBeenCalledWith('sprint/6991/issue', { issues: ['TEST-1'] });
+    });
+
+    it('warns when sprint ID is empty after confirming add to sprint', async () => {
+        mockSessionContext.inMemoryTasksId = ['TEST-1'];
+        mockSessionContext.inMemoryTasksText = ['Task one'];
+        const prompt = require('../../shared/prompt');
+        prompt.ask.mockResolvedValueOnce('v2.0.0'); // version name
+        prompt.ask.mockResolvedValueOnce(''); // empty sprint ID
+        prompt.askConfirm
+            .mockResolvedValueOnce(true) // useInMemory = true
+            .mockResolvedValueOnce(true) // confirm fixVersion
+            .mockResolvedValueOnce(true); // add to sprint
+        const mod = require('./case04');
+        await mod.handler(baseContext);
+        expect(prompt.warn).toHaveBeenCalledWith('Sprint ID vazio. Pulando...');
+    });
+
+    it('handles error when adding tasks to sprint fails', async () => {
+        mockSessionContext.inMemoryTasksId = ['TEST-1'];
+        mockSessionContext.inMemoryTasksText = ['Task one'];
+        mockJiraResource.postJiraResource = jest.fn().mockRejectedValueOnce(new Error('Sprint API error'));
+        const prompt = require('../../shared/prompt');
+        prompt.ask.mockResolvedValueOnce('v2.0.0'); // version name
+        prompt.ask.mockResolvedValueOnce('6991'); // sprint ID
+        prompt.askConfirm
+            .mockResolvedValueOnce(true) // useInMemory = true
+            .mockResolvedValueOnce(true) // confirm fixVersion
+            .mockResolvedValueOnce(true); // add to sprint
+        const mod = require('./case04');
+        await mod.handler(baseContext);
+        expect(prompt.printError).toHaveBeenCalled();
     });
 });
 
@@ -432,6 +507,27 @@ describe('case13 — create test execution', () => {
         );
     });
 
+    it('falls back to manual key entry when user declines in-memory tasks', async () => {
+        mockSessionContext.inMemoryTasksId = ['TEST-1', 'TEST-2'];
+        const prompt = require('../../shared/prompt');
+        prompt.askConfirm.mockResolvedValueOnce(false);
+        prompt.ask.mockResolvedValueOnce('MANUAL-1 MANUAL-2');
+        prompt.ask.mockResolvedValueOnce('manual-exec');
+        prompt.ask.mockResolvedValueOnce('Manual Title');
+        prompt.ask.mockResolvedValueOnce('');
+        const helpers = require('./helpers');
+        helpers.createTestExecutionWithLinksWrapper.mockResolvedValueOnce(undefined);
+        const mod = require('./case13');
+        await mod.handler(baseContext);
+        expect(helpers.createTestExecutionWithLinksWrapper).toHaveBeenCalledWith(
+            baseContext,
+            ['MANUAL-1', 'MANUAL-2'],
+            'manual-exec',
+            'Manual Title',
+            '',
+        );
+    });
+
     it('creates test execution from in-memory tasks with full flow', async () => {
         mockSessionContext.inMemoryTasksId = ['TEST-1', 'TEST-2'];
         mockSessionContext.inMemoryTasksText = ['Test one', 'Test two'];
@@ -511,6 +607,49 @@ describe('case15 — create tests from JSON', () => {
         expect(await mod.handler(baseContext)).toBeUndefined();
         expect(mockSessionContext.inMemoryTasksId).toEqual([]);
     });
+
+    it('resolves relative jsonPath using lastJsonDir from state', async () => {
+        const state = require('../../shared/state');
+        state.load.mockReturnValue({ lastJsonDir: '/base/dir' });
+        const createTests = require('../create_tests');
+        createTests.createTestsFromJson.mockResolvedValueOnce({
+            inMemoryTasksId: ['TEST-1'],
+            inMemoryTasksText: ['Test'],
+            sourcePath: '/base/dir/tests.json',
+        });
+        const fs = require('fs');
+        jest.spyOn(fs, 'existsSync').mockReturnValueOnce(true);
+        const prompt = require('../../shared/prompt');
+        prompt.ask.mockResolvedValueOnce('relative/tests.json');
+        prompt.askConfirm.mockResolvedValueOnce(false);
+        const mod = require('./case15');
+        await mod.handler(baseContext);
+        // path.resolve('/base/dir', 'relative/tests.json') = '/base/dir/relative/tests.json'
+        expect(createTests.createTestsFromJson).toHaveBeenCalledWith(
+            expect.objectContaining({ jsonPath: '/base/dir/relative/tests.json' }),
+        );
+    });
+
+    it('does not resolve relative path when file does not exist', async () => {
+        const state = require('../../shared/state');
+        state.load.mockReturnValue({ lastJsonDir: '/base/dir' });
+        const createTests = require('../create_tests');
+        createTests.createTestsFromJson.mockResolvedValueOnce({
+            inMemoryTasksId: ['TEST-1'],
+            inMemoryTasksText: ['Test'],
+            sourcePath: '/base/dir/tests.json',
+        });
+        const fs = require('fs');
+        jest.spyOn(fs, 'existsSync').mockReturnValueOnce(false);
+        const prompt = require('../../shared/prompt');
+        prompt.ask.mockResolvedValueOnce('relative/tests.json');
+        prompt.askConfirm.mockResolvedValueOnce(false);
+        const mod = require('./case15');
+        await mod.handler(baseContext);
+        expect(createTests.createTestsFromJson).toHaveBeenCalledWith(
+            expect.objectContaining({ jsonPath: 'relative/tests.json' }),
+        );
+    });
 });
 
 describe('case16 — config JSON directory', () => {
@@ -556,6 +695,30 @@ describe('case12 — diagnostic connection', () => {
         expect(prompt.printSummary).toHaveBeenCalled();
         expect(baseContext.pushHistory).toHaveBeenCalledWith('diagnostico', expect.stringContaining('2/3'), 'error');
     });
+
+    it('marks error as connection failure for non-auth HTTP errors', async () => {
+        mockJiraResource.axiosInstance.get
+            .mockResolvedValueOnce({ status: 200 })
+            .mockRejectedValueOnce({ response: { status: 500 } })
+            .mockResolvedValueOnce({ status: 200 });
+        const mod = require('./case12');
+        await mod.handler(baseContext);
+        const prompt = require('../../shared/prompt');
+        expect(prompt.printSummary).toHaveBeenCalled();
+        expect(baseContext.pushHistory).toHaveBeenCalledWith('diagnostico', expect.stringContaining('2/3'), 'error');
+    });
+
+    it('handles network error with no response object', async () => {
+        mockJiraResource.axiosInstance.get
+            .mockResolvedValueOnce({ status: 200 })
+            .mockRejectedValueOnce(new Error('Network error'))
+            .mockResolvedValueOnce({ status: 200 });
+        const mod = require('./case12');
+        await mod.handler(baseContext);
+        const prompt = require('../../shared/prompt');
+        expect(prompt.printSummary).toHaveBeenCalled();
+        expect(baseContext.pushHistory).toHaveBeenCalledWith('diagnostico', expect.stringContaining('2/3'), 'error');
+    });
 });
 
 describe('case01 — create tests from CSV', () => {
@@ -578,6 +741,58 @@ describe('case01 — create tests from CSV', () => {
         );
         expect(mockSessionContext.inMemoryTasksId).toEqual(['TEST-1', 'TEST-2']);
         expect(baseContext.pushHistory).toHaveBeenCalledWith('csv-import', '2 tests created from CSV', 'ok');
+    });
+
+    it('invokes onBusy callback during CSV import', async () => {
+        mockConfigMod.csvPath = '/fake/test.csv';
+        mockConfigMod.csvLabels = 'label1';
+        const createTests = require('../create_tests');
+        createTests.createTestsFromCsv.mockImplementationOnce(async (_opts: { onBusy: (v: boolean) => void }) => {
+            _opts.onBusy(true);
+            _opts.onBusy(false);
+            return {
+                inMemoryTasksId: ['TEST-1'],
+                inMemoryTasksText: ['Test'],
+                summary: '1 test',
+                status: 'ok',
+            };
+        });
+        const prompt = require('../../shared/prompt');
+        prompt.askConfirm.mockResolvedValueOnce(false);
+        const mod = require('./case01');
+        await mod.handler(baseContext);
+        expect(mockSessionContext.isBusy).toBe(false);
+    });
+
+    it('prompts to create test execution after CSV import when confirmed', async () => {
+        mockConfigMod.csvPath = '/fake/test.csv';
+        mockConfigMod.csvLabels = 'label1';
+        mockSessionContext.inMemoryTasksId = ['TEST-1', 'TEST-2'];
+        mockSessionContext.inMemoryTasksText = ['Test 1', 'Test 2'];
+        const state = require('../../shared/state');
+        state.load.mockReturnValue({ lastCsvPath: '/fake/test.csv' });
+        const createTests = require('../create_tests');
+        createTests.createTestsFromCsv.mockResolvedValueOnce({
+            inMemoryTasksId: ['TEST-1', 'TEST-2'],
+            inMemoryTasksText: ['Test 1', 'Test 2'],
+            summary: '2 tests',
+            status: 'ok',
+        });
+        const prompt = require('../../shared/prompt');
+        prompt.askConfirm.mockResolvedValueOnce(true);
+        prompt.ask.mockResolvedValueOnce('Exec Title');
+        prompt.ask.mockResolvedValueOnce('Exec Description');
+        const helpers = require('./helpers');
+        helpers.createTestExecutionWithLinksWrapper.mockResolvedValueOnce(undefined);
+        const mod = require('./case01');
+        await mod.handler(baseContext);
+        expect(helpers.createTestExecutionWithLinksWrapper).toHaveBeenCalledWith(
+            baseContext,
+            ['TEST-1', 'TEST-2'],
+            'test',
+            'Exec Title',
+            'Exec Description',
+        );
     });
 
     it('handles null result from createTestsFromCsv gracefully', async () => {

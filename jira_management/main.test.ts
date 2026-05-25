@@ -89,7 +89,7 @@ jest.mock('child_process', () => ({
 
 // ── Imports ────────────────────────────────────────────────────────────────
 import { createValidateEnv } from '../shared/cli_base';
-import { print, warn, helpLine, title, divider, prompt, showSelect } from '../shared/prompt';
+import { print, warn, helpLine, title, divider, prompt, showSelect, printError } from '../shared/prompt';
 import { load as loadState, update as updateState, getStatePath } from '../shared/state';
 
 // ── Types ──────────────────────────────────────────────────────────────────
@@ -432,6 +432,31 @@ describe('showDocs', () => {
         await mod.showDocs();
         expect(showSelect).toHaveBeenCalled();
     });
+
+    it('handles missing docs directory', async () => {
+        const fs = require('fs');
+        jest.spyOn(fs, 'readdirSync').mockImplementationOnce(() => {
+            throw new Error('ENOENT');
+        });
+        await mod.showDocs();
+        expect(printError).toHaveBeenCalled();
+    });
+
+    it('warns when no matching files found in docs', async () => {
+        const fs = require('fs');
+        jest.spyOn(fs, 'readdirSync').mockReturnValueOnce(['readme.txt', 'notes.md']);
+        await mod.showDocs();
+        expect(warn).toHaveBeenCalled();
+    });
+
+    it('reads and displays a selected document', async () => {
+        (showSelect as jest.Mock).mockResolvedValueOnce('01-test-doc.md').mockResolvedValueOnce('0');
+        const fs = require('fs');
+        jest.spyOn(fs, 'readdirSync').mockReturnValueOnce(['01-test-doc.md']);
+        jest.spyOn(fs, 'readFileSync').mockReturnValueOnce('# Test Document\nContent here.');
+        await mod.showDocs();
+        expect(prompt).toHaveBeenCalledWith(expect.stringContaining('Pressione Enter'));
+    });
 });
 
 describe('showHelpLoop', () => {
@@ -452,5 +477,35 @@ describe('showHelpLoop', () => {
         (prompt as jest.Mock).mockReturnValueOnce('csv').mockReturnValueOnce('/back');
         await mod.showHelpLoop();
         expect(title).toHaveBeenCalled();
+    });
+
+    it('handles empty input by continuing loop', async () => {
+        (prompt as jest.Mock).mockReturnValueOnce('').mockReturnValueOnce('/back');
+        await mod.showHelpLoop();
+        expect(title).toHaveBeenCalled();
+    });
+
+    it('shows help on /help command and continues', async () => {
+        (prompt as jest.Mock).mockReturnValueOnce('/help').mockReturnValueOnce('/back');
+        await mod.showHelpLoop();
+        expect(title).toHaveBeenCalled();
+    });
+
+    it('shows specific help topic on /help <topic>', async () => {
+        (prompt as jest.Mock).mockReturnValueOnce('/help csv').mockReturnValueOnce('/back');
+        await mod.showHelpLoop();
+        expect(helpLine).toHaveBeenCalled();
+    });
+
+    it('shows multiple matching topics when input matches several', async () => {
+        (prompt as jest.Mock).mockReturnValueOnce('a').mockReturnValueOnce('/back');
+        await mod.showHelpLoop();
+        expect(title).toHaveBeenCalled();
+    });
+
+    it('warns when topic is not found', async () => {
+        (prompt as jest.Mock).mockReturnValueOnce('nonexistent_topic_xyz').mockReturnValueOnce('/back');
+        await mod.showHelpLoop();
+        expect(warn).toHaveBeenCalledWith(expect.stringContaining('não encontrado'));
     });
 });
