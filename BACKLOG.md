@@ -825,3 +825,73 @@ Todos os 6 cenários passaram. Erros 404/403 são tratados corretamente por `han
 | `grep -rn "throw '" jira_management/import-prep*` | zero                         |
 | `grep -rn ".only(" jira_management/import-prep*`  | zero                         |
 | R4 — funções >50 linhas em `import-prep.ts`       | **0** ✅                     |
+
+---
+
+## 🔷 Comprehensive Cleanup — 7 Fases (2026-05-25)
+
+**Prioridade:** P1
+
+**Objetivo:** Eliminar débitos técnicos pendentes, padronizar exports (ESM), tipar APIs, quebrar SRP violations, remover código morte. Execução em ordem de risco crescente.
+
+### Fase 0 — Commitar Fase 7 (5 min)
+
+**Status:** ✅ CONCLUÍDA
+
+8 arquivos `.test.ts` do SRP extraído estavam untracked:
+
+- `git_triggers/batch-mode.test.ts`
+- `git_triggers/mr-handler.test.ts`
+- `git_triggers/pipeline-handler.test.ts`
+- `git_triggers/schedule-handler.test.ts`
+- `git_triggers/session-state.test.ts`
+- `shared/prompt-input.test.ts`
+- `shared/prompt-ui.test.ts`
+- `shared/spinner.test.ts`
+
+### Fase 4 — Quebrar funções > 50 linhas (P2, ~2h)
+
+**Status:** ⏳ Pendente
+
+| Função                  | Arquivo                            | Linhas | Ação                     |
+| ----------------------- | ---------------------------------- | ------ | ------------------------ |
+| `handleTriggerPipeline` | `git_triggers/pipeline-handler.ts` | 109    | Extrair helpers nomeados |
+| `tryBatchMode`          | `git_triggers/batch-mode.ts`       | 85     | Extrair helpers nomeados |
+| `tableView`             | `shared/prompt-ui.ts`              | 76     | Extrair helpers nomeados |
+| `printSummary`          | `shared/prompt-ui.ts`              | 61     | Extrair helpers nomeados |
+| `runMainLoop`           | `jira_management/main.ts`          | 65     | Extrair helpers nomeados |
+
+### Fase 1 — CJS→ESM (P1, ~3h)
+
+**Status:** ⏳ Pendente
+
+Converter 23 arquivos de `export =` / `module.exports` para `export default` / `export`:
+
+- 21 `export =` (commands/, create_tests, git_triggers/main)
+- 2 `module.exports =` (jira_management/main, commands/index)
+
+### Fase 2 — Tipar GitProvider (P1, ~2h)
+
+**Status:** ⏳ Pendente
+
+Definir interfaces em `shared/types.ts` para retornos da `GitProvider`. Tipar 36 retornos de função.
+
+### Fase 3 — SRP jira_resource.ts (P1, ~4h)
+
+**Status:** ⏳ Pendente
+
+Quebrar 456 linhas / 16 métodos em módulos por domínio.
+
+### Fase 5 — Débitos P3 (~5h)
+
+**Status:** ⏳ Pendente
+
+- AUDIT-15: TTL cache llm-client
+- AUDIT-16: Auto-reset retryCounts http-client
+- AUDIT-14: Record<string, unknown> → interfaces
+
+### Fase 6 — LLM + Reports A2
+
+**Status:** ⏳ Pendente
+
+HTML report generator auto-contido (charts SVG, zero deps).

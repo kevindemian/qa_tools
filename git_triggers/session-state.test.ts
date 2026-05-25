@@ -127,8 +127,8 @@ describe('session-state', () => {
         });
 
         it('setManager updates value', () => {
-            const m = {} as unknown;
-            sessionState.setManager(m);
+            const m = {};
+            sessionState.setManager(m as unknown);
             expect(sessionState.manager).toBe(m);
         });
     });
