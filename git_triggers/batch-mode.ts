@@ -34,24 +34,21 @@ export function parseBatchArgs(): { project?: string; branch?: string; auto?: bo
     return result;
 }
 
-export async function tryBatchMode(): Promise<boolean> {
-    const batch = parseBatchArgs();
-    if (!batch.auto && !batch.project && !batch.branch) return false;
-
-    if (batch.auto) {
-        process.env.AUTO_CONFIRM = 'true';
-    }
-
+async function setupBatchProject(batch: ReturnType<typeof parseBatchArgs>): Promise<{
+    m: import('../shared/types').GitProvider;
+    branch: string;
+    projectName: string;
+} | null> {
     const projs = getProjects();
     if (!projs || Object.keys(projs).length === 0) {
         error('Nenhum projeto configurado.');
-        return true;
+        return null;
     }
 
     const projectName = batch.project || Object.keys(projs)[0];
     if (!projs[projectName]) {
         error('Projeto "' + projectName + '" não encontrado em config/projects.json.');
-        return true;
+        return null;
     }
 
     setCurrentProjectName(projectName);
@@ -63,11 +60,17 @@ export async function tryBatchMode(): Promise<boolean> {
     const branchCheck = await m.getBranch(branch);
     if (!branchCheck) {
         error('Branch "' + branch + '" não encontrada em ' + projectName + '.');
-        return true;
+        return null;
     }
 
-    info('Modo batch: ' + projectName + ' @ ' + branch);
+    return { m, branch, projectName };
+}
 
+async function triggerAndCollectBatchPipeline(
+    m: import('../shared/types').GitProvider,
+    branch: string,
+    projectName: string,
+): Promise<boolean> {
     const payload = { ref: branch, variables: [] as Array<{ key: string; value: string }> };
     let pipelineResult: PipelineTriggerResult | undefined;
     try {
@@ -103,19 +106,38 @@ export async function tryBatchMode(): Promise<boolean> {
             await offerPipelineFailureAnalysis(parsed);
         }
     }
+    return false;
+}
 
-    if (currentProjectName) {
-        const store = loadMetrics();
-        const projectRuns = store.runs.filter((r) => r.project === currentProjectName);
-        if (projectRuns.length >= 2) {
-            const flaky = calculateFlakiness({ runs: projectRuns }, 2);
-            const html = generateFlakinessHtml(flaky, 'Flakiness — ' + currentProjectName);
-            const outPath = path.resolve(__dirname, '../flakiness-' + currentProjectName + '.html');
-            fs.writeFileSync(outPath, html, 'utf8');
-            success('Dashboard de flakiness gerado: ' + outPath);
-        }
+function generateFlakinessDashboard(projectName: string): void {
+    if (!currentProjectName) return;
+    const store = loadMetrics();
+    const projectRuns = store.runs.filter((r) => r.project === currentProjectName);
+    if (projectRuns.length < 2) return;
+    const flaky = calculateFlakiness({ runs: projectRuns }, 2);
+    const html = generateFlakinessHtml(flaky, 'Flakiness — ' + projectName);
+    const outPath = path.resolve(__dirname, '../flakiness-' + projectName + '.html');
+    fs.writeFileSync(outPath, html, 'utf8');
+    success('Dashboard de flakiness gerado: ' + outPath);
+}
+
+export async function tryBatchMode(): Promise<boolean> {
+    const batch = parseBatchArgs();
+    if (!batch.auto && !batch.project && !batch.branch) return false;
+
+    if (batch.auto) {
+        process.env.AUTO_CONFIRM = 'true';
     }
 
+    const setup = await setupBatchProject(batch);
+    if (!setup) return true;
+
+    info('Modo batch: ' + setup.projectName + ' @ ' + setup.branch);
+
+    const done = await triggerAndCollectBatchPipeline(setup.m, setup.branch, setup.projectName);
+    if (done) return true;
+
+    generateFlakinessDashboard(setup.projectName);
     printSessionSummary();
     return true;
 }

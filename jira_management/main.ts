@@ -505,6 +505,77 @@ async function dispatchChoice(choice: string, cmdCtx: CommandContext): Promise<D
     return 'continue';
 }
 
+async function getAndResolveChoice(ctx: SessionContext): Promise<string | null> {
+    let choice;
+    try {
+        choice = await getUserChoice(ctx.project_name, ctx);
+    } catch (e) {
+        if (e instanceof CancelError) choice = '/menu';
+        else throw e;
+    }
+
+    if (choice === '/exit' || choice === '/sair' || choice === '/quit') {
+        choice = '0';
+    }
+
+    const resolved = resolveAlias(choice);
+    if (resolved !== choice) {
+        choice = resolved;
+    }
+
+    const specialResult = await handleSpecialInput(choice);
+    if (specialResult === '__exit__') return '__exit__';
+    if (specialResult === true) return '__skip__';
+
+    return choice;
+}
+
+function buildCommandContext(
+    jiraResource: JiraResource,
+    jiraResourceXray: JiraResource,
+    linkManager: JiraLinkManager,
+    linkManagerXray: JiraLinkManager,
+    csvResource: CsvResource,
+    ctx: SessionContext,
+    pushHistory: (op: string, detail: string, status: string) => void,
+    printSessionSummary: () => void,
+): CommandContext {
+    return {
+        jiraResource,
+        jiraResourceXray,
+        linkManager,
+        linkManagerXray,
+        csvResource,
+        ctx,
+        pushHistory,
+        printSessionSummary,
+        base_url,
+        sessionLog,
+    };
+}
+
+async function dispatchAndHandleResult(
+    choice: string,
+    cmdCtx: CommandContext,
+    ctx: SessionContext,
+): Promise<'exit' | 'continue'> {
+    const action = await dispatchChoice(choice, cmdCtx);
+    if (action === 'exit') {
+        title('Até logo!');
+        cmdCtx.printSessionSummary();
+        if (ctx.sessionCounters.some((c) => c.status === 'error')) process.exitCode = 1;
+        return 'exit';
+    }
+
+    const longOps = ['1', '15', '4', '5', '7', '8'];
+    const hasResults = ctx.results.length > 0 && ctx.results.some((r) => r.status === 'error');
+    if (!Config.autoConfirm && choice !== '0' && longOps.includes(choice) && hasResults) {
+        prompt('Pressione Enter para continuar');
+    }
+
+    return 'continue';
+}
+
 async function runMainLoop(
     ctx: SessionContext,
     jiraResource: JiraResource,
@@ -515,35 +586,18 @@ async function runMainLoop(
     pushHistory: (op: string, detail: string, status: string) => void,
     printSessionSummary: () => void,
 ): Promise<void> {
-    const longOps = ['1', '15', '4', '5', '7', '8'];
     while (true) {
         print(palette.muted('  ───'));
-        let choice;
-        try {
-            choice = await getUserChoice(ctx.project_name, ctx);
-        } catch (e) {
-            if (e instanceof CancelError) choice = '/menu';
-            else throw e;
-        }
-
-        if (choice === '/exit' || choice === '/sair' || choice === '/quit') {
-            choice = '0';
-        }
-
-        const resolved = resolveAlias(choice);
-        if (resolved !== choice) {
-            choice = resolved;
-        }
-
-        const specialResult = await handleSpecialInput(choice);
-        if (specialResult === '__exit__') return;
-        if (specialResult === true) continue;
+        const choice = await getAndResolveChoice(ctx);
+        if (choice === '__exit__') return;
+        if (choice === '__skip__') continue;
+        if (!choice) continue;
 
         updateState((s) => {
             (s as StateSchema).lastChoice = choice;
         });
 
-        const cmdCtx: CommandContext = {
+        const cmdCtx = buildCommandContext(
             jiraResource,
             jiraResourceXray,
             linkManager,
@@ -552,22 +606,10 @@ async function runMainLoop(
             ctx,
             pushHistory,
             printSessionSummary,
-            base_url,
-            sessionLog,
-        };
+        );
 
-        const action = await dispatchChoice(choice, cmdCtx);
-        if (action === 'exit') {
-            title('Até logo!');
-            printSessionSummary();
-            if (ctx.sessionCounters.some((c) => c.status === 'error')) process.exitCode = 1;
-            return;
-        }
-
-        const hasResults = ctx.results.length > 0 && ctx.results.some((r) => r.status === 'error');
-        if (!Config.autoConfirm && choice !== '0' && longOps.includes(choice) && hasResults) {
-            prompt('Pressione Enter para continuar');
-        }
+        const result = await dispatchAndHandleResult(choice, cmdCtx, ctx);
+        if (result === 'exit') return;
     }
 }
 

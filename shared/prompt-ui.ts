@@ -191,64 +191,86 @@ export function printError(context: string, err: unknown): void {
     output.print(box(errorLines, { border: 'double', color: 'red', padding: 1, width: 72 }));
 }
 
+function renderQuietSummary(passed: number, failed: number, results: TestResult[]): void {
+    if (failed === 0) {
+        output.print('  ' + chalk.green.bold('TUDO CERTO!'));
+        success(passed + ' de ' + results.length + ' operação(oes) concluída(s) com sucesso');
+        return;
+    }
+    output.print('  ' + chalk.yellow.bold('OPERACAO PARCIAL'));
+    output.print('  ' + chalk.yellow('!') + ' ' + passed + ' concluídas, ' + failed + ' com erro');
+    results
+        .filter((r) => r.status === 'error')
+        .forEach((r) => {
+            output.print('  ' + chalk.red('*') + ' ' + r.label + ': ' + r.message);
+        });
+    if (failed > 0) {
+        const logPath = rootLogger.filePath;
+        if (logPath) {
+            output.print('  ' + chalk.yellow('->') + ' Consulte o log: ' + logPath);
+        }
+    }
+}
+
+function renderVerboseSuccess(passed: number, total: number, pct: number, testExecution?: string): void {
+    const lines: string[] = [
+        '',
+        chalk.bold(palette.green('●  TUDO CERTO!')),
+        palette.fg('●  ' + passed + ' de ' + total + ' operação(ões) concluída(s)'),
+        '',
+    ];
+    lines.push(palette.fg('📊  ' + pct + '% pass rate'));
+    if (testExecution) {
+        lines.push(palette.blue('📎  Test Execution: ' + testExecution));
+    }
+    lines.push('');
+    output.print(box(lines, { border: 'single', color: 'green', padding: 0, width: 72 }));
+}
+
+function renderVerboseFailure(
+    passed: number,
+    failed: number,
+    results: TestResult[],
+    pct: number,
+    testExecution?: string,
+): void {
+    const logPath = rootLogger.filePath;
+    const errorLines: string[] = [
+        '',
+        chalk.bold(palette.yellow('●  ' + passed + ' concluídas, ' + failed + ' com erro')),
+        '',
+    ];
+    results
+        .filter((r) => r.status === 'error')
+        .forEach((r) => {
+            errorLines.push(palette.red('✗  ' + r.label + ': ' + r.message));
+        });
+    errorLines.push('');
+    errorLines.push(palette.fg('📊  ' + pct + '% pass rate'));
+    if (testExecution) {
+        errorLines.push(palette.blue('📎  Test Execution: ' + testExecution));
+    }
+    errorLines.push(palette.blue('→  Consulte o log: ' + (logPath || 'ver logs acima')));
+    errorLines.push('');
+    output.print(box(errorLines, { border: 'single', color: 'yellow', padding: 0, width: 72 }));
+}
+
 export function printSummary(results: TestResult[], testExecution?: string): void {
     const passed = results.filter((r) => r.status === 'ok').length;
     const failed = results.filter((r) => r.status === 'error').length;
     const pct = results.length > 0 ? Math.round((passed / results.length) * 100) : 0;
 
-    function addExtras(lines: string[]): void {
-        lines.push(palette.fg('📊  ' + pct + '% pass rate'));
-        if (testExecution) {
-            lines.push(palette.blue('📎  Test Execution: ' + testExecution));
-        }
+    if (isQuiet()) {
+        renderQuietSummary(passed, failed, results);
+    } else if (failed === 0) {
+        renderVerboseSuccess(passed, results.length, pct, testExecution);
+    } else {
+        renderVerboseFailure(passed, failed, results, pct, testExecution);
     }
 
     if (failed === 0) {
-        if (isQuiet()) {
-            output.print('  ' + chalk.green.bold('TUDO CERTO!'));
-            success(passed + ' de ' + results.length + ' operação(oes) concluída(s) com sucesso');
-        } else {
-            const lines: string[] = [
-                '',
-                chalk.bold(palette.green('●  TUDO CERTO!')),
-                palette.fg('●  ' + passed + ' de ' + results.length + ' operação(ões) concluída(s)'),
-                '',
-            ];
-            addExtras(lines);
-            lines.push('');
-            output.print(box(lines, { border: 'single', color: 'green', padding: 0, width: 72 }));
-        }
         rootLogger.info('Resumo: ' + passed + '/' + results.length + ' ok');
     } else {
-        const logPath = rootLogger.filePath;
-        if (isQuiet()) {
-            output.print('  ' + chalk.yellow.bold('OPERACAO PARCIAL'));
-            output.print('  ' + chalk.yellow('!') + ' ' + passed + ' concluídas, ' + failed + ' com erro');
-            results
-                .filter((r) => r.status === 'error')
-                .forEach((r) => {
-                    output.print('  ' + chalk.red('*') + ' ' + r.label + ': ' + r.message);
-                });
-            if (logPath) {
-                output.print('  ' + chalk.yellow('->') + ' Consulte o log: ' + logPath);
-            }
-        } else {
-            const errorLines: string[] = [
-                '',
-                chalk.bold(palette.yellow('●  ' + passed + ' concluídas, ' + failed + ' com erro')),
-                '',
-            ];
-            results
-                .filter((r) => r.status === 'error')
-                .forEach((r) => {
-                    errorLines.push(palette.red('✗  ' + r.label + ': ' + r.message));
-                });
-            errorLines.push('');
-            addExtras(errorLines);
-            errorLines.push(palette.blue('→  Consulte o log: ' + (logPath || 'ver logs acima')));
-            errorLines.push('');
-            output.print(box(errorLines, { border: 'single', color: 'yellow', padding: 0, width: 72 }));
-        }
         rootLogger.warn(`Resumo: ${passed}/${results.length} ok, ${failed} erro(s)`);
     }
 }
@@ -320,35 +342,14 @@ export class CancelError extends Error {
 
 const NAV_CMDS = ['/back', '/menu', '/exit', '/sair', '/quit', '/help'];
 
-export function tableView<T extends Record<string, unknown>>(
-    data: T[] | null | undefined,
-    columns?: string[],
-    statusKey?: string,
-): void {
-    if (!data || data.length === 0) {
-        warn('Nenhum dado para exibir.');
-        return;
-    }
-    const rows = columns
-        ? data.map((row) => {
-              const obj: Record<string, unknown> = {};
-              for (const col of columns) {
-                  if (col in row) obj[col] = row[col];
-              }
-              return obj;
-          })
-        : data;
-    if (rows.length === 0) return;
-    const keys = columns || Object.keys(rows[0]);
+function buildCliTable3Config(keys: string[]) {
     const termWidth = Output.columns();
-    const borderChars = keys.length + 1;
-    const minAvail = keys.length * 3;
-    const avail = Math.max(termWidth - borderChars, minAvail);
+    const avail = Math.max(termWidth - (keys.length + 1), keys.length * 3);
     const indentStr = '  ';
     const indentWidth = visibleWidth(indentStr);
     const colWidths = keys.map(() => Math.floor(avail / keys.length));
     colWidths[0] += avail - colWidths.reduce((a, b) => a + b, 0);
-    const table = new CliTable3({
+    return {
         head: keys,
         colWidths: colWidths.map((w) => Math.max(w - indentWidth, 3)),
         style: { head: [palette.muted as unknown as string], border: [palette.border as unknown as string] },
@@ -370,26 +371,53 @@ export function tableView<T extends Record<string, unknown>>(
             middle: '│',
         },
         wordWrap: true,
+    };
+}
+
+function colorizeRowCells(keys: string[], row: Record<string, unknown>, statusColIdx: number): string[] {
+    return keys.map((k, i) => {
+        const v = row[k];
+        if (v === null || v === undefined) return '';
+        if (typeof v === 'object') return JSON.stringify(v);
+        // eslint-disable-next-line @typescript-eslint/no-base-to-string
+        const cell: string = String(v);
+        if (i === statusColIdx) {
+            if (/✓|pass|ok|sucesso/i.test(cell)) return palette.green(cell);
+            if (/✗|fail|error|erro/i.test(cell)) return palette.red(cell);
+            if (/⚠|warn|skip|pulad/i.test(cell)) return palette.yellow(cell);
+            return palette.muted(cell);
+        }
+        return cell;
     });
+}
+
+export function tableView<T extends Record<string, unknown>>(
+    data: T[] | null | undefined,
+    columns?: string[],
+    statusKey?: string,
+): void {
+    if (!data || data.length === 0) {
+        warn('Nenhum dado para exibir.');
+        return;
+    }
+    const rows = columns
+        ? data.map((row) => {
+              const obj: Record<string, unknown> = {};
+              for (const col of columns) {
+                  if (col in row) obj[col] = row[col];
+              }
+              return obj;
+          })
+        : data;
+    if (rows.length === 0) return;
+    const keys = columns || Object.keys(rows[0]);
+    const table = new CliTable3(buildCliTable3Config(keys));
     const statusColIdx = statusKey ? keys.indexOf(statusKey) : -1;
     for (const row of rows) {
-        const cells = keys.map((k, i) => {
-            const v = row[k];
-            if (v === null || v === undefined) return '';
-            if (typeof v === 'object') return JSON.stringify(v);
-            // eslint-disable-next-line @typescript-eslint/no-base-to-string
-            const cell: string = String(v);
-            if (i === statusColIdx) {
-                if (/✓|pass|ok|sucesso/i.test(cell)) return palette.green(cell);
-                if (/✗|fail|error|erro/i.test(cell)) return palette.red(cell);
-                if (/⚠|warn|skip|pulad/i.test(cell)) return palette.yellow(cell);
-                return palette.muted(cell);
-            }
-            return cell;
-        });
-        table.push(cells);
+        table.push(colorizeRowCells(keys, row, statusColIdx));
     }
     const tableStr = table.toString();
+    const indentStr = '  ';
     const indented = tableStr
         .split('\n')
         .map((line) => indentStr + line)
