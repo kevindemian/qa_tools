@@ -4,7 +4,9 @@ jest.mock('../shared/prompt', () => {
         ...actual,
         prompt: jest.fn().mockReturnValue(''),
         confirm: jest.fn().mockReturnValue(true),
-        smartPrompt: jest.fn().mockReturnValue('v2.0.0'),
+        ask: jest.fn().mockResolvedValue(''),
+        askConfirm: jest.fn().mockResolvedValue(true),
+        smartPrompt: jest.fn().mockResolvedValue('v2.0.0'),
     };
 });
 jest.mock('../shared/state', () => ({
@@ -111,7 +113,13 @@ function buildContext() {
 }
 
 const getPrompt = () =>
-    require('../shared/prompt') as { prompt: jest.Mock; confirm: jest.Mock; smartPrompt: jest.Mock };
+    require('../shared/prompt') as {
+        prompt: jest.Mock;
+        confirm: jest.Mock;
+        ask: jest.Mock;
+        askConfirm: jest.Mock;
+        smartPrompt: jest.Mock;
+    };
 
 // ──────────────────────────────────────────────
 // case02 — List versions  (GET project + versions)
@@ -164,8 +172,8 @@ describe('case03 — create version', () => {
         api.get('/project/ECSPOL').reply(200, { id: '123' });
         api.get('/project/123/versions').reply(200, []);
         api.post('/version').reply(201, { name: 'v2.0.0', id: '99' });
-        getPrompt().prompt.mockReturnValueOnce('v2.0.0');
-        getPrompt().prompt.mockReturnValueOnce('Release notes');
+        getPrompt().ask.mockResolvedValueOnce('v2.0.0');
+        getPrompt().ask.mockResolvedValueOnce('Release notes');
         const c = buildContext();
         const mod = require('../jira_management/commands/case03');
         await mod.handler(c);
@@ -174,7 +182,7 @@ describe('case03 — create version', () => {
     });
 
     it('empty name — returns early without history', async () => {
-        getPrompt().prompt.mockReturnValueOnce('');
+        getPrompt().ask.mockResolvedValueOnce('');
         const c = buildContext();
         const mod = require('../jira_management/commands/case03');
         await mod.handler(c);
@@ -197,9 +205,10 @@ describe('case04 — assign fixVersion', () => {
         api.put('/issue/IMT-1').reply(204);
         api.put('/issue/IMT-2').reply(204);
 
-        getPrompt().confirm.mockReturnValueOnce(true); // use in-memory
-        getPrompt().confirm.mockReturnValueOnce(true); // confirm fixVersion
-        getPrompt().confirm.mockReturnValueOnce(false); // no sprint
+        getPrompt().askConfirm.mockResolvedValueOnce(true); // use in-memory
+        getPrompt().ask.mockResolvedValueOnce('v2.0.0'); // version
+        getPrompt().askConfirm.mockResolvedValueOnce(true); // confirm fixVersion
+        getPrompt().askConfirm.mockResolvedValueOnce(false); // no sprint
 
         const c = buildContext();
         const mod = require('../jira_management/commands/case04');
@@ -226,8 +235,8 @@ describe('case05 — update package + release notes', () => {
                 ],
                 total: 2,
             });
-        getPrompt().smartPrompt.mockReturnValueOnce(tmpGitDir);
-        getPrompt().smartPrompt.mockReturnValueOnce('v2.0.0');
+        getPrompt().ask.mockResolvedValueOnce(tmpGitDir);
+        getPrompt().ask.mockResolvedValueOnce('v2.0.0');
         const c = buildContext();
         const mod = require('../jira_management/commands/case05');
         await mod.handler(c);
@@ -256,6 +265,7 @@ describe('case06 — check task status', () => {
                 issues: [{ key: 'TEST-1', fields: { status: { name: 'Done' } } }],
                 total: 1,
             });
+        getPrompt().ask.mockResolvedValueOnce('v2.0.0');
         const c = buildContext();
         const mod = require('../jira_management/commands/case06');
         await mod.handler(c);
@@ -299,8 +309,8 @@ describe('case07 — close tasks', () => {
         api.post('/issue/TEST-1/transitions').times(2).reply(204);
         api.post('/issue/TEST-2/transitions').times(2).reply(204);
 
-        getPrompt().smartPrompt.mockReturnValueOnce('v2.0.0');
-        getPrompt().confirm.mockReturnValueOnce(true);
+        getPrompt().ask.mockResolvedValueOnce('v2.0.0');
+        getPrompt().askConfirm.mockResolvedValueOnce(true);
 
         const c = buildContext();
         const mod = require('../jira_management/commands/case07');
@@ -313,8 +323,8 @@ describe('case07 — close tasks', () => {
         const { api } = freshScope();
         api.get('/project/ECSPOL').reply(200, { id: '123' });
         api.get('/search').query(true).reply(200, { issues: [], total: 0 });
-        getPrompt().smartPrompt.mockReturnValueOnce('v2.0.0');
-        getPrompt().confirm.mockReturnValueOnce(true);
+        getPrompt().ask.mockResolvedValueOnce('v2.0.0');
+        getPrompt().askConfirm.mockResolvedValueOnce(true);
         const c = buildContext();
         const mod = require('../jira_management/commands/case07');
         await mod.handler(c);
@@ -341,8 +351,8 @@ describe('case08 — publish version', () => {
             });
         api.put('/version/99').reply(200);
 
-        getPrompt().smartPrompt.mockReturnValueOnce('v2.0.0');
-        getPrompt().confirm.mockReturnValueOnce(true);
+        getPrompt().ask.mockResolvedValueOnce('v2.0.0');
+        getPrompt().askConfirm.mockResolvedValueOnce(true);
 
         const c = buildContext();
         const mod = require('../jira_management/commands/case08');
@@ -356,11 +366,11 @@ describe('case08 — publish version', () => {
 // case09 — Switch project  (local — no HTTP)
 // ──────────────────────────────────────────────
 describe('case09 — switch project', () => {
-    it('updates ctx.project_name and persists to state', () => {
-        getPrompt().prompt.mockReturnValueOnce('NEWPROJ');
+    it('updates ctx.project_name and persists to state', async () => {
+        getPrompt().ask.mockResolvedValueOnce('NEWPROJ');
         const c = buildContext();
         const mod = require('../jira_management/commands/case09');
-        mod.handler(c);
+        await mod.handler(c);
         expect(c.ctx.project_name).toBe('NEWPROJ');
         expect(c.pushHistory).toHaveBeenCalledWith('trocar-projeto', 'NEWPROJ', 'ok');
         expect(require('../shared/state').update).toHaveBeenCalled();
@@ -371,11 +381,11 @@ describe('case09 — switch project', () => {
 // case10 — Change git directory  (local — no HTTP)
 // ──────────────────────────────────────────────
 describe('case10 — change git directory', () => {
-    it('sets git directory and packageManager', () => {
-        getPrompt().prompt.mockReturnValueOnce(tmpGitDir);
+    it('sets git directory and packageManager', async () => {
+        getPrompt().ask.mockResolvedValueOnce(tmpGitDir);
         const c = buildContext();
         const mod = require('../jira_management/commands/case10');
-        mod.handler(c);
+        await mod.handler(c);
         expect(c.ctx.git_directory).toBe(tmpGitDir);
         expect(c.ctx.packageManager).toBeDefined();
     });
@@ -385,12 +395,12 @@ describe('case10 — change git directory', () => {
 // case11 — Generate CSV template  (local — copies file)
 // ──────────────────────────────────────────────
 describe('case11 — generate CSV template', () => {
-    it('copies template file to target path', () => {
+    it('copies template file to target path', async () => {
         const dest = path.join(tmpHome, 'template.csv');
-        getPrompt().prompt.mockReturnValueOnce(dest);
+        getPrompt().ask.mockResolvedValueOnce(dest);
         const c = buildContext();
         const mod = require('../jira_management/commands/case11');
-        mod.handler(c);
+        await mod.handler(c);
         expect(fs.existsSync(dest)).toBe(true);
         expect(c.pushHistory).toHaveBeenCalledWith('gerar-template', dest, 'ok');
     });
@@ -452,10 +462,10 @@ describe('case13 — create Test Execution', () => {
         });
         api.post('/issueLink').times(2).reply(201);
 
-        getPrompt().confirm.mockReturnValueOnce(true); // use in-memory
-        getPrompt().prompt.mockReturnValueOnce(''); // name (default '')
-        getPrompt().prompt.mockReturnValueOnce(''); // title
-        getPrompt().prompt.mockReturnValueOnce(''); // description
+        getPrompt().askConfirm.mockResolvedValueOnce(true); // use in-memory
+        getPrompt().ask.mockResolvedValueOnce(''); // name (default '')
+        getPrompt().ask.mockResolvedValueOnce(''); // title
+        getPrompt().ask.mockResolvedValueOnce(''); // description
 
         const c = buildContext();
         const mod = require('../jira_management/commands/case13');
@@ -469,11 +479,11 @@ describe('case13 — create Test Execution', () => {
 // case14 — Change Cypress directory  (local — no HTTP)
 // ──────────────────────────────────────────────
 describe('case14 — change Cypress directory', () => {
-    it('sets cypress dir in state', () => {
-        getPrompt().prompt.mockReturnValueOnce('/tmp/cypress');
+    it('sets cypress dir in state', async () => {
+        getPrompt().ask.mockResolvedValueOnce('/tmp/cypress');
         const c = buildContext();
         const mod = require('../jira_management/commands/case14');
-        mod.handler(c);
+        await mod.handler(c);
         expect(c.pushHistory).toHaveBeenCalledWith('config-cypress', '/tmp/cypress', 'ok');
         expect(require('../shared/state').update).toHaveBeenCalled();
     });
@@ -509,12 +519,11 @@ describe('case15 — import JSON tests', () => {
         });
         api.post('/issueLink').reply(201);
 
-        getPrompt().smartPrompt.mockReturnValueOnce(jsonFixture); // json path
-        getPrompt().prompt.mockReturnValueOnce('e2e,manual'); // labels
-        getPrompt().confirm.mockReturnValueOnce(true); // create TE
-        getPrompt().prompt.mockReturnValueOnce(''); // name
-        getPrompt().prompt.mockReturnValueOnce(''); // title
-        getPrompt().prompt.mockReturnValueOnce(''); // description
+        getPrompt().ask.mockResolvedValueOnce(jsonFixture); // json path
+        getPrompt().askConfirm.mockResolvedValueOnce(true); // create TE
+        getPrompt().ask.mockResolvedValueOnce(''); // name
+        getPrompt().ask.mockResolvedValueOnce(''); // title
+        getPrompt().ask.mockResolvedValueOnce(''); // description
 
         const c = buildContext();
         c.ctx.packageManager = undefined;
@@ -530,11 +539,11 @@ describe('case15 — import JSON tests', () => {
 // case16 — Change JSON directory  (local — no HTTP)
 // ──────────────────────────────────────────────
 describe('case16 — change JSON directory', () => {
-    it('sets json dir in state', () => {
-        getPrompt().prompt.mockReturnValueOnce('/tmp/json');
+    it('sets json dir in state', async () => {
+        getPrompt().ask.mockResolvedValueOnce('/tmp/json');
         const c = buildContext();
         const mod = require('../jira_management/commands/case16');
-        mod.handler(c);
+        await mod.handler(c);
         expect(c.pushHistory).toHaveBeenCalledWith('config-json-dir', '/tmp/json', 'ok');
         expect(require('../shared/state').update).toHaveBeenCalled();
     });

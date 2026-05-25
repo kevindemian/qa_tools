@@ -6,13 +6,9 @@ import TestCaseValidator from './test-case-validator';
 import { rootLogger } from '../shared/logger';
 import { load as loadState } from '../shared/state';
 import { OPERATION_CANCELLED } from './constants';
+import { confirm, info, warn, print, title, divider, prompt, error, printSummary, ask } from '../shared/prompt';
 
 const csvDefaultPath = Config.csvDefaultPath || path.join(__dirname, 'test_steps.csv');
-
-function _getPm(): typeof import('../shared/prompt') {
-    // eslint-disable-next-line @typescript-eslint/no-require-imports
-    return require('../shared/prompt');
-}
 
 function _checkResumeCheckpoint(
     tests: TestCase[],
@@ -20,7 +16,6 @@ function _checkResumeCheckpoint(
     sourceType: string,
     projectName: string,
 ): { resumeFrom: number; inMemoryTasksId: string[]; inMemoryTasksText: string[] } {
-    const { confirm, info } = _getPm();
     const cp = loadState()._checkpoint as Record<string, unknown> | undefined;
     const cpKey = sourceType === 'json' ? 'jsonPath' : 'csvPath';
     let resumeFrom = 0;
@@ -55,7 +50,6 @@ function _checkResumeCheckpoint(
 }
 
 function showPreview(tests: TestCase[], jiraLabels: string[], totalSteps: number, groupsCount: number): void {
-    const { title, print, divider, info } = _getPm();
     title('Preview dos testes a serem criados');
     tests.forEach((test, i) => {
         const desc = test.description ? ' — ' + test.description.substring(0, 60) : '';
@@ -92,7 +86,6 @@ function showPreview(tests: TestCase[], jiraLabels: string[], totalSteps: number
 }
 
 function filterTests(tests: TestCase[]): TestCase[] | null {
-    const { prompt, warn, info, confirm } = _getPm();
     if (Config.autoConfirm) return tests;
 
     const filterText = prompt('Filtrar testes por titulo? (Enter para todos)');
@@ -112,7 +105,6 @@ function filterTests(tests: TestCase[]): TestCase[] | null {
 }
 
 function confirmOrCancel(): boolean {
-    const { confirm } = _getPm();
     if (Config.autoConfirm) return true;
     return confirm('Criar estes testes no Jira?');
 }
@@ -130,7 +122,6 @@ function validateImportBatch(
     sourceType: string,
     projectName: string,
 ): ValidationResult | undefined {
-    const { warn, error } = _getPm();
     const { resumeFrom, inMemoryTasksId, inMemoryTasksText } = _checkResumeCheckpoint(
         tests,
         sourcePath,
@@ -169,7 +160,6 @@ function handleDryRun(
     status: string;
     sourcePath: string;
 } | null {
-    const { warn, printSummary } = _getPm();
     if (!Config.dryRun) return null;
 
     warn('MODO DRY-RUN: Nenhuma operação sera executada.');
@@ -184,12 +174,12 @@ function handleDryRun(
     };
 }
 
-function resolveCsvPath(csvPathInput: string | undefined): string {
+async function resolveCsvPath(csvPathInput: string | undefined): Promise<string> {
     const state = loadState();
     return (
         csvPathInput ||
         Config.csvPath ||
-        _getPm().smartPrompt('Caminho do arquivo CSV', { default: (state.lastCsvPath as string) || csvDefaultPath })
+        (await ask('Caminho do arquivo CSV', { default: (state.lastCsvPath as string) || csvDefaultPath }))
     );
 }
 
@@ -199,7 +189,7 @@ function resolveLabels(jiraLabelsInput: string[] | undefined, configKey: 'csvLab
     const configValue = Config[configKey === 'csvLabels' ? 'csvLabels' : 'jsonLabels'] as string | undefined;
     const labels =
         configValue ||
-        _getPm().prompt('Labels Jira (separadas por virgula)', {
+        prompt('Labels Jira (separadas por virgula)', {
             // eslint-disable-next-line @typescript-eslint/no-base-to-string
             hint: state.lastLabels ? 'último: ' + String(state.lastLabels) : 'vazio para nenhuma',
             default: (state.lastLabels as string) || '',
@@ -210,13 +200,14 @@ function resolveLabels(jiraLabelsInput: string[] | undefined, configKey: 'csvLab
         .filter((l) => l.length > 0);
 }
 
-function resolveJsonPath(jsonPathInput: string | undefined): string | undefined {
+async function resolveJsonPath(jsonPathInput: string | undefined): Promise<string | undefined> {
     const state = loadState();
-    const { warn, smartPrompt } = _getPm();
     const rawPath =
         jsonPathInput ||
         Config.jsonPath ||
-        smartPrompt('Caminho do arquivo JSON ou TXT (formato JSON)', { default: (state.lastJsonPath as string) || '' });
+        (await ask('Caminho do arquivo JSON ou TXT (formato JSON)', {
+            default: (state.lastJsonPath as string) || '',
+        }));
 
     let jsonPath = rawPath.trim();
     if (!jsonPath) {

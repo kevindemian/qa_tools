@@ -1,25 +1,15 @@
-import {
-    print,
-    success,
-    warn,
-    title,
-    prompt,
-    confirm,
-    smartPrompt,
-    printError,
-    printSummary,
-} from '../../shared/prompt';
+import { print, success, warn, title, ask, askConfirm, printError, printSummary } from '../../shared/prompt';
 import type { CommandContext } from './context';
 import { OPERATION_CANCELLED, ERR_ADD_TASKS_TO_SPRINT } from '../constants';
 
 async function handler(c: CommandContext): Promise<boolean | void> {
-    const useInMemory = confirm('Usar tarefas criadas anteriormente?', true);
+    const useInMemory = await askConfirm('Usar tarefas criadas anteriormente?', true);
     let taskIds: string[] = [];
 
     if (useInMemory) {
         if (c.ctx.inMemoryTasksId.length === 0) {
             warn('Nenhuma tarefa criada anteriormente. Insira manualmente.');
-            const input = prompt('IDs das tarefas (separadas por espaco)');
+            const input = await ask('IDs das tarefas (separadas por espaco)');
             taskIds = input.split(' ').filter(Boolean);
         } else {
             c.ctx.inMemoryTasksId.forEach((id, idx) => {
@@ -28,17 +18,17 @@ async function handler(c: CommandContext): Promise<boolean | void> {
             });
         }
     } else {
-        const input = prompt('IDs das tarefas (separadas por espaco)');
+        const input = await ask('IDs das tarefas (separadas por espaco)');
         taskIds = input.split(' ').filter(Boolean);
     }
 
-    const version = smartPrompt('Nome da versão', {}, () => {});
+    const version = await ask('Nome da versão', {});
 
     title('Preview da operação');
     print('  Versão: ' + version);
     print('  Tarefas (' + taskIds.length + '):');
     taskIds.forEach((id) => print('    - ' + id));
-    if (!confirm('Confirmar atribuicao de fixVersion?')) {
+    if (!(await askConfirm('Confirmar atribuicao de fixVersion?'))) {
         warn(OPERATION_CANCELLED);
         return true;
     }
@@ -63,8 +53,8 @@ async function handler(c: CommandContext): Promise<boolean | void> {
         c.ctx.results.some((r) => r.status === 'error') ? 'error' : 'ok',
     );
 
-    if (confirm('Adicionar tarefas a uma sprint?')) {
-        const sprintId = prompt('ID da sprint', { hint: 'ex: 6991 (encontrado na URL do board)' });
+    if (await askConfirm('Adicionar tarefas a uma sprint?')) {
+        const sprintId = await ask('ID da sprint', { hint: 'ex: 6991 (encontrado na URL do board)' });
         if (!sprintId.trim()) {
             warn('Sprint ID vazio. Pulando...');
         } else {

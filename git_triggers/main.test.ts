@@ -33,8 +33,10 @@ jest.mock('../shared/prompt', () => ({
     helpLine: jest.fn(),
     title: jest.fn(),
     divider: jest.fn(),
-    prompt: jest.fn(() => '0'),
-    confirm: jest.fn(() => false),
+    prompt: jest.fn(),
+    confirm: jest.fn(),
+    ask: jest.fn(),
+    askConfirm: jest.fn(),
     printError: jest.fn(),
     withSpinner: jest.fn((_label: string, fn: () => Promise<unknown>) => fn()),
     showSelect: jest.fn(),
@@ -492,32 +494,32 @@ describe('handleExportVariables', () => {
 // ---------- handleHelp ----------
 
 describe('handleHelp', () => {
-    it('prints help box and prompts to continue', () => {
+    it('prints help box and prompts to continue', async () => {
         jest.spyOn(console, 'log').mockImplementationOnce(() => {});
-        mainModule.handleHelp();
+        await mainModule.handleHelp();
         expect(console.log).toHaveBeenCalledWith(expect.stringContaining('Ajuda'));
-        expect(prompt.prompt).toHaveBeenCalledWith('Pressione Enter para continuar');
+        expect(prompt.ask).toHaveBeenCalledWith('Pressione Enter para continuar');
     });
 });
 
 // ---------- handleShowHistory ----------
 
 describe('handleShowHistory', () => {
-    it('shows history table when entries exist', () => {
+    it('shows history table when entries exist', async () => {
         (state.load as jest.Mock).mockReturnValueOnce({
             history: [{ op: 'pipeline', detail: 'main', status: 'ok', ts: '2026-01-01T00:00:00Z' }],
         });
 
-        mainModule.handleShowHistory();
+        await mainModule.handleShowHistory();
 
         expect(prompt.title).toHaveBeenCalledWith('Histórico de operações');
         expect(prompt.tableView).toHaveBeenCalled();
     });
 
-    it('warns when history is empty', () => {
+    it('warns when history is empty', async () => {
         (state.load as jest.Mock).mockReturnValueOnce({});
 
-        mainModule.handleShowHistory();
+        await mainModule.handleShowHistory();
 
         expect(prompt.warn).toHaveBeenCalledWith('Nenhuma operação registrada.');
     });

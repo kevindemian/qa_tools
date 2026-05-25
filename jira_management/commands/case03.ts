@@ -1,14 +1,14 @@
-import { warn, prompt, printError } from '../../shared/prompt';
+import { warn, ask, printError } from '../../shared/prompt';
 import { rootLogger } from '../../shared/logger';
 import type { CommandContext } from './context';
 
 async function handler(c: CommandContext): Promise<boolean | void> {
-    const name = prompt('Nome da nova versão');
+    const name = await ask('Nome da nova versão');
     if (!name.trim()) {
         warn('Nome da versão não pode ser vazio.');
         return;
     }
-    const desc = prompt('Descrição da versão (opcional)');
+    const desc = await ask('Descrição da versão (opcional)');
     try {
         await c.jiraResource.createVersion(c.ctx.project_name, name, desc);
         c.pushHistory('criar-versão', name, 'ok');

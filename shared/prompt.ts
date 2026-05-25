@@ -15,15 +15,17 @@ function getConfig(): Config {
     return _config || Config.getDefault();
 }
 
-import { box, divider as boxDivider, card, visibleWidth } from './box';
+import { box, divider as boxDivider, visibleWidth } from './box';
 import { palette } from './palette';
 import { Output, defaultOutput as output } from './output';
 import type { TestResult } from './types';
 
 export class CancelError extends Error {
+    cmd: string;
     constructor(cmd: string) {
         super('User cancelled with ' + cmd);
         this.name = 'CancelError';
+        this.cmd = cmd;
     }
 }
 
@@ -144,6 +146,7 @@ export function confirm(label: string, defaultYes = false): boolean {
             .question(text + ': ', { defaultInput: def.toLowerCase() })
             .trim()
             .toLowerCase();
+        if (NAV_CMDS.includes(answer)) throw new CancelError(answer);
         if (['y', 'yes', 'sim', 's'].includes(answer)) return true;
         if (['n', 'no', 'nao', 'não'].includes(answer)) return false;
         output.print('  ' + chalk.yellow.bold(icon('warn')) + ' Resposta inválida. Digite S/sim ou N/não.');
@@ -154,13 +157,29 @@ export function divider(): void {
     output.print(boxDivider());
 }
 
-const NAV_CMDS = ['/back', '/menu', '/exit', '/sair'];
+const NAV_CMDS = ['/back', '/menu', '/exit', '/sair', '/quit', '/help'];
 
-export function smartPrompt(label: string, options: PromptOptions = {}, helpCallback?: () => void): string {
+export async function smartPrompt(
+    label: string,
+    options: PromptOptions = {},
+    helpCallback?: () => void,
+): Promise<string> {
     let retries = 0;
     const maxRetries = options.maxRetries || 3;
     while (retries < maxRetries) {
-        const value = prompt(label, options);
+        let value: string;
+        try {
+            value = await ask(label, options);
+        } catch (err: unknown) {
+            if (err instanceof CancelError) {
+                if (err.cmd === '/help' || err.cmd === '/h') {
+                    if (helpCallback) helpCallback();
+                    continue;
+                }
+                throw err;
+            }
+            throw err;
+        }
         const trimmed = value.trim().toLowerCase();
         if (trimmed === '/help' || trimmed === '/h') {
             if (helpCallback) helpCallback();
@@ -443,6 +462,7 @@ export async function onError(
         output.print('    ' + opts.join('   '));
         output.print('  ' + boxDivider());
         const answer = readlineSync.question('  Escolha: ').trim().toLowerCase();
+        if (NAV_CMDS.includes(answer)) throw new CancelError(answer);
 
         if (answer === 'r' && canRetry) return 'retry';
         if (answer === 's') return 'skip';
@@ -462,6 +482,23 @@ export async function onError(
             continue;
         }
         warn('Opção inválida. Escolha ' + opts.join(', '));
+    }
+}
+
+let _selectMod: unknown = null;
+
+export function __setSelectMod(mod: unknown): void {
+    _selectMod = mod;
+}
+
+async function _loadSelect(): Promise<unknown> {
+    if (_selectMod !== null) return _selectMod;
+    try {
+        _selectMod = await import('@inquirer/select');
+        return _selectMod;
+    } catch {
+        _selectMod = false;
+        return false;
     }
 }
 
@@ -521,6 +558,8 @@ export async function ask(label: string, options: PromptOptions = {}): Promise<s
                 default: options.default,
                 theme: inquirerTheme,
             });
+            const trimmed = (answer as string).trim().toLowerCase();
+            if (NAV_CMDS.includes(trimmed)) throw new CancelError(trimmed);
             return (answer as string).trim();
         } catch {
             return prompt(label, options);
@@ -582,107 +621,57 @@ function groupChoices(choices: SelectChoice[]): { sections: SectionGroup[]; stan
     return { sections, standaloneItems };
 }
 
-export function showSelect(label: string, choices: SelectChoice[], options: SelectOptions = {}): string {
+export async function showSelect(label: string, choices: SelectChoice[], options: SelectOptions = {}): Promise<string> {
     const flatChoices = choices
         .filter((c): c is SelectChoice & { name: string } => c.type !== 'separator' && !!c.name)
         .map((c) => ({ name: c.name, value: c.value ?? c.name }));
-    const { sections, standaloneItems } = groupChoices(choices);
 
-    const termWidth = process.stdout.columns || 80;
+    // TTY → @inquirer/select
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- dynamic import
+    const mod: any = await _loadSelect();
+    if (mod && isTTY()) {
+        try {
+            const answer = await mod.default({
+                message: label,
+                choices: flatChoices,
+                pageSize: options.pageSize || Output.rows() - 5,
+                loop: true,
+                theme: inquirerTheme,
+            });
+            return answer as string;
+        } catch {
+            return '0';
+        }
+    }
+
+    // Non-TTY → readlineSync + items
+    const { sections, standaloneItems } = groupChoices(choices);
     const renderedItems: string[] = [];
     for (const section of sections) renderedItems.push(...section.items.map((i) => ' ' + i));
     renderedItems.push(...standaloneItems.map((i) => '  ' + i));
-    const maxLineWidth = renderedItems.length > 0 ? Math.max(...renderedItems.map((l) => visibleWidth(l)), 20) : 20;
-    const overhead = 10;
-    const cardWidth = Math.min(maxLineWidth + overhead, termWidth - 2);
 
-    function padLine(line: string): string {
-        const w = visibleWidth(line);
-        if (w >= cardWidth - overhead) return line;
-        return line + ' '.repeat(cardWidth - overhead - w);
-    }
-
-    interface MenuBlock {
-        title: string;
-        items: string[];
-        height: number;
-    }
-
-    const blocks: MenuBlock[] = [];
-    for (const section of sections) {
-        blocks.push({
-            title: section.title,
-            items: section.items.map((i) => ' ' + padLine(i)),
-            height: 4 + section.items.length,
-        });
-    }
-    if (standaloneItems.length > 0) {
-        blocks.push({
-            title: '',
-            items: standaloneItems.map((i) => ' ' + padLine(i)),
-            height: 4 + standaloneItems.length,
-        });
-    }
-
-    const pageSize = blocks.length > 0 ? options.pageSize || Output.rows() - 5 : 999;
-
-    const pages: MenuBlock[][] = [];
-    let currentBlocks: MenuBlock[] = [];
-    let currentHeight = 0;
-
-    for (const block of blocks) {
-        if (currentBlocks.length > 0 && currentHeight + block.height > pageSize) {
-            pages.push(currentBlocks);
-            currentBlocks = [];
-            currentHeight = 0;
-        }
-        currentBlocks.push(block);
-        currentHeight += block.height;
-    }
-    if (currentBlocks.length > 0) pages.push(currentBlocks);
-
-    let pageIdx = 0;
-
-    function renderPage(): void {
-        const pageBlocks = pages[pageIdx] || [];
-        for (const block of pageBlocks) {
-            const rendered = card(block.title, block.items, { width: cardWidth });
-            output.print(rendered);
-        }
-        if (pages.length > 1) {
-            output.print(palette.muted('  (Página ' + (pageIdx + 1) + '/' + pages.length + ' — /n próx, /p ant)'));
+    if (renderedItems.length > 0) {
+        for (const item of renderedItems) {
+            output.print('  ' + item);
         }
         output.print('');
     }
 
-    const hint = options.default ? 'Enter = ' + options.default : undefined;
-
-    while (true) {
-        renderPage();
-        output.print(palette.muted('  Dica: digite o número da opção, alias (ex: criar, status, versões) ou /help'));
-        const answer = prompt(label, { default: options.default, hint }).trim();
-        const trimmed = answer.toLowerCase();
-        if (trimmed === '/n' && pageIdx < pages.length - 1) {
-            pageIdx++;
-            continue;
-        }
-        if (trimmed === '/p' && pageIdx > 0) {
-            pageIdx--;
-            continue;
-        }
-        if (answer === '') return options.default || '0';
-        if (trimmed === '0' || trimmed === 'exit' || trimmed === 'sair') return '0';
-        if (trimmed.startsWith('/')) return answer;
-        const num = parseInt(answer, 10);
-        if (num >= 1 && num <= flatChoices.length) {
-            return flatChoices[num - 1].value;
-        }
-        if (!isNaN(num)) {
-            warn('Opção inválida. Digite um número entre 0 e ' + flatChoices.length + ' ou /help.');
-            continue;
-        }
-        return answer;
+    output.print(palette.muted('  Dica: digite o número da opção, alias (ex: criar, status, versões) ou /help'));
+    const answer = prompt(label, { default: options.default }).trim();
+    if (answer === '') return options.default || '0';
+    const trimmed = answer.toLowerCase();
+    if (trimmed === '0' || trimmed === 'exit' || trimmed === 'sair') return '0';
+    if (trimmed.startsWith('/')) return answer;
+    const num = parseInt(answer, 10);
+    if (num >= 1 && num <= flatChoices.length) {
+        return flatChoices[num - 1].value;
     }
+    if (!isNaN(num)) {
+        warn('Opção inválida. Digite um número entre 0 e ' + flatChoices.length + ' ou /help.');
+        return '0';
+    }
+    return answer;
 }
 
 export function tableView<T extends Record<string, unknown>>(
@@ -709,12 +698,14 @@ export function tableView<T extends Record<string, unknown>>(
     const borderChars = keys.length + 1;
     const minAvail = keys.length * 3;
     const avail = Math.max(termWidth - borderChars, minAvail);
+    const indentStr = '  ';
+    const indentWidth = visibleWidth(indentStr);
     const colWidths = keys.map(() => Math.floor(avail / keys.length));
     colWidths[0] += avail - colWidths.reduce((a, b) => a + b, 0);
     const table = new CliTable3({
         head: keys,
-        colWidths,
-        style: { head: [palette.muted as unknown as string] },
+        colWidths: colWidths.map((w) => Math.max(w - indentWidth, 3)),
+        style: { head: [palette.muted as unknown as string], border: [palette.border as unknown as string] },
         chars: {
             top: '─',
             'top-mid': '┬',
@@ -743,14 +734,19 @@ export function tableView<T extends Record<string, unknown>>(
             // eslint-disable-next-line @typescript-eslint/no-base-to-string -- known primitive
             const cell = String(v);
             if (i === statusColIdx) {
-                if (/✓|pass|ok|sucesso/i.test(cell)) return chalk.hex('#3fb950')(cell);
-                if (/✗|fail|error|erro/i.test(cell)) return chalk.hex('#f85149')(cell);
-                if (/⚠|warn|skip|pulad/i.test(cell)) return chalk.hex('#d29922')(cell);
-                return chalk.hex('#8b949e')(cell);
+                if (/✓|pass|ok|sucesso/i.test(cell)) return palette.green(cell);
+                if (/✗|fail|error|erro/i.test(cell)) return palette.red(cell);
+                if (/⚠|warn|skip|pulad/i.test(cell)) return palette.yellow(cell);
+                return palette.muted(cell);
             }
             return cell;
         });
         table.push(cells);
     }
-    output.print(table.toString());
+    const tableStr = table.toString();
+    const indented = tableStr
+        .split('\n')
+        .map((line) => indentStr + line)
+        .join('\n');
+    output.print(indented);
 }

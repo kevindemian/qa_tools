@@ -1,4 +1,4 @@
-import { prompt, info, success, printError, withSpinner, warn } from '../shared/prompt';
+import { ask, info, success, printError, withSpinner, warn } from '../shared/prompt';
 import type { GitProvider } from '../shared/types';
 
 export async function nivelarBranches(
@@ -6,9 +6,9 @@ export async function nivelarBranches(
     opts: { pushHistory?: (op: string, detail: string, status: string) => void } = {},
 ) {
     const { pushHistory } = opts;
-    const mainBranch = prompt('Branch principal', { default: 'main' });
-    const rcBranch = prompt('Branch release candidate', { default: 'rel_cand' });
-    const devBranch = prompt('Branch dev', { default: 'dev' });
+    const mainBranch = await ask('Branch principal', { default: 'main' });
+    const rcBranch = await ask('Branch release candidate', { default: 'rel_cand' });
+    const devBranch = await ask('Branch dev', { default: 'dev' });
     if (!mainBranch || !rcBranch || !devBranch) {
         warn('Todas as branches devem ser preenchidas.');
         return;

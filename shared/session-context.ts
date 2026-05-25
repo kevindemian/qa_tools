@@ -1,4 +1,4 @@
-import type { withSpinner } from './prompt';
+import { withSpinner } from './prompt';
 
 interface SessionCountersItem {
     op: string;
@@ -41,8 +41,7 @@ export class SessionContext {
     }
 
     async withBusy<T>(fn: () => Promise<T>, label?: string): Promise<T> {
-        // eslint-disable-next-line @typescript-eslint/no-require-imports
-        const { withSpinner: spinnerFn } = require('./prompt') as { withSpinner: typeof withSpinner };
+        const spinnerFn = withSpinner;
         this.isBusy = true;
         try {
             if (label) return await spinnerFn(label, fn);

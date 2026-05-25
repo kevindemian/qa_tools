@@ -185,7 +185,7 @@ function _resolveGlob(pattern: string): string | null {
     return __resolveGlob(pattern);
 }
 
-function parseTestResults(parsed: ParseResult) {
+async function parseTestResults(parsed: ParseResult) {
     return _parseTestResults(parsed);
 }
 
@@ -591,12 +591,12 @@ async function handleTriggerPipeline(ctx: SessionContext, m: GitProvider, projec
     await displayRecentPipelines(m);
 }
 
-function handleHelp() {
-    _handleHelp();
+async function handleHelp() {
+    await _handleHelp();
 }
 
-function handleShowHistory() {
-    _handleShowHistory();
+async function handleShowHistory() {
+    await _handleShowHistory();
 }
 
 function _selectProject(): { projectName: string; names: string[] } {
@@ -623,7 +623,7 @@ function _selectProject(): { projectName: string; names: string[] } {
     return { projectName, names };
 }
 
-function _promptChoice(stateHint: string): string {
+async function _promptChoice(stateHint: string): Promise<string> {
     if (process.stdout.isTTY && !Config.quiet) {
         const ctx = buildContextLine();
         const ok = sessionContext.sessionCounters.filter((c) => c.status === 'ok').length;
@@ -695,11 +695,11 @@ async function _dispatchAction(
 ): Promise<boolean> {
     const cmd = finalChoice.trim().toLowerCase();
     if (cmd === '/h' || cmd === '/help') {
-        handleHelp();
+        await handleHelp();
         return false;
     }
     if (cmd === '/history') {
-        handleShowHistory();
+        await handleShowHistory();
         return false;
     }
     if (cmd === '/docs' || cmd === '/d') {
@@ -739,7 +739,7 @@ async function main() {
 
     while (true) {
         console.clear();
-        const finalChoice = _promptChoice(stateHint);
+        const finalChoice = await _promptChoice(stateHint);
         updateState((s) => {
             s.lastChoice = finalChoice;
         });

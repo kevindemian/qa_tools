@@ -1,10 +1,21 @@
 jest.mock('../shared/prompt', () => {
     const actual = jest.requireActual('../shared/prompt');
+    const askMock = jest
+        .fn()
+        .mockResolvedValueOnce('v2.0.0') // Nome da versão
+        .mockResolvedValueOnce(''); // ID da sprint (empty → skip)
+    const askConfirmMock = jest
+        .fn()
+        .mockResolvedValueOnce(true) // Usar tarefas criadas anteriormente
+        .mockResolvedValueOnce(true) // Confirmar atribuicao de fixVersion
+        .mockResolvedValueOnce(false); // Adicionar tarefas a uma sprint (no)
     return {
         ...actual,
         prompt: jest.fn().mockReturnValue(''),
         confirm: jest.fn().mockReturnValue(true),
-        smartPrompt: jest.fn().mockReturnValue('v2.0.0'),
+        smartPrompt: jest.fn().mockResolvedValue('v2.0.0'),
+        ask: askMock,
+        askConfirm: askConfirmMock,
     };
 });
 jest.mock('../shared/state', () => ({ load: jest.fn().mockReturnValue({}), update: jest.fn() }));

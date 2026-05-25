@@ -8,6 +8,8 @@ const mockPrompt = {
     divider: jest.fn(),
     prompt: jest.fn().mockReturnValue(''),
     confirm: jest.fn(),
+    ask: jest.fn().mockResolvedValue(''),
+    askConfirm: jest.fn().mockResolvedValue(true),
     smartPrompt: jest.fn(),
     printError: jest.fn(),
     printSummary: jest.fn(),
@@ -492,14 +494,14 @@ describe('createTestsFromJson', () => {
     });
 
     it('cancela com caminho vazio', async () => {
-        jest.mocked(PROMPT.smartPrompt).mockReturnValue('');
+        jest.mocked(PROMPT.ask).mockResolvedValue('');
         const result = await createTestsFromJson(BASE_PARAMS());
         expect(result).toBeUndefined();
         expect(PROMPT.warn).toHaveBeenCalledWith(expect.stringContaining('vazio'));
     });
 
     it('cancela com JSON invalido', async () => {
-        jest.mocked(PROMPT.smartPrompt).mockReturnValue('/fake/path.json');
+        jest.mocked(PROMPT.ask).mockResolvedValue('/fake/path.json');
         FS.readFileSync.mockReturnValue('not json');
         const result = await createTestsFromJson(BASE_PARAMS());
         expect(result).toBeUndefined();
@@ -507,7 +509,7 @@ describe('createTestsFromJson', () => {
     });
 
     it('cancela com array vazio', async () => {
-        jest.mocked(PROMPT.smartPrompt).mockReturnValue('/fake/path.json');
+        jest.mocked(PROMPT.ask).mockResolvedValue('/fake/path.json');
         FS.readFileSync.mockReturnValue('[]');
         const result = await createTestsFromJson(BASE_PARAMS());
         expect(result).toBeUndefined();
@@ -515,7 +517,7 @@ describe('createTestsFromJson', () => {
     });
 
     it('cancela com item sem title/steps', async () => {
-        jest.mocked(PROMPT.smartPrompt).mockReturnValue('/fake/path.json');
+        jest.mocked(PROMPT.ask).mockResolvedValue('/fake/path.json');
         FS.readFileSync.mockReturnValue(JSON.stringify([{}]));
         const result = await createTestsFromJson(BASE_PARAMS());
         expect(result).toBeUndefined();
@@ -525,7 +527,7 @@ describe('createTestsFromJson', () => {
     it('executa dry-run com JSON valido', async () => {
         process.env.AUTO_CONFIRM = 'true';
         process.env.DRY_RUN = 'true';
-        jest.mocked(PROMPT.smartPrompt).mockReturnValue('/fake/path.json');
+        jest.mocked(PROMPT.ask).mockResolvedValue('/fake/path.json');
         FS.readFileSync.mockReturnValue(
             JSON.stringify([
                 { title: 'TC1', steps: [{ Action: 'Click' }] },
@@ -542,7 +544,7 @@ describe('createTestsFromJson', () => {
         process.env.AUTO_CONFIRM = 'true';
         process.env.DRY_RUN = 'true';
         jest.mocked(STATE.load).mockReturnValue({ lastJsonDir: '/base/dir' });
-        jest.mocked(PROMPT.smartPrompt).mockReturnValue('sub/testes.json');
+        jest.mocked(PROMPT.ask).mockResolvedValue('sub/testes.json');
         FS.existsSync.mockReturnValue(true);
         FS.readFileSync.mockImplementation((p: string) => {
             if (p === '/base/dir/sub/testes.json') {
@@ -559,7 +561,7 @@ describe('createTestsFromJson', () => {
     it('parseia precondition como reference (formato ABC-123)', async () => {
         process.env.AUTO_CONFIRM = 'true';
         process.env.DRY_RUN = 'true';
-        jest.mocked(PROMPT.smartPrompt).mockReturnValue('/fake/path.json');
+        jest.mocked(PROMPT.ask).mockResolvedValue('/fake/path.json');
         FS.readFileSync.mockReturnValue(
             JSON.stringify([{ title: 'TC1', steps: [{ Action: 'Click' }], precondition: 'PREC-001' }]),
         );
@@ -571,7 +573,7 @@ describe('createTestsFromJson', () => {
     it('parseia linkedIssues como strings', async () => {
         process.env.AUTO_CONFIRM = 'true';
         process.env.DRY_RUN = 'true';
-        jest.mocked(PROMPT.smartPrompt).mockReturnValue('/fake/path.json');
+        jest.mocked(PROMPT.ask).mockResolvedValue('/fake/path.json');
         FS.readFileSync.mockReturnValue(
             JSON.stringify([{ title: 'TC1', steps: [{ Action: 'Click' }], linkedIssues: ['BUG-1', 'BUG-2'] }]),
         );
@@ -583,7 +585,7 @@ describe('createTestsFromJson', () => {
     it('parseia linkedIssues como objetos', async () => {
         process.env.AUTO_CONFIRM = 'true';
         process.env.DRY_RUN = 'true';
-        jest.mocked(PROMPT.smartPrompt).mockReturnValue('/fake/path.json');
+        jest.mocked(PROMPT.ask).mockResolvedValue('/fake/path.json');
         FS.readFileSync.mockReturnValue(
             JSON.stringify([
                 { title: 'TC1', steps: [{ Action: 'Click' }], linkedIssues: [{ key: 'BUG-1', linkType: 'Blocks' }] },
@@ -706,7 +708,7 @@ describe('createTestsFromCsv', () => {
     });
 
     it('success path with valid CSV -> creates tests', async () => {
-        jest.mocked(PROMPT.smartPrompt).mockReturnValue('/test.csv');
+        jest.mocked(PROMPT.smartPrompt).mockResolvedValue('/test.csv');
         jest.mocked(PROMPT.prompt).mockReturnValue('');
         process.env.AUTO_CONFIRM = 'true';
         process.env.DRY_RUN = 'true';

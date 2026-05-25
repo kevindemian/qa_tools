@@ -40,7 +40,7 @@ jest.mock('../shared/prompt', () => ({
     success: jest.fn(),
     printError: jest.fn(),
     withSpinner: jest.fn((_label: string, fn: () => Promise<unknown>) => fn()),
-    prompt: mockPrompt,
+    ask: mockPrompt,
 }));
 
 jest.mock('../shared/state', () => ({
@@ -104,7 +104,7 @@ beforeAll(() => {
 
 beforeEach(() => {
     jest.clearAllMocks();
-    mockPrompt.mockReturnValue('');
+    mockPrompt.mockResolvedValue('');
     mockLoadState.mockReturnValue({ lastCypressPath: '' });
     mockGlobSync.mockReturnValue([]);
     mockAdmZipGetEntries.mockReturnValue([]);
@@ -248,19 +248,19 @@ describe('downloadTestArtifacts', () => {
 // ── parseTestResults ─────────────────────────────────────────────────────
 
 describe('parseTestResults', () => {
-    it('returns matched results with csvName when mapping is valid', () => {
+    it('returns matched results with csvName when mapping is valid', async () => {
         mockMatchResultsToTests.mockReturnValue({
             matched: [{ key: 'TEST-1', title: 'test1', status: 'passed', duration: 100 }],
             unmatched: [],
         });
-        mockPrompt.mockReturnValue('/cypress/cypress-jira-mapping.json');
+        mockPrompt.mockResolvedValue('/cypress/cypress-jira-mapping.json');
 
         const parsed: ParseResult = {
             tests: [{ title: 'test1', state: 'passed', duration: 100 }],
             stats: { passed: 1, failed: 0, skipped: 0, total: 1, duration: 100 },
         };
 
-        const result = mod.parseTestResults(parsed);
+        const result = await mod.parseTestResults(parsed);
 
         expect(result).toEqual({
             matched: [{ key: 'TEST-1', title: 'test1', status: 'passed', duration: 100 }],
@@ -270,33 +270,33 @@ describe('parseTestResults', () => {
         expect(mockMatchResultsToTests).toHaveBeenCalled();
     });
 
-    it('returns null when mapping path is empty', () => {
-        mockPrompt.mockReturnValue('   ');
+    it('returns null when mapping path is empty', async () => {
+        mockPrompt.mockResolvedValue('   ');
         const parsed: ParseResult = {
             tests: [],
             stats: { passed: 0, failed: 0, skipped: 0, total: 0, duration: 0 },
         };
 
-        const result = mod.parseTestResults(parsed);
+        const result = await mod.parseTestResults(parsed);
 
         expect(result).toBeNull();
         expect(mockMatchResultsToTests).not.toHaveBeenCalled();
     });
 
-    it('resolves glob pattern in mapping path', () => {
+    it('resolves glob pattern in mapping path', async () => {
         mockMatchResultsToTests.mockReturnValue({
             matched: [{ key: 'T1', title: 'test1', status: 'passed', duration: 0 }],
             unmatched: [],
         });
         mockGlobSync.mockReturnValue(['/some/pattern/pattern-jira-mapping.json']);
-        mockPrompt.mockReturnValue('/some/pattern/*-mapping.json');
+        mockPrompt.mockResolvedValue('/some/pattern/*-mapping.json');
 
         const parsed: ParseResult = {
             tests: [{ title: 'test1', state: 'passed', duration: 0 }],
             stats: { passed: 1, failed: 0, skipped: 0, total: 1, duration: 0 },
         };
 
-        const result = mod.parseTestResults(parsed);
+        const result = await mod.parseTestResults(parsed);
 
         expect(mockGlobSync).toHaveBeenCalledWith('/some/pattern/*-mapping.json');
         expect(result?.csvName).toBe('pattern');
@@ -371,7 +371,7 @@ describe('collectTestResults', () => {
             matched: [{ key: 'TEST-1', title: 'test1', status: 'passed', duration: 100 }],
             unmatched: [],
         });
-        mockPrompt.mockReturnValue('/cypress/cypress-jira-mapping.json');
+        mockPrompt.mockResolvedValue('/cypress/cypress-jira-mapping.json');
         mockGlobSync.mockReturnValue(['/cypress/cypress-jira-mapping.json']);
         mockCreateTestExecutionFromResults.mockResolvedValue({
             key: 'TE-123',

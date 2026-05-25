@@ -1,9 +1,9 @@
-import { success, warn, prompt } from '../../shared/prompt';
+import { success, warn, ask } from '../../shared/prompt';
 import { update as updateState } from '../../shared/state';
 import type { CommandContext } from './context';
 
-function handler(c: CommandContext): boolean | void {
-    const newName = prompt('Novo nome do projeto Jira').toUpperCase().trim();
+async function handler(c: CommandContext): Promise<boolean | void> {
+    const newName = (await ask('Novo nome do projeto Jira')).toUpperCase().trim();
     if (!newName) {
         warn('Nome do projeto não pode ser vazio.');
         return;

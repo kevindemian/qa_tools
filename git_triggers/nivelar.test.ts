@@ -3,7 +3,7 @@ import { nivelarBranches } from './nivelar';
 import type { GitProvider } from '../shared/types';
 
 jest.mock('../shared/prompt', () => ({
-    prompt: jest.fn(),
+    ask: jest.fn(),
     info: jest.fn(),
     success: jest.fn(),
     warn: jest.fn(),
@@ -29,10 +29,10 @@ describe('nivelarBranches', () => {
     });
 
     it('cria dois MRs e chama pushHistory com ok', async () => {
-        (prompt.prompt as jest.Mock)
-            .mockReturnValueOnce('main')
-            .mockReturnValueOnce('rel_cand')
-            .mockReturnValueOnce('dev');
+        (prompt.ask as jest.Mock)
+            .mockResolvedValueOnce('main')
+            .mockResolvedValueOnce('rel_cand')
+            .mockResolvedValueOnce('dev');
         mockGitlab.createMergeRequest
             .mockResolvedValueOnce({ web_url: 'https://mr1' })
             .mockResolvedValueOnce({ web_url: 'https://mr2' });
@@ -46,10 +46,10 @@ describe('nivelarBranches', () => {
     });
 
     it('continua para segundo MR quando primeiro falha', async () => {
-        (prompt.prompt as jest.Mock)
-            .mockReturnValueOnce('main')
-            .mockReturnValueOnce('rel_cand')
-            .mockReturnValueOnce('dev');
+        (prompt.ask as jest.Mock)
+            .mockResolvedValueOnce('main')
+            .mockResolvedValueOnce('rel_cand')
+            .mockResolvedValueOnce('dev');
         mockGitlab.createMergeRequest
             .mockRejectedValueOnce(new Error('Conflict'))
             .mockResolvedValueOnce({ web_url: 'https://mr2' });
@@ -63,10 +63,10 @@ describe('nivelarBranches', () => {
     });
 
     it('registra erro quando ambos falham', async () => {
-        (prompt.prompt as jest.Mock)
-            .mockReturnValueOnce('main')
-            .mockReturnValueOnce('rel_cand')
-            .mockReturnValueOnce('dev');
+        (prompt.ask as jest.Mock)
+            .mockResolvedValueOnce('main')
+            .mockResolvedValueOnce('rel_cand')
+            .mockResolvedValueOnce('dev');
         mockGitlab.createMergeRequest
             .mockRejectedValueOnce(new Error('First fail'))
             .mockRejectedValueOnce(new Error('Second fail'));
@@ -79,10 +79,10 @@ describe('nivelarBranches', () => {
     });
 
     it('aborta quando branch não existe', async () => {
-        (prompt.prompt as jest.Mock)
-            .mockReturnValueOnce('main')
-            .mockReturnValueOnce('inexistente')
-            .mockReturnValueOnce('dev');
+        (prompt.ask as jest.Mock)
+            .mockResolvedValueOnce('main')
+            .mockResolvedValueOnce('inexistente')
+            .mockResolvedValueOnce('dev');
         mockGitlab.getBranch
             .mockResolvedValueOnce({ name: 'main' })
             .mockResolvedValueOnce(null)
@@ -95,7 +95,10 @@ describe('nivelarBranches', () => {
     });
 
     it('warn quando branches são iguais', async () => {
-        (prompt.prompt as jest.Mock).mockReturnValueOnce('main').mockReturnValueOnce('main').mockReturnValueOnce('dev');
+        (prompt.ask as jest.Mock)
+            .mockResolvedValueOnce('main')
+            .mockResolvedValueOnce('main')
+            .mockResolvedValueOnce('dev');
 
         await nivelarBranches(mockGitlab as unknown as GitProvider, { pushHistory });
 
@@ -104,7 +107,10 @@ describe('nivelarBranches', () => {
     });
 
     it('warn quando branches são vazios', async () => {
-        (prompt.prompt as jest.Mock).mockReturnValueOnce('').mockReturnValueOnce('rel_cand').mockReturnValueOnce('dev');
+        (prompt.ask as jest.Mock)
+            .mockResolvedValueOnce('')
+            .mockResolvedValueOnce('rel_cand')
+            .mockResolvedValueOnce('dev');
 
         await nivelarBranches(mockGitlab as unknown as GitProvider, { pushHistory });
 
@@ -113,10 +119,10 @@ describe('nivelarBranches', () => {
     });
 
     it('warn quando todas as branches são inexistentes', async () => {
-        (prompt.prompt as jest.Mock)
-            .mockReturnValueOnce('main')
-            .mockReturnValueOnce('rel_cand')
-            .mockReturnValueOnce('dev');
+        (prompt.ask as jest.Mock)
+            .mockResolvedValueOnce('main')
+            .mockResolvedValueOnce('rel_cand')
+            .mockResolvedValueOnce('dev');
         mockGitlab.getBranch.mockResolvedValue(null);
 
         await nivelarBranches(mockGitlab as unknown as GitProvider, { pushHistory });
@@ -126,10 +132,10 @@ describe('nivelarBranches', () => {
     });
 
     it('passa parametros corretos para createMergeRequest', async () => {
-        (prompt.prompt as jest.Mock)
-            .mockReturnValueOnce('feature-x')
-            .mockReturnValueOnce('staging')
-            .mockReturnValueOnce('dev');
+        (prompt.ask as jest.Mock)
+            .mockResolvedValueOnce('feature-x')
+            .mockResolvedValueOnce('staging')
+            .mockResolvedValueOnce('dev');
         mockGitlab.createMergeRequest.mockResolvedValue({ web_url: 'https://mr' });
 
         await nivelarBranches(mockGitlab as unknown as GitProvider, { pushHistory });

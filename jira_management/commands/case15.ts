@@ -1,16 +1,19 @@
 import Config from '../../shared/config';
-import { prompt, confirm, smartPrompt, warn, success } from '../../shared/prompt';
+import { ask, askConfirm, warn, success } from '../../shared/prompt';
 import { load as loadState } from '../../shared/state';
 import path from 'path';
 import fs from 'fs';
 import type { CommandContext } from './context';
 import { createTestExecutionWithLinksWrapper } from './helpers';
+// anti-circular (prompt → create_tests → session-context → prompt)
+// eslint-disable-next-line @typescript-eslint/no-require-imports
+import createTests = require('../create_tests');
 
 async function handler(c: CommandContext): Promise<boolean | void> {
     const state = loadState() as Record<string, string | undefined>;
     const jsonPathInput =
         Config.jsonPath ||
-        smartPrompt('Caminho do arquivo JSON ou TXT (formato JSON)', { default: state.lastJsonPath || '' });
+        (await ask('Caminho do arquivo JSON ou TXT (formato JSON)', { default: state.lastJsonPath || '' }));
 
     let jsonPath = jsonPathInput.trim();
     if (!jsonPath) {
@@ -24,9 +27,7 @@ async function handler(c: CommandContext): Promise<boolean | void> {
         }
     }
 
-    // eslint-disable-next-line @typescript-eslint/no-require-imports
-    const createTestsFromJson = require('../create_tests').createTestsFromJson;
-    const result = await createTestsFromJson({
+    const result = await createTests.createTestsFromJson({
         jiraResource: c.jiraResource,
         jiraResourceXray: c.jiraResourceXray,
         linkManager: c.linkManager,
@@ -51,13 +52,13 @@ async function handler(c: CommandContext): Promise<boolean | void> {
         }));
         c.pushHistory('importar-json', okCount + ' testes', 'ok');
 
-        if (confirm('Criar Test Execution para estes testes?', true)) {
+        if (await askConfirm('Criar Test Execution para estes testes?', true)) {
             const keys = result.inMemoryTasksId;
             const srcName = result.sourcePath ? path.basename(result.sourcePath, '.json') : 'json-import';
-            const nameInput = prompt('Nome da execução', { hint: 'Enter = ' + srcName });
+            const nameInput = await ask('Nome da execução', { hint: 'Enter = ' + srcName });
             const csvName = nameInput.trim() || srcName;
-            const execTitle = prompt('Titulo do Test Execution', { hint: 'Enter = ' + csvName });
-            const execDesc = prompt('Descrição (opcional)');
+            const execTitle = await ask('Titulo do Test Execution', { hint: 'Enter = ' + csvName });
+            const execDesc = await ask('Descrição (opcional)');
             await createTestExecutionWithLinksWrapper(c, keys, csvName, execTitle, execDesc);
         }
     }

@@ -1,10 +1,12 @@
-import { warn, confirm, smartPrompt, printSummary } from '../../shared/prompt';
+import { warn, askConfirm, ask, printSummary } from '../../shared/prompt';
 import type { CommandContext } from './context';
 import { NO_TASKS_FOUND_FOR_VERSION, OPERATION_CANCELLED } from '../constants';
 
 async function handler(c: CommandContext): Promise<boolean | void> {
-    const version = smartPrompt('Versão a fechar', {}, () => {});
-    if (!confirm('Fechar todas as tarefas da versão ' + version + '? Esta operação não pode ser desfeita.')) {
+    const version = await ask('Versão a fechar', {});
+    if (
+        !(await askConfirm('Fechar todas as tarefas da versão ' + version + '? Esta operação não pode ser desfeita.'))
+    ) {
         warn(OPERATION_CANCELLED);
         return true;
     }

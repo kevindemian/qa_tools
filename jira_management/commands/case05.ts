@@ -1,15 +1,15 @@
-import { success, warn, smartPrompt, printError } from '../../shared/prompt';
+import { success, warn, ask, printError } from '../../shared/prompt';
 import { rootLogger } from '../../shared/logger';
 import type { CommandContext } from './context';
 import { NO_TASKS_FOUND_FOR_VERSION } from '../constants';
 
 async function handler(c: CommandContext): Promise<boolean | void> {
     if (!c.ctx.packageManager) {
-        const dir = smartPrompt('Diretório do projeto git', { default: process.cwd() }, () => {});
+        const dir = await ask('Diretório do projeto git', { default: process.cwd() });
         c.ctx.packageManager = c.ctx.createPackageManager?.(dir);
         c.ctx.git_directory = dir;
     }
-    const version = smartPrompt('Nome da versão', { hint: 'ex: v2.7.0' }, () => {});
+    const version = await ask('Nome da versão', { hint: 'ex: v2.7.0' });
     try {
         const tasks = await c.jiraResource.getReleaseTasks(c.ctx.project_name, version, true);
         if (!Array.isArray(tasks)) {

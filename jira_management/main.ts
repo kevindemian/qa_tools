@@ -165,7 +165,7 @@ const ALIASES: Record<string, string> = {
     docs: 'docs',
     sair: '0',
     exit: '0',
-    voltar: 'menu',
+    voltar: '/menu',
     ajuda: '/help',
     help: '/help',
     t: '1',
@@ -268,14 +268,7 @@ function buildMenuChoices(proj: string, ctx: { git_directory: string }): MenuCho
 async function handleSpecialInput(input: string): Promise<boolean | '__exit__'> {
     const cmd = input.trim().toLowerCase();
     if (cmd.startsWith('/help') || cmd === '/h' || cmd.startsWith('/h ')) {
-        const parts = cmd.split(/\s+/);
-        if (parts.length > 1 && parts[1] !== '/help' && parts[1] !== '/h') {
-            showHelp(parts.slice(1).join(' '));
-        } else {
-            showHelp();
-        }
-        divider();
-        prompt('Pressione Enter para continuar');
+        showHelpLoop();
         return true;
     }
     if (cmd === '/home') {
@@ -285,11 +278,8 @@ async function handleSpecialInput(input: string): Promise<boolean | '__exit__'> 
     if (cmd === '/back' || cmd === '/menu') {
         return '__exit__';
     }
-    if (cmd === '/exit') {
-        return true;
-    }
     if (cmd === '/docs' || cmd === '/d') {
-        showDocs();
+        await showDocs();
         return true;
     }
     if (cmd === '/history') {
@@ -307,7 +297,49 @@ async function handleSpecialInput(input: string): Promise<boolean | '__exit__'> 
     return false;
 }
 
-function showDocs(): void {
+function showHelpLoop(): void {
+    const topicEntries = Object.entries(HELP_TOPICS);
+    while (true) {
+        console.clear();
+        defaultOutput.box([], { border: 'double', padding: 1, title: 'QA Tools · Ajuda', width: 80 });
+        showHelp();
+
+        const input = prompt('Digite /help <topico>, /help search <termo>, ou /back para voltar');
+        const trimmed = input.trim();
+        if (!trimmed) continue;
+        const lower = trimmed.toLowerCase();
+
+        if (lower === '/back' || lower === '/menu') return;
+        if (lower === '/help' || lower === '/h') {
+            showHelp();
+            continue;
+        }
+        if (lower.startsWith('/help ') || lower.startsWith('/h ')) {
+            const topic = trimmed.slice(lower.startsWith('/help ') ? 6 : 3).trim();
+            showHelp(topic);
+            divider();
+            prompt('Pressione Enter para continuar');
+            continue;
+        }
+        // Try as topic name or search
+        const found = topicEntries.filter(([k]) => k.includes(lower));
+        if (found.length === 1) {
+            showHelp(found[0][0]);
+            divider();
+            prompt('Pressione Enter para continuar');
+            continue;
+        }
+        if (found.length > 1) {
+            title('Tópicos encontrados');
+            found.forEach(([k, v]) => helpLine(k + ': ' + v.split('\n')[0]));
+            divider();
+            continue;
+        }
+        warn('Tópico não encontrado: "' + trimmed + '". Tente /help search <termo>');
+    }
+}
+
+async function showDocs(): Promise<void> {
     const docsDir = path.join(__dirname, '../docs');
     let files: string[];
     try {
@@ -344,7 +376,7 @@ function showDocs(): void {
             { name: '      /voltar  Menu Jira', value: '0' },
         );
 
-        const answer = showSelect('      Selecione um documento', choices, {
+        const answer = await showSelect('      Selecione um documento', choices, {
             pageSize: (process.stdout.rows || 24) - 4,
         });
         if (answer === '0') return;
@@ -406,7 +438,7 @@ function initializeSession() {
     };
 }
 
-function getUserChoice(proj: string, ctx: SessionContext): string {
+async function getUserChoice(proj: string, ctx: SessionContext): Promise<string> {
     if (Config.autoChoice) {
         return Config.autoChoice;
     }
@@ -439,6 +471,32 @@ function getUserChoice(proj: string, ctx: SessionContext): string {
     });
 }
 
+type DispatchResult = 'exit' | 'continue';
+
+async function dispatchChoice(choice: string, cmdCtx: CommandContext): Promise<DispatchResult> {
+    if (choice === '0') return 'exit';
+
+    if (choice === 'd' || choice === 'docs') {
+        await showDocs();
+        return 'continue';
+    }
+
+    const cmdHandler = getHandler(choice);
+    if (cmdHandler) {
+        try {
+            const shouldContinue = await cmdHandler(cmdCtx);
+            if (shouldContinue) return 'continue';
+        } catch (e) {
+            if (e instanceof CancelError) return 'continue';
+            throw e;
+        }
+        return 'continue';
+    }
+
+    warn('Opção inválida. Escolha entre 0-16, alias ou digite /help.');
+    return 'continue';
+}
+
 async function runMainLoop(
     ctx: SessionContext,
     jiraResource: JiraResource,
@@ -449,63 +507,55 @@ async function runMainLoop(
     pushHistory: (op: string, detail: string, status: string) => void,
     printSessionSummary: () => void,
 ): Promise<void> {
+    const longOps = ['1', '15', '4', '5', '7', '8'];
     while (true) {
         console.clear();
-        let choice = getUserChoice(ctx.project_name, ctx);
+        let choice;
+        try {
+            choice = await getUserChoice(ctx.project_name, ctx);
+        } catch (e) {
+            if (e instanceof CancelError) choice = '/menu';
+            else throw e;
+        }
 
-        if (choice === '/exit' || choice === '/sair') {
+        if (choice === '/exit' || choice === '/sair' || choice === '/quit') {
             choice = '0';
         }
 
-        if ((await handleSpecialInput(choice)) === '__exit__') return;
-
         const resolved = resolveAlias(choice);
-        if (resolved !== choice && !isNaN(Number(resolved))) {
+        if (resolved !== choice) {
             choice = resolved;
         }
+
+        const specialResult = await handleSpecialInput(choice);
+        if (specialResult === '__exit__') return;
+        if (specialResult === true) continue;
 
         updateState((s) => {
             (s as StateSchema).lastChoice = choice;
         });
 
-        if (choice === 'd' || choice === 'docs') {
-            showDocs();
-            continue;
-        }
+        const cmdCtx: CommandContext = {
+            jiraResource,
+            jiraResourceXray,
+            linkManager,
+            linkManagerXray,
+            csvResource,
+            ctx,
+            pushHistory,
+            printSessionSummary,
+            base_url,
+            sessionLog,
+        };
 
-        const cmdHandler = getHandler(choice);
-        if (cmdHandler) {
-            const cmdCtx: CommandContext = {
-                jiraResource,
-                jiraResourceXray,
-                linkManager,
-                linkManagerXray,
-                csvResource,
-                ctx,
-                pushHistory,
-                printSessionSummary,
-                base_url,
-                sessionLog,
-            };
-            try {
-                const shouldContinue = await cmdHandler(cmdCtx);
-                if (shouldContinue) continue;
-            } catch (e) {
-                if (e instanceof CancelError) continue;
-                throw e;
-            }
-        } else if (choice !== '0') {
-            warn('Opção inválida. Escolha entre 0-16, alias ou digite /help.');
-        }
-
-        if (choice === '0') {
+        const action = await dispatchChoice(choice, cmdCtx);
+        if (action === 'exit') {
             title('Até logo!');
             printSessionSummary();
             if (ctx.sessionCounters.some((c) => c.status === 'error')) process.exitCode = 1;
             return;
         }
 
-        const longOps = ['1', '15', '4', '5', '7', '8'];
         const hasResults = ctx.results.length > 0 && ctx.results.some((r) => r.status === 'error');
         if (!Config.autoConfirm && choice !== '0' && longOps.includes(choice) && hasResults) {
             prompt('Pressione Enter para continuar');
@@ -566,8 +616,11 @@ module.exports = {
     main,
     showSplash,
     showHelp,
+    showDocs,
+    showHelpLoop,
     resolveAlias,
     buildMenuChoices,
     handleSpecialInput,
+    dispatchChoice,
     _configHint,
 };
