@@ -14,18 +14,18 @@ Ao iniciar, um menu interativo é exibido. O usuário seleciona um projeto (mape
 
 **Opções do menu:**
 
-| # | Operação |
-|---|----------|
-| 1 | Disparar pipeline |
-| 2 | Listar schedules (GitLab) |
-| 3 | Disparar schedule (GitLab) |
-| 4 | Criar MR/PR |
-| 5 | Listar MRs/PRs aprovados |
-| 6 | Fazer merge por ID |
-| 7 | Nivelar branches (main → rel_cand → dev) |
-| 8 | Exportar variáveis CI/CD |
-| 9 | Trocar de projeto |
-| 0 | Sair |
+| #   | Operação                                 |
+| --- | ---------------------------------------- |
+| 1   | Disparar pipeline                        |
+| 2   | Listar schedules (GitLab)                |
+| 3   | Disparar schedule (GitLab)               |
+| 4   | Criar MR/PR                              |
+| 5   | Listar MRs/PRs aprovados                 |
+| 6   | Fazer merge por ID                       |
+| 7   | Nivelar branches (main → rel_cand → dev) |
+| 8   | Exportar variáveis CI/CD                 |
+| 9   | Trocar de projeto                        |
+| 0   | Sair                                     |
 
 ---
 
@@ -58,8 +58,8 @@ Mapeia nomes de projeto → identificador no provedor:
 
 ```json
 {
-  "qa_ibabs": "47849962",
-  "qa_irmanager": "41268567"
+    "qa_ibabs": "47849962",
+    "qa_irmanager": "41268567"
 }
 ```
 
@@ -73,8 +73,8 @@ Define o provedor de cada projeto:
 
 ```json
 {
-  "qa_ibabs": { "provider": "gitlab" },
-  "qa_irmanager": { "provider": "github", "repo": "myorg/qa-irmanager" }
+    "qa_ibabs": { "provider": "gitlab" },
+    "qa_irmanager": { "provider": "github", "repo": "myorg/qa-irmanager" }
 }
 ```
 
@@ -111,7 +111,7 @@ Lista de IDs de revisores para MRs (IDs do GitLab):
 Após disparar uma pipeline, o usuário pode optar por **aguardar a conclusão**:
 
 ```typescript
-async function pollPipeline(m, pipelineId, interval = 5000, timeout = 300000)
+async function pollPipeline(m, pipelineId, interval = 5000, timeout = 300000);
 ```
 
 - Polling a cada **5 segundos**
@@ -146,6 +146,35 @@ Fluxo executado após pipeline concluída com sucesso (opção `"Coletar resulta
 3. Cria **Test Execution** no Jira via `createTestExecutionFromResults()`
 4. Utiliza `JiraResource` e `JiraLinkManager` para criar a issue e links
 
+### 6.4 Análise de Falhas com IA
+
+Após o parse, se houver testes falhos, a CLI pergunta: _"Deseja analisar falhas com IA?"_
+
+**Pipeline de análise (`llm-review.ts`):**
+
+1. **Tier `report`** — Envia lista de falhas formatada com prompt de `shared/prompts/failure-analysis.md`
+2. **Validação JSON** — `ReportValidator` verifica schema: `tests[].{title, classification, severity, recommendation}`
+3. **Retry** — Até 3 tentativas com feedback dos erros de validação
+4. **Revisor** — Tier `reviewer` (Gemini) avalia confiança: `AGREE` (alta), `PARTIAL` (média), `DISAGREE` (baixa)
+5. **Fallback** — Se report falha, cai para tier `main`; se reviewer falha, retorna confidence `medium`
+
+**Resultado:**
+
+- Classificação por causa raiz: `ASSERTION`, `TIMEOUT`, `ENVIRONMENT`, `FLAKY`, `APPLICATION`, `UNKNOWN`
+- Severidade: `high`, `medium`, `low`
+- Recomendação textual de correção
+- Badge de confiança no relatório HTML (🟢 alta / 🟡 média / 🔴 baixa)
+
+**Saída:** relatório HTML salvo no diretório de origem com:
+
+- Seção "Análise IA" com badge de confiança
+- Fallback warning (⚠) se IA indisponível
+- Métricas de qualidade: `totalRequests`, `rejectedByValidator`, `retryCount`
+
+**Métricas:** Cada análise gera um snapshot persistido em `~/.local/state/qa-tools/llm-metrics.json` via `llm-metrics.ts` (6 contadores: requests, falhas, validações rejeitadas, retries, confiança, latência).
+
+**Arquivos:** `git_triggers/llm-pipeline.ts`, `shared/failure-analysis.ts`, `shared/llm-review.ts`, `shared/report-generator.ts`, `shared/llm-metrics.ts`, `shared/report-validator.ts`
+
 ---
 
 ## 7. Merge Requests
@@ -162,8 +191,8 @@ Fluxo executado após pipeline concluída com sucesso (opção `"Coletar resulta
 
 - Busca MRs/PRs abertos
 - Filtra por `isApproved()`:
-  - **GitLab**: GET `/merge_requests/:iid/approvals`
-  - **GitHub**: GET `/pulls/:number/reviews` (verifica `state === 'APPROVED'`)
+    - **GitLab**: GET `/merge_requests/:iid/approvals`
+    - **GitHub**: GET `/pulls/:number/reviews` (verifica `state === 'APPROVED'`)
 - Exibe lista dos aprovados
 
 ### Fazer Merge por ID (Opção 6)
@@ -177,6 +206,7 @@ Fluxo executado após pipeline concluída com sucesso (opção `"Coletar resulta
 ### Merge Request Rápido (pós-pipeline)
 
 Após coleta de resultados, o menu pergunta:
+
 1. "Criar merge request de \<branch\> para?" — informa branch de destino
 2. "Fazer merge agora?" — executa merge imediato
 
@@ -206,22 +236,22 @@ Se o pipeline polling for interrompido (Ctrl+C, falha), o progresso é **salvo n
 
 ```typescript
 updateState({
-  pendingPipeline: {
-    branch: currentBranch,
-    pipelineId: id,
-    projectName: projectName
-  }
+    pendingPipeline: {
+        branch: currentBranch,
+        pipelineId: id,
+        projectName: projectName,
+    },
 });
 ```
 
 ### Na próxima execução
 
 1. Ao selecionar "Disparar pipeline" (opção 1), o sistema verifica se há `pendingPipeline`
-2. Se encontrado e o projeto for o mesmo, pergunta: *"Pipeline pendente encontrada. Continuar deste ponto?"*
+2. Se encontrado e o projeto for o mesmo, pergunta: _"Pipeline pendente encontrada. Continuar deste ponto?"_
 3. Se confirmado:
-   - Remove o checkpoint do estado
-   - Inicia polling da pipeline existente (sem redisparar)
-   - Após conclusão, segue o fluxo normal de coleta de resultados e MR
+    - Remove o checkpoint do estado
+    - Inicia polling da pipeline existente (sem redisparar)
+    - Após conclusão, segue o fluxo normal de coleta de resultados e MR
 
 ### Persistência
 
@@ -229,17 +259,61 @@ O estado é salvo em `~/.local/state/qa-tools/state.json` (ou `$XDG_STATE_HOME/q
 
 ---
 
+## 10. AI PR / MR Description
+
+Gera descrição de Pull Request / Merge Request automaticamente a partir do diff entre branches usando IA (tier **fast**).
+
+**Quando ocorre:** acionado via `e2e/smoke-llm.ts` ou integrado em fluxo CI.
+
+### Fluxo
+
+1. Obtém o diff entre `source` e `target` via `GitProvider.getDiff()`
+2. Envia o diff para o LLM (tier **fast** — Groq `llama3-8b-8192`)
+3. LLM retorna descrição em português com:
+    - Resumo das alterações
+    - Arquivos modificados
+    - Impacto funcional
+4. Retorna string vazia em caso de erro (não bloqueia o fluxo)
+
+**Arquivo:** `git_triggers/ai-pr-desc.ts`
+
+---
+
+## 11. AI Test Impact Analysis
+
+Analisa o impacto de alterações nos testes existentes usando o diff entre branches (tier **fast**).
+
+**Quando ocorre:** Menu → Opção de impacto de testes (pós-pipeline)
+
+### Fluxo
+
+1. Obtém o diff entre `source` e `target` via `GitProvider.getDiff()`
+2. Opcional: carrega mapping JSON de testes existentes
+3. Envia para LLM (tier **fast**) que avalia:
+    - Quais testes existentes são afetados
+    - Risco da alteração (alto/médio/baixo)
+    - Se novos testes devem ser adicionados
+4. Exibe análise textual
+
+**Arquivo:** `git_triggers/ai-test-impact.ts`
+
+---
+
 ## Variáveis de Ambiente
 
-| Variável | Obrigatória | Descrição |
-|----------|-------------|-----------|
-| `GIT_TOKEN` | Sim | Token de autenticação GitLab (PRIVATE-TOKEN) |
-| `GIT_BASE_URL` | Sim | URL base do GitLab (ex: `https://gitlab.seusite.com`) |
-| `GITHUB_TOKEN` | Condicional | Token GitHub (necessário se usar provedor GitHub) |
-| `GITHUB_API_URL` | Não | URL da API GitHub (padrão: `https://api.github.com`) |
-| `JIRA_BASE_URL` | Condicional | URL base do Jira (necessário para resultados) |
-| `JIRA_PERSONAL_TOKEN` | Condicional | Token pessoal Jira |
-| `XRAY_BASE_URL` | Condicional | URL base Xray |
+| Variável              | Obrigatória | Descrição                                                               |
+| --------------------- | ----------- | ----------------------------------------------------------------------- |
+| `GIT_TOKEN`           | Sim         | Token de autenticação GitLab (PRIVATE-TOKEN)                            |
+| `GIT_BASE_URL`        | Sim         | URL base do GitLab (ex: `https://gitlab.seusite.com`)                   |
+| `GITHUB_TOKEN`        | Condicional | Token GitHub (necessário se usar provedor GitHub)                       |
+| `GITHUB_API_URL`      | Não         | URL da API GitHub (padrão: `https://api.github.com`)                    |
+| `JIRA_BASE_URL`       | Condicional | URL base do Jira (necessário para resultados)                           |
+| `JIRA_PERSONAL_TOKEN` | Condicional | Token pessoal Jira                                                      |
+| `XRAY_BASE_URL`       | Condicional | URL base Xray                                                           |
+| `LLM_API_KEY`         | Condicional | API key do provedor LLM **main** (necessário para análise IA de falhas) |
+| `LLM_FAST_API_KEY`    | Não         | API key do tier **fast** (PR description, test impact)                  |
+
+> Consulte [`docs/06-env-vars.md`](06-env-vars.md) para a tabela completa de todas as 16 variáveis LLM.
 
 ---
 
