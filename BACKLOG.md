@@ -851,15 +851,15 @@ Todos os 6 cenários passaram. Erros 404/403 são tratados corretamente por `han
 
 ### Fase 4 — Quebrar funções > 50 linhas (P2, ~2h)
 
-**Status:** ⏳ Pendente
+**Status:** ✅ CONCLUÍDA
 
-| Função                  | Arquivo                            | Linhas | Ação                     |
-| ----------------------- | ---------------------------------- | ------ | ------------------------ |
-| `handleTriggerPipeline` | `git_triggers/pipeline-handler.ts` | 109    | Extrair helpers nomeados |
-| `tryBatchMode`          | `git_triggers/batch-mode.ts`       | 85     | Extrair helpers nomeados |
-| `tableView`             | `shared/prompt-ui.ts`              | 76     | Extrair helpers nomeados |
-| `printSummary`          | `shared/prompt-ui.ts`              | 61     | Extrair helpers nomeados |
-| `runMainLoop`           | `jira_management/main.ts`          | 65     | Extrair helpers nomeados |
+| Função                  | Arquivo                            | Antes | Depois | Extrações                                                                           |
+| ----------------------- | ---------------------------------- | ----- | ------ | ----------------------------------------------------------------------------------- |
+| `handleTriggerPipeline` | `git_triggers/pipeline-handler.ts` | 109   | 10     | `resumePendingPipeline`, `buildPipelinePayload`, `triggerAndPollPipeline`           |
+| `tryBatchMode`          | `git_triggers/batch-mode.ts`       | 85    | 15     | `setupBatchProject`, `triggerAndCollectBatchPipeline`, `generateFlakinessDashboard` |
+| `printSummary`          | `shared/prompt-ui.ts`              | 61    | 28     | `renderQuietSummary`, `renderVerboseSuccess`, `renderVerboseFailure`                |
+| `tableView`             | `shared/prompt-ui.ts`              | 76    | 37     | `buildCliTable3Config`, `colorizeRowCells`                                          |
+| `runMainLoop`           | `jira_management/main.ts`          | 65    | 18     | `getAndResolveChoice`, `buildCommandContext`, `dispatchAndHandleResult`             |
 
 ### Fase 1 — CJS→ESM (P1, ~3h)
 

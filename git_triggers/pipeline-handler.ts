@@ -150,53 +150,61 @@ async function _postPipeline(
     }
 }
 
-export async function handleTriggerPipeline(ctx: SessionContext, m: GitProvider, projectName: string) {
+async function resumePendingPipeline(m: GitProvider, projectName: string): Promise<string | null> {
     const savedState = loadState();
     const pending = savedState.pendingPipeline as
         | { branch?: string; pipelineId?: string; projectName?: string }
         | undefined;
-    let currentBranch = '';
+    if (!pending || pending.projectName !== projectName || !pending.pipelineId) return null;
 
-    if (pending && pending.projectName === projectName && pending.pipelineId) {
-        if (
-            confirm(
-                'Pipeline pendente encontrada: #' +
-                    pending.pipelineId +
-                    ' (' +
-                    pending.branch +
-                    '). Continuar deste ponto?',
-                true,
-            )
-        ) {
-            currentBranch = pending.branch || '';
-            const id = pending.pipelineId;
-            info('Retomando pipeline #' + id + '...');
-            updateState((s: Record<string, unknown>) => {
-                delete s.pendingPipeline;
-            });
-            const pollResult = await pollPipeline(m, id);
-            setIsBusy(false);
-            const icon = pollResult.status === 'success' ? '\u2713' : '\u2717';
-            info('Pipeline #' + id + ': ' + icon + ' ' + pollResult.status);
-            if (pollResult.status !== 'canceled' && pollResult.status !== 'skipped') {
-                await _postPipeline(m, id, currentBranch, projectName);
-            }
-            return;
-        }
+    if (
+        !confirm(
+            'Pipeline pendente encontrada: #' +
+                pending.pipelineId +
+                ' (' +
+                pending.branch +
+                '). Continuar deste ponto?',
+            true,
+        )
+    ) {
         updateState((s: Record<string, unknown>) => {
             delete s.pendingPipeline;
         });
+        return null;
     }
 
-    currentBranch = prompt('Branch para disparar pipeline');
-    const branchCheck = await m.getBranch(currentBranch);
+    const branch = pending.branch || '';
+    const id = pending.pipelineId;
+    info('Retomando pipeline #' + id + '...');
+    updateState((s: Record<string, unknown>) => {
+        delete s.pendingPipeline;
+    });
+    const pollResult = await pollPipeline(m, id);
+    setIsBusy(false);
+    const icon = pollResult.status === 'success' ? '\u2713' : '\u2717';
+    info('Pipeline #' + id + ': ' + icon + ' ' + pollResult.status);
+    if (pollResult.status !== 'canceled' && pollResult.status !== 'skipped') {
+        await _postPipeline(m, id, branch, projectName);
+    }
+    return branch;
+}
+
+async function buildPipelinePayload(
+    m: GitProvider,
+    projectName: string,
+): Promise<{
+    branch: string;
+    payload: { ref: string; variables: Array<{ key: string; value: string }>; workflow_id?: string };
+} | null> {
+    const branch = prompt('Branch para disparar pipeline');
+    const branchCheck = await m.getBranch(branch);
     if (!branchCheck) {
-        warn('Branch "' + currentBranch + '" não encontrada.');
-        pushHistory('pipeline', 'branch-not-found: ' + currentBranch, 'error');
-        return;
+        warn('Branch "' + branch + '" não encontrada.');
+        pushHistory('pipeline', 'branch-not-found: ' + branch, 'error');
+        return null;
     }
     const payload: { ref: string; variables: Array<{ key: string; value: string }>; workflow_id?: string } = {
-        ref: currentBranch,
+        ref: branch,
         variables: [],
     };
 
@@ -216,48 +224,67 @@ export async function handleTriggerPipeline(ctx: SessionContext, m: GitProvider,
 
     title('Preview');
     print('  Projeto: ' + projectName);
-    print('  Branch: ' + currentBranch);
+    print('  Branch: ' + branch);
     print('  Variáveis: ' + payload.variables.length);
     if (!confirm('Confirmar disparo de pipeline?')) {
         warn(MSG_OPERATION_CANCELED);
-        return;
+        return null;
     }
 
+    return { branch, payload };
+}
+
+async function triggerAndPollPipeline(
+    m: GitProvider,
+    branch: string,
+    payload: { ref: string; variables: Array<{ key: string; value: string }>; workflow_id?: string },
+    projectName: string,
+): Promise<void> {
     let pipelineResult: PipelineTriggerResult | undefined;
     try {
-        pipelineResult = await withSpinner('Disparando pipeline em ' + currentBranch + '...', () =>
+        pipelineResult = await withSpinner('Disparando pipeline em ' + branch + '...', () =>
             m.triggerPipeline(payload),
         );
         if (pipelineResult) {
             success('Pipeline disparado: ' + String(pipelineResult.web_url));
-            pushHistory('pipeline', currentBranch, 'ok');
+            pushHistory('pipeline', branch, 'ok');
         }
     } catch (err) {
         printError('Falha ao disparar pipeline', err);
-        pushHistory('pipeline', currentBranch, 'error');
+        pushHistory('pipeline', branch, 'error');
         return;
     }
 
-    if (pipelineResult && confirm('Aguardar conclusao da pipeline?', true)) {
-        const id = (pipelineResult.id as string) || (pipelineResult.run_number as string) || '';
-        if (id) {
-            updateState((s: Record<string, unknown>) => {
-                s.pendingPipeline = { branch: currentBranch, pipelineId: id, projectName };
-            });
-            setIsBusy(true);
-            info('Aguardando pipeline #' + id + '...');
-            const pollResult = await pollPipeline(m, id);
-            setIsBusy(false);
-            const icon = pollResult.status === 'success' ? '\u2713' : '\u2717';
-            info('Pipeline #' + id + ': ' + icon + ' ' + pollResult.status);
-            updateState((s: Record<string, unknown>) => {
-                delete s.pendingPipeline;
-            });
-            if (pollResult.status !== 'canceled' && pollResult.status !== 'skipped') {
-                await _postPipeline(m, id, currentBranch, projectName);
-            }
-        }
+    if (!pipelineResult || !confirm('Aguardar conclusao da pipeline?', true)) return;
+
+    const id = (pipelineResult.id as string) || (pipelineResult.run_number as string) || '';
+    if (!id) return;
+
+    updateState((s: Record<string, unknown>) => {
+        s.pendingPipeline = { branch, pipelineId: id, projectName };
+    });
+    setIsBusy(true);
+    info('Aguardando pipeline #' + id + '...');
+    const pollResult = await pollPipeline(m, id);
+    setIsBusy(false);
+    const icon = pollResult.status === 'success' ? '\u2713' : '\u2717';
+    info('Pipeline #' + id + ': ' + icon + ' ' + pollResult.status);
+    updateState((s: Record<string, unknown>) => {
+        delete s.pendingPipeline;
+    });
+    if (pollResult.status !== 'canceled' && pollResult.status !== 'skipped') {
+        await _postPipeline(m, id, branch, projectName);
     }
+}
+
+export async function handleTriggerPipeline(ctx: SessionContext, m: GitProvider, projectName: string) {
+    const resumed = await resumePendingPipeline(m, projectName);
+    if (resumed !== null) return;
+
+    const built = await buildPipelinePayload(m, projectName);
+    if (!built) return;
+
+    await triggerAndPollPipeline(m, built.branch, built.payload, projectName);
 }
 
 export async function handleExportVariables(ctx: SessionContext, m: GitProvider) {
