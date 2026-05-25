@@ -12,7 +12,6 @@ import {
     sessionContext,
     isBusy,
     manager,
-    projects,
     providerLabel,
     buildActionChoices,
     displayProjects,
@@ -25,6 +24,7 @@ import {
     setProjectId,
     setManager,
     projectId,
+    getProjects,
 } from './session-state';
 import {
     handleTriggerPipeline,
@@ -62,11 +62,6 @@ const validateEnv = createValidateEnv([
     },
 ]);
 
-setupSigint(
-    () => isBusy,
-    () => printSessionSummary(),
-);
-
 async function handleHelp() {
     await _handleHelp();
 }
@@ -82,7 +77,7 @@ function buildContextLine(): string {
 function _selectProject(): { projectName: string; names: string[] } {
     const state = loadState();
     displayProjects();
-    const names = Object.keys(projects);
+    const names = Object.keys(getProjects());
     const firstDefault = (state.lastProject as string) || '';
     const firstChoice = prompt('Escolha um projeto', {
         hint: '1-' + names.length,
@@ -96,7 +91,7 @@ function _selectProject(): { projectName: string; names: string[] } {
     }
     const projectName = names[firstIdx - 1];
     setCurrentProjectName(projectName);
-    setProjectId(projects[projectName]);
+    setProjectId(getProjects()[projectName]);
     updateState((s: Record<string, unknown>) => {
         s.lastProject = projectName;
     });
@@ -205,10 +200,15 @@ async function _dispatchAction(
 async function main() {
     if (await tryBatchMode()) return;
 
-    if (!projects) {
+    const projs = getProjects();
+    if (!projs || Object.keys(projs).length === 0) {
         process.exitCode = 1;
         return;
     }
+    setupSigint(
+        () => isBusy,
+        () => printSessionSummary(),
+    );
     validateEnv();
     await showSplash();
     sessionLog.info('Sessão iniciada');

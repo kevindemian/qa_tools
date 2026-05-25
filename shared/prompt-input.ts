@@ -169,7 +169,7 @@ export async function ask(label: string, options: PromptOptions = {}): Promise<s
     const mod: unknown = await _loadInput();
     if (mod && isTTY()) {
         try {
-            const answer = await mod.default({
+            const answer = await (mod as { default: (...args: unknown[]) => unknown }).default({
                 message: label,
                 default: options.default,
                 theme: inquirerTheme,
@@ -188,7 +188,7 @@ export async function askConfirm(label: string, defaultYes = false): Promise<boo
     const mod: unknown = await _loadConfirm();
     if (mod && isTTY()) {
         try {
-            const answer = await mod.default({
+            const answer = await (mod as { default: (...args: unknown[]) => unknown }).default({
                 message: label,
                 default: defaultYes,
                 theme: inquirerTheme,
@@ -238,7 +238,7 @@ export async function showSelect(label: string, choices: SelectChoice[], options
     const mod: unknown = await _loadSelect();
     if (mod && isTTY()) {
         try {
-            const answer = await mod.default({
+            const answer = await (mod as { default: (...args: unknown[]) => unknown }).default({
                 message: label,
                 choices: flatChoices,
                 pageSize: options.pageSize || Output.rows() - 5,

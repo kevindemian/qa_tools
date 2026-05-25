@@ -2,6 +2,7 @@ import * as fs from 'fs';
 import * as path from 'path';
 import Config from '../shared/config';
 import type { TestCase } from '../shared/types';
+import { isPreconditionKey } from '../shared/quoted-string';
 import TestCaseValidator from './test-case-validator';
 import { rootLogger } from '../shared/logger';
 import { load as loadState } from '../shared/state';
@@ -242,7 +243,7 @@ function parseJsonTests(jsonPath: string): TestCase[] {
                 },
             })),
             precondition: item.precondition
-                ? (item.precondition as string).match(/^[A-Z][A-Z0-9]+(?:-[A-Z0-9]+)*-\d+$/)
+                ? isPreconditionKey(item.precondition as string)
                     ? { type: 'reference' as const, value: item.precondition as string }
                     : { type: 'inline' as const, value: item.precondition as string }
                 : undefined,

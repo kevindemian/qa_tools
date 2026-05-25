@@ -9,6 +9,7 @@ import {
     calculateFlakiness,
     getTrends,
 } from './metrics';
+import Config from './config';
 import type { MetricsRun, MetricsStore, CoverageSnapshot } from './metrics';
 import type { ParseResult } from './result_parser';
 
@@ -32,8 +33,8 @@ afterAll(() => {
     }
 });
 
-function makeConfig(tmpDir: string): unknown {
-    return { xdgStateHome: tmpDir };
+function makeConfig(tmpDir: string): Config {
+    return Config.create({ xdgStateHome: tmpDir });
 }
 
 describe('saveRunMetrics / loadMetrics', () => {

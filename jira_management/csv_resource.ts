@@ -3,6 +3,7 @@ import csv from 'csv-parser';
 import { Readable } from 'stream';
 import { rootLogger } from '../shared/logger';
 import type { TestCase } from '../shared/types';
+import { parseQuotedValue, extractPreconditionKey } from '../shared/quoted-string';
 
 interface ParsedStep {
     fields: {
@@ -51,11 +52,10 @@ class CsvResource {
         const trimmed = value.trim();
         if (!trimmed) return null;
 
-        const KEY_MATCH = /^([A-Z][A-Z0-9]+(?:-[A-Z0-9]+)*-\d+)/;
-        const keyMatch = trimmed.match(KEY_MATCH);
+        const key = extractPreconditionKey(trimmed);
 
-        if (keyMatch) {
-            return { type: 'reference', value: keyMatch[1] };
+        if (key) {
+            return { type: 'reference', value: key };
         }
 
         return { type: 'inline', value: trimmed };
@@ -87,29 +87,16 @@ class CsvResource {
         descIndex: number,
         title: string,
     ): { description: string; descEndIndex: number } {
-        let descEndIndex = descIndex + 1;
-        let description: string;
         const rawValue = lines[descIndex].replace(/^Description:\s*/, '');
+        const parsed = parseQuotedValue(rawValue, lines, descIndex);
+        let description = parsed.value;
+        let descEndIndex = parsed.endIndex;
 
-        if (rawValue.startsWith('"') && rawValue.endsWith('"') && rawValue.length >= 2) {
-            description = rawValue.slice(1, -1).replace(/""/g, '"');
-        } else if (rawValue.startsWith('"')) {
-            const parts = [rawValue.slice(1)];
-            while (descEndIndex < lines.length) {
-                const line = lines[descEndIndex];
-                if (line.endsWith('"')) {
-                    parts.push(line.slice(0, -1));
-                    descEndIndex++;
-                    break;
-                }
-                parts.push(line);
-                descEndIndex++;
-            }
-            if (descEndIndex >= lines.length) {
-                rootLogger.warn(`Description sem aspas de fechamento: "${title}"`);
-            }
-            description = parts.join('\n').replace(/""/g, '"');
-        } else {
+        if (parsed.endIndex >= lines.length && rawValue.startsWith('"') && !rawValue.endsWith('"')) {
+            rootLogger.warn(`Description sem aspas de fechamento: "${title}"`);
+        }
+
+        if (!rawValue.startsWith('"')) {
             const stopPrefixes = ['Title:', 'Pre-condition:', 'Linked Issues:', 'Group:', 'Action,Data'];
             while (descEndIndex < lines.length) {
                 if (stopPrefixes.some((p) => lines[descEndIndex].startsWith(p))) break;
@@ -134,33 +121,14 @@ class CsvResource {
         precIndex: number,
         title: string,
     ): { precValue: string | null; precEndIndex: number } {
-        let precEndIndex = precIndex + 1;
-        let precValue: string | null;
         const rawValue = lines[precIndex].replace(/^Pre-condition:\s*/, '');
+        const parsed = parseQuotedValue(rawValue, lines, precIndex);
 
-        if (rawValue.startsWith('"') && rawValue.endsWith('"') && rawValue.length >= 2) {
-            precValue = rawValue.slice(1, -1).replace(/""/g, '"');
-        } else if (rawValue.startsWith('"')) {
-            const parts = [rawValue.slice(1)];
-            while (precEndIndex < lines.length) {
-                const line = lines[precEndIndex];
-                if (line.endsWith('"')) {
-                    parts.push(line.slice(0, -1));
-                    precEndIndex++;
-                    break;
-                }
-                parts.push(line);
-                precEndIndex++;
-            }
-            if (precEndIndex >= lines.length) {
-                rootLogger.warn(`Pre-condition sem aspas de fechamento: "${title}"`);
-            }
-            precValue = parts.join('\n').replace(/""/g, '"');
-        } else {
-            precValue = rawValue;
+        if (parsed.endIndex >= lines.length && rawValue.startsWith('"') && !rawValue.endsWith('"')) {
+            rootLogger.warn(`Pre-condition sem aspas de fechamento: "${title}"`);
         }
 
-        return { precValue, precEndIndex };
+        return { precValue: parsed.value || null, precEndIndex: parsed.endIndex };
     }
 
     private _filterBulkCsvLines(

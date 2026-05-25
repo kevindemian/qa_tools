@@ -8,7 +8,6 @@ import { generateFlakinessHtml } from '../shared/flakiness-dashboard';
 import {
     currentProvider,
     currentProjectName,
-    projects,
     pushHistory,
     displayProjects,
     displayRecentPipelines,
@@ -17,6 +16,7 @@ import {
     setCurrentProjectName,
     setProjectId,
     setManager,
+    getProjects,
 } from './session-state';
 import { update as updateState } from '../shared/state';
 
@@ -76,8 +76,8 @@ export async function handleChangeProject(ctx: SessionContext, m: GitProvider, n
     if (!isNaN(newIdx) && newIdx >= 1 && newIdx <= names.length) {
         const newName = names[newIdx - 1];
         setCurrentProjectName(newName);
-        setProjectId(projects[newName]);
-        const newManager = createManagerForProject(newName, projects[newName]);
+        setProjectId(getProjects()[newName]);
+        const newManager = createManagerForProject(newName, getProjects()[newName]);
         setManager(newManager);
         updateState((s: Record<string, unknown>) => {
             s.lastProject = newName;

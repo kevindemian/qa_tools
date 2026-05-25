@@ -7,7 +7,6 @@ import { offerPipelineFailureAnalysis } from './llm-pipeline';
 import { collectTestResults as _collectTestResults } from './test-results';
 import type { PipelineTriggerResult } from '../shared/types';
 import {
-    projects,
     currentProjectName,
     currentProvider,
     pushHistory,
@@ -16,6 +15,7 @@ import {
     setCurrentProjectName,
     setProjectId,
     setManager,
+    getProjects,
 } from './session-state';
 import { pollPipeline } from './pipeline-handler';
 
@@ -42,20 +42,21 @@ export async function tryBatchMode(): Promise<boolean> {
         process.env.AUTO_CONFIRM = 'true';
     }
 
-    if (!projects) {
+    const projs = getProjects();
+    if (!projs || Object.keys(projs).length === 0) {
         error('Nenhum projeto configurado.');
         return true;
     }
 
-    const projectName = batch.project || Object.keys(projects)[0];
-    if (!projects[projectName]) {
+    const projectName = batch.project || Object.keys(projs)[0];
+    if (!projs[projectName]) {
         error('Projeto "' + projectName + '" não encontrado em config/projects.json.');
         return true;
     }
 
     setCurrentProjectName(projectName);
-    setProjectId(projects[projectName]);
-    const m = createManagerForProject(projectName, projects[projectName]);
+    setProjectId(projs[projectName]);
+    const m = createManagerForProject(projectName, projs[projectName]);
     setManager(m);
 
     const branch = batch.branch || 'main';

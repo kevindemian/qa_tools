@@ -1,5 +1,10 @@
 # TS Migration Instructions — QA Tools
 
+## Credentials
+
+- GitHub token está em `.env` na raiz do projeto (variável `GITHUB_TOKEN`).
+- Usar `gh` CLI ou `curl -H "Authorization: Bearer $GITHUB_TOKEN"` para API calls.
+
 ## Layer Order (strict, bottom-up)
 
 ```
@@ -44,11 +49,11 @@ grep -rn ".only(" **/*.test.*                                # zero
 
 ## Error handling pattern (R5)
 
-| Flow | Rule |
-|------|------|
-| GET/search | logError + return [] / null / {} — never throw |
-| POST/PUT/DELETE | logError + throw new SpecificError() |
-| Handlers | try/catch → printError() + return false |
+| Flow            | Rule                                           |
+| --------------- | ---------------------------------------------- |
+| GET/search      | logError + return [] / null / {} — never throw |
+| POST/PUT/DELETE | logError + throw new SpecificError()           |
+| Handlers        | try/catch → printError() + return false        |
 
 ## Known pitfalls
 

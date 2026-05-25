@@ -42,36 +42,58 @@ export function setManager(v: GitProvider | null) {
 
 export const MSG_OPERATION_CANCELED = 'Operação cancelada.';
 
-export const PROVIDERS_PATH = path.resolve(__dirname, '../config/providers.json');
-export let providersConfig: Record<string, unknown> = {};
-try {
-    providersConfig = JSON.parse(fs.readFileSync(PROVIDERS_PATH, 'utf8'));
-} catch {
-    rootLogger.warn('Falha ao carregar providers.json. Usando GitLab como padrao.');
+const PROVIDERS_PATH = path.resolve(__dirname, '../config/providers.json');
+const PROJECTS_PATH = path.resolve(__dirname, '../config/projects.json');
+
+let _providersConfig: Record<string, unknown> | undefined;
+let _projects: Record<string, string> | undefined;
+
+function loadProvidersConfig(): Record<string, unknown> {
+    if (_providersConfig) return _providersConfig;
+    try {
+        _providersConfig = JSON.parse(fs.readFileSync(PROVIDERS_PATH, 'utf8'));
+    } catch {
+        rootLogger.warn('Falha ao carregar providers.json. Usando GitLab como padrao.');
+        _providersConfig = {};
+    }
+    return _providersConfig!;
 }
 
-export const projectsPath = path.resolve(__dirname, '../config/projects.json');
-export let projects: Record<string, string>;
-try {
-    projects = JSON.parse(fs.readFileSync(projectsPath, 'utf8'));
-    const projectOverrides = Config.getAllPrefixed('PROJECT_ID_');
-    for (const key of Object.keys(projects)) {
-        const envKey = 'PROJECT_ID_' + key.toUpperCase();
-        if (projectOverrides[envKey]) {
-            projects[key] = projectOverrides[envKey];
+function loadProjects(): Record<string, string> {
+    if (_projects) return _projects;
+    try {
+        _projects = JSON.parse(fs.readFileSync(PROJECTS_PATH, 'utf8'));
+        const projectOverrides = Config.getAllPrefixed('PROJECT_ID_');
+        for (const key of Object.keys(_projects!)) {
+            const envKey = 'PROJECT_ID_' + key.toUpperCase();
+            if (projectOverrides[envKey]) {
+                _projects![key] = projectOverrides[envKey];
+            }
         }
+    } catch (err: unknown) {
+        rootLogger.error(
+            `Falha ao carregar configuração de projetos de "${PROJECTS_PATH}": ${(err as Error).message}`,
+            {
+                configPath: PROJECTS_PATH,
+            },
+        );
+        error(`Configuração inválida em "${PROJECTS_PATH}". Verifique o JSON.`);
+        process.exitCode = 1;
+        _projects = {};
     }
-} catch (err: unknown) {
-    rootLogger.error(`Falha ao carregar configuração de projetos de "${projectsPath}": ${(err as Error).message}`, {
-        configPath: projectsPath,
-    });
-    error(`Configuração inválida em "${projectsPath}". Verifique o JSON.`);
-    process.exitCode = 1;
-    projects = {};
+    return _projects!;
+}
+
+export function getProvidersConfig(): Record<string, unknown> {
+    return loadProvidersConfig();
+}
+
+export function getProjects(): Record<string, string> {
+    return loadProjects();
 }
 
 export function getProviderForProject(projectName: string): 'gitlab' | 'github' {
-    const cfg = providersConfig[projectName] as Record<string, unknown> | undefined;
+    const cfg = loadProvidersConfig()[projectName] as Record<string, unknown> | undefined;
     return cfg?.provider === 'github' ? 'github' : 'gitlab';
 }
 
@@ -79,7 +101,7 @@ export function createManagerForProject(projectName: string, id: string): GitPro
     const provider = getProviderForProject(projectName);
     currentProvider = provider;
     if (provider === 'github') {
-        const cfg = providersConfig[projectName] as Record<string, unknown> | undefined;
+        const cfg = loadProvidersConfig()[projectName] as Record<string, unknown> | undefined;
         const repo = (cfg?.repo as string) || id;
         const ghToken = Config.githubToken || Config.gitToken || '';
         const ghApiUrl = Config.githubApiUrl || 'https://api.github.com';
@@ -107,8 +129,9 @@ export function providerLabel(): string {
 }
 
 export function displayProjects() {
+    const projs = loadProjects();
     title('Projetos');
-    const names = Object.keys(projects);
+    const names = Object.keys(projs);
     names.forEach((name, i) => {
         const p = getProviderForProject(name);
         const tag = p === 'github' ? ' [GH]' : ' [GL]';
