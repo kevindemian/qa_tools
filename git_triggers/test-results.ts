@@ -4,7 +4,7 @@ import glob from 'glob';
 import Config from '../shared/config';
 import JiraResource from '../jira_management/jira_resource';
 import JiraLinkManager from '../jira_management/jira_link_manager';
-import { warn, info, success, printError, withSpinner, prompt } from '../shared/prompt';
+import { warn, info, success, printError, withSpinner, ask } from '../shared/prompt';
 import { load as loadState } from '../shared/state';
 import { parseMochawesome } from '../shared/result_parser';
 import type { MochawesomeData, ParseResult } from '../shared/result_parser';
@@ -90,10 +90,10 @@ interface MatchedTestItem {
     duration: number;
 }
 
-function parseTestResults(parsed: ParseResult) {
+async function parseTestResults(parsed: ParseResult) {
     const cypressDir = Config.cypressProjectPath || (loadState().lastCypressPath as string) || '';
     const defaultMapping = cypressDir ? path.join(path.resolve(cypressDir), '*jira-mapping.json') : '';
-    const mappingPath = prompt('Caminho do mapping JSON', { default: defaultMapping });
+    const mappingPath = await ask('Caminho do mapping JSON', { default: defaultMapping });
     if (!mappingPath.trim()) {
         warn('Mapping necessario para criar Test Execution.');
         return null;
@@ -167,7 +167,7 @@ async function collectTestResults(
     const parsed = await downloadTestArtifacts(m, pipelineId);
     if (!parsed) return;
 
-    const mapping = parseTestResults(parsed);
+    const mapping = await parseTestResults(parsed);
     if (!mapping) return;
 
     await createTestExecution(

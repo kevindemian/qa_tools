@@ -1,4 +1,4 @@
-import { title, warn, divider, prompt, tableView } from '../shared/prompt';
+import { title, warn, divider, ask, tableView } from '../shared/prompt';
 import { load as loadState } from '../shared/state';
 import { defaultOutput } from '../shared/output';
 
@@ -8,7 +8,7 @@ function providerLabel(currentProvider: 'gitlab' | 'github'): string {
     return currentProvider === 'github' ? 'GitHub' : 'GitLab';
 }
 
-function handleHelp() {
+async function handleHelp() {
     defaultOutput.box(
         [
             'Ajuda — Opções disponíveis no menu numerado acima.',
@@ -22,10 +22,10 @@ function handleHelp() {
         { border: 'double', padding: 1, title: 'Ajuda — Git Tools' },
     );
     divider();
-    prompt('Pressione Enter para continuar');
+    await ask('Pressione Enter para continuar');
 }
 
-function handleShowHistory() {
+async function handleShowHistory() {
     const history = (loadState().history as Array<Record<string, unknown>>) || [];
     title('Histórico de operações');
     const last10 = history.slice(-10);
@@ -35,7 +35,7 @@ function handleShowHistory() {
         tableView(last10, ['ts', 'op', 'detail', 'status']);
     }
     divider();
-    prompt('Pressione Enter para continuar');
+    await ask('Pressione Enter para continuar');
 }
 
 function formatBranch(branch: string): string {

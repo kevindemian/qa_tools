@@ -36,7 +36,7 @@ async function main(): Promise<void> {
         console.clear();
         await showSplash();
 
-        const choice = showSelect('      Selecione o módulo', [
+        const choice = await showSelect('      Selecione o módulo', [
             { name: '      Jira Management  (Testes, Releases, Config)', value: 'jira' },
             { name: '      Git Triggers     (Pipelines, PR/MR, CI/CD)', value: 'git' },
             { type: 'separator', line: '        ' },

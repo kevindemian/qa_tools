@@ -1,6 +1,8 @@
 import fs from 'fs';
 import { rootLogger } from '../shared/logger';
-import type JiraResource from './jira_resource';
+// anti-circular (prompt → create_tests → session-context → prompt)
+// eslint-disable-next-line @typescript-eslint/no-require-imports
+import createTests = require('./create_tests');
 
 interface TestResultItem {
     title: string;
@@ -123,18 +125,14 @@ async function createTestExecutionFromResults(
     const summary = 'Resultados: ' + (csvName || 'Testes') + tag + ' - ' + now;
 
     const testKeys = matchedResults.filter((m) => m.status !== 'skipped').map((m) => m.key);
-    // eslint-disable-next-line @typescript-eslint/no-require-imports
-    const { createTestExecution } = require('./create_tests') as {
-        createTestExecution: (
-            jiraResource: JiraResource,
-            linkManager: import('./jira_link_manager'),
-            projectName: string,
-            testKeys: string[],
-            csvName: string,
-            titleOverride?: string,
-        ) => Promise<{ key: string }>;
-    };
-    const te = await createTestExecution(jiraResource, linkManager, project_name, testKeys, csvName, summary);
+    const te = await createTests.createTestExecution(
+        jiraResource,
+        linkManager,
+        project_name,
+        testKeys,
+        csvName,
+        summary,
+    );
 
     if (te.key && matchedResults.length > 0) {
         try {

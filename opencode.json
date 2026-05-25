@@ -1,80 +1,80 @@
 {
-  "$schema": "https://opencode.ai/config.json",
-  "model": "opencode/deepseek-v4-flash-free",
-  "small_model": "google/gemini-2.0-flash",
-  "default_agent": "general",
-  "instructions": ["AGENTS.md"],
+    "$schema": "https://opencode.ai/config.json",
+    "model": "opencode/deepseek-v4-flash-free",
+    "small_model": "google/gemini-2.0-flash",
+    "default_agent": "general",
+    "instructions": ["AGENTS.md"],
 
-  "command": {
-    "verify": {
-      "description": "Run R6 verification pipeline for the current TS migration layer",
-      "template": "Rodar pipeline de verificação R6:\n1. npx tsc --noEmit\n2. npx jest --no-coverage\n3. grep -rn \"throw '\" shared/ jira_management/ git_triggers/ 2>/dev/null || true\n4. grep -rn \".only(\" **/*.test.* 2>/dev/null || true\n\nReportar resultado de cada passo. Se algum falhar, parar.",
-      "agent": "explore"
+    "command": {
+        "verify": {
+            "description": "Run R6 verification pipeline for the current TS migration layer",
+            "template": "Rodar pipeline de verificação R6:\n1. npx tsc --noEmit\n2. npx jest --no-coverage\n3. grep -rn \"throw '\" shared/ jira_management/ git_triggers/ 2>/dev/null || true\n4. grep -rn \".only(\" **/*.test.* 2>/dev/null || true\n\nReportar resultado de cada passo. Se algum falhar, parar.",
+            "agent": "explore"
+        },
+        "rollback": {
+            "description": "Rollback an incomplete/broken TS migration layer (R8.4)",
+            "template": "Executar rollback R8.4:\n- Se já commitou: git revert HEAD --no-edit\n- Se não: git checkout -- shared/ jira_management/ git_triggers/ && git clean -fd\n\nVerificar se working tree voltou ao estado anterior com git status.",
+            "agent": "explore"
+        },
+        "check-layer": {
+            "description": "Check prerequisites before starting a TS migration layer (R8.1)",
+            "template": "Verificar pré-requisitos:\n1. git status --porcelain (deve estar limpo)\n2. git stash list (deve estar vazio)\n3. Listar .ts já existentes em shared/ jira_management/ git_triggers/\n4. npx tsc --noEmit (deve passar sem erros)\n\nSe tudo verde, reportar 'Pronto para começar o layer'. Se não, explicar o bloqueio.",
+            "agent": "explore"
+        }
     },
-    "rollback": {
-      "description": "Rollback an incomplete/broken TS migration layer (R8.4)",
-      "template": "Executar rollback R8.4:\n- Se já commitou: git revert HEAD --no-edit\n- Se não: git checkout -- shared/ jira_management/ git_triggers/ && git clean -fd\n\nVerificar se working tree voltou ao estado anterior com git status.",
-      "agent": "explore"
-    },
-    "check-layer": {
-      "description": "Check prerequisites before starting a TS migration layer (R8.1)",
-      "template": "Verificar pré-requisitos:\n1. git status --porcelain (deve estar limpo)\n2. git stash list (deve estar vazio)\n3. Listar .ts já existentes em shared/ jira_management/ git_triggers/\n4. npx tsc --noEmit (deve passar sem erros)\n\nSe tudo verde, reportar 'Pronto para começar o layer'. Se não, explicar o bloqueio.",
-      "agent": "explore"
-    }
-  },
 
-  "agent": {
-    "ts-migrator": {
-      "description": "Migrate JS to TS following the 8-layer plan from BACKLOG.md. Use for the TS migration task.",
-      "mode": "subagent",
-      "permission": {
+    "agent": {
+        "ts-migrator": {
+            "description": "Migrate JS to TS following the 8-layer plan from BACKLOG.md. Use for the TS migration task.",
+            "mode": "subagent",
+            "permission": {
+                "read": "allow",
+                "glob": "allow",
+                "grep": "allow",
+                "edit": "ask",
+                "bash": "ask",
+                "question": "ask"
+            },
+            "prompt": "Você está executando a migração TypeScript do QA Tools, seguindo o plano em BACKLOG.md.\n\nREGRAS OBRIGATÓRIAS:\n1. Ordem estrita: Layer 0 → 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8 (nunca pular, nunca fazer duas de uma vez)\n2. Cada layer = UM commit atômico\n3. Após CADA layer: rodar R6 completo (tsc --noEmit + jest --no-coverage + grep throw + grep .only)\n4. Só começar um layer se houver tempo para terminá-lo (R8.1)\n5. create_tests.js (732 linhas) DEVE ser quebrado em classes menores durante a migração (SRP)\n6. Nunca usar `any` sem comentário de justificativa\n7. `throw 'string'` ou `throw \"string\"` proibido — sempre `throw new Error()`\n8. Handlers (commands/) nunca podem dar `new JiraResource()` — viola DIP (R2)\n9. Manter module.exports até o último commit (config final) para compatibilidade com .js remanescentes\n10. TODO arquivo .ts novo precisa de um .test.ts correspondente (R1)\n11. Nenhum .only() em testes (R6)\n12. Se quebrar testes existentes: rollback imediato (R8.3), nunca 'consertar depois'"
+        },
+        "ts-reviewer": {
+            "description": "Review a TS migration layer for correctness before commit. Read-only — never edits.",
+            "mode": "subagent",
+            "permission": {
+                "read": "allow",
+                "glob": "allow",
+                "grep": "allow",
+                "bash": "allow",
+                "edit": "deny",
+                "question": "allow"
+            },
+            "prompt": "Você é um revisor de migração TypeScript. Revise o layer recém-migrado antes do commit.\n\nVERIFIQUE:\n- Todos os @typedef foram substituídos por interface/type nativos?\n- Algum `any` ou `as any` sem comentário de justificativa?\n- module.exports mantido (se ainda há arquivos .js remanescentes)?\n- Todo arquivo .ts tem um .test.ts correspondente?\n- Algum `throw 'string'` ou `throw \"string\"`?\n- Algum `.only(` nos arquivos de teste?\n- Algum handler faz `new JiraResource()` ou `new JiraLinkManager()`?\n- create_tests.ts ≤ 300 linhas? (se aplicável)\n- Funções com mais de 50 linhas?\n\nListe TODAS as violações encontradas, com arquivo e linha."
+        }
+    },
+
+    "compaction": {
+        "auto": true,
+        "prune": true,
+        "tail_turns": 5,
+        "preserve_recent_tokens": 12000,
+        "reserved": 2000
+    },
+
+    "tool_output": {
+        "max_lines": 500,
+        "max_bytes": 20480
+    },
+    "experimental": {
+        "batch_tool": true
+    },
+    "formatter": true,
+    "permission": {
         "read": "allow",
         "glob": "allow",
         "grep": "allow",
-        "edit": "ask",
-        "bash": "ask",
-        "question": "ask"
-      },
-      "prompt": "Você está executando a migração TypeScript do QA Tools, seguindo o plano em BACKLOG.md.\n\nREGRAS OBRIGATÓRIAS:\n1. Ordem estrita: Layer 0 → 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8 (nunca pular, nunca fazer duas de uma vez)\n2. Cada layer = UM commit atômico\n3. Após CADA layer: rodar R6 completo (tsc --noEmit + jest --no-coverage + grep throw + grep .only)\n4. Só começar um layer se houver tempo para terminá-lo (R8.1)\n5. create_tests.js (732 linhas) DEVE ser quebrado em classes menores durante a migração (SRP)\n6. Nunca usar `any` sem comentário de justificativa\n7. `throw 'string'` ou `throw \"string\"` proibido — sempre `throw new Error()`\n8. Handlers (commands/) nunca podem dar `new JiraResource()` — viola DIP (R2)\n9. Manter module.exports até o último commit (config final) para compatibilidade com .js remanescentes\n10. TODO arquivo .ts novo precisa de um .test.ts correspondente (R1)\n11. Nenhum .only() em testes (R6)\n12. Se quebrar testes existentes: rollback imediato (R8.3), nunca 'consertar depois'"
-    },
-    "ts-reviewer": {
-      "description": "Review a TS migration layer for correctness before commit. Read-only — never edits.",
-      "mode": "subagent",
-      "permission": {
-        "read": "allow",
-        "glob": "allow",
-        "grep": "allow",
+        "edit": "allow",
         "bash": "allow",
-        "edit": "deny",
+        "task": "allow",
         "question": "allow"
-      },
-      "prompt": "Você é um revisor de migração TypeScript. Revise o layer recém-migrado antes do commit.\n\nVERIFIQUE:\n- Todos os @typedef foram substituídos por interface/type nativos?\n- Algum `any` ou `as any` sem comentário de justificativa?\n- module.exports mantido (se ainda há arquivos .js remanescentes)?\n- Todo arquivo .ts tem um .test.ts correspondente?\n- Algum `throw 'string'` ou `throw \"string\"`?\n- Algum `.only(` nos arquivos de teste?\n- Algum handler faz `new JiraResource()` ou `new JiraLinkManager()`?\n- create_tests.ts ≤ 300 linhas? (se aplicável)\n- Funções com mais de 50 linhas?\n\nListe TODAS as violações encontradas, com arquivo e linha."
     }
-  },
-
-  "compaction": {
-    "auto": true,
-    "prune": true,
-    "tail_turns": 5,
-    "preserve_recent_tokens": 12000,
-    "reserved": 2000
-  },
-
-  "tool_output": {
-    "max_lines": 500,
-    "max_bytes": 20480
-  },
-  "experimental": {
-    "batch_tool": true
-  },
-  "formatter": true,
-  "permission": {
-    "read": "allow",
-    "glob": "allow",
-    "grep": "allow",
-    "edit": "ask",
-    "bash": "ask",
-    "task": "ask",
-    "question": "ask"
-  }
 }

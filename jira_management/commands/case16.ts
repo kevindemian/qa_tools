@@ -1,10 +1,10 @@
-import { success, warn, prompt } from '../../shared/prompt';
+import { success, warn, ask } from '../../shared/prompt';
 import { update as updateState } from '../../shared/state';
 import path from 'path';
 import type { CommandContext } from './context';
 
-function handler(c: CommandContext): boolean | void {
-    const dir = prompt('Caminho do diretório padrão de JSON');
+async function handler(c: CommandContext): Promise<boolean | void> {
+    const dir = await ask('Caminho do diretório padrão de JSON');
     if (!dir.trim()) {
         warn('Caminho vazio, ignorando.');
         return;

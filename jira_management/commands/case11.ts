@@ -1,10 +1,10 @@
-import { success, error, prompt } from '../../shared/prompt';
+import { success, error, ask } from '../../shared/prompt';
 import fs from 'fs';
 import path from 'path';
 import type { CommandContext } from './context';
 
-function handler(c: CommandContext): boolean | void {
-    const tmplPath = prompt('Caminho para salvar o template', {
+async function handler(c: CommandContext): Promise<boolean | void> {
+    const tmplPath = await ask('Caminho para salvar o template', {
         default: path.join(__dirname, '../test_steps_template.csv'),
     });
     const src = path.join(__dirname, '../test_steps_template.csv');

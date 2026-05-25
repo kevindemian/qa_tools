@@ -467,9 +467,9 @@ describe('Prompt', () => {
             jest.restoreAllMocks();
         });
 
-        it('selects by number', () => {
+        it('selects by number', async () => {
             const spy = jest.spyOn(readlineSync, 'question').mockReturnValue('2');
-            const result = prompt.showSelect('Test', [
+            const result = await prompt.showSelect('Test', [
                 { name: '1', value: '1' },
                 { name: '2', value: '2' },
                 { name: '3', value: '3' },
@@ -478,9 +478,9 @@ describe('Prompt', () => {
             expect(spy).toHaveBeenCalled();
         });
 
-        it('handles separator', () => {
+        it('handles separator', async () => {
             const spy = jest.spyOn(readlineSync, 'question').mockReturnValue('2');
-            const result = prompt.showSelect('With sep', [
+            const result = await prompt.showSelect('With sep', [
                 { name: '1', value: '1' },
                 { type: 'separator', line: '---' },
                 { name: '2', value: '2' },
@@ -489,42 +489,42 @@ describe('Prompt', () => {
             expect(spy).toHaveBeenCalled();
         });
 
-        it('returns "0" for empty input', () => {
+        it('returns "0" for empty input', async () => {
             jest.spyOn(readlineSync, 'question').mockReturnValue('');
-            const result = prompt.showSelect('Test', [
+            const result = await prompt.showSelect('Test', [
                 { name: '1', value: '1' },
                 { name: '2', value: '2' },
             ]);
             expect(result).toBe('0');
         });
 
-        it('returns selected value for numeric input', () => {
+        it('returns selected value for numeric input', async () => {
             jest.spyOn(readlineSync, 'question').mockReturnValue('1');
-            const result = prompt.showSelect('Test', [
+            const result = await prompt.showSelect('Test', [
                 { name: 'One', value: '1v' },
                 { name: 'Two', value: '2v' },
             ]);
             expect(result).toBe('1v');
         });
 
-        it('returns value from name when value is missing', () => {
+        it('returns value from name when value is missing', async () => {
             jest.spyOn(readlineSync, 'question').mockReturnValue('1');
-            const result = prompt.showSelect('Test', [{ name: 'Alpha' }, { name: 'Beta' }]);
+            const result = await prompt.showSelect('Test', [{ name: 'Alpha' }, { name: 'Beta' }]);
             expect(result).toBe('Alpha');
         });
 
-        it('returns "0" for zero input', () => {
+        it('returns "0" for zero input', async () => {
             jest.spyOn(readlineSync, 'question').mockReturnValue('0');
-            const result = prompt.showSelect('Test', [
+            const result = await prompt.showSelect('Test', [
                 { name: '1', value: '1' },
                 { name: '2', value: '2' },
             ]);
             expect(result).toBe('0');
         });
 
-        it('returns raw value for non-numeric input', () => {
+        it('returns raw value for non-numeric input', async () => {
             const spy = jest.spyOn(readlineSync, 'question').mockReturnValue('criar');
-            const result = prompt.showSelect('Test', [{ name: '1', value: '1' }]);
+            const result = await prompt.showSelect('Test', [{ name: '1', value: '1' }]);
             expect(result).toBe('criar');
         });
     });
@@ -578,55 +578,55 @@ describe('Prompt', () => {
             jest.restoreAllMocks();
         });
 
-        it('returns value on first attempt', () => {
+        it('returns value on first attempt', async () => {
             jest.spyOn(readlineSync, 'question').mockReturnValue('my-value');
-            const result = prompt.smartPrompt('Enter value');
+            const result = await prompt.smartPrompt('Enter value');
             expect(result).toBe('my-value');
         });
 
-        it('calls helpCallback on /help and retries', () => {
+        it('calls helpCallback on /help and retries', async () => {
             const helpCb = jest.fn();
             jest.spyOn(readlineSync, 'question').mockReturnValueOnce('/help').mockReturnValueOnce('final-value');
-            const result = prompt.smartPrompt('Enter', {}, helpCb);
+            const result = await prompt.smartPrompt('Enter', {}, helpCb);
             expect(helpCb).toHaveBeenCalledTimes(1);
             expect(result).toBe('final-value');
         });
 
-        it('returns null after max retries with empty input', () => {
+        it('returns null after max retries with empty input', async () => {
             jest.spyOn(readlineSync, 'question').mockReturnValue('');
-            const result = prompt.smartPrompt('Enter', { maxRetries: 2 });
+            const result = await prompt.smartPrompt('Enter', { maxRetries: 2 });
             expect(result).toBeNull();
         });
 
-        it('returns null-like for aborted input', () => {
+        it('returns null-like for aborted input', async () => {
             jest.spyOn(readlineSync, 'question').mockReturnValue('');
-            const result = prompt.smartPrompt('Enter', { maxRetries: 1 });
+            const result = await prompt.smartPrompt('Enter', { maxRetries: 1 });
             expect(result == null).toBe(true);
         });
 
-        it('throws CancelError for /back navigation command', () => {
+        it('throws CancelError for /back navigation command', async () => {
             jest.spyOn(readlineSync, 'question').mockReturnValue('/back');
-            expect(() => prompt.smartPrompt('Enter')).toThrow(prompt.CancelError);
+            await expect(prompt.smartPrompt('Enter')).rejects.toThrow(prompt.CancelError);
         });
 
-        it('throws CancelError for /exit navigation command', () => {
+        it('throws CancelError for /exit navigation command', async () => {
             jest.spyOn(readlineSync, 'question').mockReturnValue('/exit');
-            expect(() => prompt.smartPrompt('Enter')).toThrow(prompt.CancelError);
+            await expect(prompt.smartPrompt('Enter')).rejects.toThrow(prompt.CancelError);
         });
 
-        it('throws CancelError for /menu navigation command', () => {
+        it('throws CancelError for /menu navigation command', async () => {
             jest.spyOn(readlineSync, 'question').mockReturnValue('/menu');
-            expect(() => prompt.smartPrompt('Enter')).toThrow(prompt.CancelError);
+            await expect(prompt.smartPrompt('Enter')).rejects.toThrow(prompt.CancelError);
         });
 
-        it('allows unlimited /help and returns on valid input', () => {
+        it('allows unlimited /help and returns on valid input', async () => {
             const helpCb = jest.fn();
             jest.spyOn(readlineSync, 'question')
                 .mockReturnValueOnce('/help')
                 .mockReturnValueOnce('/help')
                 .mockReturnValueOnce('/help')
                 .mockReturnValueOnce('final-value');
-            const result = prompt.smartPrompt('Enter', {}, helpCb);
+            const result = await prompt.smartPrompt('Enter', {}, helpCb);
             expect(result).toBe('final-value');
             expect(helpCb).toHaveBeenCalledTimes(3);
         });

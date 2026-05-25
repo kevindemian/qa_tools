@@ -7,11 +7,15 @@ jest.mock('../../shared/prompt', () => ({
     divider: jest.fn(),
     prompt: jest.fn().mockReturnValue(''),
     confirm: jest.fn().mockReturnValue(false),
-    smartPrompt: jest.fn().mockReturnValue('v2.0.0'),
+    ask: jest.fn().mockResolvedValue(''),
+    askConfirm: jest.fn().mockResolvedValue(true),
+    smartPrompt: jest.fn().mockResolvedValue('v2.0.0'),
     printError: jest.fn(),
     printSummary: jest.fn(),
     isQuiet: jest.fn().mockReturnValue(true),
     print: jest.fn(),
+    badge: jest.fn().mockReturnValue(''),
+    tableView: jest.fn(),
 }));
 
 jest.mock('../../shared/state', () => ({
@@ -30,8 +34,19 @@ jest.mock('../../shared/cli_base', () => ({
     sanitizeUrl: jest.fn((url) => url),
 }));
 
-jest.mock('../../shared/config', () => ({
-    Config: { getInstance: jest.fn().mockReturnValue({ get: jest.fn() }) },
+const mockConfigMod: Record<string, unknown> = {
+    getInstance: jest.fn().mockReturnValue({ get: jest.fn() }),
+};
+jest.mock('../../shared/config', () => mockConfigMod);
+
+jest.mock('../create_tests', () => ({
+    createTestsFromCsv: jest.fn(),
+    createTestsFromJson: jest.fn(),
+    createTestExecutionWithLinks: jest.fn(),
+}));
+
+jest.mock('./helpers', () => ({
+    createTestExecutionWithLinksWrapper: jest.fn(),
 }));
 
 const mockJiraResource = {
@@ -78,7 +93,14 @@ beforeEach(() => {
     jest.restoreAllMocks();
     mockSessionContext.project_name = 'TEST';
     mockSessionContext.inMemoryTasksId = [];
+    mockSessionContext.inMemoryTasksText = [];
     mockSessionContext.packageManager = undefined;
+    mockSessionContext.results = [];
+    mockConfigMod.csvDefaultPath = undefined;
+    mockConfigMod.csvPath = undefined;
+    mockConfigMod.csvLabels = undefined;
+    mockConfigMod.jsonPath = undefined;
+    mockConfigMod.jsonLabels = undefined;
 });
 
 describe('case02 — list versions', () => {
@@ -92,7 +114,7 @@ describe('case02 — list versions', () => {
 describe('case03 — create version', () => {
     it('returns early when name is empty', async () => {
         const prompt = require('../../shared/prompt');
-        prompt.prompt.mockReturnValueOnce('');
+        prompt.ask.mockResolvedValueOnce('');
         const mod = require('./case03');
         await mod.handler(baseContext);
         expect(prompt.warn).toHaveBeenCalledWith('Nome da versão não pode ser vazio.');
@@ -100,7 +122,7 @@ describe('case03 — create version', () => {
 
     it('creates version successfully', async () => {
         const prompt = require('../../shared/prompt');
-        prompt.prompt.mockReturnValueOnce('v2.0.0').mockReturnValueOnce('descricao');
+        prompt.ask.mockResolvedValueOnce('v2.0.0').mockResolvedValueOnce('descricao');
         const mod = require('./case03');
         await mod.handler(baseContext);
         expect(mockJiraResource.createVersion).toHaveBeenCalledWith('TEST', 'v2.0.0', 'descricao');
@@ -109,7 +131,7 @@ describe('case03 — create version', () => {
     it('handles API error', async () => {
         const prompt = require('../../shared/prompt');
         const logger = require('../../shared/logger');
-        prompt.prompt.mockReturnValueOnce('v2.0.0').mockReturnValueOnce('');
+        prompt.ask.mockResolvedValueOnce('v2.0.0').mockResolvedValueOnce('');
         mockJiraResource.createVersion.mockRejectedValueOnce(new Error('API error'));
         const mod = require('./case03');
         await mod.handler(baseContext);
@@ -121,10 +143,42 @@ describe('case03 — create version', () => {
 describe('case04 — assign fixVersion', () => {
     it('returns true when cancelled', async () => {
         const prompt = require('../../shared/prompt');
-        prompt.confirm.mockReturnValueOnce(false);
+        prompt.askConfirm.mockResolvedValueOnce(true).mockResolvedValueOnce(false);
         const mod = require('./case04');
         const result = await mod.handler(baseContext);
         expect(result).toBe(true);
+    });
+
+    it('assigns fixVersion from in-memory tasks', async () => {
+        mockSessionContext.inMemoryTasksId = ['TEST-1', 'TEST-2'];
+        mockSessionContext.inMemoryTasksText = ['Task one', 'Task two'];
+        const prompt = require('../../shared/prompt');
+        prompt.ask.mockResolvedValueOnce('v2.0.0');
+        prompt.askConfirm.mockResolvedValueOnce(true).mockResolvedValueOnce(true).mockResolvedValueOnce(false);
+        const mod = require('./case04');
+        const result = await mod.handler(baseContext);
+        expect(result).toBe(false);
+        expect(mockJiraResource.updateFixVersions).toHaveBeenNthCalledWith(1, ['TEST-1'], 'TEST', 'v2.0.0');
+        expect(mockJiraResource.updateFixVersions).toHaveBeenNthCalledWith(2, ['TEST-2'], 'TEST', 'v2.0.0');
+        expect(mockJiraResource.updateFixVersions).toHaveBeenCalledTimes(2);
+        expect(baseContext.pushHistory).toHaveBeenCalledWith('atribuir-fixversion', '2/2 tarefas atualizadas', 'ok');
+    });
+
+    it('handles partial error on updateFixVersions', async () => {
+        mockSessionContext.inMemoryTasksId = ['TEST-1', 'TEST-2'];
+        mockSessionContext.inMemoryTasksText = ['Task one', 'Task two'];
+        const prompt = require('../../shared/prompt');
+        prompt.ask.mockResolvedValueOnce('v2.0.0');
+        prompt.askConfirm.mockResolvedValueOnce(true).mockResolvedValueOnce(true).mockResolvedValueOnce(false);
+        mockJiraResource.updateFixVersions.mockResolvedValueOnce({}).mockRejectedValueOnce(new Error('API error'));
+        const mod = require('./case04');
+        await mod.handler(baseContext);
+        expect(mockSessionContext.results).toContainEqual({ status: 'ok', label: 'TEST-1', message: '' });
+        expect(mockSessionContext.results).toContainEqual({
+            status: 'error',
+            label: 'TEST-2',
+            message: 'Falha ao atualizar fixVersion',
+        });
     });
 });
 
@@ -133,7 +187,7 @@ describe('case05 — update package version', () => {
         mockSessionContext.packageManager = undefined;
         mockJiraResource.getReleaseTasks.mockResolvedValueOnce(['TASK-1']);
         const prompt = require('../../shared/prompt');
-        prompt.smartPrompt.mockReturnValueOnce('/some/dir').mockReturnValueOnce('v2.0.0');
+        prompt.ask.mockResolvedValueOnce('/some/dir').mockResolvedValueOnce('v2.0.0');
         const mod = require('./case05');
         await mod.handler(baseContext);
         expect(prompt.success).toHaveBeenCalled();
@@ -159,6 +213,8 @@ describe('case05 — update package version', () => {
 
 describe('case06 — check release status', () => {
     it('checks status successfully', async () => {
+        const prompt = require('../../shared/prompt');
+        prompt.ask.mockResolvedValueOnce('v2.0.0');
         mockJiraResource.checkReleaseTasksStatus.mockResolvedValueOnce(undefined);
         const mod = require('./case06');
         await mod.handler(baseContext);
@@ -166,8 +222,9 @@ describe('case06 — check release status', () => {
     });
 
     it('handles API error', async () => {
-        mockJiraResource.checkReleaseTasksStatus.mockRejectedValueOnce(new Error('API error'));
         const prompt = require('../../shared/prompt');
+        prompt.ask.mockResolvedValueOnce('v2.0.0');
+        mockJiraResource.checkReleaseTasksStatus.mockRejectedValueOnce(new Error('API error'));
         const mod = require('./case06');
         await mod.handler(baseContext);
         expect(prompt.printError).toHaveBeenCalled();
@@ -177,7 +234,7 @@ describe('case06 — check release status', () => {
 describe('case07 — close tasks', () => {
     it('returns true when cancelled', async () => {
         const prompt = require('../../shared/prompt');
-        prompt.confirm.mockReturnValueOnce(false);
+        prompt.askConfirm.mockResolvedValueOnce(false);
         const mod = require('./case07');
         const result = await mod.handler(baseContext);
         expect(result).toBe(true);
@@ -185,7 +242,7 @@ describe('case07 — close tasks', () => {
 
     it('returns true when no tasks found', async () => {
         const prompt = require('../../shared/prompt');
-        prompt.confirm.mockReturnValueOnce(true);
+        prompt.askConfirm.mockResolvedValueOnce(true);
         mockJiraResource.getReleaseTasks.mockResolvedValueOnce([]);
         const mod = require('./case07');
         const result = await mod.handler(baseContext);
@@ -195,19 +252,49 @@ describe('case07 — close tasks', () => {
 
     it('handles moveCardsToDone error', async () => {
         const prompt = require('../../shared/prompt');
-        prompt.confirm.mockReturnValueOnce(true);
+        prompt.askConfirm.mockResolvedValueOnce(true);
         mockJiraResource.getReleaseTasks.mockResolvedValueOnce(['[TEST-1] task']);
         mockJiraResource.moveCardsToDone.mockRejectedValueOnce(new Error('API error'));
         const mod = require('./case07');
         await mod.handler(baseContext);
         expect(prompt.printSummary).toHaveBeenCalled();
     });
+
+    it('moves tasks to done successfully', async () => {
+        const prompt = require('../../shared/prompt');
+        prompt.ask.mockResolvedValueOnce('v2.0.0');
+        prompt.askConfirm.mockResolvedValueOnce(true);
+        mockJiraResource.getReleaseTasks.mockResolvedValueOnce(['[TEST-1] Fix bug', '[TEST-42] Add feature']);
+        const mod = require('./case07');
+        const result = await mod.handler(baseContext);
+        expect(result).toBe(false);
+        expect(mockJiraResource.moveCardsToDone).toHaveBeenCalledWith(['TEST-1', 'TEST-42']);
+        expect(prompt.printSummary).toHaveBeenCalledWith(
+            expect.arrayContaining([
+                expect.objectContaining({ status: 'ok', label: 'TEST-1' }),
+                expect.objectContaining({ status: 'ok', label: 'TEST-42' }),
+            ]),
+        );
+        expect(baseContext.pushHistory).toHaveBeenCalledWith('fechar-tarefas', '2 tarefa(s)', 'ok');
+    });
+
+    it('warns when task IDs cannot be extracted', async () => {
+        const prompt = require('../../shared/prompt');
+        prompt.ask.mockResolvedValueOnce('v2.0.0');
+        prompt.askConfirm.mockResolvedValueOnce(true);
+        mockJiraResource.getReleaseTasks.mockResolvedValueOnce(['TASK-1', 'TASK-2']);
+        const mod = require('./case07');
+        const result = await mod.handler(baseContext);
+        expect(result).toBe(true);
+        expect(prompt.warn).toHaveBeenCalledWith('Nenhuma tarefa encontrada.');
+    });
 });
 
 describe('case08 — release version', () => {
     it('returns true when cancelled', async () => {
         const prompt = require('../../shared/prompt');
-        prompt.confirm.mockReturnValueOnce(false);
+        prompt.ask.mockResolvedValueOnce('');
+        prompt.askConfirm.mockResolvedValueOnce(false);
         const mod = require('./case08');
         const result = await mod.handler(baseContext);
         expect(result).toBe(true);
@@ -216,7 +303,8 @@ describe('case08 — release version', () => {
 
     it('releases version successfully', async () => {
         const prompt = require('../../shared/prompt');
-        prompt.confirm.mockReturnValueOnce(true);
+        prompt.ask.mockResolvedValueOnce('v2.0.0');
+        prompt.askConfirm.mockResolvedValueOnce(true);
         const mod = require('./case08');
         const result = await mod.handler(baseContext);
         expect(mockJiraResource.releaseVersion).toHaveBeenCalledWith('TEST', 'v2.0.0');
@@ -225,7 +313,8 @@ describe('case08 — release version', () => {
 
     it('handles API error', async () => {
         const prompt = require('../../shared/prompt');
-        prompt.confirm.mockReturnValueOnce(true);
+        prompt.ask.mockResolvedValueOnce('v2.0.0');
+        prompt.askConfirm.mockResolvedValueOnce(true);
         mockJiraResource.releaseVersion.mockRejectedValueOnce(new Error('API error'));
         const mod = require('./case08');
         const result = await mod.handler(baseContext);
@@ -235,45 +324,75 @@ describe('case08 — release version', () => {
 });
 
 describe('case09 — switch project', () => {
-    it('returns early when name is empty', () => {
+    it('returns early when name is empty', async () => {
         const prompt = require('../../shared/prompt');
-        prompt.prompt.mockReturnValueOnce('');
+        prompt.ask.mockResolvedValueOnce('');
         const mod = require('./case09');
-        mod.handler(baseContext);
+        await mod.handler(baseContext);
         expect(prompt.warn).toHaveBeenCalledWith('Nome do projeto não pode ser vazio.');
     });
 
-    it('updates project name', () => {
+    it('updates project name', async () => {
         const prompt = require('../../shared/prompt');
-        prompt.prompt.mockReturnValueOnce('NEWPROJ');
+        prompt.ask.mockResolvedValueOnce('NEWPROJ');
         const mod = require('./case09');
-        mod.handler(baseContext);
+        await mod.handler(baseContext);
         expect(mockSessionContext.project_name).toBe('NEWPROJ');
     });
 });
 
 describe('case10 — show counters', () => {
-    it('returns undefined', () => {
+    it('returns undefined', async () => {
         const mod = require('./case10');
-        expect(mod.handler(baseContext)).toBeUndefined();
+        expect(await mod.handler(baseContext)).toBeUndefined();
+    });
+
+    it('sets directory and creates package manager', async () => {
+        const prompt = require('../../shared/prompt');
+        prompt.ask.mockResolvedValueOnce('/my/git/dir');
+        const mod = require('./case10');
+        await mod.handler(baseContext);
+        expect(mockSessionContext.createPackageManager).toHaveBeenCalledWith('/my/git/dir');
+        expect(mockSessionContext.git_directory).toBe('/my/git/dir');
+        expect(prompt.success).toHaveBeenCalledWith('Diretório alterado para: /my/git/dir');
+    });
+
+    it('handles missing createPackageManager', async () => {
+        mockSessionContext.createPackageManager = undefined;
+        const prompt = require('../../shared/prompt');
+        prompt.ask.mockResolvedValueOnce('/some/dir');
+        const mod = require('./case10');
+        await mod.handler(baseContext);
+        expect(mockSessionContext.packageManager).toBeUndefined();
+        expect(prompt.success).toHaveBeenCalledWith('Diretório alterado para: /some/dir');
     });
 });
 
 describe('case11 — generate CSV template', () => {
-    it('generates template file', () => {
+    it('generates template file', async () => {
         const mod = require('./case11');
-        expect(mod.handler(baseContext)).toBeUndefined();
+        expect(await mod.handler(baseContext)).toBeUndefined();
     });
 
-    it('handles copy error', () => {
+    it('handles copy error', async () => {
         const fs = require('fs');
         jest.spyOn(fs, 'copyFileSync').mockImplementationOnce(() => {
             throw new Error('permission denied');
         });
         const prompt = require('../../shared/prompt');
         const mod = require('./case11');
-        mod.handler(baseContext);
+        await mod.handler(baseContext);
         expect(prompt.error).toHaveBeenCalled();
+    });
+
+    it('uses default path when ask returns empty', async () => {
+        const prompt = require('../../shared/prompt');
+        prompt.ask.mockResolvedValueOnce('');
+        const fs = require('fs');
+        jest.spyOn(fs, 'copyFileSync').mockImplementationOnce(jest.fn());
+        const mod = require('./case11');
+        await mod.handler(baseContext);
+        expect(prompt.success).toHaveBeenCalledWith(expect.stringContaining('Template CSV gerado em:'));
     });
 });
 
@@ -281,7 +400,7 @@ describe('case13 — create test execution', () => {
     it('creates from in-memory tasks', async () => {
         mockSessionContext.inMemoryTasksId = ['TEST-1', 'TEST-2'];
         const prompt = require('../../shared/prompt');
-        prompt.confirm.mockReturnValueOnce(true);
+        prompt.askConfirm.mockResolvedValueOnce(true);
         const mod = require('./case13');
         await mod.handler(baseContext);
         expect(prompt.info).toHaveBeenCalledWith('Testes da sessão atual: TEST-1, TEST-2');
@@ -293,23 +412,63 @@ describe('case13 — create test execution', () => {
         await mod.handler(baseContext);
         expect(prompt.warn).toHaveBeenCalledWith('Nenhuma key informada.');
     });
+
+    it('creates test execution with manual key entry', async () => {
+        const prompt = require('../../shared/prompt');
+        prompt.ask.mockResolvedValueOnce('TEST-3 TEST-4');
+        prompt.ask.mockResolvedValueOnce('my-execution');
+        prompt.ask.mockResolvedValueOnce('Exec Title');
+        prompt.ask.mockResolvedValueOnce('Exec desc');
+        const helpers = require('./helpers');
+        helpers.createTestExecutionWithLinksWrapper.mockResolvedValueOnce(undefined);
+        const mod = require('./case13');
+        await mod.handler(baseContext);
+        expect(helpers.createTestExecutionWithLinksWrapper).toHaveBeenCalledWith(
+            baseContext,
+            ['TEST-3', 'TEST-4'],
+            'my-execution',
+            'Exec Title',
+            'Exec desc',
+        );
+    });
+
+    it('creates test execution from in-memory tasks with full flow', async () => {
+        mockSessionContext.inMemoryTasksId = ['TEST-1', 'TEST-2'];
+        mockSessionContext.inMemoryTasksText = ['Test one', 'Test two'];
+        const prompt = require('../../shared/prompt');
+        prompt.askConfirm.mockResolvedValueOnce(true);
+        prompt.ask.mockResolvedValueOnce('');
+        prompt.ask.mockResolvedValueOnce('Auto Exec');
+        prompt.ask.mockResolvedValueOnce('');
+        const helpers = require('./helpers');
+        helpers.createTestExecutionWithLinksWrapper.mockResolvedValueOnce(undefined);
+        const mod = require('./case13');
+        await mod.handler(baseContext);
+        expect(helpers.createTestExecutionWithLinksWrapper).toHaveBeenCalledWith(
+            baseContext,
+            ['TEST-1', 'TEST-2'],
+            '',
+            'Auto Exec',
+            '',
+        );
+    });
 });
 
 describe('case14 — config Cypress directory', () => {
-    it('returns early when dir is empty', () => {
+    it('returns early when dir is empty', async () => {
         const prompt = require('../../shared/prompt');
-        prompt.prompt.mockReturnValueOnce('');
+        prompt.ask.mockResolvedValueOnce('');
         const mod = require('./case14');
-        mod.handler(baseContext);
+        await mod.handler(baseContext);
         expect(prompt.warn).toHaveBeenCalledWith('Caminho vazio, ignorando.');
     });
 
-    it('configures Cypress directory', () => {
+    it('configures Cypress directory', async () => {
         const prompt = require('../../shared/prompt');
         const state = require('../../shared/state');
-        prompt.prompt.mockReturnValueOnce('/cypress');
+        prompt.ask.mockResolvedValueOnce('/cypress');
         const mod = require('./case14');
-        mod.handler(baseContext);
+        await mod.handler(baseContext);
         expect(state.update).toHaveBeenCalled();
     });
 });
@@ -317,28 +476,121 @@ describe('case14 — config Cypress directory', () => {
 describe('case15 — create tests from JSON', () => {
     it('returns when jsonPath is empty', async () => {
         const prompt = require('../../shared/prompt');
-        prompt.smartPrompt.mockReturnValueOnce('');
+        prompt.ask.mockResolvedValueOnce('');
         const mod = require('./case15');
         await mod.handler(baseContext);
         expect(prompt.warn).toHaveBeenCalledWith('Caminho do JSON vazio. Operação cancelada.');
     });
+
+    it('imports tests from JSON successfully', async () => {
+        mockConfigMod.jsonPath = '/fake/tests.json';
+        const createTests = require('../create_tests');
+        createTests.createTestsFromJson.mockResolvedValueOnce({
+            inMemoryTasksId: ['TEST-10', 'TEST-11'],
+            inMemoryTasksText: ['JSON test 1', 'JSON test 2'],
+            sourcePath: '/fake/tests.json',
+        });
+        const prompt = require('../../shared/prompt');
+        prompt.askConfirm.mockResolvedValueOnce(false);
+        const mod = require('./case15');
+        await mod.handler(baseContext);
+        expect(createTests.createTestsFromJson).toHaveBeenCalledWith(
+            expect.objectContaining({ jsonPath: '/fake/tests.json' }),
+        );
+        expect(mockSessionContext.inMemoryTasksId).toEqual(['TEST-10', 'TEST-11']);
+        expect(prompt.success).toHaveBeenCalledWith('Importacao JSON concluída: 2 testes');
+        expect(baseContext.pushHistory).toHaveBeenCalledWith('importar-json', '2 testes', 'ok');
+    });
+
+    it('handles null result from createTestsFromJson', async () => {
+        mockConfigMod.jsonPath = '/fake/tests.json';
+        const createTests = require('../create_tests');
+        createTests.createTestsFromJson.mockResolvedValueOnce(null);
+        const prompt = require('../../shared/prompt');
+        const mod = require('./case15');
+        expect(await mod.handler(baseContext)).toBeUndefined();
+        expect(mockSessionContext.inMemoryTasksId).toEqual([]);
+    });
 });
 
 describe('case16 — config JSON directory', () => {
-    it('returns early when dir is empty', () => {
+    it('returns early when dir is empty', async () => {
         const prompt = require('../../shared/prompt');
-        prompt.prompt.mockReturnValueOnce('');
+        prompt.ask.mockResolvedValueOnce('');
         const mod = require('./case16');
-        mod.handler(baseContext);
+        await mod.handler(baseContext);
         expect(prompt.warn).toHaveBeenCalledWith('Caminho vazio, ignorando.');
     });
 
-    it('configures JSON directory', () => {
+    it('configures JSON directory', async () => {
         const prompt = require('../../shared/prompt');
         const state = require('../../shared/state');
-        prompt.prompt.mockReturnValueOnce('/json');
+        prompt.ask.mockResolvedValueOnce('/json');
         const mod = require('./case16');
-        mod.handler(baseContext);
+        await mod.handler(baseContext);
         expect(state.update).toHaveBeenCalled();
+    });
+});
+
+describe('case12 — diagnostic connection', () => {
+    it('reports all endpoints as ok', async () => {
+        mockJiraResource.axiosInstance.get
+            .mockResolvedValueOnce({ status: 200 })
+            .mockResolvedValueOnce({ status: 200 })
+            .mockResolvedValueOnce({ status: 200 });
+        const mod = require('./case12');
+        await mod.handler(baseContext);
+        const prompt = require('../../shared/prompt');
+        expect(prompt.printSummary).toHaveBeenCalled();
+        expect(baseContext.pushHistory).toHaveBeenCalledWith('diagnostico', expect.stringContaining('3/3'), 'ok');
+    });
+
+    it('records error when one endpoint fails', async () => {
+        mockJiraResource.axiosInstance.get
+            .mockResolvedValueOnce({ status: 200 })
+            .mockRejectedValueOnce({ response: { status: 401 } })
+            .mockResolvedValueOnce({ status: 200 });
+        const mod = require('./case12');
+        await mod.handler(baseContext);
+        const prompt = require('../../shared/prompt');
+        expect(prompt.printSummary).toHaveBeenCalled();
+        expect(baseContext.pushHistory).toHaveBeenCalledWith('diagnostico', expect.stringContaining('2/3'), 'error');
+    });
+});
+
+describe('case01 — create tests from CSV', () => {
+    it('creates tests with Config csvPath and stores in-memory tasks', async () => {
+        mockConfigMod.csvPath = '/fake/test.csv';
+        mockConfigMod.csvLabels = 'label1, label2';
+        const createTests = require('../create_tests');
+        createTests.createTestsFromCsv.mockResolvedValueOnce({
+            inMemoryTasksId: ['TEST-1', 'TEST-2'],
+            inMemoryTasksText: ['First test', 'Second test'],
+            summary: '2 tests created from CSV',
+            status: 'ok',
+        });
+        const prompt = require('../../shared/prompt');
+        prompt.askConfirm.mockResolvedValueOnce(false);
+        const mod = require('./case01');
+        await mod.handler(baseContext);
+        expect(createTests.createTestsFromCsv).toHaveBeenCalledWith(
+            expect.objectContaining({ csvPath: '/fake/test.csv', jiraLabels: ['label1', 'label2'] }),
+        );
+        expect(mockSessionContext.inMemoryTasksId).toEqual(['TEST-1', 'TEST-2']);
+        expect(baseContext.pushHistory).toHaveBeenCalledWith('csv-import', '2 tests created from CSV', 'ok');
+    });
+
+    it('handles null result from createTestsFromCsv gracefully', async () => {
+        mockConfigMod.csvPath = '/fake/test.csv';
+        mockConfigMod.csvLabels = '';
+        const createTests = require('../create_tests');
+        createTests.createTestsFromCsv.mockResolvedValueOnce(null);
+        const prompt = require('../../shared/prompt');
+        prompt.ask.mockResolvedValueOnce('');
+        const state = require('../../shared/state');
+        state.load.mockReturnValue({});
+        const mod = require('./case01');
+        expect(await mod.handler(baseContext)).toBeUndefined();
+        expect(mockSessionContext.inMemoryTasksId).toEqual([]);
     });
 });

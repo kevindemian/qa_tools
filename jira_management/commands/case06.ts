@@ -1,9 +1,9 @@
-import { smartPrompt, printError } from '../../shared/prompt';
+import { ask, printError } from '../../shared/prompt';
 import { rootLogger } from '../../shared/logger';
 import type { CommandContext } from './context';
 
 async function handler(c: CommandContext): Promise<boolean | void> {
-    const version = smartPrompt('Nome da versão', {}, () => {});
+    const version = await ask('Nome da versão', {});
     try {
         await c.jiraResource.checkReleaseTasksStatus(c.ctx.project_name, version);
         c.pushHistory('verificar-status', version, 'ok');

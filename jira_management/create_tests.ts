@@ -9,6 +9,7 @@ import { rootLogger } from '../shared/logger';
 import IssueLinker from './issue-linker';
 import { resolveCsvPath, resolveJsonPath, resolveLabels, parseJsonTests } from './import-prep';
 import { createTestsFromTestCases } from './import-orchestrator';
+import { isQuiet, info, warn, printError } from '../shared/prompt';
 
 interface CreateFromFileParams {
     jiraResource: JiraResource;
@@ -23,13 +24,7 @@ interface CreateFromFileParams {
     jiraLabels?: string[];
 }
 
-function _getPm(): typeof import('../shared/prompt') {
-    // eslint-disable-next-line @typescript-eslint/no-require-imports
-    return require('../shared/prompt');
-}
-
 async function readCsvTests(csvResource: CsvResource, csvPath: string): Promise<TestCase[] | undefined> {
-    const { isQuiet, info, warn, printError } = _getPm();
     if (!isQuiet()) info('Lendo CSV...');
     try {
         const tests = await csvResource.readBulkCsv(csvPath);
@@ -45,7 +40,6 @@ async function readCsvTests(csvResource: CsvResource, csvPath: string): Promise<
 }
 
 function readJsonTests(jsonPath: string): TestCase[] | undefined {
-    const { isQuiet, info, warn, printError } = _getPm();
     if (!isQuiet()) info('Lendo JSON...');
     try {
         const tests = parseJsonTests(jsonPath);
@@ -76,7 +70,7 @@ async function createTestsFromCsv({
     csvResource: CsvResource;
     csvPath?: string;
 }): Promise<ReturnType<typeof createTestsFromTestCases>> {
-    const csvPath = resolveCsvPath(csvPathInput);
+    const csvPath = await resolveCsvPath(csvPathInput);
     const jiraLabels = resolveLabels(jiraLabelsInput, 'csvLabels');
     const tests = await readCsvTests(csvResource, csvPath);
     if (!tests) return;
@@ -111,7 +105,7 @@ async function createTestsFromJson({
 }: CreateFromFileParams & {
     jsonPath?: string;
 }): Promise<ReturnType<typeof createTestsFromTestCases>> {
-    const jsonPath = resolveJsonPath(jsonPathInput);
+    const jsonPath = await resolveJsonPath(jsonPathInput);
     if (!jsonPath) return;
 
     const jiraLabels = resolveLabels(jiraLabelsInput, 'jsonLabels');

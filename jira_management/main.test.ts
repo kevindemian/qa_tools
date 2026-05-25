@@ -1,16 +1,25 @@
 // ── Mocks ──────────────────────────────────────────────────────────────────
-jest.mock('../shared/prompt', () => ({
-    print: jest.fn(),
-    warn: jest.fn(),
-    info: jest.fn(),
-    helpLine: jest.fn(),
-    title: jest.fn(),
-    divider: jest.fn(),
-    prompt: jest.fn().mockReturnValue('0'),
-    printError: jest.fn(),
-    showSelect: jest.fn().mockReturnValue('0'),
-    tableView: jest.fn(),
-}));
+jest.mock('../shared/prompt', () => {
+    class CancelError extends Error {
+        constructor(msg?: string) {
+            super(msg);
+            this.name = 'CancelError';
+        }
+    }
+    return {
+        print: jest.fn(),
+        warn: jest.fn(),
+        info: jest.fn(),
+        helpLine: jest.fn(),
+        title: jest.fn(),
+        divider: jest.fn(),
+        prompt: jest.fn().mockReturnValue('0'),
+        printError: jest.fn(),
+        showSelect: jest.fn().mockReturnValue('0'),
+        tableView: jest.fn(),
+        CancelError,
+    };
+});
 
 jest.mock('../shared/config', () => ({
     jiraBaseUrl: '',
@@ -80,7 +89,7 @@ jest.mock('child_process', () => ({
 
 // ── Imports ────────────────────────────────────────────────────────────────
 import { createValidateEnv } from '../shared/cli_base';
-import { print, warn, helpLine, title, divider } from '../shared/prompt';
+import { print, warn, helpLine, title, divider, prompt, showSelect } from '../shared/prompt';
 import { load as loadState, update as updateState, getStatePath } from '../shared/state';
 
 // ── Types ──────────────────────────────────────────────────────────────────
@@ -93,12 +102,15 @@ interface MenuChoice {
 }
 
 interface MainModule {
-    main(): Promise<void>;
-    showSplash(): void;
-    showHelp(topic?: string): void;
-    resolveAlias(choice: string): string;
+    main(ctx: { project_name?: string; git_directory: string }): Promise<void>;
+    showSplash(statePath: string): Promise<void>;
+    showHelp(choice?: string): void;
+    showDocs(choice?: string): Promise<void>;
+    showHelpLoop(): Promise<void>;
+    resolveAlias(input: string): string;
     buildMenuChoices(proj: string, ctx: { git_directory: string }): MenuChoice[];
-    handleSpecialInput(input: string): Promise<boolean>;
+    handleSpecialInput(input: string): Promise<boolean | '__exit__'>;
+    dispatchChoice(choice: string, cmdCtx: unknown): Promise<'exit' | 'continue'>;
     _configHint(key: string, ctx: { git_directory: string }): string;
 }
 
@@ -230,6 +242,15 @@ describe('buildMenuChoices', () => {
 });
 
 describe('handleSpecialInput', () => {
+    beforeEach(() => {
+        // showHelpLoop uses prompt() to wait for input; return /back to exit loop immediately
+        (prompt as jest.Mock).mockReturnValue('/back');
+    });
+
+    afterEach(() => {
+        (prompt as jest.Mock).mockReturnValue('0');
+    });
+
     it('returns true and shows help for /help', async () => {
         expect(await mod.handleSpecialInput('/help')).toBe(true);
         expect(title).toHaveBeenCalled();
@@ -240,15 +261,13 @@ describe('handleSpecialInput', () => {
         expect(title).toHaveBeenCalled();
     });
 
-    it('handles /help with specific topic', async () => {
-        await mod.handleSpecialInput('/help csv');
-        expect(title).toHaveBeenCalledWith(expect.stringContaining('csv'));
+    it('returns false for /exit (handled by runMainLoop, not by handleSpecialInput)', async () => {
+        expect(await mod.handleSpecialInput('/exit')).toBe(false);
     });
 
-    it('returns __exit__ for /back and /menu, true for /exit', async () => {
+    it('returns __exit__ for /back and /menu', async () => {
         expect(await mod.handleSpecialInput('/back')).toBe('__exit__');
         expect(await mod.handleSpecialInput('/menu')).toBe('__exit__');
-        expect(await mod.handleSpecialInput('/exit')).toBe(true);
     });
 
     it('handles /docs and /d', async () => {
@@ -325,5 +344,113 @@ describe('module integration', () => {
 
     it('getStatePath was called during initialization', () => {
         expect(getStatePathCalled).toBe(true);
+    });
+});
+
+describe('dispatchChoice', () => {
+    const minimalCtx = {
+        jiraResource: {},
+        jiraResourceXray: {},
+        linkManager: {},
+        linkManagerXray: {},
+        csvResource: {},
+        ctx: { project_name: 'test', git_directory: '/tmp', sessionCounters: [], results: [] },
+        pushHistory: jest.fn(),
+        printSessionSummary: jest.fn(),
+        base_url: '',
+        sessionLog: '',
+    };
+
+    beforeEach(() => {
+        (jest.requireMock('./commands').getHandler as jest.Mock).mockReturnValue(null);
+    });
+
+    it("returns 'exit' for choice '0'", async () => {
+        const result = await mod.dispatchChoice('0', minimalCtx);
+        expect(result).toBe('exit');
+    });
+
+    it("dispatches to handler and returns 'continue' for choice '1'", async () => {
+        const handler = jest.fn().mockResolvedValue(false);
+        (jest.requireMock('./commands').getHandler as jest.Mock).mockReturnValue(handler);
+
+        const result = await mod.dispatchChoice('1', minimalCtx);
+
+        expect(result).toBe('continue');
+        expect(handler).toHaveBeenCalledWith(minimalCtx);
+    });
+
+    it("dispatches to handler and returns 'continue' for choice '7'", async () => {
+        const handler = jest.fn().mockResolvedValue(false);
+        (jest.requireMock('./commands').getHandler as jest.Mock).mockReturnValue(handler);
+
+        const result = await mod.dispatchChoice('7', minimalCtx);
+
+        expect(result).toBe('continue');
+        expect(handler).toHaveBeenCalledWith(minimalCtx);
+    });
+
+    it("shows docs and returns 'continue' for 'd'", async () => {
+        const result = await mod.dispatchChoice('d', minimalCtx);
+        expect(result).toBe('continue');
+    });
+
+    it("shows docs and returns 'continue' for 'docs'", async () => {
+        const result = await mod.dispatchChoice('docs', minimalCtx);
+        expect(result).toBe('continue');
+    });
+
+    it("returns 'continue' and warns for invalid choice '99'", async () => {
+        const result = await mod.dispatchChoice('99', minimalCtx);
+        expect(result).toBe('continue');
+        expect(warn).toHaveBeenCalledWith(expect.stringContaining('inválida'));
+    });
+
+    it('handler returning true triggers continue properly', async () => {
+        const handler = jest.fn().mockResolvedValue(true);
+        (jest.requireMock('./commands').getHandler as jest.Mock).mockReturnValue(handler);
+
+        const result = await mod.dispatchChoice('1', minimalCtx);
+
+        expect(result).toBe('continue');
+        expect(handler).toHaveBeenCalledWith(minimalCtx);
+    });
+
+    it("handler that throws CancelError returns 'continue'", async () => {
+        const { CancelError } = jest.requireMock('../shared/prompt');
+        const handler = jest.fn().mockRejectedValue(new CancelError('canceled'));
+        (jest.requireMock('./commands').getHandler as jest.Mock).mockReturnValue(handler);
+
+        const result = await mod.dispatchChoice('1', minimalCtx);
+
+        expect(result).toBe('continue');
+    });
+});
+
+describe('showDocs', () => {
+    it('lists available documentation files and exits on 0', async () => {
+        await mod.showDocs();
+        expect(showSelect).toHaveBeenCalled();
+    });
+});
+
+describe('showHelpLoop', () => {
+    beforeEach(() => {
+        (prompt as jest.Mock).mockReturnValue('/back');
+    });
+
+    afterEach(() => {
+        (prompt as jest.Mock).mockReturnValue('0');
+    });
+
+    it('shows help topics then exits on /back', async () => {
+        await mod.showHelpLoop();
+        expect(title).toHaveBeenCalled();
+    });
+
+    it('handles specific topic then exits', async () => {
+        (prompt as jest.Mock).mockReturnValueOnce('csv').mockReturnValueOnce('/back');
+        await mod.showHelpLoop();
+        expect(title).toHaveBeenCalled();
     });
 });

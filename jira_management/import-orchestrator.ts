@@ -9,6 +9,7 @@ import { update as updateState } from '../shared/state';
 import { showPreview, filterTests, confirmOrCancel, validateImportBatch, handleDryRun } from './import-prep';
 import { executeTestCreationLoop, updateFinalState } from './import-loop';
 import { OPERATION_CANCELLED } from './constants';
+import { info, warn, isQuiet, print, printSummary } from '../shared/prompt';
 
 interface CreateTestsFromTestCasesParams {
     tests: TestCase[];
@@ -32,11 +33,6 @@ type CreateTestsFromTestCasesResult = {
     status: string;
     sourcePath: string;
 };
-
-function _getPm(): typeof import('../shared/prompt') {
-    // eslint-disable-next-line @typescript-eslint/no-require-imports
-    return require('../shared/prompt');
-}
 
 type PrepareTestRunResult =
     | CreateTestsFromTestCasesResult
@@ -195,8 +191,6 @@ async function createTestsFromTestCases({
     sourceType,
     jiraLabels,
 }: CreateTestsFromTestCasesParams): Promise<CreateTestsFromTestCasesResult | undefined> {
-    const { warn, info, isQuiet, print, printSummary } = _getPm();
-
     const prepared = prepareTestRun(tests, sourcePath, sourceType, project_name, jiraLabels, onBusy, warn);
     if (prepared === undefined) return;
     if ('summary' in prepared) return prepared;

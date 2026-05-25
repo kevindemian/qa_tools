@@ -10,7 +10,8 @@ Issues registradas durante refatorações, postergadas por escopo.
 - **P3**: Nice-to-have, oportunidade futura
 
 ---
-## LLM Integration — Geração de Testes com IA
+
+## [NEW FEATURE] LLM Integration — Geração de Testes com IA
 
 **Prioridade**: P1 (feature nova, valor direto ao usuário)
 
@@ -86,239 +87,149 @@ LLM_SMALL_MODEL=gemini-2.0-flash-lite           # default
 | `jira_management/main.ts`   | Adicionar handler + opção no menu |
 | `.env.example`              | Adicionar vars LLM                |
 | `BACKLOG.md`                | Este plano                        |
-### 🔴 Fase 6 — Plano Detalhado (2026-05-25)
-
-**Problema original:** Na Fase 4, `showSelect` foi reescrito para usar `readlineSync` + cards em vez de `@inquirer/select`. Isso quebrou:
-
-- Paginação (menu ultrapassa tela)
-- Navegação por setas ↑↓
-- Comandos `/help`, `/back`, `/quit` não funcionam em `confirm()` e `onError()` (CancelError não propagado)
-- `/back` no menu principal crasha
-
-**Decisão (2026-05-25):** Reverter `showSelect` para `@inquirer/select` + consertar bugs de propagação de CancelError.
-
-**Ordem de execução:** A → D → B → C → E → F
 
 ---
 
-#### F6-A — Bugs P0: Comandos de navegação em TODAS as telas
+## ✅ Fase 6 — Correção TUI (CONCLUÍDA)
 
-**Arquivo:** `shared/prompt.ts`
+**Data:** 2026-05-25
 
-| #   | Problema                                                                | Linhas                        | Ação                                                                       |
-| --- | ----------------------------------------------------------------------- | ----------------------------- | -------------------------------------------------------------------------- |
-| A1  | `confirm()` usa `readlineSync.question()` direto, sem checar `NAV_CMDS` | 139-151                       | Adicionar `if (NAV_CMDS.includes(trimmed)) throw new CancelError(trimmed)` |
-| A2  | `onError()` usa `readlineSync.question()` direto, sem checar `NAV_CMDS` | 416-466                       | Adicionar `if (NAV_CMDS.includes(trimmed)) throw new CancelError(trimmed)` |
-| A3  | `/back` no menu principal crasha — `getUserChoice()` não tem try/catch  | `jira_management/main.ts:454` | Envolver `getUserChoice()` em try/catch CancelError                        |
-| A4  | `/quit` não está em `NAV_CMDS`                                          | `shared/prompt.ts:157`        | Adicionar `'/quit'`                                                        |
-| A5  | `/help` só funciona em `smartPrompt()`, não em `prompt()` direto        | `shared/prompt.ts:121-137`    | Adicionar `/help` ao `NAV_CMDS`                                            |
+**Objetivo:** Substituir a abordagem TUI_STYLE (custom/sync/frágil) por `@inquirer/*` first, com fallback `readlineSync` para não-TTY. Adicionar `CancelError` em todos os inputs. Remover código morto.
 
-**Impacto A1:** 11 callsites (case01, case04, case07, case08, case13, case15, import-prep)
-**Impacto A2:** 4 callsites (test-case-factory, issue-linker)
-**Testes:** +5 testes
+### Arquivos alterados
 
----
+| Arquivo                                  | Ação                                                                                                                                                                                                                     |
+| ---------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `TUI_STYLE.md`                           | Removido — abordagem substituída                                                                                                                                                                                         |
+| `shared/prompt.ts`                       | `confirm()`/`onError()` com `CancelError`. `showSelect()` async com `@inquirer/select`. `NAV_CMDS` completo. `smartPrompt()` delegado a `ask()`. Paginação custom removida. `tableView()` com padding + `palette.border` |
+| `shared/entry-menu.ts`                   | `await showSelect()`                                                                                                                                                                                                     |
+| `shared/splash.ts`                       | Simplificado — sem figlet/gradient                                                                                                                                                                                       |
+| `shared/box.ts`                          | `card()` removido                                                                                                                                                                                                        |
+| `jira_management/main.ts`                | `getUserChoice()` async. `try/catch CancelError`.                                                                                                                                                                        |
+| `jira_management/import-prep.ts`         | `showPreview()` via markdown. `prompt`→`ask`. `smartPrompt`→`ask`.                                                                                                                                                       |
+| `jira_management/import-orchestrator.ts` | Ajuste fluxo preview                                                                                                                                                                                                     |
+| `jira_management/commands/*.ts`          | `prompt`→`await ask`. `confirm`→`await askConfirm`. `smartPrompt`→`await ask`.                                                                                                                                           |
+| `git_triggers/main.ts`                   | `_promptChoice()` async. `try/catch CancelError`.                                                                                                                                                                        |
+| `git_triggers/nivelar.ts`                | `prompt`→`await ask`                                                                                                                                                                                                     |
+| `git_triggers/test-results.ts`           | `prompt`→`await ask`                                                                                                                                                                                                     |
+| `git_triggers/ui-helpers.ts`             | `prompt`→`await ask`                                                                                                                                                                                                     |
+| `docs/help-docs.ts`                      | `await showSelect()`                                                                                                                                                                                                     |
+| `shared/prompt.test.ts`                  | Testes `CancelError` em `confirm`/`onError`/`prompt`. Testes `showSelect` TTY mock.                                                                                                                                      |
+| `shared/splash.test.ts`                  | Simplificado (sem figlet/gradient mock)                                                                                                                                                                                  |
+| `shared/box.test.ts`                     | Testes `card()` removidos                                                                                                                                                                                                |
+| `package.json`                           | `figlet`, `gradient-string`, `@types` removidos                                                                                                                                                                          |
+| `BACKLOG.md`                             | Este registro                                                                                                                                                                                                            |
 
-#### F6-B — Reverter `showSelect` para `@inquirer/select`
+### Lições aprendidas
 
-**Arquivo:** `shared/prompt.ts`
-
-**Estado atual:** `showSelect` síncrono, `readlineSync` + cards, paginação customizada `/n` `/p`. `_loadInquirer()` removido.
-
-**Estado desejado:** `showSelect` async. TTY → `@inquirer/select`. Não-TTY → fallback `readlineSync` + cards.
-
-**Passos:**
-
-1. **Restaurar `_loadInquirer()`** — lazy-load `@inquirer/select`, cache, fallback `false`:
-
-```typescript
-let _inquirerMod: unknown = null;
-export function __setInquirerMod(mod: unknown): void {
-    _inquirerMod = mod;
-}
-async function _loadInquirer(): Promise<unknown> {
-    if (_inquirerMod !== null) return _inquirerMod;
-    try {
-        _inquirerMod = await import('@inquirer/select');
-        return _inquirerMod;
-    } catch {
-        _inquirerMod = false;
-        return false;
-    }
-}
-```
-
-2. **Reverter `showSelect()`** — usar `inquirerTheme` já existente (linhas 502-510):
-
-```typescript
-export async function showSelect(label: string, choices: SelectChoice[], options: SelectOptions = {}): Promise<string> {
-    const flatChoices = choices
-        .filter((c) => c.type !== 'separator' && !!c.name)
-        .map((c) => ({ name: c.name, value: c.value ?? c.name }));
-
-    // TTY → @inquirer/select
-    const mod = await _loadInquirer();
-    if (mod && isTTY()) {
-        try {
-            const answer = await mod.default({
-                message: label,
-                choices: flatChoices,
-                pageSize: options.pageSize || Output.rows() - 5,
-                loop: true,
-                theme: inquirerTheme,
-            });
-            return answer as string;
-        } catch {
-            return '0';
-        }
-    }
-
-    // Non-TTY → readlineSync + cards (código atual das Fases 4-5)
-    const { sections, standaloneItems } = groupChoices(choices);
-    // ... renderizar cards + prompt síncrono + números + aliases
-}
-```
-
-3. **Remover código morto:** paginação customizada (`/n`, `/p`, `buildPage`, `renderPage`, `pages`, `pageIdx`, `MenuBlock`).
-4. **Manter:** `visibleWidth` import, `console.clear()` (F5), `CancelError` (F4), fallback não-TTY com números e aliases (F5).
+1. `@inquirer/*` é profissional e testado — não tentar substituir por custom
+2. TUI_STYLE tentou "dashboard" visual com borders demais — poluição visual
+3. `readlineSync` deve ser APENAS fallback não-TTY
+4. `smartPrompt()` era redundante — `ask()` já faz `/help` + validação
 
 ---
 
-#### F6-C — Callers: síncrono → async
+## DÉBITO-001 — OOM em criação de massa (>500 testes)
 
-| #   | Arquivo                                   | Linha | Mudança                                                          |
-| --- | ----------------------------------------- | ----- | ---------------------------------------------------------------- |
-| C1  | `shared/entry-menu.ts`                    | 39    | `showSelect(...)` → `await showSelect(...)`                      |
-| C2  | `jira_management/main.ts:getUserChoice()` | 409   | Assinatura: `async function getUserChoice(...): Promise<string>` |
-| C3  | `jira_management/main.ts`                 | 436   | `return showSelect(...)` → `return await showSelect(...)`        |
-| C4  | `jira_management/main.ts:runMainLoop()`   | 461   | `getUserChoice(...)` → `await getUserChoice(...)`                |
-| C5  | `git_triggers/main.ts:_promptChoice()`    | 626   | Assinatura: `async function _promptChoice(...): Promise<string>` |
-| C6  | `git_triggers/main.ts`                    | 645   | `return showSelect(...)` → `return await showSelect(...)`        |
-| C7  | `git_triggers/main.ts`                    | 748   | `_promptChoice(...)` → `await _promptChoice(...)`                |
-| C8  | `docs/help-docs.ts`                       | 81    | `showSelect(...)` → `await showSelect(...)`                      |
+**Prioridade:** P2
 
-Nota: `showDocs()` em `jira_management/main.ts` é síncrona (F5 alterou). `runMainLoop` já trata async.
+**Problema:** `createTestsFromCsv()` carrega todos os testes em memória. Com >500 testes, o processo estoura heap (512MB default Node).
+
+**Solução proposta:** Processamento em lotes de 50 com `setImmediate()` ou `p-limit`.
+
+**Arquivos:** `create_tests.ts`, `import-loop.ts`
 
 ---
 
-#### F6-D — Corrigir `tableView` margins
+## [NEW FEATURE] DÉBITO-002 — WEB_STYLE.md não implementado
 
-**Arquivo:** `shared/prompt.ts`, função `tableView()` (linhas 614-660)
+**Prioridade:** P3
 
-| Item | Ação                                                              |
-| ---- | ----------------------------------------------------------------- |
-| D1   | Adicionar `'  '` (2 espaços) como prefixo em cada linha da tabela |
-| D2   | Usar `palette.border` para bordas da tabela                       |
-| D3   | Ajustar `colWidths` para considerar indentação                    |
+**Problema:** `WEB_STYLE.md` descreve uma interface web, nunca implementada.
+
+**Solução proposta:** Se houver demanda, implementar como SPA standalone.
 
 ---
 
-#### F6-E — Atualizar testes
+## 🔷 Fase de Correção de Menus e Navegação (CONCLUÍDA)
 
-**Arquivo:** `shared/prompt.test.ts`
+**Data:** 2026-05-25
 
-| Item | Ação                                                                                                                                                                           |
-| ---- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| E1   | Restaurar testes TTY mode (`__setInquirerMod` + `isTTY=true`): "uses inquirer when TTY", "handles separators", "returns 0 on ExitPromptError", "re-throws non-ExitPromptError" |
-| E2   | Manter testes fallback não-TTY (já existem: "selects by number", "handles separator", etc.)                                                                                    |
-| E3   | Adicionar `confirm()` com `/back` → `toThrow(CancelError)`                                                                                                                     |
-| E4   | Adicionar `onError()` com `/back` → `toThrow(CancelError)`                                                                                                                     |
-| E5   | Adicionar `prompt()` com `/quit` → `toThrow(CancelError)`                                                                                                                      |
-| E6   | Remover testes de paginação (não existem — só código não testado)                                                                                                              |
-| E7   | Atualizar testes de `showSelect` para `async` (precisam de `await`)                                                                                                            |
-| E8   | Atualizar testes de `getUserChoice` em `jira_management/main.test.ts` se necessário                                                                                            |
+**Objetivo:** Eliminar workarounds `require()` obsoletos, corrigir navegação do menu principal, tornar `/help` interativo, e preparar base para cobertura total de testes.
 
-**Mock helper para `__setInquirerMod`:**
+### Problemas Encontrados (Auditoria)
 
-```typescript
-const mockSelectModule = {
-    default: jest.fn().mockResolvedValue('selected-value'),
-};
-beforeAll(() => {
-    prompt.__setInquirerMod(mockSelectModule);
-});
-```
+| #   | Gravidade | Descrição                                                                           |
+| --- | --------- | ----------------------------------------------------------------------------------- |
+| 1   | CRÍTICO   | `showDocs()` chamado sem `await` — UI concorrente, documento nunca visível          |
+| 2   | CRÍTICO   | `/help`, `/docs`, `/history` do menu mostravam "Opção inválida" após execução       |
+| 3   | ALTO      | Aliases não-numéricos (`voltar`, `ajuda`, `documentação`) eram dead mappings        |
+| 4   | ALTO      | `voltar` alias mapeava para `'menu'` (sem barra) — nunca funcionava                 |
+| 5   | ALTO      | `showHelp()` síncrono sem loop — /help exibia ajuda e voltava ao menu imediatamente |
+| 6   | MÉDIO     | `/quit` não saía do app (não listado na condição de exit)                           |
+| 7   | MÉDIO     | Código morto: verificação `/exit` em `handleSpecialInput` (já convertido antes)     |
+
+### Correções Aplicadas
+
+| ID   | Arquivo                   | Mudança                                                                                                          |
+| ---- | ------------------------- | ---------------------------------------------------------------------------------------------------------------- |
+| F0.1 | `create_tests.ts`         | Removeu `_getPm()` + `require()`, adicionou `import` direto de `isQuiet, info, warn, printError, print, success` |
+| F0.2 | `import-prep.ts`          | Removeu `_getPm()` + `require()`, adicionou `import` direto de 12 funções de prompt                              |
+| F0.3 | `import-orchestrator.ts`  | Removeu `_getPm()` + `require()`, adicionou `import` direto                                                      |
+| F0.4 | `case01.ts`               | Substituiu `require('../create_tests')` por `import createTests = require('../create_tests')`                    |
+| F0.5 | `case15.ts`               | Mesmo padrão                                                                                                     |
+| F0.6 | `helpers.ts`              | Mesmo padrão                                                                                                     |
+| F0.7 | `result_reporter.ts`      | Mesmo padrão (removeu bloco `require` com type annotation)                                                       |
+| F0.8 | `session-context.ts`      | `import type { withSpinner }` → `import { withSpinner }`, removeu `require()`                                    |
+| F1.1 | `main.ts`                 | `showDocs()` agora com `await` (2 locais: L292, L479)                                                            |
+| F1.2 | `main.ts`                 | `handleSpecialInput` retorna `true` → main loop faz `continue` (sem "Opção inválida")                            |
+| F1.3 | `main.ts`                 | `resolveAlias` movido para ANTES de `handleSpecialInput`                                                         |
+| F1.4 | `main.ts`                 | `voltar` alias: `'menu'` → `'/menu'`                                                                             |
+| F1.5 | `main.ts`                 | Nova `showHelpLoop()` — menu interativo de ajuda com navegação por tópicos                                       |
+| F1.6 | `main.ts`                 | `/help` em `handleSpecialInput` agora chama `await showHelpLoop()` (não mais `showHelp()` síncrono)              |
+| F1.7 | `main.ts`                 | `/quit` adicionado à condição de exit (linha 463)                                                                |
+| F1.8 | `main.ts`                 | Código morto `/exit` removido de `handleSpecialInput`                                                            |
+| F1.9 | `docs/` → `docs-archive/` | `historico-concluido.md` e `help-docs.ts` movidos para `docs-archive/`                                           |
+
+### Verificação
+
+- `npx tsc --noEmit`: 0 erros
+- `npx jest --no-coverage`: 950/950 testes
+
+### Arquivos alterados
+
+| Arquivo                                  | Ação                        |
+| ---------------------------------------- | --------------------------- |
+| `shared/session-context.ts`              | Editado                     |
+| `jira_management/create_tests.ts`        | Editado                     |
+| `jira_management/import-prep.ts`         | Editado                     |
+| `jira_management/import-orchestrator.ts` | Editado                     |
+| `jira_management/commands/case01.ts`     | Editado                     |
+| `jira_management/commands/case15.ts`     | Editado                     |
+| `jira_management/commands/helpers.ts`    | Editado                     |
+| `jira_management/result_reporter.ts`     | Editado                     |
+| `jira_management/main.ts`                | Editado                     |
+| `docs/historico-concluido.md`            | Movido para `docs-archive/` |
+| `docs/help-docs.ts`                      | Movido para `docs-archive/` |
+| `BACKLOG.md`                             | Este registro               |
 
 ---
 
-#### F6-F — BACKLOG.md update
+## 🔷 Fase de Expansão de Testes (PLANEJADA)
 
-Ao final, marcar Fase 6 como concluída e atualizar status.
+**Prioridade:** P0 (R1 obriga cobertura)
 
----
+### Dependências
 
-#### Dependências entre fases
+1. **F4**: Extrair `dispatchChoice` de `runMainLoop` (SRP + testabilidade)
+2. **F5**: Unit tests para handlers com cobertura insuficiente (case01, case12, case04, case07, case10, case11, case13, case15)
+3. **F3**: Testes para `showDocs()`, `showHelpLoop()`, e menu integrado
 
-```
-A (bugs P0) ──> D (tableView) ──> B (reverter) ──> C (callers) ──> E (testes) ──> F (backlog)
-                                                                                       │
-                                                                                       ▼
-                                                                               DÉBITO-001 (OOM)
-                                                                               próxima sprint
-```
+### Verificação final
 
----
-
-### Referência: Layout do OpenCode TUI
-
-O OpenCode usa **OpenTUI** (`@opentui`) como engine de renderização com **SolidJS** para estado reativo. A TUI roda em um processo Node.js em `packages/opencode/src/cli/cmd/tui/`, comunicando com o backend via HTTP + SSE na porta 4096.
-
-#### Stack tecnológico
-
-| Camada     | Tecnologia                                          | Finalidade                                                       |
-| ---------- | --------------------------------------------------- | ---------------------------------------------------------------- |
-| Engine     | `@opentui` (OpenTUI)                                | Renderização de terminal, CLI renderer, eventos de teclado/mouse |
-| UI         | SolidJS (JSX, signals)                              | Componentes reativos, reconciliação com OpenTUI                  |
-| Layout     | Box, ScrollBox, Text, Container, Split, Overlay     | Estrutura visual                                                 |
-| Conteúdo   | `<Markdown>`, `<Code>` (syntax highlight), `<Diff>` | Renderização de conteúdo                                         |
-| Input      | `<Input>`, `<Textarea>`, `<Select>`, `<TabSelect>`  | Entrada do usuário                                               |
-| Testes     | `testRender()`                                      | Snapshot + interação                                             |
-| Roteamento | RouteProvider → rotas `home` e `session`            | Navegação entre telas                                            |
-
-#### Como obter a informação
-
-- **OpenTUI docs**: https://opentui.com/docs/bindings/solid
-- **OpenTUI GitHub**: https://github.com/anomalyco/opentui
-- **Código OpenCode TUI**: `packages/opencode/src/cli/cmd/tui/` (app.tsx → RouteProvider → home.tsx / session/index.tsx)
-- **Layout primitives OpenCode (Go, archived)**: `internal/tui/layout/` — container.go, split.go, overlay.go, layout.go
-- **Tutorial com diagramas**: https://github.com/markporter/opencode_tutorial/blob/alpha/docs/03-core-concepts/tui-interface-guide.md
-- **Pacote Go (v0.0.55, archived)**: https://pkg.go.dev/github.com/opencode-ai/opencode/internal/tui/layout
-
-#### Estrutura visual da TUI
-
-````
-┌────────────────────────────────────────────────┐
-│ Header Bar: v1.x | Session: active | Agent     │
-├────────────────────────────────────────────────┤
-│                                                │
-│ Chat Panel (ScrollBox + Markdown):             │
-│   You: <input>                                 │
-│                                                │
-│   Agent (Build):                               │
-│     [✓] Ação concluída                         │
-│     → src/file.ts (line 42)                    │
-│     ```código formatado```                     │
-│                                                │
-├────────────────────────────────────────────────┤
-│ Status Bar: Ready | Files: 3 | Tokens: 1.2K   │
-└────────────────────────────────────────────────┘
-````
-
-#### Componentes OpenTUI mais relevantes
-
-- **`<Markdown>`** — renderiza markdown diretamente (code blocks, bold, links). É como opencode exibe respostas do agente. O QA Tools pode usar `marked` + `chalk` ou similar para emular.
-- **`<Code>`** — syntax highlight via tree-sitter.
-- **`<Select>`** — lista navegável com setas, similar ao `@inquirer/select`.
-- **`<TabSelect>`** — seleção por abas (usado para alternar entre agentes Build/Plan).
-- **`<ScrollBox>`** — área rolável com scrollbar.
-- **`<Box>`** — container com bordas (estilos: rounded, thick, double, hidden), padding, cores.
-
-#### Implicações para QA Tools
-
-O QA Tools **não precisa** adotar OpenTUI — a stack atual (chalk + cli-table3 + @inquirer) é adequada para uma CLI de ferramentas. O que importa é:
-
-1. **Consistência visual**: usar `palette.border` + padding consistente (como OpenTUI Box faz)
-2. **Markdown**: se precisar renderizar markdown, usar `marked` ou similar com chalk (o OpenTUI faz nativo via `<Markdown>`)
-3. **Select profissional**: `@inquirer/select` (que vamos restaurar na Fase 6) é o equivalente ao `<Select>` do OpenTUI
-4. **Layout limpo**: seguir a mesma filosofia de header claro, conteúdo com padding, status bar informativa
-5. **Navegação por teclado**: setas ↑↓, Tab, atalhos — mesma filosofia do OpenTUI/OpenCode
+| Comando                                                     | Saída esperada |
+| ----------------------------------------------------------- | -------------- |
+| `npx tsc --noEmit`                                          | 0 erros        |
+| `npx jest --no-coverage`                                    | 100% pass      |
+| `grep -rn "throw '" shared/ jira_management/ git_triggers/` | zero           |
+| `grep -rn ".only(" **/*.test.*`                             | zero           |
