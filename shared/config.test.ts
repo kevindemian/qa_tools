@@ -1,7 +1,7 @@
 jest.mock('dotenv', () => ({ config: jest.fn() }));
 
 describe('Config', () => {
-    let Config: typeof import('./config');
+    let Config: typeof import('./config').default;
     let dotenv: { config: jest.Mock };
     const ENV_VARS = [
         'JIRA_BASE_URL',
@@ -39,7 +39,7 @@ describe('Config', () => {
         ENV_VARS.forEach((v) => delete process.env[v]);
         dotenv.config.mockClear();
         jest.isolateModules(() => {
-            Config = require('./config');
+            Config = require('./config').default;
         });
     });
 
@@ -62,7 +62,7 @@ describe('Config', () => {
                 throw new Error('fail');
             });
             jest.isolateModules(() => {
-                const LocalConfig = require('./config');
+                const LocalConfig = require('./config').default;
                 expect(typeof LocalConfig.load).toBe('function');
             });
             expect(Config).toBeDefined();
@@ -94,7 +94,7 @@ describe('Config', () => {
         it.each(STRING_GETTERS)('%s returns the env value when set', (getter, envVar) => {
             process.env[envVar] = 'from-env';
             jest.isolateModules(() => {
-                const cfg = require('./config');
+                const cfg = require('./config').default;
                 expect(cfg[getter]).toBe('from-env');
             });
         });
@@ -138,7 +138,7 @@ describe('Config', () => {
         it.each(BOOL_GETTERS)('%s returns true when env var is "true"', (getter) => {
             process.env[getEnvVar(getter)] = 'true';
             jest.isolateModules(() => {
-                const cfg = require('./config');
+                const cfg = require('./config').default;
                 expect(cfg[getter]).toBe(true);
             });
         });
@@ -150,7 +150,7 @@ describe('Config', () => {
         it.each(BOOL_GETTERS)('%s returns false when env var is not "true"', (getter) => {
             process.env[getEnvVar(getter)] = 'false';
             jest.isolateModules(() => {
-                const cfg = require('./config');
+                const cfg = require('./config').default;
                 expect(cfg[getter]).toBe(false);
             });
         });
@@ -158,7 +158,7 @@ describe('Config', () => {
         it.each(BOOL_GETTERS)('%s returns false when env var is arbitrary string', (getter) => {
             process.env[getEnvVar(getter)] = 'yes';
             jest.isolateModules(() => {
-                const cfg = require('./config');
+                const cfg = require('./config').default;
                 expect(cfg[getter]).toBe(false);
             });
         });
@@ -172,7 +172,7 @@ describe('Config', () => {
         it('returns true when DEBUG=true', () => {
             process.env.DEBUG = 'true';
             jest.isolateModules(() => {
-                const cfg = require('./config');
+                const cfg = require('./config').default;
                 expect(cfg.debug).toBe(true);
             });
         });
@@ -190,7 +190,7 @@ describe('Config', () => {
         it('returns env value when set', () => {
             process.env.ON_ERROR = 'continue';
             jest.isolateModules(() => {
-                const cfg = require('./config');
+                const cfg = require('./config').default;
                 expect(cfg.onError).toBe('continue');
             });
         });
@@ -204,7 +204,7 @@ describe('Config', () => {
         it('returns env value when set', () => {
             process.env.JIRA_PROJECT = 'PROJX';
             jest.isolateModules(() => {
-                const cfg = require('./config');
+                const cfg = require('./config').default;
                 expect(cfg.jiraProject).toBe('PROJX');
             });
         });
@@ -218,7 +218,7 @@ describe('Config', () => {
         it('returns env value when set', () => {
             process.env.GITHUB_API_URL = 'https://custom.github.com/api';
             jest.isolateModules(() => {
-                const cfg = require('./config');
+                const cfg = require('./config').default;
                 expect(cfg.githubApiUrl).toBe('https://custom.github.com/api');
             });
         });
@@ -228,7 +228,7 @@ describe('Config', () => {
         it('parses env value as number', () => {
             process.env.LOG_MAX_SIZE = '1048576';
             jest.isolateModules(() => {
-                const cfg = require('./config');
+                const cfg = require('./config').default;
                 expect(cfg.logMaxSize).toBe(1048576);
             });
         });
@@ -240,7 +240,7 @@ describe('Config', () => {
         it('returns default 5MB when env is not a valid number', () => {
             process.env.LOG_MAX_SIZE = 'not-a-number';
             jest.isolateModules(() => {
-                const cfg = require('./config');
+                const cfg = require('./config').default;
                 expect(cfg.logMaxSize).toBe(5 * 1024 * 1024);
             });
         });
@@ -248,7 +248,7 @@ describe('Config', () => {
         it('returns default 5MB when env is empty string', () => {
             process.env.LOG_MAX_SIZE = '';
             jest.isolateModules(() => {
-                const cfg = require('./config');
+                const cfg = require('./config').default;
                 expect(cfg.logMaxSize).toBe(5 * 1024 * 1024);
             });
         });
@@ -256,7 +256,7 @@ describe('Config', () => {
         it('returns parsed number when env is zero', () => {
             process.env.LOG_MAX_SIZE = '0';
             jest.isolateModules(() => {
-                const cfg = require('./config');
+                const cfg = require('./config').default;
                 expect(cfg.logMaxSize).toBe(0);
             });
         });
@@ -304,7 +304,7 @@ describe('Config', () => {
             process.env.GITHUB_TOKEN = 'gh-token';
             process.env.AUTO_CHOICE = 'yes';
             jest.isolateModules(() => {
-                const cfg = require('./config');
+                const cfg = require('./config').default;
                 expect(cfg.jiraBaseUrl).toBe('https://jira.example.com');
                 expect(cfg.jiraPersonalToken).toBe('token-123');
                 expect(cfg.xrayBaseUrl).toBe('https://xray.example.com');
@@ -324,7 +324,7 @@ describe('Config', () => {
         it('returns env value when set', () => {
             process.env.LOG_LEVEL = 'DEBUG';
             jest.isolateModules(() => {
-                const cfg = require('./config');
+                const cfg = require('./config').default;
                 expect(cfg.logLevel).toBe('DEBUG');
             });
         });
@@ -338,7 +338,7 @@ describe('Config', () => {
         it('returns env value when set', () => {
             process.env.LOG_DIR = '/var/log';
             jest.isolateModules(() => {
-                const cfg = require('./config');
+                const cfg = require('./config').default;
                 expect(cfg.logDir).toBe('/var/log');
             });
         });
@@ -356,7 +356,7 @@ describe('Config', () => {
             process.env.QA_TEST_VAR2 = 'value2';
             process.env.OTHER_VAR = 'other';
             jest.isolateModules(() => {
-                const cfg = require('./config');
+                const cfg = require('./config').default;
                 const result = cfg.getAllPrefixed('QA_TEST_');
                 expect(result).toEqual({
                     QA_TEST_VAR1: 'value1',
@@ -369,7 +369,7 @@ describe('Config', () => {
             process.env.QA_TEST_EMPTY = '';
             process.env.QA_TEST_FULL = 'full';
             jest.isolateModules(() => {
-                const cfg = require('./config');
+                const cfg = require('./config').default;
                 const result = cfg.getAllPrefixed('QA_TEST_');
                 expect(result).toEqual({ QA_TEST_FULL: 'full' });
             });
@@ -377,7 +377,7 @@ describe('Config', () => {
 
         it('returns empty object when no match', () => {
             jest.isolateModules(() => {
-                const cfg = require('./config');
+                const cfg = require('./config').default;
                 expect(cfg.getAllPrefixed('NONEXISTENT_')).toEqual({});
             });
         });

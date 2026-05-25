@@ -69,4 +69,4 @@ class CypressTest {
     }
 }
 
-export = CypressTest;
+export default CypressTest;

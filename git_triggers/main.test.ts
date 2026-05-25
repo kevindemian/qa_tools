@@ -96,6 +96,11 @@ jest.mock('../jira_management/result_reporter', () => ({
     createTestExecutionFromResults: jest.fn(),
 }));
 
+jest.mock('../shared/metrics', () => ({
+    loadMetrics: jest.fn(() => ({ runs: [] })),
+    calculateFlakiness: jest.fn(() => []),
+}));
+
 jest.mock('../shared/http-client', () => ({
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     sleep: jest.fn<any>(async () => {}),
@@ -553,7 +558,7 @@ describe('downloadTestArtifacts', () => {
 describe('collectTestResults', () => {
     it('returns early when jira env vars are missing', async () => {
         const result = await mainModule.collectTestResults(mockProvider as unknown as GitProvider, '1', 'main', 'proj');
-        expect(result).toBeUndefined();
+        expect(result).toBeNull();
     });
 });
 
@@ -772,5 +777,48 @@ describe('handleTriggerPipeline', () => {
         await mainModule.handleTriggerPipeline(ctx as never, mockProvider as unknown as GitProvider, 'proj-b');
 
         expect(mockProvider.getPipeline).toHaveBeenCalledWith('123');
+    });
+});
+
+// ---------- handleFlakinessDashboard ----------
+
+describe('handleFlakinessDashboard', () => {
+    it('warns when fewer than 2 runs exist for current project', () => {
+        mainModule.handleFlakinessDashboard();
+        expect(prompt.warn).toHaveBeenCalledWith(expect.stringContaining('Menos de 2 execuções registradas'));
+    });
+});
+
+// ---------- parseBatchArgs / tryBatchMode ----------
+
+describe('parseBatchArgs', () => {
+    const origArgv = process.argv;
+
+    afterEach(() => {
+        process.argv = origArgv;
+    });
+
+    it('parses --project and --branch', () => {
+        process.argv = ['node', 'main.ts', '--project', 'my-proj', '--branch', 'feature/x'];
+        const result = mainModule.parseBatchArgs();
+        expect(result).toEqual({ project: 'my-proj', branch: 'feature/x' });
+    });
+
+    it('parses --auto flag', () => {
+        process.argv = ['node', 'main.ts', '--auto'];
+        const result = mainModule.parseBatchArgs();
+        expect(result).toEqual({ auto: true });
+    });
+
+    it('parses -p and -b short flags', () => {
+        process.argv = ['node', 'main.ts', '-p', 'proj', '-b', 'dev'];
+        const result = mainModule.parseBatchArgs();
+        expect(result).toEqual({ project: 'proj', branch: 'dev' });
+    });
+
+    it('returns empty object when no args', () => {
+        process.argv = ['node', 'main.ts'];
+        const result = mainModule.parseBatchArgs();
+        expect(result).toEqual({});
     });
 });

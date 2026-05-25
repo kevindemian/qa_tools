@@ -49,6 +49,23 @@ interface ConfigOverrides {
     logDir?: string;
     logMaxSize?: string | number;
     xdgStateHome?: string;
+    llmApiKey?: string;
+    llmModel?: string;
+    llmBaseUrl?: string;
+    llmSmallApiKey?: string;
+    llmSmallModel?: string;
+    llmFastApiKey?: string;
+    llmFastModel?: string;
+    llmFastBaseUrl?: string;
+    llmReviewApiKey?: string;
+    llmReviewModel?: string;
+    llmReviewBaseUrl?: string;
+    llmFallbackApiKey?: string;
+    llmFallbackModel?: string;
+    llmFallbackBaseUrl?: string;
+    llmBatchApiKey?: string;
+    llmBatchModel?: string;
+    llmBatchBaseUrl?: string;
 }
 
 function toBool(val: string | boolean | undefined): boolean {
@@ -169,6 +186,73 @@ class Config {
         return this.overrides.xdgStateHome ?? envVal('XDG_STATE_HOME');
     }
 
+    // ── LLM getters ────────────────────────────────────────────────────────
+
+    get llmApiKey(): string {
+        return this.overrides.llmApiKey ?? envVal('LLM_API_KEY');
+    }
+    get llmModel(): string {
+        return this.overrides.llmModel ?? envVal('LLM_MODEL', 'google/gemini-2.0-flash-exp');
+    }
+    get llmBaseUrl(): string {
+        return this.overrides.llmBaseUrl ?? envVal('LLM_BASE_URL', 'https://openrouter.ai/api/v1');
+    }
+    get llmSmallApiKey(): string {
+        return this.overrides.llmSmallApiKey ?? envVal('LLM_SMALL_API_KEY');
+    }
+    get llmSmallModel(): string {
+        return this.overrides.llmSmallModel ?? envVal('LLM_SMALL_MODEL', 'gemini-2.0-flash-lite');
+    }
+
+    // ── Fast (Groq) ──────────────────────────────────────────────────────
+    get llmFastApiKey(): string {
+        return this.overrides.llmFastApiKey ?? envVal('LLM_FAST_API_KEY');
+    }
+    get llmFastModel(): string {
+        return this.overrides.llmFastModel ?? envVal('LLM_FAST_MODEL', 'llama3-8b-8192');
+    }
+    get llmFastBaseUrl(): string {
+        return this.overrides.llmFastBaseUrl ?? envVal('LLM_FAST_BASE_URL', 'https://api.groq.com/openai/v1');
+    }
+
+    // ── Reviewer (Gemini Pro) ────────────────────────────────────────────
+    get llmReviewApiKey(): string {
+        return this.overrides.llmReviewApiKey ?? envVal('LLM_REVIEW_API_KEY');
+    }
+    get llmReviewModel(): string {
+        return this.overrides.llmReviewModel ?? envVal('LLM_REVIEW_MODEL', 'gemini-2.0-flash-exp');
+    }
+    get llmReviewBaseUrl(): string {
+        return (
+            this.overrides.llmReviewBaseUrl ??
+            envVal('LLM_REVIEW_BASE_URL', 'https://generativelanguage.googleapis.com/v1beta')
+        );
+    }
+
+    // ── Fallback (NVIDIA NIM) ────────────────────────────────────────────
+    get llmFallbackApiKey(): string {
+        return this.overrides.llmFallbackApiKey ?? envVal('LLM_FALLBACK_API_KEY');
+    }
+    get llmFallbackModel(): string {
+        return this.overrides.llmFallbackModel ?? envVal('LLM_FALLBACK_MODEL', 'meta/llama3-70b-instruct');
+    }
+    get llmFallbackBaseUrl(): string {
+        return (
+            this.overrides.llmFallbackBaseUrl ?? envVal('LLM_FALLBACK_BASE_URL', 'https://integrate.api.nvidia.com/v1')
+        );
+    }
+
+    // ── Batch (GitHub Models) ────────────────────────────────────────────
+    get llmBatchApiKey(): string {
+        return this.overrides.llmBatchApiKey ?? envVal('LLM_BATCH_API_KEY');
+    }
+    get llmBatchModel(): string {
+        return this.overrides.llmBatchModel ?? envVal('LLM_BATCH_MODEL', 'gpt-4o-mini');
+    }
+    get llmBatchBaseUrl(): string {
+        return this.overrides.llmBatchBaseUrl ?? envVal('LLM_BATCH_BASE_URL', 'https://models.inference.ai.azure.com');
+    }
+
     get(key: string): string | undefined {
         ensureDotenv();
         return process.env[key];
@@ -273,6 +357,61 @@ class Config {
         return Config.defaultInstance.xdgStateHome;
     }
 
+    // ── Static LLM API ─────────────────────────────────────────────────
+
+    static get llmApiKey(): string {
+        return Config.defaultInstance.llmApiKey;
+    }
+    static get llmModel(): string {
+        return Config.defaultInstance.llmModel;
+    }
+    static get llmBaseUrl(): string {
+        return Config.defaultInstance.llmBaseUrl;
+    }
+    static get llmSmallApiKey(): string {
+        return Config.defaultInstance.llmSmallApiKey;
+    }
+    static get llmSmallModel(): string {
+        return Config.defaultInstance.llmSmallModel;
+    }
+
+    static get llmFastApiKey(): string {
+        return Config.defaultInstance.llmFastApiKey;
+    }
+    static get llmFastModel(): string {
+        return Config.defaultInstance.llmFastModel;
+    }
+    static get llmFastBaseUrl(): string {
+        return Config.defaultInstance.llmFastBaseUrl;
+    }
+    static get llmReviewApiKey(): string {
+        return Config.defaultInstance.llmReviewApiKey;
+    }
+    static get llmReviewModel(): string {
+        return Config.defaultInstance.llmReviewModel;
+    }
+    static get llmReviewBaseUrl(): string {
+        return Config.defaultInstance.llmReviewBaseUrl;
+    }
+    static get llmFallbackApiKey(): string {
+        return Config.defaultInstance.llmFallbackApiKey;
+    }
+    static get llmFallbackModel(): string {
+        return Config.defaultInstance.llmFallbackModel;
+    }
+    static get llmFallbackBaseUrl(): string {
+        return Config.defaultInstance.llmFallbackBaseUrl;
+    }
+    static get llmBatchApiKey(): string {
+        return Config.defaultInstance.llmBatchApiKey;
+    }
+    static get llmBatchModel(): string {
+        return Config.defaultInstance.llmBatchModel;
+    }
+    static get llmBatchBaseUrl(): string {
+        return Config.defaultInstance.llmBatchBaseUrl;
+    }
+
     static get(key: string): string | undefined {
         return Config.defaultInstance.get(key);
     }
@@ -288,4 +427,4 @@ class Config {
 
 Config.load();
 
-export = Config;
+export default Config;

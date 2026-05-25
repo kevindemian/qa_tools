@@ -241,4 +241,4 @@ class CsvResource {
     }
 }
 
-export = CsvResource;
+export default CsvResource;

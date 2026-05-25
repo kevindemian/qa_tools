@@ -95,7 +95,7 @@ function buildContext() {
     ctx.inMemoryTasksId = ['IMT-1', 'IMT-2'];
     ctx.inMemoryTasksText = ['Memory Test 1', 'Memory Test 2'];
     ctx.createPackageManager = jest.fn((dir: string) => {
-        const PackageVersionManager = require('../jira_management/package_version_manager');
+        const { default: PackageVersionManager } = require('../jira_management/package_version_manager');
         return new PackageVersionManager(dir);
     });
     return {

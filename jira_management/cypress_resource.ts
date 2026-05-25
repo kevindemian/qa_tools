@@ -75,4 +75,4 @@ class CypressResource {
     }
 }
 
-export = CypressResource;
+export default CypressResource;

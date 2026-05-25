@@ -1,0 +1,145 @@
+jest.mock('../../shared/prompt', () => ({
+    success: jest.fn(),
+    error: jest.fn(),
+    warn: jest.fn(),
+    info: jest.fn(),
+    title: jest.fn(),
+    divider: jest.fn(),
+    ask: jest.fn().mockResolvedValue(''),
+    askConfirm: jest.fn().mockResolvedValue(true),
+    printError: jest.fn(),
+    tableView: jest.fn(),
+    withSpinner: jest.fn((_label: string, fn: () => Promise<unknown>) => fn()),
+}));
+
+jest.mock('../../shared/result_parser', () => ({
+    parseCypressResults: jest.fn(),
+}));
+
+jest.mock('../../shared/report-generator', () => ({
+    generateHtmlReport: jest.fn(),
+}));
+
+jest.mock('../../shared/failure-analysis', () => ({
+    analyzeFailures: jest.fn(),
+}));
+
+jest.mock('../../shared/logger', () => ({
+    rootLogger: {
+        error: jest.fn(),
+        child: jest.fn().mockReturnValue({ info: jest.fn(), error: jest.fn(), warn: jest.fn() }),
+    },
+}));
+
+jest.mock('fs');
+
+const mockSessionContext: Record<string, unknown> = {
+    inMemoryTasksId: [],
+    inMemoryTasksText: [],
+    sessionCounters: [],
+    project_name: 'TEST',
+    isBusy: false,
+    results: [],
+    lastOperation: '',
+    createPackageManager: jest.fn(),
+};
+
+const baseContext = {
+    jiraResource: {},
+    jiraResourceXray: {},
+    linkManager: {},
+    linkManagerXray: {},
+    csvResource: {},
+    ctx: mockSessionContext,
+    pushHistory: jest.fn(),
+    printSessionSummary: jest.fn(),
+    base_url: 'https://jira.test.com',
+    sessionLog: { child: jest.fn().mockReturnValue({ info: jest.fn(), error: jest.fn() }) },
+};
+
+beforeEach(() => {
+    jest.clearAllMocks();
+});
+
+describe('case17 — HTML report generator', () => {
+    it('generates report successfully', async () => {
+        const prompt = require('../../shared/prompt');
+        const parser = require('../../shared/result_parser');
+        const reportGen = require('../../shared/report-generator');
+        const fs = require('fs');
+
+        prompt.ask.mockResolvedValueOnce('/path/to/report.json').mockResolvedValueOnce('');
+
+        parser.parseCypressResults.mockReturnValueOnce({
+            tests: [{ title: 'Test 1', state: 'passed', duration: 100 }],
+            stats: { passed: 1, failed: 0, skipped: 0, total: 1, duration: 100 },
+        });
+
+        reportGen.generateHtmlReport.mockReturnValueOnce('<html>report</html>');
+        fs.writeFileSync.mockImplementationOnce(jest.fn());
+
+        const mod = require('./case17');
+        await mod.handler(baseContext);
+
+        expect(parser.parseCypressResults).toHaveBeenCalledWith('/path/to/report.json');
+        expect(reportGen.generateHtmlReport).toHaveBeenCalled();
+        expect(fs.writeFileSync).toHaveBeenCalled();
+        expect(baseContext.pushHistory).toHaveBeenCalledWith('html-report', expect.stringContaining('1 testes'), 'ok');
+    });
+
+    it('includes failure analysis when there are failures and user confirms', async () => {
+        const prompt = require('../../shared/prompt');
+        const parser = require('../../shared/result_parser');
+        const reportGen = require('../../shared/report-generator');
+        const analysis = require('../../shared/failure-analysis');
+        const fs = require('fs');
+
+        prompt.ask.mockResolvedValueOnce('/path/to/report.json').mockResolvedValueOnce('');
+        prompt.askConfirm.mockResolvedValueOnce(true);
+
+        parser.parseCypressResults.mockReturnValueOnce({
+            tests: [
+                { title: 'Pass', state: 'passed', duration: 100 },
+                { title: 'Fail', state: 'failed', duration: 50 },
+            ],
+            stats: { passed: 1, failed: 1, skipped: 0, total: 2, duration: 150 },
+        });
+
+        reportGen.generateHtmlReport.mockReturnValueOnce('<html>report</body></html>');
+        analysis.analyzeFailures.mockResolvedValueOnce('Root cause analysis');
+        fs.writeFileSync.mockImplementationOnce(jest.fn());
+
+        const mod = require('./case17');
+        await mod.handler(baseContext);
+
+        expect(prompt.askConfirm).toHaveBeenCalled();
+        expect(analysis.analyzeFailures).toHaveBeenCalled();
+    });
+
+    it('handles parse error gracefully', async () => {
+        const prompt = require('../../shared/prompt');
+        const parser = require('../../shared/result_parser');
+
+        prompt.ask.mockResolvedValueOnce('/path/to/bad.json');
+        parser.parseCypressResults.mockReturnValueOnce({
+            tests: [],
+            stats: { passed: 0, failed: 0, skipped: 0, total: 0, duration: 0 },
+            error: 'Arquivo não encontrado',
+        });
+
+        const mod = require('./case17');
+        await mod.handler(baseContext);
+
+        expect(prompt.printError).toHaveBeenCalled();
+    });
+
+    it('handles empty file path', async () => {
+        const prompt = require('../../shared/prompt');
+        prompt.ask.mockResolvedValueOnce('');
+
+        const mod = require('./case17');
+        await mod.handler(baseContext);
+
+        expect(prompt.printError).toHaveBeenCalled();
+    });
+});

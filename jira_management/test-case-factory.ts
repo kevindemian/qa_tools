@@ -69,4 +69,4 @@ class TestCaseFactory {
     }
 }
 
-export = TestCaseFactory;
+export default TestCaseFactory;

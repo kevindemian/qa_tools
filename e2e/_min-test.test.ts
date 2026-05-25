@@ -36,7 +36,7 @@ describe('case04', () => {
     });
 
     it('happy path', async () => {
-        const JiraResource = require('../jira_management/jira_resource');
+        const { default: JiraResource } = require('../jira_management/jira_resource');
         const API = 'http://localhost:1999/rest/api/2';
         const api = nock(API).defaultReplyHeaders({ 'Content-Type': 'application/json' });
         // updateFixVersions is called PER TASK in the handler's for loop

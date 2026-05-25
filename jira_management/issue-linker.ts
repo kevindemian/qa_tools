@@ -104,4 +104,4 @@ class IssueLinker {
     }
 }
 
-export = IssueLinker;
+export default IssueLinker;

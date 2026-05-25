@@ -1,8 +1,7 @@
 import { printError } from '../../shared/prompt';
 import type { CommandContext } from './context';
 // anti-circular (prompt → create_tests → session-context → prompt)
-// eslint-disable-next-line @typescript-eslint/no-require-imports
-import createTests = require('../create_tests');
+import createTests from '../create_tests';
 
 export async function createTestExecutionWithLinksWrapper(
     c: CommandContext,
