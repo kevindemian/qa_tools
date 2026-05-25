@@ -117,6 +117,12 @@ function saveCheckpoint(
     });
 }
 
+const BATCH_SIZE = 50;
+
+function yieldToEventLoop(): Promise<void> {
+    return new Promise((resolve) => setImmediate(resolve));
+}
+
 function updateFinalState(sourceType: string, sourcePath: string, projectName: string, jiraLabels: string[]): void {
     const stateUpdate: Record<string, unknown> = { lastLabels: jiraLabels.join(',') };
     if (sourceType === 'json') {
@@ -177,6 +183,19 @@ async function executeTestCreationLoop(
         const testStatus = linkState.errored ? 'error' : 'ok';
         if (!isQuiet()) print('  -> ' + baseUrl + '/browse/' + createdTestIssue.key);
         results.push({ status: testStatus, label: testTitle, message: '' });
+
+        // Batch: yield to event loop every BATCH_SIZE items to prevent OOM
+        if ((t - resumeFrom + 1) % BATCH_SIZE === 0 && t < tests.length - 1) {
+            if (!isQuiet())
+                info(
+                    'Processados ' +
+                        (t - resumeFrom + 1) +
+                        '/' +
+                        tests.length +
+                        ' testes. Pausa para liberar memória...',
+                );
+            await yieldToEventLoop();
+        }
     }
 }
 
