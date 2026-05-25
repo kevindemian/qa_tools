@@ -129,19 +129,15 @@ LLM_SMALL_MODEL=gemini-2.0-flash-lite           # default
 
 ---
 
-## DÉBITO-001 — OOM em criação de massa (>500 testes)
+## ✅ DÉBITO-001 — OOM em criação de massa (CONCLUÍDO)
 
-**Prioridade:** P2
+**Data:** 2026-05-25
 
-**Problema:** `createTestsFromCsv()` carrega todos os testes em memória. Com >500 testes, o processo estoura heap (512MB default Node).
-
-**Solução proposta:** Processamento em lotes de 50 com `setImmediate()` ou `p-limit`.
-
-**Arquivos:** `create_tests.ts`, `import-loop.ts`
+**Solução:** `BATCH_SIZE=50` com `setImmediate()` em `executeTestCreationLoop` (`import-loop.ts:148`). Yield a cada 50 itens libera event loop e previne heap overflow.
 
 ---
 
-## [NEW FEATURE] DÉBITO-002 — WEB_STYLE.md não implementado
+## [NEW FEATURE] WEB_STYLE.md (PENDENTE)
 
 **Prioridade:** P3
 
@@ -215,15 +211,165 @@ LLM_SMALL_MODEL=gemini-2.0-flash-lite           # default
 
 ---
 
-## 🔷 Fase de Expansão de Testes (PLANEJADA)
+## ✅ Fase de Expansão de Testes (CONCLUÍDA)
 
-**Prioridade:** P0 (R1 obriga cobertura)
+**Data:** 2026-05-25
 
-### Dependências
+**Resultado:** 997 testes, 47 suites. Cobertura expandida para case01 (onBusy + exec flow), case04 (manual + sprint), case15 (relative path), case12 (branches HTTP/network), case13 (user decline). Novo `helpers.test.ts` (error path). showHelpLoop/showDocs edge cases.
 
-1. **F4**: Extrair `dispatchChoice` de `runMainLoop` (SRP + testabilidade)
-2. **F5**: Unit tests para handlers com cobertura insuficiente (case01, case12, case04, case07, case10, case11, case13, case15)
-3. **F3**: Testes para `showDocs()`, `showHelpLoop()`, e menu integrado
+**Verificação final:**
+
+| Comando                                                     | Saída esperada |
+| ----------------------------------------------------------- | -------------- |
+| `npx tsc --noEmit`                                          | ✅ 0 erros     |
+| `npx jest --no-coverage`                                    | ✅ 997/997     |
+| `grep -rn "throw '" shared/ jira_management/ git_triggers/` | ✅ zero        |
+| `grep -rn ".only(" **/*.test.*`                             | ✅ zero        |
+
+---
+
+## [NEW FEATURE] QA Reports & Analytics — Relatórios, Métricas e Cobertura
+
+**Prioridade:** P1
+
+**Motivação:** Análise de mercado (TestRail, Katalon, Zephyr, TestComplete, Ranorex) revelou lacunas em relatórios visuais, histórico de execuções e visibilidade de cobertura — funcionalidades de alto valor que o time não tem.
+
+**Abordagem:** Incremental, zero dependências novas (HTML inline + JSON local).
+
+### Arquitetura Geral
+
+```
+┌─ Report Generator ─────────────────────┐
+│  parseResult → HTML auto-contido       │
+│  (stats, charts, falhas, duração)      │
+└──────────────────────┬─────────────────┘
+                       │ alimenta
+┌─ Metrics Collector ──▼─────────────────┐
+│  history.json (state.ts)               │
+│  • timestamp, branch, pass/fail/skip   │
+│  • duração, ambiente                   │
+│  → trend analysis, flakiness           │
+└──────────────────────┬─────────────────┘
+                       │ cruza com
+┌─ Coverage Analyzer ─▼──────────────────┐
+│  Jira issues × test mapping files      │
+│  • gaps por epic/componente            │
+│  • status da última execução           │
+└────────────────────────────────────────┘
+```
+
+### 🔶 Fase 1 — Report Generator (`shared/report-generator.ts`)
+
+**Esforço:** 2-3 dias
+
+Gerar HTML auto-contido a partir de `ParseResult` e `MatchResult`:
+
+- Template inline com CSS + JS Chart (SVG/Canvas, zero deps)
+- Seções: sumário (pass/fail/skip/duration), tabela de testes, detalhe de falhas
+- Suporte a execução única e comparativo (diff entre 2 runs)
+- Saída: arquivo `.html` no diretório de execução
+
+**Inputs existentes:**
+| Tipo | Fonte |
+|------|-------|
+| `ParseResult` | `shared/result_parser.ts` |
+| `MatchResult` | `jira_management/result_reporter.ts` |
+| `FlatTest[]` | `shared/result_parser.ts` |
+
+**Arquivos:**
+
+| Arquivo                                | Ação                  |
+| -------------------------------------- | --------------------- |
+| `shared/report-generator.ts`           | Criar                 |
+| `shared/report-generator.test.ts`      | Criar                 |
+| `shared/report-templates/default.html` | Criar (template base) |
+| `BACKLOG.md`                           | Este plano            |
+
+### 🔶 Fase 2 — Metrics Collector (`shared/metrics.ts`)
+
+**Esforço:** 2-3 dias
+
+Histórico local de execuções com persistência via `state.ts`:
+
+```typescript
+interface RunRecord {
+    id: string;
+    timestamp: string;
+    branch: string;
+    provider: string; // 'github' | 'gitlab' | 'manual'
+    passed: number;
+    failed: number;
+    skipped: number;
+    duration: number;
+    pipelineId?: string;
+    reportPath?: string; // link para HTML gerado na Fase 1
+}
+```
+
+- `recordRun(data)`: persiste no history.json via `state.ts`
+- `getHistory({ limit, branch, since })`: consulta com filtros
+- `getFlakyTests(threshold)`: detecta testes que falham >N% das execuções
+- `getTrend(days)`: agregação diária para charts
+
+**Arquivos:**
+
+| Arquivo                  | Ação       |
+| ------------------------ | ---------- |
+| `shared/metrics.ts`      | Criar      |
+| `shared/metrics.test.ts` | Criar      |
+| `BACKLOG.md`             | Este plano |
+
+### 🔶 Fase 3 — Coverage Analyzer (`jira_management/coverage.ts`)
+
+**Esforço:** 2-3 dias
+
+Cruzar issues do Jira com mapping files de teste:
+
+```typescript
+interface CoverageItem {
+    issueKey: string;
+    summary: string;
+    issueType: string;
+    epic?: string;
+    component?: string;
+    hasTest: boolean;
+    testKeys: string[];
+    lastStatus?: 'passed' | 'failed' | 'skipped';
+    lastRun?: string;
+}
+```
+
+- `getCoverageMatrix(jiraResource, mappingPath)`: retorna matriz completa
+- `getGaps(jiraResource, mappingPath, { epic?, component? })`: issues sem teste
+- `getEpicCoverage(jiraResource, mappingPath)`: cobertura agregada por epic
+- Saída TUI via `tableView()` + opção HTML via Fase 1
+
+**Arquivos:**
+
+| Arquivo                            | Ação       |
+| ---------------------------------- | ---------- |
+| `jira_management/coverage.ts`      | Criar      |
+| `jira_management/coverage.test.ts` | Criar      |
+| `BACKLOG.md`                       | Este plano |
+
+### 🔶 Fase 4 — Comandos no Menu (`jira_management/main.ts`)
+
+**Esforço:** 1 dia
+
+Novas opções no menu principal:
+
+| ID   | Nome                   | Ação                               |
+| ---- | ---------------------- | ---------------------------------- |
+| `17` | Gerar relatório HTML   | Roda Fase 1 sobre último resultado |
+| `18` | Histórico de execuções | Roda Fase 2 → `tableView`          |
+| `19` | Análise de cobertura   | Roda Fase 3 → `tableView` + HTML   |
+
+### 🔶 Fase 5 — Expansão
+
+- **Flakiness Dashboard**: highlight testes com >30% falhas no histórico
+- **Coverage Trends**: chart de cobertura ao longo do tempo (Fase 1 + Fase 3)
+- **Comparativo Runs**: diff entre duas execuções no HTML report
+- **Export CSV/PDF**: exportar métricas para compartilhamento
 
 ### Verificação final
 
@@ -233,3 +379,19 @@ LLM_SMALL_MODEL=gemini-2.0-flash-lite           # default
 | `npx jest --no-coverage`                                    | 100% pass      |
 | `grep -rn "throw '" shared/ jira_management/ git_triggers/` | zero           |
 | `grep -rn ".only(" **/*.test.*`                             | zero           |
+
+### Dependências entre fases
+
+```
+Fase 1 (Report) ──────── independente
+Fase 2 (Metrics) ─────── independente
+Fase 3 (Coverage) ────── depende de JiraResource (já existe)
+Fase 4 (Menu) ────────── depende de F1 + F2 + F3
+Fase 5 (Expansão) ────── depende de F1 + F2 + F3
+```
+
+### Considerações
+
+- **Fases 1 e 2** podem rodar em paralelo por não terem dependências entre si
+- **Fase 3** já está pronta para começar (JiraResource existe e tem testes)
+- Todas as fases seguem R1 (cada .ts novo precisa de .test.ts)
