@@ -25,7 +25,8 @@ Ao iniciar, um menu interativo é exibido. O usuário seleciona um projeto (mape
 | 7   | Nivelar branches (main → rel_cand → dev) |
 | 8   | Exportar variáveis CI/CD                 |
 | 9   | Trocar de projeto                        |
-| 0   | Sair                                     |
+| a   | Dashboard flakiness (HTML)               |
+| 0   | Voltar ao menu principal                 |
 
 ---
 
@@ -273,7 +274,7 @@ O estado é salvo em `~/.local/state/qa-tools/state.json` (ou `$XDG_STATE_HOME/q
 
 Gera descrição de Pull Request / Merge Request automaticamente a partir do diff entre branches usando IA (tier **fast**).
 
-**Quando ocorre:** acionado via `e2e/smoke-llm.ts` ou integrado em fluxo CI.
+**Quando ocorre:** Sub-prompt da opção 4 (Criar MR/PR) — pergunta "Gerar descrição com IA?"
 
 ### Fluxo
 
@@ -293,7 +294,7 @@ Gera descrição de Pull Request / Merge Request automaticamente a partir do dif
 
 Analisa o impacto de alterações nos testes existentes usando o diff entre branches (tier **fast**).
 
-**Quando ocorre:** Menu → Opção de impacto de testes (pós-pipeline)
+**Quando ocorre:** Sub-prompt da opção 4 (Criar MR/PR) — pergunta "Analisar impacto nos testes com IA?"
 
 ### Fluxo
 

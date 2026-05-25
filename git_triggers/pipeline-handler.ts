@@ -5,6 +5,7 @@ import { print, success, warn, info, title, prompt, confirm, printError, withSpi
 import { load as loadState, update as updateState } from '../shared/state';
 import { sleep } from '../shared/http-client';
 import { SessionContext } from '../shared/session-context';
+import Config from '../shared/config';
 import type { ParseResult } from '../shared/result_parser';
 import type { PipelineTriggerResult } from '../shared/types';
 import type { GitProvider } from '../shared/types';
@@ -18,6 +19,8 @@ import {
 } from './test-results';
 import { offerPipelineFailureAnalysis } from './llm-pipeline';
 import { currentProvider, pushHistory, setIsBusy, MSG_OPERATION_CANCELED } from './session-state';
+import JiraResource from '../jira_management/jira_resource';
+import type { AnalysisReport } from '../shared/failure-analysis';
 
 export function isComplete(status: string): boolean {
     return ['success', 'failed', 'canceled', 'skipped'].includes(status);
@@ -90,7 +93,26 @@ async function _postPipeline(
         parsed = await collectTestResults(m, pipelineId, branch, projectName);
     }
     if (parsed) {
-        await offerPipelineFailureAnalysis(parsed);
+        await offerPipelineFailureAnalysis(parsed, async (report: AnalysisReport) => {
+            const jira = __jiraEnv();
+            if (!jira || !confirm('Criar issue no Jira com o resumo das falhas?', false)) return;
+            try {
+                const jiraRes = new JiraResource(jira.token, jira.base + '/rest/api/2');
+                const result = await jiraRes.postJiraResource('issue', {
+                    fields: {
+                        project: { key: Config.jiraProject || 'ECSPOL' },
+                        summary: 'Análise de falhas — pipeline #' + pipelineId,
+                        description: report.content,
+                        issuetype: { name: 'Bug' },
+                    },
+                });
+                success('Issue Jira criada: ' + jira.base + '/browse/' + String(result.key));
+                pushHistory('create-jira-issue', String(result.key), 'ok');
+            } catch (err) {
+                printError('Falha ao criar issue no Jira', err);
+                pushHistory('create-jira-issue', pipelineId + '', 'error');
+            }
+        });
     }
     if (pollStatus !== 'success') return;
     if (confirm('Criar merge request de ' + branch + ' para?', false)) {
