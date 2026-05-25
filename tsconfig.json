@@ -1,28 +1,26 @@
 {
-  "compilerOptions": {
-    "target": "ES2020",
-    "module": "node16",
-    "moduleResolution": "node16",
-    "allowJs": false,
-    "noEmit": true,
-    "strict": true,
-    "noImplicitReturns": true,
-    "esModuleInterop": true,
-    "skipLibCheck": true,
-    "forceConsistentCasingInFileNames": true,
-    "resolveJsonModule": true,
-    "isolatedModules": true,
-    "types": ["node", "jest"]
-  },
-  "include": [
-    "jest-setup.ts",
-    "shared/**/*.ts",
-    "jira_management/**/*.ts",
-    "git_triggers/**/*.ts",
-    "docs/**/*.ts",
-    "e2e/**/*.ts"
-  ],
-  "exclude": [
-    "node_modules"
-  ]
+    "compilerOptions": {
+        "target": "ES2020",
+        "module": "node16",
+        "moduleResolution": "node16",
+        "allowJs": false,
+        "noEmit": true,
+        "strict": true,
+        "noImplicitReturns": true,
+        "esModuleInterop": true,
+        "skipLibCheck": true,
+        "forceConsistentCasingInFileNames": true,
+        "resolveJsonModule": true,
+        "isolatedModules": true,
+        "types": ["node", "jest"]
+    },
+    "include": [
+        "jest-setup.ts",
+        "shared/**/*.ts",
+        "jira_management/**/*.ts",
+        "git_triggers/**/*.ts",
+        "docs/**/*.ts",
+        "e2e/**/*.ts"
+    ],
+    "exclude": ["node_modules", "docs-archive"]
 }

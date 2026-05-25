@@ -58,6 +58,6 @@ module.exports = tseslint.config(
             '@typescript-eslint/no-require-imports': 'off',
         },
     },
-    { ignores: ['node_modules/', '**/*.js'] },
+    { ignores: ['node_modules/', 'docs-archive/', '**/*.js'] },
     prettier,
 );
