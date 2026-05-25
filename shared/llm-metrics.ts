@@ -1,0 +1,119 @@
+import fs from 'fs';
+import path from 'path';
+import os from 'os';
+import Config from './config';
+import { rootLogger } from './logger';
+import type { LlmTier } from './llm-client';
+
+export interface LlmMetricsSnapshot {
+    timestamp: string;
+    totalRequests: number;
+    rejectedByValidator: number;
+    retryCount: number;
+    avgConfidence: number;
+    avgLatencyMs: number;
+    failuresByTier: Partial<Record<LlmTier, number>>;
+    rejectionReasons: Record<string, number>;
+}
+
+interface StoredMetrics {
+    snapshots: LlmMetricsSnapshot[];
+}
+
+function storePath(): string {
+    const xdg = Config.xdgStateHome;
+    const base = xdg ? path.join(xdg, 'qa-tools') : path.join(os.homedir(), '.local', 'state', 'qa-tools');
+    return path.join(base, 'llm-metrics.json');
+}
+
+function loadStore(): StoredMetrics {
+    try {
+        const p = storePath();
+        if (!fs.existsSync(p)) return { snapshots: [] };
+        return JSON.parse(fs.readFileSync(p, 'utf8')) as StoredMetrics;
+    } catch {
+        return { snapshots: [] };
+    }
+}
+
+function saveStore(store: StoredMetrics): void {
+    try {
+        const p = storePath();
+        fs.mkdirSync(path.dirname(p), { recursive: true });
+        const tmp = p + '.tmp';
+        fs.writeFileSync(tmp, JSON.stringify(store, null, 2), 'utf8');
+        fs.renameSync(tmp, p);
+    } catch (err) {
+        rootLogger.warn('Failed to persist LLM metrics: ' + (err as Error).message);
+    }
+}
+
+let _totalRequests = 0;
+let _rejectedByValidator = 0;
+let _retryCount = 0;
+let _confidenceSum = 0;
+let _confidenceCount = 0;
+let _latencySum = 0;
+let _latencyCount = 0;
+const _failuresByTier: Partial<Record<LlmTier, number>> = {};
+const _rejectionReasons: Record<string, number> = {};
+
+export function recordLlmRequest(tier: LlmTier, latencyMs: number): void {
+    _totalRequests++;
+    _latencySum += latencyMs;
+    _latencyCount++;
+}
+
+export function recordLlmFailure(tier: LlmTier): void {
+    _failuresByTier[tier] = (_failuresByTier[tier] || 0) + 1;
+}
+
+export function recordValidationRejection(reason: string): void {
+    _rejectedByValidator++;
+    _rejectionReasons[reason] = (_rejectionReasons[reason] || 0) + 1;
+}
+
+export function recordRetry(): void {
+    _retryCount++;
+}
+
+export function recordConfidence(confidence: 'high' | 'medium' | 'low'): void {
+    const value = confidence === 'high' ? 1 : confidence === 'medium' ? 0.5 : 0;
+    _confidenceSum += value;
+    _confidenceCount++;
+}
+
+export function snapshotLlmMetrics(): LlmMetricsSnapshot {
+    const snapshot: LlmMetricsSnapshot = {
+        timestamp: new Date().toISOString(),
+        totalRequests: _totalRequests,
+        rejectedByValidator: _rejectedByValidator,
+        retryCount: _retryCount,
+        avgConfidence: _confidenceCount > 0 ? _confidenceSum / _confidenceCount : 0,
+        avgLatencyMs: _latencyCount > 0 ? Math.round(_latencySum / _latencyCount) : 0,
+        failuresByTier: { ..._failuresByTier },
+        rejectionReasons: { ..._rejectionReasons },
+    };
+
+    const store = loadStore();
+    store.snapshots.push(snapshot);
+    saveStore(store);
+
+    return snapshot;
+}
+
+export function getLlmMetricsHistory(): LlmMetricsSnapshot[] {
+    return loadStore().snapshots;
+}
+
+export function clearLlmMetrics(): void {
+    _totalRequests = 0;
+    _rejectedByValidator = 0;
+    _retryCount = 0;
+    _confidenceSum = 0;
+    _confidenceCount = 0;
+    _latencySum = 0;
+    _latencyCount = 0;
+    for (const key of Object.keys(_failuresByTier)) delete _failuresByTier[key as LlmTier];
+    for (const key of Object.keys(_rejectionReasons)) delete _rejectionReasons[key];
+}

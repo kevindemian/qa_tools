@@ -4,6 +4,9 @@ import { rootLogger } from './logger';
 export interface ReportOptions {
     title?: string;
     includeChart?: boolean;
+    llmAnalysis?: string;
+    llmConfidence?: 'high' | 'medium' | 'low';
+    llmFallback?: boolean;
 }
 
 interface ReportStats {
@@ -88,6 +91,10 @@ tr:hover { background: #f9fafb; }
 }
 
 export function generateHtmlReport(tests: FlatTest[], options?: ReportOptions): string {
+    return generateReportWithFallback(tests, options);
+}
+
+export function generateReportWithFallback(tests: FlatTest[], options?: ReportOptions): string {
     try {
         const stats = statsFromTests(tests);
         const title = options?.title || DEFAULT_TITLE;
@@ -120,6 +127,29 @@ export function generateHtmlReport(tests: FlatTest[], options?: ReportOptions): 
             pct(stats.passed, stats.total) +
             '%</div></div>';
         html += '</div>';
+
+        if (options?.llmAnalysis) {
+            html += '<div class="chart-box">';
+            html += '<div class="label" style="margin-bottom:8px">Análise IA</div>';
+            if (options.llmFallback) {
+                html +=
+                    '<p style="color:#ca8a04;font-size:0.8rem">⚠ Análise IA indisponível — exibindo relatório template.</p>';
+            } else if (options.llmConfidence) {
+                const badge =
+                    options.llmConfidence === 'high' ? '🟢' : options.llmConfidence === 'medium' ? '🟡' : '🔴';
+                html +=
+                    '<p style="font-size:0.8rem;margin-bottom:8px">Confiança: ' +
+                    badge +
+                    ' ' +
+                    options.llmConfidence +
+                    '</p>';
+            }
+            html +=
+                '<pre style="white-space:pre-wrap;font-family:inherit;margin:0">' +
+                escapeHtml(options.llmAnalysis) +
+                '</pre>';
+            html += '</div>';
+        }
 
         if (options?.includeChart !== false && stats.total > 0) {
             html += '<div class="chart-box"><div class="label" style="margin-bottom:4px">Distribution</div>';

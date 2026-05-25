@@ -1,7 +1,8 @@
 import { offerPipelineFailureAnalysis } from './llm-pipeline';
-import { analyzeFailures } from '../shared/failure-analysis';
 
-jest.mock('../shared/failure-analysis');
+jest.mock('../shared/failure-analysis', () => ({
+    analyzeFailuresWithReport: jest.fn(),
+}));
 
 jest.mock('../shared/prompt', () => ({
     confirm: jest.fn(),
@@ -14,8 +15,15 @@ jest.mock('../shared/prompt', () => ({
 }));
 
 const mockConfirm = require('../shared/prompt').confirm as jest.Mock;
-const mockAnalyzeFailures = analyzeFailures as jest.Mock;
+const mockAnalyzeFailures = require('../shared/failure-analysis').analyzeFailuresWithReport as jest.Mock;
 const mockSuccess = require('../shared/prompt').success as jest.Mock;
+
+const mockReport = {
+    content: '**Análise:** os testes falharam por timeout.',
+    htmlReport: '<html>report</html>',
+    confidence: 'high' as const,
+    fallbackUsed: false,
+};
 
 describe('offerPipelineFailureAnalysis', () => {
     const baseParsed = {
@@ -48,9 +56,9 @@ describe('offerPipelineFailureAnalysis', () => {
         expect(mockAnalyzeFailures).not.toHaveBeenCalled();
     });
 
-    it('should call analyzeFailures and print success on analysis', async () => {
+    it('should call analyzeFailuresWithReport and print success on analysis', async () => {
         mockConfirm.mockReturnValue(true);
-        mockAnalyzeFailures.mockResolvedValue('**Análise:** os testes falharam por timeout.');
+        mockAnalyzeFailures.mockResolvedValue(mockReport);
 
         await offerPipelineFailureAnalysis(baseParsed);
         expect(mockAnalyzeFailures).toHaveBeenCalledWith(baseParsed.tests);
@@ -59,13 +67,13 @@ describe('offerPipelineFailureAnalysis', () => {
 
     it('should handle empty analysis response', async () => {
         mockConfirm.mockReturnValue(true);
-        mockAnalyzeFailures.mockResolvedValue('');
+        mockAnalyzeFailures.mockResolvedValue({ ...mockReport, content: '' });
 
         await offerPipelineFailureAnalysis(baseParsed);
         expect(mockAnalyzeFailures).toHaveBeenCalled();
     });
 
-    it('should handle analyzeFailures throwing', async () => {
+    it('should handle analyzeFailuresWithReport throwing', async () => {
         mockConfirm.mockReturnValue(true);
         mockAnalyzeFailures.mockRejectedValue(new Error('API error'));
 

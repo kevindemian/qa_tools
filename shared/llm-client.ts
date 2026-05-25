@@ -2,14 +2,17 @@ import crypto from 'crypto';
 import Config from './config';
 import { rootLogger } from './logger';
 
-export type LlmTier = 'main' | 'small' | 'fast' | 'reviewer' | 'fallback' | 'batch';
+export type LlmTier = 'main' | 'small' | 'fast' | 'reviewer' | 'report' | 'fallback' | 'batch';
 type ProviderFormat = 'openai' | 'gemini';
+type ResponseFormat = 'text' | 'json';
 
 interface ProviderConfig {
     apiKey: string;
     model: string;
     baseUrl: string;
     format: ProviderFormat;
+    temperature: number;
+    responseFormat?: ResponseFormat;
 }
 
 interface CacheEntry {
@@ -23,7 +26,13 @@ const cache = new Map<string, CacheEntry>();
 function tierToConfig(tier: LlmTier): ProviderConfig {
     switch (tier) {
         case 'main':
-            return { apiKey: Config.llmApiKey, model: Config.llmModel, baseUrl: Config.llmBaseUrl, format: 'openai' };
+            return {
+                apiKey: Config.llmApiKey,
+                model: Config.llmModel,
+                baseUrl: Config.llmBaseUrl,
+                format: 'openai',
+                temperature: 0.3,
+            };
         case 'small':
         case 'fast':
             return {
@@ -31,6 +40,7 @@ function tierToConfig(tier: LlmTier): ProviderConfig {
                 model: Config.llmFastModel,
                 baseUrl: Config.llmFastBaseUrl,
                 format: 'openai',
+                temperature: 0.1,
             };
         case 'reviewer':
             return {
@@ -38,6 +48,16 @@ function tierToConfig(tier: LlmTier): ProviderConfig {
                 model: Config.llmReviewModel || Config.llmSmallModel,
                 baseUrl: Config.llmReviewBaseUrl || 'https://generativelanguage.googleapis.com/v1beta',
                 format: 'gemini',
+                temperature: 0.2,
+            };
+        case 'report':
+            return {
+                apiKey: Config.llmApiKey,
+                model: Config.llmModel,
+                baseUrl: Config.llmBaseUrl,
+                format: 'openai',
+                temperature: 0.2,
+                responseFormat: 'json',
             };
         case 'fallback':
             return {
@@ -45,6 +65,7 @@ function tierToConfig(tier: LlmTier): ProviderConfig {
                 model: Config.llmFallbackModel,
                 baseUrl: Config.llmFallbackBaseUrl,
                 format: 'openai',
+                temperature: 0.3,
             };
         case 'batch':
             return {
@@ -52,6 +73,7 @@ function tierToConfig(tier: LlmTier): ProviderConfig {
                 model: Config.llmBatchModel,
                 baseUrl: Config.llmBatchBaseUrl,
                 format: 'openai',
+                temperature: 0.5,
             };
     }
 }
@@ -67,14 +89,25 @@ function cacheKey(tier: LlmTier, system: string, user: string): string {
         .digest('hex');
 }
 
-function buildOpenAiPayload(system: string, user: string, model: string): string {
-    return JSON.stringify({
+function buildOpenAiPayload(
+    system: string,
+    user: string,
+    model: string,
+    temperature?: number,
+    responseFormat?: ResponseFormat,
+): string {
+    const payload: Record<string, unknown> = {
         model,
+        temperature: temperature ?? 0.3,
         messages: [
             { role: 'system', content: system },
             { role: 'user', content: user },
         ],
-    });
+    };
+    if (responseFormat === 'json') {
+        payload.response_format = { type: 'json_object' };
+    }
+    return JSON.stringify(payload);
 }
 
 function buildGeminiPayload(system: string, user: string): string {
@@ -150,7 +183,7 @@ async function sendToProvider(cfg: ProviderConfig, system: string, user: string)
         return parseGeminiResponse(raw);
     }
 
-    const payload = buildOpenAiPayload(system, user, cfg.model);
+    const payload = buildOpenAiPayload(system, user, cfg.model, cfg.temperature, cfg.responseFormat);
     const url = cfg.baseUrl.replace(/\/+$/, '') + '/chat/completions';
     const resp = await fetchWithRetry(url, {
         method: 'POST',

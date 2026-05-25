@@ -1,68 +1,72 @@
 {
-  "name": "qa_tools",
-  "version": "",
-  "description": "QA automation tools for Jira/Xray, GitLab, and GitHub",
-  "main": "jira_management/main.ts",
-  "scripts": {
-    "setup": "bash setup.sh",
-    "test": "jest",
-    "test:coverage": "jest --coverage",
-    "typecheck": "tsc --noEmit",
-    "lint": "eslint . --ext .ts",
-    "format": "prettier --write '**/*.{ts,js,json,md}'",
-    "docs": "npx tsx docs/help-docs.ts",
-    "jira": "npx tsx jira_management/main.ts",
-    "git": "npx tsx git_triggers/main.ts",
-    "prepare": "husky"
-  },
-  "license": "ISC",
-  "type": "commonjs",
-  "dependencies": {
-    "@inquirer/confirm": "^6.0.13",
-    "@inquirer/input": "^5.0.13",
-    "@inquirer/select": "^5.1.5",
-    "adm-zip": "^0.5.17",
-    "axios": "^1.15.2",
-    "chalk": "^4.1.2",
-    "cli-progress": "^3.12.0",
-    "cli-table3": "^0.6.5",
-    "csv-parser": "^3.2.0",
-    "dotenv": "^17.4.2",
-    "figlet": "^1.11.0",
-    "glob": "^10.5.0",
-    "gradient-string": "^3.0.0",
-    "marked": "^18.0.4",
-    "ora": "^9.4.0",
-    "readline-sync": "^1.4.10"
-  },
-  "lint-staged": {
-    "*.ts": [
-      "eslint --fix",
-      "prettier --write"
-    ],
-    "*.js": [
-      "prettier --write"
-    ]
-  },
-  "devDependencies": {
-    "@eslint/js": "^10.0.1",
-    "@jest/globals": "^30.4.1",
-    "@types/adm-zip": "^0.5.8",
-    "@types/cli-progress": "^3.11.6",
-    "@types/figlet": "^1.7.0",
-    "@types/gradient-string": "^1.1.6",
-    "@types/jest": "^30.0.0",
-    "@types/node": "^25.9.1",
-    "eslint": "^10.4.0",
-    "eslint-config-prettier": "^10.1.8",
-    "husky": "^9.1.7",
-    "jest": "^30.4.2",
-    "lint-staged": "^17.0.5",
-    "nock": "^14.0.15",
-    "prettier": "^3.8.3",
-    "ts-jest": "^29.4.11",
-    "tsx": "^4.22.3",
-    "typescript": "^6.0.3",
-    "typescript-eslint": "^8.59.4"
-  }
+    "name": "qa_tools",
+    "version": "",
+    "description": "QA automation tools for Jira/Xray, GitLab, and GitHub",
+    "main": "jira_management/main.ts",
+    "scripts": {
+        "setup": "bash setup.sh",
+        "test": "jest",
+        "test:coverage": "jest --coverage",
+        "typecheck": "tsc --noEmit",
+        "lint": "eslint . --ext .ts",
+        "format": "prettier --write '**/*.{ts,js,json,md}'",
+        "docs": "npx tsx docs/help-docs.ts",
+        "jira": "npx tsx jira_management/main.ts",
+        "git": "npx tsx git_triggers/main.ts",
+        "smoke:github": "npx tsx e2e/smoke-github.ts",
+        "smoke:llm": "npx tsx e2e/smoke-llm.ts",
+        "smoke:pipeline": "E2E_PIPELINE=true npx tsx e2e/smoke-pipeline.ts",
+        "smoke": "npx tsx e2e/smoke-github.ts",
+        "prepare": "husky"
+    },
+    "license": "ISC",
+    "type": "commonjs",
+    "dependencies": {
+        "@inquirer/confirm": "^6.0.13",
+        "@inquirer/input": "^5.0.13",
+        "@inquirer/select": "^5.1.5",
+        "adm-zip": "^0.5.17",
+        "axios": "^1.15.2",
+        "chalk": "^4.1.2",
+        "cli-progress": "^3.12.0",
+        "cli-table3": "^0.6.5",
+        "csv-parser": "^3.2.0",
+        "dotenv": "^17.4.2",
+        "figlet": "^1.11.0",
+        "glob": "^10.5.0",
+        "gradient-string": "^3.0.0",
+        "marked": "^18.0.4",
+        "ora": "^9.4.0",
+        "readline-sync": "^1.4.10"
+    },
+    "lint-staged": {
+        "*.ts": [
+            "eslint --fix",
+            "prettier --write"
+        ],
+        "*.js": [
+            "prettier --write"
+        ]
+    },
+    "devDependencies": {
+        "@eslint/js": "^10.0.1",
+        "@jest/globals": "^30.4.1",
+        "@types/adm-zip": "^0.5.8",
+        "@types/cli-progress": "^3.11.6",
+        "@types/figlet": "^1.7.0",
+        "@types/gradient-string": "^1.1.6",
+        "@types/jest": "^30.0.0",
+        "@types/node": "^25.9.1",
+        "eslint": "^10.4.0",
+        "eslint-config-prettier": "^10.1.8",
+        "husky": "^9.1.7",
+        "jest": "^30.4.2",
+        "lint-staged": "^17.0.5",
+        "nock": "^14.0.15",
+        "prettier": "^3.8.3",
+        "ts-jest": "^29.4.11",
+        "tsx": "^4.22.3",
+        "typescript": "^6.0.3",
+        "typescript-eslint": "^8.59.4"
+    }
 }

@@ -423,6 +423,49 @@ Interface web SPA (servidor + frontend) postergada. Será revisitada após Fase 
 
 ---
 
+## 🔷 LLM Quality Assurance — Relatórios Confiáveis (CONCLUÍDO)
+
+**Data:** 2026-05-25
+
+**Prioridade:** P1
+
+**Motivação:** Garantir que relatórios gerados por IA tenham qualidade mínima antes de serem exibidos ao usuário, com fallback previsível e métricas de confiança.
+
+### Entregas
+
+| Fase | Arquivos                                                | O quê                                                                                 |
+| ---- | ------------------------------------------------------- | ------------------------------------------------------------------------------------- |
+| 1    | `shared/llm-client.ts`                                  | Temperature + response_format por tier; novo tier `report`                            |
+| 2    | `shared/report-validator.ts` + `.test`                  | `ReportValidator<T>` — required, type, regex, minLength; retry com feedback (máx 3)   |
+| 3    | `shared/report-generator.ts`                            | `generateReportWithFallback()` — HTML válido com badge de confiança e warning         |
+| 4    | `shared/llm-metrics.ts` + `.test`                       | `LlmMetricsTracker` — 6 métricas, persistência JSON, history, `clearLlmMetrics`       |
+| 5    | `shared/llm-review.ts` + `.test`, `failure-analysis.ts` | Pipeline completo: report→JSON→validate→retry→reviewer→fallback; 1105 testes passando |
+
+### Arquivos alterados
+
+| Arquivo                             | Ação                                                                                                                                                                              |
+| ----------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `shared/llm-client.ts`              | `temperature`/`responseFormat` em `ProviderConfig`; tier `report` (temp 0.2, `responseFormat:'json'`)                                                                             |
+| `shared/report-validator.ts`        | **Novo**: `ReportValidator<T>` — validação genérica de schemas JSON                                                                                                               |
+| `shared/report-validator.test.ts`   | **Novo**: 9 testes (required, type, regex, nested, warnings)                                                                                                                      |
+| `shared/report-generator.ts`        | `generateReportWithFallback()` — seção IA + confidence badge + fallback warning                                                                                                   |
+| `shared/llm-metrics.ts`             | **Novo**: `recordLlmRequest`, `recordLlmFailure`, `recordValidationRejection`, `recordRetry`, `recordConfidence`, `snapshotLlmMetrics`, `getLlmMetricsHistory`, `clearLlmMetrics` |
+| `shared/llm-metrics.test.ts`        | **Novo**: 6 testes com isolamento via `XDG_STATE_HOME` + `fs.mkdtempSync()`                                                                                                       |
+| `shared/llm-review.ts`              | Pipeline: `report` tier → JSON parse → `ReportValidator.validate()` → retry loop → reviewer → fallback                                                                            |
+| `shared/llm-review.test.ts`         | **Novo**: 5 testes (caminho feliz, non-JSON retry, main fallback, retry exausto, reviewer cruza)                                                                                  |
+| `shared/failure-analysis.ts`        | `analyzeFailuresWithReport()` — retorna `AnalysisReport` com `content`, `htmlReport`, `confidence`, `fallbackUsed`                                                                |
+| `git_triggers/llm-pipeline.ts`      | Importa `analyzeFailuresWithReport`; exibe confidence badge; salva HTML; fallback warning                                                                                         |
+| `git_triggers/llm-pipeline.test.ts` | Ajustado para mockar `analyzeFailuresWithReport` em vez de `analyzeFailures`                                                                                                      |
+| `BACKLOG.md`                        | Este registro                                                                                                                                                                     |
+
+### Correções pós-implementação
+
+1. `jest.mock('./config', ...)` em `llm-metrics.test.ts` gerava mock não-funcional (a propriedade `xdgStateHome` não era lida corretamente via módulo mock) → substituído por `process.env.XDG_STATE_HOME` com `fs.mkdtempSync()` para isolamento real.
+2. `llm-pipeline.ts` usava `import()` dinâmico → trocado para `import` estático de `analyzeFailuresWithReport`.
+3. `llm-review.test.ts` esperava `toThrow()` quando ambos os tiers falhavam → corrigido para testar o fallback real (retorna `{fallbackUsed: true, reviewed: false}`).
+
+---
+
 ## ⏳ Débitos registrados (PENDENTE)
 
 ### Auto-classify + Jira ticket em falha de pipeline
@@ -645,6 +688,56 @@ Nenhum encontrado.
 | 5a       | Lazy-load providers.json/projects.json + adiar setupSigint    | ⏳     |
 | 5b       | Extrair parser quoted-string compartilhado em csv_resource.ts | ⏳     |
 | 5c       | Unificar regex precondition                                   | ⏳     |
+
+---
+
+## ✅ Smoke Tests E2E com GitHub Real (CONCLUÍDO)
+
+**Data:** 2026-05-25
+
+**Objetivo:** Validar o módulo `git_triggers` contra o repositório real `kevindemian/qa_tools` no GitHub, sem mocks.
+
+### Arquivos criados/alterados
+
+| Arquivo                 | Ação                                                                            |
+| ----------------------- | ------------------------------------------------------------------------------- |
+| `e2e/smoke-shared.ts`   | **Novo**: `createGitHubSmokeManager()` + `assertOk()`                           |
+| `e2e/smoke-github.ts`   | **Novo**: 6 testes read-only contra GitHub API real                             |
+| `e2e/smoke-llm.ts`      | **Novo**: getDiff real → LLM real → PR description (skip sem LLM keys)          |
+| `e2e/smoke-pipeline.ts` | **Novo**: trigger → poll → artifact → dashboard (skip sem `E2E_PIPELINE=true`)  |
+| `config/projects.json`  | Adicionado `qa_tools_e2e: "kevindemian/qa_tools"`                               |
+| `config/providers.json` | Adicionado `qa_tools_e2e: { provider: "github", repo: "kevindemian/qa_tools" }` |
+| `package.json`          | Scripts: `smoke`, `smoke:github`, `smoke:llm`, `smoke:pipeline`                 |
+
+### Camadas
+
+| Camada        | Script                                     | O que valida                                             | Side-effect      | Requer         |
+| ------------- | ------------------------------------------ | -------------------------------------------------------- | ---------------- | -------------- |
+| 1 (read-only) | `npm run smoke:github`                     | Auth, API parsing, error handling (404/403), 6 operações | ❌ Zero          | `GITHUB_TOKEN` |
+| 2 (+LLM)      | `npm run smoke:llm`                        | getDiff real → LLM real → PR description                 | ❌ Zero          | LLM keys       |
+| 3 (+pipeline) | `E2E_PIPELINE=true npm run smoke:pipeline` | Trigger → poll → artifact → dashboard → LLM analysis     | ⚠️ 1 Actions run | `GITHUB_TOKEN` |
+
+### Resultado da execução real (Camada 1)
+
+```
+OK: getBranch(main) = main
+OK: getBranch(nonexistent) = null
+OK: getDiff(main, dev) = 0 chars (empty — sem branch dev divergente)
+OK: getRecentPipelines(5) = 5 runs
+OK: getCICDVariables() = 0 variables (403 tratado → [])
+OK: searchMergeRequests(open) = 0 PRs
+```
+
+Todos os 6 cenários passaram. Erros 404/403 são tratados corretamente por `handleError`.
+
+### Verificação final
+
+| Comando                      | Resultado      |
+| ---------------------------- | -------------- |
+| `npx tsc --noEmit`           | 0 erros        |
+| `npx jest --no-coverage`     | 1105/1105 pass |
+| `grep -rn "throw '" e2e/`    | zero           |
+| `grep -rn ".only(" e2e/*.ts` | zero           |
 
 ### Fase 6 — Testes Faltantes (~1h, 3 sub-fases)
 

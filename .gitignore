@@ -23,5 +23,8 @@ install-opencode.sh
 shared_docker/docker-compose.yml
 shared_docker/.selected_project
 
+# === Generated reports ===
+failure-analysis-*.html
+
 # === Windows artifacts ===
 nul
