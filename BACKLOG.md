@@ -11,85 +11,6 @@ Issues registradas durante refatorações, postergadas por escopo.
 
 ---
 
-## [NEW FEATURE] LLM Integration — Geração de Testes com IA
-
-**Prioridade**: P1 (feature nova, valor direto ao usuário)
-
-**Abordagem**: incremental, zero dependências novas (fetch nativo + marked).
-
-### Arquitetura
-
-**Providers** (dual-tier, config via `.env`):
-
-| Tier    | Provider   | Env                 | Model                            |
-| ------- | ---------- | ------------------- | -------------------------------- |
-| `main`  | OpenRouter | `LLM_API_KEY`       | `google/gemini-2.0-flash-exp`    |
-| `small` | Gemini API | `LLM_SMALL_API_KEY` | `gemini-2.0-flash-lite` (grátis) |
-
-- `main` → tarefas pesadas (gerar casos, analisar falhas)
-- `small` → tarefas leves (classificar, extrair keywords, sanitizar)
-
-### Fases
-
-#### 🔶 Fase 1 — Core (`shared/llm-client.ts`)
-
-- Função `llmPrompt(tier: 'main'|'small', system: string, user: string): Promise<string>`
-- Abstrai diferenças entre APIs: OpenRouter (formato OpenAI `/v1/chat/completions`) vs Gemini (`/v1beta/models/{model}:generateContent`)
-- Retry via `http-client.js` (reuso), cache de respostas (hash do prompt, TTL)
-- Headers: `Authorization: Bearer {{key}}`, fallback tratado com `printError`
-
-#### 🔶 Fase 2 — Prompt Templates (`shared/prompts/*.md`)
-
-Arquivos markdown editáveis sem recompilar, placeholders `{{var}}`:
-
-- `user-story-to-tests.md` — user story + AC → CSV de casos de teste (steps, pre-conditions, tags)
-- `failure-analysis.md` — diff de execuções → causas raiz sugeridas
-- `classify.md` — descrição de bug → severidade/área (tier small)
-- Template carregado via `readFileSync` + `replace` simples
-
-#### 🔶 Fase 3 — Comando no Menu (`jira_management/main.ts`)
-
-Nova opção **"Gerar testes com IA"** (id `18`):
-
-1. Input: issue key (ex. `ECSPOL-123`)
-2. `JiraResource.getIssue(key)` → summary + description
-3. Carrega `user-story-to-tests.md` → substitui placeholders
-4. `llmPrompt('main', system, user)` → CSV como string
-5. Preview com `mdBox()` — aprovação do usuário
-6. Invoca pipeline de criação existente (CSV → Xray)
-
-#### 🔶 Fase 4 — Expansão
-
-- **Analisar falhas**: parse de resultados de teste → LLM sugere causas raiz
-- **Resumir execução**: resultado de teste → relatório legível para stakeholders
-- **Classificar bugs**: descrição → severidade/área (tier small)
-- **Traduzir planos**: PT-BR ↔ EN
-- **Mais provedores**: Anthropic, Ollama (local), outras chaves open-source
-
-### Config (`shared/config.ts` + `.env`)
-
-```
-LLM_API_KEY=sk-or-v1-...
-LLM_MODEL=google/gemini-2.0-flash-exp          # default
-LLM_BASE_URL=https://openrouter.ai/api/v1       # default
-LLM_SMALL_API_KEY=AIza...
-LLM_SMALL_MODEL=gemini-2.0-flash-lite           # default
-```
-
-### Arquivos envolvidos
-
-| Arquivo                     | Ação                              |
-| --------------------------- | --------------------------------- |
-| `shared/llm-client.ts`      | Criar                             |
-| `shared/llm-client.test.ts` | Criar                             |
-| `shared/prompts/`           | Criar diretório + templates .md   |
-| `shared/config.ts`          | Adicionar getters LLM             |
-| `jira_management/main.ts`   | Adicionar handler + opção no menu |
-| `.env.example`              | Adicionar vars LLM                |
-| `BACKLOG.md`                | Este plano                        |
-
----
-
 ## ✅ Fase 6 — Correção TUI (CONCLUÍDA)
 
 **Data:** 2026-05-25
@@ -228,170 +149,121 @@ LLM_SMALL_MODEL=gemini-2.0-flash-lite           # default
 
 ---
 
-## [NEW FEATURE] QA Reports & Analytics — Relatórios, Métricas e Cobertura
+## 🔷 Plano Integrado — LLM + Reports & Analytics (6 Fases)
 
 **Prioridade:** P1
 
-**Motivação:** Análise de mercado (TestRail, Katalon, Zephyr, TestComplete, Ranorex) revelou lacunas em relatórios visuais, histórico de execuções e visibilidade de cobertura — funcionalidades de alto valor que o time não tem.
+**Motivação:** Unificar LLM Integration com Reports & Analytics — LLM é a camada de inteligência que transforma reports de "display de dados" em "análise narrativa".
 
-**Abordagem:** Incremental, zero dependências novas (HTML inline + JSON local).
+**Abordagem:** Incremental, zero dependências novas (fetch nativo, HTML inline, JSON local).
 
-### Arquitetura Geral
+**Branch:** `feat/reports-analytics-llm`
 
-```
-┌─ Report Generator ─────────────────────┐
-│  parseResult → HTML auto-contido       │
-│  (stats, charts, falhas, duração)      │
-└──────────────────────┬─────────────────┘
-                       │ alimenta
-┌─ Metrics Collector ──▼─────────────────┐
-│  history.json (state.ts)               │
-│  • timestamp, branch, pass/fail/skip   │
-│  • duração, ambiente                   │
-│  → trend analysis, flakiness           │
-└──────────────────────┬─────────────────┘
-                       │ cruza com
-┌─ Coverage Analyzer ─▼──────────────────┐
-│  Jira issues × test mapping files      │
-│  • gaps por epic/componente            │
-│  • status da última execução           │
-└────────────────────────────────────────┘
-```
-
-### 🔶 Fase 1 — Report Generator (`shared/report-generator.ts`)
-
-**Esforço:** 2-3 dias
-
-Gerar HTML auto-contido a partir de `ParseResult` e `MatchResult`:
-
-- Template inline com CSS + JS Chart (SVG/Canvas, zero deps)
-- Seções: sumário (pass/fail/skip/duration), tabela de testes, detalhe de falhas
-- Suporte a execução única e comparativo (diff entre 2 runs)
-- Saída: arquivo `.html` no diretório de execução
-
-**Inputs existentes:**
-| Tipo | Fonte |
-|------|-------|
-| `ParseResult` | `shared/result_parser.ts` |
-| `MatchResult` | `jira_management/result_reporter.ts` |
-| `FlatTest[]` | `shared/result_parser.ts` |
-
-**Arquivos:**
-
-| Arquivo                                | Ação                  |
-| -------------------------------------- | --------------------- |
-| `shared/report-generator.ts`           | Criar                 |
-| `shared/report-generator.test.ts`      | Criar                 |
-| `shared/report-templates/default.html` | Criar (template base) |
-| `BACKLOG.md`                           | Este plano            |
-
-### 🔶 Fase 2 — Metrics Collector (`shared/metrics.ts`)
-
-**Esforço:** 2-3 dias
-
-Histórico local de execuções com persistência via `state.ts`:
-
-```typescript
-interface RunRecord {
-    id: string;
-    timestamp: string;
-    branch: string;
-    provider: string; // 'github' | 'gitlab' | 'manual'
-    passed: number;
-    failed: number;
-    skipped: number;
-    duration: number;
-    pipelineId?: string;
-    reportPath?: string; // link para HTML gerado na Fase 1
-}
-```
-
-- `recordRun(data)`: persiste no history.json via `state.ts`
-- `getHistory({ limit, branch, since })`: consulta com filtros
-- `getFlakyTests(threshold)`: detecta testes que falham >N% das execuções
-- `getTrend(days)`: agregação diária para charts
-
-**Arquivos:**
-
-| Arquivo                  | Ação       |
-| ------------------------ | ---------- |
-| `shared/metrics.ts`      | Criar      |
-| `shared/metrics.test.ts` | Criar      |
-| `BACKLOG.md`             | Este plano |
-
-### 🔶 Fase 3 — Coverage Analyzer (`jira_management/coverage.ts`)
-
-**Esforço:** 2-3 dias
-
-Cruzar issues do Jira com mapping files de teste:
-
-```typescript
-interface CoverageItem {
-    issueKey: string;
-    summary: string;
-    issueType: string;
-    epic?: string;
-    component?: string;
-    hasTest: boolean;
-    testKeys: string[];
-    lastStatus?: 'passed' | 'failed' | 'skipped';
-    lastRun?: string;
-}
-```
-
-- `getCoverageMatrix(jiraResource, mappingPath)`: retorna matriz completa
-- `getGaps(jiraResource, mappingPath, { epic?, component? })`: issues sem teste
-- `getEpicCoverage(jiraResource, mappingPath)`: cobertura agregada por epic
-- Saída TUI via `tableView()` + opção HTML via Fase 1
-
-**Arquivos:**
-
-| Arquivo                            | Ação       |
-| ---------------------------------- | ---------- |
-| `jira_management/coverage.ts`      | Criar      |
-| `jira_management/coverage.test.ts` | Criar      |
-| `BACKLOG.md`                       | Este plano |
-
-### 🔶 Fase 4 — Comandos no Menu (`jira_management/main.ts`)
-
-**Esforço:** 1 dia
-
-Novas opções no menu principal:
-
-| ID   | Nome                   | Ação                               |
-| ---- | ---------------------- | ---------------------------------- |
-| `17` | Gerar relatório HTML   | Roda Fase 1 sobre último resultado |
-| `18` | Histórico de execuções | Roda Fase 2 → `tableView`          |
-| `19` | Análise de cobertura   | Roda Fase 3 → `tableView` + HTML   |
-
-### 🔶 Fase 5 — Expansão
-
-- **Flakiness Dashboard**: highlight testes com >30% falhas no histórico
-- **Coverage Trends**: chart de cobertura ao longo do tempo (Fase 1 + Fase 3)
-- **Comparativo Runs**: diff entre duas execuções no HTML report
-- **Export CSV/PDF**: exportar métricas para compartilhamento
-
-### Verificação final
-
-| Comando                                                     | Saída esperada |
-| ----------------------------------------------------------- | -------------- |
-| `npx tsc --noEmit`                                          | 0 erros        |
-| `npx jest --no-coverage`                                    | 100% pass      |
-| `grep -rn "throw '" shared/ jira_management/ git_triggers/` | zero           |
-| `grep -rn ".only(" **/*.test.*`                             | zero           |
-
-### Dependências entre fases
+### Mapa de Dependências
 
 ```
-Fase 1 (Report) ──────── independente
-Fase 2 (Metrics) ─────── independente
-Fase 3 (Coverage) ────── depende de JiraResource (já existe)
-Fase 4 (Menu) ────────── depende de F1 + F2 + F3
-Fase 5 (Expansão) ────── depende de F1 + F2 + F3
+        ┌── A1 (LLM client) ──┬── B1 (prompts) ──┬── C1 (menu IA)
+        │                     │                  │
+Fase A ─┤                     └── D1 (failure    │
+        │                        analysis)       │
+        ├── A2 (HTML report) ──┬── C2 (menu rpt) ┤
+        │                     └── D2 (resumo     │
+        │                        narrativo)      │
+        └── A3 (Metrics) ─────┬── C3 (menu hist) ┤
+                              └── B2 (Coverage) ─┘
+                                              │
+                                              └── E (expansão)
 ```
 
-### Considerações
+### Fase A — Fundação (paralelizável, ~4-5 dias)
 
-- **Fases 1 e 2** podem rodar em paralelo por não terem dependências entre si
-- **Fase 3** já está pronta para começar (JiraResource existe e tem testes)
-- Todas as fases seguem R1 (cada .ts novo precisa de .test.ts)
+| Item   | O que                                                            | Arquivos                                          | Deps | Dias |
+| ------ | ---------------------------------------------------------------- | ------------------------------------------------- | ---- | ---- |
+| **A1** | LLM core client (dual-tier OpenRouter + Gemini, retry, cache)    | `shared/llm-client.ts` + `.test`                  | —    | 1-2  |
+| **A2** | HTML Report Generator (auto-contido, charts SVG, zero deps)      | `shared/report-generator.ts` + `.test` + template | —    | 2    |
+| **A3** | Metrics Collector (history JSON via state.ts, flakiness, trends) | `shared/metrics.ts` + `.test`                     | —    | 1-2  |
+
+### Fase B — Templates + Análise (1-2 dias)
+
+| Item   | O que                                                                  | Arquivos                                | Deps         | Dias |
+| ------ | ---------------------------------------------------------------------- | --------------------------------------- | ------------ | ---- |
+| **B1** | Prompt templates .md (user-story-to-tests, failure-analysis, classify) | `shared/prompts/` (3 arquivos .md)      | A1           | 1    |
+| **B2** | Coverage Analyzer (Jira issues × mapping files, gaps por epic)         | `jira_management/coverage.ts` + `.test` | JiraResource | 1-2  |
+
+### Fase C — Comandos no Menu (~2 dias)
+
+| Item   | O que                                                     | Deps    | Dias |
+| ------ | --------------------------------------------------------- | ------- | ---- |
+| **C1** | "Gerar testes com IA" (menu id 18) + handler `case18.ts`  | A1 + B1 | 1    |
+| **C2** | "Gerar relatório HTML" (menu id 17) + handler `case17.ts` | A2      | 1    |
+| **C3** | "Histórico / Cobertura" (menu ids 19-20) + handlers       | A3 + B2 | 1    |
+
+### Fase D — Análise Inteligente (LLM + Reports, ~2-3 dias)
+
+| Item   | O que                                                                  | Deps         | Dias |
+| ------ | ---------------------------------------------------------------------- | ------------ | ---- |
+| **D1** | Failure analysis: LLM analisa `FlatTest[]` → narrative summary no HTML | A1 + B1 + A2 | 2    |
+| **D2** | Resumo narrativo no Metrics trend (LLM resume diff entre runs)         | A1 + B1 + A3 | 1-2  |
+
+### Fase E — Expansão (~3-4 dias)
+
+| Item                                         | Deps    | Dias |
+| -------------------------------------------- | ------- | ---- |
+| Flakiness Dashboard (testes >30% falha)      | D1 + D2 | 2    |
+| Coverage Trends (chart cobertura × tempo)    | B2 + A2 | 1-2  |
+| Comparativo Runs (diff HTML entre execuções) | A2 + D1 | 1    |
+| Export CSV / Markdown                        | A2      | 1    |
+
+### Config (`shared/config.ts` + `.env`)
+
+```
+LLM_API_KEY=sk-or-v1-...
+LLM_MODEL=google/gemini-2.0-flash-exp          # default
+LLM_BASE_URL=https://openrouter.ai/api/v1       # default
+LLM_SMALL_API_KEY=AIza...
+LLM_SMALL_MODEL=gemini-2.0-flash-lite           # default
+```
+
+### Providers
+
+| Tier    | Provider   | Env                 | Model                            |
+| ------- | ---------- | ------------------- | -------------------------------- |
+| `main`  | OpenRouter | `LLM_API_KEY`       | `google/gemini-2.0-flash-exp`    |
+| `small` | Gemini API | `LLM_SMALL_API_KEY` | `gemini-2.0-flash-lite` (grátis) |
+
+### Verificação final (cada PR)
+
+| Comando                                                     | Saída     |
+| ----------------------------------------------------------- | --------- |
+| `npx tsc --noEmit`                                          | 0 erros   |
+| `npx jest --no-coverage`                                    | 100% pass |
+| `grep -rn "throw '" shared/ jira_management/ git_triggers/` | zero      |
+| `grep -rn ".only(" **/*.test.*`                             | zero      |
+
+### WEB_STYLE (adiada)
+
+Interface web SPA (servidor + frontend) postergada. Será revisitada após Fase E, quando o pipeline de dados estiver maduro e validado.
+
+### Arquivos envolvidos (visão geral)
+
+| Arquivo                                 | Fase | Ação                        |
+| --------------------------------------- | ---- | --------------------------- |
+| `shared/llm-client.ts`                  | A1   | Criar                       |
+| `shared/llm-client.test.ts`             | A1   | Criar                       |
+| `shared/config.ts`                      | A1   | Adicionar getters LLM       |
+| `.env.example`                          | A1   | Adicionar vars LLM          |
+| `shared/report-generator.ts`            | A2   | Criar                       |
+| `shared/report-generator.test.ts`       | A2   | Criar                       |
+| `shared/report-templates/default.html`  | A2   | Criar (template inline)     |
+| `shared/metrics.ts`                     | A3   | Criar                       |
+| `shared/metrics.test.ts`                | A3   | Criar                       |
+| `shared/prompts/user-story-to-tests.md` | B1   | Criar                       |
+| `shared/prompts/failure-analysis.md`    | B1   | Criar                       |
+| `shared/prompts/classify.md`            | B1   | Criar                       |
+| `jira_management/coverage.ts`           | B2   | Criar                       |
+| `jira_management/coverage.test.ts`      | B2   | Criar                       |
+| `jira_management/commands/case17.ts`    | C2   | Criar                       |
+| `jira_management/commands/case18.ts`    | C1   | Criar                       |
+| `jira_management/commands/case19.ts`    | C3   | Criar                       |
+| `jira_management/main.ts`               | C    | Editar (adicionar handlers) |
+| `jira_management/main.test.ts`          | C    | Atualizar                   |
