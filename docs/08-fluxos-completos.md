@@ -274,12 +274,12 @@ Selecionar projeto → Disparar pipeline → Aguardar conclusão
 
 ## Fluxo 4: Pipeline CI → Coleta → Análise IA → Relatório HTML
 
-Este fluxo adiciona a **análise de falhas com IA** e geração de **relatório HTML** ao fluxo 3 de pipeline.
+Este fluxo adiciona a **análise de falhas com IA** e geração de **relatório HTML** ao fluxo 3 de pipeline. A análise IA é opcional — o relatório HTML e o mapeamento para Jira funcionam sem LLM.
 
 ### Pré-requisitos
 
-- `LLM_API_KEY` configurada no `.env` (ver [`06-env-vars.md`](06-env-vars.md))
-- Pipeline CI que gere artefato `mochawesome.json`
+- **Obrigatório:** Pipeline CI que gere artefato `mochawesome.json`
+- **Opcional (para análise IA):** `LLM_API_KEY` configurada no `.env` (ver [`06-env-vars.md`](06-env-vars.md))
 
 ### Passo a passo
 
@@ -295,11 +295,13 @@ Este fluxo adiciona a **análise de falhas com IA** e geração de **relatório 
 
     Download do ZIP do Mochawesome → extrai `mochawesome.json` → parse para `FlatTest[]`.
 
-4. **Análise de falhas com IA**
+4. **Análise de falhas com IA** _(opcional — independente do LLM)_
 
     Se houver testes falhos, a CLI pergunta: _"Deseja analisar falhas com IA?"_
 
-    Ao confirmar, o pipeline interno executa:
+    **Se o usuário recusar ou LLM estiver indisponível:** o fluxo segue para o passo 5 sem IA. O relatório é gerado completo, apenas sem a seção de análise.
+
+    **Se confirmado**, o pipeline interno executa:
 
     ```
     Enviar falhas → LLM report tier → Validar JSON → Retry (≤3) → Revisor Gemini → Fallback
@@ -312,14 +314,16 @@ Este fluxo adiciona a **análise de falhas com IA** e geração de **relatório 
     - **Reviewer tier** (Gemini): avalia confiança — `AGREE` (alta), `PARTIAL` (média), `DISAGREE` (baixa)
     - **Fallback** (tier `main`): se report falha após 3 tentativas, usa análise textual simples
 
-5. **Relatório HTML**
+5. **Relatório HTML** _(sempre gerado, com ou sem LLM)_
 
-    Relatório gerado inclui:
+    Relatório gerado inclui **sempre**:
     - Estatísticas de execução (passed, failed, skipped, duração)
     - Gráfico SVG de distribuição
+    - Tabela de testes com cores por status
+
+    **Adicional (se IA foi usada):**
     - **Seção "Análise IA"** com badge de confiança (🟢 alta / 🟡 média / 🔴 baixa)
     - ⚠ Warning se fallback foi ativado
-    - Tabela de testes com cores por status
 
 6. **Mapeamento para Jira (opcional)**
 
@@ -332,11 +336,19 @@ Selecionar projeto → Disparar pipeline → Aguardar conclusão
                                               ↓
                               Coletar artefatos → Parse Mochawesome
                                               ↓
-                              [Falhas?] → Sim → Analisar com IA → Relatório HTML
-                                  |                              ↓
-                                  Não                     Mapear → Test Execution
-                                  ↓
-                              Mapear → Test Execution
+                              ┌─ [Falhas?] ──┐
+                              │              │
+                              Sim            Não
+                              │              │
+                    ┌─ "Analisar IA?" ─┐     │
+                    │  Sim       Não   │     │
+                    │   ↓         ↓    │     │
+                    │  LLM     Relatório     │
+                    │   ↓         ↓    │     │
+                    │  HTML      HTML  │     │
+                    └───┬─────────┘    │     │
+                        ↓             ↓     ↓
+                    Mapear → Test Execution
 ```
 
 ### Arquivos envolvidos

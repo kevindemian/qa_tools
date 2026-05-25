@@ -148,6 +148,8 @@ Fluxo executado após pipeline concluída com sucesso (opção `"Coletar resulta
 
 ### 6.4 Análise de Falhas com IA
 
+> A análise IA é **opcional** — o relatório HTML base (stats, tabela, gráfico) e o fluxo de mapeamento para Jira funcionam **sem LLM**. A IA é um enriquecimento adicional.
+
 Após o parse, se houver testes falhos, a CLI pergunta: _"Deseja analisar falhas com IA?"_
 
 **Pipeline de análise (`llm-review.ts`):**
@@ -174,6 +176,14 @@ Após o parse, se houver testes falhos, a CLI pergunta: _"Deseja analisar falhas
 **Métricas:** Cada análise gera um snapshot persistido em `~/.local/state/qa-tools/llm-metrics.json` via `llm-metrics.ts` (6 contadores: requests, falhas, validações rejeitadas, retries, confiança, latência).
 
 **Arquivos:** `git_triggers/llm-pipeline.ts`, `shared/failure-analysis.ts`, `shared/llm-review.ts`, `shared/report-generator.ts`, `shared/llm-metrics.ts`, `shared/report-validator.ts`
+
+**Comportamento sem LLM:**
+| Situação | Ocorre |
+|----------|--------|
+| Usuário recusa análise IA | Relatório HTML gerado sem seção IA — funcionalidade completa |
+| Report tier falha | Cai para `main` tier; se também falhar, relatório gerado sem IA com ⚠ warning |
+| `LLM_API_KEY` não configurada | Análise IA retorna vazia; pipeline segue normalmente com mensagem "verifique chaves LLM" |
+| Apenas tier **fast** configurado (PR desc) | Pipeline de resultados não é afetado — **fast** é usado apenas em features separadas |
 
 ---
 

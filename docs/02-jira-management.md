@@ -461,6 +461,8 @@ Step 1 action,step 1 data,step 1 expected
 
 ## 17 — Gerar relatório HTML + análise IA
 
+> O relatório HTML é gerado **mesmo sem análise IA**. A IA é um enriquecimento opcional — stats, gráfico e tabela funcionam independentemente.
+
 Gera um relatório HTML interativo a partir de um arquivo `mochawesome.json` e, opcionalmente, enriquece com análise de falhas por IA.
 
 ### Fluxo
@@ -483,6 +485,8 @@ Gera um relatório HTML interativo a partir de um arquivo `mochawesome.json` e, 
 
 ## 18 — Gerar testes de user story (IA)
 
+> ⚠ Funcionalidade **exclusivamente baseada em IA**. Requer `LLM_API_KEY` configurada e provedor **main** acessível. Sem LLM, a operação é cancelada com mensagem de erro.
+
 Cria casos de teste automaticamente a partir de uma história de usuário e critérios de aceitação usando IA.
 
 ### Fluxo
@@ -503,6 +507,8 @@ Cria casos de teste automaticamente a partir de uma história de usuário e crit
 ---
 
 ## 19 — Comparar execuções com IA
+
+> Histórico de execuções, análise de flakiness, tendências e cobertura Jira funcionam **sem LLM**. A comparação narrativa com IA é um adicional — se o LLM falhar, a seção é omitida silenciosamente e as demais funcionalidades permanecem intactas.
 
 Compara as duas últimas execuções de teste e gera uma análise narrativa com IA sobre tendências.
 
