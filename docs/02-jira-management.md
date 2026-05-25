@@ -50,9 +50,9 @@
 | 11  | Gerar template CSV                          | UTILITARIOS  |
 | 12  | Diagnosticar conexão                        | UTILITARIOS  |
 | 13  | Criar Test Execution para testes existentes | UTILITARIOS  |
-| 17  | Gerar relatório HTML + análise IA de falhas | IA           |
-| 18  | Gerar testes a partir de user story (IA)    | IA           |
-| 19  | Comparar execuções históricas (IA)          | IA           |
+| 17  | Gerar relatório HTML + análise IA           | IA           |
+| 18  | Gerar testes com IA                         | IA           |
+| 19  | Histórico / Cobertura / Comparação IA       | IA           |
 | 0   | Sair                                        | —            |
 
 **Aliases disponíveis:** `criar` (1), `versoes` (2), `fechar` (7), `publicar` (8), `template` (11), `testexec` (13), `json` (15), entre outros.

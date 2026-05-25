@@ -43,7 +43,7 @@ class GitHubManager {
         this.repo = parts.slice(1).join('/');
     }
 
-    get _repoPath() {
+    get _repoPath(): string {
         return '/repos/' + this.owner + '/' + this.repo;
     }
 
@@ -117,7 +117,7 @@ class GitHubManager {
         return (data && data.workflows) || [];
     }
 
-    _toInputs(variables: Array<{ key: string; value: string }>) {
+    _toInputs(variables: Array<{ key: string; value: string }>): Record<string, string> {
         if (!variables || !Array.isArray(variables)) return {};
         const inputs: Record<string, string> = {};
         for (const v of variables) {

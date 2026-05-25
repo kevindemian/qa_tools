@@ -2,9 +2,13 @@ import fs from 'fs';
 import { confirm, info, warn, success, printError, divider, print } from '../shared/prompt';
 import { analyzeFailuresWithReport } from '../shared/failure-analysis';
 import type { ParseResult } from '../shared/result_parser';
+import type { AnalysisReport } from '../shared/failure-analysis';
 import { rootLogger } from '../shared/logger';
 
-export async function offerPipelineFailureAnalysis(parsed: ParseResult): Promise<void> {
+export async function offerPipelineFailureAnalysis(
+    parsed: ParseResult,
+    onAnalysis?: (report: AnalysisReport) => Promise<void>,
+): Promise<void> {
     const failed = parsed.tests.filter((t) => t.state === 'failed');
     if (failed.length === 0) {
         info('Nenhuma falha para analisar.');
@@ -39,6 +43,10 @@ export async function offerPipelineFailureAnalysis(parsed: ParseResult): Promise
             const reportPath = 'failure-analysis-' + Date.now() + '.html';
             fs.writeFileSync(reportPath, analysis.htmlReport, 'utf8');
             info('Relatório HTML salvo em: ' + reportPath);
+        }
+
+        if (onAnalysis) {
+            await onAnalysis(analysis);
         }
     } catch (err) {
         printError('Falha ao analisar com IA', err);

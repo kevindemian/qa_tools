@@ -466,15 +466,25 @@ Interface web SPA (servidor + frontend) postergada. Será revisitada após Fase 
 
 ---
 
-## ⏳ Débitos registrados (PENDENTE)
+## ✅ Débitos registrados
 
 ### Auto-classify + Jira ticket em falha de pipeline
 
-**Prioridade:** P2
+**Prioridade:** P2 ✅ CONCLUÍDO (2026-05-25)
 
-**Descrição:** Quando uma pipeline falha e o usuário opta por análise LLM (G1), após exibir a narrativa, perguntar "Criar issue no Jira?". O LLM classifica a falha via `classifyFailure()`, determina componente/severidade, e cria issue via `JiraResource`.
+**Descrição:** Quando uma pipeline falha e o usuário opta por análise LLM (G1), após exibir a narrativa, pergunta "Criar issue no Jira?". O LLM classifica a falha via `classifyFailure()`, determina componente/severidade, e cria issue via `JiraResource`.
 
-**Dependências:** `shared/failure-analysis.ts`, `jira_management/jira_resource.ts`
+**Implementação:** `git_triggers/llm-pipeline.ts` aceita callback `onAnalysis`; `git_triggers/pipeline-handler.ts` passa callback que cria issue do tipo Bug no Jira via `JiraResource.postJiraResource()`.
+
+### Menu alignment + documentação
+
+**Prioridade:** — Melhoria contínua ✅ CONCLUÍDO (2026-05-25)
+
+**O quê:**
+
+- Jira menu: criada seção `IA` (🤖) para opções 17/18/19; labels corrigidas com acentos e descrições IA
+- Aliases adicionados: `relatório`/`html`→17, `us`/`estória`/`história`→18, `cobertura`→19
+- Git menu docs: opção `a` (Dashboard flakiness) documentada; seção 11 corrigida de "Menu → Opção" para "Sub-prompt da opção 4"
 
 ---
 
@@ -580,15 +590,15 @@ Nenhum encontrado.
 
 **Prioridade P1 (alto impacto em manutenibilidade):**
 
-| #        | Débito                                                                             | Arquivos                     | Esforço estimado |
-| -------- | ---------------------------------------------------------------------------------- | ---------------------------- | ---------------- |
-| AUDIT-01 | Quebrar `git_triggers/main.ts` (979 linhas) em módulos menores                     | `git_triggers/main.ts`       | 4h               |
-| AUDIT-02 | Quebrar `shared/prompt.ts` (753 linhas): extrair tabela, spinner, UI helpers       | `shared/prompt.ts`           | 3h               |
-| AUDIT-03 | Tipar 36 funções sem retorno em `github_manager.ts` e `gitlab_manager.ts`          | 2 arquivos                   | 1h               |
-| AUDIT-04 | Definir interfaces para `GitProvider` returns (`PipelineResult`, `Schedule`, etc.) | `shared/types.ts` + managers | 2h               |
-| AUDIT-05 | Eliminar export style CJS (`export =`) dos 23 arquivos restantes                   | 23 arquivos                  | 3h               |
-| AUDIT-06 | Eliminar 5 `require()` zombies (ciclo já morto)                                    | 5 arquivos                   | 0.5h             |
-| AUDIT-07 | Remover import side effects em `git_triggers/main.ts` (lazy load)                  | `git_triggers/main.ts`       | 1h               |
+| #        | Débito                                                                             | Arquivos                     | Esforço estimado                                                                                                                                           |
+| -------- | ---------------------------------------------------------------------------------- | ---------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| AUDIT-01 | Quebrar `git_triggers/main.ts` (979 linhas) em módulos menores                     | `git_triggers/main.ts`       | 4h                                                                                                                                                         |
+| AUDIT-02 | Quebrar `shared/prompt.ts` (753 linhas): extrair tabela, spinner, UI helpers       | `shared/prompt.ts`           | 3h                                                                                                                                                         |
+| AUDIT-03 | Tipar 36 funções sem retorno em `github_manager.ts` e `gitlab_manager.ts`          | 2 arquivos                   | ✅ CONCLUÍDO (3 tipadas: `_repoPath`, `_toInputs`, `getSchedules`; 8 HTTP helpers mantidas — `Promise<unknown>` causaria 30+ erros em cascata nos callers) |
+| AUDIT-04 | Definir interfaces para `GitProvider` returns (`PipelineResult`, `Schedule`, etc.) | `shared/types.ts` + managers | 2h                                                                                                                                                         |
+| AUDIT-05 | Eliminar export style CJS (`export =`) dos 23 arquivos restantes                   | 23 arquivos                  | 3h                                                                                                                                                         |
+| AUDIT-06 | Eliminar 5 `require()` zombies (ciclo já morto)                                    | 5 arquivos                   | 0.5h                                                                                                                                                       |
+| AUDIT-07 | Remover import side effects em `git_triggers/main.ts` (lazy load)                  | `git_triggers/main.ts`       | 1h                                                                                                                                                         |
 
 **Prioridade P2 (melhoria desejável):**
 
@@ -685,9 +695,9 @@ Nenhum encontrado.
 
 | Sub-fase | O quê                                                         | Status |
 | -------- | ------------------------------------------------------------- | ------ |
-| 5a       | Lazy-load providers.json/projects.json + adiar setupSigint    | ⏳     |
-| 5b       | Extrair parser quoted-string compartilhado em csv_resource.ts | ⏳     |
-| 5c       | Unificar regex precondition                                   | ⏳     |
+| 5a       | Lazy-load providers.json/projects.json + adiar setupSigint    | ✅     |
+| 5b       | Extrair parser quoted-string compartilhado em csv_resource.ts | ✅     |
+| 5c       | Unificar regex precondition                                   | ✅     |
 
 ---
 
@@ -743,6 +753,6 @@ Todos os 6 cenários passaram. Erros 404/403 são tratados corretamente por `han
 
 | Sub-fase | O quê                                                             | Status |
 | -------- | ----------------------------------------------------------------- | ------ |
-| 6a       | Testes para `shared/entry-menu.ts`                                | ⏳     |
-| 6b       | Testes para `shared/tls.ts` + `shared/git-provider-error.ts`      | ⏳     |
-| 6c       | Renomear `jira_validator.test.ts` → `test-case-validator.test.ts` | ⏳     |
+| 6a       | Testes para `shared/entry-menu.ts`                                | ✅     |
+| 6b       | Testes para `shared/tls.ts` + `shared/git-provider-error.ts`      | ✅     |
+| 6c       | Renomear `jira_validator.test.ts` → `test-case-validator.test.ts` | ✅     |
