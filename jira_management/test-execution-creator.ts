@@ -131,4 +131,4 @@ class TestExecutionCreator {
     }
 }
 
-export = TestExecutionCreator;
+export default TestExecutionCreator;

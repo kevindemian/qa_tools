@@ -157,18 +157,18 @@ async function collectTestResults(
     projectName: string,
     currentProvider: 'gitlab' | 'github',
     pushHistory: (op: string, detail: string, status: string) => void,
-) {
+): Promise<ParseResult | null> {
     const jira = _jiraEnv();
     if (!jira) {
         warn('Variáveis JIRA não configuradas. Defina JIRA_BASE_URL, JIRA_PERSONAL_TOKEN e XRAY_BASE_URL.');
-        return;
+        return null;
     }
 
     const parsed = await downloadTestArtifacts(m, pipelineId);
-    if (!parsed) return;
+    if (!parsed) return null;
 
     const mapping = await parseTestResults(parsed);
-    if (!mapping) return;
+    if (!mapping) return parsed;
 
     await createTestExecution(
         mapping.matched,
@@ -180,6 +180,8 @@ async function collectTestResults(
         currentProvider,
         pushHistory,
     );
+
+    return parsed;
 }
 
 export { _jiraEnv, _resolveGlob, downloadTestArtifacts, parseTestResults, createTestExecution, collectTestResults };

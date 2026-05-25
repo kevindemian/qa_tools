@@ -1,8 +1,7 @@
 import fs from 'fs';
 import { rootLogger } from '../shared/logger';
 // anti-circular (prompt → create_tests → session-context → prompt)
-// eslint-disable-next-line @typescript-eslint/no-require-imports
-import createTests = require('./create_tests');
+import createTests from './create_tests';
 
 interface TestResultItem {
     title: string;
@@ -95,8 +94,8 @@ function matchResultsToTests(results: TestResultItem[], mappingJsonPath: string)
 }
 
 async function createTestExecutionFromResults(
-    jiraResource: import('./jira_resource'),
-    linkManager: import('./jira_link_manager'),
+    jiraResource: import('./jira_resource').default,
+    linkManager: import('./jira_link_manager').default,
     project_name: string,
     matchedResults: Array<{
         key: string;

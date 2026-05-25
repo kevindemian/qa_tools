@@ -129,4 +129,4 @@ class MappingFileGenerator {
     }
 }
 
-export = MappingFileGenerator;
+export default MappingFileGenerator;

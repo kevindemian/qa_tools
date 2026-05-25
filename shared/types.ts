@@ -82,54 +82,99 @@ export interface ApiConfig {
     logger?: LoggerLike;
 }
 
+export interface PipelineInfo {
+    id?: string | number;
+    web_url?: string;
+    status?: string;
+    state?: string;
+    ref?: string;
+}
+
+export interface ScheduleInfo {
+    id: string | number;
+    description?: string;
+    next_run_at?: string;
+}
+
+export interface MergeRequestInfo {
+    iid?: string | number;
+    number?: string | number;
+    title?: string;
+    state?: string;
+    web_url?: string;
+    description?: string;
+    source_branch?: string;
+    target_branch?: string;
+    approved?: boolean;
+}
+
+export interface CICDVariable {
+    key: string;
+    value: string;
+    type?: string;
+}
+
+export interface PipelineJob {
+    id: string | number;
+    name: string;
+    stage: string;
+    status: string;
+}
+
+export interface ArtifactInfo {
+    id: string | number;
+    name: string;
+}
+
+export interface PipelineRun {
+    id?: string | number;
+    run_number?: string | number;
+    ref?: string;
+    head_branch?: string;
+    status?: string;
+    conclusion?: string;
+    web_url?: string;
+}
+
+export interface PipelineTriggerResult {
+    id?: string | number;
+    web_url?: string;
+    run_number?: string | number;
+}
+
 export interface GitProvider {
     triggerPipeline: (payload: {
         ref: string;
         variables: Array<{ key: string; value: string }>;
         workflow_id?: string;
-    }) => Promise<Record<string, unknown>>;
-    getSchedules: () => Promise<Array<Record<string, unknown>>>;
+    }) => Promise<PipelineTriggerResult | undefined>;
+    getSchedules: () => Promise<ScheduleInfo[]>;
     runSchedule: (scheduleId: string | number) => Promise<Record<string, unknown>>;
     createMergeRequest: (
         sourceBranch: string,
         targetBranch: string,
         title: string,
         description?: string,
-    ) => Promise<Record<string, unknown>>;
+    ) => Promise<MergeRequestInfo | null>;
     updateMergeRequest: (
         iid: string | number,
         sourceBranch: string,
         targetBranch: string,
         title: string,
         description?: string,
-    ) => Promise<Record<string, unknown>>;
-    getMergeRequest: (iid: string | number) => Promise<Record<string, unknown> | null>;
-    searchMergeRequests: (
-        sourceBranch: string,
-        targetBranch: string,
-        status: string,
-    ) => Promise<Array<Record<string, unknown>>>;
-    acceptMergeRequest: (iid: string | number, removeSourceBranch?: boolean) => Promise<Record<string, unknown>>;
+    ) => Promise<MergeRequestInfo | null>;
+    getMergeRequest: (iid: string | number) => Promise<MergeRequestInfo | null>;
+    searchMergeRequests: (sourceBranch: string, targetBranch: string, status: string) => Promise<MergeRequestInfo[]>;
+    acceptMergeRequest: (iid: string | number, removeSourceBranch?: boolean) => Promise<MergeRequestInfo | null>;
     isApproved: (id: string | number) => Promise<boolean>;
-    getCICDVariables: () => Promise<Array<Record<string, unknown>>>;
-    getRecentPipelines: (count?: number) => Promise<Array<Record<string, unknown>>>;
+    getCICDVariables: () => Promise<CICDVariable[]>;
+    getRecentPipelines: (count?: number) => Promise<PipelineRun[]>;
     getBranch: (branch: string) => Promise<{ name: string } | null>;
-    getPipeline: (id: string | number) => Promise<Record<string, unknown> | null>;
-    getPipelineJobs: (pipelineId: string | number) => Promise<
-        Array<{
-            id: string | number;
-            name: string;
-            stage: string;
-            status: string;
-        }>
-    >;
-    listPipelineArtifacts: (pipelineId: string | number) => Promise<
-        Array<{
-            id: string | number;
-            name: string;
-        }>
-    >;
+    getPipeline: (id: string | number) => Promise<PipelineInfo | null>;
+    getPipelineJobs: (pipelineId: string | number) => Promise<PipelineJob[]>;
+    listPipelineArtifacts: (pipelineId: string | number) => Promise<ArtifactInfo[]>;
     downloadArtifact: (artifactId: string | number) => Promise<{ buffer: Buffer; filename: string }>;
+    getDiff: (source: string, target: string) => Promise<string>;
     provider: 'gitlab' | 'github';
 }
 

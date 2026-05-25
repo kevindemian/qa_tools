@@ -15,6 +15,9 @@ import case13 from './case13';
 import case14 from './case14';
 import case15 from './case15';
 import case16 from './case16';
+import case17 from './case17';
+import case18 from './case18';
+import case19 from './case19';
 
 type HandlerFn = (ctx: CommandContext) => Promise<boolean | void> | boolean | void;
 
@@ -35,6 +38,9 @@ const handlers: Record<string, { handler: HandlerFn }> = {
     '14': { handler: case14.handler },
     '15': { handler: case15.handler },
     '16': { handler: case16.handler },
+    '17': { handler: case17.handler },
+    '18': { handler: case18.handler },
+    '19': { handler: case19.handler },
 };
 
 function getHandler(caseNumber: string): HandlerFn | null {

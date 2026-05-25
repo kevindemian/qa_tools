@@ -1,4 +1,3 @@
-#!/usr/bin/env tsx
 import { spawn } from 'child_process';
 import { showSplash } from './splash';
 import { showSelect } from './prompt';
@@ -7,7 +6,7 @@ import { join } from 'path';
 
 const root = join(__dirname, '..');
 
-async function runModule(module: 'jira' | 'git'): Promise<void> {
+export async function runModule(module: 'jira' | 'git'): Promise<void> {
     const script = module === 'jira' ? 'jira_management/main.ts' : 'git_triggers/main.ts';
     return new Promise<void>((resolve, reject) => {
         const child = spawn('npx', ['tsx', join(root, script)], {
@@ -22,7 +21,7 @@ async function runModule(module: 'jira' | 'git'): Promise<void> {
     });
 }
 
-async function main(): Promise<void> {
+export async function main(): Promise<void> {
     const isTTY = Output.isTTY() && !Output.isCI();
 
     if (!isTTY) {
@@ -55,8 +54,10 @@ async function main(): Promise<void> {
     }
 }
 
-main().catch((err) => {
-    // eslint-disable-next-line no-console -- entry point error
-    console.error('Erro: ' + String(err));
-    process.exit(1);
-});
+if (require.main === module) {
+    main().catch((err) => {
+        // eslint-disable-next-line no-console -- entry point error
+        console.error('Erro: ' + String(err));
+        process.exit(1);
+    });
+}

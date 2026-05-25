@@ -16,7 +16,7 @@ async function handler(c: CommandContext): Promise<boolean | void> {
             warn(NO_TASKS_FOUND_FOR_VERSION);
             return;
         }
-        const pm = c.ctx.packageManager as import('../package_version_manager');
+        const pm = c.ctx.packageManager as import('../package_version_manager').default;
         const versionNumber = version.split(' ').pop() || '';
         pm.updateReleaseNotes(versionNumber, tasks);
 
