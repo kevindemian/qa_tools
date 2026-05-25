@@ -4,7 +4,7 @@ import dotenv from 'dotenv';
 import JiraResource from '../jira_management/jira_resource';
 import JiraLinkManager from '../jira_management/jira_link_manager';
 import CsvResource from '../jira_management/csv_resource';
-import createTestsModule = require('../jira_management/create_tests');
+import createTestsModule from '../jira_management/create_tests';
 const { createTestsFromCsv } = createTestsModule;
 import { rootLogger } from '../shared/logger';
 

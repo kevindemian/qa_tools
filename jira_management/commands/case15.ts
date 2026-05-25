@@ -6,8 +6,7 @@ import fs from 'fs';
 import type { CommandContext } from './context';
 import { createTestExecutionWithLinksWrapper } from './helpers';
 // anti-circular (prompt → create_tests → session-context → prompt)
-// eslint-disable-next-line @typescript-eslint/no-require-imports
-import createTests = require('../create_tests');
+import createTests from '../create_tests';
 
 async function handler(c: CommandContext): Promise<boolean | void> {
     const state = loadState() as Record<string, string | undefined>;

@@ -453,4 +453,4 @@ class JiraResource {
     }
 }
 
-export = JiraResource;
+export default JiraResource;

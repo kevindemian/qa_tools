@@ -216,6 +216,9 @@ const MENU_ITEMS: MenuItem[] = [
     { id: '11', label: 'Gerar template CSV' },
     { id: '12', label: 'Diagnosticar conexão' },
     { id: '13', label: 'Criar Test Execution para testes existentes' },
+    { id: '17', label: 'Gerar relatório HTML' },
+    { id: '18', label: 'Gerar testes com IA' },
+    { id: '19', label: 'Histórico / Cobertura' },
     { id: 'd', label: 'Ver documentação' },
     { id: '0', label: 'Voltar ao menu principal' },
 ];
@@ -493,7 +496,7 @@ async function dispatchChoice(choice: string, cmdCtx: CommandContext): Promise<D
         return 'continue';
     }
 
-    warn('Opção inválida. Escolha entre 0-16, alias ou digite /help.');
+    warn('Opção inválida. Escolha entre 0-19, alias ou digite /help.');
     return 'continue';
 }
 
