@@ -5,6 +5,17 @@ import { reviewWithLlm } from './llm-review';
 
 const mockLlmPrompt = llmPrompt as jest.MockedFunction<typeof llmPrompt>;
 
+const validJsonReport = JSON.stringify({
+    tests: [
+        {
+            title: 'Login fails',
+            classification: 'ASSERTION',
+            severity: 'high',
+            recommendation: 'Fix the assertion logic in the login component.',
+        },
+    ],
+});
+
 beforeEach(() => {
     jest.clearAllMocks();
 });
@@ -12,46 +23,75 @@ beforeEach(() => {
 describe('reviewWithLlm', () => {
     it('returns high confidence when reviewer agrees', async () => {
         mockLlmPrompt
-            .mockResolvedValueOnce('Primary: root cause is assertion error')
+            .mockResolvedValueOnce(validJsonReport)
             .mockResolvedValueOnce('AGREE - The analysis is accurate and complete.');
 
-        const result = await reviewWithLlm('', 'system', 'user prompt');
+        const result = await reviewWithLlm('system prompt', 'user prompt');
 
-        expect(result.content).toBe('Primary: root cause is assertion error');
+        expect(result.content).toContain('ASSERTION');
         expect(result.reviewed).toBe(true);
         expect(result.confidence).toBe('high');
     });
 
     it('returns medium confidence with reviewer notes when partial', async () => {
         mockLlmPrompt
-            .mockResolvedValueOnce('Primary analysis text')
+            .mockResolvedValueOnce(validJsonReport)
             .mockResolvedValueOnce('PARTIAL - Missing details on timeout threshold.');
 
-        const result = await reviewWithLlm('', 'system', 'user prompt');
+        const result = await reviewWithLlm('system prompt', 'user prompt');
 
-        expect(result.content).toContain('Primary analysis text');
+        expect(result.content).toContain('ASSERTION');
         expect(result.content).toContain('Reviewer notes');
         expect(result.confidence).toBe('medium');
     });
 
-    it('falls back to primary when reviewer fails', async () => {
+    it('retries when validation fails and eventually succeeds', async () => {
+        const invalidJson = JSON.stringify({ tests: [{ title: 'Login fails' }] });
         mockLlmPrompt
-            .mockResolvedValueOnce('Primary fallback content')
-            .mockRejectedValueOnce(new Error('Reviewer API error'))
-            .mockResolvedValueOnce('Primary fallback content');
+            .mockResolvedValueOnce(invalidJson)
+            .mockResolvedValueOnce(validJsonReport)
+            .mockResolvedValueOnce('AGREE - Good.');
 
-        const result = await reviewWithLlm('', 'system', 'user prompt');
+        const result = await reviewWithLlm('system prompt', 'user prompt');
 
-        expect(result.content).toBe('Primary fallback content');
-        expect(result.reviewed).toBe(false);
-        expect(result.confidence).toBe('medium');
+        expect(result.content).toContain('ASSERTION');
+        expect(result.reviewed).toBe(true);
+        expect(mockLlmPrompt).toHaveBeenCalledTimes(3);
     });
 
-    it('throws when both primary and reviewer fail', async () => {
-        mockLlmPrompt
-            .mockRejectedValueOnce(new Error('Primary error'))
-            .mockRejectedValueOnce(new Error('Reviewer error'));
+    it('falls back to main when report returns non-JSON', async () => {
+        mockLlmPrompt.mockResolvedValueOnce('plain text analysis').mockResolvedValueOnce('fallback content');
 
-        await expect(reviewWithLlm('', 'system', 'user prompt')).rejects.toThrow();
+        const result = await reviewWithLlm('system prompt', 'user prompt');
+
+        expect(result.content).toBe('fallback content');
+        expect(result.reviewed).toBe(false);
+        expect(result.confidence).toBe('medium');
+        expect(result.fallbackUsed).toBe(true);
+    });
+
+    it('falls back to main when all retries fail validation', async () => {
+        const invalidJson = JSON.stringify({ tests: [{ title: 'Bad' }] });
+        mockLlmPrompt
+            .mockResolvedValueOnce(invalidJson)
+            .mockResolvedValueOnce(invalidJson)
+            .mockResolvedValueOnce(invalidJson)
+            .mockResolvedValueOnce(invalidJson)
+            .mockResolvedValueOnce('fallback content');
+
+        const result = await reviewWithLlm('system prompt', 'user prompt');
+
+        expect(result.content).toBe('fallback content');
+        expect(result.reviewed).toBe(false);
+        expect(result.fallbackUsed).toBe(true);
+    });
+
+    it('returns fallback when report is non-JSON and main fails', async () => {
+        mockLlmPrompt.mockResolvedValueOnce('text').mockRejectedValueOnce(new Error('Main API error'));
+
+        const result = await reviewWithLlm('system prompt', 'user prompt');
+        expect(result.confidence).toBe('medium');
+        expect(result.fallbackUsed).toBe(true);
+        expect(result.reviewed).toBe(false);
     });
 });
