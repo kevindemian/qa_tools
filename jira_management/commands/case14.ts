@@ -17,4 +17,4 @@ async function handler(c: CommandContext): Promise<boolean | void> {
     c.pushHistory('config-cypress', resolved, 'ok');
 }
 
-export = { handler };
+export default { handler };

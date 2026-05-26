@@ -133,7 +133,7 @@ describe('case02 — list versions', () => {
             { name: 'v2.0.0', released: false, releaseDate: '2099-01-01', description: 'Next' },
         ]);
         const c = buildContext();
-        const mod = require('../jira_management/commands/case02');
+        const mod = require('../jira_management/commands/case02').default;
         await mod.handler(c);
         expect(c.pushHistory).toHaveBeenCalledWith('listar-versoes', '2 versão(oes)', 'ok');
         expect(nock.isDone()).toBe(true);
@@ -144,7 +144,7 @@ describe('case02 — list versions', () => {
         api.get('/project/ECSPOL').reply(200, { id: '123' });
         api.get('/project/123/versions').reply(200, []);
         const c = buildContext();
-        const mod = require('../jira_management/commands/case02');
+        const mod = require('../jira_management/commands/case02').default;
         await mod.handler(c);
         // pushHistory é chamado apenas quando há versões (results.length > 0)
         expect(c.pushHistory).not.toHaveBeenCalled();
@@ -155,7 +155,7 @@ describe('case02 — list versions', () => {
         const { api } = freshScope();
         api.get('/project/ECSPOL').reply(404);
         const c = buildContext();
-        const mod = require('../jira_management/commands/case02');
+        const mod = require('../jira_management/commands/case02').default;
         await mod.handler(c);
         expect(c.pushHistory).not.toHaveBeenCalled();
         expect(nock.isDone()).toBe(true);
@@ -175,7 +175,7 @@ describe('case03 — create version', () => {
         getPrompt().ask.mockResolvedValueOnce('v2.0.0');
         getPrompt().ask.mockResolvedValueOnce('Release notes');
         const c = buildContext();
-        const mod = require('../jira_management/commands/case03');
+        const mod = require('../jira_management/commands/case03').default;
         await mod.handler(c);
         expect(c.pushHistory).toHaveBeenCalledWith('criar-versão', 'v2.0.0', 'ok');
         expect(nock.isDone()).toBe(true);
@@ -184,7 +184,7 @@ describe('case03 — create version', () => {
     it('empty name — returns early without history', async () => {
         getPrompt().ask.mockResolvedValueOnce('');
         const c = buildContext();
-        const mod = require('../jira_management/commands/case03');
+        const mod = require('../jira_management/commands/case03').default;
         await mod.handler(c);
         expect(c.pushHistory).not.toHaveBeenCalled();
     });
@@ -211,7 +211,7 @@ describe('case04 — assign fixVersion', () => {
         getPrompt().askConfirm.mockResolvedValueOnce(false); // no sprint
 
         const c = buildContext();
-        const mod = require('../jira_management/commands/case04');
+        const mod = require('../jira_management/commands/case04').default;
         await mod.handler(c);
         expect(c.pushHistory).toHaveBeenCalledWith('atribuir-fixversion', expect.stringContaining('2/2'), 'ok');
         expect(c.ctx.results.filter((r: { status: string }) => r.status === 'ok')).toHaveLength(2);
@@ -238,7 +238,7 @@ describe('case05 — update package + release notes', () => {
         getPrompt().ask.mockResolvedValueOnce(tmpGitDir);
         getPrompt().ask.mockResolvedValueOnce('v2.0.0');
         const c = buildContext();
-        const mod = require('../jira_management/commands/case05');
+        const mod = require('../jira_management/commands/case05').default;
         await mod.handler(c);
 
         const pkg = JSON.parse(fs.readFileSync(path.join(tmpGitDir, 'package.json'), 'utf8'));
@@ -267,7 +267,7 @@ describe('case06 — check task status', () => {
             });
         getPrompt().ask.mockResolvedValueOnce('v2.0.0');
         const c = buildContext();
-        const mod = require('../jira_management/commands/case06');
+        const mod = require('../jira_management/commands/case06').default;
         await mod.handler(c);
         expect(c.pushHistory).toHaveBeenCalledWith('verificar-status', 'v2.0.0', 'ok');
         expect(nock.isDone()).toBe(true);
@@ -313,7 +313,7 @@ describe('case07 — close tasks', () => {
         getPrompt().askConfirm.mockResolvedValueOnce(true);
 
         const c = buildContext();
-        const mod = require('../jira_management/commands/case07');
+        const mod = require('../jira_management/commands/case07').default;
         await mod.handler(c);
         expect(c.pushHistory).toHaveBeenCalledWith('fechar-tarefas', '2 tarefa(s)', 'ok');
         expect(nock.isDone()).toBe(true);
@@ -326,7 +326,7 @@ describe('case07 — close tasks', () => {
         getPrompt().ask.mockResolvedValueOnce('v2.0.0');
         getPrompt().askConfirm.mockResolvedValueOnce(true);
         const c = buildContext();
-        const mod = require('../jira_management/commands/case07');
+        const mod = require('../jira_management/commands/case07').default;
         await mod.handler(c);
         expect(c.pushHistory).not.toHaveBeenCalled();
         expect(nock.isDone()).toBe(true);
@@ -355,7 +355,7 @@ describe('case08 — publish version', () => {
         getPrompt().askConfirm.mockResolvedValueOnce(true);
 
         const c = buildContext();
-        const mod = require('../jira_management/commands/case08');
+        const mod = require('../jira_management/commands/case08').default;
         await mod.handler(c);
         expect(c.pushHistory).toHaveBeenCalledWith('publicar-versão', 'v2.0.0', 'ok');
         expect(nock.isDone()).toBe(true);
@@ -369,7 +369,7 @@ describe('case09 — switch project', () => {
     it('updates ctx.project_name and persists to state', async () => {
         getPrompt().ask.mockResolvedValueOnce('NEWPROJ');
         const c = buildContext();
-        const mod = require('../jira_management/commands/case09');
+        const mod = require('../jira_management/commands/case09').default;
         await mod.handler(c);
         expect(c.ctx.project_name).toBe('NEWPROJ');
         expect(c.pushHistory).toHaveBeenCalledWith('trocar-projeto', 'NEWPROJ', 'ok');
@@ -384,7 +384,7 @@ describe('case10 — change git directory', () => {
     it('sets git directory and packageManager', async () => {
         getPrompt().ask.mockResolvedValueOnce(tmpGitDir);
         const c = buildContext();
-        const mod = require('../jira_management/commands/case10');
+        const mod = require('../jira_management/commands/case10').default;
         await mod.handler(c);
         expect(c.ctx.git_directory).toBe(tmpGitDir);
         expect(c.ctx.packageManager).toBeDefined();
@@ -399,7 +399,7 @@ describe('case11 — generate CSV template', () => {
         const dest = path.join(tmpHome, 'template.csv');
         getPrompt().ask.mockResolvedValueOnce(dest);
         const c = buildContext();
-        const mod = require('../jira_management/commands/case11');
+        const mod = require('../jira_management/commands/case11').default;
         await mod.handler(c);
         expect(fs.existsSync(dest)).toBe(true);
         expect(c.pushHistory).toHaveBeenCalledWith('gerar-template', dest, 'ok');
@@ -416,7 +416,7 @@ describe('case12 — diagnose connection', () => {
         xray.get('/').reply(200, { info: 'xray-ok' });
         api.get('/project/ECSPOL').reply(200, { id: '123', name: 'ECSPOL' });
         const c = buildContext();
-        const mod = require('../jira_management/commands/case12');
+        const mod = require('../jira_management/commands/case12').default;
         await mod.handler(c);
         expect(c.pushHistory).toHaveBeenCalledWith('diagnostico', expect.stringContaining('3/3'), 'ok');
         expect(nock.isDone()).toBe(true);
@@ -428,7 +428,7 @@ describe('case12 — diagnose connection', () => {
         xray.get('/').reply(401);
         api.get('/project/ECSPOL').reply(200, { id: '123' });
         const c = buildContext();
-        const mod = require('../jira_management/commands/case12');
+        const mod = require('../jira_management/commands/case12').default;
         await mod.handler(c);
         expect(c.pushHistory).toHaveBeenCalledWith('diagnostico', expect.stringContaining('2/3'), 'error');
         expect(nock.isDone()).toBe(true);
@@ -468,7 +468,7 @@ describe('case13 — create Test Execution', () => {
         getPrompt().ask.mockResolvedValueOnce(''); // description
 
         const c = buildContext();
-        const mod = require('../jira_management/commands/case13');
+        const mod = require('../jira_management/commands/case13').default;
         await mod.handler(c);
         expect(c.pushHistory).toHaveBeenCalledWith('create-testexec', 'EXEC-1', 'ok');
         expect(nock.isDone()).toBe(true);
@@ -482,7 +482,7 @@ describe('case14 — change Cypress directory', () => {
     it('sets cypress dir in state', async () => {
         getPrompt().ask.mockResolvedValueOnce('/tmp/cypress');
         const c = buildContext();
-        const mod = require('../jira_management/commands/case14');
+        const mod = require('../jira_management/commands/case14').default;
         await mod.handler(c);
         expect(c.pushHistory).toHaveBeenCalledWith('config-cypress', '/tmp/cypress', 'ok');
         expect(require('../shared/state').update).toHaveBeenCalled();
@@ -527,7 +527,7 @@ describe('case15 — import JSON tests', () => {
 
         const c = buildContext();
         c.ctx.packageManager = undefined;
-        const mod = require('../jira_management/commands/case15');
+        const mod = require('../jira_management/commands/case15').default;
         await mod.handler(c);
         expect(c.pushHistory).toHaveBeenCalledWith('importar-json', '1 testes', 'ok');
         expect(c.pushHistory).toHaveBeenCalledWith('create-testexec', 'EXEC-1', 'ok');
@@ -542,7 +542,7 @@ describe('case16 — change JSON directory', () => {
     it('sets json dir in state', async () => {
         getPrompt().ask.mockResolvedValueOnce('/tmp/json');
         const c = buildContext();
-        const mod = require('../jira_management/commands/case16');
+        const mod = require('../jira_management/commands/case16').default;
         await mod.handler(c);
         expect(c.pushHistory).toHaveBeenCalledWith('config-json-dir', '/tmp/json', 'ok');
         expect(require('../shared/state').update).toHaveBeenCalled();

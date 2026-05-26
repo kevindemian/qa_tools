@@ -20,4 +20,4 @@ async function handler(c: CommandContext): Promise<boolean | void> {
     return false;
 }
 
-export = { handler };
+export default { handler };

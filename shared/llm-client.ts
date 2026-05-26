@@ -21,7 +21,31 @@ interface CacheEntry {
 }
 
 const CACHE_TTL_MS = 5 * 60 * 1000;
+const CACHE_CLEANUP_INTERVAL_MS = CACHE_TTL_MS / 2;
 const cache = new Map<string, CacheEntry>();
+let _cleanupTimer: ReturnType<typeof setInterval> | null = null;
+
+function startCacheCleanup(): void {
+    if (_cleanupTimer !== null) return;
+    _cleanupTimer = setInterval(() => {
+        const now = Date.now();
+        for (const [key, entry] of cache) {
+            if (entry.expiresAt <= now) cache.delete(key);
+        }
+    }, CACHE_CLEANUP_INTERVAL_MS);
+    if (_cleanupTimer && typeof _cleanupTimer === 'object' && 'unref' in _cleanupTimer) {
+        _cleanupTimer.unref();
+    }
+}
+
+export function stopCacheCleanup(): void {
+    if (_cleanupTimer !== null) {
+        clearInterval(_cleanupTimer);
+        _cleanupTimer = null;
+    }
+}
+
+startCacheCleanup();
 
 function tierToConfig(tier: LlmTier): ProviderConfig {
     switch (tier) {

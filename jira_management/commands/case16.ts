@@ -17,4 +17,4 @@ async function handler(c: CommandContext): Promise<boolean | void> {
     c.pushHistory('config-json-dir', resolved, 'ok');
 }
 
-export = { handler };
+export default { handler };

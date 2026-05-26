@@ -78,7 +78,7 @@ describe('case17 — HTML report generator', () => {
         reportGen.generateHtmlReport.mockReturnValueOnce('<html>report</html>');
         fs.writeFileSync.mockImplementationOnce(jest.fn());
 
-        const mod = require('./case17');
+        const mod = require('./case17').default;
         await mod.handler(baseContext);
 
         expect(parser.parseCypressResults).toHaveBeenCalledWith('/path/to/report.json');
@@ -109,7 +109,7 @@ describe('case17 — HTML report generator', () => {
         analysis.analyzeFailures.mockResolvedValueOnce('Root cause analysis');
         fs.writeFileSync.mockImplementationOnce(jest.fn());
 
-        const mod = require('./case17');
+        const mod = require('./case17').default;
         await mod.handler(baseContext);
 
         expect(prompt.askConfirm).toHaveBeenCalled();
@@ -127,7 +127,7 @@ describe('case17 — HTML report generator', () => {
             error: 'Arquivo não encontrado',
         });
 
-        const mod = require('./case17');
+        const mod = require('./case17').default;
         await mod.handler(baseContext);
 
         expect(prompt.printError).toHaveBeenCalled();
@@ -137,7 +137,7 @@ describe('case17 — HTML report generator', () => {
         const prompt = require('../../shared/prompt');
         prompt.ask.mockResolvedValueOnce('');
 
-        const mod = require('./case17');
+        const mod = require('./case17').default;
         await mod.handler(baseContext);
 
         expect(prompt.printError).toHaveBeenCalled();

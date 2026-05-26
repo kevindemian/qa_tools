@@ -8,4 +8,4 @@ async function handler(c: CommandContext): Promise<boolean | void> {
     success('Diretório alterado para: ' + dir);
 }
 
-export = { handler };
+export default { handler };

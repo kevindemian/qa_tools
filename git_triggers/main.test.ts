@@ -130,7 +130,7 @@ jest.mock('./nivelar', () => ({
     nivelarBranches: jest.fn(),
 }));
 
-type MainModule = typeof import('./main');
+type MainModule = typeof import('./main').default;
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const globSyncMock = jest.fn<any>().mockReturnValue([]);
@@ -166,7 +166,7 @@ beforeAll(() => {
     jest.spyOn(fs, 'writeFileSync').mockImplementation(() => {});
     jest.spyOn(fs, 'unlinkSync').mockImplementation(() => {});
 
-    mainModule = require('./main') as MainModule;
+    mainModule = require('./main').default as MainModule;
 });
 
 afterAll(() => {

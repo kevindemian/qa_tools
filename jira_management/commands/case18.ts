@@ -48,4 +48,4 @@ async function handler(c: CommandContext): Promise<boolean | void> {
     c.pushHistory('ai-generate-tests', `user story: ${userStory.slice(0, 60)}`, 'ok');
 }
 
-export = { handler };
+export default { handler };

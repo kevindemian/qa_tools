@@ -66,7 +66,7 @@ describe('case04', () => {
             sessionLog: { child: () => ({ info: jest.fn(), error: jest.fn() }) },
         };
 
-        const mod = require('../jira_management/commands/case04');
+        const mod = require('../jira_management/commands/case04').default;
         await mod.handler(c);
         expect(c.pushHistory).toHaveBeenCalled();
         expect(nock.isDone()).toBe(true);

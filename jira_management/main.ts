@@ -34,13 +34,9 @@ import { SessionContext } from '../shared/session-context';
 import { mdBox } from '../shared/markdown';
 import type { Logger } from '../shared/logger';
 import type { StateSchema } from '../shared/types';
-import type { CommandContext } from './commands/context';
+import { getHandler } from './commands';
 import { NOT_CONFIGURED } from './constants';
-
-// eslint-disable-next-line @typescript-eslint/no-require-imports
-const { getHandler } = require('./commands') as {
-    getHandler: (caseNumber: string) => ((ctx: CommandContext) => Promise<boolean | void> | boolean | void) | null;
-};
+import type { CommandContext } from './commands/context';
 
 const base_url: string = Config.jiraBaseUrl;
 const personal_token: string = Config.jiraPersonalToken;
@@ -662,7 +658,7 @@ main().catch((err: unknown) => {
     process.exitCode = 1;
 });
 
-module.exports = {
+export {
     main,
     showSplash,
     showHelp,
