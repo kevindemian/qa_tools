@@ -330,6 +330,25 @@ Removidos: `sourceBranch`/`targetBranch` de `updateMergeRequest` (github_manager
 
 ---
 
+## 🧪 Integração de Módulos — Lote 13
+
+**Data:** 2026-05-26
+**Problema:** Funções de `shared/` exportadas mas nunca chamadas por handlers de menu (GAP descoberto em auditoria).
+**Correção aplicada:** `saveParseResult` em `test-results.ts:180`, `saveCoverageSnapshot` em `case19.ts:74`. Testes estendidos.
+
+### Débitos remanescentes
+
+| #   | Item                                                                                                                | Prio | Status     | Observação                                                                |
+| --- | ------------------------------------------------------------------------------------------------------------------- | ---- | ---------- | ------------------------------------------------------------------------- |
+| I1  | Teste de contrato: cada handler `case*.ts` deve ter assertions que verificam chamadas a funções `shared/` esperadas | P2   | ⬜         | `main.test.ts` testa `dispatchChoice` mas não verifica efeitos colaterais |
+| I2  | `metrics.ts.saveRunMetrics` ainda sem caller em produção (chamado indiretamente via `saveParseResult`)              | P2   | ✅ Coberto | `saveParseResult` chama `saveRunMetrics` internamente                     |
+| I3  | Pipeline smoke test (`e2e/smoke-pipeline.ts`) sem asserções automáticas — requer `E2E_PIPELINE=true` manual         | P3   | ⬜         | Script meramente imprime, não falha                                       |
+| I4  | `npm run unused-exports` não roda em CI — teria pego o GAP previamente                                              | P1   | ⬜         | Adicionar ao CI pipeline                                                  |
+| I5  | Script de verificação handlers↔arquivos (Passo 3 do plano) não existe                                               | P2   | ⬜         | `jira_management/commands/case*.ts` vs `commands/index.ts`                |
+| I6  | Rastrear imports de `shared/` em produção automaticamente (Passo 2)                                                 | P2   | ⬜         | Bash one-liner para detectar exports sem caller em produção               |
+
+---
+
 ## 🔧 Simplificação Estrutural — Lote 12
 
 **Data:** 2026-05-26
