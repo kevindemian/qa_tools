@@ -43,4 +43,19 @@ describe('LLM Integration', () => {
         },
         15000,
     );
+
+    itMaybe(
+        'report tier returns valid JSON (OpenRouter)',
+        async () => {
+            const result = await llmPrompt(
+                'report',
+                'You are a data formatter. Output JSON.',
+                'Return {"result": "ok"} and nothing else.',
+                'integration-test-json',
+            );
+            const parsed = JSON.parse(result);
+            expect(parsed.result).toBe('ok');
+        },
+        15000,
+    );
 });
