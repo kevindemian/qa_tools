@@ -51,6 +51,11 @@ function pct(value: number, total: number): string {
     return ((value / total) * 100).toFixed(1);
 }
 
+function pctSub(value: number, total: number): string {
+    if (total === 0) return '';
+    return ' <span style="font-size:0.75rem;color:#6b7280;font-weight:400">(' + pct(value, total) + '%)</span>';
+}
+
 function barLabel(barW: number, n: number, fill: string): string {
     if (barW < 20) return '';
     const textColor = fill === '#facc15' ? '#333' : '#fff';
@@ -66,7 +71,7 @@ function buildChartSvg(stats: ReportStats): string {
     const sw = (stats.skipped / total) * w;
     const fillW = pw + fw + sw;
     const scale = fillW > 0 ? w / fillW : 1;
-    return `<svg width="${w}" height="${h}" xmlns="http://www.w3.org/2000/svg">
+    return `<svg viewBox="0 0 ${w} ${h}" width="100%" style="max-width:${w}px;height:auto" xmlns="http://www.w3.org/2000/svg">
   <rect x="0" y="0" width="${w}" height="${h}" rx="4" fill="#e5e7eb"/>
   <rect x="0" y="0" width="${pw * scale}" height="${h}" rx="4" fill="#22c55e"/>
   ${barLabel(pw * scale, stats.passed, '#22c55e')}
@@ -82,6 +87,7 @@ function buildCss(): string {
     return (
         `
 body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; margin: 0; padding: 20px; background: #f9fafb; color: #111827; }
+.wrapper { max-width: 100%; overflow-x: auto; }
 h1 { font-size: 1.5rem; margin-bottom: 0.5rem; }
 .summary { display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 20px; }
 .card { background: #fff; border-radius: 8px; padding: 16px 20px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); min-width: 100px; }
@@ -118,6 +124,9 @@ tr:nth-child(even) { background: #f8fafc; }
 tr:nth-child(even):hover { background: #f1f5f9; }
 .row-passed { display: table-row; }
 .footer { margin-top: 16px; font-size: 0.75rem; color: #4b5563; text-align: center; }
+.error-cell { color: #991b1b; font-size: 0.8rem; cursor: pointer; }
+.error-truncated::after { content: ' \\25BC'; font-size: 0.7rem; }
+.error-truncated.expanded::after { content: ' \\25B2'; }
 @media (prefers-color-scheme: dark) {
   body { background: #0d1117; color: #c9d1d9; }
   .card { background: #161b22; box-shadow: 0 1px 3px rgba(0,0,0,0.4); }
@@ -135,6 +144,7 @@ tr:nth-child(even):hover { background: #f1f5f9; }
   tr:hover { background: #1c2128; }
   tr:nth-child(even) { background: #1c2128; }
   tr:nth-child(even):hover { background: #21262d; }
+  .error-cell { color: #f87171; }
 }
 </style></head><body>
 `
@@ -147,10 +157,21 @@ export function generateHtmlReport(tests: FlatTest[], options?: ReportOptions): 
 
 function buildSummaryCards(stats: ReportStats, passRate: number): string {
     let html = '<div class="summary">';
-    html += '<div class="card"><div class="label">Passed</div><div class="value pass">' + stats.passed + '</div></div>';
-    html += '<div class="card"><div class="label">Failed</div><div class="value fail">' + stats.failed + '</div></div>';
     html +=
-        '<div class="card"><div class="label">Skipped</div><div class="value skip">' + stats.skipped + '</div></div>';
+        '<div class="card"><div class="label">Passed</div><div class="value pass">' +
+        stats.passed +
+        pctSub(stats.passed, stats.total) +
+        '</div></div>';
+    html +=
+        '<div class="card"><div class="label">Failed</div><div class="value fail">' +
+        stats.failed +
+        pctSub(stats.failed, stats.total) +
+        '</div></div>';
+    html +=
+        '<div class="card"><div class="label">Skipped</div><div class="value skip">' +
+        stats.skipped +
+        pctSub(stats.skipped, stats.total) +
+        '</div></div>';
     html += '<div class="card"><div class="label">Total</div><div class="value">' + stats.total + '</div></div>';
     html +=
         '<div class="card"><div class="label">Duration</div><div class="value" style="font-size:1rem">' +
@@ -220,13 +241,10 @@ function buildChartSection(stats: ReportStats, wantChart: boolean): string {
 function buildErrorCell(t: FlatTest): string {
     if (t.state === 'failed' && t.error) {
         const truncated = t.error.length > 120 ? t.error.slice(0, 120) + '...' : t.error;
-        return (
-            '<span title="' +
-            escapeHtml(t.error) +
-            '" style="color:#991b1b;font-size:0.8rem">' +
-            escapeHtml(truncated) +
-            '</span>'
-        );
+        const isTruncated = t.error.length > 120;
+        const cls = isTruncated ? 'error-cell error-truncated' : 'error-cell';
+        const attrs = isTruncated ? ' data-full="' + escapeHtml(t.error) + '"' : ' title="' + escapeHtml(t.error) + '"';
+        return '<span class="' + cls + '"' + attrs + '>' + escapeHtml(truncated) + '</span>';
     }
     return '';
 }
@@ -238,7 +256,7 @@ function buildTestTable(tests: FlatTest[]): string {
         ? '<div class="control-bar"><button onclick="togglePassed()">Toggle Passed</button></div>'
         : '';
     html +=
-        '<table><thead><tr><th>#</th><th>Test</th><th>Status</th><th>Duration</th>' +
+        '<div class="wrapper"><table><thead><tr><th>#</th><th>Test</th><th>Status</th><th>Duration</th>' +
         (hasError ? '<th>Error</th>' : '') +
         '</tr></thead><tbody>';
     for (let i = 0; i < tests.length; i++) {
@@ -246,13 +264,18 @@ function buildTestTable(tests: FlatTest[]): string {
         const rowClass = t.state === 'passed' ? ' class="row-passed"' : '';
         html += '<tr' + rowClass + '>';
         html += '<td>' + (i + 1) + '</td>';
-        html += '<td>' + escapeHtml(t.title) + '</td>';
+        html +=
+            '<td' +
+            (t.fullTitle ? ' title="' + escapeHtml(t.fullTitle) + '"' : '') +
+            '>' +
+            escapeHtml(t.title) +
+            '</td>';
         html += '<td><span class="status-badge status-' + t.state + '">' + t.state + '</span></td>';
         html += '<td>' + (t.state === 'skipped' ? '—' : fmtDuration(t.duration)) + '</td>';
         if (hasError) html += '<td>' + buildErrorCell(t) + '</td>';
         html += '</tr>';
     }
-    html += '</tbody></table>';
+    html += '</tbody></table></div>';
     return html;
 }
 
@@ -265,6 +288,17 @@ function togglePassed() {
     rows.forEach(r => r.style.display = hidden ? '' : 'none');
     if (btn) btn.textContent = hidden ? 'Hide Passed' : 'Show Passed';
 }
+document.querySelectorAll('.error-truncated').forEach(function(el) {
+    el.addEventListener('click', function() {
+        if (this.classList.contains('expanded')) {
+            this.textContent = this.getAttribute('data-full').slice(0, 120) + '...';
+            this.classList.remove('expanded');
+        } else {
+            this.textContent = this.getAttribute('data-full');
+            this.classList.add('expanded');
+        }
+    });
+});
 </script>`;
 }
 

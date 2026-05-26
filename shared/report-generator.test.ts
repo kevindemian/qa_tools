@@ -168,4 +168,35 @@ describe('generateHtmlReport', () => {
         const html = generateHtmlReport(tests);
         expect(html).toContain('<text');
     });
+
+    it('shows fullTitle as tooltip when present', () => {
+        const tests: FlatTest[] = [{ title: 'Login', state: 'passed', duration: 100, fullTitle: 'Auth Tests > Login' }];
+        const html = generateHtmlReport(tests);
+        expect(html).toContain('title="Auth Tests &gt; Login"');
+    });
+
+    it('shows percentage in summary cards', () => {
+        const tests: FlatTest[] = [
+            { title: 'A', state: 'passed', duration: 100 },
+            { title: 'B', state: 'failed', duration: 100 },
+            { title: 'C', state: 'skipped', duration: 0 },
+        ];
+        const html = generateHtmlReport(tests);
+        expect(html).toContain('(33.3%)');
+    });
+
+    it('renders error as expandable when truncated', () => {
+        const longMsg = 'x'.repeat(200);
+        const tests: FlatTest[] = [{ title: 'Fail', state: 'failed', duration: 100, error: longMsg }];
+        const html = generateHtmlReport(tests);
+        expect(html).toContain('error-truncated');
+        expect(html).toContain('data-full="' + longMsg + '"');
+    });
+
+    it('uses responsive SVG viewBox', () => {
+        const tests: FlatTest[] = [{ title: 'A', state: 'passed', duration: 100 }];
+        const html = generateHtmlReport(tests);
+        expect(html).toContain('viewBox="0 0 300 30"');
+        expect(html).toContain('width="100%"');
+    });
 });
