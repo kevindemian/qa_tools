@@ -1,0 +1,9 @@
+{
+    "name": "assertion-failure",
+    "description": "Clear assertion error in a unit test",
+    "input": {
+        "title": "GET /api/users returns 200 with valid token",
+        "error": "Expected 200 but got 401. Response body: { error: 'Unauthorized' }"
+    },
+    "expectedCategory": "ASSERTION"
+}

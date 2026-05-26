@@ -1,0 +1,199 @@
+/**
+ * LLM Prompt Benchmark.
+ * Runs golden dataset fixtures through the LLM and reports match rates.
+ * Skip by default. Run with: BENCHMARK=true npx tsx shared/llm-benchmark.ts
+ * Requires LLM_API_KEY (and optionally LLM_FAST_API_KEY) in environment.
+ */
+import fs from 'fs';
+import path from 'path';
+import { llmPrompt } from './llm-client';
+import { rootLogger } from './logger';
+import {
+    loadFailureAnalysisFixtures,
+    loadUserStoryFixtures,
+    loadClassifyFixtures,
+    type FailureAnalysisFixture,
+    type UserStoryFixture,
+    type ClassifyFixture,
+} from './prompts/__fixtures__/index';
+
+const PROMPT_DIR = __dirname + '/prompts';
+
+function readPrompt(file: string): string {
+    try {
+        return fs.readFileSync(path.join(PROMPT_DIR, file), 'utf8');
+    } catch {
+        return '';
+    }
+}
+
+interface BenchmarkResult {
+    fixture: string;
+    passed: boolean;
+    error?: string;
+    durationMs: number;
+}
+
+function validateJsonSchema(body: string, minTests: number): string | null {
+    try {
+        const parsed = JSON.parse(body);
+        if (!parsed.tests || !Array.isArray(parsed.tests)) return 'Missing tests array';
+        if (parsed.tests.length < minTests) return 'Too few tests: ' + parsed.tests.length + ' < ' + minTests;
+        for (let i = 0; i < parsed.tests.length; i++) {
+            const t = parsed.tests[i];
+            if (!t.title || typeof t.title !== 'string') return 'test[' + i + '] missing title';
+            if (!t.classification) return 'test[' + i + '] missing classification';
+            if (!t.severity) return 'test[' + i + '] missing severity';
+            if (!t.recommendation || t.recommendation.length < 10) return 'test[' + i + '] recommendation too short';
+        }
+        return null;
+    } catch {
+        return 'Invalid JSON';
+    }
+}
+
+function validateJsonArray(body: string, minItems: number): string | null {
+    try {
+        const parsed = JSON.parse(body);
+        if (!Array.isArray(parsed)) return 'Not an array';
+        if (parsed.length < minItems) return 'Too few items: ' + parsed.length + ' < ' + minItems;
+        for (let i = 0; i < parsed.length; i++) {
+            const item = parsed[i];
+            if (!item.title || typeof item.title !== 'string' || item.title.length < 5)
+                return 'item[' + i + '] invalid title';
+            if (!Array.isArray(item.steps) || item.steps.length === 0) return 'item[' + i + '] invalid steps';
+            if (!item.expectedResult || item.expectedResult.length < 10)
+                return 'item[' + i + '] invalid expectedResult';
+        }
+        return null;
+    } catch {
+        return 'Invalid JSON';
+    }
+}
+
+function validateClassify(body: string, expectedCategory: string): string | null {
+    const regex = /^(ASSERTION|TIMEOUT|ENVIRONMENT|FLAKY|APPLICATION|UNKNOWN):\s/;
+    if (!regex.test(body)) return 'Invalid format: expected CATEGORY: explanation';
+    const category = body.split(':')[0]!;
+    if (category !== expectedCategory) return 'Wrong category: expected ' + expectedCategory + ' got ' + category;
+    return null;
+}
+
+async function runFailureAnalysisFixture(fixture: FailureAnalysisFixture): Promise<BenchmarkResult> {
+    const start = Date.now();
+    const system = readPrompt('failure-analysis.md').replace('{{FAILED_TESTS}}', fixture.input);
+    try {
+        const result = await llmPrompt(
+            'report',
+            system,
+            'Analyze the test failures above and produce the JSON report as instructed.',
+            'benchmark-fa',
+        );
+        const error = validateJsonSchema(result, fixture.validate.minTests);
+        return { fixture: fixture.name, passed: !error, error: error || undefined, durationMs: Date.now() - start };
+    } catch (err) {
+        return { fixture: fixture.name, passed: false, error: (err as Error).message, durationMs: Date.now() - start };
+    }
+}
+
+async function runUserStoryFixture(fixture: UserStoryFixture): Promise<BenchmarkResult> {
+    const start = Date.now();
+    const system = readPrompt('user-story-to-tests.md');
+    const userMsg =
+        'User Story:\n' + fixture.input.story + '\n\nAcceptance Criteria:\n' + fixture.input.criteria.join('\n');
+    try {
+        const result = await llmPrompt('main', system, userMsg, 'benchmark-us');
+        const error = validateJsonArray(result, fixture.validate.minItems);
+        return { fixture: fixture.name, passed: !error, error: error || undefined, durationMs: Date.now() - start };
+    } catch (err) {
+        return { fixture: fixture.name, passed: false, error: (err as Error).message, durationMs: Date.now() - start };
+    }
+}
+
+async function runClassifyFixture(fixture: ClassifyFixture): Promise<BenchmarkResult> {
+    const start = Date.now();
+    const system = readPrompt('classify.md')
+        .replace('{{TEST_TITLE}}', fixture.input.title)
+        .replace('{{ERROR_MESSAGE}}', fixture.input.error);
+    try {
+        const result = await llmPrompt('fast', system, 'Classify this failure.', 'benchmark-cl');
+        const error = validateClassify(result, fixture.expectedCategory);
+        return { fixture: fixture.name, passed: !error, error: error || undefined, durationMs: Date.now() - start };
+    } catch (err) {
+        return { fixture: fixture.name, passed: false, error: (err as Error).message, durationMs: Date.now() - start };
+    }
+}
+
+function printResults(results: BenchmarkResult[]): void {
+    const total = results.length;
+    const passed = results.filter((r) => r.passed).length;
+    const failed = results.filter((r) => !r.passed).length;
+
+    // eslint-disable-next-line no-console
+    console.log('\n=== LLM BENCHMARK RESULTS ===');
+    // eslint-disable-next-line no-console
+    console.log(
+        'Total: ' +
+            total +
+            ' | Passed: ' +
+            passed +
+            ' | Failed: ' +
+            failed +
+            ' | Rate: ' +
+            Math.round((passed / total) * 100) +
+            '%',
+    );
+    // eslint-disable-next-line no-console
+    console.log('');
+
+    for (const r of results) {
+        const icon = r.passed ? '✅' : '❌';
+        const status = r.passed ? 'PASS' : 'FAIL';
+        // eslint-disable-next-line no-console
+        console.log(icon + ' [' + status + '] ' + r.fixture + ' (' + r.durationMs + 'ms)');
+        if (r.error) {
+            // eslint-disable-next-line no-console
+            console.log('   Error: ' + r.error);
+        }
+    }
+}
+
+export async function runBenchmark(): Promise<void> {
+    if (process.env.BENCHMARK !== 'true') {
+        // eslint-disable-next-line no-console
+        console.log('Skipping benchmark. Set BENCHMARK=true to run.');
+        return;
+    }
+
+    // eslint-disable-next-line no-console
+    console.log('Loading fixtures...');
+    const faFixtures = loadFailureAnalysisFixtures();
+    const usFixtures = loadUserStoryFixtures();
+    const clFixtures = loadClassifyFixtures();
+
+    // eslint-disable-next-line no-console
+    console.log('Running ' + (faFixtures.length + usFixtures.length + clFixtures.length) + ' benchmarks...');
+
+    const results: BenchmarkResult[] = [];
+
+    for (const f of faFixtures) {
+        results.push(await runFailureAnalysisFixture(f));
+    }
+    for (const f of usFixtures) {
+        results.push(await runUserStoryFixture(f));
+    }
+    for (const f of clFixtures) {
+        results.push(await runClassifyFixture(f));
+    }
+
+    printResults(results);
+}
+
+// Allow direct execution: npx tsx shared/llm-benchmark.ts
+const isMain = process.argv[1]?.endsWith('llm-benchmark.ts');
+if (isMain) {
+    runBenchmark().catch((err) => {
+        rootLogger.error('Benchmark failed: ' + (err as Error).message);
+        process.exit(1);
+    });
+}

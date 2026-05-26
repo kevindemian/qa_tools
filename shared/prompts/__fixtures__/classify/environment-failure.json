@@ -1,0 +1,9 @@
+{
+    "name": "environment-failure",
+    "description": "Infrastructure/dependency issue",
+    "input": {
+        "title": "Payment service processes refund",
+        "error": "Connection refused: postgres://localhost:5432/testdb. Is the database running?"
+    },
+    "expectedCategory": "ENVIRONMENT"
+}

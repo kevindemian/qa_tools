@@ -1,0 +1,22 @@
+{
+    "name": "simple-login",
+    "description": "User story for login functionality",
+    "input": {
+        "story": "As a registered user, I want to log in with my email and password so that I can access my dashboard.",
+        "criteria": [
+            "Login succeeds with valid credentials",
+            "Login fails with wrong password",
+            "Login fails with unregistered email",
+            "Login button disabled while submitting"
+        ]
+    },
+    "validate": {
+        "type": "json-array",
+        "minItems": 3,
+        "itemSchema": {
+            "title": "string (min 5 chars)",
+            "steps": "string[] (min 1 step)",
+            "expectedResult": "string (min 10 chars)"
+        }
+    }
+}
