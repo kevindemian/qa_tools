@@ -1,4 +1,24 @@
+/** Test result parsers for Mochawesome and CTRF JSON formats.
+ * Provides unified flattening, detection, and file-I/O wrappers. */
+
 import fs from 'fs';
+
+const EMPTY_PARSE_RESULT = { tests: [], stats: { passed: 0, failed: 0, skipped: 0, total: 0, duration: 0 } };
+
+function readAndParse<T>(filePath: string, parser: (data: T) => ParseResult): ParseResultWithError {
+    try {
+        const raw = fs.readFileSync(filePath, 'utf8');
+        const json = JSON.parse(raw) as T;
+        return parser(json);
+    } catch (err: unknown) {
+        const e = err as NodeJS.ErrnoException;
+        const msg =
+            e.code === 'ENOENT'
+                ? 'Arquivo não encontrado: ' + filePath
+                : 'Erro ao ler/parsear arquivo: ' + filePath + ' (' + e.message + ')';
+        return { ...EMPTY_PARSE_RESULT, error: msg };
+    }
+}
 
 interface MochawesomeSuite {
     title?: string;
@@ -11,6 +31,7 @@ interface MochawesomeSuite {
     suites?: MochawesomeSuite[];
 }
 
+/** Top-level Mochawesome JSON report structure. */
 export interface MochawesomeData {
     results?: Array<{
         suites?: MochawesomeSuite[];
@@ -20,55 +41,92 @@ export interface MochawesomeData {
     };
 }
 
+/** A single test entry in CTRF format. */
 export interface CtrfTest {
+    /** Test name. */
     name: string;
+    /** Execution status: passed, failed, skipped, pending, or other. */
     status: 'passed' | 'failed' | 'skipped' | 'pending' | 'other';
+    /** Execution duration in milliseconds. */
     duration: number;
+    /** Failure or error message. */
     message?: string;
+    /** Stack trace on failure. */
     trace?: string;
+    /** Suite name the test belongs to. */
     suite?: string;
+    /** Arbitrary tags attached to the test. */
     tags?: string[];
+    /** Test type (e.g. unit, integration, e2e). */
     type?: string;
+    /** Path to the test source file. */
     filePath?: string;
+    /** Whether the test is known to be flaky. */
     flaky?: boolean;
 }
 
+/** Aggregate statistics for a CTRF test run. */
 export interface CtrfSummary {
+    /** Total number of tests. */
     tests: number;
+    /** Number of passed tests. */
     passed: number;
+    /** Number of failed tests. */
     failed: number;
+    /** Number of skipped tests. */
     skipped: number;
+    /** Number of pending tests. */
     pending: number;
+    /** Number of tests with other status. */
     other: number;
+    /** Start timestamp (epoch ms). */
     start: number;
+    /** Stop timestamp (epoch ms). */
     stop: number;
 }
 
+/** Environment metadata for a CTRF test run. */
 export interface CtrfEnvironment {
+    /** Application name. */
     appName?: string;
+    /** Build name or version. */
     buildName?: string;
+    /** Build number. */
     buildNumber?: string;
 }
 
+/** Top-level CTRF results payload containing summary and tests. */
 export interface CtrfResults {
+    /** Tool that generated the report. */
     tool?: { name?: string };
+    /** Aggregate run summary. */
     summary: CtrfSummary;
+    /** Array of individual test results. */
     tests: CtrfTest[];
+    /** Environment context. */
     environment?: CtrfEnvironment;
 }
 
+/** CTRF JSON envelope. */
 export interface CtrfData {
     results: CtrfResults;
 }
 
+/** Normalised flat test result used throughout the codebase. */
 export interface FlatTest {
+    /** Test name. */
     title: string;
+    /** Test result. */
     state: 'passed' | 'failed' | 'skipped';
+    /** Execution time in milliseconds. */
     duration: number;
+    /** Failure message if any. */
     error?: string;
+    /** Suite hierarchy if available (e.g. "Root > Sub > test"). */
     fullTitle?: string;
 }
 
+/** Parsed output with flat test list and aggregate stats. */
 export interface ParseResult {
     tests: FlatTest[];
     stats: {
@@ -80,6 +138,7 @@ export interface ParseResult {
     };
 }
 
+/** Parse result that may carry a top-level error message on failure. */
 interface ParseResultWithError extends ParseResult {
     error?: string;
 }
@@ -93,7 +152,7 @@ function _flattenTests(suite: MochawesomeSuite, parentTitle?: string): FlatTest[
             const rawState = t.state || 'pending';
             const state: 'passed' | 'failed' | 'skipped' =
                 rawState === 'passed' ? 'passed' : rawState === 'failed' ? 'failed' : 'skipped';
-            const errMsg = t.err?.[0]?.message || t.err?.[0]?.title || undefined;
+            const errMsg = t.err?.[0]?.message || t.err?.[0]?.title;
             tests.push({
                 title: t.title || '',
                 state,
@@ -111,9 +170,11 @@ function _flattenTests(suite: MochawesomeSuite, parentTitle?: string): FlatTest[
     return tests;
 }
 
+/** Parse a Mochawesome JSON report into a normalised {@link ParseResult}.
+ * Returns an empty result if the input structure is invalid. */
 export function parseMochawesome(jsonData: MochawesomeData): ParseResult {
     if (!jsonData || !jsonData.results || !Array.isArray(jsonData.results)) {
-        return { tests: [], stats: { passed: 0, failed: 0, skipped: 0, total: 0, duration: 0 } };
+        return EMPTY_PARSE_RESULT;
     }
 
     const allTests: FlatTest[] = [];
@@ -125,27 +186,36 @@ export function parseMochawesome(jsonData: MochawesomeData): ParseResult {
         }
     }
 
-    const passed = allTests.filter((t) => t.state === 'passed').length;
-    const failed = allTests.filter((t) => t.state === 'failed').length;
-    const skipped = allTests.filter((t) => t.state === 'skipped').length;
+    const counts = allTests.reduce(
+        (acc, t) => {
+            if (t.state === 'passed') acc.passed++;
+            else if (t.state === 'failed') acc.failed++;
+            else acc.skipped++;
+            return acc;
+        },
+        { passed: 0, failed: 0, skipped: 0 },
+    );
     const stats = jsonData.stats || {};
     const duration = typeof stats.duration === 'number' ? stats.duration : 0;
 
     return {
         tests: allTests,
         stats: {
-            passed,
-            failed,
-            skipped,
+            passed: counts.passed,
+            failed: counts.failed,
+            skipped: counts.skipped,
             total: allTests.length,
             duration,
         },
     };
 }
 
+/** Parse a CTRF (Common Test Report Format) JSON payload.
+ * Maps `passed` / `failed` status directly; everything else becomes `skipped`.
+ * Falls back to computed test counts when summary fields are missing. */
 export function parseCtrfResults(jsonData: CtrfData): ParseResult {
     if (!jsonData?.results?.tests || !Array.isArray(jsonData.results.tests)) {
-        return { tests: [], stats: { passed: 0, failed: 0, skipped: 0, total: 0, duration: 0 } };
+        return EMPTY_PARSE_RESULT;
     }
 
     const summary = jsonData.results.summary;
@@ -158,11 +228,20 @@ export function parseCtrfResults(jsonData: CtrfData): ParseResult {
         fullTitle: t.suite ? t.suite + ' > ' + (t.name || '') : undefined,
     }));
 
+    const testCounts = tests.reduce(
+        (acc, t) => {
+            if (t.state === 'passed') acc.passed++;
+            else if (t.state === 'failed') acc.failed++;
+            else acc.skipped++;
+            return acc;
+        },
+        { passed: 0, failed: 0, skipped: 0 },
+    );
+
     const stats = {
-        passed: typeof summary?.passed === 'number' ? summary.passed : tests.filter((t) => t.state === 'passed').length,
-        failed: typeof summary?.failed === 'number' ? summary.failed : tests.filter((t) => t.state === 'failed').length,
-        skipped:
-            typeof summary?.skipped === 'number' ? summary.skipped : tests.filter((t) => t.state === 'skipped').length,
+        passed: typeof summary?.passed === 'number' ? summary.passed : testCounts.passed,
+        failed: typeof summary?.failed === 'number' ? summary.failed : testCounts.failed,
+        skipped: typeof summary?.skipped === 'number' ? summary.skipped : testCounts.skipped,
         total: typeof summary?.tests === 'number' ? summary.tests : tests.length,
         duration:
             summary?.stop && summary?.start
@@ -175,6 +254,8 @@ export function parseCtrfResults(jsonData: CtrfData): ParseResult {
     return { tests, stats };
 }
 
+/** Type guard that checks whether an unknown value matches the CTRF envelope shape
+ * (`results.tests` array + `results.summary` object). */
 export function isCtrfFormat(jsonData: unknown): jsonData is CtrfData {
     if (typeof jsonData !== 'object' || jsonData === null) return false;
     const obj = jsonData as Record<string, unknown>;
@@ -183,6 +264,7 @@ export function isCtrfFormat(jsonData: unknown): jsonData is CtrfData {
     return Array.isArray(results.tests) && typeof results.summary === 'object';
 }
 
+/** Auto-detect format (CTRF or Mochawesome) and dispatch to the correct parser. */
 export function parseTestResults(jsonData: unknown): ParseResult {
     if (isCtrfFormat(jsonData)) {
         return parseCtrfResults(jsonData);
@@ -190,32 +272,14 @@ export function parseTestResults(jsonData: unknown): ParseResult {
     return parseMochawesome(jsonData as MochawesomeData);
 }
 
+/** Read a JSON file from disk, detect its format, and parse test results.
+ * Returns an error string in the result on I/O or parse failure. */
 export function parseTestResultsFile(filePath: string): ParseResultWithError {
-    try {
-        const raw = fs.readFileSync(filePath, 'utf8');
-        const json = JSON.parse(raw);
-        return parseTestResults(json);
-    } catch (err: unknown) {
-        const e = err as NodeJS.ErrnoException & { message: string };
-        const msg =
-            e.code === 'ENOENT'
-                ? 'Arquivo não encontrado: ' + filePath
-                : 'Erro ao ler/parsear arquivo: ' + filePath + ' (' + e.message + ')';
-        return { tests: [], stats: { passed: 0, failed: 0, skipped: 0, total: 0, duration: 0 }, error: msg };
-    }
+    return readAndParse(filePath, parseTestResults);
 }
 
+/** Legacy wrapper — reads a Mochawesome JSON file and parses it.
+ * Returns an error string in the result on I/O or parse failure. */
 export function parseCypressResults(filePath: string): ParseResultWithError {
-    try {
-        const raw = fs.readFileSync(filePath, 'utf8');
-        const json = JSON.parse(raw);
-        return parseMochawesome(json);
-    } catch (err: unknown) {
-        const e = err as NodeJS.ErrnoException & { message: string };
-        const msg =
-            e.code === 'ENOENT'
-                ? 'Arquivo não encontrado: ' + filePath
-                : 'Erro ao ler/parsear arquivo: ' + filePath + ' (' + e.message + ')';
-        return { tests: [], stats: { passed: 0, failed: 0, skipped: 0, total: 0, duration: 0 }, error: msg };
-    }
+    return readAndParse(filePath, parseMochawesome);
 }

@@ -3,6 +3,27 @@ import Config from './config';
 import { rootLogger } from './logger';
 import { sanitizeForLlm } from './sanitize';
 
+/**
+ * Multi-tier LLM client with automatic fallback, caching, rate limiting,
+ * and circuit-breaker protection.
+ *
+ * Architecture
+ * ------------
+ * Six named tiers (main, fast, reviewer, report, fallback, batch) each map
+ * to a distinct model/provider configuration via Config.  On failure the
+ * client transparently walks the tier's fallback chain (e.g. main →
+ * fallback → batch).  Responses are cached by SHA-256 hash for 5 minutes
+ * to avoid redundant calls.  Per-tier rate limiting and a circuit breaker
+ * (5 failures → 30 s cooldown) protect upstream providers.
+ */
+
+/**
+ * Named tier selecting which LLM model/provider configuration to use.
+ *
+ * Each tier corresponds to a distinct set of Config keys (model, API key,
+ * base URL, temperature).  Tiers also define a fallback chain used when
+ * the primary provider fails.
+ */
 export type LlmTier = 'main' | 'fast' | 'reviewer' | 'report' | 'fallback' | 'batch';
 type ProviderFormat = 'openai' | 'gemini';
 type ResponseFormat = 'text' | 'json';
@@ -16,8 +37,11 @@ interface ProviderConfig {
     responseFormat?: ResponseFormat;
 }
 
+/** A cached LLM response with an absolute expiration timestamp. */
 interface CacheEntry {
+    /** The response text returned by the LLM. */
     response: string;
+    /** Epoch ms after which this entry is considered stale. */
     expiresAt: number;
 }
 
@@ -45,7 +69,6 @@ function getRateLimitPerTier(): number {
 
 const cache = new Map<string, CacheEntry>();
 const _rateTimestamps = new Map<LlmTier, number[]>();
-const _rateLocks = new Map<LlmTier, Promise<void>>();
 const _circuitState = new Map<LlmTier, { failures: number; breakUntil: number }>();
 let _cleanupTimer: ReturnType<typeof setInterval> | null = null;
 
@@ -247,28 +270,18 @@ async function fetchWithRetry(url: string, options: RequestInit, retries = LLM_F
     throw new Error('LLM max retries exceeded');
 }
 
-async function checkRateLimit(tier: LlmTier): Promise<void> {
-    const prev = _rateLocks.get(tier);
-    let resolve: () => void;
-    const lock = new Promise<void>((r) => (resolve = r));
-    _rateLocks.set(tier, lock);
-    if (prev) await prev;
-    try {
-        const now = Date.now();
-        const limit = getRateLimitPerTier();
-        const timestamps = _rateTimestamps.get(tier) || [];
-        const windowed = timestamps.filter((t) => now - t < LLM_RATE_WINDOW_MS);
-        if (windowed.length >= limit) {
-            throw new Error(
-                'Rate limit exceeded for tier ' + tier + ' (' + limit + ' req/' + LLM_RATE_WINDOW_MS / 1000 + 's)',
-            );
-        }
-        windowed.push(now);
-        _rateTimestamps.set(tier, windowed);
-    } finally {
-        _rateLocks.delete(tier);
-        resolve!();
+function checkRateLimit(tier: LlmTier): void {
+    const now = Date.now();
+    const limit = getRateLimitPerTier();
+    const timestamps = _rateTimestamps.get(tier) || [];
+    const windowed = timestamps.filter((t) => now - t < LLM_RATE_WINDOW_MS);
+    if (windowed.length >= limit) {
+        throw new Error(
+            'Rate limit exceeded for tier ' + tier + ' (' + limit + ' req/' + LLM_RATE_WINDOW_MS / 1000 + 's)',
+        );
     }
+    windowed.push(now);
+    _rateTimestamps.set(tier, windowed);
 }
 
 function checkCircuitBreaker(tier: LlmTier): void {
@@ -350,7 +363,7 @@ async function sendToProvider(cfg: ProviderConfig, tier: LlmTier, system: string
 }
 
 async function sendWithFallback(tier: LlmTier, system: string, user: string): Promise<string> {
-    await checkRateLimit(tier);
+    checkRateLimit(tier);
     const primary = tierToConfig(tier);
     const errors: string[] = [];
 
@@ -390,6 +403,24 @@ async function sendWithFallback(tier: LlmTier, system: string, user: string): Pr
     throw new Error('All LLM providers failed: ' + errors.join('; '));
 }
 
+/**
+ * Send a prompt to the LLM with caching, rate limiting, and tier fallback.
+ *
+ * Checks the in-memory cache first (keyed by tier + system + user +
+ * optional callerId).  On miss, dispatches through the selected tier's
+ * primary provider; if that fails, walks the tier's fallback chain
+ * (e.g. main → fallback → batch).  The result is cached for 5 minutes
+ * before being returned.
+ *
+ * @param tier     - Which model/provider tier to route through.
+ * @param system   - System-level instruction (role: system in OpenAI
+ *                   format, prepended in Gemini format).
+ * @param user     - User message content (role: user).
+ * @param callerId - Optional identifier mixed into the cache key to
+ *                   prevent collisions between unrelated callers.
+ * @returns The LLM response text.
+ * @throws When every provider in the tier's fallback chain has failed.
+ */
 export async function llmPrompt(tier: LlmTier, system: string, user: string, callerId?: string): Promise<string> {
     const cKey = cacheKey(tier, system, user, callerId);
     const cached = cache.get(cKey);
@@ -405,14 +436,17 @@ export async function llmPrompt(tier: LlmTier, system: string, user: string, cal
     return response;
 }
 
+/** Evict all cached LLM responses. Useful in tests or when provider config changes at runtime. */
 export function clearCache(): void {
     cache.clear();
 }
 
+/** Reset per-tier rate-limit tracking. Typically called in test teardown. */
 export function resetRateLimiter(): void {
     _rateTimestamps.clear();
 }
 
+/** Reset all circuit-breaker failure counts. Typically called in test teardown. */
 export function resetCircuitState(): void {
     _circuitState.clear();
 }
