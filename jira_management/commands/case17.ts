@@ -1,6 +1,7 @@
 import fs from 'fs';
 import path from 'path';
 import { ask, askConfirm, info, printError, title, withSpinner } from '../../shared/prompt';
+import { writeReport } from '../../shared/temp-dir';
 import { parseCypressResults } from '../../shared/result_parser';
 import { generateHtmlReport } from '../../shared/report-generator';
 import { analyzeFailures } from '../../shared/failure-analysis';
@@ -41,10 +42,12 @@ async function handler(c: CommandContext): Promise<boolean | void> {
     }
 
     const defaultName = `report-${c.ctx.project_name}-${Date.now()}.html`;
-    const outPath = await ask('Caminho de saída do HTML', { default: defaultName });
-    const resolvedPath = path.resolve(outPath.trim() || defaultName);
+    const outPath = await ask('Caminho de saída do HTML', { default: path.join('reports', defaultName) });
+    const resolvedPath = outPath.trim() ? path.resolve(outPath.trim()) : writeReport(defaultName, html);
 
-    fs.writeFileSync(resolvedPath, html, 'utf8');
+    if (outPath.trim()) {
+        fs.writeFileSync(resolvedPath, html, 'utf8');
+    }
 
     info(`Relatório HTML gerado: ${resolvedPath}`);
     c.pushHistory(

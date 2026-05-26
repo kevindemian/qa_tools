@@ -1,10 +1,9 @@
-import path from 'path';
-import fs from 'fs';
 import { print, success, warn, info, prompt, printError, withSpinner } from '../shared/prompt';
 import { SessionContext } from '../shared/session-context';
 import type { GitProvider, StateContainer } from '../shared/types';
 import { loadMetrics, calculateFlakiness } from '../shared/metrics';
 import { generateFlakinessHtml } from '../shared/flakiness-dashboard';
+import { writeReport } from '../shared/temp-dir';
 import {
     currentProvider,
     currentProjectName,
@@ -107,8 +106,7 @@ export function handleFlakinessDashboard() {
         return;
     }
     const html = generateFlakinessHtml(flaky, 'Flakiness — ' + currentProjectName);
-    const outPath = path.resolve(__dirname, '../flakiness-' + currentProjectName + '.html');
-    fs.writeFileSync(outPath, html, 'utf8');
+    const outPath = writeReport('flakiness-' + currentProjectName + '.html', html);
     success('Dashboard gerado: ' + outPath);
     pushHistory(
         'flakiness',

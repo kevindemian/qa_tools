@@ -1,6 +1,3 @@
-import path from 'path';
-import os from 'os';
-import fs from 'fs';
 import { print, success, warn, info, title, prompt, confirm, printError, withSpinner } from '../shared/prompt';
 import { load as loadState, update as updateState } from '../shared/state';
 import { sleep } from '../shared/http-client';
@@ -9,6 +6,7 @@ import Config from '../shared/config';
 import type { ParseResult } from '../shared/result_parser';
 import type { PipelineTriggerResult, StateContainer } from '../shared/types';
 import type { GitProvider } from '../shared/types';
+import { writeEphemeral } from '../shared/temp-dir';
 import {
     collectTestResults as _collectTestResults,
     createTestExecution as _createTestExecution,
@@ -305,8 +303,7 @@ export async function handleExportVariables(ctx: SessionContext, m: GitProvider)
                 })
                 .join('\n');
 
-            const tmpPath = path.join(os.tmpdir(), 'qa-vars-' + process.pid + '.env');
-            fs.writeFileSync(tmpPath, envContent, { mode: 0o600, encoding: 'utf8' });
+            const tmpPath = writeEphemeral('vars', 'qa-vars-' + process.pid + '.env', envContent);
             success('Variáveis exportadas (' + variables.length + '):');
             print('');
             print(envContent);
@@ -314,7 +311,6 @@ export async function handleExportVariables(ctx: SessionContext, m: GitProvider)
             warn('As variáveis acima foram exibidas no terminal e NÃO foram salvas em disco.');
             info('Uma copia temporaria foi salva em ' + tmpPath + ' (modo 600, apenas leitura)');
             info('Ela sera removida ao encerrar esta sessão. Não compartilhe este arquivo.');
-            fs.unlinkSync(tmpPath);
             pushHistory('export-vars', variables.length + ' variáveis', 'ok');
         }
     } catch (err) {

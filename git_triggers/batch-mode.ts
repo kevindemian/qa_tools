@@ -1,11 +1,10 @@
-import fs from 'fs';
-import path from 'path';
 import { success, error, info, printError, withSpinner } from '../shared/prompt';
 import { loadMetrics, calculateFlakiness } from '../shared/metrics';
 import { generateFlakinessHtml } from '../shared/flakiness-dashboard';
 import { offerPipelineFailureAnalysis } from './llm-pipeline';
 import { collectTestResults as _collectTestResults } from './test-results';
 import type { PipelineTriggerResult } from '../shared/types';
+import { writeReport } from '../shared/temp-dir';
 import {
     currentProjectName,
     currentProvider,
@@ -116,8 +115,7 @@ function generateFlakinessDashboard(projectName: string): void {
     if (projectRuns.length < 2) return;
     const flaky = calculateFlakiness({ runs: projectRuns }, 2);
     const html = generateFlakinessHtml(flaky, 'Flakiness — ' + projectName);
-    const outPath = path.resolve(__dirname, '../flakiness-' + projectName + '.html');
-    fs.writeFileSync(outPath, html, 'utf8');
+    const outPath = writeReport('flakiness-' + projectName + '.html', html);
     success('Dashboard de flakiness gerado: ' + outPath);
 }
 

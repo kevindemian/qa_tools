@@ -39,7 +39,12 @@ jest.mock('../shared/flakiness-dashboard', () => ({ generateFlakinessHtml: jest.
 
 jest.mock('../shared/state', () => ({ update: jest.fn() }));
 
-jest.mock('fs', () => ({ writeFileSync: jest.fn() }));
+jest.mock('fs', () => ({
+    writeFileSync: jest.fn(),
+    mkdirSync: jest.fn(),
+    existsSync: jest.fn(),
+    rmSync: jest.fn(),
+}));
 
 import { success, warn, info, print, prompt, printError, withSpinner } from '../shared/prompt';
 import { pushHistory, getProjects } from './session-state';

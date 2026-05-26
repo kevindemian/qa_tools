@@ -2,7 +2,9 @@
 node_modules
 
 # === Generated / Temp ===
-logs
+logs/
+reports/
+temp/
 *.log
 __pycache__
 exported_variables.env

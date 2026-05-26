@@ -1,5 +1,4 @@
 import * as fs from 'fs';
-import * as os from 'os';
 import * as path from 'path';
 import { md } from '../shared/markdown';
 import Config from '../shared/config';
@@ -10,6 +9,7 @@ import { rootLogger } from '../shared/logger';
 import { load as loadState } from '../shared/state';
 import { OPERATION_CANCELLED } from './constants';
 import { confirm, info, warn, print, title, divider, prompt, error, printSummary, ask } from '../shared/prompt';
+import { writeEphemeral } from '../shared/temp-dir';
 
 const csvDefaultPath = Config.csvDefaultPath || path.join(__dirname, 'test_steps.csv');
 
@@ -224,8 +224,7 @@ function showPreview(tests: TestCase[], jiraLabels: string[], totalSteps: number
     );
 
     const html = renderPreviewHtml(tests, jiraLabels, totalSteps, groupsCount);
-    const outPath = path.join(os.tmpdir(), 'qa-preview.html');
-    fs.writeFileSync(outPath, html, 'utf8');
+    const outPath = writeEphemeral('previews', 'qa-preview.html', html);
     info('Preview HTML: ' + outPath);
 }
 
