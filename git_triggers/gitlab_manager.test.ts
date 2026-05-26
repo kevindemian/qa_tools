@@ -407,4 +407,35 @@ describe('GitLabManager', () => {
             expect(result).toEqual([]);
         });
     });
+
+    describe('getDiff', () => {
+        it('return diff string for valid comparison', async () => {
+            mockClient.get.mockResolvedValue({
+                data: { diffs: [{ diff: '+console.log("hi")', new_path: 'src/main.ts' }] },
+            });
+            const result = await manager.getDiff('feature', 'main');
+            expect(result).toContain('src/main.ts');
+            expect(result).toContain('console.log');
+        });
+
+        it('returns empty string when no diffs', async () => {
+            mockClient.get.mockResolvedValue({ data: { diffs: [] } });
+            const result = await manager.getDiff('feature', 'main');
+            expect(result).toBe('');
+        });
+
+        it('returns empty string when data is null', async () => {
+            mockClient.get.mockResolvedValue({ data: null });
+            const result = await manager.getDiff('feature', 'main');
+            expect(result).toBe('');
+        });
+
+        it('handles missing diff property', async () => {
+            mockClient.get.mockResolvedValue({
+                data: { diffs: [{ new_path: 'readme.md' }] },
+            });
+            const result = await manager.getDiff('feature', 'main');
+            expect(result).toBe('');
+        });
+    });
 });

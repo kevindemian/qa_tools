@@ -640,4 +640,35 @@ describe('GitHubManager', () => {
             expect(result).toBeNull();
         });
     });
+
+    describe('getDiff', () => {
+        it('return diff string for valid comparison', async () => {
+            mockClient.get.mockResolvedValue({
+                data: { files: [{ filename: 'src/main.ts', patch: '+console.log("hi")', status: 'modified' }] },
+            });
+            const result = await manager.getDiff('feature', 'main');
+            expect(result).toContain('src/main.ts');
+            expect(result).toContain('console.log');
+        });
+
+        it('returns empty string when no files', async () => {
+            mockClient.get.mockResolvedValue({ data: { files: [] } });
+            const result = await manager.getDiff('feature', 'main');
+            expect(result).toBe('');
+        });
+
+        it('returns empty string when data is null', async () => {
+            mockClient.get.mockResolvedValue({ data: null });
+            const result = await manager.getDiff('feature', 'main');
+            expect(result).toBe('');
+        });
+
+        it('handles missing patch property', async () => {
+            mockClient.get.mockResolvedValue({
+                data: { files: [{ filename: 'readme.md', status: 'modified' }] },
+            });
+            const result = await manager.getDiff('feature', 'main');
+            expect(result).toBe('');
+        });
+    });
 });
