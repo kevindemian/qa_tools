@@ -273,6 +273,6 @@ Removidos: `sourceBranch`/`targetBranch` de `updateMergeRequest` (github_manager
 
 | # | Item | Prio | Arquivo | Status |
 |---|------|------|---------|--------|
-| L10-27 | Criar fixtures de referência e script de benchmark | P4 | `shared/prompts/__fixtures__/` | ⬜ Pending (P4, opcional) |
+| L10-27 | Criar fixtures de referência e script de benchmark | P4 | `shared/prompts/__fixtures__/`, `shared/llm-benchmark.ts` | ✅ Done |
 
-**Progresso geral:** 26/27 ✅ (apenas L10-27 golden dataset — P4, opcional)
+**Progresso geral:** 27/27 ✅
