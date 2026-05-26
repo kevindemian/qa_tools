@@ -63,7 +63,7 @@ describe('case18 — AI tests generator', () => {
         fs.readFileSync.mockReturnValueOnce('You are a QA engineer.\n{{USER_STORY}}\n{{ACCEPTANCE_CRITERIA}}');
 
         llm.llmPrompt.mockResolvedValueOnce(
-            '[{"title": "Login test", "steps": ["Enter user"], "expectedResult": "OK"}]',
+            '[{"title": "Login test with valid credentials", "steps": ["Enter valid user", "Enter valid password", "Click login"], "expectedResult": "User is redirected to dashboard and sees welcome message"}]',
         );
 
         const mod = require('./case18').default;

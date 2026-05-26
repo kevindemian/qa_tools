@@ -31,17 +31,31 @@ async function handler(c: CommandContext): Promise<boolean | void> {
     const userMsg = 'User Story:\n' + userStory + '\n\nAcceptance Criteria:\n' + acceptanceCriteria;
     const safeUserMsg = sanitizeForLlm(userMsg);
 
+    function validateTestCases(raw: string): boolean {
+        try {
+            const cases = JSON.parse(raw);
+            if (!Array.isArray(cases) || cases.length === 0) return false;
+            for (const tc of cases) {
+                if (typeof tc.title !== 'string' || tc.title.length < 5) return false;
+                if (!Array.isArray(tc.steps) || tc.steps.length === 0) return false;
+                if (typeof tc.expectedResult !== 'string' || tc.expectedResult.length < 10) return false;
+            }
+            return true;
+        } catch {
+            return false;
+        }
+    }
+
     title('Gerando testes com IA...');
     let result: string;
     try {
         result = await llmPrompt('main', system, safeUserMsg, 'case18');
-        try {
-            JSON.parse(result);
-        } catch {
-            rootLogger.warn('case18: LLM returned non-JSON, retrying');
+        if (!validateTestCases(result)) {
+            rootLogger.warn('case18: LLM returned invalid test content, retrying');
             result = await llmPrompt(
                 'main',
-                system + '\n\nIMPORTANTE: Retorne APENAS um array JSON válido. Nenhum texto, nenhum markdown.',
+                system +
+                    '\n\nIMPORTANTE: Retorne APENAS um array JSON válido. Cada objeto deve ter title (>5 chars), steps (array não vazio) e expectedResult (>10 chars).',
                 safeUserMsg,
                 'case18-retry',
             );

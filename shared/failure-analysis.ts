@@ -81,6 +81,10 @@ export async function classifyFailure(title: string, error: string): Promise<str
             'Responda exatamente no formato CATEGORIA: explicacao. Use uma das categorias: ASSERTION, TIMEOUT, ENVIRONMENT, FLAKY, APPLICATION, UNKNOWN.',
             'classify-retry',
         );
+        if (!classifyRegex.test(result)) {
+            rootLogger.warn('classifyFailure: retry also returned invalid format, falling back to UNKNOWN');
+            return 'UNKNOWN: Could not classify failure after retry';
+        }
     }
 
     return result;

@@ -63,7 +63,31 @@ export class ReportValidator {
             }
         }
 
+        this.checkConsistency(obj, warnings);
+
         return { valid: errors.length === 0, errors, warnings };
+    }
+
+    private checkConsistency(data: Record<string, unknown>, warnings: string[]): void {
+        const tests = data['tests'];
+        if (!Array.isArray(tests)) return;
+        for (let i = 0; i < tests.length; i++) {
+            const t = tests[i];
+            if (typeof t !== 'object' || t === null) continue;
+            const tc = t as Record<string, unknown>;
+            if (tc.severity === 'high' && typeof tc.recommendation === 'string' && tc.recommendation.length < 20) {
+                warnings.push(
+                    'testes[' +
+                        i +
+                        '].recommendation: severity=high mas recommendation é muito curta (' +
+                        tc.recommendation.length +
+                        ' < 20)',
+                );
+            }
+            if (typeof tc.recommendation === 'string' && tc.recommendation.length < 10) {
+                warnings.push('testes[' + i + '].recommendation: muito curta (' + tc.recommendation.length + ' < 10)');
+            }
+        }
     }
 
     private resolveField(obj: Record<string, unknown>, fieldPath: string): unknown {
