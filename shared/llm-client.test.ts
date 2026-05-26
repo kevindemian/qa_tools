@@ -257,4 +257,111 @@ describe('llmPrompt', () => {
         const result = await llmPrompt('main', 'system', 'bad response');
         expect(result).toBe('');
     });
+
+    describe('rate limiter', () => {
+        it('allows requests within limit', async () => {
+            (Config as unknown as { set: (k: string, v: string) => void }).set('LLM_RATE_LIMIT', '2');
+            (Config as unknown as { set: (k: string, v: string) => void }).set('llmApiKey', 'sk-test');
+            (Config as unknown as { set: (k: string, v: string) => void }).set('llmModel', 'gpt-4');
+            (Config as unknown as { set: (k: string, v: string) => void }).set('llmBaseUrl', 'https://api.test.com/v1');
+            mockFetch.mockResolvedValue(mockOkResponse(JSON.stringify({ choices: [{ message: { content: 'ok' } }] })));
+
+            const r1 = await llmPrompt('main', 'system', 'test1');
+            const r2 = await llmPrompt('main', 'system', 'test2');
+            expect(r1).toBe('ok');
+            expect(r2).toBe('ok');
+            expect(mockFetch).toHaveBeenCalledTimes(2);
+        });
+
+        it('rejects when rate limit exceeded', async () => {
+            (Config as unknown as { set: (k: string, v: string) => void }).set('LLM_RATE_LIMIT', '2');
+            (Config as unknown as { set: (k: string, v: string) => void }).set('llmApiKey', 'sk-test');
+            (Config as unknown as { set: (k: string, v: string) => void }).set('llmModel', 'gpt-4');
+            (Config as unknown as { set: (k: string, v: string) => void }).set('llmBaseUrl', 'https://api.test.com/v1');
+            mockFetch.mockResolvedValue(mockOkResponse(JSON.stringify({ choices: [{ message: { content: 'ok' } }] })));
+
+            await llmPrompt('main', 'system', 'test1');
+            await llmPrompt('main', 'system', 'test2');
+            await expect(llmPrompt('main', 'system', 'test3')).rejects.toThrow('Rate limit exceeded');
+        });
+
+        it('recovers after rate limit window passes', async () => {
+            jest.useFakeTimers();
+            (Config as unknown as { set: (k: string, v: string) => void }).set('LLM_RATE_LIMIT', '2');
+            (Config as unknown as { set: (k: string, v: string) => void }).set('llmApiKey', 'sk-test');
+            (Config as unknown as { set: (k: string, v: string) => void }).set('llmModel', 'gpt-4');
+            (Config as unknown as { set: (k: string, v: string) => void }).set('llmBaseUrl', 'https://api.test.com/v1');
+            mockFetch.mockResolvedValue(mockOkResponse(JSON.stringify({ choices: [{ message: { content: 'ok' } }] })));
+            jest.spyOn(global, 'setTimeout').mockImplementation(((cb: (...args: unknown[]) => void) => {
+                cb();
+                return {} as NodeJS.Timeout;
+            }) as typeof global.setTimeout);
+
+            await llmPrompt('main', 'system', 'test1');
+            await llmPrompt('main', 'system', 'test2');
+            resetRateLimiter();
+            const r3 = await llmPrompt('main', 'system', 'test3');
+            expect(r3).toBe('ok');
+        });
+    });
+
+    describe('circuit breaker', () => {
+        beforeEach(() => {
+            (Config as unknown as { set: (k: string, v: string) => void }).set('llmApiKey', 'sk-test');
+            (Config as unknown as { set: (k: string, v: string) => void }).set('llmModel', 'gpt-4');
+            (Config as unknown as { set: (k: string, v: string) => void }).set('llmBaseUrl', 'https://api.test.com/v1');
+            jest.spyOn(global, 'setTimeout').mockImplementation(((cb: (...args: unknown[]) => void) => {
+                cb();
+                return {} as NodeJS.Timeout;
+            }) as typeof global.setTimeout);
+        });
+
+        it('opens after 5 consecutive call failures', async () => {
+            mockFetch.mockResolvedValue(mockErrorResponse(429));
+            for (let i = 0; i < 5; i++) {
+                await expect(llmPrompt('main', 'system', 'test' + i)).rejects.toThrow();
+            }
+        });
+
+        it('blocks requests while circuit is open', async () => {
+            mockFetch.mockResolvedValue(mockErrorResponse(429));
+            // Prime: 5 failures to open circuit
+            for (let i = 0; i < 5; i++) {
+                await expect(llmPrompt('main', 'system', 'prime' + i)).rejects.toThrow();
+            }
+            const fetchCount = mockFetch.mock.calls.length;
+            // Blocked call throws Circuit breaker open without fetching
+            await expect(llmPrompt('main', 'system', 'blocked')).rejects.toThrow('Circuit breaker open');
+            expect(mockFetch.mock.calls.length).toBe(fetchCount);
+        });
+
+        it('recovers after circuit state is cleared', async () => {
+            mockFetch.mockResolvedValue(mockErrorResponse(429));
+            for (let i = 0; i < 5; i++) {
+                await expect(llmPrompt('main', 'system', 'prime' + i)).rejects.toThrow();
+            }
+            resetCircuitState();
+            mockFetch.mockReset();
+            mockFetch.mockResolvedValue(
+                mockOkResponse(JSON.stringify({ choices: [{ message: { content: 'recovered' } }] })),
+            );
+            const result = await llmPrompt('main', 'system', 'recovered');
+            expect(result).toBe('recovered');
+        });
+
+        it('resets counter on primary success', async () => {
+            mockFetch.mockResolvedValue(mockErrorResponse(429));
+            // 4 failures → counter at 4
+            for (let i = 0; i < 4; i++) {
+                await expect(llmPrompt('main', 'system', 'fail' + i)).rejects.toThrow();
+            }
+            // Next call: mock switches to success
+            mockFetch.mockReset();
+            mockFetch.mockResolvedValue(
+                mockOkResponse(JSON.stringify({ choices: [{ message: { content: 'success' } }] })),
+            );
+            const result = await llmPrompt('main', 'system', 'recover');
+            expect(result).toBe('success');
+        });
+    });
 });

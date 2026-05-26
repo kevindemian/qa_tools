@@ -49,3 +49,35 @@ describe('truncateStacktrace', () => {
         expect(result.split('\n')).toHaveLength(11);
     });
 });
+
+describe('sanitizeForLlm — realistic scenarios', () => {
+    it('sanitizes user story containing an API key (case18 scenario)', () => {
+        const userStory = 'As a user I want to login. My API key is sk-' + 'a'.repeat(30) + ' and it should be hidden.';
+        const result = sanitizeForLlm(userStory);
+        expect(result).toContain('[...sanitized]');
+        expect(result).not.toContain('sk-' + 'a'.repeat(30));
+    });
+
+    it('sanitizes acceptance criteria with embedded token', () => {
+        const criteria = 'The system must reject github_pat_' + 'b'.repeat(30) + ' in any field.';
+        const result = sanitizeForLlm(criteria);
+        expect(result).toContain('[...sanitized]');
+    });
+
+    it('sanitizes test run data with project name containing a key (run-comparison scenario)', () => {
+        const runData = 'Project: my-project\nTotal: 100\nPassed: 90\nFailed: 10\nConfig: AIza' + 'c'.repeat(40);
+        const result = sanitizeForLlm(runData);
+        expect(result).toContain('[...sanitized]');
+        expect(result).not.toContain('AIza' + 'c'.repeat(40));
+    });
+
+    it('passes through normal user story without secrets', () => {
+        const story = 'As a user I want to reset my password via email.';
+        expect(sanitizeForLlm(story)).toBe(story);
+    });
+
+    it('passes through normal test run metrics', () => {
+        const metrics = 'Project: acme\nTotal: 50\nPassed: 48\nFailed: 2\nDuration: 1234ms';
+        expect(sanitizeForLlm(metrics)).toBe(metrics);
+    });
+});
