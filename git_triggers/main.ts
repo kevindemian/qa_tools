@@ -251,7 +251,7 @@ main().catch((err) => {
     process.exitCode = 1;
 });
 
-export = {
+export default {
     nivelarBranchesWrapper,
     isComplete,
     providerLabel,

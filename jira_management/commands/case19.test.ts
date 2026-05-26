@@ -94,7 +94,7 @@ describe('case19 — History & Coverage', () => {
         metrics.calculateFlakiness.mockReturnValueOnce([]);
         metrics.getTrends.mockReturnValueOnce([]);
 
-        const mod = require('./case19');
+        const mod = require('./case19').default;
         await mod.handler(baseContext);
 
         expect(prompt.tableView).toHaveBeenCalled();
@@ -116,7 +116,7 @@ describe('case19 — History & Coverage', () => {
             coveragePct: 60,
         });
 
-        const mod = require('./case19');
+        const mod = require('./case19').default;
         await mod.handler(baseContext);
 
         expect(coverage.analyzeCoverage).toHaveBeenCalledWith(mockJiraResource, 'TEST');
@@ -132,7 +132,7 @@ describe('case19 — History & Coverage', () => {
 
         metrics.loadMetrics.mockReturnValueOnce({ runs: [] });
 
-        const mod = require('./case19');
+        const mod = require('./case19').default;
         await mod.handler(baseContext);
 
         expect(prompt.warn).toHaveBeenCalledWith('Nenhuma execução registrada.');
@@ -142,7 +142,7 @@ describe('case19 — History & Coverage', () => {
         const prompt = require('../../shared/prompt');
         prompt.showSelect.mockResolvedValueOnce('0');
 
-        const mod = require('./case19');
+        const mod = require('./case19').default;
         await mod.handler(baseContext);
 
         expect(prompt.tableView).not.toHaveBeenCalled();

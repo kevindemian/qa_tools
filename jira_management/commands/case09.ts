@@ -17,4 +17,4 @@ async function handler(c: CommandContext): Promise<boolean | void> {
     success('Projeto alterado para: ' + c.ctx.project_name);
 }
 
-export = { handler };
+export default { handler };

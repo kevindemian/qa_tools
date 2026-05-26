@@ -66,7 +66,7 @@ describe('case18 — AI tests generator', () => {
             '[{"title": "Login test", "steps": ["Enter user"], "expectedResult": "OK"}]',
         );
 
-        const mod = require('./case18');
+        const mod = require('./case18').default;
         await mod.handler(baseContext);
 
         expect(llm.llmPrompt).toHaveBeenCalledWith('main', '', expect.stringContaining('User wants to login'));
@@ -77,7 +77,7 @@ describe('case18 — AI tests generator', () => {
         const prompt = require('../../shared/prompt');
         prompt.ask.mockResolvedValueOnce('');
 
-        const mod = require('./case18');
+        const mod = require('./case18').default;
         await mod.handler(baseContext);
 
         expect(prompt.warn).toHaveBeenCalledWith('História vazia. Operação cancelada.');
@@ -94,7 +94,7 @@ describe('case18 — AI tests generator', () => {
 
         llm.llmPrompt.mockRejectedValueOnce(new Error('LLM API error'));
 
-        const mod = require('./case18');
+        const mod = require('./case18').default;
         await mod.handler(baseContext);
 
         expect(prompt.printError).toHaveBeenCalled();
@@ -110,7 +110,7 @@ describe('case18 — AI tests generator', () => {
             throw new Error('File not found');
         });
 
-        const mod = require('./case18');
+        const mod = require('./case18').default;
         await mod.handler(baseContext);
 
         expect(prompt.printError).toHaveBeenCalled();

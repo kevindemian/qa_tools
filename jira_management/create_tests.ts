@@ -166,7 +166,7 @@ function generateMappingFiles(sourcePath: string, projectName: string, tasksId: 
     gen.generate(sourcePath, projectName, tasksId, tests);
 }
 
-export = {
+export default {
     readCsvTests,
     createTestsFromCsv,
     createTestsFromJson,
