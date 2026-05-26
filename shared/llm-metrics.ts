@@ -58,7 +58,7 @@ let _latencyCount = 0;
 const _failuresByTier: Partial<Record<LlmTier, number>> = {};
 const _rejectionReasons: Record<string, number> = {};
 
-export function recordLlmRequest(tier: LlmTier, latencyMs: number): void {
+export function recordLlmRequest(_tier: LlmTier, latencyMs: number): void {
     _totalRequests++;
     _latencySum += latencyMs;
     _latencyCount++;

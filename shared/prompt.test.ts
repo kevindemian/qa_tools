@@ -296,7 +296,7 @@ describe('Prompt', () => {
             });
 
             it('constructs SingleBar with format config', () => {
-                const bar = new prompt.ProgressBar(100, { width: 30 });
+                new prompt.ProgressBar(100, { width: 30 });
                 const cliProgress = require('cli-progress');
                 expect(cliProgress.SingleBar).toHaveBeenCalledWith(
                     expect.objectContaining({
@@ -323,10 +323,8 @@ describe('Prompt', () => {
     });
 
     describe('withSpinner', () => {
-        let mockOra: ReturnType<typeof injectOraMock>;
-
         beforeEach(() => {
-            mockOra = injectOraMock();
+            injectOraMock();
         });
 
         afterEach(() => {
@@ -523,7 +521,7 @@ describe('Prompt', () => {
         });
 
         it('returns raw value for non-numeric input', async () => {
-            const spy = jest.spyOn(readlineSync, 'question').mockReturnValue('criar');
+            jest.spyOn(readlineSync, 'question').mockReturnValue('criar');
             const result = await prompt.showSelect('Test', [{ name: '1', value: '1' }]);
             expect(result).toBe('criar');
         });

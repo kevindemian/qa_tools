@@ -63,11 +63,11 @@ const validateEnv = createValidateEnv([
     },
 ]);
 
-async function handleHelp() {
+async function handleHelp(): Promise<void> {
     await _handleHelp();
 }
 
-async function handleShowHistory() {
+async function handleShowHistory(): Promise<void> {
     await _handleShowHistory();
 }
 
@@ -159,15 +159,15 @@ function withErrorHandling(
 }
 
 const ACTION_HANDLERS: Record<string, (m: GitProvider, pn: string, ns: string[]) => Promise<boolean>> = {
-    '1': withErrorHandling((m, pn) => handleTriggerPipeline(sessionContext, m, pn)),
-    '2': withErrorHandling((m) => handleListSchedules(sessionContext, m)),
-    '3': withErrorHandling((m) => handleRunSchedule(sessionContext, m)),
-    '4': withErrorHandling((m) => handleCreateMR(sessionContext, m)),
-    '5': withErrorHandling((m) => handleListApprovedMRs(sessionContext, m)),
-    '6': withErrorHandling((m) => handleMergeMR(sessionContext, m)),
+    '1': withErrorHandling((m, pn) => handleTriggerPipeline(m, pn)),
+    '2': withErrorHandling((m) => handleListSchedules(m)),
+    '3': withErrorHandling((m) => handleRunSchedule(m)),
+    '4': withErrorHandling((m) => handleCreateMR(m)),
+    '5': withErrorHandling((m) => handleListApprovedMRs(m)),
+    '6': withErrorHandling((m) => handleMergeMR(m)),
     '7': withErrorHandling((m) => nivelarBranchesWrapper(m)),
-    '8': withErrorHandling((m) => handleExportVariables(sessionContext, m)),
-    '9': withErrorHandling((m, _pn, ns) => handleChangeProject(sessionContext, m, ns)),
+    '8': withErrorHandling((m) => handleExportVariables(m)),
+    '9': withErrorHandling((_m, _pn, ns) => handleChangeProject(ns)),
     a: () => {
         handleFlakinessDashboard();
         return Promise.resolve(false);
@@ -211,7 +211,7 @@ async function _dispatchAction(
     return false;
 }
 
-async function main() {
+async function main(): Promise<void> {
     ensureDirs();
     registerCleanup();
 

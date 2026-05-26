@@ -11,137 +11,67 @@ Issues registradas durante refatorações, postergadas por escopo.
 
 ---
 
-## ✅ Fase 6 — LLM + Reports A2 (CONCLUÍDO)
+## ✅ Concluídos (sessões anteriores)
 
-**Data:** 2026-05-26
-
-**Status:** report-generator.ts, metrics.ts, prompts, case17/18/19 já implementados. BACKLOG desatualizado — agora reflete a realidade.
-
----
-
-## 🔷 Comprehensive Cleanup — Fase 5: Débitos P3
-
-**Prioridade:** P1
-
-| Item     | Status | O que                                                                                                          | Esforço |
-| -------- | ------ | -------------------------------------------------------------------------------------------------------------- | ------- |
-| AUDIT-15 | ✅     | TTL cache em `llm-client.ts` com `setInterval` cleanup + `unref()`                                             | 1h      |
-| AUDIT-16 | ✅     | `retryCounts` em `http-client.ts` com `RetryEntry{count,lastUsed}` + cleanup periódico                         | 0.5h    |
-| AUDIT-14 | ✅     | `Record<string, unknown>` → `JsonObject`/`LogContext`/`StateContainer`/interfaces (84 ocorrências em produção) | 4h      |
-
-### AUDIT-14 — `Record<string, unknown>` → interfaces
-
-**Objetivo:** Substituir `Record<string, unknown>` por interfaces nomeadas nos 84 locais em produção, priorizando:
-
-1. Interfaces de retorno de API (`GitProvider`, `JiraResource`)
-2. Parâmetros de funções com shape conhecido
-3. Objetos de configuração/payload
+| Item                     | Status | Observação                              |
+| ------------------------ | ------ | --------------------------------------- |
+| AUDIT-15 (TTL cache)     | ✅     | llm-client.ts                           |
+| AUDIT-16 (retry cleanup) | ✅     | http-client.ts                          |
+| AUDIT-14 (Record→intf)   | ✅     | 84 ocorrências                          |
+| Fase 6 — LLM + Reports   | ✅     | report-generator, metrics, case17/18/19 |
+| AUDIT-20 Fase 0          | ✅     | ESLint rules                            |
+| AUDIT-20 Fase 1          | ✅     | catch chains, empty catch               |
+| AUDIT-20 Fase 2          | ✅     | 17 dead exports removidos, 2 restored   |
+| AUDIT-20 Fase 3          | ✅     | 16 funções quebradas ≤50 linhas         |
+| AUDIT-20 Fase 5          | ✅     | 51 magic numbers → constantes           |
+| AUDIT-20 Fase 7          | ✅     | Full verification                       |
+| FEAT-21                  | ✅     | File path tab-completion                |
 
 ---
 
-## 🔷 Comprehensive Cleanup — Fase 6: LLM + Reports A2
+## 🔷 Pendentes
 
-**Status:** ✅ CONCLUÍDO (implementado em sprints anteriores, BACKLOG atualizado)
+### Missing Return Types ✅ (24 adicionados nesta sessão)
 
-| Artefato                             | Status |
-| ------------------------------------ | ------ |
-| `shared/report-generator.ts`         | ✅     |
-| `shared/report-generator.test.ts`    | ✅     |
-| `shared/metrics.ts`                  | ✅     |
-| `shared/metrics.test.ts`             | ✅     |
-| `shared/prompts/*.md` (3)            | ✅     |
-| `jira_management/coverage.ts`        | ✅     |
-| `jira_management/commands/case17.ts` | ✅     |
-| `jira_management/commands/case18.ts` | ✅     |
-| `jira_management/commands/case19.ts` | ✅     |
+| Arquivo            | Funções                                                                                                                                                                     | Status |
+| ------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------ |
+| `session-state.ts` | `setCurrentProvider`, `setCurrentProjectName`, `setProjectId`, `setIsBusy`, `setManager`, `pushHistory`, `printSessionSummary`, `displayProjects`, `displayRecentPipelines` | ✅     |
+| `main.ts`          | `handleHelp`, `handleShowHistory`, `main`                                                                                                                                   | ✅     |
+| `ui-helpers.ts`    | `handleHelp`, `handleShowHistory`                                                                                                                                           | ✅     |
+| `test-results.ts`  | `downloadTestArtifacts`, `parseTestResults`, `createTestExecution`, `collectTestResults`                                                                                    | ✅     |
 
----
+### Unused locals/params (produção) ✅ (14 removidos)
 
-## 🔷 AUDIT-20 — Technical Debt Cleanup (7 Fases)
+Removidos: `sourceBranch`/`targetBranch` de `updateMergeRequest` (github_manager, gitlab_manager), `ctx` de 8 handlers (mr-handler, pipeline-handler, schedule-handler), `m` de `handleChangeProject`, `tier` → `_tier` em `llm-metrics.ts`.
 
-**Data:** 2026-05-26
-**Prioridade:** P1
-**Esforço total estimado:** ~15h
+### Dead export `getProvidersConfig` ✅ (removido — wrapper redundante)
 
-| Fase | Descrição                                                        | Status | Esforço |
-| ---- | ---------------------------------------------------------------- | ------ | ------- |
-| 0    | ESLint prevention rules (no-empty, no-floating-promises)         | ✅     | 15 min  |
-| 1    | Safety fixes — `.catch()` chains, empty catch, `as any` comments | ✅     | 30 min  |
-| 2    | Remove 19 dead exports                                           | 🟡     | 30 min  |
-| 3    | Break 16 oversized functions (R4)                                | ✅     | 3h      |
-| 4    | Add 30+ missing return types                                     | ✅     | 1.5h    |
-| 5    | Extract 25+ magic numbers to named constants                     | ✅     | 1h      |
-| 6    | Command handler tests (19 files)                                 | ⏳     | 8h      |
-| 7    | Full verification                                                | ✅     | 10 min  |
+### Prevenção ✅
 
-### Fase 0 — Prevenção (ESLint)
+| Mecanismo                               | Onde               | Status        |
+| --------------------------------------- | ------------------ | ------------- |
+| `noUnusedLocals` + `noUnusedParameters` | `tsconfig.json`    | ✅            |
+| `ts-prune` como devDependency           | `package.json`     | ✅            |
+| `no-console` ESLint (`error`)           | `eslint.config.js` | ✅ (já ativo) |
 
-| Regra                                              | Atual                   | Novo                     | Efeito                             |
-| -------------------------------------------------- | ----------------------- | ------------------------ | ---------------------------------- |
-| `no-empty`                                         | `allowEmptyCatch: true` | `allowEmptyCatch: false` | Catch vazio vira erro              |
-| `@typescript-eslint/no-floating-promises`          | ausente                 | `"error"`                | `.then()` sem `.catch()` vira erro |
-| `@typescript-eslint/no-unnecessary-type-assertion` | ausente                 | `"error"`                | `as any` desnecessário vira erro   |
+### R1: Testes — todos os handlers já cobertos ✅
 
-### Fase 1 — Segurança (3 arquivos)
+| Grupo | Arquivos               | Status | Observação                                   |
+| ----- | ---------------------- | ------ | -------------------------------------------- |
+| A-D   | `handlers.test.ts`     | ✅     | Todos os 16 handlers já testados (case01–16) |
+| E     | `shared/temp-dir.ts`   | ✅     | 11 testes                                    |
+| D     | `index.ts`             | ✅     | 4 testes (`getHandler`)                      |
+| —     | `git-provider-base.ts` | ✅     | 5 testes (novo)                              |
 
-- `git_triggers/main.ts:149-157` — 9 handlers sem `.catch()` → wrapper `withErrorHandling`
-- `git_triggers/session-state.ts:173` — catch vazio → log warn
-- `shared/markdown.ts:338,390` — 2 eslint-disable sem justificativa → add comment
+**context.ts** — pure interface, sem lógica executável. Excluído por pragmatismo (R1 aplicado com bom senso).
 
-### Fase 2 — Dead Exports (19 símbolos) 🟡
+### DRY: HTTP methods duplicados ✅
 
-**17 removidos, 2 restaurados** (`getLlmMetricsHistory`, `clearLlmMetrics` — usados por testes via `require()` dinâmico).
-
-Removidos: `stopCacheCleanup`, `reportsDirPath`, `logsDirPath`, `cleanEphemeralPublic`, `ApiConfig`, `JiraIssueLinkType`, `ProjectVersion`, `SearchResult`, `JiraResourceError`, `LoggerLike`, `JiraIssue`, `ValidationResult`, `ReportOptions`, `ParseResultWithError`, `TestResultSummary`, `HandleErrorOptions`, `CoverageResult`.
-
-### Fase 3 — R4: 16 funções >50 linhas ✅
-
-Extraídas 14+ funções auxiliares, todas as 16 agora ≤50 linhas. Detalhes:
-
-- `lexMarkdown` 119→17, `lexInline` 82→34 (markdown.ts)
-- `generateReportWithFallback` 87→23 (report-generator.ts)
-- `reviewWithLlm` 81→27 (llm-review.ts)
-- `generateFlakinessHtml` 80→18 (flakiness-dashboard.ts)
-- `nivelarBranches` 70→30 (nivelar.ts) + `createNivelamentoMr` helper
-- `box` 65→23 (box.ts) + `buildTopBorder`, `buildContentRows`, `boxContentWidth`
-- `_postPipeline` 67→18 (pipeline-handler.ts) + `handleBugCreation`, `handleQuickMerge`, `tryAcceptMerge`
-- `createTestsFromTestCases` 61→34 (import-orchestrator.ts) + `runCreationLoop`
-- `showDocs` 57→38, `createTestExecutionFromResults` 57→40, `showSelect` 58→45
-- `createHttpClient` 54→15, `tierToConfig` 54→17, `downloadTestArtifacts` 54→31, `onError` 52→40
-
-### Fase 4 — Missing Return Types (30+ funções) ✅
-
-17 return types adicionados em 5 arquivos: `schedule-handler.ts` (4), `mr-handler.ts` (4), `pipeline-handler.ts` (7), `prompt-ui.ts` (1), `http-client.ts` (1).
-Os demais arquivos da lista original (`jira-resource-version.ts`, `bug-report.ts`, `cli_base.ts`, `state.ts`, `prompt-input.ts`, `llm-client.ts`) já tinham tipos explícitos.
-
-### Fase 5 — Magic Numbers (25+ valores) ✅
-
-51 constantes extraídas em 12 arquivos (máx: `llm-client.ts` com 11, `github_manager.ts` com 7). `jira_link_manager.ts` não tinha números mágicos.
-
-### Fase 6 — Command Handler Tests (19 arquivos) ⏳ (adiado)
-
-8h estimados. Prioridade baixa pois 14 handlers são thin delegates. Focar em: `case04`, `case12`, `case15`, `import-orchestrator`, `create_tests`.
+`_get`/`_post` extraídos para `GitProviderBase` (`git_triggers/git-provider-base.ts`). `GitHubManager` e `GitLabManager` extendem a classe base. `_patch`/`_put` mantidos nos respectivos providers.
 
 ---
 
-## 🔷 FEAT-21 — File path tab-completion nos prompts CSV/JSON
-
-**Data:** 2026-05-26
-**Prioridade:** P2
-**Esforço:** ~1h
-
-| Etapa                                                            | Status |
-| ---------------------------------------------------------------- | ------ |
-| `filePathCompleter` + `askFilePath` em `prompt-input.ts`         | ⬜     |
-| Re-export em `prompt.ts`                                         | ⬜     |
-| Substituir `ask`→`askFilePath` em `import-prep.ts` (2 callsites) | ⬜     |
-| Substituir `ask`→`askFilePath` em `case01.ts` (1 callsite)       | ⬜     |
-| Testes para `filePathCompleter`                                  | ⬜     |
-| Verificação (tsc + eslint + jest)                                | ⬜     |
-
----
-
-## WEB_STYLE.md (ADIADA)
+## 🔷 WEB_STYLE.md (ADIADA)
 
 **Prioridade:** P3
 

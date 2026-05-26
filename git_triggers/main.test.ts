@@ -332,8 +332,6 @@ describe('pushHistory', () => {
 // ---------- handleCreateMR ----------
 
 describe('handleCreateMR', () => {
-    const ctx = { pushHistory: jest.fn(), sessionCounters: [], lastOperation: '' };
-
     it('creates MR and shows success', async () => {
         (prompt.prompt as jest.Mock)
             .mockReturnValueOnce('feature-x')
@@ -342,7 +340,7 @@ describe('handleCreateMR', () => {
             .mockReturnValueOnce('Description');
         mockProvider.createMergeRequest.mockResolvedValue({ web_url: 'https://gitlab/mr/1' });
 
-        await mainModule.handleCreateMR(ctx as never, mockProvider as unknown as GitProvider);
+        await mainModule.handleCreateMR(mockProvider as unknown as GitProvider);
 
         expect(mockProvider.createMergeRequest).toHaveBeenCalledWith('feature-x', 'main', 'My MR', 'Description');
         expect(prompt.success).toHaveBeenCalledWith(expect.stringContaining('https://gitlab/mr/1'));
@@ -356,7 +354,7 @@ describe('handleCreateMR', () => {
             .mockReturnValueOnce('Desc');
         mockProvider.createMergeRequest.mockRejectedValue(new Error('Conflict'));
 
-        await mainModule.handleCreateMR(ctx as never, mockProvider as unknown as GitProvider);
+        await mainModule.handleCreateMR(mockProvider as unknown as GitProvider);
 
         expect(prompt.printError).toHaveBeenCalledWith('Falha ao criar MR', expect.any(Error));
     });
@@ -365,13 +363,11 @@ describe('handleCreateMR', () => {
 // ---------- handleMergeMR ----------
 
 describe('handleMergeMR', () => {
-    const ctx = { pushHistory: jest.fn(), sessionCounters: [], lastOperation: '' };
-
     it('merges MR and shows success', async () => {
         (prompt.prompt as jest.Mock).mockReturnValueOnce('42');
         mockProvider.acceptMergeRequest.mockResolvedValue({ web_url: 'https://gitlab/mr/42' });
 
-        await mainModule.handleMergeMR(ctx as never, mockProvider as unknown as GitProvider);
+        await mainModule.handleMergeMR(mockProvider as unknown as GitProvider);
 
         expect(mockProvider.acceptMergeRequest).toHaveBeenCalledWith('42');
         expect(prompt.success).toHaveBeenCalledWith(expect.stringContaining('https://gitlab/mr/42'));
@@ -381,7 +377,7 @@ describe('handleMergeMR', () => {
         (prompt.prompt as jest.Mock).mockReturnValueOnce('99');
         mockProvider.acceptMergeRequest.mockRejectedValue(new Error('Merge conflict'));
 
-        await mainModule.handleMergeMR(ctx as never, mockProvider as unknown as GitProvider);
+        await mainModule.handleMergeMR(mockProvider as unknown as GitProvider);
 
         expect(prompt.printError).toHaveBeenCalledWith('Falha ao fazer merge', expect.any(Error));
     });
@@ -390,12 +386,10 @@ describe('handleMergeMR', () => {
 // ---------- handleListSchedules ----------
 
 describe('handleListSchedules', () => {
-    const ctx = { pushHistory: jest.fn(), sessionCounters: [], lastOperation: '' };
-
     it('lists schedules when found', async () => {
         mockProvider.getSchedules.mockResolvedValue([{ id: '5', description: 'Nightly', next_run_at: '2026-01-01' }]);
 
-        await mainModule.handleListSchedules(ctx as never, mockProvider as unknown as GitProvider);
+        await mainModule.handleListSchedules(mockProvider as unknown as GitProvider);
 
         expect(prompt.info).toHaveBeenCalledWith(expect.stringContaining('Schedules encontrados'));
     });
@@ -403,7 +397,7 @@ describe('handleListSchedules', () => {
     it('handles empty schedules', async () => {
         mockProvider.getSchedules.mockResolvedValue([]);
 
-        await mainModule.handleListSchedules(ctx as never, mockProvider as unknown as GitProvider);
+        await mainModule.handleListSchedules(mockProvider as unknown as GitProvider);
 
         expect(prompt.warn).toHaveBeenCalledWith(expect.stringContaining('Nenhum schedule'));
     });
@@ -411,7 +405,7 @@ describe('handleListSchedules', () => {
     it('calls printError when getSchedules throws', async () => {
         mockProvider.getSchedules.mockRejectedValue(new Error('API fail'));
 
-        await mainModule.handleListSchedules(ctx as never, mockProvider as unknown as GitProvider);
+        await mainModule.handleListSchedules(mockProvider as unknown as GitProvider);
 
         expect(prompt.printError).toHaveBeenCalledWith('Erro ao listar schedules', expect.any(Error));
     });
@@ -420,13 +414,11 @@ describe('handleListSchedules', () => {
 // ---------- handleRunSchedule ----------
 
 describe('handleRunSchedule', () => {
-    const ctx = { pushHistory: jest.fn(), sessionCounters: [], lastOperation: '' };
-
     it('runs schedule on success', async () => {
         (prompt.prompt as jest.Mock).mockReturnValueOnce('10');
         mockProvider.runSchedule.mockResolvedValue({ id: '10' });
 
-        await mainModule.handleRunSchedule(ctx as never, mockProvider as unknown as GitProvider);
+        await mainModule.handleRunSchedule(mockProvider as unknown as GitProvider);
 
         expect(mockProvider.runSchedule).toHaveBeenCalledWith('10');
         expect(prompt.success).toHaveBeenCalledWith(expect.stringContaining('Schedule disparado'));
@@ -436,7 +428,7 @@ describe('handleRunSchedule', () => {
         (prompt.prompt as jest.Mock).mockReturnValueOnce('bad-id');
         mockProvider.runSchedule.mockRejectedValue(new Error('Not found'));
 
-        await mainModule.handleRunSchedule(ctx as never, mockProvider as unknown as GitProvider);
+        await mainModule.handleRunSchedule(mockProvider as unknown as GitProvider);
 
         expect(prompt.printError).toHaveBeenCalledWith('Erro ao disparar schedule', expect.any(Error));
     });
@@ -445,14 +437,12 @@ describe('handleRunSchedule', () => {
 // ---------- handleListApprovedMRs ----------
 
 describe('handleListApprovedMRs', () => {
-    const ctx = { pushHistory: jest.fn(), sessionCounters: [], lastOperation: '' };
-
     it('lists approved MRs', async () => {
         (prompt.prompt as jest.Mock).mockReturnValueOnce('opened');
         mockProvider.searchMergeRequests.mockResolvedValue([{ iid: '1', title: 'Fix' }]);
         mockProvider.isApproved.mockResolvedValue(true);
 
-        await mainModule.handleListApprovedMRs(ctx as never, mockProvider as unknown as GitProvider);
+        await mainModule.handleListApprovedMRs(mockProvider as unknown as GitProvider);
 
         expect(prompt.info).toHaveBeenCalledWith(expect.stringContaining('aprovados'));
     });
@@ -462,7 +452,7 @@ describe('handleListApprovedMRs', () => {
         mockProvider.searchMergeRequests.mockResolvedValue([{ iid: '2', title: 'WIP' }]);
         mockProvider.isApproved.mockResolvedValue(false);
 
-        await mainModule.handleListApprovedMRs(ctx as never, mockProvider as unknown as GitProvider);
+        await mainModule.handleListApprovedMRs(mockProvider as unknown as GitProvider);
 
         expect(prompt.warn).toHaveBeenCalledWith(expect.stringContaining('Nenhum'));
     });
@@ -471,15 +461,13 @@ describe('handleListApprovedMRs', () => {
 // ---------- handleExportVariables ----------
 
 describe('handleExportVariables', () => {
-    const ctx = { pushHistory: jest.fn(), sessionCounters: [], lastOperation: '' };
-
     it('exports variables when confirmed', async () => {
         (prompt.confirm as jest.Mock).mockReturnValueOnce(true);
         mockProvider.getCICDVariables.mockResolvedValue([{ key: 'MY_VAR', value: 'my_value' }]);
         const writeSpy = jest.spyOn(fs, 'writeFileSync').mockImplementation(() => {});
         const unlinkSpy = jest.spyOn(fs, 'unlinkSync').mockImplementation(() => {});
 
-        await mainModule.handleExportVariables(ctx as never, mockProvider as unknown as GitProvider);
+        await mainModule.handleExportVariables(mockProvider as unknown as GitProvider);
 
         expect(writeSpy).toHaveBeenCalled();
         expect(prompt.print).toHaveBeenCalledWith(expect.stringContaining('MY_VAR'));
@@ -490,7 +478,7 @@ describe('handleExportVariables', () => {
     it('cancels when user declines', async () => {
         (prompt.confirm as jest.Mock).mockReturnValueOnce(false);
 
-        await mainModule.handleExportVariables(ctx as never, mockProvider as unknown as GitProvider);
+        await mainModule.handleExportVariables(mockProvider as unknown as GitProvider);
 
         expect(prompt.warn).toHaveBeenCalledWith('Operação cancelada.');
     });
@@ -565,15 +553,10 @@ describe('collectTestResults', () => {
 // ---------- handleChangeProject ----------
 
 describe('handleChangeProject', () => {
-    const ctx = { pushHistory: jest.fn(), sessionCounters: [], lastOperation: '' };
-
     it('switches to valid project', async () => {
         (prompt.prompt as jest.Mock).mockReturnValueOnce('1');
 
-        await mainModule.handleChangeProject(ctx as never, mockProvider as unknown as GitProvider, [
-            'proj-a',
-            'proj-b',
-        ]);
+        await mainModule.handleChangeProject(['proj-a', 'proj-b']);
 
         expect(prompt.success).toHaveBeenCalledWith(expect.stringContaining('proj-a'));
     });
@@ -581,7 +564,7 @@ describe('handleChangeProject', () => {
     it('warns on invalid project index', async () => {
         (prompt.prompt as jest.Mock).mockReturnValueOnce('99');
 
-        await mainModule.handleChangeProject(ctx as never, mockProvider as unknown as GitProvider, ['proj-a']);
+        await mainModule.handleChangeProject(['proj-a']);
 
         expect(prompt.warn).toHaveBeenCalledWith('Opção inválida.');
     });
@@ -641,13 +624,11 @@ describe('displayRecentPipelines', () => {
 // ---------- handleListApprovedMRs - error ----------
 
 describe('handleListApprovedMRs - error', () => {
-    const ctx = { pushHistory: jest.fn(), sessionCounters: [], lastOperation: '' };
-
     it('calls printError when searchMergeRequests throws', async () => {
         (prompt.prompt as jest.Mock).mockReturnValueOnce('opened');
         mockProvider.searchMergeRequests.mockRejectedValue(new Error('API fail'));
 
-        await mainModule.handleListApprovedMRs(ctx as never, mockProvider as unknown as GitProvider);
+        await mainModule.handleListApprovedMRs(mockProvider as unknown as GitProvider);
 
         expect(prompt.printError).toHaveBeenCalledWith(expect.stringContaining('Erro ao listar'), expect.any(Error));
     });
@@ -656,13 +637,11 @@ describe('handleListApprovedMRs - error', () => {
 // ---------- handleExportVariables - extended ----------
 
 describe('handleExportVariables - extended', () => {
-    const ctx = { pushHistory: jest.fn(), sessionCounters: [], lastOperation: '' };
-
     it('calls printError when getCICDVariables throws', async () => {
         (prompt.confirm as jest.Mock).mockReturnValueOnce(true);
         mockProvider.getCICDVariables.mockRejectedValue(new Error('API fail'));
 
-        await mainModule.handleExportVariables(ctx as never, mockProvider as unknown as GitProvider);
+        await mainModule.handleExportVariables(mockProvider as unknown as GitProvider);
 
         expect(prompt.printError).toHaveBeenCalledWith('Falha ao buscar variáveis CI/CD', expect.any(Error));
     });
@@ -673,7 +652,7 @@ describe('handleExportVariables - extended', () => {
         const writeSpy = jest.spyOn(fs, 'writeFileSync').mockImplementation(() => {});
         const unlinkSpy = jest.spyOn(fs, 'unlinkSync').mockImplementation(() => {});
 
-        await mainModule.handleExportVariables(ctx as never, mockProvider as unknown as GitProvider);
+        await mainModule.handleExportVariables(mockProvider as unknown as GitProvider);
 
         expect(prompt.print).toHaveBeenCalledWith('MY_VAR="foo=bar"');
         writeSpy.mockRestore();
@@ -696,13 +675,11 @@ describe('pushHistory - trim', () => {
 // ---------- handleTriggerPipeline ----------
 
 describe('handleTriggerPipeline', () => {
-    const ctx = { pushHistory: jest.fn(), sessionCounters: [], lastOperation: '' };
-
     it('warns when branch is not found', async () => {
         (prompt.prompt as jest.Mock).mockReturnValueOnce('bad-branch');
         mockProvider.getBranch.mockResolvedValue(null);
 
-        await mainModule.handleTriggerPipeline(ctx as never, mockProvider as unknown as GitProvider, 'proj-b');
+        await mainModule.handleTriggerPipeline(mockProvider as unknown as GitProvider, 'proj-b');
 
         expect(prompt.warn).toHaveBeenCalledWith(expect.stringContaining('não encontrada'));
     });
@@ -718,7 +695,7 @@ describe('handleTriggerPipeline', () => {
         mockProvider.getBranch.mockResolvedValue({ name: 'main' });
         mockProvider.triggerPipeline.mockResolvedValue({ web_url: 'https://gitlab/pipe/1' });
 
-        await mainModule.handleTriggerPipeline(ctx as never, mockProvider as unknown as GitProvider, 'proj-b');
+        await mainModule.handleTriggerPipeline(mockProvider as unknown as GitProvider, 'proj-b');
 
         expect(mockProvider.triggerPipeline).toHaveBeenCalledWith(
             expect.objectContaining({ ref: 'main', variables: [] }),
@@ -736,7 +713,7 @@ describe('handleTriggerPipeline', () => {
         mockProvider.getBranch.mockResolvedValue({ name: 'main' });
         mockProvider.triggerPipeline.mockRejectedValue(new Error('Trigger fail'));
 
-        await mainModule.handleTriggerPipeline(ctx as never, mockProvider as unknown as GitProvider, 'proj-b');
+        await mainModule.handleTriggerPipeline(mockProvider as unknown as GitProvider, 'proj-b');
 
         expect(prompt.printError).toHaveBeenCalledWith('Falha ao disparar pipeline', expect.any(Error));
     });
@@ -753,7 +730,7 @@ describe('handleTriggerPipeline', () => {
         mockProvider.getBranch.mockResolvedValue({ name: 'main' });
         mockProvider.triggerPipeline.mockResolvedValue({ web_url: 'https://gitlab/pipe/2' });
 
-        await mainModule.handleTriggerPipeline(ctx as never, mockProvider as unknown as GitProvider, 'proj-b');
+        await mainModule.handleTriggerPipeline(mockProvider as unknown as GitProvider, 'proj-b');
 
         expect(mockProvider.triggerPipeline).toHaveBeenCalledWith(
             expect.objectContaining({
@@ -774,7 +751,7 @@ describe('handleTriggerPipeline', () => {
         mockProvider.getPipeline.mockResolvedValue({ status: 'success', web_url: 'https://pipe/1' });
         mockProvider.getRecentPipelines.mockResolvedValue([]);
 
-        await mainModule.handleTriggerPipeline(ctx as never, mockProvider as unknown as GitProvider, 'proj-b');
+        await mainModule.handleTriggerPipeline(mockProvider as unknown as GitProvider, 'proj-b');
 
         expect(mockProvider.getPipeline).toHaveBeenCalledWith('123');
     });

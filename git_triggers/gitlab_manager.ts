@@ -2,6 +2,7 @@ import { createHttpClient } from '../shared/http-client';
 import { info } from '../shared/prompt';
 import { Logger } from '../shared/logger';
 import { handleError } from '../shared/git-provider-error';
+import { GitProviderBase } from './git-provider-base';
 import type {
     GitProvider,
     PipelineTriggerResult,
@@ -21,7 +22,7 @@ const VARIABLES_PAGE_SIZE = 100;
 const DIFF_TRUNCATION_LIMIT = 15000;
 const DEFAULT_PIPELINE_COUNT = 5;
 
-class GitLabManager implements GitProvider {
+class GitLabManager extends GitProviderBase implements GitProvider {
     provider = 'gitlab' as const;
     projectId: string;
     apiToken: string;
@@ -30,6 +31,7 @@ class GitLabManager implements GitProvider {
     log: Logger;
 
     constructor(projectId: string, apiToken: string, gitlabBaseUrl: string) {
+        super();
         if (!apiToken) {
             throw new Error('GitLab: apiToken é obrigatório');
         }
@@ -44,26 +46,6 @@ class GitLabManager implements GitProvider {
             authHeader: { 'PRIVATE-TOKEN': apiToken },
         });
         this.log = new Logger({ resource: 'GitLab', projectId });
-    }
-
-    async _get(url: string, opts?: { operation?: string; returnNull?: boolean; params?: JsonObject }) {
-        try {
-            const args = opts?.params ? [{ params: opts.params }] : [];
-            const response = await this.client.get(url, ...args);
-            return response.data;
-        } catch (err) {
-            return handleError(err, { context: opts?.operation || url, returnNull: opts?.returnNull });
-        }
-    }
-
-    async _post(url: string, body?: unknown, opts?: { operation?: string }) {
-        try {
-            const args = body !== undefined ? [body] : [];
-            const response = await this.client.post(url, ...args);
-            return response.data;
-        } catch (err) {
-            return handleError(err, { context: opts?.operation || url });
-        }
     }
 
     async _put(url: string, body?: unknown, opts?: { operation?: string }) {
@@ -122,7 +104,7 @@ class GitLabManager implements GitProvider {
                 info('MR already exists. Searching for existing...');
                 const existing = await this.searchMergeRequests(sourceBranch, targetBranch, 'opened');
                 if (existing && existing.length > 0) {
-                    return this.updateMergeRequest(existing[0].iid!, sourceBranch, targetBranch, title, description);
+                    return this.updateMergeRequest(existing[0].iid!, title, description);
                 }
             }
             throw err;
@@ -131,8 +113,6 @@ class GitLabManager implements GitProvider {
 
     async updateMergeRequest(
         iid: string | number,
-        sourceBranch: string,
-        targetBranch: string,
         title: string,
         description?: string,
     ): Promise<MergeRequestInfo | null> {

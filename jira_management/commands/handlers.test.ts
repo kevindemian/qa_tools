@@ -602,7 +602,6 @@ describe('case15 — create tests from JSON', () => {
         mockConfigMod.jsonPath = '/fake/tests.json';
         const createTests = require('../create_tests');
         createTests.createTestsFromJson.mockResolvedValueOnce(null);
-        const prompt = require('../../shared/prompt');
         const mod = require('./case15').default;
         expect(await mod.handler(baseContext)).toBeUndefined();
         expect(mockSessionContext.inMemoryTasksId).toEqual([]);

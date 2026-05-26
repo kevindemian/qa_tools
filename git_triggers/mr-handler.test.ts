@@ -23,13 +23,12 @@ jest.mock('../shared/temp-dir', () => ({
     reportsDir: jest.fn(() => '/tmp/reports'),
 }));
 
-import { print, success, warn, info, prompt, confirm, printError, withSpinner, divider } from '../shared/prompt';
+import { success, warn, info, prompt, confirm, printError } from '../shared/prompt';
 import { pushHistory } from './session-state';
 import { generatePrDescription } from './ai-pr-desc';
 import { assessTestImpact } from './ai-test-impact';
 import { nivelarBranches } from './nivelar';
 import { handleCreateMR, handleListApprovedMRs, handleMergeMR, nivelarBranchesWrapper } from './mr-handler';
-import type { SessionContext } from '../shared/session-context';
 import type { GitProvider, MergeRequestInfo } from '../shared/types';
 
 const mockPrompt = prompt as jest.Mock;
@@ -39,7 +38,6 @@ const mockGeneratePrDesc = generatePrDescription as jest.Mock;
 const mockAssessImpact = assessTestImpact as jest.Mock;
 const mockNivelar = nivelarBranches as jest.Mock;
 
-const ctx = {} as SessionContext;
 const mockM = {
     createMergeRequest: jest.fn(),
     searchMergeRequests: jest.fn(),
@@ -70,7 +68,7 @@ describe('handleCreateMR', () => {
             .mockReturnValueOnce('Manual desc');
         (mockM.createMergeRequest as jest.Mock).mockResolvedValue({ web_url: 'https://gitlab.com/merge/1' });
 
-        await handleCreateMR(ctx, mockM);
+        await handleCreateMR(mockM);
 
         expect(mockM.createMergeRequest).toHaveBeenCalledWith('feat', 'main', 'Title', 'Manual desc');
         expect(success).toHaveBeenCalledWith(expect.stringContaining('https://gitlab.com/merge/1'));
@@ -82,7 +80,7 @@ describe('handleCreateMR', () => {
         mockPrompt.mockReturnValueOnce('feat').mockReturnValueOnce('main').mockReturnValueOnce('Title');
         (mockM.createMergeRequest as jest.Mock).mockResolvedValue({ web_url: 'https://gitlab.com/merge/1' });
 
-        await handleCreateMR(ctx, mockM);
+        await handleCreateMR(mockM);
 
         expect(mockGeneratePrDesc).toHaveBeenCalled();
         expect(mockM.createMergeRequest).toHaveBeenCalledWith('feat', 'main', 'Title', 'AI generated description');
@@ -98,7 +96,7 @@ describe('handleCreateMR', () => {
             .mockReturnValueOnce('Manual desc');
         (mockM.createMergeRequest as jest.Mock).mockResolvedValue({ web_url: 'https://gitlab.com/merge/1' });
 
-        await handleCreateMR(ctx, mockM);
+        await handleCreateMR(mockM);
 
         expect(mockM.createMergeRequest).toHaveBeenCalledWith('feat', 'main', 'Title', 'Manual desc');
         expect(warn).toHaveBeenCalled();
@@ -114,7 +112,7 @@ describe('handleCreateMR', () => {
             .mockReturnValueOnce('Desc');
         (mockM.createMergeRequest as jest.Mock).mockResolvedValue({ web_url: 'https://gitlab.com/merge/1' });
 
-        await handleCreateMR(ctx, mockM);
+        await handleCreateMR(mockM);
 
         expect(mockAssessImpact).toHaveBeenCalled();
         expect(info).toHaveBeenCalledWith('Impacto nos testes:');
@@ -129,7 +127,7 @@ describe('handleCreateMR', () => {
             .mockReturnValueOnce('Desc');
         (mockM.createMergeRequest as jest.Mock).mockRejectedValue(new Error('API error'));
 
-        await handleCreateMR(ctx, mockM);
+        await handleCreateMR(mockM);
 
         expect(mockPrintError).toHaveBeenCalled();
         expect(pushHistory).toHaveBeenCalledWith('pr-create', expect.any(String), 'error');
@@ -146,7 +144,7 @@ describe('handleListApprovedMRs', () => {
         (mockM.searchMergeRequests as jest.Mock).mockResolvedValue(mrs);
         (mockM.isApproved as jest.Mock).mockResolvedValue(true);
 
-        await handleListApprovedMRs(ctx, mockM);
+        await handleListApprovedMRs(mockM);
 
         expect(info).toHaveBeenCalledWith(expect.stringContaining('aprovados'));
         expect(pushHistory).toHaveBeenCalledWith('prs-approved', expect.stringContaining('2'), 'ok');
@@ -156,7 +154,7 @@ describe('handleListApprovedMRs', () => {
         mockPrompt.mockReturnValue('opened');
         (mockM.searchMergeRequests as jest.Mock).mockResolvedValue([]);
 
-        await handleListApprovedMRs(ctx, mockM);
+        await handleListApprovedMRs(mockM);
 
         expect(warn).toHaveBeenCalled();
     });
@@ -165,7 +163,7 @@ describe('handleListApprovedMRs', () => {
         mockPrompt.mockReturnValue('opened');
         (mockM.searchMergeRequests as jest.Mock).mockRejectedValue(new Error('search fail'));
 
-        await handleListApprovedMRs(ctx, mockM);
+        await handleListApprovedMRs(mockM);
 
         expect(mockPrintError).toHaveBeenCalled();
         expect(pushHistory).toHaveBeenCalledWith('prs-approved', 'opened', 'error');
@@ -178,7 +176,7 @@ describe('handleListApprovedMRs', () => {
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         (mockM as any).isApproved = undefined;
 
-        await handleListApprovedMRs(ctx, mockM);
+        await handleListApprovedMRs(mockM);
 
         expect(warn).toHaveBeenCalled();
     });
@@ -189,7 +187,7 @@ describe('handleMergeMR', () => {
         mockPrompt.mockReturnValue('42');
         (mockM.acceptMergeRequest as jest.Mock).mockResolvedValue({ web_url: 'https://gitlab.com/merge/42' });
 
-        await handleMergeMR(ctx, mockM);
+        await handleMergeMR(mockM);
 
         expect(mockM.acceptMergeRequest).toHaveBeenCalledWith('42');
         expect(success).toHaveBeenCalled();
@@ -200,7 +198,7 @@ describe('handleMergeMR', () => {
         mockPrompt.mockReturnValue('42');
         (mockM.acceptMergeRequest as jest.Mock).mockRejectedValue(new Error('merge fail'));
 
-        await handleMergeMR(ctx, mockM);
+        await handleMergeMR(mockM);
 
         expect(mockPrintError).toHaveBeenCalled();
         expect(pushHistory).toHaveBeenCalledWith('pr-merge', '42', 'error');

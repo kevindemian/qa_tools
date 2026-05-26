@@ -10,7 +10,8 @@
         "typecheck": "tsc --noEmit",
         "lint": "eslint . --ext .ts",
         "format": "prettier --write '**/*.{ts,js,json,md}'",
-        "docs": "npx tsx docs/help-docs.ts",
+        "docs": "npx tsx docs-archive/help-docs.ts",
+        "unused-exports": "npx ts-prune -p tsconfig.json",
         "jira": "npx tsx jira_management/main.ts",
         "git": "npx tsx git_triggers/main.ts",
         "smoke:github": "npx tsx e2e/smoke-github.ts",
@@ -65,6 +66,7 @@
         "prettier": "^3.8.3",
         "ts-jest": "^29.4.11",
         "tsx": "^4.22.3",
+        "ts-prune": "^0.10.3",
         "typescript": "^6.0.3",
         "typescript-eslint": "^8.59.4"
     }

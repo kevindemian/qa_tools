@@ -1,5 +1,4 @@
 import { print, success, warn, info, prompt, confirm, printError, withSpinner, divider } from '../shared/prompt';
-import { SessionContext } from '../shared/session-context';
 import type { GitProvider, MergeRequestInfo } from '../shared/types';
 import { currentProvider, pushHistory } from './session-state';
 import { generatePrDescription } from './ai-pr-desc';
@@ -11,7 +10,7 @@ export async function nivelarBranchesWrapper(gitlab: GitProvider): Promise<void>
     await nivelarBranches(gitlab, { pushHistory });
 }
 
-export async function handleCreateMR(ctx: SessionContext, m: GitProvider): Promise<void> {
+export async function handleCreateMR(m: GitProvider): Promise<void> {
     const sourceBranch = prompt('Branch de origem');
     const targetBranch = prompt('Branch de destino');
     const mrTitle = prompt('Titulo do ' + (currentProvider === 'github' ? 'PR' : 'MR'));
@@ -57,7 +56,7 @@ export async function handleCreateMR(ctx: SessionContext, m: GitProvider): Promi
     }
 }
 
-export async function handleListApprovedMRs(ctx: SessionContext, m: GitProvider): Promise<void> {
+export async function handleListApprovedMRs(m: GitProvider): Promise<void> {
     const status = prompt('Status dos ' + (currentProvider === 'github' ? 'PRs' : 'MRs'), { default: 'opened' });
     const prLabel = currentProvider === 'github' ? 'PR' : 'MR';
     try {
@@ -87,7 +86,7 @@ export async function handleListApprovedMRs(ctx: SessionContext, m: GitProvider)
     }
 }
 
-export async function handleMergeMR(ctx: SessionContext, m: GitProvider): Promise<void> {
+export async function handleMergeMR(m: GitProvider): Promise<void> {
     const iid = prompt('ID do ' + (currentProvider === 'github' ? 'PR' : 'MR') + ' para merge');
     const prLabel = currentProvider === 'github' ? 'PR' : 'MR';
     try {

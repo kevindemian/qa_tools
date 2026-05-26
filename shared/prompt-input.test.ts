@@ -49,7 +49,6 @@ jest.mock('./prompt-ui', () => {
 import * as fs from 'fs';
 import * as path from 'path';
 import readlineSync from 'readline-sync';
-import { Output } from './output';
 import { getConfig, warn, CancelError } from './prompt-ui';
 import {
     prompt,

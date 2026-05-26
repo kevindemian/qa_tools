@@ -46,7 +46,7 @@ jest.mock('fs', () => ({
     rmSync: jest.fn(),
 }));
 
-import { success, warn, info, print, prompt, printError, withSpinner } from '../shared/prompt';
+import { success, warn, info, print, prompt, printError } from '../shared/prompt';
 import { pushHistory, getProjects } from './session-state';
 import { loadMetrics, calculateFlakiness } from '../shared/metrics';
 import { generateFlakinessHtml } from '../shared/flakiness-dashboard';
@@ -56,7 +56,6 @@ import {
     handleChangeProject,
     handleFlakinessDashboard,
 } from './schedule-handler';
-import type { SessionContext } from '../shared/session-context';
 import type { GitProvider } from '../shared/types';
 
 const mockPrompt = prompt as jest.Mock;
@@ -73,8 +72,6 @@ const mockManager = {
     runSchedule: jest.fn(),
 } as unknown as GitProvider;
 
-const ctx = {} as SessionContext;
-
 beforeEach(() => {
     jest.clearAllMocks();
     mockState.currentProvider = 'gitlab';
@@ -89,7 +86,7 @@ describe('handleListSchedules', () => {
         ];
         (mockManager.getSchedules as jest.Mock).mockResolvedValue(schedules);
 
-        await handleListSchedules(ctx, mockManager);
+        await handleListSchedules(mockManager);
 
         expect(info).toHaveBeenCalledWith(expect.stringContaining('Schedules'));
         expect(print).toHaveBeenCalledTimes(2);
@@ -99,7 +96,7 @@ describe('handleListSchedules', () => {
     it('warns on empty schedules', async () => {
         (mockManager.getSchedules as jest.Mock).mockResolvedValue([]);
 
-        await handleListSchedules(ctx, mockManager);
+        await handleListSchedules(mockManager);
 
         expect(mockWarn).toHaveBeenCalledWith(expect.stringContaining('Nenhum schedule'));
     });
@@ -107,7 +104,7 @@ describe('handleListSchedules', () => {
     it('warns for github provider', async () => {
         mockState.currentProvider = 'github';
 
-        await handleListSchedules(ctx, mockManager);
+        await handleListSchedules(mockManager);
 
         expect(mockWarn).toHaveBeenCalledWith(expect.stringContaining('GitHub'));
         expect(mockManager.getSchedules).not.toHaveBeenCalled();
@@ -116,7 +113,7 @@ describe('handleListSchedules', () => {
     it('handles error', async () => {
         (mockManager.getSchedules as jest.Mock).mockRejectedValue(new Error('API error'));
 
-        await handleListSchedules(ctx, mockManager);
+        await handleListSchedules(mockManager);
 
         expect(mockPrintError).toHaveBeenCalled();
     });
@@ -127,7 +124,7 @@ describe('handleRunSchedule', () => {
         mockPrompt.mockReturnValue('schedule-1');
         (mockManager.runSchedule as jest.Mock).mockResolvedValue({ status: 'success' });
 
-        await handleRunSchedule(ctx, mockManager);
+        await handleRunSchedule(mockManager);
 
         expect(mockManager.runSchedule).toHaveBeenCalledWith('schedule-1');
         expect(success).toHaveBeenCalled();
@@ -137,7 +134,7 @@ describe('handleRunSchedule', () => {
     it('warns for github provider', async () => {
         mockState.currentProvider = 'github';
 
-        await handleRunSchedule(ctx, mockManager);
+        await handleRunSchedule(mockManager);
 
         expect(mockWarn).toHaveBeenCalledWith(expect.stringContaining('GitHub'));
         expect(mockManager.runSchedule).not.toHaveBeenCalled();
@@ -147,7 +144,7 @@ describe('handleRunSchedule', () => {
         mockPrompt.mockReturnValue('sched-1');
         (mockManager.runSchedule as jest.Mock).mockRejectedValue(new Error('fail'));
 
-        await handleRunSchedule(ctx, mockManager);
+        await handleRunSchedule(mockManager);
 
         expect(mockPrintError).toHaveBeenCalled();
     });
@@ -160,7 +157,7 @@ describe('handleChangeProject', () => {
         mockPrompt.mockReturnValue('1');
         (getProjects as jest.Mock).mockReturnValue({ proj1: '1', proj2: '2' });
 
-        await handleChangeProject(ctx, mockManager, names);
+        await handleChangeProject(names);
 
         const { setCurrentProjectName, setProjectId, setManager } = require('./session-state');
         expect(setCurrentProjectName).toHaveBeenCalledWith('proj1');
@@ -172,14 +169,14 @@ describe('handleChangeProject', () => {
     it('warns on invalid index', async () => {
         mockPrompt.mockReturnValue('99');
 
-        await handleChangeProject(ctx, mockManager, names);
+        await handleChangeProject(names);
 
         expect(mockWarn).toHaveBeenCalledWith(expect.stringContaining('inválida'));
     });
     it('warns on NaN', async () => {
         mockPrompt.mockReturnValue('abc');
 
-        await handleChangeProject(ctx, mockManager, names);
+        await handleChangeProject(names);
 
         expect(mockWarn).toHaveBeenCalledWith(expect.stringContaining('inválida'));
     });

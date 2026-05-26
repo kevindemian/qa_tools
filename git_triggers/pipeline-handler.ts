@@ -1,7 +1,6 @@
 import { print, success, warn, info, title, prompt, confirm, printError, withSpinner } from '../shared/prompt';
 import { load as loadState, update as updateState } from '../shared/state';
 import { sleep } from '../shared/http-client';
-import { SessionContext } from '../shared/session-context';
 import Config from '../shared/config';
 import type { ParseResult } from '../shared/result_parser';
 import type { PipelineTriggerResult, StateContainer } from '../shared/types';
@@ -300,7 +299,7 @@ async function triggerAndPollPipeline(
     }
 }
 
-export async function handleTriggerPipeline(ctx: SessionContext, m: GitProvider, projectName: string): Promise<void> {
+export async function handleTriggerPipeline(m: GitProvider, projectName: string): Promise<void> {
     const resumed = await resumePendingPipeline(m, projectName);
     if (resumed !== null) return;
 
@@ -310,7 +309,7 @@ export async function handleTriggerPipeline(ctx: SessionContext, m: GitProvider,
     await triggerAndPollPipeline(m, built.branch, built.payload, projectName);
 }
 
-export async function handleExportVariables(ctx: SessionContext, m: GitProvider): Promise<void> {
+export async function handleExportVariables(m: GitProvider): Promise<void> {
     if (!confirm('Exportar TODAS as variáveis CI/CD (incluindo secrets)?', false)) {
         warn(MSG_OPERATION_CANCELED);
         return;

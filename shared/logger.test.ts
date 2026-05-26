@@ -33,7 +33,7 @@ describe('Logger', () => {
 
         it('child does not mutate parent context', () => {
             const parent = rootLogger.child({ session: 'jira' });
-            const child = parent.child({ operation: 'csv-import' });
+            parent.child({ operation: 'csv-import' });
             expect(parent.context).toEqual({ session: 'jira' });
             expect(Object.keys(parent.context)).not.toContain('operation');
         });

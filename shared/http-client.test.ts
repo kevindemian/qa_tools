@@ -60,7 +60,7 @@ describe('HTTP Client', () => {
 
     describe('createHttpClient', () => {
         it('creates axios instance with provided config', () => {
-            const client = httpClient.createHttpClient({
+            httpClient.createHttpClient({
                 baseUrl: 'https://api.test.com',
                 authHeader: { Authorization: 'Bearer token123' },
                 timeout: 5000,

@@ -89,7 +89,7 @@ jest.mock('child_process', () => ({
 
 // ── Imports ────────────────────────────────────────────────────────────────
 import { createValidateEnv } from '../shared/cli_base';
-import { print, warn, helpLine, title, divider, prompt, showSelect, printError } from '../shared/prompt';
+import { warn, helpLine, title, prompt, showSelect, printError } from '../shared/prompt';
 import { load as loadState, update as updateState, getStatePath } from '../shared/state';
 
 // ── Types ──────────────────────────────────────────────────────────────────

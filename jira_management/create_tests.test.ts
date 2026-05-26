@@ -17,7 +17,7 @@ const mockPrompt = {
     ProgressBar: jest.fn(),
     Spinner: jest.fn(),
     isQuiet: jest.fn().mockReturnValue(true),
-    withSpinner: jest.fn().mockImplementation(async (label, fn) => fn()),
+    withSpinner: jest.fn().mockImplementation(async (_label, fn) => fn()),
     print: jest.fn(),
     askFilePath: jest.fn().mockResolvedValue('/fake/path.json'),
 };

@@ -33,10 +33,8 @@ function setupJiraMocks(base: string): void {
     });
 
     let teCount = 0;
-    api.post('/issue').reply(201, (_uri: string, body) => {
+    api.post('/issue').reply(201, (_uri: string, _body) => {
         teCount++;
-        const b = body as Record<string, unknown>;
-        const keys = ((b.fields as Record<string, unknown>)?.customfield_13715 as string[]) || [];
         return { key: 'RESULT-' + teCount, id: '3000' + teCount };
     });
 
