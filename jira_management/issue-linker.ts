@@ -58,7 +58,7 @@ class IssueLinker {
         for (const { test, id } of valid) {
             const key = test.group!.toUpperCase();
             if (!groups[key]) groups[key] = { name: test.group!, members: [] };
-            groups[key].members.push({ id, description: test.description || '' });
+            groups[key].members.push({ id: id!, description: test.description || '' });
         }
 
         const crossLog = rootLogger.child({ operation: 'cross-ref' });

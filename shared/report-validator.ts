@@ -72,8 +72,8 @@ export class ReportValidator {
         for (const part of parts) {
             const arrMatch = part.match(/^(\w+)\[(\d+)]$/);
             if (arrMatch) {
-                const key = arrMatch[1];
-                const idx = parseInt(arrMatch[2], 10);
+                const key = arrMatch[1]!;
+                const idx = parseInt(arrMatch[2]!, 10);
                 if (typeof current !== 'object' || current === null) return undefined;
                 const arr = (current as Record<string, unknown>)[key];
                 if (!Array.isArray(arr)) return undefined;

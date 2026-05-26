@@ -369,7 +369,7 @@ export async function showSelect(label: string, choices: SelectChoice[], options
     if (trimmed.startsWith('/')) return answer;
     const num = parseInt(answer, 10);
     if (num >= 1 && num <= flatChoices.length) {
-        return flatChoices[num - 1].value;
+        return flatChoices[num - 1]!.value;
     }
     if (!isNaN(num)) {
         warn('Opção inválida. Digite um número entre 0 e ' + flatChoices.length + ' ou /help.');

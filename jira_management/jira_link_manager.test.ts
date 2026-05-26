@@ -73,7 +73,7 @@ describe('JiraLinkManager', () => {
             jest.mocked(fs.existsSync).mockReturnValue(false);
             const result = await manager.getIssueLinkTypes();
             expect(result).toHaveLength(3);
-            expect(result[0].name).toBe('Relates');
+            expect(result[0]!.name).toBe('Relates');
         });
 
         it('logs warning when cache write throws', async () => {
@@ -95,7 +95,7 @@ describe('JiraLinkManager', () => {
             const result = await manager.getIssueLinkTypes();
             expect(rootLogger.warn).toHaveBeenCalledWith(expect.stringContaining('Falha ao ler cache'));
             expect(result).toHaveLength(3);
-            expect(result[0].name).toBe('Relates');
+            expect(result[0]!.name).toBe('Relates');
         });
     });
 

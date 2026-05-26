@@ -76,12 +76,12 @@ Removidos: `sourceBranch`/`targetBranch` de `updateMergeRequest` (github_manager
 **Data:** 2026-05-26
 **Esforço total:** ~7h
 
-| Fase | Descrição                                                                                                   | Status | Esforço |
-| ---- | ----------------------------------------------------------------------------------------------------------- | ------ | ------- |
-| 1    | CI hardening (thresholds, eslint, ts-prune) + remove docs-archive                                           | ✅     | 15 min  |
-| 2    | `noUncheckedIndexedAccess` tsconfig (173 prod errors)                                                       | 🔴     | 4h      |
-| 3    | Branch coverage (6 files: splash, temp-dir, report-generator, prompt-input, github_manager, gitlab_manager) | 🔴     | 2.5h    |
-| 4    | Lazy `require('fs')` → `import` em temp-dir.ts                                                              | 🔴     | 20 min  |
+| Fase | Descrição                                                                           | Status | Esforço |
+| ---- | ----------------------------------------------------------------------------------- | ------ | ------- |
+| 1    | CI hardening (thresholds, eslint, ts-prune) + remove docs-archive                   | ✅     | 15 min  |
+| 2    | `noUncheckedIndexedAccess` tsconfig (173 prod errors)                               | 🔴     | 4h      |
+| 3    | Branch coverage (6 files: splash, report-generator, github_manager, gitlab_manager) | ✅     | 2.5h    |
+| 4    | Lazy `require('fs')` → `import` em temp-dir.ts                                      | ✅     | 20 min  |
 
 ### Fase 1 — Prevenção imediata
 

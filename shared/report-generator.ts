@@ -149,7 +149,7 @@ function buildChartSection(stats: ReportStats, wantChart: boolean): string {
 function buildTestTable(tests: FlatTest[]): string {
     let html = '<table><thead><tr><th>#</th><th>Test</th><th>Status</th><th>Duration</th></tr></thead><tbody>';
     for (let i = 0; i < tests.length; i++) {
-        const t = tests[i];
+        const t = tests[i]!;
         html += '<tr>';
         html += '<td>' + (i + 1) + '</td>';
         html += '<td>' + escapeHtml(t.title) + '</td>';

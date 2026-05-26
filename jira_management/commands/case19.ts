@@ -27,7 +27,7 @@ async function showHistory(): Promise<void> {
         divider();
         const lastTwo = store.runs.slice(-2);
         const analysis = await withSpinner('Comparando últimas execuções (IA)...', () =>
-            compareRuns(lastTwo[0], lastTwo[1]),
+            compareRuns(lastTwo[0]!, lastTwo[1]!),
         );
         if (analysis) {
             info('Análise comparativa: ' + analysis);
@@ -92,7 +92,7 @@ async function showCoverage(c: CommandContext): Promise<void> {
         divider();
         title('Gaps por épico');
         for (const epic of epics) {
-            info(`${epic}: ${result.gapsByEpic[epic].join(', ')}`);
+            info(`${epic}: ${result.gapsByEpic[epic]!.join(', ')}`);
         }
     }
 

@@ -83,7 +83,7 @@ function buildContentRows(
 export function box(lines: string[], options: BoxOptions = {}): string {
     const { title = '', border: borderStyle = 'single', color, padding = 0, width: maxWidth } = options;
     const totalWidth = boxContentWidth(lines, title, padding, maxWidth);
-    const b = borderStyle === 'none' ? NONE : BORDERS[borderStyle];
+    const b = borderStyle === 'none' ? NONE : BORDERS[borderStyle]!;
     const styled = color ? applyPalette(color) : palette.fg;
     const borderChalk = color ? applyPalette(color) : palette.border;
     const innerWidth = totalWidth - 8 - padding * 2;

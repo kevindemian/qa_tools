@@ -74,8 +74,8 @@ class CsvResource {
 
         while ((match = LINKED_ISSUE_PATTERN.exec(value)) !== null) {
             results.push({
-                key: match[1],
-                linkType: match[2].trim(),
+                key: match[1]!,
+                linkType: match[2]!.trim(),
             });
         }
 
@@ -87,7 +87,7 @@ class CsvResource {
         descIndex: number,
         title: string,
     ): { description: string; descEndIndex: number } {
-        const rawValue = lines[descIndex].replace(/^Description:\s*/, '');
+        const rawValue = lines[descIndex]!.replace(/^Description:\s*/, '');
         const parsed = parseQuotedValue(rawValue, lines, descIndex);
         let description = parsed.value;
         let descEndIndex = parsed.endIndex;
@@ -99,15 +99,15 @@ class CsvResource {
         if (!rawValue.startsWith('"')) {
             const stopPrefixes = ['Title:', 'Pre-condition:', 'Linked Issues:', 'Group:', 'Action,Data'];
             while (descEndIndex < lines.length) {
-                if (stopPrefixes.some((p) => lines[descEndIndex].startsWith(p))) break;
+                if (stopPrefixes.some((p) => lines[descEndIndex]!.startsWith(p))) break;
                 descEndIndex++;
             }
             const parts: string[] = [];
             for (let i = descIndex; i < descEndIndex; i++) {
                 if (i === descIndex) {
-                    parts.push(lines[i].replace(/^Description:\s*/, ''));
+                    parts.push(lines[i]!.replace(/^Description:\s*/, ''));
                 } else {
-                    parts.push(lines[i]);
+                    parts.push(lines[i]!);
                 }
             }
             description = parts.join('\n');
@@ -121,7 +121,7 @@ class CsvResource {
         precIndex: number,
         title: string,
     ): { precValue: string | null; precEndIndex: number } {
-        const rawValue = lines[precIndex].replace(/^Pre-condition:\s*/, '');
+        const rawValue = lines[precIndex]!.replace(/^Pre-condition:\s*/, '');
         const parsed = parseQuotedValue(rawValue, lines, precIndex);
 
         if (parsed.endIndex >= lines.length && rawValue.startsWith('"') && !rawValue.endsWith('"')) {

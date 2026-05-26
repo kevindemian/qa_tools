@@ -90,9 +90,9 @@ function _selectProject(): { projectName: string; names: string[] } {
         process.exitCode = 1;
         throw new Error('Invalid project');
     }
-    const projectName = names[firstIdx - 1];
+    const projectName = names[firstIdx - 1]!;
     setCurrentProjectName(projectName);
-    setProjectId(getProjects()[projectName]);
+    setProjectId(getProjects()[projectName]!);
     updateState((s: StateContainer) => {
         s.lastProject = projectName;
     });

@@ -323,7 +323,7 @@ function showHelpLoop(): void {
         // Try as topic name or search
         const found = topicEntries.filter(([k]) => k.includes(lower));
         if (found.length === 1) {
-            showHelp(found[0][0]);
+            showHelp(found[0]![0]);
             divider();
             prompt('Pressione Enter para continuar');
             continue;

@@ -445,8 +445,8 @@ describe('GitHubManager', () => {
             const result = await manager.getPipelineJobs('42');
             expect(mockClient.get).toHaveBeenCalledWith('/repos/myorg/myrepo/actions/runs/42/jobs');
             expect(result).toHaveLength(2);
-            expect(result[0].name).toContain('test');
-            expect(result[1].status).toBe('failure');
+            expect(result[0]!.name).toContain('test');
+            expect(result[1]!.status).toBe('failure');
         });
 
         it('returns [] on API error', async () => {

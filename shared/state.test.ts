@@ -31,7 +31,7 @@ function mockFs(files: Record<string, string>) {
     });
     const rename = jest.fn((from: string, to: string) => {
         if (from in files) {
-            files[to] = files[from];
+            files[to] = files[from]!;
             delete files[from];
         }
     });

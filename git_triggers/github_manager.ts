@@ -51,7 +51,7 @@ class GitHubManager extends GitProviderBase implements GitProvider {
         });
         this.log = new Logger({ resource: 'GitHub', projectId: repoFullName });
         const parts = repoFullName.split('/');
-        this.owner = parts[0];
+        this.owner = parts[0]!;
         this.repo = parts.slice(1).join('/');
     }
 
@@ -81,7 +81,7 @@ class GitHubManager extends GitProviderBase implements GitProvider {
                 if (!workflows || workflows.length === 0) {
                     throw new Error('No workflows found in repository');
                 }
-                const workflow = workflows[0];
+                const workflow = workflows[0]!;
                 await this._post(
                     this._repoPath + '/actions/workflows/' + workflow.id + '/dispatches',
                     { ref: payload.ref, inputs: this._toInputs(payload.variables) },
@@ -160,7 +160,7 @@ class GitHubManager extends GitProviderBase implements GitProvider {
                     info('PR already exists. Searching for existing...');
                     const existing = await this.searchMergeRequests(sourceBranch, targetBranch, 'open');
                     if (existing && existing.length > 0) {
-                        return this.updateMergeRequest(existing[0].number!, title, description);
+                        return this.updateMergeRequest(existing[0]!.number!, title, description);
                     }
                 }
             }
