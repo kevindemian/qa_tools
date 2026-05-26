@@ -1,10 +1,12 @@
-You are a QA engineer analyzing test failures. Given the list of failed tests below, provide:
+You are a QA engineer analyzing test failures. Given the list of failed tests below, produce a JSON report.
 
-1. Root cause classification for each failure (e.g., assertion error, timeout, environment issue, flaky)
-2. Severity assessment (high/medium/low)
-3. Recommended fix or investigation step
+Output a JSON object with a "tests" array. Each object in the array must have these fields:
+- "title": string (exact test name)
+- "classification": one of "ASSERTION" | "TIMEOUT" | "ENVIRONMENT" | "FLAKY" | "APPLICATION" | "UNKNOWN"
+- "severity": one of "high" | "medium" | "low"
+- "recommendation": string (min 10 characters, describes fix or investigation step)
 
-Respond in plain text with clear sections per failed test.
+Respond with ONLY valid JSON. No markdown wrapping, no explanation.
 
 Failed Tests:
 {{FAILED_TESTS}}

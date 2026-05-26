@@ -69,7 +69,11 @@ describe('case18 — AI tests generator', () => {
         const mod = require('./case18').default;
         await mod.handler(baseContext);
 
-        expect(llm.llmPrompt).toHaveBeenCalledWith('main', '', expect.stringContaining('User wants to login'));
+        expect(llm.llmPrompt).toHaveBeenCalledWith(
+            'main',
+            expect.stringContaining('You are a QA engineer'),
+            expect.stringContaining('User wants to login'),
+        );
         expect(baseContext.pushHistory).toHaveBeenCalledWith('ai-generate-tests', expect.any(String), 'ok');
     });
 
