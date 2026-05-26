@@ -40,6 +40,7 @@ describe('parseMochawesome', () => {
         const result = parseMochawesome(SAMPLE_MOCHAWESOME);
         expect(result.tests).toHaveLength(4);
         expect(result.tests[0]!.title).toBe('TC01 - Login valido');
+        expect(result.tests[0]!.fullTitle).toContain('Login Tests > TC01 - Login valido');
         expect(result.tests[0]!.state).toBe('passed');
         expect(result.tests[1]!.state).toBe('failed');
         expect(result.tests[2]!.state).toBe('skipped');
@@ -161,5 +162,137 @@ describe('parseCypressResults', () => {
         } catch (e) {
             /* ignore */
         }
+    });
+});
+
+const CTRF_SAMPLE = {
+    results: {
+        tool: { name: 'cypress' },
+        summary: { tests: 3, passed: 2, failed: 1, skipped: 0, pending: 0, other: 0, start: 1000, stop: 5000 },
+        environment: { appName: 'QA Tools', buildName: 'Release', buildNumber: '100' },
+        tests: [
+            { name: 'Login', status: 'passed', duration: 100, suite: 'Auth' },
+            { name: 'Logout', status: 'failed', duration: 200, suite: 'Auth', message: 'Assertion failed' },
+            { name: 'Dashboard', status: 'passed', duration: 150, suite: 'UI' },
+        ],
+    },
+};
+
+const CTRF_EMPTY = {
+    results: {
+        summary: { tests: 0, passed: 0, failed: 0, skipped: 0, pending: 0, other: 0, start: 0, stop: 0 },
+        tests: [],
+    },
+};
+
+describe('isCtrfFormat', () => {
+    const { isCtrfFormat } = require('./result_parser');
+
+    it('detects CTRF format by results.tests + results.summary', () => {
+        expect(isCtrfFormat(CTRF_SAMPLE)).toBe(true);
+    });
+
+    it('rejects null/undefined', () => {
+        expect(isCtrfFormat(null)).toBe(false);
+        expect(isCtrfFormat(undefined)).toBe(false);
+    });
+
+    it('rejects plain object without results.tests', () => {
+        expect(isCtrfFormat({})).toBe(false);
+    });
+});
+
+describe('parseCtrfResults', () => {
+    const { parseCtrfResults } = require('./result_parser');
+
+    it('extracts all tests from CTRF format', () => {
+        const result = parseCtrfResults(CTRF_SAMPLE);
+        expect(result.tests).toHaveLength(3);
+        expect(result.tests[0]!.title).toBe('Login');
+        expect(result.tests[0]!.state).toBe('passed');
+        expect(result.tests[0]!.fullTitle).toBe('Auth > Login');
+    });
+
+    it('captures error message from CTRF format', () => {
+        const result = parseCtrfResults(CTRF_SAMPLE);
+        expect(result.tests[1]!.error).toBe('Assertion failed');
+    });
+
+    it('uses CTRF summary stats when available', () => {
+        const result = parseCtrfResults(CTRF_SAMPLE);
+        expect(result.stats.passed).toBe(2);
+        expect(result.stats.failed).toBe(1);
+        expect(result.stats.skipped).toBe(0);
+        expect(result.stats.total).toBe(3);
+    });
+
+    it('returns empty for missing tests array', () => {
+        const result = parseCtrfResults(CTRF_EMPTY);
+        expect(result.tests).toEqual([]);
+    });
+
+    it('maps pending/other status to skipped', () => {
+        const input = {
+            results: {
+                summary: { tests: 2, passed: 0, failed: 0, skipped: 2, pending: 1, other: 1, start: 0, stop: 0 },
+                tests: [
+                    { name: 'Pending', status: 'pending', duration: 0 },
+                    { name: 'Other', status: 'other', duration: 0 },
+                ],
+            },
+        };
+        const result = parseCtrfResults(input);
+        expect(result.tests.every((t: { state: string }) => t.state === 'skipped')).toBe(true);
+    });
+});
+
+describe('parseTestResults (dispatch)', () => {
+    const { parseTestResults } = require('./result_parser');
+
+    it('routes CTRF format to parseCtrfResults', () => {
+        const result = parseTestResults(CTRF_SAMPLE);
+        expect(result.tests).toHaveLength(3);
+        expect(result.stats.passed).toBe(2);
+    });
+
+    it('routes Mochawesome format to parseMochawesome', () => {
+        const mochaInput = {
+            stats: { duration: 100 },
+            results: [{ suites: [{ tests: [{ title: 'Mocha Test', state: 'passed', duration: 100 }] }] }],
+        };
+        const result = parseTestResults(mochaInput);
+        expect(result.tests).toHaveLength(1);
+        expect(result.tests[0]!.title).toBe('Mocha Test');
+    });
+
+    it('returns empty for unknown format', () => {
+        const result = parseTestResults({ unexpected: true });
+        expect(result.tests).toEqual([]);
+    });
+});
+
+describe('parseTestResultsFile', () => {
+    const { parseTestResultsFile } = require('./result_parser');
+
+    it('reads CTRF file and parses it', () => {
+        const path = require('path');
+        const fixtures = path.join(__dirname, '../e2e/fixtures');
+        const result = parseTestResultsFile(path.join(fixtures, 'ctrf-report.json'));
+        expect(result.tests).toHaveLength(4);
+        expect(result.stats.passed).toBe(2);
+        expect(result.stats.failed).toBe(1);
+    });
+
+    it('reads Mochawesome file via dispatch', () => {
+        const path = require('path');
+        const fixtures = path.join(__dirname, '../e2e/fixtures');
+        const result = parseTestResultsFile(path.join(fixtures, 'mochawesome.json'));
+        expect(result.tests).toHaveLength(3);
+        expect(result.stats.passed).toBe(2);
+    });
+
+    it('returns error for nonexistent file', () => {
+        const result = parseTestResultsFile('/nonexistent-' + Date.now() + '.json');
+        expect(result.error).toContain('Arquivo não encontrado');
     });
 });
