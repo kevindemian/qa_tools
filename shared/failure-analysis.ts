@@ -72,7 +72,7 @@ export async function classifyFailure(title: string, error: string): Promise<str
     const system = systemTemplate.replace('{{TEST_TITLE}}', title).replace('{{ERROR_MESSAGE}}', sanitizeForLlm(error));
     let result = await llmPrompt('fast', system, 'Classify this failure.', 'classify');
 
-    const classifyRegex = /^(ASSERTION|TIMEOUT|ENVIRONMENT|FLAKY|APPLICATION|UNKNOWN):\s/m;
+    const classifyRegex = /^(ASSERTION|TIMEOUT|ENVIRONMENT|FLAKY|APPLICATION|UNKNOWN):\s/;
     if (!classifyRegex.test(result)) {
         rootLogger.warn('classifyFailure: invalid format, retrying');
         result = await llmPrompt(

@@ -2,6 +2,7 @@ import fs from 'fs';
 import path from 'path';
 import { ask, warn, info, printError, title, divider } from '../../shared/prompt';
 import { llmPrompt } from '../../shared/llm-client';
+import { sanitizeForLlm } from '../../shared/sanitize';
 import { rootLogger } from '../../shared/logger';
 import type { CommandContext } from './context';
 
@@ -28,11 +29,12 @@ async function handler(c: CommandContext): Promise<boolean | void> {
     }
 
     const userMsg = 'User Story:\n' + userStory + '\n\nAcceptance Criteria:\n' + acceptanceCriteria;
+    const safeUserMsg = sanitizeForLlm(userMsg);
 
     title('Gerando testes com IA...');
     let result: string;
     try {
-        result = await llmPrompt('main', system, userMsg, 'case18');
+        result = await llmPrompt('main', system, safeUserMsg, 'case18');
         try {
             JSON.parse(result);
         } catch {
@@ -40,7 +42,7 @@ async function handler(c: CommandContext): Promise<boolean | void> {
             result = await llmPrompt(
                 'main',
                 system + '\n\nIMPORTANTE: Retorne APENAS um array JSON válido. Nenhum texto, nenhum markdown.',
-                userMsg,
+                safeUserMsg,
                 'case18-retry',
             );
         }
