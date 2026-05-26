@@ -14,6 +14,8 @@ export interface LlmMetricsSnapshot {
     avgLatencyMs: number;
     failuresByTier: Partial<Record<LlmTier, number>>;
     rejectionReasons: Record<string, number>;
+    artifactApproved: number;
+    artifactRejected: number;
 }
 
 interface StoredMetrics {
@@ -55,6 +57,8 @@ let _confidenceSum = 0;
 let _confidenceCount = 0;
 let _latencySum = 0;
 let _latencyCount = 0;
+let _artifactApproved = 0;
+let _artifactRejected = 0;
 const _failuresByTier: Partial<Record<LlmTier, number>> = {};
 const _rejectionReasons: Record<string, number> = {};
 
@@ -83,6 +87,11 @@ export function recordConfidence(confidence: 'high' | 'medium' | 'low'): void {
     _confidenceCount++;
 }
 
+export function recordArtifactReview(approved: boolean): void {
+    if (approved) _artifactApproved++;
+    else _artifactRejected++;
+}
+
 export function snapshotLlmMetrics(): LlmMetricsSnapshot {
     const snapshot: LlmMetricsSnapshot = {
         timestamp: new Date().toISOString(),
@@ -93,6 +102,8 @@ export function snapshotLlmMetrics(): LlmMetricsSnapshot {
         avgLatencyMs: _latencyCount > 0 ? Math.round(_latencySum / _latencyCount) : 0,
         failuresByTier: { ..._failuresByTier },
         rejectionReasons: { ..._rejectionReasons },
+        artifactApproved: _artifactApproved,
+        artifactRejected: _artifactRejected,
     };
 
     const store = loadStore();
@@ -114,6 +125,8 @@ export function clearLlmMetrics(): void {
     _confidenceCount = 0;
     _latencySum = 0;
     _latencyCount = 0;
+    _artifactApproved = 0;
+    _artifactRejected = 0;
     for (const key of Object.keys(_failuresByTier)) delete _failuresByTier[key as LlmTier];
     for (const key of Object.keys(_rejectionReasons)) delete _rejectionReasons[key];
 }
