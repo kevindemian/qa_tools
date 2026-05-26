@@ -14,8 +14,9 @@ import path from 'path';
 
 import JiraLinkManager from './jira_link_manager';
 import { rootLogger } from '../shared/logger';
+import { tempDirPath } from '../shared/temp-dir';
 
-const CACHE_PATH = path.resolve(__dirname, '../temp/cache/link-types-cache.json');
+const CACHE_PATH = path.join(tempDirPath(), 'cache', 'link-types-cache.json');
 
 describe('JiraLinkManager', () => {
     let manager: InstanceType<typeof JiraLinkManager>;

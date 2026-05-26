@@ -12,6 +12,7 @@ function reportsDir(): string {
 }
 
 function logsDir(): string {
+    if (process.env.QA_TOOLS_LOGS_DIR) return resolve(process.env.QA_TOOLS_LOGS_DIR);
     return resolveEnvOrPath('LOG_DIR', 'logs');
 }
 

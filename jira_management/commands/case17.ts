@@ -42,11 +42,14 @@ async function handler(c: CommandContext): Promise<boolean | void> {
     }
 
     const defaultName = `report-${c.ctx.project_name}-${Date.now()}.html`;
-    const outPath = await ask('Caminho de saída do HTML', { default: path.join('reports', defaultName) });
-    const resolvedPath = outPath.trim() ? path.resolve(outPath.trim()) : writeReport(defaultName, html);
-
+    const outPath = await ask('Caminho de saída do HTML', { default: '' });
+    let resolvedPath: string;
     if (outPath.trim()) {
+        resolvedPath = path.resolve(outPath.trim());
+        fs.mkdirSync(path.dirname(resolvedPath), { recursive: true });
         fs.writeFileSync(resolvedPath, html, 'utf8');
+    } else {
+        resolvedPath = writeReport(defaultName, html);
     }
 
     info(`Relatório HTML gerado: ${resolvedPath}`);

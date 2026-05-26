@@ -2,6 +2,7 @@ import fs from 'fs';
 import path from 'path';
 import { info } from '../shared/prompt';
 import { rootLogger } from '../shared/logger';
+import { tempDirPath } from '../shared/temp-dir';
 import type { JsonObject } from '../shared/types';
 import type JiraResource from './jira_resource';
 
@@ -33,7 +34,7 @@ class JiraLinkManager {
     constructor(jiraResource: JiraResource) {
         this.jiraResource = jiraResource;
         this.linkTypesCache = null;
-        this.cacheFilePath = path.resolve(__dirname, '../temp/cache/link-types-cache.json');
+        this.cacheFilePath = path.join(tempDirPath(), 'cache', 'link-types-cache.json');
     }
 
     async getIssueLinkTypes(): Promise<LinkType[]> {
