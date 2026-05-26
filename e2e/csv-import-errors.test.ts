@@ -7,6 +7,7 @@ import JiraLinkManager from '../jira_management/jira_link_manager';
 import CsvResource from '../jira_management/csv_resource';
 import createTests from '../jira_management/create_tests';
 import { rootLogger } from '../shared/logger';
+import { tempDirPath } from '../shared/temp-dir';
 
 const { createTestsFromCsv } = createTests;
 
@@ -51,9 +52,9 @@ describe('E2E: CSV Import - Error Paths', () => {
         process.env.QUIET = 'true';
         process.env.AUTO_CONFIRM = 'true';
         process.env.ON_ERROR = 'skip';
-        const home = path.join(os.homedir(), '.qa_tools_link_types_cache.json');
+        const cachePath = path.join(tempDirPath(), 'cache', 'link-types-cache.json');
         try {
-            fs.unlinkSync(home);
+            fs.unlinkSync(cachePath);
         } catch {
             /* ignore */
         }

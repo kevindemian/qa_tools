@@ -176,7 +176,7 @@ class Config {
         return toBool(this.overrides.logFile ?? envVal('LOG_FILE'));
     }
     get logDir(): string {
-        return this.overrides.logDir ?? envVal('LOG_DIR', 'logs');
+        return this.overrides.logDir || envVal('QA_TOOLS_LOGS_DIR') || envVal('LOG_DIR', 'logs');
     }
     get logMaxSize(): number {
         return toInt(this.overrides.logMaxSize ?? envVal('LOG_MAX_SIZE'), 5 * 1024 * 1024);

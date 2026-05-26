@@ -27,6 +27,7 @@ describe('Config', () => {
         'LOG_LEVEL',
         'LOG_FILE',
         'LOG_DIR',
+        'QA_TOOLS_LOGS_DIR',
         'LOG_MAX_SIZE',
         'XDG_STATE_HOME',
     ];
