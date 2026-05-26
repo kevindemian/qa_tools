@@ -3,7 +3,7 @@ import Config from './config';
 import { rootLogger } from './logger';
 import { sanitizeForLlm } from './sanitize';
 
-export type LlmTier = 'main' | 'small' | 'fast' | 'reviewer' | 'report' | 'fallback' | 'batch';
+export type LlmTier = 'main' | 'fast' | 'reviewer' | 'report' | 'fallback' | 'batch';
 type ProviderFormat = 'openai' | 'gemini';
 type ResponseFormat = 'text' | 'json';
 
@@ -24,7 +24,6 @@ interface CacheEntry {
 const CACHE_TTL_MS = 5 * 60 * 1000;
 const CACHE_CLEANUP_INTERVAL_MS = CACHE_TTL_MS / 2;
 const LLM_TEMP_MAIN = 0.3;
-const LLM_TEMP_SMALL = 0.1;
 const LLM_TEMP_REVIEWER = 0.2;
 const LLM_TEMP_REPORT = 0.2;
 const LLM_TEMP_FALLBACK = 0.3;
@@ -33,14 +32,20 @@ const LLM_TEMP_DEFAULT = 0.3;
 const LLM_FETCH_RETRIES = 3;
 const LLM_RETRY_BASE_WAIT_MS = 2000;
 const LLM_RETRY_MAX_WAIT_MS = 10000;
+const LLM_FETCH_TIMEOUT_MS = 30000;
 const LLM_ERROR_BODY_TRUNCATION = 200;
-const LLM_RATE_LIMIT_PER_TIER = 30;
 const LLM_RATE_WINDOW_MS = 60000;
 const LLM_CIRCUIT_BREAK_THRESHOLD = 5;
 const LLM_CIRCUIT_BREAK_MS = 30000;
 
+function getRateLimitPerTier(): number {
+    const val = Config.get('LLM_RATE_LIMIT');
+    return val ? parseInt(val, 10) : 30;
+}
+
 const cache = new Map<string, CacheEntry>();
 const _rateTimestamps = new Map<LlmTier, number[]>();
+const _rateLocks = new Map<LlmTier, Promise<void>>();
 const _circuitState = new Map<LlmTier, { failures: number; breakUntil: number }>();
 let _cleanupTimer: ReturnType<typeof setInterval> | null = null;
 
@@ -69,13 +74,13 @@ function _mainTierConfig(): ProviderConfig {
     };
 }
 
-function _smallFastTierConfig(): ProviderConfig {
+function _fastTierConfig(): ProviderConfig {
     return {
         apiKey: Config.llmFastApiKey,
         model: Config.llmFastModel,
         baseUrl: Config.llmFastBaseUrl,
         format: 'openai',
-        temperature: LLM_TEMP_SMALL,
+        temperature: LLM_TEMP_MAIN,
     };
 }
 
@@ -124,11 +129,8 @@ function tierToConfig(tier: LlmTier): ProviderConfig {
     switch (tier) {
         case 'main':
             return _mainTierConfig();
-        case 'small':
-            rootLogger.warn('Tier "small" is deprecated, use "fast" instead');
-            return _smallFastTierConfig();
         case 'fast':
-            return _smallFastTierConfig();
+            return _fastTierConfig();
         case 'reviewer':
             return _reviewerTierConfig();
         case 'report':
@@ -137,13 +139,19 @@ function tierToConfig(tier: LlmTier): ProviderConfig {
             return _fallbackTierConfig();
         case 'batch':
             return _batchTierConfig();
+        default:
+            return _mainTierConfig();
     }
+}
+
+function configUniqueKey(cfg: ProviderConfig): string {
+    return cfg.baseUrl + '|' + cfg.model + '|' + cfg.temperature + '|' + (cfg.responseFormat || 'text');
 }
 
 function cacheKey(tier: LlmTier, system: string, user: string, callerId?: string): string {
     return crypto
         .createHash('sha256')
-        .update((callerId || '') + '|' + tier + '|' + system + '|' + user)
+        .update((callerId || '') + '|' + tier + '|' + configUniqueKey(tierToConfig(tier)) + '|' + system + '|' + user)
         .digest('hex');
 }
 
@@ -201,7 +209,13 @@ async function fetchWithRetry(url: string, options: RequestInit, retries = LLM_F
     for (let attempt = 1; attempt <= retries; attempt++) {
         let resp: Response;
         try {
-            resp = await fetch(url, options);
+            const controller = new AbortController();
+            const timeout = setTimeout(() => controller.abort(), LLM_FETCH_TIMEOUT_MS);
+            try {
+                resp = await fetch(url, { ...options, signal: controller.signal });
+            } finally {
+                clearTimeout(timeout);
+            }
         } catch (err) {
             if (attempt < retries) {
                 const wait = jitter(Math.min(LLM_RETRY_BASE_WAIT_MS * Math.pow(2, attempt - 1), LLM_RETRY_MAX_WAIT_MS));
@@ -233,23 +247,28 @@ async function fetchWithRetry(url: string, options: RequestInit, retries = LLM_F
     throw new Error('LLM max retries exceeded');
 }
 
-function checkRateLimit(tier: LlmTier): void {
-    const now = Date.now();
-    const timestamps = _rateTimestamps.get(tier) || [];
-    const windowed = timestamps.filter((t) => now - t < LLM_RATE_WINDOW_MS);
-    if (windowed.length >= LLM_RATE_LIMIT_PER_TIER) {
-        throw new Error(
-            'Rate limit exceeded for tier ' +
-                tier +
-                ' (' +
-                LLM_RATE_LIMIT_PER_TIER +
-                ' req/' +
-                LLM_RATE_WINDOW_MS / 1000 +
-                's)',
-        );
+async function checkRateLimit(tier: LlmTier): Promise<void> {
+    const prev = _rateLocks.get(tier);
+    let resolve: () => void;
+    const lock = new Promise<void>((r) => (resolve = r));
+    _rateLocks.set(tier, lock);
+    if (prev) await prev;
+    try {
+        const now = Date.now();
+        const limit = getRateLimitPerTier();
+        const timestamps = _rateTimestamps.get(tier) || [];
+        const windowed = timestamps.filter((t) => now - t < LLM_RATE_WINDOW_MS);
+        if (windowed.length >= limit) {
+            throw new Error(
+                'Rate limit exceeded for tier ' + tier + ' (' + limit + ' req/' + LLM_RATE_WINDOW_MS / 1000 + 's)',
+            );
+        }
+        windowed.push(now);
+        _rateTimestamps.set(tier, windowed);
+    } finally {
+        _rateLocks.delete(tier);
+        resolve!();
     }
-    windowed.push(now);
-    _rateTimestamps.set(tier, windowed);
 }
 
 function checkCircuitBreaker(tier: LlmTier): void {
@@ -276,7 +295,11 @@ function recordCircuitFailure(tier: LlmTier): void {
 }
 
 function recordCircuitSuccess(tier: LlmTier): void {
-    _circuitState.delete(tier);
+    const state = _circuitState.get(tier);
+    if (state) {
+        state.failures = 0;
+        state.breakUntil = 0;
+    }
 }
 
 function jitter(waitMs: number): number {
@@ -288,6 +311,11 @@ function parseRetryAfter(resp: Response, defaultMs: number): number {
     if (!header) return defaultMs;
     const seconds = parseInt(header, 10);
     if (!isNaN(seconds) && seconds > 0) return Math.min(seconds * 1000, LLM_RETRY_MAX_WAIT_MS);
+    const dateMs = Date.parse(header);
+    if (!isNaN(dateMs)) {
+        const diff = dateMs - Date.now();
+        if (diff > 0) return Math.min(diff, LLM_RETRY_MAX_WAIT_MS);
+    }
     return defaultMs;
 }
 
@@ -322,28 +350,34 @@ async function sendToProvider(cfg: ProviderConfig, tier: LlmTier, system: string
 }
 
 async function sendWithFallback(tier: LlmTier, system: string, user: string): Promise<string> {
-    checkRateLimit(tier);
+    await checkRateLimit(tier);
     const primary = tierToConfig(tier);
     const errors: string[] = [];
 
     const candidates: ProviderConfig[] = [primary];
 
-    // Per-tier fallback chain
     const fallbackMap: Partial<Record<LlmTier, LlmTier[]>> = {
         main: ['fallback', 'batch'],
         fast: ['main', 'fallback', 'batch'],
-        report: ['main', 'fallback'],
-        small: ['fast', 'main'],
+        report: ['fallback', 'batch'],
     };
     const fallbacks = fallbackMap[tier] || [];
+    const seenKeys = new Set<string>();
+    seenKeys.add(configUniqueKey(primary));
     for (const t of fallbacks) {
-        candidates.push(tierToConfig(t));
+        const cfg = tierToConfig(t);
+        const key = configUniqueKey(cfg);
+        if (!seenKeys.has(key)) {
+            candidates.push(cfg);
+            seenKeys.add(key);
+        }
     }
 
-    for (const cfg of candidates) {
+    for (let i = 0; i < candidates.length; i++) {
+        const cfg = candidates[i]!;
         try {
             const result = await sendToProvider(cfg, tier, system, user);
-            recordCircuitSuccess(tier);
+            if (i === 0) recordCircuitSuccess(tier);
             return result;
         } catch (err) {
             const msg = (err as Error).message;
@@ -373,4 +407,12 @@ export async function llmPrompt(tier: LlmTier, system: string, user: string, cal
 
 export function clearCache(): void {
     cache.clear();
+}
+
+export function resetRateLimiter(): void {
+    _rateTimestamps.clear();
+}
+
+export function resetCircuitState(): void {
+    _circuitState.clear();
 }
