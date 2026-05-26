@@ -22,8 +22,10 @@ function tempDir(): string {
 
 export function writeReport(filename: string, content: string): string {
     const dir = reportsDir();
-    mkdirSync(dir, { recursive: true });
-    const filepath = join(dir, filename);
+    const dateStr = new Date().toISOString().slice(0, 10);
+    const targetDir = join(dir, dateStr);
+    mkdirSync(targetDir, { recursive: true });
+    const filepath = join(targetDir, filename);
     writeFileSync(filepath, content, 'utf8');
     return filepath;
 }

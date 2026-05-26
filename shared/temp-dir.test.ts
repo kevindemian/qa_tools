@@ -72,11 +72,11 @@ describe('tempDirPath', () => {
 });
 
 describe('writeReport', () => {
-    it('writes content to reports directory', () => {
+    it('writes content to date-subfolder under reports directory', () => {
         const { writeReport } = require('./temp-dir');
         process.env.QA_TOOLS_REPORTS_DIR = '/tmp/test-reports';
         const result = writeReport('test.json', '{}');
-        expect(result).toBe('/tmp/test-reports/test.json');
+        expect(result).toMatch(/\/tmp\/test-reports\/\d{4}-\d{2}-\d{2}\/test\.json$/);
     });
 });
 
