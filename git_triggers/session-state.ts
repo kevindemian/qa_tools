@@ -29,19 +29,19 @@ export let manager: GitProvider | null = null;
 export const apiToken: string = Config.gitToken || '';
 export const gitlabBaseUrl: string = Config.gitBaseUrl || '';
 
-export function setCurrentProvider(v: 'gitlab' | 'github') {
+export function setCurrentProvider(v: 'gitlab' | 'github'): void {
     currentProvider = v;
 }
-export function setCurrentProjectName(v: string) {
+export function setCurrentProjectName(v: string): void {
     currentProjectName = v;
 }
-export function setProjectId(v: string) {
+export function setProjectId(v: string): void {
     projectId = v;
 }
-export function setIsBusy(v: boolean) {
+export function setIsBusy(v: boolean): void {
     isBusy = v;
 }
-export function setManager(v: GitProvider | null) {
+export function setManager(v: GitProvider | null): void {
     manager = v;
 }
 
@@ -89,10 +89,6 @@ function loadProjects(): Record<string, string> {
     return _projects!;
 }
 
-export function getProvidersConfig(): Record<string, ProviderConfig> {
-    return loadProvidersConfig();
-}
-
 export function getProjects(): Record<string, string> {
     return loadProjects();
 }
@@ -115,7 +111,7 @@ export function createManagerForProject(projectName: string, id: string): GitPro
     return new GitLabManager(id, apiToken, gitlabBaseUrl);
 }
 
-export function pushHistory(op: string, detail: string, status: string) {
+export function pushHistory(op: string, detail: string, status: string): void {
     sessionContext.pushHistory(op, detail, status);
     updateState((state: StateContainer) => {
         if (!state.history) state.history = [];
@@ -125,7 +121,7 @@ export function pushHistory(op: string, detail: string, status: string) {
     });
 }
 
-export function printSessionSummary() {
+export function printSessionSummary(): void {
     sharedPrintSessionSummary(sessionContext.sessionCounters, sessionContext.lastOperation);
 }
 
@@ -133,7 +129,7 @@ export function providerLabel(): string {
     return _providerLabel(currentProvider);
 }
 
-export function displayProjects() {
+export function displayProjects(): void {
     const projs = loadProjects();
     title('Projetos');
     const names = Object.keys(projs);
@@ -145,7 +141,7 @@ export function displayProjects() {
     print('  ' + (names.length + 1) + '  Sair');
 }
 
-export async function displayRecentPipelines(m: GitProvider) {
+export async function displayRecentPipelines(m: GitProvider): Promise<void> {
     try {
         const pipelines = await m.getRecentPipelines(5);
         if (pipelines && pipelines.length > 0) {

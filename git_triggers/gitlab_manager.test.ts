@@ -143,7 +143,7 @@ describe('GitLabManager', () => {
     describe('updateMergeRequest', () => {
         it('calls PUT /merge_requests/{iid}', async () => {
             mockClient.put.mockResolvedValue({ data: { iid: 5 } });
-            const result = await manager.updateMergeRequest('5', 'dev', 'main', 'New Title', 'New Desc');
+            const result = await manager.updateMergeRequest('5', 'New Title', 'New Desc');
             expect(mockClient.put).toHaveBeenCalledWith('/merge_requests/5', {
                 title: 'New Title',
                 description: 'New Desc',
@@ -153,7 +153,7 @@ describe('GitLabManager', () => {
 
         it('throws on API error (mutation)', async () => {
             mockClient.put.mockRejectedValue(new Error('Update failed'));
-            await expect(manager.updateMergeRequest('5', '', '', '')).rejects.toThrow('Update failed');
+            await expect(manager.updateMergeRequest('5', '', '')).rejects.toThrow('Update failed');
         });
     });
 

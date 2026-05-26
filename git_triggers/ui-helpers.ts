@@ -9,7 +9,7 @@ function providerLabel(currentProvider: 'gitlab' | 'github'): string {
     return currentProvider === 'github' ? 'GitHub' : 'GitLab';
 }
 
-async function handleHelp() {
+async function handleHelp(): Promise<void> {
     defaultOutput.box(
         [
             'Ajuda — Opções disponíveis no menu numerado acima.',
@@ -26,7 +26,7 @@ async function handleHelp() {
     await ask('Pressione Enter para continuar');
 }
 
-async function handleShowHistory() {
+async function handleShowHistory(): Promise<void> {
     const history = (loadState().history as JsonObject[]) || [];
     title('Histórico de operações');
     const last10 = history.slice(-10);

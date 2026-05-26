@@ -87,7 +87,6 @@ jest.mock('./github_manager', () => {
 
 jest.mock('./ui-helpers', () => ({ providerLabel: jest.fn(() => 'GitLab') }));
 
-import { success, warn, info, print, prompt, printError } from '../shared/prompt';
 import * as sessionState from './session-state';
 
 describe('session-state', () => {

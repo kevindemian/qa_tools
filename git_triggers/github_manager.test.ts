@@ -216,8 +216,6 @@ describe('GitHubManager', () => {
             });
             const result: Record<string, unknown> = (await manager.updateMergeRequest(
                 '5',
-                'dev',
-                'main',
                 'New Title',
                 'New Desc',
             )) as Record<string, unknown>;
@@ -230,7 +228,7 @@ describe('GitHubManager', () => {
 
         it('throws on API error', async () => {
             mockClient.patch.mockRejectedValue(new Error('Update failed'));
-            await expect(manager.updateMergeRequest('5', '', '', '')).rejects.toThrow('Update failed');
+            await expect(manager.updateMergeRequest('5', '', '')).rejects.toThrow('Update failed');
         });
     });
 

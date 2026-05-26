@@ -132,13 +132,7 @@ export interface GitProvider {
         title: string,
         description?: string,
     ) => Promise<MergeRequestInfo | null>;
-    updateMergeRequest: (
-        iid: string | number,
-        sourceBranch: string,
-        targetBranch: string,
-        title: string,
-        description?: string,
-    ) => Promise<MergeRequestInfo | null>;
+    updateMergeRequest: (iid: string | number, title: string, description?: string) => Promise<MergeRequestInfo | null>;
     getMergeRequest: (iid: string | number) => Promise<MergeRequestInfo | null>;
     searchMergeRequests: (sourceBranch: string, targetBranch: string, status: string) => Promise<MergeRequestInfo[]>;
     acceptMergeRequest: (iid: string | number, removeSourceBranch?: boolean) => Promise<MergeRequestInfo | null>;

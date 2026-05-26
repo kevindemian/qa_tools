@@ -43,23 +43,14 @@ jest.mock('../shared/flakiness-dashboard', () => ({ generateFlakinessHtml: jest.
 
 jest.mock('fs', () => ({ writeFileSync: jest.fn() }));
 
-import { success, error, info, printError, withSpinner } from '../shared/prompt';
-import {
-    pushHistory,
-    getProjects,
-    createManagerForProject,
-    setCurrentProjectName,
-    setProjectId,
-    setManager,
-    printSessionSummary,
-} from './session-state';
+import { success, error, printError } from '../shared/prompt';
+import { pushHistory, getProjects } from './session-state';
 import { pollPipeline } from './pipeline-handler';
 import { parseBatchArgs, tryBatchMode } from './batch-mode';
-import type { GitProvider, PipelineTriggerResult } from '../shared/types';
+import type { GitProvider } from '../shared/types';
 
 const mockSuccess = success as jest.Mock;
 const mockError = error as jest.Mock;
-const mockInfo = info as jest.Mock;
 const mockPrintError = printError as jest.Mock;
 const mockPushHistory = pushHistory as jest.Mock;
 const mockPollPipeline = pollPipeline as jest.Mock;

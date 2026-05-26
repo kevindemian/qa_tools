@@ -2,6 +2,7 @@ import { createHttpClient } from '../shared/http-client';
 import { info } from '../shared/prompt';
 import { Logger } from '../shared/logger';
 import { handleError } from '../shared/git-provider-error';
+import { GitProviderBase } from './git-provider-base';
 import type {
     GitProvider,
     PipelineTriggerResult,
@@ -23,7 +24,7 @@ const MAX_REDIRECTS = 5;
 const DIFF_TRUNCATION_LIMIT = 15000;
 const DEFAULT_PIPELINE_COUNT = 5;
 
-class GitHubManager implements GitProvider {
+class GitHubManager extends GitProviderBase implements GitProvider {
     provider = 'github' as const;
     repoFullName: string;
     apiToken: string;
@@ -34,6 +35,7 @@ class GitHubManager implements GitProvider {
     repo!: string;
 
     constructor(repoFullName: string, apiToken: string, baseUrl?: string) {
+        super();
         this.repoFullName = repoFullName;
         this.apiToken = apiToken;
         this.apiUrl = (baseUrl || 'https://api.github.com').replace(/\/+$/, '');
@@ -55,26 +57,6 @@ class GitHubManager implements GitProvider {
 
     get _repoPath(): string {
         return '/repos/' + this.owner + '/' + this.repo;
-    }
-
-    async _get(url: string, opts?: { operation?: string; returnNull?: boolean; params?: JsonObject }) {
-        try {
-            const args = opts?.params ? [{ params: opts.params }] : [];
-            const response = await this.client.get(url, ...args);
-            return response.data;
-        } catch (err) {
-            return handleError(err, { context: opts?.operation || url, returnNull: opts?.returnNull });
-        }
-    }
-
-    async _post(url: string, body?: unknown, opts?: { operation?: string }) {
-        try {
-            const args = body !== undefined ? [body] : [];
-            const response = await this.client.post(url, ...args);
-            return response.data;
-        } catch (err) {
-            return handleError(err, { context: opts?.operation || url });
-        }
     }
 
     async _patch(url: string, body?: unknown, opts?: { operation?: string }) {
@@ -178,13 +160,7 @@ class GitHubManager implements GitProvider {
                     info('PR already exists. Searching for existing...');
                     const existing = await this.searchMergeRequests(sourceBranch, targetBranch, 'open');
                     if (existing && existing.length > 0) {
-                        return this.updateMergeRequest(
-                            existing[0].number!,
-                            sourceBranch,
-                            targetBranch,
-                            title,
-                            description,
-                        );
+                        return this.updateMergeRequest(existing[0].number!, title, description);
                     }
                 }
             }
@@ -194,8 +170,6 @@ class GitHubManager implements GitProvider {
 
     async updateMergeRequest(
         iid: string | number,
-        sourceBranch: string,
-        targetBranch: string,
         title: string,
         description?: string,
     ): Promise<MergeRequestInfo | null> {

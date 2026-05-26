@@ -47,10 +47,9 @@ jest.mock('../jira_management/jira_resource', () => ({
     })),
 }));
 
-import { print, success, warn, info, title, prompt, confirm, printError, withSpinner } from '../shared/prompt';
-import { pushHistory, setIsBusy } from './session-state';
+import { success, warn, info, prompt, confirm, printError } from '../shared/prompt';
+import { pushHistory } from './session-state';
 import { isComplete, pollPipeline, handleTriggerPipeline, handleExportVariables } from './pipeline-handler';
-import type { SessionContext } from '../shared/session-context';
 import type { GitProvider } from '../shared/types';
 
 const mockPrompt = prompt as jest.Mock;
@@ -60,7 +59,6 @@ const mockInfo = info as jest.Mock;
 const mockWarn = warn as jest.Mock;
 const mockSuccess = success as jest.Mock;
 const mockPushHistory = pushHistory as jest.Mock;
-const mockTitle = title as jest.Mock;
 
 const mockM = {
     getPipeline: jest.fn(),
@@ -70,8 +68,6 @@ const mockM = {
     createMergeRequest: jest.fn(),
     acceptMergeRequest: jest.fn(),
 } as unknown as GitProvider;
-
-const ctx = {} as SessionContext;
 
 beforeEach(() => {
     jest.clearAllMocks();
@@ -127,7 +123,7 @@ describe('handleTriggerPipeline', () => {
         (mockM.getBranch as jest.Mock).mockResolvedValue({ name: 'main' });
         (mockM.triggerPipeline as jest.Mock).mockResolvedValue({ id: '42', web_url: 'https://gitlab.com/pipe/42' });
 
-        await handleTriggerPipeline(ctx, mockM, 'my-project');
+        await handleTriggerPipeline(mockM, 'my-project');
 
         expect(mockPrompt).toHaveBeenCalledWith('Branch para disparar pipeline');
         expect(mockM.triggerPipeline).toHaveBeenCalled();
@@ -138,7 +134,7 @@ describe('handleTriggerPipeline', () => {
         mockPrompt.mockReturnValue('unknown-branch');
         (mockM.getBranch as jest.Mock).mockResolvedValue(null);
 
-        await handleTriggerPipeline(ctx, mockM, 'my-project');
+        await handleTriggerPipeline(mockM, 'my-project');
 
         expect(mockWarn).toHaveBeenCalledWith(expect.stringContaining('não encontrada'));
         expect(mockPushHistory).toHaveBeenCalledWith('pipeline', expect.stringContaining('branch-not-found'), 'error');
@@ -152,7 +148,7 @@ describe('handleTriggerPipeline', () => {
         (mockM.getBranch as jest.Mock).mockResolvedValue({ name: 'main' });
         (mockM.triggerPipeline as jest.Mock).mockRejectedValue(new Error('API fail'));
 
-        await handleTriggerPipeline(ctx, mockM, 'my-project');
+        await handleTriggerPipeline(mockM, 'my-project');
 
         expect(mockPrintError).toHaveBeenCalled();
         expect(mockPushHistory).toHaveBeenCalledWith('pipeline', 'main', 'error');
@@ -171,7 +167,7 @@ describe('handleTriggerPipeline', () => {
             web_url: 'https://gitlab.com/pipe/99',
         });
 
-        await handleTriggerPipeline(ctx, mockM, 'my-project');
+        await handleTriggerPipeline(mockM, 'my-project');
 
         expect(mockInfo).toHaveBeenCalledWith(expect.stringContaining('Retomando'));
         expect(mockM.getPipeline).toHaveBeenCalledWith('99');
@@ -186,7 +182,7 @@ describe('handleExportVariables', () => {
             { key: 'VAR2', value: 'val2' },
         ]);
 
-        await handleExportVariables(ctx, mockM);
+        await handleExportVariables(mockM);
 
         expect(mockSuccess).toHaveBeenCalledWith(expect.stringContaining('2'));
         expect(mockPushHistory).toHaveBeenCalledWith('export-vars', '2 variáveis', 'ok');
@@ -195,7 +191,7 @@ describe('handleExportVariables', () => {
     it('cancels when not confirmed', async () => {
         mockConfirm.mockReturnValue(false);
 
-        await handleExportVariables(ctx, mockM);
+        await handleExportVariables(mockM);
 
         expect(mockWarn).toHaveBeenCalledWith('Operacao cancelada.');
         expect(mockM.getCICDVariables).not.toHaveBeenCalled();
@@ -205,7 +201,7 @@ describe('handleExportVariables', () => {
         mockConfirm.mockReturnValue(true);
         (mockM.getCICDVariables as jest.Mock).mockRejectedValue(new Error('fetch fail'));
 
-        await handleExportVariables(ctx, mockM);
+        await handleExportVariables(mockM);
 
         expect(mockPrintError).toHaveBeenCalled();
         expect(mockPushHistory).toHaveBeenCalledWith('export-vars', 'erro', 'error');

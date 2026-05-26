@@ -1,4 +1,3 @@
-import path from 'path';
 import fs from 'fs';
 import os from 'os';
 import { matchResultsToTests, createTestExecutionFromResults } from './result_reporter';

@@ -59,7 +59,7 @@ function _extractMochawesomeFromZip(buffer: Buffer): unknown {
     }
 }
 
-async function downloadTestArtifacts(m: GitProvider, pipelineId: string | number) {
+async function downloadTestArtifacts(m: GitProvider, pipelineId: string | number): Promise<ParseResult | null> {
     const artifacts = await withSpinner('Buscando artifacts...', () => m.listPipelineArtifacts(pipelineId));
     if (!Array.isArray(artifacts) || artifacts.length === 0) {
         warn('Nenhum artifact encontrado na pipeline #' + pipelineId);
@@ -98,7 +98,9 @@ interface MatchedTestItem {
     duration: number;
 }
 
-async function parseTestResults(parsed: ParseResult) {
+async function parseTestResults(
+    parsed: ParseResult,
+): Promise<{ matched: MatchedTestItem[]; unmatched: Array<{ title: string; state: string }>; csvName: string } | null> {
     const defaultMapping = reportsDir() + '/*jira-mapping.json';
     const mappingPath = await ask('Caminho do mapping JSON', { default: defaultMapping });
     if (!mappingPath.trim()) {
@@ -136,7 +138,7 @@ async function createTestExecution(
     branch: string,
     currentProvider: 'gitlab' | 'github',
     pushHistory: (op: string, detail: string, status: string) => void,
-) {
+): Promise<void> {
     try {
         const te = await withSpinner('Criando Test Execution no Jira...', async () => {
             const jiraRes = new JiraResource(jira.token, jira.base + '/rest/api/2');
