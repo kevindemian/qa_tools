@@ -200,6 +200,7 @@ interface MenuChoice {
 }
 
 const MENU_ITEMS: MenuItem[] = [
+    { id: 'search', label: '🔍 Buscar ação...' },
     { section: 'TESTES' },
     { id: '1', label: 'Criar testes a partir de CSV' },
     { id: '15', label: 'Importar testes de JSON' },
@@ -523,6 +524,32 @@ async function getAndResolveChoice(ctx: SessionContext): Promise<string | null> 
     const resolved = resolveAlias(choice);
     if (resolved !== choice) {
         choice = resolved;
+    }
+
+    if (choice === 'search') {
+        const term = prompt('Digite o termo de busca');
+        if (term) {
+            const items = MENU_ITEMS.filter(
+                (item) =>
+                    item.id &&
+                    item.id !== 'search' &&
+                    item.label &&
+                    item.label.toLowerCase().includes(term.toLowerCase()),
+            );
+            if (items.length > 0) {
+                const subChoices = items.map((item) => ({
+                    name: '      ' + item.label,
+                    value: item.id,
+                }));
+                const subChoice = await showSelect('Resultados para "' + term + '"', subChoices);
+                if (subChoice && subChoice !== '0') {
+                    return subChoice;
+                }
+            } else {
+                warn('Nenhuma opção encontrada para "' + term + '".');
+            }
+        }
+        return '__skip__';
     }
 
     const specialResult = await handleSpecialInput(choice);
