@@ -96,4 +96,27 @@ describe('generateHtmlReport', () => {
 
         expect(html).not.toContain('<svg');
     });
+
+    it('includes LLM analysis section when provided', () => {
+        const tests: FlatTest[] = [{ title: 'A', state: 'passed', duration: 100 }];
+        const html = generateHtmlReport(tests, { llmAnalysis: 'All tests passed.' });
+        expect(html).toContain('AI Analysis');
+        expect(html).toContain('All tests passed.');
+    });
+
+    it('shows fallback warning when llmFallback is true', () => {
+        const tests: FlatTest[] = [{ title: 'A', state: 'passed', duration: 100 }];
+        const html = generateHtmlReport(tests, { llmAnalysis: 'fallback', llmFallback: true });
+        expect(html).toContain('unavailable');
+    });
+
+    it('displays confidence badge for each level', () => {
+        const tests: FlatTest[] = [{ title: 'A', state: 'passed', duration: 100 }];
+        const htmlLow = generateHtmlReport(tests, { llmAnalysis: 'ok', llmConfidence: 'low' });
+        expect(htmlLow).toContain('low');
+        const htmlMedium = generateHtmlReport(tests, { llmAnalysis: 'ok', llmConfidence: 'medium' });
+        expect(htmlMedium).toContain('medium');
+        const htmlHigh = generateHtmlReport(tests, { llmAnalysis: 'ok', llmConfidence: 'high' });
+        expect(htmlHigh).toContain('high');
+    });
 });

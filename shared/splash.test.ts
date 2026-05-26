@@ -120,4 +120,21 @@ describe('showSplash', () => {
         await expect(showSplash('/tmp/state.json')).resolves.not.toThrow();
         expect(outputMod.defaultOutput.print).toHaveBeenCalledWith(expect.stringContaining('QA Tools'));
     });
+
+    it('uses plain text header when not TTY with jiraBaseUrl', async () => {
+        outputMod.Output.isTTY.mockReturnValue(false);
+        await expect(showSplash(undefined, 'https://jira.example.com', 'token123')).resolves.not.toThrow();
+        expect(outputMod.defaultOutput.print).toHaveBeenCalledWith(expect.stringContaining('QA Tools'));
+    });
+
+    it('includes jiraBaseUrl and token check in TTY mode', async () => {
+        outputMod.Output.isTTY.mockReturnValue(true);
+        __setFigletDep(mockFiglet);
+        __setGradientDep({ default: mockGradient });
+        await expect(showSplash(undefined, 'https://jira.example.com', 'token123')).resolves.not.toThrow();
+        expect(outputMod.defaultOutput.box).toHaveBeenCalled();
+        const [lines] = outputMod.defaultOutput.box.mock.calls[0];
+        expect(lines.join('\n')).toContain('Jira API');
+        expect(lines.join('\n')).toContain('Token');
+    });
 });

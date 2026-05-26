@@ -1,3 +1,5 @@
+import * as fs from 'fs';
+
 jest.mock('fs', () => {
     const actual = jest.requireActual('fs');
     return {
@@ -9,12 +11,16 @@ jest.mock('fs', () => {
     };
 });
 
-afterEach(() => {
-    jest.restoreAllMocks();
+beforeEach(() => {
+    jest.clearAllMocks();
     delete process.env.QA_TOOLS_REPORTS_DIR;
     delete process.env.QA_TOOLS_LOGS_DIR;
     delete process.env.QA_TOOLS_TEMP_DIR;
     delete process.env.LOG_DIR;
+});
+
+afterEach(() => {
+    jest.restoreAllMocks();
 });
 
 describe('reportsDir', () => {
@@ -85,7 +91,6 @@ describe('writeEphemeral', () => {
 
 describe('ensureDirs', () => {
     it('creates all required directories', () => {
-        const fs = require('fs');
         const { ensureDirs } = require('./temp-dir');
         process.env.QA_TOOLS_REPORTS_DIR = '/tmp/test-reports';
         process.env.QA_TOOLS_LOGS_DIR = '/tmp/test-logs';
@@ -97,17 +102,31 @@ describe('ensureDirs', () => {
 
 describe('registerCleanup', () => {
     it('registers SIGINT, SIGTERM, and exit handlers', () => {
-        const handlers: string[] = [];
-        jest.spyOn(process, 'on').mockImplementation(
-            (event: string | symbol, _listener: (...args: unknown[]) => void) => {
-                handlers.push(event as string);
-                return process;
-            },
-        );
+        const handlers: Array<string | symbol> = [];
+        jest.spyOn(process, 'on').mockImplementation((event: string | symbol) => {
+            handlers.push(event);
+            return process;
+        });
         const { registerCleanup } = require('./temp-dir');
         registerCleanup();
         expect(handlers).toContain('SIGINT');
         expect(handlers).toContain('SIGTERM');
         expect(handlers).toContain('exit');
+    });
+
+    it('catches error during cleanup gracefully', () => {
+        const handlerRef: { current?: () => void } = {};
+        jest.spyOn(process, 'on').mockImplementation(
+            (_event: string | symbol, listener: (...args: unknown[]) => void) => {
+                handlerRef.current = listener;
+                return process;
+            },
+        );
+        (fs.existsSync as jest.Mock).mockImplementation(() => {
+            throw new Error('fail');
+        });
+        const { registerCleanup } = require('./temp-dir');
+        registerCleanup();
+        expect(() => handlerRef.current?.()).not.toThrow();
     });
 });
