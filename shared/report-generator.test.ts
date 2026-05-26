@@ -87,8 +87,8 @@ describe('generateHtmlReport', () => {
 
         const html = generateHtmlReport(tests);
 
-        expect(html).toContain('&lt;script&gt;');
-        expect(html).not.toContain('<script>');
+        expect(html).toContain('&lt;script&gt;alert(&quot;xss&quot;)&lt;/script&gt;');
+        expect(html).not.toContain('<script>alert("xss")</script>');
     });
 
     it('skips chart when tests array is empty', () => {

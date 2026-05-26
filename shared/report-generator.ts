@@ -1,5 +1,6 @@
 import type { FlatTest } from './result_parser';
 import { rootLogger } from './logger';
+import { getTheme } from './theme';
 
 interface ReportOptions {
     title?: string;
@@ -65,31 +66,47 @@ function buildChartSvg(stats: ReportStats): string {
 }
 
 function buildCss(): string {
-    return `
+    const t = getTheme();
+    return (
+        `
 body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; margin: 0; padding: 20px; background: #f9fafb; color: #111827; }
 h1 { font-size: 1.5rem; margin-bottom: 0.5rem; }
 .summary { display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 20px; }
 .card { background: #fff; border-radius: 8px; padding: 16px 20px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); min-width: 100px; }
 .card .label { font-size: 0.75rem; text-transform: uppercase; color: #6b7280; }
 .card .value { font-size: 1.5rem; font-weight: 700; }
-.card .value.pass { color: #16a34a; }
-.card .value.fail { color: #dc2626; }
-.card .value.skip { color: #ca8a04; }
+.card .value.pass { color: ` +
+        t.colors.success +
+        `; }
+.card .value.fail { color: ` +
+        t.colors.error +
+        `; }
+.card .value.skip { color: ` +
+        t.colors.warn +
+        `; }
 .chart-box { background: #fff; border-radius: 8px; padding: 16px 20px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); margin-bottom: 20px; }
+.failed-summary { border-left: 4px solid ` +
+        t.colors.error +
+        `; }
 .legend { display: flex; gap: 16px; margin-top: 8px; font-size: 0.8rem; }
 .legend span { display: flex; align-items: center; gap: 4px; }
 .legend .dot { width: 10px; height: 10px; border-radius: 2px; display: inline-block; }
 table { width: 100%; border-collapse: collapse; background: #fff; border-radius: 8px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
 th { background: #f3f4f6; text-align: left; padding: 10px 12px; font-size: 0.75rem; text-transform: uppercase; color: #6b7280; }
 td { padding: 8px 12px; border-top: 1px solid #e5e7eb; font-size: 0.875rem; }
+.control-bar { margin-bottom: 12px; }
+.control-bar button { padding: 4px 12px; border: 1px solid #d1d5db; background: #fff; border-radius: 6px; cursor: pointer; font-size: 0.8rem; }
+.control-bar button:hover { background: #f3f4f6; }
 .status-badge { display: inline-block; padding: 2px 8px; border-radius: 9999px; font-size: 0.75rem; font-weight: 600; }
 .status-passed { background: #dcfce7; color: #166534; }
 .status-failed { background: #fecaca; color: #991b1b; }
 .status-skipped { background: #fef9c3; color: #854d0e; }
 tr:hover { background: #f9fafb; }
+.row-passed { display: table-row; }
 .footer { margin-top: 16px; font-size: 0.75rem; color: #9ca3af; text-align: center; }
 </style></head><body>
-`;
+`
+    );
 }
 
 export function generateHtmlReport(tests: FlatTest[], options?: ReportOptions): string {
@@ -134,6 +151,28 @@ function buildLlmSection(options: ReportOptions): string {
     return html;
 }
 
+function buildFailedSummary(tests: FlatTest[], stats: ReportStats): string {
+    if (stats.failed === 0) return '';
+    const failed = tests.filter((t) => t.state === 'failed');
+    let html = '<div class="chart-box failed-summary">';
+    html +=
+        '<div class="label" style="margin-bottom:8px;color:' +
+        getTheme().colors.error +
+        '"><b>❌ Failed Tests (' +
+        stats.failed +
+        ')</b></div>';
+    for (const t of failed) {
+        html +=
+            '<p style="margin:4px 0">• ' +
+            escapeHtml(t.title) +
+            ' <span class="status-badge status-failed">failed</span> (' +
+            fmtDuration(t.duration) +
+            ')</p>';
+    }
+    html += '</div>';
+    return html;
+}
+
 function buildChartSection(stats: ReportStats, wantChart: boolean): string {
     if (!wantChart || stats.total === 0) return '';
     let html = '<div class="chart-box"><div class="label" style="margin-bottom:4px">Distribution</div>';
@@ -147,10 +186,12 @@ function buildChartSection(stats: ReportStats, wantChart: boolean): string {
 }
 
 function buildTestTable(tests: FlatTest[]): string {
-    let html = '<table><thead><tr><th>#</th><th>Test</th><th>Status</th><th>Duration</th></tr></thead><tbody>';
+    let html = '<div class="control-bar"><button onclick="togglePassed()">Toggle Passed</button></div>';
+    html += '<table><thead><tr><th>#</th><th>Test</th><th>Status</th><th>Duration</th></tr></thead><tbody>';
     for (let i = 0; i < tests.length; i++) {
         const t = tests[i]!;
-        html += '<tr>';
+        const rowClass = t.state === 'passed' ? ' class="row-passed"' : '';
+        html += '<tr' + rowClass + '>';
         html += '<td>' + (i + 1) + '</td>';
         html += '<td>' + escapeHtml(t.title) + '</td>';
         html += '<td><span class="status-badge status-' + t.state + '">' + t.state + '</span></td>';
@@ -159,6 +200,18 @@ function buildTestTable(tests: FlatTest[]): string {
     }
     html += '</tbody></table>';
     return html;
+}
+
+function buildToggleScript(): string {
+    return `<script>
+function togglePassed() {
+    const rows = document.querySelectorAll('.row-passed');
+    const btn = document.querySelector('.control-bar button');
+    const hidden = rows.length > 0 && rows[0].style.display === 'none';
+    rows.forEach(r => r.style.display = hidden ? '' : 'none');
+    if (btn) btn.textContent = hidden ? 'Hide Passed' : 'Show Passed';
+}
+</script>`;
 }
 
 export function generateReportWithFallback(tests: FlatTest[], options?: ReportOptions): string {
@@ -172,9 +225,11 @@ export function generateReportWithFallback(tests: FlatTest[], options?: ReportOp
         html += '<title>' + title + '</title><style>' + buildCss();
         html += '<h1>' + title + '</h1>';
         html += buildSummaryCards(stats, passRate);
+        html += buildFailedSummary(tests, stats);
         html += buildLlmSection(options || { title: '', includeChart: true });
         html += buildChartSection(stats, options?.includeChart !== false);
         html += buildTestTable(tests);
+        html += buildToggleScript();
         html += '<div class="footer">Generated by QA Tools</div>';
         html += '</body></html>';
 
