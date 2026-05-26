@@ -338,8 +338,7 @@ function showHelpLoop(): void {
     }
 }
 
-async function showDocs(): Promise<void> {
-    const docsDir = path.join(__dirname, '../docs');
+function _loadDocFiles(docsDir: string): Array<{ label: string; file: string }> | null {
     let files: string[];
     try {
         files = fs
@@ -348,19 +347,25 @@ async function showDocs(): Promise<void> {
             .sort();
     } catch {
         printError('Documentação', new Error('Diretório docs/ não encontrado em ' + docsDir));
-        return;
+        return null;
     }
 
     if (files.length === 0) {
         warn('Nenhum documento encontrado em docs/.');
         divider();
-        return;
+        return null;
     }
 
-    const docs: Array<{ label: string; file: string }> = files.map((f) => ({
+    return files.map((f) => ({
         label: f.replace(/^\d{2}-/, '').replace(/\.md$/, ''),
         file: f,
     }));
+}
+
+async function showDocs(): Promise<void> {
+    const docsDir = path.join(__dirname, '../docs');
+    const docs = _loadDocFiles(docsDir);
+    if (!docs) return;
 
     while (true) {
         console.clear();

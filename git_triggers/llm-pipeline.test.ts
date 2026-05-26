@@ -19,7 +19,7 @@ const mockAnalyzeFailures = require('../shared/failure-analysis').analyzeFailure
 const mockSuccess = require('../shared/prompt').success as jest.Mock;
 
 const mockReport = {
-    content: '**Análise:** os testes falharam por timeout.',
+    content: '**Analysis:** tests failed due to timeout.',
     htmlReport: '<html>report</html>',
     confidence: 'high' as const,
     fallbackUsed: false,

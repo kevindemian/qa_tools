@@ -1,3 +1,6 @@
+import * as fs from 'fs';
+import * as path from 'path';
+import * as readline from 'readline';
 import chalk from 'chalk';
 import readlineSync from 'readline-sync';
 import { Output, defaultOutput as output } from './output';
@@ -163,6 +166,88 @@ const inquirerTheme = {
     },
 };
 
+interface FilePathOptions extends PromptOptions {
+    extensions?: string[];
+}
+
+function expandHome(filepath: string): string {
+    if (!filepath.startsWith('~')) return filepath;
+    const home = process.env.HOME || process.env.USERPROFILE || '';
+    return home + filepath.slice(1);
+}
+
+export function filePathCompleter(line: string, extensions?: string[]): [string[], string] {
+    const input = expandHome(line.trim() || '.');
+    const endsWithSep = input.endsWith('/') || input.endsWith('\\');
+    const dir = endsWithSep ? input : path.dirname(input);
+    const rawBase = path.basename(input);
+    const base = endsWithSep || rawBase === '.' ? '' : rawBase;
+
+    let entries: string[];
+    try {
+        entries = fs.readdirSync(dir);
+    } catch {
+        return [[], line];
+    }
+
+    const matches = entries
+        .filter((e) => {
+            if (e.startsWith('.') && !base.startsWith('.')) return false;
+            const lowerE = e.toLowerCase();
+            if (!lowerE.startsWith(base.toLowerCase())) return false;
+            if (!extensions) return true;
+            const full = path.join(dir, e);
+            try {
+                if (fs.statSync(full).isDirectory()) return true;
+            } catch {
+                return false;
+            }
+            return extensions.some((ext) => lowerE.endsWith(ext));
+        })
+        .sort()
+        .map((e) => {
+            const full = path.join(dir, e);
+            try {
+                return fs.statSync(full).isDirectory() ? full + '/' : full;
+            } catch {
+                return e;
+            }
+        });
+
+    return [matches, line];
+}
+
+export async function askFilePath(label: string, options: FilePathOptions = {}): Promise<string> {
+    if (!isTTY()) {
+        return prompt(label, options);
+    }
+
+    const rl = readline.createInterface({
+        input: process.stdin,
+        output: process.stdout,
+        completer: (line: string) => filePathCompleter(line, options.extensions),
+        terminal: true,
+    });
+
+    try {
+        return await new Promise<string>((resolve, reject) => {
+            const defaultStr = options.default ? ` ${chalk.yellow('[' + options.default + ']')}` : '';
+            const promptText = '\n' + chalk.cyan('->') + ' ' + label + defaultStr + chalk.dim('  (/help)') + ': ';
+
+            rl.question(promptText, (answer) => {
+                const trimmed = answer.trim();
+                const lower = trimmed.toLowerCase();
+                if (NAV_CMDS.includes(lower)) reject(new CancelError(lower));
+                resolve(trimmed || options.default || '');
+            });
+
+            rl.on('SIGINT', () => reject(new CancelError('/exit')));
+        });
+    } finally {
+        rl.close();
+    }
+}
+
 const isTTY = (): boolean => !!(process.stdout.isTTY && !getConfig().quiet);
 
 export async function ask(label: string, options: PromptOptions = {}): Promise<string> {
@@ -230,6 +315,23 @@ function groupChoices(choices: SelectChoice[]): { sections: SectionGroup[]; stan
     return { sections, standaloneItems };
 }
 
+function _renderChoices(sections: SectionGroup[], standaloneItems: string[]): void {
+    const renderedItems: string[] = [];
+    for (const section of sections) {
+        renderedItems.push('');
+        renderedItems.push('  ' + section.title);
+        renderedItems.push(...section.items.map((i) => '  ' + i));
+    }
+    renderedItems.push(...standaloneItems.map((i) => '  ' + i));
+
+    if (renderedItems.length > 0) {
+        for (const item of renderedItems) {
+            output.print('  ' + item);
+        }
+        output.print('');
+    }
+}
+
 export async function showSelect(label: string, choices: SelectChoice[], options: SelectOptions = {}): Promise<string> {
     const flatChoices = choices
         .filter((c): c is SelectChoice & { name: string } => c.type !== 'separator' && !!c.name)
@@ -257,20 +359,7 @@ export async function showSelect(label: string, choices: SelectChoice[], options
     }
 
     const { sections, standaloneItems } = groupChoices(choices);
-    const renderedItems: string[] = [];
-    for (const section of sections) {
-        renderedItems.push('');
-        renderedItems.push('  ' + section.title);
-        renderedItems.push(...section.items.map((i) => '  ' + i));
-    }
-    renderedItems.push(...standaloneItems.map((i) => '  ' + i));
-
-    if (renderedItems.length > 0) {
-        for (const item of renderedItems) {
-            output.print('  ' + item);
-        }
-        output.print('');
-    }
+    _renderChoices(sections, standaloneItems);
 
     output.print(palette.muted('  Dica: digite o número da opção, alias (ex: criar, status, versões) ou /help'));
     const answer = prompt(label, { default: options.default }).trim();

@@ -93,20 +93,12 @@ function matchResultsToTests(results: TestResultItem[], mappingJsonPath: string)
     return { matched, unmatched, stats: { passed, failed, skipped, total: matched.length } };
 }
 
-async function createTestExecutionFromResults(
-    jiraResource: import('./jira_resource').default,
-    linkManager: import('./jira_link_manager').default,
-    project_name: string,
-    matchedResults: Array<{
-        key: string;
-        title: string;
-        status: 'passed' | 'failed' | 'skipped';
-        duration: number;
-    }>,
+function _buildExecutionPayload(
+    matchedResults: Array<{ key: string; title: string; status: string; duration: number }>,
     csvName: string,
     pipelineInfo?: PipelineInfo,
-): Promise<TestExecResult> {
-    const now = new Date().toLocaleString('pt-BR', {
+): { summary: string; testKeys: string[] } {
+    const now = new Date().toLocaleString('en-US', {
         year: 'numeric',
         month: '2-digit',
         day: '2-digit',
@@ -121,9 +113,25 @@ async function createTestExecutionFromResults(
     if (pipelineId) tag += (tag ? ' #' : '#') + pipelineId;
     if (tag) tag = ' (' + tag + ')';
 
-    const summary = 'Resultados: ' + (csvName || 'Testes') + tag + ' - ' + now;
-
+    const summary = 'Results: ' + (csvName || 'Tests') + tag + ' - ' + now;
     const testKeys = matchedResults.filter((m) => m.status !== 'skipped').map((m) => m.key);
+    return { summary, testKeys };
+}
+
+async function createTestExecutionFromResults(
+    jiraResource: import('./jira_resource').default,
+    linkManager: import('./jira_link_manager').default,
+    project_name: string,
+    matchedResults: Array<{
+        key: string;
+        title: string;
+        status: 'passed' | 'failed' | 'skipped';
+        duration: number;
+    }>,
+    csvName: string,
+    pipelineInfo?: PipelineInfo,
+): Promise<TestExecResult> {
+    const { summary, testKeys } = _buildExecutionPayload(matchedResults, csvName, pipelineInfo);
     const te = await createTests.createTestExecution(
         jiraResource,
         linkManager,

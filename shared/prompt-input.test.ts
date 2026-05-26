@@ -46,6 +46,8 @@ jest.mock('./prompt-ui', () => {
     };
 });
 
+import * as fs from 'fs';
+import * as path from 'path';
 import readlineSync from 'readline-sync';
 import { Output } from './output';
 import { getConfig, warn, CancelError } from './prompt-ui';
@@ -56,6 +58,7 @@ import {
     ask,
     askConfirm,
     showSelect,
+    filePathCompleter,
     __setSelectMod,
     __setInputMod,
     __setConfirmMod,
@@ -263,5 +266,71 @@ describe('showSelect', () => {
         mockReadlineQuestion.mockReturnValue('1');
         const result = await showSelect('Choose', sectionedChoices);
         expect(result).toBe('a');
+    });
+});
+
+describe('filePathCompleter', () => {
+    const testDir = path.join(__dirname, '__test_fixtures__');
+    const csvFile = path.join(testDir, 'test.csv');
+    const jsonFile = path.join(testDir, 'test.json');
+    const txtFile = path.join(testDir, 'test.txt');
+    const subDir = path.join(testDir, 'subdir');
+
+    beforeAll(() => {
+        fs.mkdirSync(subDir, { recursive: true });
+        fs.writeFileSync(csvFile, '');
+        fs.writeFileSync(jsonFile, '');
+        fs.writeFileSync(txtFile, '');
+    });
+
+    afterAll(() => {
+        fs.rmSync(testDir, { recursive: true, force: true });
+    });
+
+    it('matches all entries with empty base', () => {
+        const [matches] = filePathCompleter(testDir + '/');
+        expect(matches).toContain(csvFile);
+        expect(matches).toContain(jsonFile);
+        expect(matches).toContain(txtFile);
+        expect(matches).toContain(subDir + '/');
+        expect(matches.length).toBe(4);
+    });
+
+    it('filters by csv extension', () => {
+        const [matches] = filePathCompleter(testDir + '/', ['.csv']);
+        expect(matches).toContain(csvFile);
+        expect(matches).not.toContain(jsonFile);
+        expect(matches).not.toContain(txtFile);
+        expect(matches).toContain(subDir + '/');
+    });
+
+    it('filters by json and txt extensions', () => {
+        const [matches] = filePathCompleter(testDir + '/', ['.json', '.txt']);
+        expect(matches).toContain(jsonFile);
+        expect(matches).toContain(txtFile);
+        expect(matches).not.toContain(csvFile);
+        expect(matches).toContain(subDir + '/');
+    });
+
+    it('includes directories with trailing slash', () => {
+        const [matches] = filePathCompleter(testDir + '/');
+        expect(matches).toContain(subDir + '/');
+    });
+
+    it('returns original line as second element', () => {
+        const prefix = testDir + '/test.';
+        const [matches, line] = filePathCompleter(prefix);
+        expect(matches.length).toBe(3);
+        expect(line).toBe(prefix);
+    });
+
+    it('returns empty on invalid dir', () => {
+        const [matches] = filePathCompleter('/nonexistent_dir_xyz/foo');
+        expect(matches).toEqual([]);
+    });
+
+    it('expands tilde', () => {
+        const [matches] = filePathCompleter('~');
+        expect(matches.length).toBeGreaterThan(0);
     });
 });

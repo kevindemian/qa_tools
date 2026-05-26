@@ -183,7 +183,7 @@ describe('createTestExecutionFromResults', () => {
             'issue',
             expect.objectContaining({
                 fields: expect.objectContaining({
-                    summary: expect.stringContaining('Resultados:'),
+                    summary: expect.stringContaining('Results:'),
                 }),
             }),
         );

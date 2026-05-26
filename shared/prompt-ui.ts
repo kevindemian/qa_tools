@@ -21,6 +21,10 @@ export const isQuiet = (): boolean => getConfig().quiet;
 
 const MSG_UNKNOWN_ERROR = 'Erro desconhecido';
 const MSG_UNEXPECTED = 'Erro inesperado';
+const TITLE_BOX_WIDTH = 60;
+const SUMMARY_BOX_WIDTH = 72;
+const STACK_TRACE_LINES = 4;
+const MIN_COLUMN_WIDTH = 3;
 
 export function badge(count: number, label: string, status: 'ok' | 'error' | 'warn' | 'info'): string {
     const colors: Record<string, chalk.Chalk> = {
@@ -78,7 +82,7 @@ export function title(msg: string): void {
         output.print('--- ' + msg + ' ---');
         return;
     }
-    output.print(box([msg], { border: 'none', padding: 0, width: 60 }));
+    output.print(box([msg], { border: 'none', padding: 0, width: TITLE_BOX_WIDTH }));
 }
 
 export function divider(): void {
@@ -188,7 +192,7 @@ export function printError(context: string, err: unknown): void {
         hintBlock,
         '',
     ];
-    output.print(box(errorLines, { border: 'double', color: 'red', padding: 1, width: 72 }));
+    output.print(box(errorLines, { border: 'double', color: 'red', padding: 1, width: SUMMARY_BOX_WIDTH }));
 }
 
 function renderQuietSummary(passed: number, failed: number, results: TestResult[]): void {
@@ -224,7 +228,7 @@ function renderVerboseSuccess(passed: number, total: number, pct: number, testEx
         lines.push(palette.blue('📎  Test Execution: ' + testExecution));
     }
     lines.push('');
-    output.print(box(lines, { border: 'single', color: 'green', padding: 0, width: 72 }));
+    output.print(box(lines, { border: 'single', color: 'green', padding: 0, width: SUMMARY_BOX_WIDTH }));
 }
 
 function renderVerboseFailure(
@@ -252,7 +256,7 @@ function renderVerboseFailure(
     }
     errorLines.push(palette.blue('→  Consulte o log: ' + (logPath || 'ver logs acima')));
     errorLines.push('');
-    output.print(box(errorLines, { border: 'single', color: 'yellow', padding: 0, width: 72 }));
+    output.print(box(errorLines, { border: 'single', color: 'yellow', padding: 0, width: SUMMARY_BOX_WIDTH }));
 }
 
 export function printSummary(results: TestResult[], testExecution?: string): void {
@@ -275,6 +279,27 @@ export function printSummary(results: TestResult[], testExecution?: string): voi
     }
 }
 
+function _formatErrorMessage(err: unknown): { msg: string; raw: string } {
+    const raw = extractErrorMessage(err);
+    const known = humanizeError(raw);
+    const msg = known ? known.msg : raw || MSG_UNEXPECTED;
+    return { msg, raw };
+}
+
+function _showErrorDetails(err: unknown): void {
+    divider();
+    const axiosErr = err as { response?: { status?: number; data?: unknown }; stack?: string };
+    output.print(`  Status: ${axiosErr.response?.status || 'N/A'}`);
+    if (axiosErr.response?.data) {
+        output.print(`  Resposta: ${JSON.stringify(axiosErr.response.data, null, 2)}`);
+    }
+    if (err instanceof Error && err.stack) {
+        const lines = err.stack.split('\n').slice(0, STACK_TRACE_LINES);
+        output.print(`  Stack: ${lines.join('\n    ')}`);
+    }
+    divider();
+}
+
 // eslint-disable-next-line @typescript-eslint/require-await
 export async function onError(
     context: string,
@@ -282,9 +307,7 @@ export async function onError(
     options: { retry?: boolean; details?: boolean } = {},
 ): Promise<'abort' | 'skip' | 'retry'> {
     const { retry: canRetry = false, details: canDetails = false } = options;
-    const raw = extractErrorMessage(err);
-    const known = humanizeError(raw);
-    const msg = known ? known.msg : raw || MSG_UNEXPECTED;
+    const { msg } = _formatErrorMessage(err);
 
     error(`${context}: ${msg}`);
 
@@ -312,17 +335,7 @@ export async function onError(
         if (answer === 's') return 'skip';
         if (answer === 'a') return 'abort';
         if (answer === 'd' && canDetails) {
-            divider();
-            const axiosErr = err as { response?: { status?: number; data?: unknown }; stack?: string };
-            output.print(`  Status: ${axiosErr.response?.status || 'N/A'}`);
-            if (axiosErr.response?.data) {
-                output.print(`  Resposta: ${JSON.stringify(axiosErr.response.data, null, 2)}`);
-            }
-            if (err instanceof Error && err.stack) {
-                const lines = err.stack.split('\n').slice(0, 4);
-                output.print(`  Stack: ${lines.join('\n    ')}`);
-            }
-            divider();
+            _showErrorDetails(err);
             continue;
         }
         warn('Opção inválida. Escolha ' + opts.join(', '));
@@ -342,16 +355,22 @@ export class CancelError extends Error {
 
 const NAV_CMDS = ['/back', '/menu', '/exit', '/sair', '/quit', '/help'];
 
-function buildCliTable3Config(keys: string[]) {
+function buildCliTable3Config(keys: string[]): {
+    head: string[];
+    colWidths: number[];
+    style: { head: string[]; border: string[] };
+    chars: Record<string, string>;
+    wordWrap: boolean;
+} {
     const termWidth = Output.columns();
-    const avail = Math.max(termWidth - (keys.length + 1), keys.length * 3);
+    const avail = Math.max(termWidth - (keys.length + 1), keys.length * MIN_COLUMN_WIDTH);
     const indentStr = '  ';
     const indentWidth = visibleWidth(indentStr);
     const colWidths = keys.map(() => Math.floor(avail / keys.length));
     colWidths[0] += avail - colWidths.reduce((a, b) => a + b, 0);
     return {
         head: keys,
-        colWidths: colWidths.map((w) => Math.max(w - indentWidth, 3)),
+        colWidths: colWidths.map((w) => Math.max(w - indentWidth, MIN_COLUMN_WIDTH)),
         style: { head: [palette.muted as unknown as string], border: [palette.border as unknown as string] },
         chars: {
             top: '─',

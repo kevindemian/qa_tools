@@ -1,5 +1,5 @@
 import Config from '../../shared/config';
-import { ask, askConfirm } from '../../shared/prompt';
+import { ask, askConfirm, askFilePath } from '../../shared/prompt';
 import { load as loadState } from '../../shared/state';
 import path from 'path';
 import type { CommandContext } from './context';
@@ -11,7 +11,11 @@ async function handler(c: CommandContext): Promise<boolean | void> {
     const state = loadState() as Record<string, string | undefined>;
     const csvDefaultPath = Config.csvDefaultPath || path.join(__dirname, '../test_steps.csv');
     const csvPath =
-        Config.csvPath || (await ask('Caminho do arquivo CSV', { default: state.lastCsvPath || csvDefaultPath }));
+        Config.csvPath ||
+        (await askFilePath('Caminho do arquivo CSV', {
+            extensions: ['.csv'],
+            default: state.lastCsvPath || csvDefaultPath,
+        }));
 
     const labelsHint = state.lastLabels ? 'último: ' + state.lastLabels : 'vazio para nenhuma';
     const jiraLabelsInput =

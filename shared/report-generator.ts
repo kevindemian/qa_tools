@@ -1,7 +1,7 @@
 import type { FlatTest } from './result_parser';
 import { rootLogger } from './logger';
 
-export interface ReportOptions {
+interface ReportOptions {
     title?: string;
     includeChart?: boolean;
     llmAnalysis?: string;
@@ -18,6 +18,8 @@ interface ReportStats {
 }
 
 const DEFAULT_TITLE = 'QA Tools — Test Report';
+const PASS_RATE_GOOD_THRESHOLD = 90;
+const PASS_RATE_WARN_THRESHOLD = 70;
 
 function statsFromTests(tests: FlatTest[]): ReportStats {
     const passed = tests.filter((t) => t.state === 'passed').length;
@@ -34,8 +36,8 @@ function fmtDuration(ms: number): string {
 }
 
 function pctClass(rate: number): string {
-    if (rate >= 90) return 'rate-good';
-    if (rate >= 70) return 'rate-warn';
+    if (rate >= PASS_RATE_GOOD_THRESHOLD) return 'rate-good';
+    if (rate >= PASS_RATE_WARN_THRESHOLD) return 'rate-warn';
     return 'rate-bad';
 }
 
@@ -94,6 +96,71 @@ export function generateHtmlReport(tests: FlatTest[], options?: ReportOptions): 
     return generateReportWithFallback(tests, options);
 }
 
+function buildSummaryCards(stats: ReportStats, passRate: number): string {
+    let html = '<div class="summary">';
+    html += '<div class="card"><div class="label">Passed</div><div class="value pass">' + stats.passed + '</div></div>';
+    html += '<div class="card"><div class="label">Failed</div><div class="value fail">' + stats.failed + '</div></div>';
+    html +=
+        '<div class="card"><div class="label">Skipped</div><div class="value skip">' + stats.skipped + '</div></div>';
+    html += '<div class="card"><div class="label">Total</div><div class="value">' + stats.total + '</div></div>';
+    html +=
+        '<div class="card"><div class="label">Duration</div><div class="value" style="font-size:1rem">' +
+        fmtDuration(stats.duration) +
+        '</div></div>';
+    html +=
+        '<div class="card"><div class="label">Pass Rate</div><div class="value ' +
+        pctClass(passRate) +
+        '">' +
+        pct(stats.passed, stats.total) +
+        '%</div></div>';
+    html += '</div>';
+    return html;
+}
+
+function buildLlmSection(options: ReportOptions): string {
+    if (!options.llmAnalysis) return '';
+    let html = '<div class="chart-box">';
+    html += '<div class="label" style="margin-bottom:8px">AI Analysis</div>';
+    if (options.llmFallback) {
+        html += '<p style="color:#ca8a04;font-size:0.8rem">⚠ AI Analysis unavailable — displaying template report.</p>';
+    } else if (options.llmConfidence) {
+        const badge = options.llmConfidence === 'high' ? '🟢' : options.llmConfidence === 'medium' ? '🟡' : '🔴';
+        html +=
+            '<p style="font-size:0.8rem;margin-bottom:8px">Confiança: ' + badge + ' ' + options.llmConfidence + '</p>';
+    }
+    html +=
+        '<pre style="white-space:pre-wrap;font-family:inherit;margin:0">' + escapeHtml(options.llmAnalysis) + '</pre>';
+    html += '</div>';
+    return html;
+}
+
+function buildChartSection(stats: ReportStats, wantChart: boolean): string {
+    if (!wantChart || stats.total === 0) return '';
+    let html = '<div class="chart-box"><div class="label" style="margin-bottom:4px">Distribution</div>';
+    html += buildChartSvg(stats);
+    html += '<div class="legend">';
+    html += '<span><span class="dot" style="background:#22c55e"></span> Passed (' + stats.passed + ')</span>';
+    html += '<span><span class="dot" style="background:#ef4444"></span> Failed (' + stats.failed + ')</span>';
+    html += '<span><span class="dot" style="background:#facc15"></span> Skipped (' + stats.skipped + ')</span>';
+    html += '</div></div>';
+    return html;
+}
+
+function buildTestTable(tests: FlatTest[]): string {
+    let html = '<table><thead><tr><th>#</th><th>Test</th><th>Status</th><th>Duration</th></tr></thead><tbody>';
+    for (let i = 0; i < tests.length; i++) {
+        const t = tests[i];
+        html += '<tr>';
+        html += '<td>' + (i + 1) + '</td>';
+        html += '<td>' + escapeHtml(t.title) + '</td>';
+        html += '<td><span class="status-badge status-' + t.state + '">' + t.state + '</span></td>';
+        html += '<td>' + fmtDuration(t.duration) + '</td>';
+        html += '</tr>';
+    }
+    html += '</tbody></table>';
+    return html;
+}
+
 export function generateReportWithFallback(tests: FlatTest[], options?: ReportOptions): string {
     try {
         const stats = statsFromTests(tests);
@@ -101,78 +168,13 @@ export function generateReportWithFallback(tests: FlatTest[], options?: ReportOp
         const passRate = stats.total > 0 ? (stats.passed / stats.total) * 100 : 0;
 
         let html =
-            '<!DOCTYPE html><html lang="pt-BR"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">';
+            '<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">';
         html += '<title>' + title + '</title><style>' + buildCss();
-
         html += '<h1>' + title + '</h1>';
-
-        html += '<div class="summary">';
-        html +=
-            '<div class="card"><div class="label">Passed</div><div class="value pass">' + stats.passed + '</div></div>';
-        html +=
-            '<div class="card"><div class="label">Failed</div><div class="value fail">' + stats.failed + '</div></div>';
-        html +=
-            '<div class="card"><div class="label">Skipped</div><div class="value skip">' +
-            stats.skipped +
-            '</div></div>';
-        html += '<div class="card"><div class="label">Total</div><div class="value">' + stats.total + '</div></div>';
-        html +=
-            '<div class="card"><div class="label">Duration</div><div class="value" style="font-size:1rem">' +
-            fmtDuration(stats.duration) +
-            '</div></div>';
-        html +=
-            '<div class="card"><div class="label">Pass Rate</div><div class="value ' +
-            pctClass(passRate) +
-            '">' +
-            pct(stats.passed, stats.total) +
-            '%</div></div>';
-        html += '</div>';
-
-        if (options?.llmAnalysis) {
-            html += '<div class="chart-box">';
-            html += '<div class="label" style="margin-bottom:8px">Análise IA</div>';
-            if (options.llmFallback) {
-                html +=
-                    '<p style="color:#ca8a04;font-size:0.8rem">⚠ Análise IA indisponível — exibindo relatório template.</p>';
-            } else if (options.llmConfidence) {
-                const badge =
-                    options.llmConfidence === 'high' ? '🟢' : options.llmConfidence === 'medium' ? '🟡' : '🔴';
-                html +=
-                    '<p style="font-size:0.8rem;margin-bottom:8px">Confiança: ' +
-                    badge +
-                    ' ' +
-                    options.llmConfidence +
-                    '</p>';
-            }
-            html +=
-                '<pre style="white-space:pre-wrap;font-family:inherit;margin:0">' +
-                escapeHtml(options.llmAnalysis) +
-                '</pre>';
-            html += '</div>';
-        }
-
-        if (options?.includeChart !== false && stats.total > 0) {
-            html += '<div class="chart-box"><div class="label" style="margin-bottom:4px">Distribution</div>';
-            html += buildChartSvg(stats);
-            html += '<div class="legend">';
-            html += '<span><span class="dot" style="background:#22c55e"></span> Passed (' + stats.passed + ')</span>';
-            html += '<span><span class="dot" style="background:#ef4444"></span> Failed (' + stats.failed + ')</span>';
-            html += '<span><span class="dot" style="background:#facc15"></span> Skipped (' + stats.skipped + ')</span>';
-            html += '</div></div>';
-        }
-
-        html += '<table><thead><tr><th>#</th><th>Test</th><th>Status</th><th>Duration</th></tr></thead><tbody>';
-        for (let i = 0; i < tests.length; i++) {
-            const t = tests[i];
-            html += '<tr>';
-            html += '<td>' + (i + 1) + '</td>';
-            html += '<td>' + escapeHtml(t.title) + '</td>';
-            html += '<td><span class="status-badge status-' + t.state + '">' + t.state + '</span></td>';
-            html += '<td>' + fmtDuration(t.duration) + '</td>';
-            html += '</tr>';
-        }
-        html += '</tbody></table>';
-
+        html += buildSummaryCards(stats, passRate);
+        html += buildLlmSection(options || { title: '', includeChart: true });
+        html += buildChartSection(stats, options?.includeChart !== false);
+        html += buildTestTable(tests);
         html += '<div class="footer">Generated by QA Tools</div>';
         html += '</body></html>';
 

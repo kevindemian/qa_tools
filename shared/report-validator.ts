@@ -6,7 +6,7 @@ export interface ValidationRule {
     pattern?: RegExp;
 }
 
-export interface ValidationResult {
+interface ValidationResult {
     valid: boolean;
     errors: string[];
     warnings: string[];

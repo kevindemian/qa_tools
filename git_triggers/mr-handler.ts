@@ -1,4 +1,3 @@
-import path from 'path';
 import { print, success, warn, info, prompt, confirm, printError, withSpinner, divider } from '../shared/prompt';
 import { SessionContext } from '../shared/session-context';
 import type { GitProvider, MergeRequestInfo } from '../shared/types';
@@ -6,13 +5,13 @@ import { currentProvider, pushHistory } from './session-state';
 import { generatePrDescription } from './ai-pr-desc';
 import { assessTestImpact } from './ai-test-impact';
 import { nivelarBranches } from './nivelar';
-import Config from '../shared/config';
+import { reportsDir } from '../shared/temp-dir';
 
-export async function nivelarBranchesWrapper(gitlab: GitProvider) {
+export async function nivelarBranchesWrapper(gitlab: GitProvider): Promise<void> {
     await nivelarBranches(gitlab, { pushHistory });
 }
 
-export async function handleCreateMR(ctx: SessionContext, m: GitProvider) {
+export async function handleCreateMR(ctx: SessionContext, m: GitProvider): Promise<void> {
     const sourceBranch = prompt('Branch de origem');
     const targetBranch = prompt('Branch de destino');
     const mrTitle = prompt('Titulo do ' + (currentProvider === 'github' ? 'PR' : 'MR'));
@@ -30,8 +29,7 @@ export async function handleCreateMR(ctx: SessionContext, m: GitProvider) {
         description = prompt('Descrição');
     }
     if (confirm('Analisar impacto nos testes com IA?', false)) {
-        const cypressDir = Config.cypressProjectPath || '';
-        const mappingPath = cypressDir ? path.resolve(cypressDir, '*jira-mapping.json') : '';
+        const mappingPath = reportsDir() + '/*jira-mapping.json';
         const impact = await assessTestImpact(m, sourceBranch, targetBranch, mappingPath || undefined);
         if (impact) {
             info('Impacto nos testes:');
@@ -59,7 +57,7 @@ export async function handleCreateMR(ctx: SessionContext, m: GitProvider) {
     }
 }
 
-export async function handleListApprovedMRs(ctx: SessionContext, m: GitProvider) {
+export async function handleListApprovedMRs(ctx: SessionContext, m: GitProvider): Promise<void> {
     const status = prompt('Status dos ' + (currentProvider === 'github' ? 'PRs' : 'MRs'), { default: 'opened' });
     const prLabel = currentProvider === 'github' ? 'PR' : 'MR';
     try {
@@ -89,7 +87,7 @@ export async function handleListApprovedMRs(ctx: SessionContext, m: GitProvider)
     }
 }
 
-export async function handleMergeMR(ctx: SessionContext, m: GitProvider) {
+export async function handleMergeMR(ctx: SessionContext, m: GitProvider): Promise<void> {
     const iid = prompt('ID do ' + (currentProvider === 'github' ? 'PR' : 'MR') + ' para merge');
     const prLabel = currentProvider === 'github' ? 'PR' : 'MR';
     try {

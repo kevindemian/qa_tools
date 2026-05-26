@@ -1,9 +1,8 @@
 import fs from 'fs';
 import path from 'path';
-import Config from '../shared/config';
-import { load } from '../shared/state';
 import { rootLogger } from '../shared/logger';
 import { info, isQuiet } from '../shared/prompt';
+import { reportsDir } from '../shared/temp-dir';
 import type { TestCase } from '../shared/types';
 
 const UTF8_ENCODING = 'utf8';
@@ -18,11 +17,10 @@ interface MappingEntry {
 
 class MappingFileGenerator {
     generate(sourcePath: string, projectName: string, tasksId: string[], tests: TestCase[]): void {
-        const cypressDir = Config.cypressProjectPath || (load().lastCypressPath as string | undefined);
-        if (!cypressDir || !tasksId.length) return;
+        if (!tasksId.length) return;
 
         const baseName = path.basename(sourcePath, path.extname(sourcePath));
-        const outDir = path.resolve(cypressDir);
+        const outDir = reportsDir();
 
         try {
             if (!fs.existsSync(outDir)) {
@@ -88,17 +86,17 @@ class MappingFileGenerator {
     private _writeMdMapping(outDir: string, baseName: string, sourcePath: string, mappings: MappingEntry[]): void {
         const mdPath = path.join(outDir, baseName + '-jira-mapping.md');
         let mdContent =
-            '# Mapeamento Jira: ' +
+            '# Jira Mapping: ' +
             baseName +
             path.extname(sourcePath) +
             '\n' +
-            '*Gerado em ' +
-            new Date().toLocaleString('pt-BR') +
+            '*Generated on ' +
+            new Date().toLocaleString('en-US') +
             '*\n\n';
 
         for (const m of mappings) {
             mdContent += '## ' + m.key + ' — ' + m.title + '\n\n';
-            if (m.description) mdContent += '**Descrição:** ' + m.description + '\n\n';
+            if (m.description) mdContent += '**Description:** ' + m.description + '\n\n';
             if (m.precondition) mdContent += '**Pre-condition:** ' + m.precondition + '\n\n';
             if (m.steps && m.steps.length > 0) {
                 mdContent += '| # | Action | Data | Expected Result |\n';
@@ -122,7 +120,7 @@ class MappingFileGenerator {
             tasksId
                 .map((key, i) => {
                     const test = tests[i] || ({} as TestCase);
-                    return key + ': ' + (test.title || '(sem titulo)');
+                    return key + ': ' + (test.title || '(untitled)');
                 })
                 .join('\n') + '\n';
         fs.writeFileSync(txtPath, txtContent, UTF8_ENCODING);

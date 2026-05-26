@@ -19,8 +19,8 @@ jest.mock('./ai-pr-desc', () => ({ generatePrDescription: jest.fn() }));
 jest.mock('./ai-test-impact', () => ({ assessTestImpact: jest.fn() }));
 jest.mock('./nivelar', () => ({ nivelarBranches: jest.fn() }));
 
-jest.mock('../shared/config', () => ({
-    default: { cypressProjectPath: '/cypress' },
+jest.mock('../shared/temp-dir', () => ({
+    reportsDir: jest.fn(() => '/tmp/reports'),
 }));
 
 import { print, success, warn, info, prompt, confirm, printError, withSpinner, divider } from '../shared/prompt';

@@ -1,6 +1,6 @@
 const PRECONDITION_KEY_PATTERN = '[A-Z][A-Z0-9]+(?:-[A-Z0-9]+)*\\-\\d+';
 
-export const PRECONDITION_KEY_RE = new RegExp('^' + PRECONDITION_KEY_PATTERN + '$');
+const PRECONDITION_KEY_RE = new RegExp('^' + PRECONDITION_KEY_PATTERN + '$');
 
 export function isPreconditionKey(value: string): boolean {
     return PRECONDITION_KEY_RE.test(value);

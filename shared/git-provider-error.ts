@@ -1,6 +1,6 @@
 import { rootLogger } from './logger';
 
-export interface HandleErrorOptions {
+interface HandleErrorOptions {
     returnNull?: boolean;
     context?: string;
 }

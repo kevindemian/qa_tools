@@ -2,13 +2,6 @@ export type JsonObject = Record<string, unknown>;
 export type LogContext = Record<string, unknown>;
 export type StateContainer = Record<string, unknown>;
 
-export interface LoggerLike {
-    info(msg: string, ctx?: Record<string, unknown>): void;
-    warn(msg: string, ctx?: Record<string, unknown>): void;
-    error(msg: string, ctx?: Record<string, unknown>): void;
-    child?(context: Record<string, unknown>): LoggerLike;
-}
-
 export interface TestResult {
     status: 'ok' | 'error';
     label: string;
@@ -38,21 +31,6 @@ export interface TestCase {
     }>;
 }
 
-export interface JiraIssue {
-    key: string;
-    fields: {
-        description?: string;
-        summary?: string;
-        project?: {
-            key: string;
-        };
-        issuetype?: {
-            name: string;
-        };
-        labels?: string[];
-    };
-}
-
 export interface StateSchema {
     lastChoice?: string;
     lastProject?: string;
@@ -78,12 +56,6 @@ export interface StateSchema {
         }>;
         ts: string;
     };
-}
-
-export interface ApiConfig {
-    baseUrl: string;
-    token: string;
-    logger?: LoggerLike;
 }
 
 export interface PipelineInfo {
@@ -182,25 +154,6 @@ export interface GitProvider {
     provider: 'gitlab' | 'github';
 }
 
-export interface JiraIssueLinkType {
-    id: string;
-    name: string;
-    inward: string;
-    outward: string;
-}
-
-export interface ProjectVersion {
-    id: string;
-    name: string;
-    released: boolean;
-    [key: string]: unknown;
-}
-
-export type SearchResult = {
-    issues: JiraIssue[];
-    total: number;
-};
-
 export interface LLMEnrichment {
     enrichedAt: string;
     model: string;
@@ -226,18 +179,4 @@ export interface BugReport {
         commitSha?: string;
         provider?: string;
     };
-}
-
-export class JiraResourceError extends Error {
-    status?: number;
-    resource?: string;
-    body?: unknown;
-
-    constructor(message: string, options?: { status?: number; resource?: string; body?: unknown }) {
-        super(message);
-        this.name = 'JiraResourceError';
-        this.status = options?.status;
-        this.resource = options?.resource;
-        this.body = options?.body;
-    }
 }

@@ -145,16 +145,29 @@ async function _promptChoice(stateHint: string): Promise<string> {
     return resolved;
 }
 
+function withErrorHandling(
+    handler: (m: GitProvider, pn: string, ns: string[]) => Promise<unknown>,
+): (m: GitProvider, pn: string, ns: string[]) => Promise<boolean> {
+    return (m, pn, ns) =>
+        handler(m, pn, ns).then(
+            () => false,
+            (err) => {
+                printError('Handler error', err);
+                return false;
+            },
+        );
+}
+
 const ACTION_HANDLERS: Record<string, (m: GitProvider, pn: string, ns: string[]) => Promise<boolean>> = {
-    '1': (m, pn) => handleTriggerPipeline(sessionContext, m, pn).then(() => false),
-    '2': (m) => handleListSchedules(sessionContext, m).then(() => false),
-    '3': (m) => handleRunSchedule(sessionContext, m).then(() => false),
-    '4': (m) => handleCreateMR(sessionContext, m).then(() => false),
-    '5': (m) => handleListApprovedMRs(sessionContext, m).then(() => false),
-    '6': (m) => handleMergeMR(sessionContext, m).then(() => false),
-    '7': (m) => nivelarBranchesWrapper(m).then(() => false),
-    '8': (m) => handleExportVariables(sessionContext, m).then(() => false),
-    '9': (m, _pn, ns) => handleChangeProject(sessionContext, m, ns).then(() => false),
+    '1': withErrorHandling((m, pn) => handleTriggerPipeline(sessionContext, m, pn)),
+    '2': withErrorHandling((m) => handleListSchedules(sessionContext, m)),
+    '3': withErrorHandling((m) => handleRunSchedule(sessionContext, m)),
+    '4': withErrorHandling((m) => handleCreateMR(sessionContext, m)),
+    '5': withErrorHandling((m) => handleListApprovedMRs(sessionContext, m)),
+    '6': withErrorHandling((m) => handleMergeMR(sessionContext, m)),
+    '7': withErrorHandling((m) => nivelarBranchesWrapper(m)),
+    '8': withErrorHandling((m) => handleExportVariables(sessionContext, m)),
+    '9': withErrorHandling((m, _pn, ns) => handleChangeProject(sessionContext, m, ns)),
     a: () => {
         handleFlakinessDashboard();
         return Promise.resolve(false);

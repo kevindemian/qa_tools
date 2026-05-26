@@ -15,6 +15,12 @@ import type {
     JsonObject,
 } from '../shared/types';
 
+const SCHEDULES_PAGE_SIZE = 100;
+const SEARCH_MRS_PAGE_SIZE = 100;
+const VARIABLES_PAGE_SIZE = 100;
+const DIFF_TRUNCATION_LIMIT = 15000;
+const DEFAULT_PIPELINE_COUNT = 5;
+
 class GitLabManager implements GitProvider {
     provider = 'gitlab' as const;
     projectId: string;
@@ -84,7 +90,7 @@ class GitLabManager implements GitProvider {
         return (
             (await this._get('/pipeline_schedules', {
                 operation: 'listar schedules',
-                params: { per_page: 100 },
+                params: { per_page: SCHEDULES_PAGE_SIZE },
                 returnNull: true,
             })) || []
         );
@@ -149,7 +155,7 @@ class GitLabManager implements GitProvider {
                     state: searchStatus,
                     source_branch: sourceBranch,
                     target_branch: targetBranch,
-                    per_page: 100,
+                    per_page: SEARCH_MRS_PAGE_SIZE,
                 },
                 returnNull: true,
             })) || []
@@ -174,7 +180,7 @@ class GitLabManager implements GitProvider {
         }
     }
 
-    async getRecentPipelines(count = 5): Promise<PipelineRun[]> {
+    async getRecentPipelines(count = DEFAULT_PIPELINE_COUNT): Promise<PipelineRun[]> {
         return (
             (await this._get('/pipelines', {
                 operation: 'buscar pipelines',
@@ -216,7 +222,7 @@ class GitLabManager implements GitProvider {
         return (
             (await this._get('/variables', {
                 operation: 'buscar variáveis CI/CD',
-                params: { per_page: 100 },
+                params: { per_page: VARIABLES_PAGE_SIZE },
                 returnNull: true,
             })) || []
         );
@@ -246,7 +252,7 @@ class GitLabManager implements GitProvider {
             }
         }
         const full = lines.join('\n');
-        return full.length > 15000 ? full.slice(0, 15000) + '\n... (truncated)' : full;
+        return full.length > DIFF_TRUNCATION_LIMIT ? full.slice(0, DIFF_TRUNCATION_LIMIT) + '\n... (truncated)' : full;
     }
 
     async isApproved(mergeRequestIid: string | number): Promise<boolean> {

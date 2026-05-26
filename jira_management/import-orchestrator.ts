@@ -11,7 +11,7 @@ import { executeTestCreationLoop, updateFinalState } from './import-loop';
 import { OPERATION_CANCELLED } from './constants';
 import { info, warn, isQuiet, print, printSummary } from '../shared/prompt';
 import Config from '../shared/config';
-import { createStepImporter } from './xray-client';
+import { createStepImporter, type XrayStepImporter } from './xray-client';
 
 interface CreateTestsFromTestCasesParams {
     tests: TestCase[];
@@ -180,42 +180,41 @@ async function postProcessCheckpoint(
     updateFinalState(sourceType, sourcePath, projectName, jiraLabels);
 }
 
-async function createTestsFromTestCases({
-    tests,
-    jiraResource,
-    jiraResourceXray,
-    linkManager,
-    project_name,
-    base_url,
-    sessionLog: _sessionLog,
-    onBusy,
-    sourcePath,
-    sourceType,
-    jiraLabels,
-}: CreateTestsFromTestCasesParams): Promise<CreateTestsFromTestCasesResult | undefined> {
-    const prepared = prepareTestRun(tests, sourcePath, sourceType, project_name, jiraLabels, onBusy, warn);
-    if (prepared === undefined) return;
-    if ('summary' in prepared) return prepared;
-    const { tests: filtered, resumeFrom, inMemoryTasksId, inMemoryTasksText, opLog } = prepared;
-
+function testCreationSetup(
+    jiraResource: JiraResource,
+    jiraResourceXray: JiraResource,
+    linkManager: JiraLinkManager,
+): { stepImporter: XrayStepImporter; factory: TestCaseFactory; linker: IssueLinker; results: TestResult[] } {
     const stepImporter = createStepImporter(jiraResourceXray, Config.xrayMode);
-    const factory = new TestCaseFactory(jiraResource, stepImporter);
-    const linker = new IssueLinker(jiraResource, linkManager);
-    const results: TestResult[] = [];
-    onBusy(true);
+    return {
+        stepImporter,
+        factory: new TestCaseFactory(jiraResource, stepImporter),
+        linker: new IssueLinker(jiraResource, linkManager),
+        results: [],
+    };
+}
 
-    opLog.info('Iniciando criação de ' + filtered.length + ' teste(s)');
-
+async function runCreationLoop(
+    filtered: TestCase[],
+    factory: TestCaseFactory,
+    linker: IssueLinker,
+    results: TestResult[],
+    params: CreateTestsFromTestCasesParams,
+    resumeFrom: number,
+    opLog: ReturnType<typeof rootLogger.child>,
+    inMemoryTasksId: string[],
+    inMemoryTasksText: string[],
+): Promise<FinalizeTestCreationResult | undefined> {
     await executeTestCreationLoop(
         filtered,
         factory,
         linker,
-        project_name,
-        jiraLabels,
-        base_url,
+        params.project_name,
+        params.jiraLabels,
+        params.base_url,
         opLog,
-        sourcePath,
-        sourceType,
+        params.sourcePath,
+        params.sourceType,
         inMemoryTasksId,
         inMemoryTasksText,
         results,
@@ -224,22 +223,55 @@ async function createTestsFromTestCases({
         info,
         print,
     );
-
     return finalizeTestCreation({
         results,
         tests: filtered,
         linker,
         inMemoryTasksId,
         inMemoryTasksText,
-        sourcePath,
-        sourceType,
-        project_name,
-        jiraLabels,
+        sourcePath: params.sourcePath,
+        sourceType: params.sourceType,
+        project_name: params.project_name,
+        jiraLabels: params.jiraLabels,
         opLog,
-        onBusy,
+        onBusy: params.onBusy,
         info,
         printSummary,
     });
+}
+
+async function createTestsFromTestCases(
+    params: CreateTestsFromTestCasesParams,
+): Promise<CreateTestsFromTestCasesResult | undefined> {
+    const prepared = prepareTestRun(
+        params.tests,
+        params.sourcePath,
+        params.sourceType,
+        params.project_name,
+        params.jiraLabels,
+        params.onBusy,
+        warn,
+    );
+    if (prepared === undefined || 'summary' in prepared) return prepared;
+    const { tests: filtered, resumeFrom, inMemoryTasksId, inMemoryTasksText, opLog } = prepared;
+    const { factory, linker, results } = testCreationSetup(
+        params.jiraResource,
+        params.jiraResourceXray,
+        params.linkManager,
+    );
+    params.onBusy(true);
+    opLog.info('Iniciando criação de ' + filtered.length + ' teste(s)');
+    return runCreationLoop(
+        filtered,
+        factory,
+        linker,
+        results,
+        params,
+        resumeFrom,
+        opLog,
+        inMemoryTasksId,
+        inMemoryTasksText,
+    );
 }
 
 export { createTestsFromTestCases, prepareTestRun, finalizeTestCreation, postProcessCheckpoint };

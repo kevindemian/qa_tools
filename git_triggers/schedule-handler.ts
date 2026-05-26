@@ -19,7 +19,7 @@ import {
 } from './session-state';
 import { update as updateState } from '../shared/state';
 
-export async function handleListSchedules(ctx: SessionContext, m: GitProvider) {
+export async function handleListSchedules(ctx: SessionContext, m: GitProvider): Promise<void> {
     if (currentProvider !== 'gitlab') {
         warn('Opção não disponivel para GitHub.');
         return;
@@ -50,7 +50,7 @@ export async function handleListSchedules(ctx: SessionContext, m: GitProvider) {
     }
 }
 
-export async function handleRunSchedule(ctx: SessionContext, m: GitProvider) {
+export async function handleRunSchedule(ctx: SessionContext, m: GitProvider): Promise<void> {
     if (currentProvider !== 'gitlab') {
         warn('Opção não disponivel para GitHub.');
         return;
@@ -68,7 +68,7 @@ export async function handleRunSchedule(ctx: SessionContext, m: GitProvider) {
     }
 }
 
-export async function handleChangeProject(ctx: SessionContext, m: GitProvider, names: string[]) {
+export async function handleChangeProject(ctx: SessionContext, m: GitProvider, names: string[]): Promise<void> {
     displayProjects();
     const newChoice = prompt('Escolha um projeto', { hint: '1-' + names.length });
     const newIdx = parseInt(newChoice, 10);
@@ -89,7 +89,7 @@ export async function handleChangeProject(ctx: SessionContext, m: GitProvider, n
     }
 }
 
-export function handleFlakinessDashboard() {
+export function handleFlakinessDashboard(): void {
     if (!currentProjectName) {
         warn('Nenhum projeto selecionado.');
         return;

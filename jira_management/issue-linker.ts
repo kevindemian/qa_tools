@@ -6,6 +6,9 @@ import type JiraResource from './jira_resource';
 import type JiraLinkManager from './jira_link_manager';
 import type { LogContext, TestCase } from '../shared/types';
 
+const CROSS_REF_SLEEP_MS = 500;
+const MIN_GROUP_MEMBERS = 2;
+
 interface ActionResult {
     action?: string;
 }
@@ -61,11 +64,11 @@ class IssueLinker {
         const crossLog = rootLogger.child({ operation: 'cross-ref' });
 
         for (const group of Object.values(groups)) {
-            if (group.members.length < 2) continue;
+            if (group.members.length < MIN_GROUP_MEMBERS) continue;
 
             crossLog.info('Atualizando descrições do grupo "' + group.name + '" (' + group.members.length + ' issues)');
 
-            await sleep(500);
+            await sleep(CROSS_REF_SLEEP_MS);
 
             for (const member of group.members) {
                 const others = group.members

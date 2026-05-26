@@ -6,7 +6,7 @@ interface SessionCountersItem {
     status: string;
 }
 
-export interface TestResultSummary {
+interface TestResultSummary {
     status: 'ok' | 'error';
     label: string;
     message: string;
