@@ -6,6 +6,11 @@ Output a JSON object with a "tests" array. Each object in the array must have th
 - "severity": one of "high" | "medium" | "low"
 - "recommendation": string (min 10 characters, describes fix or investigation step)
 
+Examples of good output:
+```json
+{"tests": [{"title": "Login fails with invalid credentials", "classification": "ASSERTION", "severity": "high", "recommendation": "Fix assertion on line 42 — expected 200 but got 401"}]}
+```
+
 Respond with ONLY valid JSON. No markdown wrapping, no explanation.
 
 Failed Tests:

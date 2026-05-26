@@ -9,7 +9,9 @@ Categories:
 - APPLICATION: Actual bug in the application under test
 - UNKNOWN: Cannot determine
 
-Output format: CATEGORY: explanation
+Respond with EXACTLY ONE LINE in exactly this format: CATEGORY: explanation
+
+Example: ASSERTION: Expected 200 but got 500 on login endpoint
 
 Test Title:
 {{TEST_TITLE}}

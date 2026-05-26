@@ -157,57 +157,122 @@ Removidos: `sourceBranch`/`targetBranch` de `updateMergeRequest` (github_manager
 
 | # | Item | Prio | Status |
 |---|------|------|--------|
-| LLM-1 | `shared/sanitize.ts` — sanitização de secrets/PII antes de enviar a LLMs externos | P0 | ⬜ Pending |
-| LLM-2 | Aplicar sanitização em `failure-analysis.ts`, `classifyFailure`, `ai-pr-desc.ts`, `ai-test-impact.ts` | P0 | ⬜ Pending |
-| LLM-3 | Prompt injection protection (delimiters em `case18.ts`, error messages) | P2 | ⬜ Pending |
-| LLM-4 | Gemini API key: URL param → `X-Goog-Api-Key` header | P3 | ⬜ Pending |
-| LLM-5 | Sanitizar error body antes de logar em `llm-client.ts` | P4 | ⬜ Pending |
+| LLM-1 | `shared/sanitize.ts` — sanitização de secrets/PII | P0 | ✅ Done |
+| LLM-2 | Aplicar sanitização nos 4 callers | P0 | ✅ Done |
+| LLM-3 | Prompt injection protection (delimiters) | P2 | ✅ Done |
+| LLM-4 | Gemini API key: URL → `X-Goog-Api-Key` header | P3 | ✅ Done |
+| LLM-5 | Sanitizar error body antes de logar | P4 | ✅ Done |
 
 ### Lote 9.2 — Prompt Engineering (foco principal)
 
 | # | Item | Prio | Status |
 |---|------|------|--------|
-| LLM-6 | `failure-analysis.md`: remover "plain text", adicionar JSON schema explícito | P1 | ⬜ Pending |
-| LLM-7 | `user-story-to-tests.md`: adicionar JSON schema | P2 | ⬜ Pending |
-| LLM-8 | `case18.ts`: usar template como system prompt, user story como user message | P2 | ⬜ Pending |
-| LLM-9 | Injetar schema do report programaticamente no prompt | P2 | ⬜ Pending |
+| LLM-6 | `failure-analysis.md`: JSON schema, remover contradição | P1 | ✅ Done |
+| LLM-7 | `user-story-to-tests.md`: adicionar JSON schema | P2 | ✅ Done |
+| LLM-8 | `case18.ts`: template como system, story como user | P2 | ✅ Done |
+| LLM-9 | Schema injetado programaticamente (user msg simplificada) | P2 | ✅ Done |
 
 ### Lote 9.3 — Infra Free-tier
 
 | # | Item | Prio | Status |
 |---|------|------|--------|
-| LLM-10 | Default `LLM_FAST_MODEL`: `llama3-8b-8192` → `llama-3.1-8b-instant` (128K context) | P1 | ⬜ Pending |
-| LLM-11 | Sliding window rate limiter (30 req/min Groq) + jitter + parse `Retry-After` | P1 | ⬜ Pending |
-| LLM-12 | Circuit breaker: 5 consec 429 → break 30s | P2 | ⬜ Pending |
+| LLM-10 | Default model: 8K→128K (`llama-3.1-8b-instant`) | P1 | ✅ Done |
+| LLM-11 | Sliding window rate limiter + jitter + `Retry-After` | P1 | ✅ Done |
+| LLM-12 | Circuit breaker: 5 consec 429 → break 30s | P2 | ✅ Done |
 
 ### Lote 9.4 — Resiliência
 
 | # | Item | Prio | Status |
 |---|------|------|--------|
-| LLM-13 | Fallback chain multi-tier (fast→main, report→main, etc) | P0 | ⬜ Pending |
-| LLM-14 | Caller identity no cache key | P1 | ⬜ Pending |
+| LLM-13 | Fallback chain multi-tier | P0 | ✅ Done |
+| LLM-14 | Caller identity no cache key | P1 | ✅ Done |
 
 ### Lote 9.5 — Validação
 
 | # | Item | Prio | Status |
 |---|------|------|--------|
-| LLM-15 | Validar resposta de `classifyFailure()`: regex + 1 retry | P0 | ⬜ Pending |
-| LLM-16 | Validar resposta de `case18()`: JSON.parse + 1 retry | P0 | ⬜ Pending |
-| LLM-17 | Confidence mapping: prefix match → regex `\b` | P3 | ⬜ Pending |
+| LLM-15 | `classifyFailure()`: regex + 1 retry | P0 | ✅ Done |
+| LLM-16 | `case18()`: JSON.parse + 1 retry | P0 | ✅ Done |
+| LLM-17 | Confidence mapping: regex `\b` | P3 | ✅ Done |
 
 ### Lote 9.6 — Testes
 
 | # | Item | Prio | Status |
 |---|------|------|--------|
-| LLM-18 | Integration tests env-gated (INTEGRATION=true) | P2 | ⬜ Pending |
-| LLM-19 | Token usage tracking (sem cost tracking) | P4 | ⬜ Pending |
-| LLM-20 | Remover dead code `small` tier (com warning) | P4 | ⬜ Pending |
+| LLM-18 | Integration tests env-gated | P2 | ✅ Done |
+| LLM-19 | Token usage tracking | P4 | ⬜ Low prio (não implementado) |
+| LLM-20 | Deprecation warning for `small` tier | P4 | ✅ Done |
 
 ### Lote 9.7 — UX
 
 | # | Item | Prio | Status |
 |---|------|------|--------|
-| LLM-21 | Spinner para `reviewWithLlm` | P2 | ⬜ Pending |
-| LLM-22 | Comentário "diverse reviewer" no `llm-review.ts` | P2 | ⬜ Pending |
+| LLM-21 | Spinner para `reviewWithLlm` | P2 | ✅ Done |
+| LLM-22 | Comentário "diverse reviewer" no `llm-review.ts` | P2 | ✅ Done |
 
-**Progresso:** 0/22 ✅
+**Progresso:** 21/22 ✅ (LLM-19 token tracking — P4, não implementado por ser baixa prioridade e custo zero em tiers free)
+
+---
+
+## 🔬 LLM Integração — Auditoria Profunda (Lote 10)
+
+**Objetivo:** Elevar nota da auditoria de 5.2/10 para >9/10 com foco em **qualidade dos artefatos produzidos** (casos de teste, análises, relatórios).
+
+### Fase 1 — Segurança + Prompts (5 arquivos, paralelo total)
+
+| # | Item | Prio | Arquivo | Status |
+|---|------|------|---------|--------|
+| L10-1 | Sanitizar `userMsg` em `case18.ts` (via primária + retry) | P0 | `jira_management/commands/case18.ts` | ⬜ Pending |
+| L10-2 | Sanitizar `buildPrompt` em `run-comparison.ts` | P2 | `shared/run-comparison.ts` | ⬜ Pending |
+| L10-3 | Few-shot examples em `failure-analysis.md` | P2 | `shared/prompts/failure-analysis.md` | ⬜ Pending |
+| L10-4 | Few-shot examples em `user-story-to-tests.md` | P2 | `shared/prompts/user-story-to-tests.md` | ⬜ Pending |
+| L10-5 | `classify.md`: explicitar "exactly one line" + fix regex | P2 | `shared/prompts/classify.md`, `shared/failure-analysis.ts` | ⬜ Pending |
+| L10-6 | Melhorar metaprompt do reviewer p/ sugerir melhorias concretas | P2 | `shared/llm-review.ts` | ⬜ Pending |
+| L10-7 | Verificar conflito `response_format: json_object` vs prompt manual | P2 | `shared/llm-client.ts` | ⬜ Pending |
+
+### Fase 2 — Core da LLM Client (infra + corretude, 1 arquivo)
+
+| # | Item | Prio | Arquivo | Status |
+|---|------|------|---------|--------|
+| L10-8 | Circuit breaker: reset só no primário (`i === 0`) | P0 | `shared/llm-client.ts` | ⬜ Pending |
+| L10-9 | Rate limiter thread-safe (per-tier lock) | P0 | `shared/llm-client.ts` | ⬜ Pending |
+| L10-10 | HTTP timeout com AbortController (30s) | P1 | `shared/llm-client.ts` | ⬜ Pending |
+| L10-11 | Cache key incluir model + temperature + responseFormat | P1 | `shared/llm-client.ts` | ⬜ Pending |
+| L10-12 | Rate limit configurável via `LLM_RATE_LIMIT` env | P1 | `shared/llm-client.ts`, `shared/config.ts` | ⬜ Pending |
+| L10-13 | `parseRetryAfter` lidar com formato data (RFC 7231) | P3 | `shared/llm-client.ts` | ⬜ Pending |
+| L10-14 | Circuit success decrementar em vez de deletar | P2 | `shared/llm-client.ts` | ⬜ Pending |
+| L10-15 | Remover tier `small` do type + código | P4 | `shared/llm-client.ts` | ⬜ Pending |
+| L10-16 | Report fallback pular main quando config === main | P2 | `shared/llm-client.ts`, `shared/llm-review.ts` | ⬜ Pending |
+
+### Fase 3 — Validação semântica (qualidade dos artefatos)
+
+| # | Item | Prio | Arquivo | Status |
+|---|------|------|---------|--------|
+| L10-17 | `case18.ts`: validar conteúdo (steps.length, expectedResult.length) | P2 | `jira_management/commands/case18.ts` | ⬜ Pending |
+| L10-18 | `report-validator.ts`: regra de consistência severity+recommendation | P2 | `shared/report-validator.ts` | ⬜ Pending |
+| L10-19 | `llm-metrics.ts`: rastrear artifactApprovedCount/rejectedCount | P3 | `shared/llm-metrics.ts` | ⬜ Pending |
+| L10-20 | `classifyFailure`: fallback para `reviewWithLlm` se ambos falharem | P2 | `shared/failure-analysis.ts` | ⬜ Pending |
+
+### Fase 4 — Infra/config + isolamento de testes
+
+| # | Item | Prio | Arquivo | Status |
+|---|------|------|---------|--------|
+| L10-21 | Exportar `resetRateLimiter()` + `resetCircuitState()` | P2 | `shared/llm-client.ts` | ⬜ Pending |
+| L10-22 | Teste de integração JSON response format | P2 | `shared/llm-integration.test.ts` | ⬜ Pending |
+
+### Fase 5 — Testes unitários de infra
+
+| # | Item | Prio | Arquivo | Status |
+|---|------|------|---------|--------|
+| L10-23 | Rate limiter: 4 testes (limite, overflow, janela, concorrência) | P2 | `shared/llm-client.test.ts` | ⬜ Pending |
+| L10-24 | Circuit breaker: 4 testes (abertura, bloqueio, restauração, reset) | P2 | `shared/llm-client.test.ts` | ⬜ Pending |
+| L10-25 | Testes de sanitização p/ case18 + run-comparison | P2 | `shared/sanitize.test.ts` | ⬜ Pending |
+| L10-26 | Mutation tests do `classifyRegex` com entradas borda | P2 | `shared/failure-analysis.test.ts` | ⬜ Pending |
+
+### Fase 6 — Golden dataset / benchmark (opcional)
+
+| # | Item | Prio | Arquivo | Status |
+|---|------|------|---------|--------|
+| L10-27 | Criar fixtures de referência e script de benchmark | P4 | `shared/prompts/__fixtures__/` | ⬜ Pending |
+
+**Progresso geral:** 0/27 ⬜

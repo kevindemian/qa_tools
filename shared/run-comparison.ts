@@ -1,5 +1,6 @@
 import type { MetricsRun } from './metrics';
 import { llmPrompt } from './llm-client';
+import { sanitizeForLlm } from './sanitize';
 import { rootLogger } from './logger';
 
 function runSummary(run: MetricsRun): string {
@@ -37,7 +38,7 @@ function buildPrompt(runA: MetricsRun, runB: MetricsRun): string {
 
 export async function compareRuns(runA: MetricsRun, runB: MetricsRun): Promise<string> {
     try {
-        const prompt = buildPrompt(runA, runB);
+        const prompt = sanitizeForLlm(buildPrompt(runA, runB));
         return await llmPrompt('fast', prompt, 'Compare these two test runs.', 'compare-runs');
     } catch (err) {
         rootLogger.error('Failed to compare runs: ' + (err as Error).message);
