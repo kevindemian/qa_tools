@@ -109,8 +109,8 @@ describe('GitHubManager', () => {
     });
 
     describe('getSchedules', () => {
-        it('returns empty array', () => {
-            const result = manager.getSchedules();
+        it('returns empty array', async () => {
+            const result = await manager.getSchedules();
             expect(result).toEqual([]);
         });
     });
@@ -488,8 +488,8 @@ describe('GitHubManager', () => {
                 maxRedirects: 5,
             });
             expect(result).not.toBeNull();
-            expect(Buffer.isBuffer(result!.buffer)).toBe(true);
-            expect(result!.filename).toBe('artifact.zip');
+            expect(Buffer.isBuffer(result.buffer)).toBe(true);
+            expect(result.filename).toBe('artifact.zip');
         });
 
         it('throws on API error (mutation)', async () => {
