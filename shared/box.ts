@@ -1,5 +1,6 @@
 import { stripVTControlCharacters } from 'util';
 import { palette, applyPalette, type PaletteKey } from './palette';
+import { getTheme } from './theme';
 
 export type BoxBorder = 'single' | 'double' | 'round' | 'none';
 
@@ -81,7 +82,14 @@ function buildContentRows(
 }
 
 export function box(lines: string[], options: BoxOptions = {}): string {
-    const { title = '', border: borderStyle = 'single', color, padding = 0, width: maxWidth } = options;
+    const theme = getTheme();
+    const {
+        title = '',
+        border: borderStyle = theme.borders.type,
+        color,
+        padding = theme.borders.padding,
+        width: maxWidth,
+    } = options;
     const totalWidth = boxContentWidth(lines, title, padding, maxWidth);
     const b = borderStyle === 'none' ? NONE : BORDERS[borderStyle]!;
     const styled = color ? applyPalette(color) : palette.fg;
