@@ -48,29 +48,33 @@ export function icon(name: 'ok' | 'err' | 'warn' | 'info'): string {
     return fallback[name] || fallback.info!;
 }
 
+type LogLevel = 'INFO' | 'ERROR' | 'WARN' | 'HELP';
+
+function _log(level: LogLevel, color: chalk.Chalk, iconName: string, msg: string, quietOk?: boolean): void {
+    if (quietOk || !isQuiet()) {
+        output.print(color.bold(icon(iconName as 'ok' | 'err' | 'warn' | 'info')) + ' ' + msg);
+    }
+    rootLogger.writeFileOnly(level, msg);
+}
+
 export function success(msg: string): void {
-    if (!isQuiet()) output.print(chalk.green.bold(icon('ok')) + ' ' + msg);
-    rootLogger.writeFileOnly('INFO', msg);
+    _log('INFO', chalk.green, 'ok', msg);
 }
 
 export function error(msg: string): void {
-    output.print(chalk.red.bold(icon('err')) + ' ' + msg);
-    rootLogger.writeFileOnly('ERROR', msg);
+    _log('ERROR', chalk.red, 'err', msg, true);
 }
 
 export function warn(msg: string): void {
-    output.print(chalk.yellow.bold(icon('warn')) + ' ' + msg);
-    rootLogger.writeFileOnly('WARN', msg);
+    _log('WARN', chalk.yellow, 'warn', msg, true);
 }
 
 export function info(msg: string): void {
-    if (!isQuiet()) output.print(chalk.cyan.bold(icon('info')) + ' ' + msg);
-    rootLogger.writeFileOnly('INFO', msg);
+    _log('INFO', chalk.cyan, 'info', msg);
 }
 
 export function helpLine(msg: string): void {
-    if (!isQuiet()) output.print(chalk.cyan.bold(icon('info')) + ' ' + msg);
-    rootLogger.writeFileOnly('HELP', msg);
+    _log('HELP', chalk.cyan, 'info', msg);
 }
 
 export function print(msg: string): void {

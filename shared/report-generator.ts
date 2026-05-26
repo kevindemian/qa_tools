@@ -2,23 +2,48 @@ import type { FlatTest } from './result_parser';
 import { rootLogger } from './logger';
 import { getTheme } from './theme';
 
+/**
+ * HTML test report generation.
+ *
+ * Converts FlatTest results into a self-contained HTML page with summary
+ * cards, optional SVG distribution chart, AI analysis section, and a
+ * toggleable test table.  The pipeline always produces valid output,
+ * falling back to a minimal error page when the render fails.
+ */
+
+/** Controls the content and metadata embedded in the generated HTML report. */
 interface ReportOptions {
+    /** Custom title for the report page. */
     title?: string;
+    /** Whether to render the passed/failed/skipped bar chart (default true). */
     includeChart?: boolean;
+    /** AI-generated textual analysis to embed below the summary cards. */
     llmAnalysis?: string;
+    /** Stated confidence of the AI analysis — drives badge colour. */
     llmConfidence?: 'high' | 'medium' | 'low';
+    /** When true, displays a warning that the analysis is a template fallback. */
     llmFallback?: boolean;
+    /** ISO-8601 timestamp shown in the report footer. */
     generatedAt?: string;
+    /** Name of the CI job or workflow that triggered this report. */
     source?: string;
+    /** URL linking to the CI pipeline run, rendered in the footer. */
     ciUrl?: string;
+    /** Branch name displayed in the footer (linked if ciUrl is also set). */
     branch?: string;
 }
 
+/** Aggregated counts derived from a FlatTest array for rendering summary cards. */
 interface ReportStats {
+    /** Number of tests that passed. */
     passed: number;
+    /** Number of tests that failed. */
     failed: number;
+    /** Number of tests that were skipped. */
     skipped: number;
+    /** Total number of tests (passed + failed + skipped). */
     total: number;
+    /** Cumulative duration of all tests in milliseconds. */
     duration: number;
 }
 
@@ -151,6 +176,13 @@ tr:nth-child(even):hover { background: #f1f5f9; }
     );
 }
 
+/**
+ * Generate a complete HTML report from flat test results.
+ *
+ * @param tests  - Flat test result objects to render in the report.
+ * @param options - Optional overrides for title, chart, AI analysis, etc.
+ * @returns A self-contained HTML string suitable for saving to disk.
+ */
 export function generateHtmlReport(tests: FlatTest[], options?: ReportOptions): string {
     return generateReportWithFallback(tests, options);
 }
@@ -302,6 +334,18 @@ document.querySelectorAll('.error-truncated').forEach(function(el) {
 </script>`;
 }
 
+/**
+ * Internal report builder that wraps every failure in a safe error page.
+ *
+ * Assembles the full HTML: CSS, summary cards, chart, AI section,
+ * test table, and toggle script.  If any part of the render throws,
+ * the error is logged and a minimal error page is returned instead.
+ *
+ * @internal
+ * @param tests  - Flat test result objects to render.
+ * @param options - Optional overrides for report content.
+ * @returns A self-contained HTML string (or a minimal error page on failure).
+ */
 export function generateReportWithFallback(tests: FlatTest[], options?: ReportOptions): string {
     try {
         const stats = statsFromTests(tests);

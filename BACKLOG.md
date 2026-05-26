@@ -328,4 +328,68 @@ Removidos: `sourceBranch`/`targetBranch` de `updateMergeRequest` (github_manager
 
 ---
 
-**Progresso geral:** 27/27 ✅ + 17/17 UX ✅
+---
+
+## 🔧 Simplificação Estrutural — Lote 12
+
+**Data:** 2026-05-26
+**Score atual:** 9.3/10
+**Foco:** Reduzir duplicação + complexidade acidental. Zero mudança de comportamento.
+
+| Fase | Descrição                                                           | Status | Esforço |
+| ---- | ------------------------------------------------------------------- | ------ | ------- |
+| A    | `result_parser.ts`: `readAndParse` + `EMPTY_PARSE_RESULT` + limpeza | ⬜     | 0.5h    |
+| B    | `llm-client.ts`: remover async lock desnecessário                   | ⬜     | 0.2h    |
+| C    | `prompt-ui.ts`: helper `_log` para 5 funções duplicadas             | ⬜     | 0.3h    |
+| D    | JSDoc nas 5 APIs públicas críticas                                  | ⬜     | 0.5h    |
+| E    | Type check + testes + commit                                        | ⬜     | 0.2h    |
+
+### Findings registrados (auditoria de simplificação)
+
+#### 🔴 Alto impacto (100–250 linhas, risco baixo)
+
+| #   | Onde                                       | Problema                                                                        | Solução                                 | Eco  |
+| --- | ------------------------------------------ | ------------------------------------------------------------------------------- | --------------------------------------- | ---- |
+| S1  | `config.ts:108-424`                        | 37 instance getters + 37 static delegators (~230 linhas)                        | Proxy `[[Get]]` ou geração programática | ~200 |
+| S2  | `result_parser.ts:193-221`                 | `parseTestResultsFile` e `parseCypressResults` = mesmo código, parser diferente | Função `readAndParse(filePath, parser)` | ~25  |
+| S3  | `result_parser.ts` + `report-generator.ts` | Objeto vazio `{tests:[], stats:{...}}` repetido 5x                              | Constante `EMPTY_PARSE_RESULT`          | ~20  |
+| S4  | `prompt-ui.ts:51-74`                       | 5 funções (`success`,`error`,`warn`,`info`,`helpLine`) 90% idênticas            | Helper `_log(level, msg)` + lookup      | ~30  |
+| S5  | `llm-client.ts:251-271`                    | Async lock (`_rateLocks`) em operação síncrona (Node single-threaded)           | Remover lock                            | ~12  |
+
+#### 🟡 Médio impacto (10–30 linhas, risco médio)
+
+| #   | Onde                          | Problema                                       | Solução                                           |
+| --- | ----------------------------- | ---------------------------------------------- | ------------------------------------------------- |
+| S6  | `report-generator.ts:154-156` | `generateHtmlReport` = wrapper 1-liner         | Consolidar                                        |
+| S7  | `failure-analysis.ts:34-37`   | `analyzeFailures` wrapper descarta HTML report | Remover, callers usam `analyzeFailuresWithReport` |
+| S8  | `llm-client.ts:67-145`        | 6 funções de tier config quase idênticas       | Tabela `Record<LlmTier, ProviderConfig>`          |
+| S9  | `main.ts:235-692`             | `(loadState() as StateSchema)` repetido 11x    | `loadTypedState()` em `state.ts`                  |
+| S10 | `result_parser.ts:96`         | final `\|\| undefined` redundante              | Remover                                           |
+
+#### 🟢 Baixo impacto (<10 linhas, refatoração cosmética)
+
+| #   | Onde                        | Solução                                                        |
+| --- | --------------------------- | -------------------------------------------------------------- |
+| S11 | `report-generator.ts:263`   | `for (let i...)` com `tests[i]!` → `for (const t of tests)`    |
+| S12 | `report-generator.ts:197`   | Ternário aninhado confidence → `Record<string, string>` lookup |
+| S13 | `result_parser.ts:128-130`  | 3× `.filter().length` → 1 `reduce`                             |
+| S14 | `failure-analysis.ts:78-89` | Retry manual → `for` loop com array de tentativas              |
+
+### Sprint atual (Lote 12)
+
+| #   | Item                                           | Prio | Status                                  |
+| --- | ---------------------------------------------- | ---- | --------------------------------------- |
+| S2  | `readAndParse` helper (result_parser.ts)       | P1   | ✅ Done                                 |
+| S3  | `EMPTY_PARSE_RESULT` constante                 | P1   | ✅ Done                                 |
+| S5  | Remover async lock (llm-client.ts)             | P1   | ✅ Done                                 |
+| S4  | `_log` helper (prompt-ui.ts)                   | P1   | ✅ Done                                 |
+| J1  | JSDoc em `types.ts` (interfaces públicas)      | P2   | ✅ Done                                 |
+| J2  | JSDoc em `result_parser.ts` (exports)          | P2   | ✅ Done                                 |
+| J3  | JSDoc em `report-generator.ts` (exports)       | P2   | ✅ Done                                 |
+| J4  | JSDoc em `llm-client.ts` (funções públicas)    | P2   | ✅ Done                                 |
+| J5  | JSDoc em `jira_resource.ts` (métodos públicos) | P2   | ✅ Done                                 |
+| S6  | Consolidar `generateHtmlReport` wrapper        | P2   | ⬜ Postergado — manter export p/ compat |
+
+---
+
+**Progresso geral:** 27/27 ✅ + 17/17 UX ✅ + 9/14 Simplificação
