@@ -130,3 +130,16 @@ Removidos: `sourceBranch`/`targetBranch` de `updateMergeRequest` (github_manager
 **Problema:** `WEB_STYLE.md` descreve uma interface web, nunca implementada.
 
 **Solução proposta:** Se houver demanda, implementar como SPA standalone.
+
+---
+
+## 🎨 UI/UX Refinement Plan (Lote 8)
+
+| ID | Item | Fase | Status |
+|----|------|------|--------|
+| UX-1 | Theme System & Style Guide (`theme.ts`, `STYLE_GUIDE.md`) | I | ✅ Done |
+| UX-2 | Baseline Snapshots (TUI + HTML report) | I | 🔄 In Progress |
+| UX-3 | TUI: Refactor `box.ts` + `prompt-ui.ts` to consume theme | II | ⬜ Pending |
+| UX-4 | TUI: Action Search no menu Jira | II | ⬜ Pending |
+| UX-5 | Reports: Consume theme, add Failed Summary + toggle | III | ⬜ Pending |
+| UX-6 | TUI: Atalho `[D]etails` para erros não mapeados | IV | ⬜ Pending |
