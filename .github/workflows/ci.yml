@@ -20,4 +20,5 @@ jobs:
                   cache: npm
             - run: npm ci
             - run: npx tsc --noEmit
+            - run: npx eslint . --ext .ts
             - run: npx jest --coverage --forceExit --detectOpenHandles --runInBand

@@ -71,6 +71,58 @@ Removidos: `sourceBranch`/`targetBranch` de `updateMergeRequest` (github_manager
 
 ---
 
+## 🔷 Plano de Melhorias — 4 Fases
+
+**Data:** 2026-05-26
+**Esforço total:** ~7h
+
+| Fase | Descrição                                                                                                   | Status | Esforço |
+| ---- | ----------------------------------------------------------------------------------------------------------- | ------ | ------- |
+| 1    | CI hardening (thresholds, eslint, ts-prune) + remove docs-archive                                           | 🔴     | 15 min  |
+| 2    | `noUncheckedIndexedAccess` tsconfig (173 prod errors)                                                       | 🔴     | 4h      |
+| 3    | Branch coverage (6 files: splash, temp-dir, report-generator, prompt-input, github_manager, gitlab_manager) | 🔴     | 2.5h    |
+| 4    | Lazy `require('fs')` → `import` em temp-dir.ts                                                              | 🔴     | 20 min  |
+
+### Fase 1 — Prevenção imediata
+
+| Item | O que                                                                                 | Esforço |
+| ---- | ------------------------------------------------------------------------------------- | ------- |
+| 1a   | Bump coverage thresholds: statements 88, branches 78, functions 85, lines 90          | 2 min   |
+| 1b   | Adicionar `npx eslint . --ext .ts` ao CI (GitHub + GitLab)                            | 5 min   |
+| 1c   | Adicionar `npx ts-prune -p tsconfig.json` ao CI (warn-only)                           | 5 min   |
+| 1d   | Remover `docs-archive/` + script `docs` do package.json + `docs/` do tsconfig include | 3 min   |
+
+### Fase 2 — `noUncheckedIndexedAccess` (layer order)
+
+| Layer | Arquivos                                            | Erros |
+| ----- | --------------------------------------------------- | ----- |
+| 2a    | `shared/*.ts` (produção)                            | ~25   |
+| 2b    | `git_triggers/*.ts` (produção)                      | ~50   |
+| 2c    | `jira_management/*.ts` (produção)                   | ~40   |
+| 2d    | `*.test.ts` (todos)                                 | ~110  |
+| 2e    | Ativar `noUncheckedIndexedAccess: true` no tsconfig | —     |
+
+### Fase 3 — Branch coverage (paralelo)
+
+| Arquivo                          | Branch atual | Meta |
+| -------------------------------- | ------------ | ---- |
+| `shared/splash.ts`               | 65.78%       | ≥80% |
+| `shared/temp-dir.ts`             | 66.66%       | ≥80% |
+| `shared/report-generator.ts`     | 71.87%       | ≥80% |
+| `shared/prompt-input.ts`         | 72.97%       | ≥80% |
+| `git_triggers/github_manager.ts` | 74%          | ≥80% |
+| `git_triggers/gitlab_manager.ts` | 72.72%       | ≥80% |
+
+### Fase 4 — Lazy `require('fs')`
+
+| Item | O que                                                |
+| ---- | ---------------------------------------------------- |
+| 4a   | Substituir `require('fs')` por `import * as fs`      |
+| 4b   | Remover eslint-disable no-require-imports            |
+| 4c   | Atualizar temp-dir.test.ts p/ usar `jest.mock('fs')` |
+
+---
+
 ## 🔷 WEB_STYLE.md (ADIADA)
 
 **Prioridade:** P3

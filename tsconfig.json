@@ -16,13 +16,6 @@
         "isolatedModules": true,
         "types": ["node", "jest"]
     },
-    "include": [
-        "jest-setup.ts",
-        "shared/**/*.ts",
-        "jira_management/**/*.ts",
-        "git_triggers/**/*.ts",
-        "docs/**/*.ts",
-        "e2e/**/*.ts"
-    ],
+    "include": ["jest-setup.ts", "shared/**/*.ts", "jira_management/**/*.ts", "git_triggers/**/*.ts", "e2e/**/*.ts"],
     "exclude": ["node_modules", "docs-archive"]
 }
