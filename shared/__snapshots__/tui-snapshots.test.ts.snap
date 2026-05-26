@@ -1,0 +1,15 @@
+// Jest Snapshot v1, https://jestjs.io/docs/snapshot-testing
+
+exports[`TUI Visual Snapshots renders color-coded status elements 1`] = `"Success"`;
+
+exports[`TUI Visual Snapshots renders color-coded status elements 2`] = `"Error"`;
+
+exports[`TUI Visual Snapshots renders standard box with content 1`] = `
+"  ┌────────────────────────────────────────────────────────┐
+  │                                                        │
+  │   Title                                                │
+  │   Content Line 1                                       │
+  │   Content Line 2                                       │
+  │                                                        │
+  └────────────────────────────────────────────────────────┘"
+`;
