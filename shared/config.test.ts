@@ -7,6 +7,7 @@ describe('Config', () => {
         'JIRA_BASE_URL',
         'JIRA_PERSONAL_TOKEN',
         'XRAY_BASE_URL',
+        'XRAY_MODE',
         'JIRA_PROJECT',
         'GIT_TOKEN',
         'GIT_BASE_URL',
@@ -291,6 +292,27 @@ describe('Config', () => {
             ] as const;
             emptyGetters.forEach((g) => {
                 expect(Config[g]).toBe('');
+            });
+        });
+    });
+
+    describe('xrayMode', () => {
+        it('returns server by default', () => {
+            expect(Config.xrayMode).toBe('server');
+        });
+
+        it('returns env value when set', () => {
+            process.env.XRAY_MODE = 'cloud';
+            jest.isolateModules(() => {
+                const cfg = require('./config').default;
+                expect(cfg.xrayMode).toBe('cloud');
+            });
+        });
+
+        it('throws on invalid value', () => {
+            process.env.XRAY_MODE = 'invalid';
+            jest.isolateModules(() => {
+                expect(() => require('./config').default.xrayMode).toThrow(/Invalid XRAY_MODE/);
             });
         });
     });

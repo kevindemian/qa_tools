@@ -27,6 +27,7 @@ interface ConfigOverrides {
     jiraBaseUrl?: string;
     jiraPersonalToken?: string;
     xrayBaseUrl?: string;
+    xrayMode?: string;
     jiraProject?: string;
     gitToken?: string;
     gitBaseUrl?: string;
@@ -112,6 +113,13 @@ class Config {
     }
     get xrayBaseUrl(): string {
         return this.overrides.xrayBaseUrl ?? envVal('XRAY_BASE_URL');
+    }
+    get xrayMode(): 'server' | 'cloud' {
+        const val = this.overrides.xrayMode ?? envVal('XRAY_MODE', 'server');
+        if (val !== 'server' && val !== 'cloud') {
+            throw new Error(`Invalid XRAY_MODE: "${val}". Must be "server" or "cloud".`);
+        }
+        return val;
     }
     get jiraProject(): string {
         return this.overrides.jiraProject ?? envVal('JIRA_PROJECT', 'ECSPOL');
@@ -286,6 +294,9 @@ class Config {
     }
     static get jiraProject(): string {
         return Config.defaultInstance.jiraProject;
+    }
+    static get xrayMode(): 'server' | 'cloud' {
+        return Config.defaultInstance.xrayMode;
     }
 
     static get gitToken(): string {

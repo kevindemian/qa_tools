@@ -5,6 +5,7 @@ import { writeReport } from '../../shared/temp-dir';
 import { parseCypressResults } from '../../shared/result_parser';
 import { generateHtmlReport } from '../../shared/report-generator';
 import { analyzeFailures } from '../../shared/failure-analysis';
+import { collectAutomated, interactiveBugReportFlow } from '../../shared/bug-report';
 import type { CommandContext } from './context';
 
 function injectAnalysisSection(html: string, analysis: string): string {
@@ -58,6 +59,14 @@ async function handler(c: CommandContext): Promise<boolean | void> {
         `${result.stats.total} testes (${result.stats.passed} pass, ${result.stats.failed} fail)`,
         'ok',
     );
+
+    if (
+        result.stats.failed > 0 &&
+        (await askConfirm('Deseja criar um relatório de bug (Bug Report) no Jira para as falhas?', false))
+    ) {
+        const automatedReport = collectAutomated(result);
+        await interactiveBugReportFlow(c.jiraResource, c.ctx.project_name, automatedReport);
+    }
 }
 
 export default { handler };

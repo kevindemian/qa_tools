@@ -201,6 +201,33 @@ export type SearchResult = {
     total: number;
 };
 
+export interface LLMEnrichment {
+    enrichedAt: string;
+    model: string;
+    suggestedFix?: string;
+    rootCause?: string;
+    confidence?: number;
+}
+
+export interface BugReport {
+    summary: string;
+    description: string;
+    source: 'automated' | 'manual';
+    stepsToReproduce?: string[];
+    expectedResult?: string;
+    actualResult?: string;
+    environment?: string;
+    severity: 'trivial' | 'minor' | 'major' | 'critical';
+    component?: string;
+    llmEnrichment?: LLMEnrichment;
+    metadata?: {
+        pipelineId?: string;
+        branch?: string;
+        commitSha?: string;
+        provider?: string;
+    };
+}
+
 export class JiraResourceError extends Error {
     status?: number;
     resource?: string;

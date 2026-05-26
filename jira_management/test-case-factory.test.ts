@@ -11,15 +11,19 @@ jest.mock('../shared/prompt', () => mockPrompt);
 
 import TestCaseFactory from './test-case-factory';
 
+function createMockImporter() {
+    return { importStep: jest.fn() };
+}
+
 describe('TestCaseFactory', () => {
     let factory: TestCaseFactory;
     let mockJiraResource: { postJiraResource: jest.Mock };
-    let mockJiraResourceXray: { postJiraResource: jest.Mock };
+    let mockImporter: ReturnType<typeof createMockImporter>;
 
     beforeEach(() => {
         mockJiraResource = { postJiraResource: jest.fn() };
-        mockJiraResourceXray = { postJiraResource: jest.fn() };
-        factory = new TestCaseFactory(mockJiraResource as never, mockJiraResourceXray as never);
+        mockImporter = createMockImporter();
+        factory = new TestCaseFactory(mockJiraResource as never, mockImporter);
     });
 
     afterEach(() => {
@@ -69,14 +73,14 @@ describe('TestCaseFactory', () => {
         const opLog = { info: jest.fn() };
 
         it('returns null on all steps success', async () => {
-            mockJiraResourceXray.postJiraResource.mockResolvedValue({});
+            mockImporter.importStep.mockResolvedValue({});
             const result = await factory.postSteps(issueKey, test, opLog);
             expect(result).toBeNull();
-            expect(mockJiraResourceXray.postJiraResource).toHaveBeenCalledTimes(2);
+            expect(mockImporter.importStep).toHaveBeenCalledTimes(2);
         });
 
         it('calls update on ProgressBar when not quiet', async () => {
-            mockJiraResourceXray.postJiraResource.mockResolvedValue({});
+            mockImporter.importStep.mockResolvedValue({});
             mockPrompt.isQuiet.mockReturnValue(false);
             await factory.postSteps(issueKey, test, opLog);
             const barInstance = mockPrompt.ProgressBar.mock.results[0].value;
@@ -86,13 +90,11 @@ describe('TestCaseFactory', () => {
         });
 
         it('aborts on step error when onError returns abort', async () => {
-            mockJiraResourceXray.postJiraResource
-                .mockResolvedValueOnce({})
-                .mockRejectedValueOnce(new Error('Step error'));
+            mockImporter.importStep.mockResolvedValueOnce({}).mockRejectedValueOnce(new Error('Step error'));
             mockPrompt.onError.mockResolvedValue('abort');
             const result = await factory.postSteps(issueKey, test, opLog);
             expect(result).toEqual({ action: 'abort' });
-            expect(mockJiraResourceXray.postJiraResource).toHaveBeenCalledTimes(2);
+            expect(mockImporter.importStep).toHaveBeenCalledTimes(2);
         });
 
         it('continues after step error when onError does not return abort', async () => {
@@ -104,14 +106,14 @@ describe('TestCaseFactory', () => {
                     { fields: { Action: 'Verify' } },
                 ],
             };
-            mockJiraResourceXray.postJiraResource
+            mockImporter.importStep
                 .mockResolvedValueOnce({})
                 .mockRejectedValueOnce(new Error('Step error'))
                 .mockResolvedValueOnce({});
             mockPrompt.onError.mockResolvedValue('continue');
             const result = await factory.postSteps(issueKey, test3, opLog);
             expect(result).toBeNull();
-            expect(mockJiraResourceXray.postJiraResource).toHaveBeenCalledTimes(3);
+            expect(mockImporter.importStep).toHaveBeenCalledTimes(3);
         });
     });
 });
