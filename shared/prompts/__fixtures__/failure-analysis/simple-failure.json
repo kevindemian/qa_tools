@@ -1,0 +1,19 @@
+{
+    "name": "simple-failure",
+    "description": "Single assertion failure in login test",
+    "input": "1. [failed] Login fails with invalid credentials (1200ms)\n2. [failed] Logout redirects to home (800ms)",
+    "validate": {
+        "type": "json-schema",
+        "schema": {
+            "tests": [
+                {
+                    "title": "string",
+                    "classification": "ASSERTION | TIMEOUT | ENVIRONMENT | FLAKY | APPLICATION | UNKNOWN",
+                    "severity": "high | medium | low",
+                    "recommendation": "string (min 10 chars)"
+                }
+            ]
+        },
+        "minTests": 2
+    }
+}

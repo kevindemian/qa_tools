@@ -1,0 +1,9 @@
+{
+    "name": "timeout-failure",
+    "description": "Test that exceeded time limit",
+    "input": {
+        "title": "Database migration runs in under 5 seconds",
+        "error": "Timeout of 5000ms exceeded. Test took 15342ms to complete."
+    },
+    "expectedCategory": "TIMEOUT"
+}
