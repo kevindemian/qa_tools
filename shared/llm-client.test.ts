@@ -73,6 +73,7 @@ function mockOkResponse(body: string): Response {
         ok: true,
         status: 200,
         text: mockResponseText.mockResolvedValue(body),
+        headers: { get: () => null },
     } as unknown as Response;
 }
 function mockErrorResponse(status: number): Response {
@@ -80,6 +81,7 @@ function mockErrorResponse(status: number): Response {
         ok: false,
         status,
         text: jest.fn().mockResolvedValue('error'),
+        headers: { get: () => null },
     } as unknown as Response;
 }
 
