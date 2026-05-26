@@ -34,7 +34,14 @@ const LLM_FETCH_RETRIES = 3;
 const LLM_RETRY_BASE_WAIT_MS = 2000;
 const LLM_RETRY_MAX_WAIT_MS = 10000;
 const LLM_ERROR_BODY_TRUNCATION = 200;
+const LLM_RATE_LIMIT_PER_TIER = 30;
+const LLM_RATE_WINDOW_MS = 60000;
+const LLM_CIRCUIT_BREAK_THRESHOLD = 5;
+const LLM_CIRCUIT_BREAK_MS = 30000;
+
 const cache = new Map<string, CacheEntry>();
+const _rateTimestamps = new Map<LlmTier, number[]>();
+const _circuitState = new Map<LlmTier, { failures: number; breakUntil: number }>();
 let _cleanupTimer: ReturnType<typeof setInterval> | null = null;
 
 function startCacheCleanup(): void {
@@ -133,10 +140,6 @@ function tierToConfig(tier: LlmTier): ProviderConfig {
     }
 }
 
-function tierOrder(): LlmTier[] {
-    return ['main', 'fallback', 'batch'];
-}
-
 function cacheKey(tier: LlmTier, system: string, user: string, callerId?: string): string {
     return crypto
         .createHash('sha256')
@@ -201,7 +204,7 @@ async function fetchWithRetry(url: string, options: RequestInit, retries = LLM_F
             resp = await fetch(url, options);
         } catch (err) {
             if (attempt < retries) {
-                const wait = Math.min(LLM_RETRY_BASE_WAIT_MS * Math.pow(2, attempt - 1), LLM_RETRY_MAX_WAIT_MS);
+                const wait = jitter(Math.min(LLM_RETRY_BASE_WAIT_MS * Math.pow(2, attempt - 1), LLM_RETRY_MAX_WAIT_MS));
                 rootLogger.warn('LLM fetch error, retrying in ' + wait + 'ms: ' + (err as Error).message);
                 await new Promise((resolve) => setTimeout(resolve, wait));
                 continue;
@@ -211,7 +214,12 @@ async function fetchWithRetry(url: string, options: RequestInit, retries = LLM_F
         if (resp.ok) return resp;
         if (resp.status === 429 || resp.status >= 500) {
             if (attempt < retries) {
-                const wait = Math.min(LLM_RETRY_BASE_WAIT_MS * Math.pow(2, attempt - 1), LLM_RETRY_MAX_WAIT_MS);
+                const wait = jitter(
+                    parseRetryAfter(
+                        resp,
+                        Math.min(LLM_RETRY_BASE_WAIT_MS * Math.pow(2, attempt - 1), LLM_RETRY_MAX_WAIT_MS),
+                    ),
+                );
                 rootLogger.warn('LLM HTTP ' + resp.status + ', retrying in ' + wait + 'ms');
                 await new Promise((resolve) => setTimeout(resolve, wait));
                 continue;
@@ -225,7 +233,66 @@ async function fetchWithRetry(url: string, options: RequestInit, retries = LLM_F
     throw new Error('LLM max retries exceeded');
 }
 
-async function sendToProvider(cfg: ProviderConfig, system: string, user: string): Promise<string> {
+function checkRateLimit(tier: LlmTier): void {
+    const now = Date.now();
+    const timestamps = _rateTimestamps.get(tier) || [];
+    const windowed = timestamps.filter((t) => now - t < LLM_RATE_WINDOW_MS);
+    if (windowed.length >= LLM_RATE_LIMIT_PER_TIER) {
+        throw new Error(
+            'Rate limit exceeded for tier ' +
+                tier +
+                ' (' +
+                LLM_RATE_LIMIT_PER_TIER +
+                ' req/' +
+                LLM_RATE_WINDOW_MS / 1000 +
+                's)',
+        );
+    }
+    windowed.push(now);
+    _rateTimestamps.set(tier, windowed);
+}
+
+function checkCircuitBreaker(tier: LlmTier): void {
+    const state = _circuitState.get(tier);
+    if (state && state.failures >= LLM_CIRCUIT_BREAK_THRESHOLD && Date.now() < state.breakUntil) {
+        throw new Error(
+            'Circuit breaker open for tier ' +
+                tier +
+                ' (retry after ' +
+                Math.ceil((state.breakUntil - Date.now()) / 1000) +
+                's)',
+        );
+    }
+}
+
+function recordCircuitFailure(tier: LlmTier): void {
+    const state = _circuitState.get(tier) || { failures: 0, breakUntil: 0 };
+    state.failures++;
+    if (state.failures >= LLM_CIRCUIT_BREAK_THRESHOLD) {
+        state.breakUntil = Date.now() + LLM_CIRCUIT_BREAK_MS;
+        rootLogger.warn('Circuit breaker opened for tier ' + tier + ' for ' + LLM_CIRCUIT_BREAK_MS / 1000 + 's');
+    }
+    _circuitState.set(tier, state);
+}
+
+function recordCircuitSuccess(tier: LlmTier): void {
+    _circuitState.delete(tier);
+}
+
+function jitter(waitMs: number): number {
+    return Math.round(waitMs * (0.5 + Math.random() * 0.5));
+}
+
+function parseRetryAfter(resp: Response, defaultMs: number): number {
+    const header = resp.headers.get('Retry-After');
+    if (!header) return defaultMs;
+    const seconds = parseInt(header, 10);
+    if (!isNaN(seconds) && seconds > 0) return Math.min(seconds * 1000, LLM_RETRY_MAX_WAIT_MS);
+    return defaultMs;
+}
+
+async function sendToProvider(cfg: ProviderConfig, tier: LlmTier, system: string, user: string): Promise<string> {
+    checkCircuitBreaker(tier);
     if (!cfg.apiKey) throw new Error('API key missing for tier');
 
     if (cfg.format === 'gemini') {
@@ -255,27 +322,34 @@ async function sendToProvider(cfg: ProviderConfig, system: string, user: string)
 }
 
 async function sendWithFallback(tier: LlmTier, system: string, user: string): Promise<string> {
+    checkRateLimit(tier);
     const primary = tierToConfig(tier);
     const errors: string[] = [];
 
     const candidates: ProviderConfig[] = [primary];
 
-    // Add fallback chain only for main tier (analysis)
-    if (tier === 'main') {
-        const fallbackOrder = tierOrder();
-        for (const t of fallbackOrder) {
-            if (t === tier) continue;
-            candidates.push(tierToConfig(t));
-        }
+    // Per-tier fallback chain
+    const fallbackMap: Partial<Record<LlmTier, LlmTier[]>> = {
+        main: ['fallback', 'batch'],
+        fast: ['main', 'fallback', 'batch'],
+        report: ['main', 'fallback'],
+        small: ['fast', 'main'],
+    };
+    const fallbacks = fallbackMap[tier] || [];
+    for (const t of fallbacks) {
+        candidates.push(tierToConfig(t));
     }
 
     for (const cfg of candidates) {
         try {
-            return await sendToProvider(cfg, system, user);
+            const result = await sendToProvider(cfg, tier, system, user);
+            recordCircuitSuccess(tier);
+            return result;
         } catch (err) {
             const msg = (err as Error).message;
             errors.push(cfg.model + '@' + cfg.baseUrl + ': ' + msg);
             rootLogger.warn('LLM provider failed: ' + msg + ' — trying next');
+            if (/HTTP 429/i.test(msg)) recordCircuitFailure(tier);
         }
     }
 
