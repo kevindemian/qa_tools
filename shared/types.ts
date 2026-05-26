@@ -1,3 +1,7 @@
+export type JsonObject = Record<string, unknown>;
+export type LogContext = Record<string, unknown>;
+export type StateContainer = Record<string, unknown>;
+
 export interface LoggerLike {
     info(msg: string, ctx?: Record<string, unknown>): void;
     warn(msg: string, ctx?: Record<string, unknown>): void;

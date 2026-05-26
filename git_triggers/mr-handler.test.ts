@@ -175,7 +175,8 @@ describe('handleListApprovedMRs', () => {
         mockPrompt.mockReturnValue('opened');
         const mrs = [{ iid: 1, title: 'MR 1' }] as MergeRequestInfo[];
         (mockM.searchMergeRequests as jest.Mock).mockResolvedValue(mrs);
-        (mockM as unknown).isApproved = undefined;
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        (mockM as any).isApproved = undefined;
 
         await handleListApprovedMRs(ctx, mockM);
 

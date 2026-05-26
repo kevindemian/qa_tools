@@ -23,11 +23,11 @@ Issues registradas durante refatorações, postergadas por escopo.
 
 **Prioridade:** P1
 
-| Item     | Status             | O que                                                                                  | Esforço |
-| -------- | ------------------ | -------------------------------------------------------------------------------------- | ------- |
-| AUDIT-15 | ✅                 | TTL cache em `llm-client.ts` com `setInterval` cleanup + `unref()`                     | 1h      |
-| AUDIT-16 | ✅                 | `retryCounts` em `http-client.ts` com `RetryEntry{count,lastUsed}` + cleanup periódico | 0.5h    |
-| AUDIT-14 | 🔄 **Em execução** | `Record<string, unknown>` → interfaces (84 ocorrências em produção)                    | 4h      |
+| Item     | Status | O que                                                                                                          | Esforço |
+| -------- | ------ | -------------------------------------------------------------------------------------------------------------- | ------- |
+| AUDIT-15 | ✅     | TTL cache em `llm-client.ts` com `setInterval` cleanup + `unref()`                                             | 1h      |
+| AUDIT-16 | ✅     | `retryCounts` em `http-client.ts` com `RetryEntry{count,lastUsed}` + cleanup periódico                         | 0.5h    |
+| AUDIT-14 | ✅     | `Record<string, unknown>` → `JsonObject`/`LogContext`/`StateContainer`/interfaces (84 ocorrências em produção) | 4h      |
 
 ### AUDIT-14 — `Record<string, unknown>` → interfaces
 

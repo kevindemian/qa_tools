@@ -1,6 +1,6 @@
 import { success, onError, isQuiet, ProgressBar } from '../shared/prompt';
 import type JiraResource from './jira_resource';
-import type { TestCase } from '../shared/types';
+import type { JsonObject, LogContext, TestCase } from '../shared/types';
 
 interface CreateIssueResult {
     key?: string;
@@ -21,11 +21,11 @@ class TestCaseFactory {
     }
 
     async createIssue(
-        testData: Record<string, unknown>,
+        testData: JsonObject,
         testTitle: string,
         testIdx: number,
         totalTests: number,
-        opLog: { info: (msg: string, meta?: Record<string, unknown>) => void },
+        opLog: { info: (msg: string, meta?: LogContext) => void },
     ): Promise<CreateIssueResult> {
         try {
             const issue = await this.jiraResource.postJiraResource('issue', testData);
@@ -45,7 +45,7 @@ class TestCaseFactory {
     async postSteps(
         issueKey: string,
         test: TestCase,
-        _opLog: { info: (msg: string, meta?: Record<string, unknown>) => void },
+        _opLog: { info: (msg: string, meta?: LogContext) => void },
     ): Promise<StepsResult | null> {
         let abortSteps = false;
         const stepBar = !isQuiet() ? new ProgressBar(test.steps.length, { width: 15 }) : null;

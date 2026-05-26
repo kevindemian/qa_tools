@@ -3,6 +3,7 @@ import path from 'path';
 import os from 'os';
 import { info } from '../shared/prompt';
 import { rootLogger } from '../shared/logger';
+import type { JsonObject } from '../shared/types';
 import type JiraResource from './jira_resource';
 
 const FALLBACK_LINK_TYPES = [
@@ -117,11 +118,7 @@ class JiraLinkManager {
         return this._preconditionFieldId;
     }
 
-    async createIssueLink(
-        sourceKey: string,
-        targetKey: string,
-        linkTypeName: string,
-    ): Promise<Record<string, unknown>> {
+    async createIssueLink(sourceKey: string, targetKey: string, linkTypeName: string): Promise<JsonObject> {
         const linkTypeId = await this.resolveLinkTypeId(linkTypeName);
         const payload = {
             type: { id: linkTypeId },
@@ -131,17 +128,15 @@ class JiraLinkManager {
         return this.jiraResource.postJiraResource('issueLink', payload);
     }
 
-    async associatePrecondition(testKey: string, preconditionKey: string): Promise<Record<string, unknown> | null> {
+    async associatePrecondition(testKey: string, preconditionKey: string): Promise<JsonObject | null> {
         const fieldId = await this._getPreconditionFieldId();
         info(`Associando pre-condition ${preconditionKey} ao teste ${testKey}...`);
-        const testIssue = await this.jiraResource.getJiraResource<{ fields?: Record<string, unknown> }>(
-            `issue/${testKey}`,
-        );
+        const testIssue = await this.jiraResource.getJiraResource<{ fields?: JsonObject }>(`issue/${testKey}`);
         const current = ((testIssue && testIssue.fields && testIssue.fields[fieldId]) as string[]) || [];
         if (!current.includes(preconditionKey)) {
             current.push(preconditionKey);
         }
-        const payload: Record<string, unknown> = {};
+        const payload: JsonObject = {};
         payload[fieldId] = current;
         return this.jiraResource.putJiraResource(`issue/${testKey}`, { fields: payload });
     }

@@ -12,6 +12,7 @@ import type {
     PipelineJob,
     ArtifactInfo,
     CICDVariable,
+    JsonObject,
 } from '../shared/types';
 
 class GitHubManager implements GitProvider {
@@ -48,7 +49,7 @@ class GitHubManager implements GitProvider {
         return '/repos/' + this.owner + '/' + this.repo;
     }
 
-    async _get(url: string, opts?: { operation?: string; returnNull?: boolean; params?: Record<string, unknown> }) {
+    async _get(url: string, opts?: { operation?: string; returnNull?: boolean; params?: JsonObject }) {
         try {
             const args = opts?.params ? [{ params: opts.params }] : [];
             const response = await this.client.get(url, ...args);
@@ -134,7 +135,7 @@ class GitHubManager implements GitProvider {
         return Promise.resolve([]);
     }
 
-    runSchedule(scheduleId: string | number): Promise<Record<string, unknown>> {
+    runSchedule(scheduleId: string | number): Promise<JsonObject> {
         const err = new Error(
             'GitHub Actions schedules not available via REST API. Use workflow_dispatch or repository_dispatch.',
         );
@@ -211,7 +212,7 @@ class GitHubManager implements GitProvider {
         targetBranch: string,
         searchStatus: string,
     ): Promise<MergeRequestInfo[]> {
-        const params: Record<string, unknown> = { per_page: 100 };
+        const params: JsonObject = { per_page: 100 };
         if (sourceBranch) params.head = this.owner + ':' + sourceBranch;
         if (targetBranch) params.base = targetBranch;
         if (searchStatus) params.state = searchStatus === 'opened' ? 'open' : searchStatus;
@@ -221,7 +222,7 @@ class GitHubManager implements GitProvider {
             params,
             returnNull: true,
         });
-        return (data || []).map((pr: Record<string, unknown>) => this._formatPR(pr));
+        return (data || []).map((pr: JsonObject) => this._formatPR(pr));
     }
 
     async acceptMergeRequest(iid: string | number, shouldRemoveSourceBranch = true): Promise<MergeRequestInfo | null> {
@@ -232,7 +233,7 @@ class GitHubManager implements GitProvider {
                 info('PR #' + iid + ' already merged');
                 return pr;
             }
-            const body: Record<string, unknown> = {};
+            const body: JsonObject = {};
             if (shouldRemoveSourceBranch) body.delete_branch_on_merge = true;
             const response = await this.client.put(this._repoPath + '/pulls/' + iid + '/merge', body);
             return this._formatPR(response.data);
@@ -260,7 +261,7 @@ class GitHubManager implements GitProvider {
             returnNull: true,
         });
         const jobs = (data && data.jobs) || [];
-        return jobs.map((j: Record<string, unknown>) => ({
+        return jobs.map((j: JsonObject) => ({
             id: j.id,
             name: j.name,
             stage: j.runner_group_name || '',
@@ -274,7 +275,7 @@ class GitHubManager implements GitProvider {
             returnNull: true,
         });
         const artifacts = (data && data.artifacts) || [];
-        return artifacts.map((a: Record<string, unknown>) => ({ id: a.id, name: a.name }));
+        return artifacts.map((a: JsonObject) => ({ id: a.id, name: a.name }));
     }
 
     async downloadArtifact(artifactId: string | number): Promise<{ buffer: Buffer; filename: string }> {
@@ -306,7 +307,7 @@ class GitHubManager implements GitProvider {
             returnNull: true,
         });
         const variables = (data && data.variables) || [];
-        return variables.map((v: Record<string, unknown>) => ({
+        return variables.map((v: JsonObject) => ({
             key: v.name,
             value: v.value,
             type: 'variable',
@@ -340,10 +341,10 @@ class GitHubManager implements GitProvider {
             operation: 'verificar reviews',
             returnNull: true,
         });
-        return (data || []).some((r: Record<string, unknown>) => r.state === 'APPROVED');
+        return (data || []).some((r: JsonObject) => r.state === 'APPROVED');
     }
 
-    _formatPR(data: Record<string, unknown>): MergeRequestInfo | null {
+    _formatPR(data: JsonObject): MergeRequestInfo | null {
         if (!data) return null;
         return {
             iid: data.number as string | number,
@@ -352,8 +353,8 @@ class GitHubManager implements GitProvider {
             state: data.merged ? 'merged' : data.state === 'closed' ? 'closed' : 'opened',
             web_url: data.html_url as string,
             description: data.body as string,
-            source_branch: ((data.head as Record<string, unknown>) || {}).ref as string,
-            target_branch: ((data.base as Record<string, unknown>) || {}).ref as string,
+            source_branch: ((data.head as JsonObject) || {}).ref as string,
+            target_branch: ((data.base as JsonObject) || {}).ref as string,
             approved: false,
         };
     }

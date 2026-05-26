@@ -1,5 +1,6 @@
 import fs from 'fs';
 import path from 'path';
+import type { JsonObject } from '../shared/types';
 import { rootLogger } from '../shared/logger';
 
 class PackageVersionManager {
@@ -15,7 +16,7 @@ class PackageVersionManager {
         this._updateJsonFile(this.packagePath, newVersion);
     }
 
-    _updateJsonFile(filePath: string, newVersion: string, extraUpdate?: (json: Record<string, unknown>) => void): void {
+    _updateJsonFile(filePath: string, newVersion: string, extraUpdate?: (json: JsonObject) => void): void {
         try {
             const data = fs.readFileSync(filePath, 'utf8');
             const json = JSON.parse(data);

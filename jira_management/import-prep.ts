@@ -3,7 +3,7 @@ import * as os from 'os';
 import * as path from 'path';
 import { md } from '../shared/markdown';
 import Config from '../shared/config';
-import type { TestCase } from '../shared/types';
+import type { JsonObject, TestCase } from '../shared/types';
 import { isPreconditionKey } from '../shared/quoted-string';
 import TestCaseValidator from './test-case-validator';
 import { rootLogger } from '../shared/logger';
@@ -19,7 +19,7 @@ function _checkResumeCheckpoint(
     sourceType: string,
     projectName: string,
 ): { resumeFrom: number; inMemoryTasksId: string[]; inMemoryTasksText: string[] } {
-    const cp = loadState()._checkpoint as Record<string, unknown> | undefined;
+    const cp = loadState()._checkpoint as JsonObject | undefined;
     const cpKey = sourceType === 'json' ? 'jsonPath' : 'csvPath';
     let resumeFrom = 0;
     const inMemoryTasksId: string[] = [];
@@ -371,7 +371,7 @@ function parseJsonTests(jsonPath: string): TestCase[] {
     const raw = fs.readFileSync(jsonPath, 'utf8');
     const parsed = JSON.parse(raw);
     if (!Array.isArray(parsed)) throw new Error('JSON deve ser um array de casos de teste');
-    return parsed.map((item: Record<string, unknown>, i: number) => {
+    return parsed.map((item: JsonObject, i: number) => {
         if (!item.title || !item.steps || !Array.isArray(item.steps)) {
             throw new Error('Item ' + (i + 1) + ': campos obrigatórios: title (string), steps (array)');
         }

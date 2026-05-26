@@ -2,7 +2,7 @@ import path from 'path';
 import fs from 'fs';
 import { print, success, warn, info, prompt, printError, withSpinner } from '../shared/prompt';
 import { SessionContext } from '../shared/session-context';
-import type { GitProvider } from '../shared/types';
+import type { GitProvider, StateContainer } from '../shared/types';
 import { loadMetrics, calculateFlakiness } from '../shared/metrics';
 import { generateFlakinessHtml } from '../shared/flakiness-dashboard';
 import {
@@ -79,7 +79,7 @@ export async function handleChangeProject(ctx: SessionContext, m: GitProvider, n
         setProjectId(getProjects()[newName]);
         const newManager = createManagerForProject(newName, getProjects()[newName]);
         setManager(newManager);
-        updateState((s: Record<string, unknown>) => {
+        updateState((s: StateContainer) => {
             s.lastProject = newName;
         });
         success('Projeto alterado para: ' + newName + ' (' + getProviderForProject(newName) + ')');

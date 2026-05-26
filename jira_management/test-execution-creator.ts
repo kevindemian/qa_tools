@@ -8,6 +8,7 @@ import {
     FAILED_TO_GET_ISSUE_TYPES,
     FAILED_TO_GET_CUSTOM_FIELDS,
 } from './constants';
+import type { JsonObject } from '../shared/types';
 
 interface TestExecutionResult {
     key: string;
@@ -60,7 +61,7 @@ class TestExecutionCreator {
         if (!testField) throw new Error(CUSTOM_FIELD_NOT_FOUND);
         execLog.info('Custom field encontrado: ' + testField.id + ' (' + testField.name + ')');
 
-        const payload: Record<string, unknown> = {
+        const payload: JsonObject = {
             fields: {
                 project: { key: projectName },
                 summary,
