@@ -6,7 +6,6 @@ Para restaurar: `git checkout HEAD~1 -- BACKLOG.md`
 
 ---
 
-
 ## Dívida técnica
 
 ### UX-001 — Melhorias de UI/UX na CLI (CONCLUÍDO)
@@ -125,7 +124,6 @@ Para restaurar: `git checkout HEAD~1 -- BACKLOG.md`
 | 7   | Cobertura ≥90% lines + ≥85% branches (94.89% / 85.14%)                                     | P2         | Alto    | ✅     |
 
 ---
-
 
 ---
 
@@ -940,3 +938,90 @@ ESLint: 0 erros · tsc: 0 erros
 
 ---
 
+## 🧹 Sessão 2026-05-25/26 — Cleanup Comprehensive + LLM & Reports
+
+Consolidação de todas as fases do "Comprehensive Cleanup — 7 Fases" e "Plano Integrado LLM + Reports & Analytics".
+
+### Correção TUI (CONCLUÍDA)
+
+**Objetivo:** Substituir TUI_STYLE (custom/sync) por `@inquirer/*` first com fallback `readlineSync` não-TTY.
+
+### DÉBITO-001 — OOM (CONCLUÍDO)
+
+**Solução:** `BATCH_SIZE=50` com `setImmediate()` em `executeTestCreationLoop`.
+
+### Correção de Menus e Navegação (CONCLUÍDA)
+
+7 problemas críticos resolvidos (showDocs sem await, aliases mortos, /help síncrono, /quit ausente).
+
+### Expansão de Testes (CONCLUÍDA)
+
+**Resultado:** 997 testes, 47 suites.
+
+### LLM + Reports & Analytics — 6 Fases (CONCLUÍDO)
+
+| Fase | Itens                                                | Status |
+| ---- | ---------------------------------------------------- | ------ |
+| A    | LLM client, HTML report generator, Metrics collector | ✅     |
+| B    | Prompt templates, Coverage analyzer                  | ✅     |
+| C    | Menu commands case17/18/19                           | ✅     |
+| D    | Failure analysis, Narrative summary                  | ✅     |
+| E    | Flakiness dashboard, Coverage trends, Run comparison | ✅     |
+| F    | Multi-provider fallback chain                        | ✅     |
+
+### GitTriggers + LLM (CONCLUÍDO)
+
+Pipeline failure analysis, AI PR description, flakiness alerts.
+
+### Test Impact Analysis + Batch Mode (CONCLUÍDO)
+
+LLM test impact analysis ao criar PR/MR; `--project --branch --auto` batch mode.
+
+### LLM Quality Assurance (CONCLUÍDO)
+
+ReportValidator, LlmMetricsTracker, reviewWithLlm pipeline com fallback.
+
+### Auditoria Geral — Débitos
+
+| Débito                                                  | Status |
+| ------------------------------------------------------- | ------ |
+| AUDIT-01: Quebrar git_triggers/main.ts (979→297 linhas) | ✅     |
+| AUDIT-02: Quebrar shared/prompt.ts                      | ✅     |
+| AUDIT-03: Tipar 36 funções managers                     | ✅     |
+| AUDIT-04: Interfaces GitProvider returns                | ✅     |
+| AUDIT-05: CJS→ESM (23 arquivos)                         | ✅     |
+| AUDIT-06: Eliminar require() zombies                    | ✅     |
+| AUDIT-07: Import side effects lazy-load                 | ✅     |
+| AUDIT-08: console.log → print()                         | ✅     |
+| AUDIT-09: Parser quoted-string duplicado                | ✅     |
+| AUDIT-10: Unificar regex precondition                   | ✅     |
+| AUDIT-11: Testes entry-menu/tls/git-provider-error      | ✅     |
+| AUDIT-13: Renomear jira_validator.test.ts               | ✅     |
+| AUDIT-15: TTL cache llm-client                          | ✅     |
+| AUDIT-16: RetryCounts cleanup http-client               | ✅     |
+
+### Smoke Tests E2E GitHub Real (CONCLUÍDO)
+
+6 testes read-only contra API real.
+
+### Fase 7 — Testes SRP Extraídos (CONCLUÍDO)
+
+8 novos `.test.ts`. **1263 testes, 74 suites.**
+
+### Preview HTML Sidecar (CONCLUÍDO)
+
+HTML sidecar em `/tmp/qa-preview.html`.
+
+### Comprehensive Cleanup (7 Fases)
+
+| Fase | O quê                                              | Status     |
+| ---- | -------------------------------------------------- | ---------- |
+| 0    | Commitar Fase 7 (8 untracked test files)           | ✅         |
+| 1    | CJS→ESM (23 arquivos convertidos)                  | ✅         |
+| 2    | Tipar GitProvider (implements, async getSchedules) | ✅         |
+| 3    | SRP jira_resource (version+sprint extraídos)       | ✅         |
+| 4    | Quebrar 5 funções >50 linhas (R4)                  | ✅         |
+| 5    | Débitos P3 (TTL + retry)                           | ⏳ Parcial |
+| 6    | LLM + Reports A2                                   | ✅         |
+
+---
