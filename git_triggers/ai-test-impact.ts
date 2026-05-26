@@ -1,6 +1,7 @@
 import fs from 'fs';
 import { llmPrompt } from '../shared/llm-client';
 import { rootLogger } from '../shared/logger';
+import { sanitizeForLlm } from '../shared/sanitize';
 import type { GitProvider } from '../shared/types';
 
 interface MappingItem {
@@ -67,7 +68,7 @@ export async function assessTestImpact(
 
         const titles = loadMappingTitles(mappingPath);
         const system = 'You are a QA automation assistant specialized in test impact analysis.';
-        const user = buildPrompt(diff, titles, source, target);
+        const user = buildPrompt(sanitizeForLlm(diff), titles, source, target);
         return await llmPrompt('fast', system, user);
     } catch (err) {
         rootLogger.error('Failed to assess test impact: ' + (err as Error).message);
