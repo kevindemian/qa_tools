@@ -298,6 +298,36 @@ describe('extractErrorMessage', () => {
     it('handles non-axios error safely', () => {
         expect(extractErrorMessage({})).toBe('');
     });
+
+    it('appends HTTP status code when available', () => {
+        const err = { response: { status: 429, data: { message: 'Too Many Requests' } } };
+        expect(extractErrorMessage(err)).toBe('Too Many Requests (HTTP 429)');
+    });
+
+    it('appends URL when config.url is present', () => {
+        const err = {
+            response: { data: { errorMessages: ['Not Found'] } },
+            config: { url: 'https://jira.example.com/rest/api/2/issue/FOO-123' },
+        };
+        expect(extractErrorMessage(err)).toBe('Not Found → https://jira.example.com/rest/api/2/issue/FOO-123');
+    });
+
+    it('appends both status and URL', () => {
+        const err = {
+            response: { status: 400, data: { message: 'Bad Request' } },
+            config: { url: 'https://jira.example.com/rest/api/2/issue' },
+        };
+        expect(extractErrorMessage(err)).toBe('Bad Request (HTTP 400) → https://jira.example.com/rest/api/2/issue');
+    });
+
+    it('still works when err.message is fallback and status+url are present', () => {
+        const err = {
+            response: { status: 500, data: {} },
+            message: 'Internal error',
+            config: { url: 'https://jira.example.com/rest/api/2/search' },
+        };
+        expect(extractErrorMessage(err)).toBe('Internal error (HTTP 500) → https://jira.example.com/rest/api/2/search');
+    });
 });
 
 describe('printError', () => {

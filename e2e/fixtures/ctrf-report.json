@@ -1,0 +1,32 @@
+{
+    "results": {
+        "tool": { "name": "cypress" },
+        "summary": {
+            "tests": 4,
+            "passed": 2,
+            "failed": 1,
+            "skipped": 1,
+            "pending": 0,
+            "other": 0,
+            "start": 1706828654274,
+            "stop": 1706828655782
+        },
+        "environment": {
+            "appName": "QA Tools",
+            "buildName": "Release 2.7",
+            "buildNumber": "100"
+        },
+        "tests": [
+            { "name": "Login Test", "status": "passed", "duration": 1200, "suite": "Authentication" },
+            {
+                "name": "Logout Test",
+                "status": "failed",
+                "duration": 800,
+                "suite": "Authentication",
+                "message": "Expected true, got false"
+            },
+            { "name": "Dashboard Render", "status": "passed", "duration": 2000, "suite": "Dashboard" },
+            { "name": "Error Handling", "status": "skipped", "duration": 0, "suite": "Error Scenarios" }
+        ]
+    }
+}

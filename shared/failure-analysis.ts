@@ -53,6 +53,8 @@ export async function analyzeFailuresWithReport(tests: FlatTest[]): Promise<Anal
         llmAnalysis: result.content,
         llmConfidence: result.confidence,
         llmFallback: result.fallbackUsed,
+        generatedAt: new Date().toISOString(),
+        source: 'AI Failure Analysis',
     });
 
     snapshotLlmMetrics();

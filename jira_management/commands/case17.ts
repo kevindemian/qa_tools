@@ -33,6 +33,8 @@ async function handler(c: CommandContext): Promise<boolean | void> {
 
     let html = generateHtmlReport(result.tests, {
         title: `Relatório - ${c.ctx.project_name}`,
+        generatedAt: new Date().toISOString(),
+        source: 'Relatório HTML',
     });
 
     if (result.stats.failed > 0 && (await askConfirm('Incluir análise das falhas (IA)?', true))) {

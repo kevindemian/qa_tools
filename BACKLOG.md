@@ -135,14 +135,14 @@ Removidos: `sourceBranch`/`targetBranch` de `updateMergeRequest` (github_manager
 
 ## 🎨 UI/UX Refinement Plan (Lote 8)
 
-| ID | Item | Fase | Status |
-|----|------|------|--------|
-| UX-1 | Theme System & Style Guide (`theme.ts`, `STYLE_GUIDE.md`) | I | ✅ Done |
-| UX-2 | Baseline Snapshots (TUI + HTML report) | I | ✅ Done |
-| UX-3 | TUI: Refactor `box.ts` to consume theme | II | ✅ Done |
-| UX-4 | TUI: Action Search no menu Jira | II | ✅ Done |
-| UX-5 | Reports: Consume theme, add Failed Summary + toggle | III | ✅ Done |
-| UX-6 | TUI: Atalho `[D]etails` para erros não mapeados | IV | ✅ Done (já implementado) |
+| ID   | Item                                                      | Fase | Status                    |
+| ---- | --------------------------------------------------------- | ---- | ------------------------- |
+| UX-1 | Theme System & Style Guide (`theme.ts`, `STYLE_GUIDE.md`) | I    | ✅ Done                   |
+| UX-2 | Baseline Snapshots (TUI + HTML report)                    | I    | ✅ Done                   |
+| UX-3 | TUI: Refactor `box.ts` to consume theme                   | II   | ✅ Done                   |
+| UX-4 | TUI: Action Search no menu Jira                           | II   | ✅ Done                   |
+| UX-5 | Reports: Consume theme, add Failed Summary + toggle       | III  | ✅ Done                   |
+| UX-6 | TUI: Atalho `[D]etails` para erros não mapeados           | IV   | ✅ Done (já implementado) |
 
 **Summary:** All UI/UX refinement tasks completed. Lote 8: 6/6 ✅
 
@@ -155,60 +155,60 @@ Removidos: `sourceBranch`/`targetBranch` de `updateMergeRequest` (github_manager
 
 ### Lote 9.1 — Segurança e Higiene (P0)
 
-| # | Item | Prio | Status |
-|---|------|------|--------|
-| LLM-1 | `shared/sanitize.ts` — sanitização de secrets/PII | P0 | ✅ Done |
-| LLM-2 | Aplicar sanitização nos 4 callers | P0 | ✅ Done |
-| LLM-3 | Prompt injection protection (delimiters) | P2 | ✅ Done |
-| LLM-4 | Gemini API key: URL → `X-Goog-Api-Key` header | P3 | ✅ Done |
-| LLM-5 | Sanitizar error body antes de logar | P4 | ✅ Done |
+| #     | Item                                              | Prio | Status  |
+| ----- | ------------------------------------------------- | ---- | ------- |
+| LLM-1 | `shared/sanitize.ts` — sanitização de secrets/PII | P0   | ✅ Done |
+| LLM-2 | Aplicar sanitização nos 4 callers                 | P0   | ✅ Done |
+| LLM-3 | Prompt injection protection (delimiters)          | P2   | ✅ Done |
+| LLM-4 | Gemini API key: URL → `X-Goog-Api-Key` header     | P3   | ✅ Done |
+| LLM-5 | Sanitizar error body antes de logar               | P4   | ✅ Done |
 
 ### Lote 9.2 — Prompt Engineering (foco principal)
 
-| # | Item | Prio | Status |
-|---|------|------|--------|
-| LLM-6 | `failure-analysis.md`: JSON schema, remover contradição | P1 | ✅ Done |
-| LLM-7 | `user-story-to-tests.md`: adicionar JSON schema | P2 | ✅ Done |
-| LLM-8 | `case18.ts`: template como system, story como user | P2 | ✅ Done |
-| LLM-9 | Schema injetado programaticamente (user msg simplificada) | P2 | ✅ Done |
+| #     | Item                                                      | Prio | Status  |
+| ----- | --------------------------------------------------------- | ---- | ------- |
+| LLM-6 | `failure-analysis.md`: JSON schema, remover contradição   | P1   | ✅ Done |
+| LLM-7 | `user-story-to-tests.md`: adicionar JSON schema           | P2   | ✅ Done |
+| LLM-8 | `case18.ts`: template como system, story como user        | P2   | ✅ Done |
+| LLM-9 | Schema injetado programaticamente (user msg simplificada) | P2   | ✅ Done |
 
 ### Lote 9.3 — Infra Free-tier
 
-| # | Item | Prio | Status |
-|---|------|------|--------|
-| LLM-10 | Default model: 8K→128K (`llama-3.1-8b-instant`) | P1 | ✅ Done |
-| LLM-11 | Sliding window rate limiter + jitter + `Retry-After` | P1 | ✅ Done |
-| LLM-12 | Circuit breaker: 5 consec 429 → break 30s | P2 | ✅ Done |
+| #      | Item                                                 | Prio | Status  |
+| ------ | ---------------------------------------------------- | ---- | ------- |
+| LLM-10 | Default model: 8K→128K (`llama-3.1-8b-instant`)      | P1   | ✅ Done |
+| LLM-11 | Sliding window rate limiter + jitter + `Retry-After` | P1   | ✅ Done |
+| LLM-12 | Circuit breaker: 5 consec 429 → break 30s            | P2   | ✅ Done |
 
 ### Lote 9.4 — Resiliência
 
-| # | Item | Prio | Status |
-|---|------|------|--------|
-| LLM-13 | Fallback chain multi-tier | P0 | ✅ Done |
-| LLM-14 | Caller identity no cache key | P1 | ✅ Done |
+| #      | Item                         | Prio | Status  |
+| ------ | ---------------------------- | ---- | ------- |
+| LLM-13 | Fallback chain multi-tier    | P0   | ✅ Done |
+| LLM-14 | Caller identity no cache key | P1   | ✅ Done |
 
 ### Lote 9.5 — Validação
 
-| # | Item | Prio | Status |
-|---|------|------|--------|
-| LLM-15 | `classifyFailure()`: regex + 1 retry | P0 | ✅ Done |
-| LLM-16 | `case18()`: JSON.parse + 1 retry | P0 | ✅ Done |
-| LLM-17 | Confidence mapping: regex `\b` | P3 | ✅ Done |
+| #      | Item                                 | Prio | Status  |
+| ------ | ------------------------------------ | ---- | ------- |
+| LLM-15 | `classifyFailure()`: regex + 1 retry | P0   | ✅ Done |
+| LLM-16 | `case18()`: JSON.parse + 1 retry     | P0   | ✅ Done |
+| LLM-17 | Confidence mapping: regex `\b`       | P3   | ✅ Done |
 
 ### Lote 9.6 — Testes
 
-| # | Item | Prio | Status |
-|---|------|------|--------|
-| LLM-18 | Integration tests env-gated | P2 | ✅ Done |
-| LLM-19 | Token usage tracking | P4 | ⬜ Low prio (não implementado) |
-| LLM-20 | Deprecation warning for `small` tier | P4 | ✅ Done |
+| #      | Item                                 | Prio | Status                         |
+| ------ | ------------------------------------ | ---- | ------------------------------ |
+| LLM-18 | Integration tests env-gated          | P2   | ✅ Done                        |
+| LLM-19 | Token usage tracking                 | P4   | ⬜ Low prio (não implementado) |
+| LLM-20 | Deprecation warning for `small` tier | P4   | ✅ Done                        |
 
 ### Lote 9.7 — UX
 
-| # | Item | Prio | Status |
-|---|------|------|--------|
-| LLM-21 | Spinner para `reviewWithLlm` | P2 | ✅ Done |
-| LLM-22 | Comentário "diverse reviewer" no `llm-review.ts` | P2 | ✅ Done |
+| #      | Item                                             | Prio | Status  |
+| ------ | ------------------------------------------------ | ---- | ------- |
+| LLM-21 | Spinner para `reviewWithLlm`                     | P2   | ✅ Done |
+| LLM-22 | Comentário "diverse reviewer" no `llm-review.ts` | P2   | ✅ Done |
 
 **Progresso:** 21/22 ✅ (LLM-19 token tracking — P4, não implementado por ser baixa prioridade e custo zero em tiers free)
 
@@ -220,59 +220,112 @@ Removidos: `sourceBranch`/`targetBranch` de `updateMergeRequest` (github_manager
 
 ### Fase 1 — Segurança + Prompts (5 arquivos, paralelo total)
 
-| # | Item | Prio | Arquivo | Status |
-|---|------|------|---------|--------|
-| L10-1 | Sanitizar `userMsg` em `case18.ts` (via primária + retry) | P0 | `jira_management/commands/case18.ts` | ✅ Done |
-| L10-2 | Sanitizar `buildPrompt` em `run-comparison.ts` | P2 | `shared/run-comparison.ts` | ✅ Done |
-| L10-3 | Few-shot examples em `failure-analysis.md` | P2 | `shared/prompts/failure-analysis.md` | ✅ Done |
-| L10-4 | Few-shot examples em `user-story-to-tests.md` | P2 | `shared/prompts/user-story-to-tests.md` | ✅ Done |
-| L10-5 | `classify.md`: explicitar "exactly one line" + fix regex | P2 | `shared/prompts/classify.md`, `shared/failure-analysis.ts` | ✅ Done |
-| L10-6 | Melhorar metaprompt do reviewer p/ sugerir melhorias concretas | P2 | `shared/llm-review.ts` | ✅ Done |
-| L10-7 | Verificar conflito `response_format: json_object` vs prompt manual | P2 | `shared/llm-client.ts` | ✅ Done (sem conflito) |
+| #     | Item                                                               | Prio | Arquivo                                                    | Status                 |
+| ----- | ------------------------------------------------------------------ | ---- | ---------------------------------------------------------- | ---------------------- |
+| L10-1 | Sanitizar `userMsg` em `case18.ts` (via primária + retry)          | P0   | `jira_management/commands/case18.ts`                       | ✅ Done                |
+| L10-2 | Sanitizar `buildPrompt` em `run-comparison.ts`                     | P2   | `shared/run-comparison.ts`                                 | ✅ Done                |
+| L10-3 | Few-shot examples em `failure-analysis.md`                         | P2   | `shared/prompts/failure-analysis.md`                       | ✅ Done                |
+| L10-4 | Few-shot examples em `user-story-to-tests.md`                      | P2   | `shared/prompts/user-story-to-tests.md`                    | ✅ Done                |
+| L10-5 | `classify.md`: explicitar "exactly one line" + fix regex           | P2   | `shared/prompts/classify.md`, `shared/failure-analysis.ts` | ✅ Done                |
+| L10-6 | Melhorar metaprompt do reviewer p/ sugerir melhorias concretas     | P2   | `shared/llm-review.ts`                                     | ✅ Done                |
+| L10-7 | Verificar conflito `response_format: json_object` vs prompt manual | P2   | `shared/llm-client.ts`                                     | ✅ Done (sem conflito) |
 
 ### Fase 2 — Core da LLM Client (infra + corretude, 1 arquivo)
 
-| # | Item | Prio | Arquivo | Status |
-|---|------|------|---------|--------|
-| L10-8 | Circuit breaker: reset só no primário (`i === 0`) | P0 | `shared/llm-client.ts` | ✅ Done |
-| L10-9 | Rate limiter thread-safe (per-tier lock) | P0 | `shared/llm-client.ts` | ✅ Done |
-| L10-10 | HTTP timeout com AbortController (30s) | P1 | `shared/llm-client.ts` | ✅ Done |
-| L10-11 | Cache key incluir model + temperature + responseFormat | P1 | `shared/llm-client.ts` | ✅ Done |
-| L10-12 | Rate limit configurável via `LLM_RATE_LIMIT` env | P1 | `shared/llm-client.ts`, `shared/config.ts` | ✅ Done |
-| L10-13 | `parseRetryAfter` lidar com formato data (RFC 7231) | P3 | `shared/llm-client.ts` | ✅ Done |
-| L10-14 | Circuit success decrementar em vez de deletar | P2 | `shared/llm-client.ts` | ✅ Done |
-| L10-15 | Remover tier `small` do type + código | P4 | `shared/llm-client.ts` | ✅ Done |
-| L10-16 | Report fallback pular main quando config === main | P2 | `shared/llm-client.ts`, `shared/llm-review.ts` | ✅ Done |
+| #      | Item                                                   | Prio | Arquivo                                        | Status  |
+| ------ | ------------------------------------------------------ | ---- | ---------------------------------------------- | ------- |
+| L10-8  | Circuit breaker: reset só no primário (`i === 0`)      | P0   | `shared/llm-client.ts`                         | ✅ Done |
+| L10-9  | Rate limiter thread-safe (per-tier lock)               | P0   | `shared/llm-client.ts`                         | ✅ Done |
+| L10-10 | HTTP timeout com AbortController (30s)                 | P1   | `shared/llm-client.ts`                         | ✅ Done |
+| L10-11 | Cache key incluir model + temperature + responseFormat | P1   | `shared/llm-client.ts`                         | ✅ Done |
+| L10-12 | Rate limit configurável via `LLM_RATE_LIMIT` env       | P1   | `shared/llm-client.ts`, `shared/config.ts`     | ✅ Done |
+| L10-13 | `parseRetryAfter` lidar com formato data (RFC 7231)    | P3   | `shared/llm-client.ts`                         | ✅ Done |
+| L10-14 | Circuit success decrementar em vez de deletar          | P2   | `shared/llm-client.ts`                         | ✅ Done |
+| L10-15 | Remover tier `small` do type + código                  | P4   | `shared/llm-client.ts`                         | ✅ Done |
+| L10-16 | Report fallback pular main quando config === main      | P2   | `shared/llm-client.ts`, `shared/llm-review.ts` | ✅ Done |
 
 ### Fase 3 — Validação semântica (qualidade dos artefatos)
 
-| # | Item | Prio | Arquivo | Status |
-|---|------|------|---------|--------|
-| L10-17 | `case18.ts`: validar conteúdo (steps.length, expectedResult.length) | P2 | `jira_management/commands/case18.ts` | ✅ Done |
-| L10-18 | `report-validator.ts`: regra de consistência severity+recommendation | P2 | `shared/report-validator.ts` | ✅ Done |
-| L10-19 | `llm-metrics.ts`: rastrear artifactApprovedCount/rejectedCount | P3 | `shared/llm-metrics.ts` | ✅ Done |
-| L10-20 | `classifyFailure`: fallback UNKNOWN após 2 falhas de regex | P2 | `shared/failure-analysis.ts` | ✅ Done |
+| #      | Item                                                                 | Prio | Arquivo                              | Status  |
+| ------ | -------------------------------------------------------------------- | ---- | ------------------------------------ | ------- |
+| L10-17 | `case18.ts`: validar conteúdo (steps.length, expectedResult.length)  | P2   | `jira_management/commands/case18.ts` | ✅ Done |
+| L10-18 | `report-validator.ts`: regra de consistência severity+recommendation | P2   | `shared/report-validator.ts`         | ✅ Done |
+| L10-19 | `llm-metrics.ts`: rastrear artifactApprovedCount/rejectedCount       | P3   | `shared/llm-metrics.ts`              | ✅ Done |
+| L10-20 | `classifyFailure`: fallback UNKNOWN após 2 falhas de regex           | P2   | `shared/failure-analysis.ts`         | ✅ Done |
 
 ### Fase 4 — Infra/config + isolamento de testes
 
-| # | Item | Prio | Arquivo | Status |
-|---|------|------|---------|--------|
-| L10-21 | Exportar `resetRateLimiter()` + `resetCircuitState()` | P2 | `shared/llm-client.ts` | ✅ Done |
-| L10-22 | Teste de integração JSON response format | P2 | `shared/llm-integration.test.ts` | ✅ Done |
+| #      | Item                                                  | Prio | Arquivo                          | Status  |
+| ------ | ----------------------------------------------------- | ---- | -------------------------------- | ------- |
+| L10-21 | Exportar `resetRateLimiter()` + `resetCircuitState()` | P2   | `shared/llm-client.ts`           | ✅ Done |
+| L10-22 | Teste de integração JSON response format              | P2   | `shared/llm-integration.test.ts` | ✅ Done |
 
 ### Fase 5 — Testes unitários de infra
 
-| # | Item | Prio | Arquivo | Status |
-|---|------|------|---------|--------|
-| L10-23 | Rate limiter: 3 testes (allow, deny, clear) | P2 | `shared/llm-client.test.ts` | ✅ Done |
-| L10-24 | Circuit breaker: 4 testes (open, block, clear, reset) | P2 | `shared/llm-client.test.ts` | ✅ Done |
-| L10-25 | Testes de sanitização p/ case18 + run-comparison | P2 | `shared/sanitize.test.ts` | ✅ Done |
-| L10-26 | Mutation tests do `classifyRegex` com entradas borda | P2 | `shared/failure-analysis.test.ts` | ✅ Done |
+| #      | Item                                                  | Prio | Arquivo                           | Status  |
+| ------ | ----------------------------------------------------- | ---- | --------------------------------- | ------- |
+| L10-23 | Rate limiter: 3 testes (allow, deny, clear)           | P2   | `shared/llm-client.test.ts`       | ✅ Done |
+| L10-24 | Circuit breaker: 4 testes (open, block, clear, reset) | P2   | `shared/llm-client.test.ts`       | ✅ Done |
+| L10-25 | Testes de sanitização p/ case18 + run-comparison      | P2   | `shared/sanitize.test.ts`         | ✅ Done |
+| L10-26 | Mutation tests do `classifyRegex` com entradas borda  | P2   | `shared/failure-analysis.test.ts` | ✅ Done |
 
 ### Fase 6 — Golden dataset / benchmark (opcional)
 
-| # | Item | Prio | Arquivo | Status |
-|---|------|------|---------|--------|
-| L10-27 | Criar fixtures de referência e script de benchmark | P4 | `shared/prompts/__fixtures__/`, `shared/llm-benchmark.ts` | ✅ Done |
+| #      | Item                                               | Prio | Arquivo                                                   | Status  |
+| ------ | -------------------------------------------------- | ---- | --------------------------------------------------------- | ------- |
+| L10-27 | Criar fixtures de referência e script de benchmark | P4   | `shared/prompts/__fixtures__/`, `shared/llm-benchmark.ts` | ✅ Done |
 
-**Progresso geral:** 27/27 ✅
+## 🎨 UI/UX Audit — Score 6.5→9.0 (Lote 11)
+
+**Data:** 2026-05-26
+**Esforço total:** ~5.5h
+**Score alvo:** 9.0/10
+
+| Fase | Descrição                                                   | Status | Esforço |
+| ---- | ----------------------------------------------------------- | ------ | ------- |
+| A    | `result_parser`: CTRF parser + dispatch + fixtures + testes | ✅     | 1.5h    |
+| B    | `report-generator`: 9 fixes CSS/render + testes             | ✅     | 2.5h    |
+| C    | `prompt-ui`: error fallback com status/url                  | ✅     | 0.3h    |
+| D    | `case17` + `failure-analysis`: metadados no footer          | ✅     | 0.3h    |
+| E    | Type check + validação final (0 erros, 100% pass)           | ✅     | 0.2h    |
+
+### Fase A — CTRF co-existence (result_parser)
+
+| #     | Item                                             | Prio | Status  |
+| ----- | ------------------------------------------------ | ---- | ------- |
+| UX-7  | `CtrfData` types + `parseCtrfResults()`          | P1   | ✅ Done |
+| UX-8  | `detectFormat()` + `parseTestResults()` dispatch | P1   | ✅ Done |
+| UX-9  | Fixture `ctrf-report.json` (e2e)                 | P2   | ✅ Done |
+| UX-10 | Testes CTRF (14 testes)                          | P2   | ✅ Done |
+| UX-11 | `FlatTest` ganha `fullTitle?: string`            | P2   | ✅ Done |
+
+### Fase B — Report renderer (report-generator)
+
+| #     | Item                                                      | Prio | Status  |
+| ----- | --------------------------------------------------------- | ---- | ------- |
+| UX-12 | WCAG AA: footer `#4b5563`, labels `#4b5563`, th `#4b5563` | P0   | ✅ Done |
+| UX-13 | Coluna erro na tabela (truncado 120 chars) + tooltip full | P0   | ✅ Done |
+| UX-14 | Toggle condicional (só se `stats.passed > 0`)             | P1   | ✅ Done |
+| UX-15 | Skipped → "—" em vez de "0s"                              | P2   | ✅ Done |
+| UX-16 | Footer com timestamp + source + branch (auto env vars)    | P0   | ✅ Done |
+| UX-17 | Dark mode: `@media (prefers-color-scheme: dark)`          | P1   | ✅ Done |
+| UX-18 | Chart SVG labels text em barras > 20px                    | P2   | ✅ Done |
+| UX-19 | Zebra striping + hover fix                                | P2   | ✅ Done |
+| UX-20 | `border-left` → `box-shadow inset` (radius fix)           | P2   | ✅ Done |
+
+### Fase C — TUI error fallback
+
+| #     | Item                                            | Prio | Status  |
+| ----- | ----------------------------------------------- | ---- | ------- |
+| UX-21 | `extractErrorMessage` incluir status code + URL | P1   | ✅ Done |
+
+### Fase D — Metadata propagation
+
+| #     | Item                                                   | Prio | Status  |
+| ----- | ------------------------------------------------------ | ---- | ------- |
+| UX-22 | `case17.ts`: passar `generatedAt` + `source`           | P2   | ✅ Done |
+| UX-23 | `failure-analysis.ts`: passar `generatedAt` + `source` | P2   | ✅ Done |
+
+---
+
+**Progresso geral:** 27/27 ✅ + 17/17 UX ✅

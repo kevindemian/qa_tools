@@ -155,7 +155,11 @@ function isAxiosErrorData(data: unknown): data is AxiosErrorData {
 export function extractErrorMessage(err: unknown): string {
     if (!err) return MSG_UNKNOWN_ERROR;
     try {
-        const axiosErr = err as { response?: { data?: unknown }; message?: string };
+        const axiosErr = err as {
+            response?: { status?: number; data?: unknown };
+            message?: string;
+            config?: { url?: string };
+        };
         const data = axiosErr.response?.data;
         let msg = '';
         if (isAxiosErrorData(data)) {
@@ -163,7 +167,12 @@ export function extractErrorMessage(err: unknown): string {
         } else if (typeof data === 'string') {
             msg = data;
         }
-        return msg || axiosErr.message || '';
+        msg = msg || axiosErr.message || '';
+        const status = axiosErr.response?.status;
+        const url = axiosErr.config?.url;
+        if (status) msg += ' (HTTP ' + status + ')';
+        if (url) msg += ' → ' + url;
+        return msg;
     } catch {
         return MSG_UNKNOWN_ERROR;
     }
