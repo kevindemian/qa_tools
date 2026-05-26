@@ -10,7 +10,7 @@
         "typecheck": "tsc --noEmit",
         "lint": "eslint . --ext .ts",
         "format": "prettier --write '**/*.{ts,js,json,md}'",
-        "docs": "npx tsx docs-archive/help-docs.ts",
+        "docs": "echo 'Documentation generation removed (docs-archive/)'",
         "unused-exports": "npx ts-prune -p tsconfig.json",
         "jira": "npx tsx jira_management/main.ts",
         "git": "npx tsx git_triggers/main.ts",

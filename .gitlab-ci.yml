@@ -10,4 +10,5 @@ test:
     script:
         - npm ci
         - npm run typecheck
+        - npx eslint . --ext .ts
         - npm run test:coverage
