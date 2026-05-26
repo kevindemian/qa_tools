@@ -10,6 +10,8 @@ import { showPreview, filterTests, confirmOrCancel, validateImportBatch, handleD
 import { executeTestCreationLoop, updateFinalState } from './import-loop';
 import { OPERATION_CANCELLED } from './constants';
 import { info, warn, isQuiet, print, printSummary } from '../shared/prompt';
+import Config from '../shared/config';
+import { createStepImporter } from './xray-client';
 
 interface CreateTestsFromTestCasesParams {
     tests: TestCase[];
@@ -196,7 +198,8 @@ async function createTestsFromTestCases({
     if ('summary' in prepared) return prepared;
     const { tests: filtered, resumeFrom, inMemoryTasksId, inMemoryTasksText, opLog } = prepared;
 
-    const factory = new TestCaseFactory(jiraResource, jiraResourceXray);
+    const stepImporter = createStepImporter(jiraResourceXray, Config.xrayMode);
+    const factory = new TestCaseFactory(jiraResource, stepImporter);
     const linker = new IssueLinker(jiraResource, linkManager);
     const results: TestResult[] = [];
     onBusy(true);

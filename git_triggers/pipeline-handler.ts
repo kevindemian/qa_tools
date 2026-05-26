@@ -17,8 +17,9 @@ import {
 } from './test-results';
 import { offerPipelineFailureAnalysis } from './llm-pipeline';
 import { currentProvider, pushHistory, setIsBusy, MSG_OPERATION_CANCELED } from './session-state';
-import JiraResource from '../jira_management/jira_resource';
 import type { AnalysisReport } from '../shared/failure-analysis';
+import JiraResource from '../jira_management/jira_resource';
+import { collectAutomated, fileToJira } from '../shared/bug-report';
 
 export function isComplete(status: string): boolean {
     return ['success', 'failed', 'canceled', 'skipped'].includes(status);
@@ -91,23 +92,22 @@ async function _postPipeline(
         parsed = await collectTestResults(m, pipelineId, branch, projectName);
     }
     if (parsed) {
-        await offerPipelineFailureAnalysis(parsed, async (report: AnalysisReport) => {
+        await offerPipelineFailureAnalysis(parsed, async (analysisReport: AnalysisReport) => {
             const jira = __jiraEnv();
-            if (!jira || !confirm('Criar issue no Jira com o resumo das falhas?', false)) return;
+            if (!jira || !confirm('Criar bug no Jira com o resumo das falhas?', false)) return;
             try {
-                const jiraRes = new JiraResource(jira.token, jira.base + '/rest/api/2');
-                const result = await jiraRes.postJiraResource('issue', {
-                    fields: {
-                        project: { key: Config.jiraProject || 'ECSPOL' },
-                        summary: 'Análise de falhas — pipeline #' + pipelineId,
-                        description: report.content,
-                        issuetype: { name: 'Bug' },
-                    },
+                const bugReport = collectAutomated(parsed, {
+                    pipelineId: String(pipelineId),
+                    branch,
+                    provider: currentProvider,
                 });
-                success('Issue Jira criada: ' + jira.base + '/browse/' + String(result.key));
-                pushHistory('create-jira-issue', String(result.key), 'ok');
+                bugReport.description = analysisReport.content;
+                const jiraRes = new JiraResource(jira.token, jira.base + '/rest/api/2');
+                const key = await fileToJira(jiraRes, bugReport, Config.jiraProject || 'ECSPOL');
+                success('Bug criado: ' + jira.base + '/browse/' + key);
+                pushHistory('create-jira-issue', key, 'ok');
             } catch (err) {
-                printError('Falha ao criar issue no Jira', err);
+                printError('Falha ao criar bug no Jira', err);
                 pushHistory('create-jira-issue', pipelineId + '', 'error');
             }
         });

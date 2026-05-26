@@ -1,5 +1,6 @@
 import { success, onError, isQuiet, ProgressBar } from '../shared/prompt';
 import type JiraResource from './jira_resource';
+import type { XrayStepImporter } from './xray-client';
 import type { JsonObject, LogContext, TestCase } from '../shared/types';
 
 interface CreateIssueResult {
@@ -13,11 +14,11 @@ interface StepsResult {
 
 class TestCaseFactory {
     jiraResource: JiraResource;
-    jiraResourceXray: JiraResource;
+    stepImporter: XrayStepImporter;
 
-    constructor(jiraResource: JiraResource, jiraResourceXray: JiraResource) {
+    constructor(jiraResource: JiraResource, stepImporter: XrayStepImporter) {
         this.jiraResource = jiraResource;
-        this.jiraResourceXray = jiraResourceXray;
+        this.stepImporter = stepImporter;
     }
 
     async createIssue(
@@ -51,13 +52,12 @@ class TestCaseFactory {
         const stepBar = !isQuiet() ? new ProgressBar(test.steps.length, { width: 15 }) : null;
         for (let i = 0; i < test.steps.length; i++) {
             try {
-                await this.jiraResourceXray.postJiraResource('test/' + issueKey + '/steps', {
-                    index: i + 1,
-                    ...test.steps[i],
-                });
+                await this.stepImporter.importStep(issueKey, i + 1, test.steps[i]);
                 if (stepBar) stepBar.update(i + 1);
             } catch (err) {
-                const action = await onError('  Step ' + (i + 1) + ' de "' + test.title + '"', err, { details: true });
+                const action = await onError('  Step ' + (i + 1) + ' de "' + test.title + '"', err, {
+                    details: true,
+                });
                 if (action === 'abort') {
                     abortSteps = true;
                     break;

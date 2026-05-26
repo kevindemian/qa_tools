@@ -22,6 +22,7 @@ export interface FlatTest {
     title: string;
     state: 'passed' | 'failed' | 'skipped';
     duration: number;
+    error?: string;
 }
 
 export interface ParseResult {
