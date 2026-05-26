@@ -37,6 +37,7 @@ import type { StateSchema } from '../shared/types';
 import { getHandler } from './commands';
 import { NOT_CONFIGURED } from './constants';
 import type { CommandContext } from './commands/context';
+import { ensureDirs, registerCleanup } from '../shared/temp-dir';
 
 const base_url: string = Config.jiraBaseUrl;
 const personal_token: string = Config.jiraPersonalToken;
@@ -614,6 +615,8 @@ async function main(): Promise<void> {
         process.stdout.write('\x1b[2J\x1b[H\x1b[3J');
     }
     validateEnv();
+    ensureDirs();
+    registerCleanup();
 
     await showSplash(getStatePath());
     rootLogger.writeFileOnly('INFO', 'Sessão iniciada');

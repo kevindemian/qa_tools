@@ -10,26 +10,17 @@ jest.mock('../shared/logger', () => ({
 jest.mock('fs');
 
 import fs from 'fs';
-import os from 'os';
+import path from 'path';
 
 import JiraLinkManager from './jira_link_manager';
 import { rootLogger } from '../shared/logger';
 
-let originalHomedir: typeof os.homedir;
+const CACHE_PATH = path.resolve(__dirname, '../temp/cache/link-types-cache.json');
 
 describe('JiraLinkManager', () => {
     let manager: InstanceType<typeof JiraLinkManager>;
     // eslint-disable-next-line @typescript-eslint/no-explicit-any -- partial mock for JiraResource in tests
     let mockJiraResource: any;
-
-    beforeAll(() => {
-        originalHomedir = os.homedir;
-        jest.spyOn(os, 'homedir').mockReturnValue('/fake/home');
-    });
-
-    afterAll(() => {
-        jest.restoreAllMocks();
-    });
 
     beforeEach(() => {
         jest.clearAllMocks();
@@ -45,7 +36,7 @@ describe('JiraLinkManager', () => {
         it('stores jiraResource and sets defaults', () => {
             expect(manager.jiraResource).toBe(mockJiraResource);
             expect(manager.linkTypesCache).toBeNull();
-            expect(manager.cacheFilePath).toBe('/fake/home/.qa_tools_link_types_cache.json');
+            expect(manager.cacheFilePath).toBe(CACHE_PATH);
         });
     });
 
@@ -64,11 +55,7 @@ describe('JiraLinkManager', () => {
             const fakeTypes = [{ id: '10200', name: 'Tested by' }];
             mockJiraResource.getJiraResource.mockResolvedValue({ issueLinkTypes: fakeTypes });
             await manager.getIssueLinkTypes();
-            expect(fs.writeFileSync).toHaveBeenCalledWith(
-                '/fake/home/.qa_tools_link_types_cache.json',
-                JSON.stringify(fakeTypes),
-                'utf8',
-            );
+            expect(fs.writeFileSync).toHaveBeenCalledWith(CACHE_PATH, JSON.stringify(fakeTypes), 'utf8');
         });
 
         it('falls back to local cache when API fails', async () => {

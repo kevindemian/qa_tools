@@ -39,6 +39,7 @@ import {
     collectTestResults,
 } from './pipeline-handler';
 import { nivelarBranchesWrapper, handleCreateMR, handleListApprovedMRs, handleMergeMR } from './mr-handler';
+import { ensureDirs, registerCleanup } from '../shared/temp-dir';
 import {
     handleListSchedules,
     handleRunSchedule,
@@ -198,6 +199,9 @@ async function _dispatchAction(
 }
 
 async function main() {
+    ensureDirs();
+    registerCleanup();
+
     if (await tryBatchMode()) return;
 
     const projs = getProjects();

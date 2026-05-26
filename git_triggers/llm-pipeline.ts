@@ -1,5 +1,5 @@
-import fs from 'fs';
 import { confirm, info, warn, success, printError, divider, print } from '../shared/prompt';
+import { writeReport } from '../shared/temp-dir';
 import { analyzeFailuresWithReport } from '../shared/failure-analysis';
 import type { ParseResult } from '../shared/result_parser';
 import type { AnalysisReport } from '../shared/failure-analysis';
@@ -40,8 +40,7 @@ export async function offerPipelineFailureAnalysis(
         divider();
 
         if (analysis.htmlReport) {
-            const reportPath = 'failure-analysis-' + Date.now() + '.html';
-            fs.writeFileSync(reportPath, analysis.htmlReport, 'utf8');
+            const reportPath = writeReport('failure-analysis-' + Date.now() + '.html', analysis.htmlReport);
             info('Relatório HTML salvo em: ' + reportPath);
         }
 
