@@ -83,7 +83,7 @@ describe('TestCaseFactory', () => {
             mockImporter.importStep.mockResolvedValue({});
             mockPrompt.isQuiet.mockReturnValue(false);
             await factory.postSteps(issueKey, test, opLog);
-            const barInstance = mockPrompt.ProgressBar.mock.results[0].value;
+            const barInstance = mockPrompt.ProgressBar.mock.results[0]!.value;
             expect(barInstance.update).toHaveBeenCalledWith(1);
             expect(barInstance.update).toHaveBeenCalledWith(2);
             expect(barInstance.stop).toHaveBeenCalled();

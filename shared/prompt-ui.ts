@@ -42,10 +42,10 @@ export function icon(name: 'ok' | 'err' | 'warn' | 'info'): string {
     const useUnicode = !getConfig().quiet && Output.isTTY();
     if (useUnicode) {
         const map: Record<string, string> = { ok: '\u2713', err: '\u2717', warn: '\u26A0', info: '\u2139' };
-        return map[name];
+        return map[name]!;
     }
     const fallback: Record<string, string> = { ok: 'OK ', err: 'ERR', warn: '!  ', info: 'i  ' };
-    return fallback[name] || fallback.info;
+    return fallback[name] || fallback.info!;
 }
 
 export function success(msg: string): void {
@@ -367,7 +367,7 @@ function buildCliTable3Config(keys: string[]): {
     const indentStr = '  ';
     const indentWidth = visibleWidth(indentStr);
     const colWidths = keys.map(() => Math.floor(avail / keys.length));
-    colWidths[0] += avail - colWidths.reduce((a, b) => a + b, 0);
+    colWidths[0]! += avail - colWidths.reduce((a, b) => a + b, 0);
     return {
         head: keys,
         colWidths: colWidths.map((w) => Math.max(w - indentWidth, MIN_COLUMN_WIDTH)),
@@ -429,7 +429,7 @@ export function tableView<T extends Record<string, unknown>>(
           })
         : data;
     if (rows.length === 0) return;
-    const keys = columns || Object.keys(rows[0]);
+    const keys = columns || Object.keys(rows[0]!);
     const table = new CliTable3(buildCliTable3Config(keys));
     const statusColIdx = statusKey ? keys.indexOf(statusKey) : -1;
     for (const row of rows) {

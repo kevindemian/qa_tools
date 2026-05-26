@@ -28,7 +28,7 @@ describe('palette', () => {
     it('palette colors render text', () => {
         const { palette } = require('./palette') as { palette: Record<string, (...args: unknown[]) => string> };
         for (const key of Object.keys(palette)) {
-            const result = palette[key]('hello');
+            const result = palette[key]!('hello');
             expect(typeof result).toBe('string');
             expect(result).toContain('hello');
         }

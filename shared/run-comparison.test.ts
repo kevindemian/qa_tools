@@ -39,7 +39,7 @@ describe('compareRuns', () => {
         const result = await compareRuns(runA, runB);
         expect(result).toBe('Overall improvement in pass rate from 80% to 90%.');
         expect(mockLlmPrompt).toHaveBeenCalledWith('fast', expect.any(String), expect.any(String));
-        const promptArg = mockLlmPrompt.mock.calls[0][1];
+        const promptArg = mockLlmPrompt.mock.calls[0]![1];
         expect(promptArg).toContain('80%');
         expect(promptArg).toContain('90%');
     });

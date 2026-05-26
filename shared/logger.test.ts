@@ -48,7 +48,7 @@ describe('Logger', () => {
             const testDir = normalizePath(fs.mkdtempSync(path.join(os.tmpdir(), 'qa-tools-logger-')));
             const cfg = Config.create({ logFile: true, logDir: testDir });
             const logger = new Logger({ test: 'write' }, cfg);
-            (logger as unknown as Record<string, jest.Mock>)[level](msg, data);
+            (logger as unknown as Record<string, jest.Mock>)[level]!(msg, data);
 
             const date = new Date().toISOString().split('T')[0];
             const logFile = path.join(testDir, `qa-tools-${date}.log`);
@@ -308,8 +308,8 @@ describe('Logger', () => {
         it('recursively masks nested arrays', () => {
             const input = { items: [{ token: 'abcdefghij' }, { name: 'public' }] };
             const result = maskDeep(input) as { items: Array<{ token: string; name: string }> };
-            expect(result.items[0].token).toBe('abcd****');
-            expect(result.items[1].name).toBe('public');
+            expect(result.items[0]!.token).toBe('abcd****');
+            expect(result.items[1]!.name).toBe('public');
         });
 
         it('masks keys matching password/authorization patterns', () => {
@@ -344,7 +344,7 @@ describe('Logger', () => {
             const logger = new Logger();
             const bigData = { big: 'x'.repeat(200) };
             logger._writeConsole('ERROR', 'fail', bigData);
-            const text = spyError.mock.calls[0][0] as string;
+            const text = spyError.mock.calls[0]![0] as string;
             expect(text.length).toBeLessThan(400);
             spyError.mockRestore();
         });

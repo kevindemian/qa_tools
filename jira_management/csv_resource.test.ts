@@ -86,11 +86,11 @@ describe('CsvResource', () => {
                 'utf-8',
             );
             const results = await csvResource.readBulkCsv(tmp);
-            expect(results[0].precondition).toEqual({
+            expect(results[0]!.precondition).toEqual({
                 type: 'inline',
                 value: 'User must be logged in\nwith admin privileges\nand valid SSL cert',
             });
-            expect(results[0].steps.length).toBe(1);
+            expect(results[0]!.steps.length).toBe(1);
             fs.unlinkSync(tmp);
         });
 
@@ -109,7 +109,7 @@ describe('CsvResource', () => {
                 'utf-8',
             );
             const results = await csvResource.readBulkCsv(tmp);
-            expect(results[0].precondition).toEqual({
+            expect(results[0]!.precondition).toEqual({
                 type: 'inline',
                 value: 'User must be logged in',
             });
@@ -131,7 +131,7 @@ describe('CsvResource', () => {
                 'utf-8',
             );
             const results = await csvResource.readBulkCsv(tmp);
-            expect(results[0].precondition).toEqual({
+            expect(results[0]!.precondition).toEqual({
                 type: 'inline',
                 value: 'User must be logged in',
             });
@@ -189,7 +189,7 @@ describe('CsvResource', () => {
             );
             const results = await csvResource.readBulkCsv(tmp);
             expect(results).toHaveLength(1);
-            expect(results[0].title).toBe('Real');
+            expect(results[0]!.title).toBe('Real');
             expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining('Pulando bloco sem Title'));
             warnSpy.mockRestore();
             fs.unlinkSync(tmp);
@@ -200,7 +200,7 @@ describe('CsvResource', () => {
             const tmp = '/tmp/test-desc-quoted.csv';
             fs.writeFileSync(tmp, 'Title: TC\nDescription:"Quoted desc"\nAction,Data,Expected\nx,y,z\n', 'utf-8');
             const results = await csvResource.readBulkCsv(tmp);
-            expect(results[0].description).toBe('Quoted desc');
+            expect(results[0]!.description).toBe('Quoted desc');
             fs.unlinkSync(tmp);
         });
 
@@ -215,8 +215,8 @@ describe('CsvResource', () => {
                 'utf-8',
             );
             const results = await csvResource.readBulkCsv(tmp);
-            expect(results[0].description).toContain('Line 1');
-            expect(results[0].description).toContain('Line 2');
+            expect(results[0]!.description).toContain('Line 1');
+            expect(results[0]!.description).toContain('Line 2');
             expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining('Description sem aspas de fechamento'));
             warnSpy.mockRestore();
             fs.unlinkSync(tmp);
@@ -231,7 +231,7 @@ describe('CsvResource', () => {
                 'utf-8',
             );
             const results = await csvResource.readBulkCsv(tmp);
-            expect(results[0].description).toBe('Line 1\nLine 2');
+            expect(results[0]!.description).toBe('Line 1\nLine 2');
             fs.unlinkSync(tmp);
         });
 
@@ -251,7 +251,7 @@ describe('CsvResource', () => {
                 'utf-8',
             );
             const results = await csvResource.readBulkCsv(tmp);
-            expect(results[0].description).toBe('First line\nSecond line\nThird line');
+            expect(results[0]!.description).toBe('First line\nSecond line\nThird line');
             fs.unlinkSync(tmp);
         });
 
@@ -264,8 +264,8 @@ describe('CsvResource', () => {
                 'utf-8',
             );
             const results = await csvResource.readBulkCsv(tmp);
-            expect(results[0].description).toBe('Some desc');
-            expect(results[0].group).toBe('G1');
+            expect(results[0]!.description).toBe('Some desc');
+            expect(results[0]!.group).toBe('G1');
             fs.unlinkSync(tmp);
         });
 
@@ -278,8 +278,8 @@ describe('CsvResource', () => {
                 'utf-8',
             );
             const results = await csvResource.readBulkCsv(tmp);
-            expect(results[0].description).toBe('');
-            expect(results[0].precondition).toBeDefined();
+            expect(results[0]!.description).toBe('');
+            expect(results[0]!.precondition).toBeDefined();
             fs.unlinkSync(tmp);
         });
 
@@ -301,7 +301,7 @@ describe('CsvResource', () => {
                 'utf-8',
             );
             const results = await csvResource.readBulkCsv(tmp);
-            expect(results[0].precondition).toBeDefined();
+            expect(results[0]!.precondition).toBeDefined();
             expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining('Pre-condition sem aspas de fechamento'));
             warnSpy.mockRestore();
             fs.unlinkSync(tmp);
@@ -335,17 +335,17 @@ describe('CsvResource', () => {
             const csvString = 'Action,Data,Expected Result\n,y,z';
             const result = await csvResource.readCsvFromString(csvString);
             expect(result).toHaveLength(1);
-            expect(result[0].fields.Action).toBe('');
-            expect(result[0].fields.Data).toBe('y');
-            expect(result[0].fields['Expected Result']).toBe('z');
+            expect(result[0]!.fields.Action).toBe('');
+            expect(result[0]!.fields.Data).toBe('y');
+            expect(result[0]!.fields['Expected Result']).toBe('z');
         });
 
         it('parses CSV with empty Data field', async () => {
             const csvString = 'Action,Data,Expected Result\nx,,z';
             const result = await csvResource.readCsvFromString(csvString);
             expect(result).toHaveLength(1);
-            expect(result[0].fields.Data).toBe('');
-            expect(result[0].fields['Expected Result']).toBe('z');
+            expect(result[0]!.fields.Data).toBe('');
+            expect(result[0]!.fields['Expected Result']).toBe('z');
         });
     });
 });

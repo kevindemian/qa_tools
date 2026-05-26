@@ -156,7 +156,7 @@ describe('filterTests', () => {
         jest.mocked(PROMPT.confirm).mockReturnValue(true);
         const result = filterTests(tests);
         expect(result).toHaveLength(1);
-        expect(result![0].title).toBe('Test 1');
+        expect(result![0]!.title).toBe('Test 1');
     });
 });
 
@@ -379,8 +379,8 @@ describe('showPreview', () => {
         showPreview(tests, ['smoke'], 2, 1);
         expect(FS.writeFileSync).toHaveBeenCalledTimes(1);
         const args = jest.mocked(FS.writeFileSync).mock.calls[0];
-        expect(args[0]).toContain('qa-preview.html');
-        expect(args[1]).toContain('Login test');
-        expect(args[2]).toBe('utf8');
+        expect(args![0]).toContain('qa-preview.html');
+        expect(args![1]).toContain('Login test');
+        expect(args![2]).toBe('utf8');
     });
 });

@@ -78,10 +78,10 @@ describe('matchResultsToTests', () => {
         ];
         const result = matchResultsToTests(results, mappingPath);
         expect(result.matched).toHaveLength(2);
-        expect(result.matched[0].key).toBe('TEST-1');
-        expect(result.matched[0].status).toBe('passed');
-        expect(result.matched[1].key).toBe('TEST-2');
-        expect(result.matched[1].status).toBe('failed');
+        expect(result.matched[0]!.key).toBe('TEST-1');
+        expect(result.matched[0]!.status).toBe('passed');
+        expect(result.matched[1]!.key).toBe('TEST-2');
+        expect(result.matched[1]!.status).toBe('failed');
         expect(result.unmatched).toHaveLength(0);
     });
 
@@ -90,7 +90,7 @@ describe('matchResultsToTests', () => {
         const result = matchResultsToTests(results, mappingPath);
         expect(result.matched).toHaveLength(0);
         expect(result.unmatched).toHaveLength(1);
-        expect(result.unmatched[0].title).toBe('TC99 - Unknown');
+        expect(result.unmatched[0]!.title).toBe('TC99 - Unknown');
     });
 
     it('calculates stats correctly', () => {
@@ -115,7 +115,7 @@ describe('matchResultsToTests', () => {
         const results = [{ title: 'Login valido', state: 'passed' as const, duration: 100 }];
         const result = matchResultsToTests(results, mappingPath);
         expect(result.matched).toHaveLength(1);
-        expect(result.matched[0].key).toBe('TEST-1');
+        expect(result.matched[0]!.key).toBe('TEST-1');
     });
 
     it('returns empty result and warns when tests array is empty', () => {

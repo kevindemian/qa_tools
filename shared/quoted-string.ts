@@ -8,7 +8,7 @@ export function isPreconditionKey(value: string): boolean {
 
 export function extractPreconditionKey(value: string): string | null {
     const match = value.match(new RegExp('^(' + PRECONDITION_KEY_PATTERN + ')'));
-    return match ? match[1] : null;
+    return match ? match[1]! : null;
 }
 
 export function parseQuotedValue(
@@ -23,7 +23,7 @@ export function parseQuotedValue(
         const parts = [rawValue.slice(1)];
         let endIndex = startLineIndex + 1;
         while (endIndex < lines.length) {
-            const line = lines[endIndex];
+            const line = lines[endIndex]!;
             if (line.endsWith('"')) {
                 parts.push(line.slice(0, -1));
                 endIndex++;

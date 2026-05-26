@@ -59,9 +59,9 @@ describe('saveRunMetrics / loadMetrics', () => {
 
         const loaded = loadMetrics(cfg);
         expect(loaded.runs).toHaveLength(1);
-        expect(loaded.runs[0].project).toBe('test-project');
-        expect(loaded.runs[0].passed).toBe(2);
-        expect(loaded.runs[0].tests).toHaveLength(3);
+        expect(loaded.runs[0]!.project).toBe('test-project');
+        expect(loaded.runs[0]!.passed).toBe(2);
+        expect(loaded.runs[0]!.tests).toHaveLength(3);
     });
 
     it('returns empty store when no metrics file exists', () => {
@@ -167,10 +167,10 @@ describe('calculateFlakiness', () => {
 
         const flaky = calculateFlakiness(store);
         expect(flaky).toHaveLength(1);
-        expect(flaky[0].title).toBe('FlakyLogin');
-        expect(flaky[0].passCount).toBe(1);
-        expect(flaky[0].failCount).toBe(1);
-        expect(flaky[0].rate).toBe(0.5);
+        expect(flaky[0]!.title).toBe('FlakyLogin');
+        expect(flaky[0]!.passCount).toBe(1);
+        expect(flaky[0]!.failCount).toBe(1);
+        expect(flaky[0]!.rate).toBe(0.5);
     });
 
     it('ignores tests below minRuns threshold', () => {
@@ -208,7 +208,7 @@ describe('saveCoverageSnapshot', () => {
 
         const loaded = loadMetrics(cfg);
         expect(loaded.coverageHistory).toHaveLength(1);
-        expect(loaded.coverageHistory![0].coveragePct).toBe(75);
+        expect(loaded.coverageHistory![0]!.coveragePct).toBe(75);
     });
 });
 
@@ -241,8 +241,8 @@ describe('getTrends', () => {
 
         const trends = getTrends(store);
         expect(trends).toHaveLength(2);
-        expect(trends[0].passRate).toBe(100);
-        expect(trends[1].passRate).toBe(0);
+        expect(trends[0]!.passRate).toBe(100);
+        expect(trends[1]!.passRate).toBe(0);
     });
 
     it('respects window parameter', () => {

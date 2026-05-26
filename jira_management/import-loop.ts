@@ -137,7 +137,7 @@ function saveCheckpoint(
         project: projectName,
         ts: new Date().toISOString(),
         testCount: tests.length,
-        done: inMemoryTasksId.map((key, idx) => ({ key, title: inMemoryTasksText[idx] })),
+        done: inMemoryTasksId.map((key, idx) => ({ key, title: inMemoryTasksText[idx]! })),
     };
     cpSave[cpKey] = sourcePath;
     updateState((state) => {
@@ -181,7 +181,7 @@ async function executeTestCreationLoop(
     print: (msg: string) => void,
 ): Promise<void> {
     outer: for (let t = resumeFrom; t < tests.length; t++) {
-        const test = tests[t];
+        const test = tests[t]!;
         const testTitle = test.title;
 
         if (!isQuiet()) info('Criando: ' + testTitle);

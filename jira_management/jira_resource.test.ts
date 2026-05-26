@@ -298,8 +298,8 @@ describe('searchJiraIssues', () => {
 
         const result = await jiraResource.searchJiraIssues('project = TEST', 1);
         expect(result.issues).toHaveLength(2);
-        expect(result.issues[0].key).toBe('TEST-1');
-        expect(result.issues[1].key).toBe('TEST-2');
+        expect(result.issues[0]!.key).toBe('TEST-1');
+        expect(result.issues[1]!.key).toBe('TEST-2');
         expect(result.total).toBe(2);
     });
 
@@ -525,7 +525,7 @@ describe('getReleaseTasks', () => {
         const searchSpy = jest.spyOn(jiraResource, 'searchJiraIssues').mockResolvedValueOnce({ issues: [], total: 0 });
 
         await jiraResource.getReleaseTasks('TEST', 'v1.0', true);
-        const jql = searchSpy.mock.calls[0][0];
+        const jql = searchSpy.mock.calls[0]![0];
         expect(jql).toContain('AND type = "Test"');
     });
 
@@ -534,7 +534,7 @@ describe('getReleaseTasks', () => {
         const searchSpy = jest.spyOn(jiraResource, 'searchJiraIssues').mockResolvedValueOnce({ issues: [], total: 0 });
 
         await jiraResource.getReleaseTasks('TEST', 'v1.0', false);
-        const jql = searchSpy.mock.calls[0][0];
+        const jql = searchSpy.mock.calls[0]![0];
         expect(jql).not.toContain('AND type = "Test"');
     });
 
@@ -567,9 +567,9 @@ describe('getLatestReleases', () => {
 
         const result = await jiraResource.getLatestReleases('TEST', 1);
         expect(result.latestReleasedVersions).toHaveLength(1);
-        expect(result.latestReleasedVersions[0].name).toBe('v1.1');
+        expect(result.latestReleasedVersions[0]!.name).toBe('v1.1');
         expect(result.unreleasedVersions).toHaveLength(1);
-        expect(result.unreleasedVersions[0].name).toBe('v2.0');
+        expect(result.unreleasedVersions[0]!.name).toBe('v2.0');
     });
 
     it('returns empty arrays when project not found', async () => {
@@ -611,8 +611,8 @@ describe('getLatestReleases', () => {
 
         const result = await jiraResource.getLatestReleases('TEST', 2);
         expect(result.latestReleasedVersions).toHaveLength(2);
-        expect(result.latestReleasedVersions[0].name).toBe('v2.0');
-        expect(result.latestReleasedVersions[1].name).toBe('v3.0');
+        expect(result.latestReleasedVersions[0]!.name).toBe('v2.0');
+        expect(result.latestReleasedVersions[1]!.name).toBe('v3.0');
     });
 
     it('filters out versions without releaseDate', async () => {
@@ -625,7 +625,7 @@ describe('getLatestReleases', () => {
 
         const result = await jiraResource.getLatestReleases('TEST', 5);
         expect(result.latestReleasedVersions).toHaveLength(1);
-        expect(result.latestReleasedVersions[0].name).toBe('v1.0');
+        expect(result.latestReleasedVersions[0]!.name).toBe('v1.0');
         expect(result.unreleasedVersions).toHaveLength(0);
     });
 });

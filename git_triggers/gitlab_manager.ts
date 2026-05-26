@@ -104,7 +104,7 @@ class GitLabManager extends GitProviderBase implements GitProvider {
                 info('MR already exists. Searching for existing...');
                 const existing = await this.searchMergeRequests(sourceBranch, targetBranch, 'opened');
                 if (existing && existing.length > 0) {
-                    return this.updateMergeRequest(existing[0].iid!, title, description);
+                    return this.updateMergeRequest(existing[0]!.iid!, title, description);
                 }
             }
             throw err;
@@ -250,7 +250,7 @@ class GitLabManager extends GitProviderBase implements GitProvider {
             });
             const disposition = (response.headers['content-disposition'] as string) || '';
             const match = disposition.match(/filename="?(.+?)"?$/);
-            const filename = match ? match[1] : 'artifacts.zip';
+            const filename = match ? match[1]! : 'artifacts.zip';
             return { buffer: Buffer.from(response.data as ArrayBuffer), filename };
         } catch (err) {
             return handleError(err, { context: 'baixar artifact' }) as never;

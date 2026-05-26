@@ -94,7 +94,7 @@ export function getProjects(): Record<string, string> {
 }
 
 export function getProviderForProject(projectName: string): 'gitlab' | 'github' {
-    const cfg = loadProvidersConfig()[projectName] as ProviderConfig | undefined;
+    const cfg = loadProvidersConfig()[projectName];
     return cfg?.provider === 'github' ? 'github' : 'gitlab';
 }
 
@@ -102,7 +102,7 @@ export function createManagerForProject(projectName: string, id: string): GitPro
     const provider = getProviderForProject(projectName);
     currentProvider = provider;
     if (provider === 'github') {
-        const cfg = loadProvidersConfig()[projectName] as ProviderConfig | undefined;
+        const cfg = loadProvidersConfig()[projectName];
         const repo = (cfg?.repo as string) || id;
         const ghToken = Config.githubToken || Config.gitToken || '';
         const ghApiUrl = Config.githubApiUrl || 'https://api.github.com';

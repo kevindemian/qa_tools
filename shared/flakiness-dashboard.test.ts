@@ -11,8 +11,8 @@ describe('filterHighFlakiness', () => {
 
         const result = filterHighFlakiness(entries, 30);
         expect(result).toHaveLength(2);
-        expect(result[0].title).toBe('Very Flaky');
-        expect(result[1].title).toBe('Borderline');
+        expect(result[0]!.title).toBe('Very Flaky');
+        expect(result[1]!.title).toBe('Borderline');
     });
 
     it('returns empty array when no entries exceed threshold', () => {

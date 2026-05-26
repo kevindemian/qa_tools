@@ -22,7 +22,7 @@ function _jiraEnv(): { base: string; token: string; xray: string } | null {
 function _resolveGlob(pattern: string): string | null {
     try {
         const matches = glob.sync(pattern);
-        return matches.length > 0 ? path.resolve(matches[0]) : null;
+        return matches.length > 0 ? path.resolve(matches[0]!) : null;
     } catch {
         return null;
     }
@@ -65,7 +65,7 @@ async function downloadTestArtifacts(m: GitProvider, pipelineId: string | number
         warn('Nenhum artifact encontrado na pipeline #' + pipelineId);
         return null;
     }
-    const art = artifacts.find((a) => /mochawesome|test-result/i.test(a.name)) || artifacts[0];
+    const art = artifacts.find((a) => /mochawesome|test-result/i.test(a.name)) || artifacts[0]!;
     info('Artifact: ' + art.name + ' (id=' + art.id + ')');
 
     const buffer = await _downloadArtifactBuffer(m, art);

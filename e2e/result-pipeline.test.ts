@@ -120,7 +120,7 @@ describe('E2E: Result Processing Pipeline', () => {
 
         expect(matched).toHaveLength(3);
         expect(unmatched).toHaveLength(1);
-        expect(unmatched[0].title).toBe('TC99 - Unknown test');
+        expect(unmatched[0]!.title).toBe('TC99 - Unknown test');
     });
 
     it('returns empty match for missing mapping file', () => {

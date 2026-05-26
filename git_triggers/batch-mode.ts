@@ -44,7 +44,7 @@ async function setupBatchProject(batch: ReturnType<typeof parseBatchArgs>): Prom
         return null;
     }
 
-    const projectName = batch.project || Object.keys(projs)[0];
+    const projectName = batch.project || Object.keys(projs)[0]!;
     if (!projs[projectName]) {
         error('Projeto "' + projectName + '" não encontrado em config/projects.json.');
         return null;
