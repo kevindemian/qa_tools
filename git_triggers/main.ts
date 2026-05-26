@@ -6,7 +6,7 @@ import { defaultOutput } from '../shared/output';
 import { rootLogger } from '../shared/logger';
 import { CancelError, success, error, warn, info, title, prompt, showSelect, printError } from '../shared/prompt';
 import { load as loadState, update as updateState } from '../shared/state';
-import type { GitProvider } from '../shared/types';
+import type { GitProvider, JsonObject, StateContainer } from '../shared/types';
 import {
     sessionLog,
     sessionContext,
@@ -92,7 +92,7 @@ function _selectProject(): { projectName: string; names: string[] } {
     const projectName = names[firstIdx - 1];
     setCurrentProjectName(projectName);
     setProjectId(getProjects()[projectName]);
-    updateState((s: Record<string, unknown>) => {
+    updateState((s: StateContainer) => {
         s.lastProject = projectName;
     });
     success('Projeto selecionado: ' + projectName + ' (' + getProviderForProject(projectName) + ')');
@@ -124,8 +124,8 @@ async function _promptChoice(stateHint: string): Promise<string> {
         });
     }
     const nonTtyLines = buildActionChoices()
-        .filter((c: Record<string, unknown>) => c.name)
-        .map((c: Record<string, unknown>) => '  ' + String(c.name));
+        .filter((c: JsonObject) => c.name)
+        .map((c: JsonObject) => '  ' + String(c.name));
     nonTtyLines.unshift('');
     nonTtyLines.push('  /help   Ajuda');
     nonTtyLines.push('  /exit   Voltar ao menu principal');
@@ -227,7 +227,7 @@ async function main() {
     while (true) {
         console.clear();
         const finalChoice = await _promptChoice(stateHint);
-        updateState((s: Record<string, unknown>) => {
+        updateState((s: StateContainer) => {
             s.lastChoice = finalChoice;
         });
         try {

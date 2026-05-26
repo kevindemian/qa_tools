@@ -12,6 +12,7 @@ import type {
     PipelineJob,
     ArtifactInfo,
     CICDVariable,
+    JsonObject,
 } from '../shared/types';
 
 class GitLabManager implements GitProvider {
@@ -39,7 +40,7 @@ class GitLabManager implements GitProvider {
         this.log = new Logger({ resource: 'GitLab', projectId });
     }
 
-    async _get(url: string, opts?: { operation?: string; returnNull?: boolean; params?: Record<string, unknown> }) {
+    async _get(url: string, opts?: { operation?: string; returnNull?: boolean; params?: JsonObject }) {
         try {
             const args = opts?.params ? [{ params: opts.params }] : [];
             const response = await this.client.get(url, ...args);
@@ -89,7 +90,7 @@ class GitLabManager implements GitProvider {
         );
     }
 
-    async runSchedule(scheduleId: string | number): Promise<Record<string, unknown>> {
+    async runSchedule(scheduleId: string | number): Promise<JsonObject> {
         return this._post(`/pipeline_schedules/${scheduleId}/play`, undefined, { operation: 'disparar schedule' });
     }
 
@@ -192,7 +193,7 @@ class GitLabManager implements GitProvider {
             operation: 'listar jobs',
             returnNull: true,
         });
-        return (data || []).map((j: Record<string, unknown>) => ({
+        return (data || []).map((j: JsonObject) => ({
             id: j.id,
             name: j.name,
             stage: j.stage,
@@ -207,11 +208,8 @@ class GitLabManager implements GitProvider {
         });
         const jobs = data || [];
         return jobs
-            .filter(
-                (j: Record<string, unknown>) =>
-                    j.artifacts_file || (j.artifacts && (j.artifacts as Array<unknown>).length > 0),
-            )
-            .map((j: Record<string, unknown>) => ({ id: j.id, name: j.name }));
+            .filter((j: JsonObject) => j.artifacts_file || (j.artifacts && (j.artifacts as Array<unknown>).length > 0))
+            .map((j: JsonObject) => ({ id: j.id, name: j.name }));
     }
 
     async getCICDVariables(): Promise<CICDVariable[]> {

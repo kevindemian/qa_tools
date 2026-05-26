@@ -19,6 +19,7 @@ import {
     unreleasedVersions as unreleasedVersionsHeader,
     NO_UNRELEASED_VERSIONS,
 } from './constants';
+import type { JsonObject } from '../shared/types';
 
 function sanitizeJqlValue(value: string): string {
     if (!value || typeof value !== 'string') {
@@ -134,7 +135,7 @@ export async function createVersion(
     projectName: string,
     versionName: string,
     description?: string,
-): Promise<Record<string, unknown> | null> {
+): Promise<JsonObject | null> {
     const versionId = await resource.getVersionId(projectName, versionName);
     if (versionId) {
         info(versionAlreadyExists(versionName));

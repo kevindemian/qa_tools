@@ -2,6 +2,7 @@ import { createHttpClient } from '../shared/http-client';
 import { rootLogger } from '../shared/logger';
 import { info, warn, success } from '../shared/prompt';
 import { sanitizeUrl } from '../shared/cli_base';
+import type { JsonObject } from '../shared/types';
 
 interface CypressReportOptions {
     cypressUrl: string;
@@ -23,7 +24,7 @@ class CypressResource {
 
     async getCypressResource(resourceUrl: string, opts: { headers?: Record<string, string> } = {}): Promise<unknown> {
         try {
-            const config: Record<string, unknown> = {};
+            const config: JsonObject = {};
             if (opts.headers) config.headers = opts.headers;
             const response = await this.client.get(resourceUrl, config);
             return response.data;

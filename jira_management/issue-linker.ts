@@ -4,7 +4,7 @@ import { rootLogger } from '../shared/logger';
 import { sleep } from '../shared/http-client';
 import type JiraResource from './jira_resource';
 import type JiraLinkManager from './jira_link_manager';
-import type { TestCase } from '../shared/types';
+import type { LogContext, TestCase } from '../shared/types';
 
 interface ActionResult {
     action?: string;
@@ -22,7 +22,7 @@ class IssueLinker {
     async associatePrecondition(
         test: TestCase,
         issueKey: string,
-        _opLog: { info: (msg: string, meta?: Record<string, unknown>) => void },
+        _opLog: { info: (msg: string, meta?: LogContext) => void },
     ): Promise<ActionResult | null> {
         if (!test.precondition) return null;
         try {

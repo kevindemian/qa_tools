@@ -1,4 +1,4 @@
-import type { TestCase, TestResult } from '../shared/types';
+import type { JsonObject, TestCase, TestResult } from '../shared/types';
 import type TestCaseFactory from './test-case-factory';
 import type IssueLinker from './issue-linker';
 import { rootLogger } from '../shared/logger';
@@ -7,6 +7,34 @@ import { update as updateState } from '../shared/state';
 interface LinkRelationsResult {
     abort: boolean;
     errored: boolean;
+}
+
+interface TestDataPayload {
+    fields: {
+        project: { key: string };
+        summary: string;
+        description: string;
+        issuetype: { name: string };
+        labels?: string[];
+        [key: string]: unknown;
+    };
+    [key: string]: unknown;
+}
+
+interface CheckpointData {
+    project: string;
+    ts: string;
+    testCount: number;
+    done: Array<{ key: string; title: string }>;
+    jsonPath?: string;
+    csvPath?: string;
+}
+
+interface StateUpdateData {
+    lastLabels: string;
+    lastProject: string;
+    lastJsonPath?: string;
+    lastCsvPath?: string;
 }
 
 async function createIssueForTest(
@@ -74,13 +102,13 @@ async function linkTestRelations(
     return { abort: false, errored };
 }
 
-function buildTestData(test: TestCase, projectName: string, jiraLabels: string[]): Record<string, unknown> {
+function buildTestData(test: TestCase, projectName: string, jiraLabels: string[]): TestDataPayload {
     let description = test.description || '';
     if (test.precondition && test.precondition.type === 'inline') {
         description += (description ? '\n\n' : '') + 'Pre-condition: ' + test.precondition.value;
     }
 
-    const testData: Record<string, unknown> = {
+    const testData: TestDataPayload = {
         fields: {
             project: { key: projectName },
             summary: test.title,
@@ -90,7 +118,7 @@ function buildTestData(test: TestCase, projectName: string, jiraLabels: string[]
     };
 
     if (jiraLabels.length > 0) {
-        (testData.fields as Record<string, unknown>).labels = jiraLabels;
+        testData.fields.labels = jiraLabels;
     }
 
     return testData;
@@ -105,15 +133,16 @@ function saveCheckpoint(
     inMemoryTasksText: string[],
 ): void {
     const cpKey = sourceType === 'json' ? 'jsonPath' : 'csvPath';
-    const cpSave: Record<string, unknown> = {};
+    const cpSave: CheckpointData = {
+        project: projectName,
+        ts: new Date().toISOString(),
+        testCount: tests.length,
+        done: inMemoryTasksId.map((key, idx) => ({ key, title: inMemoryTasksText[idx] })),
+    };
     cpSave[cpKey] = sourcePath;
-    cpSave.project = projectName;
-    cpSave.ts = new Date().toISOString();
-    cpSave.testCount = tests.length;
-    cpSave.done = inMemoryTasksId.map((key, idx) => ({ key, title: inMemoryTasksText[idx] }));
     updateState((state) => {
         if (!state._checkpoint) state._checkpoint = {};
-        Object.assign(state._checkpoint as Record<string, unknown>, cpSave);
+        Object.assign(state._checkpoint as JsonObject, cpSave);
     });
 }
 
@@ -124,13 +153,12 @@ function yieldToEventLoop(): Promise<void> {
 }
 
 function updateFinalState(sourceType: string, sourcePath: string, projectName: string, jiraLabels: string[]): void {
-    const stateUpdate: Record<string, unknown> = { lastLabels: jiraLabels.join(',') };
+    const stateUpdate: StateUpdateData = { lastLabels: jiraLabels.join(','), lastProject: projectName };
     if (sourceType === 'json') {
         stateUpdate.lastJsonPath = sourcePath;
     } else {
         stateUpdate.lastCsvPath = sourcePath;
     }
-    stateUpdate.lastProject = projectName;
     updateState((state) => Object.assign(state, stateUpdate));
 }
 

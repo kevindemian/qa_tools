@@ -8,9 +8,14 @@ import { printSessionSummary as sharedPrintSessionSummary } from '../shared/cli_
 import { providerLabel as _providerLabel } from './ui-helpers';
 import { error, print, title, warn } from '../shared/prompt';
 import { loadMetrics, calculateFlakiness } from '../shared/metrics';
-import type { GitProvider } from '../shared/types';
+import type { GitProvider, JsonObject, StateContainer } from '../shared/types';
 import GitLabManager from './gitlab_manager';
 import GitHubManager from './github_manager';
+
+interface ProviderConfig {
+    provider: string;
+    repo: string;
+}
 
 export const sessionLog = rootLogger.child({ session: 'gitlab' });
 export const sessionContext = new SessionContext();
@@ -45,10 +50,10 @@ export const MSG_OPERATION_CANCELED = 'Operação cancelada.';
 const PROVIDERS_PATH = path.resolve(__dirname, '../config/providers.json');
 const PROJECTS_PATH = path.resolve(__dirname, '../config/projects.json');
 
-let _providersConfig: Record<string, unknown> | undefined;
+let _providersConfig: Record<string, ProviderConfig> | undefined;
 let _projects: Record<string, string> | undefined;
 
-function loadProvidersConfig(): Record<string, unknown> {
+function loadProvidersConfig(): Record<string, ProviderConfig> {
     if (_providersConfig) return _providersConfig;
     try {
         _providersConfig = JSON.parse(fs.readFileSync(PROVIDERS_PATH, 'utf8'));
@@ -84,7 +89,7 @@ function loadProjects(): Record<string, string> {
     return _projects!;
 }
 
-export function getProvidersConfig(): Record<string, unknown> {
+export function getProvidersConfig(): Record<string, ProviderConfig> {
     return loadProvidersConfig();
 }
 
@@ -93,7 +98,7 @@ export function getProjects(): Record<string, string> {
 }
 
 export function getProviderForProject(projectName: string): 'gitlab' | 'github' {
-    const cfg = loadProvidersConfig()[projectName] as Record<string, unknown> | undefined;
+    const cfg = loadProvidersConfig()[projectName] as ProviderConfig | undefined;
     return cfg?.provider === 'github' ? 'github' : 'gitlab';
 }
 
@@ -101,18 +106,18 @@ export function createManagerForProject(projectName: string, id: string): GitPro
     const provider = getProviderForProject(projectName);
     currentProvider = provider;
     if (provider === 'github') {
-        const cfg = loadProvidersConfig()[projectName] as Record<string, unknown> | undefined;
+        const cfg = loadProvidersConfig()[projectName] as ProviderConfig | undefined;
         const repo = (cfg?.repo as string) || id;
         const ghToken = Config.githubToken || Config.gitToken || '';
         const ghApiUrl = Config.githubApiUrl || 'https://api.github.com';
-        return new GitHubManager(repo, ghToken, ghApiUrl) as unknown as GitProvider;
+        return new GitHubManager(repo, ghToken, ghApiUrl);
     }
     return new GitLabManager(id, apiToken, gitlabBaseUrl);
 }
 
 export function pushHistory(op: string, detail: string, status: string) {
     sessionContext.pushHistory(op, detail, status);
-    updateState((state: Record<string, unknown>) => {
+    updateState((state: StateContainer) => {
         if (!state.history) state.history = [];
         (state.history as Array<unknown>).push({ op, detail, status, ts: new Date().toISOString() });
         if ((state.history as Array<unknown>).length > 50)
@@ -168,9 +173,9 @@ export async function displayRecentPipelines(m: GitProvider) {
     } catch {}
 }
 
-export function buildActionChoices(): Array<Record<string, unknown>> {
+export function buildActionChoices(): JsonObject[] {
     const prLabel = currentProvider === 'github' ? 'PR' : 'MR';
-    const choices: Array<Record<string, unknown>> = [
+    const choices: JsonObject[] = [
         { type: 'separator', line: '        ' },
         { type: 'separator', line: '       PIPELINES' },
         { name: '      Disparar pipeline', value: '1' },

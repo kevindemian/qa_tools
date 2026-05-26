@@ -7,7 +7,7 @@ import { sleep } from '../shared/http-client';
 import { SessionContext } from '../shared/session-context';
 import Config from '../shared/config';
 import type { ParseResult } from '../shared/result_parser';
-import type { PipelineTriggerResult } from '../shared/types';
+import type { PipelineTriggerResult, StateContainer } from '../shared/types';
 import type { GitProvider } from '../shared/types';
 import {
     collectTestResults as _collectTestResults,
@@ -167,7 +167,7 @@ async function resumePendingPipeline(m: GitProvider, projectName: string): Promi
             true,
         )
     ) {
-        updateState((s: Record<string, unknown>) => {
+        updateState((s: StateContainer) => {
             delete s.pendingPipeline;
         });
         return null;
@@ -176,7 +176,7 @@ async function resumePendingPipeline(m: GitProvider, projectName: string): Promi
     const branch = pending.branch || '';
     const id = pending.pipelineId;
     info('Retomando pipeline #' + id + '...');
-    updateState((s: Record<string, unknown>) => {
+    updateState((s: StateContainer) => {
         delete s.pendingPipeline;
     });
     const pollResult = await pollPipeline(m, id);
@@ -260,7 +260,7 @@ async function triggerAndPollPipeline(
     const id = (pipelineResult.id as string) || (pipelineResult.run_number as string) || '';
     if (!id) return;
 
-    updateState((s: Record<string, unknown>) => {
+    updateState((s: StateContainer) => {
         s.pendingPipeline = { branch, pipelineId: id, projectName };
     });
     setIsBusy(true);
@@ -269,7 +269,7 @@ async function triggerAndPollPipeline(
     setIsBusy(false);
     const icon = pollResult.status === 'success' ? '\u2713' : '\u2717';
     info('Pipeline #' + id + ': ' + icon + ' ' + pollResult.status);
-    updateState((s: Record<string, unknown>) => {
+    updateState((s: StateContainer) => {
         delete s.pendingPipeline;
     });
     if (pollResult.status !== 'canceled' && pollResult.status !== 'skipped') {

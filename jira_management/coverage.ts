@@ -1,3 +1,4 @@
+import type { JsonObject } from '../shared/types';
 import type JiraResource from './jira_resource';
 
 export interface CoverageResult {
@@ -9,23 +10,23 @@ export interface CoverageResult {
     coveragePct: number;
 }
 
-function getEpicFromIssue(fields: { [key: string]: unknown }): string | null {
+function getEpicFromIssue(fields: JsonObject): string | null {
     const epic = fields['customfield_10014'] ?? fields['epic'] ?? fields['Epic'] ?? null;
     if (!epic) return null;
     if (typeof epic === 'string') return epic;
-    if (typeof epic === 'object' && epic !== null && 'key' in (epic as Record<string, unknown>)) {
-        return (epic as Record<string, unknown>).key as string;
+    if (typeof epic === 'object' && epic !== null && 'key' in (epic as JsonObject)) {
+        return (epic as JsonObject).key as string;
     }
     return null;
 }
 
-function issueHasSteps(fields: { [key: string]: unknown }): boolean {
+function issueHasSteps(fields: JsonObject): boolean {
     const steps = fields['steps'];
     return Array.isArray(steps) && steps.length > 0;
 }
 
 export async function analyzeCoverage(jiraResource: JiraResource, project: string): Promise<CoverageResult> {
-    let response: { issues: Array<{ key: string; fields: { [key: string]: unknown } }> };
+    let response: { issues: Array<{ key: string; fields: JsonObject }> };
     try {
         response = await jiraResource.searchJiraIssues(`project = ${project} AND issuetype = Test`);
     } catch {

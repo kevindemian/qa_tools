@@ -1,3 +1,4 @@
+import type { JsonObject } from '../shared/types';
 import { title, warn, divider, ask, tableView } from '../shared/prompt';
 import { load as loadState } from '../shared/state';
 import { defaultOutput } from '../shared/output';
@@ -26,7 +27,7 @@ async function handleHelp() {
 }
 
 async function handleShowHistory() {
-    const history = (loadState().history as Array<Record<string, unknown>>) || [];
+    const history = (loadState().history as JsonObject[]) || [];
     title('Histórico de operações');
     const last10 = history.slice(-10);
     if (last10.length === 0) {

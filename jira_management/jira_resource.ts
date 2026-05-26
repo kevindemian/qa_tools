@@ -19,6 +19,7 @@ import {
     transitionIssue as sprintTransitionIssue,
     moveCardsToDone as sprintMoveCardsToDone,
 } from './jira-resource-sprint';
+import type { JsonObject } from '../shared/types';
 import type { VersionData, JiraIssue, SearchResponse } from './jira-resource-version';
 
 class JiraResource {
@@ -43,16 +44,16 @@ class JiraResource {
         return sprintGetTransitionsForIssue(this, issueKey);
     }
 
-    async getJiraResource<T = Record<string, unknown>>(resourceUrl: string): Promise<T> {
+    async getJiraResource<T = JsonObject>(resourceUrl: string): Promise<T> {
         const response = await this.axiosInstance.get<T>(`/${resourceUrl}`);
         return response.data;
     }
 
-    async postJiraResource(resourceUrl: string, data: unknown): Promise<Record<string, unknown>> {
+    async postJiraResource(resourceUrl: string, data: unknown): Promise<JsonObject> {
         const opLog = this.log.child({ resourceUrl });
         try {
             const response = await this.axiosInstance.post(`/${resourceUrl}`, data);
-            return response.data as Record<string, unknown>;
+            return response.data as JsonObject;
         } catch (err: unknown) {
             const axiosErr = err as { response?: { status?: number } };
             opLog.error(`Erro POST /${resourceUrl}: ${extractErrorMessage(err)}`, {
@@ -63,10 +64,10 @@ class JiraResource {
         }
     }
 
-    async putJiraResource(resourceUrl: string, data: unknown): Promise<Record<string, unknown> | null> {
+    async putJiraResource(resourceUrl: string, data: unknown): Promise<JsonObject | null> {
         try {
             const response = await this.axiosInstance.put(`/${resourceUrl}`, data);
-            return response.status === 204 ? null : (response.data as Record<string, unknown>);
+            return response.status === 204 ? null : (response.data as JsonObject);
         } catch (err: unknown) {
             const axiosErr = err as { response?: { status?: number } };
             this.log.error(`Erro PUT /${resourceUrl}: ${extractErrorMessage(err)}`, {
@@ -89,11 +90,7 @@ class JiraResource {
         return versionGetVersionId(this, projectName, versionName);
     }
 
-    async createVersion(
-        projectName: string,
-        versionName: string,
-        description?: string,
-    ): Promise<Record<string, unknown> | null> {
+    async createVersion(projectName: string, versionName: string, description?: string): Promise<JsonObject | null> {
         return versionCreateVersion(this, projectName, versionName, description);
     }
 

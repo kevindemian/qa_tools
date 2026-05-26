@@ -128,7 +128,8 @@ describe('session-state', () => {
 
         it('setManager updates value', () => {
             const m = {};
-            sessionState.setManager(m as unknown);
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            sessionState.setManager(m as any);
             expect(sessionState.manager).toBe(m);
         });
     });
