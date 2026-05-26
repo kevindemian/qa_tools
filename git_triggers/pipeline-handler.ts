@@ -21,11 +21,19 @@ import type { AnalysisReport } from '../shared/failure-analysis';
 import JiraResource from '../jira_management/jira_resource';
 import { collectAutomated, fileToJira } from '../shared/bug-report';
 
+const PIPELINE_POLL_INTERVAL_MS = 5000;
+const PIPELINE_POLL_TIMEOUT_MS = 300000;
+
 export function isComplete(status: string): boolean {
     return ['success', 'failed', 'canceled', 'skipped'].includes(status);
 }
 
-export async function pollPipeline(m: GitProvider, pipelineId: string | number, interval = 5000, timeout = 300000) {
+export async function pollPipeline(
+    m: GitProvider,
+    pipelineId: string | number,
+    interval = PIPELINE_POLL_INTERVAL_MS,
+    timeout = PIPELINE_POLL_TIMEOUT_MS,
+): Promise<{ status: string; web_url: string }> {
     return withSpinner('Aguardando pipeline #' + pipelineId, async () => {
         const start = Date.now();
         while (Date.now() - start < timeout) {
@@ -48,7 +56,7 @@ export function _jiraEnv(): { base: string; token: string; xray: string } | null
     return __jiraEnv();
 }
 
-export async function downloadTestArtifacts(m: GitProvider, pipelineId: string | number) {
+export async function downloadTestArtifacts(m: GitProvider, pipelineId: string | number): Promise<ParseResult | null> {
     return _downloadTestArtifacts(m, pipelineId);
 }
 
@@ -56,7 +64,11 @@ export function _resolveGlob(pattern: string): string | null {
     return __resolveGlob(pattern);
 }
 
-export async function parseTestResults(parsed: ParseResult) {
+export async function parseTestResults(parsed: ParseResult): Promise<{
+    matched: Array<{ key: string; title: string; status: 'passed' | 'failed' | 'skipped'; duration: number }>;
+    unmatched: Array<{ title: string; state: string }>;
+    csvName: string;
+} | null> {
     return _parseTestResults(parsed);
 }
 
@@ -67,7 +79,7 @@ export async function createTestExecution(
     projectName: string,
     pipelineId: string | number,
     branch: string,
-) {
+): Promise<void> {
     await _createTestExecution(matched, csvName, jira, projectName, pipelineId, branch, currentProvider, pushHistory);
 }
 
@@ -80,72 +92,85 @@ export async function collectTestResults(
     return _collectTestResults(m, pipelineId, branch, projectName, currentProvider, pushHistory);
 }
 
+async function handleBugCreation(
+    parsed: ParseResult,
+    pipelineId: string | number,
+    branch: string,
+    analysisReport: AnalysisReport,
+): Promise<void> {
+    const jira = __jiraEnv();
+    if (!jira || !confirm('Criar bug no Jira com o resumo das falhas?', false)) return;
+    try {
+        const bugReport = collectAutomated(parsed, {
+            pipelineId: String(pipelineId),
+            branch,
+            provider: currentProvider,
+        });
+        bugReport.description = analysisReport.content;
+        const jiraRes = new JiraResource(jira.token, jira.base + '/rest/api/2');
+        const key = await fileToJira(jiraRes, bugReport, Config.jiraProject || 'ECSPOL');
+        success('Bug criado: ' + jira.base + '/browse/' + key);
+        pushHistory('create-jira-issue', key, 'ok');
+    } catch (err) {
+        printError('Falha ao criar bug no Jira', err);
+        pushHistory('create-jira-issue', pipelineId + '', 'error');
+    }
+}
+
+async function handleQuickMerge(m: GitProvider, branch: string, pollStatus: string | undefined): Promise<void> {
+    if (pollStatus !== 'success') return;
+    if (!confirm('Criar merge request de ' + branch + ' para?', false)) return;
+    const target = prompt('Branch de destino', { default: 'main' });
+    const prLabel = currentProvider === 'github' ? 'PR' : 'MR';
+    const mrTitle = prompt('Titulo do ' + prLabel, { default: 'chore: merge ' + branch + ' -> ' + target });
+    try {
+        const mr = await withSpinner('Criando ' + prLabel + ' ' + branch + ' -> ' + target + '...', () =>
+            m.createMergeRequest(branch, target, mrTitle, ''),
+        );
+        if (mr) {
+            success(prLabel + ' criado: ' + String(mr.web_url));
+            pushHistory('quick-mr', branch + '->' + target, 'ok');
+            await tryAcceptMerge(m, mr.iid as string | number, prLabel);
+        }
+    } catch (err) {
+        printError('Falha ao criar ' + prLabel, err);
+        pushHistory('quick-mr', branch + '->' + target, 'error');
+    }
+}
+
+async function tryAcceptMerge(m: GitProvider, iid: string | number, prLabel: string): Promise<void> {
+    if (!confirm('Fazer merge de em ' + prLabel + ' #' + String(iid) + ' agora?', false)) return;
+    try {
+        const mergeResult = await withSpinner('Fazendo merge de ' + prLabel + ' #' + String(iid) + '...', () =>
+            m.acceptMergeRequest(iid),
+        );
+        if (mergeResult) {
+            success('Merge realizado: ' + String(mergeResult.web_url));
+            pushHistory('quick-merge', String(iid), 'ok');
+        }
+    } catch (err) {
+        printError('Falha ao fazer merge', err);
+        pushHistory('quick-merge', String(iid), 'error');
+    }
+}
+
 async function _postPipeline(
     m: GitProvider,
     pipelineId: string | number,
     branch: string,
     projectName: string,
     pollStatus?: string,
-) {
+): Promise<void> {
     let parsed: ParseResult | null = null;
     if (confirm('Coletar resultados para Jira?', false)) {
         parsed = await collectTestResults(m, pipelineId, branch, projectName);
     }
     if (parsed) {
-        await offerPipelineFailureAnalysis(parsed, async (analysisReport: AnalysisReport) => {
-            const jira = __jiraEnv();
-            if (!jira || !confirm('Criar bug no Jira com o resumo das falhas?', false)) return;
-            try {
-                const bugReport = collectAutomated(parsed, {
-                    pipelineId: String(pipelineId),
-                    branch,
-                    provider: currentProvider,
-                });
-                bugReport.description = analysisReport.content;
-                const jiraRes = new JiraResource(jira.token, jira.base + '/rest/api/2');
-                const key = await fileToJira(jiraRes, bugReport, Config.jiraProject || 'ECSPOL');
-                success('Bug criado: ' + jira.base + '/browse/' + key);
-                pushHistory('create-jira-issue', key, 'ok');
-            } catch (err) {
-                printError('Falha ao criar bug no Jira', err);
-                pushHistory('create-jira-issue', pipelineId + '', 'error');
-            }
-        });
+        await offerPipelineFailureAnalysis(parsed, (analysisReport) =>
+            handleBugCreation(parsed, pipelineId, branch, analysisReport),
+        );
     }
-    if (pollStatus !== 'success') return;
-    if (confirm('Criar merge request de ' + branch + ' para?', false)) {
-        const target = prompt('Branch de destino', { default: 'main' });
-        const prLabel = currentProvider === 'github' ? 'PR' : 'MR';
-        const mrTitle = prompt('Titulo do ' + prLabel, { default: 'chore: merge ' + branch + ' -> ' + target });
-        try {
-            const mr = await withSpinner('Criando ' + prLabel + ' ' + branch + ' -> ' + target + '...', () =>
-                m.createMergeRequest(branch, target, mrTitle, ''),
-            );
-            if (mr) {
-                success(prLabel + ' criado: ' + String(mr.web_url));
-                pushHistory('quick-mr', branch + '->' + target, 'ok');
-
-                if (confirm('Fazer merge de ' + branch + ' em ' + target + ' agora?', false)) {
-                    try {
-                        const mergeResult = await withSpinner(
-                            'Fazendo merge de ' + prLabel + ' #' + String(mr.iid) + '...',
-                            () => m.acceptMergeRequest(mr.iid as string | number),
-                        );
-                        if (mergeResult) {
-                            success('Merge realizado: ' + String(mergeResult.web_url));
-                            pushHistory('quick-merge', String(mr.iid), 'ok');
-                        }
-                    } catch (err) {
-                        printError('Falha ao fazer merge', err);
-                        pushHistory('quick-merge', String(mr.iid), 'error');
-                    }
-                }
-            }
-        } catch (err) {
-            printError('Falha ao criar ' + prLabel, err);
-            pushHistory('quick-mr', branch + '->' + target, 'error');
-        }
-    }
+    await handleQuickMerge(m, branch, pollStatus);
 }
 
 async function resumePendingPipeline(m: GitProvider, projectName: string): Promise<string | null> {
@@ -275,7 +300,7 @@ async function triggerAndPollPipeline(
     }
 }
 
-export async function handleTriggerPipeline(ctx: SessionContext, m: GitProvider, projectName: string) {
+export async function handleTriggerPipeline(ctx: SessionContext, m: GitProvider, projectName: string): Promise<void> {
     const resumed = await resumePendingPipeline(m, projectName);
     if (resumed !== null) return;
 
@@ -285,7 +310,7 @@ export async function handleTriggerPipeline(ctx: SessionContext, m: GitProvider,
     await triggerAndPollPipeline(m, built.branch, built.payload, projectName);
 }
 
-export async function handleExportVariables(ctx: SessionContext, m: GitProvider) {
+export async function handleExportVariables(ctx: SessionContext, m: GitProvider): Promise<void> {
     if (!confirm('Exportar TODAS as variáveis CI/CD (incluindo secrets)?', false)) {
         warn(MSG_OPERATION_CANCELED);
         return;

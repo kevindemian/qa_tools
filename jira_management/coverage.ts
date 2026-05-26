@@ -1,7 +1,7 @@
 import type { JsonObject } from '../shared/types';
 import type JiraResource from './jira_resource';
 
-export interface CoverageResult {
+interface CoverageResult {
     totalIssues: number;
     totalSteps: number;
     mappedIssues: number;

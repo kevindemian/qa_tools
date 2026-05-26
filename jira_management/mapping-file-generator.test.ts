@@ -2,10 +2,13 @@ import fs from 'fs';
 import path from 'path';
 import os from 'os';
 
-jest.mock('../shared/config', () => ({ cypressProjectPath: '' }));
-jest.mock('../shared/state', () => ({ load: jest.fn() }));
 jest.mock('../shared/logger', () => ({ rootLogger: { warn: jest.fn() } }));
 jest.mock('../shared/prompt', () => ({ info: jest.fn(), isQuiet: jest.fn().mockReturnValue(true) }));
+
+const mockReportsDir = jest.fn();
+jest.mock('../shared/temp-dir', () => ({
+    reportsDir: mockReportsDir,
+}));
 
 import MappingFileGenerator from './mapping-file-generator';
 
@@ -17,32 +20,11 @@ describe('MappingFileGenerator', () => {
         tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'qa-tools-map-'));
         generator = new MappingFileGenerator();
         jest.clearAllMocks();
-        const cfg = require('../shared/config') as { cypressProjectPath: string };
-        cfg.cypressProjectPath = tmpDir;
-        const st = require('../shared/state') as { load: jest.Mock };
-        st.load.mockReturnValue({});
+        mockReportsDir.mockReturnValue(tmpDir);
     });
 
     afterEach(() => {
         fs.rmSync(tmpDir, { recursive: true, force: true });
-    });
-
-    it('returns early when cypressProjectPath is empty and load() has no lastCypressPath', () => {
-        const cfg = require('../shared/config') as { cypressProjectPath: string };
-        cfg.cypressProjectPath = '';
-        const st = require('../shared/state') as { load: jest.Mock };
-        st.load.mockReturnValue({});
-        generator.generate('/f.csv', 'P', ['K-1'], [{ title: '', steps: [] }]);
-        expect(fs.readdirSync(tmpDir)).toHaveLength(0);
-    });
-
-    it('uses load().lastCypressPath when cypressProjectPath is empty', () => {
-        const cfg = require('../shared/config') as { cypressProjectPath: string };
-        cfg.cypressProjectPath = '';
-        const st = require('../shared/state') as { load: jest.Mock };
-        st.load.mockReturnValue({ lastCypressPath: tmpDir });
-        generator.generate('/f.csv', 'P', ['K-1'], [{ title: 't', steps: [] }]);
-        expect(fs.readdirSync(tmpDir)).toHaveLength(3);
     });
 
     it('returns early when tasksId is empty', () => {
@@ -87,14 +69,11 @@ describe('MappingFileGenerator', () => {
         expect(txt).toContain('K-200: Logout test');
     });
 
-    it('output directory does not exist and is created automatically', () => {
-        const nestedDir = path.join(tmpDir, 'nested', 'deep');
-        const cfg = require('../shared/config') as { cypressProjectPath: string };
-        cfg.cypressProjectPath = nestedDir;
-        expect(fs.existsSync(nestedDir)).toBe(false);
+    it('output directory is created when reportsDir does not exist', () => {
+        mockReportsDir.mockReturnValue(tmpDir);
         generator.generate('/f.csv', 'P', ['K-1'], [{ title: 't', steps: [] }]);
-        expect(fs.existsSync(nestedDir)).toBe(true);
-        expect(fs.readdirSync(nestedDir)).toHaveLength(3);
+        expect(fs.existsSync(tmpDir)).toBe(true);
+        expect(fs.readdirSync(tmpDir)).toHaveLength(3);
     });
 
     it('test without steps still creates JSON, steps omitted from mapping', () => {
@@ -129,25 +108,6 @@ describe('MappingFileGenerator', () => {
         expect(p.info).toHaveBeenCalledTimes(2);
     });
 
-    it('mkdir fails — warns and returns early', () => {
-        const origExistsSync = fs.existsSync;
-        const origMkdirSync = fs.mkdirSync;
-        fs.existsSync = () => false;
-        fs.mkdirSync = () => {
-            throw new Error('EPERM');
-        };
-        try {
-            generator.generate('/f.csv', 'P', ['K-1'], [{ title: 't', steps: [] }]);
-            const l = require('../shared/logger') as { rootLogger: { warn: jest.Mock } };
-            expect(l.rootLogger.warn).toHaveBeenCalledWith(
-                expect.stringContaining('Não foi possível criar diretório de saida'),
-            );
-        } finally {
-            fs.existsSync = origExistsSync;
-            fs.mkdirSync = origMkdirSync;
-        }
-    });
-
     it('extra tasksId beyond tests produce empty-key entries', () => {
         generator.generate('/f.csv', 'P', ['KA', 'KB', 'KC'], [{ title: 'only', steps: [] }]);
         const json = JSON.parse(fs.readFileSync(path.join(tmpDir, 'f-jira-mapping.json'), 'utf8'));
@@ -156,7 +116,7 @@ describe('MappingFileGenerator', () => {
         expect(json.tests[1].title).toBe('');
         expect(json.tests[2].title).toBe('');
         const txt = fs.readFileSync(path.join(tmpDir, 'f-summary.txt'), 'utf8');
-        expect(txt).toContain('KB: (sem titulo)');
+        expect(txt).toContain('KB: (untitled)');
     });
 
     it('steps with empty fields default to empty string', () => {

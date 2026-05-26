@@ -16,6 +16,7 @@ const mockListPipelineArtifacts = jest.fn<any>();
 const mockDownloadArtifact = jest.fn<any>();
 const mockAdmZipGetEntries = jest.fn<any>();
 const mockLoadState = jest.fn<any>();
+const mockReportsDir = jest.fn<any>();
 /* eslint-enable @typescript-eslint/no-explicit-any */
 
 // ── Module mocks ─────────────────────────────────────────────────────────
@@ -57,6 +58,10 @@ jest.mock('../shared/logger', () => ({
         info: jest.fn(),
     },
     Logger: jest.fn(),
+}));
+
+jest.mock('../shared/temp-dir', () => ({
+    reportsDir: mockReportsDir,
 }));
 
 jest.mock('../shared/result_parser', () => ({
@@ -106,6 +111,7 @@ beforeEach(() => {
     jest.clearAllMocks();
     mockPrompt.mockResolvedValue('');
     mockLoadState.mockReturnValue({ lastCypressPath: '' });
+    mockReportsDir.mockReturnValue('/tmp/reports');
     mockGlobSync.mockReturnValue([]);
     mockAdmZipGetEntries.mockReturnValue([]);
 });

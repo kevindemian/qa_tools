@@ -26,6 +26,7 @@ export {
     confirm,
     smartPrompt,
     ask,
+    askFilePath,
     askConfirm,
     showSelect,
     __setSelectMod,

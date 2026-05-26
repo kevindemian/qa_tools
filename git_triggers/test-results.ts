@@ -5,9 +5,9 @@ import Config from '../shared/config';
 import JiraResource from '../jira_management/jira_resource';
 import JiraLinkManager from '../jira_management/jira_link_manager';
 import { warn, info, success, printError, withSpinner, ask } from '../shared/prompt';
-import { load as loadState } from '../shared/state';
+import { reportsDir } from '../shared/temp-dir';
 import { parseMochawesome } from '../shared/result_parser';
-import type { MochawesomeData, ParseResult } from '../shared/result_parser';
+import type { ParseResult } from '../shared/result_parser';
 import { matchResultsToTests, createTestExecutionFromResults } from '../jira_management/result_reporter';
 import type { GitProvider } from '../shared/types';
 
@@ -28,18 +28,9 @@ function _resolveGlob(pattern: string): string | null {
     }
 }
 
-async function downloadTestArtifacts(m: GitProvider, pipelineId: string | number) {
-    const artifacts = await withSpinner('Buscando artifacts...', () => m.listPipelineArtifacts(pipelineId));
-    if (!Array.isArray(artifacts) || artifacts.length === 0) {
-        warn('Nenhum artifact encontrado na pipeline #' + pipelineId);
-        return null;
-    }
-    const art = artifacts.find((a) => /mochawesome|test-result/i.test(a.name)) || artifacts[0];
-    info('Artifact: ' + art.name + ' (id=' + art.id + ')');
-
-    let buffer: Buffer;
+async function _downloadArtifactBuffer(m: GitProvider, art: { id: number | string }): Promise<Buffer | null> {
     try {
-        buffer = await withSpinner('Baixando artifact...', async () => {
+        return await withSpinner('Baixando artifact...', async () => {
             const dl = await m.downloadArtifact(art.id);
             return dl.buffer;
         });
@@ -47,8 +38,9 @@ async function downloadTestArtifacts(m: GitProvider, pipelineId: string | number
         printError('Falha ao baixar artifact', err);
         return null;
     }
+}
 
-    let jsonData: unknown;
+function _extractMochawesomeFromZip(buffer: Buffer): unknown {
     try {
         const zip = new AdmZip(buffer);
         const entries = zip.getEntries();
@@ -60,13 +52,29 @@ async function downloadTestArtifacts(m: GitProvider, pipelineId: string | number
             return null;
         }
         const raw = mochaEntry.getData().toString('utf8');
-        jsonData = JSON.parse(raw);
+        return JSON.parse(raw);
     } catch (err) {
         printError('Falha ao ler mochawesome.json', err);
         return null;
     }
+}
 
-    const parsed = parseMochawesome(jsonData as MochawesomeData);
+async function downloadTestArtifacts(m: GitProvider, pipelineId: string | number) {
+    const artifacts = await withSpinner('Buscando artifacts...', () => m.listPipelineArtifacts(pipelineId));
+    if (!Array.isArray(artifacts) || artifacts.length === 0) {
+        warn('Nenhum artifact encontrado na pipeline #' + pipelineId);
+        return null;
+    }
+    const art = artifacts.find((a) => /mochawesome|test-result/i.test(a.name)) || artifacts[0];
+    info('Artifact: ' + art.name + ' (id=' + art.id + ')');
+
+    const buffer = await _downloadArtifactBuffer(m, art);
+    if (!buffer) return null;
+
+    const jsonData = _extractMochawesomeFromZip(buffer);
+    if (!jsonData) return null;
+
+    const parsed = parseMochawesome(jsonData);
     info(
         'Resultados: ' +
             parsed.stats.passed +
@@ -91,8 +99,7 @@ interface MatchedTestItem {
 }
 
 async function parseTestResults(parsed: ParseResult) {
-    const cypressDir = Config.cypressProjectPath || (loadState().lastCypressPath as string) || '';
-    const defaultMapping = cypressDir ? path.join(path.resolve(cypressDir), '*jira-mapping.json') : '';
+    const defaultMapping = reportsDir() + '/*jira-mapping.json';
     const mappingPath = await ask('Caminho do mapping JSON', { default: defaultMapping });
     if (!mappingPath.trim()) {
         warn('Mapping necessario para criar Test Execution.');

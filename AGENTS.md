@@ -35,6 +35,12 @@ grep -rn "throw '" shared/ jira_management/ git_triggers/   # zero
 grep -rn ".only(" **/*.test.*                                # zero
 ```
 
+## R0 — Adversarial Iteration Until Pareto
+
+Every solution or plan MUST be evaluated adversarially before presentation.
+Iterate: identify weaknesses → fix → re-evaluate → stop when no further
+Pareto-improvement is possible. Document the final trade-offs explicitly.
+
 ## Non-negotiables (R1-R8)
 
 - **R1**: Every new .ts file MUST have a .test.ts file. Each public method ≥1 test (happy + error + edge case).

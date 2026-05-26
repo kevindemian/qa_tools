@@ -16,6 +16,64 @@ interface InlineToken {
     lang?: string;
 }
 
+// ─── Inline handlers ────────────────────────────────────────────────────────────
+
+function lexDel(src: string, i: number, flush: () => void, push: (t: InlineToken) => void): number | null {
+    if (src[i] !== '~' || src[i + 1] !== '~') return null;
+    const end = src.indexOf('~~', i + 2);
+    if (end === -1) return null;
+    flush();
+    push({ type: 'del', tokens: lexInline(src.slice(i + 2, end)) });
+    return end + 2;
+}
+
+function lexStrong(src: string, i: number, flush: () => void, push: (t: InlineToken) => void): number | null {
+    if (src[i] !== '*' || src[i + 1] !== '*') return null;
+    const end = src.indexOf('**', i + 2);
+    if (end === -1) return null;
+    flush();
+    push({ type: 'strong', tokens: lexInline(src.slice(i + 2, end)) });
+    return end + 2;
+}
+
+function lexEmStar(src: string, i: number, flush: () => void, push: (t: InlineToken) => void): number | null {
+    if (src[i] !== '*' || src[i + 1] === '*') return null;
+    const end = src.indexOf('*', i + 1);
+    if (end === -1) return null;
+    flush();
+    push({ type: 'em', tokens: lexInline(src.slice(i + 1, end)) });
+    return end + 1;
+}
+
+function lexEmUnderscore(src: string, i: number, flush: () => void, push: (t: InlineToken) => void): number | null {
+    if (src[i] !== '_') return null;
+    const end = src.indexOf('_', i + 1);
+    if (end === -1) return null;
+    flush();
+    push({ type: 'em', tokens: lexInline(src.slice(i + 1, end)) });
+    return end + 1;
+}
+
+function lexCodeSpan(src: string, i: number, flush: () => void, push: (t: InlineToken) => void): number | null {
+    if (src[i] !== '`') return null;
+    const end = src.indexOf('`', i + 1);
+    if (end === -1) return null;
+    flush();
+    push({ type: 'codespan', text: src.slice(i + 1, end) });
+    return end + 1;
+}
+
+function lexLink(src: string, i: number, flush: () => void, push: (t: InlineToken) => void): number | null {
+    if (src[i] !== '[') return null;
+    const cb = src.indexOf(']', i + 1);
+    if (cb === -1 || src[cb + 1] !== '(') return null;
+    const cp = src.indexOf(')', cb + 2);
+    if (cp === -1) return null;
+    flush();
+    push({ type: 'link', text: src.slice(i + 1, cb) });
+    return cp + 1;
+}
+
 // ─── Inline lexer ───────────────────────────────────────────────────────────────
 
 function lexInline(src: string): InlineToken[] {
@@ -29,71 +87,22 @@ function lexInline(src: string): InlineToken[] {
             buf = '';
         }
     };
+    const push = (t: InlineToken): void => {
+        tokens.push(t);
+    };
 
     while (i < src.length) {
-        if (src[i] === '~' && src[i + 1] === '~') {
-            const end = src.indexOf('~~', i + 2);
-            if (end !== -1) {
-                flush();
-                tokens.push({ type: 'del', tokens: lexInline(src.slice(i + 2, end)) });
-                i = end + 2;
-                continue;
+        const handlers = [lexDel, lexStrong, lexEmStar, lexEmUnderscore, lexCodeSpan, lexLink];
+        let matched = false;
+        for (const fn of handlers) {
+            const next = fn(src, i, flush, push);
+            if (next !== null) {
+                i = next;
+                matched = true;
+                break;
             }
         }
-
-        if (src[i] === '*' && src[i + 1] === '*') {
-            const end = src.indexOf('**', i + 2);
-            if (end !== -1) {
-                flush();
-                tokens.push({ type: 'strong', tokens: lexInline(src.slice(i + 2, end)) });
-                i = end + 2;
-                continue;
-            }
-        }
-
-        if (src[i] === '*' && src[i + 1] !== '*') {
-            const end = src.indexOf('*', i + 1);
-            if (end !== -1) {
-                flush();
-                tokens.push({ type: 'em', tokens: lexInline(src.slice(i + 1, end)) });
-                i = end + 1;
-                continue;
-            }
-        }
-
-        if (src[i] === '_') {
-            const end = src.indexOf('_', i + 1);
-            if (end !== -1) {
-                flush();
-                tokens.push({ type: 'em', tokens: lexInline(src.slice(i + 1, end)) });
-                i = end + 1;
-                continue;
-            }
-        }
-
-        if (src[i] === '`') {
-            const end = src.indexOf('`', i + 1);
-            if (end !== -1) {
-                flush();
-                tokens.push({ type: 'codespan', text: src.slice(i + 1, end) });
-                i = end + 1;
-                continue;
-            }
-        }
-
-        if (src[i] === '[') {
-            const cb = src.indexOf(']', i + 1);
-            if (cb !== -1 && src[cb + 1] === '(') {
-                const cp = src.indexOf(')', cb + 2);
-                if (cp !== -1) {
-                    flush();
-                    tokens.push({ type: 'link', text: src.slice(i + 1, cb) });
-                    i = cp + 1;
-                    continue;
-                }
-            }
-        }
-
+        if (matched) continue;
         buf += src[i];
         i++;
     }
@@ -149,6 +158,108 @@ function lexPipeTable(lines: string[]): InlineToken {
     return { type: 'table', header, rows, align };
 }
 
+// ─── Block-level handlers ───────────────────────────────────────────────────────
+
+function lexHeading(line: string): InlineToken | null {
+    const m = line.match(/^(#{1,6})\s+(.*)$/);
+    if (!m) return null;
+    return { type: 'heading', depth: m[1].length, tokens: lexInline(m[2]) };
+}
+
+function lexCodeBlock(lines: string[], i: number): { token: InlineToken; next: number } | null {
+    if (!lines[i].trimStart().startsWith('```')) return null;
+    const codeLines: string[] = [];
+    i++;
+    while (i < lines.length && !lines[i].trimStart().startsWith('```')) {
+        codeLines.push(lines[i]);
+        i++;
+    }
+    i++;
+    return { token: { type: 'code', text: codeLines.join('\n') }, next: i };
+}
+
+function lexBlockquote(lines: string[], i: number): { token: InlineToken; next: number } | null {
+    if (!lines[i].trimStart().startsWith('>')) return null;
+    const quoteLines: string[] = [];
+    while (i < lines.length && lines[i].trimStart().startsWith('>')) {
+        quoteLines.push(lines[i].trimStart().replace(/^>\s?/, ''));
+        i++;
+    }
+    return { token: { type: 'blockquote', tokens: lexInline(quoteLines.join(' ').trim()) }, next: i };
+}
+
+function lexUnorderedList(lines: string[], i: number): { token: InlineToken; next: number } | null {
+    const m = lines[i].match(/^(\s*)[-*+]\s+(.*)$/);
+    if (!m) return null;
+    const items: Array<{ tokens: InlineToken[] }> = [];
+    while (i < lines.length) {
+        const m2 = lines[i].match(/^(\s*)[-*+]\s+(.*)$/);
+        if (m2) {
+            items.push({ tokens: lexInline(m2[2]) });
+            i++;
+        } else if (lines[i].trim() === '') {
+            break;
+        } else {
+            break;
+        }
+    }
+    return { token: { type: 'list', items }, next: i };
+}
+
+function lexOrderedList(lines: string[], i: number): { token: InlineToken; next: number } | null {
+    const m = lines[i].match(/^\s*\d+\.\s+(.*)$/);
+    if (!m) return null;
+    const items: Array<{ tokens: InlineToken[] }> = [];
+    while (i < lines.length) {
+        const m2 = lines[i].match(/^\s*\d+\.\s+(.*)$/);
+        if (m2) {
+            items.push({ tokens: lexInline(m2[1]) });
+            i++;
+        } else if (lines[i].trim() === '') {
+            break;
+        } else {
+            break;
+        }
+    }
+    return { token: { type: 'list', items }, next: i };
+}
+
+function lexTableBlock(lines: string[], i: number): { token: InlineToken; next: number } | null {
+    if (!lines[i].trimStart().startsWith('|')) return null;
+    const tableLines: string[] = [];
+    while (i < lines.length && lines[i].includes('|')) {
+        tableLines.push(lines[i]);
+        i++;
+    }
+    return { token: lexPipeTable(tableLines), next: i };
+}
+
+function lexParagraph(lines: string[], i: number): { token: InlineToken; next: number } {
+    const paraLines: string[] = [lines[i]];
+    i++;
+    while (i < lines.length) {
+        const n = lines[i];
+        if (
+            n.trim() === '' ||
+            /^(#{1,6}\s|---|```|>)/.test(n) ||
+            /^(\s*[-*+]\s+|\s*\d+\.\s+)/.test(n) ||
+            n.trimStart().startsWith('|')
+        ) {
+            break;
+        }
+        paraLines.push(n);
+        i++;
+    }
+    return { token: { type: 'paragraph', tokens: lexInline(paraLines.join(' ')) }, next: i };
+}
+
+function dedupeSpaces(tokens: InlineToken[]): InlineToken[] {
+    return tokens.filter((t, idx, arr) => {
+        if (t.type === 'space' && idx > 0 && arr[idx - 1].type === 'space') return false;
+        return true;
+    });
+}
+
 // ─── Block-level lexer ──────────────────────────────────────────────────────────
 
 function lexMarkdown(src: string): InlineToken[] {
@@ -165,22 +276,17 @@ function lexMarkdown(src: string): InlineToken[] {
             continue;
         }
 
-        const hMatch = line.match(/^(#{1,6})\s+(.*)$/);
-        if (hMatch) {
-            tokens.push({ type: 'heading', depth: hMatch[1].length, tokens: lexInline(hMatch[2]) });
+        const h = lexHeading(line);
+        if (h) {
+            tokens.push(h);
             i++;
             continue;
         }
 
-        if (line.trimStart().startsWith('```')) {
-            const codeLines: string[] = [];
-            i++;
-            while (i < lines.length && !lines[i].trimStart().startsWith('```')) {
-                codeLines.push(lines[i]);
-                i++;
-            }
-            i++;
-            tokens.push({ type: 'code', text: codeLines.join('\n') });
+        const cb = lexCodeBlock(lines, i);
+        if (cb) {
+            tokens.push(cb.token);
+            i = cb.next;
             continue;
         }
 
@@ -190,86 +296,40 @@ function lexMarkdown(src: string): InlineToken[] {
             continue;
         }
 
-        if (line.trimStart().startsWith('>')) {
-            const quoteLines: string[] = [];
-            while (i < lines.length && lines[i].trimStart().startsWith('>')) {
-                quoteLines.push(lines[i].trimStart().replace(/^>\s?/, ''));
-                i++;
-            }
-            tokens.push({ type: 'blockquote', tokens: lexInline(quoteLines.join(' ').trim()) });
+        const bq = lexBlockquote(lines, i);
+        if (bq) {
+            tokens.push(bq.token);
+            i = bq.next;
             continue;
         }
 
-        const listMatch = line.match(/^(\s*)[-*+]\s+(.*)$/);
-        if (listMatch) {
-            const items: Array<{ tokens: InlineToken[] }> = [];
-            while (i < lines.length) {
-                const m = lines[i].match(/^(\s*)[-*+]\s+(.*)$/);
-                if (m) {
-                    items.push({ tokens: lexInline(m[2]) });
-                    i++;
-                } else if (lines[i].trim() === '') {
-                    break;
-                } else {
-                    break;
-                }
-            }
-            tokens.push({ type: 'list', items });
+        const ul = lexUnorderedList(lines, i);
+        if (ul) {
+            tokens.push(ul.token);
+            i = ul.next;
             continue;
         }
 
-        const oMatch = line.match(/^\s*\d+\.\s+(.*)$/);
-        if (oMatch) {
-            const items: Array<{ tokens: InlineToken[] }> = [];
-            while (i < lines.length) {
-                const m = lines[i].match(/^\s*\d+\.\s+(.*)$/);
-                if (m) {
-                    items.push({ tokens: lexInline(m[1]) });
-                    i++;
-                } else if (lines[i].trim() === '') {
-                    break;
-                } else {
-                    break;
-                }
-            }
-            tokens.push({ type: 'list', items });
+        const ol = lexOrderedList(lines, i);
+        if (ol) {
+            tokens.push(ol.token);
+            i = ol.next;
             continue;
         }
 
-        if (line.trimStart().startsWith('|')) {
-            const tableLines: string[] = [];
-            while (i < lines.length && lines[i].includes('|')) {
-                tableLines.push(lines[i]);
-                i++;
-            }
-            tokens.push(lexPipeTable(tableLines));
+        const tbl = lexTableBlock(lines, i);
+        if (tbl) {
+            tokens.push(tbl.token);
+            i = tbl.next;
             continue;
         }
 
-        const paraLines: string[] = [line];
-        i++;
-        while (i < lines.length) {
-            const n = lines[i];
-            if (
-                n.trim() === '' ||
-                /^(#{1,6}\s|---|```|>)/.test(n) ||
-                /^(\s*[-*+]\s+|\s*\d+\.\s+)/.test(n) ||
-                n.trimStart().startsWith('|')
-            ) {
-                break;
-            }
-            paraLines.push(n);
-            i++;
-        }
-        tokens.push({ type: 'paragraph', tokens: lexInline(paraLines.join(' ')) });
+        const para = lexParagraph(lines, i);
+        tokens.push(para.token);
+        i = para.next;
     }
 
-    return tokens.filter((t, idx, arr) => {
-        if (t.type === 'space' && idx > 0 && arr[idx - 1].type === 'space') {
-            return false;
-        }
-        return true;
-    });
+    return dedupeSpaces(tokens);
 }
 
 // ─── Test support: inject pre-parsed tokens ─────────────────────────────────────
@@ -335,7 +395,7 @@ function renderPipeTable(head: string[], rows: string[][], availWidth: number): 
     return out;
 }
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
+// eslint-disable-next-line @typescript-eslint/no-explicit-any -- token AST shape varies by lexer output, cannot be statically typed
 function renderTokens(tokens: any[], availWidth?: number): string[] {
     const out: string[] = [];
 
@@ -387,7 +447,7 @@ function renderTokens(tokens: any[], availWidth?: number): string[] {
     return out;
 }
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
+// eslint-disable-next-line @typescript-eslint/no-explicit-any -- token AST shape varies by lexer output, cannot be statically typed
 function renderInline(tokens: any[] | undefined): string {
     if (!tokens) return '';
     let out = '';

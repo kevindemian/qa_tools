@@ -95,10 +95,10 @@ describe('BugReport Service', () => {
                 provider: 'gitlab',
             });
 
-            expect(report.summary).toBe('1/2 testes falharam');
+            expect(report.summary).toBe('1/2 tests failed');
             expect(report.source).toBe('automated');
             expect(report.description).toContain('*Login fails*');
-            expect(report.description).toContain('Erro: Expected 200 got 500');
+            expect(report.description).toContain('Error: Expected 200 got 500');
             expect(report.metadata).toEqual({
                 pipelineId: '456',
                 branch: 'main',
@@ -128,16 +128,16 @@ describe('BugReport Service', () => {
             };
 
             const composed = compose(report);
-            expect(composed).toContain('**Sumário:** Login issue');
-            expect(composed).toContain('**Severidade:** major');
-            expect(composed).toContain('**Descrição:**\nDescription text');
+            expect(composed).toContain('**Summary:** Login issue');
+            expect(composed).toContain('**Severity:** major');
+            expect(composed).toContain('**Description:**\nDescription text');
             expect(composed).toContain('1. Open app');
             expect(composed).toContain('2. Click login');
-            expect(composed).toContain('**Resultado esperado:** Success');
-            expect(composed).toContain('**Resultado atual:** Failure');
-            expect(composed).toContain('**Ambiente:** Staging');
-            expect(composed).toContain('**Componente:** Frontend');
-            expect(composed).toContain('**Análise IA:** UI_ELEMENT_MISSING');
+            expect(composed).toContain('**Expected Result:** Success');
+            expect(composed).toContain('**Actual Result:** Failure');
+            expect(composed).toContain('**Environment:** Staging');
+            expect(composed).toContain('**Component:** Frontend');
+            expect(composed).toContain('**AI Analysis:** UI_ELEMENT_MISSING');
         });
     });
 

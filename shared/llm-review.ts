@@ -86,82 +86,92 @@ function buildRetryPrompt(original: string, errors: string[]): string {
     ].join('\n');
 }
 
-export async function reviewWithLlm(system: string, user: string): Promise<ReviewResult> {
-    const startTime = Date.now();
+async function callLlmFallback(system: string, user: string, startTime: number): Promise<ReviewResult> {
+    const content = await llmPrompt('main', system, user);
+    recordLlmRequest('main', Date.now() - startTime);
+    return { content, reviewed: false, confidence: 'medium', fallbackUsed: true };
+}
+
+async function attemptPrimary(system: string, user: string, startTime: number): Promise<unknown> {
+    const primary = await llmPrompt('report', system, user);
+    recordLlmRequest('report', Date.now() - startTime);
+    try {
+        return JSON.parse(primary);
+    } catch {
+        recordLlmFailure('report');
+        return null;
+    }
+}
+
+async function runRetryLoop(
+    initial: unknown,
+    system: string,
+    user: string,
+    startTime: number,
+): Promise<{ parsed: unknown; retries: number; valid: boolean }> {
+    let parsed = initial;
+    let validation = analysisValidator.validate(parsed);
     let retries = 0;
 
-    try {
-        const primary = await llmPrompt('report', system, user);
+    while (!validation.valid && retries < MAX_RETRIES) {
+        retries++;
+        recordRetry();
+        const retryPrompt = buildRetryPrompt(system + '\n\n' + user, validation.errors);
+        const retryResult = await llmPrompt('report', retryPrompt, 'Fix the validation errors above.');
         recordLlmRequest('report', Date.now() - startTime);
-
-        let parsed: unknown;
         try {
-            parsed = JSON.parse(primary);
+            parsed = JSON.parse(retryResult);
         } catch {
             recordLlmFailure('report');
-            try {
-                const fallbackContent = await llmPrompt('main', system, user);
-                recordLlmRequest('main', Date.now() - startTime);
-                return { content: fallbackContent, reviewed: false, confidence: 'medium', fallbackUsed: true };
-            } catch (fallbackErr) {
-                // eslint-disable-next-line preserve-caught-error
-                throw new Error('LLM report + fallback failed: ' + (fallbackErr as Error).message);
-            }
+            return { parsed: null, retries, valid: false };
+        }
+        validation = analysisValidator.validate(parsed);
+    }
+    if (!validation.valid) {
+        for (const err of validation.errors) recordValidationRejection(err);
+    }
+    return { parsed, retries, valid: validation.valid };
+}
+
+async function performSelfReview(parsed: unknown, startTime: number, retries: number): Promise<ReviewResult> {
+    const reportContent = JSON.stringify(parsed, null, 2);
+    const reviewPrompt = buildReviewPrompt(reportContent);
+    const reviewResponse = await llmPrompt('reviewer', reviewPrompt, 'Review the analysis above.');
+    recordLlmRequest('reviewer', Date.now() - startTime);
+
+    const confidence = parseVerdict(reviewResponse);
+    const reviewerNotes = stripVerdict(reviewResponse);
+    recordConfidence(confidence);
+
+    const finalContent =
+        confidence !== 'high' && reviewerNotes
+            ? reportContent + '\n\n[Reviewer notes: ' + reviewerNotes + ']'
+            : reportContent;
+
+    rootLogger.info('LLM review confidence=' + confidence + ' retries=' + retries);
+    return { content: finalContent, reviewed: true, confidence, fallbackUsed: false };
+}
+
+export async function reviewWithLlm(system: string, user: string): Promise<ReviewResult> {
+    const startTime = Date.now();
+
+    try {
+        const parsed = await attemptPrimary(system, user, startTime);
+        if (parsed === null) {
+            return await callLlmFallback(system, user, startTime);
         }
 
-        let validation = analysisValidator.validate(parsed);
-
-        while (!validation.valid && retries < MAX_RETRIES) {
-            retries++;
-            recordRetry();
-            const retryPrompt = buildRetryPrompt(system + '\n\n' + user, validation.errors);
-            const retryResult = await llmPrompt('report', retryPrompt, 'Fix the validation errors above.');
-            recordLlmRequest('report', Date.now() - startTime);
-
-            try {
-                parsed = JSON.parse(retryResult);
-            } catch {
-                recordLlmFailure('report');
-                break;
-            }
-            validation = analysisValidator.validate(parsed);
+        const { parsed: validated, retries, valid } = await runRetryLoop(parsed, system, user, startTime);
+        if (!valid) {
+            return await callLlmFallback(system, user, startTime);
         }
 
-        if (!validation.valid) {
-            for (const err of validation.errors) recordValidationRejection(err);
-            try {
-                const fallbackContent = await llmPrompt('main', system, user);
-                recordLlmRequest('main', Date.now() - startTime);
-                return { content: fallbackContent, reviewed: false, confidence: 'low', fallbackUsed: true };
-            } catch (fallbackErr) {
-                // eslint-disable-next-line preserve-caught-error
-                throw new Error('All LLM attempts failed: ' + (fallbackErr as Error).message);
-            }
-        }
-
-        const reportContent = JSON.stringify(parsed, null, 2);
-        const reviewPrompt = buildReviewPrompt(reportContent);
-        const reviewResponse = await llmPrompt('reviewer', reviewPrompt, 'Review the analysis above.');
-        recordLlmRequest('reviewer', Date.now() - startTime);
-
-        const confidence = parseVerdict(reviewResponse);
-        const reviewerNotes = stripVerdict(reviewResponse);
-        recordConfidence(confidence);
-
-        let finalContent = reportContent;
-        if (confidence !== 'high' && reviewerNotes) {
-            finalContent += '\n\n[Reviewer notes: ' + reviewerNotes + ']';
-        }
-
-        rootLogger.info('LLM review confidence=' + confidence + ' retries=' + retries);
-        return { content: finalContent, reviewed: true, confidence, fallbackUsed: false };
+        return await performSelfReview(validated, startTime, retries);
     } catch (err) {
         rootLogger.warn('LLM review failed, falling back to primary: ' + (err as Error).message);
         recordLlmFailure('main');
         try {
-            const content = await llmPrompt('main', system, user);
-            recordLlmRequest('main', Date.now() - startTime);
-            return { content, reviewed: false, confidence: 'medium', fallbackUsed: true };
+            return await callLlmFallback(system, user, startTime);
         } catch (fallbackErr) {
             // eslint-disable-next-line preserve-caught-error
             throw new Error('LLM review and fallback both failed: ' + (fallbackErr as Error).message);

@@ -12,10 +12,13 @@ const COLOR_FNS: Record<string, (s: string) => string> = {
     ERROR: chalk.red,
 };
 const SECRET_RE = /token|secret|key|password|authorization/i;
+const MASK_MIN_LENGTH = 8;
+const MASK_VISIBLE_CHARS = 4;
+const CONSOLE_DATA_MAX_LENGTH = 160;
 
 function maskValue(v: unknown): unknown {
     if (typeof v !== 'string') return v;
-    return v.length > 8 ? v.slice(0, 4) + '****' : '****';
+    return v.length > MASK_MIN_LENGTH ? v.slice(0, MASK_VISIBLE_CHARS) + '****' : '****';
 }
 
 export function maskDeep(obj: unknown): unknown {
@@ -110,7 +113,7 @@ export class Logger {
 
         if (data && level === 'ERROR') {
             const dataStr = JSON.stringify(data);
-            if (dataStr.length < 160) text += '  ' + colorFn(dataStr);
+            if (dataStr.length < CONSOLE_DATA_MAX_LENGTH) text += '  ' + colorFn(dataStr);
         }
 
         if (level === 'ERROR') {

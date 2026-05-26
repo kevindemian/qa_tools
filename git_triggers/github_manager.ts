@@ -15,6 +15,14 @@ import type {
     JsonObject,
 } from '../shared/types';
 
+const LIST_WORKFLOWS_PAGE_SIZE = 10;
+const SEARCH_PRS_PAGE_SIZE = 100;
+const VARIABLES_PAGE_SIZE = 100;
+const COMPARE_PAGE_SIZE = 100;
+const MAX_REDIRECTS = 5;
+const DIFF_TRUNCATION_LIMIT = 15000;
+const DEFAULT_PIPELINE_COUNT = 5;
+
 class GitHubManager implements GitProvider {
     provider = 'github' as const;
     repoFullName: string;
@@ -113,7 +121,7 @@ class GitHubManager implements GitProvider {
     async _listWorkflows(): Promise<Array<{ id: number; name: string }>> {
         const data = await this._get(this._repoPath + '/actions/workflows', {
             operation: 'listar workflows',
-            params: { per_page: 10 },
+            params: { per_page: LIST_WORKFLOWS_PAGE_SIZE },
             returnNull: true,
         });
         return (data && data.workflows) || [];
@@ -212,7 +220,7 @@ class GitHubManager implements GitProvider {
         targetBranch: string,
         searchStatus: string,
     ): Promise<MergeRequestInfo[]> {
-        const params: JsonObject = { per_page: 100 };
+        const params: JsonObject = { per_page: SEARCH_PRS_PAGE_SIZE };
         if (sourceBranch) params.head = this.owner + ':' + sourceBranch;
         if (targetBranch) params.base = targetBranch;
         if (searchStatus) params.state = searchStatus === 'opened' ? 'open' : searchStatus;
@@ -242,7 +250,7 @@ class GitHubManager implements GitProvider {
         }
     }
 
-    async getRecentPipelines(count = 5): Promise<PipelineRun[]> {
+    async getRecentPipelines(count = DEFAULT_PIPELINE_COUNT): Promise<PipelineRun[]> {
         const data = await this._get(this._repoPath + '/actions/runs', {
             operation: 'buscar runs',
             params: { per_page: count },
@@ -282,7 +290,7 @@ class GitHubManager implements GitProvider {
         try {
             const response = await this.client.get(this._repoPath + '/actions/artifacts/' + artifactId + '/zip', {
                 responseType: 'arraybuffer',
-                maxRedirects: 5,
+                maxRedirects: MAX_REDIRECTS,
             });
             return { buffer: Buffer.from(response.data), filename: 'artifact.zip' };
         } catch (err) {
@@ -303,7 +311,7 @@ class GitHubManager implements GitProvider {
     async getCICDVariables(): Promise<CICDVariable[]> {
         const data = await this._get(this._repoPath + '/actions/variables', {
             operation: 'buscar variáveis',
-            params: { per_page: 100 },
+            params: { per_page: VARIABLES_PAGE_SIZE },
             returnNull: true,
         });
         const variables = (data && data.variables) || [];
@@ -319,7 +327,7 @@ class GitHubManager implements GitProvider {
             this._repoPath + '/compare/' + encodeURIComponent(target) + '...' + encodeURIComponent(source),
             {
                 operation: 'comparar branches',
-                params: { per_page: 100 },
+                params: { per_page: COMPARE_PAGE_SIZE },
                 returnNull: true,
             },
         );
@@ -333,7 +341,7 @@ class GitHubManager implements GitProvider {
             }
         }
         const full = lines.join('\n');
-        return full.length > 15000 ? full.slice(0, 15000) + '\n... (truncated)' : full;
+        return full.length > DIFF_TRUNCATION_LIMIT ? full.slice(0, DIFF_TRUNCATION_LIMIT) + '\n... (truncated)' : full;
     }
 
     async isApproved(prNumber: string | number): Promise<boolean> {

@@ -19,6 +19,7 @@ const mockPrompt = {
     isQuiet: jest.fn().mockReturnValue(true),
     withSpinner: jest.fn().mockImplementation(async (label, fn) => fn()),
     print: jest.fn(),
+    askFilePath: jest.fn().mockResolvedValue('/fake/path.json'),
 };
 
 // 2. jest.mock BEFORE any require that uses those modules
@@ -32,6 +33,12 @@ jest.mock('fs', () => {
 jest.mock('../shared/state', () => ({
     load: jest.fn().mockReturnValue({}),
     update: jest.fn(),
+}));
+
+jest.mock('../shared/temp-dir', () => ({
+    reportsDir: jest.fn(),
+    writeEphemeral: jest.fn(),
+    tempDirPath: jest.fn(() => '/tmp/qa-tools-temp'),
 }));
 
 jest.mock('axios', () => {
@@ -321,11 +328,11 @@ describe('generateMappingFiles', () => {
 
     beforeAll(() => {
         realFs.writeFileSync(csvPath, 'Title: X\nAction,Data,Expected\nx,y,z\n', 'utf8');
-        process.env.CYPRESS_PROJECT_PATH = tmpDir;
+        const td = require('../shared/temp-dir') as { reportsDir: jest.Mock };
+        td.reportsDir.mockReturnValue(tmpDir);
     });
 
     afterAll(() => {
-        delete process.env.CYPRESS_PROJECT_PATH;
         try {
             realFs.rmSync(tmpDir, { recursive: true, force: true });
         } catch (e) {
@@ -366,10 +373,13 @@ describe('generateMappingFiles', () => {
         expect(json.tests[0].steps).toHaveLength(2);
     });
 
-    it('returns early when no cypress dir configured', () => {
+    it('generates mapping files regardless of CYPRESS_PROJECT_PATH', () => {
         delete process.env.CYPRESS_PROJECT_PATH;
-        const emptyTests: TestCase[] = [{} as TestCase];
-        expect(generateMappingFiles(nextBase() + '.csv', 'PROJ', ['TEST-1'], emptyTests)).toBeUndefined();
+        const base = nextBase();
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any -- test data may be partial TestCase
+        const testCases: any = [{ title: 'TC', steps: [] }];
+        generateMappingFiles(base + '.csv', 'PROJ', ['TEST-1'], testCases);
+        expect(realFs.existsSync(tmpDir + '/test-csv-' + testIdx + '-jira-mapping.json')).toBe(true);
         process.env.CYPRESS_PROJECT_PATH = tmpDir;
     });
 
@@ -411,12 +421,12 @@ describe('generateMappingFiles', () => {
         const md = realFs.readFileSync(tmpDir + '/test-csv-' + testIdx + '-jira-mapping.md', 'utf8');
         const mdLines = md.split('\n');
         expect(md).toContain('## TEST-1 — TC1');
-        expect(md).toContain('**Descrição:** Descricao do TC1');
+        expect(md).toContain('**Description:** Descricao do TC1');
         expect(md).toContain('| 1 | a1 |  |  |');
         expect(md).toContain('## TEST-2 — TC2');
         const tc2Section = mdLines.indexOf('## TEST-2 — TC2');
         const tc2Block = md.slice(md.indexOf('## TEST-2 — TC2'), md.indexOf('\n---\n\n', tc2Section));
-        expect(tc2Block).not.toContain('**Descrição:**');
+        expect(tc2Block).not.toContain('**Description:**');
     });
 });
 
@@ -494,7 +504,7 @@ describe('createTestsFromJson', () => {
     });
 
     it('cancela com caminho vazio', async () => {
-        jest.mocked(PROMPT.ask).mockResolvedValue('');
+        jest.mocked(PROMPT.askFilePath).mockResolvedValueOnce('');
         const result = await createTestsFromJson(BASE_PARAMS());
         expect(result).toBeUndefined();
         expect(PROMPT.warn).toHaveBeenCalledWith(expect.stringContaining('vazio'));
@@ -544,7 +554,7 @@ describe('createTestsFromJson', () => {
         process.env.AUTO_CONFIRM = 'true';
         process.env.DRY_RUN = 'true';
         jest.mocked(STATE.load).mockReturnValue({ lastJsonDir: '/base/dir' });
-        jest.mocked(PROMPT.ask).mockResolvedValue('sub/testes.json');
+        jest.mocked(PROMPT.askFilePath).mockResolvedValueOnce('sub/testes.json');
         FS.existsSync.mockReturnValue(true);
         FS.readFileSync.mockImplementation((p: string) => {
             if (p === '/base/dir/sub/testes.json') {

@@ -36,7 +36,7 @@ export interface ParseResult {
     };
 }
 
-export interface ParseResultWithError extends ParseResult {
+interface ParseResultWithError extends ParseResult {
     error?: string;
 }
 

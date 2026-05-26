@@ -170,7 +170,9 @@ export async function displayRecentPipelines(m: GitProvider) {
                 }
             }
         }
-    } catch {}
+    } catch (err) {
+        rootLogger.warn('Flakiness check failed: ' + (err as Error).message);
+    }
 }
 
 export function buildActionChoices(): JsonObject[] {

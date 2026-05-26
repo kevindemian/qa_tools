@@ -4,6 +4,10 @@ import { rootLogger } from './logger';
 import Config from './config';
 
 const _sessionStart = Date.now();
+const CREDENTIAL_MIN_LENGTH = 20;
+const MASK_VISIBLE_CHARS = 4;
+const LAST_OPS_COUNT = 5;
+const EXIT_DELAY_MS = 2000;
 
 interface EnvConfig {
     key: string;
@@ -12,7 +16,7 @@ interface EnvConfig {
 }
 
 export function mask(v: string): string {
-    return v ? v.slice(0, 4) + '****' : '';
+    return v ? v.slice(0, MASK_VISIBLE_CHARS) + '****' : '';
 }
 
 export function createValidateEnv(configs: EnvConfig[], config?: Config): () => void {
@@ -23,7 +27,7 @@ export function createValidateEnv(configs: EnvConfig[], config?: Config): () => 
             for (const c of configs) {
                 const val = cfg.get(c.key) || '';
                 if (
-                    val.length > 20 &&
+                    val.length > CREDENTIAL_MIN_LENGTH &&
                     !val.includes('placeholder') &&
                     !val.includes('seu-') &&
                     !val.includes('your-')
@@ -56,7 +60,7 @@ export function setupSigint(getIsBusy: (() => boolean) | null, onExit: (() => vo
         if (onExit) onExit();
         info('Até logo!');
         process.exitCode = 0;
-        setTimeout(() => process.exit(), 2000).unref();
+        setTimeout(() => process.exit(), EXIT_DELAY_MS).unref();
     };
     process.on('SIGINT', handler);
 }
@@ -87,7 +91,7 @@ export function printSessionSummary(
         if (er > 0) error(er + ' operação(oes) com erro');
     }
     if (history && history.length > 0) {
-        const last5 = history.slice(-5);
+        const last5 = history.slice(-LAST_OPS_COUNT);
         info('Últimas operações:');
         last5.forEach((h) => {
             const icon = h.status === 'error' ? chalk.red('ERR') : chalk.green('OK');

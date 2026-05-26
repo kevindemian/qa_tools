@@ -17,7 +17,9 @@ module.exports = tseslint.config(
             '@typescript-eslint/prefer-readonly': 'warn',
             'no-console': 'error',
             'no-throw-literal': 'error',
-            'no-empty': ['error', { allowEmptyCatch: true }],
+            'no-empty': ['error', { allowEmptyCatch: false }],
+            '@typescript-eslint/no-floating-promises': 'error',
+            '@typescript-eslint/no-unnecessary-type-assertion': 'error',
             '@typescript-eslint/no-unsafe-assignment': 'off',
             '@typescript-eslint/no-unsafe-return': 'off',
             '@typescript-eslint/no-unsafe-member-access': 'off',
@@ -49,6 +51,7 @@ module.exports = tseslint.config(
             '@typescript-eslint/require-await': 'off',
             'no-console': 'off',
             'no-control-regex': 'off',
+            'no-empty': 'off',
         },
     },
     {
@@ -56,6 +59,7 @@ module.exports = tseslint.config(
         rules: {
             'no-console': 'off',
             '@typescript-eslint/no-require-imports': 'off',
+            '@typescript-eslint/no-unnecessary-type-assertion': 'off',
         },
     },
     { ignores: ['node_modules/', 'docs-archive/', '**/*.js'] },

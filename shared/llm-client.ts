@@ -22,6 +22,17 @@ interface CacheEntry {
 
 const CACHE_TTL_MS = 5 * 60 * 1000;
 const CACHE_CLEANUP_INTERVAL_MS = CACHE_TTL_MS / 2;
+const LLM_TEMP_MAIN = 0.3;
+const LLM_TEMP_SMALL = 0.1;
+const LLM_TEMP_REVIEWER = 0.2;
+const LLM_TEMP_REPORT = 0.2;
+const LLM_TEMP_FALLBACK = 0.3;
+const LLM_TEMP_BATCH = 0.5;
+const LLM_TEMP_DEFAULT = 0.3;
+const LLM_FETCH_RETRIES = 3;
+const LLM_RETRY_BASE_WAIT_MS = 2000;
+const LLM_RETRY_MAX_WAIT_MS = 10000;
+const LLM_ERROR_BODY_TRUNCATION = 200;
 const cache = new Map<string, CacheEntry>();
 let _cleanupTimer: ReturnType<typeof setInterval> | null = null;
 
@@ -38,67 +49,84 @@ function startCacheCleanup(): void {
     }
 }
 
-export function stopCacheCleanup(): void {
-    if (_cleanupTimer !== null) {
-        clearInterval(_cleanupTimer);
-        _cleanupTimer = null;
-    }
+startCacheCleanup();
+
+function _mainTierConfig(): ProviderConfig {
+    return {
+        apiKey: Config.llmApiKey,
+        model: Config.llmModel,
+        baseUrl: Config.llmBaseUrl,
+        format: 'openai',
+        temperature: LLM_TEMP_MAIN,
+    };
 }
 
-startCacheCleanup();
+function _smallFastTierConfig(): ProviderConfig {
+    return {
+        apiKey: Config.llmFastApiKey,
+        model: Config.llmFastModel,
+        baseUrl: Config.llmFastBaseUrl,
+        format: 'openai',
+        temperature: LLM_TEMP_SMALL,
+    };
+}
+
+function _reviewerTierConfig(): ProviderConfig {
+    return {
+        apiKey: Config.llmReviewApiKey || Config.llmSmallApiKey,
+        model: Config.llmReviewModel || Config.llmSmallModel,
+        baseUrl: Config.llmReviewBaseUrl || 'https://generativelanguage.googleapis.com/v1beta',
+        format: 'gemini',
+        temperature: LLM_TEMP_REVIEWER,
+    };
+}
+
+function _reportTierConfig(): ProviderConfig {
+    return {
+        apiKey: Config.llmApiKey,
+        model: Config.llmModel,
+        baseUrl: Config.llmBaseUrl,
+        format: 'openai',
+        temperature: LLM_TEMP_REPORT,
+        responseFormat: 'json',
+    };
+}
+
+function _fallbackTierConfig(): ProviderConfig {
+    return {
+        apiKey: Config.llmFallbackApiKey,
+        model: Config.llmFallbackModel,
+        baseUrl: Config.llmFallbackBaseUrl,
+        format: 'openai',
+        temperature: LLM_TEMP_FALLBACK,
+    };
+}
+
+function _batchTierConfig(): ProviderConfig {
+    return {
+        apiKey: Config.llmBatchApiKey,
+        model: Config.llmBatchModel,
+        baseUrl: Config.llmBatchBaseUrl,
+        format: 'openai',
+        temperature: LLM_TEMP_BATCH,
+    };
+}
 
 function tierToConfig(tier: LlmTier): ProviderConfig {
     switch (tier) {
         case 'main':
-            return {
-                apiKey: Config.llmApiKey,
-                model: Config.llmModel,
-                baseUrl: Config.llmBaseUrl,
-                format: 'openai',
-                temperature: 0.3,
-            };
+            return _mainTierConfig();
         case 'small':
         case 'fast':
-            return {
-                apiKey: Config.llmFastApiKey,
-                model: Config.llmFastModel,
-                baseUrl: Config.llmFastBaseUrl,
-                format: 'openai',
-                temperature: 0.1,
-            };
+            return _smallFastTierConfig();
         case 'reviewer':
-            return {
-                apiKey: Config.llmReviewApiKey || Config.llmSmallApiKey,
-                model: Config.llmReviewModel || Config.llmSmallModel,
-                baseUrl: Config.llmReviewBaseUrl || 'https://generativelanguage.googleapis.com/v1beta',
-                format: 'gemini',
-                temperature: 0.2,
-            };
+            return _reviewerTierConfig();
         case 'report':
-            return {
-                apiKey: Config.llmApiKey,
-                model: Config.llmModel,
-                baseUrl: Config.llmBaseUrl,
-                format: 'openai',
-                temperature: 0.2,
-                responseFormat: 'json',
-            };
+            return _reportTierConfig();
         case 'fallback':
-            return {
-                apiKey: Config.llmFallbackApiKey,
-                model: Config.llmFallbackModel,
-                baseUrl: Config.llmFallbackBaseUrl,
-                format: 'openai',
-                temperature: 0.3,
-            };
+            return _fallbackTierConfig();
         case 'batch':
-            return {
-                apiKey: Config.llmBatchApiKey,
-                model: Config.llmBatchModel,
-                baseUrl: Config.llmBatchBaseUrl,
-                format: 'openai',
-                temperature: 0.5,
-            };
+            return _batchTierConfig();
     }
 }
 
@@ -122,7 +150,7 @@ function buildOpenAiPayload(
 ): string {
     const payload: Record<string, unknown> = {
         model,
-        temperature: temperature ?? 0.3,
+        temperature: temperature ?? LLM_TEMP_DEFAULT,
         messages: [
             { role: 'system', content: system },
             { role: 'user', content: user },
@@ -163,14 +191,14 @@ function parseGeminiResponse(raw: string): string {
     }
 }
 
-async function fetchWithRetry(url: string, options: RequestInit, retries = 3): Promise<Response> {
+async function fetchWithRetry(url: string, options: RequestInit, retries = LLM_FETCH_RETRIES): Promise<Response> {
     for (let attempt = 1; attempt <= retries; attempt++) {
         let resp: Response;
         try {
             resp = await fetch(url, options);
         } catch (err) {
             if (attempt < retries) {
-                const wait = Math.min(2000 * Math.pow(2, attempt - 1), 10000);
+                const wait = Math.min(LLM_RETRY_BASE_WAIT_MS * Math.pow(2, attempt - 1), LLM_RETRY_MAX_WAIT_MS);
                 rootLogger.warn('LLM fetch error, retrying in ' + wait + 'ms: ' + (err as Error).message);
                 await new Promise((resolve) => setTimeout(resolve, wait));
                 continue;
@@ -180,14 +208,14 @@ async function fetchWithRetry(url: string, options: RequestInit, retries = 3): P
         if (resp.ok) return resp;
         if (resp.status === 429 || resp.status >= 500) {
             if (attempt < retries) {
-                const wait = Math.min(2000 * Math.pow(2, attempt - 1), 10000);
+                const wait = Math.min(LLM_RETRY_BASE_WAIT_MS * Math.pow(2, attempt - 1), LLM_RETRY_MAX_WAIT_MS);
                 rootLogger.warn('LLM HTTP ' + resp.status + ', retrying in ' + wait + 'ms');
                 await new Promise((resolve) => setTimeout(resolve, wait));
                 continue;
             }
         }
         const body = await resp.text().catch(() => '');
-        throw new Error('LLM API error: HTTP ' + resp.status + ' ' + body.slice(0, 200));
+        throw new Error('LLM API error: HTTP ' + resp.status + ' ' + body.slice(0, LLM_ERROR_BODY_TRUNCATION));
     }
     throw new Error('LLM max retries exceeded');
 }

@@ -1,6 +1,33 @@
 import { ask, info, success, printError, withSpinner, warn } from '../shared/prompt';
 import type { GitProvider } from '../shared/types';
 
+async function createNivelamentoMr(
+    gitlab: GitProvider,
+    source: string,
+    target: string,
+    label: string,
+    details: string[],
+): Promise<void> {
+    try {
+        const mr = await withSpinner('Criando MR ' + source + ' -> ' + target + '...', () =>
+            gitlab.createMergeRequest(
+                source,
+                target,
+                'chore: nivelamento ' + source + ' -> ' + target,
+                'Nivelamento automatico de branches: ' + source + ' -> ' + target,
+            ),
+        );
+        if (mr) {
+            const msg = label === 'primeiro' ? 'MR criado: ' : 'Segundo MR criado: ';
+            (label === 'primeiro' ? info : success)(msg + String(mr.web_url));
+            details.push(source + '->' + target + ':ok');
+        }
+    } catch (err) {
+        printError('Falha no nivelamento (' + label + ' MR)', err);
+        details.push(source + '->' + target + ':error');
+    }
+}
+
 export async function nivelarBranches(
     gitlab: GitProvider,
     opts: { pushHistory?: (op: string, detail: string, status: string) => void } = {},
@@ -24,47 +51,10 @@ export async function nivelarBranches(
         warn('Branch(es) não encontrada(s): ' + missing.join(', '));
         return;
     }
+
     const details: string[] = [];
-
-    {
-        try {
-            const mr1 = await withSpinner('Criando MR ' + mainBranch + ' -> ' + rcBranch + '...', () =>
-                gitlab.createMergeRequest(
-                    mainBranch,
-                    rcBranch,
-                    'chore: nivelamento ' + mainBranch + ' -> ' + rcBranch,
-                    'Nivelamento automatico de branches: ' + mainBranch + ' -> ' + rcBranch,
-                ),
-            );
-            if (mr1) {
-                info('MR criado: ' + String(mr1.web_url));
-                details.push(mainBranch + '->' + rcBranch + ':ok');
-            }
-        } catch (err) {
-            printError('Falha no nivelamento (primeiro MR)', err);
-            details.push(mainBranch + '->' + rcBranch + ':error');
-        }
-    }
-
-    {
-        try {
-            const mr2 = await withSpinner('Criando MR ' + rcBranch + ' -> ' + devBranch + '...', () =>
-                gitlab.createMergeRequest(
-                    rcBranch,
-                    devBranch,
-                    'chore: nivelamento ' + rcBranch + ' -> ' + devBranch,
-                    'Nivelamento automatico de branches: ' + rcBranch + ' -> ' + devBranch,
-                ),
-            );
-            if (mr2) {
-                success('Segundo MR criado: ' + String(mr2.web_url));
-                details.push(rcBranch + '->' + devBranch + ':ok');
-            }
-        } catch (err) {
-            printError('Falha no nivelamento (segundo MR)', err);
-            details.push(rcBranch + '->' + devBranch + ':error');
-        }
-    }
+    await createNivelamentoMr(gitlab, mainBranch, rcBranch, 'primeiro', details);
+    await createNivelamentoMr(gitlab, rcBranch, devBranch, 'segundo', details);
 
     if (pushHistory) {
         const totalErr = details.filter((d) => d.endsWith(':error')).length;
