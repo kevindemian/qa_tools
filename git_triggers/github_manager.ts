@@ -3,6 +3,7 @@ import { info } from '../shared/prompt';
 import { Logger } from '../shared/logger';
 import { handleError } from '../shared/git-provider-error';
 import type {
+    GitProvider,
     PipelineTriggerResult,
     ScheduleInfo,
     MergeRequestInfo,
@@ -13,7 +14,7 @@ import type {
     CICDVariable,
 } from '../shared/types';
 
-class GitHubManager {
+class GitHubManager implements GitProvider {
     provider = 'github' as const;
     repoFullName: string;
     apiToken: string;
@@ -108,7 +109,7 @@ class GitHubManager {
         }
     }
 
-    async _listWorkflows() {
+    async _listWorkflows(): Promise<Array<{ id: number; name: string }>> {
         const data = await this._get(this._repoPath + '/actions/workflows', {
             operation: 'listar workflows',
             params: { per_page: 10 },
@@ -126,11 +127,11 @@ class GitHubManager {
         return inputs;
     }
 
-    getSchedules(): ScheduleInfo[] {
+    getSchedules(): Promise<ScheduleInfo[]> {
         this.log.warn(
             'GitHub Actions schedules not available via REST API. Use workflow_dispatch or repository_dispatch.',
         );
-        return [];
+        return Promise.resolve([]);
     }
 
     runSchedule(scheduleId: string | number): Promise<Record<string, unknown>> {

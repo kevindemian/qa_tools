@@ -3,6 +3,7 @@ import { info } from '../shared/prompt';
 import { Logger } from '../shared/logger';
 import { handleError } from '../shared/git-provider-error';
 import type {
+    GitProvider,
     PipelineTriggerResult,
     ScheduleInfo,
     MergeRequestInfo,
@@ -13,7 +14,7 @@ import type {
     CICDVariable,
 } from '../shared/types';
 
-class GitLabManager {
+class GitLabManager implements GitProvider {
     provider = 'gitlab' as const;
     projectId: string;
     apiToken: string;
