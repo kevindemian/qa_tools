@@ -17,6 +17,7 @@ const mockDownloadArtifact = jest.fn<any>();
 const mockAdmZipGetEntries = jest.fn<any>();
 const mockLoadState = jest.fn<any>();
 const mockReportsDir = jest.fn<any>();
+const mockSaveParseResult = jest.fn<any>();
 /* eslint-enable @typescript-eslint/no-explicit-any */
 
 // ── Module mocks ─────────────────────────────────────────────────────────
@@ -71,6 +72,10 @@ jest.mock('../shared/result_parser', () => ({
 jest.mock('../jira_management/result_reporter', () => ({
     matchResultsToTests: mockMatchResultsToTests,
     createTestExecutionFromResults: mockCreateTestExecutionFromResults,
+}));
+
+jest.mock('../shared/metrics', () => ({
+    saveParseResult: mockSaveParseResult,
 }));
 
 jest.mock('../jira_management/jira_resource', () => ({
@@ -399,6 +404,10 @@ describe('collectTestResults', () => {
 
         expect(mockListPipelineArtifacts).toHaveBeenCalled();
         expect(mockDownloadArtifact).toHaveBeenCalled();
+        expect(mockSaveParseResult).toHaveBeenCalledWith('PROJ', {
+            tests: [{ title: 'test1', state: 'passed', duration: 100 }],
+            stats: { passed: 1, failed: 0, skipped: 0, total: 1, duration: 100 },
+        });
         expect(mockMatchResultsToTests).toHaveBeenCalled();
         expect(mockCreateTestExecutionFromResults).toHaveBeenCalled();
         expect(pushHistory).toHaveBeenCalled();
@@ -448,6 +457,10 @@ describe('collectTestResults', () => {
             pushHistory,
         );
 
+        expect(mockSaveParseResult).toHaveBeenCalledWith('PROJ', {
+            tests: [{ title: 'test1', state: 'passed', duration: 100 }],
+            stats: { passed: 1, failed: 0, skipped: 0, total: 1, duration: 100 },
+        });
         expect(mockMatchResultsToTests).not.toHaveBeenCalled();
         expect(mockCreateTestExecutionFromResults).not.toHaveBeenCalled();
         expect(pushHistory).not.toHaveBeenCalled();

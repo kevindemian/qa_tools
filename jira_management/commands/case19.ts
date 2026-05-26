@@ -1,5 +1,5 @@
 import { info, warn, title, divider, tableView, printError, showSelect, withSpinner } from '../../shared/prompt';
-import { loadMetrics, calculateFlakiness, getTrends } from '../../shared/metrics';
+import { loadMetrics, calculateFlakiness, getTrends, saveCoverageSnapshot } from '../../shared/metrics';
 import { analyzeCoverage } from '../coverage';
 import { compareRuns } from '../../shared/run-comparison';
 import type { CommandContext } from './context';
@@ -70,6 +70,14 @@ async function showCoverage(c: CommandContext): Promise<void> {
         printError('Erro ao analisar cobertura', err);
         return;
     }
+
+    saveCoverageSnapshot({
+        timestamp: new Date().toISOString(),
+        project: c.ctx.project_name,
+        totalIssues: result.totalIssues,
+        mappedIssues: result.mappedIssues,
+        coveragePct: result.coveragePct,
+    });
 
     tableView(
         [

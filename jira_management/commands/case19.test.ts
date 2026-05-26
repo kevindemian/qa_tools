@@ -17,6 +17,7 @@ jest.mock('../../shared/metrics', () => ({
     loadMetrics: jest.fn(),
     calculateFlakiness: jest.fn(),
     getTrends: jest.fn(),
+    saveCoverageSnapshot: jest.fn(),
 }));
 
 jest.mock('../../shared/run-comparison', () => ({
@@ -104,6 +105,7 @@ describe('case19 — History & Coverage', () => {
     it('displays coverage when option b is selected', async () => {
         const prompt = require('../../shared/prompt');
         const coverage = require('../coverage');
+        const metrics = require('../../shared/metrics');
 
         prompt.showSelect.mockResolvedValueOnce('b').mockResolvedValueOnce('0');
 
@@ -120,6 +122,13 @@ describe('case19 — History & Coverage', () => {
         await mod.handler(baseContext);
 
         expect(coverage.analyzeCoverage).toHaveBeenCalledWith(mockJiraResource, 'TEST');
+        expect(metrics.saveCoverageSnapshot).toHaveBeenCalledWith({
+            timestamp: expect.any(String),
+            project: 'TEST',
+            totalIssues: 10,
+            mappedIssues: 6,
+            coveragePct: 60,
+        });
         expect(prompt.tableView).toHaveBeenCalled();
         expect(baseContext.pushHistory).toHaveBeenCalledWith('coverage-analysis', '60% coverage', 'ok');
     });

@@ -9,6 +9,7 @@ import { reportsDir } from '../shared/temp-dir';
 import { parseMochawesome } from '../shared/result_parser';
 import type { ParseResult } from '../shared/result_parser';
 import { matchResultsToTests, createTestExecutionFromResults } from '../jira_management/result_reporter';
+import { saveParseResult } from '../shared/metrics';
 import type { GitProvider } from '../shared/types';
 
 function _jiraEnv(): { base: string; token: string; xray: string } | null {
@@ -175,6 +176,8 @@ async function collectTestResults(
 
     const parsed = await downloadTestArtifacts(m, pipelineId);
     if (!parsed) return null;
+
+    saveParseResult(projectName, parsed);
 
     const mapping = await parseTestResults(parsed);
     if (!mapping) return parsed;
