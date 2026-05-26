@@ -69,7 +69,7 @@ export async function assessTestImpact(
         const titles = loadMappingTitles(mappingPath);
         const system = 'You are a QA automation assistant specialized in test impact analysis.';
         const user = buildPrompt(sanitizeForLlm(diff), titles, source, target);
-        return await llmPrompt('fast', system, user);
+        return await llmPrompt('fast', system, user, 'test-impact');
     } catch (err) {
         rootLogger.error('Failed to assess test impact: ' + (err as Error).message);
         return '';

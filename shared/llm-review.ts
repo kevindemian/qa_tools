@@ -9,6 +9,10 @@ import {
     recordConfidence,
 } from './llm-metrics';
 
+// NOTE: diverse reviewer strategy — using Gemini (reviewer tier) to review
+// output from OpenRouter (report/main tier) is intentional. Different models
+// catch different error types, reducing auto-evaluation confirmation bias.
+
 export interface ReviewResult {
     content: string;
     reviewed: boolean;
@@ -53,8 +57,8 @@ function buildReviewPrompt(original: string): string {
 
 function parseVerdict(response: string): 'high' | 'medium' | 'low' {
     const upper = response.toUpperCase().trim();
-    if (upper.startsWith('AGREE')) return 'high';
-    if (upper.startsWith('PARTIAL')) return 'medium';
+    if (/^AGREE\b/i.test(upper)) return 'high';
+    if (/^PARTIAL\b/i.test(upper)) return 'medium';
     return 'low';
 }
 

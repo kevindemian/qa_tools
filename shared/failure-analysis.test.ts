@@ -60,6 +60,6 @@ describe('classifyFailure', () => {
 
         const result = await classifyFailure('Login test', 'expected true, got false');
         expect(result).toBe('ASSERTION: expected true but got false');
-        expect(mockLlmPrompt).toHaveBeenCalledWith('fast', expect.any(String), expect.any(String));
+        expect(mockLlmPrompt).toHaveBeenCalledWith('fast', expect.any(String), expect.any(String), 'classify');
     });
 });

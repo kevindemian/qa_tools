@@ -7,6 +7,7 @@ import { rootLogger } from './logger';
 import { generateReportWithFallback } from './report-generator';
 import { snapshotLlmMetrics } from './llm-metrics';
 import { sanitizeForLlm } from './sanitize';
+import { withSpinner } from './spinner';
 
 export interface AnalysisReport {
     content: string;
@@ -43,9 +44,8 @@ export async function analyzeFailuresWithReport(tests: FlatTest[]): Promise<Anal
     if (!systemTemplate) return { content: '', confidence: 'medium', fallbackUsed: true };
 
     const system = systemTemplate.replace('{{FAILED_TESTS}}', sanitizeForLlm(formatFailedTests(failed)));
-    const result = await reviewWithLlm(
-        system,
-        'Analyze the test failures above and produce the JSON report as instructed.',
+    const result = await withSpinner('Analisando falhas com IA...', () =>
+        reviewWithLlm(system, 'Analyze the test failures above and produce the JSON report as instructed.'),
     );
 
     const htmlReport = generateReportWithFallback(tests, {
@@ -70,5 +70,18 @@ export async function classifyFailure(title: string, error: string): Promise<str
     if (!systemTemplate) return 'UNKNOWN: Could not load prompt template';
 
     const system = systemTemplate.replace('{{TEST_TITLE}}', title).replace('{{ERROR_MESSAGE}}', sanitizeForLlm(error));
-    return llmPrompt('fast', system, 'Classify this failure.');
+    let result = await llmPrompt('fast', system, 'Classify this failure.', 'classify');
+
+    const classifyRegex = /^(ASSERTION|TIMEOUT|ENVIRONMENT|FLAKY|APPLICATION|UNKNOWN):\s/m;
+    if (!classifyRegex.test(result)) {
+        rootLogger.warn('classifyFailure: invalid format, retrying');
+        result = await llmPrompt(
+            'fast',
+            system,
+            'Responda exatamente no formato CATEGORIA: explicacao. Use uma das categorias: ASSERTION, TIMEOUT, ENVIRONMENT, FLAKY, APPLICATION, UNKNOWN.',
+            'classify-retry',
+        );
+    }
+
+    return result;
 }

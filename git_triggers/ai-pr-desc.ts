@@ -29,7 +29,7 @@ export async function generatePrDescription(m: GitProvider, source: string, targ
 
         const system = 'You are a QA automation assistant that writes PR/MR descriptions.';
         const user = buildPrompt(sanitizeForLlm(diff), source, target);
-        return await llmPrompt('fast', system, user);
+        return await llmPrompt('fast', system, user, 'pr-description');
     } catch (err) {
         rootLogger.error('Failed to generate PR description: ' + (err as Error).message);
         return '';
