@@ -18,22 +18,20 @@ async function handler(c: CommandContext): Promise<boolean | void> {
     });
 
     const templatePath = path.join(__dirname, '../../shared/prompts/user-story-to-tests.md');
-    let template: string;
+    let system: string;
     try {
-        template = fs.readFileSync(templatePath, 'utf8');
+        system = fs.readFileSync(templatePath, 'utf8');
     } catch (err: unknown) {
         printError('Erro ao ler template de prompt', err);
         return;
     }
 
-    const userPrompt = template
-        .replace('{{USER_STORY}}', userStory)
-        .replace('{{ACCEPTANCE_CRITERIA}}', acceptanceCriteria);
+    const userMsg = 'User Story:\n' + userStory + '\n\nAcceptance Criteria:\n' + acceptanceCriteria;
 
     title('Gerando testes com IA...');
     let result: string;
     try {
-        result = await llmPrompt('main', '', userPrompt);
+        result = await llmPrompt('main', system, userMsg);
     } catch (err: unknown) {
         printError('Erro na chamada LLM', err);
         return;

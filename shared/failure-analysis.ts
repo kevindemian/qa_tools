@@ -44,7 +44,7 @@ export async function analyzeFailuresWithReport(tests: FlatTest[]): Promise<Anal
     const system = systemTemplate.replace('{{FAILED_TESTS}}', formatFailedTests(failed));
     const result = await reviewWithLlm(
         system,
-        'Please analyze the test failures above. Respond with a JSON object containing a "tests" array, where each test has: title, classification, severity, recommendation.',
+        'Analyze the test failures above and produce the JSON report as instructed.',
     );
 
     const htmlReport = generateReportWithFallback(tests, {
