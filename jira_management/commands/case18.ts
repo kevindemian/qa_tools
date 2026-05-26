@@ -2,6 +2,7 @@ import fs from 'fs';
 import path from 'path';
 import { ask, warn, info, printError, title, divider } from '../../shared/prompt';
 import { llmPrompt } from '../../shared/llm-client';
+import { rootLogger } from '../../shared/logger';
 import type { CommandContext } from './context';
 
 async function handler(c: CommandContext): Promise<boolean | void> {
@@ -31,7 +32,18 @@ async function handler(c: CommandContext): Promise<boolean | void> {
     title('Gerando testes com IA...');
     let result: string;
     try {
-        result = await llmPrompt('main', system, userMsg);
+        result = await llmPrompt('main', system, userMsg, 'case18');
+        try {
+            JSON.parse(result);
+        } catch {
+            rootLogger.warn('case18: LLM returned non-JSON, retrying');
+            result = await llmPrompt(
+                'main',
+                system + '\n\nIMPORTANTE: Retorne APENAS um array JSON válido. Nenhum texto, nenhum markdown.',
+                userMsg,
+                'case18-retry',
+            );
+        }
     } catch (err: unknown) {
         printError('Erro na chamada LLM', err);
         return;

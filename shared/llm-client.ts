@@ -118,6 +118,8 @@ function tierToConfig(tier: LlmTier): ProviderConfig {
         case 'main':
             return _mainTierConfig();
         case 'small':
+            rootLogger.warn('Tier "small" is deprecated, use "fast" instead');
+            return _smallFastTierConfig();
         case 'fast':
             return _smallFastTierConfig();
         case 'reviewer':
@@ -135,10 +137,10 @@ function tierOrder(): LlmTier[] {
     return ['main', 'fallback', 'batch'];
 }
 
-function cacheKey(tier: LlmTier, system: string, user: string): string {
+function cacheKey(tier: LlmTier, system: string, user: string, callerId?: string): string {
     return crypto
         .createHash('sha256')
-        .update(tier + '|' + system + '|' + user)
+        .update((callerId || '') + '|' + tier + '|' + system + '|' + user)
         .digest('hex');
 }
 
@@ -280,8 +282,8 @@ async function sendWithFallback(tier: LlmTier, system: string, user: string): Pr
     throw new Error('All LLM providers failed: ' + errors.join('; '));
 }
 
-export async function llmPrompt(tier: LlmTier, system: string, user: string): Promise<string> {
-    const cKey = cacheKey(tier, system, user);
+export async function llmPrompt(tier: LlmTier, system: string, user: string, callerId?: string): Promise<string> {
+    const cKey = cacheKey(tier, system, user, callerId);
     const cached = cache.get(cKey);
     if (cached && cached.expiresAt > Date.now()) {
         rootLogger.info('LLM cache hit for tier=' + tier);

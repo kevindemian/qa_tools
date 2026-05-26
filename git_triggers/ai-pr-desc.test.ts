@@ -26,7 +26,12 @@ describe('generatePrDescription', () => {
 
         const result = await generatePrDescription(mockProvider, 'feature/a', 'main');
         expect(mockProvider.getDiff).toHaveBeenCalledWith('feature/a', 'main');
-        expect(llmPrompt).toHaveBeenCalledWith('fast', expect.any(String), expect.stringContaining('diff --git'));
+        expect(llmPrompt).toHaveBeenCalledWith(
+            'fast',
+            expect.any(String),
+            expect.stringContaining('diff --git'),
+            'pr-description',
+        );
         expect(result).toBe('Resumo: adicionado novo teste.');
     });
 

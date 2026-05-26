@@ -38,7 +38,7 @@ function buildPrompt(runA: MetricsRun, runB: MetricsRun): string {
 export async function compareRuns(runA: MetricsRun, runB: MetricsRun): Promise<string> {
     try {
         const prompt = buildPrompt(runA, runB);
-        return await llmPrompt('fast', prompt, 'Compare these two test runs.');
+        return await llmPrompt('fast', prompt, 'Compare these two test runs.', 'compare-runs');
     } catch (err) {
         rootLogger.error('Failed to compare runs: ' + (err as Error).message);
         return '';

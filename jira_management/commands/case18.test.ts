@@ -73,6 +73,7 @@ describe('case18 — AI tests generator', () => {
             'main',
             expect.stringContaining('You are a QA engineer'),
             expect.stringContaining('User wants to login'),
+            'case18',
         );
         expect(baseContext.pushHistory).toHaveBeenCalledWith('ai-generate-tests', expect.any(String), 'ok');
     });
