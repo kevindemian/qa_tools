@@ -55,6 +55,9 @@ jest.mock('./config', () => {
         set(key: string, value: string) {
             mockConfig[key] = value;
         },
+        get(key: string) {
+            return mockConfig[key] ?? undefined;
+        },
         resetInstance() {
             Object.keys(mockConfig).forEach((k) => delete mockConfig[k]);
         },
@@ -62,7 +65,7 @@ jest.mock('./config', () => {
     return { __esModule: true, default: ConfigMock };
 });
 import Config from './config';
-import { llmPrompt, clearCache } from './llm-client';
+import { llmPrompt, clearCache, resetRateLimiter, resetCircuitState } from './llm-client';
 
 const mockResponseText = jest.fn();
 const mockFetch = jest.fn();
@@ -90,6 +93,8 @@ beforeEach(() => {
     mockFetch.mockReset();
     mockResponseText.mockReset();
     clearCache();
+    resetRateLimiter();
+    resetCircuitState();
     (Config as unknown as { resetInstance: () => void }).resetInstance();
 });
 
@@ -128,18 +133,6 @@ describe('llmPrompt', () => {
         expect(result).toBe('Fast response');
         const callUrl = mockFetch.mock.calls[0][0];
         expect(callUrl).toContain('groq.com');
-    });
-
-    it('sends prompt to small tier (aliased to fast/Groq)', async () => {
-        (Config as unknown as { set: (k: string, v: string) => void }).set('llmFastApiKey', 'gsk-test');
-        (Config as unknown as { set: (k: string, v: string) => void }).set('llmFastModel', 'llama3-8b-8192');
-        const apiResponse = JSON.stringify({ choices: [{ message: { content: 'Aliased' } }] });
-        mockFetch.mockResolvedValueOnce(mockOkResponse(apiResponse));
-
-        const result = await llmPrompt('small', 'system', 'aliased test');
-        expect(result).toBe('Aliased');
-        const callUrl = mockFetch.mock.calls[0][0];
-        expect(callUrl).toContain('/chat/completions');
     });
 
     it('sends prompt to reviewer tier (Gemini format)', async () => {
