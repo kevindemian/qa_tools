@@ -25,5 +25,8 @@ install-opencode.sh
 shared_docker/docker-compose.yml
 shared_docker/.selected_project
 
+# === Root-level stale reports (now all go to reports/) ===
+/failure-analysis-*.html
+
 # === Windows artifacts ===
 nul
