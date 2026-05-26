@@ -6,6 +6,7 @@ import { reviewWithLlm } from './llm-review';
 import { rootLogger } from './logger';
 import { generateReportWithFallback } from './report-generator';
 import { snapshotLlmMetrics } from './llm-metrics';
+import { sanitizeForLlm } from './sanitize';
 
 export interface AnalysisReport {
     content: string;
@@ -41,7 +42,7 @@ export async function analyzeFailuresWithReport(tests: FlatTest[]): Promise<Anal
     const systemTemplate = readPrompt('failure-analysis.md');
     if (!systemTemplate) return { content: '', confidence: 'medium', fallbackUsed: true };
 
-    const system = systemTemplate.replace('{{FAILED_TESTS}}', formatFailedTests(failed));
+    const system = systemTemplate.replace('{{FAILED_TESTS}}', sanitizeForLlm(formatFailedTests(failed)));
     const result = await reviewWithLlm(
         system,
         'Analyze the test failures above and produce the JSON report as instructed.',
@@ -68,6 +69,6 @@ export async function classifyFailure(title: string, error: string): Promise<str
     const systemTemplate = readPrompt('classify.md');
     if (!systemTemplate) return 'UNKNOWN: Could not load prompt template';
 
-    const system = systemTemplate.replace('{{TEST_TITLE}}', title).replace('{{ERROR_MESSAGE}}', error);
+    const system = systemTemplate.replace('{{TEST_TITLE}}', title).replace('{{ERROR_MESSAGE}}', sanitizeForLlm(error));
     return llmPrompt('fast', system, 'Classify this failure.');
 }

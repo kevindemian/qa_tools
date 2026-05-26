@@ -217,7 +217,7 @@ class Config {
         return this.overrides.llmFastApiKey ?? envVal('LLM_FAST_API_KEY');
     }
     get llmFastModel(): string {
-        return this.overrides.llmFastModel ?? envVal('LLM_FAST_MODEL', 'llama3-8b-8192');
+        return this.overrides.llmFastModel ?? envVal('LLM_FAST_MODEL', 'llama-3.1-8b-instant');
     }
     get llmFastBaseUrl(): string {
         return this.overrides.llmFastBaseUrl ?? envVal('LLM_FAST_BASE_URL', 'https://api.groq.com/openai/v1');

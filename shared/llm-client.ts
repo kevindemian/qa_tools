@@ -1,6 +1,7 @@
 import crypto from 'crypto';
 import Config from './config';
 import { rootLogger } from './logger';
+import { sanitizeForLlm } from './sanitize';
 
 export type LlmTier = 'main' | 'small' | 'fast' | 'reviewer' | 'report' | 'fallback' | 'batch';
 type ProviderFormat = 'openai' | 'gemini';
@@ -215,7 +216,9 @@ async function fetchWithRetry(url: string, options: RequestInit, retries = LLM_F
             }
         }
         const body = await resp.text().catch(() => '');
-        throw new Error('LLM API error: HTTP ' + resp.status + ' ' + body.slice(0, LLM_ERROR_BODY_TRUNCATION));
+        throw new Error(
+            'LLM API error: HTTP ' + resp.status + ' ' + sanitizeForLlm(body).slice(0, LLM_ERROR_BODY_TRUNCATION),
+        );
     }
     throw new Error('LLM max retries exceeded');
 }
@@ -225,10 +228,10 @@ async function sendToProvider(cfg: ProviderConfig, system: string, user: string)
 
     if (cfg.format === 'gemini') {
         const payload = buildGeminiPayload(system, user);
-        const url = cfg.baseUrl + '/models/' + cfg.model + ':generateContent?key=' + cfg.apiKey;
+        const url = cfg.baseUrl + '/models/' + cfg.model + ':generateContent';
         const resp = await fetchWithRetry(url, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: { 'Content-Type': 'application/json', 'X-Goog-Api-Key': cfg.apiKey },
             body: payload,
         });
         const raw = await resp.text();

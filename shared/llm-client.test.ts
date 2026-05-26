@@ -153,7 +153,8 @@ describe('llmPrompt', () => {
         const result = await llmPrompt('reviewer', 'system', 'review this');
         expect(result).toBe('Review ok');
         const callUrl = mockFetch.mock.calls[0][0];
-        expect(callUrl).toContain('key=AIza-review');
+        expect(mockFetch.mock.calls[0][1].headers['X-Goog-Api-Key']).toBe('AIza-review');
+        expect(callUrl).not.toContain('AIza-review');
     });
 
     it('falls back to fallback tier when main fails', async () => {
