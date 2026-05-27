@@ -6,12 +6,14 @@ Todas as variáveis são carregadas do arquivo `.env` na raiz do projeto.
 
 ## Jira / Xray
 
-| Variável              | Getter Config              | Obrigatória? | Padrão   | Descrição                           |
-| --------------------- | -------------------------- | ------------ | -------- | ----------------------------------- |
-| `JIRA_BASE_URL`       | `Config.jiraBaseUrl`       | Sim (Jira)   | —        | URL base do Jira Server             |
-| `JIRA_PERSONAL_TOKEN` | `Config.jiraPersonalToken` | Sim (Jira)   | —        | Token Bearer para autenticação Jira |
-| `XRAY_BASE_URL`       | `Config.xrayBaseUrl`       | Sim (Xray)   | —        | URL base do servidor Xray           |
-| `JIRA_PROJECT`        | `Config.jiraProject`       | Não          | `ECSPOL` | Projeto Jira padrão                 |
+| Variável              | Getter Config              | Obrigatória? | Padrão   | Descrição                                                                        |
+| --------------------- | -------------------------- | ------------ | -------- | -------------------------------------------------------------------------------- |
+| `JIRA_BASE_URL`       | `Config.jiraBaseUrl`       | Sim (Jira)   | —        | URL base do Jira Server                                                          |
+| `JIRA_PERSONAL_TOKEN` | `Config.jiraPersonalToken` | Sim (Jira)   | —        | Token Bearer para autenticação Jira                                              |
+| `XRAY_BASE_URL`       | `Config.xrayBaseUrl`       | Sim (Xray)   | —        | URL base do servidor Xray                                                        |
+| `XRAY_MODE`           | `Config.xrayMode`          | Não          | `server` | Modo Xray: `server` (REST) ou `cloud` (GraphQL)                                  |
+| `XRAY_CLOUD_ENDPOINT` | —                          | Não          | —        | Override do endpoint GraphQL Xray Cloud (padrão: `XRAY_BASE_URL`/api/v2/graphql) |
+| `JIRA_PROJECT`        | `Config.jiraProject`       | Não          | `ECSPOL` | Projeto Jira padrão                                                              |
 
 ## Git (GitLab / GitHub)
 
@@ -35,24 +37,27 @@ Todas as variáveis são carregadas do arquivo `.env` na raiz do projeto.
 
 ## Logging
 
-| Variável       | Getter Config       | Obrigatória? | Padrão  | Descrição                        |
-| -------------- | ------------------- | ------------ | ------- | -------------------------------- |
-| `LOG_LEVEL`    | `Config.logLevel`   | Não          | `INFO`  | Nível mínimo de log              |
-| `LOG_FILE`     | `Config.logFile`    | Não          | `false` | Habilitar log em arquivo         |
-| `LOG_DIR`      | `Config.logDir`     | Não          | `logs`  | Diretório de logs                |
-| `LOG_MAX_SIZE` | `Config.logMaxSize` | Não          | `5MB`   | Tamanho máximo do arquivo de log |
+| Variável            | Getter Config       | Obrigatória? | Padrão  | Descrição                                |
+| ------------------- | ------------------- | ------------ | ------- | ---------------------------------------- |
+| `LOG_LEVEL`         | `Config.logLevel`   | Não          | `INFO`  | Nível mínimo de log                      |
+| `LOG_FILE`          | `Config.logFile`    | Não          | `false` | Habilitar log em arquivo                 |
+| `LOG_DIR`           | `Config.logDir`     | Não          | `logs`  | Diretório de logs                        |
+| `LOG_MAX_SIZE`      | `Config.logMaxSize` | Não          | `5MB`   | Tamanho máximo do arquivo de log         |
+| `QA_TOOLS_LOGS_DIR` | (via `temp-dir.ts`) | Não          | —       | Sobrescreve `LOG_DIR` (maior prioridade) |
 
 ## Comportamento / CI
 
-| Variável         | Getter Config         | Obrigatória? | Padrão  | Descrição                       |
-| ---------------- | --------------------- | ------------ | ------- | ------------------------------- |
-| `DEBUG`          | `Config.debug`        | Não          | `false` | Modo debug                      |
-| `QUIET`          | `Config.quiet`        | Não          | `false` | Suprimir output informativo     |
-| `DRY_RUN`        | `Config.dryRun`       | Não          | `false` | Simular sem executar            |
-| `AUTO_CONFIRM`   | `Config.autoConfirm`  | Não          | `false` | Pular prompts de confirmação    |
-| `AUTO_CHOICE`    | `Config.autoChoice`   | Não          | —       | Auto-selecionar opção do menu   |
-| `ON_ERROR`       | `Config.onError`      | Não          | `abort` | Ação em erro (`abort` / `skip`) |
-| `XDG_STATE_HOME` | `Config.xdgStateHome` | Não          | —       | Diretório de estado persistente |
+| Variável               | Getter Config         | Obrigatória? | Padrão     | Descrição                                         |
+| ---------------------- | --------------------- | ------------ | ---------- | ------------------------------------------------- |
+| `DEBUG`                | `Config.debug`        | Não          | `false`    | Modo debug                                        |
+| `QUIET`                | `Config.quiet`        | Não          | `false`    | Suprimir output informativo                       |
+| `DRY_RUN`              | `Config.dryRun`       | Não          | `false`    | Simular sem executar                              |
+| `AUTO_CONFIRM`         | `Config.autoConfirm`  | Não          | `false`    | Pular prompts de confirmação                      |
+| `AUTO_CHOICE`          | `Config.autoChoice`   | Não          | —          | Auto-selecionar opção do menu                     |
+| `ON_ERROR`             | `Config.onError`      | Não          | `abort`    | Ação em erro (`abort` / `skip`)                   |
+| `XDG_STATE_HOME`       | `Config.xdgStateHome` | Não          | —          | Diretório de estado persistente                   |
+| `QA_TOOLS_TEMP_DIR`    | (via `temp-dir.ts`)   | Não          | `temp/`    | Diretório temporário (previews, cache, docs HTML) |
+| `QA_TOOLS_REPORTS_DIR` | (via `temp-dir.ts`)   | Não          | `reports/` | Diretório de relatórios gerados (HTML, flakiness) |
 
 ## LLM (7 tiers)
 
@@ -79,6 +84,7 @@ Todas as variáveis são carregadas do arquivo `.env` na raiz do projeto.
 **Hierarquia de tiers:**
 
 - **main**: análise principal de falhas (`failure-analysis.ts`, `case18.ts`)
+- **small**: tarefas leves — fallbar para main quando indisponível
 - **fast**: tarefas rápidas — PR description, classificação, comparação de runs
 - **report**: análise estruturada com validação JSON (usa mesma config do **main**, temperatura reduzida)
 - **reviewer**: validação cruzada das análises (provedor independente recomendado)

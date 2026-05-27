@@ -88,7 +88,7 @@ jest.mock('adm-zip', () => {
 });
 
 jest.mock('../shared/result_parser', () => ({
-    parseMochawesome: jest.fn(),
+    parseTestResults: jest.fn(),
 }));
 
 jest.mock('../jira_management/result_reporter', () => ({

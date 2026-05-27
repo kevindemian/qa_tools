@@ -7,12 +7,12 @@ type DepCache = { figlet?: any; gradient?: any };
 const _cache: DepCache = {};
 
 export function __setFigletDep(mod: unknown): void {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- dynamic import, ESM-only
     _cache.figlet = mod as any;
 }
 
 export function __setGradientDep(mod: unknown): void {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- dynamic import, ESM-only
     _cache.gradient = mod as any;
 }
 

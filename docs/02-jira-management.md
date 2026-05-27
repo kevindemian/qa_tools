@@ -27,35 +27,25 @@
 - [17 — Gerar relatório HTML + análise IA](#17--gerar-relatório-html--análise-ia)
 - [18 — Gerar testes de user story (IA)](#18--gerar-testes-de-user-story-ia)
 - [19 — Comparar execuções com IA](#19--comparar-execuções-com-ia)
+- [20 — Criar Bug Report](#20--criar-bug-report)
 
 ---
 
 ## Menu completo
 
-| #   | Comando                                     | Seção        |
-| --- | ------------------------------------------- | ------------ |
-| 1   | Criar testes a partir de CSV                | TESTES       |
-| 15  | Importar testes de JSON                     | TESTES       |
-| 2   | Listar versões de release                   | RELEASES     |
-| 3   | Criar nova versão                           | RELEASES     |
-| 4   | Atribuir fixVersion às tarefas              | RELEASES     |
-| 5   | Atualizar package.json + release notes      | RELEASES     |
-| 6   | Verificar status das tarefas                | RELEASES     |
-| 7   | Fechar tarefas automaticamente              | RELEASES     |
-| 8   | Publicar versão                             | RELEASES     |
-| 9   | Alterar projeto Jira                        | CONFIGURACAO |
-| 10  | Alterar diretório git                       | CONFIGURACAO |
-| 14  | Alterar diretório Cypress                   | CONFIGURACAO |
-| 16  | Alterar diretório JSON                      | CONFIGURACAO |
-| 11  | Gerar template CSV                          | UTILITARIOS  |
-| 12  | Diagnosticar conexão                        | UTILITARIOS  |
-| 13  | Criar Test Execution para testes existentes | UTILITARIOS  |
-| 17  | Gerar relatório HTML + análise IA           | IA           |
-| 18  | Gerar testes com IA                         | IA           |
-| 19  | Histórico / Cobertura / Comparação IA       | IA           |
-| 0   | Sair                                        | —            |
+O menu é organizado em categorias com sub-menus:
 
-**Aliases disponíveis:** `criar` (1), `versoes` (2), `fechar` (7), `publicar` (8), `template` (11), `testexec` (13), `json` (15), entre outros.
+| Categoria                 | Opções                                                                                                                                                   |
+| ------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| GERAÇÃO DE RELATÓRIOS     | 17 — Gerar relatório HTML                                                                                                                                |
+| GERAÇÃO DE CASOS DE TESTE | 1 — Criar testes a partir de CSV, 13 — Criar Test Execution, 15 — Importar JSON, 18 — Gerar testes via IA                                                |
+| BUG REPORT                | 20 — Criar Bug Report                                                                                                                                    |
+| ANÁLISE E HISTÓRICO       | 19 — Histórico / Cobertura                                                                                                                               |
+| RELEASES                  | 2 — Listar versões, 3 — Criar versão, 4 — Atribuir fixVersion, 5 — Atualizar package.json, 6 — Verificar status, 7 — Fechar tarefas, 8 — Publicar versão |
+| CONFIGURAÇÃO              | 9 — Alterar projeto, 10 — Alterar diretório git, 14 — Alterar Cypress, 16 — Alterar JSON                                                                 |
+| UTILITÁRIOS               | 11 — Gerar template CSV, 12 — Diagnosticar conexão, d — Ver documentação                                                                                 |
+
+**Aliases disponíveis:** `criar` (1), `versoes` (2), `fechar` (7), `publicar` (8), `template` (11), `testexec` (13), `json` (15), `bug` (20), `docs` (d), entre outros.
 
 ---
 
@@ -387,17 +377,18 @@ Define o diretório padrão para arquivos JSON usados na opção 15. Permite usa
 
 ## Variáveis de ambiente
 
-| Variável              | Descrição                                         | Obrigatória |
-| --------------------- | ------------------------------------------------- | ----------- |
-| `JIRA_BASE_URL`       | URL base do Jira (ex: `https://seu-jira-server`)  | Sim         |
-| `JIRA_PERSONAL_TOKEN` | Token de autenticação Bearer                      | Sim         |
-| `XRAY_BASE_URL`       | URL base do Xray (necessária para criar testes)   | Sim         |
-| `JIRA_PROJECT`        | Projeto Jira padrão (opcional, fallback `ECSPOL`) | Não         |
-| `CSV_DEFAULT_PATH`    | Caminho padrão do CSV                             | Não         |
-| `CSV_LABELS`          | Labels padrão separadas por vírgula               | Não         |
-| `AUTO_CHOICE`         | Opção automática do menu (para scripting)         | Não         |
-| `AUTO_CONFIRM`        | Pular confirmações (true/false)                   | Não         |
-| `DEBUG`               | Modo debug com logging adicional                  | Não         |
+| Variável              | Descrição                                               | Obrigatória |
+| --------------------- | ------------------------------------------------------- | ----------- |
+| `JIRA_BASE_URL`       | URL base do Jira (ex: `https://seu-jira-server`)        | Sim         |
+| `JIRA_PERSONAL_TOKEN` | Token de autenticação Bearer                            | Sim         |
+| `XRAY_BASE_URL`       | URL base do Xray (necessária para criar testes)         | Sim         |
+| `XRAY_MODE`           | Modo Xray: `server` (API REST) ou `cloud` (API GraphQL) | Não         |
+| `JIRA_PROJECT`        | Projeto Jira padrão (opcional, fallback `ECSPOL`)       | Não         |
+| `CSV_DEFAULT_PATH`    | Caminho padrão do CSV                                   | Não         |
+| `CSV_LABELS`          | Labels padrão separadas por vírgula                     | Não         |
+| `AUTO_CHOICE`         | Opção automática do menu (para scripting)               | Não         |
+| `AUTO_CONFIRM`        | Pular confirmações (true/false)                         | Não         |
+| `DEBUG`               | Modo debug com logging adicional                        | Não         |
 
 ---
 
@@ -463,7 +454,7 @@ Step 1 action,step 1 data,step 1 expected
 
 > O relatório HTML é gerado **mesmo sem análise IA**. A IA é um enriquecimento opcional — stats, gráfico e tabela funcionam independentemente.
 
-Gera um relatório HTML interativo a partir de um arquivo `mochawesome.json` e, opcionalmente, enriquece com análise de falhas por IA.
+Gera um relatório HTML interativo a partir de um arquivo `mochawesome.json` e, opcionalmente, enriquece com análise de falhas por IA. Também pode gerar um **Bug Report** no Jira ao final.
 
 ### Fluxo
 
@@ -477,7 +468,9 @@ Gera um relatório HTML interativo a partir de um arquivo `mochawesome.json` e, 
     - Se sim, chama `analyzeFailuresWithReport()` — pipeline LLM (report → validate → retry → reviewer → fallback)
     - Insere seção "Análise IA" no HTML com badge de confiança (🟢 alta / 🟡 média / 🔴 baixa)
     - Se fallback ativo, exibe ⚠ warning no relatório
-5. Salva HTML no diretório do JSON de origem
+5. Salva HTML no diretório do JSON de origem (ou no diretório de reports via `writeReport()`)
+6. Abre o HTML no navegador via `openWithOsOrFallback()`
+7. Se houver falhas, pergunta se deseja criar **Bug Report** no Jira (chama `interactiveBugReportFlow()`)
 
 **Arquivo:** `jira_management/commands/case17.ts`
 
@@ -523,6 +516,32 @@ Compara as duas últimas execuções de teste e gera uma análise narrativa com 
 4. Exibe análise textual de 3–5 sentenças
 
 **Arquivo:** `jira_management/commands/case19.ts`
+
+---
+
+## 20 — Criar Bug Report
+
+Cria um Bug Report no Jira descrevendo falhas encontradas em uma execução de testes. O usuário informa manualmente os detalhes ou os dados são reaproveitados do fluxo da opção 17.
+
+### Fluxo (manual)
+
+1. Informa o título do bug
+2. Informa a descrição detalhada
+3. Informa os passos para reproduzir (multilinha, finaliza com Enter duas vezes)
+4. Informa o ambiente (ex: `staging`, `production`)
+5. Informa a severidade (`high`, `medium`, `low`)
+6. Informa os links dos testes falhos (opcional)
+7. A issue é criada via `JiraResource.createIssue()` com type "Bug"
+8. Se houver links de testes falhos, cria linked issues via `JiraLinkManager`
+
+### Fluxo (automático, via opção 17)
+
+Após gerar relatório HTML com falhas, a opção 17 pergunta: _"Deseja criar um relatório de bug (Bug Report) no Jira para as falhas?"_. Os dados das falhas são extraídos automaticamente via `collectAutomated()` e o fluxo interativo é pré-preenchido.
+
+### Arquivos relacionados
+
+- `commands/case20.ts` — handler da opção
+- `shared/bug-report.ts` — funções `collectManual`, `collectAutomated`, `interactiveBugReportFlow`
 
 ---
 

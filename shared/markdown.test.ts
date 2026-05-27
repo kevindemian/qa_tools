@@ -1,4 +1,4 @@
-import { md, mdBox, __setLexer } from './markdown';
+import { md, mdBox, mdToHtml, __setLexer } from './markdown';
 
 describe('md', () => {
     afterEach(() => {
@@ -249,5 +249,149 @@ describe('renderInline additional types', () => {
         __setLexer(tokens);
         const result = md('');
         expect(result).toContain('~~struck~~');
+    });
+});
+
+describe('mdToHtml', () => {
+    it('wraps output in full HTML document', () => {
+        const result = mdToHtml('# Hello');
+        expect(result).toContain('<!DOCTYPE html>');
+        expect(result).toContain('<h1>Hello</h1>');
+        expect(result).toContain('</body></html>');
+    });
+
+    it('renders headings with correct levels', () => {
+        const result = mdToHtml('## Sub\n### Subsub');
+        expect(result).toContain('<h2>Sub</h2>');
+        expect(result).toContain('<h3>Subsub</h3>');
+    });
+
+    it('renders paragraph text', () => {
+        const result = mdToHtml('a simple paragraph');
+        expect(result).toContain('<p>a simple paragraph</p>');
+    });
+
+    it('renders bold and italic', () => {
+        const result = mdToHtml('**bold** and *italic*');
+        expect(result).toContain('<strong>bold</strong>');
+        expect(result).toContain('<em>italic</em>');
+    });
+
+    it('renders inline code', () => {
+        const result = mdToHtml('use `code` here');
+        expect(result).toContain('<code>code</code>');
+    });
+
+    it('renders code block', () => {
+        const result = mdToHtml('```\nconst x = 1;\n```');
+        expect(result).toContain('<pre><code>');
+        expect(result).toContain('const x = 1;');
+        expect(result).toContain('</code></pre>');
+    });
+
+    it('renders unordered list', () => {
+        const result = mdToHtml('- item 1\n- item 2');
+        expect(result).toContain('<ul>');
+        expect(result).toContain('<li>item 1</li>');
+        expect(result).toContain('<li>item 2</li>');
+    });
+
+    it('renders ordered list', () => {
+        const result = mdToHtml('1. first\n2. second');
+        expect(result).toContain('<ul>');
+        expect(result).toContain('<li>first</li>');
+    });
+
+    it('renders table', () => {
+        const result = mdToHtml('| a | b |\n|---|---|\n| 1 | 2 |');
+        expect(result).toContain('<table>');
+        expect(result).toContain('<th>a</th>');
+        expect(result).toContain('<td>1</td>');
+    });
+
+    it('renders horizontal rule', () => {
+        const result = mdToHtml('---');
+        expect(result).toContain('<hr>');
+    });
+
+    it('renders blockquote', () => {
+        const result = mdToHtml('> cited text');
+        expect(result).toContain('<blockquote>');
+        expect(result).toContain('cited text');
+    });
+
+    it('renders link with href', () => {
+        const result = mdToHtml('[click](https://example.com)');
+        expect(result).toContain('<a href="https://example.com">');
+        expect(result).toContain('click');
+        expect(result).toContain('</a>');
+    });
+
+    it('escapes HTML in text', () => {
+        const result = mdToHtml('<script>alert("xss")</script>');
+        expect(result).not.toContain('<script>');
+        expect(result).toContain('&lt;script&gt;');
+    });
+
+    it('handles empty input', () => {
+        const result = mdToHtml('');
+        expect(result).toContain('<body></body>');
+    });
+
+    it('uses custom title', () => {
+        const result = mdToHtml('# Hi', 'My Title');
+        expect(result).toContain('<title>My Title</title>');
+    });
+
+    it('renders strikethrough', () => {
+        const result = mdToHtml('~~struck~~');
+        expect(result).toContain('<del>struck</del>');
+    });
+
+    it('converts .md link to .html', () => {
+        const result = mdToHtml('[see](guide.md)');
+        expect(result).toContain('<a href="guide.html">');
+    });
+
+    it('preserves anchor in .md link conversion', () => {
+        const result = mdToHtml('[see](guide.md#section)');
+        expect(result).toContain('<a href="guide.html#section">');
+    });
+
+    it('does NOT convert external .md links', () => {
+        const result = mdToHtml('[ext](https://example.com/doc.md)');
+        expect(result).toContain('href="https://example.com/doc.md"');
+    });
+
+    it('does NOT convert non-.md links', () => {
+        const result = mdToHtml('[pdf](file.pdf)');
+        expect(result).toContain('href="file.pdf"');
+    });
+
+    it('injects nav bar when NavConfig provided', () => {
+        const result = mdToHtml('Content', 'Test', {
+            prev: { label: 'Anterior', file: 'prev.html' },
+            next: { label: 'Próximo', file: 'next.html' },
+        });
+        expect(result).toContain('class="nav-bar"');
+        expect(result).toContain('href="prev.html"');
+        expect(result).toContain('Anterior');
+        expect(result).toContain('href="next.html"');
+        expect(result).toContain('Próximo');
+        expect(result).toContain('href="index.html"');
+        expect(result).toContain('Índice');
+    });
+
+    it('nav bar omits prev/next when not provided', () => {
+        const result = mdToHtml('Content', 'Test', {});
+        expect(result).toContain('class="nav-bar"');
+        expect(result).toContain('Índice');
+        expect(result).not.toContain('←');
+        expect(result).not.toContain('→');
+    });
+
+    it('nav bar does not appear without NavConfig', () => {
+        const result = mdToHtml('Content');
+        expect(result).not.toContain('nav-bar');
     });
 });

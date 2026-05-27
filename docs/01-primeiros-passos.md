@@ -32,35 +32,43 @@ O valor padrão é `ECSPOL`. O nome escolhido é salvo em estado persistente e r
 
 ## 3. Menu principal
 
-O menu exibe opções categorizadas de **0 a 16**:
+O menu é organizado em **categorias** com sub-menus. Ao selecionar uma categoria, as opções internas são exibidas:
 
 ```
 == ECSPOL ==
-  TESTES
-   1  Criar testes a partir de CSV
-  15  Importar testes de JSON
+  GERAÇÃO DE RELATÓRIOS
+   17  Gerar relatório HTML
+  GERAÇÃO DE CASOS DE TESTE
+   1   Criar testes a partir de CSV
+   13  Criar Test Execution para testes existentes
+   15  Importar testes de JSON
+   18  Gerar testes via User Story (IA)
+  BUG REPORT
+   20  Criar Bug Report
+  ANÁLISE E HISTÓRICO
+   19  Histórico / Cobertura
   RELEASES
-   2  Listar versoes de release
-   3  Criar nova versão
-   4  Atribuir fixVersion as tarefas
-   5  Atualizar package.json + release notes
-   6  Verificar status das tarefas
-   7  Fechar tarefas automaticamente
-   8  Publicar versão
-  CONFIGURACAO
-   9  Alterar projeto Jira
-  10  Alterar diretório git
-  14  Alterar diretório Cypress
-  16  Alterar diretório JSON
-  UTILITARIOS
-  11  Gerar template CSV
-  12  Diagnosticar conexão
-  13  Criar Test Execution para testes existentes
-   0  Sair
+   2   Listar versões de release
+   3   Criar nova versão
+   4   Atribuir fixVersion às tarefas
+   5   Atualizar package.json + release notes
+   6   Verificar status das tarefas
+   7   Fechar tarefas automaticamente
+   8   Publicar versão
+  CONFIGURAÇÃO
+   9   Alterar projeto Jira
+   10  Alterar diretório git
+   14  Alterar diretório Cypress
+   16  Alterar diretório JSON
+  UTILITÁRIOS
+   11  Gerar template CSV
+   12  Diagnosticar conexão
+   d   Ver documentação (abre navegador)
+   0   Sair
   /h  Ajuda
 ```
 
-O usuário digita o número da opção desejada. Também é possível usar **alias** em português ou inglês (ex.: `criar`, `versoes`, `fechar`, `exit`).
+O usuário digita o número da opção desejada. Também é possível usar **alias** em português ou inglês (ex.: `criar`, `versoes`, `fechar`, `bug`, `docs`, `exit`).
 
 ---
 
@@ -68,14 +76,16 @@ O usuário digita o número da opção desejada. Também é possível usar **ali
 
 Em qualquer prompt de texto, os seguintes comandos estão disponíveis:
 
-| Comando | Descrição |
-|---------|-----------|
-| `/help` ou `/h` | Exibe ajuda contextual geral |
-| `/help <tópico>` ou `/h <tópico>` | Ajuda sobre um tópico específico (`csv`, `labels`, `group`, `precondition`, `project`, `version`, `transitions`, `template`, `diagnostics`) |
-| `/help search <termo>` ou `/h search <termo>` | Busca por termo em todos os tópicos de ajuda |
-| `/back` ou `/menu` | Volta ao menu principal |
-| `/exit` ou `/sair` | Encerra a sessão |
-| `/history` | Mostra as últimas 10 operações registradas |
+| Comando                                       | Descrição                                                                                                                                   |
+| --------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------- |
+| `/help` ou `/h`                               | Exibe ajuda contextual geral                                                                                                                |
+| `/help <tópico>` ou `/h <tópico>`             | Ajuda sobre um tópico específico (`csv`, `labels`, `group`, `precondition`, `project`, `version`, `transitions`, `template`, `diagnostics`) |
+| `/help search <termo>` ou `/h search <termo>` | Busca por termo em todos os tópicos de ajuda                                                                                                |
+| `/back` ou `/menu`                            | Volta ao menu principal                                                                                                                     |
+| `/exit` ou `/sair`                            | Encerra a sessão                                                                                                                            |
+| `/history`                                    | Mostra as últimas 10 operações registradas                                                                                                  |
+| `/docs` ou `/d`                               | Abre a documentação completa no navegador (HTML gerado em lote)                                                                             |
+| `/home`                                       | Volta ao menu de categorias principal                                                                                                       |
 
 ---
 
@@ -88,7 +98,7 @@ AUTO_CONFIRM=true AUTO_CHOICE=1 npx tsx jira_management/main.ts
 ```
 
 - `AUTO_CONFIRM=true` — pula todas as confirmações (default: `false`)
-- `AUTO_CHOICE=1` — seleciona a opção 1 automaticamente na inicialização
+- `AUTO_CHOICE=1` — seleciona a opção 1 automaticamente na inicialização (use `d` para abrir documentação)
 
 Exemplo com `DRY_RUN` para simular sem chamadas de API:
 
@@ -110,10 +120,10 @@ O arquivo contém um array `history` com entradas no formato:
 
 ```json
 {
-  "op": "Criar testes",
-  "detail": "testes.csv → 3 issues criadas",
-  "status": "ok",
-  "ts": "2026-05-22T10:30:00.000Z"
+    "op": "Criar testes",
+    "detail": "testes.csv → 3 issues criadas",
+    "status": "ok",
+    "ts": "2026-05-22T10:30:00.000Z"
 }
 ```
 

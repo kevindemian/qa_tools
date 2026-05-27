@@ -7,6 +7,7 @@ import { box, type BoxBorder } from './box';
 interface InlineToken {
     type: string;
     text?: string;
+    href?: string;
     tokens?: InlineToken[];
     depth?: number;
     items?: Array<{ tokens: InlineToken[] }>;
@@ -70,7 +71,7 @@ function lexLink(src: string, i: number, flush: () => void, push: (t: InlineToke
     const cp = src.indexOf(')', cb + 2);
     if (cp === -1) return null;
     flush();
-    push({ type: 'link', text: src.slice(i + 1, cb) });
+    push({ type: 'link', text: src.slice(i + 1, cb), href: src.slice(cb + 2, cp) });
     return cp + 1;
 }
 
@@ -334,11 +335,11 @@ function lexMarkdown(src: string): InlineToken[] {
 
 // ─── Test support: inject pre-parsed tokens ─────────────────────────────────────
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
+// eslint-disable-next-line @typescript-eslint/no-explicit-any -- token AST shape varies by lexer
 let _testTokens: any[] | null = null;
 
 export function __setLexer(tokens: unknown[] | null): void {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- token AST shape varies by lexer
     _testTokens = tokens as any[] | null;
 }
 
@@ -471,6 +472,114 @@ function renderInline(tokens: any[] | undefined): string {
     return out;
 }
 
+// ─── HTML rendering ────────────────────────────────────────────────────────────
+
+function escapeHtml(s: string): string {
+    return s
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
+}
+
+function renderInlineToHtml(tokens: unknown[] | undefined): string {
+    if (!tokens) return '';
+    let out = '';
+    for (const t of tokens) {
+        if (t.type === 'text' || t.type === 'plain') {
+            out += escapeHtml(t.text);
+        } else if (t.type === 'strong') {
+            out += '<strong>' + renderInlineToHtml(t.tokens) + '</strong>';
+        } else if (t.type === 'em') {
+            out += '<em>' + renderInlineToHtml(t.tokens) + '</em>';
+        } else if (t.type === 'codespan') {
+            out += '<code>' + escapeHtml(t.text) + '</code>';
+        } else if (t.type === 'link') {
+            let hrefVal = t.href || '';
+            if (hrefVal && !hrefVal.includes('://') && /\.md(#|$)/.test(hrefVal)) {
+                hrefVal = hrefVal.replace(/\.md(?=#|$)/, '.html');
+            }
+            const hrefAttr = hrefVal ? ' href="' + escapeHtml(hrefVal) + '"' : '';
+            out += '<a' + hrefAttr + '>' + escapeHtml(t.text || '') + '</a>';
+        } else if (t.type === 'br') {
+            out += '<br>';
+        } else if (t.type === 'del') {
+            out += '<del>' + renderInlineToHtml(t.tokens) + '</del>';
+        }
+    }
+    return out;
+}
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any -- token AST shape varies by lexer output
+function renderTokensToHtml(tokens: any[]): string {
+    const parts: string[] = [];
+    for (const token of tokens) {
+        if (token.type === 'heading') {
+            const tag = 'h' + Math.min(token.depth || 1, 6);
+            parts.push('<' + tag + '>' + renderInlineToHtml(token.tokens) + '</' + tag + '>');
+        } else if (token.type === 'paragraph') {
+            const text = renderInlineToHtml(token.tokens);
+            if (text.trim()) parts.push('<p>' + text + '</p>');
+        } else if (token.type === 'code') {
+            parts.push('<pre><code>' + escapeHtml(token.text || '') + '</code></pre>');
+        } else if (token.type === 'list') {
+            const items = (token.items as Array<{ tokens: unknown[] }>).map(
+                (item) => '<li>' + renderInlineToHtml(item.tokens) + '</li>',
+            );
+            parts.push('<ul>' + items.join('') + '</ul>');
+        } else if (token.type === 'table') {
+            const head = (token.header as Array<{ tokens: unknown[] }>).map(
+                (h) => '<th>' + renderInlineToHtml(h.tokens) + '</th>',
+            );
+            const rows = (token.rows as Array<Array<{ tokens: unknown[] }>>).map((r) => {
+                const cells = r.map((c) => '<td>' + renderInlineToHtml(c.tokens) + '</td>');
+                return '<tr>' + cells.join('') + '</tr>';
+            });
+            parts.push(
+                '<table><thead><tr>' + head.join('') + '</tr></thead><tbody>' + rows.join('') + '</tbody></table>',
+            );
+        } else if (token.type === 'hr') {
+            parts.push('<hr>');
+        } else if (token.type === 'blockquote') {
+            parts.push('<blockquote>' + renderInlineToHtml(token.tokens) + '</blockquote>');
+        }
+    }
+    return parts.join('\n');
+}
+
+const HTML_DOC_CSS = `
+body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; max-width: 800px; margin: 2rem auto; padding: 0 1rem; line-height: 1.6; color: #1a1a1a; background: #fafafa; }
+h1, h2, h3, h4, h5, h6 { color: #111; margin-top: 1.5em; margin-bottom: 0.5em; }
+code { background: #e8e8e8; padding: 0.1em 0.3em; border-radius: 3px; font-size: 0.9em; }
+pre { background: #1e1e1e; color: #d4d4d4; padding: 1em; border-radius: 6px; overflow-x: auto; }
+pre code { background: none; padding: 0; color: inherit; }
+blockquote { border-left: 4px solid #ccc; margin: 0; padding: 0 1em; color: #555; }
+table { border-collapse: collapse; width: 100%; margin: 1em 0; }
+th, td { border: 1px solid #d0d0d0; padding: 0.5em; text-align: left; }
+th { background: #eee; font-weight: 600; }
+a { color: #1a73e8; }
+hr { border: none; border-top: 1px solid #ddd; margin: 2em 0; }
+ul { padding-left: 1.5em; }
+`.trim();
+
+const NAV_CSS = `
+.nav-bar { display: flex; gap: 1rem; padding: 0.75rem 0; border-bottom: 1px solid #ddd; margin-bottom: 1.5rem; font-size: 0.9rem; }
+.nav-bar a { text-decoration: none; color: #1a73e8; }
+.nav-bar .nav-prev { margin-right: auto; }
+.nav-bar .nav-next { margin-left: auto; }
+.nav-bar .nav-index { margin: 0 auto; }
+`.trim();
+
+export interface NavLink {
+    label: string;
+    file: string;
+}
+export interface NavConfig {
+    prev?: NavLink;
+    next?: NavLink;
+}
+
 // ─── Public API ─────────────────────────────────────────────────────────────────
 
 export function md(markdown: string, availWidth?: number): string {
@@ -493,4 +602,42 @@ export function mdBox(markdown: string, options?: { title?: string; border?: Box
         border,
         padding: 1,
     });
+}
+
+export function mdToHtml(markdown: string, title?: string, nav?: NavConfig): string {
+    const tokens = _testTokens ?? lexMarkdown(markdown);
+    const body = renderTokensToHtml(tokens);
+    const docTitle = title ? escapeHtml(title) : 'Document';
+    const hasNav = !!(nav?.prev || nav?.next);
+    let allCss = HTML_DOC_CSS;
+    if (hasNav) allCss += '\n' + NAV_CSS;
+    let navHtml = '';
+    if (nav) {
+        const parts: string[] = [];
+        if (nav.prev) {
+            parts.push(
+                '<a class="nav-prev" href="' + escapeHtml(nav.prev.file) + '">← ' + escapeHtml(nav.prev.label) + '</a>',
+            );
+        }
+        parts.push('<a class="nav-index" href="index.html">Índice</a>');
+        if (nav.next) {
+            parts.push(
+                '<a class="nav-next" href="' + escapeHtml(nav.next.file) + '">' + escapeHtml(nav.next.label) + ' →</a>',
+            );
+        }
+        navHtml = '<div class="nav-bar">' + parts.join('') + '</div>';
+    }
+    return (
+        '<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8">' +
+        '<meta name="viewport" content="width=device-width, initial-scale=1.0">' +
+        '<title>' +
+        docTitle +
+        '</title><style>' +
+        allCss +
+        '</style></head>' +
+        '<body>' +
+        navHtml +
+        body +
+        '</body></html>'
+    );
 }

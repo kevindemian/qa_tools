@@ -28,10 +28,10 @@ import {
     printSessionSummary as sharedPrintSessionSummary,
 } from '../shared/cli_base';
 import { rootLogger } from '../shared/logger';
-import { openWithOsOrFallback } from '../shared/open';
+import { openWithOsOrFallback, getDocsOutputDir } from '../shared/open';
 import { loadTypedState, load as loadState, update as updateState, getStatePath } from '../shared/state';
 import { SessionContext } from '../shared/session-context';
-import { mdBox } from '../shared/markdown';
+import { mdToHtml } from '../shared/markdown';
 import type { Logger } from '../shared/logger';
 import type { StateSchema } from '../shared/types';
 import { getHandler } from './commands';
@@ -339,6 +339,12 @@ async function handleSpecialInput(input: string, level: string = 'main'): Promis
     return false;
 }
 
+function _showSearchResults(found: Array<[string, string]>): void {
+    title('Tópicos encontrados');
+    found.forEach(([k, v]) => helpLine(k + ': ' + v.split('\n')[0]));
+    divider();
+}
+
 function showHelpLoop(): void {
     const topicEntries = Object.entries(HELP_TOPICS);
     while (true) {
@@ -376,7 +382,9 @@ function showHelpLoop(): void {
         // Try as topic name or search
         const found = topicEntries.filter(([k]) => k.includes(lower));
         if (found.length === 1) {
-            showHelp(found[0]![0]);
+            const topic = found[0];
+            if (!topic) continue;
+            showHelp(topic[0]);
             divider();
             try {
                 prompt('Pressione Enter para continuar');
@@ -386,9 +394,7 @@ function showHelpLoop(): void {
             continue;
         }
         if (found.length > 1) {
-            title('Tópicos encontrados');
-            found.forEach(([k, v]) => helpLine(k + ': ' + v.split('\n')[0]));
-            divider();
+            _showSearchResults(found);
             continue;
         }
         warn('Tópico não encontrado: "' + trimmed + '". Tente /help search <termo>');
@@ -424,41 +430,77 @@ async function showDocs(): Promise<void> {
     const docs = _loadDocFiles(docsDir);
     if (!docs) return;
 
-    while (true) {
-        console.clear();
-        defaultOutput.box([], { border: 'double', padding: 1, title: 'QA Tools · Jira > Documentação', width: 80 });
-
-        const choices: MenuChoice[] = docs.map((d) => ({
-            name: '      ' + d.label,
-            value: d.file,
-        }));
-        choices.push(
-            { type: 'separator' as const, line: '        ' },
-            { name: '      /voltar  Menu Jira', value: '0' },
-        );
-
-        const answer = await showSelect('      Selecione um documento', choices, {
-            pageSize: (process.stdout.rows || 24) - 4,
-        });
-        if (answer === '0') return;
-
-        const chosen = docs.find((d) => d.file === answer);
-        if (!chosen) continue;
-
-        const filePath = path.join(docsDir, chosen.file);
-        const opened = await openWithOsOrFallback(filePath);
-        if (!opened) {
-            try {
-                const content = fs.readFileSync(filePath, 'utf8');
-                defaultOutput.print(mdBox(content, { title: chosen.label, border: 'round' }));
-            } catch (e: unknown) {
-                printError('Erro ao ler ' + chosen.file, e);
-            }
-        }
-        divider();
-        const input = prompt('Pressione Enter [ou q] para voltar à lista');
-        if (input.trim().toLowerCase() === 'q') break;
+    const outDir = getDocsOutputDir();
+    if (!outDir) {
+        printError('Documentação', new Error('Não foi possível determinar diretório de saída'));
+        return;
     }
+
+    fs.mkdirSync(outDir, { recursive: true });
+
+    for (let i = 0; i < docs.length; i++) {
+        const doc = docs[i];
+        if (!doc) continue;
+        const filePath = path.join(docsDir, doc.file);
+        let content: string;
+        try {
+            content = fs.readFileSync(filePath, 'utf8');
+        } catch (e: unknown) {
+            printError('Erro ao ler ' + doc.file, e);
+            continue;
+        }
+
+        const prevDoc = i > 0 ? docs[i - 1] : undefined;
+        const nextDoc = i < docs.length - 1 ? docs[i + 1] : undefined;
+        const nav = {
+            prev: prevDoc ? { label: prevDoc.label, file: prevDoc.file.replace(/\.md$/, '.html') } : undefined,
+            next: nextDoc ? { label: nextDoc.label, file: nextDoc.file.replace(/\.md$/, '.html') } : undefined,
+        };
+
+        const html = mdToHtml(content, doc.label, nav);
+        const htmlFile = path.join(outDir, doc.file.replace(/\.md$/, '.html'));
+        fs.writeFileSync(htmlFile, html, 'utf8');
+    }
+
+    const indexHtml = buildIndexHtml(docs);
+    const indexPath = path.join(outDir, 'index.html');
+    fs.writeFileSync(indexPath, indexHtml, 'utf8');
+
+    const opened = await openWithOsOrFallback(indexPath);
+    if (!opened) {
+        printError('Documentação', new Error('Não foi possível abrir o navegador. O arquivo está em: ' + indexPath));
+    }
+}
+
+function buildIndexHtml(docs: Array<{ label: string; file: string }>): string {
+    const items = docs
+        .map((d) => {
+            const href = d.file.replace(/\.md$/, '.html');
+            return '<li><a href="' + href + '">' + d.label.replace(/^./, (c) => c.toUpperCase()) + '</a></li>';
+        })
+        .join('\n');
+    return (
+        '<!DOCTYPE html><html lang="pt-BR"><head><meta charset="UTF-8">' +
+        '<meta name="viewport" content="width=device-width, initial-scale=1.0">' +
+        '<title>QA Tools — Documentação</title><style>' +
+        "body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; max-width: 600px; margin: 3rem auto; padding: 0 1rem; line-height: 1.6; color: #1a1a1a; background: #fafafa; }" +
+        'h1 { color: #111; border-bottom: 2px solid #1a73e8; padding-bottom: 0.5rem; }' +
+        'ul { list-style: none; padding: 0; }' +
+        'li { padding: 0.5rem 0; border-bottom: 1px solid #eee; }' +
+        'li:last-child { border-bottom: none; }' +
+        'a { color: #1a73e8; text-decoration: none; font-size: 1.1rem; }' +
+        'a:hover { text-decoration: underline; }' +
+        '.subtitle { color: #555; margin-top: -0.5rem; }' +
+        '</style></head><body>' +
+        '<h1>QA Tools — Documentação</h1>' +
+        '<p class="subtitle">' +
+        docs.length +
+        ' documentos disponíveis</p>' +
+        '<ul>' +
+        items +
+        '</ul>' +
+        '</body></html>'
+    );
 }
 
 function initializeSession() {
@@ -650,6 +692,35 @@ async function dispatchAndHandleResult(
     return 'continue';
 }
 
+async function _executeChoice(
+    choice: string,
+    ctx: SessionContext,
+    jiraResource: JiraResource,
+    jiraResourceXray: JiraResource,
+    linkManager: JiraLinkManager,
+    linkManagerXray: JiraLinkManager,
+    csvResource: CsvResource,
+    pushHistory: (op: string, detail: string, status: string) => void,
+    printSessionSummary: () => void,
+): Promise<void> {
+    updateState((s) => {
+        (s as StateSchema).lastChoice = choice;
+    });
+
+    const cmdCtx = buildCommandContext(
+        jiraResource,
+        jiraResourceXray,
+        linkManager,
+        linkManagerXray,
+        csvResource,
+        ctx,
+        pushHistory,
+        printSessionSummary,
+    );
+
+    await dispatchAndHandleResult(choice, cmdCtx, ctx);
+}
+
 async function runMainLoop(
     ctx: SessionContext,
     jiraResource: JiraResource,
@@ -684,22 +755,17 @@ async function runMainLoop(
             continue;
         }
 
-        updateState((s) => {
-            (s as StateSchema).lastChoice = choice;
-        });
-
-        const cmdCtx = buildCommandContext(
+        await _executeChoice(
+            choice,
+            ctx,
             jiraResource,
             jiraResourceXray,
             linkManager,
             linkManagerXray,
             csvResource,
-            ctx,
             pushHistory,
             printSessionSummary,
         );
-
-        await dispatchAndHandleResult(choice, cmdCtx, ctx);
     }
 }
 

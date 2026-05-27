@@ -13,6 +13,16 @@ jest.mock('../shared/logger', () => ({
             warn: jest.fn(),
         })),
     })),
+    rootLogger: {
+        info: jest.fn(),
+        warn: jest.fn(),
+        error: jest.fn(),
+        child: jest.fn(() => ({
+            error: jest.fn(),
+            info: jest.fn(),
+            warn: jest.fn(),
+        })),
+    },
 }));
 
 jest.mock('../shared/prompt', () => ({

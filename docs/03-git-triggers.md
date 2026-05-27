@@ -26,7 +26,8 @@ Ao iniciar, um menu interativo é exibido. O usuário seleciona um projeto (mape
 | 8   | Exportar variáveis CI/CD                 |
 | 9   | Trocar de projeto                        |
 | a   | Dashboard flakiness (HTML)               |
-| 0   | Voltar ao menu principal                 |
+| d   | Ver documentação (abre navegador)        |
+| 0   | Sair                                     |
 
 ---
 
@@ -241,7 +242,74 @@ main  ──MR──→  rel_cand  ──MR──→  dev
 
 ---
 
-## 9. Checkpoint (Pipeline Polling)
+## 9. Flakiness Dashboard (Opção 'a')
+
+Gera um dashboard HTML com análises de flakiness dos testes a partir do histórico de execuções armazenado em `~/.local/state/qa-tools/metrics.json`.
+
+### Fluxo
+
+1. Carrega métricas via `loadMetrics()` — filtra execuções do projeto atual
+2. Valida: mínimo de **2 execuções** registradas
+3. Calcula flakiness via `calculateFlakiness()` — taxa de transição `passed→failed` e `failed→passed` por teste
+4. Gera HTML via `generateFlakinessHtml()` com:
+    - Tabela de testes com taxa de flakiness (%), total de runs
+    - Destaque em vermelho para testes com flakiness > 30%
+    - Ordenação decrescente por taxa
+5. Salva em `reports/<data>/flakiness-<projeto>.html`
+6. Registra no histórico com contagem de testes com flakiness > 30%
+
+### Arquivos relacionados
+
+- `schedule-handler.ts` — função `handleFlakinessDashboard()`
+- `shared/metrics.ts` — `loadMetrics()`, `calculateFlakiness()`
+- `shared/flakiness-dashboard.ts` — `generateFlakinessHtml()`
+
+---
+
+## 10. Batch Mode
+
+> Execução não-interativa para pipelines CI/CD. Detecta automaticamente os argumentos `--batch` / `--auto` e executa sem prompts.
+
+O batch mode permite disparar uma pipeline, coletar resultados, analisar falhas com IA e gerar dashboard de flakiness em **um único comando**.
+
+### Flags
+
+| Flag                  | Descrição                                               |
+| --------------------- | ------------------------------------------------------- |
+| `--batch` ou `--auto` | Ativa modo batch (implica `AUTO_CONFIRM=true`)          |
+| `--project` / `-p`    | Nome do projeto (fallback: primeiro do `projects.json`) |
+| `--branch` / `-b`     | Branch para disparo (fallback: `main`)                  |
+
+### Exemplos
+
+```bash
+# Disparar pipeline no projeto padrão, branch main
+npx tsx git_triggers/main.ts --batch
+
+# Projeto e branch específicos
+npx tsx git_triggers/main.ts --batch --project qa_ibabs --branch release/v2
+```
+
+### Fluxo
+
+1. `parseBatchArgs()` analisa `process.argv` em busca das flags
+2. Carrega projeto de `config/projects.json` (ou usa o especificado)
+3. Configura manager (`GitLabManager` / `GitHubManager`) e define sessão
+4. Valida branch via `getBranch()`
+5. Dispara pipeline via `triggerPipeline()`
+6. Faz polling até conclusão (`pollPipeline()`)
+7. Coleta resultados de teste (`collectTestResults()`)
+8. Se houver falhas, oferece análise IA (`offerPipelineFailureAnalysis()`)
+9. Gera dashboard de flakiness (`generateFlakinessDashboard()`)
+10. Exibe `printSessionSummary()` e encerra
+
+### Arquivo
+
+- `batch-mode.ts` — `parseBatchArgs()`, `tryBatchMode()`, `setupBatchProject()`, `triggerAndCollectBatchPipeline()`
+
+---
+
+## 11. Checkpoint (Pipeline Polling)
 
 Se o pipeline polling for interrompido (Ctrl+C, falha), o progresso é **salvo no estado** para retomada:
 
@@ -270,7 +338,9 @@ O estado é salvo em `~/.local/state/qa-tools/state.json` (ou `$XDG_STATE_HOME/q
 
 ---
 
-## 10. AI PR / MR Description
+## 12. AI PR / MR Description
+
+> A descrição de PR/MR é gerada **exclusivamente com IA**. Se o LLM falhar, retorna string vazia (não bloqueia a criação do MR).
 
 Gera descrição de Pull Request / Merge Request automaticamente a partir do diff entre branches usando IA (tier **fast**).
 
@@ -290,7 +360,7 @@ Gera descrição de Pull Request / Merge Request automaticamente a partir do dif
 
 ---
 
-## 11. AI Test Impact Analysis
+## 13. AI Test Impact Analysis
 
 Analisa o impacto de alterações nos testes existentes usando o diff entre branches (tier **fast**).
 
@@ -323,6 +393,8 @@ Analisa o impacto de alterações nos testes existentes usando o diff entre bran
 | `XRAY_BASE_URL`       | Condicional | URL base Xray                                                           |
 | `LLM_API_KEY`         | Condicional | API key do provedor LLM **main** (necessário para análise IA de falhas) |
 | `LLM_FAST_API_KEY`    | Não         | API key do tier **fast** (PR description, test impact)                  |
+| `LLM_SMALL_API_KEY`   | Não         | API key do tier **small** (tarefas leves — fallback para main)          |
+| `QA_TOOLS_LOGS_DIR`   | Não         | Sobrescreve `LOG_DIR` para diretório de logs                            |
 
 > Consulte [`docs/06-env-vars.md`](06-env-vars.md) para a tabela completa de todas as 16 variáveis LLM.
 

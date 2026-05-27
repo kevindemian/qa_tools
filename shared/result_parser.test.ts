@@ -244,6 +244,33 @@ describe('parseCtrfResults', () => {
         const result = parseCtrfResults(input);
         expect(result.tests.every((t: { state: string }) => t.state === 'skipped')).toBe(true);
     });
+
+    it('maps explicit skipped status correctly', () => {
+        const input = {
+            results: {
+                summary: { tests: 1, passed: 0, failed: 0, skipped: 1, pending: 0, other: 0, start: 0, stop: 0 },
+                tests: [{ name: 'Skippy', status: 'skipped', duration: 0 }],
+            },
+        };
+        const result = parseCtrfResults(input);
+        expect(result.tests[0]!.state).toBe('skipped');
+    });
+
+    it('falls back to computed stats when summary fields are missing', () => {
+        const input = {
+            results: {
+                summary: { tests: 2, passed: 1, failed: 1, skipped: 0, pending: 0, other: 0, start: 0, stop: 0 },
+                tests: [
+                    { name: 'T1', status: 'passed', duration: 100 },
+                    { name: 'T2', status: 'failed', duration: 200 },
+                ],
+            },
+        };
+        const result = parseCtrfResults(input);
+        expect(result.stats.passed).toBe(1);
+        expect(result.stats.failed).toBe(1);
+        expect(result.stats.total).toBe(2);
+    });
 });
 
 describe('parseTestResults (dispatch)', () => {
@@ -268,6 +295,18 @@ describe('parseTestResults (dispatch)', () => {
     it('returns empty for unknown format', () => {
         const result = parseTestResults({ unexpected: true });
         expect(result.tests).toEqual([]);
+    });
+
+    it('returns empty for null input', () => {
+        expect(parseTestResults(null).tests).toEqual([]);
+    });
+
+    it('returns empty for undefined input', () => {
+        expect(parseTestResults(undefined).tests).toEqual([]);
+    });
+
+    it('returns empty for empty object', () => {
+        expect(parseTestResults({}).tests).toEqual([]);
     });
 });
 

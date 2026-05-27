@@ -1,6 +1,6 @@
 import { createHttpClient } from '../shared/http-client';
 import { extractErrorMessage } from '../shared/prompt';
-import { Logger } from '../shared/logger';
+import { Logger, rootLogger } from '../shared/logger';
 import {
     getProjectId as versionGetProjectId,
     getProjectVersions as versionGetProjectVersions,
@@ -67,8 +67,13 @@ class JiraResource {
      * @throws On network / non-2xx — raw axios error propagates.
      */
     async getJiraResource<T = JsonObject>(resourceUrl: string): Promise<T> {
-        const response = await this.axiosInstance.get<T>(`/${resourceUrl}`);
-        return response.data;
+        try {
+            const response = await this.axiosInstance.get<T>(`/${resourceUrl}`);
+            return response.data;
+        } catch (err) {
+            rootLogger.error('GET ' + resourceUrl + ' failed: ' + (err as Error).message);
+            throw err;
+        }
     }
 
     /**

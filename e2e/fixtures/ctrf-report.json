@@ -17,16 +17,16 @@
             "buildNumber": "100"
         },
         "tests": [
-            { "name": "Login Test", "status": "passed", "duration": 1200, "suite": "Authentication" },
+            { "name": "TC01 - Login valido", "status": "passed", "duration": 1200, "suite": "Authentication" },
             {
-                "name": "Logout Test",
+                "name": "TC02 - Login invalido",
                 "status": "failed",
                 "duration": 800,
                 "suite": "Authentication",
                 "message": "Expected true, got false"
             },
-            { "name": "Dashboard Render", "status": "passed", "duration": 2000, "suite": "Dashboard" },
-            { "name": "Error Handling", "status": "skipped", "duration": 0, "suite": "Error Scenarios" }
+            { "name": "TC03 - Logout", "status": "passed", "duration": 2000, "suite": "Dashboard" },
+            { "name": "TC04 - Error handling", "status": "skipped", "duration": 0, "suite": "Error Scenarios" }
         ]
     }
 }
