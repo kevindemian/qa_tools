@@ -27,6 +27,8 @@ function readPrompt(file: string): string {
     }
 }
 
+const CACHED_PROMPTS: Record<string, string> = {};
+
 interface BenchmarkResult {
     fixture: string;
     passed: boolean;
@@ -81,7 +83,9 @@ function validateClassify(body: string, expectedCategory: string): string | null
 
 async function runFailureAnalysisFixture(fixture: FailureAnalysisFixture): Promise<BenchmarkResult> {
     const start = Date.now();
-    const system = readPrompt('failure-analysis.md');
+    const system =
+        CACHED_PROMPTS['failure-analysis.md'] ??
+        (CACHED_PROMPTS['failure-analysis.md'] = readPrompt('failure-analysis.md'));
     try {
         const result = await llmPrompt('report', system, 'Failed Tests:\n' + fixture.input, 'benchmark-fa');
         const error = validateJsonSchema(result, fixture.validate.minTests);
@@ -93,7 +97,9 @@ async function runFailureAnalysisFixture(fixture: FailureAnalysisFixture): Promi
 
 async function runUserStoryFixture(fixture: UserStoryFixture): Promise<BenchmarkResult> {
     const start = Date.now();
-    const system = readPrompt('user-story-to-tests.md');
+    const system =
+        CACHED_PROMPTS['user-story-to-tests.md'] ??
+        (CACHED_PROMPTS['user-story-to-tests.md'] = readPrompt('user-story-to-tests.md'));
     const userMsg =
         'User Story:\n' + fixture.input.story + '\n\nAcceptance Criteria:\n' + fixture.input.criteria.join('\n');
     try {
@@ -107,7 +113,7 @@ async function runUserStoryFixture(fixture: UserStoryFixture): Promise<Benchmark
 
 async function runClassifyFixture(fixture: ClassifyFixture): Promise<BenchmarkResult> {
     const start = Date.now();
-    const system = readPrompt('classify.md');
+    const system = CACHED_PROMPTS['classify.md'] ?? (CACHED_PROMPTS['classify.md'] = readPrompt('classify.md'));
     const userMsg = 'Test Title:\n' + fixture.input.title + '\n\nError:\n' + fixture.input.error;
     try {
         const result = await llmPrompt('fast', system, userMsg, 'benchmark-cl');
