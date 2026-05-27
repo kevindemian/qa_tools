@@ -8,9 +8,13 @@ const SECRET_PATTERNS: RegExp[] = [
     /github_pat_[a-zA-Z0-9]{22,}/g,
     /AIza[0-9A-Za-z_-]{35,}/g,
     /(?:https?:\/\/)?[^@\s]+:[^@\s]+@/g,
+    /hf_[a-zA-Z0-9]{20,}/g,
+    /npm_[a-zA-Z0-9]{36,}/g,
+    /xox[abp]-[a-zA-Z0-9-]{20,}/g,
+    /ghr_[a-zA-Z0-9]{36,}/g,
 ];
 
-export function sanitizeForLlm(input: string): string {
+export function sanitizeForLlm(input: string, maxStackLines?: number): string {
     let result = input;
     for (const pattern of SECRET_PATTERNS) {
         result = result.replace(pattern, (match) => {
@@ -23,6 +27,9 @@ export function sanitizeForLlm(input: string): string {
             }
             return match.slice(0, 4) + '[...sanitized]';
         });
+    }
+    if (maxStackLines !== undefined) {
+        result = truncateStacktrace(result, maxStackLines);
     }
     return result;
 }
