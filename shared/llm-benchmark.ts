@@ -8,6 +8,7 @@ import fs from 'fs';
 import path from 'path';
 import { llmPrompt } from './llm-client';
 import { rootLogger } from './logger';
+import { defaultOutput } from './output';
 import { ReportValidator, type ValidationRule } from './report-validator';
 import {
     loadFailureAnalysisFixtures,
@@ -46,7 +47,8 @@ interface BenchmarkResult {
     durationMs: number;
 }
 
-function validateJsonSchema(body: string, minTests: number): string | null {
+/** @internal exported for testing */
+export function validateJsonSchema(body: string, minTests: number): string | null {
     let parsed: unknown;
     try {
         parsed = JSON.parse(body);
@@ -61,7 +63,8 @@ function validateJsonSchema(body: string, minTests: number): string | null {
     return null;
 }
 
-function validateJsonArray(body: string, minItems: number): string | null {
+/** @internal exported for testing */
+export function validateJsonArray(body: string, minItems: number): string | null {
     try {
         const parsed = JSON.parse(body);
         if (!Array.isArray(parsed)) return 'Not an array';
@@ -80,7 +83,8 @@ function validateJsonArray(body: string, minItems: number): string | null {
     }
 }
 
-function validateClassify(body: string, expectedCategory: string): string | null {
+/** @internal exported for testing */
+export function validateClassify(body: string, expectedCategory: string): string | null {
     const regex = /^(ASSERTION|TIMEOUT|ENVIRONMENT|FLAKY|APPLICATION|UNKNOWN):\s/;
     if (!regex.test(body)) return 'Invalid format: expected CATEGORY: explanation';
     const category = body.split(':')[0]!;
@@ -136,10 +140,8 @@ function printResults(results: BenchmarkResult[]): void {
     const passed = results.filter((r) => r.passed).length;
     const failed = results.filter((r) => !r.passed).length;
 
-    // eslint-disable-next-line no-console
-    console.log('\n=== LLM BENCHMARK RESULTS ===');
-    // eslint-disable-next-line no-console
-    console.log(
+    defaultOutput.print('\n=== LLM BENCHMARK RESULTS ===');
+    defaultOutput.print(
         'Total: ' +
             total +
             ' | Passed: ' +
@@ -150,36 +152,30 @@ function printResults(results: BenchmarkResult[]): void {
             Math.round((passed / total) * 100) +
             '%',
     );
-    // eslint-disable-next-line no-console
-    console.log('');
+    defaultOutput.print('');
 
     for (const r of results) {
         const icon = r.passed ? '✅' : '❌';
         const status = r.passed ? 'PASS' : 'FAIL';
-        // eslint-disable-next-line no-console
-        console.log(icon + ' [' + status + '] ' + r.fixture + ' (' + r.durationMs + 'ms)');
+        defaultOutput.print(icon + ' [' + status + '] ' + r.fixture + ' (' + r.durationMs + 'ms)');
         if (r.error) {
-            // eslint-disable-next-line no-console
-            console.log('   Error: ' + r.error);
+            defaultOutput.print('   Error: ' + r.error);
         }
     }
 }
 
 export async function runBenchmark(): Promise<void> {
     if (process.env.BENCHMARK !== 'true') {
-        // eslint-disable-next-line no-console
-        console.log('Skipping benchmark. Set BENCHMARK=true to run.');
+        defaultOutput.print('Skipping benchmark. Set BENCHMARK=true to run.');
         return;
     }
 
-    // eslint-disable-next-line no-console
-    console.log('Loading fixtures...');
+    defaultOutput.print('Loading fixtures...');
     const faFixtures = loadFailureAnalysisFixtures();
     const usFixtures = loadUserStoryFixtures();
     const clFixtures = loadClassifyFixtures();
 
-    // eslint-disable-next-line no-console
-    console.log('Running ' + (faFixtures.length + usFixtures.length + clFixtures.length) + ' benchmarks...');
+    defaultOutput.print('Running ' + (faFixtures.length + usFixtures.length + clFixtures.length) + ' benchmarks...');
 
     const allRunners: { name: string; run: () => Promise<BenchmarkResult> }[] = [
         ...faFixtures.map((f) => ({ name: f.name, run: () => runFailureAnalysisFixture(f) })),

@@ -54,11 +54,14 @@ async function handler(c: CommandContext): Promise<boolean | void> {
             rootLogger.warn('case18: LLM returned invalid test content, retrying');
             result = await llmPrompt(
                 'fast',
-                system +
-                    '\n\nIMPORTANTE: Retorne APENAS um array JSON válido. Cada objeto deve ter title (>5 chars), steps (array não vazio) e expectedResult (>10 chars).',
+                system + '\n\nIMPORTANTE: Retorne APENAS um array JSON válido.',
                 safeUserMsg,
                 'case18-retry',
             );
+            if (!validateTestCases(result)) {
+                printError('Falha ao gerar casos de teste com IA: LLM retornou conteúdo inválido após retry');
+                return;
+            }
         }
     } catch (err: unknown) {
         printError('Erro na chamada LLM', err);

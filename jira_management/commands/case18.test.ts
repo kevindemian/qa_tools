@@ -26,6 +26,8 @@ jest.mock('../../shared/llm-client', () => ({
 
 jest.mock('../../shared/logger', () => ({
     rootLogger: {
+        warn: jest.fn(),
+        info: jest.fn(),
         error: jest.fn(),
         child: jest.fn().mockReturnValue({ info: jest.fn(), error: jest.fn(), warn: jest.fn() }),
     },
@@ -128,5 +130,45 @@ describe('case18 — AI tests generator', () => {
         await mod.handler(baseContext);
 
         expect(prompt.printError).toHaveBeenCalled();
+    });
+
+    it('retries on invalid JSON and succeeds on second try', async () => {
+        const prompt = require('../../shared/prompt');
+        const llm = require('../../shared/llm-client');
+        const fs = require('fs');
+
+        prompt.ask.mockResolvedValueOnce('User wants to login').mockResolvedValueOnce('Must validate');
+        fs.readFileSync.mockReturnValueOnce('You are a QA engineer.');
+
+        const mock = jest
+            .fn()
+            .mockResolvedValueOnce('invalid json')
+            .mockResolvedValueOnce(
+                '[{"title": "Login test with valid credentials", "steps": ["Enter valid user"], "expectedResult": "User is redirected to dashboard"}]',
+            );
+        llm.llmPrompt.mockImplementation((...args: unknown[]) => mock(...args));
+
+        const mod = require('./case18').default;
+        await mod.handler(baseContext);
+
+        expect(llm.llmPrompt).toHaveBeenCalledTimes(2);
+        expect(baseContext.pushHistory).toHaveBeenCalledWith('ai-generate-tests', expect.any(String), 'ok');
+    });
+
+    it('23.14: prints error when retry is still invalid', async () => {
+        const { llmPrompt } = require('./llm-client');
+        const { printError } = require('../../shared/prompt');
+        const prompt = require('../../shared/prompt');
+        const fs = require('fs');
+
+        prompt.ask.mockResolvedValueOnce('User wants to login').mockResolvedValueOnce('Must validate');
+        fs.readFileSync.mockReturnValueOnce('You are a QA engineer.');
+
+        llmPrompt.mockResolvedValueOnce('invalid json 1').mockResolvedValueOnce('invalid json 2');
+
+        const mod = require('./case18').default;
+        await mod.handler(baseContext);
+
+        expect(printError).toHaveBeenCalledWith(expect.stringContaining('LLM retornou conteúdo inválido após retry'));
     });
 });
