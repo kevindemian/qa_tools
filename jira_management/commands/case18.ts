@@ -59,7 +59,7 @@ async function handler(c: CommandContext): Promise<boolean | void> {
                 'case18-retry',
             );
             if (!validateTestCases(result)) {
-                printError('Falha ao gerar casos de teste com IA: LLM retornou conteúdo inválido após retry');
+                printError('Falha ao gerar casos de teste com IA', 'LLM retornou conteúdo inválido após retry');
                 return;
             }
         }

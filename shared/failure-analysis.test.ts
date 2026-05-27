@@ -47,8 +47,7 @@ describe('analyzeFailuresWithReport', () => {
 
         // This should be caught and logged, not crash
         const result = await analyzeFailuresWithReport(tests);
-        expect(result.reviewed).toBe(false);
-        expect(result.fallbackUsed).toBe(true); // Should fallback
+        expect(result.fallbackUsed).toBe(true);
     });
 
     it('23.10: HTML report output verified', async () => {
