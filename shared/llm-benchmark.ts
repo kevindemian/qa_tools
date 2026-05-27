@@ -168,16 +168,28 @@ export async function runBenchmark(): Promise<void> {
     // eslint-disable-next-line no-console
     console.log('Running ' + (faFixtures.length + usFixtures.length + clFixtures.length) + ' benchmarks...');
 
-    const results: BenchmarkResult[] = [];
+    const allRunners: { name: string; run: () => Promise<BenchmarkResult> }[] = [
+        ...faFixtures.map((f) => ({ name: f.name, run: () => runFailureAnalysisFixture(f) })),
+        ...usFixtures.map((f) => ({ name: f.name, run: () => runUserStoryFixture(f) })),
+        ...clFixtures.map((f) => ({ name: f.name, run: () => runClassifyFixture(f) })),
+    ];
 
-    for (const f of faFixtures) {
-        results.push(await runFailureAnalysisFixture(f));
-    }
-    for (const f of usFixtures) {
-        results.push(await runUserStoryFixture(f));
-    }
-    for (const f of clFixtures) {
-        results.push(await runClassifyFixture(f));
+    const results: BenchmarkResult[] = [];
+    const CONCURRENCY = 3;
+    for (let i = 0; i < allRunners.length; i += CONCURRENCY) {
+        const batch = allRunners.slice(i, i + CONCURRENCY);
+        const batchResults = await Promise.allSettled(batch.map((r) => r.run()));
+        for (const [j, r] of batchResults.entries()) {
+            if (r.status === 'fulfilled') results.push(r.value);
+            else {
+                results.push({
+                    fixture: batch[j]?.name || 'unknown',
+                    passed: false,
+                    error: r.reason?.message || 'Unknown error',
+                    durationMs: 0,
+                });
+            }
+        }
     }
 
     printResults(results);
