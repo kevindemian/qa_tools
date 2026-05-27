@@ -756,7 +756,7 @@ Também marcar o AUDIO-01 (M1, M2, M3 do bloco antigo) como resolvidos:
 | Batch | Descrição | Itens | Esforço |
 |-------|-----------|-------|---------|
 | 19 | Critical circuit breaker + cache key + warn + NaNms + retries + jitter | 6 | ✅ |
-| 20 | Sanitize: 4 padrões + testes + truncateStacktrace | 5 | ~30min |
+| 20 | Sanitize: 4 padrões + testes + truncateStacktrace | 6 | ✅ |
 | 21 | Token debug log + metrics key hash + rate limit msg | 3 | ~30min |
 | 22 | Schema validation: heuristic fix + 4 testes | 5 | ~30min |
 | 23 | Test coverage: ~30 testes em 8 arquivos + 1 novo | 30 | ~4h |
@@ -773,12 +773,12 @@ Também marcar o AUDIO-01 (M1, M2, M3 do bloco antigo) como resolvidos:
 | 19.4 | formatFailedTests NaNms guard | P2 | failure-analysis.ts | 19.2 | ✅ |
 | 19.5 | LLM_FETCH_RETRIES configurável via env | P3 | llm-client.ts | 19.2 | ✅ |
 | 19.6 | Jitter 0-100% (era 50-100%) | P3 | llm-client.ts | 19.2 | ✅ |
-| 20.1 | Padrão HuggingFace hf_ | P2 | sanitize.ts | 20 | ⬜ |
-| 20.2 | Padrão npm_ | P2 | sanitize.ts | 20 | ⬜ |
-| 20.3 | Padrão Slack xox[abp]- | P2 | sanitize.ts | 20 | ⬜ |
-| 20.4 | Padrão GitHub refresh ghr_ | P2 | sanitize.ts | 20 | ⬜ |
-| 20.5 | Testes dos 4 novos padrões | P2 | sanitize.test.ts | 20 | ⬜ |
-| 20.6 | truncateStacktrace: chamar em sanitizeForLlm ou documentar | P3 | sanitize.ts | 20 | ⬜ |
+| 20.1 | Padrão HuggingFace hf_ | P2 | sanitize.ts | 20 | ✅ |
+| 20.2 | Padrão npm_ | P2 | sanitize.ts | 20 | ✅ |
+| 20.3 | Padrão Slack xox[abp]- | P2 | sanitize.ts | 20 | ✅ |
+| 20.4 | Padrão GitHub refresh ghr_ | P2 | sanitize.ts | 20 | ✅ |
+| 20.5 | Testes dos 4 novos padrões | P2 | sanitize.test.ts | 20 | ✅ |
+| 20.6 | truncateStacktrace integrado a sanitizeForLlm (maxStackLines param) | P3 | sanitize.ts | 20 | ✅ |
 | 21.1 | Debug log tokens por request | P3 | llm-client.ts | 21 | ⬜ |
 | 21.2 | API key hash em metrics key (vs slice -8) | P3 | llm-client.ts | 21 | ⬜ |
 | 21.3 | Rate limit msg inclui "client-side" | P3 | llm-client.ts | 21 | ⬜ |

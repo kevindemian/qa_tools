@@ -33,6 +33,23 @@ describe('sanitizeForLlm', () => {
         const safe = 'This is a normal test failure message with no secrets.';
         expect(sanitizeForLlm(safe)).toBe(safe);
     });
+
+    it('sanitizes HuggingFace tokens', () => {
+        expect(sanitizeForLlm('hf_' + 'a'.repeat(25))).toContain('[...sanitized]');
+    });
+
+    it('sanitizes npm tokens', () => {
+        expect(sanitizeForLlm('npm_' + 'a'.repeat(40))).toContain('[...sanitized]');
+    });
+
+    it('sanitizes Slack tokens', () => {
+        expect(sanitizeForLlm('xoxb-' + 'a'.repeat(24))).toContain('[...sanitized]');
+        expect(sanitizeForLlm('xoxp-' + 'a'.repeat(24))).toContain('[...sanitized]');
+    });
+
+    it('sanitizes GitHub refresh tokens', () => {
+        expect(sanitizeForLlm('ghr_' + 'a'.repeat(40))).toContain('[...sanitized]');
+    });
 });
 
 describe('truncateStacktrace', () => {
@@ -47,6 +64,30 @@ describe('truncateStacktrace', () => {
         const result = truncateStacktrace(stack, 10);
         expect(result).toContain('[... truncated');
         expect(result.split('\n')).toHaveLength(11);
+    });
+});
+
+describe('sanitizeForLlm with truncation', () => {
+    it('truncates long stack traces when maxStackLines is set', () => {
+        const lines = Array.from({ length: 30 }, (_, i) => '  at line ' + (i + 1));
+        const input = 'Error\n' + lines.join('\n');
+        const result = sanitizeForLlm(input, 10);
+        expect(result).toContain('[... truncated');
+        expect(result.split('\n')).toHaveLength(11);
+    });
+
+    it('sanitizes secrets and truncates stack in one pass', () => {
+        const lines = Array.from({ length: 25 }, (_, i) => '  at fn' + i + ' (file' + i + '.ts:' + (i + 1) + ')');
+        const input = 'Error: sk-' + 'a'.repeat(30) + '\n' + lines.join('\n');
+        const result = sanitizeForLlm(input, 10);
+        expect(result).toContain('[...sanitized]');
+        expect(result).toContain('[... truncated');
+        expect(result.split('\n')).toHaveLength(11);
+    });
+
+    it('does not truncate when maxStackLines exceeds line count', () => {
+        const stack = 'Error\n  at line 1\n  at line 2';
+        expect(sanitizeForLlm(stack, 10)).toBe(stack);
     });
 });
 
