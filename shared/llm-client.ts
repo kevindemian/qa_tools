@@ -93,17 +93,24 @@ const _llmMetrics: LlmClientMetrics = {
 
 function _trackUsage(data: Record<string, unknown>, providerKey: string): void {
     _llmMetrics.requestsByProviderKey[providerKey] = (_llmMetrics.requestsByProviderKey[providerKey] || 0) + 1;
+    let promptTokens = 0;
+    let completionTokens = 0;
     const usage = data.usage as Record<string, number> | undefined;
     if (usage) {
-        _llmMetrics.totalPromptTokens += usage.prompt_tokens || 0;
-        _llmMetrics.totalCompletionTokens += usage.completion_tokens || 0;
-        return;
+        promptTokens = usage.prompt_tokens || 0;
+        completionTokens = usage.completion_tokens || 0;
+    } else {
+        const usageMeta = data.usageMetadata as Record<string, number> | undefined;
+        if (usageMeta) {
+            promptTokens = usageMeta.promptTokenCount || 0;
+            completionTokens = usageMeta.candidatesTokenCount || 0;
+        }
     }
-    const usageMeta = data.usageMetadata as Record<string, number> | undefined;
-    if (usageMeta) {
-        _llmMetrics.totalPromptTokens += usageMeta.promptTokenCount || 0;
-        _llmMetrics.totalCompletionTokens += usageMeta.candidatesTokenCount || 0;
-    }
+    _llmMetrics.totalPromptTokens += promptTokens;
+    _llmMetrics.totalCompletionTokens += completionTokens;
+    rootLogger.debug(
+        'Token usage: prompt=' + promptTokens + ' completion=' + completionTokens + ' provider=' + providerKey,
+    );
 }
 
 function extractContent(data: Record<string, unknown>, format: ProviderFormat): string {
@@ -203,7 +210,7 @@ function configUniqueKey(cfg: ProviderConfig): string {
         '|' +
         (cfg.responseFormat || 'text') +
         '|' +
-        (cfg.apiKey ? cfg.apiKey.slice(-8) : '')
+        (cfg.apiKey ? crypto.createHash('sha256').update(cfg.apiKey).digest('hex').slice(0, 8) : '')
     );
 }
 
@@ -322,7 +329,13 @@ function checkRateLimit(tier: LlmTier): void {
     const windowed = timestamps.filter((t) => now - t < LLM_RATE_WINDOW_MS);
     if (windowed.length >= limit) {
         throw new Error(
-            'Rate limit exceeded for tier ' + tier + ' (' + limit + ' req/' + LLM_RATE_WINDOW_MS / 1000 + 's)',
+            'Client-side rate limit exceeded for tier ' +
+                tier +
+                ' (' +
+                limit +
+                ' req/' +
+                LLM_RATE_WINDOW_MS / 1000 +
+                's)',
         );
     }
     windowed.push(now);

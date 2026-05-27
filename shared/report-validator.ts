@@ -42,7 +42,7 @@ export class ReportValidator {
         const tests = obj['tests'];
         if (!Array.isArray(tests) || tests.length <= 1) return result;
 
-        const arrayRules = this.schema.filter((r) => r.field.includes('[') && r.field.includes('].'));
+        const arrayRules = this.schema.filter((r) => /\[\d+]\./.test(r.field));
         if (arrayRules.length === 0) return result;
 
         const errors: string[] = [...result.errors];

@@ -757,8 +757,8 @@ Também marcar o AUDIO-01 (M1, M2, M3 do bloco antigo) como resolvidos:
 |-------|-----------|-------|---------|
 | 19 | Critical circuit breaker + cache key + warn + NaNms + retries + jitter | 6 | ✅ |
 | 20 | Sanitize: 4 padrões + testes + truncateStacktrace | 6 | ✅ |
-| 21 | Token debug log + metrics key hash + rate limit msg | 3 | ~30min |
-| 22 | Schema validation: heuristic fix + 4 testes | 5 | ~30min |
+| 21 | Token debug log + metrics key hash + rate limit msg | 3 | ✅ |
+| 22 | Schema validation: heuristic fix + 6 testes | 6 | ✅ |
 | 23 | Test coverage: ~30 testes em 8 arquivos + 1 novo | 30 | ~4h |
 | 24 | Benchmark: reuse ReportValidator + remove dead schema | 2 | ~30min |
 | 25 | Re-audit final | 1 | ~30min |
@@ -779,14 +779,14 @@ Também marcar o AUDIO-01 (M1, M2, M3 do bloco antigo) como resolvidos:
 | 20.4 | Padrão GitHub refresh ghr_ | P2 | sanitize.ts | 20 | ✅ |
 | 20.5 | Testes dos 4 novos padrões | P2 | sanitize.test.ts | 20 | ✅ |
 | 20.6 | truncateStacktrace integrado a sanitizeForLlm (maxStackLines param) | P3 | sanitize.ts | 20 | ✅ |
-| 21.1 | Debug log tokens por request | P3 | llm-client.ts | 21 | ⬜ |
-| 21.2 | API key hash em metrics key (vs slice -8) | P3 | llm-client.ts | 21 | ⬜ |
-| 21.3 | Rate limit msg inclui "client-side" | P3 | llm-client.ts | 21 | ⬜ |
-| 22.1 | Heurística array rules usa regex em vez de includes | P2 | report-validator.ts | 22 | ⬜ |
-| 22.2 | Test: validateAll early return length<=1 | P2 | report-validator.test.ts | 22 | ⬜ |
-| 22.3 | Test: validateAll early return no array rules | P2 | report-validator.test.ts | 22 | ⬜ |
-| 22.4 | Test: checkConsistency high severity | P2 | report-validator.test.ts | 22 | ⬜ |
-| 22.5 | Test: resolveField 3+ levels | P3 | report-validator.test.ts | 22 | ⬜ |
+| 21.1 | Debug log tokens por request | P3 | llm-client.ts | 21 | ✅ |
+| 21.2 | API key hash em metrics key (vs slice -8) | P3 | llm-client.ts | 21 | ✅ |
+| 21.3 | Rate limit msg inclui "client-side" | P3 | llm-client.ts | 21 | ✅ |
+| 22.1 | Heurística array rules usa regex em vez de includes | P2 | report-validator.ts | 22 | ✅ |
+| 22.2 | Test: validateAll early return length<=1 | P2 | report-validator.test.ts | 22 | ✅ |
+| 22.3 | Test: validateAll early return no array rules | P2 | report-validator.test.ts | 22 | ✅ |
+| 22.4 | Test: checkConsistency high severity | P2 | report-validator.test.ts | 22 | ✅ |
+| 22.5 | Test: resolveField 3+ levels | P3 | report-validator.test.ts | 22 | ✅ |
 | 23.1 | llm-benchmark.test.ts (15+ testes, novo arquivo) | P2 | shared/llm-benchmark.test.ts | 23 | ⬜ |
 | 23.2 | responseFormat='json' param test | P2 | llm-client.test.ts | 23 | ⬜ |
 | 23.3 | responseFormat diferente → cache keys diferentes | P2 | llm-client.test.ts | 23 | ⬜ |
