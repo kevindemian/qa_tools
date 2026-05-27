@@ -1,5 +1,16 @@
 jest.mock('fs');
-jest.mock('./llm-client', () => ({ llmPrompt: jest.fn() }));
+jest.mock('./llm-client', () => ({
+    llmPrompt: jest.fn(),
+    getLlmClientMetrics: jest.fn(() => ({
+        cacheHits: 0,
+        cacheMisses: 0,
+        totalPromptTokens: 0,
+        totalCompletionTokens: 0,
+        requestsByProviderKey: {},
+    })),
+    resetLlmClientMetrics: jest.fn(),
+    parseRetryAfter: jest.fn(() => 2000),
+}));
 jest.mock('./llm-review', () => ({ reviewWithLlm: jest.fn() }));
 
 import fs from 'fs';

@@ -691,7 +691,7 @@ Também marcar o AUDIO-01 (M1, M2, M3 do bloco antigo) como resolvidos:
 |------|-----------|-------|---------|
 | 1 | Fixes simples independentes (I5, I3, S5, S2, I4, S6, C3, I7) | 8 | ✅ |
 | 2 | Circuit breaker, validateAll, Gemini system_instruction | 3 | ✅ |
-| 3 | Métricas + token usage + responseFormat param | 3 | ~3h |
+| 3 | Métricas + token usage + responseFormat param | 3 | ✅ |
 | 4 | Benchmark paralelo + E2E pipeline test | 2 | ~1.5h |
 
 ### Itens
@@ -702,8 +702,6 @@ Também marcar o AUDIO-01 (M1, M2, M3 do bloco antigo) como resolvidos:
 | C4 | Circuit breaker per-provider (configUniqueKey) | P0 | llm-client.ts, llm-client.test.ts | 2 | ✅ |
 | C1 | validateAll: schema validation em todos tests[i] | P1 | report-validator.ts, llm-review.ts | 2 | ✅ |
 | C2 | Gemini system_instruction field (vs concat) | P2 | llm-client.ts | 2 | ✅ |
-| I1 | Métricas: tokens + cache hit/miss + per-provider | P2 | llm-metrics.ts, llm-client.ts | 3 | ⬜ |
-| S4 | Expor token usage no parseResponse | P2 | llm-client.ts, llm-metrics.ts | 3 | ⬜ |
-| S3 | Benchmark paralelo (Promise.allSettled) | P3 | llm-benchmark.ts | 4 | ⬜ |
-| S7 | E2E pipeline test (mock chain) | P3 | e2e/llm-pipeline.test.ts (novo) | 4 | ⬜ |
-| I6 | responseFormat param opcional em llmPrompt | P3 | llm-client.ts, callers | 3 | ⬜ |
+| I1 | Métricas: tokens + cache hit/miss + per-provider | P2 | llm-metrics.ts, llm-client.ts | 3 | ✅ |
+| S4 | Expor token usage no parseResponse | P2 | llm-client.ts, llm-metrics.ts | 3 | ✅ |
+| I6 | responseFormat param opcional em llmPrompt | P3 | llm-client.ts, callers | 3 | ✅ |
