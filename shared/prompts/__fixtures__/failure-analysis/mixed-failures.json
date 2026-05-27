@@ -4,16 +4,6 @@
     "input": "1. [failed] User can login with valid email (15000ms)\n2. [failed] API returns 200 on health check (500ms)\n3. [failed] Database connection retry after failover (30000ms)",
     "validate": {
         "type": "json-schema",
-        "schema": {
-            "tests": [
-                {
-                    "title": "string",
-                    "classification": "ASSERTION | TIMEOUT | ENVIRONMENT | FLAKY | APPLICATION | UNKNOWN",
-                    "severity": "high | medium | low",
-                    "recommendation": "string (min 10 chars)"
-                }
-            ]
-        },
         "minTests": 3,
         "expectedCategories": ["TIMEOUT", "ASSERTION", "ENVIRONMENT"]
     }

@@ -8,6 +8,7 @@ import fs from 'fs';
 import path from 'path';
 import { llmPrompt } from './llm-client';
 import { rootLogger } from './logger';
+import { ReportValidator, type ValidationRule } from './report-validator';
 import {
     loadFailureAnalysisFixtures,
     loadUserStoryFixtures,
@@ -16,6 +17,15 @@ import {
     type UserStoryFixture,
     type ClassifyFixture,
 } from './prompts/__fixtures__/index';
+
+const BENCHMARK_SCHEMA: ValidationRule[] = [
+    { field: 'tests', required: true, type: 'array', minLength: 1 },
+    { field: 'tests[0].title', required: true, type: 'string' },
+    { field: 'tests[0].classification', required: true, type: 'string' },
+    { field: 'tests[0].severity', required: true, type: 'string' },
+    { field: 'tests[0].recommendation', required: true, type: 'string', minLength: 10 },
+];
+const benchmarkValidator = new ReportValidator(BENCHMARK_SCHEMA);
 
 const PROMPT_DIR = __dirname + '/prompts';
 
@@ -37,21 +47,18 @@ interface BenchmarkResult {
 }
 
 function validateJsonSchema(body: string, minTests: number): string | null {
+    let parsed: unknown;
     try {
-        const parsed = JSON.parse(body);
-        if (!parsed.tests || !Array.isArray(parsed.tests)) return 'Missing tests array';
-        if (parsed.tests.length < minTests) return 'Too few tests: ' + parsed.tests.length + ' < ' + minTests;
-        for (let i = 0; i < parsed.tests.length; i++) {
-            const t = parsed.tests[i];
-            if (!t.title || typeof t.title !== 'string') return 'test[' + i + '] missing title';
-            if (!t.classification) return 'test[' + i + '] missing classification';
-            if (!t.severity) return 'test[' + i + '] missing severity';
-            if (!t.recommendation || t.recommendation.length < 10) return 'test[' + i + '] recommendation too short';
-        }
-        return null;
+        parsed = JSON.parse(body);
     } catch {
         return 'Invalid JSON';
     }
+    const obj = parsed as Record<string, unknown>;
+    if (!obj.tests || !Array.isArray(obj.tests)) return 'Missing tests array';
+    if (obj.tests.length < minTests) return 'Too few tests: ' + obj.tests.length + ' < ' + minTests;
+    const result = benchmarkValidator.validateAll(parsed);
+    if (!result.valid) return result.errors[0] || 'Validation failed';
+    return null;
 }
 
 function validateJsonArray(body: string, minItems: number): string | null {

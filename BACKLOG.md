@@ -760,7 +760,7 @@ Também marcar o AUDIO-01 (M1, M2, M3 do bloco antigo) como resolvidos:
 | 21 | Token debug log + metrics key hash + rate limit msg | 3 | ✅ |
 | 22 | Schema validation: heuristic fix + 6 testes | 6 | ✅ |
 | 23 | Test coverage: ~30 testes em 8 arquivos + 1 novo | 30 | ~4h |
-| 24 | Benchmark: reuse ReportValidator + remove dead schema | 2 | ~30min |
+| 24 | Benchmark: reuse ReportValidator + remove dead schema | 2 | ✅ |
 | 25 | Re-audit final | 1 | ~30min |
 
 ### Itens
@@ -806,6 +806,6 @@ Também marcar o AUDIO-01 (M1, M2, M3 do bloco antigo) como resolvidos:
 | 23.17 | E2E validateAll 3-element array | P2 | llm-pipeline.test.ts | 23 | ⬜ |
 | 23.18 | E2E circuit breaker + fallback | P2 | llm-pipeline.test.ts | 23 | ⬜ |
 | 23.19 | truncateStacktrace test | P3 | sanitize.test.ts | 23 | ⬜ |
-| 24.1 | Reusar ReportValidator em benchmark | P3 | llm-benchmark.ts | 24 | ⬜ |
-| 24.2 | Remover dead schema field | P3 | fixtures/index.ts + JSONs | 24 | ⬜ |
+| 24.1 | Reusar ReportValidator em benchmark | P3 | llm-benchmark.ts | 24 | ✅ |
+| 24.2 | Remover dead schema field | P3 | fixtures/index.ts + JSONs | 24 | ✅ |
 | 25.1 | Re-audit llm-engineer (score >9.0) | P0 | — | 25 | ⬜ |
