@@ -139,7 +139,17 @@ function tierToConfig(tier: LlmTier): ProviderConfig {
 }
 
 function configUniqueKey(cfg: ProviderConfig): string {
-    return cfg.baseUrl + '|' + cfg.model + '|' + cfg.temperature + '|' + (cfg.responseFormat || 'text');
+    return (
+        cfg.baseUrl +
+        '|' +
+        cfg.model +
+        '|' +
+        cfg.temperature +
+        '|' +
+        (cfg.responseFormat || 'text') +
+        '|' +
+        (cfg.apiKey ? cfg.apiKey.slice(-8) : '')
+    );
 }
 
 function cacheKey(tier: LlmTier, system: string, user: string, callerId?: string): string {
@@ -290,7 +300,8 @@ function jitter(waitMs: number): number {
     return Math.round(waitMs * (0.5 + Math.random() * 0.5));
 }
 
-function parseRetryAfter(resp: Response, defaultMs: number): number {
+/** @internal exported for testing */
+export function parseRetryAfter(resp: Response, defaultMs: number): number {
     const header = resp.headers.get('Retry-After');
     if (!header) return defaultMs;
     const seconds = parseInt(header, 10);
@@ -396,11 +407,19 @@ export async function llmPrompt(tier: LlmTier, system: string, user: string, cal
     const cKey = cacheKey(tier, system, user, callerId);
     const cached = cache.get(cKey);
     if (cached && cached.expiresAt > Date.now()) {
-        rootLogger.info('LLM cache hit for tier=' + tier);
+        rootLogger.info('LLM cache hit for tier=' + tier + (callerId ? ' callerId=' + callerId : ''));
         return cached.response;
     }
 
-    rootLogger.info('LLM request tier=' + tier + ' system_len=' + system.length + ' user_len=' + user.length);
+    rootLogger.info(
+        'LLM request tier=' +
+            tier +
+            ' system_len=' +
+            system.length +
+            ' user_len=' +
+            user.length +
+            (callerId ? ' callerId=' + callerId : ''),
+    );
     const response = await sendWithFallback(tier, system, user);
 
     cache.set(cKey, { response, expiresAt: Date.now() + CACHE_TTL_MS });

@@ -1,5 +1,6 @@
 import { llmPrompt } from './llm-client';
 import { rootLogger } from './logger';
+import { sanitizeForLlm } from './sanitize';
 import { ReportValidator, type ValidationRule } from './report-validator';
 import {
     recordLlmRequest,
@@ -58,29 +59,29 @@ function buildReviewPrompt(original: string): string {
     ].join('\n');
 }
 
+const VERDICT_PREFIX_RE = /^(AGREE|PARTIAL|DISAGREE)(?:[:\s-]|$)/i;
+
 function parseVerdict(response: string): 'high' | 'medium' | 'low' {
     const upper = response.toUpperCase().trim();
-    if (/^AGREE\b/i.test(upper)) return 'high';
-    if (/^PARTIAL\b/i.test(upper)) return 'medium';
+    if (/^AGREE(?:[:\s-]|$)/i.test(upper)) return 'high';
+    if (/^PARTIAL(?:[:\s-]|$)/i.test(upper)) return 'medium';
     return 'low';
 }
 
 function stripVerdict(response: string): string {
     const lines = response.split('\n');
     const nonVerdict = lines.map((l) => {
-        const upper = l.toUpperCase().trim();
-        for (const prefix of ['AGREE', 'PARTIAL', 'DISAGREE']) {
-            if (upper.startsWith(prefix + ' - ') || upper.startsWith(prefix + ':')) {
-                return l.slice(upper.indexOf(prefix) + prefix.length).replace(/^[-:\s]+/, '');
-            }
+        const match = l.match(VERDICT_PREFIX_RE);
+        if (match) {
+            return l.slice(match[0].length).trim();
         }
         return l;
     });
     return nonVerdict.join('\n').trim();
 }
 
-function buildRetryPrompt(original: string, errors: string[]): string {
-    return [
+function buildRetryPrompt(original: string, errors: string[], invalidResponse?: string): string {
+    const lines = [
         'Your previous response had validation issues. Please fix the following and respond again with a complete JSON object:',
         '',
         ...errors.map((e) => '- ' + e),
@@ -90,7 +91,11 @@ function buildRetryPrompt(original: string, errors: string[]): string {
         '',
         '--- ORIGINAL REQUEST ---',
         original,
-    ].join('\n');
+    ];
+    if (invalidResponse) {
+        lines.push('', '--- YOUR INVALID RESPONSE (fix this) ---', sanitizeForLlm(invalidResponse).slice(0, 500));
+    }
+    return lines.join('\n');
 }
 
 async function callLlmFallback(system: string, user: string, startTime: number): Promise<ReviewResult> {
@@ -123,7 +128,8 @@ async function runRetryLoop(
     while (!validation.valid && retries < MAX_RETRIES) {
         retries++;
         recordRetry();
-        const retryPrompt = buildRetryPrompt(system + '\n\n' + user, validation.errors);
+        const invalidJson = typeof parsed === 'string' ? parsed : JSON.stringify(parsed);
+        const retryPrompt = buildRetryPrompt(system + '\n\n' + user, validation.errors, invalidJson);
         const retryResult = await llmPrompt('report', retryPrompt, 'Fix the validation errors above.');
         recordLlmRequest('report', Date.now() - startTime);
         try {

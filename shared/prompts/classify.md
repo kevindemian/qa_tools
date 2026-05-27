@@ -12,9 +12,3 @@ Categories:
 Respond with EXACTLY ONE LINE in exactly this format: CATEGORY: explanation
 
 Example: ASSERTION: Expected 200 but got 500 on login endpoint
-
-Test Title:
-{{TEST_TITLE}}
-
-Error:
-{{ERROR_MESSAGE}}

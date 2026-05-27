@@ -65,7 +65,7 @@ jest.mock('./config', () => {
     return { __esModule: true, default: ConfigMock };
 });
 import Config from './config';
-import { llmPrompt, clearCache, resetRateLimiter, resetCircuitState } from './llm-client';
+import { llmPrompt, clearCache, resetRateLimiter, resetCircuitState, parseRetryAfter } from './llm-client';
 
 const mockResponseText = jest.fn();
 const mockFetch = jest.fn();
@@ -85,6 +85,14 @@ function mockErrorResponse(status: number): Response {
         status,
         text: jest.fn().mockResolvedValue('error'),
         headers: { get: () => null },
+    } as unknown as Response;
+}
+function mockResponseWithHeader(status: number, headerKey: string, headerValue: string | null): Response {
+    return {
+        ok: status === 200,
+        status,
+        text: jest.fn().mockResolvedValue('error'),
+        headers: { get: (k: string) => (k === headerKey ? headerValue : null) },
     } as unknown as Response;
 }
 
@@ -362,6 +370,34 @@ describe('llmPrompt', () => {
             );
             const result = await llmPrompt('main', 'system', 'recover');
             expect(result).toBe('success');
+        });
+    });
+
+    describe('parseRetryAfter', () => {
+        it('parses seconds from Retry-After header', () => {
+            const resp = mockResponseWithHeader(429, 'Retry-After', '30');
+            const result = parseRetryAfter(resp, 2000);
+            expect(result).toBe(10000); // capped at LLM_RETRY_MAX_WAIT_MS
+        });
+
+        it('parses RFC 7231 date from Retry-After header', () => {
+            const future = new Date(Date.now() + 5000);
+            const resp = mockResponseWithHeader(429, 'Retry-After', future.toUTCString());
+            const result = parseRetryAfter(resp, 2000);
+            expect(result).toBeGreaterThan(0);
+            expect(result).toBeLessThanOrEqual(10000);
+        });
+
+        it('returns default when no Retry-After header', () => {
+            const resp = mockResponseWithHeader(429, 'Retry-After', null);
+            const result = parseRetryAfter(resp, 2000);
+            expect(result).toBe(2000);
+        });
+
+        it('returns default for invalid Retry-After value', () => {
+            const resp = mockResponseWithHeader(429, 'Retry-After', 'invalid');
+            const result = parseRetryAfter(resp, 2000);
+            expect(result).toBe(2000);
         });
     });
 });

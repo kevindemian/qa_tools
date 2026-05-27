@@ -49,11 +49,11 @@ async function handler(c: CommandContext): Promise<boolean | void> {
     title('Gerando testes com IA...');
     let result: string;
     try {
-        result = await llmPrompt('main', system, safeUserMsg, 'case18');
+        result = await llmPrompt('fast', system, safeUserMsg, 'case18');
         if (!validateTestCases(result)) {
             rootLogger.warn('case18: LLM returned invalid test content, retrying');
             result = await llmPrompt(
-                'main',
+                'fast',
                 system +
                     '\n\nIMPORTANTE: Retorne APENAS um array JSON válido. Cada objeto deve ter title (>5 chars), steps (array não vazio) e expectedResult (>10 chars).',
                 safeUserMsg,
