@@ -18,28 +18,24 @@ function runSummary(run: MetricsRun): string {
     ].join('\n');
 }
 
-function buildPrompt(runA: MetricsRun, runB: MetricsRun): string {
-    return [
-        'You are a QA analyst. Compare the following two test runs and provide a brief narrative summary.',
-        'Highlight:',
-        '- Changes in pass rate',
-        '- New failures or improvements',
-        '- Overall trend direction',
-        '',
-        '=== RUN A (older) ===',
-        runSummary(runA),
-        '',
-        '=== RUN B (newer) ===',
-        runSummary(runB),
-        '',
-        'Provide a concise 3-5 sentence analysis.',
-    ].join('\n');
+const COMPARE_SYSTEM = [
+    'You are a QA analyst. Compare the following two test runs and provide a brief narrative summary.',
+    'Highlight:',
+    '- Changes in pass rate',
+    '- New failures or improvements',
+    '- Overall trend direction',
+    '',
+    'Provide a concise 3-5 sentence analysis.',
+].join('\n');
+
+function buildData(runA: MetricsRun, runB: MetricsRun): string {
+    return ['=== RUN A (older) ===', runSummary(runA), '', '=== RUN B (newer) ===', runSummary(runB)].join('\n');
 }
 
 export async function compareRuns(runA: MetricsRun, runB: MetricsRun): Promise<string> {
     try {
-        const prompt = sanitizeForLlm(buildPrompt(runA, runB));
-        return await llmPrompt('fast', prompt, 'Compare these two test runs.', 'compare-runs');
+        const user = sanitizeForLlm(buildData(runA, runB));
+        return await llmPrompt('fast', COMPARE_SYSTEM, user, 'compare-runs');
     } catch (err) {
         rootLogger.error('Failed to compare runs: ' + (err as Error).message);
         return '';

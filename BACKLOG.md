@@ -714,3 +714,31 @@ Também marcar o AUDIO-01 (M1, M2, M3 do bloco antigo) como resolvidos:
 | I6 | responseFormat param opcional em llmPrompt | P3 | llm-client.ts, callers | 3 | ✅ |
 | S3 | Benchmark paralelo (Promise.allSettled) | P3 | llm-benchmark.ts | 4 | ✅ |
 | S7 | E2E pipeline test (mock chain) | P3 | e2e/llm-pipeline.test.ts (novo) | 4 | ✅ |
+
+---
+
+## 🔬 Lote 18 — Re-audit Fixes (Pós-L17)
+
+**Data:** 2026-05-27
+**Prioridade:** P0
+**Esforço total:** ~1.5h
+**Base:** Re-audit llm-engineer: 7.2/10 (↑0.6)
+
+### Execução
+
+| Batch | Descrição | Itens | Esforço |
+|-------|-----------|-------|---------|
+| 1 | circuitSuccess + single parse + error check + run-comparison prompt | 3 | ✅ |
+| 2 | validateAll tests + E2E mock + test prompts + benchmark cache | 4 | ~45min |
+
+### Itens
+
+| ID | Item | Prio | Arquivo(s) | Batch | Status |
+|----|------|------|------------|-------|--------|
+| R1 | recordCircuitSuccess incondicional (fallback circuit nunca resetado) | P0 | llm-client.ts | 1 | ✅ |
+| R2 | API error em 200 OK + double JSON parse | P0 | llm-client.ts | 1 | ✅ |
+| R3 | run-comparison.ts user data no system prompt | P1 | run-comparison.ts | 1 | ✅ |
+| R4 | validateAll sem testes diretos | P2 | report-validator.test.ts | 2 | ⬜ |
+| R5 | E2E mock sem resetCircuitState/resetRateLimiter | P2 | e2e/llm-pipeline.test.ts | 2 | ⬜ |
+| R6 | Test prompts usam {{PLACEHOLDER}} obsoleto | P2 | failure-analysis.test.ts, case18.test.ts | 2 | ⬜ |
+| R7 | Benchmark re-read prompts do disco por fixture | P3 | llm-benchmark.ts | 2 | ⬜ |

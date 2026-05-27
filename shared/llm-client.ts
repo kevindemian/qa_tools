@@ -88,20 +88,28 @@ const _llmMetrics: LlmClientMetrics = {
     requestsByProviderKey: {},
 };
 
-function _trackUsage(raw: string, providerKey: string): void {
+function _trackUsage(data: Record<string, unknown>, providerKey: string): void {
     _llmMetrics.requestsByProviderKey[providerKey] = (_llmMetrics.requestsByProviderKey[providerKey] || 0) + 1;
-    try {
-        const data = JSON.parse(raw);
-        if (data.usage) {
-            _llmMetrics.totalPromptTokens += data.usage.prompt_tokens || 0;
-            _llmMetrics.totalCompletionTokens += data.usage.completion_tokens || 0;
-        } else if (data.usageMetadata) {
-            _llmMetrics.totalPromptTokens += data.usageMetadata.promptTokenCount || 0;
-            _llmMetrics.totalCompletionTokens += data.usageMetadata.candidatesTokenCount || 0;
-        }
-    } catch {
-        /* non-JSON response, skip token tracking */
+    const usage = data.usage as Record<string, number> | undefined;
+    if (usage) {
+        _llmMetrics.totalPromptTokens += usage.prompt_tokens || 0;
+        _llmMetrics.totalCompletionTokens += usage.completion_tokens || 0;
+        return;
     }
+    const usageMeta = data.usageMetadata as Record<string, number> | undefined;
+    if (usageMeta) {
+        _llmMetrics.totalPromptTokens += usageMeta.promptTokenCount || 0;
+        _llmMetrics.totalCompletionTokens += usageMeta.candidatesTokenCount || 0;
+    }
+}
+
+function extractContent(data: Record<string, unknown>, format: ProviderFormat): string {
+    if (format === 'gemini') {
+        const candidates = data.candidates as Array<{ content?: { parts?: Array<{ text?: string }> } }> | undefined;
+        return candidates?.[0]?.content?.parts?.[0]?.text || '';
+    }
+    const choices = data.choices as Array<{ message?: { content?: string } }> | undefined;
+    return choices?.[0]?.message?.content || '';
 }
 
 export function getLlmClientMetrics(): LlmClientMetrics {
@@ -236,21 +244,11 @@ function buildGeminiPayload(system: string, user: string): string {
     });
 }
 
-function parseOpenAiResponse(raw: string): string {
+function parseRawOnce(raw: string): Record<string, unknown> | null {
     try {
-        const data = JSON.parse(raw);
-        return data.choices?.[0]?.message?.content || '';
+        return JSON.parse(raw) as Record<string, unknown>;
     } catch {
-        return '';
-    }
-}
-
-function parseGeminiResponse(raw: string): string {
-    try {
-        const data = JSON.parse(raw);
-        return data.candidates?.[0]?.content?.parts?.[0]?.text || '';
-    } catch {
-        return '';
+        return null;
     }
 }
 
@@ -360,32 +358,37 @@ async function sendToProvider(cfg: ProviderConfig, system: string, user: string)
     checkCircuitBreaker(configUniqueKey(cfg));
     if (!cfg.apiKey) throw new Error('API key missing for tier');
 
+    const url =
+        cfg.format === 'gemini'
+            ? cfg.baseUrl + '/models/' + cfg.model + ':generateContent'
+            : cfg.baseUrl.replace(/\/+$/, '') + '/chat/completions';
+
+    const payload =
+        cfg.format === 'gemini'
+            ? buildGeminiPayload(system, user)
+            : buildOpenAiPayload(system, user, cfg.model, cfg.temperature, cfg.responseFormat);
+
+    const headers: Record<string, string> = { 'Content-Type': 'application/json' };
     if (cfg.format === 'gemini') {
-        const payload = buildGeminiPayload(system, user);
-        const url = cfg.baseUrl + '/models/' + cfg.model + ':generateContent';
-        const resp = await fetchWithRetry(url, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json', 'X-Goog-Api-Key': cfg.apiKey },
-            body: payload,
-        });
-        const raw = await resp.text();
-        _trackUsage(raw, configUniqueKey(cfg));
-        return parseGeminiResponse(raw);
+        headers['X-Goog-Api-Key'] = cfg.apiKey;
+    } else {
+        headers['Authorization'] = 'Bearer ' + cfg.apiKey;
     }
 
-    const payload = buildOpenAiPayload(system, user, cfg.model, cfg.temperature, cfg.responseFormat);
-    const url = cfg.baseUrl.replace(/\/+$/, '') + '/chat/completions';
-    const resp = await fetchWithRetry(url, {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-            Authorization: 'Bearer ' + cfg.apiKey,
-        },
-        body: payload,
-    });
+    const resp = await fetchWithRetry(url, { method: 'POST', headers, body: payload });
     const raw = await resp.text();
-    _trackUsage(raw, configUniqueKey(cfg));
-    return parseOpenAiResponse(raw);
+    const data = parseRawOnce(raw);
+    if (!data) return '';
+
+    const errPayload = data.error as Record<string, unknown> | string | undefined;
+    if (errPayload) {
+        const msg =
+            typeof errPayload === 'string' ? errPayload : (errPayload.message as string) || JSON.stringify(errPayload);
+        throw new Error('LLM API error: ' + msg);
+    }
+
+    _trackUsage(data, configUniqueKey(cfg));
+    return extractContent(data, cfg.format);
 }
 
 async function sendWithFallback(
@@ -426,7 +429,7 @@ async function sendWithFallback(
         const cfgKey = configUniqueKey(cfg);
         try {
             const result = await sendToProvider(cfg, system, user);
-            if (i === 0) recordCircuitSuccess(cfgKey);
+            recordCircuitSuccess(cfgKey);
             return result;
         } catch (err) {
             const msg = (err as Error).message;
