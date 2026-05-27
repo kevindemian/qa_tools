@@ -10,7 +10,6 @@ export interface FailureAnalysisFixture extends FixtureBase {
     input: string;
     validate: {
         type: 'json-schema';
-        schema: Record<string, unknown>;
         minTests: number;
         expectedCategories?: string[];
     };
