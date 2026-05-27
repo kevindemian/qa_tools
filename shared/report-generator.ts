@@ -1,6 +1,7 @@
 import type { FlatTest } from './result_parser';
 import { rootLogger } from './logger';
 import { getTheme } from './theme';
+import { sanitizeUrl } from './cli_base';
 
 /**
  * HTML test report generation.
@@ -371,7 +372,12 @@ export function generateReportWithFallback(tests: FlatTest[], options?: ReportOp
         if (source) footer += ' · ' + escapeHtml(source);
         if (branch) {
             if (ciUrl)
-                footer += ' · <a href="' + escapeHtml(ciUrl) + '" style="color:inherit">' + escapeHtml(branch) + '</a>';
+                footer +=
+                    ' · <a href="' +
+                    escapeHtml(sanitizeUrl(ciUrl)) +
+                    '" style="color:inherit">' +
+                    escapeHtml(branch) +
+                    '</a>';
             else footer += ' · ' + escapeHtml(branch);
         }
         footer += '</div>';

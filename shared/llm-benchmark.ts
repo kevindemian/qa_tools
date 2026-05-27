@@ -81,14 +81,9 @@ function validateClassify(body: string, expectedCategory: string): string | null
 
 async function runFailureAnalysisFixture(fixture: FailureAnalysisFixture): Promise<BenchmarkResult> {
     const start = Date.now();
-    const system = readPrompt('failure-analysis.md').replace('{{FAILED_TESTS}}', fixture.input);
+    const system = readPrompt('failure-analysis.md');
     try {
-        const result = await llmPrompt(
-            'report',
-            system,
-            'Analyze the test failures above and produce the JSON report as instructed.',
-            'benchmark-fa',
-        );
+        const result = await llmPrompt('report', system, 'Failed Tests:\n' + fixture.input, 'benchmark-fa');
         const error = validateJsonSchema(result, fixture.validate.minTests);
         return { fixture: fixture.name, passed: !error, error: error || undefined, durationMs: Date.now() - start };
     } catch (err) {
@@ -112,11 +107,10 @@ async function runUserStoryFixture(fixture: UserStoryFixture): Promise<Benchmark
 
 async function runClassifyFixture(fixture: ClassifyFixture): Promise<BenchmarkResult> {
     const start = Date.now();
-    const system = readPrompt('classify.md')
-        .replace('{{TEST_TITLE}}', fixture.input.title)
-        .replace('{{ERROR_MESSAGE}}', fixture.input.error);
+    const system = readPrompt('classify.md');
+    const userMsg = 'Test Title:\n' + fixture.input.title + '\n\nError:\n' + fixture.input.error;
     try {
-        const result = await llmPrompt('fast', system, 'Classify this failure.', 'benchmark-cl');
+        const result = await llmPrompt('fast', system, userMsg, 'benchmark-cl');
         const error = validateClassify(result, fixture.expectedCategory);
         return { fixture: fixture.name, passed: !error, error: error || undefined, durationMs: Date.now() - start };
     } catch (err) {

@@ -12,6 +12,3 @@ Examples of good output:
 ```
 
 Respond with ONLY valid JSON. No markdown wrapping, no explanation.
-
-Failed Tests:
-{{FAILED_TESTS}}

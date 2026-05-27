@@ -38,9 +38,9 @@ export async function analyzeFailuresWithReport(tests: FlatTest[]): Promise<Anal
     const systemTemplate = readPrompt('failure-analysis.md');
     if (!systemTemplate) return { content: '', confidence: 'medium', fallbackUsed: true };
 
-    const system = systemTemplate.replace('{{FAILED_TESTS}}', sanitizeForLlm(formatFailedTests(failed)));
+    const failedTests = sanitizeForLlm(formatFailedTests(failed));
     const result = await withSpinner('Analisando falhas com IA...', () =>
-        reviewWithLlm(system, 'Analyze the test failures above and produce the JSON report as instructed.'),
+        reviewWithLlm(systemTemplate, 'Failed Tests:\n' + failedTests),
     );
 
     const htmlReport = generateReportWithFallback(tests, {
@@ -66,7 +66,7 @@ export async function classifyFailure(title: string, error: string): Promise<str
     const systemTemplate = readPrompt('classify.md');
     if (!systemTemplate) return 'UNKNOWN: Could not load prompt template';
 
-    const system = systemTemplate.replace('{{TEST_TITLE}}', title).replace('{{ERROR_MESSAGE}}', sanitizeForLlm(error));
+    const baseData = 'Test Title:\n' + title + '\n\nError:\n' + sanitizeForLlm(error);
 
     const classifyRegex = /^(ASSERTION|TIMEOUT|ENVIRONMENT|FLAKY|APPLICATION|UNKNOWN):\s/;
     const retryMessages = [
@@ -76,7 +76,7 @@ export async function classifyFailure(title: string, error: string): Promise<str
     const retryCalls = ['classify', 'classify-retry'];
 
     for (let i = 0; i < retryMessages.length; i++) {
-        const result = await llmPrompt('fast', system, retryMessages[i]!, retryCalls[i]);
+        const result = await llmPrompt('fast', systemTemplate, baseData + '\n\n' + retryMessages[i]!, retryCalls[i]);
         if (classifyRegex.test(result)) return result;
         if (i < retryMessages.length - 1) {
             rootLogger.warn('classifyFailure: invalid format, retrying');

@@ -70,7 +70,7 @@ describe('case18 — AI tests generator', () => {
         await mod.handler(baseContext);
 
         expect(llm.llmPrompt).toHaveBeenCalledWith(
-            'main',
+            'fast',
             expect.stringContaining('You are a QA engineer'),
             expect.stringContaining('User wants to login'),
             'case18',
