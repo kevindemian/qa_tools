@@ -281,7 +281,19 @@ class Config {
         ensureDotenv();
     }
 
-    // ── Static API (delegates to default instance) ─────────────────────────
+    static get(key: string): string | undefined {
+        return Config.defaultInstance.get(key);
+    }
+
+    static getAllPrefixed(prefix: string): Record<string, string> {
+        return Config.defaultInstance.getAllPrefixed(prefix);
+    }
+
+    static load(): void {
+        Config.defaultInstance.load();
+    }
+
+    // ── Static getter delegators ──────────────────────────────────────────
 
     static get jiraBaseUrl(): string {
         return Config.defaultInstance.jiraBaseUrl;
@@ -292,13 +304,12 @@ class Config {
     static get xrayBaseUrl(): string {
         return Config.defaultInstance.xrayBaseUrl;
     }
-    static get jiraProject(): string {
-        return Config.defaultInstance.jiraProject;
-    }
     static get xrayMode(): 'server' | 'cloud' {
         return Config.defaultInstance.xrayMode;
     }
-
+    static get jiraProject(): string {
+        return Config.defaultInstance.jiraProject;
+    }
     static get gitToken(): string {
         return Config.defaultInstance.gitToken;
     }
@@ -311,14 +322,12 @@ class Config {
     static get githubApiUrl(): string {
         return Config.defaultInstance.githubApiUrl;
     }
-
     static get cypressProjectPath(): string {
         return Config.defaultInstance.cypressProjectPath;
     }
     static get csvDefaultPath(): string {
         return Config.defaultInstance.csvDefaultPath;
     }
-
     static get autoChoice(): string {
         return Config.defaultInstance.autoChoice;
     }
@@ -337,7 +346,6 @@ class Config {
     static get onError(): string {
         return Config.defaultInstance.onError;
     }
-
     static get csvPath(): string {
         return Config.defaultInstance.csvPath;
     }
@@ -350,7 +358,6 @@ class Config {
     static get jsonLabels(): string {
         return Config.defaultInstance.jsonLabels;
     }
-
     static get logLevel(): string {
         return Config.defaultInstance.logLevel;
     }
@@ -363,13 +370,9 @@ class Config {
     static get logMaxSize(): number {
         return Config.defaultInstance.logMaxSize;
     }
-
     static get xdgStateHome(): string {
         return Config.defaultInstance.xdgStateHome;
     }
-
-    // ── Static LLM API ─────────────────────────────────────────────────
-
     static get llmApiKey(): string {
         return Config.defaultInstance.llmApiKey;
     }
@@ -385,7 +388,6 @@ class Config {
     static get llmSmallModel(): string {
         return Config.defaultInstance.llmSmallModel;
     }
-
     static get llmFastApiKey(): string {
         return Config.defaultInstance.llmFastApiKey;
     }
@@ -421,18 +423,6 @@ class Config {
     }
     static get llmBatchBaseUrl(): string {
         return Config.defaultInstance.llmBatchBaseUrl;
-    }
-
-    static get(key: string): string | undefined {
-        return Config.defaultInstance.get(key);
-    }
-
-    static getAllPrefixed(prefix: string): Record<string, string> {
-        return Config.defaultInstance.getAllPrefixed(prefix);
-    }
-
-    static load(): void {
-        Config.defaultInstance.load();
     }
 }
 

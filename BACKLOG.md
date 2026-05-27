@@ -79,7 +79,7 @@ Removidos: `sourceBranch`/`targetBranch` de `updateMergeRequest` (github_manager
 | Fase | Descrição                                                                           | Status | Esforço |
 | ---- | ----------------------------------------------------------------------------------- | ------ | ------- |
 | 1    | CI hardening (thresholds, eslint, ts-prune) + remove docs-archive                   | ✅     | 15 min  |
-| 2    | `noUncheckedIndexedAccess` tsconfig (173 prod errors)                               | 🔴     | 4h      |
+| 2    | `noUncheckedIndexedAccess` tsconfig (173 prod errors)                               | ✅     | 4h      |
 | 3    | Branch coverage (6 files: splash, report-generator, github_manager, gitlab_manager) | ✅     | 2.5h    |
 | 4    | Lazy `require('fs')` → `import` em temp-dir.ts                                      | ✅     | 20 min  |
 
@@ -92,15 +92,15 @@ Removidos: `sourceBranch`/`targetBranch` de `updateMergeRequest` (github_manager
 | 1c   | Adicionar `npx ts-prune -p tsconfig.json` ao CI (warn-only)                           | 5 min   |
 | 1d   | Remover `docs-archive/` + script `docs` do package.json + `docs/` do tsconfig include | 3 min   |
 
-### Fase 2 — `noUncheckedIndexedAccess` (layer order)
+### Fase 2 — `noUncheckedIndexedAccess` ✅ (já resolvido — flag ativa, 0 erros)
 
-| Layer | Arquivos                                            | Erros |
-| ----- | --------------------------------------------------- | ----- |
-| 2a    | `shared/*.ts` (produção)                            | ~25   |
-| 2b    | `git_triggers/*.ts` (produção)                      | ~50   |
-| 2c    | `jira_management/*.ts` (produção)                   | ~40   |
-| 2d    | `*.test.ts` (todos)                                 | ~110  |
-| 2e    | Ativar `noUncheckedIndexedAccess: true` no tsconfig | —     |
+| Layer | Arquivos                                            | Erros | Status |
+| ----- | --------------------------------------------------- | ----- | ------ |
+| 2a    | `shared/*.ts` (produção)                            | ~25   | ✅     |
+| 2b    | `git_triggers/*.ts` (produção)                      | ~50   | ✅     |
+| 2c    | `jira_management/*.ts` (produção)                   | ~40   | ✅     |
+| 2d    | `*.test.ts` (todos)                                 | ~110  | ✅     |
+| 2e    | Ativar `noUncheckedIndexedAccess: true` no tsconfig | —     | ✅     |
 
 ### Fase 3 — Branch coverage (paralelo)
 
@@ -367,13 +367,13 @@ Removidos: `sourceBranch`/`targetBranch` de `updateMergeRequest` (github_manager
 
 #### 🔴 Alto impacto (100–250 linhas, risco baixo)
 
-| #   | Onde                                       | Problema                                                                        | Solução                                 | Eco  |
-| --- | ------------------------------------------ | ------------------------------------------------------------------------------- | --------------------------------------- | ---- |
-| S1  | `config.ts:108-424`                        | 37 instance getters + 37 static delegators (~230 linhas)                        | Proxy `[[Get]]` ou geração programática | ~200 |
-| S2  | `result_parser.ts:193-221`                 | `parseTestResultsFile` e `parseCypressResults` = mesmo código, parser diferente | Função `readAndParse(filePath, parser)` | ~25  |
-| S3  | `result_parser.ts` + `report-generator.ts` | Objeto vazio `{tests:[], stats:{...}}` repetido 5x                              | Constante `EMPTY_PARSE_RESULT`          | ~20  |
-| S4  | `prompt-ui.ts:51-74`                       | 5 funções (`success`,`error`,`warn`,`info`,`helpLine`) 90% idênticas            | Helper `_log(level, msg)` + lookup      | ~30  |
-| S5  | `llm-client.ts:251-271`                    | Async lock (`_rateLocks`) em operação síncrona (Node single-threaded)           | Remover lock                            | ~12  |
+| #   | Onde                                       | Problema                                                                        | Solução                                                                 | Eco |
+| --- | ------------------------------------------ | ------------------------------------------------------------------------------- | ----------------------------------------------------------------------- | --- |
+| S1  | `config.ts:108-424`                        | 37 instance getters + 37 static delegators (~230 linhas)                        | Proxy `[[Get]]` (revertido: TS2749). Static getters one-liners mantidos | ~0  |
+| S2  | `result_parser.ts:193-221`                 | `parseTestResultsFile` e `parseCypressResults` = mesmo código, parser diferente | Função `readAndParse(filePath, parser)`                                 | ~25 |
+| S3  | `result_parser.ts` + `report-generator.ts` | Objeto vazio `{tests:[], stats:{...}}` repetido 5x                              | Constante `EMPTY_PARSE_RESULT`                                          | ~20 |
+| S4  | `prompt-ui.ts:51-74`                       | 5 funções (`success`,`error`,`warn`,`info`,`helpLine`) 90% idênticas            | Helper `_log(level, msg)` + lookup                                      | ~30 |
+| S5  | `llm-client.ts:251-271`                    | Async lock (`_rateLocks`) em operação síncrona (Node single-threaded)           | Remover lock                                                            | ~12 |
 
 #### 🟡 Médio impacto (10–30 linhas, risco médio)
 
@@ -396,19 +396,146 @@ Removidos: `sourceBranch`/`targetBranch` de `updateMergeRequest` (github_manager
 
 ### Sprint atual (Lote 12)
 
-| #   | Item                                           | Prio | Status                                  |
-| --- | ---------------------------------------------- | ---- | --------------------------------------- |
-| S2  | `readAndParse` helper (result_parser.ts)       | P1   | ✅ Done                                 |
-| S3  | `EMPTY_PARSE_RESULT` constante                 | P1   | ✅ Done                                 |
-| S5  | Remover async lock (llm-client.ts)             | P1   | ✅ Done                                 |
-| S4  | `_log` helper (prompt-ui.ts)                   | P1   | ✅ Done                                 |
-| J1  | JSDoc em `types.ts` (interfaces públicas)      | P2   | ✅ Done                                 |
-| J2  | JSDoc em `result_parser.ts` (exports)          | P2   | ✅ Done                                 |
-| J3  | JSDoc em `report-generator.ts` (exports)       | P2   | ✅ Done                                 |
-| J4  | JSDoc em `llm-client.ts` (funções públicas)    | P2   | ✅ Done                                 |
-| J5  | JSDoc em `jira_resource.ts` (métodos públicos) | P2   | ✅ Done                                 |
-| S6  | Consolidar `generateHtmlReport` wrapper        | P2   | ⬜ Postergado — manter export p/ compat |
+| #   | Item                                           | Prio | Status                                                                       |
+| --- | ---------------------------------------------- | ---- | ---------------------------------------------------------------------------- |
+| S2  | `readAndParse` helper (result_parser.ts)       | P1   | ✅ Done                                                                      |
+| S3  | `EMPTY_PARSE_RESULT` constante                 | P1   | ✅ Done                                                                      |
+| S5  | Remover async lock (llm-client.ts)             | P1   | ✅ Done                                                                      |
+| S4  | `_log` helper (prompt-ui.ts)                   | P1   | ✅ Done                                                                      |
+| J1  | JSDoc em `types.ts` (interfaces públicas)      | P2   | ✅ Done                                                                      |
+| J2  | JSDoc em `result_parser.ts` (exports)          | P2   | ✅ Done                                                                      |
+| J3  | JSDoc em `report-generator.ts` (exports)       | P2   | ✅ Done                                                                      |
+| J4  | JSDoc em `llm-client.ts` (funções públicas)    | P2   | ✅ Done                                                                      |
+| J5  | JSDoc em `jira_resource.ts` (métodos públicos) | P2   | ✅ Done                                                                      |
+| S6  | Consolidar `generateHtmlReport` wrapper        | P2   | ⬜ Postergado — manter export p/ compat                                      |
+| S1  | config.ts — 43 static getters → Proxy          | P1   | ✅ Revertido: Proxy quebra TS (TS2749). 43 static getter one-liners mantidos |
 
 ---
 
-**Progresso geral:** 27/27 ✅ + 17/17 UX ✅ + 9/14 Simplificação
+---
+
+## 🐛 Bug Report — Menu Gap (AUDIO-01)
+
+**Data:** 2026-05-26
+**Prioridade:** P1
+
+**Problema:** `shared/bug-report.ts` exporta `collectManual()` e `interactiveBugReportFlow()` (fluxo interativo completo, com/sem IA) mas **não há entrada de menu dedicada** — só acessível indiretamente via opção 17 (relatório HTML) ou pipeline Git.
+
+**Solução proposta:** Adicionar opção de menu (ex.: opção 20, seção UTILITÁRIOS ou IA) que pergunta se deseja auxílio IA e chama o fluxo interativo.
+
+**Nota:** Menu Jira já tem 19 opções + busca + docs + help — navegação up/down começa a ficar desconfortável. Reavaliar antes de adicionar mais itens.
+
+| Item | Descrição                                                                                           | Status |
+| ---- | --------------------------------------------------------------------------------------------------- | ------ |
+| M1   | Adicionar entrada de menu "Bug Report" (label, id, alias) em `main.ts`                              | ✅     |
+| M2   | Criar handler `case20.ts` com fluxo: collectManual → preview → fileToJira → linkIssues              | ✅     |
+| M3   | Menu hierárquico: CATEGORIES + SUB_MENUS + navegação entre níveis + alias bypass + /back contextual | ✅     |
+
+---
+
+## 🚀 Menu Hierárquico + Bug Report — FEAT-22
+
+**Data:** 2026-05-27
+**Prioridade:** P0
+**Esforço total:** ~4h
+
+### Problema
+
+1. Seção "IA" artificial — itens agrupados por tecnologia (IA) em vez de função. IA é opcional em 17 (relatório) e 19 (histórico).
+2. Bug Report sem entrada de menu dedicada — só acessível via case17 (relatório HTML).
+3. Menu flat com 20+ itens — navegação por setas desconfortável.
+
+### Solução
+
+- Menu principal com 7 categorias → cada categoria abre sub-menu com comandos específicos
+- Aliases continuam pulando a hierarquia (power users)
+- Bug Report vira opção 20 com linked issues (mesmo pattern dos casos de teste)
+- `@inquirer/select` v5 type-to-filter nativo substitui busca manual
+- `indexMode: 'number'` mostra números no menu
+
+### Estrutura do novo menu
+
+```
+NÍVEL 1 (MENU PRINCIPAL)        NÍVEL 2 (SUB-MENUS)
+─────────────────────────        ─────────────────────────
+GERAÇÃO DE RELATÓRIOS      →    17  Gerar relatório HTML
+GERAÇÃO DE CASOS DE TESTE  →    1   CSV · 15 JSON · 18 User Story (IA)
+BUG REPORT                 →    20  Criar Bug Report
+ANÁLISE E HISTÓRICO        →    19  Histórico / Cobertura
+RELEASES                   →    2-8 (7 itens)
+CONFIGURAÇÃO               →    9,10,14,16
+UTILITÁRIOS                →    11,12,13,d
+```
+
+| Fase | Descrição                                                    | Status | Esforço |
+| ---- | ------------------------------------------------------------ | ------ | ------- |
+| 0    | types.ts + prompt-input.ts (indexMode)                       | ✅     | 5 min   |
+| 1    | bug-report.ts — linkedIssues + linkManager                   | ✅     | 20 min  |
+| 2    | main.ts — menu hierárquico + navegação                       | ✅     | 1.5h    |
+| 3    | case20.ts + index.ts + case17.ts                             | ✅     | 30 min  |
+| 4    | Testes (main.test, bug-report.test, index.test, case20.test) | ✅     | 1h      |
+| 5    | Type check + testes + verificação final                      | ✅     | 15 min  |
+
+### Itens específicos
+
+| #   | Item                                                                       | Prio | Status |
+| --- | -------------------------------------------------------------------------- | ---- | ------ |
+| M1  | Adicionar entrada de menu "Bug Report" (id=20) em CATEGORIES/SUB_MENUS     | P0   | ✅     |
+| M2  | Criar handler case20.ts: collectManual → preview → fileToJira → linkIssues | P0   | ✅     |
+| M3  | Menu hierárquico: CATEGORIES + SUB_MENUS + navegação entre níveis          | P0   | ✅     |
+| M4  | Alias bypass: relatório → #17 direto (pula hierarquia)                     | P0   | ✅     |
+| M5  | /back sobe nível, não sai do módulo                                        | P0   | ✅     |
+| M6  | indexMode: 'number' no tema @inquirer/select                               | P1   | ✅     |
+| M7  | BugReport.linkedIssues no type + collectManual + compose + linkIssues      | P1   | ✅     |
+| M8  | Remover search manual (redundante com type-to-filter)                      | P1   | ✅     |
+| M9  | Atualizar aliases: bug, bug-report, bugreport, criar-bug                   | P1   | ✅     |
+| M10 | Testes: case20.test.ts, main.test.ts, bug-report.test.ts, index.test.ts    | P1   | ✅     |
+
+Também marcar o AUDIO-01 (M1, M2, M3 do bloco antigo) como resolvidos:
+
+**Progresso geral:** 27/27 ✅ + 17/17 UX ✅ + 9/14 Simplificação ✅
+
+---
+
+---
+
+## 🐛 Bug Report Sprint — 2026-05-27
+
+| #   | Item                                            | Onde                    | Prio | Status |
+| --- | ----------------------------------------------- | ----------------------- | ---- | ------ |
+| F1  | try/catch case20 handler (R5)                   | `case20.ts`             | P0   | ✅     |
+| F2  | Re-prompt 3x em `collectManual`                 | `bug-report.ts`         | P0   | ✅     |
+| F3  | Catch genérico em `dispatchChoice`              | `main.ts`               | P0   | ✅     |
+| F4  | Mover case13 → GERAÇÃO DE CASOS DE TESTE        | `main.ts` SUB_MENUS     | P2   | ✅     |
+| F5  | Teste: ask→"" → printError em case20            | `case20.test.ts`        | P1   | ✅     |
+| F6  | Teste: dispatchChoice + Error genérico          | `main.test.ts`          | P1   | ✅     |
+| F7  | Teste: re-prompt summary (warn x3 + 2º success) | `bug-report.test.ts`    | P1   | ✅     |
+| F8  | `openWithOsOrFallback()` OS default app opener  | `shared/open.ts` + test | P3   | ✅     |
+| F9  | Integrar OS opener em `showDocs`                | `main.ts`               | P3   | ✅     |
+| F10 | Integrar OS opener em `case17` (HTML report)    | `case17.ts`             | P3   | ✅     |
+
+### Lições aprendidas (prevenção)
+
+- **R5 violado**: `case20.handler` sem try/catch → erro não tratado. Convenção R5 reforçada: TODO handler deve capturar e chamar `printError`. `dispatchChoice` ganhou catch genérico como rede de segurança.
+- **Testes mockam o módulo errado**: `case20.test.ts` mockava `bug-report.collectManual` → nunca exercitava código real. Novo teste não mocka `collectManual`, mocka `prompt.ask` diretamente.
+- **Teste de `dispatchChoice` só testava CancelError**: Handler lançando `Error` comum crashava o app. Novo teste cobre esse gap.
+- **Módulo `child_process` não mockado em `main.test.ts`**: nova dependência `open.ts` requer `spawn` mockado.
+- **`collectManual` sem re-prompt**: entrada vazia causava throw imediato sem chance de correção. Re-prompt 3x adicionado.
+
+## 🧹 Sprint Débitos — 2026-05-27
+
+| #   | Item                              | Onde                        | Prio                  | Status                                                          |
+| --- | --------------------------------- | --------------------------- | --------------------- | --------------------------------------------------------------- | --- | --- |
+| S7  | Remover `analyzeFailures` wrapper | `failure-analysis.ts:34-37` | P1                    | ✅                                                              |
+| S9  | `loadTypedState()` helper         | `state.ts` + `main.ts`      | P2                    | ✅                                                              |
+| I4  | `ts-prune` no CI                  | CI pipeline                 | P1                    | ✅                                                              |
+| I5  | Script handlers↔arquivos          | `package.json`              | P2                    | ✅                                                              |
+| S8  | LlmTier configs → `Record`        | `llm-client.ts:67-145`      | P1                    | ✅                                                              |
+| S10 | `                                 |                             | undefined` redundante | `result_parser.ts:96`                                           | P2  | ✅  |
+| S11 | `for (let i...)` → `for..of`      | `report-generator.ts:263`   | P3                    | ✅                                                              |
+| S12 | Ternário → `Record` lookup        | `report-generator.ts:197`   | P3                    | ✅                                                              |
+| S13 | 3× `.filter().length` → 1×        | `result_parser.ts:128-130`  | P3                    | ⬜ Já usa `reduce` em outras partes; avaliar se ainda aplicável |
+| S14 | Retry manual → `for` loop         | `failure-analysis.ts:78-89` | P3                    | ✅                                                              |
+| S1  | config.ts Proxy refactor          | `config.ts`                 | P1                    | ✅ Proxy revertido — 43 static getter one-liners mantidos       |
+| I1  | Teste de contrato handlers        | `index.test.ts`             | P2                    | ✅ Bidirecional: file→handler + handler→file + export contract  |
+| I3  | Smoke test com asserções          | `e2e/smoke-pipeline.ts`     | P3                    | ✅ Função `assert()` + validações estruturais em cada etapa     |

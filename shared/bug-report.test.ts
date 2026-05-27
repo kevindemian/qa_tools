@@ -4,6 +4,7 @@ const mockPrompt = {
     info: jest.fn(),
     printError: jest.fn(),
     title: jest.fn(),
+    warn: jest.fn(),
 };
 jest.mock('./prompt', () => mockPrompt);
 
@@ -22,9 +23,21 @@ describe('BugReport Service', () => {
     });
 
     describe('collectManual', () => {
-        it('throws if summary is empty', async () => {
-            mockPrompt.ask.mockResolvedValueOnce('');
+        it('throws if summary is empty after 3 attempts', async () => {
+            mockPrompt.ask.mockResolvedValue('');
             await expect(collectManual()).rejects.toThrow('Sumário obrigatório');
+            expect(mockPrompt.warn).toHaveBeenCalledTimes(3);
+        });
+
+        it('succeeds on second attempt after empty first', async () => {
+            mockPrompt.ask
+                .mockResolvedValueOnce('') // 1st try
+                .mockResolvedValueOnce('Bug title') // 2nd try
+                .mockResolvedValue(''); // remaining fields
+            mockPrompt.askConfirm.mockResolvedValue(false); // skip LLM
+            const report = await collectManual();
+            expect(report.summary).toBe('Bug title');
+            expect(mockPrompt.warn).toHaveBeenCalledTimes(1);
         });
 
         it('collects fields and returns BugReport without LLM', async () => {
@@ -36,7 +49,8 @@ describe('BugReport Service', () => {
                 .mockResolvedValueOnce('Error 500 displayed') // actual
                 .mockResolvedValueOnce('production') // env
                 .mockResolvedValueOnce('critical') // severity
-                .mockResolvedValueOnce('Auth'); // component
+                .mockResolvedValueOnce('Auth') // component
+                .mockResolvedValueOnce('BUG-1, BUG-2'); // linked issues
 
             mockPrompt.askConfirm.mockResolvedValueOnce(false); // LLM classification opt-out
 
@@ -52,6 +66,10 @@ describe('BugReport Service', () => {
                 environment: 'production',
                 severity: 'critical',
                 component: 'Auth',
+                linkedIssues: [
+                    { key: 'BUG-1', linkType: 'Relates' },
+                    { key: 'BUG-2', linkType: 'Relates' },
+                ],
                 llmEnrichment: undefined,
             });
         });
@@ -65,7 +83,8 @@ describe('BugReport Service', () => {
                 .mockResolvedValueOnce('') // actual
                 .mockResolvedValueOnce('') // env
                 .mockResolvedValueOnce('minor') // severity
-                .mockResolvedValueOnce(''); // component
+                .mockResolvedValueOnce('') // component
+                .mockResolvedValueOnce(''); // linked issues (empty)
 
             mockPrompt.askConfirm.mockResolvedValueOnce(true); // LLM classification opt-in
             mockFailureAnalysis.classifyFailure.mockResolvedValueOnce('AUTHENTICATION_ERROR');
@@ -178,12 +197,41 @@ describe('BugReport Service', () => {
 
     describe('interactiveBugReportFlow', () => {
         let mockJiraResource: { postJiraResource: jest.Mock };
+        let mockLinkManager: { linkIssues: jest.Mock };
 
         beforeEach(() => {
             mockJiraResource = { postJiraResource: jest.fn() };
+            mockLinkManager = { linkIssues: jest.fn() };
         });
 
-        it('calls collectManual, displays preview and files if confirmed', async () => {
+        it('calls collectManual, creates and links issues if confirmed', async () => {
+            const report: BugReport = {
+                summary: 'Manual login failure',
+                description: 'Steps: click button',
+                source: 'manual',
+                severity: 'minor',
+                linkedIssues: [{ key: 'US-1', linkType: 'Relates' }],
+            };
+
+            mockPrompt.askConfirm.mockResolvedValueOnce(true);
+            mockJiraResource.postJiraResource.mockResolvedValueOnce({ key: 'PROJ-202' });
+
+            const result = await interactiveBugReportFlow(
+                mockJiraResource as never,
+                'PROJ',
+                report,
+                mockLinkManager as never,
+            );
+
+            expect(result).toEqual({
+                status: 'ok',
+                label: 'PROJ-202',
+                message: 'Manual login failure',
+            });
+            expect(mockLinkManager.linkIssues).toHaveBeenCalledWith('PROJ-202', report.linkedIssues);
+        });
+
+        it('does not link issues when no linkedIssues', async () => {
             const report: BugReport = {
                 summary: 'Manual login failure',
                 description: 'Steps: click button',
@@ -191,17 +239,12 @@ describe('BugReport Service', () => {
                 severity: 'minor',
             };
 
-            mockPrompt.askConfirm.mockResolvedValueOnce(true); // User confirms preview
+            mockPrompt.askConfirm.mockResolvedValueOnce(true);
             mockJiraResource.postJiraResource.mockResolvedValueOnce({ key: 'PROJ-202' });
 
-            const result = await interactiveBugReportFlow(mockJiraResource as never, 'PROJ', report);
+            await interactiveBugReportFlow(mockJiraResource as never, 'PROJ', report, mockLinkManager as never);
 
-            expect(result).toEqual({
-                status: 'ok',
-                label: 'PROJ-202',
-                message: 'Manual login failure',
-            });
-            expect(mockPrompt.info).toHaveBeenCalledWith(expect.stringContaining('Manual login failure'));
+            expect(mockLinkManager.linkIssues).not.toHaveBeenCalled();
         });
 
         it('returns null if cancelled by user', async () => {
@@ -212,7 +255,7 @@ describe('BugReport Service', () => {
                 severity: 'minor',
             };
 
-            mockPrompt.askConfirm.mockResolvedValueOnce(false); // User cancels preview
+            mockPrompt.askConfirm.mockResolvedValueOnce(false);
 
             const result = await interactiveBugReportFlow(mockJiraResource as never, 'PROJ', report);
 

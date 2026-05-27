@@ -31,11 +31,6 @@ function formatFailedTests(failed: FlatTest[]): string {
     return failed.map((t, i) => `${i + 1}. [${t.state}] ${t.title} (${t.duration}ms)`).join('\n');
 }
 
-export async function analyzeFailures(tests: FlatTest[]): Promise<string> {
-    const result = await analyzeFailuresWithReport(tests);
-    return result.content;
-}
-
 export async function analyzeFailuresWithReport(tests: FlatTest[]): Promise<AnalysisReport> {
     const failed = tests.filter((t) => t.state === 'failed');
     if (failed.length === 0) return { content: '', confidence: 'high', fallbackUsed: false };
@@ -72,22 +67,22 @@ export async function classifyFailure(title: string, error: string): Promise<str
     if (!systemTemplate) return 'UNKNOWN: Could not load prompt template';
 
     const system = systemTemplate.replace('{{TEST_TITLE}}', title).replace('{{ERROR_MESSAGE}}', sanitizeForLlm(error));
-    let result = await llmPrompt('fast', system, 'Classify this failure.', 'classify');
 
     const classifyRegex = /^(ASSERTION|TIMEOUT|ENVIRONMENT|FLAKY|APPLICATION|UNKNOWN):\s/;
-    if (!classifyRegex.test(result)) {
-        rootLogger.warn('classifyFailure: invalid format, retrying');
-        result = await llmPrompt(
-            'fast',
-            system,
-            'Responda exatamente no formato CATEGORIA: explicacao. Use uma das categorias: ASSERTION, TIMEOUT, ENVIRONMENT, FLAKY, APPLICATION, UNKNOWN.',
-            'classify-retry',
-        );
-        if (!classifyRegex.test(result)) {
-            rootLogger.warn('classifyFailure: retry also returned invalid format, falling back to UNKNOWN');
-            return 'UNKNOWN: Could not classify failure after retry';
+    const retryMessages = [
+        'Classify this failure.',
+        'Responda exatamente no formato CATEGORIA: explicacao. Use uma das categorias: ASSERTION, TIMEOUT, ENVIRONMENT, FLAKY, APPLICATION, UNKNOWN.',
+    ];
+    const retryCalls = ['classify', 'classify-retry'];
+
+    for (let i = 0; i < retryMessages.length; i++) {
+        const result = await llmPrompt('fast', system, retryMessages[i]!, retryCalls[i]);
+        if (classifyRegex.test(result)) return result;
+        if (i < retryMessages.length - 1) {
+            rootLogger.warn('classifyFailure: invalid format, retrying');
         }
     }
 
-    return result;
+    rootLogger.warn('classifyFailure: retry also returned invalid format, falling back to UNKNOWN');
+    return 'UNKNOWN: Could not classify failure after retry';
 }

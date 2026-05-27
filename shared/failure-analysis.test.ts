@@ -5,7 +5,7 @@ jest.mock('./llm-review', () => ({ reviewWithLlm: jest.fn() }));
 import fs from 'fs';
 import { llmPrompt } from './llm-client';
 import { reviewWithLlm } from './llm-review';
-import { analyzeFailures, classifyFailure } from './failure-analysis';
+import { analyzeFailuresWithReport, classifyFailure } from './failure-analysis';
 import type { FlatTest } from './result_parser';
 
 const mockReviewWithLlm = reviewWithLlm as jest.MockedFunction<typeof reviewWithLlm>;
@@ -15,12 +15,12 @@ beforeEach(() => {
     jest.clearAllMocks();
 });
 
-describe('analyzeFailures', () => {
-    it('returns empty string when no failed tests', async () => {
+describe('analyzeFailuresWithReport', () => {
+    it('returns empty content when no failed tests', async () => {
         const tests: FlatTest[] = [{ title: 'Pass', state: 'passed', duration: 100 }];
 
-        const result = await analyzeFailures(tests);
-        expect(result).toBe('');
+        const result = await analyzeFailuresWithReport(tests);
+        expect(result.content).toBe('');
         expect(mockReviewWithLlm).not.toHaveBeenCalled();
     });
 
@@ -35,8 +35,8 @@ describe('analyzeFailures', () => {
 
         const tests: FlatTest[] = [{ title: 'Login fails', state: 'failed', duration: 200 }];
 
-        const result = await analyzeFailures(tests);
-        expect(result).toBe('Root cause: assertion error');
+        const result = await analyzeFailuresWithReport(tests);
+        expect(result.content).toBe('Root cause: assertion error');
         expect(mockReviewWithLlm).toHaveBeenCalledTimes(1);
     });
 
@@ -47,8 +47,8 @@ describe('analyzeFailures', () => {
 
         const tests: FlatTest[] = [{ title: 'Fail', state: 'failed', duration: 100 }];
 
-        const result = await analyzeFailures(tests);
-        expect(result).toBe('');
+        const result = await analyzeFailuresWithReport(tests);
+        expect(result.content).toBe('');
     });
 });
 

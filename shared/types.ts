@@ -261,6 +261,11 @@ export interface BugReport {
     component?: string;
     /** LLM enrichment data, if requested. */
     llmEnrichment?: LLMEnrichment;
+    /** Jira issues linked to this bug report. */
+    linkedIssues?: Array<{
+        key: string;
+        linkType: string;
+    }>;
     /** CI/CD context in which the bug was detected. */
     metadata?: {
         pipelineId?: string;

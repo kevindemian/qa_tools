@@ -62,6 +62,7 @@ interface SelectChoice {
 interface SelectOptions {
     pageSize?: number;
     default?: string;
+    menuMode?: boolean;
 }
 
 interface SectionGroup {
@@ -304,7 +305,7 @@ function groupChoices(choices: SelectChoice[]): { sections: SectionGroup[]; stan
         idx++;
         const num = String(idx).padStart(2, ' ');
         const desc = c.description ? palette.muted('  ' + c.description) : '';
-        const entry = num + '. ' + c.name + desc;
+        const entry = num + '. ' + c.name.trimStart() + desc;
         if (current) {
             current.items.push(entry);
             current.itemValues.push(c.value);
@@ -338,7 +339,7 @@ export async function showSelect(label: string, choices: SelectChoice[], options
         .map((c) => ({ name: c.name, value: c.value ?? c.name }));
 
     const mod: unknown = await _loadSelect();
-    if (mod && isTTY()) {
+    if (mod && isTTY() && !options.menuMode) {
         const selectChoices = choices.map((c) => {
             if (c.type === 'separator') return { type: 'separator' as const, separator: c.line || '' };
             if (!c.name) return { type: 'separator' as const, separator: '' };
@@ -370,10 +371,6 @@ export async function showSelect(label: string, choices: SelectChoice[], options
     const num = parseInt(answer, 10);
     if (num >= 1 && num <= flatChoices.length) {
         return flatChoices[num - 1]!.value;
-    }
-    if (!isNaN(num)) {
-        warn('Opção inválida. Digite um número entre 0 e ' + flatChoices.length + ' ou /help.');
-        return '0';
     }
     return answer;
 }

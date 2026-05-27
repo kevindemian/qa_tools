@@ -4,6 +4,7 @@ import os from 'os';
 import Config from './config';
 import { rootLogger } from './logger';
 import { warn } from './prompt';
+import type { StateSchema } from './types';
 
 const UTF8 = 'utf8';
 
@@ -65,6 +66,10 @@ migrateOldState();
 
 export function getStatePath(config?: Config): string {
     return statePath(config);
+}
+
+export function loadTypedState(config?: Config): StateSchema {
+    return load(config);
 }
 
 export function load(config?: Config): Record<string, unknown> {

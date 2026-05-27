@@ -4,8 +4,9 @@ import { ask, askConfirm, info, printError, title, withSpinner } from '../../sha
 import { writeReport } from '../../shared/temp-dir';
 import { parseCypressResults } from '../../shared/result_parser';
 import { generateHtmlReport } from '../../shared/report-generator';
-import { analyzeFailures } from '../../shared/failure-analysis';
+import { analyzeFailuresWithReport } from '../../shared/failure-analysis';
 import { collectAutomated, interactiveBugReportFlow } from '../../shared/bug-report';
+import { openWithOsOrFallback } from '../../shared/open';
 import type { CommandContext } from './context';
 
 function injectAnalysisSection(html: string, analysis: string): string {
@@ -38,9 +39,11 @@ async function handler(c: CommandContext): Promise<boolean | void> {
     });
 
     if (result.stats.failed > 0 && (await askConfirm('Incluir análise das falhas (IA)?', true))) {
-        const analysis = await withSpinner('Analisando falhas com IA...', () => analyzeFailures(result.tests));
-        if (analysis) {
-            html = injectAnalysisSection(html, analysis);
+        const analysis = await withSpinner('Analisando falhas com IA...', () =>
+            analyzeFailuresWithReport(result.tests),
+        );
+        if (analysis.content) {
+            html = injectAnalysisSection(html, analysis.content);
         }
     }
 
@@ -56,6 +59,7 @@ async function handler(c: CommandContext): Promise<boolean | void> {
     }
 
     info(`Relatório HTML gerado: ${resolvedPath}`);
+    void openWithOsOrFallback(resolvedPath);
     c.pushHistory(
         'html-report',
         `${result.stats.total} testes (${result.stats.passed} pass, ${result.stats.failed} fail)`,
@@ -67,7 +71,7 @@ async function handler(c: CommandContext): Promise<boolean | void> {
         (await askConfirm('Deseja criar um relatório de bug (Bug Report) no Jira para as falhas?', false))
     ) {
         const automatedReport = collectAutomated(result);
-        await interactiveBugReportFlow(c.jiraResource, c.ctx.project_name, automatedReport);
+        await interactiveBugReportFlow(c.jiraResource, c.ctx.project_name, automatedReport, c.linkManager);
     }
 }
 

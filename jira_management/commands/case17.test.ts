@@ -21,7 +21,7 @@ jest.mock('../../shared/report-generator', () => ({
 }));
 
 jest.mock('../../shared/failure-analysis', () => ({
-    analyzeFailures: jest.fn(),
+    analyzeFailuresWithReport: jest.fn(),
 }));
 
 jest.mock('../../shared/logger', () => ({
@@ -106,14 +106,18 @@ describe('case17 — HTML report generator', () => {
         });
 
         reportGen.generateHtmlReport.mockReturnValueOnce('<html>report</body></html>');
-        analysis.analyzeFailures.mockResolvedValueOnce('Root cause analysis');
+        analysis.analyzeFailuresWithReport.mockResolvedValueOnce({
+            content: 'Root cause analysis',
+            confidence: 'high',
+            fallbackUsed: false,
+        });
         fs.writeFileSync.mockImplementationOnce(jest.fn());
 
         const mod = require('./case17').default;
         await mod.handler(baseContext);
 
         expect(prompt.askConfirm).toHaveBeenCalled();
-        expect(analysis.analyzeFailures).toHaveBeenCalled();
+        expect(analysis.analyzeFailuresWithReport).toHaveBeenCalled();
     });
 
     it('handles parse error gracefully', async () => {

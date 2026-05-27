@@ -37,6 +37,7 @@ jest.mock('../shared/config', () => ({
 
 jest.mock('../shared/state', () => ({
     load: jest.fn().mockReturnValue({}),
+    loadTypedState: jest.fn().mockReturnValue({}),
     update: jest.fn(),
     getStatePath: jest.fn().mockReturnValue('/tmp/state.json'),
 }));
@@ -84,13 +85,19 @@ jest.mock('./commands', () => ({
 }));
 
 jest.mock('child_process', () => ({
+    spawn: jest.fn().mockReturnValue({
+        on: jest.fn((_event: string, handler: (...args: unknown[]) => void) => {
+            if (_event === 'exit') handler(0);
+        }),
+        unref: jest.fn(),
+    }),
     spawnSync: jest.fn().mockReturnValue({ error: null, status: 0, stdout: '', stderr: '' }),
 }));
 
 // ── Imports ────────────────────────────────────────────────────────────────
 import { createValidateEnv } from '../shared/cli_base';
 import { warn, helpLine, title, prompt, showSelect, printError } from '../shared/prompt';
-import { load as loadState, update as updateState, getStatePath } from '../shared/state';
+import { loadTypedState, getStatePath } from '../shared/state';
 
 // ── Types ──────────────────────────────────────────────────────────────────
 interface MenuChoice {
@@ -108,8 +115,8 @@ interface MainModule {
     showDocs(choice?: string): Promise<void>;
     showHelpLoop(): Promise<void>;
     resolveAlias(input: string): string;
-    buildMenuChoices(proj: string, ctx: { git_directory: string }): MenuChoice[];
-    handleSpecialInput(input: string): Promise<boolean | '__exit__'>;
+    buildMenuChoices(level: string, proj: string, ctx: { git_directory: string }): MenuChoice[];
+    handleSpecialInput(input: string, level?: string): Promise<boolean | '__exit__' | '__back__'>;
     dispatchChoice(choice: string, cmdCtx: unknown): Promise<'exit' | 'continue'>;
     _configHint(key: string, ctx: { git_directory: string }): string;
 }
@@ -117,7 +124,6 @@ interface MainModule {
 // ── Module load ────────────────────────────────────────────────────────────
 let mod: MainModule;
 let createValidateEnvCall: unknown;
-let updateStateCalled = false;
 let getStatePathCalled = false;
 
 beforeAll(async () => {
@@ -125,7 +131,6 @@ beforeAll(async () => {
     // Yield to microtask queue so main() (called at module scope) completes
     await new Promise<void>((resolve) => setTimeout(resolve, 0));
     createValidateEnvCall = (createValidateEnv as jest.Mock).mock.calls[0]?.[0];
-    updateStateCalled = (updateState as jest.Mock).mock.calls.length > 0;
     getStatePathCalled = (getStatePath as jest.Mock).mock.calls.length > 0;
 });
 
@@ -200,44 +205,57 @@ describe('resolveAlias', () => {
 describe('buildMenuChoices', () => {
     const ctx = { git_directory: '/tmp/repo' };
 
-    it('returns an array', () => {
-        expect(Array.isArray(mod.buildMenuChoices('ECSPOL', ctx))).toBe(true);
+    it('returns array for main level categories', () => {
+        expect(Array.isArray(mod.buildMenuChoices('main', 'ECSPOL', ctx))).toBe(true);
     });
 
-    it('includes section separators', () => {
-        const choices = mod.buildMenuChoices('ECSPOL', ctx);
-        const separators = choices.filter((c) => c.type === 'separator' && c.line);
-        expect(separators.length).toBeGreaterThanOrEqual(4);
+    it('returns array for sub-menu level', () => {
+        expect(Array.isArray(mod.buildMenuChoices('releases', 'ECSPOL', ctx))).toBe(true);
     });
 
-    it('includes exit option with value 0', () => {
-        const choices = mod.buildMenuChoices('ECSPOL', ctx);
+    it('main level includes category IDs', () => {
+        const choices = mod.buildMenuChoices('main', 'ECSPOL', ctx);
+        const values = choices.filter((c) => c.value).map((c) => c.value);
+        expect(values).toContain('reports');
+        expect(values).toContain('releases');
+        expect(values).toContain('bugreport');
+    });
+
+    it('sub-menu level includes command IDs', () => {
+        const choices = mod.buildMenuChoices('releases', 'ECSPOL', ctx);
+        const values = choices.filter((c) => c.value).map((c) => c.value);
+        expect(values).toContain('2');
+        expect(values).toContain('8');
+        expect(values).toContain('0');
+    });
+
+    it('includes exit option with value 0 at main level', () => {
+        const choices = mod.buildMenuChoices('main', 'ECSPOL', ctx);
         expect(choices.find((c) => c.value === '0')).toBeDefined();
     });
 
-    it('sets project name as description for option 9', () => {
-        const choices = mod.buildMenuChoices('MYPROJ', ctx);
+    it('sets project name as description for option 9 in config sub-menu', () => {
+        const choices = mod.buildMenuChoices('config', 'MYPROJ', ctx);
         expect(choices.find((c) => c.value === '9')?.description).toBe('MYPROJ');
     });
 
-    it('sets git dir as description for option 10', () => {
-        const choices = mod.buildMenuChoices('P', { git_directory: '/custom/git' });
+    it('sets git dir as description for option 10 in config sub-menu', () => {
+        const choices = mod.buildMenuChoices('config', 'P', { git_directory: '/custom/git' });
         expect(choices.find((c) => c.value === '10')?.description).toBe('/custom/git');
     });
 
-    it('shows "não configurado" for unset cypress and JSON dirs', () => {
-        const choices = mod.buildMenuChoices('ECSPOL', ctx);
+    it('shows "não configurado" for unset cypress and JSON dirs in config sub-menu', () => {
+        const choices = mod.buildMenuChoices('config', 'ECSPOL', ctx);
         expect(choices.find((c) => c.value === '14')?.description).toBe('não configurado');
         expect(choices.find((c) => c.value === '16')?.description).toBe('não configurado');
     });
 
-    it('includes all known command IDs', () => {
-        const choices = mod.buildMenuChoices('ECSPOL', ctx);
+    it('utilities sub-menu includes docs command', () => {
+        const choices = mod.buildMenuChoices('utilities', 'ECSPOL', ctx);
         const values = choices.filter((c) => c.value).map((c) => c.value);
-        expect(values).toContain('1');
-        expect(values).toContain('15');
         expect(values).toContain('d');
-        expect(values).toContain('12');
+        expect(values).toContain('11');
+        expect(values).not.toContain('13');
     });
 });
 
@@ -265,9 +283,14 @@ describe('handleSpecialInput', () => {
         expect(await mod.handleSpecialInput('/exit')).toBe(false);
     });
 
-    it('returns __exit__ for /back and /menu', async () => {
-        expect(await mod.handleSpecialInput('/back')).toBe('__exit__');
-        expect(await mod.handleSpecialInput('/menu')).toBe('__exit__');
+    it('returns __exit__ for /back and /menu at main level', async () => {
+        expect(await mod.handleSpecialInput('/back', 'main')).toBe('__exit__');
+        expect(await mod.handleSpecialInput('/menu', 'main')).toBe('__exit__');
+    });
+
+    it('returns __back__ for /back and /menu at sub-menu level', async () => {
+        expect(await mod.handleSpecialInput('/back', 'releases')).toBe('__back__');
+        expect(await mod.handleSpecialInput('/menu', 'releases')).toBe('__back__');
     });
 
     it('handles /docs and /d', async () => {
@@ -299,17 +322,17 @@ describe('_configHint', () => {
     });
 
     it('returns "não configurado" when state has no cypress path', () => {
-        (loadState as jest.Mock).mockReturnValue({});
+        (loadTypedState as jest.Mock).mockReturnValue({});
         expect(mod._configHint('cypressDir', ctx)).toBe('(atual: não configurado)');
     });
 
     it('reads cypress path from state', () => {
-        (loadState as jest.Mock).mockReturnValue({ lastCypressPath: '/cy/path' });
+        (loadTypedState as jest.Mock).mockReturnValue({ lastCypressPath: '/cy/path' });
         expect(mod._configHint('cypressDir', ctx)).toBe('(atual: /cy/path)');
     });
 
     it('reads json dir from state', () => {
-        (loadState as jest.Mock).mockReturnValue({ lastJsonDir: '/json/dir' });
+        (loadTypedState as jest.Mock).mockReturnValue({ lastJsonDir: '/json/dir' });
         expect(mod._configHint('jsonDir', ctx)).toBe('(atual: /json/dir)');
     });
 
@@ -338,10 +361,6 @@ describe('module integration', () => {
         }
     });
 
-    it('updateState was called during main loop', () => {
-        expect(updateStateCalled).toBe(true);
-    });
-
     it('getStatePath was called during initialization', () => {
         expect(getStatePathCalled).toBe(true);
     });
@@ -365,9 +384,10 @@ describe('dispatchChoice', () => {
         (jest.requireMock('./commands').getHandler as jest.Mock).mockReturnValue(null);
     });
 
-    it("returns 'exit' for choice '0'", async () => {
+    it("returns 'continue' for choice '0' (handled by getAndResolveChoice now)", async () => {
         const result = await mod.dispatchChoice('0', minimalCtx);
-        expect(result).toBe('exit');
+        expect(result).toBe('continue');
+        expect(warn).toHaveBeenCalledWith(expect.stringContaining('inválida'));
     });
 
     it("dispatches to handler and returns 'continue' for choice '1'", async () => {
@@ -424,6 +444,16 @@ describe('dispatchChoice', () => {
         const result = await mod.dispatchChoice('1', minimalCtx);
 
         expect(result).toBe('continue');
+    });
+
+    it("catches generic Error from handler and returns 'continue'", async () => {
+        const handler = jest.fn().mockRejectedValue(new Error('generic error'));
+        (jest.requireMock('./commands').getHandler as jest.Mock).mockReturnValue(handler);
+
+        const result = await mod.dispatchChoice('1', minimalCtx);
+
+        expect(result).toBe('continue');
+        expect(printError).toHaveBeenCalled();
     });
 });
 

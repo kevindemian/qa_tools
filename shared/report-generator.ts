@@ -226,7 +226,8 @@ function buildLlmSection(options: ReportOptions): string {
     if (options.llmFallback) {
         html += '<p style="color:#ca8a04;font-size:0.8rem">⚠ AI Analysis unavailable — displaying template report.</p>';
     } else if (options.llmConfidence) {
-        const badge = options.llmConfidence === 'high' ? '🟢' : options.llmConfidence === 'medium' ? '🟡' : '🔴';
+        const CONFIDENCE_BADGES: Record<string, string> = { high: '🟢', medium: '🟡', low: '🔴' };
+        const badge = CONFIDENCE_BADGES[options.llmConfidence] || '🔴';
         html +=
             '<p style="font-size:0.8rem;margin-bottom:8px">Confiança: ' + badge + ' ' + options.llmConfidence + '</p>';
     }
@@ -291,8 +292,7 @@ function buildTestTable(tests: FlatTest[]): string {
         '<div class="wrapper"><table><thead><tr><th>#</th><th>Test</th><th>Status</th><th>Duration</th>' +
         (hasError ? '<th>Error</th>' : '') +
         '</tr></thead><tbody>';
-    for (let i = 0; i < tests.length; i++) {
-        const t = tests[i]!;
+    for (const [i, t] of tests.entries()) {
         const rowClass = t.state === 'passed' ? ' class="row-passed"' : '';
         html += '<tr' + rowClass + '>';
         html += '<td>' + (i + 1) + '</td>';
