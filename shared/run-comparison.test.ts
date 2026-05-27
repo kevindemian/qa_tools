@@ -50,9 +50,11 @@ describe('compareRuns', () => {
         const result = await compareRuns(runA, runB);
         expect(result).toBe('Overall improvement in pass rate from 80% to 90%.');
         expect(mockLlmPrompt).toHaveBeenCalledWith('fast', expect.any(String), expect.any(String), 'compare-runs');
-        const promptArg = mockLlmPrompt.mock.calls[0]![1];
-        expect(promptArg).toContain('80%');
-        expect(promptArg).toContain('90%');
+        const systemArg = mockLlmPrompt.mock.calls[0]![1];
+        const userArg = mockLlmPrompt.mock.calls[0]![2];
+        expect(systemArg).not.toContain('80%');
+        expect(userArg).toContain('80%');
+        expect(userArg).toContain('90%');
     });
 
     it('returns empty string on LLM error', async () => {
