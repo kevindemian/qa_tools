@@ -1,10 +1,11 @@
-import { ask, askConfirm, info, printError, title } from './prompt';
+import { ask, askConfirm, info, printError, title, warn } from './prompt';
 import { rootLogger } from './logger';
 import { classifyFailure } from './failure-analysis';
 import Config from './config';
 import type { BugReport, LLMEnrichment, TestResult } from './types';
 import type { ParseResult } from './result_parser';
 import type JiraResource from '../jira_management/jira_resource';
+import type JiraLinkManager from '../jira_management/jira_link_manager';
 
 const ERROR_TRUNCATION_LIMIT = 500;
 const LLM_DESC_TRUNCATION_LIMIT = 1000;
@@ -46,7 +47,12 @@ async function enrichWithLlm(summary: string, description: string): Promise<LLME
 export async function collectManual(): Promise<BugReport> {
     title('Bug Report Manual');
 
-    const summary = await ask('Sumário do bug');
+    let summary = '';
+    for (let attempt = 0; attempt < 3; attempt++) {
+        summary = await ask('Sumário do bug');
+        if (summary.trim()) break;
+        warn('Sumário não pode estar vazio. Tente novamente.');
+    }
     if (!summary.trim()) throw new Error('Sumário obrigatório para criar bug report.');
 
     const description = await ask('Descrição detalhada');
@@ -56,6 +62,10 @@ export async function collectManual(): Promise<BugReport> {
     const environment = await ask('Ambiente (ex: produção, staging)');
     const severityRaw = await ask('Severidade (trivial | minor | major | critical)', { default: 'minor' });
     const component = await ask('Componente (opcional)');
+    const linkedIssuesInput = await ask('Issues relacionadas (KEY-123, KEY-456) — opcional');
+    const linkedIssues = linkedIssuesInput.trim()
+        ? linkedIssuesInput.split(',').map((k) => ({ key: k.trim().toUpperCase(), linkType: 'Relates' }))
+        : undefined;
 
     const severity = (['trivial', 'minor', 'major', 'critical'] as const).includes(
         severityRaw.trim().toLowerCase() as BugReport['severity'],
@@ -85,6 +95,7 @@ export async function collectManual(): Promise<BugReport> {
         environment: environment.trim() || undefined,
         severity,
         component: component.trim() || undefined,
+        linkedIssues,
         llmEnrichment,
     };
 }
@@ -131,6 +142,9 @@ export function compose(report: BugReport): string {
     if (report.actualResult) lines.push(`**Actual Result:** ${report.actualResult}\n`);
     if (report.environment) lines.push(`**Environment:** ${report.environment}\n`);
     if (report.component) lines.push(`**Component:** ${report.component}\n`);
+    if (report.linkedIssues?.length) {
+        lines.push(`**Linked Issues:** ${report.linkedIssues.map((li) => li.key).join(', ')}\n`);
+    }
 
     if (report.llmEnrichment?.rootCause) {
         lines.push(`**AI Analysis:** ${report.llmEnrichment.rootCause}`);
@@ -169,6 +183,7 @@ export async function interactiveBugReportFlow(
     jiraResource: JiraResource,
     projectKey: string,
     preFilled?: BugReport,
+    linkManager?: JiraLinkManager,
 ): Promise<TestResult | null> {
     const report = preFilled || (await collectManual());
 
@@ -185,6 +200,12 @@ export async function interactiveBugReportFlow(
     try {
         const key = await fileToJira(jiraResource, report, projectKey);
         info(`Bug criado: ${key}`);
+
+        if (report.linkedIssues && report.linkedIssues.length > 0 && linkManager) {
+            await linkManager.linkIssues(key, report.linkedIssues);
+            info(`${report.linkedIssues.length} linked issue(s) vinculados`);
+        }
+
         return { status: 'ok', label: key, message: report.summary };
     } catch (err) {
         printError('Falha ao criar bug no Jira', err);

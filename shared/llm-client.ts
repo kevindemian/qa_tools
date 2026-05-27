@@ -87,84 +87,55 @@ function startCacheCleanup(): void {
 
 startCacheCleanup();
 
-function _mainTierConfig(): ProviderConfig {
-    return {
+const TIER_CONFIGS: Record<LlmTier, () => ProviderConfig> = {
+    main: () => ({
         apiKey: Config.llmApiKey,
         model: Config.llmModel,
         baseUrl: Config.llmBaseUrl,
         format: 'openai',
         temperature: LLM_TEMP_MAIN,
-    };
-}
-
-function _fastTierConfig(): ProviderConfig {
-    return {
+    }),
+    fast: () => ({
         apiKey: Config.llmFastApiKey,
         model: Config.llmFastModel,
         baseUrl: Config.llmFastBaseUrl,
         format: 'openai',
         temperature: LLM_TEMP_MAIN,
-    };
-}
-
-function _reviewerTierConfig(): ProviderConfig {
-    return {
+    }),
+    reviewer: () => ({
         apiKey: Config.llmReviewApiKey || Config.llmSmallApiKey,
         model: Config.llmReviewModel || Config.llmSmallModel,
         baseUrl: Config.llmReviewBaseUrl || 'https://generativelanguage.googleapis.com/v1beta',
         format: 'gemini',
         temperature: LLM_TEMP_REVIEWER,
-    };
-}
-
-function _reportTierConfig(): ProviderConfig {
-    return {
+    }),
+    report: () => ({
         apiKey: Config.llmApiKey,
         model: Config.llmModel,
         baseUrl: Config.llmBaseUrl,
         format: 'openai',
         temperature: LLM_TEMP_REPORT,
         responseFormat: 'json',
-    };
-}
-
-function _fallbackTierConfig(): ProviderConfig {
-    return {
+    }),
+    fallback: () => ({
         apiKey: Config.llmFallbackApiKey,
         model: Config.llmFallbackModel,
         baseUrl: Config.llmFallbackBaseUrl,
         format: 'openai',
         temperature: LLM_TEMP_FALLBACK,
-    };
-}
-
-function _batchTierConfig(): ProviderConfig {
-    return {
+    }),
+    batch: () => ({
         apiKey: Config.llmBatchApiKey,
         model: Config.llmBatchModel,
         baseUrl: Config.llmBatchBaseUrl,
         format: 'openai',
         temperature: LLM_TEMP_BATCH,
-    };
-}
+    }),
+};
 
 function tierToConfig(tier: LlmTier): ProviderConfig {
-    switch (tier) {
-        case 'main':
-            return _mainTierConfig();
-        case 'fast':
-            return _fastTierConfig();
-        case 'reviewer':
-            return _reviewerTierConfig();
-        case 'report':
-            return _reportTierConfig();
-        case 'fallback':
-            return _fallbackTierConfig();
-        case 'batch':
-            return _batchTierConfig();
-        default:
-            return _mainTierConfig();
-    }
+    const factory = TIER_CONFIGS[tier];
+    return factory ? factory() : TIER_CONFIGS.main();
 }
 
 function configUniqueKey(cfg: ProviderConfig): string {

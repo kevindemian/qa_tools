@@ -20,7 +20,6 @@ import {
     showSelect,
     tableView,
     CancelError,
-    print,
 } from '../shared/prompt';
 import {
     mask,
@@ -29,7 +28,8 @@ import {
     printSessionSummary as sharedPrintSessionSummary,
 } from '../shared/cli_base';
 import { rootLogger } from '../shared/logger';
-import { load as loadState, update as updateState, getStatePath } from '../shared/state';
+import { openWithOsOrFallback } from '../shared/open';
+import { loadTypedState, load as loadState, update as updateState, getStatePath } from '../shared/state';
 import { SessionContext } from '../shared/session-context';
 import { mdBox } from '../shared/markdown';
 import type { Logger } from '../shared/logger';
@@ -162,6 +162,10 @@ const ALIASES: Record<string, string> = {
     estória: '18',
     história: '18',
     cobertura: '19',
+    bug: '20',
+    'bug-report': '20',
+    bugreport: '20',
+    'criar-bug': '20',
     json: '15',
     'diretório-json': '16',
     d: 'docs',
@@ -199,52 +203,91 @@ interface MenuChoice {
     disabled?: boolean | string;
 }
 
-const MENU_ITEMS: MenuItem[] = [
-    { id: 'search', label: '🔍 Buscar ação...' },
-    { section: 'TESTES' },
-    { id: '1', label: 'Criar testes a partir de CSV' },
-    { id: '15', label: 'Importar testes de JSON' },
-    { section: 'RELEASES' },
-    { id: '2', label: 'Listar versões de release' },
-    { id: '3', label: 'Criar nova versão' },
-    { id: '4', label: 'Atribuir fixVersion às tarefas' },
-    { id: '5', label: 'Atualizar package.json + release notes' },
-    { id: '6', label: 'Verificar status das tarefas' },
-    { id: '7', label: 'Fechar tarefas automaticamente' },
-    { id: '8', label: 'Publicar versão' },
-    { section: 'CONFIGURACAO' },
-    { id: '9', label: 'Alterar projeto Jira' },
-    { id: '10', label: 'Alterar diretório git', configKey: 'gitDir' },
-    { id: '14', label: 'Alterar diretório Cypress', configKey: 'cypressDir' },
-    { id: '16', label: 'Alterar diretório JSON', configKey: 'jsonDir' },
-    { section: 'UTILITARIOS' },
-    { id: '11', label: 'Gerar template CSV' },
-    { id: '12', label: 'Diagnosticar conexão' },
-    { id: '13', label: 'Criar Test Execution para testes existentes' },
-    { section: 'IA' },
-    { id: '17', label: 'Gerar relatório HTML + análise IA' },
-    { id: '18', label: 'Gerar testes com IA' },
-    { id: '19', label: 'Histórico / Cobertura / Comparação IA' },
-    { id: 'd', label: 'Ver documentação' },
+const CATEGORIES: MenuItem[] = [
+    { id: 'reports', label: 'GERAÇÃO DE RELATÓRIOS' },
+    { id: 'tests', label: 'GERAÇÃO DE CASOS DE TESTE' },
+    { id: 'bugreport', label: 'BUG REPORT' },
+    { id: 'analytics', label: 'ANÁLISE E HISTÓRICO' },
+    { id: 'releases', label: 'RELEASES' },
+    { id: 'config', label: 'CONFIGURAÇÃO' },
+    { id: 'utilities', label: 'UTILITÁRIOS' },
     { id: '0', label: 'Voltar ao menu principal' },
 ];
+
+const SUB_MENUS: Record<string, MenuItem[]> = {
+    reports: [
+        { id: '17', label: 'Gerar relatório HTML' },
+        { id: '0', label: 'Voltar' },
+    ],
+    tests: [
+        { id: '1', label: 'Criar testes a partir de CSV' },
+        { id: '13', label: 'Criar Test Execution para testes existentes' },
+        { id: '15', label: 'Importar testes de JSON' },
+        { id: '18', label: 'Gerar testes via User Story (IA)' },
+        { id: '0', label: 'Voltar' },
+    ],
+    bugreport: [
+        { id: '20', label: 'Criar Bug Report' },
+        { id: '0', label: 'Voltar' },
+    ],
+    analytics: [
+        { id: '19', label: 'Histórico / Cobertura' },
+        { id: '0', label: 'Voltar' },
+    ],
+    releases: [
+        { id: '2', label: 'Listar versões de release' },
+        { id: '3', label: 'Criar nova versão' },
+        { id: '4', label: 'Atribuir fixVersion às tarefas' },
+        { id: '5', label: 'Atualizar package.json + release notes' },
+        { id: '6', label: 'Verificar status das tarefas' },
+        { id: '7', label: 'Fechar tarefas automaticamente' },
+        { id: '8', label: 'Publicar versão' },
+        { id: '0', label: 'Voltar' },
+    ],
+    config: [
+        { id: '9', label: 'Alterar projeto Jira' },
+        { id: '10', label: 'Alterar diretório git', configKey: 'gitDir' },
+        { id: '14', label: 'Alterar diretório Cypress', configKey: 'cypressDir' },
+        { id: '16', label: 'Alterar diretório JSON', configKey: 'jsonDir' },
+        { id: '0', label: 'Voltar' },
+    ],
+    utilities: [
+        { id: '11', label: 'Gerar template CSV' },
+        { id: '12', label: 'Diagnosticar conexão' },
+        { id: 'd', label: 'Ver documentação' },
+        { id: '0', label: 'Voltar' },
+    ],
+};
+
+const CATEGORY_IDS = new Set(Object.keys(SUB_MENUS));
+
+const CATEGORY_TITLES: Record<string, string> = {
+    reports: 'GERAÇÃO DE RELATÓRIOS',
+    tests: 'GERAÇÃO DE CASOS DE TESTE',
+    bugreport: 'BUG REPORT',
+    analytics: 'ANÁLISE E HISTÓRICO',
+    releases: 'RELEASES',
+    config: 'CONFIGURAÇÃO',
+    utilities: 'UTILITÁRIOS',
+};
 
 function _configHint(key: string, ctx: { git_directory: string }): string {
     if (key === 'gitDir') return '(atual: ' + ctx.git_directory + ')';
     if (key === 'cypressDir') {
-        const d = Config.cypressProjectPath || (loadState() as StateSchema).lastCypressPath || NOT_CONFIGURED;
+        const d = Config.cypressProjectPath || loadTypedState().lastCypressPath || NOT_CONFIGURED;
         return '(atual: ' + d + ')';
     }
     if (key === 'jsonDir') {
-        const d = (loadState() as StateSchema).lastJsonDir || NOT_CONFIGURED;
+        const d = loadTypedState().lastJsonDir || NOT_CONFIGURED;
         return '(atual: ' + d + ')';
     }
     return '';
 }
 
-function buildMenuChoices(proj: string, ctx: { git_directory: string }): MenuChoice[] {
+function buildMenuChoices(level: string, proj: string, ctx: { git_directory: string }): MenuChoice[] {
+    const items = level === 'main' ? CATEGORIES : SUB_MENUS[level] || CATEGORIES;
     const choices: MenuChoice[] = [];
-    for (const item of MENU_ITEMS) {
+    for (const item of items) {
         if (item.section) {
             choices.push({ type: 'separator' as const, line: '' });
             choices.push({ type: 'separator' as const, line: item.section });
@@ -254,10 +297,8 @@ function buildMenuChoices(proj: string, ctx: { git_directory: string }): MenuCho
             const entry: MenuChoice = { name: '      ' + item.label, value: item.id };
             if (item.configKey === 'gitDir') entry.description = ctx.git_directory;
             else if (item.configKey === 'cypressDir')
-                entry.description =
-                    Config.cypressProjectPath || (loadState() as StateSchema).lastCypressPath || NOT_CONFIGURED;
-            else if (item.configKey === 'jsonDir')
-                entry.description = (loadState() as StateSchema).lastJsonDir || NOT_CONFIGURED;
+                entry.description = Config.cypressProjectPath || loadTypedState().lastCypressPath || NOT_CONFIGURED;
+            else if (item.configKey === 'jsonDir') entry.description = loadTypedState().lastJsonDir || NOT_CONFIGURED;
             else if (item.id === '9') entry.description = proj;
             choices.push(entry);
         }
@@ -265,7 +306,7 @@ function buildMenuChoices(proj: string, ctx: { git_directory: string }): MenuCho
     return choices;
 }
 
-async function handleSpecialInput(input: string): Promise<boolean | '__exit__'> {
+async function handleSpecialInput(input: string, level: string = 'main'): Promise<boolean | '__exit__' | '__back__'> {
     const cmd = input.trim().toLowerCase();
     if (cmd.startsWith('/help') || cmd === '/h' || cmd.startsWith('/h ')) {
         showHelpLoop();
@@ -276,6 +317,7 @@ async function handleSpecialInput(input: string): Promise<boolean | '__exit__'> 
         return true;
     }
     if (cmd === '/back' || cmd === '/menu') {
+        if (level !== 'main') return '__back__';
         return '__exit__';
     }
     if (cmd === '/docs' || cmd === '/d') {
@@ -283,7 +325,7 @@ async function handleSpecialInput(input: string): Promise<boolean | '__exit__'> 
         return true;
     }
     if (cmd === '/history') {
-        const hist = (loadState() as StateSchema).history || [];
+        const hist = loadTypedState().history || [];
         title('Histórico de operações');
         const last10 = hist.slice(-10);
         if (last10.length === 0) {
@@ -304,7 +346,13 @@ function showHelpLoop(): void {
         defaultOutput.box([], { border: 'double', padding: 1, title: 'QA Tools · Ajuda', width: 80 });
         showHelp();
 
-        const input = prompt('Digite /help <topico>, /help search <termo>, ou /back para voltar');
+        let input: string;
+        try {
+            input = prompt('Digite /help <topico>, /help search <termo>, ou /back para voltar');
+        } catch (e) {
+            if (e instanceof CancelError) return;
+            throw e;
+        }
         const trimmed = input.trim();
         if (!trimmed) continue;
         const lower = trimmed.toLowerCase();
@@ -318,7 +366,11 @@ function showHelpLoop(): void {
             const topic = trimmed.slice(lower.startsWith('/help ') ? 6 : 3).trim();
             showHelp(topic);
             divider();
-            prompt('Pressione Enter para continuar');
+            try {
+                prompt('Pressione Enter para continuar');
+            } catch {
+                /* ignore */
+            }
             continue;
         }
         // Try as topic name or search
@@ -326,7 +378,11 @@ function showHelpLoop(): void {
         if (found.length === 1) {
             showHelp(found[0]![0]);
             divider();
-            prompt('Pressione Enter para continuar');
+            try {
+                prompt('Pressione Enter para continuar');
+            } catch {
+                /* ignore */
+            }
             continue;
         }
         if (found.length > 1) {
@@ -390,11 +446,14 @@ async function showDocs(): Promise<void> {
         if (!chosen) continue;
 
         const filePath = path.join(docsDir, chosen.file);
-        try {
-            const content = fs.readFileSync(filePath, 'utf8');
-            defaultOutput.print(mdBox(content, { title: chosen.label, border: 'round' }));
-        } catch (e: unknown) {
-            printError('Erro ao ler ' + chosen.file, e);
+        const opened = await openWithOsOrFallback(filePath);
+        if (!opened) {
+            try {
+                const content = fs.readFileSync(filePath, 'utf8');
+                defaultOutput.print(mdBox(content, { title: chosen.label, border: 'round' }));
+            } catch (e: unknown) {
+                printError('Erro ao ler ' + chosen.file, e);
+            }
         }
         divider();
         const input = prompt('Pressione Enter [ou q] para voltar à lista');
@@ -411,13 +470,13 @@ function initializeSession() {
     const ctx = new SessionContext();
     ctx.createPackageManager = (dir: string) => new PackageVersionManager(dir);
 
-    const state = loadState() as StateSchema;
+    const state = loadTypedState();
     ctx.project_name = (
         Config.jiraProject || prompt('Nome do projeto Jira', { default: state.lastProject || default_project })
     ).toUpperCase();
 
     function printSessionSummary(): void {
-        const history = (loadState() as StateSchema).history || [];
+        const history = loadTypedState().history || [];
         sharedPrintSessionSummary(ctx.sessionCounters, ctx.lastOperation, history);
     }
 
@@ -443,12 +502,12 @@ function initializeSession() {
     };
 }
 
-async function getUserChoice(proj: string, ctx: SessionContext): Promise<string> {
+async function getUserChoice(level: string, proj: string, ctx: SessionContext): Promise<string> {
     if (Config.autoChoice) {
         return Config.autoChoice;
     }
 
-    const choices = buildMenuChoices(proj, ctx);
+    const choices = buildMenuChoices(level, proj, ctx);
     const cmdGroup = [
         { type: 'separator' as const, line: '        ' },
         { name: '      /help   Ajuda', value: '/help' },
@@ -456,13 +515,6 @@ async function getUserChoice(proj: string, ctx: SessionContext): Promise<string>
         { name: '      /history  Histórico', value: '/history' },
     ];
     choices.splice(choices.length - 1, 0, ...cmdGroup);
-    const menuState = loadState() as StateSchema;
-
-    print('');
-    print(palette.muted('  ─────────────────────────────────────────'));
-    print('  QA TOOLS');
-    print(palette.muted('  ─────────────────────────────────────────'));
-    print('');
 
     const ok = ctx.sessionCounters.filter((c) => c.status === 'ok').length;
     const err = ctx.sessionCounters.filter((c) => c.status === 'error').length;
@@ -472,21 +524,27 @@ async function getUserChoice(proj: string, ctx: SessionContext): Promise<string>
             `   ${palette.muted(ctx.sessionCounters.length + ' operações')}  ·  ${palette.green('' + ok + ' ✓')}${err > 0 ? '  ' + palette.red('' + err + ' ✗') : ''}`,
         );
     }
-    if (headerLines.length > 0) {
-        defaultOutput.box(headerLines, { border: 'double', padding: 1, title: 'QA Tools · ' + proj, width: 80 });
-    }
 
-    return showSelect('      Selecione uma opção', choices, {
-        default: menuState.lastChoice && menuState.lastChoice !== '0' ? menuState.lastChoice : undefined,
+    const pathLine = level === 'main' ? `   ${proj}` : `   ${proj} > ${CATEGORY_TITLES[level] || level}`;
+    const maxPathLen = 74;
+    const displayPath = pathLine.length > maxPathLen ? pathLine.slice(0, maxPathLen - 1) + '…' : pathLine;
+    const boxLines = headerLines.length > 0 ? [displayPath, '', ...headerLines] : [displayPath];
+    defaultOutput.box(boxLines, { border: 'double', padding: 1, title: 'QA Tools', width: 80 });
+
+    const selectLabel =
+        level === 'main'
+            ? '      Selecione uma seção'
+            : `      ${CATEGORY_TITLES[level] || level} — Selecione uma opção`;
+
+    return showSelect(selectLabel, choices, {
         pageSize: (process.stdout.rows || 24) - 4,
+        menuMode: true,
     });
 }
 
 type DispatchResult = 'exit' | 'continue';
 
 async function dispatchChoice(choice: string, cmdCtx: CommandContext): Promise<DispatchResult> {
-    if (choice === '0') return 'exit';
-
     if (choice === 'd' || choice === 'docs') {
         await showDocs();
         return 'continue';
@@ -499,7 +557,8 @@ async function dispatchChoice(choice: string, cmdCtx: CommandContext): Promise<D
             if (shouldContinue) return 'continue';
         } catch (e) {
             if (e instanceof CancelError) return 'continue';
-            throw e;
+            printError('Erro no handler', e);
+            return 'continue';
         }
         return 'continue';
     }
@@ -508,10 +567,10 @@ async function dispatchChoice(choice: string, cmdCtx: CommandContext): Promise<D
     return 'continue';
 }
 
-async function getAndResolveChoice(ctx: SessionContext): Promise<string | null> {
+async function getAndResolveChoice(level: string, ctx: SessionContext): Promise<string | null> {
     let choice;
     try {
-        choice = await getUserChoice(ctx.project_name, ctx);
+        choice = await getUserChoice(level, ctx.project_name, ctx);
     } catch (e) {
         if (e instanceof CancelError) choice = '/menu';
         else throw e;
@@ -523,40 +582,32 @@ async function getAndResolveChoice(ctx: SessionContext): Promise<string | null> 
 
     const resolved = resolveAlias(choice);
     if (resolved !== choice) {
+        if (resolved === 'd' || resolved === 'docs' || getHandler(resolved)) {
+            return resolved;
+        }
         choice = resolved;
     }
 
-    if (choice === 'search') {
-        const term = prompt('Digite o termo de busca');
-        if (term) {
-            const items = MENU_ITEMS.filter(
-                (item) =>
-                    item.id &&
-                    item.id !== 'search' &&
-                    item.label &&
-                    item.label.toLowerCase().includes(term.toLowerCase()),
-            );
-            if (items.length > 0) {
-                const subChoices = items.map((item) => ({
-                    name: '      ' + item.label,
-                    value: item.id,
-                }));
-                const subChoice = await showSelect('Resultados para "' + term + '"', subChoices);
-                if (subChoice && subChoice !== '0') {
-                    return subChoice;
-                }
-            } else {
-                warn('Nenhuma opção encontrada para "' + term + '".');
-            }
-        }
-        return '__skip__';
+    if (CATEGORY_IDS.has(choice)) {
+        return choice;
     }
 
-    const specialResult = await handleSpecialInput(choice);
+    const specialResult = await handleSpecialInput(choice, level);
     if (specialResult === '__exit__') return '__exit__';
+    if (specialResult === '__back__') return '__back__';
     if (specialResult === true) return '__skip__';
 
-    return choice;
+    if (choice === '0') {
+        if (level === 'main') return '__exit__';
+        return '__back__';
+    }
+
+    if (getHandler(choice) || choice === 'd' || choice === 'docs') {
+        return choice;
+    }
+
+    warn('Opção inválida. Escolha entre as opções disponíveis ou digite /help.');
+    return '__skip__';
 }
 
 function buildCommandContext(
@@ -587,14 +638,8 @@ async function dispatchAndHandleResult(
     choice: string,
     cmdCtx: CommandContext,
     ctx: SessionContext,
-): Promise<'exit' | 'continue'> {
-    const action = await dispatchChoice(choice, cmdCtx);
-    if (action === 'exit') {
-        title('Até logo!');
-        cmdCtx.printSessionSummary();
-        if (ctx.sessionCounters.some((c) => c.status === 'error')) process.exitCode = 1;
-        return 'exit';
-    }
+): Promise<'continue'> {
+    await dispatchChoice(choice, cmdCtx);
 
     const longOps = ['1', '15', '4', '5', '7', '8'];
     const hasResults = ctx.results.length > 0 && ctx.results.some((r) => r.status === 'error');
@@ -615,12 +660,29 @@ async function runMainLoop(
     pushHistory: (op: string, detail: string, status: string) => void,
     printSessionSummary: () => void,
 ): Promise<void> {
+    let currentLevel = 'main';
     while (true) {
-        print(palette.muted('  ───'));
-        const choice = await getAndResolveChoice(ctx);
-        if (choice === '__exit__') return;
+        if (process.stdout.isTTY) {
+            process.stdout.write('\x1b[2J\x1b[H');
+        }
+        const choice = await getAndResolveChoice(currentLevel, ctx);
+        if (choice === '__exit__') {
+            title('Até logo!');
+            printSessionSummary();
+            if (ctx.sessionCounters.some((c) => c.status === 'error')) process.exitCode = 1;
+            return;
+        }
+        if (choice === '__back__') {
+            currentLevel = 'main';
+            continue;
+        }
         if (choice === '__skip__') continue;
         if (!choice) continue;
+
+        if (CATEGORY_IDS.has(choice)) {
+            currentLevel = choice;
+            continue;
+        }
 
         updateState((s) => {
             (s as StateSchema).lastChoice = choice;
@@ -637,8 +699,7 @@ async function runMainLoop(
             printSessionSummary,
         );
 
-        const result = await dispatchAndHandleResult(choice, cmdCtx, ctx);
-        if (result === 'exit') return;
+        await dispatchAndHandleResult(choice, cmdCtx, ctx);
     }
 }
 

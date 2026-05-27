@@ -21,4 +21,5 @@ jobs:
             - run: npm ci
             - run: npx tsc --noEmit
             - run: npx eslint . --ext .ts
+            - run: npm run unused-exports || true
             - run: npx jest --coverage --forceExit --detectOpenHandles --runInBand

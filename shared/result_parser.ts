@@ -224,7 +224,7 @@ export function parseCtrfResults(jsonData: CtrfData): ParseResult {
         title: t.name || '',
         state: t.status === 'passed' ? 'passed' : t.status === 'failed' ? 'failed' : 'skipped',
         duration: t.duration || 0,
-        error: t.message || undefined,
+        error: t.message,
         fullTitle: t.suite ? t.suite + ' > ' + (t.name || '') : undefined,
     }));
 
