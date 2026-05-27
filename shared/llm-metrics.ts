@@ -4,6 +4,7 @@ import os from 'os';
 import Config from './config';
 import { rootLogger } from './logger';
 import type { LlmTier } from './llm-client';
+import { getLlmClientMetrics, resetLlmClientMetrics } from './llm-client';
 
 export interface LlmMetricsSnapshot {
     timestamp: string;
@@ -16,6 +17,11 @@ export interface LlmMetricsSnapshot {
     rejectionReasons: Record<string, number>;
     artifactApproved: number;
     artifactRejected: number;
+    cacheHits: number;
+    cacheMisses: number;
+    totalPromptTokens: number;
+    totalCompletionTokens: number;
+    requestsByProvider: Record<string, number>;
 }
 
 interface StoredMetrics {
@@ -93,6 +99,7 @@ export function recordArtifactReview(approved: boolean): void {
 }
 
 export function snapshotLlmMetrics(): LlmMetricsSnapshot {
+    const cm = getLlmClientMetrics();
     const snapshot: LlmMetricsSnapshot = {
         timestamp: new Date().toISOString(),
         totalRequests: _totalRequests,
@@ -104,6 +111,11 @@ export function snapshotLlmMetrics(): LlmMetricsSnapshot {
         rejectionReasons: { ..._rejectionReasons },
         artifactApproved: _artifactApproved,
         artifactRejected: _artifactRejected,
+        cacheHits: cm.cacheHits,
+        cacheMisses: cm.cacheMisses,
+        totalPromptTokens: cm.totalPromptTokens,
+        totalCompletionTokens: cm.totalCompletionTokens,
+        requestsByProvider: { ...cm.requestsByProviderKey },
     };
 
     const store = loadStore();
@@ -129,4 +141,5 @@ export function clearLlmMetrics(): void {
     _artifactRejected = 0;
     for (const key of Object.keys(_failuresByTier)) delete _failuresByTier[key as LlmTier];
     for (const key of Object.keys(_rejectionReasons)) delete _rejectionReasons[key];
+    resetLlmClientMetrics();
 }

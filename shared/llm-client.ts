@@ -72,6 +72,50 @@ const _rateTimestamps = new Map<LlmTier, number[]>();
 const _circuitState = new Map<string, { failures: number; breakUntil: number }>();
 let _cleanupTimer: ReturnType<typeof setInterval> | null = null;
 
+interface LlmClientMetrics {
+    cacheHits: number;
+    cacheMisses: number;
+    totalPromptTokens: number;
+    totalCompletionTokens: number;
+    requestsByProviderKey: Record<string, number>;
+}
+
+const _llmMetrics: LlmClientMetrics = {
+    cacheHits: 0,
+    cacheMisses: 0,
+    totalPromptTokens: 0,
+    totalCompletionTokens: 0,
+    requestsByProviderKey: {},
+};
+
+function _trackUsage(raw: string, providerKey: string): void {
+    _llmMetrics.requestsByProviderKey[providerKey] = (_llmMetrics.requestsByProviderKey[providerKey] || 0) + 1;
+    try {
+        const data = JSON.parse(raw);
+        if (data.usage) {
+            _llmMetrics.totalPromptTokens += data.usage.prompt_tokens || 0;
+            _llmMetrics.totalCompletionTokens += data.usage.completion_tokens || 0;
+        } else if (data.usageMetadata) {
+            _llmMetrics.totalPromptTokens += data.usageMetadata.promptTokenCount || 0;
+            _llmMetrics.totalCompletionTokens += data.usageMetadata.candidatesTokenCount || 0;
+        }
+    } catch {
+        /* non-JSON response, skip token tracking */
+    }
+}
+
+export function getLlmClientMetrics(): LlmClientMetrics {
+    return _llmMetrics;
+}
+
+export function resetLlmClientMetrics(): void {
+    _llmMetrics.cacheHits = 0;
+    _llmMetrics.cacheMisses = 0;
+    _llmMetrics.totalPromptTokens = 0;
+    _llmMetrics.totalCompletionTokens = 0;
+    _llmMetrics.requestsByProviderKey = {};
+}
+
 function startCacheCleanup(): void {
     if (_cleanupTimer !== null) return;
     _cleanupTimer = setInterval(() => {
@@ -325,6 +369,7 @@ async function sendToProvider(cfg: ProviderConfig, system: string, user: string)
             body: payload,
         });
         const raw = await resp.text();
+        _trackUsage(raw, configUniqueKey(cfg));
         return parseGeminiResponse(raw);
     }
 
@@ -339,10 +384,16 @@ async function sendToProvider(cfg: ProviderConfig, system: string, user: string)
         body: payload,
     });
     const raw = await resp.text();
+    _trackUsage(raw, configUniqueKey(cfg));
     return parseOpenAiResponse(raw);
 }
 
-async function sendWithFallback(tier: LlmTier, system: string, user: string): Promise<string> {
+async function sendWithFallback(
+    tier: LlmTier,
+    system: string,
+    user: string,
+    responseFormat?: ResponseFormat,
+): Promise<string> {
     checkRateLimit(tier);
     const primary = tierToConfig(tier);
     const errors: string[] = [];
@@ -364,6 +415,10 @@ async function sendWithFallback(tier: LlmTier, system: string, user: string): Pr
             candidates.push(cfg);
             seenKeys.add(key);
         }
+    }
+
+    if (responseFormat) {
+        for (const cfg of candidates) cfg.responseFormat = responseFormat;
     }
 
     for (let i = 0; i < candidates.length; i++) {
@@ -393,23 +448,33 @@ async function sendWithFallback(tier: LlmTier, system: string, user: string): Pr
  * (e.g. main → fallback → batch).  The result is cached for 5 minutes
  * before being returned.
  *
- * @param tier     - Which model/provider tier to route through.
- * @param system   - System-level instruction (role: system in OpenAI
- *                   format, prepended in Gemini format).
- * @param user     - User message content (role: user).
- * @param callerId - Optional identifier mixed into the cache key to
- *                   prevent collisions between unrelated callers.
+ * @param tier           - Which model/provider tier to route through.
+ * @param system         - System-level instruction (role: system in OpenAI
+ *                         format, prepended in Gemini format).
+ * @param user           - User message content (role: user).
+ * @param callerId       - Optional identifier mixed into the cache key to
+ *                         prevent collisions between unrelated callers.
+ * @param responseFormat - Override response format for this call (tier default
+ *                         otherwise).
  * @returns The LLM response text.
  * @throws When every provider in the tier's fallback chain has failed.
  */
-export async function llmPrompt(tier: LlmTier, system: string, user: string, callerId?: string): Promise<string> {
+export async function llmPrompt(
+    tier: LlmTier,
+    system: string,
+    user: string,
+    callerId?: string,
+    responseFormat?: ResponseFormat,
+): Promise<string> {
     const cKey = cacheKey(tier, system, user, callerId);
     const cached = cache.get(cKey);
     if (cached && cached.expiresAt > Date.now()) {
+        _llmMetrics.cacheHits++;
         rootLogger.info('LLM cache hit for tier=' + tier + (callerId ? ' callerId=' + callerId : ''));
         return cached.response;
     }
 
+    _llmMetrics.cacheMisses++;
     rootLogger.info(
         'LLM request tier=' +
             tier +
@@ -419,7 +484,7 @@ export async function llmPrompt(tier: LlmTier, system: string, user: string, cal
             user.length +
             (callerId ? ' callerId=' + callerId : ''),
     );
-    const response = await sendWithFallback(tier, system, user);
+    const response = await sendWithFallback(tier, system, user, responseFormat);
 
     cache.set(cKey, { response, expiresAt: Date.now() + CACHE_TTL_MS });
     return response;

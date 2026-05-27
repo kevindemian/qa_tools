@@ -13,6 +13,15 @@ jest.mock('../../shared/prompt', () => ({
 
 jest.mock('../../shared/llm-client', () => ({
     llmPrompt: jest.fn(),
+    getLlmClientMetrics: jest.fn(() => ({
+        cacheHits: 0,
+        cacheMisses: 0,
+        totalPromptTokens: 0,
+        totalCompletionTokens: 0,
+        requestsByProviderKey: {},
+    })),
+    resetLlmClientMetrics: jest.fn(),
+    parseRetryAfter: jest.fn(() => 2000),
 }));
 
 jest.mock('../../shared/logger', () => ({
