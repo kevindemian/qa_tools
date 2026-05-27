@@ -483,7 +483,8 @@ function escapeHtml(s: string): string {
         .replace(/'/g, '&#039;');
 }
 
-function renderInlineToHtml(tokens: unknown[] | undefined): string {
+// eslint-disable-next-line @typescript-eslint/no-explicit-any -- token AST shape varies by lexer output
+function renderInlineToHtml(tokens: any[] | undefined): string {
     if (!tokens) return '';
     let out = '';
     for (const t of tokens) {
