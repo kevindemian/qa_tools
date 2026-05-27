@@ -148,4 +148,78 @@ describe('validateAll', () => {
         const result = validator.validateAll(data);
         expect(result.valid).toBe(false);
     });
+
+    it('early-returns base result for single-element array', () => {
+        const data = { tests: [{ title: 'Alpha', classification: 'A' }] };
+        const result = validator.validateAll(data);
+        expect(result.valid).toBe(true);
+        expect(result.errors).toHaveLength(0);
+    });
+
+    it('early-returns base result when schema has no array rules', () => {
+        const noArrayRules = new ReportValidator([{ field: 'title', required: true, type: 'string' }]);
+        const data = { title: 'test', tests: [{ x: 1 }, { x: 2 }] };
+        const result = noArrayRules.validateAll(data);
+        expect(result.valid).toBe(true);
+    });
+});
+
+describe('checkConsistency', () => {
+    let validator: ReportValidator;
+
+    beforeEach(() => {
+        const schema: ValidationRule[] = [
+            { field: 'tests', required: true, type: 'array', minLength: 1 },
+            { field: 'tests[0].title', required: true, type: 'string' },
+            { field: 'tests[0].severity', required: true, type: 'string', pattern: /^(high|medium|low)$/ },
+            { field: 'tests[0].recommendation', required: false, type: 'string', minLength: 10 },
+        ];
+        validator = new ReportValidator(schema);
+    });
+
+    it('warns when high severity has short recommendation', () => {
+        const data = {
+            tests: [{ title: 'Test', severity: 'high', recommendation: 'Fix' }],
+        };
+        const result = validator.validate(data);
+        expect(result.valid).toBe(true);
+        expect(result.warnings.some((w) => w.includes('severity=high'))).toBe(true);
+    });
+
+    it('does not warn when high severity has long recommendation', () => {
+        const data = {
+            tests: [
+                {
+                    title: 'Test',
+                    severity: 'high',
+                    recommendation: 'Fix the login logic by adding proper validation checks',
+                },
+            ],
+        };
+        const result = validator.validate(data);
+        expect(result.valid).toBe(true);
+        expect(result.warnings.filter((w) => w.includes('severity=high'))).toHaveLength(0);
+    });
+});
+
+describe('resolveField — deep nesting', () => {
+    let validator: ReportValidator;
+
+    beforeEach(() => {
+        const schema: ValidationRule[] = [{ field: 'metadata.tests[0].title', required: true, type: 'string' }];
+        validator = new ReportValidator(schema);
+    });
+
+    it('resolves 3-level path with array index', () => {
+        const data = { metadata: { tests: [{ title: 'Deep test' }] } };
+        const result = validator.validate(data);
+        expect(result.valid).toBe(true);
+    });
+
+    it('reports missing deeply nested field', () => {
+        const data = { metadata: { tests: [{}] } };
+        const result = validator.validate(data);
+        expect(result.valid).toBe(false);
+        expect(result.errors.some((e) => e.includes('metadata.tests[0].title'))).toBe(true);
+    });
 });

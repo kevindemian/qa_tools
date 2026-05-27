@@ -290,7 +290,7 @@ describe('llmPrompt', () => {
 
             await llmPrompt('main', 'system', 'test1');
             await llmPrompt('main', 'system', 'test2');
-            await expect(llmPrompt('main', 'system', 'test3')).rejects.toThrow('Rate limit exceeded');
+            await expect(llmPrompt('main', 'system', 'test3')).rejects.toThrow('Client-side rate limit exceeded');
         });
 
         it('recovers after rate limit window passes', async () => {
