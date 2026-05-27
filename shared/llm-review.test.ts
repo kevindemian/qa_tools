@@ -95,6 +95,33 @@ describe('reviewWithLlm', () => {
         expect(result.content).toBe('fallback content');
         expect(result.reviewed).toBe(false);
         expect(result.fallbackUsed).toBe(true);
+        // 1 primary + 3 retries + 1 fallback = 5
+        expect(mockLlmPrompt).toHaveBeenCalledTimes(5);
+    });
+
+    it('buildRetryPrompt includes validation errors and invalid response', async () => {
+        const invalidJson = JSON.stringify({ tests: [{ title: 'Bad' }] });
+        mockLlmPrompt
+            .mockResolvedValueOnce(invalidJson)
+            .mockResolvedValueOnce(
+                JSON.stringify({
+                    tests: [
+                        {
+                            title: 'Fixed',
+                            classification: 'ASSERTION',
+                            severity: 'high',
+                            recommendation: 'Long enough recommendation text',
+                        },
+                    ],
+                }),
+            )
+            .mockResolvedValueOnce('AGREE - Good.');
+
+        await reviewWithLlm('system prompt text', 'user data');
+        // Second call is the retry — the system arg (index 1) contains buildRetryPrompt output
+        const retrySystemArg = mockLlmPrompt.mock.calls[1]![1];
+        expect(retrySystemArg).toContain('validation');
+        expect(retrySystemArg).toContain(invalidJson);
     });
 
     it('returns fallback when report is non-JSON and main fails', async () => {
@@ -104,5 +131,21 @@ describe('reviewWithLlm', () => {
         expect(result.confidence).toBe('medium');
         expect(result.fallbackUsed).toBe(true);
         expect(result.reviewed).toBe(false);
+    });
+
+    it('exhausts MAX_RETRIES=3 before falling back', async () => {
+        const invalidJson = JSON.stringify({ tests: [{ title: 'Bad' }] });
+        mockLlmPrompt
+            .mockResolvedValueOnce(invalidJson)
+            .mockResolvedValueOnce(invalidJson)
+            .mockResolvedValueOnce(invalidJson)
+            .mockResolvedValueOnce(invalidJson)
+            .mockResolvedValueOnce('fallback after retries');
+
+        const result = await reviewWithLlm('system prompt', 'user prompt');
+
+        expect(result.fallbackUsed).toBe(true);
+        // 1 primary attempt + 3 retries (MAX_RETRIES=3) + 1 fallback = 5
+        expect(mockLlmPrompt).toHaveBeenCalledTimes(5);
     });
 });

@@ -799,13 +799,85 @@ Também marcar o AUDIO-01 (M1, M2, M3 do bloco antigo) como resolvidos:
 | 23.10 | HTML report output verificado | P2 | failure-analysis.test.ts | 23 | ⬜ |
 | 23.11 | snapshotLlmMetrics round-trip persist | P2 | llm-metrics.test.ts | 23 | ⬜ |
 | 23.12 | recordArtifactReview approved/rejected | P2 | llm-metrics.test.ts | 23 | ⬜ |
-| 23.13 | case18 retry + success path | P2 | case18.test.ts | 23 | ⬜ |
+| 23.13 | case18 retry + success path | P2 | case18.test.ts | 23 | ✅ |
 | 23.14 | case18 retry + still invalid → printError | P2 | case18.test.ts | 23 | ⬜ |
 | 23.15 | compareRuns empty data | P2 | run-comparison.test.ts | 23 | ⬜ |
 | 23.16 | compareRuns sanitization verified | P2 | run-comparison.test.ts | 23 | ⬜ |
-| 23.17 | E2E validateAll 3-element array | P2 | llm-pipeline.test.ts | 23 | ⬜ |
-| 23.18 | E2E circuit breaker + fallback | P2 | llm-pipeline.test.ts | 23 | ⬜ |
-| 23.19 | truncateStacktrace test | P3 | sanitize.test.ts | 23 | ⬜ |
+| 23.17 | E2E validateAll 3-element array | P2 | llm-pipeline.test.ts | 23 | ✅ |
+| 23.18 | E2E circuit breaker + fallback | P2 | llm-pipeline.test.ts | 23 | ✅ |
+| 23.19 | truncateStacktrace test | P3 | sanitize.test.ts | 23 | ✅ |
 | 24.1 | Reusar ReportValidator em benchmark | P3 | llm-benchmark.ts | 24 | ✅ |
 | 24.2 | Remover dead schema field | P3 | fixtures/index.ts + JSONs | 24 | ✅ |
 | 25.1 | Re-audit llm-engineer (score >9.0) | P0 | — | 25 | ⬜ |
+
+---
+
+### Lote 26 — Circuit Breaker Module + Half-Open State
+
+**Data:** 2026-05-27
+**Alvo:** Gap 1 da auditoria (7.9→9.2)
+**Esforço:** 2h
+
+| ID | Item | Prio | Status |
+|----|------|------|--------|
+| 26.1 | Extrair circuit breaker → `shared/circuit-breaker.ts` (check,record,state,consts) | P0 | ⬜ |
+| 26.2 | Half-open state: após cooldown → HALF_OPEN (não CLOSED) | P0 | ⬜ |
+| 26.3 | HALF_OPEN: 1 probe request a cada 15s | P0 | ⬜ |
+| 26.4 | Sucesso na probe → CLOSED; falha → OPEN | P0 | ⬜ |
+| 26.5 | Exportar CircuitState, resetCircuitState, getCircuitState, HALF_OPEN_PROBE_INTERVAL_MS | P1 | ⬜ |
+| 26.6 | Adaptar llm-client.ts para importar do novo módulo | P1 | ⬜ |
+| 26.7 | Atualizar llm-client.test.ts (imports) | P1 | ⬜ |
+| 26.8 | Atualizar llm-pipeline.test.ts | P1 | ⬜ |
+
+### Lote 27 — Output Sanitization
+
+**Data:** 2026-05-27 | **Esforço:** 1h
+
+| ID | Item | Prio | Status |
+|----|------|------|--------|
+| 27.1 | `sanitizeHtml(text): string` em sanitize.ts (escape HTML) | P1 | ⬜ |
+| 27.2 | `sanitizeTerminal(text): string` (remove ANSI escapes perigosos) | P1 | ⬜ |
+| 27.3 | Aplicar sanitizeTerminal em case18.ts:71 | P1 | ⬜ |
+| 27.4 | Aplicar sanitizeTerminal em llm-review.ts | P1 | ⬜ |
+| 27.5 | Aplicar sanitizeHtml no HTML report generator | P1 | ⬜ |
+| 27.6 | Testes dos 3 pontos de sanitização | P2 | ⬜ |
+
+### Lote 28 — Persistent Disk Cache (L2)
+
+**Data:** 2026-05-27 | **Esforço:** 1.5h
+
+| ID | Item | Prio | Status |
+|----|------|------|--------|
+| 28.1 | `diskCacheGet(key)` + `diskCacheSet(key, entry)` | P2 | ⬜ |
+| 28.2 | Env `LLM_DISK_CACHE_DIR` (default: $QA_TOOLS_LOGS_DIR/llm-cache) | P2 | ⬜ |
+| 28.3 | Lookup: L1(Map) → L2(disco) → LLM API | P2 | ⬜ |
+| 28.4 | Write: L1 + L2 simultâneo | P2 | ⬜ |
+| 28.5 | TTL: 1h disco, 5min memória | P2 | ⬜ |
+| 28.6 | Load lazy no primeiro acesso | P2 | ⬜ |
+| 28.7 | Testes com temp dir | P2 | ⬜ |
+
+### Lote 29 — Typed LLM Errors + Schema Enforcement
+
+**Data:** 2026-05-27 | **Esforço:** 1.5h
+
+| ID | Item | Prio | Status |
+|----|------|------|--------|
+| 29.1 | `shared/errors.ts` com LlmError, LlmRateLimitError, LlmProviderError, LlmTimeoutError, LlmAuthError | P1 | ⬜ |
+| 29.2 | Substituir throw new Error nos 7 sites de llm-client.ts | P1 | ⬜ |
+| 29.3 | ReportValidator.validate() dentro de llmPrompt p/ responseFormat=json | P2 | ⬜ |
+| 29.4 | 1 retry com hint de schema se validação falhar | P2 | ⬜ |
+| 29.5 | Testes dos erros tipados | P2 | ⬜ |
+| 29.6 | Testes da validação automática | P2 | ⬜ |
+
+### Lote 30 — Minor Fixes
+
+**Data:** 2026-05-27 | **Esforço:** 1h
+
+| ID | Item | Prio | Status |
+|----|------|------|--------|
+| 30.1 | `candidates[i]!` → guard `if (!cfg) continue` | P2 | ⬜ |
+| 30.2 | `Config.get()` typed + respeitar ConfigOverrides | P2 | ⬜ |
+| 30.3 | `console.log` → `Output.print` no benchmark (8 sites) | P2 | ⬜ |
+| 30.4 | `ensureDotenv` hack → carregar dotenv no startup | P2 | ⬜ |
+| 30.5 | `parseRawOnce` typed return | P3 | ⬜ |
+| 30.6 | Testes de regressão para cada fix | P2 | ⬜ |

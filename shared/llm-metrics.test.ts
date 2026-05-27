@@ -43,6 +43,29 @@ describe('LlmMetrics', () => {
         expect(history).toHaveLength(1);
     });
 
+    it('23.11: snapshotLlmMetrics round-trip persist', () => {
+        const { recordLlmRequest, snapshotLlmMetrics } = loadMod();
+        recordLlmRequest('main', 100);
+        snapshotLlmMetrics(); // Should persist to disk
+
+        // Reset and load again from the same tmp dir
+        const { snapshotLlmMetrics: snapshotLlmMetrics2 } = loadMod();
+        const snap = snapshotLlmMetrics2();
+
+        expect(snap.totalRequests).toBe(1);
+    });
+
+    it('23.12: recordArtifactReview approved/rejected', () => {
+        const { recordArtifactReview, snapshotLlmMetrics } = loadMod();
+        recordArtifactReview(true); // approved
+        recordArtifactReview(false); // rejected
+        recordArtifactReview(true); // approved
+
+        const snap = snapshotLlmMetrics();
+        expect(snap.artifactApprovedCount).toBe(2);
+        expect(snap.artifactRejectedCount).toBe(1);
+    });
+
     it('records validation rejections', () => {
         const { recordValidationRejection, snapshotLlmMetrics } = loadMod();
 
@@ -98,5 +121,29 @@ describe('LlmMetrics', () => {
 
         const snap = snapshotLlmMetrics();
         expect(snap.totalRequests).toBe(0);
+    });
+
+    it('persists snapshot and retrieves via history', () => {
+        const { recordLlmRequest, snapshotLlmMetrics, getLlmMetricsHistory } = loadMod();
+
+        recordLlmRequest('main', 500);
+        snapshotLlmMetrics();
+
+        const history = getLlmMetricsHistory();
+        expect(history).toHaveLength(1);
+        expect(history[0]!.totalRequests).toBe(1);
+        expect(history[0]!.avgLatencyMs).toBe(500);
+    });
+
+    it('records artifact review counters', () => {
+        const { recordArtifactReview, snapshotLlmMetrics } = loadMod();
+
+        recordArtifactReview(true);
+        recordArtifactReview(true);
+        recordArtifactReview(false);
+
+        const snap = snapshotLlmMetrics();
+        expect(snap.artifactApproved).toBe(2);
+        expect(snap.artifactRejected).toBe(1);
     });
 });

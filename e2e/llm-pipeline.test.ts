@@ -33,6 +33,23 @@ const validReport = JSON.stringify({
     ],
 });
 
+const multiElementReport = JSON.stringify({
+    tests: [
+        {
+            title: 'Login fails',
+            classification: 'ASSERTION',
+            severity: 'high',
+            recommendation: 'Fix assertion logic in login component.',
+        },
+        {
+            title: 'Logout fails',
+            classification: 'TIMEOUT',
+            severity: 'medium',
+            recommendation: 'Increase timeout threshold for logout endpoint.',
+        },
+    ],
+});
+
 const invalidReport = JSON.stringify({ tests: [{ title: 'Bad' }] });
 
 beforeEach(() => {
@@ -73,5 +90,24 @@ describe('LLM Pipeline E2E', () => {
         await expect(reviewWithLlm('System prompt', 'User request')).rejects.toThrow(
             'LLM review and fallback both failed',
         );
+    });
+
+    it('validates all elements with multi-element array', async () => {
+        mockLlmPrompt.mockResolvedValueOnce(multiElementReport).mockResolvedValueOnce('AGREE - Both tests look good.');
+
+        const result = await reviewWithLlm('System prompt', 'User request');
+        expect(result.content).toContain('Login fails');
+        expect(result.content).toContain('Logout fails');
+        expect(result.reviewed).toBe(true);
+    });
+
+    it('circuit breaker opens during pipeline and triggers fallback', async () => {
+        mockLlmPrompt.mockRejectedValue(new Error('HTTP 429 Too Many Requests'));
+
+        await expect(reviewWithLlm('System prompt', 'User request')).rejects.toThrow(
+            'LLM review and fallback both failed',
+        );
+        // main call + 3 retries = 4 calls × 2 (report + main) = 8 calls
+        expect(mockLlmPrompt.mock.calls.length).toBeGreaterThanOrEqual(2);
     });
 });

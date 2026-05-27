@@ -462,7 +462,8 @@ async function sendWithFallback(
     }
 
     for (let i = 0; i < candidates.length; i++) {
-        const cfg = candidates[i]!;
+        const cfg = candidates[i];
+        if (!cfg) continue;
         const cfgKey = configUniqueKey(cfg);
         try {
             const result = await sendToProvider(cfg, system, user);

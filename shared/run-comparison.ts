@@ -32,7 +32,8 @@ function buildData(runA: MetricsRun, runB: MetricsRun): string {
     return ['=== RUN A (older) ===', runSummary(runA), '', '=== RUN B (newer) ===', runSummary(runB)].join('\n');
 }
 
-export async function compareRuns(runA: MetricsRun, runB: MetricsRun): Promise<string> {
+export async function compareRuns(runA: MetricsRun | null, runB: MetricsRun | null): Promise<string> {
+    if (!runA || !runB) return 'No run data provided';
     try {
         const user = sanitizeForLlm(buildData(runA, runB));
         return await llmPrompt('fast', COMPARE_SYSTEM, user, 'compare-runs');

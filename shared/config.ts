@@ -4,16 +4,15 @@ let dotenvLoaded = false;
 
 function ensureDotenv(): void {
     if (dotenvLoaded) return;
-    const _origWrite = process.stdout.write.bind(process.stdout);
+    const envPath = path.resolve(__dirname, '../.env');
     try {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any -- suppress dotenv noise
-        (process.stdout as any).write = () => true;
         // eslint-disable-next-line @typescript-eslint/no-require-imports
-        require('dotenv').config({ path: path.resolve(__dirname, '../.env') });
+        if (require('fs').existsSync(envPath)) {
+            // eslint-disable-next-line @typescript-eslint/no-require-imports
+            require('dotenv').config({ path: envPath });
+        }
     } catch {
         /* env file optional */
-    } finally {
-        process.stdout.write = _origWrite;
     }
     dotenvLoaded = true;
 }
@@ -263,6 +262,14 @@ class Config {
 
     get(key: string): string | undefined {
         ensureDotenv();
+        const overrideKey = key as keyof ConfigOverrides;
+        if (overrideKey in this.overrides) {
+            const val = this.overrides[overrideKey];
+            if (typeof val === 'string') return val;
+            if (val === true) return 'true';
+            if (val === false) return 'false';
+            return String(val ?? '');
+        }
         return process.env[key];
     }
 
