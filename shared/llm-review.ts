@@ -122,7 +122,7 @@ async function runRetryLoop(
     startTime: number,
 ): Promise<{ parsed: unknown; retries: number; valid: boolean }> {
     let parsed = initial;
-    let validation = analysisValidator.validate(parsed);
+    let validation = analysisValidator.validateAll(parsed);
     let retries = 0;
 
     while (!validation.valid && retries < MAX_RETRIES) {
@@ -138,7 +138,7 @@ async function runRetryLoop(
             recordLlmFailure('report');
             return { parsed: null, retries, valid: false };
         }
-        validation = analysisValidator.validate(parsed);
+        validation = analysisValidator.validateAll(parsed);
     }
     if (!validation.valid) {
         for (const err of validation.errors) recordValidationRejection(err);
