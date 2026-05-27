@@ -100,3 +100,52 @@ describe('ReportValidator', () => {
         expect(result.valid).toBe(true);
     });
 });
+
+describe('validateAll', () => {
+    let validator: ReportValidator;
+    const allSchema: ValidationRule[] = [
+        { field: 'tests', required: true, type: 'array', minLength: 1 },
+        { field: 'tests[0].title', required: true, type: 'string', minLength: 3 },
+        { field: 'tests[0].classification', required: true, type: 'string', pattern: /^(A|B)$/ },
+    ];
+
+    beforeEach(() => {
+        validator = new ReportValidator(allSchema);
+    });
+
+    it('passes single test (no-op vs validate)', () => {
+        const data = { tests: [{ title: 'Alpha', classification: 'A' }] };
+        expect(validator.validateAll(data).valid).toBe(true);
+    });
+
+    it('validates all elements, not just [0]', () => {
+        const data = {
+            tests: [
+                { title: 'Alpha', classification: 'A' },
+                { title: 'Beta', classification: 'B' },
+                { title: 'Gamma', classification: 'A' },
+            ],
+        };
+        const result = validator.validateAll(data);
+        expect(result.valid).toBe(true);
+    });
+
+    it('rejects when second element fails pattern validation', () => {
+        const data = {
+            tests: [
+                { title: 'Alpha', classification: 'A' },
+                { title: 'Beta', classification: 'C' },
+                { title: 'Gamma', classification: 'A' },
+            ],
+        };
+        const result = validator.validateAll(data);
+        expect(result.valid).toBe(false);
+        expect(result.errors.some((e) => e.includes('tests[1].classification'))).toBe(true);
+    });
+
+    it('returns base result on empty tests array', () => {
+        const data = { tests: [] };
+        const result = validator.validateAll(data);
+        expect(result.valid).toBe(false);
+    });
+});

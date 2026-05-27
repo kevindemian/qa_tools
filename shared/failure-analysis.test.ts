@@ -65,7 +65,7 @@ describe('analyzeFailuresWithReport', () => {
 
 describe('classifyFailure', () => {
     it('calls llmPrompt (fast tier) with test title and error', async () => {
-        const promptContent = 'Classify: {{TEST_TITLE}} - {{ERROR_MESSAGE}}';
+        const promptContent = 'Classify: ';
         (fs.readFileSync as jest.Mock).mockReturnValue(promptContent);
         mockLlmPrompt.mockResolvedValueOnce('ASSERTION: expected true but got false');
 
@@ -75,7 +75,7 @@ describe('classifyFailure', () => {
     });
 
     it('retries when response format is invalid', async () => {
-        const promptContent = 'Classify: {{TEST_TITLE}} - {{ERROR_MESSAGE}}';
+        const promptContent = 'Classify: ';
         (fs.readFileSync as jest.Mock).mockReturnValue(promptContent);
         mockLlmPrompt
             .mockResolvedValueOnce('raw text without category')
@@ -87,7 +87,7 @@ describe('classifyFailure', () => {
     });
 
     it('falls back to UNKNOWN when both attempts fail regex', async () => {
-        const promptContent = 'Classify: {{TEST_TITLE}} - {{ERROR_MESSAGE}}';
+        const promptContent = 'Classify: ';
         (fs.readFileSync as jest.Mock).mockReturnValue(promptContent);
         mockLlmPrompt.mockResolvedValueOnce('some invalid text').mockResolvedValueOnce('more invalid text');
 

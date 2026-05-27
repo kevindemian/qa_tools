@@ -69,7 +69,7 @@ describe('case18 — AI tests generator', () => {
 
         prompt.ask.mockResolvedValueOnce('User wants to login').mockResolvedValueOnce('Must validate credentials');
 
-        fs.readFileSync.mockReturnValueOnce('You are a QA engineer.\n{{USER_STORY}}\n{{ACCEPTANCE_CRITERIA}}');
+        fs.readFileSync.mockReturnValueOnce('You are a QA engineer.');
 
         llm.llmPrompt.mockResolvedValueOnce(
             '[{"title": "Login test with valid credentials", "steps": ["Enter valid user", "Enter valid password", "Click login"], "expectedResult": "User is redirected to dashboard and sees welcome message"}]',
@@ -104,7 +104,7 @@ describe('case18 — AI tests generator', () => {
 
         prompt.ask.mockResolvedValueOnce('User wants to login').mockResolvedValueOnce('Must validate');
 
-        fs.readFileSync.mockReturnValueOnce('template {{USER_STORY}}');
+        fs.readFileSync.mockReturnValueOnce('template');
 
         llm.llmPrompt.mockRejectedValueOnce(new Error('LLM API error'));
 

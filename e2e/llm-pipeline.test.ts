@@ -10,6 +10,8 @@ jest.mock('../shared/llm-client', () => ({
     })),
     resetLlmClientMetrics: jest.fn(),
     parseRetryAfter: jest.fn(() => 2000),
+    resetCircuitState: jest.fn(),
+    resetRateLimiter: jest.fn(),
 }));
 jest.mock('../shared/sanitize', () => ({ sanitizeForLlm: (s: string) => s }));
 
