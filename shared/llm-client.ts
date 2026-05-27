@@ -53,7 +53,10 @@ const LLM_TEMP_REPORT = 0.2;
 const LLM_TEMP_FALLBACK = 0.3;
 const LLM_TEMP_BATCH = 0.5;
 const LLM_TEMP_DEFAULT = 0.3;
-const LLM_FETCH_RETRIES = 3;
+function getFetchRetries(): number {
+    const val = Config.get('LLM_FETCH_RETRIES');
+    return val ? parseInt(val, 10) : 3;
+}
 const LLM_RETRY_BASE_WAIT_MS = 2000;
 const LLM_RETRY_MAX_WAIT_MS = 10000;
 const LLM_FETCH_TIMEOUT_MS = 30000;
@@ -204,10 +207,28 @@ function configUniqueKey(cfg: ProviderConfig): string {
     );
 }
 
-function cacheKey(tier: LlmTier, system: string, user: string, callerId?: string): string {
+function cacheKey(
+    tier: LlmTier,
+    system: string,
+    user: string,
+    callerId?: string,
+    responseFormat?: ResponseFormat,
+): string {
     return crypto
         .createHash('sha256')
-        .update((callerId || '') + '|' + tier + '|' + configUniqueKey(tierToConfig(tier)) + '|' + system + '|' + user)
+        .update(
+            (callerId || '') +
+                '|' +
+                tier +
+                '|' +
+                configUniqueKey(tierToConfig(tier)) +
+                '|' +
+                (responseFormat || 'text') +
+                '|' +
+                system +
+                '|' +
+                user,
+        )
         .digest('hex');
 }
 
@@ -252,7 +273,7 @@ function parseRawOnce(raw: string): Record<string, unknown> | null {
     }
 }
 
-async function fetchWithRetry(url: string, options: RequestInit, retries = LLM_FETCH_RETRIES): Promise<Response> {
+async function fetchWithRetry(url: string, options: RequestInit, retries = getFetchRetries()): Promise<Response> {
     for (let attempt = 1; attempt <= retries; attempt++) {
         let resp: Response;
         try {
@@ -337,7 +358,7 @@ function recordCircuitSuccess(cfgKey: string): void {
 }
 
 function jitter(waitMs: number): number {
-    return Math.round(waitMs * (0.5 + Math.random() * 0.5));
+    return Math.round(waitMs * Math.random());
 }
 
 /** @internal exported for testing */
@@ -378,7 +399,10 @@ async function sendToProvider(cfg: ProviderConfig, system: string, user: string)
     const resp = await fetchWithRetry(url, { method: 'POST', headers, body: payload });
     const raw = await resp.text();
     const data = parseRawOnce(raw);
-    if (!data) return '';
+    if (!data) {
+        rootLogger.warn('LLM provider returned non-JSON response on 200 OK (raw length: ' + raw.length + ')');
+        return '';
+    }
 
     const errPayload = data.error as Record<string, unknown> | string | undefined;
     if (errPayload) {
@@ -435,7 +459,7 @@ async function sendWithFallback(
             const msg = (err as Error).message;
             errors.push(cfg.model + '@' + cfg.baseUrl + ': ' + msg);
             rootLogger.warn('LLM provider failed: ' + msg + ' — trying next');
-            if (/HTTP 429/i.test(msg)) recordCircuitFailure(cfgKey);
+            recordCircuitFailure(cfgKey);
         }
     }
 
@@ -469,7 +493,7 @@ export async function llmPrompt(
     callerId?: string,
     responseFormat?: ResponseFormat,
 ): Promise<string> {
-    const cKey = cacheKey(tier, system, user, callerId);
+    const cKey = cacheKey(tier, system, user, callerId, responseFormat);
     const cached = cache.get(cKey);
     if (cached && cached.expiresAt > Date.now()) {
         _llmMetrics.cacheHits++;

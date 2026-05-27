@@ -28,7 +28,7 @@ function readPrompt(file: string): string {
 }
 
 function formatFailedTests(failed: FlatTest[]): string {
-    return failed.map((t, i) => `${i + 1}. [${t.state}] ${t.title} (${t.duration}ms)`).join('\n');
+    return failed.map((t, i) => `${i + 1}. [${t.state}] ${t.title} (${t.duration ?? '?'}ms)`).join('\n');
 }
 
 export async function analyzeFailuresWithReport(tests: FlatTest[]): Promise<AnalysisReport> {

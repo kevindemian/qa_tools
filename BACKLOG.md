@@ -742,3 +742,70 @@ Também marcar o AUDIO-01 (M1, M2, M3 do bloco antigo) como resolvidos:
 | R5 | E2E mock sem resetCircuitState/resetRateLimiter | P2 | e2e/llm-pipeline.test.ts | 2 | ✅ |
 | R6 | Test prompts usam {{PLACEHOLDER}} obsoleto | P2 | failure-analysis.test.ts, case18.test.ts | 2 | ✅ |
 | R7 | Benchmark re-read prompts do disco por fixture | P3 | llm-benchmark.ts | 2 | ✅ |
+
+---
+
+## 🚀 Lote 19 — Critical Fixes (8.0→9.0+)
+
+**Data:** 2026-05-27
+**Alvo:** >9.0/10
+**Base:** Re-audit llm-engineer: 8.0/10
+
+### Execução
+
+| Batch | Descrição | Itens | Esforço |
+|-------|-----------|-------|---------|
+| 19 | Critical circuit breaker + cache key + warn + NaNms + retries + jitter | 6 | ✅ |
+| 20 | Sanitize: 4 padrões + testes + truncateStacktrace | 5 | ~30min |
+| 21 | Token debug log + metrics key hash + rate limit msg | 3 | ~30min |
+| 22 | Schema validation: heuristic fix + 4 testes | 5 | ~30min |
+| 23 | Test coverage: ~30 testes em 8 arquivos + 1 novo | 30 | ~4h |
+| 24 | Benchmark: reuse ReportValidator + remove dead schema | 2 | ~30min |
+| 25 | Re-audit final | 1 | ~30min |
+
+### Itens
+
+| ID | Item | Prio | Arquivo(s) | Batch | Status |
+|----|------|------|------------|-------|--------|
+| 19.1 | Circuit breaker conta todo erro (não só 429) | P1 | llm-client.ts | 19.1 | ✅ |
+| 19.2 | Cache key inclui runtime responseFormat | P1 | llm-client.ts | 19.1 | ✅ |
+| 19.3 | Warn log em non-JSON 200 OK | P2 | llm-client.ts | 19.2 | ✅ |
+| 19.4 | formatFailedTests NaNms guard | P2 | failure-analysis.ts | 19.2 | ✅ |
+| 19.5 | LLM_FETCH_RETRIES configurável via env | P3 | llm-client.ts | 19.2 | ✅ |
+| 19.6 | Jitter 0-100% (era 50-100%) | P3 | llm-client.ts | 19.2 | ✅ |
+| 20.1 | Padrão HuggingFace hf_ | P2 | sanitize.ts | 20 | ⬜ |
+| 20.2 | Padrão npm_ | P2 | sanitize.ts | 20 | ⬜ |
+| 20.3 | Padrão Slack xox[abp]- | P2 | sanitize.ts | 20 | ⬜ |
+| 20.4 | Padrão GitHub refresh ghr_ | P2 | sanitize.ts | 20 | ⬜ |
+| 20.5 | Testes dos 4 novos padrões | P2 | sanitize.test.ts | 20 | ⬜ |
+| 20.6 | truncateStacktrace: chamar em sanitizeForLlm ou documentar | P3 | sanitize.ts | 20 | ⬜ |
+| 21.1 | Debug log tokens por request | P3 | llm-client.ts | 21 | ⬜ |
+| 21.2 | API key hash em metrics key (vs slice -8) | P3 | llm-client.ts | 21 | ⬜ |
+| 21.3 | Rate limit msg inclui "client-side" | P3 | llm-client.ts | 21 | ⬜ |
+| 22.1 | Heurística array rules usa regex em vez de includes | P2 | report-validator.ts | 22 | ⬜ |
+| 22.2 | Test: validateAll early return length<=1 | P2 | report-validator.test.ts | 22 | ⬜ |
+| 22.3 | Test: validateAll early return no array rules | P2 | report-validator.test.ts | 22 | ⬜ |
+| 22.4 | Test: checkConsistency high severity | P2 | report-validator.test.ts | 22 | ⬜ |
+| 22.5 | Test: resolveField 3+ levels | P3 | report-validator.test.ts | 22 | ⬜ |
+| 23.1 | llm-benchmark.test.ts (15+ testes, novo arquivo) | P2 | shared/llm-benchmark.test.ts | 23 | ⬜ |
+| 23.2 | responseFormat='json' param test | P2 | llm-client.test.ts | 23 | ⬜ |
+| 23.3 | responseFormat diferente → cache keys diferentes | P2 | llm-client.test.ts | 23 | ⬜ |
+| 23.4 | Gemini system_instruction payload test | P2 | llm-client.test.ts | 23 | ⬜ |
+| 23.5 | non-JSON 200 chama logger.warn | P2 | llm-client.test.ts | 23 | ⬜ |
+| 23.6 | Tier fallback dedup test | P3 | llm-client.test.ts | 23 | ⬜ |
+| 23.7 | runRetryLoop MAX_RETRIES exatas | P2 | llm-review.test.ts | 23 | ⬜ |
+| 23.8 | buildRetryPrompt content verification | P2 | llm-review.test.ts | 23 | ⬜ |
+| 23.9 | analyzeFailuresWithReport HTML exception path | P2 | failure-analysis.test.ts | 23 | ⬜ |
+| 23.10 | HTML report output verificado | P2 | failure-analysis.test.ts | 23 | ⬜ |
+| 23.11 | snapshotLlmMetrics round-trip persist | P2 | llm-metrics.test.ts | 23 | ⬜ |
+| 23.12 | recordArtifactReview approved/rejected | P2 | llm-metrics.test.ts | 23 | ⬜ |
+| 23.13 | case18 retry + success path | P2 | case18.test.ts | 23 | ⬜ |
+| 23.14 | case18 retry + still invalid → printError | P2 | case18.test.ts | 23 | ⬜ |
+| 23.15 | compareRuns empty data | P2 | run-comparison.test.ts | 23 | ⬜ |
+| 23.16 | compareRuns sanitization verified | P2 | run-comparison.test.ts | 23 | ⬜ |
+| 23.17 | E2E validateAll 3-element array | P2 | llm-pipeline.test.ts | 23 | ⬜ |
+| 23.18 | E2E circuit breaker + fallback | P2 | llm-pipeline.test.ts | 23 | ⬜ |
+| 23.19 | truncateStacktrace test | P3 | sanitize.test.ts | 23 | ⬜ |
+| 24.1 | Reusar ReportValidator em benchmark | P3 | llm-benchmark.ts | 24 | ⬜ |
+| 24.2 | Remover dead schema field | P3 | fixtures/index.ts + JSONs | 24 | ⬜ |
+| 25.1 | Re-audit llm-engineer (score >9.0) | P0 | — | 25 | ⬜ |
