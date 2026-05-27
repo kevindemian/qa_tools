@@ -2,6 +2,7 @@
  * Provides unified flattening, detection, and file-I/O wrappers. */
 
 import fs from 'fs';
+import { rootLogger } from './logger';
 
 const EMPTY_PARSE_RESULT = { tests: [], stats: { passed: 0, failed: 0, skipped: 0, total: 0, duration: 0 } };
 
@@ -11,6 +12,7 @@ function readAndParse<T>(filePath: string, parser: (data: T) => ParseResult): Pa
         const json = JSON.parse(raw) as T;
         return parser(json);
     } catch (err: unknown) {
+        // err as NodeJS.ErrnoException — cobre ENOENT; SyntaxError de JSON.parse cai no else
         const e = err as NodeJS.ErrnoException;
         const msg =
             e.code === 'ENOENT'
@@ -171,8 +173,13 @@ function _flattenTests(suite: MochawesomeSuite, parentTitle?: string): FlatTest[
 }
 
 /** Parse a Mochawesome JSON report into a normalised {@link ParseResult}.
- * Returns an empty result if the input structure is invalid. */
+ * Returns an empty result if the input structure is invalid.
+ * @deprecated Use CTRF format (https://ctrf.io) instead. This parser will be removed in the next major version.
+ * @internal Not part of public API. Only used internally by `parseTestResults` and `parseCypressResults`. */
 export function parseMochawesome(jsonData: MochawesomeData): ParseResult {
+    rootLogger.warn(
+        '[deprecated] Mochawesome format detected. Migrate to CTRF (ctrf.io) — mochawesome support will be removed in a future version.',
+    );
     if (!jsonData || !jsonData.results || !Array.isArray(jsonData.results)) {
         return EMPTY_PARSE_RESULT;
     }
@@ -212,7 +219,8 @@ export function parseMochawesome(jsonData: MochawesomeData): ParseResult {
 
 /** Parse a CTRF (Common Test Report Format) JSON payload.
  * Maps `passed` / `failed` status directly; everything else becomes `skipped`.
- * Falls back to computed test counts when summary fields are missing. */
+ * Falls back to computed test counts when summary fields are missing.
+ * @internal Not part of public API. Use `parseTestResults` (auto-dispatch) instead. */
 export function parseCtrfResults(jsonData: CtrfData): ParseResult {
     if (!jsonData?.results?.tests || !Array.isArray(jsonData.results.tests)) {
         return EMPTY_PARSE_RESULT;
@@ -255,7 +263,8 @@ export function parseCtrfResults(jsonData: CtrfData): ParseResult {
 }
 
 /** Type guard that checks whether an unknown value matches the CTRF envelope shape
- * (`results.tests` array + `results.summary` object). */
+ * (`results.tests` array + `results.summary` object).
+ * @internal Not part of public API. Used internally by `parseTestResults`. */
 export function isCtrfFormat(jsonData: unknown): jsonData is CtrfData {
     if (typeof jsonData !== 'object' || jsonData === null) return false;
     const obj = jsonData as Record<string, unknown>;
@@ -279,7 +288,8 @@ export function parseTestResultsFile(filePath: string): ParseResultWithError {
 }
 
 /** Legacy wrapper — reads a Mochawesome JSON file and parses it.
- * Returns an error string in the result on I/O or parse failure. */
+ * Returns an error string in the result on I/O or parse failure.
+ * @deprecated Use {@link parseTestResultsFile} instead. Will be removed in the next major version. */
 export function parseCypressResults(filePath: string): ParseResultWithError {
     return readAndParse(filePath, parseMochawesome);
 }

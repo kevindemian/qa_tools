@@ -8,7 +8,7 @@ import type { ParseResult } from '../shared/result_parser';
 
 /* eslint-disable @typescript-eslint/no-explicit-any -- jest.fn mocks */
 const mockGlobSync = jest.fn<any>();
-const mockParseMochawesome = jest.fn<any>();
+const mockParseTestResults = jest.fn<any>();
 const mockMatchResultsToTests = jest.fn<any>();
 const mockCreateTestExecutionFromResults = jest.fn<any>();
 const mockPrompt = jest.fn<any>();
@@ -66,7 +66,8 @@ jest.mock('../shared/temp-dir', () => ({
 }));
 
 jest.mock('../shared/result_parser', () => ({
-    parseMochawesome: mockParseMochawesome,
+    parseTestResults: mockParseTestResults,
+    // detectAndParseTestResults is an alias for parseTestResults
 }));
 
 jest.mock('../jira_management/result_reporter', () => ({
@@ -161,7 +162,7 @@ describe('_resolveGlob', () => {
 // ── downloadTestArtifacts ────────────────────────────────────────────────
 
 describe('downloadTestArtifacts', () => {
-    it('returns parsed results when artifact found and zip contains valid mochawesome.json', async () => {
+    it('returns parsed results when zip contains valid mochawesome.json', async () => {
         mockListPipelineArtifacts.mockResolvedValue([{ id: 1, name: 'mochawesome-report' }]);
         mockDownloadArtifact.mockResolvedValue({ buffer: Buffer.from(''), filename: 'artifact.zip' });
         mockAdmZipGetEntries.mockReturnValue([
@@ -175,14 +176,53 @@ describe('downloadTestArtifacts', () => {
             tests: [{ title: 'test1', state: 'passed', duration: 100 }],
             stats: { passed: 1, failed: 0, skipped: 0, total: 1, duration: 100 },
         };
-        mockParseMochawesome.mockReturnValue(parseResult);
+        mockParseTestResults.mockReturnValue(parseResult);
 
         const result = await mod.downloadTestArtifacts(mockProvider as unknown as GitProvider, '1');
 
         expect(result).toEqual(parseResult);
         expect(mockListPipelineArtifacts).toHaveBeenCalledWith('1');
         expect(mockDownloadArtifact).toHaveBeenCalledWith(1);
-        expect(mockParseMochawesome).toHaveBeenCalled();
+        expect(mockParseTestResults).toHaveBeenCalled();
+    });
+
+    it('returns parsed results when zip contains valid ctrf.json', async () => {
+        mockListPipelineArtifacts.mockResolvedValue([{ id: 1, name: 'test-results' }]);
+        mockDownloadArtifact.mockResolvedValue({ buffer: Buffer.from(''), filename: 'results.zip' });
+        mockAdmZipGetEntries.mockReturnValue([
+            {
+                entryName: 'ctrf-report/ctrf.json',
+                isDirectory: false,
+                getData: () =>
+                    Buffer.from(
+                        JSON.stringify({
+                            results: {
+                                tests: [],
+                                summary: {
+                                    tests: 0,
+                                    passed: 0,
+                                    failed: 0,
+                                    skipped: 0,
+                                    pending: 0,
+                                    other: 0,
+                                    start: 0,
+                                    stop: 0,
+                                },
+                            },
+                        }),
+                    ),
+            },
+        ]);
+        const parseResult: ParseResult = {
+            tests: [{ title: 'test1', state: 'passed', duration: 100 }],
+            stats: { passed: 1, failed: 0, skipped: 0, total: 1, duration: 100 },
+        };
+        mockParseTestResults.mockReturnValue(parseResult);
+
+        const result = await mod.downloadTestArtifacts(mockProvider as unknown as GitProvider, '1');
+
+        expect(result).toEqual(parseResult);
+        expect(mockParseTestResults).toHaveBeenCalled();
     });
 
     it('returns null when no artifacts found in pipeline', async () => {
@@ -203,7 +243,7 @@ describe('downloadTestArtifacts', () => {
         expect(result).toBeNull();
     });
 
-    it('returns null when mochawesome.json is missing in zip', async () => {
+    it('returns null when no result file (ctrf.json / mochawesome.json) found in zip', async () => {
         mockListPipelineArtifacts.mockResolvedValue([{ id: 1, name: 'mochawesome-report' }]);
         mockDownloadArtifact.mockResolvedValue({ buffer: Buffer.from(''), filename: 'artifact.zip' });
         mockAdmZipGetEntries.mockReturnValue([
@@ -245,7 +285,7 @@ describe('downloadTestArtifacts', () => {
                 getData: () => Buffer.from(JSON.stringify({ results: [] })),
             },
         ]);
-        mockParseMochawesome.mockReturnValue({
+        mockParseTestResults.mockReturnValue({
             tests: [],
             stats: { passed: 0, failed: 0, skipped: 0, total: 0, duration: 0 },
         });
@@ -342,20 +382,22 @@ describe('createTestExecution', () => {
         expect(pushHistory).toHaveBeenCalledWith('resultados', expect.stringContaining('TE-123'), 'ok');
     });
 
-    it('handles error and pushes error history', async () => {
+    it('handles error, pushes error history, and re-throws', async () => {
         mockCreateTestExecutionFromResults.mockRejectedValue(new Error('Creation failed'));
         const pushHistory = jest.fn();
 
-        await mod.createTestExecution(
-            [],
-            'test',
-            { base: '', token: '', xray: '' },
-            'PROJ',
-            '1',
-            'main',
-            'github',
-            pushHistory,
-        );
+        await expect(
+            mod.createTestExecution(
+                [],
+                'test',
+                { base: '', token: '', xray: '' },
+                'PROJ',
+                '1',
+                'main',
+                'github',
+                pushHistory,
+            ),
+        ).rejects.toThrow('Creation failed');
 
         expect(pushHistory).toHaveBeenCalledWith('resultados', 'erro', 'error');
     });
@@ -374,7 +416,7 @@ describe('collectTestResults', () => {
                 getData: () => Buffer.from(JSON.stringify({ results: [] })),
             },
         ]);
-        mockParseMochawesome.mockReturnValue({
+        mockParseTestResults.mockReturnValue({
             tests: [{ title: 'test1', state: 'passed', duration: 100 }],
             stats: { passed: 1, failed: 0, skipped: 0, total: 1, duration: 100 },
         });
@@ -441,7 +483,7 @@ describe('collectTestResults', () => {
                 getData: () => Buffer.from(JSON.stringify({ results: [] })),
             },
         ]);
-        mockParseMochawesome.mockReturnValue({
+        mockParseTestResults.mockReturnValue({
             tests: [{ title: 'test1', state: 'passed', duration: 100 }],
             stats: { passed: 1, failed: 0, skipped: 0, total: 1, duration: 100 },
         });

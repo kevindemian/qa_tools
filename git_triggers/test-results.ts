@@ -6,7 +6,7 @@ import JiraResource from '../jira_management/jira_resource';
 import JiraLinkManager from '../jira_management/jira_link_manager';
 import { warn, info, success, printError, withSpinner, ask } from '../shared/prompt';
 import { reportsDir } from '../shared/temp-dir';
-import { parseMochawesome } from '../shared/result_parser';
+import { parseTestResults as detectAndParseTestResults } from '../shared/result_parser';
 import type { ParseResult } from '../shared/result_parser';
 import { matchResultsToTests, createTestExecutionFromResults } from '../jira_management/result_reporter';
 import { saveParseResult } from '../shared/metrics';
@@ -23,7 +23,8 @@ function _jiraEnv(): { base: string; token: string; xray: string } | null {
 function _resolveGlob(pattern: string): string | null {
     try {
         const matches = glob.sync(pattern);
-        return matches.length > 0 ? path.resolve(matches[0]!) : null;
+        const m = matches[0];
+        return m ? path.resolve(m) : null;
     } catch {
         return null;
     }
@@ -41,21 +42,25 @@ async function _downloadArtifactBuffer(m: GitProvider, art: { id: number | strin
     }
 }
 
-function _extractMochawesomeFromZip(buffer: Buffer): unknown {
+function _extractTestResultsFromZip(buffer: Buffer): unknown {
     try {
         const zip = new AdmZip(buffer);
         const entries = zip.getEntries();
-        const mochaEntry = entries.find((e) => e.entryName.includes('mochawesome.json') && !e.isDirectory);
-        if (!mochaEntry) {
+        const resultEntry = entries.find((e) => {
+            const name = e.entryName.toLowerCase();
+            return (name.includes('ctrf.json') || name.includes('mochawesome.json')) && !e.isDirectory;
+        });
+        if (!resultEntry) {
             warn(
-                'mochawesome.json não encontrado no artifact. Entradas: ' + entries.map((e) => e.entryName).join(', '),
+                'Nenhum resultado de teste (ctrf.json / mochawesome.json) encontrado no artifact. Entradas: ' +
+                    entries.map((e) => e.entryName).join(', '),
             );
             return null;
         }
-        const raw = mochaEntry.getData().toString('utf8');
+        const raw = resultEntry.getData().toString('utf8');
         return JSON.parse(raw);
     } catch (err) {
-        printError('Falha ao ler mochawesome.json', err);
+        printError('Falha ao ler arquivo de resultados', err);
         return null;
     }
 }
@@ -66,16 +71,20 @@ async function downloadTestArtifacts(m: GitProvider, pipelineId: string | number
         warn('Nenhum artifact encontrado na pipeline #' + pipelineId);
         return null;
     }
-    const art = artifacts.find((a) => /mochawesome|test-result/i.test(a.name)) || artifacts[0]!;
+    const art = artifacts.find((a) => /mochawesome|test-result/i.test(a.name)) || artifacts[0];
+    if (!art) {
+        warn('Nenhum artifact de resultado de teste encontrado.');
+        return null;
+    }
     info('Artifact: ' + art.name + ' (id=' + art.id + ')');
 
     const buffer = await _downloadArtifactBuffer(m, art);
     if (!buffer) return null;
 
-    const jsonData = _extractMochawesomeFromZip(buffer);
+    const jsonData = _extractTestResultsFromZip(buffer);
     if (!jsonData) return null;
 
-    const parsed = parseMochawesome(jsonData);
+    const parsed = detectAndParseTestResults(jsonData);
     info(
         'Resultados: ' +
             parsed.stats.passed +
@@ -157,6 +166,7 @@ async function createTestExecution(
     } catch (err) {
         printError('Falha ao criar Test Execution', err);
         pushHistory('resultados', 'erro', 'error');
+        throw err;
     }
 }
 

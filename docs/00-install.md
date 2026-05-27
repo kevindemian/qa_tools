@@ -8,7 +8,7 @@ Público-alvo: usuários de CLI com Node.js 20+.
 ## Pré-requisitos
 
 | Ferramenta  | Versão mínima |
-|-------------|---------------|
+| ----------- | ------------- |
 | **Node.js** | 20+           |
 | **npm**     | 9+            |
 | **Git**     | qualquer      |
@@ -41,63 +41,66 @@ Todas as variáveis de ambiente lidas por `shared/config.ts`:
 
 ### Obrigatórias (Jira/Xray)
 
-| Variável              | Descrição                     |
-|-----------------------|-------------------------------|
-| `JIRA_BASE_URL`       | URL base do servidor Jira     |
-| `JIRA_PERSONAL_TOKEN` | Token de autenticação Jira    |
-| `XRAY_BASE_URL`       | URL base do servidor Xray     |
+| Variável              | Descrição                  |
+| --------------------- | -------------------------- |
+| `JIRA_BASE_URL`       | URL base do servidor Jira  |
+| `JIRA_PERSONAL_TOKEN` | Token de autenticação Jira |
+| `XRAY_BASE_URL`       | URL base do servidor Xray  |
 
 ### GitLab (opcional)
 
-| Variável        | Descrição                     |
-|-----------------|-------------------------------|
-| `GIT_BASE_URL`  | URL base do servidor GitLab   |
-| `GIT_TOKEN`     | Token de autenticação GitLab  |
+| Variável       | Descrição                    |
+| -------------- | ---------------------------- |
+| `GIT_BASE_URL` | URL base do servidor GitLab  |
+| `GIT_TOKEN`    | Token de autenticação GitLab |
 
 ### GitHub (opcional)
 
-| Variável          | Descrição                            | Padrão                 |
-|-------------------|--------------------------------------|------------------------|
-| `GITHUB_TOKEN`    | Token de autenticação GitHub         | —                      |
-| `GITHUB_API_URL`  | URL da API do GitHub                 | `https://api.github.com` |
+| Variável         | Descrição                    | Padrão                   |
+| ---------------- | ---------------------------- | ------------------------ |
+| `GITHUB_TOKEN`   | Token de autenticação GitHub | —                        |
+| `GITHUB_API_URL` | URL da API do GitHub         | `https://api.github.com` |
 
 ### Projeto Jira
 
-| Variável       | Descrição                     | Padrão     |
-|----------------|-------------------------------|------------|
-| `JIRA_PROJECT` | Chave do projeto no Jira      | `ECSPOL`   |
+| Variável       | Descrição                | Padrão   |
+| -------------- | ------------------------ | -------- |
+| `JIRA_PROJECT` | Chave do projeto no Jira | `ECSPOL` |
 
 ### Caminhos de importação
 
-| Variável              | Descrição                                   |
-|-----------------------|---------------------------------------------|
-| `CSV_PATH`            | Caminho do arquivo CSV de steps             |
-| `CSV_DEFAULT_PATH`    | Caminho padrão alternativo para CSV         |
-| `CSV_LABELS`          | Labels para importação CSV                  |
-| `JSON_PATH`           | Caminho do arquivo JSON de testes           |
-| `JSON_LABELS`         | Labels para importação JSON                 |
-| `CYPRESS_PROJECT_PATH`| Caminho raiz do projeto Cypress             |
+| Variável               | Descrição                           |
+| ---------------------- | ----------------------------------- |
+| `CSV_PATH`             | Caminho do arquivo CSV de steps     |
+| `CSV_DEFAULT_PATH`     | Caminho padrão alternativo para CSV |
+| `CSV_LABELS`           | Labels para importação CSV          |
+| `JSON_PATH`            | Caminho do arquivo JSON de testes   |
+| `JSON_LABELS`          | Labels para importação JSON         |
+| `CYPRESS_PROJECT_PATH` | Caminho raiz do projeto Cypress     |
 
 ### Log
 
-| Variável       | Descrição                           | Padrão            |
-|----------------|-------------------------------------|-------------------|
-| `LOG_LEVEL`    | Nível de log (DEBUG, INFO, WARN, ERROR) | `INFO`        |
-| `LOG_FILE`     | Habilitar log em arquivo (`true`/`false`) | —             |
-| `LOG_DIR`      | Diretório dos arquivos de log        | `logs`            |
-| `LOG_MAX_SIZE` | Tamanho máximo do log em bytes       | `5242880` (5 MB)  |
+| Variável            | Descrição                                 | Padrão           |
+| ------------------- | ----------------------------------------- | ---------------- |
+| `LOG_LEVEL`         | Nível de log (DEBUG, INFO, WARN, ERROR)   | `INFO`           |
+| `LOG_FILE`          | Habilitar log em arquivo (`true`/`false`) | —                |
+| `LOG_DIR`           | Diretório dos arquivos de log             | `logs`           |
+| `LOG_MAX_SIZE`      | Tamanho máximo do log em bytes            | `5242880` (5 MB) |
+| `QA_TOOLS_LOGS_DIR` | Sobrescreve `LOG_DIR` (maior prioridade)  | —                |
 
 ### Comportamento
 
-| Variável        | Descrição                                    | Padrão  |
-|-----------------|----------------------------------------------|---------|
-| `DEBUG`         | Modo debug (`true`/`false`)                  | —       |
-| `QUIET`         | Suprime output informativo (`true`/`false`)  | —       |
-| `DRY_RUN`       | Simula requisições sem executar (`true`/`false`) | —    |
-| `AUTO_CONFIRM`  | Pula confirmações interativas (`true`/`false`) | —     |
-| `AUTO_CHOICE`   | Seleção automática no menu interativo         | —       |
-| `ON_ERROR`      | Ação ao encontrar erro (`abort`/`continue`)   | `abort` |
-| `XDG_STATE_HOME`| Diretório de estado (cache/state)             | —       |
+| Variável               | Descrição                                         | Padrão     |
+| ---------------------- | ------------------------------------------------- | ---------- |
+| `DEBUG`                | Modo debug (`true`/`false`)                       | —          |
+| `QUIET`                | Suprime output informativo (`true`/`false`)       | —          |
+| `DRY_RUN`              | Simula requisições sem executar (`true`/`false`)  | —          |
+| `AUTO_CONFIRM`         | Pula confirmações interativas (`true`/`false`)    | —          |
+| `AUTO_CHOICE`          | Seleção automática no menu interativo             | —          |
+| `ON_ERROR`             | Ação ao encontrar erro (`abort`/`continue`)       | `abort`    |
+| `XDG_STATE_HOME`       | Diretório de estado (cache/state)                 | —          |
+| `QA_TOOLS_TEMP_DIR`    | Diretório temporário (previews, cache, docs HTML) | `temp/`    |
+| `QA_TOOLS_REPORTS_DIR` | Diretório de relatórios gerados (HTML, flakiness) | `reports/` |
 
 ### Exemplo (`.env.example`)
 
@@ -140,11 +143,11 @@ cp .env.example .env
 
 O projeto inclui três wrappers que **auto-descobrem** ferramentas (diretórios com `main.ts`), oferecem menu interativo, instalam dependências automaticamente e alertam se `.env` estiver ausente.
 
-| Arquivo         | Plataforma         | Uso                    |
-|-----------------|--------------------|------------------------|
-| `qatools.sh`  | Linux / macOS      | `./qatools.sh`         |
-| `qatools.bat` | Windows CMD        | `qatools.bat`          |
-| `qatools.ps1` | Windows PowerShell | `.\qatools.ps1`        |
+| Arquivo       | Plataforma         | Uso             |
+| ------------- | ------------------ | --------------- |
+| `qatools.sh`  | Linux / macOS      | `./qatools.sh`  |
+| `qatools.bat` | Windows CMD        | `qatools.bat`   |
+| `qatools.ps1` | Windows PowerShell | `.\qatools.ps1` |
 
 Comportamento comum:
 

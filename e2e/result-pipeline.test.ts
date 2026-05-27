@@ -4,7 +4,7 @@ import os from 'os';
 import nock from 'nock';
 import JiraResource from '../jira_management/jira_resource';
 import JiraLinkManager from '../jira_management/jira_link_manager';
-import { parseMochawesome } from '../shared/result_parser';
+import { parseTestResults } from '../shared/result_parser';
 import { matchResultsToTests, createTestExecutionFromResults } from '../jira_management/result_reporter';
 
 const tmpHome = fs.mkdtempSync(path.join(os.tmpdir(), 'qa-e2e-'));
@@ -74,7 +74,7 @@ describe('E2E: Result Processing Pipeline', () => {
     it('flows end-to-end: mochawesome → match → TE creation', async () => {
         const mochaPath = path.join(FIXTURES, 'mochawesome.json');
         const raw = fs.readFileSync(mochaPath, 'utf8');
-        const parsed = parseMochawesome(JSON.parse(raw));
+        const parsed = parseTestResults(JSON.parse(raw));
 
         expect(parsed.tests).toHaveLength(3);
         expect(parsed.stats.passed).toBe(2);
@@ -111,7 +111,7 @@ describe('E2E: Result Processing Pipeline', () => {
     it('handles unmatched test gracefully', async () => {
         const mochaPath = path.join(FIXTURES, 'mochawesome.json');
         const raw = fs.readFileSync(mochaPath, 'utf8');
-        const parsed = parseMochawesome(JSON.parse(raw));
+        const parsed = parseTestResults(JSON.parse(raw));
 
         parsed.tests.push({ title: 'TC99 - Unknown test', state: 'failed', duration: 50 });
 
@@ -121,6 +121,22 @@ describe('E2E: Result Processing Pipeline', () => {
         expect(matched).toHaveLength(3);
         expect(unmatched).toHaveLength(1);
         expect(unmatched[0]!.title).toBe('TC99 - Unknown test');
+    });
+
+    it('flows end-to-end: CTRF → match → TE creation', async () => {
+        const ctrfPath = path.join(FIXTURES, 'ctrf-report.json');
+        const raw = fs.readFileSync(ctrfPath, 'utf8');
+        const parsed = parseTestResults(JSON.parse(raw));
+
+        expect(parsed.tests).toHaveLength(4);
+        expect(parsed.stats.passed).toBe(2);
+        expect(parsed.stats.failed).toBe(1);
+
+        const mappingPath = path.join(FIXTURES, 'test-mapping.json');
+        const { matched, unmatched } = matchResultsToTests(parsed.tests, mappingPath);
+
+        expect(matched).toHaveLength(3);
+        expect(unmatched).toHaveLength(1);
     });
 
     it('returns empty match for missing mapping file', () => {

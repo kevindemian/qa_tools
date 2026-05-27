@@ -104,7 +104,7 @@ export async function smartPrompt(
         return value;
     }
     warn('Número máximo de tentativas excedido.');
-    return null as unknown as string;
+    return '';
 }
 
 let _selectMod: unknown = null;

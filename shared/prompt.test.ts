@@ -590,16 +590,10 @@ describe('Prompt', () => {
             expect(result).toBe('final-value');
         });
 
-        it('returns null after max retries with empty input', async () => {
+        it('returns empty string after max retries with empty input', async () => {
             jest.spyOn(readlineSync, 'question').mockReturnValue('');
             const result = await prompt.smartPrompt('Enter', { maxRetries: 2 });
-            expect(result).toBeNull();
-        });
-
-        it('returns null-like for aborted input', async () => {
-            jest.spyOn(readlineSync, 'question').mockReturnValue('');
-            const result = await prompt.smartPrompt('Enter', { maxRetries: 1 });
-            expect(result == null).toBe(true);
+            expect(result).toBe('');
         });
 
         it('throws CancelError for /back navigation command', async () => {

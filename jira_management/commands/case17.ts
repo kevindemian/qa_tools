@@ -1,8 +1,9 @@
 import fs from 'fs';
 import path from 'path';
 import { ask, askConfirm, info, printError, title, withSpinner } from '../../shared/prompt';
+import type { ParseResult } from '../../shared/result_parser';
 import { writeReport } from '../../shared/temp-dir';
-import { parseCypressResults } from '../../shared/result_parser';
+import { parseTestResultsFile } from '../../shared/result_parser';
 import { generateHtmlReport } from '../../shared/report-generator';
 import { analyzeFailuresWithReport } from '../../shared/failure-analysis';
 import { collectAutomated, interactiveBugReportFlow } from '../../shared/bug-report';
@@ -16,9 +17,26 @@ function injectAnalysisSection(html: string, analysis: string): string {
     return html.slice(0, bodyEnd) + section + html.slice(bodyEnd);
 }
 
+async function _writeReportFile(html: string, projectName: string): Promise<string> {
+    const defaultName = `report-${projectName}-${Date.now()}.html`;
+    const outPath = await ask('Caminho de saída do HTML', { default: '' });
+    if (outPath.trim()) {
+        const resolvedPath = path.resolve(outPath.trim());
+        fs.mkdirSync(path.dirname(resolvedPath), { recursive: true });
+        fs.writeFileSync(resolvedPath, html, 'utf8');
+        return resolvedPath;
+    }
+    return writeReport(defaultName, html);
+}
+
+async function _addAiAnalysis(html: string, tests: ParseResult['tests']): Promise<string> {
+    const analysis = await withSpinner('Analisando falhas com IA...', () => analyzeFailuresWithReport(tests));
+    return analysis.content ? injectAnalysisSection(html, analysis.content) : html;
+}
+
 async function handler(c: CommandContext): Promise<boolean | void> {
-    const filePath = await ask('Caminho do arquivo mochawesome JSON', {
-        hint: 'ex: cypress/reports/mochawesome.json',
+    const filePath = await ask('Caminho do arquivo de resultados JSON', {
+        hint: 'ex: cypress/reports/ctrf-report.json',
     });
     if (!filePath.trim()) {
         printError('Relatório HTML', new Error('Caminho do arquivo vazio.'));
@@ -26,7 +44,7 @@ async function handler(c: CommandContext): Promise<boolean | void> {
     }
 
     title('Analisando relatório...');
-    const result = parseCypressResults(filePath.trim());
+    const result = parseTestResultsFile(filePath.trim());
     if (result.error) {
         printError('Erro ao ler relatório', new Error(result.error));
         return;
@@ -39,24 +57,10 @@ async function handler(c: CommandContext): Promise<boolean | void> {
     });
 
     if (result.stats.failed > 0 && (await askConfirm('Incluir análise das falhas (IA)?', true))) {
-        const analysis = await withSpinner('Analisando falhas com IA...', () =>
-            analyzeFailuresWithReport(result.tests),
-        );
-        if (analysis.content) {
-            html = injectAnalysisSection(html, analysis.content);
-        }
+        html = await _addAiAnalysis(html, result.tests);
     }
 
-    const defaultName = `report-${c.ctx.project_name}-${Date.now()}.html`;
-    const outPath = await ask('Caminho de saída do HTML', { default: '' });
-    let resolvedPath: string;
-    if (outPath.trim()) {
-        resolvedPath = path.resolve(outPath.trim());
-        fs.mkdirSync(path.dirname(resolvedPath), { recursive: true });
-        fs.writeFileSync(resolvedPath, html, 'utf8');
-    } else {
-        resolvedPath = writeReport(defaultName, html);
-    }
+    const resolvedPath = await _writeReportFile(html, c.ctx.project_name);
 
     info(`Relatório HTML gerado: ${resolvedPath}`);
     void openWithOsOrFallback(resolvedPath);

@@ -11,6 +11,7 @@ export function reportsDir(): string {
     return resolveEnvOrPath('QA_TOOLS_REPORTS_DIR', 'reports');
 }
 
+/** @internal Not part of public API. Logging uses `rootLogger` directly. */
 export function logsDir(): string {
     if (process.env.QA_TOOLS_LOGS_DIR) return resolve(process.env.QA_TOOLS_LOGS_DIR);
     return resolveEnvOrPath('LOG_DIR', 'logs');

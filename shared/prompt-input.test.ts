@@ -182,7 +182,7 @@ describe('smartPrompt', () => {
     it('warns on max retries exceeded', async () => {
         mockReadlineQuestion.mockReturnValue('');
         const result = await smartPrompt('Label', { maxRetries: 2 });
-        expect(result).toBeNull();
+        expect(result).toBe('');
         expect(mockWarn).toHaveBeenCalled();
     });
 });

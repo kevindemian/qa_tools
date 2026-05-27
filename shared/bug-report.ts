@@ -123,6 +123,7 @@ export function collectAutomated(
     };
 }
 
+/** @internal Not part of public API. Used internally by `fileToJira` and `interactiveBugReportFlow`. */
 export function compose(report: BugReport): string {
     const lines = [
         `*Bug Report — ${report.source === 'automated' ? 'Automated' : 'Manual'}*`,

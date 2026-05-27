@@ -384,7 +384,10 @@ function buildCliTable3Config(keys: string[]): {
     return {
         head: keys,
         colWidths: colWidths.map((w) => Math.max(w - indentWidth, MIN_COLUMN_WIDTH)),
-        style: { head: [palette.muted as unknown as string], border: [palette.border as unknown as string] },
+        style: {
+            head: [typeof palette.muted === 'string' ? palette.muted : ''],
+            border: [typeof palette.border === 'string' ? palette.border : ''],
+        },
         chars: {
             top: '─',
             'top-mid': '┬',

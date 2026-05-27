@@ -27,6 +27,28 @@ Issues registradas durante refatorações, postergadas por escopo.
 | AUDIT-20 Fase 7          | ✅     | Full verification                       |
 | FEAT-21                  | ✅     | File path tab-completion                |
 
+### Documentação — Auditoria + Correção
+
+| Item                                                                 | Status |
+| -------------------------------------------------------------------- | ------ |
+| Deletar `docs/STYLE_GUIDE.md` (abandonado)                           | ✅     |
+| `00-install.md`: + seção LLM env vars                                | ✅     |
+| `01-primeiros-passos.md`: menu, comandos, /docs viewer               | ✅     |
+| `02-jira-management.md`: categorias, 17-20, aliases, XRAY_MODE       | ✅     |
+| `03-git-triggers.md`: + batch mode, + flakiness dashboard            | ✅     |
+| `06-env-vars.md`: + XRAY_MODE, + QA_TOOLS_LOGS_DIR, + LLM_SMALL desc | ✅     |
+
+### Lote 16 — Eliminação de Débitos (Auditoria) ✅ (24/24)
+
+| Sub-lote | Itens                                                | Status |
+| -------- | ---------------------------------------------------- | ------ |
+| 16A      | 7 correções críticas (P0): env, R5, unsafe `!`, cast | ✅     |
+| 16B      | 3 funções extraídas ≤50 linhas (P1)                  | ✅     |
+| 16C      | 8 exports documentados como `@internal` (P2)         | ✅     |
+| 16D      | 5 justificativas de eslint-disable + cast (P2)       | ✅     |
+| 16E      | 5 testes adicionados (P2)                            | ✅     |
+| 16F      | 1 cast inseguro corrigido (P3)                       | ✅     |
+
 ---
 
 ## 🔷 Pendentes
@@ -135,14 +157,14 @@ Removidos: `sourceBranch`/`targetBranch` de `updateMergeRequest` (github_manager
 
 ## 🎨 UI/UX Refinement Plan (Lote 8)
 
-| ID   | Item                                                      | Fase | Status                    |
-| ---- | --------------------------------------------------------- | ---- | ------------------------- |
-| UX-1 | Theme System & Style Guide (`theme.ts`, `STYLE_GUIDE.md`) | I    | ✅ Done                   |
-| UX-2 | Baseline Snapshots (TUI + HTML report)                    | I    | ✅ Done                   |
-| UX-3 | TUI: Refactor `box.ts` to consume theme                   | II   | ✅ Done                   |
-| UX-4 | TUI: Action Search no menu Jira                           | II   | ✅ Done                   |
-| UX-5 | Reports: Consume theme, add Failed Summary + toggle       | III  | ✅ Done                   |
-| UX-6 | TUI: Atalho `[D]etails` para erros não mapeados           | IV   | ✅ Done (já implementado) |
+| ID   | Item                                                | Fase | Status                    |
+| ---- | --------------------------------------------------- | ---- | ------------------------- |
+| UX-1 | Theme System & Style Guide (`theme.ts`)             | I    | ✅ Done                   |
+| UX-2 | Baseline Snapshots (TUI + HTML report)              | I    | ✅ Done                   |
+| UX-3 | TUI: Refactor `box.ts` to consume theme             | II   | ✅ Done                   |
+| UX-4 | TUI: Action Search no menu Jira                     | II   | ✅ Done                   |
+| UX-5 | Reports: Consume theme, add Failed Summary + toggle | III  | ✅ Done                   |
+| UX-6 | TUI: Atalho `[D]etails` para erros não mapeados     | IV   | ✅ Done (já implementado) |
 
 **Summary:** All UI/UX refinement tasks completed. Lote 8: 6/6 ✅
 
@@ -539,3 +561,116 @@ Também marcar o AUDIO-01 (M1, M2, M3 do bloco antigo) como resolvidos:
 | S1  | config.ts Proxy refactor          | `config.ts`                 | P1                    | ✅ Proxy revertido — 43 static getter one-liners mantidos       |
 | I1  | Teste de contrato handlers        | `index.test.ts`             | P2                    | ✅ Bidirecional: file→handler + handler→file + export contract  |
 | I3  | Smoke test com asserções          | `e2e/smoke-pipeline.ts`     | P3                    | ✅ Função `assert()` + validações estruturais em cada etapa     |
+
+---
+
+## ☁️ Lote 14 — Jira Cloud Mode (planejado)
+
+**Data:** 2026-05-27
+**Prioridade:** P0 (CloudStepImporter quebra)
+**Esforço estimado:** ~4h
+**Dependências:** Nenhuma
+
+**Problema:** `CloudStepImporter` em `xray-client.ts:19-27` é um stub que lança `Error`. `XRAY_MODE=cloud` está documentado mas quebra em tempo de execução.
+
+| #     | Item                                                                              | Prio | Status |
+| ----- | --------------------------------------------------------------------------------- | ---- | ------ |
+| CLD-1 | Pesquisar Xray Cloud GraphQL mutation para importStep                             | P0   | ⬜     |
+| CLD-2 | Implementar `CloudStepImporter.importStep()` com GraphQL via axios                | P0   | ⬜     |
+| CLD-3 | Adicionar autenticação OAuth (client_id + client_secret) no Config                | P0   | ⬜     |
+| CLD-4 | Testes: happy path + auth error + GraphQL error                                   | P1   | ⬜     |
+| CLD-5 | Teste de integração smoke com `XRAY_MODE=cloud`                                   | P2   | ⬜     |
+| CLD-6 | Consumir `XRAY_CLOUD_ENDPOINT` no `CloudStepImporter` (GraphQL endpoint override) | P2   | ⬜     |
+
+---
+
+## 📊 Lote 15 — CTRF Pipeline + Deprecation
+
+**Data:** 2026-05-27
+**Prioridade:** P1
+**Esforço real:** ~30min
+**Dependências:** Nenhuma
+
+**Problema original:** Pipeline ignorava CTRF artifacts; case17 usava parser legado.
+**Resolvido:** Ambos os formatos são detectados automaticamente. Deprecation warning em `parseMochawesome`. `case17.ts` usa `parseTestResultsFile`.
+
+| #      | Item                                                                                  | Prio | Status |
+| ------ | ------------------------------------------------------------------------------------- | ---- | ------ |
+| CTRF-1 | Trocar `parseMochawesome` → `detectAndParseTestResults` em `test-results.ts`          | P1   | ✅     |
+| CTRF-2 | Renomear `_extractMochawesomeFromZip` → `_extractTestResultsFromZip` (ambos formatos) | P1   | ✅     |
+| CTRF-3 | Adaptar `test-results.test.ts` para ambos os formatos + teste CTRF zip                | P1   | ✅     |
+| CTRF-4 | Adaptar `e2e/result-pipeline.test.ts` — usar `parseTestResults` + teste CTRF e2e      | P1   | ✅     |
+| CTRF-5 | Adicionar deprecation warning em `parseMochawesome()`                                 | P2   | ✅     |
+| CTRF-6 | Trocar `case17.ts` → `parseTestResultsFile`, deprecar `parseCypressResults`           | P2   | ✅     |
+| CTRF-7 | Atualizar `case17.test.ts` para novos mocks                                           | P2   | ✅     |
+
+---
+
+## 🧹 Lote 16 — Eliminação de Débitos (Auditoria)
+
+**Data:** 2026-05-27
+**Prioridade:** P0
+**Esforço estimado:** ~75min
+**Real:** ~45min
+**Dependências:** Nenhuma
+
+**Problema:** Auditoria profunda revelou 30+ débitos: R5 violation, unsafe `!` assertions, dead exports, funções >50 linhas, `eslint-disable` sem justificativa, test gaps, casts inseguros.
+
+### 16A — Correções Críticas (P0)
+
+| #   | Item                                                | Onde                                     | Prio | Status |
+| --- | --------------------------------------------------- | ---------------------------------------- | ---- | ------ |
+| A0  | Restaurar `XRAY_CLOUD_ENDPOINT=` no `.env.example`  | `.env.example`                           | P0   | ✅     |
+| A1  | R5: `createTestExecution` loga + re-throw           | `git_triggers/test-results.ts:146-163`   | P0   | ✅     |
+| A2  | R5: `getJiraResource` loga antes do throw           | `jira_management/jira_resource.ts:69-72` | P0   | ✅     |
+| A3  | `null as unknown as string` → `return ''` type-safe | `shared/prompt-input.ts:107`             | P0   | ✅     |
+| A4  | `matches[0]!` → guard explícito                     | `git_triggers/test-results.ts:26`        | P0   | ✅     |
+| A5  | `artifacts[0]!` → guard antes do `\|\|`             | `git_triggers/test-results.ts:72`        | P0   | ✅     |
+| A6  | `found[0]![0]` → guard `if (!entry)`                | `jira_management/main.ts:379`            | P0   | ✅     |
+
+### 16B — Funções > 50 linhas (R4, P1)
+
+| #   | Item                                                   | Onde                              | Prio | Status |
+| --- | ------------------------------------------------------ | --------------------------------- | ---- | ------ |
+| B1  | Extrair `_writeReportFile` + `_addAiAnalysis` (58→38)  | `commands/case17.ts:19-76`        | P1   | ✅     |
+| B2  | Extrair `_showSearchResults` de `showHelpLoop` (55→47) | `jira_management/main.ts:342-396` | P1   | ✅     |
+| B3  | Extrair `_executeChoice` de `runMainLoop` (52→41)      | `jira_management/main.ts:689-740` | P1   | ✅     |
+
+### 16C — Dead Exports → Internal (P2)
+
+| #   | Export                | Arquivo                       | Ação                          | Status |
+| --- | --------------------- | ----------------------------- | ----------------------------- | ------ |
+| C1  | `parseCypressResults` | `shared/result_parser.ts:289` | Manter export (`@deprecated`) | ✅     |
+| C2  | `parseMochawesome`    | `shared/result_parser.ts:177` | `@internal` JSDoc             | ✅     |
+| C3  | `parseCtrfResults`    | `shared/result_parser.ts:221` | `@internal` JSDoc             | ✅     |
+| C4  | `isCtrfFormat`        | `shared/result_parser.ts:264` | `@internal` JSDoc             | ✅     |
+| C5  | `getWinTempDir`       | `shared/open.ts:24`           | `@internal` JSDoc             | ✅     |
+| C6  | `getOsOpenCommand`    | `shared/open.ts:71`           | `@internal` JSDoc             | ✅     |
+| C7  | `logsDir`             | `shared/temp-dir.ts:14`       | `@internal` JSDoc             | ✅     |
+| C8  | `compose`             | `shared/bug-report.ts:126`    | `@internal` JSDoc             | ✅     |
+
+### 16D — Justificativas + Casts (P2)
+
+| #   | Item                                                            | Onde                                                      | Status |
+| --- | --------------------------------------------------------------- | --------------------------------------------------------- | ------ |
+| D1  | Adicionar `-- suppress dotenv` em `eslint-disable`              | `shared/config.ts:9`                                      | ✅     |
+| D2  | Adicionar `-- dynamic import, ESM-only` nos 2 `eslint-disable`  | `shared/splash.ts:10,15`                                  | ✅     |
+| D3  | Adicionar `-- token AST shape varies by lexer`                  | `shared/markdown.ts:338,342`                              | ✅     |
+| D4  | Adicionar `// eslint-disable-next-line no-console -- TTY clear` | `jira_management/main.ts:345`, `git_triggers/main.ts:245` | ✅     |
+| D5  | Documentar `err as NodeJS.ErrnoException` — cobre ENOENT        | `shared/result_parser.ts:15`                              | ✅     |
+
+### 16E — Testes Faltantes (P2)
+
+| #   | Item                                                      | Onde                                      | Status |
+| --- | --------------------------------------------------------- | ----------------------------------------- | ------ |
+| E1  | `parseTestResults(null)` + `(undefined)` + `({})`         | `shared/result_parser.test.ts`            | ✅     |
+| E2  | `parseCtrfResults`: status `skipped` + summary fallback   | `shared/result_parser.test.ts`            | ✅     |
+| E3  | `entryName` case-insensitive (`.toLowerCase()`)           | `git_triggers/test-results.ts:49`         | ✅     |
+| E4  | Bug report sub-step após case17 com falhas                | `jira_management/commands/case17.test.ts` | ✅     |
+| E5  | Documentar `XRAY_CLOUD_ENDPOINT` em `docs/06-env-vars.md` | `docs/06-env-vars.md`                     | ✅     |
+
+### 16F — Casts Inseguros (P3)
+
+| #   | Item                                                 | Onde                      | Status |
+| --- | ---------------------------------------------------- | ------------------------- | ------ |
+| F1  | `palette.muted as unknown as string` → guard de tipo | `shared/prompt-ui.ts:387` | ✅     |

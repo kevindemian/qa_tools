@@ -92,11 +92,23 @@ jest.mock('child_process', () => ({
         unref: jest.fn(),
     }),
     spawnSync: jest.fn().mockReturnValue({ error: null, status: 0, stdout: '', stderr: '' }),
+    execSync: jest.fn().mockImplementation(() => {
+        throw new Error('not mocked');
+    }),
 }));
+
+jest.mock('../shared/open', () => {
+    const actual = jest.requireActual('../shared/open');
+    return {
+        ...actual,
+        getDocsOutputDir: jest.fn().mockReturnValue('/tmp/qa_docs_test'),
+        openWithOsOrFallback: jest.fn().mockResolvedValue(true),
+    };
+});
 
 // ── Imports ────────────────────────────────────────────────────────────────
 import { createValidateEnv } from '../shared/cli_base';
-import { warn, helpLine, title, prompt, showSelect, printError } from '../shared/prompt';
+import { warn, helpLine, title, prompt, printError } from '../shared/prompt';
 import { loadTypedState, getStatePath } from '../shared/state';
 
 // ── Types ──────────────────────────────────────────────────────────────────
@@ -458,9 +470,15 @@ describe('dispatchChoice', () => {
 });
 
 describe('showDocs', () => {
-    it('lists available documentation files and exits on 0', async () => {
+    it('generates all docs as HTML and opens browser', async () => {
+        const fs = require('fs');
+        jest.spyOn(fs, 'readdirSync').mockReturnValueOnce(['01-test-doc.md', '02-guide.md']);
+        jest.spyOn(fs, 'readFileSync').mockReturnValue('# Test Content');
         await mod.showDocs();
-        expect(showSelect).toHaveBeenCalled();
+        const openModule = require('../shared/open');
+        expect(openModule.openWithOsOrFallback).toHaveBeenCalledWith(expect.stringContaining('index.html'));
+        fs.readdirSync.mockRestore?.();
+        fs.readFileSync.mockRestore?.();
     });
 
     it('handles missing docs directory', async () => {
@@ -477,15 +495,6 @@ describe('showDocs', () => {
         jest.spyOn(fs, 'readdirSync').mockReturnValueOnce(['readme.txt', 'notes.md']);
         await mod.showDocs();
         expect(warn).toHaveBeenCalled();
-    });
-
-    it('reads and displays a selected document', async () => {
-        (showSelect as jest.Mock).mockResolvedValueOnce('01-test-doc.md').mockResolvedValueOnce('0');
-        const fs = require('fs');
-        jest.spyOn(fs, 'readdirSync').mockReturnValueOnce(['01-test-doc.md']);
-        jest.spyOn(fs, 'readFileSync').mockReturnValueOnce('# Test Document\nContent here.');
-        await mod.showDocs();
-        expect(prompt).toHaveBeenCalledWith(expect.stringContaining('Pressione Enter'));
     });
 });
 
