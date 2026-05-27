@@ -69,7 +69,7 @@ function getRateLimitPerTier(): number {
 
 const cache = new Map<string, CacheEntry>();
 const _rateTimestamps = new Map<LlmTier, number[]>();
-const _circuitState = new Map<LlmTier, { failures: number; breakUntil: number }>();
+const _circuitState = new Map<string, { failures: number; breakUntil: number }>();
 let _cleanupTimer: ReturnType<typeof setInterval> | null = null;
 
 function startCacheCleanup(): void {
@@ -182,10 +182,11 @@ function buildOpenAiPayload(
 
 function buildGeminiPayload(system: string, user: string): string {
     return JSON.stringify({
+        system_instruction: { parts: [{ text: system }] },
         contents: [
             {
                 role: 'user',
-                parts: [{ text: system + '\n\n' + user }],
+                parts: [{ text: user }],
             },
         ],
     });
@@ -265,31 +266,28 @@ function checkRateLimit(tier: LlmTier): void {
     _rateTimestamps.set(tier, windowed);
 }
 
-function checkCircuitBreaker(tier: LlmTier): void {
-    const state = _circuitState.get(tier);
+function checkCircuitBreaker(cfgKey: string): void {
+    const state = _circuitState.get(cfgKey);
     if (state && state.failures >= LLM_CIRCUIT_BREAK_THRESHOLD && Date.now() < state.breakUntil) {
         throw new Error(
-            'Circuit breaker open for tier ' +
-                tier +
-                ' (retry after ' +
+            'Circuit breaker open for provider (retry after ' +
                 Math.ceil((state.breakUntil - Date.now()) / 1000) +
                 's)',
         );
     }
 }
 
-function recordCircuitFailure(tier: LlmTier): void {
-    const state = _circuitState.get(tier) || { failures: 0, breakUntil: 0 };
+function recordCircuitFailure(cfgKey: string): void {
+    const state = _circuitState.get(cfgKey) || { failures: 0, breakUntil: 0 };
     state.failures++;
     if (state.failures >= LLM_CIRCUIT_BREAK_THRESHOLD) {
         state.breakUntil = Date.now() + LLM_CIRCUIT_BREAK_MS;
-        rootLogger.warn('Circuit breaker opened for tier ' + tier + ' for ' + LLM_CIRCUIT_BREAK_MS / 1000 + 's');
     }
-    _circuitState.set(tier, state);
+    _circuitState.set(cfgKey, state);
 }
 
-function recordCircuitSuccess(tier: LlmTier): void {
-    const state = _circuitState.get(tier);
+function recordCircuitSuccess(cfgKey: string): void {
+    const state = _circuitState.get(cfgKey);
     if (state) {
         state.failures = 0;
         state.breakUntil = 0;
@@ -314,8 +312,8 @@ export function parseRetryAfter(resp: Response, defaultMs: number): number {
     return defaultMs;
 }
 
-async function sendToProvider(cfg: ProviderConfig, tier: LlmTier, system: string, user: string): Promise<string> {
-    checkCircuitBreaker(tier);
+async function sendToProvider(cfg: ProviderConfig, system: string, user: string): Promise<string> {
+    checkCircuitBreaker(configUniqueKey(cfg));
     if (!cfg.apiKey) throw new Error('API key missing for tier');
 
     if (cfg.format === 'gemini') {
@@ -370,15 +368,16 @@ async function sendWithFallback(tier: LlmTier, system: string, user: string): Pr
 
     for (let i = 0; i < candidates.length; i++) {
         const cfg = candidates[i]!;
+        const cfgKey = configUniqueKey(cfg);
         try {
-            const result = await sendToProvider(cfg, tier, system, user);
-            if (i === 0) recordCircuitSuccess(tier);
+            const result = await sendToProvider(cfg, system, user);
+            if (i === 0) recordCircuitSuccess(cfgKey);
             return result;
         } catch (err) {
             const msg = (err as Error).message;
             errors.push(cfg.model + '@' + cfg.baseUrl + ': ' + msg);
             rootLogger.warn('LLM provider failed: ' + msg + ' — trying next');
-            if (/HTTP 429/i.test(msg)) recordCircuitFailure(tier);
+            if (/HTTP 429/i.test(msg)) recordCircuitFailure(cfgKey);
         }
     }
 

@@ -690,7 +690,7 @@ Também marcar o AUDIO-01 (M1, M2, M3 do bloco antigo) como resolvidos:
 | Fase | Descrição | Itens | Esforço |
 |------|-----------|-------|---------|
 | 1 | Fixes simples independentes (I5, I3, S5, S2, I4, S6, C3, I7) | 8 | ✅ |
-| 2 | Circuit breaker, validateAll, Gemini system_instruction | 3 | ~1.5h |
+| 2 | Circuit breaker, validateAll, Gemini system_instruction | 3 | ✅ |
 | 3 | Métricas + token usage + responseFormat param | 3 | ~3h |
 | 4 | Benchmark paralelo + E2E pipeline test | 2 | ~1.5h |
 
@@ -699,16 +699,9 @@ Também marcar o AUDIO-01 (M1, M2, M3 do bloco antigo) como resolvidos:
 | ID | Item | Prio | Arquivo(s) | Fase | Status |
 |----|------|------|------------|------|--------|
 | C3 | Prompt injection: {{FAILED_TESTS}} → user message | P0 | failure-analysis.ts, llm-benchmark.ts | 1 | ✅ |
-| C4 | Circuit breaker per-provider (configUniqueKey) | P0 | llm-client.ts, llm-client.test.ts | 2 | ⬜ |
-| I5 | case18 usar tier `fast` em vez de `main` | P0 | case18.ts | 1 | ✅ |
-| I3 | configUniqueKey incluir apiKey | P0 | llm-client.ts | 1 | ✅ |
-| C1 | validateAll: schema validation em todos tests[i] | P1 | report-validator.ts, llm-review.ts | 2 | ⬜ |
-| I4 | Alinhar parseVerdict/stripVerdict (mesmo regex) | P1 | llm-review.ts | 1 | ✅ |
-| I7 | parseRetryAfter Date (RFC 7231) test | P1 | llm-client.test.ts | 1 | ✅ |
-| S2 | callerId no cache hit/miss log | P1 | llm-client.ts | 1 | ✅ |
-| S6 | Invalid response no retry prompt | P1 | llm-review.ts | 1 | ✅ |
-| S5 | Sanitizar ciUrl no HTML report | P1 | report-generator.ts | 1 | ✅ |
-| C2 | Gemini system_instruction field (vs concat) | P2 | llm-client.ts | 2 | ⬜ |
+| C4 | Circuit breaker per-provider (configUniqueKey) | P0 | llm-client.ts, llm-client.test.ts | 2 | ✅ |
+| C1 | validateAll: schema validation em todos tests[i] | P1 | report-validator.ts, llm-review.ts | 2 | ✅ |
+| C2 | Gemini system_instruction field (vs concat) | P2 | llm-client.ts | 2 | ✅ |
 | I1 | Métricas: tokens + cache hit/miss + per-provider | P2 | llm-metrics.ts, llm-client.ts | 3 | ⬜ |
 | S4 | Expor token usage no parseResponse | P2 | llm-client.ts, llm-metrics.ts | 3 | ⬜ |
 | S3 | Benchmark paralelo (Promise.allSettled) | P3 | llm-benchmark.ts | 4 | ⬜ |
