@@ -264,3 +264,68 @@ describe('BugReport Service', () => {
         });
     });
 });
+
+jest.mock('./llm-client', () => ({ llmPrompt: jest.fn() }));
+jest.mock('fs', () => {
+    const actual = jest.requireActual('fs');
+    return {
+        ...actual,
+        readFileSync: jest.fn((p: string) => {
+            if (p.includes('bug-report-from-description.md')) return 'mock prompt content';
+            return actual.readFileSync(p);
+        }),
+    };
+});
+
+import { generateBugReportFromDescription } from './bug-report';
+
+const mockLlmPrompt = jest.requireMock('./llm-client').llmPrompt as jest.Mock;
+
+describe('generateBugReportFromDescription', () => {
+    beforeEach(() => {
+        mockLlmPrompt.mockReset();
+    });
+
+    it('returns BugReport when LLM succeeds with valid schema', async () => {
+        mockLlmPrompt.mockResolvedValue({
+            summary: 'Login fails on Firefox',
+            description: 'Request times out after 30s',
+            stepsToReproduce: ['Open Firefox', 'Navigate to /login'],
+            expectedResult: 'User redirected to dashboard',
+            actualResult: '504 Gateway Timeout',
+            environment: 'Firefox 120',
+            severity: 'major',
+            component: 'auth-service',
+        });
+
+        const result = await generateBugReportFromDescription('login fails on firefox');
+        expect(result).not.toBeNull();
+        expect(result!.summary).toBe('Login fails on Firefox');
+        expect(result!.severity).toBe('major');
+        expect(result!.source).toBe('manual');
+        expect(result!.llmEnrichment).toBeDefined();
+        expect(result!.llmEnrichment!.model).toBe('fast');
+    });
+
+    it('returns BugReport without optional fields when LLM omits them', async () => {
+        mockLlmPrompt.mockResolvedValue({
+            summary: 'Button not visible',
+            description: 'Submit button hidden on mobile viewport',
+            stepsToReproduce: ['Open on iPhone 12', 'Go to /checkout'],
+            expectedResult: 'Submit button is visible',
+            actualResult: 'Submit button is hidden behind footer',
+            severity: 'minor',
+        });
+
+        const result = await generateBugReportFromDescription('button not visible');
+        expect(result).not.toBeNull();
+        expect(result!.environment).toBeUndefined();
+        expect(result!.component).toBeUndefined();
+    });
+
+    it('returns null when LLM throws', async () => {
+        mockLlmPrompt.mockRejectedValue(new Error('LLM API error'));
+        const result = await generateBugReportFromDescription('something broke');
+        expect(result).toBeNull();
+    });
+});
