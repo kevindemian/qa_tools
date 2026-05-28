@@ -156,7 +156,7 @@ describe('case18 — AI tests generator', () => {
     });
 
     it('23.14: prints error when retry is still invalid', async () => {
-        const { llmPrompt } = require('./llm-client');
+        const { llmPrompt } = require('../../shared/llm-client');
         const { printError } = require('../../shared/prompt');
         const prompt = require('../../shared/prompt');
         const fs = require('fs');
@@ -169,6 +169,9 @@ describe('case18 — AI tests generator', () => {
         const mod = require('./case18').default;
         await mod.handler(baseContext);
 
-        expect(printError).toHaveBeenCalledWith(expect.stringContaining('LLM retornou conteúdo inválido após retry'));
+        expect(printError).toHaveBeenCalledWith(
+            'Falha ao gerar casos de teste com IA',
+            expect.stringContaining('LLM retornou conteúdo inválido após retry'),
+        );
     });
 });

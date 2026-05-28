@@ -48,11 +48,12 @@ describe('LlmMetrics', () => {
         recordLlmRequest('main', 100);
         snapshotLlmMetrics(); // Should persist to disk
 
-        // Reset and load again from the same tmp dir
-        const { snapshotLlmMetrics: snapshotLlmMetrics2 } = loadMod();
-        const snap = snapshotLlmMetrics2();
+        // Reset and load history from the same tmp dir
+        const { getLlmMetricsHistory: getHistory2 } = loadMod();
+        const history = getHistory2();
 
-        expect(snap.totalRequests).toBe(1);
+        expect(history).toHaveLength(1);
+        expect(history[0]!.totalRequests).toBe(1);
     });
 
     it('23.12: recordArtifactReview approved/rejected', () => {
@@ -62,8 +63,8 @@ describe('LlmMetrics', () => {
         recordArtifactReview(true); // approved
 
         const snap = snapshotLlmMetrics();
-        expect(snap.artifactApprovedCount).toBe(2);
-        expect(snap.artifactRejectedCount).toBe(1);
+        expect(snap.artifactApproved).toBe(2);
+        expect(snap.artifactRejected).toBe(1);
     });
 
     it('records validation rejections', () => {

@@ -41,6 +41,7 @@ jest.mock('./prompts/__fixtures__/index', () => ({
 
 import { validateJsonSchema, validateJsonArray, validateClassify, runBenchmark } from './llm-benchmark';
 import { llmPrompt } from './llm-client';
+import { withEnv } from './test-utils';
 
 const VALID_SCHEMA_ITEM = {
     title: 'Login test',
@@ -167,6 +168,7 @@ describe('validateClassify', () => {
 
 describe('runBenchmark', () => {
     let consoleSpy: jest.SpyInstance;
+    let restoreEnv: (() => void) | null = null;
 
     beforeEach(() => {
         consoleSpy = jest.spyOn(console, 'log').mockImplementation(() => {});
@@ -174,10 +176,14 @@ describe('runBenchmark', () => {
 
     afterEach(() => {
         jest.restoreAllMocks();
+        if (restoreEnv) {
+            restoreEnv();
+            restoreEnv = null;
+        }
     });
 
     it('prints skip message and returns early when BENCHMARK env var is not true', async () => {
-        jest.spyOn(process, 'env', 'get').mockReturnValue({ ...process.env, BENCHMARK: 'false' });
+        restoreEnv = withEnv({ BENCHMARK: 'false' });
 
         await runBenchmark();
 
@@ -185,7 +191,7 @@ describe('runBenchmark', () => {
     });
 
     it('loads fixtures and executes all benchmark types when BENCHMARK is true', async () => {
-        jest.spyOn(process, 'env', 'get').mockReturnValue({ ...process.env, BENCHMARK: 'true' });
+        restoreEnv = withEnv({ BENCHMARK: 'true' });
 
         const llmMock = llmPrompt as jest.Mock;
         llmMock.mockImplementation((_tier: string, _system: string, _userMsg: string, callerId?: string) => {
@@ -309,6 +315,7 @@ describe('validateClassify — edge cases', () => {
 
 describe('runBenchmark — error handling', () => {
     let consoleSpy: jest.SpyInstance;
+    let restoreEnv: (() => void) | null = null;
 
     beforeEach(() => {
         consoleSpy = jest.spyOn(console, 'log').mockImplementation(() => {});
@@ -316,10 +323,14 @@ describe('runBenchmark — error handling', () => {
 
     afterEach(() => {
         jest.restoreAllMocks();
+        if (restoreEnv) {
+            restoreEnv();
+            restoreEnv = null;
+        }
     });
 
     it('reports failure when llmPrompt throws', async () => {
-        jest.spyOn(process, 'env', 'get').mockReturnValue({ ...process.env, BENCHMARK: 'true' });
+        restoreEnv = withEnv({ BENCHMARK: 'true' });
 
         const llmMock = llmPrompt as jest.Mock;
         llmMock.mockRejectedValue(new Error('API timeout'));
@@ -331,7 +342,7 @@ describe('runBenchmark — error handling', () => {
     });
 
     it('handles empty fixture lists gracefully', async () => {
-        jest.spyOn(process, 'env', 'get').mockReturnValue({ ...process.env, BENCHMARK: 'true' });
+        restoreEnv = withEnv({ BENCHMARK: 'true' });
 
         const fixturesModule = jest.requireMock('./prompts/__fixtures__/index');
         fixturesModule.loadFailureAnalysisFixtures.mockReturnValue([]);

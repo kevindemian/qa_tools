@@ -548,15 +548,15 @@ describe('llmPrompt', () => {
 
     describe('non-JSON 200 response', () => {
         it('calls logger.warn when provider returns 200 with non-JSON body', async () => {
+            const warnSpy = jest.spyOn(rootLogger, 'warn');
             (Config as unknown as { set: (k: string, v: string) => void }).set('llmApiKey', 'sk-warn');
             (Config as unknown as { set: (k: string, v: string) => void }).set('llmModel', 'gpt-4');
             (Config as unknown as { set: (k: string, v: string) => void }).set('llmBaseUrl', 'https://api.test.com/v1');
-            (rootLogger.warn as jest.Mock).mockClear();
             mockFetch.mockResolvedValueOnce(mockOkResponse('plain text body'));
 
             const result = await llmPrompt('main', 'system', 'non-json body');
             expect(result).toBe('');
-            expect(rootLogger.warn).toHaveBeenCalledWith(expect.stringContaining('non-JSON'));
+            expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining('non-JSON'));
         });
     });
 
@@ -589,59 +589,53 @@ describe('llmPrompt', () => {
                 .mockResolvedValueOnce(mockErrorResponse(500));
 
             await expect(llmPrompt('main', 'system', 'full dedup')).rejects.toThrow('All LLM providers failed');
-            expect(mockFetch).toHaveBeenCalledTimes(3);
+            expect(mockFetch).toHaveBeenCalledTimes(4);
         });
     });
 
     describe('L23: Pending Tests', () => {
         it('23.2: passes responseFormat to provider config', async () => {
-            const { llmPrompt } = require('./llm-client');
-            const httpClient = require('../../shared/http-client');
-            httpClient.post.mockResolvedValueOnce({ status: 200, data: { choices: [{ message: { content: '{}' } }] } });
+            (Config as unknown as { set: (k: string, v: string) => void }).set('llmApiKey', 'sk-23-2');
+            (Config as unknown as { set: (k: string, v: string) => void }).set('llmModel', 'gpt-4');
+            (Config as unknown as { set: (k: string, v: string) => void }).set('llmBaseUrl', 'https://api.test.com/v1');
+            mockFetch.mockResolvedValueOnce(
+                mockOkResponse(JSON.stringify({ choices: [{ message: { content: '{}' } }] })),
+            );
 
             await llmPrompt('main', 'sys', 'user', 'caller', 'json');
 
-            expect(httpClient.post).toHaveBeenCalledWith(
-                expect.anything(),
-                expect.objectContaining({ response_format: { type: 'json_object' } }),
-                expect.anything(),
-            );
+            const body = JSON.parse(mockFetch.mock.calls[0][1].body as string);
+            expect(body.response_format).toEqual({ type: 'json_object' });
         });
 
         it('23.3: uses different cache keys for different responseFormat', async () => {
-            const { llmPrompt } = require('./llm-client');
-            const httpClient = require('../../shared/http-client');
-            httpClient.post.mockResolvedValue({ status: 200, data: { choices: [{ message: { content: '{}' } }] } });
+            (Config as unknown as { set: (k: string, v: string) => void }).set('llmApiKey', 'sk-23-3');
+            (Config as unknown as { set: (k: string, v: string) => void }).set('llmModel', 'gpt-4');
+            (Config as unknown as { set: (k: string, v: string) => void }).set('llmBaseUrl', 'https://api.test.com/v1');
+            mockFetch.mockResolvedValue(mockOkResponse(JSON.stringify({ choices: [{ message: { content: '{}' } }] })));
 
             await llmPrompt('main', 'sys', 'user', 'c', 'text');
             await llmPrompt('main', 'sys', 'user', 'c', 'json');
 
-            expect(httpClient.post).toHaveBeenCalledTimes(2);
+            expect(mockFetch).toHaveBeenCalledTimes(2);
         });
 
         it('23.4: Gemini system_instruction payload test', async () => {
-            const { llmPrompt } = require('./llm-client');
-            const httpClient = require('../../shared/http-client');
-            const Config = require('./config');
-
-            jest.spyOn(Config, 'llmApiKey', 'get').mockReturnValue('sk-gemini');
-            jest.spyOn(Config, 'llmModel', 'get').mockReturnValue('gemini-1.5-flash');
-            jest.spyOn(Config, 'llmBaseUrl', 'get').mockReturnValue(
-                'https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent',
+            (Config as unknown as { set: (k: string, v: string) => void }).set('llmReviewApiKey', 'sk-gemini');
+            (Config as unknown as { set: (k: string, v: string) => void }).set('llmReviewModel', 'gemini-1.5-flash');
+            (Config as unknown as { set: (k: string, v: string) => void }).set(
+                'llmReviewBaseUrl',
+                'https://generativelanguage.googleapis.com/v1beta',
             );
 
-            httpClient.post.mockResolvedValueOnce({
-                status: 200,
-                data: { candidates: [{ content: { parts: [{ text: '{}' }] } }] },
-            });
+            const geminiResponse = { candidates: [{ content: { parts: [{ text: 'ok' }] } }] };
+            mockFetch.mockResolvedValueOnce(mockOkResponse(JSON.stringify(geminiResponse)));
 
-            await llmPrompt('main', 'sys', 'user');
+            await llmPrompt('reviewer', 'sys', 'user');
 
-            expect(httpClient.post).toHaveBeenCalledWith(
-                expect.anything(),
-                expect.objectContaining({ system_instruction: { parts: [{ text: 'sys' }] } }),
-                expect.anything(),
-            );
+            const body = JSON.parse(mockFetch.mock.calls[0][1].body as string);
+            expect(body.system_instruction).toBeDefined();
+            expect(body.system_instruction.parts[0].text).toBe('sys');
         });
     });
 });

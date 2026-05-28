@@ -2,7 +2,7 @@ import fs from 'fs';
 import path from 'path';
 import type { FlatTest } from './result_parser';
 import { llmPrompt } from './llm-client';
-import { reviewWithLlm } from './llm-review';
+import { reviewWithLlm, type ReviewResult } from './llm-review';
 import { rootLogger } from './logger';
 import { generateReportWithFallback } from './report-generator';
 import { snapshotLlmMetrics } from './llm-metrics';
@@ -39,9 +39,14 @@ export async function analyzeFailuresWithReport(tests: FlatTest[]): Promise<Anal
     if (!systemTemplate) return { content: '', confidence: 'medium', fallbackUsed: true };
 
     const failedTests = sanitizeForLlm(formatFailedTests(failed));
-    const result = await withSpinner('Analisando falhas com IA...', () =>
-        reviewWithLlm(systemTemplate, 'Failed Tests:\n' + failedTests),
-    );
+    let result: ReviewResult;
+    try {
+        result = await withSpinner('Analisando falhas com IA...', () =>
+            reviewWithLlm(systemTemplate, 'Failed Tests:\n' + failedTests),
+        );
+    } catch {
+        return { content: '', confidence: 'medium', fallbackUsed: true };
+    }
 
     const htmlReport = generateReportWithFallback(tests, {
         title: 'Failure Analysis Report',
