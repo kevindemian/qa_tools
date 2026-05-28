@@ -4,7 +4,7 @@ Ferramentas internas de automação QA para gerenciamento de releases no Jira/Xr
 
 ```
 qa_tools/
-├── jira_management/    ← CLI interativa para Jira/Xray (19 operações)
+├── jira_management/    ← CLI interativa para Jira/Xray (20 operações)
 ├── git_triggers/       ← CLI para GitLab/GitHub (pipeline, MR, nivelar, IA)
 ├── shared/             ← Módulos base (config, logger, prompt, state, http-client, llm)
 └── config/             ← projects.json, providers.json, reviewers.json
@@ -16,12 +16,12 @@ qa_tools/
 cp .env.example .env        # edite com seus tokens (ver docs/06-env-vars.md)
 npm install
 npm run typecheck            # 0 erros
-npm test                     # 1105 testes, 66 suites
+npm test                     # 1730 testes, 98 suites
 ```
 
 - Executar Jira: `npx tsx jira_management/main.ts`
 - Executar Git: `npx tsx git_triggers/main.ts`
-- Ver docs: `npx tsx docs/help-docs.ts`
+- Ver docs: digite `d` ou `/docs` no menu Jira Management
 
 ---
 
@@ -31,7 +31,7 @@ npm test                     # 1105 testes, 66 suites
 | --------------------------------------------------- | ------------------------------------------------------------------- | ----------- |
 | [Instalação](docs/00-install.md)                    | Pré-requisitos, `.env`, wrappers (`.sh`/`.bat`/`.ps1`), verificação |
 | [Primeiros passos](docs/01-primeiros-passos.md)     | Primeira execução, menu, comandos `/help`, `/history`, auto-mode CI |
-| [Jira Management](docs/02-jira-management.md)       | Todas as 16 opções do menu em detalhe                               |
+| [Jira Management](docs/02-jira-management.md)       | Todas as 20 opções do menu em detalhe                               |
 | [Git Triggers](docs/03-git-triggers.md)             | GitLab/GitHub, pipeline polling, merge requests, nivelar branches   |
 | [Formato CSV](docs/04-csv-format.md)                | Especificação do CSV multi-bloco para importação de testes          |
 | [Formato JSON](docs/05-json-format.md)              | Formato JSON para importação de testes                              |
@@ -45,7 +45,7 @@ npm test                     # 1105 testes, 66 suites
 ## Testes
 
 ```bash
-npm test                # 1105 testes, 66 suites
+npm test                # 1730 testes, 98 suites
 npm run typecheck       # 0 erros tsc --noEmit
 npm run lint            # 0 erros eslint
 ```

@@ -26,8 +26,18 @@ Ao iniciar, um menu interativo é exibido. O usuário seleciona um projeto (mape
 | 8   | Exportar variáveis CI/CD                 |
 | 9   | Trocar de projeto                        |
 | a   | Dashboard flakiness (HTML)               |
-| d   | Ver documentação (abre navegador)        |
-| 0   | Sair                                     |
+| 0   | Sair / Voltar                            |
+
+Em qualquer prompt, comandos adicionais estão disponíveis:
+
+- `/help` — exibe lista de comandos
+- `/history` — mostra últimas 10 operações
+- `/back`, `/menu` — volta ao menu
+- `/exit`, `/sair`, `/quit` — encerra sessão
+
+Ao pressionar **Enter** sem digitar nada, a última opção escolhida é repetida automaticamente (exceto `0`).
+
+Em terminais não-TTY ou modo quiet (`QUIET=true`), o menu é renderizado em modo texto com `readline-sync` em vez de setas interativas.
 
 ---
 
@@ -268,7 +278,7 @@ Gera um dashboard HTML com análises de flakiness dos testes a partir do histór
 
 ## 10. Batch Mode
 
-> Execução não-interativa para pipelines CI/CD. Detecta automaticamente os argumentos `--batch` / `--auto` e executa sem prompts.
+> Execução não-interativa para pipelines CI/CD. Detecta automaticamente os argumentos `--batch` / `--auto` (e também `--project` ou `--branch` sozinhos) e executa sem prompts.
 
 O batch mode permite disparar uma pipeline, coletar resultados, analisar falhas com IA e gerar dashboard de flakiness em **um único comando**.
 

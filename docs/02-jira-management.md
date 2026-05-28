@@ -26,7 +26,7 @@
 - [16 — Alterar diretório JSON](#16--alterar-diretório-json)
 - [17 — Gerar relatório HTML + análise IA](#17--gerar-relatório-html--análise-ia)
 - [18 — Gerar testes de user story (IA)](#18--gerar-testes-de-user-story-ia)
-- [19 — Comparar execuções com IA](#19--comparar-execuções-com-ia)
+- [19 — Histórico / Cobertura](#19--histórico--cobertura)
 - [20 — Criar Bug Report](#20--criar-bug-report)
 
 ---
@@ -73,7 +73,7 @@ Cria issues do tipo "Test" no Jira com steps, pre-conditions e linked issues a p
 - `commands/case01.ts` — handler da opção
 - `create_tests.ts` — orquestração central (função `createTestsFromCsv`)
 - `csv_resource.ts` — parsing do CSV em blocos
-- `test-case-validator.ts` — validação dos `TestCase`
+- `csv-import-schema.ts` — validação Zod dos `TestCase`
 - `test-case-factory.ts` — criação de issues e steps no Jira/Xray
 - `issue-linker.ts` — associação de pre-conditions e linked issues
 - `mapping-file-generator.ts` — geração de arquivos de mapeamento
@@ -377,18 +377,33 @@ Define o diretório padrão para arquivos JSON usados na opção 15. Permite usa
 
 ## Variáveis de ambiente
 
-| Variável              | Descrição                                               | Obrigatória |
-| --------------------- | ------------------------------------------------------- | ----------- |
-| `JIRA_BASE_URL`       | URL base do Jira (ex: `https://seu-jira-server`)        | Sim         |
-| `JIRA_PERSONAL_TOKEN` | Token de autenticação Bearer                            | Sim         |
-| `XRAY_BASE_URL`       | URL base do Xray (necessária para criar testes)         | Sim         |
-| `XRAY_MODE`           | Modo Xray: `server` (API REST) ou `cloud` (API GraphQL) | Não         |
-| `JIRA_PROJECT`        | Projeto Jira padrão (opcional, fallback `ECSPOL`)       | Não         |
-| `CSV_DEFAULT_PATH`    | Caminho padrão do CSV                                   | Não         |
-| `CSV_LABELS`          | Labels padrão separadas por vírgula                     | Não         |
-| `AUTO_CHOICE`         | Opção automática do menu (para scripting)               | Não         |
-| `AUTO_CONFIRM`        | Pular confirmações (true/false)                         | Não         |
-| `DEBUG`               | Modo debug com logging adicional                        | Não         |
+| Variável               | Descrição                                               | Obrigatória |
+| ---------------------- | ------------------------------------------------------- | ----------- |
+| `JIRA_BASE_URL`        | URL base do Jira (ex: `https://seu-jira-server`)        | Sim         |
+| `JIRA_PERSONAL_TOKEN`  | Token de autenticação Bearer                            | Sim         |
+| `XRAY_BASE_URL`        | URL base do Xray (necessária para criar testes)         | Sim         |
+| `XRAY_MODE`            | Modo Xray: `server` (API REST) ou `cloud` (API GraphQL) | Não         |
+| `XRAY_CLIENT_ID`       | Client ID Xray Cloud (modo `cloud`)                     | Não         |
+| `XRAY_CLIENT_SECRET`   | Client Secret Xray Cloud                                | Não         |
+| `XRAY_CLOUD_ENDPOINT`  | Override do endpoint GraphQL Xray Cloud                 | Não         |
+| `JIRA_PROJECT`         | Projeto Jira padrão (opcional, fallback `ECSPOL`)       | Não         |
+| `CSV_DEFAULT_PATH`     | Caminho padrão do CSV                                   | Não         |
+| `CSV_PATH`             | Sobrescreve caminho CSV                                 | Não         |
+| `CSV_LABELS`           | Labels padrão separadas por vírgula                     | Não         |
+| `JSON_PATH`            | Caminho padrão para JSON                                | Não         |
+| `JSON_LABELS`          | Labels para import JSON                                 | Não         |
+| `CYPRESS_PROJECT_PATH` | Diretório do projeto Cypress                            | Não         |
+| `AUTO_CHOICE`          | Opção automática do menu (para scripting)               | Não         |
+| `AUTO_CONFIRM`         | Pular confirmações (true/false)                         | Não         |
+| `DRY_RUN`              | Simular requisições sem executar                        | Não         |
+| `QUIET`                | Suprimir output informativo                             | Não         |
+| `ON_ERROR`             | Ação em erro: `abort` ou `skip`                         | Não         |
+| `XDG_STATE_HOME`       | Diretório de estado persistente                         | Não         |
+| `QA_TOOLS_TEMP_DIR`    | Diretório temporário (previews, cache, docs HTML)       | Não         |
+| `QA_TOOLS_REPORTS_DIR` | Diretório de relatórios gerados (HTML, flakiness)       | Não         |
+| `QA_TOOLS_LOGS_DIR`    | Sobrescreve `LOG_DIR` (maior prioridade)                | Não         |
+| `DEBUG`                | Modo debug com logging adicional                        | Não         |
+| `LLM_API_KEY`          | API key do provedor LLM **main**                        | Condicional |
 
 ---
 
@@ -454,23 +469,35 @@ Step 1 action,step 1 data,step 1 expected
 
 > O relatório HTML é gerado **mesmo sem análise IA**. A IA é um enriquecimento opcional — stats, gráfico e tabela funcionam independentemente.
 
-Gera um relatório HTML interativo a partir de um arquivo `mochawesome.json` e, opcionalmente, enriquece com análise de falhas por IA. Também pode gerar um **Bug Report** no Jira ao final.
+Gera um relatório HTML interativo a partir de um arquivo JSON (formato **CTRF** ou **Mochawesome**) e, opcionalmente, enriquece com análise de falhas por IA. Também pode gerar um **Bug Report** no Jira ao final.
 
 ### Fluxo
 
-1. Informa o caminho do JSON do Mochawesome
+1. Informa o caminho do JSON (CTRF ou Mochawesome)
 2. Parseia com `result_parser.ts` — extrai `title`, `state`, `duration`
-3. Gera HTML com `generateHtmlReport()` incluindo:
+3. Busca **histórico Git** das últimas 5 execuções via API (GitHub Actions `/actions/runs` ou GitLab CI `/pipelines`), extrai CTRF de artifacts ZIPados
+4. Gera HTML com `generateHtmlReport()` incluindo:
     - Estatísticas (passados, falhas, skipped, duração total)
-    - Tabela de testes com cores por status
-    - Gráfico SVG de distribuição
-4. Se houver testes falhos, pergunta: _"Deseja analisar falhas com IA?"_
-    - Se sim, chama `analyzeFailuresWithReport()` — pipeline LLM (report → validate → retry → reviewer → fallback)
+    - Tabela de testes com cores por status (com **filtro JS** e **export CSV**)
+    - Gráfico SVG de distribuição + **gráfico de tendência** (pass rate dos últimos runs)
+    - **Dark mode** automático (segue `prefers-color-scheme`)
+    - **Detecção de flaky tests** entre execuções
+    - **Commits recentes** em `<details>`
+    - **Contexto Jira**: busca issues tipo Bug com `summary~"<test_name>"` para testes falhos
+    - **Diff vs última execução** (`last-results.ctrf.json`): novas falhas/passes destacados
+    - **Categorização de falhas**: ASSERTION, TIMEOUT, ENVIRONMENT, APPLICATION, FLAKY, UNKNOWN (badge colorido)
+    - **Footer** com CI URL, branch, job name
+5. Se houver testes falhos, pergunta: _"Deseja analisar falhas com IA?"_
+    - Se sim, chama `analyzeFailuresWithReport()` com **contexto enriquecido** (gitCommits, gitTrend, jiraIssues)
+    - Pipeline LLM (report → validate → retry → reviewer → fallback)
     - Insere seção "Análise IA" no HTML com badge de confiança (🟢 alta / 🟡 média / 🔴 baixa)
     - Se fallback ativo, exibe ⚠ warning no relatório
-5. Salva HTML no diretório do JSON de origem (ou no diretório de reports via `writeReport()`)
-6. Abre o HTML no navegador via `openWithOsOrFallback()`
-7. Se houver falhas, pergunta se deseja criar **Bug Report** no Jira (chama `interactiveBugReportFlow()`)
+6. **Quality Gate**: se `QA_FAIL_ON=<rate>`, valida pass rate mínimo. Abaixo do threshold → reporta erro.
+7. **Auto-bug**: se `QA_AUTO_BUG=true`, cria automaticamente Bug no Jira para cada nova falha detectada no diff
+8. **PR Comment**: se `GITHUB_PR_NUMBER` configurado, posta resumo dos testes como comentário no PR
+9. Salva HTML + `report.ctrf.json` + `report.stats.json` + `last-results.ctrf.json` no diretório de saída
+10. Abre o HTML no navegador via `openWithOsOrFallback()`
+11. Se houver falhas, pergunta se deseja criar **Bug Report** no Jira (chama `interactiveBugReportFlow()`)
 
 **Arquivo:** `jira_management/commands/case17.ts`
 
@@ -478,7 +505,7 @@ Gera um relatório HTML interativo a partir de um arquivo `mochawesome.json` e, 
 
 ## 18 — Gerar testes de user story (IA)
 
-> ⚠ Funcionalidade **exclusivamente baseada em IA**. Requer `LLM_API_KEY` configurada e provedor **main** acessível. Sem LLM, a operação é cancelada com mensagem de erro.
+> ⚠ Funcionalidade **exclusivamente baseada em IA**. Requer `LLM_FAST_API_KEY` configurada (tier **fast** — Groq) ou fallback para **main**. Sem LLM, a operação é cancelada com mensagem de erro.
 
 Cria casos de teste automaticamente a partir de uma história de usuário e critérios de aceitação usando IA.
 
@@ -499,23 +526,36 @@ Cria casos de teste automaticamente a partir de uma história de usuário e crit
 
 ---
 
-## 19 — Comparar execuções com IA
+## 19 — Histórico / Cobertura
 
 > Histórico de execuções, análise de flakiness, tendências e cobertura Jira funcionam **sem LLM**. A comparação narrativa com IA é um adicional — se o LLM falhar, a seção é omitida silenciosamente e as demais funcionalidades permanecem intactas.
 
-Compara as duas últimas execuções de teste e gera uma análise narrativa com IA sobre tendências.
+Menu de dois sub-comandos: **(a)** Mostrar histórico de execuções, **(b)** Analisar cobertura Jira.
 
-### Fluxo
+### (a) Histórico de execuções
 
-1. Exibe as últimas execuções disponíveis
-2. Seleciona as duas execuções a comparar
-3. Chama `compareRuns()` com tier **fast** — analisa:
+1. Carrega as últimas execuções armazenadas em `metrics.json`
+2. Exibe tabela com pass rate, total de testes e falhas dos últimos 10 runs
+3. `calculateFlakiness()` — detecta testes com estados mistos (passed↔failed entre runs)
+4. Quando há 2+ execuções, opcionalmente compara via `compareRuns()` (tier **fast**):
     - Variação de pass rate
     - Novas falhas introduzidas
     - Tendência geral (melhora, piora, estável)
-4. Exibe análise textual de 3–5 sentenças
+5. Exibe análise textual de 3–5 sentenças
 
-**Arquivo:** `jira_management/commands/case19.ts`
+### (b) Cobertura Jira
+
+1. `analyzeCoverage()` — busca issues tipo Test via JQL
+2. Verifica se cada issue tem steps (campo `steps` com length > 0)
+3. Agrupa gaps por Epic (`customfield_10014`)
+4. Exibe `CoverageResult` com:
+    - `totalIssues`, `totalSteps`, `mappedIssues`
+    - `unmappedSteps` — issues sem steps
+    - `gapsByEpic` — gaps agrupados por épico
+    - `coveragePct` — percentual geral
+5. `saveCoverageSnapshot()` — persiste timestamp + métricas em `metrics.json`
+
+**Arquivos:** `jira_management/commands/case19.ts`, `jira_management/coverage.ts`
 
 ---
 
