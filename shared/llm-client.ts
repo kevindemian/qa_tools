@@ -3,6 +3,7 @@ import Config from './config';
 import { rootLogger } from './logger';
 import { sanitizeForLlm } from './sanitize';
 import { checkCircuitBreaker, recordCircuitFailure, recordCircuitSuccess } from './circuit-breaker';
+import { diskCacheGet, diskCacheSet, clearDiskCache } from './disk-cache';
 
 /**
  * Multi-tier LLM client with automatic fallback, caching, rate limiting,
@@ -13,9 +14,11 @@ import { checkCircuitBreaker, recordCircuitFailure, recordCircuitSuccess } from 
  * Six named tiers (main, fast, reviewer, report, fallback, batch) each map
  * to a distinct model/provider configuration via Config.  On failure the
  * client transparently walks the tier's fallback chain (e.g. main →
- * fallback → batch).  Responses are cached by SHA-256 hash for 5 minutes
- * to avoid redundant calls.  Per-tier rate limiting and a circuit breaker
- * (5 failures → 30 s cooldown) protect upstream providers.
+ * fallback → batch).  Responses are cached by SHA-256 hash — first in
+ * memory (5 minutes) then on disk (1 hour, configurable via
+ * LLM_DISK_CACHE_DIR) — to avoid redundant calls.  Per-tier rate limiting
+ * and a circuit breaker (5 failures → 30 s cooldown) protect upstream
+ * providers.
  */
 
 /**
@@ -495,15 +498,24 @@ export async function llmPrompt(
             user.length +
             (callerId ? ' callerId=' + callerId : ''),
     );
+
+    const diskCached = diskCacheGet(cKey);
+    if (diskCached !== null) {
+        cache.set(cKey, { response: diskCached, expiresAt: Date.now() + CACHE_TTL_MS });
+        return diskCached;
+    }
+
     const response = await sendWithFallback(tier, system, user, responseFormat);
 
     cache.set(cKey, { response, expiresAt: Date.now() + CACHE_TTL_MS });
+    diskCacheSet(cKey, response);
     return response;
 }
 
-/** Evict all cached LLM responses. Useful in tests or when provider config changes at runtime. */
+/** Evict all cached LLM responses (memory + disk). Useful in tests or when provider config changes at runtime. */
 export function clearCache(): void {
     cache.clear();
+    clearDiskCache();
 }
 
 /** Reset per-tier rate-limit tracking. Typically called in test teardown. */
