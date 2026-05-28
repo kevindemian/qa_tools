@@ -4,13 +4,9 @@ let dotenvLoaded = false;
 
 function ensureDotenv(): void {
     if (dotenvLoaded) return;
-    const envPath = path.resolve(__dirname, '../.env');
     try {
         // eslint-disable-next-line @typescript-eslint/no-require-imports
-        if (require('fs').existsSync(envPath)) {
-            // eslint-disable-next-line @typescript-eslint/no-require-imports
-            require('dotenv').config({ path: envPath });
-        }
+        require('dotenv').config({ path: path.resolve(__dirname, '../.env') });
     } catch {
         /* env file optional */
     }
