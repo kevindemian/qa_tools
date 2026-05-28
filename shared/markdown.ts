@@ -1,3 +1,14 @@
+/** Lightweight Markdown parser, renderer, and HTML converter.
+ *
+ * Supported syntax: headings (#), bold (**), italic (*), strikethrough (~~),
+ * inline code (`), code blocks (```), links [text](url), images ![alt](url),
+ * unordered lists (-), ordered lists (1.), horizontal rules (---), tables (|...|),
+ * blockquotes (>).
+ *
+ * Terminal output uses ANSI styles via the palette module.
+ * HTML output generates a complete self-contained page with navigation sidebar
+ * and responsive CSS for documentation rendering. */
+
 import { stripVTControlCharacters } from 'util';
 import { palette } from './palette';
 import { box, type BoxBorder } from './box';
@@ -572,10 +583,12 @@ const NAV_CSS = `
 .nav-bar .nav-index { margin: 0 auto; }
 `.trim();
 
+/** A link in the navigation bar (prev/next). */
 export interface NavLink {
     label: string;
     file: string;
 }
+/** Navigation configuration for prev/next links in HTML output. */
 export interface NavConfig {
     prev?: NavLink;
     next?: NavLink;
@@ -583,6 +596,8 @@ export interface NavConfig {
 
 // ─── Public API ─────────────────────────────────────────────────────────────────
 
+/** Render Markdown to an ANSI-styled terminal string.
+ * @param availWidth - Available character width (defaults to terminal width - padding). */
 export function md(markdown: string, availWidth?: number): string {
     const tokens = _testTokens ?? lexMarkdown(markdown);
     const lines = renderTokens(tokens, availWidth);
@@ -592,6 +607,7 @@ export function md(markdown: string, availWidth?: number): string {
     return lines.join('\n');
 }
 
+/** Render Markdown inside a styled terminal box with optional title and border. */
 export function mdBox(markdown: string, options?: { title?: string; border?: BoxBorder; color?: string }): string {
     const termWidth = process.stdout.columns || 80;
     const availWidth = Math.max(termWidth - 12, 40);
@@ -605,6 +621,8 @@ export function mdBox(markdown: string, options?: { title?: string; border?: Box
     });
 }
 
+/** Render Markdown to a complete self-contained HTML page with optional navigation sidebar.
+ * Includes responsive CSS and uses `en` as the document language. */
 export function mdToHtml(markdown: string, title?: string, nav?: NavConfig): string {
     const tokens = _testTokens ?? lexMarkdown(markdown);
     const body = renderTokensToHtml(tokens);
