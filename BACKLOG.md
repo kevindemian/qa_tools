@@ -36,7 +36,46 @@ Issues registradas durante refatorações, postergadas por escopo.
 
 ---
 
-## 🔷 Pendentes
+## 🔷 Pendentes — Próxima Sprint
+
+### P1 — Elevar cobertura de arquivos críticos < 90%
+
+| Item                                 | Status | Stmts faltando |
+| ------------------------------------ | ------ | -------------- |
+| `git_triggers/main.ts`               | 🚧     | 101            |
+| `jira_management/commands/case17.ts` | 🚧     | 184            |
+| `jira_management/main.ts`            | 🚧     | 81             |
+| `git_triggers/pipeline-handler.ts`   | 🚧     | 62             |
+| `shared/prompt-input.ts`             | 🚧     | 25             |
+| `shared/open.ts`                     | 🚧     | 20             |
+| `shared/markdown.ts`                 | 🚧     | 23             |
+| `shared/llm-client.ts`               | 🚧     | 21             |
+| `shared/splash.ts`                   | 🚧     | 15             |
+| `shared/report-generator.ts`         | 🚧     | 14             |
+| `git_triggers/batch-mode.ts`         | 🚧     | 10             |
+
+### P2 — Fechar 16 arquivos com 1 stmt descoberto
+
+| Item                                          | Stmt descoberto                      |
+| --------------------------------------------- | ------------------------------------ |
+| `shared/logger.ts:144`                        | Dead code (unreachable)              |
+| `shared/spinner.ts:20`                        | ESM `import('ora')` (uncov. em Jest) |
+| `git_triggers/github_manager.ts:113`          | `_toInputs` non-array edge           |
+| `git_triggers/mr-handler.ts:40`               | IA não retornou análise edge         |
+| `jira_management/commands/case09.ts:15`       | `updateState` callback               |
+| `jira_management/commands/case14.ts:14`       | `updateState` callback               |
+| `jira_management/commands/case16.ts:14`       | `updateState` callback               |
+| `jira_management/import-orchestrator.ts:60`   | `validateImportBatch` undefined      |
+| `jira_management/jira-resource-version.ts:76` | total > MAX_TOTAL warn               |
+| `jira_management/xray-client.ts:43`           | Empty token response                 |
+| `shared/state.ts:61-62,75,111,160-165`        | Múltiplos edges (session-state)      |
+| `shared/config.ts`                            | 2 stmts remanescentes                |
+
+### P3 — Xray per-test history
+
+| Item                                          | Status                 |
+| --------------------------------------------- | ---------------------- |
+| Aguardar `tags: ["TEST-123"]` no emissor CTRF | 🚧 Bloqueado (externo) |
 
 ### P1 — Restaurar thresholds de cobertura (80% branches, 90% lines) ✅
 
