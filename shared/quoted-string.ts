@@ -1,16 +1,27 @@
+/** CSV quoted-value parser. Handles double-quoted values, multi-line quoted
+ * values (spanning CSV rows), and escaped quotes (""). Used by csv_resource.ts
+ * to parse CSV fields that may contain commas, newlines, or special characters. */
+
 const PRECONDITION_KEY_PATTERN = '[A-Z][A-Z0-9]+(?:-[A-Z0-9]+)*\\-\\d+';
 
 const PRECONDITION_KEY_RE = new RegExp('^' + PRECONDITION_KEY_PATTERN + '$');
 
+/** Check if a string matches the precondition key format (e.g., PRECOND-123). */
 export function isPreconditionKey(value: string): boolean {
     return PRECONDITION_KEY_RE.test(value);
 }
 
+/** Extract a precondition key from the start of a string. Returns null if not found. */
 export function extractPreconditionKey(value: string): string | null {
     const match = value.match(new RegExp('^(' + PRECONDITION_KEY_PATTERN + ')'));
     return match ? match[1]! : null;
 }
 
+/** Parse a potentially quoted CSV value, handling multi-line quoted spans.
+ * @param rawValue - The raw value from the current CSV line.
+ * @param lines - All CSV lines (for multi-line lookahead).
+ * @param startLineIndex - Current line index.
+ * @returns An object with the parsed value and the end line index. */
 export function parseQuotedValue(
     rawValue: string,
     lines: string[],

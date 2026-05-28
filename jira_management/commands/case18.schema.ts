@@ -1,3 +1,4 @@
+/** Zod schemas for AI-generated test case validation (case18 — Generate Stories from User Story). */
 import { z } from 'zod';
 
 export const TestCaseDataSchema = z.object({

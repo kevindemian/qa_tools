@@ -1,3 +1,8 @@
+/** Schema-driven report validation. Defines rules for required fields, types,
+ * lengths, and regex patterns. Includes consistency checks (e.g., high-severity
+ * items must have detailed recommendations). Used by the LLM review pipeline
+ * to validate AI-generated analysis reports. */
+
 export interface ValidationRule {
     field: string;
     required: boolean;
@@ -12,9 +17,15 @@ interface ValidationResult {
     warnings: string[];
 }
 
+/** Validates a report data structure against a schema of rules.
+ * Supports nested field paths (e.g., "tests[0].recommendation") and
+ * array-indexed rules for consistent multi-item validation. */
 export class ReportValidator {
     constructor(private readonly schema: ValidationRule[]) {}
 
+    /** Validate a single data object against the schema.
+     * Returns `valid: false` + error list on first schema mismatch,
+     * `valid: true` + optional warnings on success. */
     validate(data: unknown): ValidationResult {
         const errors: string[] = [];
         const warnings: string[] = [];
@@ -34,6 +45,8 @@ export class ReportValidator {
         return { valid: errors.length === 0, errors, warnings };
     }
 
+    /** Validate all items in a `tests` array against indexed schema rules.
+     * Runs single-validate first, then applies array-indexed rules to items 1..N. */
     validateAll(data: unknown): ValidationResult {
         const result = this.validate(data);
         if (!result.valid) return result;

@@ -1,4 +1,8 @@
-/** Create tests — orchestrate CSV/JSON import, issue creation, linking, and test execution reporting. */
+/** Create tests — orchestrate CSV/JSON import, issue creation, linking, and test execution reporting.
+ * @module Internal functions are ordered by dependency: readers → creators → validators → linkers.
+ * R2 (SRP) débito: deve ser quebrado em CsvImporter, TestCaseFactory, IssueLinker,
+ * TestExecutionCreator, PreconditionAssociator (máx 300 linhas cada). */
+
 import type JiraResource from './jira_resource';
 import JiraLinkManager from './jira_link_manager';
 import type CsvResource from './csv_resource';
@@ -25,6 +29,7 @@ interface CreateFromFileParams {
     jiraLabels?: string[];
 }
 
+/** Read and parse test cases from a CSV file. Returns undefined on error. */
 async function readCsvTests(csvResource: CsvResource, csvPath: string): Promise<TestCase[] | undefined> {
     if (!isQuiet()) info('Lendo CSV...');
     try {
@@ -40,6 +45,7 @@ async function readCsvTests(csvResource: CsvResource, csvPath: string): Promise<
     }
 }
 
+/** Read and validate test cases from a JSON file. Returns undefined on error. */
 function readJsonTests(jsonPath: string): TestCase[] | undefined {
     if (!isQuiet()) info('Lendo JSON...');
     try {
@@ -55,6 +61,7 @@ function readJsonTests(jsonPath: string): TestCase[] | undefined {
     }
 }
 
+/** Full CSV import flow: read, validate, create issues, link, and optionally create test execution. */
 async function createTestsFromCsv({
     jiraResource,
     jiraResourceXray,
@@ -92,6 +99,7 @@ async function createTestsFromCsv({
     });
 }
 
+/** Full JSON import flow: read, validate, create issues, link, and optionally create test execution. */
 async function createTestsFromJson({
     jiraResource,
     jiraResourceXray,
@@ -129,6 +137,7 @@ async function createTestsFromJson({
     });
 }
 
+/** Create a Test Execution issue in Jira for the given test keys. */
 async function createTestExecution(
     jiraResource: JiraResource,
     linkManager: JiraLinkManager,
@@ -141,6 +150,7 @@ async function createTestExecution(
     return creator.create(projectName, testKeys, csvName, titleOverride);
 }
 
+/** Create a Test Execution and link each test case to it. */
 async function createTestExecutionWithLinks(
     jiraResource: JiraResource,
     linkManager: JiraLinkManager,
@@ -153,6 +163,7 @@ async function createTestExecutionWithLinks(
     return creator.createWithLinks(projectName, testKeys, csvName, execOpts);
 }
 
+/** Validate test cases against TestCaseSchema. Returns errors and warnings separately. */
 function validateCsvTests(tests: TestCase[]): { errors: string[]; warnings: string[] } {
     const errors: string[] = [];
     const warnings: string[] = [];
@@ -185,10 +196,12 @@ function validateCsvTests(tests: TestCase[]): { errors: string[]; warnings: stri
     return { errors, warnings };
 }
 
-function updateCrossReferences(linker: IssueLinker, tests: TestCase[], ids: string[]): Promise<void> {
+/** Update cross-references between test cases that reference each other by index. */
+async function updateCrossReferences(linker: IssueLinker, tests: TestCase[], ids: string[]): Promise<void> {
     return linker.updateCrossReferences(tests, ids);
 }
 
+/** Generate CSV/JSON mapping files for the created test issues. */
 function generateMappingFiles(sourcePath: string, projectName: string, tasksId: string[], tests: TestCase[]): void {
     const gen = new MappingFileGenerator();
     gen.generate(sourcePath, projectName, tasksId, tests);
