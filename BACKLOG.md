@@ -68,7 +68,7 @@ Issues registradas durante refatorações, postergadas por escopo.
 
 | Item                                                  | Status | Esforço |
 | ----------------------------------------------------- | ------ | ------- |
-| Batch 1: README + 5 docs (incorretos/críticos)        | 🚧     | 2h      |
+| Batch 1: README + 5 docs (incorretos/críticos)        | ✅     | 2h      |
 | Batch 2: Aliases, comandos especiais, UX features     | 🚧     | 1h      |
 | Batch 3: Documentar `setup/` wizard (doc #10) + fluxo | 🚧     | 2h      |
 
