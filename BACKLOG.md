@@ -980,13 +980,26 @@ Também marcar o AUDIO-01 (M1, M2, M3 do bloco antigo) como resolvidos:
 |----|------|------|--------|
 | 25.1 | Re-audit llm-engineer (score >9.0) — implementadas todas as correções dos findings | P0 | ✅ |
 
+### Fase 6 (P0) — Ciclo Adversarial Completo ✅
+
+| ID | Item | Prio | Status |
+|----|------|------|--------|
+| A1 | `reviewerNotes` + `adversarialRetried` + `reReviewTier` em `ReviewResult` | P0 | ✅ |
+| A2 | `performSelfReview` retorna `reviewerNotes` separado do `content` | P0 | ✅ |
+| A3 | `buildAdversarialRetryPrompt(gaps, user)` — prompt com gaps detectados | P0 | ✅ |
+| A4 | `adversarialRetryParallel` — report + fast + fallback paralelo, pickBest | P0 | ✅ |
+| A5 | `reReviewParallel` — reviewer + fast + fallback paralelo, quorum 2/3 | P0 | ✅ |
+| A6 | `reviewWithLlm` integrado com ciclo adversarial completo | P0 | ✅ |
+| A7 | `recordAdversarialRetry` em llm-metrics | P0 | ✅ |
+| A8 | Testes (11): T1-T8 + 3 novos (adversarial success, re-review downgrade, short notes guard) | P1 | ✅ |
+
 ## Status Final
 
-- **Total de itens:** 53 (Lote 1-25)
-- **Completos:** 53/53 ✅ **(100%)**
-- **Lotes concluídos:** 1, 2, 2.5, 3, 5, 6, 7, 9, 10, 11, 12, 13, 13.5, 14, 15, 15.5, 16, 17, 18, 19, 20, 22, 23, 24, 25
-- **CI:** ✅ 90 suites, 1580 tests, 0 falhas
-- **Último commit:** L29 typed errors
+- **Total de itens:** 59 (Lote 1-25 + Fase 6)
+- **Completos:** 59/59 ✅ **(100%)**
+- **Lotes concluídos:** 1, 2, 2.5, 3, 5, 6, 7, 9, 10, 11, 12, 13, 13.5, 14, 15, 15.5, 16, 17, 18, 19, 20, 22, 23, 24, 25, Fase 6
+- **CI:** ✅ 90 suites, 1583 tests, 0 falhas
+- **Último commit:** Ciclo adversarial completo
 
 | Provider | Tier Planejado | API Key | Status |
 |----------|---------------|---------|--------|

@@ -42,18 +42,69 @@ describe('reviewWithLlm', () => {
         expect(result.content).toContain('ASSERTION');
         expect(result.reviewed).toBe(true);
         expect(result.confidence).toBe('high');
+        expect(result.adversarialRetried).toBeUndefined();
     });
 
-    it('returns medium confidence with reviewer notes when partial', async () => {
+    it('returns medium confidence with reviewer notes when adversarial retry fails', async () => {
         mockLlmPrompt
             .mockResolvedValueOnce(validJsonReport)
-            .mockResolvedValueOnce('PARTIAL - Missing details on timeout threshold.');
+            .mockResolvedValueOnce('PARTIAL - Missing details on timeout threshold.')
+            .mockResolvedValueOnce('invalid json')
+            .mockResolvedValueOnce('invalid json')
+            .mockResolvedValueOnce('invalid json');
 
         const result = await reviewWithLlm('system prompt', 'user prompt');
 
         expect(result.content).toContain('ASSERTION');
         expect(result.content).toContain('Reviewer notes');
         expect(result.confidence).toBe('medium');
+    });
+
+    it('performs adversarial retry and improves confidence from medium to high', async () => {
+        mockLlmPrompt
+            .mockResolvedValueOnce(validJsonReport)
+            .mockResolvedValueOnce('PARTIAL - Missing details on timeout threshold.')
+            .mockResolvedValueOnce(validJsonReport)
+            .mockResolvedValueOnce(validJsonReport)
+            .mockResolvedValueOnce(validJsonReport)
+            .mockResolvedValueOnce('AGREE - Good after revision.')
+            .mockResolvedValueOnce('AGREE - Much better.')
+            .mockResolvedValueOnce('AGREE - Acceptable.');
+
+        const result = await reviewWithLlm('system prompt', 'user prompt');
+
+        expect(result.adversarialRetried).toBe(true);
+        expect(result.reReviewTier).toBeTruthy();
+        expect(result.content).toContain('ASSERTION');
+        expect(result.content).not.toContain('Reviewer notes');
+    });
+
+    it('keeps low confidence and appends notes when re-review downgrades', async () => {
+        mockLlmPrompt
+            .mockResolvedValueOnce(validJsonReport)
+            .mockResolvedValueOnce('PARTIAL - Weak recommendations, missing coverage.')
+            .mockResolvedValueOnce(validJsonReport)
+            .mockResolvedValueOnce(validJsonReport)
+            .mockResolvedValueOnce(validJsonReport)
+            .mockResolvedValueOnce('PARTIAL - Still weak in edge cases.')
+            .mockResolvedValueOnce('PARTIAL - Recommendations need work.')
+            .mockResolvedValueOnce('DISAGREE - Multiple issues remain.');
+
+        const result = await reviewWithLlm('system prompt', 'user prompt');
+
+        expect(result.adversarialRetried).toBe(true);
+        expect(result.content).toContain('Reviewer notes');
+    });
+
+    it('skips adversarial retry when reviewerNotes are too short', async () => {
+        mockLlmPrompt.mockResolvedValueOnce(validJsonReport).mockResolvedValueOnce('PARTIAL - ok');
+
+        const result = await reviewWithLlm('system prompt', 'user prompt');
+
+        expect(result.adversarialRetried).toBeUndefined();
+        expect(result.confidence).toBe('medium');
+        // Notes are only 2 chars (<20), so no retry, but notes still appended
+        expect(result.content).toContain('Reviewer notes');
     });
 
     it('retries when validation fails and eventually succeeds', async () => {
@@ -95,7 +146,6 @@ describe('reviewWithLlm', () => {
         expect(result.content).toBe('fallback content');
         expect(result.reviewed).toBe(false);
         expect(result.fallbackUsed).toBe(true);
-        // 1 primary + 3 retries + 1 fallback = 5
         expect(mockLlmPrompt).toHaveBeenCalledTimes(5);
     });
 
@@ -118,7 +168,6 @@ describe('reviewWithLlm', () => {
             .mockResolvedValueOnce('AGREE - Good.');
 
         await reviewWithLlm('system prompt text', 'user data');
-        // Second call is the retry — the system arg (index 1) contains buildRetryPrompt output
         const retrySystemArg = mockLlmPrompt.mock.calls[1]![1];
         expect(retrySystemArg).toContain('validation');
         expect(retrySystemArg).toContain(invalidJson);
@@ -145,7 +194,6 @@ describe('reviewWithLlm', () => {
         const result = await reviewWithLlm('system prompt', 'user prompt');
 
         expect(result.fallbackUsed).toBe(true);
-        // 1 primary attempt + 3 retries (MAX_RETRIES=3) + 1 fallback = 5
         expect(mockLlmPrompt).toHaveBeenCalledTimes(5);
     });
 });
