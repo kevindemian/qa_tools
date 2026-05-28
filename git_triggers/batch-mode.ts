@@ -1,3 +1,4 @@
+/** Batch mode — run metrics, flakiness dashboard, and pipeline failure analysis headlessly. */
 import { success, error, info, printError, withSpinner } from '../shared/prompt';
 import { loadMetrics, calculateFlakiness } from '../shared/metrics';
 import { generateFlakinessHtml } from '../shared/flakiness-dashboard';

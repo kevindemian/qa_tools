@@ -1,3 +1,4 @@
+/** AI-powered test-impact assessment — analyze which tests to run based on code changes. */
 import fs from 'fs';
 import { llmPrompt } from '../shared/llm-client';
 import { rootLogger } from '../shared/logger';

@@ -1,3 +1,4 @@
+/** Session state — persist/load session context as JSON for the git_triggers lifecycle. */
 import fs from 'fs';
 import path from 'path';
 import Config from '../shared/config';

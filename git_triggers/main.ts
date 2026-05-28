@@ -1,3 +1,4 @@
+/** git_triggers entry point — validates environment, shows splash, and dispatches to sub-handlers. */
 import { createValidateEnv, setupSigint } from '../shared/cli_base';
 import Config from '../shared/config';
 import { showSplash } from '../shared/splash';
