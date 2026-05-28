@@ -13,5 +13,6 @@ Respond with EXACTLY ONE LINE in exactly this format: CATEGORY: explanation
 
 Example: ASSERTION: Expected 200 but got 500 on login endpoint
 
-## Adversarial check (before responding)
-Briefly consider: could this failure reasonably belong to a different category? If yes, choose the more specific one.
+## Adversarial check (execute before responding, do not include in output)
+1. Consider: could this failure belong to a DIFFERENT category? Choose the most specific one.
+2. Verify once: does the category match ALL failure details? If yes, output ONLY the one line.

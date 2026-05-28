@@ -27,7 +27,15 @@ export async function generatePrDescription(m: GitProvider, source: string, targ
             return '';
         }
 
-        const system = 'You are a QA automation assistant that writes PR/MR descriptions.';
+        const system = [
+            'You are a QA automation assistant that writes PR/MR descriptions.',
+            'Before writing, adversarially audit your description mentally (do not include audit in output):',
+            '1. Identify all meaningful changes from the diff — code, tests, configs, dependencies',
+            '2. Challenge your risk assessment — is any regression risk being overlooked?',
+            '3. Verify completeness — does every meaningful diff entry have coverage in the description?',
+            '4. Mentally iterate: refine the description, respecting the 300-word limit, then re-audit',
+            '5. Repeat until the description is complete AND ≤300 words — only then output',
+        ].join('\n');
         const user = buildPrompt(sanitizeForLlm(diff), source, target);
         return await llmPrompt('fast', system, user, 'pr-description');
     } catch (err) {
