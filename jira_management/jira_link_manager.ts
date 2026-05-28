@@ -1,3 +1,4 @@
+/** Issue-link management: resolve link types, create links, and associate pre-conditions via the Jira API. */
 import fs from 'fs';
 import path from 'path';
 import { info } from '../shared/prompt';
@@ -25,6 +26,7 @@ interface IssueField {
     [key: string]: unknown;
 }
 
+/** Resolves Jira issue-link types (with disk cache + fallbacks) and provides high-level linking operations. */
 class JiraLinkManager {
     jiraResource: JiraResource;
     linkTypesCache: LinkType[] | null;

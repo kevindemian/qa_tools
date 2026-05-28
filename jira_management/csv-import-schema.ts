@@ -1,3 +1,4 @@
+/** Zod schemas for CSV row validation and test case structure. */
 import { z } from 'zod';
 
 export const CsvRowFieldsSchema = z.object({

@@ -1,3 +1,4 @@
+/** Jira version management: create, publish, list, and assign fix versions to issues. */
 import { error as logError, success, info, extractErrorMessage, ProgressBar } from '../shared/prompt';
 import type { Logger } from '../shared/logger';
 import type JiraResource from './jira_resource';

@@ -1,3 +1,4 @@
+/** Xray Cloud (GraphQL authentication + step import) and Server (REST) client. */
 import axios from 'axios';
 import type JiraResource from './jira_resource';
 import type { TestStep } from '../shared/types';

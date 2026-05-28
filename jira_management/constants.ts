@@ -1,3 +1,4 @@
+/** User-facing messages for version/project operations. */
 export const NO_TASKS_FOUND_FOR_VERSION = 'Nenhuma tarefa encontrada para esta versão.';
 
 export function noIssuesFoundForVersion(versionName: string, projectName: string): string {
