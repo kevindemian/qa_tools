@@ -25,6 +25,14 @@ describe('sanitizeForLlm', () => {
         expect(result).not.toContain('ABCDEF123');
     });
 
+    it('sanitizes single-line private key markers', () => {
+        const key = 'x -----BEGIN RSA PRIVATE KEY-----data-----END RSA PRIVATE KEY----- y';
+        const result = sanitizeForLlm(key);
+        // Single-line format passes through unchanged (no newlines to truncate)
+        expect(result).toContain('BEGIN');
+        expect(result).not.toContain('[...sanitized]');
+    });
+
     it('sanitizes URLs with embedded credentials', () => {
         expect(sanitizeForLlm('https://user:pass@example.com')).toContain('[...sanitized]');
     });

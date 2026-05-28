@@ -47,6 +47,7 @@ jest.mock('./prompt-ui', () => {
 });
 
 import * as fs from 'fs';
+import * as os from 'os';
 import * as path from 'path';
 import readlineSync from 'readline-sync';
 import { getConfig, warn, CancelError } from './prompt-ui';
@@ -57,6 +58,7 @@ import {
     ask,
     askConfirm,
     showSelect,
+    askFilePath,
     filePathCompleter,
     __setSelectMod,
     __setInputMod,
@@ -185,6 +187,13 @@ describe('smartPrompt', () => {
         expect(result).toBe('');
         expect(mockWarn).toHaveBeenCalled();
     });
+
+    it('re-throws non-CancelError from ask', async () => {
+        mockReadlineQuestion.mockImplementation(() => {
+            throw new Error('readline error');
+        });
+        await expect(smartPrompt('Label')).rejects.toThrow('readline error');
+    });
 });
 
 describe('ask', () => {
@@ -204,6 +213,14 @@ describe('ask', () => {
     it('throws CancelError on navigation command in fallback', async () => {
         mockReadlineQuestion.mockReturnValue('/back');
         await expect(ask('Label')).rejects.toThrow('/back');
+    });
+});
+
+describe('askFilePath', () => {
+    it('falls back to prompt when no TTY', async () => {
+        mockReadlineQuestion.mockReturnValue('/some/path');
+        const result = await askFilePath('File:');
+        expect(result).toBe('/some/path');
     });
 });
 
@@ -331,5 +348,174 @@ describe('filePathCompleter', () => {
     it('expands tilde', () => {
         const [matches] = filePathCompleter('~');
         expect(matches.length).toBeGreaterThan(0);
+    });
+
+    it('filters out dotfiles when base does not start with dot', () => {
+        const dir = path.join(__dirname, '__test_fixtures__');
+        const dotfile = path.join(dir, '.hidden');
+        fs.writeFileSync(dotfile, '');
+        try {
+            const [matches] = filePathCompleter(dir + '/');
+            expect(matches).not.toContain(dotfile);
+        } finally {
+            fs.unlinkSync(dotfile);
+        }
+    });
+
+    it('includes dotfiles when base starts with dot', () => {
+        const dir = path.join(__dirname, '__test_fixtures__');
+        const dotfile = path.join(dir, '.hidden');
+        fs.writeFileSync(dotfile, '');
+        try {
+            const [matches] = filePathCompleter(dir + '/.hid');
+            expect(matches).toContain(dotfile);
+        } finally {
+            fs.unlinkSync(dotfile);
+        }
+    });
+
+    it('handles statSync error in filter callback', () => {
+        const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'stat-err-'));
+        try {
+            fs.symlinkSync('/nonexistent-target', path.join(dir, 'dangling.txt'));
+            const [matches] = filePathCompleter(dir + '/', ['.txt']);
+            expect(matches).toEqual([]);
+        } finally {
+            fs.rmSync(dir, { recursive: true, force: true });
+        }
+    });
+});
+
+describe('showSelect with menuMode', () => {
+    it('forces fallback when menuMode is true', async () => {
+        mockReadlineQuestion.mockReturnValue('1');
+        const result = await showSelect('Choose', [{ name: 'Item A', value: 'a' }], { menuMode: true });
+        expect(result).toBe('a');
+    });
+
+    it('handles separator with empty line in fallback mode', async () => {
+        mockReadlineQuestion.mockReturnValue('1');
+        const result = await showSelect('Choose', [
+            { type: 'separator' as const, line: '' },
+            { name: 'Visible', value: 'v' },
+        ]);
+        expect(result).toBe('v');
+    });
+});
+
+describe('ask with TTY and inquirer mod', () => {
+    beforeEach(() => {
+        Object.defineProperty(process.stdout, 'isTTY', { value: true, configurable: true });
+    });
+
+    afterEach(() => {
+        Object.defineProperty(process.stdout, 'isTTY', { value: undefined, configurable: true });
+    });
+
+    it('returns inquirer result when mod injected and TTY', async () => {
+        const mockMod = jest.fn().mockResolvedValue('inquirer answer');
+        __setInputMod({ default: mockMod });
+        const result = await ask('Label');
+        expect(result).toBe('inquirer answer');
+        expect(mockMod).toHaveBeenCalledWith(expect.objectContaining({ message: 'Label' }));
+    });
+
+    it('falls through to prompt when navigation command from inquirer', async () => {
+        const mockMod = jest.fn().mockResolvedValue('/back');
+        __setInputMod({ default: mockMod });
+        mockReadlineQuestion.mockReturnValue('backup result');
+        const result = await ask('Label');
+        expect(result).toBe('backup result');
+    });
+
+    it('falls back to prompt when inquirer throws', async () => {
+        const mockMod = jest.fn().mockRejectedValue(new Error('inquirer error'));
+        __setInputMod({ default: mockMod });
+        mockReadlineQuestion.mockReturnValue('fallback answer');
+        const result = await ask('Label');
+        expect(result).toBe('fallback answer');
+    });
+
+    it('returns inquirer result when askConfirm mod injected and TTY', async () => {
+        const mockConfirmMod = jest.fn().mockResolvedValue(true);
+        __setConfirmMod({ default: mockConfirmMod });
+        const result = await askConfirm('Confirm?');
+        expect(result).toBe(true);
+        expect(mockConfirmMod).toHaveBeenCalledWith(expect.objectContaining({ message: 'Confirm?' }));
+    });
+
+    it('falls back to confirm when askConfirm inquirer throws', async () => {
+        const mockConfirmMod = jest.fn().mockRejectedValue(new Error('err'));
+        __setConfirmMod({ default: mockConfirmMod });
+        mockReadlineQuestion.mockReturnValue('s');
+        const result = await askConfirm('Confirm?');
+        expect(result).toBe(true);
+    });
+
+    it('uses prompt fallback when _inputMod is false (cached import failure)', async () => {
+        __setInputMod(false);
+        mockReadlineQuestion.mockReturnValue('fallback');
+        const result = await ask('Label');
+        expect(result).toBe('fallback');
+    });
+
+    it('uses confirm fallback when _confirmMod is false (cached import failure)', async () => {
+        __setConfirmMod(false);
+        mockReadlineQuestion.mockReturnValue('s');
+        const result = await askConfirm('Confirm?');
+        expect(result).toBe(true);
+    });
+});
+
+describe('showSelect TTY path', () => {
+    beforeEach(() => {
+        Object.defineProperty(process.stdout, 'isTTY', { value: true, configurable: true });
+    });
+
+    afterEach(() => {
+        Object.defineProperty(process.stdout, 'isTTY', { value: undefined, configurable: true });
+    });
+
+    it('returns inquirer result when mod injected and TTY', async () => {
+        const mockSelectMod = jest.fn().mockResolvedValue('selected');
+        __setSelectMod({ default: mockSelectMod });
+        const result = await showSelect('Choose', [
+            { name: 'Item A', value: 'a' },
+            { name: 'Item B', value: 'b' },
+        ]);
+        expect(result).toBe('selected');
+        expect(mockSelectMod).toHaveBeenCalledWith(expect.objectContaining({ message: 'Choose' }));
+    });
+
+    it('handles separator and no-name choices in TTY mode', async () => {
+        const mockSelectMod = jest.fn().mockResolvedValue('val');
+        __setSelectMod({ default: mockSelectMod });
+        const result = await showSelect('Choose', [
+            { type: 'separator', line: '---' },
+            { name: undefined, value: 'no-name' },
+            { name: 'Visible', value: 'val' },
+        ]);
+        expect(result).toBe('val');
+    });
+
+    it('returns 0 when inquirer mod throws in TTY mode', async () => {
+        const mockSelectMod = jest.fn().mockRejectedValue(new Error('select error'));
+        __setSelectMod({ default: mockSelectMod });
+        const result = await showSelect('Choose', [{ name: 'Item', value: 'x' }]);
+        expect(result).toBe('0');
+    });
+});
+
+describe('showSelect fallback', () => {
+    it('returns slash command directly when not in NAV_CMDS', async () => {
+        mockReadlineQuestion.mockReturnValue('/custom-cmd');
+        const result = await showSelect('Choose', [{ name: 'Item A', value: 'a' }]);
+        expect(result).toBe('/custom-cmd');
+    });
+
+    it('handles choice with no name in fallback mode', async () => {
+        mockReadlineQuestion.mockReturnValue('1');
+        const result = await showSelect('Choose', [{ value: 'a' }, { name: 'Visible', value: 'v' }]);
+        expect(result).toBe('v');
     });
 });

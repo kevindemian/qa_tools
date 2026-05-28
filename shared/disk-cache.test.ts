@@ -31,13 +31,11 @@ describe('diskCacheGet / diskCacheSet', () => {
     });
 
     it('returns null for expired entry', () => {
-        // Manually write an expired entry (createdAt in the past)
         const file = path.join(cacheDir, 'exp-key.json');
         const expired = JSON.stringify({ response: 'stale', createdAt: Date.now() - 60 * 60 * 1000 - 1 });
         fs.mkdirSync(cacheDir, { recursive: true });
         fs.writeFileSync(file, expired, 'utf-8');
         expect(diskCacheGet('exp-key')).toBeNull();
-        // Stale file should have been deleted
         expect(fs.existsSync(file)).toBe(false);
     });
 
@@ -45,6 +43,60 @@ describe('diskCacheGet / diskCacheSet', () => {
         diskCacheSet('key', 'first');
         diskCacheSet('key', 'second');
         expect(diskCacheGet('key')).toBe('second');
+    });
+
+    it('stores and retrieves encrypted content when LLM_CACHE_KEY is set', () => {
+        process.env.LLM_CACHE_KEY = 'test-secret-key-32bytes!';
+        diskCacheSet('enc-key', 'encrypted-value');
+        expect(diskCacheGet('enc-key')).toBe('encrypted-value');
+    });
+
+    it('returns null for corrupt JSON data', () => {
+        const file = path.join(cacheDir, 'corrupt.json');
+        fs.writeFileSync(file, 'not-json', 'utf-8');
+        expect(diskCacheGet('corrupt')).toBeNull();
+    });
+
+    it('returns null for invalid encrypted payload (missing fields)', () => {
+        process.env.LLM_CACHE_KEY = 'test-secret-key-32bytes!';
+        const file = path.join(cacheDir, 'bad-enc.json');
+        const bad = JSON.stringify({ e: 'base64', iv: 'base64' });
+        fs.writeFileSync(file, bad, 'utf-8');
+        expect(diskCacheGet('bad-enc')).toBeNull();
+        expect(fs.existsSync(file)).toBe(false);
+    });
+
+    it('returns null when decrypt fails on non-JSON with cache key set', () => {
+        process.env.LLM_CACHE_KEY = 'test-secret-key-32bytes!';
+        const file = path.join(cacheDir, 'corrupt-enc.json');
+        fs.writeFileSync(file, 'not-json', 'utf-8');
+        expect(diskCacheGet('corrupt-enc')).toBeNull();
+    });
+
+    it('handles write failure gracefully (readonly dir)', () => {
+        fs.chmodSync(cacheDir, 0o444);
+        expect(() => diskCacheSet('fail-key', 'value')).not.toThrow();
+    });
+
+    it('uses fallback cache dir when env not set', () => {
+        delete process.env.LLM_DISK_CACHE_DIR;
+        diskCacheSet('fallback-key', 'val');
+        expect(diskCacheGet('fallback-key')).toBe('val');
+    });
+
+    it('creates cache dir if it does not exist', () => {
+        const newDir = path.join(os.tmpdir(), 'llm-cache-new-' + Date.now());
+        process.env.LLM_DISK_CACHE_DIR = newDir;
+        expect(fs.existsSync(newDir)).toBe(false);
+        diskCacheSet('new-dir-key', 'val');
+        expect(fs.existsSync(newDir)).toBe(true);
+        expect(diskCacheGet('new-dir-key')).toBe('val');
+    });
+
+    it('handles cache dir init failure gracefully', () => {
+        process.env.LLM_DISK_CACHE_DIR = '/dev/null/cache';
+        expect(() => diskCacheSet('fail-init', 'val')).not.toThrow();
+        expect(diskCacheGet('fail-init')).toBeNull();
     });
 });
 
@@ -55,5 +107,19 @@ describe('clearDiskCache', () => {
         clearDiskCache();
         expect(diskCacheGet('a')).toBeNull();
         expect(diskCacheGet('b')).toBeNull();
+    });
+
+    it('handles non-existent directory gracefully', () => {
+        const fakeDir = path.join(os.tmpdir(), 'nonexistent-cache-' + Date.now());
+        process.env.LLM_DISK_CACHE_DIR = fakeDir;
+        expect(() => clearDiskCache()).not.toThrow();
+    });
+
+    it('handles clear failure when cache dir is a file', () => {
+        const fileDir = path.join(os.tmpdir(), 'llm-cache-file-' + Date.now());
+        fs.writeFileSync(fileDir, '');
+        process.env.LLM_DISK_CACHE_DIR = fileDir;
+        expect(() => clearDiskCache()).not.toThrow();
+        fs.unlinkSync(fileDir);
     });
 });

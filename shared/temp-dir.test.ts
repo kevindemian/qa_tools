@@ -129,4 +129,19 @@ describe('registerCleanup', () => {
         registerCleanup();
         expect(() => handlerRef.current?.()).not.toThrow();
     });
+
+    it('removes subdirectories during cleanup when they exist', () => {
+        const handlerRef: { current?: () => void } = {};
+        jest.spyOn(process, 'on').mockImplementation(
+            (_event: string | symbol, listener: (...args: unknown[]) => void) => {
+                handlerRef.current = listener;
+                return process;
+            },
+        );
+        (fs.existsSync as jest.Mock).mockReturnValue(true);
+        const { registerCleanup } = require('./temp-dir');
+        registerCleanup();
+        handlerRef.current?.();
+        expect(fs.rmSync).toHaveBeenCalled();
+    });
 });

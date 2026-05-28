@@ -38,13 +38,16 @@ Issues registradas durante refatorações, postergadas por escopo.
 
 ## 🔷 Pendentes
 
-### P1 — Restaurar thresholds de cobertura
+### P1 — Restaurar thresholds de cobertura (80% branches, 90% lines) ✅
 
-| Item                                 | Status      |
-| ------------------------------------ | ----------- |
-| branches 77→78% + lines 89→90%       | 🚧 Pendente |
-| Adicionar testes para case17 CTRF v2 | 🚧 Pendente |
-| Adicionar testes para disk-cache.ts  | 🚧 Pendente |
+| Item                                                                       | Status |
+| -------------------------------------------------------------------------- | ------ |
+| config.ts + disk-cache.ts (+6 testes)                                      | ✅     |
+| llm-client.ts + prompt-input.ts (+12 testes)                               | ✅     |
+| sanitize.ts, box.ts, temp-dir.ts (+4 testes)                               | ✅     |
+| result_reporter.ts, package_version_manager.ts (+2 testes)                 | ✅     |
+| failure-analysis.ts, state.ts (+2 testes)                                  | ✅     |
+| Thresholds restaurados: statements 90, branches 80, functions 91, lines 90 | ✅     |
 
 ## ✅ Histórico
 

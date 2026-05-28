@@ -366,6 +366,22 @@ describe('Config', () => {
                 expect(cfg.logDir).toBe('/var/log');
             });
         });
+
+        it('prioritizes QA_TOOLS_LOGS_DIR over LOG_DIR', () => {
+            process.env.QA_TOOLS_LOGS_DIR = '/qa/logs';
+            process.env.LOG_DIR = '/var/log';
+            jest.isolateModules(() => {
+                const cfg = require('./config').default;
+                expect(cfg.logDir).toBe('/qa/logs');
+            });
+            delete process.env.QA_TOOLS_LOGS_DIR;
+            delete process.env.LOG_DIR;
+        });
+
+        it('uses override when provided', () => {
+            const cfg = Config.create({ logDir: '/override/logs' });
+            expect(cfg.logDir).toBe('/override/logs');
+        });
     });
 
     describe('getAllPrefixed', () => {
@@ -439,6 +455,175 @@ describe('Config', () => {
         it('uses override when provided', () => {
             const overridden = Config.create({ llmMaxTotalTokens: 100000 });
             expect(overridden.llmMaxTotalTokens).toBe(100000);
+        });
+    });
+
+    describe('Config.create with LLM overrides', () => {
+        it('uses override values for all LLM getters', () => {
+            const o = {
+                llmApiKey: 'key-ov',
+                llmModel: 'model-ov',
+                llmBaseUrl: 'url-ov',
+                llmSmallApiKey: 'small-key',
+                llmSmallModel: 'small-model-ov',
+                llmFastApiKey: 'fast-key',
+                llmFastModel: 'fast-model-ov',
+                llmFastBaseUrl: 'fast-url-ov',
+                llmReviewApiKey: 'rev-key',
+                llmReviewModel: 'rev-model-ov',
+                llmReviewBaseUrl: 'rev-url-ov',
+                llmFallbackApiKey: 'fb-key',
+                llmFallbackModel: 'fb-model-ov',
+                llmFallbackBaseUrl: 'fb-url-ov',
+                llmBatchApiKey: 'batch-key',
+                llmBatchModel: 'batch-model-ov',
+                llmBatchBaseUrl: 'batch-url-ov',
+                xrayClientId: 'cid-ov',
+                xrayClientSecret: 'csec-ov',
+            };
+            const cfg = Config.create(o);
+            expect(cfg.llmApiKey).toBe('key-ov');
+            expect(cfg.llmModel).toBe('model-ov');
+            expect(cfg.llmBaseUrl).toBe('url-ov');
+            expect(cfg.llmSmallApiKey).toBe('small-key');
+            expect(cfg.llmSmallModel).toBe('small-model-ov');
+            expect(cfg.llmFastApiKey).toBe('fast-key');
+            expect(cfg.llmFastModel).toBe('fast-model-ov');
+            expect(cfg.llmFastBaseUrl).toBe('fast-url-ov');
+            expect(cfg.llmReviewApiKey).toBe('rev-key');
+            expect(cfg.llmReviewModel).toBe('rev-model-ov');
+            expect(cfg.llmReviewBaseUrl).toBe('rev-url-ov');
+            expect(cfg.llmFallbackApiKey).toBe('fb-key');
+            expect(cfg.llmFallbackModel).toBe('fb-model-ov');
+            expect(cfg.llmFallbackBaseUrl).toBe('fb-url-ov');
+            expect(cfg.llmBatchApiKey).toBe('batch-key');
+            expect(cfg.llmBatchModel).toBe('batch-model-ov');
+            expect(cfg.llmBatchBaseUrl).toBe('batch-url-ov');
+            expect(cfg.xrayClientId).toBe('cid-ov');
+            expect(cfg.xrayClientSecret).toBe('csec-ov');
+        });
+
+        it('defers to envVal when no override present', () => {
+            process.env.LLM_API_KEY = 'env-key';
+            process.env.LLM_BASE_URL = 'env-url';
+            const cfg = Config.create();
+            expect(cfg.llmApiKey).toBe('env-key');
+            expect(cfg.llmBaseUrl).toBe('env-url');
+            delete process.env.LLM_API_KEY;
+            delete process.env.LLM_BASE_URL;
+        });
+
+        it('uses boolean override for toBool', () => {
+            const cfg = Config.create({ autoConfirm: true, dryRun: false });
+            expect(cfg.autoConfirm).toBe(true);
+            expect(cfg.dryRun).toBe(false);
+        });
+
+        it('uses numeric override for toInt', () => {
+            const cfg = Config.create({ logMaxSize: 0 });
+            expect(cfg.logMaxSize).toBe(0);
+        });
+    });
+
+    describe('static LLM getters delegate to defaultInstance', () => {
+        beforeEach(() => {
+            delete process.env.LLM_API_KEY;
+            delete process.env.LLM_MODEL;
+            delete process.env.LLM_BASE_URL;
+            delete process.env.LLM_SMALL_API_KEY;
+            delete process.env.LLM_SMALL_MODEL;
+            delete process.env.LLM_FAST_API_KEY;
+            delete process.env.LLM_FAST_MODEL;
+            delete process.env.LLM_FAST_BASE_URL;
+            delete process.env.LLM_REVIEW_API_KEY;
+            delete process.env.LLM_REVIEW_MODEL;
+            delete process.env.LLM_REVIEW_BASE_URL;
+            delete process.env.LLM_FALLBACK_API_KEY;
+            delete process.env.LLM_FALLBACK_MODEL;
+            delete process.env.LLM_FALLBACK_BASE_URL;
+            delete process.env.LLM_BATCH_API_KEY;
+            delete process.env.LLM_BATCH_MODEL;
+            delete process.env.LLM_BATCH_BASE_URL;
+            delete process.env.LLM_MAX_TOKENS_PER_OP;
+        });
+
+        it('returns env values for static LLM getters', () => {
+            process.env.LLM_API_KEY = 'k';
+            process.env.LLM_MODEL = 'm';
+            process.env.LLM_BASE_URL = 'u';
+            process.env.LLM_SMALL_API_KEY = 'sk';
+            process.env.LLM_SMALL_MODEL = 'sm';
+            process.env.LLM_FAST_API_KEY = 'fk';
+            process.env.LLM_FAST_MODEL = 'fm';
+            process.env.LLM_FAST_BASE_URL = 'fu';
+            process.env.LLM_REVIEW_API_KEY = 'rk';
+            process.env.LLM_REVIEW_MODEL = 'rm';
+            process.env.LLM_REVIEW_BASE_URL = 'ru';
+            process.env.LLM_FALLBACK_API_KEY = 'fbk';
+            process.env.LLM_FALLBACK_MODEL = 'fbm';
+            process.env.LLM_FALLBACK_BASE_URL = 'fbu';
+            process.env.LLM_BATCH_API_KEY = 'bk';
+            process.env.LLM_BATCH_MODEL = 'bm';
+            process.env.LLM_BATCH_BASE_URL = 'bu';
+            process.env.LLM_MAX_TOKENS_PER_OP = '64000';
+            Config.create();
+            expect(Config.llmApiKey).toBe('k');
+            expect(Config.llmModel).toBe('m');
+            expect(Config.llmBaseUrl).toBe('u');
+            expect(Config.llmSmallApiKey).toBe('sk');
+            expect(Config.llmSmallModel).toBe('sm');
+            expect(Config.llmFastApiKey).toBe('fk');
+            expect(Config.llmFastModel).toBe('fm');
+            expect(Config.llmFastBaseUrl).toBe('fu');
+            expect(Config.llmReviewApiKey).toBe('rk');
+            expect(Config.llmReviewModel).toBe('rm');
+            expect(Config.llmReviewBaseUrl).toBe('ru');
+            expect(Config.llmFallbackApiKey).toBe('fbk');
+            expect(Config.llmFallbackModel).toBe('fbm');
+            expect(Config.llmFallbackBaseUrl).toBe('fbu');
+            expect(Config.llmBatchApiKey).toBe('bk');
+            expect(Config.llmBatchModel).toBe('bm');
+            expect(Config.llmBatchBaseUrl).toBe('bu');
+            expect(Config.llmMaxTokens).toBe(64000);
+        });
+    });
+
+    describe('get(key)', () => {
+        it('returns override string value', () => {
+            const cfg = Config.create({ jiraBaseUrl: 'https://override' });
+            expect(cfg.get('jiraBaseUrl')).toBe('https://override');
+        });
+
+        it('converts boolean true override to "true"', () => {
+            const cfg = Config.create({ debug: true });
+            expect(cfg.get('debug')).toBe('true');
+        });
+
+        it('converts boolean false override to "false"', () => {
+            const cfg = Config.create({ debug: false });
+            expect(cfg.get('debug')).toBe('false');
+        });
+
+        it('converts numeric override to string', () => {
+            const cfg = Config.create({ logMaxSize: 123456 });
+            expect(cfg.get('logMaxSize')).toBe('123456');
+        });
+
+        it('returns empty string for override set to undefined', () => {
+            const cfg = Config.create({ jiraBaseUrl: undefined });
+            expect(cfg.get('jiraBaseUrl')).toBe('');
+        });
+
+        it('falls back to process.env when key not in overrides', () => {
+            process.env.TEST_KEY_FALLBACK = 'env-value';
+            expect(Config.get('TEST_KEY_FALLBACK')).toBe('env-value');
+            delete process.env.TEST_KEY_FALLBACK;
+        });
+
+        it('static get delegates to instance', () => {
+            process.env.TEST_STATIC_GET = 'static-val';
+            expect(Config.get('TEST_STATIC_GET')).toBe('static-val');
+            delete process.env.TEST_STATIC_GET;
         });
     });
 });

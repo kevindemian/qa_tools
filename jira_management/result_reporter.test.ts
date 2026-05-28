@@ -127,6 +127,13 @@ describe('matchResultsToTests', () => {
         expect(result.matched).toEqual([]);
         expect(rootLogger.warn).toHaveBeenCalledWith('Mapping JSON vazio');
     });
+
+    it('returns null for empty/undefined title in _fuzzyMatch', () => {
+        const results = [{ title: '', state: 'passed' as const, duration: 100 }];
+        const result = matchResultsToTests(results, mappingPath);
+        expect(result.unmatched).toHaveLength(1);
+        expect(result.unmatched[0]!.title).toBe('');
+    });
 });
 
 describe('createTestExecutionFromResults', () => {

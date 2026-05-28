@@ -1,4 +1,4 @@
-import { box, divider } from './box';
+import { box, divider, card } from './box';
 
 describe('box', () => {
     it('renders single border box with content', () => {
@@ -67,5 +67,20 @@ describe('divider', () => {
     it('returns a line with border color', () => {
         const result = divider(40);
         expect(result.length).toBeGreaterThan(0);
+    });
+});
+
+describe('card', () => {
+    it('renders a card with title and content', () => {
+        const result = card('Status', ['Line 1', 'Line 2']);
+        expect(result).toContain('Status');
+        expect(result).toContain('Line 1');
+        expect(result).toContain('Line 2');
+    });
+
+    it('renders card with custom border and color', () => {
+        const result = card('Title', ['content'], { border: 'double', color: 'red' });
+        expect(result).toContain('Title');
+        expect(result).toContain('╔');
     });
 });

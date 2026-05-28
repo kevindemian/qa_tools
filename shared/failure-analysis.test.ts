@@ -150,6 +150,12 @@ describe('classifyFailure', () => {
         const result = await classifyFailure('Login test', 'some error');
         expect(result).toBe('UNKNOWN: Could not classify failure after retry');
     });
+
+    it('returns UNKNOWN when classify.md cannot be read', async () => {
+        (fs.readFileSync as jest.Mock).mockReturnValue(undefined);
+        const result = await classifyFailure('Login test', 'error');
+        expect(result).toBe('UNKNOWN: Could not load prompt template');
+    });
 });
 
 describe('classifyRegex — edge case mutations', () => {
