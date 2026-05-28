@@ -1,4 +1,8 @@
+/** Visual theme contract for the terminal UI. Controls colors, borders, and typography.
+ * Used by prompt-ui.ts to render consistent styled output. */
+
 export interface UITheme {
+    /** Named color hex values for UI elements. */
     colors: {
         success: string;
         error: string;
@@ -7,10 +11,12 @@ export interface UITheme {
         muted: string;
         border: string;
     };
+    /** Border rendering preferences. */
     borders: {
         type: 'single' | 'double' | 'none';
         padding: number;
     };
+    /** Text transform functions for semantic roles. */
     typography: {
         title: (s: string) => string;
         label: (s: string) => string;
@@ -18,6 +24,7 @@ export interface UITheme {
     };
 }
 
+/** The default theme — dark-mode friendly, GitHub-inspired palette. */
 export const defaultTheme: UITheme = {
     colors: {
         success: '#3fb950',
@@ -38,6 +45,8 @@ export const defaultTheme: UITheme = {
     },
 };
 
+/** Return the current UI theme. Currently returns the default; designed to support
+ * dynamic theme switching (dark/light, custom) in the future. */
 export function getTheme(): UITheme {
     return defaultTheme;
 }

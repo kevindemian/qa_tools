@@ -1,3 +1,7 @@
+/** LLM-powered comparison between two test runs.
+ * Generates a concise narrative of changes in pass rate, failures, and trends.
+ * Returns empty string on error (never throws). */
+
 import type { MetricsRun } from './metrics';
 import { llmPrompt } from './llm-client';
 import { sanitizeForLlm } from './sanitize';

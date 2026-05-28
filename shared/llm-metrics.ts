@@ -1,3 +1,9 @@
+/** Telemetry aggregation for LLM interactions.
+ * Tracks request counts, latency, failures, retries, confidence scores, and
+ * validation rejections in-memory. `snapshotLlmMetrics()` persists to disk
+ * (~/.local/state/qa-tools/llm-metrics.json) for historical analysis.
+ * In-memory counters are scoped to the process lifetime. */
+
 import fs from 'fs';
 import path from 'path';
 import os from 'os';
@@ -6,6 +12,8 @@ import { rootLogger } from './logger';
 import type { LlmTier } from './llm-client';
 import { getLlmClientMetrics, resetLlmClientMetrics } from './llm-client';
 
+/** Snapshot of all LLM telemetry at a point in time. Persisted to disk for
+ * cross-session trend analysis (see `getLlmMetricsHistory`). */
 export interface LlmMetricsSnapshot {
     timestamp: string;
     totalRequests: number;
@@ -69,16 +77,19 @@ let _artifactRejected = 0;
 const _failuresByTier: Partial<Record<LlmTier, number>> = {};
 const _rejectionReasons: Record<string, number> = {};
 
+/** Record a successful LLM request (count + latency). */
 export function recordLlmRequest(_tier: LlmTier, latencyMs: number): void {
     _totalRequests++;
     _latencySum += latencyMs;
     _latencyCount++;
 }
 
+/** Record a failed LLM request, grouped by tier. */
 export function recordLlmFailure(tier: LlmTier): void {
     _failuresByTier[tier] = (_failuresByTier[tier] || 0) + 1;
 }
 
+/** Record a schema validation rejection with the reason string. */
 export function recordValidationRejection(reason: string): void {
     _rejectedByValidator++;
     _rejectionReasons[reason] = (_rejectionReasons[reason] || 0) + 1;
@@ -86,25 +97,31 @@ export function recordValidationRejection(reason: string): void {
 
 let _adversarialRetryCount = 0;
 
+/** Record a standard retry (non-adversarial). */
 export function recordRetry(): void {
     _retryCount++;
 }
 
+/** Record an adversarial retry (LLM self-critique loop). */
 export function recordAdversarialRetry(): void {
     _adversarialRetryCount++;
 }
 
+/** Record a confidence rating from the adversarial review pipeline. */
 export function recordConfidence(confidence: 'high' | 'medium' | 'low'): void {
     const value = confidence === 'high' ? 1 : confidence === 'medium' ? 0.5 : 0;
     _confidenceSum += value;
     _confidenceCount++;
 }
 
+/** Record whether an artifact review was approved or rejected. */
 export function recordArtifactReview(approved: boolean): void {
     if (approved) _artifactApproved++;
     else _artifactRejected++;
 }
 
+/** Take a snapshot of current metrics, persist to disk, and return it.
+ * Includes both in-memory counters and client-level metrics (cache, tokens). */
 export function snapshotLlmMetrics(): LlmMetricsSnapshot {
     const cm = getLlmClientMetrics();
     const snapshot: LlmMetricsSnapshot = {
@@ -133,10 +150,13 @@ export function snapshotLlmMetrics(): LlmMetricsSnapshot {
     return snapshot;
 }
 
+/** Return all persisted snapshots for cross-session trend analysis. */
 export function getLlmMetricsHistory(): LlmMetricsSnapshot[] {
     return loadStore().snapshots;
 }
 
+/** Reset all in-memory counters and persisted client metrics.
+ * Does NOT clear the on-disk snapshot history. */
 export function clearLlmMetrics(): void {
     _totalRequests = 0;
     _rejectedByValidator = 0;

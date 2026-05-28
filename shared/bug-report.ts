@@ -60,7 +60,10 @@ async function enrichWithLlm(summary: string, description: string): Promise<LLME
 }
 
 /** Generate a structured BugReport from a free-text description using LLM.
- * The output fields are in English (Jira-ready). Returns null on failure. */
+ * The output fields are in English (Jira-ready).
+ * Returns null (not throws) so callers can fall back to manual collection
+ * without nested try/catch. Null happens when the prompt template is missing
+ * or when the LLM call fails (network, schema validation, rate limit). */
 export async function generateBugReportFromDescription(raw: string): Promise<BugReport | null> {
     const system = readPrompt('bug-report-from-description.md');
     if (!system) {
