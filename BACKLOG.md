@@ -787,20 +787,20 @@ Também marcar o AUDIO-01 (M1, M2, M3 do bloco antigo) como resolvidos:
 | 22.3 | Test: validateAll early return no array rules | P2 | report-validator.test.ts | 22 | ✅ |
 | 22.4 | Test: checkConsistency high severity | P2 | report-validator.test.ts | 22 | ✅ |
 | 22.5 | Test: resolveField 3+ levels | P3 | report-validator.test.ts | 22 | ✅ |
-| 23.1 | llm-benchmark.test.ts (15+ testes, novo arquivo) | P2 | shared/llm-benchmark.test.ts | 23 | ⬜ |
-| 23.2 | responseFormat='json' param test | P2 | llm-client.test.ts | 23 | ⬜ |
-| 23.3 | responseFormat diferente → cache keys diferentes | P2 | llm-client.test.ts | 23 | ⬜ |
-| 23.4 | Gemini system_instruction payload test | P2 | llm-client.test.ts | 23 | ⬜ |
-| 23.5 | non-JSON 200 chama logger.warn | P2 | llm-client.test.ts | 23 | ⬜ |
-| 23.6 | Tier fallback dedup test | P3 | llm-client.test.ts | 23 | ⬜ |
+| 23.1 | llm-benchmark.test.ts (15+ testes, novo arquivo) | P2 | shared/llm-benchmark.test.ts | 23 | ✅ |
+| 23.2 | responseFormat='json' param test | P2 | llm-client.test.ts | 23 | ✅ |
+| 23.3 | responseFormat diferente → cache keys diferentes | P2 | llm-client.test.ts | 23 | ✅ |
+| 23.4 | Gemini system_instruction payload test | P2 | llm-client.test.ts | 23 | ✅ |
+| 23.5 | non-JSON 200 chama logger.warn | P2 | llm-client.test.ts | 23 | ✅ |
+| 23.6 | Tier fallback dedup test | P3 | llm-client.test.ts | 23 | ✅ |
 | 23.7 | runRetryLoop MAX_RETRIES exatas | P2 | llm-review.test.ts | 23 | ⬜ |
 | 23.8 | buildRetryPrompt content verification | P2 | llm-review.test.ts | 23 | ⬜ |
-| 23.9 | analyzeFailuresWithReport HTML exception path | P2 | failure-analysis.test.ts | 23 | ⬜ |
+| 23.9 | analyzeFailuresWithReport HTML exception path | P2 | failure-analysis.test.ts | 23 | ✅ |
 | 23.10 | HTML report output verificado | P2 | failure-analysis.test.ts | 23 | ⬜ |
-| 23.11 | snapshotLlmMetrics round-trip persist | P2 | llm-metrics.test.ts | 23 | ⬜ |
-| 23.12 | recordArtifactReview approved/rejected | P2 | llm-metrics.test.ts | 23 | ⬜ |
+| 23.11 | snapshotLlmMetrics round-trip persist | P2 | llm-metrics.test.ts | 23 | ✅ |
+| 23.12 | recordArtifactReview approved/rejected | P2 | llm-metrics.test.ts | 23 | ✅ |
 | 23.13 | case18 retry + success path | P2 | case18.test.ts | 23 | ✅ |
-| 23.14 | case18 retry + still invalid → printError | P2 | case18.test.ts | 23 | ⬜ |
+| 23.14 | case18 retry + still invalid → printError | P2 | case18.test.ts | 23 | ✅ |
 | 23.15 | compareRuns empty data | P2 | run-comparison.test.ts | 23 | ⬜ |
 | 23.16 | compareRuns sanitization verified | P2 | run-comparison.test.ts | 23 | ⬜ |
 | 23.17 | E2E validateAll 3-element array | P2 | llm-pipeline.test.ts | 23 | ✅ |
