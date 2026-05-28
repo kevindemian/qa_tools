@@ -121,11 +121,25 @@ Issues registradas durante refatorações, postergadas por escopo.
 | ----------------------------------------------------- | ------ |
 | `shared/bug-report.ts:101-155` — refatorar em helpers | 🚧     |
 
-### P3 — Xray per-test history
+### P1 — Xray per-test history ✅
 
-| Item                                          | Status                 |
-| --------------------------------------------- | ---------------------- |
-| Aguardar `tags: ["TEST-123"]` no emissor CTRF | 🚧 Bloqueado (externo) |
+| #   | Item                                                                          | Esforço | Status |
+| --- | ----------------------------------------------------------------------------- | ------- | ------ |
+| 1   | Interface `TestHistoryProvider` + types (`xray-history.ts`)                   | 0.25h   | ✅     |
+| 2   | `ServerHistoryProvider` (`GET /rest/raven/1.0/api/test/{key}/testruns`)       | 0.5h    | ✅     |
+| 3   | `CloudHistoryProvider` (GraphQL `getTestRuns` + auth + key→issueId)           | 1h      | ✅     |
+| 4   | Integração em `case17.ts` (history via mapping file + cache)                  | 0.25h   | ✅     |
+| 5   | Display no HTML report (`report-generator.ts` — coluna History c/ ferramenta) | 0.5h    | ✅     |
+| 6   | Retry + fallback + cache em memória (`TestHistoryCache`)                      | 0.25h   | ✅     |
+| 7   | Testes: `xray-history.test.ts` (19 testes)                                    | 1h      | ✅     |
+
+**API**: Server → Raven REST. Cloud → GraphQL `getTestRuns` (requer `key→issueId`). Ambos implementados via strategy pattern.
+
+### P2 — `jira mapping generate` (mapping para testes manuais)
+
+| Item                                                      | Status                  | Nota                                                                                                                                                                                                                                          |
+| --------------------------------------------------------- | ----------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| CLI command para gerar mapping file `summary→key` via JQL | 📝 Pendente refinamento | **Débito conhecido**: `fields.summary` ≠ `CTRF test name` em casos gerais. `_fuzzyMatch` mitiga parcialmente com risco de falso positivo. Necessário definir convenção (`summary = test name`) ou abordagem alternativa antes de implementar. |
 
 ### P1 — Restaurar thresholds de cobertura (80% branches, 90% lines) ✅
 

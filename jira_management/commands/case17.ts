@@ -7,10 +7,11 @@ import { ask, askConfirm, info, printError, title, withSpinner } from '../../sha
 import type { ParseResult, FlatTest, CtrfData, CtrfSummary } from '../../shared/result_parser';
 import { writeReport } from '../../shared/temp-dir';
 import { parseTestResultsFile } from '../../shared/result_parser';
-import { generateHtmlReport, categorizeFailure } from '../../shared/report-generator';
+import { generateHtmlReport, categorizeFailure, type TestHistoryRun } from '../../shared/report-generator';
 import { analyzeFailuresWithReport, type LlmContext } from '../../shared/failure-analysis';
 import { collectAutomated, interactiveBugReportFlow } from '../../shared/bug-report';
 import { openWithOsOrFallback } from '../../shared/open';
+import { createHistoryProvider, TestHistoryCache } from '../xray-history';
 import type { CommandContext } from './context';
 
 const CTRF_LAST_FILE = 'last-results.ctrf.json';
@@ -490,6 +491,69 @@ async function _postPrComment(stats: ParseResult['stats']): Promise<void> {
     }
 }
 
+const MAPPING_FILE_CANDIDATES = [process.env.QA_MAPPING_PATH || '', path.join(process.cwd(), 'mapping.json')];
+
+function _resolveMapping(): Map<string, string> {
+    for (const candidate of MAPPING_FILE_CANDIDATES) {
+        if (!candidate || !fs.existsSync(candidate)) continue;
+        try {
+            const raw = fs.readFileSync(candidate, 'utf8');
+            const data = JSON.parse(raw);
+            const tests = (data.tests ?? []) as Array<Record<string, string>>;
+            if (tests.length === 0) return new Map();
+            const entries: Array<[string, string]> = [];
+            for (const t of tests) {
+                if (t.title && t.key) entries.push([t.title, t.key]);
+            }
+            return new Map(entries);
+        } catch {
+            // try next candidate
+        }
+    }
+    return new Map();
+}
+
+async function _resolveTestHistory(
+    tests: FlatTest[],
+    c: CommandContext,
+    cache: TestHistoryCache,
+): Promise<Record<string, TestHistoryRun[]>> {
+    const mapping = _resolveMapping();
+    if (mapping.size === 0) return {};
+
+    const provider = createHistoryProvider(c.jiraResource);
+
+    const keys = tests.map((t) => mapping.get(t.title) || mapping.get(t.fullTitle ?? '') || '').filter(Boolean);
+    if (keys.length === 0) return {};
+
+    const uniqueKeys = [...new Set(keys)];
+    const results = await Promise.allSettled(
+        uniqueKeys.map(async (key) => {
+            const cached = cache.get(key);
+            if (cached) return { key, history: cached };
+            const history = await provider.getHistory(key);
+            cache.set(key, history);
+            return { key, history };
+        }),
+    );
+
+    const keyToHistory = new Map<string, TestHistoryRun[]>();
+    for (const result of results) {
+        if (result.status === 'fulfilled') {
+            keyToHistory.set(result.value.key, result.value.history);
+        }
+    }
+
+    const titleToHistory: Record<string, TestHistoryRun[]> = {};
+    for (const t of tests) {
+        const key = mapping.get(t.title) || mapping.get(t.fullTitle ?? '') || '';
+        if (key && keyToHistory.has(key)) {
+            titleToHistory[t.title] = keyToHistory.get(key)!;
+        }
+    }
+    return titleToHistory;
+}
+
 async function handler(c: CommandContext): Promise<boolean | void> {
     const filePath = await ask('Caminho do arquivo de resultados JSON', {
         hint: 'ex: cypress/reports/ctrf-report.json',
@@ -508,11 +572,15 @@ async function handler(c: CommandContext): Promise<boolean | void> {
 
     const diff = _computeDiff(result.tests);
 
+    const historyCache = new TestHistoryCache();
+    const testHistory = await _resolveTestHistory(result.tests, c, historyCache);
+
     const qualityGateThreshold = parseFloat(process.env.QA_FAIL_ON || '');
     const options: Record<string, unknown> = {
         title: `Relatório - ${c.ctx.project_name}`,
         generatedAt: new Date().toISOString(),
         source: 'Relatório HTML',
+        testHistory: Object.keys(testHistory).length > 0 ? testHistory : undefined,
     };
     if (!isNaN(qualityGateThreshold)) {
         options.qualityGate = qualityGateThreshold;
