@@ -1,3 +1,5 @@
+/** Metrics persistence: run history, flakiness calculation, and coverage tracking.
+ * Stores JSON files per-project and calculates flakiness rates from historical runs. */
 import fs from 'fs';
 import path from 'path';
 import os from 'os';

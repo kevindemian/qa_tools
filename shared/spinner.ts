@@ -1,3 +1,4 @@
+/** Spinner (ora ESM) and progress bar (cli-progress) for interactive terminal feedback. */
 import cliProgress from 'cli-progress';
 import { Output, defaultOutput as output } from './output';
 import { isQuiet } from './prompt-ui';
@@ -10,11 +11,12 @@ interface SpinnerOptions {
 // eslint-disable-next-line @typescript-eslint/no-explicit-any -- ora is ESM-only, dynamic import in CJS
 let _ora: any = null;
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any -- injection API for ESM ora mock
-export function __setOraDep(mod: any): void {
+/** Override the ora dependency (used by tests / ESM fallback). */
+export function __setOraDep(mod: unknown): void {
     _ora = mod;
 }
 
+/** Run an async function with a terminal spinner. Falls back to `fn()` directly in CI/quiet/non-TTY. */
 export async function withSpinner<T>(label: string, fn: () => Promise<T>, options?: SpinnerOptions): Promise<T> {
     if (isQuiet() || !Output.isTTY() || Output.isCI()) return fn();
     if (!_ora) _ora = (await import('ora')).default;
@@ -33,6 +35,7 @@ export async function withSpinner<T>(label: string, fn: () => Promise<T>, option
     }
 }
 
+/** CLI progress bar (cli-progress). Falls back to text output in non-TTY environments. */
 export class ProgressBar {
     current = 0;
 

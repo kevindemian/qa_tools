@@ -1,3 +1,5 @@
+/** Terminal output abstraction: wraps console.log/error/warn and adds `box()` rendering.
+ * Use {@link defaultOutput} as the singleton. */
 import type { BoxOptions } from './box';
 import { box as boxRender } from './box';
 

@@ -463,6 +463,7 @@ function escapeHtml(s: string): string {
     return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 }
 
+/** Categorise an error string into a CSS-class label (assertion, timeout, environment, etc.). */
 export function categorizeFailure(error: string): string {
     const upper = error.toUpperCase();
     if (/TIMEOUT|TIMED OUT|30S|60S/.test(upper)) return 'TIMEOUT';
@@ -487,6 +488,7 @@ function buildCategoryBadge(cat: string): string {
     return `<span style="display:inline-block;padding:1px 6px;border-radius:4px;background:${color}20;color:${color};font-size:0.7rem;font-weight:600;margin-left:4px">${cat}</span>`;
 }
 
+/** Extract the suite/folder name from a test title (text before the first `>` or `/`). */
 export function extractSuite(t: FlatTest): string {
     if (t.fullTitle) {
         const parts = t.fullTitle.split(' > ');

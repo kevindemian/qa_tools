@@ -1,3 +1,4 @@
+/** Disk-backed LLM response cache with AES-256-GCM encryption (when `LLM_CACHE_KEY` is set) and TTL expiry. */
 import crypto from 'crypto';
 import fs from 'fs';
 import path from 'path';
@@ -65,6 +66,7 @@ function ensureCacheDir(dir: string): void {
     }
 }
 
+/** Retrieve a cached LLM response. Returns `null` on miss, expiry, or decryption failure. */
 export function diskCacheGet(key: string): string | null {
     const file = filePath(key);
     try {
@@ -92,6 +94,7 @@ export function diskCacheGet(key: string): string | null {
     return null;
 }
 
+/** Store an LLM response in the disk cache (encrypted if `LLM_CACHE_KEY` is set). */
 export function diskCacheSet(key: string, response: string): void {
     const dir = cacheDir();
     try {
@@ -107,6 +110,7 @@ export function diskCacheSet(key: string, response: string): void {
     }
 }
 
+/** Delete all cached `.json` files in the cache directory. */
 export function clearDiskCache(): void {
     const dir = cacheDir();
     try {

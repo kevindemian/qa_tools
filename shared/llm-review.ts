@@ -1,3 +1,5 @@
+/** Adversarial LLM review pipeline: validates, re-reviews, and scores analysis results.
+ * Runs an audit loop across multiple LLM tiers to improve confidence and catch hallucinations. */
 import { llmPrompt, type LlmTier } from './llm-client';
 import { rootLogger } from './logger';
 import { sanitizeForLlm, sanitizeTerminal } from './sanitize';
@@ -269,6 +271,8 @@ async function reReviewParallel(
     return { confidence: winner, tier: winnerTier };
 }
 
+/** Run an LLM review: prompt → validate → adversarial audit → re-review → final score.
+ * Returns the reviewed content plus confidence metadata. */
 export async function reviewWithLlm(system: string, user: string): Promise<ReviewResult> {
     const startTime = Date.now();
 

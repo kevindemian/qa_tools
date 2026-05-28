@@ -1,5 +1,5 @@
 /**
- * LLM Prompt Benchmark.
+ * LLM Prompt Benchmark — runs golden dataset fixtures through the LLM and reports match rates.
  * Runs golden dataset fixtures through the LLM and reports match rates.
  * Skip by default. Run with: BENCHMARK=true npx tsx shared/llm-benchmark.ts
  * Requires LLM_API_KEY (and optionally LLM_FAST_API_KEY) in environment.
