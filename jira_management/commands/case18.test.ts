@@ -73,9 +73,13 @@ describe('case18 — AI tests generator', () => {
 
         fs.readFileSync.mockReturnValueOnce('You are a QA engineer.');
 
-        llm.llmPrompt.mockResolvedValueOnce(
-            '[{"title": "Login test with valid credentials", "steps": ["Enter valid user", "Enter valid password", "Click login"], "expectedResult": "User is redirected to dashboard and sees welcome message"}]',
-        );
+        llm.llmPrompt.mockResolvedValueOnce([
+            {
+                title: 'Login test with valid credentials',
+                steps: ['Enter valid user', 'Enter valid password', 'Click login'],
+                expectedResult: 'User is redirected to dashboard and sees welcome message',
+            },
+        ]);
 
         const mod = require('./case18').default;
         await mod.handler(baseContext);
@@ -85,6 +89,8 @@ describe('case18 — AI tests generator', () => {
             expect.stringContaining('You are a QA engineer'),
             expect.stringContaining('User wants to login'),
             'case18',
+            undefined,
+            expect.anything(),
         );
         expect(baseContext.pushHistory).toHaveBeenCalledWith('ai-generate-tests', expect.any(String), 'ok');
     });
@@ -132,7 +138,7 @@ describe('case18 — AI tests generator', () => {
         expect(prompt.printError).toHaveBeenCalled();
     });
 
-    it('retries on invalid JSON and succeeds on second try', async () => {
+    it('handles valid test cases from llmPrompt', async () => {
         const prompt = require('../../shared/prompt');
         const llm = require('../../shared/llm-client');
         const fs = require('fs');
@@ -140,22 +146,21 @@ describe('case18 — AI tests generator', () => {
         prompt.ask.mockResolvedValueOnce('User wants to login').mockResolvedValueOnce('Must validate');
         fs.readFileSync.mockReturnValueOnce('You are a QA engineer.');
 
-        const mock = jest
-            .fn()
-            .mockResolvedValueOnce('invalid json')
-            .mockResolvedValueOnce(
-                '[{"title": "Login test with valid credentials", "steps": ["Enter valid user"], "expectedResult": "User is redirected to dashboard"}]',
-            );
-        llm.llmPrompt.mockImplementation((...args: unknown[]) => mock(...args));
+        llm.llmPrompt.mockResolvedValueOnce([
+            {
+                title: 'Login test with valid credentials',
+                steps: ['Enter valid user'],
+                expectedResult: 'User is redirected to dashboard',
+            },
+        ]);
 
         const mod = require('./case18').default;
         await mod.handler(baseContext);
 
-        expect(llm.llmPrompt).toHaveBeenCalledTimes(2);
         expect(baseContext.pushHistory).toHaveBeenCalledWith('ai-generate-tests', expect.any(String), 'ok');
     });
 
-    it('23.14: prints error when retry is still invalid', async () => {
+    it('23.14: prints error when llmPrompt throws (Zod validation failed after retry)', async () => {
         const { llmPrompt } = require('../../shared/llm-client');
         const { printError } = require('../../shared/prompt');
         const prompt = require('../../shared/prompt');
@@ -164,14 +169,11 @@ describe('case18 — AI tests generator', () => {
         prompt.ask.mockResolvedValueOnce('User wants to login').mockResolvedValueOnce('Must validate');
         fs.readFileSync.mockReturnValueOnce('You are a QA engineer.');
 
-        llmPrompt.mockResolvedValueOnce('invalid json 1').mockResolvedValueOnce('invalid json 2');
+        llmPrompt.mockRejectedValueOnce(new Error('LLM response failed schema validation after retry'));
 
         const mod = require('./case18').default;
         await mod.handler(baseContext);
 
-        expect(printError).toHaveBeenCalledWith(
-            'Falha ao gerar casos de teste com IA',
-            expect.stringContaining('LLM retornou conteúdo inválido após retry'),
-        );
+        expect(printError).toHaveBeenCalledWith('Falha ao gerar casos de teste com IA', expect.any(Error));
     });
 });

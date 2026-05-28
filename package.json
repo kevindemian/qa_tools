@@ -8,7 +8,7 @@
         "test": "jest",
         "test:coverage": "jest --coverage",
         "typecheck": "tsc --noEmit",
-        "lint": "eslint . --ext .ts",
+        "lint": "eslint . --ext .ts && npx ts-prune --exit && npm run check-handlers",
         "format": "prettier --write '**/*.{ts,js,json,md}'",
         "docs": "echo 'Documentation generation removed (docs-archive/)'",
         "unused-exports": "npx ts-prune -p tsconfig.json",
@@ -38,7 +38,9 @@
         "glob": "^10.5.0",
         "gradient-string": "^3.0.0",
         "ora": "^9.4.0",
-        "readline-sync": "^1.4.10"
+        "readline-sync": "^1.4.10",
+        "yaml": "^2.9.0",
+        "zod": "^4.4.3"
     },
     "lint-staged": {
         "*.ts": [
@@ -58,6 +60,7 @@
         "@types/gradient-string": "^1.1.6",
         "@types/jest": "^30.0.0",
         "@types/node": "^25.9.1",
+        "@types/yaml": "^1.9.6",
         "eslint": "^10.4.0",
         "eslint-config-prettier": "^10.1.8",
         "husky": "^9.1.7",
@@ -66,8 +69,8 @@
         "nock": "^14.0.15",
         "prettier": "^3.8.3",
         "ts-jest": "^29.4.11",
-        "tsx": "^4.22.3",
         "ts-prune": "^0.10.3",
+        "tsx": "^4.22.3",
         "typescript": "^6.0.3",
         "typescript-eslint": "^8.59.4"
     }

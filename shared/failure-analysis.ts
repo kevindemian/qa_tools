@@ -8,12 +8,19 @@ import { generateReportWithFallback } from './report-generator';
 import { snapshotLlmMetrics } from './llm-metrics';
 import { sanitizeForLlm } from './sanitize';
 import { withSpinner } from './spinner';
+import { ClassifyResponseSchema } from './classify.schema';
 
 export interface AnalysisReport {
     content: string;
     htmlReport?: string;
     confidence: 'high' | 'medium' | 'low';
     fallbackUsed: boolean;
+}
+
+export interface LlmContext {
+    gitCommits?: string;
+    gitTrend?: string;
+    jiraIssues?: string;
 }
 
 const PROMPT_DIR = path.resolve(__dirname, 'prompts');
@@ -31,7 +38,7 @@ function formatFailedTests(failed: FlatTest[]): string {
     return failed.map((t, i) => `${i + 1}. [${t.state}] ${t.title} (${t.duration ?? '?'}ms)`).join('\n');
 }
 
-export async function analyzeFailuresWithReport(tests: FlatTest[]): Promise<AnalysisReport> {
+export async function analyzeFailuresWithReport(tests: FlatTest[], context?: LlmContext): Promise<AnalysisReport> {
     const failed = tests.filter((t) => t.state === 'failed');
     if (failed.length === 0) return { content: '', confidence: 'high', fallbackUsed: false };
 
@@ -39,11 +46,22 @@ export async function analyzeFailuresWithReport(tests: FlatTest[]): Promise<Anal
     if (!systemTemplate) return { content: '', confidence: 'medium', fallbackUsed: true };
 
     const failedTests = sanitizeForLlm(formatFailedTests(failed));
+
+    let userMessage = '';
+    if (context?.gitCommits) {
+        userMessage += 'Recent Commits:\n' + sanitizeForLlm(context.gitCommits) + '\n\n';
+    }
+    if (context?.gitTrend) {
+        userMessage += 'Pass Rate Trend:\n' + sanitizeForLlm(context.gitTrend) + '\n\n';
+    }
+    if (context?.jiraIssues) {
+        userMessage += 'Related Jira Issues:\n' + sanitizeForLlm(context.jiraIssues) + '\n\n';
+    }
+    userMessage += 'Failed Tests:\n' + failedTests;
+
     let result: ReviewResult;
     try {
-        result = await withSpinner('Analisando falhas com IA...', () =>
-            reviewWithLlm(systemTemplate, 'Failed Tests:\n' + failedTests),
-        );
+        result = await withSpinner('Analisando falhas com IA...', () => reviewWithLlm(systemTemplate, userMessage));
     } catch {
         return { content: '', confidence: 'medium', fallbackUsed: true };
     }
@@ -73,21 +91,11 @@ export async function classifyFailure(title: string, error: string): Promise<str
 
     const baseData = 'Test Title:\n' + title + '\n\nError:\n' + sanitizeForLlm(error);
 
-    const classifyRegex = /^(ASSERTION|TIMEOUT|ENVIRONMENT|FLAKY|APPLICATION|UNKNOWN):\s/;
-    const retryMessages = [
-        'Classify this failure.',
-        'Responda exatamente no formato CATEGORIA: explicacao. Use uma das categorias: ASSERTION, TIMEOUT, ENVIRONMENT, FLAKY, APPLICATION, UNKNOWN.',
-    ];
-    const retryCalls = ['classify', 'classify-retry'];
-
-    for (let i = 0; i < retryMessages.length; i++) {
-        const result = await llmPrompt('fast', systemTemplate, baseData + '\n\n' + retryMessages[i]!, retryCalls[i]);
-        if (classifyRegex.test(result)) return result;
-        if (i < retryMessages.length - 1) {
-            rootLogger.warn('classifyFailure: invalid format, retrying');
-        }
+    try {
+        const result = await llmPrompt('fast', systemTemplate, baseData, 'classify', undefined, ClassifyResponseSchema);
+        return result;
+    } catch {
+        rootLogger.warn('classifyFailure: llmPrompt + Zod validation failed, falling back to UNKNOWN');
+        return 'UNKNOWN: Could not classify failure after retry';
     }
-
-    rootLogger.warn('classifyFailure: retry also returned invalid format, falling back to UNKNOWN');
-    return 'UNKNOWN: Could not classify failure after retry';
 }

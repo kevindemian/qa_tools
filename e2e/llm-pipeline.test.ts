@@ -26,35 +26,35 @@ import { clearCache } from '../shared/llm-client';
 
 const mockLlmPrompt = llmPrompt as jest.MockedFunction<typeof llmPrompt>;
 
-const validReport = JSON.stringify({
+const validParsedReport = {
     tests: [
         {
             title: 'Login fails',
-            classification: 'ASSERTION',
-            severity: 'high',
+            classification: 'ASSERTION' as const,
+            severity: 'high' as const,
             recommendation: 'Fix assertion logic in login component.',
         },
     ],
-});
+};
 
-const multiElementReport = JSON.stringify({
+const multiElementParsedReport = {
     tests: [
         {
             title: 'Login fails',
-            classification: 'ASSERTION',
-            severity: 'high',
+            classification: 'ASSERTION' as const,
+            severity: 'high' as const,
             recommendation: 'Fix assertion logic in login component.',
         },
         {
             title: 'Logout fails',
-            classification: 'TIMEOUT',
-            severity: 'medium',
+            classification: 'TIMEOUT' as const,
+            severity: 'medium' as const,
             recommendation: 'Increase timeout threshold for logout endpoint.',
         },
     ],
-});
+};
 
-const invalidReport = JSON.stringify({ tests: [{ title: 'Bad' }] });
+const invalidParsedReport = { tests: [{ title: 'Bad' }] };
 
 beforeEach(() => {
     jest.clearAllMocks();
@@ -63,7 +63,7 @@ beforeEach(() => {
 
 describe('LLM Pipeline E2E', () => {
     it('happy path: report → validation → review → metrics', async () => {
-        mockLlmPrompt.mockResolvedValueOnce(validReport).mockResolvedValueOnce('AGREE - Good analysis.');
+        mockLlmPrompt.mockResolvedValueOnce(validParsedReport).mockResolvedValueOnce('AGREE - Good analysis.');
 
         const result = await reviewWithLlm('System prompt', 'User request');
 
@@ -77,8 +77,8 @@ describe('LLM Pipeline E2E', () => {
 
     it('retry loop: invalid report → retry → success', async () => {
         mockLlmPrompt
-            .mockResolvedValueOnce(invalidReport)
-            .mockResolvedValueOnce(validReport)
+            .mockResolvedValueOnce(invalidParsedReport)
+            .mockResolvedValueOnce(validParsedReport)
             .mockResolvedValueOnce('PARTIAL - Minor issues.');
 
         const result = await reviewWithLlm('System prompt', 'User request');
@@ -97,7 +97,9 @@ describe('LLM Pipeline E2E', () => {
     });
 
     it('validates all elements with multi-element array', async () => {
-        mockLlmPrompt.mockResolvedValueOnce(multiElementReport).mockResolvedValueOnce('AGREE - Both tests look good.');
+        mockLlmPrompt
+            .mockResolvedValueOnce(multiElementParsedReport)
+            .mockResolvedValueOnce('AGREE - Both tests look good.');
 
         const result = await reviewWithLlm('System prompt', 'User request');
         expect(result.content).toContain('Login fails');
@@ -111,7 +113,6 @@ describe('LLM Pipeline E2E', () => {
         await expect(reviewWithLlm('System prompt', 'User request')).rejects.toThrow(
             'LLM review and fallback both failed',
         );
-        // main call + 3 retries = 4 calls × 2 (report + main) = 8 calls
         expect(mockLlmPrompt.mock.calls.length).toBeGreaterThanOrEqual(2);
     });
 });

@@ -32,6 +32,10 @@ interface ReportOptions {
     ciUrl?: string;
     /** Branch name displayed in the footer (linked if ciUrl is also set). */
     branch?: string;
+    /** Minimum pass rate (0-100) — report will render a quality gate warning below this threshold. */
+    qualityGate?: number;
+    /** Pre-computed failure category for each test by title. */
+    testCategories?: Record<string, string>;
 }
 
 /** Aggregated counts derived from a FlatTest array for rendering summary cards. */
@@ -140,7 +144,8 @@ th { background: #f3f4f6; text-align: left; padding: 10px 12px; font-size: 0.75r
 td { padding: 8px 12px; border-top: 1px solid #e5e7eb; font-size: 0.875rem; }
 .control-bar { margin-bottom: 12px; }
 .control-bar button { padding: 4px 12px; border: 1px solid #d1d5db; background: #fff; border-radius: 6px; cursor: pointer; font-size: 0.8rem; }
-.control-bar button:hover { background: #f3f4f6; }
+  .control-bar button:hover { background: #f3f4f6; }
+  input { padding: 4px 8px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 0.8rem; }
 .status-badge { display: inline-block; padding: 2px 8px; border-radius: 9999px; font-size: 0.75rem; font-weight: 600; }
 .status-passed { background: #dcfce7; color: #166534; }
 .status-failed { background: #fecaca; color: #991b1b; }
@@ -238,6 +243,33 @@ function buildLlmSection(options: ReportOptions): string {
     return html;
 }
 
+function buildQualityGate(passRate: number, threshold: number): string {
+    if (passRate >= threshold) return '';
+    return `<div class="chart-box" style="border-left:4px solid #ef4444;background:#fef2f2">
+<div class="label" style="color:#991b1b;margin-bottom:4px">❌ Quality Gate Failed</div>
+<p style="margin:0;font-size:0.85rem">Pass rate ${passRate.toFixed(1)}% is below the configured threshold of ${threshold}%.</p>
+</div>`;
+}
+
+function buildFilterBar(): string {
+    return (
+        '<div class="control-bar" style="display:flex;gap:8px;align-items:center">' +
+        '<input id="searchInput" type="text" placeholder="Filter tests..." oninput="filterTable()" style="padding:4px 8px;border:1px solid #d1d5db;border-radius:6px;font-size:0.8rem;flex:1">' +
+        '<button onclick="exportCsv()" style="padding:4px 12px;border:1px solid #d1d5db;background:#fff;border-radius:6px;cursor:pointer;font-size:0.8rem">Export CSV</button>' +
+        '</div>'
+    );
+}
+
+function precomputeCategories(tests: FlatTest[]): Record<string, string> {
+    const cats: Record<string, string> = {};
+    for (const t of tests) {
+        if (t.state === 'failed' && t.error) {
+            cats[t.title] = categorizeFailure(t.error);
+        }
+    }
+    return cats;
+}
+
 function buildFailedSummary(tests: FlatTest[], stats: ReportStats): string {
     if (stats.failed === 0) return '';
     const failed = tests.filter((t) => t.state === 'failed');
@@ -283,26 +315,32 @@ function buildErrorCell(t: FlatTest): string {
     return '';
 }
 
-function buildTestTable(tests: FlatTest[]): string {
+function buildTestTable(tests: FlatTest[], categories?: Record<string, string>): string {
     const hasPassed = tests.some((t) => t.state === 'passed');
     const hasError = tests.some((t) => t.state === 'failed' && t.error);
+    const hasSuite = tests.some((t) => extractSuite(t));
     let html = hasPassed
         ? '<div class="control-bar"><button onclick="togglePassed()">Toggle Passed</button></div>'
         : '';
     html +=
-        '<div class="wrapper"><table><thead><tr><th>#</th><th>Test</th><th>Status</th><th>Duration</th>' +
+        '<div class="wrapper"><table><thead><tr><th>#</th><th>Test</th>' +
+        (hasSuite ? '<th>Suite</th>' : '') +
+        '<th>Status</th><th>Duration</th>' +
         (hasError ? '<th>Error</th>' : '') +
         '</tr></thead><tbody>';
     for (const [i, t] of tests.entries()) {
         const rowClass = t.state === 'passed' ? ' class="row-passed"' : '';
         html += '<tr' + rowClass + '>';
         html += '<td>' + (i + 1) + '</td>';
+        const cat = t.state === 'failed' && categories ? categories[t.title] : undefined;
         html +=
             '<td' +
             (t.fullTitle ? ' title="' + escapeHtml(t.fullTitle) + '"' : '') +
             '>' +
             escapeHtml(t.title) +
+            (cat ? buildCategoryBadge(cat) : '') +
             '</td>';
+        if (hasSuite) html += '<td>' + escapeHtml(extractSuite(t)) + '</td>';
         html += '<td><span class="status-badge status-' + t.state + '">' + t.state + '</span></td>';
         html += '<td>' + (t.state === 'skipped' ? '—' : fmtDuration(t.duration)) + '</td>';
         if (hasError) html += '<td>' + buildErrorCell(t) + '</td>';
@@ -320,6 +358,30 @@ function togglePassed() {
     const hidden = rows.length > 0 && rows[0].style.display === 'none';
     rows.forEach(r => r.style.display = hidden ? '' : 'none');
     if (btn) btn.textContent = hidden ? 'Hide Passed' : 'Show Passed';
+}
+function filterTable() {
+    const q = document.getElementById('searchInput').value.toLowerCase();
+    const rows = document.querySelectorAll('tbody tr');
+    rows.forEach(r => {
+        r.style.display = r.textContent.toLowerCase().includes(q) ? '' : 'none';
+    });
+}
+function exportCsv() {
+    const rows = document.querySelectorAll('tbody tr');
+    let csv = '#,Test,Status,Duration,Error\\n';
+    rows.forEach(r => {
+        const cells = r.querySelectorAll('td');
+        if (cells.length < 4) return;
+        const vals = Array.from(cells).slice(0, 4).map(c => '"' + c.textContent.trim().replace(/"/g, '""') + '"');
+        const err = cells.length > 4 ? '"' + cells[4].textContent.trim().replace(/"/g, '""') + '"' : '""';
+        csv += vals.join(',') + ',' + err + '\\n';
+    });
+    const blob = new Blob([csv], { type: 'text/csv' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = 'test-report.csv';
+    a.click();
+    URL.revokeObjectURL(a.href);
 }
 document.querySelectorAll('.error-truncated').forEach(function(el) {
     el.addEventListener('click', function() {
@@ -352,6 +414,7 @@ export function generateReportWithFallback(tests: FlatTest[], options?: ReportOp
         const stats = statsFromTests(tests);
         const title = options?.title || DEFAULT_TITLE;
         const passRate = stats.total > 0 ? (stats.passed / stats.total) * 100 : 0;
+        const categories = options?.testCategories || precomputeCategories(tests);
 
         let html =
             '<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">';
@@ -361,7 +424,11 @@ export function generateReportWithFallback(tests: FlatTest[], options?: ReportOp
         html += buildFailedSummary(tests, stats);
         html += buildLlmSection(options || { title: '', includeChart: true });
         html += buildChartSection(stats, options?.includeChart !== false);
-        html += buildTestTable(tests);
+        if (options?.qualityGate !== undefined) {
+            html += buildQualityGate(passRate, options.qualityGate);
+        }
+        html += buildFilterBar();
+        html += buildTestTable(tests, categories);
         html += buildToggleScript();
         const generatedAt = options?.generatedAt || new Date().toISOString();
         const source = options?.source || process.env.CI_JOB_NAME || process.env.GITHUB_WORKFLOW || '';
@@ -394,4 +461,36 @@ export function generateReportWithFallback(tests: FlatTest[], options?: ReportOp
 
 function escapeHtml(s: string): string {
     return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+}
+
+export function categorizeFailure(error: string): string {
+    const upper = error.toUpperCase();
+    if (/TIMEOUT|TIMED OUT|30S|60S/.test(upper)) return 'TIMEOUT';
+    if (/ASSERT|EXPECTED|GOT |ACTUAL|TO BE /.test(upper)) return 'ASSERTION';
+    if (/CONNECT|DATABASE|NETWORK|REFUSED|ECONNREFUSED/.test(upper)) return 'ENVIRONMENT';
+    if (/NULL|UNDEFINED|CANNOT READ|TYPEERROR|REFERENCEERROR/.test(upper)) return 'APPLICATION';
+    if (/FLAKY|INTERMITTENT|RETRY/.test(upper)) return 'FLAKY';
+    return 'UNKNOWN';
+}
+
+const CATEGORY_COLORS: Record<string, string> = {
+    ASSERTION: '#6366f1',
+    TIMEOUT: '#f59e0b',
+    ENVIRONMENT: '#10b981',
+    APPLICATION: '#ef4444',
+    FLAKY: '#8b5cf6',
+    UNKNOWN: '#6b7280',
+};
+
+function buildCategoryBadge(cat: string): string {
+    const color = CATEGORY_COLORS[cat] || '#6b7280';
+    return `<span style="display:inline-block;padding:1px 6px;border-radius:4px;background:${color}20;color:${color};font-size:0.7rem;font-weight:600;margin-left:4px">${cat}</span>`;
+}
+
+export function extractSuite(t: FlatTest): string {
+    if (t.fullTitle) {
+        const parts = t.fullTitle.split(' > ');
+        return parts.length > 1 ? parts.slice(0, -1).join(' > ') : '';
+    }
+    return '';
 }

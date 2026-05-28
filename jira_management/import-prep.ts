@@ -4,7 +4,7 @@ import { md } from '../shared/markdown';
 import Config from '../shared/config';
 import type { JsonObject, TestCase } from '../shared/types';
 import { isPreconditionKey } from '../shared/quoted-string';
-import TestCaseValidator from './test-case-validator';
+import { TestCaseSchema, ImportJsonSchema } from './csv-import-schema';
 import { rootLogger } from '../shared/logger';
 import { load as loadState } from '../shared/state';
 import { OPERATION_CANCELLED } from './constants';
@@ -291,8 +291,33 @@ function validateImportBatch(
     );
 
     if (resumeFrom === 0) {
-        const validator = new TestCaseValidator();
-        const { errors, warnings } = validator.validate(tests);
+        const errors: string[] = [];
+        const warnings: string[] = [];
+        const titles = new Set<string>();
+
+        tests.forEach((test, i) => {
+            const idx = i + 1;
+            const result = TestCaseSchema.safeParse(test);
+            if (!result.success) {
+                result.error.issues.forEach((issue) => {
+                    const path = issue.path.join('.');
+                    errors.push('Teste ' + idx + ': ' + path + ' ' + issue.message);
+                });
+            } else {
+                if (test.title && titles.has(test.title)) {
+                    warnings.push('Teste ' + idx + ': Titulo duplicado "' + test.title + '"');
+                }
+                if (test.title) titles.add(test.title);
+
+                test.steps.forEach((step, si) => {
+                    const action = step.fields?.Action || '';
+                    if (!action.trim()) {
+                        warnings.push('Teste ' + idx + ' "' + test.title + '": Step ' + (si + 1) + ' sem Action');
+                    }
+                });
+            }
+        });
+
         if (warnings.length > 0) {
             warn('Avisos (' + warnings.length + '):');
             warnings.slice(0, MAX_WARNINGS_TO_SHOW).forEach((w) => warn('  ' + w));
@@ -392,36 +417,30 @@ async function resolveJsonPath(jsonPathInput: string | undefined): Promise<strin
 function parseJsonTests(jsonPath: string): TestCase[] {
     const raw = fs.readFileSync(jsonPath, 'utf8');
     const parsed = JSON.parse(raw);
-    if (!Array.isArray(parsed)) throw new Error('JSON deve ser um array de casos de teste');
-    return parsed.map((item: JsonObject, i: number) => {
-        if (!item.title || !item.steps || !Array.isArray(item.steps)) {
-            throw new Error('Item ' + (i + 1) + ': campos obrigatórios: title (string), steps (array)');
-        }
-        return {
-            title: item.title as string,
-            description: (item.description as string) || '',
-            steps: (item.steps as Array<Record<string, string>>).map((s) => ({
-                fields: {
-                    Action: s.Action || '',
-                    Data: s.Data || '',
-                    ExpectedResult: s.ExpectedResult || '',
-                },
-            })),
-            precondition: item.precondition
-                ? isPreconditionKey(item.precondition as string)
-                    ? { type: 'reference' as const, value: item.precondition as string }
-                    : { type: 'inline' as const, value: item.precondition as string }
-                : undefined,
-            group: (item.group as string) || '',
-            linkedIssues: Array.isArray(item.linkedIssues)
-                ? (item.linkedIssues as Array<unknown>).map((li) => {
-                      if (typeof li === 'string') return { key: li, linkType: 'Tests' };
-                      const liObj = li as { key: string; linkType?: string };
-                      return { key: liObj.key, linkType: liObj.linkType || 'Tests' };
-                  })
-                : [],
-        };
-    });
+    const validated = ImportJsonSchema.parse(parsed);
+    return validated.map((item) => ({
+        title: item.title,
+        description: item.description || '',
+        steps: item.steps.map((s) => ({
+            fields: {
+                Action: s.Action || '',
+                Data: s.Data || '',
+                ExpectedResult: s.ExpectedResult || '',
+            },
+        })),
+        precondition: item.precondition
+            ? isPreconditionKey(item.precondition)
+                ? { type: 'reference' as const, value: item.precondition }
+                : { type: 'inline' as const, value: item.precondition }
+            : undefined,
+        group: item.group || '',
+        linkedIssues: Array.isArray(item.linkedIssues)
+            ? item.linkedIssues.map((li) => {
+                  if (typeof li === 'string') return { key: li, linkType: 'Tests' };
+                  return { key: li.key, linkType: li.linkType || 'Tests' };
+              })
+            : [],
+    }));
 }
 
 export {

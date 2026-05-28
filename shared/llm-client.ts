@@ -1,4 +1,5 @@
 import crypto from 'crypto';
+import { z } from 'zod';
 import Config from './config';
 import { rootLogger } from './logger';
 import { sanitizeForLlm } from './sanitize';
@@ -455,13 +456,66 @@ async function sendWithFallback(
 }
 
 /**
- * Send a prompt to the LLM with caching, rate limiting, and tier fallback.
+ * Estimate input token count (chars / 4 heuristic).
+ * @internal
+ */
+export function _estimateInputTokens(system: string, user: string): number {
+    return Math.ceil((system.length + user.length) / 4);
+}
+
+function _checkTotalTokenLimit(): void {
+    const maxTotal = Config.llmMaxTotalTokens;
+    if (maxTotal <= 0) return;
+    const current = _llmMetrics.totalPromptTokens + _llmMetrics.totalCompletionTokens;
+    if (current >= maxTotal) {
+        throw new LlmError(
+            `Total token limit reached: ${current} tokens used, limit is ${maxTotal}. ` +
+                `Increase LLM_MAX_TOTAL_TOKENS or reset metrics via resetLlmClientMetrics().`,
+        );
+    }
+}
+
+function _checkTokenLimit(system: string, user: string): void {
+    const maxTokens = Config.llmMaxTokens;
+    const estimated = _estimateInputTokens(system, user);
+    if (estimated > maxTokens) {
+        throw new LlmError(
+            `Input too large: estimated ${estimated} tokens exceeds limit of ${maxTokens}. ` +
+                `Reduce prompt size or increase LLM_MAX_TOKENS_PER_OP.`,
+        );
+    }
+}
+
+function _validateWithSchema<T>(raw: string, schema: z.ZodType<T>): T | null {
+    const parsed = parseRawOnce(raw);
+    if (!parsed) return null;
+    const result = schema.safeParse(parsed);
+    if (result.success) return result.data;
+    return null;
+}
+
+/** Basic sanity-check: ensure the response is valid JSON. Used when responseFormat='json' and no Zod schema is provided. */
+function _warnIfNotJson(raw: string): void {
+    const parsed = parseRawOnce(raw);
+    if (!parsed) {
+        rootLogger.warn('LLM response expected JSON but was not parseable — returning raw text');
+    }
+}
+
+/**
+ * Send a prompt to the LLM with caching, rate limiting, tier fallback,
+ * optional Zod schema validation (with 1 automatic retry on failure).
  *
  * Checks the in-memory cache first (keyed by tier + system + user +
  * optional callerId).  On miss, dispatches through the selected tier's
  * primary provider; if that fails, walks the tier's fallback chain
  * (e.g. main → fallback → batch).  The result is cached for 5 minutes
  * before being returned.
+ *
+ * When a Zod schema is provided, the LLM response is validated against it.
+ * If validation fails, a single retry is performed with the schema errors
+ * injected as a hint.  Cache hits are also re-validated; stale/invalid
+ * cache entries trigger a re-request.
  *
  * @param tier           - Which model/provider tier to route through.
  * @param system         - System-level instruction (role: system in OpenAI
@@ -471,22 +525,33 @@ async function sendWithFallback(
  *                         prevent collisions between unrelated callers.
  * @param responseFormat - Override response format for this call (tier default
  *                         otherwise).
- * @returns The LLM response text.
- * @throws When every provider in the tier's fallback chain has failed.
+ * @param schema         - Optional Zod schema for response validation.
+ * @returns The LLM response text (or parsed data when schema is provided).
+ * @throws When every provider in the tier's fallback chain has failed, or
+ *         when schema validation fails even after a retry.
  */
-export async function llmPrompt(
+export async function llmPrompt<T = string>(
     tier: LlmTier,
     system: string,
     user: string,
     callerId?: string,
     responseFormat?: ResponseFormat,
-): Promise<string> {
+    schema?: z.ZodType<T>,
+): Promise<T> {
     const cKey = cacheKey(tier, system, user, callerId, responseFormat);
     const cached = cache.get(cKey);
     if (cached && cached.expiresAt > Date.now()) {
         _llmMetrics.cacheHits++;
         rootLogger.info('LLM cache hit for tier=' + tier + (callerId ? ' callerId=' + callerId : ''));
-        return cached.response;
+        if (schema) {
+            const valid = _validateWithSchema(cached.response, schema);
+            if (valid !== null) return valid;
+            rootLogger.warn('LLM cache hit but schema invalid — re-requesting');
+            cache.delete(cKey);
+        } else {
+            if (responseFormat === 'json') _warnIfNotJson(cached.response);
+            return cached.response as unknown as T;
+        }
     }
 
     _llmMetrics.cacheMisses++;
@@ -500,17 +565,70 @@ export async function llmPrompt(
             (callerId ? ' callerId=' + callerId : ''),
     );
 
+    _checkTokenLimit(system, user);
+    _checkTotalTokenLimit();
+
     const diskCached = diskCacheGet(cKey);
     if (diskCached !== null) {
-        cache.set(cKey, { response: diskCached, expiresAt: Date.now() + CACHE_TTL_MS });
-        return diskCached;
+        if (schema) {
+            const valid = _validateWithSchema(diskCached, schema);
+            if (valid !== null) {
+                cache.set(cKey, { response: diskCached, expiresAt: Date.now() + CACHE_TTL_MS });
+                return valid;
+            }
+            rootLogger.warn('LLM disk cache hit but schema invalid — re-requesting');
+        } else {
+            if (responseFormat === 'json') _warnIfNotJson(diskCached);
+            cache.set(cKey, { response: diskCached, expiresAt: Date.now() + CACHE_TTL_MS });
+            return diskCached as unknown as T;
+        }
     }
 
     const response = await sendWithFallback(tier, system, user, responseFormat);
 
+    if (schema) {
+        const valid = _validateWithSchema(response, schema);
+        if (valid !== null) {
+            cache.set(cKey, { response, expiresAt: Date.now() + CACHE_TTL_MS });
+            diskCacheSet(cKey, response);
+            return valid;
+        }
+
+        rootLogger.warn('LLM response failed schema validation — retrying with hint');
+        const parsed = parseRawOnce(response);
+        const hints =
+            parsed && schema.safeParse(parsed).error
+                ? schema
+                      .safeParse(parsed)
+                      .error!.issues.map(
+                          (i) => `- ${i.path.join('.')}: ${i.message} (received: ${JSON.stringify(parsed)})`,
+                      )
+                      .join('\n')
+                : 'Response was not valid JSON. Return ONLY valid JSON matching the required schema.';
+
+        const retryResponse = await sendWithFallback(
+            tier,
+            system + '\n\n[SCHEMA VALIDATION FAILED]\n' + hints,
+            user,
+            responseFormat,
+        );
+        const retryValid = _validateWithSchema(retryResponse, schema);
+        if (retryValid !== null) {
+            cache.set(cKey, { response: retryResponse, expiresAt: Date.now() + CACHE_TTL_MS });
+            diskCacheSet(cKey, retryResponse);
+            return retryValid;
+        }
+
+        const errMsg = 'LLM response failed schema validation after retry';
+        rootLogger.error(errMsg);
+        throw new LlmError(errMsg);
+    }
+
+    if (responseFormat === 'json' && !schema) _warnIfNotJson(response);
+
     cache.set(cKey, { response, expiresAt: Date.now() + CACHE_TTL_MS });
     diskCacheSet(cKey, response);
-    return response;
+    return response as unknown as T;
 }
 
 /** Evict all cached LLM responses (memory + disk). Useful in tests or when provider config changes at runtime. */

@@ -64,6 +64,8 @@ interface ConfigOverrides {
     llmBatchBaseUrl?: string;
     xrayClientId?: string;
     xrayClientSecret?: string;
+    llmMaxTokens?: string | number;
+    llmMaxTotalTokens?: string | number;
 }
 
 function toBool(val: string | boolean | undefined): boolean {
@@ -264,11 +266,19 @@ class Config {
         return this.overrides.llmBatchBaseUrl ?? envVal('LLM_BATCH_BASE_URL', 'https://models.inference.ai.azure.com');
     }
 
+    // ── Token limits ─────────────────────────────────────────────────────
+    get llmMaxTokens(): number {
+        return toInt(this.overrides.llmMaxTokens ?? envVal('LLM_MAX_TOKENS_PER_OP'), 128000);
+    }
+    get llmMaxTotalTokens(): number {
+        return toInt(this.overrides.llmMaxTotalTokens ?? envVal('LLM_MAX_TOTAL_TOKENS'), 0);
+    }
+
     get(key: string): string | undefined {
         ensureDotenv();
-        const overrideKey = key as keyof ConfigOverrides;
-        if (overrideKey in this.overrides) {
-            const val = this.overrides[overrideKey];
+        const overrides = this.overrides as Record<string, string | number | boolean | undefined>;
+        if (Object.prototype.hasOwnProperty.call(overrides, key)) {
+            const val = overrides[key];
             if (typeof val === 'string') return val;
             if (val === true) return 'true';
             if (val === false) return 'false';
@@ -434,6 +444,12 @@ class Config {
     }
     static get llmBatchBaseUrl(): string {
         return Config.defaultInstance.llmBatchBaseUrl;
+    }
+    static get llmMaxTokens(): number {
+        return Config.defaultInstance.llmMaxTokens;
+    }
+    static get llmMaxTotalTokens(): number {
+        return Config.defaultInstance.llmMaxTotalTokens;
     }
 }
 

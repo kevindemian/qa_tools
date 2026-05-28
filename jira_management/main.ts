@@ -29,6 +29,7 @@ import {
 } from '../shared/cli_base';
 import { rootLogger } from '../shared/logger';
 import { openWithOsOrFallback, getDocsOutputDir } from '../shared/open';
+import { pushBreadcrumb, clearBreadcrumbs } from '../shared/breadcrumbs';
 import { loadTypedState, load as loadState, update as updateState, getStatePath } from '../shared/state';
 import { SessionContext } from '../shared/session-context';
 import { mdToHtml } from '../shared/markdown';
@@ -271,6 +272,17 @@ const CATEGORY_TITLES: Record<string, string> = {
     utilities: 'UTILITÁRIOS',
 };
 
+function _buildAliasMap(): Record<string, string[]> {
+    const map: Record<string, string[]> = {};
+    for (const [alias, id] of Object.entries(ALIASES)) {
+        if (!map[id]) map[id] = [];
+        map[id].push(alias);
+    }
+    return map;
+}
+
+const ID_TO_ALIASES = _buildAliasMap();
+
 function _configHint(key: string, ctx: { git_directory: string }): string {
     if (key === 'gitDir') return '(atual: ' + ctx.git_directory + ')';
     if (key === 'cypressDir') {
@@ -300,6 +312,13 @@ function buildMenuChoices(level: string, proj: string, ctx: { git_directory: str
                 entry.description = Config.cypressProjectPath || loadTypedState().lastCypressPath || NOT_CONFIGURED;
             else if (item.configKey === 'jsonDir') entry.description = loadTypedState().lastJsonDir || NOT_CONFIGURED;
             else if (item.id === '9') entry.description = proj;
+            if (item.id && ID_TO_ALIASES[item.id]) {
+                const aliases = ID_TO_ALIASES[item.id]!.slice(0, 2).join(', ');
+                const count = ID_TO_ALIASES[item.id]!.length;
+                const suffix = count > 2 ? '…' : '';
+                const hint = 'alias: ' + aliases + suffix;
+                entry.description = entry.description ? entry.description + ' (' + hint + ')' : hint;
+            }
             choices.push(entry);
         }
     }
@@ -567,7 +586,10 @@ async function getUserChoice(level: string, proj: string, ctx: SessionContext): 
         );
     }
 
-    const pathLine = level === 'main' ? `   ${proj}` : `   ${proj} > ${CATEGORY_TITLES[level] || level}`;
+    const contextLine = ctx.buildContextLine ? ctx.buildContextLine(proj) : '';
+    const contextPart = contextLine ? ' | ' + contextLine : '';
+    const pathLine =
+        level === 'main' ? `   ${proj}${contextPart}` : `   ${proj} > ${CATEGORY_TITLES[level] || level}${contextPart}`;
     const maxPathLen = 74;
     const displayPath = pathLine.length > maxPathLen ? pathLine.slice(0, maxPathLen - 1) + '…' : pathLine;
     const boxLines = headerLines.length > 0 ? [displayPath, '', ...headerLines] : [displayPath];
@@ -732,18 +754,21 @@ async function runMainLoop(
     printSessionSummary: () => void,
 ): Promise<void> {
     let currentLevel = 'main';
+    clearBreadcrumbs();
     while (true) {
         if (process.stdout.isTTY) {
             process.stdout.write('\x1b[2J\x1b[H');
         }
         const choice = await getAndResolveChoice(currentLevel, ctx);
         if (choice === '__exit__') {
+            clearBreadcrumbs();
             title('Até logo!');
             printSessionSummary();
             if (ctx.sessionCounters.some((c) => c.status === 'error')) process.exitCode = 1;
             return;
         }
         if (choice === '__back__') {
+            clearBreadcrumbs();
             currentLevel = 'main';
             continue;
         }
@@ -751,6 +776,7 @@ async function runMainLoop(
         if (!choice) continue;
 
         if (CATEGORY_IDS.has(choice)) {
+            pushBreadcrumb(CATEGORY_TITLES[choice] || choice);
             currentLevel = choice;
             continue;
         }

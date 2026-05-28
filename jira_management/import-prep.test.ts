@@ -49,9 +49,6 @@ jest.mock('fs', () => {
 const mockMd = jest.fn((s: string) => s);
 jest.mock('../shared/markdown', () => ({ md: mockMd }));
 
-const mockValidatorValidate = jest.fn().mockReturnValue({ errors: [], warnings: [] });
-jest.mock('./test-case-validator', () => jest.fn(() => ({ validate: mockValidatorValidate })));
-
 import {
     _checkResumeCheckpoint,
     filterTests,
@@ -161,33 +158,34 @@ describe('filterTests', () => {
 });
 
 describe('validateImportBatch', () => {
-    const tests = makeTestCases(3);
-
     beforeEach(() => {
         jest.clearAllMocks();
         jest.mocked(STATE.load).mockReturnValue({});
-        mockValidatorValidate.mockReturnValue({ errors: [], warnings: [] });
     });
 
     it('warnings <= 5 displayed', () => {
-        mockValidatorValidate.mockReturnValue({ errors: [], warnings: ['w1', 'w2', 'w3'] });
-        const result = validateImportBatch(tests, '/path.csv', 'csv', 'TESTPROJ');
+        const testsWithWarnings = makeTestCases(3).map((t) => ({
+            ...t,
+            steps: [{ fields: { Action: '' } }],
+        }));
+        const result = validateImportBatch(testsWithWarnings, '/path.csv', 'csv', 'TESTPROJ');
         expect(result).toBeDefined();
         expect(result!.resumeFrom).toBe(0);
         expect(PROMPT.warn).toHaveBeenCalledWith(expect.stringContaining('Avisos'));
-        expect(PROMPT.warn).toHaveBeenCalledWith('  w1');
     });
 
     it('warnings > 5 with truncated message', () => {
-        const manyWarnings = Array.from({ length: 10 }, (_, i) => `w${i + 1}`);
-        mockValidatorValidate.mockReturnValue({ errors: [], warnings: manyWarnings });
-        validateImportBatch(tests, '/path.csv', 'csv', 'TESTPROJ');
+        const manyWarnings = Array.from({ length: 10 }, (_, i) => ({
+            title: 'TC' + i,
+            steps: [{ fields: { Action: '' } }],
+        }));
+        validateImportBatch(manyWarnings, '/path.csv', 'csv', 'TESTPROJ');
         expect(PROMPT.warn).toHaveBeenCalledWith(expect.stringContaining('e mais'));
     });
 
     it('errors displayed -> returns undefined', () => {
-        mockValidatorValidate.mockReturnValue({ errors: ['err1'], warnings: [] });
-        const result = validateImportBatch(tests, '/path.csv', 'csv', 'TESTPROJ');
+        const invalidTests = [{ title: '', steps: [{ fields: { Action: 'x' } }] }];
+        const result = validateImportBatch(invalidTests, '/path.csv', 'csv', 'TESTPROJ');
         expect(result).toBeUndefined();
         expect(PROMPT.error).toHaveBeenCalledWith(expect.stringContaining('Erros'));
     });

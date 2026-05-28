@@ -52,6 +52,10 @@ jest.mock('./config', () => {
         get llmBatchBaseUrl() {
             return mockConfig.llmBatchBaseUrl ?? 'https://models.inference.ai.azure.com';
         },
+        get llmMaxTotalTokens() {
+            const v = mockConfig.llmMaxTotalTokens;
+            return v ? parseInt(v, 10) : 0;
+        },
         set(key: string, value: string) {
             mockConfig[key] = value;
         },
@@ -636,6 +640,98 @@ describe('llmPrompt', () => {
             const body = JSON.parse(mockFetch.mock.calls[0][1].body as string);
             expect(body.system_instruction).toBeDefined();
             expect(body.system_instruction.parts[0].text).toBe('sys');
+        });
+    });
+
+    describe('_warnIfNotJson (29.3)', () => {
+        beforeEach(() => {
+            (Config as unknown as { set: (k: string, v: string) => void }).set('llmApiKey', 'sk-test29');
+            (Config as unknown as { set: (k: string, v: string) => void }).set(
+                'llmModel',
+                'google/gemini-2.0-flash-exp',
+            );
+            (Config as unknown as { set: (k: string, v: string) => void }).set(
+                'llmBaseUrl',
+                'https://openrouter.ai/api/v1',
+            );
+        });
+
+        function openAiResponse(content: string): Response {
+            return {
+                ok: true,
+                status: 200,
+                text: jest.fn().mockResolvedValue(JSON.stringify({ choices: [{ message: { content } }] })),
+                headers: { get: () => null },
+            } as unknown as Response;
+        }
+
+        it('does not warn when response is valid JSON (responseFormat=json)', async () => {
+            const warnSpy = jest.spyOn(rootLogger, 'warn').mockImplementation(() => {});
+            mockFetch.mockResolvedValueOnce(openAiResponse(JSON.stringify({ ok: true })));
+            await llmPrompt('main', 'sys', 'user', 'test29.3-valid', 'json');
+            expect(warnSpy).not.toHaveBeenCalled();
+            warnSpy.mockRestore();
+        });
+
+        it('warns when responseFormat=json but extracted content is not valid JSON', async () => {
+            const warnSpy = jest.spyOn(rootLogger, 'warn').mockImplementation(() => {});
+            mockFetch.mockResolvedValueOnce(openAiResponse('not json'));
+            await llmPrompt('main', 'sys', 'user', 'test29.3-invalid', 'json');
+            expect(warnSpy).toHaveBeenCalledWith(
+                expect.stringContaining('LLM response expected JSON but was not parseable'),
+            );
+            warnSpy.mockRestore();
+        });
+
+        it('does not call _warnIfNotJson when responseFormat is not json', async () => {
+            const warnSpy = jest.spyOn(rootLogger, 'warn').mockImplementation(() => {});
+            mockFetch.mockResolvedValueOnce(openAiResponse('не json, а plain text'));
+            await llmPrompt('main', 'sys', 'user', 'test29.3-nojson');
+            expect(warnSpy).not.toHaveBeenCalledWith(
+                expect.stringContaining('LLM response expected JSON but was not parseable'),
+            );
+            warnSpy.mockRestore();
+        });
+    });
+
+    describe('total token limit', () => {
+        beforeEach(() => {
+            resetLlmClientMetrics();
+            (Config as unknown as { set: (k: string, v: string) => void }).set('llmApiKey', 'sk-test');
+        });
+
+        it('throws when total tokens exceed limit after first call', async () => {
+            (Config as unknown as { set: (k: string, v: string) => void }).set('llmMaxTotalTokens', '10');
+            const body = JSON.stringify({
+                choices: [{ message: { content: 'ok' } }],
+                usage: { prompt_tokens: 8, completion_tokens: 3 },
+            });
+            mockFetch.mockResolvedValue(mockOkResponse(body));
+            await llmPrompt('main', 'sys', 'user', 'test-llm19-1', 'text');
+            await expect(llmPrompt('main', 'sys', 'user', 'test-llm19-2', 'text')).rejects.toThrow(
+                'Total token limit reached',
+            );
+        });
+
+        it('does not throw when limit is 0 (unlimited)', async () => {
+            (Config as unknown as { set: (k: string, v: string) => void }).set('llmMaxTotalTokens', '0');
+            const body = JSON.stringify({
+                choices: [{ message: { content: 'ok' } }],
+                usage: { prompt_tokens: 5, completion_tokens: 3 },
+            });
+            mockFetch.mockResolvedValue(mockOkResponse(body));
+            await llmPrompt('main', 'sys', 'user', 'test-llm19-unlimited', 'text');
+            await expect(llmPrompt('main', 'sys', 'user', 'test-llm19-unlimited-2', 'text')).resolves.toBe('ok');
+        });
+
+        it('does not throw when total tokens are under limit', async () => {
+            (Config as unknown as { set: (k: string, v: string) => void }).set('llmMaxTotalTokens', '100');
+            const body = JSON.stringify({
+                choices: [{ message: { content: 'ok' } }],
+                usage: { prompt_tokens: 3, completion_tokens: 2 },
+            });
+            mockFetch.mockResolvedValue(mockOkResponse(body));
+            await expect(llmPrompt('main', 'sys', 'user', 'test-llm19-under', 'text')).resolves.toBe('ok');
         });
     });
 });
