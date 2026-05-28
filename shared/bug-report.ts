@@ -1,8 +1,13 @@
+import * as fs from 'fs';
+import * as path from 'path';
 import { ask, askConfirm, info, printError, title, warn } from './prompt';
 import { rootLogger } from './logger';
 import { classifyFailure } from './failure-analysis';
+import { llmPrompt } from './llm-client';
+import { AiBugReportSchema } from './bug-report.schema';
 import Config from './config';
 import type { BugReport, LLMEnrichment, TestResult } from './types';
+import type { AiBugReport } from './bug-report.schema';
 import type { ParseResult } from './result_parser';
 import type JiraResource from '../jira_management/jira_resource';
 import type JiraLinkManager from '../jira_management/jira_link_manager';
@@ -10,6 +15,16 @@ import type JiraLinkManager from '../jira_management/jira_link_manager';
 const ERROR_TRUNCATION_LIMIT = 500;
 const LLM_DESC_TRUNCATION_LIMIT = 1000;
 const LLM_CONFIDENCE = 0.5;
+const PROMPT_DIR = path.resolve(__dirname, 'prompts');
+
+function readPrompt(file: string): string {
+    try {
+        return fs.readFileSync(path.join(PROMPT_DIR, file), 'utf8');
+    } catch (err) {
+        rootLogger.error('Failed to read prompt template: ' + (err as Error).message);
+        return '';
+    }
+}
 
 function buildSummaryFromFailures(result: ParseResult): string {
     const failed = result.stats?.failed ?? 0;
@@ -41,6 +56,45 @@ async function enrichWithLlm(summary: string, description: string): Promise<LLME
     } catch (err) {
         rootLogger.warn('LLM enrichment failed: ' + (err as Error).message);
         return undefined;
+    }
+}
+
+/** Generate a structured BugReport from a free-text description using LLM.
+ * The output fields are in English (Jira-ready). Returns null on failure. */
+export async function generateBugReportFromDescription(raw: string): Promise<BugReport | null> {
+    const system = readPrompt('bug-report-from-description.md');
+    if (!system) {
+        rootLogger.error('Prompt template bug-report-from-description.md not found');
+        return null;
+    }
+    try {
+        const aiReport = await llmPrompt<AiBugReport>(
+            'fast',
+            system,
+            raw,
+            'bug-report-from-desc',
+            'json',
+            AiBugReportSchema,
+        );
+        return {
+            summary: aiReport.summary,
+            description: aiReport.description,
+            source: 'manual',
+            stepsToReproduce: aiReport.stepsToReproduce,
+            expectedResult: aiReport.expectedResult,
+            actualResult: aiReport.actualResult,
+            environment: aiReport.environment,
+            severity: aiReport.severity,
+            component: aiReport.component,
+            llmEnrichment: {
+                enrichedAt: new Date().toISOString(),
+                model: 'fast',
+                confidence: 0.5,
+            },
+        };
+    } catch (err) {
+        rootLogger.warn('AI bug report generation failed: ' + (err as Error).message);
+        return null;
     }
 }
 

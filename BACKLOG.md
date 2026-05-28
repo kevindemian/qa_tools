@@ -89,6 +89,16 @@ Issues registradas durante refatorações, postergadas por escopo.
 | `shared/state.ts:61-62,75,111,160-165`        | Múltiplos edges (session-state)      |
 | `shared/config.ts`                            | 2 stmts remanescentes                |
 
+### P0 — AI-assisted bug report from description
+
+| Item                                                           | Status |
+| -------------------------------------------------------------- | ------ |
+| `shared/prompts/bug-report-from-description.md` + schema `.ts` | 🚧     |
+| `shared/bug-report.ts` — `generateBugReportFromDescription()`  | 🚧     |
+| `jira_management/commands/case20.ts` — AI path bifurcation     | 🚧     |
+| `shared/prompts/user-story-to-tests.md` — fix example PT→EN    | 🚧     |
+| Tests: `bug-report.schema.test.ts` + `bug-report.test.ts`      | 🚧     |
+
 ### P3 — Xray per-test history
 
 | Item                                          | Status                 |

@@ -1,20 +1,27 @@
 jest.mock('../../shared/prompt', () => ({
     title: jest.fn(),
     printError: jest.fn(),
+    askConfirm: jest.fn(),
+    ask: jest.fn(),
+    info: jest.fn(),
 }));
 
 jest.mock('../../shared/bug-report', () => ({
     collectManual: jest.fn(),
     interactiveBugReportFlow: jest.fn(),
+    generateBugReportFromDescription: jest.fn(),
 }));
 
-import { printError } from '../../shared/prompt';
-import { collectManual, interactiveBugReportFlow } from '../../shared/bug-report';
+import { printError, askConfirm, ask } from '../../shared/prompt';
+import { collectManual, interactiveBugReportFlow, generateBugReportFromDescription } from '../../shared/bug-report';
 import type { CommandContext } from './context';
 import case20 from './case20';
 
 const mockCollectManual = collectManual as jest.Mock;
 const mockInteractiveBugReportFlow = interactiveBugReportFlow as jest.Mock;
+const mockAskConfirm = askConfirm as jest.Mock;
+const mockAsk = ask as jest.Mock;
+const mockGenerateAi = generateBugReportFromDescription as jest.Mock;
 
 function makeCtx(overrides: Partial<CommandContext> = {}): CommandContext {
     return {
@@ -41,6 +48,7 @@ describe('case20 - Bug Report handler', () => {
         const pushHistory = jest.fn();
         const ctx = makeCtx({ pushHistory });
 
+        mockAskConfirm.mockResolvedValueOnce(false);
         mockCollectManual.mockRejectedValueOnce(new Error('Sumário obrigatório'));
 
         await case20.handler(ctx);
@@ -53,6 +61,7 @@ describe('case20 - Bug Report handler', () => {
         const pushHistory = jest.fn();
         const ctx = makeCtx({ pushHistory });
 
+        mockAskConfirm.mockResolvedValueOnce(false);
         mockCollectManual.mockResolvedValueOnce({ summary: 'Bug A' });
         mockInteractiveBugReportFlow.mockResolvedValueOnce({
             status: 'ok',
@@ -76,6 +85,7 @@ describe('case20 - Bug Report handler', () => {
         const pushHistory = jest.fn();
         const ctx = makeCtx({ pushHistory });
 
+        mockAskConfirm.mockResolvedValueOnce(false);
         mockCollectManual.mockResolvedValueOnce({ summary: 'Bug B' });
         mockInteractiveBugReportFlow.mockResolvedValueOnce(null);
 
@@ -89,6 +99,7 @@ describe('case20 - Bug Report handler', () => {
         const linkManager = { linkIssues: jest.fn() };
         const ctx = makeCtx({ pushHistory, linkManager: linkManager as never });
 
+        mockAskConfirm.mockResolvedValueOnce(false);
         mockCollectManual.mockResolvedValueOnce({ summary: 'Bug C' });
         mockInteractiveBugReportFlow.mockResolvedValueOnce(null);
 
@@ -100,5 +111,57 @@ describe('case20 - Bug Report handler', () => {
             expect.anything(),
             linkManager,
         );
+    });
+
+    it('uses AI path when askConfirm returns true', async () => {
+        const pushHistory = jest.fn();
+        const ctx = makeCtx({ pushHistory });
+
+        mockAskConfirm.mockResolvedValueOnce(true);
+        mockAsk
+            .mockResolvedValueOnce('Login button does nothing on Firefox 120 in production')
+            .mockResolvedValueOnce('');
+        mockGenerateAi.mockResolvedValueOnce({
+            summary: 'Login fails',
+            description: 'desc',
+            source: 'manual',
+            severity: 'major',
+            stepsToReproduce: ['Step 1'],
+            expectedResult: 'ER',
+            actualResult: 'AR',
+            llmEnrichment: { enrichedAt: '', model: 'fast' },
+        });
+        mockInteractiveBugReportFlow.mockResolvedValueOnce({
+            status: 'ok',
+            label: 'PROJ-2',
+            message: 'Login fails',
+        });
+
+        await case20.handler(ctx);
+
+        expect(mockGenerateAi).toHaveBeenCalledTimes(1);
+        expect(mockInteractiveBugReportFlow).toHaveBeenCalledTimes(1);
+        expect(pushHistory).toHaveBeenCalledWith('bug-report', 'PROJ-2: Login fails', 'ok');
+    });
+
+    it('falls back to manual when AI generation returns null', async () => {
+        const pushHistory = jest.fn();
+        const ctx = makeCtx({ pushHistory });
+
+        mockAskConfirm.mockResolvedValueOnce(true);
+        mockAsk.mockResolvedValueOnce('Checkout crashes on Safari when adding items to cart');
+        mockGenerateAi.mockResolvedValueOnce(null);
+        mockCollectManual.mockResolvedValueOnce({ summary: 'Manual fallback' });
+        mockInteractiveBugReportFlow.mockResolvedValueOnce({
+            status: 'ok',
+            label: 'PROJ-3',
+            message: 'Manual fallback',
+        });
+
+        await case20.handler(ctx);
+
+        expect(mockCollectManual).toHaveBeenCalledTimes(1);
+        expect(mockInteractiveBugReportFlow).toHaveBeenCalledTimes(1);
+        expect(pushHistory).toHaveBeenCalledWith('bug-report', 'PROJ-3: Manual fallback', 'ok');
     });
 });
