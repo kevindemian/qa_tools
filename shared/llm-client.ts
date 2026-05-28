@@ -2,6 +2,7 @@ import crypto from 'crypto';
 import Config from './config';
 import { rootLogger } from './logger';
 import { sanitizeForLlm } from './sanitize';
+import { checkCircuitBreaker, recordCircuitFailure, recordCircuitSuccess } from './circuit-breaker';
 
 /**
  * Multi-tier LLM client with automatic fallback, caching, rate limiting,
@@ -62,8 +63,6 @@ const LLM_RETRY_MAX_WAIT_MS = 10000;
 const LLM_FETCH_TIMEOUT_MS = 30000;
 const LLM_ERROR_BODY_TRUNCATION = 200;
 const LLM_RATE_WINDOW_MS = 60000;
-const LLM_CIRCUIT_BREAK_THRESHOLD = 5;
-const LLM_CIRCUIT_BREAK_MS = 30000;
 
 function getRateLimitPerTier(): number {
     const val = Config.get('LLM_RATE_LIMIT');
@@ -72,7 +71,6 @@ function getRateLimitPerTier(): number {
 
 const cache = new Map<string, CacheEntry>();
 const _rateTimestamps = new Map<LlmTier, number[]>();
-const _circuitState = new Map<string, { failures: number; breakUntil: number }>();
 let _cleanupTimer: ReturnType<typeof setInterval> | null = null;
 
 interface LlmClientMetrics {
@@ -342,34 +340,6 @@ function checkRateLimit(tier: LlmTier): void {
     _rateTimestamps.set(tier, windowed);
 }
 
-function checkCircuitBreaker(cfgKey: string): void {
-    const state = _circuitState.get(cfgKey);
-    if (state && state.failures >= LLM_CIRCUIT_BREAK_THRESHOLD && Date.now() < state.breakUntil) {
-        throw new Error(
-            'Circuit breaker open for provider (retry after ' +
-                Math.ceil((state.breakUntil - Date.now()) / 1000) +
-                's)',
-        );
-    }
-}
-
-function recordCircuitFailure(cfgKey: string): void {
-    const state = _circuitState.get(cfgKey) || { failures: 0, breakUntil: 0 };
-    state.failures++;
-    if (state.failures >= LLM_CIRCUIT_BREAK_THRESHOLD) {
-        state.breakUntil = Date.now() + LLM_CIRCUIT_BREAK_MS;
-    }
-    _circuitState.set(cfgKey, state);
-}
-
-function recordCircuitSuccess(cfgKey: string): void {
-    const state = _circuitState.get(cfgKey);
-    if (state) {
-        state.failures = 0;
-        state.breakUntil = 0;
-    }
-}
-
 function jitter(waitMs: number): number {
     return Math.round(waitMs * Math.random());
 }
@@ -541,7 +511,4 @@ export function resetRateLimiter(): void {
     _rateTimestamps.clear();
 }
 
-/** Reset all circuit-breaker failure counts. Typically called in test teardown. */
-export function resetCircuitState(): void {
-    _circuitState.clear();
-}
+export { resetCircuitState, getCircuitState } from './circuit-breaker';
