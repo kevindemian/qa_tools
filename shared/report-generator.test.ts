@@ -82,6 +82,57 @@ describe('generateHtmlReport', () => {
         expect(html).toContain('My Custom Report');
     });
 
+    it('generates quality gate warning when pass rate below threshold', () => {
+        const tests: FlatTest[] = [
+            { title: 'Fail A', state: 'failed', duration: 100 },
+            { title: 'Fail B', state: 'failed', duration: 100 },
+        ];
+
+        const html = generateHtmlReport(tests, { qualityGate: 90 });
+
+        expect(html).toContain('Quality Gate Failed');
+        expect(html).toContain('below the configured threshold');
+    });
+
+    it('omits quality gate when pass rate meets threshold', () => {
+        const tests: FlatTest[] = [
+            { title: 'Pass A', state: 'passed', duration: 100 },
+            { title: 'Pass B', state: 'passed', duration: 100 },
+        ];
+
+        const html = generateHtmlReport(tests, { qualityGate: 90 });
+
+        expect(html).not.toContain('Quality Gate Failed');
+    });
+
+    it('includes source and ci URL in footer when provided', () => {
+        const tests: FlatTest[] = [{ title: 'A', state: 'passed', duration: 100 }];
+
+        const html = generateHtmlReport(tests, {
+            source: 'pipeline-42',
+            ciUrl: 'https://ci.example.com/job/42',
+            branch: 'main',
+        });
+
+        expect(html).toContain('pipeline-42');
+        expect(html).toContain('ci.example.com');
+        expect(html).toContain('main');
+    });
+
+    it('includes branch without link when ciUrl is empty', () => {
+        const tests: FlatTest[] = [{ title: 'A', state: 'passed', duration: 100 }];
+
+        const html = generateHtmlReport(tests, { branch: 'develop' });
+
+        expect(html).toContain('develop');
+    });
+
+    it('handles generateHtmlReport error gracefully', () => {
+        const html = generateHtmlReport(null as unknown as FlatTest[]);
+
+        expect(html).toContain('Error generating report');
+    });
+
     it('escapes HTML in test titles', () => {
         const tests: FlatTest[] = [{ title: '<script>alert("xss")</script>', state: 'passed', duration: 0 }];
 

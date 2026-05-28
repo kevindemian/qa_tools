@@ -82,6 +82,23 @@ describe('openWithOsOrFallback', () => {
         expect(result).toBe(false);
         expect(fallback).toHaveBeenCalledTimes(1);
     });
+
+    it('calls fallback when getOsOpenCommand returns null', async () => {
+        jest.isolateModules(() => {
+            jest.doMock('os', () => ({ platform: jest.fn(() => 'aix') }));
+            jest.doMock('fs', () => ({
+                ...jest.requireActual('fs'),
+                readFileSync: jest.fn().mockReturnValue('Linux version 5.15.0-generic'),
+            }));
+            const { openWithOsOrFallback: openFn } = require('./open');
+            const fallback = jest.fn();
+            const result = openFn('/some/file', fallback);
+            return result.then((r: boolean) => {
+                expect(r).toBe(false);
+                expect(fallback).toHaveBeenCalledTimes(1);
+            });
+        });
+    });
 });
 
 describe('getOsOpenCommand (platform detection)', () => {
@@ -196,6 +213,18 @@ describe('getWinTempDir', () => {
         process.env.TMP = ORIG_TMP;
         expect(result).toBeNull();
     });
+
+    it('returns null when execSync returns empty string', () => {
+        const ORIG_TEMP = process.env.TEMP;
+        const ORIG_TMP = process.env.TMP;
+        delete process.env.TEMP;
+        delete process.env.TMP;
+        mockExecSync.mockReturnValue('');
+        const result = getWinTempDir();
+        process.env.TEMP = ORIG_TEMP;
+        process.env.TMP = ORIG_TMP;
+        expect(result).toBeNull();
+    });
 });
 
 describe('getDocsOutputDir', () => {
@@ -230,5 +259,14 @@ describe('getDocsOutputDir', () => {
         const result = gdoDir();
         process.env.TEMP = ORIG_TEMP;
         expect(result).toBeNull();
+    });
+
+    it('uses QA_TOOLS_TEMP_DIR when set', () => {
+        const ORIG_DIR = process.env.QA_TOOLS_TEMP_DIR;
+        process.env.QA_TOOLS_TEMP_DIR = '/custom/temp';
+        mockReadFileSync.mockReturnValue('Linux version 5.15.0-generic');
+        const result = getDocsOutputDir();
+        process.env.QA_TOOLS_TEMP_DIR = ORIG_DIR;
+        expect(result).toMatch(/^\/custom\/temp\/docs$/);
     });
 });
