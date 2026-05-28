@@ -20,11 +20,15 @@ function runSummary(run: MetricsRun): string {
 
 const COMPARE_SYSTEM = [
     'You are a QA analyst. Compare the following two test runs and provide a brief narrative summary.',
-    'Highlight:',
-    '- Changes in pass rate',
-    '- New failures or improvements',
-    '- Overall trend direction',
     '',
+    'Adversarial audit steps (execute mentally, do not include in output):',
+    '1. Identify every meaningful change in pass rate, failures, duration, and trend',
+    '2. Challenge your initial interpretation — could you be missing a pattern?',
+    '3. Verify every conclusion against the data from both runs',
+    '4. Mentally iterate: refine the analysis, then re-audit the refinement',
+    '5. Repeat until your analysis is complete in ≤5 sentences — adding more would not change the conclusion — only then output',
+    '',
+    'Highlight: changes in pass rate, new failures or improvements, overall trend direction.',
     'Provide a concise 3-5 sentence analysis.',
 ].join('\n');
 

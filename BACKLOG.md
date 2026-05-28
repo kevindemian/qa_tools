@@ -993,15 +993,19 @@ Também marcar o AUDIO-01 (M1, M2, M3 do bloco antigo) como resolvidos:
 | A7 | `recordAdversarialRetry` em llm-metrics | P0 | ✅ |
 | A8 | Testes (11): T1-T8 + 3 novos (adversarial success, re-review downgrade, short notes guard) | P1 | ✅ |
 
+### Fase 7 (P0) — Reforço Adversarial: Pareto Stop + Cobertura Total ✅
+
+| ID | Item | Prio | Status |
+|----|------|------|--------|
+| P1 | `buildAdversarialRetryPrompt`: condensed → 5-step + Pareto + "do not include audit" | P0 | ✅ |
+| P2 | `classify.md`: 1-step → 2-step + Pareto + "output ONLY one line" | P0 | ✅ |
+| P3 | `COMPARE_SYSTEM` em `run-comparison.ts`: adicionar 5-step + Pareto c/ "≤5 sentences" | P0 | ✅ |
+| P4 | `ai-test-impact.ts` system: adicionar 5-step + Pareto + "do not include audit" | P0 | ✅ |
+| P5 | `ai-pr-desc.ts` system: adicionar 5-step + Pareto c/ "≤300 words" | P0 | ✅ |
+
 ## Status Final
 
-- **Total de itens:** 59 (Lote 1-25 + Fase 6)
-- **Completos:** 59/59 ✅ **(100%)**
-- **Lotes concluídos:** 1, 2, 2.5, 3, 5, 6, 7, 9, 10, 11, 12, 13, 13.5, 14, 15, 15.5, 16, 17, 18, 19, 20, 22, 23, 24, 25, Fase 6
+- **Total de itens:** 64 (Lote 1-25 + Fase 6 + Fase 7)
+- **Completos:** 64/64 ✅ **(100%)**
+- **Lotes concluídos:** 1, 2, 2.5, 3, 5, 6, 7, 9, 10, 11, 12, 13, 13.5, 14, 15, 15.5, 16, 17, 18, 19, 20, 22, 23, 24, 25, Fase 6, Fase 7
 - **CI:** ✅ 90 suites, 1583 tests, 0 falhas
-- **Último commit:** Ciclo adversarial completo
-
-| Provider | Tier Planejado | API Key | Status |
-|----------|---------------|---------|--------|
-| Cerebras | `ultra` — latência crítica | `CEREBRAS_API_KEY` | ⬜ |
-| HuggingFace | `community` — modelos especializados | `HUGGINGFACE_API_KEY` | ⬜ |

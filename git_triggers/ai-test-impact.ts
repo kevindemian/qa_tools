@@ -67,7 +67,15 @@ export async function assessTestImpact(
         }
 
         const titles = loadMappingTitles(mappingPath);
-        const system = 'You are a QA automation assistant specialized in test impact analysis.';
+        const system = [
+            'You are a QA automation assistant specialized in test impact analysis.',
+            'Before answering, adversarially audit your analysis mentally (do not include audit in output):',
+            "1. Identify every test that could be affected — don't miss edge cases or indirect dependencies",
+            '2. Challenge your risk assessment — is it accurate, too conservative, or missing context?',
+            '3. Verify each recommendation — would a new test actually catch the code change?',
+            '4. Mentally iterate: revise your assessment, then re-audit the revision',
+            '5. Repeat until you can find no new impacts — only then output your numbered assessment',
+        ].join('\n');
         const user = buildPrompt(sanitizeForLlm(diff), titles, source, target);
         return await llmPrompt('fast', system, user, 'test-impact');
     } catch (err) {
