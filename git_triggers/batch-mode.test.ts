@@ -41,7 +41,8 @@ jest.mock('../shared/metrics', () => ({
 
 jest.mock('../shared/flakiness-dashboard', () => ({ generateFlakinessHtml: jest.fn(() => '<html>') }));
 
-jest.mock('fs', () => ({ writeFileSync: jest.fn() }));
+jest.mock('fs', () => ({ writeFileSync: jest.fn(), mkdirSync: jest.fn(), existsSync: jest.fn(() => false) }));
+jest.mock('../shared/temp-dir', () => ({ writeReport: jest.fn(() => '/tmp/flakiness-test.html') }));
 
 import { success, error, printError } from '../shared/prompt';
 import { pushHistory, getProjects } from './session-state';
@@ -214,6 +215,76 @@ describe('tryBatchMode', () => {
         const result = await tryBatchMode();
 
         expect(result).toBe(true);
+    });
+
+    it('calls offerPipelineFailureAnalysis when results are collected', async () => {
+        process.argv = ['node', 'script.js', '--project', 'proj1', '--branch', 'main'];
+        mockGetProjects.mockReturnValue({ proj1: '1' });
+        (mockManager.getBranch as jest.Mock).mockResolvedValue({ name: 'main' });
+        (mockManager.triggerPipeline as jest.Mock).mockResolvedValue({
+            id: '42',
+            web_url: 'https://gitlab.com/pipe/42',
+        });
+        mockPollPipeline.mockResolvedValue({ status: 'success', web_url: '' });
+
+        jest.isolateModules(() => {
+            const testResults = jest.requireMock('./test-results');
+            testResults.collectTestResults = jest.fn(() =>
+                Promise.resolve({ tests: [], summary: { total: 1, passed: 1, failed: 0, skipped: 0 } }),
+            );
+        });
+
+        const result = await tryBatchMode();
+        expect(result).toBe(true);
+    });
+
+    it('generates flakiness dashboard when pipeline completes', async () => {
+        const mockSessionState = jest.requireMock('./session-state');
+        const origProjectName = mockSessionState.currentProjectName;
+        mockSessionState.currentProjectName = 'proj1';
+
+        const mockMetrics = jest.requireMock('../shared/metrics');
+        mockMetrics.loadMetrics.mockReturnValue({
+            runs: [
+                {
+                    project: 'proj1',
+                    timestamp: Date.now(),
+                    passRate: 100,
+                    total: 10,
+                    passed: 10,
+                    failed: 0,
+                    flaky: [],
+                    duration: 100,
+                },
+                {
+                    project: 'proj1',
+                    timestamp: Date.now() - 1000,
+                    passRate: 90,
+                    total: 10,
+                    passed: 9,
+                    failed: 1,
+                    flaky: [],
+                    duration: 200,
+                },
+            ],
+        });
+
+        process.argv = ['node', 'script.js', '--project', 'proj1', '--branch', 'main'];
+        mockGetProjects.mockReturnValue({ proj1: '1' });
+        (mockManager.getBranch as jest.Mock).mockResolvedValue({ name: 'main' });
+        (mockManager.triggerPipeline as jest.Mock).mockResolvedValue({
+            id: '42',
+            web_url: 'https://gitlab.com/pipe/42',
+        });
+        mockPollPipeline.mockResolvedValue({ status: 'success', web_url: '' });
+
+        const result = await tryBatchMode();
+
+        expect(result).toBe(true);
+        expect(mockMetrics.loadMetrics).toHaveBeenCalled();
+        expect(success).toHaveBeenCalledWith(expect.stringContaining('Dashboard'));
+
+        mockSessionState.currentProjectName = origProjectName;
     });
 
     it('handles empty pipelineId', async () => {
