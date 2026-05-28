@@ -13,6 +13,8 @@ Todas as variáveis são carregadas do arquivo `.env` na raiz do projeto.
 | `XRAY_BASE_URL`       | `Config.xrayBaseUrl`       | Sim (Xray)   | —        | URL base do servidor Xray                                                        |
 | `XRAY_MODE`           | `Config.xrayMode`          | Não          | `server` | Modo Xray: `server` (REST) ou `cloud` (GraphQL)                                  |
 | `XRAY_CLOUD_ENDPOINT` | —                          | Não          | —        | Override do endpoint GraphQL Xray Cloud (padrão: `XRAY_BASE_URL`/api/v2/graphql) |
+| `XRAY_CLIENT_ID`      | `Config.xrayClientId`      | Não          | —        | Client ID para autenticação Xray Cloud (modo `cloud`)                            |
+| `XRAY_CLIENT_SECRET`  | `Config.xrayClientSecret`  | Não          | —        | Client Secret Xray Cloud                                                         |
 | `JIRA_PROJECT`        | `Config.jiraProject`       | Não          | `ECSPOL` | Projeto Jira padrão                                                              |
 
 ## Git (GitLab / GitHub)
@@ -59,7 +61,7 @@ Todas as variáveis são carregadas do arquivo `.env` na raiz do projeto.
 | `QA_TOOLS_TEMP_DIR`    | (via `temp-dir.ts`)   | Não          | `temp/`    | Diretório temporário (previews, cache, docs HTML) |
 | `QA_TOOLS_REPORTS_DIR` | (via `temp-dir.ts`)   | Não          | `reports/` | Diretório de relatórios gerados (HTML, flakiness) |
 
-## LLM (7 tiers)
+## LLM (7 tiers + extras)
 
 | Variável                | Getter Config               | Obrigatória? | Padrão                                             | Descrição                                                    |
 | ----------------------- | --------------------------- | ------------ | -------------------------------------------------- | ------------------------------------------------------------ |
@@ -68,8 +70,9 @@ Todas as variáveis são carregadas do arquivo `.env` na raiz do projeto.
 | `LLM_BASE_URL`          | `Config.llmBaseUrl`         | Não          | `https://openrouter.ai/api/v1`                     | URL base do tier **main**                                    |
 | `LLM_SMALL_API_KEY`     | `Config.llmSmallApiKey`     | Não          | —                                                  | API key do tier **small** (tarefas leves)                    |
 | `LLM_SMALL_MODEL`       | `Config.llmSmallModel`      | Não          | `gemini-2.0-flash-lite`                            | Modelo do tier **small**                                     |
+| `LLM_SMALL_BASE_URL`    | `Config.llmSmallBaseUrl`    | Não          | `https://generativelanguage.googleapis.com/v1beta` | URL base do tier **small** (provedor: Gemini)                |
 | `LLM_FAST_API_KEY`      | `Config.llmFastApiKey`      | Não          | —                                                  | API key do tier **fast** (PR desc, classify, run comparison) |
-| `LLM_FAST_MODEL`        | `Config.llmFastModel`       | Não          | `llama3-8b-8192`                                   | Modelo do tier **fast**                                      |
+| `LLM_FAST_MODEL`        | `Config.llmFastModel`       | Não          | `llama-3.1-8b-instant`                             | Modelo do tier **fast**                                      |
 | `LLM_FAST_BASE_URL`     | `Config.llmFastBaseUrl`     | Não          | `https://api.groq.com/openai/v1`                   | URL base do tier **fast** (provedor: Groq)                   |
 | `LLM_REVIEW_API_KEY`    | `Config.llmReviewApiKey`    | Não          | —                                                  | API key do tier **reviewer** (validação cruzada)             |
 | `LLM_REVIEW_MODEL`      | `Config.llmReviewModel`     | Não          | `gemini-2.0-flash-exp`                             | Modelo do tier **reviewer**                                  |
@@ -80,16 +83,31 @@ Todas as variáveis são carregadas do arquivo `.env` na raiz do projeto.
 | `LLM_BATCH_API_KEY`     | `Config.llmBatchApiKey`     | Não          | —                                                  | API key do tier **batch** (background tasks)                 |
 | `LLM_BATCH_MODEL`       | `Config.llmBatchModel`      | Não          | `gpt-4o-mini`                                      | Modelo do tier **batch**                                     |
 | `LLM_BATCH_BASE_URL`    | `Config.llmBatchBaseUrl`    | Não          | `https://models.inference.ai.azure.com`            | URL base do tier **batch** (provedor: GitHub Models)         |
+| `LLM_RATE_LIMIT`        | —                           | Não          | `30`                                               | Requisições por minuto por tier                              |
+| `LLM_FETCH_RETRIES`     | —                           | Não          | `3`                                                | Número de retries em falha de fetch                          |
+| `LLM_MAX_TOKENS_PER_OP` | `Config.llmMaxTokens`       | Não          | `128000`                                           | Limite de tokens estimados por operação                      |
+| `LLM_MAX_TOTAL_TOKENS`  | `Config.llmMaxTotalTokens`  | Não          | `0` (ilimitado)                                    | Limite total de tokens acumulados                            |
+| `LLM_DISK_CACHE_DIR`    | —                           | Não          | `.llm-cache`                                       | Diretório do cache em disco para respostas LLM               |
+| `LLM_CACHE_KEY`         | —                           | Não          | —                                                  | Chave AES-256 para criptografar o cache em disco             |
 
 **Hierarquia de tiers:**
 
 - **main**: análise principal de falhas (`failure-analysis.ts`, `case18.ts`)
-- **small**: tarefas leves — fallbar para main quando indisponível
+- **small**: tarefas leves — fallback para main quando indisponível
 - **fast**: tarefas rápidas — PR description, classificação, comparação de runs
 - **report**: análise estruturada com validação JSON (usa mesma config do **main**, temperatura reduzida)
 - **reviewer**: validação cruzada das análises (provedor independente recomendado)
 - **fallback**: usado quando **main** falha (após 3 retries)
 - **batch**: tarefas de fundo sem requisito de latência
+
+## Comportamento / CI (extras)
+
+| Variável           | Onde é lida        | Obrigatória? | Padrão | Descrição                                          |
+| ------------------ | ------------------ | ------------ | ------ | -------------------------------------------------- |
+| `BENCHMARK`        | `llm-benchmark.ts` | Não          | —      | Ativa benchmark LLM: `BENCHMARK=true`              |
+| `QA_AUTO_BUG`      | `case17.ts`        | Não          | —      | Cria Bug no Jira automaticamente para falhas novas |
+| `QA_FAIL_ON`       | `case17.ts`        | Não          | —      | Quality gate: pass rate mínimo (ex: `90`)          |
+| `GITHUB_PR_NUMBER` | `case17.ts`        | Não          | —      | Número do PR para postar comentário de resultados  |
 
 ---
 

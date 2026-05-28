@@ -65,7 +65,7 @@ O menu é organizado em **categorias** com sub-menus. Ao selecionar uma categori
    12  Diagnosticar conexão
    d   Ver documentação (abre navegador)
    0   Sair
-  /h  Ajuda
+   /help  Ajuda
 ```
 
 O usuário digita o número da opção desejada. Também é possível usar **alias** em português ou inglês (ex.: `criar`, `versoes`, `fechar`, `bug`, `docs`, `exit`).
@@ -81,7 +81,7 @@ Em qualquer prompt de texto, os seguintes comandos estão disponíveis:
 | `/help` ou `/h`                               | Exibe ajuda contextual geral                                                                                                                |
 | `/help <tópico>` ou `/h <tópico>`             | Ajuda sobre um tópico específico (`csv`, `labels`, `group`, `precondition`, `project`, `version`, `transitions`, `template`, `diagnostics`) |
 | `/help search <termo>` ou `/h search <termo>` | Busca por termo em todos os tópicos de ajuda                                                                                                |
-| `/back` ou `/menu`                            | Volta ao menu principal                                                                                                                     |
+| `/back` ou `/menu`                            | Volta ao menu principal (se em sub-menu) ou sai da aplicação (se no menu principal)                                                         |
 | `/exit` ou `/sair`                            | Encerra a sessão                                                                                                                            |
 | `/history`                                    | Mostra as últimas 10 operações registradas                                                                                                  |
 | `/docs` ou `/d`                               | Abre a documentação completa no navegador (HTML gerado em lote)                                                                             |
@@ -152,7 +152,7 @@ Ao sair (Opção 0 ou `/exit`), a ferramenta exibe um resumo:
 Estatísticas exibidas:
 
 - Total de operações com sucesso (✓) e com erro (✗)
-- Últimas 5 operações do histórico
+- Últimas 10 operações do histórico
 - Caminho completo do arquivo de log
 - Tempo decorrido da sessão em segundos
 

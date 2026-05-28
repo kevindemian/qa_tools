@@ -187,6 +187,25 @@ git push --no-verify
 
 ---
 
+## Auto-setup de CI/CD
+
+Para gerar automaticamente pipelines CI (GitHub Actions / GitLab CI), configuração de projeto e hook pre-push:
+
+```bash
+npx tsx setup/main.ts
+```
+
+O wizard interativo detecta o framework de testes (Cypress/Playwright/Jest/Vitest) a partir do `package.json`, pergunta as features desejadas (Jira, flakiness, análise IA) e gera:
+
+- `.github/workflows/qa.yml` ou `.gitlab-ci.yml`
+- `config/projects.json` + `config/providers.json`
+- `.env.example` com as variáveis necessárias
+- Hook `.git/hooks/pre-push` (opcional)
+
+Consulte [`docs/10-setup-wizard.md`](10-setup-wizard.md) para detalhes.
+
+---
+
 ## Auto-setup
 
 ```bash
