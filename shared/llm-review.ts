@@ -1,6 +1,6 @@
 import { llmPrompt } from './llm-client';
 import { rootLogger } from './logger';
-import { sanitizeForLlm } from './sanitize';
+import { sanitizeForLlm, sanitizeTerminal } from './sanitize';
 import { ReportValidator, type ValidationRule } from './report-validator';
 import {
     recordLlmRequest,
@@ -171,15 +171,18 @@ export async function reviewWithLlm(system: string, user: string): Promise<Revie
     try {
         const parsed = await attemptPrimary(system, user, startTime);
         if (parsed === null) {
-            return await callLlmFallback(system, user, startTime);
+            const fallback = await callLlmFallback(system, user, startTime);
+            return { ...fallback, content: sanitizeTerminal(fallback.content) };
         }
 
         const { parsed: validated, retries, valid } = await runRetryLoop(parsed, system, user, startTime);
         if (!valid) {
-            return await callLlmFallback(system, user, startTime);
+            const fallback = await callLlmFallback(system, user, startTime);
+            return { ...fallback, content: sanitizeTerminal(fallback.content) };
         }
 
-        return await performSelfReview(validated, startTime, retries);
+        const result = await performSelfReview(validated, startTime, retries);
+        return { ...result, content: sanitizeTerminal(result.content) };
     } catch (err) {
         rootLogger.warn('LLM review failed, falling back to primary: ' + (err as Error).message);
         recordLlmFailure('main');
