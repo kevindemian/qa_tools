@@ -31,6 +31,7 @@ describe('Config', () => {
         'QA_TOOLS_LOGS_DIR',
         'LOG_MAX_SIZE',
         'XDG_STATE_HOME',
+        'LLM_MAX_TOTAL_TOKENS',
     ];
 
     beforeAll(() => {
@@ -418,6 +419,26 @@ describe('Config', () => {
             Config.reset();
             expect(Config.jiraBaseUrl).toBe('');
             expect(Config.debug).toBe(false);
+        });
+    });
+
+    describe('llmMaxTotalTokens', () => {
+        beforeEach(() => {
+            delete process.env.LLM_MAX_TOTAL_TOKENS;
+        });
+
+        it('defaults to 0 (unlimited)', () => {
+            expect(Config.llmMaxTotalTokens).toBe(0);
+        });
+
+        it('reads from LLM_MAX_TOTAL_TOKENS env var', () => {
+            process.env.LLM_MAX_TOTAL_TOKENS = '50000';
+            expect(Config.llmMaxTotalTokens).toBe(50000);
+        });
+
+        it('uses override when provided', () => {
+            const overridden = Config.create({ llmMaxTotalTokens: 100000 });
+            expect(overridden.llmMaxTotalTokens).toBe(100000);
         });
     });
 });
