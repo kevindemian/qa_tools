@@ -1,3 +1,5 @@
+/** Interactive prompts: text input, confirmation, file-path with tab-completion, and select menus.
+ * Falls back to `readline-sync` when TTY is unavailable or inquirer modules are not installed. */
 import * as fs from 'fs';
 import * as path from 'path';
 import * as readline from 'readline';
@@ -16,6 +18,8 @@ interface PromptOptions {
 
 const NAV_CMDS = ['/back', '/menu', '/exit', '/sair', '/quit', '/help'];
 
+/** Synchronous text prompt (readline-sync). Falls back when inquirer is unavailable.
+ * @throws {@link CancelError} on nav commands (`/back`, `/exit`, etc.). */
 export function prompt(label: string, options: PromptOptions = {}): string {
     const { default: def, hint, minLength } = options;
     while (true) {
@@ -34,6 +38,8 @@ export function prompt(label: string, options: PromptOptions = {}): string {
     }
 }
 
+/** Synchronous yes/no confirmation (readline-sync).
+ * In auto-confirm mode returns `defaultYes` without prompting. */
 export function confirm(label: string, defaultYes = false): boolean {
     if (getConfig().autoConfirm) return defaultYes;
     const def = defaultYes ? 'Y' : 'N';
@@ -71,6 +77,8 @@ interface SectionGroup {
     itemValues: Array<string | undefined>;
 }
 
+/** Async text prompt with retry logic and optional help callback.
+ * Re-prompts on empty input (up to `maxRetries`). `/help` triggers the callback without consuming a retry. */
 export async function smartPrompt(
     label: string,
     options: PromptOptions = {},
@@ -109,6 +117,7 @@ export async function smartPrompt(
 
 let _selectMod: unknown = null;
 
+/** Override the `@inquirer/select` module (used by tests). */
 export function __setSelectMod(mod: unknown): void {
     _selectMod = mod;
 }
@@ -126,6 +135,7 @@ async function _loadSelect(): Promise<unknown> {
 
 let _inputMod: unknown = null;
 
+/** Override the `@inquirer/input` module (used by tests). */
 export function __setInputMod(mod: unknown): void {
     _inputMod = mod;
 }
@@ -143,6 +153,7 @@ async function _loadInput(): Promise<unknown> {
 
 let _confirmMod: unknown = null;
 
+/** Override the `@inquirer/confirm` module (used by tests). */
 export function __setConfirmMod(mod: unknown): void {
     _confirmMod = mod;
 }
@@ -177,6 +188,7 @@ function expandHome(filepath: string): string {
     return home + filepath.slice(1);
 }
 
+/** Tab-completion for file paths. Filters by extension when provided. Hides dotfiles unless the query starts with `.`. */
 export function filePathCompleter(line: string, extensions?: string[]): [string[], string] {
     const input = expandHome(line.trim() || '.');
     const endsWithSep = input.endsWith('/') || input.endsWith('\\');
@@ -218,6 +230,8 @@ export function filePathCompleter(line: string, extensions?: string[]): [string[
     return [matches, line];
 }
 
+/** Interactive file-path prompt with tab-completion and extension filtering.
+ * Falls back to plain `prompt()` when not in a TTY. */
 export async function askFilePath(label: string, options: FilePathOptions = {}): Promise<string> {
     if (!isTTY()) {
         return prompt(label, options);
@@ -251,6 +265,7 @@ export async function askFilePath(label: string, options: FilePathOptions = {}):
 
 const isTTY = (): boolean => !!(process.stdout.isTTY && !getConfig().quiet);
 
+/** Async text input. Uses `@inquirer/input` in TTY mode, falls back to `prompt()`. */
 export async function ask(label: string, options: PromptOptions = {}): Promise<string> {
     const mod: unknown = await _loadInput();
     if (mod && isTTY()) {
@@ -270,6 +285,7 @@ export async function ask(label: string, options: PromptOptions = {}): Promise<s
     return prompt(label, options);
 }
 
+/** Async confirmation. Uses `@inquirer/confirm` in TTY mode, falls back to `confirm()`. */
 export async function askConfirm(label: string, defaultYes = false): Promise<boolean> {
     const mod: unknown = await _loadConfirm();
     if (mod && isTTY()) {
@@ -333,6 +349,8 @@ function _renderChoices(sections: SectionGroup[], standaloneItems: string[]): vo
     }
 }
 
+/** Interactive select menu. Uses `@inquirer/select` in TTY mode, falls back to a numbered list + `prompt()`.
+ * Supports section separators and navigation commands (`/back`, etc.). */
 export async function showSelect(label: string, choices: SelectChoice[], options: SelectOptions = {}): Promise<string> {
     const flatChoices = choices
         .filter((c): c is SelectChoice & { name: string } => c.type !== 'separator' && !!c.name)

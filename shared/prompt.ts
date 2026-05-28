@@ -1,3 +1,5 @@
+/** Prompt/UI barrel — re-exports all user-facing functions from prompt-ui, prompt-input, and spinner.
+ * @module Use `import { success, ask, withSpinner } from './prompt'` for convenience. */
 export {
     __setConfig,
     isQuiet,

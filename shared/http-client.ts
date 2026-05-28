@@ -1,13 +1,20 @@
+/** HTTP client with automatic retry (GET/PUT), exponential backoff + jitter, and TLS config.
+ * Uses axios under the hood. */
 import axios from 'axios';
 import { createAgent } from './tls';
 import { rootLogger } from './logger';
 
+/** Configuration for {@link createHttpClient}. */
 export interface HttpClientConfig {
+    /** Base URL for all requests (e.g. `https://api.github.com`). */
     baseUrl: string;
+    /** Optional HTTP header to include on every request (e.g. `Authorization: Bearer ...`). */
     authHeader?: Record<string, string>;
+    /** Request timeout in ms (default: 120000). */
     timeout?: number;
 }
 
+/** Promise-based delay. Used internally for retry backoff. */
 export function sleep(ms: number): Promise<void> {
     return new Promise((resolve) => setTimeout(resolve, ms));
 }
@@ -103,6 +110,9 @@ function _setupResponseInterceptor(instance: ReturnType<typeof axios.create>): v
     );
 }
 
+/** Create an axios-based HTTP client with retry logic, TLS config, and JSON content type.
+ * Retries GET/PUT on 5xx, 429, ECONNRESET, ETIMEDOUT (up to 5 attempts with exponential backoff).
+ * @param config — Base URL, optional auth header, and timeout. */
 export function createHttpClient({
     baseUrl,
     authHeader,

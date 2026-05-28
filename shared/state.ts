@@ -1,3 +1,6 @@
+/** Persisted session state (JSON file + backup).
+ * Stores user preferences like last project, CSV path, and Cypress dir.
+ * Resilient to corruption: recovers from `.bak` on parse failure. */
 import fs from 'fs';
 import path from 'path';
 import os from 'os';
@@ -33,6 +36,8 @@ function bakPath(config?: Config): string {
     return statePath(config) + '.bak';
 }
 
+/** Migrate state from the legacy `~/.qa_tools_state.json` path to the new XDG path.
+ * Called once at import. Safe to call multiple times (no-op if already migrated). */
 export function migrateOldState(config?: Config): void {
     const OLD_STATE_PATH = path.join(os.homedir(), '.qa_tools_state.json');
     try {
@@ -64,14 +69,19 @@ export function migrateOldState(config?: Config): void {
 ensureStateDir();
 migrateOldState();
 
+/** Get the absolute path to the state JSON file for the given config. */
 export function getStatePath(config?: Config): string {
     return statePath(config);
 }
 
+/** Load and return the state cast to {@link StateSchema}.
+ * @see load for uncoupled access. */
 export function loadTypedState(config?: Config): StateSchema {
     return load(config);
 }
 
+/** Load persisted state from disk. Recovers from backup on corruption.
+ * @returns A plain object (empty `{}` when no file or unrecoverable). */
 export function load(config?: Config): Record<string, unknown> {
     ensureStateDir(config);
     const sp = statePath(config);
@@ -107,6 +117,7 @@ export function load(config?: Config): Record<string, unknown> {
     return {};
 }
 
+/** Persist state to disk (main file + backup). Removes `.tmp` on success. */
 export function save(state: Record<string, unknown>, config?: Config): void {
     ensureStateDir(config);
     const sp = statePath(config);
@@ -122,6 +133,8 @@ export function save(state: Record<string, unknown>, config?: Config): void {
     }
 }
 
+/** Load, mutate via callback, then save. Returns the mutated copy.
+ * @example `update((s) => { s.lastProject = 'PROJ'; })` */
 export function update(fn: (state: Record<string, unknown>) => void, config?: Config): Record<string, unknown> {
     const state = load(config);
     const copy = JSON.parse(JSON.stringify(state));

@@ -1,5 +1,7 @@
 import * as path from 'path';
 
+/** Centralised configuration: reads from env vars, `.env` file, or runtime overrides.
+ * Access via {@link Config.create} (scoped) or static getters (global singleton). */
 let dotenvLoaded = false;
 
 function ensureDotenv(): void {
@@ -18,6 +20,8 @@ function envVal(key: string, fallback = ''): string {
     return process.env[key] || fallback;
 }
 
+/** Runtime overrides for any config key. Keys map 1:1 to env var names (lowercase, camelCase).
+ * When provided, overrides take precedence over env vars and `.env`. */
 interface ConfigOverrides {
     jiraBaseUrl?: string;
     jiraPersonalToken?: string;
@@ -68,12 +72,14 @@ interface ConfigOverrides {
     llmMaxTotalTokens?: string | number;
 }
 
+/** Parse a string/boolean/undefined into a strict boolean. */
 function toBool(val: string | boolean | undefined): boolean {
     if (val === undefined) return false;
     if (typeof val === 'boolean') return val;
     return val === 'true';
 }
 
+/** Parse a string/number/undefined into an integer with a fallback default. */
 function toInt(val: string | number | undefined, fallback: number): number {
     if (val === undefined) return fallback;
     if (typeof val === 'number') return val;
@@ -81,28 +87,36 @@ function toInt(val: string | number | undefined, fallback: number): number {
     return isNaN(n) ? fallback : n;
 }
 
+/** Config is a key-value store backed by env vars, a `.env` file, and runtime overrides.
+ * Use {@link create} for a scoped instance or static getters for the global singleton.
+ * Resolution order: runtime override > env var > `.env` default. */
 class Config {
     private static defaultInstance: Config = new Config();
 
     private readonly overrides: ConfigOverrides;
 
+    /** @param overrides — Optional runtime overrides that take precedence over env vars. */
     constructor(overrides: ConfigOverrides = {}) {
         this.overrides = overrides;
     }
 
+    /** Create a scoped Config instance with optional overrides. */
     static create(overrides?: ConfigOverrides): Config {
         return new Config(overrides);
     }
 
+    /** Reset the global singleton to factory defaults. */
     static reset(): void {
         Config.defaultInstance = new Config();
     }
 
+    /** Get the global singleton Config instance. */
     static getDefault(): Config {
         return Config.defaultInstance;
     }
 
     // ── Instance getters ───────────────────────────────────────────────────
+    // Each getter resolves: runtime override > env var > `.env` default.
 
     get jiraBaseUrl(): string {
         return this.overrides.jiraBaseUrl ?? envVal('JIRA_BASE_URL');
@@ -274,6 +288,8 @@ class Config {
         return toInt(this.overrides.llmMaxTotalTokens ?? envVal('LLM_MAX_TOTAL_TOKENS'), 0);
     }
 
+    /** Get a raw config value by key. Checks overrides first, then process.env.
+     * @returns The string value or `undefined` if not set anywhere. */
     get(key: string): string | undefined {
         ensureDotenv();
         const overrides = this.overrides as Record<string, string | number | boolean | undefined>;
@@ -287,6 +303,8 @@ class Config {
         return process.env[key];
     }
 
+    /** Collect all env/override entries whose key starts with a given prefix.
+     * Useful for reading groups like `LLM_*` or `GIT_*` vars. */
     getAllPrefixed(prefix: string): Record<string, string> {
         ensureDotenv();
         const result: Record<string, string> = {};
@@ -298,23 +316,29 @@ class Config {
         return result;
     }
 
+    /** Ensure `.env` file is loaded (idempotent). Called automatically at import time. */
     load(): void {
         ensureDotenv();
     }
 
+    /** Static delegator — see instance {@link get}. */
     static get(key: string): string | undefined {
         return Config.defaultInstance.get(key);
     }
 
+    /** Static delegator — see instance {@link getAllPrefixed}. */
     static getAllPrefixed(prefix: string): Record<string, string> {
         return Config.defaultInstance.getAllPrefixed(prefix);
     }
 
+    /** Static delegator — see instance {@link load}. */
     static load(): void {
         Config.defaultInstance.load();
     }
 
     // ── Static getter delegators ──────────────────────────────────────────
+    // Each static getter below delegates to `Config.defaultInstance`.
+    // See the instance getter above for the documentation.
 
     static get jiraBaseUrl(): string {
         return Config.defaultInstance.jiraBaseUrl;
