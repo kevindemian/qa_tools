@@ -64,6 +64,8 @@ describe('State', () => {
             mockFs({ [STATE_PATH]: JSON.stringify({ lastProject: 'ECSPOL' }) });
             const result = state.load(makeConfig());
             expect(result).toEqual({ lastProject: 'ECSPOL' });
+            const typed = state.loadTypedState(makeConfig());
+            expect(typed).toEqual({ lastProject: 'ECSPOL' });
         });
     });
 

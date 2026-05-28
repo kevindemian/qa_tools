@@ -42,6 +42,19 @@ describe('PackageVersionManager', () => {
         it('handles missing package.json', () => {
             expect(pkg.updateVersion('2.0.0')).toBeUndefined();
         });
+
+        it('calls extraUpdate callback when provided to _updateJsonFile', () => {
+            writePackage('1.0.0');
+            const extraUpdate = jest.fn();
+            (
+                pkg as unknown as {
+                    _updateJsonFile: (fp: string, ver: string, cb?: (json: Record<string, unknown>) => void) => void;
+                }
+            )._updateJsonFile(path.join(tmpDir, 'package.json'), '3.0.0', extraUpdate);
+            expect(extraUpdate).toHaveBeenCalledTimes(1);
+            const json = JSON.parse(fs.readFileSync(path.join(tmpDir, 'package.json'), 'utf8'));
+            expect(json.version).toBe('3.0.0');
+        });
     });
 
     describe('updateReleaseNotes', () => {

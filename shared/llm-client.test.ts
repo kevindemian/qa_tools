@@ -80,7 +80,6 @@ import {
 } from './llm-client';
 import { rootLogger } from './logger';
 
-const mockResponseText = jest.fn();
 const mockFetch = jest.fn();
 global.fetch = mockFetch;
 
@@ -88,7 +87,7 @@ function mockOkResponse(body: string): Response {
     return {
         ok: true,
         status: 200,
-        text: mockResponseText.mockResolvedValue(body),
+        text: jest.fn().mockResolvedValue(body),
         headers: { get: () => null },
     } as unknown as Response;
 }
@@ -112,7 +111,6 @@ function mockResponseWithHeader(status: number, headerKey: string, headerValue: 
 beforeEach(() => {
     jest.restoreAllMocks();
     mockFetch.mockReset();
-    mockResponseText.mockReset();
     clearCache();
     resetRateLimiter();
     resetCircuitState();
@@ -732,6 +730,158 @@ describe('llmPrompt', () => {
             });
             mockFetch.mockResolvedValue(mockOkResponse(body));
             await expect(llmPrompt('main', 'sys', 'user', 'test-llm19-under', 'text')).resolves.toBe('ok');
+        });
+    });
+
+    describe('schema validation', () => {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any -- mock schema
+        const okBooleanSchema: any = {
+            safeParse: (data: unknown) => {
+                if (
+                    typeof data === 'object' &&
+                    data !== null &&
+                    'ok' in data &&
+                    typeof (data as Record<string, unknown>).ok === 'boolean'
+                ) {
+                    return { success: true as const, data };
+                }
+                return { success: false as const, error: { issues: [{ path: ['ok'], message: 'Expected boolean' }] } };
+            },
+        };
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any -- mock schema that always fails
+        const alwaysFailsSchema: any = {
+            safeParse: () => ({
+                success: false as const,
+                error: { issues: [{ path: ['x'], message: 'always fails' }] },
+            }),
+        };
+
+        beforeEach(() => {
+            jest.useRealTimers();
+            (Config as unknown as { set: (k: string, v: string) => void }).set('llmApiKey', 'sk-schema');
+            (Config as unknown as { set: (k: string, v: string) => void }).set('llmModel', 'gpt-4');
+            (Config as unknown as { set: (k: string, v: string) => void }).set('llmBaseUrl', 'https://api.test.com/v1');
+            (Config as unknown as { set: (k: string, v: string) => void }).set('llmFallbackApiKey', 'nv-schema');
+            (Config as unknown as { set: (k: string, v: string) => void }).set('llmFallbackModel', 'llama3');
+            (Config as unknown as { set: (k: string, v: string) => void }).set(
+                'llmFallbackBaseUrl',
+                'https://nv.api.com/v1',
+            );
+        });
+
+        it('returns validated data on first response', async () => {
+            const validResponse = JSON.stringify({ choices: [{ message: { content: '{"ok": true}' } }] });
+            mockFetch.mockResolvedValueOnce(mockOkResponse(validResponse));
+            const result = await llmPrompt('main', 'system', 'user', 'schema-1', 'json', okBooleanSchema);
+            expect(result).toEqual({ ok: true });
+        });
+
+        it('retries with schema hints when first response is invalid', async () => {
+            const invalidBody = JSON.stringify({ choices: [{ message: { content: '{}' } }] });
+            const validBody = JSON.stringify({ choices: [{ message: { content: '{"ok": true}' } }] });
+            mockFetch
+                .mockResolvedValueOnce(mockOkResponse(invalidBody))
+                .mockResolvedValueOnce(mockOkResponse(validBody));
+            const result = await llmPrompt('main', 'system', 'user', 'schema-2', 'json', okBooleanSchema);
+            expect(result).toEqual({ ok: true });
+            expect(mockFetch).toHaveBeenCalledTimes(2);
+        });
+
+        it('throws when schema validation fails even after retry', async () => {
+            const body = JSON.stringify({ choices: [{ message: { content: '{}' } }] });
+            mockFetch.mockResolvedValueOnce(mockOkResponse(body)).mockResolvedValueOnce(mockOkResponse(body));
+            await expect(llmPrompt('main', 'system', 'user', 'schema-3', 'json', alwaysFailsSchema)).rejects.toThrow(
+                'LLM response failed schema validation after retry',
+            );
+        });
+
+        it('returns validated data on cache hit with valid schema', async () => {
+            const body = JSON.stringify({ choices: [{ message: { content: '{"ok": true}' } }] });
+            mockFetch.mockResolvedValueOnce(mockOkResponse(body));
+            await llmPrompt('main', 'system', 'user', 'schema-4', 'json', okBooleanSchema);
+            const result = await llmPrompt('main', 'system', 'user', 'schema-4', 'json', okBooleanSchema);
+            expect(result).toEqual({ ok: true });
+            expect(mockFetch).toHaveBeenCalledTimes(1);
+        });
+
+        it('re-requests on cache hit when cached value fails schema validation', async () => {
+            const validBody = JSON.stringify({ choices: [{ message: { content: '{"ok": true}' } }] });
+            mockFetch.mockResolvedValueOnce(mockOkResponse(validBody));
+            await llmPrompt('main', 'system', 'user', 'schema-5', 'json', okBooleanSchema);
+            clearCache();
+            const body = JSON.stringify({ choices: [{ message: { content: '{}' } }] });
+            mockFetch.mockResolvedValueOnce(mockOkResponse(body));
+            await llmPrompt('main', 'system', 'user', 'schema-5', 'json');
+            mockFetch.mockResolvedValueOnce(mockOkResponse(validBody));
+            const result = await llmPrompt('main', 'system', 'user', 'schema-5', 'json', okBooleanSchema);
+            expect(result).toEqual({ ok: true });
+            expect(mockFetch).toHaveBeenCalledTimes(3);
+        });
+
+        it('retries with schema hints when first response is invalid', async () => {
+            const invalidBody = JSON.stringify({ choices: [{ message: { content: '{}' } }] });
+            const validBody = JSON.stringify({ choices: [{ message: { content: '{"ok": true}' } }] });
+            mockFetch
+                .mockResolvedValueOnce(mockOkResponse(invalidBody))
+                .mockResolvedValueOnce(mockOkResponse(validBody));
+            const result = await llmPrompt('main', 'system', 'user', 'schema-2', 'json', okBooleanSchema);
+            expect(result).toEqual({ ok: true });
+            expect(mockFetch).toHaveBeenCalledTimes(2);
+        });
+
+        it('throws when schema validation fails even after retry', async () => {
+            const body = JSON.stringify({ choices: [{ message: { content: '{}' } }] });
+            mockFetch.mockResolvedValueOnce(mockOkResponse(body)).mockResolvedValueOnce(mockOkResponse(body));
+            await expect(llmPrompt('main', 'system', 'user', 'schema-3', 'json', alwaysFailsSchema)).rejects.toThrow(
+                'LLM response failed schema validation after retry',
+            );
+        });
+
+        it('returns validated data on cache hit with valid schema', async () => {
+            const body = JSON.stringify({ choices: [{ message: { content: '{"ok": true}' } }] });
+            mockFetch.mockResolvedValueOnce(mockOkResponse(body));
+            await llmPrompt('main', 'system', 'user', 'schema-4', 'json', okBooleanSchema);
+            const result = await llmPrompt('main', 'system', 'user', 'schema-4', 'json', okBooleanSchema);
+            expect(result).toEqual({ ok: true });
+            expect(mockFetch).toHaveBeenCalledTimes(1);
+        });
+
+        it('re-requests on cache hit when cached value fails schema validation', async () => {
+            const validBody = JSON.stringify({ choices: [{ message: { content: '{"ok": true}' } }] });
+            mockFetch.mockResolvedValueOnce(mockOkResponse(validBody));
+            await llmPrompt('main', 'system', 'user', 'schema-5', 'json', okBooleanSchema);
+            clearCache();
+            const invalidBody = JSON.stringify({ choices: [{ message: { content: '{}' } }] });
+            mockFetch.mockResolvedValueOnce(mockOkResponse(invalidBody));
+            await llmPrompt('main', 'system', 'user', 'schema-5', 'json');
+            mockFetch.mockResolvedValueOnce(mockOkResponse(validBody));
+            const result = await llmPrompt('main', 'system', 'user', 'schema-5', 'json', okBooleanSchema);
+            expect(result).toEqual({ ok: true });
+            expect(mockFetch).toHaveBeenCalledTimes(3);
+        });
+    });
+
+    describe('sendToProvider error payload', () => {
+        beforeEach(() => {
+            (Config as unknown as { set: (k: string, v: string) => void }).set('llmApiKey', 'sk-err');
+            (Config as unknown as { set: (k: string, v: string) => void }).set('llmModel', 'gpt-4');
+            (Config as unknown as { set: (k: string, v: string) => void }).set('llmBaseUrl', 'https://api.test.com/v1');
+            (Config as unknown as { set: (k: string, v: string) => void }).set('llmFallbackApiKey', 'nv-err');
+            (Config as unknown as { set: (k: string, v: string) => void }).set('llmFallbackModel', 'llama3');
+            (Config as unknown as { set: (k: string, v: string) => void }).set(
+                'llmFallbackBaseUrl',
+                'https://nv.api.com/v1',
+            );
+        });
+
+        it('falls back to next provider when API returns error payload in 200 response', async () => {
+            const errorBody = JSON.stringify({ error: { message: 'Rate limited by provider' } });
+            const successBody = JSON.stringify({ choices: [{ message: { content: 'fallback worked' } }] });
+            mockFetch
+                .mockResolvedValueOnce(mockOkResponse(errorBody))
+                .mockResolvedValueOnce(mockOkResponse(successBody));
+            const result = await llmPrompt('main', 'system', 'user', 'err-payload');
+            expect(result).toBe('fallback worked');
         });
     });
 });
