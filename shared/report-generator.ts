@@ -3,6 +3,14 @@ import { rootLogger } from './logger';
 import { getTheme } from './theme';
 import { sanitizeUrl } from './cli_base';
 
+/** A single historical test run entry. */
+export interface TestHistoryRun {
+    status: string;
+    testExecKey: string;
+    startedOn?: string;
+    finishedOn?: string;
+}
+
 /**
  * HTML test report generation.
  *
@@ -36,6 +44,8 @@ interface ReportOptions {
     qualityGate?: number;
     /** Pre-computed failure category for each test by title. */
     testCategories?: Record<string, string>;
+    /** Per-test Xray execution history keyed by test title. */
+    testHistory?: Record<string, TestHistoryRun[]>;
 }
 
 /** Aggregated counts derived from a FlatTest array for rendering summary cards. */
@@ -158,6 +168,14 @@ tr:nth-child(even):hover { background: #f1f5f9; }
 .error-cell { color: #991b1b; font-size: 0.8rem; cursor: pointer; }
 .error-truncated::after { content: ' \\25BC'; font-size: 0.7rem; }
 .error-truncated.expanded::after { content: ' \\25B2'; }
+.hist-dot { display: inline-block; width: 10px; height: 10px; border-radius: 50%; margin: 0 1px; }
+.hist-pass { background: #22c55e; }
+.hist-fail { background: #ef4444; }
+.hist-skip { background: #facc15; }
+.hist-other { background: #d1d5db; }
+.hist-tooltip { display: none; position: absolute; background: #1f2937; color: #f9fafb; padding: 8px 12px; border-radius: 6px; font-size: 0.75rem; white-space: nowrap; z-index: 100; pointer-events: none; }
+.hist-cell { position: relative; cursor: default; white-space: nowrap; }
+.hist-cell:hover .hist-tooltip { display: block; }
 @media (prefers-color-scheme: dark) {
   body { background: #0d1117; color: #c9d1d9; }
   .card { background: #161b22; box-shadow: 0 1px 3px rgba(0,0,0,0.4); }
@@ -315,10 +333,52 @@ function buildErrorCell(t: FlatTest): string {
     return '';
 }
 
-function buildTestTable(tests: FlatTest[], categories?: Record<string, string>): string {
+function buildHistoryCell(history: TestHistoryRun[]): string {
+    if (!history || history.length === 0) return '<td>—</td>';
+    const dots = history
+        .map((r) => {
+            const cls =
+                r.status.toUpperCase() === 'PASSED' || r.status === 'PASS'
+                    ? 'hist-pass'
+                    : r.status.toUpperCase() === 'FAILED' || r.status === 'FAIL'
+                      ? 'hist-fail'
+                      : r.status.toUpperCase() === 'SKIPPED' || r.status === 'ABORTED'
+                        ? 'hist-skip'
+                        : 'hist-other';
+            return '<span class="hist-dot ' + cls + '" title="' + escapeHtml(r.status) + '"></span>';
+        })
+        .join('');
+    const lines = history
+        .map(
+            (r) =>
+                '<span style="display:flex;gap:6px;align-items:center">' +
+                '<span class="hist-dot ' +
+                (r.status.toUpperCase() === 'PASSED' || r.status === 'PASS'
+                    ? 'hist-pass'
+                    : r.status.toUpperCase() === 'FAILED' || r.status === 'FAIL'
+                      ? 'hist-fail'
+                      : r.status.toUpperCase() === 'SKIPPED' || r.status === 'ABORTED'
+                        ? 'hist-skip'
+                        : 'hist-other') +
+                '" style="flex-shrink:0"></span>' +
+                escapeHtml(r.status) +
+                ' &mdash; ' +
+                escapeHtml(r.testExecKey) +
+                '</span>',
+        )
+        .join('');
+    return '<td class="hist-cell">' + dots + '<div class="hist-tooltip">' + lines + '</div></td>';
+}
+
+function buildTestTable(
+    tests: FlatTest[],
+    categories?: Record<string, string>,
+    history?: Record<string, TestHistoryRun[]>,
+): string {
     const hasPassed = tests.some((t) => t.state === 'passed');
     const hasError = tests.some((t) => t.state === 'failed' && t.error);
     const hasSuite = tests.some((t) => extractSuite(t));
+    const hasHistory = history !== undefined && Object.keys(history).length > 0;
     let html = hasPassed
         ? '<div class="control-bar"><button onclick="togglePassed()">Toggle Passed</button></div>'
         : '';
@@ -327,6 +387,7 @@ function buildTestTable(tests: FlatTest[], categories?: Record<string, string>):
         (hasSuite ? '<th>Suite</th>' : '') +
         '<th>Status</th><th>Duration</th>' +
         (hasError ? '<th>Error</th>' : '') +
+        (hasHistory ? '<th>History</th>' : '') +
         '</tr></thead><tbody>';
     for (const [i, t] of tests.entries()) {
         const rowClass = t.state === 'passed' ? ' class="row-passed"' : '';
@@ -344,6 +405,10 @@ function buildTestTable(tests: FlatTest[], categories?: Record<string, string>):
         html += '<td><span class="status-badge status-' + t.state + '">' + t.state + '</span></td>';
         html += '<td>' + (t.state === 'skipped' ? '—' : fmtDuration(t.duration)) + '</td>';
         if (hasError) html += '<td>' + buildErrorCell(t) + '</td>';
+        if (hasHistory) {
+            const testHistory = history[t.title] ?? history[t.fullTitle ?? ''] ?? [];
+            html += buildHistoryCell(testHistory);
+        }
         html += '</tr>';
     }
     html += '</tbody></table></div>';
@@ -428,7 +493,7 @@ export function generateReportWithFallback(tests: FlatTest[], options?: ReportOp
             html += buildQualityGate(passRate, options.qualityGate);
         }
         html += buildFilterBar();
-        html += buildTestTable(tests, categories);
+        html += buildTestTable(tests, categories, options?.testHistory);
         html += buildToggleScript();
         const generatedAt = options?.generatedAt || new Date().toISOString();
         const source = options?.source || process.env.CI_JOB_NAME || process.env.GITHUB_WORKFLOW || '';
