@@ -1,3 +1,4 @@
+/** Input sanitisation: LLM-safe redaction, HTML escaping, and ANSI stripping. */
 const SECRET_PATTERNS: RegExp[] = [
     /bearer\s+[a-zA-Z0-9\-._~+/]+/gi,
     /-----BEGIN\s?(RSA\s?)?PRIVATE\s?KEY-----[\s\S]*?-----END\s?(RSA\s?)?PRIVATE\s?KEY-----/gi,
@@ -14,6 +15,8 @@ const SECRET_PATTERNS: RegExp[] = [
     /ghr_[a-zA-Z0-9]{36,}/g,
 ];
 
+/** Redact secrets (tokens, keys, certificates, passwords) from a string before sending to an LLM.
+ * Multi-line private keys are collapsed to `[...sanitized...]`. */
 export function sanitizeForLlm(input: string, maxStackLines?: number): string {
     let result = input;
     for (const pattern of SECRET_PATTERNS) {
@@ -34,6 +37,7 @@ export function sanitizeForLlm(input: string, maxStackLines?: number): string {
     return result;
 }
 
+/** Truncate a stacktrace to `maxLines`, appending a count of omitted lines. */
 export function truncateStacktrace(input: string, maxLines: number = 20): string {
     const lines = input.split('\n');
     if (lines.length <= maxLines) return input;
@@ -48,6 +52,7 @@ const HTML_ESCAPE_MAP: Record<string, string> = {
     "'": '&#39;',
 };
 
+/** Escape HTML special characters (`&<>"'`). */
 export function sanitizeHtml(text: string): string {
     return text.replace(/[&<>"']/g, (ch) => HTML_ESCAPE_MAP[ch] || ch);
 }
@@ -55,6 +60,7 @@ export function sanitizeHtml(text: string): string {
 const ESC = String.fromCharCode(27);
 const ANSI_ESCAPE_RE = new RegExp(ESC + '\\[[0-9;]*[a-zA-Z]', 'g');
 
+/** Strip ANSI escape sequences from a string. */
 export function sanitizeTerminal(text: string): string {
     return text.replace(ANSI_ESCAPE_RE, '');
 }

@@ -125,10 +125,12 @@ function extractContent(data: Record<string, unknown>, format: ProviderFormat): 
     return choices?.[0]?.message?.content || '';
 }
 
+/** Snapshot the current LLM metrics counters (cache hits, misses, tokens). */
 export function getLlmClientMetrics(): LlmClientMetrics {
     return _llmMetrics;
 }
 
+/** Reset all LLM metrics counters to zero. */
 export function resetLlmClientMetrics(): void {
     _llmMetrics.cacheHits = 0;
     _llmMetrics.cacheMisses = 0;
@@ -350,6 +352,7 @@ function jitter(waitMs: number): number {
 }
 
 /** @internal exported for testing */
+/** Parse the `Retry-After` header from an HTTP response, falling back to `defaultMs`. */
 export function parseRetryAfter(resp: Response, defaultMs: number): number {
     const header = resp.headers.get('Retry-After');
     if (!header) return defaultMs;
@@ -632,12 +635,14 @@ export async function llmPrompt<T = string>(
 }
 
 /** Evict all cached LLM responses (memory + disk). Useful in tests or when provider config changes at runtime. */
+/** Clear both the in-memory and disk LLM response caches. */
 export function clearCache(): void {
     cache.clear();
     clearDiskCache();
 }
 
 /** Reset per-tier rate-limit tracking. Typically called in test teardown. */
+/** Reset the per-tier rate limiter state (used in tests). */
 export function resetRateLimiter(): void {
     _rateTimestamps.clear();
 }

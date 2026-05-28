@@ -1,3 +1,5 @@
+/** ASCII/Unicode box-rendering utilities: bordered boxes, dividers, and card layouts.
+ * Powered by the active theme (single, double, round, or none borders). */
 import { stripVTControlCharacters } from 'util';
 import { palette, applyPalette, type PaletteKey } from './palette';
 import { getTheme } from './theme';
@@ -12,6 +14,7 @@ export interface BoxOptions {
     width?: number;
 }
 
+/** Measured width of a string, ignoring ANSI escape codes. */
 export function visibleWidth(s: string): number {
     return stripVTControlCharacters(s).length;
 }
@@ -81,6 +84,8 @@ function buildContentRows(
     return rows;
 }
 
+/** Render a bordered box around one or more lines of text.
+ * Supports title, padding, colour, and border style. */
 export function box(lines: string[], options: BoxOptions = {}): string {
     const theme = getTheme();
     const {
@@ -112,11 +117,13 @@ export function box(lines: string[], options: BoxOptions = {}): string {
     return rows.join('\n');
 }
 
+/** Render a horizontal divider line (muted). */
 export function divider(width?: number): string {
     const w = width || process.stdout.columns || 80;
     return palette['text-muted']('─'.repeat(Math.min(w - 2, 78)));
 }
 
+/** Render a bordered card with a centred title. Convenience wrapper around {@link box}. */
 export function card(
     title: string,
     content: string[],

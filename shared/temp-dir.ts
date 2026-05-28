@@ -1,3 +1,4 @@
+/** Temporary directory management: reports, ephemeral files, and cleanup handlers. */
 import { resolve, join } from 'path';
 import { mkdirSync, writeFileSync, existsSync, rmSync } from 'fs';
 
@@ -7,11 +8,13 @@ function resolveEnvOrPath(envVar: string, defaultValue: string): string {
     return process.env[envVar] ? resolve(process.env[envVar]) : join(PROJECT_ROOT, defaultValue);
 }
 
+/** Absolute path to the reports directory (overridable via `QA_TOOLS_REPORTS_DIR`). */
 export function reportsDir(): string {
     return resolveEnvOrPath('QA_TOOLS_REPORTS_DIR', 'reports');
 }
 
 /** @internal Not part of public API. Logging uses `rootLogger` directly. */
+/** Absolute path to the logs directory (overridable via `LOG_DIR` or `QA_TOOLS_LOGS_DIR`). */
 export function logsDir(): string {
     if (process.env.QA_TOOLS_LOGS_DIR) return resolve(process.env.QA_TOOLS_LOGS_DIR);
     return resolveEnvOrPath('LOG_DIR', 'logs');
@@ -21,6 +24,7 @@ function tempDir(): string {
     return resolveEnvOrPath('QA_TOOLS_TEMP_DIR', 'temp');
 }
 
+/** Write a dated report file under `reportsDir/YYYY-MM-DD/`. Creates intermediate dirs. */
 export function writeReport(filename: string, content: string): string {
     const dir = reportsDir();
     const dateStr = new Date().toISOString().slice(0, 10);
@@ -31,6 +35,7 @@ export function writeReport(filename: string, content: string): string {
     return filepath;
 }
 
+/** Write a temp file under `tempDir/{category}/`. Cleaned up on exit via {@link registerCleanup}. */
 export function writeEphemeral(category: string, filename: string, content: string): string {
     const dir = join(tempDir(), category);
     mkdirSync(dir, { recursive: true });
@@ -39,10 +44,12 @@ export function writeEphemeral(category: string, filename: string, content: stri
     return filepath;
 }
 
+/** Get the absolute temp directory path. */
 export function tempDirPath(): string {
     return tempDir();
 }
 
+/** Create all required subdirectories (temp/previews, temp/vars, temp/cache, reports, logs). */
 export function ensureDirs(): void {
     mkdirSync(join(tempDir(), 'previews'), { recursive: true });
     mkdirSync(join(tempDir(), 'vars'), { recursive: true });
@@ -51,6 +58,7 @@ export function ensureDirs(): void {
     mkdirSync(logsDir(), { recursive: true });
 }
 
+/** Register SIGINT/SIGTERM/exit handlers to clean up temp subdirectories. */
 export function registerCleanup(): void {
     const handler = () => {
         const td = tempDir();

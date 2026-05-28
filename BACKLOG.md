@@ -43,7 +43,7 @@ Issues registradas durante refatorações, postergadas por escopo.
 | Fase | Layer                      | Arquivos                                               | Status      |
 | ---- | -------------------------- | ------------------------------------------------------ | ----------- |
 | 1    | shared/ core               | logger, config, state, http-client, prompt             | ✅          |
-| 2    | shared/ util               | result_parser, markdown, report-generator, etc.        | 🚧 Pendente |
+| 2    | shared/ util               | result_parser, markdown, report-generator, etc.        | ✅          |
 | 3    | jira_management/ resources | jira_link_manager, result_reporter, etc.               | 🚧 Pendente |
 | 4    | jira_management/ commands  | case01-case20 + context + create_tests                 | 🚧 Pendente |
 | 5    | git_triggers/              | github_manager, gitlab_manager, pipeline-handler, main | 🚧 Pendente |

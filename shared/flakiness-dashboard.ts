@@ -1,3 +1,4 @@
+/** HTML flakiness dashboard generator — renders a table with bar charts for tests exceeding the flakiness threshold. */
 import type { FlakinessEntry } from './metrics';
 import { rootLogger } from './logger';
 
@@ -7,6 +8,7 @@ function escapeHtml(s: string): string {
     return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 }
 
+/** Filter flaky entries whose rate exceeds a percentage threshold. */
 export function filterHighFlakiness(flaky: FlakinessEntry[], thresholdPct = THRESHOLD_PCT): FlakinessEntry[] {
     return flaky.filter((f) => f.rate * 100 >= thresholdPct);
 }
@@ -80,6 +82,7 @@ function buildFlakinessTable(high: FlakinessEntry[]): string {
     return html;
 }
 
+/** Generate a complete HTML page with flakiness summary cards and a test table. */
 export function generateFlakinessHtml(flaky: FlakinessEntry[], title?: string): string {
     try {
         const high = filterHighFlakiness(flaky);

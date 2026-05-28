@@ -1,3 +1,4 @@
+/** AI-powered failure analysis: classifies test failures and generates HTML reports with LLM analysis. */
 import fs from 'fs';
 import path from 'path';
 import type { FlatTest } from './result_parser';
@@ -38,6 +39,8 @@ function formatFailedTests(failed: FlatTest[]): string {
     return failed.map((t, i) => `${i + 1}. [${t.state}] ${t.title} (${t.duration ?? '?'}ms)`).join('\n');
 }
 
+/** Analyze all failed tests via an LLM review, generate a full HTML report, and snapshot LLM metrics.
+ * Returns empty content immediately when there are no failures. */
 export async function analyzeFailuresWithReport(tests: FlatTest[], context?: LlmContext): Promise<AnalysisReport> {
     const failed = tests.filter((t) => t.state === 'failed');
     if (failed.length === 0) return { content: '', confidence: 'high', fallbackUsed: false };
@@ -85,6 +88,7 @@ export async function analyzeFailuresWithReport(tests: FlatTest[], context?: Llm
     };
 }
 
+/** Classify a single test failure into a category (ASSERTION, TIMEOUT, ENVIRONMENT, etc.) via LLM. */
 export async function classifyFailure(title: string, error: string): Promise<string> {
     const systemTemplate = readPrompt('classify.md');
     if (!systemTemplate) return 'UNKNOWN: Could not load prompt template';

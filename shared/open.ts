@@ -1,3 +1,4 @@
+/** OS-aware file opener: macOS `open`, Windows `start`, Linux `xdg-open` (with WSL fallback). */
 import { spawn, execSync } from 'child_process';
 import { platform } from 'os';
 import { readFileSync, writeFileSync, mkdirSync } from 'fs';
@@ -21,6 +22,7 @@ function isWsl(): boolean {
     return _wslCached;
 }
 
+/** Get a writable Windows temp directory under WSL (`/mnt/c/...`). */
 export function getWinTempDir(): string | null {
     if (process.env.TEMP && process.env.TEMP.startsWith('/')) return process.env.TEMP;
     if (process.env.TMP && process.env.TMP.startsWith('/')) return process.env.TMP;
@@ -33,6 +35,7 @@ export function getWinTempDir(): string | null {
     }
 }
 
+/** Get the output directory for generated docs (WSL-aware). */
 export function getDocsOutputDir(): string | null {
     if (isWsl()) {
         const winTemp = getWinTempDir();
@@ -86,6 +89,7 @@ export function getOsOpenCommand(target: string): OsOpenCommand | null {
     }
 }
 
+/** Open a file/URL with the OS default handler. Falls back to `fallbackViewer` when no OS command works. */
 export function openWithOsOrFallback(target: string, fallbackViewer?: () => void): Promise<boolean> {
     const command = getOsOpenCommand(target);
     if (!command) {
