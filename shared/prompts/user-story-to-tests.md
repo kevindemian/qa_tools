@@ -21,3 +21,10 @@ Bad example (too vague):
 Return ONLY a valid JSON array. No markdown wrapping, no explanation.
 
 The user will provide the story and acceptance criteria below.
+
+## Adversarial audit (execute before responding)
+1. Check coverage: happy path, edge cases, error scenarios, boundary values — all present?
+2. Check each step: is it concrete and executable? (not vague like "Log in")
+3. Check each expectedResult: is it specific and measurable?
+4. Mentally revise any issues, then re-audit the revision
+5. Repeat until no flaws remain, then output your final JSON array

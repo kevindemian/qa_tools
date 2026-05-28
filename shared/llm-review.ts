@@ -41,20 +41,23 @@ const analysisValidator = new ReportValidator(analysisSchema);
 
 function buildReviewPrompt(original: string): string {
     return [
-        'You are a QA validation assistant. Review the following analysis for:',
-        '- Factual accuracy',
-        '- Logical consistency',
-        '- Completeness (does it address the failures?)',
-        '- Quality of recommendations (are they specific and actionable?)',
+        'You are a QA audit assistant. Perform an adversarial audit of the analysis below.',
         '',
-        'Respond with exactly one of the following, then optionally provide improvement suggestions on the next lines:',
-        'AGREE — if the analysis is accurate and complete',
-        'PARTIAL — if it has minor issues (list them briefly)',
-        'DISAGREE — if it has major errors or omissions (explain why)',
+        'Audit steps (execute mentally before responding):',
+        '1. Identify every factual error, logical gap, or missing detail',
+        '2. Challenge each recommendation — is it specific, actionable, and correct?',
+        '3. Check if all failures are addressed with correct classification/severity',
+        '4. Mentally iterate: revise the analysis with your fixes, then re-audit the revised version',
+        '5. Repeat until no more issues are found',
         '',
-        'If you answered PARTIAL or DISAGREE, suggest concrete improvements.',
+        'After completing your adversarial audit, respond with exactly one verdict:',
+        'AGREE — the analysis is accurate and complete after your mental revision',
+        'PARTIAL — minor issues remain (list them briefly)',
+        'DISAGREE — major errors or omissions remain (explain why)',
         '',
-        '--- ANALYSIS TO REVIEW ---',
+        'Then list each issue you found and how it was fixed (or why it persists if not AGREE).',
+        '',
+        '--- ANALYSIS TO AUDIT ---',
         original,
     ].join('\n');
 }
@@ -82,8 +85,14 @@ function stripVerdict(response: string): string {
 
 function buildRetryPrompt(original: string, errors: string[], invalidResponse?: string): string {
     const lines = [
-        'Your previous response had validation issues. Please fix the following and respond again with a complete JSON object:',
+        'Your previous response had validation issues. Before retrying, adversarially audit your fix:',
         '',
+        '1. Understand each error below — why it occurred and how to prevent it',
+        '2. Revise the JSON fixing all issues',
+        '3. Mentally re-validate the revised version against the schema',
+        '4. Repeat until no validation errors remain, then output the final JSON',
+        '',
+        'Validation errors to fix:',
         ...errors.map((e) => '- ' + e),
         '',
         'Make sure all required fields are present with correct types.',

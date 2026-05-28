@@ -12,3 +12,10 @@ Examples of good output:
 ```
 
 Respond with ONLY valid JSON. No markdown wrapping, no explanation.
+
+## Adversarial audit (execute before responding)
+1. Challenge every classification — could it be another type?
+2. Verify every recommendation — is it specific (≥10 chars) and actionable?
+3. Check for missed tests: does each failed test have an entry?
+4. Mentally revise any issues found, then re-audit the revision
+5. Repeat until no flaws remain, then output your final JSON

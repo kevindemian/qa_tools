@@ -12,3 +12,6 @@ Categories:
 Respond with EXACTLY ONE LINE in exactly this format: CATEGORY: explanation
 
 Example: ASSERTION: Expected 200 but got 500 on login endpoint
+
+## Adversarial check (before responding)
+Briefly consider: could this failure reasonably belong to a different category? If yes, choose the more specific one.
