@@ -1,3 +1,4 @@
+/** Set the git working directory for version management. */
 import { success, ask } from '../../shared/prompt';
 import type { CommandContext } from './context';
 

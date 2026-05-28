@@ -1,3 +1,4 @@
+/** Close all tasks for a given version — transition unresolved issues to Done. */
 import { warn, askConfirm, ask, printSummary } from '../../shared/prompt';
 import type { CommandContext } from './context';
 import { NO_TASKS_FOUND_FOR_VERSION, OPERATION_CANCELLED } from '../constants';

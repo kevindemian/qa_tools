@@ -1,3 +1,4 @@
+/** Jira sprint management: add tasks to active sprint. */
 import { success, info, warn, extractErrorMessage } from '../shared/prompt';
 import type JiraResource from './jira_resource';
 import {

@@ -1,3 +1,4 @@
+/** Set the default JSON results directory path. */
 import { success, warn, ask } from '../../shared/prompt';
 import { update as updateState } from '../../shared/state';
 import path from 'path';

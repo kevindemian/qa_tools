@@ -1,3 +1,4 @@
+/** Link test issues to requirement/user-story issues. */
 import { warn, info, ask, askConfirm } from '../../shared/prompt';
 import type { CommandContext } from './context';
 import { createTestExecutionWithLinksWrapper } from './helpers';

@@ -1,3 +1,4 @@
+/** History/Coverage dashboard — execution trends, flakiness analysis, coverage gaps. */
 import { info, warn, title, divider, tableView, printError, showSelect, withSpinner } from '../../shared/prompt';
 import { loadMetrics, calculateFlakiness, getTrends, saveCoverageSnapshot } from '../../shared/metrics';
 import { analyzeCoverage } from '../coverage';

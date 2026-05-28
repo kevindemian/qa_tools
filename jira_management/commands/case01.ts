@@ -1,3 +1,4 @@
+/** Import CSV → Create Test Cases: configure CSV path and start the import pipeline. */
 import Config from '../../shared/config';
 import { ask, askConfirm, askFilePath } from '../../shared/prompt';
 import { load as loadState } from '../../shared/state';

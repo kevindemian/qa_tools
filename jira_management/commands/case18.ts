@@ -1,3 +1,4 @@
+/** Generate test stories from a user-story description via LLM. */
 import fs from 'fs';
 import path from 'path';
 import { ask, warn, info, printError, title, divider } from '../../shared/prompt';

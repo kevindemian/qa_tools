@@ -1,3 +1,4 @@
+/** Publish a version — mark it as released in Jira. */
 import { warn, askConfirm, ask, printError, printSummary } from '../../shared/prompt';
 import type { CommandContext } from './context';
 import { OPERATION_CANCELLED } from '../constants';

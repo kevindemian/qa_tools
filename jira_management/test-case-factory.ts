@@ -1,3 +1,4 @@
+/** Test-case factory — creates test issues in Jira via Xray REST API. */
 import { success, onError, isQuiet, ProgressBar } from '../shared/prompt';
 import type JiraResource from './jira_resource';
 import type { XrayStepImporter } from './xray-client';

@@ -1,3 +1,4 @@
+/** Import JSON/TXT test results (CTRF format) to create Test Executions. */
 import Config from '../../shared/config';
 import { ask, askConfirm, warn, success } from '../../shared/prompt';
 import { load as loadState } from '../../shared/state';

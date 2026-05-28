@@ -1,3 +1,4 @@
+/** Test Execution creator — creates Test Execution issues and associates test results. */
 import { rootLogger } from '../shared/logger';
 import { success, info, withSpinner } from '../shared/prompt';
 import type JiraResource from './jira_resource';

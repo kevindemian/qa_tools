@@ -1,3 +1,4 @@
+/** Shared helpers for command handlers — createTestExecutionWithLinksWrapper, etc. */
 import { printError } from '../../shared/prompt';
 import type { CommandContext } from './context';
 // anti-circular (prompt → create_tests → session-context → prompt)

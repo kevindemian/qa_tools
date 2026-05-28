@@ -1,3 +1,4 @@
+/** Generate an HTML report from CTRF JSON results. */
 import fs from 'fs';
 import path from 'path';
 import AdmZip from 'adm-zip';

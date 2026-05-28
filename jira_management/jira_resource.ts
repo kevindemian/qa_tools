@@ -1,3 +1,4 @@
+/** Jira REST API client — wraps axios with project scoping, version cache, and typed GET/POST operations. */
 import { createHttpClient } from '../shared/http-client';
 import { extractErrorMessage } from '../shared/prompt';
 import { Logger, rootLogger } from '../shared/logger';

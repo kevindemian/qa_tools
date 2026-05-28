@@ -1,3 +1,4 @@
+/** Add tasks to sprint — assign issue keys to the current active sprint. */
 import { print, success, warn, title, ask, askConfirm, printError, printSummary } from '../../shared/prompt';
 import type { CommandContext } from './context';
 import { OPERATION_CANCELLED, ERR_ADD_TASKS_TO_SPRINT } from '../constants';
