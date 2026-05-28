@@ -11,6 +11,7 @@ export interface LlmMetricsSnapshot {
     totalRequests: number;
     rejectedByValidator: number;
     retryCount: number;
+    adversarialRetryCount: number;
     avgConfidence: number;
     avgLatencyMs: number;
     failuresByTier: Partial<Record<LlmTier, number>>;
@@ -83,8 +84,14 @@ export function recordValidationRejection(reason: string): void {
     _rejectionReasons[reason] = (_rejectionReasons[reason] || 0) + 1;
 }
 
+let _adversarialRetryCount = 0;
+
 export function recordRetry(): void {
     _retryCount++;
+}
+
+export function recordAdversarialRetry(): void {
+    _adversarialRetryCount++;
 }
 
 export function recordConfidence(confidence: 'high' | 'medium' | 'low'): void {
@@ -105,6 +112,7 @@ export function snapshotLlmMetrics(): LlmMetricsSnapshot {
         totalRequests: _totalRequests,
         rejectedByValidator: _rejectedByValidator,
         retryCount: _retryCount,
+        adversarialRetryCount: _adversarialRetryCount,
         avgConfidence: _confidenceCount > 0 ? _confidenceSum / _confidenceCount : 0,
         avgLatencyMs: _latencyCount > 0 ? Math.round(_latencySum / _latencyCount) : 0,
         failuresByTier: { ..._failuresByTier },
@@ -133,6 +141,7 @@ export function clearLlmMetrics(): void {
     _totalRequests = 0;
     _rejectedByValidator = 0;
     _retryCount = 0;
+    _adversarialRetryCount = 0;
     _confidenceSum = 0;
     _confidenceCount = 0;
     _latencySum = 0;

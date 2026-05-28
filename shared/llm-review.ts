@@ -1,4 +1,4 @@
-import { llmPrompt } from './llm-client';
+import { llmPrompt, type LlmTier } from './llm-client';
 import { rootLogger } from './logger';
 import { sanitizeForLlm, sanitizeTerminal } from './sanitize';
 import { ReportValidator, type ValidationRule } from './report-validator';
@@ -8,17 +8,17 @@ import {
     recordValidationRejection,
     recordRetry,
     recordConfidence,
+    recordAdversarialRetry,
 } from './llm-metrics';
-
-// NOTE: diverse reviewer strategy — using Gemini (reviewer tier) to review
-// output from OpenRouter (report/main tier) is intentional. Different models
-// catch different error types, reducing auto-evaluation confirmation bias.
 
 export interface ReviewResult {
     content: string;
     reviewed: boolean;
     confidence: 'high' | 'medium' | 'low';
     fallbackUsed?: boolean;
+    reviewerNotes?: string;
+    adversarialRetried?: boolean;
+    reReviewTier?: string;
     metrics?: { totalRequests: number; rejectedByValidator: number; retryCount: number };
 }
 
@@ -38,6 +38,11 @@ const analysisSchema: ValidationRule[] = [
 ];
 
 const analysisValidator = new ReportValidator(analysisSchema);
+
+const ADVERSARIAL_TIERS = ['report', 'fast', 'fallback'] as const;
+const REV_TIERS = ['reviewer', 'fast', 'fallback'] as const;
+
+const CONF_RANK: Record<string, number> = { high: 3, medium: 2, low: 1 };
 
 function buildReviewPrompt(original: string): string {
     return [
@@ -59,6 +64,21 @@ function buildReviewPrompt(original: string): string {
         '',
         '--- ANALYSIS TO AUDIT ---',
         original,
+    ].join('\n');
+}
+
+function buildAdversarialRetryPrompt(gaps: string, user: string): string {
+    return [
+        'Your previous report had these quality gaps identified by peer review:',
+        '',
+        gaps,
+        '',
+        'Regenerate the JSON report, addressing each gap above.',
+        'Before responding, adversarially audit your revision: challenge every fix,',
+        'verify each classification and recommendation, iterate mentally until no issues remain.',
+        '',
+        'Original failed tests:',
+        user,
     ].join('\n');
 }
 
@@ -155,23 +175,87 @@ async function runRetryLoop(
     return { parsed, retries, valid: validation.valid };
 }
 
-async function performSelfReview(parsed: unknown, startTime: number, retries: number): Promise<ReviewResult> {
+async function performSelfReview(
+    parsed: unknown,
+    startTime: number,
+    retries: number,
+    tier: LlmTier = 'reviewer',
+): Promise<ReviewResult> {
     const reportContent = JSON.stringify(parsed, null, 2);
     const reviewPrompt = buildReviewPrompt(reportContent);
-    const reviewResponse = await llmPrompt('reviewer', reviewPrompt, 'Review the analysis above.');
-    recordLlmRequest('reviewer', Date.now() - startTime);
+    const reviewResponse = await llmPrompt(tier, reviewPrompt, 'Review the analysis above.');
+    recordLlmRequest(tier, Date.now() - startTime);
 
     const confidence = parseVerdict(reviewResponse);
     const reviewerNotes = stripVerdict(reviewResponse);
     recordConfidence(confidence);
 
-    const finalContent =
-        confidence !== 'high' && reviewerNotes
-            ? reportContent + '\n\n[Reviewer notes: ' + reviewerNotes + ']'
-            : reportContent;
+    rootLogger.info('LLM review confidence=' + confidence + ' retries=' + retries + ' tier=' + tier);
+    return {
+        content: reportContent,
+        reviewed: true,
+        confidence,
+        fallbackUsed: false,
+        reviewerNotes: confidence !== 'high' && reviewerNotes ? reviewerNotes : undefined,
+    };
+}
 
-    rootLogger.info('LLM review confidence=' + confidence + ' retries=' + retries);
-    return { content: finalContent, reviewed: true, confidence, fallbackUsed: false };
+// --- Parallel adversarial retry ---
+async function adversarialRetryParallel(
+    system: string,
+    gaps: string,
+    user: string,
+    startTime: number,
+): Promise<{ content: string; tier: string } | null> {
+    const gapPrompt = buildAdversarialRetryPrompt(gaps, user);
+    const candidates = await Promise.allSettled(
+        ADVERSARIAL_TIERS.map(async (tier) => {
+            const raw = await llmPrompt(tier, system, gapPrompt);
+            recordLlmRequest(tier, Date.now() - startTime);
+            try {
+                const parsed = JSON.parse(raw);
+                const validation = analysisValidator.validateAll(parsed);
+                if (!validation.valid) return null;
+                return { content: JSON.stringify(parsed, null, 2), tier };
+            } catch {
+                return null;
+            }
+        }),
+    );
+    const valid: Array<{ content: string; tier: string }> = [];
+    for (const r of candidates) {
+        if (r.status === 'fulfilled' && r.value !== null) valid.push(r.value);
+    }
+    if (valid.length === 0) return null;
+    return valid[0]!;
+}
+
+// --- Parallel re-review with quorum ---
+async function reReviewParallel(
+    content: string,
+    startTime: number,
+): Promise<{ confidence: 'high' | 'medium' | 'low'; tier: string }> {
+    const reviewPrompt = buildReviewPrompt(content);
+    const reviews = await Promise.allSettled(
+        REV_TIERS.map(async (tier) => {
+            const raw = await llmPrompt(tier, reviewPrompt, 'Review the analysis above.');
+            recordLlmRequest(tier, Date.now() - startTime);
+            return { confidence: parseVerdict(raw), tier };
+        }),
+    );
+    const valid: Array<{ confidence: 'high' | 'medium' | 'low'; tier: string }> = [];
+    for (const r of reviews) {
+        if (r.status === 'fulfilled') valid.push(r.value);
+    }
+
+    if (valid.length === 0) return { confidence: 'medium', tier: 'fallback' };
+
+    const counts = { high: 0, medium: 0, low: 0 };
+    for (const v of valid) counts[v.confidence]++;
+    const sorted = (Object.keys(counts) as Array<'high' | 'medium' | 'low'>).sort((a, b) => counts[b] - counts[a]);
+    const winner: 'high' | 'medium' | 'low' = sorted[0] || 'medium';
+    const winnerTier = valid.find((v) => v.confidence === winner)?.tier ?? 'reviewer';
+    return { confidence: winner, tier: winnerTier };
 }
 
 export async function reviewWithLlm(system: string, user: string): Promise<ReviewResult> {
@@ -191,7 +275,36 @@ export async function reviewWithLlm(system: string, user: string): Promise<Revie
         }
 
         const result = await performSelfReview(validated, startTime, retries);
-        return { ...result, content: sanitizeTerminal(result.content) };
+
+        // Adversarial retry: if confidence not high and meaningful gaps
+        if (result.confidence !== 'high' && result.reviewerNotes && result.reviewerNotes.length >= 20) {
+            recordAdversarialRetry();
+            const improved = await adversarialRetryParallel(system, result.reviewerNotes, user, startTime);
+            if (improved !== null) {
+                const reReview = await reReviewParallel(improved.content, startTime);
+                const bestConf =
+                    (CONF_RANK[reReview.confidence] ?? 0) >= (CONF_RANK[result.confidence] ?? 0)
+                        ? reReview.confidence
+                        : result.confidence;
+                const finalContent =
+                    bestConf !== 'high'
+                        ? improved.content + '\n\n[Reviewer notes: ' + result.reviewerNotes + ']'
+                        : improved.content;
+                return {
+                    content: sanitizeTerminal(finalContent),
+                    reviewed: true,
+                    confidence: bestConf,
+                    reviewerNotes: result.reviewerNotes,
+                    adversarialRetried: true,
+                    reReviewTier: reReview.tier,
+                };
+            }
+        }
+
+        const content = result.reviewerNotes
+            ? result.content + '\n\n[Reviewer notes: ' + result.reviewerNotes + ']'
+            : result.content;
+        return { ...result, content: sanitizeTerminal(content) };
     } catch (err) {
         rootLogger.warn('LLM review failed, falling back to primary: ' + (err as Error).message);
         recordLlmFailure('main');
