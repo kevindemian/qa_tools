@@ -433,7 +433,7 @@ describe('generateMappingFiles', () => {
 describe('validateCsvTests', () => {
     it('returns error for empty title', () => {
         const { errors } = validateCsvTests([{ title: '', steps: [{ fields: { Action: 'x' } }] }]);
-        expect(errors).toContain('Teste 1: Titulo vazio');
+        expect(errors[0]).toContain('Título é obrigatório');
     });
 
     it('returns warning for duplicate titles', () => {
@@ -446,7 +446,7 @@ describe('validateCsvTests', () => {
 
     it('returns error for no steps', () => {
         const { errors } = validateCsvTests([{ title: 'TC1', steps: [] }]);
-        expect(errors[0]).toContain('Nenhum step definido');
+        expect(errors[0]).toContain('Pelo menos um step');
     });
 
     it('returns warning for empty Action in step', () => {
@@ -523,7 +523,7 @@ describe('createTestsFromJson', () => {
         FS.readFileSync.mockReturnValue('[]');
         const result = await createTestsFromJson(BASE_PARAMS());
         expect(result).toBeUndefined();
-        expect(PROMPT.warn).toHaveBeenCalledWith(expect.stringContaining('Nenhum teste'));
+        expect(PROMPT.printError).toHaveBeenCalledWith('Erro ao ler JSON', expect.any(Error));
     });
 
     it('cancela com item sem title/steps', async () => {

@@ -3,6 +3,7 @@ import type TestCaseFactory from './test-case-factory';
 import type IssueLinker from './issue-linker';
 import { rootLogger } from '../shared/logger';
 import { update as updateState } from '../shared/state';
+import { JiraPayloadSchema } from './csv-import-schema';
 
 interface LinkRelationsResult {
     abort: boolean;
@@ -121,7 +122,7 @@ function buildTestData(test: TestCase, projectName: string, jiraLabels: string[]
         testData.fields.labels = jiraLabels;
     }
 
-    return testData;
+    return JiraPayloadSchema.parse(testData);
 }
 
 function saveCheckpoint(

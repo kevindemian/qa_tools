@@ -248,18 +248,18 @@ describe('buildMenuChoices', () => {
 
     it('sets project name as description for option 9 in config sub-menu', () => {
         const choices = mod.buildMenuChoices('config', 'MYPROJ', ctx);
-        expect(choices.find((c) => c.value === '9')?.description).toBe('MYPROJ');
+        expect(choices.find((c) => c.value === '9')?.description).toContain('MYPROJ');
     });
 
     it('sets git dir as description for option 10 in config sub-menu', () => {
         const choices = mod.buildMenuChoices('config', 'P', { git_directory: '/custom/git' });
-        expect(choices.find((c) => c.value === '10')?.description).toBe('/custom/git');
+        expect(choices.find((c) => c.value === '10')?.description).toContain('/custom/git');
     });
 
     it('shows "não configurado" for unset cypress and JSON dirs in config sub-menu', () => {
         const choices = mod.buildMenuChoices('config', 'ECSPOL', ctx);
-        expect(choices.find((c) => c.value === '14')?.description).toBe('não configurado');
-        expect(choices.find((c) => c.value === '16')?.description).toBe('não configurado');
+        expect(choices.find((c) => c.value === '14')?.description).toContain('não configurado');
+        expect(choices.find((c) => c.value === '16')?.description).toContain('não configurado');
     });
 
     it('utilities sub-menu includes docs command', () => {

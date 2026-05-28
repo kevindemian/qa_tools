@@ -331,13 +331,10 @@ describe('CsvResource', () => {
     });
 
     describe('readCsvFromString', () => {
-        it('parses CSV with empty Action field', async () => {
+        it('skips CSV row with empty Action field', async () => {
             const csvString = 'Action,Data,Expected Result\n,y,z';
             const result = await csvResource.readCsvFromString(csvString);
-            expect(result).toHaveLength(1);
-            expect(result[0]!.fields.Action).toBe('');
-            expect(result[0]!.fields.Data).toBe('y');
-            expect(result[0]!.fields['Expected Result']).toBe('z');
+            expect(result).toHaveLength(0);
         });
 
         it('parses CSV with empty Data field', async () => {

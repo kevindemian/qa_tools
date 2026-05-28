@@ -16,16 +16,18 @@ import { reviewWithLlm } from './llm-review';
 
 const mockLlmPrompt = llmPrompt as jest.MockedFunction<typeof llmPrompt>;
 
-const validJsonReport = JSON.stringify({
+const validParsedReport = {
     tests: [
         {
             title: 'Login fails',
-            classification: 'ASSERTION',
-            severity: 'high',
+            classification: 'ASSERTION' as const,
+            severity: 'high' as const,
             recommendation: 'Fix the assertion logic in the login component.',
         },
     ],
-});
+};
+
+const invalidParsedReport = { tests: [{ title: 'Bad' }] };
 
 beforeEach(() => {
     jest.clearAllMocks();
@@ -34,7 +36,7 @@ beforeEach(() => {
 describe('reviewWithLlm', () => {
     it('returns high confidence when reviewer agrees', async () => {
         mockLlmPrompt
-            .mockResolvedValueOnce(validJsonReport)
+            .mockResolvedValueOnce(validParsedReport)
             .mockResolvedValueOnce('AGREE - The analysis is accurate and complete.');
 
         const result = await reviewWithLlm('system prompt', 'user prompt');
@@ -47,11 +49,11 @@ describe('reviewWithLlm', () => {
 
     it('returns medium confidence with reviewer notes when adversarial retry fails', async () => {
         mockLlmPrompt
-            .mockResolvedValueOnce(validJsonReport)
+            .mockResolvedValueOnce(validParsedReport)
             .mockResolvedValueOnce('PARTIAL - Missing details on timeout threshold.')
-            .mockResolvedValueOnce('invalid json')
-            .mockResolvedValueOnce('invalid json')
-            .mockResolvedValueOnce('invalid json');
+            .mockRejectedValueOnce(new Error('adversarial retry failed'))
+            .mockRejectedValueOnce(new Error('adversarial retry failed'))
+            .mockRejectedValueOnce(new Error('adversarial retry failed'));
 
         const result = await reviewWithLlm('system prompt', 'user prompt');
 
@@ -62,11 +64,11 @@ describe('reviewWithLlm', () => {
 
     it('performs adversarial retry and improves confidence from medium to high', async () => {
         mockLlmPrompt
-            .mockResolvedValueOnce(validJsonReport)
+            .mockResolvedValueOnce(validParsedReport)
             .mockResolvedValueOnce('PARTIAL - Missing details on timeout threshold.')
-            .mockResolvedValueOnce(validJsonReport)
-            .mockResolvedValueOnce(validJsonReport)
-            .mockResolvedValueOnce(validJsonReport)
+            .mockResolvedValueOnce(validParsedReport)
+            .mockResolvedValueOnce(validParsedReport)
+            .mockResolvedValueOnce(validParsedReport)
             .mockResolvedValueOnce('AGREE - Good after revision.')
             .mockResolvedValueOnce('AGREE - Much better.')
             .mockResolvedValueOnce('AGREE - Acceptable.');
@@ -81,11 +83,11 @@ describe('reviewWithLlm', () => {
 
     it('keeps low confidence and appends notes when re-review downgrades', async () => {
         mockLlmPrompt
-            .mockResolvedValueOnce(validJsonReport)
+            .mockResolvedValueOnce(validParsedReport)
             .mockResolvedValueOnce('PARTIAL - Weak recommendations, missing coverage.')
-            .mockResolvedValueOnce(validJsonReport)
-            .mockResolvedValueOnce(validJsonReport)
-            .mockResolvedValueOnce(validJsonReport)
+            .mockResolvedValueOnce(validParsedReport)
+            .mockResolvedValueOnce(validParsedReport)
+            .mockResolvedValueOnce(validParsedReport)
             .mockResolvedValueOnce('PARTIAL - Still weak in edge cases.')
             .mockResolvedValueOnce('PARTIAL - Recommendations need work.')
             .mockResolvedValueOnce('DISAGREE - Multiple issues remain.');
@@ -97,21 +99,19 @@ describe('reviewWithLlm', () => {
     });
 
     it('skips adversarial retry when reviewerNotes are too short', async () => {
-        mockLlmPrompt.mockResolvedValueOnce(validJsonReport).mockResolvedValueOnce('PARTIAL - ok');
+        mockLlmPrompt.mockResolvedValueOnce(validParsedReport).mockResolvedValueOnce('PARTIAL - ok');
 
         const result = await reviewWithLlm('system prompt', 'user prompt');
 
         expect(result.adversarialRetried).toBeUndefined();
         expect(result.confidence).toBe('medium');
-        // Notes are only 2 chars (<20), so no retry, but notes still appended
         expect(result.content).toContain('Reviewer notes');
     });
 
     it('retries when validation fails and eventually succeeds', async () => {
-        const invalidJson = JSON.stringify({ tests: [{ title: 'Login fails' }] });
         mockLlmPrompt
-            .mockResolvedValueOnce(invalidJson)
-            .mockResolvedValueOnce(validJsonReport)
+            .mockResolvedValueOnce(invalidParsedReport)
+            .mockResolvedValueOnce(validParsedReport)
             .mockResolvedValueOnce('AGREE - Good.');
 
         const result = await reviewWithLlm('system prompt', 'user prompt');
@@ -121,8 +121,10 @@ describe('reviewWithLlm', () => {
         expect(mockLlmPrompt).toHaveBeenCalledTimes(3);
     });
 
-    it('falls back to main when report returns non-JSON', async () => {
-        mockLlmPrompt.mockResolvedValueOnce('plain text analysis').mockResolvedValueOnce('fallback content');
+    it('falls back to main when report returns non-object (null from attemptPrimary)', async () => {
+        mockLlmPrompt
+            .mockRejectedValueOnce(new Error('Zod validation failed'))
+            .mockResolvedValueOnce('fallback content');
 
         const result = await reviewWithLlm('system prompt', 'user prompt');
 
@@ -133,12 +135,11 @@ describe('reviewWithLlm', () => {
     });
 
     it('falls back to main when all retries fail validation', async () => {
-        const invalidJson = JSON.stringify({ tests: [{ title: 'Bad' }] });
         mockLlmPrompt
-            .mockResolvedValueOnce(invalidJson)
-            .mockResolvedValueOnce(invalidJson)
-            .mockResolvedValueOnce(invalidJson)
-            .mockResolvedValueOnce(invalidJson)
+            .mockResolvedValueOnce(invalidParsedReport)
+            .mockResolvedValueOnce(invalidParsedReport)
+            .mockResolvedValueOnce(invalidParsedReport)
+            .mockResolvedValueOnce(invalidParsedReport)
             .mockResolvedValueOnce('fallback content');
 
         const result = await reviewWithLlm('system prompt', 'user prompt');
@@ -150,31 +151,19 @@ describe('reviewWithLlm', () => {
     });
 
     it('buildRetryPrompt includes validation errors and invalid response', async () => {
-        const invalidJson = JSON.stringify({ tests: [{ title: 'Bad' }] });
         mockLlmPrompt
-            .mockResolvedValueOnce(invalidJson)
-            .mockResolvedValueOnce(
-                JSON.stringify({
-                    tests: [
-                        {
-                            title: 'Fixed',
-                            classification: 'ASSERTION',
-                            severity: 'high',
-                            recommendation: 'Long enough recommendation text',
-                        },
-                    ],
-                }),
-            )
+            .mockResolvedValueOnce(invalidParsedReport)
+            .mockResolvedValueOnce(validParsedReport)
             .mockResolvedValueOnce('AGREE - Good.');
 
         await reviewWithLlm('system prompt text', 'user data');
         const retrySystemArg = mockLlmPrompt.mock.calls[1]![1];
         expect(retrySystemArg).toContain('validation');
-        expect(retrySystemArg).toContain(invalidJson);
+        expect(retrySystemArg).toContain(JSON.stringify(invalidParsedReport));
     });
 
-    it('returns fallback when report is non-JSON and main fails', async () => {
-        mockLlmPrompt.mockResolvedValueOnce('text').mockRejectedValueOnce(new Error('Main API error'));
+    it('returns fallback when report is non-object and main fails', async () => {
+        mockLlmPrompt.mockRejectedValueOnce(new Error('Zod failed')).mockRejectedValueOnce(new Error('Main API error'));
 
         const result = await reviewWithLlm('system prompt', 'user prompt');
         expect(result.confidence).toBe('medium');
@@ -183,12 +172,11 @@ describe('reviewWithLlm', () => {
     });
 
     it('exhausts MAX_RETRIES=3 before falling back', async () => {
-        const invalidJson = JSON.stringify({ tests: [{ title: 'Bad' }] });
         mockLlmPrompt
-            .mockResolvedValueOnce(invalidJson)
-            .mockResolvedValueOnce(invalidJson)
-            .mockResolvedValueOnce(invalidJson)
-            .mockResolvedValueOnce(invalidJson)
+            .mockResolvedValueOnce(invalidParsedReport)
+            .mockResolvedValueOnce(invalidParsedReport)
+            .mockResolvedValueOnce(invalidParsedReport)
+            .mockResolvedValueOnce(invalidParsedReport)
             .mockResolvedValueOnce('fallback after retries');
 
         const result = await reviewWithLlm('system prompt', 'user prompt');

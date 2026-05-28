@@ -1,8 +1,11 @@
+import crypto from 'crypto';
 import fs from 'fs';
 import path from 'path';
 import { rootLogger } from './logger';
 
 const DISK_CACHE_TTL_MS = 60 * 60 * 1000;
+const CACHE_DIR_PERM = 0o700;
+const CACHE_FILE_PERM = 0o600;
 
 interface DiskCacheEntry {
     response: string;
@@ -17,11 +20,66 @@ function filePath(key: string): string {
     return path.join(cacheDir(), key + '.json');
 }
 
+function cacheKeyBytes(): Buffer {
+    const raw = process.env.LLM_CACHE_KEY;
+    if (!raw) return Buffer.alloc(0);
+    return crypto.createHash('sha256').update(raw).digest();
+}
+
+function encrypt(plaintext: string): string {
+    const key = cacheKeyBytes();
+    if (key.length === 0) return plaintext;
+    const iv = crypto.randomBytes(12);
+    const cipher = crypto.createCipheriv('aes-256-gcm', key, iv);
+    const encrypted = Buffer.concat([cipher.update(plaintext, 'utf8'), cipher.final()]);
+    const tag = cipher.getAuthTag();
+    return JSON.stringify({
+        e: encrypted.toString('base64'),
+        iv: iv.toString('base64'),
+        t: tag.toString('base64'),
+    });
+}
+
+function decrypt(data: string): string | null {
+    const key = cacheKeyBytes();
+    if (key.length === 0) return data;
+    try {
+        const p = JSON.parse(data) as { e?: string; iv?: string; t?: string };
+        if (!p.e || !p.iv || !p.t) return null;
+        const decipher = crypto.createDecipheriv('aes-256-gcm', key, Buffer.from(p.iv, 'base64'));
+        decipher.setAuthTag(Buffer.from(p.t, 'base64'));
+        return decipher.update(Buffer.from(p.e, 'base64'), undefined, 'utf8') + decipher.final('utf8');
+    } catch {
+        return null;
+    }
+}
+
+function ensureCacheDir(dir: string): void {
+    try {
+        if (!fs.existsSync(dir)) {
+            fs.mkdirSync(dir, { recursive: true });
+            fs.chmodSync(dir, CACHE_DIR_PERM);
+        }
+    } catch (err) {
+        rootLogger.warn('LLM disk cache dir init failed: ' + (err instanceof Error ? err.message : String(err)));
+    }
+}
+
 export function diskCacheGet(key: string): string | null {
     const file = filePath(key);
     try {
         const raw = fs.readFileSync(file, 'utf-8');
-        const entry: DiskCacheEntry = JSON.parse(raw);
+        const decrypted = decrypt(raw);
+        if (decrypted === null) {
+            rootLogger.warn('LLM disk cache decrypt failed for key=' + key.slice(0, 12) + '… — removing');
+            try {
+                fs.unlinkSync(file);
+            } catch {
+                /* best effort */
+            }
+            return null;
+        }
+        const entry: DiskCacheEntry = JSON.parse(decrypted);
         if (Date.now() - entry.createdAt < DISK_CACHE_TTL_MS) {
             rootLogger.info('LLM disk cache hit for key=' + key.slice(0, 12) + '…');
             return entry.response;
@@ -37,11 +95,13 @@ export function diskCacheGet(key: string): string | null {
 export function diskCacheSet(key: string, response: string): void {
     const dir = cacheDir();
     try {
-        if (!fs.existsSync(dir)) {
-            fs.mkdirSync(dir, { recursive: true });
-        }
+        ensureCacheDir(dir);
         const entry: DiskCacheEntry = { response, createdAt: Date.now() };
-        fs.writeFileSync(filePath(key), JSON.stringify(entry), 'utf-8');
+        const serialized = JSON.stringify(entry);
+        const encrypted = encrypt(serialized);
+        const file = filePath(key);
+        fs.writeFileSync(file, encrypted, 'utf-8');
+        fs.chmodSync(file, CACHE_FILE_PERM);
     } catch (err) {
         rootLogger.warn('LLM disk cache write failed: ' + (err instanceof Error ? err.message : String(err)));
     }

@@ -5,6 +5,7 @@ import { rootLogger } from './logger';
 import { box, divider as boxDivider, visibleWidth } from './box';
 import { palette } from './palette';
 import { Output, defaultOutput as output } from './output';
+import { getBreadcrumbPath } from './breadcrumbs';
 import type { TestResult } from './types';
 
 let _config: Config | null = null;
@@ -82,11 +83,14 @@ export function print(msg: string): void {
 }
 
 export function title(msg: string): void {
+    const path = getBreadcrumbPath();
+    const prefix = path ? path + ' > ' : '';
+    const fullMsg = prefix + msg;
     if (isQuiet()) {
-        output.print('--- ' + msg + ' ---');
+        output.print('--- ' + fullMsg + ' ---');
         return;
     }
-    output.print(box([msg], { border: 'none', padding: 0, width: TITLE_BOX_WIDTH }));
+    output.print(box([fullMsg], { border: 'none', padding: 0, width: TITLE_BOX_WIDTH }));
 }
 
 export function divider(): void {

@@ -35,6 +35,33 @@ describe('analyzeFailuresWithReport', () => {
         expect(mockReviewWithLlm).not.toHaveBeenCalled();
     });
 
+    it('passes LlmContext to reviewWithLlm when provided', async () => {
+        const promptContent = 'Analyze these failures:\n{{FAILED_TESTS}}';
+        (fs.readFileSync as jest.Mock).mockReturnValue(promptContent);
+        mockReviewWithLlm.mockResolvedValueOnce({
+            content: 'Root cause with context',
+            reviewed: true,
+            confidence: 'high',
+            fallbackUsed: false,
+        });
+
+        const tests: FlatTest[] = [{ title: 'Login fails', state: 'failed', duration: 200 }];
+
+        const result = await analyzeFailuresWithReport(tests, {
+            gitCommits: '- fix auth module (joao, 2026-05-28)',
+            gitTrend: 'Run 1: 90.0% (9/10)',
+            jiraIssues: '- BUG-123 (Open): Auth module breaks on null input',
+        });
+
+        expect(result.content).toBe('Root cause with context');
+        expect(mockReviewWithLlm).toHaveBeenCalledTimes(1);
+        const userMsg: string = (mockReviewWithLlm.mock.calls[0]?.[1] as string) || '';
+        expect(userMsg).toContain('Recent Commits:');
+        expect(userMsg).toContain('Pass Rate Trend:');
+        expect(userMsg).toContain('Related Jira Issues:');
+        expect(userMsg).toContain('Login fails');
+    });
+
     it('23.9: analyzeFailuresWithReport HTML exception path', async () => {
         // Mock to trigger exception during HTML report generation
         const promptContent = 'Analyze these failures:\n{{FAILED_TESTS}}';
@@ -89,32 +116,36 @@ describe('analyzeFailuresWithReport', () => {
 });
 
 describe('classifyFailure', () => {
-    it('calls llmPrompt (fast tier) with test title and error', async () => {
+    it('calls llmPrompt (fast tier) with test title and Zod schema', async () => {
         const promptContent = 'Classify: ';
         (fs.readFileSync as jest.Mock).mockReturnValue(promptContent);
         mockLlmPrompt.mockResolvedValueOnce('ASSERTION: expected true but got false');
 
         const result = await classifyFailure('Login test', 'expected true, got false');
         expect(result).toBe('ASSERTION: expected true but got false');
-        expect(mockLlmPrompt).toHaveBeenCalledWith('fast', expect.any(String), expect.any(String), 'classify');
+        expect(mockLlmPrompt).toHaveBeenCalledWith(
+            'fast',
+            expect.any(String),
+            expect.any(String),
+            'classify',
+            undefined,
+            expect.anything(),
+        );
     });
 
-    it('retries when response format is invalid', async () => {
+    it('returns valid classification when llmPrompt returns matching format', async () => {
         const promptContent = 'Classify: ';
         (fs.readFileSync as jest.Mock).mockReturnValue(promptContent);
-        mockLlmPrompt
-            .mockResolvedValueOnce('raw text without category')
-            .mockResolvedValueOnce('ASSERTION: expected 200 got 500');
+        mockLlmPrompt.mockResolvedValueOnce('ASSERTION: expected 200 got 500');
 
         const result = await classifyFailure('Login test', 'expected 200, got 500');
         expect(result).toBe('ASSERTION: expected 200 got 500');
-        expect(mockLlmPrompt).toHaveBeenCalledTimes(2);
     });
 
-    it('falls back to UNKNOWN when both attempts fail regex', async () => {
+    it('falls back to UNKNOWN when llmPrompt throws (Zod validation failed after retry)', async () => {
         const promptContent = 'Classify: ';
         (fs.readFileSync as jest.Mock).mockReturnValue(promptContent);
-        mockLlmPrompt.mockResolvedValueOnce('some invalid text').mockResolvedValueOnce('more invalid text');
+        mockLlmPrompt.mockRejectedValueOnce(new Error('LLM response failed schema validation after retry'));
 
         const result = await classifyFailure('Login test', 'some error');
         expect(result).toBe('UNKNOWN: Could not classify failure after retry');

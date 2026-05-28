@@ -3,8 +3,8 @@ import path from 'path';
 import { ask, warn, info, printError, title, divider } from '../../shared/prompt';
 import { llmPrompt } from '../../shared/llm-client';
 import { sanitizeForLlm, sanitizeTerminal } from '../../shared/sanitize';
-import { rootLogger } from '../../shared/logger';
 import type { CommandContext } from './context';
+import { TestCaseArraySchema } from './case18.schema';
 
 async function handler(c: CommandContext): Promise<boolean | void> {
     const userStory = await ask('História do usuário (user story)', {
@@ -31,40 +31,13 @@ async function handler(c: CommandContext): Promise<boolean | void> {
     const userMsg = 'User Story:\n' + userStory + '\n\nAcceptance Criteria:\n' + acceptanceCriteria;
     const safeUserMsg = sanitizeForLlm(userMsg);
 
-    function validateTestCases(raw: string): boolean {
-        try {
-            const cases = JSON.parse(raw);
-            if (!Array.isArray(cases) || cases.length === 0) return false;
-            for (const tc of cases) {
-                if (typeof tc.title !== 'string' || tc.title.length < 5) return false;
-                if (!Array.isArray(tc.steps) || tc.steps.length === 0) return false;
-                if (typeof tc.expectedResult !== 'string' || tc.expectedResult.length < 10) return false;
-            }
-            return true;
-        } catch {
-            return false;
-        }
-    }
-
     title('Gerando testes com IA...');
     let result: string;
     try {
-        result = await llmPrompt('fast', system, safeUserMsg, 'case18');
-        if (!validateTestCases(result)) {
-            rootLogger.warn('case18: LLM returned invalid test content, retrying');
-            result = await llmPrompt(
-                'fast',
-                system + '\n\nIMPORTANTE: Retorne APENAS um array JSON válido.',
-                safeUserMsg,
-                'case18-retry',
-            );
-            if (!validateTestCases(result)) {
-                printError('Falha ao gerar casos de teste com IA', 'LLM retornou conteúdo inválido após retry');
-                return;
-            }
-        }
+        const testCases = await llmPrompt('fast', system, safeUserMsg, 'case18', undefined, TestCaseArraySchema);
+        result = JSON.stringify(testCases, null, 2);
     } catch (err: unknown) {
-        printError('Erro na chamada LLM', err);
+        printError('Falha ao gerar casos de teste com IA', err);
         return;
     }
 

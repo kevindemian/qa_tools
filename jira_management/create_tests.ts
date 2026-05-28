@@ -2,7 +2,7 @@ import type JiraResource from './jira_resource';
 import JiraLinkManager from './jira_link_manager';
 import type CsvResource from './csv_resource';
 import type { TestCase } from '../shared/types';
-import TestCaseValidator from './test-case-validator';
+import { TestCaseSchema } from './csv-import-schema';
 import TestExecutionCreator from './test-execution-creator';
 import MappingFileGenerator from './mapping-file-generator';
 import { rootLogger } from '../shared/logger';
@@ -153,8 +153,35 @@ async function createTestExecutionWithLinks(
 }
 
 function validateCsvTests(tests: TestCase[]): { errors: string[]; warnings: string[] } {
-    const validator = new TestCaseValidator();
-    return validator.validate(tests);
+    const errors: string[] = [];
+    const warnings: string[] = [];
+    const titles = new Set<string>();
+
+    tests.forEach((test, i) => {
+        const idx = i + 1;
+        const result = TestCaseSchema.safeParse(test);
+        if (!result.success) {
+            result.error.issues.forEach((issue) => {
+                const path = issue.path.join('.');
+                errors.push('Teste ' + idx + ': ' + path + ' ' + issue.message);
+            });
+            return;
+        }
+
+        if (test.title && titles.has(test.title)) {
+            warnings.push('Teste ' + idx + ': Titulo duplicado "' + test.title + '"');
+        }
+        if (test.title) titles.add(test.title);
+
+        test.steps.forEach((step, si) => {
+            const action = step.fields?.Action || '';
+            if (!action.trim()) {
+                warnings.push('Teste ' + idx + ' "' + test.title + '": Step ' + (si + 1) + ' sem Action');
+            }
+        });
+    });
+
+    return { errors, warnings };
 }
 
 function updateCrossReferences(linker: IssueLinker, tests: TestCase[], ids: string[]): Promise<void> {

@@ -4,31 +4,30 @@ import { Readable } from 'stream';
 import { rootLogger } from '../shared/logger';
 import type { TestCase } from '../shared/types';
 import { parseQuotedValue, extractPreconditionKey } from '../shared/quoted-string';
-
-interface ParsedStep {
-    fields: {
-        Action: string;
-        Data: string;
-        'Expected Result': string;
-    };
-}
+import { CsvRowSchema } from './csv-import-schema';
+import type { CsvRow } from './csv-import-schema';
 
 class CsvResource {
-    readCsvFromString(csvString: string): Promise<ParsedStep[]> {
+    readCsvFromString(csvString: string): Promise<CsvRow[]> {
         return new Promise((resolve, reject) => {
-            const results: ParsedStep[] = [];
+            const results: CsvRow[] = [];
             const stream = Readable.from([csvString]);
 
             stream
                 .pipe(csv())
                 .on('data', (data: Record<string, string>) => {
-                    results.push({
+                    const parsed = CsvRowSchema.safeParse({
                         fields: {
                             Action: data.Action || '',
                             Data: data.Data || '',
                             'Expected Result': data['Expected Result'] || '',
                         },
                     });
+                    if (parsed.success) {
+                        results.push(parsed.data);
+                    } else {
+                        rootLogger.warn('Linha CSV ignorada: ' + parsed.error.issues.map((i) => i.message).join('; '));
+                    }
                 })
                 .on('end', () => resolve(results))
                 .on('error', reject);

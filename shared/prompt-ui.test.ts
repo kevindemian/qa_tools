@@ -1,4 +1,9 @@
 const mockPrint = jest.fn();
+const mockGetBreadcrumbPath = jest.fn(() => '');
+
+jest.mock('./breadcrumbs', () => ({
+    getBreadcrumbPath: mockGetBreadcrumbPath,
+}));
 
 jest.mock('./output', () => ({
     Output: { isTTY: jest.fn(), columns: jest.fn(() => 80) },
@@ -83,6 +88,7 @@ beforeEach(() => {
     jest.clearAllMocks();
     __setConfig(makeConfig());
     mockIsTTY.mockReturnValue(true);
+    mockGetBreadcrumbPath.mockReturnValue('');
 });
 
 describe('__setConfig / getConfig / isQuiet', () => {
@@ -224,6 +230,13 @@ describe('title', () => {
         __setConfig(makeConfig({ quiet: true }));
         title('Section');
         expect(mockPrint).toHaveBeenCalledWith('--- Section ---');
+    });
+
+    it('prepends breadcrumbs when path is non-empty', () => {
+        mockGetBreadcrumbPath.mockReturnValue('RELEASES');
+        __setConfig(makeConfig({ quiet: true }));
+        title('Criar versão');
+        expect(mockPrint).toHaveBeenCalledWith('--- RELEASES > Criar versão ---');
     });
 });
 

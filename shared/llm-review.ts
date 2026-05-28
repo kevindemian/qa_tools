@@ -2,6 +2,7 @@ import { llmPrompt, type LlmTier } from './llm-client';
 import { rootLogger } from './logger';
 import { sanitizeForLlm, sanitizeTerminal } from './sanitize';
 import { ReportValidator, type ValidationRule } from './report-validator';
+import { FailureAnalysisSchema } from './failure-analysis.schema';
 import {
     recordLlmRequest,
     recordLlmFailure,
@@ -139,10 +140,10 @@ async function callLlmFallback(system: string, user: string, startTime: number):
 }
 
 async function attemptPrimary(system: string, user: string, startTime: number): Promise<unknown> {
-    const primary = await llmPrompt('report', system, user);
-    recordLlmRequest('report', Date.now() - startTime);
     try {
-        return JSON.parse(primary);
+        const primary = await llmPrompt('report', system, user, undefined, undefined, FailureAnalysisSchema);
+        recordLlmRequest('report', Date.now() - startTime);
+        return primary;
     } catch {
         recordLlmFailure('report');
         return null;
@@ -164,10 +165,16 @@ async function runRetryLoop(
         recordRetry();
         const invalidJson = typeof parsed === 'string' ? parsed : JSON.stringify(parsed);
         const retryPrompt = buildRetryPrompt(system + '\n\n' + user, validation.errors, invalidJson);
-        const retryResult = await llmPrompt('report', retryPrompt, 'Fix the validation errors above.');
-        recordLlmRequest('report', Date.now() - startTime);
         try {
-            parsed = JSON.parse(retryResult);
+            parsed = await llmPrompt(
+                'report',
+                retryPrompt,
+                'Fix the validation errors above.',
+                undefined,
+                undefined,
+                FailureAnalysisSchema,
+            );
+            recordLlmRequest('report', Date.now() - startTime);
         } catch {
             recordLlmFailure('report');
             return { parsed: null, retries, valid: false };
@@ -215,10 +222,9 @@ async function adversarialRetryParallel(
     const gapPrompt = buildAdversarialRetryPrompt(gaps, user);
     const candidates = await Promise.allSettled(
         ADVERSARIAL_TIERS.map(async (tier) => {
-            const raw = await llmPrompt(tier, system, gapPrompt);
-            recordLlmRequest(tier, Date.now() - startTime);
             try {
-                const parsed = JSON.parse(raw);
+                const parsed = await llmPrompt(tier, system, gapPrompt, undefined, undefined, FailureAnalysisSchema);
+                recordLlmRequest(tier, Date.now() - startTime);
                 const validation = analysisValidator.validateAll(parsed);
                 if (!validation.valid) return null;
                 return { content: JSON.stringify(parsed, null, 2), tier };
