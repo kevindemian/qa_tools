@@ -1003,9 +1003,31 @@ Também marcar o AUDIO-01 (M1, M2, M3 do bloco antigo) como resolvidos:
 | P4 | `ai-test-impact.ts` system: adicionar 5-step + Pareto + "do not include audit" | P0 | ✅ |
 | P5 | `ai-pr-desc.ts` system: adicionar 5-step + Pareto c/ "≤300 words" | P0 | ✅ |
 
+### Fase 8 (P1) — Auditoria LLM (Refinamentos Pós-Audit)
+
+| ID | Item | Prio | Status |
+|----|------|------|--------|
+| R1 | Criptografar cache em disco ou restringir permissões (chmod 600) | P1 | ⬜ |
+| R2 | Implementar monitoramento de `totalTokens` e hard-limits por operação | P1 | ⬜ |
+| R3 | Reforçar sanitização de prompts (eliminar superfície injection) | P1 | ⬜ |
+| R4 | Migrar validação JSON para schema enforcement (ex: Zod) | P2 | ⬜ |
+
+### Fase 9 (P1) — Refinamento de UX (Auditoria)
+
+| ID | Item | Prio | Status |
+|----|------|------|--------|
+| U1 | Breadcrumbs dinâmicos no título das boxes (ex: [Jira] > [Testes] > [Criar]) | P1 | ⬜ |
+| U2 | Pré-validação (linting) de CSV/JSON antes de acionar handlers | P0 | ⬜ |
+| U3 | Barra de progresso em relatórios/processos longos (em vez de spinner) | P2 | ⬜ |
+| U4 | Dark mode nativo (CSS `prefers-color-scheme`) nos relatórios HTML | P2 | ⬜ |
+| U5 | Wrapper de erro amigável para `Output.error` (mapeamento de erros comuns) | P1 | ⬜ |
+| U6 | Exibir atalhos de alias no menu ao lado das opções | P2 | ⬜ |
+| U7 | Melhorar clareza do contexto atual (ex: projeto Jira ativo) em todas as telas | P1 | ⬜ |
+| U8 | Mapeamento de erros de rede para mensagens amigáveis (VPN, timeout, etc.) | P1 | ⬜ |
+
 ## Status Final
 
-- **Total de itens:** 64 (Lote 1-25 + Fase 6 + Fase 7)
-- **Completos:** 64/64 ✅ **(100%)**
-- **Lotes concluídos:** 1, 2, 2.5, 3, 5, 6, 7, 9, 10, 11, 12, 13, 13.5, 14, 15, 15.5, 16, 17, 18, 19, 20, 22, 23, 24, 25, Fase 6, Fase 7
+- **Total de itens:** 76 (Lote 1-25 + Fase 6 + Fase 7 + Fase 8 + Fase 9)
+- **Completos:** 64/76 ✅ **(84%)**
+- **Em andamento:** Fase 8 — Auditoria LLM, Fase 9 — Refinamento de UX
 - **CI:** ✅ 90 suites, 1583 tests, 0 falhas
