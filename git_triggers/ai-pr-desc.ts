@@ -1,3 +1,4 @@
+/** AI-powered PR description generation from git diff + branch metadata. */
 import { llmPrompt } from '../shared/llm-client';
 import { rootLogger } from '../shared/logger';
 import { sanitizeForLlm } from '../shared/sanitize';

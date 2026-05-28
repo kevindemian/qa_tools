@@ -1,3 +1,4 @@
+/** Test results — collect, parse, and report test results from CI artifacts to Jira. */
 import path from 'path';
 import AdmZip from 'adm-zip';
 import glob from 'glob';

@@ -1,3 +1,4 @@
+/** Pipeline handler — monitor CI/CD status, parse results, and offer failure analysis. */
 import { print, success, warn, info, title, prompt, confirm, printError, withSpinner } from '../shared/prompt';
 import { load as loadState, update as updateState } from '../shared/state';
 import { sleep } from '../shared/http-client';

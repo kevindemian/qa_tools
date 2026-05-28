@@ -1,3 +1,4 @@
+/** GitLab API client: MRs, pipelines, reviews, and merge operations. */
 import { createHttpClient } from '../shared/http-client';
 import { info } from '../shared/prompt';
 import { Logger } from '../shared/logger';

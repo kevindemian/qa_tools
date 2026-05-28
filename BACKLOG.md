@@ -40,13 +40,13 @@ Issues registradas durante refatorações, postergadas por escopo.
 
 ### P2 — Documentar código (TSDoc exports + module headers)
 
-| Fase | Layer                      | Arquivos                                               | Status      |
-| ---- | -------------------------- | ------------------------------------------------------ | ----------- |
-| 1    | shared/ core               | logger, config, state, http-client, prompt             | ✅          |
-| 2    | shared/ util               | result_parser, markdown, report-generator, etc.        | ✅          |
-| 3    | jira_management/ resources | jira_link_manager, result_reporter, etc.               | ✅          |
-| 4    | jira_management/ commands  | case01-case20 + context + create_tests                 | ✅          |
-| 5    | git_triggers/              | github_manager, gitlab_manager, pipeline-handler, main | 🚧 Pendente |
+| Fase | Layer                      | Arquivos                                               | Status |
+| ---- | -------------------------- | ------------------------------------------------------ | ------ |
+| 1    | shared/ core               | logger, config, state, http-client, prompt             | ✅     |
+| 2    | shared/ util               | result_parser, markdown, report-generator, etc.        | ✅     |
+| 3    | jira_management/ resources | jira_link_manager, result_reporter, etc.               | ✅     |
+| 4    | jira_management/ commands  | case01-case20 + context + create_tests                 | ✅     |
+| 5    | git_triggers/              | github_manager, gitlab_manager, pipeline-handler, main | ✅     |
 
 ### P1 — Elevar cobertura de arquivos críticos < 90%
 

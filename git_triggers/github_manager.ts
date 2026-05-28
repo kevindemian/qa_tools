@@ -1,3 +1,4 @@
+/** GitHub API client: PRs, pipelines, reviews, checks, and merge operations. */
 import { createHttpClient } from '../shared/http-client';
 import { info } from '../shared/prompt';
 import { Logger } from '../shared/logger';

@@ -1,3 +1,4 @@
+/** MR/PR handler — process merge requests: AI description, test-impact, and scheduling. */
 import { print, success, warn, info, prompt, confirm, printError, withSpinner, divider } from '../shared/prompt';
 import type { GitProvider, MergeRequestInfo } from '../shared/types';
 import { currentProvider, pushHistory } from './session-state';

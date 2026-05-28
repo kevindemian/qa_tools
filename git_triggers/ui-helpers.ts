@@ -1,3 +1,4 @@
+/** UI helpers — branch formatting, interactive menus, and project-selection prompts. */
 import type { JsonObject } from '../shared/types';
 import { title, warn, divider, ask, tableView } from '../shared/prompt';
 import { load as loadState } from '../shared/state';

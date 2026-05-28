@@ -1,3 +1,4 @@
+/** Scheduled tasks — run metrics, flakiness analysis, and generate scheduled reports. */
 import { print, success, warn, info, prompt, printError, withSpinner } from '../shared/prompt';
 import type { GitProvider, StateContainer } from '../shared/types';
 import { loadMetrics, calculateFlakiness } from '../shared/metrics';

@@ -1,3 +1,4 @@
+/** Base class for Git provider clients (GitHub/GitLab) — shared API call + error handling. */
 import type { JsonObject } from '../shared/types';
 import { handleError } from '../shared/git-provider-error';
 import type { createHttpClient } from '../shared/http-client';

@@ -1,3 +1,4 @@
+/** LLM pipeline failure analysis — offer to analyze failures and generate a report. */
 import { confirm, info, warn, success, printError, divider, print } from '../shared/prompt';
 import { writeReport } from '../shared/temp-dir';
 import { analyzeFailuresWithReport } from '../shared/failure-analysis';
