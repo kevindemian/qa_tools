@@ -38,6 +38,7 @@ npm test                     # 1730 testes, 98 suites
 | [Variáveis de ambiente](docs/06-env-vars.md)        | Tabela completa de todas as env vars                                |
 | [Arquivos de configuração](docs/07-config-files.md) | `projects.json`, `providers.json`, `reviewers.json`                 |
 | [Fluxos completos](docs/08-fluxos-completos.md)     | Jornadas típicas: CSV→Test Execution, release, pipeline CI          |
+| [Setup Wizard](docs/10-setup-wizard.md)             | Geração automática de pipeline CI (GitHub/GitLab)                   |
 | [Troubleshooting](docs/09-troubleshooting.md)       | Problemas comuns e soluções                                         |
 
 ---

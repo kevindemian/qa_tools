@@ -365,4 +365,77 @@ Selecionar projeto → Disparar pipeline → Aguardar conclusão
 
 ---
 
+## Fluxo 5: Setup inicial de CI/CD com QA Tools
+
+Configura um projeto do zero: pipeline CI, configuração de projeto e hook pre-push.
+
+### Passo a passo
+
+1. **Executar o wizard**
+
+    ```bash
+    npx tsx setup/main.ts
+    ```
+
+2. **Revisar a detecção automática**
+
+    O wizard detecta o framework (Cypress/Playwright/Jest/Vitest) a partir do `package.json` e sugere comando de teste, caminho CTRF e comando de instalação.
+
+3. **Informar dados do repositório**
+    - Nome do projeto (default: nome do repo extraído do `.git/config`)
+    - Git provider (detectado automaticamente: GitHub/GitLab)
+    - Repo owner (user/org)
+
+4. **Escolher features**
+
+    O wizard pergunta se deseja:
+    - Integração com Jira (Test Execution, bugs)
+    - Flakiness Dashboard
+    - Análise de falhas com IA
+    - Hook pre-push (executa testes antes do push)
+
+5. **Revisar arquivos gerados**
+
+    Ao final, o wizard lista todos os arquivos criados:
+
+    ```
+    ✅ Criado: .github/workflows/qa.yml
+    ✅ Criado: config/projects.json
+    ✅ Criado: config/providers.json
+    ✅ Criado: .env.example
+    ⏭️  Ignorado (já existe): .git/hooks/pre-push
+    ```
+
+6. **Commit e configuração**
+
+    ```bash
+    git add .
+    git commit -m "chore: add QA Tools setup"
+    cp .env.example .env   # edite com suas credenciais
+    ```
+
+### Diagrama resumido
+
+```
+Detectar framework → Configurar projeto → Escolher features
+                                              ↓
+                          Gerar pipeline CI + config + .env + hook
+                                              ↓
+                                        Commit + push
+```
+
+### Arquivos envolvidos
+
+| Arquivo                             | Função                   |
+| ----------------------------------- | ------------------------ |
+| `setup/main.ts`                     | CLI wizard interativo    |
+| `setup/detector.ts`                 | Detecção de framework    |
+| `setup/builder/workflow-builder.ts` | Geração YAML via AST     |
+| `setup/templates/github-ci.ts`      | Template GitHub Actions  |
+| `setup/templates/gitlab-ci.ts`      | Template GitLab CI       |
+| `setup/templates/pre-push-hook.ts`  | Script pre-push          |
+| `setup/config-writer.ts`            | Geração de config + .env |
+
+---
+
 ## Ver também
