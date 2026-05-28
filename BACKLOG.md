@@ -38,7 +38,13 @@ Issues registradas durante refatorações, postergadas por escopo.
 
 ## 🔷 Pendentes
 
-Nenhum. Todos os débitos foram resolvidos.
+### P1 — Restaurar thresholds de cobertura
+
+| Item                                 | Status      |
+| ------------------------------------ | ----------- |
+| branches 77→78% + lines 89→90%       | 🚧 Pendente |
+| Adicionar testes para case17 CTRF v2 | 🚧 Pendente |
+| Adicionar testes para disk-cache.ts  | 🚧 Pendente |
 
 ## ✅ Histórico
 

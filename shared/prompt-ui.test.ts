@@ -232,11 +232,17 @@ describe('title', () => {
         expect(mockPrint).toHaveBeenCalledWith('--- Section ---');
     });
 
-    it('prepends breadcrumbs when path is non-empty', () => {
+    it('prepends breadcrumbs when path is non-empty (quiet mode)', () => {
         mockGetBreadcrumbPath.mockReturnValue('RELEASES');
         __setConfig(makeConfig({ quiet: true }));
         title('Criar versão');
         expect(mockPrint).toHaveBeenCalledWith('--- RELEASES > Criar versão ---');
+    });
+
+    it('prepends breadcrumbs when path is non-empty (verbose mode)', () => {
+        mockGetBreadcrumbPath.mockReturnValue('TESTS');
+        title('Criar teste');
+        expect(mockPrint).toHaveBeenCalled();
     });
 });
 
