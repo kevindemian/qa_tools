@@ -145,13 +145,13 @@ Removidos: `sourceBranch`/`targetBranch` de `updateMergeRequest` (github_manager
 
 ---
 
-## 🔷 WEB_STYLE.md (ADIADA)
+## 📋 Planos Futuros (New Feature)
 
-**Prioridade:** P3
+### WEB_STYLE.md
 
-**Problema:** `WEB_STYLE.md` descreve uma interface web, nunca implementada.
+**Prioridade:** Futuro (P3)
 
-**Solução proposta:** Se houver demanda, implementar como SPA standalone.
+`WEB_STYLE.md` descreve uma interface web, nunca implementada. Será implementada quando houver demanda concreta — como SPA standalone.
 
 ---
 
@@ -881,3 +881,112 @@ Também marcar o AUDIO-01 (M1, M2, M3 do bloco antigo) como resolvidos:
 | 30.4 | `ensureDotenv` hack → carregar dotenv no startup | P2 | ⬜ |
 | 30.5 | `parseRawOnce` typed return | P3 | ⬜ |
 | 30.6 | Testes de regressão para cada fix | P2 | ⬜ |
+
+---
+
+## 🚀 Plano de Ataque — Prioridade por Fase
+
+**Data:** 2026-05-28
+**API Keys disponíveis (free):** OpenRouter, Cerebras, Gemini, Groq, NVIDIA, GitHub, HuggingFace
+
+### Fase 1A (P0) — Circuit Breaker Module + Half-Open ✅
+
+| ID | Item | Prio | Status |
+|----|------|------|--------|
+| 26.1 | Extrair circuit breaker → `shared/circuit-breaker.ts` (check,record,state,consts) | P0 | ✅ |
+| 26.2 | Half-open state: após cooldown → HALF_OPEN (não CLOSED) | P0 | ✅ |
+| 26.3 | HALF_OPEN: 1 probe request a cada 15s | P0 | ✅ |
+| 26.4 | Sucesso na probe → CLOSED; falha → OPEN | P0 | ✅ |
+| 26.5 | Exportar CircuitState, resetCircuitState, getCircuitState, HALF_OPEN_PROBE_INTERVAL_MS | P1 | ✅ |
+| 26.6 | Adaptar llm-client.ts para importar do novo módulo | P1 | ✅ |
+| 26.7 | Atualizar llm-client.test.ts (imports) — via re-export | P1 | ✅ |
+| 26.8 | Atualizar llm-pipeline.test.ts — via re-export | P1 | ✅ |
+| 26.9 | Testes dedicados do circuit breaker (10 testes) | P1 | ✅ |
+
+### Fase 1B (pesquisa) — API Xray Cloud GraphQL (paralelo) ✅
+
+| ID | Item | Prio | Status |
+|----|------|------|--------|
+| CLD-0 | Pesquisar Xray Cloud GraphQL mutation para importStep → `addTestStep` + `CreateStepInput` + auth JWT | P0 | ✅ |
+
+| ID | Item | Prio | Status |
+|----|------|------|--------|
+| CLD-0 | Pesquisar Xray Cloud GraphQL mutation para importStep | P0 | ⬜ |
+
+### Fase 2A (P1) — Output Sanitization
+
+| ID | Item | Prio | Status |
+|----|------|------|--------|
+| 27.1 | `sanitizeHtml(text)` em sanitize.ts (escape HTML) | P1 | ⬜ |
+| 27.2 | `sanitizeTerminal(text)` (remove ANSI escapes perigosos) | P1 | ⬜ |
+| 27.3 | Aplicar sanitizeTerminal em case18.ts:71 | P1 | ⬜ |
+| 27.4 | Aplicar sanitizeTerminal em llm-review.ts | P1 | ⬜ |
+| 27.5 | Aplicar sanitizeHtml no HTML report generator | P1 | ⬜ |
+| 27.6 | Testes dos 3 pontos de sanitização | P2 | ⬜ |
+
+### Fase 2B (P2) — Disk Cache (free-tier economy)
+
+| ID | Item | Prio | Status |
+|----|------|------|--------|
+| 28.1 | `diskCacheGet(key)` + `diskCacheSet(key, entry)` | P2 | ⬜ |
+| 28.2 | Env `LLM_DISK_CACHE_DIR` (default: $QA_TOOLS_LOGS_DIR/llm-cache) | P2 | ⬜ |
+| 28.3 | Lookup: L1(Map) → L2(disco) → LLM API | P2 | ⬜ |
+| 28.4 | Write: L1 + L2 simultâneo | P2 | ⬜ |
+| 28.5 | TTL: 1h disco, 5min memória | P2 | ⬜ |
+| 28.6 | Load lazy no primeiro acesso | P2 | ⬜ |
+| 28.7 | Testes com temp dir | P2 | ⬜ |
+
+### Fase 1C (P0) — Jira Cloud Mode (após pesquisa 1B)
+
+| ID | Item | Prio | Status |
+|----|------|------|--------|
+| CLD-1 | Implementar `CloudStepImporter.importStep()` com GraphQL via axios | P0 | ⬜ |
+| CLD-2 | Adicionar autenticação OAuth (client_id + client_secret) no Config | P0 | ⬜ |
+| CLD-3 | Testes: happy path + auth error + GraphQL error | P1 | ⬜ |
+| CLD-4 | Teste de integração smoke com `XRAY_MODE=cloud` | P2 | ⬜ |
+| CLD-5 | Consumir `XRAY_CLOUD_ENDPOINT` no `CloudStepImporter` | P2 | ⬜ |
+
+### Fase 3 (P1-P2) — Typed Errors + Test Coverage + Minor Fixes
+
+| ID | Item | Prio | Status |
+|----|------|------|--------|
+| 29.1 | `shared/errors.ts` com LlmError, LlmRateLimitError, LlmProviderError, LlmTimeoutError, LlmAuthError | P1 | ⬜ |
+| 29.2 | Substituir throw new Error nos 7 sites de llm-client.ts | P1 | ⬜ |
+| 29.3 | ReportValidator.validate() dentro de llmPrompt p/ responseFormat=json | P2 | ⬜ |
+| 29.4 | 1 retry com hint de schema se validação falhar | P2 | ⬜ |
+| 29.5 | Testes dos erros tipados | P2 | ⬜ |
+| 29.6 | Testes da validação automática | P2 | ⬜ |
+| 23.7 | runRetryLoop MAX_RETRIES exatas | P2 | ⬜ |
+| 23.8 | buildRetryPrompt content verification | P2 | ⬜ |
+| 23.10 | HTML report output verificado | P2 | ⬜ |
+| 23.15 | compareRuns empty data | P2 | ⬜ |
+| 23.16 | compareRuns sanitization verified | P2 | ⬜ |
+| 30.1 | `candidates[i]!` → guard `if (!cfg) continue` | P2 | ⬜ |
+| 30.2 | `Config.get()` typed + respeitar ConfigOverrides | P2 | ⬜ |
+| 30.3 | `console.log` → `Output.print` no benchmark (8 sites) | P2 | ⬜ |
+| 30.4 | `ensureDotenv` hack → carregar dotenv no startup | P2 | ⬜ |
+| 30.5 | `parseRawOnce` typed return | P3 | ⬜ |
+| 30.6 | Testes de regressão para cada fix | P2 | ⬜ |
+
+### Fase 4 (P2-P3) — Simplificação Restante
+
+| ID | Item | Prio | Status |
+|----|------|------|--------|
+| S6 | Consolidar `generateHtmlReport` wrapper | P2 | ⬜ |
+| S13 | 3× `.filter().length` → 1× `reduce` | P3 | ⬜ |
+| I1 | Teste de contrato: cada handler verifica chamadas shared/ | P2 | ⬜ |
+| I3 | Smoke test com asserções reais | P3 | ⬜ |
+| I6 | Script rastrear imports shared/ em produção | P2 | ⬜ |
+
+### Fase 5 (P0) — Re-audit Final
+
+| ID | Item | Prio | Status |
+|----|------|------|--------|
+| 25.1 | Re-audit llm-engineer (score >9.0) | P0 | ⬜ |
+
+### Providers Futuros (P4)
+
+| Provider | Tier Planejado | API Key | Status |
+|----------|---------------|---------|--------|
+| Cerebras | `ultra` — latência crítica | `CEREBRAS_API_KEY` | ⬜ |
+| HuggingFace | `community` — modelos especializados | `HUGGINGFACE_API_KEY` | ⬜ |
