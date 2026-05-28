@@ -1,3 +1,4 @@
+/** CSV parsing: single-step, bulk (multi-block), description/precondition/linked-issues extraction. */
 import fs from 'fs';
 import csv from 'csv-parser';
 import { Readable } from 'stream';

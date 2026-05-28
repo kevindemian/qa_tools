@@ -1,3 +1,4 @@
+/** Cypress Dashboard API client: fetch enterprise report data (pass/fail rates per project). */
 import { createHttpClient } from '../shared/http-client';
 import { rootLogger } from '../shared/logger';
 import { info, warn, success } from '../shared/prompt';

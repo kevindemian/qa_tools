@@ -1,3 +1,4 @@
+/** Generate mapping JSON files that link test titles to Jira issue keys after import. */
 import fs from 'fs';
 import path from 'path';
 import { rootLogger } from '../shared/logger';

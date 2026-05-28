@@ -1,3 +1,4 @@
+/** Jira test coverage analysis: check which test cases have test steps and which are missing them. */
 import type { JsonObject } from '../shared/types';
 import type JiraResource from './jira_resource';
 

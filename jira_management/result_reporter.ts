@@ -1,3 +1,4 @@
+/** Match test results to Jira issues via mapping JSON and create Test Executions. */
 import fs from 'fs';
 import { rootLogger } from '../shared/logger';
 // anti-circular (prompt → create_tests → session-context → prompt)
