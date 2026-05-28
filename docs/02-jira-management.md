@@ -585,6 +585,56 @@ Após gerar relatório HTML com falhas, a opção 17 pergunta: _"Deseja criar um
 
 ---
 
+## Aliases do menu
+
+Todos os comandos podem ser acionados por alias textual (em vez do número):
+
+| Alias(es)                                     | Resolve para | Operação                         |
+| --------------------------------------------- | ------------ | -------------------------------- |
+| `sair`, `exit`                                | `0`          | Sair                             |
+| `criar`, `criar-teste`, `criar-testes`, `t`   | `1`          | Criar testes a partir de CSV     |
+| `listar-versoes`, `versoes`, `r`              | `2`          | Listar versões                   |
+| `criar-versao`                                | `3`          | Criar nova versão                |
+| `atribuir-fixversion`, `fixversion`           | `4`          | Atribuir fixVersion              |
+| `atualizar-package`, `package`                | `5`          | Atualizar package.json           |
+| `verificar`, `status`                         | `6`          | Verificar status                 |
+| `fechar`                                      | `7`          | Fechar tarefas                   |
+| `publicar`, `release`                         | `8`          | Publicar versão                  |
+| `trocar-projeto`, `projeto`, `c`              | `9`          | Alterar projeto Jira             |
+| `trocar-diretorio`, `diretorio`               | `10`         | Alterar diretório git            |
+| `template`, `gerar-template`, `u`             | `11`         | Gerar template CSV               |
+| _(sem alias)_                                 | `12`         | Diagnosticar conexão             |
+| `testexec`, `criar-testexec`, `execucao`      | `13`         | Criar Test Execution             |
+| `diretorio-cypress`, `cypress`                | `14`         | Alterar diretório Cypress        |
+| `importar-json`, `json`                       | `15`         | Importar testes de JSON          |
+| `diretorio-json`                              | `16`         | Alterar diretório JSON           |
+| `relatorio`, `html`                           | `17`         | Gerar relatório HTML             |
+| `us`, `estoria`, `historia`                   | `18`         | Gerar testes via User Story (IA) |
+| `cobertura`                                   | `19`         | Histórico / Cobertura            |
+| `bug`, `bug-report`, `bugreport`, `criar-bug` | `20`         | Criar Bug Report                 |
+| `d`, `documentacao`, `docs`                   | `docs`       | Ver documentação                 |
+| `voltar`                                      | `/menu`      | Voltar ao menu principal         |
+| `ajuda`, `help`                               | `/help`      | Ajuda                            |
+
+---
+
+## Comandos especiais
+
+Durante qualquer prompt de texto (não só no menu), os seguintes comandos `/` estão disponíveis:
+
+| Comando                   | Descrição                                                                                    |
+| ------------------------- | -------------------------------------------------------------------------------------------- |
+| `/help` ou `/h`           | Exibe ajuda contextual geral com tópicos disponíveis                                         |
+| `/help <tópico>`          | Ajuda sobre um tópico específico (`csv`, `labels`, `group`, `precondition`, `project`, etc.) |
+| `/help search <termo>`    | Busca termo em todos os tópicos de ajuda                                                     |
+| `/home`                   | Exibe splash screen e retorna ao menu principal                                              |
+| `/back` ou `/menu`        | Volta ao menu principal (se em sub-menu) ou sai da aplicação (se no nível principal)         |
+| `/docs` ou `/d`           | Abre a documentação completa no navegador (converte Markdown → HTML em lote)                 |
+| `/history`                | Mostra tabela com as últimas 10 operações registradas                                        |
+| `/exit`, `/sair`, `/quit` | Encerra a sessão                                                                             |
+
+---
+
 ## Histórico de operações
 
 Todas as operações são registradas em `~/.local/state/qa_tools_state.json` com timestamp, operação, detalhe e status. As últimas 50 operações ficam disponíveis. O menu exibe contadores de operações ok/erro da sessão atual.
