@@ -3,6 +3,7 @@ import fs from 'fs';
 import path from 'path';
 import Config from './config';
 
+/** Numeric severity: DEBUG < INFO < WARN < ERROR. */
 const LEVELS: Record<string, number> = { DEBUG: 0, INFO: 1, WARN: 2, ERROR: 3 };
 const PREFIXES: Record<string, string> = { DEBUG: '\u00b7', INFO: 'i', WARN: '!', ERROR: 'ERR' };
 const COLOR_FNS: Record<string, (s: string) => string> = {
@@ -21,6 +22,9 @@ function maskValue(v: unknown): unknown {
     return v.length > MASK_MIN_LENGTH ? v.slice(0, MASK_VISIBLE_CHARS) + '****' : '****';
 }
 
+/** Recursively mask sensitive fields (token, secret, key, password, authorization) in an object.
+ * Strings shorter than 8 chars are fully masked; longer ones keep the first 4 chars visible.
+ * @returns A new object with masked values — original is not mutated. */
 export function maskDeep(obj: unknown): unknown {
     if (!obj || typeof obj !== 'object') return obj;
     const masked: Record<string, unknown> = {};
@@ -37,6 +41,7 @@ export function maskDeep(obj: unknown): unknown {
     return masked;
 }
 
+/** Structured logger with console + file output, level filtering, rotation, and context binding. */
 export class Logger {
     context: Record<string, unknown>;
     _logDir: string | null;
@@ -46,6 +51,8 @@ export class Logger {
     _maxLogSize: number;
     _config: Config | null;
 
+    /** @param context — Key-value pairs appended to every log line (e.g. `{ session: 'jira' }`).
+     * @param config — Optional config; falls back to {@link Config} globals when omitted. */
     constructor(context: Record<string, unknown> = {}, config?: Config) {
         this.context = context;
         this._logDir = null;
@@ -157,27 +164,37 @@ export class Logger {
         this._writeFile(level, msg, data);
     }
 
+    /** Create a child logger with merged context.
+     * The child inherits the parent's context and adds/replaces keys from `extra`.
+     * @example `logger.child({ operation: 'csv-import' }).info('started')` */
     child(extra: Record<string, unknown>): Logger {
         return new Logger({ ...this.context, ...extra }, this._config ?? undefined);
     }
 
+    /** Write to file only — no console output. Useful for structured logs not meant for the user. */
     writeFileOnly(level: string, msg: string): void {
         this._writeFile(level, msg);
     }
 
+    /** Log at DEBUG severity. */
     debug(msg: string, data?: unknown): void {
         this._write('DEBUG', msg, data);
     }
+    /** Log at INFO severity. */
     info(msg: string, data?: unknown): void {
         this._write('INFO', msg, data);
     }
+    /** Log at WARN severity. */
     warn(msg: string, data?: unknown): void {
         this._write('WARN', msg, data);
     }
+    /** Log at ERROR severity. */
     error(msg: string, data?: unknown): void {
         this._write('ERROR', msg, data);
     }
 
+    /** Get the resolved log file path (triggers dir creation on first access).
+     * @returns Full path to `qa-tools-YYYY-MM-DD.log` or `null` if file logging is disabled. */
     get filePath(): string | null {
         const logFile = this._config?.logFile ?? Config.logFile;
         if (!logFile) return null;
@@ -186,4 +203,5 @@ export class Logger {
     }
 }
 
+/** Global singleton logger with empty context. Prefer `rootLogger.child(...)` for scoped logging. */
 export const rootLogger = new Logger();

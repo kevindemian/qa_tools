@@ -1,3 +1,5 @@
+/** Per-session state: counters, results, busy flag, and history.
+ * Each command handler receives a {@link SessionContext} to track progress and build context lines. */
 import { withSpinner } from './prompt';
 
 interface SessionCountersItem {
@@ -12,6 +14,7 @@ interface TestResultSummary {
     message: string;
 }
 
+/** Tracks the current interactive session: operation history, results, busy flag, and project context. */
 export class SessionContext {
     isBusy: boolean;
     lastOperation: string;
@@ -36,10 +39,12 @@ export class SessionContext {
         this.results = [];
     }
 
+    /** Clear all result entries from the current session. */
     resetResults(): void {
         this.results = [];
     }
 
+    /** Run a function while marking the session as busy (shows a spinner if `label` is provided). */
     async withBusy<T>(fn: () => Promise<T>, label?: string): Promise<T> {
         const spinnerFn = withSpinner;
         this.isBusy = true;
@@ -51,11 +56,16 @@ export class SessionContext {
         }
     }
 
+    /** Record an operation in session history.
+     * @param op — Operation name (e.g. `'trocar-projeto'`).
+     * @param detail — Detail/result (e.g. `'NEWPROJ'`).
+     * @param status — `'ok'` or `'error'`. */
     pushHistory(op: string, detail: string, status: string): void {
         this.sessionCounters.push({ op, detail, status });
         this.lastOperation = op + ': ' + detail;
     }
 
+    /** Build a one-line status string for the UI: `"Project | Last Op | 3 ok · 1 erro"`. */
     buildContextLine(projectName?: string): string {
         const ok = this.sessionCounters.filter((c) => c.status === 'ok').length;
         const er = this.sessionCounters.filter((c) => c.status === 'error').length;

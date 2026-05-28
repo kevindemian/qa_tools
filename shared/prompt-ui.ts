@@ -1,3 +1,6 @@
+/** User-facing UI output: styled messages, tables, error formatting, and summary display.
+ * All output goes through {@link Output} (supports quiet/TTY modes).
+ * @module Use `import { success, error, printError, tableView } from './prompt-ui'`. */
 import chalk from 'chalk';
 import CliTable3 from 'cli-table3';
 import Config from './config';
@@ -10,14 +13,17 @@ import type { TestResult } from './types';
 
 let _config: Config | null = null;
 
+/** Override the config instance (used by tests). */
 export function __setConfig(c: Config): void {
     _config = c;
 }
 
+/** Get the current config instance (override or global singleton). */
 export function getConfig(): Config {
     return _config || Config.getDefault();
 }
 
+/** Whether the UI is in quiet mode (minimal output). */
 export const isQuiet = (): boolean => getConfig().quiet;
 
 const MSG_UNKNOWN_ERROR = 'Erro desconhecido';
@@ -27,6 +33,7 @@ const SUMMARY_BOX_WIDTH = 72;
 const STACK_TRACE_LINES = 4;
 const MIN_COLUMN_WIDTH = 3;
 
+/** Render a coloured badge like `● 3 passed`. */
 export function badge(count: number, label: string, status: 'ok' | 'error' | 'warn' | 'info'): string {
     const colors: Record<string, chalk.Chalk> = {
         ok: chalk.hex('#3fb950'),
@@ -39,6 +46,7 @@ export function badge(count: number, label: string, status: 'ok' | 'error' | 'wa
     return `${c(icon)} ${c(count + ' ' + label)}`;
 }
 
+/** Get a unicode icon (or fallback text) for a status. */
 export function icon(name: 'ok' | 'err' | 'warn' | 'info'): string {
     const useUnicode = !getConfig().quiet && Output.isTTY();
     if (useUnicode) {
@@ -58,30 +66,37 @@ function _log(level: LogLevel, color: chalk.Chalk, iconName: string, msg: string
     rootLogger.writeFileOnly(level, msg);
 }
 
+/** Print a green success message (quietOk=false — hidden in quiet mode). */
 export function success(msg: string): void {
     _log('INFO', chalk.green, 'ok', msg);
 }
 
+/** Print a red error message (quietOk=true — always shown). */
 export function error(msg: string): void {
     _log('ERROR', chalk.red, 'err', msg, true);
 }
 
+/** Print a yellow warning message (quietOk=true — always shown). */
 export function warn(msg: string): void {
     _log('WARN', chalk.yellow, 'warn', msg, true);
 }
 
+/** Print a cyan info message (quietOk=false). */
 export function info(msg: string): void {
     _log('INFO', chalk.cyan, 'info', msg);
 }
 
+/** Print a help hint (cyan, quietOk=false). */
 export function helpLine(msg: string): void {
     _log('HELP', chalk.cyan, 'info', msg);
 }
 
+/** Print a raw message to output (no colour/formatting). */
 export function print(msg: string): void {
     output.print(msg);
 }
 
+/** Print a styled section title with breadcrumb prefix. */
 export function title(msg: string): void {
     const path = getBreadcrumbPath();
     const prefix = path ? path + ' > ' : '';
@@ -93,6 +108,7 @@ export function title(msg: string): void {
     output.print(box([fullMsg], { border: 'none', padding: 0, width: TITLE_BOX_WIDTH }));
 }
 
+/** Print a horizontal divider line. */
 export function divider(): void {
     output.print(boxDivider());
 }
@@ -143,6 +159,8 @@ const KNOWN_ERRORS: KnownError[] = [
     { test: /already exists/i, msg: 'Item ja existe', hint: 'Escolha um nome diferente.' },
 ];
 
+/** Try to match an error message against known patterns and return a user-friendly description + hint.
+ * @returns `{ msg, hint }` or `null` if no pattern matches. */
 export function humanizeError(message: string | null | undefined): { msg: string; hint: string } | null {
     if (!message) return { msg: MSG_UNKNOWN_ERROR, hint: 'Verifique os logs acima para mais detalhes.' };
     for (const known of KNOWN_ERRORS) {
@@ -160,6 +178,7 @@ function isAxiosErrorData(data: unknown): data is AxiosErrorData {
     return typeof data === 'object' && data !== null && !Array.isArray(data);
 }
 
+/** Extract a human-readable message from an unknown error (axios errors, strings, Error objects). */
 export function extractErrorMessage(err: unknown): string {
     if (!err) return MSG_UNKNOWN_ERROR;
     try {
@@ -186,6 +205,8 @@ export function extractErrorMessage(err: unknown): string {
     }
 }
 
+/** Print a styled error box with context, humanized message, and recovery hint.
+ * In quiet mode, shows a compact single-line version. */
 export function printError(context: string, err: unknown): void {
     const raw = extractErrorMessage(err);
     const known = humanizeError(raw);
@@ -276,6 +297,7 @@ function renderVerboseFailure(
     output.print(box(errorLines, { border: 'single', color: 'yellow', padding: 0, width: SUMMARY_BOX_WIDTH }));
 }
 
+/** Print an end-of-run summary with pass/fail counts, percentage, and optional Test Execution key. */
 export function printSummary(results: TestResult[], testExecution?: string): void {
     const passed = results.filter((r) => r.status === 'ok').length;
     const failed = results.filter((r) => r.status === 'error').length;
@@ -317,6 +339,9 @@ function _showErrorDetails(err: unknown): void {
     divider();
 }
 
+/** Prompt the user for an action after an error: Retry, Skip, Abort, or Details.
+ * In auto-confirm mode always returns the configured `onError` action instead of prompting.
+ * @internal Async only to match the callback signature used by callers. */
 // eslint-disable-next-line @typescript-eslint/require-await
 export async function onError(
     context: string,
@@ -361,6 +386,8 @@ export async function onError(
 
 import readlineSync from 'readline-sync';
 
+/** Thrown when the user enters a navigation command (`/back`, `/menu`, `/exit`).
+ * Caught by the main loop to switch screens. */
 export class CancelError extends Error {
     cmd: string;
     constructor(cmd: string) {
@@ -430,6 +457,8 @@ function colorizeRowCells(keys: string[], row: Record<string, unknown>, statusCo
     });
 }
 
+/** Render a table of records using cli-table3 with coloured status column.
+ * Handles empty/null data gracefully (shows warning). */
 export function tableView<T extends Record<string, unknown>>(
     data: T[] | null | undefined,
     columns?: string[],
