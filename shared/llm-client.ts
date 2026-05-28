@@ -4,6 +4,7 @@ import { rootLogger } from './logger';
 import { sanitizeForLlm } from './sanitize';
 import { checkCircuitBreaker, recordCircuitFailure, recordCircuitSuccess } from './circuit-breaker';
 import { diskCacheGet, diskCacheSet, clearDiskCache } from './disk-cache';
+import { LlmError, LlmProviderError, LlmRateLimitError, LlmAuthError } from './errors';
 
 /**
  * Multi-tier LLM client with automatic fallback, caching, rate limiting,
@@ -316,11 +317,11 @@ async function fetchWithRetry(url: string, options: RequestInit, retries = getFe
             }
         }
         const body = await resp.text().catch(() => '');
-        throw new Error(
+        throw new LlmProviderError(
             'LLM API error: HTTP ' + resp.status + ' ' + sanitizeForLlm(body).slice(0, LLM_ERROR_BODY_TRUNCATION),
         );
     }
-    throw new Error('LLM max retries exceeded');
+    throw new LlmError('LLM max retries exceeded');
 }
 
 function checkRateLimit(tier: LlmTier): void {
@@ -329,7 +330,7 @@ function checkRateLimit(tier: LlmTier): void {
     const timestamps = _rateTimestamps.get(tier) || [];
     const windowed = timestamps.filter((t) => now - t < LLM_RATE_WINDOW_MS);
     if (windowed.length >= limit) {
-        throw new Error(
+        throw new LlmRateLimitError(
             'Client-side rate limit exceeded for tier ' +
                 tier +
                 ' (' +
@@ -363,7 +364,7 @@ export function parseRetryAfter(resp: Response, defaultMs: number): number {
 
 async function sendToProvider(cfg: ProviderConfig, system: string, user: string): Promise<string> {
     checkCircuitBreaker(configUniqueKey(cfg));
-    if (!cfg.apiKey) throw new Error('API key missing for tier');
+    if (!cfg.apiKey) throw new LlmAuthError('API key missing for tier');
 
     const url =
         cfg.format === 'gemini'
@@ -394,7 +395,7 @@ async function sendToProvider(cfg: ProviderConfig, system: string, user: string)
     if (errPayload) {
         const msg =
             typeof errPayload === 'string' ? errPayload : (errPayload.message as string) || JSON.stringify(errPayload);
-        throw new Error('LLM API error: ' + msg);
+        throw new LlmProviderError('LLM API error: ' + msg);
     }
 
     _trackUsage(data, configUniqueKey(cfg));
@@ -450,7 +451,7 @@ async function sendWithFallback(
         }
     }
 
-    throw new Error('All LLM providers failed: ' + errors.join('; '));
+    throw new LlmProviderError('All LLM providers failed: ' + errors.join('; '));
 }
 
 /**

@@ -942,27 +942,27 @@ Também marcar o AUDIO-01 (M1, M2, M3 do bloco antigo) como resolvidos:
 | CLD-4 | Teste de integração smoke com `XRAY_MODE=cloud` | P2 | ⬜ |
 | CLD-5 | Consumir `XRAY_CLOUD_ENDPOINT` no `CloudStepImporter` | P2 | ✅ |
 
-### Fase 3 (P1-P2) — Typed Errors + Test Coverage + Minor Fixes
+### Fase 3 (P1-P2) — Typed Errors + Test Coverage + Minor Fixes ✅
 
 | ID | Item | Prio | Status |
 |----|------|------|--------|
-| 29.1 | `shared/errors.ts` com LlmError, LlmRateLimitError, LlmProviderError, LlmTimeoutError, LlmAuthError | P1 | ⬜ |
-| 29.2 | Substituir throw new Error nos 7 sites de llm-client.ts | P1 | ⬜ |
+| 29.1 | `shared/errors.ts` com LlmError, LlmRateLimitError, LlmProviderError, LlmTimeoutError, LlmAuthError | P1 | ✅ |
+| 29.2 | Substituir throw new Error nos 6 sites de llm-client.ts → LlmProviderError, LlmRateLimitError, LlmAuthError | P1 | ✅ |
 | 29.3 | ReportValidator.validate() dentro de llmPrompt p/ responseFormat=json | P2 | ⬜ |
 | 29.4 | 1 retry com hint de schema se validação falhar | P2 | ⬜ |
-| 29.5 | Testes dos erros tipados | P2 | ⬜ |
+| 29.5 | Testes dos erros tipados (7 testes) | P2 | ✅ |
 | 29.6 | Testes da validação automática | P2 | ⬜ |
-| 23.7 | runRetryLoop MAX_RETRIES exatas | P2 | ⬜ |
-| 23.8 | buildRetryPrompt content verification | P2 | ⬜ |
-| 23.10 | HTML report output verificado | P2 | ⬜ |
-| 23.15 | compareRuns empty data | P2 | ⬜ |
-| 23.16 | compareRuns sanitization verified | P2 | ⬜ |
-| 30.1 | `candidates[i]!` → guard `if (!cfg) continue` | P2 | ⬜ |
+| 23.7 | runRetryLoop MAX_RETRIES exatas (já testado) | P2 | ✅ |
+| 23.8 | buildRetryPrompt content verification (já testado) | P2 | ✅ |
+| 23.10 | HTML report output verificado (já testado) | P2 | ✅ |
+| 23.15 | compareRuns empty data (já testado) | P2 | ✅ |
+| 23.16 | compareRuns sanitization verified (já testado) | P2 | ✅ |
+| 30.1 | `candidates[i]!` → guard `if (!cfg) continue` (já existente) | P2 | ✅ |
 | 30.2 | `Config.get()` typed + respeitar ConfigOverrides | P2 | ⬜ |
-| 30.3 | `console.log` → `Output.print` no benchmark (8 sites) | P2 | ⬜ |
+| 30.3 | `console.log` → `Output.print` no benchmark (0 sites, já Output) | P2 | ✅ |
 | 30.4 | `ensureDotenv` hack → carregar dotenv no startup | P2 | ⬜ |
 | 30.5 | `parseRawOnce` typed return | P3 | ⬜ |
-| 30.6 | Testes de regressão para cada fix | P2 | ⬜ |
+| 30.6 | Testes de regressão para cada fix | P2 | ✅ |
 
 ### Fase 4 (P2-P3) — Simplificação Restante
 
