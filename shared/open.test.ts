@@ -161,6 +161,29 @@ describe('getOsOpenCommand (platform detection)', () => {
         expect(result).toEqual({ cmd: 'cmd', args: ['/c', 'start', '', 'C:\\file.html'] });
     });
 
+    it('falls back to xdg-open for WSL when toWinPath returns null', () => {
+        jest.doMock('fs', () => ({
+            ...jest.requireActual('fs'),
+            readFileSync: jest.fn().mockReturnValue('Linux version ... Microsoft ...'),
+        }));
+        jest.doMock('child_process', () => {
+            const actual = jest.requireActual('child_process');
+            return {
+                ...actual,
+                execSync: jest.fn().mockImplementation(() => {
+                    throw new Error('ENOENT');
+                }),
+            };
+        });
+
+        const os = require('os');
+        os.platform.mockReturnValue('linux');
+        const { getOsOpenCommand } = require('./open');
+
+        const result = getOsOpenCommand('/home/user/file.html');
+        expect(result).toEqual({ cmd: 'xdg-open', args: ['/home/user/file.html'] });
+    });
+
     it('returns null for unknown platform', () => {
         const os = require('os');
         os.platform.mockReturnValue('aix');
@@ -198,6 +221,29 @@ describe('getWinTempDir', () => {
         const result = getWinTempDir();
         process.env.TEMP = ORIG_TEMP;
         expect(result).toBe('/mnt/c/Users/Test/Temp');
+    });
+
+    it('returns TMP when TEMP not set and TMP has Linux path', () => {
+        const ORIG_TEMP = process.env.TEMP;
+        const ORIG_TMP = process.env.TMP;
+        delete process.env.TEMP;
+        process.env.TMP = '/mnt/c/Users/Test/Tmp';
+        const result = getWinTempDir();
+        process.env.TEMP = ORIG_TEMP;
+        process.env.TMP = ORIG_TMP;
+        expect(result).toBe('/mnt/c/Users/Test/Tmp');
+    });
+
+    it('converts cmd.exe TEMP output to WSL path on success', () => {
+        const ORIG_TEMP = process.env.TEMP;
+        const ORIG_TMP = process.env.TMP;
+        delete process.env.TEMP;
+        delete process.env.TMP;
+        mockExecSync.mockReturnValue('C:\\Users\\Test\\AppData\\Local\\Temp\n');
+        const result = getWinTempDir();
+        process.env.TEMP = ORIG_TEMP;
+        process.env.TMP = ORIG_TMP;
+        expect(result).toBe('/mnt/c/Users/Test/AppData/Local/Temp');
     });
 
     it('returns null when TEMP/TMP empty and cmd.exe fails', () => {
@@ -259,6 +305,24 @@ describe('getDocsOutputDir', () => {
         const result = gdoDir();
         process.env.TEMP = ORIG_TEMP;
         expect(result).toBeNull();
+    });
+
+    it('returns WSL temp path when on WSL and getWinTempDir succeeds', () => {
+        jest.resetModules();
+        jest.doMock('fs', () => {
+            const actual = jest.requireActual('fs');
+            return { ...actual, readFileSync: jest.fn().mockReturnValue('Linux version ... Microsoft ...') };
+        });
+        jest.doMock('child_process', () => {
+            const actual = jest.requireActual('child_process');
+            return { ...actual, execSync: jest.fn().mockReturnValue('C:\\Users\\Test\\Temp\n') };
+        });
+        const { getDocsOutputDir: gdoDir } = require('./open');
+        const ORIG_TEMP = process.env.TEMP;
+        delete process.env.TEMP;
+        const result = gdoDir();
+        process.env.TEMP = ORIG_TEMP;
+        expect(result).toMatch(/qa_tools_docs$/);
     });
 
     it('uses QA_TOOLS_TEMP_DIR when set', () => {

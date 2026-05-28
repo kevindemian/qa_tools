@@ -25,6 +25,17 @@ describe('palette', () => {
         expect(palette.palette).toBeDefined();
     });
 
+    it('uses chalk.hex when chalk.level >= 2', () => {
+        jest.isolateModules(() => {
+            const chalk = require('chalk');
+            const origLevel = chalk.level;
+            chalk.level = 2;
+            const { palette: p } = require('./palette') as { palette: Record<string, (...args: unknown[]) => string> };
+            expect(p.fg!('text')).toContain('text');
+            chalk.level = origLevel;
+        });
+    });
+
     it('palette colors render text', () => {
         const { palette } = require('./palette') as { palette: Record<string, (...args: unknown[]) => string> };
         for (const key of Object.keys(palette)) {
