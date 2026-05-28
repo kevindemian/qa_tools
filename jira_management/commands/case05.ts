@@ -1,3 +1,4 @@
+/** Update package version and prepend release notes. */
 import { success, warn, ask, printError } from '../../shared/prompt';
 import { rootLogger } from '../../shared/logger';
 import type { CommandContext } from './context';

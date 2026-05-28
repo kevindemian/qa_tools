@@ -1,3 +1,4 @@
+/** CSV/JSON import preparation — validate inputs, check Jira project/existing tests, and create task IDs. */
 import * as fs from 'fs';
 import * as path from 'path';
 import { md } from '../shared/markdown';

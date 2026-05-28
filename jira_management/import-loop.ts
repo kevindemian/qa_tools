@@ -1,3 +1,4 @@
+/** Import loop — iterates over test cases, creates/fetches issues, and updates state. */
 import type { JsonObject, TestCase, TestResult } from '../shared/types';
 import type TestCaseFactory from './test-case-factory';
 import type IssueLinker from './issue-linker';

@@ -1,3 +1,4 @@
+/** Command context — dependency injection for all handlers (DIP pattern). */
 import type JiraResource from '../jira_resource';
 import type JiraLinkManager from '../jira_link_manager';
 import type CsvResource from '../csv_resource';

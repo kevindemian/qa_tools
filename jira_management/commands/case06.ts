@@ -1,3 +1,4 @@
+/** Check release-task status — verify all issues for a version are resolved. */
 import { ask, printError } from '../../shared/prompt';
 import { rootLogger } from '../../shared/logger';
 import type { CommandContext } from './context';

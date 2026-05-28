@@ -1,3 +1,4 @@
+/** View project versions from Jira. */
 import { info, error, divider, printError } from '../../shared/prompt';
 import { rootLogger } from '../../shared/logger';
 import type { CommandContext } from './context';

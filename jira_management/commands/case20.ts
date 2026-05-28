@@ -1,3 +1,4 @@
+/** Interactive bug-report flow — collect details and create Jira issue. */
 import { printError, title } from '../../shared/prompt';
 import { collectManual, interactiveBugReportFlow } from '../../shared/bug-report';
 import type { CommandContext } from './context';

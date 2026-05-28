@@ -1,3 +1,4 @@
+/** Change the active Jira project name. */
 import { success, warn, ask } from '../../shared/prompt';
 import { update as updateState } from '../../shared/state';
 import type { CommandContext } from './context';

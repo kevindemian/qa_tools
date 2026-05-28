@@ -1,3 +1,4 @@
+/** Create a new version in the Jira project. */
 import { warn, ask, printError } from '../../shared/prompt';
 import { rootLogger } from '../../shared/logger';
 import type { CommandContext } from './context';

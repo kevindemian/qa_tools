@@ -1,3 +1,4 @@
+/** Command registry — maps case IDs (01-20 + exit) to handler modules. */
 import type { CommandContext } from './context';
 import case01 from './case01';
 import case02 from './case02';

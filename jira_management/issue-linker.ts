@@ -1,3 +1,4 @@
+/** Issue linker — links test issues to requirements/stories and associates pre-conditions. */
 import chalk from 'chalk';
 import { success, isQuiet, onError, print } from '../shared/prompt';
 import { rootLogger } from '../shared/logger';

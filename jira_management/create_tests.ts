@@ -1,3 +1,4 @@
+/** Create tests — orchestrate CSV/JSON import, issue creation, linking, and test execution reporting. */
 import type JiraResource from './jira_resource';
 import JiraLinkManager from './jira_link_manager';
 import type CsvResource from './csv_resource';

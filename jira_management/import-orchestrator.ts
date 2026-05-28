@@ -1,3 +1,4 @@
+/** Import orchestrator: coordinates CSV parsing, test-case creation, issue linking, and result reporting. */
 import type JiraResource from './jira_resource';
 import JiraLinkManager from './jira_link_manager';
 import type { TestCase, TestResult } from '../shared/types';

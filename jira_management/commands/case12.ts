@@ -1,3 +1,4 @@
+/** Diagnose Jira/Xray connection by probing key endpoints. */
 import { title, printSummary, divider, badge, tableView } from '../../shared/prompt';
 import { sanitizeUrl } from '../../shared/cli_base';
 import { palette } from '../../shared/palette';

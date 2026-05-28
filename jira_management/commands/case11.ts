@@ -1,3 +1,4 @@
+/** Generate a CSV template file from the built-in template. */
 import { success, error, ask } from '../../shared/prompt';
 import fs from 'fs';
 import path from 'path';
