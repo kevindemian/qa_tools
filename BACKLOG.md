@@ -909,20 +909,16 @@ Também marcar o AUDIO-01 (M1, M2, M3 do bloco antigo) como resolvidos:
 |----|------|------|--------|
 | CLD-0 | Pesquisar Xray Cloud GraphQL mutation para importStep → `addTestStep` + `CreateStepInput` + auth JWT | P0 | ✅ |
 
-| ID | Item | Prio | Status |
-|----|------|------|--------|
-| CLD-0 | Pesquisar Xray Cloud GraphQL mutation para importStep | P0 | ⬜ |
-
-### Fase 2A (P1) — Output Sanitization
+### Fase 2A (P1) — Output Sanitization ✅
 
 | ID | Item | Prio | Status |
 |----|------|------|--------|
-| 27.1 | `sanitizeHtml(text)` em sanitize.ts (escape HTML) | P1 | ⬜ |
-| 27.2 | `sanitizeTerminal(text)` (remove ANSI escapes perigosos) | P1 | ⬜ |
-| 27.3 | Aplicar sanitizeTerminal em case18.ts:71 | P1 | ⬜ |
-| 27.4 | Aplicar sanitizeTerminal em llm-review.ts | P1 | ⬜ |
-| 27.5 | Aplicar sanitizeHtml no HTML report generator | P1 | ⬜ |
-| 27.6 | Testes dos 3 pontos de sanitização | P2 | ⬜ |
+| 27.1 | `sanitizeHtml(text)` em sanitize.ts (escape HTML) | P1 | ✅ |
+| 27.2 | `sanitizeTerminal(text)` (remove ANSI escapes perigosos) | P1 | ✅ |
+| 27.3 | Aplicar sanitizeTerminal em case18.ts:71 | P1 | ✅ |
+| 27.4 | Aplicar sanitizeTerminal em llm-review.ts | P1 | ✅ |
+| 27.5 | Aplicar sanitizeHtml no HTML report generator (já existia escapeHtml) | P1 | ✅ |
+| 27.6 | Testes dos 6 pontos de sanitização | P2 | ✅ |
 
 ### Fase 2B (P2) — Disk Cache (free-tier economy)
 

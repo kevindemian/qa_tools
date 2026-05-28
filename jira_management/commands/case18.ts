@@ -2,7 +2,7 @@ import fs from 'fs';
 import path from 'path';
 import { ask, warn, info, printError, title, divider } from '../../shared/prompt';
 import { llmPrompt } from '../../shared/llm-client';
-import { sanitizeForLlm } from '../../shared/sanitize';
+import { sanitizeForLlm, sanitizeTerminal } from '../../shared/sanitize';
 import { rootLogger } from '../../shared/logger';
 import type { CommandContext } from './context';
 
@@ -71,7 +71,7 @@ async function handler(c: CommandContext): Promise<boolean | void> {
     divider();
     info('Testes gerados:');
     divider();
-    info(result);
+    info(sanitizeTerminal(result));
     divider();
 
     c.pushHistory('ai-generate-tests', `user story: ${userStory.slice(0, 60)}`, 'ok');

@@ -39,3 +39,22 @@ export function truncateStacktrace(input: string, maxLines: number = 20): string
     if (lines.length <= maxLines) return input;
     return lines.slice(0, maxLines).join('\n') + '\n[... truncated (' + (lines.length - maxLines) + ' more lines) ...]';
 }
+
+const HTML_ESCAPE_MAP: Record<string, string> = {
+    '&': '&amp;',
+    '<': '&lt;',
+    '>': '&gt;',
+    '"': '&quot;',
+    "'": '&#39;',
+};
+
+export function sanitizeHtml(text: string): string {
+    return text.replace(/[&<>"']/g, (ch) => HTML_ESCAPE_MAP[ch] || ch);
+}
+
+const ESC = String.fromCharCode(27);
+const ANSI_ESCAPE_RE = new RegExp(ESC + '\\[[0-9;]*[a-zA-Z]', 'g');
+
+export function sanitizeTerminal(text: string): string {
+    return text.replace(ANSI_ESCAPE_RE, '');
+}

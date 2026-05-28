@@ -1,4 +1,4 @@
-import { sanitizeForLlm, truncateStacktrace } from './sanitize';
+import { sanitizeForLlm, truncateStacktrace, sanitizeHtml, sanitizeTerminal } from './sanitize';
 
 describe('sanitizeForLlm', () => {
     it('sanitizes Bearer tokens', () => {
@@ -120,5 +120,44 @@ describe('sanitizeForLlm — realistic scenarios', () => {
     it('passes through normal test run metrics', () => {
         const metrics = 'Project: acme\nTotal: 50\nPassed: 48\nFailed: 2\nDuration: 1234ms';
         expect(sanitizeForLlm(metrics)).toBe(metrics);
+    });
+});
+
+describe('sanitizeHtml', () => {
+    it('escapes HTML special characters', () => {
+        const input = '<script>alert("xss")</script>';
+        const result = sanitizeHtml(input);
+        expect(result).not.toContain('<');
+        expect(result).not.toContain('>');
+        expect(result).not.toContain('"');
+        expect(result).toContain('&lt;');
+        expect(result).toContain('&gt;');
+        expect(result).toContain('&quot;');
+    });
+
+    it('escapes ampersands first', () => {
+        expect(sanitizeHtml('&')).toBe('&amp;');
+    });
+
+    it('passes through safe text unchanged', () => {
+        const safe = 'Hello, world! Normal text 123.';
+        expect(sanitizeHtml(safe)).toBe(safe);
+    });
+});
+
+describe('sanitizeTerminal', () => {
+    it('removes ANSI escape sequences', () => {
+        const input = '\x1B[31mred\x1B[0m';
+        expect(sanitizeTerminal(input)).toBe('red');
+    });
+
+    it('passes through plain text unchanged', () => {
+        const plain = 'plain text with no escapes';
+        expect(sanitizeTerminal(plain)).toBe(plain);
+    });
+
+    it('handles multiple ANSI sequences', () => {
+        const input = '\x1B[1m\x1B[32mbold green\x1B[0m';
+        expect(sanitizeTerminal(input)).toBe('bold green');
     });
 });
