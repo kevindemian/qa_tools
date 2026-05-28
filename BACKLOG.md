@@ -932,15 +932,15 @@ Também marcar o AUDIO-01 (M1, M2, M3 do bloco antigo) como resolvidos:
 | 28.6 | `clearDiskCache` + `clearCache` limpa ambos | P2 | ✅ |
 | 28.7 | Testes (5) com temp dir + expiry + overwrite | P2 | ✅ |
 
-### Fase 1C (P0) — Jira Cloud Mode (após pesquisa 1B)
+### Fase 1C (P0) — Jira Cloud Mode (após pesquisa 1B) ✅
 
 | ID | Item | Prio | Status |
 |----|------|------|--------|
-| CLD-1 | Implementar `CloudStepImporter.importStep()` com GraphQL via axios | P0 | ⬜ |
-| CLD-2 | Adicionar autenticação OAuth (client_id + client_secret) no Config | P0 | ⬜ |
-| CLD-3 | Testes: happy path + auth error + GraphQL error | P1 | ⬜ |
+| CLD-1 | Implementar `CloudStepImporter.importStep()` com GraphQL via axios | P0 | ✅ |
+| CLD-2 | Adicionar autenticação OAuth (client_id + client_secret) no Config | P0 | ✅ |
+| CLD-3 | Testes: happy path + auth error + GraphQL error | P1 | ✅ |
 | CLD-4 | Teste de integração smoke com `XRAY_MODE=cloud` | P2 | ⬜ |
-| CLD-5 | Consumir `XRAY_CLOUD_ENDPOINT` no `CloudStepImporter` | P2 | ⬜ |
+| CLD-5 | Consumir `XRAY_CLOUD_ENDPOINT` no `CloudStepImporter` | P2 | ✅ |
 
 ### Fase 3 (P1-P2) — Typed Errors + Test Coverage + Minor Fixes
 

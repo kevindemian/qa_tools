@@ -62,6 +62,8 @@ interface ConfigOverrides {
     llmBatchApiKey?: string;
     llmBatchModel?: string;
     llmBatchBaseUrl?: string;
+    xrayClientId?: string;
+    xrayClientSecret?: string;
 }
 
 function toBool(val: string | boolean | undefined): boolean {
@@ -115,6 +117,12 @@ class Config {
             throw new Error(`Invalid XRAY_MODE: "${val}". Must be "server" or "cloud".`);
         }
         return val;
+    }
+    get xrayClientId(): string {
+        return this.overrides.xrayClientId ?? envVal('XRAY_CLIENT_ID');
+    }
+    get xrayClientSecret(): string {
+        return this.overrides.xrayClientSecret ?? envVal('XRAY_CLIENT_SECRET');
     }
     get jiraProject(): string {
         return this.overrides.jiraProject ?? envVal('JIRA_PROJECT', 'ECSPOL');
