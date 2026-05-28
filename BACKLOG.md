@@ -920,17 +920,17 @@ Também marcar o AUDIO-01 (M1, M2, M3 do bloco antigo) como resolvidos:
 | 27.5 | Aplicar sanitizeHtml no HTML report generator (já existia escapeHtml) | P1 | ✅ |
 | 27.6 | Testes dos 6 pontos de sanitização | P2 | ✅ |
 
-### Fase 2B (P2) — Disk Cache (free-tier economy)
+### Fase 2B (P2) — Disk Cache (free-tier economy) ✅
 
 | ID | Item | Prio | Status |
 |----|------|------|--------|
-| 28.1 | `diskCacheGet(key)` + `diskCacheSet(key, entry)` | P2 | ⬜ |
-| 28.2 | Env `LLM_DISK_CACHE_DIR` (default: $QA_TOOLS_LOGS_DIR/llm-cache) | P2 | ⬜ |
-| 28.3 | Lookup: L1(Map) → L2(disco) → LLM API | P2 | ⬜ |
-| 28.4 | Write: L1 + L2 simultâneo | P2 | ⬜ |
-| 28.5 | TTL: 1h disco, 5min memória | P2 | ⬜ |
-| 28.6 | Load lazy no primeiro acesso | P2 | ⬜ |
-| 28.7 | Testes com temp dir | P2 | ⬜ |
+| 28.1 | `diskCacheGet(key)` + `diskCacheSet(key, entry)` | P2 | ✅ |
+| 28.2 | Env `LLM_DISK_CACHE_DIR` (default `.llm-cache`) | P2 | ✅ |
+| 28.3 | Lookup: L1(Map) → L2(disco) → LLM API | P2 | ✅ |
+| 28.4 | Write: L1 + L2 simultâneo | P2 | ✅ |
+| 28.5 | TTL: 1h disco, 5min memória | P2 | ✅ |
+| 28.6 | `clearDiskCache` + `clearCache` limpa ambos | P2 | ✅ |
+| 28.7 | Testes (5) com temp dir + expiry + overwrite | P2 | ✅ |
 
 ### Fase 1C (P0) — Jira Cloud Mode (após pesquisa 1B)
 

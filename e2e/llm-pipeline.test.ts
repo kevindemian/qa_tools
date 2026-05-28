@@ -13,7 +13,11 @@ jest.mock('../shared/llm-client', () => ({
     resetCircuitState: jest.fn(),
     resetRateLimiter: jest.fn(),
 }));
-jest.mock('../shared/sanitize', () => ({ sanitizeForLlm: (s: string) => s }));
+jest.mock('../shared/sanitize', () => ({
+    sanitizeForLlm: (s: string) => s,
+    sanitizeTerminal: (s: string) => s,
+    sanitizeHtml: (s: string) => s,
+}));
 
 import { llmPrompt } from '../shared/llm-client';
 import { reviewWithLlm } from '../shared/llm-review';
