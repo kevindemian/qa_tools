@@ -64,6 +64,14 @@ Issues registradas durante refatorações, postergadas por escopo.
 | `shared/report-generator.ts`         | 🚧     | 14             |
 | `git_triggers/batch-mode.ts`         | 🚧     | 10             |
 
+### P0 — User docs desatualizadas (gap docs vs código)
+
+| Item                                                  | Status | Esforço |
+| ----------------------------------------------------- | ------ | ------- |
+| Batch 1: README + 5 docs (incorretos/críticos)        | 🚧     | 2h      |
+| Batch 2: Aliases, comandos especiais, UX features     | 🚧     | 1h      |
+| Batch 3: Documentar `setup/` wizard (doc #10) + fluxo | 🚧     | 2h      |
+
 ### P2 — Fechar 16 arquivos com 1 stmt descoberto
 
 | Item                                          | Stmt descoberto                      |
