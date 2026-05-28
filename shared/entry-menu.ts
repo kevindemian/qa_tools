@@ -1,3 +1,9 @@
+/** Entry-point module selector for the QA Tools CLI.
+ * Displays a splash screen and lets the user choose between
+ * Jira Management and Git Triggers. Each module is spawned as a
+ * child process via `tsx` for clean state isolation.
+ * Falls back to usage instructions in non-TTY/CI environments. */
+
 import { spawn } from 'child_process';
 import { showSplash } from './splash';
 import { showSelect } from './prompt';
@@ -6,6 +12,9 @@ import { join } from 'path';
 
 const root = join(__dirname, '..');
 
+/** Spawn a module as a child process. Each module (`jira` or `git`) runs in
+ * its own process with inherited stdio and isolated state. Resolves on clean
+ * exit (code 0), rejects on non-zero exit or spawn error. */
 export async function runModule(module: 'jira' | 'git'): Promise<void> {
     const script = module === 'jira' ? 'jira_management/main.ts' : 'git_triggers/main.ts';
     return new Promise<void>((resolve, reject) => {

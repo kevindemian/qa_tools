@@ -1,3 +1,8 @@
+/** Tri-state circuit breaker for LLM provider resilience.
+ * CLOSED → normal operation. OPEN → failures exceeded threshold, reject immediately.
+ * HALF_OPEN → cooldown elapsed, allow one probe request before deciding.
+ * Tracks per-provider via a config key string. */
+
 export type CircuitState = 'CLOSED' | 'OPEN' | 'HALF_OPEN';
 
 interface CircuitEntry {
@@ -8,8 +13,11 @@ interface CircuitEntry {
 
 const store = new Map<string, CircuitEntry>();
 
+/** Consecutive failures before tripping the breaker. */
 export const CIRCUIT_BREAK_THRESHOLD = 5;
+/** Duration (ms) the breaker stays OPEN before transitioning to HALF_OPEN. */
 export const CIRCUIT_BREAK_MS = 30000;
+/** Minimum interval (ms) between probe requests in HALF_OPEN state. */
 export const HALF_OPEN_PROBE_INTERVAL_MS = 15000;
 
 function entry(cfgKey: string): CircuitEntry {
@@ -21,6 +29,7 @@ function entry(cfgKey: string): CircuitEntry {
     return e;
 }
 
+/** Read the current circuit state for a provider config key. Never throws. */
 export function getCircuitState(cfgKey: string): CircuitState {
     const e = entry(cfgKey);
     if (e.failures < CIRCUIT_BREAK_THRESHOLD) return 'CLOSED';
@@ -28,6 +37,8 @@ export function getCircuitState(cfgKey: string): CircuitState {
     return 'HALF_OPEN';
 }
 
+/** Check circuit state and throw if requests should be blocked (OPEN or probe-constrained HALF_OPEN).
+ * Updates the probe timestamp when a HALF_OPEN check passes. */
 export function checkCircuitBreaker(cfgKey: string): void {
     const state = getCircuitState(cfgKey);
     if (state === 'OPEN') {
@@ -50,6 +61,7 @@ export function checkCircuitBreaker(cfgKey: string): void {
     }
 }
 
+/** Record a failure for the provider key. Trips the breaker if threshold is reached. */
 export function recordCircuitFailure(cfgKey: string): void {
     const e = entry(cfgKey);
     e.failures++;
@@ -58,6 +70,7 @@ export function recordCircuitFailure(cfgKey: string): void {
     }
 }
 
+/** Record a success for the provider key. Resets the breaker to CLOSED. */
 export function recordCircuitSuccess(cfgKey: string): void {
     const e = entry(cfgKey);
     e.failures = 0;
@@ -65,6 +78,7 @@ export function recordCircuitSuccess(cfgKey: string): void {
     e.lastProbeAt = 0;
 }
 
+/** Clear all circuit state. Used in tests and when provider configuration changes. */
 export function resetCircuitState(): void {
     store.clear();
 }

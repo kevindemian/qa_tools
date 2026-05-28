@@ -99,6 +99,15 @@ Issues registradas durante refatorações, postergadas por escopo.
 | `shared/prompts/user-story-to-tests.md` — fix example PT→EN    | ✅     |
 | Tests: `bug-report.schema.test.ts` + `bug-report.test.ts`      | ✅     |
 
+### P1 — JSDoc/TSDoc documentation gaps (audit 2026-05-28)
+
+| Item                                                                | Status |
+| ------------------------------------------------------------------- | ------ |
+| Batch 1: `bug-report.ts` (null rationale) + 4 small files zero doc  | ✅     |
+| Batch 2: `llm-metrics.ts` + `entry-menu.ts`                         | ✅     |
+| Batch 3: `markdown.ts` (module doc) + `create_tests.ts` (SRP break) | 🚧     |
+| Batch 4: handler JSDoc (`pipeline-handler`, `mr-handler`, caseXX)   | 🚧     |
+
 ### P2 — Handler test files ausentes (16 handlers + theme.ts)
 
 | Item                                                     | Status |
