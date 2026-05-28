@@ -41,6 +41,32 @@ describe('generateFlakinessHtml', () => {
         expect(html).toContain('Flakiness Dashboard');
     });
 
+    it('shows status-medium for entries below 50% rate', () => {
+        const entries: FlakinessEntry[] = [
+            { title: 'Mild', passCount: 7, failCount: 3, skipCount: 0, totalRuns: 10, rate: 0.3 },
+        ];
+
+        const html = generateFlakinessHtml(entries);
+        expect(html).toContain('Mild');
+        expect(html).toContain('30%');
+        expect(html).toContain('status-medium');
+    });
+
+    it('shows danger class when more than 5 high-flakiness entries', () => {
+        const entries: FlakinessEntry[] = Array.from({ length: 7 }, (_, i) => ({
+            title: `Flaky#${i}`,
+            passCount: 1,
+            failCount: 9,
+            skipCount: 0,
+            totalRuns: 10,
+            rate: 0.9,
+        }));
+
+        const html = generateFlakinessHtml(entries);
+        expect(html).toContain('danger');
+        expect(html).toContain('7');
+    });
+
     it('shows no-threshold message when all below threshold', () => {
         const entries: FlakinessEntry[] = [
             { title: 'Stable', passCount: 9, failCount: 1, skipCount: 0, totalRuns: 10, rate: 0.1 },

@@ -144,6 +144,82 @@ describe('case20 - Bug Report handler', () => {
         expect(pushHistory).toHaveBeenCalledWith('bug-report', 'PROJ-2: Login fails', 'ok');
     });
 
+    it('shows short description warning and cancels when user declines', async () => {
+        const pushHistory = jest.fn();
+        const ctx = makeCtx({ pushHistory });
+
+        mockAskConfirm.mockResolvedValueOnce(true).mockResolvedValueOnce(false);
+        mockAsk.mockResolvedValueOnce('Too short');
+
+        await case20.handler(ctx);
+
+        expect(mockGenerateAi).not.toHaveBeenCalled();
+        expect(pushHistory).not.toHaveBeenCalled();
+    });
+
+    it('continues with AI generation after short description warning when user accepts', async () => {
+        const pushHistory = jest.fn();
+        const ctx = makeCtx({ pushHistory });
+
+        mockAskConfirm.mockResolvedValueOnce(true).mockResolvedValueOnce(true);
+        mockAsk.mockResolvedValueOnce('Too short').mockResolvedValueOnce('');
+        mockGenerateAi.mockResolvedValueOnce({
+            summary: 'Short bug',
+            description: 'desc',
+            source: 'manual',
+            severity: 'major',
+            stepsToReproduce: ['Step 1'],
+            expectedResult: 'ER',
+            actualResult: 'AR',
+            llmEnrichment: { enrichedAt: '', model: 'fast' },
+        });
+        mockInteractiveBugReportFlow.mockResolvedValueOnce({
+            status: 'ok',
+            label: 'PROJ-4',
+            message: 'Short bug',
+        });
+
+        await case20.handler(ctx);
+
+        expect(mockGenerateAi).toHaveBeenCalledTimes(1);
+        expect(pushHistory).toHaveBeenCalledWith('bug-report', 'PROJ-4: Short bug', 'ok');
+    });
+
+    it('parses linked issues from AI path', async () => {
+        const pushHistory = jest.fn();
+        const ctx = makeCtx({ pushHistory });
+
+        mockAskConfirm.mockResolvedValueOnce(true);
+        mockAsk
+            .mockResolvedValueOnce('Login button does nothing on Firefox 120 in production')
+            .mockResolvedValueOnce('PROJ-123, PROJ-456');
+        mockGenerateAi.mockResolvedValueOnce({
+            summary: 'Login fails',
+            description: 'desc',
+            source: 'manual',
+            severity: 'major',
+            stepsToReproduce: ['Step 1'],
+            expectedResult: 'ER',
+            actualResult: 'AR',
+            llmEnrichment: { enrichedAt: '', model: 'fast' },
+        });
+        mockInteractiveBugReportFlow.mockResolvedValueOnce({
+            status: 'ok',
+            label: 'PROJ-2',
+            message: 'Login fails',
+        });
+
+        await case20.handler(ctx);
+
+        expect(mockGenerateAi).toHaveBeenCalledTimes(1);
+        const callArg = mockInteractiveBugReportFlow.mock.calls[0]![2]!;
+        expect(callArg.linkedIssues).toEqual([
+            { key: 'PROJ-123', linkType: 'Relates' },
+            { key: 'PROJ-456', linkType: 'Relates' },
+        ]);
+        expect(pushHistory).toHaveBeenCalledWith('bug-report', 'PROJ-2: Login fails', 'ok');
+    });
+
     it('falls back to manual when AI generation returns null', async () => {
         const pushHistory = jest.fn();
         const ctx = makeCtx({ pushHistory });

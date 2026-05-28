@@ -70,6 +70,16 @@ describe('saveRunMetrics / loadMetrics', () => {
         expect(store.runs).toEqual([]);
     });
 
+    it('returns empty store on corrupted JSON', () => {
+        const cfg = makeConfig(TMP_DIR);
+        const dir = path.join(TMP_DIR, 'qa-tools', 'metrics');
+        fs.mkdirSync(dir, { recursive: true });
+        const sp = path.join(dir, 'metrics.json');
+        fs.writeFileSync(sp, 'not valid json{{{');
+        const store = loadMetrics(cfg);
+        expect(store.runs).toEqual([]);
+    });
+
     it('persists multiple runs', () => {
         const cfg = makeConfig(TMP_DIR);
         saveRunMetrics(
@@ -171,6 +181,56 @@ describe('calculateFlakiness', () => {
         expect(flaky[0]!.passCount).toBe(1);
         expect(flaky[0]!.failCount).toBe(1);
         expect(flaky[0]!.rate).toBe(0.5);
+    });
+
+    it('handles skipped test state', () => {
+        const store: MetricsStore = {
+            runs: [
+                {
+                    timestamp: '2026-01-01T00:00:00.000Z',
+                    project: 'p',
+                    total: 1,
+                    passed: 0,
+                    failed: 0,
+                    skipped: 1,
+                    duration: 0,
+                    tests: [{ title: 'Skippy', state: 'skipped', duration: 0 }],
+                },
+            ],
+        };
+        const flaky = calculateFlakiness(store);
+        expect(flaky).toHaveLength(0);
+    });
+
+    it('handles test with pass and fail in different runs', () => {
+        const store: MetricsStore = {
+            runs: [
+                {
+                    timestamp: '2026-01-01T00:00:00.000Z',
+                    project: 'p',
+                    total: 1,
+                    passed: 0,
+                    failed: 1,
+                    skipped: 0,
+                    duration: 0,
+                    tests: [{ title: 'T', state: 'failed', duration: 100 }],
+                },
+                {
+                    timestamp: '2026-01-02T00:00:00.000Z',
+                    project: 'p',
+                    total: 1,
+                    passed: 1,
+                    failed: 0,
+                    skipped: 0,
+                    duration: 0,
+                    tests: [{ title: 'T', state: 'passed', duration: 100 }],
+                },
+            ],
+        };
+        const flaky = calculateFlakiness(store);
+        expect(flaky).toHaveLength(1);
+        expect(flaky[0]!.failCount).toBe(1);
+        expect(flaky[0]!.passCount).toBe(1);
     });
 
     it('ignores tests below minRuns threshold', () => {

@@ -250,4 +250,24 @@ describe('generateHtmlReport', () => {
         expect(html).toContain('viewBox="0 0 300 30"');
         expect(html).toContain('width="100%"');
     });
+
+    it('renders history column with mixed statuses', () => {
+        const tests: FlatTest[] = [{ title: 'FlakyTest', state: 'passed', duration: 100 }];
+        const html = generateHtmlReport(tests, {
+            testHistory: {
+                FlakyTest: [
+                    { status: 'PASSED', testExecKey: 'TEST-1' },
+                    { status: 'FAILED', testExecKey: 'TEST-2' },
+                    { status: 'SKIPPED', testExecKey: 'TEST-3' },
+                    { status: 'ABORTED', testExecKey: 'TEST-4' },
+                ],
+            },
+        });
+        expect(html).toContain('hist-cell');
+        expect(html).toContain('hist-pass');
+        expect(html).toContain('hist-fail');
+        expect(html).toContain('hist-skip');
+        expect(html).toContain('TEST-1');
+        expect(html).toContain('TEST-3');
+    });
 });
