@@ -23,18 +23,22 @@ jest.mock('./box', () => ({
     visibleWidth: jest.fn((s: string) => s.length),
 }));
 
-jest.mock('./palette', () => ({
-    palette: {
-        green: { bold: (s: string) => s },
-        red: { bold: (s: string) => s },
-        yellow: { bold: (s: string) => s },
-        blue: (s: string) => s,
-        fg: { bold: (s: string) => s },
-        muted: (s: string) => s,
-        border: 'gray',
-        purple: { bold: (s: string) => s },
-    },
-}));
+jest.mock('./palette', () => {
+    const purpleFn = (s: string) => s;
+    purpleFn.bold = (s: string) => s;
+    return {
+        palette: {
+            green: { bold: (s: string) => s },
+            red: { bold: (s: string) => s },
+            yellow: { bold: (s: string) => s },
+            blue: (s: string) => s,
+            fg: { bold: (s: string) => s },
+            muted: (s: string) => s,
+            border: 'gray',
+            purple: purpleFn,
+        },
+    };
+});
 
 jest.mock('./prompt-ui', () => {
     const actual = jest.requireActual('./prompt-ui');
@@ -45,6 +49,15 @@ jest.mock('./prompt-ui', () => {
         icon: jest.fn(() => '!'),
     };
 });
+
+jest.mock('readline', () => {
+    const mockRl = { question: jest.fn(), on: jest.fn(), close: jest.fn() };
+    return { createInterface: jest.fn(() => mockRl), _testRl: mockRl };
+});
+
+jest.mock('@inquirer/input', () => ({ default: jest.fn() }));
+jest.mock('@inquirer/select', () => ({ default: jest.fn() }));
+jest.mock('@inquirer/confirm', () => ({ default: jest.fn() }));
 
 import * as fs from 'fs';
 import * as os from 'os';
@@ -64,6 +77,8 @@ import {
     __setInputMod,
     __setConfirmMod,
 } from './prompt-input';
+import * as readline from 'readline';
+import { defaultOutput as outputMock } from './output';
 
 const mockReadlineQuestion = jest.spyOn(readlineSync, 'question').mockImplementation(() => '');
 const mockGetConfig = getConfig as jest.Mock;
@@ -112,6 +127,11 @@ describe('prompt', () => {
         expect(prompt('Label', { minLength: 3 })).toBe('abcdef');
         expect(mockWarn).toHaveBeenCalled();
     });
+
+    it('displays hint when provided', () => {
+        mockReadlineQuestion.mockReturnValue('value');
+        expect(prompt('Label', { hint: 'some hint' })).toBe('value');
+    });
 });
 
 describe('confirm', () => {
@@ -151,6 +171,17 @@ describe('confirm', () => {
         expect(confirm('Confirm?')).toBe(false);
         mockReadlineQuestion.mockReturnValue('nao');
         expect(confirm('Confirm?')).toBe(false);
+    });
+
+    it('retries on invalid answer then accepts yes', () => {
+        mockReadlineQuestion.mockReturnValueOnce('x').mockReturnValueOnce('s');
+        expect(confirm('Confirm?')).toBe(true);
+        expect(outputMock.print).toHaveBeenCalled();
+    });
+
+    it('shows Y as default when defaultYes is true', () => {
+        mockReadlineQuestion.mockReturnValue('y');
+        expect(confirm('Confirm?', true)).toBe(true);
     });
 });
 
@@ -193,6 +224,12 @@ describe('smartPrompt', () => {
             throw new Error('readline error');
         });
         await expect(smartPrompt('Label')).rejects.toThrow('readline error');
+    });
+
+    it('continues on /help CancelError without callback', async () => {
+        mockReadlineQuestion.mockReturnValueOnce('/help').mockReturnValueOnce('ok');
+        const result = await smartPrompt('Label');
+        expect(result).toBe('ok');
     });
 });
 
@@ -282,6 +319,36 @@ describe('showSelect', () => {
         mockReadlineQuestion.mockReturnValue('1');
         const result = await showSelect('Choose', sectionedChoices);
         expect(result).toBe('a');
+    });
+
+    it('shows description when provided', async () => {
+        mockReadlineQuestion.mockReturnValue('1');
+        const result = await showSelect('Choose', [{ name: 'Option 1', value: '1', description: 'desc' }]);
+        expect(result).toBe('1');
+    });
+
+    it('uses name as value when value not provided', async () => {
+        mockReadlineQuestion.mockReturnValue('1');
+        const result = await showSelect('Choose', [{ name: 'Option A' }]);
+        expect(result).toBe('Option A');
+    });
+
+    it('handles choices with no name resulting in empty rendered items', async () => {
+        mockReadlineQuestion.mockReturnValue('0');
+        const result = await showSelect('Choose', [{ value: 'a' }, { value: 'b' }]);
+        expect(result).toBe('0');
+    });
+
+    it('returns default when empty answer and default provided', async () => {
+        mockReadlineQuestion.mockReturnValue('');
+        const result = await showSelect('Choose', [{ name: 'A', value: 'a' }], { default: 'def' });
+        expect(result).toBe('def');
+    });
+
+    it('returns 0 when empty answer and no default', async () => {
+        mockReadlineQuestion.mockReturnValue('');
+        const result = await showSelect('Choose', [{ name: 'A', value: 'a' }]);
+        expect(result).toBe('0');
     });
 });
 
@@ -384,6 +451,22 @@ describe('filePathCompleter', () => {
             fs.rmSync(dir, { recursive: true, force: true });
         }
     });
+
+    it('handles stat error in map callback (broken symlink, no ext filter)', () => {
+        const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'stat-map-err-'));
+        try {
+            fs.symlinkSync('/nonexistent-target', path.join(dir, 'dangling'));
+            const [matches] = filePathCompleter(dir + '/');
+            expect(matches).toContain('dangling');
+        } finally {
+            fs.rmSync(dir, { recursive: true, force: true });
+        }
+    });
+
+    it('defaults to current dir when line is empty', () => {
+        const [matches] = filePathCompleter('');
+        expect(Array.isArray(matches)).toBe(true);
+    });
 });
 
 describe('showSelect with menuMode', () => {
@@ -465,6 +548,17 @@ describe('ask with TTY and inquirer mod', () => {
         const result = await askConfirm('Confirm?');
         expect(result).toBe(true);
     });
+
+    it('calls theme.answer and theme.message via inquirer input mod', async () => {
+        const mockMod = jest.fn().mockImplementation(async (opts) => {
+            opts.theme.style.answer('ans');
+            opts.theme.style.message('msg');
+            return 'result';
+        });
+        __setInputMod({ default: mockMod });
+        const result = await ask('Label');
+        expect(result).toBe('result');
+    });
 });
 
 describe('showSelect TTY path', () => {
@@ -504,6 +598,30 @@ describe('showSelect TTY path', () => {
         const result = await showSelect('Choose', [{ name: 'Item', value: 'x' }]);
         expect(result).toBe('0');
     });
+
+    it('calls theme.renderSelected via inquirer select mod', async () => {
+        const mockSelectMod = jest.fn().mockImplementation(async (opts) => {
+            opts.theme.style.renderSelected('sel');
+            return 'selected';
+        });
+        __setSelectMod({ default: mockSelectMod });
+        const result = await showSelect('Choose', [{ name: 'Item A', value: 'a' }]);
+        expect(result).toBe('selected');
+    });
+
+    it('handles separator without line property', async () => {
+        const mockSelectMod = jest.fn().mockResolvedValue('val');
+        __setSelectMod({ default: mockSelectMod });
+        const result = await showSelect('Choose', [{ type: 'separator' as const }, { name: 'Visible', value: 'val' }]);
+        expect(result).toBe('val');
+    });
+
+    it('handles choice without value in TTY mode', async () => {
+        const mockSelectMod = jest.fn().mockResolvedValue('Visible');
+        __setSelectMod({ default: mockSelectMod });
+        const result = await showSelect('Choose', [{ name: 'Visible' }]);
+        expect(result).toBe('Visible');
+    });
 });
 
 describe('showSelect fallback', () => {
@@ -517,5 +635,63 @@ describe('showSelect fallback', () => {
         mockReadlineQuestion.mockReturnValue('1');
         const result = await showSelect('Choose', [{ value: 'a' }, { name: 'Visible', value: 'v' }]);
         expect(result).toBe('v');
+    });
+});
+
+describe('askFilePath TTY mode', () => {
+    beforeEach(() => {
+        Object.defineProperty(process.stdout, 'isTTY', { value: true, configurable: true });
+        const mockRl = (readline as unknown)._testRl;
+        mockRl.question.mockReset();
+        mockRl.on.mockReset();
+        mockRl.close.mockReset();
+    });
+
+    afterEach(() => {
+        Object.defineProperty(process.stdout, 'isTTY', { value: undefined, configurable: true });
+    });
+
+    it('resolves with user input', async () => {
+        const mockRl = (readline as unknown)._testRl;
+        mockRl.question.mockImplementation((_prompt: string, cb: (a: string) => void) => cb('user path'));
+        const result = await askFilePath('File:');
+        expect(result).toBe('user path');
+        expect(mockRl.close).toHaveBeenCalled();
+    });
+
+    it('rejects on navigation command', async () => {
+        const mockRl = (readline as unknown)._testRl;
+        mockRl.question.mockImplementation((_prompt: string, cb: (a: string) => void) => cb('/back'));
+        await expect(askFilePath('File:')).rejects.toThrow(CancelError);
+        expect(mockRl.close).toHaveBeenCalled();
+    });
+
+    it('rejects on SIGINT', async () => {
+        const mockRl = (readline as unknown)._testRl;
+        mockRl.question.mockImplementation(() => {});
+        let sigintHandler: () => void = () => {};
+        mockRl.on.mockImplementation((event: string, handler: () => void) => {
+            if (event === 'SIGINT') sigintHandler = handler;
+        });
+        const promise = askFilePath('File:');
+        sigintHandler();
+        await expect(promise).rejects.toThrow('/exit');
+        expect(mockRl.close).toHaveBeenCalled();
+    });
+
+    it('resolves with default when empty answer', async () => {
+        const mockRl = (readline as unknown)._testRl;
+        mockRl.question.mockImplementation((_prompt: string, cb: (a: string) => void) => cb(''));
+        const result = await askFilePath('File:', { default: '/default/path' });
+        expect(result).toBe('/default/path');
+        expect(mockRl.close).toHaveBeenCalled();
+    });
+
+    it('resolves with empty string when no default and empty answer', async () => {
+        const mockRl = (readline as unknown)._testRl;
+        mockRl.question.mockImplementation((_prompt: string, cb: (a: string) => void) => cb(''));
+        const result = await askFilePath('File:');
+        expect(result).toBe('');
+        expect(mockRl.close).toHaveBeenCalled();
     });
 });

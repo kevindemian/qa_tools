@@ -1,4 +1,13 @@
-import { buildSplashLines, showSplash, checkJiraStatus, __setFigletDep, __setGradientDep } from './splash';
+import http from 'http';
+import {
+    buildSplashLines,
+    showSplash,
+    checkJiraStatus,
+    __setFigletDep,
+    __setGradientDep,
+    __setHttpsDep,
+    __setHttpDep,
+} from './splash';
 
 describe('buildSplashLines', () => {
     it('formats logo lines with help hint', () => {
@@ -43,6 +52,15 @@ describe('buildSplashLines', () => {
         expect(output).toContain('Token');
         expect(output).toContain('online');
     });
+
+    it('renders error status with red dot', () => {
+        const lines = buildSplashLines('QA TOOLS', undefined, [
+            { label: 'Jira API', status: 'error', detail: 'offline' },
+        ]);
+        const output = lines.join('\n');
+        expect(output).toContain('Jira API');
+        expect(output).toContain('offline');
+    });
 });
 
 jest.mock('./output', () => ({
@@ -62,19 +80,92 @@ describe('checkJiraStatus', () => {
         expect(result.status).toBe('info');
         expect(result.detail).toContain('não configurado');
     });
+
+    describe('HTTP request paths', () => {
+        let server: http.Server;
+        let port: number;
+
+        beforeAll((done) => {
+            __setHttpDep(http);
+            __setHttpsDep(require('https'));
+            server = http.createServer((_req, res) => {
+                res.writeHead(200, { 'Content-Type': 'application/json' });
+                res.end(JSON.stringify({}));
+            });
+            server.listen(0, () => {
+                port = (server.address() as { port: number }).port;
+                done();
+            });
+        });
+
+        afterAll((done) => {
+            server.close(done);
+        });
+
+        it('returns ok when HTTP request succeeds', async () => {
+            const result = await checkJiraStatus(`http://localhost:${port}`, 'valid-token');
+            expect(result.status).toBe('ok');
+            expect(result.detail).toContain('online');
+        });
+
+        it('returns error on connection failure', async () => {
+            const result = await checkJiraStatus('http://localhost:49872', 'valid-token');
+            expect(result.status).toBe('error');
+        });
+
+        it('returns error on timeout', async () => {
+            const mockReq = { on: jest.fn(), setTimeout: jest.fn(), destroy: jest.fn() };
+            mockReq.setTimeout.mockImplementation((_ms: number, handler: () => void) => {
+                handler();
+                return mockReq;
+            });
+            __setHttpDep({ get: jest.fn(() => mockReq) });
+            const result = await checkJiraStatus('http://localhost:1', 'valid-token');
+            expect(result.status).toBe('error');
+            expect(mockReq.destroy).toHaveBeenCalled();
+            __setHttpDep(http);
+        });
+
+        it('handles https dynamic import fallback failure', async () => {
+            __setHttpsDep(undefined);
+            const result = await checkJiraStatus('https://jira.example.com', 'valid-token');
+            expect(result.status).toBe('error');
+            __setHttpsDep(require('https'));
+        });
+
+        it('handles http dynamic import fallback failure', async () => {
+            __setHttpDep(undefined);
+            const result = await checkJiraStatus('http://localhost:49873', 'valid-token');
+            expect(result.status).toBe('error');
+            __setHttpDep(http);
+        });
+    });
 });
 
 describe('showSplash', () => {
     const mockFiglet = { textSync: jest.fn().mockReturnValue('QA TOOLS\n======') };
     const mockGradientColor = jest.fn((text: string) => text);
     const mockGradient = jest.fn(() => mockGradientColor);
-    let outputMod: { Output: { isTTY: jest.Mock }; defaultOutput: { box: jest.Mock; print: jest.Mock } };
+    let outputMod: {
+        Output: { isTTY: jest.Mock; isCI: jest.Mock };
+        defaultOutput: { box: jest.Mock; print: jest.Mock };
+    };
+
+    const mockHttpsModule = {
+        get(_url: string, _opts: unknown, cb: (res: { resume: () => void }) => void) {
+            cb({ resume: () => {} });
+            return { on: () => {}, setTimeout: () => {}, destroy: () => {} };
+        },
+    };
 
     beforeEach(() => {
         outputMod = require('./output') as typeof outputMod;
         outputMod.Output.isTTY.mockReturnValue(true);
+        outputMod.Output.isCI.mockReturnValue(false);
         __setFigletDep(mockFiglet);
         __setGradientDep({ default: mockGradient });
+        __setHttpDep(http);
+        __setHttpsDep(mockHttpsModule);
     });
 
     afterEach(() => {
@@ -121,10 +212,44 @@ describe('showSplash', () => {
         expect(outputMod.defaultOutput.print).toHaveBeenCalledWith(expect.stringContaining('QA Tools'));
     });
 
+    it('prints plain text in CI mode', async () => {
+        outputMod.Output.isTTY.mockReturnValue(true);
+        outputMod.Output.isCI.mockReturnValue(true);
+        await expect(showSplash('/tmp/state.json')).resolves.not.toThrow();
+        expect(outputMod.defaultOutput.print).toHaveBeenCalledWith(expect.stringContaining('QA Tools'));
+    });
+
     it('uses plain text header when not TTY with jiraBaseUrl', async () => {
         outputMod.Output.isTTY.mockReturnValue(false);
         await expect(showSplash(undefined, 'https://jira.example.com', 'token123')).resolves.not.toThrow();
         expect(outputMod.defaultOutput.print).toHaveBeenCalledWith(expect.stringContaining('QA Tools'));
+    });
+
+    it('prints statePath in fallback when figlet fails', async () => {
+        mockFiglet.textSync.mockImplementationOnce(() => {
+            throw new Error('no TTY');
+        });
+        await expect(showSplash('/tmp/state.json')).resolves.not.toThrow();
+        expect(outputMod.defaultOutput.print).toHaveBeenCalledWith(expect.stringContaining('/tmp/state.json'));
+    });
+
+    it('handles figlet dynamic import failure in ensureDeps', async () => {
+        __setFigletDep(undefined);
+        await expect(showSplash('/tmp/state.json')).resolves.not.toThrow();
+        expect(outputMod.defaultOutput.print).toHaveBeenCalledWith(expect.stringContaining('QA Tools'));
+    });
+
+    it('handles gradient dynamic import failure in ensureDeps', async () => {
+        __setGradientDep(undefined);
+        await expect(showSplash('/tmp/state.json')).resolves.not.toThrow();
+        expect(outputMod.defaultOutput.print).toHaveBeenCalledWith(expect.stringContaining('QA Tools'));
+    });
+
+    it('calls checkJiraStatus with fallback empty token', async () => {
+        await expect(showSplash(undefined, 'https://jira.example.com')).resolves.not.toThrow();
+        expect(outputMod.defaultOutput.box).toHaveBeenCalled();
+        const [lines] = outputMod.defaultOutput.box.mock.calls[0];
+        expect(lines.join('\n')).toContain('Token');
     });
 
     it('includes jiraBaseUrl and token check in TTY mode', async () => {

@@ -147,7 +147,7 @@ function _renderTestCard(test: TestCase, index: number): string {
         }
         html +=
             '<div><span class="label">Expected</span><span class="expected">' +
-            escapeHtml(s.fields.ExpectedResult || '') +
+            escapeHtml(s.fields['Expected Result'] || '') +
             '</span></div>';
         html += '</li>\n';
     }
@@ -209,7 +209,7 @@ function generatePreviewMarkdown(tests: TestCase[]): string {
                         ' | ' +
                         (s.fields.Data || '') +
                         ' | ' +
-                        (s.fields.ExpectedResult || '') +
+                        (s.fields['Expected Result'] || '') +
                         ' |\n',
                 );
             }
@@ -426,7 +426,7 @@ function parseJsonTests(jsonPath: string): TestCase[] {
             fields: {
                 Action: s.Action || '',
                 Data: s.Data || '',
-                ExpectedResult: s.ExpectedResult || '',
+                'Expected Result': s['Expected Result'] || '',
             },
         })),
         precondition: item.precondition

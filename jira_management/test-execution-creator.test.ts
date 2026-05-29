@@ -24,6 +24,7 @@ describe('TestExecutionCreator', () => {
     let mockJiraResource: {
         getJiraResource: jest.Mock;
         postJiraResource: jest.Mock;
+        putJiraResource: jest.Mock;
     };
     let mockLinkManager: {
         createIssueLink: jest.Mock;
@@ -62,6 +63,7 @@ describe('TestExecutionCreator', () => {
         mockJiraResource = {
             getJiraResource: jest.fn(),
             postJiraResource: jest.fn(),
+            putJiraResource: jest.fn(),
         };
         mockLinkManager = {
             createIssueLink: jest.fn(),
@@ -282,6 +284,106 @@ describe('TestExecutionCreator', () => {
                     fields: expect.objectContaining({ summary: 'Custom Title' }),
                 }),
             );
+        });
+    });
+
+    describe('addTestsToExistingExecution', () => {
+        const teKey = 'TE-1';
+        const teIssue = {
+            key: 'TE-1',
+            fields: { summary: 'My TE', issuetype: { name: 'Test Execution' } },
+        };
+
+        function setupHappy(extraFields?: Record<string, unknown>) {
+            mockJiraResource.getJiraResource
+                .mockResolvedValueOnce({ ...teIssue, fields: { ...teIssue.fields, ...extraFields } })
+                .mockResolvedValueOnce(defaultFields)
+                .mockResolvedValueOnce({ fields: { issuelinks: [] } });
+            mockLinkManager.createIssueLink.mockResolvedValue({});
+        }
+
+        it('returns { key, summary } on success', async () => {
+            setupHappy({ customfield_10200: [] });
+            const result = await creator.addTestsToExistingExecution(teKey, testKeys);
+            expect(result).toEqual({ key: 'TE-1', summary: 'My TE' });
+            expect(mockJiraResource.putJiraResource).toHaveBeenCalledWith('issue/TE-1', {
+                fields: { customfield_10200: ['TEST-1', 'TEST-2'] },
+            });
+        });
+
+        it('throws when issue is not Test Execution type', async () => {
+            mockJiraResource.getJiraResource.mockResolvedValueOnce({
+                key: 'BUG-1',
+                fields: { issuetype: { name: 'Bug' } },
+            });
+            await expect(creator.addTestsToExistingExecution('BUG-1', testKeys)).rejects.toThrow(
+                '"BUG-1" não é uma Test Execution',
+            );
+        });
+
+        it('throws when TE has unknown issuetype', async () => {
+            mockJiraResource.getJiraResource.mockResolvedValueOnce({
+                key: 'X-1',
+                fields: {},
+            });
+            await expect(creator.addTestsToExistingExecution('X-1', testKeys)).rejects.toThrow(
+                'não é uma Test Execution (tipo: desconhecido)',
+            );
+        });
+
+        it('throws when fields response is non-array', async () => {
+            mockJiraResource.getJiraResource.mockResolvedValueOnce(teIssue).mockResolvedValueOnce({ not: 'array' });
+            await expect(creator.addTestsToExistingExecution(teKey, testKeys)).rejects.toThrow(
+                'Falha ao obter campos customizados do Jira',
+            );
+        });
+
+        it('throws when custom field not found', async () => {
+            mockJiraResource.getJiraResource
+                .mockResolvedValueOnce(teIssue)
+                .mockResolvedValueOnce([{ id: 'cf1', name: 'Other', schema: { custom: 'other:type' } }]);
+            await expect(creator.addTestsToExistingExecution(teKey, testKeys)).rejects.toThrow(
+                'Campo "Tests association with a Test Execution" não encontrado',
+            );
+        });
+
+        it('merges existing tests with new ones, deduplicating', async () => {
+            setupHappy({ customfield_10200: ['EXISTING-1', 'TEST-1'] });
+            await creator.addTestsToExistingExecution(teKey, testKeys);
+            expect(mockJiraResource.putJiraResource).toHaveBeenCalledWith('issue/TE-1', {
+                fields: { customfield_10200: ['EXISTING-1', 'TEST-1', 'TEST-2'] },
+            });
+        });
+
+        it('handles when TE has no current tests in custom field', async () => {
+            setupHappy({});
+            await creator.addTestsToExistingExecution(teKey, testKeys);
+            expect(mockJiraResource.putJiraResource).toHaveBeenCalledWith('issue/TE-1', {
+                fields: { customfield_10200: ['TEST-1', 'TEST-2'] },
+            });
+        });
+
+        it('reports failed links alongside linked count', async () => {
+            mockJiraResource.getJiraResource
+                .mockResolvedValueOnce({ ...teIssue, fields: { ...teIssue.fields, customfield_10200: [] } })
+                .mockResolvedValueOnce(defaultFields)
+                .mockResolvedValueOnce({ fields: { issuelinks: [] } });
+            mockLinkManager.createIssueLink.mockResolvedValueOnce({}).mockRejectedValueOnce(new Error('Link error'));
+            const result = await creator.addTestsToExistingExecution(teKey, testKeys);
+            expect(result).toEqual({ key: 'TE-1', summary: 'My TE' });
+            expect(mockLinkManager.createIssueLink).toHaveBeenCalledTimes(2);
+        });
+
+        it('uses teKey as summary when TE issue has no summary field', async () => {
+            mockJiraResource.getJiraResource.mockResolvedValueOnce({
+                key: 'TE-1',
+                fields: { issuetype: { name: 'Test Execution' } },
+            });
+            mockJiraResource.getJiraResource.mockResolvedValueOnce(defaultFields);
+            mockJiraResource.getJiraResource.mockResolvedValueOnce({ fields: { issuelinks: [] } });
+            mockLinkManager.createIssueLink.mockResolvedValue({});
+            const result = await creator.addTestsToExistingExecution(teKey, testKeys);
+            expect(result).toEqual({ key: 'TE-1', summary: 'TE-1' });
         });
     });
 });

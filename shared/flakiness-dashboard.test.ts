@@ -90,4 +90,22 @@ describe('generateFlakinessHtml', () => {
         expect(html).toContain('&lt;script&gt;');
         expect(html).not.toContain('<script>alert');
     });
+
+    // ── R9: Flakiness dark mode ─────────────────────────────────────
+
+    it('includes dark mode theme toggle script', () => {
+        const entries: FlakinessEntry[] = [
+            { title: 'Test', passCount: 5, failCount: 5, skipCount: 0, totalRuns: 10, rate: 0.5 },
+        ];
+        const html = generateFlakinessHtml(entries);
+        expect(html).toContain('qa-report-theme');
+        expect(html).toContain('prefers-color-scheme');
+    });
+
+    it('includes dark mode CSS selectors', () => {
+        const html = generateFlakinessHtml([]);
+        expect(html).toContain('html.dark body');
+        expect(html).toContain('html.dark .card');
+        expect(html).toContain('html.dark th');
+    });
 });

@@ -1,13 +1,13 @@
 /** Import JSON/TXT test results (CTRF format) to create Test Executions. */
 import Config from '../../shared/config';
-import { ask, askConfirm, warn, success } from '../../shared/prompt';
+import { ask, warn, success } from '../../shared/prompt';
 import { load as loadState } from '../../shared/state';
 import path from 'path';
 import fs from 'fs';
 import type { CommandContext } from './context';
-import { createTestExecutionWithLinksWrapper } from './helpers';
 // anti-circular (prompt → create_tests → session-context → prompt)
 import createTests from '../create_tests';
+import { offerTestExecutionAssociation, showResults } from './test-execution-flow';
 
 async function handler(c: CommandContext): Promise<boolean | void> {
     const state = loadState() as Record<string, string | undefined>;
@@ -52,15 +52,10 @@ async function handler(c: CommandContext): Promise<boolean | void> {
         }));
         c.pushHistory('importar-json', okCount + ' testes', 'ok');
 
-        if (await askConfirm('Criar Test Execution para estes testes?', true)) {
-            const keys = result.inMemoryTasksId;
-            const srcName = result.sourcePath ? path.basename(result.sourcePath, '.json') : 'json-import';
-            const nameInput = await ask('Nome da execução', { hint: 'Enter = ' + srcName });
-            const csvName = nameInput.trim() || srcName;
-            const execTitle = await ask('Titulo do Test Execution', { hint: 'Enter = ' + csvName });
-            const execDesc = await ask('Descrição (opcional)');
-            await createTestExecutionWithLinksWrapper(c, keys, csvName, execTitle, execDesc);
-        }
+        const keys = result.inMemoryTasksId;
+        const srcName = result.sourcePath ? path.basename(result.sourcePath, '.json') : 'json-import';
+        const teResult = await offerTestExecutionAssociation(c, keys, srcName);
+        await showResults(c, keys, teResult);
     }
 }
 

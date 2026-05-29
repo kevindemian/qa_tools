@@ -211,8 +211,14 @@ describe('renderPreviewHtml', () => {
             title: 'Login test',
             description: 'Verifica login com credenciais validas',
             steps: [
-                { fields: { Action: 'Navegar para /login', Data: '', ExpectedResult: 'Formulario exibido' } },
-                { fields: { Action: 'Preencher email', Data: 'user@test.com', ExpectedResult: 'Campos preenchidos' } },
+                { fields: { Action: 'Navegar para /login', Data: '', 'Expected Result': 'Formulario exibido' } },
+                {
+                    fields: {
+                        Action: 'Preencher email',
+                        Data: 'user@test.com',
+                        'Expected Result': 'Campos preenchidos',
+                    },
+                },
             ],
             precondition: { type: 'inline' as const, value: 'Usuario existe no banco' },
             group: 'Auth',
@@ -221,7 +227,7 @@ describe('renderPreviewHtml', () => {
         {
             title: 'Logout test',
             description: '',
-            steps: [{ fields: { Action: 'Clicar em Sair', Data: '', ExpectedResult: 'Redirecionado para /login' } }],
+            steps: [{ fields: { Action: 'Clicar em Sair', Data: '', 'Expected Result': 'Redirecionado para /login' } }],
             group: '',
             linkedIssues: [],
         },
@@ -286,8 +292,8 @@ describe('generatePreviewMarkdown', () => {
             title: 'Login test',
             description: 'Verifica login valido',
             steps: [
-                { fields: { Action: 'a', Data: '', ExpectedResult: 'b' } },
-                { fields: { Action: 'c', Data: '', ExpectedResult: 'd' } },
+                { fields: { Action: 'a', Data: '', 'Expected Result': 'b' } },
+                { fields: { Action: 'c', Data: '', 'Expected Result': 'd' } },
             ],
             precondition: { type: 'inline' as const, value: 'Usuario existe' },
             group: 'Auth',
@@ -296,7 +302,7 @@ describe('generatePreviewMarkdown', () => {
         {
             title: 'Logout test',
             description: '',
-            steps: [{ fields: { Action: 'x', Data: '', ExpectedResult: 'y' } }],
+            steps: [{ fields: { Action: 'x', Data: '', 'Expected Result': 'y' } }],
             group: '',
             linkedIssues: [],
         },
@@ -343,7 +349,7 @@ describe('showPreview', () => {
         {
             title: 'Login test',
             description: 'desc',
-            steps: [{ fields: { Action: 'Acao', Data: '', ExpectedResult: 'OK' } }],
+            steps: [{ fields: { Action: 'Acao', Data: '', 'Expected Result': 'OK' } }],
             group: 'Auth',
         },
     ];

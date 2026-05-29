@@ -13,6 +13,13 @@ const mockFailureAnalysis = {
 };
 jest.mock('./failure-analysis', () => mockFailureAnalysis);
 
+jest.mock('./logger');
+
+jest.mock('./config', () => ({
+    __esModule: true,
+    default: { jiraProject: '' },
+}));
+
 import { collectManual, collectAutomated, compose, fileToJira, interactiveBugReportFlow } from './bug-report';
 import type { ParseResult } from './result_parser';
 import type { BugReport } from './types';
@@ -95,6 +102,61 @@ describe('BugReport Service', () => {
             expect(report.llmEnrichment?.rootCause).toBe('AUTHENTICATION_ERROR');
             expect(mockPrompt.info).toHaveBeenCalledWith(expect.stringContaining('AUTHENTICATION_ERROR'));
         });
+
+        it('handles LLM enrichment failure gracefully', async () => {
+            mockPrompt.ask
+                .mockResolvedValueOnce('Bug title')
+                .mockResolvedValueOnce('Description')
+                .mockResolvedValueOnce('')
+                .mockResolvedValueOnce('')
+                .mockResolvedValueOnce('')
+                .mockResolvedValueOnce('')
+                .mockResolvedValueOnce('minor')
+                .mockResolvedValueOnce('')
+                .mockResolvedValueOnce('');
+            mockPrompt.askConfirm.mockResolvedValueOnce(true);
+            mockFailureAnalysis.classifyFailure.mockRejectedValueOnce(new Error('API timeout'));
+
+            const report = await collectManual();
+            expect(report.llmEnrichment).toBeUndefined();
+        });
+
+        it('defaults to minor severity when invalid severity entered', async () => {
+            mockPrompt.ask
+                .mockResolvedValueOnce('Bug title')
+                .mockResolvedValueOnce('')
+                .mockResolvedValueOnce('')
+                .mockResolvedValueOnce('')
+                .mockResolvedValueOnce('')
+                .mockResolvedValueOnce('')
+                .mockResolvedValueOnce('unknown-severity')
+                .mockResolvedValueOnce('')
+                .mockResolvedValueOnce('');
+            mockPrompt.askConfirm.mockResolvedValueOnce(false);
+
+            const report = await collectManual();
+            expect(report.severity).toBe('minor');
+        });
+
+        it('uses fallback message when LLM returns empty rootCause', async () => {
+            mockPrompt.ask
+                .mockResolvedValueOnce('Bug title')
+                .mockResolvedValueOnce('Description')
+                .mockResolvedValueOnce('')
+                .mockResolvedValueOnce('')
+                .mockResolvedValueOnce('')
+                .mockResolvedValueOnce('')
+                .mockResolvedValueOnce('minor')
+                .mockResolvedValueOnce('')
+                .mockResolvedValueOnce('');
+            mockPrompt.askConfirm.mockResolvedValueOnce(true);
+            mockFailureAnalysis.classifyFailure.mockResolvedValueOnce('');
+
+            const report = await collectManual();
+            expect(report.llmEnrichment).toBeDefined();
+            expect(report.llmEnrichment!.rootCause).toBe('');
+            expect(mockPrompt.info).toHaveBeenCalledWith(expect.stringContaining('não disponível'));
+        });
     });
 
     describe('collectAutomated', () => {
@@ -124,6 +186,31 @@ describe('BugReport Service', () => {
                 commitSha: 'abcdef123',
                 provider: 'gitlab',
             });
+        });
+
+        it('returns generic description when no tests failed', () => {
+            const mockResult: ParseResult = {
+                tests: [{ title: 'All pass', state: 'passed', duration: 50 }],
+                stats: { passed: 1, failed: 0, skipped: 0, total: 1, duration: 50 },
+            };
+            const report = collectAutomated(mockResult);
+            expect(report.description).toBe('No details available.');
+        });
+
+        it('handles missing stats and tests gracefully', () => {
+            const report = collectAutomated({} as unknown as ParseResult);
+            expect(report.summary).toBe('0/0 tests failed');
+            expect(report.description).toBe('No details available.');
+        });
+
+        it('handles failed test without error field', () => {
+            const mockResult: ParseResult = {
+                tests: [{ title: 'Fails silently', state: 'failed', duration: 50 }],
+                stats: { passed: 0, failed: 1, skipped: 0, total: 1, duration: 50 },
+            };
+            const report = collectAutomated(mockResult);
+            expect(report.description).toContain('*Fails silently*');
+            expect(report.description).not.toContain('Error:');
         });
     });
 
@@ -157,6 +244,56 @@ describe('BugReport Service', () => {
             expect(composed).toContain('**Environment:** Staging');
             expect(composed).toContain('**Component:** Frontend');
             expect(composed).toContain('**AI Analysis:** UI_ELEMENT_MISSING');
+        });
+
+        it('includes pipeline metadata when present', () => {
+            const report: BugReport = {
+                summary: 'Build failure',
+                description: 'Desc',
+                source: 'automated',
+                severity: 'critical',
+                metadata: {
+                    pipelineId: '12345',
+                    branch: 'develop',
+                    commitSha: 'abc123def',
+                    provider: 'github',
+                },
+            };
+            const composed = compose(report);
+            expect(composed).toContain('**Pipeline:** 12345');
+            expect(composed).toContain('**Branch:** develop');
+            expect(composed).toContain('**Commit:** abc123def');
+        });
+
+        it('does not include metadata fields when absent', () => {
+            const report: BugReport = {
+                summary: 'Partial metadata',
+                description: '',
+                source: 'automated',
+                severity: 'major',
+                metadata: {
+                    pipelineId: 'p1',
+                },
+            };
+            const composed = compose(report);
+            expect(composed).toContain('**Pipeline:** p1');
+            expect(composed).not.toContain('**Branch:**');
+            expect(composed).not.toContain('**Commit:**');
+        });
+
+        it('omits optional fields when not provided', () => {
+            const report: BugReport = {
+                summary: 'Minimal',
+                description: '',
+                source: 'automated',
+                severity: 'major',
+            };
+            const composed = compose(report);
+            expect(composed).toContain('**Summary:** Minimal');
+            expect(composed).toContain('**Severity:** major');
+            expect(composed).not.toContain('**Description:**');
+            expect(composed).not.toContain('**Steps to Reproduce:**');
+            expect(composed).not.toContain('**AI Analysis:**');
         });
     });
 
@@ -192,6 +329,16 @@ describe('BugReport Service', () => {
                     components: [{ name: 'API' }],
                 },
             });
+        });
+
+        it('throws when project key is missing', async () => {
+            const report: BugReport = {
+                summary: 'Bug',
+                description: '',
+                source: 'manual',
+                severity: 'minor',
+            };
+            await expect(fileToJira(mockJiraResource as never, report)).rejects.toThrow('Project key is required');
         });
     });
 
@@ -262,6 +409,53 @@ describe('BugReport Service', () => {
             expect(result).toBeNull();
             expect(mockPrompt.info).toHaveBeenCalledWith('Bug report cancelado.');
         });
+
+        it('returns error status when fileToJira throws', async () => {
+            const report: BugReport = {
+                summary: 'Bug title',
+                description: 'Desc',
+                source: 'manual',
+                severity: 'minor',
+            };
+
+            mockPrompt.askConfirm.mockResolvedValueOnce(true);
+            mockJiraResource.postJiraResource.mockRejectedValueOnce(new Error('Jira API error'));
+
+            const result = await interactiveBugReportFlow(mockJiraResource as never, 'PROJ', report);
+            expect(result).toEqual({
+                status: 'error',
+                label: '',
+                message: 'Jira API error',
+            });
+            expect(mockPrompt.printError).toHaveBeenCalled();
+        });
+
+        it('calls collectManual when preFilled is not provided', async () => {
+            mockPrompt.ask
+                .mockResolvedValueOnce('Auto summary')
+                .mockResolvedValueOnce('')
+                .mockResolvedValueOnce('')
+                .mockResolvedValueOnce('')
+                .mockResolvedValueOnce('')
+                .mockResolvedValueOnce('')
+                .mockResolvedValueOnce('minor')
+                .mockResolvedValueOnce('')
+                .mockResolvedValueOnce('');
+            mockPrompt.askConfirm.mockResolvedValueOnce(false).mockResolvedValueOnce(true);
+            mockJiraResource.postJiraResource.mockResolvedValueOnce({ key: 'PROJ-303' });
+
+            const result = await interactiveBugReportFlow(
+                mockJiraResource as never,
+                'PROJ',
+                undefined,
+                mockLinkManager as never,
+            );
+            expect(result).toEqual({
+                status: 'ok',
+                label: 'PROJ-303',
+                message: 'Auto summary',
+            });
+        });
     });
 });
 
@@ -326,6 +520,16 @@ describe('generateBugReportFromDescription', () => {
     it('returns null when LLM throws', async () => {
         mockLlmPrompt.mockRejectedValue(new Error('LLM API error'));
         const result = await generateBugReportFromDescription('something broke');
+        expect(result).toBeNull();
+    });
+
+    it('returns null when prompt template file cannot be read', async () => {
+        const fsMock = jest.requireMock('fs');
+        fsMock.readFileSync.mockImplementationOnce(() => {
+            throw new Error('ENOENT');
+        });
+
+        const result = await generateBugReportFromDescription('test');
         expect(result).toBeNull();
     });
 });

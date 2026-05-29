@@ -19,7 +19,8 @@ export const TestStepSchema = z.object({
     fields: z.object({
         Action: z.string().optional(),
         Data: z.string().optional(),
-        ExpectedResult: z.string().optional(),
+        /** @production Field name com espaço exigido pela Xray Server API. */
+        'Expected Result': z.string().optional(),
     }),
 });
 
@@ -47,7 +48,8 @@ export const TestCaseSchema = z.object({
 export const ImportJsonStepSchema = z.object({
     Action: z.string().optional(),
     Data: z.string().optional(),
-    ExpectedResult: z.string().optional(),
+    /** @production Field name com espaço exigido pela Xray Server API. */
+    'Expected Result': z.string().optional(),
 });
 
 export const ImportJsonItemSchema = z.object({

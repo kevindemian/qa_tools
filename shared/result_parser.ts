@@ -114,6 +114,18 @@ export interface CtrfData {
     results: CtrfResults;
 }
 
+/** A single test step for display in the HTML report. */
+export interface ReportStep {
+    action?: string;
+    expected?: string;
+}
+
+/** A screenshot attachment embedded in the HTML report. */
+export interface ReportScreenshot {
+    title: string;
+    dataUri: string;
+}
+
 /** Normalised flat test result used throughout the codebase. */
 export interface FlatTest {
     /** Test name. */
@@ -126,6 +138,12 @@ export interface FlatTest {
     error?: string;
     /** Suite hierarchy if available (e.g. "Root > Sub > test"). */
     fullTitle?: string;
+    /** Ordered steps for collapsible detail view. */
+    steps?: ReportStep[];
+    /** Inline screenshots (data URIs). */
+    screenshots?: ReportScreenshot[];
+    /** Collapsible log lines. */
+    logs?: string[];
 }
 
 /** Parsed output with flat test list and aggregate stats. */

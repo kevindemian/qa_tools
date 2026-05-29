@@ -42,11 +42,11 @@ describe('MappingFileGenerator', () => {
                 {
                     title: 'Login test',
                     description: 'Verifies login flow',
-                    steps: [{ fields: { Action: 'Type user', Data: 'admin', ExpectedResult: 'OK' } }],
+                    steps: [{ fields: { Action: 'Type user', Data: 'admin', 'Expected Result': 'OK' } }],
                 },
                 {
                     title: 'Logout test',
-                    steps: [{ fields: { Action: 'Click logout', Data: '', ExpectedResult: 'Redirected' } }],
+                    steps: [{ fields: { Action: 'Click logout', Data: '', 'Expected Result': 'Redirected' } }],
                 },
             ],
         );
@@ -124,6 +124,6 @@ describe('MappingFileGenerator', () => {
         const json = JSON.parse(fs.readFileSync(path.join(tmpDir, 'f-jira-mapping.json'), 'utf8'));
         expect(json.tests[0].steps[0].Action).toBe('');
         expect(json.tests[0].steps[0].Data).toBe('');
-        expect(json.tests[0].steps[0].ExpectedResult).toBe('');
+        expect(json.tests[0].steps[0]['Expected Result']).toBe('');
     });
 });

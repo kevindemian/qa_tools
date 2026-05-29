@@ -299,4 +299,10 @@ export default {
     handleFlakinessDashboard,
     tryBatchMode,
     parseBatchArgs,
+    buildContextLine,
+    _selectProject,
+    _promptChoice,
+    withErrorHandling,
+    _handleExit,
+    _dispatchAction,
 };

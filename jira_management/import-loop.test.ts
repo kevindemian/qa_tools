@@ -21,7 +21,7 @@ import {
 
 const testBase: TestCase = {
     title: 'My Test',
-    steps: [{ fields: { Action: 'Click', Data: '', ExpectedResult: 'OK' } }],
+    steps: [{ fields: { Action: 'Click', Data: '', 'Expected Result': 'OK' } }],
 };
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any -- mock objects

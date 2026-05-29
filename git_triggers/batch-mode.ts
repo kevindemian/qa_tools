@@ -6,6 +6,7 @@ import { offerPipelineFailureAnalysis } from './llm-pipeline';
 import { collectTestResults as _collectTestResults } from './test-results';
 import type { PipelineTriggerResult } from '../shared/types';
 import { writeReport } from '../shared/temp-dir';
+import { publishReport } from '../shared/publish';
 import {
     currentProjectName,
     currentProvider,
@@ -19,9 +20,9 @@ import {
 } from './session-state';
 import { pollPipeline } from './pipeline-handler';
 
-export function parseBatchArgs(): { project?: string; branch?: string; auto?: boolean } {
+export function parseBatchArgs(): { project?: string; branch?: string; auto?: boolean; publish?: string } {
     const args = process.argv.slice(2);
-    const result: { project?: string; branch?: string; auto?: boolean } = {};
+    const result: { project?: string; branch?: string; auto?: boolean; publish?: string } = {};
     for (let i = 0; i < args.length; i++) {
         if ((args[i] === '--project' || args[i] === '-p') && i + 1 < args.length) {
             result.project = args[++i];
@@ -29,6 +30,8 @@ export function parseBatchArgs(): { project?: string; branch?: string; auto?: bo
             result.branch = args[++i];
         } else if (args[i] === '--auto' || args[i] === '--batch') {
             result.auto = true;
+        } else if (args[i] === '--publish' && i + 1 < args.length) {
+            result.publish = args[++i];
         }
     }
     return result;
@@ -109,7 +112,7 @@ async function triggerAndCollectBatchPipeline(
     return false;
 }
 
-function generateFlakinessDashboard(projectName: string): void {
+function generateFlakinessDashboard(projectName: string, publishTarget?: string): void {
     if (!currentProjectName) return;
     const store = loadMetrics();
     const projectRuns = store.runs.filter((r) => r.project === currentProjectName);
@@ -118,6 +121,9 @@ function generateFlakinessDashboard(projectName: string): void {
     const html = generateFlakinessHtml(flaky, 'Flakiness — ' + projectName);
     const outPath = writeReport('flakiness-' + projectName + '.html', html);
     success('Dashboard de flakiness gerado: ' + outPath);
+    if (publishTarget) {
+        publishReport({ target: publishTarget as 's3' | 'gh-pages', filePath: outPath });
+    }
 }
 
 export async function tryBatchMode(): Promise<boolean> {
@@ -136,7 +142,7 @@ export async function tryBatchMode(): Promise<boolean> {
     const done = await triggerAndCollectBatchPipeline(setup.m, setup.branch, setup.projectName);
     if (done) return true;
 
-    generateFlakinessDashboard(setup.projectName);
+    generateFlakinessDashboard(setup.projectName, batch.publish);
     printSessionSummary();
     return true;
 }

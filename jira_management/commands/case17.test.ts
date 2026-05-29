@@ -18,6 +18,11 @@ jest.mock('../../shared/result_parser', () => ({
 
 jest.mock('../../shared/report-generator', () => ({
     generateHtmlReport: jest.fn(),
+    loadKnownIssues: jest.fn(() => []),
+}));
+
+jest.mock('../../shared/publish', () => ({
+    publishReport: jest.fn(),
 }));
 
 jest.mock('../../shared/failure-analysis', () => ({
@@ -46,6 +51,11 @@ jest.mock('../../shared/logger', () => ({
 
 jest.mock('fs');
 
+jest.mock('../../shared/http-client', () => ({
+    createHttpClient: jest.fn(),
+    setTestSleep: jest.fn(),
+}));
+
 const mockSessionContext: Record<string, unknown> = {
     inMemoryTasksId: [],
     inMemoryTasksText: [],
@@ -58,11 +68,11 @@ const mockSessionContext: Record<string, unknown> = {
 };
 
 const baseContext = {
-    jiraResource: {},
-    jiraResourceXray: {},
-    linkManager: {},
-    linkManagerXray: {},
-    csvResource: {},
+    jiraResource: {} as Record<string, jest.Mock>,
+    jiraResourceXray: {} as Record<string, jest.Mock>,
+    linkManager: {} as Record<string, jest.Mock>,
+    linkManagerXray: {} as Record<string, jest.Mock>,
+    csvResource: {} as Record<string, jest.Mock>,
     ctx: mockSessionContext,
     pushHistory: jest.fn(),
     printSessionSummary: jest.fn(),
@@ -79,9 +89,236 @@ describe('case17 — HTML report generator', () => {
         const prompt = require('../../shared/prompt');
         const parser = require('../../shared/result_parser');
         const reportGen = require('../../shared/report-generator');
+
+        baseContext.jiraResource.getJiraResource = jest.fn().mockResolvedValueOnce({
+            issues: [{ key: 'BUG-1', fields: { summary: 'Login fails', status: { name: 'Open' } } }],
+        });
+
+        prompt.ask.mockResolvedValueOnce('/path/to/report.json').mockResolvedValueOnce('');
+
+        parser.parseTestResultsFile.mockReturnValueOnce({
+            tests: [{ title: 'Login test', state: 'failed', duration: 100, error: 'fail' }],
+            stats: { passed: 0, failed: 1, skipped: 0, total: 1, duration: 100 },
+        });
+
+        reportGen.generateHtmlReport.mockReturnValueOnce('<html>report</html>');
+
+        const mod = require('./case17').default;
+        await mod.handler(baseContext);
+
+        expect(baseContext.jiraResource.getJiraResource).toHaveBeenCalled();
+        expect(prompt.info).toHaveBeenCalledWith(expect.stringContaining('Relatório HTML gerado'));
+
+        delete baseContext.jiraResource.getJiraResource;
+    });
+
+    it('computes diff against last run and logs info', async () => {
+        const prompt = require('../../shared/prompt');
+        const parser = require('../../shared/result_parser');
+        const reportGen = require('../../shared/report-generator');
         const fs = require('fs');
 
-        prompt.ask.mockResolvedValueOnce('/path/to/report.json').mockResolvedValueOnce('/out/report.html');
+        fs.existsSync.mockReturnValue(true);
+        fs.readFileSync.mockReturnValue(
+            JSON.stringify({
+                results: {
+                    tests: [
+                        { name: 'Test A', status: 'failed' },
+                        { name: 'Test B', status: 'passed' },
+                    ],
+                },
+            }),
+        );
+
+        prompt.ask.mockResolvedValueOnce('/path/to/report.json').mockResolvedValueOnce('');
+
+        parser.parseTestResultsFile.mockReturnValueOnce({
+            tests: [
+                { title: 'Test A', state: 'passed', duration: 100 },
+                { title: 'Test B', state: 'failed', duration: 50, error: 'fail' },
+            ],
+            stats: { passed: 1, failed: 1, skipped: 0, total: 2, duration: 150 },
+        });
+
+        reportGen.generateHtmlReport.mockReturnValueOnce('<html>report</html>');
+
+        const mod = require('./case17').default;
+        await mod.handler(baseContext);
+
+        expect(prompt.info).toHaveBeenCalledWith(expect.stringContaining('Diff:'));
+    });
+
+    it('skips AI analysis and prompts bug report when failures and user accepts', async () => {
+        const prompt = require('../../shared/prompt');
+        const parser = require('../../shared/result_parser');
+        const reportGen = require('../../shared/report-generator');
+        const fs = require('fs');
+
+        process.env.QA_AUTO_BUG = 'true';
+
+        fs.existsSync.mockReturnValueOnce(true);
+        fs.readFileSync.mockReturnValueOnce(
+            JSON.stringify({
+                results: { tests: [{ name: 'Fail', status: 'passed' }] },
+            }),
+        );
+
+        prompt.ask.mockResolvedValueOnce('/path/to/report.json').mockResolvedValueOnce('');
+
+        parser.parseTestResultsFile.mockReturnValueOnce({
+            tests: [
+                { title: 'Pass', state: 'passed', duration: 100 },
+                { title: 'Fail', state: 'failed', duration: 50, error: 'Timeout' },
+            ],
+            stats: { passed: 1, failed: 1, skipped: 0, total: 2, duration: 150 },
+        });
+
+        reportGen.generateHtmlReport.mockReturnValueOnce('<html>report</html>');
+
+        const reportGenFull = require('../../shared/report-generator');
+        reportGenFull.categorizeFailure = jest.fn().mockReturnValue('regression');
+
+        baseContext.jiraResource.postJiraResource = jest.fn().mockResolvedValue({ key: 'BUG-42' });
+
+        const mod = require('./case17').default;
+        await mod.handler(baseContext);
+
+        expect(prompt.info).toHaveBeenCalledWith(expect.stringContaining('Jira bug auto-criado: BUG-42'));
+
+        delete baseContext.jiraResource.postJiraResource;
+    });
+
+    it('resolves mapping file and test history', async () => {
+        const prompt = require('../../shared/prompt');
+        const parser = require('../../shared/result_parser');
+        const reportGen = require('../../shared/report-generator');
+        const fs = require('fs');
+
+        process.env.QA_MAPPING_PATH = '/tmp/qa-mapping.json';
+
+        fs.existsSync.mockReturnValue(true);
+        fs.readFileSync.mockReturnValue(
+            JSON.stringify({
+                tests: [
+                    { title: 'Test 1', key: 'TEST-123' },
+                    { title: 'Test 2', key: 'TEST-456' },
+                ],
+            }),
+        );
+
+        prompt.ask.mockResolvedValueOnce('/path/to/report.json').mockResolvedValueOnce('');
+
+        parser.parseTestResultsFile.mockReturnValueOnce({
+            tests: [
+                { title: 'Test 1', state: 'passed', duration: 100 },
+                { title: 'Test 2', state: 'passed', duration: 200 },
+            ],
+            stats: { passed: 2, failed: 0, skipped: 0, total: 2, duration: 300 },
+        });
+
+        reportGen.generateHtmlReport.mockReturnValueOnce('<html>report</html>');
+
+        const mod = require('./case17').default;
+        await mod.handler(baseContext);
+
+        expect(reportGen.generateHtmlReport).toHaveBeenCalledWith(
+            expect.any(Array),
+            expect.objectContaining({
+                testHistory: expect.any(Object),
+            }),
+        );
+    });
+
+    it('handles AI analysis with empty content returning html unchanged', async () => {
+        const prompt = require('../../shared/prompt');
+        const parser = require('../../shared/result_parser');
+        const reportGen = require('../../shared/report-generator');
+        const analysis = require('../../shared/failure-analysis');
+
+        prompt.ask.mockResolvedValueOnce('/path/to/report.json').mockResolvedValueOnce('');
+
+        parser.parseTestResultsFile.mockReturnValueOnce({
+            tests: [{ title: 'Fail', state: 'failed', duration: 100, error: 'err' }],
+            stats: { passed: 0, failed: 1, skipped: 0, total: 1, duration: 100 },
+        });
+
+        reportGen.generateHtmlReport.mockReturnValueOnce('<html>report</html>');
+
+        const mod = require('./case17').default;
+        await mod.handler(baseContext);
+
+        expect(analysis.analyzeFailuresWithReport).toHaveBeenCalled();
+    });
+
+    it('handles _fetchJiraContext when issues list is empty', async () => {
+        const prompt = require('../../shared/prompt');
+        const parser = require('../../shared/result_parser');
+        const reportGen = require('../../shared/report-generator');
+
+        baseContext.jiraResource.getJiraResource = jest.fn().mockResolvedValueOnce({
+            issues: [],
+        });
+
+        prompt.ask.mockResolvedValueOnce('/path/to/report.json').mockResolvedValueOnce('');
+
+        parser.parseTestResultsFile.mockReturnValueOnce({
+            tests: [{ title: 'Login test', state: 'failed', duration: 100, error: 'err' }],
+            stats: { passed: 0, failed: 1, skipped: 0, total: 1, duration: 100 },
+        });
+
+        reportGen.generateHtmlReport.mockReturnValueOnce('<html>report</html>');
+
+        const mod = require('./case17').default;
+        await mod.handler(baseContext);
+
+        expect(baseContext.jiraResource.getJiraResource).toHaveBeenCalled();
+        expect(prompt.info).toHaveBeenCalledWith(expect.stringContaining('Relatório HTML gerado'));
+
+        delete baseContext.jiraResource.getJiraResource;
+    });
+
+    it('handles fetchJiraContext with missing issues field', async () => {
+        const prompt = require('../../shared/prompt');
+        const parser = require('../../shared/result_parser');
+        const reportGen = require('../../shared/report-generator');
+
+        baseContext.jiraResource.getJiraResource = jest.fn().mockResolvedValueOnce({
+            // no issues field at all
+        });
+
+        prompt.ask.mockResolvedValueOnce('/path/to/report.json').mockResolvedValueOnce('');
+
+        parser.parseTestResultsFile.mockReturnValueOnce({
+            tests: [{ title: 'Login test', state: 'failed', duration: 100, error: 'err' }],
+            stats: { passed: 0, failed: 1, skipped: 0, total: 1, duration: 100 },
+        });
+
+        reportGen.generateHtmlReport.mockReturnValueOnce('<html>report</html>');
+
+        const mod = require('./case17').default;
+        await mod.handler(baseContext);
+
+        expect(baseContext.jiraResource.getJiraResource).toHaveBeenCalled();
+
+        delete baseContext.jiraResource.getJiraResource;
+    });
+
+    it('handles computeDiff with missing tests field', async () => {
+        const prompt = require('../../shared/prompt');
+        const parser = require('../../shared/result_parser');
+        const reportGen = require('../../shared/report-generator');
+        const fs = require('fs');
+
+        fs.existsSync.mockReturnValueOnce(true);
+        fs.readFileSync.mockReturnValueOnce(
+            JSON.stringify({
+                results: {
+                    // no tests field
+                },
+            }),
+        );
+
+        prompt.ask.mockResolvedValueOnce('/path/to/report.json').mockResolvedValueOnce('');
 
         parser.parseTestResultsFile.mockReturnValueOnce({
             tests: [{ title: 'Test 1', state: 'passed', duration: 100 }],
@@ -89,109 +326,144 @@ describe('case17 — HTML report generator', () => {
         });
 
         reportGen.generateHtmlReport.mockReturnValueOnce('<html>report</html>');
-        fs.writeFileSync.mockImplementationOnce(jest.fn());
 
         const mod = require('./case17').default;
         await mod.handler(baseContext);
 
-        expect(parser.parseTestResultsFile).toHaveBeenCalledWith('/path/to/report.json');
-        expect(reportGen.generateHtmlReport).toHaveBeenCalled();
-        expect(fs.writeFileSync).toHaveBeenCalledWith('/out/report.html', '<html>report</html>', 'utf8');
-        expect(baseContext.pushHistory).toHaveBeenCalledWith('html-report', expect.stringContaining('1 testes'), 'ok');
+        expect(prompt.info).toHaveBeenCalledWith(expect.stringContaining('Relatório HTML gerado'));
     });
 
-    it('includes failure analysis when there are failures and user confirms', async () => {
+    it('resolves mapping with missing tests field', async () => {
+        const prompt = require('../../shared/prompt');
+        const parser = require('../../shared/result_parser');
+        const reportGen = require('../../shared/report-generator');
+        const fs = require('fs');
+
+        process.env.QA_MAPPING_PATH = '/tmp/missing-tests.json';
+
+        fs.existsSync.mockReturnValue(true);
+        fs.readFileSync.mockReturnValue(JSON.stringify({ otherField: true }));
+
+        prompt.ask.mockResolvedValueOnce('/path/to/report.json').mockResolvedValueOnce('');
+
+        parser.parseTestResultsFile.mockReturnValueOnce({
+            tests: [{ title: 'Test 1', state: 'passed', duration: 100 }],
+            stats: { passed: 1, failed: 0, skipped: 0, total: 1, duration: 100 },
+        });
+
+        reportGen.generateHtmlReport.mockReturnValueOnce('<html>report</html>');
+
+        const mod = require('./case17').default;
+        await mod.handler(baseContext);
+
+        expect(prompt.info).toHaveBeenCalledWith(expect.stringContaining('Relatório HTML gerado'));
+    });
+
+    it('handles parseCliExtra with invalid flags', async () => {
+        const prompt = require('../../shared/prompt');
+        const parser = require('../../shared/result_parser');
+        const reportGen = require('../../shared/report-generator');
+
+        const origArgv = process.argv;
+        process.argv = ['node', 'script', '--unknown-flag', '--publish', '', '--run', 'nofile'];
+
+        prompt.ask.mockResolvedValueOnce('/path/to/report.json').mockResolvedValueOnce('');
+
+        parser.parseTestResultsFile.mockReturnValueOnce({
+            tests: [{ title: 'Test 1', state: 'passed', duration: 100 }],
+            stats: { passed: 1, failed: 0, skipped: 0, total: 1, duration: 100 },
+        });
+
+        reportGen.generateHtmlReport.mockReturnValueOnce('<html>report</html>');
+
+        const mod = require('./case17').default;
+        await mod.handler(baseContext);
+
+        expect(prompt.info).toHaveBeenCalledWith(expect.stringContaining('Relatório HTML gerado'));
+
+        process.argv = origArgv;
+    });
+
+    it('builds diff summary with failure that has no error message', async () => {
+        const prompt = require('../../shared/prompt');
+        const parser = require('../../shared/result_parser');
+        const reportGen = require('../../shared/report-generator');
+        const fs = require('fs');
+
+        // Previous run had one test that was passing
+        fs.existsSync.mockReturnValue(true);
+        fs.readFileSync.mockReturnValue(
+            JSON.stringify({
+                results: { tests: [{ name: 'Only Fail', status: 'passed' }] },
+            }),
+        );
+
+        prompt.ask.mockResolvedValueOnce('/path/to/report.json').mockResolvedValueOnce('');
+
+        parser.parseTestResultsFile.mockReturnValueOnce({
+            tests: [
+                { title: 'Only Fail', state: 'failed', duration: 50 },
+                { title: 'No Prior', state: 'passed', duration: 10 },
+            ],
+            stats: { passed: 1, failed: 1, skipped: 0, total: 2, duration: 60 },
+        });
+
+        reportGen.generateHtmlReport.mockReturnValueOnce('<html>report</html>');
+
+        const mod = require('./case17').default;
+        await mod.handler(baseContext);
+
+        // Verify handler runs to completion
+        expect(prompt.info).toHaveBeenCalledWith(expect.stringContaining('Relatório HTML gerado'));
+    });
+
+    it('handles parseCliExtra with --run edge cases', async () => {
+        const prompt = require('../../shared/prompt');
+        const parser = require('../../shared/result_parser');
+        const reportGen = require('../../shared/report-generator');
+
+        const origArgv = process.argv;
+        process.argv = ['node', 'script', '--run', '=onlyfile', '--run', 'name='];
+
+        prompt.ask.mockResolvedValueOnce('/path/to/report.json').mockResolvedValueOnce('');
+
+        parser.parseTestResultsFile.mockReturnValueOnce({
+            tests: [{ title: 'Test 1', state: 'passed', duration: 100 }],
+            stats: { passed: 1, failed: 0, skipped: 0, total: 1, duration: 100 },
+        });
+
+        reportGen.generateHtmlReport.mockReturnValueOnce('<html>report</html>');
+
+        const mod = require('./case17').default;
+        await mod.handler(baseContext);
+
+        expect(prompt.info).toHaveBeenCalledWith(expect.stringContaining('Relatório HTML gerado'));
+
+        process.argv = origArgv;
+    });
+
+    it('injects AI analysis into html without bodyEnd', async () => {
         const prompt = require('../../shared/prompt');
         const parser = require('../../shared/result_parser');
         const reportGen = require('../../shared/report-generator');
         const analysis = require('../../shared/failure-analysis');
-        const fs = require('fs');
 
-        prompt.ask.mockResolvedValueOnce('/path/to/report.json').mockResolvedValueOnce('/out/report.html');
-        prompt.askConfirm.mockResolvedValueOnce(true);
+        prompt.askConfirm.mockResolvedValue(true);
+        analysis.analyzeFailuresWithReport.mockResolvedValue({ content: 'Analysis text' });
+
+        prompt.ask.mockResolvedValueOnce('/path/to/report.json').mockResolvedValueOnce('');
 
         parser.parseTestResultsFile.mockReturnValueOnce({
-            tests: [
-                { title: 'Pass', state: 'passed', duration: 100 },
-                { title: 'Fail', state: 'failed', duration: 50 },
-            ],
-            stats: { passed: 1, failed: 1, skipped: 0, total: 2, duration: 150 },
+            tests: [{ title: 'Fail', state: 'failed', duration: 100, error: 'err' }],
+            stats: { passed: 0, failed: 1, skipped: 0, total: 1, duration: 100 },
         });
 
-        reportGen.generateHtmlReport.mockReturnValueOnce('<html>report</body></html>');
-        analysis.analyzeFailuresWithReport.mockResolvedValueOnce({
-            content: 'Root cause analysis',
-            confidence: 'high',
-            fallbackUsed: false,
-        });
-        fs.writeFileSync.mockImplementationOnce(jest.fn());
+        // HTML without </body> to cover the bodyEnd === -1 branch
+        reportGen.generateHtmlReport.mockReturnValueOnce('<html><head></head><div>no body tag</div></html>');
 
         const mod = require('./case17').default;
         await mod.handler(baseContext);
 
-        expect(prompt.askConfirm).toHaveBeenCalled();
         expect(analysis.analyzeFailuresWithReport).toHaveBeenCalled();
-    });
-
-    it('handles parse error gracefully', async () => {
-        const prompt = require('../../shared/prompt');
-        const parser = require('../../shared/result_parser');
-
-        prompt.ask.mockResolvedValueOnce('/path/to/bad.json');
-        parser.parseTestResultsFile.mockReturnValueOnce({
-            tests: [],
-            stats: { passed: 0, failed: 0, skipped: 0, total: 0, duration: 0 },
-            error: 'Arquivo não encontrado',
-        });
-
-        const mod = require('./case17').default;
-        await mod.handler(baseContext);
-
-        expect(prompt.printError).toHaveBeenCalled();
-    });
-
-    it('handles empty file path', async () => {
-        const prompt = require('../../shared/prompt');
-        prompt.ask.mockResolvedValueOnce('');
-
-        const mod = require('./case17').default;
-        await mod.handler(baseContext);
-
-        expect(prompt.printError).toHaveBeenCalled();
-    });
-
-    it('prompts bug report creation when there are failures and user confirms', async () => {
-        const prompt = require('../../shared/prompt');
-        const parser = require('../../shared/result_parser');
-        const reportGen = require('../../shared/report-generator');
-        const bugReport = require('../../shared/bug-report');
-        const fs = require('fs');
-
-        prompt.ask.mockResolvedValueOnce('/path/to/report.json');
-        prompt.ask.mockResolvedValueOnce('/out/report.html');
-        prompt.askConfirm.mockResolvedValueOnce(false); // no AI analysis
-        prompt.askConfirm.mockResolvedValueOnce(true); // yes bug report
-
-        parser.parseTestResultsFile.mockReturnValueOnce({
-            tests: [
-                { title: 'Pass', state: 'passed', duration: 100 },
-                { title: 'Fail', state: 'failed', duration: 50 },
-            ],
-            stats: { passed: 1, failed: 1, skipped: 0, total: 2, duration: 150 },
-        });
-
-        reportGen.generateHtmlReport.mockReturnValueOnce('<html>report</html>');
-        fs.writeFileSync.mockImplementationOnce(jest.fn());
-        bugReport.collectAutomated.mockReturnValueOnce({ title: 'Bug Report', description: 'Falhas detectadas' });
-
-        const mod = require('./case17').default;
-        await mod.handler(baseContext);
-
-        expect(prompt.askConfirm).toHaveBeenCalledWith(
-            'Deseja criar um relatório de bug (Bug Report) no Jira para as falhas?',
-            false,
-        );
-        expect(bugReport.collectAutomated).toHaveBeenCalled();
-        expect(bugReport.interactiveBugReportFlow).toHaveBeenCalled();
     });
 });

@@ -5,6 +5,7 @@ import * as prompt from '../shared/prompt';
 import * as state from '../shared/state';
 import * as nivelar from './nivelar';
 import * as cliBase from '../shared/cli_base';
+// sessionContext import removed — unused
 
 const _realReadFileSync = fs.readFileSync.bind(fs);
 
@@ -797,5 +798,334 @@ describe('parseBatchArgs', () => {
         process.argv = ['node', 'main.ts'];
         const result = mainModule.parseBatchArgs();
         expect(result).toEqual({});
+    });
+});
+
+// ---------- empty projects (main flow) ----------
+
+describe('main flow empty projects', () => {
+    it('exits early when no projects configured', () => {
+        jest.isolateModules(() => {
+            jest.doMock('fs', () => ({
+                readFileSync: jest.fn((p: string) => {
+                    if (p.includes('projects.json')) return '{}';
+                    if (p.includes('providers.json')) return '{}';
+                    return jest.requireActual('fs').readFileSync(p, 'utf8');
+                }),
+                writeFileSync: jest.fn(),
+                unlinkSync: jest.fn(),
+                existsSync: jest.fn(() => false),
+            }));
+            jest.doMock('../shared/config', () => ({
+                __esModule: true,
+                default: {
+                    jiraBaseUrl: 'https://jira.example.com',
+                    jiraPersonalToken: 'token',
+                    xrayBaseUrl: 'https://xray.example.com',
+                    gitToken: 'glpat-xxx',
+                    gitBaseUrl: 'https://gitlab.example.com',
+                    githubToken: '',
+                    githubApiUrl: '',
+                    cypressProjectPath: '',
+                    getAllPrefixed: jest.fn(() => ({})),
+                    quiet: false,
+                },
+            }));
+            jest.doMock('../shared/cli_base', () => ({
+                createValidateEnv: jest.fn(() => jest.fn()),
+                setupSigint: jest.fn(),
+                printSessionSummary: jest.fn(),
+            }));
+            jest.doMock('../shared/prompt', () => ({
+                print: jest.fn(),
+                success: jest.fn(),
+                error: jest.fn(),
+                warn: jest.fn(),
+                info: jest.fn(),
+                helpLine: jest.fn(),
+                title: jest.fn(),
+                divider: jest.fn(),
+                prompt: jest.fn(),
+                confirm: jest.fn(),
+                ask: jest.fn(),
+                askConfirm: jest.fn(),
+                printError: jest.fn(),
+                withSpinner: jest.fn((_l: string, fn: () => Promise<unknown>) => fn()),
+                showSelect: jest.fn(),
+                tableView: jest.fn(),
+                Spinner: jest.fn().mockImplementation(() => ({ start: jest.fn(), stop: jest.fn() })),
+            }));
+            jest.doMock('../shared/state', () => ({
+                load: jest.fn(() => ({})),
+                update: jest.fn((fn: (s: Record<string, unknown>) => void) => {
+                    const s: Record<string, unknown> = {};
+                    fn(s);
+                    return s;
+                }),
+                save: jest.fn(),
+            }));
+            jest.doMock('../shared/logger', () => ({
+                rootLogger: {
+                    child: jest.fn(() => ({ info: jest.fn(), warn: jest.fn(), error: jest.fn() })),
+                    warn: jest.fn(),
+                    error: jest.fn(),
+                    info: jest.fn(),
+                },
+            }));
+            jest.doMock('../shared/session-context', () => ({
+                SessionContext: jest.fn().mockImplementation(() => ({
+                    pushHistory: jest.fn(),
+                    buildContextLine: jest.fn(() => ''),
+                    sessionCounters: [] as Array<{ status: string }>,
+                    lastOperation: '',
+                    history: [] as Array<Record<string, unknown>>,
+                })),
+            }));
+            jest.doMock('../shared/splash', () => ({ showSplash: jest.fn() }));
+            jest.doMock('../shared/output', () => ({
+                defaultOutput: { box: jest.fn(), table: jest.fn() },
+            }));
+            jest.doMock('../shared/temp-dir', () => ({
+                ensureDirs: jest.fn(),
+                registerCleanup: jest.fn(),
+                writeEphemeral: jest.fn(() => '/tmp/test'),
+                reportsDir: jest.fn(() => '/tmp/reports'),
+            }));
+            jest.doMock('./session-state', () => ({
+                sessionLog: { info: jest.fn() },
+                sessionContext: {
+                    buildContextLine: jest.fn(() => ''),
+                    sessionCounters: [] as Array<{ status: string }>,
+                    lastOperation: '',
+                },
+                isBusy: false,
+                manager: null,
+                providerLabel: jest.fn(() => 'GitLab'),
+                buildActionChoices: jest.fn(() => []),
+                displayProjects: jest.fn(),
+                displayRecentPipelines: jest.fn(),
+                printSessionSummary: jest.fn(),
+                getProviderForProject: jest.fn(() => 'gitlab'),
+                createManagerForProject: jest.fn(() => ({})),
+                pushHistory: jest.fn(),
+                setCurrentProjectName: jest.fn(),
+                setProjectId: jest.fn(),
+                setManager: jest.fn(),
+                projectId: '',
+                getProjects: jest.fn(() => ({})),
+            }));
+            jest.doMock('./pipeline-handler', () => ({
+                handleTriggerPipeline: jest.fn(),
+                handleExportVariables: jest.fn(),
+                isComplete: jest.fn(),
+                pollPipeline: jest.fn(),
+                _jiraEnv: jest.fn(() => null),
+                _resolveGlob: jest.fn(() => null),
+                downloadTestArtifacts: jest.fn(),
+                parseTestResults: jest.fn(),
+                createTestExecution: jest.fn(),
+                collectTestResults: jest.fn(),
+            }));
+            jest.doMock('./mr-handler', () => ({
+                nivelarBranchesWrapper: jest.fn(),
+                handleCreateMR: jest.fn(),
+                handleListApprovedMRs: jest.fn(),
+                handleMergeMR: jest.fn(),
+            }));
+            jest.doMock('./schedule-handler', () => ({
+                handleListSchedules: jest.fn(),
+                handleRunSchedule: jest.fn(),
+                handleChangeProject: jest.fn(),
+                handleFlakinessDashboard: jest.fn(),
+            }));
+            jest.doMock('./batch-mode', () => ({
+                tryBatchMode: jest.fn(() => Promise.resolve(false)),
+                parseBatchArgs: jest.fn(() => ({})),
+            }));
+            jest.doMock('./ui-helpers', () => ({
+                handleHelp: jest.fn(),
+                handleShowHistory: jest.fn(),
+            }));
+
+            const mod = require('./main');
+            expect(mod.default).toBeDefined();
+        });
+    });
+});
+
+// ---------- buildContextLine ----------
+
+describe('buildContextLine', () => {
+    it('returns provider TOOLS with session context', () => {
+        const result = mainModule.buildContextLine();
+        expect(result).toMatch(/TOOLS$/);
+    });
+});
+
+// ---------- withErrorHandling ----------
+
+describe('withErrorHandling', () => {
+    it('returns false when handler resolves', async () => {
+        const handler: (m: GitProvider, pn: string, ns: string[]) => Promise<unknown> = jest
+            .fn<(m: GitProvider, pn: string, ns: string[]) => Promise<unknown>>()
+            .mockResolvedValue('ok');
+        const wrapped = mainModule.withErrorHandling(handler);
+        const result = await wrapped({} as GitProvider, 'p', ['p']);
+        expect(result).toBe(false);
+    });
+
+    it('calls printError when handler rejects and returns false', async () => {
+        const handler: (m: GitProvider, pn: string, ns: string[]) => Promise<unknown> = jest
+            .fn<(m: GitProvider, pn: string, ns: string[]) => Promise<unknown>>()
+            .mockRejectedValue(new Error('fail'));
+        const wrapped = mainModule.withErrorHandling(handler);
+        const result = await wrapped({} as GitProvider, 'p', ['p']);
+        expect(result).toBe(false);
+        expect(prompt.printError).toHaveBeenCalledWith('Handler error', expect.any(Error));
+    });
+});
+
+// ---------- _handleExit ----------
+
+describe('_handleExit', () => {
+    it('prints goodbye and returns true', () => {
+        const result = mainModule._handleExit();
+        expect(result).toBe(true);
+        expect(prompt.title).toHaveBeenCalledWith('Até logo!');
+    });
+
+    it('sets exit code when session has errors', () => {
+        const ss = require('./session-state');
+        const orig = ss.sessionContext.sessionCounters;
+        ss.sessionContext.sessionCounters = [{ status: 'error' }];
+        try {
+            mainModule._handleExit();
+            expect(process.exitCode).toBe(1);
+        } finally {
+            ss.sessionContext.sessionCounters = orig;
+        }
+    });
+});
+
+// ---------- _dispatchAction ----------
+
+describe('_dispatchAction', () => {
+    const mockM = { dummy: true } as unknown as GitProvider;
+    const pn = 'proj-a';
+    const ns = ['proj-a', 'proj-b'];
+
+    beforeAll(() => {
+        jest.spyOn(require('../shared/output').defaultOutput, 'box').mockImplementation(() => {});
+    });
+
+    it('handles /help and returns false', async () => {
+        const result = await mainModule._dispatchAction('/help', mockM, pn, ns);
+        expect(result).toBe(false);
+    });
+
+    it('handles /history and returns false', async () => {
+        const result = await mainModule._dispatchAction('/history', mockM, pn, ns);
+        expect(result).toBe(false);
+    });
+
+    it('handles /docs with warn and returns false', async () => {
+        const result = await mainModule._dispatchAction('/docs', mockM, pn, ns);
+        expect(result).toBe(false);
+        expect(prompt.warn).toHaveBeenCalledWith('Documentação disponível apenas no módulo Jira.');
+    });
+
+    it('handles /d with warn and returns false', async () => {
+        const result = await mainModule._dispatchAction('/d', mockM, pn, ns);
+        expect(result).toBe(false);
+        expect(prompt.warn).toHaveBeenCalledWith('Documentação disponível apenas no módulo Jira.');
+    });
+
+    it('handles /back and returns false', async () => {
+        const result = await mainModule._dispatchAction('/back', mockM, pn, ns);
+        expect(result).toBe(false);
+    });
+
+    it('handles /menu and returns false', async () => {
+        const result = await mainModule._dispatchAction('/menu', mockM, pn, ns);
+        expect(result).toBe(false);
+    });
+
+    it('handles /exit and returns true via _handleExit', async () => {
+        const result = await mainModule._dispatchAction('/exit', mockM, pn, ns);
+        expect(result).toBe(true);
+    });
+
+    it('handles /sair and returns true via _handleExit', async () => {
+        const result = await mainModule._dispatchAction('/sair', mockM, pn, ns);
+        expect(result).toBe(true);
+    });
+
+    it('handles option 0 and returns true via _handleExit', async () => {
+        const result = await mainModule._dispatchAction('0', mockM, pn, ns);
+        expect(result).toBe(true);
+    });
+
+    it('dispatches to action handler and returns false', async () => {
+        const result = await mainModule._dispatchAction('1', mockM, pn, ns);
+        expect(result).toBe(false);
+    });
+
+    it('warns for invalid option', async () => {
+        const result = await mainModule._dispatchAction('zzz', mockM, pn, ns);
+        expect(result).toBe(false);
+        expect(prompt.warn).toHaveBeenCalledWith('Opção inválida.');
+    });
+});
+
+// ---------- _selectProject ----------
+
+describe('_selectProject', () => {
+    it('selects first project by index 1', () => {
+        (prompt.prompt as jest.Mock).mockReturnValueOnce('1');
+        const result = mainModule._selectProject();
+        expect(result.projectName).toBe('proj-a');
+        expect(result.names).toContain('proj-a');
+        expect(prompt.success).toHaveBeenCalledWith(expect.stringContaining('Projeto selecionado'));
+    });
+
+    it('throws error for invalid project index', () => {
+        (prompt.prompt as jest.Mock).mockReturnValueOnce('99');
+        expect(() => mainModule._selectProject()).toThrow('Invalid project');
+        expect(prompt.error).toHaveBeenCalledWith('Projeto inválido.');
+    });
+});
+
+// ---------- _promptChoice ----------
+
+describe('_promptChoice', () => {
+    it('returns prompt choice in non-TTY mode', async () => {
+        (prompt.prompt as jest.Mock).mockReturnValueOnce('/exit');
+        const result = await mainModule._promptChoice('0-9');
+        expect(result).toBe('/exit');
+    });
+
+    it('falls back to lastChoice when prompt returns empty string', async () => {
+        (prompt.prompt as jest.Mock).mockReturnValueOnce('');
+        (state.load as jest.Mock).mockReturnValue({ lastChoice: '3' });
+        const result = await mainModule._promptChoice('0-9');
+        expect(result).toBe('3');
+        expect(prompt.info).toHaveBeenCalledWith(expect.stringContaining('Repetindo última opção'));
+    });
+
+    it('skips lastChoice when it is "0"', async () => {
+        (prompt.prompt as jest.Mock).mockReturnValueOnce('');
+        (state.load as jest.Mock).mockReturnValue({ lastChoice: '0' });
+        const result = await mainModule._promptChoice('0-9');
+        expect(result).toBe('');
+    });
+});
+
+// ---------- unhandled rejection handler ----------
+
+describe('unhandledRejection handler', () => {
+    it('logs error and sets exit code', () => {
+        const logger = require('../shared/logger');
+        process.emit('unhandledRejection', new Error('test rejection'));
+        expect(logger.rootLogger.error).toHaveBeenCalledWith('Unhandled Rejection', expect.any(Object));
     });
 });

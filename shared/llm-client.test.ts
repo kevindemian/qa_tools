@@ -1,3 +1,4 @@
+jest.useFakeTimers();
 jest.mock('./config', () => {
     const mockConfig: Record<string, string> = {};
     const ConfigMock = {
@@ -56,6 +57,10 @@ jest.mock('./config', () => {
             const v = mockConfig.llmMaxTotalTokens;
             return v ? parseInt(v, 10) : 0;
         },
+        get llmMaxTokens() {
+            const v = mockConfig.llmMaxTokens;
+            return v ? parseInt(v, 10) : 128000;
+        },
         set(key: string, value: string) {
             mockConfig[key] = value;
         },
@@ -68,6 +73,12 @@ jest.mock('./config', () => {
     };
     return { __esModule: true, default: ConfigMock };
 });
+jest.mock('./disk-cache', () => ({
+    diskCacheGet: jest.fn(() => null),
+    diskCacheSet: jest.fn(),
+    clearDiskCache: jest.fn(),
+}));
+import { diskCacheGet } from './disk-cache';
 import Config from './config';
 import {
     llmPrompt,
@@ -115,6 +126,7 @@ beforeEach(() => {
     resetRateLimiter();
     resetCircuitState();
     (Config as unknown as { resetInstance: () => void }).resetInstance();
+    (diskCacheGet as jest.Mock).mockReturnValue(null);
 });
 
 describe('llmPrompt', () => {
@@ -733,29 +745,29 @@ describe('llmPrompt', () => {
         });
     });
 
-    describe('schema validation', () => {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any -- mock schema
-        const okBooleanSchema: any = {
-            safeParse: (data: unknown) => {
-                if (
-                    typeof data === 'object' &&
-                    data !== null &&
-                    'ok' in data &&
-                    typeof (data as Record<string, unknown>).ok === 'boolean'
-                ) {
-                    return { success: true as const, data };
-                }
-                return { success: false as const, error: { issues: [{ path: ['ok'], message: 'Expected boolean' }] } };
-            },
-        };
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any -- mock schema that always fails
-        const alwaysFailsSchema: any = {
-            safeParse: () => ({
-                success: false as const,
-                error: { issues: [{ path: ['x'], message: 'always fails' }] },
-            }),
-        };
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const okBooleanSchema: any = {
+        safeParse: (data: unknown) => {
+            if (
+                typeof data === 'object' &&
+                data !== null &&
+                'ok' in data &&
+                typeof (data as Record<string, unknown>).ok === 'boolean'
+            ) {
+                return { success: true as const, data };
+            }
+            return { success: false as const, error: { issues: [{ path: ['ok'], message: 'Expected boolean' }] } };
+        },
+    };
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const alwaysFailsSchema: any = {
+        safeParse: () => ({
+            success: false as const,
+            error: { issues: [{ path: ['x'], message: 'always fails' }] },
+        }),
+    };
 
+    describe('schema validation', () => {
         beforeEach(() => {
             jest.useRealTimers();
             (Config as unknown as { set: (k: string, v: string) => void }).set('llmApiKey', 'sk-schema');
@@ -882,6 +894,188 @@ describe('llmPrompt', () => {
                 .mockResolvedValueOnce(mockOkResponse(successBody));
             const result = await llmPrompt('main', 'system', 'user', 'err-payload');
             expect(result).toBe('fallback worked');
+        });
+    });
+
+    describe('Gemini usageMetadata tracking', () => {
+        it('tracks prompt/completion tokens via usageMetadata (Gemini format)', async () => {
+            (Config as unknown as { set: (k: string, v: string) => void }).set('llmReviewApiKey', 'AIza-um-test');
+            (Config as unknown as { set: (k: string, v: string) => void }).set(
+                'llmReviewModel',
+                'gemini-2.0-flash-exp',
+            );
+            (Config as unknown as { set: (k: string, v: string) => void }).set(
+                'llmReviewBaseUrl',
+                'https://generativelanguage.googleapis.com/v1beta',
+            );
+            resetLlmClientMetrics();
+            const apiResponse = JSON.stringify({
+                candidates: [{ content: { parts: [{ text: 'gemini result' }] } }],
+                usageMetadata: { promptTokenCount: 10, candidatesTokenCount: 5 },
+            });
+            mockFetch.mockResolvedValueOnce(mockOkResponse(apiResponse));
+
+            await llmPrompt('reviewer', 'system', 'user', 'um-1');
+            const metrics = getLlmClientMetrics();
+            expect(metrics.totalPromptTokens).toBe(10);
+            expect(metrics.totalCompletionTokens).toBe(5);
+        });
+    });
+
+    describe('cache expiry', () => {
+        it('re-requests when cached entry expires', async () => {
+            jest.useFakeTimers();
+
+            (Config as unknown as { set: (k: string, v: string) => void }).set('llmApiKey', 'sk-cache-expire');
+            (Config as unknown as { set: (k: string, v: string) => void }).set('llmModel', 'gpt-4');
+            (Config as unknown as { set: (k: string, v: string) => void }).set('llmBaseUrl', 'https://api.test.com/v1');
+
+            mockFetch.mockResolvedValue(
+                mockOkResponse(JSON.stringify({ choices: [{ message: { content: 'first' } }] })),
+            );
+
+            const r1 = await llmPrompt('main', 'system', 'ttl test', 'cache-ttl');
+            expect(r1).toBe('first');
+            expect(mockFetch).toHaveBeenCalledTimes(1);
+
+            jest.advanceTimersByTime(5 * 60 * 1000 + 1000);
+
+            mockFetch.mockResolvedValue(
+                mockOkResponse(JSON.stringify({ choices: [{ message: { content: 'second' } }] })),
+            );
+            const r2 = await llmPrompt('main', 'system', 'ttl test', 'cache-ttl');
+            expect(r2).toBe('second');
+            expect(mockFetch).toHaveBeenCalledTimes(2);
+        });
+
+        it('cache cleanup timed interval removes expired entries', async () => {
+            (Config as unknown as { set: (k: string, v: string) => void }).set('llmApiKey', 'sk-cache-cleanup');
+            (Config as unknown as { set: (k: string, v: string) => void }).set('llmModel', 'gpt-4');
+            (Config as unknown as { set: (k: string, v: string) => void }).set('llmBaseUrl', 'https://api.test.com/v1');
+
+            mockFetch
+                .mockResolvedValueOnce(
+                    mockOkResponse(JSON.stringify({ choices: [{ message: { content: 'to-clean' } }] })),
+                )
+                .mockResolvedValueOnce(
+                    mockOkResponse(JSON.stringify({ choices: [{ message: { content: 'after-cleanup' } }] })),
+                );
+
+            const r1 = await llmPrompt('main', 'system', 'cleanup test', 'cache-cleanup');
+            expect(r1).toBe('to-clean');
+            expect(mockFetch).toHaveBeenCalledTimes(1);
+
+            jest.advanceTimersByTime(600 * 1000);
+            const r2 = await llmPrompt('main', 'system', 'cleanup test', 'cache-cleanup');
+            expect(r2).toBe('after-cleanup');
+            expect(mockFetch).toHaveBeenCalledTimes(2);
+        });
+    });
+
+    describe('report tier', () => {
+        it('uses report tier config and sends responseFormat=json', async () => {
+            (Config as unknown as { set: (k: string, v: string) => void }).set('llmApiKey', 'sk-report');
+            (Config as unknown as { set: (k: string, v: string) => void }).set('llmModel', 'gpt-4-report');
+            (Config as unknown as { set: (k: string, v: string) => void }).set('llmBaseUrl', 'https://api.test.com/v1');
+            mockFetch.mockResolvedValueOnce(
+                mockOkResponse(JSON.stringify({ choices: [{ message: { content: '{"result":42}' } }] })),
+            );
+
+            await llmPrompt('report', 'system', 'report test', undefined, 'json');
+            const body = JSON.parse(mockFetch.mock.calls[0][1].body as string);
+            expect(body.response_format).toEqual({ type: 'json_object' });
+        });
+    });
+
+    describe('fetch retries exhausted', () => {
+        it('throws on network error after exhausting all retries', async () => {
+            (Config as unknown as { set: (k: string, v: string) => void }).set('llmApiKey', 'sk-netfail');
+            (Config as unknown as { set: (k: string, v: string) => void }).set('llmModel', 'gpt-4');
+            (Config as unknown as { set: (k: string, v: string) => void }).set('llmBaseUrl', 'https://api.test.com/v1');
+            mockFetch.mockRejectedValue(new Error('Network down'));
+
+            jest.spyOn(global, 'setTimeout').mockImplementation(((cb: (...args: unknown[]) => void) => {
+                cb();
+                return {} as NodeJS.Timeout;
+            }) as typeof global.setTimeout);
+
+            await expect(llmPrompt('main', 'system', 'net fail')).rejects.toThrow('Network down');
+        });
+
+        it('throws LlmError after exhausting HTTP retries on 429', async () => {
+            (Config as unknown as { set: (k: string, v: string) => void }).set('llmApiKey', 'sk-httpex');
+            (Config as unknown as { set: (k: string, v: string) => void }).set('llmModel', 'gpt-4');
+            (Config as unknown as { set: (k: string, v: string) => void }).set('llmBaseUrl', 'https://api.test.com/v1');
+            // 3 retries + 1 extra fallback config = 4 calls total, all 429
+            mockFetch.mockResolvedValue(mockErrorResponse(429));
+
+            jest.spyOn(global, 'setTimeout').mockImplementation(((cb: (...args: unknown[]) => void) => {
+                cb();
+                return {} as NodeJS.Timeout;
+            }) as typeof global.setTimeout);
+
+            await expect(llmPrompt('main', 'system', 'http fail')).rejects.toThrow('All LLM providers failed');
+        });
+
+        it('throws LlmError when fetch retries set to 0', async () => {
+            (Config as unknown as { set: (k: string, v: string) => void }).set('llmApiKey', 'sk-zero');
+            (Config as unknown as { set: (k: string, v: string) => void }).set('llmModel', 'gpt-4');
+            (Config as unknown as { set: (k: string, v: string) => void }).set('llmBaseUrl', 'https://api.test.com/v1');
+            (Config as unknown as { set: (k: string, v: string) => void }).set('LLM_FETCH_RETRIES', '0');
+
+            await expect(llmPrompt('main', 'system', 'zero retry')).rejects.toThrow('All LLM providers failed');
+        });
+    });
+
+    describe('input token limit', () => {
+        it('throws when estimated tokens exceed LLM_MAX_TOKENS_PER_OP', async () => {
+            (Config as unknown as { set: (k: string, v: string) => void }).set('llmApiKey', 'sk-tokenlim');
+            (Config as unknown as { set: (k: string, v: string) => void }).set('llmModel', 'gpt-4');
+            (Config as unknown as { set: (k: string, v: string) => void }).set('llmBaseUrl', 'https://api.test.com/v1');
+            (Config as unknown as { set: (k: string, v: string) => void }).set('llmMaxTokens', '1');
+
+            await expect(llmPrompt('main', 'a'.repeat(100), 'b'.repeat(100), 'token-lim')).rejects.toThrow(
+                'Input too large',
+            );
+        });
+    });
+
+    describe('disk cache', () => {
+        beforeEach(() => {
+            (Config as unknown as { set: (k: string, v: string) => void }).set('llmApiKey', 'sk-disk');
+            (Config as unknown as { set: (k: string, v: string) => void }).set('llmModel', 'gpt-4');
+            (Config as unknown as { set: (k: string, v: string) => void }).set('llmBaseUrl', 'https://api.test.com/v1');
+        });
+
+        it('returns disk cached response without schema', async () => {
+            (diskCacheGet as jest.Mock).mockReturnValue('cached from disk');
+
+            const result = await llmPrompt('main', 'sys', 'usr', 'disk-noschema');
+            expect(result).toBe('cached from disk');
+            expect(mockFetch).not.toHaveBeenCalled();
+        });
+
+        it('returns disk cached response with valid schema', async () => {
+            (diskCacheGet as jest.Mock).mockReturnValue('{"ok": true}');
+
+            const result = await llmPrompt('main', 'sys', 'usr', 'disk-schema', 'json', okBooleanSchema);
+            expect(result).toEqual({ ok: true });
+            expect(mockFetch).not.toHaveBeenCalled();
+        });
+
+        it('falls through to fetch when disk cache has schema-invalid content', async () => {
+            const warnSpy = jest.spyOn(rootLogger, 'warn').mockImplementation(() => {});
+            (diskCacheGet as jest.Mock).mockReturnValue('{"not_ok": "string_value"}');
+
+            mockFetch.mockResolvedValue(
+                mockOkResponse(JSON.stringify({ choices: [{ message: { content: '{"ok": true}' } }] })),
+            );
+
+            const result = await llmPrompt('main', 'sys', 'usr', 'disk-schema-fail', 'json', okBooleanSchema);
+            expect(result).toEqual({ ok: true });
+            expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining('LLM disk cache hit but schema invalid'));
+            expect(mockFetch).toHaveBeenCalledTimes(1);
+            warnSpy.mockRestore();
         });
     });
 });

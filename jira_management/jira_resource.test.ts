@@ -906,6 +906,43 @@ describe('moveCardsToDone', () => {
 });
 
 // =====================================================================
+// getFromOriginPath
+// =====================================================================
+
+describe('getFromOriginPath', () => {
+    it('returns data on success', async () => {
+        const expected = { id: '10000', name: 'TEST' };
+        mockClient.get.mockResolvedValue({ data: expected });
+
+        const result = await jiraResource.getFromOriginPath('rest/raven/1.0/api/test/TEST-1/testruns');
+        expect(mockClient.get).toHaveBeenCalledWith('http://test-jira.com/rest/raven/1.0/api/test/TEST-1/testruns');
+        expect(result).toEqual(expected);
+    });
+
+    it('strips leading slash from path', async () => {
+        mockClient.get.mockResolvedValue({ data: { key: 'TEST-1' } });
+
+        const result = await jiraResource.getFromOriginPath('/rest/raven/1.0/api/test/TEST-1/testruns');
+        expect(mockClient.get).toHaveBeenCalledWith('http://test-jira.com/rest/raven/1.0/api/test/TEST-1/testruns');
+        expect(result).toEqual({ key: 'TEST-1' });
+    });
+
+    it('throws on network error', async () => {
+        mockClient.get.mockRejectedValue(new Error('Network error'));
+
+        await expect(jiraResource.getFromOriginPath('rest/api/test')).rejects.toThrow('Network error');
+    });
+
+    it('throws on axios error with status', async () => {
+        const axiosErr = new Error('Not found');
+        Object.assign(axiosErr, { response: { status: 404, data: { message: 'Not Found' } } });
+        mockClient.get.mockRejectedValue(axiosErr);
+
+        await expect(jiraResource.getFromOriginPath('rest/api/unknown')).rejects.toThrow('Not found');
+    });
+});
+
+// =====================================================================
 // transitionIssue
 // =====================================================================
 

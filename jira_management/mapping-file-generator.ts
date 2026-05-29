@@ -13,7 +13,11 @@ interface MappingEntry {
     key: string;
     description?: string;
     precondition?: string;
-    steps?: Array<{ Action: string; Data: string; ExpectedResult: string }>;
+    steps?: Array<{
+        Action: string;
+        Data: string;
+        /** @production Field name com espaço exigido pela Xray Server API. */ 'Expected Result': string;
+    }>;
 }
 
 class MappingFileGenerator {
@@ -52,7 +56,7 @@ class MappingFileGenerator {
                 m.steps = test.steps.map((s) => ({
                     Action: s.fields?.Action || '',
                     Data: s.fields?.Data || '',
-                    ExpectedResult: s.fields?.ExpectedResult || '',
+                    'Expected Result': s.fields?.['Expected Result'] || '',
                 }));
             }
             return m;
@@ -103,7 +107,8 @@ class MappingFileGenerator {
                 mdContent += '| # | Action | Data | Expected Result |\n';
                 mdContent += '|---|--------|------|-----------------|\n';
                 m.steps.forEach((s, i) => {
-                    mdContent += '| ' + (i + 1) + ' | ' + s.Action + ' | ' + s.Data + ' | ' + s.ExpectedResult + ' |\n';
+                    mdContent +=
+                        '| ' + (i + 1) + ' | ' + s.Action + ' | ' + s.Data + ' | ' + s['Expected Result'] + ' |\n';
                 });
             }
             mdContent += '\n---\n\n';

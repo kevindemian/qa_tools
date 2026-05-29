@@ -77,6 +77,98 @@ class TestExecutionCreator {
         return { key: created.key as string, summary };
     }
 
+    /** Link tests to a Test Execution, skipping already-linked ones.
+     * @internal Shared between createWithLinks and addTestsToExistingExecution. */
+    async _linkTestsToExecution(teKey: string, testKeys: string[]): Promise<{ linked: number; failed: number }> {
+        let linked = 0;
+        let failed = 0;
+        if (!teKey || testKeys.length === 0) return { linked, failed };
+
+        const linkedKeys: string[] = [];
+        try {
+            const te = await this.jiraResource.getJiraResource<{
+                fields?: { issuelinks?: Array<{ outwardIssue?: { key: string } }> };
+            }>('issue/' + teKey);
+            if (te?.fields?.issuelinks) {
+                for (const link of te.fields.issuelinks) {
+                    if (link.outwardIssue?.key && testKeys.includes(link.outwardIssue.key)) {
+                        linkedKeys.push(link.outwardIssue.key);
+                    }
+                }
+            }
+        } catch (err) {
+            rootLogger.warn('Não foi possível verificar links existentes: ' + (err as Error).message);
+        }
+
+        const unlinked = testKeys.filter((k) => !linkedKeys.includes(k));
+        if (unlinked.length === 0) {
+            info('Todos os testes já estão vinculados ao Test Execution.');
+            return { linked: 0, failed: 0 };
+        }
+
+        await withSpinner('Linkando ' + unlinked.length + ' teste(s)...', async () => {
+            for (const key of unlinked) {
+                try {
+                    await this.linkManager.createIssueLink(key, teKey, 'Tests');
+                    linked++;
+                } catch (err) {
+                    rootLogger.warn('Falha ao linkar ' + key + ': ' + (err as Error).message);
+                    failed++;
+                }
+            }
+        });
+        if (linked > 0) success(linked + '/' + unlinked.length + ' testes vinculados.');
+        return { linked, failed };
+    }
+
+    /** Associate test keys with an existing Test Execution (custom field + issue links). */
+    async addTestsToExistingExecution(teKey: string, testKeys: string[]): Promise<TestExecutionResult> {
+        const execLog = rootLogger.child({ operation: 'add-tests-to-testexec' });
+
+        const teIssue = await this.jiraResource.getJiraResource<{
+            key: string;
+            fields: { summary?: string; issuetype?: { name: string } };
+        }>('issue/' + teKey);
+
+        if (teIssue.fields?.issuetype?.name !== 'Test Execution') {
+            throw new Error(
+                '"' +
+                    teKey +
+                    '" não é uma Test Execution (tipo: ' +
+                    (teIssue.fields?.issuetype?.name || 'desconhecido') +
+                    ')',
+            );
+        }
+
+        const fields =
+            await this.jiraResource.getJiraResource<Array<{ id: string; name: string; schema?: { custom?: string } }>>(
+                'field',
+            );
+        if (!Array.isArray(fields)) throw new Error(FAILED_TO_GET_CUSTOM_FIELDS);
+
+        const testField = fields.find(
+            (f) => f.schema?.custom === 'com.xpandit.plugins.xray:testexec-tests-custom-field',
+        );
+        if (!testField) throw new Error(CUSTOM_FIELD_NOT_FOUND);
+
+        const currentTests: string[] = ((teIssue.fields as Record<string, unknown>)?.[testField.id] as string[]) || [];
+        const merged = [...new Set([...currentTests, ...testKeys])];
+
+        const payload: JsonObject = {};
+        payload[testField.id] = merged;
+        await this.jiraResource.putJiraResource('issue/' + teKey, { fields: payload });
+
+        execLog.info('Tests adicionados à TE: ' + teKey + ' (' + merged.length + ' total)');
+
+        const { linked, failed } = await this._linkTestsToExecution(teKey, testKeys);
+
+        const summary = teIssue.fields?.summary || teKey;
+        if (failed > 0) {
+            info('✓ Associados: ' + linked + ' | ✗ Falha: ' + failed);
+        }
+        return { key: teKey, summary };
+    }
+
     async createWithLinks(
         projectName: string,
         testKeys: string[],
@@ -88,42 +180,7 @@ class TestExecutionCreator {
 
         if (result.key && testKeys.length > 0) {
             try {
-                info('Vinculando testes ao Test Execution (link type: Tests)...');
-                const linkedKeys: string[] = [];
-                const keysToLink = [...testKeys];
-
-                try {
-                    const te = await this.jiraResource.getJiraResource<{
-                        fields?: { issuelinks?: Array<{ outwardIssue?: { key: string } }> };
-                    }>('issue/' + result.key);
-                    if (te?.fields?.issuelinks) {
-                        for (const link of te.fields.issuelinks) {
-                            if (link.outwardIssue?.key && keysToLink.includes(link.outwardIssue.key)) {
-                                linkedKeys.push(link.outwardIssue.key);
-                            }
-                        }
-                    }
-                } catch (err) {
-                    rootLogger.warn('Não foi possível verificar links existentes: ' + (err as Error).message);
-                }
-
-                const unlinked = keysToLink.filter((k) => !linkedKeys.includes(k));
-                if (unlinked.length === 0) {
-                    info('Todos os testes já estão vinculados ao Test Execution.');
-                } else {
-                    let linkCount = 0;
-                    await withSpinner('Linkando ' + unlinked.length + ' teste(s)...', async () => {
-                        for (const key of unlinked) {
-                            try {
-                                await this.linkManager.createIssueLink(key, result.key, 'Tests');
-                                linkCount++;
-                            } catch (err) {
-                                rootLogger.warn('Falha ao linkar ' + key + ': ' + (err as Error).message);
-                            }
-                        }
-                    });
-                    if (linkCount > 0) success(linkCount + '/' + unlinked.length + ' testes vinculados.');
-                }
+                await this._linkTestsToExecution(result.key, testKeys);
             } catch (err) {
                 rootLogger.error('Erro ao vincular testes: ' + (err as Error).message);
             }

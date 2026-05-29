@@ -207,7 +207,7 @@ async function resumePendingPipeline(m: GitProvider, projectName: string): Promi
     const icon = pollResult.status === 'success' ? '\u2713' : '\u2717';
     info('Pipeline #' + id + ': ' + icon + ' ' + pollResult.status);
     if (pollResult.status !== 'canceled' && pollResult.status !== 'skipped') {
-        await _postPipeline(m, id, branch, projectName);
+        await _postPipeline(m, id, branch, projectName, pollResult.status);
     }
     return branch;
 }
@@ -296,7 +296,7 @@ async function triggerAndPollPipeline(
         delete s.pendingPipeline;
     });
     if (pollResult.status !== 'canceled' && pollResult.status !== 'skipped') {
-        await _postPipeline(m, id, branch, projectName);
+        await _postPipeline(m, id, branch, projectName, pollResult.status);
     }
 }
 

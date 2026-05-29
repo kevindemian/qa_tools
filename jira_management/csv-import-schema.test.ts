@@ -22,7 +22,7 @@ describe('TestCaseSchema', () => {
     it('accepts valid test case', () => {
         const data = {
             title: 'Login test',
-            steps: [{ fields: { Action: 'Enter user', Data: 'admin', ExpectedResult: 'Logged in' } }],
+            steps: [{ fields: { Action: 'Enter user', Data: 'admin', 'Expected Result': 'Logged in' } }],
         };
         expect(TestCaseSchema.parse(data)).toEqual(data);
     });
@@ -59,7 +59,7 @@ describe('ImportJsonSchema', () => {
         const data = [
             {
                 title: 'TC1',
-                steps: [{ Action: 'Click', Data: '', ExpectedResult: 'Done' }],
+                steps: [{ Action: 'Click', Data: '', 'Expected Result': 'Done' }],
             },
         ];
         const result = ImportJsonSchema.parse(data);

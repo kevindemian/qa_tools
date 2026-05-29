@@ -10,16 +10,21 @@ jest.mock('../shared/config');
 
 const mockAxiosPost = jest.fn();
 let mockIssueGet: jest.Mock;
+let mockOriginGet: jest.Mock;
 let mockSearchGet: jest.Mock;
 
 function mockJiraResource(): JiraResource {
     mockIssueGet = jest.fn();
+    mockOriginGet = jest.fn();
     mockSearchGet = jest.fn();
     return {
         baseUrl: 'https://jira.example.com',
+        originUrl: 'https://jira.example.com',
+        personalToken: 'test-token',
         axiosInstance: {} as ReturnType<typeof jest.fn>,
         log: { child: () => ({ error: jest.fn(), warn: jest.fn(), info: jest.fn() }) } as unknown,
         getJiraResource: mockIssueGet,
+        getFromOriginPath: mockOriginGet,
         searchJiraIssues: mockSearchGet,
         getTransitionsForIssue: jest.fn(),
         getProjectId: jest.fn(),
@@ -118,7 +123,7 @@ describe('ServerHistoryProvider', () => {
     });
 
     it('returns parsed runs on successful API call', async () => {
-        mockIssueGet.mockResolvedValue([
+        mockOriginGet.mockResolvedValue([
             { status: 'PASS', testExecKey: 'TE-1', startedOn: '2024-01-01' },
             { status: 'FAIL', testExecKey: 'TE-2', startedOn: '2024-01-02' },
         ]);
@@ -136,17 +141,17 @@ describe('ServerHistoryProvider', () => {
             startedOn: '2024-01-02',
             finishedOn: undefined,
         });
-        expect(mockIssueGet).toHaveBeenCalledWith('rest/raven/1.0/api/test/TEST-123/testruns');
+        expect(mockOriginGet).toHaveBeenCalledWith('rest/raven/1.0/api/test/TEST-123/testruns');
     });
 
     it('returns empty array on API error', async () => {
-        mockIssueGet.mockRejectedValue(new Error('Network error'));
+        mockOriginGet.mockRejectedValue(new Error('Network error'));
         const result = await provider.getHistory('TEST-123');
         expect(result).toEqual([]);
     });
 
     it('returns empty array when response is not an array', async () => {
-        mockIssueGet.mockResolvedValue({ status: 'error' });
+        mockOriginGet.mockResolvedValue({ status: 'error' });
         const result = await provider.getHistory('TEST-123');
         expect(result).toEqual([]);
     });
@@ -156,13 +161,13 @@ describe('ServerHistoryProvider', () => {
             status: 'PASS',
             testExecKey: 'TE-' + (i + 1),
         }));
-        mockIssueGet.mockResolvedValue(manyRuns);
+        mockOriginGet.mockResolvedValue(manyRuns);
         const result = await provider.getHistory('TEST-123');
         expect(result).toHaveLength(20);
     });
 
     it('handles unknown status gracefully', async () => {
-        mockIssueGet.mockResolvedValue([{ testExecKey: 'TE-1' }]);
+        mockOriginGet.mockResolvedValue([{ testExecKey: 'TE-1' }]);
         const result = await provider.getHistory('TEST-123');
         expect(result[0]?.status).toBe('UNKNOWN');
     });

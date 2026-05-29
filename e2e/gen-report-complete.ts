@@ -13,7 +13,10 @@ const TOKEN = process.env.JIRA_PERSONAL_TOKEN || '';
 // XRAY_BASE_URL used by JiraResource below
 
 async function main() {
-    const ctrfPath = path.resolve(__dirname, 'fixtures/ctrf-report.json');
+    const ctrfArg = process.argv.find((a) => a.startsWith('--ctrf='));
+    const ctrfPath = ctrfArg
+        ? path.resolve(ctrfArg.split('=')[1]!)
+        : path.resolve(__dirname, 'fixtures/ctrf-report.json');
     const result = parseTestResultsFile(ctrfPath);
     if (result.error) {
         console.error('Parse error:', result.error);
@@ -21,15 +24,26 @@ async function main() {
     }
 
     // ── 1. Mapping file: CTRF titles → Jira issue keys ──
-    const mapping = {
-        tests: [
-            { title: 'TC01 - Login valido', key: 'ECSPOL-1255' },
-            { title: 'TC02 - Login invalido', key: 'ECSPOL-1295' },
-        ],
-    };
-    const mappingPath = writeReport('mapping.json', JSON.stringify(mapping, null, 2));
-    process.env.QA_MAPPING_PATH = mappingPath;
-    console.log(`Mapping: ${mappingPath}`);
+    const mappingArg = process.argv.find((a) => a.startsWith('--mapping='));
+    if (mappingArg) {
+        const mappingPath = path.resolve(mappingArg.split('=')[1]!);
+        const raw = JSON.parse(fs.readFileSync(mappingPath, 'utf8')) as {
+            tests?: Array<{ title: string; key: string }>;
+        };
+        const mappingCopy = writeReport('mapping.json', JSON.stringify(raw, null, 2));
+        process.env.QA_MAPPING_PATH = mappingCopy;
+        console.log(`Mapping loaded: ${mappingPath}`);
+    } else {
+        const mapping = {
+            tests: [
+                { title: 'TC01 - Login valido', key: 'ECSPOL-1255' },
+                { title: 'TC02 - Login invalido', key: 'ECSPOL-1295' },
+            ],
+        };
+        const mappingPath = writeReport('mapping.json', JSON.stringify(mapping, null, 2));
+        process.env.QA_MAPPING_PATH = mappingPath;
+        console.log(`Mapping (default): ${mappingPath}`);
+    }
 
     // ── 2. Baseline CTRF for diff comparison ──
     writeReport('last-results.ctrf.json', fs.readFileSync(ctrfPath, 'utf8'));

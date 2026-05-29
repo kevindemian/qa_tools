@@ -8,6 +8,7 @@ import CsvResource from '../jira_management/csv_resource';
 import createTests from '../jira_management/create_tests';
 import { rootLogger } from '../shared/logger';
 import { tempDirPath } from '../shared/temp-dir';
+import { setTestSleep } from '../shared/http-client';
 
 const { createTestsFromCsv } = createTests;
 
@@ -44,6 +45,7 @@ function writeCsv(name: string, content: string): string {
 
 describe('E2E: CSV Import - Error Paths', () => {
     beforeAll(() => {
+        setTestSleep(() => Promise.resolve());
         process.env.HOME = tmpHome;
         process.env.JIRA_BASE_URL = 'http://localhost:1999/jira';
         process.env.JIRA_PERSONAL_TOKEN = 'e2e-token';
@@ -63,9 +65,7 @@ describe('E2E: CSV Import - Error Paths', () => {
     afterAll(() => {
         nock.cleanAll();
         nock.enableNetConnect();
-        if (fs.existsSync(tmpHome)) {
-            fs.rmSync(tmpHome, { recursive: true, force: true });
-        }
+        setTestSleep(undefined);
     });
 
     beforeEach(() => {
@@ -227,7 +227,7 @@ describe('E2E: CSV Import - Error Paths', () => {
             },
         ]);
         jira.get('/issue/TEST-1').reply(200, { key: 'TEST-1', fields: { customfield_13708: [] } });
-        jira.put('/issue/TEST-1').times(6).reply(500);
+        jira.put('/issue/TEST-1').times(11).reply(500);
         const xray = nock(XRAY);
         xray.post('/test/TEST-1/steps').reply(201);
 
