@@ -3,6 +3,7 @@ import fs from 'fs';
 import path from 'path';
 import AdmZip from 'adm-zip';
 import { createHttpClient } from '../../shared/http-client';
+import Config from '../../shared/config';
 import { ask, askConfirm, info, printError, title, withSpinner } from '../../shared/prompt';
 import type { ParseResult, FlatTest, CtrfData, CtrfSummary } from '../../shared/result_parser';
 import { writeReport } from '../../shared/temp-dir';
@@ -55,8 +56,8 @@ async function _fetchGitHistory(): Promise<CiContext> {
 }
 
 async function _fetchGitHubHistory(): Promise<CiContext> {
-    const token = process.env.GITHUB_TOKEN as string;
-    const repo = process.env.GITHUB_REPOSITORY as string;
+    const token = Config.getDefault().githubToken || process.env.GITHUB_TOKEN || '';
+    const repo = process.env.GITHUB_REPOSITORY || '';
     const client = createHttpClient({
         baseUrl: 'https://api.github.com',
         authHeader: { Authorization: 'Bearer ' + token },
@@ -143,8 +144,8 @@ async function _fetchGitHubHistory(): Promise<CiContext> {
 }
 
 async function _fetchGitLabHistory(): Promise<CiContext> {
-    const token = process.env.CI_JOB_TOKEN as string;
-    const projectId = process.env.CI_PROJECT_ID as string;
+    const token = process.env.CI_JOB_TOKEN || '';
+    const projectId = process.env.CI_PROJECT_ID || '';
     const serverUrl = process.env.CI_SERVER_URL || 'https://gitlab.com';
     const client = createHttpClient({
         baseUrl: serverUrl + '/api/v4',

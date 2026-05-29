@@ -1,6 +1,6 @@
 /** Create a new version in the Jira project. */
-import { warn, ask, printError } from '../../shared/prompt';
-import { rootLogger } from '../../shared/logger';
+import { warn, ask } from '../../shared/prompt';
+import { safeJiraCall } from '../../shared/jira-helper';
 import type { CommandContext } from './context';
 
 async function handler(c: CommandContext): Promise<boolean | void> {
@@ -10,19 +10,7 @@ async function handler(c: CommandContext): Promise<boolean | void> {
         return;
     }
     const desc = await ask('Descrição da versão (opcional)');
-    try {
-        await c.jiraResource.createVersion(c.ctx.project_name, name, desc);
-        c.pushHistory('criar-versão', name, 'ok');
-    } catch (err) {
-        const msg = 'Erro ao criar versão "' + name + '" no projeto "' + c.ctx.project_name + '"';
-        printError(msg, err);
-        rootLogger.error(msg, {
-            version: name,
-            project: c.ctx.project_name,
-            status: (err as { response?: { status?: number } }).response?.status,
-        });
-        c.pushHistory('criar-versão', name, 'error');
-    }
+    await safeJiraCall(c, 'criar-versão', name, () => c.jiraResource.createVersion(c.ctx.project_name, name, desc));
 }
 
 export default { handler };

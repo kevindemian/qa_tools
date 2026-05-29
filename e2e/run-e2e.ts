@@ -64,14 +64,14 @@ function section(title: string) {
 
 // ── Helpers ─────────────────────────────────────────────────────
 async function getIssueRaw(key: string): Promise<Record<string, unknown>> {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Jira API polymorphic response
     return jiraResource.getJiraResource<any>(
         `issue/${key}?fields=summary,description,labels,issuetype,customfield_13708`,
     );
 }
 
 async function getSteps(issueKey: string): Promise<unknown[]> {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Xray API polymorphic response
     const steps = await jiraResourceXray.getJiraResource<any>(`test/${issueKey}/steps`);
     return steps.steps || [];
 }

@@ -126,9 +126,12 @@ describe('HTTP Client', () => {
                 newErr.config = cfg;
                 return errorHandler!(newErr);
             });
+            // erro é esperado (retry exhausto); catch vazio é intencional
             try {
                 await errorHandler!(err);
-            } catch (e) {}
+            } catch {
+                /* expected */
+            }
             expect(mockInstance).toHaveBeenCalledTimes(10);
         });
 
@@ -141,18 +144,24 @@ describe('HTTP Client', () => {
                 newErr.config = cfg;
                 return errorHandler!(newErr);
             });
+            // erro é esperado (retry exhausto); catch vazio é intencional
             try {
                 await errorHandler!(err);
-            } catch (e) {}
+            } catch {
+                /* expected */
+            }
             expect(mockInstance).toHaveBeenCalledTimes(10);
         });
 
         it('does not retry POST', async () => {
             httpClient.createHttpClient({ baseUrl: 'https://api.test.com' });
             const err = makeError('post', 500, 0);
+            // erro é esperado (POST não retry); catch vazio é intencional
             try {
                 await errorHandler!(err);
-            } catch (e) {}
+            } catch {
+                /* expected */
+            }
             expect(mockInstance).not.toHaveBeenCalled();
         });
 
@@ -165,9 +174,12 @@ describe('HTTP Client', () => {
                 response: { status: 400 },
                 code: undefined,
             };
+            // erro é esperado (4xx não retry); catch vazio é intencional
             try {
                 await errorHandler!(err);
-            } catch (e) {}
+            } catch {
+                /* expected */
+            }
             expect(mockInstance).not.toHaveBeenCalled();
         });
 

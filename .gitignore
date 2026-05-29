@@ -33,6 +33,13 @@ shared_docker/.selected_project
 *.html
 *.csv:Zone.Identifier
 
+# === Backup files ===
+*.bak
+tsconfig.json.bak
+
+# === Temp artifacts ===
+tmp/
+
 # === Windows artifacts ===
 nul
 .llm-cache/

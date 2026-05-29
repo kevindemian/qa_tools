@@ -327,3 +327,48 @@ Itens concluídos em sessões anteriores: [`BACKLOG-historico.md`](BACKLOG-histo
 | D   | Flaky footnote no Test Impact    | `case22.ts`, `case22.test.ts` (mod)         | 5   | P2         | ✅     |
 | L   | Diagnostics + Health Check       | `case12.ts`, `case12.test.ts` (mod/new)     | 15  | P2         | ✅     |
 | G   | Wizard detect existing config    | `setup/main.ts`, `setup/main.test.ts` (mod) | 20  | P3         | ✅     |
+
+---
+
+## 🔷 Sprint A — Publicação (P0 + infra) 🔷
+
+| #   | Item                                                                        | Prioridade | Esforço | Status | Arquivos                                        |
+| --- | --------------------------------------------------------------------------- | ---------- | ------- | ------ | ----------------------------------------------- |
+| A1  | Fix version vazia no package.json                                           | P0         | 5min    | ✅     | `package.json`                                  |
+| A2  | Adicionar noFallthroughCasesInSwitch no tsconfig                            | P2         | 2min    | ✅     | `tsconfig.json`                                 |
+| A3  | .gitignore: tmp/, \*.bak + untrack artifacts                                | P1         | 15min   | ✅     | `.gitignore`                                    |
+| A4  | Validação centralizada de env obrigatórios (`Config.validateRequiredEnv()`) | P0         | 1h      | ✅     | `shared/config.ts`                              |
+| A5  | Publicação npm: bin + build + CI workflow                                   | P0         | 3h      | ⬜     | `package.json`, `.github/workflows/publish.yml` |
+| A6  | Docker image + CI workflow                                                  | P2         | 2h      | ⬜     | `Dockerfile`, `.github/workflows/docker.yml`    |
+
+## 🔷 Sprint B — Segurança/Robustez (P1) 🔷
+
+| #   | Item                                                                          | Prioridade | Esforço | Status | Arquivos                                                                  |
+| --- | ----------------------------------------------------------------------------- | ---------- | ------- | ------ | ------------------------------------------------------------------------- |
+| B1  | Substituir `process.env.X as string` por Config.getDefault()                  | P1         | 1h      | ✅     | `case17.ts`                                                               |
+| B2  | Revisar `!` non-null assertions — import-loop.ts + prompt-ui.ts + main.ts     | P1         | 2h      | ✅     | `import-loop.ts`, `prompt-ui.ts`, `git_triggers/main.ts`                  |
+| B3  | Documentar `process.env.AUTO_CONFIRM` mutation (ponto de injeção documentado) | P1         | 30min   | ✅     | `batch-mode.ts`                                                           |
+| B4  | Quebrar circular dependency jira_resource ↔ jira-resource-sprint/version      | P1         | 1h      | ⬜     | `jira_resource.ts`, `jira-resource-sprint.ts`, `jira-resource-version.ts` |
+
+## 🔷 Sprint C — Housekeeping (P2) 🔷
+
+| #   | Item                                                                               | Prioridade | Esforço | Status                                   | Arquivos                                    |
+| --- | ---------------------------------------------------------------------------------- | ---------- | ------- | ---------------------------------------- | ------------------------------------------- |
+| C1  | Interfaces órfãs reavaliadas — todas usadas internamente em types.ts (GitProvider) | P2         | 15min   | ✅ (no-op)                               | `shared/types.ts`                           |
+| C2  | Remover exports mortos (ts-prune)                                                  | P2         | 30min   | ⬜                                       | Múltiplos                                   |
+| C3  | Adicionar `-- reason` nas ~31 eslint-disable sem justificativa                     | P2         | 45min   | ✅ (partial)                             | Múltiplos                                   |
+| C4  | Testes para `generate-coverage-gap-html.ts`                                        | P2         | 2h      | ⬜                                       | `shared/generate-coverage-gap-html.test.ts` |
+| C5  | Extrair safeJiraCall() — duplicação case03/05/06                                   | P3         | 1h      | ✅                                       | `shared/jira-helper.ts`, `case03/05/06.ts`  |
+| C6  | eslint-disable-next-line nos 2 console.clear() sem comment                         | P2         | 5min    | ✅ (removidos — não acionam mais)        | `main.ts`, `git_triggers/main.ts`           |
+| C7  | Simplificar 3 Promise.resolve() em async/sync functions                            | P3         | 5min    | ✅ (1 revertido — getSchedules síncrono) | `github_manager.ts`, `open.ts`              |
+| C8  | Silent catch blocks em http-client.test.ts comentados                              | P2         | 15min   | ✅                                       | `http-client.test.ts`                       |
+
+## 🔷 Sprint D — SRP Refactor (futuro) 🔷
+
+| #   | Item                                                            | Prioridade | Esforço | Status | Arquivos                                                                 |
+| --- | --------------------------------------------------------------- | ---------- | ------- | ------ | ------------------------------------------------------------------------ |
+| D1  | Quebrar case17.ts (731 linhas, 3 responsabilidades)             | P2         | 4h      | ⬜     | `case17.ts`                                                              |
+| D2  | Quebrar report-generator.ts (1.171 linhas, 6 responsabilidades) | P2         | 6h      | ⬜     | `report-generator.ts`                                                    |
+| D3  | Extrair options-object em 30 funções com >5 params              | P3         | 4h      | ⬜     | Múltiplos                                                                |
+| D4  | Encurtar 17 funções >50 linhas                                  | P3         | 3h      | ⬜     | Múltiplos                                                                |
+| D5  | Remover 3 orphan test files sem source                          | P3         | 15min   | ✅     | `llm-integration.test.ts`, `tui-snapshots.test.ts` (1 já removido antes) |

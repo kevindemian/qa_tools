@@ -12,7 +12,6 @@ import {
     sessionLog,
     sessionContext,
     isBusy,
-    manager,
     providerLabel,
     buildActionChoices,
     displayProjects,
@@ -232,8 +231,8 @@ async function main(): Promise<void> {
     sessionLog.info('Sessão iniciada');
 
     const { projectName, names } = _selectProject();
-    setManager(createManagerForProject(projectName, projectId));
-    const m = manager!;
+    const m = createManagerForProject(projectName, projectId);
+    setManager(m);
 
     await displayRecentPipelines(m);
 

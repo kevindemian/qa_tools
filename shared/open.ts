@@ -90,11 +90,11 @@ export function getOsOpenCommand(target: string): OsOpenCommand | null {
 }
 
 /** Open a file/URL with the OS default handler. Falls back to `fallbackViewer` when no OS command works. */
-export function openWithOsOrFallback(target: string, fallbackViewer?: () => void): Promise<boolean> {
+export async function openWithOsOrFallback(target: string, fallbackViewer?: () => void): Promise<boolean> {
     const command = getOsOpenCommand(target);
     if (!command) {
         fallbackViewer?.();
-        return Promise.resolve(false);
+        return false;
     }
     return new Promise<boolean>((resolve) => {
         const child = spawn(command.cmd, command.args, {
