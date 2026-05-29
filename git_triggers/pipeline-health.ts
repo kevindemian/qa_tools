@@ -1,13 +1,6 @@
 /** Pipeline health analysis — pure aggregation, failure categorization, and HTML report generation.
- *  All functions are pure (no I/O) except categorizePipelineFailure which calls LLM.
  *  Testable with fixtures — no GitHub API needed for the logic layer. */
-import { llmPrompt } from '../shared/llm-client';
-import { rootLogger } from '../shared/logger';
-import { sanitizeForLlm } from '../shared/sanitize';
-import { readFileSync } from 'fs';
-import { resolve } from 'path';
 
-const PROMPT_DIR = resolve(__dirname, '..', 'shared', 'prompts');
 const ERROR_LOG_PATTERN = /(?:Error|Failure|Timeout|Exception|FATAL|OOMKilled):?\s*(.+)$/gim;
 
 /* ------------------------------------------------------------------ */
@@ -177,31 +170,6 @@ export function aggregatePipelineHealth(
 }
 
 /* ------------------------------------------------------------------ */
-/*  LLM categorization                                                 */
-/* ------------------------------------------------------------------ */
-
-/** Classify a pipeline error message into infrastructure / code / flaky / unknown.
- *  Uses LLM with the classify-pipeline-failure prompt. */
-export async function categorizePipelineFailure(errorMessage: string): Promise<string> {
-    let template: string;
-    try {
-        template = readFileSync(resolve(PROMPT_DIR, 'classify-pipeline-failure.md'), 'utf8');
-    } catch {
-        rootLogger.warn('classify-pipeline-failure.md not found, falling back to unknown');
-        return 'unknown';
-    }
-    const sanitized = sanitizeForLlm(errorMessage);
-    const prompt = template.replace('{{error_message}}', sanitized);
-    try {
-        const result = await llmPrompt<string>('fast', prompt, '', 'classify-pipeline', undefined, undefined);
-        const cleaned = (typeof result === 'string' ? result : String(result)).trim().toLowerCase();
-        if (['infrastructure', 'code', 'flaky', 'unknown'].includes(cleaned)) return cleaned;
-        return 'unknown';
-    } catch {
-        return 'unknown';
-    }
-}
-
 /* ------------------------------------------------------------------ */
 /*  HTML report renderer                                               */
 /* ------------------------------------------------------------------ */

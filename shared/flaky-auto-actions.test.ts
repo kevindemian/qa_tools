@@ -1,7 +1,7 @@
 import { executeFlakyActions, calculateFlakinessWithWindow } from './flaky-auto-actions';
 import type { MetricsStore } from './metrics';
 import type { FlatTest } from './result_parser';
-import type { SearchResponse } from '../jira_management/jira-resource-version';
+import type { SearchResponse } from '../jira_management/jira-resource-types';
 import type JiraResource from '../jira_management/jira_resource';
 
 interface MockJira {

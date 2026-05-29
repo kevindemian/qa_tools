@@ -1,6 +1,6 @@
 /** Jira sprint management: add tasks to active sprint. */
 import { success, info, warn, extractErrorMessage } from '../shared/prompt';
-import type JiraResource from './jira_resource';
+import type { JiraResourceLike } from './jira-resource-types';
 import {
     addingTasksToSprint,
     TASKS_ADDED_TO_SPRINT,
@@ -20,7 +20,7 @@ interface TransitionData {
     to?: { name: string };
 }
 
-export async function addTasksToSprint(resource: JiraResource, taskIds: string[], sprintId: string): Promise<void> {
+export async function addTasksToSprint(resource: JiraResourceLike, taskIds: string[], sprintId: string): Promise<void> {
     const payload = { issues: taskIds };
 
     try {
@@ -39,7 +39,7 @@ export async function addTasksToSprint(resource: JiraResource, taskIds: string[]
 }
 
 export async function getTransitionsForIssue(
-    resource: JiraResource,
+    resource: JiraResourceLike,
     issueKey: string,
 ): Promise<Record<string, string>> {
     try {
@@ -60,7 +60,11 @@ export async function getTransitionsForIssue(
     }
 }
 
-export async function transitionIssue(resource: JiraResource, issueId: string, transitionId: string): Promise<void> {
+export async function transitionIssue(
+    resource: JiraResourceLike,
+    issueId: string,
+    transitionId: string,
+): Promise<void> {
     const payload = { transition: { id: transitionId } };
     resource.log.info(`   Movendo ${issueId} (transição ${transitionId})...`);
 
@@ -84,7 +88,7 @@ export const WORKFLOW_MAP: Record<string, string[]> = {
     approve: ['use test case'],
 };
 
-export async function moveCardsToDone(resource: JiraResource, taskIds: string[]): Promise<void> {
+export async function moveCardsToDone(resource: JiraResourceLike, taskIds: string[]): Promise<void> {
     for (const taskId of taskIds) {
         let issueData: { fields?: { status?: { name: string } } };
         try {

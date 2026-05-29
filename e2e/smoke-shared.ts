@@ -11,12 +11,3 @@ export function createGitHubSmokeManager(): GitHubManager {
     }
     return new GitHubManager(E2E_REPO, token);
 }
-
-export function assertOk(condition: boolean, label: string): void {
-    if (!condition) {
-        console.error('FAIL: ' + label);
-        process.exitCode = 1;
-    } else {
-        console.log('  OK: ' + label);
-    }
-}

@@ -1,7 +1,7 @@
 /** Jira version management: create, publish, list, and assign fix versions to issues. */
 import { error as logError, success, info, extractErrorMessage, ProgressBar } from '../shared/prompt';
 import type { Logger } from '../shared/logger';
-import type JiraResource from './jira_resource';
+import type { VersionData, JiraIssue, SearchResponse, JiraResourceLike } from './jira-resource-types';
 import {
     noIssuesFoundForVersion,
     noVersionFoundForProject,
@@ -29,31 +29,8 @@ function sanitizeJqlValue(value: string): string {
     return value.replace(/[^\w\s.:/-]/g, '');
 }
 
-export interface VersionData {
-    id: string;
-    name: string;
-    released?: boolean;
-    releaseDate?: string;
-    description?: string;
-    [key: string]: unknown;
-}
-
-export interface JiraIssue {
-    key: string;
-    fields: {
-        summary?: string;
-        status?: { name: string };
-        [key: string]: unknown;
-    };
-}
-
-export interface SearchResponse {
-    issues: JiraIssue[];
-    total: number;
-}
-
 export async function searchJiraIssuesCore(
-    resource: JiraResource,
+    resource: JiraResourceLike,
     log: Logger,
     jql: string,
     maxResults = 200,
@@ -88,7 +65,7 @@ export async function searchJiraIssuesCore(
     }
 }
 
-export async function getProjectId(resource: JiraResource, projectName: string): Promise<string> {
+export async function getProjectId(resource: JiraResourceLike, projectName: string): Promise<string> {
     try {
         const projectData = await resource.getJiraResource<{ id: string }>(`project/${projectName}`);
         return projectData.id;
@@ -98,7 +75,7 @@ export async function getProjectId(resource: JiraResource, projectName: string):
     }
 }
 
-export async function getProjectVersions(resource: JiraResource, projectId: string): Promise<VersionData[]> {
+export async function getProjectVersions(resource: JiraResourceLike, projectId: string): Promise<VersionData[]> {
     try {
         return await resource.getJiraResource<VersionData[]>(`project/${projectId}/versions`);
     } catch (err: unknown) {
@@ -108,7 +85,7 @@ export async function getProjectVersions(resource: JiraResource, projectId: stri
 }
 
 export async function getVersionId(
-    resource: JiraResource,
+    resource: JiraResourceLike,
     projectName: string,
     versionName: string,
 ): Promise<string | null> {
@@ -132,7 +109,7 @@ export async function getVersionId(
 }
 
 export async function createVersion(
-    resource: JiraResource,
+    resource: JiraResourceLike,
     projectName: string,
     versionName: string,
     description?: string,
@@ -157,7 +134,7 @@ export async function createVersion(
 }
 
 export async function checkReleaseTasksStatus(
-    resource: JiraResource,
+    resource: JiraResourceLike,
     projectName: string,
     versionName: string,
 ): Promise<boolean> {
@@ -191,7 +168,7 @@ export async function checkReleaseTasksStatus(
 }
 
 export async function getReleaseTasks(
-    resource: JiraResource,
+    resource: JiraResourceLike,
     projectName: string,
     versionName: string,
     testOnly = false,
@@ -217,7 +194,7 @@ export async function getReleaseTasks(
 }
 
 export async function getLatestReleases(
-    resource: JiraResource,
+    resource: JiraResourceLike,
     projectName: string,
     numReleases: number,
 ): Promise<{
@@ -261,7 +238,7 @@ export async function getLatestReleases(
 }
 
 export async function updateFixVersions(
-    resource: JiraResource,
+    resource: JiraResourceLike,
     taskIds: string[],
     projectName: string,
     versionName: string,
@@ -284,7 +261,11 @@ export async function updateFixVersions(
     bar.stop();
 }
 
-export async function releaseVersion(resource: JiraResource, projectName: string, versionName: string): Promise<void> {
+export async function releaseVersion(
+    resource: JiraResourceLike,
+    projectName: string,
+    versionName: string,
+): Promise<void> {
     const versionId = await resource.getVersionId(projectName, versionName);
     if (!versionId) {
         resource.log.error(`Versão '${versionName}' não encontrada.`);
