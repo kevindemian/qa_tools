@@ -8,17 +8,17 @@
             {
                 "Action": "Acessar /login",
                 "Data": "https://app.example.com",
-                "ExpectedResult": "Formulario de login exibido"
+                "Expected Result": "Formulario de login exibido"
             },
             {
                 "Action": "Preencher email",
                 "Data": "admin@test.com",
-                "ExpectedResult": "Campo aceita o valor"
+                "Expected Result": "Campo aceita o valor"
             },
             {
                 "Action": "Clicar em Entrar",
                 "Data": "",
-                "ExpectedResult": "Redirecionado para dashboard"
+                "Expected Result": "Redirecionado para dashboard"
             }
         ],
         "linkedIssues": [
@@ -38,12 +38,12 @@
             {
                 "Action": "Acessar /login",
                 "Data": "https://app.example.com",
-                "ExpectedResult": "Formulario de login exibido"
+                "Expected Result": "Formulario de login exibido"
             },
             {
                 "Action": "Digitar senha",
                 "Data": "senha_errada",
-                "ExpectedResult": "Mensagem de erro \"Credenciais invalidas\" exibida"
+                "Expected Result": "Mensagem de erro \"Credenciais invalidas\" exibida"
             }
         ]
     },
@@ -55,12 +55,12 @@
             {
                 "Action": "Preencher nome\ne sobrenome",
                 "Data": "Joao Silva\nRua ABC 123",
-                "ExpectedResult": "Campos aceitam\nmultiplas linhas"
+                "Expected Result": "Campos aceitam\nmultiplas linhas"
             },
             {
                 "Action": "Validar erro\nde CPF",
                 "Data": "123.456.789-00",
-                "ExpectedResult": "Erro:\nCPF invalido"
+                "Expected Result": "Erro:\nCPF invalido"
             }
         ]
     },
@@ -73,7 +73,7 @@
             {
                 "Action": "Acessar recurso protegido",
                 "Data": "/admin/users",
-                "ExpectedResult": "Pagina exibida com dados do usuario"
+                "Expected Result": "Pagina exibida com dados do usuario"
             }
         ]
     },

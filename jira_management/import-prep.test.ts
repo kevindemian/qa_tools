@@ -38,6 +38,9 @@ jest.mock('../shared/logger', () => ({
             warn: jest.fn(),
             error: jest.fn(),
         }),
+        warn: jest.fn(),
+        error: jest.fn(),
+        info: jest.fn(),
     },
 }));
 
@@ -57,6 +60,7 @@ import {
     generatePreviewMarkdown,
     escapeHtml,
     showPreview,
+    parseJsonTests,
 } from './import-prep';
 import * as PROMPT from '../shared/prompt';
 import * as STATE from '../shared/state';
@@ -344,6 +348,73 @@ describe('generatePreviewMarkdown', () => {
     });
 });
 
+describe('parseJsonTests', () => {
+    beforeEach(() => {
+        jest.clearAllMocks();
+    });
+
+    it('accepts ExpectedResult alias and warns once', () => {
+        const jsonContent = JSON.stringify([
+            {
+                title: 'TC1',
+                steps: [{ Action: 'Step1', ExpectedResult: 'Result1' }],
+            },
+            {
+                title: 'TC2',
+                steps: [{ Action: 'Step2', ExpectedResult: 'Result2' }],
+            },
+        ]);
+        // writeFileSync is mocked in this file — use actual fs for temp file
+        const actualFs = jest.requireActual('fs');
+        const tmp = '/tmp/test-expected-result-alias.json';
+        actualFs.writeFileSync(tmp, jsonContent, 'utf-8');
+
+        const result = parseJsonTests(tmp);
+        expect(result).toHaveLength(2);
+        expect(result[0]!.steps[0]!.fields['Expected Result']).toBe('Result1');
+        expect(result[1]!.steps[0]!.fields['Expected Result']).toBe('Result2');
+
+        const loggerModule = require('../shared/logger');
+        expect(loggerModule.rootLogger.warn).toHaveBeenCalledWith(expect.stringContaining('ExpectedResult'));
+
+        actualFs.unlinkSync(tmp);
+    });
+
+    it('prefers canonical Expected Result over alias', () => {
+        const jsonContent = JSON.stringify([
+            {
+                title: 'TC1',
+                steps: [{ Action: 'Step1', 'Expected Result': 'Canonical', ExpectedResult: 'Alias' }],
+            },
+        ]);
+        const actualFs = jest.requireActual('fs');
+        const tmp = '/tmp/test-expected-result-canonical.json';
+        actualFs.writeFileSync(tmp, jsonContent, 'utf-8');
+
+        const result = parseJsonTests(tmp);
+        expect(result[0]!.steps[0]!.fields['Expected Result']).toBe('Canonical');
+
+        actualFs.unlinkSync(tmp);
+    });
+
+    it('handles missing both Expected Result and ExpectedResult', () => {
+        const jsonContent = JSON.stringify([
+            {
+                title: 'TC1',
+                steps: [{ Action: 'Step1' }],
+            },
+        ]);
+        const actualFs = jest.requireActual('fs');
+        const tmp = '/tmp/test-expected-result-missing.json';
+        actualFs.writeFileSync(tmp, jsonContent, 'utf-8');
+
+        const result = parseJsonTests(tmp);
+        expect(result[0]!.steps[0]!.fields['Expected Result']).toBe('');
+
+        actualFs.unlinkSync(tmp);
+    });
+});
+
 describe('showPreview', () => {
     const tests = [
         {
@@ -386,5 +457,116 @@ describe('showPreview', () => {
         expect(args![0]).toContain('qa-preview.html');
         expect(args![1]).toContain('Login test');
         expect(args![2]).toBe('utf8');
+    });
+});
+
+describe('csv -> preview pipeline (e2e)', () => {
+    const fs = jest.requireActual('fs');
+    const CsvResource = jest.requireActual('../jira_management/csv_resource').default;
+
+    const crlf = '\r\n';
+    const bom = '\uFEFF';
+
+    /** Build a realistic bulk CSV with all known quirks: BOM, CRLF, ; separator, ExpectedResult camelCase, multi-line Description. */
+    function buildFixtureCsv(): string {
+        return (
+            bom +
+            [
+                'Title: Login credenciais válidas',
+                'Description: "Verifica o fluxo completo de login',
+                'incluindo validação de campos"',
+                'Pre-condition: US-100 (Relates)',
+                'Linked Issues: EPIC-42 (is epic of)',
+                'Group: Auth',
+                'Action;Data;ExpectedResult',
+                'Navegar para /login;;Formulário exibido',
+                'Preencher email;user@test.com;Campo preenchido',
+                '',
+                '---',
+                '',
+                'Title: Logout',
+                'Action;Data;ExpectedResult',
+                'Clicar em Sair;;Redirecionado para /login',
+            ].join(crlf) +
+            crlf
+        );
+    }
+
+    /** Build a golden-path CSV (no quirks): LF, , separator, Expected Result (correct). */
+    function buildGoldenCsv(): string {
+        return ['Title: Golden test', 'Action,Data,Expected Result', 'step1,data1,result1'].join('\n') + '\n';
+    }
+
+    let csvResource: InstanceType<typeof CsvResource>;
+    let loggerWarn: jest.SpyInstance;
+
+    beforeAll(() => {
+        csvResource = new CsvResource();
+        loggerWarn = jest.spyOn(require('../shared/logger').rootLogger, 'warn').mockImplementation(() => {});
+    });
+
+    afterAll(() => {
+        loggerWarn.mockRestore();
+    });
+
+    it('parses all-quirks CSV and renders preview with correct content', async () => {
+        const tmp = '/tmp/csv-e2e-quirks.csv';
+        fs.writeFileSync(tmp, buildFixtureCsv(), 'utf-8');
+
+        const tests = await csvResource.readBulkCsv(tmp);
+        expect(tests).toHaveLength(2);
+
+        const totalSteps = tests.reduce((s: number, t: { steps: unknown[] }) => s + t.steps.length, 0);
+        const groupsCount = new Set(tests.map((t: { group?: string }) => t.group).filter(Boolean)).size;
+        const html = renderPreviewHtml(tests, ['smoke', 'regression'], totalSteps, groupsCount);
+
+        expect(html).toContain('Login credenciais válidas');
+        expect(html).toContain('Logout');
+        expect(html).toContain('Navegar para /login');
+        expect(html).toContain('Formulário exibido');
+        expect(html).toContain('Preencher email');
+        expect(html).toContain('Campo preenchido');
+        expect(html).toContain('Redirecionado para /login');
+        expect(html).toContain('Clicar em Sair');
+        expect(html).toContain('US-100');
+        expect(html).toContain('EPIC-42');
+        expect(html).toContain('Verifica o fluxo completo de login');
+        expect(html).toContain('<span class="badge group">Auth</span>');
+        expect(html).toContain('Tests</div><div class="val">2');
+        expect(html).toContain('Steps</div><div class="val">3');
+        expect(html).toContain('Groups</div><div class="val">1');
+        expect(html).toContain('Labels</div><div class="val sub">');
+        expect(loggerWarn).toHaveBeenCalledWith(expect.stringContaining('ExpectedResult'));
+
+        fs.unlinkSync(tmp);
+    });
+
+    it('golden-path CSV (LF, comma, correct header) produces clean preview without normalization warning', async () => {
+        loggerWarn.mockClear();
+        const tmp = '/tmp/csv-e2e-golden.csv';
+        fs.writeFileSync(tmp, buildGoldenCsv(), 'utf-8');
+
+        const tests = await csvResource.readBulkCsv(tmp);
+        expect(tests).toHaveLength(1);
+        expect(tests[0]!.title).toBe('Golden test');
+
+        const html = renderPreviewHtml(tests, [], 1, 0);
+        expect(html).toContain('Golden test');
+        expect(html).toContain('result1');
+        expect(loggerWarn).not.toHaveBeenCalledWith(expect.stringContaining('normalizada'));
+
+        fs.unlinkSync(tmp);
+    });
+
+    it('flat CSV (no Title:) yields 0 results with diagnostic warning', async () => {
+        loggerWarn.mockClear();
+        const tmp = '/tmp/csv-e2e-flat.csv';
+        fs.writeFileSync(tmp, 'Title,Action,Data,Expected Result\nTC1,Step1,,Result1\n', 'utf-8');
+
+        const tests = await csvResource.readBulkCsv(tmp);
+        expect(tests).toHaveLength(0);
+        expect(loggerWarn).toHaveBeenCalledWith(expect.stringContaining('formato flat'));
+
+        fs.unlinkSync(tmp);
     });
 });

@@ -80,6 +80,13 @@ import {
 import * as readline from 'readline';
 import { defaultOutput as outputMock } from './output';
 
+interface _MockRl {
+    question: jest.Mock;
+    on: jest.Mock;
+    close: jest.Mock;
+}
+const _mockRl = (readline as unknown as { _testRl: _MockRl })._testRl;
+
 const mockReadlineQuestion = jest.spyOn(readlineSync, 'question').mockImplementation(() => '');
 const mockGetConfig = getConfig as jest.Mock;
 const mockWarn = warn as jest.Mock;
@@ -641,7 +648,7 @@ describe('showSelect fallback', () => {
 describe('askFilePath TTY mode', () => {
     beforeEach(() => {
         Object.defineProperty(process.stdout, 'isTTY', { value: true, configurable: true });
-        const mockRl = (readline as unknown)._testRl;
+        const mockRl = _mockRl;
         mockRl.question.mockReset();
         mockRl.on.mockReset();
         mockRl.close.mockReset();
@@ -652,7 +659,7 @@ describe('askFilePath TTY mode', () => {
     });
 
     it('resolves with user input', async () => {
-        const mockRl = (readline as unknown)._testRl;
+        const mockRl = _mockRl;
         mockRl.question.mockImplementation((_prompt: string, cb: (a: string) => void) => cb('user path'));
         const result = await askFilePath('File:');
         expect(result).toBe('user path');
@@ -660,14 +667,14 @@ describe('askFilePath TTY mode', () => {
     });
 
     it('rejects on navigation command', async () => {
-        const mockRl = (readline as unknown)._testRl;
+        const mockRl = _mockRl;
         mockRl.question.mockImplementation((_prompt: string, cb: (a: string) => void) => cb('/back'));
         await expect(askFilePath('File:')).rejects.toThrow(CancelError);
         expect(mockRl.close).toHaveBeenCalled();
     });
 
     it('rejects on SIGINT', async () => {
-        const mockRl = (readline as unknown)._testRl;
+        const mockRl = _mockRl;
         mockRl.question.mockImplementation(() => {});
         let sigintHandler: () => void = () => {};
         mockRl.on.mockImplementation((event: string, handler: () => void) => {
@@ -680,7 +687,7 @@ describe('askFilePath TTY mode', () => {
     });
 
     it('resolves with default when empty answer', async () => {
-        const mockRl = (readline as unknown)._testRl;
+        const mockRl = _mockRl;
         mockRl.question.mockImplementation((_prompt: string, cb: (a: string) => void) => cb(''));
         const result = await askFilePath('File:', { default: '/default/path' });
         expect(result).toBe('/default/path');
@@ -688,7 +695,7 @@ describe('askFilePath TTY mode', () => {
     });
 
     it('resolves with empty string when no default and empty answer', async () => {
-        const mockRl = (readline as unknown)._testRl;
+        const mockRl = _mockRl;
         mockRl.question.mockImplementation((_prompt: string, cb: (a: string) => void) => cb(''));
         const result = await askFilePath('File:');
         expect(result).toBe('');

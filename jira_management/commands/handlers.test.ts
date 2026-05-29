@@ -444,31 +444,45 @@ describe('case10 — show counters', () => {
     });
 });
 
-describe('case11 — generate CSV template', () => {
-    it('generates template file', async () => {
+describe('case11 — generate template (CSV/JSON)', () => {
+    it('generates CSV template', async () => {
+        const prompt = require('../../shared/prompt');
+        prompt.ask.mockResolvedValueOnce('CSV').mockResolvedValueOnce('/tmp/test-template.csv');
         const mod = require('./case11').default;
-        expect(await mod.handler(baseContext)).toBeUndefined();
+        await mod.handler(baseContext);
+        expect(prompt.success).toHaveBeenCalledWith(
+            expect.stringContaining('Template CSV gerado em: /tmp/test-template.csv'),
+        );
+    });
+
+    it('generates JSON template', async () => {
+        const prompt = require('../../shared/prompt');
+        prompt.ask.mockResolvedValueOnce('JSON').mockResolvedValueOnce('/tmp/test-template.json');
+        const mod = require('./case11').default;
+        await mod.handler(baseContext);
+        expect(prompt.success).toHaveBeenCalledWith(
+            expect.stringContaining('Template JSON gerado em: /tmp/test-template.json'),
+        );
     });
 
     it('handles copy error', async () => {
+        const prompt = require('../../shared/prompt');
+        prompt.ask.mockResolvedValueOnce('CSV').mockResolvedValueOnce('/tmp/test-template.csv');
         const fs = require('fs');
         jest.spyOn(fs, 'copyFileSync').mockImplementationOnce(() => {
             throw new Error('permission denied');
         });
-        const prompt = require('../../shared/prompt');
         const mod = require('./case11').default;
         await mod.handler(baseContext);
-        expect(prompt.error).toHaveBeenCalled();
+        expect(prompt.error).toHaveBeenCalledWith(expect.stringContaining('permission denied'));
     });
 
-    it('uses default path when ask returns empty', async () => {
+    it('rejects invalid format', async () => {
         const prompt = require('../../shared/prompt');
-        prompt.ask.mockResolvedValueOnce('');
-        const fs = require('fs');
-        jest.spyOn(fs, 'copyFileSync').mockImplementationOnce(jest.fn());
+        prompt.ask.mockResolvedValueOnce('XML');
         const mod = require('./case11').default;
         await mod.handler(baseContext);
-        expect(prompt.success).toHaveBeenCalledWith(expect.stringContaining('Template CSV gerado em:'));
+        expect(prompt.error).toHaveBeenCalledWith('Formato inválido. Use CSV ou JSON.');
     });
 });
 

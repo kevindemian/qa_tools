@@ -101,34 +101,41 @@ export async function generateBugReportFromDescription(raw: string): Promise<Bug
     }
 }
 
+async function askWithRetry(label: string, maxAttempts = 3): Promise<string> {
+    let value = '';
+    for (let attempt = 0; attempt < maxAttempts; attempt++) {
+        value = await ask(label);
+        if (value.trim()) break;
+        warn('Campo obrigatório. Tente novamente.');
+    }
+    if (!value.trim()) throw new Error('Campo ' + label + ' é obrigatório.');
+    return value.trim();
+}
+
+function normalizeSeverity(raw: string): BugReport['severity'] {
+    const valid = ['trivial', 'minor', 'major', 'critical'] as const;
+    const candidate = raw.trim().toLowerCase();
+    return (valid as readonly string[]).includes(candidate) ? (candidate as BugReport['severity']) : 'minor';
+}
+
 export async function collectManual(): Promise<BugReport> {
     title('Bug Report Manual');
 
-    let summary = '';
-    for (let attempt = 0; attempt < 3; attempt++) {
-        summary = await ask('Sumário do bug');
-        if (summary.trim()) break;
-        warn('Sumário não pode estar vazio. Tente novamente.');
-    }
-    if (!summary.trim()) throw new Error('Sumário obrigatório para criar bug report.');
-
+    const summary = await askWithRetry('Sumário do bug');
     const description = await ask('Descrição detalhada');
     const stepsToReproduceRaw = await ask('Passos para reproduzir (separados por vírgula)');
     const expectedResult = await ask('Resultado esperado');
     const actualResult = await ask('Resultado atual');
     const environment = await ask('Ambiente (ex: produção, staging)');
-    const severityRaw = await ask('Severidade (trivial | minor | major | critical)', { default: 'minor' });
+    const severity = normalizeSeverity(
+        await ask('Severidade (trivial | minor | major | critical)', { default: 'minor' }),
+    );
     const component = await ask('Componente (opcional)');
     const linkedIssuesInput = await ask('Issues relacionadas (KEY-123, KEY-456) — opcional');
+
     const linkedIssues = linkedIssuesInput.trim()
         ? linkedIssuesInput.split(',').map((k) => ({ key: k.trim().toUpperCase(), linkType: 'Relates' }))
         : undefined;
-
-    const severity = (['trivial', 'minor', 'major', 'critical'] as const).includes(
-        severityRaw.trim().toLowerCase() as BugReport['severity'],
-    )
-        ? (severityRaw.trim().toLowerCase() as BugReport['severity'])
-        : 'minor';
 
     const stepsToReproduce = stepsToReproduceRaw.trim()
         ? stepsToReproduceRaw.split(',').map((s) => s.trim())
@@ -143,7 +150,7 @@ export async function collectManual(): Promise<BugReport> {
     }
 
     return {
-        summary: summary.trim(),
+        summary,
         description: description.trim(),
         source: 'manual',
         stepsToReproduce,

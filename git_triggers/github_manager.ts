@@ -14,6 +14,7 @@ import type {
     PipelineJob,
     ArtifactInfo,
     CICDVariable,
+    Issue,
     JsonObject,
 } from '../shared/types';
 
@@ -24,6 +25,8 @@ const COMPARE_PAGE_SIZE = 100;
 const MAX_REDIRECTS = 5;
 const DIFF_TRUNCATION_LIMIT = 15000;
 const DEFAULT_PIPELINE_COUNT = 5;
+const ISSUES_PAGE_SIZE = 30;
+const LOG_TRUNCATION_BYTES = 10240;
 
 class GitHubManager extends GitProviderBase implements GitProvider {
     provider = 'github' as const;
@@ -325,6 +328,41 @@ class GitHubManager extends GitProviderBase implements GitProvider {
             returnNull: true,
         });
         return (data || []).some((r: JsonObject) => r.state === 'APPROVED');
+    }
+
+    /** Fetch open issues, filtering out pull requests (GitHub API returns both). */
+    async getOpenIssues(): Promise<Issue[]> {
+        const data = await this._get(this._repoPath + '/issues', {
+            operation: 'buscar issues',
+            params: { state: 'open', per_page: ISSUES_PAGE_SIZE },
+            returnNull: true,
+        });
+        return ((data as JsonObject[]) || [])
+            .filter((i: JsonObject) => !i.pull_request)
+            .map((i: JsonObject) => ({
+                number: i.number as number,
+                title: i.title as string,
+                state: i.state as string,
+                updated_at: i.updated_at as string,
+                created_at: i.created_at as string,
+                labels: ((i.labels as JsonObject[]) || []).map((l: JsonObject) => (l.name as string) || ''),
+                html_url: i.html_url as string,
+            }));
+    }
+
+    /** Fetch the raw job log, truncated to maxBytes to avoid huge downloads.
+     *  Returns the raw text, or null on failure. */
+    async getJobLogs(jobId: string | number, maxBytes = LOG_TRUNCATION_BYTES): Promise<string | null> {
+        try {
+            const response = await this.client.get(this._repoPath + '/actions/jobs/' + jobId + '/logs', {
+                responseType: 'text' as const,
+                maxRedirects: MAX_REDIRECTS,
+            });
+            const raw = typeof response.data === 'string' ? response.data : String(response.data);
+            return raw.slice(0, maxBytes);
+        } catch (err) {
+            return handleError(err, { context: 'baixar log do job' });
+        }
     }
 
     _formatPR(data: JsonObject): MergeRequestInfo | null {

@@ -83,16 +83,15 @@ Issues registradas durante refatorações, postergadas por escopo.
 
 ---
 
-## ✅ Pre-conditions + LLM Test Generation ✅
+## ✅ Pre-conditions + LLM Test Generation (refatorado: dual-threshold assimétrico) ✅
 
-| #   | Item                                                                                                                                             | Prioridade | Status | Arquivos                                    |
-| --- | ------------------------------------------------------------------------------------------------------------------------------------------------ | ---------- | ------ | ------------------------------------------- |
-| 1   | Types: `PreConditionSummary` + LLM input types                                                                                                   | P1         | ✅     | `shared/types.ts`                           |
-| 2   | Service: `JiraLinkManager.listPreconditions()`, `createPrecondition()`, `_resolvePreconditionIssueTypeId()`, `matchPreconditionByTokenOverlap()` | P1         | ✅     | `jira_management/jira_link_manager.ts`      |
-| 3   | Schema: `case18.schema.ts` — `PreConditionInputSchema` c/ `type: 'reference'\|'create'`                                                          | P1         | ✅     | `jira_management/commands/case18.schema.ts` |
-| 4   | Prompt: `user-story-to-tests.md` — instruções de reuso/criação de pre-conditions                                                                 | P1         | ✅     | `shared/prompts/user-story-to-tests.md`     |
-| 5   | Handler: `case18.ts` — fetch pre-conditions, 2-stage LLM, string match, post-process, auto-import                                                | P1         | ✅     | `jira_management/commands/case18.ts`        |
-| 6   | Tests: `jira_link_manager.test.ts`, `case18.test.ts`, `case18.schema.test.ts`                                                                    | P1         | ✅     | Vários                                      |
+| #   | Item                                                                                                                                                 | Prioridade | Status | Arquivos                                           |
+| --- | ---------------------------------------------------------------------------------------------------------------------------------------------------- | ---------- | ------ | -------------------------------------------------- |
+| 1   | Tipos `PreConditionSummary` + `PreConditionMatchResult` (inalterados)                                                                                | P1         | ✅     | `shared/types.ts`                                  |
+| 2   | `matchPreconditionByTokenOverlap()` (existente) + **novo** `matchPreconditionByDualThreshold()`: 0.5 admissão, 0.7 confirmação, assimétrico 0.5-0.69 | P1         | ✅     | `jira_management/jira_link_manager.ts`, `.test.ts` |
+| 3   | `user-story-to-tests.md` — removido `{preconditions}`, LLM sempre usa `type:'create'` + summary                                                      | P1         | ✅     | `shared/prompts/user-story-to-tests.md`            |
+| 4   | `case18.ts` — eliminada small LLM + injeção PCs. Adicionado `gatherInput()`, `createMissingPreconditions()`, `writeTestOutput()` + pós-processamento | P1         | ✅     | `jira_management/commands/case18.ts`               |
+| 5   | Tests: 15 em `case18.test.ts` + 11 em `jira_link_manager.test.ts` (dual-threshold)                                                                   | P1         | ✅     | `*.test.ts`                                        |
 
 ---
 
@@ -186,54 +185,27 @@ Elevar reports ao nível Allure (padrão ouro mercado). 3 sprints independentes.
 | Batch 2: Aliases, comandos especiais, UX features     | ✅     | 1h      |
 | Batch 3: Documentar `setup/` wizard (doc #10) + fluxo | ✅     | 2h      |
 
-### P2 — Fechar 16 arquivos com 1 stmt descoberto
-
-| Item                                          | Stmt descoberto                      |
-| --------------------------------------------- | ------------------------------------ |
-| `shared/logger.ts:144`                        | Dead code (unreachable)              |
-| `shared/spinner.ts:20`                        | ESM `import('ora')` (uncov. em Jest) |
-| `git_triggers/github_manager.ts:113`          | `_toInputs` non-array edge           |
-| `git_triggers/mr-handler.ts:40`               | IA não retornou análise edge         |
-| `jira_management/commands/case09.ts:15`       | `updateState` callback               |
-| `jira_management/commands/case14.ts:14`       | `updateState` callback               |
-| `jira_management/commands/case16.ts:14`       | `updateState` callback               |
-| `jira_management/import-orchestrator.ts:60`   | `validateImportBatch` undefined      |
-| `jira_management/jira-resource-version.ts:76` | total > MAX_TOTAL warn               |
-| `jira_management/xray-client.ts:43`           | Empty token response                 |
-| `shared/state.ts:61-62,75,111,160-165`        | Múltiplos edges (session-state)      |
-| `shared/config.ts`                            | 2 stmts remanescentes                |
-
-### P0 — AI-assisted bug report from description ✅
-
-| Item                                                           | Status |
-| -------------------------------------------------------------- | ------ |
-| `shared/prompts/bug-report-from-description.md` + schema `.ts` | ✅     |
-| `shared/bug-report.ts` — `generateBugReportFromDescription()`  | ✅     |
-| `jira_management/commands/case20.ts` — AI path bifurcation     | ✅     |
-| `shared/prompts/user-story-to-tests.md` — fix example PT→EN    | ✅     |
-| Tests: `bug-report.schema.test.ts` + `bug-report.test.ts`      | ✅     |
-
 ### P1 — JSDoc/TSDoc documentation gaps (audit 2026-05-28)
 
 | Item                                                                | Status |
 | ------------------------------------------------------------------- | ------ |
 | Batch 1: `bug-report.ts` (null rationale) + 4 small files zero doc  | ✅     |
 | Batch 2: `llm-metrics.ts` + `entry-menu.ts`                         | ✅     |
-| Batch 3: `markdown.ts` (module doc) + `create_tests.ts` (SRP break) | 🚧     |
-| Batch 4: handler JSDoc (`pipeline-handler`, `mr-handler`, caseXX)   | 🚧     |
+| Batch 3: `markdown.ts` (module doc) + `create_tests.ts` (SRP break) | ✅     |
+| Batch 4: handler JSDoc (`pipeline-handler`, `mr-handler`, caseXX)   | ✅     |
 
-### P2 — Handler test files ausentes (16 handlers + theme.ts)
+### P2 — Handler test files
 
-| Item                                                     | Status |
-| -------------------------------------------------------- | ------ |
-| `shared/theme.ts` — sem `.test.ts` para `getTheme()`     | 🚧     |
-| `jira_management/commands/case01-16.ts` — sem `.test.ts` | 🚧     |
+| Item                                                                      | Status |
+| ------------------------------------------------------------------------- | ------ |
+| `shared/theme.test.ts` exists                                             | ✅     |
+| `jira_management/commands/handlers.test.ts` covers case01-20 (787 linhas) | ✅     |
 
 ### P2 — `collectManual` > 50 linhas (R4)
 
-| Item                                                  | Status |
-| ----------------------------------------------------- | ------ |
-| `shared/bug-report.ts:101-155` — refatorar em helpers | 🚧     |
+| Item                                                                              | Status |
+| --------------------------------------------------------------------------------- | ------ |
+| `shared/bug-report.ts:104-158` — extraído em `askWithRetry` + `normalizeSeverity` | ✅     |
 
 ### P1 — Xray per-test history ✅
 
@@ -265,6 +237,43 @@ Elevar reports ao nível Allure (padrão ouro mercado). 3 sprints independentes.
 | result_reporter.ts, package_version_manager.ts (+2 testes)                 | ✅     |
 | failure-analysis.ts, state.ts (+2 testes)                                  | ✅     |
 | Thresholds restaurados: statements 90, branches 80, functions 91, lines 90 | ✅     |
+
+### ✅ P0 — CSV/JSON parsing robustness (Expected Result normalization + separator detection) ✅
+
+| Bug   | Descrição                                                                                                 | Correção                                                                                                                                                                     | Arquivos                                                                                                                                                                                                                                         |
+| ----- | --------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| ✅ P0 | CSV header `Expected Result` não identificado na preview em CSVs do Windows (CRLF, BOM, locale pt-BR `;`) | `normalizeFieldName()` (strip `\r`, case/underscore aliases) + detecção automática de separador `;` + flat CSV diagnostic warn + JSON `ExpectedResult` alias + schema update | `shared/field-names.ts` (novo), `csv-import-schema.ts`, `csv_resource.ts`, `import-prep.ts`, `test_cases_template.json`, `jira_management/test_steps_template.json`, `shared/field-names.test.ts`, `csv_resource.test.ts`, `import-prep.test.ts` |
+| ✅    | readBulkCsv falha com CRLF (--- não split) e BOM (\uFEFF impede match de Title:)                          | `raw.replace(/^\uFEFF/, '')` + `raw.replace(/\r\n/g, '\n')` antes do split                                                                                                   | `csv_resource.ts:242-243`                                                                                                                                                                                                                        |
+| ✅    | E2E: CSV com todos quirks → HTML preview                                                                  | 3 testes: all-quirks, golden-path (sem warn), flat CSV diagnostic                                                                                                            | `import-prep.test.ts` (describe `csv -> preview pipeline`)                                                                                                                                                                                       |
+| ✅    | E2E: GitHub real API → health report HTML                                                                 | 5 testes: workflow runs, jobs, PRs, branch info, consolidated HTML report via `writeReport()`                                                                                | `git_triggers/github-e2e.test.ts` (novo) — pula automaticamente sem `GITHUB_TOKEN`                                                                                                                                                               |
+
+---
+
+## ✅ Pipeline Health Reporting (GitHub e2e gold-standard) ✅
+
+| #   | Item                                                                 | Prioridade | Status | Arquivos                                      |
+| --- | -------------------------------------------------------------------- | ---------- | ------ | --------------------------------------------- |
+| 1.1 | Extender `PipelineJob` + `PipelineRun` + `Issue` interface           | P1         | ✅     | `shared/types.ts`                             |
+| 1.2 | `GitHubManager.getOpenIssues()` + `getJobLogs()`                     | P1         | ✅     | `git_triggers/github_manager.ts`              |
+| 2.1 | `aggregatePipelineHealth()` — pass rate, top failing jobs, breakdown | P1         | ✅     | `git_triggers/pipeline-health.ts`             |
+| 2.2 | `categorizePipelineFailure()` — LLM classificação de erro            | P1         | ✅     | `git_triggers/pipeline-health.ts`             |
+| 2.3 | `renderPipelineHealthHtml()` — HTML com cards, tabelas, seções       | P1         | ✅     | `git_triggers/pipeline-health.ts`             |
+| 2.4 | Tests unitários (19 testes com fixtures)                             | P1         | ✅     | `git_triggers/pipeline-health.test.ts`        |
+| 2.5 | Prompt `classify-pipeline-failure.md`                                | P1         | ✅     | `shared/prompts/classify-pipeline-failure.md` |
+| 3.1 | `github-e2e.test.ts` rewrite: fetch → pure functions → HTML          | P1         | ✅     | `git_triggers/github-e2e.test.ts`             |
+| 3.2 | Persistir snapshot no `metrics.ts`                                   | P2         | 🚧     | —                                             |
+
+---
+
+## ✅ Template CSV/JSON (case11) — Bulk format fix + JSON generation ✅
+
+| #   | Item                                                                                                                                           | Prioridade | Status | Arquivos                                                                   |
+| --- | ---------------------------------------------------------------------------------------------------------------------------------------------- | ---------- | ------ | -------------------------------------------------------------------------- |
+| 1   | **BUG**: `jira_management/test_steps_template.csv` em flat format (Title,Action,Data,Expected Result) — rejeitado pelo parser `readBulkCsv()`  | P0         | ✅     | `jira_management/test_steps_template.csv` (removido — fonte única em root) |
+| 2   | **FIX**: `case11.ts` copia da raiz (`test_steps_template.csv` — bulk, 94l), pergunta CSV/JSON, default path corrigido (não sobrescreve source) | P1         | ✅     | `jira_management/commands/case11.ts`                                       |
+| 3   | Opção JSON: novo fluxo em case11 copia `test_cases_template.json` (raiz, 5 exemplos, 86l)                                                      | P1         | ✅     | `jira_management/commands/case11.ts`                                       |
+| 4   | Menu: label "Gerar template CSV" → "Gerar template" + aliases `template:csv` e `template:json`                                                 | P2         | ✅     | `jira_management/main.ts`                                                  |
+| 5   | Tests: handlers.test.ts — case11 adaptado para CSV/JSON dual flow (4 testes)                                                                   | P1         | ✅     | `jira_management/commands/handlers.test.ts`                                |
 
 ## ✅ Histórico
 

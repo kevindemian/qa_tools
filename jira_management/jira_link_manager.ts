@@ -316,4 +316,237 @@ export function matchPreconditionByTokenOverlap(
     return { key: '__create__', summary: query, matchType: 'create' };
 }
 
+/** Stopwords (English + Portuguese) for asymmetric token verification in dual-threshold matching.
+ *  Only words that carry no domain-specific meaning. */
+const STOPWORDS = new Set([
+    'a',
+    'an',
+    'the',
+    'in',
+    'on',
+    'at',
+    'to',
+    'for',
+    'of',
+    'with',
+    'by',
+    'from',
+    'up',
+    'into',
+    'over',
+    'be',
+    'is',
+    'are',
+    'was',
+    'were',
+    'been',
+    'have',
+    'has',
+    'had',
+    'do',
+    'does',
+    'did',
+    'will',
+    'would',
+    'shall',
+    'should',
+    'may',
+    'might',
+    'can',
+    'could',
+    'must',
+    'need',
+    'not',
+    'no',
+    'or',
+    'and',
+    'but',
+    'if',
+    'as',
+    'so',
+    'than',
+    'that',
+    'this',
+    'these',
+    'those',
+    'it',
+    'its',
+    'each',
+    'every',
+    'all',
+    'any',
+    'some',
+    'such',
+    'only',
+    'own',
+    'same',
+    'very',
+    'just',
+    'about',
+    'after',
+    'before',
+    'between',
+    'through',
+    'during',
+    'without',
+    'within',
+    'along',
+    'o',
+    'a',
+    'os',
+    'as',
+    'de',
+    'da',
+    'do',
+    'das',
+    'dos',
+    'para',
+    'com',
+    'por',
+    'no',
+    'na',
+    'num',
+    'numa',
+    'em',
+    'um',
+    'uma',
+    'uns',
+    'umas',
+    'ao',
+    'aos',
+    'pela',
+    'pelas',
+    'pelo',
+    'pelos',
+    'ser',
+    'estar',
+    'ter',
+    'é',
+    'são',
+    'foi',
+    'não',
+    'se',
+    'que',
+    'como',
+    'já',
+    'só',
+    'mais',
+    'entre',
+    'sobre',
+    'após',
+    'até',
+    'sob',
+    'ante',
+    'desde',
+    'sem',
+    'conforme',
+    'segundo',
+]);
+
+/**
+ * Dual-threshold pre-condition matcher: admission at 0.5, confirmation at 0.7,
+ * with asymmetric token verification in the ambiguous zone (0.5-0.69).
+ *
+ * The goal is to achieve recall close to single-threshold 0.5 while maintaining
+ * precision close to single-threshold 0.7. The asymmetric check detects false
+ * positives where two summaries share common words but differ in meaning
+ * (e.g. "User must be logged in" vs "Admin must be logged in").
+ *
+ * Steps:
+ *   1. exact match → return (always safe)
+ *   2. containment → return (one is substring of the other → safe)
+ *   3. Jaccard ≥ 0.7 → accept (high confidence)
+ *   4. Jaccard 0.5-0.69 → asymmetric token verification:
+ *      a. Remove stopwords from both sides
+ *      b. If BOTH sides have unique content words → different meaning → reject (create)
+ *      c. If only ONE side has extras → subsunção → accept
+ *   5. Jaccard < 0.5 → create
+ *
+ * @param query - Desired precondition description (from LLM output).
+ * @param candidates - All available pre-conditions from Jira.
+ * @returns A `PreConditionMatchResult` — 'create' when unmatched or rejected by asymmetric check.
+ *
+ * @example
+ * ```ts
+ * // Different meaning in ambiguous zone → rejected
+ * matchPreconditionByDualThreshold("User must be logged in", [
+ *   { key: "PREC-1", summary: "Admin must be logged in" }
+ * ])
+ * // → { key: "__create__", ..., matchType: "create" }
+ *
+ * // Subsumption in ambiguous zone → accepted
+ * matchPreconditionByDualThreshold("User must be logged in", [
+ *   { key: "PREC-1", summary: "User must be logged in to the system" }
+ * ])
+ * // → { key: "PREC-1", ..., matchType: "containment" }
+ * ```
+ * @public Exported for testing. */
+export function matchPreconditionByDualThreshold(
+    query: string,
+    candidates: PreConditionSummary[],
+): PreConditionMatchResult {
+    const qLower = query.toLowerCase().trim();
+    if (!qLower || candidates.length === 0) {
+        return { key: '__create__', summary: query, matchType: 'create' };
+    }
+
+    // 1. Exact match (always safe)
+    const exact = candidates.find((c) => c.summary.toLowerCase().trim() === qLower);
+    if (exact) {
+        return { key: exact.key, summary: exact.summary, matchType: 'exact' };
+    }
+
+    // 2. Containment (one is substring of the other)
+    const contain = candidates.find(
+        (c) => c.summary.toLowerCase().includes(qLower) || qLower.includes(c.summary.toLowerCase()),
+    );
+    if (contain) {
+        return { key: contain.key, summary: contain.summary, matchType: 'containment' };
+    }
+
+    // 3. Token overlap (Jaccard)
+    const qWords = new Set(qLower.split(/\s+/).filter(Boolean));
+    let best: { candidate: PreConditionSummary; score: number } | null = null;
+    for (const c of candidates) {
+        const cWords = new Set(c.summary.toLowerCase().split(/\s+/).filter(Boolean));
+        const intersection = new Set([...qWords].filter((w) => cWords.has(w)));
+        const union = new Set([...qWords, ...cWords]);
+        const score = intersection.size / union.size;
+        if (score > (best?.score ?? 0)) {
+            best = { candidate: c, score };
+        }
+    }
+
+    if (!best) {
+        return { key: '__create__', summary: query, matchType: 'create' };
+    }
+
+    // 3a. High confidence: Jaccard ≥ 0.7 → accept
+    if (best.score >= 0.7) {
+        return { key: best.candidate.key, summary: best.candidate.summary, matchType: 'overlap' };
+    }
+
+    // 3b. Medium confidence: Jaccard 0.5-0.69 → asymmetric token verification
+    if (best.score >= 0.5) {
+        const qContentTokens = [...qWords].filter((w) => !STOPWORDS.has(w));
+        const cContentTokens = new Set(
+            [...best.candidate.summary.toLowerCase().split(/\s+/).filter(Boolean)].filter((w) => !STOPWORDS.has(w)),
+        );
+
+        const uniqueToQuery = qContentTokens.filter((w) => !cContentTokens.has(w));
+        const uniqueToCandidate = [...cContentTokens].filter((w) => !qContentTokens.includes(w));
+
+        // If BOTH sides have unique content words → different meaning → reject
+        if (uniqueToQuery.length > 0 && uniqueToCandidate.length > 0) {
+            return { key: '__create__', summary: query, matchType: 'create' };
+        }
+
+        // Only one side has extras → subsumption → accept
+        return { key: best.candidate.key, summary: best.candidate.summary, matchType: 'overlap' };
+    }
+
+    // 4. Low confidence: Jaccard < 0.5 → create
+    return { key: '__create__', summary: query, matchType: 'create' };
+}
+
 export default JiraLinkManager;

@@ -32,7 +32,7 @@ describe('BugReport Service', () => {
     describe('collectManual', () => {
         it('throws if summary is empty after 3 attempts', async () => {
             mockPrompt.ask.mockResolvedValue('');
-            await expect(collectManual()).rejects.toThrow('Sumário obrigatório');
+            await expect(collectManual()).rejects.toThrow('é obrigatório');
             expect(mockPrompt.warn).toHaveBeenCalledTimes(3);
         });
 

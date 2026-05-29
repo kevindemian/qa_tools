@@ -1,6 +1,5 @@
 /** Lightweight Markdown parser, renderer, and HTML converter.
- *
- * Supported syntax: headings (#), bold (**), italic (*), strikethrough (~~),
+ * @module Supported syntax: headings (#), bold (**), italic (*), strikethrough (~~),
  * inline code (`), code blocks (```), links [text](url), images ![alt](url),
  * unordered lists (-), ordered lists (1.), horizontal rules (---), tables (|...|),
  * blockquotes (>).

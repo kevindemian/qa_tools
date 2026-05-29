@@ -3,25 +3,58 @@ import fs from 'fs';
 import csv from 'csv-parser';
 import { Readable } from 'stream';
 import { rootLogger } from '../shared/logger';
+import { normalizeFieldName, sanitizeCellValue } from '../shared/field-names';
 import type { TestCase } from '../shared/types';
 import { parseQuotedValue, extractPreconditionKey } from '../shared/quoted-string';
 import { CsvRowSchema } from './csv-import-schema';
 import type { CsvRow } from './csv-import-schema';
 
 class CsvResource {
+    /** Detect CSV separator: prefers `;` when first line has `;` and no `,`.
+     * Common for Excel exports in Portuguese locale. */
+    static detectSeparator(firstLine: string): string {
+        return firstLine.includes(';') && !firstLine.includes(',') ? ';' : ',';
+    }
+
     readCsvFromString(csvString: string): Promise<CsvRow[]> {
         return new Promise((resolve, reject) => {
             const results: CsvRow[] = [];
             const stream = Readable.from([csvString]);
+            const firstLine = csvString.split('\n')[0] ?? '';
+            const separator = CsvResource.detectSeparator(firstLine);
+
+            if (separator !== ',') {
+                rootLogger.warn(
+                    `CSV com separador "${separator}" detectado. ` +
+                        `Causa: Excel configurado para locale Português (separador padrão = ";"). ` +
+                        `Solução automática: parser ajustou para "${separator}".`,
+                );
+            }
+
+            const warnedHeaders = new Set<string>();
 
             stream
-                .pipe(csv())
+                .pipe(csv({ separator }))
                 .on('data', (data: Record<string, string>) => {
+                    const nd: Record<string, string> = {};
+                    for (const [k, v] of Object.entries(data)) {
+                        const nk = normalizeFieldName(k);
+                        nd[nk] = sanitizeCellValue(v);
+                        if (nk !== k && !warnedHeaders.has(k)) {
+                            warnedHeaders.add(k);
+                            rootLogger.warn(
+                                `Coluna "${k}" normalizada para "${nk}". ` +
+                                    `Causa: nome de coluna não padronizado. ` +
+                                    `Solução: use "${nk}" no header do CSV. ` +
+                                    `Este aviso aparece apenas uma vez por nome de coluna.`,
+                            );
+                        }
+                    }
                     const parsed = CsvRowSchema.safeParse({
                         fields: {
-                            Action: data.Action || '',
-                            Data: data.Data || '',
-                            'Expected Result': data['Expected Result'] || '',
+                            Action: nd.Action || '',
+                            Data: nd.Data || '',
+                            'Expected Result': nd['Expected Result'] || '',
                         },
                     });
                     if (parsed.success) {
@@ -148,12 +181,24 @@ class CsvResource {
         return csvLines.join('\n');
     }
 
+    static readonly FLAT_CSV_PATTERNS = [/^Title,Action/i, /^Action,/i];
+
     private async _processBulkCsvBlock(block: string, results: TestCase[]): Promise<void> {
         const lines = block.split('\n').map((l) => l.trim());
 
         const titleLine = lines.find((l) => l.startsWith('Title:'));
         if (!titleLine) {
-            rootLogger.warn('Pulando bloco sem Title:\n' + block);
+            const isFlat = CsvResource.FLAT_CSV_PATTERNS.some((p) => lines[0] && p.test(lines[0]));
+            if (isFlat) {
+                rootLogger.warn(
+                    'Bloco ignorado: formato flat detectado (CSV header na primeira linha, sem "Title:" / "---"). ' +
+                        'Causa: o parser espera o formato bulk com "Title:" (dois-pontos) e blocos separados por "---". ' +
+                        'Solução: converta seu CSV para o formato bulk — veja test_steps_template.csv ' +
+                        'na raiz do projeto.',
+                );
+            } else {
+                rootLogger.warn('Pulando bloco sem Title:\n' + block);
+            }
             return;
         }
 
@@ -192,7 +237,9 @@ class CsvResource {
     }
 
     async readBulkCsv(filePath: string): Promise<TestCase[]> {
-        const raw = await fs.promises.readFile(filePath, 'utf-8');
+        let raw = await fs.promises.readFile(filePath, 'utf-8');
+        raw = raw.replace(/^\uFEFF/, ''); /* strip BOM */
+        raw = raw.replace(/\r\n/g, '\n'); /* normalize CRLF → LF for block splitting */
 
         const blocks = raw
             .split(/^---$/m)

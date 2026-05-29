@@ -50,6 +50,9 @@ export const ImportJsonStepSchema = z.object({
     Data: z.string().optional(),
     /** @production Field name com espaço exigido pela Xray Server API. */
     'Expected Result': z.string().optional(),
+    /** Alias for backward compat — users who copied from old JSON templates.
+     * normalizeFieldName() will prefer the canonical 'Expected Result' at runtime. */
+    ExpectedResult: z.string().optional(),
 });
 
 export const ImportJsonItemSchema = z.object({
