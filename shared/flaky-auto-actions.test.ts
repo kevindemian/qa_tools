@@ -1,8 +1,7 @@
 import { executeFlakyActions, calculateFlakinessWithWindow } from './flaky-auto-actions';
 import type { MetricsStore } from './metrics';
 import type { FlatTest } from './result_parser';
-import type { SearchResponse } from '../jira_management/jira-resource-types';
-import type JiraResource from '../jira_management/jira_resource';
+import type { SearchIssuesResponse, JiraResourceLike } from './types';
 
 interface MockJira {
     searchJiraIssues: jest.Mock;
@@ -15,7 +14,7 @@ function mockJiraResource(captured: { calls: unknown[] }): MockJira {
     const bugStore = new Map<string, { key: string }>();
 
     return {
-        searchJiraIssues: jest.fn().mockImplementation(async (jql: string): Promise<SearchResponse> => {
+        searchJiraIssues: jest.fn().mockImplementation(async (jql: string): Promise<SearchIssuesResponse> => {
             captured.calls.push({ method: 'searchJiraIssues', jql });
             const match = jql.match(/\[Flaky\].*?"?([^"]+)"?/);
             if (!match) return { issues: [], total: 0 };
@@ -81,8 +80,8 @@ function flakyRun(
     };
 }
 
-function asMockJira(m: MockJira): JiraResource {
-    return m as unknown as JiraResource;
+function asMockJira(m: MockJira): JiraResourceLike {
+    return m as unknown as JiraResourceLike;
 }
 
 describe('calculateFlakinessWithWindow', () => {

@@ -28,6 +28,7 @@ module.exports = tseslint.config(
         },
     },
     // Layer restriction E5.1: shared/ must not import jira_management/ or git_triggers/
+    // allowTypeImports — type-only imports are erased at compile time, zero runtime coupling
     {
         files: ['shared/**/*.ts', 'shared/**/*.js'],
         rules: {

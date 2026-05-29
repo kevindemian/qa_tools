@@ -1,5 +1,5 @@
 import { rootLogger } from './logger';
-import type JiraResource from '../jira_management/jira_resource';
+import type { JiraResourceLike } from './types';
 import type { FlakyAction, FlakyActionConfig } from './types';
 import type { FlakinessEntry, MetricsStore } from './metrics';
 
@@ -77,7 +77,11 @@ export function calculateFlakinessWithWindow(
     return result;
 }
 
-async function searchExistingBug(jiraResource: JiraResource, project: string, title: string): Promise<string | null> {
+async function searchExistingBug(
+    jiraResource: JiraResourceLike,
+    project: string,
+    title: string,
+): Promise<string | null> {
     const escapedTitle = title.replace(/"/g, '\\"');
     const jql =
         'project = ' + project + ' AND issuetype = Bug AND summary ~ "[Flaky] ' + escapedTitle + '" AND status != Done';
@@ -94,7 +98,7 @@ async function searchExistingBug(jiraResource: JiraResource, project: string, ti
 }
 
 async function createFlakyBug(
-    jiraResource: JiraResource,
+    jiraResource: JiraResourceLike,
     project: string,
     title: string,
     rate: number,
@@ -117,8 +121,8 @@ async function createFlakyBug(
     };
 
     try {
-        const response = await jiraResource.postJiraResource('issue', payload);
-        const key = response.key as string;
+        const response = await jiraResource.postJiraResource<{ key: string }>('issue', payload);
+        const key = response.key;
         rootLogger.info('Created bug ' + key + ' for flaky test: ' + title);
         return key;
     } catch (err) {
@@ -127,7 +131,7 @@ async function createFlakyBug(
     }
 }
 
-async function reenableTest(jiraResource: JiraResource, existingKey: string): Promise<void> {
+async function reenableTest(jiraResource: JiraResourceLike, existingKey: string): Promise<void> {
     try {
         const transitions = await jiraResource.getTransitionsForIssue(existingKey);
         const doneTransition = Object.entries(transitions).find(
@@ -163,7 +167,7 @@ function makeAction(
 
 export async function executeFlakyActions(
     metricsStore: MetricsStore,
-    jiraResource: JiraResource,
+    jiraResource: JiraResourceLike,
     project: string,
     config?: Partial<FlakyActionConfig>,
 ): Promise<FlakyAction[]> {

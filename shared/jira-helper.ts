@@ -1,14 +1,17 @@
 /** Jira API helpers — reduce boilerplate across handlers. */
 import { printError } from './prompt';
 import { rootLogger } from './logger';
-import type { CommandContext } from '../jira_management/commands/context';
+interface CommandContextLike {
+    pushHistory: (op: string, detail: string, status: string) => void;
+    ctx: { project_name: string };
+}
 
 /** Wrap a Jira API call with consistent error handling, logging, and pushHistory.
  *  On success: pushes `ok` history entry.
  *  On failure: logs with rootLogger, prints error, pushes `error` history entry.
  *  @returns true if the operation succeeded, false otherwise. */
 export async function safeJiraCall(
-    c: CommandContext,
+    c: CommandContextLike,
     operationName: string,
     detailLabel: string,
     fn: () => Promise<unknown>,
