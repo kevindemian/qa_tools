@@ -17,13 +17,13 @@ describe('ServerStepImporter', () => {
     it('calls postJiraResource with correct endpoint and payload', async () => {
         const mockJira = { postJiraResource: jest.fn() };
         const importer = createStepImporter(mockJira as unknown as JiraResource, 'server');
-        const step: TestStep = { fields: { Action: 'Click', Data: 'Button', ExpectedResult: 'Done' } };
+        const step: TestStep = { fields: { Action: 'Click', Data: 'Button', 'Expected Result': 'Done' } };
 
         await importer.importStep('TEST-1', 1, step);
 
         expect(mockJira.postJiraResource).toHaveBeenCalledWith('test/TEST-1/steps', {
             index: 1,
-            fields: { Action: 'Click', Data: 'Button', ExpectedResult: 'Done' },
+            fields: { Action: 'Click', Data: 'Button', 'Expected Result': 'Done' },
         });
     });
 
@@ -68,7 +68,7 @@ describe('CloudStepImporter', () => {
             .mockResolvedValueOnce({ data: { data: { addTestStep: { id: '123' } } } });
 
         const importer = createStepImporter({} as JiraResource, 'cloud');
-        const step: TestStep = { fields: { Action: 'Click', Data: 'Button', ExpectedResult: 'Done' } };
+        const step: TestStep = { fields: { Action: 'Click', Data: 'Button', 'Expected Result': 'Done' } };
 
         await importer.importStep('TEST-1', 0, step);
 

@@ -156,4 +156,170 @@ describe('case19 — History & Coverage', () => {
 
         expect(prompt.tableView).not.toHaveBeenCalled();
     });
+
+    it('displays history comparison, flaky tests and trends when multiple runs exist', async () => {
+        const prompt = require('../../shared/prompt');
+        const metrics = require('../../shared/metrics');
+        const comparison = require('../../shared/run-comparison');
+
+        prompt.showSelect.mockResolvedValueOnce('a').mockResolvedValueOnce('0');
+
+        metrics.loadMetrics.mockReturnValueOnce({
+            runs: [
+                {
+                    timestamp: '2024-01-15T10:00:00Z',
+                    project: 'TEST',
+                    total: 10,
+                    passed: 8,
+                    failed: 2,
+                    skipped: 0,
+                    duration: 5000,
+                    tests: [],
+                },
+                {
+                    timestamp: '2024-01-16T10:00:00Z',
+                    project: 'TEST',
+                    total: 10,
+                    passed: 9,
+                    failed: 1,
+                    skipped: 0,
+                    duration: 4500,
+                    tests: [],
+                },
+            ],
+        });
+
+        metrics.calculateFlakiness.mockReturnValueOnce([
+            { title: 'Flaky Test', passCount: 1, failCount: 1, rate: 0.5 },
+        ]);
+        metrics.getTrends.mockReturnValueOnce([{ label: '2024-01-15', total: 10, failed: 2, passRate: 80 }]);
+
+        comparison.compareRuns.mockResolvedValueOnce('Second run improved by 10%');
+
+        const mod = require('./case19').default;
+        await mod.handler(baseContext);
+
+        expect(comparison.compareRuns).toHaveBeenCalled();
+        expect(prompt.title).toHaveBeenCalledWith('Testes com flakiness');
+        expect(prompt.title).toHaveBeenCalledWith('Tendência');
+    });
+
+    it('handles coverage analysis error', async () => {
+        const prompt = require('../../shared/prompt');
+        const coverage = require('../coverage');
+
+        prompt.showSelect.mockResolvedValueOnce('b').mockResolvedValueOnce('0');
+        coverage.analyzeCoverage.mockRejectedValueOnce(new Error('Jira API error'));
+
+        const mod = require('./case19').default;
+        await mod.handler(baseContext);
+
+        expect(prompt.printError).toHaveBeenCalledWith('Erro ao analisar cobertura', expect.any(Error));
+    });
+
+    it('handles compareRuns returning null (falsy analysis)', async () => {
+        const prompt = require('../../shared/prompt');
+        const metrics = require('../../shared/metrics');
+        const comparison = require('../../shared/run-comparison');
+
+        prompt.showSelect.mockResolvedValueOnce('a').mockResolvedValueOnce('0');
+
+        metrics.loadMetrics.mockReturnValueOnce({
+            runs: [
+                {
+                    timestamp: '2024-01-15T10:00:00Z',
+                    project: 'TEST',
+                    total: 10,
+                    passed: 8,
+                    failed: 2,
+                    skipped: 0,
+                    duration: 5000,
+                    tests: [],
+                },
+                {
+                    timestamp: '2024-01-16T10:00:00Z',
+                    project: 'TEST',
+                    total: 10,
+                    passed: 9,
+                    failed: 1,
+                    skipped: 0,
+                    duration: 4500,
+                    tests: [],
+                },
+            ],
+        });
+        metrics.calculateFlakiness.mockReturnValueOnce([]);
+        metrics.getTrends.mockReturnValueOnce([]);
+
+        comparison.compareRuns.mockResolvedValueOnce(null);
+
+        const mod = require('./case19').default;
+        await mod.handler(baseContext);
+
+        expect(comparison.compareRuns).toHaveBeenCalled();
+        expect(prompt.info).not.toHaveBeenCalledWith(expect.stringContaining('Análise comparativa'));
+    });
+
+    it('shows coverage without unmapped steps or gaps', async () => {
+        const prompt = require('../../shared/prompt');
+        const coverage = require('../coverage');
+
+        prompt.showSelect.mockResolvedValueOnce('b').mockResolvedValueOnce('0');
+
+        coverage.analyzeCoverage.mockResolvedValueOnce({
+            totalIssues: 5,
+            totalSteps: 10,
+            mappedIssues: 5,
+            unmappedSteps: [],
+            gapsByEpic: {},
+            coveragePct: 100,
+        });
+
+        const mod = require('./case19').default;
+        await mod.handler(baseContext);
+
+        expect(prompt.warn).not.toHaveBeenCalled();
+        expect(prompt.title).not.toHaveBeenCalledWith('Gaps por épico');
+    });
+
+    it('shows history without flaky or trends data', async () => {
+        const prompt = require('../../shared/prompt');
+        const metrics = require('../../shared/metrics');
+        const comparison = require('../../shared/run-comparison');
+
+        prompt.showSelect.mockResolvedValueOnce('a').mockResolvedValueOnce('0');
+
+        metrics.loadMetrics.mockReturnValueOnce({
+            runs: [
+                {
+                    timestamp: '2024-01-15T10:00:00Z',
+                    project: 'TEST',
+                    total: 10,
+                    passed: 8,
+                    failed: 2,
+                    skipped: 0,
+                    duration: 5000,
+                    tests: [],
+                },
+                {
+                    timestamp: '2024-01-16T10:00:00Z',
+                    project: 'TEST',
+                    total: 10,
+                    passed: 9,
+                    failed: 1,
+                    skipped: 0,
+                    duration: 4500,
+                    tests: [],
+                },
+            ],
+        });
+        metrics.calculateFlakiness.mockReturnValueOnce([]);
+        metrics.getTrends.mockReturnValueOnce([]);
+        comparison.compareRuns.mockResolvedValueOnce('analysis result');
+
+        const mod = require('./case19').default;
+        await mod.handler(baseContext);
+
+        expect(prompt.tableView).toHaveBeenCalled();
+    });
 });

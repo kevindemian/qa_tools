@@ -7,7 +7,10 @@ import { writeReport } from '../shared/temp-dir';
 import { createHttpClient } from '../shared/http-client';
 
 async function main() {
-    const ctrfPath = path.resolve(__dirname, 'fixtures/ctrf-report.json');
+    const ctrfArg = process.argv.find((a) => a.startsWith('--ctrf='));
+    const ctrfPath = ctrfArg
+        ? path.resolve(ctrfArg.split('=')[1]!)
+        : path.resolve(__dirname, 'fixtures/ctrf-report.json');
     const result = parseTestResultsFile(ctrfPath);
 
     if (result.error) {

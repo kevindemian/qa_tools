@@ -70,6 +70,7 @@ interface ConfigOverrides {
     xrayClientSecret?: string;
     llmMaxTokens?: string | number;
     llmMaxTotalTokens?: string | number;
+    knownIssuesPath?: string;
 }
 
 /** Parse a string/boolean/undefined into a strict boolean. */
@@ -288,6 +289,10 @@ class Config {
         return toInt(this.overrides.llmMaxTotalTokens ?? envVal('LLM_MAX_TOTAL_TOKENS'), 0);
     }
 
+    get knownIssuesPath(): string {
+        return this.overrides.knownIssuesPath ?? envVal('KNOWN_ISSUES_PATH', '');
+    }
+
     /** Get a raw config value by key. Checks overrides first, then process.env.
      * @returns The string value or `undefined` if not set anywhere. */
     get(key: string): string | undefined {
@@ -474,6 +479,9 @@ class Config {
     }
     static get llmMaxTotalTokens(): number {
         return Config.defaultInstance.llmMaxTotalTokens;
+    }
+    static get knownIssuesPath(): string {
+        return Config.defaultInstance.knownIssuesPath;
     }
 }
 

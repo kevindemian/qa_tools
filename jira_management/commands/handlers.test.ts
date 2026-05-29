@@ -45,8 +45,9 @@ jest.mock('../create_tests', () => ({
     createTestExecutionWithLinks: jest.fn(),
 }));
 
-jest.mock('./helpers', () => ({
-    createTestExecutionWithLinksWrapper: jest.fn(),
+jest.mock('./test-execution-flow', () => ({
+    offerTestExecutionAssociation: jest.fn().mockResolvedValue({ associated: false }),
+    showResults: jest.fn().mockResolvedValue(undefined),
 }));
 
 const mockJiraResource = {
@@ -491,20 +492,20 @@ describe('case13 — create test execution', () => {
     it('creates test execution with manual key entry', async () => {
         const prompt = require('../../shared/prompt');
         prompt.ask.mockResolvedValueOnce('TEST-3 TEST-4');
-        prompt.ask.mockResolvedValueOnce('my-execution');
-        prompt.ask.mockResolvedValueOnce('Exec Title');
-        prompt.ask.mockResolvedValueOnce('Exec desc');
-        const helpers = require('./helpers');
-        helpers.createTestExecutionWithLinksWrapper.mockResolvedValueOnce(undefined);
+        const flow = require('./test-execution-flow');
+        flow.offerTestExecutionAssociation.mockResolvedValueOnce({ associated: true, key: 'TE-1', mode: 'created' });
         const mod = require('./case13').default;
         await mod.handler(baseContext);
-        expect(helpers.createTestExecutionWithLinksWrapper).toHaveBeenCalledWith(
+        expect(flow.offerTestExecutionAssociation).toHaveBeenCalledWith(
             baseContext,
             ['TEST-3', 'TEST-4'],
-            'my-execution',
-            'Exec Title',
-            'Exec desc',
+            'standalone',
         );
+        expect(flow.showResults).toHaveBeenCalledWith(baseContext, ['TEST-3', 'TEST-4'], {
+            associated: true,
+            key: 'TE-1',
+            mode: 'created',
+        });
     });
 
     it('falls back to manual key entry when user declines in-memory tasks', async () => {
@@ -512,19 +513,13 @@ describe('case13 — create test execution', () => {
         const prompt = require('../../shared/prompt');
         prompt.askConfirm.mockResolvedValueOnce(false);
         prompt.ask.mockResolvedValueOnce('MANUAL-1 MANUAL-2');
-        prompt.ask.mockResolvedValueOnce('manual-exec');
-        prompt.ask.mockResolvedValueOnce('Manual Title');
-        prompt.ask.mockResolvedValueOnce('');
-        const helpers = require('./helpers');
-        helpers.createTestExecutionWithLinksWrapper.mockResolvedValueOnce(undefined);
+        const flow = require('./test-execution-flow');
         const mod = require('./case13').default;
         await mod.handler(baseContext);
-        expect(helpers.createTestExecutionWithLinksWrapper).toHaveBeenCalledWith(
+        expect(flow.offerTestExecutionAssociation).toHaveBeenCalledWith(
             baseContext,
             ['MANUAL-1', 'MANUAL-2'],
-            'manual-exec',
-            'Manual Title',
-            '',
+            'standalone',
         );
     });
 
@@ -533,19 +528,13 @@ describe('case13 — create test execution', () => {
         mockSessionContext.inMemoryTasksText = ['Test one', 'Test two'];
         const prompt = require('../../shared/prompt');
         prompt.askConfirm.mockResolvedValueOnce(true);
-        prompt.ask.mockResolvedValueOnce('');
-        prompt.ask.mockResolvedValueOnce('Auto Exec');
-        prompt.ask.mockResolvedValueOnce('');
-        const helpers = require('./helpers');
-        helpers.createTestExecutionWithLinksWrapper.mockResolvedValueOnce(undefined);
+        const flow = require('./test-execution-flow');
         const mod = require('./case13').default;
         await mod.handler(baseContext);
-        expect(helpers.createTestExecutionWithLinksWrapper).toHaveBeenCalledWith(
+        expect(flow.offerTestExecutionAssociation).toHaveBeenCalledWith(
             baseContext,
             ['TEST-1', 'TEST-2'],
-            '',
-            'Auto Exec',
-            '',
+            'standalone',
         );
     });
 });
@@ -587,7 +576,6 @@ describe('case15 — create tests from JSON', () => {
             sourcePath: '/fake/tests.json',
         });
         const prompt = require('../../shared/prompt');
-        prompt.askConfirm.mockResolvedValueOnce(false);
         const mod = require('./case15').default;
         await mod.handler(baseContext);
         expect(createTests.createTestsFromJson).toHaveBeenCalledWith(
@@ -620,7 +608,6 @@ describe('case15 — create tests from JSON', () => {
         jest.spyOn(fs, 'existsSync').mockReturnValueOnce(true);
         const prompt = require('../../shared/prompt');
         prompt.ask.mockResolvedValueOnce('relative/tests.json');
-        prompt.askConfirm.mockResolvedValueOnce(false);
         const mod = require('./case15').default;
         await mod.handler(baseContext);
         // path.resolve('/base/dir', 'relative/tests.json') = '/base/dir/relative/tests.json'
@@ -642,7 +629,6 @@ describe('case15 — create tests from JSON', () => {
         jest.spyOn(fs, 'existsSync').mockReturnValueOnce(false);
         const prompt = require('../../shared/prompt');
         prompt.ask.mockResolvedValueOnce('relative/tests.json');
-        prompt.askConfirm.mockResolvedValueOnce(false);
         const mod = require('./case15').default;
         await mod.handler(baseContext);
         expect(createTests.createTestsFromJson).toHaveBeenCalledWith(
@@ -731,8 +717,6 @@ describe('case01 — create tests from CSV', () => {
             summary: '2 tests created from CSV',
             status: 'ok',
         });
-        const prompt = require('../../shared/prompt');
-        prompt.askConfirm.mockResolvedValueOnce(false);
         const mod = require('./case01').default;
         await mod.handler(baseContext);
         expect(createTests.createTestsFromCsv).toHaveBeenCalledWith(
@@ -756,14 +740,12 @@ describe('case01 — create tests from CSV', () => {
                 status: 'ok',
             };
         });
-        const prompt = require('../../shared/prompt');
-        prompt.askConfirm.mockResolvedValueOnce(false);
         const mod = require('./case01').default;
         await mod.handler(baseContext);
         expect(mockSessionContext.isBusy).toBe(false);
     });
 
-    it('prompts to create test execution after CSV import when confirmed', async () => {
+    it('prompts to create test execution after CSV import', async () => {
         mockConfigMod.csvPath = '/fake/test.csv';
         mockConfigMod.csvLabels = 'label1';
         mockSessionContext.inMemoryTasksId = ['TEST-1', 'TEST-2'];
@@ -777,21 +759,16 @@ describe('case01 — create tests from CSV', () => {
             summary: '2 tests',
             status: 'ok',
         });
-        const prompt = require('../../shared/prompt');
-        prompt.askConfirm.mockResolvedValueOnce(true);
-        prompt.ask.mockResolvedValueOnce('Exec Title');
-        prompt.ask.mockResolvedValueOnce('Exec Description');
-        const helpers = require('./helpers');
-        helpers.createTestExecutionWithLinksWrapper.mockResolvedValueOnce(undefined);
+        const flow = require('./test-execution-flow');
+        flow.offerTestExecutionAssociation.mockResolvedValueOnce({ associated: true, key: 'TE-1', summary: 'test' });
         const mod = require('./case01').default;
         await mod.handler(baseContext);
-        expect(helpers.createTestExecutionWithLinksWrapper).toHaveBeenCalledWith(
-            baseContext,
-            ['TEST-1', 'TEST-2'],
-            'test',
-            'Exec Title',
-            'Exec Description',
-        );
+        expect(flow.offerTestExecutionAssociation).toHaveBeenCalledWith(baseContext, ['TEST-1', 'TEST-2'], 'test');
+        expect(flow.showResults).toHaveBeenCalledWith(baseContext, ['TEST-1', 'TEST-2'], {
+            associated: true,
+            key: 'TE-1',
+            summary: 'test',
+        });
     });
 
     it('handles null result from createTestsFromCsv gracefully', async () => {

@@ -13,8 +13,26 @@ Issues registradas durante refatorações, postergadas por escopo.
 
 ## 📄 Documentação de Produção
 
-- `jira_xray_config_backup.md` — backup do ambiente Jira/Xray/CI/CD
-- `docs/PRODUCTION-CONFIG.md` — field mappings, endpoints, bugs P1-P5 encontrados no e2e real de 2026-05-29
+- `jira_xray_config_backup.md` — backup do ambiente Jira/Xray/CI/CD (configurações ORIGINAIS, pré-criptografia de tokens. IDs podem diferir da instância atual. **Não alterar** — registro histórico)
+- `docs/PRODUCTION-CONFIG.md` — field mappings, endpoints, **bugs P1-P5 corrigidos em 2026-05-29**. Configurações validadas em produção. Atualizar se field IDs mudarem.
+- **PRODUCTION FIELD IDs** (confirmados em `jiraprod.srv.euronext.com`, **não alterar sem revalidação**):
+    - Pre-condition: `customfield_13708` (schema `com.xpandit.plugins.xray:test-precondition-custom-field`)
+    - Test Execution tests: `customfield_13715` (schema `com.xpandit.plugins.xray:testexec-tests-custom-field`)
+    - Link type `Tests`: `10600`
+    - Issue type `Test Execution`: `11802`
+
+---
+
+## ✅ Produção — Bugs P1-P5 corrigidos ✅
+
+| Bug | Descrição                                                                       | Correção                                    | Arquivos                                                                                                            |
+| --- | ------------------------------------------------------------------------------- | ------------------------------------------- | ------------------------------------------------------------------------------------------------------------------- |
+| P1  | Step field name mismatch: `ExpectedResult` vs `Expected Result`                 | Renomeado type + 28 consumidores            | `shared/types.ts`, `xray-client.ts`, `import-prep.ts`, `mapping-file-generator.ts`, `csv-import-schema.ts`, 7 tests |
+| P2  | Retry 429 insuficiente: 5 retries/30s max → 10 retries/120s max + `Retry-After` | Enhanced backoff + `setTestSleep` p/ testes | `shared/http-client.ts`, `http-client.test.ts`, `csv-import-errors.test.ts`                                         |
+| P3  | Xray History URL malformed: duplo `/rest/`                                      | `getFromOriginPath` em `JiraResource`       | `jira_resource.ts`, `xray-history.ts`, `xray-history.test.ts`                                                       |
+| P4  | Step #3 perdido por rate limit                                                  | Resolvido por P2 (retry robusto cobre)      | —                                                                                                                   |
+| P5  | CTRF report usa fixture hardcoded                                               | Path configurável via `--ctrf=` CLI         | `e2e/gen-report.ts`, `gen-report-complete.ts`                                                                       |
+| —   | Link type fallback IDs errados (10201→10600 para `Tests`)                       | Atualizado `FALLBACK_LINK_TYPES`            | `jira_link_manager.ts`                                                                                              |
 
 ---
 
@@ -43,7 +61,77 @@ Issues registradas durante refatorações, postergadas por escopo.
 
 ---
 
+## ✅ Reporting — Melhorias Pós-e2e ✅
+
+| #   | Item                                                              | Prioridade | Status | Arquivos                                        |
+| --- | ----------------------------------------------------------------- | ---------- | ------ | ----------------------------------------------- |
+| 1   | **BUG**: Botão "Toggle Passed" altera texto do botão "Export CSV" | P0         | ✅     | `shared/report-generator.ts`                    |
+| 2   | **BUG**: CSV Export ignora colunas Suite/Error/History            | P0         | ✅     | `shared/report-generator.ts`                    |
+| 3   | **BUG**: CSV Export não respeita filtro de busca                  | P0         | ✅     | `shared/report-generator.ts`                    |
+| 4   | **Melhoria**: Tema light/dark/system + botão toggle no HTML       | P1         | ✅     | `shared/report-generator.ts`                    |
+| 5   | **Melhoria**: `ReportOptions.theme` p/ forçar tema na geração     | P1         | ✅     | `shared/report-generator.ts`                    |
+| 6   | **Testes**: toggle function, csv export, theme script             | P1         | ✅     | `shared/report-generator.test.ts`               |
+| 7   | **Documentação**: TSDoc em `report-generator.ts` + `theme.ts`     | P2         | ✅     | `shared/report-generator.ts`, `shared/theme.ts` |
+
+### Postergado — justificativa
+
+| Item                                                | Prioridade | Justificativa                                                                                                                                        |
+| --------------------------------------------------- | ---------- | ---------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Suite column robustez (múltiplos formatos de suite) | P3         | `fullTitle` já usa `>` nos dois parsers (CTRF + Mochawesome). Funciona para todos os formatos suportados hoje. Sem demanda concreta de usuário.      |
+| Customização de conteúdo (colunas selecionáveis)    | P3         | Exigiria UI complexa + estado persistente. Sem caso de uso validado. `ReportOptions` já permite seletividade via `includeChart`, `testHistory`, etc. |
+| Flakiness dashboard integrado no report HTML        | P3         | Funcionalidade independente (outro fluxo). Não relacionado ao report e2e.                                                                            |
+
+---
+
+## ✅ Pre-conditions + LLM Test Generation ✅
+
+| #   | Item                                                                                                                                             | Prioridade | Status | Arquivos                                    |
+| --- | ------------------------------------------------------------------------------------------------------------------------------------------------ | ---------- | ------ | ------------------------------------------- |
+| 1   | Types: `PreConditionSummary` + LLM input types                                                                                                   | P1         | ✅     | `shared/types.ts`                           |
+| 2   | Service: `JiraLinkManager.listPreconditions()`, `createPrecondition()`, `_resolvePreconditionIssueTypeId()`, `matchPreconditionByTokenOverlap()` | P1         | ✅     | `jira_management/jira_link_manager.ts`      |
+| 3   | Schema: `case18.schema.ts` — `PreConditionInputSchema` c/ `type: 'reference'\|'create'`                                                          | P1         | ✅     | `jira_management/commands/case18.schema.ts` |
+| 4   | Prompt: `user-story-to-tests.md` — instruções de reuso/criação de pre-conditions                                                                 | P1         | ✅     | `shared/prompts/user-story-to-tests.md`     |
+| 5   | Handler: `case18.ts` — fetch pre-conditions, 2-stage LLM, string match, post-process, auto-import                                                | P1         | ✅     | `jira_management/commands/case18.ts`        |
+| 6   | Tests: `jira_link_manager.test.ts`, `case18.test.ts`, `case18.schema.test.ts`                                                                    | P1         | ✅     | Vários                                      |
+
+---
+
 ## 🔷 Pendentes — Próxima Sprint
+
+### P1 — Reports Gold Standard Upgrade (3 sprints)
+
+Elevar reports ao nível Allure (padrão ouro mercado). 3 sprints independentes.
+
+#### Sprint 1 — Trend + Hierarchy + Timeline ✅
+
+| #   | Item                  | Descrição                                                                   | Esforço | Status | Arquivos                            |
+| --- | --------------------- | --------------------------------------------------------------------------- | ------- | ------ | ----------------------------------- |
+| R1  | **Trend Chart SVG**   | Gráfico de linha pass rate × tempo consumindo `getTrends()` do `metrics.ts` | 4h      | ✅     | `report-generator.ts`, `metrics.ts` |
+| R2  | **Hierarchy sidebar** | Árvore Feature > Suite do `fullTitle` com click para filtrar tabela         | 6h      | ✅     | `report-generator.ts`               |
+| R3  | **Timeline view**     | Barras horizontais: duração + status + ordem                                | 3h      | ✅     | `report-generator.ts`               |
+| R4  | Testes (R1-R3)        | Snapshot + render condicional + edge cases                                  | 2h      | ✅     | `report-generator.test.ts`          |
+
+#### Sprint 2 — Steps + Attachments + Coverage HTML ✅
+
+| #   | Item                     | Descrição                                                         | Esforço | Status |
+| --- | ------------------------ | ----------------------------------------------------------------- | ------- | ------ |
+| R5  | **Steps expansíveis**    | Detalhe colapsável por teste com steps (Action + Expected Result) | 3h      | ✅     |
+| R6  | **Attachments**          | Screenshots inline + logs colapsáveis                             | 3h      | ✅     |
+| R7  | **Coverage HTML report** | `generateCoverageHtml()` — tabela de issues grouped by epic       | 2h      | ✅     |
+| R8  | Testes (R5-R7)           | 2h                                                                | ✅      |
+
+#### Sprint 3 — Polimento + Publicação ✅
+
+| #   | Item                            | Descrição                                                    | Esforço | Status |
+| --- | ------------------------------- | ------------------------------------------------------------ | ------- | ------ |
+| R9  | **Flakiness dark mode + trend** | dark mode CSS + mini trend chart no dashboard                | 1h      | ✅     |
+| R10 | **Known issues**                | Config `known-issues.json` — falhas conhecidas suprimidas    | 2h      | ✅     |
+| R11 | **Multi-environment**           | Abas comparando 2+ runs lado a lado                          | 4h      | ✅     |
+| R12 | **PDF export**                  | CSS `@media print` + botão "Export PDF" via `window.print()` | 1h      | ✅     |
+| R13 | **Auto-publish**                | Flag `--publish s3\|gh-pages`                                | 2h      | ✅     |
+| R14 | Testes (R9-R13)                 | 3h                                                           | ✅      |
+
+---
 
 ### P2 — Documentar código (TSDoc exports + module headers)
 
@@ -55,21 +143,40 @@ Issues registradas durante refatorações, postergadas por escopo.
 | 4    | jira_management/ commands  | case01-case20 + context + create_tests                 | ✅     |
 | 5    | git_triggers/              | github_manager, gitlab_manager, pipeline-handler, main | ✅     |
 
-### P1 — Elevar cobertura de arquivos críticos < 90%
+---
 
-| Item                                 | Status | Stmts faltando |
-| ------------------------------------ | ------ | -------------- |
-| `git_triggers/main.ts`               | 🚧     | 101            |
-| `jira_management/commands/case17.ts` | 🚧     | 184            |
-| `jira_management/main.ts`            | 🚧     | 81             |
-| `git_triggers/pipeline-handler.ts`   | 🚧     | 62             |
-| `shared/prompt-input.ts`             | 🚧     | 25             |
-| `shared/open.ts`                     | 🚧     | 20             |
-| `shared/markdown.ts`                 | 🚧     | 23             |
-| `shared/llm-client.ts`               | 🚧     | 21             |
-| `shared/splash.ts`                   | 🚧     | 15             |
-| `shared/report-generator.ts`         | 🚧     | 14             |
-| `git_triggers/batch-mode.ts`         | 🚧     | 10             |
+## ✅ Test Execution Flow — Associar a TE existente + Preview unificada ✅
+
+| #   | Item                                                                                                  | Prioridade | Status | Arquivos                                                          |
+| --- | ----------------------------------------------------------------------------------------------------- | ---------- | ------ | ----------------------------------------------------------------- |
+| 1   | Type: `TestExecutionSummary`                                                                          | P1         | ✅     | `shared/types.ts`                                                 |
+| 2   | Service: `JiraLinkManager.listTestExecutions(project)` — JQL busca TEs + validação `GET /issue/{key}` | P1         | ✅     | `jira_management/jira_link_manager.ts`                            |
+| 3   | Refactor: `_linkTestsToExecution()` extraído p/ compartilhar entre criação nova e existente           | P1         | ✅     | `jira_management/test-execution-creator.ts`                       |
+| 4   | Service: `addTestsToExistingExecution(teKey, testKeys)` — custom field + issue links em TE existente  | P1         | ✅     | `jira_management/test-execution-creator.ts`                       |
+| 5   | New module: `commands/test-execution-flow.ts` — `offerTestExecutionAssociation()` + `showResults()`   | P1         | ✅     | `jira_management/commands/test-execution-flow.ts`                 |
+| 6   | Handler: `case01.ts` — substituir prompt inline por `offerTestExecutionAssociation()`                 | P1         | ✅     | `jira_management/commands/case01.ts`                              |
+| 7   | Handler: `case13.ts` — usar `showResults()` compartilhado                                             | P2         | ✅     | `jira_management/commands/case13.ts`                              |
+| 8   | Handler: `case15.ts` — substituir prompt inline por `offerTestExecutionAssociation()`                 | P1         | ✅     | `jira_management/commands/case15.ts`                              |
+| 9   | Handler: `case18.ts` — adicionar `offerTestExecutionAssociation()` após gerar testes                  | P1         | ✅     | `jira_management/commands/case18.ts`                              |
+| 10  | Tests: `test-execution-creator.test.ts`, `jira_link_manager.test.ts`, `test-execution-flow.test.ts`   | P1         | ✅     | Vários                                                            |
+| 11  | Cleanup: `commands/helpers.ts` — remover `createTestExecutionWithLinksWrapper` (substituído por flow) | P1         | ✅     | `jira_management/commands/helpers.ts`, `commands/helpers.test.ts` |
+
+### P1 — Elevar cobertura de arquivos críticos < 90% ✅
+
+| Item                                                  | Status |
+| ----------------------------------------------------- | ------ |
+| `git_triggers/main.ts`                                | ✅     |
+| `jira_management/commands/case17.ts`                  | ✅     |
+| `jira_management/main.ts`                             | ✅     |
+| `git_triggers/pipeline-handler.ts`                    | ✅     |
+| `shared/prompt-input.ts`                              | ✅     |
+| `shared/open.ts`                                      | ✅     |
+| `shared/markdown.ts`                                  | ✅     |
+| `shared/llm-client.ts`                                | ✅     |
+| `shared/splash.ts`                                    | ✅     |
+| `shared/report-generator.ts`                          | ✅     |
+| `git_triggers/batch-mode.ts`                          | ✅     |
+| Novos módulos: `publish.ts`, `test-execution-flow.ts` | ✅     |
 
 ### P0 — User docs desatualizadas (gap docs vs código)
 

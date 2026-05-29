@@ -1,12 +1,12 @@
 /** Import CSV → Create Test Cases: configure CSV path and start the import pipeline. */
 import Config from '../../shared/config';
-import { ask, askConfirm, askFilePath } from '../../shared/prompt';
+import { ask, askFilePath } from '../../shared/prompt';
 import { load as loadState } from '../../shared/state';
 import path from 'path';
 import type { CommandContext } from './context';
-import { createTestExecutionWithLinksWrapper } from './helpers';
 // anti-circular (prompt → create_tests → session-context → prompt)
 import createTests from '../create_tests';
+import { offerTestExecutionAssociation, showResults } from './test-execution-flow';
 
 async function handler(c: CommandContext): Promise<boolean | void> {
     const state = loadState() as Record<string, string | undefined>;
@@ -51,14 +51,9 @@ async function handler(c: CommandContext): Promise<boolean | void> {
     if (result && c.ctx.inMemoryTasksId.length > 0) {
         const execState = loadState() as Record<string, string | undefined>;
         const csvPathHint = execState.lastCsvPath || '';
-        const csvName = csvPathHint ? path.basename(csvPathHint, '.csv') : '';
-        if (await askConfirm('Criar Test Execution para ' + c.ctx.inMemoryTasksId.length + ' testes criados?', true)) {
-            const execTitle = await ask('Titulo do Test Execution', {
-                hint: 'Enter = ' + (csvName || 'Automated Execution'),
-            });
-            const execDesc = await ask('Descrição (opcional)');
-            await createTestExecutionWithLinksWrapper(c, c.ctx.inMemoryTasksId, csvName, execTitle, execDesc);
-        }
+        const csvName = csvPathHint ? path.basename(csvPathHint, '.csv') : 'Automated Execution';
+        const teResult = await offerTestExecutionAssociation(c, c.ctx.inMemoryTasksId, csvName);
+        await showResults(c, c.ctx.inMemoryTasksId, teResult);
     }
 }
 

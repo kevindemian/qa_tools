@@ -346,7 +346,7 @@ describe('generateMappingFiles', () => {
     });
 
     function makeSteps(...actions: string[]) {
-        return actions.map((a) => ({ fields: { Action: a, Data: '', ExpectedResult: '' } }));
+        return actions.map((a) => ({ fields: { Action: a, Data: '', 'Expected Result': '' } }));
     }
 
     it('creates JSON and MD mapping files', () => {

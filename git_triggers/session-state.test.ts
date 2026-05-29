@@ -87,7 +87,9 @@ jest.mock('./github_manager', () => {
 
 jest.mock('./ui-helpers', () => ({ providerLabel: jest.fn(() => 'GitLab') }));
 
+import * as prompt from '../shared/prompt';
 import * as sessionState from './session-state';
+import type { GitProvider } from '../shared/types';
 
 describe('session-state', () => {
     beforeEach(() => {
@@ -178,6 +180,134 @@ describe('session-state', () => {
             sessionState.setCurrentProvider('github');
             const choices = sessionState.buildActionChoices();
             expect(JSON.stringify(choices)).not.toContain('Listar schedules');
+        });
+    });
+
+    describe('loadProvidersConfig error handling', () => {
+        it('falls back to gitlab when providers.json is invalid', () => {
+            jest.isolateModules(() => {
+                jest.doMock('fs', () => ({
+                    readFileSync: jest.fn((p: string) => {
+                        if (p.includes('providers.json')) throw new Error('ENOENT');
+                        if (p.includes('projects.json')) return JSON.stringify({ proj: '1' });
+                        throw new Error('not found');
+                    }),
+                    writeFileSync: jest.fn(),
+                    unlinkSync: jest.fn(),
+                    existsSync: jest.fn(() => false),
+                }));
+                jest.doMock('../shared/prompt', () => ({
+                    print: jest.fn(),
+                    success: jest.fn(),
+                    warn: jest.fn(),
+                    info: jest.fn(),
+                    error: jest.fn(),
+                    title: jest.fn(),
+                    prompt: jest.fn(),
+                    confirm: jest.fn(),
+                    printError: jest.fn(),
+                    withSpinner: jest.fn(<T>(_: string, fn: () => Promise<T>) => fn()),
+                    divider: jest.fn(),
+                }));
+                jest.doMock('../shared/prompt-ui', () => ({
+                    CancelError: class extends Error {
+                        cmd: string;
+                        constructor(cmd: string) {
+                            super(cmd);
+                            this.cmd = cmd;
+                            this.name = 'CancelError';
+                        }
+                    },
+                    getConfig: jest.fn(() => ({ quiet: false })),
+                    isQuiet: jest.fn(() => false),
+                    success: jest.fn(),
+                    error: jest.fn(),
+                    warn: jest.fn(),
+                    info: jest.fn(),
+                    icon: jest.fn(() => '!'),
+                }));
+                jest.doMock('../shared/config', () => ({
+                    default: {
+                        gitToken: 'glpat-test',
+                        gitBaseUrl: 'https://gitlab.com',
+                        githubToken: '',
+                        githubApiUrl: 'https://api.github.com',
+                        getAllPrefixed: jest.fn(() => ({})),
+                    },
+                }));
+                jest.doMock('../shared/session-context', () => ({
+                    SessionContext: jest.fn(() => ({
+                        pushHistory: jest.fn(),
+                        sessionCounters: {},
+                        lastOperation: null,
+                        buildContextLine: jest.fn(() => ''),
+                    })),
+                }));
+                jest.doMock('../shared/state', () => ({ update: jest.fn() }));
+                jest.doMock('../shared/cli_base', () => ({ printSessionSummary: jest.fn() }));
+                jest.doMock('../shared/metrics', () => ({
+                    loadMetrics: jest.fn(() => ({ runs: [] })),
+                    calculateFlakiness: jest.fn(() => []),
+                }));
+                jest.doMock('../shared/flakiness-dashboard', () => ({
+                    generateFlakinessHtml: jest.fn(() => '<html>'),
+                }));
+                jest.doMock('../shared/logger', () => ({
+                    rootLogger: {
+                        child: jest.fn(() => ({ info: jest.fn(), warn: jest.fn(), error: jest.fn() })),
+                        warn: jest.fn(),
+                        error: jest.fn(),
+                        info: jest.fn(),
+                    },
+                }));
+                jest.doMock('./gitlab_manager', () => ({
+                    __esModule: true,
+                    default: jest.fn().mockImplementation(() => ({
+                        getRecentPipelines: jest.fn().mockResolvedValue([]),
+                    })),
+                }));
+                jest.doMock('./github_manager', () => ({
+                    __esModule: true,
+                    default: jest.fn().mockImplementation(() => ({
+                        getRecentPipelines: jest.fn().mockResolvedValue([]),
+                    })),
+                }));
+                jest.doMock('./ui-helpers', () => ({ providerLabel: jest.fn(() => 'GitLab') }));
+
+                const mod = require('./session-state');
+                const result = mod.getProviderForProject('proj');
+                expect(result).toBe('gitlab');
+            });
+        });
+    });
+
+    describe('createManagerForProject', () => {
+        it('creates GitLabManager when provider is gitlab', () => {
+            const mgr = sessionState.createManagerForProject('qa_ibabs', '47849962');
+            expect(mgr).toBeTruthy();
+            expect(typeof mgr.getRecentPipelines).toBe('function');
+        });
+    });
+
+    describe('displayRecentPipelines flakiness', () => {
+        it('warns about high flakiness tests', async () => {
+            const metrics = require('../shared/metrics');
+            (metrics.loadMetrics as jest.Mock).mockReturnValueOnce({
+                runs: [
+                    { project: 'qa_ibabs', date: '2024-01-01', results: [] },
+                    { project: 'qa_ibabs', date: '2024-01-02', results: [] },
+                ],
+            });
+            (metrics.calculateFlakiness as jest.Mock).mockReturnValueOnce([
+                { name: 'flaky-test', rate: 0.5, file: 'test.js', runs: 4, failCount: 2 },
+            ]);
+
+            sessionState.setCurrentProjectName('qa_ibabs');
+            const m = { getRecentPipelines: jest.fn().mockResolvedValue([]) } as unknown as GitProvider;
+            await sessionState.displayRecentPipelines(m);
+            expect(prompt.warn).toHaveBeenCalledWith(expect.stringContaining('flakiness'));
+
+            sessionState.setCurrentProjectName('');
         });
     });
 });

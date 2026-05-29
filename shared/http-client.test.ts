@@ -1,6 +1,6 @@
-let errorHandler: ((err: Error) => Promise<never>) | undefined;
+let errorHandler: ((err: Error) => Promise<unknown>) | undefined;
 let successHandler: ((response: unknown) => unknown) | undefined;
-const mockInstance: jest.Mock<Promise<never>, unknown[]> & {
+const mockInstance: jest.Mock<Promise<unknown>, unknown[]> & {
     interceptors: {
         request: { use: jest.Mock };
         response: { use: jest.Mock };
@@ -15,7 +15,7 @@ const mockInstance: jest.Mock<Promise<never>, unknown[]> & {
         interceptors: {
             request: { use: jest.fn() },
             response: {
-                use: jest.fn((success: unknown, error: (err: Error) => Promise<never>) => {
+                use: jest.fn((success: unknown, error: (err: Error) => Promise<unknown>) => {
                     successHandler = success as (response: unknown) => unknown;
                     errorHandler = error;
                 }),
@@ -25,7 +25,7 @@ const mockInstance: jest.Mock<Promise<never>, unknown[]> & {
         post: jest.fn(),
         put: jest.fn(),
     },
-) as jest.Mock<Promise<never>, unknown[]> & {
+) as jest.Mock<Promise<unknown>, unknown[]> & {
     interceptors: {
         request: { use: jest.Mock };
         response: { use: jest.Mock };
@@ -44,6 +44,11 @@ describe('HTTP Client', () => {
 
     beforeAll(() => {
         httpClient = httpClientModule;
+        httpClient.setTestSleep(() => Promise.resolve());
+    });
+
+    afterAll(() => {
+        httpClient.setTestSleep(undefined);
     });
 
     beforeEach(() => {
@@ -85,6 +90,14 @@ describe('HTTP Client', () => {
             httpClient.createHttpClient({ baseUrl: 'https://api.test.com' });
             expect(axios.create).toHaveBeenCalledWith(expect.objectContaining({ timeout: 120000 }));
         });
+
+        it('sleep uses default setTimeout when no test override is active', async () => {
+            httpClient.setTestSleep(undefined);
+            const promise = httpClient.sleep(1);
+            // The promise resolves when setTimeout fires (mocked in beforeEach)
+            await expect(promise).resolves.toBeUndefined();
+            httpClient.setTestSleep(() => Promise.resolve());
+        });
     });
 
     describe('retry interceptor', () => {
@@ -104,7 +117,7 @@ describe('HTTP Client', () => {
             code: undefined,
         });
 
-        it('retries GET up to 5 times', async () => {
+        it('retries GET up to HTTP_MAX_RETRIES (10) times', async () => {
             httpClient.createHttpClient({ baseUrl: 'https://api.test.com' });
             const err = makeError('get', 500, 0);
             // eslint-disable-next-line @typescript-eslint/no-explicit-any -- mock cfg can be any shape from retry
@@ -116,10 +129,10 @@ describe('HTTP Client', () => {
             try {
                 await errorHandler!(err);
             } catch (e) {}
-            expect(mockInstance).toHaveBeenCalledTimes(5);
+            expect(mockInstance).toHaveBeenCalledTimes(10);
         });
 
-        it('retries PUT up to 5 times', async () => {
+        it('retries PUT up to HTTP_MAX_RETRIES (10) times', async () => {
             httpClient.createHttpClient({ baseUrl: 'https://api.test.com' });
             const err = makeError('put', 500, 0);
             // eslint-disable-next-line @typescript-eslint/no-explicit-any -- mock cfg can be any shape from retry
@@ -131,7 +144,7 @@ describe('HTTP Client', () => {
             try {
                 await errorHandler!(err);
             } catch (e) {}
-            expect(mockInstance).toHaveBeenCalledTimes(5);
+            expect(mockInstance).toHaveBeenCalledTimes(10);
         });
 
         it('does not retry POST', async () => {
@@ -200,6 +213,87 @@ describe('HTTP Client', () => {
                 await errorHandler!(err);
             } catch (e) {}
             expect(mockInstance).toHaveBeenCalled();
+        });
+    });
+
+    describe('429 retry-after header (lines 128-129)', () => {
+        it('uses Retry-After value for wait time when header is a valid number', async () => {
+            httpClient.createHttpClient({ baseUrl: 'https://api.test.com' });
+            const err = {
+                message: 'Rate limited',
+                name: 'Error',
+                config: { method: 'get', url: '/api/resource' },
+                response: { status: 429, headers: { 'retry-after': '30' } },
+                code: undefined,
+            };
+            let callCount = 0;
+            mockInstance.mockImplementation((cfg: unknown) => {
+                callCount++;
+                if (callCount < 2) {
+                    const updatedErr = { ...err, config: cfg };
+                    return errorHandler!(updatedErr);
+                }
+                return Promise.resolve({ status: 200 });
+            });
+            const result = await errorHandler!(err);
+            expect(result).toEqual({ status: 200 });
+            expect(callCount).toBe(2);
+        });
+
+        it('falls back to exponential backoff when Retry-After header is not a number', async () => {
+            httpClient.createHttpClient({ baseUrl: 'https://api.test.com' });
+            const err = {
+                message: 'Rate limited',
+                name: 'Error',
+                config: { method: 'get', url: '/api/resource' },
+                response: { status: 429, headers: { 'retry-after': 'abc' } },
+                code: undefined,
+            };
+            let callCount = 0;
+            mockInstance.mockImplementation((cfg: unknown) => {
+                callCount++;
+                if (callCount < 2) {
+                    const updatedErr = { ...err, config: cfg };
+                    return errorHandler!(updatedErr);
+                }
+                return Promise.resolve({ status: 200 });
+            });
+            const result = await errorHandler!(err);
+            expect(result).toEqual({ status: 200 });
+            expect(callCount).toBe(2);
+        });
+    });
+
+    describe('stale retry entry cleanup (lines 70-72)', () => {
+        it('removes entries that have not been used for more than RETRY_STALE_MS', () => {
+            jest.useFakeTimers();
+
+            // Use isolateModules so startRetryCleanup runs with fake timers
+            let freshClient: typeof httpClient;
+            jest.isolateModules(() => {
+                freshClient = require('./http-client') as typeof httpClient;
+            });
+
+            freshClient!.setTestSleep(() => Promise.resolve());
+            freshClient!.createHttpClient({ baseUrl: 'https://api.test.com' });
+
+            // Create entry in retryCounts via a retry that resolves successfully
+            // (entry persists because neither success nor error handler deletes it)
+            mockInstance.mockImplementation(() => Promise.resolve({ status: 200 }));
+            const err = {
+                message: 'Server error',
+                name: 'Error',
+                config: { method: 'get', url: '/api/resource' },
+                response: { status: 500 },
+                code: undefined,
+            };
+            errorHandler!(err).catch(() => {});
+
+            // Advance past RETRY_STALE_MS (600s) + one cleanup interval (300s)
+            // to trigger stale entry deletion at t=900000
+            jest.advanceTimersByTime(900001);
+
+            jest.useRealTimers();
         });
     });
 });

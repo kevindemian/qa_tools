@@ -7,10 +7,17 @@ import { ask, askConfirm, info, printError, title, withSpinner } from '../../sha
 import type { ParseResult, FlatTest, CtrfData, CtrfSummary } from '../../shared/result_parser';
 import { writeReport } from '../../shared/temp-dir';
 import { parseTestResultsFile } from '../../shared/result_parser';
-import { generateHtmlReport, categorizeFailure, type TestHistoryRun } from '../../shared/report-generator';
+import {
+    generateHtmlReport,
+    categorizeFailure,
+    loadKnownIssues,
+    type TestHistoryRun,
+    type TestRunTab,
+} from '../../shared/report-generator';
 import { analyzeFailuresWithReport, type LlmContext } from '../../shared/failure-analysis';
 import { collectAutomated, interactiveBugReportFlow } from '../../shared/bug-report';
 import { openWithOsOrFallback } from '../../shared/open';
+import { publishReport } from '../../shared/publish';
 import { createHistoryProvider, TestHistoryCache } from '../xray-history';
 import type { CommandContext } from './context';
 
@@ -320,7 +327,8 @@ async function _writeReportFile(html: string, projectName: string): Promise<stri
 
 async function _addAiAnalysis(html: string, tests: ParseResult['tests'], context?: LlmContext): Promise<string> {
     const analysis = await withSpinner('Analisando falhas com IA...', () => analyzeFailuresWithReport(tests, context));
-    return analysis.content ? injectAnalysisSection(html, analysis.content) : html;
+    if (!analysis || !analysis.content) return html;
+    return injectAnalysisSection(html, analysis.content);
 }
 
 function _saveMetricsJson(tests: FlatTest[], htmlDir: string): void {
@@ -554,6 +562,37 @@ async function _resolveTestHistory(
     return titleToHistory;
 }
 
+/** Parse CLI args for `--publish` and `--run label=file.json`. */
+function _parseCliExtra(): { publishTarget?: string; extraRuns: Array<{ name: string; file: string }> } {
+    const args = process.argv.slice(2);
+    const result: { publishTarget?: string; extraRuns: Array<{ name: string; file: string }> } = { extraRuns: [] };
+    for (let i = 0; i < args.length; i++) {
+        const arg = args[i];
+        if (!arg) continue;
+        if (arg === '--publish' && i + 1 < args.length) {
+            const val = args[i + 1];
+            if (val) {
+                result.publishTarget = val;
+                i++;
+            }
+        } else if (arg === '--run' && i + 1 < args.length) {
+            const val = args[i + 1];
+            if (val) {
+                i++;
+                const eqIdx = val.indexOf('=');
+                if (eqIdx > 0) {
+                    const name = val.slice(0, eqIdx);
+                    const file = val.slice(eqIdx + 1);
+                    if (name && file) {
+                        result.extraRuns.push({ name, file });
+                    }
+                }
+            }
+        }
+    }
+    return result;
+}
+
 async function handler(c: CommandContext): Promise<boolean | void> {
     const filePath = await ask('Caminho do arquivo de resultados JSON', {
         hint: 'ex: cypress/reports/ctrf-report.json',
@@ -562,6 +601,8 @@ async function handler(c: CommandContext): Promise<boolean | void> {
         printError('Relatório HTML', new Error('Caminho do arquivo vazio.'));
         return;
     }
+
+    const cliExtra = _parseCliExtra();
 
     title('Analisando relatório...');
     const result = parseTestResultsFile(filePath.trim());
@@ -575,18 +616,35 @@ async function handler(c: CommandContext): Promise<boolean | void> {
     const historyCache = new TestHistoryCache();
     const testHistory = await _resolveTestHistory(result.tests, c, historyCache);
 
+    const knownIssues = loadKnownIssues(process.env.KNOWN_ISSUES_PATH || '');
+
+    const runs: TestRunTab[] = [];
+    for (const extra of cliExtra.extraRuns) {
+        const r = parseTestResultsFile(extra.file);
+        if (r.error) {
+            printError('Erro ao ler run adicional: ' + extra.file, new Error(r.error));
+            continue;
+        }
+        runs.push({ name: extra.name, tests: r.tests });
+    }
+    if (runs.length > 0) {
+        runs.unshift({ name: 'Primary', tests: result.tests });
+    }
+
     const qualityGateThreshold = parseFloat(process.env.QA_FAIL_ON || '');
-    const options: Record<string, unknown> = {
+    const genOptions: Record<string, unknown> = {
         title: `Relatório - ${c.ctx.project_name}`,
         generatedAt: new Date().toISOString(),
         source: 'Relatório HTML',
         testHistory: Object.keys(testHistory).length > 0 ? testHistory : undefined,
+        knownIssues: knownIssues.length > 0 ? knownIssues : undefined,
+        runs: runs.length > 0 ? runs : undefined,
     };
     if (!isNaN(qualityGateThreshold)) {
-        options.qualityGate = qualityGateThreshold;
+        genOptions.qualityGate = qualityGateThreshold;
     }
 
-    let html = generateHtmlReport(result.tests, options);
+    let html = generateHtmlReport(result.tests, genOptions);
 
     const diffHtml = _buildDiffSummary(diff);
     if (diffHtml) {
@@ -634,6 +692,12 @@ async function handler(c: CommandContext): Promise<boolean | void> {
         `${result.stats.total} testes (${result.stats.passed} pass, ${result.stats.failed} fail)`,
         'ok',
     );
+
+    const publishTarget = cliExtra.publishTarget || process.env.QA_PUBLISH || '';
+    if (publishTarget && (publishTarget === 's3' || publishTarget === 'gh-pages')) {
+        info('Publicando relatório para ' + publishTarget + '...');
+        publishReport({ target: publishTarget, filePath: resolvedPath });
+    }
 
     if (process.env.QA_AUTO_BUG === 'true' && diff.newFailures.length > 0) {
         info('Criando bugs no Jira para novas falhas...');

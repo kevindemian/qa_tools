@@ -1,7 +1,7 @@
-/** Link test issues to requirement/user-story issues. */
+/** Create a Test Execution for existing test issues (standalone flow). */
 import { warn, info, ask, askConfirm } from '../../shared/prompt';
 import type { CommandContext } from './context';
-import { createTestExecutionWithLinksWrapper } from './helpers';
+import { offerTestExecutionAssociation, showResults } from './test-execution-flow';
 
 async function handler(c: CommandContext): Promise<boolean | void> {
     let keys: string[] = [];
@@ -19,11 +19,8 @@ async function handler(c: CommandContext): Promise<boolean | void> {
         warn('Nenhuma key informada.');
         return;
     }
-    const nameInput = await ask('Nome da execução', { hint: 'Enter = "Automated Execution"' });
-    const csvName = nameInput.trim() || '';
-    const execTitle = await ask('Titulo do Test Execution', { hint: 'Enter = ' + (csvName || 'Automated Execution') });
-    const execDesc = await ask('Descrição (opcional)');
-    await createTestExecutionWithLinksWrapper(c, keys, csvName, execTitle, execDesc);
+    const teResult = await offerTestExecutionAssociation(c, keys, 'standalone');
+    await showResults(c, keys, teResult);
 }
 
 export default { handler };

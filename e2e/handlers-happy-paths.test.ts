@@ -34,7 +34,7 @@ if (!fs.existsSync(templateSrc)) {
 const jsonFixture = path.join(tmpHome, 'cases.json');
 fs.writeFileSync(
     jsonFixture,
-    JSON.stringify([{ title: 'TC E2E', description: 'e2e', steps: [{ Action: 'Step1', ExpectedResult: 'R1' }] }]),
+    JSON.stringify([{ title: 'TC E2E', description: 'e2e', steps: [{ Action: 'Step1', 'Expected Result': 'R1' }] }]),
 );
 
 import nock from 'nock';
@@ -461,8 +461,16 @@ describe('case13 — create Test Execution', () => {
             issueLinkTypes: [{ id: '10201', name: 'Tests', inward: 'is tested by', outward: 'tests' }],
         });
         api.post('/issueLink').times(2).reply(201);
+        // showResults → getTestCaseSummaries
+        api.get('/issue/IMT-1')
+            .query(true)
+            .reply(200, { key: 'IMT-1', fields: { summary: 'Memory Test 1' } });
+        api.get('/issue/IMT-2')
+            .query(true)
+            .reply(200, { key: 'IMT-2', fields: { summary: 'Memory Test 2' } });
 
         getPrompt().askConfirm.mockResolvedValueOnce(true); // use in-memory
+        getPrompt().ask.mockResolvedValueOnce('1'); // option 1 — create new TE
         getPrompt().ask.mockResolvedValueOnce(''); // name (default '')
         getPrompt().ask.mockResolvedValueOnce(''); // title
         getPrompt().ask.mockResolvedValueOnce(''); // description
@@ -518,10 +526,14 @@ describe('case15 — import JSON tests', () => {
             issueLinkTypes: [{ id: '10201', name: 'Tests', inward: 'is tested by', outward: 'tests' }],
         });
         api.post('/issueLink').reply(201);
+        // showResults → getTestCaseSummaries
+        api.get('/issue/TEST-1')
+            .query(true)
+            .reply(200, { key: 'TEST-1', fields: { summary: 'TC E2E' } });
 
         getPrompt().ask.mockResolvedValueOnce(jsonFixture); // json path
-        getPrompt().askConfirm.mockResolvedValueOnce(true); // create TE
-        getPrompt().ask.mockResolvedValueOnce(''); // name
+        getPrompt().ask.mockResolvedValueOnce('1'); // option 1 — create new TE
+        getPrompt().ask.mockResolvedValueOnce(''); // name (default '')
         getPrompt().ask.mockResolvedValueOnce(''); // title
         getPrompt().ask.mockResolvedValueOnce(''); // description
 

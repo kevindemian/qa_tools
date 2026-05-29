@@ -37,7 +37,18 @@ function buildFlakinessCss(pageTitle: string): string {
         '.status-high { color: #dc2626; font-weight: 600; }' +
         '.status-medium { color: #ca8a04; }' +
         '.footer { margin-top: 16px; font-size: 0.75rem; color: #9ca3af; text-align: center; }' +
-        '</style></head><body>'
+        'html.dark body { background: #0d1117; color: #c9d1d9; }' +
+        'html.dark .card { background: #161b22; box-shadow: 0 1px 3px rgba(0,0,0,0.4); }' +
+        'html.dark .card .label { color: #8b949e; }' +
+        'html.dark table { background: #161b22; box-shadow: 0 1px 3px rgba(0,0,0,0.4); }' +
+        'html.dark th { background: #1c2128; color: #8b949e; }' +
+        'html.dark td { border-top-color: #30363d; }' +
+        'html.dark .bar-bg { background: #30363d; }' +
+        'html.dark .footer { color: #8b949e; }' +
+        '</style></head><body>' +
+        '<script>' +
+        "(function(){var s=localStorage.getItem('qa-report-theme');if(s==='dark'||(!s&&window.matchMedia('(prefers-color-scheme:dark)').matches))document.documentElement.classList.add('dark');})();" +
+        '</script>'
     );
 }
 

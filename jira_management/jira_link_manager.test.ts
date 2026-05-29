@@ -12,7 +12,7 @@ jest.mock('fs');
 import fs from 'fs';
 import path from 'path';
 
-import JiraLinkManager from './jira_link_manager';
+import JiraLinkManager, { matchPreconditionByTokenOverlap } from './jira_link_manager';
 import { rootLogger } from '../shared/logger';
 import { tempDirPath } from '../shared/temp-dir';
 
@@ -29,6 +29,7 @@ describe('JiraLinkManager', () => {
             getJiraResource: jest.fn(),
             postJiraResource: jest.fn(),
             putJiraResource: jest.fn(),
+            searchJiraIssues: jest.fn(),
         };
         manager = new JiraLinkManager(mockJiraResource);
     });
@@ -234,5 +235,220 @@ describe('JiraLinkManager', () => {
                 fields: { custom_99: ['PRE-1', 'PRE-2'] },
             });
         });
+    });
+
+    describe('_resolvePreconditionIssueTypeId', () => {
+        it('returns the issue type id for Pre-condition', async () => {
+            mockJiraResource.getJiraResource.mockResolvedValue([
+                { id: '11801', name: 'Pre-condition' },
+                { id: '11802', name: 'Test Execution' },
+            ]);
+            const result = await manager._resolvePreconditionIssueTypeId();
+            expect(result).toBe('11801');
+        });
+
+        it('caches the result on second call', async () => {
+            mockJiraResource.getJiraResource.mockResolvedValue([{ id: '11801', name: 'Pre-condition' }]);
+            await manager._resolvePreconditionIssueTypeId();
+            await manager._resolvePreconditionIssueTypeId();
+            expect(mockJiraResource.getJiraResource).toHaveBeenCalledTimes(1);
+        });
+
+        it('throws when no Pre-condition issue type exists', async () => {
+            mockJiraResource.getJiraResource.mockResolvedValue([{ id: '100', name: 'Bug' }]);
+            await expect(manager._resolvePreconditionIssueTypeId()).rejects.toThrow(
+                'Issue type "Pre-condition" não encontrado no Jira',
+            );
+        });
+    });
+
+    describe('listPreconditions', () => {
+        it('returns mapped preconditions from JQL search', async () => {
+            mockJiraResource.searchJiraIssues.mockResolvedValue({
+                issues: [
+                    { key: 'PREC-1', fields: { summary: 'User must be logged in' } },
+                    { key: 'PREC-2', fields: { summary: 'Database must be seeded' } },
+                ],
+                total: 2,
+                startAt: 0,
+                maxResults: 200,
+            });
+            const result = await manager.listPreconditions('ECSPOL');
+            expect(result).toHaveLength(2);
+            expect(result[0]).toEqual({ key: 'PREC-1', summary: 'User must be logged in' });
+            expect(result[1]).toEqual({ key: 'PREC-2', summary: 'Database must be seeded' });
+        });
+
+        it('returns empty array when no preconditions found', async () => {
+            mockJiraResource.searchJiraIssues.mockResolvedValue({ issues: [], total: 0, startAt: 0, maxResults: 200 });
+            const result = await manager.listPreconditions('EMPTY');
+            expect(result).toEqual([]);
+        });
+    });
+
+    describe('createPrecondition', () => {
+        it('creates a new precondition and returns its key', async () => {
+            mockJiraResource.getJiraResource.mockResolvedValue([{ id: '11801', name: 'Pre-condition' }]);
+            mockJiraResource.postJiraResource.mockResolvedValue({ key: 'ECSPOL-NEW-1' });
+            const key = await manager.createPrecondition('ECSPOL', 'User must be admin');
+            expect(mockJiraResource.postJiraResource).toHaveBeenCalledWith('issue', {
+                fields: {
+                    project: { key: 'ECSPOL' },
+                    summary: 'User must be admin',
+                    issuetype: { id: '11801' },
+                },
+            });
+            expect(key).toBe('ECSPOL-NEW-1');
+        });
+    });
+
+    describe('listTestExecutions', () => {
+        it('returns mapped test execution summaries', async () => {
+            mockJiraResource.searchJiraIssues.mockResolvedValue({
+                issues: [
+                    {
+                        key: 'TE-1',
+                        fields: { summary: 'Execution 1', status: { name: 'Done' }, created: '2026-01-01' },
+                    },
+                    {
+                        key: 'TE-2',
+                        fields: { summary: 'Execution 2', status: { name: 'In Progress' }, created: '2026-02-01' },
+                    },
+                ],
+                total: 2,
+                startAt: 0,
+                maxResults: 20,
+            });
+            const result = await manager.listTestExecutions('PROJ', 20);
+            expect(result).toHaveLength(2);
+            expect(result[0]).toEqual({
+                key: 'TE-1',
+                summary: 'Execution 1',
+                status: 'Done',
+                created: '2026-01-01',
+            });
+            expect(result[1]).toEqual({
+                key: 'TE-2',
+                summary: 'Execution 2',
+                status: 'In Progress',
+                created: '2026-02-01',
+            });
+        });
+    });
+
+    describe('validateTestExecutionKey', () => {
+        it('passes when issue is a Test Execution', async () => {
+            mockJiraResource.getJiraResource.mockResolvedValue({
+                fields: { issuetype: { name: 'Test Execution' } },
+            });
+            await expect(manager.validateTestExecutionKey('TE-1')).resolves.toBeUndefined();
+        });
+
+        it('throws when issue is not found', async () => {
+            mockJiraResource.getJiraResource.mockResolvedValue({ fields: {} });
+            await expect(manager.validateTestExecutionKey('MISSING')).rejects.toThrow('não encontrada');
+        });
+
+        it('throws when issue type is not Test Execution', async () => {
+            mockJiraResource.getJiraResource.mockResolvedValue({
+                fields: { issuetype: { name: 'Bug' } },
+            });
+            await expect(manager.validateTestExecutionKey('BUG-1')).rejects.toThrow('não é uma Test Execution');
+        });
+    });
+
+    describe('getTestCaseSummaries', () => {
+        it('returns (key not found) for keys that fail to fetch', async () => {
+            mockJiraResource.getJiraResource
+                .mockResolvedValueOnce({ key: 'TEST-1', fields: { summary: 'Works' } })
+                .mockRejectedValueOnce(new Error('Not found'));
+            const result = await manager.getTestCaseSummaries(['TEST-1', 'TEST-2']);
+            expect(result).toEqual([
+                { key: 'TEST-1', summary: 'Works' },
+                { key: 'TEST-2', summary: '(key not found)' },
+            ]);
+        });
+
+        it('returns empty array for empty input', async () => {
+            const result = await manager.getTestCaseSummaries([]);
+            expect(result).toEqual([]);
+        });
+    });
+});
+
+describe('matchPreconditionByTokenOverlap', () => {
+    const candidates = [
+        { key: 'PREC-1', summary: 'User must be logged in' },
+        { key: 'PREC-2', summary: 'Database must be seeded' },
+        { key: 'PREC-3', summary: 'Admin role required' },
+    ];
+
+    it('returns exact match when summary is identical', () => {
+        const result = matchPreconditionByTokenOverlap('User must be logged in', candidates);
+        expect(result.key).toBe('PREC-1');
+        expect(result.matchType).toBe('exact');
+    });
+
+    it('is case insensitive for exact match', () => {
+        const result = matchPreconditionByTokenOverlap('USER MUST BE LOGGED IN', candidates);
+        expect(result.key).toBe('PREC-1');
+        expect(result.matchType).toBe('exact');
+    });
+
+    it('returns overlap match when query tokens are subset of summary', () => {
+        const result = matchPreconditionByTokenOverlap('Database seeded', candidates);
+        expect(result.key).toBe('PREC-2');
+        expect(result.matchType).toBe('overlap');
+    });
+
+    it('returns containment match when query is contiguous substring of summary', () => {
+        const result = matchPreconditionByTokenOverlap('must be seeded', candidates);
+        expect(result.key).toBe('PREC-2');
+        expect(result.matchType).toBe('containment');
+    });
+
+    it('returns containment match when summary is substring of query', () => {
+        const result = matchPreconditionByTokenOverlap('Must ensure Database must be seeded correctly', candidates);
+        expect(result.key).toBe('PREC-2');
+        expect(result.matchType).toBe('containment');
+    });
+
+    it('returns overlap match via Jaccard token similarity', () => {
+        const result = matchPreconditionByTokenOverlap('User must be logged out', candidates);
+        expect(result.key).toBe('PREC-1');
+        expect(result.matchType).toBe('overlap');
+    });
+
+    it('respects custom threshold for overlap match', () => {
+        const result = matchPreconditionByTokenOverlap('must log the user in', candidates, 0.25);
+        expect(result.key).toBe('PREC-1');
+        expect(result.matchType).toBe('overlap');
+    });
+
+    it('fails overlap match with strict threshold', () => {
+        const result = matchPreconditionByTokenOverlap('must log the user in', candidates, 0.8);
+        expect(result.matchType).toBe('create');
+    });
+
+    it('returns create when no candidate scores above threshold', () => {
+        const result = matchPreconditionByTokenOverlap('Network connectivity must be available', candidates);
+        expect(result.key).toBe('__create__');
+        expect(result.matchType).toBe('create');
+    });
+
+    it('returns create for empty query', () => {
+        const result = matchPreconditionByTokenOverlap('', candidates);
+        expect(result.matchType).toBe('create');
+    });
+
+    it('returns create for empty candidates list', () => {
+        const result = matchPreconditionByTokenOverlap('Anything', []);
+        expect(result.matchType).toBe('create');
+    });
+
+    it('returns create for single-word no-match query', () => {
+        const result = matchPreconditionByTokenOverlap('Network', candidates);
+        expect(result.key).toBe('__create__');
+        expect(result.matchType).toBe('create');
     });
 });

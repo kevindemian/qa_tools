@@ -26,6 +26,11 @@ import type { VersionData, JiraIssue, SearchResponse } from './jira-resource-ver
 /** Facade over Jira REST API — delegates to resource-specific modules. */
 class JiraResource {
     baseUrl: string;
+    /** Origin URL extraído do baseUrl (scheme + host, sem path).
+     * Usado por {@link getFromOriginPath} para endpoints que vivem fora do path do baseUrl
+     * (ex: Xray Raven API em `/rest/raven/1.0/` vs Jira API em `/rest/api/2/`). */
+    originUrl: string;
+    personalToken: string;
     axiosInstance: ReturnType<typeof createHttpClient>;
     log: Logger;
 
@@ -35,6 +40,9 @@ class JiraResource {
      */
     constructor(personalToken: string, baseUrl: string) {
         this.baseUrl = baseUrl;
+        this.personalToken = personalToken;
+        const parsed = new URL(baseUrl);
+        this.originUrl = parsed.origin;
         this.axiosInstance = createHttpClient({
             baseUrl,
             authHeader: { Authorization: `Bearer ${personalToken}` },
@@ -73,6 +81,32 @@ class JiraResource {
             return response.data;
         } catch (err) {
             rootLogger.error('GET ' + resourceUrl + ' failed: ' + (err as Error).message);
+            throw err;
+        }
+    }
+
+    /**
+     * HTTP GET to an absolute path from the server origin.
+     * Útil para endpoints que NÃO estão sob o path do baseUrl (ex: Xray Raven API).
+     * Constrói a URL a partir de `originUrl + path`, ignorando o path do baseUrl.
+     *
+     * @example
+     *   baseUrl = 'https://jira.euronext.com/rest/api/2'
+     *   getFromOriginPath('rest/raven/1.0/api/test/ECSPOL-1255/testruns')
+     *   → GET https://jira.euronext.com/rest/raven/1.0/api/test/ECSPOL-1255/testruns ✅
+     *   (getJiraResource geraria duplo /rest/ via axios baseURL)
+     *
+     * @param path - Path absoluto do servidor (ex: `rest/raven/1.0/api/...`).
+     * @returns Response body typed as `T`.
+     * @throws On network / non-2xx.
+     */
+    async getFromOriginPath<T = JsonObject>(path: string): Promise<T> {
+        const url = `${this.originUrl}/${path.startsWith('/') ? path.slice(1) : path}`;
+        try {
+            const response = await this.axiosInstance.get<T>(url);
+            return response.data;
+        } catch (err) {
+            rootLogger.error('GET from origin ' + path + ' failed: ' + (err as Error).message);
             throw err;
         }
     }

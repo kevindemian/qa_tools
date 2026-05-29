@@ -124,6 +124,12 @@ describe('parseBatchArgs', () => {
         const result = parseBatchArgs();
         expect(result).toEqual({});
     });
+
+    it('parses --publish flag', () => {
+        process.argv = ['node', 'script.js', '--publish', 's3'];
+        const result = parseBatchArgs();
+        expect(result.publish).toBe('s3');
+    });
 });
 
 describe('tryBatchMode', () => {

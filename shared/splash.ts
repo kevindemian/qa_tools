@@ -1,8 +1,8 @@
 import { palette } from './palette';
 import { defaultOutput, Output } from './output';
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any -- figlet is ESM-only
-type DepCache = { figlet?: any; gradient?: any };
+// eslint-disable-next-line @typescript-eslint/no-explicit-any -- dynamic imports, ESM-only
+type DepCache = { figlet?: any; gradient?: any; https?: any; http?: any };
 
 const _cache: DepCache = {};
 
@@ -14,6 +14,16 @@ export function __setFigletDep(mod: unknown): void {
 export function __setGradientDep(mod: unknown): void {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any -- dynamic import, ESM-only
     _cache.gradient = mod as any;
+}
+
+export function __setHttpsDep(mod: unknown): void {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Node built-in, ESM-only in Jest
+    _cache.https = mod as any;
+}
+
+export function __setHttpDep(mod: unknown): void {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Node built-in, ESM-only in Jest
+    _cache.http = mod as any;
 }
 
 async function ensureDeps(): Promise<void> {
@@ -31,14 +41,15 @@ export async function checkJiraStatus(baseUrl: string, token: string): Promise<S
     if (!baseUrl || !token) return { label: 'Jira API', status: 'info', detail: 'não configurado' };
     try {
         const start = Date.now();
-        const https = await import('https');
-        const http = await import('http');
+        const https = _cache.https ?? (await import('https'));
+        const http = _cache.http ?? (await import('http'));
         const mod = baseUrl.startsWith('https') ? https : http;
         await new Promise<void>((resolve, reject) => {
             const req = mod.get(
                 baseUrl + '/rest/api/2/myself',
                 { headers: { Authorization: 'Bearer ' + token }, timeout: 2000 },
-                (res) => {
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any -- http.IncomingMessage
+                (res: any) => {
                     res.resume();
                     resolve();
                 },

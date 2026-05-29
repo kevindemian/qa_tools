@@ -69,7 +69,7 @@ class CloudStepImporter implements XrayStepImporter {
             index: stepIndex,
             step: {
                 action: step.fields.Action ?? '',
-                result: step.fields.ExpectedResult ?? '',
+                result: step.fields['Expected Result'] ?? '',
                 data: step.fields.Data ?? '',
             },
         };

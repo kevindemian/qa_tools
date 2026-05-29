@@ -184,6 +184,135 @@ describe('getOsOpenCommand (platform detection)', () => {
         expect(result).toEqual({ cmd: 'xdg-open', args: ['/home/user/file.html'] });
     });
 
+    it('toWinPath fallback: copies file and converts via wslpath', () => {
+        jest.isolateModules(() => {
+            const execMock = jest
+                .fn()
+                .mockImplementationOnce(() => {
+                    throw new Error('ENOENT');
+                })
+                .mockImplementationOnce(() => 'C:\\Users\\Test\\Temp\n')
+                .mockImplementationOnce(() => 'C:\\Users\\Test\\Temp\\qa_tools_docs\\file.html\n');
+            jest.doMock('child_process', () => {
+                const actual = jest.requireActual('child_process');
+                return { ...actual, execSync: execMock };
+            });
+            jest.doMock('fs', () => ({
+                readFileSync: jest
+                    .fn()
+                    .mockReturnValueOnce('Linux version ... Microsoft ...')
+                    .mockReturnValueOnce('file content'),
+                writeFileSync: jest.fn(),
+                mkdirSync: jest.fn(),
+            }));
+
+            const os = require('os');
+            os.platform.mockReturnValue('linux');
+            const { getOsOpenCommand } = require('./open');
+
+            const result = getOsOpenCommand('/home/user/file.html');
+            expect(result).toEqual({
+                cmd: 'cmd.exe',
+                args: ['/c', 'start', '', 'C:\\Users\\Test\\Temp\\qa_tools_docs\\file.html'],
+            });
+        });
+    });
+
+    it('toWinPath fallback: returns null when writeFileSync throws', () => {
+        jest.isolateModules(() => {
+            const execMock = jest
+                .fn()
+                .mockImplementationOnce(() => {
+                    throw new Error('ENOENT');
+                })
+                .mockImplementationOnce(() => 'C:\\Users\\Test\\Temp\n');
+            jest.doMock('child_process', () => {
+                const actual = jest.requireActual('child_process');
+                return { ...actual, execSync: execMock };
+            });
+            jest.doMock('fs', () => ({
+                readFileSync: jest
+                    .fn()
+                    .mockReturnValueOnce('Linux version ... Microsoft ...')
+                    .mockReturnValueOnce('file content'),
+                writeFileSync: jest.fn().mockImplementation(() => {
+                    throw new Error('disk full');
+                }),
+                mkdirSync: jest.fn(),
+            }));
+
+            const os = require('os');
+            os.platform.mockReturnValue('linux');
+            const { getOsOpenCommand } = require('./open');
+
+            const result = getOsOpenCommand('/home/user/file.html');
+            expect(result).toEqual({ cmd: 'xdg-open', args: ['/home/user/file.html'] });
+        });
+    });
+
+    it('toWinPath fallback: returns null when wslpath output is invalid', () => {
+        jest.isolateModules(() => {
+            const execMock = jest
+                .fn()
+                .mockImplementationOnce(() => {
+                    throw new Error('ENOENT');
+                })
+                .mockImplementationOnce(() => 'C:\\Users\\Test\\Temp\n')
+                .mockImplementationOnce(() => '/unix/path\n');
+            jest.doMock('child_process', () => {
+                const actual = jest.requireActual('child_process');
+                return { ...actual, execSync: execMock };
+            });
+            jest.doMock('fs', () => ({
+                readFileSync: jest
+                    .fn()
+                    .mockReturnValueOnce('Linux version ... Microsoft ...')
+                    .mockReturnValueOnce('file content'),
+                writeFileSync: jest.fn(),
+                mkdirSync: jest.fn(),
+            }));
+
+            const os = require('os');
+            os.platform.mockReturnValue('linux');
+            const { getOsOpenCommand } = require('./open');
+
+            const result = getOsOpenCommand('/home/user/file.html');
+            expect(result).toEqual({ cmd: 'xdg-open', args: ['/home/user/file.html'] });
+        });
+    });
+
+    it('toWinPath: falls through when first wslpath output is not a Windows path', () => {
+        jest.isolateModules(() => {
+            const execMock = jest
+                .fn()
+                .mockImplementationOnce(() => '/unix/path\n')
+                .mockImplementationOnce(() => 'C:\\Users\\Test\\Temp\n')
+                .mockImplementationOnce(() => 'C:\\Users\\Test\\Temp\\qa_tools_docs\\file.html\n');
+            jest.doMock('child_process', () => {
+                const actual = jest.requireActual('child_process');
+                return { ...actual, execSync: execMock };
+            });
+            jest.doMock('fs', () => ({
+                readFileSync: jest
+                    .fn()
+                    .mockReturnValueOnce('Linux version ... Microsoft ...')
+                    .mockReturnValueOnce('file content'),
+                writeFileSync: jest.fn(),
+                mkdirSync: jest.fn(),
+            }));
+
+            const os = require('os');
+            os.platform.mockReturnValue('linux');
+            const { getOsOpenCommand } = require('./open');
+
+            const result = getOsOpenCommand('/home/user/file.html');
+            expect(result).toEqual({
+                cmd: 'cmd.exe',
+                args: ['/c', 'start', '', 'C:\\Users\\Test\\Temp\\qa_tools_docs\\file.html'],
+            });
+        });
+    });
+
     it('returns null for unknown platform', () => {
         const os = require('os');
         os.platform.mockReturnValue('aix');

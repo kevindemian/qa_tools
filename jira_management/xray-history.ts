@@ -73,7 +73,12 @@ class ServerHistoryProvider implements TestHistoryProvider {
 
     async getHistory(testKey: string): Promise<TestRun[]> {
         try {
-            const data = await this.jiraResource.getJiraResource<unknown[]>(
+            /** Usa {@link JiraResource.getFromOriginPath} para evitar duplo `/rest/`.
+             * O `getJiraResource` convencional concatenaria o path com `baseURL = /rest/api/2`,
+             * gerando URL inválida: `/rest/api/2/rest/raven/1.0/...`.
+             * @production bug P3 corrigido: a Xray Raven API vive em `/rest/raven/1.0/`,
+             *   não em `/rest/api/2/`. URL correta mantida em `docs/PRODUCTION-CONFIG.md`. */
+            const data = await this.jiraResource.getFromOriginPath<unknown[]>(
                 'rest/raven/1.0/api/test/' + encodeURIComponent(testKey) + '/testruns',
             );
             if (!Array.isArray(data)) {
