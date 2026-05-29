@@ -332,14 +332,14 @@ Itens concluídos em sessões anteriores: [`BACKLOG-historico.md`](BACKLOG-histo
 
 ## 🔷 Sprint A — Publicação (P0 + infra) 🔷
 
-| #   | Item                                                                        | Prioridade | Esforço | Status | Arquivos                                                               |
-| --- | --------------------------------------------------------------------------- | ---------- | ------- | ------ | ---------------------------------------------------------------------- |
-| A1  | Fix version vazia no package.json                                           | P0         | 5min    | ✅     | `package.json`                                                         |
-| A2  | Adicionar noFallthroughCasesInSwitch no tsconfig                            | P2         | 2min    | ✅     | `tsconfig.json`                                                        |
-| A3  | .gitignore: tmp/, \*.bak + untrack artifacts                                | P1         | 15min   | ✅     | `.gitignore`                                                           |
-| A4  | Validação centralizada de env obrigatórios (`Config.validateRequiredEnv()`) | P0         | 1h      | ✅     | `shared/config.ts`                                                     |
-| A5  | Publicação npm: bin + build + CI workflow                                   | P0         | 3h      | ✅     | `package.json`, `.github/workflows/publish.yml`, `tsconfig.build.json` |
-| A6  | Docker image + CI workflow                                                  | P2         | 2h      | ✅     | `Dockerfile`, `.github/workflows/docker.yml`                           |
+| #   | Item                                                                        | Prioridade | Esforço | Status        | Arquivos                                                                                                                                                                                    |
+| --- | --------------------------------------------------------------------------- | ---------- | ------- | ------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| A1  | Fix version vazia no package.json                                           | P0         | 5min    | ✅            | `package.json`                                                                                                                                                                              |
+| A2  | Adicionar noFallthroughCasesInSwitch no tsconfig                            | P2         | 2min    | ✅            | `tsconfig.json`                                                                                                                                                                             |
+| A3  | .gitignore: tmp/, \*.bak + untrack artifacts                                | P1         | 15min   | ✅            | `.gitignore`                                                                                                                                                                                |
+| A4  | Validação centralizada de env obrigatórios (`Config.validateRequiredEnv()`) | P0         | 1h      | ✅            | `shared/config.ts`                                                                                                                                                                          |
+| A5  | Publicação npm: bin + build + CI workflow                                   | P0         | 3h      | ✅            | `package.json`, `.github/workflows/publish.yml`, `tsconfig.build.json`                                                                                                                      |
+| A6  | Docker image + npm package (CI/CD)                                          | P2         | 2h      | ⬜ Postergado | Dockerfile + workflow removidos (sem demanda concreta). Reimplementar com npm package (CLI instalável via `npm install -g`) quando houver caso de uso (ex: worker serverless, CLI público). |
 
 ## 🔷 Sprint B — Segurança/Robustez (P1) 🔷
 
