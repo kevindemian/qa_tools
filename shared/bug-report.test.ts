@@ -343,11 +343,27 @@ describe('BugReport Service', () => {
     });
 
     describe('interactiveBugReportFlow', () => {
-        let mockJiraResource: { postJiraResource: jest.Mock };
-        let mockLinkManager: { linkIssues: jest.Mock };
+        let mockJiraResource: {
+            postJiraResource: jest.Mock;
+            getJiraResource: jest.Mock;
+            putJiraResource: jest.Mock;
+            searchJiraIssues: jest.Mock;
+            getTransitionsForIssue: jest.Mock;
+            transitionIssue: jest.Mock;
+        };
+        let mockLinkManager: {
+            linkIssues: jest.Mock;
+        };
 
         beforeEach(() => {
-            mockJiraResource = { postJiraResource: jest.fn() };
+            mockJiraResource = {
+                postJiraResource: jest.fn(),
+                getJiraResource: jest.fn(),
+                putJiraResource: jest.fn(),
+                searchJiraIssues: jest.fn(),
+                getTransitionsForIssue: jest.fn(),
+                transitionIssue: jest.fn(),
+            };
             mockLinkManager = { linkIssues: jest.fn() };
         });
 
@@ -363,12 +379,7 @@ describe('BugReport Service', () => {
             mockPrompt.askConfirm.mockResolvedValueOnce(true);
             mockJiraResource.postJiraResource.mockResolvedValueOnce({ key: 'PROJ-202' });
 
-            const result = await interactiveBugReportFlow(
-                mockJiraResource as never,
-                'PROJ',
-                report,
-                mockLinkManager as never,
-            );
+            const result = await interactiveBugReportFlow(mockJiraResource, 'PROJ', report, mockLinkManager);
 
             expect(result).toEqual({
                 status: 'ok',
@@ -389,7 +400,7 @@ describe('BugReport Service', () => {
             mockPrompt.askConfirm.mockResolvedValueOnce(true);
             mockJiraResource.postJiraResource.mockResolvedValueOnce({ key: 'PROJ-202' });
 
-            await interactiveBugReportFlow(mockJiraResource as never, 'PROJ', report, mockLinkManager as never);
+            await interactiveBugReportFlow(mockJiraResource, 'PROJ', report, mockLinkManager);
 
             expect(mockLinkManager.linkIssues).not.toHaveBeenCalled();
         });
@@ -444,12 +455,7 @@ describe('BugReport Service', () => {
             mockPrompt.askConfirm.mockResolvedValueOnce(false).mockResolvedValueOnce(true);
             mockJiraResource.postJiraResource.mockResolvedValueOnce({ key: 'PROJ-303' });
 
-            const result = await interactiveBugReportFlow(
-                mockJiraResource as never,
-                'PROJ',
-                undefined,
-                mockLinkManager as never,
-            );
+            const result = await interactiveBugReportFlow(mockJiraResource, 'PROJ', undefined, mockLinkManager);
             expect(result).toEqual({
                 status: 'ok',
                 label: 'PROJ-303',
