@@ -604,6 +604,8 @@ export interface JiraResourceLike {
     postJiraResource<T = unknown>(url: string, data?: unknown): Promise<T>;
     putJiraResource<T = unknown>(url: string, data?: unknown): Promise<T | null>;
     searchJiraIssues(jql: string, maxResults?: number): Promise<SearchIssuesResponse>;
+    getTransitionsForIssue(issueKey: string): Promise<Record<string, string>>;
+    transitionIssue(issueId: string, transitionId: string): Promise<void>;
 }
 
 /** Minimal shape returned by Jira issue search. */
