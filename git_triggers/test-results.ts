@@ -153,8 +153,7 @@ async function createTestExecution(
     try {
         const te = await withSpinner('Criando Test Execution no Jira...', async () => {
             const jiraRes = new JiraResource(jira.token, jira.base + '/rest/api/2');
-            const linkJiraRes = new JiraResource(jira.token, jira.base + '/rest/api/2');
-            const linkMgr = new JiraLinkManager(linkJiraRes);
+            const linkMgr = new JiraLinkManager(jiraRes);
             return createTestExecutionFromResults(jiraRes, linkMgr, projectName, matched, csvName, {
                 pipelineId,
                 branch,

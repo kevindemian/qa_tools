@@ -1,5 +1,5 @@
 import { generateCoverageGapHtml } from './generate-coverage-gap-html';
-import type { CoverageGapResult } from './types';
+import type { CoverageGapResult } from './coverage-gap';
 
 function makeFixture(): CoverageGapResult {
     return {

@@ -331,8 +331,9 @@ function buildMenuChoices(level: string, proj: string, ctx: { git_directory: str
             else if (item.configKey === 'jsonDir') entry.description = loadTypedState().lastJsonDir || NOT_CONFIGURED;
             else if (item.id === '9') entry.description = proj;
             if (item.id && ID_TO_ALIASES[item.id]) {
-                const aliases = ID_TO_ALIASES[item.id]!.slice(0, 2).join(', ');
-                const count = ID_TO_ALIASES[item.id]!.length;
+                const aliasesList = ID_TO_ALIASES[item.id] as readonly string[];
+                const aliases = aliasesList.slice(0, 2).join(', ');
+                const count = aliasesList.length;
                 const suffix = count > 2 ? '…' : '';
                 const hint = 'alias: ' + aliases + suffix;
                 entry.description = entry.description ? entry.description + ' (' + hint + ')' : hint;
@@ -385,7 +386,7 @@ function _showSearchResults(found: Array<[string, string]>): void {
 function showHelpLoop(): void {
     const topicEntries = Object.entries(HELP_TOPICS);
     while (true) {
-        console.clear();
+        if (process.stdout.isTTY) console.clear();
         defaultOutput.box([], { border: 'double', padding: 1, title: 'QA Tools · Ajuda', width: 80 });
         showHelp();
 

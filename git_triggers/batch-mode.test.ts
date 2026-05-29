@@ -25,7 +25,7 @@ jest.mock('./session-state', () => ({
 
 jest.mock('../shared/config', () => ({
     __esModule: true,
-    default: { jiraProject: 'TEST' },
+    default: { jiraProject: 'TEST', setAutoConfirm: jest.fn() },
 }));
 
 jest.mock('./pipeline-handler', () => ({ pollPipeline: jest.fn() }));
@@ -44,6 +44,7 @@ jest.mock('../shared/flakiness-dashboard', () => ({ generateFlakinessHtml: jest.
 jest.mock('fs', () => ({ writeFileSync: jest.fn(), mkdirSync: jest.fn(), existsSync: jest.fn(() => false) }));
 jest.mock('../shared/temp-dir', () => ({ writeReport: jest.fn(() => '/tmp/flakiness-test.html') }));
 
+import Config from '../shared/config';
 import { success, error, printError } from '../shared/prompt';
 import { pushHistory, getProjects } from './session-state';
 import { pollPipeline } from './pipeline-handler';
@@ -197,7 +198,7 @@ describe('tryBatchMode', () => {
 
         await tryBatchMode();
 
-        expect(process.env.AUTO_CONFIRM).toBe('true');
+        expect(Config.setAutoConfirm).toHaveBeenCalledWith(true);
     });
 
     it('handles pipeline trigger error', async () => {

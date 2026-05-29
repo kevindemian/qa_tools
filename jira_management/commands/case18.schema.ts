@@ -16,5 +16,7 @@ export const TestCaseDataSchema = z.object({
 
 export const TestCaseArraySchema = z.array(TestCaseDataSchema).min(1, 'test cases array must not be empty');
 
+/** @internal used by test via require() destructuring. */
 export type PreConditionInputData = z.infer<typeof PreConditionInputSchema>;
+/** @internal used by test via require() destructuring. */
 export type TestCaseData = z.infer<typeof TestCaseDataSchema>;

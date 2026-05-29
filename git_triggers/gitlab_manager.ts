@@ -254,7 +254,7 @@ class GitLabManager extends GitProviderBase implements GitProvider {
             const filename = match ? match[1]! : 'artifacts.zip';
             return { buffer: Buffer.from(response.data as ArrayBuffer), filename };
         } catch (err) {
-            return handleError(err, { context: 'baixar artifact' }) as never;
+            return handleError(err, { context: 'baixar artifact' });
         }
     }
 }

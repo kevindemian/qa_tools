@@ -52,12 +52,20 @@ function getOriginUrl(): string {
     }
 }
 
+function isValidTarget(t: string): boolean {
+    return t === 's3' || t === 'gh-pages';
+}
+
 /** Auto-publish a local file to the configured target (s3 or gh-pages). */
 export function publishReport(options: PublishOptions): void {
+    if (!isValidTarget(options.target)) {
+        rootLogger.error('Unknown publish target: ' + options.target + ' (expected s3 or gh-pages)');
+        return;
+    }
     rootLogger.info('Publishing report to ' + options.target + ': ' + options.filePath);
     if (options.target === 's3') {
         publishToS3(options.filePath, options.destination);
-    } else if (options.target === 'gh-pages') {
+    } else {
         publishToGhPages(options.filePath, options.destination);
     }
 }

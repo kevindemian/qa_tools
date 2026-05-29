@@ -1,5 +1,5 @@
 /** Health score calculation: 0-100 composite of pass rate, flaky rate, coverage, and suite speed. */
-import type { MetricsStore } from './metrics';
+import type { MetricsStore, MetricsRun, CoverageSnapshot } from './metrics';
 import type { HealthScoreResult, HealthScoreGrade, HealthScoreDimensions } from './types';
 
 export interface HealthScoreConfig {
@@ -59,7 +59,7 @@ function computeActualMetrics(store: MetricsStore, config: HealthScoreConfig): A
     let weightedPassSum = 0;
     let weightTotal = 0;
     for (let i = 0; i < n; i++) {
-        const run = runs[i]!;
+        const run = runs[i] as MetricsRun;
         const passRate = run.total > 0 ? (run.passed / run.total) * 100 : 0;
         const weight = Math.exp((i - n + 1) / Math.max(n / 2, 1));
         weightedPassSum += passRate * weight;
@@ -87,7 +87,8 @@ function computeActualMetrics(store: MetricsStore, config: HealthScoreConfig): A
     const actualFlakyPct = totalConsidered > 0 ? (flakyCount / totalConsidered) * 100 : 0;
 
     const history = store.coverageHistory;
-    const actualCoverage = history && history.length > 0 ? history[history.length - 1]!.coveragePct : 0;
+    const actualCoverage =
+        history && history.length > 0 ? (history[history.length - 1] as CoverageSnapshot).coveragePct : 0;
 
     const speedRuns = runs.filter((r) => r.total > 0);
     let totalDuration = 0;

@@ -372,3 +372,30 @@ Itens concluídos em sessões anteriores: [`BACKLOG-historico.md`](BACKLOG-histo
 | D3  | Extrair options-object em 30 funções com >5 params              | P3         | 4h      | ⬜     | Múltiplos                                                                |
 | D4  | Encurtar 17 funções >50 linhas                                  | P3         | 3h      | ⬜     | Múltiplos                                                                |
 | D5  | Remover 3 orphan test files sem source                          | P3         | 15min   | ✅     | `llm-integration.test.ts`, `tui-snapshots.test.ts` (1 já removido antes) |
+
+## 🔷 Sprint E — Auditoria Técnica 2026-05-29 (em execução) 🔷
+
+Remediação completa dos 43 débitos identificados na auditoria adversarial.
+
+| #    | Item                                                          | Prioridade | Esforço | Status | Arquivos                                                                                              |
+| ---- | ------------------------------------------------------------- | ---------- | ------- | ------ | ----------------------------------------------------------------------------------------------------- |
+| E0.1 | `as never` pattern (3 call-sites) + overloads handleError     | P0         | 5min    | ✅     | `shared/git-provider-error.ts`, `github_manager.ts`, `gitlab_manager.ts`                              |
+| E0.2 | `process.env.AUTO_CONFIRM` mutation → Config.setAutoConfirm() | P0         | 2min    | ✅     | `shared/config.ts`, `git_triggers/batch-mode.ts`                                                      |
+| E1.1 | `!` assertions (15× em 10 arquivos) → guards                  | P1         | 20min   | ✅     | 10 arquivos                                                                                           |
+| E1.2 | types.ts Layer 0: move CoverageGapResult → coverage-gap.ts    | P1         | 10min   | ✅     | `shared/types.ts`, `shared/coverage-gap.ts`, `shared/generate-coverage-gap-html.ts`                   |
+| E2.1 | `as` assertions (~45 em ~15 arquivos) → interfaces tipadas    | P2         | 2h      | ⬜     | ~15 arquivos                                                                                          |
+| E2.2 | escapeHtml duplicado → import sanitizeHtml()                  | P2         | 5min    | ✅     | `shared/generate-coverage-gap-html.ts`, `shared/sanitize.ts`                                          |
+| E3.1 | R5 violations (13 em 7 arquivos) — try/catch + logError       | P2         | 1h      | ⬜     | 7 arquivos                                                                                            |
+| E4.1 | SRP: report-generator.ts (1.171L) → 4 sub-módulos             | P2         | 1,5h    | ⬜     | `shared/report-generator.ts`                                                                          |
+| E4.2 | SRP: main.ts (878L) → extrair menu-data.ts + ui.ts            | P2         | 45min   | ⬜     | `jira_management/main.ts`                                                                             |
+| E4.3 | SRP: case17.ts (732L) → extrair 3 helpers                     | P2         | 45min   | ⬜     | `jira_management/commands/case17.ts`                                                                  |
+| E4.4 | SRP: jira_link_manager.ts (552L) → 3 sub-módulos              | P2         | 1h      | ⬜     | `jira_management/jira_link_manager.ts`                                                                |
+| E5.1 | Cross-layer dependency: eslint-plugin-import restrict         | P2         | 10min   | ⬜     | `.eslintrc`                                                                                           |
+| E5.2 | Duplicate JiraResource (test-results.ts:155-156)              | P2         | 2min    | ✅     | `git_triggers/test-results.ts`                                                                        |
+| E5.3 | Criar publish.test.ts (0% coverage → 100%)                    | P2         | 30min   | ✅     | `shared/publish.test.ts`                                                                              |
+| E6.1 | 11 funções >50 linhas → extração                              | P3         | 1h      | ⬜     | 6 arquivos (parcialmente coberto por E4)                                                              |
+| E7.1 | CI ts-prune: já tem `                                         | true`, ok  |         | ✅     | `.github/workflows/ci.yml`                                                                            |
+| E7.2 | CI: adicionar npm audit                                       | P3         | 5min    | ✅     | `ci.yml`                                                                                              |
+| E7.3 | Remover dead exports (ts-prune: 13→10 items false positive)   | P3         | 10min   | ✅     | `types.ts`, `csv-import-schema.ts`, `failure-analysis.schema.ts`, `llm-client.ts`, `case18.schema.ts` |
+| E7.4 | publishReport validation + TSDoc                              | P3         | 5min    | ✅     | `shared/publish.ts`                                                                                   |
+| E7.5 | console.clear() TTY guard                                     | P3         | 5min    | ✅     | `jira_management/main.ts`, `git_triggers/main.ts`, `shared/entry-menu.ts`                             |

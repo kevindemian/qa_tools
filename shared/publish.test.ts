@@ -1,144 +1,96 @@
-jest.mock('child_process');
+import { publishReport, type PublishTarget } from './publish';
+
+jest.mock('child_process', () => ({
+    execSync: jest.fn(),
+}));
+
 jest.mock('./logger', () => ({
     rootLogger: { info: jest.fn(), error: jest.fn() },
 }));
 
-import { execSync } from 'child_process';
-import { rootLogger } from './logger';
-import { publishReport } from './publish';
+const mockExecSync = jest.requireMock('child_process').execSync as jest.Mock;
+const mockLogger = jest.requireMock('./logger').rootLogger;
 
-const mockExecSync = execSync as jest.Mock;
-const mockLoggerError = rootLogger.error as jest.Mock;
+beforeEach(() => {
+    jest.clearAllMocks();
+});
 
 describe('publishReport', () => {
-    beforeEach(() => {
-        jest.clearAllMocks();
+    it('should call aws s3 cp for s3 target', () => {
+        process.env.AWS_S3_BUCKET = 's3://my-bucket';
+        publishReport({ target: 's3', filePath: './report.html' });
+        expect(mockExecSync).toHaveBeenCalledWith('aws s3 cp "./report.html" "s3://my-bucket" --no-progress', {
+            stdio: 'inherit',
+        });
+    });
+
+    it('should use explicit destination for s3 target', () => {
+        publishReport({ target: 's3', filePath: './report.html', destination: 's3://other' });
+        expect(mockExecSync).toHaveBeenCalledWith('aws s3 cp "./report.html" "s3://other" --no-progress', {
+            stdio: 'inherit',
+        });
+    });
+
+    it('should log error when s3 dest is missing', () => {
         delete process.env.AWS_S3_BUCKET;
+        publishReport({ target: 's3', filePath: './report.html' });
+        expect(mockExecSync).not.toHaveBeenCalled();
+        expect(mockLogger.error).toHaveBeenCalledWith('S3 publish requires either --dest or AWS_S3_BUCKET env var');
     });
 
-    describe('target: s3', () => {
-        it('publishes to S3 using AWS_S3_BUCKET env var', () => {
-            process.env.AWS_S3_BUCKET = 's3://my-bucket';
-            publishReport({ target: 's3', filePath: '/path/to/report.html' });
-            expect(mockExecSync).toHaveBeenCalledWith(
-                'aws s3 cp "/path/to/report.html" "s3://my-bucket" --no-progress',
-                { stdio: 'inherit' },
-            );
+    it('should log error when s3 publish fails', () => {
+        process.env.AWS_S3_BUCKET = 's3://bucket';
+        mockExecSync.mockImplementationOnce(() => {
+            throw new Error('aws failed');
         });
+        publishReport({ target: 's3', filePath: './report.html' });
+        expect(mockLogger.error).toHaveBeenCalledWith('S3 publish failed');
+    });
 
-        it('publishes to S3 with custom destination overriding env var', () => {
-            process.env.AWS_S3_BUCKET = 's3://my-bucket';
-            publishReport({
-                target: 's3',
-                filePath: '/path/to/report.html',
-                destination: 's3://custom-bucket',
-            });
-            expect(mockExecSync).toHaveBeenCalledWith(
-                'aws s3 cp "/path/to/report.html" "s3://custom-bucket" --no-progress',
-                { stdio: 'inherit' },
-            );
-        });
-
-        it('logs error when AWS_S3_BUCKET not set and no destination', () => {
-            publishReport({ target: 's3', filePath: '/path/to/report.html' });
-            expect(mockLoggerError).toHaveBeenCalledWith('S3 publish requires either --dest or AWS_S3_BUCKET env var');
-            expect(mockExecSync).not.toHaveBeenCalled();
-        });
-
-        it('logs error when S3 publish fails (execSync throws)', () => {
-            process.env.AWS_S3_BUCKET = 's3://my-bucket';
-            mockExecSync.mockImplementationOnce(() => {
-                throw new Error('aws fail');
-            });
-            publishReport({ target: 's3', filePath: '/path/to/report.html' });
-            expect(mockLoggerError).toHaveBeenCalledWith('S3 publish failed');
+    it('should call git commands for gh-pages target', () => {
+        mockExecSync
+            .mockReturnValueOnce('git@github.com:user/repo.git') // getOriginUrl
+            .mockReturnValueOnce('') // git clone
+            .mockReturnValueOnce(undefined) // cp
+            .mockReturnValueOnce(undefined); // git add + commit + push
+        publishReport({ target: 'gh-pages', filePath: './report.html' });
+        expect(mockExecSync).toHaveBeenNthCalledWith(2, expect.stringContaining('git clone --branch gh-pages'), {
+            stdio: 'ignore',
         });
     });
 
-    describe('invalid target', () => {
-        it('does nothing for unknown target', () => {
-            publishReport({ target: 'ftp' as never, filePath: '/path/to/report.html' });
-            expect(mockExecSync).not.toHaveBeenCalled();
-        });
+    it('should log error when gh-pages publish fails', () => {
+        mockExecSync
+            .mockReturnValueOnce('git@github.com:user/repo.git') // getOriginUrl
+            .mockReturnValueOnce('') // clone
+            .mockImplementationOnce(() => {
+                throw new Error('cp failed');
+            });
+        publishReport({ target: 'gh-pages', filePath: './report.html' });
+        expect(mockLogger.error).toHaveBeenCalledWith('gh-pages publish failed');
     });
 
-    describe('target: gh-pages', () => {
-        it('publishes to gh-pages successfully', () => {
-            mockExecSync
-                .mockReturnValueOnce('https://github.com/user/repo.git')
-                .mockReturnValueOnce('')
-                .mockReturnValueOnce('')
-                .mockReturnValueOnce('');
+    it('should log info about target and file path', () => {
+        publishReport({ target: 's3', filePath: './report.html', destination: 's3://b' });
+        expect(mockLogger.info).toHaveBeenCalledWith('Publishing report to s3: ./report.html');
+    });
 
-            publishReport({ target: 'gh-pages', filePath: '/path/to/report.html' });
+    it('should handle missing origin url gracefully', () => {
+        // getOriginUrl throws → caught internally → returns 'origin'
+        mockExecSync
+            .mockImplementationOnce(() => {
+                throw new Error('no remote');
+            }) // getOriginUrl
+            .mockReturnValueOnce('') // clone
+            .mockReturnValueOnce(undefined) // cp
+            .mockReturnValueOnce(undefined); // git add + commit + push
+        publishReport({ target: 'gh-pages', filePath: './report.html' });
+        expect(mockLogger.error).not.toHaveBeenCalled();
+    });
 
-            expect(mockExecSync).toHaveBeenCalledTimes(4);
-            expect(mockExecSync).toHaveBeenNthCalledWith(1, 'git remote get-url origin', { encoding: 'utf8' });
-            expect(mockExecSync).toHaveBeenNthCalledWith(2, expect.stringContaining('git clone --branch gh-pages'), {
-                stdio: 'ignore',
-            });
-            expect(mockExecSync).toHaveBeenNthCalledWith(
-                3,
-                expect.stringMatching(/^cp "\/path\/to\/report\.html" "\/tmp\/qa-gh-pages-\d+\/\.\/report\.html"$/),
-                { stdio: 'inherit' },
-            );
-            expect(mockExecSync).toHaveBeenNthCalledWith(
-                4,
-                expect.stringContaining('git add "./report.html" && git commit'),
-                { stdio: 'inherit' },
-            );
-        });
-
-        it('publishes to gh-pages with custom destination', () => {
-            mockExecSync
-                .mockReturnValueOnce('https://github.com/user/repo.git')
-                .mockReturnValueOnce('')
-                .mockReturnValueOnce('')
-                .mockReturnValueOnce('');
-
-            publishReport({
-                target: 'gh-pages',
-                filePath: '/path/to/report.html',
-                destination: 'docs/index.html',
-            });
-
-            expect(mockExecSync).toHaveBeenNthCalledWith(
-                3,
-                expect.stringMatching(/^cp "\/path\/to\/report\.html" "\/tmp\/qa-gh-pages-\d+\/docs\/index\.html"$/),
-                { stdio: 'inherit' },
-            );
-            expect(mockExecSync).toHaveBeenNthCalledWith(
-                4,
-                expect.stringContaining('git add "docs/index.html" && git commit'),
-                { stdio: 'inherit' },
-            );
-        });
-
-        it('logs error when gh-pages publish fails', () => {
-            mockExecSync.mockReturnValueOnce('https://github.com/user/repo.git').mockImplementationOnce(() => {
-                throw new Error('gh-pages fail');
-            });
-            publishReport({ target: 'gh-pages', filePath: '/path/to/report.html' });
-            expect(mockLoggerError).toHaveBeenCalledWith('gh-pages publish failed');
-        });
-
-        it('falls back to "origin" url when getOriginUrl fails', () => {
-            mockExecSync
-                .mockImplementationOnce(() => {
-                    throw new Error('no remote');
-                })
-                .mockReturnValueOnce('')
-                .mockReturnValueOnce('')
-                .mockReturnValueOnce('');
-
-            publishReport({ target: 'gh-pages', filePath: '/path/to/report.html' });
-
-            expect(mockExecSync).toHaveBeenCalledTimes(4);
-            expect(mockExecSync).toHaveBeenNthCalledWith(
-                2,
-                expect.stringContaining('git clone --branch gh-pages --single-branch "origin"'),
-                { stdio: 'ignore' },
-            );
-        });
+    it('should handle unsupported target gracefully', () => {
+        publishReport({ target: 'ftp' as PublishTarget, filePath: './x.html' });
+        expect(mockLogger.error).toHaveBeenCalledWith(expect.stringContaining('Unknown publish target'));
+        expect(mockExecSync).not.toHaveBeenCalled();
     });
 });

@@ -172,7 +172,8 @@ async function handleUseExisting(
 function resolveTeKeyInput(input: string, tes: TestExecutionSummary[]): string {
     const num = Number(input);
     if (Number.isInteger(num) && num >= 1 && num <= tes.length) {
-        return tes[num - 1]!.key;
+        const selected = tes[num - 1] as TestExecutionSummary;
+        return selected.key;
     }
 
     if (/^[A-Z]+-[A-Z]+-\d+$/.test(input.toUpperCase())) {

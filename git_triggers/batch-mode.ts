@@ -155,9 +155,7 @@ export async function tryBatchMode(): Promise<boolean> {
     if (!batch.auto && !batch.project && !batch.branch) return false;
 
     if (batch.auto) {
-        // Config singleton lê AUTO_CONFIRM do env (config.ts:186).
-        // Mutation é o ponto de injeção documentado para modo headless batch.
-        process.env.AUTO_CONFIRM = 'true';
+        Config.setAutoConfirm(true);
     }
 
     const setup = await setupBatchProject(batch);

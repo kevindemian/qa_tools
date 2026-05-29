@@ -156,7 +156,7 @@ async function showCoverage(c: CommandContext): Promise<void> {
         divider();
         title('Gaps por épico');
         for (const epic of epics) {
-            info(`${epic}: ${result.gapsByEpic[epic]!.join(', ')}`);
+            info(`${epic}: ${(result.gapsByEpic[epic] ?? []).join(', ')}`);
         }
     }
 

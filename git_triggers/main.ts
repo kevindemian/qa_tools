@@ -242,7 +242,7 @@ async function main(): Promise<void> {
             : '0-9';
 
     while (true) {
-        console.clear();
+        if (process.stdout.isTTY) console.clear();
         const finalChoice = await _promptChoice(stateHint);
         updateState((s: StateContainer) => {
             s.lastChoice = finalChoice;

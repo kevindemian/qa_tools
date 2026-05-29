@@ -41,7 +41,7 @@ export async function main(): Promise<void> {
 
     while (true) {
         // eslint-disable-next-line no-console
-        console.clear();
+        if (process.stdout.isTTY) console.clear();
         await showSplash();
 
         const choice = await showSelect('      Selecione o módulo', [

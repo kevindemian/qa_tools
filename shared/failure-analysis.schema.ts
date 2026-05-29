@@ -22,5 +22,7 @@ export const FailureAnalysisSchema = z.object({
     tests: z.array(FailureAnalysisTestSchema).min(1, 'tests array must not be empty'),
 });
 
+/** @internal used by test via require() destructuring. */
 export type FailureAnalysis = z.infer<typeof FailureAnalysisSchema>;
+/** @internal used by test via require() destructuring. */
 export type FailureAnalysisTest = z.infer<typeof FailureAnalysisTestSchema>;

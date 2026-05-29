@@ -106,6 +106,17 @@ class Config {
         return new Config(overrides);
     }
 
+    /** Override `autoConfirm` at runtime — replaces `process.env.AUTO_CONFIRM = 'true'`.
+     *  Uses the instance overrides map so no global env mutation is needed. */
+    static setAutoConfirm(value: boolean): void {
+        Config.getDefault().setAutoConfirm(value);
+    }
+
+    /** Instance method: set autoConfirm in this instance's overrides. */
+    setAutoConfirm(value: boolean): void {
+        this.overrides.autoConfirm = value;
+    }
+
     /** Validate that required env vars are set. Throws on first missing. */
     static validateRequiredEnv(): void {
         const required: Array<{ key: string; label: string }> = [

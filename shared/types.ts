@@ -40,11 +40,6 @@ export interface TestStep {
 
 /** A pre-condition listed or created during AI-assisted test generation.
  * @production LLM pode referenciar pre-conditions existentes (reference) ou solicitar criação (create). */
-export interface PreConditionInput {
-    type: 'reference' | 'create';
-    key?: string;
-    summary?: string;
-}
 
 /** Summary of an existing pre-condition fetched from Jira. */
 export interface PreConditionSummary {
@@ -340,54 +335,6 @@ export interface BugReport {
         commitSha?: string;
         provider?: string;
     };
-}
-
-/** A single item in a coverage gap analysis. */
-export interface CoverageGapItem {
-    issueKey: string;
-    summary: string;
-    type: 'Story' | 'Task' | 'Bug' | 'Epic';
-    status: string;
-    epicKey?: string;
-    epicSummary?: string;
-    hasTest: boolean;
-    linkedTestKeys: string[];
-    priority: string;
-    coverageWeight: number;
-    lastRunPassed?: boolean;
-    lastRunDate?: string;
-}
-
-/** Result of a coverage gap analysis. */
-export interface CoverageGapResult {
-    items: CoverageGapItem[];
-    totals: { totalIssues: number; covered: number; gap: number; weightedCoveragePct: number; rawCoveragePct: number };
-    byEpic: Record<string, EpicCoverage>;
-    gateConfig: { minCoveragePct: number; failingEpics: string[] };
-    hierarchy: CoverageHierarchyNode[];
-    trends: import('./metrics').CoverageSnapshot[];
-}
-
-/** Coverage data for a single epic. */
-export interface EpicCoverage {
-    epicSummary: string;
-    total: number;
-    covered: number;
-    weightedPct: number;
-    rawPct: number;
-    gatePass: boolean;
-    issues: CoverageGapItem[];
-}
-
-/** A node in the coverage hierarchy tree. */
-export interface CoverageHierarchyNode {
-    key: string;
-    summary: string;
-    type: 'Epic' | 'Story' | 'Task' | 'Bug';
-    children: CoverageHierarchyNode[];
-    totalIssues: number;
-    coveredIssues: number;
-    coveragePct: number;
 }
 
 /** Configuration for flaky auto-actions. */
