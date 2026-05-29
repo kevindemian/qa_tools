@@ -68,10 +68,12 @@ async function main() {
                 if (h.runs.length > 0) {
                     html += '<ul style="font-size:0.85rem;margin:4px 0 0 16px">';
                     for (const run of h.runs) {
-                        const status = run.status || 'TODO';
+                        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                        const r = run as any;
+                        const status = r.status || 'TODO';
                         const color = status === 'PASS' ? '#22c55e' : status === 'FAIL' ? '#ef4444' : '#6b7280';
-                        html += `<li>${run.testExecKey || '?'} — <span style="color:${color};font-weight:600">${status}</span>`;
-                        if (run.finishedOn) html += ` (${String(run.finishedOn).slice(0, 10)})`;
+                        html += `<li>${r.testExecKey || '?'} — <span style="color:${color};font-weight:600">${status}</span>`;
+                        if (r.finishedOn) html += ` (${String(r.finishedOn).slice(0, 10)})`;
                         html += '</li>';
                     }
                     html += '</ul>';
@@ -83,7 +85,7 @@ async function main() {
             console.log(`Xray history: ${historyRows.map((h) => `${h.key}=${h.runs.length}`).join(', ')}`);
         }
     } catch (e: unknown) {
-        console.log(`Xray history skipped: ${e.message}`);
+        console.log(`Xray history skipped: ${(e as Error).message}`);
     }
 
     // ── 4. CI/CD context from GitHub ──
@@ -97,10 +99,15 @@ async function main() {
                 baseUrl: 'https://api.github.com',
                 authHeader: { Authorization: 'Bearer ' + ghToken },
             });
-            const runsResp = await client.get(`/repos/${ghRepo}/actions/runs?per_page=5&status=success&status=failure`);
-            const runs: unknown[] = ((runsResp.data as unknown).workflow_runs as unknown[]) || [];
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            const runsResp = await client.get<any>(
+                `/repos/${ghRepo}/actions/runs?per_page=5&status=success&status=failure`,
+            );
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            const runs: any[] = runsResp.data?.workflow_runs || [];
 
-            const runStats: unknown[] = runs.map((run: unknown) => ({
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            const runStats: Array<{ runId: any; createdAt: string; name: string }> = runs.map((run: any) => ({
                 runId: run.id,
                 createdAt: run.created_at || '',
                 name: run.name || run.display_title || 'workflow',
@@ -116,10 +123,10 @@ async function main() {
                 }
                 html += '</ul></div>';
                 ciHtml = html;
-                console.log(`CI/CD context: ${runStats.length} runs`);
+                console.log(`CI/CD context: ${String(runStats.length)} runs`);
             }
         } catch (e: unknown) {
-            console.log(`CI/CD fetch: ${e.message}`);
+            console.log(`CI/CD fetch: ${(e as Error).message}`);
         }
     }
 
@@ -136,7 +143,7 @@ async function main() {
     console.log(`\nReport: ${outPath}`);
 }
 
-main().catch((e) => {
-    console.error('Fatal:', e.message);
+main().catch((e: unknown) => {
+    console.error('Fatal:', (e as Error).message);
     process.exit(1);
 });
