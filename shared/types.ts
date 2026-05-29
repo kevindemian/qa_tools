@@ -618,3 +618,82 @@ export interface SearchIssuesResponse {
 export interface JiraLinkManagerLike {
     linkIssues(sourceKey: string, linkedIssues: Array<{ key: string; linkType: string }>): Promise<unknown>;
 }
+
+// ── Coverage gap types (F4: moved from coverage-gap.ts to break circular dep) ──
+
+/** A single item in a coverage gap analysis. */
+export interface CoverageGapItem {
+    issueKey: string;
+    summary: string;
+    type: 'Story' | 'Task' | 'Bug' | 'Epic';
+    status: string;
+    epicKey?: string;
+    epicSummary?: string;
+    hasTest: boolean;
+    linkedTestKeys: string[];
+    priority: string;
+    coverageWeight: number;
+    lastRunPassed?: boolean;
+    lastRunDate?: string;
+}
+
+/** Coverage data for a single epic. */
+export interface EpicCoverage {
+    epicSummary: string;
+    total: number;
+    covered: number;
+    weightedPct: number;
+    rawPct: number;
+    gatePass: boolean;
+    issues: CoverageGapItem[];
+}
+
+/** A node in the coverage hierarchy tree. */
+export interface CoverageHierarchyNode {
+    key: string;
+    summary: string;
+    type: 'Epic' | 'Story' | 'Task' | 'Bug';
+    children: CoverageHierarchyNode[];
+    totalIssues: number;
+    coveredIssues: number;
+    coveragePct: number;
+}
+
+/** A snapshot of coverage metrics at a point in time (inlined from metrics.ts to keep types.ts dependency-free). */
+export interface CoverageSnapshot {
+    timestamp: string;
+    project: string;
+    totalIssues: number;
+    mappedIssues: number;
+    coveragePct: number;
+}
+
+/** Result of a coverage gap analysis. */
+export interface CoverageGapResult {
+    items: CoverageGapItem[];
+    totals: { totalIssues: number; covered: number; gap: number; weightedCoveragePct: number; rawCoveragePct: number };
+    byEpic: Record<string, EpicCoverage>;
+    gateConfig: { minCoveragePct: number; failingEpics: string[] };
+    hierarchy: CoverageHierarchyNode[];
+    trends: CoverageSnapshot[];
+}
+
+export interface CoverageGapOptions {
+    minCoveragePct?: number;
+    maxIssues?: number;
+}
+
+/** Inline token shape used internally by the markdown lexer/renderer.
+ *  Exported here for cross-module type references (F3: replaces `any[]`). */
+export interface InlineToken {
+    type: string;
+    text?: string;
+    href?: string;
+    tokens?: InlineToken[];
+    depth?: number;
+    items?: Array<{ tokens: InlineToken[] }>;
+    header?: Array<{ tokens: InlineToken[] }>;
+    rows?: Array<Array<{ tokens: InlineToken[] }>>;
+    align?: string[];
+    lang?: string;
+}

@@ -345,12 +345,10 @@ function lexMarkdown(src: string): InlineToken[] {
 
 // ─── Test support: inject pre-parsed tokens ─────────────────────────────────────
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any -- token AST shape varies by lexer
-let _testTokens: any[] | null = null;
+let _testTokens: InlineToken[] | null = null;
 
-export function __setLexer(tokens: unknown[] | null): void {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- token AST shape varies by lexer
-    _testTokens = tokens as any[] | null;
+export function __setLexer(tokens: InlineToken[] | null): void {
+    _testTokens = tokens;
 }
 
 // ─── Renderers (unchanged) ──────────────────────────────────────────────────────
@@ -406,8 +404,7 @@ function renderPipeTable(head: string[], rows: string[][], availWidth: number): 
     return out;
 }
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any -- token AST shape varies by lexer output, cannot be statically typed
-function renderTokens(tokens: any[], availWidth?: number): string[] {
+function renderTokens(tokens: InlineToken[], availWidth?: number): string[] {
     const out: string[] = [];
 
     for (const token of tokens) {
@@ -420,20 +417,22 @@ function renderTokens(tokens: any[], availWidth?: number): string[] {
             if (text.trim()) out.push(text);
             out.push('');
         } else if (token.type === 'code') {
-            const lines = token.text.split('\n') as string[];
+            const lines = (token.text ?? '').split('\n');
             for (const line of lines) {
                 out.push(palette.muted(line));
             }
             out.push('');
         } else if (token.type === 'list') {
-            for (const item of token.items as Array<{ tokens: unknown[] }>) {
+            for (const item of token.items as Array<{ tokens: InlineToken[] }>) {
                 const text = renderInline(item.tokens);
                 out.push('  ● ' + text);
             }
             out.push('');
         } else if (token.type === 'table') {
-            const head: string[] = (token.header as Array<{ tokens: unknown[] }>).map((h) => renderInline(h.tokens));
-            const rows: string[][] = (token.rows as Array<Array<{ tokens: unknown[] }>>).map((r) =>
+            const head: string[] = (token.header as Array<{ tokens: InlineToken[] }>).map((h) =>
+                renderInline(h.tokens),
+            );
+            const rows: string[][] = (token.rows as Array<Array<{ tokens: InlineToken[] }>>).map((r) =>
                 r.map((c) => renderInline(c.tokens)),
             );
             const termWidth = availWidth || process.stdout.columns || 80;
@@ -458,8 +457,7 @@ function renderTokens(tokens: any[], availWidth?: number): string[] {
     return out;
 }
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any -- token AST shape varies by lexer output, cannot be statically typed
-function renderInline(tokens: any[] | undefined): string {
+function renderInline(tokens: InlineToken[] | undefined): string {
     if (!tokens) return '';
     let out = '';
     for (const t of tokens) {
@@ -470,9 +468,9 @@ function renderInline(tokens: any[] | undefined): string {
         } else if (t.type === 'em') {
             out += '\x1b[3m' + renderInline(t.tokens) + '\x1b[23m';
         } else if (t.type === 'codespan') {
-            out += palette.muted(t.text);
+            out += palette.muted(t.text ?? '');
         } else if (t.type === 'link') {
-            out += palette.blue(t.text || '');
+            out += palette.blue(t.text ?? '');
         } else if (t.type === 'br') {
             out += '\n';
         } else if (t.type === 'del') {
@@ -493,19 +491,18 @@ function escapeHtml(s: string): string {
         .replace(/'/g, '&#039;');
 }
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any -- token AST shape varies by lexer output
-function renderInlineToHtml(tokens: any[] | undefined): string {
+function renderInlineToHtml(tokens: InlineToken[] | undefined): string {
     if (!tokens) return '';
     let out = '';
     for (const t of tokens) {
         if (t.type === 'text' || t.type === 'plain') {
-            out += escapeHtml(t.text);
+            out += escapeHtml(t.text ?? '');
         } else if (t.type === 'strong') {
             out += '<strong>' + renderInlineToHtml(t.tokens) + '</strong>';
         } else if (t.type === 'em') {
             out += '<em>' + renderInlineToHtml(t.tokens) + '</em>';
         } else if (t.type === 'codespan') {
-            out += '<code>' + escapeHtml(t.text) + '</code>';
+            out += '<code>' + escapeHtml(t.text ?? '') + '</code>';
         } else if (t.type === 'link') {
             let hrefVal = t.href || '';
             if (hrefVal && !hrefVal.includes('://') && /\.md(#|$)/.test(hrefVal)) {
@@ -522,8 +519,7 @@ function renderInlineToHtml(tokens: any[] | undefined): string {
     return out;
 }
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any -- token AST shape varies by lexer output
-function renderTokensToHtml(tokens: any[]): string {
+function renderTokensToHtml(tokens: InlineToken[]): string {
     const parts: string[] = [];
     for (const token of tokens) {
         if (token.type === 'heading') {
@@ -535,15 +531,15 @@ function renderTokensToHtml(tokens: any[]): string {
         } else if (token.type === 'code') {
             parts.push('<pre><code>' + escapeHtml(token.text || '') + '</code></pre>');
         } else if (token.type === 'list') {
-            const items = (token.items as Array<{ tokens: unknown[] }>).map(
+            const items = (token.items as Array<{ tokens: InlineToken[] }>).map(
                 (item) => '<li>' + renderInlineToHtml(item.tokens) + '</li>',
             );
             parts.push('<ul>' + items.join('') + '</ul>');
         } else if (token.type === 'table') {
-            const head = (token.header as Array<{ tokens: unknown[] }>).map(
+            const head = (token.header as Array<{ tokens: InlineToken[] }>).map(
                 (h) => '<th>' + renderInlineToHtml(h.tokens) + '</th>',
             );
-            const rows = (token.rows as Array<Array<{ tokens: unknown[] }>>).map((r) => {
+            const rows = (token.rows as Array<Array<{ tokens: InlineToken[] }>>).map((r) => {
                 const cells = r.map((c) => '<td>' + renderInlineToHtml(c.tokens) + '</td>');
                 return '<tr>' + cells.join('') + '</tr>';
             });
