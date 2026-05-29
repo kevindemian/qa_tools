@@ -1,6 +1,5 @@
 /** Update package version and prepend release notes. */
 import { success, warn, ask, printError } from '../../shared/prompt';
-import { rootLogger } from '../../shared/logger';
 import type { CommandContext } from './context';
 import { NO_TASKS_FOUND_FOR_VERSION } from '../constants';
 
@@ -28,12 +27,8 @@ async function handler(c: CommandContext): Promise<boolean | void> {
         success('Package version e release notes atualizados.');
     } catch (err) {
         const msg = 'Erro ao atualizar package para versão "' + version + '" no projeto "' + c.ctx.project_name + '"';
+        // fallback: log genérico se safeJiraCall não cobrir todos os cenários
         printError(msg, err);
-        rootLogger.error(msg, {
-            version,
-            project: c.ctx.project_name,
-            status: (err as { response?: { status?: number } }).response?.status,
-        });
         c.pushHistory('atualizar-package', version, 'error');
     }
 }

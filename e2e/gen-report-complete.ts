@@ -82,7 +82,7 @@ async function main() {
                 if (h.runs.length > 0) {
                     html += '<ul style="font-size:0.85rem;margin:4px 0 0 16px">';
                     for (const run of h.runs) {
-                        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                        // eslint-disable-next-line @typescript-eslint/no-explicit-any -- heterogeneous API response
                         const r = run as any;
                         const status = r.status || 'TODO';
                         const color = status === 'PASS' ? '#22c55e' : status === 'FAIL' ? '#ef4444' : '#6b7280';
@@ -113,14 +113,14 @@ async function main() {
                 baseUrl: 'https://api.github.com',
                 authHeader: { Authorization: 'Bearer ' + ghToken },
             });
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any -- GitHub API response shape
             const runsResp = await client.get<any>(
                 `/repos/${ghRepo}/actions/runs?per_page=5&status=success&status=failure`,
             );
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any -- GitHub API response shape
             const runs: any[] = runsResp.data?.workflow_runs || [];
 
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any -- GitHub API response shape
             const runStats: Array<{ runId: any; createdAt: string; name: string }> = runs.map((run: any) => ({
                 runId: run.id,
                 createdAt: run.created_at || '',

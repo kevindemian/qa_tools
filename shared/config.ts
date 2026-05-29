@@ -106,6 +106,20 @@ class Config {
         return new Config(overrides);
     }
 
+    /** Validate that required env vars are set. Throws on first missing. */
+    static validateRequiredEnv(): void {
+        const required: Array<{ key: string; label: string }> = [
+            { key: 'JIRA_BASE_URL', label: 'Jira base URL' },
+            { key: 'JIRA_PERSONAL_TOKEN', label: 'Jira personal token' },
+            { key: 'XRAY_BASE_URL', label: 'Xray base URL' },
+        ];
+        for (const r of required) {
+            if (!process.env[r.key]) {
+                throw new Error(`${r.label} (${r.key}) não definido. Configure no .env ou exporte a variável.`);
+            }
+        }
+    }
+
     /** Reset the global singleton to factory defaults. */
     static reset(): void {
         Config.defaultInstance = new Config();

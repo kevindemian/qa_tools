@@ -103,7 +103,7 @@ jest.mock('../shared/metrics', () => ({
 }));
 
 jest.mock('../shared/http-client', () => ({
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- mock sleep return type
     sleep: jest.fn<any>(async () => {}),
 }));
 
@@ -133,11 +133,11 @@ jest.mock('./nivelar', () => ({
 
 type MainModule = typeof import('./main').default;
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
+// eslint-disable-next-line @typescript-eslint/no-explicit-any -- glob sync mock return
 const globSyncMock = jest.fn<any>().mockReturnValue([]);
 jest.mock('glob', () => ({ sync: globSyncMock }));
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
+// eslint-disable-next-line @typescript-eslint/no-explicit-any -- mock provider allows any mock shape
 const mockProvider: Record<string, jest.Mock<any>> = {
     getSchedules: jest.fn(),
     runSchedule: jest.fn(),
@@ -157,7 +157,7 @@ const mockProvider: Record<string, jest.Mock<any>> = {
 let mainModule: MainModule;
 
 beforeAll(() => {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- fs mock path param
     jest.spyOn(fs, 'readFileSync').mockImplementation(((p: any) => {
         if (p.includes('providers.json')) return '{"proj-a":{"provider":"github"},"proj-b":{}}';
         if (p.includes('projects.json')) return '{"proj-a":"111","proj-b":"222"}';

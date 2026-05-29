@@ -32,14 +32,14 @@ async function main() {
                 baseUrl: 'https://api.github.com',
                 authHeader: { Authorization: 'Bearer ' + ghToken },
             });
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any -- GitHub API response shape
             const runsResp = await client.get<any>(
                 `/repos/${ghRepo}/actions/runs?per_page=5&status=success&status=failure`,
             );
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any -- GitHub API response shape
             const runs: any[] = runsResp.data?.workflow_runs || [];
 
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any -- GitHub API response shape
             const runStats: Array<{ runId: any; createdAt: string; name: string; passRate: number }> = [];
             for (const run of runs) {
                 const created = (run.created_at as string) || '';

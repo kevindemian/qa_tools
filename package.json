@@ -1,6 +1,6 @@
 {
     "name": "qa_tools",
-    "version": "",
+    "version": "1.0.0",
     "description": "QA automation tools for Jira/Xray, GitLab, and GitHub",
     "main": "jira_management/main.ts",
     "scripts": {

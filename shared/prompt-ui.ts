@@ -51,10 +51,10 @@ export function icon(name: 'ok' | 'err' | 'warn' | 'info'): string {
     const useUnicode = !getConfig().quiet && Output.isTTY();
     if (useUnicode) {
         const map: Record<string, string> = { ok: '\u2713', err: '\u2717', warn: '\u26A0', info: '\u2139' };
-        return map[name]!;
+        return map[name] ?? '';
     }
     const fallback: Record<string, string> = { ok: 'OK ', err: 'ERR', warn: '!  ', info: 'i  ' };
-    return fallback[name] || fallback.info!;
+    return fallback[name] || 'i  ';
 }
 
 type LogLevel = 'INFO' | 'ERROR' | 'WARN' | 'HELP';

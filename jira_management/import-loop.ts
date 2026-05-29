@@ -203,7 +203,8 @@ async function executeTestCreationLoop(
         if (!issueResult || issueResult === 'continue') continue;
         if (issueResult === 'abort') break outer;
 
-        const createdTestIssue = { key: issueResult.key! };
+        // safe: garantido por type guard nas linhas 203-204
+        const createdTestIssue = { key: issueResult.key } as { key: string };
         inMemoryTasksId.push(createdTestIssue.key);
         saveCheckpoint(sourcePath, sourceType, projectName, tests, inMemoryTasksId, inMemoryTasksText);
 

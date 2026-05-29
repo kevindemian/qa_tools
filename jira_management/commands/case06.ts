@@ -1,23 +1,13 @@
 /** Check release-task status — verify all issues for a version are resolved. */
-import { ask, printError } from '../../shared/prompt';
-import { rootLogger } from '../../shared/logger';
+import { ask } from '../../shared/prompt';
+import { safeJiraCall } from '../../shared/jira-helper';
 import type { CommandContext } from './context';
 
 async function handler(c: CommandContext): Promise<boolean | void> {
     const version = await ask('Nome da versão', {});
-    try {
-        await c.jiraResource.checkReleaseTasksStatus(c.ctx.project_name, version);
-        c.pushHistory('verificar-status', version, 'ok');
-    } catch (err) {
-        const msg = 'Erro ao verificar status da versão "' + version + '" no projeto "' + c.ctx.project_name + '"';
-        printError(msg, err);
-        rootLogger.error(msg, {
-            version,
-            project: c.ctx.project_name,
-            status: (err as { response?: { status?: number } }).response?.status,
-        });
-        c.pushHistory('verificar-status', version, 'error');
-    }
+    await safeJiraCall(c, 'verificar-status', version, () =>
+        c.jiraResource.checkReleaseTasksStatus(c.ctx.project_name, version),
+    );
 }
 
 export default { handler };
