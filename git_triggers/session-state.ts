@@ -104,7 +104,7 @@ export function createManagerForProject(projectName: string, id: string): GitPro
     currentProvider = provider;
     if (provider === 'github') {
         const cfg = loadProvidersConfig()[projectName];
-        const repo = (cfg?.repo as string) || id;
+        const repo = cfg?.repo ?? id;
         const ghToken = Config.githubToken || Config.gitToken || '';
         const ghApiUrl = Config.githubApiUrl || 'https://api.github.com';
         return new GitHubManager(repo, ghToken, ghApiUrl);
@@ -115,10 +115,17 @@ export function createManagerForProject(projectName: string, id: string): GitPro
 export function pushHistory(op: string, detail: string, status: string): void {
     sessionContext.pushHistory(op, detail, status);
     updateState((state: StateContainer) => {
-        if (!state.history) state.history = [];
-        (state.history as Array<unknown>).push({ op, detail, status, ts: new Date().toISOString() });
-        if ((state.history as Array<unknown>).length > 50)
-            (state.history as Array<unknown>) = (state.history as Array<unknown>).slice(-50);
+        let history: Array<{ op: string; detail: string; status: string; ts: string }>;
+        if (Array.isArray(state.history)) {
+            history = state.history;
+        } else {
+            history = [];
+            state.history = history;
+        }
+        history.push({ op, detail, status, ts: new Date().toISOString() });
+        if (history.length > 50) {
+            state.history = history.slice(-50);
+        }
     });
 }
 
@@ -148,9 +155,9 @@ export async function displayRecentPipelines(m: GitProvider): Promise<void> {
         if (pipelines && pipelines.length > 0) {
             print('  Últimas pipelines:');
             pipelines.slice(0, 3).forEach((p) => {
-                const id = (p.id as string) || (p.run_number as string) || '?';
-                const ref = (p.ref as string) || (p.head_branch as string) || '';
-                const s = (p.status as string) || (p.conclusion as string) || '?';
+                const id = p.id ?? p.run_number ?? '?';
+                const ref = p.ref ?? p.head_branch ?? '';
+                const s = String(p.status ?? p.conclusion ?? '?');
                 const icon = s === 'success' ? '\u2713' : s === 'failed' ? '\u2717' : '~';
                 print('    #' + id + ' ' + ref + ' — ' + icon + ' ' + s);
             });

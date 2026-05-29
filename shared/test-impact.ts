@@ -3,6 +3,7 @@ import { execSync } from 'child_process';
 import fs from 'fs';
 import path from 'path';
 import { rootLogger } from './logger';
+import { safeParseJson } from './safe-json';
 import type { TestImpactResult, ImpactedTest, FileTestMapping } from './types';
 
 // ---- helpers ----
@@ -82,7 +83,7 @@ function explicitMapping(changedFiles: string[], mappingPath: string): ImpactedT
     try {
         if (!fs.existsSync(mappingPath)) return [];
         const content = fs.readFileSync(mappingPath, 'utf8');
-        const mappings: FileTestMapping[] = JSON.parse(content) as FileTestMapping[];
+        const mappings = safeParseJson<FileTestMapping[]>(content, []);
         const impacted: ImpactedTest[] = [];
         for (const file of changedFiles) {
             for (const mapping of mappings) {

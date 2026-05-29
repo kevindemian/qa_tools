@@ -271,6 +271,51 @@ async function reReviewParallel(
     return { confidence: winner, tier: winnerTier };
 }
 
+async function _handleAdversarialRetry(
+    system: string,
+    result: ReviewResult,
+    user: string,
+    startTime: number,
+): Promise<ReviewResult | null> {
+    if (result.confidence === 'high' || !result.reviewerNotes || result.reviewerNotes.length < 20) return null;
+    recordAdversarialRetry();
+    const improved = await adversarialRetryParallel(system, result.reviewerNotes, user, startTime);
+    if (improved === null) return null;
+    const reReview = await reReviewParallel(improved.content, startTime);
+    const bestConf =
+        (CONF_RANK[reReview.confidence] ?? 0) >= (CONF_RANK[result.confidence] ?? 0)
+            ? reReview.confidence
+            : result.confidence;
+    const finalContent =
+        bestConf !== 'high'
+            ? improved.content + '\n\n[Reviewer notes: ' + result.reviewerNotes + ']'
+            : improved.content;
+    return {
+        content: sanitizeTerminal(finalContent),
+        reviewed: true,
+        confidence: bestConf,
+        reviewerNotes: result.reviewerNotes,
+        adversarialRetried: true,
+        reReviewTier: reReview.tier,
+    };
+}
+
+async function _handleReviewFallback(
+    err: unknown,
+    system: string,
+    user: string,
+    startTime: number,
+): Promise<ReviewResult> {
+    rootLogger.warn('LLM review failed, falling back to primary: ' + (err as Error).message);
+    recordLlmFailure('main');
+    try {
+        return await callLlmFallback(system, user, startTime);
+    } catch (fallbackErr) {
+        // eslint-disable-next-line preserve-caught-error
+        throw new Error('LLM review and fallback both failed: ' + (fallbackErr as Error).message);
+    }
+}
+
 /** Run an LLM review: prompt → validate → adversarial audit → re-review → final score.
  * Returns the reviewed content plus confidence metadata. */
 export async function reviewWithLlm(system: string, user: string): Promise<ReviewResult> {
@@ -291,43 +336,14 @@ export async function reviewWithLlm(system: string, user: string): Promise<Revie
 
         const result = await performSelfReview(validated, startTime, retries);
 
-        // Adversarial retry: if confidence not high and meaningful gaps
-        if (result.confidence !== 'high' && result.reviewerNotes && result.reviewerNotes.length >= 20) {
-            recordAdversarialRetry();
-            const improved = await adversarialRetryParallel(system, result.reviewerNotes, user, startTime);
-            if (improved !== null) {
-                const reReview = await reReviewParallel(improved.content, startTime);
-                const bestConf =
-                    (CONF_RANK[reReview.confidence] ?? 0) >= (CONF_RANK[result.confidence] ?? 0)
-                        ? reReview.confidence
-                        : result.confidence;
-                const finalContent =
-                    bestConf !== 'high'
-                        ? improved.content + '\n\n[Reviewer notes: ' + result.reviewerNotes + ']'
-                        : improved.content;
-                return {
-                    content: sanitizeTerminal(finalContent),
-                    reviewed: true,
-                    confidence: bestConf,
-                    reviewerNotes: result.reviewerNotes,
-                    adversarialRetried: true,
-                    reReviewTier: reReview.tier,
-                };
-            }
-        }
+        const adversarialResult = await _handleAdversarialRetry(system, result, user, startTime);
+        if (adversarialResult) return adversarialResult;
 
         const content = result.reviewerNotes
             ? result.content + '\n\n[Reviewer notes: ' + result.reviewerNotes + ']'
             : result.content;
         return { ...result, content: sanitizeTerminal(content) };
     } catch (err) {
-        rootLogger.warn('LLM review failed, falling back to primary: ' + (err as Error).message);
-        recordLlmFailure('main');
-        try {
-            return await callLlmFallback(system, user, startTime);
-        } catch (fallbackErr) {
-            // eslint-disable-next-line preserve-caught-error
-            throw new Error('LLM review and fallback both failed: ' + (fallbackErr as Error).message);
-        }
+        return _handleReviewFallback(err, system, user, startTime);
     }
 }

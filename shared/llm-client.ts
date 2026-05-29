@@ -43,6 +43,34 @@ interface ProviderConfig {
     responseFormat?: ResponseFormat;
 }
 
+interface LlmUsage {
+    prompt_tokens?: number;
+    completion_tokens?: number;
+    total_tokens?: number;
+}
+
+interface LlmUsageMeta {
+    promptTokenCount?: number;
+    candidatesTokenCount?: number;
+    totalTokenCount?: number;
+}
+
+interface LlmCandidate {
+    content?: {
+        parts?: Array<{ text?: string }>;
+    };
+}
+
+interface LlmChoice {
+    message?: { content?: string };
+}
+
+interface LlmErrorPayload {
+    message?: string;
+    type?: string;
+    code?: string;
+}
+
 /** A cached LLM response with an absolute expiration timestamp. */
 interface CacheEntry {
     /** The response text returned by the LLM. */
@@ -98,12 +126,12 @@ function _trackUsage(data: Record<string, unknown>, providerKey: string): void {
     _llmMetrics.requestsByProviderKey[providerKey] = (_llmMetrics.requestsByProviderKey[providerKey] || 0) + 1;
     let promptTokens = 0;
     let completionTokens = 0;
-    const usage = data.usage as Record<string, number> | undefined;
+    const usage = data.usage as LlmUsage | undefined;
     if (usage) {
         promptTokens = usage.prompt_tokens || 0;
         completionTokens = usage.completion_tokens || 0;
     } else {
-        const usageMeta = data.usageMetadata as Record<string, number> | undefined;
+        const usageMeta = data.usageMetadata as LlmUsageMeta | undefined;
         if (usageMeta) {
             promptTokens = usageMeta.promptTokenCount || 0;
             completionTokens = usageMeta.candidatesTokenCount || 0;
@@ -118,10 +146,10 @@ function _trackUsage(data: Record<string, unknown>, providerKey: string): void {
 
 function extractContent(data: Record<string, unknown>, format: ProviderFormat): string {
     if (format === 'gemini') {
-        const candidates = data.candidates as Array<{ content?: { parts?: Array<{ text?: string }> } }> | undefined;
+        const candidates = data.candidates as LlmCandidate[] | undefined;
         return candidates?.[0]?.content?.parts?.[0]?.text || '';
     }
-    const choices = data.choices as Array<{ message?: { content?: string } }> | undefined;
+    const choices = data.choices as LlmChoice[] | undefined;
     return choices?.[0]?.message?.content || '';
 }
 
@@ -395,10 +423,9 @@ async function sendToProvider(cfg: ProviderConfig, system: string, user: string)
         return '';
     }
 
-    const errPayload = data.error as Record<string, unknown> | string | undefined;
+    const errPayload = data.error as LlmErrorPayload | string | undefined;
     if (errPayload) {
-        const msg =
-            typeof errPayload === 'string' ? errPayload : (errPayload.message as string) || JSON.stringify(errPayload);
+        const msg = typeof errPayload === 'string' ? errPayload : (errPayload.message ?? JSON.stringify(errPayload));
         throw new LlmProviderError('LLM API error: ' + msg);
     }
 

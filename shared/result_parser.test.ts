@@ -1,7 +1,7 @@
 import path from 'path';
 import fs from 'fs';
 import os from 'os';
-import { parseMochawesome, parseCypressResults } from './result_parser';
+import { parseMochawesome, parseCypressResults, MochawesomeData } from './result_parser';
 
 const SAMPLE_MOCHAWESOME = {
     stats: { passes: 2, failures: 1, pending: 1, tests: 4, duration: 5000 },
@@ -57,7 +57,7 @@ describe('parseMochawesome', () => {
     });
 
     it('returns empty for null input', () => {
-        const result = parseMochawesome(null as never);
+        const result = parseMochawesome(null as unknown as MochawesomeData);
         expect(result.tests).toEqual([]);
         expect(result.stats.total).toBe(0);
     });

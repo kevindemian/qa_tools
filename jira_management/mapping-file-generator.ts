@@ -20,6 +20,10 @@ interface MappingEntry {
     }>;
 }
 
+function emptyTestCase(): TestCase {
+    return { title: '', steps: [] };
+}
+
 class MappingFileGenerator {
     generate(sourcePath: string, projectName: string, tasksId: string[], tests: TestCase[]): void {
         if (!tasksId.length) return;
@@ -46,7 +50,7 @@ class MappingFileGenerator {
 
     private _buildMappings(tasksId: string[], tests: TestCase[]): MappingEntry[] {
         return tasksId.map((key, i) => {
-            const test = tests[i] || ({} as TestCase);
+            const test = tests[i] || emptyTestCase();
             const m: MappingEntry = { title: test.title || '', key };
             if (test.description) m.description = test.description;
             if (test.precondition && test.precondition.value) {
@@ -125,7 +129,7 @@ class MappingFileGenerator {
         const txtContent =
             tasksId
                 .map((key, i) => {
-                    const test = tests[i] || ({} as TestCase);
+                    const test = tests[i] || emptyTestCase();
                     return key + ': ' + (test.title || '(untitled)');
                 })
                 .join('\n') + '\n';

@@ -12,12 +12,15 @@ function readAndParse<T>(filePath: string, parser: (data: T) => ParseResult): Pa
         const json = JSON.parse(raw) as T;
         return parser(json);
     } catch (err: unknown) {
-        // err as NodeJS.ErrnoException — cobre ENOENT; SyntaxError de JSON.parse cai no else
-        const e = err as NodeJS.ErrnoException;
+        const code = err && typeof err === 'object' && 'code' in err ? String(err.code) : undefined;
         const msg =
-            e.code === 'ENOENT'
+            code === 'ENOENT'
                 ? 'Arquivo não encontrado: ' + filePath
-                : 'Erro ao ler/parsear arquivo: ' + filePath + ' (' + e.message + ')';
+                : 'Erro ao ler/parsear arquivo: ' +
+                  filePath +
+                  ' (' +
+                  (err instanceof Error ? err.message : String(err)) +
+                  ')';
         return { ...EMPTY_PARSE_RESULT, error: msg };
     }
 }
@@ -165,24 +168,23 @@ interface ParseResultWithError extends ParseResult {
 
 function _flattenTests(suite: MochawesomeSuite, parentTitle?: string): FlatTest[] {
     const tests: FlatTest[] = [];
-    const suiteTitle = suite.title || '';
+    const suiteTitle = suite.title ?? '';
     const currentPath = parentTitle ? parentTitle + ' > ' + suiteTitle : suiteTitle;
-    if (suite.tests && Array.isArray(suite.tests)) {
+    if (suite.tests) {
         for (const t of suite.tests) {
-            const rawState = t.state || 'pending';
-            const state: 'passed' | 'failed' | 'skipped' =
-                rawState === 'passed' ? 'passed' : rawState === 'failed' ? 'failed' : 'skipped';
-            const errMsg = t.err?.[0]?.message || t.err?.[0]?.title;
+            const state: FlatTest['state'] =
+                t.state === 'passed' ? 'passed' : t.state === 'failed' ? 'failed' : 'skipped';
+            const errMsg = t.err?.[0]?.message ?? t.err?.[0]?.title ?? undefined;
             tests.push({
-                title: t.title || '',
+                title: t.title ?? '',
                 state,
-                duration: t.duration || 0,
+                duration: t.duration ?? 0,
                 error: errMsg,
-                fullTitle: currentPath ? currentPath + ' > ' + (t.title || '') : undefined,
+                fullTitle: currentPath ? currentPath + ' > ' + (t.title ?? '') : undefined,
             });
         }
     }
-    if (suite.suites && Array.isArray(suite.suites)) {
+    if (suite.suites) {
         for (const sub of suite.suites) {
             tests.push(..._flattenTests(sub, currentPath));
         }
@@ -198,9 +200,7 @@ export function parseMochawesome(jsonData: MochawesomeData): ParseResult {
     rootLogger.warn(
         '[deprecated] Mochawesome format detected. Migrate to CTRF (ctrf.io) — mochawesome support will be removed in a future version.',
     );
-    if (!jsonData || !jsonData.results || !Array.isArray(jsonData.results)) {
-        return EMPTY_PARSE_RESULT;
-    }
+    if (!jsonData?.results) return EMPTY_PARSE_RESULT;
 
     const allTests: FlatTest[] = [];
     for (const result of jsonData.results) {
@@ -220,8 +220,7 @@ export function parseMochawesome(jsonData: MochawesomeData): ParseResult {
         },
         { passed: 0, failed: 0, skipped: 0 },
     );
-    const stats = jsonData.stats || {};
-    const duration = typeof stats.duration === 'number' ? stats.duration : 0;
+    const duration = jsonData.stats?.duration ?? 0;
 
     return {
         tests: allTests,
@@ -285,9 +284,9 @@ export function parseCtrfResults(jsonData: CtrfData): ParseResult {
  * @internal Not part of public API. Used internally by `parseTestResults`. */
 export function isCtrfFormat(jsonData: unknown): jsonData is CtrfData {
     if (typeof jsonData !== 'object' || jsonData === null) return false;
-    const obj = jsonData as Record<string, unknown>;
+    const obj = jsonData as CtrfData;
     if (typeof obj.results !== 'object' || obj.results === null) return false;
-    const results = obj.results as Record<string, unknown>;
+    const results = obj.results;
     return Array.isArray(results.tests) && typeof results.summary === 'object';
 }
 

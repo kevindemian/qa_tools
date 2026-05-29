@@ -1,5 +1,6 @@
 /** Close all tasks for a given version — transition unresolved issues to Done. */
-import { warn, askConfirm, ask, printSummary } from '../../shared/prompt';
+import { warn, askConfirm, ask, printSummary, printError } from '../../shared/prompt';
+import { rootLogger } from '../../shared/logger';
 import type { CommandContext } from './context';
 import { NO_TASKS_FOUND_FOR_VERSION, OPERATION_CANCELLED } from '../constants';
 
@@ -30,7 +31,9 @@ async function handler(c: CommandContext): Promise<boolean | void> {
                 const summary = taskIds.map((id) => ({ status: 'ok' as const, label: id, message: '' }));
                 printSummary(summary);
                 c.pushHistory('fechar-tarefas', taskIds.length + ' tarefa(s)', 'ok');
-            } catch {
+            } catch (err: unknown) {
+                rootLogger.error('Falha ao fechar tarefas: ' + (err as Error).message);
+                printError('Erro ao fechar tarefas', err);
                 const summary = taskIds.map((id) => ({
                     status: 'error' as const,
                     label: id,

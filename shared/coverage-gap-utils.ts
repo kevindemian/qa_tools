@@ -1,6 +1,7 @@
 /** Utility functions for coverage gap analysis: type normalization, priority weighting,
  *  epic extraction, link parsing, and aggregate calculations. */
 import type { CoverageGapItem, CoverageGapResult, EpicCoverage } from './coverage-gap';
+import type { JiraIssueFields, JiraIssue } from './types';
 
 export const PRIORITY_WEIGHTS: Record<string, number> = {
     Blocker: 5,
@@ -23,42 +24,42 @@ export function normalizeType(rawType: string): 'Story' | 'Task' | 'Bug' | 'Epic
     return 'Task';
 }
 
-export function extractEpicKey(fields: Record<string, unknown>): string | undefined {
+export function extractEpicKey(fields: JiraIssueFields): string | undefined {
     const epicField = fields['customfield_10014'] ?? fields['epic'] ?? fields['Epic'];
     if (!epicField) return undefined;
     if (typeof epicField === 'string') return epicField;
     if (typeof epicField === 'object' && epicField !== null) {
-        return (epicField as Record<string, unknown>).key as string;
+        return (epicField as JiraIssue).key;
     }
     return undefined;
 }
 
-export function extractLinkedTestKeys(fields: Record<string, unknown>): string[] {
-    const links = fields['issuelinks'];
+export function extractLinkedTestKeys(fields: JiraIssueFields): string[] {
+    const links = fields.issuelinks;
     if (!Array.isArray(links)) return [];
     const keys: string[] = [];
     for (const link of links) {
-        const linkType = link?.type as Record<string, unknown> | undefined;
+        const linkType = link?.type;
         if (!linkType || linkType.name !== 'Test') continue;
-        const inward = link?.inwardIssue as Record<string, unknown> | undefined;
-        const outward = link?.outwardIssue as Record<string, unknown> | undefined;
-        if (inward?.key) keys.push(inward.key as string);
-        if (outward?.key) keys.push(outward.key as string);
+        const inward = link?.inwardIssue;
+        const outward = link?.outwardIssue;
+        if (inward?.key) keys.push(inward.key);
+        if (outward?.key) keys.push(outward.key);
     }
     return keys;
 }
 
 export function buildCoverageItems(
-    issues: Array<{ key: string; fields: Record<string, unknown> }>,
+    issues: Array<{ key: string; fields: JiraIssueFields }>,
     testLinkMap: Map<string, string[]>,
     epicsMap: Map<string, string>,
 ): CoverageGapItem[] {
     return issues.map((issue) => {
         const fields = issue.fields;
         const summary = (fields.summary as string) || '';
-        const rawType = ((fields.issuetype as Record<string, unknown>)?.name as string) || '';
-        const status = ((fields.status as Record<string, unknown>)?.name as string) || '';
-        const priority = ((fields.priority as Record<string, unknown>)?.name as string) || 'Medium';
+        const rawType = (fields.issuetype?.name as string) || '';
+        const status = (fields.status?.name as string) || '';
+        const priority = (fields.priority?.name as string) || 'Medium';
         const epicKey = extractEpicKey(fields);
         const linkedTestKeys = extractLinkedTestKeys(fields);
         const fallbackKeys = testLinkMap.get(issue.key) || [];
@@ -141,12 +142,10 @@ export function checkQualityGate(
     return { minCoveragePct, failingEpics };
 }
 
-export function loadEpicSummaries(
-    issues: Array<{ key: string; fields: Record<string, unknown> }>,
-): Map<string, string> {
+export function loadEpicSummaries(issues: Array<{ key: string; fields: JiraIssueFields }>): Map<string, string> {
     const epics = new Map<string, string>();
     for (const issue of issues) {
-        const rawType = ((issue.fields.issuetype as Record<string, unknown>)?.name as string) || '';
+        const rawType = (issue.fields.issuetype?.name as string) || '';
         if (rawType.toLowerCase() === 'epic') {
             epics.set(issue.key, (issue.fields.summary as string) || '');
         }

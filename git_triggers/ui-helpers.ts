@@ -28,7 +28,8 @@ async function handleHelp(): Promise<void> {
 }
 
 async function handleShowHistory(): Promise<void> {
-    const history = (loadState().history as JsonObject[]) || [];
+    const state = loadState() as { history?: JsonObject[] };
+    const history = state.history ?? [];
     title('Histórico de operações');
     const last10 = history.slice(-10);
     if (last10.length === 0) {

@@ -12,48 +12,52 @@ export async function nivelarBranchesWrapper(gitlab: GitProvider): Promise<void>
 }
 
 export async function handleCreateMR(m: GitProvider): Promise<void> {
-    const sourceBranch = prompt('Branch de origem');
-    const targetBranch = prompt('Branch de destino');
-    const mrTitle = prompt('Titulo do ' + (currentProvider === 'github' ? 'PR' : 'MR'));
-    let description = '';
-    if (confirm('Gerar descrição com IA?', false)) {
-        const aiDesc = await generatePrDescription(m, sourceBranch, targetBranch);
-        if (aiDesc) {
-            info('Descrição gerada por IA.');
-            description = aiDesc;
-        } else {
-            warn('IA não retornou descrição. Insira manualmente.');
-        }
-    }
-    if (!description) {
-        description = prompt('Descrição');
-    }
-    if (confirm('Analisar impacto nos testes com IA?', false)) {
-        const mappingPath = reportsDir() + '/*jira-mapping.json';
-        const impact = await assessTestImpact(m, sourceBranch, targetBranch, mappingPath || undefined);
-        if (impact) {
-            info('Impacto nos testes:');
-            divider();
-            print(impact);
-            divider();
-            pushHistory('test-impact', sourceBranch + '->' + targetBranch, 'ok');
-        } else {
-            warn('IA não retornou análise de impacto.');
-        }
-    }
-    const prLabel = currentProvider === 'github' ? 'PR' : 'MR';
     try {
-        const result = await withSpinner(
-            'Criando ' + prLabel + ' ' + sourceBranch + ' -> ' + targetBranch + '...',
-            () => m.createMergeRequest(sourceBranch, targetBranch, mrTitle, description),
-        );
-        if (result) {
-            success(prLabel + ' criado: ' + String(result.web_url));
-            pushHistory('pr-create', sourceBranch + '->' + targetBranch, 'ok');
+        const sourceBranch = prompt('Branch de origem');
+        const targetBranch = prompt('Branch de destino');
+        const mrTitle = prompt('Titulo do ' + (currentProvider === 'github' ? 'PR' : 'MR'));
+        let description = '';
+        if (confirm('Gerar descrição com IA?', false)) {
+            const aiDesc = await generatePrDescription(m, sourceBranch, targetBranch);
+            if (aiDesc) {
+                info('Descrição gerada por IA.');
+                description = aiDesc;
+            } else {
+                warn('IA não retornou descrição. Insira manualmente.');
+            }
+        }
+        if (!description) {
+            description = prompt('Descrição');
+        }
+        if (confirm('Analisar impacto nos testes com IA?', false)) {
+            const mappingPath = reportsDir() + '/*jira-mapping.json';
+            const impact = await assessTestImpact(m, sourceBranch, targetBranch, mappingPath || undefined);
+            if (impact) {
+                info('Impacto nos testes:');
+                divider();
+                print(impact);
+                divider();
+                pushHistory('test-impact', sourceBranch + '->' + targetBranch, 'ok');
+            } else {
+                warn('IA não retornou análise de impacto.');
+            }
+        }
+        const prLabel = currentProvider === 'github' ? 'PR' : 'MR';
+        try {
+            const result = await withSpinner(
+                'Criando ' + prLabel + ' ' + sourceBranch + ' -> ' + targetBranch + '...',
+                () => m.createMergeRequest(sourceBranch, targetBranch, mrTitle, description),
+            );
+            if (result) {
+                success(prLabel + ' criado: ' + String(result.web_url));
+                pushHistory('pr-create', sourceBranch + '->' + targetBranch, 'ok');
+            }
+        } catch (err) {
+            printError('Falha ao criar ' + prLabel, err);
+            pushHistory('pr-create', sourceBranch + '->' + targetBranch, 'error');
         }
     } catch (err) {
-        printError('Falha ao criar ' + prLabel, err);
-        pushHistory('pr-create', sourceBranch + '->' + targetBranch, 'error');
+        printError('Falha ao criar MR', err);
     }
 }
 

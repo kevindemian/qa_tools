@@ -27,11 +27,57 @@ module.exports = tseslint.config(
             '@typescript-eslint/no-unsafe-call': 'off',
         },
     },
+    // Layer restriction E5.1: shared/ must not import jira_management/ or git_triggers/
+    {
+        files: ['shared/**/*.ts', 'shared/**/*.js'],
+        rules: {
+            'no-restricted-imports': [
+                'error',
+                {
+                    patterns: [
+                        {
+                            group: [
+                                '../jira_management',
+                                '../jira_management/*',
+                                '../git_triggers',
+                                '../git_triggers/*',
+                            ],
+                            message:
+                                'Layer violation [E5.1]: shared/ must not import from jira_management/ or git_triggers/',
+                        },
+                    ],
+                },
+            ],
+        },
+    },
+    // Layer restriction E5.1: jira_management/ must not import git_triggers/
+    {
+        files: ['jira_management/**/*.ts', 'jira_management/**/*.js'],
+        rules: {
+            'no-restricted-imports': [
+                'error',
+                {
+                    patterns: [
+                        {
+                            group: [
+                                '../git_triggers',
+                                '../git_triggers/*',
+                                '../../git_triggers',
+                                '../../git_triggers/*',
+                            ],
+                            message: 'Layer violation [E5.1]: jira_management/ must not import from git_triggers/',
+                        },
+                    ],
+                },
+            ],
+        },
+    },
     {
         files: [
             'shared/prompt.ts',
             'shared/logger.ts',
             'shared/splash.ts',
+            'jira_management/ui-helpers.ts',
             'docs/**/*.ts',
             'jira_management/main.ts',
             'git_triggers/main.ts',
@@ -60,6 +106,7 @@ module.exports = tseslint.config(
             'no-console': 'off',
             '@typescript-eslint/no-require-imports': 'off',
             '@typescript-eslint/no-unnecessary-type-assertion': 'off',
+            'no-restricted-imports': 'off',
         },
     },
     { ignores: ['node_modules/', 'docs-archive/', '**/*.js'] },

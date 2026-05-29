@@ -432,3 +432,187 @@ export interface HealthScoreResult {
     runCount: number;
     timestamp: string;
 }
+
+// ── Jira API response interfaces (E2.1: typed alternatives to Record<string, unknown>) ──
+
+/** Minimal Jira issue type from API responses. */
+export interface JiraIssueType {
+    id?: string;
+    name?: string;
+    description?: string;
+    subtask?: boolean;
+}
+
+/** Minimal Jira status from API responses. */
+export interface JiraStatus {
+    id?: string;
+    name?: string;
+    description?: string;
+    statusCategory?: {
+        id?: number;
+        key?: string;
+        name?: string;
+    };
+}
+
+/** Minimal Jira priority from API responses. */
+export interface JiraPriority {
+    id?: string;
+    name?: string;
+    description?: string;
+    iconUrl?: string;
+}
+
+/** Minimum fields shape returned by Jira REST /search or /issue endpoints. */
+export interface JiraIssueFields {
+    summary?: string;
+    description?: string;
+    status?: JiraStatus;
+    priority?: JiraPriority;
+    issuetype?: JiraIssueType;
+    labels?: string[];
+    fixVersions?: Array<{ id?: string; name?: string; released?: boolean }>;
+    project?: { id?: string; key?: string; name?: string };
+    issuelinks?: JiraIssueLink[];
+    [key: string]: unknown; // allow custom fields
+}
+
+/** An issue link between two Jira issues. */
+export interface JiraIssueLink {
+    id?: string;
+    type?: {
+        id?: string;
+        name?: string;
+        inward?: string;
+        outward?: string;
+    };
+    inwardIssue?: { id?: string; key?: string; fields?: JiraIssueFields };
+    outwardIssue?: { id?: string; key?: string; fields?: JiraIssueFields };
+}
+
+/** A single Jira issue from REST API responses. */
+export interface JiraIssue {
+    id: string;
+    key: string;
+    self?: string;
+    fields: JiraIssueFields;
+}
+
+/** Paginated search result from Jira REST /search. */
+export interface JiraSearchResult {
+    issues: JiraIssue[];
+    total: number;
+    startAt: number;
+    maxResults: number;
+}
+
+// ── GitHub/GitLab API response interfaces (E2.1) ──
+
+/** GitHub Actions workflow run item. */
+export interface GitHubWorkflowRun {
+    id: number;
+    run_number: number;
+    name?: string;
+    head_branch?: string;
+    head_sha?: string;
+    status?: string;
+    conclusion?: string;
+    created_at?: string;
+    updated_at?: string;
+    html_url?: string;
+    event?: string;
+    head_commit?: {
+        id?: string;
+        message?: string;
+        author?: { name?: string };
+    };
+}
+
+/** GitHub Actions workflow runs API response. */
+export interface GitHubWorkflowRunsResponse {
+    total_count: number;
+    workflow_runs: GitHubWorkflowRun[];
+}
+
+/** GitHub Actions artifact item. */
+export interface GitHubArtifact {
+    id: number;
+    name: string;
+    size_in_bytes?: number;
+    created_at?: string;
+}
+
+/** GitHub Actions artifacts API response. */
+export interface GitHubArtifactsResponse {
+    artifacts: GitHubArtifact[];
+}
+
+/** GitLab CI pipeline item. */
+export interface GitLabPipeline {
+    id: number;
+    ref?: string;
+    status?: string;
+    web_url?: string;
+    created_at?: string;
+    updated_at?: string;
+}
+
+/** GitLab CI job item. */
+export interface GitLabJob {
+    id: number;
+    name: string;
+    stage?: string;
+    status?: string;
+    artifacts_file?: { filename?: string };
+    artifacts?: Array<{ file_type?: string }>;
+}
+
+// ── Xray Cloud GraphQL response interfaces (E2.1) ──
+
+/** A single test run entry from Xray Cloud GraphQL. */
+export interface XrayTestRun {
+    id?: string;
+    status?: { name?: string };
+    testExecution?: { key?: string; id?: string; issueId?: string };
+    startedOn?: string;
+    finishedOn?: string;
+}
+
+/** Xray Cloud GraphQL getTestRuns response shape. */
+export interface XrayGetTestRunsResponse {
+    data?: {
+        getTestRuns?: {
+            results?: XrayTestRun[];
+        };
+    };
+}
+
+// ── CTRF validation interfaces (E2.1) ──
+
+/** A known issue parsed from known-issues.json. */
+export interface KnownIssueEntry {
+    pattern: string;
+    reason: string;
+    ticket?: string;
+}
+
+// ── Cross-layer type interfaces (E5.1: shared/ cannot import jira_management/ directly) ──
+
+/** Minimal JiraResource interface for cross-layer type references. */
+export interface JiraResourceLike {
+    getJiraResource<T = unknown>(url: string): Promise<T>;
+    postJiraResource<T = unknown>(url: string, data?: unknown): Promise<T>;
+    putJiraResource<T = unknown>(url: string, data?: unknown): Promise<T | null>;
+    searchJiraIssues(jql: string, maxResults?: number): Promise<SearchIssuesResponse>;
+}
+
+/** Minimal shape returned by Jira issue search. */
+export interface SearchIssuesResponse {
+    issues: Array<{ key: string; fields: Record<string, unknown> }>;
+    total: number;
+}
+
+/** Minimal JiraLinkManager interface for cross-layer type references. */
+export interface JiraLinkManagerLike {
+    linkIssues(sourceKey: string, linkedIssues: Array<{ key: string; linkType: string }>): Promise<unknown>;
+}
