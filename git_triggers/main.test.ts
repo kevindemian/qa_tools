@@ -762,7 +762,7 @@ describe('handleTriggerPipeline', () => {
 
 describe('handleFlakinessDashboard', () => {
     it('warns when fewer than 2 runs exist for current project', () => {
-        mainModule.handleFlakinessDashboard();
+        void mainModule.handleFlakinessDashboard();
         expect(prompt.warn).toHaveBeenCalledWith(expect.stringContaining('Menos de 2 execuções registradas'));
     });
 });
