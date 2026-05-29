@@ -251,17 +251,17 @@ Elevar reports ao nível Allure (padrão ouro mercado). 3 sprints independentes.
 
 ## ✅ Pipeline Health Reporting (GitHub e2e gold-standard) ✅
 
-| #   | Item                                                                 | Prioridade | Status | Arquivos                                      |
-| --- | -------------------------------------------------------------------- | ---------- | ------ | --------------------------------------------- |
-| 1.1 | Extender `PipelineJob` + `PipelineRun` + `Issue` interface           | P1         | ✅     | `shared/types.ts`                             |
-| 1.2 | `GitHubManager.getOpenIssues()` + `getJobLogs()`                     | P1         | ✅     | `git_triggers/github_manager.ts`              |
-| 2.1 | `aggregatePipelineHealth()` — pass rate, top failing jobs, breakdown | P1         | ✅     | `git_triggers/pipeline-health.ts`             |
-| 2.2 | `categorizePipelineFailure()` — LLM classificação de erro            | P1         | ✅     | `git_triggers/pipeline-health.ts`             |
-| 2.3 | `renderPipelineHealthHtml()` — HTML com cards, tabelas, seções       | P1         | ✅     | `git_triggers/pipeline-health.ts`             |
-| 2.4 | Tests unitários (19 testes com fixtures)                             | P1         | ✅     | `git_triggers/pipeline-health.test.ts`        |
-| 2.5 | Prompt `classify-pipeline-failure.md`                                | P1         | ✅     | `shared/prompts/classify-pipeline-failure.md` |
-| 3.1 | `github-e2e.test.ts` rewrite: fetch → pure functions → HTML          | P1         | ✅     | `git_triggers/github-e2e.test.ts`             |
-| 3.2 | Persistir snapshot no `metrics.ts`                                   | P2         | 🚧     | —                                             |
+| #   | Item                                                                 | Prioridade | Status | Arquivos                                                         |
+| --- | -------------------------------------------------------------------- | ---------- | ------ | ---------------------------------------------------------------- |
+| 1.1 | Extender `PipelineJob` + `PipelineRun` + `Issue` interface           | P1         | ✅     | `shared/types.ts`                                                |
+| 1.2 | `GitHubManager.getOpenIssues()` + `getJobLogs()`                     | P1         | ✅     | `git_triggers/github_manager.ts`                                 |
+| 2.1 | `aggregatePipelineHealth()` — pass rate, top failing jobs, breakdown | P1         | ✅     | `git_triggers/pipeline-health.ts`                                |
+| 2.2 | `categorizePipelineFailure()` — LLM classificação de erro            | P1         | ✅     | `git_triggers/pipeline-health.ts`                                |
+| 2.3 | `renderPipelineHealthHtml()` — HTML com cards, tabelas, seções       | P1         | ✅     | `git_triggers/pipeline-health.ts`                                |
+| 2.4 | Tests unitários (19 testes com fixtures)                             | P1         | ✅     | `git_triggers/pipeline-health.test.ts`                           |
+| 2.5 | Prompt `classify-pipeline-failure.md`                                | P1         | ✅     | `shared/prompts/classify-pipeline-failure.md`                    |
+| 3.1 | `github-e2e.test.ts` rewrite: fetch → pure functions → HTML          | P1         | ✅     | `git_triggers/github-e2e.test.ts`                                |
+| 3.2 | Persistir snapshot no `metrics.ts`                                   | P2         | ✅     | `shared/metrics.ts` (saveCoverageSnapshot), `case19.ts` (caller) |
 
 ---
 
@@ -278,3 +278,52 @@ Elevar reports ao nível Allure (padrão ouro mercado). 3 sprints independentes.
 ## ✅ Histórico
 
 Itens concluídos em sessões anteriores: [`BACKLOG-historico.md`](BACKLOG-historico.md).
+
+---
+
+## 🔷 Sprint Atual — QA Tools v2 (Pareto) 🔷
+
+### ✅ Sprint 1 — P0 (Gap Analysis + Health Score) ✅
+
+| #   | Feature                | Arquivos                                                                                                                     | LOC  | Status |
+| --- | ---------------------- | ---------------------------------------------------------------------------------------------------------------------------- | ---- | ------ |
+| 1   | Gap Analysis — shared  | `shared/coverage-gap.ts`, `shared/coverage-gap.test.ts`, `shared/coverage-gap-utils.ts`, `shared/coverage-gap-utils.test.ts` | 408  | ✅     |
+| 2   | Gap Analysis — HTML    | `shared/generate-coverage-gap-html.ts`                                                                                       | 233  | ✅     |
+| 3   | Gap Analysis — handler | `jira_management/commands/case21.ts`, `case21.test.ts`                                                                       | 256  | ✅     |
+| 4   | Health Score — shared  | `shared/health-score.ts`, `shared/health-score.test.ts`                                                                      | 903  | ✅     |
+| 5   | Health Score — report  | `shared/report-generator.ts` (mod)                                                                                           | +50  | ✅     |
+| 6   | Types                  | `shared/types.ts` (mod) + novas interfaces                                                                                   | +150 | ✅     |
+
+### ✅ Sprint 2 — P1 (Flaky Auto-action + Test Impact) ✅
+
+| #   | Feature                         | Arquivos                                                     | LOC | Status |
+| --- | ------------------------------- | ------------------------------------------------------------ | --- | ------ |
+| 7   | Flaky Auto-action — shared      | `shared/flaky-auto-actions.ts`, `flaky-auto-actions.test.ts` | 484 | ✅     |
+| 8   | Flaky Auto-action — integration | `batch-mode.ts`, `schedule-handler.ts` (mod)                 | +40 | ✅     |
+| 9   | Test Impact — shared            | `shared/test-impact.ts`, `test-impact.test.ts`               | 507 | ✅     |
+| 10  | Test Impact — handler           | `jira_management/commands/case22.ts`, `case22.test.ts`       | 130 | ✅     |
+
+### ✅ Sprint 3 — P2 (AI Feedback Loop + Init Wizard) ✅
+
+| #   | Feature               | Arquivos                                               | LOC | Status |
+| --- | --------------------- | ------------------------------------------------------ | --- | ------ |
+| 11  | AI Feedback — shared  | `shared/ai-feedback.ts`, `ai-feedback.test.ts`         | 220 | ✅     |
+| 12  | AI Feedback — handler | `jira_management/commands/case23.ts`, `case23.test.ts` | 130 | ✅     |
+| 13  | Init Wizard — handler | `jira_management/commands/case00.ts`, `case00.test.ts` | 55  | ✅     |
+| 14  | Menu integration      | `jira_management/main.ts` (mod)                        | +50 | ✅     |
+
+---
+
+### 🔷 Integrações Pós-Sprint 🔷
+
+| ID  | Feature                          | Arquivos                                    | LOC | Prioridade | Status |
+| --- | -------------------------------- | ------------------------------------------- | --- | ---------- | ------ |
+| N   | AI Generation → feedback loop    | `case18.ts`, `case18.test.ts` (mod)         | 15  | P0         | ✅     |
+| I1  | Health Score no case19           | `case19.ts`, `case19.test.ts` (mod)         | 25  | P1         | ✅     |
+| O   | Flaky auto-actions interativo    | `case19.ts`, `case19.test.ts` (mod)         | 20  | P1         | ✅     |
+| K   | Coverage gap → AI gen suggestion | `case21.ts`, `case21.test.ts` (mod)         | 25  | P2         | ✅     |
+| C   | Test Impact → Gap hint           | `case22.ts`, `case22.test.ts` (mod)         | 8   | P2         | ✅     |
+| I   | Test Impact → TE hint            | `case22.ts`, `case22.test.ts` (mod)         | 10  | P2         | ✅     |
+| D   | Flaky footnote no Test Impact    | `case22.ts`, `case22.test.ts` (mod)         | 5   | P2         | ✅     |
+| L   | Diagnostics + Health Check       | `case12.ts`, `case12.test.ts` (mod/new)     | 15  | P2         | ✅     |
+| G   | Wizard detect existing config    | `setup/main.ts`, `setup/main.test.ts` (mod) | 20  | P3         | ✅     |

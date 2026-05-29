@@ -341,3 +341,147 @@ export interface BugReport {
         provider?: string;
     };
 }
+
+/** A single item in a coverage gap analysis. */
+export interface CoverageGapItem {
+    issueKey: string;
+    summary: string;
+    type: 'Story' | 'Task' | 'Bug' | 'Epic';
+    status: string;
+    epicKey?: string;
+    epicSummary?: string;
+    hasTest: boolean;
+    linkedTestKeys: string[];
+    priority: string;
+    coverageWeight: number;
+    lastRunPassed?: boolean;
+    lastRunDate?: string;
+}
+
+/** Result of a coverage gap analysis. */
+export interface CoverageGapResult {
+    items: CoverageGapItem[];
+    totals: { totalIssues: number; covered: number; gap: number; weightedCoveragePct: number; rawCoveragePct: number };
+    byEpic: Record<string, EpicCoverage>;
+    gateConfig: { minCoveragePct: number; failingEpics: string[] };
+    hierarchy: CoverageHierarchyNode[];
+    trends: import('./metrics').CoverageSnapshot[];
+}
+
+/** Coverage data for a single epic. */
+export interface EpicCoverage {
+    epicSummary: string;
+    total: number;
+    covered: number;
+    weightedPct: number;
+    rawPct: number;
+    gatePass: boolean;
+    issues: CoverageGapItem[];
+}
+
+/** A node in the coverage hierarchy tree. */
+export interface CoverageHierarchyNode {
+    key: string;
+    summary: string;
+    type: 'Epic' | 'Story' | 'Task' | 'Bug';
+    children: CoverageHierarchyNode[];
+    totalIssues: number;
+    coveredIssues: number;
+    coveragePct: number;
+}
+
+/** Configuration for flaky auto-actions. */
+export interface FlakyActionConfig {
+    threshold: number;
+    autoCreateBug: boolean;
+    bugPriority: string;
+    minTotalRuns: number;
+    dedupSearch: boolean;
+    windowSize: number;
+}
+
+/** A flaky auto-action result. */
+export interface FlakyAction {
+    testTitle: string;
+    flakyRate: number;
+    passCount: number;
+    failCount: number;
+    totalRuns: number;
+    lastErrorMessages: string[];
+    action: 'create_bug' | 'flag_in_report' | 'quarantine' | 'reenable' | 'none';
+    jiraBugKey?: string;
+    reason: string;
+}
+
+/** Maps source file patterns to associated test metadata (for Tier 3 explicit mapping). */
+export interface FileTestMapping {
+    files: string[];
+    testKeys: string[];
+    testTitles: string[];
+    testFiles: string[];
+}
+
+/** Test impact analysis result. */
+export interface TestImpactResult {
+    changedFiles: string[];
+    impactedTests: ImpactedTest[];
+    unaffected: { total: number; skippedDueTo: string[] };
+    suggestedCommand?: string;
+    confidence: 'high' | 'medium' | 'low';
+}
+
+/** A single impacted test. */
+export interface ImpactedTest {
+    testKey?: string;
+    title: string;
+    reason: string;
+    matchMode: 'mapping' | 'keyword' | 'jest_find_related';
+    filePattern?: string;
+}
+
+/** AI generation feedback record. */
+export interface AiGenerationRecord {
+    id: string;
+    generatedAt: string;
+    promptVersion: string;
+    userStory: string;
+    acceptanceCriteria: string;
+    generatedTests: Array<{ title: string; preConditions: string[]; stepCount: number }>;
+    preconditionMatches: Array<{ summary: string; matchType: string }>;
+    feedback?: AiModification[];
+}
+
+/** A single AI modification record. */
+export interface AiModification {
+    testKey: string;
+    recordedAt: string;
+    action: 'kept' | 'modified' | 'deleted';
+    reason?: string;
+}
+
+/** Grade label for health score classification. */
+export type HealthScoreGrade = 'excellent' | 'good' | 'needs_attention' | 'critical';
+
+/** Result for a single dimension within the health score. */
+export interface HealthScoreDimensionResult {
+    score: number;
+    status: 'pass' | 'fail';
+}
+
+/** All four dimensions of the health score. */
+export interface HealthScoreDimensions {
+    passRate: HealthScoreDimensionResult;
+    flakyRate: HealthScoreDimensionResult;
+    coverage: HealthScoreDimensionResult;
+    suiteSpeed: HealthScoreDimensionResult;
+}
+
+/** Overall health score result with per-dimension breakdown. */
+export interface HealthScoreResult {
+    overall: number;
+    grade: HealthScoreGrade;
+    qualityGate: 'pass' | 'fail';
+    dimensions: HealthScoreDimensions;
+    runCount: number;
+    timestamp: string;
+}

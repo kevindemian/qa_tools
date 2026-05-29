@@ -1,8 +1,9 @@
-/** Diagnose Jira/Xray connection by probing key endpoints. */
+/** Diagnose Jira/Xray connection by probing key endpoints, plus local health readiness. */
 import { title, printSummary, divider, badge, tableView } from '../../shared/prompt';
 import { sanitizeUrl } from '../../shared/cli_base';
 import { palette } from '../../shared/palette';
 import { defaultOutput } from '../../shared/output';
+import { loadMetrics } from '../../shared/metrics';
 import type { CommandContext } from './context';
 import type { TestResult } from '../../shared/types';
 
@@ -31,9 +32,27 @@ async function handler(c: CommandContext): Promise<boolean | void> {
         }
     }
 
+    const store = loadMetrics();
+    const projectRuns = store.runs.filter((r) => r.project === c.ctx.project_name);
+    const coverageCount = store.coverageHistory?.length || 0;
+    const healthReady = projectRuns.length >= 10 && coverageCount > 0;
+    let healthMsg = healthReady ? 'pronto' : 'insuficiente';
+    if (!healthReady) {
+        const missing: string[] = [];
+        if (projectRuns.length < 10) missing.push(projectRuns.length + '/' + 10 + ' runs');
+        if (coverageCount === 0) missing.push('sem snapshots de cobertura');
+        healthMsg += ' (' + missing.join(', ') + ')';
+    }
+
+    diagResults.push({
+        status: healthReady ? 'ok' : 'warn',
+        label: 'Health Score',
+        message: healthMsg,
+    });
+
     const tableData = diagResults.map((r) => ({
         Endpoint: r.label,
-        Status: r.status === 'ok' ? '🟢 ' + r.message : '🔴 ' + r.message,
+        Status: r.status === 'ok' ? '🟢 ' + r.message : r.status === 'warn' ? '🟡 ' + r.message : '🔴 ' + r.message,
         Time: r.message,
     }));
     tableView(tableData, ['Endpoint', 'Status', 'Time'], 'Status');
@@ -47,6 +66,12 @@ async function handler(c: CommandContext): Promise<boolean | void> {
             defaultOutput.print(palette.red('  ✖ ' + r.label + ': ' + r.message));
             defaultOutput.print(palette.blue('    → Check JIRA_BASE_URL e JIRA_TOKEN no .env'));
         }
+    }
+
+    if (!healthReady) {
+        defaultOutput.print(
+            palette.yellow('  ⚡ Dica: rode pipelines para acumular métricas e gere cobertura (opção 19).'),
+        );
     }
 
     divider();

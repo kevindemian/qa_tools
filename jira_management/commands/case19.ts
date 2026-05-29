@@ -1,11 +1,23 @@
-/** History/Coverage dashboard — execution trends, flakiness analysis, coverage gaps. */
-import { info, warn, title, divider, tableView, printError, showSelect, withSpinner } from '../../shared/prompt';
+/** History/Coverage dashboard — execution trends, flakiness analysis, health score, coverage gaps. */
+import {
+    info,
+    warn,
+    title,
+    divider,
+    tableView,
+    printError,
+    showSelect,
+    withSpinner,
+    askConfirm,
+} from '../../shared/prompt';
 import { loadMetrics, calculateFlakiness, getTrends, saveCoverageSnapshot } from '../../shared/metrics';
+import { calculateHealthScore } from '../../shared/health-score';
+import { executeFlakyActions } from '../../shared/flaky-auto-actions';
 import { analyzeCoverage } from '../coverage';
 import { compareRuns } from '../../shared/run-comparison';
 import type { CommandContext } from './context';
 
-async function showHistory(): Promise<void> {
+async function showHistory(c: CommandContext): Promise<void> {
     const store = loadMetrics();
     if (store.runs.length === 0) {
         warn('Nenhuma execução registrada.');
@@ -46,6 +58,19 @@ async function showHistory(): Promise<void> {
             Rate: `${Math.round(f.rate * 100)}%`,
         }));
         tableView(flakyRows, ['Teste', 'Pass', 'Fail', 'Rate']);
+        if (await askConfirm('Aplicar auto-actions (criar bugs) para testes flaky?', false)) {
+            try {
+                const actions = await executeFlakyActions(store, c.jiraResource, c.ctx.project_name, {
+                    autoCreateBug: true,
+                    minTotalRuns: 5,
+                    dedupSearch: true,
+                });
+                const bugs = actions.filter((a) => a.action === 'create_bug' || a.action === 'reenable');
+                info(bugs.length + ' auto-action(s) executada(s) para testes flaky.');
+            } catch (err: unknown) {
+                printError('Erro ao executar auto-actions', err);
+            }
+        }
     }
 
     const trends = getTrends(store, 10);
@@ -59,6 +84,36 @@ async function showHistory(): Promise<void> {
             'Pass Rate': `${Math.round(t.passRate)}%`,
         }));
         tableView(trendRows, ['Data', 'Total', 'Falhas', 'Pass Rate']);
+    }
+
+    if (store.runs.length >= 5) {
+        divider();
+        const health = calculateHealthScore(store);
+        const qcIcon = health.qualityGate === 'pass' ? '✅' : '❌';
+        title('Test Suite Health — ' + health.overall + '/100 (' + health.grade.replace(/_/g, ' ') + ') ' + qcIcon);
+        const dimRows = [
+            {
+                Dimensão: 'Pass Rate',
+                Score: health.dimensions.passRate.score,
+                Status: health.dimensions.passRate.status === 'pass' ? '✅' : '❌',
+            },
+            {
+                Dimensão: 'Flaky Rate',
+                Score: health.dimensions.flakyRate.score,
+                Status: health.dimensions.flakyRate.status === 'pass' ? '✅' : '❌',
+            },
+            {
+                Dimensão: 'Coverage',
+                Score: health.dimensions.coverage.score,
+                Status: health.dimensions.coverage.status === 'pass' ? '✅' : '❌',
+            },
+            {
+                Dimensão: 'Suite Speed',
+                Score: health.dimensions.suiteSpeed.score,
+                Status: health.dimensions.suiteSpeed.status === 'pass' ? '✅' : '❌',
+            },
+        ];
+        tableView(dimRows, ['Dimensão', 'Score', 'Status']);
     }
 }
 
@@ -120,7 +175,7 @@ async function handler(c: CommandContext): Promise<boolean | void> {
         if (choice === '0') return;
 
         if (choice === 'a') {
-            await showHistory();
+            await showHistory(c);
         } else if (choice === 'b') {
             await showCoverage(c);
         }

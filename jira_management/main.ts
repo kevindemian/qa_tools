@@ -168,6 +168,15 @@ const ALIASES: Record<string, string> = {
     estória: '18',
     história: '18',
     cobertura: '19',
+    'gap-analysis': '21',
+    gaps: '21',
+    'test-impact': '22',
+    impacto: '22',
+    'ai-feedback': '23',
+    feedback: '23',
+    setup: '00',
+    wizard: '00',
+    'setup-wizard': '00',
     bug: '20',
     'bug-report': '20',
     bugreport: '20',
@@ -238,6 +247,9 @@ const SUB_MENUS: Record<string, MenuItem[]> = {
     ],
     analytics: [
         { id: '19', label: 'Histórico / Cobertura' },
+        { id: '21', label: 'Análise de gaps de cobertura' },
+        { id: '22', label: 'Impacto de mudanças (test impact)' },
+        { id: '23', label: 'Feedback de IA' },
         { id: '0', label: 'Voltar' },
     ],
     releases: [
@@ -260,6 +272,7 @@ const SUB_MENUS: Record<string, MenuItem[]> = {
     utilities: [
         { id: '11', label: 'Gerar template (CSV/JSON)' },
         { id: '12', label: 'Diagnosticar conexão' },
+        { id: '00', label: 'Setup wizard (CI/CD)' },
         { id: 'd', label: 'Ver documentação' },
         { id: '0', label: 'Voltar' },
     ],

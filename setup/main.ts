@@ -1,6 +1,7 @@
 import fs from 'fs';
 import path from 'path';
 import { ask, askConfirm, title, info, divider } from '../shared/prompt';
+import { loadTypedState } from '../shared/state';
 import { detectFramework, extractRepoFromGit } from './detector';
 import { writeProjectsConfig, writeDotEnvExample, writePrePushHook as writeHookFile } from './config-writer';
 import { generateGitHubActions } from './templates/github-ci';
@@ -24,13 +25,16 @@ async function promptGitProvider(): Promise<GitProvider> {
     return answer.trim().toLowerCase() === 'gitlab' ? 'gitlab' : 'github';
 }
 
-async function promptProjectName(detected: string): Promise<string> {
-    const answer = await ask('Project name', { default: detected });
-    return answer.trim() || detected;
+async function promptProjectName(detected: string, existing?: string): Promise<string> {
+    const answer = await ask('Project name', { default: existing || detected });
+    return answer.trim() || existing || detected;
 }
 
 async function main(): Promise<void> {
     title('QA Tools — Auto Setup');
+
+    const state = loadTypedState();
+    const lastProject = state.lastProject || '';
 
     const detection = detectFramework();
 
@@ -38,7 +42,7 @@ async function main(): Promise<void> {
     info('Comando de teste: ' + detection.testCmd);
 
     const gitInfo = extractRepoFromGit();
-    const projectName = await promptProjectName(gitInfo.repo || 'meu-projeto');
+    const projectName = await promptProjectName(gitInfo.repo || 'meu-projeto', lastProject);
     const gitProvider = gitInfo.owner ? detectGitProvider() : await promptGitProvider();
     const repoOwner = gitInfo.owner || (await ask('Repo owner (user/org)', { default: '' }));
     const repoName = gitInfo.repo || projectName;

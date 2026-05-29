@@ -6,7 +6,7 @@ jest.mock('../../shared/prompt', () => ({
     title: jest.fn(),
     divider: jest.fn(),
     ask: jest.fn().mockResolvedValue(''),
-    askConfirm: jest.fn().mockResolvedValue(true),
+    askConfirm: jest.fn().mockResolvedValue(false),
     printError: jest.fn(),
     tableView: jest.fn(),
     showSelect: jest.fn().mockResolvedValue('0'),
@@ -18,6 +18,14 @@ jest.mock('../../shared/metrics', () => ({
     calculateFlakiness: jest.fn(),
     getTrends: jest.fn(),
     saveCoverageSnapshot: jest.fn(),
+}));
+
+jest.mock('../../shared/health-score', () => ({
+    calculateHealthScore: jest.fn(),
+}));
+
+jest.mock('../../shared/flaky-auto-actions', () => ({
+    executeFlakyActions: jest.fn().mockResolvedValue([]),
 }));
 
 jest.mock('../../shared/run-comparison', () => ({
@@ -280,6 +288,99 @@ describe('case19 — History & Coverage', () => {
 
         expect(prompt.warn).not.toHaveBeenCalled();
         expect(prompt.title).not.toHaveBeenCalledWith('Gaps por épico');
+    });
+
+    it('shows health score when enough runs exist', async () => {
+        const prompt = require('../../shared/prompt');
+        const metrics = require('../../shared/metrics');
+        const healthScore = require('../../shared/health-score');
+
+        prompt.showSelect.mockResolvedValueOnce('a').mockResolvedValueOnce('0');
+
+        metrics.loadMetrics.mockReturnValueOnce({
+            runs: Array.from({ length: 10 }, (_, i) => ({
+                timestamp: `2026-01-${String(i + 1).padStart(2, '0')}T10:00:00Z`,
+                project: 'TEST',
+                total: 10,
+                passed: 9,
+                failed: 1,
+                skipped: 0,
+                duration: 100,
+                tests: [],
+            })),
+            coverageHistory: [
+                { timestamp: '2026-01-01', project: 'TEST', totalIssues: 100, mappedIssues: 80, coveragePct: 80 },
+            ],
+        });
+        metrics.calculateFlakiness.mockReturnValueOnce([]);
+        metrics.getTrends.mockReturnValueOnce([]);
+        healthScore.calculateHealthScore.mockReturnValueOnce({
+            overall: 85,
+            grade: 'good',
+            qualityGate: 'pass',
+            runCount: 10,
+            timestamp: '2026-01-10',
+            dimensions: {
+                passRate: { score: 90, status: 'pass' },
+                flakyRate: { score: 80, status: 'pass' },
+                coverage: { score: 85, status: 'pass' },
+                suiteSpeed: { score: 75, status: 'pass' },
+            },
+        });
+
+        const mod = require('./case19').default;
+        await mod.handler(baseContext);
+
+        expect(healthScore.calculateHealthScore).toHaveBeenCalled();
+        expect(prompt.tableView).toHaveBeenCalledWith(
+            expect.arrayContaining([expect.objectContaining({ Dimensão: 'Pass Rate', Score: 90 })]),
+            expect.any(Array),
+        );
+    });
+
+    it('executes flaky auto-actions when confirmed', async () => {
+        const prompt = require('../../shared/prompt');
+        const metrics = require('../../shared/metrics');
+        const flakyActions = require('../../shared/flaky-auto-actions');
+        const comparison = require('../../shared/run-comparison');
+
+        prompt.showSelect.mockResolvedValueOnce('a').mockResolvedValueOnce('0');
+        prompt.askConfirm.mockResolvedValueOnce(true);
+
+        const runData = {
+            timestamp: '2026-01-01T10:00:00Z',
+            project: 'TEST',
+            total: 10,
+            passed: 5,
+            failed: 5,
+            skipped: 0,
+            duration: 100,
+            tests: [{ title: 'FlakyTest', state: 'failed' as const, duration: 100 }],
+        };
+        metrics.loadMetrics.mockReturnValueOnce({ runs: [runData, runData] });
+        metrics.calculateFlakiness.mockReturnValueOnce([
+            { title: 'FlakyTest', passCount: 1, failCount: 1, skipCount: 0, totalRuns: 2, rate: 0.5 },
+        ]);
+        metrics.getTrends.mockReturnValueOnce([]);
+        comparison.compareRuns.mockResolvedValueOnce('analysis');
+        flakyActions.executeFlakyActions.mockResolvedValueOnce([
+            {
+                action: 'create_bug',
+                testTitle: 'FlakyTest',
+                flakyRate: 0.5,
+                passCount: 1,
+                failCount: 1,
+                totalRuns: 2,
+                jiraBugKey: 'BUG-1',
+                reason: 'flaky',
+            },
+        ]);
+
+        const mod = require('./case19').default;
+        await mod.handler(baseContext);
+
+        expect(flakyActions.executeFlakyActions).toHaveBeenCalled();
+        expect(prompt.info).toHaveBeenCalledWith(expect.stringContaining('auto-action'));
     });
 
     it('shows history without flaky or trends data', async () => {

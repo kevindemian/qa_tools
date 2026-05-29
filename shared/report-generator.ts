@@ -81,6 +81,8 @@ interface ReportOptions {
     knownIssues?: KnownIssue[];
     /** Multi-environment test run tabs. */
     runs?: TestRunTab[];
+    /** Health score data to embed in the report. */
+    healthScore?: import('./types').HealthScoreResult;
 }
 
 /** Aggregated counts derived from a FlatTest array for rendering summary cards. */
@@ -581,6 +583,58 @@ function buildQualityGate(passRate: number, threshold: number): string {
 </div>`;
 }
 
+function healthColor(score: number): string {
+    if (score >= 80) return '#22c55e';
+    if (score >= 50) return '#eab308';
+    return '#ef4444';
+}
+
+function healthBg(score: number): string {
+    if (score >= 80) return '#f0fdf4';
+    if (score >= 50) return '#fefce8';
+    return '#fef2f2';
+}
+
+function buildHealthSection(health: import('./types').HealthScoreResult): string {
+    const qcIcon = health.qualityGate === 'pass' ? '✅' : '❌';
+    const qcText = health.qualityGate === 'pass' ? 'Pass' : 'Fail';
+    const qcColor = health.qualityGate === 'pass' ? '#166534' : '#991b1b';
+    const qcBg = health.qualityGate === 'pass' ? '#dcfce7' : '#fecaca';
+    const overallColor = healthColor(health.overall);
+    const dims = health.dimensions;
+    const dimEntries: Array<{ label: string; score: number; status: string }> = [
+        { label: 'Pass Rate', score: dims.passRate.score, status: dims.passRate.status },
+        { label: 'Flaky Rate', score: dims.flakyRate.score, status: dims.flakyRate.status },
+        { label: 'Coverage', score: dims.coverage.score, status: dims.coverage.status },
+        { label: 'Suite Speed', score: dims.suiteSpeed.score, status: dims.suiteSpeed.status },
+    ];
+
+    let html = '<div class="chart-box" style="margin-top:16px">';
+    html += '<div class="label" style="margin-bottom:12px;font-size:1rem">📊 Test Suite Health</div>';
+    html += '<div style="display:flex;gap:16px;flex-wrap:wrap;align-items:center;margin-bottom:16px">';
+    html += `<div style="text-align:center;min-width:100px"><div style="font-size:2.5rem;font-weight:800;color:${overallColor}">${health.overall}</div>`;
+    html += `<div style="font-size:0.8rem;color:#6b7280;text-transform:capitalize">${health.grade.replace(/_/g, ' ')}</div></div>`;
+    html += `<div style="padding:4px 12px;border-radius:9999px;font-size:0.85rem;font-weight:600;background:${qcBg};color:${qcColor}">${qcIcon} Quality Gate: ${qcText}</div>`;
+    html += `<div style="font-size:0.75rem;color:#6b7280">${health.runCount} run(s) · ${health.timestamp.slice(0, 10)}</div>`;
+    html += '</div>';
+    html += '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:8px">';
+    for (const d of dimEntries) {
+        const barColor = healthColor(d.score);
+        const bg = healthBg(d.score);
+        const icon = d.status === 'pass' ? '✅' : '❌';
+        html += `<div style="background:${bg};border-radius:6px;padding:10px 12px">`;
+        html += `<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">`;
+        html += `<span style="font-size:0.75rem;color:#4b5563">${d.label}</span>`;
+        html += `<span style="font-size:0.8rem;font-weight:700;color:${barColor}">${d.score} ${icon}</span>`;
+        html += '</div>';
+        html += `<div style="height:6px;background:#e5e7eb;border-radius:3px;overflow:hidden">`;
+        html += `<div style="height:100%;width:${d.score}%;background:${barColor};border-radius:3px;transition:width 0.3s"></div>`;
+        html += '</div></div>';
+    }
+    html += '</div></div>';
+    return html;
+}
+
 function buildFilterBar(): string {
     return (
         '<div class="control-bar" style="display:flex;gap:8px;align-items:center">' +
@@ -908,6 +962,9 @@ export function generateReportWithFallback(tests: FlatTest[], options?: ReportOp
         html += buildTrendSection(options?.trends || []);
         if (options?.qualityGate !== undefined) {
             html += buildQualityGate(passRate, options.qualityGate);
+        }
+        if (options?.healthScore) {
+            html += buildHealthSection(options.healthScore);
         }
 
         const runs = options?.runs;

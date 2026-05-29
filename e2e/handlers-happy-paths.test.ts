@@ -423,7 +423,7 @@ describe('case12 — diagnose connection', () => {
         const c = buildContext();
         const mod = require('../jira_management/commands/case12').default;
         await mod.handler(c);
-        expect(c.pushHistory).toHaveBeenCalledWith('diagnostico', expect.stringContaining('3/3'), 'ok');
+        expect(c.pushHistory).toHaveBeenCalledWith('diagnostico', expect.stringContaining('3/4'), 'ok');
         expect(nock.isDone()).toBe(true);
     });
 
@@ -435,7 +435,7 @@ describe('case12 — diagnose connection', () => {
         const c = buildContext();
         const mod = require('../jira_management/commands/case12').default;
         await mod.handler(c);
-        expect(c.pushHistory).toHaveBeenCalledWith('diagnostico', expect.stringContaining('2/3'), 'error');
+        expect(c.pushHistory).toHaveBeenCalledWith('diagnostico', expect.stringContaining('2/4'), 'error');
         expect(nock.isDone()).toBe(true);
     });
 });
