@@ -9,15 +9,17 @@
  *      — matches found → resolved as reference
  *      — unmatched → create in Jira
  *   4. output JSON with resolved preConditions */
+import crypto from 'crypto';
 import fs from 'fs';
 import path from 'path';
 import { ask, warn, info, printError, title, divider } from '../../shared/prompt';
 import { llmPrompt } from '../../shared/llm-client';
 import { sanitizeForLlm, sanitizeTerminal } from '../../shared/sanitize';
+import { recordAiGeneration } from '../../shared/ai-feedback';
 import type { CommandContext } from './context';
 import { TestCaseArraySchema } from './case18.schema';
 import { matchPreconditionByDualThreshold } from '../jira_link_manager';
-import type { PreConditionSummary, TestCase, TestStep } from '../../shared/types';
+import type { AiGenerationRecord, PreConditionSummary, TestCase, TestStep } from '../../shared/types';
 
 async function handler(c: CommandContext): Promise<boolean | void> {
     const input = await gatherInput(c);
@@ -43,9 +45,26 @@ async function handler(c: CommandContext): Promise<boolean | void> {
         return;
     }
 
-    const { resolvedPreConditions, summariesToCreate } = resolvePreconditionMatches(testCases, preconditions);
+    const { resolvedPreConditions, summariesToCreate, preconditionMatches } = resolvePreconditionMatches(
+        testCases,
+        preconditions,
+    );
     const createdKeys = await createMissingPreconditions(c.linkManager, input.project, summariesToCreate);
     const converted = convertTestCases(testCases, resolvedPreConditions, createdKeys);
+    const generationRecord: AiGenerationRecord = {
+        id: crypto.randomUUID(),
+        generatedAt: new Date().toISOString(),
+        promptVersion: 'v2',
+        userStory: input.userStory,
+        acceptanceCriteria: input.acceptanceCriteria,
+        generatedTests: testCases.map((tc) => ({
+            title: tc.title,
+            preConditions: tc.preConditions?.map((p) => p.summary || '') || [],
+            stepCount: tc.steps.length,
+        })),
+        preconditionMatches,
+    };
+    recordAiGeneration(generationRecord);
     writeTestOutput(converted, summariesToCreate.length);
     c.pushHistory(
         'ai-generate-tests',
@@ -99,7 +118,11 @@ async function gatherInput(c: CommandContext): Promise<{
 function resolvePreconditionMatches(
     testCases: TestCaseData[],
     allPCs: PreConditionSummary[],
-): { resolvedPreConditions: TestCasePreCondition[][]; summariesToCreate: string[] } {
+): {
+    resolvedPreConditions: TestCasePreCondition[][];
+    summariesToCreate: string[];
+    preconditionMatches: Array<{ summary: string; matchType: string }>;
+} {
     const summaries = new Set<string>();
     for (const tc of testCases) {
         if (tc.preConditions) {
@@ -111,8 +134,10 @@ function resolvePreconditionMatches(
 
     const matchMap = new Map<string, string>();
     const toCreate: string[] = [];
+    const preconditionMatches: Array<{ summary: string; matchType: string }> = [];
     for (const summary of summaries) {
         const result = matchPreconditionByDualThreshold(summary, allPCs);
+        preconditionMatches.push({ summary, matchType: result.matchType });
         if (result.matchType !== 'create') {
             matchMap.set(summary, result.key);
         } else {
@@ -131,7 +156,7 @@ function resolvePreconditionMatches(
         });
     });
 
-    return { resolvedPreConditions, summariesToCreate: toCreate };
+    return { resolvedPreConditions, summariesToCreate: toCreate, preconditionMatches };
 }
 
 /** Execute Jira API calls to create each unmatched pre-condition. */

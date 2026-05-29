@@ -1,8 +1,11 @@
-/** Scheduled tasks — run metrics, flakiness analysis, and generate scheduled reports. */
+/** Scheduled tasks — run metrics, flakiness analysis, flaky auto-actions, and generate scheduled reports. */
 import { print, success, warn, info, prompt, printError, withSpinner } from '../shared/prompt';
 import type { GitProvider, StateContainer } from '../shared/types';
 import { loadMetrics, calculateFlakiness } from '../shared/metrics';
+import { executeFlakyActions } from '../shared/flaky-auto-actions';
 import { generateFlakinessHtml } from '../shared/flakiness-dashboard';
+import Config from '../shared/config';
+import JiraResource from '../jira_management/jira_resource';
 import { writeReport } from '../shared/temp-dir';
 import {
     currentProvider,
@@ -89,7 +92,28 @@ export async function handleChangeProject(names: string[]): Promise<void> {
     }
 }
 
-export function handleFlakinessDashboard(): void {
+async function runFlakyAutoActionsForProject(projectName: string): Promise<void> {
+    try {
+        if (!Config.jiraBaseUrl || !Config.jiraPersonalToken) return;
+        const jiraResource = new JiraResource(Config.jiraPersonalToken, Config.jiraBaseUrl + '/rest/api/2');
+        const store = loadMetrics();
+        const projectRuns = store.runs.filter((r) => r.project === currentProjectName);
+        if (projectRuns.length < 5) return;
+        const actions = await executeFlakyActions({ runs: projectRuns }, jiraResource, projectName, {
+            autoCreateBug: true,
+            minTotalRuns: 10,
+            dedupSearch: true,
+        });
+        const bugs = actions.filter((a) => a.action === 'create_bug' || a.action === 'reenable');
+        if (bugs.length > 0) {
+            success(bugs.length + ' flaky auto-action(s) executada(s) para ' + projectName);
+        }
+    } catch {
+        info('Flaky auto-actions skipping (Jira config or insufficient data).');
+    }
+}
+
+export async function handleFlakinessDashboard(): Promise<void> {
     if (!currentProjectName) {
         warn('Nenhum projeto selecionado.');
         return;
@@ -113,4 +137,5 @@ export function handleFlakinessDashboard(): void {
         currentProjectName + ' (' + flaky.filter((f: { rate: number }) => f.rate > 0.3).length + ' >30%)',
         'ok',
     );
+    await runFlakyAutoActionsForProject(currentProjectName);
 }

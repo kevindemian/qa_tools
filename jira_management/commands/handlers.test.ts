@@ -680,7 +680,7 @@ describe('case12 — diagnostic connection', () => {
         await mod.handler(baseContext);
         const prompt = require('../../shared/prompt');
         expect(prompt.printSummary).toHaveBeenCalled();
-        expect(baseContext.pushHistory).toHaveBeenCalledWith('diagnostico', expect.stringContaining('3/3'), 'ok');
+        expect(baseContext.pushHistory).toHaveBeenCalledWith('diagnostico', expect.stringContaining('3/4'), 'ok');
     });
 
     it('records error when one endpoint fails', async () => {
@@ -692,7 +692,7 @@ describe('case12 — diagnostic connection', () => {
         await mod.handler(baseContext);
         const prompt = require('../../shared/prompt');
         expect(prompt.printSummary).toHaveBeenCalled();
-        expect(baseContext.pushHistory).toHaveBeenCalledWith('diagnostico', expect.stringContaining('2/3'), 'error');
+        expect(baseContext.pushHistory).toHaveBeenCalledWith('diagnostico', expect.stringContaining('2/4'), 'error');
     });
 
     it('marks error as connection failure for non-auth HTTP errors', async () => {
@@ -704,7 +704,7 @@ describe('case12 — diagnostic connection', () => {
         await mod.handler(baseContext);
         const prompt = require('../../shared/prompt');
         expect(prompt.printSummary).toHaveBeenCalled();
-        expect(baseContext.pushHistory).toHaveBeenCalledWith('diagnostico', expect.stringContaining('2/3'), 'error');
+        expect(baseContext.pushHistory).toHaveBeenCalledWith('diagnostico', expect.stringContaining('2/4'), 'error');
     });
 
     it('handles network error with no response object', async () => {
@@ -716,7 +716,7 @@ describe('case12 — diagnostic connection', () => {
         await mod.handler(baseContext);
         const prompt = require('../../shared/prompt');
         expect(prompt.printSummary).toHaveBeenCalled();
-        expect(baseContext.pushHistory).toHaveBeenCalledWith('diagnostico', expect.stringContaining('2/3'), 'error');
+        expect(baseContext.pushHistory).toHaveBeenCalledWith('diagnostico', expect.stringContaining('2/4'), 'error');
     });
 });
 

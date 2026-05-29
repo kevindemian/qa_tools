@@ -28,6 +28,11 @@ shared_docker/.selected_project
 # === Root-level stale reports (now all go to reports/) ===
 /failure-analysis-*.html
 
+# === Generated output artifacts ===
+*.csv
+*.html
+*.csv:Zone.Identifier
+
 # === Windows artifacts ===
 nul
 .llm-cache/

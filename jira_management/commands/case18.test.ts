@@ -33,6 +33,14 @@ jest.mock('../../shared/logger', () => ({
     },
 }));
 
+jest.mock('../../shared/ai-feedback', () => ({
+    recordAiGeneration: jest.fn(),
+}));
+
+jest.mock('crypto', () => ({
+    randomUUID: jest.fn().mockReturnValue('mock-uuid'),
+}));
+
 jest.mock('fs');
 
 jest.mock('../jira_link_manager', () => ({
@@ -475,5 +483,46 @@ describe('case18 — AI tests generator', () => {
         /* Deduplicated: same summary → only one createPrecondition call */
         expect(jiraLM.matchPreconditionByDualThreshold).toHaveBeenCalledTimes(1);
         expect(baseContext.linkManager.createPrecondition).toHaveBeenCalledTimes(1);
+    });
+
+    it('records AI generation after successful test generation', async () => {
+        const prompt = require('../../shared/prompt');
+        const llm = require('../../shared/llm-client');
+        const jiraLM = require('../jira_link_manager');
+        const aiFeedback = require('../../shared/ai-feedback');
+        const fs = require('fs');
+
+        prompt.ask.mockResolvedValueOnce('User story text').mockResolvedValueOnce('Some criteria');
+        fs.readFileSync.mockReturnValue('You are a QA engineer.');
+        baseContext.linkManager.listPreconditions = jest.fn().mockResolvedValue([]);
+
+        llm.llmPrompt.mockResolvedValue([
+            {
+                title: 'Generated Test',
+                steps: ['Step 1'],
+                expectedResult: 'Expected result',
+                preConditions: [{ type: 'create', summary: 'Precondition A' }],
+            },
+        ]);
+        jiraLM.matchPreconditionByDualThreshold.mockReturnValue({
+            key: '__create__',
+            summary: 'Precondition A',
+            matchType: 'create',
+        });
+        baseContext.linkManager.createPrecondition = jest.fn().mockResolvedValue('PC-NEW-1');
+
+        const mod = require('./case18').default;
+        await mod.handler(baseContext);
+
+        expect(aiFeedback.recordAiGeneration).toHaveBeenCalledWith(
+            expect.objectContaining({
+                promptVersion: 'v2',
+                userStory: 'User story text',
+                acceptanceCriteria: 'Some criteria',
+                generatedTests: expect.arrayContaining([
+                    expect.objectContaining({ title: 'Generated Test', stepCount: 1 }),
+                ]),
+            }),
+        );
     });
 });

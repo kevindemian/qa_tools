@@ -1,10 +1,13 @@
-/** Batch mode — run metrics, flakiness dashboard, and pipeline failure analysis headlessly. */
+/** Batch mode — run metrics, flakiness dashboard, pipeline failure analysis, and flaky auto-actions headlessly. */
 import { success, error, info, printError, withSpinner } from '../shared/prompt';
 import { loadMetrics, calculateFlakiness } from '../shared/metrics';
 import { generateFlakinessHtml } from '../shared/flakiness-dashboard';
+import { executeFlakyActions } from '../shared/flaky-auto-actions';
 import { offerPipelineFailureAnalysis } from './llm-pipeline';
 import { collectTestResults as _collectTestResults } from './test-results';
 import type { PipelineTriggerResult } from '../shared/types';
+import Config from '../shared/config';
+import JiraResource from '../jira_management/jira_resource';
 import { writeReport } from '../shared/temp-dir';
 import { publishReport } from '../shared/publish';
 import {
@@ -112,6 +115,27 @@ async function triggerAndCollectBatchPipeline(
     return false;
 }
 
+async function runFlakyAutoActions(projectName: string): Promise<void> {
+    try {
+        if (!Config.jiraBaseUrl || !Config.jiraPersonalToken) return;
+        const jiraResource = new JiraResource(Config.jiraPersonalToken, Config.jiraBaseUrl + '/rest/api/2');
+        const store = loadMetrics();
+        const projectRuns = store.runs.filter((r) => r.project === currentProjectName);
+        if (projectRuns.length < 5) return;
+        const actions = await executeFlakyActions({ runs: projectRuns }, jiraResource, projectName, {
+            autoCreateBug: true,
+            minTotalRuns: 10,
+            dedupSearch: true,
+        });
+        const bugs = actions.filter((a) => a.action === 'create_bug' || a.action === 'reenable');
+        if (bugs.length > 0) {
+            success(bugs.length + ' flaky auto-action(s) executada(s) para ' + projectName);
+        }
+    } catch {
+        info('Flaky auto-actions skipping (Jira config or insufficient data).');
+    }
+}
+
 function generateFlakinessDashboard(projectName: string, publishTarget?: string): void {
     if (!currentProjectName) return;
     const store = loadMetrics();
@@ -143,6 +167,7 @@ export async function tryBatchMode(): Promise<boolean> {
     if (done) return true;
 
     generateFlakinessDashboard(setup.projectName, batch.publish);
+    await runFlakyAutoActions(setup.projectName);
     printSessionSummary();
     return true;
 }
