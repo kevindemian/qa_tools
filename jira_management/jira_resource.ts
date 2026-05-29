@@ -21,10 +21,10 @@ import {
     moveCardsToDone as sprintMoveCardsToDone,
 } from './jira-resource-sprint';
 import type { JsonObject } from '../shared/types';
-import type { VersionData, JiraIssue, SearchResponse } from './jira-resource-version';
+import type { VersionData, JiraIssue, SearchResponse, JiraResourceLike } from './jira-resource-types';
 
 /** Facade over Jira REST API — delegates to resource-specific modules. */
-class JiraResource {
+class JiraResource implements JiraResourceLike {
     baseUrl: string;
     /** Origin URL extraído do baseUrl (scheme + host, sem path).
      * Usado por {@link getFromOriginPath} para endpoints que vivem fora do path do baseUrl
