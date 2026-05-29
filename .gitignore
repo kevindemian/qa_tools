@@ -4,7 +4,6 @@ node_modules
 # === Generated / Temp ===
 logs/
 reports/*
-!reports/2026-05-29/
 temp/
 *.log
 __pycache__
