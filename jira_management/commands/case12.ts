@@ -1,11 +1,11 @@
 /** Diagnose Jira/Xray connection by probing key endpoints, plus local health readiness. */
 import { title, printSummary, divider, badge, tableView } from '../../shared/prompt';
 import { sanitizeUrl } from '../../shared/cli_base';
+import { rootLogger } from '../../shared/logger';
 import { palette } from '../../shared/palette';
 import { defaultOutput } from '../../shared/output';
 import { loadMetrics } from '../../shared/metrics';
 import type { CommandContext } from './context';
-import type { TestResult } from '../../shared/types';
 
 async function handler(c: CommandContext): Promise<boolean | void> {
     title('12 · Diagnosticar Conexão');
@@ -19,31 +19,10 @@ async function handler(c: CommandContext): Promise<boolean | void> {
         },
     ];
     for (const ep of endpoints) {
-        const start = Date.now();
-        try {
-            await c.jiraResource.axiosInstance.get(ep.url);
-            const ms = Date.now() - start;
-            diagResults.push({ status: 'ok', label: ep.label, message: ms + 'ms' });
-        } catch (err) {
-            const ms = Date.now() - start;
-            const st = (err as { response?: { status?: number } }).response?.status || 'ERR';
-            const detail = st === 401 || st === 403 ? 'token pode estar inválido' : 'falha na conexão';
-            diagResults.push({ status: 'error', label: ep.label, message: st + ' ' + ms + 'ms - ' + detail });
-        }
+        diagResults.push(await _runSingleDiagnostic(ep, c.jiraResource.axiosInstance));
     }
 
-    const store = loadMetrics();
-    const projectRuns = store.runs.filter((r) => r.project === c.ctx.project_name);
-    const coverageCount = store.coverageHistory?.length || 0;
-    const healthReady = projectRuns.length >= 10 && coverageCount > 0;
-    let healthMsg = healthReady ? 'pronto' : 'insuficiente';
-    if (!healthReady) {
-        const missing: string[] = [];
-        if (projectRuns.length < 10) missing.push(projectRuns.length + '/' + 10 + ' runs');
-        if (coverageCount === 0) missing.push('sem snapshots de cobertura');
-        healthMsg += ' (' + missing.join(', ') + ')';
-    }
-
+    const { healthReady, healthMsg } = _checkHealthScore(c.ctx.project_name);
     diagResults.push({
         status: healthReady ? 'ok' : 'warn',
         label: 'Health Score',
@@ -61,26 +40,67 @@ async function handler(c: CommandContext): Promise<boolean | void> {
     const errCount = diagResults.filter((r) => r.status === 'error').length;
     defaultOutput.print('  ' + badge(okCount, 'ok', 'ok') + '  ' + badge(errCount, 'error', 'error'));
 
+    _printDiagnosticTips(diagResults, healthReady);
+
+    divider();
+    printSummary(
+        diagResults.map((r) => ({ status: r.status === 'ok' ? 'ok' : 'error', label: r.label, message: r.message })),
+    );
+    c.pushHistory(
+        'diagnostico',
+        diagResults.filter((r) => r.status === 'ok').length + '/' + diagResults.length + ' ok',
+        diagResults.some((r) => r.status === 'error') ? 'error' : 'ok',
+    );
+}
+
+async function _runSingleDiagnostic(
+    ep: { url: string; label: string },
+    axiosInstance: { get: (url: string) => Promise<unknown> },
+): Promise<{ status: string; label: string; message: string }> {
+    const start = Date.now();
+    try {
+        await axiosInstance.get(ep.url);
+        const ms = Date.now() - start;
+        return { status: 'ok', label: ep.label, message: ms + 'ms' };
+    } catch (err) {
+        rootLogger.error('Falha ao diagnosticar ' + ep.label + ': ' + (err as Error).message);
+        const ms = Date.now() - start;
+        const st = (err as { response?: { status?: number } }).response?.status || 'ERR';
+        const detail = st === 401 || st === 403 ? 'token pode estar inválido' : 'falha na conexão';
+        return { status: 'error', label: ep.label, message: st + ' ' + ms + 'ms - ' + detail };
+    }
+}
+
+function _checkHealthScore(projectName: string): { healthReady: boolean; healthMsg: string } {
+    const store = loadMetrics();
+    const projectRuns = store.runs.filter((r) => r.project === projectName);
+    const coverageCount = store.coverageHistory?.length || 0;
+    const healthReady = projectRuns.length >= 10 && coverageCount > 0;
+    let healthMsg = healthReady ? 'pronto' : 'insuficiente';
+    if (!healthReady) {
+        const missing: string[] = [];
+        if (projectRuns.length < 10) missing.push(projectRuns.length + '/' + 10 + ' runs');
+        if (coverageCount === 0) missing.push('sem snapshots de cobertura');
+        healthMsg += ' (' + missing.join(', ') + ')';
+    }
+    return { healthReady, healthMsg };
+}
+
+function _printDiagnosticTips(
+    diagResults: Array<{ status: string; label: string; message: string }>,
+    healthReady: boolean,
+): void {
     for (const r of diagResults) {
         if (r.status === 'error') {
             defaultOutput.print(palette.red('  ✖ ' + r.label + ': ' + r.message));
             defaultOutput.print(palette.blue('    → Check JIRA_BASE_URL e JIRA_TOKEN no .env'));
         }
     }
-
     if (!healthReady) {
         defaultOutput.print(
             palette.yellow('  ⚡ Dica: rode pipelines para acumular métricas e gere cobertura (opção 19).'),
         );
     }
-
-    divider();
-    printSummary(diagResults as TestResult[]);
-    c.pushHistory(
-        'diagnostico',
-        diagResults.filter((r) => r.status === 'ok').length + '/' + diagResults.length + ' ok',
-        diagResults.some((r) => r.status === 'error') ? 'error' : 'ok',
-    );
 }
 
 export default { handler };

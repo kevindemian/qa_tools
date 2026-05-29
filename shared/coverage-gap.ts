@@ -2,7 +2,7 @@
  *  calculate weighted coverage, build hierarchy rollup, and determine quality gate. */
 import { rootLogger } from './logger';
 import { loadMetrics } from './metrics';
-import type JiraResource from '../jira_management/jira_resource';
+import type { JiraIssueFields, JiraResourceLike } from './types';
 import type { CoverageSnapshot } from './metrics';
 import {
     buildCoverageItems,
@@ -65,7 +65,7 @@ export interface CoverageGapOptions {
     maxIssues?: number;
 }
 
-async function fetchTotalCount(jiraResource: JiraResource, jql: string): Promise<number> {
+async function fetchTotalCount(jiraResource: JiraResourceLike, jql: string): Promise<number> {
     try {
         const response = await jiraResource.searchJiraIssues(jql, 1);
         return response.total;
@@ -76,7 +76,7 @@ async function fetchTotalCount(jiraResource: JiraResource, jql: string): Promise
 }
 
 async function collectAllPages(
-    jiraResource: JiraResource,
+    jiraResource: JiraResourceLike,
     jql: string,
     pageSize: number,
 ): Promise<Array<{ key: string; fields: Record<string, unknown> }>> {
@@ -101,7 +101,10 @@ async function collectAllPages(
     }
 }
 
-async function fetchLinkedTestsBatch(jiraResource: JiraResource, issueKeys: string[]): Promise<Map<string, string[]>> {
+async function fetchLinkedTestsBatch(
+    jiraResource: JiraResourceLike,
+    issueKeys: string[],
+): Promise<Map<string, string[]>> {
     const linkMap = new Map<string, string[]>();
     try {
         const chunk = issueKeys.slice(0, 50);
@@ -112,11 +115,11 @@ async function fetchLinkedTestsBatch(jiraResource: JiraResource, issueKeys: stri
 
         for (const test of response.issues) {
             const testKey = test.key;
-            const testLinks = (test.fields as Record<string, unknown>)['issuelinks'];
+            const testLinks = (test.fields as JiraIssueFields)['issuelinks'];
             if (!Array.isArray(testLinks)) continue;
             for (const link of testLinks) {
-                const inward = link?.inwardIssue as Record<string, unknown> | undefined;
-                const outward = link?.outwardIssue as Record<string, unknown> | undefined;
+                const inward = link?.inwardIssue;
+                const outward = link?.outwardIssue;
                 const linkedKey = inward?.key === testKey ? outward?.key : inward?.key;
                 if (typeof linkedKey === 'string' && issueKeys.includes(linkedKey)) {
                     if (!linkMap.has(linkedKey)) linkMap.set(linkedKey, []);
@@ -202,7 +205,7 @@ function buildHierarchy(items: CoverageGapItem[]): CoverageHierarchyNode[] {
 }
 
 export async function analyzeCoverageGaps(
-    jiraResource: JiraResource,
+    jiraResource: JiraResourceLike,
     project: string,
     options?: CoverageGapOptions,
 ): Promise<CoverageGapResult> {

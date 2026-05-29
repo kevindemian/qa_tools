@@ -13,6 +13,7 @@ import crypto from 'crypto';
 import fs from 'fs';
 import path from 'path';
 import { ask, warn, info, printError, title, divider } from '../../shared/prompt';
+import { rootLogger } from '../../shared/logger';
 import { llmPrompt } from '../../shared/llm-client';
 import { sanitizeForLlm, sanitizeTerminal } from '../../shared/sanitize';
 import { recordAiGeneration } from '../../shared/ai-feedback';
@@ -30,6 +31,7 @@ async function handler(c: CommandContext): Promise<boolean | void> {
         preconditions = await c.linkManager.listPreconditions(input.project);
         info(`${preconditions.length} pre-conditions encontradas no projeto ${input.project}`);
     } catch (err: unknown) {
+        rootLogger.error('Failed to fetch pre-conditions: ' + (err as Error).message);
         warn('Não foi possível buscar pre-conditions: ' + (err as Error).message + ' — continuando sem contexto');
     }
 
@@ -51,19 +53,7 @@ async function handler(c: CommandContext): Promise<boolean | void> {
     );
     const createdKeys = await createMissingPreconditions(c.linkManager, input.project, summariesToCreate);
     const converted = convertTestCases(testCases, resolvedPreConditions, createdKeys);
-    const generationRecord: AiGenerationRecord = {
-        id: crypto.randomUUID(),
-        generatedAt: new Date().toISOString(),
-        promptVersion: 'v2',
-        userStory: input.userStory,
-        acceptanceCriteria: input.acceptanceCriteria,
-        generatedTests: testCases.map((tc) => ({
-            title: tc.title,
-            preConditions: tc.preConditions?.map((p) => p.summary || '') || [],
-            stepCount: tc.steps.length,
-        })),
-        preconditionMatches,
-    };
+    const generationRecord = _buildGenerationRecord(input, testCases, preconditionMatches);
     recordAiGeneration(generationRecord);
     writeTestOutput(converted, summariesToCreate.length);
     c.pushHistory(
@@ -179,6 +169,27 @@ async function createMissingPreconditions(
         }
     }
     return createdKeys;
+}
+
+/** Build the AI generation record for logging/metrics. */
+function _buildGenerationRecord(
+    input: { userStory: string; acceptanceCriteria: string },
+    testCases: TestCaseData[],
+    preconditionMatches: Array<{ summary: string; matchType: string }>,
+): AiGenerationRecord {
+    return {
+        id: crypto.randomUUID(),
+        generatedAt: new Date().toISOString(),
+        promptVersion: 'v2',
+        userStory: input.userStory,
+        acceptanceCriteria: input.acceptanceCriteria,
+        generatedTests: testCases.map((tc) => ({
+            title: tc.title,
+            preConditions: tc.preConditions?.map((p) => p.summary || '') || [],
+            stepCount: tc.steps.length,
+        })),
+        preconditionMatches,
+    };
 }
 
 /** Write test cases JSON to disk and log summary to console. */

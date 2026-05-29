@@ -18,6 +18,7 @@ function loadMappingTitles(mappingPath?: string): string[] {
         if (!Array.isArray(items)) return [];
         return items.map((m) => m.title).filter(Boolean);
     } catch {
+        rootLogger.warn('Failed to load mapping titles from ' + mappingPath);
         return [];
     }
 }

@@ -115,14 +115,14 @@ class JiraResource implements JiraResourceLike {
      * HTTP POST to a Jira API path.
      * @param resourceUrl - Path relative to base URL.
      * @param data        - Request payload.
-     * @returns Response body as `JsonObject`.
+     * @returns Response body typed as `T` (default `JsonObject`).
      * @throws On network / non-2xx — error is logged and re-thrown.
      */
-    async postJiraResource(resourceUrl: string, data: unknown): Promise<JsonObject> {
+    async postJiraResource<T = JsonObject>(resourceUrl: string, data: unknown): Promise<T> {
         const opLog = this.log.child({ resourceUrl });
         try {
-            const response = await this.axiosInstance.post(`/${resourceUrl}`, data);
-            return response.data as JsonObject;
+            const response = await this.axiosInstance.post<T>(`/${resourceUrl}`, data);
+            return response.data;
         } catch (err: unknown) {
             const axiosErr = err as { response?: { status?: number } };
             opLog.error(`Erro POST /${resourceUrl}: ${extractErrorMessage(err)}`, {
@@ -137,13 +137,13 @@ class JiraResource implements JiraResourceLike {
      * HTTP PUT to a Jira API path.
      * @param resourceUrl - Path relative to base URL.
      * @param data        - Request payload.
-     * @returns Response body as `JsonObject`, or `null` on HTTP 204.
+     * @returns Response body typed as `T`, or `null` on HTTP 204.
      * @throws On network / non-2xx — error is logged and re-thrown.
      */
-    async putJiraResource(resourceUrl: string, data: unknown): Promise<JsonObject | null> {
+    async putJiraResource<T = JsonObject>(resourceUrl: string, data: unknown): Promise<T | null> {
         try {
-            const response = await this.axiosInstance.put(`/${resourceUrl}`, data);
-            return response.status === 204 ? null : (response.data as JsonObject);
+            const response = await this.axiosInstance.put<T>(`/${resourceUrl}`, data);
+            return response.status === 204 ? null : response.data;
         } catch (err: unknown) {
             const axiosErr = err as { response?: { status?: number } };
             this.log.error(`Erro PUT /${resourceUrl}: ${extractErrorMessage(err)}`, {

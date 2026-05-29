@@ -114,28 +114,32 @@ async function runFlakyAutoActionsForProject(projectName: string): Promise<void>
 }
 
 export async function handleFlakinessDashboard(): Promise<void> {
-    if (!currentProjectName) {
-        warn('Nenhum projeto selecionado.');
-        return;
+    try {
+        if (!currentProjectName) {
+            warn('Nenhum projeto selecionado.');
+            return;
+        }
+        const store = loadMetrics();
+        const projectRuns = store.runs.filter((r) => r.project === currentProjectName);
+        if (projectRuns.length < 2) {
+            warn('Menos de 2 execuções registradas para ' + currentProjectName + '. Execute pipelines primeiro.');
+            return;
+        }
+        const flaky = calculateFlakiness({ runs: projectRuns }, 2);
+        if (flaky.length === 0) {
+            info('Nenhum teste flaky detectado em ' + currentProjectName + '.');
+            return;
+        }
+        const html = generateFlakinessHtml(flaky, 'Flakiness — ' + currentProjectName);
+        const outPath = writeReport('flakiness-' + currentProjectName + '.html', html);
+        success('Dashboard gerado: ' + outPath);
+        pushHistory(
+            'flakiness',
+            currentProjectName + ' (' + flaky.filter((f: { rate: number }) => f.rate > 0.3).length + ' >30%)',
+            'ok',
+        );
+        await runFlakyAutoActionsForProject(currentProjectName);
+    } catch (err) {
+        printError('Falha ao gerar dashboard de flaky', err);
     }
-    const store = loadMetrics();
-    const projectRuns = store.runs.filter((r) => r.project === currentProjectName);
-    if (projectRuns.length < 2) {
-        warn('Menos de 2 execuções registradas para ' + currentProjectName + '. Execute pipelines primeiro.');
-        return;
-    }
-    const flaky = calculateFlakiness({ runs: projectRuns }, 2);
-    if (flaky.length === 0) {
-        info('Nenhum teste flaky detectado em ' + currentProjectName + '.');
-        return;
-    }
-    const html = generateFlakinessHtml(flaky, 'Flakiness — ' + currentProjectName);
-    const outPath = writeReport('flakiness-' + currentProjectName + '.html', html);
-    success('Dashboard gerado: ' + outPath);
-    pushHistory(
-        'flakiness',
-        currentProjectName + ' (' + flaky.filter((f: { rate: number }) => f.rate > 0.3).length + ' >30%)',
-        'ok',
-    );
-    await runFlakyAutoActionsForProject(currentProjectName);
 }

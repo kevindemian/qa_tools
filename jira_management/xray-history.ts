@@ -6,6 +6,7 @@ import axios from 'axios';
 import type JiraResource from './jira_resource';
 import Config from '../shared/config';
 import { rootLogger } from '../shared/logger';
+import type { XrayGetTestRunsResponse, JsonObject, JiraIssue } from '../shared/types';
 
 const XRAY_AUTH_URL = 'https://xray.cloud.getxray.app/api/v2/authenticate';
 const XRAY_GRAPHQL_URL = 'https://xray.cloud.getxray.app/api/v2/graphql';
@@ -86,7 +87,7 @@ class ServerHistoryProvider implements TestHistoryProvider {
                 return [];
             }
             return data.slice(0, MAX_RUNS).map((r: unknown) => {
-                const row = r as Record<string, unknown>;
+                const row = r as JsonObject;
                 return {
                     status: safeStr(row.status, 'UNKNOWN'),
                     testExecKey: safeStr(row.testExecKey),
@@ -173,8 +174,7 @@ class CloudHistoryProvider implements TestHistoryProvider {
             const jql = 'id IN (' + uncached.map((id) => '"' + id.replace(/[^0-9]/g, '') + '"').join(',') + ')';
             const data = await this.jiraResource.searchJiraIssues(jql, uncached.length);
             for (const issue of data.issues ?? []) {
-                const issueRecord = issue as unknown as Record<string, unknown>;
-                const id = issueRecord.id as string | undefined;
+                const id = (issue as JiraIssue).id;
                 const key = issue.key ?? '';
                 if (id && key) {
                     this.execKeyCache.set(id, key);
@@ -221,17 +221,13 @@ class CloudHistoryProvider implements TestHistoryProvider {
                 { headers: { Authorization: 'Bearer ' + token, 'Content-Type': 'application/json' } },
             );
 
-            const body = res.data as Record<string, unknown>;
-            const getTestRuns = (body?.data as Record<string, unknown>)?.getTestRuns as
-                | Record<string, unknown>
-                | undefined;
-            const rawResults = getTestRuns?.results as Array<Record<string, unknown>> | undefined;
+            const body = res.data as XrayGetTestRunsResponse;
+            const rawResults = body?.data?.getTestRuns?.results;
             if (!Array.isArray(rawResults) || rawResults.length === 0) return [];
 
             const execIssueIds = rawResults
                 .map((r) => {
-                    const te = r.testExecution as Record<string, unknown> | undefined;
-                    return te?.issueId as string | undefined;
+                    return r.testExecution?.issueId;
                 })
                 .filter((id): id is string => !!id);
 
@@ -239,9 +235,8 @@ class CloudHistoryProvider implements TestHistoryProvider {
                 execIssueIds.length > 0 ? await this.resolveExecKeys([...new Set(execIssueIds)]) : new Map();
 
             return rawResults.map((r) => {
-                const te = r.testExecution as Record<string, unknown> | undefined;
-                const teIssueId = te?.issueId as string | undefined;
-                const rawStatus = (r.status as Record<string, unknown> | undefined)?.name;
+                const teIssueId = r.testExecution?.issueId;
+                const rawStatus = r.status?.name;
                 return {
                     status: safeStr(rawStatus, 'UNKNOWN'),
                     testExecKey: teIssueId ? (execKeyMap.get(teIssueId) ?? teIssueId) : '',

@@ -301,13 +301,17 @@ async function triggerAndPollPipeline(
 }
 
 export async function handleTriggerPipeline(m: GitProvider, projectName: string): Promise<void> {
-    const resumed = await resumePendingPipeline(m, projectName);
-    if (resumed !== null) return;
+    try {
+        const resumed = await resumePendingPipeline(m, projectName);
+        if (resumed !== null) return;
 
-    const built = await buildPipelinePayload(m, projectName);
-    if (!built) return;
+        const built = await buildPipelinePayload(m, projectName);
+        if (!built) return;
 
-    await triggerAndPollPipeline(m, built.branch, built.payload, projectName);
+        await triggerAndPollPipeline(m, built.branch, built.payload, projectName);
+    } catch (err) {
+        printError('Falha ao disparar pipeline', err);
+    }
 }
 
 export async function handleExportVariables(m: GitProvider): Promise<void> {

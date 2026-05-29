@@ -3,6 +3,11 @@
  * items must have detailed recommendations). Used by the LLM review pipeline
  * to validate AI-generated analysis reports. */
 
+interface TestCaseShape {
+    severity?: string;
+    recommendation?: string;
+}
+
 export interface ValidationRule {
     field: string;
     required: boolean;
@@ -117,7 +122,7 @@ export class ReportValidator {
         for (let i = 0; i < tests.length; i++) {
             const t = tests[i];
             if (typeof t !== 'object' || t === null) continue;
-            const tc = t as Record<string, unknown>;
+            const tc = t as TestCaseShape;
             if (tc.severity === 'high' && typeof tc.recommendation === 'string' && tc.recommendation.length < 20) {
                 warnings.push(
                     'testes[' +

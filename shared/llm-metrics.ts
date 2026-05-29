@@ -9,6 +9,7 @@ import path from 'path';
 import os from 'os';
 import Config from './config';
 import { rootLogger } from './logger';
+import { safeParseJson } from './safe-json';
 import type { LlmTier } from './llm-client';
 import { getLlmClientMetrics, resetLlmClientMetrics } from './llm-client';
 
@@ -47,8 +48,9 @@ function loadStore(): StoredMetrics {
     try {
         const p = storePath();
         if (!fs.existsSync(p)) return { snapshots: [] };
-        return JSON.parse(fs.readFileSync(p, 'utf8')) as StoredMetrics;
+        return safeParseJson<StoredMetrics>(fs.readFileSync(p, 'utf8'), { snapshots: [] });
     } catch {
+        rootLogger.warn('Failed to load LLM metrics from disk, returning empty store');
         return { snapshots: [] };
     }
 }
@@ -61,7 +63,10 @@ function saveStore(store: StoredMetrics): void {
         fs.writeFileSync(tmp, JSON.stringify(store, null, 2), 'utf8');
         fs.renameSync(tmp, p);
     } catch (err) {
-        rootLogger.warn('Failed to persist LLM metrics: ' + (err as Error).message);
+        rootLogger.error('Failed to persist LLM metrics: ' + (err as Error).message);
+        const persistError = new Error('Failed to persist LLM metrics');
+        (persistError as unknown as { cause: unknown }).cause = err;
+        throw persistError;
     }
 }
 

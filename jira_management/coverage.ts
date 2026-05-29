@@ -15,8 +15,8 @@ function getEpicFromIssue(fields: JsonObject): string | null {
     const epic = fields['customfield_10014'] ?? fields['epic'] ?? fields['Epic'] ?? null;
     if (!epic) return null;
     if (typeof epic === 'string') return epic;
-    if (typeof epic === 'object' && epic !== null && 'key' in (epic as JsonObject)) {
-        return (epic as JsonObject).key as string;
+    if (typeof epic === 'object' && epic !== null && 'key' in epic) {
+        return String(epic.key);
     }
     return null;
 }

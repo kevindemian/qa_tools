@@ -1,5 +1,6 @@
 /** Add tasks to sprint — assign issue keys to the current active sprint. */
 import { print, success, warn, title, ask, askConfirm, printError, printSummary } from '../../shared/prompt';
+import { rootLogger } from '../../shared/logger';
 import type { CommandContext } from './context';
 import { OPERATION_CANCELLED, ERR_ADD_TASKS_TO_SPRINT } from '../constants';
 
@@ -36,14 +37,7 @@ async function handler(c: CommandContext): Promise<boolean | void> {
 
     c.ctx.results = [];
     await c.ctx.withBusy(async () => {
-        for (const taskId of taskIds) {
-            try {
-                await c.jiraResource.updateFixVersions([taskId], c.ctx.project_name, version);
-                c.ctx.results.push({ status: 'ok', label: taskId, message: '' });
-            } catch {
-                c.ctx.results.push({ status: 'error', label: taskId, message: 'Falha ao atualizar fixVersion' });
-            }
-        }
+        await _processBatchTasks(c.jiraResource, taskIds, c.ctx.project_name, version, c.ctx.results);
     }, 'Atribuindo fixVersion...');
     printSummary(c.ctx.results);
     c.ctx.lastOperation =
@@ -54,6 +48,29 @@ async function handler(c: CommandContext): Promise<boolean | void> {
         c.ctx.results.some((r) => r.status === 'error') ? 'error' : 'ok',
     );
 
+    await _addToSprint(c, taskIds);
+    return false;
+}
+
+async function _processBatchTasks(
+    jiraResource: { updateFixVersions: (ids: string[], project: string, version: string) => Promise<void> },
+    taskIds: string[],
+    project: string,
+    version: string,
+    results: Array<{ status: string; label: string; message: string }>,
+): Promise<void> {
+    for (const taskId of taskIds) {
+        try {
+            await jiraResource.updateFixVersions([taskId], project, version);
+            results.push({ status: 'ok', label: taskId, message: '' });
+        } catch (err: unknown) {
+            rootLogger.error('Falha ao atualizar fixVersion: ' + (err as Error).message);
+            results.push({ status: 'error', label: taskId, message: 'Falha ao atualizar fixVersion' });
+        }
+    }
+}
+
+async function _addToSprint(c: CommandContext, taskIds: string[]): Promise<void> {
     if (await askConfirm('Adicionar tarefas a uma sprint?')) {
         const sprintId = await ask('ID da sprint', { hint: 'ex: 6991 (encontrado na URL do board)' });
         if (!sprintId.trim()) {
@@ -67,7 +84,6 @@ async function handler(c: CommandContext): Promise<boolean | void> {
             }
         }
     }
-    return false;
 }
 
 export default { handler };

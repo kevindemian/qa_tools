@@ -6,11 +6,9 @@ import { classifyFailure } from './failure-analysis';
 import { llmPrompt } from './llm-client';
 import { AiBugReportSchema } from './bug-report.schema';
 import Config from './config';
-import type { BugReport, LLMEnrichment, TestResult } from './types';
+import type { BugReport, JiraLinkManagerLike, JiraResourceLike, LLMEnrichment, TestResult } from './types';
 import type { AiBugReport } from './bug-report.schema';
 import type { ParseResult } from './result_parser';
-import type JiraResource from '../jira_management/jira_resource';
-import type JiraLinkManager from '../jira_management/jira_link_manager';
 
 const ERROR_TRUNCATION_LIMIT = 500;
 const LLM_DESC_TRUNCATION_LIMIT = 1000;
@@ -112,10 +110,14 @@ async function askWithRetry(label: string, maxAttempts = 3): Promise<string> {
     return value.trim();
 }
 
+function isBugSeverity(value: string): value is BugReport['severity'] {
+    const validSeverities: readonly string[] = ['trivial', 'minor', 'major', 'critical'];
+    return validSeverities.includes(value);
+}
+
 function normalizeSeverity(raw: string): BugReport['severity'] {
-    const valid = ['trivial', 'minor', 'major', 'critical'] as const;
     const candidate = raw.trim().toLowerCase();
-    return (valid as readonly string[]).includes(candidate) ? (candidate as BugReport['severity']) : 'minor';
+    return isBugSeverity(candidate) ? candidate : 'minor';
 }
 
 export async function collectManual(): Promise<BugReport> {
@@ -224,7 +226,11 @@ export function compose(report: BugReport): string {
     return lines.join('\n');
 }
 
-export async function fileToJira(jiraResource: JiraResource, report: BugReport, projectKey?: string): Promise<string> {
+export async function fileToJira(
+    jiraResource: JiraResourceLike,
+    report: BugReport,
+    projectKey?: string,
+): Promise<string> {
     const key = projectKey || Config.jiraProject;
     if (!key) throw new Error('Project key is required — set JIRA_PROJECT env var or provide projectKey param.');
 
@@ -240,15 +246,15 @@ export async function fileToJira(jiraResource: JiraResource, report: BugReport, 
     else if (report.severity === 'major') fields.priority = { name: 'High' };
     if (report.component) fields.components = [{ name: report.component }];
 
-    const result = await jiraResource.postJiraResource('issue', { fields });
-    return result.key as string;
+    const result = await jiraResource.postJiraResource<{ key: string }>('issue', { fields });
+    return result.key;
 }
 
 export async function interactiveBugReportFlow(
-    jiraResource: JiraResource,
+    jiraResource: JiraResourceLike,
     projectKey: string,
     preFilled?: BugReport,
-    linkManager?: JiraLinkManager,
+    linkManager?: JiraLinkManagerLike,
 ): Promise<TestResult | null> {
     const report = preFilled || (await collectManual());
 

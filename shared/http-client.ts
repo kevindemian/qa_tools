@@ -92,6 +92,22 @@ function deleteRetryKey(key: string): void {
 
 startRetryCleanup();
 
+function _calculateRetryDelay(
+    errorResponse: { status?: number; headers?: Record<string, string> } | undefined,
+    attempt: number,
+): number {
+    const retryAfter = errorResponse?.status === 429 ? errorResponse?.headers?.['retry-after'] : undefined;
+    let waitMs: number;
+    if (retryAfter) {
+        const parsed = parseInt(String(retryAfter), 10);
+        waitMs = isNaN(parsed) ? RETRY_BASE_WAIT_MS * Math.pow(2, attempt - 1) : parsed * 1000;
+    } else {
+        waitMs = Math.min(RETRY_BASE_WAIT_MS * Math.pow(2, attempt - 1), RETRY_MAX_WAIT_MS);
+    }
+    const jitter = Math.random() * RETRY_JITTER_MS;
+    return waitMs + jitter;
+}
+
 function _setupResponseInterceptor(instance: ReturnType<typeof axios.create>): void {
     instance.interceptors.response.use(
         (response) => {
@@ -121,21 +137,14 @@ function _setupResponseInterceptor(instance: ReturnType<typeof axios.create>): v
             if (attempts < maxRetries && isRetryable) {
                 attempts++;
                 setRetryCount(key, attempts);
-                let waitMs: number;
+                const delayMs = _calculateRetryDelay(axiosErr.response, attempts);
                 const retryAfter =
                     axiosErr.response?.status === 429 ? axiosErr.response?.headers?.['retry-after'] : undefined;
-                if (retryAfter) {
-                    const parsed = parseInt(String(retryAfter), 10);
-                    waitMs = isNaN(parsed) ? RETRY_BASE_WAIT_MS * Math.pow(2, attempts - 1) : parsed * 1000;
-                } else {
-                    waitMs = Math.min(RETRY_BASE_WAIT_MS * Math.pow(2, attempts - 1), RETRY_MAX_WAIT_MS);
-                }
-                const jitter = Math.random() * RETRY_JITTER_MS;
                 rootLogger.warn(
-                    `Retry ${attempts}/${maxRetries} para ${cfg.url} (espera ${Math.round(waitMs + jitter)}ms)` +
+                    `Retry ${attempts}/${maxRetries} para ${cfg.url} (espera ${Math.round(delayMs)}ms)` +
                         (retryAfter ? ' — Retry-After: ' + String(retryAfter) + 's' : ''),
                 );
-                await sleep(waitMs + jitter);
+                await sleep(delayMs);
                 return instance(cfg);
             }
             deleteRetryKey(key);

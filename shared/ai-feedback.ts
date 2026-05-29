@@ -5,6 +5,7 @@ import path from 'path';
 import os from 'os';
 import Config from './config';
 import { rootLogger } from './logger';
+import { safeParseJson } from './safe-json';
 import type { AiGenerationRecord, AiModification } from './types';
 
 const STORE_FILE = 'ai-feedback.json';
@@ -26,8 +27,8 @@ function tmpPath(config?: Config): string {
 function ensureDir(dir: string): void {
     try {
         fs.mkdirSync(dir, { recursive: true });
-    } catch {
-        /**/
+    } catch (err) {
+        rootLogger.error('Failed to create feedback directory: ' + (err as Error).message);
     }
 }
 
@@ -41,7 +42,7 @@ function loadStore(config?: Config): AiFeedbackStore {
         const sp = storePath(config);
         if (!fs.existsSync(sp)) return { records: [] };
         const raw = fs.readFileSync(sp, 'utf8');
-        return JSON.parse(raw) as AiFeedbackStore;
+        return safeParseJson<AiFeedbackStore>(raw, { records: [] });
     } catch (err) {
         rootLogger.warn('Failed to load AI feedback: ' + (err as Error).message);
         return { records: [] };
@@ -58,6 +59,9 @@ function saveStore(store: AiFeedbackStore, config?: Config): void {
         fs.renameSync(tp, sp);
     } catch (err) {
         rootLogger.error('Failed to save AI feedback: ' + (err as Error).message);
+        const saveError = new Error('Failed to save AI feedback');
+        (saveError as unknown as { cause: unknown }).cause = err;
+        throw saveError;
     }
 }
 
@@ -87,6 +91,31 @@ export function recordAiModification(
     return record;
 }
 
+function _aggregateFeedbackStats(records: AiGenerationRecord[]): {
+    totalGenerated: number;
+    totalModified: number;
+    totalDeleted: number;
+    versionCounts: Record<string, number>;
+} {
+    let totalGenerated = 0;
+    let totalModified = 0;
+    let totalDeleted = 0;
+    const versionCounts: Record<string, number> = {};
+
+    for (const record of records) {
+        totalGenerated += record.generatedTests.length;
+        versionCounts[record.promptVersion] = (versionCounts[record.promptVersion] || 0) + 1;
+        if (record.feedback) {
+            for (const fb of record.feedback) {
+                if (fb.action === 'modified') totalModified++;
+                if (fb.action === 'deleted') totalDeleted++;
+            }
+        }
+    }
+
+    return { totalGenerated, totalModified, totalDeleted, versionCounts };
+}
+
 export function getAiFeedbackSummary(config?: Config): {
     totalRecords: number;
     totalGenerated: number;
@@ -107,21 +136,7 @@ export function getAiFeedbackSummary(config?: Config): {
         };
     }
 
-    let totalGenerated = 0;
-    let totalModified = 0;
-    let totalDeleted = 0;
-    const versionCounts: Record<string, number> = {};
-
-    for (const record of store.records) {
-        totalGenerated += record.generatedTests.length;
-        versionCounts[record.promptVersion] = (versionCounts[record.promptVersion] || 0) + 1;
-        if (record.feedback) {
-            for (const fb of record.feedback) {
-                if (fb.action === 'modified') totalModified++;
-                if (fb.action === 'deleted') totalDeleted++;
-            }
-        }
-    }
+    const { totalGenerated, totalModified, totalDeleted, versionCounts } = _aggregateFeedbackStats(store.records);
 
     const totalReviewed = totalGenerated;
     const acceptanceRate =

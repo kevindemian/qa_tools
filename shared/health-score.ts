@@ -52,10 +52,7 @@ function pickConfig(options?: Partial<HealthScoreConfig>): HealthScoreConfig {
     };
 }
 
-function computeActualMetrics(store: MetricsStore, config: HealthScoreConfig): ActualMetrics {
-    const runs = store.runs.slice(-config.windowSize);
-    const n = runs.length;
-
+function _computePassRate(runs: MetricsRun[], n: number): number {
     let weightedPassSum = 0;
     let weightTotal = 0;
     for (let i = 0; i < n; i++) {
@@ -65,8 +62,10 @@ function computeActualMetrics(store: MetricsStore, config: HealthScoreConfig): A
         weightedPassSum += passRate * weight;
         weightTotal += weight;
     }
-    const actualPassRate = weightTotal > 0 ? weightedPassSum / weightTotal : 0;
+    return weightTotal > 0 ? weightedPassSum / weightTotal : 0;
+}
 
+function _computeFlakyRate(runs: MetricsRun[], config: HealthScoreConfig): number {
     const testMap = new Map<string, { pass: number; fail: number }>();
     for (const run of runs) {
         for (const t of run.tests) {
@@ -84,7 +83,15 @@ function computeActualMetrics(store: MetricsStore, config: HealthScoreConfig): A
         totalConsidered++;
         if (counts.fail > 0 && counts.pass > 0) flakyCount++;
     }
-    const actualFlakyPct = totalConsidered > 0 ? (flakyCount / totalConsidered) * 100 : 0;
+    return totalConsidered > 0 ? (flakyCount / totalConsidered) * 100 : 0;
+}
+
+function computeActualMetrics(store: MetricsStore, config: HealthScoreConfig): ActualMetrics {
+    const runs = store.runs.slice(-config.windowSize);
+    const n = runs.length;
+
+    const actualPassRate = _computePassRate(runs, n);
+    const actualFlakyPct = _computeFlakyRate(runs, config);
 
     const history = store.coverageHistory;
     const actualCoverage =
