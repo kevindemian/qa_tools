@@ -63,13 +63,17 @@ function section(title: string) {
 }
 
 // ── Helpers ─────────────────────────────────────────────────────
-async function getIssueRaw(key: string): Promise<unknown> {
-    return jiraResource.getJiraResource(`issue/${key}?fields=summary,description,labels,issuetype,customfield_13708`);
+async function getIssueRaw(key: string): Promise<Record<string, unknown>> {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    return jiraResource.getJiraResource<any>(
+        `issue/${key}?fields=summary,description,labels,issuetype,customfield_13708`,
+    );
 }
 
 async function getSteps(issueKey: string): Promise<unknown[]> {
-    const steps = await jiraResourceXray.getJiraResource(`test/${issueKey}/steps`);
-    return (steps as unknown).steps || [];
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const steps = await jiraResourceXray.getJiraResource<any>(`test/${issueKey}/steps`);
+    return steps.steps || [];
 }
 
 // ── Fase 1: Diagnóstico ────────────────────────────────────────
@@ -80,23 +84,28 @@ async function fase1Diagnostico() {
         const myself = await jiraResource.getJiraResource<{ displayName: string; emailAddress: string }>('myself');
         ok(`Autenticado como: ${myself.displayName} (${myself.emailAddress})`);
     } catch (e: unknown) {
-        fail('Autenticação Jira', e.message);
+        fail('Autenticação Jira', (e as Error).message);
         return false;
     }
 
     try {
         const issue = await getIssueRaw(EXISTING_TEST);
-        const f = issue.fields;
-        originalDescription = f.description || '';
-        ok(`Test ${EXISTING_TEST} lido: "${f.summary}"`);
-        if (f.labels?.includes(LABEL)) ok(`Label "${LABEL}" presente`);
+        const f = issue.fields as Record<string, unknown> | undefined;
+        if (!f) {
+            fail('issue.fields missing');
+            return false;
+        }
+        originalDescription = (f.description as string) || '';
+        ok(`Test ${EXISTING_TEST} lido: "${f.summary as string}"`);
+        if ((f.labels as string[])?.includes(LABEL)) ok(`Label "${LABEL}" presente`);
         else fail(`Label "${LABEL}" ausente em ${EXISTING_TEST}`);
-        if (f.issuetype?.name === 'Test') ok(`Issue type = Test`);
-        else fail(`Issue type = ${f.issuetype?.name}`);
-        if (f.customfield_13708?.includes(EXISTING_PRECOND)) ok(`Pre-condition ${EXISTING_PRECOND} linkada`);
+        if ((f.issuetype as Record<string, string>)?.name === 'Test') ok(`Issue type = Test`);
+        else fail(`Issue type = ${(f.issuetype as Record<string, string>)?.name}`);
+        if ((f.customfield_13708 as string[])?.includes(EXISTING_PRECOND))
+            ok(`Pre-condition ${EXISTING_PRECOND} linkada`);
         else fail(`Pre-condition não encontrada`);
     } catch (e: unknown) {
-        fail(`Ler ${EXISTING_TEST}`, e.message);
+        fail(`Ler ${EXISTING_TEST}`, (e as Error).message);
         return false;
     }
 
@@ -104,21 +113,22 @@ async function fase1Diagnostico() {
         const steps = await getSteps(EXISTING_TEST);
         ok(`Steps: ${steps.length} steps em ${EXISTING_TEST}`);
     } catch (e: unknown) {
-        fail(`Ler steps de ${EXISTING_TEST}`, e.message);
+        fail(`Ler steps de ${EXISTING_TEST}`, (e as Error).message);
     }
 
     try {
         const prec = await getIssueRaw(EXISTING_PRECOND);
-        ok(`Pre-condition ${EXISTING_PRECOND} lida: "${prec.fields.summary}"`);
+        const precFields = prec.fields as Record<string, unknown>;
+        ok(`Pre-condition ${EXISTING_PRECOND} lida: "${precFields.summary as string}"`);
     } catch (e: unknown) {
-        fail(`Ler ${EXISTING_PRECOND}`, e.message);
+        fail(`Ler ${EXISTING_PRECOND}`, (e as Error).message);
     }
 
     try {
         const projectData = await jiraResource.getJiraResource<{ id: string; name: string }>(`project/${PROJECT}`);
         ok(`Projeto ${PROJECT} OK (id=${projectData.id})`);
     } catch (e: unknown) {
-        fail(`Projeto ${PROJECT}`, e.message);
+        fail(`Projeto ${PROJECT}`, (e as Error).message);
     }
 
     return true;
@@ -143,18 +153,19 @@ async function fase2UpdateRollback() {
         });
         ok(`PUT description = "${testDesc}"`);
     } catch (e: unknown) {
-        fail('PUT description', e.message);
+        fail('PUT description', (e as Error).message);
         return;
     }
 
     // Verificar
     try {
         const issue2 = await getIssueRaw(EXISTING_TEST);
-        const newDesc = issue2.fields.description || '';
+        const f2 = issue2.fields as Record<string, unknown>;
+        const newDesc = (f2.description as string) || '';
         if (newDesc === testDesc) ok('Description atualizada confirmada via GET');
         else fail(`Description mismatch: "${newDesc.slice(0, 80)}..."`);
     } catch (e: unknown) {
-        fail('GET após update', e.message);
+        fail('GET após update', (e as Error).message);
     }
 
     // Rollback
@@ -164,17 +175,18 @@ async function fase2UpdateRollback() {
         });
         ok(`Rollback description = "${originalDescription.slice(0, 80)}..."`);
     } catch (e: unknown) {
-        fail('Rollback PUT', e.message);
+        fail('Rollback PUT', (e as Error).message);
     }
 
     // Confirmar rollback
     try {
         const issue3 = await getIssueRaw(EXISTING_TEST);
-        const finalDesc = issue3.fields.description || '';
+        const f3 = issue3.fields as Record<string, unknown>;
+        const finalDesc = (f3.description as string) || '';
         if (finalDesc === originalDescription) ok('Rollback confirmado via GET');
         else fail('Rollback não refletido');
     } catch (e: unknown) {
-        fail('GET após rollback', e.message);
+        fail('GET após rollback', (e as Error).message);
     }
 }
 
@@ -231,10 +243,11 @@ async function fase3CriarTest() {
             return false;
         }
     } catch (e: unknown) {
-        fail('createTestsFromCsv exception', e.message);
-        if (e.response) {
-            console.log(`  Status: ${e.response.status}`);
-            console.log(`  Data: ${JSON.stringify(e.response.data).slice(0, 400)}`);
+        const err = e as Error & { response?: { status?: number; data?: unknown } };
+        fail('createTestsFromCsv exception', err.message);
+        if (err.response) {
+            console.log(`  Status: ${err.response.status}`);
+            console.log(`  Data: ${JSON.stringify(err.response.data).slice(0, 400)}`);
         }
         return false;
     }
@@ -262,10 +275,11 @@ async function fase4CriarTestExecution() {
             fail('createTestExecutionWithLinks retornou sem key');
         }
     } catch (e: unknown) {
-        fail('createTestExecutionWithLinks', e.message);
-        if (e.response) {
-            console.log(`  Status: ${e.response.status}`);
-            console.log(`  Data: ${JSON.stringify(e.response.data).slice(0, 400)}`);
+        const err = e as Error & { response?: { status?: number; data?: unknown } };
+        fail('createTestExecutionWithLinks', err.message);
+        if (err.response) {
+            console.log(`  Status: ${err.response.status}`);
+            console.log(`  Data: ${JSON.stringify(err.response.data).slice(0, 400)}`);
         }
     }
 }
@@ -279,18 +293,26 @@ async function fase5Verificar() {
     // Verificar novo test case
     if (createdIssueKey) {
         try {
-            const issue = await getIssueRaw(createdIssueKey);
-            const f = issue.fields;
-            ok(`${createdIssueKey} existe, type=${f.issuetype?.name}`);
-            if (f.labels?.includes(LABEL)) ok(`Label "${LABEL}" presente`);
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            const issue: any = await getIssueRaw(createdIssueKey);
+            const f = issue.fields as Record<string, unknown> | undefined;
+            if (!f) {
+                fail('issue.fields missing');
+                allOk = false;
+                return allOk;
+            }
+            ok(`${createdIssueKey} existe, type=${(f.issuetype as Record<string, string>)?.name}`);
+            if ((f.labels as string[])?.includes(LABEL)) ok(`Label "${LABEL}" presente`);
             else fail(`Label "${LABEL}" ausente`);
-            if (f.customfield_13708?.includes(EXISTING_PRECOND)) ok(`Pre-condition ${EXISTING_PRECOND} linkada`);
+            if ((f.customfield_13708 as string[])?.includes(EXISTING_PRECOND))
+                ok(`Pre-condition ${EXISTING_PRECOND} linkada`);
             else fail(`Pre-condition ausente`);
-            console.log(`  Summary: ${f.summary}`);
-            console.log(`  Description: ${(f.description || '').slice(0, 100)}`);
+            console.log(`  Summary: ${f.summary as string}`);
+            console.log(`  Description: ${((f.description as string) || '').slice(0, 100)}`);
 
             // Verificar steps
-            const steps = await getSteps(createdIssueKey);
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            const steps: any[] = (await getSteps(createdIssueKey)) as any[];
             ok(`Steps: ${steps.length} steps`);
             for (const s of steps) {
                 const a = s.fields?.Action?.value?.raw || '';
@@ -298,7 +320,7 @@ async function fase5Verificar() {
                 console.log(`    Step ${s.index}: ${a} → ${e}`);
             }
         } catch (e: unknown) {
-            fail(`Verificar ${createdIssueKey}`, e.message);
+            fail(`Verificar ${createdIssueKey}`, (e as Error).message);
             allOk = false;
         }
     }
@@ -323,7 +345,7 @@ async function fase5Verificar() {
             else fail(`TE não contém ${EXISTING_TEST}`);
             if (foundNew) ok(`TE contém ${createdIssueKey}`);
         } catch (e: unknown) {
-            fail(`Verificar ${createdTestExecKey}`, e.message);
+            fail(`Verificar ${createdTestExecKey}`, (e as Error).message);
             allOk = false;
         }
     }
@@ -340,16 +362,16 @@ async function fase6XrayHistory() {
         const result = await history.getHistory(EXISTING_TEST);
         if (result.length > 0) {
             ok(`History para ${EXISTING_TEST}: ${result.length} entrada(s)`);
-            result.slice(0, 3).forEach((h: unknown) => {
-                console.log(`    ${h.date || '?'}: ${h.status || h.evolution || 'N/A'}`);
+            result.slice(0, 3).forEach((h) => {
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                const entry = h as any;
+                console.log(`    ${entry.date || '?'}: ${entry.status || entry.evolution || 'N/A'}`);
             });
         } else {
-            // Pode não ter histórico ainda
             console.log(`  ℹ️ Nenhum histórico encontrado para ${EXISTING_TEST} (pode ser normal)`);
         }
     } catch (e: unknown) {
-        // Xray history pode não estar disponível dependendo da versão
-        console.log(`  ℹ️ XrayHistory indisponível: ${e.message}`);
+        console.log(`  ℹ️ XrayHistory indisponível: ${(e as Error).message}`);
     }
 }
 
@@ -376,7 +398,7 @@ async function main() {
         await fase5Verificar();
         await fase6XrayHistory();
     } catch (e: unknown) {
-        fail('ERRO INESPERADO', e.message);
+        fail('ERRO INESPERADO', (e as Error).message);
         console.error(e);
     }
 

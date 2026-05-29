@@ -29,10 +29,15 @@ async function main() {
                 baseUrl: 'https://api.github.com',
                 authHeader: { Authorization: 'Bearer ' + ghToken },
             });
-            const runsResp = await client.get(`/repos/${ghRepo}/actions/runs?per_page=5&status=success&status=failure`);
-            const runs: unknown[] = ((runsResp.data as unknown).workflow_runs as unknown[]) || [];
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            const runsResp = await client.get<any>(
+                `/repos/${ghRepo}/actions/runs?per_page=5&status=success&status=failure`,
+            );
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            const runs: any[] = runsResp.data?.workflow_runs || [];
 
-            const runStats: unknown[] = [];
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            const runStats: Array<{ runId: any; createdAt: string; name: string; passRate: number }> = [];
             for (const run of runs) {
                 const created = (run.created_at as string) || '';
                 const name = (run.name as string) || (run.display_title as string) || 'workflow';
@@ -60,7 +65,7 @@ async function main() {
                 console.log(`CI/CD context: ${runStats.length} runs fetched`);
             }
         } catch (e: unknown) {
-            console.log(`CI/CD fetch skipped: ${e.message}`);
+            console.log(`CI/CD fetch skipped: ${(e as Error).message}`);
         }
     } else {
         console.log('GITHUB_TOKEN not set — CI/CD section omitted');
@@ -79,7 +84,7 @@ async function main() {
     console.log(`Report: ${outPath}`);
 }
 
-main().catch((e) => {
-    console.error('Fatal:', e.message);
+main().catch((e: unknown) => {
+    console.error('Fatal:', (e as Error).message);
     process.exit(1);
 });
