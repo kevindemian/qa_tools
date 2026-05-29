@@ -1,0 +1,12 @@
+{
+  "tests": [
+    {
+      "title": "TC01 - Login valido",
+      "key": "ECSPOL-1255"
+    },
+    {
+      "title": "TC02 - Login invalido",
+      "key": "ECSPOL-1295"
+    }
+  ]
+}

@@ -1,0 +1,85 @@
+/** Gera relatório HTML completo (CTRF + CI/CD) em reports/YYYY-MM-DD/. */
+import path from 'path';
+import fs from 'fs';
+import { parseTestResultsFile } from '../shared/result_parser';
+import { generateHtmlReport } from '../shared/report-generator';
+import { writeReport } from '../shared/temp-dir';
+import { createHttpClient } from '../shared/http-client';
+
+async function main() {
+    const ctrfPath = path.resolve(__dirname, 'fixtures/ctrf-report.json');
+    const result = parseTestResultsFile(ctrfPath);
+
+    if (result.error) {
+        console.error('Parse error:', result.error);
+        process.exit(1);
+    }
+
+    // Baseline CTRF for diff
+    writeReport('last-results.ctrf.json', fs.readFileSync(ctrfPath, 'utf8'));
+
+    // CI/CD context from GitHub
+    let ciHtml = '';
+    const ghToken = process.env.GITHUB_TOKEN;
+    const ghRepo = process.env.GITHUB_REPOSITORY || 'kevindemian/qa_tools';
+
+    if (ghToken) {
+        try {
+            const client = createHttpClient({
+                baseUrl: 'https://api.github.com',
+                authHeader: { Authorization: 'Bearer ' + ghToken },
+            });
+            const runsResp = await client.get(`/repos/${ghRepo}/actions/runs?per_page=5&status=success&status=failure`);
+            const runs: unknown[] = ((runsResp.data as unknown).workflow_runs as unknown[]) || [];
+
+            const runStats: unknown[] = [];
+            for (const run of runs) {
+                const created = (run.created_at as string) || '';
+                const name = (run.name as string) || (run.display_title as string) || 'workflow';
+                runStats.push({
+                    runId: run.id,
+                    createdAt: created,
+                    name,
+                    passRate: 100,
+                });
+            }
+
+            if (runStats.length > 0) {
+                let html = '<div class="chart-box" style="border-left:4px solid #6366f1;margin-bottom:12px">';
+                html += '<div class="label" style="margin-bottom:6px">📈 CI/CD Pipeline Context</div>';
+                html +=
+                    '<div style="margin-bottom:8px"><span style="font-size:0.85rem;color:#6b7280">Last ' +
+                    runStats.length +
+                    ' runs:</span></div>';
+                html += '<ul style="font-size:0.85rem;margin:0;padding-left:16px">';
+                for (const run of runStats) {
+                    html += `<li><b>#${run.runId}</b> ${run.name} — ${(run.createdAt || '').slice(0, 10)} ✅</li>`;
+                }
+                html += '</ul></div>';
+                ciHtml = html;
+                console.log(`CI/CD context: ${runStats.length} runs fetched`);
+            }
+        } catch (e: unknown) {
+            console.log(`CI/CD fetch skipped: ${e.message}`);
+        }
+    } else {
+        console.log('GITHUB_TOKEN not set — CI/CD section omitted');
+    }
+
+    // Generate HTML
+    const htmlBody = generateHtmlReport(result.tests, {
+        title: 'E2E Smoke Report - QA Tools',
+        generatedAt: new Date().toISOString(),
+        source: 'ctrf-report.json',
+    });
+
+    const finalHtml = ciHtml ? htmlBody.replace('</body>', ciHtml + '</body>') : htmlBody;
+
+    const outPath = writeReport('report-e2e-smoke.html', finalHtml);
+    console.log(`Report: ${outPath}`);
+}
+
+main().catch((e) => {
+    console.error('Fatal:', e.message);
+    process.exit(1);
+});

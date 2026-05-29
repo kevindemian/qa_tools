@@ -11,6 +11,13 @@ Issues registradas durante refatorações, postergadas por escopo.
 
 ---
 
+## 📄 Documentação de Produção
+
+- `jira_xray_config_backup.md` — backup do ambiente Jira/Xray/CI/CD
+- `docs/PRODUCTION-CONFIG.md` — field mappings, endpoints, bugs P1-P5 encontrados no e2e real de 2026-05-29
+
+---
+
 ## ✅ Fase 1 — U1 Breadcrumbs ✅
 
 | Item                    | Status |
