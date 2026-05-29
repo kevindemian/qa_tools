@@ -100,7 +100,7 @@ class GitHubManager extends GitProviderBase implements GitProvider {
             );
             return { id: workflowId, web_url: this.apiUrl + '/' + this.repoFullName + '/actions/runs' };
         } catch (err) {
-            return handleError(err, { context: 'disparar workflow' }) as never;
+            return handleError(err, { context: 'disparar workflow' });
         }
     }
 
@@ -272,7 +272,7 @@ class GitHubManager extends GitProviderBase implements GitProvider {
             });
             return { buffer: Buffer.from(response.data), filename: 'artifact.zip' };
         } catch (err) {
-            return handleError(err, { context: 'baixar artifact' }) as never;
+            return handleError(err, { context: 'baixar artifact' });
         }
     }
 

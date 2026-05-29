@@ -3,7 +3,6 @@
 import { rootLogger } from './logger';
 import { loadMetrics } from './metrics';
 import type JiraResource from '../jira_management/jira_resource';
-import type { CoverageGapItem, CoverageGapResult, CoverageHierarchyNode } from './types';
 import type { CoverageSnapshot } from './metrics';
 import {
     buildCoverageItems,
@@ -12,6 +11,54 @@ import {
     checkQualityGate,
     loadEpicSummaries,
 } from './coverage-gap-utils';
+
+/** A single item in a coverage gap analysis. */
+export interface CoverageGapItem {
+    issueKey: string;
+    summary: string;
+    type: 'Story' | 'Task' | 'Bug' | 'Epic';
+    status: string;
+    epicKey?: string;
+    epicSummary?: string;
+    hasTest: boolean;
+    linkedTestKeys: string[];
+    priority: string;
+    coverageWeight: number;
+    lastRunPassed?: boolean;
+    lastRunDate?: string;
+}
+
+/** Coverage data for a single epic. */
+export interface EpicCoverage {
+    epicSummary: string;
+    total: number;
+    covered: number;
+    weightedPct: number;
+    rawPct: number;
+    gatePass: boolean;
+    issues: CoverageGapItem[];
+}
+
+/** A node in the coverage hierarchy tree. */
+export interface CoverageHierarchyNode {
+    key: string;
+    summary: string;
+    type: 'Epic' | 'Story' | 'Task' | 'Bug';
+    children: CoverageHierarchyNode[];
+    totalIssues: number;
+    coveredIssues: number;
+    coveragePct: number;
+}
+
+/** Result of a coverage gap analysis. */
+export interface CoverageGapResult {
+    items: CoverageGapItem[];
+    totals: { totalIssues: number; covered: number; gap: number; weightedCoveragePct: number; rawCoveragePct: number };
+    byEpic: Record<string, EpicCoverage>;
+    gateConfig: { minCoveragePct: number; failingEpics: string[] };
+    hierarchy: CoverageHierarchyNode[];
+    trends: CoverageSnapshot[];
+}
 
 export interface CoverageGapOptions {
     minCoveragePct?: number;

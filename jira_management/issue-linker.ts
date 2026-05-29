@@ -57,9 +57,10 @@ class IssueLinker {
 
         const groups: Record<string, { name: string; members: Array<{ id: string; description: string }> }> = {};
         for (const { test, id } of valid) {
-            const key = test.group!.toUpperCase();
-            if (!groups[key]) groups[key] = { name: test.group!, members: [] };
-            groups[key].members.push({ id: id!, description: test.description || '' });
+            const groupName = test.group as string;
+            const key = groupName.toUpperCase();
+            if (!groups[key]) groups[key] = { name: groupName, members: [] };
+            groups[key].members.push({ id: id as string, description: test.description || '' });
         }
 
         const crossLog = rootLogger.child({ operation: 'cross-ref' });

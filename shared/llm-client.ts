@@ -647,4 +647,4 @@ export function resetRateLimiter(): void {
     _rateTimestamps.clear();
 }
 
-export { resetCircuitState, getCircuitState } from './circuit-breaker';
+export { resetCircuitState } from './circuit-breaker';

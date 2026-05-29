@@ -1,12 +1,9 @@
 /** Self-contained HTML report for coverage gap analysis.
  *  Summary cards, per-epic progress bars, hierarchy tree, gaps table, quality gate section.
  *  Dark mode support via CSS class toggle. */
-import type { CoverageGapResult, CoverageHierarchyNode } from './types';
+import type { CoverageGapResult, CoverageHierarchyNode } from './coverage-gap';
 import { rootLogger } from './logger';
-
-function escapeHtml(s: string): string {
-    return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
-}
+import { sanitizeHtml } from './sanitize';
 
 function cssThemeBlock(): string {
     return `
@@ -92,7 +89,7 @@ function buildQualityGateSection(result: CoverageGapResult): string {
     return `<div class="card gate-fail" style="margin-bottom:16px;padding:12px 16px;background:#fef2f2">
 <div class="label" style="color:#991b1b">Quality Gate</div>
 <div style="font-size:1rem;font-weight:600;color:#991b1b">${gc.failingEpics.length} epic(s) below ${gc.minCoveragePct}% threshold</div>
-<ul style="margin:8px 0 0;font-size:0.85rem">${gc.failingEpics.map((k) => '<li style="color:#991b1b">' + escapeHtml(k) + ' (' + escapeHtml(result.byEpic[k]?.rawPct + '%' || '') + ')</li>').join('')}</ul></div>`;
+<ul style="margin:8px 0 0;font-size:0.85rem">${gc.failingEpics.map((k) => '<li style="color:#991b1b">' + sanitizeHtml(k) + ' (' + sanitizeHtml(result.byEpic[k]?.rawPct + '%' || '') + ')</li>').join('')}</ul></div>`;
 }
 
 function buildEpicCards(result: CoverageGapResult): string {
@@ -104,8 +101,8 @@ function buildEpicCards(result: CoverageGapResult): string {
             ? '<span class="badge badge-pass">PASS</span>'
             : '<span class="badge badge-fail">FAIL</span>';
         html += '<div class="epic-card">';
-        html += '<div class="epic-title">' + escapeHtml(key) + ' ' + badge + '</div>';
-        html += '<div class="epic-meta">' + escapeHtml(epic.epicSummary) + '</div>';
+        html += '<div class="epic-title">' + sanitizeHtml(key) + ' ' + badge + '</div>';
+        html += '<div class="epic-meta">' + sanitizeHtml(epic.epicSummary) + '</div>';
         html += '<div style="display:flex;justify-content:space-between;font-size:0.8rem;margin-top:8px">';
         html += '<span>' + epic.covered + '/' + epic.total + ' covered</span>';
         html += '<span>Weighted: ' + epic.weightedPct + '%</span>';
@@ -134,9 +131,9 @@ function buildHierarchyHtml(nodes: CoverageHierarchyNode[], depth = 0): string {
         }
         html +=
             '<strong>' +
-            escapeHtml(node.key) +
+            sanitizeHtml(node.key) +
             '</strong> <span style="color:#6b7280;font-size:0.8rem">' +
-            escapeHtml(node.summary.slice(0, 60)) +
+            sanitizeHtml(node.summary.slice(0, 60)) +
             '</span>';
         html +=
             '<span style="float:right;font-size:0.8rem;color:' +
@@ -171,12 +168,12 @@ function buildGapsTable(result: CoverageGapResult): string {
         '<table><thead><tr><th>Key</th><th>Summary</th><th>Type</th><th>Priority</th><th>Weight</th><th>Epic</th><th>Action</th></tr></thead><tbody>';
     for (const item of gaps) {
         html += '<tr class="gap-row">';
-        html += '<td><strong>' + escapeHtml(item.issueKey) + '</strong></td>';
-        html += '<td>' + escapeHtml(item.summary.slice(0, 80)) + '</td>';
+        html += '<td><strong>' + sanitizeHtml(item.issueKey) + '</strong></td>';
+        html += '<td>' + sanitizeHtml(item.summary.slice(0, 80)) + '</td>';
         html += '<td>' + item.type + '</td>';
         html += '<td>' + item.priority + '</td>';
         html += '<td>' + item.coverageWeight + '</td>';
-        html += '<td>' + (item.epicKey ? escapeHtml(item.epicKey) : '—') + '</td>';
+        html += '<td>' + (item.epicKey ? sanitizeHtml(item.epicKey) : '—') + '</td>';
         html += '<td><span class="status-no">GAP</span></td>';
         html += '</tr>';
     }
@@ -210,10 +207,10 @@ export function generateCoverageGapHtml(result: CoverageGapResult, title?: strin
         const reportTitle = title || 'Coverage Gap Analysis';
         let html =
             '<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">';
-        html += '<title>' + escapeHtml(reportTitle) + '</title><style>' + cssThemeBlock() + '</style>';
+        html += '<title>' + sanitizeHtml(reportTitle) + '</title><style>' + cssThemeBlock() + '</style>';
         html += themeScript(theme);
         html += '</head><body>';
-        html += '<h1>' + escapeHtml(reportTitle) + '</h1>';
+        html += '<h1>' + sanitizeHtml(reportTitle) + '</h1>';
         html += buildSummaryCards(result);
         html += buildQualityGateSection(result);
         html += '<h2>Coverage by Epic</h2>';

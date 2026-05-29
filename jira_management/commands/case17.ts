@@ -557,7 +557,7 @@ async function _resolveTestHistory(
     for (const t of tests) {
         const key = mapping.get(t.title) || mapping.get(t.fullTitle ?? '') || '';
         if (key && keyToHistory.has(key)) {
-            titleToHistory[t.title] = keyToHistory.get(key)!;
+            titleToHistory[t.title] = keyToHistory.get(key) ?? [];
         }
     }
     return titleToHistory;

@@ -1,6 +1,6 @@
 /** Utility functions for coverage gap analysis: type normalization, priority weighting,
  *  epic extraction, link parsing, and aggregate calculations. */
-import type { CoverageGapItem, CoverageGapResult, EpicCoverage } from './types';
+import type { CoverageGapItem, CoverageGapResult, EpicCoverage } from './coverage-gap';
 
 export const PRIORITY_WEIGHTS: Record<string, number> = {
     Blocker: 5,

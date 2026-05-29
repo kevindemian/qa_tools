@@ -8,7 +8,7 @@ import {
     checkQualityGate,
     loadEpicSummaries,
 } from './coverage-gap-utils';
-import type { CoverageGapItem, EpicCoverage } from './types';
+import type { CoverageGapItem, EpicCoverage } from './coverage-gap';
 
 describe('getCoverageWeight', () => {
     it('returns correct weight for known priorities', () => {

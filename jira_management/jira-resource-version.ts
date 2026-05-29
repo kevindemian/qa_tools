@@ -214,7 +214,7 @@ export async function getLatestReleases(
 
     const releasedVersions = allVersions
         .filter((v) => v.released && v.releaseDate)
-        .sort((a, b) => new Date(b.releaseDate!).getTime() - new Date(a.releaseDate!).getTime());
+        .sort((a, b) => new Date(b.releaseDate as string).getTime() - new Date(a.releaseDate as string).getTime());
 
     const latestReleasedVersions = releasedVersions.slice(0, numReleases);
     const unreleasedVersions = allVersions.filter((v) => !v.released);

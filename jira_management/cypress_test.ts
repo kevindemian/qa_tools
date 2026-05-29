@@ -49,8 +49,8 @@ class CypressTest {
                         return;
                     }
 
-                    const passed = lastFour[2]!;
-                    const failed = lastFour[3]!;
+                    const passed = lastFour[2] ?? 0;
+                    const failed = lastFour[3] ?? 0;
                     totalPassed += passed;
                     totalFailed += failed;
                 });

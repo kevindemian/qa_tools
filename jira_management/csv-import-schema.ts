@@ -7,8 +7,6 @@ export const CsvRowFieldsSchema = z.object({
     'Expected Result': z.string().default(''),
 });
 
-export type CsvRowFields = z.infer<typeof CsvRowFieldsSchema>;
-
 export const CsvRowSchema = z.object({
     fields: CsvRowFieldsSchema,
 });
