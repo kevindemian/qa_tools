@@ -184,7 +184,7 @@ describe('handleChangeProject', () => {
 
 describe('handleFlakinessDashboard', () => {
     it('warns when no project selected', () => {
-        handleFlakinessDashboard();
+        void handleFlakinessDashboard();
 
         expect(mockWarn).toHaveBeenCalledWith(expect.stringContaining('Nenhum projeto'));
     });
@@ -193,7 +193,7 @@ describe('handleFlakinessDashboard', () => {
         mockState.currentProjectName = 'proj1';
         mockLoadMetrics.mockReturnValue({ runs: [{ project: 'proj1' }] });
 
-        handleFlakinessDashboard();
+        void handleFlakinessDashboard();
 
         expect(mockWarn).toHaveBeenCalledWith(expect.stringContaining('Menos de 2'));
     });
@@ -203,7 +203,7 @@ describe('handleFlakinessDashboard', () => {
         mockLoadMetrics.mockReturnValue({ runs: [{ project: 'proj1' }, { project: 'proj1' }] });
         mockCalculateFlakiness.mockReturnValue([]);
 
-        handleFlakinessDashboard();
+        void handleFlakinessDashboard();
 
         expect(mockInfo).toHaveBeenCalledWith(expect.stringContaining('Nenhum teste flaky'));
     });
@@ -213,7 +213,7 @@ describe('handleFlakinessDashboard', () => {
         mockLoadMetrics.mockReturnValue({ runs: [{ project: 'proj1' }, { project: 'proj1' }] });
         mockCalculateFlakiness.mockReturnValue([{ test: 't1', rate: 0.5 }]);
 
-        handleFlakinessDashboard();
+        void handleFlakinessDashboard();
 
         expect(mockGenerateHtml).toHaveBeenCalled();
         const { writeFileSync } = require('fs');

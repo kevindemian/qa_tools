@@ -170,7 +170,7 @@ const ACTION_HANDLERS: Record<string, (m: GitProvider, pn: string, ns: string[])
     '8': withErrorHandling((m) => handleExportVariables(m)),
     '9': withErrorHandling((_m, _pn, ns) => handleChangeProject(ns)),
     a: () => {
-        handleFlakinessDashboard();
+        void handleFlakinessDashboard();
         return Promise.resolve(false);
     },
 };
