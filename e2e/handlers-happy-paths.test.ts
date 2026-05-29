@@ -26,11 +26,6 @@ const rnDir = path.join(tmpGitDir, 'release_notes');
 fs.mkdirSync(rnDir, { recursive: true });
 fs.writeFileSync(path.join(rnDir, 'ReleaseNotes.txt'), '');
 
-const templateSrc = path.join(__dirname, '../jira_management/test_steps_template.csv');
-if (!fs.existsSync(templateSrc)) {
-    fs.writeFileSync(templateSrc, 'Title,Action,Data,Expected Result\nExemplo,Step1,,Result1\n');
-}
-
 const jsonFixture = path.join(tmpHome, 'cases.json');
 fs.writeFileSync(
     jsonFixture,
@@ -392,17 +387,27 @@ describe('case10 — change git directory', () => {
 });
 
 // ──────────────────────────────────────────────
-// case11 — Generate CSV template  (local — copies file)
+// case11 — Generate CSV/JSON template  (local — copies file)
 // ──────────────────────────────────────────────
-describe('case11 — generate CSV template', () => {
-    it('copies template file to target path', async () => {
+describe('case11 — generate CSV/JSON template', () => {
+    it('copies CSV template file to target path', async () => {
         const dest = path.join(tmpHome, 'template.csv');
-        getPrompt().ask.mockResolvedValueOnce(dest);
+        getPrompt().ask.mockResolvedValueOnce('CSV').mockResolvedValueOnce(dest);
         const c = buildContext();
         const mod = require('../jira_management/commands/case11').default;
         await mod.handler(c);
         expect(fs.existsSync(dest)).toBe(true);
-        expect(c.pushHistory).toHaveBeenCalledWith('gerar-template', dest, 'ok');
+        expect(c.pushHistory).toHaveBeenCalledWith('gerar-template', 'CSV: ' + dest, 'ok');
+    });
+
+    it('copies JSON template file to target path', async () => {
+        const dest = path.join(tmpHome, 'template.json');
+        getPrompt().ask.mockResolvedValueOnce('JSON').mockResolvedValueOnce(dest);
+        const c = buildContext();
+        const mod = require('../jira_management/commands/case11').default;
+        await mod.handler(c);
+        expect(fs.existsSync(dest)).toBe(true);
+        expect(c.pushHistory).toHaveBeenCalledWith('gerar-template', 'JSON: ' + dest, 'ok');
     });
 });
 

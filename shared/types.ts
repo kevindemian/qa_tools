@@ -193,8 +193,28 @@ export interface PipelineJob {
     name: string;
     /** CI stage the job belongs to. */
     stage: string;
-    /** Execution status. */
+    /** Execution status (conclusion from API). */
     status: string;
+    /** Individual step conclusions within the job (GitHub API). */
+    stepConclusions?: Array<{ name: string; conclusion: string; number: number }>;
+}
+
+/** A GitHub issue summary. */
+export interface Issue {
+    /** Issue number. */
+    number: number;
+    /** Issue title. */
+    title: string;
+    /** Current state (open, closed). */
+    state: string;
+    /** ISO timestamp of last update. */
+    updated_at: string;
+    /** ISO timestamp of creation. */
+    created_at: string;
+    /** Issue labels. */
+    labels: string[];
+    /** Issue URL. */
+    html_url: string;
 }
 
 /** A pipeline artifact reference. */
@@ -221,6 +241,14 @@ export interface PipelineRun {
     conclusion?: string;
     /** URL to the run in the provider UI. */
     web_url?: string;
+    /** Trigger event (push, pull_request, workflow_dispatch). */
+    event?: string;
+    /** ISO timestamp of run creation. */
+    created_at?: string;
+    /** ISO timestamp of last update. */
+    updated_at?: string;
+    /** ISO timestamp of run start. */
+    run_started_at?: string;
 }
 
 /** Result returned after triggering a pipeline. */

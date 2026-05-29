@@ -190,7 +190,7 @@ describe('CsvResource', () => {
             const results = await csvResource.readBulkCsv(tmp);
             expect(results).toHaveLength(1);
             expect(results[0]!.title).toBe('Real');
-            expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining('Pulando bloco sem Title'));
+            expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining('formato flat'));
             warnSpy.mockRestore();
             fs.unlinkSync(tmp);
         });
@@ -330,6 +330,24 @@ describe('CsvResource', () => {
         });
     });
 
+    describe('detectSeparator', () => {
+        it('returns comma for normal CSV', () => {
+            expect(CsvResource.detectSeparator('Action,Data,Expected Result')).toBe(',');
+        });
+
+        it('returns semicolon when first line has ; and no comma', () => {
+            expect(CsvResource.detectSeparator('Action;Data;Expected Result')).toBe(';');
+        });
+
+        it('returns comma when first line has both ; and ,', () => {
+            expect(CsvResource.detectSeparator('"Action;Extra",Data,Expected Result')).toBe(',');
+        });
+
+        it('returns comma for empty first line', () => {
+            expect(CsvResource.detectSeparator('')).toBe(',');
+        });
+    });
+
     describe('readCsvFromString', () => {
         it('skips CSV row with empty Action field', async () => {
             const csvString = 'Action,Data,Expected Result\n,y,z';
@@ -343,6 +361,159 @@ describe('CsvResource', () => {
             expect(result).toHaveLength(1);
             expect(result[0]!.fields.Data).toBe('');
             expect(result[0]!.fields['Expected Result']).toBe('z');
+        });
+
+        it('parses CSV with semicolon separator', async () => {
+            const csvString = 'Action;Data;Expected Result\nstep1;data1;result1';
+            const result = await csvResource.readCsvFromString(csvString);
+            expect(result).toHaveLength(1);
+            expect(result[0]!.fields.Action).toBe('step1');
+            expect(result[0]!.fields.Data).toBe('data1');
+            expect(result[0]!.fields['Expected Result']).toBe('result1');
+        });
+
+        it('normalizes ExpectedResult (camelCase) header', async () => {
+            const loggerModule = require('../shared/logger');
+            const warnSpy = jest.spyOn(loggerModule.rootLogger, 'warn').mockImplementation(() => {});
+            const csvString = 'Action,Data,ExpectedResult\nx,y,z';
+            const result = await csvResource.readCsvFromString(csvString);
+            expect(result).toHaveLength(1);
+            expect(result[0]!.fields['Expected Result']).toBe('z');
+            expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining('normalizada'));
+            warnSpy.mockRestore();
+        });
+
+        it('normalizes lowercase expected result header', async () => {
+            const csvString = 'action,data,expected result\nx,y,z';
+            const result = await csvResource.readCsvFromString(csvString);
+            expect(result).toHaveLength(1);
+            expect(result[0]!.fields.Action).toBe('x');
+            expect(result[0]!.fields['Expected Result']).toBe('z');
+        });
+
+        it('normalizes header with trailing \\r', async () => {
+            const csvString = 'Action,Data,Expected Result\r\nstep1,data1,result1';
+            const result = await csvResource.readCsvFromString(csvString);
+            expect(result).toHaveLength(1);
+            expect(result[0]!.fields['Expected Result']).toBe('result1');
+        });
+
+        it('deduplicates normalization warnings per column', async () => {
+            const loggerModule = require('../shared/logger');
+            const warnSpy = jest.spyOn(loggerModule.rootLogger, 'warn').mockImplementation(() => {});
+            const csvString = 'Action,ExpectedResult,ExpectedResult\nx,y,z\nw,v,u';
+            const result = await csvResource.readCsvFromString(csvString);
+            expect(result).toHaveLength(2);
+            // Only 1 warn for normalization (deduped), not 2
+            const normalizeWarns = warnSpy.mock.calls.filter((c) => String(c[0]).includes('normalizada')).length;
+            expect(normalizeWarns).toBe(1);
+            warnSpy.mockRestore();
+        });
+
+        it('strips \\r from cell values', async () => {
+            const csvString = 'Action,Data,Expected Result\nstep1\r,data1\r,result1\r';
+            const result = await csvResource.readCsvFromString(csvString);
+            expect(result).toHaveLength(1);
+            expect(result[0]!.fields.Action).toBe('step1');
+            expect(result[0]!.fields.Data).toBe('data1');
+            expect(result[0]!.fields['Expected Result']).toBe('result1');
+        });
+
+        it('preserves \\n inside quoted cell values', async () => {
+            const csvString = 'Action,Data,Expected Result\n"line1\nline2",data,result\nstep3,data3,result3';
+            const result = await csvResource.readCsvFromString(csvString);
+            expect(result).toHaveLength(2);
+            expect(result[0]!.fields.Action).toBe('line1\nline2');
+            expect(result[1]!.fields.Action).toBe('step3');
+        });
+    });
+
+    describe('_processBulkCsvBlock flat CSV warning', () => {
+        it('warns with diagnostic for flat CSV (Title,Action,... header)', async () => {
+            const loggerModule = require('../shared/logger');
+            const warnSpy = jest.spyOn(loggerModule.rootLogger, 'warn').mockImplementation(() => {});
+            const fs = require('fs');
+            // Flat CSV format: header row with Title,Action,Data,Expected Result (no ---, no Title:)
+            const tmp = '/tmp/test-flat.csv';
+            fs.writeFileSync(
+                tmp,
+                'Title,Action,Data,Expected Result\nTC1,Step1,,Result1\nTC2,Step2,,Result2\n',
+                'utf-8',
+            );
+            const results = await csvResource.readBulkCsv(tmp);
+            // No bulk-format blocks found, so 0 results
+            expect(results).toHaveLength(0);
+            expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining('formato flat'));
+            warnSpy.mockRestore();
+            fs.unlinkSync(tmp);
+        });
+
+        it('warns with diagnostic for flat CSV (just Action,Data,...)', async () => {
+            const loggerModule = require('../shared/logger');
+            const warnSpy = jest.spyOn(loggerModule.rootLogger, 'warn').mockImplementation(() => {});
+            const fs = require('fs');
+            const tmp = '/tmp/test-flat-action.csv';
+            fs.writeFileSync(tmp, 'Action,Data,Expected Result\nStep1,Data1,Result1\n', 'utf-8');
+            const results = await csvResource.readBulkCsv(tmp);
+            expect(results).toHaveLength(0);
+            expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining('formato flat'));
+            warnSpy.mockRestore();
+            fs.unlinkSync(tmp);
+        });
+    });
+
+    describe('readBulkCsv — CRLF normalization', () => {
+        it('splits blocks correctly with CRLF line endings', async () => {
+            const fs = require('fs');
+            const tmp = '/tmp/test-crlf-bulk.csv';
+            const crlf = '\r\n';
+            const csvContent =
+                [
+                    'Title: Test A',
+                    'Action,Data,Expected Result',
+                    'a1,d1,r1',
+                    '---',
+                    'Title: Test B',
+                    'Action,Data,Expected Result',
+                    'a2,d2,r2',
+                ].join(crlf) + crlf;
+            fs.writeFileSync(tmp, csvContent, 'utf-8');
+            const results = await csvResource.readBulkCsv(tmp);
+            expect(results).toHaveLength(2);
+            expect(results[0]!.title).toBe('Test A');
+            expect(results[1]!.title).toBe('Test B');
+            expect(results[0]!.steps).toHaveLength(1);
+            expect(results[0]!.steps[0]!.fields['Expected Result']).toBe('r1');
+            fs.unlinkSync(tmp);
+        });
+
+        it('strips BOM character at start of file', async () => {
+            const fs = require('fs');
+            const tmp = '/tmp/test-bom-bulk.csv';
+            const bom = '\uFEFF';
+            const csvContent = bom + 'Title: Com BOM\nAction,Data,Expected Result\na,d,r\n';
+            fs.writeFileSync(tmp, csvContent, 'utf-8');
+            const results = await csvResource.readBulkCsv(tmp);
+            expect(results).toHaveLength(1);
+            expect(results[0]!.title).toBe('Com BOM');
+            expect(results[0]!.steps[0]!.fields['Expected Result']).toBe('r');
+            fs.unlinkSync(tmp);
+        });
+
+        it('handles BOM + CRLF + semicolons combined', async () => {
+            const fs = require('fs');
+            const tmp = '/tmp/test-bom-crlf-semi.csv';
+            const bom = '\uFEFF';
+            const crlf = '\r\n';
+            const csvContent =
+                bom + ['Title: Combined quirks', 'Action;Data;ExpectedResult', 'step1;d1;r1'].join(crlf) + crlf;
+            fs.writeFileSync(tmp, csvContent, 'utf-8');
+            const results = await csvResource.readBulkCsv(tmp);
+            expect(results).toHaveLength(1);
+            expect(results[0]!.title).toBe('Combined quirks');
+            expect(results[0]!.steps[0]!.fields['Expected Result']).toBe('r1');
+            expect(results[0]!.steps[0]!.fields.Action).toBe('step1');
+            fs.unlinkSync(tmp);
         });
     });
 });

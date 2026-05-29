@@ -12,7 +12,10 @@ jest.mock('fs');
 import fs from 'fs';
 import path from 'path';
 
-import JiraLinkManager, { matchPreconditionByTokenOverlap } from './jira_link_manager';
+import JiraLinkManager, {
+    matchPreconditionByTokenOverlap,
+    matchPreconditionByDualThreshold,
+} from './jira_link_manager';
 import { rootLogger } from '../shared/logger';
 import { tempDirPath } from '../shared/temp-dir';
 
@@ -449,6 +452,83 @@ describe('matchPreconditionByTokenOverlap', () => {
     it('returns create for single-word no-match query', () => {
         const result = matchPreconditionByTokenOverlap('Network', candidates);
         expect(result.key).toBe('__create__');
+        expect(result.matchType).toBe('create');
+    });
+});
+
+describe('matchPreconditionByDualThreshold', () => {
+    const candidates = [
+        { key: 'PREC-1', summary: 'User must be logged in' },
+        { key: 'PREC-2', summary: 'Admin role required' },
+        { key: 'PREC-3', summary: 'Database must be seeded with test data' },
+    ];
+
+    it('returns exact match (same safety as single threshold)', () => {
+        const result = matchPreconditionByDualThreshold('User must be logged in', candidates);
+        expect(result.key).toBe('PREC-1');
+        expect(result.matchType).toBe('exact');
+    });
+
+    it('returns containment match (substring, safe)', () => {
+        const result = matchPreconditionByDualThreshold('must be seeded', candidates);
+        expect(result.key).toBe('PREC-3');
+        expect(result.matchType).toBe('containment');
+    });
+
+    it('rejects false positive: User vs Admin in Jaccard 0.5-0.69 zone', () => {
+        const noExactMatch = [
+            { key: 'PREC-2', summary: 'Admin must be logged in' },
+            { key: 'PREC-3', summary: 'Database must be seeded with test data' },
+        ];
+        const result = matchPreconditionByDualThreshold('User must be logged in', noExactMatch);
+        expect(result.matchType).toBe('create');
+    });
+
+    it('accepts subsumption: query is subset of candidate with extra words', () => {
+        const subsetCandidates = [{ key: 'PREC-X', summary: 'User must be logged in to the system' }];
+        const result = matchPreconditionByDualThreshold('User must be logged in', subsetCandidates);
+        expect(result.key).toBe('PREC-X');
+        expect(result.matchType === 'containment' || result.matchType === 'overlap').toBe(true);
+    });
+
+    it('accepts subsumption: candidate is subset of query with extra words', () => {
+        const supersetCandidates = [{ key: 'PREC-Y', summary: 'User must be logged in' }];
+        const result = matchPreconditionByDualThreshold('User must be logged in to the system', supersetCandidates);
+        expect(result.key).toBe('PREC-Y');
+        expect(result.matchType === 'containment' || result.matchType === 'overlap').toBe(true);
+    });
+
+    it('rejects when both sides have unique content words (different meaning)', () => {
+        const diffCandidates = [{ key: 'PREC-2', summary: 'Admin must be logged in' }];
+        const result = matchPreconditionByDualThreshold('User must be logged in', diffCandidates);
+        expect(result.matchType).toBe('create');
+    });
+
+    it('rejects when unique content words on both sides even with high overlap', () => {
+        const diffCandidates = [{ key: 'PREC-3', summary: 'Guest user must be logged out' }];
+        const result = matchPreconditionByDualThreshold('Admin user must be logged in', diffCandidates);
+        expect(result.matchType).toBe('create');
+    });
+
+    it('accepts high-confidence match (Jaccard ≥ 0.7, no containment)', () => {
+        const highCandidates = [{ key: 'PREC-1', summary: 'User must be logged in to the application' }];
+        const result = matchPreconditionByDualThreshold('User must be logged in to the system', highCandidates);
+        expect(result.key).toBe('PREC-1');
+        expect(result.matchType).toBe('overlap');
+    });
+
+    it('returns create for empty query', () => {
+        const result = matchPreconditionByDualThreshold('', candidates);
+        expect(result.matchType).toBe('create');
+    });
+
+    it('returns create for empty candidates list', () => {
+        const result = matchPreconditionByDualThreshold('Anything', []);
+        expect(result.matchType).toBe('create');
+    });
+
+    it('returns create for completely unrelated query', () => {
+        const result = matchPreconditionByDualThreshold('Network connectivity must be available', candidates);
         expect(result.matchType).toBe('create');
     });
 });

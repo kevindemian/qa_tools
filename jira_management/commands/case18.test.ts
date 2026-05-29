@@ -36,7 +36,7 @@ jest.mock('../../shared/logger', () => ({
 jest.mock('fs');
 
 jest.mock('../jira_link_manager', () => ({
-    matchPreconditionByTokenOverlap: jest.fn(),
+    matchPreconditionByDualThreshold: jest.fn(),
 }));
 
 const mockSessionContext: Record<string, unknown> = {
@@ -204,7 +204,7 @@ describe('case18 — AI tests generator', () => {
         const fs = require('fs');
 
         prompt.ask.mockResolvedValueOnce('User wants to login').mockResolvedValueOnce('Must validate credentials');
-        fs.readFileSync.mockReturnValue('template with {preconditions}');
+        fs.readFileSync.mockReturnValue('You are a QA engineer.');
 
         baseContext.linkManager.listPreconditions = jest
             .fn()
@@ -224,92 +224,29 @@ describe('case18 — AI tests generator', () => {
         expect(prompt.info).toHaveBeenCalledWith(expect.stringContaining('pre-conditions encontradas'));
     });
 
-    it('filters preconditions via LLM when threshold exceeded', async () => {
-        const prompt = require('../../shared/prompt');
-        const llm = require('../../shared/llm-client');
-        const jiraLM = require('../jira_link_manager');
-        const fs = require('fs');
-
-        prompt.ask.mockResolvedValueOnce('User wants to login').mockResolvedValueOnce('Must validate credentials');
-        fs.readFileSync.mockReturnValue('template {preconditions}');
-
-        const manyPreconditions = Array.from({ length: 15 }, (_, i) => ({
-            key: `PC-${i + 1}`,
-            summary: `Precondition ${i + 1}`,
-        }));
-        baseContext.linkManager.listPreconditions = jest.fn().mockResolvedValue(manyPreconditions);
-
-        llm.llmPrompt.mockResolvedValueOnce(['User is logged in']).mockResolvedValueOnce([
-            {
-                title: 'Login test',
-                steps: ['Step 1'],
-                expectedResult: 'Expected result text for validation',
-            },
-        ]);
-        jiraLM.matchPreconditionByTokenOverlap.mockReturnValue({
-            key: 'PC-1',
-            summary: 'User is logged in',
-            matchType: 'exact',
-        });
-
-        const mod = require('./case18').default;
-        await mod.handler(baseContext);
-
-        expect(jiraLM.matchPreconditionByTokenOverlap).toHaveBeenCalled();
-    });
-
-    it('handles LLM precondition filter failure gracefully', async () => {
-        const prompt = require('../../shared/prompt');
-        const llm = require('../../shared/llm-client');
-        const fs = require('fs');
-
-        prompt.ask.mockResolvedValueOnce('User story').mockResolvedValueOnce('Acceptance criteria');
-        fs.readFileSync.mockReturnValue('template {preconditions}');
-
-        const manyPreconditions = Array.from({ length: 15 }, (_, i) => ({
-            key: `PC-${i + 1}`,
-            summary: `Precondition ${i + 1}`,
-        }));
-        baseContext.linkManager.listPreconditions = jest.fn().mockResolvedValue(manyPreconditions);
-
-        llm.llmPrompt.mockRejectedValueOnce(new Error('LLM error')).mockResolvedValueOnce([
-            {
-                title: 'Login test',
-                steps: ['Step 1'],
-                expectedResult: 'Expected result text for validation',
-            },
-        ]);
-
-        const mod = require('./case18').default;
-        await mod.handler(baseContext);
-
-        expect(prompt.warn).toHaveBeenCalledWith(expect.stringContaining('Falha ao extrair'));
-    });
-
-    it('creates new preconditions in Jira when LLM detects need', async () => {
+    it('creates new preconditions when dual-threshold returns create', async () => {
         const prompt = require('../../shared/prompt');
         const llm = require('../../shared/llm-client');
         const jiraLM = require('../jira_link_manager');
         const fs = require('fs');
 
         prompt.ask.mockResolvedValueOnce('User wants to login').mockResolvedValueOnce('Must validate');
-        fs.readFileSync.mockReturnValue('template {preconditions}');
+        fs.readFileSync.mockReturnValue('You are a QA engineer.');
 
-        const manyPreconditions = Array.from({ length: 15 }, (_, i) => ({
-            key: `PC-${i + 1}`,
-            summary: `Precondition ${i + 1}`,
-        }));
-        baseContext.linkManager.listPreconditions = jest.fn().mockResolvedValue(manyPreconditions);
+        baseContext.linkManager.listPreconditions = jest
+            .fn()
+            .mockResolvedValue([{ key: 'PC-1', summary: 'User must be logged in' }]);
 
-        llm.llmPrompt.mockResolvedValueOnce(['New precondition needed']).mockResolvedValueOnce([
+        llm.llmPrompt.mockResolvedValue([
             {
                 title: 'Login test',
                 steps: ['Step 1'],
                 expectedResult: 'Expected result text for validation',
+                preConditions: [{ type: 'create', summary: 'New precondition needed' }],
             },
         ]);
-        jiraLM.matchPreconditionByTokenOverlap.mockReturnValue({
-            key: '',
+        jiraLM.matchPreconditionByDualThreshold.mockReturnValue({
+            key: '__create__',
             summary: 'New precondition needed',
             matchType: 'create',
         });
@@ -319,9 +256,48 @@ describe('case18 — AI tests generator', () => {
         const mod = require('./case18').default;
         await mod.handler(baseContext);
 
+        expect(jiraLM.matchPreconditionByDualThreshold).toHaveBeenCalled();
         expect(baseContext.linkManager.createPrecondition).toHaveBeenCalledWith('TEST', 'New precondition needed');
         expect(prompt.info).toHaveBeenCalledWith(expect.stringContaining('Pre-condition criada'));
         expect(prompt.info).toHaveBeenCalledWith(expect.stringContaining('pre-conditions foram criadas'));
+    });
+
+    it('resolves matched preconditions to reference without creating', async () => {
+        const prompt = require('../../shared/prompt');
+        const llm = require('../../shared/llm-client');
+        const jiraLM = require('../jira_link_manager');
+        const fs = require('fs');
+
+        prompt.ask.mockResolvedValueOnce('User story').mockResolvedValueOnce('Criteria');
+        fs.readFileSync.mockReturnValue('You are a QA engineer.');
+
+        baseContext.linkManager.listPreconditions = jest
+            .fn()
+            .mockResolvedValue([{ key: 'PC-1', summary: 'User must be logged in' }]);
+
+        llm.llmPrompt.mockResolvedValue([
+            {
+                title: 'Login test',
+                steps: ['Step 1'],
+                expectedResult: 'Expected result text for validation',
+                preConditions: [{ type: 'create', summary: 'User must be logged in' }],
+            },
+        ]);
+        jiraLM.matchPreconditionByDualThreshold.mockReturnValue({
+            key: 'PC-1',
+            summary: 'User must be logged in',
+            matchType: 'exact',
+        });
+
+        const mod = require('./case18').default;
+        await mod.handler(baseContext);
+
+        expect(jiraLM.matchPreconditionByDualThreshold).toHaveBeenCalledWith(
+            'User must be logged in',
+            expect.any(Array),
+        );
+        expect(baseContext.linkManager.createPrecondition).not.toHaveBeenCalled();
+        expect(prompt.info).toHaveBeenCalledWith(expect.stringContaining('Nenhuma pre-condition nova foi criada'));
     });
 
     it('handles failure to list preconditions', async () => {
@@ -330,7 +306,7 @@ describe('case18 — AI tests generator', () => {
         const fs = require('fs');
 
         prompt.ask.mockResolvedValueOnce('User story').mockResolvedValueOnce('Criteria');
-        fs.readFileSync.mockReturnValue('template {preconditions}');
+        fs.readFileSync.mockReturnValue('You are a QA engineer.');
 
         baseContext.linkManager.listPreconditions = jest.fn().mockRejectedValue(new Error('Jira unavailable'));
 
@@ -354,7 +330,7 @@ describe('case18 — AI tests generator', () => {
         const fs = require('fs');
 
         prompt.ask.mockResolvedValueOnce('User wants to login').mockResolvedValueOnce('Must validate');
-        fs.readFileSync.mockReturnValue('template {preconditions}');
+        fs.readFileSync.mockReturnValue('You are a QA engineer.');
 
         baseContext.linkManager.listPreconditions = jest.fn().mockResolvedValue([]);
 
@@ -391,23 +367,22 @@ describe('case18 — AI tests generator', () => {
         const fs = require('fs');
 
         prompt.ask.mockResolvedValueOnce('User story').mockResolvedValueOnce('Criteria');
-        fs.readFileSync.mockReturnValue('template {preconditions}');
+        fs.readFileSync.mockReturnValue('You are a QA engineer.');
 
-        const manyPreconditions = Array.from({ length: 15 }, (_, i) => ({
-            key: `PC-${i + 1}`,
-            summary: `Precondition ${i + 1}`,
-        }));
-        baseContext.linkManager.listPreconditions = jest.fn().mockResolvedValue(manyPreconditions);
+        baseContext.linkManager.listPreconditions = jest
+            .fn()
+            .mockResolvedValue([{ key: 'PC-1', summary: 'User is logged in' }]);
 
-        llm.llmPrompt.mockResolvedValueOnce(['New precondition']).mockResolvedValueOnce([
+        llm.llmPrompt.mockResolvedValue([
             {
                 title: 'Test with preconditions',
                 steps: ['Step 1'],
                 expectedResult: 'Expected result text for validation',
+                preConditions: [{ type: 'create', summary: 'New precondition' }],
             },
         ]);
-        jiraLM.matchPreconditionByTokenOverlap.mockReturnValue({
-            key: '',
+        jiraLM.matchPreconditionByDualThreshold.mockReturnValue({
+            key: '__create__',
             summary: 'New precondition',
             matchType: 'create',
         });
@@ -427,15 +402,13 @@ describe('case18 — AI tests generator', () => {
         const fs = require('fs');
 
         prompt.ask.mockResolvedValueOnce('User story').mockResolvedValueOnce('Criteria');
-        fs.readFileSync.mockReturnValue('template {preconditions}');
+        fs.readFileSync.mockReturnValue('You are a QA engineer.');
 
-        const manyPreconditions = Array.from({ length: 15 }, (_, i) => ({
-            key: `PC-${i + 1}`,
-            summary: `Precondition ${i + 1}`,
-        }));
-        baseContext.linkManager.listPreconditions = jest.fn().mockResolvedValue(manyPreconditions);
+        baseContext.linkManager.listPreconditions = jest
+            .fn()
+            .mockResolvedValue([{ key: 'PC-1', summary: 'User is logged in' }]);
 
-        llm.llmPrompt.mockResolvedValueOnce(['Existing precondition']).mockResolvedValueOnce([
+        llm.llmPrompt.mockResolvedValue([
             {
                 title: 'Test with create matching createdKeys',
                 steps: ['Step 1'],
@@ -449,8 +422,8 @@ describe('case18 — AI tests generator', () => {
                 preConditions: [{ type: 'reference' }],
             },
         ]);
-        jiraLM.matchPreconditionByTokenOverlap.mockReturnValue({
-            key: '',
+        jiraLM.matchPreconditionByDualThreshold.mockReturnValue({
+            key: '__create__',
             summary: 'Newly created PC',
             matchType: 'create',
         });
@@ -461,5 +434,46 @@ describe('case18 — AI tests generator', () => {
         await mod.handler(baseContext);
 
         expect(baseContext.linkManager.createPrecondition).toHaveBeenCalledWith('TEST', 'Newly created PC');
+    });
+
+    it('deduplicates identical summaries across test cases', async () => {
+        const prompt = require('../../shared/prompt');
+        const llm = require('../../shared/llm-client');
+        const jiraLM = require('../jira_link_manager');
+        const fs = require('fs');
+
+        prompt.ask.mockResolvedValueOnce('User story').mockResolvedValueOnce('Criteria');
+        fs.readFileSync.mockReturnValue('You are a QA engineer.');
+
+        baseContext.linkManager.listPreconditions = jest.fn().mockResolvedValue([]);
+
+        llm.llmPrompt.mockResolvedValue([
+            {
+                title: 'Test 1',
+                steps: ['Step 1'],
+                expectedResult: 'Expected result one',
+                preConditions: [{ type: 'create', summary: 'User must be logged in' }],
+            },
+            {
+                title: 'Test 2',
+                steps: ['Step 1'],
+                expectedResult: 'Expected result two',
+                preConditions: [{ type: 'create', summary: 'User must be logged in' }],
+            },
+        ]);
+        jiraLM.matchPreconditionByDualThreshold.mockReturnValue({
+            key: '__create__',
+            summary: 'User must be logged in',
+            matchType: 'create',
+        });
+
+        baseContext.linkManager.createPrecondition = jest.fn().mockResolvedValue('PC-NEW-1');
+
+        const mod = require('./case18').default;
+        await mod.handler(baseContext);
+
+        /* Deduplicated: same summary → only one createPrecondition call */
+        expect(jiraLM.matchPreconditionByDualThreshold).toHaveBeenCalledTimes(1);
+        expect(baseContext.linkManager.createPrecondition).toHaveBeenCalledTimes(1);
     });
 });

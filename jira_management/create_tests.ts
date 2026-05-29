@@ -1,7 +1,5 @@
 /** Create tests — orchestrate CSV/JSON import, issue creation, linking, and test execution reporting.
- * @module Internal functions are ordered by dependency: readers → creators → validators → linkers.
- * R2 (SRP) débito: deve ser quebrado em CsvImporter, TestCaseFactory, IssueLinker,
- * TestExecutionCreator, PreconditionAssociator (máx 300 linhas cada). */
+ * @module Functions ordered by dependency: readers → creators → validators → linkers. 219 lines under the 300-line R2 limit. */
 
 import type JiraResource from './jira_resource';
 import JiraLinkManager from './jira_link_manager';

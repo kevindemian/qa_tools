@@ -1,27 +1,31 @@
 [
-  {
-    "title": "Exemplo — Login valido",
-    "description": "Verifica login com credenciais validas",
-    "steps": [
-      { "Action": "Acessar pagina de login", "Data": "https://app.exemplo.com/login", "ExpectedResult": "Pagina de login carregada" },
-      { "Action": "Preencher usuario", "Data": "admin", "ExpectedResult": "Campo preenchido" },
-      { "Action": "Preencher senha", "Data": "123456", "ExpectedResult": "Campo preenchido (oculto)" },
-      { "Action": "Clicar em Entrar", "ExpectedResult": "Redirecionado para dashboard" }
-    ],
-    "precondition": "Usuario admin cadastrado no sistema",
-    "group": "AUTH",
-    "linkedIssues": []
-  },
-  {
-    "title": "Exemplo — Login invalido",
-    "description": "Verifica mensagem de erro com credenciais incorretas",
-    "steps": [
-      { "Action": "Acessar pagina de login", "ExpectedResult": "Pagina de login carregada" },
-      { "Action": "Preencher usuario", "Data": "invalido", "ExpectedResult": "Campo preenchido" },
-      { "Action": "Preencher senha", "Data": "errada", "ExpectedResult": "Campo preenchido (oculto)" },
-      { "Action": "Clicar em Entrar", "ExpectedResult": "Mensagem: Credenciais invalidas" }
-    ],
-    "group": "AUTH",
-    "linkedIssues": []
-  }
+    {
+        "title": "Exemplo — Login valido",
+        "description": "Verifica login com credenciais validas",
+        "steps": [
+            {
+                "Action": "Acessar pagina de login",
+                "Data": "https://app.exemplo.com/login",
+                "Expected Result": "Pagina de login carregada"
+            },
+            { "Action": "Preencher usuario", "Data": "admin", "Expected Result": "Campo preenchido" },
+            { "Action": "Preencher senha", "Data": "123456", "Expected Result": "Campo preenchido (oculto)" },
+            { "Action": "Clicar em Entrar", "Expected Result": "Redirecionado para dashboard" }
+        ],
+        "precondition": "Usuario admin cadastrado no sistema",
+        "group": "AUTH",
+        "linkedIssues": []
+    },
+    {
+        "title": "Exemplo — Login invalido",
+        "description": "Verifica mensagem de erro com credenciais incorretas",
+        "steps": [
+            { "Action": "Acessar pagina de login", "Expected Result": "Pagina de login carregada" },
+            { "Action": "Preencher usuario", "Data": "invalido", "Expected Result": "Campo preenchido" },
+            { "Action": "Preencher senha", "Data": "errada", "Expected Result": "Campo preenchido (oculto)" },
+            { "Action": "Clicar em Entrar", "Expected Result": "Mensagem: Credenciais invalidas" }
+        ],
+        "group": "AUTH",
+        "linkedIssues": []
+    }
 ]

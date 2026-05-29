@@ -810,7 +810,7 @@ describe('main flow empty projects', () => {
                 readFileSync: jest.fn((p: string) => {
                     if (p.includes('projects.json')) return '{}';
                     if (p.includes('providers.json')) return '{}';
-                    return jest.requireActual('fs').readFileSync(p, 'utf8');
+                    return _realReadFileSync(p, 'utf8');
                 }),
                 writeFileSync: jest.fn(),
                 unlinkSync: jest.fn(),

@@ -419,16 +419,29 @@ function parseJsonTests(jsonPath: string): TestCase[] {
     const raw = fs.readFileSync(jsonPath, 'utf8');
     const parsed = JSON.parse(raw);
     const validated = ImportJsonSchema.parse(parsed);
+    let aliasWarned = false;
     return validated.map((item) => ({
         title: item.title,
         description: item.description || '',
-        steps: item.steps.map((s) => ({
-            fields: {
-                Action: s.Action || '',
-                Data: s.Data || '',
-                'Expected Result': s['Expected Result'] || '',
-            },
-        })),
+        steps: item.steps.map((s) => {
+            const expectedResult = s['Expected Result'] ?? s['ExpectedResult'] ?? '';
+            if (!aliasWarned && s['ExpectedResult'] && !s['Expected Result']) {
+                aliasWarned = true;
+                rootLogger.warn(
+                    'JSON step usa "ExpectedResult" (junto, sem espaço) em vez de "Expected Result" (com espaço). ' +
+                        'Causa: template JSON desatualizado (test_cases_template.json / test_steps_template.json). ' +
+                        'Solução: renomeie a chave para "Expected Result" nos seus arquivos JSON. ' +
+                        'Este aviso aparece apenas uma vez por arquivo.',
+                );
+            }
+            return {
+                fields: {
+                    Action: s.Action || '',
+                    Data: s.Data || '',
+                    'Expected Result': expectedResult,
+                },
+            };
+        }),
         precondition: item.precondition
             ? isPreconditionKey(item.precondition)
                 ? { type: 'reference' as const, value: item.precondition }
