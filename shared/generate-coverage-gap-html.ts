@@ -1,7 +1,7 @@
 /** Self-contained HTML report for coverage gap analysis.
  *  Summary cards, per-epic progress bars, hierarchy tree, gaps table, quality gate section.
  *  Dark mode support via CSS class toggle. */
-import type { CoverageGapResult, CoverageHierarchyNode } from './coverage-gap';
+import type { CoverageGapResult, CoverageHierarchyNode } from './types';
 import { rootLogger } from './logger';
 import { sanitizeHtml } from './sanitize';
 

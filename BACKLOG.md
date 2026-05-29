@@ -407,3 +407,28 @@ Remediação completa dos 43 débitos identificados na auditoria adversarial.
 - `jira_management/menu-data.ts` + `ui-helpers.ts` — dados de menu + navegação extraídos de main.ts
 - `jira_management/link-types.ts` + `link-operations.ts` + `precondition-handler.ts` — 3 sub-módulos extraídos de jira_link_manager.ts
 - `jira_management/commands/case17-helpers.ts` + `case17-test-utils.ts` — helpers extraídos de case17.ts
+
+## 🔷 Sprint F — Auditoria Adversarial Sprint F 🔷
+
+Remediação completa dos 15 achados da auditoria adversarial (AUDITORIA_SPRINT_F.md).
+
+| #   | Item                                                                 | Gravidade | Status | Arquivos                                                                                                                                                                                                                     |
+| --- | -------------------------------------------------------------------- | --------- | ------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| F1  | `npm audit fix` (axios CVE) + `npm update` (minor/patch)             | 🔴 ALTO   | ✅     | `package.json`, `package-lock.json`                                                                                                                                                                                          |
+| F2  | Empty catch blocks (2 locais: theme localStorage)                    | 🟡 MÉDIO  | ⬜     | `shared/report-styles.ts`, `shared/generate-coverage-gap-html.ts`                                                                                                                                                            |
+| F3  | `any[]` → `InlineToken[]` em markdown.ts (6 funções públicas)        | 🔴 ALTO   | ⬜     | `shared/markdown.ts`                                                                                                                                                                                                         |
+| F4  | Circular dep coverage-gap\* — mover tipos para `types.ts`            | 🟡 MÉDIO  | ⬜     | `shared/types.ts`, `shared/coverage-gap.ts`, `shared/coverage-gap-utils.ts`, `shared/generate-coverage-gap-html.ts`                                                                                                          |
+| F5  | Throttle http-client.ts (`createThrottledClient`)                    | 🔴 ALTO   | ⬜     | `shared/http-client.ts`                                                                                                                                                                                                      |
+| F6  | report-html.ts extração (chart + sections)                           | 🟡 MÉDIO  | ⬜     | `shared/report-html.ts`, `shared/report-chart.ts`, `shared/report-sections.ts`                                                                                                                                               |
+| F7  | Testes case01–case16 (smoke + happy path)                            | 🔴 ALTO   | ⬜     | `jira_management/commands/case01.test.ts`–`case16.test.ts` (16 novos)                                                                                                                                                        |
+| F8  | `process.env` → `Config.get()` (12 arquivos, ~15 locais)             | 🟡 MÉDIO  | ⬜     | `shared/disk-cache.ts`, `shared/llm-benchmark.ts`, `shared/open.ts`, `shared/output.ts`, `shared/prompt-input.ts`, `shared/publish.ts`, `shared/report-html.ts`, `shared/temp-dir.ts`, `jira_management/commands/case17*.ts` |
+| F9  | `Config` construtor privado (force `Config.create()`/`getDefault()`) | 🟢 BAIXO  | ⬜     | `shared/config.ts`                                                                                                                                                                                                           |
+| F10 | ts-prune false positives — `--exclude 'used in module'`              | 🟢 BAIXO  | ⬜     | `package.json`                                                                                                                                                                                                               |
+| F11 | `_` prefix convention documentada em AGENTS.md                       | 🟢 BAIXO  | ⬜     | `AGENTS.md`                                                                                                                                                                                                                  |
+| F12 | Throttle em git_triggers/ (`createThrottledClient` usage)            | 🔴 ALTO   | ⬜     | `git_triggers/github_manager.ts`, `git_triggers/gitlab_manager.ts`                                                                                                                                                           |
+
+### Comentários
+
+- **M6 (skip na dispatch table)**: Confirmado falso positivo — todos os handlers 00-23 registrados. Nenhuma ação.
+- **A6 (Docker)**: Já classificado como feature futura em Sprint A. Fora do escopo.
+- **B2 (full clean \_prefix)**: 34 funções com `_` prefix — scope creep. Convenção documentada, limpeza gradual futura.
