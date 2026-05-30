@@ -4,6 +4,13 @@ jest.mock('fs', () => {
     return { ...actual, readFileSync: jest.fn() };
 });
 
+jest.mock('./config', () => {
+    const mockCfg = {
+        get: jest.fn((key: string) => process.env[key] || undefined),
+    };
+    return mockCfg;
+});
+
 import { spawn, execSync } from 'child_process';
 import { readFileSync } from 'fs';
 import { openWithOsOrFallback, getWinTempDir, getDocsOutputDir } from './open';

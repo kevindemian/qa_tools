@@ -33,7 +33,11 @@ jest.mock('../shared/state', () => ({
 jest.mock('../shared/http-client', () => ({ sleep: jest.fn() }));
 
 jest.mock('../shared/config', () => ({
-    default: { jiraProject: 'TEST' },
+    __esModule: true,
+    default: {
+        jiraProject: 'TEST',
+        get: jest.fn((key: string) => process.env[key] || undefined),
+    },
 }));
 
 jest.mock('./test-results', () => ({

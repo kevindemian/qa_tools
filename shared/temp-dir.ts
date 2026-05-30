@@ -1,11 +1,12 @@
 /** Temporary directory management: reports, ephemeral files, and cleanup handlers. */
 import { resolve, join } from 'path';
 import { mkdirSync, writeFileSync, existsSync, rmSync } from 'fs';
+import Config from './config';
 
 const PROJECT_ROOT = resolve(__dirname, '..');
 
 function resolveEnvOrPath(envVar: string, defaultValue: string): string {
-    return process.env[envVar] ? resolve(process.env[envVar]) : join(PROJECT_ROOT, defaultValue);
+    return Config.get(envVar) ? resolve(Config.get(envVar)!) : join(PROJECT_ROOT, defaultValue);
 }
 
 /** Absolute path to the reports directory (overridable via `QA_TOOLS_REPORTS_DIR`). */
@@ -16,7 +17,7 @@ export function reportsDir(): string {
 /** @internal Not part of public API. Logging uses `rootLogger` directly. */
 /** Absolute path to the logs directory (overridable via `LOG_DIR` or `QA_TOOLS_LOGS_DIR`). */
 export function logsDir(): string {
-    if (process.env.QA_TOOLS_LOGS_DIR) return resolve(process.env.QA_TOOLS_LOGS_DIR);
+    if (Config.get('QA_TOOLS_LOGS_DIR')) return resolve(Config.get('QA_TOOLS_LOGS_DIR')!);
     return resolveEnvOrPath('LOG_DIR', 'logs');
 }
 

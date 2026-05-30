@@ -8,6 +8,7 @@ import fs from 'fs';
 import path from 'path';
 import { llmPrompt } from './llm-client';
 import { rootLogger } from './logger';
+import Config from './config';
 import { defaultOutput } from './output';
 import { ReportValidator, type ValidationRule } from './report-validator';
 import {
@@ -165,7 +166,7 @@ function printResults(results: BenchmarkResult[]): void {
 }
 
 export async function runBenchmark(): Promise<void> {
-    if (process.env.BENCHMARK !== 'true') {
+    if (Config.get('BENCHMARK') !== 'true') {
         defaultOutput.print('Skipping benchmark. Set BENCHMARK=true to run.');
         return;
     }

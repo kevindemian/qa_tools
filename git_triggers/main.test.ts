@@ -11,6 +11,8 @@ const _realReadFileSync = fs.readFileSync.bind(fs);
 
 jest.mock('../shared/config', () => {
     const cfg: Record<string, unknown> = {
+        autoConfirm: false,
+        dryRun: true,
         jiraBaseUrl: 'https://jira.example.com',
         jiraPersonalToken: 'token',
         xrayBaseUrl: 'https://xray.example.com',
@@ -21,6 +23,10 @@ jest.mock('../shared/config', () => {
         cypressProjectPath: '',
         getAllPrefixed: jest.fn(() => ({})),
         quiet: false,
+        get: jest.fn((key: string) => {
+            const val = cfg[key] as string | undefined;
+            return val || process.env[key] || undefined;
+        }),
     };
     return { __esModule: true, default: cfg };
 });

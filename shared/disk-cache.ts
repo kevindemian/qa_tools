@@ -3,6 +3,7 @@ import crypto from 'crypto';
 import fs from 'fs';
 import path from 'path';
 import { rootLogger } from './logger';
+import Config from './config';
 
 const DISK_CACHE_TTL_MS = 60 * 60 * 1000;
 const CACHE_DIR_PERM = 0o700;
@@ -14,7 +15,7 @@ interface DiskCacheEntry {
 }
 
 function cacheDir(): string {
-    return process.env.LLM_DISK_CACHE_DIR || path.join(process.cwd(), '.llm-cache');
+    return Config.get('LLM_DISK_CACHE_DIR') || path.join(process.cwd(), '.llm-cache');
 }
 
 function filePath(key: string): string {
@@ -22,7 +23,7 @@ function filePath(key: string): string {
 }
 
 function cacheKeyBytes(): Buffer {
-    const raw = process.env.LLM_CACHE_KEY;
+    const raw = Config.get('LLM_CACHE_KEY');
     if (!raw) return Buffer.alloc(0);
     return crypto.createHash('sha256').update(raw).digest();
 }

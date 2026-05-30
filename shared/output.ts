@@ -2,6 +2,7 @@
  * Use {@link defaultOutput} as the singleton. */
 import type { BoxOptions } from './box';
 import { box as boxRender } from './box';
+import Config from './config';
 
 export class Output {
     static isTTY(): boolean {
@@ -9,7 +10,7 @@ export class Output {
     }
 
     static isCI(): boolean {
-        return process.env.CI === 'true';
+        return Config.get('CI') === 'true';
     }
 
     static columns(): number {

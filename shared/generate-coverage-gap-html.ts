@@ -65,7 +65,7 @@ else if(v==='light')document.documentElement.classList.remove('dark');
 else if(window.matchMedia('(prefers-color-scheme:dark)').matches)document.documentElement.classList.add('dark');}
 a(t);})();
 function toggleTheme(){var h=document.documentElement;h.classList.toggle('dark');
-try{localStorage.setItem('qa-theme',h.classList.contains('dark')?'dark':'light');}catch(e){}}</script>`;
+try{localStorage.setItem('qa-theme',h.classList.contains('dark')?'dark':'light');}catch(e){if(typeof console!=='undefined')console.warn('Theme persistence failed:',e);}}</script>`;
 }
 
 function buildSummaryCards(result: CoverageGapResult): string {

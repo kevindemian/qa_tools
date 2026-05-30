@@ -96,8 +96,9 @@ class Config {
 
     private readonly overrides: ConfigOverrides;
 
-    /** @param overrides — Optional runtime overrides that take precedence over env vars. */
-    constructor(overrides: ConfigOverrides = {}) {
+    /** @param overrides — Optional runtime overrides that take precedence over env vars.
+     *  @private Use {@link create} for scoped instances or static getters for the global singleton. */
+    private constructor(overrides: ConfigOverrides = {}) {
         this.overrides = overrides;
     }
 
