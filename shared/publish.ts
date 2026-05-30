@@ -2,6 +2,7 @@
  * Provides CLI-wrapper functions for uploading generated HTML reports. */
 import { execSync } from 'child_process';
 import { rootLogger } from './logger';
+import Config from './config';
 
 export type PublishTarget = 's3' | 'gh-pages';
 
@@ -13,7 +14,7 @@ export interface PublishOptions {
 
 /** Publish a file to S3 via the AWS CLI. */
 function publishToS3(localPath: string, destination?: string): void {
-    const dest = destination || process.env.AWS_S3_BUCKET;
+    const dest = destination || Config.get('AWS_S3_BUCKET');
     if (!dest) {
         rootLogger.error('S3 publish requires either --dest or AWS_S3_BUCKET env var');
         return;

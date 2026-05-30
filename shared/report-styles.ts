@@ -138,7 +138,7 @@ function toggleTheme() {
     var html = document.documentElement;
     html.classList.toggle('dark');
     var isDark = html.classList.contains('dark');
-    try { localStorage.setItem('qa-theme', isDark ? 'dark' : 'light'); } catch(e) {}
+    try { localStorage.setItem('qa-theme', isDark ? 'dark' : 'light'); } catch(e) { if (typeof console !== 'undefined') console.warn('Theme persistence failed:', e); }
 }
 </script>`;
 }

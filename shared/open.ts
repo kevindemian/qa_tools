@@ -3,6 +3,7 @@ import { spawn, execSync } from 'child_process';
 import { platform } from 'os';
 import { readFileSync, writeFileSync, mkdirSync } from 'fs';
 import { basename, join, resolve } from 'path';
+import Config from './config';
 
 interface OsOpenCommand {
     cmd: string;
@@ -42,7 +43,7 @@ export function getDocsOutputDir(): string | null {
         if (!winTemp) return null;
         return join(winTemp, 'qa_tools_docs');
     }
-    const envDir = process.env.QA_TOOLS_TEMP_DIR;
+    const envDir = Config.get('QA_TOOLS_TEMP_DIR');
     const root = envDir ? resolve(envDir) : resolve(__dirname, '..', 'temp');
     return join(root, 'docs');
 }

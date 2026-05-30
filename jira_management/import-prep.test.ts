@@ -1,5 +1,5 @@
 // Mock factories
-const mockConfig: Record<string, string | boolean> = {
+const mockConfig: Record<string, unknown> = {
     autoConfirm: false,
     dryRun: false,
     csvDefaultPath: '/default/path.csv',
@@ -7,7 +7,13 @@ const mockConfig: Record<string, string | boolean> = {
     jsonPath: '',
     csvLabels: '',
     jsonLabels: '',
+    get: jest.fn((key: string) => {
+        const val = mockConfig[key] as string | undefined;
+        return val || undefined;
+    }),
 };
+
+jest.mock('../shared/config', () => mockConfig);
 
 jest.mock('../shared/prompt', () => ({
     confirm: jest.fn(),
@@ -23,8 +29,6 @@ jest.mock('../shared/prompt', () => ({
     isQuiet: jest.fn().mockReturnValue(true),
     success: jest.fn(),
 }));
-
-jest.mock('../shared/config', () => mockConfig);
 
 jest.mock('../shared/state', () => ({
     load: jest.fn().mockReturnValue({}),
