@@ -23,6 +23,7 @@ import {
     saveMetricsJson,
 } from './case17-helpers';
 import { computeDiff, fetchGitHistory, resolveTestHistory } from './case17-test-utils';
+import Config from '../../shared/config';
 
 export type { RunStats, CiContext } from './case17-helpers';
 export {
@@ -132,9 +133,9 @@ async function _autoCreateJiraBugs(
 }
 
 async function _postPrComment(stats: ParseResult['stats']): Promise<void> {
-    const githubToken = process.env.GITHUB_TOKEN;
-    const repo = process.env.GITHUB_REPOSITORY;
-    const prNumber = process.env.GITHUB_PR_NUMBER || process.env.CI_PR_NUMBER;
+    const githubToken = Config.githubToken || Config.get('GITHUB_TOKEN');
+    const repo = Config.get('GITHUB_REPOSITORY');
+    const prNumber = Config.get('GITHUB_PR_NUMBER') || Config.get('CI_PR_NUMBER');
 
     if (!githubToken || !repo || !prNumber) return;
 
@@ -143,7 +144,7 @@ async function _postPrComment(stats: ParseResult['stats']): Promise<void> {
         `### 🤖 QA Tools — Test Report\n\n` +
         `**${stats.passed} ✅ passed** | **${stats.failed} ❌ failed** | **${stats.skipped} ⏭ skipped** | **${stats.total} total**\n\n` +
         `**Pass rate:** ${passRate}%\n\n` +
-        `[View full report](${process.env.CI_JOB_URL || ''})\n`;
+        `[View full report](${Config.get('CI_JOB_URL') || ''})\n`;
 
     try {
         const client = createHttpClient({
@@ -180,7 +181,7 @@ async function handler(c: CommandContext): Promise<boolean | void> {
     const historyCache = new TestHistoryCache();
     const testHistory = await resolveTestHistory(result.tests, c, historyCache);
 
-    const knownIssues = loadKnownIssues(process.env.KNOWN_ISSUES_PATH || '');
+    const knownIssues = loadKnownIssues(Config.knownIssuesPath || Config.get('KNOWN_ISSUES_PATH') || '');
 
     const runs: TestRunTab[] = [];
     for (const extra of cliExtra.extraRuns) {
@@ -195,7 +196,7 @@ async function handler(c: CommandContext): Promise<boolean | void> {
         runs.unshift({ name: 'Primary', tests: result.tests });
     }
 
-    const qualityGateThreshold = parseFloat(process.env.QA_FAIL_ON || '');
+    const qualityGateThreshold = parseFloat(Config.get('QA_FAIL_ON') || '');
     const genOptions: Record<string, unknown> = {
         title: `Relatório - ${c.ctx.project_name}`,
         generatedAt: new Date().toISOString(),
@@ -257,13 +258,13 @@ async function handler(c: CommandContext): Promise<boolean | void> {
         'ok',
     );
 
-    const publishTarget = cliExtra.publishTarget || process.env.QA_PUBLISH || '';
+    const publishTarget = cliExtra.publishTarget || Config.get('QA_PUBLISH') || '';
     if (publishTarget && (publishTarget === 's3' || publishTarget === 'gh-pages')) {
         info('Publicando relatório para ' + publishTarget + '...');
         publishReport({ target: publishTarget, filePath: resolvedPath });
     }
 
-    if (process.env.QA_AUTO_BUG === 'true' && diff.newFailures.length > 0) {
+    if (Config.get('QA_AUTO_BUG') === 'true' && diff.newFailures.length > 0) {
         info('Criando bugs no Jira para novas falhas...');
         await _autoCreateJiraBugs(diff.newFailures, c.jiraResource, c.ctx.project_name);
     }

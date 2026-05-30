@@ -1,6 +1,7 @@
 import fs from 'fs';
 import path from 'path';
 import type { FlatTest, CtrfData, CtrfSummary } from '../../shared/result_parser';
+import Config from '../../shared/config';
 
 export const CTRF_LAST_FILE = 'last-results.ctrf.json';
 export const GIT_HISTORY_RUNS = 5;
@@ -22,11 +23,11 @@ export interface CiContext {
 }
 
 export function isGitHubCi(): boolean {
-    return !!(process.env.GITHUB_TOKEN && process.env.GITHUB_REPOSITORY);
+    return !!((Config.githubToken || Config.get('GITHUB_TOKEN')) && Config.get('GITHUB_REPOSITORY'));
 }
 
 export function isGitLabCi(): boolean {
-    return !!(process.env.CI_JOB_TOKEN && process.env.CI_PROJECT_ID);
+    return !!(Config.get('CI_JOB_TOKEN') && Config.get('CI_PROJECT_ID'));
 }
 
 export function buildGitTrendHtml(ci: CiContext): string {
