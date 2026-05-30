@@ -1,8 +1,9 @@
-import { createHttpClient } from '../shared/http-client';
+import { createThrottledClient } from '../shared/http-client';
 import GitHubManager from './github_manager';
 
 jest.mock('../shared/http-client', () => ({
     createHttpClient: jest.fn(),
+    createThrottledClient: jest.fn(),
 }));
 
 jest.mock('../shared/logger', () => ({
@@ -28,7 +29,7 @@ describe('GitHubManager', () => {
 
     beforeEach(() => {
         mockClient = { get: jest.fn(), post: jest.fn(), put: jest.fn(), patch: jest.fn() };
-        (createHttpClient as jest.Mock).mockReturnValue(mockClient);
+        (createThrottledClient as jest.Mock).mockReturnValue(mockClient);
         manager = new GitHubManager('myorg/myrepo', 'ghp_test', 'https://api.github.com');
     });
 

@@ -1,5 +1,5 @@
 /** GitHub API client: PRs, pipelines, reviews, checks, and merge operations. */
-import { createHttpClient } from '../shared/http-client';
+import { createThrottledClient } from '../shared/http-client';
 import { info } from '../shared/prompt';
 import { Logger } from '../shared/logger';
 import { handleError } from '../shared/git-provider-error';
@@ -33,7 +33,7 @@ class GitHubManager extends GitProviderBase implements GitProvider {
     repoFullName: string;
     apiToken: string;
     apiUrl: string;
-    client: ReturnType<typeof createHttpClient>;
+    client: ReturnType<typeof createThrottledClient>;
     log!: Logger;
     owner!: string;
     repo!: string;
@@ -49,9 +49,10 @@ class GitHubManager extends GitProviderBase implements GitProvider {
         if (!repoFullName || !repoFullName.includes('/')) {
             throw new Error('GitHub: repoFullName deve estar no formato "owner/repo"');
         }
-        this.client = createHttpClient({
+        this.client = createThrottledClient({
             baseUrl: this.apiUrl,
             authHeader: { Authorization: 'Bearer ' + apiToken },
+            maxConcurrency: 3,
         });
         this.log = new Logger({ resource: 'GitHub', projectId: repoFullName });
         const parts = repoFullName.split('/');
