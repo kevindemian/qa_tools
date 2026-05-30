@@ -18,7 +18,7 @@ import {
     type RunStats,
 } from './case17-helpers';
 function getMappingCandidates(): string[] {
-    return [process.env.QA_MAPPING_PATH || '', path.join(process.cwd(), 'mapping.json')];
+    return [Config.get('QA_MAPPING_PATH') || '', path.join(process.cwd(), 'mapping.json')];
 }
 
 export function resolveMapping(): Map<string, string> {
@@ -117,7 +117,7 @@ export function fetchGitHistory(): Promise<CiContext> {
 }
 async function fetchGitHubHistory(): Promise<CiContext> {
     const token = Config.getDefault().githubToken || process.env.GITHUB_TOKEN || '';
-    const repo = process.env.GITHUB_REPOSITORY || '';
+    const repo = Config.get('GITHUB_REPOSITORY') || '';
     const client = createHttpClient({
         baseUrl: 'https://api.github.com',
         authHeader: { Authorization: 'Bearer ' + token },
@@ -196,9 +196,9 @@ async function fetchGitHubHistory(): Promise<CiContext> {
     }
 }
 async function fetchGitLabHistory(): Promise<CiContext> {
-    const token = process.env.CI_JOB_TOKEN || '';
-    const projectId = process.env.CI_PROJECT_ID || '';
-    const serverUrl = process.env.CI_SERVER_URL || 'https://gitlab.com';
+    const token = Config.get('CI_JOB_TOKEN') || '';
+    const projectId = Config.get('CI_PROJECT_ID') || '';
+    const serverUrl = Config.get('CI_SERVER_URL') || 'https://gitlab.com';
     const client = createHttpClient({
         baseUrl: serverUrl + '/api/v4',
         authHeader: { 'PRIVATE-TOKEN': token },
