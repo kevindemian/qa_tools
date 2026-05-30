@@ -78,6 +78,11 @@ jira_management/  → Jira/Xray integration (resources, services, commands, main
 git_triggers/     → GitHub/GitLab automation (managers, main)
 ```
 
+## Naming conventions
+
+- `_` prefix for internal/private members not meant for external use (e.g., `_put`, `_configHint`, `_repoPath`).
+- `_` prefix on test variables that exist solely to avoid unused-export warnings from ts-prune.
+
 ## Commit message pattern
 
 ```
