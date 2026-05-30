@@ -1,5 +1,5 @@
 /** GitLab API client: MRs, pipelines, reviews, and merge operations. */
-import { createHttpClient } from '../shared/http-client';
+import { createThrottledClient } from '../shared/http-client';
 import { info } from '../shared/prompt';
 import { Logger } from '../shared/logger';
 import { handleError } from '../shared/git-provider-error';
@@ -28,7 +28,7 @@ class GitLabManager extends GitProviderBase implements GitProvider {
     projectId: string;
     apiToken: string;
     apiUrl: string;
-    client: ReturnType<typeof createHttpClient>;
+    client: ReturnType<typeof createThrottledClient>;
     log: Logger;
 
     constructor(projectId: string, apiToken: string, gitlabBaseUrl: string) {
@@ -42,9 +42,10 @@ class GitLabManager extends GitProviderBase implements GitProvider {
         this.projectId = projectId;
         this.apiToken = apiToken;
         this.apiUrl = `${gitlabBaseUrl}/api/v4/projects/${this.projectId}`;
-        this.client = createHttpClient({
+        this.client = createThrottledClient({
             baseUrl: this.apiUrl,
             authHeader: { 'PRIVATE-TOKEN': apiToken },
+            maxConcurrency: 3,
         });
         this.log = new Logger({ resource: 'GitLab', projectId });
     }
