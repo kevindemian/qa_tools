@@ -1,3 +1,3 @@
-/** @deprecated Use `test-execution-flow.offerTestExecutionAssociation` instead.
+/** @deprecated Use `test-execution-flow` directly instead.
  * Kept for backward compatibility with handler test mocks. */
-export { offerTestExecutionAssociation, showResults, type TestExecutionAssociationResult } from './test-execution-flow';
+export { offerTestExecutionAssociation, showResults } from './test-execution-flow';

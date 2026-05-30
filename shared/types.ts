@@ -547,16 +547,6 @@ export interface GitHubArtifactsResponse {
     artifacts: GitHubArtifact[];
 }
 
-/** GitLab CI pipeline item. */
-export interface GitLabPipeline {
-    id: number;
-    ref?: string;
-    status?: string;
-    web_url?: string;
-    created_at?: string;
-    updated_at?: string;
-}
-
 /** GitLab CI job item. */
 export interface GitLabJob {
     id: number;
@@ -588,13 +578,6 @@ export interface XrayGetTestRunsResponse {
 }
 
 // ── CTRF validation interfaces (E2.1) ──
-
-/** A known issue parsed from known-issues.json. */
-export interface KnownIssueEntry {
-    pattern: string;
-    reason: string;
-    ticket?: string;
-}
 
 // ── Cross-layer type interfaces (E5.1: shared/ cannot import jira_management/ directly) ──
 
