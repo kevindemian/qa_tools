@@ -1,0 +1,119 @@
+import { getBranch, getDiff } from './github-branch';
+import type { AxiosInstance } from 'axios';
+
+jest.mock('./github-api', () => ({
+    apiGet: jest.fn(),
+    formatDiffResponse: jest.requireActual('./github-api').formatDiffResponse,
+}));
+
+jest.mock('../shared/logger', () => ({
+    Logger: jest.fn().mockImplementation(() => ({ error: jest.fn(), warn: jest.fn() })),
+    rootLogger: { error: jest.fn(), warn: jest.fn() },
+}));
+
+const mockApiGet = jest.requireMock('./github-api').apiGet as jest.Mock;
+
+describe('getBranch', () => {
+    let client: jest.Mocked<AxiosInstance>;
+
+    beforeEach(() => {
+        client = {
+            get: jest.fn(),
+            post: jest.fn(),
+            put: jest.fn(),
+            patch: jest.fn(),
+            delete: jest.fn(),
+        } as unknown as jest.Mocked<AxiosInstance>;
+        mockApiGet.mockClear();
+    });
+
+    it('returns { name } for valid branch', async () => {
+        mockApiGet.mockResolvedValue({ name: 'main', commit: { sha: 'abc' } });
+        const result = await getBranch(client, 'myorg', 'myrepo', 'main');
+        expect(result).toEqual({ name: 'main' });
+        expect(mockApiGet).toHaveBeenCalledWith(client, '/repos/myorg/myrepo/branches/main', { returnNull: true });
+    });
+
+    it('encodes branch name in URL', async () => {
+        mockApiGet.mockResolvedValue({ name: 'feature/test' });
+        await getBranch(client, 'myorg', 'myrepo', 'feature/test');
+        expect(mockApiGet).toHaveBeenCalledWith(client, '/repos/myorg/myrepo/branches/feature%2Ftest', {
+            returnNull: true,
+        });
+    });
+
+    it('returns null when data has no name', async () => {
+        mockApiGet.mockResolvedValue({ commit: { sha: 'abc' } });
+        const result = await getBranch(client, 'myorg', 'myrepo', 'main');
+        expect(result).toBeNull();
+    });
+
+    it('returns null when apiGet returns null', async () => {
+        mockApiGet.mockResolvedValue(null);
+        const result = await getBranch(client, 'myorg', 'myrepo', 'missing');
+        expect(result).toBeNull();
+    });
+});
+
+describe('getDiff', () => {
+    let client: jest.Mocked<AxiosInstance>;
+
+    beforeEach(() => {
+        client = {
+            get: jest.fn(),
+            post: jest.fn(),
+            put: jest.fn(),
+            patch: jest.fn(),
+            delete: jest.fn(),
+        } as unknown as jest.Mocked<AxiosInstance>;
+        mockApiGet.mockClear();
+    });
+
+    it('returns formatted diff string for valid comparison', async () => {
+        mockApiGet.mockResolvedValue({
+            files: [
+                { filename: 'src/main.ts', patch: '+console.log("hi")', status: 'modified' },
+                { filename: 'src/utils.ts', patch: '-old\n+new', status: 'modified' },
+            ],
+        });
+        const result = await getDiff(client, 'myorg', 'myrepo', 'feature', 'main');
+        expect(result).toContain('src/main.ts');
+        expect(result).toContain('console.log');
+        expect(result).toContain('src/utils.ts');
+        expect(mockApiGet).toHaveBeenCalledWith(client, '/repos/myorg/myrepo/compare/main...feature', {
+            operation: 'comparar branches',
+            params: { per_page: 100 },
+            returnNull: true,
+        });
+    });
+
+    it('returns empty string when data is null', async () => {
+        mockApiGet.mockResolvedValue(null);
+        const result = await getDiff(client, 'myorg', 'myrepo', 'feature', 'main');
+        expect(result).toBe('');
+    });
+
+    it('returns empty string when data.files is empty', async () => {
+        mockApiGet.mockResolvedValue({ files: [] });
+        const result = await getDiff(client, 'myorg', 'myrepo', 'feature', 'main');
+        expect(result).toBe('');
+    });
+
+    it('handles missing patch property in files', async () => {
+        mockApiGet.mockResolvedValue({
+            files: [{ filename: 'readme.md', status: 'modified' }],
+        });
+        const result = await getDiff(client, 'myorg', 'myrepo', 'feature', 'main');
+        expect(result).toBe('');
+    });
+
+    it('encodes branch names in compare URL', async () => {
+        mockApiGet.mockResolvedValue({ files: [] });
+        await getDiff(client, 'myorg', 'myrepo', 'feat/source', 'fix/target');
+        expect(mockApiGet).toHaveBeenCalledWith(
+            client,
+            '/repos/myorg/myrepo/compare/fix%2Ftarget...feat%2Fsource',
+            expect.any(Object),
+        );
+    });
+});

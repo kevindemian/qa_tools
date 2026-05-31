@@ -72,8 +72,10 @@ function _calcPassRate(
     const passedRuns = runs.filter((r) => r.conclusion === 'success').length;
     const failedRuns = runs.filter((r) => r.conclusion === 'failure').length;
     const passRate = totalRuns > 0 ? Math.round((passedRuns / totalRuns) * 100) : 0;
-    const from = runs.length > 0 ? (runs[0]!.created_at ?? now.toISOString()) : now.toISOString();
-    const to = runs.length > 0 ? (runs[runs.length - 1]!.created_at ?? now.toISOString()) : now.toISOString();
+    const firstRun = runs[0];
+    const lastRun = runs[runs.length - 1];
+    const from = firstRun?.created_at ?? now.toISOString();
+    const to = lastRun?.created_at ?? now.toISOString();
     return { totalRuns, passedRuns, failedRuns, passRate, from, to };
 }
 
