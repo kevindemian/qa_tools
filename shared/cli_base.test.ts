@@ -219,6 +219,7 @@ describe('CLI Base', () => {
         });
 
         it('returns false when confirm returns false', async () => {
+            delete process.env.CI;
             MOCK_PROMPT.confirm!.mockReturnValueOnce(false);
             const result = cliBase.offerEnvSetup({ ok: false, missing: ['TOKEN_A'] });
             expect(result).toBe(false);
@@ -226,12 +227,14 @@ describe('CLI Base', () => {
         });
 
         it('returns true when user accepts', async () => {
+            delete process.env.CI;
             MOCK_PROMPT.confirm!.mockReturnValueOnce(true);
             const result = cliBase.offerEnvSetup({ ok: false, missing: ['TOKEN_A'] });
             expect(result).toBe(true);
         });
 
         it('returns false when confirm throws (CancelError)', async () => {
+            delete process.env.CI;
             MOCK_PROMPT.confirm!.mockImplementationOnce(() => {
                 throw new Error('cancel');
             });
