@@ -3,7 +3,7 @@ import path from 'path';
 import AdmZip from 'adm-zip';
 import glob from 'glob';
 import Config from '../shared/config';
-import JiraResource from '../jira_management/jira_resource';
+import JiraClient from '../shared/jira-client';
 import JiraLinkManager from '../jira_management/jira_link_manager';
 import { warn, info, success, printError, withSpinner, ask } from '../shared/prompt';
 import { reportsDir } from '../shared/temp-dir';
@@ -140,44 +140,75 @@ async function parseTestResults(
     return { matched, unmatched, csvName };
 }
 
-async function createTestExecution(
-    matched: MatchedTestItem[],
-    csvName: string,
-    jira: { base: string; token: string; xray: string },
-    projectName: string,
-    pipelineId: string | number,
-    branch: string,
-    currentProvider: 'gitlab' | 'github',
-    pushHistory: (op: string, detail: string, status: string) => void,
-): Promise<void> {
+export interface CreateTestExecutionOptions {
+    matched: Array<{ key: string; title: string; status: 'passed' | 'failed' | 'skipped'; duration: number }>;
+    csvName: string;
+    jiraResource: JiraClient;
+    linkManager: JiraLinkManager;
+    jiraBaseUrl: string;
+    projectName: string;
+    pipelineId: string | number;
+    branch: string;
+    currentProvider: 'gitlab' | 'github';
+    pushHistory: (op: string, detail: string, status: string) => void;
+    teKey?: string;
+}
+
+async function createTestExecution(opts: CreateTestExecutionOptions): Promise<void> {
+    const {
+        matched,
+        csvName,
+        jiraResource,
+        linkManager,
+        jiraBaseUrl,
+        projectName,
+        pipelineId,
+        branch,
+        currentProvider,
+        pushHistory,
+        teKey,
+    } = opts;
     try {
-        const te = await withSpinner('Criando Test Execution no Jira...', async () => {
-            const jiraRes = new JiraResource(jira.token, jira.base + '/rest/api/2');
-            const linkMgr = new JiraLinkManager(jiraRes);
-            return createTestExecutionFromResults(jiraRes, linkMgr, projectName, matched, csvName, {
-                pipelineId,
-                branch,
-                provider: currentProvider,
+        const spinnerMsg = teKey
+            ? 'Adicionando resultados ao Test Execution ' + teKey + '...'
+            : 'Criando Test Execution no Jira...';
+        const te = await withSpinner(spinnerMsg, async () => {
+            return createTestExecutionFromResults({
+                jiraResource,
+                linkManager,
+                projectName,
+                matchedResults: matched,
+                csvName,
+                pipelineInfo: { pipelineId, branch, provider: currentProvider },
+                existingTeKey: teKey,
             });
         });
-        success('Test Execution criado: ' + jira.base + '/browse/' + te.key);
+        if (teKey) {
+            success('Test Execution atualizado: ' + jiraBaseUrl + '/browse/' + te.key);
+        } else {
+            success('Test Execution criado: ' + jiraBaseUrl + '/browse/' + te.key);
+        }
         success(te.passed + ' passed / ' + te.failed + ' failed / ' + te.skipped + ' skipped');
         pushHistory('resultados', te.key + ': ' + te.passed + '/' + te.failed, 'ok');
     } catch (err) {
-        printError('Falha ao criar Test Execution', err);
+        printError('Falha ao criar/atualizar Test Execution', err);
         pushHistory('resultados', 'erro', 'error');
         throw err;
     }
 }
 
-async function collectTestResults(
-    m: GitProvider,
-    pipelineId: string | number,
-    branch: string,
-    projectName: string,
-    currentProvider: 'gitlab' | 'github',
-    pushHistory: (op: string, detail: string, status: string) => void,
-): Promise<ParseResult | null> {
+export interface CollectTestResultsOptions {
+    m: GitProvider;
+    pipelineId: string | number;
+    branch: string;
+    projectName: string;
+    currentProvider: 'gitlab' | 'github';
+    pushHistory: (op: string, detail: string, status: string) => void;
+    teKey?: string;
+}
+
+async function collectTestResults(opts: CollectTestResultsOptions): Promise<ParseResult | null> {
+    const { m, pipelineId, branch, projectName, currentProvider, pushHistory, teKey } = opts;
     const jira = _jiraEnv();
     if (!jira) {
         warn('Variáveis JIRA não configuradas. Defina JIRA_BASE_URL, JIRA_PERSONAL_TOKEN e XRAY_BASE_URL.');
@@ -192,16 +223,21 @@ async function collectTestResults(
     const mapping = await parseTestResults(parsed);
     if (!mapping) return parsed;
 
-    await createTestExecution(
-        mapping.matched,
-        mapping.csvName,
-        jira,
+    const jiraResource = new JiraClient(jira.token, jira.base + '/rest/api/2');
+    const linkManager = new JiraLinkManager(jiraResource);
+    await createTestExecution({
+        matched: mapping.matched,
+        csvName: mapping.csvName,
+        jiraResource,
+        linkManager,
+        jiraBaseUrl: jira.base,
         projectName,
         pipelineId,
         branch,
         currentProvider,
         pushHistory,
-    );
+        teKey,
+    });
 
     return parsed;
 }

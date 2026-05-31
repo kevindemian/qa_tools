@@ -1,10 +1,4 @@
-jest.mock('../../shared/prompt', () => ({
-    title: jest.fn(),
-    printError: jest.fn(),
-    askConfirm: jest.fn(),
-    ask: jest.fn(),
-    info: jest.fn(),
-}));
+jest.mock('../../shared/prompt');
 
 jest.mock('../../shared/bug-report', () => ({
     collectManual: jest.fn(),

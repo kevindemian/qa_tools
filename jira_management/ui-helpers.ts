@@ -1,5 +1,3 @@
-import path from 'path';
-import fs from 'fs';
 import Config from '../shared/config';
 import { showSplash } from '../shared/splash';
 import { defaultOutput } from '../shared/output';
@@ -15,13 +13,13 @@ import {
     CancelError,
 } from '../shared/prompt';
 import { palette } from '../shared/palette';
-import { openWithOsOrFallback, getDocsOutputDir } from '../shared/open';
 import { loadTypedState, getStatePath } from '../shared/state';
-import { mdToHtml } from '../shared/markdown';
 import { getHandler } from './commands';
 import { SessionContext } from '../shared/session-context';
 import type { CommandContext } from './commands/context';
 import { HELP_TOPICS, CATEGORY_IDS, CATEGORY_TITLES, resolveAlias, buildMenuChoices } from './menu-data';
+import { showDocs } from '../shared/show-docs';
+export { showDocs };
 export function showHelp(topic?: string): void {
     if (!topic) {
         title('HELP — Jira Tools');
@@ -109,80 +107,6 @@ export function showHelpLoop(): void {
         }
         warn('Tópico não encontrado: "' + trimmed + '". Tente /help search <termo>');
     }
-}
-function _loadDocFiles(docsDir: string): Array<{ label: string; file: string }> | null {
-    let files: string[];
-    try {
-        files = fs
-            .readdirSync(docsDir)
-            .filter((f) => /^\d{2}-.+\.md$/.test(f))
-            .sort();
-    } catch {
-        printError('Documentação', new Error('Diretório docs/ não encontrado em ' + docsDir));
-        return null;
-    }
-    if (files.length === 0) {
-        warn('Nenhum documento encontrado em docs/.');
-        divider();
-        return null;
-    }
-    return files.map((f) => ({ label: f.replace(/^\d{2}-/, '').replace(/\.md$/, ''), file: f }));
-}
-function _buildIndexHtml(docs: Array<{ label: string; file: string }>): string {
-    const items = docs
-        .map(
-            (d) =>
-                '<li><a href="' +
-                d.file.replace(/\.md$/, '.html') +
-                '">' +
-                d.label.replace(/^./, (c) => c.toUpperCase()) +
-                '</a></li>',
-        )
-        .join('\n');
-    return (
-        '<!DOCTYPE html><html lang="pt-BR"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>QA Tools — Documentação</title><style>body{font-family:-apple-system,BlinkMacSystemFont,\'Segoe UI\',Roboto,sans-serif;max-width:600px;margin:3rem auto;padding:0 1rem;line-height:1.6;color:#1a1a1a;background:#fafafa}h1{color:#111;border-bottom:2px solid #1a73e8;padding-bottom:.5rem}ul{list-style:none;padding:0}li{padding:.5rem 0;border-bottom:1px solid #eee}li:last-child{border-bottom:none}a{color:#1a73e8;text-decoration:none;font-size:1.1rem}a:hover{text-decoration:underline}.subtitle{color:#555;margin-top:-.5rem}</style></head><body><h1>QA Tools — Documentação</h1><p class="subtitle">' +
-        docs.length +
-        ' documentos disponíveis</p><ul>' +
-        items +
-        '</ul></body></html>'
-    );
-}
-export async function showDocs(): Promise<void> {
-    const docsDir = path.join(__dirname, '../docs');
-    const docs = _loadDocFiles(docsDir);
-    if (!docs) return;
-    const outDir = getDocsOutputDir();
-    if (!outDir) {
-        printError('Documentação', new Error('Não foi possível determinar diretório de saída'));
-        return;
-    }
-    fs.mkdirSync(outDir, { recursive: true });
-    for (let i = 0; i < docs.length; i++) {
-        const doc = docs[i];
-        if (!doc) continue;
-        let content: string;
-        try {
-            content = fs.readFileSync(path.join(docsDir, doc.file), 'utf8');
-        } catch (e: unknown) {
-            printError('Erro ao ler ' + doc.file, e);
-            continue;
-        }
-        const prevDoc = i > 0 ? docs[i - 1] : undefined;
-        const nextDoc = i < docs.length - 1 ? docs[i + 1] : undefined;
-        fs.writeFileSync(
-            path.join(outDir, doc.file.replace(/\.md$/, '.html')),
-            mdToHtml(content, doc.label, {
-                prev: prevDoc ? { label: prevDoc.label, file: prevDoc.file.replace(/\.md$/, '.html') } : undefined,
-                next: nextDoc ? { label: nextDoc.label, file: nextDoc.file.replace(/\.md$/, '.html') } : undefined,
-            }),
-            'utf8',
-        );
-    }
-    const indexPath = path.join(outDir, 'index.html');
-    fs.writeFileSync(indexPath, _buildIndexHtml(docs), 'utf8');
-    const opened = await openWithOsOrFallback(indexPath);
-    if (!opened)
-        printError('Documentação', new Error('Não foi possível abrir o navegador. O arquivo está em: ' + indexPath));
 }
 export async function handleSpecialInput(
     input: string,

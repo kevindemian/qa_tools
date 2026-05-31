@@ -47,6 +47,14 @@ export interface ReportOptions {
     knownIssues?: KnownIssue[];
     runs?: TestRunTab[];
     healthScore?: import('./types').HealthScoreResult;
+    diffComparison?: {
+        newFailures: import('./result_parser').FlatTest[];
+        newPasses: import('./result_parser').FlatTest[];
+        flaky: import('./result_parser').FlatTest[];
+    };
+    flakinessMap?: Record<string, number>;
+    flakinessDashboardUrl?: string;
+    previousRunTests?: import('./result_parser').FlatTest[];
 }
 
 export interface ReportStats {

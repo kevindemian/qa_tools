@@ -23,11 +23,69 @@ export interface CiContext {
 }
 
 export function isGitHubCi(): boolean {
-    return !!((Config.githubToken || Config.get('GITHUB_TOKEN')) && Config.get('GITHUB_REPOSITORY'));
+    return !!(Config.githubToken && Config.get('GITHUB_REPOSITORY'));
 }
 
 export function isGitLabCi(): boolean {
     return !!(Config.get('CI_JOB_TOKEN') && Config.get('CI_PROJECT_ID'));
+}
+
+function buildRunsBarChartHtml(runs: RunStats[]): string {
+    let html = '<div style="margin-bottom:8px">';
+    html +=
+        '<div style="font-size:0.8rem;color:#6b7280;margin-bottom:4px">Pass Rate — Last ' + runs.length + ' Runs</div>';
+    html += '<div style="display:flex;gap:4px;align-items:flex-end;height:50px;padding:4px 0">';
+    for (const run of runs) {
+        const h = Math.max(4, (run.passRate / 100) * 46);
+        const color = run.passRate >= 90 ? '#22c55e' : run.passRate >= 70 ? '#f59e0b' : '#ef4444';
+        html +=
+            '<div style="display:flex;flex-direction:column;align-items:center;gap:2px;flex:1">' +
+            '<div style="width:100%;height:' +
+            h +
+            'px;background:' +
+            color +
+            ';border-radius:3px 3px 0 0;min-height:4px" title="' +
+            'Run ' +
+            run.runId +
+            ': ' +
+            run.passRate.toFixed(1) +
+            '% (' +
+            run.passed +
+            '/' +
+            run.total +
+            ')"' +
+            '></div>' +
+            '<span style="font-size:0.6rem;color:#6b7280">' +
+            (run.createdAt || '').slice(5, 10) +
+            '</span>' +
+            '</div>';
+    }
+    html += '</div></div>';
+    return html;
+}
+
+function buildHtmlDetailsSection(flakyTests: string, commits: string): string {
+    let html = '';
+    if (flakyTests) {
+        html +=
+            '<details style="margin-bottom:6px;font-size:0.85rem">' +
+            '<summary style="cursor:pointer;color:#8b5cf6;font-weight:600">⚠️ Flaky Tests</summary>' +
+            '<pre style="margin:4px 0 0 8px;font-size:0.8rem;white-space:pre-wrap">' +
+            flakyTests.replace(/</g, '&lt;') +
+            '</pre>' +
+            '</details>';
+    }
+
+    if (commits) {
+        html +=
+            '<details style="margin-bottom:4px;font-size:0.85rem">' +
+            '<summary style="cursor:pointer;color:#6366f1;font-weight:600">📝 Recent Commits</summary>' +
+            '<pre style="margin:4px 0 0 8px;font-size:0.8rem;white-space:pre-wrap">' +
+            commits.replace(/</g, '&lt;') +
+            '</pre>' +
+            '</details>';
+    }
+    return html;
 }
 
 export function buildGitTrendHtml(ci: CiContext): string {
@@ -37,60 +95,10 @@ export function buildGitTrendHtml(ci: CiContext): string {
     html += '<div class="label" style="margin-bottom:6px">📈 Git Pipeline Context</div>';
 
     if (ci.runs.length > 0) {
-        html += '<div style="margin-bottom:8px">';
-        html +=
-            '<div style="font-size:0.8rem;color:#6b7280;margin-bottom:4px">Pass Rate — Last ' +
-            ci.runs.length +
-            ' Runs</div>';
-        html += '<div style="display:flex;gap:4px;align-items:flex-end;height:50px;padding:4px 0">';
-        for (const run of ci.runs) {
-            const h = Math.max(4, (run.passRate / 100) * 46);
-            const color = run.passRate >= 90 ? '#22c55e' : run.passRate >= 70 ? '#f59e0b' : '#ef4444';
-            html +=
-                '<div style="display:flex;flex-direction:column;align-items:center;gap:2px;flex:1">' +
-                '<div style="width:100%;height:' +
-                h +
-                'px;background:' +
-                color +
-                ';border-radius:3px 3px 0 0;min-height:4px" title="' +
-                'Run ' +
-                run.runId +
-                ': ' +
-                run.passRate.toFixed(1) +
-                '% (' +
-                run.passed +
-                '/' +
-                run.total +
-                ')"' +
-                '></div>' +
-                '<span style="font-size:0.6rem;color:#6b7280">' +
-                (run.createdAt || '').slice(5, 10) +
-                '</span>' +
-                '</div>';
-        }
-        html += '</div></div>';
+        html += buildRunsBarChartHtml(ci.runs);
     }
 
-    if (ci.flakyTests) {
-        html +=
-            '<details style="margin-bottom:6px;font-size:0.85rem">' +
-            '<summary style="cursor:pointer;color:#8b5cf6;font-weight:600">⚠️ Flaky Tests</summary>' +
-            '<pre style="margin:4px 0 0 8px;font-size:0.8rem;white-space:pre-wrap">' +
-            ci.flakyTests.replace(/</g, '&lt;') +
-            '</pre>' +
-            '</details>';
-    }
-
-    if (ci.commits) {
-        html +=
-            '<details style="margin-bottom:4px;font-size:0.85rem">' +
-            '<summary style="cursor:pointer;color:#6366f1;font-weight:600">📝 Recent Commits</summary>' +
-            '<pre style="margin:4px 0 0 8px;font-size:0.8rem;white-space:pre-wrap">' +
-            ci.commits.replace(/</g, '&lt;') +
-            '</pre>' +
-            '</details>';
-    }
-
+    html += buildHtmlDetailsSection(ci.flakyTests, ci.commits);
     html += '</div>';
     return html;
 }

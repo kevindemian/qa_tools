@@ -20,6 +20,11 @@
             "description": "Check prerequisites before starting a TS migration layer (R8.1)",
             "template": "Verificar pré-requisitos:\n1. git status --porcelain (deve estar limpo)\n2. git stash list (deve estar vazio)\n3. Listar .ts já existentes em shared/ jira_management/ git_triggers/\n4. npx tsc --noEmit (deve passar sem erros)\n\nSe tudo verde, reportar 'Pronto para começar o layer'. Se não, explicar o bloqueio.",
             "agent": "explore"
+        },
+        "duplicated": {
+            "description": "Run the codebase duplication auditor across 8 systematic categories",
+            "template": "Execute a auditoria de duplicação completa no codebase seguindo as 8 categorias do seu prompt. Salve o relatório em .audit/ e apresente o sumário ao final.",
+            "agent": "duplication-auditor"
         }
     },
 
@@ -49,6 +54,18 @@
                 "question": "allow"
             },
             "prompt": "Você é um revisor de migração TypeScript. Revise o layer recém-migrado antes do commit.\n\nVERIFIQUE:\n- Todos os @typedef foram substituídos por interface/type nativos?\n- Algum `any` ou `as any` sem comentário de justificativa?\n- module.exports mantido (se ainda há arquivos .js remanescentes)?\n- Todo arquivo .ts tem um .test.ts correspondente?\n- Algum `throw 'string'` ou `throw \"string\"`?\n- Algum `.only(` nos arquivos de teste?\n- Algum handler faz `new JiraResource()` ou `new JiraLinkManager()`?\n- create_tests.ts ≤ 300 linhas? (se aplicável)\n- Funções com mais de 50 linhas?\n\nListe TODAS as violações encontradas, com arquivo e linha."
+        },
+        "duplication-auditor": {
+            "description": "Audit the codebase for code duplication, inconsistencies, and anti-patterns across 8 systematic categories.",
+            "mode": "subagent",
+            "permission": {
+                "read": "allow",
+                "glob": "allow",
+                "grep": "allow",
+                "bash": "allow",
+                "edit": "deny",
+                "question": "deny"
+            }
         }
     },
 

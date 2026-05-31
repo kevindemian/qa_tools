@@ -7,15 +7,21 @@ import type { JiraSearchResult } from '../../shared/types';
 import type { ParseResult, FlatTest } from '../../shared/result_parser';
 import { writeReport } from '../../shared/temp-dir';
 import { parseTestResultsFile } from '../../shared/result_parser';
-import { generateHtmlReport, categorizeFailure, loadKnownIssues, type TestRunTab } from '../../shared/report-generator';
+import {
+    generateHtmlReport,
+    categorizeFailure,
+    loadKnownIssues,
+    type TestRunTab,
+    type ReportOptions,
+} from '../../shared/report-generator';
+import { loadMetrics, calculateFlakiness } from '../../shared/metrics';
 import { analyzeFailuresWithReport, type LlmContext } from '../../shared/failure-analysis';
 import { collectAutomated, interactiveBugReportFlow } from '../../shared/bug-report';
-import { openWithOsOrFallback } from '../../shared/open';
+import { openWithFallback } from '../../shared/open';
 import { publishReport } from '../../shared/publish';
 import { TestHistoryCache } from '../xray-history';
 import type { CommandContext } from './context';
 import {
-    buildDiffSummary,
     buildGitTrendHtml,
     buildJiraContextHtml,
     injectAnalysisSection,
@@ -133,7 +139,7 @@ async function _autoCreateJiraBugs(
 }
 
 async function _postPrComment(stats: ParseResult['stats']): Promise<void> {
-    const githubToken = Config.githubToken || Config.get('GITHUB_TOKEN');
+    const githubToken = Config.githubToken;
     const repo = Config.get('GITHUB_REPOSITORY');
     const prNumber = Config.get('GITHUB_PR_NUMBER') || Config.get('CI_PR_NUMBER');
 
@@ -158,30 +164,31 @@ async function _postPrComment(stats: ParseResult['stats']): Promise<void> {
     }
 }
 
-async function handler(c: CommandContext): Promise<boolean | void> {
-    const filePath = await ask('Caminho do arquivo de resultados JSON', {
-        hint: 'ex: cypress/reports/ctrf-report.json',
-    });
-    if (!filePath.trim()) {
-        printError('Relatório HTML', new Error('Caminho do arquivo vazio.'));
-        return;
+function _loadFlakinessMap(c: CommandContext): Record<string, number> {
+    try {
+        const store = loadMetrics();
+        const projectRuns = store.runs.filter((r) => r.project === c.ctx.project_name);
+        const flakyEntries = projectRuns.length >= 2 ? calculateFlakiness({ runs: projectRuns }, 2) : [];
+        const map: Record<string, number> = {};
+        for (const entry of flakyEntries) {
+            map[entry.title] = entry.rate;
+        }
+        return map;
+    } catch (err: unknown) {
+        rootLogger.warn('Failed to load flakiness metrics: ' + (err as Error).message);
+        return {};
     }
+}
 
-    const cliExtra = parseCliExtra();
-
-    title('Analisando relatório...');
-    const result = parseTestResultsFile(filePath.trim());
-    if (result.error) {
-        printError('Erro ao ler relatório', new Error(result.error));
-        return;
-    }
-
-    const diff = computeDiff(result.tests);
-
+async function _buildReportOptions(
+    c: CommandContext,
+    result: ParseResult,
+    diff: ReturnType<typeof computeDiff>,
+    cliExtra: ReturnType<typeof parseCliExtra>,
+): Promise<ReportOptions> {
     const historyCache = new TestHistoryCache();
     const testHistory = await resolveTestHistory(result.tests, c, historyCache);
-
-    const knownIssues = loadKnownIssues(Config.knownIssuesPath || Config.get('KNOWN_ISSUES_PATH') || '');
+    const knownIssues = loadKnownIssues(Config.knownIssuesPath);
 
     const runs: TestRunTab[] = [];
     for (const extra of cliExtra.extraRuns) {
@@ -196,39 +203,51 @@ async function handler(c: CommandContext): Promise<boolean | void> {
         runs.unshift({ name: 'Primary', tests: result.tests });
     }
 
+    const flakinessMap = _loadFlakinessMap(c);
     const qualityGateThreshold = parseFloat(Config.get('QA_FAIL_ON') || '');
-    const genOptions: Record<string, unknown> = {
+
+    const genOptions: ReportOptions = {
         title: `Relatório - ${c.ctx.project_name}`,
         generatedAt: new Date().toISOString(),
         source: 'Relatório HTML',
         testHistory: Object.keys(testHistory).length > 0 ? testHistory : undefined,
         knownIssues: knownIssues.length > 0 ? knownIssues : undefined,
         runs: runs.length > 0 ? runs : undefined,
+        diffComparison: diff,
+        flakinessMap: Object.keys(flakinessMap).length > 0 ? flakinessMap : undefined,
     };
     if (!isNaN(qualityGateThreshold)) {
         genOptions.qualityGate = qualityGateThreshold;
     }
+    return genOptions;
+}
 
-    let html = generateHtmlReport(result.tests, genOptions);
-
-    const diffHtml = buildDiffSummary(diff);
-    if (diffHtml) {
-        html = html.replace('</body>', diffHtml + '</body>');
-    }
-
+async function _enrichHtmlWithContext(
+    html: string,
+    c: CommandContext,
+    failedTests: FlatTest[],
+): Promise<{ html: string; ciContext: Awaited<ReturnType<typeof fetchGitHistory>>; jiraContext: string }> {
     const ciContext = await fetchGitHistory();
     const gitHtml = buildGitTrendHtml(ciContext);
+    let enriched = html;
     if (gitHtml) {
-        html = html.replace('</body>', gitHtml + '</body>');
+        enriched = enriched.replace('</body>', gitHtml + '</body>');
     }
 
-    const failedTests = result.tests.filter((t) => t.state === 'failed');
     const jiraContext = await _fetchJiraContext(failedTests, c.jiraResource, c.ctx.project_name);
     const jiraHtml = buildJiraContextHtml(jiraContext);
     if (jiraHtml) {
-        html = html.replace('</body>', jiraHtml + '</body>');
+        enriched = enriched.replace('</body>', jiraHtml + '</body>');
     }
+    return { html: enriched, ciContext, jiraContext };
+}
 
+async function _runAiAnalysis(
+    html: string,
+    result: ParseResult,
+    ciContext: Awaited<ReturnType<typeof fetchGitHistory>>,
+    jiraContext: string,
+): Promise<string> {
     const llmContext: LlmContext = {};
     if (ciContext.commits) llmContext.gitCommits = ciContext.commits;
     if (ciContext.runs.length > 0) {
@@ -242,37 +261,38 @@ async function handler(c: CommandContext): Promise<boolean | void> {
     if (jiraContext) llmContext.jiraIssues = jiraContext;
 
     if (result.stats.failed > 0 && (await askConfirm('Incluir análise das falhas (IA)?', true))) {
-        html = await _addAiAnalysis(html, result.tests, llmContext);
+        return _addAiAnalysis(html, result.tests, llmContext);
     }
+    return html;
+}
 
-    const resolvedPath = await _writeReportFile(html, c.ctx.project_name);
-
-    const htmlDir = path.dirname(resolvedPath);
-    saveMetricsJson(result.tests, htmlDir);
-
-    info(`Relatório HTML gerado: ${resolvedPath}`);
-    void openWithOsOrFallback(resolvedPath);
-    c.pushHistory(
-        'html-report',
-        `${result.stats.total} testes (${result.stats.passed} pass, ${result.stats.failed} fail)`,
-        'ok',
-    );
-
+function _handlePublish(resolvedPath: string, cliExtra: ReturnType<typeof parseCliExtra>): void {
     const publishTarget = cliExtra.publishTarget || Config.get('QA_PUBLISH') || '';
     if (publishTarget && (publishTarget === 's3' || publishTarget === 'gh-pages')) {
         info('Publicando relatório para ' + publishTarget + '...');
         publishReport({ target: publishTarget, filePath: resolvedPath });
     }
+}
 
+async function _handleAutoBugs(c: CommandContext, diff: ReturnType<typeof computeDiff>): Promise<void> {
     if (Config.get('QA_AUTO_BUG') === 'true' && diff.newFailures.length > 0) {
         info('Criando bugs no Jira para novas falhas...');
         await _autoCreateJiraBugs(diff.newFailures, c.jiraResource, c.ctx.project_name);
     }
+}
 
+function _printDiffSummary(diff: ReturnType<typeof computeDiff>): void {
     if (diff.newFailures.length > 0 || diff.newPasses.length > 0) {
         info(`Diff: ${diff.newFailures.length} novas falhas, ${diff.newPasses.length} novos passes`);
     }
+}
 
+async function _handleQualityGateCheck(
+    result: ParseResult,
+    diff: ReturnType<typeof computeDiff>,
+    qualityGateThreshold: number,
+): Promise<boolean> {
+    _printDiffSummary(diff);
     await _postPrComment(result.stats);
 
     if (
@@ -283,7 +303,10 @@ async function handler(c: CommandContext): Promise<boolean | void> {
         printError('Quality Gate', new Error(`Pass rate below threshold (${qualityGateThreshold}%)`));
         return false;
     }
+    return true;
+}
 
+async function _handleInteractiveBugReport(c: CommandContext, result: ParseResult): Promise<void> {
     if (
         result.stats.failed > 0 &&
         (await askConfirm('Deseja criar um relatório de bug (Bug Report) no Jira para as falhas?', false))
@@ -291,6 +314,51 @@ async function handler(c: CommandContext): Promise<boolean | void> {
         const automatedReport = collectAutomated(result);
         await interactiveBugReportFlow(c.jiraResource, c.ctx.project_name, automatedReport, c.linkManager);
     }
+}
+
+async function handler(c: CommandContext): Promise<boolean | void> {
+    const filePath = await ask('Caminho do arquivo de resultados JSON', {
+        hint: 'ex: cypress/reports/ctrf-report.json',
+    });
+    if (!filePath.trim()) {
+        printError('Relatório HTML', new Error('Caminho do arquivo vazio.'));
+        return;
+    }
+
+    const cliExtra = parseCliExtra();
+    title('Analisando relatório...');
+    const result = parseTestResultsFile(filePath.trim());
+    if (result.error) {
+        printError('Erro ao ler relatório', new Error(result.error));
+        return;
+    }
+
+    const diff = computeDiff(result.tests);
+    const genOptions = await _buildReportOptions(c, result, diff, cliExtra);
+    let html = generateHtmlReport(result.tests, genOptions);
+
+    const failedTests = result.tests.filter((t) => t.state === 'failed');
+    const enriched = await _enrichHtmlWithContext(html, c, failedTests);
+    html = enriched.html;
+    html = await _runAiAnalysis(html, result, enriched.ciContext, enriched.jiraContext);
+
+    const resolvedPath = await _writeReportFile(html, c.ctx.project_name);
+    saveMetricsJson(result.tests, path.dirname(resolvedPath));
+    await openWithFallback(resolvedPath, 'Relatório', info);
+    c.pushHistory(
+        'html-report',
+        `${result.stats.total} testes (${result.stats.passed} pass, ${result.stats.failed} fail)`,
+        'ok',
+    );
+
+    _handlePublish(resolvedPath, cliExtra);
+    await _handleAutoBugs(c, diff);
+
+    const qualityGateThreshold = parseFloat(Config.get('QA_FAIL_ON') || '');
+    const gateOk = await _handleQualityGateCheck(result, diff, qualityGateThreshold);
+    if (!gateOk) return false;
+
+    await _handleInteractiveBugReport(c, result);
 }
 
 export default { handler };

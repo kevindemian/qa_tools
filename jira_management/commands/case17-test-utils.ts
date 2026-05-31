@@ -3,9 +3,15 @@ import path from 'path';
 import AdmZip from 'adm-zip';
 import { createHttpClient } from '../../shared/http-client';
 import Config from '../../shared/config';
+import { rootLogger } from '../../shared/logger';
 import type { FlatTest } from '../../shared/result_parser';
 import type { TestHistoryRun } from '../../shared/report-generator';
-import type { GitHubWorkflowRunsResponse, GitHubArtifactsResponse, GitLabJob } from '../../shared/types';
+import type {
+    GitHubWorkflowRun,
+    GitHubWorkflowRunsResponse,
+    GitHubArtifactsResponse,
+    GitLabJob,
+} from '../../shared/types';
 import { createHistoryProvider, TestHistoryCache } from '../xray-history';
 import type { CommandContext } from './context';
 import {
@@ -115,8 +121,85 @@ export function fetchGitHistory(): Promise<CiContext> {
     if (isGitLabCi()) return fetchGitLabHistory();
     return Promise.resolve({ commits: '', runs: [], flakyTests: '' });
 }
+async function _processGitHubArtifacts(
+    repo: string,
+    client: ReturnType<typeof createHttpClient>,
+    runs: GitHubWorkflowRun[],
+): Promise<{ runStats: RunStats[]; allTestsByTitle: Record<string, { states: string[] }> }> {
+    const runStats: RunStats[] = [];
+    const allTestsByTitle: Record<string, { states: string[] }> = {};
+    for (const run of runs.slice(0, GIT_HISTORY_RUNS)) {
+        try {
+            const artResp = await client.get(`/repos/${repo}/actions/runs/${String(run.id)}/artifacts`);
+            const artifacts = (artResp.data as GitHubArtifactsResponse).artifacts || [];
+            const ctrf = artifacts.find((a) => {
+                const name = (a.name || '').toLowerCase();
+                return name.includes('ctrf') || name.includes('test-results');
+            });
+            if (!ctrf) continue;
+
+            const zipResp = await client.get(`/repos/${repo}/actions/artifacts/${String(ctrf.id)}/zip`, {
+                responseType: 'arraybuffer' as const,
+            });
+            const zip = new AdmZip(Buffer.from(zipResp.data));
+            for (const entry of zip.getEntries()) {
+                if (!entry.name.endsWith('.json')) continue;
+                const parsed = JSON.parse(entry.getData().toString('utf8'));
+                const summary = parsed.results?.summary;
+                const tests = parsed.results?.tests || [];
+                if (summary) {
+                    runStats.push({
+                        runId: run.id,
+                        createdAt: (run.created_at as string) || '',
+                        passed: summary.passed || 0,
+                        failed: summary.failed || 0,
+                        skipped: summary.skipped || 0,
+                        total: summary.tests || 0,
+                        passRate: summary.tests > 0 ? (summary.passed / summary.tests) * 100 : 0,
+                    });
+                }
+                for (const t of tests) {
+                    const name = t.name as string;
+                    if (!allTestsByTitle[name]) allTestsByTitle[name] = { states: [] };
+                    allTestsByTitle[name].states.push(t.status as string);
+                }
+            }
+        } catch {
+            /* skip individual run */
+        }
+    }
+    return { runStats, allTestsByTitle };
+}
+
+function _buildCommitsFromRuns(runs: GitHubWorkflowRun[]): string {
+    let commits = '';
+    for (const run of runs.slice(0, GIT_HISTORY_RUNS)) {
+        const hc = run.head_commit;
+        if (hc) {
+            const msg = (hc.message || '').split('\n')[0];
+            const author = (hc.author?.name as string) || 'unknown';
+            const date = ((run.created_at as string) || '').slice(0, 10);
+            commits += `- ${msg} (${author}, ${date})\n`;
+        }
+    }
+    return commits;
+}
+
+function _detectFlakyTests(allTestsByTitle: Record<string, { states: string[] }>): string {
+    let flakyTests = '';
+    for (const [testName, data] of Object.entries(allTestsByTitle)) {
+        if (data.states.length >= 2) {
+            const unique = new Set(data.states);
+            if (unique.has('passed') && unique.has('failed')) {
+                flakyTests += `- ${testName}: ${data.states.join(', ')}\n`;
+            }
+        }
+    }
+    return flakyTests;
+}
+
 async function fetchGitHubHistory(): Promise<CiContext> {
-    const token = Config.getDefault().githubToken || process.env.GITHUB_TOKEN || '';
+    const token = Config.getDefault().githubToken || '';
     const repo = Config.get('GITHUB_REPOSITORY') || '';
     const client = createHttpClient({
         baseUrl: 'https://api.github.com',
@@ -127,74 +210,53 @@ async function fetchGitHubHistory(): Promise<CiContext> {
             `/repos/${repo}/actions/runs?per_page=${GIT_HISTORY_RUNS}&status=success&status=failure`,
         );
         const runs = (runsResp.data as GitHubWorkflowRunsResponse).workflow_runs || [];
-        const runStats: RunStats[] = [];
-        const allTestsByTitle: Record<string, { states: string[] }> = {};
-        for (const run of runs.slice(0, GIT_HISTORY_RUNS)) {
-            const r = run;
-            try {
-                const artResp = await client.get(`/repos/${repo}/actions/runs/${String(r.id)}/artifacts`);
-                const artifacts = (artResp.data as GitHubArtifactsResponse).artifacts || [];
-                const ctrf = artifacts.find((a) => {
-                    const name = (a.name || '').toLowerCase();
-                    return name.includes('ctrf') || name.includes('test-results');
-                });
-                if (!ctrf) continue;
-
-                const zipResp = await client.get(`/repos/${repo}/actions/artifacts/${String(ctrf.id)}/zip`, {
-                    responseType: 'arraybuffer' as const,
-                });
-                const zip = new AdmZip(Buffer.from(zipResp.data));
-                for (const entry of zip.getEntries()) {
-                    if (!entry.name.endsWith('.json')) continue;
-                    const parsed = JSON.parse(entry.getData().toString('utf8'));
-                    const summary = parsed.results?.summary;
-                    const tests = parsed.results?.tests || [];
-                    if (summary) {
-                        runStats.push({
-                            runId: r.id,
-                            createdAt: (r.created_at as string) || '',
-                            passed: summary.passed || 0,
-                            failed: summary.failed || 0,
-                            skipped: summary.skipped || 0,
-                            total: summary.tests || 0,
-                            passRate: summary.tests > 0 ? (summary.passed / summary.tests) * 100 : 0,
-                        });
-                    }
-                    for (const t of tests) {
-                        const name = t.name as string;
-                        if (!allTestsByTitle[name]) allTestsByTitle[name] = { states: [] };
-                        allTestsByTitle[name].states.push(t.status as string);
-                    }
-                }
-            } catch {
-                /* skip individual run */
-            }
-        }
-        let commits = '';
-        for (const run of runs.slice(0, GIT_HISTORY_RUNS)) {
-            const r = run;
-            const hc = r.head_commit;
-            if (hc) {
-                const msg = (hc.message || '').split('\n')[0];
-                const author = (hc.author?.name as string) || 'unknown';
-                const date = ((r.created_at as string) || '').slice(0, 10);
-                commits += `- ${msg} (${author}, ${date})\n`;
-            }
-        }
-        let flakyTests = '';
-        for (const [testName, data] of Object.entries(allTestsByTitle)) {
-            if (data.states.length >= 2) {
-                const unique = new Set(data.states);
-                if (unique.has('passed') && unique.has('failed')) {
-                    flakyTests += `- ${testName}: ${data.states.join(', ')}\n`;
-                }
-            }
-        }
+        const { runStats, allTestsByTitle } = await _processGitHubArtifacts(repo, client, runs);
+        const commits = _buildCommitsFromRuns(runs);
+        const flakyTests = _detectFlakyTests(allTestsByTitle);
         return { commits, runs: runStats, flakyTests };
-    } catch {
+    } catch (err: unknown) {
+        rootLogger.error('fetchGitHubHistory failed: ' + (err as Error).message);
         return { commits: '', runs: [], flakyTests: '' };
     }
 }
+async function _processGitLabPipelineArtifacts(
+    projectId: string,
+    pipeline: Record<string, unknown>,
+    client: ReturnType<typeof createHttpClient>,
+): Promise<RunStats[]> {
+    const jobsResp = await client.get(`/projects/${projectId}/pipelines/${String(pipeline.id)}/jobs`);
+    const jobs: GitLabJob[] = (jobsResp.data as GitLabJob[]) || [];
+    const testJob = jobs.find((j) => {
+        const name = (j.name || '').toLowerCase();
+        return name.includes('test') || name.includes('e2e') || name.includes('ctrf');
+    });
+    if (!testJob) return [];
+
+    const artResp = await client.get(`/projects/${projectId}/jobs/${String(testJob.id)}/artifacts`, {
+        responseType: 'arraybuffer' as const,
+        maxRedirects: 5,
+    });
+    const zip = new AdmZip(Buffer.from(artResp.data));
+    const stats: RunStats[] = [];
+    for (const entry of zip.getEntries()) {
+        if (!entry.name.endsWith('.json')) continue;
+        const parsed = JSON.parse(entry.getData().toString('utf8'));
+        const summary = parsed.results?.summary;
+        if (summary) {
+            stats.push({
+                runId: pipeline.id as number,
+                createdAt: (pipeline.created_at as string) || '',
+                passed: summary.passed || 0,
+                failed: summary.failed || 0,
+                skipped: summary.skipped || 0,
+                total: summary.tests || 0,
+                passRate: summary.tests > 0 ? (summary.passed / summary.tests) * 100 : 0,
+            });
+        }
+    }
+    return stats;
+}
+
 async function fetchGitLabHistory(): Promise<CiContext> {
     const token = Config.get('CI_JOB_TOKEN') || '';
     const projectId = Config.get('CI_PROJECT_ID') || '';
@@ -208,43 +270,16 @@ async function fetchGitLabHistory(): Promise<CiContext> {
         const runs: unknown[] = (runsResp.data as unknown[]) || [];
         const runStats: RunStats[] = [];
         for (const run of runs.slice(0, GIT_HISTORY_RUNS)) {
-            const r = run as Record<string, unknown>;
             try {
-                const jobsResp = await client.get(`/projects/${projectId}/pipelines/${String(r.id)}/jobs`);
-                const jobs: GitLabJob[] = (jobsResp.data as GitLabJob[]) || [];
-                const testJob = jobs.find((j) => {
-                    const name = (j.name || '').toLowerCase();
-                    return name.includes('test') || name.includes('e2e') || name.includes('ctrf');
-                });
-                if (!testJob) continue;
-                const tj = testJob;
-                const artResp = await client.get(`/projects/${projectId}/jobs/${String(tj.id)}/artifacts`, {
-                    responseType: 'arraybuffer' as const,
-                    maxRedirects: 5,
-                });
-                const zip = new AdmZip(Buffer.from(artResp.data));
-                for (const entry of zip.getEntries()) {
-                    if (!entry.name.endsWith('.json')) continue;
-                    const parsed = JSON.parse(entry.getData().toString('utf8'));
-                    const summary = parsed.results?.summary;
-                    if (summary) {
-                        runStats.push({
-                            runId: r.id as number,
-                            createdAt: (r.created_at as string) || '',
-                            passed: summary.passed || 0,
-                            failed: summary.failed || 0,
-                            skipped: summary.skipped || 0,
-                            total: summary.tests || 0,
-                            passRate: summary.tests > 0 ? (summary.passed / summary.tests) * 100 : 0,
-                        });
-                    }
-                }
+                const stats = await _processGitLabPipelineArtifacts(projectId, run as Record<string, unknown>, client);
+                runStats.push(...stats);
             } catch {
                 /* skip individual pipeline */
             }
         }
         return { commits: '', runs: runStats, flakyTests: '' };
-    } catch {
+    } catch (err: unknown) {
+        rootLogger.warn('fetchGitLabHistory failed: ' + (err as Error).message);
         return { commits: '', runs: [], flakyTests: '' };
     }
 }

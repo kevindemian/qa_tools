@@ -5,8 +5,7 @@ import { rootLogger } from '../shared/logger';
 import { info, isQuiet } from '../shared/prompt';
 import { reportsDir } from '../shared/temp-dir';
 import type { TestCase } from '../shared/types';
-
-const UTF8_ENCODING = 'utf8';
+import { generatePreviewMarkdown } from './import-prep';
 
 interface MappingEntry {
     title: string;
@@ -35,8 +34,8 @@ class MappingFileGenerator {
             if (!fs.existsSync(outDir)) {
                 fs.mkdirSync(outDir, { recursive: true });
             }
-        } catch {
-            rootLogger.warn('Não foi possível criar diretório de saida: ' + outDir);
+        } catch (err: unknown) {
+            rootLogger.warn('Não foi possível criar diretório de saida: ' + outDir + ' — ' + (err as Error).message);
             return;
         }
 
@@ -44,7 +43,7 @@ class MappingFileGenerator {
         const mappings = this._buildMappings(tasksId, createdTests);
 
         this._writeJsonMapping(outDir, baseName, sourcePath, projectName, mappings);
-        this._writeMdMapping(outDir, baseName, sourcePath, mappings);
+        this._writeMdMapping(outDir, baseName, sourcePath, createdTests, tasksId);
         this._writeSummaryTxt(outDir, baseName, tasksId, createdTests);
     }
 
@@ -86,39 +85,26 @@ class MappingFileGenerator {
             null,
             2,
         );
-        fs.writeFileSync(jsonPath, jsonContent, UTF8_ENCODING);
+        fs.writeFileSync(jsonPath, jsonContent, 'utf8');
         if (!isQuiet()) {
             info('Mapeamento salvo: ' + path.basename(jsonPath));
         }
     }
 
-    private _writeMdMapping(outDir: string, baseName: string, sourcePath: string, mappings: MappingEntry[]): void {
+    private _writeMdMapping(
+        outDir: string,
+        baseName: string,
+        sourcePath: string,
+        tests: TestCase[],
+        tasksId: string[],
+    ): void {
         const mdPath = path.join(outDir, baseName + '-jira-mapping.md');
-        let mdContent =
-            '# Jira Mapping: ' +
-            baseName +
-            path.extname(sourcePath) +
-            '\n' +
-            '*Generated on ' +
-            new Date().toLocaleString('en-US') +
-            '*\n\n';
-
-        for (const m of mappings) {
-            mdContent += '## ' + m.key + ' — ' + m.title + '\n\n';
-            if (m.description) mdContent += '**Description:** ' + m.description + '\n\n';
-            if (m.precondition) mdContent += '**Pre-condition:** ' + m.precondition + '\n\n';
-            if (m.steps && m.steps.length > 0) {
-                mdContent += '| # | Action | Data | Expected Result |\n';
-                mdContent += '|---|--------|------|-----------------|\n';
-                m.steps.forEach((s, i) => {
-                    mdContent +=
-                        '| ' + (i + 1) + ' | ' + s.Action + ' | ' + s.Data + ' | ' + s['Expected Result'] + ' |\n';
-                });
-            }
-            mdContent += '\n---\n\n';
-        }
-
-        fs.writeFileSync(mdPath, mdContent, UTF8_ENCODING);
+        const mdContent = generatePreviewMarkdown(tests, {
+            keys: tasksId,
+            documentTitle: 'Jira Mapping: ' + baseName + path.extname(sourcePath),
+            showTimestamp: true,
+        });
+        fs.writeFileSync(mdPath, mdContent, 'utf8');
         if (!isQuiet()) {
             info('Sumario salvo: ' + path.basename(mdPath));
         }
@@ -133,7 +119,7 @@ class MappingFileGenerator {
                     return key + ': ' + (test.title || '(untitled)');
                 })
                 .join('\n') + '\n';
-        fs.writeFileSync(txtPath, txtContent, UTF8_ENCODING);
+        fs.writeFileSync(txtPath, txtContent, 'utf8');
     }
 }
 

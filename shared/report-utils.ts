@@ -34,6 +34,4 @@ export function pctSub(value: number, total: number): string {
     return ' <span style="font-size:0.75rem;color:#6b7280;font-weight:400">(' + pct(value, total) + '%)</span>';
 }
 
-export function escapeHtml(s: string): string {
-    return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
-}
+export { sanitizeHtml as escapeHtml } from './escape';

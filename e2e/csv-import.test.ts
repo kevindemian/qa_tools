@@ -1,3 +1,5 @@
+jest.mock('../shared/open', () => ({ openWithOsOrFallback: jest.fn() }));
+
 import fs from 'fs';
 import path from 'path';
 import os from 'os';

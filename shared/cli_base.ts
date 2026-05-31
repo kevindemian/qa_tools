@@ -1,7 +1,11 @@
 import chalk from 'chalk';
-import { print, success, error, warn, info, divider } from './prompt';
+import * as readline from 'readline';
+import { print, success, error, warn, info, divider, confirm } from './prompt';
 import { rootLogger } from './logger';
 import Config from './config';
+import { loadMetrics } from './metrics';
+import { calculateHealthScore } from './health-score';
+import { ExitCode } from './types';
 
 const _sessionStart = Date.now();
 const CREDENTIAL_MIN_LENGTH = 20;
@@ -19,11 +23,21 @@ export function mask(v: string): string {
     return v ? v.slice(0, MASK_VISIBLE_CHARS) + '****' : '';
 }
 
-export function createValidateEnv(configs: EnvConfig[], config?: Config): () => void {
-    return function validateEnv(): void {
+/** Resultado da validação de ambiente. `ok` = true quando todas as variáveis estão configuradas. */
+export interface EnvValidationResult {
+    ok: boolean;
+    missing: string[];
+}
+
+export function createValidateEnv(configs: EnvConfig[], config?: Config): () => EnvValidationResult {
+    return function validateEnv(): EnvValidationResult {
         const cfg = config || Config;
         const missing = configs.filter((c) => !cfg.get(c.key));
-        if (missing.length === 0) {
+        if (missing.length > 0) {
+            warn('Configurações incompletas. Funcionalidades que dependem dessas variáveis serão limitadas.');
+            missing.forEach((c) => warn(`  • ${c.label}`));
+            rootLogger.warn(`Variáveis de ambiente faltando: ${missing.map((c) => c.key).join(', ')}`);
+        } else {
             for (const c of configs) {
                 const val = cfg.get(c.key) || '';
                 if (
@@ -35,34 +49,85 @@ export function createValidateEnv(configs: EnvConfig[], config?: Config): () => 
                     rootLogger.warn(`VARIÁVEL COM CREDENCIAL REAL: ${c.key}=${mask(val)}`);
                 }
             }
-            return;
         }
-        error('Variáveis obrigatórias não configuradas:');
-        missing.forEach((c) => warn(`  * ${c.label}`));
-        warn('Crie um arquivo .env na raiz do projeto com:');
-        configs.forEach((c) => info(`${c.key}=${c.example}`));
-        rootLogger.error(`Variáveis faltando: ${missing.map((c) => c.key).join(', ')}`);
-        throw new Error('Variáveis de ambiente faltando. Configure o .env.');
+        return { ok: missing.length === 0, missing: missing.map((c) => c.key) };
     };
+}
+
+/** After `validateEnv()`, ask the user if they want to run the setup wizard.
+ *  Returns `true` if the user accepted (caller should launch the wizard).
+ *  Skips the prompt in batch/CI mode or when `confirm` is unavailable. */
+export function offerEnvSetup(result: EnvValidationResult): boolean {
+    if (result.ok) return false;
+    if (process.env.CI === 'true' || process.env.AUTO_CONFIRM === 'true') return false;
+    try {
+        return confirm('Configurações incompletas. Deseja configurar agora?');
+    } catch {
+        return false;
+    }
 }
 
 export function sanitizeUrl(url: string): string {
     return url.replace(/token=[^&]+/, 'token=****');
 }
 
+/** Graceful shutdown: logs message and exits after EXIT_DELAY_MS to allow pending I/O to flush. */
+export function gracefulExit(code: ExitCode): void {
+    setTimeout(() => process.exit(code), EXIT_DELAY_MS).unref();
+}
+
 export function setupSigint(getIsBusy: (() => boolean) | null, onExit: (() => void) | null): void {
-    const handler = () => {
+    const handler = _createSigintHandler(getIsBusy, onExit);
+    process.on('SIGINT', handler);
+}
+
+function _createSigintHandler(getIsBusy: (() => boolean) | null, onExit: (() => void) | null): () => void {
+    let confirming = false;
+    let rl: readline.Interface | null = null;
+
+    function _cleanupConfirm(): void {
+        if (rl) {
+            rl.close();
+            rl = null;
+        }
+        confirming = false;
+    }
+
+    function _forceExit(): void {
+        _cleanupConfirm();
+        if (onExit) onExit();
+        info('Até logo!');
+        setTimeout(() => process.exit(ExitCode.OK), EXIT_DELAY_MS).unref();
+    }
+
+    return function handler(): void {
         if (getIsBusy && getIsBusy()) {
             info('Operação em andamento. Use Ctrl+C novamente para forçar saída.');
             return;
         }
+        if (confirming) {
+            _forceExit();
+            return;
+        }
         process.removeListener('SIGINT', handler);
-        if (onExit) onExit();
-        info('Até logo!');
-        process.exitCode = 0;
-        setTimeout(() => process.exit(), EXIT_DELAY_MS).unref();
+        confirming = true;
+        rl = readline.createInterface({ input: process.stdin, output: process.stdout });
+        const timeout = setTimeout(() => {
+            _cleanupConfirm();
+            info('Continuando...');
+            process.on('SIGINT', handler);
+        }, 10000);
+        rl.question('Deseja sair? (s/N) ', (answer) => {
+            clearTimeout(timeout);
+            _cleanupConfirm();
+            if (answer.toLowerCase() === 's') {
+                _forceExit();
+            } else {
+                info('Continuando...');
+                process.on('SIGINT', handler);
+            }
+        });
     };
-    process.on('SIGINT', handler);
 }
 
 interface SessionCounter {
@@ -84,25 +149,13 @@ export function printSessionSummary(
     print('');
     divider();
     info('Sessão encerrada.');
+    _printSessionCounters(sessionCounters);
+    _printLastOperations(history);
+    _tryPrintHealthScore();
+    _printSessionLine(lastOperation, logPath);
+    divider();
     const ok = sessionCounters.filter((c) => c.status === 'ok').length;
     const er = sessionCounters.filter((c) => c.status === 'error').length;
-    if (ok > 0 || er > 0) {
-        if (ok > 0) success(ok + ' operação(oes) concluída(s)');
-        if (er > 0) error(er + ' operação(oes) com erro');
-    }
-    if (history && history.length > 0) {
-        const last5 = history.slice(-LAST_OPS_COUNT);
-        info('Últimas operações:');
-        last5.forEach((h) => {
-            const icon = h.status === 'error' ? chalk.red('ERR') : chalk.green('OK');
-            print(`  ${icon} ${h.op}: ${h.detail}`);
-        });
-    }
-    if (lastOperation) info('Última operação: ' + lastOperation);
-    if (logPath) info('Log: ' + logPath);
-    const elapsed = Math.round((Date.now() - _sessionStart) / 1000);
-    info('Sessão: ' + elapsed + 's');
-    divider();
     rootLogger.writeFileOnly(
         'INFO',
         'Sessão encerrada. ' +
@@ -111,4 +164,51 @@ export function printSessionSummary(
             'última: ' +
             (lastOperation || 'nenhuma'),
     );
+}
+
+function _printSessionCounters(sessionCounters: SessionCounter[]): void {
+    const ok = sessionCounters.filter((c) => c.status === 'ok').length;
+    const er = sessionCounters.filter((c) => c.status === 'error').length;
+    if (ok > 0 || er > 0) {
+        if (ok > 0) success(ok + ' operação(oes) concluída(s)');
+        if (er > 0) error(er + ' operação(oes) com erro');
+    }
+}
+
+function _printLastOperations(history?: HistoryEntry[]): void {
+    if (!history || history.length === 0) return;
+    const last5 = history.slice(-LAST_OPS_COUNT);
+    info('Últimas operações:');
+    last5.forEach((h) => {
+        const icon = h.status === 'error' ? chalk.red('ERR') : chalk.green('OK');
+        print(`  ${icon} ${h.op}: ${h.detail}`);
+    });
+}
+
+function _tryPrintHealthScore(): void {
+    try {
+        const store = loadMetrics();
+        if (store.runs.length >= 5) {
+            const hs = calculateHealthScore(store);
+            const gradeIcon =
+                hs.grade === 'excellent'
+                    ? '🟢'
+                    : hs.grade === 'good'
+                      ? '🟡'
+                      : hs.grade === 'needs_attention'
+                        ? '🟠'
+                        : '🔴';
+            const gateIcon = hs.qualityGate === 'pass' ? '✓' : '✗';
+            info(`Saúde: ${hs.overall}/100 ${gradeIcon} · Quality Gate: ${gateIcon}`);
+        }
+    } catch {
+        // metrics store not available — skip health score silently
+    }
+}
+
+function _printSessionLine(lastOperation: string | null, logPath: string | null): void {
+    if (lastOperation) info('Última operação: ' + lastOperation);
+    if (logPath) info('Log: ' + logPath);
+    const elapsed = Math.round((Date.now() - _sessionStart) / 1000);
+    info('Sessão: ' + elapsed + 's');
 }

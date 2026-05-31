@@ -102,7 +102,6 @@ describe('SUB_MENUS', () => {
         expect(SUB_MENUS).toHaveProperty('tests');
         expect(SUB_MENUS).toHaveProperty('releases');
         expect(SUB_MENUS).toHaveProperty('config');
-        expect(SUB_MENUS).toHaveProperty('utilities');
     });
 
     it('each sub-menu has items with id and label', () => {

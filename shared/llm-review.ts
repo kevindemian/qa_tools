@@ -1,6 +1,7 @@
 /** Adversarial LLM review pipeline: validates, re-reviews, and scores analysis results.
  * Runs an audit loop across multiple LLM tiers to improve confidence and catch hallucinations. */
-import { llmPrompt, type LlmTier } from './llm-client';
+import { llmPrompt } from './llm-client';
+import type { LlmTier } from './types';
 import { rootLogger } from './logger';
 import { sanitizeForLlm, sanitizeTerminal } from './sanitize';
 import { ReportValidator, type ValidationRule } from './report-validator';
@@ -136,14 +137,14 @@ function buildRetryPrompt(original: string, errors: string[], invalidResponse?: 
 }
 
 async function callLlmFallback(system: string, user: string, startTime: number): Promise<ReviewResult> {
-    const content = await llmPrompt('main', system, user);
+    const content = await llmPrompt({ tier: 'main', system, user });
     recordLlmRequest('main', Date.now() - startTime);
     return { content, reviewed: false, confidence: 'medium', fallbackUsed: true };
 }
 
 async function attemptPrimary(system: string, user: string, startTime: number): Promise<unknown> {
     try {
-        const primary = await llmPrompt('report', system, user, undefined, undefined, FailureAnalysisSchema);
+        const primary = await llmPrompt({ tier: 'report', system, user, schema: FailureAnalysisSchema });
         recordLlmRequest('report', Date.now() - startTime);
         return primary;
     } catch {
@@ -168,14 +169,12 @@ async function runRetryLoop(
         const invalidJson = typeof parsed === 'string' ? parsed : JSON.stringify(parsed);
         const retryPrompt = buildRetryPrompt(system + '\n\n' + user, validation.errors, invalidJson);
         try {
-            parsed = await llmPrompt(
-                'report',
-                retryPrompt,
-                'Fix the validation errors above.',
-                undefined,
-                undefined,
-                FailureAnalysisSchema,
-            );
+            parsed = await llmPrompt({
+                tier: 'report',
+                system: retryPrompt,
+                user: 'Fix the validation errors above.',
+                schema: FailureAnalysisSchema,
+            });
             recordLlmRequest('report', Date.now() - startTime);
         } catch {
             recordLlmFailure('report');
@@ -197,7 +196,7 @@ async function performSelfReview(
 ): Promise<ReviewResult> {
     const reportContent = JSON.stringify(parsed, null, 2);
     const reviewPrompt = buildReviewPrompt(reportContent);
-    const reviewResponse = await llmPrompt(tier, reviewPrompt, 'Review the analysis above.');
+    const reviewResponse = await llmPrompt({ tier, system: reviewPrompt, user: 'Review the analysis above.' });
     recordLlmRequest(tier, Date.now() - startTime);
 
     const confidence = parseVerdict(reviewResponse);
@@ -225,7 +224,7 @@ async function adversarialRetryParallel(
     const candidates = await Promise.allSettled(
         ADVERSARIAL_TIERS.map(async (tier) => {
             try {
-                const parsed = await llmPrompt(tier, system, gapPrompt, undefined, undefined, FailureAnalysisSchema);
+                const parsed = await llmPrompt({ tier, system, user: gapPrompt, schema: FailureAnalysisSchema });
                 recordLlmRequest(tier, Date.now() - startTime);
                 const validation = analysisValidator.validateAll(parsed);
                 if (!validation.valid) return null;
@@ -251,7 +250,7 @@ async function reReviewParallel(
     const reviewPrompt = buildReviewPrompt(content);
     const reviews = await Promise.allSettled(
         REV_TIERS.map(async (tier) => {
-            const raw = await llmPrompt(tier, reviewPrompt, 'Review the analysis above.');
+            const raw = await llmPrompt({ tier, system: reviewPrompt, user: 'Review the analysis above.' });
             recordLlmRequest(tier, Date.now() - startTime);
             return { confidence: parseVerdict(raw), tier };
         }),

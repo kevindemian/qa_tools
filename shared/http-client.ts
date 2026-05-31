@@ -3,6 +3,7 @@
 import axios from 'axios';
 import { createAgent } from './tls';
 import { rootLogger } from './logger';
+import { extractHost, HostSemaphore } from './host-semaphore';
 
 /** Configuration for {@link createHttpClient}. */
 export interface HttpClientConfig {
@@ -12,6 +13,9 @@ export interface HttpClientConfig {
     authHeader?: Record<string, string>;
     /** Request timeout in ms (default: 120000). */
     timeout?: number;
+    /** Maximum retry attempts for GET/PUT on 5xx/429/network errors (default: 10).
+     *  Set lower for non-critical requests like status badges. */
+    maxRetries?: number;
 }
 
 /** Default sleep implementation using setTimeout.
@@ -90,6 +94,14 @@ function deleteRetryKey(key: string): void {
     retryCounts.delete(key);
 }
 
+/** Clear the retry cleanup timer so tests can restart it with fake timers. */
+export function _resetRetryCleanup(): void {
+    if (_retryCleanupTimer !== null) {
+        clearInterval(_retryCleanupTimer);
+        _retryCleanupTimer = null;
+    }
+}
+
 startRetryCleanup();
 
 function _calculateRetryDelay(
@@ -108,7 +120,7 @@ function _calculateRetryDelay(
     return waitMs + jitter;
 }
 
-function _setupResponseInterceptor(instance: ReturnType<typeof axios.create>): void {
+function _setupResponseInterceptor(instance: ReturnType<typeof axios.create>, maxRetries: number): void {
     instance.interceptors.response.use(
         (response) => {
             const key = retryKey(response.config);
@@ -126,7 +138,7 @@ function _setupResponseInterceptor(instance: ReturnType<typeof axios.create>): v
             const key = retryKey(cfg);
             let attempts = getRetryCount(key);
             const method = (cfg.method || 'get').toLowerCase();
-            const maxRetries = method === 'get' || method === 'put' ? HTTP_MAX_RETRIES : 0;
+            const effectiveMaxRetries = method === 'get' || method === 'put' ? maxRetries : 0;
             const isRetryable =
                 !axiosErr.response ||
                 axiosErr.response.status >= 500 ||
@@ -134,14 +146,14 @@ function _setupResponseInterceptor(instance: ReturnType<typeof axios.create>): v
                 axiosErr.code === 'ECONNRESET' ||
                 axiosErr.code === 'ETIMEDOUT' ||
                 axiosErr.code === 'ECONNABORTED';
-            if (attempts < maxRetries && isRetryable) {
+            if (attempts < effectiveMaxRetries && isRetryable) {
                 attempts++;
                 setRetryCount(key, attempts);
                 const delayMs = _calculateRetryDelay(axiosErr.response, attempts);
                 const retryAfter =
                     axiosErr.response?.status === 429 ? axiosErr.response?.headers?.['retry-after'] : undefined;
-                rootLogger.warn(
-                    `Retry ${attempts}/${maxRetries} para ${cfg.url} (espera ${Math.round(delayMs)}ms)` +
+                rootLogger.debug(
+                    `Retry ${attempts}/${effectiveMaxRetries} para ${cfg.url} (espera ${Math.round(delayMs)}ms)` +
                         (retryAfter ? ' — Retry-After: ' + String(retryAfter) + 's' : ''),
                 );
                 await sleep(delayMs);
@@ -154,12 +166,13 @@ function _setupResponseInterceptor(instance: ReturnType<typeof axios.create>): v
 }
 
 /** Create an axios-based HTTP client with retry logic, TLS config, and JSON content type.
- * Retries GET/PUT on 5xx, 429, ECONNRESET, ETIMEDOUT (up to 5 attempts with exponential backoff).
- * @param config — Base URL, optional auth header, and timeout. */
+ * Retries GET/PUT on 5xx, 429, ECONNRESET, ETIMEDOUT (up to configurable attempts with exponential backoff).
+ * @param config — Base URL, optional auth header, timeout, and max retries. */
 export function createHttpClient({
     baseUrl,
     authHeader,
     timeout = DEFAULT_HTTP_TIMEOUT_MS,
+    maxRetries,
 }: HttpClientConfig): axios.AxiosInstance {
     const instance = axios.create({
         baseURL: baseUrl,
@@ -171,7 +184,7 @@ export function createHttpClient({
         },
     });
 
-    _setupResponseInterceptor(instance);
+    _setupResponseInterceptor(instance, maxRetries ?? HTTP_MAX_RETRIES);
 
     return instance;
 }
@@ -183,76 +196,6 @@ export interface ThrottledClientConfig extends HttpClientConfig {
     /** Maximum concurrent requests (default: 3). */
     maxConcurrency?: number;
 }
-
-/** Extract hostname from a URL for per-host throttling. */
-function extractHost(url: string): string {
-    try {
-        const u = new URL(url);
-        return u.hostname;
-    } catch {
-        return 'unknown';
-    }
-}
-
-/** Per-host semaphore for concurrent request limiting. */
-class HostSemaphore {
-    private readonly maxConcurrency: number;
-    private readonly inflight = new Map<string, number>();
-    private readonly queues = new Map<string, Array<() => void>>();
-    private readonly releaseTimestamps = new Map<string, number[]>();
-    private readonly minIntervalMs = 200;
-
-    constructor(maxConcurrency: number) {
-        this.maxConcurrency = maxConcurrency;
-    }
-
-    /** Acquire a slot for the given host. Returns a promise that resolves when a slot is available. */
-    async acquire(host: string): Promise<void> {
-        await this.rateLimitWait(host);
-        const current = this.inflight.get(host) ?? 0;
-        if (current < this.maxConcurrency) {
-            this.inflight.set(host, current + 1);
-            return;
-        }
-        return new Promise((resolve) => {
-            if (!this.queues.has(host)) this.queues.set(host, []);
-            this.queues.get(host)!.push(resolve);
-        });
-    }
-
-    /** Release a slot for the given host, allowing a queued request to proceed. */
-    release(host: string): void {
-        const current = this.inflight.get(host) ?? 0;
-        if (current > 0) this.inflight.set(host, current - 1);
-        const ts = Date.now();
-        if (!this.releaseTimestamps.has(host)) this.releaseTimestamps.set(host, []);
-        this.releaseTimestamps.get(host)!.push(ts);
-        this.dispatchNext(host);
-    }
-
-    private dispatchNext(host: string): void {
-        const queue = this.queues.get(host);
-        if (queue && queue.length > 0 && (this.inflight.get(host) ?? 0) < this.maxConcurrency) {
-            const next = queue.shift();
-            if (next) {
-                this.inflight.set(host, (this.inflight.get(host) ?? 0) + 1);
-                next();
-            }
-        }
-    }
-
-    /** Ensure minimum interval between requests to the same host. */
-    private async rateLimitWait(host: string): Promise<void> {
-        const releases = this.releaseTimestamps.get(host);
-        if (!releases || releases.length === 0) return;
-        const last = releases[releases.length - 1]!;
-        const elapsed = Date.now() - last;
-        if (elapsed < this.minIntervalMs) {
-            await new Promise((r) => setTimeout(r, this.minIntervalMs - elapsed));
-        }
-    }
-}
-
 /** Internal marker to track which requests already acquired a throttle slot (avoids double-acquire on retries). */
 const THROTTLE_ACQUIRED = '_throttleAcquired';
 

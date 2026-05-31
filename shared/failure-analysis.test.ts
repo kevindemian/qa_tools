@@ -123,14 +123,13 @@ describe('classifyFailure', () => {
 
         const result = await classifyFailure('Login test', 'expected true, got false');
         expect(result).toBe('ASSERTION: expected true but got false');
-        expect(mockLlmPrompt).toHaveBeenCalledWith(
-            'fast',
-            expect.any(String),
-            expect.any(String),
-            'classify',
-            undefined,
-            expect.anything(),
-        );
+        expect(mockLlmPrompt).toHaveBeenCalledWith({
+            tier: 'fast',
+            system: expect.any(String),
+            user: expect.any(String),
+            callerId: 'classify',
+            schema: expect.anything(),
+        });
     });
 
     it('returns valid classification when llmPrompt returns matching format', async () => {

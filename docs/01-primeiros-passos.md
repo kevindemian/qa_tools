@@ -35,11 +35,11 @@ O valor padrão é `ECSPOL`. O nome escolhido é salvo em estado persistente e r
 O menu é organizado em **categorias** com sub-menus. Ao selecionar uma categoria, as opções internas são exibidas:
 
 ```
-== ECSPOL ==
   GERAÇÃO DE RELATÓRIOS
    17  Gerar relatório HTML
   GERAÇÃO DE CASOS DE TESTE
    1   Criar testes a partir de CSV
+   11  Gerar template (CSV/JSON)
    13  Criar Test Execution para testes existentes
    15  Importar testes de JSON
    18  Gerar testes via User Story (IA)
@@ -47,6 +47,9 @@ O menu é organizado em **categorias** com sub-menus. Ao selecionar uma categori
    20  Criar Bug Report
   ANÁLISE E HISTÓRICO
    19  Histórico / Cobertura
+   21  Análise de gaps de cobertura
+   22  Impacto de mudanças (test impact)
+   23  Feedback de IA
   RELEASES
    2   Listar versões de release
    3   Criar nova versão
@@ -58,17 +61,16 @@ O menu é organizado em **categorias** com sub-menus. Ao selecionar uma categori
   CONFIGURAÇÃO
    9   Alterar projeto Jira
    10  Alterar diretório git
+   12  Diagnosticar conexão
    14  Alterar diretório Cypress
    16  Alterar diretório JSON
   UTILITÁRIOS
-   11  Gerar template CSV
-   12  Diagnosticar conexão
    d   Ver documentação (abre navegador)
-   0   Sair
+   0   Voltar ao menu principal
    /help  Ajuda
 ```
 
-O usuário digita o número da opção desejada. Também é possível usar **alias** em português ou inglês (ex.: `criar`, `versoes`, `fechar`, `bug`, `docs`, `exit`).
+O usuário digita o número da opção desejada. Também é possível usar **alias** em português ou inglês (ex.: `criar`, `versoes`, `fechar`, `bug`, `gaps`, `docs`, `exit`).
 
 ---
 

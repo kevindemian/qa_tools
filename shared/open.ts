@@ -1,8 +1,8 @@
 /** OS-aware file opener: macOS `open`, Windows `start`, Linux `xdg-open` (with WSL fallback). */
-import { spawn, execSync } from 'child_process';
+import { spawn, spawnSync, execFileSync } from 'child_process';
 import { platform } from 'os';
 import { readFileSync, writeFileSync, mkdirSync } from 'fs';
-import { basename, join, resolve } from 'path';
+import { basename, dirname, join, resolve } from 'path';
 import Config from './config';
 
 interface OsOpenCommand {
@@ -28,7 +28,10 @@ export function getWinTempDir(): string | null {
     if (process.env.TEMP && process.env.TEMP.startsWith('/')) return process.env.TEMP;
     if (process.env.TMP && process.env.TMP.startsWith('/')) return process.env.TMP;
     try {
-        const raw = execSync('cmd.exe /c echo %TEMP%', { encoding: 'utf8', stdio: ['pipe', 'pipe', 'ignore'] }).trim();
+        const raw = execFileSync('cmd.exe', ['/c', 'echo', '%TEMP%'], {
+            encoding: 'utf8',
+            stdio: ['pipe', 'pipe', 'ignore'],
+        }).trim();
         if (!raw) return null;
         return raw.replace(/\\/g, '/').replace(/^([A-Za-z]):/, (_m, letter) => '/mnt/' + letter.toLowerCase());
     } catch {
@@ -48,10 +51,14 @@ export function getDocsOutputDir(): string | null {
     return join(root, 'docs');
 }
 
+/** Convert a Unix path to Windows path using wslpath. Uses spawnSync with argument array to prevent shell injection (C13-1). */
 function toWinPath(target: string): string | null {
     try {
-        const wp = execSync(`wslpath -w "${target}"`, { encoding: 'utf8' }).trim();
-        if (/^[A-Za-z]:\\/.test(wp)) return wp;
+        const result = spawnSync('wslpath', ['-w', target], { encoding: 'utf8' });
+        if (result.status === 0) {
+            const wp = (result.stdout ?? '').trim();
+            if (/^[A-Za-z]:\\/.test(wp)) return wp;
+        }
     } catch {
         /* wslpath failed */
     }
@@ -65,8 +72,12 @@ function toWinPath(target: string): string | null {
         mkdirSync(dir, { recursive: true });
         const dest = join(dir, basename(target));
         writeFileSync(dest, content);
-        const wp = execSync(`wslpath -w "${dest}"`, { encoding: 'utf8' }).trim();
-        return /^[A-Za-z]:\\/.test(wp) ? wp : null;
+        const result2 = spawnSync('wslpath', ['-w', dest], { encoding: 'utf8' });
+        if (result2.status === 0) {
+            const wp = (result2.stdout ?? '').trim();
+            return /^[A-Za-z]:\\/.test(wp) ? wp : null;
+        }
+        return null;
     } catch {
         return null;
     }
@@ -121,4 +132,29 @@ export async function openWithOsOrFallback(target: string, fallbackViewer?: () =
             }
         });
     });
+}
+
+/**
+ * Open a file with a 3-level fallback chain:
+ *   1. Browser/file handler (`openWithOsOrFallback` on the file)
+ *   2. File manager (`openWithOsOrFallback` on the parent directory)
+ *   3. Print the file path via `logInfo`
+ *
+ * @param filePath  Absolute path to the file to open.
+ * @param label     Human-readable label for log messages (e.g. "Relatório", "Documentação").
+ * @param logInfo   Info-logger function from prompt (injected to avoid direct dependency).
+ */
+export async function openWithFallback(filePath: string, label: string, logInfo: (msg: string) => void): Promise<void> {
+    const opened = await openWithOsOrFallback(filePath);
+    if (opened) {
+        logInfo(label + ' aberto no navegador');
+        return;
+    }
+    const parentDir = dirname(filePath);
+    const dirOpened = await openWithOsOrFallback(parentDir);
+    if (dirOpened) {
+        logInfo(label + ' salvo. Navegador indisponível, pasta aberta no gerenciador de arquivos.');
+        return;
+    }
+    logInfo(label + ' salvo em: ' + filePath);
 }

@@ -2,6 +2,7 @@ import chalk from 'chalk';
 import fs from 'fs';
 import path from 'path';
 import Config from './config';
+import { formatDateISO } from './date-utils';
 
 /** Numeric severity: DEBUG < INFO < WARN < ERROR. */
 const LEVELS: Record<string, number> = { DEBUG: 0, INFO: 1, WARN: 2, ERROR: 3 };
@@ -74,7 +75,7 @@ export class Logger {
         try {
             if (!fs.existsSync(logDir)) fs.mkdirSync(logDir, { recursive: true });
             this._logDir = logDir;
-            const date = new Date().toISOString().split('T')[0];
+            const date = formatDateISO();
             this._filePathCached = path.join(logDir, `qa-tools-${date}.log`);
             try {
                 const stat = fs.statSync(this._filePathCached);

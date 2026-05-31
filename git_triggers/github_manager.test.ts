@@ -96,9 +96,9 @@ describe('GitHubManager', () => {
             expect(result.id).toBe(42);
         });
 
-        it('throws when no workflows found', async () => {
+        it('returns undefined when no workflows found', async () => {
             mockClient.get.mockResolvedValue({ data: { workflows: [] } });
-            await expect(manager.triggerPipeline({ ref: 'main', variables: [] })).rejects.toThrow('No workflows found');
+            await expect(manager.triggerPipeline({ ref: 'main', variables: [] })).resolves.toBeUndefined();
         });
 
         it('throws on API error', async () => {
@@ -670,6 +670,67 @@ describe('GitHubManager', () => {
             });
             const result = await manager.getDiff('feature', 'main');
             expect(result).toBe('');
+        });
+    });
+
+    describe('getOpenIssues', () => {
+        it('filters out pull requests from results', async () => {
+            mockClient.get.mockResolvedValue({
+                data: [
+                    {
+                        number: 1,
+                        title: 'Issue 1',
+                        state: 'open',
+                        updated_at: '2024-01-01',
+                        created_at: '2024-01-01',
+                        labels: [],
+                        html_url: 'https://issue1',
+                    },
+                    {
+                        number: 2,
+                        title: 'PR 2',
+                        state: 'open',
+                        updated_at: '2024-01-02',
+                        created_at: '2024-01-02',
+                        labels: [],
+                        html_url: 'https://pr2',
+                        pull_request: { url: 'https://pr2' },
+                    },
+                    {
+                        number: 3,
+                        title: 'Issue 3',
+                        state: 'open',
+                        updated_at: '2024-01-03',
+                        created_at: '2024-01-03',
+                        labels: [{ name: 'bug' }],
+                        html_url: 'https://issue3',
+                    },
+                ],
+            });
+            const result = await manager.getOpenIssues();
+            expect(result).toHaveLength(2);
+            expect(result[0]!.number).toBe(1);
+            expect(result[1]!.number).toBe(3);
+            expect(result[1]!.labels).toEqual(['bug']);
+        });
+
+        it('returns empty array when data is not an array', async () => {
+            mockClient.get.mockResolvedValue({ data: { message: 'not an array', something: true } });
+            const result = await manager.getOpenIssues();
+            expect(result).toEqual([]);
+        });
+    });
+
+    describe('getJobLogs', () => {
+        it('returns truncated log text on success', async () => {
+            mockClient.get.mockResolvedValue({ data: 'line1\nline2\n' });
+            const result = await manager.getJobLogs(42, 100);
+            expect(result).toBe('line1\nline2\n');
+        });
+
+        it('throws on API error via handleError', async () => {
+            mockClient.get.mockRejectedValue(new Error('Log fetch error'));
+            await expect(manager.getJobLogs(42)).rejects.toThrow('Log fetch error');
         });
     });
 });

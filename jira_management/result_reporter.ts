@@ -1,8 +1,10 @@
 /** Match test results to Jira issues via mapping JSON and create Test Executions. */
 import fs from 'fs';
 import { rootLogger } from '../shared/logger';
+import type { JiraResourceLike } from '../shared/types';
 // anti-circular (prompt → create_tests → session-context → prompt)
 import createTests from './create_tests';
+import TestExecutionCreator from './test-execution-creator';
 
 interface TestResultItem {
     title: string;
@@ -38,6 +40,21 @@ interface PipelineInfo {
     pipelineId?: string | number;
     branch?: string;
     provider?: string;
+}
+
+interface CreateTeOpts {
+    jiraResource: JiraResourceLike;
+    linkManager: import('./jira_link_manager').default;
+    projectName: string;
+    matchedResults: Array<{
+        key: string;
+        title: string;
+        status: 'passed' | 'failed' | 'skipped';
+        duration: number;
+    }>;
+    csvName: string;
+    pipelineInfo?: PipelineInfo;
+    existingTeKey?: string;
 }
 
 function _fuzzyMatch(title: string, mappings: MappingItem[]): MappingItem | null {
@@ -119,45 +136,45 @@ function _buildExecutionPayload(
     return { summary, testKeys };
 }
 
-async function createTestExecutionFromResults(
-    jiraResource: import('./jira_resource').default,
-    linkManager: import('./jira_link_manager').default,
-    project_name: string,
-    matchedResults: Array<{
-        key: string;
-        title: string;
-        status: 'passed' | 'failed' | 'skipped';
-        duration: number;
-    }>,
-    csvName: string,
-    pipelineInfo?: PipelineInfo,
-): Promise<TestExecResult> {
-    const { summary, testKeys } = _buildExecutionPayload(matchedResults, csvName, pipelineInfo);
-    const te = await createTests.createTestExecution(
-        jiraResource,
-        linkManager,
-        project_name,
-        testKeys,
-        csvName,
-        summary,
-    );
+async function createTestExecutionFromResults(opts: CreateTeOpts): Promise<TestExecResult> {
+    const { testKeys } = _buildExecutionPayload(opts.matchedResults, opts.csvName, opts.pipelineInfo);
 
-    if (te.key && matchedResults.length > 0) {
-        try {
-            for (const m of matchedResults) {
-                if (m.status === 'skipped') continue;
-                await linkManager.createIssueLink(m.key, te.key, 'Tests');
+    let te: { key: string; summary: string } | null;
+    if (opts.existingTeKey) {
+        const creator = new TestExecutionCreator(opts.jiraResource, opts.linkManager);
+        te = await creator.addTestsToExistingExecution(opts.existingTeKey, testKeys);
+        if (!te) {
+            rootLogger.error('Falha ao adicionar testes à Test Execution existente: ' + opts.existingTeKey);
+            return { key: '', summary: '', passed: 0, failed: 0, skipped: 0 };
+        }
+    } else {
+        const { summary } = _buildExecutionPayload(opts.matchedResults, opts.csvName, opts.pipelineInfo);
+        te = await createTests.createTestExecution({
+            jiraResource: opts.jiraResource,
+            linkManager: opts.linkManager,
+            projectName: opts.projectName,
+            testKeys,
+            csvName: opts.csvName,
+            titleOverride: summary,
+        });
+
+        if (te && te.key && opts.matchedResults.length > 0) {
+            try {
+                for (const m of opts.matchedResults) {
+                    if (m.status === 'skipped') continue;
+                    await opts.linkManager.createIssueLink(m.key, te.key, 'Tests');
+                }
+            } catch (err) {
+                rootLogger.warn('Falha ao linkar alguns testes: ' + (err as Error).message);
             }
-        } catch (err) {
-            rootLogger.warn('Falha ao linkar alguns testes: ' + (err as Error).message);
         }
     }
 
-    const passed = matchedResults.filter((m) => m.status === 'passed').length;
-    const failed = matchedResults.filter((m) => m.status === 'failed').length;
-    const skipped = matchedResults.filter((m) => m.status === 'skipped').length;
+    const passed = opts.matchedResults.filter((m) => m.status === 'passed').length;
+    const failed = opts.matchedResults.filter((m) => m.status === 'failed').length;
+    const skipped = opts.matchedResults.filter((m) => m.status === 'skipped').length;
 
-    return { key: te.key, summary, passed, failed, skipped };
+    return { key: te?.key ?? '', summary: te?.summary ?? '', passed, failed, skipped };
 }
 
 export { matchResultsToTests, createTestExecutionFromResults };

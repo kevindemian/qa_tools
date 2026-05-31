@@ -1,75 +1,97 @@
 import { createGitHubSmokeManager } from './smoke-shared';
 
+async function testGetBranch(
+    gh: ReturnType<typeof createGitHubSmokeManager>,
+    counters: { passed: number; failed: number },
+): Promise<void> {
+    const mainBranch = await gh.getBranch('main');
+    if (mainBranch?.name === 'main') {
+        console.log('  OK: getBranch(main) = ' + mainBranch.name);
+        counters.passed++;
+    } else {
+        console.error('  FAIL: getBranch(main) returned ' + JSON.stringify(mainBranch));
+        counters.failed++;
+    }
+
+    const missing = await gh.getBranch('__nonexistent_branch_xyz__');
+    if (missing === null) {
+        console.log('  OK: getBranch(nonexistent) = null');
+        counters.passed++;
+    } else {
+        console.error('  FAIL: getBranch(nonexistent) = ' + JSON.stringify(missing));
+        counters.failed++;
+    }
+}
+
+async function testGetDiff(
+    gh: ReturnType<typeof createGitHubSmokeManager>,
+    counters: { passed: number; failed: number },
+): Promise<void> {
+    const diff = await gh.getDiff('main', 'dev');
+    if (typeof diff === 'string') {
+        console.log('  OK: getDiff(main, dev) = ' + diff.length + ' chars' + (diff ? ' (non-empty)' : ' (empty)'));
+        counters.passed++;
+    } else {
+        console.error('  FAIL: getDiff returned ' + typeof diff);
+        counters.failed++;
+    }
+}
+
+async function testListOperations(
+    gh: ReturnType<typeof createGitHubSmokeManager>,
+    counters: { passed: number; failed: number },
+): Promise<void> {
+    const runs = await gh.getRecentPipelines(5);
+    if (Array.isArray(runs)) {
+        console.log('  OK: getRecentPipelines(5) = ' + runs.length + ' runs');
+        counters.passed++;
+    } else {
+        console.error('  FAIL: getRecentPipelines returned non-array');
+        counters.failed++;
+    }
+
+    const vars = await gh.getCICDVariables();
+    if (Array.isArray(vars)) {
+        console.log('  OK: getCICDVariables() = ' + vars.length + ' variables');
+        counters.passed++;
+    } else {
+        console.error('  FAIL: getCICDVariables returned non-array');
+        counters.failed++;
+    }
+
+    const prs = await gh.searchMergeRequests('', '', 'open');
+    if (Array.isArray(prs)) {
+        console.log('  OK: searchMergeRequests(open) = ' + prs.length + ' PRs');
+        counters.passed++;
+    } else {
+        console.error('  FAIL: searchMergeRequests returned non-array');
+        counters.failed++;
+    }
+}
+
+async function runAllApiTests(
+    gh: ReturnType<typeof createGitHubSmokeManager>,
+): Promise<{ passed: number; failed: number }> {
+    const counters = { passed: 0, failed: 0 };
+
+    await testGetBranch(gh, counters);
+    await testGetDiff(gh, counters);
+    await testListOperations(gh, counters);
+
+    return counters;
+}
+
+function printSmokeResults(passed: number, failed: number): void {
+    console.log('\n=== Results: ' + passed + ' passed, ' + failed + ' failed ===');
+    if (failed > 0) process.exitCode = 1;
+}
+
 async function main() {
     console.log('=== Camada 1: Read-Only GitHub Smoke Test ===\n');
 
     const gh = createGitHubSmokeManager();
-    let passed = 0;
-    let failed = 0;
-
-    // 1. getBranch on existing branch
-    const main = await gh.getBranch('main');
-    if (main?.name === 'main') {
-        console.log('  OK: getBranch(main) = ' + main.name);
-        passed++;
-    } else {
-        console.error('  FAIL: getBranch(main) returned ' + JSON.stringify(main));
-        failed++;
-    }
-
-    // 2. getBranch on nonexistent branch → null
-    const missing = await gh.getBranch('__nonexistent_branch_xyz__');
-    if (missing === null) {
-        console.log('  OK: getBranch(nonexistent) = null');
-        passed++;
-    } else {
-        console.error('  FAIL: getBranch(nonexistent) = ' + JSON.stringify(missing));
-        failed++;
-    }
-
-    // 3. getDiff between main and dev
-    const diff = await gh.getDiff('main', 'dev');
-    if (typeof diff === 'string') {
-        console.log('  OK: getDiff(main, dev) = ' + diff.length + ' chars' + (diff ? ' (non-empty)' : ' (empty)'));
-        passed++;
-    } else {
-        console.error('  FAIL: getDiff returned ' + typeof diff);
-        failed++;
-    }
-
-    // 4. getRecentPipelines
-    const runs = await gh.getRecentPipelines(5);
-    if (Array.isArray(runs)) {
-        console.log('  OK: getRecentPipelines(5) = ' + runs.length + ' runs');
-        passed++;
-    } else {
-        console.error('  FAIL: getRecentPipelines returned non-array');
-        failed++;
-    }
-
-    // 5. getCICDVariables
-    const vars = await gh.getCICDVariables();
-    if (Array.isArray(vars)) {
-        console.log('  OK: getCICDVariables() = ' + vars.length + ' variables');
-        passed++;
-    } else {
-        console.error('  FAIL: getCICDVariables returned non-array');
-        failed++;
-    }
-
-    // 6. searchMergeRequests (open PRs)
-    const prs = await gh.searchMergeRequests('', '', 'open');
-    if (Array.isArray(prs)) {
-        console.log('  OK: searchMergeRequests(open) = ' + prs.length + ' PRs');
-        passed++;
-    } else {
-        console.error('  FAIL: searchMergeRequests returned non-array');
-        failed++;
-    }
-
-    // Summary
-    console.log('\n=== Results: ' + passed + ' passed, ' + failed + ' failed ===');
-    if (failed > 0) process.exitCode = 1;
+    const { passed, failed } = await runAllApiTests(gh);
+    printSmokeResults(passed, failed);
 }
 
 main().catch((err) => {

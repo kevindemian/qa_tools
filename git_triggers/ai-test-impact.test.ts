@@ -38,12 +38,12 @@ describe('assessTestImpact', () => {
 
         const result = await assessTestImpact(mockProvider, 'feature/a', 'main', '/path/mapping.json');
         expect(mockProvider.getDiff).toHaveBeenCalledWith('feature/a', 'main');
-        expect(llmPrompt).toHaveBeenCalledWith(
-            'fast',
-            expect.any(String),
-            expect.stringContaining('Test login'),
-            'test-impact',
-        );
+        expect(llmPrompt).toHaveBeenCalledWith({
+            tier: 'fast',
+            system: expect.any(String),
+            user: expect.stringContaining('Test login'),
+            callerId: 'test-impact',
+        });
         expect(result).toBe('**Risco:** BAIXO. Nenhum teste existente afetado.');
     });
 

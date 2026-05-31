@@ -2,6 +2,7 @@ import { rootLogger } from './logger';
 import type { JiraResourceLike } from './types';
 import type { FlakyAction, FlakyActionConfig } from './types';
 import type { FlakinessEntry, MetricsStore } from './metrics';
+import { quarantineTest } from './quarantine';
 
 const DEFAULT_CONFIG: FlakyActionConfig = {
     threshold: 0.3,
@@ -88,7 +89,8 @@ async function searchExistingBug(
     try {
         const result = await jiraResource.searchJiraIssues(jql, 5);
         if (result.issues && result.issues.length > 0) {
-            return result.issues[0]!.key;
+            const first = result.issues[0];
+            if (first) return first.key;
         }
         return null;
     } catch (err) {
@@ -97,16 +99,19 @@ async function searchExistingBug(
     }
 }
 
-async function createFlakyBug(
-    jiraResource: JiraResourceLike,
-    project: string,
-    title: string,
-    rate: number,
-    failCount: number,
-    passCount: number,
-    totalRuns: number,
-    priority: string,
-): Promise<string> {
+interface FlakyBugInput {
+    jiraResource: JiraResourceLike;
+    project: string;
+    title: string;
+    rate: number;
+    failCount: number;
+    passCount: number;
+    totalRuns: number;
+    priority: string;
+}
+
+async function createFlakyBug(input: FlakyBugInput): Promise<string> {
+    const { jiraResource, project, title, rate, failCount, passCount, totalRuns, priority } = input;
     const summary = '[Flaky] ' + title;
     const description = buildBugDescription(title, rate, failCount, passCount, totalRuns);
     const payload = {
@@ -165,6 +170,69 @@ function makeAction(
     };
 }
 
+async function _handleStableEntry(
+    entry: FlakinessEntry,
+    jiraResource: JiraResourceLike,
+    project: string,
+): Promise<FlakyAction | null> {
+    const existingKey = await searchExistingBug(jiraResource, project, entry.title);
+    if (!existingKey) return null;
+    await reenableTest(jiraResource, existingKey);
+    return makeAction(entry, 'reenable', 'test stabilized, closed bug ' + existingKey, existingKey);
+}
+
+async function _processFlakyEntry(
+    entry: FlakinessEntry,
+    jiraResource: JiraResourceLike,
+    project: string,
+    cfg: FlakyActionConfig,
+): Promise<FlakyAction> {
+    if (cfg.dedupSearch) {
+        const existing = await searchExistingBug(jiraResource, project, entry.title);
+        if (existing) {
+            quarantineTest({
+                testTitle: entry.title,
+                reason: 'bug already exists: ' + existing,
+                quarantinedBy: 'flaky-auto-actions',
+                flakyRate: entry.rate,
+                bugUrl: existing,
+            });
+            return makeAction(entry, 'none', 'bug already exists: ' + existing, existing);
+        }
+    }
+
+    let bugKey: string | undefined;
+    let action: FlakyAction['action'];
+    let reason: string;
+
+    if (cfg.autoCreateBug) {
+        bugKey = await createFlakyBug({
+            jiraResource,
+            project,
+            title: entry.title,
+            rate: entry.rate,
+            failCount: entry.failCount,
+            passCount: entry.passCount,
+            totalRuns: entry.totalRuns,
+            priority: cfg.bugPriority,
+        });
+        action = 'create_bug';
+        reason = 'bug created: ' + bugKey;
+    } else {
+        action = 'flag_in_report';
+        reason = 'flaky rate exceeds threshold';
+    }
+
+    quarantineTest({
+        testTitle: entry.title,
+        reason,
+        quarantinedBy: 'flaky-auto-actions',
+        flakyRate: entry.rate,
+        bugUrl: bugKey,
+    });
+    return makeAction(entry, action, reason, bugKey);
+}
+
 export async function executeFlakyActions(
     metricsStore: MetricsStore,
     jiraResource: JiraResourceLike,
@@ -181,40 +249,15 @@ export async function executeFlakyActions(
 
     for (const entry of flakyEntries) {
         if (entry.rate <= cfg.threshold) {
-            const existingKey = await searchExistingBug(jiraResource, project, entry.title);
-            if (existingKey) {
-                await reenableTest(jiraResource, existingKey);
-                actions.push(makeAction(entry, 'reenable', 'test stabilized, closed bug ' + existingKey, existingKey));
-            }
+            const action = await _handleStableEntry(entry, jiraResource, project);
+            if (action) actions.push(action);
             continue;
         }
 
         if (entry.totalRuns < cfg.minTotalRuns) continue;
 
-        if (cfg.dedupSearch) {
-            const existingKey = await searchExistingBug(jiraResource, project, entry.title);
-            if (existingKey) {
-                actions.push(makeAction(entry, 'none', 'bug already exists: ' + existingKey, existingKey));
-                continue;
-            }
-        }
-
-        if (cfg.autoCreateBug) {
-            const bugKey = await createFlakyBug(
-                jiraResource,
-                project,
-                entry.title,
-                entry.rate,
-                entry.failCount,
-                entry.passCount,
-                entry.totalRuns,
-                cfg.bugPriority,
-            );
-            actions.push(makeAction(entry, 'create_bug', 'bug created', bugKey));
-            continue;
-        }
-
-        actions.push(makeAction(entry, 'flag_in_report', 'flaky rate exceeds threshold'));
+        const action = await _processFlakyEntry(entry, jiraResource, project, cfg);
+        actions.push(action);
     }
 
     return actions;

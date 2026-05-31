@@ -8,10 +8,14 @@ module.exports = {
         'shared/**/*.ts',
         'jira_management/**/*.ts',
         'git_triggers/**/*.ts',
+        'setup/**/*.ts',
+        'scripts/**/*.ts',
         '!**/*.test.ts',
         '!**/*.d.ts',
         '!**/node_modules/**',
-        '!shared/types.ts',
+        '!e2e/**',
+        '!shared/__mocks__/**',
+        '!shared/prompts/__fixtures__/**',
     ],
     coverageThreshold: {
         global: {

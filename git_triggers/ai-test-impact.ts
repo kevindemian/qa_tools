@@ -17,8 +17,8 @@ function loadMappingTitles(mappingPath?: string): string[] {
         const items: MappingItem[] = JSON.parse(raw);
         if (!Array.isArray(items)) return [];
         return items.map((m) => m.title).filter(Boolean);
-    } catch {
-        rootLogger.warn('Failed to load mapping titles from ' + mappingPath);
+    } catch (err: unknown) {
+        rootLogger.warn('Failed to load mapping titles from ' + mappingPath + ': ' + (err as Error).message);
         return [];
     }
 }
@@ -79,7 +79,7 @@ export async function assessTestImpact(
             '5. Repeat until you can find no new impacts — only then output your numbered assessment',
         ].join('\n');
         const user = buildPrompt(sanitizeForLlm(diff), titles, source, target);
-        return await llmPrompt('fast', system, user, 'test-impact');
+        return await llmPrompt({ tier: 'fast', system, user, callerId: 'test-impact' });
     } catch (err) {
         rootLogger.error('Failed to assess test impact: ' + (err as Error).message);
         return '';

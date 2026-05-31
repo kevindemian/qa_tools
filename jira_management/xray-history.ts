@@ -2,14 +2,11 @@
  * Fetches historical test runs for a given test issue key.
  * Falls back gracefully on API errors — never throws. */
 
-import axios from 'axios';
 import type JiraResource from './jira_resource';
 import Config from '../shared/config';
 import { rootLogger } from '../shared/logger';
-import type { XrayGetTestRunsResponse, JsonObject, JiraIssue } from '../shared/types';
-
-const XRAY_AUTH_URL = 'https://xray.cloud.getxray.app/api/v2/authenticate';
-const XRAY_GRAPHQL_URL = 'https://xray.cloud.getxray.app/api/v2/graphql';
+import type { JsonObject, JiraIssue } from '../shared/types';
+import { XrayCloudClient } from '../shared/xray-cloud-client';
 const MAX_RUNS = 20;
 
 function safeStr(val: unknown, fallback = ''): string {
@@ -105,17 +102,17 @@ class ServerHistoryProvider implements TestHistoryProvider {
 // ─── Cloud (GraphQL) ─────────────────────────────────────────────────────────
 
 class CloudHistoryProvider implements TestHistoryProvider {
-    private token: string | null = null;
-    private tokenExpiresAt = 0;
+    private readonly cloudClient: XrayCloudClient;
     private readonly issueIdCache = new Map<string, string>();
     private readonly execKeyCache = new Map<string, string>();
 
     private readonly log = rootLogger.child({ module: 'CloudHistoryProvider' });
 
-    constructor(private readonly jiraResource: JiraResource) {}
+    constructor(private readonly jiraResource: JiraResource) {
+        this.cloudClient = new XrayCloudClient();
+    }
 
-    private async getToken(): Promise<string | null> {
-        if (this.token && Date.now() < this.tokenExpiresAt) return this.token;
+    private _getCredentials(): { clientId: string; clientSecret: string } | null {
         const cfg = Config.getDefault();
         const clientId = cfg.xrayClientId;
         const clientSecret = cfg.xrayClientSecret;
@@ -123,24 +120,7 @@ class CloudHistoryProvider implements TestHistoryProvider {
             this.log.warn('XRAY_CLIENT_ID and XRAY_CLIENT_SECRET not set');
             return null;
         }
-        try {
-            const res = await axios.post<string>(XRAY_AUTH_URL, {
-                client_id: clientId,
-                client_secret: clientSecret,
-            });
-            const raw = res.data;
-            const token = typeof raw === 'string' ? raw.replace(/^"|"$/g, '') : raw;
-            if (!token) {
-                this.log.warn('Xray Cloud returned empty token');
-                return null;
-            }
-            this.token = token;
-            this.tokenExpiresAt = Date.now() + 55 * 60 * 1000;
-            return token;
-        } catch (err) {
-            this.log.warn('Xray Cloud auth failed: ' + (err as Error).message);
-            return null;
-        }
+        return { clientId, clientSecret };
     }
 
     private async resolveIssueId(testKey: string): Promise<string | null> {
@@ -196,14 +176,28 @@ class CloudHistoryProvider implements TestHistoryProvider {
         const issueId = await this.resolveIssueId(testKey);
         if (!issueId) return [];
 
-        const token = await this.getToken();
-        if (!token) return [];
+        const creds = this._getCredentials();
+        if (!creds) return [];
 
         try {
-            const res = await axios.post(
-                XRAY_GRAPHQL_URL,
-                {
-                    query: `
+            const query = this._buildGraphqlHistoryQuery();
+            const data = await this.cloudClient.graphql(
+                query,
+                { testIssueIds: [issueId], limit: MAX_RUNS },
+                creds.clientId,
+                creds.clientSecret,
+            );
+            if (!data) return [];
+
+            return await this._parseGraphqlHistoryResponse(data);
+        } catch (err) {
+            this.log.warn('Cloud history failed for ' + testKey + ': ' + (err as Error).message);
+            return [];
+        }
+    }
+
+    private _buildGraphqlHistoryQuery(): string {
+        return `
             query($testIssueIds: [String!], $limit: Int!) {
               getTestRuns(testIssueIds: $testIssueIds, limit: $limit) {
                 results {
@@ -215,39 +209,31 @@ class CloudHistoryProvider implements TestHistoryProvider {
                 }
               }
             }
-          `,
-                    variables: { testIssueIds: [issueId], limit: MAX_RUNS },
-                },
-                { headers: { Authorization: 'Bearer ' + token, 'Content-Type': 'application/json' } },
-            );
+        `;
+    }
 
-            const body = res.data as XrayGetTestRunsResponse;
-            const rawResults = body?.data?.getTestRuns?.results;
-            if (!Array.isArray(rawResults) || rawResults.length === 0) return [];
+    private async _parseGraphqlHistoryResponse(data: JsonObject): Promise<TestRun[]> {
+        const getTestRuns = data.getTestRuns as JsonObject;
+        const rawResults = getTestRuns?.results as Array<JsonObject> | undefined;
+        if (!Array.isArray(rawResults) || rawResults.length === 0) return [];
 
-            const execIssueIds = rawResults
-                .map((r) => {
-                    return r.testExecution?.issueId;
-                })
-                .filter((id): id is string => !!id);
+        const execIssueIds = rawResults
+            .map((r) => (r.testExecution as JsonObject | undefined)?.issueId as string | undefined)
+            .filter((id): id is string => !!id);
 
-            const execKeyMap =
-                execIssueIds.length > 0 ? await this.resolveExecKeys([...new Set(execIssueIds)]) : new Map();
+        const execKeyMap = execIssueIds.length > 0 ? await this.resolveExecKeys([...new Set(execIssueIds)]) : new Map();
 
-            return rawResults.map((r) => {
-                const teIssueId = r.testExecution?.issueId;
-                const rawStatus = r.status?.name;
-                return {
-                    status: safeStr(rawStatus, 'UNKNOWN'),
-                    testExecKey: teIssueId ? (execKeyMap.get(teIssueId) ?? teIssueId) : '',
-                    startedOn: safeStr(r.startedOn) || undefined,
-                    finishedOn: safeStr(r.finishedOn) || undefined,
-                };
-            });
-        } catch (err) {
-            this.log.warn('Cloud history query failed for ' + testKey + ': ' + (err as Error).message);
-            return [];
-        }
+        return rawResults.map((r) => {
+            const teExec = r.testExecution as JsonObject | undefined;
+            const teIssueId = teExec?.issueId as string | undefined;
+            const rawStatus = (r.status as JsonObject | undefined)?.name as string | undefined;
+            return {
+                status: safeStr(rawStatus, 'UNKNOWN'),
+                testExecKey: teIssueId ? (execKeyMap.get(teIssueId) ?? teIssueId) : '',
+                startedOn: safeStr(r.startedOn) || undefined,
+                finishedOn: safeStr(r.finishedOn) || undefined,
+            };
+        });
     }
 }
 

@@ -3,15 +3,8 @@ jest.mock('fs', () => {
     const actual = jest.requireActual('fs');
     return { ...actual, existsSync: jest.fn(), readFileSync: jest.fn() };
 });
-jest.mock('../../shared/prompt', () => ({
-    ask: jest.fn(),
-    info: jest.fn(),
-    warn: jest.fn(),
-    title: jest.fn(),
-    divider: jest.fn(),
-    tableView: jest.fn(),
-    printError: jest.fn(),
-}));
+jest.mock('../../shared/prompt');
+jest.mock('../../shared/logger');
 jest.mock('../../shared/test-impact', () => ({
     analyzeTestImpact: jest.fn(),
 }));
@@ -26,41 +19,19 @@ jest.mock('../../shared/logger', () => ({
     },
 }));
 
-import { execSync } from 'child_process';
+import { execFileSync } from 'child_process';
 import { existsSync } from 'fs';
 import { ask, info, warn, title, printError } from '../../shared/prompt';
 import { analyzeTestImpact } from '../../shared/test-impact';
 import { loadMetrics, calculateFlakiness } from '../../shared/metrics';
+import { makeMockCommandContext } from '../../shared/test-utils';
 
-const mockExecSync = execSync as jest.Mock;
+const mockExecFileSync = execFileSync as jest.Mock;
 const mockExistsSync = existsSync as jest.Mock;
 const mockAsk = ask as jest.Mock;
 const mockAnalyzeTestImpact = analyzeTestImpact as jest.Mock;
 const mockLoadMetrics = loadMetrics as jest.Mock;
 const mockCalcFlaky = calculateFlakiness as jest.Mock;
-
-function makeContext(overrides?: Record<string, unknown>) {
-    return {
-        jiraResource: {},
-        jiraResourceXray: {},
-        linkManager: {},
-        linkManagerXray: {},
-        csvResource: {},
-        ctx: {
-            project_name: 'TEST',
-            inMemoryTasksId: [],
-            inMemoryTasksText: [],
-            sessionCounters: [],
-            isBusy: false,
-            results: [],
-        },
-        pushHistory: jest.fn(),
-        printSessionSummary: jest.fn(),
-        base_url: 'https://jira.test.com',
-        sessionLog: { child: jest.fn().mockReturnValue({ info: jest.fn(), error: jest.fn() }) },
-        ...overrides,
-    };
-}
 
 beforeEach(() => {
     jest.clearAllMocks();
@@ -71,7 +42,7 @@ beforeEach(() => {
 describe('case22 — Test Impact Analysis', () => {
     it('analyzes test impact from git diff', async () => {
         mockAsk.mockResolvedValue('HEAD~1');
-        mockExecSync.mockReturnValue('src/login.ts\nsrc/auth.ts\n');
+        mockExecFileSync.mockReturnValue('src/login.ts\nsrc/auth.ts\n');
         mockExistsSync.mockReturnValue(false);
         mockAnalyzeTestImpact.mockReturnValue({
             changedFiles: ['src/login.ts', 'src/auth.ts'],
@@ -81,7 +52,7 @@ describe('case22 — Test Impact Analysis', () => {
         });
 
         const mod = require('./case22').default;
-        await mod.handler(makeContext());
+        await mod.handler(makeMockCommandContext());
 
         expect(mockAnalyzeTestImpact).toHaveBeenCalled();
         expect(title).toHaveBeenCalledWith('TEST IMPACT ANALYSIS');
@@ -89,7 +60,7 @@ describe('case22 — Test Impact Analysis', () => {
 
     it('uses HEAD~1 as default range', async () => {
         mockAsk.mockResolvedValue('');
-        mockExecSync.mockReturnValue('src/file.ts\n');
+        mockExecFileSync.mockReturnValue('src/file.ts\n');
         mockExistsSync.mockReturnValue(false);
         mockAnalyzeTestImpact.mockReturnValue({
             changedFiles: ['src/file.ts'],
@@ -99,18 +70,18 @@ describe('case22 — Test Impact Analysis', () => {
         });
 
         const mod = require('./case22').default;
-        await mod.handler(makeContext());
+        await mod.handler(makeMockCommandContext());
 
-        expect(mockExecSync).toHaveBeenCalledWith('git diff --name-only HEAD~1', expect.any(Object));
+        expect(mockExecFileSync).toHaveBeenCalledWith('git', ['diff', '--name-only', 'HEAD~1'], { encoding: 'utf8' });
     });
 
     it('shows info when no diff changes found', async () => {
         mockAsk.mockResolvedValue('HEAD~1');
-        mockExecSync.mockReturnValue('');
+        mockExecFileSync.mockReturnValue('');
         mockExistsSync.mockReturnValue(false);
 
         const mod = require('./case22').default;
-        const result = await mod.handler(makeContext());
+        const result = await mod.handler(makeMockCommandContext());
 
         expect(result).toBe(false);
         expect(info).toHaveBeenCalledWith('Nenhuma alteração encontrada.');
@@ -118,12 +89,12 @@ describe('case22 — Test Impact Analysis', () => {
 
     it('handles git diff failure gracefully', async () => {
         mockAsk.mockResolvedValue('HEAD~1');
-        mockExecSync.mockImplementation(() => {
+        mockExecFileSync.mockImplementation(() => {
             throw new Error('fatal: not a git repository');
         });
 
         const mod = require('./case22').default;
-        const result = await mod.handler(makeContext());
+        const result = await mod.handler(makeMockCommandContext());
 
         expect(result).toBe(false);
         expect(printError).toHaveBeenCalledWith('Falha ao obter git diff', expect.any(Error));
@@ -131,7 +102,7 @@ describe('case22 — Test Impact Analysis', () => {
 
     it('populates inMemoryTasksId with impacted test keys', async () => {
         mockAsk.mockResolvedValue('HEAD~1');
-        mockExecSync.mockReturnValue('src/login.ts\n');
+        mockExecFileSync.mockReturnValue('src/login.ts\n');
         mockExistsSync.mockReturnValue(false);
         mockLoadMetrics.mockReturnValue({ runs: [] });
         mockCalcFlaky.mockReturnValue([]);
@@ -142,17 +113,17 @@ describe('case22 — Test Impact Analysis', () => {
             confidence: 'high',
         });
 
-        const ctx = makeContext();
+        const ctx = makeMockCommandContext();
         const mod = require('./case22').default;
         await mod.handler(ctx);
 
-        expect(ctx.ctx.inMemoryTasksId).toContain('PROJ-42');
+        expect((ctx.ctx as Record<string, unknown>).inMemoryTasksId).toContain('PROJ-42');
         expect(info).toHaveBeenCalledWith(expect.stringContaining('pré-carregado'));
     });
 
     it('shows gap hint when confidence is low', async () => {
         mockAsk.mockResolvedValue('HEAD~1');
-        mockExecSync.mockReturnValue('src/unknown.ts\n');
+        mockExecFileSync.mockReturnValue('src/unknown.ts\n');
         mockExistsSync.mockReturnValue(false);
         mockLoadMetrics.mockReturnValue({ runs: [] });
         mockCalcFlaky.mockReturnValue([]);
@@ -164,14 +135,14 @@ describe('case22 — Test Impact Analysis', () => {
         });
 
         const mod = require('./case22').default;
-        await mod.handler(makeContext());
+        await mod.handler(makeMockCommandContext());
 
         expect(info).toHaveBeenCalledWith(expect.stringContaining('Gap Analysis'));
     });
 
     it('warns about flaky impacted tests', async () => {
         mockAsk.mockResolvedValue('HEAD~1');
-        mockExecSync.mockReturnValue('src/login.ts\n');
+        mockExecFileSync.mockReturnValue('src/login.ts\n');
         mockExistsSync.mockReturnValue(false);
         mockLoadMetrics.mockReturnValue({
             runs: [
@@ -198,14 +169,14 @@ describe('case22 — Test Impact Analysis', () => {
         });
 
         const mod = require('./case22').default;
-        await mod.handler(makeContext());
+        await mod.handler(makeMockCommandContext());
 
         expect(warn).toHaveBeenCalledWith(expect.stringContaining('flaky'));
     });
 
     it('loads mapping file when it exists', async () => {
         mockAsk.mockResolvedValue('HEAD~1');
-        mockExecSync.mockReturnValue('src/login.ts\n');
+        mockExecFileSync.mockReturnValue('src/login.ts\n');
         mockExistsSync.mockImplementation((p: string) => p.includes('test-mapping.json'));
         mockAnalyzeTestImpact.mockReturnValue({
             changedFiles: ['src/login.ts'],
@@ -217,7 +188,7 @@ describe('case22 — Test Impact Analysis', () => {
         });
 
         const mod = require('./case22').default;
-        await mod.handler(makeContext());
+        await mod.handler(makeMockCommandContext());
 
         expect(mockAnalyzeTestImpact).toHaveBeenCalledWith(
             expect.any(String),

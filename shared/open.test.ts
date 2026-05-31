@@ -11,12 +11,15 @@ jest.mock('./config', () => {
     return mockCfg;
 });
 
-import { spawn, execSync } from 'child_process';
+import { spawn, spawnSync, execFileSync } from 'child_process';
 import { readFileSync } from 'fs';
-import { openWithOsOrFallback, getWinTempDir, getDocsOutputDir } from './open';
+import { openWithOsOrFallback, openWithFallback, getWinTempDir, getDocsOutputDir } from './open';
 
 const mockSpawn = spawn as jest.Mock;
-const mockExecSync = execSync as jest.Mock;
+const mockSpawnSync = spawnSync as jest.Mock;
+const mockExecFileSync = execFileSync as jest.Mock;
+
+void mockSpawnSync;
 const mockReadFileSync = readFileSync as jest.Mock;
 
 function makeMockChild() {
@@ -122,7 +125,7 @@ describe('getOsOpenCommand (platform detection)', () => {
         }));
         jest.doMock('child_process', () => {
             const actual = jest.requireActual('child_process');
-            return { ...actual, execSync: jest.fn().mockReturnValue('C:\\Users\\file.html\n') };
+            return { ...actual, spawnSync: jest.fn().mockReturnValue({ stdout: 'C:\\Users\\file.html\n', status: 0 }) };
         });
 
         const os = require('os');
@@ -177,7 +180,8 @@ describe('getOsOpenCommand (platform detection)', () => {
             const actual = jest.requireActual('child_process');
             return {
                 ...actual,
-                execSync: jest.fn().mockImplementation(() => {
+                spawnSync: jest.fn().mockReturnValue({ stdout: '', error: new Error('ENOENT'), status: null }),
+                execFileSync: jest.fn().mockImplementation(() => {
                     throw new Error('ENOENT');
                 }),
             };
@@ -193,16 +197,17 @@ describe('getOsOpenCommand (platform detection)', () => {
 
     it('toWinPath fallback: copies file and converts via wslpath', () => {
         jest.isolateModules(() => {
-            const execMock = jest
+            const spawnSyncMock = jest
                 .fn()
-                .mockImplementationOnce(() => {
-                    throw new Error('ENOENT');
-                })
-                .mockImplementationOnce(() => 'C:\\Users\\Test\\Temp\n')
-                .mockImplementationOnce(() => 'C:\\Users\\Test\\Temp\\qa_tools_docs\\file.html\n');
+                .mockImplementationOnce(() => ({ stdout: '', error: new Error('ENOENT'), status: null }))
+                .mockImplementationOnce(() => ({
+                    stdout: 'C:\\Users\\Test\\Temp\\qa_tools_docs\\file.html\n',
+                    status: 0,
+                }));
+            const execFileSyncMock = jest.fn().mockReturnValue('C:\\Users\\Test\\Temp\n');
             jest.doMock('child_process', () => {
                 const actual = jest.requireActual('child_process');
-                return { ...actual, execSync: execMock };
+                return { ...actual, spawnSync: spawnSyncMock, execFileSync: execFileSyncMock };
             });
             jest.doMock('fs', () => ({
                 readFileSync: jest
@@ -227,15 +232,13 @@ describe('getOsOpenCommand (platform detection)', () => {
 
     it('toWinPath fallback: returns null when writeFileSync throws', () => {
         jest.isolateModules(() => {
-            const execMock = jest
+            const spawnSyncMock = jest
                 .fn()
-                .mockImplementationOnce(() => {
-                    throw new Error('ENOENT');
-                })
-                .mockImplementationOnce(() => 'C:\\Users\\Test\\Temp\n');
+                .mockImplementationOnce(() => ({ stdout: '', error: new Error('ENOENT'), status: null }));
+            const execFileSyncMock = jest.fn().mockReturnValue('C:\\Users\\Test\\Temp\n');
             jest.doMock('child_process', () => {
                 const actual = jest.requireActual('child_process');
-                return { ...actual, execSync: execMock };
+                return { ...actual, spawnSync: spawnSyncMock, execFileSync: execFileSyncMock };
             });
             jest.doMock('fs', () => ({
                 readFileSync: jest
@@ -259,16 +262,14 @@ describe('getOsOpenCommand (platform detection)', () => {
 
     it('toWinPath fallback: returns null when wslpath output is invalid', () => {
         jest.isolateModules(() => {
-            const execMock = jest
+            const spawnSyncMock = jest
                 .fn()
-                .mockImplementationOnce(() => {
-                    throw new Error('ENOENT');
-                })
-                .mockImplementationOnce(() => 'C:\\Users\\Test\\Temp\n')
-                .mockImplementationOnce(() => '/unix/path\n');
+                .mockImplementationOnce(() => ({ stdout: '', error: new Error('ENOENT'), status: null }))
+                .mockImplementationOnce(() => ({ stdout: '/unix/path\n', status: 0 }));
+            const execFileSyncMock = jest.fn().mockReturnValue('C:\\Users\\Test\\Temp\n');
             jest.doMock('child_process', () => {
                 const actual = jest.requireActual('child_process');
-                return { ...actual, execSync: execMock };
+                return { ...actual, spawnSync: spawnSyncMock, execFileSync: execFileSyncMock };
             });
             jest.doMock('fs', () => ({
                 readFileSync: jest
@@ -290,14 +291,17 @@ describe('getOsOpenCommand (platform detection)', () => {
 
     it('toWinPath: falls through when first wslpath output is not a Windows path', () => {
         jest.isolateModules(() => {
-            const execMock = jest
+            const spawnSyncMock = jest
                 .fn()
-                .mockImplementationOnce(() => '/unix/path\n')
-                .mockImplementationOnce(() => 'C:\\Users\\Test\\Temp\n')
-                .mockImplementationOnce(() => 'C:\\Users\\Test\\Temp\\qa_tools_docs\\file.html\n');
+                .mockImplementationOnce(() => ({ stdout: '/unix/path\n', status: 0 }))
+                .mockImplementationOnce(() => ({
+                    stdout: 'C:\\Users\\Test\\Temp\\qa_tools_docs\\file.html\n',
+                    status: 0,
+                }));
+            const execFileSyncMock = jest.fn().mockReturnValue('C:\\Users\\Test\\Temp\n');
             jest.doMock('child_process', () => {
                 const actual = jest.requireActual('child_process');
-                return { ...actual, execSync: execMock };
+                return { ...actual, spawnSync: spawnSyncMock, execFileSync: execFileSyncMock };
             });
             jest.doMock('fs', () => ({
                 readFileSync: jest
@@ -375,7 +379,7 @@ describe('getWinTempDir', () => {
         const ORIG_TMP = process.env.TMP;
         delete process.env.TEMP;
         delete process.env.TMP;
-        mockExecSync.mockReturnValue('C:\\Users\\Test\\AppData\\Local\\Temp\n');
+        mockExecFileSync.mockReturnValue('C:\\Users\\Test\\AppData\\Local\\Temp\n');
         const result = getWinTempDir();
         process.env.TEMP = ORIG_TEMP;
         process.env.TMP = ORIG_TMP;
@@ -387,7 +391,7 @@ describe('getWinTempDir', () => {
         const ORIG_TMP = process.env.TMP;
         delete process.env.TEMP;
         delete process.env.TMP;
-        mockExecSync.mockImplementation(() => {
+        mockExecFileSync.mockImplementation(() => {
             throw new Error('ENOENT');
         });
         const result = getWinTempDir();
@@ -396,12 +400,12 @@ describe('getWinTempDir', () => {
         expect(result).toBeNull();
     });
 
-    it('returns null when execSync returns empty string', () => {
+    it('returns null when execFileSync returns empty string', () => {
         const ORIG_TEMP = process.env.TEMP;
         const ORIG_TMP = process.env.TMP;
         delete process.env.TEMP;
         delete process.env.TMP;
-        mockExecSync.mockReturnValue('');
+        mockExecFileSync.mockReturnValue('');
         const result = getWinTempDir();
         process.env.TEMP = ORIG_TEMP;
         process.env.TMP = ORIG_TMP;
@@ -430,7 +434,7 @@ describe('getDocsOutputDir', () => {
             const actual = jest.requireActual('child_process');
             return {
                 ...actual,
-                execSync: jest.fn().mockImplementation(() => {
+                execFileSync: jest.fn().mockImplementation(() => {
                     throw new Error('ENOENT');
                 }),
             };
@@ -451,7 +455,7 @@ describe('getDocsOutputDir', () => {
         });
         jest.doMock('child_process', () => {
             const actual = jest.requireActual('child_process');
-            return { ...actual, execSync: jest.fn().mockReturnValue('C:\\Users\\Test\\Temp\n') };
+            return { ...actual, execFileSync: jest.fn().mockReturnValue('C:\\Users\\Test\\Temp\n') };
         });
         const { getDocsOutputDir: gdoDir } = require('./open');
         const ORIG_TEMP = process.env.TEMP;
@@ -468,5 +472,55 @@ describe('getDocsOutputDir', () => {
         const result = getDocsOutputDir();
         process.env.QA_TOOLS_TEMP_DIR = ORIG_DIR;
         expect(result).toMatch(/^\/custom\/temp\/docs$/);
+    });
+});
+
+describe('openWithFallback', () => {
+    /** Counter of spawned children. Each child auto-triggers exit on next tick. */
+    function makeAutoSpawn(exitCodes: number[]) {
+        let idx = 0;
+        mockSpawn.mockImplementation(() => {
+            const code = exitCodes[idx++];
+            const child = makeMockChild();
+            // Intentional: simulate async child process exit on next tick
+            setTimeout(() => child.trigger('exit', code), 0);
+            return child;
+        });
+    }
+
+    beforeEach(() => {
+        jest.clearAllMocks();
+        mockReadFileSync.mockReturnValue('Linux version 5.15.0-generic (mock)');
+        defaultChild = makeMockChild();
+        mockSpawn.mockReturnValue(defaultChild);
+    });
+
+    it('logs browser success on exit 0', async () => {
+        const logInfo = jest.fn();
+        makeAutoSpawn([0]);
+
+        await openWithFallback('/tmp/report.html', 'Relatório', logInfo);
+
+        expect(logInfo).toHaveBeenCalledWith('Relatório aberto no navegador');
+    });
+
+    it('opens directory when browser fails', async () => {
+        const logInfo = jest.fn();
+        makeAutoSpawn([1, 0]);
+
+        await openWithFallback('/tmp/report.html', 'Relatório', logInfo);
+
+        expect(logInfo).toHaveBeenCalledWith(
+            'Relatório salvo. Navegador indisponível, pasta aberta no gerenciador de arquivos.',
+        );
+    });
+
+    it('logs file path when both browser and directory fail', async () => {
+        const logInfo = jest.fn();
+        makeAutoSpawn([1, 1]);
+
+        await openWithFallback('/tmp/report.html', 'Relatório', logInfo);
+
+        expect(logInfo).toHaveBeenCalledWith('Relatório salvo em: /tmp/report.html');
     });
 });

@@ -140,7 +140,11 @@ describe('llmPrompt', () => {
         const apiResponse = JSON.stringify({ choices: [{ message: { content: 'Generated test case' } }] });
         mockFetch.mockResolvedValueOnce(mockOkResponse(apiResponse));
 
-        const result = await llmPrompt('main', 'You are a QA assistant', 'Generate a test for login');
+        const result = await llmPrompt({
+            tier: 'main',
+            system: 'You are a QA assistant',
+            user: 'Generate a test for login',
+        });
 
         expect(result).toBe('Generated test case');
         expect(mockFetch).toHaveBeenCalledTimes(1);
@@ -160,7 +164,7 @@ describe('llmPrompt', () => {
         const apiResponse = JSON.stringify({ choices: [{ message: { content: 'Fast response' } }] });
         mockFetch.mockResolvedValueOnce(mockOkResponse(apiResponse));
 
-        const result = await llmPrompt('fast', 'system', 'quick test');
+        const result = await llmPrompt({ tier: 'fast', system: 'system', user: 'quick test' });
         expect(result).toBe('Fast response');
         const callUrl = mockFetch.mock.calls[0][0];
         expect(callUrl).toContain('groq.com');
@@ -176,7 +180,7 @@ describe('llmPrompt', () => {
         const apiResponse = JSON.stringify({ candidates: [{ content: { parts: [{ text: 'Review ok' }] } }] });
         mockFetch.mockResolvedValueOnce(mockOkResponse(apiResponse));
 
-        const result = await llmPrompt('reviewer', 'system', 'review this');
+        const result = await llmPrompt({ tier: 'reviewer', system: 'system', user: 'review this' });
         expect(result).toBe('Review ok');
         const callUrl = mockFetch.mock.calls[0][0];
         expect(mockFetch.mock.calls[0][1].headers['X-Goog-Api-Key']).toBe('AIza-review');
@@ -218,7 +222,7 @@ describe('llmPrompt', () => {
             .mockResolvedValueOnce(mockErrorResponse(500))
             .mockResolvedValueOnce(mockOkResponse(JSON.stringify({ choices: [{ message: { content: 'Batch ok' } }] })));
 
-        const result = await llmPrompt('main', 'system', 'fallback chain');
+        const result = await llmPrompt({ tier: 'main', system: 'system', user: 'fallback chain' });
         expect(result).toBe('Batch ok');
         // main:3 retries + fallback:3 retries + batch:1 success = 7 calls
         expect(mockFetch).toHaveBeenCalledTimes(7);
@@ -230,11 +234,11 @@ describe('llmPrompt', () => {
         const apiResponse = JSON.stringify({ choices: [{ message: { content: 'Cached result' } }] });
         mockFetch.mockResolvedValueOnce(mockOkResponse(apiResponse));
 
-        const first = await llmPrompt('main', 'system', 'same input');
+        const first = await llmPrompt({ tier: 'main', system: 'system', user: 'same input' });
         expect(first).toBe('Cached result');
         expect(mockFetch).toHaveBeenCalledTimes(1);
 
-        const second = await llmPrompt('main', 'system', 'same input');
+        const second = await llmPrompt({ tier: 'main', system: 'system', user: 'same input' });
         expect(second).toBe('Cached result');
         expect(mockFetch).toHaveBeenCalledTimes(1);
     });
@@ -251,14 +255,14 @@ describe('llmPrompt', () => {
             return {} as NodeJS.Timeout;
         }) as typeof global.setTimeout);
 
-        const result = await llmPrompt('main', 'system', 'retry test');
+        const result = await llmPrompt({ tier: 'main', system: 'system', user: 'retry test' });
         expect(result).toBe('OK');
         expect(mockFetch).toHaveBeenCalledTimes(2);
     });
 
     it('throws after exhausting all providers', async () => {
         (Config as unknown as { set: (k: string, v: string) => void }).set('llmApiKey', '');
-        await expect(llmPrompt('main', 'system', 'test')).rejects.toThrow();
+        await expect(llmPrompt({ tier: 'main', system: 'system', user: 'test' })).rejects.toThrow();
     });
 
     it('sends responseFormat=json payload when param is passed', async () => {
@@ -269,7 +273,7 @@ describe('llmPrompt', () => {
             mockOkResponse(JSON.stringify({ choices: [{ message: { content: 'json result' } }] })),
         );
 
-        await llmPrompt('main', 'system', 'json test', undefined, 'json');
+        await llmPrompt({ tier: 'main', system: 'system', user: 'json test', responseFormat: 'json' });
         const body = JSON.parse(mockFetch.mock.calls[0][1].body as string);
         expect(body.response_format).toEqual({ type: 'json_object' });
     });
@@ -281,12 +285,12 @@ describe('llmPrompt', () => {
         const body = JSON.stringify({ choices: [{ message: { content: 'r1' } }] });
         mockFetch.mockResolvedValue(mockOkResponse(body));
 
-        const r1 = await llmPrompt('main', 'system', 'same input', undefined, 'json');
+        const r1 = await llmPrompt({ tier: 'main', system: 'system', user: 'same input', responseFormat: 'json' });
         expect(r1).toBe('r1');
         expect(mockFetch).toHaveBeenCalledTimes(1);
 
         mockFetch.mockResolvedValue(mockOkResponse(JSON.stringify({ choices: [{ message: { content: 'r2' } }] })));
-        const r2 = await llmPrompt('main', 'system', 'same input', undefined, 'text');
+        const r2 = await llmPrompt({ tier: 'main', system: 'system', user: 'same input', responseFormat: 'text' });
         expect(r2).toBe('r2');
         expect(mockFetch).toHaveBeenCalledTimes(2);
     });
@@ -302,7 +306,7 @@ describe('llmPrompt', () => {
             mockOkResponse(JSON.stringify({ candidates: [{ content: { parts: [{ text: 'ok' }] } }] })),
         );
 
-        await llmPrompt('reviewer', 'system instruction', 'user message');
+        await llmPrompt({ tier: 'reviewer', system: 'system instruction', user: 'user message' });
         const body = JSON.parse(mockFetch.mock.calls[0][1].body as string);
         expect(body.system_instruction).toBeDefined();
         expect(body.system_instruction.parts[0].text).toBe('system instruction');
@@ -329,7 +333,9 @@ describe('llmPrompt', () => {
             .mockResolvedValueOnce(mockErrorResponse(500))
             .mockResolvedValueOnce(mockErrorResponse(500));
 
-        await expect(llmPrompt('main', 'system', 'dedup test')).rejects.toThrow('All LLM providers failed');
+        await expect(llmPrompt({ tier: 'main', system: 'system', user: 'dedup test' })).rejects.toThrow(
+            'All LLM providers failed',
+        );
         // main:3 retries, no fallback call because same config key
         expect(mockFetch).toHaveBeenCalledTimes(3);
     });
@@ -348,7 +354,7 @@ describe('llmPrompt', () => {
             return {} as NodeJS.Timeout;
         }) as typeof global.setTimeout);
 
-        const result = await llmPrompt('main', 'system', 'network recovery');
+        const result = await llmPrompt({ tier: 'main', system: 'system', user: 'network recovery' });
         expect(result).toBe('Recovered');
         expect(mockFetch).toHaveBeenCalledTimes(2);
     });
@@ -359,7 +365,7 @@ describe('llmPrompt', () => {
         const warnSpy = jest.spyOn(rootLogger, 'warn').mockImplementation(() => {});
         mockFetch.mockResolvedValueOnce(mockOkResponse('not json'));
 
-        const result = await llmPrompt('main', 'system', 'bad response');
+        const result = await llmPrompt({ tier: 'main', system: 'system', user: 'bad response' });
         expect(result).toBe('');
         expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining('non-JSON'));
         warnSpy.mockRestore();
@@ -373,8 +379,8 @@ describe('llmPrompt', () => {
             (Config as unknown as { set: (k: string, v: string) => void }).set('llmBaseUrl', 'https://api.test.com/v1');
             mockFetch.mockResolvedValue(mockOkResponse(JSON.stringify({ choices: [{ message: { content: 'ok' } }] })));
 
-            const r1 = await llmPrompt('main', 'system', 'test1');
-            const r2 = await llmPrompt('main', 'system', 'test2');
+            const r1 = await llmPrompt({ tier: 'main', system: 'system', user: 'test1' });
+            const r2 = await llmPrompt({ tier: 'main', system: 'system', user: 'test2' });
             expect(r1).toBe('ok');
             expect(r2).toBe('ok');
             expect(mockFetch).toHaveBeenCalledTimes(2);
@@ -387,9 +393,11 @@ describe('llmPrompt', () => {
             (Config as unknown as { set: (k: string, v: string) => void }).set('llmBaseUrl', 'https://api.test.com/v1');
             mockFetch.mockResolvedValue(mockOkResponse(JSON.stringify({ choices: [{ message: { content: 'ok' } }] })));
 
-            await llmPrompt('main', 'system', 'test1');
-            await llmPrompt('main', 'system', 'test2');
-            await expect(llmPrompt('main', 'system', 'test3')).rejects.toThrow('Client-side rate limit exceeded');
+            await llmPrompt({ tier: 'main', system: 'system', user: 'test1' });
+            await llmPrompt({ tier: 'main', system: 'system', user: 'test2' });
+            await expect(llmPrompt({ tier: 'main', system: 'system', user: 'test3' })).rejects.toThrow(
+                'Client-side rate limit exceeded',
+            );
         });
 
         it('recovers after rate limit window passes', async () => {
@@ -404,10 +412,10 @@ describe('llmPrompt', () => {
                 return {} as NodeJS.Timeout;
             }) as typeof global.setTimeout);
 
-            await llmPrompt('main', 'system', 'test1');
-            await llmPrompt('main', 'system', 'test2');
+            await llmPrompt({ tier: 'main', system: 'system', user: 'test1' });
+            await llmPrompt({ tier: 'main', system: 'system', user: 'test2' });
             resetRateLimiter();
-            const r3 = await llmPrompt('main', 'system', 'test3');
+            const r3 = await llmPrompt({ tier: 'main', system: 'system', user: 'test3' });
             expect(r3).toBe('ok');
         });
     });
@@ -426,7 +434,7 @@ describe('llmPrompt', () => {
         it('opens after 5 consecutive call failures', async () => {
             mockFetch.mockResolvedValue(mockErrorResponse(429));
             for (let i = 0; i < 5; i++) {
-                await expect(llmPrompt('main', 'system', 'test' + i)).rejects.toThrow();
+                await expect(llmPrompt({ tier: 'main', system: 'system', user: 'test' + i })).rejects.toThrow();
             }
         });
 
@@ -434,25 +442,27 @@ describe('llmPrompt', () => {
             mockFetch.mockResolvedValue(mockErrorResponse(429));
             // Prime: 5 failures to open circuit
             for (let i = 0; i < 5; i++) {
-                await expect(llmPrompt('main', 'system', 'prime' + i)).rejects.toThrow();
+                await expect(llmPrompt({ tier: 'main', system: 'system', user: 'prime' + i })).rejects.toThrow();
             }
             const fetchCount = mockFetch.mock.calls.length;
             // Blocked call throws Circuit breaker open without fetching
-            await expect(llmPrompt('main', 'system', 'blocked')).rejects.toThrow('Circuit breaker open');
+            await expect(llmPrompt({ tier: 'main', system: 'system', user: 'blocked' })).rejects.toThrow(
+                'Circuit breaker open',
+            );
             expect(mockFetch.mock.calls.length).toBe(fetchCount);
         });
 
         it('recovers after circuit state is cleared', async () => {
             mockFetch.mockResolvedValue(mockErrorResponse(429));
             for (let i = 0; i < 5; i++) {
-                await expect(llmPrompt('main', 'system', 'prime' + i)).rejects.toThrow();
+                await expect(llmPrompt({ tier: 'main', system: 'system', user: 'prime' + i })).rejects.toThrow();
             }
             resetCircuitState();
             mockFetch.mockReset();
             mockFetch.mockResolvedValue(
                 mockOkResponse(JSON.stringify({ choices: [{ message: { content: 'recovered' } }] })),
             );
-            const result = await llmPrompt('main', 'system', 'recovered');
+            const result = await llmPrompt({ tier: 'main', system: 'system', user: 'recovered' });
             expect(result).toBe('recovered');
         });
 
@@ -460,14 +470,14 @@ describe('llmPrompt', () => {
             mockFetch.mockResolvedValue(mockErrorResponse(429));
             // 4 failures → counter at 4
             for (let i = 0; i < 4; i++) {
-                await expect(llmPrompt('main', 'system', 'fail' + i)).rejects.toThrow();
+                await expect(llmPrompt({ tier: 'main', system: 'system', user: 'fail' + i })).rejects.toThrow();
             }
             // Next call: mock switches to success
             mockFetch.mockReset();
             mockFetch.mockResolvedValue(
                 mockOkResponse(JSON.stringify({ choices: [{ message: { content: 'success' } }] })),
             );
-            const result = await llmPrompt('main', 'system', 'recover');
+            const result = await llmPrompt({ tier: 'main', system: 'system', user: 'recover' });
             expect(result).toBe('success');
         });
     });
@@ -509,7 +519,7 @@ describe('llmPrompt', () => {
                 mockOkResponse(JSON.stringify({ choices: [{ message: { content: '{"key":"val"}' } }] })),
             );
 
-            await llmPrompt('main', 'system', 'json test', undefined, 'json');
+            await llmPrompt({ tier: 'main', system: 'system', user: 'json test', responseFormat: 'json' });
             const body = JSON.parse(mockFetch.mock.calls[0][1].body as string);
             expect(body.response_format).toEqual({ type: 'json_object' });
         });
@@ -522,13 +532,13 @@ describe('llmPrompt', () => {
             const resp = JSON.stringify({ choices: [{ message: { content: 'result' } }] });
             mockFetch.mockResolvedValue(mockOkResponse(resp));
 
-            await llmPrompt('main', 'system', 'same input', undefined, 'json');
+            await llmPrompt({ tier: 'main', system: 'system', user: 'same input', responseFormat: 'json' });
             expect(mockFetch).toHaveBeenCalledTimes(1);
 
             mockFetch.mockResolvedValue(
                 mockOkResponse(JSON.stringify({ choices: [{ message: { content: 'result2' } }] })),
             );
-            await llmPrompt('main', 'system', 'same input', undefined, 'text');
+            await llmPrompt({ tier: 'main', system: 'system', user: 'same input', responseFormat: 'text' });
             expect(mockFetch).toHaveBeenCalledTimes(2);
 
             const metrics = getLlmClientMetrics();
@@ -552,7 +562,7 @@ describe('llmPrompt', () => {
                 mockOkResponse(JSON.stringify({ candidates: [{ content: { parts: [{ text: 'ok' }] } }] })),
             );
 
-            await llmPrompt('reviewer', 'custom system instruction', 'user text');
+            await llmPrompt({ tier: 'reviewer', system: 'custom system instruction', user: 'user text' });
             const body = JSON.parse(mockFetch.mock.calls[0][1].body as string);
             expect(body.system_instruction).toBeDefined();
             expect(body.system_instruction.parts[0].text).toBe('custom system instruction');
@@ -568,7 +578,7 @@ describe('llmPrompt', () => {
             (Config as unknown as { set: (k: string, v: string) => void }).set('llmBaseUrl', 'https://api.test.com/v1');
             mockFetch.mockResolvedValueOnce(mockOkResponse('plain text body'));
 
-            const result = await llmPrompt('main', 'system', 'non-json body');
+            const result = await llmPrompt({ tier: 'main', system: 'system', user: 'non-json body' });
             expect(result).toBe('');
             expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining('non-JSON'));
         });
@@ -602,7 +612,9 @@ describe('llmPrompt', () => {
                 .mockResolvedValueOnce(mockErrorResponse(500))
                 .mockResolvedValueOnce(mockErrorResponse(500));
 
-            await expect(llmPrompt('main', 'system', 'full dedup')).rejects.toThrow('All LLM providers failed');
+            await expect(llmPrompt({ tier: 'main', system: 'system', user: 'full dedup' })).rejects.toThrow(
+                'All LLM providers failed',
+            );
             expect(mockFetch).toHaveBeenCalledTimes(4);
         });
     });
@@ -616,7 +628,7 @@ describe('llmPrompt', () => {
                 mockOkResponse(JSON.stringify({ choices: [{ message: { content: '{}' } }] })),
             );
 
-            await llmPrompt('main', 'sys', 'user', 'caller', 'json');
+            await llmPrompt({ tier: 'main', system: 'sys', user: 'user', callerId: 'caller', responseFormat: 'json' });
 
             const body = JSON.parse(mockFetch.mock.calls[0][1].body as string);
             expect(body.response_format).toEqual({ type: 'json_object' });
@@ -628,8 +640,8 @@ describe('llmPrompt', () => {
             (Config as unknown as { set: (k: string, v: string) => void }).set('llmBaseUrl', 'https://api.test.com/v1');
             mockFetch.mockResolvedValue(mockOkResponse(JSON.stringify({ choices: [{ message: { content: '{}' } }] })));
 
-            await llmPrompt('main', 'sys', 'user', 'c', 'text');
-            await llmPrompt('main', 'sys', 'user', 'c', 'json');
+            await llmPrompt({ tier: 'main', system: 'sys', user: 'user', callerId: 'c', responseFormat: 'text' });
+            await llmPrompt({ tier: 'main', system: 'sys', user: 'user', callerId: 'c', responseFormat: 'json' });
 
             expect(mockFetch).toHaveBeenCalledTimes(2);
         });
@@ -645,7 +657,7 @@ describe('llmPrompt', () => {
             const geminiResponse = { candidates: [{ content: { parts: [{ text: 'ok' }] } }] };
             mockFetch.mockResolvedValueOnce(mockOkResponse(JSON.stringify(geminiResponse)));
 
-            await llmPrompt('reviewer', 'sys', 'user');
+            await llmPrompt({ tier: 'reviewer', system: 'sys', user: 'user' });
 
             const body = JSON.parse(mockFetch.mock.calls[0][1].body as string);
             expect(body.system_instruction).toBeDefined();
@@ -678,7 +690,13 @@ describe('llmPrompt', () => {
         it('does not warn when response is valid JSON (responseFormat=json)', async () => {
             const warnSpy = jest.spyOn(rootLogger, 'warn').mockImplementation(() => {});
             mockFetch.mockResolvedValueOnce(openAiResponse(JSON.stringify({ ok: true })));
-            await llmPrompt('main', 'sys', 'user', 'test29.3-valid', 'json');
+            await llmPrompt({
+                tier: 'main',
+                system: 'sys',
+                user: 'user',
+                callerId: 'test29.3-valid',
+                responseFormat: 'json',
+            });
             expect(warnSpy).not.toHaveBeenCalled();
             warnSpy.mockRestore();
         });
@@ -686,7 +704,13 @@ describe('llmPrompt', () => {
         it('warns when responseFormat=json but extracted content is not valid JSON', async () => {
             const warnSpy = jest.spyOn(rootLogger, 'warn').mockImplementation(() => {});
             mockFetch.mockResolvedValueOnce(openAiResponse('not json'));
-            await llmPrompt('main', 'sys', 'user', 'test29.3-invalid', 'json');
+            await llmPrompt({
+                tier: 'main',
+                system: 'sys',
+                user: 'user',
+                callerId: 'test29.3-invalid',
+                responseFormat: 'json',
+            });
             expect(warnSpy).toHaveBeenCalledWith(
                 expect.stringContaining('LLM response expected JSON but was not parseable'),
             );
@@ -696,7 +720,7 @@ describe('llmPrompt', () => {
         it('does not call _warnIfNotJson when responseFormat is not json', async () => {
             const warnSpy = jest.spyOn(rootLogger, 'warn').mockImplementation(() => {});
             mockFetch.mockResolvedValueOnce(openAiResponse('не json, а plain text'));
-            await llmPrompt('main', 'sys', 'user', 'test29.3-nojson');
+            await llmPrompt({ tier: 'main', system: 'sys', user: 'user', callerId: 'test29.3-nojson' });
             expect(warnSpy).not.toHaveBeenCalledWith(
                 expect.stringContaining('LLM response expected JSON but was not parseable'),
             );
@@ -717,10 +741,22 @@ describe('llmPrompt', () => {
                 usage: { prompt_tokens: 8, completion_tokens: 3 },
             });
             mockFetch.mockResolvedValue(mockOkResponse(body));
-            await llmPrompt('main', 'sys', 'user', 'test-llm19-1', 'text');
-            await expect(llmPrompt('main', 'sys', 'user', 'test-llm19-2', 'text')).rejects.toThrow(
-                'Total token limit reached',
-            );
+            await llmPrompt({
+                tier: 'main',
+                system: 'sys',
+                user: 'user',
+                callerId: 'test-llm19-1',
+                responseFormat: 'text',
+            });
+            await expect(
+                llmPrompt({
+                    tier: 'main',
+                    system: 'sys',
+                    user: 'user',
+                    callerId: 'test-llm19-2',
+                    responseFormat: 'text',
+                }),
+            ).rejects.toThrow('Total token limit reached');
         });
 
         it('does not throw when limit is 0 (unlimited)', async () => {
@@ -730,8 +766,22 @@ describe('llmPrompt', () => {
                 usage: { prompt_tokens: 5, completion_tokens: 3 },
             });
             mockFetch.mockResolvedValue(mockOkResponse(body));
-            await llmPrompt('main', 'sys', 'user', 'test-llm19-unlimited', 'text');
-            await expect(llmPrompt('main', 'sys', 'user', 'test-llm19-unlimited-2', 'text')).resolves.toBe('ok');
+            await llmPrompt({
+                tier: 'main',
+                system: 'sys',
+                user: 'user',
+                callerId: 'test-llm19-unlimited',
+                responseFormat: 'text',
+            });
+            await expect(
+                llmPrompt({
+                    tier: 'main',
+                    system: 'sys',
+                    user: 'user',
+                    callerId: 'test-llm19-unlimited-2',
+                    responseFormat: 'text',
+                }),
+            ).resolves.toBe('ok');
         });
 
         it('does not throw when total tokens are under limit', async () => {
@@ -741,7 +791,15 @@ describe('llmPrompt', () => {
                 usage: { prompt_tokens: 3, completion_tokens: 2 },
             });
             mockFetch.mockResolvedValue(mockOkResponse(body));
-            await expect(llmPrompt('main', 'sys', 'user', 'test-llm19-under', 'text')).resolves.toBe('ok');
+            await expect(
+                llmPrompt({
+                    tier: 'main',
+                    system: 'sys',
+                    user: 'user',
+                    callerId: 'test-llm19-under',
+                    responseFormat: 'text',
+                }),
+            ).resolves.toBe('ok');
         });
     });
 
@@ -784,7 +842,14 @@ describe('llmPrompt', () => {
         it('returns validated data on first response', async () => {
             const validResponse = JSON.stringify({ choices: [{ message: { content: '{"ok": true}' } }] });
             mockFetch.mockResolvedValueOnce(mockOkResponse(validResponse));
-            const result = await llmPrompt('main', 'system', 'user', 'schema-1', 'json', okBooleanSchema);
+            const result = await llmPrompt({
+                tier: 'main',
+                system: 'system',
+                user: 'user',
+                callerId: 'schema-1',
+                responseFormat: 'json',
+                schema: okBooleanSchema,
+            });
             expect(result).toEqual({ ok: true });
         });
 
@@ -794,7 +859,14 @@ describe('llmPrompt', () => {
             mockFetch
                 .mockResolvedValueOnce(mockOkResponse(invalidBody))
                 .mockResolvedValueOnce(mockOkResponse(validBody));
-            const result = await llmPrompt('main', 'system', 'user', 'schema-2', 'json', okBooleanSchema);
+            const result = await llmPrompt({
+                tier: 'main',
+                system: 'system',
+                user: 'user',
+                callerId: 'schema-2',
+                responseFormat: 'json',
+                schema: okBooleanSchema,
+            });
             expect(result).toEqual({ ok: true });
             expect(mockFetch).toHaveBeenCalledTimes(2);
         });
@@ -802,16 +874,37 @@ describe('llmPrompt', () => {
         it('throws when schema validation fails even after retry', async () => {
             const body = JSON.stringify({ choices: [{ message: { content: '{}' } }] });
             mockFetch.mockResolvedValueOnce(mockOkResponse(body)).mockResolvedValueOnce(mockOkResponse(body));
-            await expect(llmPrompt('main', 'system', 'user', 'schema-3', 'json', alwaysFailsSchema)).rejects.toThrow(
-                'LLM response failed schema validation after retry',
-            );
+            await expect(
+                llmPrompt({
+                    tier: 'main',
+                    system: 'system',
+                    user: 'user',
+                    callerId: 'schema-3',
+                    responseFormat: 'json',
+                    schema: alwaysFailsSchema,
+                }),
+            ).rejects.toThrow('LLM response failed schema validation after retry');
         });
 
         it('returns validated data on cache hit with valid schema', async () => {
             const body = JSON.stringify({ choices: [{ message: { content: '{"ok": true}' } }] });
             mockFetch.mockResolvedValueOnce(mockOkResponse(body));
-            await llmPrompt('main', 'system', 'user', 'schema-4', 'json', okBooleanSchema);
-            const result = await llmPrompt('main', 'system', 'user', 'schema-4', 'json', okBooleanSchema);
+            await llmPrompt({
+                tier: 'main',
+                system: 'system',
+                user: 'user',
+                callerId: 'schema-4',
+                responseFormat: 'json',
+                schema: okBooleanSchema,
+            });
+            const result = await llmPrompt({
+                tier: 'main',
+                system: 'system',
+                user: 'user',
+                callerId: 'schema-4',
+                responseFormat: 'json',
+                schema: okBooleanSchema,
+            });
             expect(result).toEqual({ ok: true });
             expect(mockFetch).toHaveBeenCalledTimes(1);
         });
@@ -819,13 +912,33 @@ describe('llmPrompt', () => {
         it('re-requests on cache hit when cached value fails schema validation', async () => {
             const validBody = JSON.stringify({ choices: [{ message: { content: '{"ok": true}' } }] });
             mockFetch.mockResolvedValueOnce(mockOkResponse(validBody));
-            await llmPrompt('main', 'system', 'user', 'schema-5', 'json', okBooleanSchema);
+            await llmPrompt({
+                tier: 'main',
+                system: 'system',
+                user: 'user',
+                callerId: 'schema-5',
+                responseFormat: 'json',
+                schema: okBooleanSchema,
+            });
             clearCache();
             const body = JSON.stringify({ choices: [{ message: { content: '{}' } }] });
             mockFetch.mockResolvedValueOnce(mockOkResponse(body));
-            await llmPrompt('main', 'system', 'user', 'schema-5', 'json');
+            await llmPrompt({
+                tier: 'main',
+                system: 'system',
+                user: 'user',
+                callerId: 'schema-5',
+                responseFormat: 'json',
+            });
             mockFetch.mockResolvedValueOnce(mockOkResponse(validBody));
-            const result = await llmPrompt('main', 'system', 'user', 'schema-5', 'json', okBooleanSchema);
+            const result = await llmPrompt({
+                tier: 'main',
+                system: 'system',
+                user: 'user',
+                callerId: 'schema-5',
+                responseFormat: 'json',
+                schema: okBooleanSchema,
+            });
             expect(result).toEqual({ ok: true });
             expect(mockFetch).toHaveBeenCalledTimes(3);
         });
@@ -836,7 +949,14 @@ describe('llmPrompt', () => {
             mockFetch
                 .mockResolvedValueOnce(mockOkResponse(invalidBody))
                 .mockResolvedValueOnce(mockOkResponse(validBody));
-            const result = await llmPrompt('main', 'system', 'user', 'schema-2', 'json', okBooleanSchema);
+            const result = await llmPrompt({
+                tier: 'main',
+                system: 'system',
+                user: 'user',
+                callerId: 'schema-2',
+                responseFormat: 'json',
+                schema: okBooleanSchema,
+            });
             expect(result).toEqual({ ok: true });
             expect(mockFetch).toHaveBeenCalledTimes(2);
         });
@@ -844,16 +964,37 @@ describe('llmPrompt', () => {
         it('throws when schema validation fails even after retry', async () => {
             const body = JSON.stringify({ choices: [{ message: { content: '{}' } }] });
             mockFetch.mockResolvedValueOnce(mockOkResponse(body)).mockResolvedValueOnce(mockOkResponse(body));
-            await expect(llmPrompt('main', 'system', 'user', 'schema-3', 'json', alwaysFailsSchema)).rejects.toThrow(
-                'LLM response failed schema validation after retry',
-            );
+            await expect(
+                llmPrompt({
+                    tier: 'main',
+                    system: 'system',
+                    user: 'user',
+                    callerId: 'schema-3',
+                    responseFormat: 'json',
+                    schema: alwaysFailsSchema,
+                }),
+            ).rejects.toThrow('LLM response failed schema validation after retry');
         });
 
         it('returns validated data on cache hit with valid schema', async () => {
             const body = JSON.stringify({ choices: [{ message: { content: '{"ok": true}' } }] });
             mockFetch.mockResolvedValueOnce(mockOkResponse(body));
-            await llmPrompt('main', 'system', 'user', 'schema-4', 'json', okBooleanSchema);
-            const result = await llmPrompt('main', 'system', 'user', 'schema-4', 'json', okBooleanSchema);
+            await llmPrompt({
+                tier: 'main',
+                system: 'system',
+                user: 'user',
+                callerId: 'schema-4',
+                responseFormat: 'json',
+                schema: okBooleanSchema,
+            });
+            const result = await llmPrompt({
+                tier: 'main',
+                system: 'system',
+                user: 'user',
+                callerId: 'schema-4',
+                responseFormat: 'json',
+                schema: okBooleanSchema,
+            });
             expect(result).toEqual({ ok: true });
             expect(mockFetch).toHaveBeenCalledTimes(1);
         });
@@ -861,13 +1002,33 @@ describe('llmPrompt', () => {
         it('re-requests on cache hit when cached value fails schema validation', async () => {
             const validBody = JSON.stringify({ choices: [{ message: { content: '{"ok": true}' } }] });
             mockFetch.mockResolvedValueOnce(mockOkResponse(validBody));
-            await llmPrompt('main', 'system', 'user', 'schema-5', 'json', okBooleanSchema);
+            await llmPrompt({
+                tier: 'main',
+                system: 'system',
+                user: 'user',
+                callerId: 'schema-5',
+                responseFormat: 'json',
+                schema: okBooleanSchema,
+            });
             clearCache();
             const invalidBody = JSON.stringify({ choices: [{ message: { content: '{}' } }] });
             mockFetch.mockResolvedValueOnce(mockOkResponse(invalidBody));
-            await llmPrompt('main', 'system', 'user', 'schema-5', 'json');
+            await llmPrompt({
+                tier: 'main',
+                system: 'system',
+                user: 'user',
+                callerId: 'schema-5',
+                responseFormat: 'json',
+            });
             mockFetch.mockResolvedValueOnce(mockOkResponse(validBody));
-            const result = await llmPrompt('main', 'system', 'user', 'schema-5', 'json', okBooleanSchema);
+            const result = await llmPrompt({
+                tier: 'main',
+                system: 'system',
+                user: 'user',
+                callerId: 'schema-5',
+                responseFormat: 'json',
+                schema: okBooleanSchema,
+            });
             expect(result).toEqual({ ok: true });
             expect(mockFetch).toHaveBeenCalledTimes(3);
         });
@@ -892,7 +1053,7 @@ describe('llmPrompt', () => {
             mockFetch
                 .mockResolvedValueOnce(mockOkResponse(errorBody))
                 .mockResolvedValueOnce(mockOkResponse(successBody));
-            const result = await llmPrompt('main', 'system', 'user', 'err-payload');
+            const result = await llmPrompt({ tier: 'main', system: 'system', user: 'user', callerId: 'err-payload' });
             expect(result).toBe('fallback worked');
         });
     });
@@ -915,7 +1076,7 @@ describe('llmPrompt', () => {
             });
             mockFetch.mockResolvedValueOnce(mockOkResponse(apiResponse));
 
-            await llmPrompt('reviewer', 'system', 'user', 'um-1');
+            await llmPrompt({ tier: 'reviewer', system: 'system', user: 'user', callerId: 'um-1' });
             const metrics = getLlmClientMetrics();
             expect(metrics.totalPromptTokens).toBe(10);
             expect(metrics.totalCompletionTokens).toBe(5);
@@ -934,7 +1095,7 @@ describe('llmPrompt', () => {
                 mockOkResponse(JSON.stringify({ choices: [{ message: { content: 'first' } }] })),
             );
 
-            const r1 = await llmPrompt('main', 'system', 'ttl test', 'cache-ttl');
+            const r1 = await llmPrompt({ tier: 'main', system: 'system', user: 'ttl test', callerId: 'cache-ttl' });
             expect(r1).toBe('first');
             expect(mockFetch).toHaveBeenCalledTimes(1);
 
@@ -943,7 +1104,7 @@ describe('llmPrompt', () => {
             mockFetch.mockResolvedValue(
                 mockOkResponse(JSON.stringify({ choices: [{ message: { content: 'second' } }] })),
             );
-            const r2 = await llmPrompt('main', 'system', 'ttl test', 'cache-ttl');
+            const r2 = await llmPrompt({ tier: 'main', system: 'system', user: 'ttl test', callerId: 'cache-ttl' });
             expect(r2).toBe('second');
             expect(mockFetch).toHaveBeenCalledTimes(2);
         });
@@ -961,12 +1122,22 @@ describe('llmPrompt', () => {
                     mockOkResponse(JSON.stringify({ choices: [{ message: { content: 'after-cleanup' } }] })),
                 );
 
-            const r1 = await llmPrompt('main', 'system', 'cleanup test', 'cache-cleanup');
+            const r1 = await llmPrompt({
+                tier: 'main',
+                system: 'system',
+                user: 'cleanup test',
+                callerId: 'cache-cleanup',
+            });
             expect(r1).toBe('to-clean');
             expect(mockFetch).toHaveBeenCalledTimes(1);
 
             jest.advanceTimersByTime(600 * 1000);
-            const r2 = await llmPrompt('main', 'system', 'cleanup test', 'cache-cleanup');
+            const r2 = await llmPrompt({
+                tier: 'main',
+                system: 'system',
+                user: 'cleanup test',
+                callerId: 'cache-cleanup',
+            });
             expect(r2).toBe('after-cleanup');
             expect(mockFetch).toHaveBeenCalledTimes(2);
         });
@@ -981,7 +1152,7 @@ describe('llmPrompt', () => {
                 mockOkResponse(JSON.stringify({ choices: [{ message: { content: '{"result":42}' } }] })),
             );
 
-            await llmPrompt('report', 'system', 'report test', undefined, 'json');
+            await llmPrompt({ tier: 'report', system: 'system', user: 'report test', responseFormat: 'json' });
             const body = JSON.parse(mockFetch.mock.calls[0][1].body as string);
             expect(body.response_format).toEqual({ type: 'json_object' });
         });
@@ -999,7 +1170,9 @@ describe('llmPrompt', () => {
                 return {} as NodeJS.Timeout;
             }) as typeof global.setTimeout);
 
-            await expect(llmPrompt('main', 'system', 'net fail')).rejects.toThrow('Network down');
+            await expect(llmPrompt({ tier: 'main', system: 'system', user: 'net fail' })).rejects.toThrow(
+                'Network down',
+            );
         });
 
         it('throws LlmError after exhausting HTTP retries on 429', async () => {
@@ -1014,7 +1187,9 @@ describe('llmPrompt', () => {
                 return {} as NodeJS.Timeout;
             }) as typeof global.setTimeout);
 
-            await expect(llmPrompt('main', 'system', 'http fail')).rejects.toThrow('All LLM providers failed');
+            await expect(llmPrompt({ tier: 'main', system: 'system', user: 'http fail' })).rejects.toThrow(
+                'All LLM providers failed',
+            );
         });
 
         it('throws LlmError when fetch retries set to 0', async () => {
@@ -1023,7 +1198,9 @@ describe('llmPrompt', () => {
             (Config as unknown as { set: (k: string, v: string) => void }).set('llmBaseUrl', 'https://api.test.com/v1');
             (Config as unknown as { set: (k: string, v: string) => void }).set('LLM_FETCH_RETRIES', '0');
 
-            await expect(llmPrompt('main', 'system', 'zero retry')).rejects.toThrow('All LLM providers failed');
+            await expect(llmPrompt({ tier: 'main', system: 'system', user: 'zero retry' })).rejects.toThrow(
+                'All LLM providers failed',
+            );
         });
     });
 
@@ -1034,9 +1211,9 @@ describe('llmPrompt', () => {
             (Config as unknown as { set: (k: string, v: string) => void }).set('llmBaseUrl', 'https://api.test.com/v1');
             (Config as unknown as { set: (k: string, v: string) => void }).set('llmMaxTokens', '1');
 
-            await expect(llmPrompt('main', 'a'.repeat(100), 'b'.repeat(100), 'token-lim')).rejects.toThrow(
-                'Input too large',
-            );
+            await expect(
+                llmPrompt({ tier: 'main', system: 'a'.repeat(100), user: 'b'.repeat(100), callerId: 'token-lim' }),
+            ).rejects.toThrow('Input too large');
         });
     });
 
@@ -1050,7 +1227,7 @@ describe('llmPrompt', () => {
         it('returns disk cached response without schema', async () => {
             (diskCacheGet as jest.Mock).mockReturnValue('cached from disk');
 
-            const result = await llmPrompt('main', 'sys', 'usr', 'disk-noschema');
+            const result = await llmPrompt({ tier: 'main', system: 'sys', user: 'usr', callerId: 'disk-noschema' });
             expect(result).toBe('cached from disk');
             expect(mockFetch).not.toHaveBeenCalled();
         });
@@ -1058,7 +1235,14 @@ describe('llmPrompt', () => {
         it('returns disk cached response with valid schema', async () => {
             (diskCacheGet as jest.Mock).mockReturnValue('{"ok": true}');
 
-            const result = await llmPrompt('main', 'sys', 'usr', 'disk-schema', 'json', okBooleanSchema);
+            const result = await llmPrompt({
+                tier: 'main',
+                system: 'sys',
+                user: 'usr',
+                callerId: 'disk-schema',
+                responseFormat: 'json',
+                schema: okBooleanSchema,
+            });
             expect(result).toEqual({ ok: true });
             expect(mockFetch).not.toHaveBeenCalled();
         });
@@ -1071,7 +1255,14 @@ describe('llmPrompt', () => {
                 mockOkResponse(JSON.stringify({ choices: [{ message: { content: '{"ok": true}' } }] })),
             );
 
-            const result = await llmPrompt('main', 'sys', 'usr', 'disk-schema-fail', 'json', okBooleanSchema);
+            const result = await llmPrompt({
+                tier: 'main',
+                system: 'sys',
+                user: 'usr',
+                callerId: 'disk-schema-fail',
+                responseFormat: 'json',
+                schema: okBooleanSchema,
+            });
             expect(result).toEqual({ ok: true });
             expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining('LLM disk cache hit but schema invalid'));
             expect(mockFetch).toHaveBeenCalledTimes(1);

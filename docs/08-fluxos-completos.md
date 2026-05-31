@@ -15,7 +15,7 @@ Este fluxo cobre desde a preparação do CSV até a criação de uma **Test Exec
     Consulte o formato esperado em [`04-csv-format.md`](04-csv-format.md).  
     O CSV utiliza blocos separados por `---`, com campos `Title:`, `Description:`, `Pre-condition:`, `Group:` e uma tabela `Action,Data,Expected Result`.
 
-    Dica: use a **opção 11** "Gerar template CSV" para obter um arquivo modelo.
+    Dica: use a **opção 11** "Gerar template CSV/JSON" (menu `GERAÇÃO DE CASOS DE TESTE`) para obter um arquivo modelo.
 
 2. **Executar a CLI**
 

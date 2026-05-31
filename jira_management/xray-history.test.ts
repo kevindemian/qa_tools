@@ -1,14 +1,21 @@
 /** Tests for Xray per-test history providers, cache, and factory. */
 
-import axios from 'axios';
 import { createHistoryProvider, TestHistoryCache, type TestRun, type TestHistoryProvider } from './xray-history';
 import Config from '../shared/config';
 import type JiraResource from './jira_resource';
 
-jest.mock('axios');
+const mockGraphql = jest.fn();
+
+jest.mock('../shared/xray-cloud-client', () => ({
+    XrayCloudClient: jest.fn(() => ({
+        graphql: mockGraphql,
+        authenticate: jest.fn(),
+        graphqlMutation: jest.fn(),
+    })),
+}));
+
 jest.mock('../shared/config');
 
-const mockAxiosPost = jest.fn();
 let mockIssueGet: jest.Mock;
 let mockOriginGet: jest.Mock;
 let mockSearchGet: jest.Mock;
@@ -46,7 +53,6 @@ function mockJiraResource(): JiraResource {
 
 beforeEach(() => {
     jest.clearAllMocks();
-    (axios as unknown as { post: jest.Mock }).post = mockAxiosPost;
     (Config.getDefault as jest.Mock).mockReturnValue({
         xrayMode: 'server' as const,
         xrayClientId: '',
@@ -181,7 +187,7 @@ describe('CloudHistoryProvider', () => {
 
     beforeEach(() => {
         jira = mockJiraResource();
-        mockAxiosPost.mockReset();
+        mockGraphql.mockReset();
         (Config.getDefault as jest.Mock).mockReturnValue({
             xrayMode: 'cloud',
             xrayClientId: 'client-123',
@@ -196,7 +202,7 @@ describe('CloudHistoryProvider', () => {
         expect(result).toEqual([]);
     });
 
-    it('returns empty array when auth fails', async () => {
+    it('returns empty array when credentials are missing', async () => {
         mockIssueGet.mockResolvedValue({ id: '12345' });
         (Config.getDefault as jest.Mock).mockReturnValue({
             xrayMode: 'cloud',
@@ -209,33 +215,29 @@ describe('CloudHistoryProvider', () => {
 
     it('returns empty array when GraphQL returns no results', async () => {
         mockIssueGet.mockResolvedValue({ id: '12345' });
-        mockAxiosPost.mockResolvedValue({ data: { data: { getTestRuns: { results: [] } } } });
+        mockGraphql.mockResolvedValue(null);
         const result = await provider.getHistory('TEST-123');
         expect(result).toEqual([]);
     });
 
     it('returns parsed runs on successful GraphQL call', async () => {
         mockIssueGet.mockResolvedValue({ id: '12345' });
-        mockAxiosPost.mockResolvedValueOnce({ data: 'my-token' }).mockResolvedValueOnce({
-            data: {
-                data: {
-                    getTestRuns: {
-                        results: [
-                            {
-                                status: { name: 'PASSED' },
-                                testExecution: { issueId: '111' },
-                                startedOn: '2024-01-01',
-                                finishedOn: null,
-                            },
-                            {
-                                status: { name: 'FAILED' },
-                                testExecution: { issueId: '222' },
-                                startedOn: '2024-01-02',
-                                finishedOn: '2024-01-02T12:00:00Z',
-                            },
-                        ],
+        mockGraphql.mockResolvedValue({
+            getTestRuns: {
+                results: [
+                    {
+                        status: { name: 'PASSED' },
+                        testExecution: { issueId: '111' },
+                        startedOn: '2024-01-01',
+                        finishedOn: null,
                     },
-                },
+                    {
+                        status: { name: 'FAILED' },
+                        testExecution: { issueId: '222' },
+                        startedOn: '2024-01-02',
+                        finishedOn: '2024-01-02T12:00:00Z',
+                    },
+                ],
             },
         });
         mockSearchGet.mockResolvedValue({
@@ -255,37 +257,108 @@ describe('CloudHistoryProvider', () => {
 
     it('returns empty array on GraphQL error', async () => {
         mockIssueGet.mockResolvedValue({ id: '12345' });
-        mockAxiosPost.mockResolvedValueOnce({ data: 'my-token' }).mockRejectedValueOnce(new Error('GraphQL error'));
+        mockGraphql.mockRejectedValue(new Error('GraphQL error'));
         const result = await provider.getHistory('TEST-123');
         expect(result).toEqual([]);
     });
 
     it('caches issueId resolution for same testKey', async () => {
         mockIssueGet.mockResolvedValue({ id: '12345' });
-        mockAxiosPost.mockResolvedValue({ data: { data: { getTestRuns: { results: [] } } } });
+        mockGraphql.mockResolvedValue(null);
         await provider.getHistory('TEST-123');
         await provider.getHistory('TEST-123');
         expect(mockIssueGet).toHaveBeenCalledTimes(1);
     });
-});
 
-describe('CloudHistoryProvider — no credentials', () => {
-    let provider: TestHistoryProvider;
-    let jira: ReturnType<typeof mockJiraResource>;
+    it('passes correct query to cloudClient.graphql', async () => {
+        mockIssueGet.mockResolvedValue({ id: '12345' });
+        mockGraphql.mockResolvedValue({ getTestRuns: { results: [] } });
 
-    beforeEach(() => {
-        jira = mockJiraResource();
-        (Config.getDefault as jest.Mock).mockReturnValue({
-            xrayMode: 'cloud',
-            xrayClientId: '',
-            xrayClientSecret: '',
-        });
-        provider = createHistoryProvider(jira, 'cloud');
+        await provider.getHistory('TEST-123');
+
+        expect(mockGraphql).toHaveBeenCalledTimes(1);
+        const callArgs = mockGraphql.mock.calls[0] as unknown[];
+        expect(callArgs[0] as string).toContain('getTestRuns');
+        expect((callArgs[1] as Record<string, unknown>).testIssueIds).toEqual(['12345']);
+        expect(callArgs[2]).toBe('client-123');
+        expect(callArgs[3]).toBe('secret-456');
     });
 
-    it('returns empty array when credentials are missing', async () => {
+    it('falls back to issue id when search does not return exec key', async () => {
         mockIssueGet.mockResolvedValue({ id: '12345' });
+        mockGraphql.mockResolvedValue({
+            getTestRuns: {
+                results: [
+                    {
+                        status: { name: 'PASSED' },
+                        testExecution: { issueId: '111' },
+                        startedOn: null,
+                        finishedOn: null,
+                    },
+                ],
+            },
+        });
+        mockSearchGet.mockResolvedValue({ issues: [], total: 0 });
         const result = await provider.getHistory('TEST-123');
-        expect(result).toEqual([]);
+        expect(result).toHaveLength(1);
+        expect(result[0]?.testExecKey).toBe('111');
+    });
+
+    it('returns results with fallback keys when exec key search fails', async () => {
+        mockIssueGet.mockResolvedValue({ id: '12345' });
+        mockGraphql.mockResolvedValue({
+            getTestRuns: {
+                results: [
+                    {
+                        status: { name: 'PASSED' },
+                        testExecution: { issueId: '111' },
+                        startedOn: null,
+                        finishedOn: null,
+                    },
+                ],
+            },
+        });
+        mockSearchGet.mockRejectedValue(new Error('Search failed'));
+        const result = await provider.getHistory('TEST-123');
+        expect(result).toHaveLength(1);
+        expect(result[0]?.testExecKey).toBe('111');
+    });
+
+    it('caches exec keys and avoids re-fetching', async () => {
+        mockIssueGet.mockResolvedValue({ id: '12345' });
+        mockGraphql.mockResolvedValue({
+            getTestRuns: {
+                results: [
+                    {
+                        status: { name: 'PASSED' },
+                        testExecution: { issueId: '111' },
+                        startedOn: null,
+                        finishedOn: null,
+                    },
+                ],
+            },
+        });
+        mockSearchGet.mockResolvedValue({
+            issues: [{ id: '111', key: 'TE-1', fields: { summary: '' } }],
+        });
+        await provider.getHistory('TEST-123');
+        expect(mockSearchGet).toHaveBeenCalledTimes(1);
+
+        mockGraphql.mockResolvedValue({
+            getTestRuns: {
+                results: [
+                    {
+                        status: { name: 'PASSED' },
+                        testExecution: { issueId: '111' },
+                        startedOn: null,
+                        finishedOn: null,
+                    },
+                ],
+            },
+        });
+        const result = await provider.getHistory('TEST-123');
+        expect(result).toHaveLength(1);
+        expect(result[0]?.testExecKey).toBe('TE-1');
+        expect(mockSearchGet).toHaveBeenCalledTimes(1);
     });
 });

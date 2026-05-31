@@ -387,8 +387,9 @@ export async function showSelect(label: string, choices: SelectChoice[], options
     if (trimmed === '0' || trimmed === 'exit' || trimmed === 'sair') return '0';
     if (trimmed.startsWith('/')) return answer;
     const num = parseInt(answer, 10);
-    if (num >= 1 && num <= flatChoices.length) {
-        return flatChoices[num - 1]!.value;
+    const choice = num >= 1 && num <= flatChoices.length ? flatChoices[num - 1] : undefined;
+    if (choice) {
+        return choice.value;
     }
     return answer;
 }

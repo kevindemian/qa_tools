@@ -1,4 +1,5 @@
 /** Jira version management: create, publish, list, and assign fix versions to issues. */
+import { formatDateISO } from '../shared/date-utils';
 import { error as logError, success, info, extractErrorMessage, ProgressBar } from '../shared/prompt';
 import type { Logger } from '../shared/logger';
 import type { VersionData, JiraIssue, SearchResponse, JiraResourceLike } from './jira-resource-types';
@@ -278,7 +279,7 @@ export async function releaseVersion(
         return;
     }
 
-    const releaseDate = new Date().toISOString().split('T')[0];
+    const releaseDate = formatDateISO();
     const payload = { releaseDate, released: true };
 
     info(publishingVersion(versionName));

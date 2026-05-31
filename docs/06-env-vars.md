@@ -90,15 +90,56 @@ Todas as variáveis são carregadas do arquivo `.env` na raiz do projeto.
 | `LLM_DISK_CACHE_DIR`    | —                           | Não          | `.llm-cache`                                       | Diretório do cache em disco para respostas LLM               |
 | `LLM_CACHE_KEY`         | —                           | Não          | —                                                  | Chave AES-256 para criptografar o cache em disco             |
 
-**Hierarquia de tiers:**
+### Circuit Breaker
 
-- **main**: análise principal de falhas (`failure-analysis.ts`, `case18.ts`)
-- **small**: tarefas leves — fallback para main quando indisponível
-- **fast**: tarefas rápidas — PR description, classificação, comparação de runs
-- **report**: análise estruturada com validação JSON (usa mesma config do **main**, temperatura reduzida)
-- **reviewer**: validação cruzada das análises (provedor independente recomendado)
-- **fallback**: usado quando **main** falha (após 3 retries)
-- **batch**: tarefas de fundo sem requisito de latência
+> Proteção contra falhas encadeadas de provedores LLM. Implementa o padrão tri-state: **CLOSED** → **OPEN** → **HALF_OPEN**.
+
+**Estados:**
+
+| Estado        | Significado                                | Comportamento                                              |
+| ------------- | ------------------------------------------ | ---------------------------------------------------------- |
+| **CLOSED**    | Operação normal, falhas < threshold        | Requisições passam livremente                              |
+| **OPEN**      | Threshold excedido (5 falhas consecutivas) | Requisições rejeitadas imediatamente com erro              |
+| **HALF_OPEN** | Cooldown de 30s expirou                    | Permite 1 probe request a cada 15s para testar recuperação |
+
+**Fluxo:**
+
+1. Cada provedor LLM (main, fast, small, etc.) tem um circuito independente, chaveado por `configUniqueKey()` (model + baseURL + apiKey prefix)
+2. Após 5 falhas consecutivas (`CIRCUIT_BREAK_THRESHOLD`), o circuito abre por 30s (`CIRCUIT_BREAK_MS`)
+3. Decorrido o cooldown, transita para HALF_OPEN: a primeira requisição é um probe
+4. Se o probe **falha** → volta para OPEN por mais 30s
+5. Se o probe **sucede** → `recordCircuitSuccess()` → reset para CLOSED
+6. Em HALF_OPEN, probes são limitados a 1 a cada 15s (`HALF_OPEN_PROBE_INTERVAL_MS`)
+
+**Arquivo:** `shared/circuit-breaker.ts` — `checkCircuitBreaker()`, `recordCircuitFailure()`, `recordCircuitSuccess()`
+
+### Benchmark LLM
+
+> Suite de validação de qualidade dos provedores LLM. Avalia acurácia dos tiers **report** (análise de falhas), **main** (user story → testes) e **fast** (classificação).
+
+**Execução:**
+
+```bash
+# Habilitar benchmark
+BENCHMARK=true npx tsx shared/llm-benchmark.ts
+
+# Benchmark individual
+BENCHMARK=true npx tsx -e "require('./shared/llm-benchmark').runBenchmark()"
+```
+
+**O que testa:**
+
+| Tier   | Fixtures | Validação                                 |
+| ------ | -------- | ----------------------------------------- |
+| report | 3        | Parse de falhas → JSON schema             |
+| main   | 3        | User story → test cases (formato Gherkin) |
+| fast   | 3        | Classificação de falhas por causa raiz    |
+
+**Saída:** relatório detalhado no terminal com acertos, erros de schema e métricas por tier.
+
+**Arquivo:** `shared/llm-benchmark.ts` — `runBenchmark()`, `validateJsonSchema()`
+
+**Hierarquia de tiers:**
 
 ## Comportamento / CI (extras)
 

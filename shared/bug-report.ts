@@ -69,14 +69,14 @@ export async function generateBugReportFromDescription(raw: string): Promise<Bug
         return null;
     }
     try {
-        const aiReport = await llmPrompt<AiBugReport>(
-            'fast',
+        const aiReport = await llmPrompt<AiBugReport>({
+            tier: 'fast',
             system,
-            raw,
-            'bug-report-from-desc',
-            'json',
-            AiBugReportSchema,
-        );
+            user: raw,
+            callerId: 'bug-report-from-desc',
+            responseFormat: 'json',
+            schema: AiBugReportSchema,
+        });
         return {
             summary: aiReport.summary,
             description: aiReport.description,

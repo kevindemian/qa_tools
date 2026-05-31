@@ -1,13 +1,15 @@
-/** Batch mode — run metrics, flakiness dashboard, pipeline failure analysis, and flaky auto-actions headlessly. */
-import { success, error, info, printError, withSpinner } from '../shared/prompt';
+/** Batch mode — run metrics, flakiness dashboard, pipeline failure analysis, flaky auto-actions, and test-impact selection headlessly. */
+import { success, error, info, printError, warn, withSpinner } from '../shared/prompt';
 import { loadMetrics, calculateFlakiness } from '../shared/metrics';
 import { generateFlakinessHtml } from '../shared/flakiness-dashboard';
 import { executeFlakyActions } from '../shared/flaky-auto-actions';
+import { expireQuarantine, listQuarantined, quarantineRatio } from '../shared/quarantine';
+import { analyzeTestImpact, generateTestSelectionJson } from '../shared/test-impact';
 import { offerPipelineFailureAnalysis } from './llm-pipeline';
 import { collectTestResults as _collectTestResults } from './test-results';
 import type { PipelineTriggerResult } from '../shared/types';
 import Config from '../shared/config';
-import JiraResource from '../jira_management/jira_resource';
+import JiraClient from '../shared/jira-client';
 import { writeReport } from '../shared/temp-dir';
 import { publishReport } from '../shared/publish';
 import {
@@ -23,9 +25,25 @@ import {
 } from './session-state';
 import { pollPipeline } from './pipeline-handler';
 
-export function parseBatchArgs(): { project?: string; branch?: string; auto?: boolean; publish?: string } {
+export function parseBatchArgs(): {
+    project?: string;
+    branch?: string;
+    auto?: boolean;
+    publish?: string;
+    runImpactedTests?: boolean;
+    conservative?: boolean;
+    teKey?: string;
+} {
     const args = process.argv.slice(2);
-    const result: { project?: string; branch?: string; auto?: boolean; publish?: string } = {};
+    const result: {
+        project?: string;
+        branch?: string;
+        auto?: boolean;
+        publish?: string;
+        runImpactedTests?: boolean;
+        conservative?: boolean;
+        teKey?: string;
+    } = {};
     for (let i = 0; i < args.length; i++) {
         if ((args[i] === '--project' || args[i] === '-p') && i + 1 < args.length) {
             result.project = args[++i];
@@ -35,6 +53,12 @@ export function parseBatchArgs(): { project?: string; branch?: string; auto?: bo
             result.auto = true;
         } else if (args[i] === '--publish' && i + 1 < args.length) {
             result.publish = args[++i];
+        } else if (args[i] === '--run-impacted-tests') {
+            result.runImpactedTests = true;
+        } else if (args[i] === '--conservative') {
+            result.conservative = true;
+        } else if ((args[i] === '--te-key' || args[i] === '-k') && i + 1 < args.length) {
+            result.teKey = args[++i];
         }
     }
     return result;
@@ -76,6 +100,7 @@ async function triggerAndCollectBatchPipeline(
     m: import('../shared/types').GitProvider,
     branch: string,
     projectName: string,
+    teKey?: string,
 ): Promise<boolean> {
     const payload = { ref: branch, variables: [] as Array<{ key: string; value: string }> };
     let pipelineResult: PipelineTriggerResult | undefined;
@@ -107,7 +132,15 @@ async function triggerAndCollectBatchPipeline(
     info('Pipeline #' + pipelineId + ': ' + icon + ' ' + pollResult.status);
 
     if (pollResult.status !== 'canceled' && pollResult.status !== 'skipped') {
-        const parsed = await _collectTestResults(m, pipelineId, branch, projectName, currentProvider, pushHistory);
+        const parsed = await _collectTestResults({
+            m,
+            pipelineId,
+            branch,
+            projectName,
+            currentProvider,
+            pushHistory,
+            teKey,
+        });
         if (parsed) {
             await offerPipelineFailureAnalysis(parsed);
         }
@@ -115,10 +148,9 @@ async function triggerAndCollectBatchPipeline(
     return false;
 }
 
-async function runFlakyAutoActions(projectName: string): Promise<void> {
+async function runFlakyAutoActions(projectName: string, jiraResource: JiraClient): Promise<void> {
     try {
         if (!Config.jiraBaseUrl || !Config.jiraPersonalToken) return;
-        const jiraResource = new JiraResource(Config.jiraPersonalToken, Config.jiraBaseUrl + '/rest/api/2');
         const store = loadMetrics();
         const projectRuns = store.runs.filter((r) => r.project === currentProjectName);
         if (projectRuns.length < 5) return;
@@ -163,11 +195,61 @@ export async function tryBatchMode(): Promise<boolean> {
 
     info('Modo batch: ' + setup.projectName + ' @ ' + setup.branch);
 
-    const done = await triggerAndCollectBatchPipeline(setup.m, setup.branch, setup.projectName);
+    const done = await triggerAndCollectBatchPipeline(setup.m, setup.branch, setup.projectName, batch.teKey);
     if (done) return true;
 
     generateFlakinessDashboard(setup.projectName, batch.publish);
-    await runFlakyAutoActions(setup.projectName);
+    if (Config.jiraBaseUrl && Config.jiraPersonalToken) {
+        const jiraResource = new JiraClient(Config.jiraPersonalToken, Config.jiraBaseUrl + '/rest/api/2');
+        await runFlakyAutoActions(setup.projectName, jiraResource);
+    }
+    runQuarantineMaintenance();
+    if (batch.runImpactedTests) {
+        runTestImpactSelection(batch.conservative);
+    }
     printSessionSummary();
     return true;
+}
+
+function runTestImpactSelection(conservative?: boolean): void {
+    try {
+        const result = analyzeTestImpact();
+        if (result.changedFiles.length === 0) {
+            info('Nenhum arquivo alterado detectado — pulando seleção de testes.');
+            return;
+        }
+        const selection = generateTestSelectionJson(result, {
+            conservative,
+            smokeTests: conservative ? ['smoke'] : [],
+        });
+        const outPath = writeReport('test-selection.json', JSON.stringify(selection, null, 2));
+        success('Seleção de testes impactados salva: ' + outPath);
+        const labelMode = conservative ? '(modo conservador)' : '(modo preciso)';
+        info(
+            result.impactedTests.length +
+                ' teste(s) impactado(s) em ' +
+                result.changedFiles.length +
+                ' arquivo(s) ' +
+                labelMode +
+                '. Confiança: ' +
+                result.confidence,
+        );
+    } catch (err) {
+        printError('Falha ao analisar impacto de testes', err);
+    }
+}
+
+function runQuarantineMaintenance(): void {
+    const expired = expireQuarantine();
+    if (expired > 0) {
+        info(expired + ' quarantined test(s) expired.');
+    }
+    const allEntries = listQuarantined();
+    if (allEntries.length > 0) {
+        const meta = quarantineRatio(allEntries.length + 10);
+        info('Quarantined: ' + allEntries.length + ' test(s)');
+        if (meta.warning) {
+            warn(meta.warning);
+        }
+    }
 }

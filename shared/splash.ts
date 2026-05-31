@@ -88,7 +88,8 @@ export function buildSplashLines(logo: string, statePath?: string, statusChecks?
         splash.push(palette.muted('  State: ' + statePath));
         splash.push('');
     }
-    splash.push(palette.blue('  /help  Ajuda · d  Documentação'));
+    splash.push(palette.blue('  /help  Ajuda · /docs  Documentação'));
+    splash.push(palette.green('  --batch  Modo headless para CI/CD'));
     splash.push('');
     return splash;
 }

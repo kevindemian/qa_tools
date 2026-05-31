@@ -1,5 +1,5 @@
-import type { TestExecutionSummary } from '../shared/types';
-import type JiraResource from './jira_resource';
+import type { TestExecutionSummary, JiraResourceLike } from '../shared/types';
+import { rootLogger } from '../shared/logger';
 import { LinkTypeManager } from './link-types';
 import { LinkOperations } from './link-operations';
 import {
@@ -11,12 +11,12 @@ import {
 export { matchPreconditionByTokenOverlap, matchPreconditionByDualThreshold };
 
 class JiraLinkManager {
-    jiraResource: JiraResource;
+    jiraResource: JiraResourceLike;
     linkTypeManager: LinkTypeManager;
     linkOperations: LinkOperations;
     preconditionHandler: PreconditionHandler;
 
-    constructor(jiraResource: JiraResource) {
+    constructor(jiraResource: JiraResourceLike) {
         this.jiraResource = jiraResource;
         this.linkTypeManager = new LinkTypeManager(jiraResource);
         this.linkOperations = new LinkOperations(jiraResource, this.linkTypeManager);
@@ -71,15 +71,25 @@ class JiraLinkManager {
         );
     }
 
-    async validateTestExecutionKey(issueKey: string): Promise<void> {
-        const issue = await this.jiraResource.getJiraResource<{
-            fields: { issuetype?: { name: string } };
-        }>('issue/' + issueKey + '?fields=issuetype');
-        if (!issue?.fields?.issuetype) {
-            throw new Error('Issue "' + issueKey + '" não encontrada');
-        }
-        if (issue.fields.issuetype.name !== 'Test Execution') {
-            throw new Error('"' + issueKey + '" não é uma Test Execution (tipo: ' + issue.fields.issuetype.name + ')');
+    async validateTestExecutionKey(issueKey: string): Promise<boolean> {
+        try {
+            const issue = await this.jiraResource.getJiraResource<{
+                fields: { issuetype?: { name: string } };
+            }>('issue/' + issueKey + '?fields=issuetype');
+            if (!issue?.fields?.issuetype) {
+                rootLogger.warn('Issue "' + issueKey + '" não encontrada');
+                return false;
+            }
+            if (issue.fields.issuetype.name !== 'Test Execution') {
+                rootLogger.warn(
+                    '"' + issueKey + '" não é uma Test Execution (tipo: ' + issue.fields.issuetype.name + ')',
+                );
+                return false;
+            }
+            return true;
+        } catch (err) {
+            rootLogger.error('Erro ao validar Test Execution key: ' + (err as Error).message);
+            return false;
         }
     }
 

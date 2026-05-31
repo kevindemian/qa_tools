@@ -20,6 +20,7 @@ jest.mock('../shared/prompt', () => {
     };
 });
 
+jest.mock('../shared/show-docs', () => ({ showDocs: jest.fn(() => Promise.resolve()) }));
 jest.mock('../shared/config', () => ({
     jiraBaseUrl: '',
     jiraPersonalToken: '',
@@ -91,19 +92,26 @@ jest.mock('child_process', () => ({
     }),
 }));
 
-jest.mock('../shared/open', () => {
-    const actual = jest.requireActual('../shared/open');
-    return {
-        ...actual,
-        getDocsOutputDir: jest.fn().mockReturnValue('/tmp/qa_docs_test'),
-        openWithOsOrFallback: jest.fn().mockResolvedValue(true),
-    };
-});
+jest.mock('../shared/open', () => ({
+    getDocsOutputDir: jest.fn().mockReturnValue('/tmp/qa_docs_test'),
+    openWithFallback: jest.fn(),
+}));
 
 import { warn, helpLine, title, prompt } from '../shared/prompt';
 
 import { showHelp, showHelpLoop, handleSpecialInput, dispatchChoice } from './ui-helpers';
 import { _configHint, buildMenuChoices, type MenuChoice } from './menu-data';
+
+beforeAll(() => {
+    const openModule = require('../shared/open');
+    if (!jest.isMockFunction(openModule.openWithFallback)) {
+        throw new Error('Guard FAILED: openWithFallback is NOT mocked. Browser would open!');
+    }
+    const cp = require('child_process');
+    if (!jest.isMockFunction(cp.spawn)) {
+        throw new Error('Guard FAILED: child_process.spawn is NOT mocked. Browser would open!');
+    }
+});
 
 beforeEach(() => {
     jest.clearAllMocks();
@@ -278,5 +286,20 @@ describe('showHelpLoop', () => {
         (prompt as jest.Mock).mockReturnValueOnce('nonexistent_topic_xyz').mockReturnValueOnce('/back');
         showHelpLoop();
         expect(warn).toHaveBeenCalledWith(expect.stringContaining('não encontrado'));
+    });
+
+    it('handles CancelError in showHelpLoop (line 84-85)', () => {
+        const { CancelError } = jest.requireMock('../shared/prompt');
+        (prompt as jest.Mock).mockImplementationOnce(() => {
+            throw new CancelError();
+        });
+        // Should not throw, just return
+        expect(() => showHelpLoop()).not.toThrow();
+    });
+
+    it('handles /help and /h prefix commands', () => {
+        (prompt as jest.Mock).mockReturnValueOnce('/help csv').mockReturnValueOnce('/back');
+        showHelpLoop();
+        expect(title).toHaveBeenCalledWith(expect.stringContaining('csv'));
     });
 });

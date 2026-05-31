@@ -134,8 +134,48 @@ describe('PreconditionHandler', () => {
         });
     });
 
+    describe('findExistingPrecondition', () => {
+        it('returns key when exact summary match found via JQL', async () => {
+            mockJiraResource.searchJiraIssues.mockResolvedValue({
+                issues: [{ key: 'PREC-1', fields: { summary: 'User must be logged in' } }],
+                total: 1,
+                startAt: 0,
+                maxResults: 5,
+            });
+            const key = await handler.findExistingPrecondition('ECSPOL', 'User must be logged in');
+            expect(key).toBe('PREC-1');
+        });
+
+        it('returns null when no JQL match', async () => {
+            mockJiraResource.searchJiraIssues.mockResolvedValue({ issues: [], total: 0, startAt: 0, maxResults: 5 });
+            const key = await handler.findExistingPrecondition('ECSPOL', 'Nonexistent');
+            expect(key).toBeNull();
+        });
+
+        it('returns null when JQL matches but summaries differ case-sensitively', async () => {
+            mockJiraResource.searchJiraIssues.mockResolvedValue({
+                issues: [{ key: 'PREC-1', fields: { summary: 'Different summary' } }],
+                total: 1,
+                startAt: 0,
+                maxResults: 5,
+            });
+            const key = await handler.findExistingPrecondition('ECSPOL', 'User must be logged in');
+            expect(key).toBeNull();
+        });
+
+        it('escapes single quotes in summary for JQL safety', async () => {
+            mockJiraResource.searchJiraIssues.mockResolvedValue({ issues: [], total: 0, startAt: 0, maxResults: 5 });
+            await handler.findExistingPrecondition('PROJ', "user's precondition");
+            expect(mockJiraResource.searchJiraIssues).toHaveBeenCalledWith(
+                expect.stringContaining("user\\\\'s"),
+                expect.any(Number),
+            );
+        });
+    });
+
     describe('createPrecondition', () => {
         it('creates a new precondition and returns its key', async () => {
+            mockJiraResource.searchJiraIssues.mockResolvedValue({ issues: [], total: 0, startAt: 0, maxResults: 5 });
             mockJiraResource.getJiraResource.mockResolvedValue([{ id: '11801', name: 'Pre-condition' }]);
             mockJiraResource.postJiraResource.mockResolvedValue({ key: 'ECSPOL-NEW-1' });
             const key = await handler.createPrecondition('ECSPOL', 'User must be admin');
@@ -147,6 +187,18 @@ describe('PreconditionHandler', () => {
                 },
             });
             expect(key).toBe('ECSPOL-NEW-1');
+        });
+
+        it('reuses existing precondition when found', async () => {
+            mockJiraResource.searchJiraIssues.mockResolvedValue({
+                issues: [{ key: 'PREC-EXISTING', fields: { summary: 'User must be admin' } }],
+                total: 1,
+                startAt: 0,
+                maxResults: 5,
+            });
+            const key = await handler.createPrecondition('ECSPOL', 'User must be admin');
+            expect(key).toBe('PREC-EXISTING');
+            expect(mockJiraResource.postJiraResource).not.toHaveBeenCalled();
         });
     });
 });

@@ -9,6 +9,12 @@ export type LogContext = Record<string, unknown>;
 /** Serializable bag of persisted user state. */
 export type StateContainer = Record<string, unknown>;
 
+/** LLM provider tier used for routing requests to the appropriate model. */
+export type LlmTier = 'main' | 'fast' | 'reviewer' | 'report' | 'fallback' | 'batch';
+
+/** Expected response format from an LLM provider. */
+export type ResponseFormat = 'text' | 'json';
+
 /** Outcome of a single operation with human-readable feedback. */
 export interface TestResult {
     /** 'ok' on success, 'error' on failure. */
@@ -386,6 +392,23 @@ export interface ImpactedTest {
     filePattern?: string;
 }
 
+/** Serialisable test selection output for pipeline integration. */
+export interface TestSelectionJson {
+    generatedAt: string;
+    changedFiles: string[];
+    impactedTests: Array<{
+        title: string;
+        testKey?: string;
+        reason: string;
+        matchMode: string;
+        filePattern?: string;
+    }>;
+    suggestedCommand?: string;
+    confidence: 'high' | 'medium' | 'low';
+    conservative: boolean;
+    smokeTests: string[];
+}
+
 /** AI generation feedback record. */
 export interface AiGenerationRecord {
     id: string;
@@ -568,15 +591,6 @@ export interface XrayTestRun {
     finishedOn?: string;
 }
 
-/** Xray Cloud GraphQL getTestRuns response shape. */
-export interface XrayGetTestRunsResponse {
-    data?: {
-        getTestRuns?: {
-            results?: XrayTestRun[];
-        };
-    };
-}
-
 // ── CTRF validation interfaces (E2.1) ──
 
 // ── Cross-layer type interfaces (E5.1: shared/ cannot import jira_management/ directly) ──
@@ -679,4 +693,71 @@ export interface InlineToken {
     rows?: Array<Array<{ tokens: InlineToken[] }>>;
     align?: string[];
     lang?: string;
+}
+
+/** Exit codes for CLI entry points. Maps to POSIX convention. */
+export enum ExitCode {
+    /** Successful completion. */
+    OK = 0,
+    /** General error. */
+    ERROR = 1,
+    /** Incorrect usage / invalid arguments. */
+    USAGE = 2,
+    /** Required resource unavailable (e.g. API down, missing env). */
+    UNAVAILABLE = 3,
+}
+
+/** Runtime overrides for any config key. Keys map 1:1 to env var names (lowercase, camelCase).
+ * When provided, overrides take precedence over env vars and `.env`.
+ * @remarks Moved from `shared/config.ts` to `shared/types.ts` for SRP compliance (J3). */
+export interface ConfigOverrides {
+    jiraBaseUrl?: string;
+    jiraPersonalToken?: string;
+    xrayBaseUrl?: string;
+    xrayMode?: string;
+    jiraProject?: string;
+    gitToken?: string;
+    gitBaseUrl?: string;
+    githubToken?: string;
+    githubApiUrl?: string;
+    cypressProjectPath?: string;
+    csvDefaultPath?: string;
+    autoChoice?: string;
+    autoConfirm?: string | boolean;
+    dryRun?: string | boolean;
+    debug?: string | boolean;
+    quiet?: string | boolean;
+    onError?: string;
+    csvPath?: string;
+    csvLabels?: string;
+    jsonPath?: string;
+    jsonLabels?: string;
+    logLevel?: string;
+    logFile?: string | boolean;
+    logDir?: string;
+    logMaxSize?: string | number;
+    xdgStateHome?: string;
+    llmApiKey?: string;
+    llmModel?: string;
+    llmBaseUrl?: string;
+    llmSmallApiKey?: string;
+    llmSmallModel?: string;
+    llmFastApiKey?: string;
+    llmFastModel?: string;
+    llmFastBaseUrl?: string;
+    llmReviewApiKey?: string;
+    llmReviewModel?: string;
+    llmReviewBaseUrl?: string;
+    llmFallbackApiKey?: string;
+    llmFallbackModel?: string;
+    llmFallbackBaseUrl?: string;
+    llmBatchApiKey?: string;
+    llmBatchModel?: string;
+    llmBatchBaseUrl?: string;
+    xrayClientId?: string;
+    xrayClientSecret?: string;
+    xrayCloudUrl?: string;
+    llmMaxTokens?: string | number;
+    llmMaxTotalTokens?: string | number;
+    knownIssuesPath?: string;
 }

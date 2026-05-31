@@ -1,4 +1,44 @@
-import { createConsoleSpies, restoreConsoleSpies, withEnv } from './test-utils';
+import { createConsoleSpies, restoreConsoleSpies, withEnv, makeMockCommandContext } from './test-utils';
+
+describe('makeMockCommandContext', () => {
+    it('returns a context with all standard fields', () => {
+        const ctx = makeMockCommandContext();
+        expect(ctx).toHaveProperty('jiraResource', {});
+        expect(ctx).toHaveProperty('jiraResourceXray', {});
+        expect(ctx).toHaveProperty('linkManager', {});
+        expect(ctx).toHaveProperty('linkManagerXray', {});
+        expect(ctx).toHaveProperty('csvResource', {});
+        expect(ctx).toHaveProperty('base_url', 'https://jira.test.com');
+        expect(ctx).toHaveProperty('ctx');
+        expect(typeof ctx.pushHistory).toBe('function');
+        expect(typeof ctx.printSessionSummary).toBe('function');
+        expect(typeof ctx.sessionLog).toBe('object');
+    });
+
+    it('creates fresh jest mock functions each call', () => {
+        const a = makeMockCommandContext();
+        const b = makeMockCommandContext();
+        expect(a.pushHistory).not.toBe(b.pushHistory);
+    });
+
+    it('overrides top-level fields', () => {
+        const ctx = makeMockCommandContext({ base_url: 'https://custom.test.com' });
+        expect(ctx.base_url).toBe('https://custom.test.com');
+    });
+
+    it('shallow-merges ctx overrides with default ctx', () => {
+        const ctx = makeMockCommandContext({ ctx: { extraField: 'hello' } });
+        const mergedCtx = ctx.ctx as Record<string, unknown>;
+        expect(mergedCtx.project_name).toBe('TEST');
+        expect(mergedCtx.extraField).toBe('hello');
+    });
+
+    it('ctx override replaces default field with same key', () => {
+        const ctx = makeMockCommandContext({ ctx: { project_name: 'OVERRIDE' } });
+        const mergedCtx = ctx.ctx as Record<string, unknown>;
+        expect(mergedCtx.project_name).toBe('OVERRIDE');
+    });
+});
 
 describe('createConsoleSpies', () => {
     it('creates spy objects for log, error, warn', () => {

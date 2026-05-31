@@ -8,6 +8,8 @@ import fs from 'fs';
 import path from 'path';
 import { llmPrompt } from './llm-client';
 import { rootLogger } from './logger';
+import { gracefulExit } from './cli_base';
+import { ExitCode } from './types';
 import Config from './config';
 import { defaultOutput } from './output';
 import { ReportValidator, type ValidationRule } from './report-validator';
@@ -99,7 +101,12 @@ async function runFailureAnalysisFixture(fixture: FailureAnalysisFixture): Promi
         CACHED_PROMPTS['failure-analysis.md'] ??
         (CACHED_PROMPTS['failure-analysis.md'] = readPrompt('failure-analysis.md'));
     try {
-        const result = await llmPrompt('report', system, 'Failed Tests:\n' + fixture.input, 'benchmark-fa');
+        const result = await llmPrompt({
+            tier: 'report',
+            system,
+            user: 'Failed Tests:\n' + fixture.input,
+            callerId: 'benchmark-fa',
+        });
         const error = validateJsonSchema(result, fixture.validate.minTests);
         return { fixture: fixture.name, passed: !error, error: error || undefined, durationMs: Date.now() - start };
     } catch (err) {
@@ -115,7 +122,7 @@ async function runUserStoryFixture(fixture: UserStoryFixture): Promise<Benchmark
     const userMsg =
         'User Story:\n' + fixture.input.story + '\n\nAcceptance Criteria:\n' + fixture.input.criteria.join('\n');
     try {
-        const result = await llmPrompt('main', system, userMsg, 'benchmark-us');
+        const result = await llmPrompt({ tier: 'main', system, user: userMsg, callerId: 'benchmark-us' });
         const error = validateJsonArray(result, fixture.validate.minItems);
         return { fixture: fixture.name, passed: !error, error: error || undefined, durationMs: Date.now() - start };
     } catch (err) {
@@ -128,7 +135,7 @@ async function runClassifyFixture(fixture: ClassifyFixture): Promise<BenchmarkRe
     const system = CACHED_PROMPTS['classify.md'] ?? (CACHED_PROMPTS['classify.md'] = readPrompt('classify.md'));
     const userMsg = 'Test Title:\n' + fixture.input.title + '\n\nError:\n' + fixture.input.error;
     try {
-        const result = await llmPrompt('fast', system, userMsg, 'benchmark-cl');
+        const result = await llmPrompt({ tier: 'fast', system, user: userMsg, callerId: 'benchmark-cl' });
         const error = validateClassify(result, fixture.expectedCategory);
         return { fixture: fixture.name, passed: !error, error: error || undefined, durationMs: Date.now() - start };
     } catch (err) {
@@ -210,6 +217,6 @@ const isMain = process.argv[1]?.endsWith('llm-benchmark.ts');
 if (isMain) {
     runBenchmark().catch((err) => {
         rootLogger.error('Benchmark failed: ' + (err as Error).message);
-        process.exit(1);
+        gracefulExit(ExitCode.ERROR);
     });
 }

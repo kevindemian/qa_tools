@@ -32,6 +32,7 @@ shared_docker/.selected_project
 *.csv
 *.html
 *.csv:Zone.Identifier
+.audit/
 
 # === Backup files ===
 *.bak

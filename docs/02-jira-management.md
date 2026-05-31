@@ -18,7 +18,7 @@
 - [8 — Publicar versão](#8--publicar-versão)
 - [9 — Alterar projeto Jira](#9--alterar-projeto-jira)
 - [10 — Alterar diretório git](#10--alterar-diretório-git)
-- [11 — Gerar template CSV](#11--gerar-template-csv)
+- [11 — Gerar template CSV/JSON](#11--gerar-template-csvjson)
 - [12 — Diagnosticar conexão](#12--diagnosticar-conexão)
 - [13 — Criar Test Execution](#13--criar-test-execution)
 - [14 — Alterar diretório Cypress](#14--alterar-diretório-cypress)
@@ -28,6 +28,9 @@
 - [18 — Gerar testes de user story (IA)](#18--gerar-testes-de-user-story-ia)
 - [19 — Histórico / Cobertura](#19--histórico--cobertura)
 - [20 — Criar Bug Report](#20--criar-bug-report)
+- [21 — Análise de gaps de cobertura](#21--análise-de-gaps-de-cobertura)
+- [22 — Impacto de mudanças (test impact)](#22--impacto-de-mudanças-test-impact)
+- [23 — Feedback de IA](#23--feedback-de-ia)
 
 ---
 
@@ -38,14 +41,14 @@ O menu é organizado em categorias com sub-menus:
 | Categoria                 | Opções                                                                                                                                                   |
 | ------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | GERAÇÃO DE RELATÓRIOS     | 17 — Gerar relatório HTML                                                                                                                                |
-| GERAÇÃO DE CASOS DE TESTE | 1 — Criar testes a partir de CSV, 13 — Criar Test Execution, 15 — Importar JSON, 18 — Gerar testes via IA                                                |
+| GERAÇÃO DE CASOS DE TESTE | 1 — Criar testes a partir de CSV, 11 — Gerar template, 13 — Criar Test Execution, 15 — Importar JSON, 18 — Gerar testes via IA                           |
 | BUG REPORT                | 20 — Criar Bug Report                                                                                                                                    |
-| ANÁLISE E HISTÓRICO       | 19 — Histórico / Cobertura                                                                                                                               |
+| ANÁLISE E HISTÓRICO       | 19 — Histórico / Cobertura, 21 — Gaps de cobertura, 22 — Test impact, 23 — Feedback de IA                                                                |
 | RELEASES                  | 2 — Listar versões, 3 — Criar versão, 4 — Atribuir fixVersion, 5 — Atualizar package.json, 6 — Verificar status, 7 — Fechar tarefas, 8 — Publicar versão |
-| CONFIGURAÇÃO              | 9 — Alterar projeto, 10 — Alterar diretório git, 14 — Alterar Cypress, 16 — Alterar JSON                                                                 |
-| UTILITÁRIOS               | 11 — Gerar template CSV, 12 — Diagnosticar conexão, d — Ver documentação                                                                                 |
+| CONFIGURAÇÃO              | 9 — Alterar projeto, 10 — Alterar diretório git, 12 — Diagnosticar conexão, 14 — Alterar Cypress, 16 — Alterar JSON                                      |
+| UTILITÁRIOS               | d — Ver documentação                                                                                                                                     |
 
-**Aliases disponíveis:** `criar` (1), `versoes` (2), `fechar` (7), `publicar` (8), `template` (11), `testexec` (13), `json` (15), `bug` (20), `docs` (d), entre outros.
+**Aliases disponíveis:** `criar` (1), `versoes` (2), `fechar` (7), `publicar` (8), `template` (11), `testexec` (13), `json` (15), `bug` (20), `gaps` ou `gap-analysis` (21), `impacto` ou `test-impact` (22), `ai-feedback` ou `feedback` (23), `docs` (d), entre outros.
 
 ---
 
@@ -259,9 +262,9 @@ Define o diretório do projeto git usado pela opção 5 para atualizar `package.
 
 ---
 
-### 11 — Gerar template CSV
+### 11 — Gerar template CSV/JSON
 
-Copia o arquivo `test_steps_template.csv` (modelo canônico com exemplos de todos os campos e formatos) para o caminho informado pelo usuário.
+Copia o arquivo `test_steps_template.csv` ou gera um JSON de exemplo (modelo canônico com exemplos de todos os campos e formatos) para o caminho informado pelo usuário.
 
 **Fluxo:**
 
@@ -454,7 +457,7 @@ Step 1 action,step 1 data,step 1 expected
 
 ## Fluxo de release recomendado
 
-1. **Opção 11** — Gere o template CSV como base.
+1. **Opção 11** — Gere o template CSV/JSON como base.
 2. **Opção 1** — Crie os testes no Jira a partir do CSV.
 3. **Opção 3** — Crie a versão da release.
 4. **Opção 4** — Atribua a versão às tarefas.
@@ -602,7 +605,7 @@ Todos os comandos podem ser acionados por alias textual (em vez do número):
 | `publicar`, `release`                         | `8`          | Publicar versão                  |
 | `trocar-projeto`, `projeto`, `c`              | `9`          | Alterar projeto Jira             |
 | `trocar-diretorio`, `diretorio`               | `10`         | Alterar diretório git            |
-| `template`, `gerar-template`, `u`             | `11`         | Gerar template CSV               |
+| `template`, `gerar-template`, `u`             | `11`         | Gerar template CSV/JSON          |
 | _(sem alias)_                                 | `12`         | Diagnosticar conexão             |
 | `testexec`, `criar-testexec`, `execucao`      | `13`         | Criar Test Execution             |
 | `diretorio-cypress`, `cypress`                | `14`         | Alterar diretório Cypress        |
@@ -612,6 +615,9 @@ Todos os comandos podem ser acionados por alias textual (em vez do número):
 | `us`, `estoria`, `historia`                   | `18`         | Gerar testes via User Story (IA) |
 | `cobertura`                                   | `19`         | Histórico / Cobertura            |
 | `bug`, `bug-report`, `bugreport`, `criar-bug` | `20`         | Criar Bug Report                 |
+| `gap-analysis`, `gaps`                        | `21`         | Análise de gaps de cobertura     |
+| `test-impact`, `impacto`                      | `22`         | Impacto de mudanças              |
+| `ai-feedback`, `feedback`                     | `23`         | Feedback de IA                   |
 | `d`, `documentacao`, `docs`                   | `docs`       | Ver documentação                 |
 | `voltar`                                      | `/menu`      | Voltar ao menu principal         |
 | `ajuda`, `help`                               | `/help`      | Ajuda                            |
@@ -640,6 +646,69 @@ Durante qualquer prompt de texto (não só no menu), os seguintes comandos `/` e
 Todas as operações são registradas em `~/.local/state/qa_tools_state.json` com timestamp, operação, detalhe e status. As últimas 50 operações ficam disponíveis. O menu exibe contadores de operações ok/erro da sessão atual.
 
 Digite `/history` no menu para visualizar as últimas 10 operações.
+
+---
+
+---
+
+### 21 — Análise de gaps de cobertura
+
+Analisa a cobertura de testes no projeto Jira, identificando issues sem testes associados, agrupando por Epic e gerando relatório HTML com indicadores visuais.
+
+**Fluxo:**
+
+1. Executa JQL para buscar todas as issues do projeto
+2. Busca links "is tested by" de cada issue
+3. Identifica issues sem nenhum teste vinculado (gaps)
+4. Converte relatório HTML com seções por tipo de issue e Epic
+5. Abre o relatório no navegador ou exibe resumo no terminal
+
+**Saída:** Arquivo HTML em `reports/coverage-gap-{timestamp}.html`
+
+| Alias          | Resolve para |
+| -------------- | ------------ |
+| `gap-analysis` | `21`         |
+| `gaps`         | `21`         |
+
+---
+
+### 22 — Impacto de mudanças (test impact)
+
+Analisa o impacto potencial de mudanças em issues Jira, identificando quais testes existentes podem ser afetados por alterações em requisitos ou código.
+
+**Fluxo:**
+
+1. Busca a issue alvo e suas linked issues
+2. Analisa relacionamentos de rastreabilidade (tests, blocks, relates to)
+3. Gera relatório com lista de testes potencialmente impactados
+4. Exibe resumo no terminal
+
+**Uso:** Execute após identificar uma issue que sofreu alteração significativa, para saber quais testes precisam ser revisados.
+
+| Alias         | Resolve para |
+| ------------- | ------------ |
+| `test-impact` | `22`         |
+| `impacto`     | `22`         |
+
+---
+
+### 23 — Feedback de IA
+
+Registra um feedback de análise de IA para uma issue Jira. Permite ao usuário fornecer uma avaliação qualitativa sobre a análise gerada pelo LLM, alimentando métricas de qualidade.
+
+**Fluxo:**
+
+1. Informe a issue Jira (ex: `ECSPOL-123`)
+2. Informe o tipo de feedback (positivo/negativo/neutro)
+3. Adicione um comentário explicativo
+4. A CLI registra o feedback no estado local para consulta futura
+
+**Saída:** O feedback é persistido em `~/.local/state/qa_tools_state.json` e exibido no sumário da sessão.
+
+| Alias         | Resolve para |
+| ------------- | ------------ |
+| `ai-feedback` | `23`         |
+| `feedback`    | `23`         |
 
 ---
 

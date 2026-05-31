@@ -64,8 +64,8 @@ describe('compareRuns', () => {
 
         await compareRuns(runAWithSecrets, runB);
 
-        const callArgs = mockLlmPrompt.mock.calls[0]!;
-        const userMsg = callArgs[2];
+        const callArgs = mockLlmPrompt.mock.calls[0]![0];
+        const userMsg = callArgs.user;
         expect(userMsg).not.toContain(secret);
     });
 
@@ -105,7 +105,7 @@ describe('compareRuns', () => {
         };
         mockLlmPrompt.mockResolvedValueOnce('sanitized response');
         await compareRuns(runWithSecret, runA);
-        const userArg = mockLlmPrompt.mock.calls[0]![2];
+        const userArg = mockLlmPrompt.mock.calls[0]![0].user;
         expect(typeof userArg).toBe('string');
         const sanitized = sanitizeForLlm(userArg);
         expect(sanitized).toBe(userArg);

@@ -51,7 +51,10 @@ describe('GitLabManager', () => {
         it('calls POST /pipeline, returns data', async () => {
             mockClient.post.mockResolvedValue({ data: { id: 1, web_url: 'https://...' } });
             const result = await manager.triggerPipeline({ ref: 'main', variables: [] });
-            expect(mockClient.post).toHaveBeenCalledWith('/pipeline', { ref: 'main', variables: [] });
+            expect(mockClient.post).toHaveBeenCalledWith('/projects/project-123/pipeline', {
+                ref: 'main',
+                variables: [],
+            });
             expect(result).toEqual({ id: 1, web_url: 'https://...' });
         });
 
@@ -67,7 +70,9 @@ describe('GitLabManager', () => {
         it('calls GET /pipeline_schedules with per_page=100', async () => {
             mockClient.get.mockResolvedValue({ data: [{ id: 1, description: 'Daily' }] });
             const result = await manager.getSchedules();
-            expect(mockClient.get).toHaveBeenCalledWith('/pipeline_schedules', { params: { per_page: 100 } });
+            expect(mockClient.get).toHaveBeenCalledWith('/projects/project-123/pipeline_schedules', {
+                params: { per_page: 100 },
+            });
             expect(result).toEqual([{ id: 1, description: 'Daily' }]);
         });
 
@@ -82,7 +87,7 @@ describe('GitLabManager', () => {
         it('calls POST /pipeline_schedules/{id}/play', async () => {
             mockClient.post.mockResolvedValue({ data: { id: 42 } });
             const result = await manager.runSchedule('42');
-            expect(mockClient.post).toHaveBeenCalledWith('/pipeline_schedules/42/play');
+            expect(mockClient.post).toHaveBeenCalledWith('/projects/project-123/pipeline_schedules/42/play');
             expect(result).toEqual({ id: 42 });
         });
 
@@ -98,14 +103,14 @@ describe('GitLabManager', () => {
         it('calls POST /merge_requests on success', async () => {
             mockClient.post.mockResolvedValue({ data: { iid: 10, web_url: 'https://...' } });
             const result = await manager.createMergeRequest(...args);
-            expect(mockClient.post).toHaveBeenCalledWith('/merge_requests', {
+            expect(mockClient.post).toHaveBeenCalledWith('/projects/project-123/merge_requests', {
                 id: 'project-123',
                 source_branch: 'feature',
                 target_branch: 'main',
                 title: 'MR Title',
                 description: 'MR Desc',
             });
-            expect(result).toEqual({ iid: 10, web_url: 'https://...' });
+            expect(result).toMatchObject({ iid: 10, web_url: 'https://...' });
         });
 
         it('handles 409 by searching and updating existing MR', async () => {
@@ -115,14 +120,14 @@ describe('GitLabManager', () => {
             mockClient.put.mockResolvedValue({ data: { iid: 5 } });
 
             const result = await manager.createMergeRequest(...args);
-            expect(mockClient.get).toHaveBeenCalledWith('/merge_requests', {
+            expect(mockClient.get).toHaveBeenCalledWith('/projects/project-123/merge_requests', {
                 params: { state: 'opened', source_branch: 'feature', target_branch: 'main', per_page: 100 },
             });
-            expect(mockClient.put).toHaveBeenCalledWith('/merge_requests/5', {
+            expect(mockClient.put).toHaveBeenCalledWith('/projects/project-123/merge_requests/5', {
                 title: 'MR Title',
                 description: 'MR Desc',
             });
-            expect(result).toEqual({ iid: 5 });
+            expect(result).toMatchObject({ iid: 5 });
         });
 
         it('re-throws on 409 when no existing MR found', async () => {
@@ -145,11 +150,11 @@ describe('GitLabManager', () => {
         it('calls PUT /merge_requests/{iid}', async () => {
             mockClient.put.mockResolvedValue({ data: { iid: 5 } });
             const result = await manager.updateMergeRequest('5', 'New Title', 'New Desc');
-            expect(mockClient.put).toHaveBeenCalledWith('/merge_requests/5', {
+            expect(mockClient.put).toHaveBeenCalledWith('/projects/project-123/merge_requests/5', {
                 title: 'New Title',
                 description: 'New Desc',
             });
-            expect(result).toEqual({ iid: 5 });
+            expect(result).toMatchObject({ iid: 5 });
         });
 
         it('throws on API error (mutation)', async () => {
@@ -162,8 +167,8 @@ describe('GitLabManager', () => {
         it('calls GET /merge_requests/{iid}', async () => {
             mockClient.get.mockResolvedValue({ data: { iid: 5, state: 'opened' } });
             const result = await manager.getMergeRequest('5');
-            expect(mockClient.get).toHaveBeenCalledWith('/merge_requests/5');
-            expect(result).toEqual({ iid: 5, state: 'opened' });
+            expect(mockClient.get).toHaveBeenCalledWith('/projects/project-123/merge_requests/5');
+            expect(result).toMatchObject({ iid: 5, state: 'opened' });
         });
 
         it('returns null on API error', async () => {
@@ -177,10 +182,12 @@ describe('GitLabManager', () => {
         it('calls GET /merge_requests with per_page=100', async () => {
             mockClient.get.mockResolvedValue({ data: [{ iid: 1 }, { iid: 2 }] });
             const result = await manager.searchMergeRequests('dev', 'main', 'opened');
-            expect(mockClient.get).toHaveBeenCalledWith('/merge_requests', {
+            expect(mockClient.get).toHaveBeenCalledWith('/projects/project-123/merge_requests', {
                 params: { state: 'opened', source_branch: 'dev', target_branch: 'main', per_page: 100 },
             });
-            expect(result).toEqual([{ iid: 1 }, { iid: 2 }]);
+            expect(result).toHaveLength(2);
+            expect(result[0]).toMatchObject({ iid: 1 });
+            expect(result[1]).toMatchObject({ iid: 2 });
         });
 
         it('returns [] on API error (read)', async () => {
@@ -196,11 +203,11 @@ describe('GitLabManager', () => {
             mockClient.put.mockResolvedValue({ data: { web_url: 'https://merge' } });
 
             const result = await manager.acceptMergeRequest('5');
-            expect(mockClient.get).toHaveBeenCalledWith('/merge_requests/5');
-            expect(mockClient.put).toHaveBeenCalledWith('/merge_requests/5/merge', {
+            expect(mockClient.get).toHaveBeenCalledWith('/projects/project-123/merge_requests/5');
+            expect(mockClient.put).toHaveBeenCalledWith('/projects/project-123/merge_requests/5/merge', {
                 should_remove_source_branch: true,
             });
-            expect(result).toEqual({ web_url: 'https://merge' });
+            expect(result).toMatchObject({ web_url: 'https://merge' });
         });
 
         it('returns early without PUT when already merged', async () => {
@@ -208,7 +215,7 @@ describe('GitLabManager', () => {
 
             const result = await manager.acceptMergeRequest('5');
             expect(mockClient.put).not.toHaveBeenCalled();
-            expect(result).toEqual({ iid: 5, state: 'merged', web_url: 'https://...' });
+            expect(result).toMatchObject({ iid: 5, state: 'merged', web_url: 'https://...' });
         });
 
         it('throws when MR not found', async () => {
@@ -229,7 +236,7 @@ describe('GitLabManager', () => {
             mockClient.put.mockResolvedValue({ data: {} });
 
             await manager.acceptMergeRequest('5', false);
-            expect(mockClient.put).toHaveBeenCalledWith('/merge_requests/5/merge', {
+            expect(mockClient.put).toHaveBeenCalledWith('/projects/project-123/merge_requests/5/merge', {
                 should_remove_source_branch: false,
             });
         });
@@ -239,7 +246,7 @@ describe('GitLabManager', () => {
         it('calls GET /pipelines with per_page and order_by', async () => {
             mockClient.get.mockResolvedValue({ data: [{ id: 1, ref: 'main', status: 'success' }] });
             const result = await manager.getRecentPipelines(3);
-            expect(mockClient.get).toHaveBeenCalledWith('/pipelines', {
+            expect(mockClient.get).toHaveBeenCalledWith('/projects/project-123/pipelines', {
                 params: { per_page: 3, order_by: 'updated_at' },
             });
             expect(result).toEqual([{ id: 1, ref: 'main', status: 'success' }]);
@@ -248,7 +255,7 @@ describe('GitLabManager', () => {
         it('defaults to count=5', async () => {
             mockClient.get.mockResolvedValue({ data: [] });
             await manager.getRecentPipelines();
-            expect(mockClient.get).toHaveBeenCalledWith('/pipelines', {
+            expect(mockClient.get).toHaveBeenCalledWith('/projects/project-123/pipelines', {
                 params: { per_page: 5, order_by: 'updated_at' },
             });
         });
@@ -264,7 +271,7 @@ describe('GitLabManager', () => {
         it('calls GET /pipelines/{id}', async () => {
             mockClient.get.mockResolvedValue({ data: { id: 42, status: 'success', web_url: 'https://...' } });
             const result = await manager.getPipeline('42');
-            expect(mockClient.get).toHaveBeenCalledWith('/pipelines/42');
+            expect(mockClient.get).toHaveBeenCalledWith('/projects/project-123/pipelines/42');
             expect(result).toEqual({ id: 42, status: 'success', web_url: 'https://...' });
         });
 
@@ -304,7 +311,7 @@ describe('GitLabManager', () => {
                 ],
             });
             const result = await manager.getPipelineJobs('42');
-            expect(mockClient.get).toHaveBeenCalledWith('/pipelines/42/jobs');
+            expect(mockClient.get).toHaveBeenCalledWith('/projects/project-123/pipelines/42/jobs');
             expect(result).toEqual([
                 { id: 101, name: 'test', stage: 'test', status: 'success' },
                 { id: 102, name: 'build', stage: 'build', status: 'success' },
@@ -351,7 +358,7 @@ describe('GitLabManager', () => {
                 headers: { 'content-disposition': 'attachment; filename="artifacts.zip"' },
             });
             const result = await manager.downloadArtifact('101');
-            expect(mockClient.get).toHaveBeenCalledWith('/jobs/101/artifacts', {
+            expect(mockClient.get).toHaveBeenCalledWith('/projects/project-123/jobs/101/artifacts', {
                 responseType: 'arraybuffer',
             });
             expect(Buffer.isBuffer(result.buffer)).toBe(true);
@@ -378,7 +385,7 @@ describe('GitLabManager', () => {
             mockClient.get.mockResolvedValue({ data: { approved: true } });
             const result = await manager.isApproved(42);
             expect(result).toBe(true);
-            expect(mockClient.get).toHaveBeenCalledWith('/merge_requests/42/approvals');
+            expect(mockClient.get).toHaveBeenCalledWith('/projects/project-123/merge_requests/42/approvals');
         });
 
         it('returns false when not approved', async () => {
@@ -398,7 +405,9 @@ describe('GitLabManager', () => {
         it('calls GET /variables with per_page=100', async () => {
             mockClient.get.mockResolvedValue({ data: [{ key: 'VAR1', value: 'val1' }] });
             const result = await manager.getCICDVariables();
-            expect(mockClient.get).toHaveBeenCalledWith('/variables', { params: { per_page: 100 } });
+            expect(mockClient.get).toHaveBeenCalledWith('/projects/project-123/variables', {
+                params: { per_page: 100 },
+            });
             expect(result).toEqual([{ key: 'VAR1', value: 'val1' }]);
         });
 
@@ -437,6 +446,82 @@ describe('GitLabManager', () => {
             });
             const result = await manager.getDiff('feature', 'main');
             expect(result).toBe('');
+        });
+    });
+
+    describe('getOpenIssues', () => {
+        const ISSUE_FIXTURE = {
+            iid: 42,
+            title: 'Test bug',
+            state: 'opened',
+            updated_at: '2026-01-01T00:00:00Z',
+            created_at: '2026-01-01T00:00:00Z',
+            labels: ['bug', 'critical'],
+            web_url: 'https://gitlab.test.com/project-123/-/issues/42',
+        };
+
+        it('returns formatted issues from GET /issues', async () => {
+            mockClient.get.mockResolvedValue({ data: [ISSUE_FIXTURE] });
+            const result = await manager.getOpenIssues();
+            expect(mockClient.get).toHaveBeenCalledWith('/projects/project-123/issues', {
+                params: { state: 'opened', per_page: 30 },
+            });
+            expect(result).toHaveLength(1);
+            expect(result[0]).toMatchObject({
+                number: 42,
+                title: 'Test bug',
+                state: 'opened',
+            });
+        });
+
+        it('returns [] on API error (read)', async () => {
+            mockClient.get.mockRejectedValue(new Error('API error'));
+            const result = await manager.getOpenIssues();
+            expect(result).toEqual([]);
+        });
+
+        it('returns [] when data is not an array', async () => {
+            mockClient.get.mockResolvedValue({ data: null });
+            const result = await manager.getOpenIssues();
+            expect(result).toEqual([]);
+        });
+
+        it('maps labels as flat strings', async () => {
+            const item = { ...ISSUE_FIXTURE, labels: ['bug', 'priority:high'] };
+            mockClient.get.mockResolvedValue({ data: [item] });
+            const result = await manager.getOpenIssues();
+            expect(result[0]!.labels).toEqual(['bug', 'priority:high']);
+        });
+
+        it('handles missing optional fields gracefully', async () => {
+            mockClient.get.mockResolvedValue({ data: [{ iid: 1 }] });
+            const result = await manager.getOpenIssues();
+            expect(result[0]!.title).toBe('');
+            expect(result[0]!.number).toBe(1);
+        });
+    });
+
+    describe('getJobLogs', () => {
+        it('returns truncated log text from GET /jobs/{id}/trace', async () => {
+            mockClient.get.mockResolvedValue({ data: 'line1\nline2\nline3\n' });
+            const result = await manager.getJobLogs(101);
+            expect(mockClient.get).toHaveBeenCalledWith('/projects/project-123/jobs/101/trace', {
+                responseType: 'text',
+            });
+            expect(result).toBe('line1\nline2\nline3\n');
+        });
+
+        it('truncates log to maxBytes', async () => {
+            const longLog = 'a'.repeat(100);
+            mockClient.get.mockResolvedValue({ data: longLog });
+            const result = await manager.getJobLogs(101, 10);
+            expect(result).toBe('a'.repeat(10));
+        });
+
+        it('returns null on API error', async () => {
+            mockClient.get.mockRejectedValue(new Error('Log not found'));
+            const result = await manager.getJobLogs(999);
+            expect(result).toBeNull();
         });
     });
 });

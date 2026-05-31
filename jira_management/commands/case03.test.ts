@@ -1,38 +1,18 @@
-jest.mock('../../shared/prompt', () => ({
-    warn: jest.fn(),
-    ask: jest.fn().mockResolvedValue(''),
-}));
+jest.mock('../../shared/prompt');
 
 jest.mock('../../shared/jira-helper', () => ({
     safeJiraCall: jest.fn(),
 }));
 
 import case03 from './case03';
+import { makeMockCommandContext } from '../../shared/test-utils';
 
 const mockJiraResource = {
     getProjectId: jest.fn().mockResolvedValue('123'),
     createVersion: jest.fn().mockResolvedValue({}),
 };
 
-const mockContext: Record<string, unknown> = {
-    jiraResource: mockJiraResource,
-    jiraResourceXray: {},
-    linkManager: {},
-    linkManagerXray: {},
-    csvResource: {},
-    ctx: {
-        project_name: 'TEST',
-        inMemoryTasksId: [],
-        inMemoryTasksText: [],
-        sessionCounters: [],
-        isBusy: false,
-        results: [],
-    },
-    pushHistory: jest.fn(),
-    printSessionSummary: jest.fn(),
-    base_url: 'https://jira.test.com',
-    sessionLog: { child: jest.fn().mockReturnValue({ info: jest.fn(), error: jest.fn(), warn: jest.fn() }) },
-};
+const mockContext = makeMockCommandContext({ jiraResource: mockJiraResource });
 
 beforeEach(() => {
     jest.clearAllMocks();

@@ -20,36 +20,13 @@ class CsvResource {
         return new Promise((resolve, reject) => {
             const results: CsvRow[] = [];
             const stream = Readable.from([csvString]);
-            const firstLine = csvString.split('\n')[0] ?? '';
-            const separator = CsvResource.detectSeparator(firstLine);
-
-            if (separator !== ',') {
-                rootLogger.warn(
-                    `CSV com separador "${separator}" detectado. ` +
-                        `Causa: Excel configurado para locale Português (separador padrão = ";"). ` +
-                        `Solução automática: parser ajustou para "${separator}".`,
-                );
-            }
-
+            const separator = this._detectAndWarnSeparator(csvString);
             const warnedHeaders = new Set<string>();
 
             stream
                 .pipe(csv({ separator }))
                 .on('data', (data: Record<string, string>) => {
-                    const nd: Record<string, string> = {};
-                    for (const [k, v] of Object.entries(data)) {
-                        const nk = normalizeFieldName(k);
-                        nd[nk] = sanitizeCellValue(v);
-                        if (nk !== k && !warnedHeaders.has(k)) {
-                            warnedHeaders.add(k);
-                            rootLogger.warn(
-                                `Coluna "${k}" normalizada para "${nk}". ` +
-                                    `Causa: nome de coluna não padronizado. ` +
-                                    `Solução: use "${nk}" no header do CSV. ` +
-                                    `Este aviso aparece apenas uma vez por nome de coluna.`,
-                            );
-                        }
-                    }
+                    const nd = this._normalizeCsvRow(data, warnedHeaders);
                     const parsed = CsvRowSchema.safeParse({
                         fields: {
                             Action: nd.Action || '',
@@ -189,11 +166,66 @@ class CsvResource {
 
     static readonly FLAT_CSV_PATTERNS = [/^Title,Action/i, /^Action,/i];
 
+    private _detectAndWarnSeparator(csvString: string): string {
+        const firstLine = csvString.split('\n')[0] ?? '';
+        const separator = CsvResource.detectSeparator(firstLine);
+        if (separator !== ',') {
+            rootLogger.warn(
+                `CSV com separador "${separator}" detectado. ` +
+                    `Causa: Excel configurado para locale Português (separador padrão = ";"). ` +
+                    `Solução automática: parser ajustou para "${separator}".`,
+            );
+        }
+        return separator;
+    }
+
+    private _normalizeCsvRow(data: Record<string, string>, warnedHeaders: Set<string>): Record<string, string> {
+        const nd: Record<string, string> = {};
+        for (const [k, v] of Object.entries(data)) {
+            const nk = normalizeFieldName(k);
+            nd[nk] = sanitizeCellValue(v);
+            if (nk !== k && !warnedHeaders.has(k)) {
+                warnedHeaders.add(k);
+                rootLogger.warn(
+                    `Coluna "${k}" normalizada para "${nk}". ` +
+                        `Causa: nome de coluna não padronizado. ` +
+                        `Solução: use "${nk}" no header do CSV. ` +
+                        `Este aviso aparece apenas uma vez por nome de coluna.`,
+                );
+            }
+        }
+        return nd;
+    }
+
+    private _parseBulkCsvTitle(lines: string[]): string | null {
+        const titleLine = lines.find((l) => l.startsWith('Title:'));
+        if (!titleLine) return null;
+        return titleLine.replace('Title:', '').trim();
+    }
+
+    private async _buildBulkCsvTestResult(
+        csvString: string,
+        title: string,
+        description: string,
+        precValue: string | null,
+        lines: string[],
+    ): Promise<TestCase> {
+        const steps = await this.readCsvFromString(csvString);
+        return {
+            title,
+            description,
+            precondition: this.parsePrecondition(precValue) ?? undefined,
+            linkedIssues: this.parseLinkedIssues(lines),
+            group: this.parseGroup(lines) ?? undefined,
+            steps,
+        };
+    }
+
     private async _processBulkCsvBlock(block: string, results: TestCase[]): Promise<void> {
         const lines = block.split('\n').map((l) => l.trim());
 
-        const titleLine = lines.find((l) => l.startsWith('Title:'));
-        if (!titleLine) {
+        const title = this._parseBulkCsvTitle(lines);
+        if (!title) {
             const isFlat = CsvResource.FLAT_CSV_PATTERNS.some((p) => lines[0] && p.test(lines[0]));
             if (isFlat) {
                 rootLogger.warn(
@@ -207,8 +239,6 @@ class CsvResource {
             }
             return;
         }
-
-        const title = titleLine.replace('Title:', '').trim();
 
         const descIndex = lines.findIndex((l) => l.startsWith('Description:'));
         const { description, descEndIndex } =
@@ -225,16 +255,8 @@ class CsvResource {
         const csvString = this._filterBulkCsvLines(lines, descIndex, descEndIndex, precIndex, precEndIndex);
 
         try {
-            const steps = await this.readCsvFromString(csvString);
-
-            results.push({
-                title,
-                description,
-                precondition: this.parsePrecondition(precValue) ?? undefined,
-                linkedIssues: this.parseLinkedIssues(lines),
-                group: this.parseGroup(lines) ?? undefined,
-                steps,
-            });
+            const testCase = await this._buildBulkCsvTestResult(csvString, title, description, precValue, lines);
+            results.push(testCase);
         } catch (error: unknown) {
             const err = error as Error;
             rootLogger.error(`Erro ao analisar bloco CSV "${title}": ${err.message}`);

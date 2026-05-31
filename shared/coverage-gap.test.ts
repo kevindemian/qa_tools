@@ -26,6 +26,8 @@ function makeIssue(key: string, overrides?: Record<string, unknown>): { key: str
 
 beforeEach(() => {
     jest.clearAllMocks();
+    mockSearch.mockReset();
+    mockSearch.mockResolvedValue({ issues: [], total: 0 });
     require('./metrics').loadMetrics.mockReturnValue({ runs: [], coverageHistory: [] });
 });
 
@@ -272,5 +274,62 @@ describe('analyzeCoverageGaps', () => {
         const result = await analyzeCoverageGaps(mockJiraResource as never, 'PROJ');
         expect(result.trends).toHaveLength(1);
         expect(result.trends[0]!.coveragePct).toBe(50);
+    });
+
+    it('handles fetchLinkedTestsBatch error (lines 84-85)', async () => {
+        mockSearch
+            .mockResolvedValueOnce({ issues: [], total: 1 })
+            .mockResolvedValueOnce({ issues: [makeIssue('PROJ-1')], total: 1 })
+            .mockRejectedValueOnce(new Error('Linked tests fetch failed'));
+        const result = await analyzeCoverageGaps(mockJiraResource as never, 'PROJ');
+        expect(result.totals.totalIssues).toBe(1);
+        expect(result.items[0]!.linkedTestKeys).toEqual([]);
+    });
+
+    it('handles fetchLinkedTestsBatch empty response (line 68)', async () => {
+        mockSearch
+            .mockResolvedValueOnce({ issues: [], total: 1 })
+            .mockResolvedValueOnce({ issues: [makeIssue('PROJ-1')], total: 1 })
+            .mockResolvedValueOnce({ total: 0 });
+        const result = await analyzeCoverageGaps(mockJiraResource as never, 'PROJ');
+        expect(result.items[0]!.linkedTestKeys).toEqual([]);
+    });
+
+    it('handles collectAllPages with empty issues batch (line 43)', async () => {
+        mockSearch
+            .mockResolvedValueOnce({ issues: [], total: 0 })
+            .mockResolvedValueOnce({ issues: [], total: 0 })
+            .mockResolvedValueOnce({ issues: [], total: 0 });
+        const result = await analyzeCoverageGaps(mockJiraResource as never, 'PROJ');
+        expect(result.totals.totalIssues).toBe(0);
+    });
+
+    it('handles linked tests with issuelinks on issue (lines 70-83)', async () => {
+        mockSearch
+            .mockResolvedValueOnce({ issues: [], total: 2 })
+            .mockResolvedValueOnce({
+                issues: [
+                    makeIssue('PROJ-1', {
+                        issuelinks: [{ type: { name: 'Test' }, inwardIssue: { key: 'TEST-1' } }],
+                    }),
+                    makeIssue('PROJ-2', {
+                        issuelinks: [
+                            { type: { name: 'Test' }, outwardIssue: { key: 'TEST-2' }, inwardIssue: { key: 'PROJ-2' } },
+                        ],
+                    }),
+                ],
+                total: 2,
+            })
+            .mockResolvedValueOnce({ issues: [], total: 0 });
+        const result = await analyzeCoverageGaps(mockJiraResource as never, 'PROJ');
+        expect(result.totals.covered).toBe(2);
+    });
+
+    it('handles collectAllPages catch error (lines 53-54)', async () => {
+        mockSearch
+            .mockResolvedValueOnce({ issues: [], total: 1 })
+            .mockRejectedValueOnce(new Error('collect pages error'));
+        const result = await analyzeCoverageGaps(mockJiraResource as never, 'PROJ');
+        expect(result.totals.totalIssues).toBe(0);
     });
 });

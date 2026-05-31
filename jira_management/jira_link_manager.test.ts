@@ -291,6 +291,7 @@ describe('JiraLinkManager', () => {
 
     describe('createPrecondition', () => {
         it('creates a new precondition and returns its key', async () => {
+            mockJiraResource.searchJiraIssues.mockResolvedValue({ issues: [], total: 0, startAt: 0, maxResults: 5 });
             mockJiraResource.getJiraResource.mockResolvedValue([{ id: '11801', name: 'Pre-condition' }]);
             mockJiraResource.postJiraResource.mockResolvedValue({ key: 'ECSPOL-NEW-1' });
             const key = await manager.createPrecondition('ECSPOL', 'User must be admin');
@@ -344,19 +345,19 @@ describe('JiraLinkManager', () => {
             mockJiraResource.getJiraResource.mockResolvedValue({
                 fields: { issuetype: { name: 'Test Execution' } },
             });
-            await expect(manager.validateTestExecutionKey('TE-1')).resolves.toBeUndefined();
+            await expect(manager.validateTestExecutionKey('TE-1')).resolves.toBe(true);
         });
 
-        it('throws when issue is not found', async () => {
+        it('returns false when issue is not found', async () => {
             mockJiraResource.getJiraResource.mockResolvedValue({ fields: {} });
-            await expect(manager.validateTestExecutionKey('MISSING')).rejects.toThrow('não encontrada');
+            await expect(manager.validateTestExecutionKey('MISSING')).resolves.toBe(false);
         });
 
-        it('throws when issue type is not Test Execution', async () => {
+        it('returns false when issue type is not Test Execution', async () => {
             mockJiraResource.getJiraResource.mockResolvedValue({
                 fields: { issuetype: { name: 'Bug' } },
             });
-            await expect(manager.validateTestExecutionKey('BUG-1')).rejects.toThrow('não é uma Test Execution');
+            await expect(manager.validateTestExecutionKey('BUG-1')).resolves.toBe(false);
         });
     });
 

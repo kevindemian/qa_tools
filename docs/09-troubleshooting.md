@@ -13,7 +13,7 @@ ERR  Erro de conexão: ECONNREFUSED
 **Solução**:
 
 1. Verifique `.env`: `JIRA_BASE_URL` deve ser a URL base do Jira Server (ex.: `https://jira.empresa.com`)
-2. Teste com a opção 12 "Diagnosticar conexão"
+2. Teste com a opção 12 "Diagnosticar conexão" (menu CONFIGURAÇÃO)
 3. Confirme que o token em `JIRA_PERSONAL_TOKEN` é válido
 
 ## Token inválido / 401
@@ -28,7 +28,7 @@ ERR  Token inválido ou expirado — Sem permissão (401)
 
 1. Gere um novo token em **Perfil Jira → Personal Access Tokens**
 2. Atualize `JIRA_PERSONAL_TOKEN` no `.env`
-3. Teste com opção 12
+3. Teste com opção 12 (menu CONFIGURAÇÃO)
 
 ## Erro ao criar issues — "Issue type not found"
 

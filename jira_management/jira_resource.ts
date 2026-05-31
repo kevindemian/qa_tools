@@ -1,7 +1,7 @@
-/** Jira REST API client — wraps axios with project scoping, version cache, and typed GET/POST operations. */
-import { createHttpClient } from '../shared/http-client';
+/** Jira REST API client — extends shared JiraClient with project/version/sprint operations. */
+import JiraClient from '../shared/jira-client';
 import { extractErrorMessage } from '../shared/prompt';
-import { Logger, rootLogger } from '../shared/logger';
+import { Logger } from '../shared/logger';
 import {
     getProjectId as versionGetProjectId,
     getProjectVersions as versionGetProjectVersions,
@@ -23,30 +23,13 @@ import {
 import type { JsonObject } from '../shared/types';
 import type { VersionData, JiraIssue, SearchResponse, JiraResourceLike } from './jira-resource-types';
 
-/** Facade over Jira REST API — delegates to resource-specific modules. */
-class JiraResource implements JiraResourceLike {
-    baseUrl: string;
-    /** Origin URL extraído do baseUrl (scheme + host, sem path).
-     * Usado por {@link getFromOriginPath} para endpoints que vivem fora do path do baseUrl
-     * (ex: Xray Raven API em `/rest/raven/1.0/` vs Jira API em `/rest/api/2/`). */
-    originUrl: string;
-    personalToken: string;
-    axiosInstance: ReturnType<typeof createHttpClient>;
+/** Facade over Jira REST API — delegates to resource-specific modules.
+ *  Extends the base JiraClient (shared) with project version and sprint management. */
+class JiraResource extends JiraClient implements JiraResourceLike {
     log: Logger;
 
-    /**
-     * @param personalToken - Bearer token for Jira API authentication.
-     * @param baseUrl       - Jira instance base URL (e.g. `https://your-domain.atlassian.net`).
-     */
     constructor(personalToken: string, baseUrl: string) {
-        this.baseUrl = baseUrl;
-        this.personalToken = personalToken;
-        const parsed = new URL(baseUrl);
-        this.originUrl = parsed.origin;
-        this.axiosInstance = createHttpClient({
-            baseUrl,
-            authHeader: { Authorization: `Bearer ${personalToken}` },
-        });
+        super(personalToken, baseUrl);
         this.log = new Logger({ resource: 'JiraAPI' });
     }
 
@@ -70,48 +53,6 @@ class JiraResource implements JiraResourceLike {
     }
 
     /**
-     * HTTP GET to a Jira API path.
-     * @param resourceUrl - Path relative to base URL (e.g. `issue/PROJ-123`).
-     * @returns Response body typed as `T` (default `JsonObject`).
-     * @throws On network / non-2xx — raw axios error propagates.
-     */
-    async getJiraResource<T = JsonObject>(resourceUrl: string): Promise<T> {
-        try {
-            const response = await this.axiosInstance.get<T>(`/${resourceUrl}`);
-            return response.data;
-        } catch (err) {
-            rootLogger.error('GET ' + resourceUrl + ' failed: ' + (err as Error).message);
-            throw err;
-        }
-    }
-
-    /**
-     * HTTP GET to an absolute path from the server origin.
-     * Útil para endpoints que NÃO estão sob o path do baseUrl (ex: Xray Raven API).
-     * Constrói a URL a partir de `originUrl + path`, ignorando o path do baseUrl.
-     *
-     * @example
-     *   baseUrl = 'https://jira.euronext.com/rest/api/2'
-     *   getFromOriginPath('rest/raven/1.0/api/test/ECSPOL-1255/testruns')
-     *   → GET https://jira.euronext.com/rest/raven/1.0/api/test/ECSPOL-1255/testruns ✅
-     *   (getJiraResource geraria duplo /rest/ via axios baseURL)
-     *
-     * @param path - Path absoluto do servidor (ex: `rest/raven/1.0/api/...`).
-     * @returns Response body typed as `T`.
-     * @throws On network / non-2xx.
-     */
-    async getFromOriginPath<T = JsonObject>(path: string): Promise<T> {
-        const url = `${this.originUrl}/${path.startsWith('/') ? path.slice(1) : path}`;
-        try {
-            const response = await this.axiosInstance.get<T>(url);
-            return response.data;
-        } catch (err) {
-            rootLogger.error('GET from origin ' + path + ' failed: ' + (err as Error).message);
-            throw err;
-        }
-    }
-
-    /**
      * HTTP POST to a Jira API path.
      * @param resourceUrl - Path relative to base URL.
      * @param data        - Request payload.
@@ -128,27 +69,6 @@ class JiraResource implements JiraResourceLike {
             opLog.error(`Erro POST /${resourceUrl}: ${extractErrorMessage(err)}`, {
                 status: axiosErr.response?.status,
                 resourceUrl,
-            });
-            throw err;
-        }
-    }
-
-    /**
-     * HTTP PUT to a Jira API path.
-     * @param resourceUrl - Path relative to base URL.
-     * @param data        - Request payload.
-     * @returns Response body typed as `T`, or `null` on HTTP 204.
-     * @throws On network / non-2xx — error is logged and re-thrown.
-     */
-    async putJiraResource<T = JsonObject>(resourceUrl: string, data: unknown): Promise<T | null> {
-        try {
-            const response = await this.axiosInstance.put<T>(`/${resourceUrl}`, data);
-            return response.status === 204 ? null : response.data;
-        } catch (err: unknown) {
-            const axiosErr = err as { response?: { status?: number } };
-            this.log.error(`Erro PUT /${resourceUrl}: ${extractErrorMessage(err)}`, {
-                resourceUrl,
-                status: axiosErr.response?.status,
             });
             throw err;
         }

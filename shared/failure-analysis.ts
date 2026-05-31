@@ -96,7 +96,13 @@ export async function classifyFailure(title: string, error: string): Promise<str
     const baseData = 'Test Title:\n' + title + '\n\nError:\n' + sanitizeForLlm(error);
 
     try {
-        const result = await llmPrompt('fast', systemTemplate, baseData, 'classify', undefined, ClassifyResponseSchema);
+        const result = await llmPrompt({
+            tier: 'fast',
+            system: systemTemplate,
+            user: baseData,
+            callerId: 'classify',
+            schema: ClassifyResponseSchema,
+        });
         return result;
     } catch {
         rootLogger.warn('classifyFailure: llmPrompt + Zod validation failed, falling back to UNKNOWN');

@@ -1,13 +1,12 @@
 import { info } from '../shared/prompt';
-import type { JsonObject } from '../shared/types';
-import type JiraResource from './jira_resource';
+import type { JsonObject, JiraResourceLike } from '../shared/types';
 import type { LinkTypeManager } from './link-types';
 
 export class LinkOperations {
-    private readonly jiraResource: JiraResource;
+    private readonly jiraResource: JiraResourceLike;
     private readonly linkTypeManager: LinkTypeManager;
 
-    constructor(jiraResource: JiraResource, linkTypeManager: LinkTypeManager) {
+    constructor(jiraResource: JiraResourceLike, linkTypeManager: LinkTypeManager) {
         this.jiraResource = jiraResource;
         this.linkTypeManager = linkTypeManager;
     }

@@ -10,7 +10,7 @@ import os from 'os';
 import Config from './config';
 import { rootLogger } from './logger';
 import { safeParseJson } from './safe-json';
-import type { LlmTier } from './llm-client';
+import type { LlmTier } from './types';
 import { getLlmClientMetrics, resetLlmClientMetrics } from './llm-client';
 
 /** Snapshot of all LLM telemetry at a point in time. Persisted to disk for
@@ -49,8 +49,8 @@ function loadStore(): StoredMetrics {
         const p = storePath();
         if (!fs.existsSync(p)) return { snapshots: [] };
         return safeParseJson<StoredMetrics>(fs.readFileSync(p, 'utf8'), { snapshots: [] });
-    } catch {
-        rootLogger.warn('Failed to load LLM metrics from disk, returning empty store');
+    } catch (err: unknown) {
+        rootLogger.warn('Failed to load LLM metrics from disk: ' + (err as Error).message);
         return { snapshots: [] };
     }
 }

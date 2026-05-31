@@ -1,15 +1,10 @@
-# Backlog — Débitos Técnicos
+# Backlog — Histórico de Implementação
 
-Issues registradas durante refatorações, postergadas por escopo.
+> **ORIENTAÇÃO**: Este arquivo contém **APENAS** tarefas concluídas, organizadas por sessão/sprint.
+> Tarefas pendentes ou em andamento estão em [`BACKLOG.md`](BACKLOG.md).
+> Ao concluir um item do backlog, mova-o para a seção apropriada deste arquivo imediatamente.
 
-## Critério de prioridade
-
-- **P0**: Bloqueia CI ou funcionalidade crítica
-- **P1**: Impacto alto em manutenibilidade, risco médio
-- **P2**: Melhoria desejável, baixo risco
-- **P3**: Nice-to-have, oportunidade futura
-
----
+Issues registradas durante refatorações, postergadas por escopo, e concluídas em sprints anteriores.
 
 ## ✅ Concluídos (sessões anteriores)
 
@@ -1290,3 +1285,350 @@ Usa lib `yaml` (AST nativa) em vez de template strings. Vantagens:
 | Framework detection | `detector.ts` lê `package.json` devDependencies                   | Zero config, 100% determinístico                                       |
 | Pre-push hook       | Shell script em `.git/hooks/pre-push`                             | Git hook nativo, funciona offline                                      |
 | Config output       | `config/projects.json` + `.env.example` (append, não sobrescreve) | Seguro para projetos que já têm config                                 |
+
+---
+
+## ✅ Produção — Bugs P1-P5 corrigidos ✅
+
+| Bug | Descrição                                                                       | Correção                                    | Arquivos                                                                                                            |
+| --- | ------------------------------------------------------------------------------- | ------------------------------------------- | ------------------------------------------------------------------------------------------------------------------- |
+| P1  | Step field name mismatch: `ExpectedResult` vs `Expected Result`                 | Renomeado type + 28 consumidores            | `shared/types.ts`, `xray-client.ts`, `import-prep.ts`, `mapping-file-generator.ts`, `csv-import-schema.ts`, 7 tests |
+| P2  | Retry 429 insuficiente: 5 retries/30s max → 10 retries/120s max + `Retry-After` | Enhanced backoff + `setTestSleep` p/ testes | `shared/http-client.ts`, `http-client.test.ts`, `csv-import-errors.test.ts`                                         |
+| P3  | Xray History URL malformed: duplo `/rest/`                                      | `getFromOriginPath` em `JiraResource`       | `jira_resource.ts`, `xray-history.ts`, `xray-history.test.ts`                                                       |
+| P4  | Step #3 perdido por rate limit                                                  | Resolvido por P2 (retry robusto cobre)      | —                                                                                                                   |
+| P5  | CTRF report usa fixture hardcoded                                               | Path configurável via `--ctrf=` CLI         | `e2e/gen-report.ts`, `gen-report-complete.ts`                                                                       |
+| —   | Link type fallback IDs errados (10201→10600 para `Tests`)                       | Atualizado `FALLBACK_LINK_TYPES`            | `jira_link_manager.ts`                                                                                              |
+
+## ✅ Fase 1 — U1 Breadcrumbs ✅
+
+| Item                    | Status |
+| ----------------------- | ------ |
+| `shared/breadcrumbs.ts` | ✅     |
+| Modificar `title()`     | ✅     |
+| push/pop em `main.ts`   | ✅     |
+| Testes unitários (6)    | ✅     |
+
+## ✅ Fase 2 — I6 Import Tracker CI ✅
+
+| Item              | Status |
+| ----------------- | ------ |
+| package.json lint | ✅     |
+
+## ✅ Fase 3 — LLM-19 Token Hard Limits ✅
+
+| Item                       | Status |
+| -------------------------- | ------ |
+| `Config.llmMaxTotalTokens` | ✅     |
+| `_checkTotalTokenLimit()`  | ✅     |
+| Testes (3)                 | ✅     |
+
+---
+
+## ✅ Reporting — Melhorias Pós-e2e ✅
+
+| #   | Item                                                              | Prioridade | Status | Arquivos                                        |
+| --- | ----------------------------------------------------------------- | ---------- | ------ | ----------------------------------------------- |
+| 1   | **BUG**: Botão "Toggle Passed" altera texto do botão "Export CSV" | P0         | ✅     | `shared/report-generator.ts`                    |
+| 2   | **BUG**: CSV Export ignora colunas Suite/Error/History            | P0         | ✅     | `shared/report-generator.ts`                    |
+| 3   | **BUG**: CSV Export não respeita filtro de busca                  | P0         | ✅     | `shared/report-generator.ts`                    |
+| 4   | **Melhoria**: Tema light/dark/system + botão toggle no HTML       | P1         | ✅     | `shared/report-generator.ts`                    |
+| 5   | **Melhoria**: `ReportOptions.theme` p/ forçar tema na geração     | P1         | ✅     | `shared/report-generator.ts`                    |
+| 6   | **Testes**: toggle function, csv export, theme script             | P1         | ✅     | `shared/report-generator.test.ts`               |
+| 7   | **Documentação**: TSDoc em `report-generator.ts` + `theme.ts`     | P2         | ✅     | `shared/report-generator.ts`, `shared/theme.ts` |
+
+## ✅ Pre-conditions + LLM Test Generation (dual-threshold assimétrico) ✅
+
+| #   | Item                                                                                                                                                 | Prioridade | Status | Arquivos                                           |
+| --- | ---------------------------------------------------------------------------------------------------------------------------------------------------- | ---------- | ------ | -------------------------------------------------- |
+| 1   | Tipos `PreConditionSummary` + `PreConditionMatchResult` (inalterados)                                                                                | P1         | ✅     | `shared/types.ts`                                  |
+| 2   | `matchPreconditionByTokenOverlap()` (existente) + **novo** `matchPreconditionByDualThreshold()`: 0.5 admissão, 0.7 confirmação, assimétrico 0.5-0.69 | P1         | ✅     | `jira_management/jira_link_manager.ts`, `.test.ts` |
+| 3   | `user-story-to-tests.md` — removido `{preconditions}`, LLM sempre usa `type:'create'` + summary                                                      | P1         | ✅     | `shared/prompts/user-story-to-tests.md`            |
+| 4   | `case18.ts` — eliminada small LLM + injeção PCs. Adicionado `gatherInput()`, `createMissingPreconditions()`, `writeTestOutput()` + pós-processamento | P1         | ✅     | `jira_management/commands/case18.ts`               |
+| 5   | Tests: 15 em `case18.test.ts` + 11 em `jira_link_manager.test.ts` (dual-threshold)                                                                   | P1         | ✅     | `*.test.ts`                                        |
+
+## ✅ P1 — Reports Gold Standard Upgrade (3 sprints) ✅
+
+Elevar reports ao nível Allure (padrão ouro mercado). 3 sprints independentes.
+
+### Sprint 1 — Trend + Hierarchy + Timeline
+
+| #   | Item                  | Descrição                                                                   | Esforço | Status | Arquivos                            |
+| --- | --------------------- | --------------------------------------------------------------------------- | ------- | ------ | ----------------------------------- |
+| R1  | **Trend Chart SVG**   | Gráfico de linha pass rate × tempo consumindo `getTrends()` do `metrics.ts` | 4h      | ✅     | `report-generator.ts`, `metrics.ts` |
+| R2  | **Hierarchy sidebar** | Árvore Feature > Suite do `fullTitle` com click para filtrar tabela         | 6h      | ✅     | `report-generator.ts`               |
+| R3  | **Timeline view**     | Barras horizontais: duração + status + ordem                                | 3h      | ✅     | `report-generator.ts`               |
+| R4  | Testes (R1-R3)        | Snapshot + render condicional + edge cases                                  | 2h      | ✅     | `report-generator.test.ts`          |
+
+### Sprint 2 — Steps + Attachments + Coverage HTML
+
+| #   | Item                     | Descrição                                                         | Esforço | Status |
+| --- | ------------------------ | ----------------------------------------------------------------- | ------- | ------ |
+| R5  | **Steps expansíveis**    | Detalhe colapsável por teste com steps (Action + Expected Result) | 3h      | ✅     |
+| R6  | **Attachments**          | Screenshots inline + logs colapsáveis                             | 3h      | ✅     |
+| R7  | **Coverage HTML report** | `generateCoverageHtml()` — tabela de issues grouped by epic       | 2h      | ✅     |
+| R8  | Testes (R5-R7)           | 2h                                                                | ✅      |
+
+### Sprint 3 — Polimento + Publicação
+
+| #   | Item                            | Descrição                                                    | Esforço | Status |
+| --- | ------------------------------- | ------------------------------------------------------------ | ------- | ------ |
+| R9  | **Flakiness dark mode + trend** | dark mode CSS + mini trend chart no dashboard                | 1h      | ✅     |
+| R10 | **Known issues**                | Config `known-issues.json` — falhas conhecidas suprimidas    | 2h      | ✅     |
+| R11 | **Multi-environment**           | Abas comparando 2+ runs lado a lado                          | 4h      | ✅     |
+| R12 | **PDF export**                  | CSS `@media print` + botão "Export PDF" via `window.print()` | 1h      | ✅     |
+| R13 | **Auto-publish**                | Flag `--publish s3\|gh-pages`                                | 2h      | ✅     |
+| R14 | Testes (R9-R13)                 | 3h                                                           | ✅      |
+
+---
+
+## ✅ P2 — Documentar código (TSDoc exports + module headers) ✅
+
+| Fase | Layer                      | Arquivos                                               | Status |
+| ---- | -------------------------- | ------------------------------------------------------ | ------ |
+| 1    | shared/ core               | logger, config, state, http-client, prompt             | ✅     |
+| 2    | shared/ util               | result_parser, markdown, report-generator, etc.        | ✅     |
+| 3    | jira_management/ resources | jira_link_manager, result_reporter, etc.               | ✅     |
+| 4    | jira_management/ commands  | case01-case20 + context + create_tests                 | ✅     |
+| 5    | git_triggers/              | github_manager, gitlab_manager, pipeline-handler, main | ✅     |
+
+## ✅ Test Execution Flow — Associar a TE existente + Preview unificada ✅
+
+| #   | Item                                                                                                  | Prioridade | Status | Arquivos                                                          |
+| --- | ----------------------------------------------------------------------------------------------------- | ---------- | ------ | ----------------------------------------------------------------- |
+| 1   | Type: `TestExecutionSummary`                                                                          | P1         | ✅     | `shared/types.ts`                                                 |
+| 2   | Service: `JiraLinkManager.listTestExecutions(project)` — JQL busca TEs + validação `GET /issue/{key}` | P1         | ✅     | `jira_management/jira_link_manager.ts`                            |
+| 3   | Refactor: `_linkTestsToExecution()` extraído p/ compartilhar entre criação nova e existente           | P1         | ✅     | `jira_management/test-execution-creator.ts`                       |
+| 4   | Service: `addTestsToExistingExecution(teKey, testKeys)` — custom field + issue links em TE existente  | P1         | ✅     | `jira_management/test-execution-creator.ts`                       |
+| 5   | New module: `commands/test-execution-flow.ts` — `offerTestExecutionAssociation()` + `showResults()`   | P1         | ✅     | `jira_management/commands/test-execution-flow.ts`                 |
+| 6   | Handler: `case01.ts` — substituir prompt inline por `offerTestExecutionAssociation()`                 | P1         | ✅     | `jira_management/commands/case01.ts`                              |
+| 7   | Handler: `case13.ts` — usar `showResults()` compartilhado                                             | P2         | ✅     | `jira_management/commands/case13.ts`                              |
+| 8   | Handler: `case15.ts` — substituir prompt inline por `offerTestExecutionAssociation()`                 | P1         | ✅     | `jira_management/commands/case15.ts`                              |
+| 9   | Handler: `case18.ts` — adicionar `offerTestExecutionAssociation()` após gerar testes                  | P1         | ✅     | `jira_management/commands/case18.ts`                              |
+| 10  | Tests: `test-execution-creator.test.ts`, `jira_link_manager.test.ts`, `test-execution-flow.test.ts`   | P1         | ✅     | Vários                                                            |
+| 11  | Cleanup: `commands/helpers.ts` — remover `createTestExecutionWithLinksWrapper` (substituído por flow) | P1         | ✅     | `jira_management/commands/helpers.ts`, `commands/helpers.test.ts` |
+
+### ✅ P1 — Elevar cobertura de arquivos críticos < 90% ✅
+
+| Item                                                  | Status |
+| ----------------------------------------------------- | ------ |
+| `git_triggers/main.ts`                                | ✅     |
+| `jira_management/commands/case17.ts`                  | ✅     |
+| `jira_management/main.ts`                             | ✅     |
+| `git_triggers/pipeline-handler.ts`                    | ✅     |
+| `shared/prompt-input.ts`                              | ✅     |
+| `shared/open.ts`                                      | ✅     |
+| `shared/markdown.ts`                                  | ✅     |
+| `shared/llm-client.ts`                                | ✅     |
+| `shared/splash.ts`                                    | ✅     |
+| `shared/report-generator.ts`                          | ✅     |
+| `git_triggers/batch-mode.ts`                          | ✅     |
+| Novos módulos: `publish.ts`, `test-execution-flow.ts` | ✅     |
+
+### ✅ P0 — User docs desatualizadas (gap docs vs código) ✅
+
+| Item                                                  | Status | Esforço |
+| ----------------------------------------------------- | ------ | ------- |
+| Batch 1: README + 5 docs (incorretos/críticos)        | ✅     | 2h      |
+| Batch 2: Aliases, comandos especiais, UX features     | ✅     | 1h      |
+| Batch 3: Documentar `setup/` wizard (doc #10) + fluxo | ✅     | 2h      |
+
+### ✅ P1 — JSDoc/TSDoc documentation gaps (audit 2026-05-28) ✅
+
+| Item                                                                | Status |
+| ------------------------------------------------------------------- | ------ |
+| Batch 1: `bug-report.ts` (null rationale) + 4 small files zero doc  | ✅     |
+| Batch 2: `llm-metrics.ts` + `entry-menu.ts`                         | ✅     |
+| Batch 3: `markdown.ts` (module doc) + `create_tests.ts` (SRP break) | ✅     |
+| Batch 4: handler JSDoc (`pipeline-handler`, `mr-handler`, caseXX)   | ✅     |
+
+### ✅ P2 — Handler test files ✅
+
+| Item                                                                      | Status |
+| ------------------------------------------------------------------------- | ------ |
+| `shared/theme.test.ts` exists                                             | ✅     |
+| `jira_management/commands/handlers.test.ts` covers case01-20 (787 linhas) | ✅     |
+
+### ✅ P2 — `collectManual` > 50 linhas (R4) ✅
+
+| Item                                                                              | Status |
+| --------------------------------------------------------------------------------- | ------ |
+| `shared/bug-report.ts:104-158` — extraído em `askWithRetry` + `normalizeSeverity` | ✅     |
+
+### ✅ P1 — Xray per-test history ✅
+
+| #   | Item                                                                          | Esforço | Status |
+| --- | ----------------------------------------------------------------------------- | ------- | ------ |
+| 1   | Interface `TestHistoryProvider` + types (`xray-history.ts`)                   | 0.25h   | ✅     |
+| 2   | `ServerHistoryProvider` (`GET /rest/raven/1.0/api/test/{key}/testruns`)       | 0.5h    | ✅     |
+| 3   | `CloudHistoryProvider` (GraphQL `getTestRuns` + auth + key→issueId)           | 1h      | ✅     |
+| 4   | Integração em `case17.ts` (history via mapping file + cache)                  | 0.25h   | ✅     |
+| 5   | Display no HTML report (`report-generator.ts` — coluna History c/ ferramenta) | 0.5h    | ✅     |
+| 6   | Retry + fallback + cache em memória (`TestHistoryCache`)                      | 0.25h   | ✅     |
+| 7   | Testes: `xray-history.test.ts` (19 testes)                                    | 1h      | ✅     |
+
+### ✅ P1 — Restaurar thresholds de cobertura (80% branches, 90% lines) ✅
+
+| Item                                                                       | Status |
+| -------------------------------------------------------------------------- | ------ |
+| config.ts + disk-cache.ts (+6 testes)                                      | ✅     |
+| llm-client.ts + prompt-input.ts (+12 testes)                               | ✅     |
+| sanitize.ts, box.ts, temp-dir.ts (+4 testes)                               | ✅     |
+| result_reporter.ts, package_version_manager.ts (+2 testes)                 | ✅     |
+| failure-analysis.ts, state.ts (+2 testes)                                  | ✅     |
+| Thresholds restaurados: statements 90, branches 80, functions 91, lines 90 | ✅     |
+
+### ✅ P0 — CSV/JSON parsing robustness (Expected Result normalization + separator detection) ✅
+
+| Bug   | Descrição                                                                                                 | Correção                                                                                                                                                                     | Arquivos                                                                                                                                                                                                                                         |
+| ----- | --------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| ✅ P0 | CSV header `Expected Result` não identificado na preview em CSVs do Windows (CRLF, BOM, locale pt-BR `;`) | `normalizeFieldName()` (strip `\r`, case/underscore aliases) + detecção automática de separador `;` + flat CSV diagnostic warn + JSON `ExpectedResult` alias + schema update | `shared/field-names.ts` (novo), `csv-import-schema.ts`, `csv_resource.ts`, `import-prep.ts`, `test_cases_template.json`, `jira_management/test_steps_template.json`, `shared/field-names.test.ts`, `csv_resource.test.ts`, `import-prep.test.ts` |
+| ✅    | readBulkCsv falha com CRLF (--- não split) e BOM (\uFEFF impede match de Title:)                          | `raw.replace(/^\uFEFF/, '')` + `raw.replace(/\r\n/g, '\n')` antes do split                                                                                                   | `csv_resource.ts:242-243`                                                                                                                                                                                                                        |
+| ✅    | E2E: CSV com todos quirks → HTML preview                                                                  | 3 testes: all-quirks, golden-path (sem warn), flat CSV diagnostic                                                                                                            | `import-prep.test.ts` (describe `csv -> preview pipeline`)                                                                                                                                                                                       |
+| ✅    | E2E: GitHub real API → health report HTML                                                                 | 5 testes: workflow runs, jobs, PRs, branch info, consolidated HTML report via `writeReport()`                                                                                | `git_triggers/github-e2e.test.ts` (novo) — pula automaticamente sem `GITHUB_TOKEN`                                                                                                                                                               |
+
+---
+
+## ✅ Pipeline Health Reporting (GitHub e2e gold-standard) ✅
+
+| #   | Item                                                                 | Prioridade | Status | Arquivos                                                         |
+| --- | -------------------------------------------------------------------- | ---------- | ------ | ---------------------------------------------------------------- |
+| 1.1 | Extender `PipelineJob` + `PipelineRun` + `Issue` interface           | P1         | ✅     | `shared/types.ts`                                                |
+| 1.2 | `GitHubManager.getOpenIssues()` + `getJobLogs()`                     | P1         | ✅     | `git_triggers/github_manager.ts`                                 |
+| 2.1 | `aggregatePipelineHealth()` — pass rate, top failing jobs, breakdown | P1         | ✅     | `git_triggers/pipeline-health.ts`                                |
+| 2.2 | `categorizePipelineFailure()` — LLM classificação de erro            | P1         | ✅     | `git_triggers/pipeline-health.ts`                                |
+| 2.3 | `renderPipelineHealthHtml()` — HTML com cards, tabelas, seções       | P1         | ✅     | `git_triggers/pipeline-health.ts`                                |
+| 2.4 | Tests unitários (19 testes com fixtures)                             | P1         | ✅     | `git_triggers/pipeline-health.test.ts`                           |
+| 2.5 | Prompt `classify-pipeline-failure.md`                                | P1         | ✅     | `shared/prompts/classify-pipeline-failure.md`                    |
+| 3.1 | `github-e2e.test.ts` rewrite: fetch → pure functions → HTML          | P1         | ✅     | `git_triggers/github-e2e.test.ts`                                |
+| 3.2 | Persistir snapshot no `metrics.ts`                                   | P2         | ✅     | `shared/metrics.ts` (saveCoverageSnapshot), `case19.ts` (caller) |
+
+---
+
+## ✅ Template CSV/JSON (case11) — Bulk format fix + JSON generation ✅
+
+| #   | Item                                                                                                                                           | Prioridade | Status | Arquivos                                                                   |
+| --- | ---------------------------------------------------------------------------------------------------------------------------------------------- | ---------- | ------ | -------------------------------------------------------------------------- |
+| 1   | **BUG**: `jira_management/test_steps_template.csv` em flat format (Title,Action,Data,Expected Result) — rejeitado pelo parser `readBulkCsv()`  | P0         | ✅     | `jira_management/test_steps_template.csv` (removido — fonte única em root) |
+| 2   | **FIX**: `case11.ts` copia da raiz (`test_steps_template.csv` — bulk, 94l), pergunta CSV/JSON, default path corrigido (não sobrescreve source) | P1         | ✅     | `jira_management/commands/case11.ts`                                       |
+| 3   | Opção JSON: novo fluxo em case11 copia `test_cases_template.json` (raiz, 5 exemplos, 86l)                                                      | P1         | ✅     | `jira_management/commands/case11.ts`                                       |
+| 4   | Menu: label "Gerar template CSV" → "Gerar template" + aliases `template:csv` e `template:json`                                                 | P2         | ✅     | `jira_management/main.ts`                                                  |
+| 5   | Tests: handlers.test.ts — case11 adaptado para CSV/JSON dual flow (4 testes)                                                                   | P1         | ✅     | `jira_management/commands/handlers.test.ts`                                |
+
+---
+
+## ✅ Sprint Atual — QA Tools v2 (Pareto) ✅
+
+### Sprint 1 — P0 (Gap Analysis + Health Score)
+
+| #   | Feature                | Arquivos                                                                                                                     | LOC  | Status |
+| --- | ---------------------- | ---------------------------------------------------------------------------------------------------------------------------- | ---- | ------ |
+| 1   | Gap Analysis — shared  | `shared/coverage-gap.ts`, `shared/coverage-gap.test.ts`, `shared/coverage-gap-utils.ts`, `shared/coverage-gap-utils.test.ts` | 408  | ✅     |
+| 2   | Gap Analysis — HTML    | `shared/generate-coverage-gap-html.ts`                                                                                       | 233  | ✅     |
+| 3   | Gap Analysis — handler | `jira_management/commands/case21.ts`, `case21.test.ts`                                                                       | 256  | ✅     |
+| 4   | Health Score — shared  | `shared/health-score.ts`, `shared/health-score.test.ts`                                                                      | 903  | ✅     |
+| 5   | Health Score — report  | `shared/report-generator.ts` (mod)                                                                                           | +50  | ✅     |
+| 6   | Types                  | `shared/types.ts` (mod) + novas interfaces                                                                                   | +150 | ✅     |
+
+### Sprint 2 — P1 (Flaky Auto-action + Test Impact)
+
+| #   | Feature                         | Arquivos                                                     | LOC | Status |
+| --- | ------------------------------- | ------------------------------------------------------------ | --- | ------ |
+| 7   | Flaky Auto-action — shared      | `shared/flaky-auto-actions.ts`, `flaky-auto-actions.test.ts` | 484 | ✅     |
+| 8   | Flaky Auto-action — integration | `batch-mode.ts`, `schedule-handler.ts` (mod)                 | +40 | ✅     |
+| 9   | Test Impact — shared            | `shared/test-impact.ts`, `test-impact.test.ts`               | 507 | ✅     |
+| 10  | Test Impact — handler           | `jira_management/commands/case22.ts`, `case22.test.ts`       | 130 | ✅     |
+
+### Sprint 3 — P2 (AI Feedback Loop + Init Wizard)
+
+| #   | Feature               | Arquivos                                               | LOC | Status |
+| --- | --------------------- | ------------------------------------------------------ | --- | ------ |
+| 11  | AI Feedback — shared  | `shared/ai-feedback.ts`, `ai-feedback.test.ts`         | 220 | ✅     |
+| 12  | AI Feedback — handler | `jira_management/commands/case23.ts`, `case23.test.ts` | 130 | ✅     |
+| 13  | Init Wizard — handler | `jira_management/commands/case00.ts`, `case00.test.ts` | 55  | ✅     |
+| 14  | Menu integration      | `jira_management/main.ts` (mod)                        | +50 | ✅     |
+
+### ✅ Integrações Pós-Sprint ✅
+
+| ID  | Feature                          | Arquivos                                    | LOC | Prioridade | Status |
+| --- | -------------------------------- | ------------------------------------------- | --- | ---------- | ------ |
+| N   | AI Generation → feedback loop    | `case18.ts`, `case18.test.ts` (mod)         | 15  | P0         | ✅     |
+| I1  | Health Score no case19           | `case19.ts`, `case19.test.ts` (mod)         | 25  | P1         | ✅     |
+| O   | Flaky auto-actions interativo    | `case19.ts`, `case19.test.ts` (mod)         | 20  | P1         | ✅     |
+| K   | Coverage gap → AI gen suggestion | `case21.ts`, `case21.test.ts` (mod)         | 25  | P2         | ✅     |
+| C   | Test Impact → Gap hint           | `case22.ts`, `case22.test.ts` (mod)         | 8   | P2         | ✅     |
+| I   | Test Impact → TE hint            | `case22.ts`, `case22.test.ts` (mod)         | 10  | P2         | ✅     |
+| D   | Flaky footnote no Test Impact    | `case22.ts`, `case22.test.ts` (mod)         | 5   | P2         | ✅     |
+| L   | Diagnostics + Health Check       | `case12.ts`, `case12.test.ts` (mod/new)     | 15  | P2         | ✅     |
+| G   | Wizard detect existing config    | `setup/main.ts`, `setup/main.test.ts` (mod) | 20  | P3         | ✅     |
+
+---
+
+## ✅ Sprint A — Publicação (P0 + infra) ✅
+
+| #   | Item                                             | Prioridade | Esforço | Status |
+| --- | ------------------------------------------------ | ---------- | ------- | ------ |
+| A1  | Fix version vazia no package.json                | P0         | 5min    | ✅     |
+| A2  | Adicionar noFallthroughCasesInSwitch no tsconfig | P2         | 2min    | ✅     |
+| A3  | .gitignore: tmp/, \*.bak + untrack artifacts     | P1         | 15min   | ✅     |
+| A4  | Validação centralizada de env obrigatórios       | P0         | 1h      | ✅     |
+| A5  | Publicação npm: bin + build + CI workflow        | P0         | 3h      | ✅     |
+
+## ✅ Sprint B — Segurança/Robustez (P1) ✅
+
+| #   | Item                                                                     | Prioridade | Esforço | Status | Arquivos                                                                                            |
+| --- | ------------------------------------------------------------------------ | ---------- | ------- | ------ | --------------------------------------------------------------------------------------------------- |
+| B1  | Substituir `process.env.X as string` por Config.getDefault()             | P1         | 1h      | ✅     | `case17.ts`                                                                                         |
+| B2  | Revisar `!` non-null assertions                                          | P1         | 2h      | ✅     | `import-loop.ts`, `prompt-ui.ts`, `git_triggers/main.ts`                                            |
+| B3  | Documentar `process.env.AUTO_CONFIRM` mutation                           | P1         | 30min   | ✅     | `batch-mode.ts`                                                                                     |
+| B4  | Quebrar circular dependency jira_resource ↔ jira-resource-sprint/version | P1         | 1h      | ✅     | `jira_resource.ts`, `jira-resource-sprint.ts`, `jira-resource-version.ts`, `jira-resource-types.ts` |
+
+## ✅ Sprint C — Housekeeping (P2) ✅
+
+| #   | Item                                                           | Prioridade | Esforço | Status |
+| --- | -------------------------------------------------------------- | ---------- | ------- | ------ |
+| C1  | Interfaces órfãs reavaliadas                                   | P2         | 15min   | ✅     |
+| C2  | Remover exports mortos (ts-prune)                              | P2         | 30min   | ✅     |
+| C3  | Adicionar `-- reason` nas ~31 eslint-disable sem justificativa | P2         | 45min   | ✅     |
+| C4  | Testes para `generate-coverage-gap-html.ts`                    | P2         | 2h      | ✅     |
+| C5  | Extrair safeJiraCall() — duplicação case03/05/06               | P3         | 1h      | ✅     |
+| C6  | eslint-disable-next-line nos 2 console.clear() sem comment     | P2         | 5min    | ✅     |
+| C7  | Simplificar 3 Promise.resolve() em async/sync functions        | P3         | 5min    | ✅     |
+| C8  | Silent catch blocks em http-client.test.ts comentados          | P2         | 15min   | ✅     |
+
+## ✅ Sprint D — SRP Refactor ✅
+
+| #   | Item                                               | Prioridade | Esforço | Status | Arquivos                                                                                                                                          |
+| --- | -------------------------------------------------- | ---------- | ------- | ------ | ------------------------------------------------------------------------------------------------------------------------------------------------- |
+| D3  | Extrair options-object em 12 funções com >5 params | P3         | 4h      | ✅     | `import-loop.ts`, `llm-client.ts`, `pipeline-handler.ts`, `test-results.ts`, `box.ts`, `quarantine.ts`, `test-case-factory.ts`, `create_tests.ts` |
+| D4  | Encurtar 34 funções >50 linhas                     | P3         | 3h      | ✅     | `report-*.ts`, `pipeline-health.ts`, `markdown.ts`, `test-execution-flow.ts`, `cli_base.ts`, `csv_resource.ts`, e2e/, setup/                      |
+
+## ✅ Sprint F1 — Auditoria Fase 1: Foundation (2026-05-31) ✅
+
+| #   | Auditoria | Item                                                                                  | Arquivos alterados                                                                                       | Status |
+| --- | --------- | ------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------- | ------ |
+| F1  | C5-1      | Cross-layer: extrair shared/jira-client.ts quebrando dep git_triggers→jira_management | shared/jira-client.ts (novo), jira_management/jira_resource.ts, git_triggers/ (4), shared/types.ts       | ✅     |
+| F2  | C6-1      | Bare catches: sed em 89 locais + 18 fixes B/C manuais                                 | shared/ (state, publish, entry-menu, etc), jira_management/ (17), eslint.config.js                       | ✅     |
+| F3  | C22-1     | Test files: case24, safe-json, report-chart                                           | shared/safe-json.test.ts, shared/report-chart.test.ts, jira_management/commands/case24.test.ts (3 novos) | ✅     |
+| F4  | C18-1     | Exit codes: consumir ExitCode enum em prod                                            | shared/cli_base.ts, entry-menu.ts, llm-benchmark.ts, e2e/smoke-shared.ts                                 | ✅     |
+| F5  | C19-1     | Idempotência: --te-key + precondition JQL dedup                                       | precondition-handler.ts, result_reporter.ts, test-results.ts, pipeline-handler.ts, batch-mode.ts + tests | ✅     |
+
+## ✅ Sprint F2 — R1 Test Coverage: Missing .test.ts files (2026-05-31) ✅
+
+| #   | File sob teste                        | Arquivos                                   | Status |
+| --- | ------------------------------------- | ------------------------------------------ | ------ |
+| T1  | `shared/report-styles.ts`             | `shared/report-styles.test.ts`             | ✅     |
+| T2  | `shared/report-sections.ts`           | `shared/report-sections.test.ts`           | ✅     |
+| T3  | `shared/report-scripts.ts`            | `shared/report-scripts.test.ts`            | ✅     |
+| T4  | `shared/report-utils.ts`              | `shared/report-utils.test.ts`              | ✅     |
+| T5  | `jira_management/commands/context.ts` | `jira_management/commands/context.test.ts` | ✅     |
+
+## ✅ Sprint W — Aviso + Caminho Amigável (2026-05-31) ✅
+
+| #   | Item                                                                                | Arquivos                                                                                      | Status |
+| --- | ----------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------- | ------ |
+| U1  | Breadcrumbs dinâmicos no título das boxes                                           | `shared/breadcrumbs.ts`, `main.ts` (jira+git), tests                                          | ✅     |
+| W1  | `validateEnv()`: se variáveis faltando, perguntar "Quer configurar? (s/N)" + wizard | `shared/cli_base.ts`, `git_triggers/main.ts`, `jira_management/main.ts`, tests                | ✅     |
+| W2  | `_selectProject()`: sem projetos → oferecer "Configurar projetos agora?"            | `git_triggers/main.ts`, tests                                                                 | ✅     |
+| W3  | `createManagerForProject()`: token ausente → mensagem instrutiva + "Configurar?"    | `git_triggers/session-state.ts`, tests                                                        | ✅     |
+| W4  | Wizard on demand — alias 'w' em ambos menus                                         | `shared/first-run.ts`, `jira_management/menu-data.ts`, `git_triggers/session-state.ts`, tests | ✅     |
+| W5  | Testes de integração nock-based + CLI                                               | `e2e/friendly-error-paths.test.ts` (9 testes)                                                 | ✅     |

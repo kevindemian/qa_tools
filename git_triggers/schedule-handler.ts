@@ -3,9 +3,10 @@ import { print, success, warn, info, prompt, printError, withSpinner } from '../
 import type { GitProvider, StateContainer } from '../shared/types';
 import { loadMetrics, calculateFlakiness } from '../shared/metrics';
 import { executeFlakyActions } from '../shared/flaky-auto-actions';
+import { openWithFallback } from '../shared/open';
 import { generateFlakinessHtml } from '../shared/flakiness-dashboard';
 import Config from '../shared/config';
-import JiraResource from '../jira_management/jira_resource';
+import JiraClient from '../shared/jira-client';
 import { writeReport } from '../shared/temp-dir';
 import {
     currentProvider,
@@ -92,10 +93,9 @@ export async function handleChangeProject(names: string[]): Promise<void> {
     }
 }
 
-async function runFlakyAutoActionsForProject(projectName: string): Promise<void> {
+async function runFlakyAutoActionsForProject(projectName: string, jiraResource: JiraClient): Promise<void> {
     try {
         if (!Config.jiraBaseUrl || !Config.jiraPersonalToken) return;
-        const jiraResource = new JiraResource(Config.jiraPersonalToken, Config.jiraBaseUrl + '/rest/api/2');
         const store = loadMetrics();
         const projectRuns = store.runs.filter((r) => r.project === currentProjectName);
         if (projectRuns.length < 5) return;
@@ -132,13 +132,16 @@ export async function handleFlakinessDashboard(): Promise<void> {
         }
         const html = generateFlakinessHtml(flaky, 'Flakiness — ' + currentProjectName);
         const outPath = writeReport('flakiness-' + currentProjectName + '.html', html);
-        success('Dashboard gerado: ' + outPath);
+        await openWithFallback(outPath, 'Dashboard de flaky', info);
         pushHistory(
             'flakiness',
             currentProjectName + ' (' + flaky.filter((f: { rate: number }) => f.rate > 0.3).length + ' >30%)',
             'ok',
         );
-        await runFlakyAutoActionsForProject(currentProjectName);
+        if (Config.jiraBaseUrl && Config.jiraPersonalToken) {
+            const jiraResource = new JiraClient(Config.jiraPersonalToken, Config.jiraBaseUrl + '/rest/api/2');
+            await runFlakyAutoActionsForProject(currentProjectName, jiraResource);
+        }
     } catch (err) {
         printError('Falha ao gerar dashboard de flaky', err);
     }

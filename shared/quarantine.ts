@@ -1,0 +1,242 @@
+/** Quarantine management for flaky tests.
+ *  Persists quarantined test metadata, auto-expires entries after configurable TTL,
+ *  generates pipeline-consumable `qa-quarantine.json`, and integrates with flaky auto-actions. */
+import fs from 'fs';
+import path from 'path';
+import os from 'os';
+import { rootLogger } from './logger';
+import Config from './config';
+
+export interface QuarantineEntry {
+    testTitle: string;
+    reason: string;
+    quarantinedBy: string;
+    date: string;
+    expiresAt: string;
+    flakyRate: number;
+    bugUrl?: string;
+    reviewRequired: boolean;
+    permanent: boolean;
+}
+
+export interface QuarantineStore {
+    entries: QuarantineEntry[];
+}
+
+export interface PipelineQuarantineItem {
+    test: string;
+    reason: string;
+    quarantinedBy: string;
+    date: string;
+    bugUrl?: string;
+    reviewRequired: boolean;
+}
+
+export interface PipelineQuarantine {
+    excluded: PipelineQuarantineItem[];
+    metadata: {
+        totalExcluded: number;
+        totalTests: number;
+        ratio: number;
+        warning: string;
+    };
+}
+
+const STORE_FILE = 'quarantine.json';
+const PIPELINE_FILE = 'qa-quarantine.json';
+
+function getDataDir(): string {
+    const xdg = Config.xdgStateHome;
+    const base = xdg ? path.join(xdg, 'qa-tools') : path.join(os.homedir(), '.local', 'state', 'qa-tools');
+    return path.join(base, 'quarantine');
+}
+
+function storePath(): string {
+    return path.join(getDataDir(), STORE_FILE);
+}
+
+function pipelinePath(): string {
+    return path.join(process.cwd(), PIPELINE_FILE);
+}
+
+function ensureDir(dir: string): void {
+    try {
+        fs.mkdirSync(dir, { recursive: true });
+    } catch {
+        /* best effort */
+    }
+}
+
+const DEFAULT_TTL_DAYS = 7;
+
+export function loadQuarantine(): QuarantineStore {
+    try {
+        ensureDir(getDataDir());
+        const sp = storePath();
+        if (!fs.existsSync(sp)) return { entries: [] };
+        const raw = fs.readFileSync(sp, 'utf8');
+        return JSON.parse(raw) as QuarantineStore;
+    } catch (err) {
+        rootLogger.warn('Failed to load quarantine store: ' + (err as Error).message);
+        return { entries: [] };
+    }
+}
+
+function saveQuarantine(store: QuarantineStore): void {
+    try {
+        const dir = getDataDir();
+        ensureDir(dir);
+        const sp = storePath();
+        const tp = sp + '.tmp';
+        fs.writeFileSync(tp, JSON.stringify(store, null, 2), 'utf8');
+        fs.renameSync(tp, sp);
+    } catch (err) {
+        rootLogger.error('Failed to save quarantine store: ' + (err as Error).message);
+    }
+}
+
+export interface QuarantineTestOptions {
+    testTitle: string;
+    reason: string;
+    quarantinedBy: string;
+    flakyRate: number;
+    bugUrl?: string;
+    ttlDays?: number;
+}
+
+export function quarantineTest(opts: QuarantineTestOptions): void {
+    const { testTitle, reason, quarantinedBy, flakyRate, bugUrl, ttlDays } = opts;
+    const store = loadQuarantine();
+    const existingIdx = store.entries.findIndex((e) => e.testTitle === testTitle && !e.permanent);
+    if (existingIdx >= 0) {
+        store.entries.splice(existingIdx, 1);
+    }
+    const date = new Date().toISOString();
+    const expires = new Date(Date.now() + (ttlDays ?? DEFAULT_TTL_DAYS) * 24 * 60 * 60 * 1000).toISOString();
+    const entry: QuarantineEntry = {
+        testTitle,
+        reason,
+        quarantinedBy,
+        date,
+        expiresAt: expires,
+        flakyRate,
+        bugUrl,
+        reviewRequired: true,
+        permanent: false,
+    };
+    store.entries.push(entry);
+    saveQuarantine(store);
+    generatePipelineQuarantine(store);
+}
+
+export function removeQuarantine(testTitle: string): boolean {
+    const store = loadQuarantine();
+    const idx = store.entries.findIndex((e) => e.testTitle === testTitle);
+    if (idx < 0) return false;
+    store.entries.splice(idx, 1);
+    saveQuarantine(store);
+    generatePipelineQuarantine(store);
+    return true;
+}
+
+export function expireQuarantine(): number {
+    const store = loadQuarantine();
+    const now = Date.now();
+    const before = store.entries.length;
+    store.entries = store.entries.filter((e) => e.permanent || new Date(e.expiresAt).getTime() > now);
+    const expired = before - store.entries.length;
+    if (expired > 0) {
+        rootLogger.info('Expired ' + expired + ' quarantine entries');
+        saveQuarantine(store);
+        generatePipelineQuarantine(store);
+    }
+    return expired;
+}
+
+function loadAndExpire(): QuarantineStore {
+    expireQuarantine();
+    return loadQuarantine();
+}
+
+export function markPermanent(testTitle: string): boolean {
+    const store = loadQuarantine();
+    const entry = store.entries.find((e) => e.testTitle === testTitle);
+    if (!entry) return false;
+    entry.permanent = true;
+    saveQuarantine(store);
+    generatePipelineQuarantine(store);
+    return true;
+}
+
+export function isQuarantined(testTitle: string): QuarantineEntry | undefined {
+    const store = loadAndExpire();
+    return store.entries.find((e) => e.testTitle === testTitle);
+}
+
+export function listQuarantined(): QuarantineEntry[] {
+    const store = loadAndExpire();
+    return store.entries;
+}
+
+export function quarantineRatio(totalTests: number): { count: number; ratio: number; warning: string } {
+    const store = loadAndExpire();
+    const count = store.entries.length;
+    const ratio = totalTests > 0 ? count / totalTests : 0;
+    const warning =
+        ratio > 0.05
+            ? '⚠️ Quarantine alert: ' +
+              count +
+              '/' +
+              totalTests +
+              ' tests (' +
+              (ratio * 100).toFixed(1) +
+              '%) exceed 5% threshold'
+            : '';
+    return { count, ratio, warning };
+}
+
+export function generatePipelineQuarantine(store?: QuarantineStore): PipelineQuarantine {
+    const resolved = store ?? loadQuarantine();
+    const total = resolved.entries.length + 1;
+    const count = resolved.entries.length;
+    const ratio = total > 0 ? count / total : 0;
+    const meta = {
+        count,
+        totalTests: total,
+        ratio,
+        warning:
+            ratio > 0.05
+                ? '⚠️ Quarantine alert: ' +
+                  count +
+                  '/' +
+                  total +
+                  ' tests (' +
+                  (ratio * 100).toFixed(1) +
+                  '%) exceed 5% threshold'
+                : '',
+    };
+    const excluded: PipelineQuarantineItem[] = resolved.entries.map((e) => ({
+        test: e.testTitle,
+        reason: e.reason,
+        quarantinedBy: e.quarantinedBy,
+        date: e.date,
+        bugUrl: e.bugUrl,
+        reviewRequired: e.reviewRequired,
+    }));
+    const pipeline: PipelineQuarantine = {
+        excluded,
+        metadata: {
+            totalExcluded: excluded.length,
+            totalTests: excluded.length + 1,
+            ratio: meta.ratio,
+            warning: meta.warning,
+        },
+    };
+    try {
+        const pp = pipelinePath();
+        fs.writeFileSync(pp, JSON.stringify(pipeline, null, 2), 'utf8');
+    } catch (err) {
+        rootLogger.error('Failed to write pipeline quarantine file: ' + (err as Error).message);
+    }
+    return pipeline;
+}

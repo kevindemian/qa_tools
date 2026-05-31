@@ -1,6 +1,4 @@
-/** GitHub API client: PRs, pipelines, reviews, checks, and merge operations. */
 import { createThrottledClient } from '../shared/http-client';
-import { info } from '../shared/prompt';
 import { Logger } from '../shared/logger';
 import { handleError } from '../shared/git-provider-error';
 import { GitProviderBase } from './git-provider-base';
@@ -17,23 +15,37 @@ import type {
     Issue,
     JsonObject,
 } from '../shared/types';
-
-const LIST_WORKFLOWS_PAGE_SIZE = 10;
-const SEARCH_PRS_PAGE_SIZE = 100;
-const VARIABLES_PAGE_SIZE = 100;
-const COMPARE_PAGE_SIZE = 100;
-const MAX_REDIRECTS = 5;
-const DIFF_TRUNCATION_LIMIT = 15000;
-const DEFAULT_PIPELINE_COUNT = 5;
-const ISSUES_PAGE_SIZE = 30;
-const LOG_TRUNCATION_BYTES = 10240;
+import type { AxiosInstance } from 'axios';
+import {
+    formatPR,
+    prCreateMergeRequest,
+    prUpdateMergeRequest,
+    prGetMergeRequest,
+    prSearchMergeRequests,
+    prAcceptMergeRequest,
+    prIsApproved,
+} from './github-pr';
+import {
+    wfTriggerPipeline,
+    wfGetRecentPipelines,
+    wfGetPipeline,
+    wfGetPipelineJobs,
+    wfListPipelineArtifacts,
+    wfDownloadArtifact,
+    wfGetJobLogs,
+    wfGetCICDVariables,
+    wfGetSchedules,
+    wfRunSchedule,
+} from './github-workflow';
+import { getOpenIssues } from './github-issues';
+import { getBranch, getDiff } from './github-branch';
 
 class GitHubManager extends GitProviderBase implements GitProvider {
     provider = 'github' as const;
     repoFullName: string;
     apiToken: string;
     apiUrl: string;
-    client: ReturnType<typeof createThrottledClient>;
+    client!: AxiosInstance;
     log!: Logger;
     owner!: string;
     repo!: string;
@@ -74,68 +86,16 @@ class GitHubManager extends GitProviderBase implements GitProvider {
         }
     }
 
+    _formatPR(data: JsonObject): MergeRequestInfo | null {
+        return formatPR(data);
+    }
+
     async triggerPipeline(payload: {
         ref: string;
         variables: Array<{ key: string; value: string }>;
         workflow_id?: string;
     }): Promise<PipelineTriggerResult | undefined> {
-        try {
-            const workflowId = payload.workflow_id;
-            if (!workflowId) {
-                const workflows = await this._listWorkflows();
-                if (!workflows || workflows.length === 0) {
-                    throw new Error('No workflows found in repository');
-                }
-                const workflow = workflows[0]!;
-                await this._post(
-                    this._repoPath + '/actions/workflows/' + workflow.id + '/dispatches',
-                    { ref: payload.ref, inputs: this._toInputs(payload.variables) },
-                    { operation: 'disparar workflow' },
-                );
-                return { id: workflow.id, web_url: this.apiUrl + '/' + this.repoFullName + '/actions/runs' };
-            }
-            await this._post(
-                this._repoPath + '/actions/workflows/' + workflowId + '/dispatches',
-                { ref: payload.ref, inputs: this._toInputs(payload.variables) },
-                { operation: 'disparar workflow' },
-            );
-            return { id: workflowId, web_url: this.apiUrl + '/' + this.repoFullName + '/actions/runs' };
-        } catch (err) {
-            return handleError(err, { context: 'disparar workflow' });
-        }
-    }
-
-    async _listWorkflows(): Promise<Array<{ id: number; name: string }>> {
-        const data = await this._get(this._repoPath + '/actions/workflows', {
-            operation: 'listar workflows',
-            params: { per_page: LIST_WORKFLOWS_PAGE_SIZE },
-            returnNull: true,
-        });
-        return (data && data.workflows) || [];
-    }
-
-    _toInputs(variables: Array<{ key: string; value: string }>): Record<string, string> {
-        if (!variables || !Array.isArray(variables)) return {};
-        const inputs: Record<string, string> = {};
-        for (const v of variables) {
-            if (v.key) inputs[v.key] = v.value;
-        }
-        return inputs;
-    }
-
-    getSchedules(): Promise<ScheduleInfo[]> {
-        this.log.warn(
-            'GitHub Actions schedules not available via REST API. Use workflow_dispatch or repository_dispatch.',
-        );
-        return Promise.resolve([]);
-    }
-
-    runSchedule(scheduleId: string | number): Promise<JsonObject> {
-        const err = new Error(
-            'GitHub Actions schedules not available via REST API. Use workflow_dispatch or repository_dispatch.',
-        );
-        this.log.error(err.message, { scheduleId });
-        throw err;
+        return wfTriggerPipeline(this.client, this.owner, this.repo, this.apiUrl, payload);
     }
 
     async createMergeRequest(
@@ -144,33 +104,7 @@ class GitHubManager extends GitProviderBase implements GitProvider {
         title: string,
         description?: string,
     ): Promise<MergeRequestInfo | null> {
-        const body = {
-            head: sourceBranch,
-            base: targetBranch,
-            title,
-            body: description,
-        };
-
-        try {
-            const data = await this._post(this._repoPath + '/pulls', body, { operation: 'criar PR' });
-            return this._formatPR(data);
-        } catch (err: unknown) {
-            const ghErr = err as { response?: { status?: number; data?: { errors?: Array<{ message: string }> } } };
-            if (ghErr.response?.status === 422) {
-                const errors = ghErr.response?.data?.errors || [];
-                const alreadyExists = errors.some(
-                    (e: { message: string }) => e.message && e.message.includes('already exists'),
-                );
-                if (alreadyExists) {
-                    info('PR already exists. Searching for existing...');
-                    const existing = await this.searchMergeRequests(sourceBranch, targetBranch, 'open');
-                    if (existing && existing.length > 0) {
-                        return this.updateMergeRequest(existing[0]!.number!, title, description);
-                    }
-                }
-            }
-            return handleError(err, { context: 'criar PR' });
-        }
+        return prCreateMergeRequest(this.client, this.owner, this.repo, sourceBranch, targetBranch, title, description);
     }
 
     async updateMergeRequest(
@@ -178,20 +112,11 @@ class GitHubManager extends GitProviderBase implements GitProvider {
         title: string,
         description?: string,
     ): Promise<MergeRequestInfo | null> {
-        const data = await this._patch(
-            this._repoPath + '/pulls/' + iid,
-            { title, body: description },
-            { operation: 'atualizar PR' },
-        );
-        return this._formatPR(data);
+        return prUpdateMergeRequest(this.client, this.owner, this.repo, iid, title, description);
     }
 
     async getMergeRequest(iid: string | number): Promise<MergeRequestInfo | null> {
-        const data = await this._get(this._repoPath + '/pulls/' + iid, {
-            operation: 'buscar PR',
-            returnNull: true,
-        });
-        return this._formatPR(data);
+        return prGetMergeRequest(this.client, this.owner, this.repo, iid);
     }
 
     async searchMergeRequests(
@@ -199,190 +124,63 @@ class GitHubManager extends GitProviderBase implements GitProvider {
         targetBranch: string,
         searchStatus: string,
     ): Promise<MergeRequestInfo[]> {
-        const params: JsonObject = { per_page: SEARCH_PRS_PAGE_SIZE };
-        if (sourceBranch) params.head = this.owner + ':' + sourceBranch;
-        if (targetBranch) params.base = targetBranch;
-        if (searchStatus) params.state = searchStatus === 'opened' ? 'open' : searchStatus;
-
-        const data = await this._get(this._repoPath + '/pulls', {
-            operation: 'buscar PRs',
-            params,
-            returnNull: true,
-        });
-        return (data || []).map((pr: JsonObject) => this._formatPR(pr));
+        return prSearchMergeRequests(this.client, this.owner, this.repo, sourceBranch, targetBranch, searchStatus);
     }
 
     async acceptMergeRequest(iid: string | number, shouldRemoveSourceBranch = true): Promise<MergeRequestInfo | null> {
-        try {
-            const pr = await this.getMergeRequest(iid);
-            if (!pr) throw new Error('PR #' + iid + ' not found');
-            if (pr.state === 'merged') {
-                info('PR #' + iid + ' already merged');
-                return pr;
-            }
-            const body: JsonObject = {};
-            if (shouldRemoveSourceBranch) body.delete_branch_on_merge = true;
-            const response = await this.client.put(this._repoPath + '/pulls/' + iid + '/merge', body);
-            return this._formatPR(response.data);
-        } catch (err) {
-            return handleError(err, { context: 'fazer merge' });
-        }
+        return prAcceptMergeRequest(this.client, this.owner, this.repo, iid, shouldRemoveSourceBranch);
     }
 
-    async getRecentPipelines(count = DEFAULT_PIPELINE_COUNT): Promise<PipelineRun[]> {
-        const data = await this._get(this._repoPath + '/actions/runs', {
-            operation: 'buscar runs',
-            params: { per_page: count },
-            returnNull: true,
-        });
-        return (data && data.workflow_runs) || [];
+    async getRecentPipelines(count = 5): Promise<PipelineRun[]> {
+        return wfGetRecentPipelines(this.client, this.owner, this.repo, count);
     }
 
     async getPipeline(runId: string | number): Promise<PipelineInfo | null> {
-        return this._get(this._repoPath + '/actions/runs/' + runId, { operation: 'buscar run', returnNull: true });
+        return wfGetPipeline(this.client, this.owner, this.repo, runId);
     }
 
     async getPipelineJobs(pipelineId: string | number): Promise<PipelineJob[]> {
-        const data = await this._get(this._repoPath + '/actions/runs/' + pipelineId + '/jobs', {
-            operation: 'listar jobs',
-            returnNull: true,
-        });
-        const jobs = (data && data.jobs) || [];
-        return jobs.map((j: JsonObject) => ({
-            id: j.id,
-            name: j.name,
-            stage: j.runner_group_name || '',
-            status: j.conclusion || j.status || '',
-        }));
+        return wfGetPipelineJobs(this.client, this.owner, this.repo, pipelineId);
     }
 
     async listPipelineArtifacts(pipelineId: string | number): Promise<ArtifactInfo[]> {
-        const data = await this._get(this._repoPath + '/actions/runs/' + pipelineId + '/artifacts', {
-            operation: 'listar artifacts',
-            returnNull: true,
-        });
-        const artifacts = (data && data.artifacts) || [];
-        return artifacts.map((a: JsonObject) => ({ id: a.id, name: a.name }));
+        return wfListPipelineArtifacts(this.client, this.owner, this.repo, pipelineId);
     }
 
     async downloadArtifact(artifactId: string | number): Promise<{ buffer: Buffer; filename: string }> {
-        try {
-            const response = await this.client.get(this._repoPath + '/actions/artifacts/' + artifactId + '/zip', {
-                responseType: 'arraybuffer',
-                maxRedirects: MAX_REDIRECTS,
-            });
-            return { buffer: Buffer.from(response.data), filename: 'artifact.zip' };
-        } catch (err) {
-            return handleError(err, { context: 'baixar artifact' });
-        }
+        return wfDownloadArtifact(this.client, this.owner, this.repo, artifactId);
     }
 
     async getBranch(branch: string): Promise<{ name: string } | null> {
-        try {
-            const { data } = await this.client.get(`${this._repoPath}/branches/${encodeURIComponent(branch)}`);
-            if (!data?.name) return null;
-            return { name: data.name };
-        } catch {
-            return null;
-        }
+        return getBranch(this.client, this.owner, this.repo, branch);
     }
 
     async getCICDVariables(): Promise<CICDVariable[]> {
-        const data = await this._get(this._repoPath + '/actions/variables', {
-            operation: 'buscar variáveis',
-            params: { per_page: VARIABLES_PAGE_SIZE },
-            returnNull: true,
-        });
-        const variables = (data && data.variables) || [];
-        return variables.map((v: JsonObject) => ({
-            key: v.name,
-            value: v.value,
-            type: 'variable',
-        }));
-    }
-
-    async getDiff(source: string, target: string): Promise<string> {
-        const data = await this._get(
-            this._repoPath + '/compare/' + encodeURIComponent(target) + '...' + encodeURIComponent(source),
-            {
-                operation: 'comparar branches',
-                params: { per_page: COMPARE_PAGE_SIZE },
-                returnNull: true,
-            },
-        );
-        if (!data?.files || !Array.isArray(data.files)) return '';
-        const lines: string[] = [];
-        for (const f of data.files as Array<{ filename?: string; patch?: string; status?: string }>) {
-            if (f.patch) {
-                lines.push('--- a/' + (f.filename || ''));
-                lines.push('+++ b/' + (f.filename || ''));
-                lines.push(f.patch);
-            }
-        }
-        const full = lines.join('\n');
-        return full.length > DIFF_TRUNCATION_LIMIT ? full.slice(0, DIFF_TRUNCATION_LIMIT) + '\n... (truncated)' : full;
+        return wfGetCICDVariables(this.client, this.owner, this.repo);
     }
 
     async isApproved(prNumber: string | number): Promise<boolean> {
-        const data = await this._get(this._repoPath + '/pulls/' + prNumber + '/reviews', {
-            operation: 'verificar reviews',
-            returnNull: true,
-        });
-        return (data || []).some((r: JsonObject) => r.state === 'APPROVED');
+        return prIsApproved(this.client, this.owner, this.repo, prNumber);
     }
 
-    /** Fetch open issues, filtering out pull requests (GitHub API returns both). */
+    async getDiff(source: string, target: string): Promise<string> {
+        return getDiff(this.client, this.owner, this.repo, source, target);
+    }
+
     async getOpenIssues(): Promise<Issue[]> {
-        const data = await this._get(this._repoPath + '/issues', {
-            operation: 'buscar issues',
-            params: { state: 'open', per_page: ISSUES_PAGE_SIZE },
-            returnNull: true,
-        });
-        const items: unknown[] = Array.isArray(data) ? data : [];
-        return items
-            .filter((item): item is Record<string, unknown> => item !== null && typeof item === 'object')
-            .filter((i) => !i.pull_request)
-            .map((i) => ({
-                number: typeof i.number === 'number' ? i.number : 0,
-                title: typeof i.title === 'string' ? i.title : '',
-                state: typeof i.state === 'string' ? i.state : '',
-                updated_at: typeof i.updated_at === 'string' ? i.updated_at : '',
-                created_at: typeof i.created_at === 'string' ? i.created_at : '',
-                labels: (Array.isArray(i.labels) ? i.labels : [])
-                    .filter((l): l is Record<string, unknown> => l !== null && typeof l === 'object')
-                    .map((l) => (typeof l.name === 'string' ? l.name : '')),
-                html_url: typeof i.html_url === 'string' ? i.html_url : '',
-            }));
+        return getOpenIssues(this.client, this.owner, this.repo);
     }
 
-    /** Fetch the raw job log, truncated to maxBytes to avoid huge downloads.
-     *  Returns the raw text, or null on failure. */
-    async getJobLogs(jobId: string | number, maxBytes = LOG_TRUNCATION_BYTES): Promise<string | null> {
-        try {
-            const response = await this.client.get(this._repoPath + '/actions/jobs/' + jobId + '/logs', {
-                responseType: 'text' as const,
-                maxRedirects: MAX_REDIRECTS,
-            });
-            const raw = typeof response.data === 'string' ? response.data : String(response.data);
-            return raw.slice(0, maxBytes);
-        } catch (err) {
-            return handleError(err, { context: 'baixar log do job' });
-        }
+    async getJobLogs(jobId: string | number, maxBytes = 10240): Promise<string | null> {
+        return wfGetJobLogs(this.client, this.owner, this.repo, jobId, maxBytes);
     }
 
-    _formatPR(data: JsonObject): MergeRequestInfo | null {
-        if (!data) return null;
-        return {
-            iid: data.number as string | number,
-            number: data.number as string | number,
-            title: data.title as string,
-            state: data.merged ? 'merged' : data.state === 'closed' ? 'closed' : 'opened',
-            web_url: data.html_url as string,
-            description: data.body as string,
-            source_branch: ((data.head as JsonObject) || {}).ref as string,
-            target_branch: ((data.base as JsonObject) || {}).ref as string,
-            approved: false,
-        };
+    getSchedules(): Promise<ScheduleInfo[]> {
+        return wfGetSchedules();
+    }
+
+    runSchedule(scheduleId: string | number): Promise<JsonObject> {
+        return wfRunSchedule(scheduleId);
     }
 }
 

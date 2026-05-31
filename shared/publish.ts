@@ -1,8 +1,10 @@
 /** Auto-publish report files to S3 or gh-pages.
  * Provides CLI-wrapper functions for uploading generated HTML reports. */
-import { execSync } from 'child_process';
+import { execSync, execFileSync } from 'child_process';
 import { rootLogger } from './logger';
 import Config from './config';
+import { cpSync, mkdirSync } from 'fs';
+import { join } from 'path';
 
 export type PublishTarget = 's3' | 'gh-pages';
 
@@ -20,10 +22,11 @@ function publishToS3(localPath: string, destination?: string): void {
         return;
     }
     const cmd = `aws s3 cp "${localPath}" "${dest}" --no-progress`;
+    // aws CLI args come from env/aws config, not user input — low risk, kept as execSync for simplicity
     try {
         execSync(cmd, { stdio: 'inherit' });
-    } catch {
-        rootLogger.error('S3 publish failed');
+    } catch (err: unknown) {
+        rootLogger.error('S3 publish failed: ' + (err as Error).message);
     }
 }
 
@@ -32,22 +35,25 @@ function publishToGhPages(localPath: string, destination?: string): void {
     const dest = destination || './report.html';
     const tmpDir = '/tmp/qa-gh-pages-' + Date.now();
     try {
-        execSync(
-            `git clone --branch gh-pages --single-branch "${getOriginUrl()}" "${tmpDir}" 2>/dev/null || mkdir -p "${tmpDir}"`,
-            { stdio: 'ignore' },
-        );
-        execSync(`cp "${localPath}" "${tmpDir}/${dest}"`, { stdio: 'inherit' });
-        execSync(`cd "${tmpDir}" && git add "${dest}" && git commit -m "Auto-publish report" && git push`, {
-            stdio: 'inherit',
+        execFileSync('git', ['clone', '--branch', 'gh-pages', '--single-branch', getOriginUrl(), tmpDir], {
+            stdio: 'ignore',
         });
     } catch {
-        rootLogger.error('gh-pages publish failed');
+        mkdirSync(tmpDir, { recursive: true });
+    }
+    try {
+        cpSync(localPath, join(tmpDir, dest));
+        execFileSync('git', ['add', dest], { stdio: 'inherit', cwd: tmpDir });
+        execFileSync('git', ['commit', '-m', 'Auto-publish report'], { stdio: 'inherit', cwd: tmpDir });
+        execFileSync('git', ['push'], { stdio: 'inherit', cwd: tmpDir });
+    } catch (err: unknown) {
+        rootLogger.error('gh-pages publish failed: ' + (err as Error).message);
     }
 }
 
 function getOriginUrl(): string {
     try {
-        return execSync('git remote get-url origin', { encoding: 'utf8' }).trim();
+        return execFileSync('git', ['remote', 'get-url', 'origin'], { encoding: 'utf8' }).trim();
     } catch {
         return 'origin';
     }

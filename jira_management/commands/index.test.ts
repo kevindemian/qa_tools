@@ -3,7 +3,6 @@ import * as path from 'path';
 import { getHandler } from './index';
 
 const KNOWN_CASES = [
-    '00',
     '1',
     '2',
     '3',

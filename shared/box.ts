@@ -35,14 +35,17 @@ function boxContentWidth(lines: string[], title: string, padding: number, maxWid
     return Math.min(longest + overhead, termWidth - 2);
 }
 
-function buildTopBorder(
-    title: string,
-    hArea: number,
-    b: { tl: string; tr: string; h: string },
-    borderChalk: (s: string) => string,
-    styled: (s: string) => string,
-    leftPad: string,
-): string {
+interface TopBorderOptions {
+    title: string;
+    hArea: number;
+    b: { tl: string; tr: string; h: string };
+    borderChalk: (s: string) => string;
+    styled: (s: string) => string;
+    leftPad: string;
+}
+
+function buildTopBorder(opts: TopBorderOptions): string {
+    const { title, hArea, b, borderChalk, styled, leftPad } = opts;
     let top = leftPad + borderChalk(b.tl);
     if (title) {
         const titleText = ' ' + styled(title) + ' ';
@@ -57,17 +60,20 @@ function buildTopBorder(
     return top;
 }
 
-function buildContentRows(
-    lines: string[],
-    innerWidth: number,
-    hArea: number,
-    padding: number,
-    b: { v: string; bl: string; br: string; h: string },
-    borderChalk: (s: string) => string,
-    styled: (s: string) => string,
-    leftPad: string,
-    showBorder: boolean,
-): string[] {
+interface BuildContentRowsOptions {
+    lines: string[];
+    innerWidth: number;
+    hArea: number;
+    padding: number;
+    border: { v: string; bl: string; br: string; h: string };
+    borderChalk: (s: string) => string;
+    styled: (s: string) => string;
+    leftPad: string;
+    showBorder: boolean;
+}
+
+function buildContentRows(opts: BuildContentRowsOptions): string[] {
+    const { lines, innerWidth, hArea, padding, border: b, borderChalk, styled, leftPad, showBorder } = opts;
     const rows: string[] = [];
     const pad = ' '.repeat(padding);
     if (showBorder && padding > 0) {
@@ -105,10 +111,20 @@ export function box(lines: string[], options: BoxOptions = {}): string {
     const rows: string[] = [];
 
     if (borderStyle !== 'none') {
-        rows.push(buildTopBorder(title, hArea, b, borderChalk, styled, leftPad));
+        rows.push(buildTopBorder({ title, hArea, b, borderChalk, styled, leftPad }));
     }
     rows.push(
-        ...buildContentRows(lines, innerWidth, hArea, padding, b, borderChalk, styled, leftPad, borderStyle !== 'none'),
+        ...buildContentRows({
+            lines,
+            innerWidth,
+            hArea,
+            padding,
+            border: b,
+            borderChalk,
+            styled,
+            leftPad,
+            showBorder: borderStyle !== 'none',
+        }),
     );
     if (borderStyle !== 'none') {
         rows.push(leftPad + borderChalk(b.bl + b.h.repeat(hArea) + b.br));

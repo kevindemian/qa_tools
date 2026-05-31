@@ -1,92 +1,7 @@
-import * as path from 'path';
-
 /** Centralised configuration: reads from env vars, `.env` file, or runtime overrides.
  * Access via {@link Config.create} (scoped) or static getters (global singleton). */
-let dotenvLoaded = false;
-
-function ensureDotenv(): void {
-    if (dotenvLoaded) return;
-    try {
-        // eslint-disable-next-line @typescript-eslint/no-require-imports
-        require('dotenv').config({ path: path.resolve(__dirname, '../.env') });
-    } catch {
-        /* env file optional */
-    }
-    dotenvLoaded = true;
-}
-
-function envVal(key: string, fallback = ''): string {
-    ensureDotenv();
-    return process.env[key] || fallback;
-}
-
-/** Runtime overrides for any config key. Keys map 1:1 to env var names (lowercase, camelCase).
- * When provided, overrides take precedence over env vars and `.env`. */
-interface ConfigOverrides {
-    jiraBaseUrl?: string;
-    jiraPersonalToken?: string;
-    xrayBaseUrl?: string;
-    xrayMode?: string;
-    jiraProject?: string;
-    gitToken?: string;
-    gitBaseUrl?: string;
-    githubToken?: string;
-    githubApiUrl?: string;
-    cypressProjectPath?: string;
-    csvDefaultPath?: string;
-    autoChoice?: string;
-    autoConfirm?: string | boolean;
-    dryRun?: string | boolean;
-    debug?: string | boolean;
-    quiet?: string | boolean;
-    onError?: string;
-    csvPath?: string;
-    csvLabels?: string;
-    jsonPath?: string;
-    jsonLabels?: string;
-    logLevel?: string;
-    logFile?: string | boolean;
-    logDir?: string;
-    logMaxSize?: string | number;
-    xdgStateHome?: string;
-    llmApiKey?: string;
-    llmModel?: string;
-    llmBaseUrl?: string;
-    llmSmallApiKey?: string;
-    llmSmallModel?: string;
-    llmFastApiKey?: string;
-    llmFastModel?: string;
-    llmFastBaseUrl?: string;
-    llmReviewApiKey?: string;
-    llmReviewModel?: string;
-    llmReviewBaseUrl?: string;
-    llmFallbackApiKey?: string;
-    llmFallbackModel?: string;
-    llmFallbackBaseUrl?: string;
-    llmBatchApiKey?: string;
-    llmBatchModel?: string;
-    llmBatchBaseUrl?: string;
-    xrayClientId?: string;
-    xrayClientSecret?: string;
-    llmMaxTokens?: string | number;
-    llmMaxTotalTokens?: string | number;
-    knownIssuesPath?: string;
-}
-
-/** Parse a string/boolean/undefined into a strict boolean. */
-function toBool(val: string | boolean | undefined): boolean {
-    if (val === undefined) return false;
-    if (typeof val === 'boolean') return val;
-    return val === 'true';
-}
-
-/** Parse a string/number/undefined into an integer with a fallback default. */
-function toInt(val: string | number | undefined, fallback: number): number {
-    if (val === undefined) return fallback;
-    if (typeof val === 'number') return val;
-    const n = parseInt(val, 10);
-    return isNaN(n) ? fallback : n;
-}
+import { ensureDotenv, envVal, toBool, toInt } from './env-utils';
+import type { ConfigOverrides } from './types';
 
 /** Config is a key-value store backed by env vars, a `.env` file, and runtime overrides.
  * Use {@link create} for a scoped instance or static getters for the global singleton.
@@ -166,6 +81,9 @@ class Config {
     }
     get xrayClientSecret(): string {
         return this.overrides.xrayClientSecret ?? envVal('XRAY_CLIENT_SECRET');
+    }
+    get xrayCloudUrl(): string {
+        return this.overrides.xrayCloudUrl ?? envVal('XRAY_CLOUD_URL', 'https://xray.cloud.getxray.app');
     }
     get jiraProject(): string {
         return this.overrides.jiraProject ?? envVal('JIRA_PROJECT', 'ECSPOL');
@@ -367,9 +285,7 @@ class Config {
         Config.defaultInstance.load();
     }
 
-    // ── Static getter delegators ──────────────────────────────────────────
-    // Each static getter below delegates to `Config.defaultInstance`.
-    // See the instance getter above for the documentation.
+    // ── Static getter delegators (1-liner per key) ───────────────────────
 
     static get jiraBaseUrl(): string {
         return Config.defaultInstance.jiraBaseUrl;
@@ -382,6 +298,15 @@ class Config {
     }
     static get xrayMode(): 'server' | 'cloud' {
         return Config.defaultInstance.xrayMode;
+    }
+    static get xrayClientId(): string {
+        return Config.defaultInstance.xrayClientId;
+    }
+    static get xrayClientSecret(): string {
+        return Config.defaultInstance.xrayClientSecret;
+    }
+    static get xrayCloudUrl(): string {
+        return Config.defaultInstance.xrayCloudUrl;
     }
     static get jiraProject(): string {
         return Config.defaultInstance.jiraProject;

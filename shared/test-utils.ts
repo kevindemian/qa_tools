@@ -33,6 +33,40 @@ export function restoreConsoleSpies(spies: ReturnType<typeof createConsoleSpies>
     spies.warn.mockRestore();
 }
 
+/** Create a mock CommandContext with standard default fields for handler tests.
+ * Each call produces fresh `jest.fn()` instances, so tests are isolated.
+ * When `overrides.ctx` is provided, it is shallow-merged into the default ctx
+ * rather than replacing it entirely.
+ * @param overrides - Top-level fields to override. `ctx` is deep-merged.
+ * @returns A `Record<string, unknown>` compatible with `CommandContext` */
+export function makeMockCommandContext(overrides: Record<string, unknown> = {}): Record<string, unknown> {
+    const ctx = {
+        project_name: 'TEST',
+        inMemoryTasksId: [],
+        inMemoryTasksText: [],
+        sessionCounters: [],
+        isBusy: false,
+        results: [],
+    };
+    const mergedOverrides = { ...overrides };
+    if (overrides.ctx && typeof overrides.ctx === 'object' && !Array.isArray(overrides.ctx)) {
+        mergedOverrides.ctx = { ...ctx, ...(overrides.ctx as Record<string, unknown>) };
+    }
+    return {
+        jiraResource: {},
+        jiraResourceXray: {},
+        linkManager: {},
+        linkManagerXray: {},
+        csvResource: {},
+        ctx,
+        pushHistory: jest.fn(),
+        printSessionSummary: jest.fn(),
+        base_url: 'https://jira.test.com',
+        sessionLog: { child: jest.fn().mockReturnValue({ info: jest.fn(), error: jest.fn(), warn: jest.fn() }) },
+        ...mergedOverrides,
+    };
+}
+
 export function withEnv(env: Record<string, string | undefined>): () => void {
     const prev: Record<string, string | undefined> = {};
     for (const key of Object.keys(env)) {

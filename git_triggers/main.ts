@@ -1,11 +1,22 @@
 /** git_triggers entry point — validates environment, shows splash, and dispatches to sub-handlers. */
-import { createValidateEnv, setupSigint } from '../shared/cli_base';
+import { pushBreadcrumb, clearBreadcrumbs } from '../shared/breadcrumbs';
+import { createValidateEnv, offerEnvSetup, setupSigint } from '../shared/cli_base';
 import Config from '../shared/config';
 import { showSplash } from '../shared/splash';
 import { palette } from '../shared/palette';
 import { defaultOutput } from '../shared/output';
 import { rootLogger } from '../shared/logger';
-import { CancelError, success, error, warn, info, title, prompt, showSelect, printError } from '../shared/prompt';
+import {
+    CancelError,
+    success,
+    warn,
+    info,
+    title,
+    prompt,
+    showSelect,
+    printError,
+    confirm as promptConfirm,
+} from '../shared/prompt';
 import { load as loadState, update as updateState } from '../shared/state';
 import type { GitProvider, JsonObject, StateContainer } from '../shared/types';
 import {
@@ -25,6 +36,7 @@ import {
     setManager,
     projectId,
     getProjects,
+    clearProjectCache,
 } from './session-state';
 import {
     handleTriggerPipeline,
@@ -48,6 +60,8 @@ import {
 } from './schedule-handler';
 import { tryBatchMode, parseBatchArgs } from './batch-mode';
 import { handleHelp as _handleHelp, handleShowHistory as _handleShowHistory } from './ui-helpers';
+import { handleSetupWizard as _handleSetupWizard } from './case00-handler';
+import { showDocs } from '../shared/show-docs';
 
 const validateEnv = createValidateEnv([
     { key: 'GIT_TOKEN', label: 'GIT_TOKEN (token de autenticação GitLab)', example: 'GIT_TOKEN=seu-token-aqui' },
@@ -75,7 +89,7 @@ function buildContextLine(): string {
     return providerLabel().toUpperCase() + ' TOOLS' + sessionContext.buildContextLine();
 }
 
-function _selectProject(): { projectName: string; names: string[] } {
+function _selectProject(): { projectName: string | null; names: string[] } {
     const state = loadState();
     displayProjects();
     const names = Object.keys(getProjects());
@@ -86,9 +100,8 @@ function _selectProject(): { projectName: string; names: string[] } {
     });
     const firstIdx = !firstChoice.trim() ? names.indexOf(firstDefault) + 1 : parseInt(firstChoice, 10);
     if (isNaN(firstIdx) || firstIdx < 1 || firstIdx > names.length) {
-        error('Projeto inválido.');
-        process.exitCode = 1;
-        throw new Error('Invalid project');
+        warn('Projeto inválido.');
+        return { projectName: null, names };
     }
     const projectName = names[firstIdx - 1]!;
     setCurrentProjectName(projectName);
@@ -159,6 +172,8 @@ function withErrorHandling(
 }
 
 const ACTION_HANDLERS: Record<string, (m: GitProvider, pn: string, ns: string[]) => Promise<boolean>> = {
+    '00': () => _handleSetupWizard(),
+    w: () => _handleSetupWizard(),
     '1': withErrorHandling((m, pn) => handleTriggerPipeline(m, pn)),
     '2': withErrorHandling((m) => handleListSchedules(m)),
     '3': withErrorHandling((m) => handleRunSchedule(m)),
@@ -175,9 +190,9 @@ const ACTION_HANDLERS: Record<string, (m: GitProvider, pn: string, ns: string[])
 };
 
 function _handleExit(): boolean {
+    clearBreadcrumbs();
     title('Até logo!');
     printSessionSummary();
-    if (sessionContext.sessionCounters.some((c: { status: string }) => c.status === 'error')) process.exitCode = 1;
     return true;
 }
 
@@ -197,7 +212,7 @@ async function _dispatchAction(
         return false;
     }
     if (cmd === '/docs' || cmd === '/d') {
-        warn('Documentação disponível apenas no módulo Jira.');
+        await showDocs();
         return false;
     }
     if (cmd === '/back' || cmd === '/menu') {
@@ -211,28 +226,103 @@ async function _dispatchAction(
     return false;
 }
 
-async function main(): Promise<void> {
+function _initInfrastructure(): void {
     ensureDirs();
     registerCleanup();
+}
 
-    if (await tryBatchMode()) return;
-
-    const projs = getProjects();
+async function _ensureProjectsConfigured(): Promise<boolean> {
+    let projs = getProjects();
     if (!projs || Object.keys(projs).length === 0) {
-        process.exitCode = 1;
-        return;
+        warn('Nenhum projeto configurado.');
+        try {
+            const wantsSetup = promptConfirm('Deseja configurar um projeto agora?');
+            if (wantsSetup) {
+                await _handleSetupWizard();
+                clearProjectCache();
+                projs = getProjects();
+            }
+        } catch {
+            // confirm cancelled — exit
+        }
+        if (!projs || Object.keys(projs).length === 0) {
+            warn('É necessário configurar ao menos um projeto. Configure projects.json ou execute o setup wizard.');
+            return false;
+        }
     }
+    return true;
+}
+
+async function _initEnvironment(): Promise<void> {
     setupSigint(
         () => isBusy,
         () => printSessionSummary(),
     );
-    validateEnv();
+    const envResult = validateEnv();
+    if (offerEnvSetup(envResult)) {
+        try {
+            // eslint-disable-next-line @typescript-eslint/no-require-imports
+            const handlerMod = require('./case00-handler') as { handleSetupWizard: () => Promise<boolean> };
+            await handlerMod.handleSetupWizard();
+        } catch {
+            // wizard failed — continue anyway
+        }
+    }
     await showSplash();
     sessionLog.info('Sessão iniciada');
+}
 
+async function _selectProjectAndCreateManager(): Promise<{
+    projectName: string;
+    names: string[];
+    manager: GitProvider;
+} | null> {
     const { projectName, names } = _selectProject();
-    const m = createManagerForProject(projectName, projectId);
+    if (!projectName) return null;
+    let m: GitProvider;
+    try {
+        m = createManagerForProject(projectName, projectId);
+    } catch (e) {
+        if ((e as Error).name === 'MissingTokenError') {
+            warn(String(e));
+            try {
+                if (promptConfirm('Token de acesso não encontrado. Deseja configurar agora?')) {
+                    await _handleSetupWizard();
+                    clearProjectCache();
+                    m = createManagerForProject(projectName, projectId);
+                } else {
+                    return null;
+                }
+            } catch {
+                return null;
+            }
+        } else {
+            printError('Erro ao criar gerenciador do projeto', e);
+            rootLogger.error('createManagerForProject failed', { projectName, error: String(e) });
+            return null;
+        }
+    }
     setManager(m);
+    return { projectName, names, manager: m };
+}
+
+async function main(): Promise<void> {
+    _initInfrastructure();
+
+    if (await tryBatchMode()) return;
+
+    const hasProjects = await _ensureProjectsConfigured();
+    if (!hasProjects) return;
+
+    await _initEnvironment();
+
+    const result = await _selectProjectAndCreateManager();
+    if (!result) return;
+    const { projectName, names, manager: m } = result;
+
+    clearBreadcrumbs();
+    pushBreadcrumb('GIT');
+    pushBreadcrumb(projectName);
 
     await displayRecentPipelines(m);
 
@@ -252,20 +342,22 @@ async function main(): Promise<void> {
             if (shouldExit) return;
         } catch (e) {
             if (e instanceof CancelError) continue;
-            throw e;
+            printError('Erro na operação', e);
+            rootLogger.error('Handler error', { error: String(e) });
+            continue;
         }
     }
 }
 
 process.on('unhandledRejection', (reason: unknown) => {
+    printError('Erro interno não tratado', reason);
     rootLogger.error('Unhandled Rejection', { reason: String(reason) });
-    process.exitCode = 1;
 });
 
 main().catch((err) => {
     printError('Erro inesperado', err);
     printSessionSummary();
-    process.exitCode = 1;
+    rootLogger.error('Main error', { error: String(err) });
 });
 
 export default {
@@ -296,6 +388,7 @@ export default {
     displayProjects,
     displayRecentPipelines,
     handleFlakinessDashboard,
+    handleSetupWizard: _handleSetupWizard,
     tryBatchMode,
     parseBatchArgs,
     buildContextLine,
