@@ -43,6 +43,7 @@ function setupJiraMocks(base: string): void {
 
 describe('E2E: Result Processing Pipeline', () => {
     beforeAll(() => {
+        nock.cleanAll();
         process.env.HOME = tmpHome;
         process.env.JIRA_BASE_URL = 'http://localhost:1997/jira';
         process.env.JIRA_PERSONAL_TOKEN = 'e2e-token';
@@ -54,6 +55,7 @@ describe('E2E: Result Processing Pipeline', () => {
     afterAll(() => {
         nock.cleanAll();
         nock.enableNetConnect();
+        nock.restore();
         if (fs.existsSync(tmpHome)) {
             fs.rmSync(tmpHome, { recursive: true, force: true });
         }

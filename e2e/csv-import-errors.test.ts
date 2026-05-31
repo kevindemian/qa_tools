@@ -47,6 +47,7 @@ function writeCsv(name: string, content: string): string {
 
 describe('E2E: CSV Import - Error Paths', () => {
     beforeAll(() => {
+        nock.cleanAll();
         setTestSleep(() => Promise.resolve());
         process.env.HOME = tmpHome;
         process.env.JIRA_BASE_URL = 'http://localhost:1999/jira';
@@ -67,6 +68,7 @@ describe('E2E: CSV Import - Error Paths', () => {
     afterAll(() => {
         nock.cleanAll();
         nock.enableNetConnect();
+        nock.restore();
         setTestSleep(undefined);
     });
 
