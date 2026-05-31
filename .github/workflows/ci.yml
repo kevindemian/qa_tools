@@ -23,4 +23,5 @@ jobs:
             - run: npx eslint . --ext .ts
             - run: npm run unused-exports || true
             - run: npm audit --audit-level=high || true
-            - run: npx jest --coverage --forceExit --detectOpenHandles --runInBand
+            - run: npx jest --coverage --forceExit --detectOpenHandles --testPathIgnorePatterns='e2e/|github-e2e'
+            - run: npx jest --no-coverage --forceExit --runInBand e2e/ git_triggers/github-e2e.test.ts
