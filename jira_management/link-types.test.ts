@@ -6,6 +6,7 @@ jest.mock('fs');
 
 import fs from 'fs';
 import path from 'path';
+import type { JiraResourceLike } from '../shared/types';
 import { LinkTypeManager } from './link-types';
 import { rootLogger } from '../shared/logger';
 import { tempDirPath } from '../shared/temp-dir';
@@ -14,8 +15,12 @@ const CACHE_PATH = path.join(tempDirPath(), 'cache', 'link-types-cache.json');
 
 describe('LinkTypeManager', () => {
     let manager: LinkTypeManager;
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- partial mock
-    let mockJiraResource: any;
+    let mockJiraResource: {
+        getJiraResource: jest.Mock;
+        postJiraResource: jest.Mock;
+        putJiraResource: jest.Mock;
+        searchJiraIssues: jest.Mock;
+    };
 
     beforeEach(() => {
         jest.clearAllMocks();
@@ -25,7 +30,7 @@ describe('LinkTypeManager', () => {
             putJiraResource: jest.fn(),
             searchJiraIssues: jest.fn(),
         };
-        manager = new LinkTypeManager(mockJiraResource);
+        manager = new LinkTypeManager(mockJiraResource as unknown as JiraResourceLike);
     });
 
     describe('constructor', () => {

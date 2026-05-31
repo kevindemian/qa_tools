@@ -3,12 +3,17 @@ jest.mock('../shared/prompt', () => ({
     warn: jest.fn(),
 }));
 
+import type { JiraResourceLike } from '../shared/types';
 import { LinkOperations } from './link-operations';
 import { LinkTypeManager } from './link-types';
 
 describe('LinkOperations', () => {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- partial mock
-    let mockJiraResource: any;
+    let mockJiraResource: {
+        getJiraResource: jest.Mock;
+        postJiraResource: jest.Mock;
+        putJiraResource: jest.Mock;
+        searchJiraIssues: jest.Mock;
+    };
     let linkTypeManager: LinkTypeManager;
     let operations: LinkOperations;
 
@@ -20,8 +25,8 @@ describe('LinkOperations', () => {
             putJiraResource: jest.fn(),
             searchJiraIssues: jest.fn(),
         };
-        linkTypeManager = new LinkTypeManager(mockJiraResource);
-        operations = new LinkOperations(mockJiraResource, linkTypeManager);
+        linkTypeManager = new LinkTypeManager(mockJiraResource as unknown as JiraResourceLike);
+        operations = new LinkOperations(mockJiraResource as unknown as JiraResourceLike, linkTypeManager);
     });
 
     describe('linkIssues', () => {

@@ -1,3 +1,4 @@
+import type { AxiosInstance } from 'axios';
 import { apiGet, apiPost, apiPut, projectPath, formatDiffResponse } from './gitlab-api';
 
 jest.mock('../shared/git-provider-error', () => ({
@@ -6,6 +7,10 @@ jest.mock('../shared/git-provider-error', () => ({
         throw err;
     }),
 }));
+
+function mockClient(): jest.Mocked<AxiosInstance> {
+    return { get: jest.fn(), post: jest.fn(), put: jest.fn() } as unknown as jest.Mocked<AxiosInstance>;
+}
 
 describe('projectPath', () => {
     it('encodes owner/repo pair', () => {
@@ -23,89 +28,103 @@ describe('projectPath', () => {
 
 describe('apiGet', () => {
     it('returns data on successful get', async () => {
-        const client = { get: jest.fn().mockResolvedValue({ data: { id: 1 } }) } as any;
+        const client = mockClient();
+        client.get.mockResolvedValue({ data: { id: 1 } });
         const result = await apiGet(client, '/test');
         expect(result).toEqual({ id: 1 });
     });
 
     it('passes params to client.get', async () => {
-        const client = { get: jest.fn().mockResolvedValue({ data: [] }) } as any;
+        const client = mockClient();
+        client.get.mockResolvedValue({ data: [] });
         await apiGet(client, '/test', { params: { page: 2 } });
         expect(client.get).toHaveBeenCalledWith('/test', { params: { page: 2 } });
     });
 
     it('calls get without params when no opts provided', async () => {
-        const client = { get: jest.fn().mockResolvedValue({ data: 'ok' }) } as any;
+        const client = mockClient();
+        client.get.mockResolvedValue({ data: 'ok' });
         await apiGet(client, '/test');
         expect(client.get).toHaveBeenCalledWith('/test');
     });
 
     it('returns null on error when returnNull is true', async () => {
-        const client = { get: jest.fn().mockRejectedValue(new Error('fail')) } as any;
+        const client = mockClient();
+        client.get.mockRejectedValue(new Error('fail'));
         const result = await apiGet(client, '/test', { returnNull: true });
         expect(result).toBeNull();
     });
 
     it('re-throws on error when returnNull is not set', async () => {
-        const client = { get: jest.fn().mockRejectedValue(new Error('fail')) } as any;
+        const client = mockClient();
+        client.get.mockRejectedValue(new Error('fail'));
         await expect(apiGet(client, '/test')).rejects.toThrow('fail');
     });
 });
 
 describe('apiPost', () => {
     it('returns data on successful post with body', async () => {
-        const client = { post: jest.fn().mockResolvedValue({ data: { id: 1 } }) } as any;
+        const client = mockClient();
+        client.post.mockResolvedValue({ data: { id: 1 } });
         const result = await apiPost(client, '/test', { name: 'foo' });
         expect(result).toEqual({ id: 1 });
         expect(client.post).toHaveBeenCalledWith('/test', { name: 'foo' });
     });
 
     it('calls post without body when body is undefined', async () => {
-        const client = { post: jest.fn().mockResolvedValue({ data: null }) } as any;
+        const client = mockClient();
+        client.post.mockResolvedValue({ data: null });
         await apiPost(client, '/test');
         expect(client.post).toHaveBeenCalledWith('/test');
     });
 
     it('calls post with explicit undefined body', async () => {
-        const client = { post: jest.fn().mockResolvedValue({ data: null }) } as any;
+        const client = mockClient();
+        client.post.mockResolvedValue({ data: null });
         await apiPost(client, '/test', undefined);
         expect(client.post).toHaveBeenCalledWith('/test');
     });
 
     it('calls post with null body', async () => {
-        const client = { post: jest.fn().mockResolvedValue({ data: null }) } as any;
+        const client = mockClient();
+        client.post.mockResolvedValue({ data: null });
         await apiPost(client, '/test', null);
         expect(client.post).toHaveBeenCalledWith('/test', null);
     });
 
     it('re-throws on error', async () => {
-        const client = { post: jest.fn().mockRejectedValue(new Error('fail')) } as any;
+        const client = mockClient();
+        client.post.mockRejectedValue(new Error('fail'));
         await expect(apiPost(client, '/test')).rejects.toThrow('fail');
     });
 });
 
 describe('apiPut', () => {
     it('returns data on successful put with body', async () => {
-        const client = { put: jest.fn().mockResolvedValue({ data: { id: 1 }, status: 200 }) } as any;
+        const client = mockClient();
+        client.put.mockResolvedValue({ data: { id: 1 }, status: 200 });
         const result = await apiPut(client, '/test', { name: 'foo' });
         expect(result).toEqual({ id: 1 });
         expect(client.put).toHaveBeenCalledWith('/test', { name: 'foo' });
     });
 
     it('returns null on 204 status', async () => {
-        const client = { put: jest.fn().mockResolvedValue({ data: {}, status: 204 }) } as any;
+        const client = mockClient();
+        client.put.mockResolvedValue({ data: {}, status: 204 });
         const result = await apiPut(client, '/test');
         expect(result).toBeNull();
     });
 
     it('calls put without body when body is undefined', async () => {
-        const client = { put: jest.fn().mockResolvedValue({ data: null, status: 200 }) } as any;
+        const client = mockClient();
+        client.put.mockResolvedValue({ data: null, status: 200 });
         await apiPut(client, '/test');
         expect(client.put).toHaveBeenCalledWith('/test');
     });
 
     it('re-throws on error', async () => {
-        const client = { put: jest.fn().mockRejectedValue(new Error('fail')) } as any;
+        const client = mockClient();
+        client.put.mockRejectedValue(new Error('fail'));
         await expect(apiPut(client, '/test')).rejects.toThrow('fail');
     });
 });
@@ -144,7 +163,7 @@ describe('formatDiffResponse', () => {
     it('returns empty string for null / undefined / non-array input', () => {
         expect(formatDiffResponse(null, 'diff', 'name')).toBe('');
         expect(formatDiffResponse(undefined, 'diff', 'name')).toBe('');
-        expect(formatDiffResponse({} as any, 'diff', 'name')).toBe('');
+        expect(formatDiffResponse({} as unknown as Record<string, unknown>[], 'diff', 'name')).toBe('');
     });
 
     it('returns empty string for empty array', () => {

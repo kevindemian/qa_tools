@@ -1,5 +1,6 @@
 import { glGetBranch, glGetDiff } from './gitlab-branch';
 import { apiGet, projectPath, formatDiffResponse } from './gitlab-api';
+import type { AxiosInstance } from 'axios';
 
 jest.mock('./gitlab-api', () => ({
     apiGet: jest.fn(),
@@ -9,7 +10,7 @@ jest.mock('./gitlab-api', () => ({
     formatDiffResponse: jest.fn(),
 }));
 
-const mockClient = { get: jest.fn() } as any;
+const mockClient = { get: jest.fn() } as unknown as jest.Mocked<AxiosInstance>;
 
 beforeEach(() => {
     jest.clearAllMocks();
@@ -22,7 +23,11 @@ beforeEach(() => {
             if (!entries || !Array.isArray(entries)) return '';
             return entries
                 .filter((e) => e.diff && typeof e.diff === 'string')
-                .map((e) => `--- a/${String(e.new_path ?? '')}\n+++ b/${String(e.new_path ?? '')}\n${String(e.diff)}`)
+                .map((e) => {
+                    const newPath = typeof e.new_path === 'string' ? e.new_path : '';
+                    const diff = typeof e.diff === 'string' ? e.diff : '';
+                    return `--- a/${newPath}\n+++ b/${newPath}\n${diff}`;
+                })
                 .join('\n');
         },
     );

@@ -12,6 +12,7 @@ jest.mock('fs');
 import fs from 'fs';
 import path from 'path';
 
+import type { JiraResourceLike } from '../shared/types';
 import JiraLinkManager, {
     matchPreconditionByTokenOverlap,
     matchPreconditionByDualThreshold,
@@ -23,8 +24,12 @@ const CACHE_PATH = path.join(tempDirPath(), 'cache', 'link-types-cache.json');
 
 describe('JiraLinkManager', () => {
     let manager: InstanceType<typeof JiraLinkManager>;
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- partial mock for JiraResource in tests
-    let mockJiraResource: any;
+    let mockJiraResource: {
+        getJiraResource: jest.Mock;
+        postJiraResource: jest.Mock;
+        putJiraResource: jest.Mock;
+        searchJiraIssues: jest.Mock;
+    };
 
     beforeEach(() => {
         jest.clearAllMocks();
@@ -34,7 +39,7 @@ describe('JiraLinkManager', () => {
             putJiraResource: jest.fn(),
             searchJiraIssues: jest.fn(),
         };
-        manager = new JiraLinkManager(mockJiraResource);
+        manager = new JiraLinkManager(mockJiraResource as unknown as JiraResourceLike);
     });
 
     describe('constructor', () => {

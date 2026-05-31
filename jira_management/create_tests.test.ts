@@ -55,6 +55,7 @@ jest.mock('axios', () => {
 });
 
 // 3. THEN import the source modules (they'll get the mocked dependencies)
+import type { JiraResourceLike } from '../shared/types';
 import JiraResource from './jira_resource';
 import JiraLinkManager from './jira_link_manager';
 import type { TestCase } from '../shared/types';
@@ -73,6 +74,7 @@ const {
 import * as PROMPT from '../shared/prompt';
 import * as STATE from '../shared/state';
 import fs from 'fs';
+import { rootLogger } from '../shared/logger';
 
 const MOCK_ISSUE_TYPES = [
     { id: '11200', name: 'Epic' },
@@ -97,13 +99,11 @@ const MOCK_FIELDS = [
 const PROJECT = 'TESTPROJ';
 
 describe('createTestExecution', () => {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- methods replaced with jest.fn()
-    let jiraResource: any;
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- JiraLinkManager with mocked jiraResource
-    let linkManager: any;
+    let jiraResource: jest.Mocked<JiraResource>;
+    let linkManager: JiraLinkManager;
 
     beforeEach(() => {
-        jiraResource = new JiraResource('fake-token', 'http://jira/rest/api/2');
+        jiraResource = new JiraResource('fake-token', 'http://jira/rest/api/2') as jest.Mocked<JiraResource>;
         jiraResource.getJiraResource = jest.fn();
         jiraResource.postJiraResource = jest.fn();
         linkManager = new JiraLinkManager(jiraResource);
@@ -242,19 +242,16 @@ describe('createTestExecution', () => {
 });
 
 describe('createTestExecutionWithLinks', () => {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- methods replaced with jest.fn()
-    let jiraResource: any;
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- methods replaced with jest.fn()
-    let linkJiraRes: any;
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- JiraLinkManager with mocked jiraResource
-    let linkManager: any;
+    let jiraResource: jest.Mocked<JiraResource>;
+    let linkJiraRes: jest.Mocked<JiraResource>;
+    let linkManager: JiraLinkManager;
 
     beforeEach(() => {
-        jiraResource = new JiraResource('fake-token', 'http://jira/rest/api/2');
+        jiraResource = new JiraResource('fake-token', 'http://jira/rest/api/2') as jest.Mocked<JiraResource>;
         jiraResource.getJiraResource = jest.fn();
         jiraResource.postJiraResource = jest.fn();
 
-        linkJiraRes = new JiraResource('fake-token', 'http://jira/rest/api/2');
+        linkJiraRes = new JiraResource('fake-token', 'http://jira/rest/api/2') as jest.Mocked<JiraResource>;
         linkJiraRes.getJiraResource = jest.fn();
         linkJiraRes.postJiraResource = jest.fn();
         linkJiraRes.getJiraResource.mockImplementation((url: string) => {
@@ -319,10 +316,11 @@ describe('createTestExecutionWithLinks', () => {
             execOpts: {},
         });
 
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any -- accessing mock calls on replaced method
-        const linkCalls = linkJiraRes.postJiraResource.mock.calls.filter((c: any) => c[0] === 'issueLink');
+        const linkCalls = linkJiraRes.postJiraResource.mock.calls.filter(
+            (c): c is [string, { outwardIssue: { key: string } }] => c[0] === 'issueLink',
+        );
         expect(linkCalls).toHaveLength(1);
-        expect(linkCalls[0][1].outwardIssue.key).toBe('TEST-2');
+        expect(linkCalls[0]![1].outwardIssue.key).toBe('TEST-2');
     });
 
     it('handles link API failure gracefully', async () => {
@@ -380,12 +378,11 @@ describe('generateMappingFiles', () => {
 
     it('creates JSON and MD mapping files', () => {
         const base = nextBase();
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any -- test data may be partial TestCase
-        const testCases: any = [
+        const testCases: Partial<TestCase>[] = [
             { title: 'TC1', description: 'Descricao do TC1', steps: makeSteps('a1', 'a2') },
             { title: 'TC2' },
         ];
-        generateMappingFiles(base + '.csv', 'PROJ', ['TEST-1', 'TEST-2'], testCases);
+        generateMappingFiles(base + '.csv', 'PROJ', ['TEST-1', 'TEST-2'], testCases as TestCase[]);
 
         const jsonPath = tmpDir + '/test-csv-' + testIdx + '-jira-mapping.json';
         const mdPath = tmpDir + '/test-csv-' + testIdx + '-jira-mapping.md';
@@ -405,8 +402,7 @@ describe('generateMappingFiles', () => {
     it('generates mapping files regardless of CYPRESS_PROJECT_PATH', () => {
         delete process.env.CYPRESS_PROJECT_PATH;
         const base = nextBase();
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any -- test data may be partial TestCase
-        const testCases: any = [{ title: 'TC', steps: [] }];
+        const testCases: TestCase[] = [{ title: 'TC', steps: [] }];
         generateMappingFiles(base + '.csv', 'PROJ', ['TEST-1'], testCases);
         expect(realFs.existsSync(tmpDir + '/test-csv-' + testIdx + '-jira-mapping.json')).toBe(true);
         process.env.CYPRESS_PROJECT_PATH = tmpDir;
@@ -423,8 +419,7 @@ describe('generateMappingFiles', () => {
 
     it('includes steps and precondition in JSON mapping', () => {
         const base = nextBase();
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any -- test data with precondition
-        const testCases: any = [
+        const testCases: TestCase[] = [
             {
                 title: 'TC3',
                 description: 'Desc',
@@ -441,12 +436,11 @@ describe('generateMappingFiles', () => {
 
     it('generates MD with full steps for each test', () => {
         const base = nextBase();
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any -- test data may be partial TestCase
-        const testCases: any = [
+        const testCases: Partial<TestCase>[] = [
             { title: 'TC1', description: 'Descricao do TC1', steps: makeSteps('a1') },
             { title: 'TC2' },
         ];
-        generateMappingFiles(base + '.csv', 'PROJ', ['TEST-1', 'TEST-2'], testCases);
+        generateMappingFiles(base + '.csv', 'PROJ', ['TEST-1', 'TEST-2'], testCases as TestCase[]);
         const md = realFs.readFileSync(tmpDir + '/test-csv-' + testIdx + '-jira-mapping.md', 'utf8');
         const mdLines = md.split('\n');
         expect(md).toContain('## TEST-1 — TC1');
@@ -493,12 +487,10 @@ describe('validateCsvTests', () => {
 });
 
 describe('createTestsFromJson', () => {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- jest.mock('fs') replaces with mocked version
-    const FS: any = fs;
+    const FS: jest.Mocked<typeof fs> = fs as jest.Mocked<typeof fs>;
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- test helper; returns partially mocked instance
-    function makeJiraResource(): any {
-        const r = new JiraResource('fake-token', 'http://jira/rest/api/2');
+    function makeJiraResource(): jest.Mocked<JiraResource> {
+        const r = new JiraResource('fake-token', 'http://jira/rest/api/2') as jest.Mocked<JiraResource>;
         r.getJiraResource = jest.fn();
         r.postJiraResource = jest.fn();
         return r;
@@ -511,20 +503,23 @@ describe('createTestsFromJson', () => {
         return lm;
     }
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- test helper; mock types don't match Logger/JiraResource exactly
-    const BASE_PARAMS = (): any => ({
-        jiraResource: makeJiraResource(),
-        jiraResourceXray: makeJiraResource(),
-        linkManager: makeLinkManager(),
-        linkManagerXray: makeLinkManager(),
-        project_name: 'TESTPROJ',
-        base_url: 'http://jira',
-        sessionLog: {
-            log: jest.fn(),
-            child: jest.fn().mockReturnValue({ log: jest.fn(), warn: jest.fn(), info: jest.fn(), error: jest.fn() }),
-        },
-        onBusy: jest.fn(),
-    });
+    function BASE_PARAMS() {
+        return {
+            jiraResource: makeJiraResource() as unknown as JiraResourceLike,
+            jiraResourceXray: makeJiraResource() as unknown as JiraResourceLike,
+            linkManager: makeLinkManager(),
+            linkManagerXray: makeLinkManager(),
+            project_name: 'TESTPROJ' as const,
+            base_url: 'http://jira',
+            sessionLog: {
+                log: jest.fn(),
+                child: jest
+                    .fn()
+                    .mockReturnValue({ log: jest.fn(), warn: jest.fn(), info: jest.fn(), error: jest.fn() }),
+            },
+            onBusy: jest.fn(),
+        } as unknown as Parameters<typeof createTestsFromJson>[0];
+    }
     afterEach(() => {
         delete process.env.JSON_PATH;
         delete process.env.AUTO_CONFIRM;
@@ -587,12 +582,12 @@ describe('createTestsFromJson', () => {
         jest.mocked(STATE.load).mockReturnValue({ lastJsonDir: '/base/dir' });
         jest.mocked(PROMPT.askFilePath).mockResolvedValueOnce('sub/testes.json');
         FS.existsSync.mockReturnValue(true);
-        FS.readFileSync.mockImplementation((p: string) => {
+        FS.readFileSync.mockImplementation(((p: string) => {
             if (p === '/base/dir/sub/testes.json') {
                 return JSON.stringify([{ title: 'TC1', steps: [{ Action: 'Click' }] }]);
             }
             return '[]';
-        });
+        }) as typeof FS.readFileSync);
         const result = await createTestsFromJson(BASE_PARAMS());
         expect(result).toBeDefined();
         expect(result!.summary).toContain('1');
@@ -639,33 +634,28 @@ describe('createTestsFromJson', () => {
 });
 
 describe('readCsvTests (via createTestsFromCsv)', () => {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- methods replaced with jest.fn()
-    let csvResource: any;
+    let csvResource: jest.Mocked<CsvResource>;
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- test helper returns partially mocked instance
-    function makeJiraResForCsv(): any {
-        const r = new JiraResource('fake-token', 'http://jira/rest/api/2');
+    function makeJiraResForCsv(): jest.Mocked<JiraResource> {
+        const r = new JiraResource('fake-token', 'http://jira/rest/api/2') as jest.Mocked<JiraResource>;
         r.getJiraResource = jest.fn();
         r.postJiraResource = jest.fn();
         return r;
     }
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- test helper
-    function makeLinkMgrForCsv(): any {
+    function makeLinkMgrForCsv(): JiraLinkManager {
         const fakeJira = { get: jest.fn(), post: jest.fn() } as unknown as JiraResource;
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any -- cast to mock
-        return new JiraLinkManager(fakeJira) as any;
+        return new JiraLinkManager(fakeJira);
     }
 
     function makeCsvArgs(overrides: Record<string, unknown> = {}) {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any -- partial Logger mock
-        const sessionLog: any = {
+        const sessionLog = {
             log: jest.fn(),
             child: jest.fn().mockReturnValue({ log: jest.fn(), warn: jest.fn(), info: jest.fn(), error: jest.fn() }),
-        };
+        } as unknown as ReturnType<typeof rootLogger.child>;
         return {
-            jiraResource: makeJiraResForCsv(),
-            jiraResourceXray: makeJiraResForCsv(),
+            jiraResource: makeJiraResForCsv() as unknown as JiraResourceLike,
+            jiraResourceXray: makeJiraResForCsv() as unknown as JiraResourceLike,
             linkManager: makeLinkMgrForCsv(),
             linkManagerXray: makeLinkMgrForCsv(),
             csvResource,
@@ -674,12 +664,12 @@ describe('readCsvTests (via createTestsFromCsv)', () => {
             sessionLog,
             onBusy: jest.fn(),
             ...overrides,
-        };
+        } as unknown as Parameters<typeof createTestsFromCsv>[0];
     }
 
     beforeEach(() => {
         jest.clearAllMocks();
-        csvResource = new CsvResource();
+        csvResource = new CsvResource() as jest.Mocked<CsvResource>;
         csvResource.readBulkCsv = jest.fn();
     });
 
@@ -708,30 +698,25 @@ describe('updateCrossReferences', () => {
 });
 
 describe('createTestsFromCsv', () => {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- methods replaced with jest.fn()
-    let csvResource: any;
+    let csvResource: jest.Mocked<CsvResource>;
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- test helper
-    function makeJiraResCSV(): any {
-        const r = new JiraResource('fake-token', 'http://jira/rest/api/2');
+    function makeJiraResCSV(): jest.Mocked<JiraResource> {
+        const r = new JiraResource('fake-token', 'http://jira/rest/api/2') as jest.Mocked<JiraResource>;
         r.getJiraResource = jest.fn();
         r.postJiraResource = jest.fn();
         return r;
     }
 
     function makeFullArgs(overrides: Record<string, unknown> = {}) {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any -- partial Logger mock
-        const sessionLog: any = {
+        const sessionLog = {
             log: jest.fn(),
             child: jest.fn().mockReturnValue({ log: jest.fn(), warn: jest.fn(), info: jest.fn(), error: jest.fn() }),
-        };
+        } as unknown as ReturnType<typeof rootLogger.child>;
         return {
-            jiraResource: makeJiraResCSV(),
-            jiraResourceXray: makeJiraResCSV(),
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any -- cast to mock
-            linkManager: new JiraLinkManager({} as never) as any,
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any -- cast to mock
-            linkManagerXray: new JiraLinkManager({} as never) as any,
+            jiraResource: makeJiraResCSV() as unknown as JiraResourceLike,
+            jiraResourceXray: makeJiraResCSV() as unknown as JiraResourceLike,
+            linkManager: new JiraLinkManager({} as never),
+            linkManagerXray: new JiraLinkManager({} as never),
             csvResource,
             project_name: 'TESTPROJ',
             base_url: 'http://jira',
@@ -739,12 +724,12 @@ describe('createTestsFromCsv', () => {
             onBusy: jest.fn(),
             csvPath: '/test.csv',
             ...overrides,
-        };
+        } as unknown as Parameters<typeof createTestsFromCsv>[0];
     }
 
     beforeEach(() => {
         jest.clearAllMocks();
-        csvResource = new CsvResource();
+        csvResource = new CsvResource() as jest.Mocked<CsvResource>;
         csvResource.readBulkCsv = jest.fn();
     });
 

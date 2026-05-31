@@ -137,8 +137,7 @@ describe('computeDiff', () => {
         const current = [
             { title: 'T1', state: 'passed', duration: 1 },
             { title: 'T2', state: 'passed', duration: 1 },
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any -- test data with partial FlatTest shape
-        ] as any[];
+        ] as never[];
         const result = computeDiff(current);
         expect(result.newFailures).toHaveLength(0);
         expect(result.newPasses).toHaveLength(1);
@@ -172,6 +171,50 @@ describe('computeDiff', () => {
         expect(result.newFailures).toHaveLength(1);
         expect(result.newFailures[0]?.title).toBe('T1');
         expect(result.newPasses).toHaveLength(0);
+    });
+
+    it('returns empty diff on invalid CTRF data', () => {
+        fs.existsSync = jest.fn().mockReturnValue(true);
+        _readFileSyncSpy = jest.spyOn(fs, 'readFileSync').mockReturnValue(JSON.stringify({ invalid: true }));
+        const result = computeDiff([]);
+        expect(result.newFailures).toEqual([]);
+    });
+
+    it('detects new failures from CTRF diff', () => {
+        fs.existsSync = jest.fn().mockReturnValue(true);
+        _readFileSyncSpy = jest.spyOn(fs, 'readFileSync').mockReturnValue(
+            JSON.stringify({
+                results: {
+                    tests: [
+                        { name: 'T1', status: 'passed' },
+                        { name: 'T2', status: 'passed' },
+                    ],
+                },
+            }),
+        );
+        const current = [
+            { title: 'T1', state: 'failed' as const, duration: 1 },
+            { title: 'T2', state: 'passed' as const, duration: 1 },
+        ] as never[];
+        const result = computeDiff(current);
+        expect(result.newFailures).toHaveLength(1);
+        expect(result.newFailures[0]?.title).toBe('T1');
+        expect(result.newPasses).toHaveLength(0);
+    });
+
+    it('detects flaky tests (last was failed)', () => {
+        fs.existsSync = jest.fn().mockReturnValue(true);
+        _readFileSyncSpy = jest.spyOn(fs, 'readFileSync').mockReturnValue(
+            JSON.stringify({
+                results: {
+                    tests: [{ name: 'T1', status: 'failed' }],
+                },
+            }),
+        );
+        const current = [{ title: 'T1', state: 'passed' as const, duration: 1 }] as never[];
+        const result = computeDiff(current);
+        expect(result.flaky).toHaveLength(1);
+        expect(result.flaky[0]?.title).toBe('T1');
     });
 
     it('detects flaky tests (last was failed)', () => {

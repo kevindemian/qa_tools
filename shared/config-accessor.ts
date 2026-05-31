@@ -18,7 +18,7 @@ class Config {
         Config.defaultInstance.setAutoConfirm(v);
     }
     setAutoConfirm(v: boolean): void {
-        this.overrides.autoConfirm = v as never;
+        this.overrides.autoConfirm = v;
     }
     static validateRequiredEnv(): void {
         validateRequiredEnv();
