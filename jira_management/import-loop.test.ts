@@ -9,7 +9,10 @@ jest.mock('../shared/logger', () => ({
     },
 }));
 
-import type { TestCase } from '../shared/types';
+import type { TestCase, TestResult } from '../shared/types';
+import type IssueLinker from './issue-linker';
+import type TestCaseFactory from './test-case-factory';
+import type { Logger } from '../shared/logger';
 import { update as updateState } from '../shared/state';
 import {
     linkTestRelations,
@@ -24,22 +27,27 @@ const testBase: TestCase = {
     steps: [{ fields: { Action: 'Click', Data: '', 'Expected Result': 'OK' } }],
 };
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any -- mock objects
-const makeLinker = (): any => ({
+const makeLinker = (): jest.Mocked<IssueLinker> => ({
     associatePrecondition: jest.fn(),
     linkIssues: jest.fn(),
+    updateCrossReferences: jest.fn(),
+    jiraResource: {} as never,
+    linkManager: {} as never,
 });
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any -- mock objects
-const makeFactory = (): any => ({
+const makeFactory = (): jest.Mocked<TestCaseFactory> => ({
     createIssue: jest.fn(),
     postSteps: jest.fn(),
+    jiraResource: {} as never,
+    stepImporter: {} as never,
 });
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any -- mock logger
-const opLog: any = { info: jest.fn(), warn: jest.fn(), error: jest.fn() };
-// eslint-disable-next-line @typescript-eslint/no-explicit-any -- result accumulator
-const resultSink: any[] = [];
+const opLog = {
+    info: jest.fn(),
+    warn: jest.fn(),
+    error: jest.fn(),
+} as unknown as jest.Mocked<Logger>;
+const resultSink: TestResult[] = [];
 
 beforeEach(() => {
     jest.clearAllMocks();
@@ -63,7 +71,7 @@ describe('linkTestRelations', () => {
             results: resultSink,
         });
         expect(result).toEqual({ abort: true, errored: true });
-        expect(resultSink[0].message).toContain('pre-condition');
+        expect(resultSink[0]!.message).toContain('pre-condition');
     });
 
     it('linkIssues abort -> abort/errored', async () => {
@@ -248,6 +256,6 @@ describe('executeTestCreationLoop', () => {
 
         expect(inMemoryTasksId).toEqual(['T-NEW']);
         expect(resultSink).toHaveLength(1);
-        expect(resultSink[0].status).toBe('ok');
+        expect(resultSink[0]!.status).toBe('ok');
     });
 });

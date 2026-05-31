@@ -2,6 +2,7 @@ jest.mock('../shared/http-client', () => ({
     createHttpClient: jest.fn(),
 }));
 
+import type { AxiosInstance } from 'axios';
 import { createHttpClient } from '../shared/http-client';
 
 jest.mock('../shared/logger', () => ({
@@ -11,13 +12,12 @@ jest.mock('../shared/logger', () => ({
 import CypressResource from './cypress_resource';
 
 describe('CypressResource', () => {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- partial mock for AxiosInstance
-    let mockClient: any;
+    let mockClient: { get: jest.Mock };
     let cypress: InstanceType<typeof CypressResource>;
 
     beforeEach(() => {
         mockClient = { get: jest.fn() };
-        jest.mocked(createHttpClient).mockReturnValue(mockClient);
+        jest.mocked(createHttpClient).mockReturnValue(mockClient as unknown as AxiosInstance);
         cypress = new CypressResource('http://cypress', 'token');
     });
 

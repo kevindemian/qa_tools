@@ -138,19 +138,16 @@ describe('matchResultsToTests', () => {
 });
 
 describe('createTestExecutionFromResults', () => {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- methods replaced with jest.fn() in beforeEach
-    let jiraResource: any;
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- methods replaced with jest.fn() in beforeEach
-    let linkJiraRes: any;
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- JiraLinkManager used with mocked JiraResource
-    let linkManager: any;
+    let jiraResource: jest.Mocked<JiraResource>;
+    let linkJiraRes: jest.Mocked<JiraResource>;
+    let linkManager: JiraLinkManager;
 
     beforeEach(() => {
-        jiraResource = new JiraResource('fake-token', 'http://jira/rest/api/2');
+        jiraResource = new JiraResource('fake-token', 'http://jira/rest/api/2') as jest.Mocked<JiraResource>;
         jiraResource.getJiraResource = jest.fn();
         jiraResource.postJiraResource = jest.fn();
 
-        linkJiraRes = new JiraResource('fake-token', 'http://jira/rest/api/2');
+        linkJiraRes = new JiraResource('fake-token', 'http://jira/rest/api/2') as jest.Mocked<JiraResource>;
         linkJiraRes.getJiraResource = jest.fn();
         linkJiraRes.postJiraResource = jest.fn();
         linkJiraRes.getJiraResource.mockImplementation((url: string) => {
@@ -224,10 +221,11 @@ describe('createTestExecutionFromResults', () => {
         expect(result.key).toBe('EXEC-2');
         expect(result.passed).toBe(1);
         expect(result.skipped).toBe(1);
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any -- mock.calls on replaced method
-        const linkCalls = linkJiraRes.postJiraResource.mock.calls.filter((c: any) => c[0] === 'issueLink');
+        const linkCalls = linkJiraRes.postJiraResource.mock.calls.filter(
+            (c): c is [string, { outwardIssue: { key: string } }] => c[0] === 'issueLink',
+        );
         expect(linkCalls).toHaveLength(1);
-        expect(linkCalls[0][1].outwardIssue.key).toBe('TEST-1');
+        expect(linkCalls[0]![1].outwardIssue.key).toBe('TEST-1');
     });
 
     it('logs warning when createIssueLink throws, but execution is still created', async () => {

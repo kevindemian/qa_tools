@@ -8,24 +8,20 @@ const mockInstance: jest.Mock<Promise<unknown>, unknown[]> & {
     get: jest.Mock;
     post: jest.Mock;
     put: jest.Mock;
-} = Object.assign(
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- mock needs flexible args for retry tests
-    jest.fn<any, any[]>(() => Promise.reject(new Error('still fails'))),
-    {
-        interceptors: {
-            request: { use: jest.fn() },
-            response: {
-                use: jest.fn((success: unknown, error: (err: Error) => Promise<unknown>) => {
-                    successHandler = success as (response: unknown) => unknown;
-                    errorHandler = error;
-                }),
-            },
+} = Object.assign(jest.fn(() => Promise.reject(new Error('still fails'))) as jest.Mock<Promise<unknown>, unknown[]>, {
+    interceptors: {
+        request: { use: jest.fn() },
+        response: {
+            use: jest.fn((success: unknown, error: (err: Error) => Promise<unknown>) => {
+                successHandler = success as (response: unknown) => unknown;
+                errorHandler = error;
+            }),
         },
-        get: jest.fn(),
-        post: jest.fn(),
-        put: jest.fn(),
     },
-) as jest.Mock<Promise<unknown>, unknown[]> & {
+    get: jest.fn(),
+    post: jest.fn(),
+    put: jest.fn(),
+}) as jest.Mock<Promise<unknown>, unknown[]> & {
     interceptors: {
         request: { use: jest.Mock };
         response: { use: jest.Mock };
@@ -121,8 +117,8 @@ describe('HTTP Client', () => {
         it('retries GET up to HTTP_MAX_RETRIES (10) times', async () => {
             httpClient.createHttpClient({ baseUrl: 'https://api.test.com' });
             const err = makeError('get', 500, 0);
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any -- mock cfg can be any shape from retry
-            mockInstance.mockImplementation((cfg: any) => {
+            mockInstance.mockImplementation((...args: unknown[]) => {
+                const cfg = args[0] as { method: string; __retryAttempts: number };
                 const newErr = makeError('get', 500, cfg.__retryAttempts);
                 newErr.config = cfg;
                 return errorHandler!(newErr);
@@ -139,8 +135,8 @@ describe('HTTP Client', () => {
         it('retries PUT up to HTTP_MAX_RETRIES (10) times', async () => {
             httpClient.createHttpClient({ baseUrl: 'https://api.test.com' });
             const err = makeError('put', 500, 0);
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any -- mock cfg can be any shape from retry
-            mockInstance.mockImplementation((cfg: any) => {
+            mockInstance.mockImplementation((...args: unknown[]) => {
+                const cfg = args[0] as { method: string; __retryAttempts: number };
                 const newErr = makeError('put', 500, cfg.__retryAttempts);
                 newErr.config = cfg;
                 return errorHandler!(newErr);

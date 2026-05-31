@@ -2,22 +2,18 @@
 import { jest } from '@jest/globals';
 import { XrayCloudClient } from './xray-cloud-client';
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any -- jest mock fn accepts any args/return
-const mockPost = jest.fn<any>();
-// eslint-disable-next-line @typescript-eslint/no-explicit-any -- jest mock fn accepts any args/return
-const mockGet = jest.fn<any>();
-// eslint-disable-next-line @typescript-eslint/no-explicit-any -- jest mock fn accepts any args/return
-const mockPut = jest.fn<any>();
+type PromiseFn = (...args: Array<unknown>) => Promise<unknown>;
+const mockPost = jest.fn<PromiseFn>();
+const mockGet = jest.fn<PromiseFn>();
+const mockPut = jest.fn<PromiseFn>();
 
 const mockHttpClient = {
     post: mockPost,
     get: mockGet,
     put: mockPut,
     interceptors: {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any -- jest mock fn accepts any args/return
-        request: { use: jest.fn<any>() },
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any -- jest mock fn accepts any args/return
-        response: { use: jest.fn<any>() },
+        request: { use: jest.fn<PromiseFn>() },
+        response: { use: jest.fn<PromiseFn>() },
     },
 };
 

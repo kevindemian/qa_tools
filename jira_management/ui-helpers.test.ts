@@ -101,6 +101,7 @@ import { warn, helpLine, title, prompt } from '../shared/prompt';
 
 import { showHelp, showHelpLoop, handleSpecialInput, dispatchChoice } from './ui-helpers';
 import { _configHint, buildMenuChoices, type MenuChoice } from './menu-data';
+import type { CommandContext } from './commands/context';
 
 beforeAll(() => {
     const openModule = require('../shared/open');
@@ -238,15 +239,13 @@ describe('dispatchChoice', () => {
     });
 
     it("returns 'continue' for invalid choice", async () => {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any -- partial mock
-        const result = await dispatchChoice('99', minimalCtx as any);
+        const result = await dispatchChoice('99', minimalCtx as unknown as CommandContext);
         expect(result).toBe('continue');
         expect(warn).toHaveBeenCalledWith(expect.stringContaining('inválida'));
     });
 
     it("returns 'continue' for docs choice", async () => {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any -- partial mock
-        const result = await dispatchChoice('d', minimalCtx as any);
+        const result = await dispatchChoice('d', minimalCtx as unknown as CommandContext);
         expect(result).toBe('continue');
     });
 
@@ -255,8 +254,7 @@ describe('dispatchChoice', () => {
         const commands = jest.requireMock('./commands');
         commands.getHandler.mockReturnValue(handler);
 
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any -- partial mock
-        const result = await dispatchChoice('1', minimalCtx as any);
+        const result = await dispatchChoice('1', minimalCtx as unknown as CommandContext);
         expect(result).toBe('continue');
         expect(handler).toHaveBeenCalledWith(minimalCtx);
     });

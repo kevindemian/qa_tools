@@ -1,3 +1,5 @@
+import type { JsonObject } from '../shared/types';
+import type { AxiosInstance } from 'axios';
 import {
     formatPR,
     glCreateMergeRequest,
@@ -28,7 +30,7 @@ jest.mock('../shared/git-provider-error', () => ({
     }),
 }));
 
-const mockClient = { get: jest.fn(), post: jest.fn(), put: jest.fn() } as any;
+const mockClient = { get: jest.fn(), post: jest.fn(), put: jest.fn() } as unknown as jest.Mocked<AxiosInstance>;
 
 beforeEach(() => {
     jest.clearAllMocks();
@@ -61,11 +63,11 @@ describe('formatPR', () => {
     });
 
     it('returns null for null input', () => {
-        expect(formatPR(null as any)).toBeNull();
+        expect(formatPR(null as unknown as JsonObject)).toBeNull();
     });
 
     it('returns null for undefined input', () => {
-        expect(formatPR(undefined as any)).toBeNull();
+        expect(formatPR(undefined as unknown as JsonObject)).toBeNull();
     });
 
     it('coerces approved to boolean false', () => {

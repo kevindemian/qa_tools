@@ -11,7 +11,7 @@ import {
     glGetJobLogs,
 } from './gitlab-workflow';
 import { apiGet, apiPost, projectPath } from './gitlab-api';
-
+import type { AxiosInstance } from 'axios';
 jest.mock('./gitlab-api', () => ({
     apiGet: jest.fn(),
     apiPost: jest.fn(),
@@ -25,7 +25,7 @@ jest.mock('../shared/git-provider-error', () => ({
     }),
 }));
 
-const mockClient = { get: jest.fn(), post: jest.fn() } as any;
+const mockClient = { get: jest.fn(), post: jest.fn() } as unknown as jest.Mocked<AxiosInstance>;
 
 beforeEach(() => {
     jest.clearAllMocks();

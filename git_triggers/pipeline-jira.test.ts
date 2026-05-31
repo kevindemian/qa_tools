@@ -33,6 +33,7 @@ import { collectAutomated, fileToJira } from '../shared/bug-report';
 import { handleBugCreation } from './pipeline-jira';
 import type { ParseResult } from '../shared/result_parser';
 import type { AnalysisReport } from '../shared/failure-analysis';
+import type JiraClient from '../shared/jira-client';
 
 const mockParseResult: ParseResult = {
     tests: [
@@ -56,7 +57,7 @@ const mockBugReport = {
     metadata: { pipelineId: '42', branch: 'main', provider: 'gitlab' },
 };
 
-const mockJiraResource = {} as any;
+const mockJiraResource = {} as unknown as JiraClient;
 
 beforeEach(() => {
     jest.clearAllMocks();
@@ -90,7 +91,7 @@ describe('handleBugCreation', () => {
         (confirm as jest.Mock).mockReturnValue(true);
         (collectAutomated as jest.Mock).mockReturnValue(mockBugReport);
         (fileToJira as jest.Mock).mockResolvedValue('ECSPOL-456');
-        (Config as any).jiraProject = '';
+        (Config as { jiraProject: string }).jiraProject = '';
 
         await handleBugCreation(mockParseResult, '99', 'develop', mockAnalysisReport, mockJiraResource);
 
@@ -98,7 +99,7 @@ describe('handleBugCreation', () => {
         expect(success).toHaveBeenCalledWith('Bug criado: https://jira.example.com/browse/ECSPOL-456');
         expect(pushHistory).toHaveBeenCalledWith('create-jira-issue', 'ECSPOL-456', 'ok');
 
-        (Config as any).jiraProject = 'ECSPOL';
+        (Config as { jiraProject: string }).jiraProject = 'ECSPOL';
     });
 
     it('returns early when jira env is not configured', async () => {

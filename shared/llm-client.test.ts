@@ -1,3 +1,4 @@
+import type { ZodType } from 'zod';
 jest.useFakeTimers();
 jest.mock('./config', () => {
     const mockConfig: Record<string, string> = {};
@@ -803,8 +804,7 @@ describe('llmPrompt', () => {
         });
     });
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const okBooleanSchema: any = {
+    const okBooleanSchema = {
         safeParse: (data: unknown) => {
             if (
                 typeof data === 'object' &&
@@ -816,14 +816,13 @@ describe('llmPrompt', () => {
             }
             return { success: false as const, error: { issues: [{ path: ['ok'], message: 'Expected boolean' }] } };
         },
-    };
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const alwaysFailsSchema: any = {
+    } as unknown as ZodType<unknown>;
+    const alwaysFailsSchema = {
         safeParse: () => ({
             success: false as const,
             error: { issues: [{ path: ['x'], message: 'always fails' }] },
         }),
-    };
+    } as unknown as ZodType<unknown>;
 
     describe('schema validation', () => {
         beforeEach(() => {
