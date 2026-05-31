@@ -33,6 +33,7 @@ describe('case04', () => {
     afterEach(() => {
         nock.cleanAll();
         nock.enableNetConnect();
+        nock.restore();
     });
 
     it('happy path', async () => {

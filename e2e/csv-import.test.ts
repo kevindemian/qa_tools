@@ -17,6 +17,7 @@ const tmpHome = fs.mkdtempSync(path.join(os.tmpdir(), 'qa-e2e-'));
 
 describe('E2E: CSV Import', () => {
     beforeAll(() => {
+        nock.cleanAll();
         process.env.HOME = tmpHome;
         process.env.JIRA_BASE_URL = 'http://localhost:9999/jira';
         process.env.JIRA_PERSONAL_TOKEN = 'e2e-token';
@@ -31,6 +32,7 @@ describe('E2E: CSV Import', () => {
 
     afterAll(() => {
         resetHandlers();
+        nock.restore();
         if (fs.existsSync(tmpHome)) {
             fs.rmSync(tmpHome, { recursive: true, force: true });
         }

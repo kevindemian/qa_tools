@@ -8,6 +8,7 @@ const { createTestExecution } = createTests;
 const JIRA = 'http://localhost:1998/jira';
 
 beforeAll(() => {
+    nock.cleanAll();
     nock.disableNetConnect();
 
     const api = nock(JIRA + '/rest/api/2');
@@ -42,6 +43,7 @@ beforeAll(() => {
 afterAll(() => {
     nock.cleanAll();
     nock.enableNetConnect();
+    nock.restore();
 });
 
 describe('E2E: createTestExecution', () => {

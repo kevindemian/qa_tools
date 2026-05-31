@@ -54,6 +54,7 @@ describe('friendly error paths (Sprint W)', () => {
     afterEach(() => {
         nock.cleanAll();
         nock.enableNetConnect();
+        nock.restore();
     });
 
     describe('W1 — offerEnvSetup integration', () => {

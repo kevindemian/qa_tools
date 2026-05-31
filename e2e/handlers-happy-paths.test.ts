@@ -44,6 +44,7 @@ const HOST = 'http://localhost:1996';
 const API = HOST + '/rest/api/2';
 
 beforeAll(() => {
+    nock.cleanAll();
     process.env.HOME = tmpHome;
     process.env.JIRA_BASE_URL = HOST;
     process.env.JIRA_PERSONAL_TOKEN = 'e2e-token';
@@ -55,6 +56,7 @@ beforeAll(() => {
 afterAll(() => {
     nock.cleanAll();
     nock.enableNetConnect();
+    nock.restore();
     [tmpHome, tmpGitDir].forEach((d) => {
         try {
             fs.rmSync(d, { recursive: true, force: true });
