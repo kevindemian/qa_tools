@@ -1,10 +1,10 @@
 /** Three-tier test impact analysis — jest, keyword, and explicit mapping. */
-import { execSync } from 'child_process';
+import { execFileSync } from 'child_process';
 import fs from 'fs';
 import path from 'path';
 import { rootLogger } from './logger';
 import { safeParseJson } from './safe-json';
-import type { TestImpactResult, ImpactedTest, FileTestMapping } from './types';
+import type { TestImpactResult, ImpactedTest, FileTestMapping, TestSelectionJson } from './types';
 
 // ---- helpers ----
 
@@ -40,9 +40,9 @@ interface JestResult {
 
 function runJestFindRelated(changedFiles: string[]): JestResult | null {
     try {
-        const joined = changedFiles.join(' ');
-        const cmd = `npx jest --listTests --findRelatedTests ${joined}`;
-        const output = execSync(cmd, { encoding: 'utf8' }).toString().trim();
+        const output = execFileSync('npx', ['jest', '--listTests', '--findRelatedTests', ...changedFiles], {
+            encoding: 'utf8',
+        }).trim();
         const testFiles = output.split('\n').filter(Boolean);
         const testTitles = testFiles.map((f) => {
             const base = path.basename(f);
@@ -114,11 +114,9 @@ function explicitMapping(changedFiles: string[], mappingPath: string): ImpactedT
 
 function getGitDiff(): string {
     try {
-        return execSync('git diff --name-only HEAD~1', {
+        return execFileSync('git', ['diff', '--name-only', 'HEAD~1'], {
             encoding: 'utf8',
-        })
-            .toString()
-            .trim();
+        }).trim();
     } catch {
         rootLogger.error('Failed to get git diff');
         return '';
@@ -219,5 +217,28 @@ export function analyzeTestImpact(
         unaffected: { total: 0, skippedDueTo: [] },
         suggestedCommand,
         confidence,
+    };
+}
+
+/** Build a serialisable TestSelectionJson from an analysis result.
+ * Pure function — no I/O. Caller writes the JSON to disk. */
+export function generateTestSelectionJson(
+    result: TestImpactResult,
+    options?: { conservative?: boolean; smokeTests?: string[] },
+): TestSelectionJson {
+    return {
+        generatedAt: new Date().toISOString(),
+        changedFiles: result.changedFiles,
+        impactedTests: result.impactedTests.map((t) => ({
+            title: t.title,
+            testKey: t.testKey,
+            reason: t.reason,
+            matchMode: t.matchMode,
+            filePattern: t.filePattern,
+        })),
+        suggestedCommand: result.suggestedCommand,
+        confidence: result.confidence,
+        conservative: options?.conservative ?? false,
+        smokeTests: options?.smokeTests ?? [],
     };
 }

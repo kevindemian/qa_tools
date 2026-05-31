@@ -54,22 +54,28 @@ describe('E2E: createTestExecution', () => {
     });
 
     it('creates Test Execution with 2 test keys', async () => {
-        const result = await createTestExecution(
+        const result = await createTestExecution({
             jiraResource,
             linkManager,
-            'EXECPROJ',
-            ['TEST-1', 'TEST-2'],
-            'meus-testes',
-        );
+            projectName: 'EXECPROJ',
+            testKeys: ['TEST-1', 'TEST-2'],
+            csvName: 'meus-testes',
+        });
 
-        expect(result.key).toBe('EXEC-2');
-        expect(result.summary).toMatch(/^meus-testes - /);
+        expect(result!.key).toBe('EXEC-2');
+        expect(result!.summary).toMatch(/^meus-testes - /);
     });
 
     it('creates Test Execution with single key and default name', async () => {
-        const result = await createTestExecution(jiraResource, linkManager, 'EXECPROJ', ['TEST-3'], '');
+        const result = await createTestExecution({
+            jiraResource,
+            linkManager,
+            projectName: 'EXECPROJ',
+            testKeys: ['TEST-3'],
+            csvName: '',
+        });
 
-        expect(result.key).toBe('EXEC-1');
-        expect(result.summary).toMatch(/^Automated Execution - /);
+        expect(result!.key).toBe('EXEC-1');
+        expect(result!.summary).toMatch(/^Automated Execution - /);
     });
 });

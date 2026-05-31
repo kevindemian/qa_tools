@@ -44,18 +44,7 @@ export function truncateStacktrace(input: string, maxLines: number = 20): string
     return lines.slice(0, maxLines).join('\n') + '\n[... truncated (' + (lines.length - maxLines) + ' more lines) ...]';
 }
 
-const HTML_ESCAPE_MAP: Record<string, string> = {
-    '&': '&amp;',
-    '<': '&lt;',
-    '>': '&gt;',
-    '"': '&quot;',
-    "'": '&#39;',
-};
-
-/** Escape HTML special characters (`&<>"'`). */
-export function sanitizeHtml(text: string): string {
-    return text.replace(/[&<>"']/g, (ch) => HTML_ESCAPE_MAP[ch] || ch);
-}
+export { sanitizeHtml } from './escape';
 
 const ESC = String.fromCharCode(27);
 const ANSI_ESCAPE_RE = new RegExp(ESC + '\\[[0-9;]*[a-zA-Z]', 'g');

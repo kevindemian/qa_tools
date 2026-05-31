@@ -1,7 +1,7 @@
 /** Test Execution creator — creates Test Execution issues and associates test results. */
 import { rootLogger } from '../shared/logger';
 import { success, info, withSpinner } from '../shared/prompt';
-import type JiraResource from './jira_resource';
+import type { JiraResourceLike } from '../shared/types';
 import type JiraLinkManager from './jira_link_manager';
 import {
     ISSUE_TYPE_NOT_FOUND,
@@ -17,10 +17,10 @@ interface TestExecutionResult {
 }
 
 class TestExecutionCreator {
-    jiraResource: JiraResource;
+    jiraResource: JiraResourceLike;
     linkManager: JiraLinkManager;
 
-    constructor(jiraResource: JiraResource, linkManager: JiraLinkManager) {
+    constructor(jiraResource: JiraResourceLike, linkManager: JiraLinkManager) {
         this.jiraResource = jiraResource;
         this.linkManager = linkManager;
     }
@@ -30,7 +30,32 @@ class TestExecutionCreator {
         testKeys: string[],
         csvName: string,
         titleOverride?: string,
-    ): Promise<TestExecutionResult> {
+    ): Promise<TestExecutionResult | null> {
+        const summary = this._buildTimestampedSummary(csvName, titleOverride);
+        const execLog = rootLogger.child({ operation: 'create-testexec' });
+
+        const issueType = await this._resolveIssueType();
+        if (!issueType) return null;
+
+        const testField = await this._resolveTestField();
+        if (!testField) return null;
+
+        const payload: JsonObject = {
+            fields: {
+                project: { key: projectName },
+                summary,
+                issuetype: { id: issueType.id },
+                [testField.id]: testKeys,
+            },
+        };
+
+        const created = await this.jiraResource.postJiraResource<JsonObject>('issue', payload);
+        success('Test Execution criado: ' + String(created.key) + ' — ' + summary);
+        execLog.info('Test Execution criado', { key: created.key, summary });
+        return { key: created.key as string, summary };
+    }
+
+    private _buildTimestampedSummary(csvName: string, titleOverride?: string): string {
         const timestamp = new Date().toLocaleString('pt-BR', {
             year: 'numeric',
             month: '2-digit',
@@ -38,43 +63,46 @@ class TestExecutionCreator {
             hour: '2-digit',
             minute: '2-digit',
         });
-        const summary = titleOverride || (csvName || 'Automated Execution') + ' - ' + timestamp;
+        return titleOverride || (csvName || 'Automated Execution') + ' - ' + timestamp;
+    }
 
+    private async _resolveIssueType(): Promise<{ id: string } | null> {
         const execLog = rootLogger.child({ operation: 'create-testexec' });
         execLog.info('Descobrindo issue type "Test Execution"...');
         const issueTypes = await this.jiraResource.getJiraResource<Array<{ id: string; name: string }>>('issuetype');
-        if (!Array.isArray(issueTypes)) throw new Error(FAILED_TO_GET_ISSUE_TYPES);
-
+        if (!Array.isArray(issueTypes)) {
+            rootLogger.error(FAILED_TO_GET_ISSUE_TYPES);
+            return null;
+        }
         const execType = issueTypes.find((t) => t.name === 'Test Execution');
-        if (!execType) throw new Error(ISSUE_TYPE_NOT_FOUND);
+        if (!execType) {
+            rootLogger.error(ISSUE_TYPE_NOT_FOUND);
+            return null;
+        }
         execLog.info('Issue type encontrado: id=' + execType.id);
+        return { id: execType.id };
+    }
 
+    private async _resolveTestField(): Promise<{ id: string } | null> {
+        const execLog = rootLogger.child({ operation: 'create-testexec' });
         execLog.info('Descobrindo custom field para tests...');
         const fields =
             await this.jiraResource.getJiraResource<Array<{ id: string; name: string; schema?: { custom?: string } }>>(
                 'field',
             );
-        if (!Array.isArray(fields)) throw new Error(FAILED_TO_GET_CUSTOM_FIELDS);
-
+        if (!Array.isArray(fields)) {
+            rootLogger.error(FAILED_TO_GET_CUSTOM_FIELDS);
+            return null;
+        }
         const testField = fields.find(
             (f) => f.schema?.custom === 'com.xpandit.plugins.xray:testexec-tests-custom-field',
         );
-        if (!testField) throw new Error(CUSTOM_FIELD_NOT_FOUND);
+        if (!testField) {
+            rootLogger.error(CUSTOM_FIELD_NOT_FOUND);
+            return null;
+        }
         execLog.info('Custom field encontrado: ' + testField.id + ' (' + testField.name + ')');
-
-        const payload: JsonObject = {
-            fields: {
-                project: { key: projectName },
-                summary,
-                issuetype: { id: execType.id },
-                [testField.id]: testKeys,
-            },
-        };
-
-        const created = await this.jiraResource.postJiraResource('issue', payload);
-        success('Test Execution criado: ' + String(created.key) + ' — ' + summary);
-        execLog.info('Test Execution criado', { key: created.key, summary });
-        return { key: created.key as string, summary };
+        return { id: testField.id };
     }
 
     /** Link tests to a Test Execution, skipping already-linked ones.
@@ -111,9 +139,14 @@ class TestExecutionCreator {
                 try {
                     await this.linkManager.createIssueLink(key, teKey, 'Tests');
                     linked++;
-                } catch (err) {
-                    rootLogger.warn('Falha ao linkar ' + key + ': ' + (err as Error).message);
-                    failed++;
+                } catch (err: unknown) {
+                    const msg = (err as Error).message;
+                    if (msg.includes('already exists') || msg.includes('already linked')) {
+                        linked++;
+                    } else {
+                        rootLogger.warn('Falha ao linkar ' + key + ': ' + msg);
+                        failed++;
+                    }
                 }
             }
         });
@@ -122,7 +155,7 @@ class TestExecutionCreator {
     }
 
     /** Associate test keys with an existing Test Execution (custom field + issue links). */
-    async addTestsToExistingExecution(teKey: string, testKeys: string[]): Promise<TestExecutionResult> {
+    async addTestsToExistingExecution(teKey: string, testKeys: string[]): Promise<TestExecutionResult | null> {
         const execLog = rootLogger.child({ operation: 'add-tests-to-testexec' });
 
         const teIssue = await this.jiraResource.getJiraResource<{
@@ -131,25 +164,27 @@ class TestExecutionCreator {
         }>('issue/' + teKey);
 
         if (teIssue.fields?.issuetype?.name !== 'Test Execution') {
-            throw new Error(
-                '"' +
-                    teKey +
-                    '" não é uma Test Execution (tipo: ' +
-                    (teIssue.fields?.issuetype?.name || 'desconhecido') +
-                    ')',
-            );
+            const actualType = teIssue.fields?.issuetype?.name || 'desconhecido';
+            rootLogger.error('"' + teKey + '" não é uma Test Execution (tipo: ' + actualType + ')');
+            return null;
         }
 
         const fields =
             await this.jiraResource.getJiraResource<Array<{ id: string; name: string; schema?: { custom?: string } }>>(
                 'field',
             );
-        if (!Array.isArray(fields)) throw new Error(FAILED_TO_GET_CUSTOM_FIELDS);
+        if (!Array.isArray(fields)) {
+            rootLogger.error(FAILED_TO_GET_CUSTOM_FIELDS);
+            return null;
+        }
 
         const testField = fields.find(
             (f) => f.schema?.custom === 'com.xpandit.plugins.xray:testexec-tests-custom-field',
         );
-        if (!testField) throw new Error(CUSTOM_FIELD_NOT_FOUND);
+        if (!testField) {
+            rootLogger.error(CUSTOM_FIELD_NOT_FOUND);
+            return null;
+        }
 
         const currentTests: string[] = ((teIssue.fields as Record<string, unknown>)?.[testField.id] as string[]) || [];
         const merged = [...new Set([...currentTests, ...testKeys])];
@@ -174,11 +209,12 @@ class TestExecutionCreator {
         testKeys: string[],
         csvName: string,
         execOpts?: { title?: string; description?: string },
-    ): Promise<TestExecutionResult> {
+    ): Promise<TestExecutionResult | null> {
         const title = execOpts?.title || '';
         const result = await this.create(projectName, testKeys, csvName, title);
+        if (!result) return null;
 
-        if (result.key && testKeys.length > 0) {
+        if (testKeys.length > 0) {
             try {
                 await this._linkTestsToExecution(result.key, testKeys);
             } catch (err) {

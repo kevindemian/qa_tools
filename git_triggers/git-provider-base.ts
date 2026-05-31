@@ -27,4 +27,26 @@ export abstract class GitProviderBase {
             return handleError(err, { context: opts?.operation || url });
         }
     }
+
+    /** Format diff entries with --- a/ +++ b/ patch content. Truncates at truncationLimit. */
+    protected _formatDiffResponse(
+        entries: Array<Record<string, unknown>> | undefined | null,
+        patchField: string,
+        nameField: string,
+        truncationLimit = 15000,
+    ): string {
+        if (!entries || !Array.isArray(entries)) return '';
+        const lines: string[] = [];
+        for (const entry of entries) {
+            const patch = entry[patchField];
+            const name = entry[nameField];
+            if (patch && typeof patch === 'string') {
+                lines.push('--- a/' + (typeof name === 'string' ? name : ''));
+                lines.push('+++ b/' + (typeof name === 'string' ? name : ''));
+                lines.push(patch);
+            }
+        }
+        const full = lines.join('\n');
+        return full.length > truncationLimit ? full.slice(0, truncationLimit) + '\n... (truncated)' : full;
+    }
 }

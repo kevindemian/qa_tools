@@ -2,7 +2,6 @@
 import { print, success, warn, info, title, prompt, confirm, printError, withSpinner } from '../shared/prompt';
 import { load as loadState, update as updateState } from '../shared/state';
 import { sleep } from '../shared/http-client';
-import Config from '../shared/config';
 import type { ParseResult } from '../shared/result_parser';
 import type { PipelineTriggerResult, StateContainer } from '../shared/types';
 import type { GitProvider } from '../shared/types';
@@ -10,16 +9,17 @@ import { writeEphemeral } from '../shared/temp-dir';
 import {
     collectTestResults as _collectTestResults,
     createTestExecution as _createTestExecution,
+    type CreateTestExecutionOptions,
     _jiraEnv as __jiraEnv,
     _resolveGlob as __resolveGlob,
     downloadTestArtifacts as _downloadTestArtifacts,
     parseTestResults as _parseTestResults,
 } from './test-results';
 import { offerPipelineFailureAnalysis } from './llm-pipeline';
+import { handleBugCreation } from './pipeline-jira';
+import JiraClient from '../shared/jira-client';
+import JiraLinkManager from '../jira_management/jira_link_manager';
 import { currentProvider, pushHistory, setIsBusy, MSG_OPERATION_CANCELED } from './session-state';
-import type { AnalysisReport } from '../shared/failure-analysis';
-import JiraResource from '../jira_management/jira_resource';
-import { collectAutomated, fileToJira } from '../shared/bug-report';
 
 const PIPELINE_POLL_INTERVAL_MS = 5000;
 const PIPELINE_POLL_TIMEOUT_MS = 300000;
@@ -73,14 +73,23 @@ export async function parseTestResults(parsed: ParseResult): Promise<{
 }
 
 export async function createTestExecution(
-    matched: Array<{ key: string; title: string; status: 'passed' | 'failed' | 'skipped'; duration: number }>,
-    csvName: string,
-    jira: { base: string; token: string; xray: string },
-    projectName: string,
-    pipelineId: string | number,
-    branch: string,
+    opts: Omit<
+        CreateTestExecutionOptions,
+        'jiraResource' | 'linkManager' | 'jiraBaseUrl' | 'currentProvider' | 'pushHistory'
+    >,
 ): Promise<void> {
-    await _createTestExecution(matched, csvName, jira, projectName, pipelineId, branch, currentProvider, pushHistory);
+    const jira = __jiraEnv();
+    if (!jira) return;
+    const jiraRes = new JiraClient(jira.token, jira.base + '/rest/api/2');
+    const linkMgr = new JiraLinkManager(jiraRes);
+    await _createTestExecution({
+        ...opts,
+        jiraResource: jiraRes,
+        linkManager: linkMgr,
+        jiraBaseUrl: jira.base,
+        currentProvider,
+        pushHistory,
+    });
 }
 
 export async function collectTestResults(
@@ -89,32 +98,7 @@ export async function collectTestResults(
     branch: string,
     projectName: string,
 ): Promise<ParseResult | null> {
-    return _collectTestResults(m, pipelineId, branch, projectName, currentProvider, pushHistory);
-}
-
-async function handleBugCreation(
-    parsed: ParseResult,
-    pipelineId: string | number,
-    branch: string,
-    analysisReport: AnalysisReport,
-): Promise<void> {
-    const jira = __jiraEnv();
-    if (!jira || !confirm('Criar bug no Jira com o resumo das falhas?', false)) return;
-    try {
-        const bugReport = collectAutomated(parsed, {
-            pipelineId: String(pipelineId),
-            branch,
-            provider: currentProvider,
-        });
-        bugReport.description = analysisReport.content;
-        const jiraRes = new JiraResource(jira.token, jira.base + '/rest/api/2');
-        const key = await fileToJira(jiraRes, bugReport, Config.jiraProject || 'ECSPOL');
-        success('Bug criado: ' + jira.base + '/browse/' + key);
-        pushHistory('create-jira-issue', key, 'ok');
-    } catch (err) {
-        printError('Falha ao criar bug no Jira', err);
-        pushHistory('create-jira-issue', pipelineId + '', 'error');
-    }
+    return _collectTestResults({ m, pipelineId, branch, projectName, currentProvider, pushHistory });
 }
 
 async function handleQuickMerge(m: GitProvider, branch: string, pollStatus: string | undefined): Promise<void> {
@@ -166,9 +150,14 @@ async function _postPipeline(
         parsed = await collectTestResults(m, pipelineId, branch, projectName);
     }
     if (parsed) {
-        await offerPipelineFailureAnalysis(parsed, (analysisReport) =>
-            handleBugCreation(parsed, pipelineId, branch, analysisReport),
-        );
+        await offerPipelineFailureAnalysis(parsed, (analysisReport) => {
+            const jira = __jiraEnv();
+            if (jira) {
+                const jiraRes = new JiraClient(jira.token, jira.base + '/rest/api/2');
+                return handleBugCreation(parsed, pipelineId, branch, analysisReport, jiraRes);
+            }
+            return Promise.resolve();
+        });
     }
     await handleQuickMerge(m, branch, pollStatus);
 }

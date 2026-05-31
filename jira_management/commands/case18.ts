@@ -12,6 +12,7 @@
 import crypto from 'crypto';
 import fs from 'fs';
 import path from 'path';
+import { formatDateISO } from '../../shared/date-utils';
 import { ask, warn, info, printError, title, divider } from '../../shared/prompt';
 import { rootLogger } from '../../shared/logger';
 import { llmPrompt } from '../../shared/llm-client';
@@ -41,7 +42,13 @@ async function handler(c: CommandContext): Promise<boolean | void> {
     title('Gerando testes com IA...');
     let testCases: TestCaseData[];
     try {
-        testCases = await llmPrompt('fast', input.system, safeUserMsg, 'case18', undefined, TestCaseArraySchema);
+        testCases = await llmPrompt({
+            tier: 'fast',
+            system: input.system,
+            user: safeUserMsg,
+            callerId: 'case18',
+            schema: TestCaseArraySchema,
+        });
     } catch (err: unknown) {
         printError('Falha ao gerar casos de teste com IA', err);
         return;
@@ -194,7 +201,7 @@ function _buildGenerationRecord(
 
 /** Write test cases JSON to disk and log summary to console. */
 function writeTestOutput(converted: TestCase[], createdCount: number): void {
-    const outDir = path.join(process.cwd(), 'reports', new Date().toISOString().slice(0, 10));
+    const outDir = path.join(process.cwd(), 'reports', formatDateISO());
     fs.mkdirSync(outDir, { recursive: true });
     const outPath = path.join(outDir, 'llm-generated-tests.json');
     fs.writeFileSync(outPath, JSON.stringify(converted, null, 2), 'utf8');

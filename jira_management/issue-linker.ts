@@ -3,7 +3,7 @@ import chalk from 'chalk';
 import { success, isQuiet, onError, print } from '../shared/prompt';
 import { rootLogger } from '../shared/logger';
 import { sleep } from '../shared/http-client';
-import type JiraResource from './jira_resource';
+import type { JiraResourceLike } from '../shared/types';
 import type JiraLinkManager from './jira_link_manager';
 import type { LogContext, TestCase } from '../shared/types';
 
@@ -14,11 +14,73 @@ interface ActionResult {
     action?: string;
 }
 
+interface CrossRefMember {
+    id: string;
+    description: string;
+}
+
+interface CrossRefGroup {
+    name: string;
+    members: CrossRefMember[];
+}
+
+function buildCrossRefGroups(tests: TestCase[], ids: string[]): Record<string, CrossRefGroup> {
+    const valid = tests.map((t, i) => ({ test: t, id: ids[i] })).filter((x) => x.id && x.test.group);
+    const groups: Record<string, CrossRefGroup> = {};
+    for (const { test, id } of valid) {
+        const groupName = test.group as string;
+        const key = groupName.toUpperCase();
+        if (!groups[key]) groups[key] = { name: groupName, members: [] };
+        groups[key].members.push({ id: id as string, description: test.description || '' });
+    }
+    return groups;
+}
+
+async function updateGroupLinks(
+    jiraResource: JiraResourceLike,
+    group: CrossRefGroup,
+    crossLog: ReturnType<typeof rootLogger.child>,
+): Promise<void> {
+    for (const member of group.members) {
+        const others = group.members
+            .filter((m) => m.id !== member.id)
+            .map((m) => m.id)
+            .join(', ');
+        const refText = '\n\nThis test case is part of the set ' + group.name + ': ' + others;
+
+        try {
+            const current = await jiraResource.getJiraResource<{ fields?: { description?: string } }>(
+                'issue/' + member.id,
+            );
+            const currentDesc = current?.fields?.description || '';
+            if (
+                currentDesc.includes('faz parte do conjunto') ||
+                currentDesc.includes('This test case is part of the set')
+            ) {
+                crossLog.info('  ' + member.id + ': ja atualizado, pulando');
+                continue;
+            }
+
+            await jiraResource.putJiraResource('issue/' + member.id, {
+                fields: { description: currentDesc + refText },
+            });
+            if (!isQuiet()) print(chalk.green('+'));
+            crossLog.info('  ' + member.id + ': descrição atualizada');
+        } catch (err) {
+            const status = (err as { response?: { status?: number } }).response?.status;
+            crossLog.error('Falha ao atualizar descrição de ' + member.id + ' no grupo "' + group.name + '"', {
+                status,
+            });
+            if (!isQuiet()) print(chalk.red('x'));
+        }
+    }
+}
+
 class IssueLinker {
-    jiraResource: JiraResource;
+    jiraResource: JiraResourceLike;
     linkManager: JiraLinkManager;
 
-    constructor(jiraResource: JiraResource, linkManager: JiraLinkManager) {
+    constructor(jiraResource: JiraResourceLike, linkManager: JiraLinkManager) {
         this.jiraResource = jiraResource;
         this.linkManager = linkManager;
     }
@@ -53,58 +115,14 @@ class IssueLinker {
     }
 
     async updateCrossReferences(tests: TestCase[], ids: string[]): Promise<void> {
-        const valid = tests.map((t, i) => ({ test: t, id: ids[i] })).filter((x) => x.id && x.test.group);
-
-        const groups: Record<string, { name: string; members: Array<{ id: string; description: string }> }> = {};
-        for (const { test, id } of valid) {
-            const groupName = test.group as string;
-            const key = groupName.toUpperCase();
-            if (!groups[key]) groups[key] = { name: groupName, members: [] };
-            groups[key].members.push({ id: id as string, description: test.description || '' });
-        }
-
+        const groups = buildCrossRefGroups(tests, ids);
         const crossLog = rootLogger.child({ operation: 'cross-ref' });
 
         for (const group of Object.values(groups)) {
             if (group.members.length < MIN_GROUP_MEMBERS) continue;
-
             crossLog.info('Atualizando descrições do grupo "' + group.name + '" (' + group.members.length + ' issues)');
-
             await sleep(CROSS_REF_SLEEP_MS);
-
-            for (const member of group.members) {
-                const others = group.members
-                    .filter((m) => m.id !== member.id)
-                    .map((m) => m.id)
-                    .join(', ');
-                const refText = '\n\nThis test case is part of the set ' + group.name + ': ' + others;
-
-                try {
-                    const current = await this.jiraResource.getJiraResource<{ fields?: { description?: string } }>(
-                        'issue/' + member.id,
-                    );
-                    const currentDesc = current?.fields?.description || '';
-                    if (
-                        currentDesc.includes('faz parte do conjunto') ||
-                        currentDesc.includes('This test case is part of the set')
-                    ) {
-                        crossLog.info('  ' + member.id + ': ja atualizado, pulando');
-                        continue;
-                    }
-
-                    await this.jiraResource.putJiraResource('issue/' + member.id, {
-                        fields: { description: currentDesc + refText },
-                    });
-                    if (!isQuiet()) print(chalk.green('+'));
-                    crossLog.info('  ' + member.id + ': descrição atualizada');
-                } catch (err) {
-                    const status = (err as { response?: { status?: number } }).response?.status;
-                    crossLog.error('Falha ao atualizar descrição de ' + member.id + ' no grupo "' + group.name + '"', {
-                        status,
-                    });
-                    if (!isQuiet()) print(chalk.red('x'));
-                }
-            }
+            await updateGroupLinks(this.jiraResource, group, crossLog);
         }
     }
 }

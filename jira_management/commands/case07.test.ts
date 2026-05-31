@@ -1,44 +1,15 @@
-jest.mock('../../shared/prompt', () => ({
-    warn: jest.fn(),
-    askConfirm: jest.fn().mockResolvedValue(false),
-    ask: jest.fn().mockResolvedValue(''),
-    printSummary: jest.fn(),
-    printError: jest.fn(),
-}));
-
-jest.mock('../../shared/logger', () => ({
-    rootLogger: {
-        error: jest.fn(),
-        child: jest.fn().mockReturnValue({ info: jest.fn(), error: jest.fn(), warn: jest.fn() }),
-    },
-}));
+jest.mock('../../shared/prompt');
+jest.mock('../../shared/logger');
 
 import case07 from './case07';
+import { makeMockCommandContext } from '../../shared/test-utils';
 
 const mockJiraResource = {
     getReleaseTasks: jest.fn().mockResolvedValue([]),
     moveCardsToDone: jest.fn().mockResolvedValue({}),
 };
 
-const mockContext: Record<string, unknown> = {
-    jiraResource: mockJiraResource,
-    jiraResourceXray: {},
-    linkManager: {},
-    linkManagerXray: {},
-    csvResource: {},
-    ctx: {
-        project_name: 'TEST',
-        inMemoryTasksId: [],
-        inMemoryTasksText: [],
-        sessionCounters: [],
-        isBusy: false,
-        results: [],
-    },
-    pushHistory: jest.fn(),
-    printSessionSummary: jest.fn(),
-    base_url: 'https://jira.test.com',
-    sessionLog: { child: jest.fn().mockReturnValue({ info: jest.fn(), error: jest.fn(), warn: jest.fn() }) },
-};
+const mockContext = makeMockCommandContext({ jiraResource: mockJiraResource });
 
 beforeEach(() => {
     jest.clearAllMocks();

@@ -37,6 +37,7 @@ const mockInstance: jest.Mock<Promise<unknown>, unknown[]> & {
 
 jest.mock('axios', () => ({ create: jest.fn(() => mockInstance) }));
 import * as httpClientModule from './http-client';
+import { rootLogger } from './logger';
 import axios from 'axios';
 
 describe('HTTP Client', () => {
@@ -226,6 +227,43 @@ describe('HTTP Client', () => {
             } catch (e) {}
             expect(mockInstance).toHaveBeenCalled();
         });
+
+        it('retries GET up to custom maxRetries (2) and stops', async () => {
+            httpClient.createHttpClient({ baseUrl: 'https://api.test.com', maxRetries: 2 });
+            const err = makeError('get', 500, 0);
+            mockInstance.mockImplementation((cfg: unknown) => {
+                const newErr = makeError('get', 500, (cfg as Record<string, unknown>).__retryAttempts as number);
+                (newErr as unknown as Record<string, unknown>).config = cfg;
+                return errorHandler!(newErr);
+            });
+            try {
+                await errorHandler!(err);
+            } catch {
+                /* expected */
+            }
+            expect(mockInstance).toHaveBeenCalledTimes(2);
+        });
+
+        it('logs retry attempts at debug level, not warn', async () => {
+            const debugSpy = jest.spyOn(rootLogger, 'debug');
+            const warnSpy = jest.spyOn(rootLogger, 'warn');
+            httpClient.createHttpClient({ baseUrl: 'https://api.test.com' });
+            const err = makeError('get', 500, 0);
+            mockInstance.mockImplementation((cfg: unknown) => {
+                const newErr = makeError('get', 500, (cfg as Record<string, unknown>).__retryAttempts as number);
+                (newErr as unknown as Record<string, unknown>).config = cfg;
+                return errorHandler!(newErr);
+            });
+            try {
+                await errorHandler!(err);
+            } catch {
+                /* expected */
+            }
+            expect(debugSpy).toHaveBeenCalled();
+            expect(warnSpy).not.toHaveBeenCalled();
+            debugSpy.mockRestore();
+            warnSpy.mockRestore();
+        });
     });
 
     describe('429 retry-after header (lines 128-129)', () => {
@@ -277,17 +315,17 @@ describe('HTTP Client', () => {
     });
 
     describe('stale retry entry cleanup (lines 70-72)', () => {
-        it('removes entries that have not been used for more than RETRY_STALE_MS', () => {
+        beforeEach(() => {
             jest.useFakeTimers();
+            httpClient._resetRetryCleanup();
+        });
 
-            // Use isolateModules so startRetryCleanup runs with fake timers
-            let freshClient: typeof httpClient;
-            jest.isolateModules(() => {
-                freshClient = require('./http-client') as typeof httpClient;
-            });
+        afterEach(() => {
+            jest.useRealTimers();
+        });
 
-            freshClient!.setTestSleep(() => Promise.resolve());
-            freshClient!.createHttpClient({ baseUrl: 'https://api.test.com' });
+        it('removes entries that have not been used for more than RETRY_STALE_MS', () => {
+            httpClient.createHttpClient({ baseUrl: 'https://api.test.com' });
 
             // Create entry in retryCounts via a retry that resolves successfully
             // (entry persists because neither success nor error handler deletes it)
@@ -304,8 +342,70 @@ describe('HTTP Client', () => {
             // Advance past RETRY_STALE_MS (600s) + one cleanup interval (300s)
             // to trigger stale entry deletion at t=900000
             jest.advanceTimersByTime(900001);
+        });
+    });
 
-            jest.useRealTimers();
+    describe('createThrottledClient (branch coverage)', () => {
+        it('extractHost returns unknown for invalid URL', async () => {
+            httpClient.createThrottledClient({ baseUrl: 'https://api.test.com', maxConcurrency: 3 });
+            const reqHandler = mockInstance.interceptors.request.use.mock.calls[0][0];
+            const cfg: Record<string, unknown> = { url: ':::invalid', headers: {} };
+            const result = await reqHandler(cfg);
+            expect((result as Record<string, unknown>)._throttleAcquired).toBe(true);
+        });
+
+        it('acquire queues second request when concurrency is maxed out', async () => {
+            httpClient.createThrottledClient({ baseUrl: 'https://api.test.com', maxConcurrency: 1 });
+            const reqHandler = mockInstance.interceptors.request.use.mock.calls[0][0];
+            const respHandler = mockInstance.interceptors.response.use.mock.calls[1][0];
+            const cfg1: Record<string, unknown> = { url: 'https://api.test.com/resource', headers: {} };
+            const cfg2: Record<string, unknown> = { url: 'https://api.test.com/other', headers: {} };
+            await reqHandler(cfg1);
+            const req2Promise = reqHandler(cfg2);
+            respHandler({ config: cfg1, data: 'ok' });
+            await expect(req2Promise).resolves.toBe(cfg2);
+        });
+
+        it('response error handler extracts host from empty url', () => {
+            httpClient.createThrottledClient({ baseUrl: 'https://api.test.com', maxConcurrency: 3 });
+            const errRespHandler = mockInstance.interceptors.response.use.mock.calls[1][1];
+            const error = { config: {}, message: 'test', name: 'Error' };
+            expect(() => errRespHandler(error)).toThrow(error);
+        });
+    });
+
+    describe('HostSemaphore (direct)', () => {
+        it('acquire blocks when maxConcurrency reached and releases when slot frees', async () => {
+            const { HostSemaphore } = require('./host-semaphore');
+            const sem = new HostSemaphore(1);
+
+            await sem.acquire('test-host');
+
+            const p = sem.acquire('test-host');
+            const race = Promise.race([p.then(() => 'resolved'), Promise.resolve('pending')]);
+            expect(await race).toBe('pending');
+
+            sem.release('test-host');
+            expect(await p).toBeUndefined();
+        });
+
+        it('release dispatches queued request and updates inflight', async () => {
+            const { HostSemaphore } = require('./host-semaphore');
+            const sem = new HostSemaphore(2);
+
+            await sem.acquire('h1');
+            await sem.acquire('h1');
+
+            const p3 = sem.acquire('h1');
+
+            sem.release('h1');
+            await expect(p3).resolves.toBeUndefined();
+        });
+
+        it('release calls dispatchNext even when queue is empty', () => {
+            const { HostSemaphore } = require('./host-semaphore');
+            const sem = new HostSemaphore(1);
+            expect(() => sem.release('nonexistent')).not.toThrow();
         });
     });
 });

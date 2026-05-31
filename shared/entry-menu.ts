@@ -8,7 +8,10 @@ import { spawn } from 'child_process';
 import { showSplash } from './splash';
 import { showSelect } from './prompt';
 import { Output, defaultOutput } from './output';
+import { rootLogger } from './logger';
+import { ExitCode } from './types';
 import { join } from 'path';
+import { gracefulExit } from './cli_base';
 
 const root = join(__dirname, '..');
 
@@ -35,7 +38,7 @@ export async function main(): Promise<void> {
 
     if (!isTTY) {
         defaultOutput.print('Usage: npm run jira   — Jira/Xray management');
-        defaultOutput.print('       npm run git    — Git triggers (GitHub/GitLab)');
+        defaultOutput.print('       npm run git    — Git triggers (GitHub/GitLab, CI/CD Setup)');
         return;
     }
 
@@ -46,7 +49,7 @@ export async function main(): Promise<void> {
 
         const choice = await showSelect('      Selecione o módulo', [
             { name: '      Jira Management  (Testes, Releases, Config)', value: 'jira' },
-            { name: '      Git Triggers     (Pipelines, PR/MR, CI/CD)', value: 'git' },
+            { name: '      Git Triggers     (Pipelines, PR/MR, CI/CD, Setup)', value: 'git' },
             { type: 'separator', line: '        ' },
             { name: '      /exit  Sair', value: 'exit' },
         ]);
@@ -57,16 +60,16 @@ export async function main(): Promise<void> {
         try {
             await runModule(choice);
             // child exited with code 0 → loop back to entry menu
-        } catch {
-            break; // fatal error → exit
+        } catch (err: unknown) {
+            rootLogger.error('Entry menu child module error: ' + (err as Error).message);
+            break;
         }
     }
 }
 
 if (require.main === module) {
     main().catch((err) => {
-        // eslint-disable-next-line no-console -- entry point error
-        console.error('Erro: ' + String(err));
-        process.exit(1);
+        rootLogger.error('Entry menu fatal: ' + String(err));
+        gracefulExit(ExitCode.ERROR);
     });
 }

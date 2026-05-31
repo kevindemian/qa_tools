@@ -2,6 +2,7 @@ import fs from 'fs';
 import path from 'path';
 import os from 'os';
 import Config from './config';
+import { formatDateISO } from './date-utils';
 import { Logger, rootLogger, maskDeep } from './logger';
 
 function normalizePath(p: string): string {
@@ -50,7 +51,7 @@ describe('Logger', () => {
             const logger = new Logger({ test: 'write' }, cfg);
             (logger as unknown as Record<string, jest.Mock>)[level]!(msg, data);
 
-            const date = new Date().toISOString().split('T')[0];
+            const date = formatDateISO();
             const logFile = path.join(testDir, `qa-tools-${date}.log`);
 
             if (!fs.existsSync(logFile)) {
@@ -167,7 +168,7 @@ describe('Logger', () => {
         it('reads _bytesWritten from statSync when log file already exists', () => {
             const testDir = normalizePath(fs.mkdtempSync(path.join(os.tmpdir(), 'qa-tools-logger-stat-')));
             const cfg = Config.create({ logFile: true, logDir: testDir });
-            const date = new Date().toISOString().split('T')[0];
+            const date = formatDateISO();
             const logFile = path.join(testDir, `qa-tools-${date}.log`);
             fs.writeFileSync(logFile, 'existing content\n');
             const logger = new Logger({}, cfg);
@@ -185,7 +186,7 @@ describe('Logger', () => {
         it('increments seq when rotated file already exists', () => {
             jest.isolateModules(() => {
                 const testDir = normalizePath(fs.mkdtempSync(path.join(os.tmpdir(), 'qa-tools-logger-seq-')));
-                const date = new Date().toISOString().split('T')[0];
+                const date = formatDateISO();
                 const logFile = path.join(testDir, `qa-tools-${date}.log`);
                 fs.writeFileSync(logFile, 'x'.repeat(60));
                 fs.writeFileSync(path.join(testDir, `qa-tools-${date}.1.log`), 'rotated-1\n');
@@ -204,7 +205,7 @@ describe('Logger', () => {
             jest.isolateModules(() => {
                 const spyError = jest.spyOn(console, 'error').mockImplementation(() => {});
                 const testDir = normalizePath(fs.mkdtempSync(path.join(os.tmpdir(), 'qa-tools-logger-rotfail-')));
-                const date = new Date().toISOString().split('T')[0];
+                const date = formatDateISO();
                 const logFile = path.join(testDir, `qa-tools-${date}.log`);
                 fs.writeFileSync(logFile, 'x'.repeat(60));
                 const cfg = Config.create({ logFile: true, logDir: testDir, logMaxSize: 50 });

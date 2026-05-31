@@ -1,15 +1,5 @@
-jest.mock('../../shared/prompt', () => ({
-    success: jest.fn(),
-    error: jest.fn(),
-    warn: jest.fn(),
-    info: jest.fn(),
-    title: jest.fn(),
-    divider: jest.fn(),
-    ask: jest.fn().mockResolvedValue(''),
-    askConfirm: jest.fn().mockResolvedValue(true),
-    printError: jest.fn(),
-    tableView: jest.fn(),
-}));
+jest.mock('../../shared/prompt');
+jest.mock('../../shared/logger');
 
 jest.mock('../../shared/llm-client', () => ({
     llmPrompt: jest.fn(),
@@ -96,14 +86,13 @@ describe('case18 — AI tests generator', () => {
         const mod = require('./case18').default;
         await mod.handler(baseContext);
 
-        expect(llm.llmPrompt).toHaveBeenCalledWith(
-            'fast',
-            expect.stringContaining('You are a QA engineer'),
-            expect.stringContaining('User wants to login'),
-            'case18',
-            undefined,
-            expect.anything(),
-        );
+        expect(llm.llmPrompt).toHaveBeenCalledWith({
+            tier: 'fast',
+            system: expect.stringContaining('You are a QA engineer'),
+            user: expect.stringContaining('User wants to login'),
+            callerId: 'case18',
+            schema: expect.anything(),
+        });
         expect(baseContext.pushHistory).toHaveBeenCalledWith('ai-generate-tests', expect.any(String), 'ok');
     });
 

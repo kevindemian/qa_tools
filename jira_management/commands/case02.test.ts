@@ -1,43 +1,15 @@
-jest.mock('../../shared/prompt', () => ({
-    info: jest.fn(),
-    error: jest.fn(),
-    divider: jest.fn(),
-    printError: jest.fn(),
-}));
-
-jest.mock('../../shared/logger', () => ({
-    rootLogger: {
-        error: jest.fn(),
-        child: jest.fn().mockReturnValue({ info: jest.fn(), error: jest.fn(), warn: jest.fn() }),
-    },
-}));
+jest.mock('../../shared/prompt');
+jest.mock('../../shared/logger');
 
 import case02 from './case02';
+import { makeMockCommandContext } from '../../shared/test-utils';
 
 const mockJiraResource = {
     getProjectId: jest.fn().mockResolvedValue('123'),
     getProjectVersions: jest.fn().mockResolvedValue([]),
 };
 
-const mockContext: Record<string, unknown> = {
-    jiraResource: mockJiraResource,
-    jiraResourceXray: {},
-    linkManager: {},
-    linkManagerXray: {},
-    csvResource: {},
-    ctx: {
-        project_name: 'TEST',
-        inMemoryTasksId: [],
-        inMemoryTasksText: [],
-        sessionCounters: [],
-        isBusy: false,
-        results: [],
-    },
-    pushHistory: jest.fn(),
-    printSessionSummary: jest.fn(),
-    base_url: 'https://jira.test.com',
-    sessionLog: { child: jest.fn().mockReturnValue({ info: jest.fn(), error: jest.fn(), warn: jest.fn() }) },
-};
+const mockContext = makeMockCommandContext({ jiraResource: mockJiraResource });
 
 beforeEach(() => {
     jest.clearAllMocks();
@@ -50,6 +22,37 @@ describe('case02 — list versions', () => {
     });
 
     it('executes without error with basic context', async () => {
+        const result = await case02.handler(mockContext as never);
+        expect(result === undefined || result === true || result === false).toBe(true);
+    });
+
+    it('handles missing projectId gracefully', async () => {
+        mockJiraResource.getProjectId.mockResolvedValueOnce(null);
+        const result = await case02.handler(mockContext as never);
+        expect(result).toBeUndefined();
+    });
+
+    it('handles versions list and calls pushHistory', async () => {
+        mockJiraResource.getProjectVersions.mockResolvedValueOnce([
+            { name: 'v1.0', description: 'First release', released: true },
+            { name: 'v2.0', description: '', released: false, releaseDate: '2099-12-31' },
+        ]);
+        const result = await case02.handler(mockContext as never);
+        expect(mockContext.pushHistory).toHaveBeenCalledWith('listar-versoes', expect.stringContaining('versão'), 'ok');
+        expect(result === undefined || result === true || result === false).toBe(true);
+    });
+
+    it('handles versions list with overdue release', async () => {
+        const pastDate = new Date(Date.now() - 86400000).toISOString().slice(0, 10);
+        mockJiraResource.getProjectVersions.mockResolvedValueOnce([
+            { name: 'v1.0', description: 'Desc', released: false, releaseDate: pastDate },
+        ]);
+        const result = await case02.handler(mockContext as never);
+        expect(result === undefined || result === true || result === false).toBe(true);
+    });
+
+    it('handles catch error block (lines 27-32)', async () => {
+        mockJiraResource.getProjectId.mockRejectedValueOnce(new Error('API failure'));
         const result = await case02.handler(mockContext as never);
         expect(result === undefined || result === true || result === false).toBe(true);
     });

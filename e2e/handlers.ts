@@ -8,6 +8,8 @@ export function setupHandlers(): void {
 
     const jira = nock('http://localhost:9999/jira/rest/api/2');
 
+    jira.get('/search').query(true).times(2).reply(200, { issues: [] });
+
     jira.post('/issue')
         .times(2)
         .reply(201, () => {

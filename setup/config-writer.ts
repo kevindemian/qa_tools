@@ -7,66 +7,56 @@ interface WriterResult {
     filesSkipped: string[];
 }
 
+function writeJsonConfig(
+    filePath: string,
+    ctx: Pick<SetupContext, 'projectName' | 'gitProvider' | 'repoName' | 'repoOwner'>,
+    makeEntry: (ctx: Pick<SetupContext, 'projectName' | 'gitProvider' | 'repoName' | 'repoOwner'>) => unknown,
+    result: WriterResult,
+): void {
+    if (!fs.existsSync(filePath)) {
+        fs.writeFileSync(filePath, JSON.stringify({ [ctx.projectName]: makeEntry(ctx) }, null, 2) + '\n', 'utf8');
+        result.filesCreated.push(filePath);
+        return;
+    }
+    try {
+        const existing = JSON.parse(fs.readFileSync(filePath, 'utf8')) as Record<string, unknown>;
+        if (ctx.projectName in existing) {
+            result.filesSkipped.push(filePath);
+        } else {
+            existing[ctx.projectName] = makeEntry(ctx);
+            fs.writeFileSync(filePath, JSON.stringify(existing, null, 2) + '\n', 'utf8');
+            result.filesCreated.push(filePath);
+        }
+    } catch {
+        fs.writeFileSync(filePath, JSON.stringify({ [ctx.projectName]: makeEntry(ctx) }, null, 2) + '\n', 'utf8');
+        result.filesCreated.push(filePath);
+    }
+}
+
+function makeProjectEntry(ctx: Pick<SetupContext, 'projectName' | 'gitProvider' | 'repoName' | 'repoOwner'>): unknown {
+    return ctx.gitProvider === 'github' ? ctx.repoName : ctx.projectName;
+}
+
+function makeProviderEntry(ctx: Pick<SetupContext, 'projectName' | 'gitProvider' | 'repoName' | 'repoOwner'>): unknown {
+    return ctx.gitProvider === 'github'
+        ? { provider: 'github', repo: ctx.repoOwner + '/' + ctx.repoName }
+        : { provider: 'gitlab' };
+}
+
+function ensureConfigDir(): string {
+    const configDir = path.resolve(process.cwd(), 'config');
+    fs.mkdirSync(configDir, { recursive: true });
+    return configDir;
+}
+
 export function writeProjectsConfig(
     ctx: Pick<SetupContext, 'projectName' | 'gitProvider' | 'repoName' | 'repoOwner'>,
 ): WriterResult {
     const result: WriterResult = { filesCreated: [], filesSkipped: [] };
-    const configDir = path.resolve(process.cwd(), 'config');
-    fs.mkdirSync(configDir, { recursive: true });
+    const configDir = ensureConfigDir();
 
-    const projectsPath = path.join(configDir, 'projects.json');
-    if (fs.existsSync(projectsPath)) {
-        try {
-            const existing = JSON.parse(fs.readFileSync(projectsPath, 'utf8')) as Record<string, unknown>;
-            if (ctx.projectName in existing) {
-                result.filesSkipped.push(projectsPath);
-            } else {
-                existing[ctx.projectName] = ctx.gitProvider === 'github' ? ctx.repoName : ctx.projectName;
-                fs.writeFileSync(projectsPath, JSON.stringify(existing, null, 2) + '\n', 'utf8');
-                result.filesCreated.push(projectsPath);
-            }
-        } catch {
-            fs.writeFileSync(
-                projectsPath,
-                JSON.stringify({ [ctx.projectName]: ctx.projectName }, null, 2) + '\n',
-                'utf8',
-            );
-            result.filesCreated.push(projectsPath);
-        }
-    } else {
-        const id = ctx.gitProvider === 'github' ? ctx.repoName : ctx.projectName;
-        fs.writeFileSync(projectsPath, JSON.stringify({ [ctx.projectName]: id }, null, 2) + '\n', 'utf8');
-        result.filesCreated.push(projectsPath);
-    }
-
-    const providersPath = path.join(configDir, 'providers.json');
-    const providerEntry =
-        ctx.gitProvider === 'github'
-            ? { provider: 'github', repo: ctx.repoOwner + '/' + ctx.repoName }
-            : { provider: 'gitlab' };
-
-    if (fs.existsSync(providersPath)) {
-        try {
-            const existing = JSON.parse(fs.readFileSync(providersPath, 'utf8')) as Record<string, unknown>;
-            if (ctx.projectName in existing) {
-                result.filesSkipped.push(providersPath);
-            } else {
-                existing[ctx.projectName] = providerEntry;
-                fs.writeFileSync(providersPath, JSON.stringify(existing, null, 2) + '\n', 'utf8');
-                result.filesCreated.push(providersPath);
-            }
-        } catch {
-            fs.writeFileSync(
-                providersPath,
-                JSON.stringify({ [ctx.projectName]: providerEntry }, null, 2) + '\n',
-                'utf8',
-            );
-            result.filesCreated.push(providersPath);
-        }
-    } else {
-        fs.writeFileSync(providersPath, JSON.stringify({ [ctx.projectName]: providerEntry }, null, 2) + '\n', 'utf8');
-        result.filesCreated.push(providersPath);
-    }
+    writeJsonConfig(path.join(configDir, 'projects.json'), ctx, makeProjectEntry, result);
+    writeJsonConfig(path.join(configDir, 'providers.json'), ctx, makeProviderEntry, result);
 
     return result;
 }

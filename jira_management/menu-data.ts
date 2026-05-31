@@ -29,9 +29,9 @@ export const HELP_TOPICS: Record<string, string> = {
     version: 'Versão:\n  Nome da versão (ex: v2.7.0).\n  Criada no projeto Jira para organizar releases.',
     transitions:
         'Transicoes:\n  Fluxo: New -> Approve -> Coding In Progress -> Coding Done -> Done\n  Use a opção 7 para fechamento automatico.',
-    template: 'Template CSV:\n  Use a opção 11 para gerar um arquivo CSV de exemplo.',
+    template: 'Template CSV/JSON:\n  Use a opção 11 (GERAÇÃO DE CASOS DE TESTE) para gerar um arquivo de exemplo.',
     diagnostics:
-        'Diagnostico de conexão:\n  Opção 12 no menu. Testa conectividade com Jira API, Xray API,\n  e valida o projeto atual. Mostra tempos de resposta e status HTTP.',
+        'Diagnostico de conexão:\n  Opção 12 (CONFIGURAÇÃO). Testa conectividade com Jira API, Xray API,\n  e valida o projeto atual. Mostra tempos de resposta e status HTTP.',
 };
 
 export const ALIASES: Record<string, string> = {
@@ -79,9 +79,11 @@ export const ALIASES: Record<string, string> = {
     impacto: '22',
     'ai-feedback': '23',
     feedback: '23',
-    setup: '00',
-    wizard: '00',
-    'setup-wizard': '00',
+
+    w: '24',
+    setup: '24',
+    wizard: '24',
+    configurar: '24',
     bug: '20',
     'bug-report': '20',
     bugreport: '20',
@@ -96,10 +98,6 @@ export const ALIASES: Record<string, string> = {
     voltar: '/menu',
     ajuda: '/help',
     help: '/help',
-    t: '1',
-    r: '2',
-    c: '9',
-    u: '11',
 };
 
 export function resolveAlias(choice: string): string {
@@ -114,7 +112,6 @@ export const CATEGORIES: MenuItem[] = [
     { id: 'analytics', label: 'ANÁLISE E HISTÓRICO' },
     { id: 'releases', label: 'RELEASES' },
     { id: 'config', label: 'CONFIGURAÇÃO' },
-    { id: 'utilities', label: 'UTILITÁRIOS' },
     { id: '0', label: 'Voltar ao menu principal' },
 ];
 
@@ -128,6 +125,7 @@ export const SUB_MENUS: Record<string, MenuItem[]> = {
         { id: '13', label: 'Criar Test Execution para testes existentes' },
         { id: '15', label: 'Importar testes de JSON' },
         { id: '18', label: 'Gerar testes via User Story (IA)' },
+        { id: '11', label: 'Gerar template (CSV/JSON)' },
         { id: '0', label: 'Voltar' },
     ],
     bugreport: [
@@ -156,13 +154,8 @@ export const SUB_MENUS: Record<string, MenuItem[]> = {
         { id: '10', label: 'Alterar diretório git', configKey: 'gitDir' },
         { id: '14', label: 'Alterar diretório Cypress', configKey: 'cypressDir' },
         { id: '16', label: 'Alterar diretório JSON', configKey: 'jsonDir' },
-        { id: '0', label: 'Voltar' },
-    ],
-    utilities: [
-        { id: '11', label: 'Gerar template (CSV/JSON)' },
         { id: '12', label: 'Diagnosticar conexão' },
-        { id: '00', label: 'Setup wizard (CI/CD)' },
-        { id: 'd', label: 'Ver documentação' },
+        { id: '24', label: 'Setup wizard / Primeiros passos' },
         { id: '0', label: 'Voltar' },
     ],
 };
@@ -176,7 +169,6 @@ export const CATEGORY_TITLES: Record<string, string> = {
     analytics: 'ANÁLISE E HISTÓRICO',
     releases: 'RELEASES',
     config: 'CONFIGURAÇÃO',
-    utilities: 'UTILITÁRIOS',
 };
 
 function _buildAliasMap(): Record<string, string[]> {

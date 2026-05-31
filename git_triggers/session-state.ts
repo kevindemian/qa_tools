@@ -48,6 +48,14 @@ export function setManager(v: GitProvider | null): void {
 
 export const MSG_OPERATION_CANCELED = 'Operação cancelada.';
 
+/** Thrown when a required token/env var is missing for the provider. */
+export class MissingTokenError extends Error {
+    constructor(provider: string, missingVar: string) {
+        super(`Token de autenticação não configurado para ${provider}. Configure ${missingVar} no .env`);
+        this.name = 'MissingTokenError';
+    }
+}
+
 const PROVIDERS_PATH = path.resolve(__dirname, '../config/providers.json');
 const PROJECTS_PATH = path.resolve(__dirname, '../config/projects.json');
 
@@ -58,8 +66,8 @@ function loadProvidersConfig(): Record<string, ProviderConfig> {
     if (_providersConfig) return _providersConfig;
     try {
         _providersConfig = JSON.parse(fs.readFileSync(PROVIDERS_PATH, 'utf8'));
-    } catch {
-        rootLogger.warn('Falha ao carregar providers.json. Usando GitLab como padrao.');
+    } catch (err: unknown) {
+        rootLogger.warn('Falha ao carregar providers.json: ' + (err as Error).message + '. Usando GitLab como padrao.');
         _providersConfig = {};
     }
     return _providersConfig!;
@@ -84,7 +92,6 @@ function loadProjects(): Record<string, string> {
             },
         );
         error(`Configuração inválida em "${PROJECTS_PATH}". Verifique o JSON.`);
-        process.exitCode = 1;
         _projects = {};
     }
     return _projects!;
@@ -106,9 +113,11 @@ export function createManagerForProject(projectName: string, id: string): GitPro
         const cfg = loadProvidersConfig()[projectName];
         const repo = cfg?.repo ?? id;
         const ghToken = Config.githubToken || Config.gitToken || '';
+        if (!ghToken) throw new MissingTokenError('GitHub', 'GITHUB_TOKEN ou GIT_TOKEN');
         const ghApiUrl = Config.githubApiUrl || 'https://api.github.com';
         return new GitHubManager(repo, ghToken, ghApiUrl);
     }
+    if (!apiToken) throw new MissingTokenError('GitLab', 'GIT_TOKEN');
     return new GitLabManager(id, apiToken, gitlabBaseUrl);
 }
 
@@ -135,6 +144,23 @@ export function printSessionSummary(): void {
 
 export function providerLabel(): string {
     return _providerLabel(currentProvider);
+}
+
+/** Clear the cached projects/config so the next `getProjects()` call re-reads from disk.
+ *  Used after the setup wizard creates new projects. */
+export function clearProjectCache(): void {
+    _providersConfig = undefined;
+    _projects = undefined;
+}
+
+/** Reset internal caches and mutable state for test isolation. @internal */
+export function _resetForTest(): void {
+    clearProjectCache();
+    currentProjectName = '';
+    currentProvider = 'gitlab';
+    isBusy = false;
+    manager = null;
+    sessionContext.sessionCounters = [];
 }
 
 export function displayProjects(): void {
@@ -198,6 +224,7 @@ export function buildActionChoices(): JsonObject[] {
         { name: '      Nivelar branches', value: '7' },
         { type: 'separator', line: '        ' },
         { type: 'separator', line: '       UTILITARIOS' },
+        { name: '      Setup wizard CI/CD (w)', value: 'w' },
         { name: '      Exportar variáveis CI/CD', value: '8' },
         { name: '      Trocar de projeto', value: '9' },
         { name: '      Dashboard flakiness (HTML)', value: 'a' },

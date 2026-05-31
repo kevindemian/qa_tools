@@ -67,20 +67,36 @@ beforeEach(() => {
 });
 
 describe('prepareTestRun', () => {
-    it('user cancels via confirmOrCancel', () => {
+    it('user cancels via confirmOrCancel', async () => {
         jest.mocked(confirmOrCancel).mockReturnValue(false);
-        const result = prepareTestRun(makeTestCases(2), '/p.csv', 'csv', 'PROJ', [], onBusy, warn);
+        const result = await prepareTestRun({
+            tests: makeTestCases(2),
+            sourcePath: '/p.csv',
+            sourceType: 'csv',
+            project_name: 'PROJ',
+            jiraLabels: [],
+            onBusy,
+            warn,
+        });
         expect(result).toBeUndefined();
         expect(warn).toHaveBeenCalledWith(expect.stringContaining('cancelada'));
     });
 
-    it('filterTests returns null', () => {
+    it('filterTests returns null', async () => {
         jest.mocked(filterTests).mockReturnValue(null);
-        const result = prepareTestRun(makeTestCases(2), '/p.csv', 'csv', 'PROJ', [], onBusy, warn);
+        const result = await prepareTestRun({
+            tests: makeTestCases(2),
+            sourcePath: '/p.csv',
+            sourceType: 'csv',
+            project_name: 'PROJ',
+            jiraLabels: [],
+            onBusy,
+            warn,
+        });
         expect(result).toBeUndefined();
     });
 
-    it('dry-run returns early', () => {
+    it('dry-run returns early', async () => {
         jest.mocked(handleDryRun).mockReturnValue({
             inMemoryTasksId: [],
             inMemoryTasksText: [],
@@ -88,7 +104,15 @@ describe('prepareTestRun', () => {
             status: 'ok',
             sourcePath: '/p.csv',
         });
-        const result = prepareTestRun(makeTestCases(2), '/p.csv', 'csv', 'PROJ', [], onBusy, warn);
+        const result = await prepareTestRun({
+            tests: makeTestCases(2),
+            sourcePath: '/p.csv',
+            sourceType: 'csv',
+            project_name: 'PROJ',
+            jiraLabels: [],
+            onBusy,
+            warn,
+        });
         expect(result).toEqual({
             inMemoryTasksId: [],
             inMemoryTasksText: [],
@@ -132,17 +156,17 @@ describe('postProcessCheckpoint', () => {
             updateCrossReferences: jest.fn().mockResolvedValue(undefined),
         } as never;
         const results = [{ status: 'ok' as const, label: 'Test 1', message: '' }];
-        await postProcessCheckpoint(
+        await postProcessCheckpoint({
             results,
-            [{ title: 'Test 1', steps: [], group: 'g1' }],
-            'PROJ',
-            ['T-1'],
-            [],
-            '/p.csv',
-            'csv',
+            tests: [{ title: 'Test 1', steps: [], group: 'g1' }],
+            projectName: 'PROJ',
+            inMemoryTasksId: ['T-1'],
+            jiraLabels: [],
+            sourcePath: '/p.csv',
+            sourceType: 'csv',
             linker,
-            jest.fn(),
-        );
+            info: jest.fn(),
+        });
         expect(STATE.update).toHaveBeenCalledWith(expect.any(Function));
         expect(updateFinalState).toHaveBeenCalled();
     });

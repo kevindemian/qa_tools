@@ -104,42 +104,42 @@ describe('TestExecutionCreator', () => {
             });
         });
 
-        it('throws error when issue type not found', async () => {
+        it('returns null and logs error when issue type not found', async () => {
             mockJiraResource.getJiraResource.mockResolvedValueOnce([
                 { id: '1', name: 'Bug' },
                 { id: '3', name: 'Story' },
             ]);
-            await expect(creator.create(projectName, testKeys, csvName)).rejects.toThrow(
-                'Issue type "Test Execution" não encontrado',
-            );
+            const result = await creator.create(projectName, testKeys, csvName);
+            expect(result).toBeNull();
+            expect(rootLogger.error).toHaveBeenCalledWith(expect.stringContaining('Issue type'));
             expect(mockJiraResource.postJiraResource).not.toHaveBeenCalled();
         });
 
-        it('throws error when custom field not found', async () => {
+        it('returns null and logs error when custom field not found', async () => {
             mockJiraResource.getJiraResource
                 .mockResolvedValueOnce(defaultIssueTypes)
                 .mockResolvedValueOnce([{ id: 'customfield_10100', name: 'Test', schema: { custom: 'some:other' } }]);
-            await expect(creator.create(projectName, testKeys, csvName)).rejects.toThrow(
-                'Campo "Tests association with a Test Execution" não encontrado',
-            );
+            const result = await creator.create(projectName, testKeys, csvName);
+            expect(result).toBeNull();
+            expect(rootLogger.error).toHaveBeenCalledWith(expect.stringContaining('Tests association'));
             expect(mockJiraResource.postJiraResource).not.toHaveBeenCalled();
         });
 
-        it('throws error when issuetype response is non-array', async () => {
+        it('returns null and logs error when issuetype response is non-array', async () => {
             mockJiraResource.getJiraResource.mockResolvedValueOnce({ id: '1' });
-            await expect(creator.create(projectName, testKeys, csvName)).rejects.toThrow(
-                'Falha ao obter tipos de issue do Jira',
-            );
+            const result = await creator.create(projectName, testKeys, csvName);
+            expect(result).toBeNull();
+            expect(rootLogger.error).toHaveBeenCalledWith(expect.stringContaining('tipos de issue'));
             expect(mockJiraResource.postJiraResource).not.toHaveBeenCalled();
         });
 
-        it('throws error when fields response is non-array', async () => {
+        it('returns null and logs error when fields response is non-array', async () => {
             mockJiraResource.getJiraResource
                 .mockResolvedValueOnce(defaultIssueTypes)
                 .mockResolvedValueOnce({ id: 'customfield_1' });
-            await expect(creator.create(projectName, testKeys, csvName)).rejects.toThrow(
-                'Falha ao obter campos customizados do Jira',
-            );
+            const result = await creator.create(projectName, testKeys, csvName);
+            expect(result).toBeNull();
+            expect(rootLogger.error).toHaveBeenCalledWith(expect.stringContaining('campos customizados'));
             expect(mockJiraResource.postJiraResource).not.toHaveBeenCalled();
         });
 
@@ -311,40 +311,40 @@ describe('TestExecutionCreator', () => {
             });
         });
 
-        it('throws when issue is not Test Execution type', async () => {
+        it('returns null and logs error when issue is not Test Execution type', async () => {
             mockJiraResource.getJiraResource.mockResolvedValueOnce({
                 key: 'BUG-1',
                 fields: { issuetype: { name: 'Bug' } },
             });
-            await expect(creator.addTestsToExistingExecution('BUG-1', testKeys)).rejects.toThrow(
-                '"BUG-1" não é uma Test Execution',
-            );
+            const result = await creator.addTestsToExistingExecution('BUG-1', testKeys);
+            expect(result).toBeNull();
+            expect(rootLogger.error).toHaveBeenCalledWith(expect.stringContaining('não é uma Test Execution'));
         });
 
-        it('throws when TE has unknown issuetype', async () => {
+        it('returns null when TE has unknown issuetype', async () => {
             mockJiraResource.getJiraResource.mockResolvedValueOnce({
                 key: 'X-1',
                 fields: {},
             });
-            await expect(creator.addTestsToExistingExecution('X-1', testKeys)).rejects.toThrow(
-                'não é uma Test Execution (tipo: desconhecido)',
-            );
+            const result = await creator.addTestsToExistingExecution('X-1', testKeys);
+            expect(result).toBeNull();
+            expect(rootLogger.error).toHaveBeenCalledWith(expect.stringContaining('não é uma Test Execution'));
         });
 
-        it('throws when fields response is non-array', async () => {
+        it('returns null when fields response is non-array', async () => {
             mockJiraResource.getJiraResource.mockResolvedValueOnce(teIssue).mockResolvedValueOnce({ not: 'array' });
-            await expect(creator.addTestsToExistingExecution(teKey, testKeys)).rejects.toThrow(
-                'Falha ao obter campos customizados do Jira',
-            );
+            const result = await creator.addTestsToExistingExecution(teKey, testKeys);
+            expect(result).toBeNull();
+            expect(rootLogger.error).toHaveBeenCalledWith(expect.stringContaining('campos customizados'));
         });
 
-        it('throws when custom field not found', async () => {
+        it('returns null when custom field not found', async () => {
             mockJiraResource.getJiraResource
                 .mockResolvedValueOnce(teIssue)
                 .mockResolvedValueOnce([{ id: 'cf1', name: 'Other', schema: { custom: 'other:type' } }]);
-            await expect(creator.addTestsToExistingExecution(teKey, testKeys)).rejects.toThrow(
-                'Campo "Tests association with a Test Execution" não encontrado',
-            );
+            const result = await creator.addTestsToExistingExecution(teKey, testKeys);
+            expect(result).toBeNull();
+            expect(rootLogger.error).toHaveBeenCalledWith(expect.stringContaining('Tests association'));
         });
 
         it('merges existing tests with new ones, deduplicating', async () => {

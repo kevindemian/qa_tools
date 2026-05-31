@@ -2,7 +2,7 @@ import fs from 'fs';
 import path from 'path';
 import { rootLogger } from '../shared/logger';
 import { tempDirPath } from '../shared/temp-dir';
-import type JiraResource from './jira_resource';
+import type { JiraResourceLike } from '../shared/types';
 
 export interface LinkType {
     id: string;
@@ -18,11 +18,11 @@ export const FALLBACK_LINK_TYPES: LinkType[] = [
 ];
 
 export class LinkTypeManager {
-    jiraResource: JiraResource;
+    jiraResource: JiraResourceLike;
     linkTypesCache: LinkType[] | null;
     cacheFilePath: string;
 
-    constructor(jiraResource: JiraResource) {
+    constructor(jiraResource: JiraResourceLike) {
         this.jiraResource = jiraResource;
         this.linkTypesCache = null;
         this.cacheFilePath = path.join(tempDirPath(), 'cache', 'link-types-cache.json');
@@ -41,8 +41,8 @@ export class LinkTypeManager {
                 }
                 return this.linkTypesCache;
             }
-        } catch {
-            rootLogger.warn('getIssueLinkTypes — API falhou, verificando cache local...');
+        } catch (err: unknown) {
+            rootLogger.warn('getIssueLinkTypes — API falhou, verificando cache local... ' + (err as Error).message);
         }
         try {
             if (fs.existsSync(this.cacheFilePath)) {

@@ -1,9 +1,4 @@
-jest.mock('../../shared/prompt', () => ({
-    success: jest.fn(),
-    error: jest.fn(),
-    info: jest.fn(),
-    ask: jest.fn().mockResolvedValue(''),
-}));
+jest.mock('../../shared/prompt');
 
 jest.mock('fs', () => ({
     copyFileSync: jest.fn(),
@@ -11,26 +6,9 @@ jest.mock('fs', () => ({
 }));
 
 import case11 from './case11';
+import { makeMockCommandContext } from '../../shared/test-utils';
 
-const mockContext: Record<string, unknown> = {
-    jiraResource: {},
-    jiraResourceXray: {},
-    linkManager: {},
-    linkManagerXray: {},
-    csvResource: {},
-    ctx: {
-        project_name: 'TEST',
-        inMemoryTasksId: [],
-        inMemoryTasksText: [],
-        sessionCounters: [],
-        isBusy: false,
-        results: [],
-    },
-    pushHistory: jest.fn(),
-    printSessionSummary: jest.fn(),
-    base_url: 'https://jira.test.com',
-    sessionLog: { child: jest.fn().mockReturnValue({ info: jest.fn(), error: jest.fn(), warn: jest.fn() }) },
-};
+const mockContext = makeMockCommandContext();
 
 beforeEach(() => {
     jest.clearAllMocks();

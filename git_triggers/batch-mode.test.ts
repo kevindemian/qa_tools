@@ -305,4 +305,47 @@ describe('tryBatchMode', () => {
         expect(result).toBe(true);
         expect(mockError).toHaveBeenCalledWith(expect.stringContaining('ID da pipeline'));
     });
+
+    it('handles flakiness dashboard generation with publish target (line 149)', async () => {
+        const mockSessionState = jest.requireMock('./session-state');
+        const origProjectName = mockSessionState.currentProjectName;
+        mockSessionState.currentProjectName = 'proj1';
+
+        const mockMetrics = jest.requireMock('../shared/metrics');
+        mockMetrics.loadMetrics.mockReturnValue({
+            runs: [
+                {
+                    project: 'proj1',
+                    timestamp: Date.now(),
+                    passRate: 100,
+                    total: 10,
+                    passed: 10,
+                    failed: 0,
+                    flaky: [],
+                    duration: 100,
+                },
+                {
+                    project: 'proj1',
+                    timestamp: Date.now() - 1000,
+                    passRate: 90,
+                    total: 10,
+                    passed: 9,
+                    failed: 1,
+                    flaky: [],
+                    duration: 200,
+                },
+            ],
+        });
+
+        process.argv = ['node', 'script.js', '--project', 'proj1', '--branch', 'main', '--publish', 'gh-pages'];
+        mockGetProjects.mockReturnValue({ proj1: '1' });
+        (mockManager.getBranch as jest.Mock).mockResolvedValue({ name: 'main' });
+        (mockManager.triggerPipeline as jest.Mock).mockResolvedValue({ id: '42', web_url: '' });
+        mockPollPipeline.mockResolvedValue({ status: 'success', web_url: '' });
+
+        const result = await tryBatchMode();
+        expect(result).toBe(true);
+
+        mockSessionState.currentProjectName = origProjectName;
+    });
 });

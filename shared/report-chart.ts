@@ -30,6 +30,35 @@ export function buildChartSvg(stats: ReportStats): string {
 </svg>`;
 }
 
+interface _TrendLayout {
+    pts: Array<{ x: number; y: number }>;
+    pathD: string;
+    refY: number;
+}
+
+function _computeTrendLayout(
+    trends: TrendPoint[],
+    pad: { top: number; right: number; bottom: number; left: number },
+    chartW: number,
+    chartH: number,
+): _TrendLayout {
+    const pts = trends.map((t, i) => ({
+        x: pad.left + (i / (trends.length - 1)) * chartW,
+        y: pad.top + chartH - (t.passRate / 100) * chartH,
+    }));
+    const pathD = pts.map((p, i) => (i === 0 ? 'M' : 'L') + p.x.toFixed(1) + ' ' + p.y.toFixed(1)).join(' ');
+    const refY = pad.top + chartH - (90 / 100) * chartH;
+    return { pts, pathD, refY };
+}
+
+function _buildTrendDataPoints(pts: Array<{ x: number; y: number }>): string {
+    return pts
+        .map(function (p) {
+            return '<circle cx="' + p.x.toFixed(1) + '" cy="' + p.y.toFixed(1) + '" r="3" fill="#6366f1"/>';
+        })
+        .join('');
+}
+
 export function buildMiniTrendChart(trends: TrendPoint[]): string {
     if (trends.length < 2) return '';
     const w = 300;
@@ -37,12 +66,7 @@ export function buildMiniTrendChart(trends: TrendPoint[]): string {
     const pad = { top: 15, right: 10, bottom: 20, left: 30 };
     const chartW = w - pad.left - pad.right;
     const chartH = h - pad.top - pad.bottom;
-    const pts = trends.map((t, i) => ({
-        x: pad.left + (i / (trends.length - 1)) * chartW,
-        y: pad.top + chartH - (t.passRate / 100) * chartH,
-    }));
-    const pathD = pts.map((p, i) => (i === 0 ? 'M' : 'L') + p.x.toFixed(1) + ' ' + p.y.toFixed(1)).join(' ');
-    const refY = pad.top + chartH - (90 / 100) * chartH;
+    const { pts, pathD, refY } = _computeTrendLayout(trends, pad, chartW, chartH);
     return (
         '<div class="mini-trend"><svg viewBox="0 0 ' +
         w +
@@ -76,11 +100,7 @@ export function buildMiniTrendChart(trends: TrendPoint[]): string {
         '<path d="' +
         pathD +
         '" fill="none" stroke="#6366f1" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>' +
-        pts
-            .map(function (p) {
-                return '<circle cx="' + p.x.toFixed(1) + '" cy="' + p.y.toFixed(1) + '" r="3" fill="#6366f1"/>';
-            })
-            .join('') +
+        _buildTrendDataPoints(pts) +
         '</svg></div>'
     );
 }

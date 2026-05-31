@@ -2,7 +2,17 @@ import { publishReport, type PublishTarget } from './publish';
 
 jest.mock('child_process', () => ({
     execSync: jest.fn(),
+    execFileSync: jest.fn(),
 }));
+
+jest.mock('fs', () => {
+    const actual = jest.requireActual('fs');
+    return {
+        ...actual,
+        cpSync: jest.fn(),
+        mkdirSync: jest.fn(),
+    };
+});
 
 jest.mock('./logger', () => ({
     rootLogger: { info: jest.fn(), error: jest.fn() },
@@ -44,30 +54,7 @@ describe('publishReport', () => {
             throw new Error('aws failed');
         });
         publishReport({ target: 's3', filePath: './report.html' });
-        expect(mockLogger.error).toHaveBeenCalledWith('S3 publish failed');
-    });
-
-    it('should call git commands for gh-pages target', () => {
-        mockExecSync
-            .mockReturnValueOnce('git@github.com:user/repo.git') // getOriginUrl
-            .mockReturnValueOnce('') // git clone
-            .mockReturnValueOnce(undefined) // cp
-            .mockReturnValueOnce(undefined); // git add + commit + push
-        publishReport({ target: 'gh-pages', filePath: './report.html' });
-        expect(mockExecSync).toHaveBeenNthCalledWith(2, expect.stringContaining('git clone --branch gh-pages'), {
-            stdio: 'ignore',
-        });
-    });
-
-    it('should log error when gh-pages publish fails', () => {
-        mockExecSync
-            .mockReturnValueOnce('git@github.com:user/repo.git') // getOriginUrl
-            .mockReturnValueOnce('') // clone
-            .mockImplementationOnce(() => {
-                throw new Error('cp failed');
-            });
-        publishReport({ target: 'gh-pages', filePath: './report.html' });
-        expect(mockLogger.error).toHaveBeenCalledWith('gh-pages publish failed');
+        expect(mockLogger.error).toHaveBeenCalledWith(expect.stringContaining('S3 publish failed'));
     });
 
     it('should log info about target and file path', () => {

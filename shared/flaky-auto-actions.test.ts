@@ -136,6 +136,31 @@ describe('calculateFlakinessWithWindow', () => {
         const withMin2 = calculateFlakinessWithWindow(store, { minRuns: 2 });
         expect(withMin2.length).toBeGreaterThan(0);
     });
+
+    it('counts skipped tests', () => {
+        const tests: FlatTest[] = [
+            { title: 'Skippy', state: 'passed', duration: 100 },
+            { title: 'Skippy', state: 'failed', duration: 100 },
+            { title: 'Skippy', state: 'skipped', duration: 0 },
+        ];
+        const store = makeStore([
+            {
+                timestamp: '2026-01-01T00:00:00.000Z',
+                project: 'p',
+                total: 3,
+                passed: 1,
+                failed: 1,
+                skipped: 1,
+                duration: 200,
+                tests,
+            },
+        ]);
+        const result = calculateFlakinessWithWindow(store, { minRuns: 1 });
+        expect(result).toHaveLength(1);
+        expect(result[0]!.skipCount).toBe(1);
+        expect(result[0]!.passCount).toBe(1);
+        expect(result[0]!.failCount).toBe(1);
+    });
 });
 
 describe('executeFlakyActions', () => {
@@ -262,5 +287,45 @@ describe('executeFlakyActions', () => {
         expect(postCall!.data.fields.labels).toContain('flaky');
         expect(postCall!.data.fields.labels).toContain('auto-generated');
         expect(postCall!.data.fields.priority.name).toBe('Medium');
+    });
+
+    it('handles search failure gracefully when checking for re-enable', async () => {
+        jira.searchJiraIssues = jest.fn().mockRejectedValue(new Error('Jira search failed'));
+        const runs = Array.from({ length: 15 }, () => flakyRun('SearchFail', 'passed'));
+        const actions = await executeFlakyActions(makeStore(runs), asMockJira(jira), 'PROJ', {
+            threshold: 0.5,
+            minTotalRuns: 5,
+        });
+        expect(actions).toHaveLength(0);
+    });
+
+    it('handles search failure gracefully during dedup check', async () => {
+        jira.searchJiraIssues = jest.fn().mockRejectedValue(new Error('Jira search failed'));
+        const runs = Array.from({ length: 15 }, (_, i) => flakyRun('DedupFail', i % 2 === 0 ? 'failed' : 'passed'));
+        const actions = await executeFlakyActions(makeStore(runs), asMockJira(jira), 'PROJ', {
+            threshold: 0.1,
+            autoCreateBug: false,
+            minTotalRuns: 5,
+        });
+        expect(actions).toHaveLength(1);
+        expect(actions[0]!.action).toBe('flag_in_report');
+    });
+
+    it('throws when reenableTest fails due to transition fetch error', async () => {
+        const runs = Array.from({ length: 15 }, (_, i) => flakyRun('ReenableFail', i % 2 === 0 ? 'failed' : 'passed'));
+        await executeFlakyActions(makeStore(runs), asMockJira(jira), 'PROJ', {
+            autoCreateBug: true,
+            minTotalRuns: 5,
+            threshold: 0.1,
+        });
+        jira.getTransitionsForIssue = jest.fn().mockRejectedValue(new Error('Transition error'));
+        const stableRuns = Array.from({ length: 15 }, () => flakyRun('ReenableFail', 'passed'));
+        await expect(
+            executeFlakyActions(makeStore(stableRuns), asMockJira(jira), 'PROJ', {
+                autoCreateBug: true,
+                minTotalRuns: 5,
+                threshold: 0.1,
+            }),
+        ).rejects.toThrow('Transition error');
     });
 });

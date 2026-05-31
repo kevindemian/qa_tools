@@ -1,13 +1,5 @@
-jest.mock('../../shared/prompt', () => ({
-    info: jest.fn(),
-    warn: jest.fn(),
-    title: jest.fn(),
-    divider: jest.fn(),
-    tableView: jest.fn(),
-    printError: jest.fn(),
-    withSpinner: jest.fn((_label: string, fn: () => Promise<unknown>) => fn()),
-    askConfirm: jest.fn().mockResolvedValue(false),
-}));
+jest.mock('../../shared/prompt');
+jest.mock('../../shared/logger');
 
 jest.mock('../../shared/coverage-gap', () => ({
     analyzeCoverageGaps: jest.fn(),
@@ -16,6 +8,8 @@ jest.mock('../../shared/coverage-gap', () => ({
 jest.mock('../../shared/generate-coverage-gap-html', () => ({
     generateCoverageGapHtml: jest.fn().mockReturnValue('<html></html>'),
 }));
+
+jest.mock('../../shared/open', () => ({ openWithFallback: jest.fn() }));
 
 jest.mock('../../shared/ai-feedback', () => ({
     recordAiGeneration: jest.fn(),
@@ -82,6 +76,13 @@ const mockGapResult = {
 
 beforeEach(() => {
     jest.clearAllMocks();
+});
+
+beforeAll(() => {
+    const openModule = require('../../shared/open');
+    if (!jest.isMockFunction(openModule.openWithFallback)) {
+        throw new Error('Guard FAILED: openWithFallback is NOT mocked. Browser would open!');
+    }
 });
 
 describe('case21 — Gap Analysis', () => {
@@ -158,6 +159,7 @@ describe('case21 — Gap Analysis', () => {
         const prompt = require('../../shared/prompt');
         const coverageGap = require('../../shared/coverage-gap');
         const htmlModule = require('../../shared/generate-coverage-gap-html');
+        const openModule = require('../../shared/open');
 
         prompt.askConfirm
             .mockResolvedValueOnce(false) // skip create tests
@@ -170,7 +172,11 @@ describe('case21 — Gap Analysis', () => {
         await mod.handler(baseContext);
 
         expect(htmlModule.generateCoverageGapHtml).toHaveBeenCalled();
-        expect(prompt.info).toHaveBeenCalledWith(expect.stringContaining('coverage-gap-report.html'));
+        expect(openModule.openWithFallback).toHaveBeenCalledWith(
+            expect.stringContaining('coverage-gap-report.html'),
+            'Relatório de cobertura',
+            prompt.info,
+        );
     });
 
     it('handles HTML generation error gracefully', async () => {
@@ -192,5 +198,56 @@ describe('case21 — Gap Analysis', () => {
         await mod.handler(baseContext);
 
         expect(prompt.printError).toHaveBeenCalledWith('Erro ao gerar relatório HTML', expect.any(Error));
+    });
+
+    it('handles create tests confirmation', async () => {
+        const prompt = require('../../shared/prompt');
+        const coverageGap = require('../../shared/coverage-gap');
+
+        prompt.askConfirm
+            .mockResolvedValueOnce(true) // create tests
+            .mockResolvedValueOnce(false) // skip AI gen
+            .mockResolvedValueOnce(false); // skip HTML
+
+        coverageGap.analyzeCoverageGaps.mockResolvedValueOnce(mockGapResult);
+
+        const mod = require('./case21').default;
+        await mod.handler(baseContext);
+
+        expect(prompt.info).toHaveBeenCalledWith('Funcionalidade de criação de testes será implementada em breve.');
+    });
+
+    it('handles AI gen with more than 5 gaps', async () => {
+        const prompt = require('../../shared/prompt');
+        const coverageGap = require('../../shared/coverage-gap');
+
+        const gapItems = Array.from({ length: 7 }, (_, i) => ({
+            issueKey: `PROJ-${i + 1}`,
+            summary: `Gap issue ${i + 1}`,
+            type: 'Story',
+            status: 'To Do',
+            hasTest: false,
+            linkedTestKeys: [],
+            priority: 'Medium',
+            coverageWeight: 2,
+        }));
+
+        const resultWithManyGaps = {
+            ...mockGapResult,
+            items: gapItems,
+            totals: { ...mockGapResult.totals, totalIssues: 10, covered: 3, gap: 7 },
+        };
+
+        prompt.askConfirm
+            .mockResolvedValueOnce(false) // skip create tests
+            .mockResolvedValueOnce(true) // AI gen
+            .mockResolvedValueOnce(false); // skip HTML
+
+        coverageGap.analyzeCoverageGaps.mockResolvedValueOnce(resultWithManyGaps);
+
+        const mod = require('./case21').default;
+        await mod.handler(baseContext);
+
+        expect(prompt.info).toHaveBeenCalledWith(expect.stringContaining('... e mais'));
     });
 });

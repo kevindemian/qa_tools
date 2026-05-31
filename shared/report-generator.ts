@@ -19,6 +19,5 @@ export function loadKnownIssues(filePath: string): KnownIssue[] {
 }
 
 export { generateHtmlReport, generateReportWithFallback, generateCoverageHtml } from './report-html';
-export { categorizeFailure, extractSuite } from './report-types';
-export { exportTestsCsv, exportTestsJson } from './report-export';
+export { categorizeFailure } from './report-types';
 export type { TestHistoryRun, KnownIssue, TestRunTab, CoverageEpic, ReportOptions, ReportStats } from './report-types';

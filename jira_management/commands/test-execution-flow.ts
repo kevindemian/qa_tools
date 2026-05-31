@@ -82,14 +82,18 @@ async function handleCreateNew(
     const execTitle = await ask('Título do Test Execution', { hint: 'Enter = ' + csvName });
     const execDesc = await ask('Descrição (opcional)');
     try {
-        const execResult = await createTests.createTestExecutionWithLinks(
-            c.jiraResource,
-            c.linkManager,
-            project,
+        const execResult = await createTests.createTestExecutionWithLinks({
+            jiraResource: c.jiraResource,
+            linkManager: c.linkManager,
+            projectName: project,
             testKeys,
             csvName,
-            { title: execTitle, description: execDesc },
-        );
+            execOpts: { title: execTitle, description: execDesc },
+        });
+        if (!execResult) {
+            c.pushHistory('create-testexec', 'erro', 'error');
+            return { associated: false };
+        }
         c.pushHistory('create-testexec', execResult.key, 'ok');
         return { associated: true, key: execResult.key, summary: execResult.summary, mode: 'created' };
     } catch (err) {
@@ -99,21 +103,21 @@ async function handleCreateNew(
     }
 }
 
-/** Option 2: Use an existing Test Execution. */
-async function handleUseExisting(
-    c: CommandContext,
-    testKeys: string[],
+/** Fetch the list of Test Executions for the project. */
+async function fetchTeList(
+    linkManager: CommandContext['linkManager'],
     project: string,
-): Promise<TestExecutionAssociationResult> {
-    let tes: TestExecutionSummary[] = [];
+): Promise<TestExecutionSummary[]> {
     try {
-        tes = await c.linkManager.listTestExecutions(project);
+        return await linkManager.listTestExecutions(project);
     } catch {
         warn('Não foi possível buscar Test Executions do projeto.');
+        return [];
     }
+}
 
-    let teKey: string;
-
+/** Prompt the user to select a TE from a list or enter a key manually. */
+async function promptTeSelection(tes: TestExecutionSummary[], project: string): Promise<string> {
     if (tes.length > 0) {
         info('Test Executions disponíveis no projeto ' + project + ' (mais recentes):');
         divider();
@@ -125,24 +129,26 @@ async function handleUseExisting(
         const input = await ask('Digite o número da TE acima, ou informe a key manualmente', {
             hint: 'ex: 1 ou ' + project + '-TE-999',
         });
-        teKey = resolveTeKeyInput(input.trim(), tes);
-    } else {
-        info('Nenhuma Test Execution encontrada no projeto ' + project + '.');
-        teKey = await ask('Informe a key da Test Execution manualmente', { hint: 'ex: ' + project + '-TE-999' });
+        return resolveTeKeyInput(input.trim(), tes);
     }
 
-    if (!teKey) {
-        warn('Key inválida. Operação cancelada.');
-        return { associated: false };
-    }
+    info('Nenhuma Test Execution encontrada no projeto ' + project + '.');
+    return ask('Informe a key da Test Execution manualmente', { hint: 'ex: ' + project + '-TE-999' });
+}
 
+/** Validate the TE key and associate tests. Returns the association result or { associated: false }. */
+async function validateAndLinkTe(
+    c: CommandContext,
+    teKey: string,
+    testKeys: string[],
+): Promise<TestExecutionAssociationResult> {
     try {
         await c.linkManager.validateTestExecutionKey(teKey);
     } catch (err: unknown) {
         warn((err as Error).message);
         const retry = await ask('Tentar novamente? (s/N)', { default: '' });
         if (retry.toLowerCase() === 's' || retry.toLowerCase() === 'sim') {
-            teKey = await ask('Informe a key da Test Execution', { hint: 'ex: ' + project + '-TE-999' });
+            teKey = await ask('Informe a key da Test Execution', { hint: 'ex: ' + c.ctx.project_name + '-TE-999' });
             if (!teKey) return { associated: false };
             try {
                 await c.linkManager.validateTestExecutionKey(teKey);
@@ -158,6 +164,10 @@ async function handleUseExisting(
     try {
         const creator = new TestExecutionCreator(c.jiraResource, c.linkManager);
         const result = await creator.addTestsToExistingExecution(teKey, testKeys);
+        if (!result) {
+            c.pushHistory('associate-testexec', 'erro', 'error');
+            return { associated: false };
+        }
         c.pushHistory('associate-testexec', result.key + ' (' + testKeys.length + ' testes)', 'ok');
         success('Testes associados à ' + result.key + ' — ' + result.summary);
         return { associated: true, key: result.key, summary: result.summary, mode: 'existing' };
@@ -166,6 +176,23 @@ async function handleUseExisting(
         c.pushHistory('associate-testexec', 'erro', 'error');
         return { associated: false };
     }
+}
+
+/** Option 2: Use an existing Test Execution. */
+async function handleUseExisting(
+    c: CommandContext,
+    testKeys: string[],
+    project: string,
+): Promise<TestExecutionAssociationResult> {
+    const tes = await fetchTeList(c.linkManager, project);
+    const teKey = await promptTeSelection(tes, project);
+
+    if (!teKey) {
+        warn('Key inválida. Operação cancelada.');
+        return { associated: false };
+    }
+
+    return validateAndLinkTe(c, teKey, testKeys);
 }
 
 /** Resolve user input: if it's a number <= list length, use as index; otherwise treat as a key. */

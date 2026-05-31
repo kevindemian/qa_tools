@@ -7,8 +7,26 @@ import * as nivelar from './nivelar';
 import * as cliBase from '../shared/cli_base';
 // sessionContext import removed — unused
 
-const _realReadFileSync = fs.readFileSync.bind(fs);
+jest.mock('fs', () => {
+    const original: typeof import('fs') = jest.requireActual('fs');
+    return {
+        ...original,
+        readFileSync: jest.fn((p: string, ...rest: string[]) => {
+            if (p.includes('providers.json')) return '{"proj-a":{"provider":"github"},"proj-b":{}}';
+            if (p.includes('projects.json')) return '{"proj-a":"111","proj-b":"222"}';
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any -- overloaded readFileSync mock
+            return (original.readFileSync as any)(p, ...rest) as string;
+        }),
+    };
+});
 
+jest.mock('../shared/breadcrumbs', () => ({
+    pushBreadcrumb: jest.fn(),
+    popBreadcrumb: jest.fn(),
+    clearBreadcrumbs: jest.fn(),
+    getBreadcrumbPath: jest.fn(() => 'GIT > proj-a'),
+}));
+jest.mock('../shared/show-docs', () => ({ showDocs: jest.fn(() => Promise.resolve()) }));
 jest.mock('../shared/config', () => {
     const cfg: Record<string, unknown> = {
         autoConfirm: false,
@@ -83,6 +101,8 @@ jest.mock('../shared/logger', () => ({
 
 jest.mock('../shared/cli_base', () => ({
     createValidateEnv: jest.fn(() => jest.fn()),
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- mock return compat
+    offerEnvSetup: jest.fn<any>().mockResolvedValue(false),
     setupSigint: jest.fn(),
     printSessionSummary: jest.fn(),
 }));
@@ -113,7 +133,7 @@ jest.mock('../shared/http-client', () => ({
     sleep: jest.fn<any>(async () => {}),
 }));
 
-jest.mock('../jira_management/jira_resource', () => ({
+jest.mock('../shared/jira-client', () => ({
     __esModule: true,
     default: jest.fn(),
 }));
@@ -135,6 +155,10 @@ jest.mock('./github_manager', () => ({
 
 jest.mock('./nivelar', () => ({
     nivelarBranches: jest.fn(),
+}));
+
+jest.mock('./case00-handler', () => ({
+    handleSetupWizard: jest.fn(() => Promise.resolve(false)),
 }));
 
 type MainModule = typeof import('./main').default;
@@ -163,15 +187,8 @@ const mockProvider: Record<string, jest.Mock<any>> = {
 let mainModule: MainModule;
 
 beforeAll(() => {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- fs mock path param
-    jest.spyOn(fs, 'readFileSync').mockImplementation(((p: any) => {
-        if (p.includes('providers.json')) return '{"proj-a":{"provider":"github"},"proj-b":{}}';
-        if (p.includes('projects.json')) return '{"proj-a":"111","proj-b":"222"}';
-
-        return _realReadFileSync(p, 'utf8');
-    }) as typeof fs.readFileSync);
-    jest.spyOn(fs, 'writeFileSync').mockImplementation(() => {});
-    jest.spyOn(fs, 'unlinkSync').mockImplementation(() => {});
+    const sessionState = require('./session-state');
+    sessionState._resetForTest();
 
     mainModule = require('./main').default as MainModule;
 });
@@ -816,7 +833,8 @@ describe('main flow empty projects', () => {
                 readFileSync: jest.fn((p: string) => {
                     if (p.includes('projects.json')) return '{}';
                     if (p.includes('providers.json')) return '{}';
-                    return _realReadFileSync(p, 'utf8');
+                    // eslint-disable-next-line @typescript-eslint/no-unnecessary-type-assertion -- requireActual returns unknown, needs typeof import for method access
+                    return (jest.requireActual('fs') as typeof import('fs')).readFileSync(p, 'utf8') as string;
                 }),
                 writeFileSync: jest.fn(),
                 unlinkSync: jest.fn(),
@@ -839,6 +857,8 @@ describe('main flow empty projects', () => {
             }));
             jest.doMock('../shared/cli_base', () => ({
                 createValidateEnv: jest.fn(() => jest.fn()),
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any -- mock return compat
+                offerEnvSetup: jest.fn<any>().mockResolvedValue(false),
                 setupSigint: jest.fn(),
                 printSessionSummary: jest.fn(),
             }));
@@ -952,6 +972,9 @@ describe('main flow empty projects', () => {
                 handleHelp: jest.fn(),
                 handleShowHistory: jest.fn(),
             }));
+            jest.doMock('./case00-handler', () => ({
+                handleSetupWizard: jest.fn(() => Promise.resolve(false)),
+            }));
 
             const mod = require('./main');
             expect(mod.default).toBeDefined();
@@ -995,18 +1018,20 @@ describe('withErrorHandling', () => {
 
 describe('_handleExit', () => {
     it('prints goodbye and returns true', () => {
+        const breadcrumbs = require('../shared/breadcrumbs');
         const result = mainModule._handleExit();
         expect(result).toBe(true);
         expect(prompt.title).toHaveBeenCalledWith('Até logo!');
+        expect(breadcrumbs.clearBreadcrumbs).toHaveBeenCalled();
     });
 
-    it('sets exit code when session has errors', () => {
+    it('does not set exit code when session has errors — no exitCode', () => {
         const ss = require('./session-state');
         const orig = ss.sessionContext.sessionCounters;
         ss.sessionContext.sessionCounters = [{ status: 'error' }];
         try {
             mainModule._handleExit();
-            expect(process.exitCode).toBe(1);
+            expect(process.exitCode).toBeUndefined();
         } finally {
             ss.sessionContext.sessionCounters = orig;
         }
@@ -1034,16 +1059,16 @@ describe('_dispatchAction', () => {
         expect(result).toBe(false);
     });
 
-    it('handles /docs with warn and returns false', async () => {
+    it('handles /docs and returns false', async () => {
         const result = await mainModule._dispatchAction('/docs', mockM, pn, ns);
         expect(result).toBe(false);
-        expect(prompt.warn).toHaveBeenCalledWith('Documentação disponível apenas no módulo Jira.');
+        expect(prompt.warn).not.toHaveBeenCalledWith('Documentação disponível apenas no módulo Jira.');
     });
 
-    it('handles /d with warn and returns false', async () => {
+    it('handles /d and returns false', async () => {
         const result = await mainModule._dispatchAction('/d', mockM, pn, ns);
         expect(result).toBe(false);
-        expect(prompt.warn).toHaveBeenCalledWith('Documentação disponível apenas no módulo Jira.');
+        expect(prompt.warn).not.toHaveBeenCalledWith('Documentação disponível apenas no módulo Jira.');
     });
 
     it('handles /back and returns false', async () => {
@@ -1094,10 +1119,11 @@ describe('_selectProject', () => {
         expect(prompt.success).toHaveBeenCalledWith(expect.stringContaining('Projeto selecionado'));
     });
 
-    it('throws error for invalid project index', () => {
+    it('returns null projectName for invalid project index', () => {
         (prompt.prompt as jest.Mock).mockReturnValueOnce('99');
-        expect(() => mainModule._selectProject()).toThrow('Invalid project');
-        expect(prompt.error).toHaveBeenCalledWith('Projeto inválido.');
+        const result = mainModule._selectProject();
+        expect(result.projectName).toBeNull();
+        expect(prompt.warn).toHaveBeenCalledWith('Projeto inválido.');
     });
 });
 
@@ -1129,9 +1155,70 @@ describe('_promptChoice', () => {
 // ---------- unhandled rejection handler ----------
 
 describe('unhandledRejection handler', () => {
-    it('logs error and sets exit code', () => {
+    it('logs error and shows user message', () => {
         const logger = require('../shared/logger');
         process.emit('unhandledRejection', new Error('test rejection'));
         expect(logger.rootLogger.error).toHaveBeenCalledWith('Unhandled Rejection', expect.any(Object));
+    });
+});
+
+// ---------- _promptChoice TTY mode ----------
+
+describe('_promptChoice TTY mode', () => {
+    const _origIsTTY = process.stdout.isTTY;
+
+    beforeAll(() => {
+        process.stdout.isTTY = true;
+    });
+
+    afterAll(() => {
+        process.stdout.isTTY = _origIsTTY;
+    });
+
+    beforeEach(() => {
+        jest.clearAllMocks();
+        (state.load as jest.Mock).mockReturnValue({ lastChoice: undefined });
+    });
+
+    it('shows box with session counters when TTY and not quiet', async () => {
+        const sessionState = require('./session-state');
+        sessionState.sessionContext.sessionCounters = [{ status: 'ok' }, { status: 'error' }, { status: 'ok' }];
+        (prompt.showSelect as jest.Mock).mockResolvedValue('/exit' as never);
+        const result = await mainModule._promptChoice('0-9');
+        expect(result).toBe('/exit');
+        expect(prompt.showSelect).toHaveBeenCalled();
+    });
+});
+
+// ---------- ACTION_HANDLERS ----------
+
+describe('ACTION_HANDLERS', () => {
+    let mockProvider: GitProvider;
+    let pn: string;
+    let ns: string[];
+
+    beforeAll(() => {
+        jest.clearAllMocks();
+    });
+
+    beforeEach(() => {
+        mockProvider = {} as GitProvider;
+        pn = 'proj-a';
+        ns = ['proj-a', 'proj-b'];
+    });
+
+    it('handler 9 calls handleChangeProject', async () => {
+        const result = await mainModule._dispatchAction('9', mockProvider, pn, ns);
+        expect(result).toBe(false);
+    });
+
+    it('handler a calls handleFlakinessDashboard (void)', async () => {
+        const result = await mainModule._dispatchAction('a', mockProvider, pn, ns);
+        expect(result).toBe(false);
+    });
+
+    it('handler 00 calls handleSetupWizard', async () => {
+        const result = await mainModule._dispatchAction('00', mockProvider, pn, ns);
+        expect(result).toBe(false);
     });
 });

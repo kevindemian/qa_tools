@@ -32,20 +32,13 @@ jest.mock('../shared/prompt-ui', () => ({
 
 jest.mock('../shared/config', () => ({
     default: {
-        get gitToken() {
-            return 'glpat-test';
-        },
-        get gitBaseUrl() {
-            return 'https://gitlab.com';
-        },
-        get githubToken() {
-            return '';
-        },
-        get githubApiUrl() {
-            return 'https://api.github.com';
-        },
+        gitToken: 'glpat-test',
+        gitBaseUrl: 'https://gitlab.com',
+        githubToken: '',
+        githubApiUrl: 'https://api.github.com',
         getAllPrefixed: jest.fn(() => ({})),
     },
+    __esModule: true,
 }));
 
 jest.mock('../shared/session-context', () => ({
@@ -174,6 +167,7 @@ describe('session-state', () => {
             const choices = sessionState.buildActionChoices();
             expect(choices.length).toBeGreaterThan(0);
             expect(JSON.stringify(choices)).toContain('Disparar pipeline');
+            expect(JSON.stringify(choices)).toContain('Setup wizard CI/CD');
         });
 
         it('returns choices for github (no schedules)', () => {
@@ -234,6 +228,7 @@ describe('session-state', () => {
                         githubApiUrl: 'https://api.github.com',
                         getAllPrefixed: jest.fn(() => ({})),
                     },
+                    __esModule: true,
                 }));
                 jest.doMock('../shared/session-context', () => ({
                     SessionContext: jest.fn(() => ({

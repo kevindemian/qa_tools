@@ -53,7 +53,15 @@ describe('linkTestRelations', () => {
         linker.associatePrecondition.mockResolvedValue({ action: 'abort' });
         factory.postSteps.mockResolvedValue(null);
         const test: TestCase = { ...testBase, precondition: { type: 'reference', value: 'PREC-1' } };
-        const result = await linkTestRelations(linker, test, { key: 'T-1' }, factory, opLog, 'My Test', resultSink);
+        const result = await linkTestRelations({
+            linker,
+            test,
+            createdTestIssue: { key: 'T-1' },
+            factory,
+            opLog,
+            testTitle: 'My Test',
+            results: resultSink,
+        });
         expect(result).toEqual({ abort: true, errored: true });
         expect(resultSink[0].message).toContain('pre-condition');
     });
@@ -68,7 +76,15 @@ describe('linkTestRelations', () => {
             ...testBase,
             linkedIssues: [{ key: 'BUG-1', linkType: 'Tests' }],
         };
-        const result = await linkTestRelations(linker, test, { key: 'T-1' }, factory, opLog, 'My Test', resultSink);
+        const result = await linkTestRelations({
+            linker,
+            test,
+            createdTestIssue: { key: 'T-1' },
+            factory,
+            opLog,
+            testTitle: 'My Test',
+            results: resultSink,
+        });
         expect(result).toEqual({ abort: true, errored: true });
     });
 });
@@ -101,7 +117,14 @@ describe('buildTestData', () => {
 
 describe('saveCheckpoint', () => {
     it('happy path', () => {
-        saveCheckpoint('/path.csv', 'csv', 'PROJ', [testBase], ['T-1'], ['My Test']);
+        saveCheckpoint({
+            sourcePath: '/path.csv',
+            sourceType: 'csv',
+            projectName: 'PROJ',
+            tests: [testBase],
+            inMemoryTasksId: ['T-1'],
+            inMemoryTasksText: ['My Test'],
+        });
         expect(updateState).toHaveBeenCalledWith(expect.any(Function));
     });
 
@@ -109,9 +132,16 @@ describe('saveCheckpoint', () => {
         jest.mocked(updateState).mockImplementationOnce(() => {
             throw new Error('write failed');
         });
-        expect(() => saveCheckpoint('/path.csv', 'csv', 'PROJ', [testBase], ['T-1'], ['My Test'])).toThrow(
-            'write failed',
-        );
+        expect(() =>
+            saveCheckpoint({
+                sourcePath: '/path.csv',
+                sourceType: 'csv',
+                projectName: 'PROJ',
+                tests: [testBase],
+                inMemoryTasksId: ['T-1'],
+                inMemoryTasksText: ['My Test'],
+            }),
+        ).toThrow('write failed');
     });
 });
 
@@ -119,29 +149,69 @@ describe('createIssueForTest', () => {
     it('abort branch', async () => {
         const factory = makeFactory();
         factory.createIssue.mockResolvedValue({ action: 'abort' });
-        const result = await createIssueForTest(factory, testBase, 'My Test', 'PROJ', [], 0, 3, opLog, resultSink);
+        const result = await createIssueForTest({
+            factory,
+            test: testBase,
+            testTitle: 'My Test',
+            projectName: 'PROJ',
+            jiraLabels: [],
+            t: 0,
+            total: 3,
+            opLog,
+            results: resultSink,
+        });
         expect(result).toBe('abort');
     });
 
     it('retry branch returns null', async () => {
         const factory = makeFactory();
         factory.createIssue.mockResolvedValue({ action: 'retry' });
-        const result = await createIssueForTest(factory, testBase, 'My Test', 'PROJ', [], 0, 3, opLog, resultSink);
+        const result = await createIssueForTest({
+            factory,
+            test: testBase,
+            testTitle: 'My Test',
+            projectName: 'PROJ',
+            jiraLabels: [],
+            t: 0,
+            total: 3,
+            opLog,
+            results: resultSink,
+        });
         expect(result).toBeNull();
     });
 
     it('continue branch', async () => {
         const factory = makeFactory();
         factory.createIssue.mockResolvedValue({ action: 'skip' });
-        const result = await createIssueForTest(factory, testBase, 'My Test', 'PROJ', [], 0, 3, opLog, resultSink);
+        const result = await createIssueForTest({
+            factory,
+            test: testBase,
+            testTitle: 'My Test',
+            projectName: 'PROJ',
+            jiraLabels: [],
+            t: 0,
+            total: 3,
+            opLog,
+            results: resultSink,
+        });
         expect(result).toBe('continue');
     });
 
     it('success returns key', async () => {
         const factory = makeFactory();
         factory.createIssue.mockResolvedValue({ key: 'TEST-100' });
-        const result = await createIssueForTest(factory, testBase, 'My Test', 'PROJ', [], 0, 3, opLog, resultSink);
-        expect(result).toEqual({ key: 'TEST-100' });
+        const result = await createIssueForTest({
+            factory,
+            test: testBase,
+            testTitle: 'My Test',
+            projectName: 'PROJ',
+            jiraLabels: [],
+            t: 0,
+            total: 3,
+            opLog,
+            results: resultSink,
+        });
+        expect(result).toEqual({ key: 'TEST-100', skipped: false });
     });
 });
 
@@ -157,24 +227,24 @@ describe('executeTestCreationLoop', () => {
         const inMemoryTasksId: string[] = [];
         const inMemoryTasksText: string[] = [];
 
-        await executeTestCreationLoop(
+        await executeTestCreationLoop({
             tests,
             factory,
             linker,
-            'PROJ',
-            [],
-            'http://jira',
+            projectName: 'PROJ',
+            jiraLabels: [],
+            baseUrl: 'http://jira',
             opLog,
-            '/path.csv',
-            'csv',
+            sourcePath: '/path.csv',
+            sourceType: 'csv',
             inMemoryTasksId,
             inMemoryTasksText,
-            resultSink,
-            0,
-            () => true,
-            jest.fn(),
-            jest.fn(),
-        );
+            results: resultSink,
+            resumeFrom: 0,
+            isQuiet: () => true,
+            reportInfo: jest.fn(),
+            reportPrint: jest.fn(),
+        });
 
         expect(inMemoryTasksId).toEqual(['T-NEW']);
         expect(resultSink).toHaveLength(1);

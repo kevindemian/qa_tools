@@ -44,7 +44,7 @@ export async function compareRuns(runA: MetricsRun | null, runB: MetricsRun | nu
     if (!runA || !runB) return 'No run data provided';
     try {
         const user = sanitizeForLlm(buildData(runA, runB));
-        return await llmPrompt('fast', COMPARE_SYSTEM, user, 'compare-runs');
+        return await llmPrompt({ tier: 'fast', system: COMPARE_SYSTEM, user, callerId: 'compare-runs' });
     } catch (err) {
         rootLogger.error('Failed to compare runs: ' + (err as Error).message);
         return '';

@@ -37,6 +37,8 @@ jest.mock('../shared/metrics', () => ({
 
 jest.mock('../shared/flakiness-dashboard', () => ({ generateFlakinessHtml: jest.fn(() => '<html>') }));
 
+jest.mock('../shared/open', () => ({ openWithFallback: jest.fn() }));
+
 jest.mock('../shared/state', () => ({ update: jest.fn() }));
 
 jest.mock('fs', () => ({
@@ -76,6 +78,13 @@ beforeEach(() => {
     jest.clearAllMocks();
     mockState.currentProvider = 'gitlab';
     mockState.currentProjectName = '';
+});
+
+beforeAll(() => {
+    const openModule = require('../shared/open');
+    if (!jest.isMockFunction(openModule.openWithFallback)) {
+        throw new Error('Guard FAILED: openWithFallback is NOT mocked. Browser would open!');
+    }
 });
 
 describe('handleListSchedules', () => {
@@ -208,16 +217,17 @@ describe('handleFlakinessDashboard', () => {
         expect(mockInfo).toHaveBeenCalledWith(expect.stringContaining('Nenhum teste flaky'));
     });
 
-    it('generates dashboard HTML', () => {
+    it('generates dashboard HTML and opens browser', async () => {
         mockState.currentProjectName = 'proj1';
         mockLoadMetrics.mockReturnValue({ runs: [{ project: 'proj1' }, { project: 'proj1' }] });
         mockCalculateFlakiness.mockReturnValue([{ test: 't1', rate: 0.5 }]);
 
-        void handleFlakinessDashboard();
+        await handleFlakinessDashboard();
 
         expect(mockGenerateHtml).toHaveBeenCalled();
         const { writeFileSync } = require('fs');
         expect(writeFileSync).toHaveBeenCalled();
-        expect(success).toHaveBeenCalledWith(expect.stringContaining('Dashboard'));
+        const { openWithFallback } = require('../shared/open');
+        expect(openWithFallback).toHaveBeenCalledWith(expect.stringContaining('flakiness'), 'Dashboard de flaky', info);
     });
 });

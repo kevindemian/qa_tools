@@ -2,6 +2,7 @@
 import { resolve, join } from 'path';
 import { mkdirSync, writeFileSync, existsSync, rmSync } from 'fs';
 import Config from './config';
+import { formatDateISO } from './date-utils';
 
 const PROJECT_ROOT = resolve(__dirname, '..');
 
@@ -28,7 +29,7 @@ function tempDir(): string {
 /** Write a dated report file under `reportsDir/YYYY-MM-DD/`. Creates intermediate dirs. */
 export function writeReport(filename: string, content: string): string {
     const dir = reportsDir();
-    const dateStr = new Date().toISOString().slice(0, 10);
+    const dateStr = formatDateISO();
     const targetDir = join(dir, dateStr);
     mkdirSync(targetDir, { recursive: true });
     const filepath = join(targetDir, filename);

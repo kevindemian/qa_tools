@@ -1,6 +1,5 @@
-/** Command registry — maps case IDs (00, 01-23 + exit) to handler modules. */
+/** Command registry — maps case IDs (01-23 + exit) to handler modules. */
 import type { CommandContext } from './context';
-import case00 from './case00';
 import case01 from './case01';
 import case02 from './case02';
 import case03 from './case03';
@@ -24,11 +23,11 @@ import case20 from './case20';
 import case21 from './case21';
 import case22 from './case22';
 import case23 from './case23';
+import case24 from './case24';
 
 type HandlerFn = (ctx: CommandContext) => Promise<boolean | void> | boolean | void;
 
 const handlers: Record<string, { handler: HandlerFn }> = {
-    '00': { handler: case00.handler },
     '1': { handler: case01.handler },
     '2': { handler: case02.handler },
     '3': { handler: case03.handler },
@@ -52,6 +51,7 @@ const handlers: Record<string, { handler: HandlerFn }> = {
     '21': { handler: case21.handler },
     '22': { handler: case22.handler },
     '23': { handler: case23.handler },
+    '24': { handler: case24.handler },
 };
 
 function getHandler(caseNumber: string): HandlerFn | null {

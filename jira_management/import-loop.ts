@@ -39,19 +39,36 @@ interface StateUpdateData {
     lastCsvPath?: string;
 }
 
+interface CreateIssueOptions {
+    factory: TestCaseFactory;
+    test: TestCase;
+    testTitle: string;
+    projectName: string;
+    jiraLabels: string[];
+    t: number;
+    total: number;
+    opLog: ReturnType<typeof rootLogger.child>;
+    results: TestResult[];
+}
+
 async function createIssueForTest(
-    factory: TestCaseFactory,
-    test: TestCase,
-    testTitle: string,
-    projectName: string,
-    jiraLabels: string[],
-    t: number,
-    total: number,
-    opLog: ReturnType<typeof rootLogger.child>,
-    results: TestResult[],
-): Promise<{ key: string | null } | 'abort' | 'continue' | null> {
+    opts: CreateIssueOptions,
+): Promise<{ key: string | null; skipped: boolean } | 'abort' | 'continue' | null> {
+    const { factory, test, testTitle, projectName, jiraLabels, t, total, opLog, results } = opts;
     const testData = buildTestData(test, projectName, jiraLabels);
-    const issueResult = await factory.createIssue(testData, testTitle, t, total, opLog);
+    const issueResult = await factory.createIssue({
+        testData,
+        testTitle,
+        testIdx: t,
+        totalTests: total,
+        opLog,
+        skipExisting: true,
+    });
+
+    if (issueResult.skipped) {
+        return { key: issueResult.key ?? null, skipped: true };
+    }
+
     if ('action' in issueResult) {
         if (issueResult.action === 'abort') {
             opLog.warn('Usuario abortou apos falha na criação da issue');
@@ -62,18 +79,21 @@ async function createIssueForTest(
         results.push({ status: 'error', label: testTitle, message: 'Falha na criação da issue' });
         return 'continue';
     }
-    return { key: issueResult.key ?? null };
+    return { key: issueResult.key ?? null, skipped: false };
 }
 
-async function linkTestRelations(
-    linker: IssueLinker,
-    test: TestCase,
-    createdTestIssue: { key: string },
-    factory: TestCaseFactory,
-    opLog: ReturnType<typeof rootLogger.child>,
-    testTitle: string,
-    results: TestResult[],
-): Promise<LinkRelationsResult> {
+interface LinkTestRelationsOptions {
+    linker: IssueLinker;
+    test: TestCase;
+    createdTestIssue: { key: string };
+    factory: TestCaseFactory;
+    opLog: ReturnType<typeof rootLogger.child>;
+    testTitle: string;
+    results: TestResult[];
+}
+
+async function linkTestRelations(opts: LinkTestRelationsOptions): Promise<LinkRelationsResult> {
+    const { linker, test, createdTestIssue, factory, opLog, testTitle, results } = opts;
     let errored = false;
 
     if (test.precondition && test.precondition.type === 'reference') {
@@ -126,14 +146,17 @@ function buildTestData(test: TestCase, projectName: string, jiraLabels: string[]
     return JiraPayloadSchema.parse(testData);
 }
 
-function saveCheckpoint(
-    sourcePath: string,
-    sourceType: string,
-    projectName: string,
-    tests: TestCase[],
-    inMemoryTasksId: string[],
-    inMemoryTasksText: string[],
-): void {
+interface SaveCheckpointOptions {
+    sourcePath: string;
+    sourceType: string;
+    projectName: string;
+    tests: TestCase[];
+    inMemoryTasksId: string[];
+    inMemoryTasksText: string[];
+}
+
+function saveCheckpoint(opts: SaveCheckpointOptions): void {
+    const { sourcePath, sourceType, projectName, tests, inMemoryTasksId, inMemoryTasksText } = opts;
     const cpKey = sourceType === 'json' ? 'jsonPath' : 'csvPath';
     const cpSave: CheckpointData = {
         project: projectName,
@@ -164,69 +187,167 @@ function updateFinalState(sourceType: string, sourcePath: string, projectName: s
     updateState((state) => Object.assign(state, stateUpdate));
 }
 
-async function executeTestCreationLoop(
-    tests: TestCase[],
-    factory: TestCaseFactory,
-    linker: IssueLinker,
-    projectName: string,
-    jiraLabels: string[],
-    baseUrl: string,
-    opLog: ReturnType<typeof rootLogger.child>,
-    sourcePath: string,
-    sourceType: string,
-    inMemoryTasksId: string[],
-    inMemoryTasksText: string[],
-    results: TestResult[],
+export interface TestCreationLoopOptions {
+    tests: TestCase[];
+    factory: TestCaseFactory;
+    linker: IssueLinker;
+    projectName: string;
+    jiraLabels: string[];
+    baseUrl: string;
+    opLog: ReturnType<typeof rootLogger.child>;
+    sourcePath: string;
+    sourceType: string;
+    inMemoryTasksId: string[];
+    inMemoryTasksText: string[];
+    results: TestResult[];
+    resumeFrom: number;
+    isQuiet: () => boolean;
+    reportInfo: (msg: string) => void;
+    reportPrint: (msg: string) => void;
+}
+
+async function notifyBatch(
+    t: number,
     resumeFrom: number,
+    length: number,
     isQuiet: () => boolean,
-    info: (msg: string) => void,
-    print: (msg: string) => void,
+    reportInfo: (msg: string) => void,
 ): Promise<void> {
+    if (!isQuiet())
+        reportInfo('Processados ' + (t - resumeFrom + 1) + '/' + length + ' testes. Pausa para liberar memória...');
+    await yieldToEventLoop();
+}
+
+interface ProcessOneTestOptions {
+    t: number;
+    test: TestCase;
+    testTitle: string;
+    factory: TestCaseFactory;
+    projectName: string;
+    jiraLabels: string[];
+    opLog: ReturnType<typeof rootLogger.child>;
+    results: TestResult[];
+    linker: IssueLinker;
+    baseUrl: string;
+    sourcePath: string;
+    sourceType: string;
+    total: number;
+    tests: TestCase[];
+    inMemoryTasksId: string[];
+    inMemoryTasksText: string[];
+    resumeFrom: number;
+    isQuiet: () => boolean;
+    reportInfo: (msg: string) => void;
+    reportPrint: (msg: string) => void;
+}
+
+function recordSkippedTest(results: TestResult[], testTitle: string): void {
+    results.push({ status: 'ok', label: testTitle, message: 'skipped (already exists)' });
+}
+
+async function processCreationAndLinking(opts: ProcessOneTestOptions): Promise<'abort' | 'continue'> {
+    const {
+        t,
+        test,
+        testTitle,
+        factory,
+        projectName,
+        jiraLabels,
+        opLog,
+        results,
+        linker,
+        baseUrl,
+        sourcePath,
+        sourceType,
+        total,
+        tests,
+        inMemoryTasksId,
+        inMemoryTasksText,
+        resumeFrom,
+        isQuiet,
+        reportInfo,
+        reportPrint,
+    } = opts;
+    const issueResult = await createIssueForTest({
+        factory,
+        test,
+        testTitle,
+        projectName,
+        jiraLabels,
+        t,
+        total,
+        opLog,
+        results,
+    });
+    if (!issueResult || issueResult === 'continue') return 'continue';
+    if (issueResult === 'abort') return 'abort';
+    const createdTestIssue = { key: issueResult.key as string };
+    inMemoryTasksId.push(createdTestIssue.key);
+    if (issueResult.skipped) {
+        recordSkippedTest(results, testTitle);
+        return 'continue';
+    }
+    saveCheckpoint({ sourcePath, sourceType, projectName, tests, inMemoryTasksId, inMemoryTasksText });
+    const linkState = await linkTestRelations({ linker, test, createdTestIssue, factory, opLog, testTitle, results });
+    if (linkState.abort) return 'abort';
+    const testStatus = linkState.errored ? 'error' : 'ok';
+    if (!isQuiet()) reportPrint('  -> ' + baseUrl + '/browse/' + createdTestIssue.key);
+    results.push({ status: testStatus, label: testTitle, message: '' });
+    if ((t - resumeFrom + 1) % BATCH_SIZE === 0 && t < tests.length - 1) {
+        await notifyBatch(t, resumeFrom, tests.length, isQuiet, reportInfo);
+    }
+    return 'continue';
+}
+
+async function executeTestCreationLoop(opts: TestCreationLoopOptions): Promise<void> {
+    const {
+        tests,
+        factory,
+        linker,
+        projectName,
+        jiraLabels,
+        baseUrl,
+        opLog,
+        sourcePath,
+        sourceType,
+        inMemoryTasksId,
+        inMemoryTasksText,
+        results,
+        resumeFrom,
+        isQuiet,
+        reportInfo,
+        reportPrint,
+    } = opts;
+
     outer: for (let t = resumeFrom; t < tests.length; t++) {
         const test = tests[t]!;
         const testTitle = test.title;
-
-        if (!isQuiet()) info('Criando: ' + testTitle);
+        if (!isQuiet()) reportInfo('Criando: ' + testTitle);
         inMemoryTasksText.push(testTitle);
 
-        const issueResult = await createIssueForTest(
-            factory,
+        const signal = await processCreationAndLinking({
+            t,
             test,
             testTitle,
+            factory,
             projectName,
             jiraLabels,
-            t,
-            tests.length,
             opLog,
             results,
-        );
-        if (!issueResult || issueResult === 'continue') continue;
-        if (issueResult === 'abort') break outer;
-
-        // safe: garantido por type guard nas linhas 203-204
-        const createdTestIssue = { key: issueResult.key } as { key: string };
-        inMemoryTasksId.push(createdTestIssue.key);
-        saveCheckpoint(sourcePath, sourceType, projectName, tests, inMemoryTasksId, inMemoryTasksText);
-
-        const linkState = await linkTestRelations(linker, test, createdTestIssue, factory, opLog, testTitle, results);
-        if (linkState.abort) break outer;
-
-        const testStatus = linkState.errored ? 'error' : 'ok';
-        if (!isQuiet()) print('  -> ' + baseUrl + '/browse/' + createdTestIssue.key);
-        results.push({ status: testStatus, label: testTitle, message: '' });
-
-        // Batch: yield to event loop every BATCH_SIZE items to prevent OOM
-        if ((t - resumeFrom + 1) % BATCH_SIZE === 0 && t < tests.length - 1) {
-            if (!isQuiet())
-                info(
-                    'Processados ' +
-                        (t - resumeFrom + 1) +
-                        '/' +
-                        tests.length +
-                        ' testes. Pausa para liberar memória...',
-                );
-            await yieldToEventLoop();
-        }
+            linker,
+            baseUrl,
+            sourcePath,
+            sourceType,
+            total: tests.length,
+            tests,
+            inMemoryTasksId,
+            inMemoryTasksText,
+            resumeFrom,
+            isQuiet,
+            reportInfo,
+            reportPrint,
+        });
+        if (signal === 'abort') break outer;
     }
 }
 

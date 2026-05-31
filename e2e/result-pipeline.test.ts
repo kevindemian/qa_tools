@@ -90,14 +90,14 @@ describe('E2E: Result Processing Pipeline', () => {
 
         const jiraResource = new JiraResource('e2e-token', 'http://localhost:1997/jira/rest/api/2');
         const linkManager = new JiraLinkManager(jiraResource);
-        const result = await createTestExecutionFromResults(
+        const result = await createTestExecutionFromResults({
             jiraResource,
             linkManager,
-            'EXECPROJ',
-            matched,
-            'testes-simples',
-            { pipelineId: 42, branch: 'main', provider: 'gitlab' },
-        );
+            projectName: 'EXECPROJ',
+            matchedResults: matched,
+            csvName: 'testes-simples',
+            pipelineInfo: { pipelineId: 42, branch: 'main', provider: 'gitlab' },
+        });
 
         expect(result.key).toBe('RESULT-1');
         expect(result.summary).toMatch(/testes-simples \(main #42\)/);

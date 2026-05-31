@@ -16,6 +16,7 @@ Ao iniciar, um menu interativo é exibido. O usuário seleciona um projeto (mape
 
 | #   | Operação                                 |
 | --- | ---------------------------------------- |
+| 00  | Setup wizard CI/CD                       |
 | 1   | Disparar pipeline                        |
 | 2   | Listar schedules (GitLab)                |
 | 3   | Disparar schedule (GitLab)               |
@@ -196,6 +197,9 @@ Após o parse, se houver testes falhos, a CLI pergunta: _"Deseja analisar falhas
 | Report tier falha | Cai para `main` tier; se também falhar, relatório gerado sem IA com ⚠ warning |
 | `LLM_API_KEY` não configurada | Análise IA retorna vazia; pipeline segue normalmente com mensagem "verifique chaves LLM" |
 | Apenas tier **fast** configurado (PR desc) | Pipeline de resultados não é afetado — **fast** é usado apenas em features separadas |
+| Circuit breaker aberto | LLM pula automaticamente; pipeline segue sem IA — veja [`docs/06-env-vars.md`](06-env-vars.md) > Circuit Breaker |
+
+> Consulte [`docs/06-env-vars.md`](06-env-vars.md) para detalhes sobre **circuit breaker** (proteção contra falhas encadeadas) e **benchmark LLM** (validação de acurácia dos provedores).
 
 ---
 
@@ -274,6 +278,34 @@ Gera um dashboard HTML com análises de flakiness dos testes a partir do histór
 - `shared/metrics.ts` — `loadMetrics()`, `calculateFlakiness()`
 - `shared/flakiness-dashboard.ts` — `generateFlakinessHtml()`
 
+### Flaky Auto-Actions
+
+> Automatiza a resposta a testes flaky detectados no pipeline. Executado ao final do batch mode (`tryBatchMode()` → `runFlakyAutoActions()`).
+
+**Comportamento:**
+
+1. **Cálculo**: `calculateFlakinessWithWindow()` analisa as últimas 20 execuções (janela deslizante).
+2. **Threshold**: taxa de falha > 30% → considerado flaky. Testes com taxa ≤ 30% e bug Jira aberto → re-enable automático.
+3. **Ações disponíveis**:
+    - `create_bug` — Cria issue Bug no Jira com label `flaky`, `auto-generated` e descrição detalhada (taxa, contagem pass/fail, ações recomendadas)
+    - `flag_in_report` — Marca no relatório HTML sem criar bug (quando `autoCreateBug=false`)
+    - `reenable` — Se taxa caiu ≤ 30% e existe bug aberto, faz transição para Done/Closed
+    - `none` — Bug já existe (dedupSearch evita duplicatas)
+4. **Quarentena**: testes flaky são auto-excluídos do pipeline via `quarantineTest()` → `qa-quarantine.json` com TTL de 7 dias
+5. **Dedup**: `searchExistingBug()` busca por `project = X AND summary ~ "[Flaky] <titulo>"` antes de criar
+
+**Configuração:**
+
+| Parâmetro       | Padrão | Descrição                                  |
+| --------------- | ------ | ------------------------------------------ |
+| `threshold`     | 0.3    | Taxa de falha mínima para considerar flaky |
+| `autoCreateBug` | false  | Cria bug Jira automaticamente              |
+| `minTotalRuns`  | 10     | Mínimo de execuções para análise           |
+| `windowSize`    | 20     | Janela deslizante de execuções             |
+| `dedupSearch`   | true   | Evita criar bug duplicado                  |
+
+**Arquivo:** `shared/flaky-auto-actions.ts` — `executeFlakyActions()`
+
 ---
 
 ## 10. Batch Mode
@@ -284,11 +316,13 @@ O batch mode permite disparar uma pipeline, coletar resultados, analisar falhas 
 
 ### Flags
 
-| Flag                  | Descrição                                               |
-| --------------------- | ------------------------------------------------------- |
-| `--batch` ou `--auto` | Ativa modo batch (implica `AUTO_CONFIRM=true`)          |
-| `--project` / `-p`    | Nome do projeto (fallback: primeiro do `projects.json`) |
-| `--branch` / `-b`     | Branch para disparo (fallback: `main`)                  |
+| Flag                   | Descrição                                               |
+| ---------------------- | ------------------------------------------------------- |
+| `--batch` ou `--auto`  | Ativa modo batch (implica `AUTO_CONFIRM=true`)          |
+| `--project` / `-p`     | Nome do projeto (fallback: primeiro do `projects.json`) |
+| `--branch` / `-b`      | Branch para disparo (fallback: `main`)                  |
+| `--run-impacted-tests` | Analisa diff desde HEAD~1 e gera `test-selection.json`  |
+| `--conservative`       | Modo conservador: smoke obrigatórios + testes afetados  |
 
 ### Exemplos
 
@@ -313,9 +347,32 @@ npx tsx git_triggers/main.ts --batch --project qa_ibabs --branch release/v2
 9. Gera dashboard de flakiness (`generateFlakinessDashboard()`)
 10. Exibe `printSessionSummary()` e encerra
 
+### Test Selection (--run-impacted-tests)
+
+Quando `--run-impacted-tests` é passado, o batch mode executa análise de impacto de testes após a coleta de resultados:
+
+1. Obtém diff de arquivos desde `HEAD~1` via `git diff --name-only`
+2. Executa análise de impacto em 3 tiers (jest `--findRelatedTests`, keyword matching, mapping explícito)
+3. Gera `reports/test-selection.json` com a lista de testes impactados
+
+**`test-selection.json`:**
+
+| Campo              | Tipo     | Descrição                                       |
+| ------------------ | -------- | ----------------------------------------------- |
+| `generatedAt`      | string   | Timestamp ISO da geração                        |
+| `changedFiles`     | string[] | Arquivos modificados no diff                    |
+| `impactedTests`    | array    | Testes impactados com título, reason, matchMode |
+| `suggestedCommand` | string   | Comando sugerido para executar os testes        |
+| `confidence`       | string   | `high` / `medium` / `low`                       |
+| `conservative`     | boolean  | Se `--conservative` foi ativado                 |
+| `smokeTests`       | string[] | Smoke obrigatórios (modo conservador)           |
+
+O modo `--conservative` adiciona smoke obrigatórios à seleção, garantindo que testes críticos sejam executados mesmo se o diff não os indicar como impactados.
+
 ### Arquivo
 
 - `batch-mode.ts` — `parseBatchArgs()`, `tryBatchMode()`, `setupBatchProject()`, `triggerAndCollectBatchPipeline()`
+- `shared/test-impact.ts` — `analyzeTestImpact()`, `generateTestSelectionJson()`
 
 ---
 

@@ -13,6 +13,7 @@ jest.mock('../shared/state', () => ({
     load: jest.fn().mockReturnValue({}),
     update: jest.fn(),
 }));
+jest.mock('../shared/open', () => ({ openWithOsOrFallback: jest.fn() }));
 
 import fs from 'fs';
 import path from 'path';
@@ -67,6 +68,13 @@ beforeEach(() => {
     jest.clearAllMocks();
     jest.restoreAllMocks();
     nock.cleanAll();
+    // Clear mockResolvedValueOnce queue (clearAllMocks does NOT clear it)
+    getPrompt().ask.mockReset();
+    getPrompt().ask.mockResolvedValue('');
+    getPrompt().prompt.mockReset();
+    getPrompt().prompt.mockReturnValue('');
+    getPrompt().confirm.mockReset();
+    getPrompt().confirm.mockReturnValue(true);
     nock.disableNetConnect();
     jest.spyOn(console, 'log').mockImplementation(() => {});
     jest.spyOn(process.stdout, 'write').mockImplementation(() => true);
@@ -510,8 +518,11 @@ describe('case15 — import JSON tests', () => {
         const { api, xray } = freshScope();
         // createTestsFromJson creates 1 test from JSON fixture:
         // 1. POST /issue to create the test case
+        // 1a. GET /search (skipExisting check in createIssue)
+        api.get('/search').query(true).reply(200, { issues: [] });
+        // 2. POST /issue to create the test case
         api.post('/issue').reply(201, { key: 'TEST-1', id: '10001' });
-        // 2. POST /test/{key}/steps via jiraResourceXray (baseURL = HOST)
+        // 3. POST /test/{key}/steps via jiraResourceXray (baseURL = HOST)
         xray.post('/test/TEST-1/steps').reply(201);
         // Then TE creation (confirm=true):
         api.get('/issuetype').reply(200, [

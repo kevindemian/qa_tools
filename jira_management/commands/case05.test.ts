@@ -1,36 +1,16 @@
-jest.mock('../../shared/prompt', () => ({
-    success: jest.fn(),
-    warn: jest.fn(),
-    ask: jest.fn().mockResolvedValue(''),
-    printError: jest.fn(),
-}));
+jest.mock('../../shared/prompt');
 
 import case05 from './case05';
+import { makeMockCommandContext } from '../../shared/test-utils';
 
 const mockJiraResource = {
     getReleaseTasks: jest.fn().mockResolvedValue([]),
 };
 
-const mockContext: Record<string, unknown> = {
+const mockContext = makeMockCommandContext({
     jiraResource: mockJiraResource,
-    jiraResourceXray: {},
-    linkManager: {},
-    linkManagerXray: {},
-    csvResource: {},
-    ctx: {
-        project_name: 'TEST',
-        inMemoryTasksId: [],
-        inMemoryTasksText: [],
-        sessionCounters: [],
-        isBusy: false,
-        results: [],
-        packageManager: { updateReleaseNotes: jest.fn(), updateVersion: jest.fn() },
-    },
-    pushHistory: jest.fn(),
-    printSessionSummary: jest.fn(),
-    base_url: 'https://jira.test.com',
-    sessionLog: { child: jest.fn().mockReturnValue({ info: jest.fn(), error: jest.fn(), warn: jest.fn() }) },
-};
+    ctx: { packageManager: { updateReleaseNotes: jest.fn(), updateVersion: jest.fn() } },
+});
 
 beforeEach(() => {
     jest.clearAllMocks();

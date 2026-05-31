@@ -3,15 +3,15 @@ import type JiraResource from './jira_resource';
 import type { TestStep } from '../shared/types';
 import Config from '../shared/config';
 
-jest.mock('axios');
+const mockGraphqlMutation = jest.fn();
+
+jest.mock('../shared/xray-cloud-client', () => ({
+    XrayCloudClient: jest.fn(() => ({
+        graphqlMutation: mockGraphqlMutation,
+    })),
+}));
+
 jest.mock('../shared/config');
-
-const mockAxiosPost = jest.fn();
-
-beforeEach(() => {
-    const axios = jest.requireMock('axios');
-    axios.post = mockAxiosPost;
-});
 
 describe('ServerStepImporter', () => {
     it('calls postJiraResource with correct endpoint and payload', async () => {
@@ -52,8 +52,6 @@ describe('ServerStepImporter', () => {
 });
 
 describe('CloudStepImporter', () => {
-    const token = 'eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.token';
-
     beforeEach(() => {
         jest.clearAllMocks();
         (Config.getDefault as jest.Mock).mockReturnValue({
@@ -62,31 +60,20 @@ describe('CloudStepImporter', () => {
         });
     });
 
-    it('happy path — authenticates and sends GraphQL mutation', async () => {
-        mockAxiosPost
-            .mockResolvedValueOnce({ data: '"' + token + '"' })
-            .mockResolvedValueOnce({ data: { data: { addTestStep: { id: '123' } } } });
+    it('happy path — sends GraphQL mutation via XrayCloudClient', async () => {
+        mockGraphqlMutation.mockResolvedValue(undefined);
 
         const importer = createStepImporter({} as JiraResource, 'cloud');
         const step: TestStep = { fields: { Action: 'Click', Data: 'Button', 'Expected Result': 'Done' } };
 
         await importer.importStep('TEST-1', 0, step);
 
-        // First call: authentication
-        expect(mockAxiosPost).toHaveBeenNthCalledWith(1, 'https://xray.cloud.getxray.app/api/v2/authenticate', {
-            client_id: 'test-client-id',
-            client_secret: 'test-client-secret',
-        });
-        // Second call: GraphQL
-        expect(mockAxiosPost).toHaveBeenNthCalledWith(
-            2,
-            'https://xray.cloud.getxray.app/api/v2/graphql',
-            expect.objectContaining({
-                query: expect.stringContaining('addTestStep'),
-                variables: expect.objectContaining({ issueId: 'TEST-1', index: 0 }),
-            }),
-            expect.objectContaining({ headers: expect.objectContaining({ Authorization: 'Bearer ' + token }) }),
-        );
+        expect(mockGraphqlMutation).toHaveBeenCalledTimes(1);
+        const callArgs = mockGraphqlMutation.mock.calls[0] as [string, Record<string, unknown>, string, string];
+        expect(callArgs[0]).toContain('addTestStep');
+        expect(callArgs[1]).toMatchObject({ issueId: 'TEST-1', index: 0 });
+        expect(callArgs[2]).toBe('test-client-id');
+        expect(callArgs[3]).toBe('test-client-secret');
     });
 
     it('throws on missing credentials', async () => {
@@ -103,43 +90,12 @@ describe('CloudStepImporter', () => {
         );
     });
 
-    it('throws on authentication failure', async () => {
-        mockAxiosPost.mockRejectedValue(new Error('401 Unauthorized'));
-
-        const importer = createStepImporter({} as JiraResource, 'cloud');
-        const step: TestStep = { fields: { Action: 'Click' } };
-
-        await expect(importer.importStep('TEST-1', 0, step)).rejects.toThrow(/Xray Cloud authentication/);
-    });
-
-    it('throws on GraphQL error', async () => {
-        mockAxiosPost
-            .mockResolvedValueOnce({ data: '"' + token + '"' })
-            .mockRejectedValue(new Error('GraphQL error: field not found'));
+    it('propagates GraphQL mutation error', async () => {
+        mockGraphqlMutation.mockRejectedValue(new Error('Xray Cloud GraphQL mutation failed: field not found'));
 
         const importer = createStepImporter({} as JiraResource, 'cloud');
         const step: TestStep = { fields: { Action: 'Click' } };
 
         await expect(importer.importStep('TEST-1', 0, step)).rejects.toThrow(/Xray Cloud GraphQL/);
-    });
-
-    it('reuses cached token on subsequent calls', async () => {
-        mockAxiosPost
-            .mockResolvedValueOnce({ data: '"' + token + '"' })
-            .mockResolvedValue({ data: { data: { addTestStep: { id: '123' } } } });
-
-        const importer = createStepImporter({} as JiraResource, 'cloud');
-        const step: TestStep = { fields: { Action: 'Click' } };
-
-        await importer.importStep('TEST-1', 0, step);
-        await importer.importStep('TEST-2', 1, step);
-
-        // auth called only once
-        expect(mockAxiosPost).toHaveBeenCalledTimes(3); // auth + call 1 + call 2
-        expect(mockAxiosPost).toHaveBeenNthCalledWith(
-            1,
-            'https://xray.cloud.getxray.app/api/v2/authenticate',
-            expect.any(Object),
-        );
     });
 });

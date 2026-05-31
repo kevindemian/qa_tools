@@ -1,36 +1,59 @@
 /** Test-case factory — creates test issues in Jira via Xray REST API. */
-import { success, onError, isQuiet, ProgressBar } from '../shared/prompt';
-import type JiraResource from './jira_resource';
+import { success, info as promptInfo, onError, isQuiet, ProgressBar } from '../shared/prompt';
+import type { JiraResourceLike } from '../shared/types';
 import type { XrayStepImporter } from './xray-client';
 import type { JsonObject, LogContext, TestCase } from '../shared/types';
 
 interface CreateIssueResult {
     key?: string;
     action?: string;
+    skipped?: boolean;
 }
 
 interface StepsResult {
     action?: string;
 }
 
+interface CreateIssueParams {
+    testData: JsonObject;
+    testTitle: string;
+    testIdx: number;
+    totalTests: number;
+    opLog: { info: (msg: string, meta?: LogContext) => void };
+    skipExisting?: boolean;
+}
+
 class TestCaseFactory {
-    jiraResource: JiraResource;
+    jiraResource: JiraResourceLike;
     stepImporter: XrayStepImporter;
 
-    constructor(jiraResource: JiraResource, stepImporter: XrayStepImporter) {
+    constructor(jiraResource: JiraResourceLike, stepImporter: XrayStepImporter) {
         this.jiraResource = jiraResource;
         this.stepImporter = stepImporter;
     }
 
-    async createIssue(
-        testData: JsonObject,
-        testTitle: string,
-        testIdx: number,
-        totalTests: number,
-        opLog: { info: (msg: string, meta?: LogContext) => void },
-    ): Promise<CreateIssueResult> {
+    async createIssue(params: CreateIssueParams): Promise<CreateIssueResult> {
+        const { testData, testTitle, testIdx, totalTests, opLog, skipExisting } = params;
+        if (skipExisting && testTitle) {
+            try {
+                const jql = `project = "${((testData as Record<string, unknown>).project as string) || ''}" AND summary ~ "${testTitle.replace(/"/g, '\\"')}"`;
+                const existing = await this.jiraResource.searchJiraIssues(jql, 5);
+                const found = existing.issues.find(
+                    (i) => (i.fields?.summary as string)?.trim().toLowerCase() === testTitle.trim().toLowerCase(),
+                );
+                if (found) {
+                    const key = found.key;
+                    if (!isQuiet()) promptInfo('Issue já existe, pulando: ' + key);
+                    opLog.info('Issue pulada (já existe)', { key, title: testTitle });
+                    return { key, skipped: true };
+                }
+            } catch {
+                /* skip-existing é otimização — se falhar busca, prossegue criação */
+            }
+        }
+
         try {
-            const issue = await this.jiraResource.postJiraResource('issue', testData);
+            const issue = await this.jiraResource.postJiraResource<JsonObject>('issue', testData);
             if (!isQuiet()) success('Issue criada: ' + String(issue.key));
             opLog.info('Issue criada', { key: issue.key });
             return { key: issue.key as string };

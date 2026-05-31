@@ -79,7 +79,7 @@ jest.mock('../shared/metrics', () => ({
     saveParseResult: mockSaveParseResult,
 }));
 
-jest.mock('../jira_management/jira_resource', () => ({
+jest.mock('../shared/jira-client', () => ({
     __esModule: true,
     default: jest.fn(),
 }));
@@ -367,16 +367,20 @@ describe('createTestExecution', () => {
         });
         const pushHistory = jest.fn();
 
-        await mod.createTestExecution(
-            [{ key: 'T1', title: 'test1', status: 'passed', duration: 100 }],
-            'my-tests',
-            { base: 'https://jira.example.com', token: 'token', xray: 'https://xray.example.com' },
-            'PROJ',
-            '123',
-            'main',
-            'gitlab',
+        await mod.createTestExecution({
+            matched: [{ key: 'T1', title: 'test1', status: 'passed', duration: 100 }],
+            csvName: 'my-tests',
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any -- mock object for JiraClient
+            jiraResource: { baseUrl: 'https://jira.example.com/rest/api/2', request: jest.fn() } as any,
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any -- mock object for JiraLinkManager
+            linkManager: {} as any,
+            jiraBaseUrl: 'https://jira.example.com',
+            projectName: 'PROJ',
+            pipelineId: '123',
+            branch: 'main',
+            currentProvider: 'gitlab',
             pushHistory,
-        );
+        });
 
         expect(mockCreateTestExecutionFromResults).toHaveBeenCalled();
         expect(pushHistory).toHaveBeenCalledWith('resultados', expect.stringContaining('TE-123'), 'ok');
@@ -387,16 +391,20 @@ describe('createTestExecution', () => {
         const pushHistory = jest.fn();
 
         await expect(
-            mod.createTestExecution(
-                [],
-                'test',
-                { base: '', token: '', xray: '' },
-                'PROJ',
-                '1',
-                'main',
-                'github',
+            mod.createTestExecution({
+                matched: [],
+                csvName: 'test',
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any -- mock object for JiraClient
+                jiraResource: { baseUrl: '', request: jest.fn() } as any,
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any -- mock object for JiraLinkManager
+                linkManager: {} as any,
+                jiraBaseUrl: '',
+                projectName: 'PROJ',
+                pipelineId: '1',
+                branch: 'main',
+                currentProvider: 'github',
                 pushHistory,
-            ),
+            }),
         ).rejects.toThrow('Creation failed');
 
         expect(pushHistory).toHaveBeenCalledWith('resultados', 'erro', 'error');
@@ -435,14 +443,14 @@ describe('collectTestResults', () => {
         });
         const pushHistory = jest.fn();
 
-        await mod.collectTestResults(
-            mockProvider as unknown as GitProvider,
-            '1',
-            'main',
-            'PROJ',
-            'gitlab',
+        await mod.collectTestResults({
+            m: mockProvider as unknown as GitProvider,
+            pipelineId: '1',
+            branch: 'main',
+            projectName: 'PROJ',
+            currentProvider: 'gitlab',
             pushHistory,
-        );
+        });
 
         expect(mockListPipelineArtifacts).toHaveBeenCalled();
         expect(mockDownloadArtifact).toHaveBeenCalled();
@@ -459,14 +467,14 @@ describe('collectTestResults', () => {
         mockListPipelineArtifacts.mockResolvedValue([]);
         const pushHistory = jest.fn();
 
-        await mod.collectTestResults(
-            mockProvider as unknown as GitProvider,
-            '1',
-            'main',
-            'PROJ',
-            'gitlab',
+        await mod.collectTestResults({
+            m: mockProvider as unknown as GitProvider,
+            pipelineId: '1',
+            branch: 'main',
+            projectName: 'PROJ',
+            currentProvider: 'gitlab',
             pushHistory,
-        );
+        });
 
         expect(mockMatchResultsToTests).not.toHaveBeenCalled();
         expect(mockCreateTestExecutionFromResults).not.toHaveBeenCalled();
@@ -490,14 +498,14 @@ describe('collectTestResults', () => {
         // mockPrompt default (empty string) makes parseTestResults return null
         const pushHistory = jest.fn();
 
-        await mod.collectTestResults(
-            mockProvider as unknown as GitProvider,
-            '1',
-            'main',
-            'PROJ',
-            'gitlab',
+        await mod.collectTestResults({
+            m: mockProvider as unknown as GitProvider,
+            pipelineId: '1',
+            branch: 'main',
+            projectName: 'PROJ',
+            currentProvider: 'gitlab',
             pushHistory,
-        );
+        });
 
         expect(mockSaveParseResult).toHaveBeenCalledWith('PROJ', {
             tests: [{ title: 'test1', state: 'passed', duration: 100 }],

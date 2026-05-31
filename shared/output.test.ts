@@ -41,9 +41,9 @@ describe('Output', () => {
 
     it('isTTY returns stdout.isTTY', () => {
         const original = process.stdout.isTTY;
-        (process.stdout as { isTTY?: boolean }).isTTY = true;
+        Object.defineProperty(process.stdout, 'isTTY', { value: true, configurable: true });
         expect(Output.isTTY()).toBe(true);
-        (process.stdout as { isTTY?: boolean }).isTTY = original;
+        Object.defineProperty(process.stdout, 'isTTY', { value: original, configurable: true });
     });
 
     it('print calls console.log', () => {

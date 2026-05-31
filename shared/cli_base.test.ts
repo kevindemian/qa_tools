@@ -19,10 +19,15 @@ const MOCK_PROMPT: {
     print?: jest.Mock;
     success?: jest.Mock;
     divider?: jest.Mock;
-} = { error: jest.fn(), warn: jest.fn(), info: jest.fn() };
+    confirm?: jest.Mock;
+} = { error: jest.fn(), warn: jest.fn(), info: jest.fn(), confirm: jest.fn().mockReturnValue(false) };
 jest.mock('./prompt', () => MOCK_PROMPT);
+jest.mock('readline', () => ({
+    createInterface: jest.fn(),
+}));
 
 import * as cliBase from './cli_base';
+import * as readline from 'readline';
 import Config from './config';
 
 const ENV_BACKUP = { ...process.env };
@@ -56,12 +61,14 @@ describe('CLI Base', () => {
             { key: 'TOKEN_B', label: 'Token B', example: 'TOKEN_B=def' },
         ];
 
-        it('throws when required vars are missing', () => {
+        it('does not throw when required vars are missing — returns result and warns', () => {
             delete process.env.TOKEN_A;
             delete process.env.TOKEN_B;
             const validate = cliBase.createValidateEnv(configs);
-            expect(() => validate()).toThrow('Variáveis de ambiente faltando');
-            expect(MOCK_PROMPT.error).toHaveBeenCalledWith(expect.stringContaining('Variáveis obrigatórias'));
+            const result = validate();
+            expect(result.ok).toBe(false);
+            expect(result.missing).toContain('TOKEN_A');
+            expect(MOCK_PROMPT.warn).toHaveBeenCalledWith(expect.stringContaining('Configurações incompletas'));
         });
 
         it('warns when real credentials are detected', () => {
@@ -82,44 +89,154 @@ describe('CLI Base', () => {
     });
 
     describe('setupSigint', () => {
-        it('registers SIGINT handler', () => {
-            const onSpy = jest.spyOn(process, 'on').mockImplementation(() => process);
-            cliBase.setupSigint(null, () => {});
-            expect(onSpy).toHaveBeenCalledWith('SIGINT', expect.any(Function));
-            onSpy.mockRestore();
+        let mockRl: { question: jest.Mock; close: jest.Mock };
+
+        beforeEach(() => {
+            mockRl = { question: jest.fn(), close: jest.fn() };
+            (readline.createInterface as jest.Mock).mockReturnValue(mockRl);
         });
 
-        it('calls onExit and sets exitCode on SIGINT', () => {
-            jest.useFakeTimers();
-            const exitSpy = jest.spyOn(process, 'exit').mockImplementation(() => undefined as never);
-            const removeListenerSpy = jest.spyOn(process, 'removeListener').mockImplementation(() => process);
-            const onSpy = jest.spyOn(process, 'on').mockImplementation((evt, handler) => {
-                if (evt === 'SIGINT') handler();
+        afterEach(() => {
+            jest.restoreAllMocks();
+        });
+
+        it('registers SIGINT handler', () => {
+            jest.spyOn(process, 'on').mockImplementation(() => process);
+            cliBase.setupSigint(null, () => {});
+            expect(process.on).toHaveBeenCalledWith('SIGINT', expect.any(Function));
+        });
+
+        it('shows confirmation prompt on SIGINT (not busy)', () => {
+            jest.spyOn(process, 'on').mockImplementation((evt, handler) => {
+                if (evt === 'SIGINT') (handler as () => void)();
                 return process;
             });
             const onExit = jest.fn();
             cliBase.setupSigint(null, onExit);
+            expect(readline.createInterface).toHaveBeenCalled();
+            expect(mockRl.question).toHaveBeenCalledWith('Deseja sair? (s/N) ', expect.any(Function));
+        });
+
+        it('calls onExit and exits when user responds s', () => {
+            jest.useFakeTimers();
+            const exitSpy = jest.spyOn(process, 'exit').mockImplementation(() => undefined as never);
+            jest.spyOn(process, 'on').mockImplementation((evt, handler) => {
+                if (evt === 'SIGINT') (handler as () => void)();
+                return process;
+            });
+            const onExit = jest.fn();
+            cliBase.setupSigint(null, onExit);
+            const questionFn = mockRl.question.mock.calls[0][1] as (answer: string) => void;
+            questionFn('s');
             expect(onExit).toHaveBeenCalled();
             expect(MOCK_PROMPT.info).toHaveBeenCalledWith('Até logo!');
-            expect(removeListenerSpy).toHaveBeenCalledWith('SIGINT', expect.any(Function));
             jest.advanceTimersByTime(2000);
             expect(exitSpy).toHaveBeenCalled();
             exitSpy.mockRestore();
-            removeListenerSpy.mockRestore();
-            onSpy.mockRestore();
+            jest.useRealTimers();
+        });
+
+        it('does not exit when user responds n', () => {
+            jest.spyOn(process, 'on').mockImplementation((evt, handler) => {
+                if (evt === 'SIGINT') (handler as () => void)();
+                return process;
+            });
+            const onExit = jest.fn();
+            cliBase.setupSigint(null, onExit);
+            const questionFn = mockRl.question.mock.calls[0][1] as (answer: string) => void;
+            questionFn('n');
+            expect(onExit).not.toHaveBeenCalled();
+            expect(MOCK_PROMPT.info).toHaveBeenCalledWith('Continuando...');
+        });
+
+        it('force exits on 2nd SIGINT during confirmation', () => {
+            jest.useFakeTimers();
+            const exitSpy = jest.spyOn(process, 'exit').mockImplementation(() => undefined as never);
+            let capturedHandler: () => void;
+            jest.spyOn(process, 'on').mockImplementation((evt, handler) => {
+                if (evt === 'SIGINT') capturedHandler = handler as () => void;
+                return process;
+            });
+            const onExit = jest.fn();
+            cliBase.setupSigint(null, onExit);
+            capturedHandler!();
+            expect(mockRl.question).toHaveBeenCalled();
+            capturedHandler!();
+            expect(onExit).toHaveBeenCalled();
+            expect(MOCK_PROMPT.info).toHaveBeenCalledWith('Até logo!');
+            jest.advanceTimersByTime(2000);
+            expect(exitSpy).toHaveBeenCalled();
+            exitSpy.mockRestore();
             jest.useRealTimers();
         });
 
         it('does not exit if isBusy returns true', () => {
-            const onSpy = jest.spyOn(process, 'on').mockImplementation((evt, handler) => {
-                if (evt === 'SIGINT') handler();
+            let capturedHandler: () => void;
+            jest.spyOn(process, 'on').mockImplementation((evt, handler) => {
+                if (evt === 'SIGINT') capturedHandler = handler as () => void;
                 return process;
             });
             const onExit = jest.fn();
             cliBase.setupSigint(() => true, onExit);
+            capturedHandler!();
             expect(MOCK_PROMPT.info).toHaveBeenCalledWith(expect.stringContaining('Operação em andamento'));
             expect(onExit).not.toHaveBeenCalled();
-            onSpy.mockRestore();
+        });
+
+        it('handles null onExit gracefully on confirmation s', () => {
+            jest.useFakeTimers();
+            const exitSpy = jest.spyOn(process, 'exit').mockImplementation(() => undefined as never);
+            let capturedHandler: () => void;
+            jest.spyOn(process, 'on').mockImplementation((evt, handler) => {
+                if (evt === 'SIGINT') capturedHandler = handler as () => void;
+                return process;
+            });
+            cliBase.setupSigint(null, null);
+            capturedHandler!();
+            const questionFn = mockRl.question.mock.calls[0][1] as (answer: string) => void;
+            questionFn('s');
+            expect(MOCK_PROMPT.info).toHaveBeenCalledWith('Até logo!');
+            jest.advanceTimersByTime(2000);
+            expect(exitSpy).toHaveBeenCalled();
+            exitSpy.mockRestore();
+            jest.useRealTimers();
+        });
+    });
+
+    describe('offerEnvSetup', () => {
+        it('returns false when validation ok', async () => {
+            const result = cliBase.offerEnvSetup({ ok: true, missing: [] });
+            expect(result).toBe(false);
+            expect(MOCK_PROMPT.confirm).not.toHaveBeenCalled();
+        });
+
+        it('returns false and does not prompt in CI mode', async () => {
+            process.env.CI = 'true';
+            const result = cliBase.offerEnvSetup({ ok: false, missing: ['TOKEN_A'] });
+            expect(result).toBe(false);
+            expect(MOCK_PROMPT.confirm).not.toHaveBeenCalled();
+            delete process.env.CI;
+        });
+
+        it('returns false when confirm returns false', async () => {
+            MOCK_PROMPT.confirm!.mockReturnValueOnce(false);
+            const result = cliBase.offerEnvSetup({ ok: false, missing: ['TOKEN_A'] });
+            expect(result).toBe(false);
+            expect(MOCK_PROMPT.confirm).toHaveBeenCalledWith(expect.stringContaining('configurar'));
+        });
+
+        it('returns true when user accepts', async () => {
+            MOCK_PROMPT.confirm!.mockReturnValueOnce(true);
+            const result = cliBase.offerEnvSetup({ ok: false, missing: ['TOKEN_A'] });
+            expect(result).toBe(true);
+        });
+
+        it('returns false when confirm throws (CancelError)', async () => {
+            MOCK_PROMPT.confirm!.mockImplementationOnce(() => {
+                throw new Error('cancel');
+            });
+            const result = cliBase.offerEnvSetup({ ok: false, missing: ['TOKEN_A'] });
+            expect(result).toBe(false);
         });
     });
 
@@ -140,43 +257,6 @@ describe('CLI Base', () => {
 
         it('does not modify URL with empty token value', () => {
             expect(cliBase.sanitizeUrl('http://example.com?token=')).toBe('http://example.com?token=');
-        });
-    });
-
-    describe('setupSigint exit code', () => {
-        it('sets exitCode to 0 on clean exit', () => {
-            jest.useFakeTimers();
-            const exitSpy = jest.spyOn(process, 'exit').mockImplementation(() => undefined as never);
-            const removeListenerSpy = jest.spyOn(process, 'removeListener').mockImplementation(() => process);
-            const onSpy = jest.spyOn(process, 'on').mockImplementation((evt, handler) => {
-                if (evt === 'SIGINT') handler();
-                return process;
-            });
-            cliBase.setupSigint(null, jest.fn());
-            expect(process.exitCode).toBe(0);
-            jest.advanceTimersByTime(2000);
-            exitSpy.mockRestore();
-            removeListenerSpy.mockRestore();
-            onSpy.mockRestore();
-            jest.useRealTimers();
-        });
-
-        it('handles null onExit gracefully', () => {
-            jest.useFakeTimers();
-            const exitSpy = jest.spyOn(process, 'exit').mockImplementation(() => undefined as never);
-            const removeListenerSpy = jest.spyOn(process, 'removeListener').mockImplementation(() => process);
-            const onSpy = jest.spyOn(process, 'on').mockImplementation((evt, handler) => {
-                if (evt === 'SIGINT') handler();
-                return process;
-            });
-            cliBase.setupSigint(null, null);
-            expect(MOCK_PROMPT.info).toHaveBeenCalledWith('Até logo!');
-            expect(process.exitCode).toBe(0);
-            jest.advanceTimersByTime(2000);
-            exitSpy.mockRestore();
-            removeListenerSpy.mockRestore();
-            onSpy.mockRestore();
-            jest.useRealTimers();
         });
     });
 

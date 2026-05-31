@@ -38,7 +38,7 @@ export async function generatePrDescription(m: GitProvider, source: string, targ
             '5. Repeat until the description is complete AND ≤300 words — only then output',
         ].join('\n');
         const user = buildPrompt(sanitizeForLlm(diff), source, target);
-        return await llmPrompt('fast', system, user, 'pr-description');
+        return await llmPrompt({ tier: 'fast', system, user, callerId: 'pr-description' });
     } catch (err) {
         rootLogger.error('Failed to generate PR description: ' + (err as Error).message);
         return '';

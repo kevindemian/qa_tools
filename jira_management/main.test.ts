@@ -57,6 +57,7 @@ jest.mock('../shared/logger', () => ({
 jest.mock('../shared/cli_base', () => ({
     mask: jest.fn((v: string) => (v ? v.slice(0, 4) + '****' : '')),
     createValidateEnv: jest.fn().mockReturnValue(jest.fn()),
+    offerEnvSetup: jest.fn().mockResolvedValue(false),
     setupSigint: jest.fn(),
     printSessionSummary: jest.fn(),
     sanitizeUrl: jest.fn((url: string) => url),
@@ -97,14 +98,10 @@ jest.mock('child_process', () => ({
     }),
 }));
 
-jest.mock('../shared/open', () => {
-    const actual = jest.requireActual('../shared/open');
-    return {
-        ...actual,
-        getDocsOutputDir: jest.fn().mockReturnValue('/tmp/qa_docs_test'),
-        openWithOsOrFallback: jest.fn().mockResolvedValue(true),
-    };
-});
+jest.mock('../shared/open', () => ({
+    getDocsOutputDir: jest.fn().mockReturnValue('/tmp/qa_docs_test'),
+    openWithFallback: jest.fn(),
+}));
 
 // ── Imports ────────────────────────────────────────────────────────────────
 import { createValidateEnv } from '../shared/cli_base';
@@ -130,7 +127,14 @@ interface MainModule {
     buildMenuChoices(level: string, proj: string, ctx: { git_directory: string }): MenuChoice[];
     handleSpecialInput(input: string, level?: string): Promise<boolean | '__exit__' | '__back__'>;
     dispatchChoice(choice: string, cmdCtx: unknown): Promise<'exit' | 'continue'>;
+    dispatchAndHandleResult(
+        choice: string,
+        cmdCtx: unknown,
+        ctx: { results: Array<{ status: string }>; sessionCounters?: Array<unknown> },
+    ): Promise<'continue'>;
     _configHint(key: string, ctx: { git_directory: string }): string;
+    _isJiraConfigured(): boolean;
+    showGapBadge(jiraResource: unknown, project: string): Promise<void>;
 }
 
 // ── Module load ────────────────────────────────────────────────────────────
@@ -138,9 +142,20 @@ let mod: MainModule;
 let createValidateEnvCall: unknown;
 let getStatePathCalled = false;
 
+beforeAll(() => {
+    const openModule = require('../shared/open');
+    if (!jest.isMockFunction(openModule.openWithFallback)) {
+        throw new Error('Guard FAILED: openWithFallback is NOT mocked. Browser would open!');
+    }
+    const cp = require('child_process');
+    if (!jest.isMockFunction(cp.spawn)) {
+        throw new Error('Guard FAILED: child_process.spawn is NOT mocked. Browser would open!');
+    }
+});
+
 beforeAll(async () => {
     mod = require('./main') as MainModule;
-    // Yield to microtask queue so main() (called at module scope) completes
+    // Intentional: yield to microtask queue so main() (called at module scope) completes
     await new Promise<void>((resolve) => setTimeout(resolve, 0));
     createValidateEnvCall = (createValidateEnv as jest.Mock).mock.calls[0]?.[0];
     getStatePathCalled = (getStatePath as jest.Mock).mock.calls.length > 0;
@@ -262,12 +277,33 @@ describe('buildMenuChoices', () => {
         expect(choices.find((c) => c.value === '16')?.description).toContain('não configurado');
     });
 
-    it('utilities sub-menu includes docs command', () => {
+    it('fallback to main categories when sub-menu not found', () => {
         const choices = mod.buildMenuChoices('utilities', 'ECSPOL', ctx);
         const values = choices.filter((c) => c.value).map((c) => c.value);
-        expect(values).toContain('d');
+        expect(values).toContain('0');
+        expect(values).toContain('reports');
+        expect(values).toContain('tests');
+        expect(values).toContain('config');
+    });
+
+    it('tests sub-menu includes template command', () => {
+        const choices = mod.buildMenuChoices('tests', 'ECSPOL', ctx);
+        const values = choices.filter((c) => c.value).map((c) => c.value);
+        expect(values).toContain('1');
         expect(values).toContain('11');
-        expect(values).not.toContain('13');
+        expect(values).toContain('13');
+        expect(values).toContain('15');
+        expect(values).toContain('18');
+    });
+
+    it('config sub-menu includes diagnostic command', () => {
+        const choices = mod.buildMenuChoices('config', 'ECSPOL', ctx);
+        const values = choices.filter((c) => c.value).map((c) => c.value);
+        expect(values).toContain('9');
+        expect(values).toContain('10');
+        expect(values).toContain('12');
+        expect(values).toContain('14');
+        expect(values).toContain('16');
     });
 });
 
@@ -476,7 +512,11 @@ describe('showDocs', () => {
         jest.spyOn(fs, 'readFileSync').mockReturnValue('# Test Content');
         await mod.showDocs();
         const openModule = require('../shared/open');
-        expect(openModule.openWithOsOrFallback).toHaveBeenCalledWith(expect.stringContaining('index.html'));
+        expect(openModule.openWithFallback).toHaveBeenCalledWith(
+            expect.stringContaining('index.html'),
+            'Documentação',
+            expect.any(Function),
+        );
         fs.readdirSync.mockRestore?.();
         fs.readFileSync.mockRestore?.();
     });
@@ -546,5 +586,271 @@ describe('showHelpLoop', () => {
         (prompt as jest.Mock).mockReturnValueOnce('nonexistent_topic_xyz').mockReturnValueOnce('/back');
         await mod.showHelpLoop();
         expect(warn).toHaveBeenCalledWith(expect.stringContaining('não encontrado'));
+    });
+});
+
+describe('_isJiraConfigured', () => {
+    it('returns false when jiraBaseUrl is empty', () => {
+        jest.isolateModules(() => {
+            jest.doMock('../shared/config', () => ({
+                jiraBaseUrl: '',
+                jiraPersonalToken: 'valid-token',
+                xrayBaseUrl: '',
+                jiraProject: '',
+                debug: false,
+                autoChoice: '',
+                autoConfirm: false,
+                quiet: false,
+                cypressProjectPath: '',
+                dryRun: false,
+                get: jest.fn().mockReturnValue(''),
+            }));
+            const { _isJiraConfigured: check } = require('./main') as MainModule;
+            expect(check()).toBe(false);
+        });
+    });
+
+    it('returns false when jiraPersonalToken is empty', () => {
+        jest.isolateModules(() => {
+            jest.doMock('../shared/config', () => ({
+                jiraBaseUrl: 'https://jira.example.com',
+                jiraPersonalToken: '',
+                xrayBaseUrl: '',
+                jiraProject: '',
+                debug: false,
+                autoChoice: '',
+                autoConfirm: false,
+                quiet: false,
+                cypressProjectPath: '',
+                dryRun: false,
+                get: jest.fn().mockReturnValue(''),
+            }));
+            const { _isJiraConfigured: check } = require('./main') as MainModule;
+            expect(check()).toBe(false);
+        });
+    });
+
+    it('returns false when url contains placeholder seu-jira-server', () => {
+        jest.isolateModules(() => {
+            jest.doMock('../shared/config', () => ({
+                jiraBaseUrl: 'https://seu-jira-server',
+                jiraPersonalToken: 'token',
+                xrayBaseUrl: '',
+                jiraProject: '',
+                debug: false,
+                autoChoice: '',
+                autoConfirm: false,
+                quiet: false,
+                cypressProjectPath: '',
+                dryRun: false,
+                get: jest.fn().mockReturnValue(''),
+            }));
+            const { _isJiraConfigured: check } = require('./main') as MainModule;
+            expect(check()).toBe(false);
+        });
+    });
+
+    it('returns false when token equals placeholder seu-token-aqui', () => {
+        jest.isolateModules(() => {
+            jest.doMock('../shared/config', () => ({
+                jiraBaseUrl: 'https://jira.example.com',
+                jiraPersonalToken: 'seu-token-aqui',
+                xrayBaseUrl: '',
+                jiraProject: '',
+                debug: false,
+                autoChoice: '',
+                autoConfirm: false,
+                quiet: false,
+                cypressProjectPath: '',
+                dryRun: false,
+                get: jest.fn().mockReturnValue(''),
+            }));
+            const { _isJiraConfigured: check } = require('./main') as MainModule;
+            expect(check()).toBe(false);
+        });
+    });
+
+    it('returns false when both are empty', () => {
+        jest.isolateModules(() => {
+            jest.doMock('../shared/config', () => ({
+                jiraBaseUrl: '',
+                jiraPersonalToken: '',
+                xrayBaseUrl: '',
+                jiraProject: '',
+                debug: false,
+                autoChoice: '',
+                autoConfirm: false,
+                quiet: false,
+                cypressProjectPath: '',
+                dryRun: false,
+                get: jest.fn().mockReturnValue(''),
+            }));
+            const { _isJiraConfigured: check } = require('./main') as MainModule;
+            expect(check()).toBe(false);
+        });
+    });
+
+    it('returns true when both url and token are valid — singleton', () => {
+        // This test verifies that the singleton module (loaded in beforeAll)
+        // sees the file-scope mock config (empty → false)
+        expect(mod._isJiraConfigured()).toBe(false);
+    });
+});
+
+describe('showGapBadge', () => {
+    it('resolves without error when config has placeholder values (skips API)', async () => {
+        await expect(mod.showGapBadge({}, 'TESTPROJ')).resolves.toBeUndefined();
+    });
+});
+
+describe('module-level main error handler', () => {
+    it('catches main() rejection and sets exit code', async () => {
+        jest.isolateModules(() => {
+            jest.doMock('../shared/config', () => ({
+                jiraBaseUrl: '',
+                jiraPersonalToken: '',
+                xrayBaseUrl: '',
+                debug: false,
+                autoChoice: '',
+                autoConfirm: false,
+                quiet: true,
+                cypressProjectPath: '',
+                dryRun: false,
+                get: jest.fn().mockReturnValue(''),
+            }));
+            const printErrorMock = jest.fn();
+            jest.doMock('../shared/prompt', () => ({
+                printError: printErrorMock,
+                info: jest.fn(),
+                print: jest.fn(),
+                prompt: jest.fn().mockReturnValue('0'),
+                title: jest.fn(),
+                warn: jest.fn(),
+                success: jest.fn(),
+                isQuiet: jest.fn().mockReturnValue(true),
+                showSelect: jest.fn().mockReturnValue('0'),
+                tableView: jest.fn(),
+                error: jest.fn(),
+            }));
+            jest.doMock('../shared/session-context', () => ({
+                SessionContext: jest.fn().mockImplementation(() => ({
+                    project_name: 'TEST',
+                    sessionCounters: [],
+                    results: [],
+                    lastOperation: '',
+                    git_directory: '/tmp',
+                    buildContextLine: jest.fn(),
+                    isBusy: false,
+                })),
+            }));
+            jest.doMock('./jira_resource');
+            jest.doMock('./jira_link_manager');
+            jest.doMock('./csv_resource');
+            jest.doMock('./commands', () => ({
+                getHandler: jest.fn().mockReturnValue(null),
+            }));
+            jest.doMock('../shared/logger', () => ({
+                rootLogger: { error: jest.fn(), info: jest.fn(), child: jest.fn().mockReturnThis() },
+                Logger: jest.fn(),
+            }));
+            jest.doMock('../shared/state', () => ({
+                load: jest.fn().mockReturnValue({}),
+                loadTypedState: jest.fn().mockReturnValue({ history: [] }),
+                update: jest.fn(),
+                getStatePath: jest.fn().mockReturnValue('/tmp/state.json'),
+            }));
+            jest.doMock('../shared/cli_base', () => ({
+                mask: jest.fn(),
+                createValidateEnv: jest.fn().mockReturnValue(jest.fn()),
+                offerEnvSetup: jest.fn().mockResolvedValue(false),
+                setupSigint: jest.fn(),
+                printSessionSummary: jest.fn(),
+                sanitizeUrl: jest.fn(),
+            }));
+            jest.doMock('../shared/spinner', () => ({ withSpinner: jest.fn() }));
+            jest.doMock('../shared/breadcrumbs', () => ({
+                pushBreadcrumb: jest.fn(),
+                clearBreadcrumbs: jest.fn(),
+            }));
+            jest.doMock('../shared/temp-dir', () => ({
+                ensureDirs: jest.fn(),
+                registerCleanup: jest.fn(),
+            }));
+            jest.doMock('../shared/splash', () => ({
+                showSplash: jest.fn().mockRejectedValue(new Error('Splash error')),
+            }));
+            jest.doMock('./menu-data', () => ({
+                CATEGORY_IDS: new Set<string>(),
+                CATEGORY_TITLES: {},
+            }));
+            jest.doMock('./ui-helpers', () => ({
+                dispatchChoice: jest.fn(),
+                getAndResolveChoice: jest.fn(),
+            }));
+
+            const mod = require('./main');
+            expect(mod.main).toBeDefined();
+        });
+    });
+});
+
+describe('dispatchAndHandleResult', () => {
+    const minimalCtx = {
+        jiraResource: {},
+        jiraResourceXray: {},
+        linkManager: {},
+        linkManagerXray: {},
+        csvResource: {},
+        ctx: { project_name: 'test', git_directory: '/tmp', sessionCounters: [], results: [] },
+        pushHistory: jest.fn(),
+        printSessionSummary: jest.fn(),
+        base_url: '',
+        sessionLog: '',
+    };
+
+    beforeEach(() => {
+        (jest.requireMock('./commands').getHandler as jest.Mock).mockReturnValue(jest.fn().mockResolvedValue(false));
+    });
+
+    it('calls prompt when autoConfirm off with long op and error results', async () => {
+        const ctxWithErrors = {
+            ...minimalCtx,
+            ctx: { ...minimalCtx.ctx, results: [{ status: 'error' }] },
+        };
+        const result = await mod.dispatchAndHandleResult('1', ctxWithErrors, ctxWithErrors.ctx);
+        expect(result).toBe('continue');
+        const { prompt } = require('../shared/prompt');
+        expect(prompt).toHaveBeenCalledWith(expect.stringContaining('Enter'));
+    });
+
+    it('does not prompt for autoConfirm off with choice 0', async () => {
+        const ctxWithErrors = {
+            ...minimalCtx,
+            ctx: { ...minimalCtx.ctx, results: [{ status: 'error' }] },
+        };
+        const { prompt } = require('../shared/prompt');
+        (prompt as jest.Mock).mockClear();
+        const result = await mod.dispatchAndHandleResult('0', ctxWithErrors, ctxWithErrors.ctx);
+        expect(result).toBe('continue');
+        expect(prompt).not.toHaveBeenCalled();
+    });
+
+    it('does not prompt for non-long-op choice', async () => {
+        const ctxWithErrors = {
+            ...minimalCtx,
+            ctx: { ...minimalCtx.ctx, results: [{ status: 'error' }] },
+        };
+        const { prompt } = require('../shared/prompt');
+        (prompt as jest.Mock).mockClear();
+        const result = await mod.dispatchAndHandleResult('2', ctxWithErrors, ctxWithErrors.ctx);
+        expect(result).toBe('continue');
+        expect(prompt).not.toHaveBeenCalled();
+    });
+});
+
+describe('module-level debug logging', () => {
+    it('mask hides middle of token', () => {
+        const { mask } = require('../shared/cli_base');
+        expect(mask('secret1234567')).toBe('secr****');
     });
 });

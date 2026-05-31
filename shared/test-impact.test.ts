@@ -7,11 +7,11 @@ jest.mock('./logger', () => ({
     rootLogger: { error: jest.fn(), warn: jest.fn(), info: jest.fn() },
 }));
 
-import { execSync } from 'child_process';
+import { execFileSync } from 'child_process';
 import { existsSync, readFileSync } from 'fs';
-import { analyzeTestImpact } from './test-impact';
+import { analyzeTestImpact, generateTestSelectionJson } from './test-impact';
 
-const mockExecSync = execSync as jest.Mock;
+const mockExecFileSync = execFileSync as jest.Mock;
 const mockExistsSync = existsSync as jest.Mock;
 const mockReadFileSync = readFileSync as jest.Mock;
 
@@ -35,8 +35,8 @@ describe('analyzeTestImpact', () => {
     describe('Tier 1 — jest --findRelatedTests', () => {
         it('returns high confidence when jest finds tests', () => {
             mockPackageJson(true);
-            mockExecSync.mockImplementation((cmd: string) => {
-                if (cmd.includes('jest --listTests')) {
+            mockExecFileSync.mockImplementation((_cmd: string, args: string[]) => {
+                if (args.includes('--listTests')) {
                     return '/path/to/login.test.ts\n/path/to/auth.test.ts';
                 }
                 return '';
@@ -52,9 +52,9 @@ describe('analyzeTestImpact', () => {
 
         it('generates suggested command when jest is available', () => {
             mockPackageJson(true);
-            mockExecSync.mockImplementation((cmd: string) => {
-                if (cmd.includes('jest --listTests')) {
-                    return 'login.test.ts';
+            mockExecFileSync.mockImplementation((_cmd: string, args: string[]) => {
+                if (args.includes('--listTests')) {
+                    return '/path/to/login.test.ts\n/path/to/auth.test.ts';
                 }
                 return '';
             });
@@ -122,8 +122,8 @@ describe('analyzeTestImpact', () => {
                 if (p.includes('test-mapping.json')) return true;
                 return false;
             });
-            mockExecSync.mockImplementation((cmd: string) => {
-                if (cmd.includes('jest --listTests')) {
+            mockExecFileSync.mockImplementation((_cmd: string, args: string[]) => {
+                if (args.includes('--listTests')) {
                     return '/path/to/login.test.ts\n/path/to/auth.test.ts';
                 }
                 return '';
@@ -187,7 +187,7 @@ describe('analyzeTestImpact', () => {
 
         it('handles error when git diff fails', () => {
             mockExistsSync.mockReturnValue(false);
-            mockExecSync.mockImplementation(() => {
+            mockExecFileSync.mockImplementation(() => {
                 throw new Error('fatal: not a git repository');
             });
 
@@ -221,7 +221,7 @@ describe('analyzeTestImpact', () => {
     describe('git diff parsing', () => {
         it('runs git diff when no diff argument provided', () => {
             mockPackageJson(false);
-            mockExecSync.mockReturnValue('src/file1.ts\nsrc/file2.ts\n');
+            mockExecFileSync.mockReturnValue('src/file1.ts\nsrc/file2.ts\n');
 
             const result = analyzeTestImpact();
             expect(result.changedFiles).toEqual(['src/file1.ts', 'src/file2.ts']);
@@ -231,8 +231,8 @@ describe('analyzeTestImpact', () => {
     describe('confidence labeling', () => {
         it('sets high when jest found tests', () => {
             mockPackageJson(true);
-            mockExecSync.mockImplementation((cmd: string) => {
-                if (cmd.includes('jest --listTests')) return 'test.test.ts';
+            mockExecFileSync.mockImplementation((_cmd: string, args: string[]) => {
+                if (args.includes('--listTests')) return 'test.test.ts';
                 return '';
             });
             const result = analyzeTestImpact('src/file.ts');
@@ -281,5 +281,81 @@ describe('analyzeTestImpact', () => {
             const result = analyzeTestImpact('src/unknown.ts');
             expect(result.confidence).toBe('low');
         });
+    });
+});
+
+describe('generateTestSelectionJson', () => {
+    it('returns serialisable JSON from a TestImpactResult', () => {
+        const result = {
+            changedFiles: ['src/login.ts'],
+            impactedTests: [
+                {
+                    title: 'Login test',
+                    testKey: 'PROJ-42',
+                    reason: 'Jest --findRelatedTests: login.test.ts',
+                    matchMode: 'jest_find_related' as const,
+                    filePattern: 'login.test.ts',
+                },
+            ],
+            unaffected: { total: 0, skippedDueTo: [] },
+            suggestedCommand: 'npx jest --findRelatedTests src/login.ts',
+            confidence: 'high' as const,
+        };
+
+        const json = generateTestSelectionJson(result);
+        expect(json.changedFiles).toEqual(['src/login.ts']);
+        expect(json.impactedTests).toHaveLength(1);
+        expect(json.impactedTests[0]!.title).toBe('Login test');
+        expect(json.impactedTests[0]!.testKey).toBe('PROJ-42');
+        expect(json.impactedTests[0]!.matchMode).toBe('jest_find_related');
+        expect(json.suggestedCommand).toBe('npx jest --findRelatedTests src/login.ts');
+        expect(json.confidence).toBe('high');
+        expect(json.conservative).toBe(false);
+        expect(json.smokeTests).toEqual([]);
+        expect(json.generatedAt).toBeTruthy();
+    });
+
+    it('sets conservative and smokeTests when options provided', () => {
+        const result = {
+            changedFiles: ['src/api.ts'],
+            impactedTests: [],
+            unaffected: { total: 0, skippedDueTo: [] },
+            confidence: 'low' as const,
+        };
+
+        const json = generateTestSelectionJson(result, {
+            conservative: true,
+            smokeTests: ['smoke-health', 'smoke-auth'],
+        });
+        expect(json.conservative).toBe(true);
+        expect(json.smokeTests).toEqual(['smoke-health', 'smoke-auth']);
+    });
+
+    it('handles empty impact gracefully', () => {
+        const result = {
+            changedFiles: [],
+            impactedTests: [],
+            unaffected: { total: 0, skippedDueTo: [] },
+            confidence: 'low' as const,
+        };
+        const json = generateTestSelectionJson(result);
+        expect(json.changedFiles).toEqual([]);
+        expect(json.impactedTests).toEqual([]);
+        expect(json.confidence).toBe('low');
+    });
+
+    it('includes confidence and metadata fields', () => {
+        const result = {
+            changedFiles: ['src/a.ts'],
+            impactedTests: [
+                { title: 'Test A', reason: 'mapping', matchMode: 'mapping' as const, filePattern: 'src/a.ts' },
+            ],
+            unaffected: { total: 0, skippedDueTo: [] },
+            confidence: 'high' as const,
+        };
+        const json = generateTestSelectionJson(result);
+        expect(json.confidence).toBe('high');
+        expect(json.impactedTests[0]!.filePattern).toBe('src/a.ts');
+        expect(json.impactedTests[0]!.matchMode).toBe('mapping');
     });
 });

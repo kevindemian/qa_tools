@@ -63,7 +63,7 @@ jest.mock('../shared/bug-report', () => ({
     fileToJira: jest.fn(() => 'BUG-1'),
 }));
 
-jest.mock('../jira_management/jira_resource', () => ({
+jest.mock('../shared/jira-client', () => ({
     __esModule: true,
     default: jest.fn().mockImplementation(() => ({
         postJiraResource: jest.fn().mockResolvedValue({ key: 'BUG-1' }),
@@ -359,14 +359,13 @@ describe('createTestExecution', () => {
         const testResults = require('./test-results');
         (testResults.createTestExecution as jest.Mock).mockResolvedValue(undefined);
         await expect(
-            createTestExecution(
-                [],
-                'csv',
-                { base: 'https://jira.com', token: 'tok', xray: 'xray' },
-                'proj',
-                '1',
-                'main',
-            ),
+            createTestExecution({
+                matched: [],
+                csvName: 'csv',
+                projectName: 'proj',
+                pipelineId: '1',
+                branch: 'main',
+            }),
         ).resolves.toBeUndefined();
         expect(testResults.createTestExecution).toHaveBeenCalled();
     });

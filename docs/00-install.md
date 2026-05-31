@@ -159,6 +159,34 @@ Comportamento comum:
 
 ---
 
+## Modo Batch
+
+> Execução não-interativa para pipelines CI/CD. Útil quando você precisa disparar pipeline, coletar resultados, analisar falhas e gerar dashboard de flakiness em um único comando, sem prompts.
+
+```bash
+# Disparar pipeline no projeto padrão, branch main
+npx tsx git_triggers/main.ts --batch
+
+# Projeto e branch específicos
+npx tsx git_triggers/main.ts --batch --project qa_ibabs --branch release/v2
+```
+
+**Flags disponíveis:**
+
+| Flag                   | Descrição                                               |
+| ---------------------- | ------------------------------------------------------- |
+| `--batch` ou `--auto`  | Ativa modo batch (implica `AUTO_CONFIRM=true`)          |
+| `--project` / `-p`     | Nome do projeto (fallback: primeiro do `projects.json`) |
+| `--branch` / `-b`      | Branch para disparo (fallback: `main`)                  |
+| `--run-impacted-tests` | Seleciona testes impactados pelo diff para execução     |
+| `--conservative`       | Modo conservador: smoke obrigatórios + testes afetados  |
+
+O batch mode executa o pipeline, faz polling até conclusão, coleta resultados, oferece análise IA de falhas (se houver), gera dashboard de flakiness, executa auto-actions para testes flaky e exibe resumo da sessão.
+
+> Consulte [`docs/03-git-triggers.md`](03-git-triggers.md) para documentação completa do batch mode e flags avançadas.
+
+---
+
 ## Verificação
 
 ```bash

@@ -117,15 +117,15 @@ describe('createTestExecution', () => {
         });
         jiraResource.postJiraResource.mockResolvedValue({ key: 'EXEC-1', id: '999' });
 
-        const result = await createTestExecution(
+        const result = await createTestExecution({
             jiraResource,
             linkManager,
-            PROJECT,
-            ['TEST-1', 'TEST-2'],
-            'meus-testes',
-        );
+            projectName: PROJECT,
+            testKeys: ['TEST-1', 'TEST-2'],
+            csvName: 'meus-testes',
+        });
 
-        expect(result.key).toBe('EXEC-1');
+        expect(result!.key).toBe('EXEC-1');
         expect(jiraResource.getJiraResource).toHaveBeenCalledWith('issuetype');
         expect(jiraResource.getJiraResource).toHaveBeenCalledWith('field');
         expect(jiraResource.postJiraResource).toHaveBeenCalledWith('issue', {
@@ -146,9 +146,15 @@ describe('createTestExecution', () => {
         });
         jiraResource.postJiraResource.mockResolvedValue({ key: 'EXEC-2' });
 
-        const result = await createTestExecution(jiraResource, linkManager, PROJECT, ['TEST-3'], '');
+        const result = await createTestExecution({
+            jiraResource,
+            linkManager,
+            projectName: PROJECT,
+            testKeys: ['TEST-3'],
+            csvName: '',
+        });
 
-        expect(result.key).toBe('EXEC-2');
+        expect(result!.key).toBe('EXEC-2');
         expect(jiraResource.postJiraResource).toHaveBeenCalledWith('issue', {
             fields: {
                 project: { key: PROJECT },
@@ -159,53 +165,55 @@ describe('createTestExecution', () => {
         });
     });
 
-    it('throws when issuetype not found', async () => {
+    it('returns null when issuetype not found', async () => {
         jiraResource.getJiraResource.mockResolvedValue([
             { id: '11200', name: 'Epic' },
             { id: '11800', name: 'Test' },
         ]);
 
-        await expect(createTestExecution(jiraResource, linkManager, PROJECT, ['TEST-1'], '')).rejects.toThrow(
-            'Issue type "Test Execution" não encontrado',
-        );
+        await expect(
+            createTestExecution({ jiraResource, linkManager, projectName: PROJECT, testKeys: ['TEST-1'], csvName: '' }),
+        ).resolves.toBeNull();
     });
 
-    it('throws when custom field not found', async () => {
+    it('returns null when custom field not found', async () => {
         jiraResource.getJiraResource.mockImplementation((url: string) => {
             if (url === 'issuetype') return Promise.resolve(MOCK_ISSUE_TYPES);
             if (url === 'field') return Promise.resolve([]);
             return Promise.reject(new Error('unexpected url: ' + url));
         });
 
-        await expect(createTestExecution(jiraResource, linkManager, PROJECT, ['TEST-1'], '')).rejects.toThrow(
-            'Campo "Tests association with a Test Execution" não encontrado',
-        );
+        await expect(
+            createTestExecution({ jiraResource, linkManager, projectName: PROJECT, testKeys: ['TEST-1'], csvName: '' }),
+        ).resolves.toBeNull();
     });
 
     it('throws when issuetype API fails', async () => {
         jiraResource.getJiraResource.mockRejectedValue(new Error('API error'));
 
-        await expect(createTestExecution(jiraResource, linkManager, PROJECT, ['TEST-1'], '')).rejects.toThrow();
+        await expect(
+            createTestExecution({ jiraResource, linkManager, projectName: PROJECT, testKeys: ['TEST-1'], csvName: '' }),
+        ).rejects.toThrow();
     });
 
-    it('throws when field API returns non-array', async () => {
+    it('returns null when field API returns non-array', async () => {
         jiraResource.getJiraResource.mockImplementation((url: string) => {
             if (url === 'issuetype') return Promise.resolve(MOCK_ISSUE_TYPES);
             if (url === 'field') return Promise.resolve(null);
             return Promise.reject(new Error('unexpected url: ' + url));
         });
 
-        await expect(createTestExecution(jiraResource, linkManager, PROJECT, ['TEST-1'], '')).rejects.toThrow(
-            'Falha ao obter campos customizados',
-        );
+        await expect(
+            createTestExecution({ jiraResource, linkManager, projectName: PROJECT, testKeys: ['TEST-1'], csvName: '' }),
+        ).resolves.toBeNull();
     });
 
-    it('throws when issuetype API returns non-array', async () => {
+    it('returns null when issuetype API returns non-array', async () => {
         jiraResource.getJiraResource.mockResolvedValue(null);
 
-        await expect(createTestExecution(jiraResource, linkManager, PROJECT, ['TEST-1'], '')).rejects.toThrow(
-            'Falha ao obter tipos de issue',
-        );
+        await expect(
+            createTestExecution({ jiraResource, linkManager, projectName: PROJECT, testKeys: ['TEST-1'], csvName: '' }),
+        ).resolves.toBeNull();
     });
 
     it('accepts titleOverride as 5th param', async () => {
@@ -216,13 +224,20 @@ describe('createTestExecution', () => {
         });
         jiraResource.postJiraResource.mockResolvedValue({ key: 'EXEC-3' });
 
-        const result = await createTestExecution(jiraResource, linkManager, PROJECT, ['TEST-1'], '', 'Custom Title');
+        const result = await createTestExecution({
+            jiraResource,
+            linkManager,
+            projectName: PROJECT,
+            testKeys: ['TEST-1'],
+            csvName: '',
+            titleOverride: 'Custom Title',
+        });
         expect(jiraResource.postJiraResource).toHaveBeenCalledWith('issue', {
             fields: expect.objectContaining({
                 summary: 'Custom Title',
             }),
         });
-        expect(result.key).toBe('EXEC-3');
+        expect(result!.key).toBe('EXEC-3');
     });
 });
 
@@ -263,16 +278,16 @@ describe('createTestExecutionWithLinks', () => {
         jiraResource.postJiraResource.mockResolvedValue({ key: 'EXEC-1' });
         linkJiraRes.postJiraResource.mockResolvedValue({});
 
-        const result = await createTestExecutionWithLinks(
+        const result = await createTestExecutionWithLinks({
             jiraResource,
             linkManager,
-            PROJECT,
-            ['TEST-1', 'TEST-2'],
-            'meus-testes',
-            {},
-        );
+            projectName: PROJECT,
+            testKeys: ['TEST-1', 'TEST-2'],
+            csvName: 'meus-testes',
+            execOpts: {},
+        });
 
-        expect(result.key).toBe('EXEC-1');
+        expect(result!.key).toBe('EXEC-1');
         expect(linkJiraRes.postJiraResource).toHaveBeenCalledWith('issueLink', {
             type: { id: '10201' },
             inwardIssue: { key: 'EXEC-1' },
@@ -295,7 +310,14 @@ describe('createTestExecutionWithLinks', () => {
         jiraResource.postJiraResource.mockResolvedValue({ key: 'EXEC-1' });
         linkJiraRes.postJiraResource.mockResolvedValue({});
 
-        await createTestExecutionWithLinks(jiraResource, linkManager, PROJECT, ['TEST-1', 'TEST-2'], '', {});
+        await createTestExecutionWithLinks({
+            jiraResource,
+            linkManager,
+            projectName: PROJECT,
+            testKeys: ['TEST-1', 'TEST-2'],
+            csvName: '',
+            execOpts: {},
+        });
 
         // eslint-disable-next-line @typescript-eslint/no-explicit-any -- accessing mock calls on replaced method
         const linkCalls = linkJiraRes.postJiraResource.mock.calls.filter((c: any) => c[0] === 'issueLink');
@@ -313,9 +335,16 @@ describe('createTestExecutionWithLinks', () => {
         jiraResource.postJiraResource.mockResolvedValue({ key: 'EXEC-1' });
         linkJiraRes.postJiraResource.mockRejectedValue(new Error('Link failed'));
 
-        const result = await createTestExecutionWithLinks(jiraResource, linkManager, PROJECT, ['TEST-1'], '', {});
+        const result = await createTestExecutionWithLinks({
+            jiraResource,
+            linkManager,
+            projectName: PROJECT,
+            testKeys: ['TEST-1'],
+            csvName: '',
+            execOpts: {},
+        });
 
-        expect(result.key).toBe('EXEC-1');
+        expect(result!.key).toBe('EXEC-1');
     });
 });
 
@@ -410,7 +439,7 @@ describe('generateMappingFiles', () => {
         expect(json.tests[0].steps[0].Action).toBe('Click login');
     });
 
-    it('generates MD with full table for each test', () => {
+    it('generates MD with full steps for each test', () => {
         const base = nextBase();
         // eslint-disable-next-line @typescript-eslint/no-explicit-any -- test data may be partial TestCase
         const testCases: any = [
@@ -422,7 +451,9 @@ describe('generateMappingFiles', () => {
         const mdLines = md.split('\n');
         expect(md).toContain('## TEST-1 — TC1');
         expect(md).toContain('**Description:** Descricao do TC1');
-        expect(md).toContain('| 1 | a1 |  |  |');
+        expect(md).toContain('### Steps');
+        expect(md).toContain('**Step 1**');
+        expect(md).toContain('- **Action:** a1');
         expect(md).toContain('## TEST-2 — TC2');
         const tc2Section = mdLines.indexOf('## TEST-2 — TC2');
         const tc2Block = md.slice(md.indexOf('## TEST-2 — TC2'), md.indexOf('\n---\n\n', tc2Section));

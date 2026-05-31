@@ -77,17 +77,18 @@ async function getSteps(issueKey: string): Promise<unknown[]> {
 }
 
 // ── Fase 1: Diagnóstico ────────────────────────────────────────
-async function fase1Diagnostico() {
-    section('FASE 1 — Diagnóstico');
-
+async function checkAuthentication(): Promise<boolean> {
     try {
         const myself = await jiraResource.getJiraResource<{ displayName: string; emailAddress: string }>('myself');
         ok(`Autenticado como: ${myself.displayName} (${myself.emailAddress})`);
+        return true;
     } catch (e: unknown) {
         fail('Autenticação Jira', (e as Error).message);
         return false;
     }
+}
 
+async function readExistingTest(): Promise<boolean> {
     try {
         const issue = await getIssueRaw(EXISTING_TEST);
         const f = issue.fields as Record<string, unknown> | undefined;
@@ -104,18 +105,23 @@ async function fase1Diagnostico() {
         if ((f.customfield_13708 as string[])?.includes(EXISTING_PRECOND))
             ok(`Pre-condition ${EXISTING_PRECOND} linkada`);
         else fail(`Pre-condition não encontrada`);
+        return true;
     } catch (e: unknown) {
         fail(`Ler ${EXISTING_TEST}`, (e as Error).message);
         return false;
     }
+}
 
+async function checkTestSteps(): Promise<void> {
     try {
         const steps = await getSteps(EXISTING_TEST);
         ok(`Steps: ${steps.length} steps em ${EXISTING_TEST}`);
     } catch (e: unknown) {
         fail(`Ler steps de ${EXISTING_TEST}`, (e as Error).message);
     }
+}
 
+async function checkPrecondition(): Promise<void> {
     try {
         const prec = await getIssueRaw(EXISTING_PRECOND);
         const precFields = prec.fields as Record<string, unknown>;
@@ -123,41 +129,44 @@ async function fase1Diagnostico() {
     } catch (e: unknown) {
         fail(`Ler ${EXISTING_PRECOND}`, (e as Error).message);
     }
+}
 
+async function checkProject(): Promise<void> {
     try {
         const projectData = await jiraResource.getJiraResource<{ id: string; name: string }>(`project/${PROJECT}`);
         ok(`Projeto ${PROJECT} OK (id=${projectData.id})`);
     } catch (e: unknown) {
         fail(`Projeto ${PROJECT}`, (e as Error).message);
     }
+}
+
+async function fase1Diagnostico() {
+    section('FASE 1 — Diagnóstico');
+
+    if (!(await checkAuthentication())) return false;
+    if (!(await readExistingTest())) return false;
+    await checkTestSteps();
+    await checkPrecondition();
+    await checkProject();
 
     return true;
 }
 
 // ── Fase 2: Update + Rollback ──────────────────────────────────
-async function fase2UpdateRollback() {
-    section('FASE 2 — Update + Rollback ECSPOL-1255');
-
-    const testDesc = `[E2E TEST] Modificado em ${new Date().toISOString()} — será revertido em segundos.`;
-
-    // Salvar description original (já salva em fase1, mas vamos confirmar)
-    if (!originalDescription) {
-        // already saved in fase1
-        return;
-    }
-
-    // Update
+async function updateDescription(testDesc: string): Promise<boolean> {
     try {
         await jiraResource.putJiraResource(`issue/${EXISTING_TEST}`, {
             fields: { description: testDesc },
         });
         ok(`PUT description = "${testDesc}"`);
+        return true;
     } catch (e: unknown) {
         fail('PUT description', (e as Error).message);
-        return;
+        return false;
     }
+}
 
-    // Verificar
+async function verifyUpdateApplied(testDesc: string): Promise<void> {
     try {
         const issue2 = await getIssueRaw(EXISTING_TEST);
         const f2 = issue2.fields as Record<string, unknown>;
@@ -167,18 +176,20 @@ async function fase2UpdateRollback() {
     } catch (e: unknown) {
         fail('GET após update', (e as Error).message);
     }
+}
 
-    // Rollback
+async function rollbackDescription(): Promise<void> {
     try {
         await jiraResource.putJiraResource(`issue/${EXISTING_TEST}`, {
-            fields: { description: originalDescription },
+            fields: { description: originalDescription ?? '' },
         });
-        ok(`Rollback description = "${originalDescription.slice(0, 80)}..."`);
+        ok(`Rollback description = "${(originalDescription ?? '').slice(0, 80)}..."`);
     } catch (e: unknown) {
         fail('Rollback PUT', (e as Error).message);
     }
+}
 
-    // Confirmar rollback
+async function verifyRollbackApplied(): Promise<void> {
     try {
         const issue3 = await getIssueRaw(EXISTING_TEST);
         const f3 = issue3.fields as Record<string, unknown>;
@@ -188,6 +199,20 @@ async function fase2UpdateRollback() {
     } catch (e: unknown) {
         fail('GET após rollback', (e as Error).message);
     }
+}
+
+async function fase2UpdateRollback() {
+    section('FASE 2 — Update + Rollback ECSPOL-1255');
+
+    if (!originalDescription) return;
+
+    const testDesc = `[E2E TEST] Modificado em ${new Date().toISOString()} — será revertido em segundos.`;
+
+    if (await updateDescription(testDesc)) {
+        await verifyUpdateApplied(testDesc);
+    }
+    await rollbackDescription();
+    await verifyRollbackApplied();
 }
 
 // ── Fase 3: Criar CSV + Test Case ──────────────────────────────
@@ -262,9 +287,16 @@ async function fase4CriarTestExecution() {
 
     try {
         const timestamp = new Date().toISOString().slice(0, 16).replace('T', ' ');
-        const result = await createTestExecutionWithLinks(jiraResource, linkManager, PROJECT, testKeys, 'E2E-Smoke', {
-            title: `E2E Smoke - ${timestamp}`,
-            description: 'Teste automatizado e2e - qa_tools',
+        const result = await createTestExecutionWithLinks({
+            jiraResource,
+            linkManager,
+            projectName: PROJECT,
+            testKeys,
+            csvName: 'E2E-Smoke',
+            execOpts: {
+                title: `E2E Smoke - ${timestamp}`,
+                description: 'Teste automatizado e2e - qa_tools',
+            },
         });
         if (result && result.key) {
             createdTestExecKey = result.key;
@@ -285,71 +317,74 @@ async function fase4CriarTestExecution() {
 }
 
 // ── Fase 5: Verificação ────────────────────────────────────────
+async function verifyNewTestCase(): Promise<boolean> {
+    if (!createdIssueKey) return true;
+
+    try {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const issue: any = await getIssueRaw(createdIssueKey);
+        const f = issue.fields as Record<string, unknown> | undefined;
+        if (!f) {
+            fail('issue.fields missing');
+            return false;
+        }
+        ok(`${createdIssueKey} existe, type=${(f.issuetype as Record<string, string>)?.name}`);
+        if ((f.labels as string[])?.includes(LABEL)) ok(`Label "${LABEL}" presente`);
+        else fail(`Label "${LABEL}" ausente`);
+        if ((f.customfield_13708 as string[])?.includes(EXISTING_PRECOND))
+            ok(`Pre-condition ${EXISTING_PRECOND} linkada`);
+        else fail(`Pre-condition ausente`);
+        console.log(`  Summary: ${f.summary as string}`);
+        console.log(`  Description: ${((f.description as string) || '').slice(0, 100)}`);
+
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const steps: any[] = (await getSteps(createdIssueKey)) as any[];
+        ok(`Steps: ${steps.length} steps`);
+        for (const s of steps) {
+            const a = s.fields?.Action?.value?.raw || '';
+            const e = s.fields?.['Expected Result']?.value?.raw || '';
+            console.log(`    Step ${s.index}: ${a} → ${e}`);
+        }
+        return true;
+    } catch (e: unknown) {
+        fail(`Verificar ${createdIssueKey}`, (e as Error).message);
+        return false;
+    }
+}
+
+async function verifyTestExecution(): Promise<boolean> {
+    if (!createdTestExecKey) return true;
+
+    try {
+        const te = await jiraResource.getJiraResource<{
+            fields: {
+                summary: string;
+                issuelinks?: Array<{ outwardIssue?: { key: string } }>;
+            };
+        }>(`issue/${createdTestExecKey}?fields=summary,issuelinks`);
+
+        const links = te.fields?.issuelinks || [];
+        const linkedKeys = links.map((l) => l.outwardIssue?.key).filter(Boolean);
+        ok(`TE ${createdTestExecKey} criada: "${te.fields?.summary}"`);
+        ok(`TE contém ${linkedKeys.length} link(s): ${linkedKeys.join(', ')}`);
+        const found1255 = linkedKeys.includes(EXISTING_TEST);
+        const foundNew = createdIssueKey ? linkedKeys.includes(createdIssueKey) : false;
+        if (found1255) ok(`TE contém ${EXISTING_TEST}`);
+        else fail(`TE não contém ${EXISTING_TEST}`);
+        if (foundNew) ok(`TE contém ${createdIssueKey}`);
+        return true;
+    } catch (e: unknown) {
+        fail(`Verificar ${createdTestExecKey}`, (e as Error).message);
+        return false;
+    }
+}
+
 async function fase5Verificar() {
     section('FASE 5 — Verificação Final');
 
     let allOk = true;
-
-    // Verificar novo test case
-    if (createdIssueKey) {
-        try {
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            const issue: any = await getIssueRaw(createdIssueKey);
-            const f = issue.fields as Record<string, unknown> | undefined;
-            if (!f) {
-                fail('issue.fields missing');
-                allOk = false;
-                return allOk;
-            }
-            ok(`${createdIssueKey} existe, type=${(f.issuetype as Record<string, string>)?.name}`);
-            if ((f.labels as string[])?.includes(LABEL)) ok(`Label "${LABEL}" presente`);
-            else fail(`Label "${LABEL}" ausente`);
-            if ((f.customfield_13708 as string[])?.includes(EXISTING_PRECOND))
-                ok(`Pre-condition ${EXISTING_PRECOND} linkada`);
-            else fail(`Pre-condition ausente`);
-            console.log(`  Summary: ${f.summary as string}`);
-            console.log(`  Description: ${((f.description as string) || '').slice(0, 100)}`);
-
-            // Verificar steps
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            const steps: any[] = (await getSteps(createdIssueKey)) as any[];
-            ok(`Steps: ${steps.length} steps`);
-            for (const s of steps) {
-                const a = s.fields?.Action?.value?.raw || '';
-                const e = s.fields?.['Expected Result']?.value?.raw || '';
-                console.log(`    Step ${s.index}: ${a} → ${e}`);
-            }
-        } catch (e: unknown) {
-            fail(`Verificar ${createdIssueKey}`, (e as Error).message);
-            allOk = false;
-        }
-    }
-
-    // Verificar Test Execution
-    if (createdTestExecKey) {
-        try {
-            const te = await jiraResource.getJiraResource<{
-                fields: {
-                    summary: string;
-                    issuelinks?: Array<{ outwardIssue?: { key: string } }>;
-                };
-            }>(`issue/${createdTestExecKey}?fields=summary,issuelinks`);
-
-            const links = te.fields?.issuelinks || [];
-            const linkedKeys = links.map((l) => l.outwardIssue?.key).filter(Boolean);
-            ok(`TE ${createdTestExecKey} criada: "${te.fields?.summary}"`);
-            ok(`TE contém ${linkedKeys.length} link(s): ${linkedKeys.join(', ')}`);
-            const found1255 = linkedKeys.includes(EXISTING_TEST);
-            const foundNew = createdIssueKey ? linkedKeys.includes(createdIssueKey) : false;
-            if (found1255) ok(`TE contém ${EXISTING_TEST}`);
-            else fail(`TE não contém ${EXISTING_TEST}`);
-            if (foundNew) ok(`TE contém ${createdIssueKey}`);
-        } catch (e: unknown) {
-            fail(`Verificar ${createdTestExecKey}`, (e as Error).message);
-            allOk = false;
-        }
-    }
-
+    if (!(await verifyNewTestCase())) allOk = false;
+    if (!(await verifyTestExecution())) allOk = false;
     return allOk;
 }
 

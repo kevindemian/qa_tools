@@ -77,7 +77,7 @@ async function fetchLinkedTestsBatch(
                 const linkedKey = inward?.key === testKey ? outward?.key : inward?.key;
                 if (typeof linkedKey === 'string' && issueKeys.includes(linkedKey)) {
                     if (!linkMap.has(linkedKey)) linkMap.set(linkedKey, []);
-                    linkMap.get(linkedKey)!.push(testKey);
+                    linkMap.get(linkedKey)?.push(testKey);
                 }
             }
         }
@@ -105,7 +105,17 @@ function createEpicNode(item: CoverageGapItem, epicNodes: Map<string, CoverageHi
             coveragePct: 0,
         });
     }
-    return epicNodes.get(item.issueKey)!;
+    return (
+        epicNodes.get(item.issueKey) ?? {
+            key: item.issueKey,
+            summary: item.summary,
+            type: 'Epic',
+            children: [],
+            totalIssues: 0,
+            coveredIssues: 0,
+            coveragePct: 0,
+        }
+    );
 }
 
 function createChildNode(item: CoverageGapItem): CoverageHierarchyNode {
@@ -149,7 +159,7 @@ function buildHierarchy(items: CoverageGapItem[]): CoverageHierarchyNode[] {
         const node = createChildNode(item);
         if (item.epicKey && epicNodes.has(item.epicKey)) {
             if (!epicChildMap.has(item.epicKey)) epicChildMap.set(item.epicKey, []);
-            epicChildMap.get(item.epicKey)!.push(node);
+            epicChildMap.get(item.epicKey)?.push(node);
         } else {
             rootNodes.push(node);
         }

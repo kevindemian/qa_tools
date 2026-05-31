@@ -157,7 +157,7 @@ describe('reviewWithLlm', () => {
             .mockResolvedValueOnce('AGREE - Good.');
 
         await reviewWithLlm('system prompt text', 'user data');
-        const retrySystemArg = mockLlmPrompt.mock.calls[1]![1];
+        const retrySystemArg = mockLlmPrompt.mock.calls[1]![0].system;
         expect(retrySystemArg).toContain('validation');
         expect(retrySystemArg).toContain(JSON.stringify(invalidParsedReport));
     });

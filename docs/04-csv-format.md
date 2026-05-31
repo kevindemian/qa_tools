@@ -89,6 +89,7 @@ Group: LOGIN-FLOW
 ```
 
 Identificador para agrupar testes. Útil para:
+
 - Organização lógica
 - Cross-reference de `Pre-condition` entre testes do mesmo grupo
 
@@ -110,11 +111,11 @@ Clicar em Entrar,,Redirecionado para dashboard
 
 Colunas:
 
-| Coluna | Obrigatório | Descrição |
-|--------|-------------|-----------|
-| `Action` | Sim | Ação a ser executada |
-| `Data` | Não | Dados de entrada (vazio se omitido) |
-| `Expected Result` | Não | Resultado esperado |
+| Coluna            | Obrigatório | Descrição                           |
+| ----------------- | ----------- | ----------------------------------- |
+| `Action`          | Sim         | Ação a ser executada                |
+| `Data`            | Não         | Dados de entrada (vazio se omitido) |
+| `Expected Result` | Não         | Resultado esperado                  |
 
 ### Generic Step
 
@@ -153,21 +154,21 @@ Um arquivo modelo completo está disponível na raiz do projeto:
 test_steps_template.csv
 ```
 
-Ele pode ser copiado automaticamente via **opção 11** do menu (`Gerar template CSV`).
+Ele pode ser copiado automaticamente via **opção 11** no menu (`GERAÇÃO DE CASOS DE TESTE → Gerar template CSV/JSON`).
 
 ## Regras Importantes
 
-| Regra | Descrição |
-|-------|-----------|
-| **Title obrigatório** | Bloco sem `Title` é ignorado com warning |
-| **Expected Result vazio** | Step classificado como "generic step" |
-| **Pre-condition via Group** | Se a pre-condition referencia um `Title` de outro bloco com mesmo `Group`, o vínculo é resolvido automaticamente |
-| **Labels** | Podem ser passadas via variável de ambiente `CSV_LABELS` (separadas por vírgula, ex: `qa,regression,smoke`) ou informadas via prompt durante a execução |
-| **Chave vs. texto** | Pre-condition que corresponde ao padrão `/^[A-Z][A-Z0-9]+(?:-[A-Z0-9]+)*-\d+$/` é tratada como referência Jira; caso contrário, como texto inline |
-| **Aspas duplas** | Use `"valor, com vírgula"` para valores com vírgula; `""` para aspas literais |
-| **Codificação** | UTF-8 sem BOM |
-| **Separador** | Vírgula (`,`) |
-| **Linhas comentário** | Linhas iniciando com `#` são ignoradas |
+| Regra                       | Descrição                                                                                                                                               |
+| --------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Title obrigatório**       | Bloco sem `Title` é ignorado com warning                                                                                                                |
+| **Expected Result vazio**   | Step classificado como "generic step"                                                                                                                   |
+| **Pre-condition via Group** | Se a pre-condition referencia um `Title` de outro bloco com mesmo `Group`, o vínculo é resolvido automaticamente                                        |
+| **Labels**                  | Podem ser passadas via variável de ambiente `CSV_LABELS` (separadas por vírgula, ex: `qa,regression,smoke`) ou informadas via prompt durante a execução |
+| **Chave vs. texto**         | Pre-condition que corresponde ao padrão `/^[A-Z][A-Z0-9]+(?:-[A-Z0-9]+)*-\d+$/` é tratada como referência Jira; caso contrário, como texto inline       |
+| **Aspas duplas**            | Use `"valor, com vírgula"` para valores com vírgula; `""` para aspas literais                                                                           |
+| **Codificação**             | UTF-8 sem BOM                                                                                                                                           |
+| **Separador**               | Vírgula (`,`)                                                                                                                                           |
+| **Linhas comentário**       | Linhas iniciando com `#` são ignoradas                                                                                                                  |
 
 ---
 

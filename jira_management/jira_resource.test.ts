@@ -42,6 +42,7 @@ jest.mock('../shared/prompt', () => ({
 }));
 
 import JiraResource from './jira_resource';
+import { formatDateISO } from '../shared/date-utils';
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -745,7 +746,7 @@ describe('releaseVersion', () => {
         jest.spyOn(jiraResource, 'getVersionId').mockResolvedValueOnce('v-1');
         jest.spyOn(jiraResource, 'checkReleaseTasksStatus').mockResolvedValueOnce(true);
         mockClient.put.mockResolvedValue({ data: {}, status: 200 });
-        const today = new Date().toISOString().split('T')[0];
+        const today = formatDateISO();
 
         await jiraResource.releaseVersion('TEST', 'v1.0');
         expect(mockClient.put).toHaveBeenCalledWith('/version/v-1', {

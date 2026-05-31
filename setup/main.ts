@@ -30,12 +30,9 @@ async function promptProjectName(detected: string, existing?: string): Promise<s
     return answer.trim() || existing || detected;
 }
 
-async function main(): Promise<void> {
-    title('QA Tools — Auto Setup');
-
+async function gatherSetupContext(): Promise<SetupContext> {
     const state = loadTypedState();
     const lastProject = state.lastProject || '';
-
     const detection = detectFramework();
 
     info('Framework detectado: ' + detection.framework);
@@ -62,7 +59,7 @@ async function main(): Promise<void> {
         prePushHook: await askConfirm('Criar hook pre-push (executa testes antes do push)?', false),
     };
 
-    const ctx: SetupContext = {
+    return {
         projectName,
         framework,
         ctrfReportPath,
@@ -75,14 +72,13 @@ async function main(): Promise<void> {
         workflowDir: gitProvider === 'github' ? '.github/workflows' : '.gitlab-ci.yml',
         features,
     };
+}
 
-    divider();
-    info('Gerando arquivos...\n');
-
+function generateConfigFiles(ctx: SetupContext): { created: string[]; skipped: string[] } {
     const created: string[] = [];
     const skipped: string[] = [];
 
-    if (gitProvider === 'github') {
+    if (ctx.gitProvider === 'github') {
         const workflowDir = path.resolve(process.cwd(), '.github/workflows');
         fs.mkdirSync(workflowDir, { recursive: true });
         const wfPath = path.join(workflowDir, 'qa.yml');
@@ -108,7 +104,7 @@ async function main(): Promise<void> {
     created.push(...envResult.filesCreated);
     skipped.push(...envResult.filesSkipped);
 
-    if (features.prePushHook) {
+    if (ctx.features.prePushHook) {
         const hookResult = writeHookFile(ctx);
         created.push(...hookResult.filesCreated);
         skipped.push(...hookResult.filesSkipped);
@@ -125,6 +121,10 @@ async function main(): Promise<void> {
         }
     }
 
+    return { created, skipped };
+}
+
+function printSetupSummary(created: string[], skipped: string[]): void {
     for (const f of created) {
         info('✅ Criado: ' + path.relative(process.cwd(), f));
     }
@@ -141,6 +141,18 @@ async function main(): Promise<void> {
     }
     info('3. Copie .env.example para .env e preencha as credenciais');
     info('4. Rode: npx tsx setup/main.ts para reconfigurar');
+}
+
+async function main(): Promise<void> {
+    title('QA Tools — Auto Setup');
+
+    const ctx = await gatherSetupContext();
+
+    divider();
+    info('Gerando arquivos...\n');
+
+    const { created, skipped } = generateConfigFiles(ctx);
+    printSetupSummary(created, skipped);
 }
 
 export default { main };

@@ -1,5 +1,5 @@
 /** Import orchestrator: coordinates CSV parsing, test-case creation, issue linking, and result reporting. */
-import type JiraResource from './jira_resource';
+import type { JiraResourceLike } from '../shared/types';
 import JiraLinkManager from './jira_link_manager';
 import type { TestCase, TestResult } from '../shared/types';
 import TestCaseFactory from './test-case-factory';
@@ -8,7 +8,7 @@ import MappingFileGenerator from './mapping-file-generator';
 import { rootLogger } from '../shared/logger';
 import { update as updateState } from '../shared/state';
 import { showPreview, filterTests, confirmOrCancel, validateImportBatch, handleDryRun } from './import-prep';
-import { executeTestCreationLoop, updateFinalState } from './import-loop';
+import { executeTestCreationLoop, updateFinalState, type TestCreationLoopOptions } from './import-loop';
 import { OPERATION_CANCELLED } from './constants';
 import { info, warn, isQuiet, print, printSummary } from '../shared/prompt';
 import Config from '../shared/config';
@@ -16,8 +16,8 @@ import { createStepImporter, type XrayStepImporter } from './xray-client';
 
 interface CreateTestsFromTestCasesParams {
     tests: TestCase[];
-    jiraResource: JiraResource;
-    jiraResourceXray: JiraResource;
+    jiraResource: JiraResourceLike;
+    jiraResourceXray: JiraResourceLike;
     linkManager: JiraLinkManager;
     linkManagerXray: JiraLinkManager;
     project_name: string;
@@ -48,15 +48,18 @@ type PrepareTestRunResult =
       }
     | undefined;
 
-function prepareTestRun(
-    tests: TestCase[],
-    sourcePath: string,
-    sourceType: string,
-    project_name: string,
-    jiraLabels: string[],
-    onBusy: (busy: boolean) => void,
-    warn: (msg: string) => void,
-): PrepareTestRunResult {
+interface PrepareTestRunOptions {
+    tests: TestCase[];
+    sourcePath: string;
+    sourceType: string;
+    project_name: string;
+    jiraLabels: string[];
+    onBusy: (busy: boolean) => void;
+    warn: (msg: string) => void;
+}
+
+async function prepareTestRun(opts: PrepareTestRunOptions): Promise<PrepareTestRunResult> {
+    const { tests, sourcePath, sourceType, project_name, jiraLabels, onBusy, warn } = opts;
     const validationResult = validateImportBatch(tests, sourcePath, sourceType, project_name);
     if (validationResult === undefined) return;
     const { resumeFrom, inMemoryTasksId, inMemoryTasksText, opLog } = validationResult;
@@ -64,7 +67,7 @@ function prepareTestRun(
     const totalSteps = tests.reduce((sum, t) => sum + t.steps.length, 0);
     const groupsCount = new Set(tests.map((t) => t.group).filter(Boolean)).size;
 
-    showPreview(tests, jiraLabels, totalSteps, groupsCount);
+    await showPreview(tests, jiraLabels, totalSteps, groupsCount);
 
     const filtered = filterTests(tests);
     if (filtered === null) return;
@@ -119,7 +122,7 @@ async function finalizeTestCreation({
     info,
     printSummary,
 }: FinalizeTestCreationParams): Promise<FinalizeTestCreationResult | undefined> {
-    await postProcessCheckpoint(
+    await postProcessCheckpoint({
         results,
         tests,
         projectName,
@@ -129,7 +132,7 @@ async function finalizeTestCreation({
         sourceType,
         linker,
         info,
-    );
+    });
 
     printSummary(results);
 
@@ -153,17 +156,20 @@ async function finalizeTestCreation({
     };
 }
 
-async function postProcessCheckpoint(
-    results: TestResult[],
-    tests: TestCase[],
-    projectName: string,
-    inMemoryTasksId: string[],
-    jiraLabels: string[],
-    sourcePath: string,
-    sourceType: string,
-    linker: IssueLinker,
-    info: (msg: string) => void,
-): Promise<void> {
+interface PostProcessCheckpointOptions {
+    results: TestResult[];
+    tests: TestCase[];
+    projectName: string;
+    inMemoryTasksId: string[];
+    jiraLabels: string[];
+    sourcePath: string;
+    sourceType: string;
+    linker: IssueLinker;
+    info: (msg: string) => void;
+}
+
+async function postProcessCheckpoint(opts: PostProcessCheckpointOptions): Promise<void> {
+    const { results, tests, projectName, inMemoryTasksId, jiraLabels, sourcePath, sourceType, linker, info } = opts;
     if (results.filter((r) => r.status === 'ok').length === tests.length) {
         updateState((state) => {
             delete state._checkpoint;
@@ -182,8 +188,8 @@ async function postProcessCheckpoint(
 }
 
 function testCreationSetup(
-    jiraResource: JiraResource,
-    jiraResourceXray: JiraResource,
+    jiraResource: JiraResourceLike,
+    jiraResourceXray: JiraResourceLike,
     linkManager: JiraLinkManager,
 ): { stepImporter: XrayStepImporter; factory: TestCaseFactory; linker: IssueLinker; results: TestResult[] } {
     const stepImporter = createStepImporter(jiraResourceXray, Config.xrayMode);
@@ -195,35 +201,39 @@ function testCreationSetup(
     };
 }
 
-async function runCreationLoop(
-    filtered: TestCase[],
-    factory: TestCaseFactory,
-    linker: IssueLinker,
-    results: TestResult[],
-    params: CreateTestsFromTestCasesParams,
-    resumeFrom: number,
-    opLog: ReturnType<typeof rootLogger.child>,
-    inMemoryTasksId: string[],
-    inMemoryTasksText: string[],
-): Promise<FinalizeTestCreationResult | undefined> {
-    await executeTestCreationLoop(
-        filtered,
+interface RunCreationLoopOptions {
+    filtered: TestCase[];
+    factory: TestCaseFactory;
+    linker: IssueLinker;
+    results: TestResult[];
+    params: CreateTestsFromTestCasesParams;
+    resumeFrom: number;
+    opLog: ReturnType<typeof rootLogger.child>;
+    inMemoryTasksId: string[];
+    inMemoryTasksText: string[];
+}
+
+async function runCreationLoop(opts: RunCreationLoopOptions): Promise<FinalizeTestCreationResult | undefined> {
+    const { filtered, factory, linker, results, params, resumeFrom, opLog, inMemoryTasksId, inMemoryTasksText } = opts;
+    const loopOpts: TestCreationLoopOptions = {
+        tests: filtered,
         factory,
         linker,
-        params.project_name,
-        params.jiraLabels,
-        params.base_url,
+        projectName: params.project_name,
+        jiraLabels: params.jiraLabels,
+        baseUrl: params.base_url,
         opLog,
-        params.sourcePath,
-        params.sourceType,
+        sourcePath: params.sourcePath,
+        sourceType: params.sourceType,
         inMemoryTasksId,
         inMemoryTasksText,
         results,
         resumeFrom,
         isQuiet,
-        info,
-        print,
-    );
+        reportInfo: info,
+        reportPrint: print,
+    };
+    await executeTestCreationLoop(loopOpts);
     return finalizeTestCreation({
         results,
         tests: filtered,
@@ -244,15 +254,15 @@ async function runCreationLoop(
 async function createTestsFromTestCases(
     params: CreateTestsFromTestCasesParams,
 ): Promise<CreateTestsFromTestCasesResult | undefined> {
-    const prepared = prepareTestRun(
-        params.tests,
-        params.sourcePath,
-        params.sourceType,
-        params.project_name,
-        params.jiraLabels,
-        params.onBusy,
+    const prepared = await prepareTestRun({
+        tests: params.tests,
+        sourcePath: params.sourcePath,
+        sourceType: params.sourceType,
+        project_name: params.project_name,
+        jiraLabels: params.jiraLabels,
+        onBusy: params.onBusy,
         warn,
-    );
+    });
     if (prepared === undefined || 'summary' in prepared) return prepared;
     const { tests: filtered, resumeFrom, inMemoryTasksId, inMemoryTasksText, opLog } = prepared;
     const { factory, linker, results } = testCreationSetup(
@@ -262,7 +272,7 @@ async function createTestsFromTestCases(
     );
     params.onBusy(true);
     opLog.info('Iniciando criação de ' + filtered.length + ' teste(s)');
-    return runCreationLoop(
+    return runCreationLoop({
         filtered,
         factory,
         linker,
@@ -272,7 +282,7 @@ async function createTestsFromTestCases(
         opLog,
         inMemoryTasksId,
         inMemoryTasksText,
-    );
+    });
 }
 
 export { createTestsFromTestCases, prepareTestRun, finalizeTestCreation, postProcessCheckpoint };

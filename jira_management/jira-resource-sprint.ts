@@ -93,8 +93,8 @@ export async function moveCardsToDone(resource: JiraResourceLike, taskIds: strin
         let issueData: { fields?: { status?: { name: string } } };
         try {
             issueData = await resource.getJiraResource(`issue/${taskId}`);
-        } catch {
-            resource.log.warn(skippingTask(taskId));
+        } catch (err: unknown) {
+            resource.log.warn(skippingTask(taskId) + ' — ' + (err as Error).message);
             continue;
         }
         if (!issueData.fields || !issueData.fields.status) {

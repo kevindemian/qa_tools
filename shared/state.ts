@@ -91,9 +91,9 @@ export function load(config?: Config): Record<string, unknown> {
         if (fs.existsSync(sp)) {
             return JSON.parse(fs.readFileSync(sp, UTF8));
         }
-    } catch {
+    } catch (err: unknown) {
         warn('Arquivo de estado corrompido. Recuperando backup...');
-        rootLogger.warn('Arquivo de estado corrompido, recuperando backup...');
+        rootLogger.warn('Arquivo de estado corrompido, recuperando backup...', (err as Error).message);
         try {
             if (fs.existsSync(bp)) {
                 const backup = JSON.parse(fs.readFileSync(bp, UTF8));

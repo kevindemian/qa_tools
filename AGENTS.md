@@ -35,9 +35,30 @@ grep -rn "throw '" shared/ jira_management/ git_triggers/   # zero
 grep -rn ".only(" **/*.test.*                                # zero
 ```
 
-## R0 — Adversarial Iteration Until Pareto
+## R0 — Adversarial Iteration (avaliação Pareto)
 
 Every solution or plan MUST be evaluated adversarially before presentation.
+
+### Hierarquia de avaliação Pareto (estrita)
+
+1. **Superioridade técnica** (ordenada, decrescente)
+   1.1 **Correção** — comportamento determinístico, sem bugs conhecidos
+   1.2 **Manutenibilidade** — clareza > concisão; SRP; baixo acoplamento
+   1.3 **Testabilidade** — facilidade de cobrir com testes determinísticos
+   1.4 **Previsibilidade** — comportamento explícito, sem side effects ocultos
+
+2. **Esforço** — desempate quando duas soluções empatam em (1).
+   Se a solução tecnicamente superior exigir >10× o esforço da segunda
+   superior, a próxima considerada é a segunda superior (não a mais
+   barata) — evita perfeccionismo sem abrir brecha para shortcut-driven
+   architecture.
+
+3. **Degradação tolerável** — piorar funcionalidade B para melhorar A
+   é aceito apenas se B não retrocede em (1.1–1.4). Não-funcionais
+   (legibilidade, tempo de compilação, consumo) seguem o mesmo critério:
+   podem ser sacrificados desde que não piorem correção,
+   manutenibilidade, testabilidade ou previsibilidade.
+
 Iterate: identify weaknesses → fix → re-evaluate → stop when no further
 Pareto-improvement is possible. Document the final trade-offs explicitly.
 

@@ -1,6 +1,4 @@
-/** GitLab API client: MRs, pipelines, reviews, and merge operations. */
 import { createThrottledClient } from '../shared/http-client';
-import { info } from '../shared/prompt';
 import { Logger } from '../shared/logger';
 import { handleError } from '../shared/git-provider-error';
 import { GitProviderBase } from './git-provider-base';
@@ -14,18 +12,37 @@ import type {
     PipelineJob,
     ArtifactInfo,
     CICDVariable,
+    Issue,
     JsonObject,
 } from '../shared/types';
-
-const SCHEDULES_PAGE_SIZE = 100;
-const SEARCH_MRS_PAGE_SIZE = 100;
-const VARIABLES_PAGE_SIZE = 100;
-const DIFF_TRUNCATION_LIMIT = 15000;
-const DEFAULT_PIPELINE_COUNT = 5;
+import {
+    glTriggerPipeline,
+    glGetRecentPipelines,
+    glGetPipeline,
+    glGetPipelineJobs,
+    glListPipelineArtifacts,
+    glDownloadArtifact,
+    glGetCICDVariables,
+    glGetJobLogs,
+    glGetSchedules,
+    glRunSchedule,
+} from './gitlab-workflow';
+import {
+    glCreateMergeRequest,
+    glUpdateMergeRequest,
+    glGetMergeRequest,
+    glSearchMergeRequests,
+    glAcceptMergeRequest,
+    glIsApproved,
+} from './gitlab-pr';
+import { glGetOpenIssues } from './gitlab-issues';
+import { glGetBranch, glGetDiff } from './gitlab-branch';
 
 class GitLabManager extends GitProviderBase implements GitProvider {
     provider = 'gitlab' as const;
     projectId: string;
+    owner: string;
+    repo: string;
     apiToken: string;
     apiUrl: string;
     client: ReturnType<typeof createThrottledClient>;
@@ -41,7 +58,9 @@ class GitLabManager extends GitProviderBase implements GitProvider {
         }
         this.projectId = projectId;
         this.apiToken = apiToken;
-        this.apiUrl = `${gitlabBaseUrl}/api/v4/projects/${this.projectId}`;
+        this.apiUrl = `${gitlabBaseUrl}/api/v4`;
+        this.owner = '';
+        this.repo = projectId;
         this.client = createThrottledClient({
             baseUrl: this.apiUrl,
             authHeader: { 'PRIVATE-TOKEN': apiToken },
@@ -65,23 +84,15 @@ class GitLabManager extends GitProviderBase implements GitProvider {
         variables: Array<{ key: string; value: string }>;
         workflow_id?: string;
     }): Promise<PipelineTriggerResult | undefined> {
-        return this._post('/pipeline', payload, { operation: 'disparar pipeline' }) as Promise<
-            PipelineTriggerResult | undefined
-        >;
+        return glTriggerPipeline(this.client, this.owner, this.repo, payload);
     }
 
     async getSchedules(): Promise<ScheduleInfo[]> {
-        return (
-            (await this._get('/pipeline_schedules', {
-                operation: 'listar schedules',
-                params: { per_page: SCHEDULES_PAGE_SIZE },
-                returnNull: true,
-            })) || []
-        );
+        return glGetSchedules(this.client, this.owner, this.repo);
     }
 
     async runSchedule(scheduleId: string | number): Promise<JsonObject> {
-        return this._post(`/pipeline_schedules/${scheduleId}/play`, undefined, { operation: 'disparar schedule' });
+        return glRunSchedule(this.client, this.owner, this.repo, scheduleId);
     }
 
     async createMergeRequest(
@@ -90,27 +101,7 @@ class GitLabManager extends GitProviderBase implements GitProvider {
         title: string,
         description?: string,
     ): Promise<MergeRequestInfo | null> {
-        const body = {
-            id: this.projectId,
-            source_branch: sourceBranch,
-            target_branch: targetBranch,
-            title,
-            description,
-        };
-
-        try {
-            return await this._post('/merge_requests', body, { operation: 'criar MR' });
-        } catch (err: unknown) {
-            const glErr = err as { response?: { status?: number } };
-            if (glErr.response?.status === 409) {
-                info('MR already exists. Searching for existing...');
-                const existing = await this.searchMergeRequests(sourceBranch, targetBranch, 'opened');
-                if (existing && existing.length > 0) {
-                    return this.updateMergeRequest(existing[0]!.iid!, title, description);
-                }
-            }
-            throw err;
-        }
+        return glCreateMergeRequest(this.client, this.owner, this.repo, sourceBranch, targetBranch, title, description);
     }
 
     async updateMergeRequest(
@@ -118,11 +109,11 @@ class GitLabManager extends GitProviderBase implements GitProvider {
         title: string,
         description?: string,
     ): Promise<MergeRequestInfo | null> {
-        return this._put(`/merge_requests/${iid}`, { title, description }, { operation: 'atualizar MR' });
+        return glUpdateMergeRequest(this.client, this.owner, this.repo, iid, title, description);
     }
 
     async getMergeRequest(iid: string | number): Promise<MergeRequestInfo | null> {
-        return this._get(`/merge_requests/${iid}`, { operation: 'buscar MR', returnNull: true });
+        return glGetMergeRequest(this.client, this.owner, this.repo, iid);
     }
 
     async searchMergeRequests(
@@ -130,133 +121,55 @@ class GitLabManager extends GitProviderBase implements GitProvider {
         targetBranch: string,
         searchStatus: string,
     ): Promise<MergeRequestInfo[]> {
-        return (
-            (await this._get('/merge_requests', {
-                operation: 'buscar MRs',
-                params: {
-                    state: searchStatus,
-                    source_branch: sourceBranch,
-                    target_branch: targetBranch,
-                    per_page: SEARCH_MRS_PAGE_SIZE,
-                },
-                returnNull: true,
-            })) || []
-        );
+        return glSearchMergeRequests(this.client, this.owner, this.repo, sourceBranch, targetBranch, searchStatus);
     }
 
     async acceptMergeRequest(iid: string | number, shouldRemoveSourceBranch = true): Promise<MergeRequestInfo | null> {
-        try {
-            const mr = await this.getMergeRequest(iid);
-            if (!mr) throw new Error(`MR #${iid} not found`);
-            if (mr.state === 'merged') {
-                info(`MR #${iid} already merged`);
-                return mr;
-            }
-            return await this._put(
-                `/merge_requests/${iid}/merge`,
-                { should_remove_source_branch: shouldRemoveSourceBranch },
-                { operation: 'fazer merge' },
-            );
-        } catch (err) {
-            return handleError(err, { context: 'fazer merge' });
-        }
+        return glAcceptMergeRequest(this.client, this.owner, this.repo, iid, shouldRemoveSourceBranch);
     }
 
-    async getRecentPipelines(count = DEFAULT_PIPELINE_COUNT): Promise<PipelineRun[]> {
-        return (
-            (await this._get('/pipelines', {
-                operation: 'buscar pipelines',
-                params: { per_page: count, order_by: 'updated_at' },
-                returnNull: true,
-            })) || []
-        );
+    async getRecentPipelines(count = 5): Promise<PipelineRun[]> {
+        return glGetRecentPipelines(this.client, this.owner, this.repo, count);
     }
 
     async getPipeline(pipelineId: string | number): Promise<PipelineInfo | null> {
-        return this._get(`/pipelines/${pipelineId}`, { operation: 'buscar pipeline', returnNull: true });
+        return glGetPipeline(this.client, this.owner, this.repo, pipelineId);
     }
 
     async getPipelineJobs(pipelineId: string | number): Promise<PipelineJob[]> {
-        const data = await this._get(`/pipelines/${pipelineId}/jobs`, {
-            operation: 'listar jobs',
-            returnNull: true,
-        });
-        return (data || []).map((j: JsonObject) => ({
-            id: j.id,
-            name: j.name,
-            stage: j.stage,
-            status: j.status,
-        }));
+        return glGetPipelineJobs(this.client, this.owner, this.repo, pipelineId);
     }
 
     async listPipelineArtifacts(pipelineId: string | number): Promise<ArtifactInfo[]> {
-        const data = await this._get(`/pipelines/${pipelineId}/jobs`, {
-            operation: 'listar artifacts',
-            returnNull: true,
-        });
-        const jobs = data || [];
-        return jobs
-            .filter((j: JsonObject) => j.artifacts_file || (j.artifacts && (j.artifacts as Array<unknown>).length > 0))
-            .map((j: JsonObject) => ({ id: j.id, name: j.name }));
+        return glListPipelineArtifacts(this.client, this.owner, this.repo, pipelineId);
     }
 
     async getCICDVariables(): Promise<CICDVariable[]> {
-        return (
-            (await this._get('/variables', {
-                operation: 'buscar variáveis CI/CD',
-                params: { per_page: VARIABLES_PAGE_SIZE },
-                returnNull: true,
-            })) || []
-        );
+        return glGetCICDVariables(this.client, this.owner, this.repo);
     }
 
     async getBranch(branch: string): Promise<{ name: string } | null> {
-        const data = await this._get(`/repository/branches/${encodeURIComponent(branch)}`, {
-            operation: 'buscar branch',
-            returnNull: true,
-        });
-        return data ? { name: data.name as string } : null;
+        return glGetBranch(this.client, this.owner, this.repo, branch);
     }
 
     async getDiff(source: string, target: string): Promise<string> {
-        const data = await this._get('/repository/compare', {
-            operation: 'comparar branches',
-            params: { from: source, to: target },
-            returnNull: true,
-        });
-        if (!data?.diffs || !Array.isArray(data.diffs)) return '';
-        const lines: string[] = [];
-        for (const d of data.diffs as Array<{ diff?: string; new_path?: string }>) {
-            if (d.diff) {
-                lines.push('--- a/' + (d.new_path || ''));
-                lines.push('+++ b/' + (d.new_path || ''));
-                lines.push(d.diff);
-            }
-        }
-        const full = lines.join('\n');
-        return full.length > DIFF_TRUNCATION_LIMIT ? full.slice(0, DIFF_TRUNCATION_LIMIT) + '\n... (truncated)' : full;
+        return glGetDiff(this.client, this.owner, this.repo, source, target);
     }
 
     async isApproved(mergeRequestIid: string | number): Promise<boolean> {
-        const data = await this._get(`/merge_requests/${mergeRequestIid}/approvals`, {
-            operation: 'verificar aprovação',
-            returnNull: true,
-        });
-        return !!data?.approved;
+        return glIsApproved(this.client, this.owner, this.repo, mergeRequestIid);
     }
 
     async downloadArtifact(artifactId: string | number): Promise<{ buffer: Buffer; filename: string }> {
-        try {
-            const response = await this.client.get(`/jobs/${artifactId}/artifacts`, {
-                responseType: 'arraybuffer',
-            });
-            const disposition = (response.headers['content-disposition'] as string) || '';
-            const match = disposition.match(/filename="?(.+?)"?$/);
-            const filename = match ? match[1]! : 'artifacts.zip';
-            return { buffer: Buffer.from(response.data as ArrayBuffer), filename };
-        } catch (err) {
-            return handleError(err, { context: 'baixar artifact' });
-        }
+        return glDownloadArtifact(this.client, this.owner, this.repo, artifactId);
+    }
+
+    async getOpenIssues(): Promise<Issue[]> {
+        return glGetOpenIssues(this.client, this.owner, this.repo);
+    }
+
+    async getJobLogs(jobId: string | number, maxBytes = 10240): Promise<string | null> {
+        return glGetJobLogs(this.client, this.owner, this.repo, jobId, maxBytes);
     }
 }
 

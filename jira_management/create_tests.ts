@@ -1,7 +1,7 @@
 /** Create tests — orchestrate CSV/JSON import, issue creation, linking, and test execution reporting.
  * @module Functions ordered by dependency: readers → creators → validators → linkers. 219 lines under the 300-line R2 limit. */
 
-import type JiraResource from './jira_resource';
+import type { JiraResourceLike } from '../shared/types';
 import JiraLinkManager from './jira_link_manager';
 import type CsvResource from './csv_resource';
 import type { TestCase } from '../shared/types';
@@ -15,8 +15,8 @@ import { createTestsFromTestCases } from './import-orchestrator';
 import { isQuiet, info, warn, printError } from '../shared/prompt';
 
 interface CreateFromFileParams {
-    jiraResource: JiraResource;
-    jiraResourceXray: JiraResource;
+    jiraResource: JiraResourceLike;
+    jiraResourceXray: JiraResourceLike;
     linkManager: JiraLinkManager;
     linkManagerXray: JiraLinkManager;
     project_name: string;
@@ -135,28 +135,36 @@ async function createTestsFromJson({
     });
 }
 
+interface CreateTeOptions {
+    jiraResource: JiraResourceLike;
+    linkManager: JiraLinkManager;
+    projectName: string;
+    testKeys: string[];
+    csvName: string;
+    titleOverride?: string;
+}
+
 /** Create a Test Execution issue in Jira for the given test keys. */
-async function createTestExecution(
-    jiraResource: JiraResource,
-    linkManager: JiraLinkManager,
-    projectName: string,
-    testKeys: string[],
-    csvName: string,
-    titleOverride?: string,
-): Promise<{ key: string; summary: string }> {
+async function createTestExecution(opts: CreateTeOptions): Promise<{ key: string; summary: string } | null> {
+    const { jiraResource, linkManager, projectName, testKeys, csvName, titleOverride } = opts;
     const creator = new TestExecutionCreator(jiraResource, linkManager);
     return creator.create(projectName, testKeys, csvName, titleOverride);
 }
 
+interface CreateTeWithLinksOptions {
+    jiraResource: JiraResourceLike;
+    linkManager: JiraLinkManager;
+    projectName: string;
+    testKeys: string[];
+    csvName: string;
+    execOpts?: { title?: string; description?: string };
+}
+
 /** Create a Test Execution and link each test case to it. */
 async function createTestExecutionWithLinks(
-    jiraResource: JiraResource,
-    linkManager: JiraLinkManager,
-    projectName: string,
-    testKeys: string[],
-    csvName: string,
-    execOpts?: { title?: string; description?: string },
-): Promise<{ key: string; summary: string }> {
+    opts: CreateTeWithLinksOptions,
+): Promise<{ key: string; summary: string } | null> {
+    const { jiraResource, linkManager, projectName, testKeys, csvName, execOpts } = opts;
     const creator = new TestExecutionCreator(jiraResource, linkManager);
     return creator.createWithLinks(projectName, testKeys, csvName, execOpts);
 }

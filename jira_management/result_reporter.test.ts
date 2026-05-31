@@ -25,6 +25,7 @@ jest.mock('../shared/prompt', () => ({
     success: jest.fn(),
     warn: jest.fn(),
     isQuiet: () => true,
+    withSpinner: jest.fn(async (_label: string, fn: () => Promise<unknown>) => fn()),
 }));
 
 const MOCK_ISSUE_TYPES = [
@@ -176,10 +177,13 @@ describe('createTestExecutionFromResults', () => {
             { key: 'TEST-2', title: 'TC02', status: 'failed' as const, duration: 200 },
         ];
 
-        const result = await createTestExecutionFromResults(jiraResource, linkManager, 'PROJ', matched, 'test-csv', {
-            pipelineId: 42,
-            branch: 'main',
-            provider: 'gitlab',
+        const result = await createTestExecutionFromResults({
+            jiraResource,
+            linkManager,
+            projectName: 'PROJ',
+            matchedResults: matched,
+            csvName: 'test-csv',
+            pipelineInfo: { pipelineId: 42, branch: 'main', provider: 'gitlab' },
         });
 
         expect(result.key).toBe('EXEC-1');
@@ -209,7 +213,13 @@ describe('createTestExecutionFromResults', () => {
             { key: 'TEST-3', title: 'TC03', status: 'skipped' as const, duration: 0 },
         ];
 
-        const result = await createTestExecutionFromResults(jiraResource, linkManager, 'PROJ', matched, 'test-csv');
+        const result = await createTestExecutionFromResults({
+            jiraResource,
+            linkManager,
+            projectName: 'PROJ',
+            matchedResults: matched,
+            csvName: 'test-csv',
+        });
 
         expect(result.key).toBe('EXEC-2');
         expect(result.passed).toBe(1);
@@ -231,8 +241,53 @@ describe('createTestExecutionFromResults', () => {
 
         const matched = [{ key: 'TEST-1', title: 'TC01', status: 'passed' as const, duration: 300 }];
 
-        const result = await createTestExecutionFromResults(jiraResource, linkManager, 'PROJ', matched, 'test-csv');
+        const result = await createTestExecutionFromResults({
+            jiraResource,
+            linkManager,
+            projectName: 'PROJ',
+            matchedResults: matched,
+            csvName: 'test-csv',
+        });
         expect(result.key).toBe('EXEC-3');
         expect(rootLogger.warn).toHaveBeenCalledWith(expect.stringContaining('Falha ao linkar'));
+    });
+
+    it('uses existingTeKey to add tests to existing TE instead of creating new', async () => {
+        const teKey = 'EXEC-EXISTING-1';
+        jiraResource.getJiraResource.mockImplementation((url: string) => {
+            if (url === 'issue/' + teKey) {
+                return Promise.resolve({
+                    key: teKey,
+                    fields: { summary: 'Regression run', issuetype: { name: 'Test Execution' } },
+                });
+            }
+            if (url === 'field') return Promise.resolve(MOCK_FIELDS);
+            return Promise.resolve({});
+        });
+        jiraResource.putJiraResource = jest.fn().mockResolvedValue({});
+
+        const matched = [
+            { key: 'TEST-1', title: 'TC01', status: 'passed' as const, duration: 300 },
+            { key: 'TEST-2', title: 'TC02', status: 'failed' as const, duration: 200 },
+        ];
+
+        const result = await createTestExecutionFromResults({
+            jiraResource,
+            linkManager,
+            projectName: 'PROJ',
+            matchedResults: matched,
+            csvName: 'test-csv',
+            pipelineInfo: { pipelineId: 42, branch: 'main', provider: 'gitlab' },
+            existingTeKey: teKey,
+        });
+
+        expect(result.key).toBe(teKey);
+        expect(result.passed).toBe(1);
+        expect(result.failed).toBe(1);
+        expect(jiraResource.putJiraResource).toHaveBeenCalledWith(
+            'issue/' + teKey,
+            expect.objectContaining({ fields: expect.objectContaining({ customfield_13715: expect.any(Array) }) }),
+        );
+        expect(jiraResource.postJiraResource).not.toHaveBeenCalledWith('issue', expect.anything());
     });
 });

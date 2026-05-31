@@ -1,12 +1,5 @@
-jest.mock('../../shared/prompt', () => ({
-    info: jest.fn(),
-    warn: jest.fn(),
-    title: jest.fn(),
-    divider: jest.fn(),
-    tableView: jest.fn(),
-    printError: jest.fn(),
-    showSelect: jest.fn().mockResolvedValue('0'),
-}));
+jest.mock('../../shared/prompt');
+jest.mock('../../shared/logger');
 
 jest.mock('../../shared/ai-feedback', () => ({
     getAiFeedbackSummary: jest.fn(),
@@ -26,29 +19,7 @@ import { getAiFeedbackSummary, getRecentAiRecords } from '../../shared/ai-feedba
 const mockGetSummary = getAiFeedbackSummary as jest.Mock;
 const mockGetRecent = getRecentAiRecords as jest.Mock;
 const mockShowSelect = showSelect as jest.Mock;
-
-function makeContext(overrides?: Record<string, unknown>) {
-    return {
-        jiraResource: {},
-        jiraResourceXray: {},
-        linkManager: {},
-        linkManagerXray: {},
-        csvResource: {},
-        ctx: {
-            project_name: 'TEST',
-            inMemoryTasksId: [],
-            inMemoryTasksText: [],
-            sessionCounters: [],
-            isBusy: false,
-            results: [],
-        },
-        pushHistory: jest.fn(),
-        printSessionSummary: jest.fn(),
-        base_url: 'https://jira.test.com',
-        sessionLog: { child: jest.fn().mockReturnValue({ info: jest.fn(), error: jest.fn() }) },
-        ...overrides,
-    };
-}
+import { makeMockCommandContext } from '../../shared/test-utils';
 
 beforeEach(() => {
     jest.clearAllMocks();
@@ -68,7 +39,7 @@ describe('case23 — AI Feedback', () => {
         });
 
         const mod = require('./case23').default;
-        await mod.handler(makeContext());
+        await mod.handler(makeMockCommandContext());
 
         expect(warn).toHaveBeenCalledWith('Nenhum registro de feedback de IA encontrado.');
         expect(tableView).not.toHaveBeenCalled();
@@ -86,7 +57,7 @@ describe('case23 — AI Feedback', () => {
         });
 
         const mod = require('./case23').default;
-        await mod.handler(makeContext());
+        await mod.handler(makeMockCommandContext());
 
         expect(tableView).toHaveBeenCalledWith(
             expect.arrayContaining([expect.objectContaining({ Métrica: 'Total de registros', Valor: 5 })]),
@@ -107,7 +78,7 @@ describe('case23 — AI Feedback', () => {
         ]);
 
         const mod = require('./case23').default;
-        await mod.handler(makeContext());
+        await mod.handler(makeMockCommandContext());
 
         expect(tableView).toHaveBeenCalled();
     });
@@ -117,7 +88,7 @@ describe('case23 — AI Feedback', () => {
         mockGetRecent.mockReturnValue([]);
 
         const mod = require('./case23').default;
-        await mod.handler(makeContext());
+        await mod.handler(makeMockCommandContext());
 
         expect(warn).toHaveBeenCalledWith('Nenhum registro recente.');
     });

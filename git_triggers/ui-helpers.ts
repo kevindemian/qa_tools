@@ -16,7 +16,7 @@ async function handleHelp(): Promise<void> {
             'Ajuda — Opções disponíveis no menu numerado acima.',
             '',
             '  /history  - Exibe histórico de operações da sessão.',
-            '  /docs     - Documentação.',
+            '  /docs     - Abre documentação completa no navegador.',
             '  /help     - Esta ajuda.',
             '  /exit     - Sair do programa.',
             '  /back     - Voltar ao menu principal.',
