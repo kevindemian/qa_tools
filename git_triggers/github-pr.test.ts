@@ -1,0 +1,543 @@
+import {
+    formatPR,
+    prCreateMergeRequest,
+    prUpdateMergeRequest,
+    prGetMergeRequest,
+    prSearchMergeRequests,
+    prAcceptMergeRequest,
+    prIsApproved,
+} from './github-pr';
+import type { AxiosInstance } from 'axios';
+import * as prompt from '../shared/prompt';
+
+jest.mock('./github-api', () => ({
+    apiGet: jest.fn(),
+    apiPost: jest.fn(),
+    apiPatch: jest.fn(),
+}));
+
+jest.mock('../shared/logger', () => ({
+    Logger: jest.fn().mockImplementation(() => ({ error: jest.fn(), warn: jest.fn() })),
+    rootLogger: { error: jest.fn(), warn: jest.fn() },
+}));
+
+jest.mock('../shared/git-provider-error', () => ({
+    handleError: jest.fn((err: unknown, opts?: { returnNull?: boolean }) => {
+        if (opts?.returnNull) return null;
+        throw err;
+    }),
+}));
+
+jest.mock('../shared/prompt', () => ({
+    info: jest.fn(),
+    extractErrorMessage: jest.fn((err: Error) => err?.message || 'Erro desconhecido'),
+}));
+
+const mockApiGet = jest.requireMock('./github-api').apiGet as jest.Mock;
+const mockApiPost = jest.requireMock('./github-api').apiPost as jest.Mock;
+const mockApiPatch = jest.requireMock('./github-api').apiPatch as jest.Mock;
+
+describe('formatPR', () => {
+    it('returns MergeRequestInfo for open PR', () => {
+        const data = {
+            number: 1,
+            title: 'My PR',
+            body: 'Desc',
+            html_url: 'https://github.com/org/repo/pull/1',
+            state: 'open',
+            merged: false,
+            head: { ref: 'feature' },
+            base: { ref: 'main' },
+        };
+        const result = formatPR(data);
+        expect(result).not.toBeNull();
+        expect(result!.iid).toBe(1);
+        expect(result!.number).toBe(1);
+        expect(result!.state).toBe('opened');
+        expect(result!.source_branch).toBe('feature');
+        expect(result!.target_branch).toBe('main');
+        expect(result!.web_url).toBe('https://github.com/org/repo/pull/1');
+        expect(result!.description).toBe('Desc');
+    });
+
+    it('returns state merged when merged is true', () => {
+        const data = {
+            number: 2,
+            title: 'Merged PR',
+            body: '',
+            html_url: '',
+            state: 'closed',
+            merged: true,
+            head: { ref: 'f' },
+            base: { ref: 'm' },
+        };
+        const result = formatPR(data);
+        expect(result!.state).toBe('merged');
+    });
+
+    it('returns state closed when not merged and state is closed', () => {
+        const data = {
+            number: 3,
+            title: 'Closed PR',
+            body: '',
+            html_url: '',
+            state: 'closed',
+            merged: false,
+            head: { ref: 'f' },
+            base: { ref: 'm' },
+        };
+        const result = formatPR(data);
+        expect(result!.state).toBe('closed');
+    });
+
+    it('returns null for null input', () => {
+        expect(formatPR(null as unknown as Record<string, unknown>)).toBeNull();
+    });
+
+    it('handles missing head/base gracefully', () => {
+        const data = {
+            number: 4,
+            title: 'No head',
+            body: '',
+            html_url: '',
+            state: 'open',
+            merged: false,
+        };
+        const result = formatPR(data);
+        expect(result!.source_branch).toBeUndefined();
+        expect(result!.target_branch).toBeUndefined();
+    });
+});
+
+describe('prCreateMergeRequest', () => {
+    let client: jest.Mocked<AxiosInstance>;
+
+    beforeEach(() => {
+        client = {
+            get: jest.fn(),
+            post: jest.fn(),
+            put: jest.fn(),
+            patch: jest.fn(),
+        } as unknown as jest.Mocked<AxiosInstance>;
+        mockApiGet.mockClear();
+        mockApiPost.mockClear();
+        mockApiPatch.mockClear();
+        jest.mocked(prompt.info).mockClear();
+    });
+
+    it('calls POST /pulls and returns formatted PR on success', async () => {
+        const mockData = {
+            number: 10,
+            title: 'PR Title',
+            body: 'PR Desc',
+            html_url: 'https://pr',
+            state: 'open',
+            merged: false,
+            head: { ref: 'feature' },
+            base: { ref: 'main' },
+        };
+        mockApiPost.mockResolvedValue(mockData);
+        const result = await prCreateMergeRequest(client, 'myorg', 'myrepo', 'feature', 'main', 'PR Title', 'PR Desc');
+        expect(mockApiPost).toHaveBeenCalledWith(
+            client,
+            '/repos/myorg/myrepo/pulls',
+            { head: 'feature', base: 'main', title: 'PR Title', body: 'PR Desc' },
+            { operation: 'criar PR' },
+        );
+        expect(result!.iid).toBe(10);
+        expect(result!.title).toBe('PR Title');
+    });
+
+    it('handles 422 (already exists) by searching and updating existing PR', async () => {
+        const err = Object.assign(new Error('Unprocessable'), {
+            response: { status: 422, data: { errors: [{ message: 'already exists' }] } },
+        });
+        mockApiPost.mockRejectedValue(err);
+        mockApiGet.mockResolvedValue([
+            {
+                number: 5,
+                title: 'old',
+                body: 'old',
+                html_url: '',
+                state: 'open',
+                merged: false,
+                head: { ref: 'feature' },
+                base: { ref: 'main' },
+            },
+        ]);
+        mockApiPatch.mockResolvedValue({
+            number: 5,
+            title: 'PR Title',
+            body: 'PR Desc',
+            html_url: '',
+            state: 'open',
+            merged: false,
+            head: { ref: 'feature' },
+            base: { ref: 'main' },
+        });
+
+        const result = await prCreateMergeRequest(client, 'myorg', 'myrepo', 'feature', 'main', 'PR Title', 'PR Desc');
+        expect(mockApiPatch).toHaveBeenCalledWith(
+            client,
+            '/repos/myorg/myrepo/pulls/5',
+            { title: 'PR Title', body: 'PR Desc' },
+            { operation: 'atualizar PR' },
+        );
+        expect(result!.iid).toBe(5);
+        expect(jest.mocked(prompt.info)).toHaveBeenCalledWith('PR already exists. Searching for existing...');
+    });
+
+    it('throws on 422 without already_exists error', async () => {
+        const err = Object.assign(new Error('Unprocessable'), {
+            response: { status: 422, data: { errors: [{ message: 'other error' }] } },
+        });
+        mockApiPost.mockRejectedValue(err);
+        await expect(prCreateMergeRequest(client, 'myorg', 'myrepo', 'feature', 'main', 'Title')).rejects.toThrow(
+            'Unprocessable',
+        );
+    });
+
+    it('throws on non-422 error', async () => {
+        const err = Object.assign(new Error('Bad request'), { response: { status: 400 } });
+        mockApiPost.mockRejectedValue(err);
+        await expect(prCreateMergeRequest(client, 'myorg', 'myrepo', 'feature', 'main', 'Title')).rejects.toThrow(
+            'Bad request',
+        );
+    });
+
+    it('calls prCreateMergeRequest without optional description', async () => {
+        mockApiPost.mockResolvedValue({
+            number: 1,
+            title: 'Title',
+            body: undefined,
+            html_url: '',
+            state: 'open',
+            merged: false,
+            head: { ref: 'f' },
+            base: { ref: 'm' },
+        });
+        const result = await prCreateMergeRequest(client, 'myorg', 'myrepo', 'feature', 'main', 'Title');
+        expect(result).not.toBeNull();
+        expect(mockApiPost).toHaveBeenCalledWith(
+            client,
+            '/repos/myorg/myrepo/pulls',
+            { head: 'feature', base: 'main', title: 'Title', body: undefined },
+            { operation: 'criar PR' },
+        );
+    });
+});
+
+describe('prUpdateMergeRequest', () => {
+    let client: jest.Mocked<AxiosInstance>;
+
+    beforeEach(() => {
+        client = {
+            get: jest.fn(),
+            post: jest.fn(),
+            put: jest.fn(),
+            patch: jest.fn(),
+        } as unknown as jest.Mocked<AxiosInstance>;
+        mockApiPatch.mockClear();
+    });
+
+    it('calls PATCH /pulls/{iid} and returns formatted PR', async () => {
+        mockApiPatch.mockResolvedValue({
+            number: 5,
+            title: 'New Title',
+            body: 'New Desc',
+            html_url: '',
+            state: 'open',
+            merged: false,
+            head: { ref: 'dev' },
+            base: { ref: 'main' },
+        });
+        const result = await prUpdateMergeRequest(client, 'myorg', 'myrepo', 5, 'New Title', 'New Desc');
+        expect(mockApiPatch).toHaveBeenCalledWith(
+            client,
+            '/repos/myorg/myrepo/pulls/5',
+            { title: 'New Title', body: 'New Desc' },
+            { operation: 'atualizar PR' },
+        );
+        expect(result!.iid).toBe(5);
+    });
+
+    it('throws on API error', async () => {
+        mockApiPatch.mockRejectedValue(new Error('Update failed'));
+        await expect(prUpdateMergeRequest(client, 'myorg', 'myrepo', 5, '', '')).rejects.toThrow('Update failed');
+    });
+});
+
+describe('prGetMergeRequest', () => {
+    let client: jest.Mocked<AxiosInstance>;
+
+    beforeEach(() => {
+        client = {
+            get: jest.fn(),
+            post: jest.fn(),
+            put: jest.fn(),
+            patch: jest.fn(),
+        } as unknown as jest.Mocked<AxiosInstance>;
+        mockApiGet.mockClear();
+    });
+
+    it('calls GET /pulls/{iid} and returns formatted PR', async () => {
+        mockApiGet.mockResolvedValue({
+            number: 5,
+            state: 'open',
+            merged: false,
+            title: 'T',
+            body: 'D',
+            html_url: '',
+            head: { ref: 'f' },
+            base: { ref: 'm' },
+        });
+        const result = await prGetMergeRequest(client, 'myorg', 'myrepo', 5);
+        expect(mockApiGet).toHaveBeenCalledWith(client, '/repos/myorg/myrepo/pulls/5', {
+            operation: 'buscar PR',
+            returnNull: true,
+        });
+        expect(result!.iid).toBe(5);
+    });
+
+    it('returns null when apiGet returns null', async () => {
+        mockApiGet.mockResolvedValue(null);
+        const result = await prGetMergeRequest(client, 'myorg', 'myrepo', 999);
+        expect(result).toBeNull();
+    });
+});
+
+describe('prSearchMergeRequests', () => {
+    let client: jest.Mocked<AxiosInstance>;
+
+    beforeEach(() => {
+        client = {
+            get: jest.fn(),
+            post: jest.fn(),
+            put: jest.fn(),
+            patch: jest.fn(),
+        } as unknown as jest.Mocked<AxiosInstance>;
+        mockApiGet.mockClear();
+    });
+
+    it('calls GET /pulls with correct params', async () => {
+        mockApiGet.mockResolvedValue([
+            {
+                number: 1,
+                state: 'open',
+                merged: false,
+                title: 'T1',
+                body: '',
+                html_url: '',
+                head: { ref: 'dev' },
+                base: { ref: 'main' },
+            },
+        ]);
+        const result = await prSearchMergeRequests(client, 'myorg', 'myrepo', 'dev', 'main', 'opened');
+        expect(mockApiGet).toHaveBeenCalledWith(client, '/repos/myorg/myrepo/pulls', {
+            operation: 'buscar PRs',
+            params: { per_page: 100, head: 'myorg:dev', base: 'main', state: 'open' },
+            returnNull: true,
+        });
+        expect(result).toHaveLength(1);
+        expect(result[0]!.iid).toBe(1);
+    });
+
+    it('maps opened status to open', async () => {
+        mockApiGet.mockResolvedValue([]);
+        await prSearchMergeRequests(client, 'myorg', 'myrepo', '', '', 'opened');
+        expect(mockApiGet).toHaveBeenCalledWith(
+            client,
+            '/repos/myorg/myrepo/pulls',
+            expect.objectContaining({
+                params: expect.objectContaining({ state: 'open', per_page: 100 }),
+            }),
+        );
+    });
+
+    it('returns empty array when apiGet returns null', async () => {
+        mockApiGet.mockResolvedValue(null);
+        const result = await prSearchMergeRequests(client, 'myorg', 'myrepo', '', '', 'opened');
+        expect(result).toEqual([]);
+    });
+
+    it('passes status directly when not opened', async () => {
+        mockApiGet.mockResolvedValue([]);
+        await prSearchMergeRequests(client, 'myorg', 'myrepo', '', '', 'closed');
+        expect(mockApiGet).toHaveBeenCalledWith(
+            client,
+            '/repos/myorg/myrepo/pulls',
+            expect.objectContaining({
+                params: expect.objectContaining({ state: 'closed' }),
+            }),
+        );
+    });
+
+    it('omits head param when sourceBranch is empty', async () => {
+        mockApiGet.mockResolvedValue([]);
+        await prSearchMergeRequests(client, 'myorg', 'myrepo', '', 'main', 'opened');
+        const calledWith = mockApiGet.mock.calls[0];
+        const params = calledWith[2]!.params as Record<string, unknown>;
+        expect(params.head).toBeUndefined();
+        expect(params.base).toBe('main');
+    });
+
+    it('omits base param when targetBranch is empty', async () => {
+        mockApiGet.mockResolvedValue([]);
+        await prSearchMergeRequests(client, 'myorg', 'myrepo', 'dev', '', 'opened');
+        const calledWith = mockApiGet.mock.calls[0];
+        const params = calledWith[2]!.params as Record<string, unknown>;
+        expect(params.head).toBe('myorg:dev');
+        expect(params.base).toBeUndefined();
+    });
+});
+
+describe('prAcceptMergeRequest', () => {
+    let client: jest.Mocked<AxiosInstance>;
+
+    beforeEach(() => {
+        client = {
+            get: jest.fn(),
+            post: jest.fn(),
+            put: jest.fn(),
+            patch: jest.fn(),
+        } as unknown as jest.Mocked<AxiosInstance>;
+        mockApiGet.mockClear();
+        jest.clearAllMocks();
+    });
+
+    it('calls GET then PUT /pulls/{iid}/merge when PR is open', async () => {
+        mockApiGet.mockResolvedValue({
+            number: 5,
+            state: 'open',
+            merged: false,
+            title: 'T',
+            body: '',
+            html_url: '',
+            head: { ref: 'f' },
+            base: { ref: 'm' },
+        });
+        (client.put as jest.Mock).mockResolvedValue({
+            data: {
+                number: 5,
+                state: 'open',
+                merged: true,
+                title: 'T',
+                body: '',
+                html_url: 'https://merge',
+                head: { ref: 'f' },
+                base: { ref: 'm' },
+            },
+        });
+
+        const result = await prAcceptMergeRequest(client, 'myorg', 'myrepo', 5);
+        expect(client.put).toHaveBeenCalledWith('/repos/myorg/myrepo/pulls/5/merge', { delete_branch_on_merge: true });
+        expect(result!.web_url).toBe('https://merge');
+    });
+
+    it('returns early without PUT when already merged', async () => {
+        mockApiGet.mockResolvedValue({
+            number: 5,
+            state: 'closed',
+            merged: true,
+            title: 'T',
+            body: '',
+            html_url: 'https://...',
+            head: { ref: 'f' },
+            base: { ref: 'm' },
+        });
+
+        const result = await prAcceptMergeRequest(client, 'myorg', 'myrepo', 5);
+        expect(client.put).not.toHaveBeenCalled();
+        expect(result!.state).toBe('merged');
+    });
+
+    it('throws when PR not found', async () => {
+        mockApiGet.mockResolvedValue(null);
+        await expect(prAcceptMergeRequest(client, 'myorg', 'myrepo', 999)).rejects.toThrow('PR #999 not found');
+    });
+
+    it('throws on merge API failure', async () => {
+        mockApiGet.mockResolvedValue({
+            number: 5,
+            state: 'open',
+            merged: false,
+            title: 'T',
+            body: '',
+            html_url: '',
+            head: { ref: 'f' },
+            base: { ref: 'm' },
+        });
+        (client.put as jest.Mock).mockRejectedValue(new Error('Merge failed'));
+        await expect(prAcceptMergeRequest(client, 'myorg', 'myrepo', 5)).rejects.toThrow('Merge failed');
+    });
+
+    it('omits delete_branch_on_merge when shouldRemoveSourceBranch is false', async () => {
+        mockApiGet.mockResolvedValue({
+            number: 5,
+            state: 'open',
+            merged: false,
+            title: 'T',
+            body: '',
+            html_url: '',
+            head: { ref: 'f' },
+            base: { ref: 'm' },
+        });
+        (client.put as jest.Mock).mockResolvedValue({
+            data: {
+                number: 5,
+                state: 'open',
+                merged: true,
+                title: 'T',
+                body: '',
+                html_url: '',
+                head: { ref: 'f' },
+                base: { ref: 'm' },
+            },
+        });
+
+        await prAcceptMergeRequest(client, 'myorg', 'myrepo', 5, false);
+        expect(client.put).toHaveBeenCalledWith('/repos/myorg/myrepo/pulls/5/merge', {});
+    });
+});
+
+describe('prIsApproved', () => {
+    let client: jest.Mocked<AxiosInstance>;
+
+    beforeEach(() => {
+        client = {
+            get: jest.fn(),
+            post: jest.fn(),
+            put: jest.fn(),
+            patch: jest.fn(),
+        } as unknown as jest.Mocked<AxiosInstance>;
+        mockApiGet.mockClear();
+    });
+
+    it('returns true when at least one review is APPROVED', async () => {
+        mockApiGet.mockResolvedValue([{ state: 'APPROVED' }]);
+        const result = await prIsApproved(client, 'myorg', 'myrepo', 42);
+        expect(result).toBe(true);
+        expect(mockApiGet).toHaveBeenCalledWith(client, '/repos/myorg/myrepo/pulls/42/reviews', {
+            operation: 'verificar reviews',
+            returnNull: true,
+        });
+    });
+
+    it('returns false when no APPROVED review', async () => {
+        mockApiGet.mockResolvedValue([{ state: 'COMMENTED' }, { state: 'CHANGES_REQUESTED' }]);
+        const result = await prIsApproved(client, 'myorg', 'myrepo', 42);
+        expect(result).toBe(false);
+    });
+
+    it('returns false on empty reviews array', async () => {
+        mockApiGet.mockResolvedValue([]);
+        const result = await prIsApproved(client, 'myorg', 'myrepo', 42);
+        expect(result).toBe(false);
+    });
+
+    it('returns false when apiGet returns null', async () => {
+        mockApiGet.mockResolvedValue(null);
+        const result = await prIsApproved(client, 'myorg', 'myrepo', 42);
+        expect(result).toBe(false);
+    });
+});

@@ -119,6 +119,7 @@ export function recordConfidence(confidence: 'high' | 'medium' | 'low'): void {
     _confidenceCount++;
 }
 
+/** @internal */
 /** Record whether an artifact review was approved or rejected. */
 export function recordArtifactReview(approved: boolean): void {
     if (approved) _artifactApproved++;
@@ -155,11 +156,13 @@ export function snapshotLlmMetrics(): LlmMetricsSnapshot {
     return snapshot;
 }
 
+/** @internal */
 /** Return all persisted snapshots for cross-session trend analysis. */
 export function getLlmMetricsHistory(): LlmMetricsSnapshot[] {
     return loadStore().snapshots;
 }
 
+/** @internal */
 /** Reset all in-memory counters and persisted client metrics.
  * Does NOT clear the on-disk snapshot history. */
 export function clearLlmMetrics(): void {
