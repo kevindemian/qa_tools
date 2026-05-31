@@ -94,17 +94,17 @@
 | C12-5    | 📋   | `git_triggers/gitlab-workflow.ts`          | Criar `.test.ts`                             | 20min   | F1           | ⬜     |
 | C12-5    | 📋   | `git_triggers/pipeline-jira.ts`            | Criar `.test.ts` — bug creation flow         | 20min   | F1 (C12-2)   | ⬜     |
 
-**Fase 5 — Código morto + Limpeza (P2/P3)**
+**Fase 5 — Código morto + Limpeza (P2/P3) ✅**
 
 | ID Audit | Tipo | Arquivo                                 | Item                                                            | Esforço | Status |
 | -------- | ---- | --------------------------------------- | --------------------------------------------------------------- | ------- | ------ |
-| C1-4     | 🧹   | `shared/types.ts:580`                   | Remover `XrayTestRun` (0 imports)                               | 5min    | ⬜     |
-| C1-5     | 🧹   | `jira_management/commands/helpers.ts`   | Remover arquivo (re-export morto)                               | 5min    | ⬜     |
-| C1-6     | 🧹   | `jira_management/commands/case17.ts:34` | Remover re-exports não utilizados                               | 5min    | ⬜     |
-| C1-1/2/3 | 🔧   | `shared/llm-metrics.ts`                 | Adicionar `@internal` nos 3 exports de teste                    | 10min   | ⬜     |
-| C3-1/2   | ♻️   | `git_triggers/pipeline-health.ts:75-76` | Substituir `runs[0]!`/`runs[len]!` por var temporária           | 10min   | ⬜     |
-| C15-1    | 🔧   | `package.json`                          | Documentar: chalk@4 mantido (CJS), decisão registrada           | 5min    | ⬜     |
-| C15-2    | 🔧   | `package.json`                          | Documentar: glob@10 mantido (sync), reavaliar quando necessário | 5min    | ⬜     |
+| C1-4     | 🧹   | `shared/types.ts:580`                   | Remover `XrayTestRun` (0 imports)                               | 5min    | ✅     |
+| C1-5     | 🧹   | `jira_management/commands/helpers.ts`   | Remover arquivo (re-export morto)                               | 5min    | ✅     |
+| C1-6     | 🧹   | `jira_management/commands/case17.ts:34` | Remover re-exports não utilizados                               | 5min    | ✅     |
+| C1-1/2/3 | 🔧   | `shared/llm-metrics.ts`                 | Adicionar `@internal` nos 3 exports de teste                    | 10min   | ✅     |
+| C3-1/2   | ♻️   | `git_triggers/pipeline-health.ts:75-76` | Substituir `runs[0]!`/`runs[len]!` por var temporária           | 10min   | ✅     |
+| C15-1    | 🔧   | `package.json`                          | Documentar: chalk@4 mantido (CJS), decisão registrada           | 5min    | ✅     |
+| C15-2    | 🔧   | `package.json`                          | Documentar: glob@10 mantido (sync), reavaliar quando necessário | 5min    | ✅     |
 
 ---
 
