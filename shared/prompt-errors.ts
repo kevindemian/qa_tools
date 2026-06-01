@@ -175,8 +175,8 @@ export async function onError(
 
     error(`${context}: ${msg}`);
 
-    if (getConfig().autoConfirm) {
-        const autoAction = getConfig().onError;
+    if (getConfig().get<boolean>('autoConfirm')) {
+        const autoAction = getConfig().get('onError');
         if (autoAction === 'skip') warn('Modo automatico: pulando...');
         else error('Modo automatico: abortando...');
         return autoAction as 'abort' | 'skip' | 'retry';

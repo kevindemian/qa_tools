@@ -231,7 +231,7 @@ export async function fileToJira(
     report: BugReport,
     projectKey?: string,
 ): Promise<string> {
-    const key = projectKey || Config.jiraProject;
+    const key = projectKey || Config.get('jiraProject');
     if (!key) throw new Error('Project key is required — set JIRA_PROJECT env var or provide projectKey param.');
 
     const fields: Record<string, unknown> = {

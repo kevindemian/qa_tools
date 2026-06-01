@@ -1,4 +1,6 @@
 import type { GitProvider } from '../shared/types';
+import type JiraClient from '../shared/jira-client';
+import type JiraLinkManager from '../jira_management/jira_link_manager';
 import { createGitHubSmokeManager } from './smoke-shared';
 import { loadMetrics, calculateFlakiness } from '../shared/metrics';
 import { generateFlakinessHtml } from '../shared/flakiness-dashboard';
@@ -64,6 +66,8 @@ async function pollIfNeeded(
 }
 
 async function collectAndReportResults(gh: ReturnType<typeof createGitHubSmokeManager>, runId: string): Promise<void> {
+    const jiraResource = {} as JiraClient;
+    const linkManager = {} as JiraLinkManager;
     const parsed = await collectTestResults({
         m: gh as unknown as GitProvider,
         pipelineId: runId,
@@ -71,6 +75,9 @@ async function collectAndReportResults(gh: ReturnType<typeof createGitHubSmokeMa
         projectName: 'qa_tools_e2e',
         currentProvider: 'github',
         pushHistory: () => {},
+        jiraResource,
+        linkManager,
+        jiraBaseUrl: '',
     });
     if (!parsed) {
         console.log('  No test results collected (expected if no artifacts).\n');

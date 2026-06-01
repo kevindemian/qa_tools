@@ -7,7 +7,7 @@ import { formatDateISO } from './date-utils';
 const PROJECT_ROOT = resolve(__dirname, '..');
 
 function resolveEnvOrPath(envVar: string, defaultValue: string): string {
-    return Config.get(envVar) ? resolve(Config.get(envVar)!) : join(PROJECT_ROOT, defaultValue);
+    return Config.get(envVar) ? resolve(Config.get(envVar)) : join(PROJECT_ROOT, defaultValue);
 }
 
 /** Absolute path to the reports directory (overridable via `QA_TOOLS_REPORTS_DIR`). */
@@ -18,7 +18,7 @@ export function reportsDir(): string {
 /** @internal Not part of public API. Logging uses `rootLogger` directly. */
 /** Absolute path to the logs directory (overridable via `LOG_DIR` or `QA_TOOLS_LOGS_DIR`). */
 export function logsDir(): string {
-    if (Config.get('QA_TOOLS_LOGS_DIR')) return resolve(Config.get('QA_TOOLS_LOGS_DIR')!);
+    if (Config.get('QA_TOOLS_LOGS_DIR')) return resolve(Config.get('QA_TOOLS_LOGS_DIR'));
     return resolveEnvOrPath('LOG_DIR', 'logs');
 }
 

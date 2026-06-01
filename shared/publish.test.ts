@@ -1,7 +1,6 @@
 import { publishReport, type PublishTarget } from './publish';
 
 jest.mock('child_process', () => ({
-    execSync: jest.fn(),
     execFileSync: jest.fn(),
 }));
 
@@ -18,7 +17,7 @@ jest.mock('./logger', () => ({
     rootLogger: { info: jest.fn(), error: jest.fn() },
 }));
 
-const mockExecSync = jest.requireMock('child_process').execSync as jest.Mock;
+const mockExecFileSync = jest.requireMock('child_process').execFileSync as jest.Mock;
 const mockLogger = jest.requireMock('./logger').rootLogger;
 
 beforeEach(() => {
@@ -29,28 +28,44 @@ describe('publishReport', () => {
     it('should call aws s3 cp for s3 target', () => {
         process.env.AWS_S3_BUCKET = 's3://my-bucket';
         publishReport({ target: 's3', filePath: './report.html' });
-        expect(mockExecSync).toHaveBeenCalledWith('aws s3 cp "./report.html" "s3://my-bucket" --no-progress', {
-            stdio: 'inherit',
-        });
+        expect(mockExecFileSync).toHaveBeenCalledWith(
+            'aws',
+            ['s3', 'cp', './report.html', 's3://my-bucket', '--no-progress'],
+            { stdio: 'inherit' },
+        );
     });
 
     it('should use explicit destination for s3 target', () => {
         publishReport({ target: 's3', filePath: './report.html', destination: 's3://other' });
-        expect(mockExecSync).toHaveBeenCalledWith('aws s3 cp "./report.html" "s3://other" --no-progress', {
-            stdio: 'inherit',
-        });
+        expect(mockExecFileSync).toHaveBeenCalledWith(
+            'aws',
+            ['s3', 'cp', './report.html', 's3://other', '--no-progress'],
+            { stdio: 'inherit' },
+        );
+    });
+
+    it('should not execute shell when path contains injection characters', () => {
+        process.env.AWS_S3_BUCKET = 's3://bucket';
+        const maliciousPath = './report; rm -rf /; .html';
+        publishReport({ target: 's3', filePath: maliciousPath });
+        expect(mockExecFileSync).toHaveBeenCalledWith(
+            'aws',
+            ['s3', 'cp', maliciousPath, 's3://bucket', '--no-progress'],
+            { stdio: 'inherit' },
+        );
+        expect(mockLogger.error).not.toHaveBeenCalled();
     });
 
     it('should log error when s3 dest is missing', () => {
         delete process.env.AWS_S3_BUCKET;
         publishReport({ target: 's3', filePath: './report.html' });
-        expect(mockExecSync).not.toHaveBeenCalled();
+        expect(mockExecFileSync).not.toHaveBeenCalled();
         expect(mockLogger.error).toHaveBeenCalledWith('S3 publish requires either --dest or AWS_S3_BUCKET env var');
     });
 
     it('should log error when s3 publish fails', () => {
         process.env.AWS_S3_BUCKET = 's3://bucket';
-        mockExecSync.mockImplementationOnce(() => {
+        mockExecFileSync.mockImplementationOnce(() => {
             throw new Error('aws failed');
         });
         publishReport({ target: 's3', filePath: './report.html' });
@@ -63,14 +78,13 @@ describe('publishReport', () => {
     });
 
     it('should handle missing origin url gracefully', () => {
-        // getOriginUrl throws → caught internally → returns 'origin'
-        mockExecSync
+        mockExecFileSync
             .mockImplementationOnce(() => {
                 throw new Error('no remote');
-            }) // getOriginUrl
-            .mockReturnValueOnce('') // clone
-            .mockReturnValueOnce(undefined) // cp
-            .mockReturnValueOnce(undefined); // git add + commit + push
+            })
+            .mockReturnValueOnce('')
+            .mockReturnValueOnce(undefined)
+            .mockReturnValueOnce(undefined);
         publishReport({ target: 'gh-pages', filePath: './report.html' });
         expect(mockLogger.error).not.toHaveBeenCalled();
     });
@@ -78,6 +92,6 @@ describe('publishReport', () => {
     it('should handle unsupported target gracefully', () => {
         publishReport({ target: 'ftp' as PublishTarget, filePath: './x.html' });
         expect(mockLogger.error).toHaveBeenCalledWith(expect.stringContaining('Unknown publish target'));
-        expect(mockExecSync).not.toHaveBeenCalled();
+        expect(mockExecFileSync).not.toHaveBeenCalled();
     });
 });

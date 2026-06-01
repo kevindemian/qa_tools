@@ -41,7 +41,7 @@ export function prompt(label: string, options: PromptOptions = {}): string {
 /** Synchronous yes/no confirmation (readline-sync).
  * In auto-confirm mode returns `defaultYes` without prompting. */
 export function confirm(label: string, defaultYes = false): boolean {
-    if (getConfig().autoConfirm) return defaultYes;
+    if (getConfig().get<boolean>('autoConfirm')) return defaultYes;
     const def = defaultYes ? 'Y' : 'N';
     while (true) {
         const text = '\n' + chalk.yellow('?') + ' ' + label + ' ' + chalk.yellow('(' + def + ')');
@@ -263,7 +263,7 @@ export async function askFilePath(label: string, options: FilePathOptions = {}):
     }
 }
 
-const isTTY = (): boolean => !!(process.stdout.isTTY && !getConfig().quiet);
+const isTTY = (): boolean => !!(process.stdout.isTTY && !getConfig().get<boolean>('quiet'));
 
 /** Async text input. Uses `@inquirer/input` in TTY mode, falls back to `prompt()`. */
 export async function ask(label: string, options: PromptOptions = {}): Promise<string> {

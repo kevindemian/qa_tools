@@ -192,7 +192,7 @@ function testCreationSetup(
     jiraResourceXray: JiraResourceLike,
     linkManager: JiraLinkManager,
 ): { stepImporter: XrayStepImporter; factory: TestCaseFactory; linker: IssueLinker; results: TestResult[] } {
-    const stepImporter = createStepImporter(jiraResourceXray, Config.xrayMode);
+    const stepImporter = createStepImporter(jiraResourceXray, Config.get('xrayMode'));
     return {
         stepImporter,
         factory: new TestCaseFactory(jiraResource, stepImporter),

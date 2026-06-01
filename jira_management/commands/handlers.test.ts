@@ -9,6 +9,7 @@ jest.mock('../../shared/prompt', () => ({
     confirm: jest.fn().mockReturnValue(false),
     ask: jest.fn().mockResolvedValue(''),
     askConfirm: jest.fn().mockResolvedValue(true),
+    askFilePath: jest.fn().mockResolvedValue('/mock/path.csv'),
     smartPrompt: jest.fn().mockResolvedValue('v2.0.0'),
     printError: jest.fn(),
     printSummary: jest.fn(),
@@ -34,9 +35,10 @@ jest.mock('../../shared/cli_base', () => ({
     sanitizeUrl: jest.fn((url) => url),
 }));
 
-const mockConfigMod: Record<string, unknown> = {
-    getInstance: jest.fn().mockReturnValue({ get: jest.fn() }),
-};
+const mockConfigMod: Record<string, unknown> = {};
+const mockGet = jest.fn((key: string) => (mockConfigMod[key] as string) ?? '');
+mockConfigMod.get = mockGet;
+mockConfigMod.getInstance = jest.fn().mockReturnValue({ get: mockGet });
 jest.mock('../../shared/config', () => mockConfigMod);
 
 jest.mock('../create_tests', () => ({

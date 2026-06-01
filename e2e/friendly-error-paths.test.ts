@@ -107,6 +107,9 @@ describe('friendly error paths (Sprint W)', () => {
                         githubToken: '',
                         githubApiUrl: '',
                         getAllPrefixed: jest.fn(() => ({})),
+                        get(key: string) {
+                            return (this as Record<string, unknown>)[key] as string;
+                        },
                     },
                     __esModule: true,
                 }));
@@ -164,6 +167,9 @@ describe('friendly error paths (Sprint W)', () => {
                         githubToken: '',
                         githubApiUrl: '',
                         getAllPrefixed: jest.fn(() => ({})),
+                        get(key: string) {
+                            return (this as Record<string, unknown>)[key] as string;
+                        },
                     },
                     __esModule: true,
                 }));

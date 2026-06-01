@@ -50,7 +50,7 @@ export interface TrendPoint {
 const STORE_FILE = 'metrics.json';
 
 function getMetricsDir(config?: Config): string {
-    const xdg = config ? config.xdgStateHome : Config.xdgStateHome;
+    const xdg = config ? config.get('xdgStateHome') : Config.get('xdgStateHome');
     const base = xdg ? path.join(xdg, 'qa-tools') : path.join(os.homedir(), '.local', 'state', 'qa-tools');
     return path.join(base, 'metrics');
 }

@@ -18,7 +18,7 @@ jest.mock('../../shared/config', () => {
         default: {
             get: mockGet,
             getDefault: jest.fn(() => ({
-                githubToken: 'mock-token',
+                get: mockGet,
             })),
         },
         get: mockGet,

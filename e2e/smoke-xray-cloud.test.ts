@@ -29,7 +29,7 @@ if (!runSmoke) {
 
         it('config.xrayMode returns "cloud"', () => {
             const Config = require('../shared/config').default;
-            expect(Config.xrayMode).toBe('cloud');
+            expect(Config.get('xrayMode')).toBe('cloud');
         });
 
         it('default XrayClient instantiates from JiraResource', () => {

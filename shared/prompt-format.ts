@@ -18,7 +18,7 @@ export function getConfig(): Config {
     return _config || Config.getDefault();
 }
 
-export const isQuiet = (): boolean => getConfig().quiet;
+export const isQuiet = (): boolean => getConfig().get<boolean>('quiet');
 
 export const MSG_UNKNOWN_ERROR = 'Erro desconhecido';
 export const MSG_UNEXPECTED = 'Erro inesperado';
@@ -40,7 +40,7 @@ export function badge(count: number, label: string, status: 'ok' | 'error' | 'wa
 }
 
 export function icon(name: 'ok' | 'err' | 'warn' | 'info'): string {
-    const useUnicode = !getConfig().quiet && Output.isTTY();
+    const useUnicode = !getConfig().get<boolean>('quiet') && Output.isTTY();
     if (useUnicode) {
         const map: Record<string, string> = { ok: '\u2713', err: '\u2717', warn: '\u26A0', info: '\u2139' };
         return map[name] ?? '';

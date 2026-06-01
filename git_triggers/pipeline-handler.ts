@@ -73,20 +73,13 @@ export async function parseTestResults(parsed: ParseResult): Promise<{
 }
 
 export async function createTestExecution(
-    opts: Omit<
-        CreateTestExecutionOptions,
-        'jiraResource' | 'linkManager' | 'jiraBaseUrl' | 'currentProvider' | 'pushHistory'
-    >,
+    opts: CreateTestExecutionOptions & {
+        currentProvider: 'gitlab' | 'github';
+        pushHistory: (op: string, detail: string, status: string) => void;
+    },
 ): Promise<void> {
-    const jira = __jiraEnv();
-    if (!jira) return;
-    const jiraRes = new JiraClient(jira.token, jira.base + '/rest/api/2');
-    const linkMgr = new JiraLinkManager(jiraRes);
     await _createTestExecution({
         ...opts,
-        jiraResource: jiraRes,
-        linkManager: linkMgr,
-        jiraBaseUrl: jira.base,
         currentProvider,
         pushHistory,
     });
@@ -97,8 +90,9 @@ export async function collectTestResults(
     pipelineId: string | number,
     branch: string,
     projectName: string,
+    extra: { jiraResource: JiraClient; linkManager: JiraLinkManager; jiraBaseUrl: string },
 ): Promise<ParseResult | null> {
-    return _collectTestResults({ m, pipelineId, branch, projectName, currentProvider, pushHistory });
+    return _collectTestResults({ m, pipelineId, branch, projectName, currentProvider, pushHistory, ...extra });
 }
 
 async function handleQuickMerge(m: GitProvider, branch: string, pollStatus: string | undefined): Promise<void> {
@@ -143,26 +137,34 @@ async function _postPipeline(
     pipelineId: string | number,
     branch: string,
     projectName: string,
+    jiraResource: JiraClient,
+    jiraBaseUrl: string,
+    linkManager: JiraLinkManager,
     pollStatus?: string,
 ): Promise<void> {
     let parsed: ParseResult | null = null;
     if (confirm('Coletar resultados para Jira?', false)) {
-        parsed = await collectTestResults(m, pipelineId, branch, projectName);
+        parsed = await collectTestResults(m, pipelineId, branch, projectName, {
+            jiraResource,
+            linkManager,
+            jiraBaseUrl,
+        });
     }
     if (parsed) {
         await offerPipelineFailureAnalysis(parsed, (analysisReport) => {
-            const jira = __jiraEnv();
-            if (jira) {
-                const jiraRes = new JiraClient(jira.token, jira.base + '/rest/api/2');
-                return handleBugCreation(parsed, pipelineId, branch, analysisReport, jiraRes);
-            }
-            return Promise.resolve();
+            return handleBugCreation(parsed, pipelineId, branch, analysisReport, jiraResource);
         });
     }
     await handleQuickMerge(m, branch, pollStatus);
 }
 
-async function resumePendingPipeline(m: GitProvider, projectName: string): Promise<string | null> {
+async function resumePendingPipeline(
+    m: GitProvider,
+    projectName: string,
+    jiraResource: JiraClient,
+    jiraBaseUrl: string,
+    linkManager: JiraLinkManager,
+): Promise<string | null> {
     const savedState = loadState();
     const pending = savedState.pendingPipeline as
         | { branch?: string; pipelineId?: string; projectName?: string }
@@ -196,7 +198,7 @@ async function resumePendingPipeline(m: GitProvider, projectName: string): Promi
     const icon = pollResult.status === 'success' ? '\u2713' : '\u2717';
     info('Pipeline #' + id + ': ' + icon + ' ' + pollResult.status);
     if (pollResult.status !== 'canceled' && pollResult.status !== 'skipped') {
-        await _postPipeline(m, id, branch, projectName, pollResult.status);
+        await _postPipeline(m, id, branch, projectName, jiraResource, jiraBaseUrl, linkManager, pollResult.status);
     }
     return branch;
 }
@@ -251,6 +253,9 @@ async function triggerAndPollPipeline(
     branch: string,
     payload: { ref: string; variables: Array<{ key: string; value: string }>; workflow_id?: string },
     projectName: string,
+    jiraResource: JiraClient,
+    jiraBaseUrl: string,
+    linkManager: JiraLinkManager,
 ): Promise<void> {
     let pipelineResult: PipelineTriggerResult | undefined;
     try {
@@ -285,19 +290,41 @@ async function triggerAndPollPipeline(
         delete s.pendingPipeline;
     });
     if (pollResult.status !== 'canceled' && pollResult.status !== 'skipped') {
-        await _postPipeline(m, id, branch, projectName, pollResult.status);
+        await _postPipeline(m, id, branch, projectName, jiraResource, jiraBaseUrl, linkManager, pollResult.status);
     }
 }
 
 export async function handleTriggerPipeline(m: GitProvider, projectName: string): Promise<void> {
     try {
-        const resumed = await resumePendingPipeline(m, projectName);
+        const jira = __jiraEnv();
+        if (!jira) {
+            warn('Variáveis JIRA não configuradas. Defina JIRA_BASE_URL, JIRA_PERSONAL_TOKEN e XRAY_BASE_URL.');
+        }
+
+        let jiraResource: JiraClient | undefined;
+        let linkManager: JiraLinkManager | undefined;
+        let jiraBaseUrl: string | undefined;
+        if (jira) {
+            jiraResource = new JiraClient(jira.token, jira.base + '/rest/api/2');
+            linkManager = new JiraLinkManager(jiraResource);
+            jiraBaseUrl = jira.base;
+        }
+
+        const resumed = await resumePendingPipeline(m, projectName, jiraResource!, jiraBaseUrl!, linkManager!);
         if (resumed !== null) return;
 
         const built = await buildPipelinePayload(m, projectName);
         if (!built) return;
 
-        await triggerAndPollPipeline(m, built.branch, built.payload, projectName);
+        await triggerAndPollPipeline(
+            m,
+            built.branch,
+            built.payload,
+            projectName,
+            jiraResource!,
+            jiraBaseUrl!,
+            linkManager!,
+        );
     } catch (err) {
         printError('Falha ao disparar pipeline', err);
     }

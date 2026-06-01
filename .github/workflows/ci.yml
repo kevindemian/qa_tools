@@ -22,6 +22,10 @@ jobs:
             - run: npx tsc --noEmit
             - run: npx eslint . --ext .ts
             - run: npm run unused-exports || true
+            - name: Check no .only() in tests
+              run: '! grep -rn "\.only(" --include="*.test.ts" --include="*.test.js" .'
+            - name: Check no throw string literal
+              run: '! grep -rn "throw ''" --include="*.ts" shared/ jira_management/ git_triggers/'
             - run: npm audit --audit-level=high || true
             - run: npx jest --coverage --forceExit --detectOpenHandles --testPathIgnorePatterns='github-e2e'
             - run: npx jest --no-coverage --forceExit --runInBand git_triggers/github-e2e.test.ts

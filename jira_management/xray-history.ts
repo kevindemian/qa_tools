@@ -114,8 +114,8 @@ class CloudHistoryProvider implements TestHistoryProvider {
 
     private _getCredentials(): { clientId: string; clientSecret: string } | null {
         const cfg = Config.getDefault();
-        const clientId = cfg.xrayClientId;
-        const clientSecret = cfg.xrayClientSecret;
+        const clientId = cfg.get('xrayClientId');
+        const clientSecret = cfg.get('xrayClientSecret');
         if (!clientId || !clientSecret) {
             this.log.warn('XRAY_CLIENT_ID and XRAY_CLIENT_SECRET not set');
             return null;
@@ -240,6 +240,6 @@ class CloudHistoryProvider implements TestHistoryProvider {
 // ─── Factory ─────────────────────────────────────────────────────────────────
 
 export function createHistoryProvider(jiraResource: JiraResource, mode?: 'server' | 'cloud'): TestHistoryProvider {
-    const resolvedMode = mode ?? Config.getDefault().xrayMode ?? 'server';
+    const resolvedMode = mode ?? Config.getDefault().get('xrayMode') ?? 'server';
     return resolvedMode === 'cloud' ? new CloudHistoryProvider(jiraResource) : new ServerHistoryProvider(jiraResource);
 }

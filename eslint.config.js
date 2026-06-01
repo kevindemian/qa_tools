@@ -26,6 +26,18 @@ module.exports = tseslint.config(
             '@typescript-eslint/no-unsafe-member-access': 'off',
             '@typescript-eslint/no-unsafe-argument': 'off',
             '@typescript-eslint/no-unsafe-call': 'off',
+            'no-restricted-syntax': [
+                'error',
+                {
+                    selector: 'CallExpression[callee.name="execSync"]',
+                    message: 'Use execFileSync with argv array instead of execSync to prevent command injection.',
+                },
+                {
+                    selector: 'CallExpression[callee.name="execFileSync"][arguments.0.type="TemplateLiteral"]',
+                    message:
+                        'execFileSync argument 0 must not be a template literal — use an argv array with literal command.',
+                },
+            ],
         },
     },
     // Layer restriction E5.1: shared/ must not import jira_management/ or git_triggers/

@@ -24,7 +24,7 @@ export async function handleBugCreation(
             provider: currentProvider,
         });
         bugReport.description = analysisReport.content;
-        const key = await fileToJira(jiraResource, bugReport, Config.jiraProject || 'ECSPOL');
+        const key = await fileToJira(jiraResource, bugReport, Config.get('jiraProject'));
         success('Bug criado: ' + jira.base + '/browse/' + key);
         pushHistory('create-jira-issue', key, 'ok');
     } catch (err) {

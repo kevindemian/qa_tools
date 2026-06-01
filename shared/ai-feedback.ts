@@ -11,7 +11,7 @@ import type { AiGenerationRecord, AiModification } from './types';
 const STORE_FILE = 'ai-feedback.json';
 
 function getStoreDir(config?: Config): string {
-    const xdg = config ? config.xdgStateHome : Config.xdgStateHome;
+    const xdg = config ? config.get('xdgStateHome') : Config.get('xdgStateHome');
     const base = xdg ? path.join(xdg, 'qa-tools') : path.join(os.homedir(), '.local', 'state', 'qa-tools');
     return path.join(base, 'feedback');
 }

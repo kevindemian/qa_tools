@@ -57,7 +57,7 @@ export type { LlmTier } from './types';
 // ---- token limits ----
 
 function _checkTotalTokenLimit(): void {
-    const maxTotal = Config.llmMaxTotalTokens;
+    const maxTotal = Config.get<number>('llmMaxTotalTokens');
     if (maxTotal <= 0) return;
     const current = _llmMetrics.totalPromptTokens + _llmMetrics.totalCompletionTokens;
     if (current >= maxTotal) {
@@ -69,7 +69,7 @@ function _checkTotalTokenLimit(): void {
 }
 
 function _checkTokenLimit(system: string, user: string): void {
-    const maxTokens = Config.llmMaxTokens;
+    const maxTokens = Config.get<number>('llmMaxTokens');
     const estimated = _estimateInputTokens(system, user);
     if (estimated > maxTokens) {
         throw new LlmError(

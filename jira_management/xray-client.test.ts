@@ -55,8 +55,13 @@ describe('CloudStepImporter', () => {
     beforeEach(() => {
         jest.clearAllMocks();
         (Config.getDefault as jest.Mock).mockReturnValue({
-            xrayClientId: 'test-client-id',
-            xrayClientSecret: 'test-client-secret',
+            get(key: string) {
+                const map: Record<string, string> = {
+                    xrayClientId: 'test-client-id',
+                    xrayClientSecret: 'test-client-secret',
+                };
+                return map[key];
+            },
         });
     });
 
@@ -78,8 +83,10 @@ describe('CloudStepImporter', () => {
 
     it('throws on missing credentials', async () => {
         (Config.getDefault as jest.Mock).mockReturnValue({
-            xrayClientId: '',
-            xrayClientSecret: '',
+            get(key: string) {
+                const map: Record<string, string> = { xrayClientId: '', xrayClientSecret: '' };
+                return map[key];
+            },
         });
 
         const importer = createStepImporter({} as JiraResource, 'cloud');

@@ -83,6 +83,8 @@ import {
     collectTestResults,
 } from './pipeline-handler';
 import type { GitProvider } from '../shared/types';
+import type JiraClient from '../shared/jira-client';
+import type JiraLinkManager from '../jira_management/jira_link_manager';
 
 const mockPrompt = prompt as jest.Mock;
 const mockConfirm = confirm as jest.Mock;
@@ -358,6 +360,8 @@ describe('createTestExecution', () => {
     it('delegates to test-results createTestExecution', async () => {
         const testResults = require('./test-results');
         (testResults.createTestExecution as jest.Mock).mockResolvedValue(undefined);
+        const jiraResource = {} as JiraClient;
+        const linkManager = {} as JiraLinkManager;
         await expect(
             createTestExecution({
                 matched: [],
@@ -365,6 +369,11 @@ describe('createTestExecution', () => {
                 projectName: 'proj',
                 pipelineId: '1',
                 branch: 'main',
+                jiraResource,
+                linkManager,
+                jiraBaseUrl: '',
+                currentProvider: 'github' as const,
+                pushHistory: jest.fn(),
             }),
         ).resolves.toBeUndefined();
         expect(testResults.createTestExecution).toHaveBeenCalled();
@@ -389,7 +398,13 @@ describe('collectTestResults', () => {
     it('delegates to test-results collectTestResults', async () => {
         const testResults = require('./test-results');
         (testResults.collectTestResults as jest.Mock).mockResolvedValue(null);
-        const result = await collectTestResults(mockM, '1', 'main', 'proj');
+        const jiraResource = {} as JiraClient;
+        const linkManager = {} as JiraLinkManager;
+        const result = await collectTestResults(mockM, '1', 'main', 'proj', {
+            jiraResource,
+            linkManager,
+            jiraBaseUrl: '',
+        });
         expect(result).toBeNull();
     });
 });

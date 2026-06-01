@@ -139,7 +139,7 @@ async function _autoCreateJiraBugs(
 }
 
 async function _postPrComment(stats: ParseResult['stats']): Promise<void> {
-    const githubToken = Config.githubToken;
+    const githubToken = Config.get('githubToken');
     const repo = Config.get('GITHUB_REPOSITORY');
     const prNumber = Config.get('GITHUB_PR_NUMBER') || Config.get('CI_PR_NUMBER');
 
@@ -188,7 +188,7 @@ async function _buildReportOptions(
 ): Promise<ReportOptions> {
     const historyCache = new TestHistoryCache();
     const testHistory = await resolveTestHistory(result.tests, c, historyCache);
-    const knownIssues = loadKnownIssues(Config.knownIssuesPath);
+    const knownIssues = loadKnownIssues(Config.get('knownIssuesPath'));
 
     const runs: TestRunTab[] = [];
     for (const extra of cliExtra.extraRuns) {

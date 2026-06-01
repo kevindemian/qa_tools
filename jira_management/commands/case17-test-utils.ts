@@ -199,7 +199,7 @@ function _detectFlakyTests(allTestsByTitle: Record<string, { states: string[] }>
 }
 
 async function fetchGitHubHistory(): Promise<CiContext> {
-    const token = Config.getDefault().githubToken || '';
+    const token = Config.getDefault().get('githubToken') || '';
     const repo = Config.get('GITHUB_REPOSITORY') || '';
     const client = createHttpClient({
         baseUrl: 'https://api.github.com',

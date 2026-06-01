@@ -23,7 +23,7 @@ export interface CiContext {
 }
 
 export function isGitHubCi(): boolean {
-    return !!(Config.githubToken && Config.get('GITHUB_REPOSITORY'));
+    return !!(Config.get('githubToken') && Config.get('GITHUB_REPOSITORY'));
 }
 
 export function isGitLabCi(): boolean {

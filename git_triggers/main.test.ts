@@ -1,6 +1,8 @@
 import { jest } from '@jest/globals';
 import fs from 'fs';
 import type { GitProvider } from '../shared/types';
+import type JiraClient from '../shared/jira-client';
+import type JiraLinkManager from '../jira_management/jira_link_manager';
 import * as prompt from '../shared/prompt';
 import * as state from '../shared/state';
 import * as nivelar from './nivelar';
@@ -569,7 +571,15 @@ describe('downloadTestArtifacts', () => {
 
 describe('collectTestResults', () => {
     it('returns early when jira env vars are missing', async () => {
-        const result = await mainModule.collectTestResults(mockProvider as unknown as GitProvider, '1', 'main', 'proj');
+        const jiraResource = {} as JiraClient;
+        const linkManager = {} as JiraLinkManager;
+        const result = await mainModule.collectTestResults(
+            mockProvider as unknown as GitProvider,
+            '1',
+            'main',
+            'proj',
+            { jiraResource, linkManager, jiraBaseUrl: '' },
+        );
         expect(result).toBeNull();
     });
 });

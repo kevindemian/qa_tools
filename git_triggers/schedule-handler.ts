@@ -95,7 +95,7 @@ export async function handleChangeProject(names: string[]): Promise<void> {
 
 async function runFlakyAutoActionsForProject(projectName: string, jiraResource: JiraClient): Promise<void> {
     try {
-        if (!Config.jiraBaseUrl || !Config.jiraPersonalToken) return;
+        if (!Config.get('jiraBaseUrl') || !Config.get('jiraPersonalToken')) return;
         const store = loadMetrics();
         const projectRuns = store.runs.filter((r) => r.project === currentProjectName);
         if (projectRuns.length < 5) return;
@@ -138,8 +138,11 @@ export async function handleFlakinessDashboard(): Promise<void> {
             currentProjectName + ' (' + flaky.filter((f: { rate: number }) => f.rate > 0.3).length + ' >30%)',
             'ok',
         );
-        if (Config.jiraBaseUrl && Config.jiraPersonalToken) {
-            const jiraResource = new JiraClient(Config.jiraPersonalToken, Config.jiraBaseUrl + '/rest/api/2');
+        if (Config.get('jiraBaseUrl') && Config.get('jiraPersonalToken')) {
+            const jiraResource = new JiraClient(
+                Config.get('jiraPersonalToken'),
+                Config.get('jiraBaseUrl') + '/rest/api/2',
+            );
             await runFlakyAutoActionsForProject(currentProjectName, jiraResource);
         }
     } catch (err) {

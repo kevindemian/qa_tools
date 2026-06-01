@@ -5,9 +5,13 @@ jest.mock('../../shared/state', () => ({
     update: jest.fn(),
 }));
 
-jest.mock('../../shared/config', () => ({
-    getInstance: jest.fn().mockReturnValue({ get: jest.fn() }),
-}));
+jest.mock('../../shared/config', () => {
+    const mockGet = jest.fn();
+    return {
+        get: mockGet,
+        getInstance: jest.fn().mockReturnValue({ get: mockGet }),
+    };
+});
 
 jest.mock('../create_tests', () => ({
     createTestsFromCsv: jest.fn(),
