@@ -37,6 +37,9 @@ jest.mock('../shared/config', () => ({
         githubToken: '',
         githubApiUrl: 'https://api.github.com',
         getAllPrefixed: jest.fn(() => ({})),
+        get(key: string) {
+            return (this as Record<string, unknown>)[key] as string;
+        },
     },
     __esModule: true,
 }));

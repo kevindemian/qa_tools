@@ -14,9 +14,9 @@ import { saveParseResult } from '../shared/metrics';
 import type { GitProvider } from '../shared/types';
 
 function _jiraEnv(): { base: string; token: string; xray: string } | null {
-    const base = Config.jiraBaseUrl;
-    const token = Config.jiraPersonalToken;
-    const xray = Config.xrayBaseUrl;
+    const base = Config.get('jiraBaseUrl');
+    const token = Config.get('jiraPersonalToken');
+    const xray = Config.get('xrayBaseUrl');
     if (!base || !token || !xray) return null;
     return { base, token, xray };
 }
@@ -205,15 +205,24 @@ export interface CollectTestResultsOptions {
     currentProvider: 'gitlab' | 'github';
     pushHistory: (op: string, detail: string, status: string) => void;
     teKey?: string;
+    jiraResource: JiraClient;
+    linkManager: JiraLinkManager;
+    jiraBaseUrl: string;
 }
 
 async function collectTestResults(opts: CollectTestResultsOptions): Promise<ParseResult | null> {
-    const { m, pipelineId, branch, projectName, currentProvider, pushHistory, teKey } = opts;
-    const jira = _jiraEnv();
-    if (!jira) {
-        warn('Variáveis JIRA não configuradas. Defina JIRA_BASE_URL, JIRA_PERSONAL_TOKEN e XRAY_BASE_URL.');
-        return null;
-    }
+    const {
+        m,
+        pipelineId,
+        branch,
+        projectName,
+        currentProvider,
+        pushHistory,
+        teKey,
+        jiraResource,
+        linkManager,
+        jiraBaseUrl,
+    } = opts;
 
     const parsed = await downloadTestArtifacts(m, pipelineId);
     if (!parsed) return null;
@@ -223,14 +232,12 @@ async function collectTestResults(opts: CollectTestResultsOptions): Promise<Pars
     const mapping = await parseTestResults(parsed);
     if (!mapping) return parsed;
 
-    const jiraResource = new JiraClient(jira.token, jira.base + '/rest/api/2');
-    const linkManager = new JiraLinkManager(jiraResource);
     await createTestExecution({
         matched: mapping.matched,
         csvName: mapping.csvName,
         jiraResource,
         linkManager,
-        jiraBaseUrl: jira.base,
+        jiraBaseUrl,
         projectName,
         pipelineId,
         branch,

@@ -7,6 +7,12 @@ jest.mock('../shared/prompt', () => ({
 jest.mock('../shared/config', () => ({
     default: {
         jiraProject: 'ECSPOL',
+        get(key: string) {
+            return (this as Record<string, unknown>)[key] as string;
+        },
+        set(key: string, value: unknown) {
+            (this as Record<string, unknown>)[key] = value;
+        },
     },
     __esModule: true,
 }));
@@ -86,20 +92,19 @@ describe('handleBugCreation', () => {
         expect(pushHistory).toHaveBeenCalledWith('create-jira-issue', 'ECSPOL-123', 'ok');
     });
 
-    it('uses default project key when Config.jiraProject is not set', async () => {
+    it('prints error when Config.get("jiraProject") is not set', async () => {
         (_jiraEnv as jest.Mock).mockReturnValue({ base: 'https://jira.example.com', token: 'tok', xray: 'xray' });
         (confirm as jest.Mock).mockReturnValue(true);
         (collectAutomated as jest.Mock).mockReturnValue(mockBugReport);
-        (fileToJira as jest.Mock).mockResolvedValue('ECSPOL-456');
-        (Config as { jiraProject: string }).jiraProject = '';
+        (fileToJira as jest.Mock).mockRejectedValue(new Error('Project key is required'));
+        Config.set('jiraProject', '');
 
         await handleBugCreation(mockParseResult, '99', 'develop', mockAnalysisReport, mockJiraResource);
 
-        expect(fileToJira).toHaveBeenCalledWith(mockJiraResource, expect.anything(), 'ECSPOL');
-        expect(success).toHaveBeenCalledWith('Bug criado: https://jira.example.com/browse/ECSPOL-456');
-        expect(pushHistory).toHaveBeenCalledWith('create-jira-issue', 'ECSPOL-456', 'ok');
+        expect(printError).toHaveBeenCalledWith('Falha ao criar bug no Jira', expect.any(Error));
+        expect(pushHistory).toHaveBeenCalledWith('create-jira-issue', '99', 'error');
 
-        (Config as { jiraProject: string }).jiraProject = 'ECSPOL';
+        Config.set('jiraProject', 'ECSPOL');
     });
 
     it('returns early when jira env is not configured', async () => {

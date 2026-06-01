@@ -114,7 +114,7 @@ function _selectProject(): { projectName: string | null; names: string[] } {
 }
 
 async function _promptChoice(stateHint: string): Promise<string> {
-    if (process.stdout.isTTY && !Config.quiet) {
+    if (process.stdout.isTTY && !Config.get('quiet')) {
         const ctx = buildContextLine();
         const ok = sessionContext.sessionCounters.filter((c: { status: string }) => c.status === 'ok').length;
         const err = sessionContext.sessionCounters.filter((c: { status: string }) => c.status === 'error').length;

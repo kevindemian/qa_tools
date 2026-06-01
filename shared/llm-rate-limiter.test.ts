@@ -4,7 +4,7 @@ jest.mock('./config', () => {
         __esModule: true,
         default: {
             get llmApiKey() {
-                return mockConfig.llmApiKey ?? '';
+                return mockConfig['llmApiKey'] ?? '';
             },
             get(key: string) {
                 return mockConfig[key] ?? undefined;

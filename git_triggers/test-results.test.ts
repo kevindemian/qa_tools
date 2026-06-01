@@ -31,7 +31,7 @@ jest.mock('../shared/config', () => {
         xrayBaseUrl: 'https://xray.example.com',
         cypressProjectPath: '',
         getAllPrefixed: jest.fn(() => ({})),
-        quiet: false,
+        get: jest.fn((key: string) => cfg[key] as string),
     };
     return { __esModule: true, default: cfg };
 });
@@ -443,6 +443,9 @@ describe('collectTestResults', () => {
         });
         const pushHistory = jest.fn();
 
+        const mockJiraRes = {} as unknown;
+        const mockLinkMgr = {} as unknown;
+
         await mod.collectTestResults({
             m: mockProvider as unknown as GitProvider,
             pipelineId: '1',
@@ -450,6 +453,9 @@ describe('collectTestResults', () => {
             projectName: 'PROJ',
             currentProvider: 'gitlab',
             pushHistory,
+            jiraResource: mockJiraRes,
+            linkManager: mockLinkMgr,
+            jiraBaseUrl: 'https://jira.example.com',
         });
 
         expect(mockListPipelineArtifacts).toHaveBeenCalled();
@@ -467,6 +473,9 @@ describe('collectTestResults', () => {
         mockListPipelineArtifacts.mockResolvedValue([]);
         const pushHistory = jest.fn();
 
+        const mockJiraRes = {} as unknown;
+        const mockLinkMgr = {} as unknown;
+
         await mod.collectTestResults({
             m: mockProvider as unknown as GitProvider,
             pipelineId: '1',
@@ -474,6 +483,9 @@ describe('collectTestResults', () => {
             projectName: 'PROJ',
             currentProvider: 'gitlab',
             pushHistory,
+            jiraResource: mockJiraRes,
+            linkManager: mockLinkMgr,
+            jiraBaseUrl: 'https://jira.example.com',
         });
 
         expect(mockMatchResultsToTests).not.toHaveBeenCalled();
@@ -498,6 +510,9 @@ describe('collectTestResults', () => {
         // mockPrompt default (empty string) makes parseTestResults return null
         const pushHistory = jest.fn();
 
+        const mockJiraRes = {} as unknown;
+        const mockLinkMgr = {} as unknown;
+
         await mod.collectTestResults({
             m: mockProvider as unknown as GitProvider,
             pipelineId: '1',
@@ -505,6 +520,9 @@ describe('collectTestResults', () => {
             projectName: 'PROJ',
             currentProvider: 'gitlab',
             pushHistory,
+            jiraResource: mockJiraRes,
+            linkManager: mockLinkMgr,
+            jiraBaseUrl: 'https://jira.example.com',
         });
 
         expect(mockSaveParseResult).toHaveBeenCalledWith('PROJ', {

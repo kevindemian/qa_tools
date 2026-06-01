@@ -10,9 +10,9 @@ import { offerTestExecutionAssociation, showResults } from './test-execution-flo
 
 async function handler(c: CommandContext): Promise<boolean | void> {
     const state = loadState() as Record<string, string | undefined>;
-    const csvDefaultPath = Config.csvDefaultPath || path.join(__dirname, '../test_steps.csv');
+    const csvDefaultPath = Config.get('csvDefaultPath') || path.join(__dirname, '../test_steps.csv');
     const csvPath =
-        Config.csvPath ||
+        Config.get('csvPath') ||
         (await askFilePath('Caminho do arquivo CSV', {
             extensions: ['.csv'],
             default: state.lastCsvPath || csvDefaultPath,
@@ -20,7 +20,7 @@ async function handler(c: CommandContext): Promise<boolean | void> {
 
     const labelsHint = state.lastLabels ? 'último: ' + state.lastLabels : 'vazio para nenhuma';
     const jiraLabelsInput =
-        Config.csvLabels ||
+        Config.get('csvLabels') ||
         (await ask('Labels Jira (separadas por virgula)', { hint: labelsHint, default: state.lastLabels || '' }));
     const jiraLabels = jiraLabelsInput
         .split(',')

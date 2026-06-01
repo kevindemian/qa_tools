@@ -185,7 +185,9 @@ export const ID_TO_ALIASES = _buildAliasMap();
 export function _configHint(key: string, ctx: { git_directory: string }): string {
     if (key === 'gitDir') return '(atual: ' + ctx.git_directory + ')';
     if (key === 'cypressDir')
-        return '(atual: ' + (Config.cypressProjectPath || loadTypedState().lastCypressPath || NOT_CONFIGURED) + ')';
+        return (
+            '(atual: ' + (Config.get('cypressProjectPath') || loadTypedState().lastCypressPath || NOT_CONFIGURED) + ')'
+        );
     if (key === 'jsonDir') return '(atual: ' + (loadTypedState().lastJsonDir || NOT_CONFIGURED) + ')';
     return '';
 }
@@ -202,7 +204,8 @@ export function buildMenuChoices(level: string, proj: string, ctx: { git_directo
             const entry: MenuChoice = { name: '      ' + item.label, value: item.id };
             if (item.configKey === 'gitDir') entry.description = ctx.git_directory;
             else if (item.configKey === 'cypressDir')
-                entry.description = Config.cypressProjectPath || loadTypedState().lastCypressPath || NOT_CONFIGURED;
+                entry.description =
+                    Config.get('cypressProjectPath') || loadTypedState().lastCypressPath || NOT_CONFIGURED;
             else if (item.configKey === 'jsonDir') entry.description = loadTypedState().lastJsonDir || NOT_CONFIGURED;
             else if (item.id === '9') entry.description = proj;
             if (item.id && ID_TO_ALIASES[item.id]) {

@@ -66,7 +66,21 @@ jest.mock('./config', () => {
             mockConfig[key] = value;
         },
         get(key: string) {
-            return mockConfig[key] ?? undefined;
+            const defaults: Record<string, string | number> = {
+                llmModel: 'google/gemini-2.0-flash-exp',
+                llmBaseUrl: 'https://openrouter.ai/api/v1',
+                llmSmallModel: 'gemini-2.0-flash-lite',
+                llmFastModel: 'llama3-8b-8192',
+                llmFastBaseUrl: 'https://api.groq.com/openai/v1',
+                llmReviewModel: 'gemini-2.0-flash-exp',
+                llmReviewBaseUrl: 'https://generativelanguage.googleapis.com/v1beta',
+                llmFallbackModel: 'meta/llama3-70b-instruct',
+                llmFallbackBaseUrl: 'https://integrate.api.nvidia.com/v1',
+                llmBatchModel: 'gpt-4o-mini',
+                llmBatchBaseUrl: 'https://models.inference.ai.azure.com',
+                llmMaxTokens: 128000,
+            };
+            return mockConfig[key] ?? defaults[key];
         },
         resetInstance() {
             Object.keys(mockConfig).forEach((k) => delete mockConfig[k]);

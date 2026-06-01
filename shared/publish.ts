@@ -1,6 +1,6 @@
 /** Auto-publish report files to S3 or gh-pages.
  * Provides CLI-wrapper functions for uploading generated HTML reports. */
-import { execSync, execFileSync } from 'child_process';
+import { execFileSync } from 'child_process';
 import { rootLogger } from './logger';
 import Config from './config';
 import { cpSync, mkdirSync } from 'fs';
@@ -21,10 +21,8 @@ function publishToS3(localPath: string, destination?: string): void {
         rootLogger.error('S3 publish requires either --dest or AWS_S3_BUCKET env var');
         return;
     }
-    const cmd = `aws s3 cp "${localPath}" "${dest}" --no-progress`;
-    // aws CLI args come from env/aws config, not user input — low risk, kept as execSync for simplicity
     try {
-        execSync(cmd, { stdio: 'inherit' });
+        execFileSync('aws', ['s3', 'cp', localPath, dest, '--no-progress'], { stdio: 'inherit' });
     } catch (err: unknown) {
         rootLogger.error('S3 publish failed: ' + (err as Error).message);
     }

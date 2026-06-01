@@ -1,1 +1,1 @@
-npx tsc --noEmit && npx lint-staged && echo "--- Checking for .only ---" && ! grep -rn '\.only(' --include='*.test.*' . && echo "OK"
+npx tsc --noEmit && npx lint-staged && echo "--- Checking for .only ---" && ! grep -rn '\.only(' --include='*.test.*' --exclude-dir=node_modules --exclude-dir=.git . && echo "OK"

@@ -81,8 +81,8 @@ async function showGapBadge(jiraResource: JiraResource, project: string): Promis
 /** Returns true when Jira base URL and personal token are configured with real values
  *  (non-empty, non-placeholder). Used to skip non-critical startup calls. */
 function _isJiraConfigured(): boolean {
-    const url = Config.jiraBaseUrl;
-    const token = Config.jiraPersonalToken;
+    const url = Config.get('jiraBaseUrl');
+    const token = Config.get('jiraPersonalToken');
     if (!url || !token) return false;
     if (url.includes('seu-jira-server') || token === 'seu-token-aqui') return false;
     return true;
@@ -102,14 +102,14 @@ function _displayBadge(totalCount: number, project: string): void {
     info(badge);
 }
 
-const base_url: string = Config.jiraBaseUrl;
-const personal_token: string = Config.jiraPersonalToken;
-const xray_url: string = Config.xrayBaseUrl;
-const default_project = 'ECSPOL';
+const base_url: string = Config.get('jiraBaseUrl');
+const personal_token: string = Config.get('jiraPersonalToken');
+const xray_url: string = Config.get('xrayBaseUrl');
+const default_project = '';
 
 const sessionLog = rootLogger.child({ session: 'jira' });
 
-if (Config.debug) {
+if (Config.get('debug')) {
     info('Jira Base URL: ' + base_url);
     info('Jira Token: ' + mask(personal_token));
 }
@@ -139,7 +139,7 @@ function initializeSession() {
 
     const state = loadTypedState();
     ctx.project_name = (
-        Config.jiraProject || prompt('Nome do projeto Jira', { default: state.lastProject || default_project })
+        Config.get('jiraProject') || prompt('Nome do projeto Jira', { default: state.lastProject || default_project })
     ).toUpperCase();
 
     function printSessionSummary(): void {
@@ -203,7 +203,7 @@ async function dispatchAndHandleResult(
 
     const longOps = ['1', '15', '4', '5', '7', '8'];
     const hasResults = ctx.results.length > 0 && ctx.results.some((r) => r.status === 'error');
-    if (!Config.autoConfirm && choice !== '0' && longOps.includes(choice) && hasResults) {
+    if (!Config.get('autoConfirm') && choice !== '0' && longOps.includes(choice) && hasResults) {
         prompt('Pressione Enter para continuar');
     }
 

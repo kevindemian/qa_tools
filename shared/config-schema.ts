@@ -30,7 +30,7 @@ export const CONFIG_SCHEMA: ConfigField[] = [
         key: 'jiraProject',
         envVar: 'JIRA_PROJECT',
         type: 'string',
-        defaultVal: 'ECSPOL',
+        defaultVal: 'YOUR_PROJECT_KEY',
         description: 'Jira project key',
     },
     { key: 'gitToken', envVar: 'GIT_TOKEN', type: 'string', description: 'Git token' },

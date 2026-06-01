@@ -10,6 +10,7 @@ import { collectTestResults as _collectTestResults } from './test-results';
 import type { PipelineTriggerResult } from '../shared/types';
 import Config from '../shared/config';
 import JiraClient from '../shared/jira-client';
+import JiraLinkManager from '../jira_management/jira_link_manager';
 import { writeReport } from '../shared/temp-dir';
 import { publishReport } from '../shared/publish';
 import {
@@ -100,7 +101,10 @@ async function triggerAndCollectBatchPipeline(
     m: import('../shared/types').GitProvider,
     branch: string,
     projectName: string,
-    teKey?: string,
+    teKey: string | undefined,
+    jiraResource: JiraClient,
+    jiraBaseUrl: string,
+    linkManager: JiraLinkManager,
 ): Promise<boolean> {
     const payload = { ref: branch, variables: [] as Array<{ key: string; value: string }> };
     let pipelineResult: PipelineTriggerResult | undefined;
@@ -140,6 +144,9 @@ async function triggerAndCollectBatchPipeline(
             currentProvider,
             pushHistory,
             teKey,
+            jiraResource,
+            linkManager,
+            jiraBaseUrl,
         });
         if (parsed) {
             await offerPipelineFailureAnalysis(parsed);
@@ -150,7 +157,7 @@ async function triggerAndCollectBatchPipeline(
 
 async function runFlakyAutoActions(projectName: string, jiraResource: JiraClient): Promise<void> {
     try {
-        if (!Config.jiraBaseUrl || !Config.jiraPersonalToken) return;
+        if (!Config.get('jiraBaseUrl') || !Config.get('jiraPersonalToken')) return;
         const store = loadMetrics();
         const projectRuns = store.runs.filter((r) => r.project === currentProjectName);
         if (projectRuns.length < 5) return;
@@ -195,12 +202,28 @@ export async function tryBatchMode(): Promise<boolean> {
 
     info('Modo batch: ' + setup.projectName + ' @ ' + setup.branch);
 
-    const done = await triggerAndCollectBatchPipeline(setup.m, setup.branch, setup.projectName, batch.teKey);
+    let jiraResource: JiraClient | undefined;
+    let linkManager: JiraLinkManager | undefined;
+    let jiraBaseUrl: string | undefined;
+    if (Config.get('jiraBaseUrl') && Config.get('jiraPersonalToken')) {
+        jiraResource = new JiraClient(Config.get('jiraPersonalToken'), Config.get('jiraBaseUrl') + '/rest/api/2');
+        linkManager = new JiraLinkManager(jiraResource);
+        jiraBaseUrl = Config.get('jiraBaseUrl');
+    }
+
+    const done = await triggerAndCollectBatchPipeline(
+        setup.m,
+        setup.branch,
+        setup.projectName,
+        batch.teKey,
+        jiraResource!,
+        jiraBaseUrl!,
+        linkManager!,
+    );
     if (done) return true;
 
     generateFlakinessDashboard(setup.projectName, batch.publish);
-    if (Config.jiraBaseUrl && Config.jiraPersonalToken) {
-        const jiraResource = new JiraClient(Config.jiraPersonalToken, Config.jiraBaseUrl + '/rest/api/2');
+    if (jiraResource) {
         await runFlakyAutoActions(setup.projectName, jiraResource);
     }
     runQuarantineMaintenance();

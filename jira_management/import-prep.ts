@@ -13,7 +13,7 @@ import { confirm, info, warn, print, title, divider, prompt, error, printSummary
 import { writeEphemeral } from '../shared/temp-dir';
 import { openWithOsOrFallback } from '../shared/open';
 
-const csvDefaultPath = Config.csvDefaultPath || path.join(__dirname, 'test_steps.csv');
+const csvDefaultPath = Config.get('csvDefaultPath') || path.join(__dirname, 'test_steps.csv');
 const CHECKPOINT_MAX_AGE_MS = 86400000;
 const MAX_WARNINGS_TO_SHOW = 5;
 
@@ -174,7 +174,7 @@ async function showPreview(
 }
 
 function filterTests(tests: TestCase[]): TestCase[] | null {
-    if (Config.autoConfirm) return tests;
+    if (Config.get('autoConfirm')) return tests;
 
     const filterText = prompt('Filtrar testes por titulo? (Enter para todos)');
     if (!filterText.trim()) return tests;
@@ -193,7 +193,7 @@ function filterTests(tests: TestCase[]): TestCase[] | null {
 }
 
 function confirmOrCancel(): boolean {
-    if (Config.autoConfirm) return true;
+    if (Config.get('autoConfirm')) return true;
     return confirm('Criar estes testes no Jira?');
 }
 
@@ -283,7 +283,7 @@ function handleDryRun(
     status: string;
     sourcePath: string;
 } | null {
-    if (!Config.dryRun) return null;
+    if (!Config.get('dryRun')) return null;
 
     warn('MODO DRY-RUN: Nenhuma operação sera executada.');
     printSummary(tests.map((t) => ({ status: 'ok' as const, label: t.title, message: 'simulado' })));
@@ -301,7 +301,7 @@ async function resolveCsvPath(csvPathInput: string | undefined): Promise<string>
     const state = loadState();
     return (
         csvPathInput ||
-        Config.csvPath ||
+        Config.get('csvPath') ||
         (await askFilePath('Caminho do arquivo CSV', {
             extensions: ['.csv'],
             default: (state.lastCsvPath as string) || csvDefaultPath,
@@ -312,7 +312,7 @@ async function resolveCsvPath(csvPathInput: string | undefined): Promise<string>
 function resolveLabels(jiraLabelsInput: string[] | undefined, configKey: 'csvLabels' | 'jsonLabels'): string[] {
     if (jiraLabelsInput) return jiraLabelsInput;
     const state = loadState();
-    const configValue = Config[configKey === 'csvLabels' ? 'csvLabels' : 'jsonLabels'] as string | undefined;
+    const configValue = Config.get(configKey === 'csvLabels' ? 'csvLabels' : 'jsonLabels');
     const labels =
         configValue ||
         prompt('Labels Jira (separadas por virgula)', {
@@ -330,7 +330,7 @@ async function resolveJsonPath(jsonPathInput: string | undefined): Promise<strin
     const state = loadState();
     const rawPath =
         jsonPathInput ||
-        Config.jsonPath ||
+        Config.get('jsonPath') ||
         (await askFilePath('Caminho do arquivo JSON ou TXT (formato JSON)', {
             extensions: ['.json', '.txt'],
             default: (state.lastJsonPath as string) || '',

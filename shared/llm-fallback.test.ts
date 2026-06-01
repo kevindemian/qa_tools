@@ -4,55 +4,55 @@ jest.mock('./config', () => {
         __esModule: true,
         default: {
             get llmApiKey() {
-                return mockConfig.llmApiKey ?? '';
+                return mockConfig['llmApiKey'] ?? '';
             },
             get llmModel() {
-                return mockConfig.llmModel ?? 'gpt-4';
+                return mockConfig['llmModel'] ?? 'gpt-4';
             },
             get llmBaseUrl() {
-                return mockConfig.llmBaseUrl ?? 'https://api.test.com/v1';
+                return mockConfig['llmBaseUrl'] ?? 'https://api.test.com/v1';
             },
             get llmSmallApiKey() {
-                return mockConfig.llmSmallApiKey ?? '';
+                return mockConfig['llmSmallApiKey'] ?? '';
             },
             get llmSmallModel() {
-                return mockConfig.llmSmallModel ?? 'gemini-2.0-flash-lite';
+                return mockConfig['llmSmallModel'] ?? 'gemini-2.0-flash-lite';
             },
             get llmFastApiKey() {
-                return mockConfig.llmFastApiKey ?? '';
+                return mockConfig['llmFastApiKey'] ?? '';
             },
             get llmFastModel() {
-                return mockConfig.llmFastModel ?? 'llama3-8b-8192';
+                return mockConfig['llmFastModel'] ?? 'llama3-8b-8192';
             },
             get llmFastBaseUrl() {
-                return mockConfig.llmFastBaseUrl ?? 'https://api.groq.com/openai/v1';
+                return mockConfig['llmFastBaseUrl'] ?? 'https://api.groq.com/openai/v1';
             },
             get llmReviewApiKey() {
-                return mockConfig.llmReviewApiKey ?? '';
+                return mockConfig['llmReviewApiKey'] ?? '';
             },
             get llmReviewModel() {
-                return mockConfig.llmReviewModel ?? 'gemini-2.0-flash-exp';
+                return mockConfig['llmReviewModel'] ?? 'gemini-2.0-flash-exp';
             },
             get llmReviewBaseUrl() {
-                return mockConfig.llmReviewBaseUrl ?? 'https://generativelanguage.googleapis.com/v1beta';
+                return mockConfig['llmReviewBaseUrl'] ?? 'https://generativelanguage.googleapis.com/v1beta';
             },
             get llmFallbackApiKey() {
-                return mockConfig.llmFallbackApiKey ?? '';
+                return mockConfig['llmFallbackApiKey'] ?? '';
             },
             get llmFallbackModel() {
-                return mockConfig.llmFallbackModel ?? 'llama3';
+                return mockConfig['llmFallbackModel'] ?? 'llama3';
             },
             get llmFallbackBaseUrl() {
-                return mockConfig.llmFallbackBaseUrl ?? 'https://nv.api.com/v1';
+                return mockConfig['llmFallbackBaseUrl'] ?? 'https://nv.api.com/v1';
             },
             get llmBatchApiKey() {
-                return mockConfig.llmBatchApiKey ?? '';
+                return mockConfig['llmBatchApiKey'] ?? '';
             },
             get llmBatchModel() {
-                return mockConfig.llmBatchModel ?? 'gpt-4o-mini';
+                return mockConfig['llmBatchModel'] ?? 'gpt-4o-mini';
             },
             get llmBatchBaseUrl() {
-                return mockConfig.llmBatchBaseUrl ?? 'https://models.inference.ai.azure.com';
+                return mockConfig['llmBatchBaseUrl'] ?? 'https://models.inference.ai.azure.com';
             },
             set(key: string, value: string) {
                 mockConfig[key] = value;

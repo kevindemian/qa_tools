@@ -12,7 +12,7 @@ import { offerTestExecutionAssociation, showResults } from './test-execution-flo
 async function handler(c: CommandContext): Promise<boolean | void> {
     const state = loadState() as Record<string, string | undefined>;
     const jsonPathInput =
-        Config.jsonPath ||
+        Config.get('jsonPath') ||
         (await ask('Caminho do arquivo JSON ou TXT (formato JSON)', { default: state.lastJsonPath || '' }));
 
     let jsonPath = jsonPathInput.trim();

@@ -158,7 +158,7 @@ export async function dispatchChoice(choice: string, cmdCtx: CommandContext): Pr
     return 'continue';
 }
 export async function getUserChoice(level: string, proj: string, ctx: SessionContext): Promise<string> {
-    if (Config.autoChoice) return Config.autoChoice;
+    if (Config.get('autoChoice')) return Config.get('autoChoice');
     const choices = buildMenuChoices(level, proj, ctx);
     choices.splice(
         choices.length - 1,

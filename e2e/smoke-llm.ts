@@ -4,7 +4,7 @@ import { generatePrDescription } from '../git_triggers/ai-pr-desc';
 import Config from '../shared/config';
 
 function hasLlmKeys(): boolean {
-    return !!(Config.llmFastApiKey || Config.llmApiKey);
+    return !!(Config.get('llmFastApiKey') || Config.get('llmApiKey'));
 }
 
 async function main() {

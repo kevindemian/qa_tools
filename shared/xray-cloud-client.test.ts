@@ -21,9 +21,23 @@ jest.mock('./http-client', () => ({
     createThrottledClient: jest.fn(() => mockHttpClient),
 }));
 
-jest.mock('./config', () => ({
-    getDefault: jest.fn(() => ({ xrayCloudUrl: 'https://xray.cloud.getxray.app' })),
-}));
+jest.mock('./config', () => {
+    const mockGet = jest.fn((key: string) => {
+        const map: Record<string, string> = { xrayCloudUrl: 'https://xray.cloud.getxray.app' };
+        return map[key];
+    });
+    const mockDefault = {
+        get: mockGet,
+        getAllPrefixed: jest.fn(() => ({})),
+        getDefault: jest.fn(() => mockDefault),
+    };
+    return {
+        __esModule: true,
+        default: mockDefault,
+        get: mockGet,
+        getDefault: mockDefault.getDefault,
+    };
+});
 
 const CID = 'test-client-id';
 const CSEC = 'test-client-secret';

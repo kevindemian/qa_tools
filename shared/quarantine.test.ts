@@ -9,6 +9,9 @@ jest.mock('./config', () => ({
     __esModule: true,
     default: {
         xdgStateHome: '/tmp/qa-tools-quarantine-test-mock',
+        get(key: string) {
+            return (this as Record<string, unknown>)[key] as string;
+        },
     },
 }));
 

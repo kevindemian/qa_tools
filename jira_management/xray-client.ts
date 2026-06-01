@@ -28,8 +28,8 @@ class CloudStepImporter implements XrayStepImporter {
 
     private _getCredentials(): { clientId: string; clientSecret: string } {
         const cfg = Config.getDefault();
-        const clientId = cfg.xrayClientId;
-        const clientSecret = cfg.xrayClientSecret;
+        const clientId = cfg.get('xrayClientId');
+        const clientSecret = cfg.get('xrayClientSecret');
         if (!clientId || !clientSecret) {
             throw new Error('XRAY_CLIENT_ID and XRAY_CLIENT_SECRET must be set for Xray Cloud mode');
         }

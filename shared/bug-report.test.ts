@@ -17,7 +17,12 @@ jest.mock('./logger');
 
 jest.mock('./config', () => ({
     __esModule: true,
-    default: { jiraProject: '' },
+    default: {
+        jiraProject: '',
+        get(key: string) {
+            return (this as Record<string, unknown>)[key] as string;
+        },
+    },
 }));
 
 import { collectManual, collectAutomated, compose, fileToJira, interactiveBugReportFlow } from './bug-report';

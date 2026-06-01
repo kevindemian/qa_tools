@@ -27,8 +27,8 @@ export let currentProvider: 'gitlab' | 'github' = 'gitlab';
 export let isBusy = false;
 export let manager: GitProvider | null = null;
 
-export const apiToken: string = Config.gitToken || '';
-export const gitlabBaseUrl: string = Config.gitBaseUrl || '';
+export const apiToken: string = Config.get('gitToken') || '';
+export const gitlabBaseUrl: string = Config.get('gitBaseUrl') || '';
 
 export function setCurrentProvider(v: 'gitlab' | 'github'): void {
     currentProvider = v;
@@ -112,9 +112,9 @@ export function createManagerForProject(projectName: string, id: string): GitPro
     if (provider === 'github') {
         const cfg = loadProvidersConfig()[projectName];
         const repo = cfg?.repo ?? id;
-        const ghToken = Config.githubToken || Config.gitToken || '';
+        const ghToken = Config.get('githubToken') || Config.get('gitToken') || '';
         if (!ghToken) throw new MissingTokenError('GitHub', 'GITHUB_TOKEN ou GIT_TOKEN');
-        const ghApiUrl = Config.githubApiUrl || 'https://api.github.com';
+        const ghApiUrl = Config.get('githubApiUrl') || 'https://api.github.com';
         return new GitHubManager(repo, ghToken, ghApiUrl);
     }
     if (!apiToken) throw new MissingTokenError('GitLab', 'GIT_TOKEN');

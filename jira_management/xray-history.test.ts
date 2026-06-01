@@ -54,9 +54,10 @@ function mockJiraResource(): JiraResource {
 beforeEach(() => {
     jest.clearAllMocks();
     (Config.getDefault as jest.Mock).mockReturnValue({
-        xrayMode: 'server' as const,
-        xrayClientId: '',
-        xrayClientSecret: '',
+        get(key: string) {
+            const map: Record<string, string> = { xrayMode: 'server', xrayClientId: '', xrayClientSecret: '' };
+            return map[key];
+        },
     });
 });
 
@@ -189,9 +190,14 @@ describe('CloudHistoryProvider', () => {
         jira = mockJiraResource();
         mockGraphql.mockReset();
         (Config.getDefault as jest.Mock).mockReturnValue({
-            xrayMode: 'cloud',
-            xrayClientId: 'client-123',
-            xrayClientSecret: 'secret-456',
+            get(key: string) {
+                const map: Record<string, string> = {
+                    xrayMode: 'cloud',
+                    xrayClientId: 'client-123',
+                    xrayClientSecret: 'secret-456',
+                };
+                return map[key];
+            },
         });
         provider = createHistoryProvider(jira, 'cloud');
     });
@@ -205,9 +211,10 @@ describe('CloudHistoryProvider', () => {
     it('returns empty array when credentials are missing', async () => {
         mockIssueGet.mockResolvedValue({ id: '12345' });
         (Config.getDefault as jest.Mock).mockReturnValue({
-            xrayMode: 'cloud',
-            xrayClientId: '',
-            xrayClientSecret: '',
+            get(key: string) {
+                const map: Record<string, string> = { xrayMode: 'cloud', xrayClientId: '', xrayClientSecret: '' };
+                return map[key];
+            },
         });
         const result = await provider.getHistory('TEST-123');
         expect(result).toEqual([]);

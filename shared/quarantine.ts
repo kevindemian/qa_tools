@@ -46,7 +46,7 @@ const STORE_FILE = 'quarantine.json';
 const PIPELINE_FILE = 'qa-quarantine.json';
 
 function getDataDir(): string {
-    const xdg = Config.xdgStateHome;
+    const xdg = Config.get('xdgStateHome');
     const base = xdg ? path.join(xdg, 'qa-tools') : path.join(os.homedir(), '.local', 'state', 'qa-tools');
     return path.join(base, 'quarantine');
 }

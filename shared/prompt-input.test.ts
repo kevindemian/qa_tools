@@ -44,7 +44,12 @@ jest.mock('./prompt-ui', () => {
     const actual = jest.requireActual('./prompt-ui');
     return {
         ...actual,
-        getConfig: jest.fn(() => ({ quiet: false, autoConfirm: false })),
+        getConfig: jest.fn(() => ({
+            get: (key: string) => {
+                const v: Record<string, unknown> = { quiet: false, autoConfirm: false };
+                return v[key] as boolean;
+            },
+        })),
         warn: jest.fn(),
         icon: jest.fn(() => '!'),
     };
@@ -94,7 +99,7 @@ const mockWarn = warn as jest.Mock;
 beforeEach(() => {
     jest.clearAllMocks();
     mockReadlineQuestion.mockReturnValue('');
-    mockGetConfig.mockReturnValue({ quiet: false, autoConfirm: false });
+    mockGetConfig.mockReturnValue({ get: (k: string) => ({ quiet: false, autoConfirm: false })[k] });
     __setInputMod(null);
     __setSelectMod(null);
     __setConfirmMod(null);
@@ -153,7 +158,7 @@ describe('confirm', () => {
     });
 
     it('returns defaultYes when autoConfirm', () => {
-        mockGetConfig.mockReturnValue({ quiet: false, autoConfirm: true });
+        mockGetConfig.mockReturnValue({ get: (k: string) => ({ quiet: false, autoConfirm: true })[k] });
         expect(confirm('Confirm?', true)).toBe(true);
     });
 

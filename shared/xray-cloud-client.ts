@@ -23,7 +23,7 @@ export class XrayCloudClient {
     private readonly baseUrl: string;
 
     constructor(baseUrl?: string) {
-        this.baseUrl = baseUrl ?? Config.getDefault().xrayCloudUrl ?? DEFAULT_XRAY_CLOUD_URL;
+        this.baseUrl = baseUrl ?? Config.getDefault().get('xrayCloudUrl') ?? DEFAULT_XRAY_CLOUD_URL;
         this.httpClient = createThrottledClient({ baseUrl: this.baseUrl, maxConcurrency: 3 });
     }
 

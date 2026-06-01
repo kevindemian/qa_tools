@@ -25,7 +25,13 @@ jest.mock('./session-state', () => ({
 
 jest.mock('../shared/config', () => ({
     __esModule: true,
-    default: { jiraProject: 'TEST', setAutoConfirm: jest.fn() },
+    default: {
+        jiraProject: 'TEST',
+        setAutoConfirm: jest.fn(),
+        get(key: string) {
+            return (this as Record<string, unknown>)[key] as string;
+        },
+    },
 }));
 
 jest.mock('./pipeline-handler', () => ({ pollPipeline: jest.fn() }));
