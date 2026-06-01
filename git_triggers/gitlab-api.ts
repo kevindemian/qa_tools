@@ -6,35 +6,45 @@ export function projectPath(owner: string, repo: string): string {
     return '/projects/' + encodeURIComponent(owner ? owner + '/' + repo : repo);
 }
 
-export async function apiGet(
+export async function apiGet<T = JsonObject>(
     client: AxiosInstance,
     url: string,
     opts?: { operation?: string; returnNull?: boolean; params?: JsonObject },
-) {
+): Promise<T | null> {
     try {
         const args = opts?.params ? [{ params: opts.params }] : [];
         const response = await client.get(url, ...args);
-        return response.data;
+        return response.data as T;
     } catch (err) {
         return handleError(err, { context: opts?.operation || url, returnNull: opts?.returnNull });
     }
 }
 
-export async function apiPost(client: AxiosInstance, url: string, body?: unknown, opts?: { operation?: string }) {
+export async function apiPost<T = JsonObject>(
+    client: AxiosInstance,
+    url: string,
+    body?: unknown,
+    opts?: { operation?: string },
+): Promise<T> {
     try {
         const args = body !== undefined ? [body] : [];
         const response = await client.post(url, ...args);
-        return response.data;
+        return response.data as T;
     } catch (err) {
         return handleError(err, { context: opts?.operation || url });
     }
 }
 
-export async function apiPut(client: AxiosInstance, url: string, body?: unknown, opts?: { operation?: string }) {
+export async function apiPut<T = JsonObject>(
+    client: AxiosInstance,
+    url: string,
+    body?: unknown,
+    opts?: { operation?: string },
+): Promise<T | null> {
     try {
         const args = body !== undefined ? [body] : [];
         const response = await client.put(url, ...args);
-        return response.status === 204 ? null : response.data;
+        return (response.status === 204 ? null : response.data) as T | null;
     } catch (err) {
         return handleError(err, { context: opts?.operation || url });
     }

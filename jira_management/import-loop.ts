@@ -245,21 +245,24 @@ function recordSkippedTest(results: TestResult[], testTitle: string): void {
     results.push({ status: 'ok', label: testTitle, message: 'skipped (already exists)' });
 }
 
-async function processCreationAndLinking(opts: ProcessOneTestOptions): Promise<'abort' | 'continue'> {
+async function _finalizeAfterIssueCreation(
+    opts: ProcessOneTestOptions & {
+        createdTestIssue: { key: string };
+        issueResult: { key: string | null; skipped: boolean };
+    },
+): Promise<'abort' | 'continue'> {
     const {
         t,
         test,
         testTitle,
-        factory,
         projectName,
-        jiraLabels,
+        factory,
         opLog,
         results,
         linker,
         baseUrl,
         sourcePath,
         sourceType,
-        total,
         tests,
         inMemoryTasksId,
         inMemoryTasksText,
@@ -267,21 +270,9 @@ async function processCreationAndLinking(opts: ProcessOneTestOptions): Promise<'
         isQuiet,
         reportInfo,
         reportPrint,
+        createdTestIssue,
+        issueResult,
     } = opts;
-    const issueResult = await createIssueForTest({
-        factory,
-        test,
-        testTitle,
-        projectName,
-        jiraLabels,
-        t,
-        total,
-        opLog,
-        results,
-    });
-    if (!issueResult || issueResult === 'continue') return 'continue';
-    if (issueResult === 'abort') return 'abort';
-    const createdTestIssue = { key: issueResult.key as string };
     inMemoryTasksId.push(createdTestIssue.key);
     if (issueResult.skipped) {
         recordSkippedTest(results, testTitle);
@@ -297,6 +288,28 @@ async function processCreationAndLinking(opts: ProcessOneTestOptions): Promise<'
         await notifyBatch(t, resumeFrom, tests.length, isQuiet, reportInfo);
     }
     return 'continue';
+}
+
+async function processCreationAndLinking(opts: ProcessOneTestOptions): Promise<'abort' | 'continue'> {
+    const { test, testTitle, factory, projectName, jiraLabels, t, total, opLog, results } = opts;
+    const issueResult = await createIssueForTest({
+        factory,
+        test,
+        testTitle,
+        projectName,
+        jiraLabels,
+        t,
+        total,
+        opLog,
+        results,
+    });
+    if (!issueResult || issueResult === 'continue') return 'continue';
+    if (issueResult === 'abort') return 'abort';
+    return _finalizeAfterIssueCreation({
+        ...opts,
+        createdTestIssue: { key: issueResult.key as string },
+        issueResult,
+    });
 }
 
 async function executeTestCreationLoop(opts: TestCreationLoopOptions): Promise<void> {

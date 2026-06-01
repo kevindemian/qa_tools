@@ -24,19 +24,19 @@ export async function glTriggerPipeline(
     payload: { ref: string; variables: Array<{ key: string; value: string }>; workflow_id?: string },
 ): Promise<PipelineTriggerResult | undefined> {
     const base = projectPath(owner, repo);
-    return apiPost(client, base + '/pipeline', payload, { operation: 'disparar pipeline' }) as Promise<
-        PipelineTriggerResult | undefined
-    >;
+    return apiPost<PipelineTriggerResult | undefined>(client, base + '/pipeline', payload, {
+        operation: 'disparar pipeline',
+    });
 }
 
 export async function glGetSchedules(client: AxiosInstance, owner: string, repo: string): Promise<ScheduleInfo[]> {
     const base = projectPath(owner, repo);
-    const data = await apiGet(client, base + '/pipeline_schedules', {
+    const data = await apiGet<ScheduleInfo[]>(client, base + '/pipeline_schedules', {
         operation: 'listar schedules',
         params: { per_page: SCHEDULES_PAGE_SIZE },
         returnNull: true,
     });
-    return (data || []) as ScheduleInfo[];
+    return data ?? [];
 }
 
 export async function glRunSchedule(
@@ -46,7 +46,7 @@ export async function glRunSchedule(
     scheduleId: string | number,
 ): Promise<JsonObject> {
     const base = projectPath(owner, repo);
-    return apiPost(client, base + `/pipeline_schedules/${scheduleId}/play`, undefined, {
+    return apiPost<JsonObject>(client, base + `/pipeline_schedules/${scheduleId}/play`, undefined, {
         operation: 'disparar schedule',
     });
 }
@@ -58,12 +58,12 @@ export async function glGetRecentPipelines(
     count = DEFAULT_PIPELINE_COUNT,
 ): Promise<PipelineRun[]> {
     const base = projectPath(owner, repo);
-    const data = await apiGet(client, base + '/pipelines', {
+    const data = await apiGet<PipelineRun[]>(client, base + '/pipelines', {
         operation: 'buscar pipelines',
         params: { per_page: count, order_by: 'updated_at' },
         returnNull: true,
     });
-    return (data || []) as PipelineRun[];
+    return data ?? [];
 }
 
 export async function glGetPipeline(
@@ -73,7 +73,7 @@ export async function glGetPipeline(
     pipelineId: string | number,
 ): Promise<PipelineInfo | null> {
     const base = projectPath(owner, repo);
-    return apiGet(client, base + `/pipelines/${pipelineId}`, {
+    return apiGet<PipelineInfo>(client, base + `/pipelines/${pipelineId}`, {
         operation: 'buscar pipeline',
         returnNull: true,
     });
@@ -86,15 +86,15 @@ export async function glGetPipelineJobs(
     pipelineId: string | number,
 ): Promise<PipelineJob[]> {
     const base = projectPath(owner, repo);
-    const data = await apiGet(client, base + `/pipelines/${pipelineId}/jobs`, {
+    const data = await apiGet<JsonObject[]>(client, base + `/pipelines/${pipelineId}/jobs`, {
         operation: 'listar jobs',
         returnNull: true,
     });
-    return (data || []).map((j: JsonObject) => ({
-        id: j.id,
-        name: j.name,
-        stage: j.stage,
-        status: j.status,
+    return (data ?? []).map((j: JsonObject) => ({
+        id: j.id as string | number,
+        name: j.name as string,
+        stage: j.stage as string,
+        status: j.status as string,
     }));
 }
 
@@ -105,24 +105,24 @@ export async function glListPipelineArtifacts(
     pipelineId: string | number,
 ): Promise<ArtifactInfo[]> {
     const base = projectPath(owner, repo);
-    const data = await apiGet(client, base + `/pipelines/${pipelineId}/jobs`, {
+    const data = await apiGet<JsonObject[]>(client, base + `/pipelines/${pipelineId}/jobs`, {
         operation: 'listar artifacts',
         returnNull: true,
     });
-    const jobs = data || [];
+    const jobs = data ?? [];
     return jobs
-        .filter((j: JsonObject) => j.artifacts_file || (j.artifacts && (j.artifacts as Array<unknown>).length > 0))
-        .map((j: JsonObject) => ({ id: j.id, name: j.name }));
+        .filter((j) => j.artifacts_file || (j.artifacts && (j.artifacts as unknown[]).length > 0))
+        .map((j: JsonObject) => ({ id: j.id as string | number, name: j.name as string }));
 }
 
 export async function glGetCICDVariables(client: AxiosInstance, owner: string, repo: string): Promise<CICDVariable[]> {
     const base = projectPath(owner, repo);
-    const data = await apiGet(client, base + '/variables', {
+    const data = await apiGet<CICDVariable[]>(client, base + '/variables', {
         operation: 'buscar variáveis CI/CD',
         params: { per_page: VARIABLES_PAGE_SIZE },
         returnNull: true,
     });
-    return (data || []) as CICDVariable[];
+    return data ?? [];
 }
 
 export async function glDownloadArtifact(
@@ -136,10 +136,11 @@ export async function glDownloadArtifact(
         const response = await client.get(base + `/jobs/${artifactId}/artifacts`, {
             responseType: 'arraybuffer',
         });
-        const disposition = (response.headers['content-disposition'] as string) || '';
+        const disposition =
+            typeof response.headers['content-disposition'] === 'string' ? response.headers['content-disposition'] : '';
         const match = disposition.match(/filename="?(.+?)"?$/);
         const filename = match ? match[1]! : 'artifacts.zip';
-        return { buffer: Buffer.from(response.data as ArrayBuffer), filename };
+        return { buffer: Buffer.from(response.data), filename };
     } catch (err) {
         return handleError(err, { context: 'baixar artifact' });
     }
@@ -157,7 +158,7 @@ export async function glGetJobLogs(
         const response = await client.get(base + `/jobs/${jobId}/trace`, {
             responseType: 'text' as const,
         });
-        const raw = typeof response.data === 'string' ? response.data : String(response.data);
+        const raw = String(response.data);
         return raw.slice(0, maxBytes);
     } catch (err) {
         return handleError(err, { context: 'baixar log do job', returnNull: true });

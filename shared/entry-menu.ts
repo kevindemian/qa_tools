@@ -43,8 +43,7 @@ export async function main(): Promise<void> {
     }
 
     while (true) {
-        // eslint-disable-next-line no-console
-        if (process.stdout.isTTY) console.clear();
+        if (process.stdout.isTTY) process.stdout.write('\x1Bc');
         await showSplash();
 
         const choice = await showSelect('      Selecione o módulo', [

@@ -2,19 +2,24 @@
 import { execFileSync } from 'child_process';
 import fs from 'fs';
 import path from 'path';
+import { z } from 'zod';
 import { rootLogger } from './logger';
 import { safeParseJson } from './safe-json';
 import type { TestImpactResult, ImpactedTest, FileTestMapping, TestSelectionJson } from './types';
 
 // ---- helpers ----
 
+const PackageJsonSchema = z.object({
+    devDependencies: z.record(z.string(), z.string()).optional(),
+});
+
 function loadPackageJson(): { devDependencies?: Record<string, string> } | null {
     try {
         const pkgPath = path.resolve(process.cwd(), 'package.json');
         if (!fs.existsSync(pkgPath)) return null;
-        return JSON.parse(fs.readFileSync(pkgPath, 'utf8')) as {
-            devDependencies?: Record<string, string>;
-        };
+        const raw = fs.readFileSync(pkgPath, 'utf8');
+        const parsed: unknown = JSON.parse(raw);
+        return PackageJsonSchema.parse(parsed);
     } catch (err: unknown) {
         rootLogger.warn('Failed to read package.json', err);
         return null;

@@ -5,6 +5,7 @@
  * during Sprint N UX restructuring. */
 import { title, info, divider, printError } from '../shared/prompt';
 import { pushHistory } from './session-state';
+import { main as setupMain } from '../setup/main';
 
 /** Execute the CI/CD setup wizard and record the result in session history.
  * @returns false on success (continues the menu loop), false also on error
@@ -15,9 +16,7 @@ export async function handleSetupWizard(): Promise<boolean> {
     divider();
 
     try {
-        // eslint-disable-next-line @typescript-eslint/no-require-imports
-        const setupModule = require('../setup/main') as { default: { main: () => Promise<void> } };
-        await setupModule.default.main();
+        await setupMain();
     } catch (err: unknown) {
         printError('Erro ao executar setup wizard', err);
         return false;

@@ -261,9 +261,7 @@ async function _initEnvironment(): Promise<void> {
     const envResult = validateEnv();
     if (offerEnvSetup(envResult)) {
         try {
-            // eslint-disable-next-line @typescript-eslint/no-require-imports
-            const handlerMod = require('./case00-handler') as { handleSetupWizard: () => Promise<boolean> };
-            await handlerMod.handleSetupWizard();
+            await _handleSetupWizard();
         } catch {
             // wizard failed — continue anyway
         }

@@ -1,33 +1,37 @@
 import { palette } from './palette';
 import { defaultOutput, Output } from './output';
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any -- dynamic imports, ESM-only
-type DepCache = { figlet?: any; gradient?: any; https?: any; http?: any };
+type FigletModule = { textSync: (str: string, opts?: Record<string, unknown>) => string };
+type GradientModule = { default: (colors: string[]) => (text: string) => string };
+type HttpModule = typeof import('http');
+
+interface DepCache {
+    figlet?: FigletModule;
+    gradient?: GradientModule;
+    https?: HttpModule;
+    http?: HttpModule;
+}
 
 const _cache: DepCache = {};
 
 export function __setFigletDep(mod: unknown): void {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- dynamic import, ESM-only
-    _cache.figlet = mod as any;
+    _cache.figlet = mod as FigletModule;
 }
 
 export function __setGradientDep(mod: unknown): void {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- dynamic import, ESM-only
-    _cache.gradient = mod as any;
+    _cache.gradient = mod as GradientModule;
 }
 
 export function __setHttpsDep(mod: unknown): void {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Node built-in, ESM-only in Jest
-    _cache.https = mod as any;
+    _cache.https = mod as HttpModule;
 }
 
 export function __setHttpDep(mod: unknown): void {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Node built-in, ESM-only in Jest
-    _cache.http = mod as any;
+    _cache.http = mod as HttpModule;
 }
 
 async function ensureDeps(): Promise<void> {
-    if (!_cache.figlet) _cache.figlet = await import('figlet');
+    if (!_cache.figlet) _cache.figlet = (await import('figlet')) as unknown as FigletModule;
     if (!_cache.gradient) _cache.gradient = await import('gradient-string');
 }
 
@@ -48,8 +52,7 @@ export async function checkJiraStatus(baseUrl: string, token: string): Promise<S
             const req = mod.get(
                 baseUrl + '/rest/api/2/myself',
                 { headers: { Authorization: 'Bearer ' + token }, timeout: 2000 },
-                // eslint-disable-next-line @typescript-eslint/no-explicit-any -- http.IncomingMessage
-                (res: any) => {
+                (res: import('http').IncomingMessage) => {
                     res.resume();
                     resolve();
                 },
@@ -105,8 +108,15 @@ export async function showSplash(statePath?: string, jiraBaseUrl?: string, jiraT
 
     try {
         await ensureDeps();
-        const logo = _cache.figlet.textSync('QA TOOLS', { font: 'ANSI Shadow' }) as string;
-        const grad = _cache.gradient.default as (colors: string[]) => { (text: string): string };
+        const figletInstance = _cache.figlet;
+        const gradientModule = _cache.gradient;
+        if (!figletInstance || !gradientModule) {
+            defaultOutput.print('🔧 QA Tools  v1.0.0 — Gestão de Testes & Automação de CI/CD');
+            if (statePath) defaultOutput.print('  State: ' + statePath);
+            return;
+        }
+        const logo = figletInstance.textSync('QA TOOLS', { font: 'ANSI Shadow' });
+        const grad = gradientModule.default;
         const colored = grad(['#58a6ff', '#bc8cff'])(logo);
 
         const checks: StatusCheck[] = [];

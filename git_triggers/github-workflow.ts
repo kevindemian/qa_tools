@@ -194,8 +194,7 @@ export function wfGetSchedules(): Promise<ScheduleInfo[]> {
 }
 
 export function wfRunSchedule(_scheduleId: string | number): Promise<JsonObject> {
-    const err = new Error(
+    throw new Error(
         'GitHub Actions schedules not available via REST API. Use workflow_dispatch or repository_dispatch.',
     );
-    throw err;
 }

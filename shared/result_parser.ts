@@ -9,8 +9,8 @@ const EMPTY_PARSE_RESULT = { tests: [], stats: { passed: 0, failed: 0, skipped: 
 function readAndParse<T>(filePath: string, parser: (data: T) => ParseResult): ParseResultWithError {
     try {
         const raw = fs.readFileSync(filePath, 'utf8');
-        const json = JSON.parse(raw) as T;
-        return parser(json);
+        const json: unknown = JSON.parse(raw);
+        return parser(json as T);
     } catch (err: unknown) {
         const code = err && typeof err === 'object' && 'code' in err ? String(err.code) : undefined;
         const msg =

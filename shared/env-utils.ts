@@ -1,5 +1,6 @@
 /** Environment variable utilities — extracted from Config for SRP compliance. */
 import * as path from 'path';
+import dotenv from 'dotenv';
 
 let dotenvLoaded = false;
 
@@ -7,8 +8,7 @@ let dotenvLoaded = false;
 function ensureDotenv(): void {
     if (dotenvLoaded) return;
     try {
-        // eslint-disable-next-line @typescript-eslint/no-require-imports
-        require('dotenv').config({ path: path.resolve(__dirname, '../.env') });
+        dotenv.config({ path: path.resolve(__dirname, '../.env') });
     } catch {
         /* env file optional */
     }

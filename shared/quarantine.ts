@@ -4,6 +4,7 @@
 import fs from 'fs';
 import path from 'path';
 import os from 'os';
+import { z } from 'zod';
 import { rootLogger } from './logger';
 import Config from './config';
 
@@ -42,6 +43,22 @@ export interface PipelineQuarantine {
     };
 }
 
+const QuarantineEntrySchema: z.ZodType<QuarantineEntry> = z.object({
+    testTitle: z.string(),
+    reason: z.string(),
+    quarantinedBy: z.string(),
+    date: z.string(),
+    expiresAt: z.string(),
+    flakyRate: z.number().min(0).max(1),
+    bugUrl: z.string().optional(),
+    reviewRequired: z.boolean(),
+    permanent: z.boolean(),
+});
+
+const QuarantineStoreSchema: z.ZodType<QuarantineStore> = z.object({
+    entries: z.array(QuarantineEntrySchema),
+});
+
 const STORE_FILE = 'quarantine.json';
 const PIPELINE_FILE = 'qa-quarantine.json';
 
@@ -75,9 +92,10 @@ export function loadQuarantine(): QuarantineStore {
         const sp = storePath();
         if (!fs.existsSync(sp)) return { entries: [] };
         const raw = fs.readFileSync(sp, 'utf8');
-        return JSON.parse(raw) as QuarantineStore;
+        const parsed: unknown = JSON.parse(raw);
+        return QuarantineStoreSchema.parse(parsed);
     } catch (err) {
-        rootLogger.warn('Failed to load quarantine store: ' + (err as Error).message);
+        rootLogger.warn('Failed to load quarantine store: ' + (err instanceof Error ? err.message : String(err)));
         return { entries: [] };
     }
 }

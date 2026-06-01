@@ -1,4 +1,5 @@
 /** UI helpers — branch formatting, interactive menus, and project-selection prompts. */
+import { stripVTControlCharacters } from 'util';
 import type { JsonObject } from '../shared/types';
 import { title, warn, divider, ask, tableView } from '../shared/prompt';
 import { load as loadState } from '../shared/state';
@@ -42,8 +43,7 @@ async function handleShowHistory(): Promise<void> {
 }
 
 function formatBranch(branch: string): string {
-    // eslint-disable-next-line no-control-regex -- ANSI escape sequence
-    return branch.replace(/[\u001b\u009b][[()#;?]*(?:[0-9]{1,4}(?:;[0-9]{0,4})*)?[0-9A-ORZcf-nqry=><]/g, '');
+    return stripVTControlCharacters(branch);
 }
 
 export { MSG_NO_OPERATION_RECORDED, providerLabel, handleHelp, handleShowHistory, formatBranch };

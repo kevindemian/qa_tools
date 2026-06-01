@@ -164,12 +164,11 @@ export class CancelError extends Error {
     }
 }
 
-// eslint-disable-next-line @typescript-eslint/require-await
-export async function onError(
+export function onError(
     context: string,
     err: unknown,
     options: { retry?: boolean; details?: boolean } = {},
-): Promise<'abort' | 'skip' | 'retry'> {
+): 'abort' | 'skip' | 'retry' {
     const { retry: canRetry = false, details: canDetails = false } = options;
     const { msg } = _formatErrorMessage(err);
 

@@ -514,9 +514,9 @@ describe('handleExportVariables', () => {
 
 describe('handleHelp', () => {
     it('prints help box and prompts to continue', async () => {
-        jest.spyOn(console, 'log').mockImplementationOnce(() => {});
+        jest.spyOn(process.stdout, 'write').mockImplementationOnce(() => true);
         await mainModule.handleHelp();
-        expect(console.log).toHaveBeenCalledWith(expect.stringContaining('Ajuda'));
+        expect(process.stdout.write).toHaveBeenCalledWith(expect.stringContaining('Ajuda'));
         expect(prompt.ask).toHaveBeenCalledWith('Pressione Enter para continuar');
     });
 });

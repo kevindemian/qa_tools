@@ -21,12 +21,11 @@
     },
     "include": [
         "jest-setup.ts",
+        "setup/**/*.ts",
         "shared/**/*.ts",
         "jira_management/**/*.ts",
         "git_triggers/**/*.ts",
-        "e2e/**/*.ts",
-        "setup/**/*.ts",
-        "scripts/audit/*.ts"
+        "e2e/**/*.ts"
     ],
     "exclude": ["node_modules", "docs-archive"]
 }

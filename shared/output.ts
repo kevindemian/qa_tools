@@ -22,18 +22,15 @@ export class Output {
     }
 
     print(...args: Parameters<typeof console.log>): void {
-        // eslint-disable-next-line no-console
-        console.log(...args);
+        process.stdout.write(args.map(String).join(' ') + '\n');
     }
 
     error(...args: Parameters<typeof console.error>): void {
-        // eslint-disable-next-line no-console
-        console.error(...args);
+        process.stderr.write(args.map(String).join(' ') + '\n');
     }
 
     warn(...args: Parameters<typeof console.warn>): void {
-        // eslint-disable-next-line no-console
-        console.warn(...args);
+        process.stderr.write(args.map(String).join(' ') + '\n');
     }
 
     box(lines: string[], options?: BoxOptions): void {

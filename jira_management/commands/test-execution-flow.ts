@@ -82,9 +82,9 @@ async function handleCreateNew(
     const execTitle = await ask('Título do Test Execution', { hint: 'Enter = ' + csvName });
     const execDesc = await ask('Descrição (opcional)');
     try {
+        const executor = new TestExecutionCreator(c.jiraResource, c.linkManager);
         const execResult = await createTests.createTestExecutionWithLinks({
-            jiraResource: c.jiraResource,
-            linkManager: c.linkManager,
+            testExecutionCreator: executor,
             projectName: project,
             testKeys,
             csvName,

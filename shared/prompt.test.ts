@@ -34,9 +34,9 @@ describe('Prompt', () => {
     });
 
     beforeEach(() => {
-        mockLog = jest.spyOn(console, 'log').mockImplementation(() => {});
-        mockError = jest.spyOn(console, 'error').mockImplementation(() => {});
-        mockWarn = jest.spyOn(console, 'warn').mockImplementation(() => {});
+        mockLog = jest.spyOn(process.stdout, 'write').mockImplementation(() => true);
+        mockError = jest.spyOn(process.stderr, 'write').mockImplementation(() => true);
+        mockWarn = jest.spyOn(process.stderr, 'write').mockImplementation(() => true);
         process.stdout.isTTY = false;
         prompt.__setConfig(Config.create({}));
     });
@@ -153,7 +153,7 @@ describe('Prompt', () => {
         it('logs plain text when QUIET=true', () => {
             prompt.__setConfig(Config.create({ quiet: true }));
             prompt.title('Quieto');
-            expect(mockLog).toHaveBeenCalledWith('--- Quieto ---');
+            expect(mockLog).toHaveBeenCalledWith(expect.stringContaining('--- Quieto ---'));
         });
     });
 
@@ -864,31 +864,31 @@ describe('Prompt', () => {
 
         it('returns "skip" when autoConfirm and autoAction is skip', async () => {
             prompt.__setConfig(Config.create({ autoConfirm: true, onError: 'skip' }));
-            const result = await prompt.onError('ctx', new Error('fail'), { retry: true });
+            const result = prompt.onError('ctx', new Error('fail'), { retry: true });
             expect(result).toBe('skip');
         });
 
         it('returns "abort" when autoConfirm and autoAction is abort', async () => {
             prompt.__setConfig(Config.create({ autoConfirm: true, onError: 'abort' }));
-            const result = await prompt.onError('ctx', new Error('fail'));
+            const result = prompt.onError('ctx', new Error('fail'));
             expect(result).toBe('abort');
         });
 
         it('returns "abort" when user chooses A', async () => {
             jest.spyOn(readlineSync, 'question').mockReturnValue('a');
-            const result = await prompt.onError('ctx', new Error('fail'));
+            const result = prompt.onError('ctx', new Error('fail'));
             expect(result).toBe('abort');
         });
 
         it('returns "skip" when user chooses S', async () => {
             jest.spyOn(readlineSync, 'question').mockReturnValue('s');
-            const result = await prompt.onError('ctx', new Error('fail'));
+            const result = prompt.onError('ctx', new Error('fail'));
             expect(result).toBe('skip');
         });
 
         it('returns "retry" when user chooses R with canRetry', async () => {
             jest.spyOn(readlineSync, 'question').mockReturnValue('r');
-            const result = await prompt.onError('ctx', new Error('fail'), { retry: true });
+            const result = prompt.onError('ctx', new Error('fail'), { retry: true });
             expect(result).toBe('retry');
         });
 
@@ -898,31 +898,31 @@ describe('Prompt', () => {
                 response: { status: 400, data: { detail: 'invalid' } },
                 message: 'bad request',
             };
-            const result = await prompt.onError('ctx', err, { details: true });
+            const result = prompt.onError('ctx', err, { details: true });
             expect(result).toBe('abort');
             expect(mockLog).toHaveBeenCalledWith(expect.stringContaining('400'));
         });
 
         it('shows error with stack details when err is Error', async () => {
             jest.spyOn(readlineSync, 'question').mockReturnValueOnce('d').mockReturnValueOnce('a');
-            const result = await prompt.onError('ctx', new Error('detail-error'), { details: true });
+            const result = prompt.onError('ctx', new Error('detail-error'), { details: true });
             expect(result).toBe('abort');
             expect(mockLog).toHaveBeenCalledWith(expect.stringContaining('Stack'));
         });
 
         it('warns on invalid option and retries', async () => {
             jest.spyOn(readlineSync, 'question').mockReturnValueOnce('x').mockReturnValueOnce('a');
-            const result = await prompt.onError('ctx', new Error('fail'));
+            const result = prompt.onError('ctx', new Error('fail'));
             expect(result).toBe('abort');
             expect(mockLog).toHaveBeenCalledWith(expect.stringContaining('Opção inválida'));
         });
     });
 
     describe('print', () => {
-        it('calls console.log with the message', () => {
-            const spy = jest.spyOn(console, 'log').mockImplementation(() => {});
+        it('calls process.stdout.write with the message', () => {
+            const spy = jest.spyOn(process.stdout, 'write').mockImplementation(() => true);
             prompt.print('Hello');
-            expect(spy).toHaveBeenCalledWith('Hello');
+            expect(spy).toHaveBeenCalledWith(expect.stringContaining('Hello'));
             spy.mockRestore();
         });
     });

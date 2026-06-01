@@ -417,19 +417,19 @@ describe('CancelError', () => {
 describe('onError', () => {
     it('returns auto action when autoConfirm is true', async () => {
         __setConfig(makeConfig({ autoConfirm: true, onError: 'skip' }));
-        const result = await onError('ctx', new Error('fail'));
+        const result = onError('ctx', new Error('fail'));
         expect(result).toBe('skip');
     });
 
     it('returns abort when autoConfirm and onError=abort', async () => {
         __setConfig(makeConfig({ autoConfirm: true, onError: 'abort' }));
-        const result = await onError('ctx', new Error('fail'));
+        const result = onError('ctx', new Error('fail'));
         expect(result).toBe('abort');
     });
 
     it('throws CancelError when user types navigation cmd', async () => {
         (readlineSync.question as jest.Mock).mockReturnValue('/back');
-        await expect(onError('ctx', new Error('fail'))).rejects.toThrow('/back');
+        expect(() => onError('ctx', new Error('fail'))).toThrow('/back');
         (readlineSync.question as jest.Mock).mockReturnValue('');
     });
 });

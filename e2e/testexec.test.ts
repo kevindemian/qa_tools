@@ -1,11 +1,15 @@
 import nock from 'nock';
 import JiraResource from '../jira_management/jira_resource';
 import JiraLinkManager from '../jira_management/jira_link_manager';
+import TestExecutionCreator from '../jira_management/test-execution-creator';
 import createTests from '../jira_management/create_tests';
 
 const { createTestExecution } = createTests;
 
 const JIRA = 'http://localhost:1998/jira';
+
+let testExecutionCreator: TestExecutionCreator;
+let jiraResource: JiraResource;
 
 beforeAll(() => {
     nock.cleanAll();
@@ -38,6 +42,10 @@ beforeAll(() => {
             const keys = ((b.fields as Record<string, unknown>)?.customfield_13715 as string[]) || [];
             return { key: 'EXEC-' + keys.length, id: '20001' };
         });
+
+    jiraResource = new JiraResource('e2e-token', JIRA + '/rest/api/2');
+    const linkManager = new JiraLinkManager(jiraResource);
+    testExecutionCreator = new TestExecutionCreator(jiraResource, linkManager);
 });
 
 afterAll(() => {
@@ -47,18 +55,9 @@ afterAll(() => {
 });
 
 describe('E2E: createTestExecution', () => {
-    let jiraResource: JiraResource;
-    let linkManager: JiraLinkManager;
-
-    beforeAll(() => {
-        jiraResource = new JiraResource('e2e-token', JIRA + '/rest/api/2');
-        linkManager = new JiraLinkManager(jiraResource);
-    });
-
     it('creates Test Execution with 2 test keys', async () => {
         const result = await createTestExecution({
-            jiraResource,
-            linkManager,
+            testExecutionCreator,
             projectName: 'EXECPROJ',
             testKeys: ['TEST-1', 'TEST-2'],
             csvName: 'meus-testes',
@@ -70,8 +69,7 @@ describe('E2E: createTestExecution', () => {
 
     it('creates Test Execution with single key and default name', async () => {
         const result = await createTestExecution({
-            jiraResource,
-            linkManager,
+            testExecutionCreator,
             projectName: 'EXECPROJ',
             testKeys: ['TEST-3'],
             csvName: '',

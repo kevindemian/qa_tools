@@ -1632,3 +1632,68 @@ Elevar reports ao nível Allure (padrão ouro mercado). 3 sprints independentes.
 | W3  | `createManagerForProject()`: token ausente → mensagem instrutiva + "Configurar?"    | `git_triggers/session-state.ts`, tests                                                        | ✅     |
 | W4  | Wizard on demand — alias 'w' em ambos menus                                         | `shared/first-run.ts`, `jira_management/menu-data.ts`, `git_triggers/session-state.ts`, tests | ✅     |
 | W5  | Testes de integração nock-based + CLI                                               | `e2e/friendly-error-paths.test.ts` (9 testes)                                                 | ✅     |
+
+## ✅ Sprint — Remediação Auditoria Profunda (F0–F11) ✅
+
+| ID    | Tipo | Item                                                                                   | Esforço | Status |
+| ----- | ---- | -------------------------------------------------------------------------------------- | ------- | ------ |
+| A0.1  | 🔧   | eslint rule `no-restricted-syntax` p/ `execSync` + `execFileSync` template             | 10min   | ✅     |
+| A0.2  | 🔧   | CI script: detector `.only()` + `throw 'string'`                                       | 10min   | ✅     |
+| A0.3  | 🔧   | ts-prune já configurado no CI via `check-unused-exports.sh`                            | —       | ✅     |
+| A1.1  | 🐛   | `shared/publish.ts:24` — Command injection: `execSync` → `execFileSync`                | 15min   | ✅     |
+| A1.2  | 📋   | `shared/publish.test.ts` — Test case: path com shell chars (`; rm -rf /`)              | 10min   | ✅     |
+| A2.1  | ♻️   | DIP: `createTestExecution()` receber `JiraResource` + `JiraLinkManager` como parâmetro | 30min   | ✅     |
+| A2.2  | ♻️   | DIP: `collectAndCreateTestExecution()` receber dependências como parâmetro             | 30min   | ✅     |
+| A2.3  | ♻️   | DIP: Atualizar callers: criar + injetar `JiraClient` + `JiraLinkManager`               | 15min   | ✅     |
+| A3.1  | ♻️   | `config-accessor.ts`: Proxy-based dynamic accessor (379→~60 linhas)                    | 3h      | ✅     |
+| A3.2  | 🐛   | `config-schema.ts:33`: Hardcoded `ECSPOL` → `YOUR_PROJECT_KEY`                         | 5min    | ✅     |
+| A3.3  | 🐛   | `pipeline-jira.ts:27`: Remover fallback `'ECSPOL'`                                     | 5min    | ✅     |
+| A3.4  | 📋   | `config-accessor.test.ts`: get/set/reset/create/validate (23 testes)                   | 30min   | ✅     |
+| A4.1  | 📋   | `config-schema.test.ts`                                                                | 15min   | ✅     |
+| A4.2  | 📋   | `config-validator.test.ts`                                                             | 15min   | ✅     |
+| A4.3  | 📋   | `prompt-errors.test.ts`                                                                | 30min   | ✅     |
+| A4.4  | 📋   | `prompt-format.test.ts`                                                                | 45min   | ✅     |
+| A4.5  | 📋   | `prompt-summary.test.ts`                                                               | 20min   | ✅     |
+| A5.1  | ♻️   | `llm-metrics.ts`: Encapsular 12 vars module-level em classe `LlmMetricsCollector`      | 1h      | ✅     |
+| A5.2  | 🧹   | `llm-metrics.ts`: Remover dead exports (restaurado `recordArtifactReview` para testes) | 5min    | ✅     |
+| A6.1  | ♻️   | `http-client.ts`: Encapsular state em classe `HttpClientInternals`                     | 1h      | ✅     |
+| A7.1  | ♻️   | `shared/types.ts`: Split 763 linhas em 7 domínios + barrel re-export                   | 2h      | ✅     |
+| A8.1  | ♻️   | `import-loop.ts`: Extrair `_finalizeAfterIssueCreation()` helper                       | 15min   | ✅     |
+| A8.2  | ♻️   | `create_tests.ts`: DIP para `TestExecutionCreator` injetado por parâmetro              | 20min   | ✅     |
+| A8.3  | ♻️   | `prompt-format.ts`: Import direto `config-accessor` (evitar circular dep)              | 15min   | ✅     |
+| A9.1  | 🔧   | `box.ts`: Nomear constantes (TERMINAL_FALLBACK_WIDTH, BOX_MIN_WIDTH, etc.)             | 15min   | ✅     |
+| A9.2  | 🔧   | `cli_base.ts:71`: URL sanitization abrangente (token, api_key, secret, password, etc.) | 10min   | ✅     |
+| A10.1 | 🧹   | `handlers.test.ts`: Não é orphan — 76 testes reais. Mantido. BACKLOG corrigido.        | —       | ✅     |
+| A10.2 | 🧹   | `github-e2e.test.ts`: Não é orphan — testes e2e reais. Mantido. BACKLOG corrigido.     | —       | ✅     |
+| A10.3 | 🔧   | `.env.example`: Sincronizado com `config-schema.ts`                                    | 15min   | ✅     |
+| A11.1 | 📄   | `prompt-input.ts`: Documentar pattern de dynamic import (ESM lazy em CJS)              | 5min    | ✅     |
+
+### Fases anteriores (ciclo C12) — concluídas na sprint
+
+| ID    | Tipo | Item                                                                  | Esforço | Status |
+| ----- | ---- | --------------------------------------------------------------------- | ------- | ------ |
+| C12-1 | ♻️   | DIP: `createTestExecution()` receber dependências como parâmetro      | 30min   | ✅     |
+| C12-2 | ♻️   | DIP: `handleBugCreation()` receber `JiraClient` como parâmetro        | 15min   | ✅     |
+| C12-3 | ♻️   | DIP: `runFlakyAutoActions()` receber `JiraClient` como parâmetro      | 15min   | ✅     |
+| C12-4 | ♻️   | DIP: `runFlakyAutoActionsForProject()` receber `JiraClient`           | 15min   | ✅     |
+| C3-3  | 🐛   | `llm-fallback.ts:99-122`: Zod validation em `as LlmUsage`/`LlmChoice` | 30min   | ✅     |
+| C3-4  | 🐛   | `llm-cache.ts:69,132,153`: Zod validation em `as unknown as T`        | 30min   | ✅     |
+| C11-1 | ♻️   | `llm-rate-limiter.ts:5`: Mover `LlmTier`/`ResponseFormat` p/ types    | 15min   | ✅     |
+| C19-1 | 🐛   | `test-execution-creator.ts:28`: Adicionar `findExistingTe()`          | 30min   | ✅     |
+| C4-1  | ♻️   | `report-table.ts:165`: Extrair helpers de `_buildTestTableRow`        | 15min   | ✅     |
+| C4-2  | ♻️   | `import-loop.ts:248`: Extrair helper `processCreationAndLinking`      | 15min   | ✅     |
+| C12-6 | 🐛   | Fix case15 timeout — adicionar nock scopes                            | 1h      | ✅     |
+| C12-7 | 🐛   | Fix case16 path — reset mock state                                    | 30min   | ✅     |
+| C12-8 | 🐛   | Fix CSV timeout — adicionar nock scopes ou split test                 | 30min   | ✅     |
+
+### Config & infra — alterações estruturais
+
+| Item                                                        | Status |
+| ----------------------------------------------------------- | ------ |
+| eslint: `no-require-imports` off (CJS project nativo)       | ✅     |
+| eslint: remove todos `eslint-disable` em produção           | ✅     |
+| `setup/main.ts`: `export default` → `export { main }`       | ✅     |
+| `console.*` → `process.stdout/stderr.write` em `Output`     | ✅     |
+| Tests: spies de `console.*` → `process.stdout/stderr.write` | ✅     |
+| tsconfig.json: incluído `setup/**/*.ts`                     | ✅     |
+| `shared/config-accessor.ts`: 23 testes, 100% cobertura      | ✅     |

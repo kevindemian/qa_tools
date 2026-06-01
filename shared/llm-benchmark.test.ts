@@ -167,11 +167,11 @@ describe('validateClassify', () => {
 // ---------------------------------------------------------------------------
 
 describe('runBenchmark', () => {
-    let consoleSpy: jest.SpyInstance;
+    let stdoutSpy: jest.SpyInstance;
     let restoreEnv: (() => void) | null = null;
 
     beforeEach(() => {
-        consoleSpy = jest.spyOn(console, 'log').mockImplementation(() => {});
+        stdoutSpy = jest.spyOn(process.stdout, 'write').mockImplementation(() => true);
     });
 
     afterEach(() => {
@@ -187,7 +187,7 @@ describe('runBenchmark', () => {
 
         await runBenchmark();
 
-        expect(consoleSpy).toHaveBeenCalledWith(expect.stringContaining('Skipping'));
+        expect(stdoutSpy).toHaveBeenCalledWith(expect.stringContaining('Skipping'));
     });
 
     it('loads fixtures and executes all benchmark types when BENCHMARK is true', async () => {
@@ -229,9 +229,9 @@ describe('runBenchmark', () => {
 
         await runBenchmark();
 
-        expect(consoleSpy).toHaveBeenCalledWith(expect.stringContaining('Loading fixtures'));
-        expect(consoleSpy).toHaveBeenCalledWith(expect.stringContaining('Running'));
-        expect(consoleSpy).toHaveBeenCalledWith(expect.stringContaining('BENCHMARK RESULTS'));
+        expect(stdoutSpy).toHaveBeenCalledWith(expect.stringContaining('Loading fixtures'));
+        expect(stdoutSpy).toHaveBeenCalledWith(expect.stringContaining('Running'));
+        expect(stdoutSpy).toHaveBeenCalledWith(expect.stringContaining('BENCHMARK RESULTS'));
     });
 });
 
@@ -314,11 +314,11 @@ describe('validateClassify — edge cases', () => {
 // ---------------------------------------------------------------------------
 
 describe('runBenchmark — error handling', () => {
-    let consoleSpy: jest.SpyInstance;
+    let stdoutSpy: jest.SpyInstance;
     let restoreEnv: (() => void) | null = null;
 
     beforeEach(() => {
-        consoleSpy = jest.spyOn(console, 'log').mockImplementation(() => {});
+        stdoutSpy = jest.spyOn(process.stdout, 'write').mockImplementation(() => true);
     });
 
     afterEach(() => {
@@ -337,8 +337,8 @@ describe('runBenchmark — error handling', () => {
 
         await runBenchmark();
 
-        expect(consoleSpy).toHaveBeenCalledWith(expect.stringContaining('FAIL'));
-        expect(consoleSpy).toHaveBeenCalledWith(expect.stringContaining('API timeout'));
+        expect(stdoutSpy).toHaveBeenCalledWith(expect.stringContaining('FAIL'));
+        expect(stdoutSpy).toHaveBeenCalledWith(expect.stringContaining('API timeout'));
     });
 
     it('handles empty fixture lists gracefully', async () => {
@@ -351,7 +351,7 @@ describe('runBenchmark — error handling', () => {
 
         await runBenchmark();
 
-        expect(consoleSpy).toHaveBeenCalledWith(expect.stringContaining('Loading fixtures'));
-        expect(consoleSpy).toHaveBeenCalledWith(expect.stringContaining('BENCHMARK RESULTS'));
+        expect(stdoutSpy).toHaveBeenCalledWith(expect.stringContaining('Loading fixtures'));
+        expect(stdoutSpy).toHaveBeenCalledWith(expect.stringContaining('BENCHMARK RESULTS'));
     });
 });

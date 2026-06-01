@@ -162,6 +162,53 @@ interface _ColumnFlags {
     hasStepsOrScreenshotsOrLogs: boolean;
 }
 
+function _buildRowClass(t: FlatTest, matchedKi: KnownIssue | undefined): string {
+    let cls = '';
+    if (t.state === 'passed') cls = ' row-passed';
+    if (matchedKi) cls += ' ki-suppressed';
+    return cls.trim();
+}
+
+function _buildRowAttributes(t: FlatTest, extraRowClass: string): string {
+    const hierarchy = t.fullTitle ? t.fullTitle.replace(/ > /g, ' \u203A ') : undefined;
+    let attrs = '';
+    if (extraRowClass) attrs += ' class="' + extraRowClass + '"';
+    if (hierarchy) attrs += ' data-hierarchy="' + escapeHtml(hierarchy) + '"';
+    return attrs;
+}
+
+function _buildTestNameCellHtml(
+    t: FlatTest,
+    i: number,
+    cat: string | undefined,
+    matchedKi: KnownIssue | undefined,
+    hasDetail: boolean,
+): string {
+    let html = '<td' + (t.fullTitle ? ' title="' + escapeHtml(t.fullTitle) + '"' : '') + '>';
+    html += escapeHtml(t.title);
+    if (cat) html += buildCategoryBadge(cat);
+    if (matchedKi) {
+        html += '<span class="ki-badge">Known Issue' + (matchedKi.ticket ? ': ' + matchedKi.ticket : '') + '</span>';
+    }
+    if (hasDetail) {
+        html += '<span class="detail-toggle" onclick="toggleDetail(' + i + ')"> \u25BC</span>';
+    }
+    html += '</td>';
+    return html;
+}
+
+function _buildFlakinessCell(t: FlatTest, flakinessMap: Record<string, number> | undefined): string {
+    if (!flakinessMap) return '';
+    const rate = flakinessMap[t.title] ?? flakinessMap[t.fullTitle ?? ''] ?? 0;
+    return '<td>' + (rate > 0 ? buildFlakinessBadge(rate) : '<span style="color:#9ca3af">—</span>') + '</td>';
+}
+
+function _buildDetailRowHtml(t: FlatTest, i: number, flags: _ColumnFlags): string {
+    if (!flags.hasStepsOrScreenshotsOrLogs) return '';
+    const cols = 4 + (flags.hasSuite ? 1 : 0) + (flags.hasError ? 1 : 0) + (flags.hasHistory ? 1 : 0);
+    return buildDetailRow(t, i, cols + 1);
+}
+
 function _buildTestTableRow(
     t: FlatTest,
     i: number,
@@ -172,33 +219,15 @@ function _buildTestTableRow(
     flags: _ColumnFlags,
 ): string {
     const matchedKi = knownIssues && t.state === 'failed' ? matchKnownIssue(t.title, knownIssues) : undefined;
-    let extraRowClass = '';
-    if (t.state === 'passed') extraRowClass = ' row-passed';
-    if (matchedKi) extraRowClass += ' ki-suppressed';
-    const hierarchy = t.fullTitle ? t.fullTitle.replace(/ > /g, ' \u203A ') : undefined;
-    let html =
-        '<tr' +
-        (extraRowClass ? ' class="' + extraRowClass.trim() + '"' : '') +
-        (hierarchy ? ' data-hierarchy="' + escapeHtml(hierarchy) + '"' : '') +
-        '>';
-    html += '<td>' + (i + 1) + '</td>';
+    const extraRowClass = _buildRowClass(t, matchedKi);
     const cat = t.state === 'failed' && categories ? categories[t.title] : undefined;
-    html +=
-        '<td' +
-        (t.fullTitle ? ' title="' + escapeHtml(t.fullTitle) + '"' : '') +
-        '>' +
-        escapeHtml(t.title) +
-        (cat ? buildCategoryBadge(cat) : '') +
-        (matchedKi
-            ? '<span class="ki-badge">Known Issue' + (matchedKi.ticket ? ': ' + matchedKi.ticket : '') + '</span>'
-            : '') +
-        (flags.hasStepsOrScreenshotsOrLogs &&
-        ((t.steps && t.steps.length > 0) ||
-            (t.screenshots && t.screenshots.length > 0) ||
-            (t.logs && t.logs.length > 0))
-            ? '<span class="detail-toggle" onclick="toggleDetail(' + i + ')"> \u25BC</span>'
-            : '') +
-        '</td>';
+    const hasDetail =
+        flags.hasStepsOrScreenshotsOrLogs &&
+        ((t.steps?.length ?? 0) > 0 || (t.screenshots?.length ?? 0) > 0 || (t.logs?.length ?? 0) > 0);
+
+    let html = '<tr' + _buildRowAttributes(t, extraRowClass) + '>';
+    html += '<td>' + (i + 1) + '</td>';
+    html += _buildTestNameCellHtml(t, i, cat, matchedKi, hasDetail);
     if (flags.hasSuite) html += '<td>' + escapeHtml(extractSuite(t)) + '</td>';
     html += '<td>' + _buildStatusBadge(t.state) + '</td>';
     html += '<td>' + (t.state === 'skipped' ? '—' : fmtDuration(t.duration)) + '</td>';
@@ -207,15 +236,9 @@ function _buildTestTableRow(
         const testHistory = history![t.title] ?? history![t.fullTitle ?? ''] ?? [];
         html += buildHistoryCell(testHistory);
     }
-    if (flags.hasFlakiness) {
-        const rate = flakinessMap![t.title] ?? flakinessMap![t.fullTitle ?? ''] ?? 0;
-        html += '<td>' + (rate > 0 ? buildFlakinessBadge(rate) : '<span style="color:#9ca3af">—</span>') + '</td>';
-    }
+    if (flags.hasFlakiness) html += _buildFlakinessCell(t, flakinessMap);
     html += '</tr>';
-    if (flags.hasStepsOrScreenshotsOrLogs) {
-        const cols = 4 + (flags.hasSuite ? 1 : 0) + (flags.hasError ? 1 : 0) + (flags.hasHistory ? 1 : 0);
-        html += buildDetailRow(t, i, cols + 1);
-    }
+    html += _buildDetailRowHtml(t, i, flags);
     return html;
 }
 

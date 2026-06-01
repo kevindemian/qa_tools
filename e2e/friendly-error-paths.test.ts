@@ -119,8 +119,7 @@ describe('friendly error paths (Sprint W)', () => {
                         ...original,
                         readFileSync: jest.fn((p: string) => {
                             if (p.includes('providers.json')) return '{"test-proj":{}}';
-                            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                            return (original.readFileSync as any)(p, 'utf8');
+                            return (original.readFileSync as jest.Mock)(p, 'utf8');
                         }),
                     };
                 });
@@ -179,8 +178,7 @@ describe('friendly error paths (Sprint W)', () => {
                         ...original,
                         readFileSync: jest.fn((p: string) => {
                             if (p.includes('providers.json')) return '{"test-proj":{"provider":"github"}}';
-                            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                            return (original.readFileSync as any)(p, 'utf8');
+                            return (original.readFileSync as jest.Mock)(p, 'utf8');
                         }),
                     };
                 });

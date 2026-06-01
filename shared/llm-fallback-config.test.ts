@@ -1,0 +1,256 @@
+jest.mock('./config', () => {
+    const mockConfig: Record<string, string> = {};
+    return {
+        __esModule: true,
+        default: {
+            get llmApiKey() {
+                return mockConfig['llmApiKey'] ?? '';
+            },
+            get llmModel() {
+                return mockConfig['llmModel'] ?? 'gpt-4';
+            },
+            get llmBaseUrl() {
+                return mockConfig['llmBaseUrl'] ?? 'https://api.test.com/v1';
+            },
+            get llmSmallApiKey() {
+                return mockConfig['llmSmallApiKey'] ?? '';
+            },
+            get llmSmallModel() {
+                return mockConfig['llmSmallModel'] ?? 'gemini-2.0-flash-lite';
+            },
+            get llmFastApiKey() {
+                return mockConfig['llmFastApiKey'] ?? '';
+            },
+            get llmFastModel() {
+                return mockConfig['llmFastModel'] ?? 'llama3-8b-8192';
+            },
+            get llmFastBaseUrl() {
+                return mockConfig['llmFastBaseUrl'] ?? 'https://api.groq.com/openai/v1';
+            },
+            get llmReviewApiKey() {
+                return mockConfig['llmReviewApiKey'] ?? '';
+            },
+            get llmReviewModel() {
+                return mockConfig['llmReviewModel'] ?? 'gemini-2.0-flash-exp';
+            },
+            get llmReviewBaseUrl() {
+                return mockConfig['llmReviewBaseUrl'] ?? 'https://generativelanguage.googleapis.com/v1beta';
+            },
+            get llmFallbackApiKey() {
+                return mockConfig['llmFallbackApiKey'] ?? '';
+            },
+            get llmFallbackModel() {
+                return mockConfig['llmFallbackModel'] ?? 'llama3';
+            },
+            get llmFallbackBaseUrl() {
+                return mockConfig['llmFallbackBaseUrl'] ?? 'https://nv.api.com/v1';
+            },
+            get llmBatchApiKey() {
+                return mockConfig['llmBatchApiKey'] ?? '';
+            },
+            get llmBatchModel() {
+                return mockConfig['llmBatchModel'] ?? 'gpt-4o-mini';
+            },
+            get llmBatchBaseUrl() {
+                return mockConfig['llmBatchBaseUrl'] ?? 'https://models.inference.ai.azure.com';
+            },
+            set(key: string, value: string) {
+                mockConfig[key] = value;
+            },
+            get(key: string) {
+                return mockConfig[key] ?? undefined;
+            },
+            resetInstance() {
+                Object.keys(mockConfig).forEach((k) => delete mockConfig[k]);
+            },
+        },
+    };
+});
+
+import {
+    tierToConfig,
+    getLlmClientMetrics,
+    resetLlmClientMetrics,
+    _trackUsage,
+    extractContent,
+    _llmMetrics,
+    getFetchRetries,
+    LLM_TEMP_DEFAULT,
+    LLM_RETRY_BASE_WAIT_MS,
+    LLM_RETRY_MAX_WAIT_MS,
+    LLM_FETCH_TIMEOUT_MS,
+    LLM_ERROR_BODY_TRUNCATION,
+    LlmErrorPayloadSchema,
+} from './llm-fallback-config';
+import Config from './config';
+
+beforeEach(() => {
+    (Config as unknown as { resetInstance: () => void }).resetInstance();
+    resetLlmClientMetrics();
+});
+
+describe('tierToConfig', () => {
+    it('returns main config for main tier', () => {
+        (Config as unknown as { set: (k: string, v: string) => void }).set('llmApiKey', 'sk-main');
+        (Config as unknown as { set: (k: string, v: string) => void }).set('llmModel', 'gpt-4');
+        (Config as unknown as { set: (k: string, v: string) => void }).set('llmBaseUrl', 'https://api.test.com/v1');
+        const cfg = tierToConfig('main');
+        expect(cfg.apiKey).toBe('sk-main');
+        expect(cfg.model).toBe('gpt-4');
+        expect(cfg.format).toBe('openai');
+    });
+
+    it('returns fast tier config', () => {
+        (Config as unknown as { set: (k: string, v: string) => void }).set('llmFastApiKey', 'gsk-fast');
+        (Config as unknown as { set: (k: string, v: string) => void }).set('llmFastModel', 'llama3');
+        const cfg = tierToConfig('fast');
+        expect(cfg.apiKey).toBe('gsk-fast');
+        expect(cfg.model).toBe('llama3');
+        expect(cfg.format).toBe('openai');
+    });
+
+    it('returns reviewer tier config with gemini format', () => {
+        (Config as unknown as { set: (k: string, v: string) => void }).set('llmReviewApiKey', 'AIza-review');
+        (Config as unknown as { set: (k: string, v: string) => void }).set('llmReviewModel', 'gemini-2.0-flash-exp');
+        const cfg = tierToConfig('reviewer');
+        expect(cfg.apiKey).toBe('AIza-review');
+        expect(cfg.model).toBe('gemini-2.0-flash-exp');
+        expect(cfg.format).toBe('gemini');
+    });
+
+    it('returns report tier config with json responseFormat', () => {
+        (Config as unknown as { set: (k: string, v: string) => void }).set('llmApiKey', 'sk-report');
+        (Config as unknown as { set: (k: string, v: string) => void }).set('llmModel', 'gpt-4-report');
+        const cfg = tierToConfig('report');
+        expect(cfg.apiKey).toBe('sk-report');
+        expect(cfg.responseFormat).toBe('json');
+    });
+
+    it('falls back to main when tier is unknown', () => {
+        (Config as unknown as { set: (k: string, v: string) => void }).set('llmApiKey', 'sk-main');
+        const cfg = tierToConfig('nonexistent' as never);
+        expect(cfg.apiKey).toBe('sk-main');
+    });
+});
+
+describe('getLlmClientMetrics / resetLlmClientMetrics', () => {
+    it('returns initial zero metrics', () => {
+        const metrics = getLlmClientMetrics();
+        expect(metrics.cacheHits).toBe(0);
+        expect(metrics.cacheMisses).toBe(0);
+        expect(metrics.totalPromptTokens).toBe(0);
+        expect(metrics.totalCompletionTokens).toBe(0);
+    });
+
+    it('resets metrics to zero', () => {
+        _llmMetrics.cacheHits = 10;
+        _llmMetrics.cacheMisses = 5;
+        resetLlmClientMetrics();
+        const reset = getLlmClientMetrics();
+        expect(reset.cacheHits).toBe(0);
+        expect(reset.cacheMisses).toBe(0);
+    });
+});
+
+describe('getFetchRetries', () => {
+    it('returns default 3 when not configured', () => {
+        const result = getFetchRetries();
+        expect(result).toBe(3);
+    });
+
+    it('parses LLM_FETCH_RETRIES from Config', () => {
+        (Config as unknown as { set: (k: string, v: string) => void }).set('LLM_FETCH_RETRIES', '5');
+        const result = getFetchRetries();
+        expect(result).toBe(5);
+    });
+});
+
+describe('_trackUsage', () => {
+    it('tracks OpenAI-style usage and updates metrics', () => {
+        const data = {
+            usage: { prompt_tokens: 10, completion_tokens: 20, total_tokens: 30 },
+        };
+        _trackUsage(data, 'test-provider');
+        const metrics = getLlmClientMetrics();
+        expect(metrics.totalPromptTokens).toBe(10);
+        expect(metrics.totalCompletionTokens).toBe(20);
+        expect(metrics.requestsByProviderKey['test-provider']).toBe(1);
+    });
+
+    it('tracks Gemini-style usage metadata', () => {
+        const data = {
+            usageMetadata: { promptTokenCount: 5, candidatesTokenCount: 15, totalTokenCount: 20 },
+        };
+        _trackUsage(data, 'gemini-provider');
+        const metrics = getLlmClientMetrics();
+        expect(metrics.totalPromptTokens).toBe(5);
+        expect(metrics.totalCompletionTokens).toBe(15);
+    });
+
+    it('counts multiple requests to same provider', () => {
+        _trackUsage({ usage: { prompt_tokens: 1, completion_tokens: 2 } }, 'same');
+        _trackUsage({ usage: { prompt_tokens: 3, completion_tokens: 4 } }, 'same');
+        expect(_llmMetrics.requestsByProviderKey['same']).toBe(2);
+        expect(_llmMetrics.totalPromptTokens).toBe(4);
+        expect(_llmMetrics.totalCompletionTokens).toBe(6);
+    });
+});
+
+describe('extractContent', () => {
+    it('extracts text from OpenAI-style response', () => {
+        const data = {
+            choices: [{ message: { content: 'hello world' } }],
+        };
+        const result = extractContent(data, 'openai');
+        expect(result).toBe('hello world');
+    });
+
+    it('extracts text from Gemini-style response', () => {
+        const data = {
+            candidates: [{ content: { parts: [{ text: 'gemini response' }] } }],
+        };
+        const result = extractContent(data, 'gemini');
+        expect(result).toBe('gemini response');
+    });
+
+    it('returns empty string for empty OpenAI response', () => {
+        const data = { choices: [{ message: { content: '' } }] };
+        const result = extractContent(data, 'openai');
+        expect(result).toBe('');
+    });
+
+    it('returns empty string for missing content in Gemini', () => {
+        const data = { candidates: [{}] };
+        const result = extractContent(data, 'gemini');
+        expect(result).toBe('');
+    });
+});
+
+describe('constants', () => {
+    it('exports LLM_TEMP_DEFAULT', () => {
+        expect(LLM_TEMP_DEFAULT).toBe(0.3);
+    });
+
+    it('exports retry constants', () => {
+        expect(LLM_RETRY_BASE_WAIT_MS).toBe(2000);
+        expect(LLM_RETRY_MAX_WAIT_MS).toBe(10000);
+        expect(LLM_FETCH_TIMEOUT_MS).toBe(30000);
+        expect(LLM_ERROR_BODY_TRUNCATION).toBe(200);
+    });
+});
+
+describe('LlmErrorPayloadSchema', () => {
+    it('parses a valid error payload', () => {
+        const result = LlmErrorPayloadSchema.safeParse({
+            message: 'rate limit',
+            type: 'rate_limit_error',
+            code: '429',
+        });
+        expect(result.success).toBe(true);
+    });
+
+    it('accepts empty error payload', () => {
+        const result = LlmErrorPayloadSchema.safeParse({});
+        expect(result.success).toBe(true);
+    });
+});

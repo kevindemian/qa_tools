@@ -70,113 +70,145 @@ function saveStore(store: StoredMetrics): void {
     }
 }
 
-let _totalRequests = 0;
-let _rejectedByValidator = 0;
-let _retryCount = 0;
-let _confidenceSum = 0;
-let _confidenceCount = 0;
-let _latencySum = 0;
-let _latencyCount = 0;
-let _artifactApproved = 0;
-let _artifactRejected = 0;
-const _failuresByTier: Partial<Record<LlmTier, number>> = {};
-const _rejectionReasons: Record<string, number> = {};
+export class LlmMetricsCollector {
+    private _totalRequests = 0;
+    private _rejectedByValidator = 0;
+    private _retryCount = 0;
+    private _confidenceSum = 0;
+    private _confidenceCount = 0;
+    private _latencySum = 0;
+    private _latencyCount = 0;
+    private _artifactApproved = 0;
+    private _artifactRejected = 0;
+    private _adversarialRetryCount = 0;
+    private readonly _failuresByTier: Partial<Record<LlmTier, number>> = {};
+    private readonly _rejectionReasons: Record<string, number> = {};
 
-/** Record a successful LLM request (count + latency). */
-export function recordLlmRequest(_tier: LlmTier, latencyMs: number): void {
-    _totalRequests++;
-    _latencySum += latencyMs;
-    _latencyCount++;
+    recordLlmRequest(_tier: LlmTier, latencyMs: number): void {
+        this._totalRequests++;
+        this._latencySum += latencyMs;
+        this._latencyCount++;
+    }
+
+    recordLlmFailure(tier: LlmTier): void {
+        this._failuresByTier[tier] = (this._failuresByTier[tier] || 0) + 1;
+    }
+
+    recordValidationRejection(reason: string): void {
+        this._rejectedByValidator++;
+        this._rejectionReasons[reason] = (this._rejectionReasons[reason] || 0) + 1;
+    }
+
+    recordRetry(): void {
+        this._retryCount++;
+    }
+
+    recordAdversarialRetry(): void {
+        this._adversarialRetryCount++;
+    }
+
+    recordConfidence(confidence: 'high' | 'medium' | 'low'): void {
+        const value = confidence === 'high' ? 1 : confidence === 'medium' ? 0.5 : 0;
+        this._confidenceSum += value;
+        this._confidenceCount++;
+    }
+
+    recordArtifactReview(approved: boolean): void {
+        if (approved) this._artifactApproved++;
+        else this._artifactRejected++;
+    }
+
+    /** Take a snapshot of current metrics, persist to disk, and return it. */
+    snapshot(): LlmMetricsSnapshot {
+        const cm = getLlmClientMetrics();
+        const snapshot: LlmMetricsSnapshot = {
+            timestamp: new Date().toISOString(),
+            totalRequests: this._totalRequests,
+            rejectedByValidator: this._rejectedByValidator,
+            retryCount: this._retryCount,
+            adversarialRetryCount: this._adversarialRetryCount,
+            avgConfidence: this._confidenceCount > 0 ? this._confidenceSum / this._confidenceCount : 0,
+            avgLatencyMs: this._latencyCount > 0 ? Math.round(this._latencySum / this._latencyCount) : 0,
+            failuresByTier: { ...this._failuresByTier },
+            rejectionReasons: { ...this._rejectionReasons },
+            artifactApproved: this._artifactApproved,
+            artifactRejected: this._artifactRejected,
+            cacheHits: cm.cacheHits,
+            cacheMisses: cm.cacheMisses,
+            totalPromptTokens: cm.totalPromptTokens,
+            totalCompletionTokens: cm.totalCompletionTokens,
+            requestsByProvider: { ...cm.requestsByProviderKey },
+        };
+
+        const store = loadStore();
+        store.snapshots.push(snapshot);
+        saveStore(store);
+
+        return snapshot;
+    }
+
+    /** Return all persisted snapshots for cross-session trend analysis. */
+    getHistory(): LlmMetricsSnapshot[] {
+        return loadStore().snapshots;
+    }
+
+    /** Reset all in-memory counters and persisted client metrics.
+     * Does NOT clear the on-disk snapshot history. */
+    clear(): void {
+        this._totalRequests = 0;
+        this._rejectedByValidator = 0;
+        this._retryCount = 0;
+        this._adversarialRetryCount = 0;
+        this._confidenceSum = 0;
+        this._confidenceCount = 0;
+        this._latencySum = 0;
+        this._latencyCount = 0;
+        this._artifactApproved = 0;
+        this._artifactRejected = 0;
+        for (const key of Object.keys(this._failuresByTier)) delete this._failuresByTier[key as LlmTier];
+        for (const key of Object.keys(this._rejectionReasons)) delete this._rejectionReasons[key];
+        resetLlmClientMetrics();
+    }
 }
 
-/** Record a failed LLM request, grouped by tier. */
+const _defaultCollector = new LlmMetricsCollector();
+
+export function recordLlmRequest(tier: LlmTier, latencyMs: number): void {
+    _defaultCollector.recordLlmRequest(tier, latencyMs);
+}
+
 export function recordLlmFailure(tier: LlmTier): void {
-    _failuresByTier[tier] = (_failuresByTier[tier] || 0) + 1;
+    _defaultCollector.recordLlmFailure(tier);
 }
 
-/** Record a schema validation rejection with the reason string. */
 export function recordValidationRejection(reason: string): void {
-    _rejectedByValidator++;
-    _rejectionReasons[reason] = (_rejectionReasons[reason] || 0) + 1;
+    _defaultCollector.recordValidationRejection(reason);
 }
 
-let _adversarialRetryCount = 0;
-
-/** Record a standard retry (non-adversarial). */
 export function recordRetry(): void {
-    _retryCount++;
+    _defaultCollector.recordRetry();
 }
 
-/** Record an adversarial retry (LLM self-critique loop). */
-export function recordAdversarialRetry(): void {
-    _adversarialRetryCount++;
-}
-
-/** Record a confidence rating from the adversarial review pipeline. */
-export function recordConfidence(confidence: 'high' | 'medium' | 'low'): void {
-    const value = confidence === 'high' ? 1 : confidence === 'medium' ? 0.5 : 0;
-    _confidenceSum += value;
-    _confidenceCount++;
-}
-
-/** @internal */
-/** Record whether an artifact review was approved or rejected. */
 export function recordArtifactReview(approved: boolean): void {
-    if (approved) _artifactApproved++;
-    else _artifactRejected++;
+    _defaultCollector.recordArtifactReview(approved);
 }
 
-/** Take a snapshot of current metrics, persist to disk, and return it.
- * Includes both in-memory counters and client-level metrics (cache, tokens). */
+export function recordAdversarialRetry(): void {
+    _defaultCollector.recordAdversarialRetry();
+}
+
+export function recordConfidence(confidence: 'high' | 'medium' | 'low'): void {
+    _defaultCollector.recordConfidence(confidence);
+}
+
 export function snapshotLlmMetrics(): LlmMetricsSnapshot {
-    const cm = getLlmClientMetrics();
-    const snapshot: LlmMetricsSnapshot = {
-        timestamp: new Date().toISOString(),
-        totalRequests: _totalRequests,
-        rejectedByValidator: _rejectedByValidator,
-        retryCount: _retryCount,
-        adversarialRetryCount: _adversarialRetryCount,
-        avgConfidence: _confidenceCount > 0 ? _confidenceSum / _confidenceCount : 0,
-        avgLatencyMs: _latencyCount > 0 ? Math.round(_latencySum / _latencyCount) : 0,
-        failuresByTier: { ..._failuresByTier },
-        rejectionReasons: { ..._rejectionReasons },
-        artifactApproved: _artifactApproved,
-        artifactRejected: _artifactRejected,
-        cacheHits: cm.cacheHits,
-        cacheMisses: cm.cacheMisses,
-        totalPromptTokens: cm.totalPromptTokens,
-        totalCompletionTokens: cm.totalCompletionTokens,
-        requestsByProvider: { ...cm.requestsByProviderKey },
-    };
-
-    const store = loadStore();
-    store.snapshots.push(snapshot);
-    saveStore(store);
-
-    return snapshot;
+    return _defaultCollector.snapshot();
 }
 
-/** @internal */
-/** Return all persisted snapshots for cross-session trend analysis. */
 export function getLlmMetricsHistory(): LlmMetricsSnapshot[] {
-    return loadStore().snapshots;
+    return _defaultCollector.getHistory();
 }
 
-/** @internal */
-/** Reset all in-memory counters and persisted client metrics.
- * Does NOT clear the on-disk snapshot history. */
 export function clearLlmMetrics(): void {
-    _totalRequests = 0;
-    _rejectedByValidator = 0;
-    _retryCount = 0;
-    _adversarialRetryCount = 0;
-    _confidenceSum = 0;
-    _confidenceCount = 0;
-    _latencySum = 0;
-    _latencyCount = 0;
-    _artifactApproved = 0;
-    _artifactRejected = 0;
-    for (const key of Object.keys(_failuresByTier)) delete _failuresByTier[key as LlmTier];
-    for (const key of Object.keys(_rejectionReasons)) delete _rejectionReasons[key];
-    resetLlmClientMetrics();
+    _defaultCollector.clear();
 }

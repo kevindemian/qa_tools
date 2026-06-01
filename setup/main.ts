@@ -155,4 +155,4 @@ async function main(): Promise<void> {
     printSetupSummary(created, skipped);
 }
 
-export default { main };
+export { main };

@@ -56,12 +56,11 @@ function buildXrayHistoryHtml(historyRows: Array<{ key: string; runs: unknown[] 
         if (h.runs.length > 0) {
             html += '<ul style="font-size:0.85rem;margin:4px 0 0 16px">';
             for (const run of h.runs) {
-                // eslint-disable-next-line @typescript-eslint/no-explicit-any -- heterogeneous API response
-                const r = run as any;
-                const status = r.status || 'TODO';
+                const r = run as Record<string, unknown>;
+                const status = (r.status as string) || 'TODO';
                 const color = status === 'PASS' ? '#22c55e' : status === 'FAIL' ? '#ef4444' : '#6b7280';
-                html += `<li>${r.testExecKey || '?'} — <span style="color:${color};font-weight:600">${status}</span>`;
-                if (r.finishedOn) html += ` (${String(r.finishedOn).slice(0, 10)})`;
+                html += `<li>${(r.testExecKey as string) || '?'} — <span style="color:${color};font-weight:600">${status}</span>`;
+                if (r.finishedOn) html += ` (${(r.finishedOn as string).slice(0, 10)})`;
                 html += '</li>';
             }
             html += '</ul>';

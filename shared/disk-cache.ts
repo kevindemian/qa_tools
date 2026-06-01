@@ -2,6 +2,7 @@
 import crypto from 'crypto';
 import fs from 'fs';
 import path from 'path';
+import { z } from 'zod';
 import { rootLogger } from './logger';
 import Config from './config';
 
@@ -13,6 +14,17 @@ interface DiskCacheEntry {
     response: string;
     createdAt: number;
 }
+
+const DiskCacheEntrySchema = z.object({
+    response: z.string(),
+    createdAt: z.number(),
+});
+
+const EncryptedPayloadSchema = z.object({
+    e: z.string(),
+    iv: z.string(),
+    t: z.string(),
+});
 
 function cacheDir(): string {
     return Config.get('LLM_DISK_CACHE_DIR') || path.join(process.cwd(), '.llm-cache');
@@ -46,8 +58,8 @@ function decrypt(data: string): string | null {
     const key = cacheKeyBytes();
     if (key.length === 0) return data;
     try {
-        const p = JSON.parse(data) as { e?: string; iv?: string; t?: string };
-        if (!p.e || !p.iv || !p.t) return null;
+        const parsed: unknown = JSON.parse(data);
+        const p = EncryptedPayloadSchema.parse(parsed);
         const decipher = crypto.createDecipheriv('aes-256-gcm', key, Buffer.from(p.iv, 'base64'));
         decipher.setAuthTag(Buffer.from(p.t, 'base64'));
         return decipher.update(Buffer.from(p.e, 'base64'), undefined, 'utf8') + decipher.final('utf8');
@@ -82,7 +94,8 @@ export function diskCacheGet(key: string): string | null {
             }
             return null;
         }
-        const entry: DiskCacheEntry = JSON.parse(decrypted);
+        const parsedEntry: unknown = JSON.parse(decrypted);
+        const entry = DiskCacheEntrySchema.parse(parsedEntry);
         if (Date.now() - entry.createdAt < DISK_CACHE_TTL_MS) {
             rootLogger.info('LLM disk cache hit for key=' + key.slice(0, 12) + '…');
             return entry.response;

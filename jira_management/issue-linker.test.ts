@@ -60,7 +60,7 @@ describe('IssueLinker', () => {
 
         it('returns abort action on error', async () => {
             mockLinkManager.associatePrecondition.mockRejectedValue(new Error('API error'));
-            mockPrompt.onError.mockResolvedValue('abort');
+            mockPrompt.onError.mockReturnValue('abort');
             const test = { title: 'Test', precondition: { value: 'PREC-001' } };
             const result = await linker.associatePrecondition(test as never, 'TEST-1', opLog);
             expect(result).toEqual({ action: 'abort' });
@@ -97,7 +97,7 @@ describe('IssueLinker', () => {
 
         it('returns action on error', async () => {
             mockLinkManager.linkIssues.mockRejectedValue(new Error('API error'));
-            mockPrompt.onError.mockResolvedValue('retry');
+            mockPrompt.onError.mockReturnValue('retry');
             const test = { title: 'Test', linkedIssues: [{ key: 'BUG-1', linkType: 'is tested by' }] };
             const result = await linker.linkIssues('TEST-1', test as never);
             expect(result).toEqual({ action: 'retry' });

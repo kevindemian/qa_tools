@@ -1,21 +1,21 @@
 /** User-facing UI output: styled messages, tables, and formatting helpers. */
 import chalk from 'chalk';
 import CliTable3 from 'cli-table3';
-import Config from './config';
+import ConfigAccessor from './config-accessor';
 import { rootLogger } from './logger';
 import { box, divider as boxDivider, visibleWidth } from './box';
 import { palette } from './palette';
 import { Output, defaultOutput as output } from './output';
 import { getBreadcrumbPath } from './breadcrumbs';
 
-let _config: Config | null = null;
+let _config: ConfigAccessor | null = null;
 
-export function __setConfig(c: Config): void {
+export function __setConfig(c: ConfigAccessor): void {
     _config = c;
 }
 
-export function getConfig(): Config {
-    return _config || Config.getDefault();
+export function getConfig(): ConfigAccessor {
+    return _config || ConfigAccessor.getDefault();
 }
 
 export const isQuiet = (): boolean => getConfig().get<boolean>('quiet');
@@ -143,8 +143,7 @@ function colorizeRowCells(keys: string[], row: Record<string, unknown>, statusCo
         const v = row[k];
         if (v === null || v === undefined) return '';
         if (typeof v === 'object') return JSON.stringify(v);
-        // eslint-disable-next-line @typescript-eslint/no-base-to-string
-        const cell: string = String(v);
+        const cell: string = typeof v === 'string' ? v : JSON.stringify(v);
         if (i === statusColIdx) {
             if (/✓|pass|ok|sucesso/i.test(cell)) return palette.green(cell);
             if (/✗|fail|error|erro/i.test(cell)) return palette.red(cell);

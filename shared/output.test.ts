@@ -2,20 +2,17 @@ import { Output, defaultOutput } from './output';
 import * as boxModule from './box';
 
 describe('Output', () => {
-    let consoleLogSpy: jest.SpyInstance;
-    let consoleErrorSpy: jest.SpyInstance;
-    let consoleWarnSpy: jest.SpyInstance;
+    let stdoutWriteSpy: jest.SpyInstance;
+    let stderrWriteSpy: jest.SpyInstance;
 
     beforeEach(() => {
-        consoleLogSpy = jest.spyOn(console, 'log').mockImplementation(() => {});
-        consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
-        consoleWarnSpy = jest.spyOn(console, 'warn').mockImplementation(() => {});
+        stdoutWriteSpy = jest.spyOn(process.stdout, 'write').mockImplementation(() => true);
+        stderrWriteSpy = jest.spyOn(process.stderr, 'write').mockImplementation(() => true);
     });
 
     afterEach(() => {
-        consoleLogSpy.mockRestore();
-        consoleErrorSpy.mockRestore();
-        consoleWarnSpy.mockRestore();
+        stdoutWriteSpy.mockRestore();
+        stderrWriteSpy.mockRestore();
     });
 
     it('rows returns stdout.rows or 24', () => {
@@ -46,29 +43,29 @@ describe('Output', () => {
         Object.defineProperty(process.stdout, 'isTTY', { value: original, configurable: true });
     });
 
-    it('print calls console.log', () => {
+    it('print writes to stdout with newline', () => {
         const output = new Output();
         output.print('test message');
-        expect(consoleLogSpy).toHaveBeenCalledWith('test message');
+        expect(stdoutWriteSpy).toHaveBeenCalledWith('test message\n');
     });
 
-    it('error calls console.error', () => {
+    it('error writes to stderr with newline', () => {
         const output = new Output();
         output.error('error message');
-        expect(consoleErrorSpy).toHaveBeenCalledWith('error message');
+        expect(stderrWriteSpy).toHaveBeenCalledWith('error message\n');
     });
 
-    it('warn calls console.warn', () => {
+    it('warn writes to stderr with newline', () => {
         const output = new Output();
         output.warn('warn message');
-        expect(consoleWarnSpy).toHaveBeenCalledWith('warn message');
+        expect(stderrWriteSpy).toHaveBeenCalledWith('warn message\n');
     });
 
-    it('box prints rendered box', () => {
+    it('box prints rendered box to stdout', () => {
         const boxSpy = jest.spyOn(boxModule, 'box').mockReturnValue('boxed content');
         const output = new Output();
         output.box(['line1'], { width: 20 });
-        expect(consoleLogSpy).toHaveBeenCalledWith('boxed content');
+        expect(stdoutWriteSpy).toHaveBeenCalledWith('boxed content\n');
         boxSpy.mockRestore();
     });
 

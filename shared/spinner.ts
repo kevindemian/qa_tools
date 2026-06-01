@@ -8,12 +8,17 @@ interface SpinnerOptions {
     color?: string;
 }
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any -- ora is ESM-only, dynamic import in CJS
-let _ora: any = null;
+interface OraInstance {
+    start: () => OraInstance;
+    succeed: () => void;
+    fail: () => void;
+}
+
+let _ora: ((opts: Record<string, unknown>) => OraInstance) | null = null;
 
 /** Override the ora dependency (used by tests / ESM fallback). */
 export function __setOraDep(mod: unknown): void {
-    _ora = mod;
+    _ora = mod as (opts: Record<string, unknown>) => OraInstance;
 }
 
 /** Run an async function with a terminal spinner. Falls back to `fn()` directly in CI/quiet/non-TTY. */

@@ -116,7 +116,7 @@ describe('onError', () => {
         (getConfig as jest.Mock).mockReturnValue({
             get: (k: string) => (k === 'autoConfirm' ? true : 'abort'),
         });
-        const r = await onError('ctx', new Error('fail'));
+        const r = onError('ctx', new Error('fail'));
         expect(r).toBe('abort');
     });
 
@@ -124,7 +124,7 @@ describe('onError', () => {
         (getConfig as jest.Mock).mockReturnValue({
             get: (k: string) => (k === 'autoConfirm' ? true : 'skip'),
         });
-        const r = await onError('ctx', new Error('fail'));
+        const r = onError('ctx', new Error('fail'));
         expect(r).toBe('skip');
     });
 });

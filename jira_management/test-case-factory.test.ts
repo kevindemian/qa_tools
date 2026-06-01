@@ -58,7 +58,7 @@ describe('TestCaseFactory', () => {
 
         it('returns retry action on error with onError returning retry', async () => {
             mockJiraResource.postJiraResource.mockRejectedValue(new Error('API error'));
-            mockPrompt.onError.mockResolvedValue('retry');
+            mockPrompt.onError.mockReturnValue('retry');
             const result = await factory.createIssue({
                 testData,
                 testTitle: 'Test Title',
@@ -71,7 +71,7 @@ describe('TestCaseFactory', () => {
 
         it('returns abort action on error with onError returning abort', async () => {
             mockJiraResource.postJiraResource.mockRejectedValue(new Error('API error'));
-            mockPrompt.onError.mockResolvedValue('abort');
+            mockPrompt.onError.mockReturnValue('abort');
             const result = await factory.createIssue({
                 testData,
                 testTitle: 'Test Title',
@@ -210,7 +210,7 @@ describe('TestCaseFactory', () => {
 
         it('aborts on step error when onError returns abort', async () => {
             mockImporter.importStep.mockResolvedValueOnce({}).mockRejectedValueOnce(new Error('Step error'));
-            mockPrompt.onError.mockResolvedValue('abort');
+            mockPrompt.onError.mockReturnValue('abort');
             const result = await factory.postSteps(issueKey, test, opLog);
             expect(result).toEqual({ action: 'abort' });
             expect(mockImporter.importStep).toHaveBeenCalledTimes(2);
@@ -229,7 +229,7 @@ describe('TestCaseFactory', () => {
                 .mockResolvedValueOnce({})
                 .mockRejectedValueOnce(new Error('Step error'))
                 .mockResolvedValueOnce({});
-            mockPrompt.onError.mockResolvedValue('continue');
+            mockPrompt.onError.mockReturnValue('continue');
             const result = await factory.postSteps(issueKey, test3, opLog);
             expect(result).toBeNull();
             expect(mockImporter.importStep).toHaveBeenCalledTimes(3);

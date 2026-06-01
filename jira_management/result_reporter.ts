@@ -139,9 +139,9 @@ function _buildExecutionPayload(
 async function createTestExecutionFromResults(opts: CreateTeOpts): Promise<TestExecResult> {
     const { testKeys } = _buildExecutionPayload(opts.matchedResults, opts.csvName, opts.pipelineInfo);
 
+    const creator = new TestExecutionCreator(opts.jiraResource, opts.linkManager);
     let te: { key: string; summary: string } | null;
     if (opts.existingTeKey) {
-        const creator = new TestExecutionCreator(opts.jiraResource, opts.linkManager);
         te = await creator.addTestsToExistingExecution(opts.existingTeKey, testKeys);
         if (!te) {
             rootLogger.error('Falha ao adicionar testes à Test Execution existente: ' + opts.existingTeKey);
@@ -150,8 +150,7 @@ async function createTestExecutionFromResults(opts: CreateTeOpts): Promise<TestE
     } else {
         const { summary } = _buildExecutionPayload(opts.matchedResults, opts.csvName, opts.pipelineInfo);
         te = await createTests.createTestExecution({
-            jiraResource: opts.jiraResource,
-            linkManager: opts.linkManager,
+            testExecutionCreator: creator,
             projectName: opts.projectName,
             testKeys,
             csvName: opts.csvName,
