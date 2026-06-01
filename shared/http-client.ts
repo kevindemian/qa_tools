@@ -18,39 +18,6 @@ export interface HttpClientConfig {
     maxRetries?: number;
 }
 
-/** Default sleep implementation using setTimeout.
- * Override via {@link setTestSleep} for tests to avoid real waits. */
-function _defaultSleep(ms: number): Promise<void> {
-    return new Promise((resolve) => setTimeout(resolve, ms));
-}
-
-/** Sleep implementation — points to {@link _defaultSleep} in production.
- * Tests can replace this to resolve instantly. */
-let _sleepImpl: (ms: number) => Promise<void> = _defaultSleep;
-
-/** Override the sleep function for testing. Pass `undefined` to restore default. */
-export function setTestSleep(fn: ((ms: number) => Promise<void>) | undefined): void {
-    _sleepImpl = fn ?? _defaultSleep;
-}
-
-/** Promise-based delay. Used internally for retry backoff. */
-export function sleep(ms: number): Promise<void> {
-    return _sleepImpl(ms);
-}
-
-function retryKey(cfg: { method?: string; url?: string }): string {
-    return `${(cfg.method || 'get').toLowerCase()}:${cfg.url || ''}`;
-}
-
-interface RetryEntry {
-    count: number;
-    lastUsed: number;
-}
-
-const retryCounts = new Map<string, RetryEntry>();
-
-const RETRY_CLEANUP_INTERVAL_MS = 5 * 60 * 1000;
-const RETRY_STALE_MS = 10 * 60 * 1000;
 /** Número máximo de tentativas para GET/PUT.
  * @production Jira Data Center atrás de Cloudflare limita ~2-3 req/min com cooldown 30-60s (429).
  *   10 tentativas com backoff até 120s garantem cobertura do cooldown.
@@ -66,43 +33,92 @@ const RETRY_BASE_WAIT_MS = 2000;
 const RETRY_MAX_WAIT_MS = 120000;
 const RETRY_JITTER_MS = 1000;
 const DEFAULT_HTTP_TIMEOUT_MS = 120000;
-let _retryCleanupTimer: ReturnType<typeof setInterval> | null = null;
+const RETRY_CLEANUP_INTERVAL_MS = 5 * 60 * 1000;
+const RETRY_STALE_MS = 10 * 60 * 1000;
 
-function startRetryCleanup(): void {
-    if (_retryCleanupTimer !== null) return;
-    _retryCleanupTimer = setInterval(() => {
-        const now = Date.now();
-        for (const [key, entry] of retryCounts) {
-            if (now - entry.lastUsed > RETRY_STALE_MS) retryCounts.delete(key);
+interface RetryEntry {
+    count: number;
+    lastUsed: number;
+}
+
+function retryKey(cfg: { method?: string; url?: string }): string {
+    return `${(cfg.method || 'get').toLowerCase()}:${cfg.url || ''}`;
+}
+
+class HttpClientInternals {
+    _sleepImpl: (ms: number) => Promise<void>;
+    readonly retryCounts = new Map<string, RetryEntry>();
+    _retryCleanupTimer: ReturnType<typeof setInterval> | null = null;
+
+    constructor() {
+        this._sleepImpl = this._defaultSleep.bind(this);
+    }
+
+    private _defaultSleep(ms: number): Promise<void> {
+        return new Promise((resolve) => setTimeout(resolve, ms));
+    }
+
+    setTestSleep(fn: ((ms: number) => Promise<void>) | undefined): void {
+        this._sleepImpl = fn ?? this._defaultSleep.bind(this);
+    }
+
+    sleep(ms: number): Promise<void> {
+        return this._sleepImpl(ms);
+    }
+
+    startRetryCleanup(): void {
+        if (this._retryCleanupTimer !== null) return;
+        this._retryCleanupTimer = setInterval(() => {
+            const now = Date.now();
+            for (const [key, entry] of this.retryCounts) {
+                if (now - entry.lastUsed > RETRY_STALE_MS) this.retryCounts.delete(key);
+            }
+        }, RETRY_CLEANUP_INTERVAL_MS);
+        if (
+            this._retryCleanupTimer &&
+            typeof this._retryCleanupTimer === 'object' &&
+            'unref' in this._retryCleanupTimer
+        ) {
+            this._retryCleanupTimer.unref();
         }
-    }, RETRY_CLEANUP_INTERVAL_MS);
-    if (_retryCleanupTimer && typeof _retryCleanupTimer === 'object' && 'unref' in _retryCleanupTimer) {
-        _retryCleanupTimer.unref();
+    }
+
+    getRetryCount(key: string): number {
+        const entry = this.retryCounts.get(key);
+        return entry ? entry.count : 0;
+    }
+
+    setRetryCount(key: string, count: number): void {
+        this.retryCounts.set(key, { count, lastUsed: Date.now() });
+    }
+
+    deleteRetryKey(key: string): void {
+        this.retryCounts.delete(key);
+    }
+
+    resetRetryCleanup(): void {
+        if (this._retryCleanupTimer !== null) {
+            clearInterval(this._retryCleanupTimer);
+            this._retryCleanupTimer = null;
+        }
     }
 }
 
-function getRetryCount(key: string): number {
-    const entry = retryCounts.get(key);
-    return entry ? entry.count : 0;
+const _internals = new HttpClientInternals();
+
+_internals.startRetryCleanup();
+
+export function setTestSleep(fn: ((ms: number) => Promise<void>) | undefined): void {
+    _internals.setTestSleep(fn);
 }
 
-function setRetryCount(key: string, count: number): void {
-    retryCounts.set(key, { count, lastUsed: Date.now() });
+export function sleep(ms: number): Promise<void> {
+    return _internals.sleep(ms);
 }
 
-function deleteRetryKey(key: string): void {
-    retryCounts.delete(key);
-}
-
-/** Clear the retry cleanup timer so tests can restart it with fake timers. */
 export function _resetRetryCleanup(): void {
-    if (_retryCleanupTimer !== null) {
-        clearInterval(_retryCleanupTimer);
-        _retryCleanupTimer = null;
-    }
+    _internals.resetRetryCleanup();
 }
-
-startRetryCleanup();
 
 function _calculateRetryDelay(
     errorResponse: { status?: number; headers?: Record<string, string> } | undefined,
@@ -124,7 +140,7 @@ function _setupResponseInterceptor(instance: ReturnType<typeof axios.create>, ma
     instance.interceptors.response.use(
         (response) => {
             const key = retryKey(response.config);
-            deleteRetryKey(key);
+            _internals.deleteRetryKey(key);
             return response;
         },
         async (error: unknown) => {
@@ -136,7 +152,7 @@ function _setupResponseInterceptor(instance: ReturnType<typeof axios.create>, ma
             const cfg = axiosErr.config;
             if (!cfg) throw error;
             const key = retryKey(cfg);
-            let attempts = getRetryCount(key);
+            let attempts = _internals.getRetryCount(key);
             const method = (cfg.method || 'get').toLowerCase();
             const effectiveMaxRetries = method === 'get' || method === 'put' ? maxRetries : 0;
             const isRetryable =
@@ -148,7 +164,7 @@ function _setupResponseInterceptor(instance: ReturnType<typeof axios.create>, ma
                 axiosErr.code === 'ECONNABORTED';
             if (attempts < effectiveMaxRetries && isRetryable) {
                 attempts++;
-                setRetryCount(key, attempts);
+                _internals.setRetryCount(key, attempts);
                 const delayMs = _calculateRetryDelay(axiosErr.response, attempts);
                 const retryAfter =
                     axiosErr.response?.status === 429 ? axiosErr.response?.headers?.['retry-after'] : undefined;
@@ -156,10 +172,10 @@ function _setupResponseInterceptor(instance: ReturnType<typeof axios.create>, ma
                     `Retry ${attempts}/${effectiveMaxRetries} para ${cfg.url} (espera ${Math.round(delayMs)}ms)` +
                         (retryAfter ? ' — Retry-After: ' + String(retryAfter) + 's' : ''),
                 );
-                await sleep(delayMs);
+                await _internals.sleep(delayMs);
                 return instance(cfg);
             }
-            deleteRetryKey(key);
+            _internals.deleteRetryKey(key);
             throw error;
         },
     );

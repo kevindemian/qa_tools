@@ -24,6 +24,7 @@ import type { CommandContext } from './commands/context';
 import { ensureDirs, registerCleanup } from '../shared/temp-dir';
 import { CATEGORY_IDS, CATEGORY_TITLES } from './menu-data';
 import { dispatchChoice, getAndResolveChoice } from './ui-helpers';
+import { maybeRunFirstRunWizard } from '../shared/first-run';
 
 /** Type-safe wrapper around `updateState` that provides a `StateSchema` callback. */
 function updateStateTyped(fn: (state: StateSchema) => void): void {
@@ -264,9 +265,7 @@ async function main(): Promise<void> {
 
     if (offerEnvSetup(envResult)) {
         try {
-            // eslint-disable-next-line @typescript-eslint/no-require-imports
-            const firstRun = require('../shared/first-run') as { maybeRunFirstRunWizard: () => Promise<void> };
-            await firstRun.maybeRunFirstRunWizard();
+            await maybeRunFirstRunWizard();
         } catch {
             // wizard failed — continue anyway
         }

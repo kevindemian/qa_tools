@@ -26,7 +26,7 @@ export interface JobConfig {
 }
 
 export class WorkflowBuilder {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- yaml lib types are not strictly compatible with Document.Parsed; using any for pragmatic compatibility
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- yaml Document and Document.Parsed have incompatible generics; any is the pragmatic choice
     private doc: any;
     private readonly provider: 'github' | 'gitlab';
 

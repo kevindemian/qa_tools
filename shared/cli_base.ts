@@ -68,7 +68,7 @@ export function offerEnvSetup(result: EnvValidationResult): boolean {
 }
 
 export function sanitizeUrl(url: string): string {
-    return url.replace(/token=[^&]+/, 'token=****');
+    return url.replace(/(token|api_key|secret|password|access_token|client_secret)=[^&]+/gi, '$1=****');
 }
 
 /** Graceful shutdown: logs message and exits after EXIT_DELAY_MS to allow pending I/O to flush. */

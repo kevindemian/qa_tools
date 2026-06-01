@@ -19,6 +19,12 @@ jest.mock('./state', () => ({
     update: mockUpdateState,
 }));
 
+const mockSetupMain = jest.fn().mockResolvedValue(undefined);
+
+jest.mock('../setup/main', () => ({
+    main: mockSetupMain,
+}));
+
 const OLD_ENV = { ...process.env };
 const OLD_ARGV = [...process.argv];
 
@@ -127,6 +133,7 @@ describe('maybeRunFirstRunWizard', () => {
         mockShowSelect.mockResolvedValue('setup');
         const { maybeRunFirstRunWizard: f } = loadModule();
         await expect(f()).resolves.not.toThrow();
+        expect(mockSetupMain).toHaveBeenCalledTimes(1);
         expect(mockUpdateState).toHaveBeenCalledTimes(1);
     });
 
@@ -138,9 +145,10 @@ describe('maybeRunFirstRunWizard', () => {
         expect(mockUpdateState).toHaveBeenCalledTimes(1);
     });
 
-    it('does not crash when setup module fails to load', async () => {
+    it('does not crash when setupMain() throws', async () => {
         mockLoadTypedState.mockReturnValue({});
         mockShowSelect.mockResolvedValue('setup');
+        mockSetupMain.mockRejectedValueOnce(new Error('Setup error'));
         const { maybeRunFirstRunWizard: f } = loadModule();
         await expect(f()).resolves.not.toThrow();
         expect(mockWarn).toHaveBeenCalledWith(expect.stringContaining('Não foi possível iniciar'));

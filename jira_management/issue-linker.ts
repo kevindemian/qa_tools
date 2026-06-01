@@ -96,7 +96,7 @@ class IssueLinker {
             if (!isQuiet()) success('  Pre-condition ' + test.precondition.value + ' associada');
             return null;
         } catch (err) {
-            const action = await onError('  Pre-condition de "' + test.title + '"', err, { details: true });
+            const action = onError('  Pre-condition de "' + test.title + '"', err, { details: true });
             return { action };
         }
     }
@@ -109,7 +109,7 @@ class IssueLinker {
             return null;
         } catch (err) {
             return {
-                action: await onError('  Linked issues de "' + test.title + '"', err, { details: true }),
+                action: onError('  Linked issues de "' + test.title + '"', err, { details: true }),
             };
         }
     }

@@ -19,6 +19,13 @@ export function visibleWidth(s: string): number {
     return stripVTControlCharacters(s).length;
 }
 
+const TERMINAL_FALLBACK_WIDTH = 80;
+const BOX_MIN_WIDTH = 20;
+const BOX_OVERHEAD = 8;
+const BOX_PADDING_MULTIPLIER = 2;
+const BOX_BORDER_WIDTH = 4;
+const DIVIDER_MAX_WIDTH = 78;
+
 const BORDERS: Record<string, { tl: string; tr: string; bl: string; br: string; h: string; v: string }> = {
     single: { tl: '┌', tr: '┐', bl: '└', br: '┘', h: '─', v: '│' },
     double: { tl: '╔', tr: '╗', bl: '╚', br: '╝', h: '═', v: '║' },
@@ -28,11 +35,15 @@ const BORDERS: Record<string, { tl: string; tr: string; bl: string; br: string; 
 const NONE = { tl: '', tr: '', bl: '', br: '', h: '', v: '' };
 
 function boxContentWidth(lines: string[], title: string, padding: number, maxWidth?: number): number {
-    const termWidth = process.stdout.columns || 80;
+    const termWidth = process.stdout.columns || TERMINAL_FALLBACK_WIDTH;
     if (maxWidth) return maxWidth;
-    const longest = Math.max(...lines.map((l) => visibleWidth(l)), title ? visibleWidth(title) + 4 : 0, 20);
-    const overhead = 8 + padding * 2;
-    return Math.min(longest + overhead, termWidth - 2);
+    const longest = Math.max(
+        ...lines.map((l) => visibleWidth(l)),
+        title ? visibleWidth(title) + BOX_BORDER_WIDTH : 0,
+        BOX_MIN_WIDTH,
+    );
+    const overhead = BOX_OVERHEAD + padding * BOX_PADDING_MULTIPLIER;
+    return Math.min(longest + overhead, termWidth - BOX_PADDING_MULTIPLIER);
 }
 
 interface TopBorderOptions {
@@ -105,8 +116,8 @@ export function box(lines: string[], options: BoxOptions = {}): string {
     const b = borderStyle === 'none' ? NONE : BORDERS[borderStyle]!;
     const styled = color ? applyPalette(color) : palette.fg;
     const borderChalk = color ? applyPalette(color) : palette.border;
-    const innerWidth = totalWidth - 8 - padding * 2;
-    const hArea = totalWidth - 4;
+    const innerWidth = totalWidth - BOX_OVERHEAD - padding * BOX_PADDING_MULTIPLIER;
+    const hArea = totalWidth - BOX_BORDER_WIDTH;
     const leftPad = '  ';
     const rows: string[] = [];
 
@@ -135,8 +146,8 @@ export function box(lines: string[], options: BoxOptions = {}): string {
 
 /** Render a horizontal divider line (muted). */
 export function divider(width?: number): string {
-    const w = width || process.stdout.columns || 80;
-    return palette['text-muted']('─'.repeat(Math.min(w - 2, 78)));
+    const w = width || process.stdout.columns || TERMINAL_FALLBACK_WIDTH;
+    return palette['text-muted']('─'.repeat(Math.min(w - BOX_PADDING_MULTIPLIER, DIVIDER_MAX_WIDTH)));
 }
 
 /** Render a bordered card with a centred title. Convenience wrapper around {@link box}. */

@@ -39,7 +39,7 @@ export async function glCreateMergeRequest(
         description,
     };
     try {
-        const data = await apiPost(client, base + '/merge_requests', body, { operation: 'criar MR' });
+        const data = await apiPost<JsonObject>(client, base + '/merge_requests', body, { operation: 'criar MR' });
         return formatPR(data);
     } catch (err: unknown) {
         const glErr = err as { response?: { status?: number } };
@@ -63,13 +63,13 @@ export async function glUpdateMergeRequest(
     description?: string,
 ): Promise<MergeRequestInfo | null> {
     const base = projectPath(owner, repo);
-    const data = await apiPut(
+    const data = await apiPut<JsonObject>(
         client,
         base + `/merge_requests/${iid}`,
         { title, description },
         { operation: 'atualizar MR' },
     );
-    return formatPR(data);
+    return data ? formatPR(data) : null;
 }
 
 export async function glGetMergeRequest(
@@ -79,11 +79,11 @@ export async function glGetMergeRequest(
     iid: string | number,
 ): Promise<MergeRequestInfo | null> {
     const base = projectPath(owner, repo);
-    const data = await apiGet(client, base + `/merge_requests/${iid}`, {
+    const data = await apiGet<JsonObject>(client, base + `/merge_requests/${iid}`, {
         operation: 'buscar MR',
         returnNull: true,
     });
-    return formatPR(data);
+    return data ? formatPR(data) : null;
 }
 
 export async function glSearchMergeRequests(
@@ -95,7 +95,7 @@ export async function glSearchMergeRequests(
     searchStatus: string,
 ): Promise<MergeRequestInfo[]> {
     const base = projectPath(owner, repo);
-    const data = await apiGet(client, base + '/merge_requests', {
+    const data = await apiGet<JsonObject[]>(client, base + '/merge_requests', {
         operation: 'buscar MRs',
         params: {
             state: searchStatus,
@@ -105,7 +105,7 @@ export async function glSearchMergeRequests(
         },
         returnNull: true,
     });
-    return (data || []).map((mr: JsonObject) => formatPR(mr));
+    return (data ?? []).map((mr) => formatPR(mr)).filter((x): x is MergeRequestInfo => x !== null);
 }
 
 export async function glAcceptMergeRequest(
@@ -123,13 +123,13 @@ export async function glAcceptMergeRequest(
             info(`MR #${iid} already merged`);
             return mr;
         }
-        const data = await apiPut(
+        const data = await apiPut<JsonObject>(
             client,
             base + `/merge_requests/${iid}/merge`,
             { should_remove_source_branch: shouldRemoveSourceBranch },
             { operation: 'fazer merge' },
         );
-        return formatPR(data);
+        return data ? formatPR(data) : null;
     } catch (err) {
         return handleError(err, { context: 'fazer merge' });
     }
@@ -142,7 +142,7 @@ export async function glIsApproved(
     mergeRequestIid: string | number,
 ): Promise<boolean> {
     const base = projectPath(owner, repo);
-    const data = await apiGet(client, base + `/merge_requests/${mergeRequestIid}/approvals`, {
+    const data = await apiGet<{ approved?: boolean }>(client, base + `/merge_requests/${mergeRequestIid}/approvals`, {
         operation: 'verificar aprovação',
         returnNull: true,
     });

@@ -3,6 +3,7 @@
 import fs from 'fs';
 import path from 'path';
 import os from 'os';
+import { z } from 'zod';
 import Config from './config';
 import { rootLogger } from './logger';
 import type { ParseResult, FlatTest } from './result_parser';
@@ -30,6 +31,43 @@ export interface MetricsStore {
     runs: MetricsRun[];
     coverageHistory?: CoverageSnapshot[];
 }
+
+const FlatTestSchema: z.ZodType<FlatTest> = z.object({
+    title: z.string(),
+    state: z.union([z.literal('passed'), z.literal('failed'), z.literal('skipped')]),
+    duration: z.number().nonnegative(),
+    error: z.string().optional(),
+    fullTitle: z.string().optional(),
+    steps: z
+        .array(z.object({ action: z.string().optional(), expected: z.string().optional() }).passthrough())
+        .optional(),
+    screenshots: z.array(z.object({ title: z.string(), dataUri: z.string() }).passthrough()).optional(),
+    logs: z.array(z.string()).optional(),
+});
+
+const MetricsRunSchema: z.ZodType<MetricsRun> = z.object({
+    timestamp: z.string(),
+    project: z.string(),
+    total: z.number().int().nonnegative(),
+    passed: z.number().int().nonnegative(),
+    failed: z.number().int().nonnegative(),
+    skipped: z.number().int().nonnegative(),
+    duration: z.number().nonnegative(),
+    tests: z.array(FlatTestSchema),
+});
+
+const CoverageSnapshotSchema: z.ZodType<CoverageSnapshot> = z.object({
+    timestamp: z.string(),
+    project: z.string(),
+    totalIssues: z.number().int().nonnegative(),
+    mappedIssues: z.number().int().nonnegative(),
+    coveragePct: z.number().min(0).max(100),
+});
+
+const MetricsStoreSchema: z.ZodType<MetricsStore> = z.object({
+    runs: z.array(MetricsRunSchema),
+    coverageHistory: z.array(CoverageSnapshotSchema).optional(),
+});
 
 export interface FlakinessEntry {
     title: string;
@@ -78,9 +116,10 @@ export function loadMetrics(config?: Config): MetricsStore {
         const sp = storePath(config);
         if (!fs.existsSync(sp)) return { runs: [] };
         const raw = fs.readFileSync(sp, 'utf8');
-        return JSON.parse(raw) as MetricsStore;
+        const parsed: unknown = JSON.parse(raw);
+        return MetricsStoreSchema.parse(parsed);
     } catch (err) {
-        rootLogger.warn('Failed to load metrics: ' + (err as Error).message);
+        rootLogger.warn('Failed to load metrics: ' + (err instanceof Error ? err.message : String(err)));
         return { runs: [] };
     }
 }

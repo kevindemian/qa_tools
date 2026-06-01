@@ -2,11 +2,11 @@
  * @module Functions ordered by dependency: readers → creators → validators → linkers. 219 lines under the 300-line R2 limit. */
 
 import type { JiraResourceLike } from '../shared/types';
-import JiraLinkManager from './jira_link_manager';
+import type JiraLinkManager from './jira_link_manager';
 import type CsvResource from './csv_resource';
 import type { TestCase } from '../shared/types';
 import { TestCaseSchema } from './csv-import-schema';
-import TestExecutionCreator from './test-execution-creator';
+import type TestExecutionCreator from './test-execution-creator';
 import MappingFileGenerator from './mapping-file-generator';
 import { rootLogger } from '../shared/logger';
 import IssueLinker from './issue-linker';
@@ -136,8 +136,7 @@ async function createTestsFromJson({
 }
 
 interface CreateTeOptions {
-    jiraResource: JiraResourceLike;
-    linkManager: JiraLinkManager;
+    testExecutionCreator: TestExecutionCreator;
     projectName: string;
     testKeys: string[];
     csvName: string;
@@ -146,14 +145,12 @@ interface CreateTeOptions {
 
 /** Create a Test Execution issue in Jira for the given test keys. */
 async function createTestExecution(opts: CreateTeOptions): Promise<{ key: string; summary: string } | null> {
-    const { jiraResource, linkManager, projectName, testKeys, csvName, titleOverride } = opts;
-    const creator = new TestExecutionCreator(jiraResource, linkManager);
-    return creator.create(projectName, testKeys, csvName, titleOverride);
+    const { testExecutionCreator, projectName, testKeys, csvName, titleOverride } = opts;
+    return testExecutionCreator.create(projectName, testKeys, csvName, titleOverride);
 }
 
 interface CreateTeWithLinksOptions {
-    jiraResource: JiraResourceLike;
-    linkManager: JiraLinkManager;
+    testExecutionCreator: TestExecutionCreator;
     projectName: string;
     testKeys: string[];
     csvName: string;
@@ -164,9 +161,8 @@ interface CreateTeWithLinksOptions {
 async function createTestExecutionWithLinks(
     opts: CreateTeWithLinksOptions,
 ): Promise<{ key: string; summary: string } | null> {
-    const { jiraResource, linkManager, projectName, testKeys, csvName, execOpts } = opts;
-    const creator = new TestExecutionCreator(jiraResource, linkManager);
-    return creator.createWithLinks(projectName, testKeys, csvName, execOpts);
+    const { testExecutionCreator, projectName, testKeys, csvName, execOpts } = opts;
+    return testExecutionCreator.createWithLinks(projectName, testKeys, csvName, execOpts);
 }
 
 /** Validate test cases against TestCaseSchema. Returns errors and warnings separately. */

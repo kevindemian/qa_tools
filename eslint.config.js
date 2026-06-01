@@ -15,6 +15,7 @@ module.exports = tseslint.config(
             '@typescript-eslint/no-unused-vars': ['error', { argsIgnorePattern: '^_' }],
             '@typescript-eslint/return-await': 'error',
             '@typescript-eslint/prefer-readonly': 'warn',
+            '@typescript-eslint/no-require-imports': 'off',
             'no-console': 'error',
             'no-throw-literal': 'error',
             'no-empty': ['error', { allowEmptyCatch: false }],
@@ -123,6 +124,6 @@ module.exports = tseslint.config(
             'no-restricted-imports': 'off',
         },
     },
-    { ignores: ['node_modules/', 'docs-archive/', '**/*.js'] },
+    { ignores: ['node_modules/', 'docs-archive/', 'scripts/', '**/*.js'] },
     prettier,
 );

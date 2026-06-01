@@ -58,6 +58,7 @@ jest.mock('axios', () => {
 import type { JiraResourceLike } from '../shared/types';
 import JiraResource from './jira_resource';
 import JiraLinkManager from './jira_link_manager';
+import TestExecutionCreator from './test-execution-creator';
 import type { TestCase } from '../shared/types';
 import CsvResource from './csv_resource';
 import IssueLinker from './issue-linker';
@@ -100,13 +101,14 @@ const PROJECT = 'TESTPROJ';
 
 describe('createTestExecution', () => {
     let jiraResource: jest.Mocked<JiraResource>;
-    let linkManager: JiraLinkManager;
+    let testExecutionCreator: TestExecutionCreator;
 
     beforeEach(() => {
         jiraResource = new JiraResource('fake-token', 'http://jira/rest/api/2') as jest.Mocked<JiraResource>;
         jiraResource.getJiraResource = jest.fn();
         jiraResource.postJiraResource = jest.fn();
-        linkManager = new JiraLinkManager(jiraResource);
+        const linkManager = new JiraLinkManager(jiraResource);
+        testExecutionCreator = new TestExecutionCreator(jiraResource, linkManager);
     });
 
     it('creates a Test Execution with given keys', async () => {
@@ -118,8 +120,7 @@ describe('createTestExecution', () => {
         jiraResource.postJiraResource.mockResolvedValue({ key: 'EXEC-1', id: '999' });
 
         const result = await createTestExecution({
-            jiraResource,
-            linkManager,
+            testExecutionCreator,
             projectName: PROJECT,
             testKeys: ['TEST-1', 'TEST-2'],
             csvName: 'meus-testes',
@@ -147,8 +148,7 @@ describe('createTestExecution', () => {
         jiraResource.postJiraResource.mockResolvedValue({ key: 'EXEC-2' });
 
         const result = await createTestExecution({
-            jiraResource,
-            linkManager,
+            testExecutionCreator,
             projectName: PROJECT,
             testKeys: ['TEST-3'],
             csvName: '',
@@ -172,7 +172,7 @@ describe('createTestExecution', () => {
         ]);
 
         await expect(
-            createTestExecution({ jiraResource, linkManager, projectName: PROJECT, testKeys: ['TEST-1'], csvName: '' }),
+            createTestExecution({ testExecutionCreator, projectName: PROJECT, testKeys: ['TEST-1'], csvName: '' }),
         ).resolves.toBeNull();
     });
 
@@ -184,7 +184,7 @@ describe('createTestExecution', () => {
         });
 
         await expect(
-            createTestExecution({ jiraResource, linkManager, projectName: PROJECT, testKeys: ['TEST-1'], csvName: '' }),
+            createTestExecution({ testExecutionCreator, projectName: PROJECT, testKeys: ['TEST-1'], csvName: '' }),
         ).resolves.toBeNull();
     });
 
@@ -192,7 +192,7 @@ describe('createTestExecution', () => {
         jiraResource.getJiraResource.mockRejectedValue(new Error('API error'));
 
         await expect(
-            createTestExecution({ jiraResource, linkManager, projectName: PROJECT, testKeys: ['TEST-1'], csvName: '' }),
+            createTestExecution({ testExecutionCreator, projectName: PROJECT, testKeys: ['TEST-1'], csvName: '' }),
         ).rejects.toThrow();
     });
 
@@ -204,7 +204,7 @@ describe('createTestExecution', () => {
         });
 
         await expect(
-            createTestExecution({ jiraResource, linkManager, projectName: PROJECT, testKeys: ['TEST-1'], csvName: '' }),
+            createTestExecution({ testExecutionCreator, projectName: PROJECT, testKeys: ['TEST-1'], csvName: '' }),
         ).resolves.toBeNull();
     });
 
@@ -212,7 +212,7 @@ describe('createTestExecution', () => {
         jiraResource.getJiraResource.mockResolvedValue(null);
 
         await expect(
-            createTestExecution({ jiraResource, linkManager, projectName: PROJECT, testKeys: ['TEST-1'], csvName: '' }),
+            createTestExecution({ testExecutionCreator, projectName: PROJECT, testKeys: ['TEST-1'], csvName: '' }),
         ).resolves.toBeNull();
     });
 
@@ -225,8 +225,7 @@ describe('createTestExecution', () => {
         jiraResource.postJiraResource.mockResolvedValue({ key: 'EXEC-3' });
 
         const result = await createTestExecution({
-            jiraResource,
-            linkManager,
+            testExecutionCreator,
             projectName: PROJECT,
             testKeys: ['TEST-1'],
             csvName: '',
@@ -244,7 +243,7 @@ describe('createTestExecution', () => {
 describe('createTestExecutionWithLinks', () => {
     let jiraResource: jest.Mocked<JiraResource>;
     let linkJiraRes: jest.Mocked<JiraResource>;
-    let linkManager: JiraLinkManager;
+    let testExecutionCreator: TestExecutionCreator;
 
     beforeEach(() => {
         jiraResource = new JiraResource('fake-token', 'http://jira/rest/api/2') as jest.Mocked<JiraResource>;
@@ -262,7 +261,8 @@ describe('createTestExecutionWithLinks', () => {
             if (url === 'issueLink') return Promise.resolve({});
             return Promise.reject(new Error('unexpected: ' + url));
         });
-        linkManager = new JiraLinkManager(linkJiraRes);
+        const linkManager = new JiraLinkManager(linkJiraRes);
+        testExecutionCreator = new TestExecutionCreator(jiraResource, linkManager);
     });
 
     it('creates TE and links all test keys', async () => {
@@ -276,8 +276,7 @@ describe('createTestExecutionWithLinks', () => {
         linkJiraRes.postJiraResource.mockResolvedValue({});
 
         const result = await createTestExecutionWithLinks({
-            jiraResource,
-            linkManager,
+            testExecutionCreator,
             projectName: PROJECT,
             testKeys: ['TEST-1', 'TEST-2'],
             csvName: 'meus-testes',
@@ -308,8 +307,7 @@ describe('createTestExecutionWithLinks', () => {
         linkJiraRes.postJiraResource.mockResolvedValue({});
 
         await createTestExecutionWithLinks({
-            jiraResource,
-            linkManager,
+            testExecutionCreator,
             projectName: PROJECT,
             testKeys: ['TEST-1', 'TEST-2'],
             csvName: '',
@@ -334,8 +332,7 @@ describe('createTestExecutionWithLinks', () => {
         linkJiraRes.postJiraResource.mockRejectedValue(new Error('Link failed'));
 
         const result = await createTestExecutionWithLinks({
-            jiraResource,
-            linkManager,
+            testExecutionCreator,
             projectName: PROJECT,
             testKeys: ['TEST-1'],
             csvName: '',

@@ -15,6 +15,7 @@ import fs from 'fs';
 import dotenv from 'dotenv';
 import JiraResource from '../jira_management/jira_resource';
 import JiraLinkManager from '../jira_management/jira_link_manager';
+import TestExecutionCreator from '../jira_management/test-execution-creator';
 import CsvResource from '../jira_management/csv_resource';
 import createTestsModule from '../jira_management/create_tests';
 import { rootLogger } from '../shared/logger';
@@ -39,6 +40,7 @@ const jiraResource = new JiraResource(TOKEN, BASE_URL + '/rest/api/2');
 const jiraResourceXray = new JiraResource(TOKEN, XRAY_URL);
 const linkManager = new JiraLinkManager(jiraResource);
 const linkManagerXray = new JiraLinkManager(jiraResourceXray);
+const testExecutionCreator = new TestExecutionCreator(jiraResource, linkManager);
 const csvResource = new CsvResource();
 const sessionLog = rootLogger.child({ session: 'e2e-real' });
 
@@ -288,8 +290,7 @@ async function fase4CriarTestExecution() {
     try {
         const timestamp = new Date().toISOString().slice(0, 16).replace('T', ' ');
         const result = await createTestExecutionWithLinks({
-            jiraResource,
-            linkManager,
+            testExecutionCreator,
             projectName: PROJECT,
             testKeys,
             csvName: 'E2E-Smoke',
@@ -337,13 +338,13 @@ async function verifyNewTestCase(): Promise<boolean> {
         console.log(`  Summary: ${f.summary as string}`);
         console.log(`  Description: ${((f.description as string) || '').slice(0, 100)}`);
 
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const steps: any[] = (await getSteps(createdIssueKey)) as any[];
+        const steps = (await getSteps(createdIssueKey)) as unknown as Record<string, unknown>[];
         ok(`Steps: ${steps.length} steps`);
         for (const s of steps) {
-            const a = s.fields?.Action?.value?.raw || '';
-            const e = s.fields?.['Expected Result']?.value?.raw || '';
-            console.log(`    Step ${s.index}: ${a} → ${e}`);
+            const fields = s.fields as Record<string, unknown> | undefined;
+            const a = ((fields?.Action as Record<string, unknown> | undefined)?.value as string) ?? '';
+            const e = ((fields?.['Expected Result'] as Record<string, unknown> | undefined)?.value as string) ?? '';
+            console.log(`    Step ${String(s.index)}: ${a} → ${e}`);
         }
         return true;
     } catch (e: unknown) {
@@ -398,9 +399,15 @@ async function fase6XrayHistory() {
         if (result.length > 0) {
             ok(`History para ${EXISTING_TEST}: ${result.length} entrada(s)`);
             result.slice(0, 3).forEach((h) => {
-                // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                const entry = h as any;
-                console.log(`    ${entry.date || '?'}: ${entry.status || entry.evolution || 'N/A'}`);
+                const entry = h as unknown as Record<string, unknown>;
+                const entryDate = typeof entry.date === 'string' ? entry.date : '?';
+                const entryStatus =
+                    typeof entry.status === 'string'
+                        ? entry.status
+                        : typeof entry.evolution === 'string'
+                          ? entry.evolution
+                          : 'N/A';
+                console.log(`    ${entryDate}: ${entryStatus}`);
             });
         } else {
             console.log(`  ℹ️ Nenhum histórico encontrado para ${EXISTING_TEST} (pode ser normal)`);

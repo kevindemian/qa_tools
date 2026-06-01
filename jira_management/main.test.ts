@@ -54,10 +54,14 @@ jest.mock('../shared/logger', () => ({
     Logger: jest.fn(),
 }));
 
+jest.mock('../shared/first-run', () => ({
+    maybeRunFirstRunWizard: jest.fn().mockResolvedValue(undefined),
+}));
+
 jest.mock('../shared/cli_base', () => ({
     mask: jest.fn((v: string) => (v ? v.slice(0, 4) + '****' : '')),
     createValidateEnv: jest.fn().mockReturnValue(jest.fn()),
-    offerEnvSetup: jest.fn().mockResolvedValue(false),
+    offerEnvSetup: jest.fn().mockReturnValue(false),
     setupSigint: jest.fn(),
     printSessionSummary: jest.fn(),
     sanitizeUrl: jest.fn((url: string) => url),
@@ -762,10 +766,13 @@ describe('module-level main error handler', () => {
             jest.doMock('../shared/cli_base', () => ({
                 mask: jest.fn(),
                 createValidateEnv: jest.fn().mockReturnValue(jest.fn()),
-                offerEnvSetup: jest.fn().mockResolvedValue(false),
+                offerEnvSetup: jest.fn().mockReturnValue(false),
                 setupSigint: jest.fn(),
                 printSessionSummary: jest.fn(),
                 sanitizeUrl: jest.fn(),
+            }));
+            jest.doMock('../shared/first-run', () => ({
+                maybeRunFirstRunWizard: jest.fn().mockResolvedValue(undefined),
             }));
             jest.doMock('../shared/spinner', () => ({ withSpinner: jest.fn() }));
             jest.doMock('../shared/breadcrumbs', () => ({

@@ -130,8 +130,10 @@ async function _processGitHubArtifacts(
     const allTestsByTitle: Record<string, { states: string[] }> = {};
     for (const run of runs.slice(0, GIT_HISTORY_RUNS)) {
         try {
-            const artResp = await client.get(`/repos/${repo}/actions/runs/${String(run.id)}/artifacts`);
-            const artifacts = (artResp.data as GitHubArtifactsResponse).artifacts || [];
+            const artResp = await client.get<GitHubArtifactsResponse>(
+                `/repos/${repo}/actions/runs/${String(run.id)}/artifacts`,
+            );
+            const artifacts = artResp.data.artifacts || [];
             const ctrf = artifacts.find((a) => {
                 const name = (a.name || '').toLowerCase();
                 return name.includes('ctrf') || name.includes('test-results');
@@ -150,7 +152,7 @@ async function _processGitHubArtifacts(
                 if (summary) {
                     runStats.push({
                         runId: run.id,
-                        createdAt: (run.created_at as string) || '',
+                        createdAt: typeof run.created_at === 'string' ? run.created_at : '',
                         passed: summary.passed || 0,
                         failed: summary.failed || 0,
                         skipped: summary.skipped || 0,
@@ -159,9 +161,9 @@ async function _processGitHubArtifacts(
                     });
                 }
                 for (const t of tests) {
-                    const name = t.name as string;
+                    const name = String(t.name ?? '');
                     if (!allTestsByTitle[name]) allTestsByTitle[name] = { states: [] };
-                    allTestsByTitle[name].states.push(t.status as string);
+                    allTestsByTitle[name].states.push(String(t.status ?? ''));
                 }
             }
         } catch {
@@ -177,8 +179,8 @@ function _buildCommitsFromRuns(runs: GitHubWorkflowRun[]): string {
         const hc = run.head_commit;
         if (hc) {
             const msg = (hc.message || '').split('\n')[0];
-            const author = (hc.author?.name as string) || 'unknown';
-            const date = ((run.created_at as string) || '').slice(0, 10);
+            const author = typeof hc.author?.name === 'string' ? hc.author.name : 'unknown';
+            const date = (typeof run.created_at === 'string' ? run.created_at : '').slice(0, 10);
             commits += `- ${msg} (${author}, ${date})\n`;
         }
     }
@@ -206,16 +208,16 @@ async function fetchGitHubHistory(): Promise<CiContext> {
         authHeader: { Authorization: 'Bearer ' + token },
     });
     try {
-        const runsResp = await client.get(
+        const runsResp = await client.get<GitHubWorkflowRunsResponse>(
             `/repos/${repo}/actions/runs?per_page=${GIT_HISTORY_RUNS}&status=success&status=failure`,
         );
-        const runs = (runsResp.data as GitHubWorkflowRunsResponse).workflow_runs || [];
+        const runs = runsResp.data.workflow_runs || [];
         const { runStats, allTestsByTitle } = await _processGitHubArtifacts(repo, client, runs);
         const commits = _buildCommitsFromRuns(runs);
         const flakyTests = _detectFlakyTests(allTestsByTitle);
         return { commits, runs: runStats, flakyTests };
     } catch (err: unknown) {
-        rootLogger.error('fetchGitHubHistory failed: ' + (err as Error).message);
+        rootLogger.error('fetchGitHubHistory failed: ' + (err instanceof Error ? err.message : String(err)));
         return { commits: '', runs: [], flakyTests: '' };
     }
 }
@@ -224,8 +226,8 @@ async function _processGitLabPipelineArtifacts(
     pipeline: Record<string, unknown>,
     client: ReturnType<typeof createHttpClient>,
 ): Promise<RunStats[]> {
-    const jobsResp = await client.get(`/projects/${projectId}/pipelines/${String(pipeline.id)}/jobs`);
-    const jobs: GitLabJob[] = (jobsResp.data as GitLabJob[]) || [];
+    const jobsResp = await client.get<GitLabJob[]>(`/projects/${projectId}/pipelines/${String(pipeline.id)}/jobs`);
+    const jobs: GitLabJob[] = jobsResp.data || [];
     const testJob = jobs.find((j) => {
         const name = (j.name || '').toLowerCase();
         return name.includes('test') || name.includes('e2e') || name.includes('ctrf');

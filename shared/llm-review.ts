@@ -310,8 +310,9 @@ async function _handleReviewFallback(
     try {
         return await callLlmFallback(system, user, startTime);
     } catch (fallbackErr) {
-        // eslint-disable-next-line preserve-caught-error
-        throw new Error('LLM review and fallback both failed: ' + (fallbackErr as Error).message);
+        throw new Error('LLM review and fallback both failed: ' + (fallbackErr as Error).message, {
+            cause: fallbackErr,
+        });
     }
 }
 

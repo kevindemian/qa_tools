@@ -97,8 +97,28 @@ async function setupBatchProject(batch: ReturnType<typeof parseBatchArgs>): Prom
     return { m, branch, projectName };
 }
 
-async function triggerAndCollectBatchPipeline(
+async function _triggerPipeline(
     m: import('../shared/types').GitProvider,
+    branch: string,
+): Promise<PipelineTriggerResult | undefined> {
+    const payload = { ref: branch, variables: [] as Array<{ key: string; value: string }> };
+    try {
+        const result = await withSpinner('Disparando pipeline em ' + branch + '...', () => m.triggerPipeline(payload));
+        if (result) {
+            success('Pipeline disparado: ' + String(result.web_url));
+            pushHistory('batch-pipeline', branch, 'ok');
+        }
+        return result;
+    } catch (err) {
+        printError('Falha ao disparar pipeline', err);
+        pushHistory('batch-pipeline', branch, 'error');
+        return undefined;
+    }
+}
+
+async function _collectPipelineResults(
+    m: import('../shared/types').GitProvider,
+    pipelineResult: PipelineTriggerResult,
     branch: string,
     projectName: string,
     teKey: string | undefined,
@@ -106,24 +126,6 @@ async function triggerAndCollectBatchPipeline(
     jiraBaseUrl: string,
     linkManager: JiraLinkManager,
 ): Promise<boolean> {
-    const payload = { ref: branch, variables: [] as Array<{ key: string; value: string }> };
-    let pipelineResult: PipelineTriggerResult | undefined;
-    try {
-        pipelineResult = await withSpinner('Disparando pipeline em ' + branch + '...', () =>
-            m.triggerPipeline(payload),
-        );
-        if (pipelineResult) {
-            success('Pipeline disparado: ' + String(pipelineResult.web_url));
-            pushHistory('batch-pipeline', branch, 'ok');
-        }
-    } catch (err) {
-        printError('Falha ao disparar pipeline', err);
-        pushHistory('batch-pipeline', branch, 'error');
-        return true;
-    }
-
-    if (!pipelineResult) return true;
-
     const pipelineId = (pipelineResult.id as string) || (pipelineResult.run_number as string) || '';
     if (!pipelineId) {
         error('ID da pipeline não encontrado na resposta.');
@@ -153,6 +155,30 @@ async function triggerAndCollectBatchPipeline(
         }
     }
     return false;
+}
+
+async function triggerAndCollectBatchPipeline(
+    m: import('../shared/types').GitProvider,
+    branch: string,
+    projectName: string,
+    teKey: string | undefined,
+    jiraResource: JiraClient,
+    jiraBaseUrl: string,
+    linkManager: JiraLinkManager,
+): Promise<boolean> {
+    const pipelineResult = await _triggerPipeline(m, branch);
+    if (!pipelineResult) return true;
+
+    return _collectPipelineResults(
+        m,
+        pipelineResult,
+        branch,
+        projectName,
+        teKey,
+        jiraResource,
+        jiraBaseUrl,
+        linkManager,
+    );
 }
 
 async function runFlakyAutoActions(projectName: string, jiraResource: JiraClient): Promise<void> {

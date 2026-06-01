@@ -7,6 +7,7 @@
  * Once acknowledged, stores a flag in state so it never shows again. */
 import { title, info, divider, warn, showSelect } from './prompt';
 import { loadTypedState, update as updateState } from './state';
+import { main as setupMain } from '../setup/main';
 
 const FIRST_RUN_FLAG = '_firstRunDone';
 
@@ -55,9 +56,7 @@ export async function maybeRunFirstRunWizard(): Promise<void> {
 
     if (choice === 'setup') {
         try {
-            // eslint-disable-next-line @typescript-eslint/no-require-imports
-            const setupModule = require('../../setup/main') as { default: { main: () => Promise<void> } };
-            await setupModule.default.main();
+            await setupMain();
         } catch {
             warn('Não foi possível iniciar o setup wizard.');
         }

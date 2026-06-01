@@ -58,11 +58,10 @@ class TestCaseFactory {
             opLog.info('Issue criada', { key: issue.key });
             return { key: issue.key as string };
         } catch (err) {
-            const action = await onError(
-                '[' + (testIdx + 1) + '/' + totalTests + '] Criar issue "' + testTitle + '"',
-                err,
-                { retry: true, details: true },
-            );
+            const action = onError('[' + (testIdx + 1) + '/' + totalTests + '] Criar issue "' + testTitle + '"', err, {
+                retry: true,
+                details: true,
+            });
             return { action };
         }
     }
@@ -79,7 +78,7 @@ class TestCaseFactory {
                 await this.stepImporter.importStep(issueKey, i + 1, test.steps[i]!);
                 if (stepBar) stepBar.update(i + 1);
             } catch (err) {
-                const action = await onError('  Step ' + (i + 1) + ' de "' + test.title + '"', err, {
+                const action = onError('  Step ' + (i + 1) + ' de "' + test.title + '"', err, {
                     details: true,
                 });
                 if (action === 'abort') {

@@ -25,6 +25,24 @@ class TestExecutionCreator {
         this.linkManager = linkManager;
     }
 
+    /** Search for an existing Test Execution with matching summary to ensure idempotency.
+     *  Uses JQL to find TE issues in the project with exact summary match.
+     *  Returns the first matching TE or null if none found. */
+    private async findExistingTe(projectName: string, summary: string): Promise<TestExecutionResult | null> {
+        const jql = `project = "${projectName}" AND issuetype = "Test Execution" AND summary ~ "${summary}"`;
+        try {
+            const result = await this.jiraResource.searchJiraIssues(jql, 1);
+            if (result.issues.length > 0) {
+                const issue = result.issues[0]!;
+                rootLogger.info('Test Execution existente encontrado: ' + issue.key);
+                return { key: issue.key, summary: (issue.fields.summary as string) || summary };
+            }
+        } catch (err) {
+            rootLogger.warn('Falha ao buscar Test Execution existente: ' + (err as Error).message);
+        }
+        return null;
+    }
+
     async create(
         projectName: string,
         testKeys: string[],
@@ -33,6 +51,12 @@ class TestExecutionCreator {
     ): Promise<TestExecutionResult | null> {
         const summary = this._buildTimestampedSummary(csvName, titleOverride);
         const execLog = rootLogger.child({ operation: 'create-testexec' });
+
+        const existing = await this.findExistingTe(projectName, summary);
+        if (existing) {
+            info('Reutilizando Test Execution existente: ' + existing.key + ' — ' + existing.summary);
+            return existing;
+        }
 
         const issueType = await this._resolveIssueType();
         if (!issueType) return null;

@@ -46,7 +46,7 @@ const MockGenHook = generatePrePushHook as jest.MockedFunction<typeof generatePr
 const MockAsk = prompt.ask as jest.MockedFunction<typeof prompt.ask>;
 const MockAskConfirm = prompt.askConfirm as jest.MockedFunction<typeof prompt.askConfirm>;
 
-import setupModule from './main';
+import { main } from './main';
 
 function mockGitHubDetect() {
     (MockFs.readFileSync as jest.Mock).mockImplementation((p: string | Buffer | URL) => {
@@ -100,7 +100,7 @@ describe('setup main', () => {
         mockGitHubDetect();
         mockAskForTests(false);
 
-        await setupModule.main();
+        await main();
 
         expect(MockGenGithub).toHaveBeenCalled();
         expect(MockFs.writeFileSync).toHaveBeenCalledWith(
@@ -125,7 +125,7 @@ describe('setup main', () => {
             .mockResolvedValueOnce(true)
             .mockResolvedValueOnce(false);
 
-        await setupModule.main();
+        await main();
 
         expect(MockGenGitlab).toHaveBeenCalled();
     });
@@ -135,7 +135,7 @@ describe('setup main', () => {
         mockGitHubDetect();
         mockAskForTests(false);
 
-        await setupModule.main();
+        await main();
 
         expect(MockWriteEnv).toHaveBeenCalled();
     });
@@ -145,7 +145,7 @@ describe('setup main', () => {
         mockGitHubDetect();
         mockAskForTests(true);
 
-        await setupModule.main();
+        await main();
 
         expect(MockGenHook).toHaveBeenCalled();
         expect(MockWriteHook).toHaveBeenCalled();
@@ -156,7 +156,7 @@ describe('setup main', () => {
         mockGitHubDetect();
         mockAskForTests(false);
 
-        await setupModule.main();
+        await main();
 
         expect(MockGenHook).not.toHaveBeenCalled();
     });
@@ -179,7 +179,7 @@ describe('setup main', () => {
             return p.toString().includes('.gitlab-ci.yml');
         });
 
-        await setupModule.main();
+        await main();
 
         expect(MockGenGitlab).toHaveBeenCalled();
         expect(MockFs.writeFileSync).not.toHaveBeenCalledWith(
