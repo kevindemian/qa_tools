@@ -7,7 +7,6 @@ import {
     nullAs,
     undefinedAs,
 } from './test-utils';
-import type { CommandContext } from '../jira_management/commands/context';
 
 describe('nullAs', () => {
     it('returns null typed as T', () => {
@@ -39,7 +38,7 @@ describe('makeMockCommandContext', () => {
     });
 
     it('returns correct type assignable to CommandContext', () => {
-        const ctx: CommandContext = makeMockCommandContext();
+        const ctx = makeMockCommandContext();
         expect(ctx.base_url).toBe('https://jira.test.com');
     });
 

@@ -14,7 +14,7 @@ type MockProxy<T> = {
 export function createMockContext(overrides?: Partial<MockProxy<CommandContext>>): jest.Mocked<CommandContext> {
     // Cast 1/1: jest.Mocked<T> is a mapped type that cannot be constructed manually.
     // TypeScript cannot prove structural equivalence between the literal and the mapped type.
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any — mapped type limitation
+
     const base = {
         jiraResource: createMockJiraResource(),
         jiraResourceXray: createMockJiraResource(),

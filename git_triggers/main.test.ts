@@ -349,11 +349,11 @@ describe('handleCreateMR', () => {
             .mockReturnValueOnce('main')
             .mockReturnValueOnce('My MR')
             .mockReturnValueOnce('Description');
-        mockProvider.createMergeRequest!.mockResolvedValue({ web_url: 'https://gitlab/mr/1' });
+        mockProvider.createMergeRequest.mockResolvedValue({ web_url: 'https://gitlab/mr/1' });
 
         await mainModule.handleCreateMR(mockProvider);
 
-        expect(mockProvider.createMergeRequest!).toHaveBeenCalledWith('feature-x', 'main', 'My MR', 'Description');
+        expect(mockProvider.createMergeRequest).toHaveBeenCalledWith('feature-x', 'main', 'My MR', 'Description');
         expect(prompt.success).toHaveBeenCalledWith(expect.stringContaining('https://gitlab/mr/1'));
     });
 
@@ -363,7 +363,7 @@ describe('handleCreateMR', () => {
             .mockReturnValueOnce('dst')
             .mockReturnValueOnce('Title')
             .mockReturnValueOnce('Desc');
-        mockProvider.createMergeRequest!.mockRejectedValue(new Error('Conflict'));
+        mockProvider.createMergeRequest.mockRejectedValue(new Error('Conflict'));
 
         await mainModule.handleCreateMR(mockProvider);
 
@@ -376,17 +376,17 @@ describe('handleCreateMR', () => {
 describe('handleMergeMR', () => {
     it('merges MR and shows success', async () => {
         jest.mocked(prompt.prompt).mockReturnValueOnce('42');
-        mockProvider.acceptMergeRequest!.mockResolvedValue({ web_url: 'https://gitlab/mr/42' });
+        mockProvider.acceptMergeRequest.mockResolvedValue({ web_url: 'https://gitlab/mr/42' });
 
         await mainModule.handleMergeMR(mockProvider);
 
-        expect(mockProvider.acceptMergeRequest!).toHaveBeenCalledWith('42');
+        expect(mockProvider.acceptMergeRequest).toHaveBeenCalledWith('42');
         expect(prompt.success).toHaveBeenCalledWith(expect.stringContaining('https://gitlab/mr/42'));
     });
 
     it('handles merge error', async () => {
         jest.mocked(prompt.prompt).mockReturnValueOnce('99');
-        mockProvider.acceptMergeRequest!.mockRejectedValue(new Error('Merge conflict'));
+        mockProvider.acceptMergeRequest.mockRejectedValue(new Error('Merge conflict'));
 
         await mainModule.handleMergeMR(mockProvider);
 
@@ -398,7 +398,7 @@ describe('handleMergeMR', () => {
 
 describe('handleListSchedules', () => {
     it('lists schedules when found', async () => {
-        mockProvider.getSchedules!.mockResolvedValue([{ id: '5', description: 'Nightly', next_run_at: '2026-01-01' }]);
+        mockProvider.getSchedules.mockResolvedValue([{ id: '5', description: 'Nightly', next_run_at: '2026-01-01' }]);
 
         await mainModule.handleListSchedules(mockProvider);
 
@@ -406,7 +406,7 @@ describe('handleListSchedules', () => {
     });
 
     it('handles empty schedules', async () => {
-        mockProvider.getSchedules!.mockResolvedValue([]);
+        mockProvider.getSchedules.mockResolvedValue([]);
 
         await mainModule.handleListSchedules(mockProvider);
 
@@ -414,7 +414,7 @@ describe('handleListSchedules', () => {
     });
 
     it('calls printError when getSchedules throws', async () => {
-        mockProvider.getSchedules!.mockRejectedValue(new Error('API fail'));
+        mockProvider.getSchedules.mockRejectedValue(new Error('API fail'));
 
         await mainModule.handleListSchedules(mockProvider);
 
@@ -427,17 +427,17 @@ describe('handleListSchedules', () => {
 describe('handleRunSchedule', () => {
     it('runs schedule on success', async () => {
         jest.mocked(prompt.prompt).mockReturnValueOnce('10');
-        mockProvider.runSchedule!.mockResolvedValue({ id: '10' });
+        mockProvider.runSchedule.mockResolvedValue({ id: '10' });
 
         await mainModule.handleRunSchedule(mockProvider);
 
-        expect(mockProvider.runSchedule!).toHaveBeenCalledWith('10');
+        expect(mockProvider.runSchedule).toHaveBeenCalledWith('10');
         expect(prompt.success).toHaveBeenCalledWith(expect.stringContaining('Schedule disparado'));
     });
 
     it('handles run error', async () => {
         jest.mocked(prompt.prompt).mockReturnValueOnce('bad-id');
-        mockProvider.runSchedule!.mockRejectedValue(new Error('Not found'));
+        mockProvider.runSchedule.mockRejectedValue(new Error('Not found'));
 
         await mainModule.handleRunSchedule(mockProvider);
 
@@ -450,8 +450,8 @@ describe('handleRunSchedule', () => {
 describe('handleListApprovedMRs', () => {
     it('lists approved MRs', async () => {
         jest.mocked(prompt.prompt).mockReturnValueOnce('opened');
-        mockProvider.searchMergeRequests!.mockResolvedValue([{ iid: '1', title: 'Fix' }]);
-        mockProvider.isApproved!.mockResolvedValue(true);
+        mockProvider.searchMergeRequests.mockResolvedValue([{ iid: '1', title: 'Fix' }]);
+        mockProvider.isApproved.mockResolvedValue(true);
 
         await mainModule.handleListApprovedMRs(mockProvider);
 
@@ -460,8 +460,8 @@ describe('handleListApprovedMRs', () => {
 
     it('warns when none approved', async () => {
         jest.mocked(prompt.prompt).mockReturnValueOnce('opened');
-        mockProvider.searchMergeRequests!.mockResolvedValue([{ iid: '2', title: 'WIP' }]);
-        mockProvider.isApproved!.mockResolvedValue(false);
+        mockProvider.searchMergeRequests.mockResolvedValue([{ iid: '2', title: 'WIP' }]);
+        mockProvider.isApproved.mockResolvedValue(false);
 
         await mainModule.handleListApprovedMRs(mockProvider);
 
@@ -474,7 +474,7 @@ describe('handleListApprovedMRs', () => {
 describe('handleExportVariables', () => {
     it('exports variables when confirmed', async () => {
         jest.mocked(prompt.confirm).mockReturnValueOnce(true);
-        mockProvider.getCICDVariables!.mockResolvedValue([{ key: 'MY_VAR', value: 'my_value' }]);
+        mockProvider.getCICDVariables.mockResolvedValue([{ key: 'MY_VAR', value: 'my_value' }]);
         const writeSpy = jest.spyOn(fs, 'writeFileSync').mockImplementation(() => {});
         const unlinkSpy = jest.spyOn(fs, 'unlinkSync').mockImplementation(() => {});
 
@@ -546,7 +546,7 @@ describe('nivelarBranchesWrapper', () => {
 
 describe('downloadTestArtifacts', () => {
     it('returns null when no artifacts found', async () => {
-        mockProvider.listPipelineArtifacts!.mockResolvedValue([]);
+        mockProvider.listPipelineArtifacts.mockResolvedValue([]);
         const result = await mainModule.downloadTestArtifacts(mockProvider, '1');
         expect(result).toBeNull();
     });
@@ -611,7 +611,7 @@ describe('printSessionSummary', () => {
 
 describe('displayRecentPipelines', () => {
     it('prints pipelines when results exist', async () => {
-        mockProvider.getRecentPipelines!.mockResolvedValue([
+        mockProvider.getRecentPipelines.mockResolvedValue([
             { id: '1', ref: 'main', status: 'success' },
             { id: '2', ref: 'develop', status: 'failed' },
         ]);
@@ -622,7 +622,7 @@ describe('displayRecentPipelines', () => {
     });
 
     it('does not print when pipelines array is empty', async () => {
-        mockProvider.getRecentPipelines!.mockResolvedValue([]);
+        mockProvider.getRecentPipelines.mockResolvedValue([]);
 
         await mainModule.displayRecentPipelines(mockProvider);
 
@@ -630,7 +630,7 @@ describe('displayRecentPipelines', () => {
     });
 
     it('silently catches getRecentPipelines error', async () => {
-        mockProvider.getRecentPipelines!.mockRejectedValue(new Error('API error'));
+        mockProvider.getRecentPipelines.mockRejectedValue(new Error('API error'));
 
         await expect(mainModule.displayRecentPipelines(mockProvider)).resolves.toBeUndefined();
     });
@@ -641,7 +641,7 @@ describe('displayRecentPipelines', () => {
 describe('handleListApprovedMRs - error', () => {
     it('calls printError when searchMergeRequests throws', async () => {
         jest.mocked(prompt.prompt).mockReturnValueOnce('opened');
-        mockProvider.searchMergeRequests!.mockRejectedValue(new Error('API fail'));
+        mockProvider.searchMergeRequests.mockRejectedValue(new Error('API fail'));
 
         await mainModule.handleListApprovedMRs(mockProvider);
 
@@ -654,7 +654,7 @@ describe('handleListApprovedMRs - error', () => {
 describe('handleExportVariables - extended', () => {
     it('calls printError when getCICDVariables throws', async () => {
         jest.mocked(prompt.confirm).mockReturnValueOnce(true);
-        mockProvider.getCICDVariables!.mockRejectedValue(new Error('API fail'));
+        mockProvider.getCICDVariables.mockRejectedValue(new Error('API fail'));
 
         await mainModule.handleExportVariables(mockProvider);
 
@@ -663,7 +663,7 @@ describe('handleExportVariables - extended', () => {
 
     it('escapes values containing = sign with double quotes', async () => {
         jest.mocked(prompt.confirm).mockReturnValueOnce(true);
-        mockProvider.getCICDVariables!.mockResolvedValue([{ key: 'MY_VAR', value: 'foo=bar' }]);
+        mockProvider.getCICDVariables.mockResolvedValue([{ key: 'MY_VAR', value: 'foo=bar' }]);
         const writeSpy = jest.spyOn(fs, 'writeFileSync').mockImplementation(() => {});
         const unlinkSpy = jest.spyOn(fs, 'unlinkSync').mockImplementation(() => {});
 
@@ -680,7 +680,7 @@ describe('handleExportVariables - extended', () => {
 describe('pushHistory - trim', () => {
     it('trims state history to last 50 entries', () => {
         mainModule.pushHistory('op', 'd', 'ok');
-        const callback = jest.mocked(state.update).mock.calls[0]![0] as (s: Record<string, unknown>) => void;
+        const callback = jest.mocked(state.update).mock.calls[0]![0];
         const testState = { history: Array(51).fill({}) };
         callback(testState);
         expect((testState.history as Array<unknown>).length).toBe(50);
@@ -692,7 +692,7 @@ describe('pushHistory - trim', () => {
 describe('handleTriggerPipeline', () => {
     it('warns when branch is not found', async () => {
         jest.mocked(prompt.prompt).mockReturnValueOnce('bad-branch');
-        mockProvider.getBranch!.mockResolvedValue(null);
+        mockProvider.getBranch.mockResolvedValue(null);
 
         await mainModule.handleTriggerPipeline(mockProvider, 'proj-b');
 
@@ -707,12 +707,12 @@ describe('handleTriggerPipeline', () => {
             .mockReturnValueOnce(false) // add variables = no
             .mockReturnValueOnce(true) // confirm trigger = yes
             .mockReturnValueOnce(false); // wait for completion = no
-        mockProvider.getBranch!.mockResolvedValue({ name: 'main' });
-        mockProvider.triggerPipeline!.mockResolvedValue({ web_url: 'https://gitlab/pipe/1' });
+        mockProvider.getBranch.mockResolvedValue({ name: 'main' });
+        mockProvider.triggerPipeline.mockResolvedValue({ web_url: 'https://gitlab/pipe/1' });
 
         await mainModule.handleTriggerPipeline(mockProvider, 'proj-b');
 
-        expect(mockProvider.triggerPipeline!).toHaveBeenCalledWith(
+        expect(mockProvider.triggerPipeline).toHaveBeenCalledWith(
             expect.objectContaining({ ref: 'main', variables: [] }),
         );
         expect(prompt.success).toHaveBeenCalledWith(expect.stringContaining('https://gitlab/pipe/1'));
@@ -725,8 +725,8 @@ describe('handleTriggerPipeline', () => {
         jest.mocked(prompt.confirm)
             .mockReturnValueOnce(false) // add variables = no
             .mockReturnValueOnce(true); // confirm trigger = yes
-        mockProvider.getBranch!.mockResolvedValue({ name: 'main' });
-        mockProvider.triggerPipeline!.mockRejectedValue(new Error('Trigger fail'));
+        mockProvider.getBranch.mockResolvedValue({ name: 'main' });
+        mockProvider.triggerPipeline.mockRejectedValue(new Error('Trigger fail'));
 
         await mainModule.handleTriggerPipeline(mockProvider, 'proj-b');
 
@@ -742,12 +742,12 @@ describe('handleTriggerPipeline', () => {
             .mockReturnValueOnce(true) // add variables = yes
             .mockReturnValueOnce(true) // confirm trigger = yes
             .mockReturnValueOnce(false); // wait = no
-        mockProvider.getBranch!.mockResolvedValue({ name: 'main' });
-        mockProvider.triggerPipeline!.mockResolvedValue({ web_url: 'https://gitlab/pipe/2' });
+        mockProvider.getBranch.mockResolvedValue({ name: 'main' });
+        mockProvider.triggerPipeline.mockResolvedValue({ web_url: 'https://gitlab/pipe/2' });
 
         await mainModule.handleTriggerPipeline(mockProvider, 'proj-b');
 
-        expect(mockProvider.triggerPipeline!).toHaveBeenCalledWith(
+        expect(mockProvider.triggerPipeline).toHaveBeenCalledWith(
             expect.objectContaining({
                 ref: 'main',
                 variables: [
@@ -763,12 +763,12 @@ describe('handleTriggerPipeline', () => {
             pendingPipeline: { branch: 'feature-x', pipelineId: '123', projectName: 'proj-b' },
         });
         jest.mocked(prompt.confirm).mockReturnValueOnce(true); // confirm resume
-        mockProvider.getPipeline!.mockResolvedValue({ status: 'success', web_url: 'https://pipe/1' });
-        mockProvider.getRecentPipelines!.mockResolvedValue([]);
+        mockProvider.getPipeline.mockResolvedValue({ status: 'success', web_url: 'https://pipe/1' });
+        mockProvider.getRecentPipelines.mockResolvedValue([]);
 
         await mainModule.handleTriggerPipeline(mockProvider, 'proj-b');
 
-        expect(mockProvider.getPipeline!).toHaveBeenCalledWith('123');
+        expect(mockProvider.getPipeline).toHaveBeenCalledWith('123');
     });
 });
 

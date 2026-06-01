@@ -15,16 +15,16 @@ export function createMockTestExecutionCreator(overrides?: Partial<MockTestExecu
     const base = {
         jiraResource: {} as JiraResourceLike,
         linkManager: {} as JiraLinkManager,
-        _linkTestsToExecution: jest.fn(async (_teKey: string, _testKeys: string[]) => ({
+        _linkTestsToExecution: jest.fn((_teKey: string, _testKeys: string[]) => ({
             linked: 0,
             failed: 0,
         })),
-        addTestsToExistingExecution: jest.fn(async (_teKey: string, _testKeys: string[]) => ({
+        addTestsToExistingExecution: jest.fn((_teKey: string, _testKeys: string[]) => ({
             key: 'MOCK-TE',
             summary: 'Mock Test Execution',
         })),
         createWithLinks: jest.fn(
-            async (
+            (
                 _projectName: string,
                 _testKeys: string[],
                 _csvName: string,
@@ -34,12 +34,10 @@ export function createMockTestExecutionCreator(overrides?: Partial<MockTestExecu
                 summary: 'Mock Test Execution',
             }),
         ),
-        create: jest.fn(
-            async (_projectName: string, _testKeys: string[], _csvName: string, _titleOverride?: string) => ({
-                key: 'MOCK-TE',
-                summary: 'Mock Test Execution',
-            }),
-        ),
+        create: jest.fn((_projectName: string, _testKeys: string[], _csvName: string, _titleOverride?: string) => ({
+            key: 'MOCK-TE',
+            summary: 'Mock Test Execution',
+        })),
     } as unknown as TestExecutionCreator;
     return Object.assign(base, overrides);
 }

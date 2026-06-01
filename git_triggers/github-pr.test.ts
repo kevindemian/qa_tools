@@ -93,7 +93,6 @@ describe('formatPR', () => {
     });
 
     it('returns null for null input', () => {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any — R9: type narrowing from null for null-handling test
         expect(formatPR(nullAs<Record<string, unknown>>())).toBeNull();
     });
 

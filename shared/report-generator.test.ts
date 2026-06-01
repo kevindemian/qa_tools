@@ -132,7 +132,6 @@ describe('generateHtmlReport', () => {
     });
 
     it('handles generateHtmlReport error gracefully', () => {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any — R9: type narrowing from null for null-handling test
         const html = generateHtmlReport(nullAs<FlatTest[]>());
 
         expect(html).toContain('Error generating report');

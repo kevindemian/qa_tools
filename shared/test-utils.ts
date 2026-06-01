@@ -1,4 +1,3 @@
-import type { CommandContext } from '../jira_management/commands/context';
 import type { Logger } from './logger';
 import { createMockContext } from './test-utils/factories/context-factory';
 
@@ -82,7 +81,7 @@ export function restoreConsoleSpies(spies: ReturnType<typeof createConsoleSpies>
  *  compatibility (e.g. partial mocks, extra fields on ctx).
  *  @param overrides - Top-level fields to override. `ctx` is deep-merged.
  *  @returns A `jest.Mocked<CommandContext>` compatible with handler signatures. */
-export function makeMockCommandContext(overrides: Record<string, unknown> = {}): jest.Mocked<CommandContext> {
+export function makeMockCommandContext(overrides: Record<string, unknown> = {}): ReturnType<typeof createMockContext> {
     const ctx = {
         project_name: 'TEST',
         inMemoryTasksId: [],
@@ -95,17 +94,14 @@ export function makeMockCommandContext(overrides: Record<string, unknown> = {}):
     if (overrides.ctx && typeof overrides.ctx === 'object' && !Array.isArray(overrides.ctx)) {
         mergedOverrides.ctx = { ...ctx, ...(overrides.ctx as Record<string, unknown>) };
     }
-    // Cast 1/1: merge of typed createMockContext with untyped Record overrides
-    // requires a cast because Record keys may not exist on CommandContext.
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any — partial override merge
-    return { ...createMockContext(), ...mergedOverrides } as unknown as jest.Mocked<CommandContext>;
+    return { ...createMockContext(), ...mergedOverrides };
 }
 
 /** Assert that a value is non-nullable at runtime, with a type-safe return.
  *  Replaces `x!` in tests with a verifiable check: `nonNull(x).property`.
  *  @throws if `value` is `null` or `undefined`. */
 export function nonNull<T>(value: T, msg?: string): NonNullable<T> {
-    if (value == null) throw new Error(msg ?? `Expected non-nullable value, got ${value}`);
+    if (value == null) throw new Error(msg ?? `Expected non-nullable value, got ${String(value)}`);
     return value;
 }
 

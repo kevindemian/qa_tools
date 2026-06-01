@@ -144,7 +144,6 @@ describe('generateHtmlReport', () => {
 
 describe('generateReportWithFallback', () => {
     it('returns error page when generation fails', () => {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any — R9: type narrowing from null for null-handling test
         const badTests = nullAs<FlatTest[]>();
         const html = generateReportWithFallback(badTests, { title: 'Fail' });
         expect(html).toContain('Error generating report');
@@ -200,7 +199,6 @@ describe('generateCoverageHtml', () => {
     });
 
     it('returns error page on failure', () => {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any — R9: type narrowing from null for null-handling test
         const badEpics = nullAs<CoverageEpic[]>();
         const html = generateCoverageHtml(badEpics);
         expect(html).toContain('Error generating coverage report');

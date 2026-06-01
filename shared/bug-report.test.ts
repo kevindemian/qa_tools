@@ -204,7 +204,6 @@ describe('BugReport Service', () => {
         });
 
         it('handles missing stats and tests gracefully', () => {
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any — R9: type narrowing empty object for edge case test
             const report = collectAutomated({} as ParseResult);
             expect(report.summary).toBe('0/0 tests failed');
             expect(report.description).toBe('No details available.');
