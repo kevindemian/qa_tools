@@ -150,7 +150,7 @@ export interface GitProvider {
     searchMergeRequests: (sourceBranch: string, targetBranch: string, status: string) => Promise<MergeRequestInfo[]>;
     acceptMergeRequest: (iid: string | number, removeSourceBranch?: boolean) => Promise<MergeRequestInfo | null>;
     isApproved: (id: string | number) => Promise<boolean>;
-    getCICDVariables: () => Promise<CICDVariable[]>;
+    getCICDVariables: () => Promise<CICDVariable[] | null>;
     getRecentPipelines: (count?: number) => Promise<PipelineRun[]>;
     getBranch: (branch: string) => Promise<{ name: string } | null>;
     getPipeline: (id: string | number) => Promise<PipelineInfo | null>;

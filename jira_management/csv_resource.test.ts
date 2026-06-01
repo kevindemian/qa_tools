@@ -1,3 +1,4 @@
+import { nonNull } from '../shared/test-utils';
 import CsvResource from './csv_resource';
 
 describe('CsvResource', () => {
@@ -86,11 +87,11 @@ describe('CsvResource', () => {
                 'utf-8',
             );
             const results = await csvResource.readBulkCsv(tmp);
-            expect(results[0]!.precondition).toEqual({
+            expect(nonNull(results[0]).precondition).toEqual({
                 type: 'inline',
                 value: 'User must be logged in\nwith admin privileges\nand valid SSL cert',
             });
-            expect(results[0]!.steps.length).toBe(1);
+            expect(nonNull(results[0]).steps.length).toBe(1);
             fs.unlinkSync(tmp);
         });
 
@@ -109,7 +110,7 @@ describe('CsvResource', () => {
                 'utf-8',
             );
             const results = await csvResource.readBulkCsv(tmp);
-            expect(results[0]!.precondition).toEqual({
+            expect(nonNull(results[0]).precondition).toEqual({
                 type: 'inline',
                 value: 'User must be logged in',
             });
@@ -131,7 +132,7 @@ describe('CsvResource', () => {
                 'utf-8',
             );
             const results = await csvResource.readBulkCsv(tmp);
-            expect(results[0]!.precondition).toEqual({
+            expect(nonNull(results[0]).precondition).toEqual({
                 type: 'inline',
                 value: 'User must be logged in',
             });
@@ -189,7 +190,7 @@ describe('CsvResource', () => {
             );
             const results = await csvResource.readBulkCsv(tmp);
             expect(results).toHaveLength(1);
-            expect(results[0]!.title).toBe('Real');
+            expect(nonNull(results[0]).title).toBe('Real');
             expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining('formato flat'));
             warnSpy.mockRestore();
             fs.unlinkSync(tmp);
@@ -200,7 +201,7 @@ describe('CsvResource', () => {
             const tmp = '/tmp/test-desc-quoted.csv';
             fs.writeFileSync(tmp, 'Title: TC\nDescription:"Quoted desc"\nAction,Data,Expected\nx,y,z\n', 'utf-8');
             const results = await csvResource.readBulkCsv(tmp);
-            expect(results[0]!.description).toBe('Quoted desc');
+            expect(nonNull(results[0]).description).toBe('Quoted desc');
             fs.unlinkSync(tmp);
         });
 
@@ -215,8 +216,8 @@ describe('CsvResource', () => {
                 'utf-8',
             );
             const results = await csvResource.readBulkCsv(tmp);
-            expect(results[0]!.description).toContain('Line 1');
-            expect(results[0]!.description).toContain('Line 2');
+            expect(nonNull(results[0]).description).toContain('Line 1');
+            expect(nonNull(results[0]).description).toContain('Line 2');
             expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining('Description sem aspas de fechamento'));
             warnSpy.mockRestore();
             fs.unlinkSync(tmp);
@@ -231,7 +232,7 @@ describe('CsvResource', () => {
                 'utf-8',
             );
             const results = await csvResource.readBulkCsv(tmp);
-            expect(results[0]!.description).toBe('Line 1\nLine 2');
+            expect(nonNull(results[0]).description).toBe('Line 1\nLine 2');
             fs.unlinkSync(tmp);
         });
 
@@ -251,7 +252,7 @@ describe('CsvResource', () => {
                 'utf-8',
             );
             const results = await csvResource.readBulkCsv(tmp);
-            expect(results[0]!.description).toBe('First line\nSecond line\nThird line');
+            expect(nonNull(results[0]).description).toBe('First line\nSecond line\nThird line');
             fs.unlinkSync(tmp);
         });
 
@@ -264,8 +265,8 @@ describe('CsvResource', () => {
                 'utf-8',
             );
             const results = await csvResource.readBulkCsv(tmp);
-            expect(results[0]!.description).toBe('Some desc');
-            expect(results[0]!.group).toBe('G1');
+            expect(nonNull(results[0]).description).toBe('Some desc');
+            expect(nonNull(results[0]).group).toBe('G1');
             fs.unlinkSync(tmp);
         });
 
@@ -278,8 +279,8 @@ describe('CsvResource', () => {
                 'utf-8',
             );
             const results = await csvResource.readBulkCsv(tmp);
-            expect(results[0]!.description).toBe('');
-            expect(results[0]!.precondition).toBeDefined();
+            expect(nonNull(results[0]).description).toBe('');
+            expect(nonNull(results[0]).precondition).toBeDefined();
             fs.unlinkSync(tmp);
         });
 
@@ -301,7 +302,7 @@ describe('CsvResource', () => {
                 'utf-8',
             );
             const results = await csvResource.readBulkCsv(tmp);
-            expect(results[0]!.precondition).toBeDefined();
+            expect(nonNull(results[0]).precondition).toBeDefined();
             expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining('Pre-condition sem aspas de fechamento'));
             warnSpy.mockRestore();
             fs.unlinkSync(tmp);
@@ -311,7 +312,9 @@ describe('CsvResource', () => {
             const loggerModule = require('../shared/logger');
             const errorSpy = jest.spyOn(loggerModule.rootLogger, 'error').mockImplementation(() => {});
             const orig = csvResource.readCsvFromString;
-            csvResource.readCsvFromString = jest.fn().mockRejectedValue(new Error('CSV parse error')) as never;
+            csvResource.readCsvFromString = jest
+                .fn<Promise<never>, [string]>()
+                .mockRejectedValue(new Error('CSV parse error'));
             const fs = require('fs');
             const tmp = '/tmp/test-csv-error.csv';
             fs.writeFileSync(tmp, 'Title: TC\nDescription: Test\nAction,Data,Expected\nx,y,z\n', 'utf-8');
@@ -359,17 +362,17 @@ describe('CsvResource', () => {
             const csvString = 'Action,Data,Expected Result\nx,,z';
             const result = await csvResource.readCsvFromString(csvString);
             expect(result).toHaveLength(1);
-            expect(result[0]!.fields.Data).toBe('');
-            expect(result[0]!.fields['Expected Result']).toBe('z');
+            expect(nonNull(result[0]).fields.Data).toBe('');
+            expect(nonNull(result[0]).fields['Expected Result']).toBe('z');
         });
 
         it('parses CSV with semicolon separator', async () => {
             const csvString = 'Action;Data;Expected Result\nstep1;data1;result1';
             const result = await csvResource.readCsvFromString(csvString);
             expect(result).toHaveLength(1);
-            expect(result[0]!.fields.Action).toBe('step1');
-            expect(result[0]!.fields.Data).toBe('data1');
-            expect(result[0]!.fields['Expected Result']).toBe('result1');
+            expect(nonNull(result[0]).fields.Action).toBe('step1');
+            expect(nonNull(result[0]).fields.Data).toBe('data1');
+            expect(nonNull(result[0]).fields['Expected Result']).toBe('result1');
         });
 
         it('normalizes ExpectedResult (camelCase) header', async () => {
@@ -378,7 +381,7 @@ describe('CsvResource', () => {
             const csvString = 'Action,Data,ExpectedResult\nx,y,z';
             const result = await csvResource.readCsvFromString(csvString);
             expect(result).toHaveLength(1);
-            expect(result[0]!.fields['Expected Result']).toBe('z');
+            expect(nonNull(result[0]).fields['Expected Result']).toBe('z');
             expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining('normalizada'));
             warnSpy.mockRestore();
         });
@@ -387,15 +390,15 @@ describe('CsvResource', () => {
             const csvString = 'action,data,expected result\nx,y,z';
             const result = await csvResource.readCsvFromString(csvString);
             expect(result).toHaveLength(1);
-            expect(result[0]!.fields.Action).toBe('x');
-            expect(result[0]!.fields['Expected Result']).toBe('z');
+            expect(nonNull(result[0]).fields.Action).toBe('x');
+            expect(nonNull(result[0]).fields['Expected Result']).toBe('z');
         });
 
         it('normalizes header with trailing \\r', async () => {
             const csvString = 'Action,Data,Expected Result\r\nstep1,data1,result1';
             const result = await csvResource.readCsvFromString(csvString);
             expect(result).toHaveLength(1);
-            expect(result[0]!.fields['Expected Result']).toBe('result1');
+            expect(nonNull(result[0]).fields['Expected Result']).toBe('result1');
         });
 
         it('deduplicates normalization warnings per column', async () => {
@@ -414,17 +417,17 @@ describe('CsvResource', () => {
             const csvString = 'Action,Data,Expected Result\nstep1\r,data1\r,result1\r';
             const result = await csvResource.readCsvFromString(csvString);
             expect(result).toHaveLength(1);
-            expect(result[0]!.fields.Action).toBe('step1');
-            expect(result[0]!.fields.Data).toBe('data1');
-            expect(result[0]!.fields['Expected Result']).toBe('result1');
+            expect(nonNull(result[0]).fields.Action).toBe('step1');
+            expect(nonNull(result[0]).fields.Data).toBe('data1');
+            expect(nonNull(result[0]).fields['Expected Result']).toBe('result1');
         });
 
         it('preserves \\n inside quoted cell values', async () => {
             const csvString = 'Action,Data,Expected Result\n"line1\nline2",data,result\nstep3,data3,result3';
             const result = await csvResource.readCsvFromString(csvString);
             expect(result).toHaveLength(2);
-            expect(result[0]!.fields.Action).toBe('line1\nline2');
-            expect(result[1]!.fields.Action).toBe('step3');
+            expect(nonNull(result[0]).fields.Action).toBe('line1\nline2');
+            expect(nonNull(result[1]).fields.Action).toBe('step3');
         });
     });
 
@@ -480,10 +483,10 @@ describe('CsvResource', () => {
             fs.writeFileSync(tmp, csvContent, 'utf-8');
             const results = await csvResource.readBulkCsv(tmp);
             expect(results).toHaveLength(2);
-            expect(results[0]!.title).toBe('Test A');
-            expect(results[1]!.title).toBe('Test B');
-            expect(results[0]!.steps).toHaveLength(1);
-            expect(results[0]!.steps[0]!.fields['Expected Result']).toBe('r1');
+            expect(nonNull(results[0]).title).toBe('Test A');
+            expect(nonNull(results[1]).title).toBe('Test B');
+            expect(nonNull(results[0]).steps).toHaveLength(1);
+            expect(nonNull(nonNull(results[0]).steps[0]).fields['Expected Result']).toBe('r1');
             fs.unlinkSync(tmp);
         });
 
@@ -495,8 +498,8 @@ describe('CsvResource', () => {
             fs.writeFileSync(tmp, csvContent, 'utf-8');
             const results = await csvResource.readBulkCsv(tmp);
             expect(results).toHaveLength(1);
-            expect(results[0]!.title).toBe('Com BOM');
-            expect(results[0]!.steps[0]!.fields['Expected Result']).toBe('r');
+            expect(nonNull(results[0]).title).toBe('Com BOM');
+            expect(nonNull(nonNull(results[0]).steps[0]).fields['Expected Result']).toBe('r');
             fs.unlinkSync(tmp);
         });
 
@@ -510,9 +513,9 @@ describe('CsvResource', () => {
             fs.writeFileSync(tmp, csvContent, 'utf-8');
             const results = await csvResource.readBulkCsv(tmp);
             expect(results).toHaveLength(1);
-            expect(results[0]!.title).toBe('Combined quirks');
-            expect(results[0]!.steps[0]!.fields['Expected Result']).toBe('r1');
-            expect(results[0]!.steps[0]!.fields.Action).toBe('step1');
+            expect(nonNull(results[0]).title).toBe('Combined quirks');
+            expect(nonNull(nonNull(results[0]).steps[0]).fields['Expected Result']).toBe('r1');
+            expect(nonNull(nonNull(results[0]).steps[0]).fields.Action).toBe('step1');
             fs.unlinkSync(tmp);
         });
     });

@@ -74,6 +74,13 @@ Pareto-improvement is possible. Document the final trade-offs explicitly.
 - **R7**: Each layer = one atomic commit. Commit messages follow `feat(ts): migrate shared/ foundation modules (.js→.ts)` pattern.
 - **R8**: Never start a layer you can't finish (check estimates in BACKLOG.md). Never commit a broken layer. Rollback immediately on failure (R8.3).
 
+## R9 — Zero type-blind workarounds
+
+- **NUNCA** usar `as unknown as`, `as never`, `as any`, ou qualquer type assertion que mascare incompatibilidade real de tipos.
+- Se `jest.mocked()` expor um erro de tipo, corrigir a CAUSA RAIZ (completar mock, ajustar assinatura, criar factory).
+- A única exceção: type narrowing necessário de `unknown` para tipos concretos (ex: `j.id as string`, `data as Error`) com validação upstream já confirmada — desde que documentado com `// eslint-disable-next-line`.
+- Fazer "rápido" com workaround = fazer de novo + risco de regressão. Sempre preferir a solução correta.
+
 ## Error handling pattern (R5)
 
 | Flow            | Rule                                           |

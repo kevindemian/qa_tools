@@ -39,7 +39,7 @@ class JiraResource extends JiraClient implements JiraResourceLike {
      * @param maxResults - Maximum results to return (default 200).
      * @returns `SearchResponse` with `issues`, `total`, `startAt`, `maxResults`.
      */
-    async searchJiraIssues(jql: string, maxResults = 200): Promise<SearchResponse> {
+    override async searchJiraIssues(jql: string, maxResults = 200): Promise<SearchResponse> {
         return versionSearchJiraIssues(this, this.log, jql, maxResults);
     }
 
@@ -48,7 +48,7 @@ class JiraResource extends JiraClient implements JiraResourceLike {
      * @param issueKey - Jira issue key (e.g. `PROJ-123`).
      * @returns Map of transition name → transition id.
      */
-    async getTransitionsForIssue(issueKey: string): Promise<Record<string, string>> {
+    override async getTransitionsForIssue(issueKey: string): Promise<Record<string, string>> {
         return sprintGetTransitionsForIssue(this, issueKey);
     }
 
@@ -59,7 +59,7 @@ class JiraResource extends JiraClient implements JiraResourceLike {
      * @returns Response body typed as `T` (default `JsonObject`).
      * @throws On network / non-2xx — error is logged and re-thrown.
      */
-    async postJiraResource<T = JsonObject>(resourceUrl: string, data: unknown): Promise<T> {
+    override async postJiraResource<T = JsonObject>(resourceUrl: string, data: unknown): Promise<T> {
         const opLog = this.log.child({ resourceUrl });
         try {
             const response = await this.axiosInstance.post<T>(`/${resourceUrl}`, data);
@@ -191,7 +191,7 @@ class JiraResource extends JiraClient implements JiraResourceLike {
      * @param issueId      - Jira issue key.
      * @param transitionId - Transition id (from `getTransitionsForIssue`).
      */
-    async transitionIssue(issueId: string, transitionId: string): Promise<void> {
+    override async transitionIssue(issueId: string, transitionId: string): Promise<void> {
         return sprintTransitionIssue(this, issueId, transitionId);
     }
 }

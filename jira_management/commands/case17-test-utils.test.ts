@@ -56,10 +56,12 @@ jest.mock('./case17-helpers', () => ({
 
 const { createHttpClient } = require('../../shared/http-client');
 const mockClient = { get: jest.fn() };
-(createHttpClient as jest.Mock).mockReturnValue(mockClient);
+jest.mocked(createHttpClient).mockReturnValue(mockClient);
 
 import { resolveMapping, computeDiff, fetchGitHistory, resolveTestHistory } from './case17-test-utils';
 import type { CommandContext } from './context';
+import type { FlatTest } from '../../shared/result_parser';
+import { createMockContext } from '../../shared/test-utils/factories/context-factory';
 
 describe('resolveMapping', () => {
     const _origExistsSync = fs.existsSync;
@@ -137,7 +139,7 @@ describe('computeDiff', () => {
         const current = [
             { title: 'T1', state: 'passed', duration: 1 },
             { title: 'T2', state: 'passed', duration: 1 },
-        ] as never[];
+        ] as FlatTest[];
         const result = computeDiff(current);
         expect(result.newFailures).toHaveLength(0);
         expect(result.newPasses).toHaveLength(1);
@@ -166,7 +168,7 @@ describe('computeDiff', () => {
         const current = [
             { title: 'T1', state: 'failed', duration: 1 },
             { title: 'T2', state: 'passed', duration: 1 },
-        ] as never[];
+        ] as FlatTest[];
         const result = computeDiff(current);
         expect(result.newFailures).toHaveLength(1);
         expect(result.newFailures[0]?.title).toBe('T1');
@@ -195,7 +197,7 @@ describe('computeDiff', () => {
         const current = [
             { title: 'T1', state: 'failed' as const, duration: 1 },
             { title: 'T2', state: 'passed' as const, duration: 1 },
-        ] as never[];
+        ] as FlatTest[];
         const result = computeDiff(current);
         expect(result.newFailures).toHaveLength(1);
         expect(result.newFailures[0]?.title).toBe('T1');
@@ -211,7 +213,7 @@ describe('computeDiff', () => {
                 },
             }),
         );
-        const current = [{ title: 'T1', state: 'passed' as const, duration: 1 }] as never[];
+        const current = [{ title: 'T1', state: 'passed' as const, duration: 1 }] as FlatTest[];
         const result = computeDiff(current);
         expect(result.flaky).toHaveLength(1);
         expect(result.flaky[0]?.title).toBe('T1');
@@ -226,7 +228,7 @@ describe('computeDiff', () => {
                 },
             }),
         );
-        const current = [{ title: 'T1', state: 'passed', duration: 1 }] as never[];
+        const current = [{ title: 'T1', state: 'passed', duration: 1 }] as FlatTest[];
         const result = computeDiff(current);
         expect(result.flaky).toHaveLength(1);
         expect(result.flaky[0]?.title).toBe('T1');
@@ -258,19 +260,7 @@ describe('resolveTestHistory', () => {
     });
 
     function makeCtx(overrides?: Partial<CommandContext>): CommandContext {
-        return {
-            jiraResource: {} as never,
-            jiraResourceXray: {} as never,
-            linkManager: {} as never,
-            linkManagerXray: {} as never,
-            csvResource: {} as never,
-            ctx: { project_name: 'TEST' } as never,
-            pushHistory: jest.fn(),
-            printSessionSummary: jest.fn(),
-            base_url: 'https://test.atlassian.net',
-            sessionLog: { info: jest.fn(), warn: jest.fn(), error: jest.fn() } as never,
-            ...overrides,
-        };
+        return { ...createMockContext(), ...overrides };
     }
 
     it('returns empty when no mapping file exists', async () => {
@@ -289,7 +279,7 @@ describe('resolveTestHistory', () => {
         const c = makeCtx();
         const cache = new (require('../xray-history').TestHistoryCache)();
         const result = await resolveTestHistory(
-            [{ title: 'Other', state: 'passed', duration: 1 }] as never[],
+            [{ title: 'Other', state: 'passed', duration: 1 }] as FlatTest[],
             c,
             cache,
         );
@@ -310,7 +300,7 @@ describe('resolveTestHistory', () => {
         cache.set = jest.fn();
         const c = makeCtx();
         const result = await resolveTestHistory(
-            [{ title: 'Login', state: 'passed', duration: 1 }] as never[],
+            [{ title: 'Login', state: 'passed', duration: 1 }] as FlatTest[],
             c,
             cache,
         );
@@ -333,7 +323,7 @@ describe('resolveTestHistory', () => {
         cache.set = jest.fn();
         const c = makeCtx();
         const result = await resolveTestHistory(
-            [{ title: 'Login', state: 'passed', duration: 1 }] as never[],
+            [{ title: 'Login', state: 'passed', duration: 1 }] as FlatTest[],
             c,
             cache,
         );
@@ -349,8 +339,8 @@ describe('fetchGitHistory', () => {
 
     it('returns empty when neither CI environment detected', async () => {
         const helpers = require('./case17-helpers');
-        (helpers.isGitHubCi as jest.Mock).mockReturnValue(false);
-        (helpers.isGitLabCi as jest.Mock).mockReturnValue(false);
+        jest.mocked(helpers.isGitHubCi).mockReturnValue(false);
+        jest.mocked(helpers.isGitLabCi).mockReturnValue(false);
         const result = await fetchGitHistory();
         expect(result.commits).toBe('');
         expect(result.runs).toEqual([]);
@@ -359,8 +349,8 @@ describe('fetchGitHistory', () => {
 
     it('fetches from GitHub when GitHub CI detected', async () => {
         const helpers = require('./case17-helpers');
-        (helpers.isGitHubCi as jest.Mock).mockReturnValue(true);
-        (helpers.isGitLabCi as jest.Mock).mockReturnValue(false);
+        jest.mocked(helpers.isGitHubCi).mockReturnValue(true);
+        jest.mocked(helpers.isGitLabCi).mockReturnValue(false);
 
         const runData = {
             workflow_runs: [
@@ -388,8 +378,8 @@ describe('fetchGitHistory', () => {
 
     it('handles GitHub API errors gracefully', async () => {
         const helpers = require('./case17-helpers');
-        (helpers.isGitHubCi as jest.Mock).mockReturnValue(true);
-        (helpers.isGitLabCi as jest.Mock).mockReturnValue(false);
+        jest.mocked(helpers.isGitHubCi).mockReturnValue(true);
+        jest.mocked(helpers.isGitLabCi).mockReturnValue(false);
         mockClient.get.mockRejectedValue(new Error('Network error'));
         const result = await fetchGitHistory();
         expect(result.commits).toBe('');
@@ -399,8 +389,8 @@ describe('fetchGitHistory', () => {
 
     it('fetches from GitLab when GitLab CI detected', async () => {
         const helpers = require('./case17-helpers');
-        (helpers.isGitHubCi as jest.Mock).mockReturnValue(false);
-        (helpers.isGitLabCi as jest.Mock).mockReturnValue(true);
+        jest.mocked(helpers.isGitHubCi).mockReturnValue(false);
+        jest.mocked(helpers.isGitLabCi).mockReturnValue(true);
 
         mockClient.get
             .mockResolvedValueOnce({ data: [{ id: 1, created_at: '2024-01-15' }] })
@@ -415,8 +405,8 @@ describe('fetchGitHistory', () => {
 
     it('handles GitLab API errors gracefully', async () => {
         const helpers = require('./case17-helpers');
-        (helpers.isGitHubCi as jest.Mock).mockReturnValue(false);
-        (helpers.isGitLabCi as jest.Mock).mockReturnValue(true);
+        jest.mocked(helpers.isGitHubCi).mockReturnValue(false);
+        jest.mocked(helpers.isGitLabCi).mockReturnValue(true);
         mockClient.get.mockRejectedValue(new Error('Network error'));
         const result = await fetchGitHistory();
         expect(result.commits).toBe('');

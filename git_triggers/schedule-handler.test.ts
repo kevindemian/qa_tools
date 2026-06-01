@@ -58,21 +58,18 @@ import {
     handleChangeProject,
     handleFlakinessDashboard,
 } from './schedule-handler';
-import type { GitProvider } from '../shared/types';
+import { createMockGitProvider } from '../shared/test-utils/factories';
 
-const mockPrompt = prompt as jest.Mock;
-const mockPushHistory = pushHistory as jest.Mock;
-const mockPrintError = printError as jest.Mock;
-const mockWarn = warn as jest.Mock;
-const mockInfo = info as jest.Mock;
-const mockLoadMetrics = loadMetrics as jest.Mock;
-const mockCalculateFlakiness = calculateFlakiness as jest.Mock;
-const mockGenerateHtml = generateFlakinessHtml as jest.Mock;
+const mockPrompt = jest.mocked(prompt);
+const mockPushHistory = jest.mocked(pushHistory);
+const mockPrintError = jest.mocked(printError);
+const mockWarn = jest.mocked(warn);
+const mockInfo = jest.mocked(info);
+const mockLoadMetrics = jest.mocked(loadMetrics);
+const mockCalculateFlakiness = jest.mocked(calculateFlakiness);
+const mockGenerateHtml = jest.mocked(generateFlakinessHtml);
 
-const mockManager = {
-    getSchedules: jest.fn(),
-    runSchedule: jest.fn(),
-} as unknown as GitProvider;
+const mockManager = createMockGitProvider();
 
 beforeEach(() => {
     jest.clearAllMocks();
@@ -91,9 +88,9 @@ describe('handleListSchedules', () => {
     it('lists schedules for gitlab', async () => {
         const schedules = [
             { id: '1', description: 'Nightly', next_run_at: '2026-01-01' },
-            { id: '2', description: '', next_run_at: null },
+            { id: '2', description: '' },
         ];
-        (mockManager.getSchedules as jest.Mock).mockResolvedValue(schedules);
+        jest.mocked(mockManager.getSchedules).mockResolvedValue(schedules);
 
         await handleListSchedules(mockManager);
 
@@ -103,7 +100,7 @@ describe('handleListSchedules', () => {
     });
 
     it('warns on empty schedules', async () => {
-        (mockManager.getSchedules as jest.Mock).mockResolvedValue([]);
+        jest.mocked(mockManager.getSchedules).mockResolvedValue([]);
 
         await handleListSchedules(mockManager);
 
@@ -120,7 +117,7 @@ describe('handleListSchedules', () => {
     });
 
     it('handles error', async () => {
-        (mockManager.getSchedules as jest.Mock).mockRejectedValue(new Error('API error'));
+        jest.mocked(mockManager.getSchedules).mockRejectedValue(new Error('API error'));
 
         await handleListSchedules(mockManager);
 
@@ -131,7 +128,7 @@ describe('handleListSchedules', () => {
 describe('handleRunSchedule', () => {
     it('runs schedule for gitlab', async () => {
         mockPrompt.mockReturnValue('schedule-1');
-        (mockManager.runSchedule as jest.Mock).mockResolvedValue({ status: 'success' });
+        jest.mocked(mockManager.runSchedule).mockResolvedValue({ status: 'success' });
 
         await handleRunSchedule(mockManager);
 
@@ -151,7 +148,7 @@ describe('handleRunSchedule', () => {
 
     it('handles error', async () => {
         mockPrompt.mockReturnValue('sched-1');
-        (mockManager.runSchedule as jest.Mock).mockRejectedValue(new Error('fail'));
+        jest.mocked(mockManager.runSchedule).mockRejectedValue(new Error('fail'));
 
         await handleRunSchedule(mockManager);
 
@@ -164,7 +161,7 @@ describe('handleChangeProject', () => {
 
     it('changes to valid project', async () => {
         mockPrompt.mockReturnValue('1');
-        (getProjects as jest.Mock).mockReturnValue({ proj1: '1', proj2: '2' });
+        jest.mocked(getProjects).mockReturnValue({ proj1: '1', proj2: '2' });
 
         await handleChangeProject(names);
 
@@ -200,7 +197,11 @@ describe('handleFlakinessDashboard', () => {
 
     it('warns when less than 2 runs', () => {
         mockState.currentProjectName = 'proj1';
-        mockLoadMetrics.mockReturnValue({ runs: [{ project: 'proj1' }] });
+        mockLoadMetrics.mockReturnValue({
+            runs: [
+                { project: 'proj1', timestamp: '', total: 0, passed: 0, failed: 0, skipped: 0, duration: 0, tests: [] },
+            ],
+        });
 
         void handleFlakinessDashboard();
 
@@ -209,7 +210,12 @@ describe('handleFlakinessDashboard', () => {
 
     it('informs when no flaky tests', () => {
         mockState.currentProjectName = 'proj1';
-        mockLoadMetrics.mockReturnValue({ runs: [{ project: 'proj1' }, { project: 'proj1' }] });
+        mockLoadMetrics.mockReturnValue({
+            runs: [
+                { project: 'proj1', timestamp: '', total: 0, passed: 0, failed: 0, skipped: 0, duration: 0, tests: [] },
+                { project: 'proj1', timestamp: '', total: 0, passed: 0, failed: 0, skipped: 0, duration: 0, tests: [] },
+            ],
+        });
         mockCalculateFlakiness.mockReturnValue([]);
 
         void handleFlakinessDashboard();
@@ -219,8 +225,15 @@ describe('handleFlakinessDashboard', () => {
 
     it('generates dashboard HTML and opens browser', async () => {
         mockState.currentProjectName = 'proj1';
-        mockLoadMetrics.mockReturnValue({ runs: [{ project: 'proj1' }, { project: 'proj1' }] });
-        mockCalculateFlakiness.mockReturnValue([{ test: 't1', rate: 0.5 }]);
+        mockLoadMetrics.mockReturnValue({
+            runs: [
+                { project: 'proj1', timestamp: '', total: 0, passed: 0, failed: 0, skipped: 0, duration: 0, tests: [] },
+                { project: 'proj1', timestamp: '', total: 0, passed: 0, failed: 0, skipped: 0, duration: 0, tests: [] },
+            ],
+        });
+        mockCalculateFlakiness.mockReturnValue([
+            { title: 't1', rate: 0.5, passCount: 1, failCount: 0, skipCount: 0, totalRuns: 1 },
+        ]);
 
         await handleFlakinessDashboard();
 

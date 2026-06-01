@@ -1,6 +1,7 @@
 /** Pipeline health — pure function tests with fixture data. */
 import { aggregatePipelineHealth, extractErrorMessages, renderPipelineHealthHtml } from './pipeline-health';
 import type { PipelineRunExtended, PipelineJobExtended } from './pipeline-health';
+import { nonNull } from '../shared/test-utils';
 
 /* ------------------------------------------------------------------ */
 /*  Fixtures                                                           */
@@ -146,8 +147,8 @@ describe('aggregatePipelineHealth', () => {
         expect(health.topFailingJobs.length).toBeGreaterThanOrEqual(2);
         const lint = health.topFailingJobs.find((j) => j.name === 'lint');
         expect(lint).toBeDefined();
-        expect(lint!.failCount).toBe(1);
-        expect(lint!.totalCount).toBe(5);
+        expect(nonNull(lint).failCount).toBe(1);
+        expect(nonNull(lint).totalCount).toBe(5);
         /* test appears in 4 runs (not in run3) */
         const test = health.topFailingJobs.find((j) => j.name === 'test');
         expect(test).toBeDefined();
@@ -157,19 +158,19 @@ describe('aggregatePipelineHealth', () => {
         expect(health.failureReasons.length).toBeGreaterThanOrEqual(3);
         const moduleNotFound = health.failureReasons.find((r) => r.message.includes('Module not found'));
         expect(moduleNotFound).toBeDefined();
-        expect(moduleNotFound!.count).toBe(1);
+        expect(nonNull(moduleNotFound).count).toBe(1);
     });
 
     it('breaks down by branch', () => {
         const main = health.branchBreakdown.find((b) => b.branch === 'main');
         expect(main).toBeDefined();
-        expect(main!.count).toBe(4);
-        expect(main!.passRate).toBe(75);
+        expect(nonNull(main).count).toBe(4);
+        expect(nonNull(main).passRate).toBe(75);
 
         const develop = health.branchBreakdown.find((b) => b.branch === 'develop');
         expect(develop).toBeDefined();
-        expect(develop!.count).toBe(1);
-        expect(develop!.passRate).toBe(0);
+        expect(nonNull(develop).count).toBe(1);
+        expect(nonNull(develop).passRate).toBe(0);
     });
 
     it('counts open issues by label', () => {

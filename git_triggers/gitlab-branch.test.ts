@@ -1,6 +1,6 @@
 import { glGetBranch, glGetDiff } from './gitlab-branch';
 import { apiGet, projectPath, formatDiffResponse } from './gitlab-api';
-import type { AxiosInstance } from 'axios';
+import { createMockAxiosInstance } from '../shared/test-utils/factories/response-factory';
 
 jest.mock('./gitlab-api', () => ({
     apiGet: jest.fn(),
@@ -10,15 +10,15 @@ jest.mock('./gitlab-api', () => ({
     formatDiffResponse: jest.fn(),
 }));
 
-const mockClient = { get: jest.fn() } as unknown as jest.Mocked<AxiosInstance>;
+const mockClient = createMockAxiosInstance();
 
 beforeEach(() => {
     jest.clearAllMocks();
-    (projectPath as jest.Mock).mockImplementation(
+    jest.mocked(projectPath).mockImplementation(
         (owner: string, repo: string) =>
             `/projects/${owner ? encodeURIComponent(owner + '/' + repo) : encodeURIComponent(repo)}`,
     );
-    (formatDiffResponse as jest.Mock).mockImplementation(
+    jest.mocked(formatDiffResponse).mockImplementation(
         (entries: Array<Record<string, unknown>> | undefined | null, _patchField: string, _nameField: string) => {
             if (!entries || !Array.isArray(entries)) return '';
             return entries
@@ -35,19 +35,19 @@ beforeEach(() => {
 
 describe('glGetBranch', () => {
     it('returns { name } on success', async () => {
-        (apiGet as jest.Mock).mockResolvedValue({ name: 'main' });
+        jest.mocked(apiGet).mockResolvedValue({ name: 'main' });
         const result = await glGetBranch(mockClient, 'owner', 'repo', 'main');
         expect(result).toEqual({ name: 'main' });
     });
 
     it('returns null when apiGet returns null', async () => {
-        (apiGet as jest.Mock).mockResolvedValue(null);
+        jest.mocked(apiGet).mockResolvedValue(null);
         const result = await glGetBranch(mockClient, 'owner', 'repo', 'main');
         expect(result).toBeNull();
     });
 
     it('calls apiGet with correct URL encoding branch name', async () => {
-        (apiGet as jest.Mock).mockResolvedValue(null);
+        jest.mocked(apiGet).mockResolvedValue(null);
         await glGetBranch(mockClient, 'my-group', 'my-project', 'feature/x');
         expect(projectPath).toHaveBeenCalledWith('my-group', 'my-project');
         expect(apiGet).toHaveBeenCalledWith(mockClient, expect.stringContaining('/repository/branches/feature%2Fx'), {
@@ -59,7 +59,7 @@ describe('glGetBranch', () => {
 
 describe('glGetDiff', () => {
     it('returns formatted diff string', async () => {
-        (apiGet as jest.Mock).mockResolvedValue({
+        jest.mocked(apiGet).mockResolvedValue({
             diffs: [{ diff: '+console.log("hi")', new_path: 'src/main.ts' }],
         });
         const result = await glGetDiff(mockClient, 'owner', 'repo', 'feature', 'main');
@@ -68,19 +68,19 @@ describe('glGetDiff', () => {
     });
 
     it('returns empty string when no diffs', async () => {
-        (apiGet as jest.Mock).mockResolvedValue({ diffs: [] });
+        jest.mocked(apiGet).mockResolvedValue({ diffs: [] });
         const result = await glGetDiff(mockClient, 'owner', 'repo', 'feature', 'main');
         expect(result).toBe('');
     });
 
     it('returns empty string when apiGet returns null', async () => {
-        (apiGet as jest.Mock).mockResolvedValue(null);
+        jest.mocked(apiGet).mockResolvedValue(null);
         const result = await glGetDiff(mockClient, 'owner', 'repo', 'feature', 'main');
         expect(result).toBe('');
     });
 
     it('calls apiGet with compare endpoint and params', async () => {
-        (apiGet as jest.Mock).mockResolvedValue(null);
+        jest.mocked(apiGet).mockResolvedValue(null);
         await glGetDiff(mockClient, 'owner', 'repo', 'source', 'target');
         expect(apiGet).toHaveBeenCalledWith(mockClient, expect.stringContaining('/repository/compare'), {
             operation: 'comparar branches',

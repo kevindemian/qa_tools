@@ -19,6 +19,7 @@ jest.mock('./prompt-format', () => ({
 import { humanizeError, extractErrorMessage, printError, CancelError, onError } from './prompt-errors';
 import { getConfig, isQuiet } from './prompt-format';
 import { defaultOutput as output } from './output';
+import { createMockConfigInstance } from './test-utils/factories';
 
 describe('humanizeError', () => {
     it('returns unknown error for null input', () => {
@@ -91,7 +92,7 @@ describe('printError', () => {
     });
 
     it('prints single line when quiet', () => {
-        (isQuiet as jest.Mock).mockReturnValue(true);
+        jest.mocked(isQuiet).mockReturnValue(true);
         printError('ctx', new Error('err'));
         expect(output.print).toHaveBeenCalledWith(expect.stringMatching(/ctx/));
     });
@@ -109,21 +110,25 @@ describe('CancelError', () => {
 describe('onError', () => {
     beforeEach(() => {
         jest.clearAllMocks();
-        (getConfig as jest.Mock).mockReturnValue({ get: () => false });
+        jest.mocked(getConfig).mockReturnValue(createMockConfigInstance());
     });
 
     it('returns abort when autoConfirm and onError is abort', async () => {
-        (getConfig as jest.Mock).mockReturnValue({
-            get: (k: string) => (k === 'autoConfirm' ? true : 'abort'),
-        });
+        const mockConfig = createMockConfigInstance();
+        mockConfig.get = function <T = string>(k: string): T {
+            return (k === 'autoConfirm' ? 'true' : 'abort') as T;
+        };
+        jest.mocked(getConfig).mockReturnValue(mockConfig);
         const r = onError('ctx', new Error('fail'));
         expect(r).toBe('abort');
     });
 
     it('returns skip when autoConfirm and onError is skip', async () => {
-        (getConfig as jest.Mock).mockReturnValue({
-            get: (k: string) => (k === 'autoConfirm' ? true : 'skip'),
-        });
+        const mockConfig = createMockConfigInstance();
+        mockConfig.get = function <T = string>(k: string): T {
+            return (k === 'autoConfirm' ? 'true' : 'skip') as T;
+        };
+        jest.mocked(getConfig).mockReturnValue(mockConfig);
         const r = onError('ctx', new Error('fail'));
         expect(r).toBe('skip');
     });

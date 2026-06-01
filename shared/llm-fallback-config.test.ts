@@ -63,6 +63,9 @@ jest.mock('./config', () => {
             resetInstance() {
                 Object.keys(mockConfig).forEach((k) => delete mockConfig[k]);
             },
+            reset() {
+                Object.keys(mockConfig).forEach((k) => delete mockConfig[k]);
+            },
         },
     };
 });
@@ -85,15 +88,15 @@ import {
 import Config from './config';
 
 beforeEach(() => {
-    (Config as unknown as { resetInstance: () => void }).resetInstance();
+    Config.reset();
     resetLlmClientMetrics();
 });
 
 describe('tierToConfig', () => {
     it('returns main config for main tier', () => {
-        (Config as unknown as { set: (k: string, v: string) => void }).set('llmApiKey', 'sk-main');
-        (Config as unknown as { set: (k: string, v: string) => void }).set('llmModel', 'gpt-4');
-        (Config as unknown as { set: (k: string, v: string) => void }).set('llmBaseUrl', 'https://api.test.com/v1');
+        Config.set('llmApiKey', 'sk-main');
+        Config.set('llmModel', 'gpt-4');
+        Config.set('llmBaseUrl', 'https://api.test.com/v1');
         const cfg = tierToConfig('main');
         expect(cfg.apiKey).toBe('sk-main');
         expect(cfg.model).toBe('gpt-4');
@@ -101,8 +104,8 @@ describe('tierToConfig', () => {
     });
 
     it('returns fast tier config', () => {
-        (Config as unknown as { set: (k: string, v: string) => void }).set('llmFastApiKey', 'gsk-fast');
-        (Config as unknown as { set: (k: string, v: string) => void }).set('llmFastModel', 'llama3');
+        Config.set('llmFastApiKey', 'gsk-fast');
+        Config.set('llmFastModel', 'llama3');
         const cfg = tierToConfig('fast');
         expect(cfg.apiKey).toBe('gsk-fast');
         expect(cfg.model).toBe('llama3');
@@ -110,8 +113,8 @@ describe('tierToConfig', () => {
     });
 
     it('returns reviewer tier config with gemini format', () => {
-        (Config as unknown as { set: (k: string, v: string) => void }).set('llmReviewApiKey', 'AIza-review');
-        (Config as unknown as { set: (k: string, v: string) => void }).set('llmReviewModel', 'gemini-2.0-flash-exp');
+        Config.set('llmReviewApiKey', 'AIza-review');
+        Config.set('llmReviewModel', 'gemini-2.0-flash-exp');
         const cfg = tierToConfig('reviewer');
         expect(cfg.apiKey).toBe('AIza-review');
         expect(cfg.model).toBe('gemini-2.0-flash-exp');
@@ -119,16 +122,16 @@ describe('tierToConfig', () => {
     });
 
     it('returns report tier config with json responseFormat', () => {
-        (Config as unknown as { set: (k: string, v: string) => void }).set('llmApiKey', 'sk-report');
-        (Config as unknown as { set: (k: string, v: string) => void }).set('llmModel', 'gpt-4-report');
+        Config.set('llmApiKey', 'sk-report');
+        Config.set('llmModel', 'gpt-4-report');
         const cfg = tierToConfig('report');
         expect(cfg.apiKey).toBe('sk-report');
         expect(cfg.responseFormat).toBe('json');
     });
 
     it('falls back to main when tier is unknown', () => {
-        (Config as unknown as { set: (k: string, v: string) => void }).set('llmApiKey', 'sk-main');
-        const cfg = tierToConfig('nonexistent' as never);
+        Config.set('llmApiKey', 'sk-main');
+        const cfg = (tierToConfig as (tier: string) => ReturnType<typeof tierToConfig>)('nonexistent');
         expect(cfg.apiKey).toBe('sk-main');
     });
 });
@@ -159,7 +162,7 @@ describe('getFetchRetries', () => {
     });
 
     it('parses LLM_FETCH_RETRIES from Config', () => {
-        (Config as unknown as { set: (k: string, v: string) => void }).set('LLM_FETCH_RETRIES', '5');
+        Config.set('LLM_FETCH_RETRIES', '5');
         const result = getFetchRetries();
         expect(result).toBe(5);
     });

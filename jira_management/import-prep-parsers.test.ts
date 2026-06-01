@@ -1,3 +1,4 @@
+import { nonNull } from '../shared/test-utils';
 import { handleDryRun, resolveCsvPath, resolveLabels, resolveJsonPath } from './import-prep-parsers';
 
 jest.mock('../shared/config', () => ({ get: jest.fn() }));
@@ -50,8 +51,8 @@ describe('handleDryRun', () => {
         const tests = [{ title: 'TC1', steps: [] }];
         const result = handleDryRun(tests, onBusy, '/path.csv');
         expect(result).not.toBeNull();
-        expect(result!.summary).toContain('DRY-RUN');
-        expect(result!.status).toBe('ok');
+        expect(nonNull(result).summary).toContain('DRY-RUN');
+        expect(nonNull(result).status).toBe('ok');
         expect(onBusy).toHaveBeenCalledWith(false);
         expect(PROMPT.warn).toHaveBeenCalledWith(expect.stringContaining('DRY-RUN'));
     });

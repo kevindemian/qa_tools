@@ -9,28 +9,18 @@ jest.mock('../../shared/bug-report', () => ({
 import { printError, askConfirm, ask } from '../../shared/prompt';
 import { collectManual, interactiveBugReportFlow, generateBugReportFromDescription } from '../../shared/bug-report';
 import type { CommandContext } from './context';
+import { createMockContext } from '../../shared/test-utils/factories/context-factory';
+import { createMockLinkManager } from '../../shared/test-utils/factories/link-manager-factory';
 import case20 from './case20';
 
-const mockCollectManual = collectManual as jest.Mock;
-const mockInteractiveBugReportFlow = interactiveBugReportFlow as jest.Mock;
-const mockAskConfirm = askConfirm as jest.Mock;
-const mockAsk = ask as jest.Mock;
-const mockGenerateAi = generateBugReportFromDescription as jest.Mock;
+const mockCollectManual = jest.mocked(collectManual);
+const mockInteractiveBugReportFlow = jest.mocked(interactiveBugReportFlow);
+const mockAskConfirm = jest.mocked(askConfirm);
+const mockAsk = jest.mocked(ask);
+const mockGenerateAi = jest.mocked(generateBugReportFromDescription);
 
 function makeCtx(overrides: Partial<CommandContext> = {}): CommandContext {
-    return {
-        jiraResource: {} as never,
-        jiraResourceXray: {} as never,
-        linkManager: {} as never,
-        linkManagerXray: {} as never,
-        csvResource: {} as never,
-        ctx: { project_name: 'TEST' } as never,
-        pushHistory: jest.fn(),
-        printSessionSummary: jest.fn(),
-        base_url: '',
-        sessionLog: {} as never,
-        ...overrides,
-    };
+    return { ...createMockContext({ base_url: '' }), ...overrides };
 }
 
 describe('case20 - Bug Report handler', () => {
@@ -56,7 +46,12 @@ describe('case20 - Bug Report handler', () => {
         const ctx = makeCtx({ pushHistory });
 
         mockAskConfirm.mockResolvedValueOnce(false);
-        mockCollectManual.mockResolvedValueOnce({ summary: 'Bug A' });
+        mockCollectManual.mockResolvedValueOnce({
+            summary: 'Bug A',
+            description: 'desc',
+            source: 'manual',
+            severity: 'major',
+        });
         mockInteractiveBugReportFlow.mockResolvedValueOnce({
             status: 'ok',
             label: 'PROJ-1',
@@ -69,7 +64,7 @@ describe('case20 - Bug Report handler', () => {
         expect(mockInteractiveBugReportFlow).toHaveBeenCalledWith(
             ctx.jiraResource,
             'TEST',
-            { summary: 'Bug A' },
+            { summary: 'Bug A', description: 'desc', source: 'manual', severity: 'major' },
             ctx.linkManager,
         );
         expect(pushHistory).toHaveBeenCalledWith('bug-report', 'PROJ-1: Bug A', 'ok');
@@ -80,7 +75,12 @@ describe('case20 - Bug Report handler', () => {
         const ctx = makeCtx({ pushHistory });
 
         mockAskConfirm.mockResolvedValueOnce(false);
-        mockCollectManual.mockResolvedValueOnce({ summary: 'Bug B' });
+        mockCollectManual.mockResolvedValueOnce({
+            summary: 'Bug B',
+            description: 'desc',
+            source: 'manual',
+            severity: 'major',
+        });
         mockInteractiveBugReportFlow.mockResolvedValueOnce(null);
 
         await case20.handler(ctx);
@@ -90,11 +90,16 @@ describe('case20 - Bug Report handler', () => {
 
     it('passes linkManager to interactiveBugReportFlow', async () => {
         const pushHistory = jest.fn();
-        const linkManager = { linkIssues: jest.fn() };
-        const ctx = makeCtx({ pushHistory, linkManager: linkManager as never });
+        const linkManager = createMockLinkManager();
+        const ctx = makeCtx({ pushHistory, linkManager });
 
         mockAskConfirm.mockResolvedValueOnce(false);
-        mockCollectManual.mockResolvedValueOnce({ summary: 'Bug C' });
+        mockCollectManual.mockResolvedValueOnce({
+            summary: 'Bug C',
+            description: 'desc',
+            source: 'manual',
+            severity: 'major',
+        });
         mockInteractiveBugReportFlow.mockResolvedValueOnce(null);
 
         await case20.handler(ctx);
@@ -221,7 +226,12 @@ describe('case20 - Bug Report handler', () => {
         mockAskConfirm.mockResolvedValueOnce(true);
         mockAsk.mockResolvedValueOnce('Checkout crashes on Safari when adding items to cart');
         mockGenerateAi.mockResolvedValueOnce(null);
-        mockCollectManual.mockResolvedValueOnce({ summary: 'Manual fallback' });
+        mockCollectManual.mockResolvedValueOnce({
+            summary: 'Manual fallback',
+            description: 'desc',
+            source: 'manual',
+            severity: 'major',
+        });
         mockInteractiveBugReportFlow.mockResolvedValueOnce({
             status: 'ok',
             label: 'PROJ-3',

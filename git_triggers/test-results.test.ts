@@ -1,5 +1,5 @@
 import { jest } from '@jest/globals';
-import type { GitProvider } from '../shared/types';
+import { createMockGitProvider, createMockJiraResource, createMockLinkManager } from '../shared/test-utils/factories';
 import type { ParseResult } from '../shared/result_parser';
 import JiraClient from '../shared/jira-client';
 import JiraLinkManager from '../jira_management/jira_link_manager';
@@ -100,11 +100,10 @@ jest.mock('adm-zip', () => {
 
 // ── Provider mock ─────────────────────────────────────────────────────────
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any -- provider mock
-const mockProvider: Record<string, jest.Mock<any>> = {
+const mockProvider = createMockGitProvider({
     listPipelineArtifacts: mockListPipelineArtifacts,
     downloadArtifact: mockDownloadArtifact,
-};
+});
 
 // ── Module under test ─────────────────────────────────────────────────────
 
@@ -180,7 +179,7 @@ describe('downloadTestArtifacts', () => {
         };
         mockParseTestResults.mockReturnValue(parseResult);
 
-        const result = await mod.downloadTestArtifacts(mockProvider as unknown as GitProvider, '1');
+        const result = await mod.downloadTestArtifacts(mockProvider, '1');
 
         expect(result).toEqual(parseResult);
         expect(mockListPipelineArtifacts).toHaveBeenCalledWith('1');
@@ -221,7 +220,7 @@ describe('downloadTestArtifacts', () => {
         };
         mockParseTestResults.mockReturnValue(parseResult);
 
-        const result = await mod.downloadTestArtifacts(mockProvider as unknown as GitProvider, '1');
+        const result = await mod.downloadTestArtifacts(mockProvider, '1');
 
         expect(result).toEqual(parseResult);
         expect(mockParseTestResults).toHaveBeenCalled();
@@ -230,7 +229,7 @@ describe('downloadTestArtifacts', () => {
     it('returns null when no artifacts found in pipeline', async () => {
         mockListPipelineArtifacts.mockResolvedValue([]);
 
-        const result = await mod.downloadTestArtifacts(mockProvider as unknown as GitProvider, '1');
+        const result = await mod.downloadTestArtifacts(mockProvider, '1');
 
         expect(result).toBeNull();
         expect(mockDownloadArtifact).not.toHaveBeenCalled();
@@ -240,7 +239,7 @@ describe('downloadTestArtifacts', () => {
         mockListPipelineArtifacts.mockResolvedValue([{ id: 1, name: 'artifact' }]);
         mockDownloadArtifact.mockRejectedValue(new Error('Download error'));
 
-        const result = await mod.downloadTestArtifacts(mockProvider as unknown as GitProvider, '1');
+        const result = await mod.downloadTestArtifacts(mockProvider, '1');
 
         expect(result).toBeNull();
     });
@@ -256,7 +255,7 @@ describe('downloadTestArtifacts', () => {
             },
         ]);
 
-        const result = await mod.downloadTestArtifacts(mockProvider as unknown as GitProvider, '1');
+        const result = await mod.downloadTestArtifacts(mockProvider, '1');
 
         expect(result).toBeNull();
     });
@@ -272,7 +271,7 @@ describe('downloadTestArtifacts', () => {
             },
         ]);
 
-        const result = await mod.downloadTestArtifacts(mockProvider as unknown as GitProvider, '1');
+        const result = await mod.downloadTestArtifacts(mockProvider, '1');
 
         expect(result).toBeNull();
     });
@@ -292,7 +291,7 @@ describe('downloadTestArtifacts', () => {
             stats: { passed: 0, failed: 0, skipped: 0, total: 0, duration: 0 },
         });
 
-        const result = await mod.downloadTestArtifacts(mockProvider as unknown as GitProvider, '1');
+        const result = await mod.downloadTestArtifacts(mockProvider, '1');
 
         expect(result).toBeNull();
     });
@@ -372,10 +371,10 @@ describe('createTestExecution', () => {
         await mod.createTestExecution({
             matched: [{ key: 'T1', title: 'test1', status: 'passed', duration: 100 }],
             csvName: 'my-tests',
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any -- mock object for JiraClient
-            jiraResource: { baseUrl: 'https://jira.example.com/rest/api/2', request: jest.fn() } as any,
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any -- mock object for JiraLinkManager
-            linkManager: {} as any,
+            jiraResource: createMockJiraResource({
+                baseUrl: 'https://jira.example.com/rest/api/2',
+            }),
+            linkManager: createMockLinkManager(),
             jiraBaseUrl: 'https://jira.example.com',
             projectName: 'PROJ',
             pipelineId: '123',
@@ -396,10 +395,8 @@ describe('createTestExecution', () => {
             mod.createTestExecution({
                 matched: [],
                 csvName: 'test',
-                // eslint-disable-next-line @typescript-eslint/no-explicit-any -- mock object for JiraClient
-                jiraResource: { baseUrl: '', request: jest.fn() } as any,
-                // eslint-disable-next-line @typescript-eslint/no-explicit-any -- mock object for JiraLinkManager
-                linkManager: {} as any,
+                jiraResource: createMockJiraResource({ baseUrl: '' }),
+                linkManager: createMockLinkManager(),
                 jiraBaseUrl: '',
                 projectName: 'PROJ',
                 pipelineId: '1',
@@ -449,7 +446,7 @@ describe('collectTestResults', () => {
         const mockLinkMgr = {} as JiraLinkManager;
 
         await mod.collectTestResults({
-            m: mockProvider as unknown as GitProvider,
+            m: mockProvider,
             pipelineId: '1',
             branch: 'main',
             projectName: 'PROJ',
@@ -479,7 +476,7 @@ describe('collectTestResults', () => {
         const mockLinkMgr = {} as JiraLinkManager;
 
         await mod.collectTestResults({
-            m: mockProvider as unknown as GitProvider,
+            m: mockProvider,
             pipelineId: '1',
             branch: 'main',
             projectName: 'PROJ',
@@ -516,7 +513,7 @@ describe('collectTestResults', () => {
         const mockLinkMgr = {} as JiraLinkManager;
 
         await mod.collectTestResults({
-            m: mockProvider as unknown as GitProvider,
+            m: mockProvider,
             pipelineId: '1',
             branch: 'main',
             projectName: 'PROJ',

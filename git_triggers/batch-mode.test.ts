@@ -55,20 +55,16 @@ import { success, error, printError } from '../shared/prompt';
 import { pushHistory, getProjects } from './session-state';
 import { pollPipeline } from './pipeline-handler';
 import { parseBatchArgs, tryBatchMode } from './batch-mode';
-import type { GitProvider } from '../shared/types';
+import { createMockGitProvider } from '../shared/test-utils/factories';
 
-const mockSuccess = success as jest.Mock;
-const mockError = error as jest.Mock;
-const mockPrintError = printError as jest.Mock;
-const mockPushHistory = pushHistory as jest.Mock;
-const mockPollPipeline = pollPipeline as jest.Mock;
-const mockGetProjects = getProjects as jest.Mock;
+const mockSuccess = jest.mocked(success);
+const mockError = jest.mocked(error);
+const mockPrintError = jest.mocked(printError);
+const mockPushHistory = jest.mocked(pushHistory);
+const mockPollPipeline = jest.mocked(pollPipeline);
+const mockGetProjects = jest.mocked(getProjects);
 
-const mockManager = {
-    getBranch: jest.fn(),
-    triggerPipeline: jest.fn(),
-    getRecentPipelines: jest.fn(),
-} as unknown as GitProvider;
+const mockManager = createMockGitProvider();
 
 let originalArgv: string[];
 let originalAutoConfirm: string | undefined;
@@ -169,7 +165,7 @@ describe('tryBatchMode', () => {
     it('errors when branch not found', async () => {
         process.argv = ['node', 'script.js', '--project', 'proj1', '--branch', 'bad'];
         mockGetProjects.mockReturnValue({ proj1: '1' });
-        (mockManager.getBranch as jest.Mock).mockResolvedValue(null);
+        jest.mocked(mockManager.getBranch).mockResolvedValue(null);
 
         const result = await tryBatchMode();
 
@@ -180,8 +176,8 @@ describe('tryBatchMode', () => {
     it('triggers pipeline and polls when batch mode', async () => {
         process.argv = ['node', 'script.js', '--project', 'proj1', '--branch', 'main'];
         mockGetProjects.mockReturnValue({ proj1: '1' });
-        (mockManager.getBranch as jest.Mock).mockResolvedValue({ name: 'main' });
-        (mockManager.triggerPipeline as jest.Mock).mockResolvedValue({
+        jest.mocked(mockManager.getBranch).mockResolvedValue({ name: 'main' });
+        jest.mocked(mockManager.triggerPipeline).mockResolvedValue({
             id: '42',
             web_url: 'https://gitlab.com/pipe/42',
         });
@@ -198,8 +194,8 @@ describe('tryBatchMode', () => {
     it('sets AUTO_CONFIRM when --auto flag passed', async () => {
         process.argv = ['node', 'script.js', '--auto', '--project', 'proj1'];
         mockGetProjects.mockReturnValue({ proj1: '1' });
-        (mockManager.getBranch as jest.Mock).mockResolvedValue({ name: 'main' });
-        (mockManager.triggerPipeline as jest.Mock).mockResolvedValue({ id: '1', web_url: '' });
+        jest.mocked(mockManager.getBranch).mockResolvedValue({ name: 'main' });
+        jest.mocked(mockManager.triggerPipeline).mockResolvedValue({ id: '1', web_url: '' });
         mockPollPipeline.mockResolvedValue({ status: 'success', web_url: '' });
 
         await tryBatchMode();
@@ -210,8 +206,8 @@ describe('tryBatchMode', () => {
     it('handles pipeline trigger error', async () => {
         process.argv = ['node', 'script.js', '--project', 'proj1'];
         mockGetProjects.mockReturnValue({ proj1: '1' });
-        (mockManager.getBranch as jest.Mock).mockResolvedValue({ name: 'main' });
-        (mockManager.triggerPipeline as jest.Mock).mockRejectedValue(new Error('fail'));
+        jest.mocked(mockManager.getBranch).mockResolvedValue({ name: 'main' });
+        jest.mocked(mockManager.triggerPipeline).mockRejectedValue(new Error('fail'));
 
         const result = await tryBatchMode();
 
@@ -222,8 +218,8 @@ describe('tryBatchMode', () => {
     it('returns early when pipelineResult is undefined', async () => {
         process.argv = ['node', 'script.js', '--project', 'proj1'];
         mockGetProjects.mockReturnValue({ proj1: '1' });
-        (mockManager.getBranch as jest.Mock).mockResolvedValue({ name: 'main' });
-        (mockManager.triggerPipeline as jest.Mock).mockResolvedValue(undefined);
+        jest.mocked(mockManager.getBranch).mockResolvedValue({ name: 'main' });
+        jest.mocked(mockManager.triggerPipeline).mockResolvedValue(undefined);
 
         const result = await tryBatchMode();
 
@@ -233,8 +229,8 @@ describe('tryBatchMode', () => {
     it('calls offerPipelineFailureAnalysis when results are collected', async () => {
         process.argv = ['node', 'script.js', '--project', 'proj1', '--branch', 'main'];
         mockGetProjects.mockReturnValue({ proj1: '1' });
-        (mockManager.getBranch as jest.Mock).mockResolvedValue({ name: 'main' });
-        (mockManager.triggerPipeline as jest.Mock).mockResolvedValue({
+        jest.mocked(mockManager.getBranch).mockResolvedValue({ name: 'main' });
+        jest.mocked(mockManager.triggerPipeline).mockResolvedValue({
             id: '42',
             web_url: 'https://gitlab.com/pipe/42',
         });
@@ -284,8 +280,8 @@ describe('tryBatchMode', () => {
 
         process.argv = ['node', 'script.js', '--project', 'proj1', '--branch', 'main'];
         mockGetProjects.mockReturnValue({ proj1: '1' });
-        (mockManager.getBranch as jest.Mock).mockResolvedValue({ name: 'main' });
-        (mockManager.triggerPipeline as jest.Mock).mockResolvedValue({
+        jest.mocked(mockManager.getBranch).mockResolvedValue({ name: 'main' });
+        jest.mocked(mockManager.triggerPipeline).mockResolvedValue({
             id: '42',
             web_url: 'https://gitlab.com/pipe/42',
         });
@@ -303,8 +299,8 @@ describe('tryBatchMode', () => {
     it('handles empty pipelineId', async () => {
         process.argv = ['node', 'script.js', '--project', 'proj1'];
         mockGetProjects.mockReturnValue({ proj1: '1' });
-        (mockManager.getBranch as jest.Mock).mockResolvedValue({ name: 'main' });
-        (mockManager.triggerPipeline as jest.Mock).mockResolvedValue({ web_url: '' });
+        jest.mocked(mockManager.getBranch).mockResolvedValue({ name: 'main' });
+        jest.mocked(mockManager.triggerPipeline).mockResolvedValue({ web_url: '' });
 
         const result = await tryBatchMode();
 
@@ -345,8 +341,8 @@ describe('tryBatchMode', () => {
 
         process.argv = ['node', 'script.js', '--project', 'proj1', '--branch', 'main', '--publish', 'gh-pages'];
         mockGetProjects.mockReturnValue({ proj1: '1' });
-        (mockManager.getBranch as jest.Mock).mockResolvedValue({ name: 'main' });
-        (mockManager.triggerPipeline as jest.Mock).mockResolvedValue({ id: '42', web_url: '' });
+        jest.mocked(mockManager.getBranch).mockResolvedValue({ name: 'main' });
+        jest.mocked(mockManager.triggerPipeline).mockResolvedValue({ id: '42', web_url: '' });
         mockPollPipeline.mockResolvedValue({ status: 'success', web_url: '' });
 
         const result = await tryBatchMode();

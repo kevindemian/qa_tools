@@ -158,21 +158,21 @@ describe('checkMemoryCache', () => {
 
 describe('checkDiskCache', () => {
     it('returns miss when disk cache returns null', () => {
-        (diskCacheGet as jest.Mock).mockReturnValue(null);
+        jest.mocked(diskCacheGet).mockReturnValue(null);
         const result = checkDiskCache('missing', undefined, undefined);
         expect(result.hit).toBe(false);
         expect(result.data).toBeNull();
     });
 
     it('returns hit with string when disk cache has data without schema', () => {
-        (diskCacheGet as jest.Mock).mockReturnValue('disk value');
+        jest.mocked(diskCacheGet).mockReturnValue('disk value');
         const result = checkDiskCache('disk-key', undefined, undefined);
         expect(result.hit).toBe(true);
         expect(result.data).toBe('disk value');
     });
 
     it('returns validated data and populates memory cache when schema matches', () => {
-        (diskCacheGet as jest.Mock).mockReturnValue('{"ok": true}');
+        jest.mocked(diskCacheGet).mockReturnValue('{"ok": true}');
         const result = checkDiskCache('disk-schema', testSchema, 'json');
         expect(result.hit).toBe(true);
         expect(result.data).toEqual({ ok: true });
@@ -181,7 +181,7 @@ describe('checkDiskCache', () => {
     });
 
     it('warns and returns miss when disk cache data fails schema', () => {
-        (diskCacheGet as jest.Mock).mockReturnValue('{"ok": "bad"}');
+        jest.mocked(diskCacheGet).mockReturnValue('{"ok": "bad"}');
         const warnSpy = jest.spyOn(rootLogger, 'warn').mockImplementation(() => {});
         const result = checkDiskCache('disk-bad-schema', testSchema, 'json');
         expect(result.hit).toBe(false);
@@ -191,7 +191,7 @@ describe('checkDiskCache', () => {
     });
 
     it('warns when responseFormat=json but content is not JSON from disk', () => {
-        (diskCacheGet as jest.Mock).mockReturnValue('not json');
+        jest.mocked(diskCacheGet).mockReturnValue('not json');
         const warnSpy = jest.spyOn(rootLogger, 'warn').mockImplementation(() => {});
         checkDiskCache('disk-nonjson', undefined, 'json');
         expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining('not parseable'));
@@ -222,7 +222,7 @@ describe('clearCache', () => {
     });
 
     it('calls clearDiskCache', () => {
-        (clearDiskCache as jest.Mock).mockClear();
+        jest.mocked(clearDiskCache).mockClear();
         clearCache();
         expect(clearDiskCache).toHaveBeenCalledTimes(1);
     });

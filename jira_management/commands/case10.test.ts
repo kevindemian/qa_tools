@@ -20,7 +20,7 @@ describe('case10 — set directory', () => {
     });
 
     it('executes without error with basic context', async () => {
-        const result = await case10.handler(mockContext as never);
+        const result = await case10.handler(mockContext);
         expect(result === undefined || result === true || result === false).toBe(true);
     });
 });

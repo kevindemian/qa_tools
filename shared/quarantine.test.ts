@@ -26,6 +26,7 @@ import {
     loadQuarantine,
     markPermanent,
 } from './quarantine';
+import { nonNull } from '../shared/test-utils';
 
 function quarantineStorePath(): string {
     return path.join(MOCK_STATE_HOME, 'qa-tools', 'quarantine', 'quarantine.json');
@@ -66,10 +67,10 @@ describe('quarantineTest / isQuarantined', () => {
         quarantineTest({ testTitle: TEST_TITLE, reason: 'flaky', quarantinedBy: 'test', flakyRate: 0.7 });
         const entry = isQuarantined(TEST_TITLE);
         expect(entry).toBeDefined();
-        expect(entry!.testTitle).toBe(TEST_TITLE);
-        expect(entry!.flakyRate).toBe(0.7);
-        expect(entry!.reviewRequired).toBe(true);
-        expect(entry!.permanent).toBe(false);
+        expect(nonNull(entry).testTitle).toBe(TEST_TITLE);
+        expect(nonNull(entry).flakyRate).toBe(0.7);
+        expect(nonNull(entry).reviewRequired).toBe(true);
+        expect(nonNull(entry).permanent).toBe(false);
     });
 
     it('returns undefined for non-quarantined test', () => {
@@ -80,8 +81,8 @@ describe('quarantineTest / isQuarantined', () => {
         quarantineTest({ testTitle: TEST_TITLE, reason: 'first', quarantinedBy: 'test', flakyRate: 0.5 });
         quarantineTest({ testTitle: TEST_TITLE, reason: 'updated', quarantinedBy: 'test', flakyRate: 0.8 });
         const entry = isQuarantined(TEST_TITLE);
-        expect(entry!.reason).toBe('updated');
-        expect(entry!.flakyRate).toBe(0.8);
+        expect(nonNull(entry).reason).toBe('updated');
+        expect(nonNull(entry).flakyRate).toBe(0.8);
     });
 });
 
@@ -117,7 +118,7 @@ describe('expireQuarantine', () => {
         expect(expired).toBe(0);
         const entry = isQuarantined('perm-test');
         expect(entry).toBeDefined();
-        expect(entry!.permanent).toBe(true);
+        expect(nonNull(entry).permanent).toBe(true);
         jest.useRealTimers();
     });
 });
@@ -180,7 +181,7 @@ describe('markPermanent', () => {
         quarantineTest({ testTitle: TEST_TITLE, reason: 'flaky', quarantinedBy: 'test', flakyRate: 0.5 });
         expect(markPermanent(TEST_TITLE)).toBe(true);
         const entry = isQuarantined(TEST_TITLE);
-        expect(entry!.permanent).toBe(true);
+        expect(nonNull(entry).permanent).toBe(true);
     });
 
     it('returns false for non-existent entry', () => {

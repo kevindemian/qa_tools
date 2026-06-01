@@ -22,7 +22,7 @@ describe('case07 — close tasks', () => {
     });
 
     it('executes without error with basic context', async () => {
-        const result = await case07.handler(mockContext as never);
+        const result = await case07.handler(mockContext);
         expect(result === undefined || result === true || result === false).toBe(true);
     });
 });

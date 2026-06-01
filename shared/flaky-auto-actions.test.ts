@@ -2,12 +2,15 @@ import { executeFlakyActions, calculateFlakinessWithWindow } from './flaky-auto-
 import type { MetricsStore } from './metrics';
 import type { FlatTest } from './result_parser';
 import type { SearchIssuesResponse, JiraResourceLike } from './types';
+import { nonNull } from './test-utils';
 
 interface MockJira {
     searchJiraIssues: jest.Mock;
     postJiraResource: jest.Mock;
     getTransitionsForIssue: jest.Mock;
     transitionIssue: jest.Mock;
+    getJiraResource: jest.Mock;
+    putJiraResource: jest.Mock;
 }
 
 function mockJiraResource(captured: { calls: unknown[] }): MockJira {
@@ -37,6 +40,8 @@ function mockJiraResource(captured: { calls: unknown[] }): MockJira {
         transitionIssue: jest.fn().mockImplementation(async () => {
             captured.calls.push({ method: 'transitionIssue' });
         }),
+        getJiraResource: jest.fn().mockResolvedValue({}),
+        putJiraResource: jest.fn().mockResolvedValue(null),
     };
 }
 
@@ -81,7 +86,7 @@ function flakyRun(
 }
 
 function asMockJira(m: MockJira): JiraResourceLike {
-    return m as unknown as JiraResourceLike;
+    return m;
 }
 
 describe('calculateFlakinessWithWindow', () => {
@@ -108,7 +113,7 @@ describe('calculateFlakinessWithWindow', () => {
 
         const smallWindow = calculateFlakinessWithWindow(store, { windowSize: 2, minRuns: 2 });
         if (smallWindow.length > 0) {
-            expect(smallWindow[0]!.totalRuns).toBeLessThanOrEqual(2);
+            expect(nonNull(smallWindow[0]).totalRuns).toBeLessThanOrEqual(2);
         }
     });
 
@@ -157,9 +162,9 @@ describe('calculateFlakinessWithWindow', () => {
         ]);
         const result = calculateFlakinessWithWindow(store, { minRuns: 1 });
         expect(result).toHaveLength(1);
-        expect(result[0]!.skipCount).toBe(1);
-        expect(result[0]!.passCount).toBe(1);
-        expect(result[0]!.failCount).toBe(1);
+        expect(nonNull(result[0]).skipCount).toBe(1);
+        expect(nonNull(result[0]).passCount).toBe(1);
+        expect(nonNull(result[0]).failCount).toBe(1);
     });
 });
 
@@ -179,7 +184,7 @@ describe('executeFlakyActions', () => {
             minTotalRuns: 5,
         });
         expect(actions.filter((a) => a.action === 'create_bug')).toHaveLength(1);
-        expect(actions[0]!.jiraBugKey).toBeTruthy();
+        expect(nonNull(actions[0]).jiraBugKey).toBeTruthy();
     });
 
     it('does nothing for flaky test below threshold', async () => {
@@ -259,10 +264,10 @@ describe('executeFlakyActions', () => {
             minTotalRuns: 5,
         });
         expect(actions).toHaveLength(1);
-        expect(actions[0]!.action).toBe('create_bug');
-        expect(actions[0]!.jiraBugKey).toBe('FLAKY-1');
-        expect(actions[0]!.flakyRate).toBeGreaterThan(0);
-        expect(actions[0]!.totalRuns).toBe(15);
+        expect(nonNull(actions[0]).action).toBe('create_bug');
+        expect(nonNull(actions[0]).jiraBugKey).toBe('FLAKY-1');
+        expect(nonNull(actions[0]).flakyRate).toBeGreaterThan(0);
+        expect(nonNull(actions[0]).totalRuns).toBe(15);
 
         const postCall = captured.calls.find(
             (c: unknown) => (c as { method: string }).method === 'postJiraResource',
@@ -281,12 +286,12 @@ describe('executeFlakyActions', () => {
               }
             | undefined;
         expect(postCall).toBeTruthy();
-        expect(postCall!.data.fields.project.key).toBe('PROJ');
-        expect(postCall!.data.fields.summary).toContain('[Flaky]');
-        expect(postCall!.data.fields.issuetype.name).toBe('Bug');
-        expect(postCall!.data.fields.labels).toContain('flaky');
-        expect(postCall!.data.fields.labels).toContain('auto-generated');
-        expect(postCall!.data.fields.priority.name).toBe('Medium');
+        expect(nonNull(postCall).data.fields.project.key).toBe('PROJ');
+        expect(nonNull(postCall).data.fields.summary).toContain('[Flaky]');
+        expect(nonNull(postCall).data.fields.issuetype.name).toBe('Bug');
+        expect(nonNull(postCall).data.fields.labels).toContain('flaky');
+        expect(nonNull(postCall).data.fields.labels).toContain('auto-generated');
+        expect(nonNull(postCall).data.fields.priority.name).toBe('Medium');
     });
 
     it('handles search failure gracefully when checking for re-enable', async () => {
@@ -308,7 +313,7 @@ describe('executeFlakyActions', () => {
             minTotalRuns: 5,
         });
         expect(actions).toHaveLength(1);
-        expect(actions[0]!.action).toBe('flag_in_report');
+        expect(nonNull(actions[0]).action).toBe('flag_in_report');
     });
 
     it('throws when reenableTest fails due to transition fetch error', async () => {

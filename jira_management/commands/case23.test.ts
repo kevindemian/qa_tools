@@ -16,9 +16,9 @@ jest.mock('../../shared/logger', () => ({
 import { warn, tableView, showSelect } from '../../shared/prompt';
 import { getAiFeedbackSummary, getRecentAiRecords } from '../../shared/ai-feedback';
 
-const mockGetSummary = getAiFeedbackSummary as jest.Mock;
-const mockGetRecent = getRecentAiRecords as jest.Mock;
-const mockShowSelect = showSelect as jest.Mock;
+const mockGetSummary = jest.mocked(getAiFeedbackSummary);
+const mockGetRecent = jest.mocked(getRecentAiRecords);
+const mockShowSelect = jest.mocked(showSelect);
 import { makeMockCommandContext } from '../../shared/test-utils';
 
 beforeEach(() => {
@@ -74,6 +74,8 @@ describe('case23 — AI Feedback', () => {
                 promptVersion: 'v2',
                 generatedTests: [{ title: 'T1', preConditions: [], stepCount: 1 }],
                 userStory: 'As a user',
+                acceptanceCriteria: 'some criteria',
+                preconditionMatches: [],
             },
         ]);
 

@@ -1,4 +1,5 @@
 import { createHttpClient } from '../shared/http-client';
+import { createMockAxiosInstance } from '../shared/test-utils/factories/response-factory';
 
 jest.mock('../shared/http-client', () => ({ createHttpClient: jest.fn() }));
 
@@ -30,12 +31,14 @@ jest.mock('../shared/prompt', () => ({
 import JiraResource from './jira_resource';
 import { getProjectId, getVersionId, getProjectVersions, getLatestReleases } from './jira-resource-version';
 
-const mockGet = jest.fn<Promise<unknown>, [string]>();
-const mockPost = jest.fn<Promise<unknown>, [string, unknown]>();
-const mockPut = jest.fn<Promise<unknown>, [string, unknown]>();
+const mockGet = jest.fn();
+const mockPost = jest.fn();
+const mockPut = jest.fn();
 
 function buildResource(): JiraResource {
-    (createHttpClient as jest.Mock).mockReturnValue({ get: mockGet, post: mockPost, put: mockPut });
+    jest.mocked(createHttpClient).mockReturnValue(
+        createMockAxiosInstance({ get: mockGet, post: mockPost, put: mockPut }),
+    );
     return new JiraResource('test-token', 'http://test-jira.com');
 }
 

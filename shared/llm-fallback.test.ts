@@ -63,6 +63,9 @@ jest.mock('./config', () => {
             resetInstance() {
                 Object.keys(mockConfig).forEach((k) => delete mockConfig[k]);
             },
+            reset() {
+                Object.keys(mockConfig).forEach((k) => delete mockConfig[k]);
+            },
         },
     };
 });
@@ -99,37 +102,33 @@ const mockFetch = jest.fn();
 global.fetch = mockFetch;
 
 function mockOkResponse(body: string): Response {
-    return {
-        ok: true,
-        status: 200,
-        text: jest.fn().mockResolvedValue(body),
-        headers: { get: () => null },
-    } as unknown as Response;
+    const r = new Response(body, { status: 200 });
+    jest.spyOn(r, 'text').mockResolvedValue(body);
+    jest.spyOn(r.headers, 'get').mockReturnValue(null);
+    return r;
 }
 
 function mockErrorResponse(status: number): Response {
-    return {
-        ok: false,
-        status,
-        text: jest.fn().mockResolvedValue('error'),
-        headers: { get: () => null },
-    } as unknown as Response;
+    const r = new Response('error', { status });
+    jest.spyOn(r, 'text').mockResolvedValue('error');
+    jest.spyOn(r.headers, 'get').mockReturnValue(null);
+    return r;
 }
 
 beforeEach(() => {
     jest.clearAllMocks();
     mockFetch.mockReset();
-    (Config as unknown as { resetInstance: () => void }).resetInstance();
+    Config.reset();
     resetLlmClientMetrics();
-    (checkRateLimit as jest.Mock).mockImplementation(() => {});
-    (checkCircuitBreaker as jest.Mock).mockImplementation(() => {});
+    jest.mocked(checkRateLimit).mockImplementation(() => {});
+    jest.mocked(checkCircuitBreaker).mockImplementation(() => {});
 });
 
 describe('tierToConfig', () => {
     it('returns main config for main tier', () => {
-        (Config as unknown as { set: (k: string, v: string) => void }).set('llmApiKey', 'sk-main');
-        (Config as unknown as { set: (k: string, v: string) => void }).set('llmModel', 'gpt-4');
-        (Config as unknown as { set: (k: string, v: string) => void }).set('llmBaseUrl', 'https://api.test.com/v1');
+        Config.set('llmApiKey', 'sk-main');
+        Config.set('llmModel', 'gpt-4');
+        Config.set('llmBaseUrl', 'https://api.test.com/v1');
         const cfg = tierToConfig('main');
         expect(cfg.apiKey).toBe('sk-main');
         expect(cfg.model).toBe('gpt-4');
@@ -137,8 +136,8 @@ describe('tierToConfig', () => {
     });
 
     it('returns fast tier config', () => {
-        (Config as unknown as { set: (k: string, v: string) => void }).set('llmFastApiKey', 'gsk-fast');
-        (Config as unknown as { set: (k: string, v: string) => void }).set('llmFastModel', 'llama3');
+        Config.set('llmFastApiKey', 'gsk-fast');
+        Config.set('llmFastModel', 'llama3');
         const cfg = tierToConfig('fast');
         expect(cfg.apiKey).toBe('gsk-fast');
         expect(cfg.model).toBe('llama3');
@@ -146,8 +145,8 @@ describe('tierToConfig', () => {
     });
 
     it('returns reviewer tier config with gemini format', () => {
-        (Config as unknown as { set: (k: string, v: string) => void }).set('llmReviewApiKey', 'AIza-review');
-        (Config as unknown as { set: (k: string, v: string) => void }).set('llmReviewModel', 'gemini-2.0-flash-exp');
+        Config.set('llmReviewApiKey', 'AIza-review');
+        Config.set('llmReviewModel', 'gemini-2.0-flash-exp');
         const cfg = tierToConfig('reviewer');
         expect(cfg.apiKey).toBe('AIza-review');
         expect(cfg.model).toBe('gemini-2.0-flash-exp');
@@ -155,16 +154,16 @@ describe('tierToConfig', () => {
     });
 
     it('returns report tier config with json responseFormat', () => {
-        (Config as unknown as { set: (k: string, v: string) => void }).set('llmApiKey', 'sk-report');
-        (Config as unknown as { set: (k: string, v: string) => void }).set('llmModel', 'gpt-4-report');
+        Config.set('llmApiKey', 'sk-report');
+        Config.set('llmModel', 'gpt-4-report');
         const cfg = tierToConfig('report');
         expect(cfg.apiKey).toBe('sk-report');
         expect(cfg.responseFormat).toBe('json');
     });
 
     it('falls back to main when tier is unknown', () => {
-        (Config as unknown as { set: (k: string, v: string) => void }).set('llmApiKey', 'sk-main');
-        const cfg = tierToConfig('nonexistent' as never);
+        Config.set('llmApiKey', 'sk-main');
+        const cfg = (tierToConfig as (tier: string) => ReturnType<typeof tierToConfig>)('nonexistent');
         expect(cfg.apiKey).toBe('sk-main');
     });
 });
@@ -188,12 +187,10 @@ describe('parseRawOnce', () => {
 
 describe('parseRetryAfter', () => {
     function mockResponseWithHeader(key: string, value: string | null): Response {
-        return {
-            ok: false,
-            status: 429,
-            text: jest.fn().mockResolvedValue(''),
-            headers: { get: (k: string) => (k === key ? value : null) },
-        } as unknown as Response;
+        const r = new Response('', { status: 429 });
+        jest.spyOn(r, 'text').mockResolvedValue('');
+        jest.spyOn(r.headers, 'get').mockImplementation((k: string) => (k === key ? value : null));
+        return r;
     }
 
     it('parses seconds from Retry-After header', () => {
@@ -271,9 +268,9 @@ describe('sendWithFallback', () => {
     });
 
     it('sends to primary provider and returns response', async () => {
-        (Config as unknown as { set: (k: string, v: string) => void }).set('llmApiKey', 'sk-test');
-        (Config as unknown as { set: (k: string, v: string) => void }).set('llmModel', 'gpt-4');
-        (Config as unknown as { set: (k: string, v: string) => void }).set('llmBaseUrl', 'https://api.test.com/v1');
+        Config.set('llmApiKey', 'sk-test');
+        Config.set('llmModel', 'gpt-4');
+        Config.set('llmBaseUrl', 'https://api.test.com/v1');
         mockFetch.mockResolvedValueOnce(
             mockOkResponse(JSON.stringify({ choices: [{ message: { content: 'success' } }] })),
         );
@@ -284,21 +281,15 @@ describe('sendWithFallback', () => {
     });
 
     it('falls back to next provider when primary fails', async () => {
-        (Config as unknown as { set: (k: string, v: string) => void }).set('llmApiKey', 'sk-test');
-        (Config as unknown as { set: (k: string, v: string) => void }).set('llmModel', 'gpt-4');
-        (Config as unknown as { set: (k: string, v: string) => void }).set('llmBaseUrl', 'https://api.test.com/v1');
-        (Config as unknown as { set: (k: string, v: string) => void }).set('llmFallbackApiKey', 'nv-test');
-        (Config as unknown as { set: (k: string, v: string) => void }).set('llmFallbackModel', 'llama3');
-        (Config as unknown as { set: (k: string, v: string) => void }).set(
-            'llmFallbackBaseUrl',
-            'https://nv.api.com/v1',
-        );
-        (Config as unknown as { set: (k: string, v: string) => void }).set('llmBatchApiKey', 'gh-test');
-        (Config as unknown as { set: (k: string, v: string) => void }).set('llmBatchModel', 'gpt4o-mini');
-        (Config as unknown as { set: (k: string, v: string) => void }).set(
-            'llmBatchBaseUrl',
-            'https://models.inference.ai.azure.com',
-        );
+        Config.set('llmApiKey', 'sk-test');
+        Config.set('llmModel', 'gpt-4');
+        Config.set('llmBaseUrl', 'https://api.test.com/v1');
+        Config.set('llmFallbackApiKey', 'nv-test');
+        Config.set('llmFallbackModel', 'llama3');
+        Config.set('llmFallbackBaseUrl', 'https://nv.api.com/v1');
+        Config.set('llmBatchApiKey', 'gh-test');
+        Config.set('llmBatchModel', 'gpt4o-mini');
+        Config.set('llmBatchBaseUrl', 'https://models.inference.ai.azure.com');
 
         mockFetch
             .mockResolvedValueOnce(mockErrorResponse(500))
@@ -315,23 +306,23 @@ describe('sendWithFallback', () => {
     });
 
     it('throws when all providers are exhausted', async () => {
-        (Config as unknown as { set: (k: string, v: string) => void }).set('llmApiKey', 'sk-test');
-        (Config as unknown as { set: (k: string, v: string) => void }).set('llmModel', 'gpt-4');
-        (Config as unknown as { set: (k: string, v: string) => void }).set('llmBaseUrl', 'https://api.test.com/v1');
+        Config.set('llmApiKey', 'sk-test');
+        Config.set('llmModel', 'gpt-4');
+        Config.set('llmBaseUrl', 'https://api.test.com/v1');
         mockFetch.mockResolvedValue(mockErrorResponse(500));
 
         await expect(sendWithFallback('main', 'system', 'user')).rejects.toThrow('All LLM providers failed');
     });
 
     it('aggregates error when API key is missing for all providers', async () => {
-        (Config as unknown as { set: (k: string, v: string) => void }).set('llmApiKey', '');
+        Config.set('llmApiKey', '');
         await expect(sendWithFallback('main', 'system', 'user')).rejects.toThrow('All LLM providers failed');
     });
 
     it('aggregates error messages from all providers', async () => {
-        (Config as unknown as { set: (k: string, v: string) => void }).set('llmApiKey', 'sk-test');
-        (Config as unknown as { set: (k: string, v: string) => void }).set('llmModel', 'gpt-4');
-        (Config as unknown as { set: (k: string, v: string) => void }).set('llmBaseUrl', 'https://api.test.com/v1');
+        Config.set('llmApiKey', 'sk-test');
+        Config.set('llmModel', 'gpt-4');
+        Config.set('llmBaseUrl', 'https://api.test.com/v1');
         mockFetch.mockResolvedValue(mockErrorResponse(500));
 
         try {
@@ -344,9 +335,9 @@ describe('sendWithFallback', () => {
     });
 
     it('applies responseFormat to all candidates', async () => {
-        (Config as unknown as { set: (k: string, v: string) => void }).set('llmApiKey', 'sk-test');
-        (Config as unknown as { set: (k: string, v: string) => void }).set('llmModel', 'gpt-4');
-        (Config as unknown as { set: (k: string, v: string) => void }).set('llmBaseUrl', 'https://api.test.com/v1');
+        Config.set('llmApiKey', 'sk-test');
+        Config.set('llmModel', 'gpt-4');
+        Config.set('llmBaseUrl', 'https://api.test.com/v1');
         mockFetch.mockResolvedValueOnce(
             mockOkResponse(JSON.stringify({ choices: [{ message: { content: '{"key":"val"}' } }] })),
         );
@@ -356,21 +347,15 @@ describe('sendWithFallback', () => {
     });
 
     it('deduplicates fallback provider with same config key as primary', async () => {
-        (Config as unknown as { set: (k: string, v: string) => void }).set('llmApiKey', 'sk-test');
-        (Config as unknown as { set: (k: string, v: string) => void }).set('llmModel', 'gpt-4');
-        (Config as unknown as { set: (k: string, v: string) => void }).set('llmBaseUrl', 'https://api.test.com/v1');
-        (Config as unknown as { set: (k: string, v: string) => void }).set('llmFallbackApiKey', 'sk-test');
-        (Config as unknown as { set: (k: string, v: string) => void }).set('llmFallbackModel', 'gpt-4');
-        (Config as unknown as { set: (k: string, v: string) => void }).set(
-            'llmFallbackBaseUrl',
-            'https://api.test.com/v1',
-        );
-        (Config as unknown as { set: (k: string, v: string) => void }).set('llmBatchApiKey', 'sk-test');
-        (Config as unknown as { set: (k: string, v: string) => void }).set('llmBatchModel', 'gpt-4');
-        (Config as unknown as { set: (k: string, v: string) => void }).set(
-            'llmBatchBaseUrl',
-            'https://api.test.com/v1',
-        );
+        Config.set('llmApiKey', 'sk-test');
+        Config.set('llmModel', 'gpt-4');
+        Config.set('llmBaseUrl', 'https://api.test.com/v1');
+        Config.set('llmFallbackApiKey', 'sk-test');
+        Config.set('llmFallbackModel', 'gpt-4');
+        Config.set('llmFallbackBaseUrl', 'https://api.test.com/v1');
+        Config.set('llmBatchApiKey', 'sk-test');
+        Config.set('llmBatchModel', 'gpt-4');
+        Config.set('llmBatchBaseUrl', 'https://api.test.com/v1');
 
         mockFetch.mockResolvedValue(mockErrorResponse(500));
 

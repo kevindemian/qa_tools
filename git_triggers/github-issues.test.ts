@@ -1,4 +1,5 @@
 import { getOpenIssues } from './github-issues';
+import { createMockAxiosInstance } from '../shared/test-utils/factories/response-factory';
 import type { AxiosInstance } from 'axios';
 
 jest.mock('./github-api', () => ({
@@ -10,19 +11,13 @@ jest.mock('../shared/logger', () => ({
     rootLogger: { error: jest.fn(), warn: jest.fn() },
 }));
 
-const mockApiGet = jest.requireMock('./github-api').apiGet as jest.Mock;
+const mockApiGet = jest.mocked(jest.requireMock('./github-api').apiGet);
 
 describe('getOpenIssues', () => {
     let client: jest.Mocked<AxiosInstance>;
 
     beforeEach(() => {
-        client = {
-            get: jest.fn(),
-            post: jest.fn(),
-            put: jest.fn(),
-            patch: jest.fn(),
-            delete: jest.fn(),
-        } as unknown as jest.Mocked<AxiosInstance>;
+        client = createMockAxiosInstance();
         mockApiGet.mockClear();
     });
 

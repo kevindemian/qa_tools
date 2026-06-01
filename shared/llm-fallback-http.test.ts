@@ -24,6 +24,9 @@ jest.mock('./config', () => {
             resetInstance() {
                 Object.keys(mockConfig).forEach((k) => delete mockConfig[k]);
             },
+            reset() {
+                Object.keys(mockConfig).forEach((k) => delete mockConfig[k]);
+            },
         },
     };
 });
@@ -65,32 +68,28 @@ const mockFetch = jest.fn();
 global.fetch = mockFetch;
 
 function mockOkResponse(body: string): Response {
-    return {
-        ok: true,
-        status: 200,
-        text: jest.fn().mockResolvedValue(body),
-        headers: { get: () => null },
-    } as unknown as Response;
+    const r = new Response(body, { status: 200 });
+    jest.spyOn(r, 'text').mockResolvedValue(body);
+    jest.spyOn(r.headers, 'get').mockReturnValue(null);
+    return r;
 }
 
 function mockErrorResponse(status: number): Response {
-    return {
-        ok: false,
-        status,
-        text: jest.fn().mockResolvedValue('error'),
-        headers: { get: () => null },
-    } as unknown as Response;
+    const r = new Response('error', { status });
+    jest.spyOn(r, 'text').mockResolvedValue('error');
+    jest.spyOn(r.headers, 'get').mockReturnValue(null);
+    return r;
 }
 
 beforeEach(() => {
     jest.clearAllMocks();
     mockFetch.mockReset();
-    (Config as unknown as { resetInstance: () => void }).resetInstance();
+    Config.reset();
     resetLlmClientMetrics();
-    (Config as unknown as { set: (k: string, v: string) => void }).set('llmApiKey', 'sk-test');
-    (Config as unknown as { set: (k: string, v: string) => void }).set('llmModel', 'gpt-4');
-    (Config as unknown as { set: (k: string, v: string) => void }).set('llmBaseUrl', 'https://api.test.com/v1');
-    (checkCircuitBreaker as jest.Mock).mockImplementation(() => {});
+    Config.set('llmApiKey', 'sk-test');
+    Config.set('llmModel', 'gpt-4');
+    Config.set('llmBaseUrl', 'https://api.test.com/v1');
+    jest.mocked(checkCircuitBreaker).mockImplementation(() => {});
 });
 
 describe('parseRawOnce', () => {
@@ -112,12 +111,10 @@ describe('parseRawOnce', () => {
 
 describe('parseRetryAfter', () => {
     function mockResponseWithHeader(key: string, value: string | null): Response {
-        return {
-            ok: false,
-            status: 429,
-            text: jest.fn().mockResolvedValue(''),
-            headers: { get: (k: string) => (k === key ? value : null) },
-        } as unknown as Response;
+        const r = new Response('', { status: 429 });
+        jest.spyOn(r, 'text').mockResolvedValue('');
+        jest.spyOn(r.headers, 'get').mockImplementation((k: string) => (k === key ? value : null));
+        return r;
     }
 
     it('parses seconds from Retry-After header', () => {

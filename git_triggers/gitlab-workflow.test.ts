@@ -11,7 +11,7 @@ import {
     glGetJobLogs,
 } from './gitlab-workflow';
 import { apiGet, apiPost, projectPath } from './gitlab-api';
-import type { AxiosInstance } from 'axios';
+import { createMockAxiosInstance } from '../shared/test-utils/factories/response-factory';
 jest.mock('./gitlab-api', () => ({
     apiGet: jest.fn(),
     apiPost: jest.fn(),
@@ -25,11 +25,11 @@ jest.mock('../shared/git-provider-error', () => ({
     }),
 }));
 
-const mockClient = { get: jest.fn(), post: jest.fn() } as unknown as jest.Mocked<AxiosInstance>;
+const mockClient = createMockAxiosInstance();
 
 beforeEach(() => {
     jest.clearAllMocks();
-    (projectPath as jest.Mock).mockImplementation(
+    jest.mocked(projectPath).mockImplementation(
         (owner: string, repo: string) =>
             `/projects/${owner ? encodeURIComponent(owner + '/' + repo) : encodeURIComponent(repo)}`,
     );
@@ -37,7 +37,7 @@ beforeEach(() => {
 
 describe('glTriggerPipeline', () => {
     it('calls apiPost and returns result', async () => {
-        (apiPost as jest.Mock).mockResolvedValue({ id: 1, web_url: 'https://...' });
+        jest.mocked(apiPost).mockResolvedValue({ id: 1, web_url: 'https://...' });
         const payload = { ref: 'main', variables: [{ key: 'VAR', value: 'val' }] };
         const result = await glTriggerPipeline(mockClient, 'owner', 'repo', payload);
         expect(result).toEqual({ id: 1, web_url: 'https://...' });
@@ -47,7 +47,7 @@ describe('glTriggerPipeline', () => {
     });
 
     it('returns undefined when apiPost returns undefined', async () => {
-        (apiPost as jest.Mock).mockResolvedValue(undefined);
+        jest.mocked(apiPost).mockResolvedValue(undefined);
         const result = await glTriggerPipeline(mockClient, 'owner', 'repo', { ref: 'main', variables: [] });
         expect(result).toBeUndefined();
     });
@@ -55,7 +55,7 @@ describe('glTriggerPipeline', () => {
 
 describe('glGetSchedules', () => {
     it('calls apiGet and returns schedules', async () => {
-        (apiGet as jest.Mock).mockResolvedValue([{ id: 1, description: 'Daily' }]);
+        jest.mocked(apiGet).mockResolvedValue([{ id: 1, description: 'Daily' }]);
         const result = await glGetSchedules(mockClient, 'owner', 'repo');
         expect(result).toEqual([{ id: 1, description: 'Daily' }]);
         expect(apiGet).toHaveBeenCalledWith(mockClient, expect.stringContaining('/pipeline_schedules'), {
@@ -66,7 +66,7 @@ describe('glGetSchedules', () => {
     });
 
     it('returns [] when apiGet returns null', async () => {
-        (apiGet as jest.Mock).mockResolvedValue(null);
+        jest.mocked(apiGet).mockResolvedValue(null);
         const result = await glGetSchedules(mockClient, 'owner', 'repo');
         expect(result).toEqual([]);
     });
@@ -74,7 +74,7 @@ describe('glGetSchedules', () => {
 
 describe('glRunSchedule', () => {
     it('calls apiPost and returns result', async () => {
-        (apiPost as jest.Mock).mockResolvedValue({ id: 42 });
+        jest.mocked(apiPost).mockResolvedValue({ id: 42 });
         const result = await glRunSchedule(mockClient, 'owner', 'repo', 42);
         expect(result).toEqual({ id: 42 });
         expect(apiPost).toHaveBeenCalledWith(
@@ -86,20 +86,20 @@ describe('glRunSchedule', () => {
     });
 
     it('works with string scheduleId', async () => {
-        (apiPost as jest.Mock).mockResolvedValue({ id: 7 });
+        jest.mocked(apiPost).mockResolvedValue({ id: 7 });
         const result = await glRunSchedule(mockClient, 'owner', 'repo', '7');
         expect(result).toEqual({ id: 7 });
     });
 
     it('re-throws on API error', async () => {
-        (apiPost as jest.Mock).mockRejectedValue(new Error('fail'));
+        jest.mocked(apiPost).mockRejectedValue(new Error('fail'));
         await expect(glRunSchedule(mockClient, 'owner', 'repo', 42)).rejects.toThrow('fail');
     });
 });
 
 describe('glGetRecentPipelines', () => {
     it('calls apiGet and returns pipelines', async () => {
-        (apiGet as jest.Mock).mockResolvedValue([{ id: 1, ref: 'main', status: 'success' }]);
+        jest.mocked(apiGet).mockResolvedValue([{ id: 1, ref: 'main', status: 'success' }]);
         const result = await glGetRecentPipelines(mockClient, 'owner', 'repo', 3);
         expect(result).toEqual([{ id: 1, ref: 'main', status: 'success' }]);
         expect(apiGet).toHaveBeenCalledWith(mockClient, expect.stringContaining('/pipelines'), {
@@ -110,7 +110,7 @@ describe('glGetRecentPipelines', () => {
     });
 
     it('defaults to count=5', async () => {
-        (apiGet as jest.Mock).mockResolvedValue([]);
+        jest.mocked(apiGet).mockResolvedValue([]);
         await glGetRecentPipelines(mockClient, 'owner', 'repo');
         expect(apiGet).toHaveBeenCalledWith(
             mockClient,
@@ -120,7 +120,7 @@ describe('glGetRecentPipelines', () => {
     });
 
     it('returns [] when apiGet returns null', async () => {
-        (apiGet as jest.Mock).mockResolvedValue(null);
+        jest.mocked(apiGet).mockResolvedValue(null);
         const result = await glGetRecentPipelines(mockClient, 'owner', 'repo');
         expect(result).toEqual([]);
     });
@@ -128,7 +128,7 @@ describe('glGetRecentPipelines', () => {
 
 describe('glGetPipeline', () => {
     it('calls apiGet and returns pipeline', async () => {
-        (apiGet as jest.Mock).mockResolvedValue({ id: 42, status: 'success', web_url: 'https://...' });
+        jest.mocked(apiGet).mockResolvedValue({ id: 42, status: 'success', web_url: 'https://...' });
         const result = await glGetPipeline(mockClient, 'owner', 'repo', 42);
         expect(result).toEqual({ id: 42, status: 'success', web_url: 'https://...' });
         expect(apiGet).toHaveBeenCalledWith(mockClient, expect.stringContaining('/pipelines/42'), {
@@ -138,7 +138,7 @@ describe('glGetPipeline', () => {
     });
 
     it('returns null when apiGet returns null', async () => {
-        (apiGet as jest.Mock).mockResolvedValue(null);
+        jest.mocked(apiGet).mockResolvedValue(null);
         const result = await glGetPipeline(mockClient, 'owner', 'repo', 42);
         expect(result).toBeNull();
     });
@@ -146,7 +146,7 @@ describe('glGetPipeline', () => {
 
 describe('glGetPipelineJobs', () => {
     it('returns formatted jobs', async () => {
-        (apiGet as jest.Mock).mockResolvedValue([
+        jest.mocked(apiGet).mockResolvedValue([
             { id: 101, name: 'test', stage: 'test', status: 'success' },
             { id: 102, name: 'build', stage: 'build', status: 'running' },
         ]);
@@ -162,7 +162,7 @@ describe('glGetPipelineJobs', () => {
     });
 
     it('returns [] when apiGet returns null', async () => {
-        (apiGet as jest.Mock).mockResolvedValue(null);
+        jest.mocked(apiGet).mockResolvedValue(null);
         const result = await glGetPipelineJobs(mockClient, 'owner', 'repo', 42);
         expect(result).toEqual([]);
     });
@@ -170,7 +170,7 @@ describe('glGetPipelineJobs', () => {
 
 describe('glListPipelineArtifacts', () => {
     it('returns jobs with artifacts_file', async () => {
-        (apiGet as jest.Mock).mockResolvedValue([
+        jest.mocked(apiGet).mockResolvedValue([
             { id: 101, name: 'test', artifacts_file: { filename: 'results.zip' } },
             { id: 102, name: 'build', artifacts: [] },
             { id: 103, name: 'lint' },
@@ -180,13 +180,13 @@ describe('glListPipelineArtifacts', () => {
     });
 
     it('returns jobs with non-empty artifacts array', async () => {
-        (apiGet as jest.Mock).mockResolvedValue([{ id: 201, name: 'deploy', artifacts: [{ file_type: 'zip' }] }]);
+        jest.mocked(apiGet).mockResolvedValue([{ id: 201, name: 'deploy', artifacts: [{ file_type: 'zip' }] }]);
         const result = await glListPipelineArtifacts(mockClient, 'owner', 'repo', 42);
         expect(result).toEqual([{ id: 201, name: 'deploy' }]);
     });
 
     it('returns [] when apiGet returns null', async () => {
-        (apiGet as jest.Mock).mockResolvedValue(null);
+        jest.mocked(apiGet).mockResolvedValue(null);
         const result = await glListPipelineArtifacts(mockClient, 'owner', 'repo', 42);
         expect(result).toEqual([]);
     });
@@ -194,7 +194,7 @@ describe('glListPipelineArtifacts', () => {
 
 describe('glGetCICDVariables', () => {
     it('calls apiGet and returns variables', async () => {
-        (apiGet as jest.Mock).mockResolvedValue([{ key: 'VAR1', value: 'val1' }]);
+        jest.mocked(apiGet).mockResolvedValue([{ key: 'VAR1', value: 'val1' }]);
         const result = await glGetCICDVariables(mockClient, 'owner', 'repo');
         expect(result).toEqual([{ key: 'VAR1', value: 'val1' }]);
         expect(apiGet).toHaveBeenCalledWith(mockClient, expect.stringContaining('/variables'), {
@@ -205,7 +205,7 @@ describe('glGetCICDVariables', () => {
     });
 
     it('returns [] when apiGet returns null', async () => {
-        (apiGet as jest.Mock).mockResolvedValue(null);
+        jest.mocked(apiGet).mockResolvedValue(null);
         const result = await glGetCICDVariables(mockClient, 'owner', 'repo');
         expect(result).toEqual([]);
     });

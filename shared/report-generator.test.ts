@@ -1,5 +1,6 @@
 jest.mock('fs');
 
+import { nullAs } from './test-utils';
 import { generateHtmlReport, generateCoverageHtml, loadKnownIssues } from './report-generator';
 import type { FlatTest } from './result_parser';
 import type { CoverageEpic, KnownIssue, TestRunTab } from './report-generator';
@@ -131,7 +132,8 @@ describe('generateHtmlReport', () => {
     });
 
     it('handles generateHtmlReport error gracefully', () => {
-        const html = generateHtmlReport(null as unknown as FlatTest[]);
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any — R9: type narrowing from null for null-handling test
+        const html = generateHtmlReport(nullAs<FlatTest[]>());
 
         expect(html).toContain('Error generating report');
     });
@@ -723,8 +725,8 @@ describe('generateHtmlReport', () => {
             { pattern: 'timeout', reason: 'Infra flaky', ticket: 'BUG-1' },
             { pattern: 'login', reason: 'Known SSL issue' },
         ];
-        const mockExists = fs.existsSync as jest.Mock;
-        const mockReadFile = fs.readFileSync as jest.Mock;
+        const mockExists = jest.mocked(fs.existsSync);
+        const mockReadFile = jest.mocked(fs.readFileSync);
         mockExists.mockReset();
         mockReadFile.mockReset();
         mockExists.mockImplementation((p: string) => p === '/tmp/known-issues.json');
@@ -742,8 +744,8 @@ describe('generateHtmlReport', () => {
 
     it('loadKnownIssues handles issues as top-level array', () => {
         const fs = require('fs');
-        const mockExists = fs.existsSync as jest.Mock;
-        const mockReadFile = fs.readFileSync as jest.Mock;
+        const mockExists = jest.mocked(fs.existsSync);
+        const mockReadFile = jest.mocked(fs.readFileSync);
         mockExists.mockReset();
         mockReadFile.mockReset();
         mockExists.mockImplementation((p: string) => p === '/tmp/ki.json');
@@ -759,8 +761,8 @@ describe('generateHtmlReport', () => {
 
     it('loadKnownIssues skips invalid JSON and returns empty array', () => {
         const fs = require('fs');
-        const mockExists = fs.existsSync as jest.Mock;
-        const mockReadFile = fs.readFileSync as jest.Mock;
+        const mockExists = jest.mocked(fs.existsSync);
+        const mockReadFile = jest.mocked(fs.readFileSync);
         mockExists.mockReset();
         mockReadFile.mockReset();
         mockExists.mockImplementation((_p: string) => true);

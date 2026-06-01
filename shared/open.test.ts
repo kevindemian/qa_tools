@@ -15,25 +15,75 @@ import { spawn, spawnSync, execFileSync } from 'child_process';
 import { readFileSync } from 'fs';
 import { openWithOsOrFallback, openWithFallback, getWinTempDir, getDocsOutputDir } from './open';
 
-const mockSpawn = spawn as jest.Mock;
-const mockSpawnSync = spawnSync as jest.Mock;
-const mockExecFileSync = execFileSync as jest.Mock;
+const mockSpawn = jest.mocked(spawn);
+const mockSpawnSync = jest.mocked(spawnSync);
+const mockExecFileSync = jest.mocked(execFileSync);
 
 void mockSpawnSync;
-const mockReadFileSync = readFileSync as jest.Mock;
+const mockReadFileSync = jest.mocked(readFileSync);
 
 function makeMockChild() {
     const handlers: Record<string, (...args: unknown[]) => void> = {};
-    return {
-        on: jest.fn((event: string, handler: (...args: unknown[]) => void) => {
-            handlers[event] = handler;
-        }),
+    const _stdio: [null, null, null, null, null] = [null, null, null, null, null];
+    const mock = {
+        stdin: null,
+        stdout: null,
+        stderr: null,
+        channel: undefined,
+        stdio: _stdio,
+        killed: false,
+        pid: undefined,
+        connected: false,
+        exitCode: null,
+        signalCode: null,
+        spawnargs: [] as string[],
+        spawnfile: '',
+        kill: jest.fn(),
+        send: jest.fn(),
+        disconnect: jest.fn(),
+        ref: jest.fn(),
         unref: jest.fn(),
+        on(event: string, handler: (...args: unknown[]) => void) {
+            handlers[event] = handler;
+            return mock;
+        },
+        once() {
+            return mock;
+        },
+        emit: jest.fn(),
+        addListener() {
+            return mock;
+        },
+        removeListener() {
+            return mock;
+        },
+        removeAllListeners() {
+            return mock;
+        },
+        listeners: jest.fn(),
+        listenerCount: jest.fn(),
+        eventNames: jest.fn(),
+        rawListeners: jest.fn(),
+        prependListener() {
+            return mock;
+        },
+        prependOnceListener() {
+            return mock;
+        },
+        off() {
+            return mock;
+        },
+        getMaxListeners: jest.fn(),
+        setMaxListeners: jest.fn(),
+        [Symbol.dispose]() {
+            /* noop */
+        },
         trigger(event: string, ...args: unknown[]) {
             const fn = handlers[event] as (...args: unknown[]) => void;
             fn(...args);
         },
     };
+    return mock;
 }
 
 let defaultChild: ReturnType<typeof makeMockChild>;
@@ -86,7 +136,7 @@ describe('openWithOsOrFallback', () => {
     });
 
     it('calls fallback when no handler is attached (spawn returns undefined)', async () => {
-        mockSpawn.mockReturnValueOnce(undefined);
+        mockSpawn.mockReset();
         const fallback = jest.fn();
         const result = await openWithOsOrFallback('/some/file', fallback);
         expect(result).toBe(false);

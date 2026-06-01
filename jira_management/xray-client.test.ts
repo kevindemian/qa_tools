@@ -2,6 +2,8 @@ import { createStepImporter } from './xray-client';
 import type JiraResource from './jira_resource';
 import type { TestStep } from '../shared/types';
 import Config from '../shared/config';
+import { createMockConfigInstance } from '../shared/test-utils/factories';
+import { createMockJiraResource } from '../shared/test-utils/factories/jira-resource-factory';
 
 const mockGraphqlMutation = jest.fn();
 
@@ -15,8 +17,8 @@ jest.mock('../shared/config');
 
 describe('ServerStepImporter', () => {
     it('calls postJiraResource with correct endpoint and payload', async () => {
-        const mockJira = { postJiraResource: jest.fn() };
-        const importer = createStepImporter(mockJira as unknown as JiraResource, 'server');
+        const mockJira = createMockJiraResource();
+        const importer = createStepImporter(mockJira, 'server');
         const step: TestStep = { fields: { Action: 'Click', Data: 'Button', 'Expected Result': 'Done' } };
 
         await importer.importStep('TEST-1', 1, step);
@@ -27,24 +29,23 @@ describe('ServerStepImporter', () => {
         });
     });
 
-    it('supports step with raw fields without nesting', async () => {
-        const mockJira = { postJiraResource: jest.fn() };
-        const importer = createStepImporter(mockJira as unknown as JiraResource, 'server');
-        const step = { Action: 'Verify', Data: 'Response', Result: '200' } as unknown as TestStep;
+    it('sends step data in the POST payload', async () => {
+        const mockJira = createMockJiraResource();
+        const importer = createStepImporter(mockJira, 'server');
+        const step: TestStep = { fields: { Action: 'Verify', Data: 'Response', 'Expected Result': '200' } };
 
         await importer.importStep('TEST-2', 2, step);
 
         expect(mockJira.postJiraResource).toHaveBeenCalledWith('test/TEST-2/steps', {
             index: 2,
-            Action: 'Verify',
-            Data: 'Response',
-            Result: '200',
+            fields: { Action: 'Verify', Data: 'Response', 'Expected Result': '200' },
         });
     });
 
     it('propagates post error', async () => {
-        const mockJira = { postJiraResource: jest.fn().mockRejectedValue(new Error('Network error')) };
-        const importer = createStepImporter(mockJira as unknown as JiraResource, 'server');
+        const mockJira = createMockJiraResource();
+        mockJira.postJiraResource.mockRejectedValue(new Error('Network error'));
+        const importer = createStepImporter(mockJira, 'server');
         const step: TestStep = { fields: { Action: 'Click' } };
 
         await expect(importer.importStep('TEST-3', 1, step)).rejects.toThrow('Network error');
@@ -54,15 +55,15 @@ describe('ServerStepImporter', () => {
 describe('CloudStepImporter', () => {
     beforeEach(() => {
         jest.clearAllMocks();
-        (Config.getDefault as jest.Mock).mockReturnValue({
-            get(key: string) {
-                const map: Record<string, string> = {
-                    xrayClientId: 'test-client-id',
-                    xrayClientSecret: 'test-client-secret',
-                };
-                return map[key];
-            },
-        });
+        const mockConfig = createMockConfigInstance();
+        mockConfig.get = function <T = string>(key: string): T {
+            const map: Record<string, string> = {
+                xrayClientId: 'test-client-id',
+                xrayClientSecret: 'test-client-secret',
+            };
+            return (map[key] ?? '') as T;
+        };
+        jest.mocked(Config.getDefault).mockReturnValue(mockConfig);
     });
 
     it('happy path — sends GraphQL mutation via XrayCloudClient', async () => {
@@ -82,12 +83,12 @@ describe('CloudStepImporter', () => {
     });
 
     it('throws on missing credentials', async () => {
-        (Config.getDefault as jest.Mock).mockReturnValue({
-            get(key: string) {
-                const map: Record<string, string> = { xrayClientId: '', xrayClientSecret: '' };
-                return map[key];
-            },
-        });
+        const mockConfig = createMockConfigInstance();
+        mockConfig.get = function <T = string>(key: string): T {
+            const map: Record<string, string> = { xrayClientId: '', xrayClientSecret: '' };
+            return (map[key] ?? '') as T;
+        };
+        jest.mocked(Config.getDefault).mockReturnValue(mockConfig);
 
         const importer = createStepImporter({} as JiraResource, 'cloud');
         const step: TestStep = { fields: { Action: 'Click' } };

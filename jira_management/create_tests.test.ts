@@ -55,7 +55,6 @@ jest.mock('axios', () => {
 });
 
 // 3. THEN import the source modules (they'll get the mocked dependencies)
-import type { JiraResourceLike } from '../shared/types';
 import JiraResource from './jira_resource';
 import JiraLinkManager from './jira_link_manager';
 import TestExecutionCreator from './test-execution-creator';
@@ -75,7 +74,10 @@ const {
 import * as PROMPT from '../shared/prompt';
 import * as STATE from '../shared/state';
 import fs from 'fs';
-import { rootLogger } from '../shared/logger';
+
+import { createMockLogger, nonNull } from '../shared/test-utils';
+import { createMockJiraResource } from '../shared/test-utils/factories/jira-resource-factory';
+import { createMockLinkManager } from '../shared/test-utils/factories/link-manager-factory';
 
 const MOCK_ISSUE_TYPES = [
     { id: '11200', name: 'Epic' },
@@ -104,7 +106,7 @@ describe('createTestExecution', () => {
     let testExecutionCreator: TestExecutionCreator;
 
     beforeEach(() => {
-        jiraResource = new JiraResource('fake-token', 'http://jira/rest/api/2') as jest.Mocked<JiraResource>;
+        jiraResource = jest.mocked(new JiraResource('fake-token', 'http://jira/rest/api/2'));
         jiraResource.getJiraResource = jest.fn();
         jiraResource.postJiraResource = jest.fn();
         const linkManager = new JiraLinkManager(jiraResource);
@@ -126,7 +128,7 @@ describe('createTestExecution', () => {
             csvName: 'meus-testes',
         });
 
-        expect(result!.key).toBe('EXEC-1');
+        expect(nonNull(result).key).toBe('EXEC-1');
         expect(jiraResource.getJiraResource).toHaveBeenCalledWith('issuetype');
         expect(jiraResource.getJiraResource).toHaveBeenCalledWith('field');
         expect(jiraResource.postJiraResource).toHaveBeenCalledWith('issue', {
@@ -154,7 +156,7 @@ describe('createTestExecution', () => {
             csvName: '',
         });
 
-        expect(result!.key).toBe('EXEC-2');
+        expect(nonNull(result).key).toBe('EXEC-2');
         expect(jiraResource.postJiraResource).toHaveBeenCalledWith('issue', {
             fields: {
                 project: { key: PROJECT },
@@ -236,7 +238,7 @@ describe('createTestExecution', () => {
                 summary: 'Custom Title',
             }),
         });
-        expect(result!.key).toBe('EXEC-3');
+        expect(nonNull(result).key).toBe('EXEC-3');
     });
 });
 
@@ -246,11 +248,11 @@ describe('createTestExecutionWithLinks', () => {
     let testExecutionCreator: TestExecutionCreator;
 
     beforeEach(() => {
-        jiraResource = new JiraResource('fake-token', 'http://jira/rest/api/2') as jest.Mocked<JiraResource>;
+        jiraResource = jest.mocked(new JiraResource('fake-token', 'http://jira/rest/api/2'));
         jiraResource.getJiraResource = jest.fn();
         jiraResource.postJiraResource = jest.fn();
 
-        linkJiraRes = new JiraResource('fake-token', 'http://jira/rest/api/2') as jest.Mocked<JiraResource>;
+        linkJiraRes = jest.mocked(new JiraResource('fake-token', 'http://jira/rest/api/2'));
         linkJiraRes.getJiraResource = jest.fn();
         linkJiraRes.postJiraResource = jest.fn();
         linkJiraRes.getJiraResource.mockImplementation((url: string) => {
@@ -283,7 +285,7 @@ describe('createTestExecutionWithLinks', () => {
             execOpts: {},
         });
 
-        expect(result!.key).toBe('EXEC-1');
+        expect(nonNull(result).key).toBe('EXEC-1');
         expect(linkJiraRes.postJiraResource).toHaveBeenCalledWith('issueLink', {
             type: { id: '10201' },
             inwardIssue: { key: 'EXEC-1' },
@@ -318,7 +320,7 @@ describe('createTestExecutionWithLinks', () => {
             (c): c is [string, { outwardIssue: { key: string } }] => c[0] === 'issueLink',
         );
         expect(linkCalls).toHaveLength(1);
-        expect(linkCalls[0]![1].outwardIssue.key).toBe('TEST-2');
+        expect(nonNull(linkCalls[0])[1].outwardIssue.key).toBe('TEST-2');
     });
 
     it('handles link API failure gracefully', async () => {
@@ -339,7 +341,7 @@ describe('createTestExecutionWithLinks', () => {
             execOpts: {},
         });
 
-        expect(result!.key).toBe('EXEC-1');
+        expect(nonNull(result).key).toBe('EXEC-1');
     });
 });
 
@@ -484,17 +486,17 @@ describe('validateCsvTests', () => {
 });
 
 describe('createTestsFromJson', () => {
-    const FS: jest.Mocked<typeof fs> = fs as jest.Mocked<typeof fs>;
+    const FS: jest.Mocked<typeof fs> = jest.mocked(fs);
 
     function makeJiraResource(): jest.Mocked<JiraResource> {
-        const r = new JiraResource('fake-token', 'http://jira/rest/api/2') as jest.Mocked<JiraResource>;
+        const r = jest.mocked(new JiraResource('fake-token', 'http://jira/rest/api/2'));
         r.getJiraResource = jest.fn();
         r.postJiraResource = jest.fn();
         return r;
     }
 
     function makeLinkManager(): JiraLinkManager & { postLink: jest.Mock } {
-        const fakeJira = { get: jest.fn(), post: jest.fn() } as unknown as JiraResource;
+        const fakeJira = createMockJiraResource();
         const lm = new JiraLinkManager(fakeJira) as JiraLinkManager & { postLink: jest.Mock };
         lm.postLink = jest.fn();
         return lm;
@@ -502,20 +504,15 @@ describe('createTestsFromJson', () => {
 
     function BASE_PARAMS() {
         return {
-            jiraResource: makeJiraResource() as unknown as JiraResourceLike,
-            jiraResourceXray: makeJiraResource() as unknown as JiraResourceLike,
+            jiraResource: makeJiraResource(),
+            jiraResourceXray: makeJiraResource(),
             linkManager: makeLinkManager(),
             linkManagerXray: makeLinkManager(),
             project_name: 'TESTPROJ' as const,
             base_url: 'http://jira',
-            sessionLog: {
-                log: jest.fn(),
-                child: jest
-                    .fn()
-                    .mockReturnValue({ log: jest.fn(), warn: jest.fn(), info: jest.fn(), error: jest.fn() }),
-            },
+            sessionLog: createMockLogger(),
             onBusy: jest.fn(),
-        } as unknown as Parameters<typeof createTestsFromJson>[0];
+        } satisfies Parameters<typeof createTestsFromJson>[0];
     }
     afterEach(() => {
         delete process.env.JSON_PATH;
@@ -569,8 +566,8 @@ describe('createTestsFromJson', () => {
         );
         const result = await createTestsFromJson(BASE_PARAMS());
         expect(result).toBeDefined();
-        expect(result!.summary).toContain('2');
-        expect(result!.sourcePath).toBe('/fake/path.json');
+        expect(nonNull(result).summary).toContain('2');
+        expect(nonNull(result).sourcePath).toBe('/fake/path.json');
     });
 
     it('usa state.lastJsonDir para resolver caminho relativo', async () => {
@@ -587,8 +584,8 @@ describe('createTestsFromJson', () => {
         }) as typeof FS.readFileSync);
         const result = await createTestsFromJson(BASE_PARAMS());
         expect(result).toBeDefined();
-        expect(result!.summary).toContain('1');
-        expect(result!.sourcePath).toBe('/base/dir/sub/testes.json');
+        expect(nonNull(result).summary).toContain('1');
+        expect(nonNull(result).sourcePath).toBe('/base/dir/sub/testes.json');
     });
 
     it('parseia precondition como reference (formato ABC-123)', async () => {
@@ -600,7 +597,7 @@ describe('createTestsFromJson', () => {
         );
         const result = await createTestsFromJson(BASE_PARAMS());
         expect(result).toBeDefined();
-        expect(result!.summary).toContain('1');
+        expect(nonNull(result).summary).toContain('1');
     });
 
     it('parseia linkedIssues como strings', async () => {
@@ -612,7 +609,7 @@ describe('createTestsFromJson', () => {
         );
         const result = await createTestsFromJson(BASE_PARAMS());
         expect(result).toBeDefined();
-        expect(result!.summary).toContain('1');
+        expect(nonNull(result).summary).toContain('1');
     });
 
     it('parseia linkedIssues como objetos', async () => {
@@ -626,7 +623,7 @@ describe('createTestsFromJson', () => {
         );
         const result = await createTestsFromJson(BASE_PARAMS());
         expect(result).toBeDefined();
-        expect(result!.summary).toContain('1');
+        expect(nonNull(result).summary).toContain('1');
     });
 });
 
@@ -634,25 +631,22 @@ describe('readCsvTests (via createTestsFromCsv)', () => {
     let csvResource: jest.Mocked<CsvResource>;
 
     function makeJiraResForCsv(): jest.Mocked<JiraResource> {
-        const r = new JiraResource('fake-token', 'http://jira/rest/api/2') as jest.Mocked<JiraResource>;
+        const r = jest.mocked(new JiraResource('fake-token', 'http://jira/rest/api/2'));
         r.getJiraResource = jest.fn();
         r.postJiraResource = jest.fn();
         return r;
     }
 
     function makeLinkMgrForCsv(): JiraLinkManager {
-        const fakeJira = { get: jest.fn(), post: jest.fn() } as unknown as JiraResource;
+        const fakeJira = createMockJiraResource();
         return new JiraLinkManager(fakeJira);
     }
 
     function makeCsvArgs(overrides: Record<string, unknown> = {}) {
-        const sessionLog = {
-            log: jest.fn(),
-            child: jest.fn().mockReturnValue({ log: jest.fn(), warn: jest.fn(), info: jest.fn(), error: jest.fn() }),
-        } as unknown as ReturnType<typeof rootLogger.child>;
+        const sessionLog = createMockLogger();
         return {
-            jiraResource: makeJiraResForCsv() as unknown as JiraResourceLike,
-            jiraResourceXray: makeJiraResForCsv() as unknown as JiraResourceLike,
+            jiraResource: makeJiraResForCsv(),
+            jiraResourceXray: makeJiraResForCsv(),
             linkManager: makeLinkMgrForCsv(),
             linkManagerXray: makeLinkMgrForCsv(),
             csvResource,
@@ -661,12 +655,12 @@ describe('readCsvTests (via createTestsFromCsv)', () => {
             sessionLog,
             onBusy: jest.fn(),
             ...overrides,
-        } as unknown as Parameters<typeof createTestsFromCsv>[0];
+        } satisfies Parameters<typeof createTestsFromCsv>[0];
     }
 
     beforeEach(() => {
         jest.clearAllMocks();
-        csvResource = new CsvResource() as jest.Mocked<CsvResource>;
+        csvResource = jest.mocked(new CsvResource());
         csvResource.readBulkCsv = jest.fn();
     });
 
@@ -687,7 +681,20 @@ describe('readCsvTests (via createTestsFromCsv)', () => {
 
 describe('updateCrossReferences', () => {
     it('delegates to linker', async () => {
-        const linker = { updateCrossReferences: jest.fn().mockResolvedValue(undefined) } as unknown as IssueLinker;
+        const linker: IssueLinker = {
+            jiraResource: {
+                getJiraResource: jest.fn(),
+                postJiraResource: jest.fn(),
+                putJiraResource: jest.fn(),
+                searchJiraIssues: jest.fn(),
+                getTransitionsForIssue: jest.fn(),
+                transitionIssue: jest.fn(),
+            },
+            linkManager: createMockLinkManager(),
+            associatePrecondition: jest.fn(),
+            linkIssues: jest.fn(),
+            updateCrossReferences: jest.fn().mockResolvedValue(undefined),
+        };
         const tests: TestCase[] = [{ title: 'T1', steps: [], group: 'g1' }];
         await updateCrossReferences(linker, tests, ['T-1']);
         expect(linker.updateCrossReferences).toHaveBeenCalledWith(tests, ['T-1']);
@@ -698,35 +705,31 @@ describe('createTestsFromCsv', () => {
     let csvResource: jest.Mocked<CsvResource>;
 
     function makeJiraResCSV(): jest.Mocked<JiraResource> {
-        const r = new JiraResource('fake-token', 'http://jira/rest/api/2') as jest.Mocked<JiraResource>;
+        const r = jest.mocked(new JiraResource('fake-token', 'http://jira/rest/api/2'));
         r.getJiraResource = jest.fn();
         r.postJiraResource = jest.fn();
         return r;
     }
 
-    function makeFullArgs(overrides: Record<string, unknown> = {}) {
-        const sessionLog = {
-            log: jest.fn(),
-            child: jest.fn().mockReturnValue({ log: jest.fn(), warn: jest.fn(), info: jest.fn(), error: jest.fn() }),
-        } as unknown as ReturnType<typeof rootLogger.child>;
-        return {
-            jiraResource: makeJiraResCSV() as unknown as JiraResourceLike,
-            jiraResourceXray: makeJiraResCSV() as unknown as JiraResourceLike,
-            linkManager: new JiraLinkManager({} as never),
-            linkManagerXray: new JiraLinkManager({} as never),
+    function makeFullArgs(overrides: Partial<Parameters<typeof createTestsFromCsv>[0]> = {}) {
+        const base: Parameters<typeof createTestsFromCsv>[0] = {
+            jiraResource: makeJiraResCSV(),
+            jiraResourceXray: makeJiraResCSV(),
+            linkManager: new JiraLinkManager(createMockJiraResource()),
+            linkManagerXray: new JiraLinkManager(createMockJiraResource()),
             csvResource,
-            project_name: 'TESTPROJ',
-            base_url: 'http://jira',
-            sessionLog,
+            project_name: 'TESTPROJ' as const,
+            base_url: 'http://jira' as const,
+            sessionLog: createMockLogger(),
             onBusy: jest.fn(),
-            csvPath: '/test.csv',
-            ...overrides,
-        } as unknown as Parameters<typeof createTestsFromCsv>[0];
+            csvPath: '/test.csv' as const,
+        };
+        return { ...base, ...overrides };
     }
 
     beforeEach(() => {
         jest.clearAllMocks();
-        csvResource = new CsvResource() as jest.Mocked<CsvResource>;
+        csvResource = jest.mocked(new CsvResource());
         csvResource.readBulkCsv = jest.fn();
     });
 
@@ -738,6 +741,6 @@ describe('createTestsFromCsv', () => {
         csvResource.readBulkCsv.mockResolvedValue([{ title: 'TC1', steps: [{ fields: { Action: 'Click' } }] }]);
         const result = await createTestsFromCsv(makeFullArgs());
         expect(result).toBeDefined();
-        expect(result!.summary).toContain('1');
+        expect(nonNull(result).summary).toContain('1');
     });
 });

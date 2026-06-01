@@ -19,8 +19,8 @@ import { reviewWithLlm } from './llm-review';
 import { analyzeFailuresWithReport, classifyFailure } from './failure-analysis';
 import type { FlatTest } from './result_parser';
 
-const mockReviewWithLlm = reviewWithLlm as jest.MockedFunction<typeof reviewWithLlm>;
-const mockLlmPrompt = llmPrompt as jest.MockedFunction<typeof llmPrompt>;
+const mockReviewWithLlm = jest.mocked(reviewWithLlm);
+const mockLlmPrompt = jest.mocked(llmPrompt);
 
 beforeEach(() => {
     jest.clearAllMocks();
@@ -37,7 +37,7 @@ describe('analyzeFailuresWithReport', () => {
 
     it('passes LlmContext to reviewWithLlm when provided', async () => {
         const promptContent = 'Analyze these failures:\n{{FAILED_TESTS}}';
-        (fs.readFileSync as jest.Mock).mockReturnValue(promptContent);
+        jest.mocked(fs.readFileSync).mockReturnValue(promptContent);
         mockReviewWithLlm.mockResolvedValueOnce({
             content: 'Root cause with context',
             reviewed: true,
@@ -65,7 +65,7 @@ describe('analyzeFailuresWithReport', () => {
     it('23.9: analyzeFailuresWithReport HTML exception path', async () => {
         // Mock to trigger exception during HTML report generation
         const promptContent = 'Analyze these failures:\n{{FAILED_TESTS}}';
-        (fs.readFileSync as jest.Mock).mockReturnValue(promptContent);
+        jest.mocked(fs.readFileSync).mockReturnValue(promptContent);
 
         // Mock reviewWithLlm to fail or behave in a way that generates error in report generation
         mockReviewWithLlm.mockRejectedValueOnce(new Error('HTML report generation failed'));
@@ -79,7 +79,7 @@ describe('analyzeFailuresWithReport', () => {
 
     it('23.10: HTML report output verified', async () => {
         const promptContent = 'Analyze these failures:\n{{FAILED_TESTS}}';
-        (fs.readFileSync as jest.Mock).mockReturnValue(promptContent);
+        jest.mocked(fs.readFileSync).mockReturnValue(promptContent);
         mockReviewWithLlm.mockResolvedValueOnce({
             content: 'Root cause: assertion error',
             reviewed: true,
@@ -93,7 +93,7 @@ describe('analyzeFailuresWithReport', () => {
     });
 
     it('handles missing prompt template gracefully', async () => {
-        (fs.readFileSync as jest.Mock).mockImplementation(() => {
+        jest.mocked(fs.readFileSync).mockImplementation(() => {
             throw new Error('ENOENT');
         });
 
@@ -104,7 +104,7 @@ describe('analyzeFailuresWithReport', () => {
     });
 
     it('returns fallback=true when template is missing', async () => {
-        (fs.readFileSync as jest.Mock).mockImplementation(() => {
+        jest.mocked(fs.readFileSync).mockImplementation(() => {
             throw new Error('ENOENT');
         });
 
@@ -118,7 +118,7 @@ describe('analyzeFailuresWithReport', () => {
 describe('classifyFailure', () => {
     it('calls llmPrompt (fast tier) with test title and Zod schema', async () => {
         const promptContent = 'Classify: ';
-        (fs.readFileSync as jest.Mock).mockReturnValue(promptContent);
+        jest.mocked(fs.readFileSync).mockReturnValue(promptContent);
         mockLlmPrompt.mockResolvedValueOnce('ASSERTION: expected true but got false');
 
         const result = await classifyFailure('Login test', 'expected true, got false');
@@ -134,7 +134,7 @@ describe('classifyFailure', () => {
 
     it('returns valid classification when llmPrompt returns matching format', async () => {
         const promptContent = 'Classify: ';
-        (fs.readFileSync as jest.Mock).mockReturnValue(promptContent);
+        jest.mocked(fs.readFileSync).mockReturnValue(promptContent);
         mockLlmPrompt.mockResolvedValueOnce('ASSERTION: expected 200 got 500');
 
         const result = await classifyFailure('Login test', 'expected 200, got 500');
@@ -143,7 +143,7 @@ describe('classifyFailure', () => {
 
     it('falls back to UNKNOWN when llmPrompt throws (Zod validation failed after retry)', async () => {
         const promptContent = 'Classify: ';
-        (fs.readFileSync as jest.Mock).mockReturnValue(promptContent);
+        jest.mocked(fs.readFileSync).mockReturnValue(promptContent);
         mockLlmPrompt.mockRejectedValueOnce(new Error('LLM response failed schema validation after retry'));
 
         const result = await classifyFailure('Login test', 'some error');
@@ -151,7 +151,9 @@ describe('classifyFailure', () => {
     });
 
     it('returns UNKNOWN when classify.md cannot be read', async () => {
-        (fs.readFileSync as jest.Mock).mockReturnValue(undefined);
+        jest.mocked(fs.readFileSync).mockImplementation(() => {
+            throw new Error('ENOENT');
+        });
         const result = await classifyFailure('Login test', 'error');
         expect(result).toBe('UNKNOWN: Could not load prompt template');
     });

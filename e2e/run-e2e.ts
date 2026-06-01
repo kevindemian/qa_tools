@@ -322,7 +322,7 @@ async function verifyNewTestCase(): Promise<boolean> {
     if (!createdIssueKey) return true;
 
     try {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Jira API polymorphic response shape
         const issue: any = await getIssueRaw(createdIssueKey);
         const f = issue.fields as Record<string, unknown> | undefined;
         if (!f) {

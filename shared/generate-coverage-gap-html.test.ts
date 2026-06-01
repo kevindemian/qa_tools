@@ -1,3 +1,4 @@
+import { nullAs } from './test-utils';
 import { generateCoverageGapHtml } from './generate-coverage-gap-html';
 import type { CoverageGapResult } from './types';
 
@@ -144,7 +145,7 @@ describe('generateCoverageGapHtml', () => {
     });
 
     it('returns error HTML on invalid input', () => {
-        const result = generateCoverageGapHtml(null as never);
+        const result = generateCoverageGapHtml(nullAs());
         expect(result).toContain('Error generating coverage gap report');
     });
 

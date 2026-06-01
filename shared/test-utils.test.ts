@@ -1,18 +1,46 @@
-import { createConsoleSpies, restoreConsoleSpies, withEnv, makeMockCommandContext } from './test-utils';
+import {
+    createConsoleSpies,
+    nonNull,
+    restoreConsoleSpies,
+    withEnv,
+    makeMockCommandContext,
+    nullAs,
+    undefinedAs,
+} from './test-utils';
+import type { CommandContext } from '../jira_management/commands/context';
+
+describe('nullAs', () => {
+    it('returns null typed as T', () => {
+        const v = nullAs<{ x: number }>();
+        expect(v).toBeNull();
+    });
+});
+
+describe('undefinedAs', () => {
+    it('returns undefined typed as T', () => {
+        const v = undefinedAs<{ x: number }>();
+        expect(v).toBeUndefined();
+    });
+});
 
 describe('makeMockCommandContext', () => {
     it('returns a context with all standard fields', () => {
         const ctx = makeMockCommandContext();
-        expect(ctx).toHaveProperty('jiraResource', {});
-        expect(ctx).toHaveProperty('jiraResourceXray', {});
-        expect(ctx).toHaveProperty('linkManager', {});
-        expect(ctx).toHaveProperty('linkManagerXray', {});
-        expect(ctx).toHaveProperty('csvResource', {});
-        expect(ctx).toHaveProperty('base_url', 'https://jira.test.com');
+        expect(ctx).toHaveProperty('jiraResource');
+        expect(ctx).toHaveProperty('jiraResourceXray');
+        expect(ctx).toHaveProperty('linkManager');
+        expect(ctx).toHaveProperty('linkManagerXray');
+        expect(ctx).toHaveProperty('csvResource');
+        expect(ctx.base_url).toBe('https://jira.test.com');
         expect(ctx).toHaveProperty('ctx');
         expect(typeof ctx.pushHistory).toBe('function');
         expect(typeof ctx.printSessionSummary).toBe('function');
         expect(typeof ctx.sessionLog).toBe('object');
+    });
+
+    it('returns correct type assignable to CommandContext', () => {
+        const ctx: CommandContext = makeMockCommandContext();
+        expect(ctx.base_url).toBe('https://jira.test.com');
     });
 
     it('creates fresh jest mock functions each call', () => {
@@ -27,16 +55,45 @@ describe('makeMockCommandContext', () => {
     });
 
     it('shallow-merges ctx overrides with default ctx', () => {
-        const ctx = makeMockCommandContext({ ctx: { extraField: 'hello' } });
-        const mergedCtx = ctx.ctx as Record<string, unknown>;
-        expect(mergedCtx.project_name).toBe('TEST');
-        expect(mergedCtx.extraField).toBe('hello');
+        const ctx = makeMockCommandContext({ ctx: { project_name: 'OVERWRITE' } });
+        expect(ctx.ctx.project_name).toBe('OVERWRITE');
     });
 
     it('ctx override replaces default field with same key', () => {
         const ctx = makeMockCommandContext({ ctx: { project_name: 'OVERRIDE' } });
-        const mergedCtx = ctx.ctx as Record<string, unknown>;
-        expect(mergedCtx.project_name).toBe('OVERRIDE');
+        expect(ctx.ctx.project_name).toBe('OVERRIDE');
+    });
+});
+
+describe('nonNull', () => {
+    it('returns the value when non-null', () => {
+        expect(nonNull(42)).toBe(42);
+    });
+
+    it('returns the value for empty string', () => {
+        expect(nonNull('')).toBe('');
+    });
+
+    it('returns the value for zero', () => {
+        expect(nonNull(0)).toBe(0);
+    });
+
+    it('throws for null', () => {
+        expect(() => nonNull(null)).toThrow('Expected non-nullable value');
+    });
+
+    it('throws for undefined', () => {
+        expect(() => nonNull(undefined)).toThrow('Expected non-nullable value');
+    });
+
+    it('uses custom error message', () => {
+        expect(() => nonNull(null, 'my message')).toThrow('my message');
+    });
+
+    it('narrows the type for subsequent access', () => {
+        const x: string | null = 'hello';
+        const result = nonNull(x);
+        expect(result.length).toBe(5);
     });
 });
 

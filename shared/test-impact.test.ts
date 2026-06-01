@@ -9,16 +9,18 @@ jest.mock('./logger', () => ({
 
 import { execFileSync } from 'child_process';
 import { existsSync, readFileSync } from 'fs';
+import type { PathLike } from 'fs';
+import { nonNull } from './test-utils';
 import { analyzeTestImpact, generateTestSelectionJson } from './test-impact';
 
-const mockExecFileSync = execFileSync as jest.Mock;
-const mockExistsSync = existsSync as jest.Mock;
-const mockReadFileSync = readFileSync as jest.Mock;
+const mockExecFileSync = jest.mocked(execFileSync);
+const mockExistsSync = jest.mocked(existsSync);
+const mockReadFileSync = jest.mocked(readFileSync);
 
 function mockPackageJson(hasJest: boolean): void {
-    mockExistsSync.mockImplementation((p: string) => p.includes('package.json'));
-    mockReadFileSync.mockImplementation((p: string) => {
-        if (p.includes('package.json')) {
+    mockExistsSync.mockImplementation((p: PathLike) => typeof p === 'string' && p.includes('package.json'));
+    mockReadFileSync.mockImplementation((p) => {
+        if (typeof p === 'string' && p.includes('package.json')) {
             return JSON.stringify({
                 devDependencies: hasJest ? { jest: '^29.0.0' } : {},
             });
@@ -35,8 +37,8 @@ describe('analyzeTestImpact', () => {
     describe('Tier 1 — jest --findRelatedTests', () => {
         it('returns high confidence when jest finds tests', () => {
             mockPackageJson(true);
-            mockExecFileSync.mockImplementation((_cmd: string, args: string[]) => {
-                if (args.includes('--listTests')) {
+            mockExecFileSync.mockImplementation((_cmd: string, args?: readonly string[]) => {
+                if (args?.includes('--listTests')) {
                     return '/path/to/login.test.ts\n/path/to/auth.test.ts';
                 }
                 return '';
@@ -46,14 +48,14 @@ describe('analyzeTestImpact', () => {
 
             expect(result.confidence).toBe('high');
             expect(result.impactedTests).toHaveLength(2);
-            expect(result.impactedTests[0]!.matchMode).toBe('jest_find_related');
+            expect(nonNull(result.impactedTests[0]).matchMode).toBe('jest_find_related');
             expect(result.changedFiles).toEqual(['src/login.ts', 'src/auth.ts']);
         });
 
         it('generates suggested command when jest is available', () => {
             mockPackageJson(true);
-            mockExecFileSync.mockImplementation((_cmd: string, args: string[]) => {
-                if (args.includes('--listTests')) {
+            mockExecFileSync.mockImplementation((_cmd: string, args?: readonly string[]) => {
+                if (args?.includes('--listTests')) {
                     return '/path/to/login.test.ts\n/path/to/auth.test.ts';
                 }
                 return '';
@@ -71,8 +73,8 @@ describe('analyzeTestImpact', () => {
                 testTitles: ['Login test', 'Logout test'],
             });
             expect(result.impactedTests).toHaveLength(1);
-            expect(result.impactedTests[0]!.title).toBe('Login test');
-            expect(result.impactedTests[0]!.matchMode).toBe('keyword');
+            expect(nonNull(result.impactedTests[0]).title).toBe('Login test');
+            expect(nonNull(result.impactedTests[0]).matchMode).toBe('keyword');
             expect(result.confidence).toBe('medium');
         });
     });
@@ -80,16 +82,16 @@ describe('analyzeTestImpact', () => {
     describe('Tier 3 — explicit mapping', () => {
         it('returns high confidence from mapping file', () => {
             mockPackageJson(false);
-            mockExistsSync.mockImplementation((p: string) => {
-                if (p.includes('package.json')) return true;
-                if (p.includes('test-mapping.json')) return true;
+            mockExistsSync.mockImplementation((p: PathLike) => {
+                if (typeof p === 'string' && p.includes('package.json')) return true;
+                if (typeof p === 'string' && p.includes('test-mapping.json')) return true;
                 return false;
             });
-            mockReadFileSync.mockImplementation((p: string) => {
-                if (p.includes('package.json')) {
+            mockReadFileSync.mockImplementation((p) => {
+                if (typeof p === 'string' && p.includes('package.json')) {
                     return JSON.stringify({ devDependencies: {} });
                 }
-                if (p.includes('test-mapping.json')) {
+                if (typeof p === 'string' && p.includes('test-mapping.json')) {
                     return JSON.stringify([
                         {
                             files: ['src/login.ts'],
@@ -107,9 +109,9 @@ describe('analyzeTestImpact', () => {
             });
 
             expect(result.impactedTests).toHaveLength(1);
-            expect(result.impactedTests[0]!.testKey).toBe('PROJ-42');
-            expect(result.impactedTests[0]!.title).toBe('Login com SSO');
-            expect(result.impactedTests[0]!.matchMode).toBe('mapping');
+            expect(nonNull(result.impactedTests[0]).testKey).toBe('PROJ-42');
+            expect(nonNull(result.impactedTests[0]).title).toBe('Login com SSO');
+            expect(nonNull(result.impactedTests[0]).matchMode).toBe('mapping');
             expect(result.confidence).toBe('high');
         });
     });
@@ -117,22 +119,22 @@ describe('analyzeTestImpact', () => {
     describe('all 3 tiers combined', () => {
         it('deduplicates tests across tiers with priority mapping > jest > keyword', () => {
             mockPackageJson(true);
-            mockExistsSync.mockImplementation((p: string) => {
-                if (p.includes('package.json')) return true;
-                if (p.includes('test-mapping.json')) return true;
+            mockExistsSync.mockImplementation((p: PathLike) => {
+                if (typeof p === 'string' && p.includes('package.json')) return true;
+                if (typeof p === 'string' && p.includes('test-mapping.json')) return true;
                 return false;
             });
-            mockExecFileSync.mockImplementation((_cmd: string, args: string[]) => {
-                if (args.includes('--listTests')) {
+            mockExecFileSync.mockImplementation((_cmd: string, args?: readonly string[]) => {
+                if (args?.includes('--listTests')) {
                     return '/path/to/login.test.ts\n/path/to/auth.test.ts';
                 }
                 return '';
             });
-            mockReadFileSync.mockImplementation((p: string) => {
-                if (p.includes('package.json')) {
+            mockReadFileSync.mockImplementation((p) => {
+                if (typeof p === 'string' && p.includes('package.json')) {
                     return JSON.stringify({ devDependencies: { jest: '^29.0.0' } });
                 }
-                if (p.includes('test-mapping.json')) {
+                if (typeof p === 'string' && p.includes('test-mapping.json')) {
                     return JSON.stringify([
                         {
                             files: ['src/login.ts'],
@@ -169,11 +171,11 @@ describe('analyzeTestImpact', () => {
             expect(titles).toContain('Auth test');
 
             const loginTest = result.impactedTests.find((t) => t.title === 'Login test');
-            expect(loginTest!.matchMode).toBe('mapping');
-            expect(loginTest!.testKey).toBe('PROJ-42');
+            expect(nonNull(loginTest).matchMode).toBe('mapping');
+            expect(nonNull(loginTest).testKey).toBe('PROJ-42');
 
             const authTest = result.impactedTests.find((t) => t.title === 'auth');
-            expect(authTest!.matchMode).toBe('jest_find_related');
+            expect(nonNull(authTest).matchMode).toBe('jest_find_related');
         });
     });
 
@@ -204,8 +206,8 @@ describe('analyzeTestImpact', () => {
         });
 
         it('handles malformed package.json gracefully', () => {
-            mockExistsSync.mockImplementation((p: string) => {
-                if (p.includes('package.json')) return true;
+            mockExistsSync.mockImplementation((p: PathLike) => {
+                if (typeof p === 'string' && p.includes('package.json')) return true;
                 return false;
             });
             mockReadFileSync.mockImplementation(() => {
@@ -231,8 +233,8 @@ describe('analyzeTestImpact', () => {
     describe('confidence labeling', () => {
         it('sets high when jest found tests', () => {
             mockPackageJson(true);
-            mockExecFileSync.mockImplementation((_cmd: string, args: string[]) => {
-                if (args.includes('--listTests')) return 'test.test.ts';
+            mockExecFileSync.mockImplementation((_cmd: string, args?: readonly string[]) => {
+                if (args?.includes('--listTests')) return 'test.test.ts';
                 return '';
             });
             const result = analyzeTestImpact('src/file.ts');
@@ -241,16 +243,16 @@ describe('analyzeTestImpact', () => {
 
         it('sets high when mapping found tests', () => {
             mockPackageJson(false);
-            mockExistsSync.mockImplementation((p: string) => {
-                if (p.includes('package.json')) return true;
-                if (p.includes('mapping.json')) return true;
+            mockExistsSync.mockImplementation((p: PathLike) => {
+                if (typeof p === 'string' && p.includes('package.json')) return true;
+                if (typeof p === 'string' && p.includes('mapping.json')) return true;
                 return false;
             });
-            mockReadFileSync.mockImplementation((p: string) => {
-                if (p.includes('package.json')) {
+            mockReadFileSync.mockImplementation((p) => {
+                if (typeof p === 'string' && p.includes('package.json')) {
                     return JSON.stringify({ devDependencies: {} });
                 }
-                if (p.includes('mapping.json')) {
+                if (typeof p === 'string' && p.includes('mapping.json')) {
                     return JSON.stringify([
                         {
                             files: ['src/file.ts'],
@@ -305,9 +307,9 @@ describe('generateTestSelectionJson', () => {
         const json = generateTestSelectionJson(result);
         expect(json.changedFiles).toEqual(['src/login.ts']);
         expect(json.impactedTests).toHaveLength(1);
-        expect(json.impactedTests[0]!.title).toBe('Login test');
-        expect(json.impactedTests[0]!.testKey).toBe('PROJ-42');
-        expect(json.impactedTests[0]!.matchMode).toBe('jest_find_related');
+        expect(nonNull(json.impactedTests[0]).title).toBe('Login test');
+        expect(nonNull(json.impactedTests[0]).testKey).toBe('PROJ-42');
+        expect(nonNull(json.impactedTests[0]).matchMode).toBe('jest_find_related');
         expect(json.suggestedCommand).toBe('npx jest --findRelatedTests src/login.ts');
         expect(json.confidence).toBe('high');
         expect(json.conservative).toBe(false);
@@ -355,7 +357,7 @@ describe('generateTestSelectionJson', () => {
         };
         const json = generateTestSelectionJson(result);
         expect(json.confidence).toBe('high');
-        expect(json.impactedTests[0]!.filePattern).toBe('src/a.ts');
-        expect(json.impactedTests[0]!.matchMode).toBe('mapping');
+        expect(nonNull(json.impactedTests[0]).filePattern).toBe('src/a.ts');
+        expect(nonNull(json.impactedTests[0]).matchMode).toBe('mapping');
     });
 });

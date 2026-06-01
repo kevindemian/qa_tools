@@ -44,21 +44,23 @@ jest.mock('./prompt-ui', () => {
     const actual = jest.requireActual('./prompt-ui');
     return {
         ...actual,
-        getConfig: jest.fn(() => ({
-            get: (key: string) => {
+        getConfig: jest.fn(() => {
+            const cfg = new (jest.requireActual('./config-accessor').default)();
+            cfg.get = <T>(key: string): T => {
                 const v: Record<string, unknown> = { quiet: false, autoConfirm: false };
-                return v[key] as boolean;
-            },
-        })),
+                return v[key] as T;
+            };
+            return cfg;
+        }),
         warn: jest.fn(),
         icon: jest.fn(() => '!'),
     };
 });
 
-jest.mock('readline', () => {
-    const mockRl = { question: jest.fn(), on: jest.fn(), close: jest.fn() };
-    return { createInterface: jest.fn(() => mockRl), _testRl: mockRl };
-});
+const mockRlForReadline = { question: jest.fn(), on: jest.fn(), close: jest.fn() };
+jest.mock('readline', () => ({
+    createInterface: jest.fn(() => mockRlForReadline),
+}));
 
 jest.mock('@inquirer/input', () => ({ default: jest.fn() }));
 jest.mock('@inquirer/select', () => ({ default: jest.fn() }));
@@ -68,25 +70,20 @@ import * as fs from 'fs';
 import * as os from 'os';
 import * as path from 'path';
 import readlineSync from 'readline-sync';
-import { CancelError } from './prompt-ui';
-import { getConfig } from './prompt-ui';
+import ConfigAccessor from './config-accessor';
+import { CancelError, getConfig } from './prompt-ui';
 import { filePathCompleter, askFilePath } from './prompt-input-filepath';
-import * as readline from 'readline';
-
-interface _MockRl {
-    question: jest.Mock;
-    on: jest.Mock;
-    close: jest.Mock;
-}
-const _mockRl = (readline as unknown as { _testRl: _MockRl })._testRl;
+const _mockRl = mockRlForReadline;
 
 const mockReadlineQuestion = jest.spyOn(readlineSync, 'question').mockImplementation(() => '');
-const mockGetConfig = getConfig as jest.Mock;
+const mockGetConfig = jest.mocked(getConfig);
 
 beforeEach(() => {
     jest.clearAllMocks();
     mockReadlineQuestion.mockReturnValue('');
-    mockGetConfig.mockReturnValue({ get: (k: string) => ({ quiet: false, autoConfirm: false })[k] });
+    const cfg = ConfigAccessor.create();
+    cfg.get = <T>(k: string) => ({ quiet: false, autoConfirm: false })[k] as T;
+    mockGetConfig.mockReturnValue(cfg);
 });
 
 describe('filePathCompleter', () => {

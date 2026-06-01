@@ -1,4 +1,5 @@
 import { apiGet, apiPost, apiPatch, formatDiffResponse } from './github-api';
+import { createMockAxiosInstance } from '../shared/test-utils/factories/response-factory';
 import type { AxiosInstance } from 'axios';
 
 jest.mock('../shared/logger', () => ({
@@ -17,46 +18,40 @@ describe('apiGet', () => {
     let client: jest.Mocked<AxiosInstance>;
 
     beforeEach(() => {
-        client = {
-            get: jest.fn(),
-            post: jest.fn(),
-            put: jest.fn(),
-            patch: jest.fn(),
-            delete: jest.fn(),
-        } as unknown as jest.Mocked<AxiosInstance>;
+        client = createMockAxiosInstance();
     });
 
     it('returns data on successful GET', async () => {
-        (client.get as jest.Mock).mockResolvedValue({ data: { id: 1, name: 'test' } });
+        jest.mocked(client.get).mockResolvedValue({ data: { id: 1, name: 'test' } });
         const result = await apiGet(client, '/test');
         expect(result).toEqual({ id: 1, name: 'test' });
     });
 
     it('passes params to client.get when provided', async () => {
-        (client.get as jest.Mock).mockResolvedValue({ data: [] });
+        jest.mocked(client.get).mockResolvedValue({ data: [] });
         await apiGet(client, '/test', { params: { page: 2, per_page: 10 } });
         expect(client.get).toHaveBeenCalledWith('/test', { params: { page: 2, per_page: 10 } });
     });
 
     it('calls get without params when params not provided', async () => {
-        (client.get as jest.Mock).mockResolvedValue({ data: 'ok' });
+        jest.mocked(client.get).mockResolvedValue({ data: 'ok' });
         await apiGet(client, '/test');
         expect(client.get).toHaveBeenCalledWith('/test');
     });
 
     it('returns null on error when returnNull is set', async () => {
-        (client.get as jest.Mock).mockRejectedValue(new Error('fail'));
+        jest.mocked(client.get).mockRejectedValue(new Error('fail'));
         const result = await apiGet(client, '/test', { returnNull: true });
         expect(result).toBeNull();
     });
 
     it('throws on error when returnNull is not set', async () => {
-        (client.get as jest.Mock).mockRejectedValue(new Error('fail'));
+        jest.mocked(client.get).mockRejectedValue(new Error('fail'));
         await expect(apiGet(client, '/test')).rejects.toThrow('fail');
     });
 
     it('uses operation string in error context when provided', async () => {
-        (client.get as jest.Mock).mockRejectedValue(new Error('fail'));
+        jest.mocked(client.get).mockRejectedValue(new Error('fail'));
         await expect(apiGet(client, '/test', { operation: 'my operation' })).rejects.toThrow('fail');
     });
 });
@@ -65,30 +60,24 @@ describe('apiPost', () => {
     let client: jest.Mocked<AxiosInstance>;
 
     beforeEach(() => {
-        client = {
-            get: jest.fn(),
-            post: jest.fn(),
-            put: jest.fn(),
-            patch: jest.fn(),
-            delete: jest.fn(),
-        } as unknown as jest.Mocked<AxiosInstance>;
+        client = createMockAxiosInstance();
     });
 
     it('returns data on successful POST with body', async () => {
-        (client.post as jest.Mock).mockResolvedValue({ data: { id: 42 } });
+        jest.mocked(client.post).mockResolvedValue({ data: { id: 42 } });
         const result = await apiPost(client, '/test', { name: 'foo' });
         expect(result).toEqual({ id: 42 });
         expect(client.post).toHaveBeenCalledWith('/test', { name: 'foo' });
     });
 
     it('calls POST without body when body is undefined', async () => {
-        (client.post as jest.Mock).mockResolvedValue({ data: null });
+        jest.mocked(client.post).mockResolvedValue({ data: null });
         await apiPost(client, '/test');
         expect(client.post).toHaveBeenCalledWith('/test');
     });
 
     it('throws on error', async () => {
-        (client.post as jest.Mock).mockRejectedValue(new Error('post fail'));
+        jest.mocked(client.post).mockRejectedValue(new Error('post fail'));
         await expect(apiPost(client, '/test', {})).rejects.toThrow('post fail');
     });
 });
@@ -97,30 +86,24 @@ describe('apiPatch', () => {
     let client: jest.Mocked<AxiosInstance>;
 
     beforeEach(() => {
-        client = {
-            get: jest.fn(),
-            post: jest.fn(),
-            put: jest.fn(),
-            patch: jest.fn(),
-            delete: jest.fn(),
-        } as unknown as jest.Mocked<AxiosInstance>;
+        client = createMockAxiosInstance();
     });
 
     it('returns data on successful PATCH with body', async () => {
-        (client.patch as jest.Mock).mockResolvedValue({ data: { updated: true } });
+        jest.mocked(client.patch).mockResolvedValue({ data: { updated: true } });
         const result = await apiPatch(client, '/test', { title: 'new' });
         expect(result).toEqual({ updated: true });
         expect(client.patch).toHaveBeenCalledWith('/test', { title: 'new' });
     });
 
     it('calls PATCH without body when body is undefined', async () => {
-        (client.patch as jest.Mock).mockResolvedValue({ data: {} });
+        jest.mocked(client.patch).mockResolvedValue({ data: {} });
         await apiPatch(client, '/test');
         expect(client.patch).toHaveBeenCalledWith('/test');
     });
 
     it('throws on error', async () => {
-        (client.patch as jest.Mock).mockRejectedValue(new Error('patch fail'));
+        jest.mocked(client.patch).mockRejectedValue(new Error('patch fail'));
         await expect(apiPatch(client, '/test', {})).rejects.toThrow('patch fail');
     });
 });

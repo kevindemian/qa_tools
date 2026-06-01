@@ -78,7 +78,7 @@ import {
 } from './prompt-ui';
 import Config from './config';
 
-const mockIsTTY = Output.isTTY as jest.Mock;
+const mockIsTTY = jest.mocked(Output.isTTY);
 
 function makeConfig(overrides: Record<string, unknown> = {}) {
     return Config.create({ quiet: false, onError: 'abort', ...overrides });
@@ -428,9 +428,9 @@ describe('onError', () => {
     });
 
     it('throws CancelError when user types navigation cmd', async () => {
-        (readlineSync.question as jest.Mock).mockReturnValue('/back');
+        jest.mocked(readlineSync.question).mockReturnValue('/back');
         expect(() => onError('ctx', new Error('fail'))).toThrow('/back');
-        (readlineSync.question as jest.Mock).mockReturnValue('');
+        jest.mocked(readlineSync.question).mockReturnValue('');
     });
 });
 

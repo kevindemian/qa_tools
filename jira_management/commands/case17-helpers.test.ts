@@ -1,5 +1,6 @@
 jest.mock('fs');
 
+import type { FlatTest } from '../../shared/result_parser';
 import {
     isGitHubCi,
     isGitLabCi,
@@ -246,10 +247,10 @@ describe('saveMetricsJson', () => {
 
     it('writes three JSON files', () => {
         const tests = [{ title: 'T1', state: 'passed', duration: 100 }];
-        saveMetricsJson(tests as never, '/tmp/html');
+        saveMetricsJson(tests as FlatTest[], '/tmp/html');
 
         expect(fs.writeFileSync).toHaveBeenCalledTimes(3);
-        const calls = (fs.writeFileSync as jest.Mock).mock.calls;
+        const calls = jest.mocked(fs.writeFileSync).mock.calls;
         expect(calls[0][0]).toContain('report.ctrf.json');
         expect(calls[1][0]).toContain('report.stats.json');
         expect(calls[2][0]).toContain('last-results.ctrf.json');
@@ -261,9 +262,9 @@ describe('saveMetricsJson', () => {
             { title: 'F1', state: 'failed', duration: 30, error: 'err' },
             { title: 'S1', state: 'skipped', duration: 0 },
         ];
-        saveMetricsJson(tests as never, '/tmp/html');
+        saveMetricsJson(tests as FlatTest[], '/tmp/html');
 
-        const statsCall = (fs.writeFileSync as jest.Mock).mock.calls[1];
+        const statsCall = jest.mocked(fs.writeFileSync).mock.calls[1];
         const stats = JSON.parse(statsCall[1]);
         expect(stats.passed).toBe(1);
         expect(stats.failed).toBe(1);

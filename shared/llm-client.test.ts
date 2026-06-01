@@ -1,4 +1,3 @@
-import type { ZodType } from 'zod';
 jest.useFakeTimers();
 jest.mock('./config', () => {
     const mockConfig: Record<string, string> = {};
@@ -85,6 +84,9 @@ jest.mock('./config', () => {
         resetInstance() {
             Object.keys(mockConfig).forEach((k) => delete mockConfig[k]);
         },
+        reset() {
+            Object.keys(mockConfig).forEach((k) => delete mockConfig[k]);
+        },
     };
     return { __esModule: true, default: ConfigMock };
 });
@@ -110,28 +112,22 @@ const mockFetch = jest.fn();
 global.fetch = mockFetch;
 
 function mockOkResponse(body: string): Response {
-    return {
-        ok: true,
-        status: 200,
-        text: jest.fn().mockResolvedValue(body),
-        headers: { get: () => null },
-    } as unknown as Response;
+    const r = new Response(body, { status: 200 });
+    jest.spyOn(r, 'text').mockResolvedValue(body);
+    jest.spyOn(r.headers, 'get').mockReturnValue(null);
+    return r;
 }
 function mockErrorResponse(status: number): Response {
-    return {
-        ok: false,
-        status,
-        text: jest.fn().mockResolvedValue('error'),
-        headers: { get: () => null },
-    } as unknown as Response;
+    const r = new Response('error', { status });
+    jest.spyOn(r, 'text').mockResolvedValue('error');
+    jest.spyOn(r.headers, 'get').mockReturnValue(null);
+    return r;
 }
 function mockResponseWithHeader(status: number, headerKey: string, headerValue: string | null): Response {
-    return {
-        ok: status === 200,
-        status,
-        text: jest.fn().mockResolvedValue('error'),
-        headers: { get: (k: string) => (k === headerKey ? headerValue : null) },
-    } as unknown as Response;
+    const r = new Response('error', { status });
+    jest.spyOn(r, 'text').mockResolvedValue('error');
+    jest.spyOn(r.headers, 'get').mockImplementation((k: string) => (k === headerKey ? headerValue : null));
+    return r;
 }
 
 beforeEach(() => {
@@ -140,18 +136,15 @@ beforeEach(() => {
     clearCache();
     resetRateLimiter();
     resetCircuitState();
-    (Config as unknown as { resetInstance: () => void }).resetInstance();
-    (diskCacheGet as jest.Mock).mockReturnValue(null);
+    Config.reset();
+    jest.mocked(diskCacheGet).mockReturnValue(null);
 });
 
 describe('llmPrompt', () => {
     it('sends prompt to main tier (OpenRouter) and returns parsed response', async () => {
-        (Config as unknown as { set: (k: string, v: string) => void }).set('llmApiKey', 'sk-test');
-        (Config as unknown as { set: (k: string, v: string) => void }).set('llmModel', 'google/gemini-2.0-flash-exp');
-        (Config as unknown as { set: (k: string, v: string) => void }).set(
-            'llmBaseUrl',
-            'https://openrouter.ai/api/v1',
-        );
+        Config.set('llmApiKey', 'sk-test');
+        Config.set('llmModel', 'google/gemini-2.0-flash-exp');
+        Config.set('llmBaseUrl', 'https://openrouter.ai/api/v1');
         const apiResponse = JSON.stringify({ choices: [{ message: { content: 'Generated test case' } }] });
         mockFetch.mockResolvedValueOnce(mockOkResponse(apiResponse));
 
@@ -170,12 +163,9 @@ describe('llmPrompt', () => {
     });
 
     it('sends prompt to fast tier (Groq, OpenAI format)', async () => {
-        (Config as unknown as { set: (k: string, v: string) => void }).set('llmFastApiKey', 'gsk-test');
-        (Config as unknown as { set: (k: string, v: string) => void }).set('llmFastModel', 'llama3-8b-8192');
-        (Config as unknown as { set: (k: string, v: string) => void }).set(
-            'llmFastBaseUrl',
-            'https://api.groq.com/openai/v1',
-        );
+        Config.set('llmFastApiKey', 'gsk-test');
+        Config.set('llmFastModel', 'llama3-8b-8192');
+        Config.set('llmFastBaseUrl', 'https://api.groq.com/openai/v1');
         const apiResponse = JSON.stringify({ choices: [{ message: { content: 'Fast response' } }] });
         mockFetch.mockResolvedValueOnce(mockOkResponse(apiResponse));
 
@@ -186,12 +176,9 @@ describe('llmPrompt', () => {
     });
 
     it('sends prompt to reviewer tier (Gemini format)', async () => {
-        (Config as unknown as { set: (k: string, v: string) => void }).set('llmReviewApiKey', 'AIza-review');
-        (Config as unknown as { set: (k: string, v: string) => void }).set('llmReviewModel', 'gemini-2.0-flash-exp');
-        (Config as unknown as { set: (k: string, v: string) => void }).set(
-            'llmReviewBaseUrl',
-            'https://generativelanguage.googleapis.com/v1beta',
-        );
+        Config.set('llmReviewApiKey', 'AIza-review');
+        Config.set('llmReviewModel', 'gemini-2.0-flash-exp');
+        Config.set('llmReviewBaseUrl', 'https://generativelanguage.googleapis.com/v1beta');
         const apiResponse = JSON.stringify({ candidates: [{ content: { parts: [{ text: 'Review ok' }] } }] });
         mockFetch.mockResolvedValueOnce(mockOkResponse(apiResponse));
 
@@ -203,24 +190,15 @@ describe('llmPrompt', () => {
     });
 
     it('falls back to fallback tier when main fails', async () => {
-        (Config as unknown as { set: (k: string, v: string) => void }).set('llmApiKey', 'sk-test');
-        (Config as unknown as { set: (k: string, v: string) => void }).set('llmModel', 'gpt-4');
-        (Config as unknown as { set: (k: string, v: string) => void }).set(
-            'llmBaseUrl',
-            'https://openrouter.ai/api/v1',
-        );
-        (Config as unknown as { set: (k: string, v: string) => void }).set('llmFallbackApiKey', 'nv-test');
-        (Config as unknown as { set: (k: string, v: string) => void }).set('llmFallbackModel', 'llama3');
-        (Config as unknown as { set: (k: string, v: string) => void }).set(
-            'llmFallbackBaseUrl',
-            'https://nv.api.com/v1',
-        );
-        (Config as unknown as { set: (k: string, v: string) => void }).set('llmBatchApiKey', 'gh-test');
-        (Config as unknown as { set: (k: string, v: string) => void }).set('llmBatchModel', 'gpt4o-mini');
-        (Config as unknown as { set: (k: string, v: string) => void }).set(
-            'llmBatchBaseUrl',
-            'https://models.inference.ai.azure.com',
-        );
+        Config.set('llmApiKey', 'sk-test');
+        Config.set('llmModel', 'gpt-4');
+        Config.set('llmBaseUrl', 'https://openrouter.ai/api/v1');
+        Config.set('llmFallbackApiKey', 'nv-test');
+        Config.set('llmFallbackModel', 'llama3');
+        Config.set('llmFallbackBaseUrl', 'https://nv.api.com/v1');
+        Config.set('llmBatchApiKey', 'gh-test');
+        Config.set('llmBatchModel', 'gpt4o-mini');
+        Config.set('llmBatchBaseUrl', 'https://models.inference.ai.azure.com');
 
         jest.spyOn(global, 'setTimeout').mockImplementation(((cb: (...args: unknown[]) => void) => {
             cb();
@@ -244,8 +222,8 @@ describe('llmPrompt', () => {
     });
 
     it('returns cached response on repeated call with same inputs', async () => {
-        (Config as unknown as { set: (k: string, v: string) => void }).set('llmApiKey', 'sk-test');
-        (Config as unknown as { set: (k: string, v: string) => void }).set('llmModel', 'google/gemini-2.0-flash-exp');
+        Config.set('llmApiKey', 'sk-test');
+        Config.set('llmModel', 'google/gemini-2.0-flash-exp');
         const apiResponse = JSON.stringify({ choices: [{ message: { content: 'Cached result' } }] });
         mockFetch.mockResolvedValueOnce(mockOkResponse(apiResponse));
 
@@ -259,8 +237,8 @@ describe('llmPrompt', () => {
     });
 
     it('retries on HTTP 429 and succeeds', async () => {
-        (Config as unknown as { set: (k: string, v: string) => void }).set('llmApiKey', 'sk-test');
-        (Config as unknown as { set: (k: string, v: string) => void }).set('llmModel', 'google/gemini-2.0-flash-exp');
+        Config.set('llmApiKey', 'sk-test');
+        Config.set('llmModel', 'google/gemini-2.0-flash-exp');
         mockFetch
             .mockResolvedValueOnce(mockErrorResponse(429))
             .mockResolvedValueOnce(mockOkResponse(JSON.stringify({ choices: [{ message: { content: 'OK' } }] })));
@@ -276,14 +254,14 @@ describe('llmPrompt', () => {
     });
 
     it('throws after exhausting all providers', async () => {
-        (Config as unknown as { set: (k: string, v: string) => void }).set('llmApiKey', '');
+        Config.set('llmApiKey', '');
         await expect(llmPrompt({ tier: 'main', system: 'system', user: 'test' })).rejects.toThrow();
     });
 
     it('sends responseFormat=json payload when param is passed', async () => {
-        (Config as unknown as { set: (k: string, v: string) => void }).set('llmApiKey', 'sk-test2');
-        (Config as unknown as { set: (k: string, v: string) => void }).set('llmModel', 'gpt-4');
-        (Config as unknown as { set: (k: string, v: string) => void }).set('llmBaseUrl', 'https://api.test.com/v1');
+        Config.set('llmApiKey', 'sk-test2');
+        Config.set('llmModel', 'gpt-4');
+        Config.set('llmBaseUrl', 'https://api.test.com/v1');
         mockFetch.mockResolvedValueOnce(
             mockOkResponse(JSON.stringify({ choices: [{ message: { content: 'json result' } }] })),
         );
@@ -294,9 +272,9 @@ describe('llmPrompt', () => {
     });
 
     it('different responseFormat produces different cache keys', async () => {
-        (Config as unknown as { set: (k: string, v: string) => void }).set('llmApiKey', 'sk-test3');
-        (Config as unknown as { set: (k: string, v: string) => void }).set('llmModel', 'gpt-4');
-        (Config as unknown as { set: (k: string, v: string) => void }).set('llmBaseUrl', 'https://api.test.com/v1');
+        Config.set('llmApiKey', 'sk-test3');
+        Config.set('llmModel', 'gpt-4');
+        Config.set('llmBaseUrl', 'https://api.test.com/v1');
         const body = JSON.stringify({ choices: [{ message: { content: 'r1' } }] });
         mockFetch.mockResolvedValue(mockOkResponse(body));
 
@@ -311,12 +289,9 @@ describe('llmPrompt', () => {
     });
 
     it('sends Gemini system_instruction payload for reviewer tier', async () => {
-        (Config as unknown as { set: (k: string, v: string) => void }).set('llmReviewApiKey', 'AIza-gemini-test');
-        (Config as unknown as { set: (k: string, v: string) => void }).set('llmReviewModel', 'gemini-2.0-flash-exp');
-        (Config as unknown as { set: (k: string, v: string) => void }).set(
-            'llmReviewBaseUrl',
-            'https://generativelanguage.googleapis.com/v1beta',
-        );
+        Config.set('llmReviewApiKey', 'AIza-gemini-test');
+        Config.set('llmReviewModel', 'gemini-2.0-flash-exp');
+        Config.set('llmReviewBaseUrl', 'https://generativelanguage.googleapis.com/v1beta');
         mockFetch.mockResolvedValueOnce(
             mockOkResponse(JSON.stringify({ candidates: [{ content: { parts: [{ text: 'ok' }] } }] })),
         );
@@ -330,15 +305,12 @@ describe('llmPrompt', () => {
     });
 
     it('deduplicates same provider in fallback chain', async () => {
-        (Config as unknown as { set: (k: string, v: string) => void }).set('llmApiKey', 'sk-test');
-        (Config as unknown as { set: (k: string, v: string) => void }).set('llmModel', 'gpt-4');
-        (Config as unknown as { set: (k: string, v: string) => void }).set('llmBaseUrl', 'https://api.test.com/v1');
-        (Config as unknown as { set: (k: string, v: string) => void }).set('llmFallbackApiKey', 'sk-test');
-        (Config as unknown as { set: (k: string, v: string) => void }).set('llmFallbackModel', 'gpt-4');
-        (Config as unknown as { set: (k: string, v: string) => void }).set(
-            'llmFallbackBaseUrl',
-            'https://api.test.com/v1',
-        );
+        Config.set('llmApiKey', 'sk-test');
+        Config.set('llmModel', 'gpt-4');
+        Config.set('llmBaseUrl', 'https://api.test.com/v1');
+        Config.set('llmFallbackApiKey', 'sk-test');
+        Config.set('llmFallbackModel', 'gpt-4');
+        Config.set('llmFallbackBaseUrl', 'https://api.test.com/v1');
         jest.spyOn(global, 'setTimeout').mockImplementation(((cb: (...args: unknown[]) => void) => {
             cb();
             return {} as NodeJS.Timeout;
@@ -356,8 +328,8 @@ describe('llmPrompt', () => {
     });
 
     it('handles network error with retry', async () => {
-        (Config as unknown as { set: (k: string, v: string) => void }).set('llmApiKey', 'sk-test');
-        (Config as unknown as { set: (k: string, v: string) => void }).set('llmModel', 'google/gemini-2.0-flash-exp');
+        Config.set('llmApiKey', 'sk-test');
+        Config.set('llmModel', 'google/gemini-2.0-flash-exp');
         mockFetch
             .mockRejectedValueOnce(new Error('Network failure'))
             .mockResolvedValueOnce(
@@ -375,8 +347,8 @@ describe('llmPrompt', () => {
     });
 
     it('returns empty string for unparseable response', async () => {
-        (Config as unknown as { set: (k: string, v: string) => void }).set('llmApiKey', 'sk-test');
-        (Config as unknown as { set: (k: string, v: string) => void }).set('llmModel', 'google/gemini-2.0-flash-exp');
+        Config.set('llmApiKey', 'sk-test');
+        Config.set('llmModel', 'google/gemini-2.0-flash-exp');
         const warnSpy = jest.spyOn(rootLogger, 'warn').mockImplementation(() => {});
         mockFetch.mockResolvedValueOnce(mockOkResponse('not json'));
 
@@ -388,10 +360,10 @@ describe('llmPrompt', () => {
 
     describe('rate limiter', () => {
         it('allows requests within limit', async () => {
-            (Config as unknown as { set: (k: string, v: string) => void }).set('LLM_RATE_LIMIT', '2');
-            (Config as unknown as { set: (k: string, v: string) => void }).set('llmApiKey', 'sk-test');
-            (Config as unknown as { set: (k: string, v: string) => void }).set('llmModel', 'gpt-4');
-            (Config as unknown as { set: (k: string, v: string) => void }).set('llmBaseUrl', 'https://api.test.com/v1');
+            Config.set('LLM_RATE_LIMIT', '2');
+            Config.set('llmApiKey', 'sk-test');
+            Config.set('llmModel', 'gpt-4');
+            Config.set('llmBaseUrl', 'https://api.test.com/v1');
             mockFetch.mockResolvedValue(mockOkResponse(JSON.stringify({ choices: [{ message: { content: 'ok' } }] })));
 
             const r1 = await llmPrompt({ tier: 'main', system: 'system', user: 'test1' });
@@ -402,10 +374,10 @@ describe('llmPrompt', () => {
         });
 
         it('rejects when rate limit exceeded', async () => {
-            (Config as unknown as { set: (k: string, v: string) => void }).set('LLM_RATE_LIMIT', '2');
-            (Config as unknown as { set: (k: string, v: string) => void }).set('llmApiKey', 'sk-test');
-            (Config as unknown as { set: (k: string, v: string) => void }).set('llmModel', 'gpt-4');
-            (Config as unknown as { set: (k: string, v: string) => void }).set('llmBaseUrl', 'https://api.test.com/v1');
+            Config.set('LLM_RATE_LIMIT', '2');
+            Config.set('llmApiKey', 'sk-test');
+            Config.set('llmModel', 'gpt-4');
+            Config.set('llmBaseUrl', 'https://api.test.com/v1');
             mockFetch.mockResolvedValue(mockOkResponse(JSON.stringify({ choices: [{ message: { content: 'ok' } }] })));
 
             await llmPrompt({ tier: 'main', system: 'system', user: 'test1' });
@@ -417,10 +389,10 @@ describe('llmPrompt', () => {
 
         it('recovers after rate limit window passes', async () => {
             jest.useFakeTimers();
-            (Config as unknown as { set: (k: string, v: string) => void }).set('LLM_RATE_LIMIT', '2');
-            (Config as unknown as { set: (k: string, v: string) => void }).set('llmApiKey', 'sk-test');
-            (Config as unknown as { set: (k: string, v: string) => void }).set('llmModel', 'gpt-4');
-            (Config as unknown as { set: (k: string, v: string) => void }).set('llmBaseUrl', 'https://api.test.com/v1');
+            Config.set('LLM_RATE_LIMIT', '2');
+            Config.set('llmApiKey', 'sk-test');
+            Config.set('llmModel', 'gpt-4');
+            Config.set('llmBaseUrl', 'https://api.test.com/v1');
             mockFetch.mockResolvedValue(mockOkResponse(JSON.stringify({ choices: [{ message: { content: 'ok' } }] })));
             jest.spyOn(global, 'setTimeout').mockImplementation(((cb: (...args: unknown[]) => void) => {
                 cb();
@@ -437,9 +409,9 @@ describe('llmPrompt', () => {
 
     describe('circuit breaker', () => {
         beforeEach(() => {
-            (Config as unknown as { set: (k: string, v: string) => void }).set('llmApiKey', 'sk-test');
-            (Config as unknown as { set: (k: string, v: string) => void }).set('llmModel', 'gpt-4');
-            (Config as unknown as { set: (k: string, v: string) => void }).set('llmBaseUrl', 'https://api.test.com/v1');
+            Config.set('llmApiKey', 'sk-test');
+            Config.set('llmModel', 'gpt-4');
+            Config.set('llmBaseUrl', 'https://api.test.com/v1');
             jest.spyOn(global, 'setTimeout').mockImplementation(((cb: (...args: unknown[]) => void) => {
                 cb();
                 return {} as NodeJS.Timeout;
@@ -527,9 +499,9 @@ describe('llmPrompt', () => {
 
     describe('responseFormat parameter', () => {
         it('passes responseFormat=json to provider config', async () => {
-            (Config as unknown as { set: (k: string, v: string) => void }).set('llmApiKey', 'sk-rftest');
-            (Config as unknown as { set: (k: string, v: string) => void }).set('llmModel', 'gpt-4');
-            (Config as unknown as { set: (k: string, v: string) => void }).set('llmBaseUrl', 'https://api.test.com/v1');
+            Config.set('llmApiKey', 'sk-rftest');
+            Config.set('llmModel', 'gpt-4');
+            Config.set('llmBaseUrl', 'https://api.test.com/v1');
             mockFetch.mockResolvedValueOnce(
                 mockOkResponse(JSON.stringify({ choices: [{ message: { content: '{"key":"val"}' } }] })),
             );
@@ -540,9 +512,9 @@ describe('llmPrompt', () => {
         });
 
         it('different responseFormat produces different cache keys (via metrics)', async () => {
-            (Config as unknown as { set: (k: string, v: string) => void }).set('llmApiKey', 'sk-metrics');
-            (Config as unknown as { set: (k: string, v: string) => void }).set('llmModel', 'gpt-4');
-            (Config as unknown as { set: (k: string, v: string) => void }).set('llmBaseUrl', 'https://api.test.com/v1');
+            Config.set('llmApiKey', 'sk-metrics');
+            Config.set('llmModel', 'gpt-4');
+            Config.set('llmBaseUrl', 'https://api.test.com/v1');
             resetLlmClientMetrics();
             const resp = JSON.stringify({ choices: [{ message: { content: 'result' } }] });
             mockFetch.mockResolvedValue(mockOkResponse(resp));
@@ -564,15 +536,9 @@ describe('llmPrompt', () => {
 
     describe('Gemini system_instruction payload', () => {
         it('includes system_instruction for gemini format provider', async () => {
-            (Config as unknown as { set: (k: string, v: string) => void }).set('llmReviewApiKey', 'AIza-gemini-sys');
-            (Config as unknown as { set: (k: string, v: string) => void }).set(
-                'llmReviewModel',
-                'gemini-2.0-flash-exp',
-            );
-            (Config as unknown as { set: (k: string, v: string) => void }).set(
-                'llmReviewBaseUrl',
-                'https://generativelanguage.googleapis.com/v1beta',
-            );
+            Config.set('llmReviewApiKey', 'AIza-gemini-sys');
+            Config.set('llmReviewModel', 'gemini-2.0-flash-exp');
+            Config.set('llmReviewBaseUrl', 'https://generativelanguage.googleapis.com/v1beta');
             mockFetch.mockResolvedValueOnce(
                 mockOkResponse(JSON.stringify({ candidates: [{ content: { parts: [{ text: 'ok' }] } }] })),
             );
@@ -588,9 +554,9 @@ describe('llmPrompt', () => {
     describe('non-JSON 200 response', () => {
         it('calls logger.warn when provider returns 200 with non-JSON body', async () => {
             const warnSpy = jest.spyOn(rootLogger, 'warn');
-            (Config as unknown as { set: (k: string, v: string) => void }).set('llmApiKey', 'sk-warn');
-            (Config as unknown as { set: (k: string, v: string) => void }).set('llmModel', 'gpt-4');
-            (Config as unknown as { set: (k: string, v: string) => void }).set('llmBaseUrl', 'https://api.test.com/v1');
+            Config.set('llmApiKey', 'sk-warn');
+            Config.set('llmModel', 'gpt-4');
+            Config.set('llmBaseUrl', 'https://api.test.com/v1');
             mockFetch.mockResolvedValueOnce(mockOkResponse('plain text body'));
 
             const result = await llmPrompt({ tier: 'main', system: 'system', user: 'non-json body' });
@@ -601,21 +567,15 @@ describe('llmPrompt', () => {
 
     describe('tier fallback deduplication', () => {
         it('skips batch when all fallback candidates have same configUniqueKey', async () => {
-            (Config as unknown as { set: (k: string, v: string) => void }).set('llmApiKey', 'sk-dd');
-            (Config as unknown as { set: (k: string, v: string) => void }).set('llmModel', 'gpt-4');
-            (Config as unknown as { set: (k: string, v: string) => void }).set('llmBaseUrl', 'https://api.test.com/v1');
-            (Config as unknown as { set: (k: string, v: string) => void }).set('llmFallbackApiKey', 'sk-dd');
-            (Config as unknown as { set: (k: string, v: string) => void }).set('llmFallbackModel', 'gpt-4');
-            (Config as unknown as { set: (k: string, v: string) => void }).set(
-                'llmFallbackBaseUrl',
-                'https://api.test.com/v1',
-            );
-            (Config as unknown as { set: (k: string, v: string) => void }).set('llmBatchApiKey', 'sk-dd');
-            (Config as unknown as { set: (k: string, v: string) => void }).set('llmBatchModel', 'gpt-4');
-            (Config as unknown as { set: (k: string, v: string) => void }).set(
-                'llmBatchBaseUrl',
-                'https://api.test.com/v1',
-            );
+            Config.set('llmApiKey', 'sk-dd');
+            Config.set('llmModel', 'gpt-4');
+            Config.set('llmBaseUrl', 'https://api.test.com/v1');
+            Config.set('llmFallbackApiKey', 'sk-dd');
+            Config.set('llmFallbackModel', 'gpt-4');
+            Config.set('llmFallbackBaseUrl', 'https://api.test.com/v1');
+            Config.set('llmBatchApiKey', 'sk-dd');
+            Config.set('llmBatchModel', 'gpt-4');
+            Config.set('llmBatchBaseUrl', 'https://api.test.com/v1');
 
             jest.spyOn(global, 'setTimeout').mockImplementation(((cb: (...args: unknown[]) => void) => {
                 cb();
@@ -636,9 +596,9 @@ describe('llmPrompt', () => {
 
     describe('L23: Pending Tests', () => {
         it('23.2: passes responseFormat to provider config', async () => {
-            (Config as unknown as { set: (k: string, v: string) => void }).set('llmApiKey', 'sk-23-2');
-            (Config as unknown as { set: (k: string, v: string) => void }).set('llmModel', 'gpt-4');
-            (Config as unknown as { set: (k: string, v: string) => void }).set('llmBaseUrl', 'https://api.test.com/v1');
+            Config.set('llmApiKey', 'sk-23-2');
+            Config.set('llmModel', 'gpt-4');
+            Config.set('llmBaseUrl', 'https://api.test.com/v1');
             mockFetch.mockResolvedValueOnce(
                 mockOkResponse(JSON.stringify({ choices: [{ message: { content: '{}' } }] })),
             );
@@ -650,9 +610,9 @@ describe('llmPrompt', () => {
         });
 
         it('23.3: uses different cache keys for different responseFormat', async () => {
-            (Config as unknown as { set: (k: string, v: string) => void }).set('llmApiKey', 'sk-23-3');
-            (Config as unknown as { set: (k: string, v: string) => void }).set('llmModel', 'gpt-4');
-            (Config as unknown as { set: (k: string, v: string) => void }).set('llmBaseUrl', 'https://api.test.com/v1');
+            Config.set('llmApiKey', 'sk-23-3');
+            Config.set('llmModel', 'gpt-4');
+            Config.set('llmBaseUrl', 'https://api.test.com/v1');
             mockFetch.mockResolvedValue(mockOkResponse(JSON.stringify({ choices: [{ message: { content: '{}' } }] })));
 
             await llmPrompt({ tier: 'main', system: 'sys', user: 'user', callerId: 'c', responseFormat: 'text' });
@@ -662,12 +622,9 @@ describe('llmPrompt', () => {
         });
 
         it('23.4: Gemini system_instruction payload test', async () => {
-            (Config as unknown as { set: (k: string, v: string) => void }).set('llmReviewApiKey', 'sk-gemini');
-            (Config as unknown as { set: (k: string, v: string) => void }).set('llmReviewModel', 'gemini-1.5-flash');
-            (Config as unknown as { set: (k: string, v: string) => void }).set(
-                'llmReviewBaseUrl',
-                'https://generativelanguage.googleapis.com/v1beta',
-            );
+            Config.set('llmReviewApiKey', 'sk-gemini');
+            Config.set('llmReviewModel', 'gemini-1.5-flash');
+            Config.set('llmReviewBaseUrl', 'https://generativelanguage.googleapis.com/v1beta');
 
             const geminiResponse = { candidates: [{ content: { parts: [{ text: 'ok' }] } }] };
             mockFetch.mockResolvedValueOnce(mockOkResponse(JSON.stringify(geminiResponse)));
@@ -682,24 +639,17 @@ describe('llmPrompt', () => {
 
     describe('_warnIfNotJson (29.3)', () => {
         beforeEach(() => {
-            (Config as unknown as { set: (k: string, v: string) => void }).set('llmApiKey', 'sk-test29');
-            (Config as unknown as { set: (k: string, v: string) => void }).set(
-                'llmModel',
-                'google/gemini-2.0-flash-exp',
-            );
-            (Config as unknown as { set: (k: string, v: string) => void }).set(
-                'llmBaseUrl',
-                'https://openrouter.ai/api/v1',
-            );
+            Config.set('llmApiKey', 'sk-test29');
+            Config.set('llmModel', 'google/gemini-2.0-flash-exp');
+            Config.set('llmBaseUrl', 'https://openrouter.ai/api/v1');
         });
 
         function openAiResponse(content: string): Response {
-            return {
-                ok: true,
-                status: 200,
-                text: jest.fn().mockResolvedValue(JSON.stringify({ choices: [{ message: { content } }] })),
-                headers: { get: () => null },
-            } as unknown as Response;
+            const body = JSON.stringify({ choices: [{ message: { content } }] });
+            const r = new Response(body, { status: 200 });
+            jest.spyOn(r, 'text').mockResolvedValue(body);
+            jest.spyOn(r.headers, 'get').mockReturnValue(null);
+            return r;
         }
 
         it('does not warn when response is valid JSON (responseFormat=json)', async () => {
@@ -746,11 +696,11 @@ describe('llmPrompt', () => {
     describe('total token limit', () => {
         beforeEach(() => {
             resetLlmClientMetrics();
-            (Config as unknown as { set: (k: string, v: string) => void }).set('llmApiKey', 'sk-test');
+            Config.set('llmApiKey', 'sk-test');
         });
 
         it('throws when total tokens exceed limit after first call', async () => {
-            (Config as unknown as { set: (k: string, v: string) => void }).set('llmMaxTotalTokens', '10');
+            Config.set('llmMaxTotalTokens', '10');
             const body = JSON.stringify({
                 choices: [{ message: { content: 'ok' } }],
                 usage: { prompt_tokens: 8, completion_tokens: 3 },
@@ -775,7 +725,7 @@ describe('llmPrompt', () => {
         });
 
         it('does not throw when limit is 0 (unlimited)', async () => {
-            (Config as unknown as { set: (k: string, v: string) => void }).set('llmMaxTotalTokens', '0');
+            Config.set('llmMaxTotalTokens', '0');
             const body = JSON.stringify({
                 choices: [{ message: { content: 'ok' } }],
                 usage: { prompt_tokens: 5, completion_tokens: 3 },
@@ -800,7 +750,7 @@ describe('llmPrompt', () => {
         });
 
         it('does not throw when total tokens are under limit', async () => {
-            (Config as unknown as { set: (k: string, v: string) => void }).set('llmMaxTotalTokens', '100');
+            Config.set('llmMaxTotalTokens', '100');
             const body = JSON.stringify({
                 choices: [{ message: { content: 'ok' } }],
                 usage: { prompt_tokens: 3, completion_tokens: 2 },
@@ -830,26 +780,23 @@ describe('llmPrompt', () => {
             }
             return { success: false as const, error: { issues: [{ path: ['ok'], message: 'Expected boolean' }] } };
         },
-    } as unknown as ZodType<unknown>;
+    };
     const alwaysFailsSchema = {
         safeParse: () => ({
             success: false as const,
             error: { issues: [{ path: ['x'], message: 'always fails' }] },
         }),
-    } as unknown as ZodType<unknown>;
+    };
 
     describe('schema validation', () => {
         beforeEach(() => {
             jest.useRealTimers();
-            (Config as unknown as { set: (k: string, v: string) => void }).set('llmApiKey', 'sk-schema');
-            (Config as unknown as { set: (k: string, v: string) => void }).set('llmModel', 'gpt-4');
-            (Config as unknown as { set: (k: string, v: string) => void }).set('llmBaseUrl', 'https://api.test.com/v1');
-            (Config as unknown as { set: (k: string, v: string) => void }).set('llmFallbackApiKey', 'nv-schema');
-            (Config as unknown as { set: (k: string, v: string) => void }).set('llmFallbackModel', 'llama3');
-            (Config as unknown as { set: (k: string, v: string) => void }).set(
-                'llmFallbackBaseUrl',
-                'https://nv.api.com/v1',
-            );
+            Config.set('llmApiKey', 'sk-schema');
+            Config.set('llmModel', 'gpt-4');
+            Config.set('llmBaseUrl', 'https://api.test.com/v1');
+            Config.set('llmFallbackApiKey', 'nv-schema');
+            Config.set('llmFallbackModel', 'llama3');
+            Config.set('llmFallbackBaseUrl', 'https://nv.api.com/v1');
         });
 
         it('returns validated data on first response', async () => {
@@ -1049,15 +996,12 @@ describe('llmPrompt', () => {
 
     describe('sendToProvider error payload', () => {
         beforeEach(() => {
-            (Config as unknown as { set: (k: string, v: string) => void }).set('llmApiKey', 'sk-err');
-            (Config as unknown as { set: (k: string, v: string) => void }).set('llmModel', 'gpt-4');
-            (Config as unknown as { set: (k: string, v: string) => void }).set('llmBaseUrl', 'https://api.test.com/v1');
-            (Config as unknown as { set: (k: string, v: string) => void }).set('llmFallbackApiKey', 'nv-err');
-            (Config as unknown as { set: (k: string, v: string) => void }).set('llmFallbackModel', 'llama3');
-            (Config as unknown as { set: (k: string, v: string) => void }).set(
-                'llmFallbackBaseUrl',
-                'https://nv.api.com/v1',
-            );
+            Config.set('llmApiKey', 'sk-err');
+            Config.set('llmModel', 'gpt-4');
+            Config.set('llmBaseUrl', 'https://api.test.com/v1');
+            Config.set('llmFallbackApiKey', 'nv-err');
+            Config.set('llmFallbackModel', 'llama3');
+            Config.set('llmFallbackBaseUrl', 'https://nv.api.com/v1');
         });
 
         it('falls back to next provider when API returns error payload in 200 response', async () => {
@@ -1073,15 +1017,9 @@ describe('llmPrompt', () => {
 
     describe('Gemini usageMetadata tracking', () => {
         it('tracks prompt/completion tokens via usageMetadata (Gemini format)', async () => {
-            (Config as unknown as { set: (k: string, v: string) => void }).set('llmReviewApiKey', 'AIza-um-test');
-            (Config as unknown as { set: (k: string, v: string) => void }).set(
-                'llmReviewModel',
-                'gemini-2.0-flash-exp',
-            );
-            (Config as unknown as { set: (k: string, v: string) => void }).set(
-                'llmReviewBaseUrl',
-                'https://generativelanguage.googleapis.com/v1beta',
-            );
+            Config.set('llmReviewApiKey', 'AIza-um-test');
+            Config.set('llmReviewModel', 'gemini-2.0-flash-exp');
+            Config.set('llmReviewBaseUrl', 'https://generativelanguage.googleapis.com/v1beta');
             resetLlmClientMetrics();
             const apiResponse = JSON.stringify({
                 candidates: [{ content: { parts: [{ text: 'gemini result' }] } }],
@@ -1100,9 +1038,9 @@ describe('llmPrompt', () => {
         it('re-requests when cached entry expires', async () => {
             jest.useFakeTimers();
 
-            (Config as unknown as { set: (k: string, v: string) => void }).set('llmApiKey', 'sk-cache-expire');
-            (Config as unknown as { set: (k: string, v: string) => void }).set('llmModel', 'gpt-4');
-            (Config as unknown as { set: (k: string, v: string) => void }).set('llmBaseUrl', 'https://api.test.com/v1');
+            Config.set('llmApiKey', 'sk-cache-expire');
+            Config.set('llmModel', 'gpt-4');
+            Config.set('llmBaseUrl', 'https://api.test.com/v1');
 
             mockFetch.mockResolvedValue(
                 mockOkResponse(JSON.stringify({ choices: [{ message: { content: 'first' } }] })),
@@ -1123,9 +1061,9 @@ describe('llmPrompt', () => {
         });
 
         it('cache cleanup timed interval removes expired entries', async () => {
-            (Config as unknown as { set: (k: string, v: string) => void }).set('llmApiKey', 'sk-cache-cleanup');
-            (Config as unknown as { set: (k: string, v: string) => void }).set('llmModel', 'gpt-4');
-            (Config as unknown as { set: (k: string, v: string) => void }).set('llmBaseUrl', 'https://api.test.com/v1');
+            Config.set('llmApiKey', 'sk-cache-cleanup');
+            Config.set('llmModel', 'gpt-4');
+            Config.set('llmBaseUrl', 'https://api.test.com/v1');
 
             mockFetch
                 .mockResolvedValueOnce(
@@ -1158,9 +1096,9 @@ describe('llmPrompt', () => {
 
     describe('report tier', () => {
         it('uses report tier config and sends responseFormat=json', async () => {
-            (Config as unknown as { set: (k: string, v: string) => void }).set('llmApiKey', 'sk-report');
-            (Config as unknown as { set: (k: string, v: string) => void }).set('llmModel', 'gpt-4-report');
-            (Config as unknown as { set: (k: string, v: string) => void }).set('llmBaseUrl', 'https://api.test.com/v1');
+            Config.set('llmApiKey', 'sk-report');
+            Config.set('llmModel', 'gpt-4-report');
+            Config.set('llmBaseUrl', 'https://api.test.com/v1');
             mockFetch.mockResolvedValueOnce(
                 mockOkResponse(JSON.stringify({ choices: [{ message: { content: '{"result":42}' } }] })),
             );
@@ -1173,9 +1111,9 @@ describe('llmPrompt', () => {
 
     describe('fetch retries exhausted', () => {
         it('throws on network error after exhausting all retries', async () => {
-            (Config as unknown as { set: (k: string, v: string) => void }).set('llmApiKey', 'sk-netfail');
-            (Config as unknown as { set: (k: string, v: string) => void }).set('llmModel', 'gpt-4');
-            (Config as unknown as { set: (k: string, v: string) => void }).set('llmBaseUrl', 'https://api.test.com/v1');
+            Config.set('llmApiKey', 'sk-netfail');
+            Config.set('llmModel', 'gpt-4');
+            Config.set('llmBaseUrl', 'https://api.test.com/v1');
             mockFetch.mockRejectedValue(new Error('Network down'));
 
             jest.spyOn(global, 'setTimeout').mockImplementation(((cb: (...args: unknown[]) => void) => {
@@ -1189,9 +1127,9 @@ describe('llmPrompt', () => {
         });
 
         it('throws LlmError after exhausting HTTP retries on 429', async () => {
-            (Config as unknown as { set: (k: string, v: string) => void }).set('llmApiKey', 'sk-httpex');
-            (Config as unknown as { set: (k: string, v: string) => void }).set('llmModel', 'gpt-4');
-            (Config as unknown as { set: (k: string, v: string) => void }).set('llmBaseUrl', 'https://api.test.com/v1');
+            Config.set('llmApiKey', 'sk-httpex');
+            Config.set('llmModel', 'gpt-4');
+            Config.set('llmBaseUrl', 'https://api.test.com/v1');
             // 3 retries + 1 extra fallback config = 4 calls total, all 429
             mockFetch.mockResolvedValue(mockErrorResponse(429));
 
@@ -1206,10 +1144,10 @@ describe('llmPrompt', () => {
         });
 
         it('throws LlmError when fetch retries set to 0', async () => {
-            (Config as unknown as { set: (k: string, v: string) => void }).set('llmApiKey', 'sk-zero');
-            (Config as unknown as { set: (k: string, v: string) => void }).set('llmModel', 'gpt-4');
-            (Config as unknown as { set: (k: string, v: string) => void }).set('llmBaseUrl', 'https://api.test.com/v1');
-            (Config as unknown as { set: (k: string, v: string) => void }).set('LLM_FETCH_RETRIES', '0');
+            Config.set('llmApiKey', 'sk-zero');
+            Config.set('llmModel', 'gpt-4');
+            Config.set('llmBaseUrl', 'https://api.test.com/v1');
+            Config.set('LLM_FETCH_RETRIES', '0');
 
             await expect(llmPrompt({ tier: 'main', system: 'system', user: 'zero retry' })).rejects.toThrow(
                 'All LLM providers failed',
@@ -1219,10 +1157,10 @@ describe('llmPrompt', () => {
 
     describe('input token limit', () => {
         it('throws when estimated tokens exceed LLM_MAX_TOKENS_PER_OP', async () => {
-            (Config as unknown as { set: (k: string, v: string) => void }).set('llmApiKey', 'sk-tokenlim');
-            (Config as unknown as { set: (k: string, v: string) => void }).set('llmModel', 'gpt-4');
-            (Config as unknown as { set: (k: string, v: string) => void }).set('llmBaseUrl', 'https://api.test.com/v1');
-            (Config as unknown as { set: (k: string, v: string) => void }).set('llmMaxTokens', '1');
+            Config.set('llmApiKey', 'sk-tokenlim');
+            Config.set('llmModel', 'gpt-4');
+            Config.set('llmBaseUrl', 'https://api.test.com/v1');
+            Config.set('llmMaxTokens', '1');
 
             await expect(
                 llmPrompt({ tier: 'main', system: 'a'.repeat(100), user: 'b'.repeat(100), callerId: 'token-lim' }),
@@ -1232,13 +1170,13 @@ describe('llmPrompt', () => {
 
     describe('disk cache', () => {
         beforeEach(() => {
-            (Config as unknown as { set: (k: string, v: string) => void }).set('llmApiKey', 'sk-disk');
-            (Config as unknown as { set: (k: string, v: string) => void }).set('llmModel', 'gpt-4');
-            (Config as unknown as { set: (k: string, v: string) => void }).set('llmBaseUrl', 'https://api.test.com/v1');
+            Config.set('llmApiKey', 'sk-disk');
+            Config.set('llmModel', 'gpt-4');
+            Config.set('llmBaseUrl', 'https://api.test.com/v1');
         });
 
         it('returns disk cached response without schema', async () => {
-            (diskCacheGet as jest.Mock).mockReturnValue('cached from disk');
+            jest.mocked(diskCacheGet).mockReturnValue('cached from disk');
 
             const result = await llmPrompt({ tier: 'main', system: 'sys', user: 'usr', callerId: 'disk-noschema' });
             expect(result).toBe('cached from disk');
@@ -1246,7 +1184,7 @@ describe('llmPrompt', () => {
         });
 
         it('returns disk cached response with valid schema', async () => {
-            (diskCacheGet as jest.Mock).mockReturnValue('{"ok": true}');
+            jest.mocked(diskCacheGet).mockReturnValue('{"ok": true}');
 
             const result = await llmPrompt({
                 tier: 'main',
@@ -1262,7 +1200,7 @@ describe('llmPrompt', () => {
 
         it('falls through to fetch when disk cache has schema-invalid content', async () => {
             const warnSpy = jest.spyOn(rootLogger, 'warn').mockImplementation(() => {});
-            (diskCacheGet as jest.Mock).mockReturnValue('{"not_ok": "string_value"}');
+            jest.mocked(diskCacheGet).mockReturnValue('{"not_ok": "string_value"}');
 
             mockFetch.mockResolvedValue(
                 mockOkResponse(JSON.stringify({ choices: [{ message: { content: '{"ok": true}' } }] })),

@@ -1,6 +1,7 @@
 import * as prompt from '../shared/prompt';
 import { nivelarBranches } from './nivelar';
 import type { GitProvider } from '../shared/types';
+import { createMockGitProvider } from '../shared/test-utils/factories';
 
 jest.mock('../shared/prompt', () => ({
     ask: jest.fn(),
@@ -13,23 +14,19 @@ jest.mock('../shared/prompt', () => ({
 }));
 
 describe('nivelarBranches', () => {
-    let mockGitlab: {
-        createMergeRequest: jest.Mock;
-        getBranch: jest.Mock;
-    };
+    let mockGitlab: jest.Mocked<GitProvider>;
     let pushHistory: jest.Mock;
 
     beforeEach(() => {
         jest.clearAllMocks();
-        mockGitlab = {
-            createMergeRequest: jest.fn(),
-            getBranch: jest.fn().mockResolvedValue({ name: 'branch' }),
-        };
+        mockGitlab = createMockGitProvider();
+        mockGitlab.getBranch.mockResolvedValue({ name: 'branch' });
+
         pushHistory = jest.fn();
     });
 
     it('cria dois MRs e chama pushHistory com ok', async () => {
-        (prompt.ask as jest.Mock)
+        jest.mocked(prompt.ask)
             .mockResolvedValueOnce('main')
             .mockResolvedValueOnce('rel_cand')
             .mockResolvedValueOnce('dev');
@@ -37,7 +34,7 @@ describe('nivelarBranches', () => {
             .mockResolvedValueOnce({ web_url: 'https://mr1' })
             .mockResolvedValueOnce({ web_url: 'https://mr2' });
 
-        await nivelarBranches(mockGitlab as unknown as GitProvider, { pushHistory });
+        await nivelarBranches(mockGitlab, { pushHistory });
 
         expect(mockGitlab.createMergeRequest).toHaveBeenCalledTimes(2);
         expect(jest.mocked(prompt.info)).toHaveBeenCalledWith('MR criado: https://mr1');
@@ -46,7 +43,7 @@ describe('nivelarBranches', () => {
     });
 
     it('continua para segundo MR quando primeiro falha', async () => {
-        (prompt.ask as jest.Mock)
+        jest.mocked(prompt.ask)
             .mockResolvedValueOnce('main')
             .mockResolvedValueOnce('rel_cand')
             .mockResolvedValueOnce('dev');
@@ -54,7 +51,7 @@ describe('nivelarBranches', () => {
             .mockRejectedValueOnce(new Error('Conflict'))
             .mockResolvedValueOnce({ web_url: 'https://mr2' });
 
-        await nivelarBranches(mockGitlab as unknown as GitProvider, { pushHistory });
+        await nivelarBranches(mockGitlab, { pushHistory });
 
         expect(mockGitlab.createMergeRequest).toHaveBeenCalledTimes(2);
         expect(jest.mocked(prompt.printError)).toHaveBeenCalledTimes(1);
@@ -63,7 +60,7 @@ describe('nivelarBranches', () => {
     });
 
     it('registra erro quando ambos falham', async () => {
-        (prompt.ask as jest.Mock)
+        jest.mocked(prompt.ask)
             .mockResolvedValueOnce('main')
             .mockResolvedValueOnce('rel_cand')
             .mockResolvedValueOnce('dev');
@@ -71,7 +68,7 @@ describe('nivelarBranches', () => {
             .mockRejectedValueOnce(new Error('First fail'))
             .mockRejectedValueOnce(new Error('Second fail'));
 
-        await nivelarBranches(mockGitlab as unknown as GitProvider, { pushHistory });
+        await nivelarBranches(mockGitlab, { pushHistory });
 
         expect(mockGitlab.createMergeRequest).toHaveBeenCalledTimes(2);
         expect(jest.mocked(prompt.printError)).toHaveBeenCalledTimes(2);
@@ -79,7 +76,7 @@ describe('nivelarBranches', () => {
     });
 
     it('aborta quando branch não existe', async () => {
-        (prompt.ask as jest.Mock)
+        jest.mocked(prompt.ask)
             .mockResolvedValueOnce('main')
             .mockResolvedValueOnce('inexistente')
             .mockResolvedValueOnce('dev');
@@ -88,57 +85,57 @@ describe('nivelarBranches', () => {
             .mockResolvedValueOnce(null)
             .mockResolvedValueOnce({ name: 'dev' });
 
-        await nivelarBranches(mockGitlab as unknown as GitProvider, { pushHistory });
+        await nivelarBranches(mockGitlab, { pushHistory });
 
         expect(mockGitlab.createMergeRequest).not.toHaveBeenCalled();
         expect(jest.mocked(prompt.warn)).toHaveBeenCalledWith(expect.stringContaining('inexistente'));
     });
 
     it('warn quando branches são iguais', async () => {
-        (prompt.ask as jest.Mock)
+        jest.mocked(prompt.ask)
             .mockResolvedValueOnce('main')
             .mockResolvedValueOnce('main')
             .mockResolvedValueOnce('dev');
 
-        await nivelarBranches(mockGitlab as unknown as GitProvider, { pushHistory });
+        await nivelarBranches(mockGitlab, { pushHistory });
 
         expect(jest.mocked(prompt.warn)).toHaveBeenCalledWith('Branches devem ser diferentes entre si.');
         expect(mockGitlab.createMergeRequest).not.toHaveBeenCalled();
     });
 
     it('warn quando branches são vazios', async () => {
-        (prompt.ask as jest.Mock)
+        jest.mocked(prompt.ask)
             .mockResolvedValueOnce('')
             .mockResolvedValueOnce('rel_cand')
             .mockResolvedValueOnce('dev');
 
-        await nivelarBranches(mockGitlab as unknown as GitProvider, { pushHistory });
+        await nivelarBranches(mockGitlab, { pushHistory });
 
         expect(jest.mocked(prompt.warn)).toHaveBeenCalledWith('Todas as branches devem ser preenchidas.');
         expect(mockGitlab.createMergeRequest).not.toHaveBeenCalled();
     });
 
     it('warn quando todas as branches são inexistentes', async () => {
-        (prompt.ask as jest.Mock)
+        jest.mocked(prompt.ask)
             .mockResolvedValueOnce('main')
             .mockResolvedValueOnce('rel_cand')
             .mockResolvedValueOnce('dev');
         mockGitlab.getBranch.mockResolvedValue(null);
 
-        await nivelarBranches(mockGitlab as unknown as GitProvider, { pushHistory });
+        await nivelarBranches(mockGitlab, { pushHistory });
 
         expect(mockGitlab.createMergeRequest).not.toHaveBeenCalled();
         expect(jest.mocked(prompt.warn)).toHaveBeenCalledWith('Branch(es) não encontrada(s): main, rel_cand, dev');
     });
 
     it('passa parametros corretos para createMergeRequest', async () => {
-        (prompt.ask as jest.Mock)
+        jest.mocked(prompt.ask)
             .mockResolvedValueOnce('feature-x')
             .mockResolvedValueOnce('staging')
             .mockResolvedValueOnce('dev');
         mockGitlab.createMergeRequest.mockResolvedValue({ web_url: 'https://mr' });
 
-        await nivelarBranches(mockGitlab as unknown as GitProvider, { pushHistory });
+        await nivelarBranches(mockGitlab, { pushHistory });
 
         expect(mockGitlab.createMergeRequest).toHaveBeenNthCalledWith(
             1,

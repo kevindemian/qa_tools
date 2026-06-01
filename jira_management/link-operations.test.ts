@@ -3,7 +3,6 @@ jest.mock('../shared/prompt', () => ({
     warn: jest.fn(),
 }));
 
-import type { JiraResourceLike } from '../shared/types';
 import { LinkOperations } from './link-operations';
 import { LinkTypeManager } from './link-types';
 
@@ -13,6 +12,8 @@ describe('LinkOperations', () => {
         postJiraResource: jest.Mock;
         putJiraResource: jest.Mock;
         searchJiraIssues: jest.Mock;
+        getTransitionsForIssue: jest.Mock;
+        transitionIssue: jest.Mock;
     };
     let linkTypeManager: LinkTypeManager;
     let operations: LinkOperations;
@@ -24,9 +25,11 @@ describe('LinkOperations', () => {
             postJiraResource: jest.fn(),
             putJiraResource: jest.fn(),
             searchJiraIssues: jest.fn(),
+            getTransitionsForIssue: jest.fn(),
+            transitionIssue: jest.fn(),
         };
-        linkTypeManager = new LinkTypeManager(mockJiraResource as unknown as JiraResourceLike);
-        operations = new LinkOperations(mockJiraResource as unknown as JiraResourceLike, linkTypeManager);
+        linkTypeManager = new LinkTypeManager(mockJiraResource);
+        operations = new LinkOperations(mockJiraResource, linkTypeManager);
     });
 
     describe('linkIssues', () => {

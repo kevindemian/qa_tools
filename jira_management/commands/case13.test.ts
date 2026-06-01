@@ -21,7 +21,7 @@ describe('case13 — create test execution', () => {
     });
 
     it('executes without error with basic context', async () => {
-        const result = await case13.handler(mockContext as never);
+        const result = await case13.handler(mockContext);
         expect(result === undefined || result === true || result === false).toBe(true);
     });
 });

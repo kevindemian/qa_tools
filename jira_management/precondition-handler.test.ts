@@ -7,7 +7,6 @@ jest.mock('../shared/logger', () => ({
     rootLogger: { info: jest.fn(), warn: jest.fn(), error: jest.fn() },
 }));
 
-import type { JiraResourceLike } from '../shared/types';
 import {
     PreconditionHandler,
     matchPreconditionByTokenOverlap,
@@ -20,6 +19,8 @@ describe('PreconditionHandler', () => {
         postJiraResource: jest.Mock;
         putJiraResource: jest.Mock;
         searchJiraIssues: jest.Mock;
+        getTransitionsForIssue: jest.Mock;
+        transitionIssue: jest.Mock;
     };
     let handler: PreconditionHandler;
 
@@ -30,8 +31,10 @@ describe('PreconditionHandler', () => {
             postJiraResource: jest.fn(),
             putJiraResource: jest.fn(),
             searchJiraIssues: jest.fn(),
+            getTransitionsForIssue: jest.fn(),
+            transitionIssue: jest.fn(),
         };
-        handler = new PreconditionHandler(mockJiraResource as unknown as JiraResourceLike);
+        handler = new PreconditionHandler(mockJiraResource);
     });
 
     describe('_getPreconditionFieldId', () => {

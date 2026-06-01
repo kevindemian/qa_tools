@@ -9,36 +9,36 @@ jest.mock('../../shared/prompt', () => ({
 
 import { maybeRunFirstRunWizard } from '../../shared/first-run';
 import { info, printError } from '../../shared/prompt';
+import { createMockContext } from '../../shared/test-utils/factories/context-factory';
 import handlerModule from './case24';
 
-const mockHandler = handlerModule.handler as unknown as (c: Record<string, unknown>) => Promise<boolean | void>;
+const mockHandler = handlerModule.handler;
 
 describe('case24 handler', () => {
-    const mockPushHistory = jest.fn();
-    const mockContext = { pushHistory: mockPushHistory };
+    const mockContext = createMockContext();
 
     beforeEach(() => {
         jest.clearAllMocks();
     });
 
     it('calls maybeRunFirstRunWizard and pushes history on success', async () => {
-        (maybeRunFirstRunWizard as jest.Mock).mockResolvedValue(undefined);
+        jest.mocked(maybeRunFirstRunWizard).mockResolvedValue(undefined);
 
         const result = await mockHandler(mockContext);
 
         expect(maybeRunFirstRunWizard).toHaveBeenCalledTimes(1);
         expect(info).toHaveBeenCalledWith(expect.stringContaining('assistente'));
-        expect(mockPushHistory).toHaveBeenCalledWith('setup-wizard', expect.any(String), 'ok');
+        expect(mockContext.pushHistory).toHaveBeenCalledWith('setup-wizard', expect.any(String), 'ok');
         expect(result).toBeUndefined();
     });
 
     it('returns false and prints error on first-run wizard failure', async () => {
-        (maybeRunFirstRunWizard as jest.Mock).mockRejectedValue(new Error('network error'));
+        jest.mocked(maybeRunFirstRunWizard).mockRejectedValue(new Error('network error'));
 
         const result = await mockHandler(mockContext);
 
         expect(printError).toHaveBeenCalledWith(expect.stringContaining('wizard'), expect.any(Error));
         expect(result).toBe(false);
-        expect(mockPushHistory).not.toHaveBeenCalled();
+        expect(mockContext.pushHistory).not.toHaveBeenCalled();
     });
 });

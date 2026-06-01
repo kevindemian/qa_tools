@@ -1,3 +1,4 @@
+import { createMockAxiosInstance } from '../shared/test-utils/factories/response-factory';
 import type { AxiosInstance } from 'axios';
 import { apiGet, apiPost, apiPut, projectPath, formatDiffResponse } from './gitlab-api';
 
@@ -9,7 +10,7 @@ jest.mock('../shared/git-provider-error', () => ({
 }));
 
 function mockClient(): jest.Mocked<AxiosInstance> {
-    return { get: jest.fn(), post: jest.fn(), put: jest.fn() } as unknown as jest.Mocked<AxiosInstance>;
+    return createMockAxiosInstance();
 }
 
 describe('projectPath', () => {
@@ -163,7 +164,8 @@ describe('formatDiffResponse', () => {
     it('returns empty string for null / undefined / non-array input', () => {
         expect(formatDiffResponse(null, 'diff', 'name')).toBe('');
         expect(formatDiffResponse(undefined, 'diff', 'name')).toBe('');
-        expect(formatDiffResponse({} as unknown as Record<string, unknown>[], 'diff', 'name')).toBe('');
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any — R9: type narrowing for invalid input test
+        expect(formatDiffResponse({} as Record<string, unknown>[], 'diff', 'name')).toBe('');
     });
 
     it('returns empty string for empty array', () => {

@@ -1,5 +1,6 @@
 import type { JsonObject } from '../shared/types';
-import type { AxiosInstance } from 'axios';
+import { nonNull, nullAs, undefinedAs } from '../shared/test-utils';
+import { createMockAxiosInstance } from '../shared/test-utils/factories/response-factory';
 import {
     formatPR,
     glCreateMergeRequest,
@@ -30,11 +31,11 @@ jest.mock('../shared/git-provider-error', () => ({
     }),
 }));
 
-const mockClient = { get: jest.fn(), post: jest.fn(), put: jest.fn() } as unknown as jest.Mocked<AxiosInstance>;
+const mockClient = createMockAxiosInstance();
 
 beforeEach(() => {
     jest.clearAllMocks();
-    (projectPath as jest.Mock).mockImplementation(
+    jest.mocked(projectPath).mockImplementation(
         (owner: string, repo: string) =>
             `/projects/${owner ? encodeURIComponent(owner + '/' + repo) : encodeURIComponent(repo)}`,
     );
@@ -63,17 +64,19 @@ describe('formatPR', () => {
     });
 
     it('returns null for null input', () => {
-        expect(formatPR(null as unknown as JsonObject)).toBeNull();
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any — R9: type narrowing from null/undefined for null-handling test
+        expect(formatPR(nullAs<JsonObject>())).toBeNull();
     });
 
     it('returns null for undefined input', () => {
-        expect(formatPR(undefined as unknown as JsonObject)).toBeNull();
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any — R9: type narrowing from null/undefined for null-handling test
+        expect(formatPR(undefinedAs<JsonObject>())).toBeNull();
     });
 
     it('coerces approved to boolean false', () => {
         const data = { iid: 1, approved: false };
         const result = formatPR(data);
-        expect(result!.approved).toBe(false);
+        expect(nonNull(result).approved).toBe(false);
     });
 });
 
@@ -81,7 +84,7 @@ describe('glCreateMergeRequest', () => {
     const args = ['owner', 'repo', 'feature', 'main', 'MR Title', 'MR Desc'] as const;
 
     it('calls apiPost and returns formatted MR', async () => {
-        (apiPost as jest.Mock).mockResolvedValue({ iid: 10, web_url: 'https://...' });
+        jest.mocked(apiPost).mockResolvedValue({ iid: 10, web_url: 'https://...' });
         const result = await glCreateMergeRequest(mockClient, ...args);
         expect(result).toMatchObject({ iid: 10, number: 10 });
         expect(apiPost).toHaveBeenCalledWith(
@@ -99,9 +102,9 @@ describe('glCreateMergeRequest', () => {
     });
 
     it('handles 409 by searching and updating existing MR', async () => {
-        (apiPost as jest.Mock).mockRejectedValue(Object.assign(new Error('Conflict'), { response: { status: 409 } }));
-        (apiGet as jest.Mock).mockResolvedValue([{ iid: 5 }]);
-        (apiPut as jest.Mock).mockResolvedValue({ iid: 5 });
+        jest.mocked(apiPost).mockRejectedValue(Object.assign(new Error('Conflict'), { response: { status: 409 } }));
+        jest.mocked(apiGet).mockResolvedValue([{ iid: 5 }]);
+        jest.mocked(apiPut).mockResolvedValue({ iid: 5 });
 
         const result = await glCreateMergeRequest(mockClient, ...args);
         expect(apiGet).toHaveBeenCalled();
@@ -110,22 +113,20 @@ describe('glCreateMergeRequest', () => {
     });
 
     it('re-throws on 409 when no existing MR found', async () => {
-        (apiPost as jest.Mock).mockRejectedValue(Object.assign(new Error('Conflict'), { response: { status: 409 } }));
-        (apiGet as jest.Mock).mockResolvedValue([]);
+        jest.mocked(apiPost).mockRejectedValue(Object.assign(new Error('Conflict'), { response: { status: 409 } }));
+        jest.mocked(apiGet).mockResolvedValue([]);
 
         await expect(glCreateMergeRequest(mockClient, ...args)).rejects.toThrow('Conflict');
     });
 
     it('re-throws on non-409 error', async () => {
-        (apiPost as jest.Mock).mockRejectedValue(
-            Object.assign(new Error('Bad request'), { response: { status: 400 } }),
-        );
+        jest.mocked(apiPost).mockRejectedValue(Object.assign(new Error('Bad request'), { response: { status: 400 } }));
 
         await expect(glCreateMergeRequest(mockClient, ...args)).rejects.toThrow('Bad request');
     });
 
     it('works without description', async () => {
-        (apiPost as jest.Mock).mockResolvedValue({ iid: 11 });
+        jest.mocked(apiPost).mockResolvedValue({ iid: 11 });
         const result = await glCreateMergeRequest(mockClient, 'o', 'r', 'feature', 'main', 'Title');
         expect(result).toMatchObject({ iid: 11 });
     });
@@ -133,7 +134,7 @@ describe('glCreateMergeRequest', () => {
 
 describe('glUpdateMergeRequest', () => {
     it('calls apiPut and returns formatted MR', async () => {
-        (apiPut as jest.Mock).mockResolvedValue({ iid: 5, title: 'Updated' });
+        jest.mocked(apiPut).mockResolvedValue({ iid: 5, title: 'Updated' });
         const result = await glUpdateMergeRequest(mockClient, 'owner', 'repo', 5, 'Updated', 'New desc');
         expect(result).toMatchObject({ iid: 5, title: 'Updated' });
         expect(apiPut).toHaveBeenCalledWith(
@@ -145,7 +146,7 @@ describe('glUpdateMergeRequest', () => {
     });
 
     it('works with string IID', async () => {
-        (apiPut as jest.Mock).mockResolvedValue({ iid: 5 });
+        jest.mocked(apiPut).mockResolvedValue({ iid: 5 });
         const result = await glUpdateMergeRequest(mockClient, 'owner', 'repo', '5', 'Title');
         expect(result).toMatchObject({ iid: 5 });
     });
@@ -153,19 +154,19 @@ describe('glUpdateMergeRequest', () => {
 
 describe('glGetMergeRequest', () => {
     it('returns formatted MR on success', async () => {
-        (apiGet as jest.Mock).mockResolvedValue({ iid: 5, state: 'opened' });
+        jest.mocked(apiGet).mockResolvedValue({ iid: 5, state: 'opened' });
         const result = await glGetMergeRequest(mockClient, 'owner', 'repo', 5);
         expect(result).toMatchObject({ iid: 5, state: 'opened' });
     });
 
     it('returns null when apiGet returns null', async () => {
-        (apiGet as jest.Mock).mockResolvedValue(null);
+        jest.mocked(apiGet).mockResolvedValue(null);
         const result = await glGetMergeRequest(mockClient, 'owner', 'repo', 5);
         expect(result).toBeNull();
     });
 
     it('passes returnNull: true to apiGet', async () => {
-        (apiGet as jest.Mock).mockResolvedValue(null);
+        jest.mocked(apiGet).mockResolvedValue(null);
         await glGetMergeRequest(mockClient, 'owner', 'repo', 5);
         expect(apiGet).toHaveBeenCalledWith(mockClient, expect.stringContaining('/merge_requests/5'), {
             operation: 'buscar MR',
@@ -176,7 +177,7 @@ describe('glGetMergeRequest', () => {
 
 describe('glSearchMergeRequests', () => {
     it('returns formatted MRs from apiGet', async () => {
-        (apiGet as jest.Mock).mockResolvedValue([
+        jest.mocked(apiGet).mockResolvedValue([
             { iid: 1, title: 'First' },
             { iid: 2, title: 'Second' },
         ]);
@@ -187,19 +188,19 @@ describe('glSearchMergeRequests', () => {
     });
 
     it('returns [] when apiGet returns null', async () => {
-        (apiGet as jest.Mock).mockResolvedValue(null);
+        jest.mocked(apiGet).mockResolvedValue(null);
         const result = await glSearchMergeRequests(mockClient, 'owner', 'repo', 'feature', 'main', 'opened');
         expect(result).toEqual([]);
     });
 
     it('returns [] when apiGet returns empty array', async () => {
-        (apiGet as jest.Mock).mockResolvedValue([]);
+        jest.mocked(apiGet).mockResolvedValue([]);
         const result = await glSearchMergeRequests(mockClient, 'owner', 'repo', 'feature', 'main', 'opened');
         expect(result).toEqual([]);
     });
 
     it('passes correct query params', async () => {
-        (apiGet as jest.Mock).mockResolvedValue([]);
+        jest.mocked(apiGet).mockResolvedValue([]);
         await glSearchMergeRequests(mockClient, 'owner', 'repo', 'feature', 'main', 'opened');
         expect(apiGet).toHaveBeenCalledWith(
             mockClient,
@@ -213,8 +214,8 @@ describe('glSearchMergeRequests', () => {
 
 describe('glAcceptMergeRequest', () => {
     it('calls glGetMergeRequest then merge when opened', async () => {
-        (apiGet as jest.Mock).mockResolvedValue({ iid: 5, state: 'opened' });
-        (apiPut as jest.Mock).mockResolvedValue({ web_url: 'https://merge' });
+        jest.mocked(apiGet).mockResolvedValue({ iid: 5, state: 'opened' });
+        jest.mocked(apiPut).mockResolvedValue({ web_url: 'https://merge' });
 
         const result = await glAcceptMergeRequest(mockClient, 'owner', 'repo', 5);
         expect(apiPut).toHaveBeenCalledWith(
@@ -227,7 +228,7 @@ describe('glAcceptMergeRequest', () => {
     });
 
     it('returns early when already merged', async () => {
-        (apiGet as jest.Mock).mockResolvedValue({ iid: 5, state: 'merged', web_url: 'https://...' });
+        jest.mocked(apiGet).mockResolvedValue({ iid: 5, state: 'merged', web_url: 'https://...' });
 
         const result = await glAcceptMergeRequest(mockClient, 'owner', 'repo', 5);
         expect(apiPut).not.toHaveBeenCalled();
@@ -235,21 +236,21 @@ describe('glAcceptMergeRequest', () => {
     });
 
     it('throws when MR not found', async () => {
-        (apiGet as jest.Mock).mockResolvedValue(null);
+        jest.mocked(apiGet).mockResolvedValue(null);
 
         await expect(glAcceptMergeRequest(mockClient, 'owner', 'repo', 999)).rejects.toThrow('MR #999 not found');
     });
 
     it('throws on merge API failure', async () => {
-        (apiGet as jest.Mock).mockResolvedValue({ iid: 5, state: 'opened' });
-        (apiPut as jest.Mock).mockRejectedValue(new Error('Merge failed'));
+        jest.mocked(apiGet).mockResolvedValue({ iid: 5, state: 'opened' });
+        jest.mocked(apiPut).mockRejectedValue(new Error('Merge failed'));
 
         await expect(glAcceptMergeRequest(mockClient, 'owner', 'repo', 5)).rejects.toThrow('Merge failed');
     });
 
     it('passes should_remove_source_branch=false when specified', async () => {
-        (apiGet as jest.Mock).mockResolvedValue({ iid: 5, state: 'opened' });
-        (apiPut as jest.Mock).mockResolvedValue({});
+        jest.mocked(apiGet).mockResolvedValue({ iid: 5, state: 'opened' });
+        jest.mocked(apiPut).mockResolvedValue({});
 
         await glAcceptMergeRequest(mockClient, 'owner', 'repo', 5, false);
         expect(apiPut).toHaveBeenCalledWith(
@@ -263,7 +264,7 @@ describe('glAcceptMergeRequest', () => {
 
 describe('glIsApproved', () => {
     it('returns true when approved', async () => {
-        (apiGet as jest.Mock).mockResolvedValue({ approved: true });
+        jest.mocked(apiGet).mockResolvedValue({ approved: true });
         const result = await glIsApproved(mockClient, 'owner', 'repo', 42);
         expect(result).toBe(true);
         expect(apiGet).toHaveBeenCalledWith(mockClient, expect.stringContaining('/merge_requests/42/approvals'), {
@@ -273,13 +274,13 @@ describe('glIsApproved', () => {
     });
 
     it('returns false when not approved', async () => {
-        (apiGet as jest.Mock).mockResolvedValue({ approved: false });
+        jest.mocked(apiGet).mockResolvedValue({ approved: false });
         const result = await glIsApproved(mockClient, 'owner', 'repo', 42);
         expect(result).toBe(false);
     });
 
     it('returns false when apiGet returns null', async () => {
-        (apiGet as jest.Mock).mockResolvedValue(null);
+        jest.mocked(apiGet).mockResolvedValue(null);
         const result = await glIsApproved(mockClient, 'owner', 'repo', 42);
         expect(result).toBe(false);
     });

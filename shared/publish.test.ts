@@ -17,7 +17,7 @@ jest.mock('./logger', () => ({
     rootLogger: { info: jest.fn(), error: jest.fn() },
 }));
 
-const mockExecFileSync = jest.requireMock('child_process').execFileSync as jest.Mock;
+const mockExecFileSync = jest.mocked(jest.requireMock('child_process').execFileSync);
 const mockLogger = jest.requireMock('./logger').rootLogger;
 
 beforeEach(() => {

@@ -1,4 +1,5 @@
 /** Tests for safeParseJson — parses JSON safely with fallback. */
+import { undefinedAs } from './test-utils';
 import { safeParseJson } from './safe-json';
 
 describe('safeParseJson', () => {
@@ -21,7 +22,8 @@ describe('safeParseJson', () => {
 
     it('returns fallback on undefined input', () => {
         const fallback = 42;
-        const result = safeParseJson<number>(undefined as unknown as string, fallback);
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any — R9: type narrowing from undefined
+        const result = safeParseJson<number>(undefinedAs<string>(), fallback);
         expect(result).toBe(42);
     });
 });

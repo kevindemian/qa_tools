@@ -24,7 +24,7 @@ import { reviewWithLlm } from '../shared/llm-review';
 import { snapshotLlmMetrics } from '../shared/llm-metrics';
 import { clearCache } from '../shared/llm-client';
 
-const mockLlmPrompt = llmPrompt as jest.MockedFunction<typeof llmPrompt>;
+const mockLlmPrompt = jest.mocked(llmPrompt);
 
 const validParsedReport = {
     tests: [

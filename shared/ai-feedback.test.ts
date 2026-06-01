@@ -15,13 +15,14 @@ jest.mock('./logger', () => ({
 
 import { existsSync, readFileSync, writeFileSync, renameSync, mkdirSync } from 'fs';
 import { recordAiGeneration, recordAiModification, getAiFeedbackSummary, getRecentAiRecords } from './ai-feedback';
+import { nonNull } from './test-utils';
 import type { AiGenerationRecord, AiModification } from './types';
 
-const mockExistsSync = existsSync as jest.Mock;
-const mockReadFileSync = readFileSync as jest.Mock;
-const mockWriteFileSync = writeFileSync as jest.Mock;
-const mockRenameSync = renameSync as jest.Mock;
-const mockMkdirSync = mkdirSync as jest.Mock;
+const mockExistsSync = jest.mocked(existsSync);
+const mockReadFileSync = jest.mocked(readFileSync);
+const mockWriteFileSync = jest.mocked(writeFileSync);
+const mockRenameSync = jest.mocked(renameSync);
+const mockMkdirSync = jest.mocked(mkdirSync);
 
 function makeRecord(id: string, overrides?: Partial<AiGenerationRecord>): AiGenerationRecord {
     return {
@@ -50,7 +51,7 @@ describe('recordAiGeneration', () => {
         recordAiGeneration(record);
 
         expect(mockWriteFileSync).toHaveBeenCalledTimes(1);
-        const written = JSON.parse(mockWriteFileSync.mock.calls[0][1] as string);
+        const written = JSON.parse(mockWriteFileSync.mock.calls[0]?.[1] as string);
         expect(written.records).toHaveLength(1);
         expect(written.records[0].id).toBe('rec-1');
     });
@@ -61,7 +62,7 @@ describe('recordAiGeneration', () => {
 
         recordAiGeneration(makeRecord('rec-2'));
 
-        const written = JSON.parse(mockWriteFileSync.mock.calls[0][1] as string);
+        const written = JSON.parse(mockWriteFileSync.mock.calls[0]?.[1] as string);
         expect(written.records).toHaveLength(2);
     });
 
@@ -72,7 +73,7 @@ describe('recordAiGeneration', () => {
 
         recordAiGeneration(makeRecord('rec-200'));
 
-        const written = JSON.parse(mockWriteFileSync.mock.calls[0][1] as string);
+        const written = JSON.parse(mockWriteFileSync.mock.calls[0]?.[1] as string);
         expect(written.records).toHaveLength(200);
         expect(written.records[0].id).toBe('rec-1');
     });
@@ -93,8 +94,8 @@ describe('recordAiModification', () => {
         const updated = recordAiModification('rec-1', mod);
 
         expect(updated).not.toBeNull();
-        expect(updated!.feedback).toHaveLength(1);
-        expect(updated!.feedback![0]!.action).toBe('kept');
+        expect(nonNull(updated).feedback).toHaveLength(1);
+        expect(nonNull(nonNull(updated).feedback![0]).action).toBe('kept');
     });
 
     it('returns null for unknown record', () => {
@@ -164,7 +165,7 @@ describe('getRecentAiRecords', () => {
 
         const recent = getRecentAiRecords(2);
         expect(recent).toHaveLength(2);
-        expect(recent[0]!.id).toBe('r3');
-        expect(recent[1]!.id).toBe('r2');
+        expect(nonNull(recent[0]).id).toBe('r3');
+        expect(nonNull(recent[1]).id).toBe('r2');
     });
 });

@@ -1,4 +1,6 @@
 import type { VersionData, JiraIssue, SearchResponse, JiraResourceLike } from './jira-resource-types';
+import { nullAs } from '../shared/test-utils';
+import { createMockJiraResource } from '../shared/test-utils/factories/jira-resource-factory';
 
 describe('jira-resource-types', () => {
     it('VersionData has the correct shape', () => {
@@ -27,12 +29,7 @@ describe('jira-resource-types', () => {
             getJiraResource: jest.fn(),
             postJiraResource: jest.fn(),
             putJiraResource: jest.fn(),
-            log: {
-                info: jest.fn(),
-                warn: jest.fn(),
-                error: jest.fn(),
-                child: jest.fn(),
-            } as unknown as import('../shared/logger').Logger,
+            log: createMockJiraResource().log,
             getProjectId: jest.fn(),
             getProjectVersions: jest.fn(),
             getVersionId: jest.fn(),
@@ -49,7 +46,7 @@ describe('jira-resource-types', () => {
     it('import from JiraResource class satisfies JiraResourceLike', () => {
         // This is a compile-time check: JiraResource is tested later via integration.
         // Here we just verify the type is exported correctly.
-        const typeCheck: { new (personalToken: string, baseUrl: string): JiraResourceLike } = null as never;
+        const typeCheck: { new (personalToken: string, baseUrl: string): JiraResourceLike } = nullAs();
         expect(typeCheck).toBeNull();
     });
 });

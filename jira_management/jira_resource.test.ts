@@ -1,3 +1,4 @@
+import { nonNull } from '../shared/test-utils';
 import { createHttpClient } from '../shared/http-client';
 
 jest.mock('../shared/http-client', () => ({ createHttpClient: jest.fn() }));
@@ -43,17 +44,18 @@ jest.mock('../shared/prompt', () => ({
 
 import JiraResource from './jira_resource';
 import { formatDateISO } from '../shared/date-utils';
+import { createMockAxiosInstance } from '../shared/test-utils/factories/response-factory';
 
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
 
-let mockClient: { get: jest.Mock; post: jest.Mock; put: jest.Mock };
+let mockClient: ReturnType<typeof createMockAxiosInstance>;
 let jiraResource: JiraResource;
 
 function buildResource(): void {
-    mockClient = { get: jest.fn(), post: jest.fn(), put: jest.fn() };
-    (createHttpClient as jest.Mock).mockReturnValue(mockClient);
+    mockClient = createMockAxiosInstance();
+    jest.mocked(createHttpClient).mockReturnValue(mockClient);
     jiraResource = new JiraResource('test-token', 'http://test-jira.com');
 }
 
@@ -309,8 +311,8 @@ describe('searchJiraIssues', () => {
 
         const result = await jiraResource.searchJiraIssues('project = TEST', 1);
         expect(result.issues).toHaveLength(2);
-        expect(result.issues[0]!.key).toBe('TEST-1');
-        expect(result.issues[1]!.key).toBe('TEST-2');
+        expect(nonNull(result.issues[0]).key).toBe('TEST-1');
+        expect(nonNull(result.issues[1]).key).toBe('TEST-2');
         expect(result.total).toBe(2);
     });
 
@@ -578,9 +580,9 @@ describe('getLatestReleases', () => {
 
         const result = await jiraResource.getLatestReleases('TEST', 1);
         expect(result.latestReleasedVersions).toHaveLength(1);
-        expect(result.latestReleasedVersions[0]!.name).toBe('v1.1');
+        expect(nonNull(result.latestReleasedVersions[0]).name).toBe('v1.1');
         expect(result.unreleasedVersions).toHaveLength(1);
-        expect(result.unreleasedVersions[0]!.name).toBe('v2.0');
+        expect(nonNull(result.unreleasedVersions[0]).name).toBe('v2.0');
     });
 
     it('returns empty arrays when project not found', async () => {
@@ -622,8 +624,8 @@ describe('getLatestReleases', () => {
 
         const result = await jiraResource.getLatestReleases('TEST', 2);
         expect(result.latestReleasedVersions).toHaveLength(2);
-        expect(result.latestReleasedVersions[0]!.name).toBe('v2.0');
-        expect(result.latestReleasedVersions[1]!.name).toBe('v3.0');
+        expect(nonNull(result.latestReleasedVersions[0]).name).toBe('v2.0');
+        expect(nonNull(result.latestReleasedVersions[1]).name).toBe('v3.0');
     });
 
     it('filters out versions without releaseDate', async () => {
@@ -636,7 +638,7 @@ describe('getLatestReleases', () => {
 
         const result = await jiraResource.getLatestReleases('TEST', 5);
         expect(result.latestReleasedVersions).toHaveLength(1);
-        expect(result.latestReleasedVersions[0]!.name).toBe('v1.0');
+        expect(nonNull(result.latestReleasedVersions[0]).name).toBe('v1.0');
         expect(result.unreleasedVersions).toHaveLength(0);
     });
 });

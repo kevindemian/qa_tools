@@ -14,9 +14,10 @@ jest.mock('./llm-client', () => ({
 import { llmPrompt } from './llm-client';
 import { compareRuns } from './run-comparison';
 import { sanitizeForLlm } from './sanitize';
+import { nonNull } from './test-utils';
 import type { MetricsRun } from './metrics';
 
-const mockLlmPrompt = llmPrompt as jest.MockedFunction<typeof llmPrompt>;
+const mockLlmPrompt = jest.mocked(llmPrompt);
 
 const runA: MetricsRun = {
     timestamp: '2026-01-01T00:00:00.000Z',
@@ -64,7 +65,7 @@ describe('compareRuns', () => {
 
         await compareRuns(runAWithSecrets, runB);
 
-        const callArgs = mockLlmPrompt.mock.calls[0]![0];
+        const callArgs = nonNull(mockLlmPrompt.mock.calls[0])[0];
         const userMsg = callArgs.user;
         expect(userMsg).not.toContain(secret);
     });
@@ -105,7 +106,7 @@ describe('compareRuns', () => {
         };
         mockLlmPrompt.mockResolvedValueOnce('sanitized response');
         await compareRuns(runWithSecret, runA);
-        const userArg = mockLlmPrompt.mock.calls[0]![0].user;
+        const userArg = nonNull(mockLlmPrompt.mock.calls[0])[0].user;
         expect(typeof userArg).toBe('string');
         const sanitized = sanitizeForLlm(userArg);
         expect(sanitized).toBe(userArg);

@@ -15,7 +15,6 @@ jest.mock('./config', () => {
     };
 });
 
-import type Config from './config';
 import {
     badge,
     icon,
@@ -31,6 +30,7 @@ import {
 } from './prompt-format';
 import { defaultOutput as output } from './output';
 import { getBreadcrumbPath } from './breadcrumbs';
+import ConfigAccessor from './config-accessor';
 
 describe('badge', () => {
     it('formats ok badge', () => {
@@ -84,7 +84,7 @@ describe('success/error/warn/info', () => {
 
 describe('title', () => {
     it('prints title with breadcrumbs', () => {
-        (getBreadcrumbPath as jest.Mock).mockReturnValue('main');
+        jest.mocked(getBreadcrumbPath).mockReturnValue('main');
         title('My Title');
         expect(output.print).toHaveBeenCalledWith(expect.stringMatching(/My Title/));
     });
@@ -130,7 +130,7 @@ describe('getConfig / __setConfig', () => {
     });
 
     it('returns set config after __setConfig', () => {
-        const mockC = { get: () => false, getDefault: () => mockC } as unknown as Config;
+        const mockC = ConfigAccessor.create({});
         __setConfig(mockC);
         expect(getConfig()).toBe(mockC);
     });

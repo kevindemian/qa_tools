@@ -40,11 +40,13 @@ jest.mock('./import-loop', () => ({
     updateFinalState: jest.fn(),
 }));
 
+import { createMockLogger } from '../shared/test-utils';
+import { createMockLinkManager } from '../shared/test-utils/factories';
+import type IssueLinker from './issue-linker';
 import { prepareTestRun, finalizeTestCreation, postProcessCheckpoint } from './import-orchestrator';
 import { validateImportBatch, filterTests, confirmOrCancel, handleDryRun } from './import-prep';
 import * as STATE from '../shared/state';
 import { updateFinalState } from './import-loop';
-
 const makeTestCases = (count: number) =>
     Array.from({ length: count }, (_, i) => ({
         title: `Test ${i + 1}`,
@@ -54,13 +56,33 @@ const makeTestCases = (count: number) =>
 const onBusy = jest.fn();
 const warn = jest.fn();
 
+function linkerMock(
+    overrides: Partial<Pick<IssueLinker, 'associatePrecondition' | 'linkIssues' | 'updateCrossReferences'>> = {},
+): IssueLinker {
+    return {
+        jiraResource: {
+            getJiraResource: jest.fn(),
+            postJiraResource: jest.fn(),
+            putJiraResource: jest.fn(),
+            searchJiraIssues: jest.fn(),
+            getTransitionsForIssue: jest.fn(),
+            transitionIssue: jest.fn(),
+        },
+        linkManager: createMockLinkManager(),
+        associatePrecondition: jest.fn(),
+        linkIssues: jest.fn(),
+        updateCrossReferences: jest.fn().mockResolvedValue(undefined),
+        ...overrides,
+    };
+}
+
 beforeEach(() => {
     jest.clearAllMocks();
     jest.mocked(validateImportBatch).mockReturnValue({
         resumeFrom: 0,
         inMemoryTasksId: [],
         inMemoryTasksText: [],
-        opLog: { info: jest.fn(), warn: jest.fn(), error: jest.fn() } as never,
+        opLog: createMockLogger(),
     });
     jest.mocked(filterTests).mockImplementation((t: unknown[]) => t as []);
     jest.mocked(confirmOrCancel).mockReturnValue(true);
@@ -129,32 +151,37 @@ describe('finalizeTestCreation', () => {
             { status: 'ok' as const, label: 'Test 1', message: '' },
             { status: 'error' as const, label: 'Test 2', message: 'fail' },
         ];
+        const linker = linkerMock({
+            associatePrecondition: jest.fn(),
+            linkIssues: jest.fn(),
+            updateCrossReferences: jest.fn(),
+        });
         const result = await finalizeTestCreation({
             results,
             tests: makeTestCases(2),
-            linker: {} as never,
+            linker,
             inMemoryTasksId: ['T-1'],
             inMemoryTasksText: ['Test 1'],
             sourcePath: '/p.csv',
             sourceType: 'csv',
             project_name: 'PROJ',
             jiraLabels: [],
-            opLog: { info: jest.fn(), warn: jest.fn(), error: jest.fn() } as never,
+            opLog: createMockLogger(),
             onBusy,
             info: jest.fn(),
             printSummary: jest.fn(),
         });
         expect(result).toBeDefined();
-        expect(result!.status).toBe('error');
-        expect(result!.summary).toContain('1/2');
+        expect(result?.status).toBe('error');
+        expect(result?.summary).toContain('1/2');
     });
 });
 
 describe('postProcessCheckpoint', () => {
     it('deletes checkpoint and updates xrefs', async () => {
-        const linker = {
+        const linker = linkerMock({
             updateCrossReferences: jest.fn().mockResolvedValue(undefined),
-        } as never;
+        });
         const results = [{ status: 'ok' as const, label: 'Test 1', message: '' }];
         await postProcessCheckpoint({
             results,

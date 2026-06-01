@@ -1,5 +1,6 @@
 import { createThrottledClient } from '../shared/http-client';
 import GitLabManager from './gitlab_manager';
+import { createMockAxiosInstance } from '../shared/test-utils/factories/response-factory';
 
 jest.mock('../shared/http-client', () => ({
     createHttpClient: jest.fn(),
@@ -24,12 +25,12 @@ jest.mock('../shared/git-provider-error', () => ({
 }));
 
 describe('GitLabManager', () => {
-    let mockClient: { get: jest.Mock; post: jest.Mock; put: jest.Mock };
+    let mockClient: ReturnType<typeof createMockAxiosInstance>;
     let manager: GitLabManager;
 
     beforeEach(() => {
-        mockClient = { get: jest.fn(), post: jest.fn(), put: jest.fn() };
-        (createThrottledClient as jest.Mock).mockReturnValue(mockClient);
+        mockClient = createMockAxiosInstance();
+        jest.mocked(createThrottledClient).mockReturnValue(mockClient);
         manager = new GitLabManager('project-123', 'test-token', 'https://gitlab.test.com');
     });
 

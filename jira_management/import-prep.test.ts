@@ -68,6 +68,7 @@ import {
 import * as PROMPT from '../shared/prompt';
 import * as STATE from '../shared/state';
 import * as FS from 'fs';
+import { nonNull } from '../shared/test-utils';
 
 const makeTestCases = (count: number) =>
     Array.from({ length: count }, (_, i) => ({
@@ -160,7 +161,7 @@ describe('filterTests', () => {
         jest.mocked(PROMPT.confirm).mockReturnValue(true);
         const result = filterTests(tests);
         expect(result).toHaveLength(1);
-        expect(result![0]!.title).toBe('Test 1');
+        expect(nonNull(nonNull(result)[0]).title).toBe('Test 1');
     });
 });
 
@@ -177,7 +178,7 @@ describe('validateImportBatch', () => {
         }));
         const result = validateImportBatch(testsWithWarnings, '/path.csv', 'csv', 'TESTPROJ');
         expect(result).toBeDefined();
-        expect(result!.resumeFrom).toBe(0);
+        expect(nonNull(result).resumeFrom).toBe(0);
         expect(PROMPT.warn).toHaveBeenCalledWith(expect.stringContaining('Avisos'));
     });
 
@@ -324,8 +325,8 @@ describe('parseJsonTests', () => {
 
         const result = parseJsonTests(tmp);
         expect(result).toHaveLength(2);
-        expect(result[0]!.steps[0]!.fields['Expected Result']).toBe('Result1');
-        expect(result[1]!.steps[0]!.fields['Expected Result']).toBe('Result2');
+        expect(nonNull(nonNull(result[0]).steps[0]).fields['Expected Result']).toBe('Result1');
+        expect(nonNull(nonNull(result[1]).steps[0]).fields['Expected Result']).toBe('Result2');
 
         const loggerModule = require('../shared/logger');
         expect(loggerModule.rootLogger.warn).toHaveBeenCalledWith(expect.stringContaining('ExpectedResult'));
@@ -345,7 +346,7 @@ describe('parseJsonTests', () => {
         actualFs.writeFileSync(tmp, jsonContent, 'utf-8');
 
         const result = parseJsonTests(tmp);
-        expect(result[0]!.steps[0]!.fields['Expected Result']).toBe('Canonical');
+        expect(nonNull(nonNull(result[0]).steps[0]).fields['Expected Result']).toBe('Canonical');
 
         actualFs.unlinkSync(tmp);
     });
@@ -362,7 +363,7 @@ describe('parseJsonTests', () => {
         actualFs.writeFileSync(tmp, jsonContent, 'utf-8');
 
         const result = parseJsonTests(tmp);
-        expect(result[0]!.steps[0]!.fields['Expected Result']).toBe('');
+        expect(nonNull(nonNull(result[0]).steps[0]).fields['Expected Result']).toBe('');
 
         actualFs.unlinkSync(tmp);
     });
@@ -392,8 +393,8 @@ describe('showPreview', () => {
         expect(mockMdToHtml).toHaveBeenCalledWith(expect.any(String), 'Preview — QA Tools');
         expect(FS.writeFileSync).toHaveBeenCalledTimes(2);
         const calls = jest.mocked(FS.writeFileSync).mock.calls;
-        expect(calls[0]![0]).toContain('qa-preview.md');
-        expect(calls[1]![0]).toContain('qa-preview.html');
+        expect(nonNull(calls[0])[0]).toContain('qa-preview.md');
+        expect(nonNull(calls[1])[0]).toContain('qa-preview.html');
     });
 
     it('opens browser when available', async () => {
@@ -510,7 +511,7 @@ describe('csv -> preview pipeline (e2e)', () => {
 
         const tests = await csvResource.readBulkCsv(tmp);
         expect(tests).toHaveLength(1);
-        expect(tests[0]!.title).toBe('Golden test');
+        expect(nonNull(tests[0]).title).toBe('Golden test');
 
         const md = generatePreviewMarkdown(tests);
         expect(md).toContain('Golden test');
