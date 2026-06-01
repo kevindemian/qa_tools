@@ -14,6 +14,9 @@ const FIXTURES = path.join(__dirname, 'fixtures');
 function setupJiraMocks(base: string): void {
     const api = nock(base + '/rest/api/2');
 
+    // findExistingTe → GET /search (called before /issuetype)
+    api.get('/search').query(true).reply(200, { issues: [], total: 0 });
+
     api.get('/issuetype').reply(200, [
         { id: '11200', name: 'Epic' },
         { id: '11800', name: 'Test' },

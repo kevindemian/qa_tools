@@ -17,6 +17,9 @@ beforeAll(() => {
 
     const api = nock(JIRA + '/rest/api/2');
 
+    // findExistingTe → GET /search (called before /issuetype)
+    api.get('/search').query(true).times(2).reply(200, { issues: [], total: 0 });
+
     api.get('/issuetype')
         .times(2)
         .reply(200, [
