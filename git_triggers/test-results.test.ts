@@ -1,6 +1,8 @@
 import { jest } from '@jest/globals';
 import type { GitProvider } from '../shared/types';
 import type { ParseResult } from '../shared/result_parser';
+import JiraClient from '../shared/jira-client';
+import JiraLinkManager from '../jira_management/jira_link_manager';
 
 // ── Shared mock functions ───────────────────────────────────────────────────
 // These are referenced by jest.mock factories below. Must be declared before
@@ -443,8 +445,8 @@ describe('collectTestResults', () => {
         });
         const pushHistory = jest.fn();
 
-        const mockJiraRes = {} as unknown;
-        const mockLinkMgr = {} as unknown;
+        const mockJiraRes = {} as JiraClient;
+        const mockLinkMgr = {} as JiraLinkManager;
 
         await mod.collectTestResults({
             m: mockProvider as unknown as GitProvider,
@@ -473,8 +475,8 @@ describe('collectTestResults', () => {
         mockListPipelineArtifacts.mockResolvedValue([]);
         const pushHistory = jest.fn();
 
-        const mockJiraRes = {} as unknown;
-        const mockLinkMgr = {} as unknown;
+        const mockJiraRes = {} as JiraClient;
+        const mockLinkMgr = {} as JiraLinkManager;
 
         await mod.collectTestResults({
             m: mockProvider as unknown as GitProvider,
@@ -510,8 +512,8 @@ describe('collectTestResults', () => {
         // mockPrompt default (empty string) makes parseTestResults return null
         const pushHistory = jest.fn();
 
-        const mockJiraRes = {} as unknown;
-        const mockLinkMgr = {} as unknown;
+        const mockJiraRes = {} as JiraClient;
+        const mockLinkMgr = {} as JiraLinkManager;
 
         await mod.collectTestResults({
             m: mockProvider as unknown as GitProvider,
