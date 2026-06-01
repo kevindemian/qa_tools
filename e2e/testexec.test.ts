@@ -2,6 +2,7 @@ import nock from 'nock';
 import JiraResource from '../jira_management/jira_resource';
 import JiraLinkManager from '../jira_management/jira_link_manager';
 import TestExecutionCreator from '../jira_management/test-execution-creator';
+import { nonNull } from '../shared/test-utils';
 import createTests from '../jira_management/create_tests';
 
 const { createTestExecution } = createTests;
@@ -66,8 +67,8 @@ describe('E2E: createTestExecution', () => {
             csvName: 'meus-testes',
         });
 
-        expect(result!.key).toBe('EXEC-2');
-        expect(result!.summary).toMatch(/^meus-testes - /);
+        expect(nonNull(result).key).toBe('EXEC-2');
+        expect(nonNull(result).summary).toMatch(/^meus-testes - /);
     });
 
     it('creates Test Execution with single key and default name', async () => {
@@ -78,7 +79,7 @@ describe('E2E: createTestExecution', () => {
             csvName: '',
         });
 
-        expect(result!.key).toBe('EXEC-1');
-        expect(result!.summary).toMatch(/^Automated Execution - /);
+        expect(nonNull(result).key).toBe('EXEC-1');
+        expect(nonNull(result).summary).toMatch(/^Automated Execution - /);
     });
 });

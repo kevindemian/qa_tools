@@ -44,30 +44,35 @@ jest.mock('./prompt-ui', () => {
     const actual = jest.requireActual('./prompt-ui');
     return {
         ...actual,
-        getConfig: jest.fn(() => ({
-            get: (key: string) => {
+        getConfig: jest.fn(() => {
+            const cfg = new (jest.requireActual('./config-accessor').default)();
+            cfg.get = <T>(key: string): T => {
                 const v: Record<string, unknown> = { quiet: false, autoConfirm: false };
-                return v[key] as boolean;
-            },
-        })),
+                return v[key] as T;
+            };
+            return cfg;
+        }),
         warn: jest.fn(),
         icon: jest.fn(() => '!'),
     };
 });
 
 import readlineSync from 'readline-sync';
+import ConfigAccessor from './config-accessor';
 import { getConfig, warn, CancelError } from './prompt-ui';
 import { defaultOutput as outputMock } from './output';
 import { prompt, confirm, isTTY, NAV_CMDS } from './prompt-input-base';
 
 const mockReadlineQuestion = jest.spyOn(readlineSync, 'question').mockImplementation(() => '');
-const mockGetConfig = getConfig as jest.Mock;
-const mockWarn = warn as jest.Mock;
+const mockGetConfig = jest.mocked(getConfig);
+const mockWarn = jest.mocked(warn);
 
 beforeEach(() => {
     jest.clearAllMocks();
     mockReadlineQuestion.mockReturnValue('');
-    mockGetConfig.mockReturnValue({ get: (k: string) => ({ quiet: false, autoConfirm: false })[k] });
+    const cfg = ConfigAccessor.create();
+    cfg.get = <T>(k: string) => ({ quiet: false, autoConfirm: false })[k] as T;
+    mockGetConfig.mockReturnValue(cfg);
 });
 
 describe('prompt', () => {
@@ -110,7 +115,9 @@ describe('confirm', () => {
     });
 
     it('returns defaultYes when autoConfirm', () => {
-        mockGetConfig.mockReturnValue({ get: (k: string) => ({ quiet: false, autoConfirm: true })[k] });
+        const cfg2 = ConfigAccessor.create();
+        cfg2.get = <T>(k: string) => ({ quiet: false, autoConfirm: true })[k] as T;
+        mockGetConfig.mockReturnValue(cfg2);
         expect(confirm('Confirm?', true)).toBe(true);
     });
 
@@ -166,7 +173,9 @@ describe('isTTY', () => {
 
     it('returns false when quiet is true', () => {
         Object.defineProperty(process.stdout, 'isTTY', { value: true, configurable: true });
-        mockGetConfig.mockReturnValue({ get: (k: string) => ({ quiet: true, autoConfirm: false })[k] });
+        const cfg3 = ConfigAccessor.create();
+        cfg3.get = <T>(k: string) => ({ quiet: true, autoConfirm: false })[k] as T;
+        mockGetConfig.mockReturnValue(cfg3);
         expect(isTTY()).toBe(false);
     });
 });

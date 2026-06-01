@@ -29,21 +29,17 @@ import { generatePrDescription } from './ai-pr-desc';
 import { assessTestImpact } from './ai-test-impact';
 import { nivelarBranches } from './nivelar';
 import { handleCreateMR, handleListApprovedMRs, handleMergeMR, nivelarBranchesWrapper } from './mr-handler';
-import type { GitProvider, MergeRequestInfo } from '../shared/types';
+import type { MergeRequestInfo } from '../shared/types';
+import { createMockGitProvider } from '../shared/test-utils/factories';
 
-const mockPrompt = prompt as jest.Mock;
-const mockConfirm = confirm as jest.Mock;
-const mockPrintError = printError as jest.Mock;
-const mockGeneratePrDesc = generatePrDescription as jest.Mock;
-const mockAssessImpact = assessTestImpact as jest.Mock;
-const mockNivelar = nivelarBranches as jest.Mock;
+const mockPrompt = jest.mocked(prompt);
+const mockConfirm = jest.mocked(confirm);
+const mockPrintError = jest.mocked(printError);
+const mockGeneratePrDesc = jest.mocked(generatePrDescription);
+const mockAssessImpact = jest.mocked(assessTestImpact);
+const mockNivelar = jest.mocked(nivelarBranches);
 
-const mockM = {
-    createMergeRequest: jest.fn(),
-    searchMergeRequests: jest.fn(),
-    isApproved: jest.fn(),
-    acceptMergeRequest: jest.fn(),
-} as unknown as GitProvider;
+const mockM = createMockGitProvider();
 
 beforeEach(() => {
     jest.clearAllMocks();
@@ -66,7 +62,7 @@ describe('handleCreateMR', () => {
             .mockReturnValueOnce('main')
             .mockReturnValueOnce('Title')
             .mockReturnValueOnce('Manual desc');
-        (mockM.createMergeRequest as jest.Mock).mockResolvedValue({ web_url: 'https://gitlab.com/merge/1' });
+        jest.mocked(mockM.createMergeRequest).mockResolvedValue({ web_url: 'https://gitlab.com/merge/1' });
 
         await handleCreateMR(mockM);
 
@@ -78,7 +74,7 @@ describe('handleCreateMR', () => {
         mockConfirm.mockReturnValueOnce(true).mockReturnValueOnce(false);
         mockGeneratePrDesc.mockResolvedValue('AI generated description');
         mockPrompt.mockReturnValueOnce('feat').mockReturnValueOnce('main').mockReturnValueOnce('Title');
-        (mockM.createMergeRequest as jest.Mock).mockResolvedValue({ web_url: 'https://gitlab.com/merge/1' });
+        jest.mocked(mockM.createMergeRequest).mockResolvedValue({ web_url: 'https://gitlab.com/merge/1' });
 
         await handleCreateMR(mockM);
 
@@ -94,7 +90,7 @@ describe('handleCreateMR', () => {
             .mockReturnValueOnce('main')
             .mockReturnValueOnce('Title')
             .mockReturnValueOnce('Manual desc');
-        (mockM.createMergeRequest as jest.Mock).mockResolvedValue({ web_url: 'https://gitlab.com/merge/1' });
+        jest.mocked(mockM.createMergeRequest).mockResolvedValue({ web_url: 'https://gitlab.com/merge/1' });
 
         await handleCreateMR(mockM);
 
@@ -110,7 +106,7 @@ describe('handleCreateMR', () => {
             .mockReturnValueOnce('main')
             .mockReturnValueOnce('Title')
             .mockReturnValueOnce('Desc');
-        (mockM.createMergeRequest as jest.Mock).mockResolvedValue({ web_url: 'https://gitlab.com/merge/1' });
+        jest.mocked(mockM.createMergeRequest).mockResolvedValue({ web_url: 'https://gitlab.com/merge/1' });
 
         await handleCreateMR(mockM);
 
@@ -125,7 +121,7 @@ describe('handleCreateMR', () => {
             .mockReturnValueOnce('main')
             .mockReturnValueOnce('Title')
             .mockReturnValueOnce('Desc');
-        (mockM.createMergeRequest as jest.Mock).mockRejectedValue(new Error('API error'));
+        jest.mocked(mockM.createMergeRequest).mockRejectedValue(new Error('API error'));
 
         await handleCreateMR(mockM);
 
@@ -141,8 +137,8 @@ describe('handleListApprovedMRs', () => {
             { iid: 1, title: 'MR 1' },
             { iid: 2, title: 'MR 2' },
         ] as MergeRequestInfo[];
-        (mockM.searchMergeRequests as jest.Mock).mockResolvedValue(mrs);
-        (mockM.isApproved as jest.Mock).mockResolvedValue(true);
+        jest.mocked(mockM.searchMergeRequests).mockResolvedValue(mrs);
+        jest.mocked(mockM.isApproved).mockResolvedValue(true);
 
         await handleListApprovedMRs(mockM);
 
@@ -152,7 +148,7 @@ describe('handleListApprovedMRs', () => {
 
     it('warns when no approved MRs', async () => {
         mockPrompt.mockReturnValue('opened');
-        (mockM.searchMergeRequests as jest.Mock).mockResolvedValue([]);
+        jest.mocked(mockM.searchMergeRequests).mockResolvedValue([]);
 
         await handleListApprovedMRs(mockM);
 
@@ -161,7 +157,7 @@ describe('handleListApprovedMRs', () => {
 
     it('handles search error', async () => {
         mockPrompt.mockReturnValue('opened');
-        (mockM.searchMergeRequests as jest.Mock).mockRejectedValue(new Error('search fail'));
+        jest.mocked(mockM.searchMergeRequests).mockRejectedValue(new Error('search fail'));
 
         await handleListApprovedMRs(mockM);
 
@@ -172,9 +168,8 @@ describe('handleListApprovedMRs', () => {
     it('handles provider without isApproved', async () => {
         mockPrompt.mockReturnValue('opened');
         const mrs = [{ iid: 1, title: 'MR 1' }] as MergeRequestInfo[];
-        (mockM.searchMergeRequests as jest.Mock).mockResolvedValue(mrs);
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        (mockM as any).isApproved = undefined;
+        jest.mocked(mockM.searchMergeRequests).mockResolvedValue(mrs);
+        Object.defineProperty(mockM, 'isApproved', { value: undefined, writable: true });
 
         await handleListApprovedMRs(mockM);
 
@@ -185,7 +180,7 @@ describe('handleListApprovedMRs', () => {
 describe('handleMergeMR', () => {
     it('merges MR successfully', async () => {
         mockPrompt.mockReturnValue('42');
-        (mockM.acceptMergeRequest as jest.Mock).mockResolvedValue({ web_url: 'https://gitlab.com/merge/42' });
+        jest.mocked(mockM.acceptMergeRequest).mockResolvedValue({ web_url: 'https://gitlab.com/merge/42' });
 
         await handleMergeMR(mockM);
 
@@ -196,7 +191,7 @@ describe('handleMergeMR', () => {
 
     it('handles merge error', async () => {
         mockPrompt.mockReturnValue('42');
-        (mockM.acceptMergeRequest as jest.Mock).mockRejectedValue(new Error('merge fail'));
+        jest.mocked(mockM.acceptMergeRequest).mockRejectedValue(new Error('merge fail'));
 
         await handleMergeMR(mockM);
 

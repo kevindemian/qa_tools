@@ -15,6 +15,9 @@ jest.mock('./config', () => {
             resetInstance() {
                 Object.keys(mockConfig).forEach((k) => delete mockConfig[k]);
             },
+            reset() {
+                Object.keys(mockConfig).forEach((k) => delete mockConfig[k]);
+            },
         },
     };
 });
@@ -24,7 +27,7 @@ import { checkRateLimit, resetRateLimiter, jitter, LLM_RATE_WINDOW_MS } from './
 import { LlmRateLimitError } from './errors';
 
 beforeEach(() => {
-    (Config as unknown as { resetInstance: () => void }).resetInstance();
+    Config.reset();
     resetRateLimiter();
 });
 
@@ -49,13 +52,13 @@ describe('jitter', () => {
 
 describe('checkRateLimit', () => {
     it('allows requests within limit', () => {
-        (Config as unknown as { set: (k: string, v: string) => void }).set('LLM_RATE_LIMIT', '5');
+        Config.set('LLM_RATE_LIMIT', '5');
         expect(() => checkRateLimit('main')).not.toThrow();
         expect(() => checkRateLimit('main')).not.toThrow();
     });
 
     it('throws when rate limit exceeded', () => {
-        (Config as unknown as { set: (k: string, v: string) => void }).set('LLM_RATE_LIMIT', '2');
+        Config.set('LLM_RATE_LIMIT', '2');
         resetRateLimiter();
         checkRateLimit('main');
         checkRateLimit('main');
@@ -71,7 +74,7 @@ describe('checkRateLimit', () => {
 
     it('recovers after rate limit window passes', () => {
         jest.useFakeTimers();
-        (Config as unknown as { set: (k: string, v: string) => void }).set('LLM_RATE_LIMIT', '1');
+        Config.set('LLM_RATE_LIMIT', '1');
         resetRateLimiter();
         checkRateLimit('main');
         expect(() => checkRateLimit('main')).toThrow(LlmRateLimitError);
@@ -81,7 +84,7 @@ describe('checkRateLimit', () => {
     });
 
     it('enforces tier-specific limits independently', () => {
-        (Config as unknown as { set: (k: string, v: string) => void }).set('LLM_RATE_LIMIT', '1');
+        Config.set('LLM_RATE_LIMIT', '1');
         resetRateLimiter();
         checkRateLimit('main');
         expect(() => checkRateLimit('main')).toThrow(LlmRateLimitError);
@@ -89,7 +92,7 @@ describe('checkRateLimit', () => {
     });
 
     it('throws error message containing tier name and limit', () => {
-        (Config as unknown as { set: (k: string, v: string) => void }).set('LLM_RATE_LIMIT', '1');
+        Config.set('LLM_RATE_LIMIT', '1');
         resetRateLimiter();
         checkRateLimit('reviewer');
         expect(() => checkRateLimit('reviewer')).toThrow(/tier.*reviewer/);
@@ -98,7 +101,7 @@ describe('checkRateLimit', () => {
 
 describe('resetRateLimiter', () => {
     it('resets the rate limiter state', () => {
-        (Config as unknown as { set: (k: string, v: string) => void }).set('LLM_RATE_LIMIT', '1');
+        Config.set('LLM_RATE_LIMIT', '1');
         resetRateLimiter();
         checkRateLimit('main');
         expect(() => checkRateLimit('main')).toThrow(LlmRateLimitError);

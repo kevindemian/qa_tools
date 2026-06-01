@@ -16,19 +16,15 @@ jest.mock('../shared/prompt', () => ({
     }),
 }));
 
+import { createMockJiraResource } from '../shared/test-utils/factories/jira-resource-factory';
+import { createMockLinkManager } from '../shared/test-utils/factories/link-manager-factory';
 import TestExecutionCreator from './test-execution-creator';
 import { rootLogger } from '../shared/logger';
 
 describe('TestExecutionCreator', () => {
     let creator: TestExecutionCreator;
-    let mockJiraResource: {
-        getJiraResource: jest.Mock;
-        postJiraResource: jest.Mock;
-        putJiraResource: jest.Mock;
-    };
-    let mockLinkManager: {
-        createIssueLink: jest.Mock;
-    };
+    let mockJiraResource: ReturnType<typeof createMockJiraResource>;
+    let mockLinkManager: ReturnType<typeof createMockLinkManager>;
     let dateSpy: jest.SpyInstance;
 
     const fixedTimestamp = '23/05/2026 10:30';
@@ -60,15 +56,9 @@ describe('TestExecutionCreator', () => {
     beforeEach(() => {
         dateSpy = jest.spyOn(Date.prototype, 'toLocaleString').mockReturnValue(fixedTimestamp);
 
-        mockJiraResource = {
-            getJiraResource: jest.fn(),
-            postJiraResource: jest.fn(),
-            putJiraResource: jest.fn(),
-        };
-        mockLinkManager = {
-            createIssueLink: jest.fn(),
-        };
-        creator = new TestExecutionCreator(mockJiraResource as never, mockLinkManager as never);
+        mockJiraResource = createMockJiraResource();
+        mockLinkManager = createMockLinkManager();
+        creator = new TestExecutionCreator(mockJiraResource, mockLinkManager);
     });
 
     afterEach(() => {

@@ -101,7 +101,8 @@ describe('_markFirstRunDone', () => {
         const { _markFirstRunDone } = loadModule();
         _markFirstRunDone();
         expect(mockUpdateState).toHaveBeenCalledTimes(1);
-        const cb = mockUpdateState.mock.calls[0]?.[0] as unknown as (s: Record<string, unknown>) => void;
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any — R9: type narrowing from mock callback argument
+        const cb = mockUpdateState.mock.calls[0]?.[0] as (s: Record<string, unknown>) => void;
         expect(typeof cb).toBe('function');
         const state: Record<string, unknown> = {};
         cb(state);

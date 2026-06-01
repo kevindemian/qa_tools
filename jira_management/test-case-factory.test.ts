@@ -10,6 +10,7 @@ const mockPrompt = {
 };
 jest.mock('../shared/prompt', () => mockPrompt);
 
+import { createMockJiraResource } from '../shared/test-utils/factories/jira-resource-factory';
 import TestCaseFactory from './test-case-factory';
 
 function createMockImporter() {
@@ -18,13 +19,13 @@ function createMockImporter() {
 
 describe('TestCaseFactory', () => {
     let factory: TestCaseFactory;
-    let mockJiraResource: { postJiraResource: jest.Mock; searchJiraIssues: jest.Mock };
+    let mockJiraResource: ReturnType<typeof createMockJiraResource>;
     let mockImporter: ReturnType<typeof createMockImporter>;
 
     beforeEach(() => {
-        mockJiraResource = { postJiraResource: jest.fn(), searchJiraIssues: jest.fn() };
+        mockJiraResource = createMockJiraResource();
         mockImporter = createMockImporter();
-        factory = new TestCaseFactory(mockJiraResource as never, mockImporter);
+        factory = new TestCaseFactory(mockJiraResource, mockImporter);
     });
 
     afterEach(() => {
@@ -88,7 +89,7 @@ describe('TestCaseFactory', () => {
         const opLog = { info: jest.fn() };
 
         it('skips creation when existing issue found by title', async () => {
-            mockJiraResource.searchJiraIssues = jest.fn().mockResolvedValue({
+            mockJiraResource.searchJiraIssues.mockResolvedValue({
                 issues: [{ key: 'TEST-42', fields: { summary: 'Login Test' } }],
                 total: 1,
             });
@@ -111,7 +112,7 @@ describe('TestCaseFactory', () => {
         });
 
         it('proceeds with creation when no existing issue matches', async () => {
-            mockJiraResource.searchJiraIssues = jest.fn().mockResolvedValue({
+            mockJiraResource.searchJiraIssues.mockResolvedValue({
                 issues: [],
                 total: 0,
             });
@@ -131,7 +132,7 @@ describe('TestCaseFactory', () => {
         });
 
         it('falls through to create when search fails gracefully', async () => {
-            mockJiraResource.searchJiraIssues = jest.fn().mockRejectedValue(new Error('Search error'));
+            mockJiraResource.searchJiraIssues.mockRejectedValue(new Error('Search error'));
             mockJiraResource.postJiraResource.mockResolvedValue({ key: 'TEST-44' });
 
             const result = await factory.createIssue({
@@ -164,7 +165,7 @@ describe('TestCaseFactory', () => {
         });
 
         it('shows prompt info when quiet is false and issue skipped', async () => {
-            mockJiraResource.searchJiraIssues = jest.fn().mockResolvedValue({
+            mockJiraResource.searchJiraIssues.mockResolvedValue({
                 issues: [{ key: 'TEST-42', fields: { summary: 'Login Test' } }],
                 total: 1,
             });

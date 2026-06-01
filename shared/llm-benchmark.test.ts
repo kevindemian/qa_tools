@@ -193,8 +193,9 @@ describe('runBenchmark', () => {
     it('loads fixtures and executes all benchmark types when BENCHMARK is true', async () => {
         restoreEnv = withEnv({ BENCHMARK: 'true' });
 
-        const llmMock = llmPrompt as jest.Mock;
-        llmMock.mockImplementation((_tier: string, _system: string, _userMsg: string, callerId?: string) => {
+        const llmMock = jest.mocked(llmPrompt);
+        llmMock.mockImplementation(async (opts) => {
+            const callerId = opts.callerId;
             if (callerId === 'benchmark-fa') {
                 return JSON.stringify({
                     tests: [
@@ -332,7 +333,7 @@ describe('runBenchmark — error handling', () => {
     it('reports failure when llmPrompt throws', async () => {
         restoreEnv = withEnv({ BENCHMARK: 'true' });
 
-        const llmMock = llmPrompt as jest.Mock;
+        const llmMock = jest.mocked(llmPrompt);
         llmMock.mockRejectedValue(new Error('API timeout'));
 
         await runBenchmark();

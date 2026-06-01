@@ -6,6 +6,7 @@ import crypto from 'crypto';
 import { z } from 'zod';
 import { diskCacheGet, diskCacheSet, clearDiskCache } from './disk-cache';
 import { rootLogger } from './logger';
+import type { ZodSchema } from './types';
 
 // ---- types ----
 
@@ -74,7 +75,7 @@ function parseRawOnce(raw: string): Record<string, unknown> | null {
     }
 }
 
-function _validateWithSchema<T>(raw: string, schema: z.ZodType<T>): T | null {
+function _validateWithSchema<T>(raw: string, schema: ZodSchema<T>): T | null {
     const parsed = parseRawOnce(raw);
     if (!parsed) return null;
     const result = schema.safeParse(parsed);
@@ -117,7 +118,7 @@ export function checkMemoryCache<T>(
     cKey: string,
     tier: string,
     callerId: string | undefined,
-    schema: z.ZodType<T> | undefined,
+    schema: ZodSchema<T> | undefined,
     responseFormat: string | undefined,
 ): CacheLookupResult<T> {
     const cached = cache.get(cKey);
@@ -138,7 +139,7 @@ export function checkMemoryCache<T>(
 
 export function checkDiskCache<T>(
     cKey: string,
-    schema: z.ZodType<T> | undefined,
+    schema: ZodSchema<T> | undefined,
     responseFormat: string | undefined,
 ): CacheLookupResult<T> {
     const diskCached = diskCacheGet(cKey);
@@ -173,7 +174,7 @@ export function clearCache(): void {
     clearDiskCache();
 }
 
-export function checkSchema<T>(raw: string, schema: z.ZodType<T>): T | null {
+export function checkSchema<T>(raw: string, schema: ZodSchema<T>): T | null {
     return _validateWithSchema(raw, schema);
 }
 

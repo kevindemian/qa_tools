@@ -161,8 +161,8 @@ beforeAll(async () => {
     mod = require('./main') as MainModule;
     // Intentional: yield to microtask queue so main() (called at module scope) completes
     await new Promise<void>((resolve) => setTimeout(resolve, 0));
-    createValidateEnvCall = (createValidateEnv as jest.Mock).mock.calls[0]?.[0];
-    getStatePathCalled = (getStatePath as jest.Mock).mock.calls.length > 0;
+    createValidateEnvCall = jest.mocked(createValidateEnv).mock.calls[0]?.[0];
+    getStatePathCalled = jest.mocked(getStatePath).mock.calls.length > 0;
 });
 
 afterAll(() => {
@@ -314,11 +314,11 @@ describe('buildMenuChoices', () => {
 describe('handleSpecialInput', () => {
     beforeEach(() => {
         // showHelpLoop uses prompt() to wait for input; return /back to exit loop immediately
-        (prompt as jest.Mock).mockReturnValue('/back');
+        jest.mocked(prompt).mockReturnValue('/back');
     });
 
     afterEach(() => {
-        (prompt as jest.Mock).mockReturnValue('0');
+        jest.mocked(prompt).mockReturnValue('0');
     });
 
     it('returns true and shows help for /help', async () => {
@@ -374,17 +374,17 @@ describe('_configHint', () => {
     });
 
     it('returns "não configurado" when state has no cypress path', () => {
-        (loadTypedState as jest.Mock).mockReturnValue({});
+        jest.mocked(loadTypedState).mockReturnValue({});
         expect(mod._configHint('cypressDir', ctx)).toBe('(atual: não configurado)');
     });
 
     it('reads cypress path from state', () => {
-        (loadTypedState as jest.Mock).mockReturnValue({ lastCypressPath: '/cy/path' });
+        jest.mocked(loadTypedState).mockReturnValue({ lastCypressPath: '/cy/path' });
         expect(mod._configHint('cypressDir', ctx)).toBe('(atual: /cy/path)');
     });
 
     it('reads json dir from state', () => {
-        (loadTypedState as jest.Mock).mockReturnValue({ lastJsonDir: '/json/dir' });
+        jest.mocked(loadTypedState).mockReturnValue({ lastJsonDir: '/json/dir' });
         expect(mod._configHint('jsonDir', ctx)).toBe('(atual: /json/dir)');
     });
 
@@ -433,7 +433,7 @@ describe('dispatchChoice', () => {
     };
 
     beforeEach(() => {
-        (jest.requireMock('./commands').getHandler as jest.Mock).mockReturnValue(null);
+        jest.mocked(jest.requireMock('./commands').getHandler).mockReturnValue(null);
     });
 
     it("returns 'continue' for choice '0' (handled by getAndResolveChoice now)", async () => {
@@ -444,7 +444,7 @@ describe('dispatchChoice', () => {
 
     it("dispatches to handler and returns 'continue' for choice '1'", async () => {
         const handler = jest.fn().mockResolvedValue(false);
-        (jest.requireMock('./commands').getHandler as jest.Mock).mockReturnValue(handler);
+        jest.mocked(jest.requireMock('./commands').getHandler).mockReturnValue(handler);
 
         const result = await mod.dispatchChoice('1', minimalCtx);
 
@@ -454,7 +454,7 @@ describe('dispatchChoice', () => {
 
     it("dispatches to handler and returns 'continue' for choice '7'", async () => {
         const handler = jest.fn().mockResolvedValue(false);
-        (jest.requireMock('./commands').getHandler as jest.Mock).mockReturnValue(handler);
+        jest.mocked(jest.requireMock('./commands').getHandler).mockReturnValue(handler);
 
         const result = await mod.dispatchChoice('7', minimalCtx);
 
@@ -480,7 +480,7 @@ describe('dispatchChoice', () => {
 
     it('handler returning true triggers continue properly', async () => {
         const handler = jest.fn().mockResolvedValue(true);
-        (jest.requireMock('./commands').getHandler as jest.Mock).mockReturnValue(handler);
+        jest.mocked(jest.requireMock('./commands').getHandler).mockReturnValue(handler);
 
         const result = await mod.dispatchChoice('1', minimalCtx);
 
@@ -491,7 +491,7 @@ describe('dispatchChoice', () => {
     it("handler that throws CancelError returns 'continue'", async () => {
         const { CancelError } = jest.requireMock('../shared/prompt');
         const handler = jest.fn().mockRejectedValue(new CancelError('canceled'));
-        (jest.requireMock('./commands').getHandler as jest.Mock).mockReturnValue(handler);
+        jest.mocked(jest.requireMock('./commands').getHandler).mockReturnValue(handler);
 
         const result = await mod.dispatchChoice('1', minimalCtx);
 
@@ -500,7 +500,7 @@ describe('dispatchChoice', () => {
 
     it("catches generic Error from handler and returns 'continue'", async () => {
         const handler = jest.fn().mockRejectedValue(new Error('generic error'));
-        (jest.requireMock('./commands').getHandler as jest.Mock).mockReturnValue(handler);
+        jest.mocked(jest.requireMock('./commands').getHandler).mockReturnValue(handler);
 
         const result = await mod.dispatchChoice('1', minimalCtx);
 
@@ -544,11 +544,11 @@ describe('showDocs', () => {
 
 describe('showHelpLoop', () => {
     beforeEach(() => {
-        (prompt as jest.Mock).mockReturnValue('/back');
+        jest.mocked(prompt).mockReturnValue('/back');
     });
 
     afterEach(() => {
-        (prompt as jest.Mock).mockReturnValue('0');
+        jest.mocked(prompt).mockReturnValue('0');
     });
 
     it('shows help topics then exits on /back', async () => {
@@ -557,37 +557,37 @@ describe('showHelpLoop', () => {
     });
 
     it('handles specific topic then exits', async () => {
-        (prompt as jest.Mock).mockReturnValueOnce('csv').mockReturnValueOnce('/back');
+        jest.mocked(prompt).mockReturnValueOnce('csv').mockReturnValueOnce('/back');
         await mod.showHelpLoop();
         expect(title).toHaveBeenCalled();
     });
 
     it('handles empty input by continuing loop', async () => {
-        (prompt as jest.Mock).mockReturnValueOnce('').mockReturnValueOnce('/back');
+        jest.mocked(prompt).mockReturnValueOnce('').mockReturnValueOnce('/back');
         await mod.showHelpLoop();
         expect(title).toHaveBeenCalled();
     });
 
     it('shows help on /help command and continues', async () => {
-        (prompt as jest.Mock).mockReturnValueOnce('/help').mockReturnValueOnce('/back');
+        jest.mocked(prompt).mockReturnValueOnce('/help').mockReturnValueOnce('/back');
         await mod.showHelpLoop();
         expect(title).toHaveBeenCalled();
     });
 
     it('shows specific help topic on /help <topic>', async () => {
-        (prompt as jest.Mock).mockReturnValueOnce('/help csv').mockReturnValueOnce('/back');
+        jest.mocked(prompt).mockReturnValueOnce('/help csv').mockReturnValueOnce('/back');
         await mod.showHelpLoop();
         expect(helpLine).toHaveBeenCalled();
     });
 
     it('shows multiple matching topics when input matches several', async () => {
-        (prompt as jest.Mock).mockReturnValueOnce('a').mockReturnValueOnce('/back');
+        jest.mocked(prompt).mockReturnValueOnce('a').mockReturnValueOnce('/back');
         await mod.showHelpLoop();
         expect(title).toHaveBeenCalled();
     });
 
     it('warns when topic is not found', async () => {
-        (prompt as jest.Mock).mockReturnValueOnce('nonexistent_topic_xyz').mockReturnValueOnce('/back');
+        jest.mocked(prompt).mockReturnValueOnce('nonexistent_topic_xyz').mockReturnValueOnce('/back');
         await mod.showHelpLoop();
         expect(warn).toHaveBeenCalledWith(expect.stringContaining('não encontrado'));
     });
@@ -816,7 +816,7 @@ describe('dispatchAndHandleResult', () => {
     };
 
     beforeEach(() => {
-        (jest.requireMock('./commands').getHandler as jest.Mock).mockReturnValue(jest.fn().mockResolvedValue(false));
+        jest.mocked(jest.requireMock('./commands').getHandler).mockReturnValue(jest.fn().mockResolvedValue(false));
     });
 
     it('calls prompt when autoConfirm off with long op and error results', async () => {
@@ -836,7 +836,7 @@ describe('dispatchAndHandleResult', () => {
             ctx: { ...minimalCtx.ctx, results: [{ status: 'error' }] },
         };
         const { prompt } = require('../shared/prompt');
-        (prompt as jest.Mock).mockClear();
+        jest.mocked(prompt).mockClear();
         const result = await mod.dispatchAndHandleResult('0', ctxWithErrors, ctxWithErrors.ctx);
         expect(result).toBe('continue');
         expect(prompt).not.toHaveBeenCalled();
@@ -848,7 +848,7 @@ describe('dispatchAndHandleResult', () => {
             ctx: { ...minimalCtx.ctx, results: [{ status: 'error' }] },
         };
         const { prompt } = require('../shared/prompt');
-        (prompt as jest.Mock).mockClear();
+        jest.mocked(prompt).mockClear();
         const result = await mod.dispatchAndHandleResult('2', ctxWithErrors, ctxWithErrors.ctx);
         expect(result).toBe('continue');
         expect(prompt).not.toHaveBeenCalled();

@@ -14,9 +14,9 @@ jest.mock('../shared/prompt', () => ({
     divider: jest.fn(),
 }));
 
-const mockConfirm = require('../shared/prompt').confirm as jest.Mock;
-const mockAnalyzeFailures = require('../shared/failure-analysis').analyzeFailuresWithReport as jest.Mock;
-const mockSuccess = require('../shared/prompt').success as jest.Mock;
+const mockConfirm = jest.mocked(require('../shared/prompt').confirm);
+const mockAnalyzeFailures = jest.mocked(require('../shared/failure-analysis').analyzeFailuresWithReport);
+const mockSuccess = jest.mocked(require('../shared/prompt').success);
 
 const mockReport = {
     content: '**Analysis:** tests failed due to timeout.',

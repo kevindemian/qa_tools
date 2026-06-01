@@ -12,7 +12,6 @@ jest.mock('fs');
 import fs from 'fs';
 import path from 'path';
 
-import type { JiraResourceLike } from '../shared/types';
 import JiraLinkManager, {
     matchPreconditionByTokenOverlap,
     matchPreconditionByDualThreshold,
@@ -29,6 +28,8 @@ describe('JiraLinkManager', () => {
         postJiraResource: jest.Mock;
         putJiraResource: jest.Mock;
         searchJiraIssues: jest.Mock;
+        getTransitionsForIssue: jest.Mock;
+        transitionIssue: jest.Mock;
     };
 
     beforeEach(() => {
@@ -38,8 +39,10 @@ describe('JiraLinkManager', () => {
             postJiraResource: jest.fn(),
             putJiraResource: jest.fn(),
             searchJiraIssues: jest.fn(),
+            getTransitionsForIssue: jest.fn(),
+            transitionIssue: jest.fn(),
         };
-        manager = new JiraLinkManager(mockJiraResource as unknown as JiraResourceLike);
+        manager = new JiraLinkManager(mockJiraResource);
     });
 
     describe('constructor', () => {

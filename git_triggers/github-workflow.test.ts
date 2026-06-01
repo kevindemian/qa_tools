@@ -1,3 +1,5 @@
+import { createMockAxiosInstance } from '../shared/test-utils/factories/response-factory';
+import { nonNull } from '../shared/test-utils';
 import type { AxiosInstance } from 'axios';
 import {
     wfTriggerPipeline,
@@ -29,19 +31,14 @@ jest.mock('../shared/git-provider-error', () => ({
     }),
 }));
 
-const mockApiGet = jest.requireMock('./github-api').apiGet as jest.Mock;
-const mockApiPost = jest.requireMock('./github-api').apiPost as jest.Mock;
+const mockApiGet = jest.mocked(jest.requireMock('./github-api').apiGet);
+const mockApiPost = jest.mocked(jest.requireMock('./github-api').apiPost);
 
 describe('wfTriggerPipeline', () => {
     let client: jest.Mocked<AxiosInstance>;
 
     beforeEach(() => {
-        client = {
-            get: jest.fn(),
-            post: jest.fn(),
-            put: jest.fn(),
-            patch: jest.fn(),
-        } as unknown as jest.Mocked<AxiosInstance>;
+        client = createMockAxiosInstance();
         mockApiGet.mockClear();
         mockApiPost.mockClear();
     });
@@ -117,12 +114,7 @@ describe('wfGetRecentPipelines', () => {
     let client: jest.Mocked<AxiosInstance>;
 
     beforeEach(() => {
-        client = {
-            get: jest.fn(),
-            post: jest.fn(),
-            put: jest.fn(),
-            patch: jest.fn(),
-        } as unknown as jest.Mocked<AxiosInstance>;
+        client = createMockAxiosInstance();
         mockApiGet.mockClear();
     });
 
@@ -162,12 +154,7 @@ describe('wfGetPipeline', () => {
     let client: jest.Mocked<AxiosInstance>;
 
     beforeEach(() => {
-        client = {
-            get: jest.fn(),
-            post: jest.fn(),
-            put: jest.fn(),
-            patch: jest.fn(),
-        } as unknown as jest.Mocked<AxiosInstance>;
+        client = createMockAxiosInstance();
         mockApiGet.mockClear();
     });
 
@@ -192,12 +179,7 @@ describe('wfGetPipelineJobs', () => {
     let client: jest.Mocked<AxiosInstance>;
 
     beforeEach(() => {
-        client = {
-            get: jest.fn(),
-            post: jest.fn(),
-            put: jest.fn(),
-            patch: jest.fn(),
-        } as unknown as jest.Mocked<AxiosInstance>;
+        client = createMockAxiosInstance();
         mockApiGet.mockClear();
     });
 
@@ -214,10 +196,10 @@ describe('wfGetPipelineJobs', () => {
             returnNull: true,
         });
         expect(result).toHaveLength(2);
-        expect(result[0]!.name).toBe('test (22)');
-        expect(result[0]!.stage).toBe('ubuntu');
-        expect(result[0]!.status).toBe('success');
-        expect(result[1]!.status).toBe('failure');
+        expect(nonNull(result[0]).name).toBe('test (22)');
+        expect(nonNull(result[0]).stage).toBe('ubuntu');
+        expect(nonNull(result[0]).status).toBe('success');
+        expect(nonNull(result[1]).status).toBe('failure');
     });
 
     it('returns empty array when apiGet returns null', async () => {
@@ -237,7 +219,7 @@ describe('wfGetPipelineJobs', () => {
             jobs: [{ id: 1, name: 'job1', runner_group_name: '', status: 'in_progress' }],
         });
         const result = await wfGetPipelineJobs(client, 'myorg', 'myrepo', 42);
-        expect(result[0]!.status).toBe('in_progress');
+        expect(nonNull(result[0]).status).toBe('in_progress');
     });
 });
 
@@ -245,12 +227,7 @@ describe('wfListPipelineArtifacts', () => {
     let client: jest.Mocked<AxiosInstance>;
 
     beforeEach(() => {
-        client = {
-            get: jest.fn(),
-            post: jest.fn(),
-            put: jest.fn(),
-            patch: jest.fn(),
-        } as unknown as jest.Mocked<AxiosInstance>;
+        client = createMockAxiosInstance();
         mockApiGet.mockClear();
     });
 
@@ -283,16 +260,11 @@ describe('wfDownloadArtifact', () => {
     let client: jest.Mocked<AxiosInstance>;
 
     beforeEach(() => {
-        client = {
-            get: jest.fn(),
-            post: jest.fn(),
-            put: jest.fn(),
-            patch: jest.fn(),
-        } as unknown as jest.Mocked<AxiosInstance>;
+        client = createMockAxiosInstance();
     });
 
     it('returns buffer and filename from artifact zip', async () => {
-        (client.get as jest.Mock).mockResolvedValue({ data: Buffer.from('zip-data') });
+        jest.mocked(client.get).mockResolvedValue({ data: Buffer.from('zip-data') });
         const result = await wfDownloadArtifact(client, 'myorg', 'myrepo', '301');
         expect(client.get).toHaveBeenCalledWith('/repos/myorg/myrepo/actions/artifacts/301/zip', {
             responseType: 'arraybuffer',
@@ -304,7 +276,7 @@ describe('wfDownloadArtifact', () => {
     });
 
     it('throws on API error', async () => {
-        (client.get as jest.Mock).mockRejectedValue(new Error('Download failed'));
+        jest.mocked(client.get).mockRejectedValue(new Error('Download failed'));
         await expect(wfDownloadArtifact(client, 'myorg', 'myrepo', '999')).rejects.toThrow('Download failed');
     });
 });
@@ -313,16 +285,11 @@ describe('wfGetJobLogs', () => {
     let client: jest.Mocked<AxiosInstance>;
 
     beforeEach(() => {
-        client = {
-            get: jest.fn(),
-            post: jest.fn(),
-            put: jest.fn(),
-            patch: jest.fn(),
-        } as unknown as jest.Mocked<AxiosInstance>;
+        client = createMockAxiosInstance();
     });
 
     it('returns truncated log text on success', async () => {
-        (client.get as jest.Mock).mockResolvedValue({ data: 'line1\nline2\nline3\n' });
+        jest.mocked(client.get).mockResolvedValue({ data: 'line1\nline2\nline3\n' });
         const result = await wfGetJobLogs(client, 'myorg', 'myrepo', 42, 100);
         expect(client.get).toHaveBeenCalledWith('/repos/myorg/myrepo/actions/jobs/42/logs', {
             responseType: 'text' as const,
@@ -332,20 +299,20 @@ describe('wfGetJobLogs', () => {
     });
 
     it('truncates log when exceeding maxBytes', async () => {
-        (client.get as jest.Mock).mockResolvedValue({ data: 'a'.repeat(100) });
+        jest.mocked(client.get).mockResolvedValue({ data: 'a'.repeat(100) });
         const result = await wfGetJobLogs(client, 'myorg', 'myrepo', 42, 10);
         expect(result).toBe('a'.repeat(10));
-        expect(result!.length).toBe(10);
+        expect(nonNull(result).length).toBe(10);
     });
 
     it('handles non-string response data', async () => {
-        (client.get as jest.Mock).mockResolvedValue({ data: Buffer.from('text-data') });
+        jest.mocked(client.get).mockResolvedValue({ data: Buffer.from('text-data') });
         const result = await wfGetJobLogs(client, 'myorg', 'myrepo', 42, 100);
         expect(result).toBe('text-data');
     });
 
     it('throws on API error', async () => {
-        (client.get as jest.Mock).mockRejectedValue(new Error('Log fetch error'));
+        jest.mocked(client.get).mockRejectedValue(new Error('Log fetch error'));
         await expect(wfGetJobLogs(client, 'myorg', 'myrepo', 42)).rejects.toThrow('Log fetch error');
     });
 });
@@ -354,12 +321,7 @@ describe('wfGetCICDVariables', () => {
     let client: jest.Mocked<AxiosInstance>;
 
     beforeEach(() => {
-        client = {
-            get: jest.fn(),
-            post: jest.fn(),
-            put: jest.fn(),
-            patch: jest.fn(),
-        } as unknown as jest.Mocked<AxiosInstance>;
+        client = createMockAxiosInstance();
         mockApiGet.mockClear();
     });
 

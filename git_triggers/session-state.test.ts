@@ -85,7 +85,7 @@ jest.mock('./ui-helpers', () => ({ providerLabel: jest.fn(() => 'GitLab') }));
 
 import * as prompt from '../shared/prompt';
 import * as sessionState from './session-state';
-import type { GitProvider } from '../shared/types';
+import { createMockGitProvider } from '../shared/test-utils/factories';
 
 describe('session-state', () => {
     beforeEach(() => {
@@ -124,9 +124,8 @@ describe('session-state', () => {
         });
 
         it('setManager updates value', () => {
-            const m = {};
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            sessionState.setManager(m as any);
+            const m = createMockGitProvider();
+            sessionState.setManager(m);
             expect(sessionState.manager).toBe(m);
         });
     });
@@ -290,18 +289,19 @@ describe('session-state', () => {
     describe('displayRecentPipelines flakiness', () => {
         it('warns about high flakiness tests', async () => {
             const metrics = require('../shared/metrics');
-            (metrics.loadMetrics as jest.Mock).mockReturnValueOnce({
+            jest.mocked(metrics.loadMetrics).mockReturnValueOnce({
                 runs: [
                     { project: 'qa_ibabs', date: '2024-01-01', results: [] },
                     { project: 'qa_ibabs', date: '2024-01-02', results: [] },
                 ],
             });
-            (metrics.calculateFlakiness as jest.Mock).mockReturnValueOnce([
+            jest.mocked(metrics.calculateFlakiness).mockReturnValueOnce([
                 { name: 'flaky-test', rate: 0.5, file: 'test.js', runs: 4, failCount: 2 },
             ]);
 
             sessionState.setCurrentProjectName('qa_ibabs');
-            const m = { getRecentPipelines: jest.fn().mockResolvedValue([]) } as unknown as GitProvider;
+            const m = createMockGitProvider();
+            jest.mocked(m.getRecentPipelines).mockResolvedValue([]);
             await sessionState.displayRecentPipelines(m);
             expect(prompt.warn).toHaveBeenCalledWith(expect.stringContaining('flakiness'));
 

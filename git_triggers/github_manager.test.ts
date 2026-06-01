@@ -1,5 +1,7 @@
 import { createThrottledClient } from '../shared/http-client';
 import GitHubManager from './github_manager';
+import { nullAs } from '../shared/test-utils';
+import { createMockAxiosInstance } from '../shared/test-utils/factories/response-factory';
 
 jest.mock('../shared/http-client', () => ({
     createHttpClient: jest.fn(),
@@ -24,12 +26,12 @@ jest.mock('../shared/git-provider-error', () => ({
 }));
 
 describe('GitHubManager', () => {
-    let mockClient: { get: jest.Mock; post: jest.Mock; put: jest.Mock; patch: jest.Mock };
+    let mockClient: ReturnType<typeof createMockAxiosInstance>;
     let manager: GitHubManager;
 
     beforeEach(() => {
-        mockClient = { get: jest.fn(), post: jest.fn(), put: jest.fn(), patch: jest.fn() };
-        (createThrottledClient as jest.Mock).mockReturnValue(mockClient);
+        mockClient = createMockAxiosInstance();
+        jest.mocked(createThrottledClient).mockReturnValue(mockClient);
         manager = new GitHubManager('myorg/myrepo', 'ghp_test', 'https://api.github.com');
     });
 
@@ -572,7 +574,8 @@ describe('GitHubManager', () => {
         });
 
         it('returns null for null input', () => {
-            expect(manager._formatPR(null as unknown as Record<string, unknown>)).toBeNull();
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any — R9: type narrowing from null for null-handling test
+            expect(manager._formatPR(nullAs<Record<string, unknown>>())).toBeNull();
         });
     });
 

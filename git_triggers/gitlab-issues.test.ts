@@ -1,6 +1,6 @@
 import { glGetOpenIssues } from './gitlab-issues';
 import { apiGet, projectPath } from './gitlab-api';
-import type { AxiosInstance } from 'axios';
+import { createMockAxiosInstance } from '../shared/test-utils/factories/response-factory';
 
 jest.mock('./gitlab-api', () => ({
     apiGet: jest.fn(),
@@ -9,11 +9,11 @@ jest.mock('./gitlab-api', () => ({
     projectPath: jest.fn(),
 }));
 
-const mockClient = { get: jest.fn() } as unknown as jest.Mocked<AxiosInstance>;
+const mockClient = createMockAxiosInstance();
 
 beforeEach(() => {
     jest.clearAllMocks();
-    (projectPath as jest.Mock).mockImplementation(
+    jest.mocked(projectPath).mockImplementation(
         (owner: string, repo: string) =>
             `/projects/${owner ? encodeURIComponent(owner + '/' + repo) : encodeURIComponent(repo)}`,
     );
@@ -31,7 +31,7 @@ const ISSUE_FIXTURE = {
 
 describe('glGetOpenIssues', () => {
     it('returns formatted issues from GET /issues', async () => {
-        (apiGet as jest.Mock).mockResolvedValue([ISSUE_FIXTURE]);
+        jest.mocked(apiGet).mockResolvedValue([ISSUE_FIXTURE]);
         const result = await glGetOpenIssues(mockClient, 'owner', 'repo');
         expect(result).toHaveLength(1);
         expect(result[0]).toMatchObject({
@@ -43,7 +43,7 @@ describe('glGetOpenIssues', () => {
     });
 
     it('calls apiGet with correct params', async () => {
-        (apiGet as jest.Mock).mockResolvedValue([]);
+        jest.mocked(apiGet).mockResolvedValue([]);
         await glGetOpenIssues(mockClient, 'owner', 'repo');
         expect(projectPath).toHaveBeenCalledWith('owner', 'repo');
         expect(apiGet).toHaveBeenCalledWith(mockClient, expect.stringContaining('/issues'), {
@@ -54,31 +54,31 @@ describe('glGetOpenIssues', () => {
     });
 
     it('returns [] when data is null', async () => {
-        (apiGet as jest.Mock).mockResolvedValue(null);
+        jest.mocked(apiGet).mockResolvedValue(null);
         const result = await glGetOpenIssues(mockClient, 'owner', 'repo');
         expect(result).toEqual([]);
     });
 
     it('returns [] when data is not an array', async () => {
-        (apiGet as jest.Mock).mockResolvedValue({});
+        jest.mocked(apiGet).mockResolvedValue({});
         const result = await glGetOpenIssues(mockClient, 'owner', 'repo');
         expect(result).toEqual([]);
     });
 
     it('returns [] from empty array', async () => {
-        (apiGet as jest.Mock).mockResolvedValue([]);
+        jest.mocked(apiGet).mockResolvedValue([]);
         const result = await glGetOpenIssues(mockClient, 'owner', 'repo');
         expect(result).toEqual([]);
     });
 
     it('maps labels as flat strings', async () => {
-        (apiGet as jest.Mock).mockResolvedValue([{ ...ISSUE_FIXTURE, labels: ['bug', 'priority:high'] }]);
+        jest.mocked(apiGet).mockResolvedValue([{ ...ISSUE_FIXTURE, labels: ['bug', 'priority:high'] }]);
         const result = await glGetOpenIssues(mockClient, 'owner', 'repo');
         expect(result[0]!.labels).toEqual(['bug', 'priority:high']);
     });
 
     it('handles missing optional fields gracefully', async () => {
-        (apiGet as jest.Mock).mockResolvedValue([{ iid: 1 }]);
+        jest.mocked(apiGet).mockResolvedValue([{ iid: 1 }]);
         const result = await glGetOpenIssues(mockClient, 'owner', 'repo');
         expect(result[0]!.title).toBe('');
         expect(result[0]!.number).toBe(1);
@@ -87,7 +87,7 @@ describe('glGetOpenIssues', () => {
     });
 
     it('filters out null items from array', async () => {
-        (apiGet as jest.Mock).mockResolvedValue([null, ISSUE_FIXTURE]);
+        jest.mocked(apiGet).mockResolvedValue([null, ISSUE_FIXTURE]);
         const result = await glGetOpenIssues(mockClient, 'owner', 'repo');
         expect(result).toHaveLength(1);
     });

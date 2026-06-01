@@ -25,7 +25,7 @@ describe('case03 — create version', () => {
     });
 
     it('executes without error with basic context', async () => {
-        const result = await case03.handler(mockContext as never);
+        const result = await case03.handler(mockContext);
         expect(result === undefined || result === true || result === false).toBe(true);
     });
 });

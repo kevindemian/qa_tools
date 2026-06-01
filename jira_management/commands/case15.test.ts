@@ -45,7 +45,7 @@ describe('case15 — create tests from JSON', () => {
     });
 
     it('executes without error with basic context', async () => {
-        const result = await case15.handler(mockContext as never);
+        const result = await case15.handler(mockContext);
         expect(result === undefined || result === true || result === false).toBe(true);
     });
 });

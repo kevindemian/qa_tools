@@ -21,24 +21,28 @@ function makeConfig(): Config {
 }
 
 function mockFs(files: Record<string, string>) {
-    const exists = jest.fn((p: string) => p in files);
-    const read = jest.fn((p: string) => {
-        if (!(p in files)) throw new Error('ENOENT');
-        return files[p];
+    const exists = jest.spyOn(fs, 'existsSync').mockImplementation((p) => p.toString() in files);
+    const read = jest.spyOn(fs, 'readFileSync').mockImplementation((p: Parameters<typeof fs.readFileSync>[0]) => {
+        const ps = p.toString();
+        if (!(ps in files)) throw new Error('ENOENT');
+        return files[ps]!;
     });
-    const write = jest.fn((p: string, data: string) => {
-        files[p] = data;
-    });
-    const rename = jest.fn((from: string, to: string) => {
-        if (from in files) {
-            files[to] = files[from]!;
-            delete files[from];
-        }
-    });
-    jest.spyOn(fs, 'existsSync').mockImplementation(exists as unknown as typeof fs.existsSync);
-    jest.spyOn(fs, 'readFileSync').mockImplementation(read as unknown as typeof fs.readFileSync);
-    jest.spyOn(fs, 'writeFileSync').mockImplementation(write as unknown as typeof fs.writeFileSync);
-    jest.spyOn(fs, 'renameSync').mockImplementation(rename as unknown as typeof fs.renameSync);
+    const write = jest
+        .spyOn(fs, 'writeFileSync')
+        .mockImplementation(
+            (p: Parameters<typeof fs.writeFileSync>[0], data: Parameters<typeof fs.writeFileSync>[1]) => {
+                files[p.toString()] = typeof data === 'string' ? data : '';
+            },
+        );
+    const rename = jest
+        .spyOn(fs, 'renameSync')
+        .mockImplementation((from: Parameters<typeof fs.renameSync>[0], to: Parameters<typeof fs.renameSync>[1]) => {
+            const f = from.toString();
+            if (f in files) {
+                files[to.toString()] = files[f]!;
+                delete files[f];
+            }
+        });
     return { exists, read, write, rename };
 }
 

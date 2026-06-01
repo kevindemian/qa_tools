@@ -5,7 +5,7 @@ jest.mock('child_process', () => ({
     execFileSync: jest.fn(),
 }));
 
-const mockExecFileSync = execFileSync as unknown as jest.Mock;
+const mockExecFileSync = jest.mocked(execFileSync);
 
 beforeEach(() => {
     jest.clearAllMocks();

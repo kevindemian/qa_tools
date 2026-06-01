@@ -41,18 +41,18 @@ describe('printSummary', () => {
 
     it('includes test execution link when provided', () => {
         printSummary([makeResult({})], 'PROJ-123');
-        const calls = (output.print as jest.Mock).mock.calls.map((c: string[]) => c[0]).join(' ');
+        const calls = jest.mocked(output.print).mock.calls.map((c: string[]) => c[0]).join(' ');
         expect(calls).toMatch(/Test Execution/);
     });
 
     it('renders quiet summary when isQuiet', () => {
-        (isQuiet as jest.Mock).mockReturnValue(true);
+        jest.mocked(isQuiet).mockReturnValue(true);
         printSummary([makeResult({})]);
         expect(output.print).toHaveBeenCalled();
     });
 
     it('renders quiet summary with failures', () => {
-        (isQuiet as jest.Mock).mockReturnValue(true);
+        jest.mocked(isQuiet).mockReturnValue(true);
         printSummary([makeResult({ status: 'error', message: 'fail' })]);
         expect(output.print).toHaveBeenCalled();
     });

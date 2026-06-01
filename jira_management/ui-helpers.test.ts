@@ -101,7 +101,7 @@ import { warn, helpLine, title, prompt } from '../shared/prompt';
 
 import { showHelp, showHelpLoop, handleSpecialInput, dispatchChoice } from './ui-helpers';
 import { _configHint, buildMenuChoices, type MenuChoice } from './menu-data';
-import type { CommandContext } from './commands/context';
+import { createMockContext } from '../shared/test-utils/factories/context-factory';
 
 beforeAll(() => {
     const openModule = require('../shared/open');
@@ -189,11 +189,11 @@ describe('buildMenuChoices', () => {
 
 describe('handleSpecialInput', () => {
     beforeEach(() => {
-        (prompt as jest.Mock).mockReturnValue('/back');
+        jest.mocked(prompt).mockReturnValue('/back');
     });
 
     afterEach(() => {
-        (prompt as jest.Mock).mockReturnValue('0');
+        jest.mocked(prompt).mockReturnValue('0');
     });
 
     it('returns true and shows help for /help', async () => {
@@ -220,18 +220,7 @@ describe('handleSpecialInput', () => {
 });
 
 describe('dispatchChoice', () => {
-    const minimalCtx = {
-        jiraResource: {},
-        jiraResourceXray: {},
-        linkManager: {},
-        linkManagerXray: {},
-        csvResource: {},
-        ctx: { project_name: 'test', git_directory: '/tmp', sessionCounters: [], results: [] },
-        pushHistory: jest.fn(),
-        printSessionSummary: jest.fn(),
-        base_url: '',
-        sessionLog: '',
-    };
+    const minimalCtx = createMockContext();
 
     beforeEach(() => {
         const commands = jest.requireMock('./commands');
@@ -239,13 +228,13 @@ describe('dispatchChoice', () => {
     });
 
     it("returns 'continue' for invalid choice", async () => {
-        const result = await dispatchChoice('99', minimalCtx as unknown as CommandContext);
+        const result = await dispatchChoice('99', minimalCtx);
         expect(result).toBe('continue');
         expect(warn).toHaveBeenCalledWith(expect.stringContaining('inválida'));
     });
 
     it("returns 'continue' for docs choice", async () => {
-        const result = await dispatchChoice('d', minimalCtx as unknown as CommandContext);
+        const result = await dispatchChoice('d', minimalCtx);
         expect(result).toBe('continue');
     });
 
@@ -254,7 +243,7 @@ describe('dispatchChoice', () => {
         const commands = jest.requireMock('./commands');
         commands.getHandler.mockReturnValue(handler);
 
-        const result = await dispatchChoice('1', minimalCtx as unknown as CommandContext);
+        const result = await dispatchChoice('1', minimalCtx);
         expect(result).toBe('continue');
         expect(handler).toHaveBeenCalledWith(minimalCtx);
     });
@@ -262,11 +251,11 @@ describe('dispatchChoice', () => {
 
 describe('showHelpLoop', () => {
     beforeEach(() => {
-        (prompt as jest.Mock).mockReturnValue('/back');
+        jest.mocked(prompt).mockReturnValue('/back');
     });
 
     afterEach(() => {
-        (prompt as jest.Mock).mockReturnValue('0');
+        jest.mocked(prompt).mockReturnValue('0');
     });
 
     it('shows help and exits on /back', () => {
@@ -275,20 +264,20 @@ describe('showHelpLoop', () => {
     });
 
     it('handles specific topic input', () => {
-        (prompt as jest.Mock).mockReturnValueOnce('csv').mockReturnValueOnce('/back');
+        jest.mocked(prompt).mockReturnValueOnce('csv').mockReturnValueOnce('/back');
         showHelpLoop();
         expect(title).toHaveBeenCalled();
     });
 
     it('warns for unknown topic', () => {
-        (prompt as jest.Mock).mockReturnValueOnce('nonexistent_topic_xyz').mockReturnValueOnce('/back');
+        jest.mocked(prompt).mockReturnValueOnce('nonexistent_topic_xyz').mockReturnValueOnce('/back');
         showHelpLoop();
         expect(warn).toHaveBeenCalledWith(expect.stringContaining('não encontrado'));
     });
 
     it('handles CancelError in showHelpLoop (line 84-85)', () => {
         const { CancelError } = jest.requireMock('../shared/prompt');
-        (prompt as jest.Mock).mockImplementationOnce(() => {
+        jest.mocked(prompt).mockImplementationOnce(() => {
             throw new CancelError();
         });
         // Should not throw, just return
@@ -296,7 +285,7 @@ describe('showHelpLoop', () => {
     });
 
     it('handles /help and /h prefix commands', () => {
-        (prompt as jest.Mock).mockReturnValueOnce('/help csv').mockReturnValueOnce('/back');
+        jest.mocked(prompt).mockReturnValueOnce('/help csv').mockReturnValueOnce('/back');
         showHelpLoop();
         expect(title).toHaveBeenCalledWith(expect.stringContaining('csv'));
     });

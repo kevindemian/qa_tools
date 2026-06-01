@@ -21,7 +21,7 @@ describe('case16 — config JSON directory', () => {
     });
 
     it('executes without error with basic context', async () => {
-        const result = await case16.handler(mockContext as never);
+        const result = await case16.handler(mockContext);
         expect(result === undefined || result === true || result === false).toBe(true);
     });
 });

@@ -82,26 +82,19 @@ import {
     downloadTestArtifacts,
     collectTestResults,
 } from './pipeline-handler';
-import type { GitProvider } from '../shared/types';
 import type JiraClient from '../shared/jira-client';
 import type JiraLinkManager from '../jira_management/jira_link_manager';
+import { createMockGitProvider } from '../shared/test-utils/factories';
 
-const mockPrompt = prompt as jest.Mock;
-const mockConfirm = confirm as jest.Mock;
-const mockPrintError = printError as jest.Mock;
-const mockInfo = info as jest.Mock;
-const mockWarn = warn as jest.Mock;
-const mockSuccess = success as jest.Mock;
-const mockPushHistory = pushHistory as jest.Mock;
+const mockPrompt = jest.mocked(prompt);
+const mockConfirm = jest.mocked(confirm);
+const mockPrintError = jest.mocked(printError);
+const mockInfo = jest.mocked(info);
+const mockWarn = jest.mocked(warn);
+const mockSuccess = jest.mocked(success);
+const mockPushHistory = jest.mocked(pushHistory);
 
-const mockM = {
-    getPipeline: jest.fn(),
-    getBranch: jest.fn(),
-    triggerPipeline: jest.fn(),
-    getCICDVariables: jest.fn(),
-    createMergeRequest: jest.fn(),
-    acceptMergeRequest: jest.fn(),
-} as unknown as GitProvider;
+const mockM = createMockGitProvider();
 
 beforeEach(() => {
     jest.clearAllMocks();
@@ -124,14 +117,14 @@ describe('isComplete', () => {
 
 describe('pollPipeline', () => {
     it('returns completed status when pipeline finishes', async () => {
-        (mockM.getPipeline as jest.Mock).mockResolvedValue({ status: 'success', web_url: 'https://gitlab.com/pipe/1' });
+        jest.mocked(mockM.getPipeline).mockResolvedValue({ status: 'success', web_url: 'https://gitlab.com/pipe/1' });
 
         const result = await pollPipeline(mockM, '1', 100, 10000);
         expect(result).toEqual({ status: 'success', web_url: 'https://gitlab.com/pipe/1' });
     });
 
     it('continues polling when pipeline returns null', async () => {
-        (mockM.getPipeline as jest.Mock)
+        jest.mocked(mockM.getPipeline)
             .mockResolvedValueOnce(null)
             .mockResolvedValueOnce({ status: 'success', web_url: 'https://gitlab.com/pipe/1' });
 
@@ -140,7 +133,7 @@ describe('pollPipeline', () => {
     });
 
     it('returns timeout when pipeline does not complete', async () => {
-        (mockM.getPipeline as jest.Mock).mockResolvedValue({ status: 'running', web_url: '' });
+        jest.mocked(mockM.getPipeline).mockResolvedValue({ status: 'running', web_url: '' });
 
         const result = await pollPipeline(mockM, '1', 50, 0);
         expect(result).toEqual({ status: 'timeout', web_url: '' });
@@ -148,7 +141,7 @@ describe('pollPipeline', () => {
 
     it('handles missing status/state and web_url', async () => {
         let callCount = 0;
-        (mockM.getPipeline as jest.Mock).mockImplementation(() => {
+        jest.mocked(mockM.getPipeline).mockImplementation(async () => {
             callCount++;
             if (callCount === 1) return { web_url: '' };
             return { status: 'success', web_url: 'https://gitlab.com/pipe/1' };
@@ -165,8 +158,8 @@ describe('handleTriggerPipeline', () => {
             .mockReturnValueOnce(true) // Confirmar disparo?
             .mockReturnValue(false); // Aguardar conclusao?
         mockPrompt.mockReturnValue('main');
-        (mockM.getBranch as jest.Mock).mockResolvedValue({ name: 'main' });
-        (mockM.triggerPipeline as jest.Mock).mockResolvedValue({ id: '42', web_url: 'https://gitlab.com/pipe/42' });
+        jest.mocked(mockM.getBranch).mockResolvedValue({ name: 'main' });
+        jest.mocked(mockM.triggerPipeline).mockResolvedValue({ id: '42', web_url: 'https://gitlab.com/pipe/42' });
 
         await handleTriggerPipeline(mockM, 'my-project');
 
@@ -177,7 +170,7 @@ describe('handleTriggerPipeline', () => {
 
     it('warns when branch not found', async () => {
         mockPrompt.mockReturnValue('unknown-branch');
-        (mockM.getBranch as jest.Mock).mockResolvedValue(null);
+        jest.mocked(mockM.getBranch).mockResolvedValue(null);
 
         await handleTriggerPipeline(mockM, 'my-project');
 
@@ -190,8 +183,8 @@ describe('handleTriggerPipeline', () => {
             .mockReturnValueOnce(false) // Adicionar variáveis?
             .mockReturnValueOnce(true); // Confirmar disparo?
         mockPrompt.mockReturnValue('main');
-        (mockM.getBranch as jest.Mock).mockResolvedValue({ name: 'main' });
-        (mockM.triggerPipeline as jest.Mock).mockRejectedValue(new Error('API fail'));
+        jest.mocked(mockM.getBranch).mockResolvedValue({ name: 'main' });
+        jest.mocked(mockM.triggerPipeline).mockRejectedValue(new Error('API fail'));
 
         await handleTriggerPipeline(mockM, 'my-project');
 
@@ -207,7 +200,7 @@ describe('handleTriggerPipeline', () => {
         mockConfirm
             .mockReturnValueOnce(true) // Continuar deste ponto?
             .mockReturnValue(false); // Coletar resultados?
-        (mockM.getPipeline as jest.Mock).mockResolvedValue({
+        jest.mocked(mockM.getPipeline).mockResolvedValue({
             status: 'success',
             web_url: 'https://gitlab.com/pipe/99',
         });
@@ -226,7 +219,7 @@ describe('handleTriggerPipeline', () => {
         mockConfirm
             .mockReturnValueOnce(true) // Continuar deste ponto?
             .mockReturnValue(false); // Coletar resultados?
-        (mockM.getPipeline as jest.Mock).mockResolvedValue({
+        jest.mocked(mockM.getPipeline).mockResolvedValue({
             status: 'failed',
             web_url: '',
         });
@@ -243,7 +236,7 @@ describe('handleTriggerPipeline', () => {
             pendingPipeline: { branch: 'feat', pipelineId: '99', projectName: 'my-project' },
         });
         mockConfirm.mockReturnValueOnce(true); // Continuar deste ponto?
-        (mockM.getPipeline as jest.Mock).mockResolvedValue({
+        jest.mocked(mockM.getPipeline).mockResolvedValue({
             status: 'canceled',
             web_url: '',
         });
@@ -260,7 +253,7 @@ describe('handleTriggerPipeline', () => {
         mockConfirm
             .mockReturnValueOnce(true) // Continuar deste ponto?
             .mockReturnValue(false); // Coletar resultados?
-        (mockM.getPipeline as jest.Mock).mockResolvedValue({
+        jest.mocked(mockM.getPipeline).mockResolvedValue({
             status: 'success',
             web_url: 'https://gitlab.com/pipe/77',
         });
@@ -274,7 +267,7 @@ describe('handleTriggerPipeline', () => {
 describe('handleExportVariables', () => {
     it('exports variables when confirmed', async () => {
         mockConfirm.mockReturnValue(true);
-        (mockM.getCICDVariables as jest.Mock).mockResolvedValue([
+        jest.mocked(mockM.getCICDVariables).mockResolvedValue([
             { key: 'VAR1', value: 'val1' },
             { key: 'VAR2', value: 'val2' },
         ]);
@@ -296,7 +289,7 @@ describe('handleExportVariables', () => {
 
     it('handles fetch error', async () => {
         mockConfirm.mockReturnValue(true);
-        (mockM.getCICDVariables as jest.Mock).mockRejectedValue(new Error('fetch fail'));
+        jest.mocked(mockM.getCICDVariables).mockRejectedValue(new Error('fetch fail'));
 
         await handleExportVariables(mockM);
 
@@ -306,17 +299,17 @@ describe('handleExportVariables', () => {
 
     it('handles null variables', async () => {
         mockConfirm.mockReturnValue(true);
-        (mockM.getCICDVariables as jest.Mock).mockResolvedValue(null);
+        jest.mocked(mockM.getCICDVariables).mockResolvedValue(null);
 
         await handleExportVariables(mockM);
 
         expect(mockSuccess).not.toHaveBeenCalledWith(expect.stringContaining('Variáveis exportadas'));
     });
 
-    it('handles undefined variable value', async () => {
+    it('handles empty variable value', async () => {
         mockConfirm.mockReturnValue(true);
-        (mockM.getCICDVariables as jest.Mock).mockResolvedValue([
-            { key: 'VAR1', value: undefined },
+        jest.mocked(mockM.getCICDVariables).mockResolvedValue([
+            { key: 'VAR1', value: '' },
             { key: 'VAR2', value: 'val2' },
         ]);
 
@@ -331,7 +324,7 @@ describe('handleExportVariables', () => {
 describe('parseTestResults', () => {
     it('delegates to test-results parseTestResults', async () => {
         const testResults = require('./test-results');
-        (testResults.parseTestResults as jest.Mock).mockResolvedValue({
+        jest.mocked(testResults.parseTestResults).mockResolvedValue({
             matched: [],
             unmatched: [],
             csvName: 'test',
@@ -345,7 +338,7 @@ describe('parseTestResults', () => {
 
     it('returns null when delegate returns null', async () => {
         const testResults = require('./test-results');
-        (testResults.parseTestResults as jest.Mock).mockResolvedValue(null);
+        jest.mocked(testResults.parseTestResults).mockResolvedValue(null);
         const result = await parseTestResults({
             stats: { passed: 0, failed: 0, skipped: 0, total: 0, duration: 0 },
             tests: [],
@@ -359,7 +352,7 @@ describe('parseTestResults', () => {
 describe('createTestExecution', () => {
     it('delegates to test-results createTestExecution', async () => {
         const testResults = require('./test-results');
-        (testResults.createTestExecution as jest.Mock).mockResolvedValue(undefined);
+        jest.mocked(testResults.createTestExecution).mockResolvedValue(undefined);
         const jiraResource = {} as JiraClient;
         const linkManager = {} as JiraLinkManager;
         await expect(
@@ -385,7 +378,7 @@ describe('createTestExecution', () => {
 describe('downloadTestArtifacts', () => {
     it('delegates to test-results downloadTestArtifacts', async () => {
         const testResults = require('./test-results');
-        (testResults.downloadTestArtifacts as jest.Mock).mockResolvedValue(null);
+        jest.mocked(testResults.downloadTestArtifacts).mockResolvedValue(null);
         const result = await downloadTestArtifacts(mockM, '1');
         expect(result).toBeNull();
         expect(testResults.downloadTestArtifacts).toHaveBeenCalledWith(mockM, '1');
@@ -397,7 +390,7 @@ describe('downloadTestArtifacts', () => {
 describe('collectTestResults', () => {
     it('delegates to test-results collectTestResults', async () => {
         const testResults = require('./test-results');
-        (testResults.collectTestResults as jest.Mock).mockResolvedValue(null);
+        jest.mocked(testResults.collectTestResults).mockResolvedValue(null);
         const jiraResource = {} as JiraClient;
         const linkManager = {} as JiraLinkManager;
         const result = await collectTestResults(mockM, '1', 'main', 'proj', {
@@ -414,7 +407,7 @@ describe('collectTestResults', () => {
 describe('buildPipelinePayload cancel', () => {
     it('cancels when user declines trigger confirmation', async () => {
         mockPrompt.mockReturnValue('main');
-        (mockM.getBranch as jest.Mock).mockResolvedValue({ name: 'main' });
+        jest.mocked(mockM.getBranch).mockResolvedValue({ name: 'main' });
         mockConfirm
             .mockReturnValueOnce(false) // Adicionar variáveis?
             .mockReturnValueOnce(false); // Confirmar disparo?
@@ -431,20 +424,20 @@ describe('triggerAndPollPipeline full flow', () => {
     beforeEach(() => {
         jest.clearAllMocks();
         mockPrompt.mockReturnValue('main');
-        (mockM.getBranch as jest.Mock).mockResolvedValue({ name: 'main' });
-        (mockM.triggerPipeline as jest.Mock).mockResolvedValue({
+        jest.mocked(mockM.getBranch).mockResolvedValue({ name: 'main' });
+        jest.mocked(mockM.triggerPipeline).mockResolvedValue({
             id: '42',
             web_url: 'https://gitlab.com/pipe/42',
         });
-        (mockM.getPipeline as jest.Mock).mockResolvedValue({
+        jest.mocked(mockM.getPipeline).mockResolvedValue({
             status: 'success',
             web_url: 'https://gitlab.com/pipe/42',
         });
-        (mockM.createMergeRequest as jest.Mock).mockResolvedValue({
+        jest.mocked(mockM.createMergeRequest).mockResolvedValue({
             web_url: 'https://gitlab.com/mr/1',
             iid: '1',
         });
-        (mockM.acceptMergeRequest as jest.Mock).mockResolvedValue({
+        jest.mocked(mockM.acceptMergeRequest).mockResolvedValue({
             web_url: 'https://gitlab.com/mr/1/merge',
         });
     });
@@ -461,7 +454,7 @@ describe('triggerAndPollPipeline full flow', () => {
 
         // Make collectTestResults return a parsed result
         const testResults = require('./test-results');
-        (testResults.collectTestResults as jest.Mock).mockResolvedValue({
+        jest.mocked(testResults.collectTestResults).mockResolvedValue({
             stats: { passed: 5, failed: 2, skipped: 1 },
             tests: [
                 { title: 'test-1', state: 'failed' },
@@ -471,7 +464,7 @@ describe('triggerAndPollPipeline full flow', () => {
 
         // Make offerPipelineFailureAnalysis call the callback
         const llmPipeline = require('./llm-pipeline');
-        (llmPipeline.offerPipelineFailureAnalysis as jest.Mock).mockImplementation(
+        jest.mocked(llmPipeline.offerPipelineFailureAnalysis).mockImplementation(
             (_parsed: unknown, onAnalysis?: (r: { content: string }) => Promise<void>) => {
                 if (onAnalysis) return onAnalysis({ content: 'analysis result' });
                 return undefined;
@@ -492,7 +485,7 @@ describe('triggerAndPollPipeline full flow', () => {
 
     it('handles bug creation error', async () => {
         const bugReport = require('../shared/bug-report');
-        (bugReport.fileToJira as jest.Mock).mockRejectedValue(new Error('Jira API error'));
+        jest.mocked(bugReport.fileToJira).mockRejectedValue(new Error('Jira API error'));
 
         mockConfirm
             .mockReturnValueOnce(false) // Adicionar variáveis?
@@ -503,7 +496,7 @@ describe('triggerAndPollPipeline full flow', () => {
             .mockReturnValueOnce(false); // Não criar merge request (padrão)
 
         const testResults = require('./test-results');
-        (testResults.collectTestResults as jest.Mock).mockResolvedValue({
+        jest.mocked(testResults.collectTestResults).mockResolvedValue({
             stats: { passed: 5, failed: 2, skipped: 1 },
             tests: [
                 { title: 'test-1', state: 'failed' },
@@ -512,7 +505,7 @@ describe('triggerAndPollPipeline full flow', () => {
         });
 
         const llmPipeline = require('./llm-pipeline');
-        (llmPipeline.offerPipelineFailureAnalysis as jest.Mock).mockImplementation(
+        jest.mocked(llmPipeline.offerPipelineFailureAnalysis).mockImplementation(
             (_parsed: unknown, onAnalysis?: (r: { content: string }) => Promise<void>) => {
                 if (onAnalysis) return onAnalysis({ content: 'analysis result' });
                 return undefined;
@@ -526,7 +519,7 @@ describe('triggerAndPollPipeline full flow', () => {
     });
 
     it('handles quick merge creation error', async () => {
-        (mockM.createMergeRequest as jest.Mock).mockRejectedValue(new Error('Merge create error'));
+        jest.mocked(mockM.createMergeRequest).mockRejectedValue(new Error('Merge create error'));
 
         mockConfirm
             .mockReturnValueOnce(false) // Adicionar variáveis?
@@ -542,11 +535,11 @@ describe('triggerAndPollPipeline full flow', () => {
     });
 
     it('handles merge acceptance error', async () => {
-        (mockM.createMergeRequest as jest.Mock).mockResolvedValue({
+        jest.mocked(mockM.createMergeRequest).mockResolvedValue({
             web_url: 'https://gitlab.com/mr/1',
             iid: '1',
         });
-        (mockM.acceptMergeRequest as jest.Mock).mockRejectedValue(new Error('Merge accept error'));
+        jest.mocked(mockM.acceptMergeRequest).mockRejectedValue(new Error('Merge accept error'));
 
         mockConfirm
             .mockReturnValueOnce(false) // Adicionar variáveis?
@@ -570,8 +563,8 @@ describe('triggerAndPollPipeline full flow', () => {
             .mockReturnValueOnce(true) // Adicionar variáveis? yes
             .mockReturnValueOnce(true) // Confirmar disparo?
             .mockReturnValueOnce(false); // Aguardar conclusao?
-        (mockM.getBranch as jest.Mock).mockResolvedValue({ name: 'main' });
-        (mockM.triggerPipeline as jest.Mock).mockResolvedValue({ id: '42', web_url: 'https://gitlab.com/pipe/42' });
+        jest.mocked(mockM.getBranch).mockResolvedValue({ name: 'main' });
+        jest.mocked(mockM.triggerPipeline).mockResolvedValue({ id: '42', web_url: 'https://gitlab.com/pipe/42' });
 
         await handleTriggerPipeline(mockM, 'my-project');
 
@@ -584,9 +577,9 @@ describe('triggerAndPollPipeline full flow', () => {
 
     it('skips bug creation when jira env is null', async () => {
         const testResults = require('./test-results');
-        (testResults._jiraEnv as jest.Mock).mockReturnValueOnce(null);
+        jest.mocked(testResults._jiraEnv).mockReturnValueOnce(null);
         const testResults2 = require('./test-results');
-        (testResults2.collectTestResults as jest.Mock).mockResolvedValue({
+        jest.mocked(testResults2.collectTestResults).mockResolvedValue({
             stats: { passed: 5, failed: 2, skipped: 1 },
             tests: [
                 { title: 'test-1', state: 'failed' },
@@ -607,7 +600,7 @@ describe('triggerAndPollPipeline full flow', () => {
     });
 
     it('triggers pipeline with canceled status skips post-pipeline', async () => {
-        (mockM.getPipeline as jest.Mock).mockResolvedValue({ status: 'canceled', web_url: '' });
+        jest.mocked(mockM.getPipeline).mockResolvedValue({ status: 'canceled', web_url: '' });
         mockConfirm
             .mockReturnValueOnce(false) // Adicionar variáveis?
             .mockReturnValueOnce(true) // Confirmar disparo?
@@ -618,7 +611,7 @@ describe('triggerAndPollPipeline full flow', () => {
     });
 
     it('handles pipelineResult being null from triggerPipeline', async () => {
-        (mockM.triggerPipeline as jest.Mock).mockResolvedValue(null);
+        jest.mocked(mockM.triggerPipeline).mockResolvedValue(undefined);
         mockConfirm
             .mockReturnValueOnce(false) // Adicionar variáveis?
             .mockReturnValueOnce(true); // Confirmar disparo?
@@ -630,7 +623,7 @@ describe('triggerAndPollPipeline full flow', () => {
     });
 
     it('creates merge request returning null', async () => {
-        (mockM.createMergeRequest as jest.Mock).mockResolvedValue(null);
+        jest.mocked(mockM.createMergeRequest).mockResolvedValue(null);
         mockConfirm
             .mockReturnValueOnce(false) // Adicionar variáveis?
             .mockReturnValueOnce(true) // Confirmar disparo?
@@ -638,7 +631,7 @@ describe('triggerAndPollPipeline full flow', () => {
             .mockReturnValueOnce(true) // Coletar resultados?
             .mockReturnValueOnce(true); // Criar bug no Jira?
         const testResults = require('./test-results');
-        (testResults.collectTestResults as jest.Mock).mockResolvedValue({
+        jest.mocked(testResults.collectTestResults).mockResolvedValue({
             stats: { passed: 0, failed: 0, skipped: 0 },
             tests: [],
         });
@@ -649,7 +642,7 @@ describe('triggerAndPollPipeline full flow', () => {
     });
 
     it('accepts merge returning null', async () => {
-        (mockM.acceptMergeRequest as jest.Mock).mockResolvedValue(null);
+        jest.mocked(mockM.acceptMergeRequest).mockResolvedValue(null);
         mockConfirm
             .mockReturnValueOnce(false) // Adicionar variáveis?
             .mockReturnValueOnce(true) // Confirmar disparo?
@@ -684,8 +677,8 @@ describe('triggerAndPollPipeline full flow', () => {
 describe('triggerPipeline missing id', () => {
     it('returns early when pipeline result has no id', async () => {
         mockPrompt.mockReturnValue('main');
-        (mockM.getBranch as jest.Mock).mockResolvedValue({ name: 'main' });
-        (mockM.triggerPipeline as jest.Mock).mockResolvedValue({
+        jest.mocked(mockM.getBranch).mockResolvedValue({ name: 'main' });
+        jest.mocked(mockM.triggerPipeline).mockResolvedValue({
             web_url: 'https://gitlab.com/pipe/42',
         });
         mockConfirm
@@ -705,7 +698,7 @@ describe('triggerPipeline missing id', () => {
 describe('resumePendingPipeline decline', () => {
     it('deletes pending state when user declines resume', async () => {
         const state = require('../shared/state');
-        (state.load as jest.Mock).mockReturnValueOnce({
+        jest.mocked(state.load).mockReturnValueOnce({
             pendingPipeline: { branch: 'feat', pipelineId: '99', projectName: 'my-project' },
         });
         mockConfirm.mockReturnValue(false); // Continuar deste ponto? → não

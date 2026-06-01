@@ -1,3 +1,13 @@
+/** Structural schema type — accepts any object with a `safeParse` method.
+ *  Allows test doubles without casting to `z.ZodType`.
+ *  Compatible with both real Zod schemas and test doubles. */
+type ZodErrorLike = { issues: Array<{ path: Array<string | number | symbol>; message: string }> };
+export type ZodSchema<T> = {
+    safeParse(
+        data: unknown,
+    ): { success: true; data: T; error?: undefined } | { success: false; error: ZodErrorLike; data?: undefined };
+};
+
 /** LLM provider tier used for routing requests to the appropriate model. */
 export type LlmTier = 'main' | 'fast' | 'reviewer' | 'report' | 'fallback' | 'batch';
 

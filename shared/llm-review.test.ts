@@ -13,8 +13,9 @@ jest.mock('./llm-client', () => ({
 
 import { llmPrompt } from './llm-client';
 import { reviewWithLlm } from './llm-review';
+import { nonNull } from './test-utils';
 
-const mockLlmPrompt = llmPrompt as jest.MockedFunction<typeof llmPrompt>;
+const mockLlmPrompt = jest.mocked(llmPrompt);
 
 const validParsedReport = {
     tests: [
@@ -157,7 +158,7 @@ describe('reviewWithLlm', () => {
             .mockResolvedValueOnce('AGREE - Good.');
 
         await reviewWithLlm('system prompt text', 'user data');
-        const retrySystemArg = mockLlmPrompt.mock.calls[1]![0].system;
+        const retrySystemArg = nonNull(mockLlmPrompt.mock.calls[1])[0].system;
         expect(retrySystemArg).toContain('validation');
         expect(retrySystemArg).toContain(JSON.stringify(invalidParsedReport));
     });

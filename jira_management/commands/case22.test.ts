@@ -20,18 +20,18 @@ jest.mock('../../shared/logger', () => ({
 }));
 
 import { execFileSync } from 'child_process';
-import { existsSync } from 'fs';
+import { existsSync, PathLike } from 'fs';
 import { ask, info, warn, title, printError } from '../../shared/prompt';
 import { analyzeTestImpact } from '../../shared/test-impact';
 import { loadMetrics, calculateFlakiness } from '../../shared/metrics';
 import { makeMockCommandContext } from '../../shared/test-utils';
 
-const mockExecFileSync = execFileSync as jest.Mock;
-const mockExistsSync = existsSync as jest.Mock;
-const mockAsk = ask as jest.Mock;
-const mockAnalyzeTestImpact = analyzeTestImpact as jest.Mock;
-const mockLoadMetrics = loadMetrics as jest.Mock;
-const mockCalcFlaky = calculateFlakiness as jest.Mock;
+const mockExecFileSync = jest.mocked(execFileSync);
+const mockExistsSync = jest.mocked(existsSync);
+const mockAsk = jest.mocked(ask);
+const mockAnalyzeTestImpact = jest.mocked(analyzeTestImpact);
+const mockLoadMetrics = jest.mocked(loadMetrics);
+const mockCalcFlaky = jest.mocked(calculateFlakiness);
 
 beforeEach(() => {
     jest.clearAllMocks();
@@ -117,7 +117,7 @@ describe('case22 — Test Impact Analysis', () => {
         const mod = require('./case22').default;
         await mod.handler(ctx);
 
-        expect((ctx.ctx as Record<string, unknown>).inMemoryTasksId).toContain('PROJ-42');
+        expect(ctx.ctx.inMemoryTasksId).toContain('PROJ-42');
         expect(info).toHaveBeenCalledWith(expect.stringContaining('pré-carregado'));
     });
 
@@ -177,7 +177,7 @@ describe('case22 — Test Impact Analysis', () => {
     it('loads mapping file when it exists', async () => {
         mockAsk.mockResolvedValue('HEAD~1');
         mockExecFileSync.mockReturnValue('src/login.ts\n');
-        mockExistsSync.mockImplementation((p: string) => p.includes('test-mapping.json'));
+        mockExistsSync.mockImplementation((p: PathLike) => typeof p === 'string' && p.includes('test-mapping.json'));
         mockAnalyzeTestImpact.mockReturnValue({
             changedFiles: ['src/login.ts'],
             impactedTests: [

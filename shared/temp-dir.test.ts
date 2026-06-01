@@ -122,7 +122,7 @@ describe('registerCleanup', () => {
                 return process;
             },
         );
-        (fs.existsSync as jest.Mock).mockImplementation(() => {
+        jest.mocked(fs.existsSync).mockImplementation(() => {
             throw new Error('fail');
         });
         const { registerCleanup } = require('./temp-dir');
@@ -138,7 +138,7 @@ describe('registerCleanup', () => {
                 return process;
             },
         );
-        (fs.existsSync as jest.Mock).mockReturnValue(true);
+        jest.mocked(fs.existsSync).mockReturnValue(true);
         const { registerCleanup } = require('./temp-dir');
         registerCleanup();
         handlerRef.current?.();

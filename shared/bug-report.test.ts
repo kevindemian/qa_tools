@@ -28,6 +28,7 @@ jest.mock('./config', () => ({
 import { collectManual, collectAutomated, compose, fileToJira, interactiveBugReportFlow } from './bug-report';
 import type { ParseResult } from './result_parser';
 import type { BugReport } from './types';
+import { nonNull } from './test-utils';
 
 describe('BugReport Service', () => {
     beforeEach(() => {
@@ -203,7 +204,8 @@ describe('BugReport Service', () => {
         });
 
         it('handles missing stats and tests gracefully', () => {
-            const report = collectAutomated({} as unknown as ParseResult);
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any — R9: type narrowing empty object for edge case test
+            const report = collectAutomated({} as ParseResult);
             expect(report.summary).toBe('0/0 tests failed');
             expect(report.description).toBe('No details available.');
         });
@@ -303,10 +305,24 @@ describe('BugReport Service', () => {
     });
 
     describe('fileToJira', () => {
-        let mockJiraResource: { postJiraResource: jest.Mock };
+        let mockJiraResource: {
+            getJiraResource: jest.Mock;
+            postJiraResource: jest.Mock;
+            putJiraResource: jest.Mock;
+            searchJiraIssues: jest.Mock;
+            getTransitionsForIssue: jest.Mock;
+            transitionIssue: jest.Mock;
+        };
 
         beforeEach(() => {
-            mockJiraResource = { postJiraResource: jest.fn() };
+            mockJiraResource = {
+                getJiraResource: jest.fn(),
+                postJiraResource: jest.fn(),
+                putJiraResource: jest.fn(),
+                searchJiraIssues: jest.fn(),
+                getTransitionsForIssue: jest.fn(),
+                transitionIssue: jest.fn(),
+            };
         });
 
         it('files bug to Jira and returns key', async () => {
@@ -320,7 +336,7 @@ describe('BugReport Service', () => {
 
             mockJiraResource.postJiraResource.mockResolvedValueOnce({ key: 'PROJ-101' });
 
-            const key = await fileToJira(mockJiraResource as never, report, 'PROJ');
+            const key = await fileToJira(mockJiraResource, report, 'PROJ');
 
             expect(key).toBe('PROJ-101');
             expect(mockJiraResource.postJiraResource).toHaveBeenCalledWith('issue', {
@@ -343,7 +359,7 @@ describe('BugReport Service', () => {
                 source: 'manual',
                 severity: 'minor',
             };
-            await expect(fileToJira(mockJiraResource as never, report)).rejects.toThrow('Project key is required');
+            await expect(fileToJira(mockJiraResource, report)).rejects.toThrow('Project key is required');
         });
     });
 
@@ -420,7 +436,7 @@ describe('BugReport Service', () => {
 
             mockPrompt.askConfirm.mockResolvedValueOnce(false);
 
-            const result = await interactiveBugReportFlow(mockJiraResource as never, 'PROJ', report);
+            const result = await interactiveBugReportFlow(mockJiraResource, 'PROJ', report);
 
             expect(result).toBeNull();
             expect(mockPrompt.info).toHaveBeenCalledWith('Bug report cancelado.');
@@ -437,7 +453,7 @@ describe('BugReport Service', () => {
             mockPrompt.askConfirm.mockResolvedValueOnce(true);
             mockJiraResource.postJiraResource.mockRejectedValueOnce(new Error('Jira API error'));
 
-            const result = await interactiveBugReportFlow(mockJiraResource as never, 'PROJ', report);
+            const result = await interactiveBugReportFlow(mockJiraResource, 'PROJ', report);
             expect(result).toEqual({
                 status: 'error',
                 label: '',
@@ -484,7 +500,7 @@ jest.mock('fs', () => {
 
 import { generateBugReportFromDescription } from './bug-report';
 
-const mockLlmPrompt = jest.requireMock('./llm-client').llmPrompt as jest.Mock;
+const mockLlmPrompt = jest.mocked(jest.requireMock('./llm-client').llmPrompt);
 
 describe('generateBugReportFromDescription', () => {
     beforeEach(() => {
@@ -505,11 +521,11 @@ describe('generateBugReportFromDescription', () => {
 
         const result = await generateBugReportFromDescription('login fails on firefox');
         expect(result).not.toBeNull();
-        expect(result!.summary).toBe('Login fails on Firefox');
-        expect(result!.severity).toBe('major');
-        expect(result!.source).toBe('manual');
-        expect(result!.llmEnrichment).toBeDefined();
-        expect(result!.llmEnrichment!.model).toBe('fast');
+        expect(nonNull(result).summary).toBe('Login fails on Firefox');
+        expect(nonNull(result).severity).toBe('major');
+        expect(nonNull(result).source).toBe('manual');
+        expect(nonNull(result).llmEnrichment).toBeDefined();
+        expect(nonNull(result).llmEnrichment!.model).toBe('fast');
     });
 
     it('returns BugReport without optional fields when LLM omits them', async () => {
@@ -524,8 +540,8 @@ describe('generateBugReportFromDescription', () => {
 
         const result = await generateBugReportFromDescription('button not visible');
         expect(result).not.toBeNull();
-        expect(result!.environment).toBeUndefined();
-        expect(result!.component).toBeUndefined();
+        expect(nonNull(result).environment).toBeUndefined();
+        expect(nonNull(result).component).toBeUndefined();
     });
 
     it('returns null when LLM throws', async () => {

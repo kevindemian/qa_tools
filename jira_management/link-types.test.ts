@@ -6,10 +6,10 @@ jest.mock('fs');
 
 import fs from 'fs';
 import path from 'path';
-import type { JiraResourceLike } from '../shared/types';
 import { LinkTypeManager } from './link-types';
 import { rootLogger } from '../shared/logger';
 import { tempDirPath } from '../shared/temp-dir';
+import { nonNull } from '../shared/test-utils';
 
 const CACHE_PATH = path.join(tempDirPath(), 'cache', 'link-types-cache.json');
 
@@ -20,6 +20,8 @@ describe('LinkTypeManager', () => {
         postJiraResource: jest.Mock;
         putJiraResource: jest.Mock;
         searchJiraIssues: jest.Mock;
+        getTransitionsForIssue: jest.Mock;
+        transitionIssue: jest.Mock;
     };
 
     beforeEach(() => {
@@ -29,8 +31,10 @@ describe('LinkTypeManager', () => {
             postJiraResource: jest.fn(),
             putJiraResource: jest.fn(),
             searchJiraIssues: jest.fn(),
+            getTransitionsForIssue: jest.fn(),
+            transitionIssue: jest.fn(),
         };
-        manager = new LinkTypeManager(mockJiraResource as unknown as JiraResourceLike);
+        manager = new LinkTypeManager(mockJiraResource);
     });
 
     describe('constructor', () => {
@@ -73,7 +77,7 @@ describe('LinkTypeManager', () => {
             jest.mocked(fs.existsSync).mockReturnValue(false);
             const result = await manager.getIssueLinkTypes();
             expect(result).toHaveLength(3);
-            expect(result[0]!.name).toBe('Relates');
+            expect(nonNull(result[0]).name).toBe('Relates');
         });
 
         it('logs warning when cache write throws', async () => {
@@ -93,7 +97,7 @@ describe('LinkTypeManager', () => {
             const result = await manager.getIssueLinkTypes();
             expect(rootLogger.warn).toHaveBeenCalledWith(expect.stringContaining('Falha ao ler cache'));
             expect(result).toHaveLength(3);
-            expect(result[0]!.name).toBe('Relates');
+            expect(nonNull(result[0]).name).toBe('Relates');
         });
     });
 

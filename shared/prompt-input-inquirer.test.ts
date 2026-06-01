@@ -44,12 +44,14 @@ jest.mock('./prompt-ui', () => {
     const actual = jest.requireActual('./prompt-ui');
     return {
         ...actual,
-        getConfig: jest.fn(() => ({
-            get: (key: string) => {
+        getConfig: jest.fn(() => {
+            const cfg = new (jest.requireActual('./config-accessor').default)();
+            cfg.get = <T>(key: string): T => {
                 const v: Record<string, unknown> = { quiet: false, autoConfirm: false };
-                return v[key] as boolean;
-            },
-        })),
+                return v[key] as T;
+            };
+            return cfg;
+        }),
         warn: jest.fn(),
         icon: jest.fn(() => '!'),
     };
@@ -65,6 +67,7 @@ jest.mock('@inquirer/select', () => ({ default: jest.fn() }));
 jest.mock('@inquirer/confirm', () => ({ default: jest.fn() }));
 
 import readlineSync from 'readline-sync';
+import ConfigAccessor from './config-accessor';
 import { getConfig, warn, CancelError } from './prompt-ui';
 import {
     smartPrompt,
@@ -78,13 +81,15 @@ import {
 } from './prompt-input-inquirer';
 
 const mockReadlineQuestion = jest.spyOn(readlineSync, 'question').mockImplementation(() => '');
-const mockGetConfig = getConfig as jest.Mock;
-const mockWarn = warn as jest.Mock;
+const mockGetConfig = jest.mocked(getConfig);
+const mockWarn = jest.mocked(warn);
 
 beforeEach(() => {
     jest.clearAllMocks();
     mockReadlineQuestion.mockReturnValue('');
-    mockGetConfig.mockReturnValue({ get: (k: string) => ({ quiet: false, autoConfirm: false })[k] });
+    const cfg = ConfigAccessor.create();
+    cfg.get = <T>(k: string) => ({ quiet: false, autoConfirm: false })[k] as T;
+    mockGetConfig.mockReturnValue(cfg);
     __setInputMod(null);
     __setSelectMod(null);
     __setConfirmMod(null);

@@ -40,7 +40,7 @@ describe('case12 — diagnostic connection', () => {
     });
 
     it('executes without error with basic context', async () => {
-        const result = await case12.handler(mockContext as never);
+        const result = await case12.handler(mockContext);
         expect(result === undefined || result === true || result === false).toBe(true);
     });
 
@@ -56,7 +56,7 @@ describe('case12 — diagnostic connection', () => {
             .mockRejectedValueOnce(new Error('error 2'))
             .mockRejectedValueOnce(new Error('error 3'));
 
-        await case12.handler(mockContext as never);
+        await case12.handler(mockContext);
 
         expect(palette.yellow).toHaveBeenCalledWith(
             expect.stringContaining('Dica: rode pipelines para acumular métricas'),
@@ -85,7 +85,7 @@ describe('case12 — diagnostic connection', () => {
             .mockResolvedValueOnce({ status: 200 })
             .mockResolvedValueOnce({ status: 200 });
 
-        await case12.handler(mockContext as never);
+        await case12.handler(mockContext);
 
         expect(palette.yellow).not.toHaveBeenCalledWith(expect.stringContaining('Dica: rode pipelines'));
     });
@@ -106,7 +106,7 @@ describe('case12 — diagnostic connection', () => {
         }));
         metrics.loadMetrics.mockReturnValueOnce({ runs });
 
-        await case12.handler(mockContext as never);
+        await case12.handler(mockContext);
 
         expect(prompt.tableView).toHaveBeenCalledWith(
             expect.arrayContaining([
@@ -137,7 +137,7 @@ describe('case12 — diagnostic connection', () => {
             coverageHistory: [{ date: '2024-01-01', pct: 80 }],
         });
 
-        await case12.handler(mockContext as never);
+        await case12.handler(mockContext);
 
         expect(prompt.tableView).toHaveBeenCalledWith(
             expect.arrayContaining([

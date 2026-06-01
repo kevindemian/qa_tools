@@ -3,6 +3,10 @@
 import { createHistoryProvider, TestHistoryCache, type TestRun, type TestHistoryProvider } from './xray-history';
 import Config from '../shared/config';
 import type JiraResource from './jira_resource';
+import { createMockConfigInstance } from '../shared/test-utils/factories';
+import { createMockJiraResource } from '../shared/test-utils/factories/jira-resource-factory';
+
+type MockedJiraResource = ReturnType<typeof createMockJiraResource>;
 
 const mockGraphql = jest.fn();
 
@@ -16,49 +20,26 @@ jest.mock('../shared/xray-cloud-client', () => ({
 
 jest.mock('../shared/config');
 
-let mockIssueGet: jest.Mock;
-let mockOriginGet: jest.Mock;
-let mockSearchGet: jest.Mock;
+let mockIssueGet: MockedJiraResource['getJiraResource'];
+let mockOriginGet: MockedJiraResource['getFromOriginPath'];
+let mockSearchGet: MockedJiraResource['searchJiraIssues'];
 
 function mockJiraResource(): JiraResource {
-    mockIssueGet = jest.fn();
-    mockOriginGet = jest.fn();
-    mockSearchGet = jest.fn();
-    return {
-        baseUrl: 'https://jira.example.com',
-        originUrl: 'https://jira.example.com',
-        personalToken: 'test-token',
-        axiosInstance: {} as ReturnType<typeof jest.fn>,
-        log: { child: () => ({ error: jest.fn(), warn: jest.fn(), info: jest.fn() }) } as unknown,
-        getJiraResource: mockIssueGet,
-        getFromOriginPath: mockOriginGet,
-        searchJiraIssues: mockSearchGet,
-        getTransitionsForIssue: jest.fn(),
-        getProjectId: jest.fn(),
-        getProjectVersions: jest.fn(),
-        getVersionId: jest.fn(),
-        createVersion: jest.fn(),
-        checkReleaseTasksStatus: jest.fn(),
-        getReleaseTasks: jest.fn(),
-        getLatestReleases: jest.fn(),
-        addTasksToSprint: jest.fn(),
-        updateFixVersions: jest.fn(),
-        releaseVersion: jest.fn(),
-        moveCardsToDone: jest.fn(),
-        transitionIssue: jest.fn(),
-        postJiraResource: jest.fn(),
-        putJiraResource: jest.fn(),
-    } as unknown as JiraResource;
+    const mock = createMockJiraResource();
+    mockIssueGet = mock.getJiraResource;
+    mockOriginGet = mock.getFromOriginPath;
+    mockSearchGet = mock.searchJiraIssues;
+    return mock;
 }
 
 beforeEach(() => {
     jest.clearAllMocks();
-    (Config.getDefault as jest.Mock).mockReturnValue({
-        get(key: string) {
-            const map: Record<string, string> = { xrayMode: 'server', xrayClientId: '', xrayClientSecret: '' };
-            return map[key];
-        },
-    });
+    const mockConfig = createMockConfigInstance();
+    mockConfig.get = function <T = string>(key: string): T {
+        const map: Record<string, string> = { xrayMode: 'server', xrayClientId: '', xrayClientSecret: '' };
+        return (map[key] ?? '') as T;
+    };
+    jest.mocked(Config.getDefault).mockReturnValue(mockConfig);
 });
 
 // ─── TestHistoryCache ────────────────────────────────────────────────────────
@@ -189,16 +170,16 @@ describe('CloudHistoryProvider', () => {
     beforeEach(() => {
         jira = mockJiraResource();
         mockGraphql.mockReset();
-        (Config.getDefault as jest.Mock).mockReturnValue({
-            get(key: string) {
-                const map: Record<string, string> = {
-                    xrayMode: 'cloud',
-                    xrayClientId: 'client-123',
-                    xrayClientSecret: 'secret-456',
-                };
-                return map[key];
-            },
-        });
+        const cloudMockConfig = createMockConfigInstance();
+        cloudMockConfig.get = function <T = string>(key: string): T {
+            const map: Record<string, string> = {
+                xrayMode: 'cloud',
+                xrayClientId: 'client-123',
+                xrayClientSecret: 'secret-456',
+            };
+            return (map[key] ?? '') as T;
+        };
+        jest.mocked(Config.getDefault).mockReturnValue(cloudMockConfig);
         provider = createHistoryProvider(jira, 'cloud');
     });
 
@@ -210,12 +191,12 @@ describe('CloudHistoryProvider', () => {
 
     it('returns empty array when credentials are missing', async () => {
         mockIssueGet.mockResolvedValue({ id: '12345' });
-        (Config.getDefault as jest.Mock).mockReturnValue({
-            get(key: string) {
-                const map: Record<string, string> = { xrayMode: 'cloud', xrayClientId: '', xrayClientSecret: '' };
-                return map[key];
-            },
-        });
+        const missingCredsConfig = createMockConfigInstance();
+        missingCredsConfig.get = function <T = string>(key: string): T {
+            const map: Record<string, string> = { xrayMode: 'cloud', xrayClientId: '', xrayClientSecret: '' };
+            return (map[key] ?? '') as T;
+        };
+        jest.mocked(Config.getDefault).mockReturnValue(missingCredsConfig);
         const result = await provider.getHistory('TEST-123');
         expect(result).toEqual([]);
     });
@@ -247,11 +228,13 @@ describe('CloudHistoryProvider', () => {
                 ],
             },
         });
+        const mockIssues = [
+            { id: '111', key: 'TE-1', fields: { summary: '' } },
+            { id: '222', key: 'TE-2', fields: { summary: '' } },
+        ];
         mockSearchGet.mockResolvedValue({
-            issues: [
-                { id: '111', key: 'TE-1', fields: { summary: '' } },
-                { id: '222', key: 'TE-2', fields: { summary: '' } },
-            ] as Array<{ id: string; key: string; fields: Record<string, unknown> }>,
+            issues: mockIssues,
+            total: 2,
         });
 
         const result = await provider.getHistory('TEST-123');
@@ -345,8 +328,10 @@ describe('CloudHistoryProvider', () => {
                 ],
             },
         });
+        const singleIssue = { id: '111', key: 'TE-1', fields: { summary: '' } };
         mockSearchGet.mockResolvedValue({
-            issues: [{ id: '111', key: 'TE-1', fields: { summary: '' } }],
+            issues: [singleIssue],
+            total: 1,
         });
         await provider.getHistory('TEST-123');
         expect(mockSearchGet).toHaveBeenCalledTimes(1);

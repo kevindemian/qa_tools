@@ -1,3 +1,4 @@
+import { nonNull } from '../../shared/test-utils';
 import { TestCaseDataSchema, TestCaseArraySchema, PreConditionInputSchema } from './case18.schema';
 
 describe('TestCaseDataSchema', () => {
@@ -77,8 +78,8 @@ describe('PreConditionInputSchema', () => {
         };
         const parsed = TestCaseDataSchema.parse(data);
         expect(parsed.preConditions).toBeDefined();
-        expect(parsed.preConditions!).toHaveLength(2);
-        expect(parsed.preConditions![0]).toEqual({ type: 'reference', key: 'PREC-123' });
+        expect(nonNull(parsed.preConditions)).toHaveLength(2);
+        expect(nonNull(parsed.preConditions)[0]).toEqual({ type: 'reference', key: 'PREC-123' });
     });
 
     it('accepts test case without preConditions', () => {

@@ -4,6 +4,7 @@ import os from 'os';
 import Config from './config';
 import { formatDateISO } from './date-utils';
 import { Logger, rootLogger, maskDeep } from './logger';
+import { nonNull } from './test-utils';
 
 function normalizePath(p: string): string {
     return p.replace(/\\/g, '/');
@@ -42,14 +43,14 @@ describe('Logger', () => {
 
     describe('_writeFile', () => {
         function writeAndCheck(
-            level: string,
+            level: keyof Logger,
             msg: string,
             data?: unknown,
         ): { fileFound: boolean; lastLine?: string; filePath?: string; logFile?: string } {
             const testDir = normalizePath(fs.mkdtempSync(path.join(os.tmpdir(), 'qa-tools-logger-')));
             const cfg = Config.create({ logFile: true, logDir: testDir });
             const logger = new Logger({ test: 'write' }, cfg);
-            (logger as unknown as Record<string, jest.Mock>)[level]!(msg, data);
+            (logger[level] as (m: string, d?: unknown) => void)(msg, data);
 
             const date = formatDateISO();
             const logFile = path.join(testDir, `qa-tools-${date}.log`);
@@ -117,9 +118,9 @@ describe('Logger', () => {
                 const firstFile = logger.filePath;
 
                 logger.info('more data after rotation');
-                const dir = path.dirname(firstFile!);
-                const ext = path.extname(firstFile!);
-                const base = path.basename(firstFile!, ext);
+                const dir = path.dirname(nonNull(firstFile));
+                const ext = path.extname(nonNull(firstFile));
+                const base = path.basename(nonNull(firstFile), ext);
                 const rotated = path.join(dir, `${base}.1${ext}`);
 
                 expect(fs.existsSync(rotated)).toBe(true);
@@ -309,8 +310,8 @@ describe('Logger', () => {
         it('recursively masks nested arrays', () => {
             const input = { items: [{ token: 'abcdefghij' }, { name: 'public' }] };
             const result = maskDeep(input) as { items: Array<{ token: string; name: string }> };
-            expect(result.items[0]!.token).toBe('abcd****');
-            expect(result.items[1]!.name).toBe('public');
+            expect(nonNull(result.items[0]).token).toBe('abcd****');
+            expect(nonNull(result.items[1]).name).toBe('public');
         });
 
         it('masks keys matching password/authorization patterns', () => {
@@ -345,7 +346,7 @@ describe('Logger', () => {
             const logger = new Logger();
             const bigData = { big: 'x'.repeat(200) };
             logger._writeConsole('ERROR', 'fail', bigData);
-            const text = spyError.mock.calls[0]![0] as string;
+            const text = nonNull(spyError.mock.calls[0])[0] as string;
             expect(text.length).toBeLessThan(400);
             spyError.mockRestore();
         });

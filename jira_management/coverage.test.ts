@@ -1,18 +1,15 @@
+import { createMockJiraResource } from '../shared/test-utils/factories/jira-resource-factory';
 import { analyzeCoverage } from './coverage';
 
-const mockSearchJiraIssues = jest.fn();
-
-const mockJiraResource = {
-    searchJiraIssues: mockSearchJiraIssues,
-};
+let mockJiraResource: ReturnType<typeof createMockJiraResource>;
 
 beforeEach(() => {
-    jest.clearAllMocks();
+    mockJiraResource = createMockJiraResource();
 });
 
 describe('analyzeCoverage', () => {
     it('returns coverage result with some mapped and some unmapped', async () => {
-        mockSearchJiraIssues.mockResolvedValueOnce({
+        mockJiraResource.searchJiraIssues.mockResolvedValueOnce({
             issues: [
                 { key: 'TEST-1', fields: { summary: 'With steps', steps: [{ action: 'Step 1' }] } },
                 {
@@ -25,7 +22,7 @@ describe('analyzeCoverage', () => {
             total: 4,
         });
 
-        const result = await analyzeCoverage(mockJiraResource as never, 'TEST');
+        const result = await analyzeCoverage(mockJiraResource, 'TEST');
 
         expect(result.totalIssues).toBe(4);
         expect(result.mappedIssues).toBe(2);
@@ -35,9 +32,9 @@ describe('analyzeCoverage', () => {
     });
 
     it('handles empty response', async () => {
-        mockSearchJiraIssues.mockResolvedValueOnce({ issues: [], total: 0 });
+        mockJiraResource.searchJiraIssues.mockResolvedValueOnce({ issues: [], total: 0 });
 
-        const result = await analyzeCoverage(mockJiraResource as never, 'TEST');
+        const result = await analyzeCoverage(mockJiraResource, 'TEST');
 
         expect(result.totalIssues).toBe(0);
         expect(result.mappedIssues).toBe(0);
@@ -46,9 +43,9 @@ describe('analyzeCoverage', () => {
     });
 
     it('handles network error and returns zero coverage', async () => {
-        mockSearchJiraIssues.mockRejectedValueOnce(new Error('Network error'));
+        mockJiraResource.searchJiraIssues.mockRejectedValueOnce(new Error('Network error'));
 
-        const result = await analyzeCoverage(mockJiraResource as never, 'TEST');
+        const result = await analyzeCoverage(mockJiraResource, 'TEST');
 
         expect(result.totalIssues).toBe(0);
         expect(result.coveragePct).toBe(0);
@@ -57,7 +54,7 @@ describe('analyzeCoverage', () => {
     it('groups gaps by epic when epic field is present', async () => {
         const mockEpic1 = { key: 'EPIC-1' };
         const mockEpic2 = { key: 'EPIC-2' };
-        mockSearchJiraIssues.mockResolvedValueOnce({
+        mockJiraResource.searchJiraIssues.mockResolvedValueOnce({
             issues: [
                 { key: 'TEST-1', fields: { summary: 'No steps', customfield_10014: mockEpic1 } },
                 { key: 'TEST-2', fields: { summary: 'No steps', customfield_10014: mockEpic2 } },
@@ -67,7 +64,7 @@ describe('analyzeCoverage', () => {
             total: 4,
         });
 
-        const result = await analyzeCoverage(mockJiraResource as never, 'TEST');
+        const result = await analyzeCoverage(mockJiraResource, 'TEST');
 
         expect(result.gapsByEpic['EPIC-1']).toEqual(['TEST-1']);
         expect(result.gapsByEpic['EPIC-2']).toEqual(['TEST-2', 'TEST-3']);

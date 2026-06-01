@@ -89,11 +89,41 @@ describe('CLI Base', () => {
     });
 
     describe('setupSigint', () => {
-        let mockRl: { question: jest.Mock; close: jest.Mock };
+        let mockRl: jest.Mocked<readline.Interface>;
 
         beforeEach(() => {
-            mockRl = { question: jest.fn(), close: jest.fn() };
-            (readline.createInterface as jest.Mock).mockReturnValue(mockRl);
+            mockRl = jest.mocked<readline.Interface>({
+                question: jest.fn(),
+                close: jest.fn(),
+                terminal: false,
+                line: '',
+                cursor: 0,
+                getPrompt: jest.fn(),
+                setPrompt: jest.fn(),
+                prompt: jest.fn(),
+                pause: jest.fn(),
+                resume: jest.fn(),
+                getCursorPos: jest.fn(),
+                write: jest.fn(),
+                on: jest.fn(),
+                once: jest.fn(),
+                emit: jest.fn(),
+                addListener: jest.fn(),
+                removeListener: jest.fn(),
+                off: jest.fn(),
+                removeAllListeners: jest.fn(),
+                setMaxListeners: jest.fn(),
+                getMaxListeners: jest.fn(),
+                listeners: jest.fn(),
+                rawListeners: jest.fn(),
+                listenerCount: jest.fn(),
+                prependListener: jest.fn(),
+                prependOnceListener: jest.fn(),
+                eventNames: jest.fn(),
+                [Symbol.dispose]: jest.fn(),
+                [Symbol.asyncIterator]: jest.fn(),
+            });
+            jest.mocked(readline.createInterface).mockReturnValue(mockRl);
         });
 
         afterEach(() => {
@@ -119,14 +149,16 @@ describe('CLI Base', () => {
 
         it('calls onExit and exits when user responds s', () => {
             jest.useFakeTimers();
-            const exitSpy = jest.spyOn(process, 'exit').mockImplementation(() => undefined as never);
+            const exitSpy = jest
+                .spyOn(process, 'exit')
+                .mockImplementation(jest.fn<never, [string | number | null | undefined]>());
             jest.spyOn(process, 'on').mockImplementation((evt, handler) => {
                 if (evt === 'SIGINT') (handler as () => void)();
                 return process;
             });
             const onExit = jest.fn();
             cliBase.setupSigint(null, onExit);
-            const questionFn = mockRl.question.mock.calls[0][1] as (answer: string) => void;
+            const questionFn = mockRl.question.mock.calls[0]![1] as (answer: string) => void;
             questionFn('s');
             expect(onExit).toHaveBeenCalled();
             expect(MOCK_PROMPT.info).toHaveBeenCalledWith('Até logo!');
@@ -143,7 +175,7 @@ describe('CLI Base', () => {
             });
             const onExit = jest.fn();
             cliBase.setupSigint(null, onExit);
-            const questionFn = mockRl.question.mock.calls[0][1] as (answer: string) => void;
+            const questionFn = mockRl.question.mock.calls[0]![1] as (answer: string) => void;
             questionFn('n');
             expect(onExit).not.toHaveBeenCalled();
             expect(MOCK_PROMPT.info).toHaveBeenCalledWith('Continuando...');
@@ -151,7 +183,9 @@ describe('CLI Base', () => {
 
         it('force exits on 2nd SIGINT during confirmation', () => {
             jest.useFakeTimers();
-            const exitSpy = jest.spyOn(process, 'exit').mockImplementation(() => undefined as never);
+            const exitSpy = jest
+                .spyOn(process, 'exit')
+                .mockImplementation(jest.fn<never, [string | number | null | undefined]>());
             let capturedHandler: () => void;
             jest.spyOn(process, 'on').mockImplementation((evt, handler) => {
                 if (evt === 'SIGINT') capturedHandler = handler as () => void;
@@ -185,7 +219,9 @@ describe('CLI Base', () => {
 
         it('handles null onExit gracefully on confirmation s', () => {
             jest.useFakeTimers();
-            const exitSpy = jest.spyOn(process, 'exit').mockImplementation(() => undefined as never);
+            const exitSpy = jest
+                .spyOn(process, 'exit')
+                .mockImplementation(jest.fn<never, [string | number | null | undefined]>());
             let capturedHandler: () => void;
             jest.spyOn(process, 'on').mockImplementation((evt, handler) => {
                 if (evt === 'SIGINT') capturedHandler = handler as () => void;
@@ -193,7 +229,7 @@ describe('CLI Base', () => {
             });
             cliBase.setupSigint(null, null);
             capturedHandler!();
-            const questionFn = mockRl.question.mock.calls[0][1] as (answer: string) => void;
+            const questionFn = mockRl.question.mock.calls[0]![1] as (answer: string) => void;
             questionFn('s');
             expect(MOCK_PROMPT.info).toHaveBeenCalledWith('Até logo!');
             jest.advanceTimersByTime(2000);

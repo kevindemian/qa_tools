@@ -17,9 +17,9 @@ import { isQuiet } from '../shared/prompt-ui';
 import { Output } from '../shared/output';
 import { withSpinner, ProgressBar, __setOraDep } from './spinner';
 
-const mockIsQuiet = isQuiet as jest.Mock;
-const mockIsTTY = Output.isTTY as jest.Mock;
-const mockIsCI = Output.isCI as jest.Mock;
+const mockIsQuiet = jest.mocked(isQuiet);
+const mockIsTTY = jest.mocked(Output.isTTY);
+const mockIsCI = jest.mocked(Output.isCI);
 
 beforeEach(() => {
     jest.clearAllMocks();

@@ -13,6 +13,10 @@ import type { TestCase, TestResult } from '../shared/types';
 import type IssueLinker from './issue-linker';
 import type TestCaseFactory from './test-case-factory';
 import type { Logger } from '../shared/logger';
+import type { JiraResourceLike } from '../shared/types';
+import type { XrayStepImporter } from './xray-client';
+import JiraLinkManager from './jira_link_manager';
+import { createMockJiraResource } from '../shared/test-utils/factories/jira-resource-factory';
 import { update as updateState } from '../shared/state';
 import {
     linkTestRelations,
@@ -27,26 +31,55 @@ const testBase: TestCase = {
     steps: [{ fields: { Action: 'Click', Data: '', 'Expected Result': 'OK' } }],
 };
 
-const makeLinker = (): jest.Mocked<IssueLinker> => ({
-    associatePrecondition: jest.fn(),
-    linkIssues: jest.fn(),
-    updateCrossReferences: jest.fn(),
-    jiraResource: {} as never,
-    linkManager: {} as never,
-});
+const makeLinker = (): jest.Mocked<IssueLinker> => {
+    const mockJiraResource: jest.Mocked<JiraResourceLike> = createMockJiraResource();
+    const realLinkMgr = new JiraLinkManager(mockJiraResource);
+    const mockLinkMgr = jest.mocked(realLinkMgr);
+    mockLinkMgr.associatePrecondition = jest.fn();
+    mockLinkMgr.linkIssues = jest.fn();
+    return {
+        associatePrecondition: jest.fn(),
+        linkIssues: jest.fn(),
+        updateCrossReferences: jest.fn(),
+        jiraResource: mockJiraResource,
+        linkManager: mockLinkMgr,
+    };
+};
 
-const makeFactory = (): jest.Mocked<TestCaseFactory> => ({
-    createIssue: jest.fn(),
-    postSteps: jest.fn(),
-    jiraResource: {} as never,
-    stepImporter: {} as never,
-});
+const makeFactory = (): jest.Mocked<TestCaseFactory> => {
+    const mockJiraResource: jest.Mocked<JiraResourceLike> = createMockJiraResource();
+    const stepImporter: XrayStepImporter = { importStep: jest.fn() };
+    return {
+        createIssue: jest.fn(),
+        postSteps: jest.fn(),
+        jiraResource: mockJiraResource,
+        stepImporter,
+    };
+};
 
-const opLog = {
+const opLog = jest.mocked<Logger>({
+    context: {},
+    _logDir: null,
+    _filePathCached: null,
+    _fileError: false,
+    _bytesWritten: 0,
+    _maxLogSize: 0,
+    _config: null,
+    _ensureDir: jest.fn(),
+    _rotateIfNeeded: jest.fn(),
+    _writeConsole: jest.fn(),
+    _writeFile: jest.fn(),
+    _write: jest.fn(),
+    child: jest.fn(),
+    writeFileOnly: jest.fn(),
+    debug: jest.fn(),
     info: jest.fn(),
     warn: jest.fn(),
     error: jest.fn(),
-} as unknown as jest.Mocked<Logger>;
+    get filePath() {
+        return '';
+    },
+});
 const resultSink: TestResult[] = [];
 
 beforeEach(() => {

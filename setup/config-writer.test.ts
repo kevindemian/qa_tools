@@ -3,14 +3,14 @@ import path from 'path';
 import { writeProjectsConfig, writeDotEnvExample } from './config-writer';
 
 jest.mock('fs');
-const MockFs = fs as jest.Mocked<typeof fs>;
+const MockFs = jest.mocked(fs);
 
 describe('writeProjectsConfig', () => {
     beforeEach(() => {
         jest.clearAllMocks();
-        (MockFs.existsSync as jest.Mock).mockReturnValue(false);
-        (MockFs.mkdirSync as jest.Mock).mockImplementation(jest.fn());
-        (MockFs.writeFileSync as jest.Mock).mockImplementation(jest.fn());
+        jest.mocked(MockFs.existsSync).mockReturnValue(false);
+        jest.mocked(MockFs.mkdirSync).mockImplementation(jest.fn());
+        jest.mocked(MockFs.writeFileSync).mockImplementation(jest.fn());
     });
 
     it('creates projects.json and providers.json when neither exists', () => {
@@ -26,8 +26,8 @@ describe('writeProjectsConfig', () => {
     });
 
     it('appends new project to existing projects.json', () => {
-        (MockFs.existsSync as jest.Mock).mockReturnValue(true);
-        (MockFs.readFileSync as jest.Mock).mockReturnValue(JSON.stringify({ existing: '123' }));
+        jest.mocked(MockFs.existsSync).mockReturnValue(true);
+        jest.mocked(MockFs.readFileSync).mockReturnValue(JSON.stringify({ existing: '123' }));
 
         const result = writeProjectsConfig({
             projectName: 'newapp',
@@ -43,8 +43,8 @@ describe('writeProjectsConfig', () => {
     });
 
     it('skips when project already exists', () => {
-        (MockFs.existsSync as jest.Mock).mockReturnValue(true);
-        (MockFs.readFileSync as jest.Mock).mockReturnValue(JSON.stringify({ myapp: 'myapp' }));
+        jest.mocked(MockFs.existsSync).mockReturnValue(true);
+        jest.mocked(MockFs.readFileSync).mockReturnValue(JSON.stringify({ myapp: 'myapp' }));
 
         const result = writeProjectsConfig({
             projectName: 'myapp',
@@ -56,8 +56,8 @@ describe('writeProjectsConfig', () => {
     });
 
     it('handles corrupt existing file by overwriting', () => {
-        (MockFs.existsSync as jest.Mock).mockReturnValue(true);
-        (MockFs.readFileSync as jest.Mock).mockReturnValue('not json');
+        jest.mocked(MockFs.existsSync).mockReturnValue(true);
+        jest.mocked(MockFs.readFileSync).mockReturnValue('not json');
 
         const result = writeProjectsConfig({
             projectName: 'myapp',
@@ -72,8 +72,8 @@ describe('writeProjectsConfig', () => {
 describe('writeDotEnvExample', () => {
     beforeEach(() => {
         jest.clearAllMocks();
-        (MockFs.existsSync as jest.Mock).mockReturnValue(false);
-        (MockFs.writeFileSync as jest.Mock).mockImplementation(jest.fn());
+        jest.mocked(MockFs.existsSync).mockReturnValue(false);
+        jest.mocked(MockFs.writeFileSync).mockImplementation(jest.fn());
     });
 
     it('creates .env.example with GitHub vars', () => {
@@ -93,7 +93,7 @@ describe('writeDotEnvExample', () => {
     });
 
     it('skips when .env.example already exists', () => {
-        (MockFs.existsSync as jest.Mock).mockReturnValue(true);
+        jest.mocked(MockFs.existsSync).mockReturnValue(true);
         const result = writeDotEnvExample({ projectName: 'myapp', gitProvider: 'github' });
         expect(result.filesSkipped.length).toBe(1);
         expect(MockFs.writeFileSync).not.toHaveBeenCalled();

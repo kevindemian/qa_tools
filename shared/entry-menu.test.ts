@@ -88,7 +88,7 @@ describe('main', () => {
     });
 
     it('prints usage when not TTY', async () => {
-        (Output.isTTY as jest.Mock).mockReturnValue(false);
+        jest.mocked(Output.isTTY).mockReturnValue(false);
 
         await entryMenu.main();
 
@@ -97,8 +97,8 @@ describe('main', () => {
     });
 
     it('loops and exits on /exit choice', async () => {
-        (Output.isTTY as jest.Mock).mockReturnValue(true);
-        (Output.isCI as jest.Mock).mockReturnValue(false);
+        jest.mocked(Output.isTTY).mockReturnValue(true);
+        jest.mocked(Output.isCI).mockReturnValue(false);
         const promptMod = require('./prompt') as { showSelect: jest.Mock };
         promptMod.showSelect.mockResolvedValue('exit');
 
@@ -108,8 +108,8 @@ describe('main', () => {
     });
 
     it('launches jira module when selected and exits on failure', async () => {
-        (Output.isTTY as jest.Mock).mockReturnValue(true);
-        (Output.isCI as jest.Mock).mockReturnValue(false);
+        jest.mocked(Output.isTTY).mockReturnValue(true);
+        jest.mocked(Output.isCI).mockReturnValue(false);
         const promptMod = require('./prompt') as { showSelect: jest.Mock };
         promptMod.showSelect.mockResolvedValue('jira');
         mockSpawnWithExit(1);
@@ -120,8 +120,8 @@ describe('main', () => {
     });
 
     it('continues loop on unknown choice', async () => {
-        (Output.isTTY as jest.Mock).mockReturnValue(true);
-        (Output.isCI as jest.Mock).mockReturnValue(false);
+        jest.mocked(Output.isTTY).mockReturnValue(true);
+        jest.mocked(Output.isCI).mockReturnValue(false);
         const promptMod = require('./prompt') as { showSelect: jest.Mock };
         promptMod.showSelect.mockResolvedValueOnce('unknown').mockResolvedValueOnce('exit');
 

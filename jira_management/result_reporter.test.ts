@@ -4,6 +4,7 @@ import { matchResultsToTests, createTestExecutionFromResults } from './result_re
 import JiraResource from './jira_resource';
 import JiraLinkManager from './jira_link_manager';
 import { rootLogger } from '../shared/logger';
+import { nonNull } from '../shared/test-utils';
 
 jest.mock('axios', () => {
     const mockInstance = {
@@ -79,10 +80,10 @@ describe('matchResultsToTests', () => {
         ];
         const result = matchResultsToTests(results, mappingPath);
         expect(result.matched).toHaveLength(2);
-        expect(result.matched[0]!.key).toBe('TEST-1');
-        expect(result.matched[0]!.status).toBe('passed');
-        expect(result.matched[1]!.key).toBe('TEST-2');
-        expect(result.matched[1]!.status).toBe('failed');
+        expect(nonNull(result.matched[0]).key).toBe('TEST-1');
+        expect(nonNull(result.matched[0]).status).toBe('passed');
+        expect(nonNull(result.matched[1]).key).toBe('TEST-2');
+        expect(nonNull(result.matched[1]).status).toBe('failed');
         expect(result.unmatched).toHaveLength(0);
     });
 
@@ -91,7 +92,7 @@ describe('matchResultsToTests', () => {
         const result = matchResultsToTests(results, mappingPath);
         expect(result.matched).toHaveLength(0);
         expect(result.unmatched).toHaveLength(1);
-        expect(result.unmatched[0]!.title).toBe('TC99 - Unknown');
+        expect(nonNull(result.unmatched[0]).title).toBe('TC99 - Unknown');
     });
 
     it('calculates stats correctly', () => {
@@ -116,7 +117,7 @@ describe('matchResultsToTests', () => {
         const results = [{ title: 'Login valido', state: 'passed' as const, duration: 100 }];
         const result = matchResultsToTests(results, mappingPath);
         expect(result.matched).toHaveLength(1);
-        expect(result.matched[0]!.key).toBe('TEST-1');
+        expect(nonNull(result.matched[0]).key).toBe('TEST-1');
     });
 
     it('returns empty result and warns when tests array is empty', () => {
@@ -133,7 +134,7 @@ describe('matchResultsToTests', () => {
         const results = [{ title: '', state: 'passed' as const, duration: 100 }];
         const result = matchResultsToTests(results, mappingPath);
         expect(result.unmatched).toHaveLength(1);
-        expect(result.unmatched[0]!.title).toBe('');
+        expect(nonNull(result.unmatched[0]).title).toBe('');
     });
 });
 
@@ -143,11 +144,11 @@ describe('createTestExecutionFromResults', () => {
     let linkManager: JiraLinkManager;
 
     beforeEach(() => {
-        jiraResource = new JiraResource('fake-token', 'http://jira/rest/api/2') as jest.Mocked<JiraResource>;
+        jiraResource = jest.mocked(new JiraResource('fake-token', 'http://jira/rest/api/2'));
         jiraResource.getJiraResource = jest.fn();
         jiraResource.postJiraResource = jest.fn();
 
-        linkJiraRes = new JiraResource('fake-token', 'http://jira/rest/api/2') as jest.Mocked<JiraResource>;
+        linkJiraRes = jest.mocked(new JiraResource('fake-token', 'http://jira/rest/api/2'));
         linkJiraRes.getJiraResource = jest.fn();
         linkJiraRes.postJiraResource = jest.fn();
         linkJiraRes.getJiraResource.mockImplementation((url: string) => {
@@ -225,7 +226,7 @@ describe('createTestExecutionFromResults', () => {
             (c): c is [string, { outwardIssue: { key: string } }] => c[0] === 'issueLink',
         );
         expect(linkCalls).toHaveLength(1);
-        expect(linkCalls[0]![1].outwardIssue.key).toBe('TEST-1');
+        expect(nonNull(linkCalls[0])[1].outwardIssue.key).toBe('TEST-1');
     });
 
     it('logs warning when createIssueLink throws, but execution is still created', async () => {

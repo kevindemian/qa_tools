@@ -1697,3 +1697,28 @@ Elevar reports ao nível Allure (padrão ouro mercado). 3 sprints independentes.
 | Tests: spies de `console.*` → `process.stdout/stderr.write` | ✅     |
 | tsconfig.json: incluído `setup/**/*.ts`                     | ✅     |
 | `shared/config-accessor.ts`: 23 testes, 100% cobertura      | ✅     |
+
+### Sprint 3 — Fase 1: Factory Functions ✅
+
+6 factory functions com 33 tests, 100% cobertura.
+
+| ID  | Factory                    | Arquivo                                                | Tests | Status |
+| --- | -------------------------- | ------------------------------------------------------ | ----- | ------ |
+| F1  | `createMockJiraResource()` | `shared/test-utils/factories/jira-resource-factory.ts` | 5     | ✅     |
+| F2  | `createMockLinkManager()`  | `shared/test-utils/factories/link-manager-factory.ts`  | 5     | ✅     |
+| F3  | `createMockGitProvider()`  | `shared/test-utils/factories/git-provider-factory.ts`  | 4     | ✅     |
+| F4  | `createMockConfig()`       | `shared/test-utils/factories/config-factory.ts`        | 7     | ✅     |
+| F5  | `createMockContext()`      | `shared/test-utils/factories/context-factory.ts`       | 7     | ✅     |
+| F6  | `createMockResponse()`     | `shared/test-utils/factories/response-factory.ts`      | 5     | ✅     |
+|     | Barrel                     | `shared/test-utils/factories/index.ts`                 | —     | ✅     |
+
+### Sprint 3 — Fase 2: `jest.mocked()` Migration ✅
+
+Transform script applied 144 changes across 36 files. All `(expr as jest.Mock)`, `(expr as jest.Mocked<T>)`, and `(expr as jest.MockedFunction<typeof fn>)` patterns replaced with `jest.mocked(expr)`. 2 syntax errors manually fixed (cli_base, import-loop). Real type mismatches exposed by removing casts fixed in 12 files (complete mock objects, fix signatures, add optional chaining).
+
+| ID  | Item                                   | Count before | Status |
+| --- | -------------------------------------- | ------------ | ------ |
+| M1  | `git_triggers/main.test.ts`            | ~50          | ✅     |
+| M2  | `jira_management/main.test.ts`         | ~30          | ✅     |
+| M3  | `setup/main.test.ts`                   | ~25          | ✅     |
+| M4  | Demais ~37 arquivos com `as jest.Mock` | ~400         | ✅     |

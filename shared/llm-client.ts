@@ -18,7 +18,6 @@
  *   llm-cache         — in-memory + disk response cache
  *   llm-fallback      — tier configs, provider calls, fallback chain
  */
-import { z } from 'zod';
 import Config from './config';
 import { rootLogger } from './logger';
 import { LlmError } from './errors';
@@ -33,7 +32,7 @@ import {
     parseRawOnce,
     tierToConfig,
 } from './llm-fallback';
-import type { LlmTier, ResponseFormat } from './types';
+import type { LlmTier, ResponseFormat, ZodSchema } from './types';
 
 import {
     checkMemoryCache,
@@ -86,7 +85,7 @@ interface ValidateWithRetryOptions<T> {
     system: string;
     user: string;
     responseFormat?: ResponseFormat;
-    schema: z.ZodType<T>;
+    schema: ZodSchema<T>;
     cKey: string;
     response: string;
 }
@@ -145,7 +144,7 @@ export interface LlmPromptOptions<T> {
     user: string;
     callerId?: string;
     responseFormat?: ResponseFormat;
-    schema?: z.ZodType<T>;
+    schema?: ZodSchema<T>;
 }
 
 export async function llmPrompt<T = string>(opts: LlmPromptOptions<T>): Promise<T> {

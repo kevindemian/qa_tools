@@ -16,17 +16,20 @@ jest.mock('../shared/prompt', () => mockPrompt);
 jest.mock('../shared/logger', () => mockLogger);
 jest.mock('../shared/http-client', () => mockHttpClient);
 
+import type { TestCase, JiraResourceLike } from '../shared/types';
 import IssueLinker from './issue-linker';
+import { createMockJiraResource, createMockLinkManager } from '../shared/test-utils/factories';
+import type JiraLinkManager from './jira_link_manager';
 
 describe('IssueLinker', () => {
     let linker: IssueLinker;
-    let mockJiraResource: { getJiraResource: jest.Mock; putJiraResource: jest.Mock };
-    let mockLinkManager: { associatePrecondition: jest.Mock; linkIssues: jest.Mock };
+    let mockJiraResource: jest.Mocked<JiraResourceLike>;
+    let mockLinkManager: jest.Mocked<JiraLinkManager>;
 
     beforeEach(() => {
-        mockJiraResource = { getJiraResource: jest.fn(), putJiraResource: jest.fn() };
-        mockLinkManager = { associatePrecondition: jest.fn(), linkIssues: jest.fn() };
-        linker = new IssueLinker(mockJiraResource as never, mockLinkManager as never);
+        mockJiraResource = createMockJiraResource();
+        mockLinkManager = createMockLinkManager();
+        linker = new IssueLinker(mockJiraResource, mockLinkManager);
     });
 
     afterEach(() => {
@@ -37,52 +40,56 @@ describe('IssueLinker', () => {
         const opLog = { info: jest.fn() };
 
         it('returns null when no precondition', async () => {
-            const result = await linker.associatePrecondition({ title: 'Test' } as never, 'TEST-1', opLog);
+            const result = await linker.associatePrecondition({ title: 'Test', steps: [] }, 'TEST-1', opLog);
             expect(result).toBeNull();
             expect(mockLinkManager.associatePrecondition).not.toHaveBeenCalled();
         });
 
         it('returns null on success', async () => {
-            mockLinkManager.associatePrecondition.mockResolvedValue(undefined);
-            const test = { title: 'Test', precondition: { value: 'PREC-001' } };
-            const result = await linker.associatePrecondition(test as never, 'TEST-1', opLog);
+            mockLinkManager.associatePrecondition.mockResolvedValue(null);
+            const test: TestCase = { title: 'Test', steps: [], precondition: { type: 'reference', value: 'PREC-001' } };
+            const result = await linker.associatePrecondition(test, 'TEST-1', opLog);
             expect(result).toBeNull();
             expect(mockLinkManager.associatePrecondition).toHaveBeenCalledWith('TEST-1', 'PREC-001');
         });
 
         it('calls success when not quiet', async () => {
-            mockLinkManager.associatePrecondition.mockResolvedValue(undefined);
+            mockLinkManager.associatePrecondition.mockResolvedValue(null);
             mockPrompt.isQuiet.mockReturnValue(false);
-            const test = { title: 'Test', precondition: { value: 'PREC-001' } };
-            await linker.associatePrecondition(test as never, 'TEST-1', opLog);
+            const test: TestCase = { title: 'Test', steps: [], precondition: { type: 'reference', value: 'PREC-001' } };
+            await linker.associatePrecondition(test, 'TEST-1', opLog);
             expect(mockPrompt.success).toHaveBeenCalledWith('  Pre-condition PREC-001 associada');
         });
 
         it('returns abort action on error', async () => {
             mockLinkManager.associatePrecondition.mockRejectedValue(new Error('API error'));
             mockPrompt.onError.mockReturnValue('abort');
-            const test = { title: 'Test', precondition: { value: 'PREC-001' } };
-            const result = await linker.associatePrecondition(test as never, 'TEST-1', opLog);
+            const test: TestCase = { title: 'Test', steps: [], precondition: { type: 'reference', value: 'PREC-001' } };
+            const result = await linker.associatePrecondition(test, 'TEST-1', opLog);
             expect(result).toEqual({ action: 'abort' });
         });
     });
 
     describe('linkIssues', () => {
         it('returns null when no linkedIssues', async () => {
-            const result = await linker.linkIssues('TEST-1', { title: 'Test' } as never);
+            const result = await linker.linkIssues('TEST-1', { title: 'Test', steps: [] });
             expect(result).toBeNull();
             expect(mockLinkManager.linkIssues).not.toHaveBeenCalled();
         });
 
         it('returns null when linkedIssues is empty array', async () => {
-            const result = await linker.linkIssues('TEST-1', { title: 'Test', linkedIssues: [] } as never);
+            const result = await linker.linkIssues('TEST-1', { title: 'Test', steps: [], linkedIssues: [] });
             expect(result).toBeNull();
         });
 
         it('returns null on success', async () => {
             mockLinkManager.linkIssues.mockResolvedValue(undefined);
-            const test = { title: 'Test', linkedIssues: [{ key: 'BUG-1', linkType: 'is tested by' }] };
-            const result = await linker.linkIssues('TEST-1', test as never);
+            const test: TestCase = {
+                title: 'Test',
+                steps: [],
+                linkedIssues: [{ key: 'BUG-1', linkType: 'is tested by' }],
+            };
+            const result = await linker.linkIssues('TEST-1', test);
             expect(result).toBeNull();
             expect(mockLinkManager.linkIssues).toHaveBeenCalledWith('TEST-1', test.linkedIssues);
         });
@@ -90,16 +97,24 @@ describe('IssueLinker', () => {
         it('calls success when not quiet', async () => {
             mockLinkManager.linkIssues.mockResolvedValue(undefined);
             mockPrompt.isQuiet.mockReturnValue(false);
-            const test = { title: 'Test', linkedIssues: [{ key: 'BUG-1', linkType: 'is tested by' }] };
-            await linker.linkIssues('TEST-1', test as never);
+            const test: TestCase = {
+                title: 'Test',
+                steps: [],
+                linkedIssues: [{ key: 'BUG-1', linkType: 'is tested by' }],
+            };
+            await linker.linkIssues('TEST-1', test);
             expect(mockPrompt.success).toHaveBeenCalledWith('  1 linked issue(s) criados');
         });
 
         it('returns action on error', async () => {
             mockLinkManager.linkIssues.mockRejectedValue(new Error('API error'));
             mockPrompt.onError.mockReturnValue('retry');
-            const test = { title: 'Test', linkedIssues: [{ key: 'BUG-1', linkType: 'is tested by' }] };
-            const result = await linker.linkIssues('TEST-1', test as never);
+            const test: TestCase = {
+                title: 'Test',
+                steps: [],
+                linkedIssues: [{ key: 'BUG-1', linkType: 'is tested by' }],
+            };
+            const result = await linker.linkIssues('TEST-1', test);
             expect(result).toEqual({ action: 'retry' });
         });
     });
@@ -111,13 +126,13 @@ describe('IssueLinker', () => {
         });
 
         it('skips tests without id or group', async () => {
-            const tests = [{ title: 'Test', group: '' }] as never;
+            const tests: TestCase[] = [{ title: 'Test', steps: [], group: '' }];
             await linker.updateCrossReferences(tests, ['']);
             expect(mockJiraResource.getJiraResource).not.toHaveBeenCalled();
         });
 
         it('skips groups with fewer than 2 members', async () => {
-            const tests = [{ title: 'Test', group: 'G1' }] as never;
+            const tests: TestCase[] = [{ title: 'Test', steps: [], group: 'G1' }];
             await linker.updateCrossReferences(tests, ['TEST-1']);
             expect(mockJiraResource.getJiraResource).not.toHaveBeenCalled();
         });
@@ -127,10 +142,10 @@ describe('IssueLinker', () => {
                 .mockResolvedValueOnce({ fields: { description: 'Old desc' } })
                 .mockResolvedValueOnce({ fields: { description: '' } });
             mockJiraResource.putJiraResource.mockResolvedValue({});
-            const tests = [
-                { title: 'Test1', group: 'G1', description: 'First' },
-                { title: 'Test2', group: 'G1', description: 'Second' },
-            ] as never;
+            const tests: TestCase[] = [
+                { title: 'Test1', group: 'G1', description: 'First', steps: [] },
+                { title: 'Test2', group: 'G1', description: 'Second', steps: [] },
+            ];
             await linker.updateCrossReferences(tests, ['TEST-1', 'TEST-2']);
             expect(mockJiraResource.getJiraResource).toHaveBeenCalledTimes(2);
             expect(mockJiraResource.putJiraResource).toHaveBeenCalledTimes(2);
@@ -142,20 +157,20 @@ describe('IssueLinker', () => {
             mockJiraResource.getJiraResource.mockResolvedValue({
                 fields: { description: 'This test case is part of the set Grupo X: TEST-2' },
             });
-            const tests = [
-                { title: 'Test1', group: 'G1' },
-                { title: 'Test2', group: 'G1' },
-            ] as never;
+            const tests: TestCase[] = [
+                { title: 'Test1', group: 'G1', steps: [] },
+                { title: 'Test2', group: 'G1', steps: [] },
+            ];
             await linker.updateCrossReferences(tests, ['TEST-1', 'TEST-2']);
             expect(mockJiraResource.putJiraResource).not.toHaveBeenCalled();
         });
 
         it('handles getJiraResource error', async () => {
             mockJiraResource.getJiraResource.mockRejectedValue({ response: { status: 404 } });
-            const tests = [
-                { title: 'Test1', group: 'G1' },
-                { title: 'Test2', group: 'G1' },
-            ] as never;
+            const tests: TestCase[] = [
+                { title: 'Test1', group: 'G1', steps: [] },
+                { title: 'Test2', group: 'G1', steps: [] },
+            ];
             await linker.updateCrossReferences(tests, ['TEST-1', 'TEST-2']);
             expect(mockJiraResource.putJiraResource).not.toHaveBeenCalled();
         });
@@ -165,10 +180,10 @@ describe('IssueLinker', () => {
                 .mockResolvedValueOnce({ fields: { description: 'Old' } })
                 .mockResolvedValueOnce({ fields: { description: 'Old' } });
             mockJiraResource.putJiraResource.mockRejectedValue({ response: { status: 403 } });
-            const tests = [
-                { title: 'Test1', group: 'G1' },
-                { title: 'Test2', group: 'G1' },
-            ] as never;
+            const tests: TestCase[] = [
+                { title: 'Test1', group: 'G1', steps: [] },
+                { title: 'Test2', group: 'G1', steps: [] },
+            ];
             await linker.updateCrossReferences(tests, ['TEST-1', 'TEST-2']);
             expect(mockJiraResource.putJiraResource).toHaveBeenCalledTimes(2);
         });
@@ -179,10 +194,10 @@ describe('IssueLinker', () => {
                 .mockResolvedValueOnce({ fields: { description: 'Old' } })
                 .mockResolvedValueOnce({ fields: { description: 'Old' } });
             mockJiraResource.putJiraResource.mockResolvedValue({});
-            const tests = [
-                { title: 'Test1', group: 'G1' },
-                { title: 'Test2', group: 'G1' },
-            ] as never;
+            const tests: TestCase[] = [
+                { title: 'Test1', group: 'G1', steps: [] },
+                { title: 'Test2', group: 'G1', steps: [] },
+            ];
             await linker.updateCrossReferences(tests, ['TEST-1', 'TEST-2']);
             expect(mockPrompt.print).toHaveBeenCalledWith(expect.stringContaining('+'));
         });
@@ -193,10 +208,10 @@ describe('IssueLinker', () => {
                 .mockResolvedValueOnce({ fields: { description: 'Old' } })
                 .mockResolvedValueOnce({ fields: { description: 'Old' } });
             mockJiraResource.putJiraResource.mockRejectedValue({ response: { status: 500 } });
-            const tests = [
-                { title: 'Test1', group: 'G1' },
-                { title: 'Test2', group: 'G1' },
-            ] as never;
+            const tests: TestCase[] = [
+                { title: 'Test1', group: 'G1', steps: [] },
+                { title: 'Test2', group: 'G1', steps: [] },
+            ];
             await linker.updateCrossReferences(tests, ['TEST-1', 'TEST-2']);
             expect(mockPrompt.print).toHaveBeenCalledWith(expect.stringContaining('x'));
         });

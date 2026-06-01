@@ -1,18 +1,10 @@
 let errorHandler: ((err: Error) => Promise<unknown>) | undefined;
 let successHandler: ((response: unknown) => unknown) | undefined;
-const mockInstance: jest.Mock<Promise<unknown>, unknown[]> & {
-    interceptors: {
-        request: { use: jest.Mock };
-        response: { use: jest.Mock };
-    };
-    get: jest.Mock;
-    post: jest.Mock;
-    put: jest.Mock;
-} = Object.assign(jest.fn(() => Promise.reject(new Error('still fails'))) as jest.Mock<Promise<unknown>, unknown[]>, {
+const mockInstance = Object.assign(jest.fn<Promise<unknown>, unknown[]>(), {
     interceptors: {
         request: { use: jest.fn() },
         response: {
-            use: jest.fn((success: unknown, error: (err: Error) => Promise<unknown>) => {
+            use: jest.fn().mockImplementation((success: unknown, error: (err: Error) => Promise<unknown>) => {
                 successHandler = success as (response: unknown) => unknown;
                 errorHandler = error;
             }),
@@ -21,15 +13,7 @@ const mockInstance: jest.Mock<Promise<unknown>, unknown[]> & {
     get: jest.fn(),
     post: jest.fn(),
     put: jest.fn(),
-}) as jest.Mock<Promise<unknown>, unknown[]> & {
-    interceptors: {
-        request: { use: jest.Mock };
-        response: { use: jest.Mock };
-    };
-    get: jest.Mock;
-    post: jest.Mock;
-    put: jest.Mock;
-};
+});
 
 jest.mock('axios', () => ({ create: jest.fn(() => mockInstance) }));
 import * as httpClientModule from './http-client';
@@ -203,19 +187,15 @@ describe('HTTP Client', () => {
 
         it('defaults method to get when config.method is missing', async () => {
             httpClient.createHttpClient({ baseUrl: 'https://api.test.com' });
-            const err = {
-                message: 'no method',
-                name: 'Error',
+            const err = Object.assign(new Error('no method'), {
                 config: { url: '/test' },
                 response: { status: 500 },
-            } as never;
+            });
             mockInstance.mockImplementation((cfg: unknown) => {
-                const newErr = {
-                    message: 'no method',
-                    name: 'Error',
+                const newErr = Object.assign(new Error('no method'), {
                     config: cfg,
                     response: { status: 500 },
-                } as never;
+                });
                 return errorHandler!(newErr);
             });
             try {
@@ -228,8 +208,8 @@ describe('HTTP Client', () => {
             httpClient.createHttpClient({ baseUrl: 'https://api.test.com', maxRetries: 2 });
             const err = makeError('get', 500, 0);
             mockInstance.mockImplementation((cfg: unknown) => {
-                const newErr = makeError('get', 500, (cfg as Record<string, unknown>).__retryAttempts as number);
-                (newErr as unknown as Record<string, unknown>).config = cfg;
+                const newErr = makeError('get', 500, (cfg as RetryError['config']).__retryAttempts);
+                newErr.config = cfg as RetryError['config'];
                 return errorHandler!(newErr);
             });
             try {
@@ -246,8 +226,8 @@ describe('HTTP Client', () => {
             httpClient.createHttpClient({ baseUrl: 'https://api.test.com' });
             const err = makeError('get', 500, 0);
             mockInstance.mockImplementation((cfg: unknown) => {
-                const newErr = makeError('get', 500, (cfg as Record<string, unknown>).__retryAttempts as number);
-                (newErr as unknown as Record<string, unknown>).config = cfg;
+                const newErr = makeError('get', 500, (cfg as RetryError['config']).__retryAttempts);
+                newErr.config = cfg as RetryError['config'];
                 return errorHandler!(newErr);
             });
             try {
