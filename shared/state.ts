@@ -12,7 +12,7 @@ import type { StateSchema } from './types';
 const UTF8 = 'utf8';
 
 function getStateDir(config?: Config): string {
-    const xdg = config ? config.xdgStateHome : Config.xdgStateHome;
+    const xdg = config ? config.get('xdgStateHome') : Config.get('xdgStateHome');
     return xdg ? path.join(xdg, 'qa-tools') : path.join(os.homedir(), '.local', 'state', 'qa-tools');
 }
 

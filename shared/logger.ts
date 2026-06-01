@@ -60,17 +60,18 @@ export class Logger {
         this._filePathCached = null;
         this._fileError = false;
         this._bytesWritten = 0;
-        this._maxLogSize = config?.logMaxSize ?? Config.logMaxSize;
+        this._maxLogSize = config?.get?.('logMaxSize') ?? Config.get('logMaxSize');
         this._config = config ?? null;
     }
 
     _ensureDir(): boolean {
         if (this._fileError) return false;
-        const logFile = this._config?.logFile ?? Config.logFile;
+        const logFile = this._config?.get('logFile') ?? Config.get('logFile');
         if (!logFile) return false;
 
-        const logDir = this._config?.logDir ?? Config.logDir;
+        const logDir = this._config?.get('logDir') ?? Config.get('logDir');
         if (this._logDir === logDir && this._filePathCached) return true;
+        if (!logDir) return false;
 
         try {
             if (!fs.existsSync(logDir)) fs.mkdirSync(logDir, { recursive: true });
@@ -111,7 +112,7 @@ export class Logger {
 
     _writeConsole(level: string, msg: string, data?: unknown): void {
         const levelNum = LEVELS[level] ?? 1;
-        const envLevel = this._config?.logLevel ?? Config.logLevel;
+        const envLevel = this._config?.get('logLevel') ?? Config.get('logLevel') ?? 'info';
         const envLevelNum = LEVELS[envLevel] ?? 1;
         if (levelNum < envLevelNum) return;
 
@@ -197,7 +198,7 @@ export class Logger {
     /** Get the resolved log file path (triggers dir creation on first access).
      * @returns Full path to `qa-tools-YYYY-MM-DD.log` or `null` if file logging is disabled. */
     get filePath(): string | null {
-        const logFile = this._config?.logFile ?? Config.logFile;
+        const logFile = this._config?.get('logFile') ?? Config.get('logFile');
         if (!logFile) return null;
         this._ensureDir();
         return this._filePathCached;
