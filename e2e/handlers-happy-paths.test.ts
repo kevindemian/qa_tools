@@ -456,7 +456,8 @@ describe('case12 — diagnose connection', () => {
 describe('case13 — create Test Execution', () => {
     it('happy path with in-memory tasks', async () => {
         const { api } = freshScope();
-        // createTestExecution → GET /issuetype, GET /field, POST /issue
+        // createTestExecution → findExistingTe(GET /search), GET /issuetype, GET /field, POST /issue
+        api.get('/search').query(true).reply(200, { issues: [], total: 0 });
         api.get('/issuetype').reply(200, [
             { id: '11200', name: 'Epic' },
             { id: '11802', name: 'Test Execution' },
@@ -527,6 +528,8 @@ describe('case15 — import JSON tests', () => {
         // 3. POST /test/{key}/steps via jiraResourceXray (baseURL = HOST)
         xray.post('/test/TEST-1/steps').reply(201);
         // Then TE creation (confirm=true):
+        // findExistingTe → GET /search
+        api.get('/search').query(true).reply(200, { issues: [], total: 0 });
         api.get('/issuetype').reply(200, [
             { id: '11200', name: 'Epic' },
             { id: '11802', name: 'Test Execution' },
