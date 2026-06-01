@@ -164,7 +164,7 @@ describe('formatDiffResponse', () => {
     it('returns empty string for null / undefined / non-array input', () => {
         expect(formatDiffResponse(null, 'diff', 'name')).toBe('');
         expect(formatDiffResponse(undefined, 'diff', 'name')).toBe('');
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any — R9: type narrowing for invalid input test
+
         expect(formatDiffResponse({} as Record<string, unknown>[], 'diff', 'name')).toBe('');
     });
 

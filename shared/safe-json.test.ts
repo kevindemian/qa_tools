@@ -22,7 +22,7 @@ describe('safeParseJson', () => {
 
     it('returns fallback on undefined input', () => {
         const fallback = 42;
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any — R9: type narrowing from undefined
+
         const result = safeParseJson<number>(undefinedAs<string>(), fallback);
         expect(result).toBe(42);
     });

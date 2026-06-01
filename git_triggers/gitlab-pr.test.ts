@@ -64,12 +64,10 @@ describe('formatPR', () => {
     });
 
     it('returns null for null input', () => {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any — R9: type narrowing from null/undefined for null-handling test
         expect(formatPR(nullAs<JsonObject>())).toBeNull();
     });
 
     it('returns null for undefined input', () => {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any — R9: type narrowing from null/undefined for null-handling test
         expect(formatPR(undefinedAs<JsonObject>())).toBeNull();
     });
 

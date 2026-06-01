@@ -58,7 +58,6 @@ describe('parseMochawesome', () => {
     });
 
     it('returns empty for null input', () => {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any — R9: type narrowing from null for null-handling test
         const result = parseMochawesome(nullAs<MochawesomeData>());
         expect(result.tests).toEqual([]);
         expect(result.stats.total).toBe(0);

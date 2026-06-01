@@ -63,7 +63,6 @@ const mockBugReport = {
     metadata: { pipelineId: '42', branch: 'main', provider: 'gitlab' },
 };
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any — R9: type narrowing empty mock object
 const mockJiraResource = {} as JiraClient;
 
 beforeEach(() => {
