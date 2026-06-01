@@ -1,12 +1,20 @@
 /** Structural schema type — accepts any object with a `safeParse` method.
  *  Allows test doubles without casting to `z.ZodType`.
  *  Compatible with both real Zod schemas and test doubles. */
-type ZodErrorLike = { issues: Array<{ path: Array<string | number | symbol>; message: string }> };
-export type ZodSchema<T> = {
-    safeParse(
-        data: unknown,
-    ): { success: true; data: T; error?: undefined } | { success: false; error: ZodErrorLike; data?: undefined };
+type ZodErrorLike = { issues: Array<{ path: PropertyKey[]; message: string }> };
+export type SafeParseSuccess<T> = { success: true; data: T };
+export type SafeParseFailure = { success: false; error: ZodErrorLike };
+export type SafeParseResult<T> = SafeParseSuccess<T> | SafeParseFailure;
+export type ZodSchema = {
+    safeParse(data: unknown): SafeParseResult<unknown>;
 };
+export type ZodSchemaTyped<T> = {
+    safeParse(data: unknown): SafeParseResult<T>;
+};
+
+/** Extract the output type T from a ZodSchema-compatible schema.
+ *  Works for both real Zod schemas (discriminated union) and test doubles. */
+export type InferSchemaData<S> = S extends { safeParse: (data: unknown) => SafeParseResult<infer T> } ? T : never;
 
 /** LLM provider tier used for routing requests to the appropriate model. */
 export type LlmTier = 'main' | 'fast' | 'reviewer' | 'report' | 'fallback' | 'batch';

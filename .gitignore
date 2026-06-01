@@ -44,3 +44,4 @@ tmp/
 # === Windows artifacts ===
 nul
 .llm-cache/
+a.out
