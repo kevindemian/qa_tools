@@ -7,7 +7,6 @@ import { llmPrompt } from './llm-client';
 import { AiBugReportSchema } from './bug-report.schema';
 import Config from './config';
 import type { BugReport, JiraLinkManagerLike, JiraResourceLike, LLMEnrichment, TestResult } from './types';
-import type { AiBugReport } from './bug-report.schema';
 import type { ParseResult } from './result_parser';
 
 const ERROR_TRUNCATION_LIMIT = 500;
@@ -69,7 +68,7 @@ export async function generateBugReportFromDescription(raw: string): Promise<Bug
         return null;
     }
     try {
-        const aiReport = await llmPrompt<AiBugReport>({
+        const aiReport = await llmPrompt({
             tier: 'fast',
             system,
             user: raw,

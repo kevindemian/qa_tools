@@ -6,7 +6,7 @@ import crypto from 'crypto';
 import { z } from 'zod';
 import { diskCacheGet, diskCacheSet, clearDiskCache } from './disk-cache';
 import { rootLogger } from './logger';
-import type { ZodSchema } from './types';
+import type { ZodSchemaTyped as ZodSchema } from './types';
 
 // ---- types ----
 

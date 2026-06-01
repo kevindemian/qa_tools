@@ -32,7 +32,7 @@ import {
     parseRawOnce,
     tierToConfig,
 } from './llm-fallback';
-import type { LlmTier, ResponseFormat, ZodSchema } from './types';
+import type { LlmTier, ResponseFormat, ZodSchema, ZodSchemaTyped, InferSchemaData } from './types';
 
 import {
     checkMemoryCache,
@@ -85,7 +85,7 @@ interface ValidateWithRetryOptions<T> {
     system: string;
     user: string;
     responseFormat?: ResponseFormat;
-    schema: ZodSchema<T>;
+    schema: ZodSchemaTyped<T>;
     cKey: string;
     response: string;
 }
@@ -101,11 +101,12 @@ async function _validateWithRetry<T>(opts: ValidateWithRetryOptions<T>): Promise
     rootLogger.warn('LLM response failed schema validation — retrying with hint');
     const parsed = parseRawOnce(response);
     const parseResult = parsed && schema.safeParse(parsed);
-    const hints = parseResult?.error
-        ? parseResult.error.issues
-              .map((i) => `- ${i.path.join('.')}: ${i.message} (received: ${JSON.stringify(parsed)})`)
-              .join('\n')
-        : 'Response was not valid JSON. Return ONLY valid JSON matching the required schema.';
+    const hints =
+        parseResult && !parseResult.success
+            ? parseResult.error.issues
+                  .map((i) => `- ${i.path.join('.')}: ${i.message} (received: ${JSON.stringify(parsed)})`)
+                  .join('\n')
+            : 'Response was not valid JSON. Return ONLY valid JSON matching the required schema.';
     const retryResponse = await sendWithFallback(
         tier,
         system + '\n\n[SCHEMA VALIDATION FAILED]\n' + hints,
@@ -138,21 +139,25 @@ async function _validateWithRetry<T>(opts: ValidateWithRetryOptions<T>): Promise
  * @returns The LLM response text (or parsed data when schema is provided).
  * @throws When every provider in the fallback chain fails, or schema validation fails after retry.
  */
-export interface LlmPromptOptions<T> {
+export interface LlmPromptOptions<S extends ZodSchema = never> {
     tier: LlmTier;
     system: string;
     user: string;
     callerId?: string;
     responseFormat?: ResponseFormat;
-    schema?: ZodSchema<T>;
+    schema?: S;
 }
 
-export async function llmPrompt<T = string>(opts: LlmPromptOptions<T>): Promise<T> {
+export async function llmPrompt<S extends ZodSchema = never>(
+    opts: LlmPromptOptions<S>,
+): Promise<[S] extends [never] ? string : InferSchemaData<S>> {
     const { tier, system, user, callerId, responseFormat, schema } = opts;
+    type T = [S] extends [never] ? string : InferSchemaData<NonNullable<S>>;
+    const typedSchema = schema as unknown as ZodSchemaTyped<T> | undefined;
     const cfgKey = configUniqueKey(tierToConfig(tier));
     const cKey = cacheKey(tier, cfgKey, system, user, callerId, responseFormat);
 
-    const memResult = checkMemoryCache(cKey, tier, callerId, schema, responseFormat);
+    const memResult = checkMemoryCache(cKey, tier, callerId, typedSchema, responseFormat);
     if (memResult.data !== null) {
         _llmMetrics.cacheHits++;
         return memResult.data;
@@ -172,7 +177,7 @@ export async function llmPrompt<T = string>(opts: LlmPromptOptions<T>): Promise<
     _checkTokenLimit(system, user);
     _checkTotalTokenLimit();
 
-    const diskResult = checkDiskCache(cKey, schema, responseFormat);
+    const diskResult = checkDiskCache(cKey, typedSchema, responseFormat);
     if (diskResult.data !== null) {
         _llmMetrics.cacheHits++;
         return diskResult.data;
@@ -180,9 +185,10 @@ export async function llmPrompt<T = string>(opts: LlmPromptOptions<T>): Promise<
 
     const response = await sendWithFallback(tier, system, user, responseFormat);
 
-    if (schema) return _validateWithRetry({ tier, system, user, responseFormat, schema, cKey, response });
+    if (typedSchema)
+        return _validateWithRetry({ tier, system, user, responseFormat, schema: typedSchema, cKey, response });
 
-    if (responseFormat === 'json' && !schema) warnIfNotJson(response);
+    if (responseFormat === 'json' && !typedSchema) warnIfNotJson(response);
 
     setMemoryCache(cKey, response);
     setDiskCache(cKey, response);
