@@ -9,6 +9,10 @@ export const AiBugReportSchema = z.object({
     environment: z.string().optional(),
     severity: z.enum(['trivial', 'minor', 'major', 'critical']),
     component: z.string().optional(),
+    evidence: z
+        .array(z.string())
+        .describe('Specific sentences from the description that support each field')
+        .optional(),
 });
 
 export type AiBugReport = z.infer<typeof AiBugReportSchema>;

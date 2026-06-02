@@ -133,6 +133,71 @@ checks.push(
     ),
 );
 
+// 10. All artifact validators exist and export create* functions
+// This check ensures the artifact validation framework is intact
+checks.push(
+    (() => {
+        const violations: CheckResult['violations'] = [];
+        const requiredExports: Array<{ file: string; export: string }> = [
+            { file: 'shared/test-case-validator.ts', export: 'createTestCaseValidator' },
+            { file: 'shared/analysis-validator.ts', export: 'createAnalysisValidator' },
+            { file: 'shared/pipeline-validator.ts', export: 'createPipelineValidator' },
+            { file: 'shared/bug-report-validator.ts', export: 'createBugReportValidator' },
+            { file: 'shared/comparison-validator.ts', export: 'createComparisonValidator' },
+            { file: 'shared/evidence-validator.ts', export: 'verifyEvidence' },
+            { file: 'shared/coverage-verifier.ts', export: 'recalculateCoverage' },
+            { file: 'shared/artifact-validator.ts', export: 'ArtifactValidator' },
+            { file: 'shared/llm-self-consistency.ts', export: 'consensusGenerate' },
+            { file: 'shared/targeted-retry.ts', export: 'generateWithRetry' },
+            { file: 'shared/quality-metrics.ts', export: 'snapshotQualityMetrics' },
+        ];
+        for (const req of requiredExports) {
+            if (!existsSync(req.file)) {
+                violations.push({
+                    file: req.file,
+                    line: 1,
+                    content: `MISSING FILE: ${req.file} is required for artifact validation framework`,
+                });
+                continue;
+            }
+            const content = readFileSync(req.file, 'utf-8');
+            if (
+                !content.includes('export ' + req.export) &&
+                !content.includes('export function ' + req.export) &&
+                !content.includes('export class ' + req.export) &&
+                !content.includes('export async function ' + req.export)
+            ) {
+                violations.push({
+                    file: req.file,
+                    line: 1,
+                    content: `Missing export: ${req.export} not found in ${req.file}`,
+                });
+            }
+        }
+        return { name: 'artifact validation framework exports intact', passed: violations.length === 0, violations };
+    })(),
+);
+
+// 11. No LLM artifact type without a corresponding validator
+checks.push(
+    (() => {
+        const violations: CheckResult['violations'] = [];
+        const validators = [
+            'shared/test-case-validator.ts',
+            'shared/analysis-validator.ts',
+            'shared/pipeline-validator.ts',
+            'shared/bug-report-validator.ts',
+            'shared/comparison-validator.ts',
+        ];
+        for (const vf of validators) {
+            if (!existsSync(vf)) {
+                violations.push({ file: vf, line: 1, content: `Missing validator: ${vf}` });
+            }
+        }
+        return { name: 'all artifact types have validators', passed: violations.length === 0, violations };
+    })(),
+);
+
 // 9. No non-null assertions (!) in .ts files (postfix operator, not negation)
 // Known false-positive exclusions: markdown/image syntax, GraphQL schemas,
 // uppercase string content like 'ATRASADA!', comment text like 'NO!'.
