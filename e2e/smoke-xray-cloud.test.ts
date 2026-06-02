@@ -39,7 +39,6 @@ if (!runSmoke) {
             const XrayClient = require('../jira_management/xray-client') as {
                 default: { createTest: unknown; updateTest: unknown };
             };
-            const jira = new JiraResource('test', 'https://example.atlassian.net');
             expect(XrayClient).toBeDefined();
             expect(typeof XrayClient.default?.createTest).toBe('function');
             expect(typeof XrayClient.default?.updateTest).toBe('function');

@@ -66,7 +66,7 @@ describe('HTTP Client', () => {
                     },
                 }),
             );
-            const axCfg = jest.mocked(axios.create).mock.calls[0][0];
+            const axCfg = jest.mocked(axios.create).mock.calls[0]![0];
             expect(axCfg).toHaveProperty('httpsAgent');
         });
 
@@ -332,7 +332,7 @@ describe('HTTP Client', () => {
     describe('createThrottledClient (branch coverage)', () => {
         it('extractHost returns unknown for invalid URL', async () => {
             httpClient.createThrottledClient({ baseUrl: 'https://api.test.com', maxConcurrency: 3 });
-            const reqHandler = mockInstance.interceptors.request.use.mock.calls[0][0];
+            const reqHandler = mockInstance.interceptors.request.use.mock.calls[0]![0];
             const cfg: Record<string, unknown> = { url: ':::invalid', headers: {} };
             const result = await reqHandler(cfg);
             // Handler returns config unchanged; semaphore acquire is verified via the HostSemaphore integration
@@ -341,8 +341,8 @@ describe('HTTP Client', () => {
 
         it('acquire queues second request when concurrency is maxed out', async () => {
             httpClient.createThrottledClient({ baseUrl: 'https://api.test.com', maxConcurrency: 1 });
-            const reqHandler = mockInstance.interceptors.request.use.mock.calls[0][0];
-            const respHandler = mockInstance.interceptors.response.use.mock.calls[1][0];
+            const reqHandler = mockInstance.interceptors.request.use.mock.calls[0]![0];
+            const respHandler = mockInstance.interceptors.response.use.mock.calls[1]![0];
             const cfg1: Record<string, unknown> = { url: 'https://api.test.com/resource', headers: {} };
             const cfg2: Record<string, unknown> = { url: 'https://api.test.com/other', headers: {} };
             await reqHandler(cfg1);
@@ -353,7 +353,7 @@ describe('HTTP Client', () => {
 
         it('response error handler extracts host from empty url', () => {
             httpClient.createThrottledClient({ baseUrl: 'https://api.test.com', maxConcurrency: 3 });
-            const errRespHandler = mockInstance.interceptors.response.use.mock.calls[1][1];
+            const errRespHandler = mockInstance.interceptors.response.use.mock.calls[1]![1];
             const error = { config: {}, message: 'test', name: 'Error' };
             expect(() => errRespHandler(error)).toThrow(error);
         });

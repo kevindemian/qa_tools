@@ -53,8 +53,8 @@ jest.mock('fs', () => {
     return { ...actual, writeFileSync: jest.fn<() => void, [string, string]>() };
 });
 
-const mockMd = jest.fn<(s: string) => string, [string]>((s: string) => s);
-const mockMdToHtml = jest.fn<(s: string) => string, [string]>((s: string) => '<html>' + s + '</html>');
+const mockMd = jest.fn<string, [string]>((s: string) => s);
+const mockMdToHtml = jest.fn<string, [string]>((s: string) => '<html>' + s + '</html>');
 jest.mock('../shared/markdown', () => ({ md: mockMd, mdToHtml: mockMdToHtml }));
 
 import {

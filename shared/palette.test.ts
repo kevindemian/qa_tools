@@ -14,7 +14,7 @@ describe('palette', () => {
         const { applyPalette, palette } = paletteModule;
         const keys = Object.keys(palette);
         for (const key of keys) {
-            const fn = applyPalette(key);
+            const fn = applyPalette(key as keyof typeof palette);
             expect(typeof fn).toBe('function');
             expect(typeof fn('text')).toBe('string');
         }

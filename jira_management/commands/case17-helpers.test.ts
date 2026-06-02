@@ -250,9 +250,9 @@ describe('saveMetricsJson', () => {
 
         expect(jest.mocked(fs.writeFileSync)).toHaveBeenCalledTimes(3);
         const calls = jest.mocked(fs.writeFileSync).mock.calls;
-        expect(String(calls[0][0])).toContain('report.ctrf.json');
-        expect(String(calls[1][0])).toContain('report.stats.json');
-        expect(String(calls[2][0])).toContain('last-results.ctrf.json');
+        expect(String(calls[0]![0])).toContain('report.ctrf.json');
+        expect(String(calls[1]![0])).toContain('report.stats.json');
+        expect(String(calls[2]![0])).toContain('last-results.ctrf.json');
     });
 
     it('writes correct stats for mixed results', () => {
@@ -264,8 +264,8 @@ describe('saveMetricsJson', () => {
         saveMetricsJson(tests as FlatTest[], '/tmp/html');
 
         const writeFileMock = jest.mocked(fs.writeFileSync);
-        const raw = writeFileMock.mock.calls[1][1];
-        const dataStr = typeof raw === 'string' ? raw : Buffer.from(raw).toString();
+        const raw = writeFileMock.mock.calls[1]![1];
+        const dataStr = raw as string;
         expect(JSON.parse(dataStr)).toMatchObject({
             passed: 1,
             failed: 1,

@@ -167,8 +167,8 @@ describe('generatePipelineQuarantine', () => {
         };
 
         expect(parsed.excluded).toHaveLength(1);
-        expect(parsed.excluded[0].test).toBe(TEST_TITLE);
-        expect(parsed.excluded[0].bugUrl).toBe('https://jira/bug-1');
+        expect(parsed.excluded[0]?.test).toBe(TEST_TITLE);
+        expect(parsed.excluded[0]?.bugUrl).toBe('https://jira/bug-1');
         expect(parsed.metadata.totalExcluded).toBe(1);
         expect(parsed.metadata.warning).toContain('exceed 5%');
     });

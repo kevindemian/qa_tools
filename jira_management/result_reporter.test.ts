@@ -5,7 +5,6 @@ import JiraResource from './jira_resource';
 import JiraLinkManager from './jira_link_manager';
 import { rootLogger } from '../shared/logger';
 import { nonNull } from '../shared/test-utils';
-import type { JsonObject } from '../shared/types';
 
 jest.mock('axios', () => {
     const mockInstance = {
@@ -148,15 +147,15 @@ describe('createTestExecutionFromResults', () => {
         jiraResource = jest.mocked(
             new JiraResource('fake-token', 'http://jira/rest/api/2'),
         ) as jest.Mocked<JiraResource>;
-        jiraResource.getJiraResource = jest.fn<Promise<JsonObject>, [string]>();
-        jiraResource.postJiraResource = jest.fn<Promise<JsonObject>, [url: string, data: JsonObject]>();
-        jiraResource.putJiraResource = jest.fn<Promise<JsonObject | null>, [url: string, data: JsonObject]>();
+        jiraResource.getJiraResource = jest.fn();
+        jiraResource.postJiraResource = jest.fn();
+        jiraResource.putJiraResource = jest.fn();
 
         linkJiraRes = jest.mocked(
             new JiraResource('fake-token', 'http://jira/rest/api/2'),
         ) as jest.Mocked<JiraResource>;
-        linkJiraRes.getJiraResource = jest.fn<Promise<JsonObject>, [string]>();
-        linkJiraRes.postJiraResource = jest.fn<Promise<JsonObject>, [url: string, data: JsonObject]>();
+        linkJiraRes.getJiraResource = jest.fn();
+        linkJiraRes.postJiraResource = jest.fn();
         linkJiraRes.getJiraResource.mockImplementation((url: string) => {
             if (url === 'issueLinkType')
                 return Promise.resolve({

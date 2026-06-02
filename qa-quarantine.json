@@ -46,7 +46,7 @@
       "test": "LoginTest",
       "reason": "bug created: FLAKY-1",
       "quarantinedBy": "flaky-auto-actions",
-      "date": "2026-06-02T17:15:26.649Z",
+      "date": "2026-06-02T17:59:34.562Z",
       "bugUrl": "FLAKY-1",
       "reviewRequired": true
     },
@@ -54,7 +54,7 @@
       "test": "DupTest",
       "reason": "bug already exists: FLAKY-1",
       "quarantinedBy": "flaky-auto-actions",
-      "date": "2026-06-02T17:15:26.663Z",
+      "date": "2026-06-02T17:59:34.577Z",
       "bugUrl": "FLAKY-1",
       "reviewRequired": true
     },
@@ -62,14 +62,14 @@
       "test": "FlagTest",
       "reason": "flaky rate exceeds threshold",
       "quarantinedBy": "flaky-auto-actions",
-      "date": "2026-06-02T17:15:26.668Z",
+      "date": "2026-06-02T17:59:34.581Z",
       "reviewRequired": true
     },
     {
       "test": "HealedTest",
       "reason": "bug created: FLAKY-1",
       "quarantinedBy": "flaky-auto-actions",
-      "date": "2026-06-02T17:15:26.677Z",
+      "date": "2026-06-02T17:59:34.589Z",
       "bugUrl": "FLAKY-1",
       "reviewRequired": true
     },
@@ -77,7 +77,7 @@
       "test": "FmtTest",
       "reason": "bug created: FLAKY-1",
       "quarantinedBy": "flaky-auto-actions",
-      "date": "2026-06-02T17:15:26.724Z",
+      "date": "2026-06-02T17:59:34.662Z",
       "bugUrl": "FLAKY-1",
       "reviewRequired": true
     },
@@ -85,14 +85,14 @@
       "test": "DedupFail",
       "reason": "flaky rate exceeds threshold",
       "quarantinedBy": "flaky-auto-actions",
-      "date": "2026-06-02T17:15:26.736Z",
+      "date": "2026-06-02T17:59:34.671Z",
       "reviewRequired": true
     },
     {
       "test": "ReenableFail",
       "reason": "bug created: FLAKY-1",
       "quarantinedBy": "flaky-auto-actions",
-      "date": "2026-06-02T17:15:26.741Z",
+      "date": "2026-06-02T17:59:34.679Z",
       "bugUrl": "FLAKY-1",
       "reviewRequired": true
     }

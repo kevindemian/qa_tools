@@ -50,12 +50,7 @@ jest.mock('./test-results', () => ({
 }));
 
 jest.mock('./llm-pipeline', () => ({
-    offerPipelineFailureAnalysis: jest.fn(
-        (_parsed: unknown, onAnalysis?: (r: { content: string }) => Promise<void>) => {
-            if (onAnalysis) return onAnalysis({ content: 'test analysis' });
-            return undefined;
-        },
-    ),
+    offerPipelineFailureAnalysis: jest.fn(),
 }));
 
 jest.mock('../shared/bug-report', () => ({
@@ -84,6 +79,8 @@ import {
 } from './pipeline-handler';
 import type JiraClient from '../shared/jira-client';
 import type JiraLinkManager from '../jira_management/jira_link_manager';
+import type { AnalysisReport } from '../shared/failure-analysis';
+import type { ParseResult } from '../shared/result_parser';
 import { createMockGitProvider } from '../shared/test-utils/factories';
 import * as testResultsModule from './test-results';
 import * as stateModule from '../shared/state';
@@ -459,19 +456,20 @@ describe('triggerAndPollPipeline full flow', () => {
         // Make collectTestResults return a parsed result
         const testResults = jest.mocked(testResultsModule);
         jest.mocked(testResults.collectTestResults).mockResolvedValue({
-            stats: { passed: 5, failed: 2, skipped: 1 },
+            stats: { passed: 5, failed: 2, skipped: 1, total: 7, duration: 100 },
             tests: [
-                { title: 'test-1', state: 'failed' },
-                { title: 'test-2', state: 'passed' },
+                { title: 'test-1', state: 'failed', duration: 0 },
+                { title: 'test-2', state: 'passed', duration: 0 },
             ],
         });
 
         // Make offerPipelineFailureAnalysis call the callback
         const llmPipeline = jest.mocked(llmModule);
         jest.mocked(llmPipeline.offerPipelineFailureAnalysis).mockImplementation(
-            (_parsed: unknown, onAnalysis?: (r: { content: string }) => Promise<void>) => {
-                if (onAnalysis) return onAnalysis({ content: 'analysis result' });
-                return undefined;
+            (_parsed: ParseResult, onAnalysis?: (report: AnalysisReport) => Promise<void>) => {
+                if (onAnalysis)
+                    return onAnalysis({ content: 'analysis result', confidence: 'high', fallbackUsed: false });
+                return Promise.resolve();
             },
         );
 
@@ -501,18 +499,19 @@ describe('triggerAndPollPipeline full flow', () => {
 
         const testResults = jest.mocked(testResultsModule);
         jest.mocked(testResults.collectTestResults).mockResolvedValue({
-            stats: { passed: 5, failed: 2, skipped: 1 },
+            stats: { passed: 5, failed: 2, skipped: 1, total: 7, duration: 100 },
             tests: [
-                { title: 'test-1', state: 'failed' },
-                { title: 'test-2', state: 'passed' },
+                { title: 'test-1', state: 'failed', duration: 0 },
+                { title: 'test-2', state: 'passed', duration: 0 },
             ],
         });
 
         const llmPipeline = jest.mocked(llmModule);
         jest.mocked(llmPipeline.offerPipelineFailureAnalysis).mockImplementation(
-            (_parsed: unknown, onAnalysis?: (r: { content: string }) => Promise<void>) => {
-                if (onAnalysis) return onAnalysis({ content: 'analysis result' });
-                return undefined;
+            (_parsed: ParseResult, onAnalysis?: (report: AnalysisReport) => Promise<void>) => {
+                if (onAnalysis)
+                    return onAnalysis({ content: 'analysis result', confidence: 'high', fallbackUsed: false });
+                return Promise.resolve();
             },
         );
 
@@ -584,10 +583,10 @@ describe('triggerAndPollPipeline full flow', () => {
         jest.mocked(testResults._jiraEnv).mockReturnValueOnce(null);
         const testResults2 = jest.mocked(testResultsModule);
         jest.mocked(testResults2.collectTestResults).mockResolvedValue({
-            stats: { passed: 5, failed: 2, skipped: 1 },
+            stats: { passed: 5, failed: 2, skipped: 1, total: 7, duration: 100 },
             tests: [
-                { title: 'test-1', state: 'failed' },
-                { title: 'test-2', state: 'passed' },
+                { title: 'test-1', state: 'failed', duration: 0 },
+                { title: 'test-2', state: 'passed', duration: 0 },
             ],
         });
         mockConfirm
@@ -636,7 +635,7 @@ describe('triggerAndPollPipeline full flow', () => {
             .mockReturnValueOnce(true); // Criar bug no Jira?
         const testResults = jest.mocked(testResultsModule);
         jest.mocked(testResults.collectTestResults).mockResolvedValue({
-            stats: { passed: 0, failed: 0, skipped: 0 },
+            stats: { passed: 0, failed: 0, skipped: 0, total: 0, duration: 0 },
             tests: [],
         });
 

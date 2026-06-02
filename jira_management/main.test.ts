@@ -107,6 +107,14 @@ jest.mock('../shared/open', () => ({
     openWithFallback: jest.fn(),
 }));
 
+jest.mock('fs', () => {
+    const original: typeof import('fs') = jest.requireActual('fs');
+    return {
+        ...original,
+        readdirSync: jest.fn<Array<string>, [path: import('fs').PathLike]>(() => []),
+    };
+});
+
 // ── Imports ────────────────────────────────────────────────────────────────
 import { createValidateEnv } from '../shared/cli_base';
 import { warn, helpLine, title, prompt, printError } from '../shared/prompt';
@@ -116,6 +124,7 @@ import * as cp from 'child_process';
 import * as commandsModule from './commands';
 import { CancelError } from '../shared/prompt';
 import { mask } from '../shared/cli_base';
+import fs from 'fs';
 
 // ── Types ──────────────────────────────────────────────────────────────────
 interface MenuChoice {
@@ -513,22 +522,19 @@ describe('dispatchChoice', () => {
 
 describe('showDocs', () => {
     it('generates all docs as HTML and opens browser', async () => {
-        const fsActual = jest.requireActual<typeof import('fs')>('fs');
-        const readdirSpy = jest.spyOn(fsActual, 'readdirSync').mockReturnValueOnce(['01-test-doc.md', '02-guide.md']);
-        const readFileSpy = jest.spyOn(fsActual, 'readFileSync').mockReturnValue('# Test Content');
+        (fs.readdirSync as jest.Mock).mockReturnValueOnce(['01-test-doc.md', '02-guide.md']);
+        const readFileSpy = jest.spyOn(fs, 'readFileSync').mockReturnValue('# Test Content');
         await mod.showDocs();
         expect(openModule.openWithFallback).toHaveBeenCalledWith(
             expect.stringContaining('index.html'),
             'Documentação',
             expect.any(Function),
         );
-        readdirSpy.mockRestore?.();
         readFileSpy.mockRestore?.();
     });
 
     it('handles missing docs directory', async () => {
-        const fsActual = jest.requireActual<typeof import('fs')>('fs');
-        jest.spyOn(fsActual, 'readdirSync').mockImplementationOnce(() => {
+        (fs.readdirSync as jest.Mock).mockImplementationOnce(() => {
             throw new Error('ENOENT');
         });
         await mod.showDocs();
@@ -536,8 +542,7 @@ describe('showDocs', () => {
     });
 
     it('warns when no matching files found in docs', async () => {
-        const fsActual = jest.requireActual<typeof import('fs')>('fs');
-        jest.spyOn(fsActual, 'readdirSync').mockReturnValueOnce(['readme.txt', 'notes.md']);
+        (fs.readdirSync as jest.Mock).mockReturnValueOnce(['readme.txt', 'notes.md']);
         await mod.showDocs();
         expect(warn).toHaveBeenCalled();
     });
