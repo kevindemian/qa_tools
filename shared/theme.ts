@@ -1,8 +1,16 @@
-/** Visual theme contract for the terminal UI. Controls colors, borders, and typography.
- * Used by prompt-ui.ts to render consistent styled output. */
+/**
+ * Terminal UI theme contract — derived from design tokens.
+ *
+ * Controls colors, borders, and typography for the terminal UI.
+ * Values are drawn from the shared design token system (theme-tokens.ts)
+ * to ensure visual consistency between terminal output and HTML reports.
+ *
+ * @module theme
+ */
+
+import { tokens } from './theme-tokens';
 
 export interface UITheme {
-    /** Named color hex values for UI elements. */
     colors: {
         success: string;
         error: string;
@@ -11,12 +19,10 @@ export interface UITheme {
         muted: string;
         border: string;
     };
-    /** Border rendering preferences. */
     borders: {
         type: 'single' | 'double' | 'none';
         padding: number;
     };
-    /** Text transform functions for semantic roles. */
     typography: {
         title: (s: string) => string;
         label: (s: string) => string;
@@ -24,15 +30,14 @@ export interface UITheme {
     };
 }
 
-/** The default theme — dark-mode friendly, GitHub-inspired palette. */
 export const defaultTheme: UITheme = {
     colors: {
-        success: '#3fb950',
-        error: '#f85149',
-        warn: '#d29922',
-        info: '#58a6ff',
-        muted: '#8b949e',
-        border: '#30363d',
+        success: tokens.color.semantic.success.dark,
+        error: tokens.color.semantic.error.dark,
+        warn: tokens.color.semantic.warn.dark,
+        info: tokens.color.semantic.info.dark,
+        muted: tokens.color.text.secondary.dark,
+        border: tokens.color.border.default.dark,
     },
     borders: {
         type: 'single',
@@ -45,8 +50,6 @@ export const defaultTheme: UITheme = {
     },
 };
 
-/** Return the current UI theme. Currently returns the default; designed to support
- * dynamic theme switching (dark/light, custom) in the future. */
 export function getTheme(): UITheme {
     return defaultTheme;
 }

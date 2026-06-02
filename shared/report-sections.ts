@@ -1,12 +1,20 @@
-/** UI section builders for HTML reports — summary cards, filter bar, tabs,
- *  sidebar, timeline, quality gate, LLM analysis, and failed-test summary.
- * @module report-sections */
-import { getTheme } from './theme';
+/**
+ * UI section builders for HTML reports — summary cards, filter bar, tabs,
+ * sidebar, timeline, quality gate, LLM analysis, and failed-test summary.
+ *
+ * All visual output uses design tokens via component primitives.
+ *
+ * @module report-sections
+ */
+
 import { escapeHtml, fmtDuration, pct, pctSub, pctClass } from './report-utils';
 import { extractSuite } from './report-types';
 import type { FlatTest } from './result_parser';
 import type { TestRunTab, TestHistoryRun, KnownIssue, ReportOptions, ReportStats } from './report-types';
 import { buildTestTable } from './report-table';
+import { MetricCard, MetricGrid, Card, Badge } from './primitives';
+import { FilterBar, SearchInput, Button } from './primitives';
+import { tokens } from './theme-tokens';
 
 export function buildTabs(runs: TestRunTab[]): string {
     if (runs.length <= 1) return '';
@@ -56,7 +64,7 @@ export function buildHierarchySidebar(tests: FlatTest[]): string {
     const sorted = Array.from(suites).sort();
     let html = '<div class="sidebar">';
     html +=
-        '<div style="font-weight:600;margin-bottom:6px;font-size:0.8rem;text-transform:uppercase;color:#6b7280">Suites</div>';
+        '<div style="font-weight:600;margin-bottom:6px;font-size:0.8rem;text-transform:uppercase;color:var(--color-text-muted)">Suites</div>';
     for (const suite of sorted) {
         html +=
             '<div class="tree-node" onclick="filterByHierarchy(\'' +
@@ -66,7 +74,7 @@ export function buildHierarchySidebar(tests: FlatTest[]): string {
             '</div>';
     }
     html +=
-        '<div class="tree-node" onclick="clearHierarchy()" style="margin-top:6px;font-style:italic;color:#6b7280">Clear filter</div>';
+        '<div class="tree-node" onclick="clearHierarchy()" style="margin-top:6px;font-style:italic;color:var(--color-text-muted)">Clear filter</div>';
     html += '</div>';
     return html;
 }
@@ -78,20 +86,35 @@ export function buildTimeline(tests: FlatTest[]): string {
         if (t.duration > maxDur) maxDur = t.duration;
     }
     if (maxDur === 0) maxDur = 1;
-    let html =
-        '<div class="chart-box"><div class="label" style="margin-bottom:8px">Timeline <button id="timelineToggle" onclick="toggleTimeline()" style="font-size:0.75rem;margin-left:8px">Hide</button></div>';
+    let html = Card({
+        children: '',
+        role: 'region',
+        ariaLabel: 'Test timeline',
+    });
+    const label =
+        '<div class="label" style="margin-bottom:8px">Timeline <button id="timelineToggle" onclick="toggleTimeline()" style="font-size:0.75rem;margin-left:8px">Hide</button></div>';
+    html = html.replace('<div data-part="body">', `<div data-part="body">${label}`);
     html += '<div id="timelineBody">';
     for (const t of tests) {
         const barW = Math.max(4, (t.duration / maxDur) * 300);
-        const color = t.state === 'passed' ? '#22c55e' : t.state === 'failed' ? '#ef4444' : '#facc15';
+        const color =
+            t.state === 'passed'
+                ? tokens.color.chart.pass
+                : t.state === 'failed'
+                  ? tokens.color.chart.fail
+                  : tokens.color.chart.skip;
         html += '<div class="timeline-row" onclick="scrollToTest(\'' + escapeHtml(t.title) + '\')">';
-        html += '<span class="status-badge status-' + t.state + '">' + t.state + '</span>';
+        const badgeVariant = t.state === 'passed' ? 'pass' : t.state === 'failed' ? 'fail' : 'skip';
+        html += Badge({ variant: badgeVariant, children: t.state });
         html +=
             '<span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' +
             escapeHtml(t.title) +
             '</span>';
         html += '<div class="timeline-bar" style="width:' + barW.toFixed(0) + 'px;background:' + color + '"></div>';
-        html += '<span style="font-size:0.75rem;color:#6b7280;flex-shrink:0">' + fmtDuration(t.duration) + '</span>';
+        html +=
+            '<span style="font-size:0.75rem;color:var(--color-text-muted);flex-shrink:0">' +
+            fmtDuration(t.duration) +
+            '</span>';
         html += '</div>';
     }
     html += '</div></div>';
@@ -99,43 +122,39 @@ export function buildTimeline(tests: FlatTest[]): string {
 }
 
 export function buildSummaryCards(stats: ReportStats, passRate: number): string {
-    let html = '<div class="summary">';
-    html +=
-        '<div class="card"><div class="label">Passed</div><div class="value pass">' +
-        stats.passed +
-        pctSub(stats.passed, stats.total) +
-        '</div></div>';
-    html +=
-        '<div class="card"><div class="label">Failed</div><div class="value fail">' +
-        stats.failed +
-        pctSub(stats.failed, stats.total) +
-        '</div></div>';
-    html +=
-        '<div class="card"><div class="label">Skipped</div><div class="value skip">' +
-        stats.skipped +
-        pctSub(stats.skipped, stats.total) +
-        '</div></div>';
-    html += '<div class="card"><div class="label">Total</div><div class="value">' + stats.total + '</div></div>';
-    html +=
-        '<div class="card"><div class="label">Duration</div><div class="value" style="font-size:1rem">' +
-        fmtDuration(stats.duration) +
-        '</div></div>';
-    html +=
-        '<div class="card"><div class="label">Pass Rate</div><div class="value ' +
-        pctClass(passRate) +
-        '">' +
-        pct(stats.passed, stats.total) +
-        '%</div></div>';
-    html += '</div>';
-    return html;
+    return MetricGrid({
+        children:
+            MetricCard({
+                label: 'Passed',
+                value: String(stats.passed) + pctSub(stats.passed, stats.total),
+                severity: 'success',
+            }) +
+            MetricCard({
+                label: 'Failed',
+                value: String(stats.failed) + pctSub(stats.failed, stats.total),
+                severity: 'error',
+            }) +
+            MetricCard({
+                label: 'Skipped',
+                value: String(stats.skipped) + pctSub(stats.skipped, stats.total),
+                severity: 'warn',
+            }) +
+            MetricCard({ label: 'Total', value: String(stats.total) }) +
+            MetricCard({ label: 'Duration', value: fmtDuration(stats.duration) }) +
+            MetricCard({
+                label: 'Pass Rate',
+                value: pct(stats.passed, stats.total) + '%',
+                severity: pctClass(passRate) === 'pass' ? 'success' : pctClass(passRate) === 'warn' ? 'warn' : 'error',
+            }),
+    });
 }
 
 export function buildLlmSection(options: ReportOptions): string {
     if (!options.llmAnalysis) return '';
-    let html = '<div class="chart-box">';
-    html += '<div class="label" style="margin-bottom:8px">AI Analysis</div>';
+    let content = '';
     if (options.llmFallback) {
-        html += '<p style="color:#ca8a04;font-size:0.8rem">⚠ AI Analysis unavailable — displaying template report.</p>';
+        content =
+            '<p style="color:#ca8a04;font-size:0.8rem">⚠ AI Analysis unavailable — displaying template report.</p>';
     } else if (options.llmConfidence) {
         const CONFIDENCE_BADGES: Record<string, string> = {
             high: '\ud83d\udfe2',
@@ -143,56 +162,62 @@ export function buildLlmSection(options: ReportOptions): string {
             low: '\ud83d\udd34',
         };
         const badge = CONFIDENCE_BADGES[options.llmConfidence] || '\ud83d\udd34';
-        html +=
+        content +=
             '<p style="font-size:0.8rem;margin-bottom:8px">Confian\u00e7a: ' +
             badge +
             ' ' +
             options.llmConfidence +
             '</p>';
     }
-    html +=
+    content +=
         '<pre style="white-space:pre-wrap;font-family:inherit;margin:0">' + escapeHtml(options.llmAnalysis) + '</pre>';
-    html += '</div>';
-    return html;
+    return Card({
+        title: 'AI Analysis',
+        children: content,
+        variant: 'default',
+    });
 }
 
 export function buildQualityGate(passRate: number, threshold: number): string {
     if (passRate >= threshold) return '';
-    return `<div class="chart-box" style="border-left:4px solid #ef4444;background:#fef2f2">
-<div class="label" style="color:#991b1b;margin-bottom:4px">❌ Quality Gate Failed</div>
-<p style="margin:0;font-size:0.85rem">Pass rate ${passRate.toFixed(1)}% is below the configured threshold of ${threshold}%.</p>
-</div>`;
+    return Card({
+        variant: 'bordered',
+        severity: 'error',
+        children: `<div class="label" style="color:var(--color-badge-fail-text);margin-bottom:4px">❌ Quality Gate Failed</div>
+<p style="margin:0;font-size:0.85rem;color:var(--color-text-primary)">Pass rate ${passRate.toFixed(1)}% is below the configured threshold of ${threshold}%.</p>`,
+    });
 }
 
 export function buildFilterBar(): string {
-    return (
-        '<div class="control-bar" style="display:flex;gap:8px;align-items:center">' +
-        '<input id="searchInput" type="text" placeholder="Filter tests..." oninput="filterTable()" style="padding:4px 8px;border:1px solid #d1d5db;border-radius:6px;font-size:0.8rem;flex:1">' +
-        '<button onclick="exportCsv()" style="padding:4px 12px;border:1px solid #d1d5db;background:#fff;border-radius:6px;cursor:pointer;font-size:0.8rem">Export CSV</button>' +
-        '<button onclick="window.print()" style="padding:4px 12px;border:1px solid #d1d5db;background:#fff;border-radius:6px;cursor:pointer;font-size:0.8rem">PDF</button>' +
-        '<button onclick="toggleTheme()" style="padding:4px 12px;border:1px solid #d1d5db;background:#fff;border-radius:6px;cursor:pointer;font-size:0.8rem">🌓</button>' +
-        '</div>'
-    );
+    return FilterBar({
+        children:
+            SearchInput({ placeholder: 'Filter tests...' }) +
+            Button({ children: 'Export CSV', onClick: 'exportCsv()' }) +
+            Button({ children: 'PDF', onClick: 'window.print()' }) +
+            Button({ children: '\ud83c\udf13', onClick: '_toggleTheme()', variant: 'ghost' }),
+    });
 }
 
 export function buildFailedSummary(tests: FlatTest[], stats: ReportStats): string {
     if (stats.failed === 0) return '';
     const failed = tests.filter((t) => t.state === 'failed');
-    let html = '<div class="chart-box failed-summary">';
-    html +=
-        '<div class="label" style="margin-bottom:8px;color:' +
-        getTheme().colors.error +
-        '"><b>❌ Failed Tests (' +
-        stats.failed +
-        ')</b></div>';
+    let items = '';
     for (const t of failed) {
-        html +=
+        items +=
             '<p style="margin:4px 0">\u2022 ' +
             escapeHtml(t.title) +
-            ' <span class="status-badge status-failed">failed</span> (' +
+            ' ' +
+            Badge({ variant: 'fail', children: 'failed' }) +
+            ' (' +
             (t.state === 'skipped' ? '\u2014' : fmtDuration(t.duration)) +
             ')</p>';
     }
-    html += '</div>';
-    return html;
+    return Card({
+        variant: 'bordered',
+        severity: 'error',
+        ariaLabel: 'Failed tests summary',
+        children:
+            `<div class="label" style="margin-bottom:8px;color:var(--color-error)"><b>❌ Failed Tests (${stats.failed})</b></div>` +
+            items,
+    });
 }

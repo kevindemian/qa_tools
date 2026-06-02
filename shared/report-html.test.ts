@@ -1,4 +1,7 @@
-/** Tests for report-html — HTML report generation. */
+/**
+ * Tests for report-html — HTML report generation using primitives.
+ */
+
 import { nonNull, nullAs } from './test-utils';
 import { generateHtmlReport, generateCoverageHtml, generateReportWithFallback } from './report-html';
 import type { FlatTest } from './result_parser';
@@ -195,7 +198,7 @@ describe('generateCoverageHtml', () => {
         ];
         const html = generateCoverageHtml(epics);
         expect(html).toContain('In Progress');
-        expect(html).toContain('status-skipped');
+        expect(html).toContain('data-component="badge"');
     });
 
     it('returns error page on failure', () => {

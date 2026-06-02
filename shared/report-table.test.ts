@@ -1,3 +1,7 @@
+/**
+ * Tests for report-table — test table builder with primitives.
+ */
+
 import {
     matchKnownIssue,
     precomputeCategories,
@@ -150,9 +154,8 @@ describe('buildTestTable', () => {
         const html = buildTestTable(tests);
         expect(html).toContain('Test 1');
         expect(html).toContain('Test 2');
-        expect(html).toContain('passed');
-        expect(html).toContain('failed');
-        expect(html).toContain('<table');
+        expect(html).toContain('data-component="badge"');
+        expect(html).toContain('data-component="table-wrapper"');
     });
 
     it('includes history column when history provided', () => {
@@ -170,6 +173,6 @@ describe('buildTestTable', () => {
 
     it('handles empty tests list', () => {
         const html = buildTestTable([]);
-        expect(html).toContain('<tbody>');
+        expect(html).toContain('data-component="table-wrapper"');
     });
 });
