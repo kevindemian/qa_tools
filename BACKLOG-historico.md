@@ -1758,6 +1758,22 @@ Transform script applied 144 changes across 36 files. All `(expr as jest.Mock)`,
 | M3  | `setup/main.test.ts`                   | ~25          | ✅     |
 | M4  | Demais ~37 arquivos com `as jest.Mock` | ~400         | ✅     |
 
+## ✅ Sprint 6 — Jira Cloud Coexistência — Concluído 2026-06-02
+
+**Fase 1 (Contrato)**: Schema + Types + Validação — preexistente ✅
+**Fase 2 (Autenticação)**: jira-auth.ts + testes — implementado ✅
+**Fase 3 (Entry Points)**: main, batch, schedule, pipeline, splash — modo-aware ✅
+**Fase 4 (Smoke Test)**: e2e/smoke-jira-cloud.test.ts — criado ✅
+**Fase 5 (Documentação)**: .env.example + docs/06-env-vars.md — atualizado ✅
+**Gap G1**: \_jiraEnv() agora retorna `mode` — propagado para todos os consumers ✅
+
+| Métrica             | Resultado      |
+| ------------------- | -------------- |
+| `tsc --noEmit`      | 0 erros        |
+| ESLint              | 0 erros/warn   |
+| `jest` (unitários)  | 3467 ✅, 0 ❌  |
+| `jira-auth.test.ts` | 7 testes, 100% |
+
 ## ✅ Sprint 2 (Completo) + Sprint 3 (Completo) — Migrados 2026-06-02
 
 **Sprint 2**: 8 fases, ~35h, 25/25 itens de débito eliminados ✅

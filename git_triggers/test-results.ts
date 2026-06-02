@@ -13,12 +13,13 @@ import { matchResultsToTests, createTestExecutionFromResults } from '../jira_man
 import { saveParseResult } from '../shared/metrics';
 import type { GitProvider } from '../shared/types';
 
-function _jiraEnv(): { base: string; token: string; xray: string } | null {
+function _jiraEnv(): { base: string; token: string; xray: string; mode: string } | null {
     const base = Config.get('jiraBaseUrl');
     const token = Config.get('jiraPersonalToken');
     const xray = Config.get('xrayBaseUrl');
+    const mode = Config.get('jiraMode');
     if (!base || !token || !xray) return null;
-    return { base, token, xray };
+    return { base, token, xray, mode };
 }
 
 function _resolveGlob(pattern: string): string | null {

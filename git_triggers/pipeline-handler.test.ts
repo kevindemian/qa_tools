@@ -43,7 +43,7 @@ jest.mock('../shared/config', () => ({
 jest.mock('./test-results', () => ({
     collectTestResults: jest.fn(),
     createTestExecution: jest.fn(),
-    _jiraEnv: jest.fn(() => ({ base: 'https://jira.com', token: 'tok', xray: 'xray' })),
+    _jiraEnv: jest.fn(() => ({ base: 'https://jira.com', token: 'tok', xray: 'xray', mode: 'server' })),
     _resolveGlob: jest.fn(),
     downloadTestArtifacts: jest.fn(),
     parseTestResults: jest.fn(),

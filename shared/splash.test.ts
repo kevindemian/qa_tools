@@ -127,6 +127,24 @@ describe('checkJiraStatus', () => {
             __setHttpDep(http);
         });
 
+        it('succeeds with explicit server mode', async () => {
+            const result = await checkJiraStatus(`http://localhost:${port}`, 'valid-token', 'server');
+            expect(result.status).toBe('ok');
+            expect(result.detail).toContain('online');
+        });
+
+        it('succeeds with explicit cloud mode', async () => {
+            const result = await checkJiraStatus(`http://localhost:${port}`, 'email:apiToken', 'cloud');
+            expect(result.status).toBe('ok');
+            expect(result.detail).toContain('online');
+        });
+
+        it('falls back to server mode when mode is empty', async () => {
+            const result = await checkJiraStatus(`http://localhost:${port}`, 'valid-token', '');
+            expect(result.status).toBe('ok');
+            expect(result.detail).toContain('online');
+        });
+
         it('handles https dynamic import fallback failure', async () => {
             __setHttpsDep(undefined);
             const result = await checkJiraStatus('https://jira.example.com', 'valid-token');
@@ -251,6 +269,16 @@ describe('showSplash', () => {
         expect(outputMod.defaultOutput.box).toHaveBeenCalled();
         const outputLines = nonNull(outputMod.defaultOutput.box.mock.calls[0])[0];
         expect(outputLines.join('\n')).toContain('Token');
+    });
+
+    it('passes jiraMode to checkJiraStatus', async () => {
+        outputMod.Output.isTTY.mockReturnValue(true);
+        __setFigletDep(mockFiglet);
+        __setGradientDep({ default: mockGradient });
+        await expect(showSplash(undefined, 'https://jira.example.com', 'token123', 'cloud')).resolves.not.toThrow();
+        expect(outputMod.defaultOutput.box).toHaveBeenCalled();
+        const outputLines = nonNull(outputMod.defaultOutput.box.mock.calls[0])[0];
+        expect(outputLines.join('\n')).toContain('Jira API');
     });
 
     it('includes jiraBaseUrl and token check in TTY mode', async () => {

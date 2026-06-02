@@ -36,6 +36,7 @@ jest.mock('../shared/config', () => {
         dryRun: true,
         jiraBaseUrl: 'https://jira.example.com',
         jiraPersonalToken: 'token',
+        jiraMode: 'server',
         xrayBaseUrl: 'https://xray.example.com',
         gitToken: 'glpat-xxx',
         gitBaseUrl: 'https://gitlab.example.com',
@@ -262,6 +263,7 @@ describe('_jiraEnv', () => {
             base: 'https://jira.example.com',
             token: 'token',
             xray: 'https://xray.example.com',
+            mode: 'server',
         });
     });
 });

@@ -7,6 +7,7 @@ jest.mock('./http-client', () => ({
 }));
 
 import JiraClient from './jira-client';
+import { createHttpClient } from './http-client';
 
 const mockGet = jest.fn();
 const mockPost = jest.fn();
@@ -14,13 +15,14 @@ const mockPut = jest.fn();
 
 const TOKEN = 'test-token-12345';
 const BASE_URL = 'https://instance.atlassian.net/rest/api/2';
+const CLOUD_CRED = 'user@example.com:APITOKEN123';
 
 beforeEach(() => {
     jest.clearAllMocks();
 });
 
 describe('JiraClient', () => {
-    describe('constructor', () => {
+    describe('constructor — auth mode', () => {
         it('stores baseUrl and personalToken', () => {
             const client = new JiraClient(TOKEN, BASE_URL);
             expect(client.baseUrl).toBe(BASE_URL);
@@ -30,6 +32,34 @@ describe('JiraClient', () => {
         it('parses originUrl from baseUrl', () => {
             const client = new JiraClient(TOKEN, BASE_URL);
             expect(client.originUrl).toBe('https://instance.atlassian.net');
+        });
+
+        it('defaults jiraMode to server', () => {
+            const client = new JiraClient(TOKEN, BASE_URL);
+            expect(client.jiraMode).toBe('server');
+        });
+
+        it('accepts explicit jiraMode', () => {
+            const client = new JiraClient(TOKEN, BASE_URL, 'cloud');
+            expect(client.jiraMode).toBe('cloud');
+        });
+
+        it('uses Bearer auth when mode is server (default)', () => {
+            new JiraClient(TOKEN, BASE_URL);
+            expect(createHttpClient).toHaveBeenCalledWith(
+                expect.objectContaining({
+                    authHeader: { Authorization: `Bearer ${TOKEN}` },
+                }),
+            );
+        });
+
+        it('uses Basic auth when mode is cloud', () => {
+            new JiraClient(CLOUD_CRED, BASE_URL, 'cloud');
+            expect(createHttpClient).toHaveBeenCalledWith(
+                expect.objectContaining({
+                    authHeader: { Authorization: `Basic ${Buffer.from(CLOUD_CRED).toString('base64')}` },
+                }),
+            );
         });
     });
 

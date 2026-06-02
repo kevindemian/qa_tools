@@ -44,6 +44,8 @@ class Config {
         const raw = envVal(f.envVar, String(f.defaultVal ?? ''));
         if (f.key === 'xrayMode' && raw !== 'server' && raw !== 'cloud')
             throw new Error(`Invalid XRAY_MODE: "${raw}". Must be "server" or "cloud".`);
+        if (f.key === 'jiraMode' && raw !== 'server' && raw !== 'cloud')
+            throw new Error(`Invalid JIRA_MODE: "${raw}". Must be "server" or "cloud".`);
         if (f.key === 'logDir' && envVal('QA_TOOLS_LOGS_DIR')) return envVal('QA_TOOLS_LOGS_DIR') as T;
         if (f.type === 'boolean') return toBool(raw) as T;
         if (f.type === 'number') return toInt(raw, f.defaultVal as number) as T;

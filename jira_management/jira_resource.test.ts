@@ -15,10 +15,12 @@ jest.mock('../shared/logger', () => ({
         })),
     })),
     rootLogger: {
+        debug: jest.fn(),
         info: jest.fn(),
         warn: jest.fn(),
         error: jest.fn(),
         child: jest.fn(() => ({
+            debug: jest.fn(),
             error: jest.fn(),
             info: jest.fn(),
             warn: jest.fn(),

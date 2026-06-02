@@ -142,6 +142,7 @@ export async function handleFlakinessDashboard(): Promise<void> {
             const jiraResource = new JiraClient(
                 Config.get('jiraPersonalToken'),
                 Config.get('jiraBaseUrl') + '/rest/api/2',
+                Config.get('jiraMode'),
             );
             await runFlakyAutoActionsForProject(currentProjectName, jiraResource);
         }

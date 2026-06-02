@@ -1,5 +1,6 @@
 import { palette } from './palette';
 import { defaultOutput, Output } from './output';
+import { createJiraAuthHeader } from './jira-auth';
 
 type FigletModule = { textSync: (str: string, opts?: Record<string, unknown>) => string };
 type GradientModule = { default: (colors: string[]) => (text: string) => string };
@@ -41,17 +42,18 @@ interface StatusCheck {
     detail: string;
 }
 
-export async function checkJiraStatus(baseUrl: string, token: string): Promise<StatusCheck> {
+export async function checkJiraStatus(baseUrl: string, token: string, mode?: string): Promise<StatusCheck> {
     if (!baseUrl || !token) return { label: 'Jira API', status: 'info', detail: 'não configurado' };
     try {
         const start = Date.now();
         const https = _cache.https ?? (await import('https'));
         const http = _cache.http ?? (await import('http'));
         const mod = baseUrl.startsWith('https') ? https : http;
+        const authHeader = createJiraAuthHeader(token, mode ?? 'server');
         await new Promise<void>((resolve, reject) => {
             const req = mod.get(
                 baseUrl + '/rest/api/2/myself',
-                { headers: { Authorization: 'Bearer ' + token }, timeout: 2000 },
+                { headers: { Authorization: authHeader.Authorization }, timeout: 2000 },
                 (res: import('http').IncomingMessage) => {
                     res.resume();
                     resolve();
@@ -97,7 +99,12 @@ export function buildSplashLines(logo: string, statePath?: string, statusChecks?
     return splash;
 }
 
-export async function showSplash(statePath?: string, jiraBaseUrl?: string, jiraToken?: string): Promise<void> {
+export async function showSplash(
+    statePath?: string,
+    jiraBaseUrl?: string,
+    jiraToken?: string,
+    jiraMode?: string,
+): Promise<void> {
     const isTTY = Output.isTTY() && !Output.isCI();
 
     if (!isTTY) {
@@ -121,7 +128,7 @@ export async function showSplash(statePath?: string, jiraBaseUrl?: string, jiraT
 
         const checks: StatusCheck[] = [];
         if (jiraBaseUrl) {
-            checks.push(await checkJiraStatus(jiraBaseUrl, jiraToken || ''));
+            checks.push(await checkJiraStatus(jiraBaseUrl, jiraToken || '', jiraMode));
         }
         checks.push({
             label: 'Token',

@@ -5,11 +5,13 @@ jest.mock('../shared/http-client', () => ({ createHttpClient: jest.fn() }));
 
 jest.mock('../shared/logger', () => ({
     Logger: jest.fn(() => ({
+        debug: jest.fn(),
         info: jest.fn(),
         warn: jest.fn(),
         error: jest.fn(),
-        child: jest.fn(() => ({ error: jest.fn(), info: jest.fn(), warn: jest.fn() })),
+        child: jest.fn(() => ({ debug: jest.fn(), error: jest.fn(), info: jest.fn(), warn: jest.fn() })),
     })),
+    rootLogger: { debug: jest.fn(), info: jest.fn(), warn: jest.fn(), error: jest.fn() },
 }));
 
 jest.mock('../shared/prompt', () => ({
