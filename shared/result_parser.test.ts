@@ -180,9 +180,9 @@ const CTRF_SAMPLE = {
         summary: { tests: 3, passed: 2, failed: 1, skipped: 0, pending: 0, other: 0, start: 1000, stop: 5000 },
         environment: { appName: 'QA Tools', buildName: 'Release', buildNumber: '100' },
         tests: [
-            { name: 'Login', status: 'passed', duration: 100, suite: 'Auth' },
-            { name: 'Logout', status: 'failed', duration: 200, suite: 'Auth', message: 'Assertion failed' },
-            { name: 'Dashboard', status: 'passed', duration: 150, suite: 'UI' },
+            { name: 'Login', status: 'passed' as const, duration: 100, suite: 'Auth' },
+            { name: 'Logout', status: 'failed' as const, duration: 200, suite: 'Auth', message: 'Assertion failed' },
+            { name: 'Dashboard', status: 'passed' as const, duration: 150, suite: 'UI' },
         ],
     },
 };
@@ -241,8 +241,8 @@ describe('parseCtrfResults', () => {
             results: {
                 summary: { tests: 2, passed: 0, failed: 0, skipped: 2, pending: 1, other: 1, start: 0, stop: 0 },
                 tests: [
-                    { name: 'Pending', status: 'pending', duration: 0 },
-                    { name: 'Other', status: 'other', duration: 0 },
+                    { name: 'Pending', status: 'pending' as const, duration: 0 },
+                    { name: 'Other', status: 'other' as const, duration: 0 },
                 ],
             },
         };
@@ -254,7 +254,7 @@ describe('parseCtrfResults', () => {
         const input = {
             results: {
                 summary: { tests: 1, passed: 0, failed: 0, skipped: 1, pending: 0, other: 0, start: 0, stop: 0 },
-                tests: [{ name: 'Skippy', status: 'skipped', duration: 0 }],
+                tests: [{ name: 'Skippy', status: 'skipped' as const, duration: 0 }],
             },
         };
         const result = parseCtrfResults(input);
@@ -266,8 +266,8 @@ describe('parseCtrfResults', () => {
             results: {
                 summary: { tests: 2, passed: 1, failed: 1, skipped: 0, pending: 0, other: 0, start: 0, stop: 0 },
                 tests: [
-                    { name: 'T1', status: 'passed', duration: 100 },
-                    { name: 'T2', status: 'failed', duration: 200 },
+                    { name: 'T1', status: 'passed' as const, duration: 100 },
+                    { name: 'T2', status: 'failed' as const, duration: 200 },
                 ],
             },
         };

@@ -1,6 +1,5 @@
 import { analyzeCoverageGaps } from './coverage-gap';
 import { loadMetrics } from './metrics';
-import type { MetricsStore } from './metrics';
 
 jest.mock('./logger', () => ({
     rootLogger: { error: jest.fn(), warn: jest.fn(), info: jest.fn(), child: jest.fn().mockReturnThis() },

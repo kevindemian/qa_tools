@@ -55,8 +55,17 @@ jest.mock('./case17-helpers', () => ({
     isGitLabCi: jest.fn(),
 }));
 
-const mockClient = { get: jest.fn() };
-jest.mocked(createHttpClient).mockReturnValue(mockClient);
+const mockClient = {
+    get: jest.fn<Promise<{ status: number; data: unknown }>, [string]>(),
+    post: jest.fn(),
+    put: jest.fn(),
+    patch: jest.fn(),
+    delete: jest.fn(),
+    head: jest.fn(),
+    options: jest.fn(),
+    request: jest.fn(),
+};
+jest.mocked(createHttpClient).mockReturnValue(mockClient as never);
 
 import { resolveMapping, computeDiff, fetchGitHistory, resolveTestHistory } from './case17-test-utils';
 import type { CommandContext } from './context';
@@ -315,8 +324,9 @@ describe('resolveTestHistory', () => {
         _readFileSyncSpy = jest
             .spyOn(fs, 'readFileSync')
             .mockReturnValue(JSON.stringify({ tests: [{ title: 'Login', key: 'TEST-1' }] }));
+        const mockGetHistory = jest.fn();
         jest.mocked(xrayHistory.createHistoryProvider).mockReturnValue({
-            getHistory: jest.fn(),
+            getHistory: mockGetHistory,
         });
         const cache = new xrayHistory.TestHistoryCache();
         cache.get = jest.fn().mockReturnValue([{ status: 'PASS' }]);
@@ -328,7 +338,7 @@ describe('resolveTestHistory', () => {
             cache,
         );
         expect(result).toHaveProperty('Login');
-        expect(xrayHistory.createHistoryProvider().getHistory).not.toHaveBeenCalled();
+        expect(mockGetHistory).not.toHaveBeenCalled();
     });
 });
 
@@ -363,9 +373,9 @@ describe('fetchGitHistory', () => {
             artifacts: [{ id: 99, name: 'ctrf-report' }],
         };
         mockClient.get
-            .mockResolvedValueOnce({ data: runData })
-            .mockResolvedValueOnce({ data: artifactData })
-            .mockResolvedValueOnce({ data: Buffer.from('{}') });
+            .mockResolvedValueOnce({ status: 200, data: runData })
+            .mockResolvedValueOnce({ status: 200, data: artifactData })
+            .mockResolvedValueOnce({ status: 200, data: Buffer.from('{}') });
 
         const result = await fetchGitHistory();
         expect(mockClient.get).toHaveBeenCalled();
@@ -389,9 +399,9 @@ describe('fetchGitHistory', () => {
         jest.mocked(case17Helpers.isGitLabCi).mockReturnValue(true);
 
         mockClient.get
-            .mockResolvedValueOnce({ data: [{ id: 1, created_at: '2024-01-15' }] })
-            .mockResolvedValueOnce({ data: [{ id: 10, name: 'test-job' }] })
-            .mockResolvedValueOnce({ data: Buffer.from('{}') });
+            .mockResolvedValueOnce({ status: 200, data: [{ id: 1, created_at: '2024-01-15' }] })
+            .mockResolvedValueOnce({ status: 200, data: [{ id: 10, name: 'test-job' }] })
+            .mockResolvedValueOnce({ status: 200, data: Buffer.from('{}') });
 
         const result = await fetchGitHistory();
         expect(result.commits).toBe('');

@@ -239,7 +239,7 @@ describe('tryBatchMode', () => {
         jest.isolateModules(() => {
             const testResults = jest.mocked(jest.requireMock<typeof import('./test-results')>('./test-results'));
             testResults.collectTestResults.mockImplementation(() =>
-                Promise.resolve({ tests: [], summary: { total: 1, passed: 1, failed: 0, skipped: 0 } }),
+                Promise.resolve({ tests: [], stats: { passed: 1, failed: 0, skipped: 0, total: 1, duration: 0 } }),
             );
         });
 
@@ -257,23 +257,23 @@ describe('tryBatchMode', () => {
             runs: [
                 {
                     project: 'proj1',
-                    timestamp: Date.now(),
-                    passRate: 100,
+                    timestamp: new Date().toISOString(),
                     total: 10,
                     passed: 10,
                     failed: 0,
-                    flaky: [],
+                    skipped: 0,
                     duration: 100,
+                    tests: [],
                 },
                 {
                     project: 'proj1',
-                    timestamp: Date.now() - 1000,
-                    passRate: 90,
+                    timestamp: new Date(Date.now() - 1000).toISOString(),
                     total: 10,
                     passed: 9,
                     failed: 1,
-                    flaky: [],
+                    skipped: 0,
                     duration: 200,
+                    tests: [],
                 },
             ],
         });
@@ -318,23 +318,23 @@ describe('tryBatchMode', () => {
             runs: [
                 {
                     project: 'proj1',
-                    timestamp: Date.now(),
-                    passRate: 100,
+                    timestamp: new Date().toISOString(),
                     total: 10,
                     passed: 10,
                     failed: 0,
-                    flaky: [],
+                    skipped: 0,
                     duration: 100,
+                    tests: [],
                 },
                 {
                     project: 'proj1',
-                    timestamp: Date.now() - 1000,
-                    passRate: 90,
+                    timestamp: new Date(Date.now() - 1000).toISOString(),
                     total: 10,
                     passed: 9,
                     failed: 1,
-                    flaky: [],
+                    skipped: 0,
                     duration: 200,
+                    tests: [],
                 },
             ],
         });

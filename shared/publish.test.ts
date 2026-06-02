@@ -83,8 +83,8 @@ describe('publishReport', () => {
                 throw new Error('no remote');
             })
             .mockReturnValueOnce('')
-            .mockReturnValueOnce(undefined)
-            .mockReturnValueOnce(undefined);
+            .mockReturnValueOnce('')
+            .mockReturnValueOnce('');
         publishReport({ target: 'gh-pages', filePath: './report.html' });
         expect(mockLogger.error).not.toHaveBeenCalled();
     });

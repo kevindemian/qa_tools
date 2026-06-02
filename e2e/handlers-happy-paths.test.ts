@@ -2,25 +2,24 @@ jest.mock('../shared/prompt', () => {
     const actual = jest.requireActual<typeof import('../shared/prompt')>('../shared/prompt');
     return {
         ...actual,
-        prompt: jest.fn<() => string, []>().mockReturnValue(''),
-        confirm: jest.fn<() => boolean, []>().mockReturnValue(true),
-        ask: jest.fn<() => Promise<string>, []>().mockResolvedValue(''),
-        askConfirm: jest.fn<() => Promise<boolean>, []>().mockResolvedValue(true),
-        smartPrompt: jest.fn<() => Promise<string>, []>().mockResolvedValue('v2.0.0'),
+        prompt: jest.fn<string, []>().mockReturnValue(''),
+        confirm: jest.fn<boolean, []>().mockReturnValue(true),
+        ask: jest.fn<Promise<string>, []>().mockResolvedValue(''),
+        askConfirm: jest.fn<Promise<boolean>, []>().mockResolvedValue(true),
+        smartPrompt: jest.fn<Promise<string>, []>().mockResolvedValue('v2.0.0'),
     };
 });
 jest.mock('../shared/state', () => ({
-    load: jest.fn<() => Record<string, unknown>, []>().mockReturnValue({}),
-    update: jest.fn<() => void, [Record<string, unknown>]>(),
+    load: jest.fn<Record<string, unknown>, []>().mockReturnValue({}),
+    update: jest.fn<void, [Record<string, unknown>]>(),
 }));
-jest.mock('../shared/open', () => ({ openWithOsOrFallback: jest.fn<() => void, [string]>() }));
+jest.mock('../shared/open', () => ({ openWithOsOrFallback: jest.fn<void, [string]>() }));
 
 import fs from 'fs';
 import path from 'path';
 import os from 'os';
 import * as promptModule from '../shared/prompt';
 import * as stateModule from '../shared/state';
-import * as openModule from '../shared/open';
 
 const tmpHome = fs.mkdtempSync(path.join(os.tmpdir(), 'qa-e2e-hp-'));
 const tmpGitDir = fs.mkdtempSync(path.join(os.tmpdir(), 'qa-e2e-git-'));
@@ -97,9 +96,9 @@ beforeEach(() => {
     getPrompt().confirm.mockReset();
     getPrompt().confirm.mockReturnValue(true);
     nock.disableNetConnect();
-    jest.spyOn(console, 'log').mockImplementation(jest.fn<() => void, []>());
+    jest.spyOn(console, 'log').mockImplementation(jest.fn<void, []>());
     jest.spyOn(process.stdout, 'write').mockImplementation(
-        jest.fn<() => boolean, [Buffer | string]>().mockReturnValue(true),
+        jest.fn<boolean, [string | Uint8Array]>().mockReturnValue(true),
     );
 });
 
@@ -120,7 +119,7 @@ function buildContext() {
     ctx.project_name = 'ECSPOL';
     ctx.inMemoryTasksId = ['IMT-1', 'IMT-2'];
     ctx.inMemoryTasksText = ['Memory Test 1', 'Memory Test 2'];
-    ctx.createPackageManager = jest.fn<(dir: string) => PackageVersionManager, [string]>((dir: string) => {
+    ctx.createPackageManager = jest.fn<PackageVersionManager, [string]>((dir: string) => {
         return new PackageVersionManager(dir);
     });
     return {
@@ -130,8 +129,8 @@ function buildContext() {
         linkManagerXray: lmXray,
         csvResource: csv,
         ctx,
-        pushHistory: jest.fn<(op: string, detail: string, status: string) => void, [string, string, string]>(
-            (op: string, detail: string, status: string) => ctx.pushHistory(op, detail, status),
+        pushHistory: jest.fn<void, [string, string, string]>((op: string, detail: string, status: string) =>
+            ctx.pushHistory(op, detail, status),
         ),
         printSessionSummary: jest.fn<() => void, []>(),
         base_url: HOST,

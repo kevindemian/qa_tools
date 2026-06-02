@@ -43,7 +43,7 @@ describe('assessTestImpact', () => {
                 callerId: 'test-impact',
             }),
         );
-        expect(jest.mocked(llmPrompt).mock.calls[0][0].user).toEqual(expect.stringContaining('Test login'));
+        expect(jest.mocked(llmPrompt).mock.calls[0]![0].user).toEqual(expect.stringContaining('Test login'));
         expect(result).toBe('**Risco:** BAIXO. Nenhum teste existente afetado.');
     });
 

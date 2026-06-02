@@ -53,7 +53,7 @@ describe('recordAiGeneration', () => {
         expect(mockWriteFileSync).toHaveBeenCalledTimes(1);
         const written = JSON.parse(mockWriteFileSync.mock.calls[0]?.[1] as string) as { records: AiGenerationRecord[] };
         expect(written.records).toHaveLength(1);
-        expect(written.records[0].id).toBe('rec-1');
+        expect(nonNull(written.records[0]).id).toBe('rec-1');
     });
 
     it('appends to existing records', () => {
@@ -75,7 +75,7 @@ describe('recordAiGeneration', () => {
 
         const written = JSON.parse(mockWriteFileSync.mock.calls[0]?.[1] as string) as { records: AiGenerationRecord[] };
         expect(written.records).toHaveLength(200);
-        expect(written.records[0].id).toBe('rec-1');
+        expect(nonNull(written.records[0]).id).toBe('rec-1');
     });
 });
 

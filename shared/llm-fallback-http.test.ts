@@ -156,10 +156,10 @@ describe('buildOpenAiPayload', () => {
         expect(parsed.model).toBe('gpt-4');
         expect(parsed.temperature).toBe(0.5);
         expect(parsed.messages).toHaveLength(2);
-        expect(parsed.messages[0].role).toBe('system');
-        expect(parsed.messages[0].content).toBe('sys');
-        expect(parsed.messages[1].role).toBe('user');
-        expect(parsed.messages[1].content).toBe('usr');
+        expect(parsed.messages[0]?.role).toBe('system');
+        expect(parsed.messages[0]?.content).toBe('sys');
+        expect(parsed.messages[1]?.role).toBe('user');
+        expect(parsed.messages[1]?.content).toBe('usr');
     });
 
     it('uses default temperature when not provided', () => {
@@ -190,9 +190,9 @@ describe('buildGeminiPayload', () => {
     it('builds a valid Gemini JSON payload', () => {
         const result = buildGeminiPayload('sys', 'usr');
         const parsed = JSON.parse(result) as GeminiPayload;
-        expect(parsed.system_instruction.parts[0].text).toBe('sys');
-        expect(parsed.contents[0].role).toBe('user');
-        expect(parsed.contents[0].parts[0].text).toBe('usr');
+        expect(parsed.system_instruction.parts[0]?.text).toBe('sys');
+        expect(parsed.contents[0]?.role).toBe('user');
+        expect(parsed.contents[0]?.parts[0]?.text).toBe('usr');
     });
 });
 

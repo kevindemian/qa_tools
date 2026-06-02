@@ -4,7 +4,7 @@ const mockConfirm = jest.fn<boolean, [message: string, defaultValue?: boolean]>(
 const mockConfigGet = jest.fn<boolean, [key: string, defaultValue?: boolean]>();
 
 jest.mock('../shared/prompt', () => ({
-    confirm: (...args: unknown[]) => mockConfirm(...args),
+    confirm: (...args: [message: string, defaultValue?: boolean]) => mockConfirm(...args),
     prompt: jest.fn(),
     warn: jest.fn(),
     info: jest.fn(),
@@ -19,7 +19,7 @@ jest.mock('../shared/prompt', () => ({
 }));
 
 jest.mock('../shared/config', () => ({
-    get: (...args: unknown[]) => mockConfigGet(...args),
+    get: (...args: [key: string, defaultValue?: boolean]) => mockConfigGet(...args),
 }));
 
 jest.mock('../shared/markdown', () => ({

@@ -1,6 +1,6 @@
 import { jest } from '@jest/globals';
 import fs from 'fs';
-import type { GitProvider } from '../shared/types';
+import type { GitProvider, PipelineInfo } from '../shared/types';
 import type JiraClient from '../shared/jira-client';
 import type JiraLinkManager from '../jira_management/jira_link_manager';
 import { createMockGitProvider } from '../shared/test-utils/factories';
@@ -85,7 +85,7 @@ jest.mock('../shared/session-context', () => ({
     SessionContext: jest.fn().mockImplementation(() => ({
         pushHistory: jest.fn(),
         buildContextLine: jest.fn(() => ''),
-        sessionCounters: [] as Array<{ status: string }>,
+        sessionCounters: [] as Array<{ op: string; detail: string; status: string }>,
         lastOperation: '',
         history: [] as Array<Record<string, unknown>>,
     })),
@@ -103,7 +103,7 @@ jest.mock('../shared/logger', () => ({
 
 jest.mock('../shared/cli_base', () => ({
     createValidateEnv: jest.fn(() => jest.fn()),
-    offerEnvSetup: jest.fn<Promise<boolean>, [prompt: object]>().mockResolvedValue(false),
+    offerEnvSetup: jest.fn<(prompt: object) => Promise<boolean>>().mockResolvedValue(false),
     setupSigint: jest.fn(),
     printSessionSummary: jest.fn(),
 }));
@@ -130,7 +130,7 @@ jest.mock('../shared/metrics', () => ({
 }));
 
 jest.mock('../shared/http-client', () => ({
-    sleep: jest.fn<Promise<void>, [ms: number]>(async () => {}),
+    sleep: jest.fn<(ms: number) => Promise<void>>(async () => {}),
 }));
 
 jest.mock('../shared/jira-client', () => ({
@@ -163,7 +163,7 @@ jest.mock('./case00-handler', () => ({
 
 type MainModule = typeof import('./main').default;
 
-const globSyncMock = jest.fn<string[], [pattern: string]>().mockReturnValue([]);
+const globSyncMock = jest.fn<(pattern: string) => string[]>().mockReturnValue([]);
 jest.mock('glob', () => ({ sync: globSyncMock }));
 
 const mockProvider = createMockGitProvider();
@@ -292,10 +292,7 @@ describe('_resolveGlob', () => {
 // ---------- pollPipeline ----------
 
 describe('pollPipeline', () => {
-    const mockGetPipeline = jest.fn<
-        Promise<{ status: string; web_url: string }>,
-        [projectId: string, pipelineId: string]
-    >();
+    const mockGetPipeline = jest.fn<(id: string | number) => Promise<PipelineInfo | null>>();
 
     beforeEach(() => {
         mockGetPipeline.mockReset();
@@ -847,7 +844,7 @@ describe('main flow empty projects', () => {
             }));
             jest.doMock('../shared/cli_base', () => ({
                 createValidateEnv: jest.fn(() => jest.fn()),
-                offerEnvSetup: jest.fn<Promise<boolean>, [prompt: object]>().mockResolvedValue(false),
+                offerEnvSetup: jest.fn<(prompt: object) => Promise<boolean>>().mockResolvedValue(false),
                 setupSigint: jest.fn(),
                 printSessionSummary: jest.fn(),
             }));
@@ -891,7 +888,7 @@ describe('main flow empty projects', () => {
                 SessionContext: jest.fn().mockImplementation(() => ({
                     pushHistory: jest.fn(),
                     buildContextLine: jest.fn(() => ''),
-                    sessionCounters: [] as Array<{ status: string }>,
+                    sessionCounters: [] as Array<{ op: string; detail: string; status: string }>,
                     lastOperation: '',
                     history: [] as Array<Record<string, unknown>>,
                 })),
@@ -910,7 +907,7 @@ describe('main flow empty projects', () => {
                 sessionLog: { info: jest.fn() },
                 sessionContext: {
                     buildContextLine: jest.fn(() => ''),
-                    sessionCounters: [] as Array<{ status: string }>,
+                    sessionCounters: [] as Array<{ op: string; detail: string; status: string }>,
                     lastOperation: '',
                 },
                 isBusy: false,
@@ -986,7 +983,7 @@ describe('withErrorHandling', () => {
     it('returns false when handler resolves', async () => {
         const handler: (m: GitProvider, pn: string, ns: string[]) => Promise<object> = jest
             .fn<(m: GitProvider, pn: string, ns: string[]) => Promise<object>>()
-            .mockResolvedValue('ok');
+            .mockResolvedValue({ ok: true as const });
         const wrapped = mainModule.withErrorHandling(handler);
         await wrapped(createMockGitProvider(), 'p', ['p']);
     });
@@ -1016,7 +1013,7 @@ describe('_handleExit', () => {
     it('does not set exit code when session has errors — no exitCode', () => {
         const ss = require('./session-state') as typeof import('./session-state');
         const orig = ss.sessionContext.sessionCounters;
-        ss.sessionContext.sessionCounters = [{ status: 'error' }];
+        ss.sessionContext.sessionCounters = [{ op: '', detail: '', status: 'error' }];
         try {
             mainModule._handleExit();
             expect(process.exitCode).toBeUndefined();
@@ -1173,7 +1170,11 @@ describe('_promptChoice TTY mode', () => {
 
     it('shows box with session counters when TTY and not quiet', async () => {
         const sessionState = require('./session-state') as typeof import('./session-state');
-        sessionState.sessionContext.sessionCounters = [{ status: 'ok' }, { status: 'error' }, { status: 'ok' }];
+        sessionState.sessionContext.sessionCounters = [
+            { op: '', detail: '', status: 'ok' },
+            { op: '', detail: '', status: 'error' },
+            { op: '', detail: '', status: 'ok' },
+        ];
         jest.mocked(prompt.showSelect).mockResolvedValue('/exit');
         const result = await mainModule._promptChoice('0-9');
         expect(result).toBe('/exit');

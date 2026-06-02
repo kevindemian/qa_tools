@@ -109,7 +109,7 @@ import {
 import { rootLogger } from './logger';
 import { safeParseJson } from './safe-json';
 
-const mockFetch = jest.fn<Promise<Response>, [string, RequestInit]>();
+const mockFetch = jest.fn<Promise<Response>, [input: string | URL | Request, init?: RequestInit]>();
 global.fetch = mockFetch;
 
 function mockOkResponse(body: string): Response {
@@ -157,10 +157,10 @@ describe('llmPrompt', () => {
 
         expect(result).toBe('Generated test case');
         expect(mockFetch).toHaveBeenCalledTimes(1);
-        const callUrl = mockFetch.mock.calls[0][0];
-        const callOpts = mockFetch.mock.calls[0][1];
+        const callUrl = mockFetch.mock.calls[0]?.[0] ?? '';
+        const callOpts = mockFetch.mock.calls[0]?.[1];
         expect(callUrl).toContain('/chat/completions');
-        expect(callOpts.headers.Authorization).toBe('Bearer sk-test');
+        expect(((callOpts?.headers ?? {}) as Record<string, string>)['Authorization']).toBe('Bearer sk-test');
     });
 
     it('sends prompt to fast tier (Groq, OpenAI format)', async () => {
@@ -172,7 +172,7 @@ describe('llmPrompt', () => {
 
         const result = await llmPrompt({ tier: 'fast', system: 'system', user: 'quick test' });
         expect(result).toBe('Fast response');
-        const callUrl = mockFetch.mock.calls[0][0];
+        const callUrl = mockFetch.mock.calls[0]?.[0] ?? '';
         expect(callUrl).toContain('groq.com');
     });
 
@@ -185,8 +185,10 @@ describe('llmPrompt', () => {
 
         const result = await llmPrompt({ tier: 'reviewer', system: 'system', user: 'review this' });
         expect(result).toBe('Review ok');
-        const callUrl = mockFetch.mock.calls[0][0];
-        expect(mockFetch.mock.calls[0][1].headers['X-Goog-Api-Key']).toBe('AIza-review');
+        const callUrl = mockFetch.mock.calls[0]?.[0] ?? '';
+        expect(((mockFetch.mock.calls[0]?.[1]?.headers ?? {}) as Record<string, string>)['X-Goog-Api-Key']).toBe(
+            'AIza-review',
+        );
         expect(callUrl).not.toContain('AIza-review');
     });
 
@@ -268,7 +270,7 @@ describe('llmPrompt', () => {
         );
 
         await llmPrompt({ tier: 'main', system: 'system', user: 'json test', responseFormat: 'json' });
-        const body = safeParseJson<Record<string, unknown>>(mockFetch.mock.calls[0][1].body as string, {});
+        const body = safeParseJson<Record<string, unknown>>((mockFetch.mock.calls[0]?.[1]?.body as string) ?? '', {});
         expect(body.response_format).toEqual({ type: 'json_object' });
     });
 
@@ -298,11 +300,13 @@ describe('llmPrompt', () => {
         );
 
         await llmPrompt({ tier: 'reviewer', system: 'system instruction', user: 'user message' });
-        const body = safeParseJson<Record<string, unknown>>(mockFetch.mock.calls[0][1].body as string, {});
+        const body = safeParseJson<Record<string, unknown>>((mockFetch.mock.calls[0]?.[1]?.body as string) ?? '', {});
         expect(body).toHaveProperty('system_instruction');
         expect(body).toHaveProperty('system_instruction.parts[0].text', 'system instruction');
         expect(body).toHaveProperty('contents[0].parts[0].text', 'user message');
-        expect(mockFetch.mock.calls[0][1].headers['X-Goog-Api-Key']).toBe('AIza-gemini-test');
+        expect(((mockFetch.mock.calls[0]?.[1]?.headers ?? {}) as Record<string, string>)['X-Goog-Api-Key']).toBe(
+            'AIza-gemini-test',
+        );
     });
 
     it('deduplicates same provider in fallback chain', async () => {
@@ -508,7 +512,10 @@ describe('llmPrompt', () => {
             );
 
             await llmPrompt({ tier: 'main', system: 'system', user: 'json test', responseFormat: 'json' });
-            const body = safeParseJson<Record<string, unknown>>(mockFetch.mock.calls[0][1].body as string, {});
+            const body = safeParseJson<Record<string, unknown>>(
+                (mockFetch.mock.calls[0]?.[1]?.body as string) ?? '',
+                {},
+            );
             expect(body.response_format).toEqual({ type: 'json_object' });
         });
 
@@ -545,7 +552,10 @@ describe('llmPrompt', () => {
             );
 
             await llmPrompt({ tier: 'reviewer', system: 'custom system instruction', user: 'user text' });
-            const body = safeParseJson<Record<string, unknown>>(mockFetch.mock.calls[0][1].body as string, {});
+            const body = safeParseJson<Record<string, unknown>>(
+                (mockFetch.mock.calls[0]?.[1]?.body as string) ?? '',
+                {},
+            );
             expect(body).toHaveProperty('system_instruction');
             expect(body).toHaveProperty('system_instruction.parts[0].text', 'custom system instruction');
             expect(body).toHaveProperty('contents[0].parts[0].text', 'user text');
@@ -606,7 +616,10 @@ describe('llmPrompt', () => {
 
             await llmPrompt({ tier: 'main', system: 'sys', user: 'user', callerId: 'caller', responseFormat: 'json' });
 
-            const body = safeParseJson<Record<string, unknown>>(mockFetch.mock.calls[0][1].body as string, {});
+            const body = safeParseJson<Record<string, unknown>>(
+                (mockFetch.mock.calls[0]?.[1]?.body as string) ?? '',
+                {},
+            );
             expect(body.response_format).toEqual({ type: 'json_object' });
         });
 
@@ -632,7 +645,10 @@ describe('llmPrompt', () => {
 
             await llmPrompt({ tier: 'reviewer', system: 'sys', user: 'user' });
 
-            const body = safeParseJson<Record<string, unknown>>(mockFetch.mock.calls[0][1].body as string, {});
+            const body = safeParseJson<Record<string, unknown>>(
+                (mockFetch.mock.calls[0]?.[1]?.body as string) ?? '',
+                {},
+            );
             expect(body).toHaveProperty('system_instruction');
             expect(body).toHaveProperty('system_instruction.parts[0].text', 'sys');
         });
@@ -1105,7 +1121,10 @@ describe('llmPrompt', () => {
             );
 
             await llmPrompt({ tier: 'report', system: 'system', user: 'report test', responseFormat: 'json' });
-            const body = safeParseJson<Record<string, unknown>>(mockFetch.mock.calls[0][1].body as string, {});
+            const body = safeParseJson<Record<string, unknown>>(
+                (mockFetch.mock.calls[0]?.[1]?.body as string) ?? '',
+                {},
+            );
             expect(body.response_format).toEqual({ type: 'json_object' });
         });
     });

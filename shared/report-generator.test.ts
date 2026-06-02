@@ -1,6 +1,7 @@
 jest.mock('fs');
 
 import { existsSync, readFileSync } from 'fs';
+import type { PathLike, PathOrFileDescriptor } from 'fs';
 import { nullAs } from './test-utils';
 import { generateHtmlReport, generateCoverageHtml, loadKnownIssues } from './report-generator';
 import type { FlatTest } from './result_parser';
@@ -728,8 +729,8 @@ describe('generateHtmlReport', () => {
         const mockReadFile = jest.mocked(readFileSync);
         mockExists.mockReset();
         mockReadFile.mockReset();
-        mockExists.mockImplementation((p: string) => p === '/tmp/known-issues.json');
-        mockReadFile.mockImplementation((p: string) => {
+        mockExists.mockImplementation((p: PathLike) => p === '/tmp/known-issues.json');
+        mockReadFile.mockImplementation((p: PathOrFileDescriptor, _options?: unknown): string => {
             if (p === '/tmp/known-issues.json') return JSON.stringify({ issues: knownIssues });
             throw new Error('not found');
         });
@@ -746,8 +747,8 @@ describe('generateHtmlReport', () => {
         const mockReadFile = jest.mocked(readFileSync);
         mockExists.mockReset();
         mockReadFile.mockReset();
-        mockExists.mockImplementation((p: string) => p === '/tmp/ki.json');
-        mockReadFile.mockImplementation((p: string) => {
+        mockExists.mockImplementation((p: PathLike) => p === '/tmp/ki.json');
+        mockReadFile.mockImplementation((p: PathOrFileDescriptor, _options?: unknown): string => {
             if (p === '/tmp/ki.json') return JSON.stringify([{ pattern: 'flaky', reason: 'Intermittent' }]);
             throw new Error('not found');
         });
@@ -762,7 +763,7 @@ describe('generateHtmlReport', () => {
         const mockReadFile = jest.mocked(readFileSync);
         mockExists.mockReset();
         mockReadFile.mockReset();
-        mockExists.mockImplementation((_p: string) => true);
+        mockExists.mockImplementation((_p: PathLike) => true);
         mockReadFile.mockImplementation(() => {
             throw new Error('bad json');
         });

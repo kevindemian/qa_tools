@@ -1,6 +1,7 @@
 import { jest } from '@jest/globals';
 import { createMockGitProvider, createMockJiraResource, createMockLinkManager } from '../shared/test-utils/factories';
 import type { ParseResult } from '../shared/result_parser';
+import type { ArtifactInfo } from '../shared/types';
 import JiraClient from '../shared/jira-client';
 import JiraLinkManager from '../jira_management/jira_link_manager';
 
@@ -8,20 +9,18 @@ import JiraLinkManager from '../jira_management/jira_link_manager';
 // These are referenced by jest.mock factories below. Must be declared before
 // jest.mock calls (jest.mock is hoisted but factories are lazy-evaluated).
 
-const mockGlobSync = jest.fn<string[], [pattern: string]>();
-const mockParseTestResults = jest.fn<ParseResult, [raw: string]>();
-const mockMatchResultsToTests = jest.fn<
-    { matched: object[]; unmatched: object[] },
-    [parsed: ParseResult, keys: string[]]
->();
-const mockCreateTestExecutionFromResults = jest.fn<Promise<object | null>, [results: object, config: object]>();
-const mockPrompt = jest.fn<Promise<string>, [message: string]>();
-const mockListPipelineArtifacts = jest.fn<Promise<object[]>, [projectId: string, pipelineId: string]>();
-const mockDownloadArtifact = jest.fn<Promise<void>, [projectId: string, artifact: object]>();
-const mockAdmZipGetEntries = jest.fn<{ name: string }[], []>();
-const mockLoadState = jest.fn<object, []>();
-const mockReportsDir = jest.fn<string, []>();
-const mockSaveParseResult = jest.fn<void, [project: string, result: ParseResult]>();
+const mockGlobSync = jest.fn<(pattern: string) => string[]>();
+const mockParseTestResults = jest.fn<(raw: string) => ParseResult>();
+const mockMatchResultsToTests =
+    jest.fn<(parsed: ParseResult, keys: string[]) => { matched: object[]; unmatched: object[] }>();
+const mockCreateTestExecutionFromResults = jest.fn<(results: object, config: object) => Promise<object | null>>();
+const mockPrompt = jest.fn<(message: string) => Promise<string>>();
+const mockListPipelineArtifacts = jest.fn<(pipelineId: string | number) => Promise<ArtifactInfo[]>>();
+const mockDownloadArtifact = jest.fn<(artifactId: string | number) => Promise<{ buffer: Buffer; filename: string }>>();
+const mockAdmZipGetEntries = jest.fn<() => { entryName: string; isDirectory: boolean; getData: () => Buffer }[]>();
+const mockLoadState = jest.fn<() => object>();
+const mockReportsDir = jest.fn<() => string>();
+const mockSaveParseResult = jest.fn<(project: string, result: ParseResult) => void>();
 
 // ── Module mocks ─────────────────────────────────────────────────────────
 

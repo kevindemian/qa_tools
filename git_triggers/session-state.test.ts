@@ -286,12 +286,30 @@ describe('session-state', () => {
             const metrics = jest.requireMock<typeof import('../shared/metrics')>('../shared/metrics');
             jest.mocked(metrics.loadMetrics).mockReturnValueOnce({
                 runs: [
-                    { project: 'qa_ibabs', date: '2024-01-01', results: [] },
-                    { project: 'qa_ibabs', date: '2024-01-02', results: [] },
+                    {
+                        project: 'qa_ibabs',
+                        timestamp: '2024-01-01',
+                        total: 0,
+                        passed: 0,
+                        failed: 0,
+                        skipped: 0,
+                        duration: 0,
+                        tests: [],
+                    },
+                    {
+                        project: 'qa_ibabs',
+                        timestamp: '2024-01-02',
+                        total: 0,
+                        passed: 0,
+                        failed: 0,
+                        skipped: 0,
+                        duration: 0,
+                        tests: [],
+                    },
                 ],
             });
             jest.mocked(metrics.calculateFlakiness).mockReturnValueOnce([
-                { name: 'flaky-test', rate: 0.5, file: 'test.js', runs: 4, failCount: 2 },
+                { title: 'flaky-test', rate: 0.5, passCount: 2, failCount: 2, skipCount: 0, totalRuns: 4 },
             ]);
 
             sessionState.setCurrentProjectName('qa_ibabs');

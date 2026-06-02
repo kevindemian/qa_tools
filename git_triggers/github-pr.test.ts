@@ -21,25 +21,36 @@ jest.mock('./github-api', () => ({
 }));
 
 jest.mock('../shared/logger', () => ({
-    Logger: jest
-        .fn()
-        .mockImplementation(() => ({ error: jest.fn<() => void, [string]>(), warn: jest.fn<() => void, [string]>() })),
-    rootLogger: { error: jest.fn<() => void, [string]>(), warn: jest.fn<() => void, [string]>() },
+    Logger: jest.fn().mockImplementation(() => ({ error: jest.fn<void, [string]>(), warn: jest.fn<void, [string]>() })),
+    rootLogger: { error: jest.fn<void, [string]>(), warn: jest.fn<void, [string]>() },
 }));
 
 jest.mock('../shared/git-provider-error', () => ({
-    handleError: jest.fn<
-        (err: unknown, opts?: { returnNull?: boolean }) => unknown,
-        [unknown, { returnNull?: boolean }?]
-    >((err: unknown, opts?: { returnNull?: boolean }) => {
-        if (opts?.returnNull) return null;
-        throw err;
-    }),
+    handleError: jest.fn<void, [error: unknown, options?: { returnNull?: boolean }]>(
+        (err: unknown, opts?: { returnNull?: boolean }) => {
+            if (opts?.returnNull) return null;
+            throw err;
+        },
+    ),
 }));
 
 jest.mock('../shared/prompt', () => ({
-    info: jest.fn<() => void, [string]>(),
-    extractErrorMessage: jest.fn<(err: Error) => string, [Error]>((err: Error) => err?.message || 'Erro desconhecido'),
+    info: jest.fn<void, [string]>(),
+    extractErrorMessage: jest.fn<string, [Error]>((err: Error) => err?.message || 'Erro desconhecido'),
+}));
+
+jest.mock('../shared/git-provider-error', () => ({
+    handleError: jest.fn<void, [error: unknown, options?: { returnNull?: boolean }]>(
+        (err: unknown, opts?: { returnNull?: boolean }) => {
+            if (opts?.returnNull) return null;
+            throw err;
+        },
+    ),
+}));
+
+jest.mock('../shared/prompt', () => ({
+    info: jest.fn<void, [string]>(),
+    extractErrorMessage: jest.fn<string, [Error]>((err: Error) => err?.message || 'Erro desconhecido'),
 }));
 
 import * as githubApi from './github-api';
@@ -365,7 +376,7 @@ describe('prSearchMergeRequests', () => {
     it('omits head param when sourceBranch is empty', async () => {
         mockApiGet.mockResolvedValue([]);
         await prSearchMergeRequests(client, 'myorg', 'myrepo', '', 'main', 'opened');
-        const calledWith = mockApiGet.mock.calls[0];
+        const calledWith = mockApiGet.mock.calls[0]!;
         const params = nonNull(calledWith[2]).params as Record<string, unknown>;
         expect(params.head).toBeUndefined();
         expect(params.base).toBe('main');
@@ -374,7 +385,7 @@ describe('prSearchMergeRequests', () => {
     it('omits base param when targetBranch is empty', async () => {
         mockApiGet.mockResolvedValue([]);
         await prSearchMergeRequests(client, 'myorg', 'myrepo', 'dev', '', 'opened');
-        const calledWith = mockApiGet.mock.calls[0];
+        const calledWith = mockApiGet.mock.calls[0]!;
         const params = nonNull(calledWith[2]).params as Record<string, unknown>;
         expect(params.head).toBe('myorg:dev');
         expect(params.base).toBeUndefined();
