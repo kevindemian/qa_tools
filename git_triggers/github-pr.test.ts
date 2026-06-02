@@ -376,7 +376,7 @@ describe('prSearchMergeRequests', () => {
     it('omits head param when sourceBranch is empty', async () => {
         mockApiGet.mockResolvedValue([]);
         await prSearchMergeRequests(client, 'myorg', 'myrepo', '', 'main', 'opened');
-        const calledWith = mockApiGet.mock.calls[0]!;
+        const calledWith = nonNull(mockApiGet.mock.calls[0]);
         const params = nonNull(calledWith[2]).params as Record<string, unknown>;
         expect(params.head).toBeUndefined();
         expect(params.base).toBe('main');
@@ -385,7 +385,7 @@ describe('prSearchMergeRequests', () => {
     it('omits base param when targetBranch is empty', async () => {
         mockApiGet.mockResolvedValue([]);
         await prSearchMergeRequests(client, 'myorg', 'myrepo', 'dev', '', 'opened');
-        const calledWith = mockApiGet.mock.calls[0]!;
+        const calledWith = nonNull(mockApiGet.mock.calls[0]);
         const params = nonNull(calledWith[2]).params as Record<string, unknown>;
         expect(params.head).toBe('myorg:dev');
         expect(params.base).toBeUndefined();

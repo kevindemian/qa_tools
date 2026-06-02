@@ -10,6 +10,7 @@ import CsvResource from '../jira_management/csv_resource';
 import createTests from '../jira_management/create_tests';
 import { rootLogger } from '../shared/logger';
 import { tempDirPath } from '../shared/temp-dir';
+import { nonNull } from '../shared/test-utils';
 import { setTestSleep } from '../shared/http-client';
 
 const { createTestsFromCsv } = createTests;
@@ -105,7 +106,7 @@ describe('E2E: CSV Import - Error Paths', () => {
         const xray = nock(XRAY);
         xray.post('/test/TEST-2/steps').reply(201);
 
-        const result = (await createTestsFromCsv(makeState()))!;
+        const result = nonNull(await createTestsFromCsv(makeState()));
         expect(result.inMemoryTasksId).toEqual(['TEST-2']);
         expect(result.inMemoryTasksText).toEqual(['TC01', 'TC02']);
         expect(result.status).toBe('error');
@@ -131,7 +132,7 @@ describe('E2E: CSV Import - Error Paths', () => {
         const jira = nock(BASE);
         jira.post('/issue').reply(500, { errorMessages: ['Internal error'] });
 
-        const result = (await createTestsFromCsv(makeState()))!;
+        const result = nonNull(await createTestsFromCsv(makeState()));
         expect(result.inMemoryTasksId).toEqual([]);
         expect(result.inMemoryTasksText).toEqual(['TC01']);
         expect(result.status).toBe('error');
@@ -170,7 +171,7 @@ describe('E2E: CSV Import - Error Paths', () => {
         xray.post('/test/TEST-1/steps').reply(201);
         xray.post('/test/TEST-2/steps').reply(201);
 
-        const result = (await createTestsFromCsv(makeState()))!;
+        const result = nonNull(await createTestsFromCsv(makeState()));
         expect(result.inMemoryTasksId).toEqual(['TEST-1', 'TEST-2']);
         expect(result.inMemoryTasksText).toEqual(['TC01', 'TC02']);
         expect(result.status).toBe('ok');
@@ -207,7 +208,7 @@ describe('E2E: CSV Import - Error Paths', () => {
         xray.post('/test/TEST-1/steps').reply(201);
         xray.post('/test/TEST-2/steps').reply(201);
 
-        const result = (await createTestsFromCsv(makeState()))!;
+        const result = nonNull(await createTestsFromCsv(makeState()));
         expect(result.inMemoryTasksId).toEqual(['TEST-1', 'TEST-2']);
         expect(result.inMemoryTasksText).toEqual(['TC01', 'TC02']);
         expect(result.status).toBe('ok');
@@ -235,7 +236,7 @@ describe('E2E: CSV Import - Error Paths', () => {
         const xray = nock(XRAY);
         xray.post('/test/TEST-1/steps').reply(201);
 
-        const result = (await createTestsFromCsv(makeState()))!;
+        const result = nonNull(await createTestsFromCsv(makeState()));
         expect(result.inMemoryTasksId).toEqual(['TEST-1']);
         expect(result.inMemoryTasksText).toEqual(['TC01']);
         expect(result.status).toBe('error');
@@ -275,7 +276,7 @@ describe('E2E: CSV Import - Error Paths', () => {
         xray.post('/test/TEST-1/steps').reply(201);
         xray.post('/test/TEST-2/steps').reply(201);
 
-        const result = (await createTestsFromCsv(makeState()))!;
+        const result = nonNull(await createTestsFromCsv(makeState()));
         expect(result.inMemoryTasksId).toEqual(['TEST-1', 'TEST-2']);
         expect(result.inMemoryTasksText).toEqual(['TC01', 'TC02']);
         expect(result.status).toBe('ok');
@@ -292,7 +293,7 @@ describe('E2E: CSV Import - Error Paths', () => {
         const xray = nock(XRAY);
         xray.post('/test/TEST-1/steps').reply(500);
 
-        const result = (await createTestsFromCsv(makeState()))!;
+        const result = nonNull(await createTestsFromCsv(makeState()));
         expect(result.inMemoryTasksId).toEqual(['TEST-1']);
         expect(result.inMemoryTasksText).toEqual(['TC01']);
         expect(result.status).toBe('error');
@@ -304,7 +305,7 @@ describe('E2E: CSV Import - Error Paths', () => {
         process.env.DRY_RUN = 'true';
         process.env.CSV_PATH = writeCsv('c8', ['Title: TC Dry', 'Action,Data,Expected Result', 'Step1,,R1'].join('\n'));
 
-        const result = (await createTestsFromCsv(makeState()))!;
+        const result = nonNull(await createTestsFromCsv(makeState()));
 
         expect(result.status).toBe('ok');
         expect(result.summary).toContain('DRY-RUN');

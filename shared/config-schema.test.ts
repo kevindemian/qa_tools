@@ -1,4 +1,5 @@
 import { CONFIG_SCHEMA } from './config-schema';
+import { nonNull } from './test-utils';
 
 describe('CONFIG_SCHEMA', () => {
     it('has at least 40 entries', () => {
@@ -44,19 +45,19 @@ describe('CONFIG_SCHEMA', () => {
     });
 
     it('llmMaxTokens is a number with default 128000', () => {
-        const f = CONFIG_SCHEMA.find((r) => r.key === 'llmMaxTokens')!;
+        const f = nonNull(CONFIG_SCHEMA.find((r) => r.key === 'llmMaxTokens'));
         expect(f.type).toBe('number');
         expect(f.defaultVal).toBe(128000);
     });
 
     it('autoConfirm is boolean with default false', () => {
-        const f = CONFIG_SCHEMA.find((r) => r.key === 'autoConfirm')!;
+        const f = nonNull(CONFIG_SCHEMA.find((r) => r.key === 'autoConfirm'));
         expect(f.type).toBe('boolean');
         expect(f.defaultVal).toBe(false);
     });
 
     it('logMaxSize is number with default 5242880', () => {
-        const f = CONFIG_SCHEMA.find((r) => r.key === 'logMaxSize')!;
+        const f = nonNull(CONFIG_SCHEMA.find((r) => r.key === 'logMaxSize'));
         expect(f.type).toBe('number');
         expect(f.defaultVal).toBe(5242880);
     });

@@ -1,3 +1,4 @@
+import { nonNull } from '../shared/test-utils';
 import {
     HELP_TOPICS,
     ALIASES,
@@ -116,7 +117,7 @@ describe('SUB_MENUS', () => {
     });
 
     it('releases sub-menu contains version commands', () => {
-        const releases = SUB_MENUS.releases!;
+        const releases = nonNull(SUB_MENUS.releases);
         const ids = releases.map((i) => i.id);
         expect(ids).toContain('2');
         expect(ids).toContain('3');
@@ -125,7 +126,7 @@ describe('SUB_MENUS', () => {
     });
 
     it('config sub-menu has configKey on directory items', () => {
-        const configMenu = SUB_MENUS.config!;
+        const configMenu = nonNull(SUB_MENUS.config);
         const gitItem = configMenu.find((i) => i.id === '10');
         expect(gitItem?.configKey).toBe('gitDir');
         const cypressItem = configMenu.find((i) => i.id === '14');

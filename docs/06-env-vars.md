@@ -6,16 +6,16 @@ Todas as variáveis são carregadas do arquivo `.env` na raiz do projeto.
 
 ## Jira / Xray
 
-| Variável              | Getter Config              | Obrigatória? | Padrão   | Descrição                                                                        |
-| --------------------- | -------------------------- | ------------ | -------- | -------------------------------------------------------------------------------- |
-| `JIRA_BASE_URL`       | `Config.jiraBaseUrl`       | Sim (Jira)   | —        | URL base do Jira Server                                                          |
-| `JIRA_PERSONAL_TOKEN` | `Config.jiraPersonalToken` | Sim (Jira)   | —        | Token Bearer para autenticação Jira                                              |
-| `XRAY_BASE_URL`       | `Config.xrayBaseUrl`       | Sim (Xray)   | —        | URL base do servidor Xray                                                        |
-| `XRAY_MODE`           | `Config.xrayMode`          | Não          | `server` | Modo Xray: `server` (REST) ou `cloud` (GraphQL)                                  |
-| `XRAY_CLOUD_ENDPOINT` | —                          | Não          | —        | Override do endpoint GraphQL Xray Cloud (padrão: `XRAY_BASE_URL`/api/v2/graphql) |
-| `XRAY_CLIENT_ID`      | `Config.xrayClientId`      | Não          | —        | Client ID para autenticação Xray Cloud (modo `cloud`)                            |
-| `XRAY_CLIENT_SECRET`  | `Config.xrayClientSecret`  | Não          | —        | Client Secret Xray Cloud                                                         |
-| `JIRA_PROJECT`        | `Config.jiraProject`       | Não          | `ECSPOL` | Projeto Jira padrão                                                              |
+| Variável              | Getter Config              | Obrigatória? | Padrão   | Descrição                                                                          |
+| --------------------- | -------------------------- | ------------ | -------- | ---------------------------------------------------------------------------------- |
+| `JIRA_BASE_URL`       | `Config.jiraBaseUrl`       | Sim (Jira)   | —        | URL base do Jira Server                                                            |
+| `JIRA_PERSONAL_TOKEN` | `Config.jiraPersonalToken` | Sim (Jira)   | —        | Token Bearer para autenticação Jira                                                |
+| `XRAY_BASE_URL`       | `Config.xrayBaseUrl`       | Sim (Xray)   | —        | URL base do servidor Xray                                                          |
+| `XRAY_MODE`           | `Config.xrayMode`          | Não          | `server` | Modo Xray: `server` (REST) ou `cloud` (GraphQL)                                    |
+| `XRAY_CLOUD_URL`      | `Config.xrayCloudUrl`      | Não          | —        | Override do endpoint GraphQL Xray Cloud (padrão: `https://xray.cloud.getxray.app`) |
+| `XRAY_CLIENT_ID`      | `Config.xrayClientId`      | Não          | —        | Client ID para autenticação Xray Cloud (modo `cloud`)                              |
+| `XRAY_CLIENT_SECRET`  | `Config.xrayClientSecret`  | Não          | —        | Client Secret Xray Cloud                                                           |
+| `JIRA_PROJECT`        | `Config.jiraProject`       | Não          | `ECSPOL` | Projeto Jira padrão                                                                |
 
 ## Git (GitLab / GitHub)
 

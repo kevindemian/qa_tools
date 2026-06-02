@@ -1,4 +1,4 @@
-import { createMockRootLogger } from './test-utils';
+import { createMockRootLogger, nonNull } from './test-utils';
 import readlineSync from 'readline-sync';
 
 const mockRootLogger = createMockRootLogger();
@@ -354,22 +354,22 @@ describe('Prompt', () => {
 
     describe('humanizeError', () => {
         it('returns known error for rate limit', () => {
-            const result = prompt.humanizeError('rate limit exceeded')!;
+            const result = nonNull(prompt.humanizeError('rate limit exceeded'));
             expect(result.msg).toContain('Rate limit');
         });
 
         it('returns known error for 403/permission', () => {
-            const result = prompt.humanizeError('permission denied')!;
+            const result = nonNull(prompt.humanizeError('permission denied'));
             expect(result.msg).toContain('Sem permissão');
         });
 
         it('returns known error for 401/unauthorized', () => {
-            const result = prompt.humanizeError('401 unauthorized')!;
+            const result = nonNull(prompt.humanizeError('401 unauthorized'));
             expect(result.msg).toContain('Token inválido');
         });
 
         it('returns known error for connection issues', () => {
-            const result = prompt.humanizeError('ECONNREFUSED')!;
+            const result = nonNull(prompt.humanizeError('ECONNREFUSED'));
             expect(result.msg).toContain('Erro de conexão');
         });
 
@@ -383,27 +383,27 @@ describe('Prompt', () => {
         });
 
         it('returns known error for issue type not found', () => {
-            const result = prompt.humanizeError('Issue type not found')!;
+            const result = nonNull(prompt.humanizeError('Issue type not found'));
             expect(result.msg).toContain('Tipo de issue');
         });
 
         it('returns known error for field not found', () => {
-            const result = prompt.humanizeError('Field customfield_123 not found')!;
+            const result = nonNull(prompt.humanizeError('Field customfield_123 not found'));
             expect(result.msg).toContain('Campo não encontrado');
         });
 
         it('returns known error for project not found', () => {
-            const result = prompt.humanizeError('Project PROJ not found')!;
+            const result = nonNull(prompt.humanizeError('Project PROJ not found'));
             expect(result.msg).toContain('Projeto não encontrado');
         });
 
         it('returns known error for version not found', () => {
-            const result = prompt.humanizeError('version not found')!;
+            const result = nonNull(prompt.humanizeError('version not found'));
             expect(result.msg).toContain('Versão não encontrada');
         });
 
         it('returns known error for already exists', () => {
-            const result = prompt.humanizeError('already exists')!;
+            const result = nonNull(prompt.humanizeError('already exists'));
             expect(result.msg).toContain('Item ja existe');
         });
     });

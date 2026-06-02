@@ -18,6 +18,7 @@ import { llmPrompt } from './llm-client';
 import { reviewWithLlm } from './llm-review';
 import { analyzeFailuresWithReport, classifyFailure } from './failure-analysis';
 import type { FlatTest } from './result_parser';
+import { nonNull } from './test-utils';
 
 const mockReviewWithLlm = jest.mocked(reviewWithLlm);
 const mockLlmPrompt = jest.mocked(llmPrompt);
@@ -123,7 +124,7 @@ describe('classifyFailure', () => {
 
         const result = await classifyFailure('Login test', 'expected true, got false');
         expect(result).toBe('ASSERTION: expected true but got false');
-        const [callOpts] = mockLlmPrompt.mock.calls[0]!;
+        const [callOpts] = nonNull(mockLlmPrompt.mock.calls[0]);
         expect(callOpts).toHaveProperty('system', expect.any(String));
         expect(callOpts).toHaveProperty('user', expect.any(String));
         expect(callOpts).toHaveProperty('schema', expect.anything());

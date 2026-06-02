@@ -104,7 +104,7 @@ describe('calculateFlakinessWithWindow', () => {
             failed: i % 2 === 0 ? 1 : 0,
             skipped: 0,
             duration: 0,
-            tests: [tests[i]!],
+            tests: [nonNull(tests[i])],
         }));
         const store = makeStore(runs);
 
@@ -131,7 +131,7 @@ describe('calculateFlakinessWithWindow', () => {
             failed: i % 2 === 0 ? 1 : 0,
             skipped: 0,
             duration: 0,
-            tests: [minRunsTests[i]!],
+            tests: [nonNull(minRunsTests[i])],
         }));
         const store = makeStore(runs);
 

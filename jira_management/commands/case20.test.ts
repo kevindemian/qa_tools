@@ -9,6 +9,7 @@ jest.mock('../../shared/bug-report', () => ({
 import { printError, askConfirm, ask } from '../../shared/prompt';
 import { collectManual, interactiveBugReportFlow, generateBugReportFromDescription } from '../../shared/bug-report';
 import type { CommandContext } from './context';
+import { nonNull } from '../../shared/test-utils';
 import { createMockContext } from '../../shared/test-utils/factories/context-factory';
 import { createMockLinkManager } from '../../shared/test-utils/factories/link-manager-factory';
 import case20 from './case20';
@@ -211,7 +212,7 @@ describe('case20 - Bug Report handler', () => {
         await case20.handler(ctx);
 
         expect(mockGenerateAi).toHaveBeenCalledTimes(1);
-        const callArg = mockInteractiveBugReportFlow.mock.calls[0]![2]!;
+        const callArg = nonNull(nonNull(mockInteractiveBugReportFlow.mock.calls[0])[2]);
         expect(callArg.linkedIssues).toEqual([
             { key: 'PROJ-123', linkType: 'Relates' },
             { key: 'PROJ-456', linkType: 'Relates' },

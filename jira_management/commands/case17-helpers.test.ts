@@ -2,6 +2,7 @@ jest.mock('fs');
 
 import * as fs from 'fs';
 import type { FlatTest } from '../../shared/result_parser';
+import { nonNull } from '../../shared/test-utils';
 import {
     isGitHubCi,
     isGitLabCi,
@@ -250,9 +251,9 @@ describe('saveMetricsJson', () => {
 
         expect(jest.mocked(fs.writeFileSync)).toHaveBeenCalledTimes(3);
         const calls = jest.mocked(fs.writeFileSync).mock.calls;
-        expect(String(calls[0]![0])).toContain('report.ctrf.json');
-        expect(String(calls[1]![0])).toContain('report.stats.json');
-        expect(String(calls[2]![0])).toContain('last-results.ctrf.json');
+        expect(String(nonNull(calls[0])[0])).toContain('report.ctrf.json');
+        expect(String(nonNull(calls[1])[0])).toContain('report.stats.json');
+        expect(String(nonNull(calls[2])[0])).toContain('last-results.ctrf.json');
     });
 
     it('writes correct stats for mixed results', () => {
@@ -264,7 +265,7 @@ describe('saveMetricsJson', () => {
         saveMetricsJson(tests as FlatTest[], '/tmp/html');
 
         const writeFileMock = jest.mocked(fs.writeFileSync);
-        const raw = writeFileMock.mock.calls[1]![1];
+        const raw = nonNull(writeFileMock.mock.calls[1])[1];
         const dataStr = raw as string;
         expect(JSON.parse(dataStr)).toMatchObject({
             passed: 1,

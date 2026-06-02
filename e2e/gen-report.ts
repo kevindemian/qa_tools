@@ -9,7 +9,7 @@ import { createHttpClient } from '../shared/http-client';
 function loadCtrfFixture(): { ctrfPath: string; result: ReturnType<typeof parseTestResultsFile> } {
     const ctrfArg = process.argv.find((a) => a.startsWith('--ctrf='));
     const ctrfPath = ctrfArg
-        ? path.resolve(ctrfArg.split('=')[1]!)
+        ? path.resolve(ctrfArg.split('=')[1] ?? '')
         : path.resolve(__dirname, 'fixtures/ctrf-report.json');
     const result = parseTestResultsFile(ctrfPath);
 

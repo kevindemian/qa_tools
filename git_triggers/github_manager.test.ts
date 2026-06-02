@@ -1,6 +1,6 @@
 import { createThrottledClient } from '../shared/http-client';
 import GitHubManager from './github_manager';
-import { nullAs } from '../shared/test-utils';
+import { nonNull, nullAs } from '../shared/test-utils';
 import { createMockAxiosInstance } from '../shared/test-utils/factories/response-factory';
 
 jest.mock('../shared/http-client', () => ({
@@ -300,8 +300,8 @@ describe('GitHubManager', () => {
             mockClient.get.mockResolvedValue({ data: [] });
             await manager.searchMergeRequests('', '', 'opened');
             expect(mockClient.get).toHaveBeenCalledWith(expect.any(String), expect.anything());
-            expect(mockClient.get.mock.calls[0]![1]).toHaveProperty('params.state', 'open');
-            expect(mockClient.get.mock.calls[0]![1]).toHaveProperty('params.per_page', 100);
+            expect(nonNull(mockClient.get.mock.calls[0])[1]).toHaveProperty('params.state', 'open');
+            expect(nonNull(mockClient.get.mock.calls[0])[1]).toHaveProperty('params.per_page', 100);
         });
 
         it('returns [] on API error', async () => {
@@ -448,8 +448,8 @@ describe('GitHubManager', () => {
             const result = await manager.getPipelineJobs('42');
             expect(mockClient.get).toHaveBeenCalledWith('/repos/myorg/myrepo/actions/runs/42/jobs');
             expect(result).toHaveLength(2);
-            expect(result[0]!.name).toContain('test');
-            expect(result[1]!.status).toBe('failure');
+            expect(nonNull(result[0]).name).toContain('test');
+            expect(nonNull(result[1]).status).toBe('failure');
         });
 
         it('returns [] on API error', async () => {
@@ -711,9 +711,9 @@ describe('GitHubManager', () => {
             });
             const result = await manager.getOpenIssues();
             expect(result).toHaveLength(2);
-            expect(result[0]!.number).toBe(1);
-            expect(result[1]!.number).toBe(3);
-            expect(result[1]!.labels).toEqual(['bug']);
+            expect(nonNull(result[0]).number).toBe(1);
+            expect(nonNull(result[1]).number).toBe(3);
+            expect(nonNull(result[1]).labels).toEqual(['bug']);
         });
 
         it('returns empty array when data is not an array', async () => {

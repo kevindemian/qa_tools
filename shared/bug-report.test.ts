@@ -160,7 +160,7 @@ describe('BugReport Service', () => {
 
             const report = await collectManual();
             expect(report.llmEnrichment).toBeDefined();
-            expect(report.llmEnrichment!.rootCause).toBe('');
+            expect(nonNull(report.llmEnrichment).rootCause).toBe('');
             expect(mockPrompt.info).toHaveBeenCalledWith(expect.stringContaining('não disponível'));
         });
     });
@@ -524,7 +524,7 @@ describe('generateBugReportFromDescription', () => {
         expect(nonNull(result).severity).toBe('major');
         expect(nonNull(result).source).toBe('manual');
         expect(nonNull(result).llmEnrichment).toBeDefined();
-        expect(nonNull(result).llmEnrichment!.model).toBe('fast');
+        expect(nonNull(nonNull(result).llmEnrichment).model).toBe('fast');
     });
 
     it('returns BugReport without optional fields when LLM omits them', async () => {

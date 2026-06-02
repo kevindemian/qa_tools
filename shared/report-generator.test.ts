@@ -2,7 +2,7 @@ jest.mock('fs');
 
 import { existsSync, readFileSync } from 'fs';
 import type { PathLike, PathOrFileDescriptor } from 'fs';
-import { nullAs } from './test-utils';
+import { nonNull, nullAs } from './test-utils';
 import { generateHtmlReport, generateCoverageHtml, loadKnownIssues } from './report-generator';
 import type { FlatTest } from './result_parser';
 import type { CoverageEpic, KnownIssue, TestRunTab } from './report-generator';
@@ -665,7 +665,7 @@ describe('generateHtmlReport', () => {
             { name: 'Chrome', tests: [{ title: 'Login', state: 'passed', duration: 100 }] },
             { name: 'Firefox', tests: [{ title: 'Login', state: 'failed', duration: 200 }] },
         ];
-        const html = generateHtmlReport(runs[0]!.tests, { runs });
+        const html = generateHtmlReport(nonNull(runs[0]).tests, { runs });
         expect(html).toContain('envTabs');
         expect(html).toContain('Chrome');
         expect(html).toContain('Firefox');
@@ -677,7 +677,7 @@ describe('generateHtmlReport', () => {
             { name: 'Env A', tests: [{ title: 'Test A', state: 'passed', duration: 100 }] },
             { name: 'Env B', tests: [{ title: 'Test B', state: 'failed', duration: 200 }] },
         ];
-        const html = generateHtmlReport(runs[0]!.tests, { runs });
+        const html = generateHtmlReport(nonNull(runs[0]).tests, { runs });
         expect(html).toContain('tab-content');
         expect(html).toContain('tabContent-0');
         expect(html).toContain('tabContent-1');
@@ -688,14 +688,14 @@ describe('generateHtmlReport', () => {
             { name: 'A', tests: [{ title: 'T1', state: 'passed', duration: 100 }] },
             { name: 'B', tests: [{ title: 'T2', state: 'failed', duration: 100 }] },
         ];
-        const html = generateHtmlReport(runs[0]!.tests, { runs });
+        const html = generateHtmlReport(nonNull(runs[0]).tests, { runs });
         expect(html).toContain('class="tab-btn active"');
         expect(html).toContain('class="tab-content active"');
     });
 
     it('omits tabs when only 1 run', () => {
         const runs: TestRunTab[] = [{ name: 'Single', tests: [{ title: 'T', state: 'passed', duration: 100 }] }];
-        const html = generateHtmlReport(runs[0]!.tests, { runs });
+        const html = generateHtmlReport(nonNull(runs[0]).tests, { runs });
         expect(html).not.toContain('envTabs');
     });
 
@@ -737,9 +737,9 @@ describe('generateHtmlReport', () => {
 
         const issues = loadKnownIssues('/tmp/known-issues.json');
         expect(issues).toHaveLength(2);
-        expect(issues[0]!.pattern).toBe('timeout');
-        expect(issues[0]!.ticket).toBe('BUG-1');
-        expect(issues[1]!.pattern).toBe('login');
+        expect(nonNull(issues[0]).pattern).toBe('timeout');
+        expect(nonNull(issues[0]).ticket).toBe('BUG-1');
+        expect(nonNull(issues[1]).pattern).toBe('login');
     });
 
     it('loadKnownIssues handles issues as top-level array', () => {
@@ -755,7 +755,7 @@ describe('generateHtmlReport', () => {
 
         const issues = loadKnownIssues('/tmp/ki.json');
         expect(issues).toHaveLength(1);
-        expect(issues[0]!.pattern).toBe('flaky');
+        expect(nonNull(issues[0]).pattern).toBe('flaky');
     });
 
     it('loadKnownIssues skips invalid JSON and returns empty array', () => {

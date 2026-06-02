@@ -14,7 +14,7 @@ const TOKEN = process.env.JIRA_PERSONAL_TOKEN || '';
 function loadCtrfFixture(): { ctrfPath: string; result: ReturnType<typeof parseTestResultsFile> } {
     const ctrfArg = process.argv.find((a) => a.startsWith('--ctrf='));
     const ctrfPath = ctrfArg
-        ? path.resolve(ctrfArg.split('=')[1]!)
+        ? path.resolve(ctrfArg.split('=')[1] ?? '')
         : path.resolve(__dirname, 'fixtures/ctrf-report.json');
     const result = parseTestResultsFile(ctrfPath);
     if (result.error) {
@@ -28,7 +28,7 @@ function loadCtrfFixture(): { ctrfPath: string; result: ReturnType<typeof parseT
 function setupMappingFile(): void {
     const mappingArg = process.argv.find((a) => a.startsWith('--mapping='));
     if (mappingArg) {
-        const mappingPath = path.resolve(mappingArg.split('=')[1]!);
+        const mappingPath = path.resolve(mappingArg.split('=')[1] ?? '');
         const raw = JSON.parse(fs.readFileSync(mappingPath, 'utf8')) as {
             tests?: Array<{ title: string; key: string }>;
         };

@@ -1,3 +1,4 @@
+import { nonNull } from './test-utils';
 import { SessionContext } from './session-context';
 
 describe('SessionContext', () => {
@@ -56,8 +57,8 @@ describe('SessionContext', () => {
         ctx.pushHistory('op1', 'd1', 'ok');
         ctx.pushHistory('op2', 'd2', 'error');
         expect(ctx.sessionCounters.length).toBe(2);
-        expect(ctx.sessionCounters[0]!.op).toBe('op1');
-        expect(ctx.sessionCounters[1]!.op).toBe('op2');
+        expect(nonNull(ctx.sessionCounters[0]).op).toBe('op1');
+        expect(nonNull(ctx.sessionCounters[1]).op).toBe('op2');
     });
 
     describe('buildContextLine', () => {

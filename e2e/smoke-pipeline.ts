@@ -28,8 +28,8 @@ async function triggerAndFindRun(
 
     const runs = await gh.getRecentPipelines(3);
     assert(runs, 'getRecentPipelines returned null/undefined');
-    assert(runs!.length > 0, 'No workflow runs found after trigger');
-    const latestRun = runs![0];
+    assert(runs.length > 0, 'No workflow runs found after trigger');
+    const latestRun = runs[0];
     assert(latestRun, 'No workflow run found');
     assert(latestRun.id, 'Latest run missing id');
     const runId = String(latestRun.id);

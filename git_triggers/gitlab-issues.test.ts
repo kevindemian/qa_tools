@@ -1,5 +1,6 @@
 import { glGetOpenIssues } from './gitlab-issues';
 import { apiGet, projectPath } from './gitlab-api';
+import { nonNull } from '../shared/test-utils';
 import { createMockAxiosInstance } from '../shared/test-utils/factories/response-factory';
 
 jest.mock('./gitlab-api', () => ({
@@ -74,16 +75,16 @@ describe('glGetOpenIssues', () => {
     it('maps labels as flat strings', async () => {
         jest.mocked(apiGet).mockResolvedValue([{ ...ISSUE_FIXTURE, labels: ['bug', 'priority:high'] }]);
         const result = await glGetOpenIssues(mockClient, 'owner', 'repo');
-        expect(result[0]!.labels).toEqual(['bug', 'priority:high']);
+        expect(nonNull(result[0]).labels).toEqual(['bug', 'priority:high']);
     });
 
     it('handles missing optional fields gracefully', async () => {
         jest.mocked(apiGet).mockResolvedValue([{ iid: 1 }]);
         const result = await glGetOpenIssues(mockClient, 'owner', 'repo');
-        expect(result[0]!.title).toBe('');
-        expect(result[0]!.number).toBe(1);
-        expect(result[0]!.labels).toEqual([]);
-        expect(result[0]!.html_url).toBe('');
+        expect(nonNull(result[0]).title).toBe('');
+        expect(nonNull(result[0]).number).toBe(1);
+        expect(nonNull(result[0]).labels).toEqual([]);
+        expect(nonNull(result[0]).html_url).toBe('');
     });
 
     it('filters out null items from array', async () => {

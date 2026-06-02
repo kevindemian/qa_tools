@@ -9,6 +9,7 @@ jest.mock('./report-table', () => ({
     buildTestTable: jest.fn(() => '<table>mock</table>'),
 }));
 
+import { nonNull } from './test-utils';
 import type { FlatTest } from './result_parser';
 import type { TestRunTab, ReportOptions, ReportStats } from './report-types';
 import {
@@ -49,8 +50,8 @@ describe('buildTabs', () => {
 
     it('first tab is marked active', () => {
         const runs: TestRunTab[] = [
-            { name: 'A', tests: [sampleTests[0]!] },
-            { name: 'B', tests: [sampleTests[0]!] },
+            { name: 'A', tests: [nonNull(sampleTests[0])] },
+            { name: 'B', tests: [nonNull(sampleTests[0])] },
         ];
         const html = buildTabs(runs);
         expect(html).toContain('active');
@@ -68,8 +69,8 @@ describe('buildTabContents', () => {
 
     it('returns tab contents for multiple runs', () => {
         const runs: TestRunTab[] = [
-            { name: 'Chrome', tests: [sampleTests[0]!] },
-            { name: 'Firefox', tests: [sampleTests[0]!] },
+            { name: 'Chrome', tests: [nonNull(sampleTests[0])] },
+            { name: 'Firefox', tests: [nonNull(sampleTests[0])] },
         ];
         const html = buildTabContents(runs);
         expect(html).toContain('tabContent-0');

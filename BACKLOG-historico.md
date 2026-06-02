@@ -1717,6 +1717,36 @@ Elevar reports ao nível Allure (padrão ouro mercado). 3 sprints independentes.
 | F6  | `createMockResponse()`     | `shared/test-utils/factories/response-factory.ts`      | 5     | ✅     |
 |     | Barrel                     | `shared/test-utils/factories/index.ts`                 | —     | ✅     |
 
+## ✅ Sprint 4 — Eliminação Total de Casts + Barreiras de Prevenção ✅
+
+Sprint 4 completada em 2026-06-02. 0 itens pendentes no BACKLOG.
+
+**Resumo:**
+
+| Fase | Item                                         | Esforço | Status                                      |
+| ---- | -------------------------------------------- | ------- | ------------------------------------------- |
+| 1    | `as unknown as` em produção                  | ~1h     | ✅ 7 ocorrências eliminadas                 |
+| 2    | Tipar API clients na raiz                    | ~2h     | ✅ github-api, gitlab-api, callers          |
+| 3    | Ativar `no-unsafe-*` ESLint (produção)       | ~1h     | ✅ 5 regras como `error`                    |
+| 3b   | Fix test files para `no-unsafe-*`            | ~10h    | ✅ 35 arquivos, ~1348 erros                 |
+| 4    | Eliminar non-null assertions                 | ~4h     | ✅ ~201 em tests + 13 em prod               |
+| 4b   | Eliminar `jest.fn<...unknown>()`             | ~2h     | ✅ ~60 ocorrências em 16 arquivos           |
+| 5    | Ativar `exactOptionalPropertyTypes`          | —       | ✅ Já ativo                                 |
+| 6    | Avaliar `noPropertyAccessFromIndexSignature` | ~5min   | ✅ DEFERIDO — 613 erros, zero ganho         |
+| 7    | Docs env var name mismatch                   | ~2min   | ✅ `XRAY_CLOUD_ENDPOINT` → `XRAY_CLOUD_URL` |
+| 8    | Prevenção non-null                           | ~30min  | ✅ Check 9 + ESLint error                   |
+
+**Métrica final:**
+
+- `tsc --noEmit`: **0 erros**
+- ESLint errors: **0**
+- ESLint warnings: **0**
+- `enforce-quality`: **9/9 checks**
+- `jest`: **3351 pass, 0 fail**
+- Items no BACKLOG: **0** 🎉
+
+---
+
 ### Sprint 3 — Fase 2: `jest.mocked()` Migration ✅
 
 Transform script applied 144 changes across 36 files. All `(expr as jest.Mock)`, `(expr as jest.Mocked<T>)`, and `(expr as jest.MockedFunction<typeof fn>)` patterns replaced with `jest.mocked(expr)`. 2 syntax errors manually fixed (cli_base, import-loop). Real type mismatches exposed by removing casts fixed in 12 files (complete mock objects, fix signatures, add optional chaining).
@@ -1727,3 +1757,10 @@ Transform script applied 144 changes across 36 files. All `(expr as jest.Mock)`,
 | M2  | `jira_management/main.test.ts`         | ~30          | ✅     |
 | M3  | `setup/main.test.ts`                   | ~25          | ✅     |
 | M4  | Demais ~37 arquivos com `as jest.Mock` | ~400         | ✅     |
+
+## ✅ Sprint 2 (Completo) + Sprint 3 (Completo) — Migrados 2026-06-02
+
+**Sprint 2**: 8 fases, ~35h, 25/25 itens de débito eliminados ✅
+**Sprint 3**: 8 fases, ~20.5h, ~1.350 pontos de débito (casts + non-null) eliminados ✅
+
+Ver detalhes em commits e BACKOLG original (arquivado).

@@ -11,6 +11,7 @@ jest.mock('../shared/temp-dir', () => ({
 }));
 
 import * as prompt from '../shared/prompt';
+import { nonNull } from '../shared/test-utils';
 import MappingFileGenerator from './mapping-file-generator';
 
 interface MappingJson {
@@ -67,12 +68,12 @@ describe('MappingFileGenerator', () => {
         const json = JSON.parse(fs.readFileSync(path.join(tmpDir, base + '-jira-mapping.json'), 'utf8')) as MappingJson;
         expect(json.project).toBe('ECSPOL');
         expect(json.tests).toHaveLength(2);
-        expect(json.tests[0]!.key).toBe('K-100');
-        expect(json.tests[0]!.title).toBe('Login test');
-        expect(json.tests[0]!.description).toBe('Verifies login flow');
-        expect(json.tests[0]!.steps![0]!.Action).toBe('Type user');
-        expect(json.tests[1]!.key).toBe('K-200');
-        expect(json.tests[1]!.title).toBe('Logout test');
+        expect(nonNull(json.tests[0]).key).toBe('K-100');
+        expect(nonNull(json.tests[0]).title).toBe('Login test');
+        expect(nonNull(json.tests[0]).description).toBe('Verifies login flow');
+        expect(nonNull(nonNull(nonNull(json.tests[0]).steps)[0]).Action).toBe('Type user');
+        expect(nonNull(json.tests[1]).key).toBe('K-200');
+        expect(nonNull(json.tests[1]).title).toBe('Logout test');
         const md = fs.readFileSync(path.join(tmpDir, base + '-jira-mapping.md'), 'utf8');
         expect(md).toContain('Login test');
         expect(md).toContain('Type user');
@@ -91,7 +92,7 @@ describe('MappingFileGenerator', () => {
     it('test without steps still creates JSON, steps omitted from mapping', () => {
         generator.generate('/f.csv', 'P', ['K-1'], [{ title: 't', description: 'd', steps: [] }]);
         const json = JSON.parse(fs.readFileSync(path.join(tmpDir, 'f-jira-mapping.json'), 'utf8')) as MappingJson;
-        expect(json.tests[0]!.steps).toBeUndefined();
+        expect(nonNull(json.tests[0]).steps).toBeUndefined();
     });
 
     it('test with precondition includes it in JSON and MD', () => {
@@ -108,7 +109,7 @@ describe('MappingFileGenerator', () => {
             ],
         );
         const json = JSON.parse(fs.readFileSync(path.join(tmpDir, 'f-jira-mapping.json'), 'utf8')) as MappingJson;
-        expect(json.tests[0]!.precondition).toBe('must login');
+        expect(nonNull(json.tests[0]).precondition).toBe('must login');
         const md = fs.readFileSync(path.join(tmpDir, 'f-jira-mapping.md'), 'utf8');
         expect(md).toContain('must login');
     });
@@ -125,9 +126,9 @@ describe('MappingFileGenerator', () => {
         generator.generate('/f.csv', 'P', ['KA', 'KB', 'KC'], [{ title: 'only', steps: [] }]);
         const json = JSON.parse(fs.readFileSync(path.join(tmpDir, 'f-jira-mapping.json'), 'utf8')) as MappingJson;
         expect(json.tests).toHaveLength(3);
-        expect(json.tests[0]!.title).toBe('only');
-        expect(json.tests[1]!.title).toBe('');
-        expect(json.tests[2]!.title).toBe('');
+        expect(nonNull(json.tests[0]).title).toBe('only');
+        expect(nonNull(json.tests[1]).title).toBe('');
+        expect(nonNull(json.tests[2]).title).toBe('');
         const txt = fs.readFileSync(path.join(tmpDir, 'f-summary.txt'), 'utf8');
         expect(txt).toContain('KB: (untitled)');
     });
@@ -135,8 +136,8 @@ describe('MappingFileGenerator', () => {
     it('steps with empty fields default to empty string', () => {
         generator.generate('/f.csv', 'P', ['KE'], [{ title: 't', steps: [{ fields: {} }] }]);
         const json = JSON.parse(fs.readFileSync(path.join(tmpDir, 'f-jira-mapping.json'), 'utf8')) as MappingJson;
-        expect(json.tests[0]!.steps![0]!.Action).toBe('');
-        expect(json.tests[0]!.steps![0]!.Data).toBe('');
-        expect(json.tests[0]!.steps![0]!['Expected Result']).toBe('');
+        expect(nonNull(nonNull(nonNull(json.tests[0]).steps)[0]).Action).toBe('');
+        expect(nonNull(nonNull(nonNull(json.tests[0]).steps)[0]).Data).toBe('');
+        expect(nonNull(nonNull(nonNull(json.tests[0]).steps)[0])['Expected Result']).toBe('');
     });
 });

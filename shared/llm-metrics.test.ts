@@ -1,6 +1,7 @@
 import fs from 'fs';
 import os from 'os';
 import path from 'path';
+import { nonNull } from './test-utils';
 
 let TMP_DIR: string;
 
@@ -53,7 +54,7 @@ describe('LlmMetrics', () => {
         const history = getHistory2();
 
         expect(history).toHaveLength(1);
-        expect(history[0]!.totalRequests).toBe(1);
+        expect(nonNull(history[0]).totalRequests).toBe(1);
     });
 
     it('23.12: recordArtifactReview approved/rejected', () => {
@@ -132,8 +133,8 @@ describe('LlmMetrics', () => {
 
         const history = getLlmMetricsHistory();
         expect(history).toHaveLength(1);
-        expect(history[0]!.totalRequests).toBe(1);
-        expect(history[0]!.avgLatencyMs).toBe(500);
+        expect(nonNull(history[0]).totalRequests).toBe(1);
+        expect(nonNull(history[0]).avgLatencyMs).toBe(500);
     });
 
     it('records artifact review counters', () => {

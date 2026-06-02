@@ -1,4 +1,5 @@
 import { getOpenIssues } from './github-issues';
+import { nonNull } from '../shared/test-utils';
 import { createMockAxiosInstance } from '../shared/test-utils/factories/response-factory';
 import type { AxiosInstance } from 'axios';
 
@@ -54,10 +55,10 @@ describe('getOpenIssues', () => {
         ]);
         const result = await getOpenIssues(client, 'myorg', 'myrepo');
         expect(result).toHaveLength(2);
-        expect(result[0]!.number).toBe(1);
-        expect(result[0]!.title).toBe('Bug fix');
-        expect(result[1]!.number).toBe(3);
-        expect(result[1]!.labels).toEqual(['enhancement']);
+        expect(nonNull(result[0]).number).toBe(1);
+        expect(nonNull(result[0]).title).toBe('Bug fix');
+        expect(nonNull(result[1]).number).toBe(3);
+        expect(nonNull(result[1]).labels).toEqual(['enhancement']);
         expect(mockApiGet).toHaveBeenCalledWith(client, '/repos/myorg/myrepo/issues', {
             operation: 'buscar issues',
             params: { state: 'open', per_page: 30 },
@@ -87,10 +88,10 @@ describe('getOpenIssues', () => {
         mockApiGet.mockResolvedValue([{ number: 1, title: 'Minimal', state: 'open', labels: null, html_url: null }]);
         const result = await getOpenIssues(client, 'myorg', 'myrepo');
         expect(result).toHaveLength(1);
-        expect(result[0]!.number).toBe(1);
-        expect(result[0]!.title).toBe('Minimal');
-        expect(result[0]!.labels).toEqual([]);
-        expect(result[0]!.html_url).toBe('');
+        expect(nonNull(result[0]).number).toBe(1);
+        expect(nonNull(result[0]).title).toBe('Minimal');
+        expect(nonNull(result[0]).labels).toEqual([]);
+        expect(nonNull(result[0]).html_url).toBe('');
     });
 
     it('maps label names correctly filtering out non-object labels', async () => {
@@ -106,6 +107,6 @@ describe('getOpenIssues', () => {
             },
         ]);
         const result = await getOpenIssues(client, 'myorg', 'myrepo');
-        expect(result[0]!.labels).toEqual(['bug', 'critical']);
+        expect(nonNull(result[0]).labels).toEqual(['bug', 'critical']);
     });
 });

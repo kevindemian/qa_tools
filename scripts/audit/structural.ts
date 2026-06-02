@@ -36,7 +36,7 @@ function grep(pattern: string, path: string): string {
 
 function grepFiles(pattern: string, path: string): string[] {
     const out = grep(pattern, path);
-    return out ? [...new Set(out.split('\n').map((l) => l.split(':')[0]!))] : [];
+    return out ? [...new Set(out.split('\n').map((l) => l.split(':')[0] ?? l))] : [];
 }
 
 function count(pattern: string, path: string): number {

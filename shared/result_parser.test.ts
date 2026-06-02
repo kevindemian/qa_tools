@@ -1,7 +1,7 @@
 import path from 'path';
 import fs from 'fs';
 import os from 'os';
-import { nullAs } from './test-utils';
+import { nonNull, nullAs } from './test-utils';
 import {
     parseMochawesome,
     parseCypressResults,
@@ -48,12 +48,12 @@ describe('parseMochawesome', () => {
     it('extracts all tests flat from nested suites', () => {
         const result = parseMochawesome(SAMPLE_MOCHAWESOME);
         expect(result.tests).toHaveLength(4);
-        expect(result.tests[0]!.title).toBe('TC01 - Login valido');
-        expect(result.tests[0]!.fullTitle).toContain('Login Tests > TC01 - Login valido');
-        expect(result.tests[0]!.state).toBe('passed');
-        expect(result.tests[1]!.state).toBe('failed');
-        expect(result.tests[2]!.state).toBe('skipped');
-        expect(result.tests[3]!.state).toBe('passed');
+        expect(nonNull(result.tests[0]).title).toBe('TC01 - Login valido');
+        expect(nonNull(result.tests[0]).fullTitle).toContain('Login Tests > TC01 - Login valido');
+        expect(nonNull(result.tests[0]).state).toBe('passed');
+        expect(nonNull(result.tests[1]).state).toBe('failed');
+        expect(nonNull(result.tests[2]).state).toBe('skipped');
+        expect(nonNull(result.tests[3]).state).toBe('passed');
     });
 
     it('returns correct stats', () => {
@@ -81,7 +81,7 @@ describe('parseMochawesome', () => {
             results: [{ suites: [{ tests: [{ title: 'X', state: 'pending', duration: 0 }] }] }],
         };
         const result = parseMochawesome(input);
-        expect(result.tests[0]!.state).toBe('skipped');
+        expect(nonNull(result.tests[0]).state).toBe('skipped');
     });
 
     it('_flattenTests skips suite without tests and processes nested suites', () => {
@@ -103,7 +103,7 @@ describe('parseMochawesome', () => {
         };
         const result = parseMochawesome(input);
         expect(result.tests).toHaveLength(1);
-        expect(result.tests[0]!.title).toBe('TC01');
+        expect(nonNull(result.tests[0]).title).toBe('TC01');
     });
 
     it('defaults missing state to pending (mapped to skipped)', () => {
@@ -111,7 +111,7 @@ describe('parseMochawesome', () => {
             results: [{ suites: [{ tests: [{ title: 'TC01' }] }] }],
         };
         const result = parseMochawesome(input);
-        expect(result.tests[0]!.state).toBe('skipped');
+        expect(nonNull(result.tests[0]).state).toBe('skipped');
     });
 
     it('defaults missing title to empty string and missing duration to 0', () => {
@@ -119,8 +119,8 @@ describe('parseMochawesome', () => {
             results: [{ suites: [{ tests: [{ state: 'passed' }] }] }],
         };
         const result = parseMochawesome(input);
-        expect(result.tests[0]!.title).toBe('');
-        expect(result.tests[0]!.duration).toBe(0);
+        expect(nonNull(result.tests[0]).title).toBe('');
+        expect(nonNull(result.tests[0]).duration).toBe(0);
     });
 
     it('handles result without suites property', () => {
@@ -213,14 +213,14 @@ describe('parseCtrfResults', () => {
     it('extracts all tests from CTRF format', () => {
         const result = parseCtrfResults(CTRF_SAMPLE);
         expect(result.tests).toHaveLength(3);
-        expect(result.tests[0]!.title).toBe('Login');
-        expect(result.tests[0]!.state).toBe('passed');
-        expect(result.tests[0]!.fullTitle).toBe('Auth > Login');
+        expect(nonNull(result.tests[0]).title).toBe('Login');
+        expect(nonNull(result.tests[0]).state).toBe('passed');
+        expect(nonNull(result.tests[0]).fullTitle).toBe('Auth > Login');
     });
 
     it('captures error message from CTRF format', () => {
         const result = parseCtrfResults(CTRF_SAMPLE);
-        expect(result.tests[1]!.error).toBe('Assertion failed');
+        expect(nonNull(result.tests[1]).error).toBe('Assertion failed');
     });
 
     it('uses CTRF summary stats when available', () => {
@@ -258,7 +258,7 @@ describe('parseCtrfResults', () => {
             },
         };
         const result = parseCtrfResults(input);
-        expect(result.tests[0]!.state).toBe('skipped');
+        expect(nonNull(result.tests[0]).state).toBe('skipped');
     });
 
     it('falls back to computed stats when summary fields are missing', () => {
@@ -292,7 +292,7 @@ describe('parseTestResults (dispatch)', () => {
         };
         const result = parseTestResults(mochaInput);
         expect(result.tests).toHaveLength(1);
-        expect(result.tests[0]!.title).toBe('Mocha Test');
+        expect(nonNull(result.tests[0]).title).toBe('Mocha Test');
     });
 
     it('returns empty for unknown format', () => {
