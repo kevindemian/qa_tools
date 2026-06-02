@@ -3,7 +3,6 @@
  */
 
 import { buildChartSvg, buildMiniTrendChart, buildTrendSection, buildChartSection } from './report-chart';
-import type { ReportStats } from './report-types';
 
 describe('buildChartSvg', () => {
     it('returns SVG string with passed/failed/skipped sections', () => {
