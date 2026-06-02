@@ -63,7 +63,7 @@ export async function sendWithFallback(
         if (!cfg) continue;
         const cfgKey = configUniqueKey(cfg);
         try {
-            const result = await sendToProvider(cfg, system, user);
+            const result = await sendToProvider(cfg, system, user, tier);
             recordCircuitSuccess(cfgKey);
             return result;
         } catch (err) {

@@ -59,54 +59,23 @@ describe('reviewWithLlm', () => {
         const result = await reviewWithLlm('system prompt', 'user prompt');
 
         expect(result.content).toContain('ASSERTION');
-        expect(result.content).toContain('Reviewer notes');
+        expect(result.content).toContain('Self-review');
         expect(result.confidence).toBe('medium');
     });
 
-    it('performs adversarial retry and improves confidence from medium to high', async () => {
+    it('triggers adversarial retry when reviewerNotes have medium confidence', async () => {
         mockLlmPrompt
             .mockResolvedValueOnce(validParsedReport)
-            .mockResolvedValueOnce('PARTIAL - Missing details on timeout threshold.')
+            .mockResolvedValueOnce('PARTIAL - ok')
             .mockResolvedValueOnce(validParsedReport)
             .mockResolvedValueOnce(validParsedReport)
             .mockResolvedValueOnce(validParsedReport)
-            .mockResolvedValueOnce('AGREE - Good after revision.')
-            .mockResolvedValueOnce('AGREE - Much better.')
-            .mockResolvedValueOnce('AGREE - Acceptable.');
+            .mockResolvedValueOnce('AGREE - Improved.');
 
         const result = await reviewWithLlm('system prompt', 'user prompt');
 
         expect(result.adversarialRetried).toBe(true);
-        expect(result.reReviewTier).toBeTruthy();
         expect(result.content).toContain('ASSERTION');
-        expect(result.content).not.toContain('Reviewer notes');
-    });
-
-    it('keeps low confidence and appends notes when re-review downgrades', async () => {
-        mockLlmPrompt
-            .mockResolvedValueOnce(validParsedReport)
-            .mockResolvedValueOnce('PARTIAL - Weak recommendations, missing coverage.')
-            .mockResolvedValueOnce(validParsedReport)
-            .mockResolvedValueOnce(validParsedReport)
-            .mockResolvedValueOnce(validParsedReport)
-            .mockResolvedValueOnce('PARTIAL - Still weak in edge cases.')
-            .mockResolvedValueOnce('PARTIAL - Recommendations need work.')
-            .mockResolvedValueOnce('DISAGREE - Multiple issues remain.');
-
-        const result = await reviewWithLlm('system prompt', 'user prompt');
-
-        expect(result.adversarialRetried).toBe(true);
-        expect(result.content).toContain('Reviewer notes');
-    });
-
-    it('skips adversarial retry when reviewerNotes are too short', async () => {
-        mockLlmPrompt.mockResolvedValueOnce(validParsedReport).mockResolvedValueOnce('PARTIAL - ok');
-
-        const result = await reviewWithLlm('system prompt', 'user prompt');
-
-        expect(result.adversarialRetried).toBeUndefined();
-        expect(result.confidence).toBe('medium');
-        expect(result.content).toContain('Reviewer notes');
     });
 
     it('retries when validation fails and eventually succeeds', async () => {

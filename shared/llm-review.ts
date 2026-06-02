@@ -1,20 +1,24 @@
 /**
- * Adversarial LLM review pipeline: validates, re-reviews, and scores analysis results.
- * Runs an audit loop across multiple LLM tiers to improve confidence and catch hallucinations.
+ * Three-stage hybrid LLM review pipeline: validates, self-critiques,
+ * and selectively escalates to adversarial review.
  *
- * TWO PERSONAS:
- *   Persona 1 — EXECUTOR (report tier, temp=0.3): generates the artifact
- *   Persona 2 — VALIDADOR (reviewer tier, Gemini, temp=0.2):
- *     "Parta do pressuposto de NÃO CONFORMIDADE. Só aprove se TODOS os
- *      requisitos estiverem comprovadamente atendidos."
+ * ARCHITECTURE (3 estágios):
+ *   Stage 1 — EXECUTOR (report tier, temp=0.3): generates the artifact
+ *   Stage 2 — SELF-CRITIQUE (report tier, mesma LLM, 2 personas):
+ *       Persona adversária separada: "Parta do pressuposto de NÃO CONFORMIDADE"
+ *   Stage 3 — ADVERSARIAL (reviewer/fast tiers, LLMs diferentes):
+ *       Acionado apenas quando iMAD heuristics detectam ambiguidade,
+ *       hedging, contradições, ou confidence abaixo do threshold.
  *
  * Three-tier validation: schema (Layer 1) → domain invariants (Layer 2)
- * → semantic evidence (Layer 3), followed by adversarial review.
+ * → semantic evidence (Layer 3), executed before Stage 2.
  */
+import Config from './config';
 import { llmPrompt } from './llm-client';
 import type { LlmTier, ZodSchema } from './types';
 import { rootLogger } from './logger';
 import { sanitizeForLlm, sanitizeTerminal } from './sanitize';
+import { _llmMetrics } from './llm-fallback';
 import { FailureAnalysisSchema } from './failure-analysis.schema';
 import { TestSuiteSchema } from './test-suite.schema';
 import { PipelineClassificationSchema } from './pipeline-schema';
@@ -161,6 +165,165 @@ function getTypeReviewChecks(type: ArtifactType): string {
                 '- Code/infrastructure categories require a recommendation',
             ].join('\n');
     }
+}
+
+/**
+ * Build the self-critique prompt for the SAME model (2-persona).
+ * Stronger adversarial framing to mitigate self-bias —
+ * explicitly separate the critic persona from the generator persona.
+ */
+function buildSelfCritiquePrompt(original: string, type: ArtifactType): string {
+    const typeSpecificChecks = getTypeReviewChecks(type);
+    return [
+        'You are an independent adversarial auditor — a DIFFERENT agent from the report generator.',
+        'The ' + type + ' below was produced by ANOTHER agent. Treat it as untrusted.',
+        'Your role is to find flaws, omissions, and inaccuracies. Do NOT polish or rewrite.',
+        '',
+        'PREMISE OF NON-COMPLIANCE:',
+        'Start from the assumption that EVERY claim is WRONG.',
+        'Only conclude COMPLIANT if you find explicit evidence for each requirement.',
+        'If evidence is missing or insufficient → mark as VIOLATION.',
+        '',
+        'Audit steps (execute mentally before responding):',
+        '1. Identify every factual error, logical gap, or missing detail',
+        '2. Challenge each recommendation — is it specific, actionable, and correct?',
+        '3. Verify all evidence citations — do they reference real content from input?',
+        '4. Check all required fields are present and non-empty',
+        '5. If you find ANY issue, mark as DISAGREE or PARTIAL — do NOT rationalize',
+        '',
+        typeSpecificChecks,
+        '',
+        'After completing your adversarial audit, respond with exactly one verdict:',
+        'AGREE — the output is accurate and complete (no issues found)',
+        'PARTIAL — minor issues remain (list them briefly)',
+        'DISAGREE — major errors or omissions remain (explain why)',
+        '',
+        'Then list each issue you found and how you would fix it.',
+        '',
+        '--- ' + type.toUpperCase() + ' TO AUDIT ---',
+        original,
+    ].join('\n');
+}
+
+/** Artifact risk classification for iMAD selective trigger. */
+const ARTIFACT_RISK: Record<ArtifactType, 'critical' | 'normal' | 'low'> = {
+    'test-suite': 'critical',
+    'bug-report': 'critical',
+    analysis: 'normal',
+    pipeline: 'normal',
+    comparison: 'low',
+};
+
+/** Portuguese hedging patterns — objective heuristic, not LLM. */
+const HEDGING_PATTERNS = [
+    /\bparece\b/i,
+    /\bpossivelmente\b/i,
+    /\btalvez\b/i,
+    /\bpode\s+ser\b/i,
+    /\bnao\s+tenho\s+certeza\b/i,
+    /\bacho\s+que\b/i,
+    /\bprovavelmente\b/i,
+    /\bsupostamente\b/i,
+    /\bnão\s+sei\b/i,
+    /\.\.\.\.\.\./i,
+    /\bhmm\b/i,
+];
+
+/** Count hedging/hesitation markers in text. Returns 0-* score. */
+export function detectHedging(text: string): number {
+    let count = 0;
+    for (const pattern of HEDGING_PATTERNS) {
+        count += (text.match(pattern) || []).length;
+    }
+    return count;
+}
+
+const CONTRADICTION_MARKERS: Array<{ pos: RegExp; neg: RegExp }> = [
+    { pos: /\b(certo|correto|ok|passa|válido)\b/i, neg: /\b(erro|falha|incorreto|falso|inválido)\b/i },
+];
+
+/** Count contradictory pairs (pos+neg) within the same paragraph. */
+export function detectContradictions(text: string): number {
+    const paragraphs = text.split('\n\n');
+    let contradictions = 0;
+    for (const para of paragraphs) {
+        let hasPos = false;
+        let hasNeg = false;
+        for (const m of CONTRADICTION_MARKERS) {
+            if (m.pos.test(para)) hasPos = true;
+            if (m.neg.test(para)) hasNeg = true;
+        }
+        if (hasPos && hasNeg) contradictions++;
+    }
+    return contradictions;
+}
+
+/** Decision returned by the iMAD selective trigger. */
+export interface ReviewDecision {
+    skip: boolean;
+    reason: string;
+    maxDepth: number;
+}
+
+/**
+ * iMAD-style selective trigger for adversarial review.
+ * Uses objective heuristics (not LLM self-judgment) to decide
+ * whether escalation to a 2nd LLM is warranted.
+ */
+export function shouldSkipAdversarialReview(
+    result: ReviewResult,
+    type: ArtifactType,
+    sessionCost: number,
+): ReviewDecision {
+    const strategy = Config.get<string>('llmReviewStrategy');
+    if (strategy === 'always') {
+        return { skip: false, reason: 'strategy_always', maxDepth: 3 };
+    }
+
+    const budget = Config.get<number>('llmReviewBudget');
+
+    // 1. Budget gate
+    if (sessionCost > budget && budget > 0) {
+        rootLogger.debug(
+            'Adversarial review skipped: budget exceeded ($' + sessionCost.toFixed(4) + ' > $' + budget + ')',
+        );
+        return { skip: true, reason: 'budget_exceeded', maxDepth: 0 };
+    }
+
+    // 2. Risk-based gate
+    const risk = ARTIFACT_RISK[type] ?? 'normal';
+    if (risk === 'low' && result.confidence !== 'low') {
+        return { skip: true, reason: 'low_risk_artifact', maxDepth: 0 };
+    }
+
+    // 3. iMAD heuristics: hedging language
+    const hedgingScore = detectHedging(result.content);
+    if (hedgingScore > 3 && result.confidence !== 'high') {
+        return { skip: false, reason: 'hedging_detected', maxDepth: 3 };
+    }
+
+    // 4. Contradiction detection
+    const contradictScore = detectContradictions(result.content);
+    if (contradictScore > 0) {
+        return { skip: false, reason: 'contradiction_detected', maxDepth: 3 };
+    }
+
+    // 5. Confidence gate
+    if (result.confidence === 'high') {
+        if (risk === 'critical') {
+            return { skip: false, reason: 'critical_risk', maxDepth: 1 };
+        }
+        if (!result.reviewerNotes || result.reviewerNotes.length < 20) {
+            return { skip: true, reason: 'high_confidence', maxDepth: 0 };
+        }
+    }
+
+    // 6. Budget-constrained mode
+    if (budget > 0 && sessionCost > budget * 0.7) {
+        return { skip: false, reason: 'budget_constrained', maxDepth: 1 };
+    }
+
+    return { skip: false, reason: 'standard', maxDepth: 3 };
 }
 
 function buildAdversarialRetryPrompt(gaps: string, user: string, type: ArtifactType): string {
@@ -372,10 +535,10 @@ async function performSelfReview(
     startTime: number,
     retries: number,
     type: ArtifactType,
-    tier: LlmTier = 'reviewer',
+    tier: LlmTier = 'report',
 ): Promise<ReviewResult> {
     const reportContent = JSON.stringify(parsed, null, 2);
-    const reviewPrompt = buildReviewPrompt(reportContent, type);
+    const reviewPrompt = buildSelfCritiquePrompt(reportContent, type);
     const reviewResponse = await llmPrompt({
         tier,
         system: reviewPrompt,
@@ -463,9 +626,12 @@ async function _handleAdversarialRetry(
     startTime: number,
     type: ArtifactType,
 ): Promise<ReviewResult | null> {
-    if (result.confidence === 'high' || !result.reviewerNotes || result.reviewerNotes.length < 20) return null;
+    const decision = shouldSkipAdversarialReview(result, type, _llmMetrics.totalCostUSD);
+    if (decision.skip || !result.reviewerNotes) return null;
+    rootLogger.debug('Adversarial review triggered: reason=' + decision.reason + ' maxDepth=' + decision.maxDepth);
     recordAdversarialRetry();
-    const improved = await adversarialRetryParallel(system, result.reviewerNotes, user, startTime, type);
+    const improve = result.reviewerNotes || '';
+    const improved = await adversarialRetryParallel(system, improve, user, startTime, type);
     if (improved === null) return null;
     const reReview = await reReviewParallel(improved.content, startTime, type);
     const bestConf =
@@ -480,7 +646,7 @@ async function _handleAdversarialRetry(
         content: sanitizeTerminal(finalContent),
         reviewed: true,
         confidence: bestConf,
-        reviewerNotes: result.reviewerNotes,
+        ...(result.reviewerNotes !== undefined && { reviewerNotes: result.reviewerNotes }),
         adversarialRetried: true,
         reReviewTier: reReview.tier,
         artifactType: type,
@@ -535,18 +701,40 @@ export async function reviewWithLlm(
 
         const result = await performSelfReview(validated, startTime, retries, type);
         const layerResults = parseLayerErrors(layerErrors);
+        rootLogger.info(
+            'Self-critique: confidence=' +
+                result.confidence +
+                ' type=' +
+                type +
+                ' cost=$' +
+                _llmMetrics.totalCostUSD.toFixed(4),
+        );
 
         const adversarialResult = await _handleAdversarialRetry(system, result, user, startTime, type);
         if (adversarialResult) {
+            rootLogger.info(
+                'Adversarial escalation: confidence=' +
+                    adversarialResult.confidence +
+                    ' retried=' +
+                    adversarialResult.adversarialRetried +
+                    ' cost=$' +
+                    _llmMetrics.totalCostUSD.toFixed(4),
+            );
             recordArtifactReview(adversarialResult.confidence === 'high');
             snapshotQualityMetrics();
             return adversarialResult;
         }
 
         const content = result.reviewerNotes
-            ? result.content + '\n\n[Reviewer notes: ' + result.reviewerNotes + ']'
+            ? result.content + '\n\n[Self-review: ' + result.reviewerNotes + ']'
             : result.content;
 
+        rootLogger.info(
+            'Artifact approved after self-critique: confidence=' +
+                result.confidence +
+                ' cost=$' +
+                _llmMetrics.totalCostUSD.toFixed(4),
+        );
         recordArtifactReview(result.confidence !== 'low');
         snapshotQualityMetrics();
         return { ...result, content: sanitizeTerminal(content), layerResults };

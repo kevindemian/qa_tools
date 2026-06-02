@@ -173,3 +173,40 @@ Objetivo: `JIRA_MODE=server|cloud` com auth strategy diferenciada.
 | Failure analysis validation coverage | 🔶 Parcial | **100%**    |
 | Invariant fire rate tracking         | ❌         | **✅**      |
 | Evidence citation verification       | ❌         | **✅**      |
+
+---
+
+## ✅ Sprint 7 — Revisão Híbrida: Self-Critique (Mesma LLM) + iMAD Trigger + 2-LLM Escalation
+
+### Fase A — Foundation (Cost Tracking + Config)
+
+| ID  | Componente                    | Arquivo                         | Status |
+| --- | ----------------------------- | ------------------------------- | ------ |
+| A1  | `llmReviewBudget` no schema   | `shared/config-schema.ts`       | ✅     |
+| A2  | `llmReviewStrategy` no schema | `shared/config-schema.ts`       | ✅     |
+| A3  | MODEL_PRICING + \_trackCost   | `shared/llm-fallback-config.ts` | ✅     |
+| A4  | totalCostUSD + costPerTier    | `shared/llm-metrics.ts`         | ✅     |
+
+### Fase B — Core Logic
+
+| ID  | Componente                            | Arquivo                | Status |
+| --- | ------------------------------------- | ---------------------- | ------ |
+| B1  | Self-critique tier: reviewer → report | `shared/llm-review.ts` | ✅     |
+| B2  | Prompt diferenciado self-critique     | `shared/llm-review.ts` | ✅     |
+| B3  | iMAD heuristics                       | `shared/llm-review.ts` | ✅     |
+| B4  | shouldSkipAdversarialReview trigger   | `shared/llm-review.ts` | ✅     |
+| B5  | reviewWithLlm adaptado ao trigger     | `shared/llm-review.ts` | ✅     |
+
+### Fase C — Config + Docs
+
+| ID  | Componente            | Arquivo               | Status |
+| --- | --------------------- | --------------------- | ------ |
+| C1  | `.env.example`        | `.env.example`        | ✅     |
+| C2  | `docs/06-env-vars.md` | `docs/06-env-vars.md` | ✅     |
+
+### Fase D — Testes
+
+| ID  | Componente          | Arquivo                     | Status |
+| --- | ------------------- | --------------------------- | ------ |
+| D1  | Testes llm-review   | `shared/llm-review.test.ts` | ✅     |
+| D2  | Cost tracking tests | `shared/llm-cost.test.ts`   | ✅     |

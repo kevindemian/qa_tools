@@ -12,7 +12,7 @@ import { rootLogger } from './logger';
 import { sanitizeForLlm } from './sanitize';
 import { z } from 'zod';
 import { LlmError, LlmProviderError, LlmAuthError } from './errors';
-import type { ResponseFormat } from './types';
+import type { LlmTier, ResponseFormat } from './types';
 import {
     ProviderConfig,
     LLM_TEMP_DEFAULT,
@@ -134,7 +134,12 @@ export function parseRetryAfter(resp: Response, defaultMs: number): number {
     return defaultMs;
 }
 
-export async function sendToProvider(cfg: ProviderConfig, system: string, user: string): Promise<string> {
+export async function sendToProvider(
+    cfg: ProviderConfig,
+    system: string,
+    user: string,
+    tier?: LlmTier,
+): Promise<string> {
     checkCircuitBreaker(configUniqueKey(cfg));
     if (!cfg.apiKey) throw new LlmAuthError('API key missing for tier');
 
@@ -173,6 +178,6 @@ export async function sendToProvider(cfg: ProviderConfig, system: string, user: 
         throw new LlmProviderError('LLM API error: ' + JSON.stringify(errPayload));
     }
 
-    _trackUsage(data, configUniqueKey(cfg));
+    _trackUsage(data, configUniqueKey(cfg), tier ?? 'main');
     return extractContent(data, cfg.format);
 }
