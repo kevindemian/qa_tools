@@ -90,6 +90,7 @@ export enum ExitCode {
 export interface ConfigOverrides {
     jiraBaseUrl?: string;
     jiraPersonalToken?: string;
+    jiraMode?: string;
     xrayBaseUrl?: string;
     xrayMode?: string;
     jiraProject?: string;

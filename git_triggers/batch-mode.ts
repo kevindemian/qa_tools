@@ -242,7 +242,11 @@ export async function tryBatchMode(): Promise<boolean> {
     let linkManager: JiraLinkManager | undefined;
     let jiraBaseUrl: string | undefined;
     if (Config.get('jiraBaseUrl') && Config.get('jiraPersonalToken')) {
-        jiraResource = new JiraClient(Config.get('jiraPersonalToken'), Config.get('jiraBaseUrl') + '/rest/api/2');
+        jiraResource = new JiraClient(
+            Config.get('jiraPersonalToken'),
+            Config.get('jiraBaseUrl') + '/rest/api/2',
+            Config.get('jiraMode'),
+        );
         linkManager = new JiraLinkManager(jiraResource);
         jiraBaseUrl = Config.get('jiraBaseUrl');
     }

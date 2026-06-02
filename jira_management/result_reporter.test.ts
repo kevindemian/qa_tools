@@ -17,7 +17,11 @@ jest.mock('axios', () => {
 });
 
 jest.mock('../shared/logger', () => ({
-    rootLogger: { warn: jest.fn(), child: () => ({ info: jest.fn(), warn: jest.fn() }) },
+    rootLogger: {
+        debug: jest.fn(),
+        warn: jest.fn(),
+        child: () => ({ debug: jest.fn(), info: jest.fn(), warn: jest.fn() }),
+    },
     Logger: jest.fn().mockImplementation(() => ({ error: jest.fn(), warn: jest.fn(), info: jest.fn() })),
 }));
 

@@ -30,6 +30,7 @@ jest.mock('../shared/config', () => {
     const cfg: Record<string, unknown> = {
         jiraBaseUrl: 'https://jira.example.com',
         jiraPersonalToken: 'token',
+        jiraMode: 'server',
         xrayBaseUrl: 'https://xray.example.com',
         cypressProjectPath: '',
         getAllPrefixed: jest.fn(() => ({})),
@@ -132,6 +133,7 @@ describe('_jiraEnv', () => {
             base: 'https://jira.example.com',
             token: 'token',
             xray: 'https://xray.example.com',
+            mode: 'server',
         });
     });
 });

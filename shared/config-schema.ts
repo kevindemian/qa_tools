@@ -8,7 +8,19 @@ export interface ConfigField {
 
 export const CONFIG_SCHEMA: ConfigField[] = [
     { key: 'jiraBaseUrl', envVar: 'JIRA_BASE_URL', type: 'string', description: 'Jira base URL' },
-    { key: 'jiraPersonalToken', envVar: 'JIRA_PERSONAL_TOKEN', type: 'string', description: 'Jira personal token' },
+    {
+        key: 'jiraPersonalToken',
+        envVar: 'JIRA_PERSONAL_TOKEN',
+        type: 'string',
+        description: 'Jira personal token (PAT para server, email:apiToken base64 para cloud)',
+    },
+    {
+        key: 'jiraMode',
+        envVar: 'JIRA_MODE',
+        type: 'string',
+        defaultVal: 'server',
+        description: 'Jira mode (server|cloud)',
+    },
     { key: 'xrayBaseUrl', envVar: 'XRAY_BASE_URL', type: 'string', description: 'Xray base URL' },
     {
         key: 'xrayMode',

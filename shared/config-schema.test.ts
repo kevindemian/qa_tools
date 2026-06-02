@@ -44,6 +44,16 @@ describe('CONFIG_SCHEMA', () => {
         expect(f?.defaultVal).toBe('server');
     });
 
+    it('jiraMode defaults to server', () => {
+        const f = CONFIG_SCHEMA.find((r) => r.key === 'jiraMode');
+        expect(f?.defaultVal).toBe('server');
+    });
+
+    it('jiraMode description mentions server|cloud', () => {
+        const f = CONFIG_SCHEMA.find((r) => r.key === 'jiraMode');
+        expect(f?.description).toMatch(/server.*cloud/i);
+    });
+
     it('llmMaxTokens is a number with default 128000', () => {
         const f = nonNull(CONFIG_SCHEMA.find((r) => r.key === 'llmMaxTokens'));
         expect(f.type).toBe('number');
@@ -66,6 +76,7 @@ describe('CONFIG_SCHEMA', () => {
         const firstGroupKeys = [
             'jiraBaseUrl',
             'jiraPersonalToken',
+            'jiraMode',
             'xrayBaseUrl',
             'xrayMode',
             'xrayClientId',

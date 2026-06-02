@@ -106,6 +106,7 @@ function _displayBadge(totalCount: number, project: string): void {
 const base_url: string = Config.get('jiraBaseUrl');
 const personal_token: string = Config.get('jiraPersonalToken');
 const xray_url: string = Config.get('xrayBaseUrl');
+const jira_mode: string = Config.get('jiraMode');
 const default_project = '';
 
 const sessionLog = rootLogger.child({ session: 'jira' });
@@ -130,8 +131,8 @@ const validateEnv = createValidateEnv([
 ]);
 
 function initializeSession() {
-    const jiraResource = new JiraResource(personal_token, base_url + '/rest/api/2');
-    const jiraResourceXray = new JiraResource(personal_token, xray_url);
+    const jiraResource = new JiraResource(personal_token, base_url + '/rest/api/2', jira_mode);
+    const jiraResourceXray = new JiraResource(personal_token, xray_url, jira_mode);
     const linkManager = new JiraLinkManager(jiraResource);
     const linkManagerXray = new JiraLinkManager(jiraResourceXray);
     const csvResource = new CsvResource();

@@ -28,8 +28,8 @@ import type { VersionData, JiraIssue, SearchResponse, JiraResourceLike } from '.
 class JiraResource extends JiraClient implements JiraResourceLike {
     log: Logger;
 
-    constructor(personalToken: string, baseUrl: string) {
-        super(personalToken, baseUrl);
+    constructor(personalToken: string, baseUrl: string, mode?: string) {
+        super(personalToken, baseUrl, mode);
         this.log = new Logger({ resource: 'JiraAPI' });
     }
 

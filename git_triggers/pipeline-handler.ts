@@ -52,7 +52,7 @@ export async function pollPipeline(
     });
 }
 
-export function _jiraEnv(): { base: string; token: string; xray: string } | null {
+export function _jiraEnv(): { base: string; token: string; xray: string; mode: string } | null {
     return __jiraEnv();
 }
 
@@ -305,7 +305,7 @@ export async function handleTriggerPipeline(m: GitProvider, projectName: string)
         let linkManager: JiraLinkManager | undefined;
         let jiraBaseUrl: string | undefined;
         if (jira) {
-            jiraResource = new JiraClient(jira.token, jira.base + '/rest/api/2');
+            jiraResource = new JiraClient(jira.token, jira.base + '/rest/api/2', jira.mode);
             linkManager = new JiraLinkManager(jiraResource);
             jiraBaseUrl = jira.base;
         }

@@ -62,6 +62,21 @@ describe('Config (accessor)', () => {
             expect(() => Config.get('xrayMode')).toThrow(/Must be "server" or "cloud"/);
         });
 
+        it('throws for invalid jiraMode value', () => {
+            process.env.JIRA_MODE = 'invalid';
+            expect(() => Config.get('jiraMode')).toThrow(/Must be "server" or "cloud"/);
+        });
+
+        it('defaults jiraMode to server when env var is unset', () => {
+            delete process.env.JIRA_MODE;
+            expect(Config.get('jiraMode')).toBe('server');
+        });
+
+        it('returns cloud when JIRA_MODE=cloud is set', () => {
+            process.env.JIRA_MODE = 'cloud';
+            expect(Config.get('jiraMode')).toBe('cloud');
+        });
+
         it('returns logDir from QA_TOOLS_LOGS_DIR when set', () => {
             process.env.QA_TOOLS_LOGS_DIR = '/custom/logs';
             expect(Config.get('logDir')).toBe('/custom/logs');

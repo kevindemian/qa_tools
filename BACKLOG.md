@@ -21,12 +21,72 @@
 
 ---
 
-<!-- Sprint 2, Sprint 3, Sprint 4 → migrados para BACKLOG-historico.md (100% concluídos) -->
+<!-- Sprint 2, Sprint 3, Sprint 4, Sprint 5 → migrados para BACKLOG-historico.md (100% concluídos) -->
 
-## 🚀 Sprint 5 — Qualidade de Artefatos LLM (3 Camadas + Validação por Evidências)
+## 🚀 Sprint 6 — Jira Mode: Coexistência Server + Cloud
 
-Todas as fases abaixo implementam o plano de garantia de qualidade de artefatos LLM.
+Implementação do modo Jira Cloud com coexistência Jira Server.
 Cada fase inclui: implementação + testes (100% coverage) + documentação.
+
+Objetivo: `JIRA_MODE=server|cloud` com auth strategy diferenciada.
+
+- Server: `Bearer <PAT>` (atual, unchanged)
+- Cloud: `Basic <base64(email:apiToken)>`
+
+### Fase 1 — Contrato: Config Schema + Types (P0, ~0.5h)
+
+| ID  | Componente            | Arquivo                        | Status |
+| --- | --------------------- | ------------------------------ | ------ |
+| C1  | `jiraMode` no schema  | `shared/config-schema.ts`      | ✅     |
+| C2  | `jiraMode` em types   | `shared/types/common.ts`       | ✅     |
+| C3  | Validação do mode     | `shared/config-accessor.ts`    | ✅     |
+| C4  | Testes de schema/mode | `shared/config-schema.test.ts` | ✅     |
+
+### Fase 2 — Mecanismo de Autenticação (P0, ~1h)
+
+| ID  | Componente               | Arquivo                    | Status |
+| --- | ------------------------ | -------------------------- | ------ |
+| A1  | Factory de auth header   | `shared/jira-auth.ts`      | ✅     |
+| A2  | Mode param no JiraClient | `shared/jira-client.ts`    | ✅     |
+| A3  | Testes de auth strategy  | `shared/jira-auth.test.ts` | ✅     |
+
+### Fase 3 — Entry Points: Injeção do Mode (P0, ~1h)
+
+| ID  | Componente                 | Arquivo                            | Status |
+| --- | -------------------------- | ---------------------------------- | ------ |
+| E1  | `main.ts` + jiraMode       | `jira_management/main.ts`          | ✅     |
+| E2  | `batch-mode.ts` + jiraMode | `git_triggers/batch-mode.ts`       | ✅     |
+| E3  | `schedule-handler.ts`      | `git_triggers/schedule-handler.ts` | ✅     |
+| E4  | `pipeline-handler.ts`      | `git_triggers/pipeline-handler.ts` | ✅     |
+| E5  | `splash.ts` mode-aware     | `shared/splash.ts`                 | ✅     |
+
+### Fase 4 — Testes de Integração (P1, ~0.5h)
+
+| ID  | Componente            | Arquivo                        | Status |
+| --- | --------------------- | ------------------------------ | ------ |
+| T1  | Smoke test Jira Cloud | `e2e/smoke-jira-cloud.test.ts` | ✅     |
+
+### Fase 5 — Documentação (P2, ~0.5h)
+
+| ID  | Componente            | Arquivo               | Status |
+| --- | --------------------- | --------------------- | ------ |
+| D1  | `.env.example`        | `.env.example`        | ✅     |
+| D2  | `docs/06-env-vars.md` | `docs/06-env-vars.md` | ✅     |
+
+---
+
+## 📊 Métrica alvo (Sprint 6) — ✅ CONCLUÍDA
+
+| Métrica                         | Atual            | Alvo        |
+| ------------------------------- | ---------------- | ----------- |
+| `tsc --noEmit`                  | 0 erros          | **0 erros** |
+| ESLint errors                   | 0                | **0**       |
+| ESLint warnings                 | 0                | **0**       |
+| `enforce-quality` checks        | 11/11            | **11/11**   |
+| `jest` pass                     | 3467 (unitários) | **100%**    |
+| `jest` fail                     | 0                | **0**       |
+| Test coverage auth strategy     | 100%             | **100%**    |
+| Test coverage config validation | 100%             | **100%**    |
 
 ### 🔴 Fase 2 — Schemas Zod para Todos os Artefatos — Layer 1 (P1, ~4h)
 

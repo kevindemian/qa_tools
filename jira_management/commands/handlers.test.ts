@@ -101,6 +101,7 @@ const mockJiraResource = {
     baseUrl: 'https://jira.test.com',
     originUrl: 'https://jira.test.com',
     personalToken: 'mock-token',
+    jiraMode: 'server',
     axiosInstance: createMockAxiosInstance({
         get: jest.fn().mockResolvedValue({ status: 200 }),
         post: jest.fn().mockResolvedValue({}),

@@ -1,29 +1,39 @@
 /** Lightweight Jira HTTP client — shared between jira_management/ and git_triggers/.
  *  Provides core REST operations (GET/POST/PUT), JQL search, and workflow transitions.
- *  JiraResource (jira_management/) extends this class with project-version-sprint operations. */
+ *  JiraResource (jira_management/) extends this class with project-version-sprint operations.
+ *
+ *  Supports two authentication modes:
+ *  - `'server'` (default): `Authorization: Bearer <PAT>`
+ *  - `'cloud'`:            `Authorization: Basic <base64(email:apiToken)>` */
 import { createHttpClient } from './http-client';
 import { extractErrorMessage } from './prompt';
 import { rootLogger } from './logger';
+import { createJiraAuthHeader } from './jira-auth';
 import type { JsonObject, JiraResourceLike, SearchIssuesResponse } from './types';
 
 class JiraClient implements JiraResourceLike {
     baseUrl: string;
     originUrl: string;
     personalToken: string;
+    jiraMode: string;
     axiosInstance: ReturnType<typeof createHttpClient>;
 
     /**
-     * @param personalToken - Bearer token for Jira API authentication.
+     * @param personalToken - Token for Jira API authentication.
+     *                        - server: Personal Access Token.
+     *                        - cloud:  email:apiToken (will be base64-encoded).
      * @param baseUrl       - Jira instance base URL (e.g. `https://your-domain.atlassian.net/rest/api/2`).
+     * @param mode          - `'server'` (default, Bearer PAT) or `'cloud'` (Basic base64).
      */
-    constructor(personalToken: string, baseUrl: string) {
+    constructor(personalToken: string, baseUrl: string, mode?: string) {
         this.baseUrl = baseUrl;
         this.personalToken = personalToken;
+        this.jiraMode = mode ?? 'server';
         const parsed = new URL(baseUrl);
         this.originUrl = parsed.origin;
         this.axiosInstance = createHttpClient({
             baseUrl,
-            authHeader: { Authorization: `Bearer ${personalToken}` },
+            authHeader: createJiraAuthHeader(personalToken, this.jiraMode),
         });
     }
 

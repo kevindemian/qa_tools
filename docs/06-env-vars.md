@@ -9,7 +9,8 @@ Todas as variáveis são carregadas do arquivo `.env` na raiz do projeto.
 | Variável              | Getter Config              | Obrigatória? | Padrão   | Descrição                                                                          |
 | --------------------- | -------------------------- | ------------ | -------- | ---------------------------------------------------------------------------------- |
 | `JIRA_BASE_URL`       | `Config.jiraBaseUrl`       | Sim (Jira)   | —        | URL base do Jira Server                                                            |
-| `JIRA_PERSONAL_TOKEN` | `Config.jiraPersonalToken` | Sim (Jira)   | —        | Token Bearer para autenticação Jira                                                |
+| `JIRA_MODE`           | `Config.jiraMode`          | Não          | `server` | Modo Jira: `server` (Bearer PAT) ou `cloud` (Basic email:apiToken base64)          |
+| `JIRA_PERSONAL_TOKEN` | `Config.jiraPersonalToken` | Sim (Jira)   | —        | Token de autenticação Jira (PAT no modo server, `email:apiToken` no modo cloud)    |
 | `XRAY_BASE_URL`       | `Config.xrayBaseUrl`       | Sim (Xray)   | —        | URL base do servidor Xray                                                          |
 | `XRAY_MODE`           | `Config.xrayMode`          | Não          | `server` | Modo Xray: `server` (REST) ou `cloud` (GraphQL)                                    |
 | `XRAY_CLOUD_URL`      | `Config.xrayCloudUrl`      | Não          | —        | Override do endpoint GraphQL Xray Cloud (padrão: `https://xray.cloud.getxray.app`) |
