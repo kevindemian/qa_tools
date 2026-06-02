@@ -75,17 +75,23 @@ describe('LLM Pipeline E2E', () => {
         expect(metrics.cacheHits).toBe(0);
     });
 
-    it('retry loop: invalid report → retry → success', async () => {
+    it('retry loop: invalid report → retry → success with adversarial retry', async () => {
         mockLlmPrompt
             .mockResolvedValueOnce(invalidParsedReport)
             .mockResolvedValueOnce(validParsedReport)
-            .mockResolvedValueOnce('PARTIAL - Minor issues.');
+            .mockResolvedValueOnce('PARTIAL - Minor issues.')
+            .mockResolvedValueOnce(validParsedReport)
+            .mockResolvedValueOnce(validParsedReport)
+            .mockResolvedValueOnce(validParsedReport)
+            .mockResolvedValueOnce('AGREE - Good.')
+            .mockResolvedValueOnce('AGREE - Confirmed.')
+            .mockResolvedValueOnce('AGREE - Verified.');
 
         const result = await reviewWithLlm('System prompt', 'User request');
 
         expect(result.reviewed).toBe(true);
-        expect(result.confidence).toBe('medium');
-        expect(mockLlmPrompt).toHaveBeenCalledTimes(3);
+        expect(result.confidence).toBe('high');
+        expect(mockLlmPrompt).toHaveBeenCalledTimes(9);
     });
 
     it('all providers fail: throws error', async () => {
