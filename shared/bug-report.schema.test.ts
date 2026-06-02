@@ -62,4 +62,18 @@ describe('AiBugReportSchema', () => {
             expect(result.severity).toBe(severity);
         }
     });
+
+    it('accepts report with evidence field', () => {
+        const withEvidence = {
+            ...validReport,
+            evidence: ['Request times out with 504 Gateway Timeout', 'Firefox 120, staging'],
+        };
+        const result = AiBugReportSchema.parse(withEvidence);
+        expect(result.evidence).toEqual(['Request times out with 504 Gateway Timeout', 'Firefox 120, staging']);
+    });
+
+    it('accepts report without evidence (optional)', () => {
+        const result = AiBugReportSchema.parse(validReport);
+        expect(result.evidence).toBeUndefined();
+    });
 });

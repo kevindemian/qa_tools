@@ -32,6 +32,10 @@ export interface LlmMetricsSnapshot {
     totalPromptTokens: number;
     totalCompletionTokens: number;
     requestsByProvider: Record<string, number>;
+    /** @deprecated Moved to quality-metrics.ts. Kept for backward compat. */
+    invariantFires?: Record<string, number>;
+    /** @deprecated Moved to quality-metrics.ts. Kept for backward compat. */
+    layerPassRates?: { layer1: number; layer2: number; layer3: number };
 }
 
 interface StoredMetrics {
