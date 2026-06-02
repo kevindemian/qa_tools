@@ -5,6 +5,7 @@ import nock from 'nock';
 import JiraResource from '../jira_management/jira_resource';
 import JiraLinkManager from '../jira_management/jira_link_manager';
 import { parseTestResults } from '../shared/result_parser';
+import { nonNull } from '../shared/test-utils';
 import { matchResultsToTests, createTestExecutionFromResults } from '../jira_management/result_reporter';
 
 const tmpHome = fs.mkdtempSync(path.join(os.tmpdir(), 'qa-e2e-'));
@@ -125,7 +126,7 @@ describe('E2E: Result Processing Pipeline', () => {
 
         expect(matched).toHaveLength(3);
         expect(unmatched).toHaveLength(1);
-        expect(unmatched[0]!.title).toBe('TC99 - Unknown test');
+        expect(nonNull(unmatched[0]).title).toBe('TC99 - Unknown test');
     });
 
     it('flows end-to-end: CTRF → match → TE creation', async () => {

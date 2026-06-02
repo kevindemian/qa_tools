@@ -1,4 +1,4 @@
-import { createMockRootLogger } from './test-utils';
+import { createMockRootLogger, nonNull } from './test-utils';
 
 const mockRootLogger = createMockRootLogger();
 
@@ -158,7 +158,7 @@ describe('CLI Base', () => {
             });
             const onExit = jest.fn();
             cliBase.setupSigint(null, onExit);
-            const questionFn = mockRl.question.mock.calls[0]![1] as (answer: string) => void;
+            const questionFn = nonNull(mockRl.question.mock.calls[0])[1] as (answer: string) => void;
             questionFn('s');
             expect(onExit).toHaveBeenCalled();
             expect(MOCK_PROMPT.info).toHaveBeenCalledWith('Até logo!');
@@ -175,7 +175,7 @@ describe('CLI Base', () => {
             });
             const onExit = jest.fn();
             cliBase.setupSigint(null, onExit);
-            const questionFn = mockRl.question.mock.calls[0]![1] as (answer: string) => void;
+            const questionFn = nonNull(mockRl.question.mock.calls[0])[1] as (answer: string) => void;
             questionFn('n');
             expect(onExit).not.toHaveBeenCalled();
             expect(MOCK_PROMPT.info).toHaveBeenCalledWith('Continuando...');
@@ -186,16 +186,16 @@ describe('CLI Base', () => {
             const exitSpy = jest
                 .spyOn(process, 'exit')
                 .mockImplementation(jest.fn<never, [string | number | null | undefined]>());
-            let capturedHandler: () => void;
+            let capturedHandler: () => void = () => {};
             jest.spyOn(process, 'on').mockImplementation((evt, handler) => {
                 if (evt === 'SIGINT') capturedHandler = handler as () => void;
                 return process;
             });
             const onExit = jest.fn();
             cliBase.setupSigint(null, onExit);
-            capturedHandler!();
+            capturedHandler();
             expect(mockRl.question).toHaveBeenCalled();
-            capturedHandler!();
+            capturedHandler();
             expect(onExit).toHaveBeenCalled();
             expect(MOCK_PROMPT.info).toHaveBeenCalledWith('Até logo!');
             jest.advanceTimersByTime(2000);
@@ -205,14 +205,14 @@ describe('CLI Base', () => {
         });
 
         it('does not exit if isBusy returns true', () => {
-            let capturedHandler: () => void;
+            let capturedHandler: () => void = () => {};
             jest.spyOn(process, 'on').mockImplementation((evt, handler) => {
                 if (evt === 'SIGINT') capturedHandler = handler as () => void;
                 return process;
             });
             const onExit = jest.fn();
             cliBase.setupSigint(() => true, onExit);
-            capturedHandler!();
+            capturedHandler();
             expect(MOCK_PROMPT.info).toHaveBeenCalledWith(expect.stringContaining('Operação em andamento'));
             expect(onExit).not.toHaveBeenCalled();
         });
@@ -222,14 +222,14 @@ describe('CLI Base', () => {
             const exitSpy = jest
                 .spyOn(process, 'exit')
                 .mockImplementation(jest.fn<never, [string | number | null | undefined]>());
-            let capturedHandler: () => void;
+            let capturedHandler: () => void = () => {};
             jest.spyOn(process, 'on').mockImplementation((evt, handler) => {
                 if (evt === 'SIGINT') capturedHandler = handler as () => void;
                 return process;
             });
             cliBase.setupSigint(null, null);
-            capturedHandler!();
-            const questionFn = mockRl.question.mock.calls[0]![1] as (answer: string) => void;
+            capturedHandler();
+            const questionFn = nonNull(mockRl.question.mock.calls[0])[1] as (answer: string) => void;
             questionFn('s');
             expect(MOCK_PROMPT.info).toHaveBeenCalledWith('Até logo!');
             jest.advanceTimersByTime(2000);
@@ -256,7 +256,7 @@ describe('CLI Base', () => {
 
         it('returns false when confirm returns false', async () => {
             delete process.env.CI;
-            MOCK_PROMPT.confirm!.mockReturnValueOnce(false);
+            nonNull(MOCK_PROMPT.confirm).mockReturnValueOnce(false);
             const result = cliBase.offerEnvSetup({ ok: false, missing: ['TOKEN_A'] });
             expect(result).toBe(false);
             expect(MOCK_PROMPT.confirm).toHaveBeenCalledWith(expect.stringContaining('configurar'));
@@ -264,14 +264,14 @@ describe('CLI Base', () => {
 
         it('returns true when user accepts', async () => {
             delete process.env.CI;
-            MOCK_PROMPT.confirm!.mockReturnValueOnce(true);
+            nonNull(MOCK_PROMPT.confirm).mockReturnValueOnce(true);
             const result = cliBase.offerEnvSetup({ ok: false, missing: ['TOKEN_A'] });
             expect(result).toBe(true);
         });
 
         it('returns false when confirm throws (CancelError)', async () => {
             delete process.env.CI;
-            MOCK_PROMPT.confirm!.mockImplementationOnce(() => {
+            nonNull(MOCK_PROMPT.confirm).mockImplementationOnce(() => {
                 throw new Error('cancel');
             });
             const result = cliBase.offerEnvSetup({ ok: false, missing: ['TOKEN_A'] });

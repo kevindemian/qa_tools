@@ -1,3 +1,4 @@
+import { nonNull } from '../shared/test-utils';
 import { createMockGitProvider } from '../shared/test-utils/factories';
 import { generatePrDescription } from './ai-pr-desc';
 import type { GitProvider } from '../shared/types';
@@ -31,7 +32,7 @@ describe('generatePrDescription', () => {
                 callerId: 'pr-description',
             }),
         );
-        expect(jest.mocked(llmPrompt).mock.calls[0]![0].user).toEqual(expect.stringContaining('diff --git'));
+        expect(nonNull(jest.mocked(llmPrompt).mock.calls[0])[0].user).toEqual(expect.stringContaining('diff --git'));
         expect(result).toBe('Resumo: adicionado novo teste.');
     });
 

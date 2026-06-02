@@ -1,3 +1,4 @@
+import { nonNull } from './test-utils';
 import { jest } from '@jest/globals';
 
 const mockReaddirSync = jest.fn();
@@ -87,7 +88,7 @@ describe('showDocs', () => {
         await showDocs();
 
         expect(mockPrintError).toHaveBeenCalledWith('Documentação', expect.any(Error));
-        expect(mockPrintError.mock.calls[0]![1].message).toContain('Diretório docs/ não encontrado');
+        expect(nonNull(mockPrintError.mock.calls[0])[1].message).toContain('Diretório docs/ não encontrado');
         expect(mockOpenWithFallback).not.toHaveBeenCalled();
     });
 
@@ -129,7 +130,7 @@ describe('showDocs', () => {
         await showDocs();
 
         expect(mockPrintError).toHaveBeenCalledWith('Documentação', expect.any(Error));
-        expect(mockPrintError.mock.calls[0]![1].message).toContain('Não foi possível determinar');
+        expect(nonNull(mockPrintError.mock.calls[0])[1].message).toContain('Não foi possível determinar');
         expect(mockOpenWithFallback).not.toHaveBeenCalled();
     });
 });

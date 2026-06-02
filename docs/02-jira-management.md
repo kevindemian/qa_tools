@@ -388,7 +388,7 @@ Define o diretório padrão para arquivos JSON usados na opção 15. Permite usa
 | `XRAY_MODE`            | Modo Xray: `server` (API REST) ou `cloud` (API GraphQL) | Não         |
 | `XRAY_CLIENT_ID`       | Client ID Xray Cloud (modo `cloud`)                     | Não         |
 | `XRAY_CLIENT_SECRET`   | Client Secret Xray Cloud                                | Não         |
-| `XRAY_CLOUD_ENDPOINT`  | Override do endpoint GraphQL Xray Cloud                 | Não         |
+| `XRAY_CLOUD_URL`       | Override da URL base da API Xray Cloud                  | Não         |
 | `JIRA_PROJECT`         | Projeto Jira padrão (opcional, fallback `ECSPOL`)       | Não         |
 | `CSV_DEFAULT_PATH`     | Caminho padrão do CSV                                   | Não         |
 | `CSV_PATH`             | Sobrescreve caminho CSV                                 | Não         |

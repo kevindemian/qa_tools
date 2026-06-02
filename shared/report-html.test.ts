@@ -1,5 +1,5 @@
 /** Tests for report-html — HTML report generation. */
-import { nullAs } from './test-utils';
+import { nonNull, nullAs } from './test-utils';
 import { generateHtmlReport, generateCoverageHtml, generateReportWithFallback } from './report-html';
 import type { FlatTest } from './result_parser';
 import type { CoverageEpic, TestRunTab } from './report-types';
@@ -102,7 +102,7 @@ describe('generateHtmlReport', () => {
     it('renders multi-run tabs when runs provided', () => {
         const runs: TestRunTab[] = [
             { name: 'Chrome', tests: MOCK_TESTS },
-            { name: 'Firefox', tests: [MOCK_TESTS[0]!] },
+            { name: 'Firefox', tests: [nonNull(MOCK_TESTS[0])] },
         ];
         const html = generateHtmlReport(MOCK_TESTS, { title: 'Multi', runs });
         expect(html).toContain('Chrome');

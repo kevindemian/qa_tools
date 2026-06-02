@@ -24,6 +24,7 @@ import * as httpClientModule from './http-client';
 import { rootLogger } from './logger';
 import { HostSemaphore } from './host-semaphore';
 import axios from 'axios';
+import { nonNull } from './test-utils';
 
 describe('HTTP Client', () => {
     let httpClient: typeof import('./http-client');
@@ -66,7 +67,7 @@ describe('HTTP Client', () => {
                     },
                 }),
             );
-            const axCfg = jest.mocked(axios.create).mock.calls[0]![0];
+            const axCfg = nonNull(jest.mocked(axios.create).mock.calls[0])[0];
             expect(axCfg).toHaveProperty('httpsAgent');
         });
 
@@ -113,11 +114,11 @@ describe('HTTP Client', () => {
                 const cfg2 = cfg as { method: string; __retryAttempts: number };
                 const newErr = makeError('get', 500, cfg2.__retryAttempts);
                 newErr.config = cfg2;
-                return errorHandler!(newErr) as Promise<{ status: number; data?: string }>;
+                return nonNull(errorHandler)(newErr) as Promise<{ status: number; data?: string }>;
             });
             // erro é esperado (retry exhausto); catch vazio é intencional
             try {
-                await errorHandler!(err);
+                await nonNull(errorHandler)(err);
             } catch {
                 /* expected */
             }
@@ -131,11 +132,11 @@ describe('HTTP Client', () => {
                 const cfg2 = cfg as { method: string; __retryAttempts: number };
                 const newErr = makeError('put', 500, cfg2.__retryAttempts);
                 newErr.config = cfg2;
-                return errorHandler!(newErr) as Promise<{ status: number; data?: string }>;
+                return nonNull(errorHandler)(newErr) as Promise<{ status: number; data?: string }>;
             });
             // erro é esperado (retry exhausto); catch vazio é intencional
             try {
-                await errorHandler!(err);
+                await nonNull(errorHandler)(err);
             } catch {
                 /* expected */
             }
@@ -147,7 +148,7 @@ describe('HTTP Client', () => {
             const err = makeError('post', 500, 0);
             // erro é esperado (POST não retry); catch vazio é intencional
             try {
-                await errorHandler!(err);
+                await nonNull(errorHandler)(err);
             } catch {
                 /* expected */
             }
@@ -165,7 +166,7 @@ describe('HTTP Client', () => {
             };
             // erro é esperado (4xx não retry); catch vazio é intencional
             try {
-                await errorHandler!(err);
+                await nonNull(errorHandler)(err);
             } catch {
                 /* expected */
             }
@@ -178,7 +179,7 @@ describe('HTTP Client', () => {
                 config: { method: 'get', url: '/test' },
                 data: 'ok',
             };
-            const result = successHandler!(response);
+            const result = nonNull(successHandler)(response);
             expect(result).toBe(response);
         });
 
@@ -186,7 +187,7 @@ describe('HTTP Client', () => {
             httpClient.createHttpClient({ baseUrl: 'https://api.test.com' });
             const err = new Error('no config');
             try {
-                await errorHandler!(err);
+                await nonNull(errorHandler)(err);
                 fail('should have thrown');
             } catch (e) {
                 expect(e).toBe(err);
@@ -204,10 +205,10 @@ describe('HTTP Client', () => {
                     config: cfg,
                     response: { status: 500 },
                 });
-                return errorHandler!(newErr) as Promise<{ status: number; data?: string }>;
+                return nonNull(errorHandler)(newErr) as Promise<{ status: number; data?: string }>;
             });
             try {
-                await errorHandler!(err);
+                await nonNull(errorHandler)(err);
             } catch (e) {}
             expect(mockInstance).toHaveBeenCalled();
         });
@@ -218,10 +219,10 @@ describe('HTTP Client', () => {
             mockInstance.mockImplementation((cfg: object) => {
                 const newErr = makeError('get', 500, (cfg as RetryError['config']).__retryAttempts);
                 newErr.config = cfg as RetryError['config'];
-                return errorHandler!(newErr) as Promise<{ status: number; data?: string }>;
+                return nonNull(errorHandler)(newErr) as Promise<{ status: number; data?: string }>;
             });
             try {
-                await errorHandler!(err);
+                await nonNull(errorHandler)(err);
             } catch {
                 /* expected */
             }
@@ -236,10 +237,10 @@ describe('HTTP Client', () => {
             mockInstance.mockImplementation((cfg: object) => {
                 const newErr = makeError('get', 500, (cfg as RetryError['config']).__retryAttempts);
                 newErr.config = cfg as RetryError['config'];
-                return errorHandler!(newErr) as Promise<{ status: number; data?: string }>;
+                return nonNull(errorHandler)(newErr) as Promise<{ status: number; data?: string }>;
             });
             try {
-                await errorHandler!(err);
+                await nonNull(errorHandler)(err);
             } catch {
                 /* expected */
             }
@@ -265,11 +266,11 @@ describe('HTTP Client', () => {
                 callCount++;
                 if (callCount < 2) {
                     const updatedErr = { ...err, config: cfg };
-                    return errorHandler!(updatedErr) as Promise<{ status: number; data?: string }>;
+                    return nonNull(errorHandler)(updatedErr) as Promise<{ status: number; data?: string }>;
                 }
                 return Promise.resolve({ status: 200 });
             });
-            const result = await errorHandler!(err);
+            const result = await nonNull(errorHandler)(err);
             expect(result).toEqual({ status: 200 });
             expect(callCount).toBe(2);
         });
@@ -288,11 +289,11 @@ describe('HTTP Client', () => {
                 callCount++;
                 if (callCount < 2) {
                     const updatedErr = { ...err, config: cfg };
-                    return errorHandler!(updatedErr) as Promise<{ status: number; data?: string }>;
+                    return nonNull(errorHandler)(updatedErr) as Promise<{ status: number; data?: string }>;
                 }
                 return Promise.resolve({ status: 200 });
             });
-            const result = await errorHandler!(err);
+            const result = await nonNull(errorHandler)(err);
             expect(result).toEqual({ status: 200 });
             expect(callCount).toBe(2);
         });
@@ -321,7 +322,7 @@ describe('HTTP Client', () => {
                 response: { status: 500 },
                 code: undefined,
             };
-            errorHandler!(err).catch(() => {});
+            nonNull(errorHandler)(err).catch(() => {});
 
             // Advance past RETRY_STALE_MS (600s) + one cleanup interval (300s)
             // to trigger stale entry deletion at t=900000
@@ -332,7 +333,7 @@ describe('HTTP Client', () => {
     describe('createThrottledClient (branch coverage)', () => {
         it('extractHost returns unknown for invalid URL', async () => {
             httpClient.createThrottledClient({ baseUrl: 'https://api.test.com', maxConcurrency: 3 });
-            const reqHandler = mockInstance.interceptors.request.use.mock.calls[0]![0];
+            const reqHandler = nonNull(mockInstance.interceptors.request.use.mock.calls[0])[0];
             const cfg: Record<string, unknown> = { url: ':::invalid', headers: {} };
             const result = await reqHandler(cfg);
             // Handler returns config unchanged; semaphore acquire is verified via the HostSemaphore integration
@@ -341,8 +342,8 @@ describe('HTTP Client', () => {
 
         it('acquire queues second request when concurrency is maxed out', async () => {
             httpClient.createThrottledClient({ baseUrl: 'https://api.test.com', maxConcurrency: 1 });
-            const reqHandler = mockInstance.interceptors.request.use.mock.calls[0]![0];
-            const respHandler = mockInstance.interceptors.response.use.mock.calls[1]![0];
+            const reqHandler = nonNull(mockInstance.interceptors.request.use.mock.calls[0])[0];
+            const respHandler = nonNull(mockInstance.interceptors.response.use.mock.calls[1])[0];
             const cfg1: Record<string, unknown> = { url: 'https://api.test.com/resource', headers: {} };
             const cfg2: Record<string, unknown> = { url: 'https://api.test.com/other', headers: {} };
             await reqHandler(cfg1);
@@ -353,7 +354,7 @@ describe('HTTP Client', () => {
 
         it('response error handler extracts host from empty url', () => {
             httpClient.createThrottledClient({ baseUrl: 'https://api.test.com', maxConcurrency: 3 });
-            const errRespHandler = mockInstance.interceptors.response.use.mock.calls[1]![1];
+            const errRespHandler = nonNull(mockInstance.interceptors.response.use.mock.calls[1])[1];
             const error = { config: {}, message: 'test', name: 'Error' };
             expect(() => errRespHandler(error)).toThrow(error);
         });

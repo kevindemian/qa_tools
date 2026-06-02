@@ -331,7 +331,17 @@ Never justify decisions using:
 
 ---
 
-## 15. FINAL INVARIANT
+## 15. AUDIT TRAIL — Flags tsconfig AVALIADOS E DEFERIDOS
+
+### `noPropertyAccessFromIndexSignature`
+
+- **Data da avaliação:** 2026-06-02
+- **Medição:** 613 erros em 87 arquivos
+- **Cobertura existente:** `noUncheckedIndexedAccess` já ativo
+- **Decisão:** DEFERIDO — regra estilística, zero ganho de correção. Pareto: alto custo, zero benefício.
+- **Comentário:** `tsconfig.json` contém explicação inline
+
+## 16. FINAL INVARIANT
 
 No rule may be reinterpreted, weakened, bypassed or combined to violate another rule.
 

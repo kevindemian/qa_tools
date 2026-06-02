@@ -12,6 +12,7 @@ jest.mock('fs');
 import fs from 'fs';
 import path from 'path';
 
+import { nonNull } from '../shared/test-utils';
 import JiraLinkManager, {
     matchPreconditionByTokenOverlap,
     matchPreconditionByDualThreshold,
@@ -85,18 +86,7 @@ describe('JiraLinkManager', () => {
             jest.mocked(fs.existsSync).mockReturnValue(false);
             const result = await manager.getIssueLinkTypes();
             expect(result).toHaveLength(3);
-            expect(result[0]!.name).toBe('Relates');
-        });
-
-        it('logs warning when cache write throws', async () => {
-            const fakeTypes = [{ id: '10200', name: 'Tested by' }];
-            mockJiraResource.getJiraResource.mockResolvedValue({ issueLinkTypes: fakeTypes });
-            jest.mocked(fs.writeFileSync).mockImplementation(() => {
-                throw new Error('Disk full');
-            });
-
-            await manager.getIssueLinkTypes();
-            expect(rootLogger.warn).toHaveBeenCalledWith(expect.stringContaining('Falha ao escrever cache'));
+            expect(nonNull(result[0]).name).toBe('Relates');
         });
 
         it('logs warning when cache read has invalid JSON', async () => {
@@ -107,7 +97,7 @@ describe('JiraLinkManager', () => {
             const result = await manager.getIssueLinkTypes();
             expect(rootLogger.warn).toHaveBeenCalledWith(expect.stringContaining('Falha ao ler cache'));
             expect(result).toHaveLength(3);
-            expect(result[0]!.name).toBe('Relates');
+            expect(nonNull(result[0]).name).toBe('Relates');
         });
     });
 

@@ -4,6 +4,7 @@ import type { GitProvider, PipelineInfo } from '../shared/types';
 import type JiraClient from '../shared/jira-client';
 import type JiraLinkManager from '../jira_management/jira_link_manager';
 import { createMockGitProvider } from '../shared/test-utils/factories';
+import { nonNull } from '../shared/test-utils';
 import * as prompt from '../shared/prompt';
 import * as state from '../shared/state';
 import * as nivelar from './nivelar';
@@ -676,7 +677,7 @@ describe('handleExportVariables - extended', () => {
 describe('pushHistory - trim', () => {
     it('trims state history to last 50 entries', () => {
         mainModule.pushHistory('op', 'd', 'ok');
-        const callback = jest.mocked(state.update).mock.calls[0]![0];
+        const callback = nonNull(jest.mocked(state.update).mock.calls[0])[0];
         const testState = { history: Array(51).fill({}) };
         callback(testState);
         expect((testState.history as Array<unknown>).length).toBe(50);

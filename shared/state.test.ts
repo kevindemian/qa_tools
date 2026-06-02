@@ -1,4 +1,4 @@
-import { createMockRootLogger } from './test-utils';
+import { createMockRootLogger, nonNull } from './test-utils';
 
 const mockRootLogger = createMockRootLogger();
 
@@ -25,7 +25,7 @@ function mockFs(files: Record<string, string>) {
     const read = jest.spyOn(fs, 'readFileSync').mockImplementation((p: Parameters<typeof fs.readFileSync>[0]) => {
         const ps = p.toString();
         if (!(ps in files)) throw new Error('ENOENT');
-        return files[ps]!;
+        return nonNull(files[ps]);
     });
     const write = jest
         .spyOn(fs, 'writeFileSync')
@@ -39,7 +39,7 @@ function mockFs(files: Record<string, string>) {
         .mockImplementation((from: Parameters<typeof fs.renameSync>[0], to: Parameters<typeof fs.renameSync>[1]) => {
             const f = from.toString();
             if (f in files) {
-                files[to.toString()] = files[f]!;
+                files[to.toString()] = nonNull(files[f]);
                 delete files[f];
             }
         });

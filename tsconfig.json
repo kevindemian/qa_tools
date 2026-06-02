@@ -21,6 +21,7 @@
         "isolatedModules": true,
         "types": ["node", "jest"]
     },
+    "_noPropertyAccessFromIndexSignature": "DEFERIDO (2026-06-02). 613 erros em 87 arquivos, zero ganho. noUncheckedIndexedAccess já cobre safety.",
     "include": [
         "jest-setup.ts",
         "setup/**/*.ts",

@@ -538,7 +538,7 @@ describe('getReleaseTasks', () => {
         const searchSpy = jest.spyOn(jiraResource, 'searchJiraIssues').mockResolvedValueOnce({ issues: [], total: 0 });
 
         await jiraResource.getReleaseTasks('TEST', 'v1.0', true);
-        const jql = searchSpy.mock.calls[0]![0];
+        const jql = nonNull(searchSpy.mock.calls[0])[0];
         expect(jql).toContain('AND type = "Test"');
     });
 
@@ -547,7 +547,7 @@ describe('getReleaseTasks', () => {
         const searchSpy = jest.spyOn(jiraResource, 'searchJiraIssues').mockResolvedValueOnce({ issues: [], total: 0 });
 
         await jiraResource.getReleaseTasks('TEST', 'v1.0', false);
-        const jql = searchSpy.mock.calls[0]![0];
+        const jql = nonNull(searchSpy.mock.calls[0])[0];
         expect(jql).not.toContain('AND type = "Test"');
     });
 

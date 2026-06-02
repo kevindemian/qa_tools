@@ -1,6 +1,7 @@
 import { createThrottledClient } from '../shared/http-client';
 import GitLabManager from './gitlab_manager';
 import { createMockAxiosInstance } from '../shared/test-utils/factories/response-factory';
+import { nonNull } from '../shared/test-utils';
 
 jest.mock('../shared/http-client', () => ({
     createHttpClient: jest.fn(),
@@ -491,14 +492,14 @@ describe('GitLabManager', () => {
             const item = { ...ISSUE_FIXTURE, labels: ['bug', 'priority:high'] };
             mockClient.get.mockResolvedValue({ data: [item] });
             const result = await manager.getOpenIssues();
-            expect(result[0]!.labels).toEqual(['bug', 'priority:high']);
+            expect(nonNull(result[0]).labels).toEqual(['bug', 'priority:high']);
         });
 
         it('handles missing optional fields gracefully', async () => {
             mockClient.get.mockResolvedValue({ data: [{ iid: 1 }] });
             const result = await manager.getOpenIssues();
-            expect(result[0]!.title).toBe('');
-            expect(result[0]!.number).toBe(1);
+            expect(nonNull(result[0]).title).toBe('');
+            expect(nonNull(result[0]).number).toBe(1);
         });
     });
 

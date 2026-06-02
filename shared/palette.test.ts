@@ -1,3 +1,4 @@
+import { nonNull } from './test-utils';
 import * as paletteModule from './palette';
 import chalk from 'chalk';
 
@@ -29,7 +30,7 @@ describe('palette', () => {
             const origLevel = chalk.level;
             chalk.level = 2;
             const { palette: p } = require('./palette') as { palette: Record<string, (...args: unknown[]) => string> };
-            expect(p.fg!('text')).toContain('text');
+            expect(nonNull(p.fg)('text')).toContain('text');
             chalk.level = origLevel;
         });
     });

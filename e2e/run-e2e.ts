@@ -25,9 +25,13 @@ const { createTestsFromCsv, createTestExecutionWithLinks } = createTestsModule;
 dotenv.config({ path: path.resolve(__dirname, '../.env') });
 
 // ── Config ─────────────────────────────────────────────────────
-const BASE_URL = process.env.JIRA_BASE_URL!;
-const XRAY_URL = process.env.XRAY_BASE_URL!;
-const TOKEN = process.env.JIRA_PERSONAL_TOKEN!;
+const BASE_URL = process.env.JIRA_BASE_URL ?? '';
+const XRAY_URL = process.env.XRAY_BASE_URL ?? '';
+const TOKEN = process.env.JIRA_PERSONAL_TOKEN ?? '';
+if (!BASE_URL || !XRAY_URL || !TOKEN) {
+    console.error('Missing required env vars: JIRA_BASE_URL, XRAY_BASE_URL, JIRA_PERSONAL_TOKEN');
+    process.exit(1);
+}
 const PROJECT = 'ECSPOL';
 const EXISTING_TEST = 'ECSPOL-1255';
 const EXISTING_PRECOND = 'ECSPOL-1202';
@@ -259,7 +263,7 @@ async function fase3CriarTest() {
         });
 
         if (result && result.status === 'ok' && result.inMemoryTasksId.length > 0) {
-            createdIssueKey = result.inMemoryTasksId[0]!;
+            createdIssueKey = result.inMemoryTasksId[0] ?? null;
             ok(`Test criado: ${createdIssueKey} — "${result.inMemoryTasksText[0]}"`);
             console.log(`  ${BASE_URL}/browse/${createdIssueKey}`);
             return true;

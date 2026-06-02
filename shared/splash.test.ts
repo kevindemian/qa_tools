@@ -1,3 +1,4 @@
+import { nonNull } from './test-utils';
 import http from 'http';
 import {
     buildSplashLines,
@@ -181,14 +182,14 @@ describe('showSplash', () => {
     it('includes statePath when provided', async () => {
         await expect(showSplash('/tmp/state.json')).resolves.not.toThrow();
         expect(outputMod.defaultOutput.box).toHaveBeenCalled();
-        const outputLines = outputMod.defaultOutput.box.mock.calls[0]![0];
+        const outputLines = nonNull(outputMod.defaultOutput.box.mock.calls[0])[0];
         expect(outputLines.join('\n')).toContain('/tmp/state.json');
     });
 
     it('shows token status check without jiraBaseUrl', async () => {
         await expect(showSplash('/tmp/state.json')).resolves.not.toThrow();
         expect(outputMod.defaultOutput.box).toHaveBeenCalled();
-        const outputLines = outputMod.defaultOutput.box.mock.calls[0]![0];
+        const outputLines = nonNull(outputMod.defaultOutput.box.mock.calls[0])[0];
         expect(outputLines.join('\n')).toContain('Token');
     });
 
@@ -248,7 +249,7 @@ describe('showSplash', () => {
     it('calls checkJiraStatus with fallback empty token', async () => {
         await expect(showSplash(undefined, 'https://jira.example.com')).resolves.not.toThrow();
         expect(outputMod.defaultOutput.box).toHaveBeenCalled();
-        const outputLines = outputMod.defaultOutput.box.mock.calls[0]![0];
+        const outputLines = nonNull(outputMod.defaultOutput.box.mock.calls[0])[0];
         expect(outputLines.join('\n')).toContain('Token');
     });
 
@@ -258,7 +259,7 @@ describe('showSplash', () => {
         __setGradientDep({ default: mockGradient });
         await expect(showSplash(undefined, 'https://jira.example.com', 'token123')).resolves.not.toThrow();
         expect(outputMod.defaultOutput.box).toHaveBeenCalled();
-        const outputLines = outputMod.defaultOutput.box.mock.calls[0]![0];
+        const outputLines = nonNull(outputMod.defaultOutput.box.mock.calls[0])[0];
         expect(outputLines.join('\n')).toContain('Jira API');
         expect(outputLines.join('\n')).toContain('Token');
     });

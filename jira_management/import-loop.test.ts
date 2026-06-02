@@ -16,6 +16,7 @@ import type { Logger } from '../shared/logger';
 import type { JiraResourceLike } from '../shared/types';
 import type { XrayStepImporter } from './xray-client';
 import JiraLinkManager from './jira_link_manager';
+import { nonNull } from '../shared/test-utils';
 import { createMockJiraResource } from '../shared/test-utils/factories/jira-resource-factory';
 import { update as updateState } from '../shared/state';
 import {
@@ -104,7 +105,7 @@ describe('linkTestRelations', () => {
             results: resultSink,
         });
         expect(result).toEqual({ abort: true, errored: true });
-        expect(resultSink[0]!.message).toContain('pre-condition');
+        expect(nonNull(resultSink[0]).message).toContain('pre-condition');
     });
 
     it('linkIssues abort -> abort/errored', async () => {
@@ -289,6 +290,6 @@ describe('executeTestCreationLoop', () => {
 
         expect(inMemoryTasksId).toEqual(['T-NEW']);
         expect(resultSink).toHaveLength(1);
-        expect(resultSink[0]!.status).toBe('ok');
+        expect(nonNull(resultSink[0]).status).toBe('ok');
     });
 });

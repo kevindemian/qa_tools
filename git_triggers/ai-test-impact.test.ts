@@ -1,3 +1,4 @@
+import { nonNull } from '../shared/test-utils';
 import { createMockGitProvider } from '../shared/test-utils/factories';
 import fs from 'fs';
 import { assessTestImpact } from './ai-test-impact';
@@ -43,7 +44,7 @@ describe('assessTestImpact', () => {
                 callerId: 'test-impact',
             }),
         );
-        expect(jest.mocked(llmPrompt).mock.calls[0]![0].user).toEqual(expect.stringContaining('Test login'));
+        expect(nonNull(jest.mocked(llmPrompt).mock.calls[0])[0].user).toEqual(expect.stringContaining('Test login'));
         expect(result).toBe('**Risco:** BAIXO. Nenhum teste existente afetado.');
     });
 

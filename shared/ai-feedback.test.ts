@@ -95,7 +95,7 @@ describe('recordAiModification', () => {
 
         expect(updated).not.toBeNull();
         expect(nonNull(updated).feedback).toHaveLength(1);
-        expect(nonNull(nonNull(updated).feedback![0]).action).toBe('kept');
+        expect(nonNull(nonNull(nonNull(updated).feedback)[0]).action).toBe('kept');
     });
 
     it('returns null for unknown record', () => {

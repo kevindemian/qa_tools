@@ -1,3 +1,4 @@
+import { nonNull } from './test-utils';
 import { categorizeFailure, extractSuite, toKnownIssues } from './report-types';
 import { DEFAULT_TITLE, PASS_RATE_GOOD_THRESHOLD, PASS_RATE_WARN_THRESHOLD, CATEGORY_COLORS } from './report-types';
 import type { KnownIssue } from './report-types';
@@ -105,11 +106,11 @@ describe('toKnownIssues', () => {
         ];
         const result = toKnownIssues(input);
         expect(result).toHaveLength(2);
-        expect(result[0]!.pattern).toBe('timeout');
-        expect(result[0]!.reason).toBe('Infra flaky');
-        expect(result[0]!.ticket).toBe('BUG-1');
-        expect(result[1]!.pattern).toBe('login');
-        expect(result[1]!.ticket).toBeUndefined();
+        expect(nonNull(result[0]).pattern).toBe('timeout');
+        expect(nonNull(result[0]).reason).toBe('Infra flaky');
+        expect(nonNull(result[0]).ticket).toBe('BUG-1');
+        expect(nonNull(result[1]).pattern).toBe('login');
+        expect(nonNull(result[1]).ticket).toBeUndefined();
     });
 
     it('skips invalid items', () => {
@@ -121,7 +122,7 @@ describe('toKnownIssues', () => {
         ];
         const result = toKnownIssues(input);
         expect(result).toHaveLength(1);
-        expect(result[0]!.pattern).toBe('valid');
+        expect(nonNull(result[0]).pattern).toBe('valid');
     });
 
     it('KnownIssue interface is usable as a type', () => {

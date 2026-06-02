@@ -9,6 +9,7 @@ import JiraLinkManager from '../jira_management/jira_link_manager';
 import CsvResource from '../jira_management/csv_resource';
 import createTests from '../jira_management/create_tests';
 import { rootLogger } from '../shared/logger';
+import { nonNull } from '../shared/test-utils';
 import { setupHandlers, resetHandlers } from './handlers';
 
 const { createTestsFromCsv } = createTests;
@@ -67,7 +68,7 @@ describe('E2E: CSV Import', () => {
             onBusy,
         };
 
-        const result = (await createTestsFromCsv(state))!;
+        const result = nonNull(await createTestsFromCsv(state));
         expect(result.inMemoryTasksId).toEqual(['TEST-1', 'TEST-2']);
         expect(result.inMemoryTasksText).toEqual(['TC01 - Login valido', 'TC02 - Login invalido']);
         expect(result.status).toBe('ok');

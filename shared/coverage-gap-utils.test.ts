@@ -9,6 +9,7 @@ import {
     loadEpicSummaries,
 } from './coverage-gap-utils';
 import type { CoverageGapItem, EpicCoverage } from './types';
+import { nonNull } from './test-utils';
 
 describe('getCoverageWeight', () => {
     it('returns correct weight for known priorities', () => {
@@ -108,12 +109,12 @@ describe('buildCoverageItems', () => {
         const epicsMap = new Map<string, string>();
         const items = buildCoverageItems(issues, testLinkMap, epicsMap);
         expect(items).toHaveLength(2);
-        expect(items[0]!.hasTest).toBe(false);
-        expect(items[0]!.type).toBe('Story');
-        expect(items[0]!.priority).toBe('High');
-        expect(items[1]!.hasTest).toBe(true);
-        expect(items[1]!.type).toBe('Bug');
-        expect(items[1]!.coverageWeight).toBe(5);
+        expect(nonNull(items[0]).hasTest).toBe(false);
+        expect(nonNull(items[0]).type).toBe('Story');
+        expect(nonNull(items[0]).priority).toBe('High');
+        expect(nonNull(items[1]).hasTest).toBe(true);
+        expect(nonNull(items[1]).type).toBe('Bug');
+        expect(nonNull(items[1]).coverageWeight).toBe(5);
     });
 });
 

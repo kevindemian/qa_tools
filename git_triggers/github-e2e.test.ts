@@ -8,6 +8,7 @@ import dotenv from 'dotenv';
 import path from 'path';
 import fs from 'fs';
 import GitHubManager from './github_manager';
+import { nonNull } from '../shared/test-utils';
 import { writeReport } from '../shared/temp-dir';
 import { aggregatePipelineHealth, renderPipelineHealthHtml, extractErrorMessages } from './pipeline-health';
 import type { PipelineRun, PipelineJob, Issue } from '../shared/types';
@@ -30,7 +31,7 @@ describeGh('GitHub e2e — real API', () => {
     let issues: Issue[];
 
     beforeAll(async () => {
-        manager = new GitHubManager(REPO, GITHUB_TOKEN!);
+        manager = new GitHubManager(REPO, nonNull(GITHUB_TOKEN));
 
         /* Fetch data upfront */
         runs = await manager.getRecentPipelines(RUNS_TO_FETCH);

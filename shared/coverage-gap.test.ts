@@ -1,5 +1,6 @@
 import { analyzeCoverageGaps } from './coverage-gap';
 import { loadMetrics } from './metrics';
+import { nonNull } from './test-utils';
 
 jest.mock('./logger', () => ({
     rootLogger: { error: jest.fn(), warn: jest.fn(), info: jest.fn(), child: jest.fn().mockReturnThis() },
@@ -70,8 +71,8 @@ describe('analyzeCoverageGaps', () => {
             .mockResolvedValueOnce({ issues: [], total: 0 });
         const result = await analyzeCoverageGaps(mockJiraResource, 'PROJ');
         expect(result.totals.covered).toBe(1);
-        expect(result.items[0]!.hasTest).toBe(true);
-        expect(result.items[0]!.linkedTestKeys).toContain('TEST-1');
+        expect(nonNull(result.items[0]).hasTest).toBe(true);
+        expect(nonNull(result.items[0]).linkedTestKeys).toContain('TEST-1');
     });
 
     it('calculates weighted coverage by priority', async () => {
@@ -97,9 +98,9 @@ describe('analyzeCoverageGaps', () => {
             })
             .mockResolvedValueOnce({ issues: [], total: 0 });
         const result = await analyzeCoverageGaps(mockJiraResource, 'PROJ');
-        expect(result.items[0]!.coverageWeight).toBe(5);
-        expect(result.items[1]!.coverageWeight).toBe(0.5);
-        expect(result.items[2]!.coverageWeight).toBe(3);
+        expect(nonNull(result.items[0]).coverageWeight).toBe(5);
+        expect(nonNull(result.items[1]).coverageWeight).toBe(0.5);
+        expect(nonNull(result.items[2]).coverageWeight).toBe(3);
         expect(result.totals.weightedCoveragePct).toBeGreaterThan(0);
     });
 
@@ -131,9 +132,9 @@ describe('analyzeCoverageGaps', () => {
             })
             .mockResolvedValueOnce({ issues: [], total: 0 });
         const result = await analyzeCoverageGaps(mockJiraResource, 'PROJ');
-        expect(result.byEpic['EPIC-1']!.total).toBe(2);
-        expect(result.byEpic['EPIC-1']!.covered).toBe(1);
-        expect(result.byEpic['EPIC-1']!.rawPct).toBe(50);
+        expect(nonNull(result.byEpic['EPIC-1']).total).toBe(2);
+        expect(nonNull(result.byEpic['EPIC-1']).covered).toBe(1);
+        expect(nonNull(result.byEpic['EPIC-1']).rawPct).toBe(50);
     });
 
     it('quality gate passes when all epics meet threshold', async () => {
@@ -154,7 +155,7 @@ describe('analyzeCoverageGaps', () => {
             .mockResolvedValueOnce({ issues: [], total: 0 });
         const result = await analyzeCoverageGaps(mockJiraResource, 'PROJ', { minCoveragePct: 50 });
         expect(result.gateConfig.failingEpics).toEqual([]);
-        expect(result.byEpic['EPIC-1']!.gatePass).toBe(true);
+        expect(nonNull(result.byEpic['EPIC-1']).gatePass).toBe(true);
     });
 
     it('quality gate fails when epics below threshold', async () => {
@@ -170,7 +171,7 @@ describe('analyzeCoverageGaps', () => {
             .mockResolvedValueOnce({ issues: [], total: 0 });
         const result = await analyzeCoverageGaps(mockJiraResource, 'PROJ', { minCoveragePct: 50 });
         expect(result.gateConfig.failingEpics).toContain('EPIC-1');
-        expect(result.byEpic['EPIC-1']!.gatePass).toBe(false);
+        expect(nonNull(result.byEpic['EPIC-1']).gatePass).toBe(false);
     });
 
     it('builds hierarchy tree with epics and children', async () => {
@@ -193,10 +194,10 @@ describe('analyzeCoverageGaps', () => {
             .mockResolvedValueOnce({ issues: [], total: 0 });
         const result = await analyzeCoverageGaps(mockJiraResource, 'PROJ');
         expect(result.hierarchy.length).toBe(1);
-        expect(result.hierarchy[0]!.key).toBe('EPIC-1');
-        expect(result.hierarchy[0]!.children.length).toBe(2);
-        expect(result.hierarchy[0]!.totalIssues).toBe(2);
-        expect(result.hierarchy[0]!.coveredIssues).toBe(1);
+        expect(nonNull(result.hierarchy[0]).key).toBe('EPIC-1');
+        expect(nonNull(result.hierarchy[0]).children.length).toBe(2);
+        expect(nonNull(result.hierarchy[0]).totalIssues).toBe(2);
+        expect(nonNull(result.hierarchy[0]).coveredIssues).toBe(1);
     });
 
     it('returns empty result for empty project', async () => {
@@ -258,9 +259,9 @@ describe('analyzeCoverageGaps', () => {
             })
             .mockResolvedValueOnce({ issues: [], total: 0 });
         const result = await analyzeCoverageGaps(mockJiraResource, 'PROJ');
-        expect(result.items[0]!.type).toBe('Bug');
-        expect(result.items[1]!.type).toBe('Epic');
-        expect(result.items[2]!.type).toBe('Task');
+        expect(nonNull(result.items[0]).type).toBe('Bug');
+        expect(nonNull(result.items[1]).type).toBe('Epic');
+        expect(nonNull(result.items[2]).type).toBe('Task');
     });
 
     it('loads trends from metrics store', async () => {
@@ -282,7 +283,7 @@ describe('analyzeCoverageGaps', () => {
             .mockResolvedValueOnce({ issues: [], total: 0 });
         const result = await analyzeCoverageGaps(mockJiraResource, 'PROJ');
         expect(result.trends).toHaveLength(1);
-        expect(result.trends[0]!.coveragePct).toBe(50);
+        expect(nonNull(result.trends[0]).coveragePct).toBe(50);
     });
 
     it('handles fetchLinkedTestsBatch error (lines 84-85)', async () => {
@@ -292,7 +293,7 @@ describe('analyzeCoverageGaps', () => {
             .mockRejectedValueOnce(new Error('Linked tests fetch failed'));
         const result = await analyzeCoverageGaps(mockJiraResource, 'PROJ');
         expect(result.totals.totalIssues).toBe(1);
-        expect(result.items[0]!.linkedTestKeys).toEqual([]);
+        expect(nonNull(result.items[0]).linkedTestKeys).toEqual([]);
     });
 
     it('handles fetchLinkedTestsBatch empty response (line 68)', async () => {
@@ -301,7 +302,7 @@ describe('analyzeCoverageGaps', () => {
             .mockResolvedValueOnce({ issues: [makeIssue('PROJ-1')], total: 1 })
             .mockResolvedValueOnce({ total: 0 });
         const result = await analyzeCoverageGaps(mockJiraResource, 'PROJ');
-        expect(result.items[0]!.linkedTestKeys).toEqual([]);
+        expect(nonNull(result.items[0]).linkedTestKeys).toEqual([]);
     });
 
     it('handles collectAllPages with empty issues batch (line 43)', async () => {

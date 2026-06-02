@@ -133,6 +133,18 @@ checks.push(
     ),
 );
 
+// 9. No non-null assertions (!) in .ts files (postfix operator, not negation)
+// Known false-positive exclusions: markdown/image syntax, GraphQL schemas,
+// uppercase string content like 'ATRASADA!', comment text like 'NO!'.
+checks.push(
+    checkNoPattern(
+        'non-null assertion (!) in .ts files',
+        /(?:\)|\]|\w+)\s*!\s*(?:\.|\[|;|,|\)|$|(?:\s+as\b))/,
+        allTsFiles().filter((f) => !f.startsWith('scripts/')),
+        /markdown\.ts$|markdown-lexer\.ts$|xray-history\.ts$|xray-client\.ts$|case02\.ts$|pipeline-handler\.test\.ts$/,
+    ),
+);
+
 // ---------- output ----------
 
 let allPassed = true;

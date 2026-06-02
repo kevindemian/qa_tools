@@ -193,7 +193,7 @@ describe('createTestExecutionFromResults', () => {
         expect(result.passed).toBe(1);
         expect(result.failed).toBe(1);
         expect(jiraResource.postJiraResource).toHaveBeenCalledWith('issue', expect.anything());
-        const [, postArg] = jiraResource.postJiraResource.mock.calls[0]!;
+        const [, postArg] = nonNull(jiraResource.postJiraResource.mock.calls[0]);
         expect(postArg).toHaveProperty('fields.summary', expect.stringContaining('Results:'));
     });
 
@@ -284,7 +284,7 @@ describe('createTestExecutionFromResults', () => {
         expect(result.passed).toBe(1);
         expect(result.failed).toBe(1);
         expect(jiraResource.putJiraResource).toHaveBeenCalledWith('issue/' + teKey, expect.anything());
-        const [, putArg] = jiraResource.putJiraResource.mock.calls[0]!;
+        const [, putArg] = nonNull(jiraResource.putJiraResource.mock.calls[0]);
         expect(putArg).toHaveProperty('fields.customfield_13715', expect.any(Array));
         expect(jiraResource.postJiraResource).not.toHaveBeenCalledWith('issue', expect.anything());
     });
