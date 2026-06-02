@@ -194,4 +194,18 @@ export const CONFIG_SCHEMA: ConfigField[] = [
         defaultVal: '',
         description: 'Known issues JSON path',
     },
+    {
+        key: 'llmReviewBudget',
+        envVar: 'LLM_REVIEW_BUDGET',
+        type: 'number',
+        defaultVal: 0.5,
+        description: 'Maximum USD per session for adversarial review',
+    },
+    {
+        key: 'llmReviewStrategy',
+        envVar: 'LLM_REVIEW_STRATEGY',
+        type: 'string',
+        defaultVal: 'selective',
+        description: 'Review strategy (selective|always)',
+    },
 ];

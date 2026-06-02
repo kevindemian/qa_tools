@@ -81,6 +81,36 @@ export const LLM_RETRY_MAX_WAIT_MS = 10000;
 export const LLM_FETCH_TIMEOUT_MS = 30000;
 export const LLM_ERROR_BODY_TRUNCATION = 200;
 
+// ---- pricing tables (USD per 1K tokens) ----
+
+interface ModelPricing {
+    inputPer1K: number;
+    outputPer1K: number;
+}
+
+const MODEL_PRICING: Record<string, ModelPricing> = {
+    'google/gemini-2.0-flash-exp': { inputPer1K: 0.0001, outputPer1K: 0.0004 },
+    'gemini-2.0-flash-exp': { inputPer1K: 0.0001, outputPer1K: 0.0004 },
+    'gemini-2.0-flash-lite': { inputPer1K: 0.000075, outputPer1K: 0.0003 },
+    'llama-3.1-8b-instant': { inputPer1K: 0.00005, outputPer1K: 0.00008 },
+    'gpt-4o-mini': { inputPer1K: 0.00015, outputPer1K: 0.0006 },
+    'meta/llama3-70b-instruct': { inputPer1K: 0.0009, outputPer1K: 0.0009 },
+};
+
+export function estimateCostUSD(model: string, promptTokens: number, completionTokens: number): number {
+    const pricing = MODEL_PRICING[model] ?? MODEL_PRICING['google/gemini-2.0-flash-exp'];
+    if (!pricing) return 0;
+    return (promptTokens / 1000) * pricing.inputPer1K + (completionTokens / 1000) * pricing.outputPer1K;
+}
+
+export function getModelPricing(model: string): ModelPricing | undefined {
+    return MODEL_PRICING[model];
+}
+
+export function hasPricingForModel(model: string): boolean {
+    return model in MODEL_PRICING;
+}
+
 // ---- metrics (shared with llm-client.ts) ----
 
 export interface LlmClientMetrics {
@@ -89,6 +119,8 @@ export interface LlmClientMetrics {
     totalPromptTokens: number;
     totalCompletionTokens: number;
     requestsByProviderKey: Record<string, number>;
+    totalCostUSD: number;
+    costPerTier: Partial<Record<LlmTier, number>>;
 }
 
 export const _llmMetrics: LlmClientMetrics = {
@@ -97,9 +129,11 @@ export const _llmMetrics: LlmClientMetrics = {
     totalPromptTokens: 0,
     totalCompletionTokens: 0,
     requestsByProviderKey: {},
+    totalCostUSD: 0,
+    costPerTier: {},
 };
 
-export function _trackUsage(data: Record<string, unknown>, providerKey: string): void {
+export function _trackUsage(data: Record<string, unknown>, providerKey: string, tier: LlmTier): void {
     _llmMetrics.requestsByProviderKey[providerKey] = (_llmMetrics.requestsByProviderKey[providerKey] || 0) + 1;
     let promptTokens = 0;
     let completionTokens = 0;
@@ -116,8 +150,22 @@ export function _trackUsage(data: Record<string, unknown>, providerKey: string):
     }
     _llmMetrics.totalPromptTokens += promptTokens;
     _llmMetrics.totalCompletionTokens += completionTokens;
+
+    // Track cost in USD
+    const model = tierToConfig(tier).model;
+    const cost = estimateCostUSD(model, promptTokens, completionTokens);
+    _llmMetrics.totalCostUSD += cost;
+    _llmMetrics.costPerTier[tier] = (_llmMetrics.costPerTier[tier] || 0) + cost;
+
     rootLogger.debug(
-        'Token usage: prompt=' + promptTokens + ' completion=' + completionTokens + ' provider=' + providerKey,
+        'Token usage: prompt=' +
+            promptTokens +
+            ' completion=' +
+            completionTokens +
+            ' provider=' +
+            providerKey +
+            ' cost=$' +
+            cost.toFixed(6),
     );
 }
 
@@ -140,6 +188,8 @@ export function resetLlmClientMetrics(): void {
     _llmMetrics.totalPromptTokens = 0;
     _llmMetrics.totalCompletionTokens = 0;
     _llmMetrics.requestsByProviderKey = {};
+    _llmMetrics.totalCostUSD = 0;
+    _llmMetrics.costPerTier = {};
 }
 
 // ---- tier configuration ----

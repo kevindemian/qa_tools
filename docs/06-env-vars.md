@@ -81,6 +81,8 @@ Todas as variáveis são carregadas do arquivo `.env` na raiz do projeto.
 | `LLM_FALLBACK_API_KEY`  | `Config.llmFallbackApiKey`  | Não          | —                                                  | API key do tier **fallback** (circuit breaker)               |
 | `LLM_FALLBACK_MODEL`    | `Config.llmFallbackModel`   | Não          | `meta/llama3-70b-instruct`                         | Modelo do tier **fallback**                                  |
 | `LLM_FALLBACK_BASE_URL` | `Config.llmFallbackBaseUrl` | Não          | `https://integrate.api.nvidia.com/v1`              | URL base do tier **fallback** (provedor: NVIDIA NIM)         |
+| `LLM_REVIEW_BUDGET`     | `Config.llmReviewBudget`    | Não          | `0.50`                                             | Budget máximo em USD para adversarial review por sessão      |
+| `LLM_REVIEW_STRATEGY`   | `Config.llmReviewStrategy`  | Não          | `selective`                                        | Estratégia: `always` (sempre 2 LLMs), `selective` (iMAD)     |
 | `LLM_BATCH_API_KEY`     | `Config.llmBatchApiKey`     | Não          | —                                                  | API key do tier **batch** (background tasks)                 |
 | `LLM_BATCH_MODEL`       | `Config.llmBatchModel`      | Não          | `gpt-4o-mini`                                      | Modelo do tier **batch**                                     |
 | `LLM_BATCH_BASE_URL`    | `Config.llmBatchBaseUrl`    | Não          | `https://models.inference.ai.azure.com`            | URL base do tier **batch** (provedor: GitHub Models)         |

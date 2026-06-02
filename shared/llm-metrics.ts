@@ -31,6 +31,8 @@ export interface LlmMetricsSnapshot {
     cacheMisses: number;
     totalPromptTokens: number;
     totalCompletionTokens: number;
+    totalCostUSD: number;
+    costPerTier: Partial<Record<LlmTier, number>>;
     requestsByProvider: Record<string, number>;
     /** @deprecated Moved to quality-metrics.ts. Kept for backward compat. */
     invariantFires?: Record<string, number>;
@@ -139,6 +141,8 @@ export class LlmMetricsCollector {
             cacheMisses: cm.cacheMisses,
             totalPromptTokens: cm.totalPromptTokens,
             totalCompletionTokens: cm.totalCompletionTokens,
+            totalCostUSD: cm.totalCostUSD,
+            costPerTier: { ...cm.costPerTier },
             requestsByProvider: { ...cm.requestsByProviderKey },
         };
 

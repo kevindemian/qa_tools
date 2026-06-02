@@ -169,14 +169,19 @@ describe('getFetchRetries', () => {
 });
 
 describe('_trackUsage', () => {
+    beforeEach(() => {
+        resetLlmClientMetrics();
+    });
+
     it('tracks OpenAI-style usage and updates metrics', () => {
         const data = {
             usage: { prompt_tokens: 10, completion_tokens: 20, total_tokens: 30 },
         };
-        _trackUsage(data, 'test-provider');
+        _trackUsage(data, 'test-provider', 'main');
         const metrics = getLlmClientMetrics();
         expect(metrics.totalPromptTokens).toBe(10);
         expect(metrics.totalCompletionTokens).toBe(20);
+        expect(metrics.totalCostUSD).toBeGreaterThan(0);
         expect(metrics.requestsByProviderKey['test-provider']).toBe(1);
     });
 
@@ -184,18 +189,28 @@ describe('_trackUsage', () => {
         const data = {
             usageMetadata: { promptTokenCount: 5, candidatesTokenCount: 15, totalTokenCount: 20 },
         };
-        _trackUsage(data, 'gemini-provider');
+        _trackUsage(data, 'gemini-provider', 'reviewer');
         const metrics = getLlmClientMetrics();
         expect(metrics.totalPromptTokens).toBe(5);
         expect(metrics.totalCompletionTokens).toBe(15);
+        expect(metrics.totalCostUSD).toBeGreaterThan(0);
     });
 
-    it('counts multiple requests to same provider', () => {
-        _trackUsage({ usage: { prompt_tokens: 1, completion_tokens: 2 } }, 'same');
-        _trackUsage({ usage: { prompt_tokens: 3, completion_tokens: 4 } }, 'same');
+    it('counts multiple requests to same provider with cost accumulation', () => {
+        _trackUsage({ usage: { prompt_tokens: 1, completion_tokens: 2 } }, 'same', 'main');
+        _trackUsage({ usage: { prompt_tokens: 3, completion_tokens: 4 } }, 'same', 'main');
         expect(_llmMetrics.requestsByProviderKey['same']).toBe(2);
         expect(_llmMetrics.totalPromptTokens).toBe(4);
         expect(_llmMetrics.totalCompletionTokens).toBe(6);
+        expect(_llmMetrics.totalCostUSD).toBeGreaterThan(0);
+    });
+
+    it('tracks cost per tier separately', () => {
+        _trackUsage({ usage: { prompt_tokens: 1000, completion_tokens: 500 } }, 'p1', 'main');
+        _trackUsage({ usage: { prompt_tokens: 2000, completion_tokens: 1000 } }, 'p2', 'reviewer');
+        expect(_llmMetrics.costPerTier['main']).toBeGreaterThan(0);
+        expect(_llmMetrics.costPerTier['reviewer']).toBeGreaterThan(0);
+        expect(_llmMetrics.totalCostUSD).toBeGreaterThan(0);
     });
 });
 
