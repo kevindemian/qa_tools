@@ -165,7 +165,7 @@ function makeAction(
         totalRuns: entry.totalRuns,
         lastErrorMessages: [],
         action,
-        jiraBugKey,
+        ...(jiraBugKey ? { jiraBugKey } : {}),
         reason,
     };
 }
@@ -228,7 +228,7 @@ async function _processFlakyEntry(
         reason,
         quarantinedBy: 'flaky-auto-actions',
         flakyRate: entry.rate,
-        bugUrl: bugKey,
+        ...(bugKey ? { bugUrl: bugKey } : {}),
     });
     return makeAction(entry, action, reason, bugKey);
 }

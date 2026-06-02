@@ -136,23 +136,17 @@ describe('TestExecutionCreator', () => {
         it('uses title override instead of csvName + timestamp', async () => {
             setupHappyPath();
             await creator.create(projectName, testKeys, csvName, 'My Custom Title');
-            expect(mockJiraResource.postJiraResource).toHaveBeenCalledWith(
-                'issue',
-                expect.objectContaining({
-                    fields: expect.objectContaining({ summary: 'My Custom Title' }),
-                }),
-            );
+            const callArgs = mockJiraResource.postJiraResource.mock.calls[0];
+            expect(callArgs?.[0]).toBe('issue');
+            expect(callArgs?.[1]).toHaveProperty('fields.summary', 'My Custom Title');
         });
 
         it('uses "Automated Execution" when csvName is empty and no title override', async () => {
             setupHappyPath();
             await creator.create(projectName, testKeys, '');
-            expect(mockJiraResource.postJiraResource).toHaveBeenCalledWith(
-                'issue',
-                expect.objectContaining({
-                    fields: expect.objectContaining({ summary: 'Automated Execution - 23/05/2026 10:30' }),
-                }),
-            );
+            const callArgs = mockJiraResource.postJiraResource.mock.calls[0];
+            expect(callArgs?.[0]).toBe('issue');
+            expect(callArgs?.[1]).toHaveProperty('fields.summary', 'Automated Execution - 23/05/2026 10:30');
         });
     });
 
@@ -255,7 +249,7 @@ describe('TestExecutionCreator', () => {
             setupCreate('TE-1');
             mockJiraResource.getJiraResource.mockResolvedValueOnce({ fields: {} });
 
-            const prompt = jest.requireMock('../shared/prompt');
+            const prompt = jest.requireMock<{ withSpinner: jest.Mock }>('../shared/prompt');
             prompt.withSpinner.mockRejectedValueOnce(new Error('Spinner error'));
 
             await creator.createWithLinks(projectName, testKeys, csvName);
@@ -268,12 +262,9 @@ describe('TestExecutionCreator', () => {
 
             await creator.createWithLinks(projectName, testKeys, csvName, { title: 'Custom Title' });
 
-            expect(mockJiraResource.postJiraResource).toHaveBeenCalledWith(
-                'issue',
-                expect.objectContaining({
-                    fields: expect.objectContaining({ summary: 'Custom Title' }),
-                }),
-            );
+            const callArgs = mockJiraResource.postJiraResource.mock.calls[0];
+            expect(callArgs?.[0]).toBe('issue');
+            expect(callArgs?.[1]).toHaveProperty('fields.summary', 'Custom Title');
         });
     });
 

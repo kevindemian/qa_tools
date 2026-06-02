@@ -35,7 +35,7 @@ export function generateGitHubActions(ctx: SetupContext): string {
             name: 'QA Tools Post-Processing',
             if: 'always()',
             run: postCmd,
-            env: Object.keys(postStepEnv).length > 0 ? postStepEnv : undefined,
+            ...(Object.keys(postStepEnv).length > 0 ? { env: postStepEnv } : {}),
         });
     }
 

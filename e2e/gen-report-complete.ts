@@ -109,15 +109,12 @@ async function fetchCiCdContext(): Promise<string> {
             baseUrl: 'https://api.github.com',
             authHeader: { Authorization: 'Bearer ' + ghToken },
         });
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any -- GitHub API response shape
-        const runsResp = await client.get<any>(
-            `/repos/${ghRepo}/actions/runs?per_page=5&status=success&status=failure`,
-        );
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any -- GitHub API response shape
-        const runs: any[] = runsResp.data?.workflow_runs || [];
+        const runsResp = await client.get<{
+            workflow_runs?: Array<{ id: number; created_at?: string; name?: string; display_title?: string }>;
+        }>(`/repos/${ghRepo}/actions/runs?per_page=5&status=success&status=failure`);
+        const runs = runsResp.data?.workflow_runs || [];
 
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any -- GitHub API response shape
-        const runStats: Array<{ runId: any; createdAt: string; name: string }> = runs.map((run: any) => ({
+        const runStats: Array<{ runId: number; createdAt: string; name: string }> = runs.map((run) => ({
             runId: run.id,
             createdAt: run.created_at || '',
             name: run.name || run.display_title || 'workflow',

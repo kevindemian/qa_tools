@@ -147,8 +147,8 @@ describe('showSplash', () => {
     const mockGradientColor = jest.fn((text: string) => text);
     const mockGradient = jest.fn(() => mockGradientColor);
     let outputMod: {
-        Output: { isTTY: jest.Mock; isCI: jest.Mock };
-        defaultOutput: { box: jest.Mock; print: jest.Mock };
+        Output: { isTTY: jest.Mock<boolean, []>; isCI: jest.Mock<boolean, []> };
+        defaultOutput: { box: jest.Mock<void, [string[]]>; print: jest.Mock };
     };
 
     const mockHttpsModule = {
@@ -159,7 +159,7 @@ describe('showSplash', () => {
     };
 
     beforeEach(() => {
-        outputMod = require('./output') as typeof outputMod;
+        outputMod = jest.requireMock<typeof outputMod>('./output');
         outputMod.Output.isTTY.mockReturnValue(true);
         outputMod.Output.isCI.mockReturnValue(false);
         __setFigletDep(mockFiglet);
@@ -181,15 +181,15 @@ describe('showSplash', () => {
     it('includes statePath when provided', async () => {
         await expect(showSplash('/tmp/state.json')).resolves.not.toThrow();
         expect(outputMod.defaultOutput.box).toHaveBeenCalled();
-        const [lines] = outputMod.defaultOutput.box.mock.calls[0];
-        expect(lines.join('\n')).toContain('/tmp/state.json');
+        const outputLines = outputMod.defaultOutput.box.mock.calls[0]![0];
+        expect(outputLines.join('\n')).toContain('/tmp/state.json');
     });
 
     it('shows token status check without jiraBaseUrl', async () => {
         await expect(showSplash('/tmp/state.json')).resolves.not.toThrow();
         expect(outputMod.defaultOutput.box).toHaveBeenCalled();
-        const [lines] = outputMod.defaultOutput.box.mock.calls[0];
-        expect(lines.join('\n')).toContain('Token');
+        const outputLines = outputMod.defaultOutput.box.mock.calls[0]![0];
+        expect(outputLines.join('\n')).toContain('Token');
     });
 
     it('handles figlet textSync failure', async () => {
@@ -248,8 +248,8 @@ describe('showSplash', () => {
     it('calls checkJiraStatus with fallback empty token', async () => {
         await expect(showSplash(undefined, 'https://jira.example.com')).resolves.not.toThrow();
         expect(outputMod.defaultOutput.box).toHaveBeenCalled();
-        const [lines] = outputMod.defaultOutput.box.mock.calls[0];
-        expect(lines.join('\n')).toContain('Token');
+        const outputLines = outputMod.defaultOutput.box.mock.calls[0]![0];
+        expect(outputLines.join('\n')).toContain('Token');
     });
 
     it('includes jiraBaseUrl and token check in TTY mode', async () => {
@@ -258,8 +258,8 @@ describe('showSplash', () => {
         __setGradientDep({ default: mockGradient });
         await expect(showSplash(undefined, 'https://jira.example.com', 'token123')).resolves.not.toThrow();
         expect(outputMod.defaultOutput.box).toHaveBeenCalled();
-        const [lines] = outputMod.defaultOutput.box.mock.calls[0];
-        expect(lines.join('\n')).toContain('Jira API');
-        expect(lines.join('\n')).toContain('Token');
+        const outputLines = outputMod.defaultOutput.box.mock.calls[0]![0];
+        expect(outputLines.join('\n')).toContain('Jira API');
+        expect(outputLines.join('\n')).toContain('Token');
     });
 });

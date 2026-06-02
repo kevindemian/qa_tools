@@ -20,6 +20,7 @@ const mockGetSummary = jest.mocked(getAiFeedbackSummary);
 const mockGetRecent = jest.mocked(getRecentAiRecords);
 const mockShowSelect = jest.mocked(showSelect);
 import { makeMockCommandContext } from '../../shared/test-utils';
+import case23Handler from './case23';
 
 beforeEach(() => {
     jest.clearAllMocks();
@@ -38,8 +39,7 @@ describe('case23 — AI Feedback', () => {
             topPromptVersion: '',
         });
 
-        const mod = require('./case23').default;
-        await mod.handler(makeMockCommandContext());
+        await case23Handler.handler(makeMockCommandContext());
 
         expect(warn).toHaveBeenCalledWith('Nenhum registro de feedback de IA encontrado.');
         expect(tableView).not.toHaveBeenCalled();
@@ -56,8 +56,7 @@ describe('case23 — AI Feedback', () => {
             topPromptVersion: 'v2',
         });
 
-        const mod = require('./case23').default;
-        await mod.handler(makeMockCommandContext());
+        await case23Handler.handler(makeMockCommandContext());
 
         expect(tableView).toHaveBeenCalledWith(
             expect.arrayContaining([expect.objectContaining({ Métrica: 'Total de registros', Valor: 5 })]),
@@ -79,8 +78,7 @@ describe('case23 — AI Feedback', () => {
             },
         ]);
 
-        const mod = require('./case23').default;
-        await mod.handler(makeMockCommandContext());
+        await case23Handler.handler(makeMockCommandContext());
 
         expect(tableView).toHaveBeenCalled();
     });
@@ -89,8 +87,7 @@ describe('case23 — AI Feedback', () => {
         mockShowSelect.mockResolvedValueOnce('b').mockResolvedValueOnce('0');
         mockGetRecent.mockReturnValue([]);
 
-        const mod = require('./case23').default;
-        await mod.handler(makeMockCommandContext());
+        await case23Handler.handler(makeMockCommandContext());
 
         expect(warn).toHaveBeenCalledWith('Nenhum registro recente.');
     });

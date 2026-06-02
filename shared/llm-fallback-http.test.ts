@@ -31,7 +31,7 @@ jest.mock('./config', () => {
     };
 });
 jest.mock('./llm-rate-limiter', () => {
-    const original = jest.requireActual('./llm-rate-limiter');
+    const original = jest.requireActual<typeof import('./llm-rate-limiter')>('./llm-rate-limiter');
     return {
         ...original,
         checkRateLimit: jest.fn(),
@@ -142,10 +142,17 @@ describe('parseRetryAfter', () => {
     });
 });
 
+interface OpenAiPayload {
+    model: string;
+    temperature: number;
+    messages: Array<{ role: string; content: string }>;
+    response_format?: { type: string };
+}
+
 describe('buildOpenAiPayload', () => {
     it('builds a valid JSON payload', () => {
         const result = buildOpenAiPayload('sys', 'usr', 'gpt-4', 0.5);
-        const parsed = JSON.parse(result);
+        const parsed = JSON.parse(result) as OpenAiPayload;
         expect(parsed.model).toBe('gpt-4');
         expect(parsed.temperature).toBe(0.5);
         expect(parsed.messages).toHaveLength(2);
@@ -157,27 +164,32 @@ describe('buildOpenAiPayload', () => {
 
     it('uses default temperature when not provided', () => {
         const result = buildOpenAiPayload('sys', 'usr', 'gpt-4');
-        const parsed = JSON.parse(result);
+        const parsed = JSON.parse(result) as OpenAiPayload;
         expect(parsed.temperature).toBe(0.3);
     });
 
     it('includes response_format when format is json', () => {
         const result = buildOpenAiPayload('sys', 'usr', 'gpt-4', 0.3, 'json');
-        const parsed = JSON.parse(result);
+        const parsed = JSON.parse(result) as OpenAiPayload;
         expect(parsed.response_format).toEqual({ type: 'json_object' });
     });
 
     it('omits response_format when format is not json', () => {
         const result = buildOpenAiPayload('sys', 'usr', 'gpt-4', 0.3, 'text');
-        const parsed = JSON.parse(result);
+        const parsed = JSON.parse(result) as OpenAiPayload;
         expect(parsed.response_format).toBeUndefined();
     });
 });
 
+interface GeminiPayload {
+    system_instruction: { parts: Array<{ text: string }> };
+    contents: Array<{ role: string; parts: Array<{ text: string }> }>;
+}
+
 describe('buildGeminiPayload', () => {
     it('builds a valid Gemini JSON payload', () => {
         const result = buildGeminiPayload('sys', 'usr');
-        const parsed = JSON.parse(result);
+        const parsed = JSON.parse(result) as GeminiPayload;
         expect(parsed.system_instruction.parts[0].text).toBe('sys');
         expect(parsed.contents[0].role).toBe('user');
         expect(parsed.contents[0].parts[0].text).toBe('usr');

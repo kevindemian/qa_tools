@@ -345,7 +345,11 @@ describe('runBenchmark — error handling', () => {
     it('handles empty fixture lists gracefully', async () => {
         restoreEnv = withEnv({ BENCHMARK: 'true' });
 
-        const fixturesModule = jest.requireMock('./prompts/__fixtures__/index');
+        const fixturesModule = jest.requireMock<{
+            loadFailureAnalysisFixtures: jest.Mock;
+            loadUserStoryFixtures: jest.Mock;
+            loadClassifyFixtures: jest.Mock;
+        }>('./prompts/__fixtures__/index');
         fixturesModule.loadFailureAnalysisFixtures.mockReturnValue([]);
         fixturesModule.loadUserStoryFixtures.mockReturnValue([]);
         fixturesModule.loadClassifyFixtures.mockReturnValue([]);

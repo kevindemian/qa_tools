@@ -3,7 +3,7 @@ const mockPrompt = {
     info: jest.fn(),
     onError: jest.fn(),
     isQuiet: jest.fn().mockReturnValue(true),
-    ProgressBar: jest.fn().mockImplementation(() => ({
+    ProgressBar: jest.fn<{ update: jest.Mock; stop: jest.Mock }, [total: number, options?: { width?: number }]>(() => ({
         update: jest.fn(),
         stop: jest.fn(),
     })),
@@ -26,10 +26,12 @@ describe('TestCaseFactory', () => {
         mockJiraResource = createMockJiraResource();
         mockImporter = createMockImporter();
         factory = new TestCaseFactory(mockJiraResource, mockImporter);
+        mockPrompt.isQuiet.mockReturnValue(true);
+        mockPrompt.ProgressBar.mockImplementation(() => ({ update: jest.fn(), stop: jest.fn() }));
     });
 
     afterEach(() => {
-        jest.clearAllMocks();
+        jest.resetAllMocks();
     });
 
     describe('createIssue', () => {
@@ -200,13 +202,15 @@ describe('TestCaseFactory', () => {
         });
 
         it('calls update on ProgressBar when not quiet', async () => {
+            const update = jest.fn();
+            const stop = jest.fn();
+            mockPrompt.ProgressBar.mockImplementation(() => ({ update, stop }));
             mockImporter.importStep.mockResolvedValue({});
             mockPrompt.isQuiet.mockReturnValue(false);
             await factory.postSteps(issueKey, test, opLog);
-            const barInstance = mockPrompt.ProgressBar.mock.results[0]!.value;
-            expect(barInstance.update).toHaveBeenCalledWith(1);
-            expect(barInstance.update).toHaveBeenCalledWith(2);
-            expect(barInstance.stop).toHaveBeenCalled();
+            expect(update).toHaveBeenCalledWith(1);
+            expect(update).toHaveBeenCalledWith(2);
+            expect(stop).toHaveBeenCalled();
         });
 
         it('aborts on step error when onError returns abort', async () => {

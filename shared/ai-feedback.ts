@@ -59,9 +59,7 @@ function saveStore(store: AiFeedbackStore, config?: Config): void {
         fs.renameSync(tp, sp);
     } catch (err) {
         rootLogger.error('Failed to save AI feedback: ' + (err as Error).message);
-        const saveError = new Error('Failed to save AI feedback');
-        (saveError as unknown as { cause: unknown }).cause = err;
-        throw saveError;
+        throw new Error('Failed to save AI feedback', { cause: err });
     }
 }
 

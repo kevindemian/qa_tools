@@ -85,11 +85,13 @@ class ServerHistoryProvider implements TestHistoryProvider {
             }
             return data.slice(0, MAX_RUNS).map((r: unknown) => {
                 const row = r as JsonObject;
+                const startedOn = safeStr(row.startedOn);
+                const finishedOn = safeStr(row.finishedOn);
                 return {
                     status: safeStr(row.status, 'UNKNOWN'),
                     testExecKey: safeStr(row.testExecKey),
-                    startedOn: safeStr(row.startedOn) || undefined,
-                    finishedOn: safeStr(row.finishedOn) || undefined,
+                    ...(startedOn ? { startedOn } : {}),
+                    ...(finishedOn ? { finishedOn } : {}),
                 };
             });
         } catch (err) {
@@ -221,17 +223,22 @@ class CloudHistoryProvider implements TestHistoryProvider {
             .map((r) => (r.testExecution as JsonObject | undefined)?.issueId as string | undefined)
             .filter((id): id is string => !!id);
 
-        const execKeyMap = execIssueIds.length > 0 ? await this.resolveExecKeys([...new Set(execIssueIds)]) : new Map();
+        const execKeyMap =
+            execIssueIds.length > 0
+                ? await this.resolveExecKeys([...new Set(execIssueIds)])
+                : new Map<string, string>();
 
         return rawResults.map((r) => {
             const teExec = r.testExecution as JsonObject | undefined;
             const teIssueId = teExec?.issueId as string | undefined;
             const rawStatus = (r.status as JsonObject | undefined)?.name as string | undefined;
+            const startedOn2 = safeStr(r.startedOn);
+            const finishedOn2 = safeStr(r.finishedOn);
             return {
                 status: safeStr(rawStatus, 'UNKNOWN'),
                 testExecKey: teIssueId ? (execKeyMap.get(teIssueId) ?? teIssueId) : '',
-                startedOn: safeStr(r.startedOn) || undefined,
-                finishedOn: safeStr(r.finishedOn) || undefined,
+                ...(startedOn2 ? { startedOn: startedOn2 } : {}),
+                ...(finishedOn2 ? { finishedOn: finishedOn2 } : {}),
             };
         });
     }

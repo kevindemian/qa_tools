@@ -8,19 +8,20 @@ import JiraLinkManager from '../jira_management/jira_link_manager';
 // These are referenced by jest.mock factories below. Must be declared before
 // jest.mock calls (jest.mock is hoisted but factories are lazy-evaluated).
 
-/* eslint-disable @typescript-eslint/no-explicit-any -- jest.fn mocks */
-const mockGlobSync = jest.fn<any>();
-const mockParseTestResults = jest.fn<any>();
-const mockMatchResultsToTests = jest.fn<any>();
-const mockCreateTestExecutionFromResults = jest.fn<any>();
-const mockPrompt = jest.fn<any>();
-const mockListPipelineArtifacts = jest.fn<any>();
-const mockDownloadArtifact = jest.fn<any>();
-const mockAdmZipGetEntries = jest.fn<any>();
-const mockLoadState = jest.fn<any>();
-const mockReportsDir = jest.fn<any>();
-const mockSaveParseResult = jest.fn<any>();
-/* eslint-enable @typescript-eslint/no-explicit-any */
+const mockGlobSync = jest.fn<string[], [pattern: string]>();
+const mockParseTestResults = jest.fn<ParseResult, [raw: string]>();
+const mockMatchResultsToTests = jest.fn<
+    { matched: object[]; unmatched: object[] },
+    [parsed: ParseResult, keys: string[]]
+>();
+const mockCreateTestExecutionFromResults = jest.fn<Promise<object | null>, [results: object, config: object]>();
+const mockPrompt = jest.fn<Promise<string>, [message: string]>();
+const mockListPipelineArtifacts = jest.fn<Promise<object[]>, [projectId: string, pipelineId: string]>();
+const mockDownloadArtifact = jest.fn<Promise<void>, [projectId: string, artifact: object]>();
+const mockAdmZipGetEntries = jest.fn<{ name: string }[], []>();
+const mockLoadState = jest.fn<object, []>();
+const mockReportsDir = jest.fn<string, []>();
+const mockSaveParseResult = jest.fn<void, [project: string, result: ParseResult]>();
 
 // ── Module mocks ─────────────────────────────────────────────────────────
 
@@ -43,7 +44,7 @@ jest.mock('../shared/prompt', () => ({
     info: jest.fn(),
     success: jest.fn(),
     printError: jest.fn(),
-    withSpinner: jest.fn((_label: string, fn: () => Promise<unknown>) => fn()),
+    withSpinner: jest.fn((_label: string, fn: () => Promise<void>) => fn()),
     ask: mockPrompt,
 }));
 

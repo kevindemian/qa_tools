@@ -4,7 +4,7 @@ import AdmZip from 'adm-zip';
 import { createHttpClient } from '../../shared/http-client';
 import Config from '../../shared/config';
 import { rootLogger } from '../../shared/logger';
-import type { FlatTest } from '../../shared/result_parser';
+import type { CtrfData, FlatTest } from '../../shared/result_parser';
 import type { TestHistoryRun } from '../../shared/report-generator';
 import type {
     GitHubWorkflowRun,
@@ -32,8 +32,10 @@ export function resolveMapping(): Map<string, string> {
         if (!candidate || !fs.existsSync(candidate)) continue;
         try {
             const raw = fs.readFileSync(candidate, 'utf8');
-            const data = JSON.parse(raw);
-            const tests = (data.tests ?? []) as Array<Record<string, string>>;
+            const data: { tests?: Array<Record<string, string>> } = JSON.parse(raw) as {
+                tests?: Array<Record<string, string>>;
+            };
+            const tests: Array<Record<string, string>> = data.tests ?? [];
             if (tests.length === 0) return new Map();
             const entries: Array<[string, string]> = [];
             for (const t of tests) {
@@ -146,7 +148,7 @@ async function _processGitHubArtifacts(
             const zip = new AdmZip(Buffer.from(zipResp.data));
             for (const entry of zip.getEntries()) {
                 if (!entry.name.endsWith('.json')) continue;
-                const parsed = JSON.parse(entry.getData().toString('utf8'));
+                const parsed: Partial<CtrfData> = JSON.parse(entry.getData().toString('utf8')) as Partial<CtrfData>;
                 const summary = parsed.results?.summary;
                 const tests = parsed.results?.tests || [];
                 if (summary) {
@@ -242,7 +244,7 @@ async function _processGitLabPipelineArtifacts(
     const stats: RunStats[] = [];
     for (const entry of zip.getEntries()) {
         if (!entry.name.endsWith('.json')) continue;
-        const parsed = JSON.parse(entry.getData().toString('utf8'));
+        const parsed: Partial<CtrfData> = JSON.parse(entry.getData().toString('utf8')) as Partial<CtrfData>;
         const summary = parsed.results?.summary;
         if (summary) {
             stats.push({

@@ -1,7 +1,7 @@
 import { confirmOrCancel } from './import-prep-preview';
 
-const mockConfirm = jest.fn();
-const mockConfigGet = jest.fn();
+const mockConfirm = jest.fn<boolean, [message: string, defaultValue?: boolean]>();
+const mockConfigGet = jest.fn<boolean, [key: string, defaultValue?: boolean]>();
 
 jest.mock('../shared/prompt', () => ({
     confirm: (...args: unknown[]) => mockConfirm(...args),
@@ -50,7 +50,7 @@ jest.mock('../shared/logger', () => ({
 }));
 
 jest.mock('fs', () => {
-    const actual = jest.requireActual('fs');
+    const actual = jest.requireActual<typeof import('fs')>('fs');
     return { ...actual, writeFileSync: jest.fn() };
 });
 

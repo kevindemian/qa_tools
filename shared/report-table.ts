@@ -77,9 +77,9 @@ export function buildDetailRow(t: FlatTest, index: number, colspan: number): str
         '" style="display:none"><td colspan="' +
         colspan +
         '">';
-    if (hasSteps) html += _renderStepsHtml(t.steps!);
-    if (hasScreenshots) html += _renderScreenshotsHtml(t.screenshots!);
-    if (hasLogs) html += _renderLogsHtml(t.logs!);
+    if (hasSteps) html += _renderStepsHtml(t.steps as NonNullable<FlatTest['steps']>);
+    if (hasScreenshots) html += _renderScreenshotsHtml(t.screenshots as NonNullable<FlatTest['screenshots']>);
+    if (hasLogs) html += _renderLogsHtml(t.logs as NonNullable<FlatTest['logs']>);
     html += '</td></tr>';
     return html;
 }
@@ -233,7 +233,7 @@ function _buildTestTableRow(
     html += '<td>' + (t.state === 'skipped' ? '—' : fmtDuration(t.duration)) + '</td>';
     if (flags.hasError) html += '<td>' + buildErrorCell(t) + '</td>';
     if (flags.hasHistory) {
-        const testHistory = history![t.title] ?? history![t.fullTitle ?? ''] ?? [];
+        const testHistory = history?.[t.title] ?? history?.[t.fullTitle ?? ''] ?? [];
         html += buildHistoryCell(testHistory);
     }
     if (flags.hasFlakiness) html += _buildFlakinessCell(t, flakinessMap);

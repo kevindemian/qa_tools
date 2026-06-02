@@ -206,8 +206,8 @@ export function saveMetricsJson(tests: FlatTest[], htmlDir: string): void {
                 name: t.title,
                 status: t.state,
                 duration: t.duration,
-                message: t.error,
-                suite: t.fullTitle,
+                ...(t.error ? { message: t.error } : {}),
+                ...(t.fullTitle ? { suite: t.fullTitle } : {}),
             })),
         },
     };

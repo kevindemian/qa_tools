@@ -85,6 +85,10 @@ import {
 import type JiraClient from '../shared/jira-client';
 import type JiraLinkManager from '../jira_management/jira_link_manager';
 import { createMockGitProvider } from '../shared/test-utils/factories';
+import * as testResultsModule from './test-results';
+import * as stateModule from '../shared/state';
+import * as llmModule from './llm-pipeline';
+import * as bugReportModule from '../shared/bug-report';
 
 const mockPrompt = jest.mocked(prompt);
 const mockConfirm = jest.mocked(confirm);
@@ -193,7 +197,7 @@ describe('handleTriggerPipeline', () => {
     });
 
     it('resumes pending pipeline when confirmed', async () => {
-        const { load: mockLoad } = require('../shared/state');
+        const mockLoad = jest.mocked(stateModule.load);
         mockLoad.mockReturnValueOnce({
             pendingPipeline: { branch: 'feat', pipelineId: '99', projectName: 'my-project' },
         });
@@ -212,7 +216,7 @@ describe('handleTriggerPipeline', () => {
     });
 
     it('resumes pending pipeline with failed status triggers quick-merge early return', async () => {
-        const { load: mockLoad } = require('../shared/state');
+        const mockLoad = jest.mocked(stateModule.load);
         mockLoad.mockReturnValueOnce({
             pendingPipeline: { branch: 'feat', pipelineId: '99', projectName: 'my-project' },
         });
@@ -231,7 +235,7 @@ describe('handleTriggerPipeline', () => {
     });
 
     it('resumes pending pipeline with canceled status skips post-pipeline', async () => {
-        const { load: mockLoad } = require('../shared/state');
+        const mockLoad = jest.mocked(stateModule.load);
         mockLoad.mockReturnValueOnce({
             pendingPipeline: { branch: 'feat', pipelineId: '99', projectName: 'my-project' },
         });
@@ -246,7 +250,7 @@ describe('handleTriggerPipeline', () => {
     });
 
     it('resumes pending pipeline with undefined branch', async () => {
-        const { load: mockLoad } = require('../shared/state');
+        const mockLoad = jest.mocked(stateModule.load);
         mockLoad.mockReturnValueOnce({
             pendingPipeline: { pipelineId: '77', projectName: 'my-project' },
         });
@@ -323,7 +327,7 @@ describe('handleExportVariables', () => {
 
 describe('parseTestResults', () => {
     it('delegates to test-results parseTestResults', async () => {
-        const testResults = require('./test-results');
+        const testResults = jest.mocked(testResultsModule);
         jest.mocked(testResults.parseTestResults).mockResolvedValue({
             matched: [],
             unmatched: [],
@@ -337,7 +341,7 @@ describe('parseTestResults', () => {
     });
 
     it('returns null when delegate returns null', async () => {
-        const testResults = require('./test-results');
+        const testResults = jest.mocked(testResultsModule);
         jest.mocked(testResults.parseTestResults).mockResolvedValue(null);
         const result = await parseTestResults({
             stats: { passed: 0, failed: 0, skipped: 0, total: 0, duration: 0 },
@@ -351,7 +355,7 @@ describe('parseTestResults', () => {
 
 describe('createTestExecution', () => {
     it('delegates to test-results createTestExecution', async () => {
-        const testResults = require('./test-results');
+        const testResults = jest.mocked(testResultsModule);
         jest.mocked(testResults.createTestExecution).mockResolvedValue(undefined);
         const jiraResource = {} as JiraClient;
         const linkManager = {} as JiraLinkManager;
@@ -377,7 +381,7 @@ describe('createTestExecution', () => {
 
 describe('downloadTestArtifacts', () => {
     it('delegates to test-results downloadTestArtifacts', async () => {
-        const testResults = require('./test-results');
+        const testResults = jest.mocked(testResultsModule);
         jest.mocked(testResults.downloadTestArtifacts).mockResolvedValue(null);
         const result = await downloadTestArtifacts(mockM, '1');
         expect(result).toBeNull();
@@ -389,7 +393,7 @@ describe('downloadTestArtifacts', () => {
 
 describe('collectTestResults', () => {
     it('delegates to test-results collectTestResults', async () => {
-        const testResults = require('./test-results');
+        const testResults = jest.mocked(testResultsModule);
         jest.mocked(testResults.collectTestResults).mockResolvedValue(null);
         const jiraResource = {} as JiraClient;
         const linkManager = {} as JiraLinkManager;
@@ -453,7 +457,7 @@ describe('triggerAndPollPipeline full flow', () => {
             .mockReturnValueOnce(true); // Fazer merge agora?
 
         // Make collectTestResults return a parsed result
-        const testResults = require('./test-results');
+        const testResults = jest.mocked(testResultsModule);
         jest.mocked(testResults.collectTestResults).mockResolvedValue({
             stats: { passed: 5, failed: 2, skipped: 1 },
             tests: [
@@ -463,7 +467,7 @@ describe('triggerAndPollPipeline full flow', () => {
         });
 
         // Make offerPipelineFailureAnalysis call the callback
-        const llmPipeline = require('./llm-pipeline');
+        const llmPipeline = jest.mocked(llmModule);
         jest.mocked(llmPipeline.offerPipelineFailureAnalysis).mockImplementation(
             (_parsed: unknown, onAnalysis?: (r: { content: string }) => Promise<void>) => {
                 if (onAnalysis) return onAnalysis({ content: 'analysis result' });
@@ -484,7 +488,7 @@ describe('triggerAndPollPipeline full flow', () => {
     });
 
     it('handles bug creation error', async () => {
-        const bugReport = require('../shared/bug-report');
+        const bugReport = jest.mocked(bugReportModule);
         jest.mocked(bugReport.fileToJira).mockRejectedValue(new Error('Jira API error'));
 
         mockConfirm
@@ -495,7 +499,7 @@ describe('triggerAndPollPipeline full flow', () => {
             .mockReturnValueOnce(true) // Criar bug no Jira?
             .mockReturnValueOnce(false); // Não criar merge request (padrão)
 
-        const testResults = require('./test-results');
+        const testResults = jest.mocked(testResultsModule);
         jest.mocked(testResults.collectTestResults).mockResolvedValue({
             stats: { passed: 5, failed: 2, skipped: 1 },
             tests: [
@@ -504,7 +508,7 @@ describe('triggerAndPollPipeline full flow', () => {
             ],
         });
 
-        const llmPipeline = require('./llm-pipeline');
+        const llmPipeline = jest.mocked(llmModule);
         jest.mocked(llmPipeline.offerPipelineFailureAnalysis).mockImplementation(
             (_parsed: unknown, onAnalysis?: (r: { content: string }) => Promise<void>) => {
                 if (onAnalysis) return onAnalysis({ content: 'analysis result' });
@@ -576,9 +580,9 @@ describe('triggerAndPollPipeline full flow', () => {
     });
 
     it('skips bug creation when jira env is null', async () => {
-        const testResults = require('./test-results');
+        const testResults = jest.mocked(testResultsModule);
         jest.mocked(testResults._jiraEnv).mockReturnValueOnce(null);
-        const testResults2 = require('./test-results');
+        const testResults2 = jest.mocked(testResultsModule);
         jest.mocked(testResults2.collectTestResults).mockResolvedValue({
             stats: { passed: 5, failed: 2, skipped: 1 },
             tests: [
@@ -595,7 +599,7 @@ describe('triggerAndPollPipeline full flow', () => {
 
         await handleTriggerPipeline(mockM, 'my-project');
         // handleBugCreation called, but _jiraEnv returns null → early return
-        const bugReport = require('../shared/bug-report');
+        const bugReport = jest.mocked(bugReportModule);
         expect(bugReport.fileToJira).not.toHaveBeenCalled();
     });
 
@@ -630,7 +634,7 @@ describe('triggerAndPollPipeline full flow', () => {
             .mockReturnValueOnce(true) // Aguardar conclusao?
             .mockReturnValueOnce(true) // Coletar resultados?
             .mockReturnValueOnce(true); // Criar bug no Jira?
-        const testResults = require('./test-results');
+        const testResults = jest.mocked(testResultsModule);
         jest.mocked(testResults.collectTestResults).mockResolvedValue({
             stats: { passed: 0, failed: 0, skipped: 0 },
             tests: [],
@@ -697,7 +701,7 @@ describe('triggerPipeline missing id', () => {
 
 describe('resumePendingPipeline decline', () => {
     it('deletes pending state when user declines resume', async () => {
-        const state = require('../shared/state');
+        const state = jest.mocked(stateModule);
         jest.mocked(state.load).mockReturnValueOnce({
             pendingPipeline: { branch: 'feat', pipelineId: '99', projectName: 'my-project' },
         });

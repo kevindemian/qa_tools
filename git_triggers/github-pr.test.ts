@@ -12,32 +12,40 @@ import { createMockAxiosInstance } from '../shared/test-utils/factories/response
 import type { AxiosInstance } from 'axios';
 import * as prompt from '../shared/prompt';
 
+import type { apiGet as ApiGetFn, apiPost as ApiPostFn, apiPatch as ApiPatchFn } from './github-api';
+
 jest.mock('./github-api', () => ({
-    apiGet: jest.fn(),
-    apiPost: jest.fn(),
-    apiPatch: jest.fn(),
+    apiGet: jest.fn<ReturnType<typeof ApiGetFn>, Parameters<typeof ApiGetFn>>(),
+    apiPost: jest.fn<ReturnType<typeof ApiPostFn>, Parameters<typeof ApiPostFn>>(),
+    apiPatch: jest.fn<ReturnType<typeof ApiPatchFn>, Parameters<typeof ApiPatchFn>>(),
 }));
 
 jest.mock('../shared/logger', () => ({
-    Logger: jest.fn().mockImplementation(() => ({ error: jest.fn(), warn: jest.fn() })),
-    rootLogger: { error: jest.fn(), warn: jest.fn() },
+    Logger: jest
+        .fn()
+        .mockImplementation(() => ({ error: jest.fn<() => void, [string]>(), warn: jest.fn<() => void, [string]>() })),
+    rootLogger: { error: jest.fn<() => void, [string]>(), warn: jest.fn<() => void, [string]>() },
 }));
 
 jest.mock('../shared/git-provider-error', () => ({
-    handleError: jest.fn((err: unknown, opts?: { returnNull?: boolean }) => {
+    handleError: jest.fn<
+        (err: unknown, opts?: { returnNull?: boolean }) => unknown,
+        [unknown, { returnNull?: boolean }?]
+    >((err: unknown, opts?: { returnNull?: boolean }) => {
         if (opts?.returnNull) return null;
         throw err;
     }),
 }));
 
 jest.mock('../shared/prompt', () => ({
-    info: jest.fn(),
-    extractErrorMessage: jest.fn((err: Error) => err?.message || 'Erro desconhecido'),
+    info: jest.fn<() => void, [string]>(),
+    extractErrorMessage: jest.fn<(err: Error) => string, [Error]>((err: Error) => err?.message || 'Erro desconhecido'),
 }));
 
-const mockApiGet = jest.mocked(jest.requireMock('./github-api').apiGet);
-const mockApiPost = jest.mocked(jest.requireMock('./github-api').apiPost);
-const mockApiPatch = jest.mocked(jest.requireMock('./github-api').apiPatch);
+import * as githubApi from './github-api';
+const mockApiGet = jest.mocked(githubApi.apiGet);
+const mockApiPost = jest.mocked(githubApi.apiPost);
+const mockApiPatch = jest.mocked(githubApi.apiPatch);
 
 describe('formatPR', () => {
     it('returns MergeRequestInfo for open PR', () => {
@@ -330,8 +338,8 @@ describe('prSearchMergeRequests', () => {
         expect(mockApiGet).toHaveBeenCalledWith(
             client,
             '/repos/myorg/myrepo/pulls',
-            expect.objectContaining({
-                params: expect.objectContaining({ state: 'open', per_page: 100 }),
+            expect.objectContaining<Record<string, unknown>>({
+                params: expect.objectContaining<Record<string, unknown>>({ state: 'open', per_page: 100 }),
             }),
         );
     });
@@ -348,8 +356,8 @@ describe('prSearchMergeRequests', () => {
         expect(mockApiGet).toHaveBeenCalledWith(
             client,
             '/repos/myorg/myrepo/pulls',
-            expect.objectContaining({
-                params: expect.objectContaining({ state: 'closed' }),
+            expect.objectContaining<Record<string, unknown>>({
+                params: expect.objectContaining<Record<string, unknown>>({ state: 'closed' }),
             }),
         );
     });

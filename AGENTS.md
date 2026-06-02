@@ -1,127 +1,340 @@
-# TS Migration Instructions — QA Tools
+# QA Tools
 
-## Credentials
+## 0. SYSTEM MODEL
 
-- GitHub token está em `.env` na raiz do projeto (variável `GITHUB_TOKEN`).
-- Usar `gh` CLI ou `curl -H "Authorization: Bearer $GITHUB_TOKEN"` para API calls.
+This document defines invariants, not guidelines.
 
-## Layer Order (strict, bottom-up)
+Rules are:
 
-```
-Layer 0: shared/types.ts                  — interfaces puras
-Layer 1: shared/*.ts (7 arquivos)         — logger, prompt, cli_base, state, http-client, result_parser, tls
-Layer 2: shared/session-context.ts        — depende de Layer 1
-Layer 3: jira_management/ (5 arquivos)    — jira_resource, csv_resource, cypress_resource, jira_validator, cypress_test
-Layer 4: jira_management/ (3 arquivos)    — jira_link_manager, package_version_manager, result_reporter
-Layer 5: jira_management/commands/* (17)  — handlers + context + index
-Layer 6: jira_management/create_tests.ts  — maior arquivo (732 linhas, 109 erros). QUEBRAR SRP.
-Layer 7: jira_management/main.ts          — entry point
-Layer 8: git_triggers/* (5 arquivos)      — github_manager, gitlab_manager, nivelar, main
-```
+- absolute
+- non-overridable
+- non-reinterpretable
+- non-weakenable
 
-Nunca pular layers. Nunca fazer duas layers no mesmo commit.
+If any ambiguity, contradiction, missing authority, unresolved dependency or rule conflict exists:
 
-## Per-layer verification (R6) — mandatory
+STOP.
 
-```bash
-# 1. Type check — 0 errors
-npx tsc --noEmit
+No execution, assumption, inference, approximation or continuation is permitted.
 
-# 2. Testes — 100% pass
-npx jest --no-coverage
+---
 
-# 3. Regras automáticas
-grep -rn "throw '" shared/ jira_management/ git_triggers/   # zero
-grep -rn ".only(" **/*.test.*                                # zero
-```
+## 1. AUTHORITY MODEL
 
-## R0 — Adversarial Iteration (avaliação Pareto)
+Valid authority only:
 
-Every solution or plan MUST be evaluated adversarially before presentation.
+- explicit requirements
+- formal specifications
+- explicit domain definitions
+- official documentation
+- explicit user instructions
 
-### Hierarquia de avaliação Pareto (estrita)
+Invalid authority:
 
-1. **Superioridade técnica** (ordenada, decrescente)
-   1.1 **Correção** — comportamento determinístico, sem bugs conhecidos
-   1.2 **Manutenibilidade** — clareza > concisão; SRP; baixo acoplamento
-   1.3 **Testabilidade** — facilidade de cobrir com testes determinísticos
-   1.4 **Previsibilidade** — comportamento explícito, sem side effects ocultos
+- implementation behavior
+- runtime behavior
+- current usage
+- historical usage
+- tests
+- compiler output
+- build success
+- consumer count
+- frequency of occurrence
+- convenience
+- effort
+- speed
+- diff size
 
-2. **Esforço** — desempate quando duas soluções empatam em (1).
-   Se a solução tecnicamente superior exigir >10× o esforço da segunda
-   superior, a próxima considerada é a segunda superior (não a mais
-   barata) — evita perfeccionismo sem abrir brecha para shortcut-driven
-   architecture.
+Absence of evidence is not evidence.
 
-3. **Degradação tolerável** — piorar funcionalidade B para melhorar A
-   é aceito apenas se B não retrocede em (1.1–1.4). Não-funcionais
-   (legibilidade, tempo de compilação, consumo) seguem o mesmo critério:
-   podem ser sacrificados desde que não piorem correção,
-   manutenibilidade, testabilidade ou previsibilidade.
+No inference from invalid authority is permitted.
 
-Iterate: identify weaknesses → fix → re-evaluate → stop when no further
-Pareto-improvement is possible. Document the final trade-offs explicitly.
+---
 
-## Non-negotiables (R1-R8)
+## 2. PRIORITY HIERARCHY
 
-- **R1**: Every new .ts file MUST have a .test.ts file. Each public method ≥1 test (happy + error + edge case).
-- **R2 (SRP)**: create_tests.ts MUST be broken into sub-classes (CsvImporter, TestCaseFactory, IssueLinker, TestExecutionCreator, PreconditionAssociator). Max 300 lines.
-- **R2 (DIP)**: Handlers NEVER instantiate JiraResource/JiraLinkManager. Receive via constructor/parameter. Only entry points (main.ts) do `new`.
-- **R3**: No `throw 'string'` or `throw "string"`. Always `throw new Error(...)`. Use `JiraResourceError extends Error` for API errors.
-- **R4**: No `any`/`as any` without `// eslint-disable-next-line @typescript-eslint/no-explicit-any — <reason>`.
-- **R4**: No `console.log` in production. Use `Logger` or `prompt.print()`.
-- **R4**: Max 50 lines per function. Extract named helpers when exceeded.
-- **R7**: Each layer = one atomic commit. Commit messages follow `feat(ts): migrate shared/ foundation modules (.js→.ts)` pattern.
-- **R8**: Never start a layer you can't finish (check estimates in BACKLOG.md). Never commit a broken layer. Rollback immediately on failure (R8.3).
+Strict order:
 
-## R9 — Zero type-blind workarounds
+1. Domain correctness
+2. Explicit requirements
+3. Explicit specifications
+4. This document
+5. Architecture
+6. Implementation
 
-- **NUNCA** usar `as unknown as`, `as never`, `as any`, ou qualquer type assertion que mascare incompatibilidade real de tipos.
-- Se `jest.mocked()` expor um erro de tipo, corrigir a CAUSA RAIZ (completar mock, ajustar assinatura, criar factory).
-- A única exceção: type narrowing necessário de `unknown` para tipos concretos (ex: `j.id as string`, `data as Error`) com validação upstream já confirmada — desde que documentado com `// eslint-disable-next-line`.
-- Fazer "rápido" com workaround = fazer de novo + risco de regressão. Sempre preferir a solução correta.
+Lower levels MUST NEVER justify violating higher levels.
 
-## Error handling pattern (R5)
+---
 
-| Flow            | Rule                                           |
-| --------------- | ---------------------------------------------- |
-| GET/search      | logError + return [] / null / {} — never throw |
-| POST/PUT/DELETE | logError + throw new SpecificError()           |
-| Handlers        | try/catch → printError() + return false        |
+## 3. FORBIDDEN TRANSFORMATIONS
 
-## Known pitfalls
+Invalid by definition:
 
-1. `readline-sync` sem tipos → `declare module 'readline-sync'` em `shared/types/ambient.d.ts`
-2. axios `Response<T>` → usar `this.axiosInstance.get<T>(url)` e `const { data } = response`
-3. `require()` dinâmico anti-circular (session-context → prompt) → manter `require()` com `typeof import('./prompt').withSpinner`
-4. `jest.mock()` com `.ts` → `jest.mock('../../shared/logger')` resolve sem extensão (ts-jest cuida)
-5. `module.exports` vs `export` → manter `module.exports` pattern até o último commit (R7 configuração final). Só converter tudo no fim.
-6. `override` keyword → usar `override` em métodos que sobrescrevem superclasse (target ES2020+)
+- workaround
+- temporary fix
+- partial fix
+- compensating logic
+- compatibility shim
+- fallback path
+- transitional path
+- parallel implementation
+- duplicated logic
+- architectural bypass
+- type-system bypass
+- error suppression
+- defect relocation
+- local fix leaving equivalent flows inconsistent
+- contract modification without authority
+- validation weakening
+- safety-mechanism weakening
 
-## Project structure
+Presence of any item above invalidates the solution.
 
-```
-shared/           → foundation modules (logger, prompt, http-client, etc.)
-jira_management/  → Jira/Xray integration (resources, services, commands, main)
-git_triggers/     → GitHub/GitLab automation (managers, main)
-```
+---
 
-## Naming conventions
+## 4. ROOT CAUSE INVARIANT
 
-- `_` prefix for internal/private members not meant for external use (e.g., `_put`, `_configHint`, `_repoPath`).
-- `_` prefix on test variables that exist solely to avoid unused-export warnings from ts-prune.
+Every defect MUST be corrected at origin.
 
-## Commit message pattern
+Allowed:
 
-```
-feat(ts): add shared/types.ts with all interfaces
-feat(ts): migrate shared/ foundation modules (.js→.ts)
-feat(ts): migrate shared/session-context.ts
-feat(ts): migrate jira_management/ resource layer
-feat(ts): migrate jira_management/ service layer
-feat(ts): migrate jira_management/commands
-feat(ts): migrate jira_management/create_tests.ts (break into sub-classes)
-feat(ts): migrate jira_management/main.ts
-feat(ts): migrate git_triggers/
-chore(ts): enable strict:true, remove allowJs
-```
+- correct producer
+- correct implementation
+- correct contract (only when authorized by rule 6)
+
+Forbidden:
+
+- symptom correction
+- abstraction masking
+- defect shifting
+- compensating behavior
+- bypassing failure
+
+A defect remains unresolved until root cause is corrected.
+
+---
+
+## 5. SAFETY MECHANISM IMMUTABILITY
+
+Safety mechanisms include:
+
+- tests
+- assertions
+- validations
+- guards
+- invariants
+- schemas
+- CI rules
+- quality gates
+- static analysis
+- type checks
+
+Forbidden:
+
+- weaken
+- remove
+- bypass
+- suppress
+- relax
+- adapt to fit implementation
+
+If a safety mechanism fails:
+
+1. assume defect
+2. identify root cause
+3. correct implementation
+4. preserve or strengthen safety mechanism
+
+Safety mechanisms MUST NOT be changed merely to make code pass.
+
+---
+
+## 6. CONTRACT IMMUTABILITY
+
+Contracts include:
+
+- types
+- interfaces
+- schemas
+- APIs
+- validations
+- domain rules
+- domain models
+
+Contracts are immutable unless ALL are proven:
+
+- producers identified
+- consumers identified
+- intended behavior explicitly evidenced
+- domain validity explicitly evidenced
+- existing guarantees preserved
+- explicit authorization exists
+
+If any condition is missing:
+
+CONTRACT CHANGE IS INVALID.
+
+Compiler errors, failing tests, existing callers and current behavior are not evidence.
+
+---
+
+## 7. SYSTEM CONSISTENCY
+
+Accepted changes MUST update:
+
+- all producers
+- all consumers
+- all contracts
+- all interfaces
+- all validations
+- all tests
+
+Equivalent flows MUST remain equivalent.
+
+Partial, mixed-version or transitional states are invalid.
+
+Local correctness without system correctness is invalid.
+
+---
+
+## 8. TEST NON-AUTHORITY
+
+Tests are:
+
+- validation mechanisms
+- regression detectors
+
+Tests are NOT:
+
+- specifications
+- domain authority
+- contract authority
+
+Incorrect tests must be corrected.
+
+Implementation must NOT be altered to satisfy invalid tests.
+
+---
+
+## 9. IMPLEMENTATION NON-AUTHORITY
+
+Implementation is:
+
+- evidence of existence
+
+Implementation is NOT:
+
+- specification
+- contract
+- domain authority
+
+Backward compatibility is forbidden unless explicitly required.
+
+---
+
+## 10. EQUIVALENCE PROOF
+
+Two solutions are NOT equivalent unless proven.
+
+Proof requires:
+
+- identical specified behavior
+- identical guarantees
+- identical contract constraints
+- no new valid states
+- no newly representable invalid states
+- no invariant regression
+
+Without proof:
+
+assume NOT equivalent.
+
+---
+
+## 11. MULTI-AGENT INVARIANT
+
+Agent boundaries are irrelevant.
+
+Each agent is responsible for:
+
+- full dependency graph
+- all producers
+- all consumers
+- all contracts
+- all validations
+- all tests
+- all side effects
+
+Distributed execution never justifies local fixes.
+
+---
+
+## 12. VALIDATION GATE
+
+A solution is invalid if ANY of the following exist:
+
+- invariant violation
+- contract inconsistency
+- unresolved ambiguity
+- unresolved dependency impact
+- safety-mechanism bypass
+- weakened validation
+- weakened test protection
+
+Invalid state:
+
+STOP → root-cause correction → full-system revalidation.
+
+---
+
+## 13. FAILURE MODEL
+
+On failure:
+
+STOP → isolate root cause → correct at origin → revalidate entire system
+
+Forbidden:
+
+- patch forward
+- partial acceptance
+- suppression
+- compensating logic
+- validation bypass
+
+---
+
+## 14. COMMUNICATION
+
+Output must be:
+
+- factual
+- explicit
+- non-speculative
+- non-persuasive
+
+Always declare:
+
+- evidence
+- assumptions
+- risks
+- limitations
+- unknowns
+
+Never justify decisions using:
+
+- effort
+- speed
+- convenience
+- simplicity
+- implementation cost
+- change size
+
+---
+
+## 15. FINAL INVARIANT
+
+No rule may be reinterpreted, weakened, bypassed or combined to violate another rule.
+
+If ambiguity, uncertainty, contradiction or insufficient authority exists:
+
+STOP.

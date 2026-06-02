@@ -88,7 +88,7 @@ export function toKnownIssues(raw: unknown): KnownIssue[] {
                 result.push({
                     pattern: obj.pattern,
                     reason: obj.reason,
-                    ticket: typeof obj.ticket === 'string' ? obj.ticket : undefined,
+                    ...(typeof obj.ticket === 'string' ? { ticket: obj.ticket } : {}),
                 });
             }
         }

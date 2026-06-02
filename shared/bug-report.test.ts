@@ -342,7 +342,7 @@ describe('BugReport Service', () => {
                 fields: {
                     project: { key: 'PROJ' },
                     summary: 'Login issue',
-                    description: expect.any(String),
+                    description: expect.any(String) as string,
                     issuetype: { name: 'Bug' },
                     labels: ['bug-report', 'manual'],
                     priority: { name: 'Highest' },
@@ -487,7 +487,7 @@ describe('BugReport Service', () => {
 
 jest.mock('./llm-client', () => ({ llmPrompt: jest.fn() }));
 jest.mock('fs', () => {
-    const actual = jest.requireActual('fs');
+    const actual = jest.requireActual<typeof import('fs')>('fs');
     return {
         ...actual,
         readFileSync: jest.fn((p: string) => {
@@ -499,7 +499,7 @@ jest.mock('fs', () => {
 
 import { generateBugReportFromDescription } from './bug-report';
 
-const mockLlmPrompt = jest.mocked(jest.requireMock('./llm-client').llmPrompt);
+const mockLlmPrompt = jest.mocked(jest.requireMock<typeof import('./llm-client')>('./llm-client').llmPrompt);
 
 describe('generateBugReportFromDescription', () => {
     beforeEach(() => {
@@ -550,7 +550,7 @@ describe('generateBugReportFromDescription', () => {
     });
 
     it('returns null when prompt template file cannot be read', async () => {
-        const fsMock = jest.requireMock('fs');
+        const fsMock = jest.mocked(jest.requireMock<typeof import('fs')>('fs'));
         fsMock.readFileSync.mockImplementationOnce(() => {
             throw new Error('ENOENT');
         });

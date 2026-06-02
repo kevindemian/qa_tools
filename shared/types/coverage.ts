@@ -74,7 +74,7 @@ export interface ImpactedTest {
     testKey?: string;
     title: string;
     reason: string;
-    matchMode: 'mapping' | 'keyword' | 'jest_find_related';
+    matchMode: string;
     filePattern?: string;
 }
 

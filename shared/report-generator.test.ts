@@ -1,5 +1,6 @@
 jest.mock('fs');
 
+import { existsSync, readFileSync } from 'fs';
 import { nullAs } from './test-utils';
 import { generateHtmlReport, generateCoverageHtml, loadKnownIssues } from './report-generator';
 import type { FlatTest } from './result_parser';
@@ -719,13 +720,12 @@ describe('generateHtmlReport', () => {
     });
 
     it('loadKnownIssues reads issues from a valid JSON file', () => {
-        const fs = require('fs');
         const knownIssues = [
             { pattern: 'timeout', reason: 'Infra flaky', ticket: 'BUG-1' },
             { pattern: 'login', reason: 'Known SSL issue' },
         ];
-        const mockExists = jest.mocked(fs.existsSync);
-        const mockReadFile = jest.mocked(fs.readFileSync);
+        const mockExists = jest.mocked(existsSync);
+        const mockReadFile = jest.mocked(readFileSync);
         mockExists.mockReset();
         mockReadFile.mockReset();
         mockExists.mockImplementation((p: string) => p === '/tmp/known-issues.json');
@@ -742,9 +742,8 @@ describe('generateHtmlReport', () => {
     });
 
     it('loadKnownIssues handles issues as top-level array', () => {
-        const fs = require('fs');
-        const mockExists = jest.mocked(fs.existsSync);
-        const mockReadFile = jest.mocked(fs.readFileSync);
+        const mockExists = jest.mocked(existsSync);
+        const mockReadFile = jest.mocked(readFileSync);
         mockExists.mockReset();
         mockReadFile.mockReset();
         mockExists.mockImplementation((p: string) => p === '/tmp/ki.json');
@@ -759,9 +758,8 @@ describe('generateHtmlReport', () => {
     });
 
     it('loadKnownIssues skips invalid JSON and returns empty array', () => {
-        const fs = require('fs');
-        const mockExists = jest.mocked(fs.existsSync);
-        const mockReadFile = jest.mocked(fs.readFileSync);
+        const mockExists = jest.mocked(existsSync);
+        const mockReadFile = jest.mocked(readFileSync);
         mockExists.mockReset();
         mockReadFile.mockReset();
         mockExists.mockImplementation((_p: string) => true);

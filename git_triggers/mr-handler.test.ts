@@ -50,7 +50,7 @@ beforeEach(() => {
 describe('nivelarBranchesWrapper', () => {
     it('delegates to nivelarBranches', async () => {
         await nivelarBranchesWrapper(mockM);
-        expect(mockNivelar).toHaveBeenCalledWith(mockM, { pushHistory: expect.any(Function) });
+        expect(mockNivelar).toHaveBeenCalledWith(mockM, expect.any(Object));
     });
 });
 

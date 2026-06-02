@@ -1,5 +1,8 @@
 import { EventEmitter } from 'events';
 import { Output, defaultOutput } from './output';
+import * as entryMenuModule from './entry-menu';
+import * as promptModule from './prompt';
+import { type ChildProcess } from 'child_process';
 
 jest.mock('./splash', () => ({ showSplash: jest.fn() }));
 jest.mock('./prompt', () => ({ showSelect: jest.fn() }));
@@ -11,20 +14,14 @@ jest.mock('./output', () => {
     };
 });
 
-const mockSpawn = jest.fn();
-jest.mock('child_process', () => ({ spawn: mockSpawn }));
+jest.mock('child_process', () => ({ spawn: jest.fn() }));
 
-let entryMenu: { runModule: (module: 'jira' | 'git') => Promise<void>; main: () => Promise<void> };
-beforeAll(() => {
-    entryMenu = require('./entry-menu') as typeof entryMenu;
-});
+import { spawn } from 'child_process';
+const mockSpawn = jest.mocked(spawn);
+const entryMenu = entryMenuModule;
 
-function makeMockChildProcess() {
-    const cp = new EventEmitter() as EventEmitter & { stdout: EventEmitter; stderr: EventEmitter; pid: number };
-    cp.stdout = new EventEmitter();
-    cp.stderr = new EventEmitter();
-    cp.pid = 12345;
-    return cp;
+function makeMockChildProcess(): ChildProcess {
+    return new EventEmitter() as ChildProcess;
 }
 
 function mockSpawnWithExit(code: number): void {
@@ -44,8 +41,11 @@ describe('runModule', () => {
         mockSpawnWithExit(0);
 
         const promise = entryMenu.runModule('jira');
-        const expectedScript = expect.stringContaining('jira_management/main.ts');
-        expect(mockSpawn).toHaveBeenCalledWith('npx', ['tsx', expectedScript], expect.any(Object));
+        expect(mockSpawn).toHaveBeenCalledWith(
+            'npx',
+            ['tsx', expect.stringContaining('jira_management/main.ts')],
+            expect.any(Object),
+        );
         await expect(promise).resolves.toBeUndefined();
     });
 
@@ -53,8 +53,11 @@ describe('runModule', () => {
         mockSpawnWithExit(0);
 
         const promise = entryMenu.runModule('git');
-        const expectedScript = expect.stringContaining('git_triggers/main.ts');
-        expect(mockSpawn).toHaveBeenCalledWith('npx', ['tsx', expectedScript], expect.any(Object));
+        expect(mockSpawn).toHaveBeenCalledWith(
+            'npx',
+            ['tsx', expect.stringContaining('git_triggers/main.ts')],
+            expect.any(Object),
+        );
         await expect(promise).resolves.toBeUndefined();
     });
 
@@ -99,7 +102,7 @@ describe('main', () => {
     it('loops and exits on /exit choice', async () => {
         jest.mocked(Output.isTTY).mockReturnValue(true);
         jest.mocked(Output.isCI).mockReturnValue(false);
-        const promptMod = require('./prompt') as { showSelect: jest.Mock };
+        const promptMod = jest.mocked(promptModule);
         promptMod.showSelect.mockResolvedValue('exit');
 
         await entryMenu.main();
@@ -110,8 +113,7 @@ describe('main', () => {
     it('launches jira module when selected and exits on failure', async () => {
         jest.mocked(Output.isTTY).mockReturnValue(true);
         jest.mocked(Output.isCI).mockReturnValue(false);
-        const promptMod = require('./prompt') as { showSelect: jest.Mock };
-        promptMod.showSelect.mockResolvedValue('jira');
+        jest.mocked(promptModule).showSelect.mockResolvedValue('jira');
         mockSpawnWithExit(1);
 
         await entryMenu.main();
@@ -122,11 +124,10 @@ describe('main', () => {
     it('continues loop on unknown choice', async () => {
         jest.mocked(Output.isTTY).mockReturnValue(true);
         jest.mocked(Output.isCI).mockReturnValue(false);
-        const promptMod = require('./prompt') as { showSelect: jest.Mock };
-        promptMod.showSelect.mockResolvedValueOnce('unknown').mockResolvedValueOnce('exit');
+        jest.mocked(promptModule).showSelect.mockResolvedValueOnce('unknown').mockResolvedValueOnce('exit');
 
         await entryMenu.main();
 
-        expect(promptMod.showSelect).toHaveBeenCalledTimes(2);
+        expect(jest.mocked(promptModule).showSelect).toHaveBeenCalledTimes(2);
     });
 });

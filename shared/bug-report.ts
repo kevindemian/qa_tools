@@ -80,12 +80,12 @@ export async function generateBugReportFromDescription(raw: string): Promise<Bug
             summary: aiReport.summary,
             description: aiReport.description,
             source: 'manual',
-            stepsToReproduce: aiReport.stepsToReproduce,
-            expectedResult: aiReport.expectedResult,
-            actualResult: aiReport.actualResult,
-            environment: aiReport.environment,
+            ...(aiReport.stepsToReproduce ? { stepsToReproduce: aiReport.stepsToReproduce } : {}),
+            ...(aiReport.expectedResult ? { expectedResult: aiReport.expectedResult } : {}),
+            ...(aiReport.actualResult ? { actualResult: aiReport.actualResult } : {}),
+            ...(aiReport.environment ? { environment: aiReport.environment } : {}),
             severity: aiReport.severity,
-            component: aiReport.component,
+            ...(aiReport.component ? { component: aiReport.component } : {}),
             llmEnrichment: {
                 enrichedAt: new Date().toISOString(),
                 model: 'fast',
@@ -125,13 +125,13 @@ export async function collectManual(): Promise<BugReport> {
     const summary = await askWithRetry('Sumário do bug');
     const description = await ask('Descrição detalhada');
     const stepsToReproduceRaw = await ask('Passos para reproduzir (separados por vírgula)');
-    const expectedResult = await ask('Resultado esperado');
-    const actualResult = await ask('Resultado atual');
-    const environment = await ask('Ambiente (ex: produção, staging)');
+    const expResult = await ask('Resultado esperado');
+    const actResult = await ask('Resultado atual');
+    const env = await ask('Ambiente (ex: produção, staging)');
     const severity = normalizeSeverity(
         await ask('Severidade (trivial | minor | major | critical)', { default: 'minor' }),
     );
-    const component = await ask('Componente (opcional)');
+    const comp = await ask('Componente (opcional)');
     const linkedIssuesInput = await ask('Issues relacionadas (KEY-123, KEY-456) — opcional');
 
     const linkedIssues = linkedIssuesInput.trim()
@@ -150,18 +150,23 @@ export async function collectManual(): Promise<BugReport> {
         }
     }
 
+    const trimmedExpResult = expResult.trim();
+    const trimmedActResult = actResult.trim();
+    const trimmedEnv = env.trim();
+    const trimmedComp = comp.trim();
+
     return {
         summary,
         description: description.trim(),
         source: 'manual',
-        stepsToReproduce,
-        expectedResult: expectedResult.trim() || undefined,
-        actualResult: actualResult.trim() || undefined,
-        environment: environment.trim() || undefined,
+        ...(stepsToReproduce ? { stepsToReproduce } : {}),
+        ...(trimmedExpResult ? { expectedResult: trimmedExpResult } : {}),
+        ...(trimmedActResult ? { actualResult: trimmedActResult } : {}),
+        ...(trimmedEnv ? { environment: trimmedEnv } : {}),
         severity,
-        component: component.trim() || undefined,
-        linkedIssues,
-        llmEnrichment,
+        ...(trimmedComp ? { component: trimmedComp } : {}),
+        ...(linkedIssues ? { linkedIssues } : {}),
+        ...(llmEnrichment ? { llmEnrichment } : {}),
     };
 }
 
@@ -184,7 +189,7 @@ export function collectAutomated(
             model: 'analysis',
             confidence: LLM_CONFIDENCE,
         },
-        metadata: pipelineInfo,
+        ...(pipelineInfo ? { metadata: pipelineInfo } : {}),
     };
 }
 

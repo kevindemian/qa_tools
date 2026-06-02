@@ -49,12 +49,12 @@ jest.mock('../shared/logger', () => ({
 }));
 
 jest.mock('fs', () => {
-    const actual = jest.requireActual('fs');
-    return { ...actual, writeFileSync: jest.fn() };
+    const actual = jest.requireActual<typeof import('fs')>('fs');
+    return { ...actual, writeFileSync: jest.fn<() => void, [string, string]>() };
 });
 
-const mockMd = jest.fn((s: string) => s);
-const mockMdToHtml = jest.fn((s: string) => '<html>' + s + '</html>');
+const mockMd = jest.fn<(s: string) => string, [string]>((s: string) => s);
+const mockMdToHtml = jest.fn<(s: string) => string, [string]>((s: string) => '<html>' + s + '</html>');
 jest.mock('../shared/markdown', () => ({ md: mockMd, mdToHtml: mockMdToHtml }));
 
 import {
@@ -69,6 +69,8 @@ import * as PROMPT from '../shared/prompt';
 import * as STATE from '../shared/state';
 import * as FS from 'fs';
 import { nonNull } from '../shared/test-utils';
+import CsvResource from './csv_resource';
+import { rootLogger } from '../shared/logger';
 
 const makeTestCases = (count: number) =>
     Array.from({ length: count }, (_, i) => ({
@@ -319,7 +321,7 @@ describe('parseJsonTests', () => {
             },
         ]);
         // writeFileSync is mocked in this file — use actual fs for temp file
-        const actualFs = jest.requireActual('fs');
+        const actualFs = jest.requireActual<typeof import('fs')>('fs');
         const tmp = '/tmp/test-expected-result-alias.json';
         actualFs.writeFileSync(tmp, jsonContent, 'utf-8');
 
@@ -328,8 +330,7 @@ describe('parseJsonTests', () => {
         expect(nonNull(nonNull(result[0]).steps[0]).fields['Expected Result']).toBe('Result1');
         expect(nonNull(nonNull(result[1]).steps[0]).fields['Expected Result']).toBe('Result2');
 
-        const loggerModule = require('../shared/logger');
-        expect(loggerModule.rootLogger.warn).toHaveBeenCalledWith(expect.stringContaining('ExpectedResult'));
+        expect(rootLogger.warn).toHaveBeenCalledWith(expect.stringContaining('ExpectedResult'));
 
         actualFs.unlinkSync(tmp);
     });
@@ -341,7 +342,7 @@ describe('parseJsonTests', () => {
                 steps: [{ Action: 'Step1', 'Expected Result': 'Canonical', ExpectedResult: 'Alias' }],
             },
         ]);
-        const actualFs = jest.requireActual('fs');
+        const actualFs = jest.requireActual<typeof import('fs')>('fs');
         const tmp = '/tmp/test-expected-result-canonical.json';
         actualFs.writeFileSync(tmp, jsonContent, 'utf-8');
 
@@ -358,7 +359,7 @@ describe('parseJsonTests', () => {
                 steps: [{ Action: 'Step1' }],
             },
         ]);
-        const actualFs = jest.requireActual('fs');
+        const actualFs = jest.requireActual<typeof import('fs')>('fs');
         const tmp = '/tmp/test-expected-result-missing.json';
         actualFs.writeFileSync(tmp, jsonContent, 'utf-8');
 
@@ -424,8 +425,8 @@ describe('showPreview', () => {
 });
 
 describe('csv -> preview pipeline (e2e)', () => {
-    const fs = jest.requireActual('fs');
-    const CsvResource = jest.requireActual('../jira_management/csv_resource').default;
+    const fs = jest.requireActual<typeof import('fs')>('fs');
+    // CsvResource is imported at top level — no requireActual needed
 
     const crlf = '\r\n';
     const bom = '\uFEFF';
@@ -465,7 +466,7 @@ describe('csv -> preview pipeline (e2e)', () => {
 
     beforeAll(() => {
         csvResource = new CsvResource();
-        loggerWarn = jest.spyOn(require('../shared/logger').rootLogger, 'warn').mockImplementation(() => {});
+        loggerWarn = jest.spyOn(rootLogger, 'warn').mockImplementation(() => {});
     });
 
     afterAll(() => {

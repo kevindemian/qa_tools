@@ -89,14 +89,17 @@ export function load(config?: Config): Record<string, unknown> {
     const tp = tmpPath(config);
     try {
         if (fs.existsSync(sp)) {
-            return JSON.parse(fs.readFileSync(sp, UTF8));
+            return JSON.parse(fs.readFileSync(sp, UTF8)) as Record<string, unknown>;
         }
     } catch (err: unknown) {
         warn('Arquivo de estado corrompido. Recuperando backup...');
         rootLogger.warn('Arquivo de estado corrompido, recuperando backup...', (err as Error).message);
         try {
             if (fs.existsSync(bp)) {
-                const backup = JSON.parse(fs.readFileSync(bp, UTF8));
+                const backup: Record<string, unknown> = JSON.parse(fs.readFileSync(bp, UTF8)) as Record<
+                    string,
+                    unknown
+                >;
                 fs.writeFileSync(tp, JSON.stringify(backup, null, 2), UTF8);
                 fs.renameSync(tp, sp);
                 return backup;
@@ -137,7 +140,7 @@ export function save(state: Record<string, unknown>, config?: Config): void {
  * @example `update((s) => { s.lastProject = 'PROJ'; })` */
 export function update(fn: (state: Record<string, unknown>) => void, config?: Config): Record<string, unknown> {
     const state = load(config);
-    const copy = JSON.parse(JSON.stringify(state));
+    const copy: Record<string, unknown> = JSON.parse(JSON.stringify(state)) as Record<string, unknown>;
     fn(copy);
     save(copy, config);
     return copy;

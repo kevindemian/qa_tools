@@ -104,11 +104,11 @@ import { _configHint, buildMenuChoices, type MenuChoice } from './menu-data';
 import { createMockContext } from '../shared/test-utils/factories/context-factory';
 
 beforeAll(() => {
-    const openModule = require('../shared/open');
+    const openModule = jest.mocked(jest.requireMock<typeof import('../shared/open')>('../shared/open'));
     if (!jest.isMockFunction(openModule.openWithFallback)) {
         throw new Error('Guard FAILED: openWithFallback is NOT mocked. Browser would open!');
     }
-    const cp = require('child_process');
+    const cp = jest.mocked(jest.requireMock<typeof import('child_process')>('child_process'));
     if (!jest.isMockFunction(cp.spawn)) {
         throw new Error('Guard FAILED: child_process.spawn is NOT mocked. Browser would open!');
     }
@@ -223,7 +223,7 @@ describe('dispatchChoice', () => {
     const minimalCtx = createMockContext();
 
     beforeEach(() => {
-        const commands = jest.requireMock('./commands');
+        const commands = jest.mocked(jest.requireMock<typeof import('./commands')>('./commands'));
         commands.getHandler.mockReturnValue(null);
     });
 
@@ -240,7 +240,7 @@ describe('dispatchChoice', () => {
 
     it('dispatches to handler', async () => {
         const handler = jest.fn().mockResolvedValue(false);
-        const commands = jest.requireMock('./commands');
+        const commands = jest.mocked(jest.requireMock<typeof import('./commands')>('./commands'));
         commands.getHandler.mockReturnValue(handler);
 
         const result = await dispatchChoice('1', minimalCtx);
@@ -276,9 +276,9 @@ describe('showHelpLoop', () => {
     });
 
     it('handles CancelError in showHelpLoop (line 84-85)', () => {
-        const { CancelError } = jest.requireMock('../shared/prompt');
+        const { CancelError } = jest.requireMock<typeof import('../shared/prompt')>('../shared/prompt');
         jest.mocked(prompt).mockImplementationOnce(() => {
-            throw new CancelError();
+            throw new CancelError('/back');
         });
         // Should not throw, just return
         expect(() => showHelpLoop()).not.toThrow();

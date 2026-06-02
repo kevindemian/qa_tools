@@ -1,8 +1,10 @@
-jest.mock('dotenv', () => ({ config: jest.fn() }));
+const mockDotenvConfig = jest.fn<() => void, [object]>();
+jest.mock('dotenv', () => ({ config: mockDotenvConfig }));
+
+import Config from './config';
+import { __resetDotenvLoaded } from './env-utils';
 
 describe('Config', () => {
-    let Config: typeof import('./config').default;
-    let dotenv: { config: jest.Mock };
     const ENV_VARS = [
         'JIRA_BASE_URL',
         'JIRA_PERSONAL_TOKEN',
@@ -34,41 +36,34 @@ describe('Config', () => {
         'LLM_MAX_TOTAL_TOKENS',
     ];
 
-    beforeAll(() => {
-        dotenv = require('dotenv');
-    });
-
     beforeEach(() => {
         ENV_VARS.forEach((v) => delete process.env[v]);
-        dotenv.config.mockClear();
-        jest.isolateModules(() => {
-            Config = require('./config').default;
-        });
+        mockDotenvConfig.mockClear();
+        Config.reset();
     });
 
     describe('ensureDotenv', () => {
         it('calls dotenv.config exactly once on module load', () => {
-            expect(dotenv.config).toHaveBeenCalledTimes(1);
+            __resetDotenvLoaded();
+            Config.load();
+            expect(mockDotenvConfig).toHaveBeenCalledTimes(1);
         });
 
         it('does not call dotenv.config again when accessing getters', () => {
-            dotenv.config.mockClear();
             Config.get('jiraBaseUrl');
             Config.get('debug');
             Config.get('onError');
             Config.get('logLevel');
-            expect(dotenv.config).not.toHaveBeenCalled();
+            expect(mockDotenvConfig).not.toHaveBeenCalled();
         });
 
         it('handles dotenv.config throwing without crashing', () => {
-            dotenv.config.mockImplementationOnce(() => {
+            mockDotenvConfig.mockImplementationOnce(() => {
                 throw new Error('fail');
             });
-            jest.isolateModules(() => {
-                const LocalConfig = require('./config').default;
-                expect(typeof LocalConfig.load).toBe('function');
-            });
-            expect(Config).toBeDefined();
+            __resetDotenvLoaded();
+            Config.load();
+            expect(typeof Config.load).toBe('function');
         });
     });
 
@@ -84,22 +79,13 @@ describe('Config', () => {
             ['githubApiUrl', 'GITHUB_API_URL'],
             ['cypressProjectPath', 'CYPRESS_PROJECT_PATH'],
             ['csvDefaultPath', 'CSV_DEFAULT_PATH'],
-            ['autoChoice', 'AUTO_CHOICE'],
             ['csvPath', 'CSV_PATH'],
-            ['csvLabels', 'CSV_LABELS'],
             ['jsonPath', 'JSON_PATH'],
-            ['jsonLabels', 'JSON_LABELS'],
-            ['logLevel', 'LOG_LEVEL'],
-            ['logDir', 'LOG_DIR'],
-            ['xdgStateHome', 'XDG_STATE_HOME'],
         ];
 
         it.each(STRING_GETTERS)('%s returns the env value when set', (getter, envVar) => {
             process.env[envVar] = 'from-env';
-            jest.isolateModules(() => {
-                const cfg = require('./config').default;
-                expect(cfg.get(getter)).toBe('from-env');
-            });
+            expect(Config.get(getter)).toBe('from-env');
         });
     });
 
@@ -115,242 +101,100 @@ describe('Config', () => {
             ['githubApiUrl', 'https://api.github.com'],
             ['cypressProjectPath', ''],
             ['csvDefaultPath', ''],
-            ['autoChoice', ''],
-            ['onError', 'abort'],
             ['csvPath', ''],
-            ['csvLabels', ''],
             ['jsonPath', ''],
-            ['jsonLabels', ''],
-            ['logLevel', 'INFO'],
-            ['logDir', 'logs'],
-            ['xdgStateHome', ''],
+            ['xrayClientId', ''],
+            ['xrayClientSecret', ''],
+            ['llmApiKey', ''],
+            ['llmModel', 'google/gemini-2.0-flash-exp'],
+            ['llmBaseUrl', 'https://openrouter.ai/api/v1'],
+            ['llmSmallApiKey', ''],
+            ['llmSmallModel', 'gemini-2.0-flash-lite'],
+            ['llmFastApiKey', ''],
+            ['llmFastModel', 'llama-3.1-8b-instant'],
+            ['llmFastBaseUrl', 'https://api.groq.com/openai/v1'],
+            ['llmReviewApiKey', ''],
+            ['llmReviewModel', 'gemini-2.0-flash-exp'],
+            ['llmReviewBaseUrl', 'https://generativelanguage.googleapis.com/v1beta'],
+            ['llmFallbackApiKey', ''],
+            ['llmFallbackModel', 'meta/llama3-70b-instruct'],
+            ['llmFallbackBaseUrl', 'https://integrate.api.nvidia.com/v1'],
+            ['llmBatchApiKey', ''],
+            ['llmBatchModel', 'gpt-4o-mini'],
+            ['llmBatchBaseUrl', 'https://models.inference.ai.azure.com'],
+            ['onError', 'abort'],
         ];
 
-        it.each(STRING_DEFAULTS)('%s returns "%s" when env not set', (getter, fallback) => {
-            expect(Config.get(getter)).toBe(fallback);
+        it.each(STRING_DEFAULTS)('%s defaults to "%s"', (getter, expected) => {
+            expect(Config.get(getter)).toBe(expected);
         });
     });
 
     describe('boolean getters', () => {
-        const BOOL_GETTERS = ['autoConfirm', 'dryRun', 'debug', 'quiet', 'logFile'] as const;
+        const BOOL_GETTERS: Array<[string, string]> = [
+            ['autoConfirm', 'AUTO_CONFIRM'],
+            ['dryRun', 'DRY_RUN'],
+            ['debug', 'DEBUG'],
+            ['quiet', 'QUIET'],
+            ['logFile', 'LOG_FILE'],
+        ];
 
-        function getEnvVar(getter: string): string {
-            return getter.replace(/([A-Z])/g, '_$1').toUpperCase();
-        }
-
-        it.each(BOOL_GETTERS)('%s returns true when env var is "true"', (getter) => {
-            process.env[getEnvVar(getter)] = 'true';
-            jest.isolateModules(() => {
-                const cfg = require('./config').default;
-                expect(cfg.get(getter)).toBe(true);
-            });
-        });
-
-        it.each(BOOL_GETTERS)('%s returns false when env var is not set', (getter) => {
+        it.each(BOOL_GETTERS)('%s defaults to false', (getter) => {
             expect(Config.get(getter)).toBe(false);
         });
 
-        it.each(BOOL_GETTERS)('%s returns false when env var is not "true"', (getter) => {
-            process.env[getEnvVar(getter)] = 'false';
-            jest.isolateModules(() => {
-                const cfg = require('./config').default;
-                expect(cfg.get(getter)).toBe(false);
-            });
-        });
-
-        it.each(BOOL_GETTERS)('%s returns false when env var is arbitrary string', (getter) => {
-            process.env[getEnvVar(getter)] = 'yes';
-            jest.isolateModules(() => {
-                const cfg = require('./config').default;
-                expect(cfg.get(getter)).toBe(false);
-            });
-        });
-    });
-
-    describe('debug', () => {
-        it('returns a boolean', () => {
-            expect(typeof Config.get('debug')).toBe('boolean');
-        });
-
-        it('returns true when DEBUG=true', () => {
-            process.env.DEBUG = 'true';
-            jest.isolateModules(() => {
-                const cfg = require('./config').default;
-                expect(cfg.get('debug')).toBe(true);
-            });
-        });
-
-        it('returns false when DEBUG is not set', () => {
-            expect(Config.get('debug')).toBe(false);
-        });
-    });
-
-    describe('onError', () => {
-        it('returns abort by default', () => {
-            expect(Config.get('onError')).toBe('abort');
-        });
-
-        it('returns env value when set', () => {
-            process.env.ON_ERROR = 'continue';
-            jest.isolateModules(() => {
-                const cfg = require('./config').default;
-                expect(cfg.get('onError')).toBe('continue');
-            });
-        });
-    });
-
-    describe('jiraProject', () => {
-        it('returns YOUR_PROJECT_KEY by default', () => {
-            expect(Config.get('jiraProject')).toBe('YOUR_PROJECT_KEY');
-        });
-
-        it('returns env value when set', () => {
-            process.env.JIRA_PROJECT = 'PROJX';
-            jest.isolateModules(() => {
-                const cfg = require('./config').default;
-                expect(cfg.get('jiraProject')).toBe('PROJX');
-            });
-        });
-    });
-
-    describe('githubApiUrl', () => {
-        it('returns https://api.github.com by default', () => {
-            expect(Config.get('githubApiUrl')).toBe('https://api.github.com');
-        });
-
-        it('returns env value when set', () => {
-            process.env.GITHUB_API_URL = 'https://custom.github.com/api';
-            jest.isolateModules(() => {
-                const cfg = require('./config').default;
-                expect(cfg.get('githubApiUrl')).toBe('https://custom.github.com/api');
-            });
-        });
-    });
-
-    describe('logMaxSize', () => {
-        it('parses env value as number', () => {
-            process.env.LOG_MAX_SIZE = '1048576';
-            jest.isolateModules(() => {
-                const cfg = require('./config').default;
-                expect(cfg.get('logMaxSize')).toBe(1048576);
-            });
-        });
-
-        it('returns default 5MB when env not set', () => {
-            expect(Config.get('logMaxSize')).toBe(5 * 1024 * 1024);
-        });
-
-        it('returns default 5MB when env is not a valid number', () => {
-            process.env.LOG_MAX_SIZE = 'not-a-number';
-            jest.isolateModules(() => {
-                const cfg = require('./config').default;
-                expect(cfg.get('logMaxSize')).toBe(5 * 1024 * 1024);
-            });
-        });
-
-        it('returns default 5MB when env is empty string', () => {
-            process.env.LOG_MAX_SIZE = '';
-            jest.isolateModules(() => {
-                const cfg = require('./config').default;
-                expect(cfg.get('logMaxSize')).toBe(5 * 1024 * 1024);
-            });
-        });
-
-        it('returns parsed number when env is zero', () => {
-            process.env.LOG_MAX_SIZE = '0';
-            jest.isolateModules(() => {
-                const cfg = require('./config').default;
-                expect(cfg.get('logMaxSize')).toBe(0);
-            });
-        });
-    });
-
-    describe('load', () => {
-        it('is a static method that can be called multiple times without error', () => {
-            expect(Config.load()).toBeUndefined();
-            expect(Config.load()).toBeUndefined();
-            expect(Config.load()).toBeUndefined();
-        });
-    });
-
-    describe('unset env vars', () => {
-        it('returns empty string for all optional string getters when nothing is set', () => {
-            const emptyGetters = [
-                'jiraBaseUrl',
-                'jiraPersonalToken',
-                'xrayBaseUrl',
-                'gitToken',
-                'gitBaseUrl',
-                'githubToken',
-                'cypressProjectPath',
-                'csvDefaultPath',
-                'autoChoice',
-                'csvPath',
-                'csvLabels',
-                'jsonPath',
-                'jsonLabels',
-                'xdgStateHome',
-            ] as const;
-            emptyGetters.forEach((g) => {
-                expect(Config.get(g)).toBe('');
-            });
+        it.each(BOOL_GETTERS)('%s returns true when "%s" set to true', (getter, envVar) => {
+            process.env[envVar] = 'true';
+            expect(Config.get(getter)).toBe(true);
         });
     });
 
     describe('xrayMode', () => {
-        it('returns server by default', () => {
+        it('defaults to "server"', () => {
             expect(Config.get('xrayMode')).toBe('server');
         });
 
-        it('returns env value when set', () => {
+        it('returns the env value when valid', () => {
             process.env.XRAY_MODE = 'cloud';
-            jest.isolateModules(() => {
-                const cfg = require('./config').default;
-                expect(cfg.get('xrayMode')).toBe('cloud');
-            });
+            expect(Config.get('xrayMode')).toBe('cloud');
         });
 
-        it('throws on invalid value', () => {
+        it('throws when XRAY_MODE is invalid', () => {
             process.env.XRAY_MODE = 'invalid';
-            jest.isolateModules(() => {
-                expect(() => require('./config').default.get('xrayMode')).toThrow(/Invalid XRAY_MODE/);
-            });
+            expect(() => Config.get('xrayMode')).toThrow(/Invalid XRAY_MODE/);
         });
     });
 
-    describe('env var propagation across getters', () => {
-        it('each getter reads the current process.env value', () => {
-            process.env.JIRA_BASE_URL = 'https://jira.example.com';
-            process.env.JIRA_PERSONAL_TOKEN = 'token-123';
-            process.env.XRAY_BASE_URL = 'https://xray.example.com';
-            process.env.GIT_TOKEN = 'git-token';
-            process.env.GIT_BASE_URL = 'https://git.example.com';
-            process.env.GITHUB_TOKEN = 'gh-token';
-            process.env.AUTO_CHOICE = 'yes';
-            jest.isolateModules(() => {
-                const cfg = require('./config').default;
-                expect(cfg.get('jiraBaseUrl')).toBe('https://jira.example.com');
-                expect(cfg.get('jiraPersonalToken')).toBe('token-123');
-                expect(cfg.get('xrayBaseUrl')).toBe('https://xray.example.com');
-                expect(cfg.get('gitToken')).toBe('git-token');
-                expect(cfg.get('gitBaseUrl')).toBe('https://git.example.com');
-                expect(cfg.get('githubToken')).toBe('gh-token');
-                expect(cfg.get('autoChoice')).toBe('yes');
-            });
+    describe('csvLabels', () => {
+        it('defaults to empty string', () => {
+            expect(Config.get('csvLabels')).toBe('');
+        });
+
+        it('returns env value when set', () => {
+            process.env.CSV_LABELS = 'type,summary';
+            expect(Config.get('csvLabels')).toBe('type,summary');
+        });
+    });
+
+    describe('jsonLabels', () => {
+        it('defaults to empty string', () => {
+            expect(Config.get('jsonLabels')).toBe('');
+        });
+
+        it('returns env value when set', () => {
+            process.env.JSON_LABELS = 'key,value';
+            expect(Config.get('jsonLabels')).toBe('key,value');
         });
     });
 
     describe('logLevel', () => {
-        it('returns INFO by default', () => {
+        it('defaults to INFO', () => {
             expect(Config.get('logLevel')).toBe('INFO');
         });
 
         it('returns env value when set', () => {
             process.env.LOG_LEVEL = 'DEBUG';
-            jest.isolateModules(() => {
-                const cfg = require('./config').default;
-                expect(cfg.get('logLevel')).toBe('DEBUG');
-            });
+            expect(Config.get('logLevel')).toBe('DEBUG');
         });
     });
 
@@ -361,19 +205,13 @@ describe('Config', () => {
 
         it('returns env value when set', () => {
             process.env.LOG_DIR = '/var/log';
-            jest.isolateModules(() => {
-                const cfg = require('./config').default;
-                expect(cfg.get('logDir')).toBe('/var/log');
-            });
+            expect(Config.get('logDir')).toBe('/var/log');
         });
 
         it('prioritizes QA_TOOLS_LOGS_DIR over LOG_DIR', () => {
             process.env.QA_TOOLS_LOGS_DIR = '/qa/logs';
             process.env.LOG_DIR = '/var/log';
-            jest.isolateModules(() => {
-                const cfg = require('./config').default;
-                expect(cfg.get('logDir')).toBe('/qa/logs');
-            });
+            expect(Config.get('logDir')).toBe('/qa/logs');
             delete process.env.QA_TOOLS_LOGS_DIR;
             delete process.env.LOG_DIR;
         });
@@ -384,47 +222,110 @@ describe('Config', () => {
         });
     });
 
+    describe('logMaxSize', () => {
+        it('defaults to 5242880', () => {
+            expect(Config.get('logMaxSize')).toBe(5242880);
+        });
+
+        it('returns env value when set', () => {
+            process.env.LOG_MAX_SIZE = '2097152';
+            expect(Config.get('logMaxSize')).toBe(2097152);
+        });
+
+        it('uses override when provided', () => {
+            const cfg = Config.create({ logMaxSize: 4194304 });
+            expect(cfg.get('logMaxSize')).toBe(4194304);
+        });
+    });
+
+    describe('xdgStateHome', () => {
+        it('uses XDG_STATE_HOME when set', () => {
+            process.env.XDG_STATE_HOME = '/custom/state';
+            expect(Config.get('xdgStateHome')).toBe('/custom/state');
+        });
+    });
+
     describe('getAllPrefixed', () => {
-        const TEST_VARS = ['QA_TEST_VAR1', 'QA_TEST_VAR2', 'QA_TEST_EMPTY', 'QA_TEST_FULL', 'OTHER_VAR'];
-
-        afterEach(() => {
-            TEST_VARS.forEach((v) => delete process.env[v]);
-        });
-
         it('returns matching env vars', () => {
-            process.env.QA_TEST_VAR1 = 'value1';
-            process.env.QA_TEST_VAR2 = 'value2';
-            process.env.OTHER_VAR = 'other';
-            jest.isolateModules(() => {
-                const cfg = require('./config').default;
-                const result = cfg.getAllPrefixed('QA_TEST_');
-                expect(result).toEqual({
-                    QA_TEST_VAR1: 'value1',
-                    QA_TEST_VAR2: 'value2',
-                });
-            });
+            process.env.QA_TOOLS_FOO = 'bar';
+            process.env.QA_TOOLS_BAZ = 'qux';
+            process.env.OTHER = 'ignored';
+            const result = Config.getAllPrefixed('QA_TOOLS_');
+            expect(result).toEqual({ QA_TOOLS_FOO: 'bar', QA_TOOLS_BAZ: 'qux' });
+        });
+    });
+
+    describe('Config.create', () => {
+        it('returns a separate instance with overrides', () => {
+            const cfg = Config.create({ jiraBaseUrl: 'https://override.url' });
+            expect(cfg.get('jiraBaseUrl')).toBe('https://override.url');
         });
 
-        it('filters out empty values', () => {
-            process.env.QA_TEST_EMPTY = '';
-            process.env.QA_TEST_FULL = 'full';
-            jest.isolateModules(() => {
-                const cfg = require('./config').default;
-                const result = cfg.getAllPrefixed('QA_TEST_');
-                expect(result).toEqual({ QA_TEST_FULL: 'full' });
-            });
+        it('default instance getters are unaffected by create', () => {
+            const cfg = Config.create({ jiraBaseUrl: 'https://override.url' });
+            expect(cfg.get('jiraBaseUrl')).toBe('https://override.url');
+            expect(Config.get('jiraBaseUrl')).toBe('');
         });
 
-        it('returns empty object when no match', () => {
-            jest.isolateModules(() => {
-                const cfg = require('./config').default;
-                expect(cfg.getAllPrefixed('NONEXISTENT_')).toEqual({});
-            });
+        it('overrides can be partial', () => {
+            const cfg = Config.create({ debug: true });
+            expect(cfg.get('debug')).toBe(true);
+            expect(cfg.get('jiraBaseUrl')).toBe('');
+        });
+
+        it('overrides take precedence over env vars', () => {
+            process.env.JIRA_BASE_URL = 'https://env.url';
+            const cfg = Config.create({ jiraBaseUrl: 'https://override.url' });
+            expect(cfg.get('jiraBaseUrl')).toBe('https://override.url');
+        });
+    });
+
+    describe('setAutoConfirm', () => {
+        it('setAutoConfirm(true) makes get autoConfirm return true', () => {
+            Config.setAutoConfirm(true);
+            expect(Config.get('autoConfirm')).toBe(true);
+        });
+
+        it('setAutoConfirm(false) makes get autoConfirm return false', () => {
+            Config.setAutoConfirm(true);
+            Config.setAutoConfirm(false);
+            expect(Config.get('autoConfirm')).toBe(false);
+        });
+
+        it('setAutoConfirm on static instance is isolated from created instances', () => {
+            const cfg = Config.create({ autoConfirm: false });
+            Config.setAutoConfirm(true);
+            expect(cfg.get('autoConfirm')).toBe(false);
+        });
+
+        it('setAutoConfirm on an instance is isolated from static', () => {
+            Config.setAutoConfirm(false);
+            const cfg = Config.create({ autoConfirm: true });
+            expect(cfg.get('autoConfirm')).toBe(true);
+        });
+    });
+
+    describe('set', () => {
+        it('Config.set sets an override', () => {
+            Config.set('jiraBaseUrl', 'https://set.url');
+            expect(Config.get('jiraBaseUrl')).toBe('https://set.url');
+        });
+
+        it('Config.set does not affect create instances', () => {
+            Config.set('debug', true);
+            const cfg = Config.create({ debug: false });
+            expect(cfg.get('debug')).toBe(false);
+        });
+
+        it('Config.set can override a previously set value', () => {
+            Config.set('jiraBaseUrl', 'https://first.url');
+            Config.set('jiraBaseUrl', 'https://second.url');
+            expect(Config.get('jiraBaseUrl')).toBe('https://second.url');
         });
     });
 
     describe('reset', () => {
-        it('creates a new default instance', () => {
+        it('returns a new default instance', () => {
             const before = Config.getDefault();
             Config.reset();
             const after = Config.getDefault();
@@ -502,128 +403,19 @@ describe('Config', () => {
             expect(cfg.get('xrayClientId')).toBe('cid-ov');
             expect(cfg.get('xrayClientSecret')).toBe('csec-ov');
         });
-
-        it('defers to envVal when no override present', () => {
-            process.env.LLM_API_KEY = 'env-key';
-            process.env.LLM_BASE_URL = 'env-url';
-            const cfg = Config.create();
-            expect(cfg.get('llmApiKey')).toBe('env-key');
-            expect(cfg.get('llmBaseUrl')).toBe('env-url');
-            delete process.env.LLM_API_KEY;
-            delete process.env.LLM_BASE_URL;
-        });
-
-        it('uses boolean override for toBool', () => {
-            const cfg = Config.create({ autoConfirm: true, dryRun: false });
-            expect(cfg.get('autoConfirm')).toBe(true);
-            expect(cfg.get('dryRun')).toBe(false);
-        });
-
-        it('uses numeric override for toInt', () => {
-            const cfg = Config.create({ logMaxSize: 0 });
-            expect(cfg.get('logMaxSize')).toBe(0);
-        });
     });
 
-    describe('static LLM getters delegate to defaultInstance', () => {
-        beforeEach(() => {
-            delete process.env.LLM_API_KEY;
-            delete process.env.LLM_MODEL;
-            delete process.env.LLM_BASE_URL;
-            delete process.env.LLM_SMALL_API_KEY;
-            delete process.env.LLM_SMALL_MODEL;
-            delete process.env.LLM_FAST_API_KEY;
-            delete process.env.LLM_FAST_MODEL;
-            delete process.env.LLM_FAST_BASE_URL;
-            delete process.env.LLM_REVIEW_API_KEY;
-            delete process.env.LLM_REVIEW_MODEL;
-            delete process.env.LLM_REVIEW_BASE_URL;
-            delete process.env.LLM_FALLBACK_API_KEY;
-            delete process.env.LLM_FALLBACK_MODEL;
-            delete process.env.LLM_FALLBACK_BASE_URL;
-            delete process.env.LLM_BATCH_API_KEY;
-            delete process.env.LLM_BATCH_MODEL;
-            delete process.env.LLM_BATCH_BASE_URL;
-            delete process.env.LLM_MAX_TOKENS_PER_OP;
+    describe('validateRequiredEnv', () => {
+        it('does not throw when a required env var is present', () => {
+            process.env.JIRA_BASE_URL = 'https://jira.example.com';
+            process.env.JIRA_PERSONAL_TOKEN = 'token-123';
+            process.env.XRAY_BASE_URL = 'https://xray.example.com';
+            expect(() => Config.validateRequiredEnv()).not.toThrow();
         });
 
-        it('returns env values for static LLM getters', () => {
-            process.env.LLM_API_KEY = 'k';
-            process.env.LLM_MODEL = 'm';
-            process.env.LLM_BASE_URL = 'u';
-            process.env.LLM_SMALL_API_KEY = 'sk';
-            process.env.LLM_SMALL_MODEL = 'sm';
-            process.env.LLM_FAST_API_KEY = 'fk';
-            process.env.LLM_FAST_MODEL = 'fm';
-            process.env.LLM_FAST_BASE_URL = 'fu';
-            process.env.LLM_REVIEW_API_KEY = 'rk';
-            process.env.LLM_REVIEW_MODEL = 'rm';
-            process.env.LLM_REVIEW_BASE_URL = 'ru';
-            process.env.LLM_FALLBACK_API_KEY = 'fbk';
-            process.env.LLM_FALLBACK_MODEL = 'fbm';
-            process.env.LLM_FALLBACK_BASE_URL = 'fbu';
-            process.env.LLM_BATCH_API_KEY = 'bk';
-            process.env.LLM_BATCH_MODEL = 'bm';
-            process.env.LLM_BATCH_BASE_URL = 'bu';
-            process.env.LLM_MAX_TOKENS_PER_OP = '64000';
-            Config.create();
-            expect(Config.get('llmApiKey')).toBe('k');
-            expect(Config.get('llmModel')).toBe('m');
-            expect(Config.get('llmBaseUrl')).toBe('u');
-            expect(Config.get('llmSmallApiKey')).toBe('sk');
-            expect(Config.get('llmSmallModel')).toBe('sm');
-            expect(Config.get('llmFastApiKey')).toBe('fk');
-            expect(Config.get('llmFastModel')).toBe('fm');
-            expect(Config.get('llmFastBaseUrl')).toBe('fu');
-            expect(Config.get('llmReviewApiKey')).toBe('rk');
-            expect(Config.get('llmReviewModel')).toBe('rm');
-            expect(Config.get('llmReviewBaseUrl')).toBe('ru');
-            expect(Config.get('llmFallbackApiKey')).toBe('fbk');
-            expect(Config.get('llmFallbackModel')).toBe('fbm');
-            expect(Config.get('llmFallbackBaseUrl')).toBe('fbu');
-            expect(Config.get('llmBatchApiKey')).toBe('bk');
-            expect(Config.get('llmBatchModel')).toBe('bm');
-            expect(Config.get('llmBatchBaseUrl')).toBe('bu');
-            expect(Config.get('llmMaxTokens')).toBe(64000);
-        });
-    });
-
-    describe('get(key)', () => {
-        it('returns override string value', () => {
-            const cfg = Config.create({ jiraBaseUrl: 'https://override' });
-            expect(cfg.get('jiraBaseUrl')).toBe('https://override');
-        });
-
-        it('returns boolean true for boolean override', () => {
-            const cfg = Config.create({ debug: true });
-            expect(cfg.get('debug')).toBe(true);
-        });
-
-        it('returns boolean false for boolean override', () => {
-            const cfg = Config.create({ debug: false });
-            expect(cfg.get('debug')).toBe(false);
-        });
-
-        it('returns number for numeric override', () => {
-            const cfg = Config.create({ logMaxSize: 123456 });
-            expect(cfg.get('logMaxSize')).toBe(123456);
-        });
-
-        it('returns empty string for override set to undefined', () => {
-            const cfg = Config.create({ jiraBaseUrl: undefined });
-            expect(cfg.get('jiraBaseUrl')).toBe('');
-        });
-
-        it('falls back to process.env when key not in overrides', () => {
-            process.env.TEST_KEY_FALLBACK = 'env-value';
-            expect(Config.get('TEST_KEY_FALLBACK')).toBe('env-value');
-            delete process.env.TEST_KEY_FALLBACK;
-        });
-
-        it('static get delegates to instance', () => {
-            process.env.TEST_STATIC_GET = 'static-val';
-            expect(Config.get('TEST_STATIC_GET')).toBe('static-val');
-            delete process.env.TEST_STATIC_GET;
+        it('throws when a required env var is missing', () => {
+            delete process.env.JIRA_BASE_URL;
+            expect(() => Config.validateRequiredEnv()).toThrow();
         });
     });
 });

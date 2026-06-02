@@ -72,7 +72,7 @@ async function handler(c: CommandContext): Promise<boolean | void> {
 
     const mappingPath = 'config/test-mapping.json';
     const resolvedMappingPath = fs.existsSync(mappingPath) ? mappingPath : undefined;
-    const result = analyzeTestImpact(diff, { mappingPath: resolvedMappingPath });
+    const result = analyzeTestImpact(diff, { ...(resolvedMappingPath ? { mappingPath: resolvedMappingPath } : {}) });
 
     _showImpactSummary(result);
     _showImpactedTests(result);

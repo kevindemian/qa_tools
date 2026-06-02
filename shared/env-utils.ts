@@ -37,3 +37,8 @@ function toInt(val: string | number | undefined, fallback: number): number {
 }
 
 export { ensureDotenv, envVal, toBool, toInt };
+
+/** Reset dotenv loaded flag for testing. */
+export function __resetDotenvLoaded(): void {
+    dotenvLoaded = false;
+}

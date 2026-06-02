@@ -59,9 +59,8 @@ describe('exportTestsJson', () => {
     it('returns valid JSON for test list', () => {
         const tests: FlatTest[] = [{ title: 'Test', state: 'passed', duration: 100 }];
         const json = exportTestsJson(tests);
-        const parsed = JSON.parse(json);
-        expect(parsed).toHaveLength(1);
-        expect(parsed[0]!.title).toBe('Test');
+        expect(JSON.parse(json)).toHaveLength(1);
+        expect(JSON.parse(json)).toContainEqual(expect.objectContaining({ title: 'Test' }));
     });
 
     it('returns pretty-printed JSON with indentation', () => {

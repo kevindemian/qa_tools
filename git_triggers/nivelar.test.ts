@@ -10,7 +10,7 @@ jest.mock('../shared/prompt', () => ({
     warn: jest.fn(),
     printError: jest.fn(),
     Spinner: jest.fn().mockImplementation(() => ({ start: jest.fn(), stop: jest.fn() })),
-    withSpinner: jest.fn().mockImplementation(async (_label: string, fn: () => Promise<unknown>) => fn()),
+    withSpinner: jest.fn().mockImplementation(async (_label: string, fn: () => Promise<void>) => fn()),
 }));
 
 describe('nivelarBranches', () => {

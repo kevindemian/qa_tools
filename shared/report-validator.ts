@@ -120,7 +120,7 @@ export class ReportValidator {
         const tests = data['tests'];
         if (!Array.isArray(tests)) return;
         for (let i = 0; i < tests.length; i++) {
-            const t = tests[i];
+            const t: unknown = tests[i];
             if (typeof t !== 'object' || t === null) continue;
             const tc = t as TestCaseShape;
             if (tc.severity === 'high' && typeof tc.recommendation === 'string' && tc.recommendation.length < 20) {
@@ -144,8 +144,8 @@ export class ReportValidator {
         for (const part of parts) {
             const arrMatch = part.match(/^(\w+)\[(\d+)]$/);
             if (arrMatch) {
-                const key = arrMatch[1]!;
-                const idx = parseInt(arrMatch[2]!, 10);
+                const key = arrMatch[1] as string;
+                const idx = parseInt(arrMatch[2] as string, 10);
                 if (typeof current !== 'object' || current === null) return undefined;
                 const arr = (current as Record<string, unknown>)[key];
                 if (!Array.isArray(arr)) return undefined;

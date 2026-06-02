@@ -11,7 +11,7 @@ jest.mock('../shared/logger', () => ({
     rootLogger: { error: jest.fn(), warn: jest.fn() },
 }));
 
-const mockApiGet = jest.mocked(jest.requireMock('./github-api').apiGet);
+const mockApiGet = jest.mocked(jest.requireMock<typeof import('./github-api')>('./github-api').apiGet);
 
 describe('getOpenIssues', () => {
     let client: jest.Mocked<AxiosInstance>;

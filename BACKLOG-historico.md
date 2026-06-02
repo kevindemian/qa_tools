@@ -21,6 +21,11 @@ Issues registradas durante refatorações, postergadas por escopo, e concluídas
 | AUDIT-20 Fase 5          | ✅     | 51 magic numbers → constantes           |
 | AUDIT-20 Fase 7          | ✅     | Full verification                       |
 | FEAT-21                  | ✅     | File path tab-completion                |
+| Sprint4-F3b-T0           | ✅     | handlers.test.ts — 525 no-unsafe-\* → 0 |
+| Sprint4-F3b-T1           | ✅     | case17.test.ts — 373 no-unsafe-\* → 0   |
+| Sprint4-F3b-T2           | ✅     | case19.test.ts — 300 no-unsafe-\* → 0   |
+| Sprint4-F3b-T3           | ✅     | case18.test.ts — 264 no-unsafe-\* → 0   |
+| Sprint4-F3b-T4           | ✅     | case21.test.ts — 113 no-unsafe-\* → 0   |
 
 ### Documentação — Auditoria + Correção
 

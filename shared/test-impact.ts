@@ -13,7 +13,7 @@ const PackageJsonSchema = z.object({
     devDependencies: z.record(z.string(), z.string()).optional(),
 });
 
-function loadPackageJson(): { devDependencies?: Record<string, string> } | null {
+function loadPackageJson(): { devDependencies?: Record<string, string> | undefined } | null {
     try {
         const pkgPath = path.resolve(process.cwd(), 'package.json');
         if (!fs.existsSync(pkgPath)) return null;
@@ -26,7 +26,7 @@ function loadPackageJson(): { devDependencies?: Record<string, string> } | null 
     }
 }
 
-function hasJest(pkg: { devDependencies?: Record<string, string> } | null): boolean {
+function hasJest(pkg: { devDependencies?: Record<string, string> | undefined } | null): boolean {
     if (!pkg?.devDependencies) return false;
     return pkg.devDependencies.jest !== undefined;
 }
@@ -220,7 +220,7 @@ export function analyzeTestImpact(
         changedFiles,
         impactedTests,
         unaffected: { total: 0, skippedDueTo: [] },
-        suggestedCommand,
+        ...(suggestedCommand ? { suggestedCommand } : {}),
         confidence,
     };
 }
@@ -229,19 +229,19 @@ export function analyzeTestImpact(
  * Pure function — no I/O. Caller writes the JSON to disk. */
 export function generateTestSelectionJson(
     result: TestImpactResult,
-    options?: { conservative?: boolean; smokeTests?: string[] },
+    options?: { conservative?: boolean | undefined; smokeTests?: string[] | undefined },
 ): TestSelectionJson {
     return {
         generatedAt: new Date().toISOString(),
         changedFiles: result.changedFiles,
         impactedTests: result.impactedTests.map((t) => ({
             title: t.title,
-            testKey: t.testKey,
+            ...(t.testKey ? { testKey: t.testKey } : {}),
             reason: t.reason,
             matchMode: t.matchMode,
-            filePattern: t.filePattern,
+            ...(t.filePattern ? { filePattern: t.filePattern } : {}),
         })),
-        suggestedCommand: result.suggestedCommand,
+        ...(result.suggestedCommand ? { suggestedCommand: result.suggestedCommand } : {}),
         confidence: result.confidence,
         conservative: options?.conservative ?? false,
         smokeTests: options?.smokeTests ?? [],

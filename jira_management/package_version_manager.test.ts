@@ -35,7 +35,7 @@ describe('PackageVersionManager', () => {
         it('updates version in package.json', () => {
             writePackage('1.0.0');
             pkg.updateVersion('2.0.0');
-            const json = JSON.parse(fs.readFileSync(path.join(tmpDir, 'package.json'), 'utf8'));
+            const json = JSON.parse(fs.readFileSync(path.join(tmpDir, 'package.json'), 'utf8')) as { version: string };
             expect(json.version).toBe('2.0.0');
         });
 
@@ -48,7 +48,7 @@ describe('PackageVersionManager', () => {
             const extraUpdate = jest.fn();
             pkg._updateJsonFile(path.join(tmpDir, 'package.json'), '3.0.0', extraUpdate);
             expect(extraUpdate).toHaveBeenCalledTimes(1);
-            const json = JSON.parse(fs.readFileSync(path.join(tmpDir, 'package.json'), 'utf8'));
+            const json = JSON.parse(fs.readFileSync(path.join(tmpDir, 'package.json'), 'utf8')) as { version: string };
             expect(json.version).toBe('3.0.0');
         });
     });

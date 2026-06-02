@@ -88,7 +88,7 @@ export async function prGetMergeRequest(
         operation: 'buscar PR',
         returnNull: true,
     });
-    return formatPR(data);
+    return data ? formatPR(data) : null;
 }
 
 export async function prSearchMergeRequests(
@@ -105,12 +105,17 @@ export async function prSearchMergeRequests(
     if (targetBranch) params.base = targetBranch;
     if (searchStatus) params.state = searchStatus === 'opened' ? 'open' : searchStatus;
 
-    const data = await apiGet(client, repoPath + '/pulls', {
+    const data = await apiGet<JsonObject[]>(client, repoPath + '/pulls', {
         operation: 'buscar PRs',
         params,
         returnNull: true,
     });
-    return (data || []).map((pr: JsonObject) => formatPR(pr));
+    if (!data) return [];
+    return data.reduce<MergeRequestInfo[]>((acc, pr) => {
+        const formatted = formatPR(pr);
+        if (formatted) acc.push(formatted);
+        return acc;
+    }, []);
 }
 
 export async function prAcceptMergeRequest(
@@ -130,7 +135,7 @@ export async function prAcceptMergeRequest(
         }
         const body: JsonObject = {};
         if (shouldRemoveSourceBranch) body.delete_branch_on_merge = true;
-        const response = await client.put(repoPath + '/pulls/' + iid + '/merge', body);
+        const response = await client.put<JsonObject>(repoPath + '/pulls/' + iid + '/merge', body);
         return formatPR(response.data);
     } catch (err) {
         return handleError(err, { context: 'fazer merge' });
@@ -144,7 +149,7 @@ export async function prIsApproved(
     prNumber: string | number,
 ): Promise<boolean> {
     const repoPath = '/repos/' + owner + '/' + repo;
-    const data = await apiGet(client, repoPath + '/pulls/' + prNumber + '/reviews', {
+    const data = await apiGet<JsonObject[]>(client, repoPath + '/pulls/' + prNumber + '/reviews', {
         operation: 'verificar reviews',
         returnNull: true,
     });

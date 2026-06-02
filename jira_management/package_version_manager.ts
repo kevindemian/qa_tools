@@ -21,7 +21,7 @@ class PackageVersionManager {
     _updateJsonFile(filePath: string, newVersion: string, extraUpdate?: (json: JsonObject) => void): void {
         try {
             const data = fs.readFileSync(filePath, 'utf8');
-            const json = JSON.parse(data);
+            const json: JsonObject = JSON.parse(data) as JsonObject;
             json.version = newVersion;
             if (extraUpdate) extraUpdate(json);
             fs.writeFileSync(filePath, JSON.stringify(json, null, 2), 'utf8');

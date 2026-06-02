@@ -133,13 +133,13 @@ export async function glDownloadArtifact(
 ): Promise<{ buffer: Buffer; filename: string }> {
     const base = projectPath(owner, repo);
     try {
-        const response = await client.get(base + `/jobs/${artifactId}/artifacts`, {
+        const response = await client.get<ArrayBuffer>(base + `/jobs/${artifactId}/artifacts`, {
             responseType: 'arraybuffer',
         });
         const disposition =
             typeof response.headers['content-disposition'] === 'string' ? response.headers['content-disposition'] : '';
         const match = disposition.match(/filename="?(.+?)"?$/);
-        const filename = match ? match[1]! : 'artifacts.zip';
+        const filename = match ? (match[1] ?? 'artifacts.zip') : 'artifacts.zip';
         return { buffer: Buffer.from(response.data), filename };
     } catch (err) {
         return handleError(err, { context: 'baixar artifact' });

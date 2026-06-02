@@ -6,13 +6,13 @@ const mockMkdirSync = jest.fn();
 const mockWriteFileSync = jest.fn();
 const mockJoin = jest.fn((...args: string[]) => args.join('/'));
 
-const mockPrintError = jest.fn();
-const mockWarn = jest.fn();
-const mockInfo = jest.fn();
-const mockDivider = jest.fn();
+const mockPrintError = jest.fn<(label: string, error: Error) => void>();
+const mockWarn = jest.fn<(message: string) => void>();
+const mockInfo = jest.fn<(message: string) => void>();
+const mockDivider = jest.fn<() => void>();
 
-const mockOpenWithFallback = jest.fn();
-const mockGetDocsOutputDir = jest.fn();
+const mockOpenWithFallback = jest.fn<(path: string, label: string, callback?: (err: Error | null) => void) => void>();
+const mockGetDocsOutputDir = jest.fn<() => string | null>();
 
 const mockMdToHtml = jest.fn((content: string) => '<html>' + content + '</html>');
 
@@ -86,10 +86,8 @@ describe('showDocs', () => {
         const { showDocs } = loadModule();
         await showDocs();
 
-        expect(mockPrintError).toHaveBeenCalledWith(
-            'Documentação',
-            expect.objectContaining({ message: expect.stringContaining('Diretório docs/ não encontrado') }),
-        );
+        expect(mockPrintError).toHaveBeenCalledWith('Documentação', expect.any(Error));
+        expect(mockPrintError.mock.calls[0]![1].message).toContain('Diretório docs/ não encontrado');
         expect(mockOpenWithFallback).not.toHaveBeenCalled();
     });
 
@@ -130,10 +128,8 @@ describe('showDocs', () => {
         const { showDocs } = loadModule();
         await showDocs();
 
-        expect(mockPrintError).toHaveBeenCalledWith(
-            'Documentação',
-            expect.objectContaining({ message: expect.stringContaining('Não foi possível determinar') }),
-        );
+        expect(mockPrintError).toHaveBeenCalledWith('Documentação', expect.any(Error));
+        expect(mockPrintError.mock.calls[0]![1].message).toContain('Não foi possível determinar');
         expect(mockOpenWithFallback).not.toHaveBeenCalled();
     });
 });

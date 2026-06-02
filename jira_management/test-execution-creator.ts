@@ -33,7 +33,7 @@ class TestExecutionCreator {
         try {
             const result = await this.jiraResource.searchJiraIssues(jql, 1);
             if (result.issues.length > 0) {
-                const issue = result.issues[0]!;
+                const issue = result.issues[0] as NonNullable<(typeof result.issues)[number]>;
                 rootLogger.info('Test Execution existente encontrado: ' + issue.key);
                 return { key: issue.key, summary: (issue.fields.summary as string) || summary };
             }

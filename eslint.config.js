@@ -22,11 +22,11 @@ module.exports = tseslint.config(
             '@typescript-eslint/no-floating-promises': 'error',
             '@typescript-eslint/no-unnecessary-type-assertion': 'error',
             '@typescript-eslint/no-non-null-assertion': 'warn',
-            '@typescript-eslint/no-unsafe-assignment': 'off',
-            '@typescript-eslint/no-unsafe-call': 'off',
-            '@typescript-eslint/no-unsafe-member-access': 'off',
-            '@typescript-eslint/no-unsafe-argument': 'off',
-            '@typescript-eslint/no-unsafe-return': 'off',
+            '@typescript-eslint/no-unsafe-assignment': 'error',
+            '@typescript-eslint/no-unsafe-call': 'error',
+            '@typescript-eslint/no-unsafe-member-access': 'error',
+            '@typescript-eslint/no-unsafe-argument': 'error',
+            '@typescript-eslint/no-unsafe-return': 'error',
             'no-restricted-syntax': [
                 'error',
                 {
@@ -122,6 +122,16 @@ module.exports = tseslint.config(
             '@typescript-eslint/no-require-imports': 'off',
             '@typescript-eslint/no-unnecessary-type-assertion': 'off',
             'no-restricted-imports': 'off',
+        },
+    },
+    {
+        files: ['shared/__mocks__/**'],
+        rules: {
+            '@typescript-eslint/no-unsafe-assignment': 'off',
+            '@typescript-eslint/no-unsafe-call': 'off',
+            '@typescript-eslint/no-unsafe-member-access': 'off',
+            '@typescript-eslint/no-unsafe-argument': 'off',
+            '@typescript-eslint/no-unsafe-return': 'off',
         },
     },
     { ignores: ['node_modules/', 'docs-archive/', 'scripts/', '**/*.js'] },

@@ -13,10 +13,13 @@ export async function apiGet<T = JsonObject>(
 ): Promise<T | null> {
     try {
         const args = opts?.params ? [{ params: opts.params }] : [];
-        const response = await client.get(url, ...args);
-        return response.data as T;
+        const response = await client.get<T>(url, ...args);
+        return response.data;
     } catch (err) {
-        return handleError(err, { context: opts?.operation || url, returnNull: opts?.returnNull });
+        return handleError(err, {
+            context: opts?.operation || url,
+            ...(opts?.returnNull ? { returnNull: true as const } : {}),
+        });
     }
 }
 
@@ -28,8 +31,8 @@ export async function apiPost<T = JsonObject>(
 ): Promise<T> {
     try {
         const args = body !== undefined ? [body] : [];
-        const response = await client.post(url, ...args);
-        return response.data as T;
+        const response = await client.post<T>(url, ...args);
+        return response.data;
     } catch (err) {
         return handleError(err, { context: opts?.operation || url });
     }
@@ -43,8 +46,8 @@ export async function apiPut<T = JsonObject>(
 ): Promise<T | null> {
     try {
         const args = body !== undefined ? [body] : [];
-        const response = await client.put(url, ...args);
-        return (response.status === 204 ? null : response.data) as T | null;
+        const response = await client.put<T>(url, ...args);
+        return response.status === 204 ? null : response.data;
     } catch (err) {
         return handleError(err, { context: opts?.operation || url });
     }

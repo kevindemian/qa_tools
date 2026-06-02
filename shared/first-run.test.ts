@@ -1,10 +1,10 @@
-const mockShowSelect = jest.fn().mockResolvedValue('skip');
-const mockTitle = jest.fn();
-const mockInfo = jest.fn();
-const mockDivider = jest.fn();
-const mockWarn = jest.fn();
-const mockLoadTypedState = jest.fn();
-const mockUpdateState = jest.fn();
+const mockShowSelect = jest.fn<Promise<string>, [value: string]>().mockResolvedValue('skip');
+const mockTitle = jest.fn<void, [message: string]>();
+const mockInfo = jest.fn<void, [message: string]>();
+const mockDivider = jest.fn<void, []>();
+const mockWarn = jest.fn<void, [message: string]>();
+const mockLoadTypedState = jest.fn<Record<string, unknown>, []>();
+const mockUpdateState = jest.fn<void, [(state: object) => void]>();
 
 jest.mock('./prompt', () => ({
     title: mockTitle,

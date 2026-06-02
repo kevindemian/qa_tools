@@ -74,7 +74,10 @@ describe('handler contract (bidirectional)', () => {
 
     it('every handler module exports a handler function', () => {
         for (const num of KNOWN_CASES) {
-            const mod = require(`./case${String(num).padStart(2, '0')}`);
+            const padded = String(num).padStart(2, '0');
+            const mod = jest.requireActual<{ default: { handler: (...args: unknown[]) => unknown } }>(
+                `./case${padded}`,
+            );
             expect(mod.default).toHaveProperty('handler');
             expect(mod.default.handler).toBeInstanceOf(Function);
         }

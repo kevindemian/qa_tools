@@ -10,7 +10,19 @@ jest.mock('../shared/temp-dir', () => ({
     reportsDir: mockReportsDir,
 }));
 
+import * as prompt from '../shared/prompt';
 import MappingFileGenerator from './mapping-file-generator';
+
+interface MappingJson {
+    project: string;
+    tests: Array<{
+        key: string;
+        title: string;
+        description?: string;
+        steps?: Array<Record<string, string>>;
+        precondition?: string;
+    }>;
+}
 
 describe('MappingFileGenerator', () => {
     let generator: MappingFileGenerator;
@@ -52,13 +64,13 @@ describe('MappingFileGenerator', () => {
         );
         const files = fs.readdirSync(tmpDir).sort();
         expect(files).toEqual([base + '-jira-mapping.json', base + '-jira-mapping.md', base + '-summary.txt']);
-        const json = JSON.parse(fs.readFileSync(path.join(tmpDir, base + '-jira-mapping.json'), 'utf8'));
+        const json = JSON.parse(fs.readFileSync(path.join(tmpDir, base + '-jira-mapping.json'), 'utf8')) as MappingJson;
         expect(json.project).toBe('ECSPOL');
         expect(json.tests).toHaveLength(2);
         expect(json.tests[0].key).toBe('K-100');
         expect(json.tests[0].title).toBe('Login test');
         expect(json.tests[0].description).toBe('Verifies login flow');
-        expect(json.tests[0].steps[0].Action).toBe('Type user');
+        expect(json.tests[0].steps![0].Action).toBe('Type user');
         expect(json.tests[1].key).toBe('K-200');
         expect(json.tests[1].title).toBe('Logout test');
         const md = fs.readFileSync(path.join(tmpDir, base + '-jira-mapping.md'), 'utf8');
@@ -78,7 +90,7 @@ describe('MappingFileGenerator', () => {
 
     it('test without steps still creates JSON, steps omitted from mapping', () => {
         generator.generate('/f.csv', 'P', ['K-1'], [{ title: 't', description: 'd', steps: [] }]);
-        const json = JSON.parse(fs.readFileSync(path.join(tmpDir, 'f-jira-mapping.json'), 'utf8'));
+        const json = JSON.parse(fs.readFileSync(path.join(tmpDir, 'f-jira-mapping.json'), 'utf8')) as MappingJson;
         expect(json.tests[0].steps).toBeUndefined();
     });
 
@@ -95,22 +107,23 @@ describe('MappingFileGenerator', () => {
                 },
             ],
         );
-        const json = JSON.parse(fs.readFileSync(path.join(tmpDir, 'f-jira-mapping.json'), 'utf8'));
+        const json = JSON.parse(fs.readFileSync(path.join(tmpDir, 'f-jira-mapping.json'), 'utf8')) as MappingJson;
         expect(json.tests[0].precondition).toBe('must login');
         const md = fs.readFileSync(path.join(tmpDir, 'f-jira-mapping.md'), 'utf8');
         expect(md).toContain('must login');
     });
 
     it('isQuiet returns false — info() is called', () => {
-        const p = require('../shared/prompt') as { info: jest.Mock; isQuiet: jest.Mock };
-        p.isQuiet.mockReturnValue(false);
+        const mockIsQuiet = jest.mocked(prompt.isQuiet);
+        const mockInfo = jest.mocked(prompt.info);
+        mockIsQuiet.mockReturnValue(false);
         generator.generate('/f.csv', 'P', ['K-1'], [{ title: 't', steps: [] }]);
-        expect(p.info).toHaveBeenCalledTimes(2);
+        expect(mockInfo).toHaveBeenCalledTimes(2);
     });
 
     it('extra tasksId beyond tests produce empty-key entries', () => {
         generator.generate('/f.csv', 'P', ['KA', 'KB', 'KC'], [{ title: 'only', steps: [] }]);
-        const json = JSON.parse(fs.readFileSync(path.join(tmpDir, 'f-jira-mapping.json'), 'utf8'));
+        const json = JSON.parse(fs.readFileSync(path.join(tmpDir, 'f-jira-mapping.json'), 'utf8')) as MappingJson;
         expect(json.tests).toHaveLength(3);
         expect(json.tests[0].title).toBe('only');
         expect(json.tests[1].title).toBe('');
@@ -121,9 +134,9 @@ describe('MappingFileGenerator', () => {
 
     it('steps with empty fields default to empty string', () => {
         generator.generate('/f.csv', 'P', ['KE'], [{ title: 't', steps: [{ fields: {} }] }]);
-        const json = JSON.parse(fs.readFileSync(path.join(tmpDir, 'f-jira-mapping.json'), 'utf8'));
-        expect(json.tests[0].steps[0].Action).toBe('');
-        expect(json.tests[0].steps[0].Data).toBe('');
-        expect(json.tests[0].steps[0]['Expected Result']).toBe('');
+        const json = JSON.parse(fs.readFileSync(path.join(tmpDir, 'f-jira-mapping.json'), 'utf8')) as MappingJson;
+        expect(json.tests[0].steps![0].Action).toBe('');
+        expect(json.tests[0].steps![0].Data).toBe('');
+        expect(json.tests[0].steps![0]['Expected Result']).toBe('');
     });
 });

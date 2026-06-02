@@ -65,23 +65,27 @@ let _projects: Record<string, string> | undefined;
 function loadProvidersConfig(): Record<string, ProviderConfig> {
     if (_providersConfig) return _providersConfig;
     try {
-        _providersConfig = JSON.parse(fs.readFileSync(PROVIDERS_PATH, 'utf8'));
+        const parsed: Record<string, ProviderConfig> = JSON.parse(fs.readFileSync(PROVIDERS_PATH, 'utf8')) as Record<
+            string,
+            ProviderConfig
+        >;
+        _providersConfig = parsed;
     } catch (err: unknown) {
         rootLogger.warn('Falha ao carregar providers.json: ' + (err as Error).message + '. Usando GitLab como padrao.');
         _providersConfig = {};
     }
-    return _providersConfig!;
+    return _providersConfig;
 }
 
 function loadProjects(): Record<string, string> {
     if (_projects) return _projects;
     try {
-        _projects = JSON.parse(fs.readFileSync(PROJECTS_PATH, 'utf8'));
+        _projects = JSON.parse(fs.readFileSync(PROJECTS_PATH, 'utf8')) as Record<string, string>;
         const projectOverrides = Config.getAllPrefixed('PROJECT_ID_');
-        for (const key of Object.keys(_projects!)) {
+        for (const key of Object.keys(_projects)) {
             const envKey = 'PROJECT_ID_' + key.toUpperCase();
             if (projectOverrides[envKey]) {
-                _projects![key] = projectOverrides[envKey];
+                _projects[key] = projectOverrides[envKey];
             }
         }
     } catch (err: unknown) {
@@ -94,7 +98,7 @@ function loadProjects(): Record<string, string> {
         error(`Configuração inválida em "${PROJECTS_PATH}". Verifique o JSON.`);
         _projects = {};
     }
-    return _projects!;
+    return _projects;
 }
 
 export function getProjects(): Record<string, string> {
@@ -126,7 +130,7 @@ export function pushHistory(op: string, detail: string, status: string): void {
     updateState((state: StateContainer) => {
         let history: Array<{ op: string; detail: string; status: string; ts: string }>;
         if (Array.isArray(state.history)) {
-            history = state.history;
+            history = state.history as Array<{ op: string; detail: string; status: string; ts: string }>;
         } else {
             history = [];
             state.history = history;

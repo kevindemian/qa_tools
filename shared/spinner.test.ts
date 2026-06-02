@@ -14,7 +14,7 @@ jest.mock('cli-progress', () => ({
 }));
 
 import { isQuiet } from '../shared/prompt-ui';
-import { Output } from '../shared/output';
+import { Output, defaultOutput } from '../shared/output';
 import { withSpinner, ProgressBar, __setOraDep } from './spinner';
 
 const mockIsQuiet = jest.mocked(isQuiet);
@@ -99,7 +99,6 @@ describe('ProgressBar', () => {
 
         it('falls back to output.print when not TTY', () => {
             mockIsTTY.mockReturnValue(false);
-            const { defaultOutput } = require('../shared/output');
             const bar = new ProgressBar(100);
             bar.update(50);
             expect(defaultOutput.print).toHaveBeenCalled();

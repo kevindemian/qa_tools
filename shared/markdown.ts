@@ -42,7 +42,7 @@ export function mdBox(markdown: string, options?: { title?: string; border?: Box
     const lines = content.split('\n');
     const border: BoxBorder = options?.border || 'round';
     return box(lines, {
-        title: options?.title,
+        ...(options?.title ? { title: options.title } : {}),
         border,
         padding: 1,
     });

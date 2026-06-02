@@ -130,20 +130,15 @@ function buildTestData(test: TestCase, projectName: string, jiraLabels: string[]
         description += (description ? '\n\n' : '') + 'Pre-condition: ' + test.precondition.value;
     }
 
-    const testData: TestDataPayload = {
+    return JiraPayloadSchema.parse({
         fields: {
             project: { key: projectName },
             summary: test.title,
             description,
-            issuetype: { name: 'Test' },
+            issuetype: { name: 'Test' as const },
+            labels: jiraLabels,
         },
-    };
-
-    if (jiraLabels.length > 0) {
-        testData.fields.labels = jiraLabels;
-    }
-
-    return JiraPayloadSchema.parse(testData);
+    }) as TestDataPayload;
 }
 
 interface SaveCheckpointOptions {
@@ -162,7 +157,7 @@ function saveCheckpoint(opts: SaveCheckpointOptions): void {
         project: projectName,
         ts: new Date().toISOString(),
         testCount: tests.length,
-        done: inMemoryTasksId.map((key, idx) => ({ key, title: inMemoryTasksText[idx]! })),
+        done: inMemoryTasksId.map((key, idx) => ({ key, title: inMemoryTasksText[idx] as string })),
     };
     cpSave[cpKey] = sourcePath;
     updateState((state) => {
@@ -333,7 +328,7 @@ async function executeTestCreationLoop(opts: TestCreationLoopOptions): Promise<v
     } = opts;
 
     outer: for (let t = resumeFrom; t < tests.length; t++) {
-        const test = tests[t]!;
+        const test = tests[t] as NonNullable<(typeof tests)[number]>;
         const testTitle = test.title;
         if (!isQuiet()) reportInfo('Criando: ' + testTitle);
         inMemoryTasksText.push(testTitle);

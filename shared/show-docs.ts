@@ -79,8 +79,8 @@ export async function showDocs(): Promise<void> {
         fs.writeFileSync(
             path.join(outDir, doc.file.replace(/\.md$/, '.html')),
             mdToHtml(content, doc.label, {
-                prev: prevDoc ? { label: prevDoc.label, file: prevDoc.file.replace(/\.md$/, '.html') } : undefined,
-                next: nextDoc ? { label: nextDoc.label, file: nextDoc.file.replace(/\.md$/, '.html') } : undefined,
+                ...(prevDoc ? { prev: { label: prevDoc.label, file: prevDoc.file.replace(/\.md$/, '.html') } } : {}),
+                ...(nextDoc ? { next: { label: nextDoc.label, file: nextDoc.file.replace(/\.md$/, '.html') } } : {}),
             }),
             'utf8',
         );

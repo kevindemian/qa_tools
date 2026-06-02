@@ -1,23 +1,26 @@
 jest.mock('../shared/prompt', () => {
-    const actual = jest.requireActual('../shared/prompt');
+    const actual = jest.requireActual<typeof import('../shared/prompt')>('../shared/prompt');
     return {
         ...actual,
-        prompt: jest.fn().mockReturnValue(''),
-        confirm: jest.fn().mockReturnValue(true),
-        ask: jest.fn().mockResolvedValue(''),
-        askConfirm: jest.fn().mockResolvedValue(true),
-        smartPrompt: jest.fn().mockResolvedValue('v2.0.0'),
+        prompt: jest.fn<() => string, []>().mockReturnValue(''),
+        confirm: jest.fn<() => boolean, []>().mockReturnValue(true),
+        ask: jest.fn<() => Promise<string>, []>().mockResolvedValue(''),
+        askConfirm: jest.fn<() => Promise<boolean>, []>().mockResolvedValue(true),
+        smartPrompt: jest.fn<() => Promise<string>, []>().mockResolvedValue('v2.0.0'),
     };
 });
 jest.mock('../shared/state', () => ({
-    load: jest.fn().mockReturnValue({}),
-    update: jest.fn(),
+    load: jest.fn<() => Record<string, unknown>, []>().mockReturnValue({}),
+    update: jest.fn<() => void, [Record<string, unknown>]>(),
 }));
-jest.mock('../shared/open', () => ({ openWithOsOrFallback: jest.fn() }));
+jest.mock('../shared/open', () => ({ openWithOsOrFallback: jest.fn<() => void, [string]>() }));
 
 import fs from 'fs';
 import path from 'path';
 import os from 'os';
+import * as promptModule from '../shared/prompt';
+import * as stateModule from '../shared/state';
+import * as openModule from '../shared/open';
 
 const tmpHome = fs.mkdtempSync(path.join(os.tmpdir(), 'qa-e2e-hp-'));
 const tmpGitDir = fs.mkdtempSync(path.join(os.tmpdir(), 'qa-e2e-git-'));
@@ -39,6 +42,22 @@ import JiraLinkManager from '../jira_management/jira_link_manager';
 import CsvResource from '../jira_management/csv_resource';
 import { rootLogger } from '../shared/logger';
 import { SessionContext } from '../shared/session-context';
+import case02 from '../jira_management/commands/case02';
+import case03 from '../jira_management/commands/case03';
+import case04 from '../jira_management/commands/case04';
+import case05 from '../jira_management/commands/case05';
+import case06 from '../jira_management/commands/case06';
+import case07 from '../jira_management/commands/case07';
+import case08 from '../jira_management/commands/case08';
+import case09 from '../jira_management/commands/case09';
+import case10 from '../jira_management/commands/case10';
+import case11 from '../jira_management/commands/case11';
+import case12 from '../jira_management/commands/case12';
+import case13 from '../jira_management/commands/case13';
+import case14 from '../jira_management/commands/case14';
+import case15 from '../jira_management/commands/case15';
+import case16 from '../jira_management/commands/case16';
+import PackageVersionManager from '../jira_management/package_version_manager';
 
 const HOST = 'http://localhost:1996';
 const API = HOST + '/rest/api/2';
@@ -78,8 +97,10 @@ beforeEach(() => {
     getPrompt().confirm.mockReset();
     getPrompt().confirm.mockReturnValue(true);
     nock.disableNetConnect();
-    jest.spyOn(console, 'log').mockImplementation(() => {});
-    jest.spyOn(process.stdout, 'write').mockImplementation(() => true);
+    jest.spyOn(console, 'log').mockImplementation(jest.fn<() => void, []>());
+    jest.spyOn(process.stdout, 'write').mockImplementation(
+        jest.fn<() => boolean, [Buffer | string]>().mockReturnValue(true),
+    );
 });
 
 afterEach(() => {
@@ -99,8 +120,7 @@ function buildContext() {
     ctx.project_name = 'ECSPOL';
     ctx.inMemoryTasksId = ['IMT-1', 'IMT-2'];
     ctx.inMemoryTasksText = ['Memory Test 1', 'Memory Test 2'];
-    ctx.createPackageManager = jest.fn((dir: string) => {
-        const { default: PackageVersionManager } = require('../jira_management/package_version_manager');
+    ctx.createPackageManager = jest.fn<(dir: string) => PackageVersionManager, [string]>((dir: string) => {
         return new PackageVersionManager(dir);
     });
     return {
@@ -110,21 +130,16 @@ function buildContext() {
         linkManagerXray: lmXray,
         csvResource: csv,
         ctx,
-        pushHistory: jest.fn((op: string, detail: string, status: string) => ctx.pushHistory(op, detail, status)),
-        printSessionSummary: jest.fn(),
+        pushHistory: jest.fn<(op: string, detail: string, status: string) => void, [string, string, string]>(
+            (op: string, detail: string, status: string) => ctx.pushHistory(op, detail, status),
+        ),
+        printSessionSummary: jest.fn<() => void, []>(),
         base_url: HOST,
         sessionLog: rootLogger.child({ session: 'e2e-hp' }),
     };
 }
 
-const getPrompt = () =>
-    require('../shared/prompt') as {
-        prompt: jest.Mock;
-        confirm: jest.Mock;
-        ask: jest.Mock;
-        askConfirm: jest.Mock;
-        smartPrompt: jest.Mock;
-    };
+const getPrompt = () => jest.mocked(promptModule);
 
 // ──────────────────────────────────────────────
 // case02 — List versions  (GET project + versions)
@@ -138,7 +153,7 @@ describe('case02 — list versions', () => {
             { name: 'v2.0.0', released: false, releaseDate: '2099-01-01', description: 'Next' },
         ]);
         const c = buildContext();
-        const mod = require('../jira_management/commands/case02').default;
+        const mod = case02;
         await mod.handler(c);
         expect(c.pushHistory).toHaveBeenCalledWith('listar-versoes', '2 versão(oes)', 'ok');
         expect(nock.isDone()).toBe(true);
@@ -149,7 +164,7 @@ describe('case02 — list versions', () => {
         api.get('/project/ECSPOL').reply(200, { id: '123' });
         api.get('/project/123/versions').reply(200, []);
         const c = buildContext();
-        const mod = require('../jira_management/commands/case02').default;
+        const mod = case02;
         await mod.handler(c);
         // pushHistory é chamado apenas quando há versões (results.length > 0)
         expect(c.pushHistory).not.toHaveBeenCalled();
@@ -160,7 +175,7 @@ describe('case02 — list versions', () => {
         const { api } = freshScope();
         api.get('/project/ECSPOL').reply(404);
         const c = buildContext();
-        const mod = require('../jira_management/commands/case02').default;
+        const mod = case02;
         await mod.handler(c);
         expect(c.pushHistory).not.toHaveBeenCalled();
         expect(nock.isDone()).toBe(true);
@@ -180,7 +195,7 @@ describe('case03 — create version', () => {
         getPrompt().ask.mockResolvedValueOnce('v2.0.0');
         getPrompt().ask.mockResolvedValueOnce('Release notes');
         const c = buildContext();
-        const mod = require('../jira_management/commands/case03').default;
+        const mod = case03;
         await mod.handler(c);
         expect(c.pushHistory).toHaveBeenCalledWith('criar-versão', 'v2.0.0', 'ok');
         expect(nock.isDone()).toBe(true);
@@ -189,7 +204,7 @@ describe('case03 — create version', () => {
     it('empty name — returns early without history', async () => {
         getPrompt().ask.mockResolvedValueOnce('');
         const c = buildContext();
-        const mod = require('../jira_management/commands/case03').default;
+        const mod = case03;
         await mod.handler(c);
         expect(c.pushHistory).not.toHaveBeenCalled();
     });
@@ -216,7 +231,7 @@ describe('case04 — assign fixVersion', () => {
         getPrompt().askConfirm.mockResolvedValueOnce(false); // no sprint
 
         const c = buildContext();
-        const mod = require('../jira_management/commands/case04').default;
+        const mod = case04;
         await mod.handler(c);
         expect(c.pushHistory).toHaveBeenCalledWith('atribuir-fixversion', expect.stringContaining('2/2'), 'ok');
         expect(c.ctx.results.filter((r: { status: string }) => r.status === 'ok')).toHaveLength(2);
@@ -243,10 +258,12 @@ describe('case05 — update package + release notes', () => {
         getPrompt().ask.mockResolvedValueOnce(tmpGitDir);
         getPrompt().ask.mockResolvedValueOnce('v2.0.0');
         const c = buildContext();
-        const mod = require('../jira_management/commands/case05').default;
+        const mod = case05;
         await mod.handler(c);
 
-        const pkg = JSON.parse(fs.readFileSync(path.join(tmpGitDir, 'package.json'), 'utf8'));
+        const pkg: Record<string, unknown> = JSON.parse(
+            fs.readFileSync(path.join(tmpGitDir, 'package.json'), 'utf8'),
+        ) as Record<string, unknown>;
         const rn = fs.readFileSync(path.join(rnDir, 'ReleaseNotes.txt'), 'utf8');
 
         expect(pkg.version).toBe('2.0.0');
@@ -272,7 +289,7 @@ describe('case06 — check task status', () => {
             });
         getPrompt().ask.mockResolvedValueOnce('v2.0.0');
         const c = buildContext();
-        const mod = require('../jira_management/commands/case06').default;
+        const mod = case06;
         await mod.handler(c);
         expect(c.pushHistory).toHaveBeenCalledWith('verificar-status', 'v2.0.0', 'ok');
         expect(nock.isDone()).toBe(true);
@@ -318,7 +335,7 @@ describe('case07 — close tasks', () => {
         getPrompt().askConfirm.mockResolvedValueOnce(true);
 
         const c = buildContext();
-        const mod = require('../jira_management/commands/case07').default;
+        const mod = case07;
         await mod.handler(c);
         expect(c.pushHistory).toHaveBeenCalledWith('fechar-tarefas', '2 tarefa(s)', 'ok');
         expect(nock.isDone()).toBe(true);
@@ -331,7 +348,7 @@ describe('case07 — close tasks', () => {
         getPrompt().ask.mockResolvedValueOnce('v2.0.0');
         getPrompt().askConfirm.mockResolvedValueOnce(true);
         const c = buildContext();
-        const mod = require('../jira_management/commands/case07').default;
+        const mod = case07;
         await mod.handler(c);
         expect(c.pushHistory).not.toHaveBeenCalled();
         expect(nock.isDone()).toBe(true);
@@ -360,7 +377,7 @@ describe('case08 — publish version', () => {
         getPrompt().askConfirm.mockResolvedValueOnce(true);
 
         const c = buildContext();
-        const mod = require('../jira_management/commands/case08').default;
+        const mod = case08;
         await mod.handler(c);
         expect(c.pushHistory).toHaveBeenCalledWith('publicar-versão', 'v2.0.0', 'ok');
         expect(nock.isDone()).toBe(true);
@@ -374,11 +391,11 @@ describe('case09 — switch project', () => {
     it('updates ctx.project_name and persists to state', async () => {
         getPrompt().ask.mockResolvedValueOnce('NEWPROJ');
         const c = buildContext();
-        const mod = require('../jira_management/commands/case09').default;
+        const mod = case09;
         await mod.handler(c);
         expect(c.ctx.project_name).toBe('NEWPROJ');
         expect(c.pushHistory).toHaveBeenCalledWith('trocar-projeto', 'NEWPROJ', 'ok');
-        expect(require('../shared/state').update).toHaveBeenCalled();
+        expect(stateModule.update).toHaveBeenCalled();
     });
 });
 
@@ -389,7 +406,7 @@ describe('case10 — change git directory', () => {
     it('sets git directory and packageManager', async () => {
         getPrompt().ask.mockResolvedValueOnce(tmpGitDir);
         const c = buildContext();
-        const mod = require('../jira_management/commands/case10').default;
+        const mod = case10;
         await mod.handler(c);
         expect(c.ctx.git_directory).toBe(tmpGitDir);
         expect(c.ctx.packageManager).toBeDefined();
@@ -404,7 +421,7 @@ describe('case11 — generate CSV/JSON template', () => {
         const dest = path.join(tmpHome, 'template.csv');
         getPrompt().ask.mockResolvedValueOnce('CSV').mockResolvedValueOnce(dest);
         const c = buildContext();
-        const mod = require('../jira_management/commands/case11').default;
+        const mod = case11;
         await mod.handler(c);
         expect(fs.existsSync(dest)).toBe(true);
         expect(c.pushHistory).toHaveBeenCalledWith('gerar-template', 'CSV: ' + dest, 'ok');
@@ -414,7 +431,7 @@ describe('case11 — generate CSV/JSON template', () => {
         const dest = path.join(tmpHome, 'template.json');
         getPrompt().ask.mockResolvedValueOnce('JSON').mockResolvedValueOnce(dest);
         const c = buildContext();
-        const mod = require('../jira_management/commands/case11').default;
+        const mod = case11;
         await mod.handler(c);
         expect(fs.existsSync(dest)).toBe(true);
         expect(c.pushHistory).toHaveBeenCalledWith('gerar-template', 'JSON: ' + dest, 'ok');
@@ -431,7 +448,7 @@ describe('case12 — diagnose connection', () => {
         xray.get('/').reply(200, { info: 'xray-ok' });
         api.get('/project/ECSPOL').reply(200, { id: '123', name: 'ECSPOL' });
         const c = buildContext();
-        const mod = require('../jira_management/commands/case12').default;
+        const mod = case12;
         await mod.handler(c);
         expect(c.pushHistory).toHaveBeenCalledWith('diagnostico', expect.stringContaining('3/4'), 'ok');
         expect(nock.isDone()).toBe(true);
@@ -443,7 +460,7 @@ describe('case12 — diagnose connection', () => {
         xray.get('/').reply(401);
         api.get('/project/ECSPOL').reply(200, { id: '123' });
         const c = buildContext();
-        const mod = require('../jira_management/commands/case12').default;
+        const mod = case12;
         await mod.handler(c);
         expect(c.pushHistory).toHaveBeenCalledWith('diagnostico', expect.stringContaining('2/4'), 'error');
         expect(nock.isDone()).toBe(true);
@@ -492,7 +509,7 @@ describe('case13 — create Test Execution', () => {
         getPrompt().ask.mockResolvedValueOnce(''); // description
 
         const c = buildContext();
-        const mod = require('../jira_management/commands/case13').default;
+        const mod = case13;
         await mod.handler(c);
         expect(c.pushHistory).toHaveBeenCalledWith('create-testexec', 'EXEC-1', 'ok');
         expect(nock.isDone()).toBe(true);
@@ -506,10 +523,10 @@ describe('case14 — change Cypress directory', () => {
     it('sets cypress dir in state', async () => {
         getPrompt().ask.mockResolvedValueOnce('/tmp/cypress');
         const c = buildContext();
-        const mod = require('../jira_management/commands/case14').default;
+        const mod = case14;
         await mod.handler(c);
         expect(c.pushHistory).toHaveBeenCalledWith('config-cypress', '/tmp/cypress', 'ok');
-        expect(require('../shared/state').update).toHaveBeenCalled();
+        expect(stateModule.update).toHaveBeenCalled();
     });
 });
 
@@ -560,7 +577,7 @@ describe('case15 — import JSON tests', () => {
 
         const c = buildContext();
         c.ctx.packageManager = undefined;
-        const mod = require('../jira_management/commands/case15').default;
+        const mod = case15;
         await mod.handler(c);
         expect(c.pushHistory).toHaveBeenCalledWith('importar-json', '1 testes', 'ok');
         expect(c.pushHistory).toHaveBeenCalledWith('create-testexec', 'EXEC-1', 'ok');
@@ -575,10 +592,10 @@ describe('case16 — change JSON directory', () => {
     it('sets json dir in state', async () => {
         getPrompt().ask.mockResolvedValueOnce('/tmp/json');
         const c = buildContext();
-        const mod = require('../jira_management/commands/case16').default;
+        const mod = case16;
         await mod.handler(c);
         expect(c.pushHistory).toHaveBeenCalledWith('config-json-dir', '/tmp/json', 'ok');
-        expect(require('../shared/state').update).toHaveBeenCalled();
+        expect(stateModule.update).toHaveBeenCalled();
     });
 });
 

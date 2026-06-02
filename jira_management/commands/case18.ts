@@ -40,7 +40,7 @@ async function handler(c: CommandContext): Promise<boolean | void> {
     const safeUserMsg = sanitizeForLlm(userMsg);
 
     title('Gerando testes com IA...');
-    let testCases: TestCaseData[];
+    let testCases;
     try {
         testCases = await llmPrompt({
             tier: 'fast',
@@ -53,7 +53,6 @@ async function handler(c: CommandContext): Promise<boolean | void> {
         printError('Falha ao gerar casos de teste com IA', err);
         return;
     }
-
     const { resolvedPreConditions, summariesToCreate, preconditionMatches } = resolvePreconditionMatches(
         testCases,
         preconditions,
@@ -147,9 +146,13 @@ function resolvePreconditionMatches(
         return tc.preConditions.map((pc) => {
             const matched = pc.summary ? matchMap.get(pc.summary.trim()) : undefined;
             if (matched) {
-                return { type: 'reference' as const, key: matched, summary: pc.summary };
+                return {
+                    type: 'reference' as const,
+                    key: matched,
+                    ...(pc.summary ? { summary: pc.summary } : {}),
+                };
             }
-            return { type: 'create' as const, summary: pc.summary };
+            return { type: 'create' as const, ...(pc.summary ? { summary: pc.summary } : {}) };
         });
     });
 
@@ -226,7 +229,7 @@ interface TestCaseData {
     title: string;
     steps: string[];
     expectedResult: string;
-    preConditions?: Array<{ type: string; key?: string; summary?: string }>;
+    preConditions?: Array<{ type: string; key?: string | undefined; summary?: string | undefined }> | undefined;
 }
 
 interface TestCasePreCondition {
@@ -252,7 +255,7 @@ function convertTestCases(
             title: item.title,
             description: '',
             steps,
-            precondition: precondition || undefined,
+            ...(precondition ? { precondition } : {}),
         };
     });
 }

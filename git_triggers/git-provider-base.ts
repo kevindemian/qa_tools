@@ -8,20 +8,26 @@ type HttpClient = ReturnType<typeof createHttpClient>;
 export abstract class GitProviderBase {
     protected abstract client: HttpClient;
 
-    protected async _get(url: string, opts?: { operation?: string; returnNull?: boolean; params?: JsonObject }) {
+    protected async _get<T = JsonObject>(
+        url: string,
+        opts?: { operation?: string; returnNull?: boolean; params?: JsonObject },
+    ): Promise<T | null> {
         try {
             const args = opts?.params ? [{ params: opts.params }] : [];
-            const response = await this.client.get(url, ...args);
+            const response = await this.client.get<T>(url, ...args);
             return response.data;
         } catch (err) {
-            return handleError(err, { context: opts?.operation || url, returnNull: opts?.returnNull });
+            return handleError(err, {
+                context: opts?.operation || url,
+                ...(opts?.returnNull ? { returnNull: true as const } : {}),
+            });
         }
     }
 
-    protected async _post(url: string, body?: unknown, opts?: { operation?: string }) {
+    protected async _post<T = JsonObject>(url: string, body?: unknown, opts?: { operation?: string }): Promise<T> {
         try {
             const args = body !== undefined ? [body] : [];
-            const response = await this.client.post(url, ...args);
+            const response = await this.client.post<T>(url, ...args);
             return response.data;
         } catch (err) {
             return handleError(err, { context: opts?.operation || url });

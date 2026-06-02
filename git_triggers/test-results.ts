@@ -180,7 +180,7 @@ async function createTestExecution(opts: CreateTestExecutionOptions): Promise<vo
                 matchedResults: matched,
                 csvName,
                 pipelineInfo: { pipelineId, branch, provider: currentProvider },
-                existingTeKey: teKey,
+                ...(teKey ? { existingTeKey: teKey } : {}),
             });
         });
         if (teKey) {
@@ -243,7 +243,7 @@ async function collectTestResults(opts: CollectTestResultsOptions): Promise<Pars
         branch,
         currentProvider,
         pushHistory,
-        teKey,
+        ...(teKey ? { teKey } : {}),
     });
 
     return parsed;

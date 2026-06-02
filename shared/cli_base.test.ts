@@ -122,7 +122,7 @@ describe('CLI Base', () => {
                 eventNames: jest.fn(),
                 [Symbol.dispose]: jest.fn(),
                 [Symbol.asyncIterator]: jest.fn(),
-            });
+            }) as jest.Mocked<readline.Interface>;
             jest.mocked(readline.createInterface).mockReturnValue(mockRl);
         });
 

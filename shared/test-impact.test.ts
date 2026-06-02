@@ -1,6 +1,6 @@
 jest.mock('child_process');
 jest.mock('fs', () => {
-    const actual = jest.requireActual('fs');
+    const actual = jest.requireActual<typeof import('fs')>('fs');
     return { ...actual, existsSync: jest.fn(), readFileSync: jest.fn() };
 });
 jest.mock('./logger', () => ({

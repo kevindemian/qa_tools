@@ -201,7 +201,10 @@ export function buildMenuChoices(level: string, proj: string, ctx: { git_directo
         } else if (item.id === '0') {
             choices.push({ name: '      ' + item.label, value: '0' });
         } else {
-            const entry: MenuChoice = { name: '      ' + item.label, value: item.id };
+            const entry: MenuChoice = {
+                name: '      ' + item.label,
+                ...(item.id ? { value: item.id } : {}),
+            };
             if (item.configKey === 'gitDir') entry.description = ctx.git_directory;
             else if (item.configKey === 'cypressDir')
                 entry.description =
@@ -209,7 +212,7 @@ export function buildMenuChoices(level: string, proj: string, ctx: { git_directo
             else if (item.configKey === 'jsonDir') entry.description = loadTypedState().lastJsonDir || NOT_CONFIGURED;
             else if (item.id === '9') entry.description = proj;
             if (item.id && ID_TO_ALIASES[item.id]) {
-                const a = ID_TO_ALIASES[item.id]!;
+                const a = ID_TO_ALIASES[item.id] as string[];
                 const hint = 'alias: ' + a.slice(0, 2).join(', ') + (a.length > 2 ? '…' : '');
                 entry.description = entry.description ? entry.description + ' (' + hint + ')' : hint;
             }

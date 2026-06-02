@@ -67,7 +67,7 @@ export function cacheKey(
 
 function parseRawOnce(raw: string): Record<string, unknown> | null {
     try {
-        const json = JSON.parse(raw);
+        const json: unknown = JSON.parse(raw);
         const result = z.record(z.string(), z.unknown()).safeParse(json);
         return result.success ? result.data : null;
     } catch {

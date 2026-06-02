@@ -1,4 +1,5 @@
 import fs from 'fs';
+import { createHttpClient } from '../../shared/http-client';
 
 jest.mock('../../shared/http-client', () => ({ createHttpClient: jest.fn() }));
 jest.mock('../../shared/config', () => {
@@ -54,7 +55,6 @@ jest.mock('./case17-helpers', () => ({
     isGitLabCi: jest.fn(),
 }));
 
-const { createHttpClient } = require('../../shared/http-client');
 const mockClient = { get: jest.fn() };
 jest.mocked(createHttpClient).mockReturnValue(mockClient);
 
@@ -62,6 +62,8 @@ import { resolveMapping, computeDiff, fetchGitHistory, resolveTestHistory } from
 import type { CommandContext } from './context';
 import type { FlatTest } from '../../shared/result_parser';
 import { createMockContext } from '../../shared/test-utils/factories/context-factory';
+import * as xrayHistory from '../xray-history';
+import * as case17Helpers from './case17-helpers';
 
 describe('resolveMapping', () => {
     const _origExistsSync = fs.existsSync;
@@ -266,7 +268,7 @@ describe('resolveTestHistory', () => {
     it('returns empty when no mapping file exists', async () => {
         fs.existsSync = jest.fn().mockReturnValue(false);
         const c = makeCtx();
-        const cache = new (require('../xray-history').TestHistoryCache)();
+        const cache = new xrayHistory.TestHistoryCache();
         const result = await resolveTestHistory([], c, cache);
         expect(result).toEqual({});
     });
@@ -277,7 +279,7 @@ describe('resolveTestHistory', () => {
             .spyOn(fs, 'readFileSync')
             .mockReturnValue(JSON.stringify({ tests: [{ title: 'Login', key: 'TEST-1' }] }));
         const c = makeCtx();
-        const cache = new (require('../xray-history').TestHistoryCache)();
+        const cache = new xrayHistory.TestHistoryCache();
         const result = await resolveTestHistory(
             [{ title: 'Other', state: 'passed', duration: 1 }] as FlatTest[],
             c,
@@ -291,11 +293,10 @@ describe('resolveTestHistory', () => {
         _readFileSyncSpy = jest
             .spyOn(fs, 'readFileSync')
             .mockReturnValue(JSON.stringify({ tests: [{ title: 'Login', key: 'TEST-1' }] }));
-        const { createHistoryProvider } = require('../xray-history');
-        createHistoryProvider.mockReturnValue({
+        jest.mocked(xrayHistory.createHistoryProvider).mockReturnValue({
             getHistory: jest.fn().mockResolvedValue([{ status: 'PASS' }]),
         });
-        const cache = new (require('../xray-history').TestHistoryCache)();
+        const cache = new xrayHistory.TestHistoryCache();
         cache.get = jest.fn().mockReturnValue(null);
         cache.set = jest.fn();
         const c = makeCtx();
@@ -314,11 +315,10 @@ describe('resolveTestHistory', () => {
         _readFileSyncSpy = jest
             .spyOn(fs, 'readFileSync')
             .mockReturnValue(JSON.stringify({ tests: [{ title: 'Login', key: 'TEST-1' }] }));
-        const { createHistoryProvider } = require('../xray-history');
-        createHistoryProvider.mockReturnValue({
+        jest.mocked(xrayHistory.createHistoryProvider).mockReturnValue({
             getHistory: jest.fn(),
         });
-        const cache = new (require('../xray-history').TestHistoryCache)();
+        const cache = new xrayHistory.TestHistoryCache();
         cache.get = jest.fn().mockReturnValue([{ status: 'PASS' }]);
         cache.set = jest.fn();
         const c = makeCtx();
@@ -328,7 +328,7 @@ describe('resolveTestHistory', () => {
             cache,
         );
         expect(result).toHaveProperty('Login');
-        expect(createHistoryProvider().getHistory).not.toHaveBeenCalled();
+        expect(xrayHistory.createHistoryProvider().getHistory).not.toHaveBeenCalled();
     });
 });
 
@@ -338,9 +338,8 @@ describe('fetchGitHistory', () => {
     });
 
     it('returns empty when neither CI environment detected', async () => {
-        const helpers = require('./case17-helpers');
-        jest.mocked(helpers.isGitHubCi).mockReturnValue(false);
-        jest.mocked(helpers.isGitLabCi).mockReturnValue(false);
+        jest.mocked(case17Helpers.isGitHubCi).mockReturnValue(false);
+        jest.mocked(case17Helpers.isGitLabCi).mockReturnValue(false);
         const result = await fetchGitHistory();
         expect(result.commits).toBe('');
         expect(result.runs).toEqual([]);
@@ -348,9 +347,8 @@ describe('fetchGitHistory', () => {
     });
 
     it('fetches from GitHub when GitHub CI detected', async () => {
-        const helpers = require('./case17-helpers');
-        jest.mocked(helpers.isGitHubCi).mockReturnValue(true);
-        jest.mocked(helpers.isGitLabCi).mockReturnValue(false);
+        jest.mocked(case17Helpers.isGitHubCi).mockReturnValue(true);
+        jest.mocked(case17Helpers.isGitLabCi).mockReturnValue(false);
 
         const runData = {
             workflow_runs: [
@@ -377,9 +375,8 @@ describe('fetchGitHistory', () => {
     });
 
     it('handles GitHub API errors gracefully', async () => {
-        const helpers = require('./case17-helpers');
-        jest.mocked(helpers.isGitHubCi).mockReturnValue(true);
-        jest.mocked(helpers.isGitLabCi).mockReturnValue(false);
+        jest.mocked(case17Helpers.isGitHubCi).mockReturnValue(true);
+        jest.mocked(case17Helpers.isGitLabCi).mockReturnValue(false);
         mockClient.get.mockRejectedValue(new Error('Network error'));
         const result = await fetchGitHistory();
         expect(result.commits).toBe('');
@@ -388,9 +385,8 @@ describe('fetchGitHistory', () => {
     });
 
     it('fetches from GitLab when GitLab CI detected', async () => {
-        const helpers = require('./case17-helpers');
-        jest.mocked(helpers.isGitHubCi).mockReturnValue(false);
-        jest.mocked(helpers.isGitLabCi).mockReturnValue(true);
+        jest.mocked(case17Helpers.isGitHubCi).mockReturnValue(false);
+        jest.mocked(case17Helpers.isGitLabCi).mockReturnValue(true);
 
         mockClient.get
             .mockResolvedValueOnce({ data: [{ id: 1, created_at: '2024-01-15' }] })
@@ -404,9 +400,8 @@ describe('fetchGitHistory', () => {
     });
 
     it('handles GitLab API errors gracefully', async () => {
-        const helpers = require('./case17-helpers');
-        jest.mocked(helpers.isGitHubCi).mockReturnValue(false);
-        jest.mocked(helpers.isGitLabCi).mockReturnValue(true);
+        jest.mocked(case17Helpers.isGitHubCi).mockReturnValue(false);
+        jest.mocked(case17Helpers.isGitLabCi).mockReturnValue(true);
         mockClient.get.mockRejectedValue(new Error('Network error'));
         const result = await fetchGitHistory();
         expect(result.commits).toBe('');

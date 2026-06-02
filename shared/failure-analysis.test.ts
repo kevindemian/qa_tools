@@ -1,6 +1,6 @@
 jest.mock('fs');
 jest.mock('./llm-client', () => ({
-    llmPrompt: jest.fn(),
+    llmPrompt: jest.fn<Promise<string>, [opts: import('./llm-client').LlmPromptOptions]>(),
     getLlmClientMetrics: jest.fn(() => ({
         cacheHits: 0,
         cacheMisses: 0,
@@ -123,13 +123,11 @@ describe('classifyFailure', () => {
 
         const result = await classifyFailure('Login test', 'expected true, got false');
         expect(result).toBe('ASSERTION: expected true but got false');
-        expect(mockLlmPrompt).toHaveBeenCalledWith({
-            tier: 'fast',
-            system: expect.any(String),
-            user: expect.any(String),
-            callerId: 'classify',
-            schema: expect.anything(),
-        });
+        const [callOpts] = mockLlmPrompt.mock.calls[0]!;
+        expect(callOpts).toHaveProperty('system', expect.any(String));
+        expect(callOpts).toHaveProperty('user', expect.any(String));
+        expect(callOpts).toHaveProperty('schema', expect.anything());
+        expect(mockLlmPrompt).toHaveBeenCalledWith(expect.objectContaining({ tier: 'fast', callerId: 'classify' }));
     });
 
     it('returns valid classification when llmPrompt returns matching format', async () => {

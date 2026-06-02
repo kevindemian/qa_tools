@@ -140,7 +140,7 @@ describe('buildTestData', () => {
             description: 'desc',
             issuetype: { name: 'Test' },
         });
-        expect((result.fields as Record<string, unknown>).labels).toBeUndefined();
+        expect((result.fields as Record<string, unknown>).labels).toEqual([]);
     });
 
     it('with jiraLabels', () => {

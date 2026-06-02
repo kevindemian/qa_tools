@@ -30,19 +30,23 @@ jest.mock('../shared/prompt-ui', () => ({
     icon: jest.fn(() => '!'),
 }));
 
-jest.mock('../shared/config', () => ({
-    default: {
-        gitToken: 'glpat-test',
-        gitBaseUrl: 'https://gitlab.com',
-        githubToken: '',
-        githubApiUrl: 'https://api.github.com',
-        getAllPrefixed: jest.fn(() => ({})),
-        get(key: string) {
-            return (this as Record<string, unknown>)[key] as string;
+function createMockConfig() {
+    return {
+        default: {
+            gitToken: 'glpat-test',
+            gitBaseUrl: 'https://gitlab.com',
+            githubToken: '',
+            githubApiUrl: 'https://api.github.com',
+            getAllPrefixed: jest.fn(() => ({})),
+            get(key: string) {
+                return (this as Record<string, unknown>)[key] as string;
+            },
         },
-    },
-    __esModule: true,
-}));
+        __esModule: true,
+    };
+}
+
+jest.mock('../shared/config', createMockConfig);
 
 jest.mock('../shared/session-context', () => ({
     SessionContext: jest.fn(() => ({
@@ -86,6 +90,7 @@ jest.mock('./ui-helpers', () => ({ providerLabel: jest.fn(() => 'GitLab') }));
 import * as prompt from '../shared/prompt';
 import * as sessionState from './session-state';
 import { createMockGitProvider } from '../shared/test-utils/factories';
+import { update as stateUpdate } from '../shared/state';
 
 describe('session-state', () => {
     beforeEach(() => {
@@ -134,8 +139,7 @@ describe('session-state', () => {
         it('calls sessionContext.pushHistory and updateState', () => {
             sessionState.pushHistory('test-op', 'detail', 'ok');
             expect(sessionState.sessionContext.pushHistory).toHaveBeenCalledWith('test-op', 'detail', 'ok');
-            const { update } = require('../shared/state');
-            expect(update).toHaveBeenCalled();
+            expect(stateUpdate).toHaveBeenCalled();
         });
     });
 
@@ -157,7 +161,7 @@ describe('session-state', () => {
                     calculateFlakiness: jest.fn(() => []),
                 }));
                 jest.mock('../shared/flakiness-dashboard', () => ({ generateFlakinessHtml: jest.fn(() => '<html>') }));
-                const mod = require('./session-state');
+                const mod = jest.requireMock<typeof import('./session-state')>('./session-state');
                 mod.displayProjects();
             });
         });
@@ -222,16 +226,7 @@ describe('session-state', () => {
                     info: jest.fn(),
                     icon: jest.fn(() => '!'),
                 }));
-                jest.doMock('../shared/config', () => ({
-                    default: {
-                        gitToken: 'glpat-test',
-                        gitBaseUrl: 'https://gitlab.com',
-                        githubToken: '',
-                        githubApiUrl: 'https://api.github.com',
-                        getAllPrefixed: jest.fn(() => ({})),
-                    },
-                    __esModule: true,
-                }));
+                jest.doMock('../shared/config', createMockConfig);
                 jest.doMock('../shared/session-context', () => ({
                     SessionContext: jest.fn(() => ({
                         pushHistory: jest.fn(),
@@ -271,7 +266,7 @@ describe('session-state', () => {
                 }));
                 jest.doMock('./ui-helpers', () => ({ providerLabel: jest.fn(() => 'GitLab') }));
 
-                const mod = require('./session-state');
+                const mod = jest.requireActual<typeof import('./session-state')>('./session-state');
                 const result = mod.getProviderForProject('proj');
                 expect(result).toBe('gitlab');
             });
@@ -288,7 +283,7 @@ describe('session-state', () => {
 
     describe('displayRecentPipelines flakiness', () => {
         it('warns about high flakiness tests', async () => {
-            const metrics = require('../shared/metrics');
+            const metrics = jest.requireMock<typeof import('../shared/metrics')>('../shared/metrics');
             jest.mocked(metrics.loadMetrics).mockReturnValueOnce({
                 runs: [
                     { project: 'qa_ibabs', date: '2024-01-01', results: [] },

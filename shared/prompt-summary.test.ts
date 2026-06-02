@@ -5,7 +5,7 @@ jest.mock('./logger', () => ({
     rootLogger: { filePath: '/tmp/qa.log', info: jest.fn(), warn: jest.fn() },
 }));
 jest.mock('./prompt-format', () => ({
-    ...jest.requireActual('./prompt-format'),
+    ...jest.requireActual<typeof import('./prompt-format')>('./prompt-format'),
     isQuiet: jest.fn(() => false),
     success: jest.fn(),
 }));
@@ -41,7 +41,10 @@ describe('printSummary', () => {
 
     it('includes test execution link when provided', () => {
         printSummary([makeResult({})], 'PROJ-123');
-        const calls = jest.mocked(output.print).mock.calls.map((c: string[]) => c[0]).join(' ');
+        const calls = jest
+            .mocked(output.print)
+            .mock.calls.map((c: string[]) => c[0])
+            .join(' ');
         expect(calls).toMatch(/Test Execution/);
     });
 

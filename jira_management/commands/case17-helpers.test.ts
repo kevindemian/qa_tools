@@ -1,5 +1,6 @@
 jest.mock('fs');
 
+import * as fs from 'fs';
 import type { FlatTest } from '../../shared/result_parser';
 import {
     isGitHubCi,
@@ -239,8 +240,6 @@ describe('parseCliExtra', () => {
 });
 
 describe('saveMetricsJson', () => {
-    const fs = require('fs');
-
     beforeEach(() => {
         jest.clearAllMocks();
     });
@@ -249,11 +248,11 @@ describe('saveMetricsJson', () => {
         const tests = [{ title: 'T1', state: 'passed', duration: 100 }];
         saveMetricsJson(tests as FlatTest[], '/tmp/html');
 
-        expect(fs.writeFileSync).toHaveBeenCalledTimes(3);
+        expect(jest.mocked(fs.writeFileSync)).toHaveBeenCalledTimes(3);
         const calls = jest.mocked(fs.writeFileSync).mock.calls;
-        expect(calls[0][0]).toContain('report.ctrf.json');
-        expect(calls[1][0]).toContain('report.stats.json');
-        expect(calls[2][0]).toContain('last-results.ctrf.json');
+        expect(String(calls[0][0])).toContain('report.ctrf.json');
+        expect(String(calls[1][0])).toContain('report.stats.json');
+        expect(String(calls[2][0])).toContain('last-results.ctrf.json');
     });
 
     it('writes correct stats for mixed results', () => {
@@ -264,11 +263,14 @@ describe('saveMetricsJson', () => {
         ];
         saveMetricsJson(tests as FlatTest[], '/tmp/html');
 
-        const statsCall = jest.mocked(fs.writeFileSync).mock.calls[1];
-        const stats = JSON.parse(statsCall[1]);
-        expect(stats.passed).toBe(1);
-        expect(stats.failed).toBe(1);
-        expect(stats.skipped).toBe(1);
-        expect(stats.total).toBe(3);
+        const writeFileMock = jest.mocked(fs.writeFileSync);
+        const raw = writeFileMock.mock.calls[1][1];
+        const dataStr = typeof raw === 'string' ? raw : Buffer.from(raw).toString();
+        expect(JSON.parse(dataStr)).toMatchObject({
+            passed: 1,
+            failed: 1,
+            skipped: 1,
+            total: 3,
+        });
     });
 });

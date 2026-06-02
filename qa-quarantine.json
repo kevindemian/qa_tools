@@ -1,0 +1,106 @@
+{
+  "excluded": [
+    {
+      "test": "perm-test",
+      "reason": "flaky",
+      "quarantinedBy": "test",
+      "date": "2026-05-30T21:49:47.334Z",
+      "reviewRequired": true
+    },
+    {
+      "test": "test-1",
+      "reason": "flaky",
+      "quarantinedBy": "test",
+      "date": "2027-07-04T21:49:58.930Z",
+      "reviewRequired": true
+    },
+    {
+      "test": "test-2",
+      "reason": "flaky",
+      "quarantinedBy": "test",
+      "date": "2027-07-04T21:49:58.930Z",
+      "reviewRequired": true
+    },
+    {
+      "test": "t2",
+      "reason": "flaky",
+      "quarantinedBy": "test",
+      "date": "2027-07-04T21:49:58.930Z",
+      "reviewRequired": true
+    },
+    {
+      "test": "t1",
+      "reason": "flaky",
+      "quarantinedBy": "test",
+      "date": "2027-07-04T21:49:58.930Z",
+      "reviewRequired": true
+    },
+    {
+      "test": "tests/login.spec.ts",
+      "reason": "flaky",
+      "quarantinedBy": "test",
+      "date": "2027-07-04T21:49:58.930Z",
+      "reviewRequired": true
+    },
+    {
+      "test": "LoginTest",
+      "reason": "bug created: FLAKY-1",
+      "quarantinedBy": "flaky-auto-actions",
+      "date": "2026-06-02T17:15:26.649Z",
+      "bugUrl": "FLAKY-1",
+      "reviewRequired": true
+    },
+    {
+      "test": "DupTest",
+      "reason": "bug already exists: FLAKY-1",
+      "quarantinedBy": "flaky-auto-actions",
+      "date": "2026-06-02T17:15:26.663Z",
+      "bugUrl": "FLAKY-1",
+      "reviewRequired": true
+    },
+    {
+      "test": "FlagTest",
+      "reason": "flaky rate exceeds threshold",
+      "quarantinedBy": "flaky-auto-actions",
+      "date": "2026-06-02T17:15:26.668Z",
+      "reviewRequired": true
+    },
+    {
+      "test": "HealedTest",
+      "reason": "bug created: FLAKY-1",
+      "quarantinedBy": "flaky-auto-actions",
+      "date": "2026-06-02T17:15:26.677Z",
+      "bugUrl": "FLAKY-1",
+      "reviewRequired": true
+    },
+    {
+      "test": "FmtTest",
+      "reason": "bug created: FLAKY-1",
+      "quarantinedBy": "flaky-auto-actions",
+      "date": "2026-06-02T17:15:26.724Z",
+      "bugUrl": "FLAKY-1",
+      "reviewRequired": true
+    },
+    {
+      "test": "DedupFail",
+      "reason": "flaky rate exceeds threshold",
+      "quarantinedBy": "flaky-auto-actions",
+      "date": "2026-06-02T17:15:26.736Z",
+      "reviewRequired": true
+    },
+    {
+      "test": "ReenableFail",
+      "reason": "bug created: FLAKY-1",
+      "quarantinedBy": "flaky-auto-actions",
+      "date": "2026-06-02T17:15:26.741Z",
+      "bugUrl": "FLAKY-1",
+      "reviewRequired": true
+    }
+  ],
+  "metadata": {
+    "totalExcluded": 13,
+    "totalTests": 14,
+    "ratio": 0.9285714285714286,
+    "warning": "⚠️ Quarantine alert: 13/14 tests (92.9%) exceed 5% threshold"
+  }
+}

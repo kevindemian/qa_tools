@@ -36,7 +36,10 @@ async function _compareLastTwoRuns(store: ReturnType<typeof loadMetrics>): Promi
     divider();
     const lastTwo = store.runs.slice(-2);
     const analysis = await withSpinner('Comparando últimas execuções (IA)...', () =>
-        compareRuns(lastTwo[0]!, lastTwo[1]!),
+        compareRuns(
+            lastTwo[0] as NonNullable<(typeof store)['runs'][0]>,
+            lastTwo[1] as NonNullable<(typeof store)['runs'][0]>,
+        ),
     );
     if (analysis) info('Análise comparativa: ' + analysis);
 }

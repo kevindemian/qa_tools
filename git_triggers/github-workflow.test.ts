@@ -1,6 +1,8 @@
 import { createMockAxiosInstance } from '../shared/test-utils/factories/response-factory';
 import { nonNull } from '../shared/test-utils';
 import type { AxiosInstance } from 'axios';
+import type { JsonObject } from '../shared/types';
+import { apiGet, apiPost } from './github-api';
 import {
     wfTriggerPipeline,
     wfGetRecentPipelines,
@@ -15,24 +17,32 @@ import {
 } from './github-workflow';
 
 jest.mock('./github-api', () => ({
-    apiGet: jest.fn(),
-    apiPost: jest.fn(),
+    apiGet: jest.fn<Promise<JsonObject | null>, [client: AxiosInstance, url: string, options?: object]>(),
+    apiPost: jest.fn<Promise<JsonObject>, [client: AxiosInstance, url: string, data?: object, options?: object]>(),
 }));
 
 jest.mock('../shared/logger', () => ({
-    Logger: jest.fn().mockImplementation(() => ({ error: jest.fn(), warn: jest.fn() })),
-    rootLogger: { error: jest.fn(), warn: jest.fn() },
+    Logger: jest.fn<Record<string, jest.Mock>, [opts?: object]>().mockImplementation(() => ({
+        error: jest.fn<void, [msg: string, meta?: object]>(),
+        warn: jest.fn<void, [msg: string, meta?: object]>(),
+    })),
+    rootLogger: {
+        error: jest.fn<void, [msg: string, meta?: object]>(),
+        warn: jest.fn<void, [msg: string, meta?: object]>(),
+    },
 }));
 
 jest.mock('../shared/git-provider-error', () => ({
-    handleError: jest.fn((err: unknown, opts?: { returnNull?: boolean }) => {
-        if (opts?.returnNull) return null;
-        throw err;
-    }),
+    handleError: jest.fn<null, [err: Error, opts?: { returnNull?: boolean }]>(
+        (err: Error, opts?: { returnNull?: boolean }) => {
+            if (opts?.returnNull) return null;
+            throw err;
+        },
+    ),
 }));
 
-const mockApiGet = jest.mocked(jest.requireMock('./github-api').apiGet);
-const mockApiPost = jest.mocked(jest.requireMock('./github-api').apiPost);
+const mockApiGet = jest.mocked(apiGet);
+const mockApiPost = jest.mocked(apiPost);
 
 describe('wfTriggerPipeline', () => {
     let client: jest.Mocked<AxiosInstance>;

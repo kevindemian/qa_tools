@@ -5,18 +5,28 @@ jest.mock('../../shared/cli_base', () => ({
     sanitizeUrl: jest.fn((url: string) => url),
 }));
 
+const mockLoadMetrics = jest.fn<object, []>().mockReturnValue({ runs: [] });
+const mockPrint = jest.fn<void, [string]>();
+const mockPaletteYellow = jest.fn<string, [string]>();
+
 jest.mock('../../shared/palette', () => ({
-    palette: { red: jest.fn(), green: jest.fn(), yellow: jest.fn(), blue: jest.fn() },
+    palette: {
+        red: jest.fn<string, [string]>(),
+        green: jest.fn<string, [string]>(),
+        yellow: mockPaletteYellow,
+        blue: jest.fn<string, [string]>(),
+    },
 }));
 
 jest.mock('../../shared/output', () => ({
-    defaultOutput: { print: jest.fn() },
+    defaultOutput: { print: mockPrint },
 }));
 
 jest.mock('../../shared/metrics', () => ({
-    loadMetrics: jest.fn().mockReturnValue({ runs: [] }),
+    loadMetrics: mockLoadMetrics,
 }));
 
+import { tableView } from '../../shared/prompt';
 import case12 from './case12';
 import { makeMockCommandContext } from '../../shared/test-utils';
 
@@ -45,11 +55,7 @@ describe('case12 — diagnostic connection', () => {
     });
 
     it('shows health score warning when metrics and endpoints both fail', async () => {
-        const metrics = require('../../shared/metrics');
-        const { palette } = require('../../shared/palette');
-        const output = require('../../shared/output');
-
-        metrics.loadMetrics.mockReturnValueOnce({ runs: [], coverageHistory: [] });
+        mockLoadMetrics.mockReturnValueOnce({ runs: [], coverageHistory: [] });
 
         mockJiraResource.axiosInstance.get
             .mockRejectedValueOnce(new Error('error 1'))
@@ -58,16 +64,13 @@ describe('case12 — diagnostic connection', () => {
 
         await case12.handler(mockContext);
 
-        expect(palette.yellow).toHaveBeenCalledWith(
+        expect(mockPaletteYellow).toHaveBeenCalledWith(
             expect.stringContaining('Dica: rode pipelines para acumular métricas'),
         );
-        expect(output.defaultOutput.print).toHaveBeenCalled();
+        expect(mockPrint).toHaveBeenCalled();
     });
 
     it('shows health score ready when enough runs exist', async () => {
-        const metrics = require('../../shared/metrics');
-        const { palette } = require('../../shared/palette');
-
         const runs = Array.from({ length: 10 }, (_, i) => ({
             timestamp: `2024-01-${String(i + 1).padStart(2, '0')}T10:00:00Z`,
             project: 'TEST',
@@ -78,7 +81,18 @@ describe('case12 — diagnostic connection', () => {
             duration: 100,
             tests: [],
         }));
-        metrics.loadMetrics.mockReturnValueOnce({ runs, coverageHistory: [{ date: '2024-01-01', pct: 80 }] });
+        mockLoadMetrics.mockReturnValueOnce({
+            runs,
+            coverageHistory: [
+                {
+                    timestamp: '2024-01-01T00:00:00Z',
+                    project: 'TEST',
+                    totalIssues: 0,
+                    mappedIssues: 0,
+                    coveragePct: 80,
+                },
+            ],
+        });
 
         mockJiraResource.axiosInstance.get
             .mockResolvedValueOnce({ status: 200 })
@@ -87,13 +101,10 @@ describe('case12 — diagnostic connection', () => {
 
         await case12.handler(mockContext);
 
-        expect(palette.yellow).not.toHaveBeenCalledWith(expect.stringContaining('Dica: rode pipelines'));
+        expect(mockPaletteYellow).not.toHaveBeenCalledWith(expect.stringContaining('Dica: rode pipelines'));
     });
 
     it('shows health score with runs but no coverage', async () => {
-        const metrics = require('../../shared/metrics');
-        const prompt = require('../../shared/prompt');
-
         const runs = Array.from({ length: 10 }, (_, i) => ({
             timestamp: `2024-01-${String(i + 1).padStart(2, '0')}T10:00:00Z`,
             project: 'TEST',
@@ -104,13 +115,16 @@ describe('case12 — diagnostic connection', () => {
             duration: 100,
             tests: [],
         }));
-        metrics.loadMetrics.mockReturnValueOnce({ runs });
+        mockLoadMetrics.mockReturnValueOnce({ runs });
 
         await case12.handler(mockContext);
 
-        expect(prompt.tableView).toHaveBeenCalledWith(
+        expect(jest.mocked(tableView)).toHaveBeenCalledWith(
             expect.arrayContaining([
-                expect.objectContaining({ Endpoint: 'Health Score', Status: expect.stringContaining('sem snapshots') }),
+                expect.objectContaining({
+                    Endpoint: 'Health Score',
+                    Status: '🟡 insuficiente (sem snapshots de cobertura)',
+                }),
             ]),
             expect.any(Array),
             expect.any(String),
@@ -118,10 +132,7 @@ describe('case12 — diagnostic connection', () => {
     });
 
     it('shows health score with coverage but too few runs', async () => {
-        const metrics = require('../../shared/metrics');
-        const prompt = require('../../shared/prompt');
-
-        metrics.loadMetrics.mockReturnValueOnce({
+        mockLoadMetrics.mockReturnValueOnce({
             runs: [
                 {
                     timestamp: '2024-01-01T10:00:00Z',
@@ -134,14 +145,22 @@ describe('case12 — diagnostic connection', () => {
                     tests: [],
                 },
             ],
-            coverageHistory: [{ date: '2024-01-01', pct: 80 }],
+            coverageHistory: [
+                {
+                    timestamp: '2024-01-01T00:00:00Z',
+                    project: 'TEST',
+                    totalIssues: 0,
+                    mappedIssues: 0,
+                    coveragePct: 80,
+                },
+            ],
         });
 
         await case12.handler(mockContext);
 
-        expect(prompt.tableView).toHaveBeenCalledWith(
+        expect(jest.mocked(tableView)).toHaveBeenCalledWith(
             expect.arrayContaining([
-                expect.objectContaining({ Endpoint: 'Health Score', Status: expect.stringContaining('1/10 runs') }),
+                expect.objectContaining({ Endpoint: 'Health Score', Status: '🟡 insuficiente (1/10 runs)' }),
             ]),
             expect.any(Array),
             expect.any(String),

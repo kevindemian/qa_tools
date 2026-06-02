@@ -1,8 +1,9 @@
 import https from 'https';
+import { createAgent } from './tls';
 
 describe('createAgent', () => {
     it('returns an https.Agent with keepAlive true', () => {
-        const agent = require('./tls').createAgent() as https.Agent;
+        const agent = createAgent();
         expect(agent).toBeInstanceOf(https.Agent);
         expect((agent as https.Agent & { keepAlive: boolean }).keepAlive).toBe(true);
     });

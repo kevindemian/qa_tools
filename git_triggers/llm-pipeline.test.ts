@@ -1,22 +1,34 @@
+import { confirm, success } from '../shared/prompt';
+import { analyzeFailuresWithReport } from '../shared/failure-analysis';
+import type { analyzeFailuresWithReport as AnalyzeFailuresFn } from '../shared/failure-analysis';
+import type {
+    confirm as ConfirmFn,
+    info as InfoFn,
+    warn as WarnFn,
+    success as SuccessFn,
+    print as PrintFn,
+    printError as PrintErrorFn,
+    divider as DividerFn,
+} from '../shared/prompt';
 import { offerPipelineFailureAnalysis } from './llm-pipeline';
 
 jest.mock('../shared/failure-analysis', () => ({
-    analyzeFailuresWithReport: jest.fn(),
+    analyzeFailuresWithReport: jest.fn<ReturnType<typeof AnalyzeFailuresFn>, Parameters<typeof AnalyzeFailuresFn>>(),
 }));
 
 jest.mock('../shared/prompt', () => ({
-    confirm: jest.fn(),
-    info: jest.fn(),
-    warn: jest.fn(),
-    success: jest.fn(),
-    print: jest.fn(),
-    printError: jest.fn(),
-    divider: jest.fn(),
+    confirm: jest.fn<ReturnType<typeof ConfirmFn>, Parameters<typeof ConfirmFn>>(),
+    info: jest.fn<ReturnType<typeof InfoFn>, Parameters<typeof InfoFn>>(),
+    warn: jest.fn<ReturnType<typeof WarnFn>, Parameters<typeof WarnFn>>(),
+    success: jest.fn<ReturnType<typeof SuccessFn>, Parameters<typeof SuccessFn>>(),
+    print: jest.fn<ReturnType<typeof PrintFn>, Parameters<typeof PrintFn>>(),
+    printError: jest.fn<ReturnType<typeof PrintErrorFn>, Parameters<typeof PrintErrorFn>>(),
+    divider: jest.fn<ReturnType<typeof DividerFn>, Parameters<typeof DividerFn>>(),
 }));
 
-const mockConfirm = jest.mocked(require('../shared/prompt').confirm);
-const mockAnalyzeFailures = jest.mocked(require('../shared/failure-analysis').analyzeFailuresWithReport);
-const mockSuccess = jest.mocked(require('../shared/prompt').success);
+const mockConfirm = jest.mocked(confirm);
+const mockAnalyzeFailures = jest.mocked(analyzeFailuresWithReport);
+const mockSuccess = jest.mocked(success);
 
 const mockReport = {
     content: '**Analysis:** tests failed due to timeout.',

@@ -161,7 +161,10 @@ describe('generatePipelineQuarantine', () => {
         });
 
         const raw = fs.readFileSync(pipelineFilePath(), 'utf8');
-        const parsed = JSON.parse(raw);
+        const parsed = JSON.parse(raw) as {
+            excluded: { test: string; bugUrl: string }[];
+            metadata: { totalExcluded: number; warning: string };
+        };
 
         expect(parsed.excluded).toHaveLength(1);
         expect(parsed.excluded[0].test).toBe(TEST_TITLE);

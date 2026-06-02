@@ -310,7 +310,13 @@ export async function handleTriggerPipeline(m: GitProvider, projectName: string)
             jiraBaseUrl = jira.base;
         }
 
-        const resumed = await resumePendingPipeline(m, projectName, jiraResource!, jiraBaseUrl!, linkManager!);
+        const resumed = await resumePendingPipeline(
+            m,
+            projectName,
+            jiraResource as JiraClient,
+            jiraBaseUrl as string,
+            linkManager as JiraLinkManager,
+        );
         if (resumed !== null) return;
 
         const built = await buildPipelinePayload(m, projectName);
@@ -321,9 +327,9 @@ export async function handleTriggerPipeline(m: GitProvider, projectName: string)
             built.branch,
             built.payload,
             projectName,
-            jiraResource!,
-            jiraBaseUrl!,
-            linkManager!,
+            jiraResource as JiraClient,
+            jiraBaseUrl as string,
+            linkManager as JiraLinkManager,
         );
     } catch (err) {
         printError('Falha ao disparar pipeline', err);

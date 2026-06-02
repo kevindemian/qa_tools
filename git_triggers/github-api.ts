@@ -2,34 +2,47 @@ import type { JsonObject } from '../shared/types';
 import { handleError } from '../shared/git-provider-error';
 import type { AxiosInstance } from 'axios';
 
-export async function apiGet(
+export async function apiGet<T = JsonObject>(
     client: AxiosInstance,
     url: string,
     opts?: { operation?: string; returnNull?: boolean; params?: JsonObject },
-) {
+): Promise<T | null> {
     try {
         const args = opts?.params ? [{ params: opts.params }] : [];
-        const response = await client.get(url, ...args);
+        const response = await client.get<T>(url, ...args);
         return response.data;
     } catch (err) {
-        return handleError(err, { context: opts?.operation || url, returnNull: opts?.returnNull });
+        return handleError(err, {
+            context: opts?.operation || url,
+            ...(opts?.returnNull ? { returnNull: true as const } : {}),
+        });
     }
 }
 
-export async function apiPost(client: AxiosInstance, url: string, body?: unknown, opts?: { operation?: string }) {
+export async function apiPost<T = JsonObject>(
+    client: AxiosInstance,
+    url: string,
+    body?: unknown,
+    opts?: { operation?: string },
+): Promise<T> {
     try {
         const args = body !== undefined ? [body] : [];
-        const response = await client.post(url, ...args);
+        const response = await client.post<T>(url, ...args);
         return response.data;
     } catch (err) {
         return handleError(err, { context: opts?.operation || url });
     }
 }
 
-export async function apiPatch(client: AxiosInstance, url: string, body?: unknown, opts?: { operation?: string }) {
+export async function apiPatch<T = JsonObject>(
+    client: AxiosInstance,
+    url: string,
+    body?: unknown,
+    opts?: { operation?: string },
+): Promise<T> {
     try {
         const args = body !== undefined ? [body] : [];
-        const response = await client.patch(url, ...args);
+        const response = await client.patch<T>(url, ...args);
         return response.data;
     } catch (err) {
         return handleError(err, { context: opts?.operation || url });

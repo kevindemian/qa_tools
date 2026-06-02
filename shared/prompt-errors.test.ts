@@ -2,7 +2,10 @@ jest.mock('readline-sync', () => ({ question: jest.fn() }));
 jest.mock('./output', () => ({
     defaultOutput: { print: jest.fn() },
 }));
-jest.mock('./box', () => ({ box: jest.fn((lines) => lines.filter(Boolean).join('\n')), divider: () => '' }));
+jest.mock('./box', () => ({
+    box: jest.fn<string, [string[]]>((lines) => lines.filter(Boolean).join('\n')),
+    divider: () => '',
+}));
 jest.mock('./prompt-format', () => ({
     isQuiet: jest.fn(() => false),
     getConfig: jest.fn(),

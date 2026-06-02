@@ -66,16 +66,14 @@ function section(title: string) {
 
 // ── Helpers ─────────────────────────────────────────────────────
 async function getIssueRaw(key: string): Promise<Record<string, unknown>> {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Jira API polymorphic response
-    return jiraResource.getJiraResource<any>(
+    return jiraResource.getJiraResource<Record<string, unknown>>(
         `issue/${key}?fields=summary,description,labels,issuetype,customfield_13708`,
     );
 }
 
 async function getSteps(issueKey: string): Promise<unknown[]> {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Xray API polymorphic response
-    const steps = await jiraResourceXray.getJiraResource<any>(`test/${issueKey}/steps`);
-    return steps.steps || [];
+    const response = await jiraResourceXray.getJiraResource<{ steps?: unknown[] }>(`test/${issueKey}/steps`);
+    return response.steps || [];
 }
 
 // ── Fase 1: Diagnóstico ────────────────────────────────────────
@@ -322,8 +320,7 @@ async function verifyNewTestCase(): Promise<boolean> {
     if (!createdIssueKey) return true;
 
     try {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Jira API polymorphic response shape
-        const issue: any = await getIssueRaw(createdIssueKey);
+        const issue = await getIssueRaw(createdIssueKey);
         const f = issue.fields as Record<string, unknown> | undefined;
         if (!f) {
             fail('issue.fields missing');

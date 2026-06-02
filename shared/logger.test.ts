@@ -46,7 +46,12 @@ describe('Logger', () => {
             level: keyof Logger,
             msg: string,
             data?: unknown,
-        ): { fileFound: boolean; lastLine?: string; filePath?: string; logFile?: string } {
+        ): {
+            fileFound: boolean;
+            lastLine?: string | undefined;
+            filePath?: string | undefined;
+            logFile?: string | undefined;
+        } {
             const testDir = normalizePath(fs.mkdtempSync(path.join(os.tmpdir(), 'qa-tools-logger-')));
             const cfg = Config.create({ logFile: true, logDir: testDir });
             const logger = new Logger({ test: 'write' }, cfg);

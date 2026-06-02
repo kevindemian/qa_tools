@@ -211,12 +211,14 @@ class CsvResource {
         lines: string[],
     ): Promise<TestCase> {
         const steps = await this.readCsvFromString(csvString);
+        const precondition = this.parsePrecondition(precValue) ?? undefined;
+        const group = this.parseGroup(lines) ?? undefined;
         return {
             title,
             description,
-            precondition: this.parsePrecondition(precValue) ?? undefined,
+            ...(precondition ? { precondition } : {}),
             linkedIssues: this.parseLinkedIssues(lines),
-            group: this.parseGroup(lines) ?? undefined,
+            ...(group ? { group } : {}),
             steps,
         };
     }
