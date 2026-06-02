@@ -23,9 +23,9 @@ describe('generateHtmlReport', () => {
         expect(html).toContain('Logout works');
         expect(html).toContain('Error handling');
         expect(html).toContain('Pending feature');
-        expect(html).toContain('status-passed');
-        expect(html).toContain('status-failed');
-        expect(html).toContain('status-skipped');
+        expect(html).toContain('data-variant="pass"');
+        expect(html).toContain('data-variant="fail"');
+        expect(html).toContain('data-variant="skip"');
         expect(html).toContain('passed');
         expect(html).toContain('failed');
         expect(html).toContain('skipped');
@@ -248,13 +248,12 @@ describe('generateHtmlReport', () => {
     it('shows dash for skipped test duration', () => {
         const tests: FlatTest[] = [{ title: 'Skip', state: 'skipped', duration: 0 }];
         const html = generateHtmlReport(tests);
-        expect(html).toContain('—</td>');
+        expect(html).toContain('\u2014');
     });
 
     it('includes dark theme CSS via html.dark selector', () => {
         const html = generateHtmlReport([]);
         expect(html).toContain('html.dark');
-        expect(html).toContain('html.dark body');
     });
 
     it('includes theme toggle script in head', () => {
@@ -282,6 +281,7 @@ describe('generateHtmlReport', () => {
         const tests: FlatTest[] = [{ title: 'Login', state: 'passed', duration: 100, fullTitle: 'Auth Tests > Login' }];
         const html = generateHtmlReport(tests);
         expect(html).toContain('title="Auth Tests &gt; Login"');
+        expect(html).toContain('data-hierarchy="Auth Tests &gt; Login"');
     });
 
     it('shows percentage in summary cards', () => {
@@ -398,7 +398,7 @@ describe('generateHtmlReport', () => {
     it('adds data-hierarchy attribute to table rows', () => {
         const tests: FlatTest[] = [{ title: 'Login', state: 'passed', duration: 100, fullTitle: 'Auth > Login' }];
         const html = generateHtmlReport(tests);
-        expect(html).toContain('data-hierarchy="Auth › Login"');
+        expect(html).toContain('data-hierarchy="Auth &gt; Login"');
     });
 
     it('includes hierarchy filtering JavaScript functions', () => {
@@ -584,7 +584,7 @@ describe('generateHtmlReport', () => {
             },
         ];
         const html = generateCoverageHtml(epics);
-        expect(html).toContain('>1</div></div>');
+        expect(html).toContain('>1<');
         expect(html).toContain('1 issues, 100.0% closed');
     });
 
@@ -606,9 +606,9 @@ describe('generateHtmlReport', () => {
             },
         ];
         const html = generateCoverageHtml(epics);
-        expect(html).toContain('status-passed');
-        expect(html).toContain('status-skipped');
-        expect(html).toContain('status-failed');
+        expect(html).toContain('data-variant="pass"');
+        expect(html).toContain('data-variant="skip"');
+        expect(html).toContain('data-variant="fail"');
     });
 
     // ── R9: Mini Trend Chart ────────────────────────────────────────
@@ -710,7 +710,7 @@ describe('generateHtmlReport', () => {
     it('includes print CSS media query', () => {
         const html = generateHtmlReport([]);
         expect(html).toContain('@media print');
-        expect(html).toContain('.control-bar, .detail-toggle');
+        expect(html).toContain('.control-bar,.detail-toggle');
     });
 
     // ── R10: loadKnownIssues ───────────────────────────────────────────

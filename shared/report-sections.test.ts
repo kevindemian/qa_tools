@@ -1,9 +1,6 @@
-/** Tests for report-sections — HTML UI section builders. */
-jest.mock('./theme', () => ({
-    getTheme: jest.fn(() => ({
-        colors: { success: '#22c55e', error: '#ef4444', warn: '#facc15', primary: '#6366f1' },
-    })),
-}));
+/**
+ * Tests for report-sections — HTML UI section builders.
+ */
 
 jest.mock('./report-table', () => ({
     buildTestTable: jest.fn(() => '<table>mock</table>'),
@@ -75,7 +72,7 @@ describe('buildTabContents', () => {
         const html = buildTabContents(runs);
         expect(html).toContain('tabContent-0');
         expect(html).toContain('tabContent-1');
-        expect(html).toContain('control-bar');
+        expect(html).toContain('searchInput');
     });
 
     it('handles empty runs array', () => {
@@ -132,9 +129,7 @@ describe('buildTimeline', () => {
 
     it('includes state badges', () => {
         const html = buildTimeline(sampleTests);
-        expect(html).toContain('status-passed');
-        expect(html).toContain('status-failed');
-        expect(html).toContain('status-skipped');
+        expect(html).toContain('data-component="badge"');
     });
 
     it('handles zero-duration tests without division by zero', () => {
@@ -176,9 +171,9 @@ describe('buildSummaryCards', () => {
         expect(html).toContain('0.0%');
     });
 
-    it('shows pass rate in appropriate class', () => {
+    it('shows pass rate with severity', () => {
         const html = buildSummaryCards(sampleStats, 95);
-        expect(html).toContain('rate-good');
+        expect(html).toContain('data-severity');
     });
 });
 
@@ -237,7 +232,7 @@ describe('buildFilterBar', () => {
         expect(html).toContain('searchInput');
         expect(html).toContain('exportCsv');
         expect(html).toContain('window.print');
-        expect(html).toContain('toggleTheme');
+        expect(html).toContain('_toggleTheme');
     });
 });
 

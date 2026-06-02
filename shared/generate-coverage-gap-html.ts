@@ -1,126 +1,92 @@
-/** Self-contained HTML report for coverage gap analysis.
- *  Summary cards, per-epic progress bars, hierarchy tree, gaps table, quality gate section.
- *  Dark mode support via CSS class toggle. */
+/**
+ * Self-contained HTML report for coverage gap analysis.
+ * Uses primitives and design tokens for consistent rendering.
+ *
+ * Summary cards, per-epic progress bars, hierarchy tree, gaps table, quality gate section.
+ * Dark mode support via CSS custom properties.
+ *
+ * @module generate-coverage-gap-html
+ */
+
 import type { CoverageGapResult, CoverageHierarchyNode } from './types';
 import { rootLogger } from './logger';
 import { sanitizeHtml } from './sanitize';
 import { formatDateISO } from './date-utils';
 import { buildHtmlPage, buildErrorPage } from './html-factory';
-
-const COVERAGE_LIGHT_CSS = `
-body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; margin: 0; padding: 20px; background: #f9fafb; color: #111827; max-width: 1200px; margin: 0 auto; }
-h1 { font-size: 1.5rem; margin-bottom: 0.5rem; }
-h2 { font-size: 1.2rem; margin: 1rem 0 0.5rem; }
-.summary { display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 20px; }
-.card { background: #fff; border-radius: 8px; padding: 16px 20px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); min-width: 100px; }
-.card .label { font-size: 0.75rem; text-transform: uppercase; color: #4b5563; }
-.card .value { font-size: 1.5rem; font-weight: 700; }
-.gate-pass { border-left: 4px solid #22c55e; }
-.gate-fail { border-left: 4px solid #ef4444; }
-.progress-bar { height: 8px; background: #e5e7eb; border-radius: 4px; overflow: hidden; margin: 4px 0; }
-.progress-fill { height: 100%; border-radius: 4px; transition: width 0.3s; }
-.epic-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 12px; margin-bottom: 20px; }
-.epic-card { background: #fff; border-radius: 8px; padding: 12px 16px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
-.epic-card .epic-title { font-weight: 600; font-size: 0.9rem; margin-bottom: 4px; }
-.epic-card .epic-meta { font-size: 0.75rem; color: #6b7280; }
-.badge { display: inline-block; padding: 2px 8px; border-radius: 9999px; font-size: 0.7rem; font-weight: 600; }
-.badge-pass { background: #dcfce7; color: #166534; }
-.badge-fail { background: #fecaca; color: #991b1b; }
-.tree { margin-bottom: 20px; }
-.tree-node { margin: 4px 0; padding: 6px 10px; background: #fff; border-radius: 6px; box-shadow: 0 1px 2px rgba(0,0,0,0.05); }
-.tree-children { margin-left: 20px; border-left: 2px solid #e5e7eb; padding-left: 12px; }
-.tree-toggle { cursor: pointer; user-select: none; font-size: 0.8rem; color: #6366f1; margin-right: 6px; }
-table { width: 100%; border-collapse: collapse; background: #fff; border-radius: 8px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.1); margin-bottom: 20px; }
-th { background: #f3f4f6; text-align: left; padding: 10px 12px; font-size: 0.75rem; text-transform: uppercase; color: #4b5563; }
-td { padding: 8px 12px; border-top: 1px solid #e5e7eb; font-size: 0.875rem; }
-tr:hover { background: #f9fafb; }
-.status-yes { color: #22c55e; font-weight: 700; }
-.status-no { color: #ef4444; font-weight: 700; }
-.footer { margin-top: 16px; font-size: 0.75rem; color: #6b7280; text-align: center; }
-.control-bar { display: flex; gap: 8px; align-items: center; margin-bottom: 12px; }
-.control-bar button { padding: 4px 12px; border: 1px solid #d1d5db; background: #fff; border-radius: 6px; cursor: pointer; font-size: 0.8rem; }
-.control-bar button:hover { background: #f3f4f6; }
-#searchInput { padding: 4px 8px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 0.8rem; flex: 1; }
-`;
-
-const COVERAGE_DARK_CSS = `
-html.dark body { background: #0d1117; color: #c9d1d9; }
-html.dark .card { background: #161b22; box-shadow: 0 1px 3px rgba(0,0,0,0.4); }
-html.dark .epic-card { background: #161b22; }
-html.dark .card .label { color: #8b949e; }
-html.dark table { background: #161b22; }
-html.dark th { background: #1c2128; color: #8b949e; }
-html.dark td { border-top-color: #30363d; }
-html.dark .tree-node { background: #161b22; }
-html.dark .tree-children { border-left-color: #30363d; }
-html.dark .progress-bar { background: #21262d; }
-html.dark tr:hover { background: #1c2128; }
-html.dark .control-bar button { background: #21262d; color: #c9d1d9; border-color: #30363d; }
-html.dark .control-bar button:hover { background: #30363d; }
-html.dark #searchInput { background: #21262d; color: #c9d1d9; border-color: #30363d; }
-@media print { .control-bar { display: none; } body { padding: 0; } }
-`;
-
-function cssThemeBlock(): string {
-    return COVERAGE_LIGHT_CSS + COVERAGE_DARK_CSS;
-}
+import { buildCss } from './report-styles';
+import { Card, MetricCard, MetricGrid, Badge, ProgressBar, SearchInput, Button, FilterBar } from './primitives';
+import { tokens } from './theme-tokens';
 
 function buildSummaryCards(result: CoverageGapResult): string {
     const t = result.totals;
-    return `<div class="summary">
-<div class="card"><div class="label">Total Issues</div><div class="value">${t.totalIssues}</div></div>
-<div class="card"><div class="label">Covered</div><div class="value" style="color:#22c55e">${t.covered}</div></div>
-<div class="card"><div class="label">Gaps</div><div class="value" style="color:#ef4444">${t.gap}</div></div>
-<div class="card ${t.weightedCoveragePct >= 50 ? 'gate-pass' : 'gate-fail'}"><div class="label">Weighted Coverage</div><div class="value">${t.weightedCoveragePct}%</div></div>
-<div class="card ${t.rawCoveragePct >= 50 ? 'gate-pass' : 'gate-fail'}"><div class="label">Raw Coverage</div><div class="value">${t.rawCoveragePct}%</div></div>
-</div>`;
+    return MetricGrid({
+        children:
+            MetricCard({ label: 'Total Issues', value: String(t.totalIssues) }) +
+            MetricCard({ label: 'Covered', value: String(t.covered), severity: 'success' }) +
+            MetricCard({ label: 'Gaps', value: String(t.gap), severity: 'error' }) +
+            MetricCard({
+                label: 'Weighted Coverage',
+                value: t.weightedCoveragePct + '%',
+                severity: t.weightedCoveragePct >= 50 ? 'success' : 'error',
+            }) +
+            MetricCard({
+                label: 'Raw Coverage',
+                value: t.rawCoveragePct + '%',
+                severity: t.rawCoveragePct >= 50 ? 'success' : 'error',
+            }),
+    });
 }
 
 function buildQualityGateSection(result: CoverageGapResult): string {
     const gc = result.gateConfig;
     if (gc.failingEpics.length === 0) {
-        return `<div class="card gate-pass" style="margin-bottom:16px;padding:12px 16px;background:#f0fdf4">
-<div class="label" style="color:#166534">Quality Gate</div>
-<div style="font-size:1rem;font-weight:600;color:#166534">All epics pass (min ${gc.minCoveragePct}%)</div></div>`;
+        return Card({
+            variant: 'bordered',
+            severity: 'success',
+            children:
+                `<div class="label" style="color:var(--color-badge-pass-text);margin-bottom:4px">Quality Gate</div>` +
+                `<div style="font-size:1rem;font-weight:600;color:var(--color-badge-pass-text)">All epics pass (min ${gc.minCoveragePct}%)</div>`,
+        });
     }
-    return `<div class="card gate-fail" style="margin-bottom:16px;padding:12px 16px;background:#fef2f2">
-<div class="label" style="color:#991b1b">Quality Gate</div>
-<div style="font-size:1rem;font-weight:600;color:#991b1b">${gc.failingEpics.length} epic(s) below ${gc.minCoveragePct}% threshold</div>
-<ul style="margin:8px 0 0;font-size:0.85rem">${gc.failingEpics.map((k) => '<li style="color:#991b1b">' + sanitizeHtml(k) + ' (' + sanitizeHtml(result.byEpic[k]?.rawPct + '%' || '') + ')</li>').join('')}</ul></div>`;
+    return Card({
+        variant: 'bordered',
+        severity: 'error',
+        children:
+            `<div class="label" style="color:var(--color-badge-fail-text);margin-bottom:4px">Quality Gate</div>` +
+            `<div style="font-size:1rem;font-weight:600;color:var(--color-badge-fail-text)">${gc.failingEpics.length} epic(s) below ${gc.minCoveragePct}% threshold</div>` +
+            `<ul style="margin:8px 0 0;font-size:0.85rem">${gc.failingEpics.map((k) => '<li style="color:var(--color-badge-fail-text)">' + sanitizeHtml(k) + ' (' + sanitizeHtml(result.byEpic[k]?.rawPct + '%' || '') + ')</li>').join('')}</ul>`,
+    });
 }
 
 function buildEpicCards(result: CoverageGapResult): string {
-    let html = '<div class="epic-grid">';
+    let html =
+        '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:12px;margin-bottom:20px">';
     for (const [key, epic] of Object.entries(result.byEpic)) {
         if (key === '__no_epic__') continue;
-        const color = epic.weightedPct >= 50 ? '#22c55e' : '#ef4444';
+        const color = epic.weightedPct >= 50 ? tokens.color.chart.pass : tokens.color.chart.fail;
         const badge = epic.gatePass
-            ? '<span class="badge badge-pass">PASS</span>'
-            : '<span class="badge badge-fail">FAIL</span>';
-        html += '<div class="epic-card">';
-        html += '<div class="epic-title">' + sanitizeHtml(key) + ' ' + badge + '</div>';
-        html += '<div class="epic-meta">' + sanitizeHtml(epic.epicSummary) + '</div>';
-        html += '<div style="display:flex;justify-content:space-between;font-size:0.8rem;margin-top:8px">';
-        html += '<span>' + epic.covered + '/' + epic.total + ' covered</span>';
-        html += '<span>Weighted: ' + epic.weightedPct + '%</span>';
-        html += '</div>';
-        html +=
-            '<div class="progress-bar"><div class="progress-fill" style="width:' +
-            epic.weightedPct +
-            '%;background:' +
-            color +
-            '"></div></div>';
-        html += '</div>';
+            ? Badge({ variant: 'pass', children: 'PASS' })
+            : Badge({ variant: 'fail', children: 'FAIL' });
+        html += Card({
+            variant: 'default',
+            children:
+                `<div style="font-weight:600;font-size:0.9rem;margin-bottom:4px">${sanitizeHtml(key)} ${badge}</div>` +
+                `<div style="font-size:0.75rem;color:var(--color-text-muted);margin-bottom:8px">${sanitizeHtml(epic.epicSummary)}</div>` +
+                `<div style="display:flex;justify-content:space-between;font-size:0.8rem;margin-bottom:4px">` +
+                `<span>${epic.covered}/${epic.total} covered</span>` +
+                `<span>Weighted: ${epic.weightedPct}%</span></div>` +
+                ProgressBar({ value: epic.weightedPct, color, showLabel: false }),
+        });
     }
     html += '</div>';
     return html;
 }
 
 function buildHierarchyHtml(nodes: CoverageHierarchyNode[], depth = 0): string {
-    if (nodes.length === 0) return '<p style="font-size:0.85rem;color:#6b7280">No hierarchy data</p>';
+    if (nodes.length === 0) return '<p style="font-size:0.85rem;color:var(--color-text-muted)">No hierarchy data</p>';
     let html = '<div class="tree">';
     for (const node of nodes) {
-        const color = node.coveragePct >= 50 ? '#22c55e' : '#ef4444';
+        const color = node.coveragePct >= 50 ? tokens.color.chart.pass : tokens.color.chart.fail;
         const hasChildren = node.children && node.children.length > 0;
         html += '<div class="tree-node">';
         if (hasChildren) {
@@ -129,7 +95,7 @@ function buildHierarchyHtml(nodes: CoverageHierarchyNode[], depth = 0): string {
         html +=
             '<strong>' +
             sanitizeHtml(node.key) +
-            '</strong> <span style="color:#6b7280;font-size:0.8rem">' +
+            '</strong> <span style="color:var(--color-text-muted);font-size:0.8rem">' +
             sanitizeHtml(node.summary.slice(0, 60)) +
             '</span>';
         html +=
@@ -156,25 +122,27 @@ function buildHierarchyHtml(nodes: CoverageHierarchyNode[], depth = 0): string {
 function buildGapsTable(result: CoverageGapResult): string {
     const gaps = result.items.filter((i) => !i.hasTest);
     if (gaps.length === 0) {
-        return '<p style="color:#22c55e;font-weight:600">No coverage gaps found</p>';
+        return '<p style="color:var(--color-success);font-weight:600">No coverage gaps found</p>';
     }
-    let html =
-        '<div class="control-bar"><input id="searchInput" type="text" placeholder="Filter gaps..." oninput="filterGaps()">';
-    html += '<button onclick="toggleTheme()">🌓</button></div>';
+    let html = FilterBar({
+        children:
+            SearchInput({ placeholder: 'Filter gaps...', onInput: 'filterGaps()', id: 'gapSearchInput' }) +
+            Button({ children: '🌓', onClick: 'toggleTheme()', variant: 'ghost' }),
+    });
     html +=
-        '<table><thead><tr><th>Key</th><th>Summary</th><th>Type</th><th>Priority</th><th>Weight</th><th>Epic</th><th>Action</th></tr></thead><tbody>';
+        '<div style="overflow-x:auto;border-radius:8px;box-shadow:0 1px 3px rgba(0,0,0,0.1)"><table><thead><tr><th>Key</th><th>Summary</th><th>Type</th><th>Priority</th><th>Weight</th><th>Epic</th><th>Action</th></tr></thead><tbody>';
     for (const item of gaps) {
-        html += '<tr class="gap-row">';
+        html += '<tr class="gap-row" style="border-bottom:1px solid var(--color-border-subtle)">';
         html += '<td><strong>' + sanitizeHtml(item.issueKey) + '</strong></td>';
         html += '<td>' + sanitizeHtml(item.summary.slice(0, 80)) + '</td>';
         html += '<td>' + item.type + '</td>';
         html += '<td>' + item.priority + '</td>';
         html += '<td>' + item.coverageWeight + '</td>';
         html += '<td>' + (item.epicKey ? sanitizeHtml(item.epicKey) : '—') + '</td>';
-        html += '<td><span class="status-no">GAP</span></td>';
+        html += '<td>' + Badge({ variant: 'fail', children: 'GAP' }) + '</td>';
         html += '</tr>';
     }
-    html += '</tbody></table>';
+    html += '</tbody></table></div>';
     return html;
 }
 
@@ -191,7 +159,7 @@ function toggleTree(el) {
     }
 }
 function filterGaps() {
-    var q = document.getElementById('searchInput').value.toLowerCase();
+    var q = document.getElementById('gapSearchInput').value.toLowerCase();
     document.querySelectorAll('.gap-row').forEach(function(r) {
         r.style.display = r.textContent.toLowerCase().includes(q) ? '' : 'none';
     });
@@ -218,7 +186,7 @@ export function generateCoverageGapHtml(result: CoverageGapResult, title?: strin
             buildGapsTable(result);
         return buildHtmlPage({
             title: reportTitle,
-            styles: cssThemeBlock(),
+            styles: buildCss(),
             theme: theme || 'system',
             bodyContent,
             footer: 'Generated by QA Tools · ' + formatDateISO(),

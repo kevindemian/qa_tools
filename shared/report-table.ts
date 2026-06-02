@@ -1,10 +1,19 @@
-/** Test-table builders for HTML reports — row rendering, error cells, history dots,
- *  category & flakiness badges, and the full test table with filtering and detail rows.
- * @module report-table */
+/**
+ * Test-table builders for HTML reports — row rendering, error cells, history dots,
+ * category & flakiness badges, and the full test table with filtering and detail rows.
+ *
+ * Uses primitives for consistent badge, table, and cell rendering.
+ *
+ * @module report-table
+ */
+
 import { escapeHtml, fmtDuration } from './report-utils';
 import { extractSuite, CATEGORY_COLORS, categorizeFailure } from './report-types';
 import type { FlatTest } from './result_parser';
 import type { TestHistoryRun, KnownIssue } from './report-types';
+import { Badge } from './primitives';
+import { Tr, Td } from './primitives';
+import { tokens } from './theme-tokens';
 
 export function matchKnownIssue(title: string, knownIssues: KnownIssue[]): KnownIssue | undefined {
     const lower = title.toLowerCase();
@@ -133,115 +142,6 @@ export function buildFlakinessBadge(rate: number): string {
     return `<span style="display:inline-block;padding:1px 6px;border-radius:4px;background:${color}20;color:${color};font-size:0.7rem;font-weight:600;margin-left:4px" title="Flakiness: ${pct}%">🔄 ${label}</span>`;
 }
 
-function _buildTableHeaderRow(
-    hasSuite: boolean,
-    hasError: boolean,
-    hasHistory: boolean,
-    hasFlakiness: boolean,
-): string {
-    return (
-        '<thead><tr><th>#</th><th>Test</th>' +
-        (hasSuite ? '<th>Suite</th>' : '') +
-        '<th>Status</th><th>Duration</th>' +
-        (hasError ? '<th>Error</th>' : '') +
-        (hasHistory ? '<th>History</th>' : '') +
-        (hasFlakiness ? '<th>Flaky</th>' : '') +
-        '</tr></thead>'
-    );
-}
-
-function _buildStatusBadge(state: string): string {
-    return '<span class="status-badge status-' + state + '">' + state + '</span>';
-}
-
-interface _ColumnFlags {
-    hasSuite: boolean;
-    hasError: boolean;
-    hasHistory: boolean;
-    hasFlakiness: boolean;
-    hasStepsOrScreenshotsOrLogs: boolean;
-}
-
-function _buildRowClass(t: FlatTest, matchedKi: KnownIssue | undefined): string {
-    let cls = '';
-    if (t.state === 'passed') cls = ' row-passed';
-    if (matchedKi) cls += ' ki-suppressed';
-    return cls.trim();
-}
-
-function _buildRowAttributes(t: FlatTest, extraRowClass: string): string {
-    const hierarchy = t.fullTitle ? t.fullTitle.replace(/ > /g, ' \u203A ') : undefined;
-    let attrs = '';
-    if (extraRowClass) attrs += ' class="' + extraRowClass + '"';
-    if (hierarchy) attrs += ' data-hierarchy="' + escapeHtml(hierarchy) + '"';
-    return attrs;
-}
-
-function _buildTestNameCellHtml(
-    t: FlatTest,
-    i: number,
-    cat: string | undefined,
-    matchedKi: KnownIssue | undefined,
-    hasDetail: boolean,
-): string {
-    let html = '<td' + (t.fullTitle ? ' title="' + escapeHtml(t.fullTitle) + '"' : '') + '>';
-    html += escapeHtml(t.title);
-    if (cat) html += buildCategoryBadge(cat);
-    if (matchedKi) {
-        html += '<span class="ki-badge">Known Issue' + (matchedKi.ticket ? ': ' + matchedKi.ticket : '') + '</span>';
-    }
-    if (hasDetail) {
-        html += '<span class="detail-toggle" onclick="toggleDetail(' + i + ')"> \u25BC</span>';
-    }
-    html += '</td>';
-    return html;
-}
-
-function _buildFlakinessCell(t: FlatTest, flakinessMap: Record<string, number> | undefined): string {
-    if (!flakinessMap) return '';
-    const rate = flakinessMap[t.title] ?? flakinessMap[t.fullTitle ?? ''] ?? 0;
-    return '<td>' + (rate > 0 ? buildFlakinessBadge(rate) : '<span style="color:#9ca3af">—</span>') + '</td>';
-}
-
-function _buildDetailRowHtml(t: FlatTest, i: number, flags: _ColumnFlags): string {
-    if (!flags.hasStepsOrScreenshotsOrLogs) return '';
-    const cols = 4 + (flags.hasSuite ? 1 : 0) + (flags.hasError ? 1 : 0) + (flags.hasHistory ? 1 : 0);
-    return buildDetailRow(t, i, cols + 1);
-}
-
-function _buildTestTableRow(
-    t: FlatTest,
-    i: number,
-    categories: Record<string, string> | undefined,
-    history: Record<string, TestHistoryRun[]> | undefined,
-    knownIssues: KnownIssue[] | undefined,
-    flakinessMap: Record<string, number> | undefined,
-    flags: _ColumnFlags,
-): string {
-    const matchedKi = knownIssues && t.state === 'failed' ? matchKnownIssue(t.title, knownIssues) : undefined;
-    const extraRowClass = _buildRowClass(t, matchedKi);
-    const cat = t.state === 'failed' && categories ? categories[t.title] : undefined;
-    const hasDetail =
-        flags.hasStepsOrScreenshotsOrLogs &&
-        ((t.steps?.length ?? 0) > 0 || (t.screenshots?.length ?? 0) > 0 || (t.logs?.length ?? 0) > 0);
-
-    let html = '<tr' + _buildRowAttributes(t, extraRowClass) + '>';
-    html += '<td>' + (i + 1) + '</td>';
-    html += _buildTestNameCellHtml(t, i, cat, matchedKi, hasDetail);
-    if (flags.hasSuite) html += '<td>' + escapeHtml(extractSuite(t)) + '</td>';
-    html += '<td>' + _buildStatusBadge(t.state) + '</td>';
-    html += '<td>' + (t.state === 'skipped' ? '—' : fmtDuration(t.duration)) + '</td>';
-    if (flags.hasError) html += '<td>' + buildErrorCell(t) + '</td>';
-    if (flags.hasHistory) {
-        const testHistory = history?.[t.title] ?? history?.[t.fullTitle ?? ''] ?? [];
-        html += buildHistoryCell(testHistory);
-    }
-    if (flags.hasFlakiness) html += _buildFlakinessCell(t, flakinessMap);
-    html += '</tr>';
-    html += _buildDetailRowHtml(t, i, flags);
-    return html;
-}
-
 export function buildTestTable(
     tests: FlatTest[],
     categories?: Record<string, string>,
@@ -254,27 +154,101 @@ export function buildTestTable(
     const hasSuite = tests.some((t) => extractSuite(t));
     const hasHistory = history !== undefined && Object.keys(history).length > 0;
     const hasFlakiness = flakinessMap !== undefined && Object.keys(flakinessMap).length > 0;
-    const hasStepsOrScreenshotsOrLogs = tests.some(function (t) {
-        return (
-            (t.steps && t.steps.length > 0) ||
-            (t.screenshots && t.screenshots.length > 0) ||
-            (t.logs && t.logs.length > 0)
-        );
-    });
-    let html = hasPassed
+
+    interface ColDef {
+        key: string;
+        label: string;
+        width?: string;
+    }
+
+    const columns: ColDef[] = [
+        { key: 'index', label: '#', width: '40px' },
+        { key: 'test', label: 'Test' },
+        ...(hasSuite ? [{ key: 'suite', label: 'Suite' }] : []),
+        { key: 'status', label: 'Status' },
+        { key: 'duration', label: 'Duration' },
+        ...(hasError ? [{ key: 'error', label: 'Error' }] : []),
+        ...(hasHistory ? [{ key: 'history', label: 'History' }] : []),
+        ...(hasFlakiness ? [{ key: 'flaky', label: 'Flaky' }] : []),
+    ];
+
+    const cellPadding = `${tokens.spacing.xs}px ${tokens.spacing.sm}px`;
+
+    let thead = '<thead style="background:var(--color-surface-elevated)"><tr>';
+    for (const col of columns) {
+        const width = col.width ? `width:${col.width};` : '';
+        thead += `<th data-column="${col.key}"
+            scope="col"
+            style="padding:${cellPadding};${width}
+                   font-size:${tokens.fontSize.sm};text-transform:uppercase;
+                   color:var(--color-text-secondary);white-space:nowrap;
+                   border-bottom:2px solid var(--color-border-subtle)">
+            ${col.label}
+        </th>`;
+    }
+    thead += '</tr></thead>';
+
+    let tbody = '<tbody>';
+    for (const [i, t] of tests.entries()) {
+        const matchedKi = knownIssues && t.state === 'failed' ? matchKnownIssue(t.title, knownIssues) : undefined;
+        const cat = t.state === 'failed' && categories ? categories[t.title] : undefined;
+        const hasStepsOrScreenshotsOrLogs =
+            (t.steps?.length ?? 0) > 0 || (t.screenshots?.length ?? 0) > 0 || (t.logs?.length ?? 0) > 0;
+
+        let testCell = escapeHtml(t.title);
+        if (cat) testCell += buildCategoryBadge(cat);
+        if (matchedKi) {
+            testCell += `<span class="ki-badge">Known Issue${matchedKi.ticket ? ': ' + matchedKi.ticket : ''}</span>`;
+        }
+        if (hasStepsOrScreenshotsOrLogs) {
+            testCell += '<span class="detail-toggle" onclick="toggleDetail(' + i + ')"> \u25BC</span>';
+        }
+
+        const statusBadge = Badge({
+            variant: t.state === 'passed' ? 'pass' : t.state === 'failed' ? 'fail' : 'skip',
+            children: t.state,
+        });
+
+        const durationCell = t.state === 'skipped' ? '—' : fmtDuration(t.duration);
+
+        let flakyCell = '';
+        if (hasFlakiness && flakinessMap) {
+            const rate = flakinessMap[t.title] ?? flakinessMap[t.fullTitle ?? ''] ?? 0;
+            flakyCell = rate > 0 ? buildFlakinessBadge(rate) : '<span style="color:var(--color-text-muted)">—</span>';
+        }
+
+        const rowClass = (t.state === 'passed' ? 'row-passed' : '') + (matchedKi ? ' ki-suppressed' : '');
+        const hierarchyAttr = t.fullTitle ? ` data-hierarchy="${escapeHtml(t.fullTitle)}"` : '';
+        const fullTitle = t.fullTitle;
+
+        let cells = '';
+        cells += Td({ children: String(i + 1) });
+        cells += Td({ children: testCell, ...(fullTitle ? { title: escapeHtml(fullTitle) } : {}) });
+        if (hasSuite) cells += Td({ children: escapeHtml(extractSuite(t)) });
+        cells += Td({ children: statusBadge });
+        cells += Td({ children: durationCell });
+        if (hasError) cells += Td({ children: buildErrorCell(t) });
+        if (hasHistory) {
+            const testHistory = history?.[t.title] ?? history?.[t.fullTitle ?? ''] ?? [];
+            cells += Td({ children: buildHistoryCell(testHistory) });
+        }
+        if (hasFlakiness) cells += Td({ children: flakyCell });
+
+        tbody += Tr({ key: `test-${i}`, class: rowClass, attrs: hierarchyAttr, children: cells });
+
+        const detail = buildDetailRow(t, i, columns.length);
+        if (detail) tbody += detail;
+    }
+    tbody += '</tbody>';
+
+    const tableHtml = `<div data-component="table-wrapper" style="overflow-x:auto;border-radius:${tokens.borderRadius.lg}px;box-shadow:${tokens.shadow.card}"><table data-component="data-table"
+        role="table"
+        style="width:100%;border-collapse:collapse;background:var(--color-surface-card);
+               font-size:${tokens.fontSize.lg};color:var(--color-text-primary)">${thead}${tbody}</table></div>`;
+
+    const toggleBtn = hasPassed
         ? '<div class="control-bar"><button id="toggleBtn" onclick="togglePassed()">Toggle Passed</button></div>'
         : '';
-    html +=
-        '<div class="wrapper"><table>' + _buildTableHeaderRow(hasSuite, hasError, hasHistory, hasFlakiness) + '<tbody>';
-    for (const [i, t] of tests.entries()) {
-        html += _buildTestTableRow(t, i, categories, history, knownIssues, flakinessMap, {
-            hasSuite,
-            hasError,
-            hasHistory,
-            hasFlakiness,
-            hasStepsOrScreenshotsOrLogs,
-        });
-    }
-    html += '</tbody></table></div>';
-    return html;
+
+    return toggleBtn + tableHtml;
 }

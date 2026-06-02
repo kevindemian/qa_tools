@@ -1,3 +1,11 @@
+/**
+ * HTML page factory — builds complete HTML pages with CSS variables, theme, and structure.
+ *
+ * Injects CSS custom properties from design tokens and supports dark/light/system theme.
+ *
+ * @module html-factory
+ */
+
 import { sanitizeHtml } from './escape';
 
 export interface HtmlPageParams {
@@ -47,12 +55,12 @@ export function buildThemeScript(theme?: string, storageKey?: string): string {
     }
     apply(theme);
 })();
-function toggleTheme() {
+var _toggleTheme = function toggleTheme() {
     var html = document.documentElement;
     html.classList.toggle('dark');
     var isDark = html.classList.contains('dark');
     try { localStorage.setItem('${key}', isDark ? 'dark' : 'light'); } catch(e) { if (typeof console !== 'undefined') console.warn('Theme persistence failed:', e); }
-}
+};
 </script>`;
 }
 

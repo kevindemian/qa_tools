@@ -1,3 +1,12 @@
+/**
+ * HTML report orchestrator — assembles all sections into a complete report page.
+ *
+ * Uses primitives and design tokens for consistent visual output.
+ * This is the public API for generating HTML test reports.
+ *
+ * @module report-html
+ */
+
 import { rootLogger } from './logger';
 import { sanitizeUrl } from './cli_base';
 import { escapeHtml, statsFromTests } from './report-utils';
@@ -22,11 +31,13 @@ import {
 import { buildTestTable, precomputeCategories } from './report-table';
 import { buildDiffComparisonSection } from './report-diff';
 import Config from './config';
+import { Card, MetricCard, Badge } from './primitives';
+import { tokens } from './theme-tokens';
 
 function healthColor(score: number): string {
-    if (score >= 80) return '#22c55e';
-    if (score >= 50) return '#eab308';
-    return '#ef4444';
+    if (score >= 80) return tokens.color.chart.pass;
+    if (score >= 50) return tokens.color.semantic.warn.light;
+    return tokens.color.chart.fail;
 }
 
 function healthBg(score: number): string {
@@ -38,8 +49,8 @@ function healthBg(score: number): string {
 function buildHealthSection(health: import('./types').HealthScoreResult): string {
     const qcIcon = health.qualityGate === 'pass' ? '✅' : '❌';
     const qcText = health.qualityGate === 'pass' ? 'Pass' : 'Fail';
-    const qcColor = health.qualityGate === 'pass' ? '#166534' : '#991b1b';
-    const qcBg = health.qualityGate === 'pass' ? '#dcfce7' : '#fecaca';
+    const qcColor = health.qualityGate === 'pass' ? 'var(--color-badge-pass-text)' : 'var(--color-badge-fail-text)';
+    const qcBg = health.qualityGate === 'pass' ? 'var(--color-badge-pass-bg)' : 'var(--color-badge-fail-bg)';
     const overallColor = healthColor(health.overall);
     const dims = health.dimensions;
     const dimEntries: Array<{ label: string; score: number; status: string }> = [
@@ -49,29 +60,34 @@ function buildHealthSection(health: import('./types').HealthScoreResult): string
         { label: 'Suite Speed', score: dims.suiteSpeed.score, status: dims.suiteSpeed.status },
     ];
 
-    let html = '<div class="chart-box" style="margin-top:16px">';
-    html += '<div class="label" style="margin-bottom:12px;font-size:1rem">📊 Test Suite Health</div>';
-    html += '<div style="display:flex;gap:16px;flex-wrap:wrap;align-items:center;margin-bottom:16px">';
-    html += `<div style="text-align:center;min-width:100px"><div style="font-size:2.5rem;font-weight:800;color:${overallColor}">${health.overall}</div>`;
-    html += `<div style="font-size:0.8rem;color:#6b7280;text-transform:capitalize">${health.grade.replace(/_/g, ' ')}</div></div>`;
-    html += `<div style="padding:4px 12px;border-radius:9999px;font-size:0.85rem;font-weight:600;background:${qcBg};color:${qcColor}">${qcIcon} Quality Gate: ${qcText}</div>`;
-    html += `<div style="font-size:0.75rem;color:#6b7280">${health.runCount} run(s) · ${health.timestamp.slice(0, 10)}</div>`;
-    html += '</div>';
-    html += '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:8px">';
+    let dimCards = '';
     for (const d of dimEntries) {
         const barColor = healthColor(d.score);
         const bg = healthBg(d.score);
         const icon = d.status === 'pass' ? '✅' : '❌';
-        html += `<div style="background:${bg};border-radius:6px;padding:10px 12px">`;
-        html += `<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">`;
-        html += `<span style="font-size:0.75rem;color:#4b5563">${d.label}</span>`;
-        html += `<span style="font-size:0.8rem;font-weight:700;color:${barColor}">${d.score} ${icon}</span>`;
-        html += '</div>';
-        html += `<div style="height:6px;background:#e5e7eb;border-radius:3px;overflow:hidden">`;
-        html += `<div style="height:100%;width:${d.score}%;background:${barColor};border-radius:3px;transition:width 0.3s"></div>`;
-        html += '</div></div>';
+        dimCards += `<div style="background:${bg};border-radius:6px;padding:10px 12px">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+                <span style="font-size:0.75rem;color:var(--color-text-secondary)">${d.label}</span>
+                <span style="font-size:0.8rem;font-weight:700;color:${barColor}">${d.score} ${icon}</span>
+            </div>
+            <div style="height:6px;background:var(--color-border-subtle);border-radius:3px;overflow:hidden">
+                <div style="height:100%;width:${d.score}%;background:${barColor};border-radius:3px;transition:width 0.3s"></div>
+            </div>
+        </div>`;
     }
-    html += '</div></div>';
+
+    const html = Card({
+        variant: 'default',
+        children:
+            `<div class="label" style="margin-bottom:12px;font-size:1rem">📊 Test Suite Health</div>` +
+            `<div style="display:flex;gap:16px;flex-wrap:wrap;align-items:center;margin-bottom:16px">` +
+            `<div style="text-align:center;min-width:100px"><div style="font-size:2.5rem;font-weight:800;color:${overallColor}">${health.overall}</div>` +
+            `<div style="font-size:0.8rem;color:var(--color-text-muted);text-transform:capitalize">${health.grade.replace(/_/g, ' ')}</div></div>` +
+            `<span style="padding:4px 12px;border-radius:9999px;font-size:0.85rem;font-weight:600;background:${qcBg};color:${qcColor}">${qcIcon} Quality Gate: ${qcText}</span>` +
+            `<span style="font-size:0.75rem;color:var(--color-text-muted)">${health.runCount} run(s) · ${health.timestamp.slice(0, 10)}</span>` +
+            `</div>` +
+            `<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:8px">${dimCards}</div>`,
+    });
     return html;
 }
 
@@ -86,7 +102,7 @@ function _buildFlakinessLink(options: ReportOptions): string {
         '<div style="text-align:center;margin-top:12px">' +
         '<a href="' +
         escapeHtml(options.flakinessDashboardUrl) +
-        '" style="display:inline-block;padding:8px 16px;background:#f3f4f6;border-radius:6px;color:#374151;text-decoration:none;font-size:0.85rem" target="_blank">📊 View Flakiness Dashboard</a></div>'
+        '" style="display:inline-block;padding:8px 16px;background:var(--color-surface-elevated);border-radius:6px;color:var(--color-text-primary);text-decoration:none;font-size:0.85rem" target="_blank" rel="noopener">📊 View Flakiness Dashboard</a></div>'
     );
 }
 
@@ -177,46 +193,38 @@ function _coverageStatusClass(status: string): string {
 }
 
 function _renderEpicRow(e: CoverageEpic, closePct: string): string {
-    let html = '<div class="card" style="margin-bottom:12px">';
-    html += '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">';
-    html +=
-        '<div><span style="font-weight:700">' +
-        escapeHtml(e.key) +
-        '</span> &mdash; ' +
-        escapeHtml(e.summary) +
-        '</div>';
-    html +=
-        '<span class="status-badge" style="background:#e0e7ff;color:#3730a3">' +
-        e.issues.length +
-        ' issues, ' +
-        closePct +
-        '% closed</span>';
-    html += '</div>';
+    let issues = '';
     for (const issue of e.issues) {
-        html += '<div style="display:flex;gap:8px;align-items:center;padding:4px 0;font-size:0.85rem">';
-        html +=
-            '<span class="status-badge ' +
-            _coverageStatusClass(issue.status) +
-            '">' +
-            escapeHtml(issue.status) +
-            '</span>';
-        html += '<span><strong>' + escapeHtml(issue.key) + '</strong></span>';
-        html += '<span>' + escapeHtml(issue.summary) + '</span>';
-        html += '<span style="font-size:0.7rem;color:#6b7280">' + escapeHtml(issue.type) + '</span></div>';
+        issues +=
+            '<div style="display:flex;gap:8px;align-items:center;padding:4px 0;font-size:0.85rem">' +
+            Badge({
+                variant:
+                    _coverageStatusClass(issue.status) === 'status-passed'
+                        ? 'pass'
+                        : _coverageStatusClass(issue.status) === 'status-failed'
+                          ? 'fail'
+                          : 'skip',
+                children: issue.status,
+            }) +
+            '<span><strong>' +
+            escapeHtml(issue.key) +
+            '</strong></span>' +
+            '<span>' +
+            escapeHtml(issue.summary) +
+            '</span>' +
+            '<span style="font-size:0.7rem;color:var(--color-text-muted)">' +
+            escapeHtml(issue.type) +
+            '</span></div>';
     }
-    html += '</div>';
-    return html;
+    return Card({
+        variant: 'default',
+        children:
+            `<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">` +
+            `<div><span style="font-weight:700">${escapeHtml(e.key)}</span> &mdash; ${escapeHtml(e.summary)}</div>` +
+            Badge({ variant: 'info', children: `${e.issues.length} issues, ${closePct}% closed` }) +
+            `</div>${issues}`,
+    });
 }
-
-const _COVERAGE_CSS =
-    "body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; margin: 0; padding: 20px; background: #f9fafb; color: #111827; }" +
-    'h1 { font-size: 1.5rem; }' +
-    '.card { background: #fff; border-radius: 8px; padding: 16px 20px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }' +
-    '.status-badge { display: inline-block; padding: 2px 8px; border-radius: 9999px; font-size: 0.75rem; font-weight: 600; }' +
-    '.status-passed { background: #dcfce7; color: #166534; }' +
-    '.status-failed { background: #fecaca; color: #991b1b; }' +
-    '.status-skipped { background: #fef9c3; color: #854d0e; }' +
-    '.summary { display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 20px; }';
 
 export function generateCoverageHtml(epics: CoverageEpic[], title?: string): string {
     try {
@@ -235,23 +243,17 @@ export function generateCoverageHtml(epics: CoverageEpic[], title?: string): str
             '<h1>' +
             reportTitle +
             '</h1>' +
-            '<div class="summary"><div class="card"><div class="label" style="font-size:0.75rem;text-transform:uppercase;color:#4b5563">Total Epics</div><div class="value" style="font-size:1.5rem;font-weight:700">' +
-            epics.length +
-            '</div></div>' +
-            '<div class="card"><div class="label" style="font-size:0.75rem;text-transform:uppercase;color:#4b5563">Total Issues</div><div class="value" style="font-size:1.5rem;font-weight:700">' +
-            totalIssues +
-            '</div></div>' +
-            '<div class="card"><div class="label" style="font-size:0.75rem;text-transform:uppercase;color:#4b5563">Closed</div><div class="value" style="font-size:1.5rem;font-weight:700;color:#16a34a">' +
-            closedIssues +
-            '</div></div>' +
-            '<div class="card"><div class="label" style="font-size:0.75rem;text-transform:uppercase;color:#4b5563">Coverage</div><div class="value" style="font-size:1.5rem;font-weight:700">' +
-            closePct +
-            '%</div></div></div>' +
+            '<div style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:20px">' +
+            MetricCard({ label: 'Total Epics', value: String(epics.length) }) +
+            MetricCard({ label: 'Total Issues', value: String(totalIssues) }) +
+            MetricCard({ label: 'Closed', value: String(closedIssues), severity: 'success' }) +
+            MetricCard({ label: 'Coverage', value: closePct + '%' }) +
+            '</div>' +
             epicRows;
 
         return buildHtmlPage({
             title: reportTitle,
-            styles: _COVERAGE_CSS,
+            styles: buildCss(),
             bodyContent: coverageBody,
             footer: 'Generated by QA Tools',
         });

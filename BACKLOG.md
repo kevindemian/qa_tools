@@ -176,37 +176,78 @@ Objetivo: `JIRA_MODE=server|cloud` com auth strategy diferenciada.
 
 ---
 
-## ✅ Sprint 7 — Revisão Híbrida: Self-Critique (Mesma LLM) + iMAD Trigger + 2-LLM Escalation
+## 🚀 Sprint 8 — Design Token System + Component Primitives (P0, ~29h)
 
-### Fase A — Foundation (Cost Tracking + Config)
+Implementação do Design Token System + Component Primitives para unificar os 3 sistemas CSS independentes de relatórios HTML.
 
-| ID  | Componente                    | Arquivo                         | Status |
-| --- | ----------------------------- | ------------------------------- | ------ |
-| A1  | `llmReviewBudget` no schema   | `shared/config-schema.ts`       | ✅     |
-| A2  | `llmReviewStrategy` no schema | `shared/config-schema.ts`       | ✅     |
-| A3  | MODEL_PRICING + \_trackCost   | `shared/llm-fallback-config.ts` | ✅     |
-| A4  | totalCostUSD + costPerTier    | `shared/llm-metrics.ts`         | ✅     |
+**Objetivo**: Substituir CSS hardcoded duplicado por tokens centralizados + primitives reutilizáveis com data-attributes.
 
-### Fase B — Core Logic
+### Fase 0 — Theme Tokens (P0, ~2h)
 
-| ID  | Componente                            | Arquivo                | Status |
-| --- | ------------------------------------- | ---------------------- | ------ |
-| B1  | Self-critique tier: reviewer → report | `shared/llm-review.ts` | ✅     |
-| B2  | Prompt diferenciado self-critique     | `shared/llm-review.ts` | ✅     |
-| B3  | iMAD heuristics                       | `shared/llm-review.ts` | ✅     |
-| B4  | shouldSkipAdversarialReview trigger   | `shared/llm-review.ts` | ✅     |
-| B5  | reviewWithLlm adaptado ao trigger     | `shared/llm-review.ts` | ✅     |
+| ID  | Componente            | Arquivo                  | Status |
+| --- | --------------------- | ------------------------ | ------ |
+| T0  | Fonte única de tokens | `shared/theme-tokens.ts` | ✅     |
 
-### Fase C — Config + Docs
+### Fase 1 — Primitives (P0, ~6h)
 
-| ID  | Componente            | Arquivo               | Status |
-| --- | --------------------- | --------------------- | ------ |
-| C1  | `.env.example`        | `.env.example`        | ✅     |
-| C2  | `docs/06-env-vars.md` | `docs/06-env-vars.md` | ✅     |
+| ID  | Componente        | Arquivo                       | Status |
+| --- | ----------------- | ----------------------------- | ------ |
+| P1  | Layout primitives | `shared/primitives/layout.ts` | ✅     |
+| P2  | Card primitives   | `shared/primitives/card.ts`   | ✅     |
+| P3  | Badge primitives  | `shared/primitives/badge.ts`  | ✅     |
+| P4  | Table primitives  | `shared/primitives/table.ts`  | ✅     |
+| P5  | Chart primitives  | `shared/primitives/chart.ts`  | ✅     |
+| P6  | Form primitives   | `shared/primitives/form.ts`   | ✅     |
+| P7  | Barrel export     | `shared/primitives/index.ts`  | ✅     |
 
-### Fase D — Testes
+### Fase 2 — CSS via Tokens + Dark Mode Unificado (P0, ~3h)
 
-| ID  | Componente          | Arquivo                     | Status |
-| --- | ------------------- | --------------------------- | ------ |
-| D1  | Testes llm-review   | `shared/llm-review.test.ts` | ✅     |
-| D2  | Cost tracking tests | `shared/llm-cost.test.ts`   | ✅     |
+| ID  | Componente         | Arquivo                   | Status |
+| --- | ------------------ | ------------------------- | ------ |
+| C1  | CSS vars + tokens  | `shared/report-styles.ts` | ✅     |
+| C2  | CSS vars injection | `shared/html-factory.ts`  | ✅     |
+| C3  | UITheme via tokens | `shared/theme.ts`         | ✅     |
+
+### Fase 3 — Migrar Section/Table/Chart/Diff para Primitives (P0, ~5h)
+
+| ID  | Componente      | Arquivo                     | Status |
+| --- | --------------- | --------------------------- | ------ |
+| M1  | Migrar sections | `shared/report-sections.ts` | ✅     |
+| M2  | Migrar table    | `shared/report-table.ts`    | ✅     |
+| M3  | Migrar chart    | `shared/report-chart.ts`    | ✅     |
+| M4  | Migrar html     | `shared/report-html.ts`     | ✅     |
+| M5  | Migrar diff     | `shared/report-diff.ts`     | ✅     |
+
+### Fase 4 — Migrar Coverage Gap + Flakiness (P0, ~4h)
+
+| ID  | Componente          | Arquivo                                | Status |
+| --- | ------------------- | -------------------------------------- | ------ |
+| G1  | Migrar coverage gap | `shared/generate-coverage-gap-html.ts` | ✅     |
+| G2  | Migrar flakiness    | `shared/flakiness-dashboard.ts`        | ✅     |
+
+### Fase 5 — Responsividade + Acessibilidade (P0, ~3h)
+
+| ID  | Componente        | Arquivo                   | Status |
+| --- | ----------------- | ------------------------- | ------ |
+| R1  | Responsive styles | `shared/report-styles.ts` | ✅     |
+| R2  | ARIA attributes   | All primitives            | ✅     |
+
+### Fase 6 — Testes (P0, ~6h)
+
+| ID  | Componente                   | Arquivo                                     | Status |
+| --- | ---------------------------- | ------------------------------------------- | ------ |
+| X1  | Tests theme-tokens           | `shared/theme-tokens.test.ts`               | ✅     |
+| X2  | Tests primitive layout       | `shared/primitives/layout.test.ts`          | ✅     |
+| X3  | Tests primitive card         | `shared/primitives/card.test.ts`            | ✅     |
+| X4  | Tests primitive badge        | `shared/primitives/badge.test.ts`           | ✅     |
+| X5  | Tests primitive table        | `shared/primitives/table.test.ts`           | ✅     |
+| X6  | Tests primitive chart        | `shared/primitives/chart.test.ts`           | ✅     |
+| X7  | Tests primitive form         | `shared/primitives/form.test.ts`            | ✅     |
+| X8  | Update report-styles tests   | `shared/report-styles.test.ts`              | ✅     |
+| X9  | Update report-sections tests | `shared/report-sections.test.ts`            | ✅     |
+| X10 | Update report-table tests    | `shared/report-table.test.ts`               | ✅     |
+| X11 | Update report-chart tests    | `shared/report-chart.test.ts`               | ✅     |
+| X12 | Update report-html tests     | `shared/report-html.test.ts`                | ✅     |
+| X13 | Update coverage-gap tests    | `shared/generate-coverage-gap-html.test.ts` | ✅     |
+| X14 | Update flakiness tests       | `shared/flakiness-dashboard.test.ts`        | ✅     |
+| X15 | Update theme tests           | `shared/theme.test.ts`                      | ✅     |

@@ -1,3 +1,7 @@
+/**
+ * Tests for generate-coverage-gap-html — coverage gap report using primitives.
+ */
+
 import { nullAs } from './test-utils';
 import { generateCoverageGapHtml } from './generate-coverage-gap-html';
 import type { CoverageGapResult } from './types';
@@ -89,7 +93,6 @@ describe('generateCoverageGapHtml', () => {
     it('shows quality gate section with failing epics', () => {
         const html = generateCoverageGapHtml(makeFixture());
         expect(html).toContain('Quality Gate');
-        expect(html).toContain('gate-fail');
         expect(html).toContain('epic(s) below');
     });
 
@@ -102,16 +105,14 @@ describe('generateCoverageGapHtml', () => {
         fixture.totals.rawCoveragePct = 80;
         fixture.gateConfig.minCoveragePct = 50;
         const html = generateCoverageGapHtml(fixture);
-        expect(html).toContain('gate-pass');
         expect(html).toContain('All epics pass');
     });
 
     it('renders epic cards with progress bars', () => {
         const html = generateCoverageGapHtml(makeFixture());
         expect(html).toContain('Authentication Module');
-        expect(html).toContain('progress-bar');
-        expect(html).toContain('progress-fill');
-        expect(html).toContain('1/2 covered'); // fixture: 1 covered out of 2
+        expect(html).toContain('data-component="progress-bar"');
+        expect(html).toContain('1/2 covered');
     });
 
     it('renders hierarchy tree', () => {
@@ -151,14 +152,14 @@ describe('generateCoverageGapHtml', () => {
 
     it('includes theme toggle script', () => {
         const html = generateCoverageGapHtml(makeFixture());
-        expect(html).toContain('toggleTheme');
+        expect(html).toContain('_toggleTheme');
         expect(html).toContain('dark');
     });
 
     it('includes filter script for gaps table', () => {
         const html = generateCoverageGapHtml(makeFixture());
         expect(html).toContain('function filterGaps()');
-        expect(html).toContain('searchInput');
+        expect(html).toContain('gapSearchInput');
     });
 
     it('includes collapsible tree toggle', () => {

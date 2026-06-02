@@ -1,3 +1,7 @@
+/**
+ * Tests for flakiness-dashboard — HTML flakiness report using primitives.
+ */
+
 import { filterHighFlakiness, generateFlakinessHtml } from './flakiness-dashboard';
 import type { FlakinessEntry } from './metrics';
 import { nonNull } from './test-utils';
@@ -42,7 +46,7 @@ describe('generateFlakinessHtml', () => {
         expect(html).toContain('Flakiness Dashboard');
     });
 
-    it('shows status-medium for entries below 50% rate', () => {
+    it('shows entries below 50% rate with warn badge', () => {
         const entries: FlakinessEntry[] = [
             { title: 'Mild', passCount: 7, failCount: 3, skipCount: 0, totalRuns: 10, rate: 0.3 },
         ];
@@ -50,10 +54,10 @@ describe('generateFlakinessHtml', () => {
         const html = generateFlakinessHtml(entries);
         expect(html).toContain('Mild');
         expect(html).toContain('30%');
-        expect(html).toContain('status-medium');
+        expect(html).toContain('data-component="badge"');
     });
 
-    it('shows danger class when more than 5 high-flakiness entries', () => {
+    it('shows danger severity when more than 5 high-flakiness entries', () => {
         const entries: FlakinessEntry[] = Array.from({ length: 7 }, (_, i) => ({
             title: `Flaky#${i}`,
             passCount: 1,
@@ -64,7 +68,7 @@ describe('generateFlakinessHtml', () => {
         }));
 
         const html = generateFlakinessHtml(entries);
-        expect(html).toContain('danger');
+        expect(html).toContain('data-severity="error"');
         expect(html).toContain('7');
     });
 
@@ -92,8 +96,6 @@ describe('generateFlakinessHtml', () => {
         expect(html).not.toContain('<script>alert');
     });
 
-    // ── R9: Flakiness dark mode ─────────────────────────────────────
-
     it('includes dark mode theme toggle script', () => {
         const entries: FlakinessEntry[] = [
             { title: 'Test', passCount: 5, failCount: 5, skipCount: 0, totalRuns: 10, rate: 0.5 },
@@ -105,8 +107,7 @@ describe('generateFlakinessHtml', () => {
 
     it('includes dark mode CSS selectors', () => {
         const html = generateFlakinessHtml([]);
-        expect(html).toContain('html.dark body');
-        expect(html).toContain('html.dark .card');
-        expect(html).toContain('html.dark th');
+        expect(html).toContain('--color-surface-page');
+        expect(html).toContain('html.dark');
     });
 });
