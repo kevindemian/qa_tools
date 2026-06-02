@@ -209,7 +209,7 @@ async function performSelfReview(
         reviewed: true,
         confidence,
         fallbackUsed: false,
-        reviewerNotes: confidence !== 'high' && reviewerNotes ? reviewerNotes : undefined,
+        ...(confidence !== 'high' && reviewerNotes ? { reviewerNotes } : {}),
     };
 }
 
@@ -239,7 +239,7 @@ async function adversarialRetryParallel(
         if (r.status === 'fulfilled' && r.value !== null) valid.push(r.value);
     }
     if (valid.length === 0) return null;
-    return valid[0]!;
+    return valid[0] as NonNullable<(typeof valid)[number]>;
 }
 
 // --- Parallel re-review with quorum ---

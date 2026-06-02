@@ -1,6 +1,9 @@
+import * as paletteModule from './palette';
+import chalk from 'chalk';
+
 describe('palette', () => {
     it('has all expected palette keys', () => {
-        const { palette } = require('./palette') as { palette: Record<string, unknown> };
+        const { palette } = paletteModule;
         const expected = ['fg', 'muted', 'border', 'blue', 'green', 'yellow', 'red', 'purple', 'orange'] as const;
         for (const key of expected) {
             expect(palette).toHaveProperty(key);
@@ -8,10 +11,7 @@ describe('palette', () => {
     });
 
     it('applyPalette returns a chalk function for each key', () => {
-        const { applyPalette, palette } = require('./palette') as {
-            applyPalette: (k: string) => (...args: unknown[]) => string;
-            palette: Record<string, (...args: unknown[]) => string>;
-        };
+        const { applyPalette, palette } = paletteModule;
         const keys = Object.keys(palette);
         for (const key of keys) {
             const fn = applyPalette(key);
@@ -21,13 +21,11 @@ describe('palette', () => {
     });
 
     it('hexOrBasic returns basic chalk for level < 2', () => {
-        const palette = require('./palette');
-        expect(palette.palette).toBeDefined();
+        expect(paletteModule.palette).toBeDefined();
     });
 
     it('uses chalk.hex when chalk.level >= 2', () => {
         jest.isolateModules(() => {
-            const chalk = require('chalk');
             const origLevel = chalk.level;
             chalk.level = 2;
             const { palette: p } = require('./palette') as { palette: Record<string, (...args: unknown[]) => string> };
@@ -37,9 +35,10 @@ describe('palette', () => {
     });
 
     it('palette colors render text', () => {
-        const { palette } = require('./palette') as { palette: Record<string, (...args: unknown[]) => string> };
+        const { palette, applyPalette } = paletteModule;
         for (const key of Object.keys(palette)) {
-            const result = palette[key]!('hello');
+            const fn = applyPalette(key as keyof typeof palette);
+            const result = fn('hello');
             expect(typeof result).toBe('string');
             expect(result).toContain('hello');
         }

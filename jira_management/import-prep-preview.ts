@@ -38,7 +38,7 @@ function _renderSteps(t: TestCase): string {
     if (!t.steps || t.steps.length === 0) return '_No steps defined._\n\n';
     let out = '### Steps\n\n';
     for (let j = 0; j < t.steps.length; j++) {
-        const s = t.steps[j]!;
+        const s = t.steps[j] as NonNullable<NonNullable<(typeof t)['steps']>[number]>;
         out += '**Step ' + (j + 1) + '**\n';
         out += '- **Action:** ' + (s.fields?.Action || '') + '\n';
         if (s.fields?.Data) out += '- **Data:** ' + s.fields.Data + '\n';
@@ -72,7 +72,7 @@ export function generatePreviewMarkdown(tests: TestCase[], options?: PreviewMdOp
     if (summaryParts.length > 0) parts.push(summaryParts.join('  \n') + '\n\n---\n\n');
 
     for (let i = 0; i < tests.length; i++) {
-        const t = tests[i]!;
+        const t = tests[i] as NonNullable<(typeof tests)[number]>;
         parts.push(_renderTestHeader(t, i, options?.keys));
         parts.push(_renderTestMeta(t));
         parts.push(_renderSteps(t));

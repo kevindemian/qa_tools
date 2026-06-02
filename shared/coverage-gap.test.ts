@@ -1,4 +1,6 @@
 import { analyzeCoverageGaps } from './coverage-gap';
+import { loadMetrics } from './metrics';
+import type { MetricsStore } from './metrics';
 
 jest.mock('./logger', () => ({
     rootLogger: { error: jest.fn(), warn: jest.fn(), info: jest.fn(), child: jest.fn().mockReturnThis() },
@@ -8,6 +10,7 @@ jest.mock('./metrics', () => ({
     loadMetrics: jest.fn(),
 }));
 
+const mockLoadMetrics = jest.mocked(loadMetrics);
 const mockSearch = jest.fn();
 const mockJiraResource = {
     getJiraResource: jest.fn(),
@@ -35,7 +38,7 @@ beforeEach(() => {
     jest.clearAllMocks();
     mockSearch.mockReset();
     mockSearch.mockResolvedValue({ issues: [], total: 0 });
-    require('./metrics').loadMetrics.mockReturnValue({ runs: [], coverageHistory: [] });
+    mockLoadMetrics.mockReturnValue({ runs: [], coverageHistory: [] });
 });
 
 describe('analyzeCoverageGaps', () => {
@@ -262,7 +265,7 @@ describe('analyzeCoverageGaps', () => {
     });
 
     it('loads trends from metrics store', async () => {
-        require('./metrics').loadMetrics.mockReturnValue({
+        mockLoadMetrics.mockReturnValue({
             runs: [],
             coverageHistory: [
                 {

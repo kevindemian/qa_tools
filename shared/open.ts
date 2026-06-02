@@ -12,6 +12,11 @@ interface OsOpenCommand {
 
 let _wslCached: boolean | null = null;
 
+/** Reset cached WSL detection state. Used in tests to avoid cross-test leakage. */
+export function __resetWslCache(): void {
+    _wslCached = null;
+}
+
 function isWsl(): boolean {
     if (_wslCached !== null) return _wslCached;
     try {
@@ -33,7 +38,9 @@ export function getWinTempDir(): string | null {
             stdio: ['pipe', 'pipe', 'ignore'],
         }).trim();
         if (!raw) return null;
-        return raw.replace(/\\/g, '/').replace(/^([A-Za-z]):/, (_m, letter) => '/mnt/' + letter.toLowerCase());
+        return raw
+            .replace(/\\/g, '/')
+            .replace(/^([A-Za-z]):/, (_m: string, letter: string) => '/mnt/' + letter.toLowerCase());
     } catch {
         return null;
     }

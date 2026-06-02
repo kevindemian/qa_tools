@@ -70,7 +70,7 @@ jest.mock('./config', () => {
     };
 });
 jest.mock('./llm-rate-limiter', () => {
-    const original = jest.requireActual('./llm-rate-limiter');
+    const original = jest.requireActual<typeof import('./llm-rate-limiter')>('./llm-rate-limiter');
     return {
         ...original,
         checkRateLimit: jest.fn(),

@@ -64,13 +64,14 @@ export function buildCoverageItems(
         const linkedTestKeys = extractLinkedTestKeys(fields);
         const fallbackKeys = testLinkMap.get(issue.key) || [];
         const allKeys = Array.from(new Set([...linkedTestKeys, ...fallbackKeys]));
+        const epicSummary = epicKey ? epicsMap.get(epicKey) : undefined;
         return {
             issueKey: issue.key,
             summary,
             type: normalizeType(rawType),
             status,
-            epicKey,
-            epicSummary: epicKey ? epicsMap.get(epicKey) : undefined,
+            ...(epicKey ? { epicKey } : {}),
+            ...(epicSummary ? { epicSummary } : {}),
             hasTest: allKeys.length > 0,
             linkedTestKeys: allKeys,
             priority,
@@ -112,7 +113,7 @@ export function buildEpicRollup(items: CoverageGapItem[], epicsMap: Map<string, 
         byEpic[epicKey].issues.push(item);
     }
     for (const key of Object.keys(byEpic)) {
-        const epic = byEpic[key]!;
+        const epic = byEpic[key] as NonNullable<(typeof byEpic)[string]>;
         epic.total = epic.issues.length;
         epic.covered = epic.issues.filter((i) => i.hasTest).length;
         epic.rawPct = epic.total > 0 ? Math.round((epic.covered / epic.total) * 100) : 0;

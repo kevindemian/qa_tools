@@ -243,7 +243,7 @@ export async function showSelect(label: string, choices: SelectChoice[], options
     _renderChoices(sections, standaloneItems);
 
     output.print(palette.muted('  Dica: digite o número da opção, alias (ex: criar, status, versões) ou /help'));
-    const answer = prompt(label, { default: options.default }).trim();
+    const answer = prompt(label, { ...(options.default ? { default: options.default } : {}) }).trim();
     if (answer === '') return options.default || '0';
     const trimmed = answer.toLowerCase();
     if (trimmed === '0' || trimmed === 'exit' || trimmed === 'sair') return '0';

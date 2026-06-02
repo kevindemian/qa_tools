@@ -196,6 +196,34 @@ Substituídos ~110 usos de `!` em 22 arquivos de teste por `nonNull()`.
 >
 > **Gate**: Só ativar as 3 regras ESLint após zerar os erros. Adicionar ao `scripts/enforce-quality.ts` quando ativadas.
 
+### 🟡 Fase 4b — Eliminar `jest.fn<...unknown...>()` em tests (P2, ~2h) ✅
+
+Eliminar ~60 ocorrências de `jest.fn` com `unknown`, `unknown[]`, ou `any` como type argument direto em 17 arquivos de teste.
+
+Estratégia: `import type` das funções reais + `Parameters<>` / `ReturnType<>` dentro das factories, sem criar circularidade (import type é erased em compile-time).
+
+| ID  | Arquivo                                       | Ocorrências | Status |
+| --- | --------------------------------------------- | ----------- | ------ |
+| U1  | `git_triggers/llm-pipeline.test.ts`           | 8           | ✅     |
+| U2  | `shared/jira-helper.test.ts`                  | 2           | ✅     |
+| U3  | `git_triggers/github-pr.test.ts`              | 3           | ✅     |
+| U4  | `jira_management/commands/case12.test.ts`     | 4           | ✅     |
+| U5  | `jira_management/create_tests.test.ts`        | 10          | ✅     |
+| U6  | `shared/http-client.test.ts`                  | 1           | ✅     |
+| U7  | `e2e/handlers-happy-paths.test.ts`            | 1           | ✅     |
+| U8  | `shared/show-docs.test.ts`                    | 1           | ✅     |
+| U9  | `jira_management/import-prep-preview.test.ts` | 2           | ✅     |
+| U10 | `git_triggers/github-workflow.test.ts`        | 10          | ✅     |
+| U11 | `jira_management/result_reporter.test.ts`     | 3           | ✅     |
+| U12 | `shared/first-run.test.ts`                    | 1           | ✅     |
+| U13 | `jira_management/commands/handlers.test.ts`   | 3           | ✅     |
+| U14 | `git_triggers/main.test.ts`                   | 5           | ✅     |
+| U15 | `git_triggers/test-results.test.ts`           | 11          | ✅     |
+| U16 | `git_triggers/nivelar.test.ts`                | 1           | ✅     |
+
+**Prevenção**: `scripts/enforce-quality.ts` + `AGENTS.md` — falha o build se `jest.fn<...unknown...>()` aparecer.
+**Estado**: `grep` por `jest.fn<.*unknown` e `jest.fn<.*any` em test files — **0 matches**. `scripts/enforce-quality.ts` — **8 checks pass**.
+
 ### 🟢 Fase 8 — CI Bloqueio + Verificação Final (P3, ~1h) ✅
 
 Criado `scripts/enforce-quality.ts` com 6 verificações automatizadas:
@@ -233,3 +261,154 @@ Uso: `npx ts-node scripts/enforce-quality.ts` (exit code 0 = passa).
 - Total de débitos eliminados Sprint 3: **>500 casts + ~110 non-null assertions** ✅
 - `nonNull<T>()` helper: criado, 7 testes, 22 arquivos consumindo ✅
 - CI enforcement script: `scripts/enforce-quality.ts` com 6 verificações ✅
+
+---
+
+## 🎯 Sprint 4 — Eliminação Total de Casts + Barreiras de Prevenção 🚀
+
+Plano em 6 fases cobrindo débitos remanescentes: `as unknown as` em produção, API clients sem tipo, `no-unsafe-*` ESLint, non-null assertions, tsconfig strict flags.
+
+### 🔴 Fase 1 — `as unknown as` em produção (P0, ~1h) ✅
+
+| ID  | Arquivo                    | Cast                                          | Correção                              | Status |
+| --- | -------------------------- | --------------------------------------------- | ------------------------------------- | ------ |
+| U1  | `shared/ai-feedback.ts`    | `(saveError as unknown as {cause}).cause`     | `new Error('msg', { cause: err })`    | ✅     |
+| U2  | `shared/llm-metrics.ts`    | `(persistError as unknown as {cause}).cause`  | `new Error('msg', { cause: err })`    | ✅     |
+| U3  | `shared/http-client.ts`    | `cfg as unknown as Record<string, unknown>`   | `WeakMap<object, true>`               | ✅     |
+| U4  | `case17.ts`                | `result as unknown as JiraSearchResult`       | `getJiraResource<JiraSearchResult>()` | ✅     |
+| U5  | `shared/splash.ts`         | `import('figlet') as unknown as FigletModule` | Aceito (R9) + justificativa           | ✅     |
+| U6  | `shared/llm-client.ts:156` | `schema as unknown as ZodSchemaTyped<T>`      | Aceito (R9) + justificativa           | ✅     |
+| U7  | `shared/llm-client.ts:195` | `response as unknown as T`                    | Aceito (R9) + justificativa           | ✅     |
+
+### 🟠 Fase 2 — Tipar API Clients na Raiz (P0, ~2h) ✅
+
+| ID  | Arquivo                                            | Problema                      | Correção                                | Status |
+| --- | -------------------------------------------------- | ----------------------------- | --------------------------------------- | ------ |
+| A1  | `git_triggers/github-api.ts`                       | `response.data` retorna `any` | `<T = JsonObject>` + `client.get<T>()`  | ✅     |
+| A2  | `git_triggers/gitlab-api.ts`                       | `response.data as T` — cast   | Substituir por `client.get<T>()`        | ✅     |
+| A3  | `git_triggers/github-*.ts` + `gitlab-*.ts` callers | 8 arquivos sem generic        | Adicionar generics tipando resposta API | ✅     |
+
+### 🟡 Fase 3 — Ativar `no-unsafe-*` ESLint (P1, ~1h) 🏃
+
+Rules ativadas como `error`. 11 erros em produção a corrigir; testes com Opção B aprovada (manual mocks tipados — registrado como débito pós-Sprint 4).
+
+| ID  | Regra                                        | Status |
+| --- | -------------------------------------------- | ------ |
+| N1  | `@typescript-eslint/no-unsafe-assignment`    | ✅     |
+| N2  | `@typescript-eslint/no-unsafe-call`          | ✅     |
+| N3  | `@typescript-eslint/no-unsafe-member-access` | ✅     |
+| N4  | `@typescript-eslint/no-unsafe-argument`      | ✅     |
+| N5  | `@typescript-eslint/no-unsafe-return`        | ✅     |
+
+### 🟠 Fase 3b — Fix Test Files for `no-unsafe-*` (P0, ~10h) 🏃
+
+Rules ativadas em Fase 3 para produção (✅). Test files ~1749 erros remanescentes (1575 errors + 174 warnings) porque `no-unsafe-*` NÃO foi desligado para `**/*.test.ts` — a decisão foi corrigir os testes com tipos, não suprimir.
+
+**State real (2026-06-02):**
+
+- `tsc --noEmit`: **0 erros** ✅
+- `jest`: **3352 pass, 0 fail** ✅
+- ESLint errors: 1575 (todos em test files, no-unsafe-\*)
+- ESLint warnings: 174 (non-null assertions, 39 files)
+
+**State after corrections (2026-06-02 — audit adversarial):**
+
+- `tsc --noEmit`: **0 erros** ✅
+- `jest`: **3352 pass, 0 fail** ✅
+- ESLint errors: **31** (↓1544, 6 files restantes)
+- ESLint warnings: 178 (~~174~~ +4 novas em 4 arquivos)
+
+#### STOMP Protocol (Standard Technical Obstacle Management Protocol)
+
+Adicionado em 2026-06-02 como regra vinculante para todo o desenvolvimento:
+
+1. **Gatilho**: antes de qualquer `as any`, `as unknown as`, `eslint-disable`, `ts-expect-error`, `require()` (evitável por `import`), `jest.isolateModules`, `jest.doMock` + `require()`, supressão de erro, duplicação para contornar tipo, ou abstração cujo único propósito é evitar corrigir a fonte.
+2. **Ação**: PARAR → declarar causa raiz → listar opções (cada uma com contratos afetados, impacto sistêmico, riscos) → aguardar autorização.
+3. **Invariante**: se não parou antes do primeiro bypass → implementação inválida, desfazer até o ponto anterior ao desvio.
+
+#### Sub-fase 3b.1 — Correção de workarounds (W1–W6) ✅
+
+| ID  | Arquivo                              | Workaround                      | Correção                                                                                                                     | Status |
+| --- | ------------------------------------ | ------------------------------- | ---------------------------------------------------------------------------------------------------------------------------- | ------ |
+| W1  | case17/18/19/21.test.ts              | 8 `eslint-disable` p/ expect.\* | `import { expect } from '@jest/globals'` (tipos corretos)                                                                    | ✅     |
+| W2  | `setup/builder/workflow-builder.ts`  | 2 block-level eslint-disable    | `doc: any` → `doc: Document<Node>`                                                                                           | ✅     |
+| W3  | `jira_management/xray-history.ts`    | eslint-disable-line             | `new Map()` → `new Map<string, string>()`                                                                                    | ✅     |
+| W5  | `context.test.ts` + `config.test.ts` | 2 `as any`                      | Removidos — substituídos por `{}`                                                                                            | ✅     |
+| W4  | `create_tests.test.ts`               | 6 `as unknown as`               | Removidos — `jest.Mocked<JiraResource>` → `jest.MockedObjectDeep<JiraResource>` (tipo correto retornado por `jest.mocked()`) | ✅     |
+| W6  | `cli_base.test.ts`                   | 1 `as unknown as`               | Substituído por `as jest.Mocked<readline.Interface>` direto (sem `unknown`)                                                  | ✅     |
+
+#### Sub-fase 3b.2 — Correção dos arquivos de teste
+
+Progressão por arquivo (ordem decrescente de erros):
+
+| ID    | Arquivo                                          | Erros (06-02) | Erros (corrigido) | Esforço | Status |
+| ----- | ------------------------------------------------ | ------------- | ----------------- | ------- | ------ |
+| T0–T4 | case17/18/19/21 + handlers.test.ts               | —             | 0                 | —       | ✅     |
+| T5    | `shared/open.test.ts`                            | ~~105~~       | 0                 | —       | ✅     |
+| T6    | `shared/config.test.ts`                          | ~~104~~       | 0                 | —       | ✅     |
+| T7    | `jira_management/csv_resource.test.ts`           | 101           | 0                 | 30min   | ✅     |
+| T8    | `e2e/handlers-happy-paths.test.ts`               | 94            | 0                 | 30min   | ✅     |
+| T9    | `shared/result_parser.test.ts`                   | 85            | 0                 | 30min   | ✅     |
+| T10   | `git_triggers/github-pr.test.ts`                 | 84            | 0                 | 30min   | ✅     |
+| T11   | `shared/llm-metrics.test.ts`                     | 83            | 0                 | 30min   | ✅     |
+| T12   | `shared/result_parser.test.ts`                   | 85            | 0                 | 30min   | ✅     |
+| T13   | `git_triggers/pipeline-handler.test.ts`          | 73            | 0                 | 30min   | ✅     |
+| T14   | `case17-test-utils.test.ts`                      | 67            | 0                 | 30min   | ✅     |
+| T15   | `git_triggers/github-workflow.test.ts`           | 58            | 0                 | 30min   | ✅     |
+| T16   | `jira_management/create_tests.test.ts`           | 53            | 0                 | 30min   | ✅     |
+| T17   | `e2e/friendly-error-paths.test.ts`               | 53            | 0                 | 30min   | ✅     |
+| T18   | `jira_management/main.test.ts`                   | 67            | 0                 | 30min   | ✅     |
+| T19   | `git_triggers/http-client.test.ts`               | 47            | 0                 | 30min   | ✅     |
+| T20   | `shared/report-generator.test.ts`                | 39            | 0                 | 30min   | ✅     |
+| T21   | `jira_management/commands/case22.test.ts`        | 37            | 0                 | 30min   | ✅     |
+| T22   | `llm/llm-client.test.ts`                         | 37            | 0                 | 30min   | ✅     |
+| T23   | `shared/temp-dir.test.ts`                        | 33            | 0                 | 30min   | ✅     |
+| T24   | `e2e/smoke-xray-cloud.test.ts`                   | 29            | 0                 | 30min   | ✅     |
+| T25   | `e2e/detector.test.ts`                           | 27            | 0                 | 30min   | ✅     |
+| T26   | `git_triggers/github-branch.test.ts`             | 26            | 0                 | 30min   | ✅     |
+| T27   | `jira_management/commands/case12.test.ts`        | 24            | 0                 | 30min   | ✅     |
+| T28   | `jira_management/mapping-file-generator.test.ts` | 22            | 0                 | 30min   | ✅     |
+| T29   | `jira_management/publish.test.ts`                | 22            | 0                 | 30min   | ✅     |
+| T30   | `llm/llm-pipeline.test.ts`                       | 21            | 0                 | 30min   | ✅     |
+| T31   | `e2e/batch-mode.test.ts`                         | 21            | 0                 | 30min   | ✅     |
+| T32   | `llm/llm-fallback-http.test.ts`                  | 20            | 0                 | 30min   | ✅     |
+| T33   | `git_triggers/main.test.ts`                      | 20            | 0                 | 30min   | ✅     |
+| T34   | `shared/bug-report.test.ts`                      | 19            | 0                 | 30min   | ✅     |
+| T35   | `case17-helpers.test.ts`                         | 19            | 0                 | 30min   | ✅     |
+| T36   | Demais ~6 arquivos (2-12 cada)                   | ~31           | 0                 | 1h      | ✅     |
+
+**Total corrigido**: 35 arquivos, ~1348 erros eliminados.
+**Remanescente**: 0 arquivos, 0 erros.
+
+_(Nota: auditoria adversarial em 2026-06-02 revelou que a estimativa original de ~258 erros em 45 arquivos era incorreta — o real era 31 erros em 6 arquivos.)_
+
+**Abordagem**: substituir `require()` inline por `import` estático + `jest.fn<T>()` tipado. Inline `require()` retorna `any` e propaga `no-unsafe-*`. A solução tecnicamente superior é imports estáticos com tipos.
+
+**Gate**: Zero erros `no-unsafe-*` em `**/*.test.ts` antes de avançar para Fase 4.
+
+> **🧾 DÉBITO TÉCNICO — `unknown` em parâmetros de `jest.fn<T>()` em mock factories**
+> ...
+> **Prioridade**: P2 (pós-Fase 4 Sprint 4)
+> **Esforço estimado**: 1h
+> **Status**: ✅ Resolvido em Sprint 4 Fase 4b
+> **Gate**: Resolver antes de ativar `noPropertyAccessFromIndexSignature` (Fase 6)
+
+### 🟡 Fase 4 — Eliminar Non-null Assertions (P2, ~4h)
+
+| ID  | Escopo                   | Ocorrências (06-02) | Ação                                            |
+| --- | ------------------------ | ------------------- | ----------------------------------------------- |
+| N1  | Produção (`e2e/`)        | 7                   | Substituir `!` por guardas / `nonNull()` / `??` |
+| N2  | `shared/state.ts`        | 1                   | Remover type assertion desnecessária            |
+| N3  | Test files (39 arquivos) | 167                 | `nonNull()` + guard clauses                     |
+
+### ✅ Fase 5 — Ativar `exactOptionalPropertyTypes` (P2, ~2h) ✅
+
+| ID  | Erros | Status                                                   |
+| --- | ----- | -------------------------------------------------------- |
+| E1  | 0     | ✅ Já ativo em `tsconfig.json` — nenhuma ação necessária |
+
+### ⏳ Fase 6 — Avaliar `noPropertyAccessFromIndexSignature` (P3)
+
+| ID  | Erros | Decisão                                        |
+| --- | ----- | ---------------------------------------------- |
+| P1  | ?     | Avaliar via Pareto — medir erro real com `tsc` |

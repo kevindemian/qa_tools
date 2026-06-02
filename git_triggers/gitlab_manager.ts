@@ -69,10 +69,10 @@ class GitLabManager extends GitProviderBase implements GitProvider {
         this.log = new Logger({ resource: 'GitLab', projectId });
     }
 
-    async _put(url: string, body?: unknown, opts?: { operation?: string }) {
+    async _put<T = JsonObject>(url: string, body?: unknown, opts?: { operation?: string }): Promise<T | null> {
         try {
             const args = body !== undefined ? [body] : [];
-            const response = await this.client.put(url, ...args);
+            const response = await this.client.put<T>(url, ...args);
             return response.status === 204 ? null : response.data;
         } catch (err) {
             return handleError(err, { context: opts?.operation || url });

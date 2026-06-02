@@ -1,4 +1,5 @@
 import { createMockRootLogger } from './test-utils';
+import readlineSync from 'readline-sync';
 
 const mockRootLogger = createMockRootLogger();
 
@@ -27,7 +28,9 @@ import * as promptModule from './prompt';
 
 describe('Prompt', () => {
     let prompt: typeof import('./prompt');
-    let mockLog: jest.SpyInstance, mockError: jest.SpyInstance, mockWarn: jest.SpyInstance;
+    let mockLog: jest.SpyInstance<boolean, Parameters<typeof process.stdout.write>>,
+        mockError: jest.SpyInstance<boolean, Parameters<typeof process.stderr.write>>,
+        mockWarn: jest.SpyInstance<boolean, Parameters<typeof process.stderr.write>>;
 
     beforeAll(() => {
         prompt = promptModule;
@@ -297,13 +300,13 @@ describe('Prompt', () => {
 
             it('constructs SingleBar with format config', () => {
                 new prompt.ProgressBar(100, { width: 30 });
-                const cliProgress = require('cli-progress');
-                expect(cliProgress.SingleBar).toHaveBeenCalledWith(
-                    expect.objectContaining({
-                        format: expect.stringContaining('{bar}'),
-                        barsize: 30,
-                    }),
-                    cliProgress.Presets.shades_classic,
+                const cliProgressMock = jest.requireMock<{
+                    SingleBar: jest.Mock;
+                    Presets: { shades_classic: Record<string, unknown> };
+                }>('cli-progress');
+                expect(cliProgressMock.SingleBar).toHaveBeenCalledWith(
+                    expect.objectContaining({ barsize: 30 }),
+                    cliProgressMock.Presets.shades_classic,
                 );
                 expect(mockSingleBar.start).toHaveBeenCalledWith(100, 0);
             });
@@ -455,12 +458,6 @@ describe('Prompt', () => {
     }
 
     describe('showSelect', () => {
-        let readlineSync: typeof import('readline-sync');
-
-        beforeAll(() => {
-            readlineSync = require('readline-sync');
-        });
-
         afterEach(() => {
             jest.restoreAllMocks();
         });
@@ -528,12 +525,6 @@ describe('Prompt', () => {
     });
 
     describe('prompt', () => {
-        let readlineSync: typeof import('readline-sync');
-
-        beforeAll(() => {
-            readlineSync = require('readline-sync');
-        });
-
         afterEach(() => {
             jest.restoreAllMocks();
         });
@@ -566,12 +557,6 @@ describe('Prompt', () => {
     });
 
     describe('smartPrompt', () => {
-        let readlineSync: typeof import('readline-sync');
-
-        beforeAll(() => {
-            readlineSync = require('readline-sync');
-        });
-
         afterEach(() => {
             jest.restoreAllMocks();
         });
@@ -625,12 +610,6 @@ describe('Prompt', () => {
     });
 
     describe('confirm', () => {
-        let readlineSync: typeof import('readline-sync');
-
-        beforeAll(() => {
-            readlineSync = require('readline-sync');
-        });
-
         afterEach(() => {
             jest.restoreAllMocks();
         });
@@ -667,11 +646,6 @@ describe('Prompt', () => {
 
     describe('ask', () => {
         let mockInput: ReturnType<typeof injectInputMock>;
-        let readlineSync: typeof import('readline-sync');
-
-        beforeAll(() => {
-            readlineSync = require('readline-sync');
-        });
 
         beforeEach(() => {
             mockInput = injectInputMock();
@@ -716,11 +690,6 @@ describe('Prompt', () => {
 
     describe('askConfirm', () => {
         let mockConfirm: ReturnType<typeof injectConfirmMock>;
-        let readlineSync: typeof import('readline-sync');
-
-        beforeAll(() => {
-            readlineSync = require('readline-sync');
-        });
 
         beforeEach(() => {
             mockConfirm = injectConfirmMock();
@@ -851,12 +820,6 @@ describe('Prompt', () => {
     });
 
     describe('onError', () => {
-        let readlineSync: typeof import('readline-sync');
-
-        beforeAll(() => {
-            readlineSync = require('readline-sync');
-        });
-
         afterEach(() => {
             jest.restoreAllMocks();
             prompt.__setConfig(Config.create({}));

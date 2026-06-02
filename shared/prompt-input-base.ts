@@ -25,7 +25,7 @@ export function prompt(label: string, options: PromptOptions = {}): string {
         if (hint) text += ' ' + chalk.yellow('(' + hint + ')');
         if (def) text += ' ' + chalk.yellow('[' + def + ']');
         text += chalk.dim('  (/help)');
-        const answer = readlineSync.question(text + ': ', { defaultInput: def }).trim();
+        const answer = readlineSync.question(text + ': ', { defaultInput: def ?? '' }).trim();
         const trimmed = answer.toLowerCase();
         if (NAV_CMDS.includes(trimmed)) throw new CancelError(trimmed);
         if (minLength !== undefined && answer.length < minLength) {

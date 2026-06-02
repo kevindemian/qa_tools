@@ -1,3 +1,5 @@
+import { expect } from '@jest/globals';
+
 jest.mock('../../shared/prompt');
 jest.mock('../../shared/logger');
 
@@ -26,35 +28,18 @@ jest.mock('../../shared/logger', () => ({
     },
 }));
 
-const mockSessionContext: Record<string, unknown> = {
-    inMemoryTasksId: [],
-    inMemoryTasksText: [],
-    sessionCounters: [],
-    project_name: 'TEST',
-    isBusy: false,
-    results: [],
-    lastOperation: '',
-    createPackageManager: jest.fn(),
-};
+import * as promptModule from '../../shared/prompt';
+import * as coverageGapModule from '../../shared/coverage-gap';
+import * as htmlModule from '../../shared/generate-coverage-gap-html';
+import * as openModule from '../../shared/open';
+import * as aiFeedbackModule from '../../shared/ai-feedback';
+import type { CoverageGapResult, CoverageGapItem } from '../../shared/types/coverage';
+import case21Module from './case21';
+import { createMockContext } from '../../shared/test-utils/factories/context-factory';
 
-const mockJiraResource = {
-    searchJiraIssues: jest.fn(),
-};
+const baseContext = createMockContext();
 
-const baseContext = {
-    jiraResource: mockJiraResource,
-    jiraResourceXray: {},
-    linkManager: {},
-    linkManagerXray: {},
-    csvResource: {},
-    ctx: mockSessionContext,
-    pushHistory: jest.fn(),
-    printSessionSummary: jest.fn(),
-    base_url: 'https://jira.test.com',
-    sessionLog: { child: jest.fn().mockReturnValue({ info: jest.fn(), error: jest.fn() }) },
-};
-
-const mockGapResult = {
+const mockGapResult: CoverageGapResult = {
     items: [
         {
             issueKey: 'PROJ-1',
@@ -79,7 +64,6 @@ beforeEach(() => {
 });
 
 beforeAll(() => {
-    const openModule = require('../../shared/open');
     if (!jest.isMockFunction(openModule.openWithFallback)) {
         throw new Error('Guard FAILED: openWithFallback is NOT mocked. Browser would open!');
     }
@@ -87,30 +71,30 @@ beforeAll(() => {
 
 describe('case21 — Gap Analysis', () => {
     it('displays coverage gap summary', async () => {
-        const coverageGap = require('../../shared/coverage-gap');
+        const coverageGap = jest.mocked(coverageGapModule);
         coverageGap.analyzeCoverageGaps.mockResolvedValueOnce(mockGapResult);
 
-        const mod = require('./case21').default;
+        const mod = case21Module;
         await mod.handler(baseContext);
 
-        expect(coverageGap.analyzeCoverageGaps).toHaveBeenCalledWith(mockJiraResource, 'TEST');
+        expect(coverageGap.analyzeCoverageGaps).toHaveBeenCalledWith(baseContext.jiraResource, 'TEST');
         expect(baseContext.pushHistory).toHaveBeenCalledWith('coverage-gap-analysis', '60% coverage, 2 gaps', 'ok');
     });
 
     it('handles error from analyzeCoverageGaps', async () => {
-        const prompt = require('../../shared/prompt');
-        const coverageGap = require('../../shared/coverage-gap');
+        const prompt = jest.mocked(promptModule);
+        const coverageGap = jest.mocked(coverageGapModule);
         coverageGap.analyzeCoverageGaps.mockRejectedValueOnce(new Error('API error'));
 
-        const mod = require('./case21').default;
+        const mod = case21Module;
         await mod.handler(baseContext);
 
         expect(prompt.printError).toHaveBeenCalledWith('Erro ao analisar gaps de cobertura', expect.any(Error));
     });
 
     it('shows failing epics when quality gate fails', async () => {
-        const prompt = require('../../shared/prompt');
-        const coverageGap = require('../../shared/coverage-gap');
+        const prompt = jest.mocked(promptModule);
+        const coverageGap = jest.mocked(coverageGapModule);
         const resultWithFailures = {
             ...mockGapResult,
             gateConfig: { minCoveragePct: 50, failingEpics: ['EPIC-1'] },
@@ -128,7 +112,7 @@ describe('case21 — Gap Analysis', () => {
         };
         coverageGap.analyzeCoverageGaps.mockResolvedValueOnce(resultWithFailures);
 
-        const mod = require('./case21').default;
+        const mod = case21Module;
         await mod.handler(baseContext);
 
         expect(prompt.warn).toHaveBeenCalledWith(expect.stringContaining('abaixo do threshold'));
@@ -136,9 +120,9 @@ describe('case21 — Gap Analysis', () => {
     });
 
     it('records AI generation when user confirms AI gen', async () => {
-        const prompt = require('../../shared/prompt');
-        const coverageGap = require('../../shared/coverage-gap');
-        const aiFeedback = require('../../shared/ai-feedback');
+        const prompt = jest.mocked(promptModule);
+        const coverageGap = jest.mocked(coverageGapModule);
+        const aiFeedback = jest.mocked(aiFeedbackModule);
 
         prompt.askConfirm
             .mockResolvedValueOnce(false) // skip create tests
@@ -147,7 +131,7 @@ describe('case21 — Gap Analysis', () => {
 
         coverageGap.analyzeCoverageGaps.mockResolvedValueOnce(mockGapResult);
 
-        const mod = require('./case21').default;
+        const mod = case21Module;
         await mod.handler(baseContext);
 
         expect(aiFeedback.recordAiGeneration).toHaveBeenCalledWith(
@@ -156,10 +140,8 @@ describe('case21 — Gap Analysis', () => {
     });
 
     it('generates HTML report when user confirms', async () => {
-        const prompt = require('../../shared/prompt');
-        const coverageGap = require('../../shared/coverage-gap');
-        const htmlModule = require('../../shared/generate-coverage-gap-html');
-        const openModule = require('../../shared/open');
+        const prompt = jest.mocked(promptModule);
+        const coverageGap = jest.mocked(coverageGapModule);
 
         prompt.askConfirm
             .mockResolvedValueOnce(false) // skip create tests
@@ -168,11 +150,11 @@ describe('case21 — Gap Analysis', () => {
 
         coverageGap.analyzeCoverageGaps.mockResolvedValueOnce(mockGapResult);
 
-        const mod = require('./case21').default;
+        const mod = case21Module;
         await mod.handler(baseContext);
 
-        expect(htmlModule.generateCoverageGapHtml).toHaveBeenCalled();
-        expect(openModule.openWithFallback).toHaveBeenCalledWith(
+        expect(jest.mocked(htmlModule).generateCoverageGapHtml).toHaveBeenCalled();
+        expect(jest.mocked(openModule).openWithFallback).toHaveBeenCalledWith(
             expect.stringContaining('coverage-gap-report.html'),
             'Relatório de cobertura',
             prompt.info,
@@ -180,9 +162,8 @@ describe('case21 — Gap Analysis', () => {
     });
 
     it('handles HTML generation error gracefully', async () => {
-        const prompt = require('../../shared/prompt');
-        const coverageGap = require('../../shared/coverage-gap');
-        const htmlModule = require('../../shared/generate-coverage-gap-html');
+        const prompt = jest.mocked(promptModule);
+        const coverageGap = jest.mocked(coverageGapModule);
 
         prompt.askConfirm
             .mockResolvedValueOnce(false) // skip create tests
@@ -190,19 +171,19 @@ describe('case21 — Gap Analysis', () => {
             .mockResolvedValueOnce(true); // export HTML
 
         coverageGap.analyzeCoverageGaps.mockResolvedValueOnce(mockGapResult);
-        htmlModule.generateCoverageGapHtml.mockImplementationOnce(() => {
+        jest.mocked(htmlModule).generateCoverageGapHtml.mockImplementationOnce(() => {
             throw new Error('Render error');
         });
 
-        const mod = require('./case21').default;
+        const mod = case21Module;
         await mod.handler(baseContext);
 
         expect(prompt.printError).toHaveBeenCalledWith('Erro ao gerar relatório HTML', expect.any(Error));
     });
 
     it('handles create tests confirmation', async () => {
-        const prompt = require('../../shared/prompt');
-        const coverageGap = require('../../shared/coverage-gap');
+        const prompt = jest.mocked(promptModule);
+        const coverageGap = jest.mocked(coverageGapModule);
 
         prompt.askConfirm
             .mockResolvedValueOnce(true) // create tests
@@ -211,20 +192,20 @@ describe('case21 — Gap Analysis', () => {
 
         coverageGap.analyzeCoverageGaps.mockResolvedValueOnce(mockGapResult);
 
-        const mod = require('./case21').default;
+        const mod = case21Module;
         await mod.handler(baseContext);
 
         expect(prompt.info).toHaveBeenCalledWith('Funcionalidade de criação de testes será implementada em breve.');
     });
 
     it('handles AI gen with more than 5 gaps', async () => {
-        const prompt = require('../../shared/prompt');
-        const coverageGap = require('../../shared/coverage-gap');
+        const prompt = jest.mocked(promptModule);
+        const coverageGap = jest.mocked(coverageGapModule);
 
-        const gapItems = Array.from({ length: 7 }, (_, i) => ({
+        const gapItems: CoverageGapItem[] = Array.from({ length: 7 }, (_, i) => ({
             issueKey: `PROJ-${i + 1}`,
             summary: `Gap issue ${i + 1}`,
-            type: 'Story',
+            type: 'Story' as const,
             status: 'To Do',
             hasTest: false,
             linkedTestKeys: [],
@@ -232,7 +213,7 @@ describe('case21 — Gap Analysis', () => {
             coverageWeight: 2,
         }));
 
-        const resultWithManyGaps = {
+        const resultWithManyGaps: CoverageGapResult = {
             ...mockGapResult,
             items: gapItems,
             totals: { ...mockGapResult.totals, totalIssues: 10, covered: 3, gap: 7 },
@@ -245,7 +226,7 @@ describe('case21 — Gap Analysis', () => {
 
         coverageGap.analyzeCoverageGaps.mockResolvedValueOnce(resultWithManyGaps);
 
-        const mod = require('./case21').default;
+        const mod = case21Module;
         await mod.handler(baseContext);
 
         expect(prompt.info).toHaveBeenCalledWith(expect.stringContaining('... e mais'));

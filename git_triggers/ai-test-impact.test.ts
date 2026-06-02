@@ -7,7 +7,7 @@ import { llmPrompt } from '../shared/llm-client';
 jest.mock('../shared/llm-client');
 
 jest.mock('fs', () => ({
-    ...jest.requireActual('fs'),
+    ...jest.requireActual<typeof import('fs')>('fs'),
     readFileSync: jest.fn(),
 }));
 
@@ -37,12 +37,13 @@ describe('assessTestImpact', () => {
 
         const result = await assessTestImpact(mockProvider, 'feature/a', 'main', '/path/mapping.json');
         expect(mockProvider.getDiff).toHaveBeenCalledWith('feature/a', 'main');
-        expect(llmPrompt).toHaveBeenCalledWith({
-            tier: 'fast',
-            system: expect.any(String),
-            user: expect.stringContaining('Test login'),
-            callerId: 'test-impact',
-        });
+        expect(llmPrompt).toHaveBeenCalledWith(
+            expect.objectContaining({
+                tier: 'fast',
+                callerId: 'test-impact',
+            }),
+        );
+        expect(jest.mocked(llmPrompt).mock.calls[0][0].user).toEqual(expect.stringContaining('Test login'));
         expect(result).toBe('**Risco:** BAIXO. Nenhum teste existente afetado.');
     });
 

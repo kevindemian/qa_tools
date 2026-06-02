@@ -186,7 +186,15 @@ export async function llmPrompt<S extends ZodSchema = never>(
     const response = await sendWithFallback(tier, system, user, responseFormat);
 
     if (typedSchema)
-        return _validateWithRetry({ tier, system, user, responseFormat, schema: typedSchema, cKey, response });
+        return _validateWithRetry({
+            tier,
+            system,
+            user,
+            ...(responseFormat ? { responseFormat } : {}),
+            schema: typedSchema,
+            cKey,
+            response,
+        });
 
     if (responseFormat === 'json' && !typedSchema) warnIfNotJson(response);
 

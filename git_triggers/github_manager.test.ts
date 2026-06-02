@@ -299,9 +299,9 @@ describe('GitHubManager', () => {
         it('maps opened status correctly', async () => {
             mockClient.get.mockResolvedValue({ data: [] });
             await manager.searchMergeRequests('', '', 'opened');
-            expect(mockClient.get).toHaveBeenCalledWith(expect.any(String), {
-                params: expect.objectContaining({ state: 'open', per_page: 100 }),
-            });
+            expect(mockClient.get).toHaveBeenCalledWith(expect.any(String), expect.anything());
+            expect(mockClient.get.mock.calls[0]![1]).toHaveProperty('params.state', 'open');
+            expect(mockClient.get.mock.calls[0]![1]).toHaveProperty('params.per_page', 100);
         });
 
         it('returns [] on API error', async () => {

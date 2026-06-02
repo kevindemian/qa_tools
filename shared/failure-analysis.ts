@@ -73,7 +73,7 @@ export async function analyzeFailuresWithReport(tests: FlatTest[], context?: Llm
         title: 'Failure Analysis Report',
         llmAnalysis: result.content,
         llmConfidence: result.confidence,
-        llmFallback: result.fallbackUsed,
+        ...(result.fallbackUsed ? { llmFallback: result.fallbackUsed } : {}),
         generatedAt: new Date().toISOString(),
         source: 'AI Failure Analysis',
     });

@@ -64,9 +64,7 @@ function saveStore(store: StoredMetrics): void {
         fs.renameSync(tmp, p);
     } catch (err) {
         rootLogger.error('Failed to persist LLM metrics: ' + (err as Error).message);
-        const persistError = new Error('Failed to persist LLM metrics');
-        (persistError as unknown as { cause: unknown }).cause = err;
-        throw persistError;
+        throw new Error('Failed to persist LLM metrics', { cause: err });
     }
 }
 

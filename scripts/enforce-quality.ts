@@ -115,6 +115,24 @@ checks.push({
         : [{ file: tsconfigPath, line: 1, content: 'noImplicitOverride must be true in compilerOptions' }],
 });
 
+// 7. No jest.fn<unknown, ...> in test files (first type arg is literally unknown)
+checks.push(
+    checkNoPattern(
+        'jest.fn<unknown, ...> in test files',
+        /jest\.fn<\s*unknown\s*[,>]/,
+        allTsFiles().filter((f) => f.endsWith('.test.ts')),
+    ),
+);
+
+// 8. No jest.fn<..., unknown[]> in test files (second type arg is literally unknown[])
+checks.push(
+    checkNoPattern(
+        'jest.fn<..., unknown[]> in test files',
+        /jest\.fn<[^)]*,\s*unknown\s*\[/,
+        allTsFiles().filter((f) => f.endsWith('.test.ts')),
+    ),
+);
+
 // ---------- output ----------
 
 let allPassed = true;

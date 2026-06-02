@@ -26,6 +26,11 @@ import {
 } from './session-state';
 import { pollPipeline } from './pipeline-handler';
 
+/** Extract the next argument value after a flag, or `undefined` if out of bounds. */
+function _nextArg(args: string[], i: number): string | undefined {
+    return i + 1 < args.length ? args[i + 1] : undefined;
+}
+
 export function parseBatchArgs(): {
     project?: string;
     branch?: string;
@@ -46,20 +51,25 @@ export function parseBatchArgs(): {
         teKey?: string;
     } = {};
     for (let i = 0; i < args.length; i++) {
-        if ((args[i] === '--project' || args[i] === '-p') && i + 1 < args.length) {
-            result.project = args[++i];
-        } else if ((args[i] === '--branch' || args[i] === '-b') && i + 1 < args.length) {
-            result.branch = args[++i];
+        const val = _nextArg(args, i);
+        if ((args[i] === '--project' || args[i] === '-p') && val !== undefined) {
+            result.project = val;
+            i++;
+        } else if ((args[i] === '--branch' || args[i] === '-b') && val !== undefined) {
+            result.branch = val;
+            i++;
         } else if (args[i] === '--auto' || args[i] === '--batch') {
             result.auto = true;
-        } else if (args[i] === '--publish' && i + 1 < args.length) {
-            result.publish = args[++i];
+        } else if (args[i] === '--publish' && val !== undefined) {
+            result.publish = val;
+            i++;
         } else if (args[i] === '--run-impacted-tests') {
             result.runImpactedTests = true;
         } else if (args[i] === '--conservative') {
             result.conservative = true;
-        } else if ((args[i] === '--te-key' || args[i] === '-k') && i + 1 < args.length) {
-            result.teKey = args[++i];
+        } else if ((args[i] === '--te-key' || args[i] === '-k') && val !== undefined) {
+            result.teKey = val;
+            i++;
         }
     }
     return result;
@@ -76,7 +86,7 @@ async function setupBatchProject(batch: ReturnType<typeof parseBatchArgs>): Prom
         return null;
     }
 
-    const projectName = batch.project || Object.keys(projs)[0]!;
+    const projectName = (batch.project || Object.keys(projs)[0]) ?? '';
     if (!projs[projectName]) {
         error('Projeto "' + projectName + '" não encontrado em config/projects.json.');
         return null;
@@ -145,7 +155,7 @@ async function _collectPipelineResults(
             projectName,
             currentProvider,
             pushHistory,
-            teKey,
+            ...(teKey ? { teKey } : {}),
             jiraResource,
             linkManager,
             jiraBaseUrl,
@@ -242,9 +252,9 @@ export async function tryBatchMode(): Promise<boolean> {
         setup.branch,
         setup.projectName,
         batch.teKey,
-        jiraResource!,
-        jiraBaseUrl!,
-        linkManager!,
+        jiraResource as JiraClient,
+        jiraBaseUrl as string,
+        linkManager as JiraLinkManager,
     );
     if (done) return true;
 

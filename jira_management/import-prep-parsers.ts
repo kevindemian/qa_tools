@@ -90,7 +90,7 @@ export async function resolveJsonPath(jsonPathInput: string | undefined): Promis
 
 export function parseJsonTests(jsonPath: string): TestCase[] {
     const raw = fs.readFileSync(jsonPath, 'utf8');
-    const parsed = JSON.parse(raw);
+    const parsed: Array<Record<string, unknown>> = JSON.parse(raw) as Array<Record<string, unknown>>;
     const validated = ImportJsonSchema.parse(parsed);
     let aliasWarned = false;
     return validated.map((item) => ({
@@ -115,11 +115,13 @@ export function parseJsonTests(jsonPath: string): TestCase[] {
                 },
             };
         }),
-        precondition: item.precondition
-            ? isPreconditionKey(item.precondition)
-                ? { type: 'reference' as const, value: item.precondition }
-                : { type: 'inline' as const, value: item.precondition }
-            : undefined,
+        ...(item.precondition
+            ? {
+                  precondition: isPreconditionKey(item.precondition)
+                      ? { type: 'reference' as const, value: item.precondition }
+                      : { type: 'inline' as const, value: item.precondition },
+              }
+            : {}),
         group: item.group || '',
         linkedIssues: Array.isArray(item.linkedIssues)
             ? item.linkedIssues.map((li) => {

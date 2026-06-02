@@ -14,8 +14,9 @@ function loadMappingTitles(mappingPath?: string): string[] {
     if (!mappingPath) return [];
     try {
         const raw = fs.readFileSync(mappingPath, 'utf8');
-        const items: MappingItem[] = JSON.parse(raw);
-        if (!Array.isArray(items)) return [];
+        const parsed: unknown = JSON.parse(raw);
+        const items: MappingItem[] = Array.isArray(parsed) ? (parsed as MappingItem[]) : [];
+        if (items.length === 0) return [];
         return items.map((m) => m.title).filter(Boolean);
     } catch (err: unknown) {
         rootLogger.warn('Failed to load mapping titles from ' + mappingPath + ': ' + (err as Error).message);

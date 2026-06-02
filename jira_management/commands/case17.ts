@@ -57,8 +57,9 @@ async function _fetchJiraContext(
     const testNames = failedTests.slice(0, 10).map((t) => t.title.replace(/['"]/g, ''));
     const jql = `project=${projectName} AND issuetype=Bug AND (${testNames.map((t) => `summary~"${t}"`).join(' OR ')})`;
     try {
-        const result = await jiraResource.getJiraResource('search?jql=' + encodeURIComponent(jql) + '&maxResults=5');
-        const data = result as unknown as JiraSearchResult;
+        const data = await jiraResource.getJiraResource<JiraSearchResult>(
+            'search?jql=' + encodeURIComponent(jql) + '&maxResults=5',
+        );
         const issues = data.issues || [];
         if (issues.length === 0) return '';
 
@@ -210,11 +211,11 @@ async function _buildReportOptions(
         title: `Relatório - ${c.ctx.project_name}`,
         generatedAt: new Date().toISOString(),
         source: 'Relatório HTML',
-        testHistory: Object.keys(testHistory).length > 0 ? testHistory : undefined,
-        knownIssues: knownIssues.length > 0 ? knownIssues : undefined,
-        runs: runs.length > 0 ? runs : undefined,
+        ...(Object.keys(testHistory).length > 0 ? { testHistory } : {}),
+        ...(knownIssues.length > 0 ? { knownIssues } : {}),
+        ...(runs.length > 0 ? { runs } : {}),
         diffComparison: diff,
-        flakinessMap: Object.keys(flakinessMap).length > 0 ? flakinessMap : undefined,
+        ...(Object.keys(flakinessMap).length > 0 ? { flakinessMap } : {}),
     };
     if (!isNaN(qualityGateThreshold)) {
         genOptions.qualityGate = qualityGateThreshold;

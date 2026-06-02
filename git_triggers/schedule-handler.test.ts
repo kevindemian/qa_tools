@@ -78,7 +78,7 @@ beforeEach(() => {
 });
 
 beforeAll(() => {
-    const openModule = require('../shared/open');
+    const openModule = require('../shared/open') as { openWithFallback: (...args: unknown[]) => unknown };
     if (!jest.isMockFunction(openModule.openWithFallback)) {
         throw new Error('Guard FAILED: openWithFallback is NOT mocked. Browser would open!');
     }
@@ -165,7 +165,11 @@ describe('handleChangeProject', () => {
 
         await handleChangeProject(names);
 
-        const { setCurrentProjectName, setProjectId, setManager } = require('./session-state');
+        const { setCurrentProjectName, setProjectId, setManager } = require('./session-state') as {
+            setCurrentProjectName: (name: string) => void;
+            setProjectId: (id: string) => void;
+            setManager: (...args: unknown[]) => void;
+        };
         expect(setCurrentProjectName).toHaveBeenCalledWith('proj1');
         expect(setProjectId).toHaveBeenCalledWith('1');
         expect(setManager).toHaveBeenCalled();
@@ -238,9 +242,9 @@ describe('handleFlakinessDashboard', () => {
         await handleFlakinessDashboard();
 
         expect(mockGenerateHtml).toHaveBeenCalled();
-        const { writeFileSync } = require('fs');
+        const { writeFileSync } = require('fs') as typeof import('fs');
         expect(writeFileSync).toHaveBeenCalled();
-        const { openWithFallback } = require('../shared/open');
+        const { openWithFallback } = require('../shared/open') as { openWithFallback: (...args: unknown[]) => unknown };
         expect(openWithFallback).toHaveBeenCalledWith(expect.stringContaining('flakiness'), 'Dashboard de flaky', info);
     });
 });

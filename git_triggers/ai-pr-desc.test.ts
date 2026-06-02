@@ -5,6 +5,8 @@ import { llmPrompt } from '../shared/llm-client';
 
 jest.mock('../shared/llm-client');
 
+const mockLlmPrompt = jest.mocked(llmPrompt);
+
 describe('generatePrDescription', () => {
     const mockProvider: GitProvider = createMockGitProvider();
 
@@ -25,12 +27,13 @@ describe('generatePrDescription', () => {
 
         const result = await generatePrDescription(mockProvider, 'feature/a', 'main');
         expect(mockProvider.getDiff).toHaveBeenCalledWith('feature/a', 'main');
-        expect(llmPrompt).toHaveBeenCalledWith({
-            tier: 'fast',
-            system: expect.any(String),
-            user: expect.stringContaining('diff --git'),
-            callerId: 'pr-description',
-        });
+        expect(llmPrompt).toHaveBeenCalledWith(
+            expect.objectContaining({
+                tier: 'fast',
+                callerId: 'pr-description',
+            }),
+        );
+        expect(jest.mocked(llmPrompt).mock.calls[0][0].user).toEqual(expect.stringContaining('diff --git'));
         expect(result).toBe('Resumo: adicionado novo teste.');
     });
 

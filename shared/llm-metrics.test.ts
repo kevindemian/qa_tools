@@ -15,7 +15,7 @@ afterAll(() => {
 
 function loadMod() {
     jest.resetModules();
-    const mod = require('./llm-metrics');
+    const mod = require('./llm-metrics') as typeof import('./llm-metrics');
     mod.clearLlmMetrics();
     return mod;
 }

@@ -10,7 +10,7 @@ describe('CommandContext interface', () => {
     });
 
     it('allows optional packageManager', () => {
-        const ctx = createMockContext({ packageManager: undefined });
+        const ctx = createMockContext({});
         expect(ctx.packageManager).toBeUndefined();
     });
 });

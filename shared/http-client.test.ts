@@ -1,13 +1,17 @@
-let errorHandler: ((err: Error) => Promise<unknown>) | undefined;
-let successHandler: ((response: unknown) => unknown) | undefined;
-const mockInstance = Object.assign(jest.fn<Promise<unknown>, unknown[]>(), {
+let errorHandler: ((err: Error) => Promise<object>) | undefined;
+let successHandler: ((response: object) => object) | undefined;
+const mockInstance = Object.assign(jest.fn<Promise<{ status: number; data?: string }>, [config: object]>(), {
     interceptors: {
-        request: { use: jest.fn() },
+        request: {
+            use: jest.fn<void, [(config: object) => object | Promise<object>]>(),
+        },
         response: {
-            use: jest.fn().mockImplementation((success: unknown, error: (err: Error) => Promise<unknown>) => {
-                successHandler = success as (response: unknown) => unknown;
-                errorHandler = error;
-            }),
+            use: jest
+                .fn<void, [(response: object) => object, (err: Error) => Promise<object>]>()
+                .mockImplementation((success: (response: object) => object, error: (err: Error) => Promise<object>) => {
+                    successHandler = success;
+                    errorHandler = error;
+                }),
         },
     },
     get: jest.fn(),
@@ -15,9 +19,10 @@ const mockInstance = Object.assign(jest.fn<Promise<unknown>, unknown[]>(), {
     put: jest.fn(),
 });
 
-jest.mock('axios', () => ({ create: jest.fn(() => mockInstance) }));
+jest.mock('axios', () => ({ create: jest.fn<typeof mockInstance, [object]>(() => mockInstance) }));
 import * as httpClientModule from './http-client';
 import { rootLogger } from './logger';
+import { HostSemaphore } from './host-semaphore';
 import axios from 'axios';
 
 describe('HTTP Client', () => {
@@ -51,15 +56,18 @@ describe('HTTP Client', () => {
                 authHeader: { Authorization: 'Bearer token123' },
                 timeout: 5000,
             });
-            expect(axios.create).toHaveBeenCalledWith({
-                baseURL: 'https://api.test.com',
-                timeout: 5000,
-                httpsAgent: expect.any(Object),
-                headers: {
-                    'Content-Type': 'application/json',
-                    Authorization: 'Bearer token123',
-                },
-            });
+            expect(axios.create).toHaveBeenCalledWith(
+                expect.objectContaining({
+                    baseURL: 'https://api.test.com',
+                    timeout: 5000,
+                    headers: {
+                        'Content-Type': 'application/json',
+                        Authorization: 'Bearer token123',
+                    },
+                }),
+            );
+            const axCfg = jest.mocked(axios.create).mock.calls[0][0];
+            expect(axCfg).toHaveProperty('httpsAgent');
         });
 
         it('registers response interceptor', () => {
@@ -101,11 +109,11 @@ describe('HTTP Client', () => {
         it('retries GET up to HTTP_MAX_RETRIES (10) times', async () => {
             httpClient.createHttpClient({ baseUrl: 'https://api.test.com' });
             const err = makeError('get', 500, 0);
-            mockInstance.mockImplementation((...args: unknown[]) => {
-                const cfg = args[0] as { method: string; __retryAttempts: number };
-                const newErr = makeError('get', 500, cfg.__retryAttempts);
-                newErr.config = cfg;
-                return errorHandler!(newErr);
+            mockInstance.mockImplementation((cfg: object) => {
+                const cfg2 = cfg as { method: string; __retryAttempts: number };
+                const newErr = makeError('get', 500, cfg2.__retryAttempts);
+                newErr.config = cfg2;
+                return errorHandler!(newErr) as Promise<{ status: number; data?: string }>;
             });
             // erro é esperado (retry exhausto); catch vazio é intencional
             try {
@@ -119,11 +127,11 @@ describe('HTTP Client', () => {
         it('retries PUT up to HTTP_MAX_RETRIES (10) times', async () => {
             httpClient.createHttpClient({ baseUrl: 'https://api.test.com' });
             const err = makeError('put', 500, 0);
-            mockInstance.mockImplementation((...args: unknown[]) => {
-                const cfg = args[0] as { method: string; __retryAttempts: number };
-                const newErr = makeError('put', 500, cfg.__retryAttempts);
-                newErr.config = cfg;
-                return errorHandler!(newErr);
+            mockInstance.mockImplementation((cfg: object) => {
+                const cfg2 = cfg as { method: string; __retryAttempts: number };
+                const newErr = makeError('put', 500, cfg2.__retryAttempts);
+                newErr.config = cfg2;
+                return errorHandler!(newErr) as Promise<{ status: number; data?: string }>;
             });
             // erro é esperado (retry exhausto); catch vazio é intencional
             try {
@@ -191,12 +199,12 @@ describe('HTTP Client', () => {
                 config: { url: '/test' },
                 response: { status: 500 },
             });
-            mockInstance.mockImplementation((cfg: unknown) => {
+            mockInstance.mockImplementation((cfg: object) => {
                 const newErr = Object.assign(new Error('no method'), {
                     config: cfg,
                     response: { status: 500 },
                 });
-                return errorHandler!(newErr);
+                return errorHandler!(newErr) as Promise<{ status: number; data?: string }>;
             });
             try {
                 await errorHandler!(err);
@@ -207,10 +215,10 @@ describe('HTTP Client', () => {
         it('retries GET up to custom maxRetries (2) and stops', async () => {
             httpClient.createHttpClient({ baseUrl: 'https://api.test.com', maxRetries: 2 });
             const err = makeError('get', 500, 0);
-            mockInstance.mockImplementation((cfg: unknown) => {
+            mockInstance.mockImplementation((cfg: object) => {
                 const newErr = makeError('get', 500, (cfg as RetryError['config']).__retryAttempts);
                 newErr.config = cfg as RetryError['config'];
-                return errorHandler!(newErr);
+                return errorHandler!(newErr) as Promise<{ status: number; data?: string }>;
             });
             try {
                 await errorHandler!(err);
@@ -225,10 +233,10 @@ describe('HTTP Client', () => {
             const warnSpy = jest.spyOn(rootLogger, 'warn');
             httpClient.createHttpClient({ baseUrl: 'https://api.test.com' });
             const err = makeError('get', 500, 0);
-            mockInstance.mockImplementation((cfg: unknown) => {
+            mockInstance.mockImplementation((cfg: object) => {
                 const newErr = makeError('get', 500, (cfg as RetryError['config']).__retryAttempts);
                 newErr.config = cfg as RetryError['config'];
-                return errorHandler!(newErr);
+                return errorHandler!(newErr) as Promise<{ status: number; data?: string }>;
             });
             try {
                 await errorHandler!(err);
@@ -253,11 +261,11 @@ describe('HTTP Client', () => {
                 code: undefined,
             };
             let callCount = 0;
-            mockInstance.mockImplementation((cfg: unknown) => {
+            mockInstance.mockImplementation((cfg: object) => {
                 callCount++;
                 if (callCount < 2) {
                     const updatedErr = { ...err, config: cfg };
-                    return errorHandler!(updatedErr);
+                    return errorHandler!(updatedErr) as Promise<{ status: number; data?: string }>;
                 }
                 return Promise.resolve({ status: 200 });
             });
@@ -276,11 +284,11 @@ describe('HTTP Client', () => {
                 code: undefined,
             };
             let callCount = 0;
-            mockInstance.mockImplementation((cfg: unknown) => {
+            mockInstance.mockImplementation((cfg: object) => {
                 callCount++;
                 if (callCount < 2) {
                     const updatedErr = { ...err, config: cfg };
-                    return errorHandler!(updatedErr);
+                    return errorHandler!(updatedErr) as Promise<{ status: number; data?: string }>;
                 }
                 return Promise.resolve({ status: 200 });
             });
@@ -327,7 +335,8 @@ describe('HTTP Client', () => {
             const reqHandler = mockInstance.interceptors.request.use.mock.calls[0][0];
             const cfg: Record<string, unknown> = { url: ':::invalid', headers: {} };
             const result = await reqHandler(cfg);
-            expect((result as Record<string, unknown>)._throttleAcquired).toBe(true);
+            // Handler returns config unchanged; semaphore acquire is verified via the HostSemaphore integration
+            expect(result).toBe(cfg);
         });
 
         it('acquire queues second request when concurrency is maxed out', async () => {
@@ -352,7 +361,6 @@ describe('HTTP Client', () => {
 
     describe('HostSemaphore (direct)', () => {
         it('acquire blocks when maxConcurrency reached and releases when slot frees', async () => {
-            const { HostSemaphore } = require('./host-semaphore');
             const sem = new HostSemaphore(1);
 
             await sem.acquire('test-host');
@@ -366,7 +374,6 @@ describe('HTTP Client', () => {
         });
 
         it('release dispatches queued request and updates inflight', async () => {
-            const { HostSemaphore } = require('./host-semaphore');
             const sem = new HostSemaphore(2);
 
             await sem.acquire('h1');
@@ -379,7 +386,6 @@ describe('HTTP Client', () => {
         });
 
         it('release calls dispatchNext even when queue is empty', () => {
-            const { HostSemaphore } = require('./host-semaphore');
             const sem = new HostSemaphore(1);
             expect(() => sem.release('nonexistent')).not.toThrow();
         });

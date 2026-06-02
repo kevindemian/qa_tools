@@ -1,5 +1,5 @@
 jest.mock('fs', () => {
-    const actual = jest.requireActual('fs');
+    const actual = jest.requireActual<typeof import('fs')>('fs');
     return {
         ...actual,
         existsSync: jest.fn(),
@@ -51,7 +51,7 @@ describe('recordAiGeneration', () => {
         recordAiGeneration(record);
 
         expect(mockWriteFileSync).toHaveBeenCalledTimes(1);
-        const written = JSON.parse(mockWriteFileSync.mock.calls[0]?.[1] as string);
+        const written = JSON.parse(mockWriteFileSync.mock.calls[0]?.[1] as string) as { records: AiGenerationRecord[] };
         expect(written.records).toHaveLength(1);
         expect(written.records[0].id).toBe('rec-1');
     });
@@ -62,7 +62,7 @@ describe('recordAiGeneration', () => {
 
         recordAiGeneration(makeRecord('rec-2'));
 
-        const written = JSON.parse(mockWriteFileSync.mock.calls[0]?.[1] as string);
+        const written = JSON.parse(mockWriteFileSync.mock.calls[0]?.[1] as string) as { records: AiGenerationRecord[] };
         expect(written.records).toHaveLength(2);
     });
 
@@ -73,7 +73,7 @@ describe('recordAiGeneration', () => {
 
         recordAiGeneration(makeRecord('rec-200'));
 
-        const written = JSON.parse(mockWriteFileSync.mock.calls[0]?.[1] as string);
+        const written = JSON.parse(mockWriteFileSync.mock.calls[0]?.[1] as string) as { records: AiGenerationRecord[] };
         expect(written.records).toHaveLength(200);
         expect(written.records[0].id).toBe('rec-1');
     });

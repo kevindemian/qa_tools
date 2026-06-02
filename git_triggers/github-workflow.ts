@@ -33,12 +33,16 @@ async function listWorkflows(
     owner: string,
     repo: string,
 ): Promise<Array<{ id: number; name: string }>> {
-    const data = await apiGet(client, '/repos/' + owner + '/' + repo + '/actions/workflows', {
-        operation: 'listar workflows',
-        params: { per_page: LIST_WORKFLOWS_PAGE_SIZE },
-        returnNull: true,
-    });
-    return (data && data.workflows) || [];
+    const data = await apiGet<{ workflows: Array<{ id: number; name: string }> }>(
+        client,
+        '/repos/' + owner + '/' + repo + '/actions/workflows',
+        {
+            operation: 'listar workflows',
+            params: { per_page: LIST_WORKFLOWS_PAGE_SIZE },
+            returnNull: true,
+        },
+    );
+    return data?.workflows || [];
 }
 
 export async function wfTriggerPipeline(
@@ -56,7 +60,7 @@ export async function wfTriggerPipeline(
                 rootLogger.warn('No workflows found in repository for project ' + owner + '/' + repo);
                 return undefined;
             }
-            const workflow = workflows[0]!;
+            const workflow = workflows[0] as (typeof workflows)[number];
             await apiPost(
                 client,
                 '/repos/' + owner + '/' + repo + '/actions/workflows/' + workflow.id + '/dispatches',
@@ -83,12 +87,16 @@ export async function wfGetRecentPipelines(
     repo: string,
     count = DEFAULT_PIPELINE_COUNT,
 ): Promise<PipelineRun[]> {
-    const data = await apiGet(client, '/repos/' + owner + '/' + repo + '/actions/runs', {
-        operation: 'buscar runs',
-        params: { per_page: count },
-        returnNull: true,
-    });
-    return (data && data.workflow_runs) || [];
+    const data = await apiGet<{ workflow_runs: PipelineRun[] }>(
+        client,
+        '/repos/' + owner + '/' + repo + '/actions/runs',
+        {
+            operation: 'buscar runs',
+            params: { per_page: count },
+            returnNull: true,
+        },
+    );
+    return data?.workflow_runs || [];
 }
 
 export async function wfGetPipeline(
@@ -97,7 +105,7 @@ export async function wfGetPipeline(
     repo: string,
     runId: string | number,
 ): Promise<PipelineInfo | null> {
-    return apiGet(client, '/repos/' + owner + '/' + repo + '/actions/runs/' + runId, {
+    return apiGet<PipelineInfo>(client, '/repos/' + owner + '/' + repo + '/actions/runs/' + runId, {
         operation: 'buscar run',
         returnNull: true,
     });
@@ -109,12 +117,14 @@ export async function wfGetPipelineJobs(
     repo: string,
     pipelineId: string | number,
 ): Promise<PipelineJob[]> {
-    const data = await apiGet(client, '/repos/' + owner + '/' + repo + '/actions/runs/' + pipelineId + '/jobs', {
+    const data = await apiGet<{
+        jobs: Array<{ id: number; name: string; runner_group_name?: string; conclusion?: string; status?: string }>;
+    }>(client, '/repos/' + owner + '/' + repo + '/actions/runs/' + pipelineId + '/jobs', {
         operation: 'listar jobs',
         returnNull: true,
     });
-    const jobs = (data && data.jobs) || [];
-    return jobs.map((j: JsonObject) => ({
+    const jobs = data?.jobs || [];
+    return jobs.map((j) => ({
         id: j.id,
         name: j.name,
         stage: j.runner_group_name || '',
@@ -128,12 +138,16 @@ export async function wfListPipelineArtifacts(
     repo: string,
     pipelineId: string | number,
 ): Promise<ArtifactInfo[]> {
-    const data = await apiGet(client, '/repos/' + owner + '/' + repo + '/actions/runs/' + pipelineId + '/artifacts', {
-        operation: 'listar artifacts',
-        returnNull: true,
-    });
-    const artifacts = (data && data.artifacts) || [];
-    return artifacts.map((a: JsonObject) => ({ id: a.id, name: a.name }));
+    const data = await apiGet<{ artifacts: Array<{ id: number; name: string }> }>(
+        client,
+        '/repos/' + owner + '/' + repo + '/actions/runs/' + pipelineId + '/artifacts',
+        {
+            operation: 'listar artifacts',
+            returnNull: true,
+        },
+    );
+    const artifacts = data?.artifacts || [];
+    return artifacts.map((a) => ({ id: a.id, name: a.name }));
 }
 
 export async function wfDownloadArtifact(
@@ -143,7 +157,7 @@ export async function wfDownloadArtifact(
     artifactId: string | number,
 ): Promise<{ buffer: Buffer; filename: string }> {
     try {
-        const response = await client.get(
+        const response = await client.get<ArrayBuffer>(
             '/repos/' + owner + '/' + repo + '/actions/artifacts/' + artifactId + '/zip',
             {
                 responseType: 'arraybuffer',
@@ -176,13 +190,17 @@ export async function wfGetJobLogs(
 }
 
 export async function wfGetCICDVariables(client: AxiosInstance, owner: string, repo: string): Promise<CICDVariable[]> {
-    const data = await apiGet(client, '/repos/' + owner + '/' + repo + '/actions/variables', {
-        operation: 'buscar variáveis',
-        params: { per_page: VARIABLES_PAGE_SIZE },
-        returnNull: true,
-    });
-    const variables = (data && data.variables) || [];
-    return variables.map((v: JsonObject) => ({
+    const data = await apiGet<{ variables: Array<{ name: string; value: string }> }>(
+        client,
+        '/repos/' + owner + '/' + repo + '/actions/variables',
+        {
+            operation: 'buscar variáveis',
+            params: { per_page: VARIABLES_PAGE_SIZE },
+            returnNull: true,
+        },
+    );
+    const variables = data?.variables || [];
+    return variables.map((v) => ({
         key: v.name,
         value: v.value,
         type: 'variable',

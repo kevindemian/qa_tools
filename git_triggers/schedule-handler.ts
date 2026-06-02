@@ -77,10 +77,10 @@ export async function handleChangeProject(names: string[]): Promise<void> {
     const newChoice = prompt('Escolha um projeto', { hint: '1-' + names.length });
     const newIdx = parseInt(newChoice, 10);
     if (!isNaN(newIdx) && newIdx >= 1 && newIdx <= names.length) {
-        const newName = names[newIdx - 1]!;
+        const newName = names[newIdx - 1] as string;
         setCurrentProjectName(newName);
-        setProjectId(getProjects()[newName]!);
-        const newManager = createManagerForProject(newName, getProjects()[newName]!);
+        setProjectId(getProjects()[newName] as string);
+        const newManager = createManagerForProject(newName, getProjects()[newName] as string);
         setManager(newManager);
         updateState((s: StateContainer) => {
             s.lastProject = newName;

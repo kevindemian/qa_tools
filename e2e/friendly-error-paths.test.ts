@@ -2,8 +2,15 @@
  *  Validates that missing config/env vars trigger setup wizard offers.
  *  Uses nock for HTTP isolation and confirms the user is never left without an actionable message. */
 import nock from 'nock';
+import { offerEnvSetup } from '../shared/cli_base';
+import { getProjects } from '../git_triggers/session-state';
+import { resolveAlias } from '../jira_management/menu-data';
+import * as breadcrumbs from '../shared/breadcrumbs';
+import { confirm as _confirm } from '../shared/prompt';
+import { loadTypedState as _loadTypedState } from '../shared/state';
 
-const MOCK_CONFIRM = jest.fn().mockResolvedValue(false);
+const mockConfirm = jest.mocked(_confirm);
+const mockLoadTypedState = jest.mocked(_loadTypedState);
 
 jest.mock('../shared/prompt', () => ({
     print: jest.fn(),
@@ -14,7 +21,7 @@ jest.mock('../shared/prompt', () => ({
     title: jest.fn(),
     divider: jest.fn(),
     prompt: jest.fn().mockReturnValue(''),
-    confirm: MOCK_CONFIRM,
+    confirm: jest.fn<boolean, []>().mockReturnValue(false),
     printError: jest.fn(),
     showSelect: jest.fn().mockResolvedValue('skip'),
     tableView: jest.fn(),
@@ -32,10 +39,9 @@ jest.mock('../shared/logger', () => ({
     Logger: jest.fn(),
 }));
 
-const MOCK_LOAD_TYPED_STATE = jest.fn();
 jest.mock('../shared/state', () => ({
     load: jest.fn(() => ({})),
-    loadTypedState: MOCK_LOAD_TYPED_STATE,
+    loadTypedState: jest.fn<object, []>(),
     update: jest.fn(),
     getStatePath: jest.fn(() => '/tmp/state.json'),
 }));
@@ -45,8 +51,8 @@ describe('friendly error paths (Sprint W)', () => {
         jest.clearAllMocks();
         nock.cleanAll();
         nock.disableNetConnect();
-        MOCK_LOAD_TYPED_STATE.mockReturnValue({});
-        MOCK_CONFIRM.mockResolvedValue(false);
+        mockLoadTypedState.mockReturnValue({});
+        mockConfirm.mockReturnValue(false);
         delete process.env.CI;
         delete process.env.AUTO_CONFIRM;
     });
@@ -58,40 +64,34 @@ describe('friendly error paths (Sprint W)', () => {
     });
 
     describe('W1 — offerEnvSetup integration', () => {
-        it('prompts user when env vars are missing and user declines', async () => {
-            const { offerEnvSetup } = require('../shared/cli_base');
-            const result = await offerEnvSetup({ ok: false, missing: ['JIRA_BASE_URL'] });
+        it('prompts user when env vars are missing and user declines', () => {
+            const result = offerEnvSetup({ ok: false, missing: ['JIRA_BASE_URL'] });
             expect(result).toBe(false);
-            expect(MOCK_CONFIRM).toHaveBeenCalledWith(expect.stringContaining('configurar'));
+            expect(mockConfirm).toHaveBeenCalledWith(expect.stringContaining('configurar'));
         });
 
-        it('does not prompt when all vars are present', async () => {
-            const { offerEnvSetup } = require('../shared/cli_base');
-            const result = await offerEnvSetup({ ok: true, missing: [] });
+        it('does not prompt when all vars are present', () => {
+            const result = offerEnvSetup({ ok: true, missing: [] });
             expect(result).toBe(false);
-            expect(MOCK_CONFIRM).not.toHaveBeenCalled();
+            expect(mockConfirm).not.toHaveBeenCalled();
         });
 
-        it('skips prompt in CI mode', async () => {
+        it('skips prompt in CI mode', () => {
             process.env.CI = 'true';
-            const { offerEnvSetup } = require('../shared/cli_base');
-            const result = await offerEnvSetup({ ok: false, missing: ['GIT_TOKEN'] });
+            const result = offerEnvSetup({ ok: false, missing: ['GIT_TOKEN'] });
             expect(result).toBe(false);
-            expect(MOCK_CONFIRM).not.toHaveBeenCalled();
+            expect(mockConfirm).not.toHaveBeenCalled();
         });
 
-        it('returns true when user accepts setup', async () => {
-            MOCK_CONFIRM.mockResolvedValueOnce(true);
-            const { offerEnvSetup } = require('../shared/cli_base');
-            const result = await offerEnvSetup({ ok: false, missing: ['TOKEN'] });
+        it('returns true when user accepts setup', () => {
+            mockConfirm.mockReturnValueOnce(true);
+            const result = offerEnvSetup({ ok: false, missing: ['TOKEN'] });
             expect(result).toBe(true);
         });
     });
 
     describe('W2 — empty projects flow', () => {
         it('getProjects returns empty when file is empty JSON', () => {
-            const { getProjects } = require('../git_triggers/session-state');
-            // loadProjects caches result; reset and verify shape
             const projects = Object.keys(getProjects());
             expect(Array.isArray(projects)).toBe(true);
         });
@@ -114,7 +114,7 @@ describe('friendly error paths (Sprint W)', () => {
                     __esModule: true,
                 }));
                 jest.doMock('fs', () => {
-                    const original = jest.requireActual('fs');
+                    const original = jest.requireActual<typeof import('fs')>('fs');
                     return {
                         ...original,
                         readFileSync: jest.fn((p: string) => {
@@ -152,7 +152,9 @@ describe('friendly error paths (Sprint W)', () => {
                     default: jest.fn(),
                 }));
 
-                const mod = require('../git_triggers/session-state');
+                const mod = jest.requireActual<typeof import('../git_triggers/session-state')>(
+                    '../git_triggers/session-state',
+                );
                 expect(() => mod.createManagerForProject('test-proj', '123')).toThrow('GIT_TOKEN');
             });
         });
@@ -173,7 +175,7 @@ describe('friendly error paths (Sprint W)', () => {
                     __esModule: true,
                 }));
                 jest.doMock('fs', () => {
-                    const original = jest.requireActual('fs');
+                    const original = jest.requireActual<typeof import('fs')>('fs');
                     return {
                         ...original,
                         readFileSync: jest.fn((p: string) => {
@@ -211,7 +213,9 @@ describe('friendly error paths (Sprint W)', () => {
                     default: jest.fn(),
                 }));
 
-                const mod = require('../git_triggers/session-state');
+                const mod = jest.requireActual<typeof import('../git_triggers/session-state')>(
+                    '../git_triggers/session-state',
+                );
                 expect(() => mod.createManagerForProject('test-proj', '456')).toThrow('GITHUB_TOKEN');
             });
         });
@@ -219,7 +223,6 @@ describe('friendly error paths (Sprint W)', () => {
 
     describe('W4 — wizard alias w', () => {
         it('resolves alias w to 24 in Jira menu', () => {
-            const { resolveAlias } = require('../jira_management/menu-data');
             expect(resolveAlias('w')).toBe('24');
             expect(resolveAlias('setup')).toBe('24');
             expect(resolveAlias('wizard')).toBe('24');
@@ -229,7 +232,6 @@ describe('friendly error paths (Sprint W)', () => {
 
     describe('U1 — breadcrumbs dynamic navigation', () => {
         it('popBreadcrumb on back navigation preserves parent', () => {
-            const breadcrumbs = require('../shared/breadcrumbs');
             breadcrumbs.__resetBreadcrumbs();
             breadcrumbs.pushBreadcrumb('GERAÇÃO DE RELATÓRIOS');
             breadcrumbs.pushBreadcrumb('Gerar relatório HTML');

@@ -10,9 +10,13 @@ export async function getBranch(
     repo: string,
     branch: string,
 ): Promise<{ name: string } | null> {
-    const data = await apiGet(client, '/repos/' + owner + '/' + repo + '/branches/' + encodeURIComponent(branch), {
-        returnNull: true,
-    });
+    const data = await apiGet<{ name: string }>(
+        client,
+        '/repos/' + owner + '/' + repo + '/branches/' + encodeURIComponent(branch),
+        {
+            returnNull: true,
+        },
+    );
     if (!data?.name) return null;
     return { name: data.name };
 }
@@ -24,7 +28,7 @@ export async function getDiff(
     source: string,
     target: string,
 ): Promise<string> {
-    const data = await apiGet(
+    const data = await apiGet<{ files?: Array<Record<string, unknown>> }>(
         client,
         '/repos/' + owner + '/' + repo + '/compare/' + encodeURIComponent(target) + '...' + encodeURIComponent(source),
         {
@@ -33,10 +37,5 @@ export async function getDiff(
             returnNull: true,
         },
     );
-    return formatDiffResponse(
-        data?.files as Array<Record<string, unknown>> | undefined,
-        'patch',
-        'filename',
-        DIFF_TRUNCATION_LIMIT,
-    );
+    return formatDiffResponse(data?.files, 'patch', 'filename', DIFF_TRUNCATION_LIMIT);
 }

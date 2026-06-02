@@ -2,7 +2,15 @@ import path from 'path';
 import fs from 'fs';
 import os from 'os';
 import { nullAs } from './test-utils';
-import { parseMochawesome, parseCypressResults, MochawesomeData } from './result_parser';
+import {
+    parseMochawesome,
+    parseCypressResults,
+    parseCtrfResults,
+    parseTestResults,
+    parseTestResultsFile,
+    isCtrfFormat,
+    MochawesomeData,
+} from './result_parser';
 
 const SAMPLE_MOCHAWESOME = {
     stats: { passes: 2, failures: 1, pending: 1, tests: 4, duration: 5000 },
@@ -187,8 +195,6 @@ const CTRF_EMPTY = {
 };
 
 describe('isCtrfFormat', () => {
-    const { isCtrfFormat } = require('./result_parser');
-
     it('detects CTRF format by results.tests + results.summary', () => {
         expect(isCtrfFormat(CTRF_SAMPLE)).toBe(true);
     });
@@ -204,8 +210,6 @@ describe('isCtrfFormat', () => {
 });
 
 describe('parseCtrfResults', () => {
-    const { parseCtrfResults } = require('./result_parser');
-
     it('extracts all tests from CTRF format', () => {
         const result = parseCtrfResults(CTRF_SAMPLE);
         expect(result.tests).toHaveLength(3);
@@ -275,8 +279,6 @@ describe('parseCtrfResults', () => {
 });
 
 describe('parseTestResults (dispatch)', () => {
-    const { parseTestResults } = require('./result_parser');
-
     it('routes CTRF format to parseCtrfResults', () => {
         const result = parseTestResults(CTRF_SAMPLE);
         expect(result.tests).toHaveLength(3);
@@ -312,10 +314,7 @@ describe('parseTestResults (dispatch)', () => {
 });
 
 describe('parseTestResultsFile', () => {
-    const { parseTestResultsFile } = require('./result_parser');
-
     it('reads CTRF file and parses it', () => {
-        const path = require('path');
         const fixtures = path.join(__dirname, '../e2e/fixtures');
         const result = parseTestResultsFile(path.join(fixtures, 'ctrf-report.json'));
         expect(result.tests).toHaveLength(4);
@@ -324,7 +323,6 @@ describe('parseTestResultsFile', () => {
     });
 
     it('reads Mochawesome file via dispatch', () => {
-        const path = require('path');
         const fixtures = path.join(__dirname, '../e2e/fixtures');
         const result = parseTestResultsFile(path.join(fixtures, 'mochawesome.json'));
         expect(result.tests).toHaveLength(3);

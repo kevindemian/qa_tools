@@ -65,7 +65,7 @@ jest.mock('../shared/prompt', () => ({
     ask: jest.fn(),
     askConfirm: jest.fn(),
     printError: jest.fn(),
-    withSpinner: jest.fn((_label: string, fn: () => Promise<unknown>) => fn()),
+    withSpinner: jest.fn((_label: string, fn: () => Promise<void>) => fn()),
     showSelect: jest.fn(),
     tableView: jest.fn(),
     Spinner: jest.fn().mockImplementation(() => ({ start: jest.fn(), stop: jest.fn() })),
@@ -103,8 +103,7 @@ jest.mock('../shared/logger', () => ({
 
 jest.mock('../shared/cli_base', () => ({
     createValidateEnv: jest.fn(() => jest.fn()),
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- mock return compat
-    offerEnvSetup: jest.fn<any>().mockResolvedValue(false),
+    offerEnvSetup: jest.fn<Promise<boolean>, [prompt: object]>().mockResolvedValue(false),
     setupSigint: jest.fn(),
     printSessionSummary: jest.fn(),
 }));
@@ -131,8 +130,7 @@ jest.mock('../shared/metrics', () => ({
 }));
 
 jest.mock('../shared/http-client', () => ({
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- mock sleep return type
-    sleep: jest.fn<any>(async () => {}),
+    sleep: jest.fn<Promise<void>, [ms: number]>(async () => {}),
 }));
 
 jest.mock('../shared/jira-client', () => ({
@@ -165,8 +163,7 @@ jest.mock('./case00-handler', () => ({
 
 type MainModule = typeof import('./main').default;
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any -- glob sync mock return
-const globSyncMock = jest.fn<any>().mockReturnValue([]);
+const globSyncMock = jest.fn<string[], [pattern: string]>().mockReturnValue([]);
 jest.mock('glob', () => ({ sync: globSyncMock }));
 
 const mockProvider = createMockGitProvider();
@@ -174,10 +171,10 @@ const mockProvider = createMockGitProvider();
 let mainModule: MainModule;
 
 beforeAll(() => {
-    const sessionState = require('./session-state');
+    const sessionState = require('./session-state') as typeof import('./session-state');
     sessionState._resetForTest();
 
-    mainModule = require('./main').default as MainModule;
+    mainModule = (require('./main') as typeof import('./main')).default;
 });
 
 afterAll(() => {
@@ -295,8 +292,10 @@ describe('_resolveGlob', () => {
 // ---------- pollPipeline ----------
 
 describe('pollPipeline', () => {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- jest.fn type parameter not inferred for polymorphic return
-    const mockGetPipeline = jest.fn<any>();
+    const mockGetPipeline = jest.fn<
+        Promise<{ status: string; web_url: string }>,
+        [projectId: string, pipelineId: string]
+    >();
 
     beforeEach(() => {
         mockGetPipeline.mockReset();
@@ -537,7 +536,7 @@ describe('nivelarBranchesWrapper', () => {
         await mainModule.nivelarBranchesWrapper(gitlab);
         expect(nivelar.nivelarBranches).toHaveBeenCalledWith(
             gitlab,
-            expect.objectContaining({ pushHistory: expect.any(Function) }),
+            expect.objectContaining({ pushHistory: expect.any(Function) as (...args: unknown[]) => unknown }),
         );
     });
 });
@@ -848,8 +847,7 @@ describe('main flow empty projects', () => {
             }));
             jest.doMock('../shared/cli_base', () => ({
                 createValidateEnv: jest.fn(() => jest.fn()),
-                // eslint-disable-next-line @typescript-eslint/no-explicit-any -- mock return compat
-                offerEnvSetup: jest.fn<any>().mockResolvedValue(false),
+                offerEnvSetup: jest.fn<Promise<boolean>, [prompt: object]>().mockResolvedValue(false),
                 setupSigint: jest.fn(),
                 printSessionSummary: jest.fn(),
             }));
@@ -867,7 +865,7 @@ describe('main flow empty projects', () => {
                 ask: jest.fn(),
                 askConfirm: jest.fn(),
                 printError: jest.fn(),
-                withSpinner: jest.fn((_l: string, fn: () => Promise<unknown>) => fn()),
+                withSpinner: jest.fn((_l: string, fn: () => Promise<void>) => fn()),
                 showSelect: jest.fn(),
                 tableView: jest.fn(),
                 Spinner: jest.fn().mockImplementation(() => ({ start: jest.fn(), stop: jest.fn() })),
@@ -967,7 +965,7 @@ describe('main flow empty projects', () => {
                 handleSetupWizard: jest.fn(() => Promise.resolve(false)),
             }));
 
-            const mod = require('./main');
+            const mod = require('./main') as typeof import('./main');
             expect(mod.default).toBeDefined();
         });
     });
@@ -986,16 +984,16 @@ describe('buildContextLine', () => {
 
 describe('withErrorHandling', () => {
     it('returns false when handler resolves', async () => {
-        const handler: (m: GitProvider, pn: string, ns: string[]) => Promise<unknown> = jest
-            .fn<(m: GitProvider, pn: string, ns: string[]) => Promise<unknown>>()
+        const handler: (m: GitProvider, pn: string, ns: string[]) => Promise<object> = jest
+            .fn<(m: GitProvider, pn: string, ns: string[]) => Promise<object>>()
             .mockResolvedValue('ok');
         const wrapped = mainModule.withErrorHandling(handler);
         await wrapped(createMockGitProvider(), 'p', ['p']);
     });
 
     it('calls printError when handler rejects and returns false', async () => {
-        const handler: (m: GitProvider, pn: string, ns: string[]) => Promise<unknown> = jest
-            .fn<(m: GitProvider, pn: string, ns: string[]) => Promise<unknown>>()
+        const handler: (m: GitProvider, pn: string, ns: string[]) => Promise<object> = jest
+            .fn<(m: GitProvider, pn: string, ns: string[]) => Promise<object>>()
             .mockRejectedValue(new Error('fail'));
         const wrapped = mainModule.withErrorHandling(handler);
         const result = await wrapped(createMockGitProvider(), 'p', ['p']);
@@ -1008,7 +1006,7 @@ describe('withErrorHandling', () => {
 
 describe('_handleExit', () => {
     it('prints goodbye and returns true', () => {
-        const breadcrumbs = require('../shared/breadcrumbs');
+        const breadcrumbs = require('../shared/breadcrumbs') as typeof import('../shared/breadcrumbs');
         const result = mainModule._handleExit();
         expect(result).toBe(true);
         expect(prompt.title).toHaveBeenCalledWith('Até logo!');
@@ -1016,7 +1014,7 @@ describe('_handleExit', () => {
     });
 
     it('does not set exit code when session has errors — no exitCode', () => {
-        const ss = require('./session-state');
+        const ss = require('./session-state') as typeof import('./session-state');
         const orig = ss.sessionContext.sessionCounters;
         ss.sessionContext.sessionCounters = [{ status: 'error' }];
         try {
@@ -1036,7 +1034,10 @@ describe('_dispatchAction', () => {
     const ns = ['proj-a', 'proj-b'];
 
     beforeAll(() => {
-        jest.spyOn(require('../shared/output').defaultOutput, 'box').mockImplementation(() => {});
+        jest.spyOn(
+            (require('../shared/output') as typeof import('../shared/output')).defaultOutput,
+            'box',
+        ).mockImplementation(() => {});
     });
 
     it('handles /help and returns false', async () => {
@@ -1146,7 +1147,7 @@ describe('_promptChoice', () => {
 
 describe('unhandledRejection handler', () => {
     it('logs error and shows user message', () => {
-        const logger = require('../shared/logger');
+        const logger = require('../shared/logger') as typeof import('../shared/logger');
         process.emit('unhandledRejection', new Error('test rejection'));
         expect(logger.rootLogger.error).toHaveBeenCalledWith('Unhandled Rejection', expect.any(Object));
     });
@@ -1171,7 +1172,7 @@ describe('_promptChoice TTY mode', () => {
     });
 
     it('shows box with session counters when TTY and not quiet', async () => {
-        const sessionState = require('./session-state');
+        const sessionState = require('./session-state') as typeof import('./session-state');
         sessionState.sessionContext.sessionCounters = [{ status: 'ok' }, { status: 'error' }, { status: 'ok' }];
         jest.mocked(prompt.showSelect).mockResolvedValue('/exit');
         const result = await mainModule._promptChoice('0-9');

@@ -1,4 +1,4 @@
-import { Document, YAMLMap, YAMLSeq, Scalar, Pair, isMap, parseDocument } from 'yaml';
+import { Document, type Node, YAMLMap, YAMLSeq, Scalar, Pair, isMap, parseDocument } from 'yaml';
 
 export interface StepConfig {
     name?: string;
@@ -26,8 +26,7 @@ export interface JobConfig {
 }
 
 export class WorkflowBuilder {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- yaml Document and Document.Parsed have incompatible generics; any is the pragmatic choice
-    private doc: any;
+    private doc: Document<Node>;
     private readonly provider: 'github' | 'gitlab';
 
     constructor(provider: 'github' | 'gitlab', _projectName: string) {

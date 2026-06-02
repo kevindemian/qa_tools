@@ -111,6 +111,11 @@ jest.mock('../shared/open', () => ({
 import { createValidateEnv } from '../shared/cli_base';
 import { warn, helpLine, title, prompt, printError } from '../shared/prompt';
 import { loadTypedState, getStatePath } from '../shared/state';
+import * as openModule from '../shared/open';
+import * as cp from 'child_process';
+import * as commandsModule from './commands';
+import { CancelError } from '../shared/prompt';
+import { mask } from '../shared/cli_base';
 
 // ── Types ──────────────────────────────────────────────────────────────────
 interface MenuChoice {
@@ -147,11 +152,9 @@ let createValidateEnvCall: unknown;
 let getStatePathCalled = false;
 
 beforeAll(() => {
-    const openModule = require('../shared/open');
     if (!jest.isMockFunction(openModule.openWithFallback)) {
         throw new Error('Guard FAILED: openWithFallback is NOT mocked. Browser would open!');
     }
-    const cp = require('child_process');
     if (!jest.isMockFunction(cp.spawn)) {
         throw new Error('Guard FAILED: child_process.spawn is NOT mocked. Browser would open!');
     }
@@ -433,7 +436,7 @@ describe('dispatchChoice', () => {
     };
 
     beforeEach(() => {
-        jest.mocked(jest.requireMock('./commands').getHandler).mockReturnValue(null);
+        jest.mocked(commandsModule.getHandler).mockReturnValue(null);
     });
 
     it("returns 'continue' for choice '0' (handled by getAndResolveChoice now)", async () => {
@@ -444,7 +447,7 @@ describe('dispatchChoice', () => {
 
     it("dispatches to handler and returns 'continue' for choice '1'", async () => {
         const handler = jest.fn().mockResolvedValue(false);
-        jest.mocked(jest.requireMock('./commands').getHandler).mockReturnValue(handler);
+        jest.mocked(commandsModule.getHandler).mockReturnValue(handler);
 
         const result = await mod.dispatchChoice('1', minimalCtx);
 
@@ -454,7 +457,7 @@ describe('dispatchChoice', () => {
 
     it("dispatches to handler and returns 'continue' for choice '7'", async () => {
         const handler = jest.fn().mockResolvedValue(false);
-        jest.mocked(jest.requireMock('./commands').getHandler).mockReturnValue(handler);
+        jest.mocked(commandsModule.getHandler).mockReturnValue(handler);
 
         const result = await mod.dispatchChoice('7', minimalCtx);
 
@@ -480,7 +483,7 @@ describe('dispatchChoice', () => {
 
     it('handler returning true triggers continue properly', async () => {
         const handler = jest.fn().mockResolvedValue(true);
-        jest.mocked(jest.requireMock('./commands').getHandler).mockReturnValue(handler);
+        jest.mocked(commandsModule.getHandler).mockReturnValue(handler);
 
         const result = await mod.dispatchChoice('1', minimalCtx);
 
@@ -489,9 +492,8 @@ describe('dispatchChoice', () => {
     });
 
     it("handler that throws CancelError returns 'continue'", async () => {
-        const { CancelError } = jest.requireMock('../shared/prompt');
         const handler = jest.fn().mockRejectedValue(new CancelError('canceled'));
-        jest.mocked(jest.requireMock('./commands').getHandler).mockReturnValue(handler);
+        jest.mocked(commandsModule.getHandler).mockReturnValue(handler);
 
         const result = await mod.dispatchChoice('1', minimalCtx);
 
@@ -500,7 +502,7 @@ describe('dispatchChoice', () => {
 
     it("catches generic Error from handler and returns 'continue'", async () => {
         const handler = jest.fn().mockRejectedValue(new Error('generic error'));
-        jest.mocked(jest.requireMock('./commands').getHandler).mockReturnValue(handler);
+        jest.mocked(commandsModule.getHandler).mockReturnValue(handler);
 
         const result = await mod.dispatchChoice('1', minimalCtx);
 
@@ -511,23 +513,22 @@ describe('dispatchChoice', () => {
 
 describe('showDocs', () => {
     it('generates all docs as HTML and opens browser', async () => {
-        const fs = require('fs');
-        jest.spyOn(fs, 'readdirSync').mockReturnValueOnce(['01-test-doc.md', '02-guide.md']);
-        jest.spyOn(fs, 'readFileSync').mockReturnValue('# Test Content');
+        const fsActual = jest.requireActual<typeof import('fs')>('fs');
+        const readdirSpy = jest.spyOn(fsActual, 'readdirSync').mockReturnValueOnce(['01-test-doc.md', '02-guide.md']);
+        const readFileSpy = jest.spyOn(fsActual, 'readFileSync').mockReturnValue('# Test Content');
         await mod.showDocs();
-        const openModule = require('../shared/open');
         expect(openModule.openWithFallback).toHaveBeenCalledWith(
             expect.stringContaining('index.html'),
             'Documentação',
             expect.any(Function),
         );
-        fs.readdirSync.mockRestore?.();
-        fs.readFileSync.mockRestore?.();
+        readdirSpy.mockRestore?.();
+        readFileSpy.mockRestore?.();
     });
 
     it('handles missing docs directory', async () => {
-        const fs = require('fs');
-        jest.spyOn(fs, 'readdirSync').mockImplementationOnce(() => {
+        const fsActual = jest.requireActual<typeof import('fs')>('fs');
+        jest.spyOn(fsActual, 'readdirSync').mockImplementationOnce(() => {
             throw new Error('ENOENT');
         });
         await mod.showDocs();
@@ -535,8 +536,8 @@ describe('showDocs', () => {
     });
 
     it('warns when no matching files found in docs', async () => {
-        const fs = require('fs');
-        jest.spyOn(fs, 'readdirSync').mockReturnValueOnce(['readme.txt', 'notes.md']);
+        const fsActual = jest.requireActual<typeof import('fs')>('fs');
+        jest.spyOn(fsActual, 'readdirSync').mockReturnValueOnce(['readme.txt', 'notes.md']);
         await mod.showDocs();
         expect(warn).toHaveBeenCalled();
     });
@@ -795,7 +796,7 @@ describe('module-level main error handler', () => {
                 getAndResolveChoice: jest.fn(),
             }));
 
-            const mod = require('./main');
+            const mod = require('./main') as MainModule;
             expect(mod.main).toBeDefined();
         });
     });
@@ -816,7 +817,7 @@ describe('dispatchAndHandleResult', () => {
     };
 
     beforeEach(() => {
-        jest.mocked(jest.requireMock('./commands').getHandler).mockReturnValue(jest.fn().mockResolvedValue(false));
+        jest.mocked(commandsModule.getHandler).mockReturnValue(jest.fn().mockResolvedValue(false));
     });
 
     it('calls prompt when autoConfirm off with long op and error results', async () => {
@@ -826,7 +827,6 @@ describe('dispatchAndHandleResult', () => {
         };
         const result = await mod.dispatchAndHandleResult('1', ctxWithErrors, ctxWithErrors.ctx);
         expect(result).toBe('continue');
-        const { prompt } = require('../shared/prompt');
         expect(prompt).toHaveBeenCalledWith(expect.stringContaining('Enter'));
     });
 
@@ -835,7 +835,6 @@ describe('dispatchAndHandleResult', () => {
             ...minimalCtx,
             ctx: { ...minimalCtx.ctx, results: [{ status: 'error' }] },
         };
-        const { prompt } = require('../shared/prompt');
         jest.mocked(prompt).mockClear();
         const result = await mod.dispatchAndHandleResult('0', ctxWithErrors, ctxWithErrors.ctx);
         expect(result).toBe('continue');
@@ -847,7 +846,6 @@ describe('dispatchAndHandleResult', () => {
             ...minimalCtx,
             ctx: { ...minimalCtx.ctx, results: [{ status: 'error' }] },
         };
-        const { prompt } = require('../shared/prompt');
         jest.mocked(prompt).mockClear();
         const result = await mod.dispatchAndHandleResult('2', ctxWithErrors, ctxWithErrors.ctx);
         expect(result).toBe('continue');
@@ -857,7 +855,6 @@ describe('dispatchAndHandleResult', () => {
 
 describe('module-level debug logging', () => {
     it('mask hides middle of token', () => {
-        const { mask } = require('../shared/cli_base');
         expect(mask('secret1234567')).toBe('secr****');
     });
 });

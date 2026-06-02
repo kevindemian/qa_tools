@@ -14,7 +14,7 @@ export function isPreconditionKey(value: string): boolean {
 /** Extract a precondition key from the start of a string. Returns null if not found. */
 export function extractPreconditionKey(value: string): string | null {
     const match = value.match(new RegExp('^(' + PRECONDITION_KEY_PATTERN + ')'));
-    return match ? match[1]! : null;
+    return match ? (match[1] ?? null) : null;
 }
 
 /** Parse a potentially quoted CSV value, handling multi-line quoted spans.
@@ -34,7 +34,7 @@ export function parseQuotedValue(
         const parts = [rawValue.slice(1)];
         let endIndex = startLineIndex + 1;
         while (endIndex < lines.length) {
-            const line = lines[endIndex]!;
+            const line = lines[endIndex] as string;
             if (line.endsWith('"')) {
                 parts.push(line.slice(0, -1));
                 endIndex++;

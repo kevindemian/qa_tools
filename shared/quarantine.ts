@@ -43,7 +43,7 @@ export interface PipelineQuarantine {
     };
 }
 
-const QuarantineEntrySchema: z.ZodType<QuarantineEntry> = z.object({
+const QuarantineEntrySchema = z.object({
     testTitle: z.string(),
     reason: z.string(),
     quarantinedBy: z.string(),
@@ -55,7 +55,7 @@ const QuarantineEntrySchema: z.ZodType<QuarantineEntry> = z.object({
     permanent: z.boolean(),
 });
 
-const QuarantineStoreSchema: z.ZodType<QuarantineStore> = z.object({
+const QuarantineStoreSchema = z.object({
     entries: z.array(QuarantineEntrySchema),
 });
 
@@ -93,7 +93,7 @@ export function loadQuarantine(): QuarantineStore {
         if (!fs.existsSync(sp)) return { entries: [] };
         const raw = fs.readFileSync(sp, 'utf8');
         const parsed: unknown = JSON.parse(raw);
-        return QuarantineStoreSchema.parse(parsed);
+        return QuarantineStoreSchema.parse(parsed) as QuarantineStore;
     } catch (err) {
         rootLogger.warn('Failed to load quarantine store: ' + (err instanceof Error ? err.message : String(err)));
         return { entries: [] };
@@ -138,7 +138,7 @@ export function quarantineTest(opts: QuarantineTestOptions): void {
         date,
         expiresAt: expires,
         flakyRate,
-        bugUrl,
+        ...(bugUrl ? { bugUrl } : {}),
         reviewRequired: true,
         permanent: false,
     };
@@ -238,7 +238,7 @@ export function generatePipelineQuarantine(store?: QuarantineStore): PipelineQua
         reason: e.reason,
         quarantinedBy: e.quarantinedBy,
         date: e.date,
-        bugUrl: e.bugUrl,
+        ...(e.bugUrl ? { bugUrl: e.bugUrl } : {}),
         reviewRequired: e.reviewRequired,
     }));
     const pipeline: PipelineQuarantine = {

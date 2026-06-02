@@ -77,8 +77,10 @@ function matchResultsToTests(results: TestResultItem[], mappingJsonPath: string)
     let mappings: MappingItem[];
     try {
         const raw = fs.readFileSync(mappingJsonPath, 'utf8');
-        const data = JSON.parse(raw);
-        mappings = (data.tests || []).map((t: Record<string, string>) => ({
+        const data: { tests?: Array<Record<string, string>> } = JSON.parse(raw) as {
+            tests?: Array<Record<string, string>>;
+        };
+        mappings = (data.tests || []).map((t) => ({
             title: t.title || '',
             key: t.key || '',
         }));

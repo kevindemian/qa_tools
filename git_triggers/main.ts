@@ -103,9 +103,9 @@ function _selectProject(): { projectName: string | null; names: string[] } {
         warn('Projeto inválido.');
         return { projectName: null, names };
     }
-    const projectName = names[firstIdx - 1]!;
+    const projectName = names[firstIdx - 1] as string;
     setCurrentProjectName(projectName);
-    setProjectId(getProjects()[projectName]!);
+    setProjectId(getProjects()[projectName] as string);
     updateState((s: StateContainer) => {
         s.lastProject = projectName;
     });
@@ -133,7 +133,7 @@ async function _promptChoice(stateHint: string): Promise<string> {
                 ? (loadState().lastChoice as string)
                 : undefined;
         return showSelect('      Escolha uma opção', buildActionChoices(), {
-            default: stateHint2,
+            ...(stateHint2 ? { default: stateHint2 } : {}),
             pageSize: (process.stdout.rows || 24) - 4,
         });
     }

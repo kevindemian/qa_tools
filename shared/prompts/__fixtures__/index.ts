@@ -41,7 +41,7 @@ const FixtureBaseSchema = z.object({
     description: z.string(),
 });
 
-const FailureAnalysisFixtureSchema: z.ZodType<FailureAnalysisFixture> = FixtureBaseSchema.extend({
+const FailureAnalysisFixtureSchema = FixtureBaseSchema.extend({
     input: z.string(),
     validate: z.object({
         type: z.literal('json-schema'),
@@ -86,7 +86,7 @@ function loadDir<T>(subdir: string, schema: z.ZodType<T>): T[] {
 }
 
 export function loadFailureAnalysisFixtures(): FailureAnalysisFixture[] {
-    return loadDir('failure-analysis', FailureAnalysisFixtureSchema);
+    return loadDir('failure-analysis', FailureAnalysisFixtureSchema) as FailureAnalysisFixture[];
 }
 
 export function loadUserStoryFixtures(): UserStoryFixture[] {

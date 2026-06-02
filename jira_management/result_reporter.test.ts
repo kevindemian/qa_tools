@@ -5,6 +5,7 @@ import JiraResource from './jira_resource';
 import JiraLinkManager from './jira_link_manager';
 import { rootLogger } from '../shared/logger';
 import { nonNull } from '../shared/test-utils';
+import type { JsonObject } from '../shared/types';
 
 jest.mock('axios', () => {
     const mockInstance = {
@@ -26,7 +27,7 @@ jest.mock('../shared/prompt', () => ({
     success: jest.fn(),
     warn: jest.fn(),
     isQuiet: () => true,
-    withSpinner: jest.fn(async (_label: string, fn: () => Promise<unknown>) => fn()),
+    withSpinner: jest.fn(async (_label: string, fn: () => Promise<void>) => fn()),
 }));
 
 const MOCK_ISSUE_TYPES = [
@@ -144,13 +145,18 @@ describe('createTestExecutionFromResults', () => {
     let linkManager: JiraLinkManager;
 
     beforeEach(() => {
-        jiraResource = jest.mocked(new JiraResource('fake-token', 'http://jira/rest/api/2'));
-        jiraResource.getJiraResource = jest.fn();
-        jiraResource.postJiraResource = jest.fn();
+        jiraResource = jest.mocked(
+            new JiraResource('fake-token', 'http://jira/rest/api/2'),
+        ) as jest.Mocked<JiraResource>;
+        jiraResource.getJiraResource = jest.fn<Promise<JsonObject>, [string]>();
+        jiraResource.postJiraResource = jest.fn<Promise<JsonObject>, [url: string, data: JsonObject]>();
+        jiraResource.putJiraResource = jest.fn<Promise<JsonObject | null>, [url: string, data: JsonObject]>();
 
-        linkJiraRes = jest.mocked(new JiraResource('fake-token', 'http://jira/rest/api/2'));
-        linkJiraRes.getJiraResource = jest.fn();
-        linkJiraRes.postJiraResource = jest.fn();
+        linkJiraRes = jest.mocked(
+            new JiraResource('fake-token', 'http://jira/rest/api/2'),
+        ) as jest.Mocked<JiraResource>;
+        linkJiraRes.getJiraResource = jest.fn<Promise<JsonObject>, [string]>();
+        linkJiraRes.postJiraResource = jest.fn<Promise<JsonObject>, [url: string, data: JsonObject]>();
         linkJiraRes.getJiraResource.mockImplementation((url: string) => {
             if (url === 'issueLinkType')
                 return Promise.resolve({
@@ -187,14 +193,9 @@ describe('createTestExecutionFromResults', () => {
         expect(result.key).toBe('EXEC-1');
         expect(result.passed).toBe(1);
         expect(result.failed).toBe(1);
-        expect(jiraResource.postJiraResource).toHaveBeenCalledWith(
-            'issue',
-            expect.objectContaining({
-                fields: expect.objectContaining({
-                    summary: expect.stringContaining('Results:'),
-                }),
-            }),
-        );
+        expect(jiraResource.postJiraResource).toHaveBeenCalledWith('issue', expect.anything());
+        const [, postArg] = jiraResource.postJiraResource.mock.calls[0]!;
+        expect(postArg).toHaveProperty('fields.summary', expect.stringContaining('Results:'));
     });
 
     it('skips linking for skipped tests', async () => {
@@ -283,10 +284,9 @@ describe('createTestExecutionFromResults', () => {
         expect(result.key).toBe(teKey);
         expect(result.passed).toBe(1);
         expect(result.failed).toBe(1);
-        expect(jiraResource.putJiraResource).toHaveBeenCalledWith(
-            'issue/' + teKey,
-            expect.objectContaining({ fields: expect.objectContaining({ customfield_13715: expect.any(Array) }) }),
-        );
+        expect(jiraResource.putJiraResource).toHaveBeenCalledWith('issue/' + teKey, expect.anything());
+        const [, putArg] = jiraResource.putJiraResource.mock.calls[0]!;
+        expect(putArg).toHaveProperty('fields.customfield_13715', expect.any(Array));
         expect(jiraResource.postJiraResource).not.toHaveBeenCalledWith('issue', expect.anything());
     });
 });

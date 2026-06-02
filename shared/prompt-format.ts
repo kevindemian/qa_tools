@@ -109,7 +109,7 @@ function buildCliTable3Config(keys: string[]): {
     const indentStr = '  ';
     const indentWidth = visibleWidth(indentStr);
     const colWidths = keys.map(() => Math.floor(avail / keys.length));
-    colWidths[0]! += avail - colWidths.reduce((a, b) => a + b, 0);
+    colWidths[0] = (colWidths[0] as number) + avail - colWidths.reduce((a, b) => a + b, 0);
     return {
         head: keys,
         colWidths: colWidths.map((w) => Math.max(w - indentWidth, MIN_COLUMN_WIDTH)),
@@ -173,7 +173,7 @@ export function tableView<T extends Record<string, unknown>>(
           })
         : data;
     if (rows.length === 0) return;
-    const keys = columns || Object.keys(rows[0]!);
+    const keys = columns || Object.keys(rows[0] as Record<string, unknown>);
     const table = new CliTable3(buildCliTable3Config(keys));
     const statusColIdx = statusKey ? keys.indexOf(statusKey) : -1;
     for (const row of rows) {

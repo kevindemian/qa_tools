@@ -36,7 +36,7 @@ function makeCfg(
         model: overrides.model ?? 'gpt-4',
         baseUrl: overrides.baseUrl ?? 'https://api.test.com/v1',
         temperature: overrides.temperature ?? 0.3,
-        responseFormat: overrides.responseFormat,
+        ...(overrides.responseFormat !== undefined ? { responseFormat: overrides.responseFormat } : {}),
     };
 }
 

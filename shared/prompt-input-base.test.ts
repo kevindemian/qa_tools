@@ -41,11 +41,12 @@ jest.mock('./palette', () => {
 });
 
 jest.mock('./prompt-ui', () => {
-    const actual = jest.requireActual('./prompt-ui');
+    const actual = jest.requireActual<typeof import('./prompt-ui')>('./prompt-ui');
     return {
         ...actual,
         getConfig: jest.fn(() => {
-            const cfg = new (jest.requireActual('./config-accessor').default)();
+            const ConfigAccessorActual = jest.requireActual<typeof import('./config-accessor')>('./config-accessor');
+            const cfg = ConfigAccessorActual.default.create();
             cfg.get = <T>(key: string): T => {
                 const v: Record<string, unknown> = { quiet: false, autoConfirm: false };
                 return v[key] as T;

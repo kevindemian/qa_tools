@@ -107,8 +107,9 @@ import {
     resetLlmClientMetrics,
 } from './llm-client';
 import { rootLogger } from './logger';
+import { safeParseJson } from './safe-json';
 
-const mockFetch = jest.fn();
+const mockFetch = jest.fn<Promise<Response>, [string, RequestInit]>();
 global.fetch = mockFetch;
 
 function mockOkResponse(body: string): Response {
@@ -267,7 +268,7 @@ describe('llmPrompt', () => {
         );
 
         await llmPrompt({ tier: 'main', system: 'system', user: 'json test', responseFormat: 'json' });
-        const body = JSON.parse(mockFetch.mock.calls[0][1].body as string);
+        const body = safeParseJson<Record<string, unknown>>(mockFetch.mock.calls[0][1].body as string, {});
         expect(body.response_format).toEqual({ type: 'json_object' });
     });
 
@@ -297,10 +298,10 @@ describe('llmPrompt', () => {
         );
 
         await llmPrompt({ tier: 'reviewer', system: 'system instruction', user: 'user message' });
-        const body = JSON.parse(mockFetch.mock.calls[0][1].body as string);
-        expect(body.system_instruction).toBeDefined();
-        expect(body.system_instruction.parts[0].text).toBe('system instruction');
-        expect(body.contents[0].parts[0].text).toBe('user message');
+        const body = safeParseJson<Record<string, unknown>>(mockFetch.mock.calls[0][1].body as string, {});
+        expect(body).toHaveProperty('system_instruction');
+        expect(body).toHaveProperty('system_instruction.parts[0].text', 'system instruction');
+        expect(body).toHaveProperty('contents[0].parts[0].text', 'user message');
         expect(mockFetch.mock.calls[0][1].headers['X-Goog-Api-Key']).toBe('AIza-gemini-test');
     });
 
@@ -507,7 +508,7 @@ describe('llmPrompt', () => {
             );
 
             await llmPrompt({ tier: 'main', system: 'system', user: 'json test', responseFormat: 'json' });
-            const body = JSON.parse(mockFetch.mock.calls[0][1].body as string);
+            const body = safeParseJson<Record<string, unknown>>(mockFetch.mock.calls[0][1].body as string, {});
             expect(body.response_format).toEqual({ type: 'json_object' });
         });
 
@@ -544,10 +545,10 @@ describe('llmPrompt', () => {
             );
 
             await llmPrompt({ tier: 'reviewer', system: 'custom system instruction', user: 'user text' });
-            const body = JSON.parse(mockFetch.mock.calls[0][1].body as string);
-            expect(body.system_instruction).toBeDefined();
-            expect(body.system_instruction.parts[0].text).toBe('custom system instruction');
-            expect(body.contents[0].parts[0].text).toBe('user text');
+            const body = safeParseJson<Record<string, unknown>>(mockFetch.mock.calls[0][1].body as string, {});
+            expect(body).toHaveProperty('system_instruction');
+            expect(body).toHaveProperty('system_instruction.parts[0].text', 'custom system instruction');
+            expect(body).toHaveProperty('contents[0].parts[0].text', 'user text');
         });
     });
 
@@ -605,7 +606,7 @@ describe('llmPrompt', () => {
 
             await llmPrompt({ tier: 'main', system: 'sys', user: 'user', callerId: 'caller', responseFormat: 'json' });
 
-            const body = JSON.parse(mockFetch.mock.calls[0][1].body as string);
+            const body = safeParseJson<Record<string, unknown>>(mockFetch.mock.calls[0][1].body as string, {});
             expect(body.response_format).toEqual({ type: 'json_object' });
         });
 
@@ -631,9 +632,9 @@ describe('llmPrompt', () => {
 
             await llmPrompt({ tier: 'reviewer', system: 'sys', user: 'user' });
 
-            const body = JSON.parse(mockFetch.mock.calls[0][1].body as string);
-            expect(body.system_instruction).toBeDefined();
-            expect(body.system_instruction.parts[0].text).toBe('sys');
+            const body = safeParseJson<Record<string, unknown>>(mockFetch.mock.calls[0][1].body as string, {});
+            expect(body).toHaveProperty('system_instruction');
+            expect(body).toHaveProperty('system_instruction.parts[0].text', 'sys');
         });
     });
 
@@ -1104,7 +1105,7 @@ describe('llmPrompt', () => {
             );
 
             await llmPrompt({ tier: 'report', system: 'system', user: 'report test', responseFormat: 'json' });
-            const body = JSON.parse(mockFetch.mock.calls[0][1].body as string);
+            const body = safeParseJson<Record<string, unknown>>(mockFetch.mock.calls[0][1].body as string, {});
             expect(body.response_format).toEqual({ type: 'json_object' });
         });
     });

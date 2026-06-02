@@ -212,12 +212,14 @@ export interface ThrottledClientConfig extends HttpClientConfig {
     /** Maximum concurrent requests (default: 3). */
     maxConcurrency?: number;
 }
-/** Internal marker to track which requests already acquired a throttle slot (avoids double-acquire on retries). */
-const THROTTLE_ACQUIRED = '_throttleAcquired';
 
 /** Create an HTTP client with concurrency limiting per-host.
  * Combines the retry/backoff from {@link createHttpClient} with a semaphore that
  * limits concurrent in-flight requests to the same host.
+ *
+ * Uses a `WeakMap` keyed on the axios request config to track which requests have
+ * already acquired a throttle slot (avoids double-acquire on retries), eliminating
+ * the need for property injection on the config object.
  *
  * @param config — Base config plus optional {@link ThrottledClientConfig.maxConcurrency}.
  * @default maxConcurrency = 3
@@ -226,18 +228,19 @@ const THROTTLE_ACQUIRED = '_throttleAcquired';
  * const client = createThrottledClient({ baseUrl: 'https://api.github.com', authHeader: { Authorization: 'Bearer token' }, maxConcurrency: 5 });
  * const { data } = await client.get('/repos/owner/repo/actions/runs');
  */
+const _throttled = new WeakMap<object, true>();
+
 export function createThrottledClient(config: ThrottledClientConfig): axios.AxiosInstance {
     const maxConcurrency = config.maxConcurrency ?? 3;
     const semaphore = new HostSemaphore(maxConcurrency);
     const instance = createHttpClient(config);
 
     instance.interceptors.request.use(async (cfg) => {
-        const cfgAny = cfg as unknown as Record<string, unknown>;
-        if (cfgAny[THROTTLE_ACQUIRED]) return cfg;
+        if (_throttled.has(cfg)) return cfg;
         const host = extractHost(cfg.url || '');
         rootLogger.debug(`Throttle: waiting for slot on ${host} (concurrency ${maxConcurrency})`);
         await semaphore.acquire(host);
-        cfgAny[THROTTLE_ACQUIRED] = true;
+        _throttled.set(cfg, true);
         return cfg;
     });
 

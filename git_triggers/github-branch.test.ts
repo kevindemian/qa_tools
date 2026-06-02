@@ -4,7 +4,7 @@ import type { AxiosInstance } from 'axios';
 
 jest.mock('./github-api', () => ({
     apiGet: jest.fn(),
-    formatDiffResponse: jest.requireActual('./github-api').formatDiffResponse,
+    formatDiffResponse: jest.requireActual<typeof import('./github-api')>('./github-api').formatDiffResponse,
 }));
 
 jest.mock('../shared/logger', () => ({
@@ -12,7 +12,7 @@ jest.mock('../shared/logger', () => ({
     rootLogger: { error: jest.fn(), warn: jest.fn() },
 }));
 
-const mockApiGet = jest.mocked(jest.requireMock('./github-api').apiGet);
+const mockApiGet = jest.mocked(jest.requireMock<typeof import('./github-api')>('./github-api').apiGet);
 
 describe('getBranch', () => {
     let client: jest.Mocked<AxiosInstance>;

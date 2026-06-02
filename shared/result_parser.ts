@@ -179,8 +179,8 @@ function _flattenTests(suite: MochawesomeSuite, parentTitle?: string): FlatTest[
                 title: t.title ?? '',
                 state,
                 duration: t.duration ?? 0,
-                error: errMsg,
-                fullTitle: currentPath ? currentPath + ' > ' + (t.title ?? '') : undefined,
+                ...(errMsg !== undefined ? { error: errMsg } : {}),
+                ...(currentPath ? { fullTitle: currentPath + ' > ' + (t.title ?? '') } : {}),
             });
         }
     }
@@ -249,8 +249,8 @@ export function parseCtrfResults(jsonData: CtrfData): ParseResult {
         title: t.name || '',
         state: t.status === 'passed' ? 'passed' : t.status === 'failed' ? 'failed' : 'skipped',
         duration: t.duration || 0,
-        error: t.message,
-        fullTitle: t.suite ? t.suite + ' > ' + (t.name || '') : undefined,
+        ...(t.message !== undefined ? { error: t.message } : {}),
+        ...(t.suite ? { fullTitle: t.suite + ' > ' + (t.name || '') } : {}),
     }));
 
     const testCounts = tests.reduce(

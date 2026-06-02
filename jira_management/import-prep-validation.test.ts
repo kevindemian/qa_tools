@@ -15,8 +15,12 @@ jest.mock('../shared/logger', () => ({
 jest.mock('../shared/prompt', () => ({
     confirm: jest.fn(),
     info: jest.fn(),
-    warn: (...args: unknown[]) => mockWarn(...args),
-    error: (...args: unknown[]) => mockError(...args),
+    warn: (...args: unknown[]) => {
+        mockWarn(...args);
+    },
+    error: (...args: unknown[]) => {
+        mockError(...args);
+    },
 }));
 
 jest.mock('../shared/state', () => ({

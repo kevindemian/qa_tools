@@ -56,7 +56,7 @@ export function showHelp(topic?: string): void {
     if (!term) return;
     title('HELP — busca por "' + term + '"');
     const found = Object.entries(HELP_TOPICS).filter(([_, v]) => v.toLowerCase().includes(term));
-    if (found.length > 0) found.forEach(([k, v]) => helpLine(k + ': ' + v.split('\n')[0]!));
+    if (found.length > 0) found.forEach(([k, v]) => helpLine(k + ': ' + (v.split('\n')[0] ?? '')));
     else warn('Nenhum topico encontrado para "' + term + '".');
 }
 function _showAndPause(topic: string): void {
@@ -101,7 +101,7 @@ export function showHelpLoop(): void {
         }
         if (found.length > 1) {
             title('Tópicos encontrados');
-            found.forEach(([k, v]) => helpLine(k + ': ' + v.split('\n')[0]!));
+            found.forEach(([k, v]) => helpLine(k + ': ' + (v.split('\n')[0] ?? '')));
             divider();
             continue;
         }

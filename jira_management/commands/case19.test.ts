@@ -1,3 +1,5 @@
+import { expect } from '@jest/globals';
+
 jest.mock('../../shared/prompt');
 jest.mock('../../shared/logger');
 
@@ -31,33 +33,16 @@ jest.mock('../../shared/logger', () => ({
     },
 }));
 
-const mockSessionContext: Record<string, unknown> = {
-    inMemoryTasksId: [],
-    inMemoryTasksText: [],
-    sessionCounters: [],
-    project_name: 'TEST',
-    isBusy: false,
-    results: [],
-    lastOperation: '',
-    createPackageManager: jest.fn(),
-};
+import * as promptModule from '../../shared/prompt';
+import * as metricsModule from '../../shared/metrics';
+import * as comparisonModule from '../../shared/run-comparison';
+import * as flakyActionsModule from '../../shared/flaky-auto-actions';
+import * as healthScoreModule from '../../shared/health-score';
+import * as coverageModule from '../coverage';
+import case19Module from './case19';
+import { createMockContext } from '../../shared/test-utils/factories/context-factory';
 
-const mockJiraResource = {
-    searchJiraIssues: jest.fn(),
-};
-
-const baseContext = {
-    jiraResource: mockJiraResource,
-    jiraResourceXray: {},
-    linkManager: {},
-    linkManagerXray: {},
-    csvResource: {},
-    ctx: mockSessionContext,
-    pushHistory: jest.fn(),
-    printSessionSummary: jest.fn(),
-    base_url: 'https://jira.test.com',
-    sessionLog: { child: jest.fn().mockReturnValue({ info: jest.fn(), error: jest.fn() }) },
-};
+const baseContext = createMockContext();
 
 beforeEach(() => {
     jest.clearAllMocks();
@@ -65,8 +50,8 @@ beforeEach(() => {
 
 describe('case19 — History & Coverage', () => {
     it('displays history when option a is selected', async () => {
-        const prompt = require('../../shared/prompt');
-        const metrics = require('../../shared/metrics');
+        const prompt = jest.mocked(promptModule);
+        const metrics = jest.mocked(metricsModule);
 
         prompt.showSelect.mockResolvedValueOnce('a').mockResolvedValueOnce('0');
 
@@ -91,7 +76,7 @@ describe('case19 — History & Coverage', () => {
         metrics.calculateFlakiness.mockReturnValueOnce([]);
         metrics.getTrends.mockReturnValueOnce([]);
 
-        const mod = require('./case19').default;
+        const mod = case19Module;
         await mod.handler(baseContext);
 
         expect(prompt.tableView).toHaveBeenCalled();
@@ -99,9 +84,9 @@ describe('case19 — History & Coverage', () => {
     });
 
     it('displays coverage when option b is selected', async () => {
-        const prompt = require('../../shared/prompt');
-        const coverage = require('../coverage');
-        const metrics = require('../../shared/metrics');
+        const prompt = jest.mocked(promptModule);
+        const coverage = jest.mocked(coverageModule);
+        const metrics = jest.mocked(metricsModule);
 
         prompt.showSelect.mockResolvedValueOnce('b').mockResolvedValueOnce('0');
 
@@ -114,10 +99,10 @@ describe('case19 — History & Coverage', () => {
             coveragePct: 60,
         });
 
-        const mod = require('./case19').default;
+        const mod = case19Module;
         await mod.handler(baseContext);
 
-        expect(coverage.analyzeCoverage).toHaveBeenCalledWith(mockJiraResource, 'TEST');
+        expect(coverage.analyzeCoverage).toHaveBeenCalledWith(baseContext.jiraResource, 'TEST');
         expect(metrics.saveCoverageSnapshot).toHaveBeenCalledWith({
             timestamp: expect.any(String),
             project: 'TEST',
@@ -130,33 +115,33 @@ describe('case19 — History & Coverage', () => {
     });
 
     it('handles empty metrics gracefully', async () => {
-        const prompt = require('../../shared/prompt');
-        const metrics = require('../../shared/metrics');
+        const prompt = jest.mocked(promptModule);
+        const metrics = jest.mocked(metricsModule);
 
         prompt.showSelect.mockResolvedValueOnce('a').mockResolvedValueOnce('0');
 
         metrics.loadMetrics.mockReturnValueOnce({ runs: [] });
 
-        const mod = require('./case19').default;
+        const mod = case19Module;
         await mod.handler(baseContext);
 
         expect(prompt.warn).toHaveBeenCalledWith('Nenhuma execução registrada.');
     });
 
     it('returns when user selects voltar', async () => {
-        const prompt = require('../../shared/prompt');
+        const prompt = jest.mocked(promptModule);
         prompt.showSelect.mockResolvedValueOnce('0');
 
-        const mod = require('./case19').default;
+        const mod = case19Module;
         await mod.handler(baseContext);
 
         expect(prompt.tableView).not.toHaveBeenCalled();
     });
 
     it('displays history comparison, flaky tests and trends when multiple runs exist', async () => {
-        const prompt = require('../../shared/prompt');
-        const metrics = require('../../shared/metrics');
-        const comparison = require('../../shared/run-comparison');
+        const prompt = jest.mocked(promptModule);
+        const metrics = jest.mocked(metricsModule);
+        const comparison = jest.mocked(comparisonModule);
 
         prompt.showSelect.mockResolvedValueOnce('a').mockResolvedValueOnce('0');
 
@@ -186,13 +171,13 @@ describe('case19 — History & Coverage', () => {
         });
 
         metrics.calculateFlakiness.mockReturnValueOnce([
-            { title: 'Flaky Test', passCount: 1, failCount: 1, rate: 0.5 },
+            { title: 'Flaky Test', passCount: 1, failCount: 1, skipCount: 0, totalRuns: 2, rate: 0.5 },
         ]);
         metrics.getTrends.mockReturnValueOnce([{ label: '2024-01-15', total: 10, failed: 2, passRate: 80 }]);
 
         comparison.compareRuns.mockResolvedValueOnce('Second run improved by 10%');
 
-        const mod = require('./case19').default;
+        const mod = case19Module;
         await mod.handler(baseContext);
 
         expect(comparison.compareRuns).toHaveBeenCalled();
@@ -201,22 +186,22 @@ describe('case19 — History & Coverage', () => {
     });
 
     it('handles coverage analysis error', async () => {
-        const prompt = require('../../shared/prompt');
-        const coverage = require('../coverage');
+        const prompt = jest.mocked(promptModule);
+        const coverage = jest.mocked(coverageModule);
 
         prompt.showSelect.mockResolvedValueOnce('b').mockResolvedValueOnce('0');
         coverage.analyzeCoverage.mockRejectedValueOnce(new Error('Jira API error'));
 
-        const mod = require('./case19').default;
+        const mod = case19Module;
         await mod.handler(baseContext);
 
         expect(prompt.printError).toHaveBeenCalledWith('Erro ao analisar cobertura', expect.any(Error));
     });
 
     it('handles compareRuns returning null (falsy analysis)', async () => {
-        const prompt = require('../../shared/prompt');
-        const metrics = require('../../shared/metrics');
-        const comparison = require('../../shared/run-comparison');
+        const prompt = jest.mocked(promptModule);
+        const metrics = jest.mocked(metricsModule);
+        const comparison = jest.mocked(comparisonModule);
 
         prompt.showSelect.mockResolvedValueOnce('a').mockResolvedValueOnce('0');
 
@@ -247,9 +232,9 @@ describe('case19 — History & Coverage', () => {
         metrics.calculateFlakiness.mockReturnValueOnce([]);
         metrics.getTrends.mockReturnValueOnce([]);
 
-        comparison.compareRuns.mockResolvedValueOnce(null);
+        comparison.compareRuns.mockResolvedValueOnce('');
 
-        const mod = require('./case19').default;
+        const mod = case19Module;
         await mod.handler(baseContext);
 
         expect(comparison.compareRuns).toHaveBeenCalled();
@@ -257,8 +242,8 @@ describe('case19 — History & Coverage', () => {
     });
 
     it('shows coverage without unmapped steps or gaps', async () => {
-        const prompt = require('../../shared/prompt');
-        const coverage = require('../coverage');
+        const prompt = jest.mocked(promptModule);
+        const coverage = jest.mocked(coverageModule);
 
         prompt.showSelect.mockResolvedValueOnce('b').mockResolvedValueOnce('0');
 
@@ -271,7 +256,7 @@ describe('case19 — History & Coverage', () => {
             coveragePct: 100,
         });
 
-        const mod = require('./case19').default;
+        const mod = case19Module;
         await mod.handler(baseContext);
 
         expect(prompt.warn).not.toHaveBeenCalled();
@@ -279,9 +264,9 @@ describe('case19 — History & Coverage', () => {
     });
 
     it('shows health score when enough runs exist', async () => {
-        const prompt = require('../../shared/prompt');
-        const metrics = require('../../shared/metrics');
-        const healthScore = require('../../shared/health-score');
+        const prompt = jest.mocked(promptModule);
+        const metrics = jest.mocked(metricsModule);
+        const healthScore = jest.mocked(healthScoreModule);
 
         prompt.showSelect.mockResolvedValueOnce('a').mockResolvedValueOnce('0');
 
@@ -316,7 +301,7 @@ describe('case19 — History & Coverage', () => {
             },
         });
 
-        const mod = require('./case19').default;
+        const mod = case19Module;
         await mod.handler(baseContext);
 
         expect(healthScore.calculateHealthScore).toHaveBeenCalled();
@@ -327,10 +312,10 @@ describe('case19 — History & Coverage', () => {
     });
 
     it('executes flaky auto-actions when confirmed', async () => {
-        const prompt = require('../../shared/prompt');
-        const metrics = require('../../shared/metrics');
-        const flakyActions = require('../../shared/flaky-auto-actions');
-        const comparison = require('../../shared/run-comparison');
+        const prompt = jest.mocked(promptModule);
+        const metrics = jest.mocked(metricsModule);
+        const flakyActions = jest.mocked(flakyActionsModule);
+        const comparison = jest.mocked(comparisonModule);
 
         prompt.showSelect.mockResolvedValueOnce('a').mockResolvedValueOnce('0');
         prompt.askConfirm.mockResolvedValueOnce(true);
@@ -359,12 +344,13 @@ describe('case19 — History & Coverage', () => {
                 passCount: 1,
                 failCount: 1,
                 totalRuns: 2,
+                lastErrorMessages: [],
                 jiraBugKey: 'BUG-1',
                 reason: 'flaky',
             },
         ]);
 
-        const mod = require('./case19').default;
+        const mod = case19Module;
         await mod.handler(baseContext);
 
         expect(flakyActions.executeFlakyActions).toHaveBeenCalled();
@@ -372,9 +358,9 @@ describe('case19 — History & Coverage', () => {
     });
 
     it('shows history without flaky or trends data', async () => {
-        const prompt = require('../../shared/prompt');
-        const metrics = require('../../shared/metrics');
-        const comparison = require('../../shared/run-comparison');
+        const prompt = jest.mocked(promptModule);
+        const metrics = jest.mocked(metricsModule);
+        const comparison = jest.mocked(comparisonModule);
 
         prompt.showSelect.mockResolvedValueOnce('a').mockResolvedValueOnce('0');
 
@@ -406,17 +392,17 @@ describe('case19 — History & Coverage', () => {
         metrics.getTrends.mockReturnValueOnce([]);
         comparison.compareRuns.mockResolvedValueOnce('analysis result');
 
-        const mod = require('./case19').default;
+        const mod = case19Module;
         await mod.handler(baseContext);
 
         expect(prompt.tableView).toHaveBeenCalled();
     });
 
     it('handles executeFlakyActions error', async () => {
-        const prompt = require('../../shared/prompt');
-        const metrics = require('../../shared/metrics');
-        const flakyActions = require('../../shared/flaky-auto-actions');
-        const comparison = require('../../shared/run-comparison');
+        const prompt = jest.mocked(promptModule);
+        const metrics = jest.mocked(metricsModule);
+        const flakyActions = jest.mocked(flakyActionsModule);
+        const comparison = jest.mocked(comparisonModule);
 
         prompt.showSelect.mockResolvedValueOnce('a').mockResolvedValueOnce('0');
         prompt.askConfirm.mockResolvedValueOnce(true);
@@ -439,16 +425,16 @@ describe('case19 — History & Coverage', () => {
         comparison.compareRuns.mockResolvedValueOnce('analysis');
         flakyActions.executeFlakyActions.mockRejectedValueOnce(new Error('API error'));
 
-        const mod = require('./case19').default;
+        const mod = case19Module;
         await mod.handler(baseContext);
 
         expect(prompt.printError).toHaveBeenCalledWith('Erro ao executar auto-actions', expect.any(Error));
     });
 
     it('handles run with total=0 to cover Rate branch', async () => {
-        const prompt = require('../../shared/prompt');
-        const metrics = require('../../shared/metrics');
-        const comparison = require('../../shared/run-comparison');
+        const prompt = jest.mocked(promptModule);
+        const metrics = jest.mocked(metricsModule);
+        const comparison = jest.mocked(comparisonModule);
 
         prompt.showSelect.mockResolvedValueOnce('a').mockResolvedValueOnce('0');
 
@@ -468,19 +454,19 @@ describe('case19 — History & Coverage', () => {
         });
         metrics.calculateFlakiness.mockReturnValueOnce([]);
         metrics.getTrends.mockReturnValueOnce([]);
-        comparison.compareRuns.mockResolvedValueOnce(null);
+        comparison.compareRuns.mockResolvedValueOnce('');
 
-        const mod = require('./case19').default;
+        const mod = case19Module;
         await mod.handler(baseContext);
 
         expect(prompt.tableView).toHaveBeenCalled();
     });
 
     it('handles flaky actions with non-matching action types', async () => {
-        const prompt = require('../../shared/prompt');
-        const metrics = require('../../shared/metrics');
-        const flakyActions = require('../../shared/flaky-auto-actions');
-        const comparison = require('../../shared/run-comparison');
+        const prompt = jest.mocked(promptModule);
+        const metrics = jest.mocked(metricsModule);
+        const flakyActions = jest.mocked(flakyActionsModule);
+        const comparison = jest.mocked(comparisonModule);
 
         prompt.showSelect.mockResolvedValueOnce('a').mockResolvedValueOnce('0');
         prompt.askConfirm.mockResolvedValueOnce(true);
@@ -503,27 +489,28 @@ describe('case19 — History & Coverage', () => {
         comparison.compareRuns.mockResolvedValueOnce('analysis');
         flakyActions.executeFlakyActions.mockResolvedValueOnce([
             {
-                action: 'skip' as const,
+                action: 'none' as const,
                 testTitle: 'FlakyTest',
                 flakyRate: 0.5,
                 passCount: 1,
                 failCount: 1,
                 totalRuns: 2,
-                reason: 'skip',
+                lastErrorMessages: [],
+                reason: 'no actionable flaky',
             },
         ]);
 
-        const mod = require('./case19').default;
+        const mod = case19Module;
         await mod.handler(baseContext);
 
         expect(prompt.info).toHaveBeenCalledWith('0 auto-action(s) executada(s) para testes flaky.');
     });
 
     it('shows health score section when 5+ runs exist', async () => {
-        const prompt = require('../../shared/prompt');
-        const metrics = require('../../shared/metrics');
-        const healthScore = require('../../shared/health-score');
-        const comparison = require('../../shared/run-comparison');
+        const prompt = jest.mocked(promptModule);
+        const metrics = jest.mocked(metricsModule);
+        const healthScore = jest.mocked(healthScoreModule);
+        const comparison = jest.mocked(comparisonModule);
 
         prompt.showSelect.mockResolvedValueOnce('a').mockResolvedValueOnce('0');
 
@@ -544,17 +531,19 @@ describe('case19 — History & Coverage', () => {
         comparison.compareRuns.mockResolvedValueOnce('analysis');
         healthScore.calculateHealthScore.mockReturnValueOnce({
             overall: 85,
-            grade: 'B',
+            grade: 'good',
             qualityGate: 'pass',
+            runCount: 5,
+            timestamp: '2024-01-05',
             dimensions: {
                 passRate: { score: 90, status: 'pass' as const },
                 flakyRate: { score: 80, status: 'pass' as const },
-                coverage: { score: 70, status: 'warn' as const },
+                coverage: { score: 70, status: 'pass' as const },
                 suiteSpeed: { score: 95, status: 'pass' as const },
             },
         });
 
-        const mod = require('./case19').default;
+        const mod = case19Module;
         await mod.handler(baseContext);
 
         expect(healthScore.calculateHealthScore).toHaveBeenCalled();
@@ -562,8 +551,8 @@ describe('case19 — History & Coverage', () => {
     });
 
     it('shows coverage with gapsByEpic data', async () => {
-        const prompt = require('../../shared/prompt');
-        const coverage = require('../coverage');
+        const prompt = jest.mocked(promptModule);
+        const coverage = jest.mocked(coverageModule);
 
         prompt.showSelect.mockResolvedValueOnce('b').mockResolvedValueOnce('0');
 
@@ -576,7 +565,7 @@ describe('case19 — History & Coverage', () => {
             coveragePct: 100,
         });
 
-        const mod = require('./case19').default;
+        const mod = case19Module;
         await mod.handler(baseContext);
 
         expect(prompt.info).toHaveBeenCalledWith(expect.stringContaining('Epic-1'));

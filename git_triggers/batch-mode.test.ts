@@ -237,8 +237,8 @@ describe('tryBatchMode', () => {
         mockPollPipeline.mockResolvedValue({ status: 'success', web_url: '' });
 
         jest.isolateModules(() => {
-            const testResults = jest.requireMock('./test-results');
-            testResults.collectTestResults = jest.fn(() =>
+            const testResults = jest.mocked(jest.requireMock<typeof import('./test-results')>('./test-results'));
+            testResults.collectTestResults.mockImplementation(() =>
                 Promise.resolve({ tests: [], summary: { total: 1, passed: 1, failed: 0, skipped: 0 } }),
             );
         });
@@ -248,11 +248,11 @@ describe('tryBatchMode', () => {
     });
 
     it('generates flakiness dashboard when pipeline completes', async () => {
-        const mockSessionState = jest.requireMock('./session-state');
+        const mockSessionState = jest.requireMock<typeof import('./session-state')>('./session-state');
         const origProjectName = mockSessionState.currentProjectName;
         mockSessionState.currentProjectName = 'proj1';
 
-        const mockMetrics = jest.requireMock('../shared/metrics');
+        const mockMetrics = jest.mocked(jest.requireMock<typeof import('../shared/metrics')>('../shared/metrics'));
         mockMetrics.loadMetrics.mockReturnValue({
             runs: [
                 {
@@ -309,11 +309,11 @@ describe('tryBatchMode', () => {
     });
 
     it('handles flakiness dashboard generation with publish target (line 149)', async () => {
-        const mockSessionState = jest.requireMock('./session-state');
+        const mockSessionState = jest.requireMock<typeof import('./session-state')>('./session-state');
         const origProjectName = mockSessionState.currentProjectName;
         mockSessionState.currentProjectName = 'proj1';
 
-        const mockMetrics = jest.requireMock('../shared/metrics');
+        const mockMetrics = jest.mocked(jest.requireMock<typeof import('../shared/metrics')>('../shared/metrics'));
         mockMetrics.loadMetrics.mockReturnValue({
             runs: [
                 {

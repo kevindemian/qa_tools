@@ -32,7 +32,7 @@ export interface MetricsStore {
     coverageHistory?: CoverageSnapshot[];
 }
 
-const FlatTestSchema: z.ZodType<FlatTest> = z.object({
+const FlatTestSchema = z.object({
     title: z.string(),
     state: z.union([z.literal('passed'), z.literal('failed'), z.literal('skipped')]),
     duration: z.number().nonnegative(),
@@ -45,7 +45,7 @@ const FlatTestSchema: z.ZodType<FlatTest> = z.object({
     logs: z.array(z.string()).optional(),
 });
 
-const MetricsRunSchema: z.ZodType<MetricsRun> = z.object({
+const MetricsRunSchema = z.object({
     timestamp: z.string(),
     project: z.string(),
     total: z.number().int().nonnegative(),
@@ -64,7 +64,7 @@ const CoverageSnapshotSchema: z.ZodType<CoverageSnapshot> = z.object({
     coveragePct: z.number().min(0).max(100),
 });
 
-const MetricsStoreSchema: z.ZodType<MetricsStore> = z.object({
+const MetricsStoreSchema = z.object({
     runs: z.array(MetricsRunSchema),
     coverageHistory: z.array(CoverageSnapshotSchema).optional(),
 });
@@ -117,7 +117,7 @@ export function loadMetrics(config?: Config): MetricsStore {
         if (!fs.existsSync(sp)) return { runs: [] };
         const raw = fs.readFileSync(sp, 'utf8');
         const parsed: unknown = JSON.parse(raw);
-        return MetricsStoreSchema.parse(parsed);
+        return MetricsStoreSchema.parse(parsed) as MetricsStore;
     } catch (err) {
         rootLogger.warn('Failed to load metrics: ' + (err instanceof Error ? err.message : String(err)));
         return { runs: [] };

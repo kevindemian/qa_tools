@@ -1,17 +1,24 @@
 /** Tests for shared/jira-helper.ts — safeJiraCall. */
 import { safeJiraCall } from './jira-helper';
+import type { printError as PrintErrorFn } from './prompt';
+import type { rootLogger } from './logger';
+type LoggerRoot = typeof rootLogger;
 
 const mockPushHistory = jest.fn();
 const mockPrintError = jest.fn();
 const mockRootLoggerError = jest.fn();
 
 jest.mock('./prompt', () => ({
-    printError: jest.fn((...args: unknown[]) => mockPrintError(...args)),
+    printError: jest.fn<void, Parameters<typeof PrintErrorFn>>((label, error) => {
+        mockPrintError(label, error);
+    }),
 }));
 
 jest.mock('./logger', () => ({
     rootLogger: {
-        error: jest.fn((...args: unknown[]) => mockRootLoggerError(...args)),
+        error: jest.fn<void, Parameters<LoggerRoot['error']>>((message, meta) => {
+            mockRootLoggerError(message, meta);
+        }),
     },
 }));
 

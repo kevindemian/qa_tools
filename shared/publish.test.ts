@@ -5,7 +5,7 @@ jest.mock('child_process', () => ({
 }));
 
 jest.mock('fs', () => {
-    const actual = jest.requireActual('fs');
+    const actual = jest.requireActual<typeof import('fs')>('fs');
     return {
         ...actual,
         cpSync: jest.fn(),
@@ -17,8 +17,8 @@ jest.mock('./logger', () => ({
     rootLogger: { info: jest.fn(), error: jest.fn() },
 }));
 
-const mockExecFileSync = jest.mocked(jest.requireMock('child_process').execFileSync);
-const mockLogger = jest.requireMock('./logger').rootLogger;
+const mockExecFileSync = jest.mocked(jest.requireMock<typeof import('child_process')>('child_process').execFileSync);
+const mockLogger = jest.mocked(jest.requireMock<typeof import('./logger')>('./logger').rootLogger);
 
 beforeEach(() => {
     jest.clearAllMocks();

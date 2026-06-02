@@ -1,6 +1,6 @@
 jest.mock('child_process');
 jest.mock('fs', () => {
-    const actual = jest.requireActual('fs');
+    const actual = jest.requireActual<typeof import('fs')>('fs');
     return { ...actual, existsSync: jest.fn(), readFileSync: jest.fn() };
 });
 jest.mock('../../shared/prompt');
@@ -25,6 +25,7 @@ import { ask, info, warn, title, printError } from '../../shared/prompt';
 import { analyzeTestImpact } from '../../shared/test-impact';
 import { loadMetrics, calculateFlakiness } from '../../shared/metrics';
 import { makeMockCommandContext } from '../../shared/test-utils';
+import case22Module from './case22';
 
 const mockExecFileSync = jest.mocked(execFileSync);
 const mockExistsSync = jest.mocked(existsSync);
@@ -51,7 +52,7 @@ describe('case22 — Test Impact Analysis', () => {
             confidence: 'high',
         });
 
-        const mod = require('./case22').default;
+        const mod = case22Module;
         await mod.handler(makeMockCommandContext());
 
         expect(mockAnalyzeTestImpact).toHaveBeenCalled();
@@ -69,7 +70,7 @@ describe('case22 — Test Impact Analysis', () => {
             confidence: 'low',
         });
 
-        const mod = require('./case22').default;
+        const mod = case22Module;
         await mod.handler(makeMockCommandContext());
 
         expect(mockExecFileSync).toHaveBeenCalledWith('git', ['diff', '--name-only', 'HEAD~1'], { encoding: 'utf8' });
@@ -80,7 +81,7 @@ describe('case22 — Test Impact Analysis', () => {
         mockExecFileSync.mockReturnValue('');
         mockExistsSync.mockReturnValue(false);
 
-        const mod = require('./case22').default;
+        const mod = case22Module;
         const result = await mod.handler(makeMockCommandContext());
 
         expect(result).toBe(false);
@@ -93,7 +94,7 @@ describe('case22 — Test Impact Analysis', () => {
             throw new Error('fatal: not a git repository');
         });
 
-        const mod = require('./case22').default;
+        const mod = case22Module;
         const result = await mod.handler(makeMockCommandContext());
 
         expect(result).toBe(false);
@@ -114,7 +115,7 @@ describe('case22 — Test Impact Analysis', () => {
         });
 
         const ctx = makeMockCommandContext();
-        const mod = require('./case22').default;
+        const mod = case22Module;
         await mod.handler(ctx);
 
         expect(ctx.ctx.inMemoryTasksId).toContain('PROJ-42');
@@ -134,7 +135,7 @@ describe('case22 — Test Impact Analysis', () => {
             confidence: 'low',
         });
 
-        const mod = require('./case22').default;
+        const mod = case22Module;
         await mod.handler(makeMockCommandContext());
 
         expect(info).toHaveBeenCalledWith(expect.stringContaining('Gap Analysis'));
@@ -168,7 +169,7 @@ describe('case22 — Test Impact Analysis', () => {
             confidence: 'high',
         });
 
-        const mod = require('./case22').default;
+        const mod = case22Module;
         await mod.handler(makeMockCommandContext());
 
         expect(warn).toHaveBeenCalledWith(expect.stringContaining('flaky'));
@@ -187,13 +188,13 @@ describe('case22 — Test Impact Analysis', () => {
             confidence: 'high',
         });
 
-        const mod = require('./case22').default;
+        const mod = case22Module;
         await mod.handler(makeMockCommandContext());
 
         expect(mockAnalyzeTestImpact).toHaveBeenCalledWith(
             expect.any(String),
             expect.objectContaining({
-                mappingPath: expect.stringContaining('test-mapping.json'),
+                mappingPath: 'config/test-mapping.json',
             }),
         );
     });

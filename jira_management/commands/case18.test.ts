@@ -1,3 +1,5 @@
+import { expect } from '@jest/globals';
+
 jest.mock('../../shared/prompt');
 jest.mock('../../shared/logger');
 
@@ -37,29 +39,15 @@ jest.mock('../jira_link_manager', () => ({
     matchPreconditionByDualThreshold: jest.fn(),
 }));
 
-const mockSessionContext: Record<string, unknown> = {
-    inMemoryTasksId: [],
-    inMemoryTasksText: [],
-    sessionCounters: [],
-    project_name: 'TEST',
-    isBusy: false,
-    results: [],
-    lastOperation: '',
-    createPackageManager: jest.fn(),
-};
+import * as promptModule from '../../shared/prompt';
+import * as llmClientModule from '../../shared/llm-client';
+import * as jiraLinkManagerModule from '../jira_link_manager';
+import * as aiFeedbackModule from '../../shared/ai-feedback';
+import * as fsModule from 'fs';
+import case18Module from './case18';
+import { createMockContext } from '../../shared/test-utils/factories/context-factory';
 
-const baseContext = {
-    jiraResource: {} as Record<string, jest.Mock>,
-    jiraResourceXray: {} as Record<string, jest.Mock>,
-    linkManager: {} as Record<string, jest.Mock>,
-    linkManagerXray: {} as Record<string, jest.Mock>,
-    csvResource: {} as Record<string, jest.Mock>,
-    ctx: mockSessionContext,
-    pushHistory: jest.fn(),
-    printSessionSummary: jest.fn(),
-    base_url: 'https://jira.test.com',
-    sessionLog: { child: jest.fn().mockReturnValue({ info: jest.fn(), error: jest.fn() }) },
-};
+const baseContext = createMockContext();
 
 beforeEach(() => {
     jest.clearAllMocks();
@@ -67,9 +55,9 @@ beforeEach(() => {
 
 describe('case18 — AI tests generator', () => {
     it('generates tests with AI successfully', async () => {
-        const prompt = require('../../shared/prompt');
-        const llm = require('../../shared/llm-client');
-        const fs = require('fs');
+        const prompt = jest.mocked(promptModule);
+        const llm = jest.mocked(llmClientModule);
+        const fs = jest.mocked(fsModule);
 
         prompt.ask.mockResolvedValueOnce('User wants to login').mockResolvedValueOnce('Must validate credentials');
 
@@ -83,7 +71,7 @@ describe('case18 — AI tests generator', () => {
             },
         ]);
 
-        const mod = require('./case18').default;
+        const mod = case18Module;
         await mod.handler(baseContext);
 
         expect(llm.llmPrompt).toHaveBeenCalledWith({
@@ -97,19 +85,19 @@ describe('case18 — AI tests generator', () => {
     });
 
     it('handles empty user story', async () => {
-        const prompt = require('../../shared/prompt');
+        const prompt = jest.mocked(promptModule);
         prompt.ask.mockResolvedValueOnce('');
 
-        const mod = require('./case18').default;
+        const mod = case18Module;
         await mod.handler(baseContext);
 
         expect(prompt.warn).toHaveBeenCalledWith('História vazia. Operação cancelada.');
     });
 
     it('handles LLM error', async () => {
-        const prompt = require('../../shared/prompt');
-        const llm = require('../../shared/llm-client');
-        const fs = require('fs');
+        const prompt = jest.mocked(promptModule);
+        const llm = jest.mocked(llmClientModule);
+        const fs = jest.mocked(fsModule);
 
         prompt.ask.mockResolvedValueOnce('User wants to login').mockResolvedValueOnce('Must validate');
 
@@ -117,15 +105,15 @@ describe('case18 — AI tests generator', () => {
 
         llm.llmPrompt.mockRejectedValueOnce(new Error('LLM API error'));
 
-        const mod = require('./case18').default;
+        const mod = case18Module;
         await mod.handler(baseContext);
 
         expect(prompt.printError).toHaveBeenCalled();
     });
 
     it('handles template read error', async () => {
-        const prompt = require('../../shared/prompt');
-        const fs = require('fs');
+        const prompt = jest.mocked(promptModule);
+        const fs = jest.mocked(fsModule);
 
         prompt.ask.mockResolvedValueOnce('User wants to login').mockResolvedValueOnce('Must validate');
 
@@ -133,16 +121,16 @@ describe('case18 — AI tests generator', () => {
             throw new Error('File not found');
         });
 
-        const mod = require('./case18').default;
+        const mod = case18Module;
         await mod.handler(baseContext);
 
         expect(prompt.printError).toHaveBeenCalled();
     });
 
     it('handles valid test cases from llmPrompt', async () => {
-        const prompt = require('../../shared/prompt');
-        const llm = require('../../shared/llm-client');
-        const fs = require('fs');
+        const prompt = jest.mocked(promptModule);
+        const llm = jest.mocked(llmClientModule);
+        const fs = jest.mocked(fsModule);
 
         prompt.ask.mockResolvedValueOnce('User wants to login').mockResolvedValueOnce('Must validate');
         fs.readFileSync.mockReturnValueOnce('You are a QA engineer.');
@@ -155,31 +143,31 @@ describe('case18 — AI tests generator', () => {
             },
         ]);
 
-        const mod = require('./case18').default;
+        const mod = case18Module;
         await mod.handler(baseContext);
 
         expect(baseContext.pushHistory).toHaveBeenCalledWith('ai-generate-tests', expect.any(String), 'ok');
     });
 
     it('23.14: prints error when llmPrompt throws (Zod validation failed after retry)', async () => {
-        const { llmPrompt } = require('../../shared/llm-client');
-        const { printError } = require('../../shared/prompt');
-        const prompt = require('../../shared/prompt');
-        const fs = require('fs');
+        const llmPrompt = jest.mocked(llmClientModule).llmPrompt;
+        const printError = jest.mocked(promptModule).printError;
+        const prompt = jest.mocked(promptModule);
+        const fs = jest.mocked(fsModule);
 
         prompt.ask.mockResolvedValueOnce('User wants to login').mockResolvedValueOnce('Must validate');
         fs.readFileSync.mockReturnValueOnce('You are a QA engineer.');
 
         llmPrompt.mockRejectedValueOnce(new Error('LLM response failed schema validation after retry'));
 
-        const mod = require('./case18').default;
+        const mod = case18Module;
         await mod.handler(baseContext);
 
         expect(printError).toHaveBeenCalledWith('Falha ao gerar casos de teste com IA', expect.any(Error));
     });
 
     it('warns when project name is empty', async () => {
-        const prompt = require('../../shared/prompt');
+        const prompt = jest.mocked(promptModule);
         const origProjectName = baseContext.ctx.project_name;
         baseContext.ctx.project_name = '';
 
@@ -188,7 +176,7 @@ describe('case18 — AI tests generator', () => {
             .mockResolvedValueOnce('Acceptance criteria')
             .mockResolvedValueOnce('');
 
-        const mod = require('./case18').default;
+        const mod = case18Module;
         await mod.handler(baseContext);
 
         expect(prompt.warn).toHaveBeenCalledWith('Projeto vazio. Operação cancelada.');
@@ -196,16 +184,14 @@ describe('case18 — AI tests generator', () => {
     });
 
     it('lists preconditions from Jira project', async () => {
-        const prompt = require('../../shared/prompt');
-        const llm = require('../../shared/llm-client');
-        const fs = require('fs');
+        const prompt = jest.mocked(promptModule);
+        const llm = jest.mocked(llmClientModule);
+        const fs = jest.mocked(fsModule);
 
         prompt.ask.mockResolvedValueOnce('User wants to login').mockResolvedValueOnce('Must validate credentials');
         fs.readFileSync.mockReturnValue('You are a QA engineer.');
 
-        baseContext.linkManager.listPreconditions = jest
-            .fn()
-            .mockResolvedValue([{ key: 'PC-1', summary: 'User is logged in' }]);
+        baseContext.linkManager.listPreconditions.mockResolvedValue([{ key: 'PC-1', summary: 'User is logged in' }]);
 
         llm.llmPrompt.mockResolvedValue([
             {
@@ -215,24 +201,24 @@ describe('case18 — AI tests generator', () => {
             },
         ]);
 
-        const mod = require('./case18').default;
+        const mod = case18Module;
         await mod.handler(baseContext);
 
         expect(prompt.info).toHaveBeenCalledWith(expect.stringContaining('pre-conditions encontradas'));
     });
 
     it('creates new preconditions when dual-threshold returns create', async () => {
-        const prompt = require('../../shared/prompt');
-        const llm = require('../../shared/llm-client');
-        const jiraLM = require('../jira_link_manager');
-        const fs = require('fs');
+        const prompt = jest.mocked(promptModule);
+        const llm = jest.mocked(llmClientModule);
+        const jiraLM = jest.mocked(jiraLinkManagerModule);
+        const fs = jest.mocked(fsModule);
 
         prompt.ask.mockResolvedValueOnce('User wants to login').mockResolvedValueOnce('Must validate');
         fs.readFileSync.mockReturnValue('You are a QA engineer.');
 
-        baseContext.linkManager.listPreconditions = jest
-            .fn()
-            .mockResolvedValue([{ key: 'PC-1', summary: 'User must be logged in' }]);
+        baseContext.linkManager.listPreconditions.mockResolvedValue([
+            { key: 'PC-1', summary: 'User must be logged in' },
+        ]);
 
         llm.llmPrompt.mockResolvedValue([
             {
@@ -248,9 +234,9 @@ describe('case18 — AI tests generator', () => {
             matchType: 'create',
         });
 
-        baseContext.linkManager.createPrecondition = jest.fn().mockResolvedValue('PC-NEW-1');
+        baseContext.linkManager.createPrecondition.mockResolvedValue('PC-NEW-1');
 
-        const mod = require('./case18').default;
+        const mod = case18Module;
         await mod.handler(baseContext);
 
         expect(jiraLM.matchPreconditionByDualThreshold).toHaveBeenCalled();
@@ -260,17 +246,17 @@ describe('case18 — AI tests generator', () => {
     });
 
     it('resolves matched preconditions to reference without creating', async () => {
-        const prompt = require('../../shared/prompt');
-        const llm = require('../../shared/llm-client');
-        const jiraLM = require('../jira_link_manager');
-        const fs = require('fs');
+        const prompt = jest.mocked(promptModule);
+        const llm = jest.mocked(llmClientModule);
+        const jiraLM = jest.mocked(jiraLinkManagerModule);
+        const fs = jest.mocked(fsModule);
 
         prompt.ask.mockResolvedValueOnce('User story').mockResolvedValueOnce('Criteria');
         fs.readFileSync.mockReturnValue('You are a QA engineer.');
 
-        baseContext.linkManager.listPreconditions = jest
-            .fn()
-            .mockResolvedValue([{ key: 'PC-1', summary: 'User must be logged in' }]);
+        baseContext.linkManager.listPreconditions.mockResolvedValue([
+            { key: 'PC-1', summary: 'User must be logged in' },
+        ]);
 
         llm.llmPrompt.mockResolvedValue([
             {
@@ -286,7 +272,7 @@ describe('case18 — AI tests generator', () => {
             matchType: 'exact',
         });
 
-        const mod = require('./case18').default;
+        const mod = case18Module;
         await mod.handler(baseContext);
 
         expect(jiraLM.matchPreconditionByDualThreshold).toHaveBeenCalledWith(
@@ -298,14 +284,14 @@ describe('case18 — AI tests generator', () => {
     });
 
     it('handles failure to list preconditions', async () => {
-        const prompt = require('../../shared/prompt');
-        const llm = require('../../shared/llm-client');
-        const fs = require('fs');
+        const prompt = jest.mocked(promptModule);
+        const llm = jest.mocked(llmClientModule);
+        const fs = jest.mocked(fsModule);
 
         prompt.ask.mockResolvedValueOnce('User story').mockResolvedValueOnce('Criteria');
         fs.readFileSync.mockReturnValue('You are a QA engineer.');
 
-        baseContext.linkManager.listPreconditions = jest.fn().mockRejectedValue(new Error('Jira unavailable'));
+        baseContext.linkManager.listPreconditions.mockRejectedValue(new Error('Jira unavailable'));
 
         llm.llmPrompt.mockResolvedValue([
             {
@@ -315,21 +301,21 @@ describe('case18 — AI tests generator', () => {
             },
         ]);
 
-        const mod = require('./case18').default;
+        const mod = case18Module;
         await mod.handler(baseContext);
 
         expect(prompt.warn).toHaveBeenCalledWith(expect.stringContaining('Não foi possível buscar pre-conditions'));
     });
 
     it('handles various precondition types in converted test cases', async () => {
-        const prompt = require('../../shared/prompt');
-        const llm = require('../../shared/llm-client');
-        const fs = require('fs');
+        const prompt = jest.mocked(promptModule);
+        const llm = jest.mocked(llmClientModule);
+        const fs = jest.mocked(fsModule);
 
         prompt.ask.mockResolvedValueOnce('User wants to login').mockResolvedValueOnce('Must validate');
         fs.readFileSync.mockReturnValue('You are a QA engineer.');
 
-        baseContext.linkManager.listPreconditions = jest.fn().mockResolvedValue([]);
+        baseContext.linkManager.listPreconditions.mockResolvedValue([]);
 
         llm.llmPrompt.mockResolvedValue([
             {
@@ -351,24 +337,22 @@ describe('case18 — AI tests generator', () => {
             },
         ]);
 
-        const mod = require('./case18').default;
+        const mod = case18Module;
         await mod.handler(baseContext);
 
         expect(baseContext.pushHistory).toHaveBeenCalledWith('ai-generate-tests', expect.any(String), 'ok');
     });
 
     it('handles precondition creation failure', async () => {
-        const prompt = require('../../shared/prompt');
-        const llm = require('../../shared/llm-client');
-        const jiraLM = require('../jira_link_manager');
-        const fs = require('fs');
+        const prompt = jest.mocked(promptModule);
+        const llm = jest.mocked(llmClientModule);
+        const jiraLM = jest.mocked(jiraLinkManagerModule);
+        const fs = jest.mocked(fsModule);
 
         prompt.ask.mockResolvedValueOnce('User story').mockResolvedValueOnce('Criteria');
         fs.readFileSync.mockReturnValue('You are a QA engineer.');
 
-        baseContext.linkManager.listPreconditions = jest
-            .fn()
-            .mockResolvedValue([{ key: 'PC-1', summary: 'User is logged in' }]);
+        baseContext.linkManager.listPreconditions.mockResolvedValue([{ key: 'PC-1', summary: 'User is logged in' }]);
 
         llm.llmPrompt.mockResolvedValue([
             {
@@ -384,26 +368,24 @@ describe('case18 — AI tests generator', () => {
             matchType: 'create',
         });
 
-        baseContext.linkManager.createPrecondition = jest.fn().mockRejectedValue(new Error('Jira error'));
+        baseContext.linkManager.createPrecondition.mockRejectedValue(new Error('Jira error'));
 
-        const mod = require('./case18').default;
+        const mod = case18Module;
         await mod.handler(baseContext);
 
         expect(prompt.warn).toHaveBeenCalledWith(expect.stringContaining('Falha ao criar pre-condition'));
     });
 
     it('converts test cases with various precondition resolutions', async () => {
-        const prompt = require('../../shared/prompt');
-        const llm = require('../../shared/llm-client');
-        const jiraLM = require('../jira_link_manager');
-        const fs = require('fs');
+        const prompt = jest.mocked(promptModule);
+        const llm = jest.mocked(llmClientModule);
+        const jiraLM = jest.mocked(jiraLinkManagerModule);
+        const fs = jest.mocked(fsModule);
 
         prompt.ask.mockResolvedValueOnce('User story').mockResolvedValueOnce('Criteria');
         fs.readFileSync.mockReturnValue('You are a QA engineer.');
 
-        baseContext.linkManager.listPreconditions = jest
-            .fn()
-            .mockResolvedValue([{ key: 'PC-1', summary: 'User is logged in' }]);
+        baseContext.linkManager.listPreconditions.mockResolvedValue([{ key: 'PC-1', summary: 'User is logged in' }]);
 
         llm.llmPrompt.mockResolvedValue([
             {
@@ -425,24 +407,24 @@ describe('case18 — AI tests generator', () => {
             matchType: 'create',
         });
 
-        baseContext.linkManager.createPrecondition = jest.fn().mockResolvedValue('PC-NEW-1');
+        baseContext.linkManager.createPrecondition.mockResolvedValue('PC-NEW-1');
 
-        const mod = require('./case18').default;
+        const mod = case18Module;
         await mod.handler(baseContext);
 
         expect(baseContext.linkManager.createPrecondition).toHaveBeenCalledWith('TEST', 'Newly created PC');
     });
 
     it('deduplicates identical summaries across test cases', async () => {
-        const prompt = require('../../shared/prompt');
-        const llm = require('../../shared/llm-client');
-        const jiraLM = require('../jira_link_manager');
-        const fs = require('fs');
+        const prompt = jest.mocked(promptModule);
+        const llm = jest.mocked(llmClientModule);
+        const jiraLM = jest.mocked(jiraLinkManagerModule);
+        const fs = jest.mocked(fsModule);
 
         prompt.ask.mockResolvedValueOnce('User story').mockResolvedValueOnce('Criteria');
         fs.readFileSync.mockReturnValue('You are a QA engineer.');
 
-        baseContext.linkManager.listPreconditions = jest.fn().mockResolvedValue([]);
+        baseContext.linkManager.listPreconditions.mockResolvedValue([]);
 
         llm.llmPrompt.mockResolvedValue([
             {
@@ -464,9 +446,9 @@ describe('case18 — AI tests generator', () => {
             matchType: 'create',
         });
 
-        baseContext.linkManager.createPrecondition = jest.fn().mockResolvedValue('PC-NEW-1');
+        baseContext.linkManager.createPrecondition.mockResolvedValue('PC-NEW-1');
 
-        const mod = require('./case18').default;
+        const mod = case18Module;
         await mod.handler(baseContext);
 
         /* Deduplicated: same summary → only one createPrecondition call */
@@ -475,15 +457,15 @@ describe('case18 — AI tests generator', () => {
     });
 
     it('records AI generation after successful test generation', async () => {
-        const prompt = require('../../shared/prompt');
-        const llm = require('../../shared/llm-client');
-        const jiraLM = require('../jira_link_manager');
-        const aiFeedback = require('../../shared/ai-feedback');
-        const fs = require('fs');
+        const prompt = jest.mocked(promptModule);
+        const llm = jest.mocked(llmClientModule);
+        const jiraLM = jest.mocked(jiraLinkManagerModule);
+        const aiFeedback = jest.mocked(aiFeedbackModule);
+        const fs = jest.mocked(fsModule);
 
         prompt.ask.mockResolvedValueOnce('User story text').mockResolvedValueOnce('Some criteria');
         fs.readFileSync.mockReturnValue('You are a QA engineer.');
-        baseContext.linkManager.listPreconditions = jest.fn().mockResolvedValue([]);
+        baseContext.linkManager.listPreconditions.mockResolvedValue([]);
 
         llm.llmPrompt.mockResolvedValue([
             {
@@ -498,9 +480,9 @@ describe('case18 — AI tests generator', () => {
             summary: 'Precondition A',
             matchType: 'create',
         });
-        baseContext.linkManager.createPrecondition = jest.fn().mockResolvedValue('PC-NEW-1');
+        baseContext.linkManager.createPrecondition.mockResolvedValue('PC-NEW-1');
 
-        const mod = require('./case18').default;
+        const mod = case18Module;
         await mod.handler(baseContext);
 
         expect(aiFeedback.recordAiGeneration).toHaveBeenCalledWith(

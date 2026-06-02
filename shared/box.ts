@@ -113,7 +113,7 @@ export function box(lines: string[], options: BoxOptions = {}): string {
         width: maxWidth,
     } = options;
     const totalWidth = boxContentWidth(lines, title, padding, maxWidth);
-    const b = borderStyle === 'none' ? NONE : BORDERS[borderStyle]!;
+    const b = borderStyle === 'none' ? NONE : (BORDERS[borderStyle] ?? NONE);
     const styled = color ? applyPalette(color) : palette.fg;
     const borderChalk = color ? applyPalette(color) : palette.border;
     const innerWidth = totalWidth - BOX_OVERHEAD - padding * BOX_PADDING_MULTIPLIER;
@@ -161,6 +161,6 @@ export function card(
         border: options.border || 'round',
         color: options.color || 'border',
         padding: 1,
-        width: options.width,
+        ...(options.width !== undefined ? { width: options.width } : {}),
     });
 }

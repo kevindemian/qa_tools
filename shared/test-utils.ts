@@ -7,7 +7,7 @@ type MockLogger = {
     warn: jest.Mock;
     debug: jest.Mock;
     writeFileOnly: jest.Mock;
-    filePath?: string;
+    filePath?: string | undefined;
 };
 
 /** Helper for null-handling tests: pass `null` where T is expected.

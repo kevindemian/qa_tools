@@ -4,7 +4,7 @@ jest.mock('fs');
 
 describe('detectFramework', () => {
     it('detects cypress from devDependencies', () => {
-        const fs = require('fs');
+        const fs = jest.mocked(jest.requireMock<typeof import('fs')>('fs'));
         fs.readFileSync.mockReturnValueOnce(
             JSON.stringify({
                 devDependencies: { cypress: '^13.0' },
@@ -16,7 +16,7 @@ describe('detectFramework', () => {
     });
 
     it('detects playwright from dependencies', () => {
-        const fs = require('fs');
+        const fs = jest.mocked(jest.requireMock<typeof import('fs')>('fs'));
         fs.readFileSync.mockReturnValueOnce(
             JSON.stringify({
                 dependencies: { '@playwright/test': '^1.40' },
@@ -27,7 +27,7 @@ describe('detectFramework', () => {
     });
 
     it('detects jest', () => {
-        const fs = require('fs');
+        const fs = jest.mocked(jest.requireMock<typeof import('fs')>('fs'));
         fs.readFileSync.mockReturnValueOnce(
             JSON.stringify({
                 devDependencies: { jest: '^29.0' },
@@ -38,7 +38,7 @@ describe('detectFramework', () => {
     });
 
     it('detects vitest', () => {
-        const fs = require('fs');
+        const fs = jest.mocked(jest.requireMock<typeof import('fs')>('fs'));
         fs.readFileSync.mockReturnValueOnce(
             JSON.stringify({
                 devDependencies: { vitest: '^1.0' },
@@ -49,7 +49,7 @@ describe('detectFramework', () => {
     });
 
     it('falls back to generic when no framework found', () => {
-        const fs = require('fs');
+        const fs = jest.mocked(jest.requireMock<typeof import('fs')>('fs'));
         fs.readFileSync.mockReturnValueOnce(
             JSON.stringify({
                 devDependencies: { eslint: '^8.0' },
@@ -60,7 +60,7 @@ describe('detectFramework', () => {
     });
 
     it('falls back to generic when file read fails', () => {
-        const fs = require('fs');
+        const fs = jest.mocked(jest.requireMock<typeof import('fs')>('fs'));
         fs.readFileSync.mockImplementationOnce(() => {
             throw new Error('ENOENT');
         });
@@ -71,7 +71,7 @@ describe('detectFramework', () => {
 
 describe('extractRepoFromGit', () => {
     it('extracts GitHub owner and repo from git config', () => {
-        const fs = require('fs');
+        const fs = jest.mocked(jest.requireMock<typeof import('fs')>('fs'));
         fs.readFileSync.mockReturnValueOnce(`[remote "origin"]
 \turl = git@github.com:myorg/my-repo.git
 \tfetch = +refs/heads/*:refs/remotes/origin/*
@@ -82,7 +82,7 @@ describe('extractRepoFromGit', () => {
     });
 
     it('extracts GitLab owner and repo', () => {
-        const fs = require('fs');
+        const fs = jest.mocked(jest.requireMock<typeof import('fs')>('fs'));
         fs.readFileSync.mockReturnValueOnce(`[remote "origin"]
 \turl = https://gitlab.com/myorg/my-repo.git
 \tfetch = +refs/heads/*:refs/remotes/origin/*
@@ -93,7 +93,7 @@ describe('extractRepoFromGit', () => {
     });
 
     it('returns empty when not a git repo', () => {
-        const fs = require('fs');
+        const fs = jest.mocked(jest.requireMock<typeof import('fs')>('fs'));
         fs.readFileSync.mockImplementationOnce(() => {
             throw new Error('ENOENT');
         });

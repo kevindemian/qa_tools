@@ -10,11 +10,11 @@ export async function glGetBranch(
     branch: string,
 ): Promise<{ name: string } | null> {
     const base = projectPath(owner, repo);
-    const data = await apiGet(client, base + `/repository/branches/${encodeURIComponent(branch)}`, {
+    const data = await apiGet<{ name: string }>(client, base + `/repository/branches/${encodeURIComponent(branch)}`, {
         operation: 'buscar branch',
         returnNull: true,
     });
-    return data ? { name: data.name as string } : null;
+    return data ? { name: data.name } : null;
 }
 
 export async function glGetDiff(
@@ -25,15 +25,10 @@ export async function glGetDiff(
     target: string,
 ): Promise<string> {
     const base = projectPath(owner, repo);
-    const data = await apiGet(client, base + '/repository/compare', {
+    const data = await apiGet<{ diffs?: Array<Record<string, unknown>> }>(client, base + '/repository/compare', {
         operation: 'comparar branches',
         params: { from: source, to: target },
         returnNull: true,
     });
-    return formatDiffResponse(
-        data?.diffs as Array<Record<string, unknown>> | undefined,
-        'diff',
-        'new_path',
-        DIFF_TRUNCATION_LIMIT,
-    );
+    return formatDiffResponse(data?.diffs, 'diff', 'new_path', DIFF_TRUNCATION_LIMIT);
 }

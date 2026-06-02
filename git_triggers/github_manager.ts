@@ -68,7 +68,7 @@ class GitHubManager extends GitProviderBase implements GitProvider {
         });
         this.log = new Logger({ resource: 'GitHub', projectId: repoFullName });
         const parts = repoFullName.split('/');
-        this.owner = parts[0]!;
+        this.owner = parts[0] as string;
         this.repo = parts.slice(1).join('/');
     }
 
@@ -76,10 +76,10 @@ class GitHubManager extends GitProviderBase implements GitProvider {
         return '/repos/' + this.owner + '/' + this.repo;
     }
 
-    async _patch(url: string, body?: unknown, opts?: { operation?: string }) {
+    async _patch<T = JsonObject>(url: string, body?: unknown, opts?: { operation?: string }): Promise<T> {
         try {
             const args = body !== undefined ? [body] : [];
-            const response = await this.client.patch(url, ...args);
+            const response = await this.client.patch<T>(url, ...args);
             return response.data;
         } catch (err) {
             return handleError(err, { context: opts?.operation || url });

@@ -69,15 +69,15 @@ export function validateJsonSchema(body: string, minTests: number): string | nul
 /** @internal exported for testing */
 export function validateJsonArray(body: string, minItems: number): string | null {
     try {
-        const parsed = JSON.parse(body);
+        const parsed: unknown = JSON.parse(body);
         if (!Array.isArray(parsed)) return 'Not an array';
         if (parsed.length < minItems) return 'Too few items: ' + parsed.length + ' < ' + minItems;
         for (let i = 0; i < parsed.length; i++) {
-            const item = parsed[i];
+            const item = parsed[i] as Record<string, unknown>;
             if (!item.title || typeof item.title !== 'string' || item.title.length < 5)
                 return 'item[' + i + '] invalid title';
             if (!Array.isArray(item.steps) || item.steps.length === 0) return 'item[' + i + '] invalid steps';
-            if (!item.expectedResult || item.expectedResult.length < 10)
+            if (!item.expectedResult || typeof item.expectedResult !== 'string' || item.expectedResult.length < 10)
                 return 'item[' + i + '] invalid expectedResult';
         }
         return null;
@@ -90,7 +90,7 @@ export function validateJsonArray(body: string, minItems: number): string | null
 export function validateClassify(body: string, expectedCategory: string): string | null {
     const regex = /^(ASSERTION|TIMEOUT|ENVIRONMENT|FLAKY|APPLICATION|UNKNOWN):\s/;
     if (!regex.test(body)) return 'Invalid format: expected CATEGORY: explanation';
-    const category = body.split(':')[0]!;
+    const category = body.split(':')[0] ?? '';
     if (category !== expectedCategory) return 'Wrong category: expected ' + expectedCategory + ' got ' + category;
     return null;
 }
@@ -108,7 +108,7 @@ async function runFailureAnalysisFixture(fixture: FailureAnalysisFixture): Promi
             callerId: 'benchmark-fa',
         });
         const error = validateJsonSchema(result, fixture.validate.minTests);
-        return { fixture: fixture.name, passed: !error, error: error || undefined, durationMs: Date.now() - start };
+        return { fixture: fixture.name, passed: !error, ...(error ? { error } : {}), durationMs: Date.now() - start };
     } catch (err) {
         return { fixture: fixture.name, passed: false, error: (err as Error).message, durationMs: Date.now() - start };
     }
@@ -124,7 +124,7 @@ async function runUserStoryFixture(fixture: UserStoryFixture): Promise<Benchmark
     try {
         const result = await llmPrompt({ tier: 'main', system, user: userMsg, callerId: 'benchmark-us' });
         const error = validateJsonArray(result, fixture.validate.minItems);
-        return { fixture: fixture.name, passed: !error, error: error || undefined, durationMs: Date.now() - start };
+        return { fixture: fixture.name, passed: !error, ...(error ? { error } : {}), durationMs: Date.now() - start };
     } catch (err) {
         return { fixture: fixture.name, passed: false, error: (err as Error).message, durationMs: Date.now() - start };
     }
@@ -137,7 +137,7 @@ async function runClassifyFixture(fixture: ClassifyFixture): Promise<BenchmarkRe
     try {
         const result = await llmPrompt({ tier: 'fast', system, user: userMsg, callerId: 'benchmark-cl' });
         const error = validateClassify(result, fixture.expectedCategory);
-        return { fixture: fixture.name, passed: !error, error: error || undefined, durationMs: Date.now() - start };
+        return { fixture: fixture.name, passed: !error, ...(error ? { error } : {}), durationMs: Date.now() - start };
     } catch (err) {
         return { fixture: fixture.name, passed: false, error: (err as Error).message, durationMs: Date.now() - start };
     }
@@ -202,7 +202,7 @@ export async function runBenchmark(): Promise<void> {
                 results.push({
                     fixture: batch[j]?.name || 'unknown',
                     passed: false,
-                    error: r.reason?.message || 'Unknown error',
+                    error: (r.reason as Error | undefined)?.message || 'Unknown error',
                     durationMs: 0,
                 });
             }

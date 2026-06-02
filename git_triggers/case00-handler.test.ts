@@ -11,8 +11,9 @@ jest.mock('../setup/main', () => {
 
 import { title, info, divider, printError } from '../shared/prompt';
 import { pushHistory } from './session-state';
+import { handleSetupWizard } from './case00-handler';
 
-const mockSetupModule = jest.requireMock('../setup/main');
+const mockSetupModule = jest.mocked(jest.requireMock<typeof import('../setup/main')>('../setup/main'));
 
 beforeEach(() => {
     jest.clearAllMocks();
@@ -22,7 +23,6 @@ describe('handleSetupWizard', () => {
     it('calls setup main and records history on success', async () => {
         mockSetupModule.main.mockResolvedValue(undefined);
 
-        const { handleSetupWizard } = require('./case00-handler');
         const result = await handleSetupWizard();
 
         expect(title).toHaveBeenCalledWith('Setup Wizard');
@@ -36,7 +36,6 @@ describe('handleSetupWizard', () => {
     it('handles setup failure gracefully', async () => {
         mockSetupModule.main.mockRejectedValue(new Error('Setup error'));
 
-        const { handleSetupWizard } = require('./case00-handler');
         const result = await handleSetupWizard();
 
         expect(result).toBe(false);
