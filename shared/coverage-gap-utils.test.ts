@@ -6,6 +6,7 @@ import {
     buildCoverageItems,
     calculateTotals,
     checkQualityGate,
+    getCoverageGateDefaults,
     loadEpicSummaries,
 } from './coverage-gap-utils';
 import type { CoverageGapItem, EpicCoverage } from './types';
@@ -156,6 +157,12 @@ describe('checkQualityGate', () => {
         const byEpic: Record<string, EpicCoverage> = { __no_epic__: makeEpic(10) };
         const result = checkQualityGate(byEpic, 50);
         expect(result.failingEpics).toEqual([]);
+    });
+});
+
+describe('getCoverageGateDefaults', () => {
+    it('returns default minCoveragePct of 50', () => {
+        expect(getCoverageGateDefaults()).toEqual({ minCoveragePct: 50 });
     });
 });
 

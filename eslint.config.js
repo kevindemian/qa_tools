@@ -106,13 +106,10 @@ module.exports = tseslint.config(
         rules: {
             '@typescript-eslint/no-require-imports': 'off',
             '@typescript-eslint/no-unused-expressions': 'off',
-            '@typescript-eslint/ban-ts-comment': 'off',
-            '@typescript-eslint/no-unused-vars': 'off',
             '@typescript-eslint/unbound-method': 'off',
             '@typescript-eslint/require-await': 'off',
             'no-console': 'off',
             'no-control-regex': 'off',
-            'no-empty': 'off',
         },
     },
     {

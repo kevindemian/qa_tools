@@ -27,9 +27,17 @@ export interface CoverageSnapshot {
     coveragePct: number;
 }
 
+export interface FailureClassification {
+    timestamp: string;
+    testTitle: string;
+    category: string;
+    project: string;
+}
+
 export interface MetricsStore {
     runs: MetricsRun[];
     coverageHistory?: CoverageSnapshot[];
+    failureClassifications?: FailureClassification[];
 }
 
 const FlatTestSchema = z.object({
@@ -64,9 +72,17 @@ const CoverageSnapshotSchema: z.ZodType<CoverageSnapshot> = z.object({
     coveragePct: z.number().min(0).max(100),
 });
 
+const FailureClassificationSchema = z.object({
+    timestamp: z.string(),
+    testTitle: z.string(),
+    category: z.string(),
+    project: z.string(),
+});
+
 const MetricsStoreSchema = z.object({
     runs: z.array(MetricsRunSchema),
     coverageHistory: z.array(CoverageSnapshotSchema).optional(),
+    failureClassifications: z.array(FailureClassificationSchema).optional(),
 });
 
 export interface FlakinessEntry {
@@ -124,7 +140,7 @@ export function loadMetrics(config?: Config): MetricsStore {
     }
 }
 
-function saveMetrics(store: MetricsStore, config?: Config): void {
+export function saveMetrics(store: MetricsStore, config?: Config): void {
     try {
         const dir = getMetricsDir(config);
         ensureDir(dir);

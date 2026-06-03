@@ -128,6 +128,10 @@ export function buildEpicRollup(items: CoverageGapItem[], epicsMap: Map<string, 
     return byEpic;
 }
 
+export function getCoverageGateDefaults(): { minCoveragePct: number } {
+    return { minCoveragePct: 50 };
+}
+
 export function checkQualityGate(
     byEpic: Record<string, EpicCoverage>,
     minCoveragePct: number,

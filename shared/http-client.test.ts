@@ -209,7 +209,9 @@ describe('HTTP Client', () => {
             });
             try {
                 await nonNull(errorHandler)(err);
-            } catch (e) {}
+            } catch {
+                void 0;
+            }
             expect(mockInstance).toHaveBeenCalled();
         });
 

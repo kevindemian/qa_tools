@@ -9,7 +9,8 @@ export function generatePrePushHook(ctx: SetupContext): string {
 echo "🔍 QA Tools: Running pre-push checks..."
 CURRENT_BRANCH=$(git rev-parse --abbrev-ref HEAD)
 
-npx tsx git_triggers/main.ts --batch --project ${ctx.projectName} --branch "$CURRENT_BRANCH"
+npx tsx git_triggers/main.ts --batch --project ${ctx.projectName} --branch "$CURRENT_BRANCH" --run-impacted-tests &&
+npx tsx scripts/quality-gate.ts
 EXIT_CODE=$?
 
 if [ $EXIT_CODE -ne 0 ]; then

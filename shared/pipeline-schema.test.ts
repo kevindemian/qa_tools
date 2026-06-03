@@ -28,7 +28,7 @@ describe('PipelineClassificationSchema', () => {
     });
 
     it('accepts classification without recommendation', () => {
-        const { recommendation, ...noRec } = valid;
+        const noRec = (({ recommendation: _rec, ...rest }) => rest)(valid);
         const result = PipelineClassificationSchema.parse(noRec);
         expect(result.recommendation).toBeUndefined();
     });

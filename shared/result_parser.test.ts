@@ -143,7 +143,7 @@ describe('parseCypressResults', () => {
     afterEach(() => {
         try {
             fs.unlinkSync(tmpFile);
-        } catch (e) {
+        } catch {
             /* ignore */
         }
     });
@@ -168,7 +168,7 @@ describe('parseCypressResults', () => {
         expect(result.error).toContain('Erro ao ler/parsear');
         try {
             fs.unlinkSync(invalidFile);
-        } catch (e) {
+        } catch {
             /* ignore */
         }
     });

@@ -1,0 +1,236 @@
+/**
+ * Requirement Quality Score — evaluates testability of requirements based on AI
+ * feedback analysis. Correlates acceptance rates, modification patterns, and
+ * prompt version effectiveness to produce a quality score per requirement.
+ *
+ * @module requirement-score
+ */
+
+import { sanitizeHtml } from './escape';
+import { buildHtmlPage, buildErrorPage } from './html-factory';
+import { buildCss } from './report-styles';
+import { MetricCard, MetricGrid, DataTable } from './primitives';
+import type { TableColumn, TableRow } from './primitives';
+import { rootLogger } from './logger';
+import type { AiGenerationRecord } from './types/llm';
+
+export interface RequirementScoreEntry {
+    requirementId: string;
+    userStory: string;
+    totalTests: number;
+    keptTests: number;
+    modifiedTests: number;
+    deletedTests: number;
+    acceptanceRate: number;
+    score: number;
+    scoreGrade: 'A' | 'B' | 'C' | 'D' | 'F';
+    promptVersion: string;
+}
+
+export interface RequirementScoreResult {
+    entries: RequirementScoreEntry[];
+    totalRequirements: number;
+    overallScore: number;
+    overallGrade: string;
+    averageAcceptanceRate: number;
+    totalGenerated: number;
+    totalKept: number;
+    totalModified: number;
+    totalDeleted: number;
+    timestamp: string;
+}
+
+function calculateGrade(score: number): 'A' | 'B' | 'C' | 'D' | 'F' {
+    if (score >= 90) return 'A';
+    if (score >= 75) return 'B';
+    if (score >= 60) return 'C';
+    if (score >= 40) return 'D';
+    return 'F';
+}
+
+function computeEntryScore(entry: Omit<RequirementScoreEntry, 'score' | 'scoreGrade'>): RequirementScoreEntry {
+    const acceptanceWeight = 0.5;
+    const retentionWeight = 0.3;
+    const volumeWeight = 0.2;
+
+    const normalizedAcceptance = entry.acceptanceRate;
+    const retentionRate = entry.totalTests > 0 ? ((entry.keptTests + entry.modifiedTests) / entry.totalTests) * 100 : 0;
+    const volumeScore = Math.min(100, (entry.totalTests / 10) * 100);
+
+    const score = Math.round(
+        normalizedAcceptance * acceptanceWeight + retentionRate * retentionWeight + volumeScore * volumeWeight,
+    );
+
+    return {
+        ...entry,
+        score,
+        scoreGrade: calculateGrade(score),
+    };
+}
+
+export function calculateRequirementScores(records: AiGenerationRecord[] | null | undefined): RequirementScoreResult {
+    const timestamp = new Date().toISOString();
+
+    if (!records || records.length === 0) {
+        return {
+            entries: [],
+            totalRequirements: 0,
+            overallScore: 0,
+            overallGrade: 'F',
+            averageAcceptanceRate: 0,
+            totalGenerated: 0,
+            totalKept: 0,
+            totalModified: 0,
+            totalDeleted: 0,
+            timestamp,
+        };
+    }
+
+    const entries: RequirementScoreEntry[] = [];
+
+    for (const record of records) {
+        const totalTests = record.generatedTests.length;
+        let keptCount = 0;
+        let modifiedCount = 0;
+        let deletedCount = 0;
+
+        if (record.feedback) {
+            for (const fb of record.feedback) {
+                if (fb.action === 'kept') keptCount++;
+                else if (fb.action === 'modified') modifiedCount++;
+                else if (fb.action === 'deleted') deletedCount++;
+            }
+        }
+
+        const reviewedTests = keptCount + modifiedCount + deletedCount;
+        const acceptanceRate = reviewedTests > 0 ? Math.round(((keptCount + modifiedCount) / reviewedTests) * 100) : 0;
+
+        entries.push(
+            computeEntryScore({
+                requirementId: record.id,
+                userStory: record.userStory.slice(0, 120),
+                totalTests,
+                keptTests: keptCount,
+                modifiedTests: modifiedCount,
+                deletedTests: deletedCount,
+                acceptanceRate,
+                promptVersion: record.promptVersion,
+            }),
+        );
+    }
+
+    entries.sort((a, b) => b.score - a.score);
+
+    const totalRequirements = entries.length;
+    const totalGenerated = entries.reduce((s, e) => s + e.totalTests, 0);
+    const totalKept = entries.reduce((s, e) => s + e.keptTests, 0);
+    const totalModified = entries.reduce((s, e) => s + e.modifiedTests, 0);
+    const totalDeleted = entries.reduce((s, e) => s + e.deletedTests, 0);
+    const averageAcceptanceRate =
+        totalRequirements > 0 ? Math.round(entries.reduce((s, e) => s + e.acceptanceRate, 0) / totalRequirements) : 0;
+
+    const overallScore =
+        totalRequirements > 0 ? Math.round(entries.reduce((s, e) => s + e.score, 0) / totalRequirements) : 0;
+    const overallGrade = calculateGrade(overallScore);
+
+    return {
+        entries,
+        totalRequirements,
+        overallScore,
+        overallGrade,
+        averageAcceptanceRate,
+        totalGenerated,
+        totalKept,
+        totalModified,
+        totalDeleted,
+        timestamp,
+    };
+}
+
+export function generateRequirementScoreHtml(
+    result: RequirementScoreResult | null | undefined,
+    title?: string,
+): string {
+    try {
+        if (!result) {
+            rootLogger.error('Requirement score result is null or undefined');
+            return buildErrorPage('Error generating report', 'Requirement Score Report Error');
+        }
+
+        const pageTitle = title || 'Requirement Quality Score';
+
+        const summaryCards = MetricGrid({
+            children:
+                MetricCard({
+                    label: 'Requirements',
+                    value: String(result.totalRequirements),
+                    severity: result.totalRequirements > 0 ? 'info' : 'default',
+                }) +
+                MetricCard({
+                    label: 'Overall Score',
+                    value: result.overallGrade,
+                    severity: result.overallScore >= 75 ? 'info' : result.overallScore >= 40 ? 'warn' : 'error',
+                }) +
+                MetricCard({
+                    label: 'Acceptance Rate',
+                    value: result.averageAcceptanceRate + '%',
+                    severity:
+                        result.averageAcceptanceRate >= 70
+                            ? 'info'
+                            : result.averageAcceptanceRate >= 40
+                              ? 'warn'
+                              : 'error',
+                }) +
+                MetricCard({
+                    label: 'Generated Tests',
+                    value: String(result.totalGenerated),
+                }),
+        });
+
+        const columns: TableColumn[] = [
+            { key: 'requirement', label: 'Requirement', width: '30%' },
+            { key: 'score', label: 'Score', align: 'right' },
+            { key: 'grade', label: 'Grade' },
+            { key: 'acceptance', label: 'Acceptance', align: 'right' },
+            { key: 'generated', label: 'Generated', align: 'right' },
+            { key: 'kept', label: 'Kept', align: 'right' },
+            { key: 'modified', label: 'Modified', align: 'right' },
+            { key: 'deleted', label: 'Deleted', align: 'right' },
+        ];
+
+        let tableHtml: string;
+        if (result.entries.length === 0) {
+            tableHtml = '<p style="color:var(--color-text-muted)">No requirement data available.</p>';
+        } else {
+            const rows: TableRow[] = result.entries.map((e, i) => ({
+                key: String(i),
+                cells: {
+                    requirement: sanitizeHtml(e.userStory),
+                    score: String(e.score),
+                    grade: e.scoreGrade,
+                    acceptance: e.acceptanceRate + '%',
+                    generated: String(e.totalTests),
+                    kept: String(e.keptTests),
+                    modified: String(e.modifiedTests),
+                    deleted: String(e.deletedTests),
+                },
+            }));
+
+            tableHtml = DataTable({ columns, rows, caption: 'Requirement quality scores per requirement' });
+        }
+
+        const bodyContent =
+            '<h1>' + sanitizeHtml(pageTitle) + '</h1>' + summaryCards + '<h2>Score Breakdown</h2>' + tableHtml;
+
+        return buildHtmlPage({
+            title: pageTitle,
+            styles: buildCss(),
+            theme: 'system',
+            bodyContent,
+            footer: 'Generated by QA Tools — Requirement Quality Score',
+        });
+    } catch (err) {
+        rootLogger.error('Failed to generate requirement score HTML: ' + (err as Error).message);
+        return buildErrorPage('Error generating report', 'Requirement Score Report Error');
+    }
+}

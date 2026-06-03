@@ -17,6 +17,7 @@ import { buildCss } from './report-styles';
 import { buildHtmlPage, buildErrorPage } from './html-factory';
 import { buildToggleScript } from './report-scripts';
 import { buildChartSection, buildTrendSection } from './report-chart';
+export { buildTrendSection } from './report-chart';
 import {
     buildSummaryCards,
     buildFailedSummary,
@@ -27,69 +28,12 @@ import {
     buildTabContents,
     buildHierarchySidebar,
     buildTimeline,
+    buildHealthSection,
 } from './report-sections';
 import { buildTestTable, precomputeCategories } from './report-table';
 import { buildDiffComparisonSection } from './report-diff';
 import Config from './config';
 import { Card, MetricCard, Badge } from './primitives';
-import { tokens } from './theme-tokens';
-
-function healthColor(score: number): string {
-    if (score >= 80) return tokens.color.chart.pass;
-    if (score >= 50) return tokens.color.semantic.warn.light;
-    return tokens.color.chart.fail;
-}
-
-function healthBg(score: number): string {
-    if (score >= 80) return '#f0fdf4';
-    if (score >= 50) return '#fefce8';
-    return '#fef2f2';
-}
-
-function buildHealthSection(health: import('./types').HealthScoreResult): string {
-    const qcIcon = health.qualityGate === 'pass' ? '✅' : '❌';
-    const qcText = health.qualityGate === 'pass' ? 'Pass' : 'Fail';
-    const qcColor = health.qualityGate === 'pass' ? 'var(--color-badge-pass-text)' : 'var(--color-badge-fail-text)';
-    const qcBg = health.qualityGate === 'pass' ? 'var(--color-badge-pass-bg)' : 'var(--color-badge-fail-bg)';
-    const overallColor = healthColor(health.overall);
-    const dims = health.dimensions;
-    const dimEntries: Array<{ label: string; score: number; status: string }> = [
-        { label: 'Pass Rate', score: dims.passRate.score, status: dims.passRate.status },
-        { label: 'Flaky Rate', score: dims.flakyRate.score, status: dims.flakyRate.status },
-        { label: 'Coverage', score: dims.coverage.score, status: dims.coverage.status },
-        { label: 'Suite Speed', score: dims.suiteSpeed.score, status: dims.suiteSpeed.status },
-    ];
-
-    let dimCards = '';
-    for (const d of dimEntries) {
-        const barColor = healthColor(d.score);
-        const bg = healthBg(d.score);
-        const icon = d.status === 'pass' ? '✅' : '❌';
-        dimCards += `<div style="background:${bg};border-radius:6px;padding:10px 12px">
-            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
-                <span style="font-size:0.75rem;color:var(--color-text-secondary)">${d.label}</span>
-                <span style="font-size:0.8rem;font-weight:700;color:${barColor}">${d.score} ${icon}</span>
-            </div>
-            <div style="height:6px;background:var(--color-border-subtle);border-radius:3px;overflow:hidden">
-                <div style="height:100%;width:${d.score}%;background:${barColor};border-radius:3px;transition:width 0.3s"></div>
-            </div>
-        </div>`;
-    }
-
-    const html = Card({
-        variant: 'default',
-        children:
-            `<div class="label" style="margin-bottom:12px;font-size:1rem">📊 Test Suite Health</div>` +
-            `<div style="display:flex;gap:16px;flex-wrap:wrap;align-items:center;margin-bottom:16px">` +
-            `<div style="text-align:center;min-width:100px"><div style="font-size:2.5rem;font-weight:800;color:${overallColor}">${health.overall}</div>` +
-            `<div style="font-size:0.8rem;color:var(--color-text-muted);text-transform:capitalize">${health.grade.replace(/_/g, ' ')}</div></div>` +
-            `<span style="padding:4px 12px;border-radius:9999px;font-size:0.85rem;font-weight:600;background:${qcBg};color:${qcColor}">${qcIcon} Quality Gate: ${qcText}</span>` +
-            `<span style="font-size:0.75rem;color:var(--color-text-muted)">${health.runCount} run(s) · ${health.timestamp.slice(0, 10)}</span>` +
-            `</div>` +
-            `<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:8px">${dimCards}</div>`,
-    });
-    return html;
-}
 
 export function generateHtmlReport(tests: FlatTest[], options?: ReportOptions): string {
     return generateReportWithFallback(tests, options);

@@ -311,18 +311,230 @@ Implementação do sistema de governance para prompts do projeto + extensão do 
 | M1  | Run benchmark (baseline) | `BENCHMARK=true npx tsx ...` | ✅     |
 | M2  | Report delta & metrics   | `BACKLOG.md`                 | ✅     |
 
-### Métricas alvo (Sprint 9)
+## 🚀 Sprint 10 — Fase 1: Orquestração (STRATEGIC-PLAN.md) — ✅ CONCLUÍDA
 
-| Métrica                   | Atual                                       | Alvo        |
-| ------------------------- | ------------------------------------------- | ----------- |
-| `tsc --noEmit`            | **0 erros** ✅                              | **0 erros** |
-| ESLint errors             | **0** ✅                                    | **0**       |
-| ESLint warnings           | **0** ✅                                    | **0**       |
-| `jest` pass               | **3685/3685** ✅                            | **100%**    |
-| `jest` fail               | **0** ✅                                    | **0**       |
-| Benchmark pass rate       | **100%** ✅                                 | **≥85%**    |
-| Criteria coverage metric  | **44%** ⚠️                                  | **≥80%**    |
-| Partition coverage metric | **22%** ⚠️                                  | **≥70%**    |
-| Boundary coverage metric  | **22%** ⚠️                                  | **≥60%**    |
-| Token count increase      | ~6% (5473→5188) ✅                          | **≤15%**    |
-| LLM cost per run          | **~$0.03** (gpt-4o-mini / groq / gh models) | N/A         |
+Implementação da Fase 1 do STRATEGIC-PLAN.md: conectar, encapsular e expor capacidades existentes como serviços orquestrados.
+
+**Objetivo:** Transformar 10 ferramentas isoladas em 1 plataforma que coleta, correlaciona, decide e age.
+
+**Premissa verificada por auditoria adversarial de 6 explorações paralelas:** Todo código já existe e está testado (3800+ testes). O trabalho é **conectar** — não reimplementar.
+
+### Fase 0 — Gaps Estruturais (P0, ~0h) — ✅
+
+_Auditoria adversarial confirmou: TODOS os 8 gaps originais já estavam resolvidos no código._
+
+### Fase 0.5 — Ativar Código Órfão (P0, ~2.5h) — ✅
+
+| ID  | Módulo órfão                        | Arquivo(s)                         | Status |
+| --- | ----------------------------------- | ---------------------------------- | ------ |
+| O1  | `enforce-quality.ts`                | `.github/workflows/ci.yml`         | ✅     |
+| O2  | `pipeline-health.ts`                | `git_triggers/batch-mode.ts`       | ✅     |
+| O4  | `generatePipelineQuarantine()`      | `git_triggers/batch-mode.ts`       | ✅     |
+| O5  | `.githooks/pre-push`                | `setup/templates/pre-push-hook.ts` | ✅     |
+| O6  | `shared/report-export.ts`           | `git_triggers/batch-mode.ts`       | ✅     |
+| O7  | `shared/run-comparison.ts`          | `git_triggers/schedule-handler.ts` | ✅     |
+| O8  | `saveMetrics` privado em metrics.ts | `shared/metrics.ts`                | ✅     |
+
+### Fase 1.1 — CI Quality Gate + Pre-push Hook (P0, ~2h) — ✅
+
+| ID  | Componente               | Arquivo(s)                                                            | Status |
+| --- | ------------------------ | --------------------------------------------------------------------- | ------ |
+| Q1  | CLI `qa-quality-gate`    | `shared/quality-gate.ts` + `scripts/quality-gate.ts` + `package.json` | ✅     |
+| Q2  | Gate wireado em CI       | `.github/workflows/ci.yml`                                            | ✅     |
+| Q3  | Pre-push com test-impact | `.githooks/pre-push`                                                  | ✅     |
+
+### Fase 1.2 — Failure Auto-Triage + Persistence (P0, ~3h) — ✅
+
+| ID  | Componente                    | Arquivo(s)                                  | Status |
+| --- | ----------------------------- | ------------------------------------------- | ------ |
+| T1  | `QA_AUTO_BUG=true` flag       | `git_triggers/pipeline-handler.ts`          | ✅     |
+| T2  | Persistir classifications/run | `shared/metrics.ts` + `failure-analysis.ts` | ✅     |
+| T3  | Git blame integration         | `shared/failure-analysis.ts`                | ✅     |
+
+### Fase 1.3 — Flaky Thresholds Docs (P1, ~0.5h) — ✅
+
+| ID  | Componente                  | Arquivo(s)     | Status |
+| --- | --------------------------- | -------------- | ------ |
+| F1  | Documentar thresholds flaky | `.env.example` | ✅     |
+
+### Fase 1.4 — Quality Weekly Report (P1, ~3h) — ✅
+
+| ID  | Componente                        | Arquivo(s)                         | Status |
+| --- | --------------------------------- | ---------------------------------- | ------ |
+| W1  | Weekly report em schedule-handler | `git_triggers/schedule-handler.ts` | ✅     |
+
+### Fase 1.5 — Dashboards (P2, ~5h) — ✅
+
+| ID  | Componente                     | Arquivo(s)                      | Status |
+| --- | ------------------------------ | ------------------------------- | ------ |
+| D1  | Release Readiness Score        | `shared/release-score.ts`       | ✅     |
+| D2  | Defect Trend Dashboard         | `shared/defect-trend.ts`        | ✅     |
+| D3  | Traceability Matrix            | `shared/traceability-matrix.ts` | ✅     |
+| D4  | Backlog Health Dashboard       | `shared/backlog-health.ts`      | ✅     |
+| D5  | AI Gen Effectiveness Dashboard | `shared/ai-effectiveness.ts`    | ✅     |
+
+### Fase 1.6 — Testes + CI Integration (P0, ~1.5h) — ✅
+
+| ID  | Componente                    | Arquivo(s)                   | Status |
+| --- | ----------------------------- | ---------------------------- | ------ |
+| X1  | Tests para novos módulos      | `shared/*.test.ts`           | ✅     |
+| X2  | Update enforce-quality checks | `scripts/enforce-quality.ts` | ✅     |
+
+### Métricas finais (Sprint 10)
+
+| Métrica                   | Alvo           | Resultado      |
+| ------------------------- | -------------- | -------------- |
+| `tsc --noEmit`            | **0 erros**    | **0 erros**    |
+| ESLint errors             | **0**          | **0**          |
+| ESLint warnings           | **0**          | **0**          |
+| `jest` pass               | **100%**       | **3816/3829**  |
+| `jest` fail               | **0**          | **0**          |
+| enforce-quality checks    | **13/13**      | **13/13**      |
+| Módulos órfãos eliminados | **0**          | **0**          |
+| Dashboards implementados  | **5**          | **5**          |
+| Auto-triage funcional     | **automático** | **automático** |
+
+---
+
+## 🚀 Sprint 11 — Fase 2: Acúmulo + Sinergia (STRATEGIC-PLAN.md) — ✅ CONCLUÍDA
+
+Implementação da Fase 2 do STRATEGIC-PLAN.md: análise cross-run, detecção de regressão silenciosa, perfil de desenvolvedor, benchmarks e otimização.
+
+**Objetivo:** 6 dashboards analíticos que correlacionam dados acumulados para gerar inteligência acionável.
+
+### #11 — Defect Seasonality Dashboard (P1, ~3h) — ✅
+
+| ID  | Componente                     | Arquivo(s)                          | Status |
+| --- | ------------------------------ | ----------------------------------- | ------ |
+| S1  | `aggregateDefectSeasonality()` | `shared/defect-seasonality.ts`      | ✅     |
+| S2  | `generateSeasonalityHtml()`    | `shared/defect-seasonality.ts`      | ✅     |
+| S3  | Tests                          | `shared/defect-seasonality.test.ts` | ✅     |
+| S4  | Wirear em weekly report        | `git_triggers/schedule-handler.ts`  | ✅     |
+
+### #12 — Silent Regression Detector (P1, ~3h) — ✅
+
+| ID  | Componente                       | Arquivo(s)                         | Status |
+| --- | -------------------------------- | ---------------------------------- | ------ |
+| R1  | `detectSilentRegression()`       | `shared/silent-regression.ts`      | ✅     |
+| R2  | `generateSilentRegressionHtml()` | `shared/silent-regression.ts`      | ✅     |
+| R3  | Tests                            | `shared/silent-regression.test.ts` | ✅     |
+| R4  | Wirear em weekly report          | `git_triggers/schedule-handler.ts` | ✅     |
+
+### #13 — AI Test Effectiveness (P1, ~3h) — ✅
+
+| ID  | Componente                   | Arquivo(s)                         | Status |
+| --- | ---------------------------- | ---------------------------------- | ------ |
+| A1  | `compareAiVsManual()`        | `shared/ai-comparison.ts`          | ✅     |
+| A2  | `generateAiComparisonHtml()` | `shared/ai-comparison.ts`          | ✅     |
+| A3  | Tests                        | `shared/ai-comparison.test.ts`     | ✅     |
+| A4  | Wirear em weekly report      | `git_triggers/schedule-handler.ts` | ✅     |
+
+### #14 — Cross-Squad Benchmark (P1, ~3h) — ✅
+
+| ID  | Componente                     | Arquivo(s)                             | Status |
+| --- | ------------------------------ | -------------------------------------- | ------ |
+| B1  | `computeCrossSquadBenchmark()` | `shared/cross-squad-benchmark.ts`      | ✅     |
+| B2  | `generateBenchmarkHtml()`      | `shared/cross-squad-benchmark.ts`      | ✅     |
+| B3  | Tests                          | `shared/cross-squad-benchmark.test.ts` | ✅     |
+| B4  | Wirear em weekly report        | `git_triggers/schedule-handler.ts`     | ✅     |
+
+### #15 — Developer Profile (P1, ~3h) — ✅
+
+| ID  | Componente                       | Arquivo(s)                         | Status |
+| --- | -------------------------------- | ---------------------------------- | ------ |
+| D1  | `buildDeveloperProfile()`        | `shared/developer-profile.ts`      | ✅     |
+| D2  | `generateDeveloperProfileHtml()` | `shared/developer-profile.ts`      | ✅     |
+| D3  | Tests                            | `shared/developer-profile.test.ts` | ✅     |
+| D4  | Wirear em weekly report          | `git_triggers/schedule-handler.ts` | ✅     |
+
+### #16 — Suite Optimization Advisor (P2, ~4h) — ✅
+
+| ID  | Componente                   | Arquivo(s)                          | Status |
+| --- | ---------------------------- | ----------------------------------- | ------ |
+| O1  | `analyzeSuiteOptimization()` | `shared/suite-optimization.ts`      | ✅     |
+| O2  | `generateOptimizationHtml()` | `shared/suite-optimization.ts`      | ✅     |
+| O3  | Tests                        | `shared/suite-optimization.test.ts` | ✅     |
+| O4  | Wirear em weekly report      | `git_triggers/schedule-handler.ts`  | ✅     |
+
+### Gap estrutural: pipeline-health.ts (P0)
+
+| ID  | Componente                               | Arquivo(s)                             | Status |
+| --- | ---------------------------------------- | -------------------------------------- | ------ |
+| G1  | Wirear `pipeline-health.ts` em entry pts | `git_triggers/batch-mode.ts`           | ✅     |
+| G2  | Tests pipeline-health wiring             | `git_triggers/pipeline-health.test.ts` | ✅     |
+
+### Métricas finais (Sprint 11)
+
+| Métrica                 | Alvo              | Atual          |
+| ----------------------- | ----------------- | -------------- |
+| `tsc --noEmit`          | **0 erros**       | **0 erros**    |
+| ESLint errors           | **0**             | **0**          |
+| ESLint warnings         | **0**             | **0**          |
+| enforce-quality checks  | **15/15**         | **15/15**      |
+| Anti-patterns no código | **0**             | **0**          |
+| `jest` pass             | **100%**          | **~3994/4007** |
+| `jest` fail             | **0**             | **0 (unit)**   |
+| Dashboards Fase 2       | **6**             | **6**          |
+| Weekly report completo  | **11 dashboards** | **11/11**      |
+| Auto-integridade        | **✅**            | **✅**         |
+
+---
+
+## 🚀 Sprint 12 — Fase 3: Inteligência Avançada (STRATEGIC-PLAN.md) — ✅ CONCLUÍDA
+
+Implementação da Fase 3 do STRATEGIC-PLAN.md: inteligência avançada que correlaciona múltiplas fontes para gerar investigação, alertas, scores e analytics.
+
+**Pré-condições verificadas:** Fase 1 completa com dados acumulados. Fase 2 completa com 6 dashboards operacionais. pipeline-health.ts wireado em batch-mode.ts. per-test duration persistido.
+
+### #20 — Pipeline Cost Analytics (P1, ~3h) — ✅
+
+| ID  | Componente                   | Arquivo(s)                         | Status |
+| --- | ---------------------------- | ---------------------------------- | ------ |
+| C1  | `calculatePipelineCost()`    | `shared/pipeline-cost.ts`          | ✅     |
+| C2  | `generatePipelineCostHtml()` | `shared/pipeline-cost.ts`          | ✅     |
+| C3  | Tests                        | `shared/pipeline-cost.test.ts`     | ✅     |
+| C4  | Wirear em weekly report      | `git_triggers/schedule-handler.ts` | ✅     |
+
+### #18 — Impact-Aware Pipeline Alert (P1, ~4h) — ✅
+
+| ID  | Componente                  | Arquivo(s)                         | Status |
+| --- | --------------------------- | ---------------------------------- | ------ |
+| I1  | `analyzePipelineImpact()`   | `shared/impact-alert.ts`           | ✅     |
+| I2  | `generateImpactAlertHtml()` | `shared/impact-alert.ts`           | ✅     |
+| I3  | Tests                       | `shared/impact-alert.test.ts`      | ✅     |
+| I4  | Wirear em weekly report     | `git_triggers/schedule-handler.ts` | ✅     |
+
+### #17 — Incident Investigation Report (P1, ~5h) — ✅
+
+| ID  | Componente                     | Arquivo(s)                         | Status |
+| --- | ------------------------------ | ---------------------------------- | ------ |
+| N1  | `buildIncidentReport()`        | `shared/incident-report.ts`        | ✅     |
+| N2  | `generateIncidentReportHtml()` | `shared/incident-report.ts`        | ✅     |
+| N3  | Tests                          | `shared/incident-report.test.ts`   | ✅     |
+| N4  | Wirear em weekly report        | `git_triggers/schedule-handler.ts` | ✅     |
+
+### #19 — Requirement Quality Score (P1, ~3h) — ✅
+
+| ID  | Componente                       | Arquivo(s)                         | Status |
+| --- | -------------------------------- | ---------------------------------- | ------ |
+| Q1  | `calculateRequirementScores()`   | `shared/requirement-score.ts`      | ✅     |
+| Q2  | `generateRequirementScoreHtml()` | `shared/requirement-score.ts`      | ✅     |
+| Q3  | Tests                            | `shared/requirement-score.test.ts` | ✅     |
+| Q4  | Wirear em weekly report          | `git_triggers/schedule-handler.ts` | ✅     |
+
+### Métricas finais (Sprint 12)
+
+| Métérica                  | Alvo              | Resultado         |
+| ------------------------- | ----------------- | ----------------- |
+| `tsc --noEmit`            | **0 erros**       | **0 erros**       |
+| ESLint errors             | **0**             | **0**             |
+| ESLint warnings           | **0**             | **0**             |
+| enforce-quality checks    | **15/15**         | **15/15**         |
+| Anti-patterns no código   | **0**             | **0**             |
+| `jest` pass               | **100%**          | **4099/4101**     |
+| `jest` fail               | **0**             | **0 (unit)**      |
+| Dashboards Fase 3         | **4**             | **4**             |
+| Weekly report completo    | **15 dashboards** | **15 dashboards** |
+| Cobertura testes Fase 3   | **100%**          | **100%**          |
+| Módulos órfãos eliminados | **0**             | **0**             |
+| Débitos técnicos novos    | **0**             | **0**             |

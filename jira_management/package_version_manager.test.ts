@@ -69,7 +69,6 @@ describe('PackageVersionManager', () => {
 
         it('handles non-array tasks', () => {
             writeReleaseNotes();
-            // @ts-expect-error — R9: testing runtime behavior with invalid input
             expect(pkg.updateReleaseNotes('v2.0', 'task')).toBeUndefined();
         });
 
