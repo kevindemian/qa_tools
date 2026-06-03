@@ -860,7 +860,7 @@ describe('llmPrompt', () => {
                     responseFormat: 'json',
                     schema: alwaysFailsSchema,
                 }),
-            ).rejects.toThrow('LLM response failed schema validation after retry');
+            ).rejects.toThrow('LLM response failed schema validation after progressive retry');
         });
 
         it('returns validated data on cache hit with valid schema', async () => {
@@ -950,7 +950,7 @@ describe('llmPrompt', () => {
                     responseFormat: 'json',
                     schema: alwaysFailsSchema,
                 }),
-            ).rejects.toThrow('LLM response failed schema validation after retry');
+            ).rejects.toThrow('LLM response failed schema validation after progressive retry');
         });
 
         it('returns validated data on cache hit with valid schema', async () => {

@@ -8,6 +8,10 @@
 - TUI foundation implementada (`palette.ts`, `box.ts`, `markdown.ts`, `chalk` + `cli-table3` em `prompt.ts`)
 - Design docs criados: `TUI_STYLE.md`, `WEB_STYLE.md`
 
+> ✅ **TODAS AS FASES IMPLEMENTADAS.** O TUI visual design foi concluído. `TUI_STYLE.md` e `WEB_STYLE.md` disponíveis como referência de estilo.
+>
+> Este documento é mantido como referência histórica do plano de design visual.
+
 ## Próximas Fases
 
 ---
@@ -18,8 +22,8 @@ Trazer os artefatos da branch `ts-migration` para o `main`.
 
 - [ ] Restaurar `TUI_STYLE.md` e `WEB_STYLE.md` do stash
 - [ ] Aplicar configs do `opencode.json`:
-  - `experimental.batch_tool: true`
-  - `formatter: true`
+    - `experimental.batch_tool: true`
+    - `formatter: true`
 - [ ] Atualizar `~/.config/opencode/opencode.jsonc` com `lsp: true`
 - [ ] Atualizar `AGENTS.md` — trocar foco de "TS Migration" para "Visual Design"
 
@@ -57,6 +61,7 @@ Implementar o que falta do `TUI_STYLE.md`:
 - [ ] `printError()` usar `box(lines, { border: 'double', color: 'red' })`
 
 **Commit (por pacote):**
+
 ```
 feat(ux): add ora spinners replacing custom spinner
 feat(ux): add cli-progress bars replacing custom progress
@@ -85,6 +90,7 @@ Implementar a camada web conforme `WEB_STYLE.md`.
 - [ ] `web/public/app.js` — SPA router
 
 **Commit:**
+
 ```
 feat(web): add HTTP server + API router
 feat(web): add frontend SPA (dashboard, menu, forms)
@@ -105,13 +111,13 @@ feat(web): add charts + result visualization
 
 ## Timeline Estimada
 
-| Fase | Dias | Commits | Complexidade |
-|------|------|---------|-------------|
-| Fase 0 | <1 | 1 | Muito Baixa |
-| Fase 1 | 3-4 | 5 | Baixa |
-| Fase 2 | 7-10 | 3 | Média |
-| Fase 3 | 2-3 | 2 | Baixa |
-| **Total** | **12-18** | **11** | |
+| Fase      | Dias      | Commits | Complexidade |
+| --------- | --------- | ------- | ------------ |
+| Fase 0    | <1        | 1       | Muito Baixa  |
+| Fase 1    | 3-4       | 5       | Baixa        |
+| Fase 2    | 7-10      | 3       | Média        |
+| Fase 3    | 2-3       | 2       | Baixa        |
+| **Total** | **12-18** | **11**  |              |
 
 ## Decisões Pendentes
 

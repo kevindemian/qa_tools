@@ -10,15 +10,15 @@ Mapeia nomes de projeto para o **ID do projeto no GitLab** ou **`owner/repo` no 
 
 ```json
 {
-  "qa_ibabs": "47849962",
-  "qa_tools": "62689551"
+    "qa_ibabs": "47849962",
+    "qa_tools": "62689551"
 }
 ```
 
 - **Chave**: nome interno do projeto (usado no menu do CLI).
 - **Valor**: no GitLab, é o ID numérico do projeto. No GitHub, usa-se o formato `owner/repo` (ex: `"my-org/my-repo"`).
 
-**Onde é lido**: `git_triggers/main.ts:142` — carregado com `JSON.parse(fs.readFileSync(...))`. Suporta sobrescrita por variáveis de ambiente `PROJECT_ID_<NOME>`.
+**Onde é lido**: `git_triggers/main.ts` — carregado com `JSON.parse(fs.readFileSync(...))`. Suporta sobrescrita por variáveis de ambiente `PROJECT_ID_<NOME>`.
 
 ---
 
@@ -28,8 +28,8 @@ Mapeia nomes de projeto para o provedor Git (`"gitlab"` ou `"github"`).
 
 ```json
 {
-  "qa_ibabs": { "provider": "gitlab" },
-  "qa_tools": { "provider": "gitlab" }
+    "qa_ibabs": { "provider": "gitlab" },
+    "qa_tools": { "provider": "gitlab" }
 }
 ```
 
@@ -44,11 +44,7 @@ Cada entrada define o provedor que será usado ao criar o manager (`GitLabManage
 Array de IDs de usuário do GitLab para atribuição automática de revisores em Merge Requests.
 
 ```json
-[
-  12161752,
-  14566471,
-  23136801
-]
+[12161752, 14566471, 23136801]
 ```
 
 > ⚠️ Este arquivo é específico para projetos que usam **GitLab**. No GitHub, a atribuição de revisores é feita pela API nativa do GitHub.

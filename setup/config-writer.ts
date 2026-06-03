@@ -77,7 +77,7 @@ export function writeDotEnvExample(ctx: Pick<SetupContext, 'projectName' | 'gitP
     lines.push('');
     lines.push('# Jira');
     lines.push('JIRA_BASE_URL=https://seu-jira.atlassian.net');
-    lines.push('JIRA_TOKEN=');
+    lines.push('JIRA_PERSONAL_TOKEN=');
     lines.push('JIRA_USER_EMAIL=email@exemplo.com');
     lines.push('');
     lines.push('# QA Tools');

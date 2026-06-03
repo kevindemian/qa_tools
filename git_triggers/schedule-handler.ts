@@ -23,6 +23,7 @@ import { analyzePipelineImpact, generateImpactAlertHtml } from '../shared/impact
 import { calculatePipelineCost, generatePipelineCostHtml } from '../shared/pipeline-cost';
 import { calculateRequirementScores, generateRequirementScoreHtml } from '../shared/requirement-score';
 import { generateGitMetricsRuns, generateGitFailureClassifications } from '../shared/git-metrics-adapter';
+import { runQualityGate, formatQualityGateText } from '../shared/quality-gate';
 import Config from '../shared/config';
 import JiraClient from '../shared/jira-client';
 import { writeReport } from '../shared/temp-dir';
@@ -302,6 +303,8 @@ export function generateWeeklyQualityReport(): void {
         const requirementScores = calculateRequirementScores([]);
 
         const sections: string[] = [];
+        const qualityGate = runQualityGate({ project: currentProjectName });
+        sections.push('<h2>Quality Gate</h2><pre>' + formatQualityGateText(qualityGate) + '</pre>');
         sections.push('<h2>Cross-Squad Benchmark</h2>' + generateBenchmarkHtml(benchmark));
         sections.push('<h2>Defect Seasonality</h2>' + generateSeasonalityHtml(seasonality));
         sections.push('<h2>Release Score</h2>' + generateReleaseScoreHtml(releaseScore));

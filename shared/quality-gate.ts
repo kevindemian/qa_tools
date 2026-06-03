@@ -4,7 +4,10 @@
 import { loadMetrics, calculateFlakiness } from './metrics';
 import { calculateHealthScore, type HealthScoreConfig } from './health-score';
 import { generateGitMetricsRuns } from './git-metrics-adapter';
+import Config from './config-accessor';
 import { rootLogger } from './logger';
+import { executeFlakyActions } from './flaky-auto-actions';
+import JiraClient from './jira-client';
 
 export interface QualityGateResult {
     overall: 'pass' | 'fail';
@@ -28,13 +31,13 @@ export interface QualityGateOptions {
 
 function loadEnvThresholds(): Partial<HealthScoreConfig> {
     const cfg: Partial<HealthScoreConfig> = {};
-    const passRate = process.env.QA_GATE_MIN_PASS_RATE;
+    const passRate = Config.get('qaGateMinPassRate');
     if (passRate) cfg.minPassRateGate = Number(passRate);
-    const flaky = process.env.QA_GATE_MAX_FLAKY_PCT;
+    const flaky = Config.get('qaGateMaxFlakyPct');
     if (flaky) cfg.maxFlakyGate = Number(flaky);
-    const coverage = process.env.QA_GATE_MIN_COVERAGE;
+    const coverage = Config.get('qaGateMinCoverage');
     if (coverage) cfg.minCoverageGate = Number(coverage);
-    const speed = process.env.QA_GATE_MAX_SUITE_SPEED;
+    const speed = Config.get('qaGateMaxSuiteSpeed');
     if (speed) cfg.maxSuiteSpeedGate = Number(speed);
     return cfg;
 }
@@ -93,6 +96,27 @@ export function runQualityGate(options?: QualityGateOptions): QualityGateResult 
         const flakyEntries = calculateFlakiness({ runs: projectRuns }, 2);
         const flakyPct = projectRuns.length > 0 ? (flakyEntries.length / Math.max(projectRuns.length, 1)) * 100 : 0;
         const flakyCheck = flakyPct <= maxFlakyPct ? 'pass' : 'fail';
+        if (flakyCheck === 'fail' && Config.get('jiraBaseUrl') && Config.get('jiraPersonalToken')) {
+            const jira = new JiraClient(
+                Config.get('jiraPersonalToken'),
+                Config.get('jiraBaseUrl') + '/rest/api/2',
+                Config.get('jiraMode'),
+            );
+            const project = options?.project ?? 'unknown';
+            const store = loadMetrics();
+            const projectRuns = store.runs.filter((r) => r.project === project);
+            if (projectRuns.length >= 5) {
+                executeFlakyActions({ runs: projectRuns }, jira, project, {
+                    autoCreateBug: true,
+                    minTotalRuns: 10,
+                    dedupSearch: true,
+                }).catch((err) => {
+                    rootLogger.warn(
+                        'Flaky auto-actions trigger failed: ' + (err instanceof Error ? err.message : String(err)),
+                    );
+                });
+            }
+        }
         checks.push({
             name: 'flaky-rate',
             status: flakyCheck,

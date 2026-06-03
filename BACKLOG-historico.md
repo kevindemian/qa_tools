@@ -1774,6 +1774,27 @@ Transform script applied 144 changes across 36 files. All `(expr as jest.Mock)`,
 | `jest` (unitários)  | 3467 ✅, 0 ❌  |
 | `jira-auth.test.ts` | 7 testes, 100% |
 
+## ✅ Sprint 12.5 — Git Metrics Adapter (P0) — Concluído 2026-06-03
+
+Adaptador git → MetricsRun[] + FailureClassification[] para autovalidação usando histórico do projeto. Fallback automático no quality-gate e schedule-handler.
+
+| Componente                            | Arquivo                              | Status |
+| ------------------------------------- | ------------------------------------ | ------ |
+| `generateGitMetricsRuns()`            | `shared/git-metrics-adapter.ts`      | ✅     |
+| `generateGitFailureClassifications()` | `shared/git-metrics-adapter.ts`      | ✅     |
+| Tests (23)                            | `shared/git-metrics-adapter.test.ts` | ✅     |
+| Fallback no quality-gate              | `shared/quality-gate.ts`             | ✅     |
+| Fallback no schedule-handler          | `git_triggers/schedule-handler.ts`   | ✅     |
+
+| Métrica         | Resultado    |
+| --------------- | ------------ |
+| `tsc --noEmit`  | 0 erros      |
+| ESLint          | 0 erros/warn |
+| enforce-quality | 15/15        |
+| `jest` pass     | 4122/4124    |
+| `jest` fail     | 0            |
+| CI              | ✅ pass      |
+
 ## ✅ Sprint 2 (Completo) + Sprint 3 (Completo) — Migrados 2026-06-02
 
 **Sprint 2**: 8 fases, ~35h, 25/25 itens de débito eliminados ✅

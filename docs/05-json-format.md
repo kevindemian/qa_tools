@@ -6,24 +6,24 @@ O arquivo JSON deve conter um **array de objetos**, onde cada objeto representa 
 
 ## 2. Propriedades
 
-| Propriedade | Tipo | Obrigatório | Descrição |
-|---|---|---|---|
-| `title` | `string` | Sim | Título do caso de teste |
-| `description` | `string` | Não | Descrição detalhada do teste |
-| `precondition` | `string` | Não | Pré-condição. Se for uma key Jira válida (ex: `CALC-123`), é tratada como referência a outro issue. Caso contrário, é tratada como texto inline. |
-| `group` | `string` | Não | Nome do grupo/ suite para organização |
-| `steps` | `array` | Sim | Array de objetos de passo (ver formato abaixo) |
-| `labels` | `array` | Não | Array de strings com labels Jira |
-| `linkedIssues` | `array` | Não | Array de strings (keys Jira) ou objetos `{ key, linkType? }`. O `linkType` padrão é `Tests`. |
+| Propriedade    | Tipo     | Obrigatório | Descrição                                                                                                                                        |
+| -------------- | -------- | ----------- | ------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `title`        | `string` | Sim         | Título do caso de teste                                                                                                                          |
+| `description`  | `string` | Não         | Descrição detalhada do teste                                                                                                                     |
+| `precondition` | `string` | Não         | Pré-condição. Se for uma key Jira válida (ex: `CALC-123`), é tratada como referência a outro issue. Caso contrário, é tratada como texto inline. |
+| `group`        | `string` | Não         | Nome do grupo/ suite para organização                                                                                                            |
+| `steps`        | `array`  | Sim         | Array de objetos de passo (ver formato abaixo)                                                                                                   |
+| `labels`       | `array`  | Não         | Array de strings com labels Jira                                                                                                                 |
+| `linkedIssues` | `array`  | Não         | Array de strings (keys Jira) ou objetos `{ key, linkType? }`. O `linkType` padrão é `Tests`.                                                     |
 
 ### Formato de cada passo (`steps[]`)
 
 Cada item do array `steps` é um objeto com as seguintes chaves:
 
-| Campo | Tipo | Descrição |
-|---|---|---|
-| `Action` | `string` | Ação a ser executada |
-| `Data` | `string` | Dado de entrada (opcional) |
+| Campo            | Tipo     | Descrição                     |
+| ---------------- | -------- | ----------------------------- |
+| `Action`         | `string` | Ação a ser executada          |
+| `Data`           | `string` | Dado de entrada (opcional)    |
 | `ExpectedResult` | `string` | Resultado esperado (opcional) |
 
 > **Atenção:** as chaves usam **PascalCase** (`Action`, `Data`, `ExpectedResult`) por refletirem os cabeçalhos do formato CSV interno.
@@ -100,7 +100,7 @@ Cada item do array `steps` é um objeto com as seguintes chaves:
 
 ## 4. Template
 
-O template oficial está disponível em `jira_management/test_cases_template.json`.
+O template oficial está disponível em `test_cases_template.json` na raiz do projeto.
 
 ---
 

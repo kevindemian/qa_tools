@@ -3,14 +3,17 @@ import fs from 'fs';
 import path from 'path';
 import { execFileSync } from 'child_process';
 import type { FlatTest } from './result_parser';
-import { llmPrompt } from './llm-client';
+import { llmPrompt, type LlmPromptOptions } from './llm-client';
 import { reviewWithLlm, type ReviewResult } from './llm-review';
 import { rootLogger } from './logger';
 import { generateReportWithFallback } from './report-generator';
 import { snapshotLlmMetrics } from './llm-metrics';
+import Config from './config-accessor';
 import { sanitizeForLlm } from './sanitize';
 import { withSpinner } from './spinner';
 import { ClassifyResponseSchema } from './classify.schema';
+import { consensusGenerate } from './llm-self-consistency';
+import { ArtifactValidator, type ValidationContext, pass, fail } from './artifact-validator';
 
 export interface AnalysisReport {
     content: string;
@@ -38,7 +41,7 @@ export function getCommitAuthor(diff: string): string {
         }
         if (files.size === 0) return 'unknown';
 
-        const ignoreRevs = process.env.QA_GIT_BLAME_IGNORE || '';
+        const ignoreRevs = String(Config.get('qaGitBlameIgnore') || '');
         const ignoreArgs = ignoreRevs ? ['--ignore-rev', ignoreRevs] : [];
 
         let author = 'unknown';
@@ -67,6 +70,18 @@ export function getCommitAuthor(diff: string): string {
         return 'unknown';
     }
 }
+
+/**
+ * Module-level ArtifactValidator for classify failure responses.
+ * Validates that the LLM output matches the ClassifyResponseSchema (CATEGORY: explanation).
+ */
+const classifyValidator = new ArtifactValidator<string>('analysis');
+classifyValidator.addInvariant('CLASSIFY-SCHEMA', (artifact: string, _context: ValidationContext) => {
+    const parsed = ClassifyResponseSchema.safeParse(artifact);
+    return parsed.success
+        ? [pass('CLASSIFY-SCHEMA', 'Response matches classification schema')]
+        : [fail('CLASSIFY-SCHEMA', 'Response does not match classification schema: ' + parsed.error.message)];
+});
 
 const PROMPT_DIR = path.resolve(__dirname, 'prompts');
 
@@ -132,7 +147,10 @@ export async function analyzeFailuresWithReport(tests: FlatTest[], context?: Llm
     };
 }
 
-/** Classify a single test failure into a category (ASSERTION, TIMEOUT, ENVIRONMENT, etc.) via LLM. */
+/** Classify a single test failure into a category (ASSERTION, TIMEOUT, ENVIRONMENT, etc.) via self-consistency LLM.
+ *  Uses self-consistency (n=3 parallel LLM calls with majority voting) when possible, falling back to
+ *  single llmPrompt call if the consensus mechanism fails. Logs the divergence level when self-consistency
+ *  is used. */
 export async function classifyFailure(title: string, error: string): Promise<string> {
     const systemTemplate = readPrompt('classify.md');
     if (!systemTemplate) return 'UNKNOWN: Could not load prompt template';
@@ -140,16 +158,41 @@ export async function classifyFailure(title: string, error: string): Promise<str
     const baseData = 'Test Title:\n' + title + '\n\nError:\n' + sanitizeForLlm(error);
 
     try {
-        const result = await llmPrompt({
-            tier: 'fast',
-            system: systemTemplate,
-            user: baseData,
-            callerId: 'classify',
-            schema: ClassifyResponseSchema,
-        });
-        return result;
+        const context: ValidationContext = {
+            inputRaw: baseData,
+            outputRaw: {},
+            artifactType: 'analysis',
+        };
+        const result = await consensusGenerate(
+            {
+                tier: 'fast',
+                system: systemTemplate,
+                user: baseData,
+                callerId: 'classify',
+                schema: ClassifyResponseSchema,
+            } as LlmPromptOptions,
+            classifyValidator,
+            context,
+            3,
+        );
+        if (result.divergence !== 'none') {
+            rootLogger.info('classifyFailure: self-consistency divergence level = ' + result.divergence);
+        }
+        return result.winner;
     } catch {
-        rootLogger.warn('classifyFailure: llmPrompt + Zod validation failed, falling back to UNKNOWN');
-        return 'UNKNOWN: Could not classify failure after retry';
+        rootLogger.warn('Self-consistency failed for classifyFailure, falling back to regular llmPrompt');
+        try {
+            const fallbackResult = await llmPrompt({
+                tier: 'fast',
+                system: systemTemplate,
+                user: baseData,
+                callerId: 'classify',
+                schema: ClassifyResponseSchema,
+            });
+            return fallbackResult;
+        } catch {
+            rootLogger.warn('classifyFailure: llmPrompt + Zod validation failed, falling back to UNKNOWN');
+            return 'UNKNOWN: Could not classify failure after retry';
+        }
     }
 }

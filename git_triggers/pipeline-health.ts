@@ -2,6 +2,9 @@
  *  Testable with fixtures — no GitHub API needed for the logic layer. */
 import { sanitizeHtml } from '../shared/escape';
 import { buildHtmlPage } from '../shared/html-factory';
+import { loadMetrics } from '../shared/metrics';
+import { generateGitMetricsRuns } from '../shared/git-metrics-adapter';
+import type { MetricsRun } from '../shared/metrics';
 
 const ERROR_LOG_PATTERN = /(?:Error|Failure|Timeout|Exception|FATAL|OOMKilled):?\s*(.+)$/gim;
 
@@ -38,6 +41,24 @@ export interface PipelineRunExtended {
     run_started_at?: string;
     updated_at?: string;
     event?: string;
+}
+
+/* ------------------------------------------------------------------ */
+/*  Git metrics fallback (quality-gate pattern)                        */
+/* ------------------------------------------------------------------ */
+
+/** Load MetricsRun[] from the metrics store with git-based fallback.
+ *  If no project runs exist in the store, generates fallback runs from
+ *  git commit history via `generateGitMetricsRuns()`. Follows the same
+ *  pattern as quality-gate.ts. */
+export function loadMetricsWithGitFallback(projectName?: string): MetricsRun[] {
+    const store = loadMetrics();
+    const projectRuns = projectName ? store.runs.filter((r) => r.project === projectName) : store.runs;
+    if (projectRuns.length === 0) {
+        const gitRuns = generateGitMetricsRuns({ projectName: projectName ?? 'git' });
+        if (gitRuns.length > 0) return gitRuns;
+    }
+    return projectRuns;
 }
 
 /* ------------------------------------------------------------------ */

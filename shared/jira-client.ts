@@ -4,11 +4,15 @@
  *
  *  Supports two authentication modes:
  *  - `'server'` (default): `Authorization: Bearer <PAT>`
- *  - `'cloud'`:            `Authorization: Basic <base64(email:apiToken)>` */
+ *  - `'cloud'`:            `Authorization: Basic <base64(email:apiToken)>`
+ *
+ *  Circuit breaker key: 'jira-client' — all HTTP methods check the breaker before
+ *  issuing requests and record success/failure after completion. */
 import { createHttpClient } from './http-client';
 import { extractErrorMessage } from './prompt';
 import { rootLogger } from './logger';
 import { createJiraAuthHeader } from './jira-auth';
+import { checkCircuitBreaker, recordCircuitFailure, recordCircuitSuccess } from './circuit-breaker';
 import type { JsonObject, JiraResourceLike, SearchIssuesResponse } from './types';
 
 class JiraClient implements JiraResourceLike {
@@ -38,21 +42,28 @@ class JiraClient implements JiraResourceLike {
     }
 
     async getJiraResource<T = JsonObject>(resourceUrl: string): Promise<T> {
+        checkCircuitBreaker('jira-client');
         try {
             const response = await this.axiosInstance.get<T>(`/${resourceUrl}`);
+            recordCircuitSuccess('jira-client');
             return response.data;
         } catch (err: unknown) {
+            const axiosErr = err as { response?: { status?: number }; code?: string };
+            if (!axiosErr.response) recordCircuitFailure('jira-client');
             rootLogger.error('GET ' + resourceUrl + ' failed: ' + (err as Error).message);
             throw err;
         }
     }
 
     async postJiraResource<T = JsonObject>(resourceUrl: string, data: unknown): Promise<T> {
+        checkCircuitBreaker('jira-client');
         try {
             const response = await this.axiosInstance.post<T>(`/${resourceUrl}`, data);
+            recordCircuitSuccess('jira-client');
             return response.data;
         } catch (err: unknown) {
-            const axiosErr = err as { response?: { status?: number } };
+            const axiosErr = err as { response?: { status?: number }; code?: string };
+            if (!axiosErr.response) recordCircuitFailure('jira-client');
             rootLogger.error(`Erro POST /${resourceUrl}: ${extractErrorMessage(err)}`, {
                 status: axiosErr.response?.status,
                 resourceUrl,
@@ -62,11 +73,14 @@ class JiraClient implements JiraResourceLike {
     }
 
     async putJiraResource<T = JsonObject>(resourceUrl: string, data: unknown): Promise<T | null> {
+        checkCircuitBreaker('jira-client');
         try {
             const response = await this.axiosInstance.put<T>(`/${resourceUrl}`, data);
+            recordCircuitSuccess('jira-client');
             return response.status === 204 ? null : response.data;
         } catch (err: unknown) {
-            const axiosErr = err as { response?: { status?: number } };
+            const axiosErr = err as { response?: { status?: number }; code?: string };
+            if (!axiosErr.response) recordCircuitFailure('jira-client');
             rootLogger.error(`Erro PUT /${resourceUrl}: ${extractErrorMessage(err)}`, {
                 resourceUrl,
                 status: axiosErr.response?.status,
@@ -76,11 +90,15 @@ class JiraClient implements JiraResourceLike {
     }
 
     async getFromOriginPath<T = JsonObject>(path: string): Promise<T> {
+        checkCircuitBreaker('jira-client');
         const url = `${this.originUrl}/${path.startsWith('/') ? path.slice(1) : path}`;
         try {
             const response = await this.axiosInstance.get<T>(url);
+            recordCircuitSuccess('jira-client');
             return response.data;
         } catch (err: unknown) {
+            const axiosErr = err as { response?: { status?: number }; code?: string };
+            if (!axiosErr.response) recordCircuitFailure('jira-client');
             rootLogger.error('GET from origin ' + path + ' failed: ' + (err as Error).message);
             throw err;
         }

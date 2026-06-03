@@ -63,9 +63,9 @@ Todas as variáveis de ambiente lidas por `shared/config.ts`:
 
 ### Projeto Jira
 
-| Variável       | Descrição                | Padrão   |
-| -------------- | ------------------------ | -------- |
-| `JIRA_PROJECT` | Chave do projeto no Jira | `ECSPOL` |
+| Variável       | Descrição                                                | Padrão   |
+| -------------- | -------------------------------------------------------- | -------- |
+| `JIRA_PROJECT` | Chave do projeto no Jira (se não definida, usa `ECSPOL`) | `ECSPOL` |
 
 ### Caminhos de importação
 
@@ -97,10 +97,56 @@ Todas as variáveis de ambiente lidas por `shared/config.ts`:
 | `DRY_RUN`              | Simula requisições sem executar (`true`/`false`)  | —          |
 | `AUTO_CONFIRM`         | Pula confirmações interativas (`true`/`false`)    | —          |
 | `AUTO_CHOICE`          | Seleção automática no menu interativo             | —          |
-| `ON_ERROR`             | Ação ao encontrar erro (`abort`/`continue`)       | `abort`    |
+| `ON_ERROR`             | Ação ao encontrar erro (`abort`/`skip`)           | `abort`    |
 | `XDG_STATE_HOME`       | Diretório de estado (cache/state)                 | —          |
 | `QA_TOOLS_TEMP_DIR`    | Diretório temporário (previews, cache, docs HTML) | `temp/`    |
 | `QA_TOOLS_REPORTS_DIR` | Diretório de relatórios gerados (HTML, flakiness) | `reports/` |
+
+### LLM (7 tiers)
+
+| Variável                | Descrição                                         | Padrão                                             |
+| ----------------------- | ------------------------------------------------- | -------------------------------------------------- |
+| `LLM_API_KEY`           | API key do provedor **main** (análise principal)  | —                                                  |
+| `LLM_MODEL`             | Modelo do tier **main**                           | `google/gemini-2.0-flash-exp`                      |
+| `LLM_BASE_URL`          | URL base do tier **main**                         | `https://openrouter.ai/api/v1`                     |
+| `LLM_SMALL_API_KEY`     | API key do tier **small** (tarefas leves)         | —                                                  |
+| `LLM_SMALL_MODEL`       | Modelo do tier **small**                          | `gemini-2.0-flash-lite`                            |
+| `LLM_SMALL_BASE_URL`    | URL base do tier **small** (Gemini)               | `https://generativelanguage.googleapis.com/v1beta` |
+| `LLM_FAST_API_KEY`      | API key do tier **fast** (PR desc, classificação) | —                                                  |
+| `LLM_FAST_MODEL`        | Modelo do tier **fast** (Groq)                    | `llama-3.1-8b-instant`                             |
+| `LLM_FAST_BASE_URL`     | URL base do tier **fast**                         | `https://api.groq.com/openai/v1`                   |
+| `LLM_REVIEW_API_KEY`    | API key do tier **reviewer** (validação cruzada)  | —                                                  |
+| `LLM_REVIEW_MODEL`      | Modelo do tier **reviewer** (Gemini)              | `gemini-2.0-flash-exp`                             |
+| `LLM_REVIEW_BASE_URL`   | URL base do tier **reviewer**                     | `https://generativelanguage.googleapis.com/v1beta` |
+| `LLM_FALLBACK_API_KEY`  | API key do tier **fallback** (circuit breaker)    | —                                                  |
+| `LLM_FALLBACK_MODEL`    | Modelo do tier **fallback**                       | `meta/llama3-70b-instruct`                         |
+| `LLM_FALLBACK_BASE_URL` | URL base do tier **fallback** (NVIDIA NIM)        | `https://integrate.api.nvidia.com/v1`              |
+| `LLM_REVIEW_BUDGET`     | Budget máximo em USD para adversarial review      | `0.50`                                             |
+| `LLM_REVIEW_STRATEGY`   | Estratégia: `always` ou `selective`               | `selective`                                        |
+| `LLM_BATCH_API_KEY`     | API key do tier **batch** (background tasks)      | —                                                  |
+| `LLM_BATCH_MODEL`       | Modelo do tier **batch**                          | `gpt-4o-mini`                                      |
+| `LLM_BATCH_BASE_URL`    | URL base do tier **batch** (GitHub Models)        | `https://models.inference.ai.azure.com`            |
+| `LLM_RATE_LIMIT`        | Requisições por minuto por tier                   | `30`                                               |
+| `LLM_FETCH_RETRIES`     | Número de retries em falha de fetch               | `3`                                                |
+| `LLM_MAX_TOKENS_PER_OP` | Limite de tokens estimados por operação           | `128000`                                           |
+| `LLM_MAX_TOTAL_TOKENS`  | Limite total de tokens acumulados                 | `0` (ilimitado)                                    |
+| `LLM_DISK_CACHE_DIR`    | Diretório do cache em disco para respostas LLM    | `.llm-cache`                                       |
+| `LLM_CACHE_KEY`         | Chave AES-256 para criptografar o cache em disco  | —                                                  |
+
+### Quality Gate / CI
+
+| Variável                | Descrição                                               | Padrão |
+| ----------------------- | ------------------------------------------------------- | ------ |
+| `QA_FAIL_ON`            | Pass rate mínimo para quality gate (ex: `90`)           | —      |
+| `QA_AUTO_BUG`           | Cria Bug no Jira automaticamente para falhas novas      | —      |
+| `QA_GATE_FAIL_ON`       | Threshold de falha do quality gate                      | —      |
+| `QA_GATE_MAX_RETRY`     | Máximo de retries do quality gate                       | —      |
+| `QA_GATE_SKIP_ANALYSIS` | Pular análise de falhas no quality gate                 | —      |
+| `QA_GIT_BLAME_IGNORE`   | Autores ignorados no git blame (regex, separado por \|) | —      |
+| `BENCHMARK`             | Ativa benchmark LLM: `BENCHMARK=true`                   | —      |
+| `GITHUB_PR_NUMBER`      | Número do PR para postar comentário de resultados       | —      |
+| `KNOWN_ISSUES_PATH`     | Caminho para JSON de falhas conhecidas (supressão)      | —      |
+| `AWS_S3_BUCKET`         | Bucket S3 para upload de relatórios                     | —      |
 
 ### Exemplo (`.env.example`)
 

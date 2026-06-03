@@ -125,7 +125,7 @@ ERR  LLM report + fallback failed
     ```
 2. Verifique se `LLM_API_KEY`, `LLM_BASE_URL`, `LLM_MODEL` estão no `.env`
 3. Se estiver usando rate-limited (429), aguarde e tente novamente
-4. Verifique logs em `logs/qa-tools-*.log` para mensagens de erro HTTP
+4. Verifique logs em `{LOG_DIR}/qa-tools-*.log` para mensagens de erro HTTP
 
 ## LLM — Fallback ativado (confidence baixo)
 
@@ -156,7 +156,7 @@ Validation errors: field "tests[0].classification" is required
 
 1. O sistema já tenta corrigir automaticamente (retry com erros no prompt)
 2. Se persistir, verifique se o prompt em `shared/prompts/failure-analysis.md` está claro
-3. Considere usar `gpt-4o` ou `claude-3` no tier **report** para melhor aderência a schema
+3. Considere usar `gpt-4o` ou `claude-3` no tier **main** para melhor aderência a schema
 4. Verifique `rejectionReasons` no snapshot de métricas para entender quais campos falham
 
 ## LLM — Confidence baixo no relatório

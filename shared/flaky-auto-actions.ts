@@ -3,6 +3,7 @@ import type { JiraResourceLike } from './types';
 import type { FlakyAction, FlakyActionConfig } from './types';
 import type { FlakinessEntry, MetricsStore } from './metrics';
 import { quarantineTest } from './quarantine';
+import Config from './config-accessor';
 
 const DEFAULT_CONFIG: FlakyActionConfig = {
     threshold: 0.3,
@@ -21,7 +22,7 @@ function buildBugDescription(
     totalRuns: number,
 ): string {
     const pct = Math.round(rate * 100);
-    return [
+    const lines = [
         '## Teste Flaky Detectado',
         '',
         '**Teste:** `' + title + '`',
@@ -36,7 +37,14 @@ function buildBugDescription(
         '- [ ] Investigar causa raiz',
         '- [ ] Estabilizar ou mover para suite separado',
         "- [ ] Remover label 'flaky' quando resolvido",
-    ].join('\n');
+    ];
+    const ignorePattern = String(Config.get('qaGitBlameIgnore') || '');
+    if (ignorePattern) {
+        lines.push('');
+        lines.push('**Git Blame Configuration:**');
+        lines.push('Authors matching pattern `' + ignorePattern + '` are ignored by git blame configuration.');
+    }
+    return lines.join('\n');
 }
 
 export function calculateFlakinessWithWindow(

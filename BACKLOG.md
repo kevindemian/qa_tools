@@ -37,7 +37,7 @@ Objetivo: `JIRA_MODE=server|cloud` com auth strategy diferenciada.
 
 | ID  | Componente           | Arquivo                   | Status |
 | --- | -------------------- | ------------------------- | ------ |
-| C1  | `jiraMode` no schema | `shared/config-schema.ts` | ⏳     |
+| C1  | `jiraMode` no schema | `shared/config-schema.ts` | ✅     |
 
 ### Fase 4|
 
@@ -480,7 +480,7 @@ Implementação da Fase 2 do STRATEGIC-PLAN.md: análise cross-run, detecção d
 
 ---
 
-## 🚀 Sprint 12.5 — Git Metrics Adapter (P0, ~2h)
+## 🚀 Sprint 12.5 — Git Metrics Adapter (P0, ~2h) — ✅ CONCLUÍDA
 
 Implementação do adaptador git → MetricsRun[] para autovalidação das funcionalidades de saúde/qualidade usando o próprio histórico do projeto.
 
@@ -490,23 +490,24 @@ Implementação do adaptador git → MetricsRun[] para autovalidação das funci
 
 | ID  | Componente                            | Arquivo(s)                           | Status |
 | --- | ------------------------------------- | ------------------------------------ | ------ |
-| G1  | `generateGitMetricsRuns()`            | `shared/git-metrics-adapter.ts`      | ⏳     |
-| G2  | `generateGitFailureClassifications()` | `shared/git-metrics-adapter.ts`      | ⏳     |
-| G3  | Tests                                 | `shared/git-metrics-adapter.test.ts` | ⏳     |
-| G4  | Wirear fallback no quality-gate       | `shared/quality-gate.ts`             | ⏳     |
-| G5  | Wirear fallback no schedule-handler   | `git_triggers/schedule-handler.ts`   | ⏳     |
+| G1  | `generateGitMetricsRuns()`            | `shared/git-metrics-adapter.ts`      | ✅     |
+| G2  | `generateGitFailureClassifications()` | `shared/git-metrics-adapter.ts`      | ✅     |
+| G3  | Tests                                 | `shared/git-metrics-adapter.test.ts` | ✅     |
+| G4  | Wirear fallback no quality-gate       | `shared/quality-gate.ts`             | ✅     |
+| G5  | Wirear fallback no schedule-handler   | `git_triggers/schedule-handler.ts`   | ✅     |
 
-### Métricas alvo
+### Métricas finais
 
-| Mététrica                  | Alvo        |
-| -------------------------- | ----------- |
-| `tsc --noEmit`             | **0 erros** |
-| ESLint errors/warnings     | **0**       |
-| enforce-quality checks     | **15/15**   |
-| `jest` pass                | **100%**    |
-| `jest` fail                | **0**       |
-| Cobertura testes adaptador | **100%**    |
-| Débitos técnicos novos     | **0**       |
+| Métrica                    | Alvo        | Resultado        |
+| -------------------------- | ----------- | ---------------- |
+| `tsc --noEmit`             | **0 erros** | **0 erros**      |
+| ESLint errors/warnings     | **0**       | **0**            |
+| enforce-quality checks     | **15/15**   | **15/15**        |
+| `jest` pass                | **100%**    | **4122/4124**    |
+| `jest` fail                | **0**       | **0**            |
+| Cobertura testes adaptador | **100%**    | **23/23 testes** |
+| Débitos técnicos novos     | **0**       | **0**            |
+| CI build                   | **✅ pass** | **✅ pass**      |
 
 ## 🚀 Sprint 12 — Fase 3: Inteligência Avançada (STRATEGIC-PLAN.md) — ✅ CONCLUÍDA
 
@@ -566,3 +567,87 @@ Implementação da Fase 3 do STRATEGIC-PLAN.md: inteligência avançada que corr
 | Cobertura testes Fase 3   | **100%**          | **100%**          |
 | Módulos órfãos eliminados | **0**             | **0**             |
 | Débitos técnicos novos    | **0**             | **0**             |
+
+---
+
+## 🚀 Sprint V1 — Value Extraction: Housekeeping — ✅ CONCLUÍDA
+
+| ID  | Item                                                           | Status |
+| --- | -------------------------------------------------------------- | ------ |
+| 0a  | Adicionar `KNOWN_ISSUES_PATH` em `docs/06-env-vars.md`         | ✅     |
+| 0b  | Adicionar shadow env vars ao `config-schema.ts` (13 entries)   | ✅     |
+| 0c  | Remover env vars mortas do `.env.example`                      | ✅     |
+| 0d  | Adicionar `QA_GATE_*` + `QA_GIT_BLAME_IGNORE` ao schema + docs | ✅     |
+| 0e  | Exportar 4 funções privadas do batch-mode.ts                   | ✅     |
+| 0f  | Atualizar `.unused-exports-baseline`                           | ✅     |
+| M1  | Conectar `generateWithRetry` ao `llm-client.ts`                | ✅     |
+
+## 🚀 Sprint V0.5 — Value Extraction: Documentação — ✅ CONCLUÍDA
+
+| ID  | Item                                                         | Status |
+| --- | ------------------------------------------------------------ | ------ |
+| D1  | Fix `config-writer.ts`: `JIRA_TOKEN` → `JIRA_PERSONAL_TOKEN` | ✅     |
+| D2  | Fix `docs/05-json-format.md`: template path errado           | ✅     |
+| D3  | Fix `docs/09-troubleshooting.md`: wrong file references      | ✅     |
+| D4  | `docs/02-jira-management.md`: Add handler 24 (setup wizard)  | ✅     |
+| D5  | `docs/02-jira-management.md`: Fix option category table      | ✅     |
+| D6  | `docs/02-jira-management.md`: Fix aliases in category table  | ✅     |
+| D7  | `docs/02-jira-management.md`: Fix state path references      | ✅     |
+| D8  | `docs/02-jira-management.md`: Remove aliases inexistentes    | ✅     |
+| D9  | `docs/00-install.md`: Add 20+ env vars faltantes             | ✅     |
+| D10 | `docs/00-install.md`: Fix `ON_ERROR` values                  | ✅     |
+| D11 | `docs/00-install.md`: Fix `JIRA_PROJECT` default             | ✅     |
+| D12 | `docs/06-env-vars.md`: Add `KNOWN_ISSUES_PATH`               | ✅     |
+| D13 | `docs/01-primeiros-passos.md`: Fix menu categories           | ✅     |
+| D14 | `docs/03-git-triggers.md`: Add batch mode flags              | ✅     |
+| D15 | `README.md`: Update test count, fix lint desc                | ✅     |
+| D16 | `STRATEGIC-PLAN.md`: Mark Fases 1-3 as implemented           | ✅     |
+| D17 | `WORKPLAN.md`: Mark Fase 1 done, TUI_STYLE.md note           | ✅     |
+| D18 | `CAPABILITIES-ANALYSIS*.md`: Add obsolescence note           | ✅     |
+| D19 | `docs/07-config-files.md`: Fix `known-issues.json` reference | ✅     |
+| D20 | `docs/PRODUCTION-CONFIG.md`: Fix P1/P3 bug report status     | ✅     |
+| D21 | Alinhar cross-doc: state path, defaults, menu labels         | ✅     |
+| D22 | Verificar consistência schema ↔ docs                         | ✅     |
+
+## 🚀 Sprint V3 — Value Extraction: Conexões — ✅ CONCLUÍDA
+
+| ID  | Item                                                          | Status |
+| --- | ------------------------------------------------------------- | ------ |
+| 1a  | CI template: batch post-processing como default               | ✅     |
+| 1b  | Conectar `evaluateQualityGate()` ao relatório semanal         | ✅     |
+| 1c  | Quality gate fail por flaky → trigger `executeFlakyActions()` | ✅     |
+| 1d  | Adicionar entrada de menu "Executar batch" no git triggers    | ✅     |
+| 1e  | Documentar batch mode + novas entradas de menu                | ✅     |
+| M2  | Flaky auto-actions consumirem `QA_GIT_BLAME_IGNORE`           | ✅     |
+| M3  | Health score no header da sessão interativa                   | ✅     |
+| M7  | Menu "Relatório completo de qualidade"                        | ✅     |
+
+## 🚀 Sprint V4 — Value Extraction: Reuso de Infra — ✅ CONCLUÍDA
+
+| ID  | Item                                      | Status |
+| --- | ----------------------------------------- | ------ |
+| 2a  | Circuit breaker nos HTTP clients externos | ✅     |
+| 2b  | Self-consistency no `failure-analysis.ts` | ✅     |
+| M5  | Git metrics fallback em dashboards        | ✅     |
+
+## 🚀 Sprint V5 — Value Extraction: Consolidação — ✅ CONCLUÍDA
+
+| ID  | Item                                               | Status |
+| --- | -------------------------------------------------- | ------ |
+| 3a  | Fluxo gap analysis → AI generation (case21→case18) | ✅     |
+| M6  | Adicionar env vars ao config-schema                | ✅     |
+
+### Métricas finais (Sprints V1–V5)
+
+| Métrica                     | Alvo        | Resultado     |
+| --------------------------- | ----------- | ------------- |
+| `tsc --noEmit`              | **0 erros** | **0 erros**   |
+| ESLint errors/warnings      | **0**       | **0**         |
+| `jest` pass                 | **100%**    | **4122/4124** |
+| `jest` fail                 | **0**       | **0**         |
+| Débitos técnicos novos      | **0**       | **0**         |
+| Módulos órfãos conectados   | **0**       | **0**         |
+| Documentação corrigida      | **22 docs** | **22 docs**   |
+| Conexões implementadas      | **8 itens** | **8 itens**   |
+| Reuso de infra implementado | **3 itens** | **3 itens**   |
+| Consolidação implementada   | **2 itens** | **2 itens**   |

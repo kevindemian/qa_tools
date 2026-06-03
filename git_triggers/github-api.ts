@@ -1,5 +1,6 @@
 import type { JsonObject } from '../shared/types';
 import { handleError } from '../shared/git-provider-error';
+import { checkCircuitBreaker, recordCircuitFailure, recordCircuitSuccess } from '../shared/circuit-breaker';
 import type { AxiosInstance } from 'axios';
 
 export async function apiGet<T = JsonObject>(
@@ -7,11 +8,15 @@ export async function apiGet<T = JsonObject>(
     url: string,
     opts?: { operation?: string; returnNull?: boolean; params?: JsonObject },
 ): Promise<T | null> {
+    checkCircuitBreaker('github-api');
     try {
         const args = opts?.params ? [{ params: opts.params }] : [];
         const response = await client.get<T>(url, ...args);
+        recordCircuitSuccess('github-api');
         return response.data;
     } catch (err) {
+        const axiosErr = err as { response?: unknown; code?: string };
+        if (!axiosErr.response) recordCircuitFailure('github-api');
         return handleError(err, {
             context: opts?.operation || url,
             ...(opts?.returnNull ? { returnNull: true as const } : {}),
@@ -25,11 +30,15 @@ export async function apiPost<T = JsonObject>(
     body?: unknown,
     opts?: { operation?: string },
 ): Promise<T> {
+    checkCircuitBreaker('github-api');
     try {
         const args = body !== undefined ? [body] : [];
         const response = await client.post<T>(url, ...args);
+        recordCircuitSuccess('github-api');
         return response.data;
     } catch (err) {
+        const axiosErr = err as { response?: unknown; code?: string };
+        if (!axiosErr.response) recordCircuitFailure('github-api');
         return handleError(err, { context: opts?.operation || url });
     }
 }
@@ -40,11 +49,15 @@ export async function apiPatch<T = JsonObject>(
     body?: unknown,
     opts?: { operation?: string },
 ): Promise<T> {
+    checkCircuitBreaker('github-api');
     try {
         const args = body !== undefined ? [body] : [];
         const response = await client.patch<T>(url, ...args);
+        recordCircuitSuccess('github-api');
         return response.data;
     } catch (err) {
+        const axiosErr = err as { response?: unknown; code?: string };
+        if (!axiosErr.response) recordCircuitFailure('github-api');
         return handleError(err, { context: opts?.operation || url });
     }
 }

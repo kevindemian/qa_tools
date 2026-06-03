@@ -16,7 +16,7 @@ qa_tools/
 cp .env.example .env        # edite com seus tokens (ver docs/06-env-vars.md)
 npm install
 npm run typecheck            # 0 erros
-npm test                     # 1730 testes, 98 suites
+npm test                     # 4122+ testes, 245+ suites
 ```
 
 - Executar Jira: `npx tsx jira_management/main.ts`
@@ -46,9 +46,9 @@ npm test                     # 1730 testes, 98 suites
 ## Testes
 
 ```bash
-npm test                # 1730 testes, 98 suites
+npm test                # 4122+ testes, 245+ suites
 npm run typecheck       # 0 erros tsc --noEmit
-npm run lint            # 0 erros eslint
+npm run lint            # 0 erros eslint (0 warnings)
 ```
 
 ---

@@ -7,6 +7,7 @@ import { expireQuarantine, listQuarantined, quarantineRatio, generatePipelineQua
 import { aggregatePipelineHealth, renderPipelineHealthHtml } from './pipeline-health';
 import type { PipelineRunExtended, PipelineJobExtended } from './pipeline-health';
 import { exportTestsCsv, exportTestsJson } from '../shared/report-export';
+import { generateGitMetricsRuns } from '../shared/git-metrics-adapter';
 import { analyzeTestImpact, generateTestSelectionJson } from '../shared/test-impact';
 import { offerPipelineFailureAnalysis } from './llm-pipeline';
 import { collectTestResults as _collectTestResults } from './test-results';
@@ -170,7 +171,7 @@ async function _collectPipelineResults(
     return false;
 }
 
-async function triggerAndCollectBatchPipeline(
+export async function triggerAndCollectBatchPipeline(
     m: import('../shared/types').GitProvider,
     branch: string,
     projectName: string,
@@ -194,7 +195,7 @@ async function triggerAndCollectBatchPipeline(
     );
 }
 
-async function runFlakyAutoActions(projectName: string, jiraResource: JiraClient): Promise<void> {
+export async function runFlakyAutoActions(projectName: string, jiraResource: JiraClient): Promise<void> {
     try {
         if (!Config.get('jiraBaseUrl') || !Config.get('jiraPersonalToken')) return;
         const store = loadMetrics();
@@ -214,11 +215,19 @@ async function runFlakyAutoActions(projectName: string, jiraResource: JiraClient
     }
 }
 
-function generateFlakinessDashboard(projectName: string, publishTarget?: string): void {
+export function generateFlakinessDashboard(projectName: string, publishTarget?: string): void {
     if (!currentProjectName) return;
     const store = loadMetrics();
-    const projectRuns = store.runs.filter((r) => r.project === currentProjectName);
-    if (projectRuns.length < 2) return;
+    let projectRuns = store.runs.filter((r) => r.project === currentProjectName);
+    if (projectRuns.length < 2) {
+        const gitRuns = generateGitMetricsRuns({ projectName: currentProjectName });
+        if (gitRuns.length >= 2) {
+            projectRuns = gitRuns;
+            info('Fallback para git metrics — flakiness dashboard com dados do histórico de commits');
+        } else {
+            return;
+        }
+    }
     const flaky = calculateFlakiness({ runs: projectRuns }, 2);
     const html = generateFlakinessHtml(flaky, 'Flakiness — ' + projectName);
     const outPath = writeReport('flakiness-' + projectName + '.html', html);
@@ -279,7 +288,7 @@ export async function tryBatchMode(): Promise<boolean> {
     return true;
 }
 
-function runTestImpactSelection(conservative?: boolean): void {
+export function runTestImpactSelection(conservative?: boolean): void {
     try {
         const result = analyzeTestImpact();
         if (result.changedFiles.length === 0) {
@@ -326,8 +335,16 @@ function runQuarantineMaintenance(): void {
 function generateTestExport(projectName: string): void {
     try {
         const store = loadMetrics();
-        const projectRuns = store.runs.filter((r) => r.project === projectName);
-        if (projectRuns.length === 0) return;
+        let projectRuns = store.runs.filter((r) => r.project === projectName);
+        if (projectRuns.length === 0) {
+            const gitRuns = generateGitMetricsRuns({ projectName });
+            if (gitRuns.length > 0) {
+                projectRuns = gitRuns;
+                info('Fallback para git metrics — export com dados do histórico de commits');
+            } else {
+                return;
+            }
+        }
         const latestRun = projectRuns[projectRuns.length - 1];
         if (!latestRun || latestRun.tests.length === 0) return;
         const csv = exportTestsCsv(latestRun.tests);

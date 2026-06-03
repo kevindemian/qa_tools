@@ -72,7 +72,12 @@ export async function checkJiraStatus(baseUrl: string, token: string, mode?: str
     }
 }
 
-export function buildSplashLines(logo: string, statePath?: string, statusChecks?: StatusCheck[]): string[] {
+export function buildSplashLines(
+    logo: string,
+    statePath?: string,
+    statusChecks?: StatusCheck[],
+    healthScore?: { score: number; grade: string },
+): string[] {
     const splash: string[] = [''];
     const logoLines = logo.split('\n');
     for (const line of logoLines) {
@@ -87,6 +92,16 @@ export function buildSplashLines(logo: string, statePath?: string, statusChecks?
                 c.status === 'ok' ? palette.green('●') : c.status === 'error' ? palette.red('●') : palette.muted('○');
             splash.push('  ' + dot + ' ' + c.label + ': ' + palette.muted(c.detail));
         }
+        splash.push('');
+    }
+    if (healthScore) {
+        const healthColor =
+            healthScore.grade === 'excellent' || healthScore.grade === 'good'
+                ? palette.green
+                : healthScore.grade === 'needs_attention'
+                  ? palette.yellow
+                  : palette.red;
+        splash.push(healthColor('  Health: ' + healthScore.score + '/100 (' + healthScore.grade + ')'));
         splash.push('');
     }
     if (statePath) {
@@ -104,6 +119,7 @@ export async function showSplash(
     jiraBaseUrl?: string,
     jiraToken?: string,
     jiraMode?: string,
+    healthScore?: { score: number; grade: string },
 ): Promise<void> {
     const isTTY = Output.isTTY() && !Output.isCI();
 
@@ -136,10 +152,11 @@ export async function showSplash(
             detail: jiraToken ? '✓ configurado' : 'não configurado',
         });
 
-        const splash = buildSplashLines(colored, statePath, checks.length > 0 ? checks : undefined);
+        const splash = buildSplashLines(colored, statePath, checks.length > 0 ? checks : undefined, healthScore);
         defaultOutput.box(splash, { border: 'double', padding: 1 });
     } catch {
         defaultOutput.print('🔧 QA Tools  v1.0.0 — Gestão de Testes & Automação de CI/CD');
         if (statePath) defaultOutput.print('  State: ' + statePath);
+        if (healthScore) defaultOutput.print('  Health: ' + healthScore.score + '/100 (' + healthScore.grade + ')');
     }
 }

@@ -3,6 +3,8 @@ import { pushBreadcrumb, clearBreadcrumbs } from '../shared/breadcrumbs';
 import { createValidateEnv, offerEnvSetup, setupSigint } from '../shared/cli_base';
 import Config from '../shared/config';
 import { showSplash } from '../shared/splash';
+import { loadMetrics } from '../shared/metrics';
+import { calculateHealthScore } from '../shared/health-score';
 import { palette } from '../shared/palette';
 import { defaultOutput } from '../shared/output';
 import { rootLogger } from '../shared/logger';
@@ -57,6 +59,7 @@ import {
     handleRunSchedule,
     handleChangeProject,
     handleFlakinessDashboard,
+    generateWeeklyQualityReport,
 } from './schedule-handler';
 import { tryBatchMode, parseBatchArgs } from './batch-mode';
 import { handleHelp as _handleHelp, handleShowHistory as _handleShowHistory } from './ui-helpers';
@@ -187,6 +190,14 @@ const ACTION_HANDLERS: Record<string, (m: GitProvider, pn: string, ns: string[])
         void handleFlakinessDashboard();
         return Promise.resolve(false);
     },
+    b: async () => {
+        await tryBatchMode();
+        return false;
+    },
+    r: () => {
+        generateWeeklyQualityReport();
+        return Promise.resolve(false);
+    },
 };
 
 function _handleExit(): boolean {
@@ -266,7 +277,15 @@ async function _initEnvironment(): Promise<void> {
             // wizard failed — continue anyway
         }
     }
-    await showSplash();
+    let healthScore: { score: number; grade: string } | undefined;
+    try {
+        const store = loadMetrics();
+        const health = calculateHealthScore(store);
+        healthScore = { score: health.overall, grade: health.grade };
+    } catch {
+        // health score unavailable — skip
+    }
+    await showSplash(undefined, undefined, undefined, undefined, healthScore);
     sessionLog.info('Sessão iniciada');
 }
 
