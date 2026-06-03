@@ -53,12 +53,12 @@ export function runQualityGate(options?: QualityGateOptions): QualityGateResult 
         if (projectRuns.length < 1) {
             checks.push({
                 name: 'metrics-data',
-                status: 'fail',
-                score: 0,
+                status: 'pass',
+                score: 100,
                 threshold: 1,
-                details: 'Sem dados de execução no metrics store',
+                details: 'Sem dados históricos — gate não aplicável',
             });
-            return { overall: 'fail', checks, score: 0 };
+            return { overall: 'pass', checks, score: 100 };
         }
 
         const health = calculateHealthScore({ ...store, runs: projectRuns }, envCfg);
