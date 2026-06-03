@@ -1,5 +1,7 @@
 # Análise 2 — QA Tools como Plataforma de Inteligência de Qualidade
 
+> ⚠️ **DOCUMENTO HISTÓRICO.** A análise aqui contida foi integralmente implementada (Sprints V1-V5, Sprints 10-12). Consulte `BACKLOG.md` para o estado atual das features.
+
 > **Propósito:** Avaliar o potencial do produto como plataforma de inteligência de qualidade, não como ferramenta de execução de testes.
 > **Foco:** contexto, correlação, inferência, análise, suporte à decisão, geração de insumos, redução de esforço cognitivo.
 

@@ -43,9 +43,10 @@ O menu é organizado em categorias com sub-menus:
 | GERAÇÃO DE RELATÓRIOS     | 17 — Gerar relatório HTML                                                                                                                                |
 | GERAÇÃO DE CASOS DE TESTE | 1 — Criar testes a partir de CSV, 11 — Gerar template, 13 — Criar Test Execution, 15 — Importar JSON, 18 — Gerar testes via IA                           |
 | BUG REPORT                | 20 — Criar Bug Report                                                                                                                                    |
-| ANÁLISE E HISTÓRICO       | 19 — Histórico / Cobertura, 21 — Gaps de cobertura, 22 — Test impact, 23 — Feedback de IA                                                                |
+| ANÁLISE E HISTÓRICO       | 19 — Histórico / Cobertura, 21 — Gaps de cobertura, 22 — Test impact, 23 — Feedback de IA, 24 — Setup wizard CI/CD                                       |
 | RELEASES                  | 2 — Listar versões, 3 — Criar versão, 4 — Atribuir fixVersion, 5 — Atualizar package.json, 6 — Verificar status, 7 — Fechar tarefas, 8 — Publicar versão |
 | CONFIGURAÇÃO              | 9 — Alterar projeto, 10 — Alterar diretório git, 12 — Diagnosticar conexão, 14 — Alterar Cypress, 16 — Alterar JSON                                      |
+| SETUP CI/CD               | 24 — Setup wizard CI/CD                                                                                                                                  |
 | UTILITÁRIOS               | d — Ver documentação                                                                                                                                     |
 
 **Aliases disponíveis:** `criar` (1), `versoes` (2), `fechar` (7), `publicar` (8), `template` (11), `testexec` (13), `json` (15), `bug` (20), `gaps` ou `gap-analysis` (21), `impacto` ou `test-impact` (22), `ai-feedback` ou `feedback` (23), `docs` (d), entre outros.
@@ -618,6 +619,7 @@ Todos os comandos podem ser acionados por alias textual (em vez do número):
 | `gap-analysis`, `gaps`                        | `21`         | Análise de gaps de cobertura     |
 | `test-impact`, `impacto`                      | `22`         | Impacto de mudanças              |
 | `ai-feedback`, `feedback`                     | `23`         | Feedback de IA                   |
+| `setup-wizard`, `setup`                       | `24`         | Setup wizard CI/CD               |
 | `d`, `documentacao`, `docs`                   | `docs`       | Ver documentação                 |
 | `voltar`                                      | `/menu`      | Voltar ao menu principal         |
 | `ajuda`, `help`                               | `/help`      | Ajuda                            |
@@ -695,6 +697,30 @@ Analisa o impacto potencial de mudanças em issues Jira, identificando quais tes
 ### 23 — Feedback de IA
 
 Registra um feedback de análise de IA para uma issue Jira. Permite ao usuário fornecer uma avaliação qualitativa sobre a análise gerada pelo LLM, alimentando métricas de qualidade.
+
+---
+
+### 24 — Setup wizard CI/CD
+
+Executa o wizard interativo de configuração de CI/CD. Gera pipelines GitHub Actions ou GitLab CI, configura projetos e hook pre-push.
+
+**Fluxo:**
+
+1. Detecta framework de testes (Cypress/Playwright/Jest/Vitest) a partir do `package.json`
+2. Pergunta features desejadas (Jira, flakiness, análise IA)
+3. Gera `.github/workflows/qa.yml` ou `.gitlab-ci.yml`
+4. Cria `config/projects.json` + `config/providers.json`
+5. Gera `.env.example` com variáveis necessárias
+6. Instala hook `.git/hooks/pre-push` (opcional)
+
+**Arquivo:** `setup/main.ts` — orquestração do wizard
+
+| Alias          | Resolve para |
+| -------------- | ------------ |
+| `setup-wizard` | `24`         |
+| `setup`        | `24`         |
+
+---
 
 **Fluxo:**
 

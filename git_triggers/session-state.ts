@@ -232,6 +232,8 @@ export function buildActionChoices(): JsonObject[] {
         { name: '      Exportar variáveis CI/CD', value: '8' },
         { name: '      Trocar de projeto', value: '9' },
         { name: '      Dashboard flakiness (HTML)', value: 'a' },
+        { name: '      Relatório completo de qualidade', value: 'r' },
+        { name: '      Executar batch', value: 'b' },
         { name: '      Voltar ao menu principal', value: '0' },
         { type: 'separator', line: '        ' },
         { name: '      /help  Ajuda', value: '/help' },

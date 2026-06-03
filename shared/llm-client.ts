@@ -22,6 +22,7 @@ import Config from './config';
 import { rootLogger } from './logger';
 import { LlmError } from './errors';
 
+import { generateWithRetry } from './targeted-retry';
 import {
     _llmMetrics,
     getLlmClientMetrics,
@@ -29,7 +30,6 @@ import {
     parseRetryAfter,
     _estimateInputTokens,
     sendWithFallback,
-    parseRawOnce,
     tierToConfig,
 } from './llm-fallback';
 import type { LlmTier, ResponseFormat, ZodSchema, ZodSchemaTyped, InferSchemaData } from './types';
@@ -51,6 +51,7 @@ export { clearCache } from './llm-cache';
 export { resetRateLimiter } from './llm-rate-limiter';
 export { resetCircuitState } from './circuit-breaker';
 export { getLlmClientMetrics, resetLlmClientMetrics, parseRetryAfter, _estimateInputTokens };
+export { generateWithRetry } from './targeted-retry';
 export type { LlmTier } from './types';
 
 // ---- token limits ----
@@ -98,29 +99,44 @@ async function _validateWithRetry<T>(opts: ValidateWithRetryOptions<T>): Promise
         setDiskCache(cKey, response);
         return valid;
     }
-    rootLogger.warn('LLM response failed schema validation — retrying with hint');
-    const parsed = parseRawOnce(response);
-    const parseResult = parsed && schema.safeParse(parsed);
-    const hints =
-        parseResult && !parseResult.success
-            ? parseResult.error.issues
-                  .map((i) => `- ${i.path.join('.')}: ${i.message} (received: ${JSON.stringify(parsed)})`)
-                  .join('\n')
-            : 'Response was not valid JSON. Return ONLY valid JSON matching the required schema.';
-    const retryResponse = await sendWithFallback(
+    rootLogger.warn('LLM response failed schema validation — progressive retry via generateWithRetry');
+    const optsForRetry = {
         tier,
-        system + '\n\n[SCHEMA VALIDATION FAILED]\n' + hints,
+        system,
         user,
-        responseFormat,
+        callerId: 'validate-retry',
+        ...(responseFormat ? { responseFormat } : {}),
+        schema,
+    };
+    const noopValidator = {
+        validate: () => ({
+            allPassed: true,
+            results: [],
+            totalInvariants: 0,
+            passed: 0,
+            failed: 0,
+            warnings: 0,
+        }),
+    } as const;
+    const retryResult = await generateWithRetry<T>(
+        optsForRetry as Parameters<typeof generateWithRetry>[0],
+        schema,
+        noopValidator,
+        noopValidator,
+        { inputRaw: user, artifactType: 'schema-validation' },
+        {
+            layer1: { maxRetries: 2, enabled: true },
+            layer2: { maxRetries: 0, enabled: false },
+            layer3: { maxRetries: 0, enabled: false },
+        },
     );
-    const retryValid = checkSchema(retryResponse, schema);
-    if (retryValid !== null) {
-        setMemoryCache(cKey, retryResponse);
-        setDiskCache(cKey, retryResponse);
-        return retryValid;
+    if (retryResult.data !== null) {
+        setMemoryCache(cKey, JSON.stringify(retryResult.data));
+        setDiskCache(cKey, JSON.stringify(retryResult.data));
+        return retryResult.data;
     }
-    const errMsg = 'LLM response failed schema validation after retry';
-    rootLogger.error(errMsg);
+    const errMsg = 'LLM response failed schema validation after progressive retry';
+    rootLogger.error(errMsg + ': ' + retryResult.finalErrors.join('; '));
     throw new LlmError(errMsg);
 }
 

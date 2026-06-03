@@ -17,6 +17,8 @@ jest.mock('../../shared/ai-feedback', () => ({
     recordAiGeneration: jest.fn(),
 }));
 
+jest.mock('./case18');
+
 jest.mock('crypto', () => ({
     randomUUID: jest.fn().mockReturnValue('abc-123'),
 }));
@@ -32,9 +34,10 @@ import * as promptModule from '../../shared/prompt';
 import * as coverageGapModule from '../../shared/coverage-gap';
 import * as htmlModule from '../../shared/generate-coverage-gap-html';
 import * as openModule from '../../shared/open';
-import * as aiFeedbackModule from '../../shared/ai-feedback';
+
 import type { CoverageGapResult, CoverageGapItem } from '../../shared/types/coverage';
 import case21Module from './case21';
+import case18Module from './case18';
 import { createMockContext } from '../../shared/test-utils/factories/context-factory';
 
 const baseContext = createMockContext();
@@ -119,10 +122,10 @@ describe('case21 — Gap Analysis', () => {
         expect(prompt.info).toHaveBeenCalledWith(expect.stringContaining('EPIC-1'));
     });
 
-    it('records AI generation when user confirms AI gen', async () => {
+    it('delegates to case18 when user confirms AI gen', async () => {
         const prompt = jest.mocked(promptModule);
         const coverageGap = jest.mocked(coverageGapModule);
-        const aiFeedback = jest.mocked(aiFeedbackModule);
+        const case18 = jest.mocked(case18Module);
 
         prompt.askConfirm
             .mockResolvedValueOnce(false) // skip create tests
@@ -130,18 +133,18 @@ describe('case21 — Gap Analysis', () => {
             .mockResolvedValueOnce(false); // skip HTML
 
         coverageGap.analyzeCoverageGaps.mockResolvedValueOnce(mockGapResult);
+        case18.handler.mockResolvedValueOnce(undefined);
 
         const mod = case21Module;
         await mod.handler(baseContext);
 
-        expect(aiFeedback.recordAiGeneration).toHaveBeenCalledWith(
-            expect.objectContaining({ promptVersion: 'v2', userStory: expect.stringContaining('Coverage gap') }),
-        );
+        expect(case18.handler).toHaveBeenCalledWith(baseContext);
     });
 
     it('generates HTML report when user confirms', async () => {
         const prompt = jest.mocked(promptModule);
         const coverageGap = jest.mocked(coverageGapModule);
+        const case18 = jest.mocked(case18Module);
 
         prompt.askConfirm
             .mockResolvedValueOnce(false) // skip create tests
@@ -149,6 +152,7 @@ describe('case21 — Gap Analysis', () => {
             .mockResolvedValueOnce(true); // export HTML
 
         coverageGap.analyzeCoverageGaps.mockResolvedValueOnce(mockGapResult);
+        case18.handler.mockResolvedValueOnce(undefined);
 
         const mod = case21Module;
         await mod.handler(baseContext);
@@ -201,6 +205,7 @@ describe('case21 — Gap Analysis', () => {
     it('handles AI gen with more than 5 gaps', async () => {
         const prompt = jest.mocked(promptModule);
         const coverageGap = jest.mocked(coverageGapModule);
+        const case18 = jest.mocked(case18Module);
 
         const gapItems: CoverageGapItem[] = Array.from({ length: 7 }, (_, i) => ({
             issueKey: `PROJ-${i + 1}`,
@@ -225,10 +230,12 @@ describe('case21 — Gap Analysis', () => {
             .mockResolvedValueOnce(false); // skip HTML
 
         coverageGap.analyzeCoverageGaps.mockResolvedValueOnce(resultWithManyGaps);
+        case18.handler.mockResolvedValueOnce(undefined);
 
         const mod = case21Module;
         await mod.handler(baseContext);
 
         expect(prompt.info).toHaveBeenCalledWith(expect.stringContaining('... e mais'));
+        expect(case18.handler).toHaveBeenCalledWith(baseContext);
     });
 });

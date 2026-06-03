@@ -323,6 +323,10 @@ O batch mode permite disparar uma pipeline, coletar resultados, analisar falhas 
 | `--branch` / `-b`      | Branch para disparo (fallback: `main`)                  |
 | `--run-impacted-tests` | Analisa diff desde HEAD~1 e gera `test-selection.json`  |
 | `--conservative`       | Modo conservador: smoke obrigatórios + testes afetados  |
+| `--skip-flaky`         | Pula análise de flaky e auto-actions                    |
+| `--skip-ia`            | Pula análise IA de falhas                               |
+| `--skip-dashboard`     | Pula geração de dashboards                              |
+| `--output-dir` / `-o`  | Diretório de saída para relatórios e dashboards         |
 
 ### Exemplos
 

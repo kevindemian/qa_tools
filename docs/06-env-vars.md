@@ -146,12 +146,13 @@ BENCHMARK=true npx tsx -e "require('./shared/llm-benchmark').runBenchmark()"
 
 ## Comportamento / CI (extras)
 
-| Variável           | Onde é lida        | Obrigatória? | Padrão | Descrição                                          |
-| ------------------ | ------------------ | ------------ | ------ | -------------------------------------------------- |
-| `BENCHMARK`        | `llm-benchmark.ts` | Não          | —      | Ativa benchmark LLM: `BENCHMARK=true`              |
-| `QA_AUTO_BUG`      | `case17.ts`        | Não          | —      | Cria Bug no Jira automaticamente para falhas novas |
-| `QA_FAIL_ON`       | `case17.ts`        | Não          | —      | Quality gate: pass rate mínimo (ex: `90`)          |
-| `GITHUB_PR_NUMBER` | `case17.ts`        | Não          | —      | Número do PR para postar comentário de resultados  |
+| Variável            | Onde é lida                 | Obrigatória? | Padrão | Descrição                                          |
+| ------------------- | --------------------------- | ------------ | ------ | -------------------------------------------------- |
+| `BENCHMARK`         | `llm-benchmark.ts`          | Não          | —      | Ativa benchmark LLM: `BENCHMARK=true`              |
+| `QA_AUTO_BUG`       | `case17.ts`                 | Não          | —      | Cria Bug no Jira automaticamente para falhas novas |
+| `QA_FAIL_ON`        | `case17.ts`                 | Não          | —      | Quality gate: pass rate mínimo (ex: `90`)          |
+| `GITHUB_PR_NUMBER`  | `case17.ts`                 | Não          | —      | Número do PR para postar comentário de resultados  |
+| `KNOWN_ISSUES_PATH` | `shared/config-accessor.ts` | Não          | —      | Caminho para JSON de falhas conhecidas (supressão) |
 
 ---
 

@@ -1,5 +1,6 @@
 # Análise de Capacidades — QA Tools
 
+> ⚠️ **DOCUMENTO HISTÓRICO.** A análise aqui contida foi integralmente implementada (Sprints V1-V5, Sprints 10-12). Consulte `BACKLOG.md` para o estado atual das features.
 > **Propósito:** Mapear o valor real e oculto do produto a partir das capacidades já existentes, sem assumir novos desenvolvimento s.
 > **Premissa:** Nenhum novo conector será criado nos próximos 12 meses.
 > **Método:** Análise de capacidades (não funcionalidades), correlações, sinergias e gaps de exploração.

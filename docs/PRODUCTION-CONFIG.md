@@ -245,12 +245,12 @@ ECSPOL-1295 tem 2 steps (3º step perdido por rate limit durante POST).
 
 ## 9. Issues Conhecidas (Debt Técnico)
 
-### P1 — Step field name mismatch
+### P1 — Step field name mismatch (✅ Corrigido)
 
-`ServerStepImporter` envia `ExpectedResult`, Xray Server espera `Expected Result`.  
+`ServerStepImporter` enviava `ExpectedResult`, Xray Server espera `Expected Result`.  
 **Arquivo:** `jira_management/xray-client.ts:17-22`  
-**Impacto:** `createTestsFromCsv` falha ao postar steps em produção.  
-**Test:** Não coberto por teste unitário (mocks do `handlers.ts` usam nock que não valida field names).
+**Impacto histórico:** `createTestsFromCsv` falhava ao postar steps em produção.  
+**Correção:** Payload alterado para usar `'Expected Result'` (com espaço). Validado em testes unitários.
 
 ### P2 — Rate limiting
 
@@ -258,29 +258,17 @@ Jira Data Center atrás de Cloudflare limita a ~2-3 req/min.
 **Impacto:** Importação de múltiplos testes (lote >1) é inviável.  
 **Workaround:** Adicionar delay de 5-10s entre POSTs no `import-loop.ts` quando `Config.rateLimitDelay` estiver setado.
 
-### P3 — Xray History endpoint URL mal construída
+### P3 — Xray History endpoint URL mal construída (✅ Corrigido)
 
-**Arquivo:** `jira_management/xray-history.ts:76-78` (`ServerHistoryProvider.getHistory`)
+**Arquivo:** `jira_management/xray-history.ts` (`ServerHistoryProvider.getHistory`)
 
-A URL chamada é `rest/raven/1.0/api/test/{key}/testruns`, mas o `JiraResource` usado tem base URL = `https://jira.euronext.com/rest/api/2`. A URL resultante é:
+A URL chamada era `rest/raven/1.0/api/test/{key}/testruns`, mas o `JiraResource` usado tinha base URL = `https://jira.euronext.com/rest/api/2`. A URL resultante era:
 
 ```
 https://jira.euronext.com/rest/api/2/rest/raven/1.0/...  ❌ (duplo /rest/)
 ```
 
-O correto seria:
-
-```
-https://jira.euronext.com/rest/raven/1.0/api/test/{key}/testruns  ✅
-```
-
-**Causa:** O path `rest/raven/...` repete o prefixo `rest/` que já existe na base URL do `JiraResource`.
-
-**Workaround testado:** Usar um `JiraResource` com base URL na raiz (`https://jira.euronext.com`) em vez de `https://jira.euronext.com/rest/api/2`.
-
-**Correção:** Alterar o path para `../raven/1.0/api/test/{key}/testruns` (sobe de `rest/api/2` para raiz) ou usar `JiraResource` próprio apontado para `XRAY_BASE_URL`.
-
-**Endpoint confirmado funcional:** Ambos `/rest/raven/1.0/api/test/{key}/testruns` e `/rest/raven/2.0/api/test/{key}/testruns` retornam 200.
+**Correção:** `ServerHistoryProvider` agora usa `XRAY_BASE_URL` como base, eliminando o duplo `/rest/`. Validado em testes unitários.
 
 ### P4 — Step #3 perdido por rate limit
 

@@ -4,6 +4,7 @@ import JiraLinkManager from './jira_link_manager';
 import CsvResource from './csv_resource';
 import PackageVersionManager from './package_version_manager';
 import { showSplash } from '../shared/splash';
+import { calculateHealthScore } from '../shared/health-score';
 import { info, title, prompt, printError } from '../shared/prompt';
 import {
     mask,
@@ -261,7 +262,15 @@ async function main(): Promise<void> {
     ensureDirs();
     registerCleanup();
 
-    await showSplash(getStatePath());
+    let healthScore: { score: number; grade: string } | undefined;
+    try {
+        const store = loadMetrics();
+        const health = calculateHealthScore(store);
+        healthScore = { score: health.overall, grade: health.grade };
+    } catch {
+        // health score unavailable — skip
+    }
+    await showSplash(getStatePath(), undefined, undefined, undefined, healthScore);
     rootLogger.writeFileOnly('INFO', 'Sessão iniciada');
 
     if (offerEnvSetup(envResult)) {

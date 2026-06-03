@@ -5,14 +5,13 @@ import { info, warn, error, title, divider, tableView, printError, withSpinner, 
 import { analyzeCoverageGaps } from '../../shared/coverage-gap';
 import { openWithFallback } from '../../shared/open';
 import { generateCoverageGapHtml } from '../../shared/generate-coverage-gap-html';
-import { recordAiGeneration } from '../../shared/ai-feedback';
 import { loadMetrics, saveCoverageSnapshot } from '../../shared/metrics';
 import { rootLogger } from '../../shared/logger';
-import crypto from 'crypto';
 import fs from 'fs';
 import path from 'path';
 import type { CommandContext } from './context';
-import type { AiGenerationRecord, CoverageGapResult } from '../../shared/types';
+import type { CoverageGapResult } from '../../shared/types';
+import case18Handler from './case18';
 
 function checkCiGateFlag(): boolean {
     return process.argv.slice(2).some((a) => a === '--ci-gate');
@@ -108,9 +107,9 @@ function _showFailingEpics(result: CoverageGapResult): void {
     }
 }
 
-async function _handleAiGeneration(result: CoverageGapResult): Promise<void> {
+async function _handleAiGeneration(result: CoverageGapResult, c: CommandContext): Promise<void> {
     if (result.totals.gap === 0) return;
-    const useAi = await askConfirm('Usar IA para gerar testes para gaps?');
+    const useAi = await askConfirm('Deseja gerar testes via IA para os gaps encontrados?');
     if (!useAi) return;
     const issuesSemTeste = result.items.filter((i) => !i.hasTest);
     const gapIssues = issuesSemTeste.slice(0, 5);
@@ -120,17 +119,8 @@ async function _handleAiGeneration(result: CoverageGapResult): Promise<void> {
     if (gapIssues.length < issuesSemTeste.length) {
         info('... e mais ' + (issuesSemTeste.length - 5) + ' issue(s).');
     }
-    info('Acesse a opção 18 (Gerar testes via IA) e use os summaries acima como user stories.');
-    const genRecord: AiGenerationRecord = {
-        id: crypto.randomUUID(),
-        generatedAt: new Date().toISOString(),
-        promptVersion: 'v2',
-        userStory: 'Coverage gap analysis: ' + result.totals.gap + ' uncovered issues',
-        acceptanceCriteria: 'Generate tests for uncovered issues identified by gap analysis',
-        generatedTests: gapIssues.map((i) => ({ title: i.summary, preConditions: [], stepCount: 0 })),
-        preconditionMatches: [],
-    };
-    recordAiGeneration(genRecord);
+    info('Delegando para o gerador de testes via IA (case18)...');
+    await case18Handler.handler(c);
 }
 
 async function _handleHtmlExport(result: CoverageGapResult, c: CommandContext): Promise<void> {
@@ -173,7 +163,7 @@ async function handler(c: CommandContext): Promise<boolean | void> {
         info('Funcionalidade de criação de testes será implementada em breve.');
     }
 
-    await _handleAiGeneration(result);
+    await _handleAiGeneration(result, c);
     await _handleHtmlExport(result, c);
 
     c.pushHistory(

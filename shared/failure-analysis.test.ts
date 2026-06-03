@@ -143,7 +143,8 @@ describe('classifyFailure', () => {
     it('falls back to UNKNOWN when llmPrompt throws (Zod validation failed after retry)', async () => {
         const promptContent = 'Classify: ';
         jest.mocked(fs.readFileSync).mockReturnValue(promptContent);
-        mockLlmPrompt.mockRejectedValueOnce(new Error('LLM response failed schema validation after retry'));
+        // Self-consistency calls llmPrompt 3×; fallback calls it 1× more
+        mockLlmPrompt.mockRejectedValue(new Error('LLM response failed schema validation after retry'));
 
         const result = await classifyFailure('Login test', 'some error');
         expect(result).toBe('UNKNOWN: Could not classify failure after retry');

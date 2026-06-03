@@ -46,10 +46,11 @@ O menu é organizado em **categorias** com sub-menus. Ao selecionar uma categori
   BUG REPORT
    20  Criar Bug Report
   ANÁLISE E HISTÓRICO
-   19  Histórico / Cobertura
-   21  Análise de gaps de cobertura
-   22  Impacto de mudanças (test impact)
-   23  Feedback de IA
+    19  Histórico / Cobertura
+    21  Análise de gaps de cobertura
+    22  Impacto de mudanças (test impact)
+    23  Feedback de IA
+    24  Setup wizard CI/CD
   RELEASES
    2   Listar versões de release
    3   Criar nova versão
