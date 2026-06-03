@@ -919,3 +919,86 @@ Auditoria UX independente: 43 issues (7 críticos, 11 maiores, 25 menores). Scor
 | Non-TTY emoji leaks        | **0**                |
 | Mixed language modules     | **0**                |
 | `confirmDestructiveAction` | **em uso**           |
+
+## 🧪 Sprint Test — Auditoria de Testes (Jun/2026)
+
+Auditoria completa: 246 test files, 269 source files. Coverage: shared 94.7%, jira 100%, setup 85.7%.
+
+### Criticos (P0)
+
+| ID   | Item                                                                                                                           | Arquivo(s)                | Esforco | Status |
+| ---- | ------------------------------------------------------------------------------------------------------------------------------ | ------------------------- | ------- | ------ |
+| T-C1 | 🐛 `shared/types.ts` sem testes de contrato — enums (`ExitCode`, `LlmTier`, `BugReport`) usados em todo projeto sem validacao  | `shared/types.ts`         | 1h      | ⏳     |
+| T-C2 | 🐛 `http-client.ts:79-94` module-level `setInterval` roda no import — timer vaza entre test suites, `--detectOpenHandles` leak | `shared/http-client.ts`   | 30min   | ⏳     |
+| T-C3 | 🐛 `prompt-errors.ts:199` `readlineSync.question` bloqueia event loop em non-TTY — sem fallback, trava em CI                   | `shared/prompt-errors.ts` | 20min   | ⏳     |
+| T-C4 | 🐛 `prompt.test.ts` (894 linhas, 26 describe blocks) — testa 26 funcoes de 4 modulos diferentes. Quebrar por modulo            | `shared/prompt.test.ts`   | 2h      | ⏳     |
+
+### Maiores (P1)
+
+| ID    | Item                                                                                                                                                                                       | Arquivo(s)                        | Esforco | Status |
+| ----- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | --------------------------------- | ------- | ------ |
+| T-M1  | 🗑️ 7 source files `shared/` sem `.test.ts`: `types.ts`, `llm-review-analyzer.ts`, `llm-review-prompts.ts`, `jira-auth.ts`, `markdown-html.ts`, `markdown-lexer.ts`, `markdown-renderer.ts` | `shared/` (7 files)               | 3h      | ⏳     |
+| T-M2  | 🗑️ `setup/context.ts` sem `.test.ts` — estado do setup nao testado                                                                                                                         | `setup/context.ts`                | 30min   | ⏳     |
+| T-M3  | 🐛 Expressoes regex de sanitizacao nao testadas para 5 tipos de token: `hf_`, `npm_`, `xox[abp]-`, `ghr_`, URL-embedded creds                                                              | `shared/sanitize.test.ts`         | 30min   | ⏳     |
+| T-M4  | 🐛 `toBeTruthy()` usado em 24 locais onde `toBe()`/`toContain()`/`toMatch()` seriam mais especificos — assercoes fracas                                                                    | 24 locais em test files           | 1h      | ⏳     |
+| T-M5  | 🐛 `http-client.test.ts:43-46` `setTimeout` mock sem `afterEach` restore — mock vaza entre testes                                                                                          | `shared/http-client.test.ts`      | 15min   | ⏳     |
+| T-M6  | 🐛 `calculateRetryDelay` jitter nao testado — caminho pure exponential-backoff sem cobertura                                                                                               | `shared/http-client.test.ts`      | 20min   | ⏳     |
+| T-M7  | 🐛 `createThrottledClient` WeakMap slot tracking (`_throttled.has(cfg)`) nao testado — double-acquire prevention sem cobertura                                                             | `shared/http-client.test.ts`      | 30min   | ⏳     |
+| T-M8  | 🐛 `onError()` interactive loop com `canDetails=true` + `autoConfirm=true` nao testado                                                                                                     | `shared/prompt-errors.test.ts`    | 20min   | ⏳     |
+| T-M9  | 🐛 `NAV_CMDS` no `onError()` — apenas `/back` testado, `/menu`, `/exit`, `/sair`, `/quit`, `/help` sem cobertura                                                                           | `shared/prompt-errors.test.ts`    | 15min   | ⏳     |
+| T-M10 | 🐛 `_formatErrorMessage` / `_showErrorDetails` funcoes internas nao testadas diretamente                                                                                                   | `shared/prompt-errors.ts:137-156` | 20min   | ⏳     |
+| T-M11 | 🐛 `onError()` non-TTY path sem teste — `isQuiet()` short-circuit so testado via prompt.test.ts mega-file                                                                                  | `shared/prompt-errors.test.ts`    | 15min   | ⏳     |
+
+### Menores (P2)
+
+| ID    | Item                                                                                                                                    | Arquivo(s)                                                                     | Esforco | Status |
+| ----- | --------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------ | ------- | ------ |
+| T-N1  | 🗑️ `e2e/smoke-jira-cloud.test.ts:38` `describe.skip` — suite inteira desativada                                                         | `e2e/smoke-jira-cloud.test.ts`                                                 | 15min   | ⏳     |
+| T-N2  | 🗑️ `e2e/smoke-xray-cloud.test.ts:13` `describe.skip` — suite inteira desativada                                                         | `e2e/smoke-xray-cloud.test.ts`                                                 | 15min   | ⏳     |
+| T-N3  | 🐛 Filesystem pollution: `metrics.test.ts:17`, `logger.test.ts` (8 locais), `disk-cache.test.ts:10` usam `mkdtempSync` real sem `memfs` | `shared/metrics.test.ts`, `shared/logger.test.ts`, `shared/disk-cache.test.ts` | 2h      | ⏳     |
+| T-N4  | 🐛 `cli_base.test.ts:151` `jest.useFakeTimers()` sem `jest.useRealTimers()` restoration                                                 | `shared/cli_base.test.ts`                                                      | 10min   | ⏳     |
+| T-N5  | 🐛 `prompt-input-filepath.test.ts:103-104` `fs.mkdirSync` + `fs.writeFileSync` real em teste                                            | `shared/prompt-input-filepath.test.ts`                                         | 15min   | ⏳     |
+| T-N6  | 🐛 156 acessos `process.env` em test files — cada um e vetor de poluicao entre testes. Migrar para `withEnv()` helper                   | Todos test files                                                               | 3h      | ⏳     |
+| T-N7  | 🐛 `readPrompt` path resolution nao validada — `path.join(PROMPT_DIR, file)` sem teste de diretorio                                     | `shared/failure-analysis.test.ts`                                              | 15min   | ⏳     |
+| T-N8  | 🐛 `ensureDirs` test so verifica `mkdirSync` foi chamado — nao verifica se 5 paths criados independentemente                            | `shared/temp-dir.test.ts`                                                      | 15min   | ⏳     |
+| T-N9  | 🐛 `_tryPrintHealthScore` catch block nao testado (linha 213)                                                                           | `shared/cli_base.test.ts`                                                      | 10min   | ⏳     |
+| T-N10 | 🐛 `toWinPath` fallback complexo (wslpath → copy → wslpath) — apenas caminho base testado                                               | `shared/open.test.ts`                                                          | 30min   | ⏳     |
+| T-N11 | 🐛 `startRetryCleanup` interval execution nao testado — so `deleteRetryKey` testado                                                     | `shared/http-client.test.ts`                                                   | 20min   | ⏳     |
+| T-N12 | 🐛 `shouldAutoRetry` boundary nao testado — `AUTO_RETRY_MAX=2` + normal retry counter sobreposto                                        | `shared/http-client.test.ts`                                                   | 20min   | ⏳     |
+| T-N13 | 🐛 `sleep(1000)` auto-retry hardcoded — testado via mocked setTimeout, nao validado timing                                              | `shared/http-client.test.ts`                                                   | 10min   | ⏳     |
+| T-N14 | 🐛 `KNOWN_ERRORS` regex localizados (PT) — se Jira API retornar EN, hints nao casam. Sem teste contra respostas reais                   | `shared/prompt-errors.test.ts`                                                 | 30min   | ⏳     |
+| T-N15 | 🐛 `setupSigint` readline timeout path (10s) nao testado                                                                                | `shared/cli_base.test.ts`                                                      | 20min   | ⏳     |
+| T-N16 | 🐛 `getIsBusy()` retornando `null` nao testado                                                                                          | `shared/cli_base.test.ts`                                                      | 10min   | ⏳     |
+| T-N17 | 🐛 `jira-auth.ts` sem `.test.ts` — auth token handling, risco de seguranca                                                              | `shared/jira-auth.ts`                                                          | 30min   | ⏳     |
+| T-N18 | 🐛 Concorrencia/race condition nao testada: `createThrottledClient` + `HostSemaphore` queue draining                                    | `shared/http-client.test.ts`, `shared/host-semaphore.test.ts`                  | 1h      | ⏳     |
+| T-N19 | 🐛 `prompt-input-base.ts:23-24` non-TTY path + `minLength` juntos sem teste                                                             | `shared/prompt-input-base.test.ts`                                             | 10min   | ⏳     |
+| T-N20 | 🐛 `cancelError` handling em `smartPrompt` — `/help` command chama `helpCallback()` e `continue` — UI thread bloqueado                  | `shared/prompt-input-inquirer.test.ts`                                         | 15min   | ⏳     |
+| T-N21 | 🐛 `http-client.ts` auto-retry com `shouldAutoRetry` + `AUTO_RETRY_MAX=2` — test coverage da interacao auto+normal retry                | `shared/http-client.test.ts`                                                   | 30min   | ⏳     |
+
+### Sugestoes (P3)
+
+| ID   | Item                                                                                                                | Arquivo(s)                                                                     | Esforco | Status |
+| ---- | ------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------ | ------- | ------ |
+| T-S1 | 💡 Migrar `fs` operacoes em testes unitarios para `memfs` (in-memory filesystem) — elimina IO real                  | `shared/metrics.test.ts`, `shared/logger.test.ts`, `shared/disk-cache.test.ts` | 3h      | ⏳     |
+| T-S2 | 💡 Adicionar benchmark test para `sanitizeForLlm()` com inputs grandes + `calculateRetryDelay` hot loop             | `shared/sanitize.test.ts`, `shared/http-client.test.ts`                        | 1h      | ⏳     |
+| T-S3 | 💡 Testes de integracao para fluxos cross-module (ex: jira → git → setup)                                           | `e2e/` (novo)                                                                  | 4h      | ⏳     |
+| T-S4 | 💡 Property-based/fuzz testing para sanitizacao (hypothesis-style) — validar que nenhum segredo vaza                | `shared/sanitize.test.ts`                                                      | 2h      | ⏳     |
+| T-S5 | 💡 Snapshot testing para output format — `printError`, `printSessionSummary`, `box()` garantir estabilidade visual  | `shared/prompt.test.ts`, `shared/prompt-format.test.ts`                        | 2h      | ⏳     |
+| T-S6 | 💡 Usar `withEnv()` de `test-utils.ts` consistentemente em vez de save/restore manual de `process.env`              | Todos test files                                                               | 2h      | ⏳     |
+| T-S7 | 💡 Adicionar teste para cada UX finding registrado em Sprint UX v2 (43 itens) — garantir que correcoes nao regridem | Conforme UX v2 section                                                         | 4h      | ⏳     |
+| T-S8 | 💡 Contrato de tipos em `shared/types.ts` via `zod` schema + `parse()` — validacao runtime + teste                  | `shared/types.ts`                                                              | 1h      | ⏳     |
+
+### Metricas alvo (Sprint Test)
+
+| Metrica                       | Alvo        |
+| ----------------------------- | ----------- |
+| `tsc --noEmit`                | **0 erros** |
+| `jest` pass                   | **100%**    |
+| Source coverage (statements)  | **≥95%**    |
+| Source coverage (branches)    | **≥85%**    |
+| Source coverage (functions)   | **≥95%**    |
+| Untested shared files         | **0**       |
+| `toBeTruthy()` usage          | **0**       |
+| `setTimeout` mock sem restore | **0**       |
+| process.env pollution points  | **0**       |
+| `.only()` / `.skip()`         | **0**       |
