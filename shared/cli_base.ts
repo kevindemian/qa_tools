@@ -6,6 +6,7 @@ import Config from './config';
 import { loadMetrics } from './metrics';
 import { calculateHealthScore } from './health-score';
 import { ExitCode } from './types';
+import { cleanupTempDirs } from './temp-dir';
 
 const _sessionStart = Date.now();
 const CREDENTIAL_MIN_LENGTH = 20;
@@ -70,6 +71,10 @@ export function offerEnvSetup(result: EnvValidationResult): boolean {
     }
 }
 
+export function confirmDestructiveAction(action: string): boolean {
+    return confirm(`Confirm ${action}? (s/N)`);
+}
+
 export function sanitizeUrl(url: string): string {
     return url.replace(/(token|api_key|secret|password|access_token|client_secret)=[^&]+/gi, '$1=****');
 }
@@ -98,6 +103,7 @@ function _createSigintHandler(getIsBusy: (() => boolean) | null, onExit: (() => 
 
     function _forceExit(): void {
         _cleanupConfirm();
+        cleanupTempDirs();
         if (onExit) onExit();
         info('Até logo!');
         setTimeout(() => process.exit(ExitCode.OK), EXIT_DELAY_MS).unref();

@@ -155,7 +155,7 @@ export async function classifyFailure(title: string, error: string): Promise<str
     const systemTemplate = readPrompt('classify.md');
     if (!systemTemplate) return 'UNKNOWN: Could not load prompt template';
 
-    const baseData = 'Test Title:\n' + title + '\n\nError:\n' + sanitizeForLlm(error);
+    const baseData = 'Test Title:\n' + sanitizeForLlm(title) + '\n\nError:\n' + sanitizeForLlm(error);
 
     try {
         const context: ValidationContext = {

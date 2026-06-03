@@ -110,6 +110,10 @@ export function getOsOpenCommand(target: string): OsOpenCommand | null {
 
 /** Open a file/URL with the OS default handler. Falls back to `fallbackViewer` when no OS command works. */
 export async function openWithOsOrFallback(target: string, fallbackViewer?: () => void): Promise<boolean> {
+    if (!target || target === 'undefined') {
+        fallbackViewer?.();
+        return false;
+    }
     const command = getOsOpenCommand(target);
     if (!command) {
         fallbackViewer?.();
@@ -152,6 +156,10 @@ export async function openWithOsOrFallback(target: string, fallbackViewer?: () =
  * @param logInfo   Info-logger function from prompt (injected to avoid direct dependency).
  */
 export async function openWithFallback(filePath: string, label: string, logInfo: (msg: string) => void): Promise<void> {
+    if (!filePath) {
+        logInfo(label + ' não encontrado');
+        return;
+    }
     const opened = await openWithOsOrFallback(filePath);
     if (opened) {
         logInfo(label + ' aberto no navegador');

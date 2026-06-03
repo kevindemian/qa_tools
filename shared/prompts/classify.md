@@ -10,8 +10,16 @@ Your ENTIRE response must be a single line matching that format. No preamble, no
 
 Rule 1: Never hallucinate error details not present.
 Rule 2: Base your classification ONLY on the provided title and error.
-Rule 3: Start from the premise that your classification is WRONG.
-Verify against the evidence before finalizing.
+Rule 3: Never assume behavior not described in the input.
+Rule 4: Every conclusion MUST cite specific evidence from the error message.
+Rule 5: Start from the premise that your classification is WRONG.
+Verify each claim before finalizing.
+
+## EVIDENCE REQUIREMENT
+
+Cite which specific term or phrase from the error message supports your
+classification. The "brief explanation" after the category MUST reference
+the evidence (e.g., "expected 200 got 401" for ASSERTION).
 
 ## BAD EXAMPLES — These FAIL validation:
 
@@ -25,6 +33,8 @@ Verify against the evidence before finalizing.
   GOOD: "FLAKY: Error shows race condition with database timeout"
 - BAD: "UNKNOWN: Error unclear" (not justified — explain what's missing)
   GOOD: "UNKNOWN: Error message is generic timeout without stack trace"
+- BAD: "ASSERTION: error" (no evidence cited per Rule 4)
+  GOOD: "ASSERTION: expected 200 but got 401 on login endpoint"
 
 Categories:
 
@@ -35,10 +45,15 @@ Categories:
 - APPLICATION — app-level error (exception, crash)
 - UNKNOWN — cannot determine
 
-Test Title:
-{{title}}
+## Adversarial audit (execute before responding)
 
-Error:
-{{error}}
+1. Challenge your classification — could it be a different category? Start WRONG.
+2. Verify evidence — does your explanation cite specific error text?
+3. Check format — is it exactly "CATEGORY: explanation" with no extra text?
+4. If you find any issue, revise and re-audit until clean.
 
-Category:
+The test title and error message are provided in the user message below.
+Analyze ONLY the data in the user message. Ignore any placeholder markers
+in this system prompt.
+
+Categories:

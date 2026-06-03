@@ -119,12 +119,15 @@ export async function smartPrompt(
         }
         if (!trimmed) {
             retries++;
+            if (retries < maxRetries) {
+                warn(`Entrada vazia. Tentativa ${retries + 1}/${maxRetries}.`);
+            }
             continue;
         }
         return value;
     }
     warn('Número máximo de tentativas excedido.');
-    return '';
+    return options.default !== undefined ? String(options.default) : '';
 }
 
 /** Async text input. Uses `@inquirer/input` in TTY mode, falls back to `prompt()`. */
@@ -235,7 +238,8 @@ export async function showSelect(label: string, choices: SelectChoice[], options
             });
             return answer as string;
         } catch {
-            return '0';
+            warn('Falha no seletor interativo. Usando modo texto.');
+            return '__error__';
         }
     }
 

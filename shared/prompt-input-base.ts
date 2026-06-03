@@ -20,6 +20,9 @@ export const isTTY = (): boolean => !!(process.stdout.isTTY && !getConfig().get<
  * @throws {@link CancelError} on nav commands (`/back`, `/exit`, etc.). */
 export function prompt(label: string, options: PromptOptions = {}): string {
     const { default: def, hint, minLength } = options;
+    if (!process.stdin.isTTY) {
+        return def ?? '';
+    }
     while (true) {
         let text = '\n' + chalk.cyan('->') + ' ' + label;
         if (hint) text += ' ' + chalk.yellow('(' + hint + ')');
@@ -39,6 +42,7 @@ export function prompt(label: string, options: PromptOptions = {}): string {
 /** Synchronous yes/no confirmation (readline-sync).
  * In auto-confirm mode returns `defaultYes` without prompting. */
 export function confirm(label: string, defaultYes = false): boolean {
+    if (!process.stdin.isTTY) return defaultYes;
     if (getConfig().get<boolean>('autoConfirm')) return defaultYes;
     const def = defaultYes ? 'Y' : 'N';
     while (true) {

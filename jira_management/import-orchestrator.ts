@@ -122,6 +122,7 @@ async function finalizeTestCreation({
     info,
     printSummary,
 }: FinalizeTestCreationParams): Promise<FinalizeTestCreationResult | undefined> {
+    info('Passo 4 de 5: Atualizando referências e gerando mapeamentos...');
     await postProcessCheckpoint({
         results,
         tests,
@@ -134,6 +135,7 @@ async function finalizeTestCreation({
         info,
     });
 
+    info('Passo 5 de 5: Finalizando...');
     printSummary(results);
 
     const okCount = results.filter((r) => r.status === 'ok').length;
@@ -180,6 +182,8 @@ async function postProcessCheckpoint(opts: PostProcessCheckpointOptions): Promis
         info('Atualizando descrições com cross-references...');
         await linker.updateCrossReferences(tests, inMemoryTasksId);
     }
+
+    info('Gerando arquivos de mapeamento...');
 
     const mappingGen = new MappingFileGenerator();
     mappingGen.generate(sourcePath, projectName, inMemoryTasksId, tests);
@@ -254,6 +258,7 @@ async function runCreationLoop(opts: RunCreationLoopOptions): Promise<FinalizeTe
 async function createTestsFromTestCases(
     params: CreateTestsFromTestCasesParams,
 ): Promise<CreateTestsFromTestCasesResult | undefined> {
+    info('Passo 1 de 5: Validando arquivo de entrada...');
     const prepared = await prepareTestRun({
         tests: params.tests,
         sourcePath: params.sourcePath,
@@ -265,6 +270,8 @@ async function createTestsFromTestCases(
     });
     if (prepared === undefined || 'summary' in prepared) return prepared;
     const { tests: filtered, resumeFrom, inMemoryTasksId, inMemoryTasksText, opLog } = prepared;
+
+    info('Passo 2 de 5: Preparando criação de testes...');
     const { factory, linker, results } = testCreationSetup(
         params.jiraResource,
         params.jiraResourceXray,
@@ -272,6 +279,8 @@ async function createTestsFromTestCases(
     );
     params.onBusy(true);
     opLog.info('Iniciando criação de ' + filtered.length + ' teste(s)');
+
+    info('Passo 3 de 5: Criando testes no Jira...');
     return runCreationLoop({
         filtered,
         factory,

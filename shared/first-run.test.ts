@@ -21,8 +21,14 @@ jest.mock('./state', () => ({
 
 const mockSetupMain = jest.fn().mockResolvedValue(undefined);
 
+const mockShowDocs = jest.fn().mockResolvedValue(undefined);
+
 jest.mock('../setup/main', () => ({
     main: mockSetupMain,
+}));
+
+jest.mock('./show-docs', () => ({
+    showDocs: mockShowDocs,
 }));
 
 const OLD_ENV = { ...process.env };

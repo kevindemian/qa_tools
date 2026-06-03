@@ -1,10 +1,11 @@
 /** git_triggers entry point — validates environment, shows splash, and dispatches to sub-handlers. */
 import { pushBreadcrumb, clearBreadcrumbs } from '../shared/breadcrumbs';
-import { createValidateEnv, offerEnvSetup, setupSigint } from '../shared/cli_base';
+import { createValidateEnv, offerEnvSetup, setupSigint, gracefulExit } from '../shared/cli_base';
 import Config from '../shared/config';
 import { showSplash } from '../shared/splash';
 import { loadMetrics } from '../shared/metrics';
 import { calculateHealthScore } from '../shared/health-score';
+import { version } from '../package.json';
 import { palette } from '../shared/palette';
 import { defaultOutput } from '../shared/output';
 import { rootLogger } from '../shared/logger';
@@ -20,7 +21,7 @@ import {
     confirm as promptConfirm,
 } from '../shared/prompt';
 import { load as loadState, update as updateState } from '../shared/state';
-import type { GitProvider, JsonObject, StateContainer } from '../shared/types';
+import { ExitCode, type GitProvider, type JsonObject, type StateContainer } from '../shared/types';
 import {
     sessionLog,
     sessionContext,
@@ -94,8 +95,9 @@ function buildContextLine(): string {
 
 function _selectProject(): { projectName: string | null; names: string[] } {
     const state = loadState();
-    displayProjects();
-    const names = Object.keys(getProjects());
+    const allProjects = getProjects();
+    const names = Object.keys(allProjects).sort();
+    displayProjects(names, state.lastProject as string);
     const firstDefault = (state.lastProject as string) || '';
     const firstChoice = prompt('Escolha um projeto', {
         hint: '1-' + names.length,
@@ -108,7 +110,7 @@ function _selectProject(): { projectName: string | null; names: string[] } {
     }
     const projectName = names[firstIdx - 1] as string;
     setCurrentProjectName(projectName);
-    setProjectId(getProjects()[projectName] as string);
+    setProjectId(allProjects[projectName] as string);
     updateState((s: StateContainer) => {
         s.lastProject = projectName;
     });
@@ -282,8 +284,8 @@ async function _initEnvironment(): Promise<void> {
         const store = loadMetrics();
         const health = calculateHealthScore(store);
         healthScore = { score: health.overall, grade: health.grade };
-    } catch {
-        // health score unavailable — skip
+    } catch (err) {
+        rootLogger.debug('Health score failed: ' + (err instanceof Error ? err.message : String(err)));
     }
     await showSplash(undefined, undefined, undefined, undefined, healthScore);
     sessionLog.info('Sessão iniciada');
@@ -324,6 +326,22 @@ async function _selectProjectAndCreateManager(): Promise<{
 }
 
 async function main(): Promise<void> {
+    if (process.argv.includes('--help') || process.argv.includes('-h')) {
+        console.log('QA Tools — Git Triggers');
+        console.log('');
+        console.log('Uso: npx tsx git_triggers/main.ts [opcoes]');
+        console.log('');
+        console.log('Opcoes:');
+        console.log('  --help, -h     Exibe esta ajuda');
+        console.log('  --version      Exibe a versao');
+        gracefulExit(ExitCode.OK);
+        return;
+    }
+    if (process.argv.includes('--version')) {
+        console.log(version);
+        gracefulExit(ExitCode.OK);
+        return;
+    }
     _initInfrastructure();
 
     if (await tryBatchMode()) return;
@@ -349,7 +367,8 @@ async function main(): Promise<void> {
             : '0-9';
 
     while (true) {
-        if (process.stdout.isTTY) console.clear();
+        if (process.stdout.isTTY && !process.argv.includes('--no-clear') && process.env.QA_TOOLS_NO_CLEAR !== 'true')
+            console.clear();
         const finalChoice = await _promptChoice(stateHint);
         updateState((s: StateContainer) => {
             s.lastChoice = finalChoice;
@@ -367,8 +386,15 @@ async function main(): Promise<void> {
 }
 
 process.on('unhandledRejection', (reason: unknown) => {
-    printError('Erro interno não tratado', reason);
+    printError('Erro interno não tratado (async)', reason);
     rootLogger.error('Unhandled Rejection', { reason: String(reason) });
+});
+
+process.on('uncaughtException', (err: Error) => {
+    printError('Erro interno não tratado (sync)', err);
+    rootLogger.error('Uncaught Exception', { error: err.message, stack: err.stack });
+    printSessionSummary();
+    gracefulExit(ExitCode.ERROR);
 });
 
 main().catch((err) => {

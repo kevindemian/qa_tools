@@ -78,9 +78,13 @@ export async function sendWithFallback(
 }
 
 /**
- * Estimate input token count (chars / 4 heuristic).
+ * Estimate input token count.
+ * CJK chars → 1 token each, other chars → 1 token per 4.
  * @internal
  */
 export function _estimateInputTokens(system: string, user: string): number {
-    return Math.ceil((system.length + user.length) / 4);
+    const combined = system + user;
+    const cjkCount = (combined.match(/[\u4E00-\u9FFF\u3000-\u303F\uFF00-\uFFEF]/g) ?? []).length;
+    const regCount = combined.length - cjkCount;
+    return Math.ceil(regCount / 4) + cjkCount;
 }

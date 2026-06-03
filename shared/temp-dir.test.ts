@@ -98,7 +98,7 @@ describe('registerCleanup', () => {
             return process;
         });
         registerCleanup();
-        expect(handlers).toContain('SIGINT');
+        expect(handlers).not.toContain('SIGINT');
         expect(handlers).toContain('SIGTERM');
         expect(handlers).toContain('exit');
     });

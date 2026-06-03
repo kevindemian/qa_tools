@@ -53,7 +53,7 @@ const KNOWN_ERRORS: KnownError[] = [
     {
         test: /unauthorized|401/i,
         msg: 'Token inválido ou expirado',
-        hint: 'Verifique seu token de autenticação no arquivo .env.',
+        hint: 'Token inválido ou expirado. Reconfigure: /setup ou edite o arquivo .env.',
     },
     {
         test: /econnreset|econnrefused|enotfound|timeout|econnaborted/i,
@@ -172,9 +172,12 @@ export function onError(
     options: { retry?: boolean; details?: boolean } = {},
 ): 'abort' | 'skip' | 'retry' {
     const { retry: canRetry = false, details: canDetails = false } = options;
-    const { msg } = _formatErrorMessage(err);
+    const { msg, raw } = _formatErrorMessage(err);
 
     error(`${context}: ${msg}`);
+    if (/unauthorized|401/i.test(raw)) {
+        output.print(palette.blue('→  Token inválido ou expirado. Reconfigure com /setup ou edite o .env'));
+    }
 
     if (getConfig().get<boolean>('autoConfirm')) {
         const autoAction = getConfig().get('onError');

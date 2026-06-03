@@ -85,7 +85,7 @@ async function callLlmFallback(
 /** Attempt the primary LLM call with schema-enforced output. */
 async function attemptPrimary(system: string, user: string, startTime: number, type: ArtifactType): Promise<unknown> {
     const schema = getSchemaForType(type);
-    const tier = type === 'analysis' ? 'report' : 'report';
+    const tier = 'report';
     try {
         const primary = await llmPrompt({ tier, system, user, schema });
         recordLlmRequest(tier, Date.now() - startTime);

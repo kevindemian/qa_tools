@@ -50,10 +50,26 @@ export async function main(): Promise<void> {
             { name: '      Jira Management  (Testes, Releases, Config)', value: 'jira' },
             { name: '      Git Triggers     (Pipelines, PR/MR, CI/CD, Setup)', value: 'git' },
             { type: 'separator', line: '        ' },
+            { name: '      Setup Wizard  (Configurar projeto)', value: 'setup' },
+            { type: 'separator', line: '        ' },
             { name: '      /exit  Sair', value: 'exit' },
         ]);
 
         if (choice === 'exit') break;
+        if (choice === 'setup') {
+            await new Promise<void>((resolve, reject) => {
+                const child = spawn('npx', ['tsx', join(root, 'setup/main.ts')], {
+                    stdio: 'inherit',
+                    cwd: root,
+                });
+                child.on('exit', (code) => {
+                    if (code === 0) resolve();
+                    else reject(new Error('Setup encerrou com código ' + code));
+                });
+                child.on('error', reject);
+            });
+            continue;
+        }
         if (choice !== 'jira' && choice !== 'git') continue;
 
         try {

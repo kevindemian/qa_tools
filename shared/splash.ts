@@ -112,6 +112,7 @@ export function buildSplashLines(
     }
     splash.push(palette.blue('  /help  Ajuda · /docs  Documentação'));
     splash.push(palette.green('  --batch  Modo headless para CI/CD'));
+    splash.push(palette.muted('  Categorias: 1-6  ·  /help <tópico>  ·  /exit'));
     splash.push('');
     return splash;
 }

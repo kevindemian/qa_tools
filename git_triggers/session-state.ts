@@ -4,10 +4,11 @@ import path from 'path';
 import Config from '../shared/config';
 import { rootLogger } from '../shared/logger';
 import { SessionContext } from '../shared/session-context';
-import { update as updateState } from '../shared/state';
+import { load as loadState, update as updateState } from '../shared/state';
 import { printSessionSummary as sharedPrintSessionSummary } from '../shared/cli_base';
 import { providerLabel as _providerLabel } from './ui-helpers';
 import { error, print, title, warn } from '../shared/prompt';
+import { palette } from '../shared/palette';
 import { loadMetrics, calculateFlakiness } from '../shared/metrics';
 import type { GitProvider, JsonObject, StateContainer } from '../shared/types';
 import GitLabManager from './gitlab_manager';
@@ -143,7 +144,14 @@ export function pushHistory(op: string, detail: string, status: string): void {
 }
 
 export function printSessionSummary(): void {
-    sharedPrintSessionSummary(sessionContext.sessionCounters, sessionContext.lastOperation);
+    const state = (() => {
+        try {
+            return loadState() as { history?: Array<{ status: string; op: string; detail: string }> };
+        } catch {
+            return {};
+        }
+    })();
+    sharedPrintSessionSummary(sessionContext.sessionCounters, sessionContext.lastOperation, state.history);
 }
 
 export function providerLabel(): string {
@@ -167,16 +175,17 @@ export function _resetForTest(): void {
     sessionContext.sessionCounters = [];
 }
 
-export function displayProjects(): void {
+export function displayProjects(names?: string[], lastProject?: string): void {
     const projs = loadProjects();
     title('Projetos');
-    const names = Object.keys(projs);
-    names.forEach((name, i) => {
+    const keys = names ?? Object.keys(projs).sort();
+    keys.forEach((name, i) => {
         const p = getProviderForProject(name);
         const tag = p === 'github' ? ' [GH]' : ' [GL]';
-        print('  ' + (i + 1) + '  ' + name + tag);
+        const marker = name === lastProject ? palette.muted(' *') : '';
+        print('  ' + (i + 1) + '  ' + name + tag + marker);
     });
-    print('  ' + (names.length + 1) + '  Sair');
+    print('  ' + (keys.length + 1) + '  Sair');
 }
 
 export async function displayRecentPipelines(m: GitProvider): Promise<void> {
