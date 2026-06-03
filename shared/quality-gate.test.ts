@@ -23,12 +23,14 @@ describe('runQualityGate', () => {
         delete process.env.QA_GATE_MAX_SUITE_SPEED;
     });
 
-    it('returns fail when no metrics data exists', () => {
+    it('returns pass when no metrics data exists (gate skipped)', () => {
         mockLoadMetrics.mockReturnValue({ runs: [] });
         const result = runQualityGate();
-        expect(result.overall).toBe('fail');
+        expect(result.overall).toBe('pass');
         expect(result.checks).toHaveLength(1);
         expect(result.checks[0]?.name).toBe('metrics-data');
+        expect(result.checks[0]?.status).toBe('pass');
+        expect(result.score).toBe(100);
     });
 
     it('returns pass when all gates pass', () => {
