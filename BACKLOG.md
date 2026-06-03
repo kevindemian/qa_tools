@@ -750,3 +750,59 @@ Implementação da Fase 3 do STRATEGIC-PLAN.md: inteligência avançada que corr
 | Conexões implementadas      | **8 itens** | **8 itens**   |
 | Reuso de infra implementado | **3 itens** | **3 itens**   |
 | Consolidação implementada   | **2 itens** | **2 itens**   |
+
+## 🔴 Débito Urgente — Auditoria llm-engineer (Jun/2026)
+
+Auditoria completa: 6 prompts (avg 7.6/10), 11 failure points, 8 risks, 7 gaps, 6 security.
+
+### Críticos (P0)
+
+| ID   | Item                                                                                                                                                            | Arquivo(s)                     | Esforço | Status |
+| ---- | --------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------ | ------- | ------ |
+| U-C1 | 🐛 `readPrompt()` retorna `''` na falha — `failure-analysis.ts:107,155` não valida, LLM recebe zero instruções → output aleatório                               | `shared/failure-analysis.ts`   | 15min   | ⏳     |
+| U-C2 | 🐛 Sem integrity check de prompt files no startup — se `classify.md`/`failure-analysis.md`/`bug-report-from-description.md` faltam, app continua sem sys prompt | `shared/cli_base.ts` (startup) | 30min   | ⏳     |
+| U-C3 | 🐛 `withBusy()` race condition: `isBusy` corrompido em chamadas concorrentes — `finally` seta `false` mesmo com outra call ativa                                | `shared/session-context.ts`    | 30min   | ⏳     |
+| U-G4 | 🐛 Sem validação de templates de prompt — arquivos corrompidos/faltantes passam silenciosos                                                                     | Global (startup hook)          | 20min   | ⏳     |
+
+### Maiores (P1)
+
+| ID   | Item                                                                                                                           | Arquivo(s)                                                                                 | Esforço | Status |
+| ---- | ------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------ | ------- | ------ |
+| U-M1 | 🗑️ `classify-pipeline-failure.md` — dead file: zero `.ts` imports, marcado ✅ mas nunca usado. Remover ou integrar             | `shared/prompts/classify-pipeline-failure.md`                                              | 15min   | ⏳     |
+| U-M2 | 🐛 `main().catch()` sem `gracefulExit()` — processo pode travar em fatal error                                                 | `jira_management/main.ts:348-353`                                                          | 10min   | ⏳     |
+| U-M3 | 🐛 `name === 'MissingTokenError'` string check frágil — refatoração de Error class quebra handler silenciosamente              | `git_triggers/main.ts:305`                                                                 | 10min   | ⏳     |
+| U-M4 | 🐛 5 bare `catch {}` sem logging — debugging impossível: `jira:319`, `git:258,278`, `open:69`, `first-run:61`                  | `jira_management/main.ts`, `git_triggers/main.ts`, `shared/open.ts`, `shared/first-run.ts` | 20min   | ⏳     |
+| U-M5 | 🐛 `failure-analysis.md` schema inconsistente — `evidence` opcional no schema mas Rule 4 do constitution exige obrigatório     | `shared/prompts/failure-analysis.md`                                                       | 10min   | ⏳     |
+| U-M6 | 🐛 Benchmark regression check manual (GOVERNANCE.md §6) — sem CI automation                                                    | CI config + `shared/llm-benchmark.ts`                                                      | 1h      | ⏳     |
+| U-M7 | 🐛 Duas prompts classify com taxonomias diferentes (`classify.md` vs `classify-pipeline-failure.md`) sem rationale documentado | `shared/prompts/`                                                                          | 20min   | ⏳     |
+
+### Menores (P2)
+
+| ID   | Item                                                                                            | Arquivo(s)                              | Esforço | Status |
+| ---- | ----------------------------------------------------------------------------------------------- | --------------------------------------- | ------- | ------ |
+| U-m1 | 🐛 Regex sanitize.ts:11 falso-positivo `http://host:8080/path` redige porta como se fosse senha | `shared/sanitize.ts`                    | 10min   | ⏳     |
+| U-m2 | 🗑️ `if (!child)` dead code — `spawn()` nunca retorna null                                       | `shared/open.ts:127`                    | 5min    | ⏳     |
+| U-m3 | 🐛 `classify.md:59` linha `Categories:` redundante/truncada no final                            | `shared/prompts/classify.md`            | 5min    | ⏳     |
+| U-m4 | 🐛 Token leak em `prompt-errors.ts:_showErrorDetails` — `response.data` logado sem sanitização  | `shared/prompt-errors.ts`               | 10min   | ⏳     |
+| U-m5 | 🐛 `user-story-to-tests.md` `preConditions` type enum incompleto — só `"create"` exemplificado  | `shared/prompts/user-story-to-tests.md` | 10min   | ⏳     |
+
+### Sugestões (P3)
+
+| ID   | Item                                                                                                              | Arquivo(s)                                      | Esforço | Status |
+| ---- | ----------------------------------------------------------------------------------------------------------------- | ----------------------------------------------- | ------- | ------ |
+| U-s1 | 💡 Refatorar `jira_management/main.ts:279-333` — extrair arg parsing, health score, first-run em funções nomeadas | `jira_management/main.ts`                       | 30min   | ⏳     |
+| U-s2 | 💡 Adicionar re-entrancy guard / promise queue em `SessionContext` para concorrência segura                       | `shared/session-context.ts`                     | 30min   | ⏳     |
+| U-s3 | 💡 `stepsToReproduce >=3` no `bug-report-from-description.md` — flexibilizar para >=1 com recomendação de >=3     | `shared/prompts/bug-report-from-description.md` | 5min    | ⏳     |
+| U-s4 | 💡 `preConditions >=1` no `user-story-to-tests.md` — flexibilizar para >=0                                        | `shared/prompts/user-story-to-tests.md`         | 5min    | ⏳     |
+| U-s5 | 💡 Prompt versioning + rollback strategy documentado em GOVERNANCE.md                                             | `shared/prompts/GOVERNANCE.md`                  | 20min   | ⏳     |
+
+### Métricas alvo
+
+| Métrica          | Alvo        |
+| ---------------- | ----------- |
+| `tsc --noEmit`   | **0 erros** |
+| `jest` pass      | **100%**    |
+| Prompt score avg | **≥9.0/10** |
+| Dead code        | **0 files** |
+| Bare `catch {}`  | **0**       |
+| Race conditions  | **0**       |
