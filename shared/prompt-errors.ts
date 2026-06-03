@@ -3,6 +3,7 @@ import chalk from 'chalk';
 import { box, divider as boxDivider } from './box';
 import { palette } from './palette';
 import { defaultOutput as output } from './output';
+import { rootLogger } from './logger';
 import {
     isQuiet,
     getConfig,
@@ -101,7 +102,8 @@ export function extractErrorMessage(err: unknown): string {
         if (status) msg += ' (HTTP ' + status + ')';
         if (url) msg += ' → ' + url;
         return msg;
-    } catch {
+    } catch (err) {
+        rootLogger.debug('Error extraction failed: ' + (err instanceof Error ? err.message : String(err)));
         return MSG_UNKNOWN_ERROR;
     }
 }

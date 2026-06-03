@@ -69,7 +69,7 @@ export function registerCleanup(): void {
             try {
                 if (existsSync(p)) rmSync(p, { recursive: true, force: true });
             } catch {
-                /* ok */
+                /* cleanup — temp dir pode não existir ainda */
             }
         }
     };

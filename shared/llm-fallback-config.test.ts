@@ -84,6 +84,9 @@ import {
     LLM_FETCH_TIMEOUT_MS,
     LLM_ERROR_BODY_TRUNCATION,
     LlmErrorPayloadSchema,
+    estimateCostUSD,
+    getModelPricing,
+    hasPricingForModel,
 } from './llm-fallback-config';
 import Config from './config';
 
@@ -270,5 +273,57 @@ describe('LlmErrorPayloadSchema', () => {
     it('accepts empty error payload', () => {
         const result = LlmErrorPayloadSchema.safeParse({});
         expect(result.success).toBe(true);
+    });
+});
+
+describe('estimateCostUSD', () => {
+    it('calculates cost for known model', () => {
+        const cost = estimateCostUSD('google/gemini-2.0-flash-exp', 1000, 500);
+        expect(cost).toBeGreaterThan(0);
+        expect(cost).toBeLessThan(0.01);
+    });
+
+    it('falls back to default pricing for unknown model', () => {
+        const cost = estimateCostUSD('nonexistent-model', 1000, 500);
+        expect(cost).toBeGreaterThan(0);
+    });
+
+    it('handles zero tokens', () => {
+        const cost = estimateCostUSD('google/gemini-2.0-flash-exp', 0, 0);
+        expect(cost).toBe(0);
+    });
+
+    it('pricing is proportional to token count', () => {
+        const small = estimateCostUSD('google/gemini-2.0-flash-exp', 1000, 500);
+        const large = estimateCostUSD('google/gemini-2.0-flash-exp', 2000, 1000);
+        expect(large).toBeCloseTo(small * 2, 5);
+    });
+});
+
+describe('getModelPricing', () => {
+    it('returns pricing for known model', () => {
+        const pricing = getModelPricing('google/gemini-2.0-flash-exp');
+        expect(pricing).toBeDefined();
+        if (!pricing) throw new Error('Expected pricing to be defined');
+        expect(pricing.inputPer1K).toBeGreaterThan(0);
+        expect(pricing.outputPer1K).toBeGreaterThan(0);
+    });
+
+    it('returns undefined for unknown model', () => {
+        expect(getModelPricing('unknown')).toBeUndefined();
+    });
+});
+
+describe('hasPricingForModel', () => {
+    it('returns true for known model', () => {
+        expect(hasPricingForModel('google/gemini-2.0-flash-exp')).toBe(true);
+    });
+
+    it('returns false for unknown model', () => {
+        expect(hasPricingForModel('unknown')).toBe(false);
+    });
+
+    it('returns true for llama-3.1-8b-instant', () => {
+        expect(hasPricingForModel('llama-3.1-8b-instant')).toBe(true);
     });
 });

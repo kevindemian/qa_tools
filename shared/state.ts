@@ -21,7 +21,8 @@ function ensureStateDir(config?: Config): boolean {
     try {
         fs.mkdirSync(dir, { recursive: true });
         return true;
-    } catch {
+    } catch (err) {
+        rootLogger.warn('Failed to ensure state dir: ' + (err instanceof Error ? err.message : String(err)));
         return false;
     }
 }
@@ -29,6 +30,7 @@ function ensureStateDir(config?: Config): boolean {
 function statePath(config?: Config): string {
     return path.join(getStateDir(config), 'state.json');
 }
+
 function tmpPath(config?: Config): string {
     return statePath(config) + '.tmp';
 }
@@ -48,17 +50,17 @@ export function migrateOldState(config?: Config): void {
             try {
                 fs.unlinkSync(OLD_STATE_PATH + '.bak');
             } catch {
-                /* best-effort cleanup */
+                /* best-effort cleanup — old backup file may not exist */
             }
             try {
                 fs.unlinkSync(OLD_STATE_PATH + '.tmp');
             } catch {
-                /* best-effort cleanup */
+                /* best-effort cleanup — old tmp file may not exist */
             }
             try {
                 fs.unlinkSync(OLD_STATE_PATH);
             } catch {
-                /* best-effort cleanup */
+                /* best-effort cleanup — old state file may not exist */
             }
         }
     } catch (err: unknown) {

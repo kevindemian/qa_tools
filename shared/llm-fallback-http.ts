@@ -112,7 +112,12 @@ export async function fetchWithRetry(
                 continue;
             }
         }
-        const body = await resp.text().catch(() => '');
+        const body = await resp.text().catch(() => {
+            rootLogger.debug(
+                'Failed to read HTTP response body on status ' + resp.status + ' — propagating primary error',
+            );
+            return '';
+        });
         throw new LlmProviderError(
             'LLM API error: HTTP ' + resp.status + ' ' + sanitizeForLlm(body).slice(0, LLM_ERROR_BODY_TRUNCATION),
         );

@@ -1,6 +1,7 @@
 import * as fs from 'fs';
 import { toKnownIssues } from './report-types';
 import type { KnownIssue } from './report-types';
+import { rootLogger } from './logger';
 
 export function loadKnownIssues(filePath: string): KnownIssue[] {
     try {
@@ -13,7 +14,8 @@ export function loadKnownIssues(filePath: string): KnownIssue[] {
             if (Array.isArray(obj.issues)) return toKnownIssues(obj.issues);
         }
         return [];
-    } catch {
+    } catch (err) {
+        rootLogger.warn('Report generation fallback: ' + (err instanceof Error ? err.message : String(err)));
         return [];
     }
 }

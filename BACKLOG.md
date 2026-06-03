@@ -21,7 +21,29 @@
 
 ---
 
-<!-- Sprint 2, Sprint 3, Sprint 4, Sprint 5 → migrados para BACKLOG-historico.md (100% concluídos) -->
+## 🚀 Sprint A — Auditoria Adversarial: Correções (P0-P2)
+
+Correções estruturais identificadas na auditoria adversarial completa (jun/2026).
+
+| ID  | Item                                                                                                  | Arquivos                                                                                     | Esforço | Status |
+| --- | ----------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------- | ------- | ------ |
+| A1  | ♻️ Split `llm-review.ts` por SRP (prompts + analyzer + orchestration)                                 | `shared/llm-review.ts`, `shared/llm-review-prompts.ts`, `shared/llm-review-analyzer.ts`      | 2h      | ⏳     |
+| A2  | ♻️ Refatorar `runQualityGate`: 4 helpers + side effect isolado                                        | `shared/quality-gate.ts`                                                                     | 1h      | ⏳     |
+| A3  | 🔧 Adicionar debug log em `resp.text().catch(() => '')`                                               | `shared/llm-fallback-http.ts`                                                                | 5min    | ⏳     |
+| A4  | 🔧 Categorizar `catch {}` sem parâmetro (8 recovery + 4 cleanup)                                      | 12 arquivos em `shared/`                                                                     | 30min   | ⏳     |
+| A5  | 📋 Merge `llm-cost.test.ts` em `llm-fallback-config.test.ts` + `llm-review.test.ts`, deletar original | `shared/llm-cost.test.ts`, `shared/llm-fallback-config.test.ts`, `shared/llm-review.test.ts` | 30min   | ⏳     |
+
+### Métricas alvo (Sprint A)
+
+| Métrica               | Alvo         |
+| --------------------- | ------------ |
+| `tsc --noEmit`        | 0 erros      |
+| `eslint`              | 0 erros      |
+| `jest`                | 100% pass    |
+| Débitos novos         | 0            |
+| `llm-review.ts` size  | < 500 linhas |
+| `runQualityGate` size | < 70 linhas  |
+| Orphan tests          | 0            |
 
 ## 🚀 Sprint 6 — Jira Mode: Coexistência Server + Cloud
 
