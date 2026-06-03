@@ -806,3 +806,116 @@ Auditoria completa: 6 prompts (avg 7.6/10), 11 failure points, 8 risks, 7 gaps, 
 | Dead code        | **0 files** |
 | Bare `catch {}`  | **0**       |
 | Race conditions  | **0**       |
+
+## 🎨 Sprint UX v2 — Auditoria UX Completa (Jun/2026)
+
+Auditoria UX independente: 43 issues (7 críticos, 11 maiores, 25 menores). Score geral: 6.5/10.
+
+### Críticos (P0) — Fixar antes do próximo release
+
+| ID   | Item                                                                                                                                    | Arquivo(s)                                                                                                                 | Esforço | Status |
+| ---- | --------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------- | ------- | ------ |
+| V-C1 | 🐛 **Triplo sistema de ícones**: Unicode (✓✗⚠ℹ), emoji (📊🟢🟡🔴), ASCII dots (●○) — inconsistente entre módulos. Unificar via `icon()` | `shared/prompt-format.ts`, `shared/splash.ts`, `shared/cli_base.ts`, `shared/session-state.ts`, `shared/prompt-summary.ts` | 2h      | ⏳     |
+| V-C2 | 🐛 **Setup Wizard 60% em inglês**: prompts `"Git provider"`, `"Project name"`, `"Test framework"` etc — todo o resto do app em PT       | `setup/main.ts:26-58`                                                                                                      | 30min   | ⏳     |
+| V-C3 | 🐛 **Sem fallback ASCII para emoji**: `📊🟢🟡🔴✅⏭️` em non-TTY/CI viram raw emoji                                                      | `splash.ts:70,73`, `session-state.ts:200`, `prompt-summary.ts:38-40`, `cli_base.ts:204-209`                                | 1h      | ⏳     |
+| V-C4 | 🐛 **Splash duplicado**: renderizado no entry-menu E de novo no sub-módulo — usuário vê logo 2x por sessão                              | `entry-menu.ts:47`, `jira_management/main.ts:311`, `git_triggers/main.ts:290`                                              | 1h      | ⏳     |
+| V-C5 | 🐛 **Três métodos de clear de tela**: `\x1Bc` (entry), `\x1b[2J\x1b[H` (jira), `console.clear()` (git)                                  | `entry-menu.ts:46`, `jira_management/main.ts:251`, `git_triggers/main.ts:370`                                              | 30min   | ⏳     |
+| V-C6 | 🐛 **Git project selector usa `prompt()` ao invés de `showSelect`** — Jira usa widget inquirer, Git usa texto puro                      | `git_triggers/main.ts:96-119`                                                                                              | 1h      | ⏳     |
+| V-C7 | 🐛 **`confirmDestructiveAction` nunca é chamada** — definida em `cli_base.ts:75` mas merge/close/publish não usam                       | `shared/cli_base.ts`, handlers de merge/close/publish                                                                      | 1h      | ⏳     |
+
+### Maiores (P1)
+
+| ID    | Item                                                                                                                    | Arquivo(s)                                               | Esforço | Status |
+| ----- | ----------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------- | ------- | ------ |
+| V-M1  | 🐛 `/history` no Jira não pausa — operações somem na próxima renderização. Git pausa (`ask()`), Jira não. Inconsistente | `jira_management/ui-helpers.ts:129-136`                  | 15min   | ⏳     |
+| V-M2  | 🐛 `/back` e `/menu` no Git não dão feedback — `return false` silencioso, usuário não vê confirmação                    | `git_triggers/main.ts:231-233`                           | 15min   | ⏳     |
+| V-M3  | 🐛 `/exit` no Git rotulado `"Voltar ao menu principal"` — mas na verdade sai do módulo Git. Nome enganoso               | `git_triggers/main.ts:150`                               | 5min    | ⏳     |
+| V-M4  | 🐛 **Entry menu não aceita `/sair` ou `/quit`** — `choice === 'exit'` break, mas `/sair` e `/quit` ignorados            | `entry-menu.ts:58`                                       | 10min   | ⏳     |
+| V-M5  | 🐛 **Non-TTY minimalista**: splash non-TTY só `"🔧 QA Tools v1.0.0"` — sem hint de comandos ou /help                    | `splash.ts:129-132`                                      | 15min   | ⏳     |
+| V-M6  | 🐛 **Prompt prefix inconsistente**: `->` (prompt-input-base) vs `◆` (inquirer) para mesma ação                          | `prompt-input-base.ts:27`, `prompt-input-inquirer.ts:30` | 15min   | ⏳     |
+| V-M7  | 🐛 **`(/help)` em todo prompt**: inclusive em `"Pressione Enter para continuar"` — ruído                                | `prompt-input-base.ts:30`                                | 15min   | ⏳     |
+| V-M8  | 🐛 **Git pipeline status 3 sistemas de ícone na mesma função**: `\u2713` (✓), `\u2717` (✗), `'~'` (tilde ASCII)         | `git_triggers/session-state.ts:200`                      | 10min   | ⏳     |
+| V-M9  | 🐛 **Jira `/help` flag usa `console.log` sem formatação** — inconsistente com experiência interativa rica               | `jira_management/main.ts:279-290`                        | 10min   | ⏳     |
+| V-M10 | 🐛 **JQL validation call sem spinner** — requisição de rede bloqueia UI sem feedback                                    | `jira_management/main.ts:157-163`                        | 10min   | ⏳     |
+| V-M11 | 🐛 **Projeto Git >20 nomes rola sem `pageSize`** — `displayProjects` sem limite, `showSelect` tem                       | `git_triggers/main.ts:96-119`                            | 15min   | ⏳     |
+
+### Menores (P2)
+
+| ID    | Item                                                                                                                      | Arquivo(s)                                          | Esforço | Status |
+| ----- | ------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------- | ------- | ------ |
+| V-N1  | 🐛 Options entry menu com `6-space indent` (`'      Jira Management'`) — inconsistente com sub-menus                      | `entry-menu.ts:49-56`                               | 5min    | ⏳     |
+| V-N2  | 🐛 Non-TTY entry menu em inglês (`"Usage: npm run jira"`) — todo app em PT                                                | `entry-menu.ts:40-43`                               | 5min    | ⏳     |
+| V-N3  | 🐛 Splash mostra health check COM delay de rede antes do menu — first-run espera 2s sem ação                              | `splash.ts:46-74`                                   | 30min   | ⏳     |
+| V-N4  | 🐛 Status dots no splash usam `●`/`○` — terceiro sistema de ícone (não `icon()`, não emoji)                               | `splash.ts:93-94`                                   | 10min   | ⏳     |
+| V-N5  | 🐛 Help hint no splash usa 3 cores na mesma linha (`/help` blue, `--batch` green, `Categorias` muted) — sobrecarga visual | `splash.ts:113-115`                                 | 5min    | ⏳     |
+| V-N6  | 🐛 Jira status `🟢 online` / `🔴 offline` — emoji sem fallback ASCII                                                      | `splash.ts:70,73`                                   | 10min   | ⏳     |
+| V-N7  | 🐛 Logo figlet `ANSI Shadow` 7+ linhas — muito alto para re-renderização frequente                                        | `splash.ts:144`                                     | 15min   | ⏳     |
+| V-N8  | 🐛 `_displayBadge` usa `📊` sem fallback ASCII em non-TTY                                                                 | `jira_management/main.ts:98-110`                    | 10min   | ⏳     |
+| V-N9  | 🐛 `getUserChoice` re-renderiza header box em cada iteração — flickering                                                  | `jira_management/ui-helpers.ts:160-196`             | 20min   | ⏳     |
+| V-N10 | 🐛 Setup summary usa `✅⏭️` sem fallback ASCII                                                                            | `setup/main.ts:140-157`                             | 10min   | ⏳     |
+| V-N11 | 🐛 `.gitlab-ci.yml` overwrite `askConfirm` sem fallback non-TTY                                                           | `setup/main.ts:99`                                  | 10min   | ⏳     |
+| V-N12 | 🐛 First-run wizard breadcrumb prefix vazio — título mostra `> ` sem contexto                                             | `first-run.ts:44-48`                                | 10min   | ⏳     |
+| V-N13 | 🐛 First-run options sem explicação — usuário não sabe o que "setup wizard" faz                                           | `first-run.ts:51-55`                                | 10min   | ⏳     |
+| V-N14 | 🐛 `printError` usa `SUMMARY_BOX_WIDTH=72` fixo — não adapta ao terminal width, quebra em terminais estreitos             | `prompt-errors.ts:134`                              | 10min   | ⏳     |
+| V-N15 | 🐛 `onError` renderiza opções com divider manual — diferente do box-based usado no resto do app                           | `prompt-errors.ts:196-198`                          | 10min   | ⏳     |
+| V-N16 | 🐛 `NAV_CMDS` não inclui `/docs`, `/history`, `/h` — sem única fonte da verdade para comandos                             | `prompt-input-base.ts:15`                           | 10min   | ⏳     |
+| V-N17 | 🐛 `_log` respeita `isQuiet()` menos para error/warn — bom padrão, mas `helpLine` respeita quiet, non-TTY sem help        | `prompt-format.ts:55-57`                            | 10min   | ⏳     |
+| V-N18 | 🐛 Docs sempre abrem browser — sem fallback `less`/`more` em non-TTY/SSH                                                  | `showDocs.ts:57-91`                                 | 1h      | ⏳     |
+| V-N19 | 🐛 `confirmDestructiveAction` em inglês (`"Confirm ${action}? (s/N)"`) — inconsistente com app PT                         | `cli_base.ts:75`                                    | 5min    | ⏳     |
+| V-N20 | 🐛 `safeParse` em `shared/first-run.ts` — import não encontrado (potencial runtime error)                                 | `shared/first-run.ts`                               | 10min   | ⏳     |
+| V-N21 | 🐛 `maybeRunFirstRunWizard` catch sem `safeParse` — runtime error se módulo não carregar                                  | `shared/first-run.ts:60-71`                         | 10min   | ⏳     |
+| V-N22 | 🐛 `shared/prompt.ts` exporta tudo de 3 sub-módulos + redefine — risco de shadowing                                       | `shared/prompt.ts`                                  | 15min   | ⏳     |
+| V-N23 | 🐛 `task_analysis.ts` — módulo não encontrado em disco (import quebrado?)                                                 | `git_triggers/main.ts` ou `shared/task-analysis.ts` | 15min   | ⏳     |
+| V-N24 | 🐛 `loadState` em `git_triggers/main.ts` — pode carregar estado corrompido sem validação                                  | `git_triggers/main.ts`                              | 15min   | ⏳     |
+| V-N25 | 🐛 `temp-dir.ts` usa `tmp` module sem `unsafeCleanup` — potencial resíduo em disco se processo morre                      | `shared/temp-dir.ts`                                | 20min   | ⏳     |
+
+### Sugestões (P3)
+
+| ID    | Item                                                                                                                                         | Arquivo(s)                                            | Esforço | Status |
+| ----- | -------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------- | ------- | ------ |
+| V-S1  | 💡 Criar `clearScreen()` centralizado em `shared/output.ts` — usar em todos os módulos                                                       | `shared/output.ts`, `entry-menu.ts`, `main.ts` files  | 15min   | ⏳     |
+| V-S2  | 💡 Reduzir altura do splash — trocar figlet `ANSI Shadow` por fonte mais compacta ou renderizar logo só na primeira entrada                  | `shared/splash.ts`                                    | 15min   | ⏳     |
+| V-S3  | 💡 Respeitar `NO_COLOR` env var — CLI colorido deve desligar cores quando `NO_COLOR` set                                                     | `shared/palette.ts`, `shared/output.ts`               | 30min   | ⏳     |
+| V-S4  | 💡 `getUserChoice` memoizar header box — não re-renderizar se counters não mudaram                                                           | `jira_management/ui-helpers.ts`                       | 20min   | ⏳     |
+| V-S5  | 💡 `pageSize` no `displayProjects` — limitar a 15 com indicador "mais N projetos"                                                            | `git_triggers/session-state.ts`                       | 15min   | ⏳     |
+| V-S6  | 💡 Adicionar hint non-TTY no splash: `"Digite /help para ajuda"`                                                                             | `splash.ts:129-132`                                   | 5min    | ⏳     |
+| V-S7  | 💡 Prefixo único de prompt: escolher entre `->` e `◆` e usar em todo o app                                                                   | `prompt-input-base.ts`, `prompt-input-inquirer.ts`    | 10min   | ⏳     |
+| V-S8  | 💡 `parâmetro showHelpHint` em `prompt()` — suprimir `(/help)` em "Pressione Enter"                                                          | `prompt-input-base.ts`, `jira_management/main.ts:227` | 15min   | ⏳     |
+| V-S9  | 💡 `onError` usar `boxDivider()` ao invés de divider manual — consistência visual                                                            | `prompt-errors.ts:196-198`                            | 5min    | ⏳     |
+| V-S10 | 💡 Fallback `less`/`more` em `showDocs` quando browser indisponível                                                                          | `showDocs.ts`                                         | 30min   | ⏳     |
+| V-S11 | 💡 Tradutor em runtime: centralizar strings PT em i18n module, Setup Wizard usar mesmas chaves                                               | `shared/i18n.ts` (novo), `setup/main.ts`              | 2h      | ⏳     |
+| V-S12 | 💡 `Semantic Commit` nos logs de sessão — `history.push({ op: 'create', detail: 'Test CX-123', status: 'ok' })` já segue, mas padronizar ops | `shared/cli_base.ts`, `shared/session-context.ts`     | 15min   | ⏳     |
+
+### Quick Wins (≤15min cada)
+
+| ID   | Item                                                                  | Arquivo                           | Esforço |
+| ---- | --------------------------------------------------------------------- | --------------------------------- | ------- |
+| V-Q1 | Adicionar pausa após `/history` no Jira (igual Git)                   | `jira_management/ui-helpers.ts`   | 5min    |
+| V-Q2 | Traduzir `confirmDestructiveAction` para PT                           | `cli_base.ts:75`                  | 5min    |
+| V-Q3 | Rotular `/exit` como `"Sair"` no Git (não "Voltar ao menu principal") | `git_triggers/main.ts:150`        | 5min    |
+| V-Q4 | Aceitar `/sair` e `/quit` no entry menu                               | `entry-menu.ts:58`                | 5min    |
+| V-Q5 | Adicionar hint non-TTY no splash: `"Digite /help para ajuda"`         | `splash.ts:129-132`               | 5min    |
+| V-Q6 | Substituir divider manual em `onError` por `boxDivider()`             | `prompt-errors.ts:196-198`        | 5min    |
+| V-Q7 | Adicionar `withSpinner` na validação JQL                              | `jira_management/main.ts:157-163` | 10min   |
+| V-Q8 | Trocar label "Voltar ao menu principal" → "/exit Sair" no Git         | `git_triggers/main.ts:150`        | 5min    |
+
+### Padrões Positivos (Preservar)
+
+- `printError`/`onError` formato 3-partes (o quê + por quê + como resolver) — melhor UX de erro em CLI
+- `CancelError` + navigation commands — padrão elegante de saída graciosa de qualquer prompt
+- `withSpinner` com fallback TTY/non-TTY — separação limpa
+- `SessionContext` + `printSessionSummary` — tracking de sessão compreensivo
+- `box()` rendering — visualmente consistente e theme-aware
+- `HELP_TOPICS` + sistema de aliases — discoverability via `/help search <term>`
+
+### Métricas alvo (Sprint UX v2)
+
+| Métrica                    | Alvo                 |
+| -------------------------- | -------------------- |
+| `tsc --noEmit`             | **0 erros**          |
+| `jest` pass                | **100%**             |
+| Icon systems               | **1 (unificado)**    |
+| Clear methods              | **1 (centralizado)** |
+| Non-TTY emoji leaks        | **0**                |
+| Mixed language modules     | **0**                |
+| `confirmDestructiveAction` | **em uso**           |
