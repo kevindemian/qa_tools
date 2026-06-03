@@ -9,6 +9,9 @@ import {
     invariantStateMutation,
     invariantNumericConsistency,
     invariantNoDuplicateTests,
+    invariantPartitionCoverage,
+    invariantBoundaryCoverage,
+    invariantRedundancyCoupling,
 } from './test-case-validator';
 import type { ValidationContext } from './artifact-validator';
 
@@ -30,6 +33,8 @@ describe('TestCaseValidator — createTestCaseValidator', () => {
         expect(invariants).toContain('T-08');
         expect(invariants).toContain('T-09');
         expect(invariants).toContain('T-10');
+        expect(invariants).toContain('T-11');
+        expect(invariants).toContain('T-12');
         expect(invariants).toContain('I-01');
         expect(invariants).toContain('I-02');
         expect(invariants).toContain('I-03');
@@ -186,5 +191,426 @@ describe('invariantNumericConsistency (T-09)', () => {
     it('fails inconsistent numbers', () => {
         const results = invariantNumericConsistency({ item_count: 5, items: [1, 2, 3] }, makeCtx(''));
         expect(results.some((r) => !r.passed && r.invariantId === 'T-09')).toBe(true);
+    });
+});
+
+describe('invariantPartitionCoverage (T-11)', () => {
+    it('passes when all partitions are covered', () => {
+        const results = invariantPartitionCoverage(
+            {
+                tests: [
+                    {
+                        title: 'Age 18 is accepted',
+                        steps: ['Enter age 18', 'Submit'],
+                        expectedResult: 'Accepted',
+                    },
+                    {
+                        title: 'Age 17 is rejected',
+                        steps: ['Enter age 17', 'Submit'],
+                        expectedResult: 'Rejected',
+                    },
+                    {
+                        title: 'Age 66 is rejected',
+                        steps: ['Enter age 66', 'Submit'],
+                        expectedResult: 'Rejected',
+                    },
+                ],
+            },
+            makeCtx('ages between 18 and 65'),
+        );
+        expect(results.some((r) => r.passed && r.invariantId === 'T-11')).toBe(true);
+    });
+
+    it('passes when no numeric range is present (skipped)', () => {
+        const results = invariantPartitionCoverage(
+            { tests: [{ title: 'Test', steps: ['Step'], expectedResult: 'OK' }] },
+            makeCtx('No numbers here'),
+        );
+        expect(results.some((r) => r.passed && r.invariantId === 'T-11')).toBe(true);
+    });
+
+    it('warns when below-min partition is missing', () => {
+        const results = invariantPartitionCoverage(
+            {
+                tests: [
+                    {
+                        title: 'Age 18 is accepted',
+                        steps: ['Enter age 18', 'Submit'],
+                        expectedResult: 'Accepted',
+                    },
+                    {
+                        title: 'Age 65 is accepted',
+                        steps: ['Enter age 65', 'Submit'],
+                        expectedResult: 'Accepted',
+                    },
+                ],
+            },
+            makeCtx('ages between 18 and 65'),
+        );
+        const warnings = results.filter((r) => !r.passed && r.invariantId === 'T-11');
+        expect(warnings.length).toBeGreaterThan(0);
+        expect(warnings[0]?.message.toLowerCase()).toContain('below');
+    });
+
+    it('warns when above-max partition is missing', () => {
+        const results = invariantPartitionCoverage(
+            {
+                tests: [
+                    {
+                        title: 'Age 18 is accepted',
+                        steps: ['Enter age 18', 'Submit'],
+                        expectedResult: 'Accepted',
+                    },
+                    {
+                        title: 'Age 17 is rejected',
+                        steps: ['Enter age 17', 'Submit'],
+                        expectedResult: 'Rejected',
+                    },
+                ],
+            },
+            makeCtx('ages between 18 and 65'),
+        );
+        const warnings = results.filter((r) => !r.passed && r.invariantId === 'T-11');
+        expect(warnings.length).toBeGreaterThan(0);
+        expect(warnings[0]?.message.toLowerCase()).toContain('above');
+    });
+
+    it('fails when no tests exist', () => {
+        const results = invariantPartitionCoverage({ tests: [] }, makeCtx('ages between 18 and 65'));
+        expect(results.some((r) => !r.passed && r.invariantId === 'T-11')).toBe(true);
+    });
+});
+
+describe('invariantBoundaryCoverage (T-12)', () => {
+    it('passes when all boundaries are covered (2-value BVA)', () => {
+        const results = invariantBoundaryCoverage(
+            {
+                tests: [
+                    {
+                        title: 'Age 17 rejected',
+                        steps: ['Enter age 17', 'Submit'],
+                        expectedResult: 'Rejected',
+                    },
+                    {
+                        title: 'Age 18 accepted',
+                        steps: ['Enter age 18', 'Submit'],
+                        expectedResult: 'Accepted',
+                    },
+                    {
+                        title: 'Age 65 accepted',
+                        steps: ['Enter age 65', 'Submit'],
+                        expectedResult: 'Accepted',
+                    },
+                    {
+                        title: 'Age 66 rejected',
+                        steps: ['Enter age 66', 'Submit'],
+                        expectedResult: 'Rejected',
+                    },
+                ],
+            },
+            makeCtx('ages between 18 and 65'),
+        );
+        expect(results.some((r) => r.passed && r.invariantId === 'T-12')).toBe(true);
+    });
+
+    it('passes when no numeric range is present (skipped)', () => {
+        const results = invariantBoundaryCoverage(
+            { tests: [{ title: 'Test', steps: ['Step'], expectedResult: 'OK' }] },
+            makeCtx('No numbers here'),
+        );
+        expect(results.some((r) => r.passed && r.invariantId === 'T-12')).toBe(true);
+    });
+
+    it('warns when some boundaries are missing', () => {
+        const results = invariantBoundaryCoverage(
+            {
+                tests: [
+                    {
+                        title: 'Age 18 accepted',
+                        steps: ['Enter age 18', 'Submit'],
+                        expectedResult: 'Accepted',
+                    },
+                    {
+                        title: 'Age 65 accepted',
+                        steps: ['Enter age 65', 'Submit'],
+                        expectedResult: 'Accepted',
+                    },
+                ],
+            },
+            makeCtx('ages between 18 and 65'),
+        );
+        const warnings = results.filter((r) => !r.passed && r.invariantId === 'T-12');
+        expect(warnings.length).toBeGreaterThan(0);
+        // 18 and 65 covered but 17 and 66 missing
+        expect(warnings[0]?.message).toContain('Missing');
+    });
+
+    it('fails when no tests exist', () => {
+        const results = invariantBoundaryCoverage({ tests: [] }, makeCtx('ages between 18 and 65'));
+        expect(results.some((r) => !r.passed && r.invariantId === 'T-12')).toBe(true);
+    });
+});
+
+describe('invariantRedundancyCoupling (T-13)', () => {
+    it('passes with fewer than 2 tests', () => {
+        const results = invariantRedundancyCoupling(
+            { tests: [{ title: 'Only test', steps: ['Do something'] }] },
+            makeCtx(''),
+        );
+        expect(results.some((r) => r.passed && r.invariantId === 'T-13')).toBe(true);
+    });
+
+    it('passes with completely different tests', () => {
+        const artifact = {
+            tests: [
+                {
+                    title: 'Valid login works',
+                    steps: ['Navigate to login', 'Enter valid email', 'Click Sign In'],
+                    expectedResult: 'Redirected to dashboard',
+                    coverage: [{ criterionId: 'C-1', criterionText: 'Login succeeds' }],
+                },
+                {
+                    title: 'Wrong password fails',
+                    steps: ['Navigate to login', 'Enter wrong password', 'Click Sign In'],
+                    expectedResult: 'Error message shown',
+                    coverage: [{ criterionId: 'C-2', criterionText: 'Login fails' }],
+                },
+            ],
+        };
+        const results = invariantRedundancyCoupling(artifact, makeCtx(''));
+        expect(results.some((r) => r.passed && r.invariantId === 'T-13')).toBe(true);
+    });
+
+    it('fails when steps are identical and title+result are similar (A + D → error)', () => {
+        const results = invariantRedundancyCoupling(
+            {
+                tests: [
+                    {
+                        title: 'Valid age 18 accepts registration',
+                        steps: ['Enter age 18', 'Click Submit', 'Check result'],
+                        expectedResult: 'Registration accepted for age 18',
+                    },
+                    {
+                        title: 'Valid age 19 accepts registration',
+                        steps: ['Enter age 19', 'Click Submit', 'Check result'],
+                        expectedResult: 'Registration accepted for age 19',
+                    },
+                ],
+            },
+            makeCtx(''),
+        );
+        const errors = results.filter((r) => !r.passed && r.severity === 'error' && r.invariantId === 'T-13');
+        expect(errors.length).toBeGreaterThan(0);
+        expect(errors[0]?.message).toContain('identical');
+    });
+
+    it('warns when only steps overlap without title+result duplicate (A only → warning)', () => {
+        const results = invariantRedundancyCoupling(
+            {
+                tests: [
+                    {
+                        title: 'First valid age scenario',
+                        steps: ['Enter age 18', 'Click Submit', 'Check result'],
+                        expectedResult: 'Registration accepted for valid age',
+                    },
+                    {
+                        title: 'Second valid age different value',
+                        steps: ['Enter age 25', 'Click Submit', 'Check result'],
+                        expectedResult: 'Registration accepted for valid age',
+                    },
+                ],
+            },
+            makeCtx(''),
+        );
+        const warnings = results.filter((r) => !r.passed && r.severity === 'warning' && r.invariantId === 'T-13');
+        expect(warnings.length).toBeGreaterThan(0);
+        expect(warnings[0]?.message).toContain('similar');
+    });
+
+    it('warns when coverage overlaps (B → warning)', () => {
+        const results = invariantRedundancyCoupling(
+            {
+                tests: [
+                    {
+                        title: 'Test A',
+                        steps: ['Do step A1', 'Do step A2'],
+                        expectedResult: 'Result A',
+                        coverage: [
+                            { criterionId: 'C-1', criterionText: 'First criterion' },
+                            { criterionId: 'C-2', criterionText: 'Second criterion' },
+                            { criterionId: 'C-3', criterionText: 'Third criterion' },
+                        ],
+                    },
+                    {
+                        title: 'Test B',
+                        steps: ['Do step B1', 'Do step B2'],
+                        expectedResult: 'Result B',
+                        coverage: [
+                            { criterionId: 'C-1', criterionText: 'First criterion' },
+                            { criterionId: 'C-2', criterionText: 'Second criterion' },
+                            { criterionId: 'C-3', criterionText: 'Third criterion' },
+                            { criterionId: 'C-4', criterionText: 'Fourth criterion' },
+                        ],
+                    },
+                ],
+            },
+            makeCtx(''),
+        );
+        const warnings = results.filter((r) => !r.passed && r.severity === 'warning' && r.invariantId === 'T-13');
+        const coverageWarnings = warnings.filter((w) => w.message.includes('coverage'));
+        expect(coverageWarnings.length).toBeGreaterThan(0);
+    });
+
+    it('warns when tests are coupled via shared resource (C → warning)', () => {
+        const artifact = {
+            tests: [
+                {
+                    title: 'Create user',
+                    steps: ['Navigate to /users', 'Click Add', 'Fill form', 'Submit to create user_carlos'],
+                    expectedResult: 'User created successfully',
+                },
+                {
+                    title: 'Delete user',
+                    steps: ['Search for user_carlos', 'Open profile', 'Click delete user_carlos'],
+                    expectedResult: 'User removed from system',
+                },
+            ],
+        };
+        const results = invariantRedundancyCoupling(artifact, makeCtx(''));
+        const warnings = results.filter((r) => !r.passed && r.severity === 'warning' && r.invariantId === 'T-13');
+        const couplingWarnings = warnings.filter((w) => w.message.includes('coupled'));
+        expect(couplingWarnings.length).toBeGreaterThan(0);
+    });
+
+    it('passes for EP/BVA variations that should not be flagged', () => {
+        const results = invariantRedundancyCoupling(
+            {
+                tests: [
+                    {
+                        title: 'Age 18 boundary — minimum valid',
+                        steps: ['Enter age 18', 'Submit registration'],
+                        expectedResult: 'Registration accepted — minimum boundary',
+                    },
+                    {
+                        title: 'Age 65 boundary — maximum valid',
+                        steps: ['Enter age 65', 'Submit registration'],
+                        expectedResult: 'Registration accepted — maximum boundary',
+                    },
+                ],
+            },
+            makeCtx(''),
+        );
+        // These have identical steps token-wise but different title+result
+        // "Enter age 18" vs "Enter age 65": tokens {enter, age, 18, submit, registration} vs {enter, age, 65, submit, registration}
+        // Jaccard = 4/5 = 80% → stepsRedundant = true
+        // But title+result: "age 18 boundary minimum valid registration accepted minimum boundary" vs "age 65 boundary maximum valid registration accepted maximum boundary"
+        // Different enough → titleResultDupe should be false → no error
+        const errors = results.filter((r) => !r.passed && r.severity === 'error' && r.invariantId === 'T-13');
+        expect(errors.length).toBe(0);
+    });
+
+    it('passes when coverage sets are completely different', () => {
+        const artifact = {
+            tests: [
+                {
+                    title: 'Login test',
+                    steps: ['Click the login button'],
+                    expectedResult: 'Login page appears',
+                    coverage: [{ criterionId: 'C-1', criterionText: 'First' }],
+                },
+                {
+                    title: 'Signup test',
+                    steps: ['Click the signup button'],
+                    expectedResult: 'Signup page appears',
+                    coverage: [{ criterionId: 'C-2', criterionText: 'Second' }],
+                },
+            ],
+        };
+        const results = invariantRedundancyCoupling(artifact, makeCtx(''));
+        expect(results.some((r) => r.passed && r.invariantId === 'T-13')).toBe(true);
+    });
+
+    it('warns on Portuguese resource coupling', () => {
+        const results = invariantRedundancyCoupling(
+            {
+                tests: [
+                    {
+                        title: 'Criar usuario',
+                        steps: ['Preencher formulario', 'Registrar usuario_teste'],
+                        expectedResult: 'Usuario criado',
+                    },
+                    {
+                        title: 'Deletar usuario',
+                        steps: ['Buscar usuario_teste', 'Abrir perfil', 'Remover usuario_teste'],
+                        expectedResult: 'Usuario removido',
+                    },
+                ],
+            },
+            makeCtx(''),
+        );
+        const warnings = results.filter((r) => !r.passed && r.severity === 'warning' && r.invariantId === 'T-13');
+        const couplingWarnings = warnings.filter((w) => w.message.includes('coupled'));
+        expect(couplingWarnings.length).toBeGreaterThan(0);
+    });
+
+    it('warns when test A creates resource and test B deletes different resource (no coupling)', () => {
+        const results = invariantRedundancyCoupling(
+            {
+                tests: [
+                    {
+                        title: 'Create admin',
+                        steps: ['Create admin_user'],
+                        expectedResult: 'Created',
+                    },
+                    {
+                        title: 'Delete guest',
+                        steps: ['Delete guest_user'],
+                        expectedResult: 'Deleted',
+                    },
+                ],
+            },
+            makeCtx(''),
+        );
+        // Different resource names → no coupling
+        expect(results.some((r) => r.passed && r.invariantId === 'T-13')).toBe(true);
+    });
+
+    it('detects both error and warning in the same test set', () => {
+        const results = invariantRedundancyCoupling(
+            {
+                tests: [
+                    {
+                        title: 'Login with valid email accepts',
+                        steps: ['Enter email', 'Enter password', 'Click Login'],
+                        expectedResult: 'User is logged in to dashboard',
+                        coverage: [{ criterionId: 'C-1', criterionText: 'Login' }],
+                    },
+                    {
+                        title: 'Login with valid email accepts v2',
+                        steps: ['Enter email', 'Enter password', 'Click Login'],
+                        expectedResult: 'User is logged in to dashboard ok',
+                        coverage: [{ criterionId: 'C-1', criterionText: 'Login' }],
+                    },
+                    {
+                        title: 'Create user bob via form',
+                        steps: ['Click Add', 'Fill form', 'Create user_bob'],
+                        expectedResult: 'User bob created successfully',
+                        coverage: [{ criterionId: 'C-2', criterionText: 'Create' }],
+                    },
+                    {
+                        title: 'Delete user bob from system',
+                        steps: ['Search for user_bob', 'Open profile', 'Delete user_bob'],
+                        expectedResult: 'User bob deleted from system',
+                        coverage: [{ criterionId: 'C-3', criterionText: 'Delete' }],
+                    },
+                ],
+            },
+            makeCtx(''),
+        );
+        const errors = results.filter((r) => !r.passed && r.severity === 'error' && r.invariantId === 'T-13');
+        const warnings = results.filter((r) => !r.passed && r.severity === 'warning' && r.invariantId === 'T-13');
+        expect(errors.length).toBeGreaterThan(0);
+        const couplingWarnings = warnings.filter((w) => w.message.includes('coupled'));
+        expect(couplingWarnings.length).toBeGreaterThan(0);
     });
 });

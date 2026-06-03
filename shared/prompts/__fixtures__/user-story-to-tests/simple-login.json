@@ -18,5 +18,13 @@
             "steps": "string[] (min 1 step)",
             "expectedResult": "string (min 10 chars)"
         }
+    },
+    "coverage": {
+        "expectedCriteria": [
+            "Login succeeds with valid credentials",
+            "Login fails with wrong password",
+            "Login fails with unregistered email"
+        ],
+        "numericRanges": []
     }
 }

@@ -1,0 +1,41 @@
+{
+    "name": "numeric-age-validation",
+    "description": "User story for age validation with numeric range (18-65), testing EP and BVA coverage",
+    "input": {
+        "story": "As a system administrator, I want to validate user age during registration so that only users between 18 and 65 years old can register.",
+        "criteria": [
+            "Registration succeeds for age 18 (minimum boundary)",
+            "Registration succeeds for age 65 (maximum boundary)",
+            "Registration fails for age 17 (below minimum)",
+            "Registration fails for age 66 (above maximum)",
+            "Registration fails for negative age values",
+            "Registration fails for non-numeric age input"
+        ]
+    },
+    "validate": {
+        "type": "json-array",
+        "minItems": 4,
+        "itemSchema": {
+            "title": "string (min 5 chars)",
+            "steps": "string[] (min 1 step)",
+            "expectedResult": "string (min 10 chars)"
+        }
+    },
+    "coverage": {
+        "expectedCriteria": [
+            "Registration succeeds for age 18",
+            "Registration succeeds for age 65",
+            "Registration fails for age 17",
+            "Registration fails for age 66",
+            "Registration fails for negative age values",
+            "Registration fails for non-numeric age input"
+        ],
+        "numericRanges": [
+            {
+                "field": "age",
+                "min": 18,
+                "max": 65
+            }
+        ]
+    }
+}

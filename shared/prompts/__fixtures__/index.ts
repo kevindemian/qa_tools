@@ -7,12 +7,23 @@ export interface FixtureBase {
     description: string;
 }
 
+export interface NumericRange {
+    field: string;
+    min: number;
+    max: number;
+}
+
+export interface UserStoryCoverage {
+    expectedCriteria: string[];
+    numericRanges: NumericRange[];
+}
+
 export interface FailureAnalysisFixture extends FixtureBase {
     input: string;
     validate: {
         type: 'json-schema';
         minTests: number;
-        expectedCategories?: string[];
+        expectedCategories: string[];
     };
 }
 
@@ -26,6 +37,7 @@ export interface UserStoryFixture extends FixtureBase {
         minItems: number;
         itemSchema: Record<string, string>;
     };
+    coverage: UserStoryCoverage;
 }
 
 export interface ClassifyFixture extends FixtureBase {
@@ -41,12 +53,23 @@ const FixtureBaseSchema = z.object({
     description: z.string(),
 });
 
-const FailureAnalysisFixtureSchema = FixtureBaseSchema.extend({
+const NumericRangeSchema: z.ZodType<NumericRange> = z.object({
+    field: z.string(),
+    min: z.number(),
+    max: z.number(),
+});
+
+const UserStoryCoverageSchema: z.ZodType<UserStoryCoverage> = z.object({
+    expectedCriteria: z.array(z.string()),
+    numericRanges: z.array(NumericRangeSchema).default([]),
+});
+
+const FailureAnalysisFixtureSchema: z.ZodType<FailureAnalysisFixture> = FixtureBaseSchema.extend({
     input: z.string(),
     validate: z.object({
         type: z.literal('json-schema'),
         minTests: z.number(),
-        expectedCategories: z.array(z.string()).optional(),
+        expectedCategories: z.array(z.string()).default([]),
     }),
 });
 
@@ -60,6 +83,7 @@ const UserStoryFixtureSchema: z.ZodType<UserStoryFixture> = FixtureBaseSchema.ex
         minItems: z.number(),
         itemSchema: z.record(z.string(), z.string()),
     }),
+    coverage: UserStoryCoverageSchema,
 });
 
 const ClassifyFixtureSchema: z.ZodType<ClassifyFixture> = FixtureBaseSchema.extend({
@@ -86,7 +110,7 @@ function loadDir<T>(subdir: string, schema: z.ZodType<T>): T[] {
 }
 
 export function loadFailureAnalysisFixtures(): FailureAnalysisFixture[] {
-    return loadDir('failure-analysis', FailureAnalysisFixtureSchema) as FailureAnalysisFixture[];
+    return loadDir('failure-analysis', FailureAnalysisFixtureSchema);
 }
 
 export function loadUserStoryFixtures(): UserStoryFixture[] {

@@ -12,6 +12,11 @@
  *   T-08  expectedResult matches the action (create/update/delete)
  *   T-09  Numeric data consistency (items_count vs items array)
  *   T-10  No duplicate test scenarios (high similarity)
+ *   T-11  Equivalence partitions covered (ISO 29119-4, ISTQB CTFL)
+ *   T-12  Boundary values tested (ISO 29119-4, ISTQB CTFL)
+ *   T-13  No redundancy, overlap, or coupling between tests
+ *         (GOVERNANCE.md §10.1-10.3 — 4 sub-checks: steps redundancy,
+ *         coverage overlap, resource coupling, title+result duplication)
  */
 
 import {
@@ -426,6 +431,427 @@ function levenshtein(a: string, b: string): number {
     return lastRow[a.length] as number;
 }
 
+/**
+ * Regex patterns to detect numeric ranges in test input criteria.
+ * Examples: "ages between 18 and 65", "password 6 to 30 chars", "range 1-100"
+ */
+const RANGE_PATTERN = /(\d+)\s*(?:and|to|-|through)\s*(\d+)/i;
+
+/**
+ * Detect numeric range metadata from input text for boundary/partition validation.
+ * Returns null if no range found.
+ */
+function detectNumericRange(input: string): { min: number; max: number } | null {
+    const match = RANGE_PATTERN.exec(input);
+    if (match) {
+        const min = parseInt(match[1] as string, 10);
+        const max = parseInt(match[2] as string, 10);
+        if (!isNaN(min) && !isNaN(max) && min < max) {
+            return { min, max };
+        }
+    }
+    return null;
+}
+
+/**
+ * T-11: Equivalence partitions covered (ISO 29119-4 §8.3, ISTQB CTFL §4.3.1).
+ * Divides input domain into valid and invalid partitions — each must have ≥1 test case.
+ * Checks: below min (invalid), within range (valid), above max (invalid).
+ */
+export const invariantPartitionCoverage: InvariantFn = (
+    artifact: unknown,
+    context: ValidationContext,
+): ValidationResult[] => {
+    const range = detectNumericRange(context.inputRaw);
+    if (!range) return [pass('T-11', 'No numeric range detected — partition coverage not applicable')];
+
+    const tests = parseTests(artifact);
+    if (tests.length === 0) return [fail('T-11', 'No tests found — cannot verify partition coverage')];
+
+    const allText = tests
+        .map((t) => {
+            const steps = (t.steps || []).join(' ');
+            const expected = t.expectedResult || '';
+            const title = t.title || '';
+            return (steps + ' ' + expected + ' ' + title).toLowerCase();
+        })
+        .join(' ');
+
+    const validPartitionCovered = new RegExp('\\b' + range.min + '\\b|\\b' + range.max + '\\b', 'i').test(allText);
+    const { min, max } = range;
+    const belowMinCovered =
+        new RegExp('\\b' + (min - 1) + '\\b', 'i').test(allText) || /below|less than|under/i.test(allText);
+    const aboveMaxCovered =
+        new RegExp('\\b' + (max + 1) + '\\b', 'i').test(allText) || /above|greater than|over|exceed/i.test(allText);
+
+    const missing: string[] = [];
+    if (!validPartitionCovered) missing.push('valid range (' + min + '-' + max + ')');
+    if (!belowMinCovered) missing.push('below minimum (' + (min - 1) + ')');
+    if (!aboveMaxCovered) missing.push('above maximum (' + (max + 1) + ')');
+
+    if (missing.length > 0) {
+        return [
+            warn(
+                'T-11',
+                'Missing partition coverage for: ' +
+                    missing.join(', ') +
+                    '. (ISO 29119-4: each partition must have ≥1 test)',
+            ),
+        ];
+    }
+    return [pass('T-11', 'All equivalence partitions covered: valid range, below min, above max')];
+};
+
+/**
+ * T-12: Boundary values tested (ISO 29119-4 §8.4, ISTQB CTFL §4.3.2).
+ * Uses 2-value BVA by default: tests value at boundary and one neighbor from adjacent partition.
+ * Checks: min, max, min-1, max+1 boundary values.
+ */
+export const invariantBoundaryCoverage: InvariantFn = (
+    artifact: unknown,
+    context: ValidationContext,
+): ValidationResult[] => {
+    const range = detectNumericRange(context.inputRaw);
+    if (!range) return [pass('T-12', 'No numeric range detected — boundary coverage not applicable')];
+
+    const tests = parseTests(artifact);
+    if (tests.length === 0) return [fail('T-12', 'No tests found — cannot verify boundary coverage')];
+
+    const allText = tests
+        .map((t) => {
+            const steps = (t.steps || []).join(' ');
+            const expected = t.expectedResult || '';
+            const title = t.title || '';
+            return (steps + ' ' + expected + ' ' + title).toLowerCase();
+        })
+        .join(' ');
+
+    const { min, max } = range;
+    const expectedBoundaries = [min, max, min - 1, max + 1];
+    const missing: number[] = [];
+
+    for (const b of expectedBoundaries) {
+        const re = new RegExp('\\b' + b + '\\b');
+        if (!re.test(allText)) {
+            missing.push(b);
+        }
+    }
+
+    if (missing.length > 0) {
+        const covered = expectedBoundaries.length - missing.length;
+        return [
+            warn(
+                'T-12',
+                'Missing ' +
+                    missing.length +
+                    ' of ' +
+                    expectedBoundaries.length +
+                    ' boundary values: [' +
+                    missing.join(', ') +
+                    ']. ' +
+                    'Covered ' +
+                    covered +
+                    '/' +
+                    expectedBoundaries.length +
+                    '. (ISO 29119-4 BVA: test min, max, min-1, max+1)',
+            ),
+        ];
+    }
+    return [
+        pass(
+            'T-12',
+            'All boundary values covered: min=' +
+                min +
+                ', max=' +
+                max +
+                ', min-1=' +
+                (min - 1) +
+                ', max+1=' +
+                (max + 1),
+        ),
+    ];
+};
+
+// ---- T-13: Redundancy / Overlap / Coupling ----
+
+const STOP_WORDS = new Set([
+    'a',
+    'an',
+    'the',
+    'is',
+    'are',
+    'was',
+    'were',
+    'be',
+    'been',
+    'being',
+    'have',
+    'has',
+    'had',
+    'do',
+    'does',
+    'did',
+    'will',
+    'would',
+    'could',
+    'should',
+    'may',
+    'might',
+    'can',
+    'shall',
+    'to',
+    'of',
+    'in',
+    'for',
+    'on',
+    'with',
+    'at',
+    'by',
+    'from',
+    'as',
+    'into',
+    'through',
+    'during',
+    'before',
+    'after',
+    'above',
+    'below',
+    'between',
+    'and',
+    'but',
+    'or',
+    'nor',
+    'not',
+    'so',
+    'yet',
+    'both',
+    'either',
+    'neither',
+    'each',
+    'every',
+    'all',
+    'any',
+    'few',
+    'more',
+    'most',
+    'other',
+    'some',
+    'such',
+    'no',
+    'only',
+    'own',
+    'same',
+    'than',
+    'too',
+    'very',
+    'just',
+    'because',
+    'if',
+    'then',
+    'else',
+    'when',
+    'where',
+    'why',
+    'how',
+    'which',
+    'who',
+    'whom',
+    'what',
+    'this',
+    'that',
+    'these',
+    'those',
+    'it',
+    'its',
+    'o',
+    'a',
+    'e',
+    'em',
+    'para',
+    'com',
+    'por',
+    'de',
+    'do',
+    'da',
+    'dos',
+    'das',
+    'no',
+    'na',
+    'nos',
+    'nas',
+    'um',
+    'uma',
+    'uns',
+    'umas',
+]);
+
+function tokenize(text: string): string[] {
+    return text
+        .toLowerCase()
+        .replace(/[^a-z0-9\s]/g, ' ')
+        .split(/\s+/)
+        .filter((t) => t.length > 0 && !STOP_WORDS.has(t));
+}
+
+function jaccardSimilarity(a: Set<string>, b: Set<string>): number {
+    const intersection = new Set([...a].filter((x) => b.has(x)));
+    const union = new Set([...a, ...b]);
+    if (union.size === 0) return 1;
+    return intersection.size / union.size;
+}
+
+function normalizeText(text: string): string {
+    return text
+        .toLowerCase()
+        .replace(/[^a-z0-9\s]/g, ' ')
+        .trim();
+}
+
+/**
+ * T-13: No redundant, overlapping, or coupled tests (GOVERNANCE.md §10.1-10.3).
+ *
+ * Sub-checks:
+ *   A — Steps token overlap ≥ 80% → error (if also D) or warning
+ *   B — Coverage criterionId Jaccard ≥ 75% → warning (overlap)
+ *   C — Coupled via shared resource → warning
+ *   D — Title+expectedResult Levenshtein ≥ 85% → error (if also A)
+ */
+export const invariantRedundancyCoupling: InvariantFn = (
+    artifact: unknown,
+    _context: ValidationContext,
+): ValidationResult[] => {
+    const tests = parseTests(artifact);
+    if (tests.length < 2) return [pass('T-13', 'Fewer than 2 tests — no redundancy possible')];
+
+    const results: ValidationResult[] = [];
+    const errorPairs: string[] = [];
+    const warningPairs: string[] = [];
+
+    for (let i = 0; i < tests.length; i++) {
+        for (let j = i + 1; j < tests.length; j++) {
+            const a = tests[i] as TestCaseShape;
+            const b = tests[j] as TestCaseShape;
+
+            const stepsA = (a.steps || []).join(' ');
+            const stepsB = (b.steps || []).join(' ');
+
+            const tokensA = new Set(tokenize(stepsA));
+            const tokensB = new Set(tokenize(stepsB));
+            const stepOverlap = jaccardSimilarity(tokensA, tokensB);
+
+            const titleResultA = normalizeText((a.title || '') + ' ' + (a.expectedResult || ''));
+            const titleResultB = normalizeText((b.title || '') + ' ' + (b.expectedResult || ''));
+            const titleResultSim = similarity(titleResultA, titleResultB);
+
+            // Sub-check A: steps redundancy (token overlap ≥ 70%)
+            const stepsRedundant = stepOverlap >= 0.7;
+
+            // Sub-check D: title+result duplication (Levenshtein ≥ 85%)
+            const titleResultDupe = titleResultSim >= 0.85;
+
+            // Decision: A + D → error (structurally identical)
+            if (stepsRedundant && titleResultDupe) {
+                errorPairs.push(
+                    `test[${i}] ↔ test[${j}] (steps ${(stepOverlap * 100).toFixed(0)}%, title+result ${(titleResultSim * 100).toFixed(0)}%)`,
+                );
+                continue;
+            }
+
+            // A only → warning (possible redundancy)
+            if (stepsRedundant) {
+                warningPairs.push(
+                    `test[${i}] ↔ test[${j}] steps ${(stepOverlap * 100).toFixed(0)}% similar (consider merge if only data differs)`,
+                );
+            }
+
+            // Sub-check B: coverage overlap (Jaccard ≥ 75%)
+            const covIdsA = new Set((a.coverage || []).map((c) => c.criterionId));
+            const covIdsB = new Set((b.coverage || []).map((c) => c.criterionId));
+            if (covIdsA.size > 0 && covIdsB.size > 0) {
+                const covOverlap = jaccardSimilarity(covIdsA, covIdsB);
+                if (covOverlap >= 0.75) {
+                    warningPairs.push(`test[${i}] ↔ test[${j}] coverage ${(covOverlap * 100).toFixed(0)}% overlapping`);
+                }
+            }
+
+            // Sub-check C: resource coupling detection
+            const coupled = testCoupling(stepsA, stepsB);
+            if (coupled) {
+                warningPairs.push(`test[${i}] ↔ test[${j}] coupled (create/delete shared resource)`);
+            }
+        }
+    }
+
+    if (errorPairs.length > 0) {
+        results.push(
+            fail(
+                'T-13',
+                `Found ${errorPairs.length} structurally identical test pair(s): ${errorPairs.join('; ')}. Merge or differentiate. (GOVERNANCE.md §10.1)`,
+            ),
+        );
+    }
+
+    if (warningPairs.length > 0) {
+        for (const msg of warningPairs) {
+            results.push(warn('T-13', msg));
+        }
+    }
+
+    if (results.length === 0) {
+        return [pass('T-13', 'No redundancy, overlap, or coupling detected')];
+    }
+
+    return results;
+};
+
+const CREATE_RESOURCE_RE = /\b(?:create|register|new|criar|registrar|adicionar)\s+(\w+)/i;
+const DELETE_RESOURCE_RE = /\b(?:delete|remove|destroy|erase|excluir|remover|deletar)\s+(\w+)/i;
+const COMMON_WORDS = new Set([
+    'fill',
+    'form',
+    'page',
+    'link',
+    'item',
+    'list',
+    'view',
+    'edit',
+    'save',
+    'cancel',
+    'submit',
+    'formulario',
+    'dados',
+    'nome',
+    'email',
+    'senha',
+    'valor',
+    'arquivo',
+]);
+
+function extractCreateResource(text: string): string | null {
+    const match = CREATE_RESOURCE_RE.exec(text);
+    const name = match?.[1];
+    if (name && !COMMON_WORDS.has(name.toLowerCase())) return name;
+    return null;
+}
+
+function extractDeleteResource(text: string): string | null {
+    const match = DELETE_RESOURCE_RE.exec(text);
+    const name = match?.[1];
+    if (name && !COMMON_WORDS.has(name.toLowerCase())) return name;
+    return null;
+}
+
+/** Check if stepsA creates a resource that stepsB deletes (or vice-versa). */
+function testCoupling(stepsA: string, stepsB: string): boolean {
+    const created = extractCreateResource(stepsA);
+    const deleted = extractDeleteResource(stepsB);
+    if (created && deleted && created.toLowerCase() === deleted.toLowerCase()) return true;
+    const createdB = extractCreateResource(stepsB);
+    const deletedA = extractDeleteResource(stepsA);
+    if (createdB && deletedA && createdB.toLowerCase() === deletedA.toLowerCase()) return true;
+    return false;
+}
+
 /** Create a pre-configured TestCaseValidator with all invariants registered. */
 export function createTestCaseValidator(): ArtifactValidator<unknown> {
     const validator = new ArtifactValidator<unknown>('test-suite');
@@ -437,7 +863,7 @@ export function createTestCaseValidator(): ArtifactValidator<unknown> {
     validator.addInvariant('I-04', invariantNoEmptyStrings);
     validator.addInvariant('I-05', invariantConclusionHasEvidence);
 
-    // Domain invariants (T-01 to T-10)
+    // Domain invariants (T-01 to T-13)
     validator.addInvariant('T-01', invariantCoverageComplete);
     validator.addInvariant('T-02', invariantCoverageThreshold);
     validator.addInvariant('T-03', invariantStateMutation);
@@ -448,6 +874,9 @@ export function createTestCaseValidator(): ArtifactValidator<unknown> {
     validator.addInvariant('T-08', invariantResultMatchesAction);
     validator.addInvariant('T-09', invariantNumericConsistency);
     validator.addInvariant('T-10', invariantNoDuplicateTests);
+    validator.addInvariant('T-11', invariantPartitionCoverage);
+    validator.addInvariant('T-12', invariantBoundaryCoverage);
+    validator.addInvariant('T-13', invariantRedundancyCoupling);
 
     return validator;
 }
