@@ -1,4 +1,4 @@
-import { calculateHealthScore } from './health-score';
+import { calculateHealthScore, evaluateQualityGate } from './health-score';
 import type { MetricsStore } from './metrics';
 
 function makeStore(overrides?: Partial<MetricsStore>): MetricsStore {
@@ -49,6 +49,32 @@ const PASSING_RUN = run({
         testT('T9', 'passed'),
         testT('T10', 'passed'),
     ],
+});
+
+describe('evaluateQualityGate', () => {
+    it('returns pass when all dimensions meet thresholds', () => {
+        expect(evaluateQualityGate(95, 0, 90, 2)).toBe('pass');
+    });
+
+    it('returns fail when passRate is below gate', () => {
+        expect(evaluateQualityGate(70, 0, 90, 2)).toBe('fail');
+    });
+
+    it('returns fail when flakyPct exceeds gate', () => {
+        expect(evaluateQualityGate(95, 15, 90, 2)).toBe('fail');
+    });
+
+    it('returns fail when coverage is below gate', () => {
+        expect(evaluateQualityGate(95, 0, 60, 2)).toBe('fail');
+    });
+
+    it('returns fail when suiteSpeed exceeds gate', () => {
+        expect(evaluateQualityGate(95, 0, 90, 10)).toBe('fail');
+    });
+
+    it('accepts custom config overrides', () => {
+        expect(evaluateQualityGate(70, 0, 90, 2, { minPassRateGate: 60 })).toBe('pass');
+    });
 });
 
 describe('calculateHealthScore', () => {

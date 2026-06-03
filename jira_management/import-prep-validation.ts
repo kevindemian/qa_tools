@@ -54,7 +54,7 @@ export function _checkResumeCheckpoint(
     return { resumeFrom, inMemoryTasksId, inMemoryTasksText };
 }
 
-export function _runValidationRules(tests: TestCase[]): { errors: string[]; warnings: string[] } {
+export function _runValidationRules(tests: unknown[]): { errors: string[]; warnings: string[] } {
     const errors: string[] = [];
     const warnings: string[] = [];
     const titles = new Set<string>();
@@ -68,15 +68,16 @@ export function _runValidationRules(tests: TestCase[]): { errors: string[]; warn
                 errors.push('Teste ' + idx + ': ' + path + ' ' + issue.message);
             });
         } else {
-            if (test.title && titles.has(test.title)) {
-                warnings.push('Teste ' + idx + ': Titulo duplicado "' + test.title + '"');
+            const data = result.data;
+            if (data.title && titles.has(data.title)) {
+                warnings.push('Teste ' + idx + ': Titulo duplicado "' + data.title + '"');
             }
-            if (test.title) titles.add(test.title);
+            if (data.title) titles.add(data.title);
 
-            test.steps.forEach((step, si) => {
+            data.steps.forEach((step, si) => {
                 const action = step.fields?.Action || '';
                 if (!action.trim()) {
-                    warnings.push('Teste ' + idx + ' "' + test.title + '": Step ' + (si + 1) + ' sem Action');
+                    warnings.push('Teste ' + idx + ' "' + data.title + '": Step ' + (si + 1) + ' sem Action');
                 }
             });
         }

@@ -374,12 +374,12 @@ describe('generateMappingFiles', () => {
     afterAll(() => {
         try {
             realFs.rmSync(tmpDir, { recursive: true, force: true });
-        } catch (e) {
+        } catch {
             /* ignore */
         }
         try {
             realFs.unlinkSync(csvPath);
-        } catch (e) {
+        } catch {
             /* ignore */
         }
     });

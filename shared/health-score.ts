@@ -52,6 +52,21 @@ function pickConfig(options?: Partial<HealthScoreConfig>): HealthScoreConfig {
     };
 }
 
+export function evaluateQualityGate(
+    passRate: number,
+    flakyPct: number,
+    coverage: number,
+    suiteSpeed: number,
+    config?: Partial<HealthScoreConfig>,
+): 'pass' | 'fail' {
+    const cfg = pickConfig(config);
+    if (passRate < cfg.minPassRateGate) return 'fail';
+    if (flakyPct > cfg.maxFlakyGate) return 'fail';
+    if (coverage < cfg.minCoverageGate) return 'fail';
+    if (suiteSpeed > cfg.maxSuiteSpeedGate) return 'fail';
+    return 'pass';
+}
+
 function _computePassRate(runs: MetricsRun[], n: number): number {
     let weightedPassSum = 0;
     let weightTotal = 0;
@@ -177,9 +192,6 @@ export function calculateHealthScore(
     const statusCoverage: 'pass' | 'fail' = actual.coverage >= config.minCoverageGate ? 'pass' : 'fail';
     const statusSpeed: 'pass' | 'fail' = actual.suiteSpeed <= config.maxSuiteSpeedGate ? 'pass' : 'fail';
 
-    const qcFail =
-        statusPassRate === 'fail' || statusFlaky === 'fail' || statusCoverage === 'fail' || statusSpeed === 'fail';
-
     const dims: HealthScoreDimensions = {
         passRate: { score: Math.round(scPassRate), status: statusPassRate },
         flakyRate: { score: Math.round(scFlakyRate), status: statusFlaky },
@@ -190,7 +202,7 @@ export function calculateHealthScore(
     return {
         overall: Math.round(overall),
         grade: computeGrade(overall),
-        qualityGate: qcFail ? 'fail' : 'pass',
+        qualityGate: evaluateQualityGate(actual.passRate, actual.flakyPct, actual.coverage, actual.suiteSpeed, config),
         dimensions: dims,
         runCount: metricsStore.runs.length,
         timestamp: new Date().toISOString(),

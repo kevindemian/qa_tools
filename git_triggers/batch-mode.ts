@@ -3,7 +3,10 @@ import { success, error, info, printError, warn, withSpinner } from '../shared/p
 import { loadMetrics, calculateFlakiness } from '../shared/metrics';
 import { generateFlakinessHtml } from '../shared/flakiness-dashboard';
 import { executeFlakyActions } from '../shared/flaky-auto-actions';
-import { expireQuarantine, listQuarantined, quarantineRatio } from '../shared/quarantine';
+import { expireQuarantine, listQuarantined, quarantineRatio, generatePipelineQuarantine } from '../shared/quarantine';
+import { aggregatePipelineHealth, renderPipelineHealthHtml } from './pipeline-health';
+import type { PipelineRunExtended, PipelineJobExtended } from './pipeline-health';
+import { exportTestsCsv, exportTestsJson } from '../shared/report-export';
 import { analyzeTestImpact, generateTestSelectionJson } from '../shared/test-impact';
 import { offerPipelineFailureAnalysis } from './llm-pipeline';
 import { collectTestResults as _collectTestResults } from './test-results';
@@ -263,6 +266,8 @@ export async function tryBatchMode(): Promise<boolean> {
     if (done) return true;
 
     generateFlakinessDashboard(setup.projectName, batch.publish);
+    generateTestExport(setup.projectName);
+    await generatePipelineHealthReport(setup.m);
     if (jiraResource) {
         await runFlakyAutoActions(setup.projectName, jiraResource);
     }
@@ -307,6 +312,7 @@ function runQuarantineMaintenance(): void {
     if (expired > 0) {
         info(expired + ' quarantined test(s) expired.');
     }
+    generatePipelineQuarantine();
     const allEntries = listQuarantined();
     if (allEntries.length > 0) {
         const meta = quarantineRatio(allEntries.length + 10);
@@ -314,5 +320,41 @@ function runQuarantineMaintenance(): void {
         if (meta.warning) {
             warn(meta.warning);
         }
+    }
+}
+
+function generateTestExport(projectName: string): void {
+    try {
+        const store = loadMetrics();
+        const projectRuns = store.runs.filter((r) => r.project === projectName);
+        if (projectRuns.length === 0) return;
+        const latestRun = projectRuns[projectRuns.length - 1];
+        if (!latestRun || latestRun.tests.length === 0) return;
+        const csv = exportTestsCsv(latestRun.tests);
+        const csvPath = writeReport('tests-' + projectName + '.csv', csv);
+        success('Test CSV export gerado: ' + csvPath);
+        const json = exportTestsJson(latestRun.tests);
+        const jsonPath = writeReport('tests-' + projectName + '.json', json);
+        success('Test JSON export gerado: ' + jsonPath);
+    } catch (err) {
+        printError('Falha ao exportar testes', err);
+    }
+}
+
+async function generatePipelineHealthReport(m: import('../shared/types').GitProvider): Promise<void> {
+    try {
+        const runs = (await m.getRecentPipelines(10)) as unknown as PipelineRunExtended[];
+        if (!runs || runs.length === 0) return;
+        const allJobs: PipelineJobExtended[][] = [];
+        for (const run of runs) {
+            const jobs = (await m.getPipelineJobs(run.id ?? '')) as unknown as PipelineJobExtended[];
+            allJobs.push(jobs || []);
+        }
+        const health = aggregatePipelineHealth(runs, allJobs, [], [], new Date());
+        const html = renderPipelineHealthHtml(health, 'Pipeline Health \u2014 ' + currentProjectName);
+        const outPath = writeReport('pipeline-health-' + currentProjectName + '.html', html);
+        success('Pipeline health report gerado: ' + outPath);
+    } catch (err) {
+        printError('Falha ao gerar pipeline health', err);
     }
 }

@@ -72,7 +72,7 @@ describe('matchResultsToTests', () => {
     afterAll(() => {
         try {
             fs.rmSync(tmpDir, { recursive: true, force: true });
-        } catch (e) {
+        } catch {
             /* ignore */
         }
     });

@@ -198,6 +198,70 @@ checks.push(
     })(),
 );
 
+// 12. All dashboard modules exist and export required functions (Sprint 10 + Sprint 11 + Sprint 12)
+checks.push(
+    (() => {
+        const violations: CheckResult['violations'] = [];
+        const dashboards: Array<{ file: string; export_: string }> = [
+            { file: 'shared/release-score.ts', export_: 'calculateReleaseScore' },
+            { file: 'shared/release-score.ts', export_: 'generateReleaseScoreHtml' },
+            { file: 'shared/defect-trend.ts', export_: 'aggregateDefectTrends' },
+            { file: 'shared/defect-trend.ts', export_: 'generateDefectTrendHtml' },
+            { file: 'shared/traceability-matrix.ts', export_: 'buildTraceabilityMatrix' },
+            { file: 'shared/traceability-matrix.ts', export_: 'generateTraceabilityHtml' },
+            { file: 'shared/ai-effectiveness.ts', export_: 'computeAiEffectiveness' },
+            { file: 'shared/ai-effectiveness.ts', export_: 'generateAiEffectivenessHtml' },
+            { file: 'shared/defect-seasonality.ts', export_: 'aggregateDefectSeasonality' },
+            { file: 'shared/defect-seasonality.ts', export_: 'generateSeasonalityHtml' },
+            { file: 'shared/silent-regression.ts', export_: 'detectSilentRegression' },
+            { file: 'shared/silent-regression.ts', export_: 'generateSilentRegressionHtml' },
+            { file: 'shared/ai-comparison.ts', export_: 'compareAiVsManual' },
+            { file: 'shared/ai-comparison.ts', export_: 'generateAiComparisonHtml' },
+            { file: 'shared/cross-squad-benchmark.ts', export_: 'computeCrossSquadBenchmark' },
+            { file: 'shared/cross-squad-benchmark.ts', export_: 'generateBenchmarkHtml' },
+            { file: 'shared/developer-profile.ts', export_: 'buildDeveloperProfile' },
+            { file: 'shared/developer-profile.ts', export_: 'generateDeveloperProfileHtml' },
+            { file: 'shared/suite-optimization.ts', export_: 'analyzeSuiteOptimization' },
+            { file: 'shared/suite-optimization.ts', export_: 'generateOptimizationHtml' },
+            { file: 'shared/backlog-health.ts', export_: 'analyzeBacklogHealth' },
+            { file: 'shared/backlog-health.ts', export_: 'generateBacklogHealthHtml' },
+            { file: 'shared/incident-report.ts', export_: 'buildIncidentReport' },
+            { file: 'shared/incident-report.ts', export_: 'generateIncidentReportHtml' },
+            { file: 'shared/impact-alert.ts', export_: 'analyzePipelineImpact' },
+            { file: 'shared/impact-alert.ts', export_: 'generateImpactAlertHtml' },
+            { file: 'shared/pipeline-cost.ts', export_: 'calculatePipelineCost' },
+            { file: 'shared/pipeline-cost.ts', export_: 'generatePipelineCostHtml' },
+            { file: 'shared/requirement-score.ts', export_: 'calculateRequirementScores' },
+            { file: 'shared/requirement-score.ts', export_: 'generateRequirementScoreHtml' },
+        ];
+        for (const d of dashboards) {
+            if (!existsSync(d.file)) {
+                violations.push({ file: d.file, line: 1, content: `MISSING FILE: ${d.file}` });
+                continue;
+            }
+            const content = readFileSync(d.file, 'utf-8');
+            if (!content.includes('export function ' + d.export_)) {
+                violations.push({ file: d.file, line: 1, content: `Missing export: ${d.export_} not found` });
+            }
+        }
+        return { name: 'all dashboard modules have required exports', passed: violations.length === 0, violations };
+    })(),
+);
+
+// 13. Quality gate module exists
+checks.push(
+    (() => {
+        const violations: CheckResult['violations'] = [];
+        const files = ['shared/quality-gate.ts', 'scripts/quality-gate.ts'];
+        for (const f of files) {
+            if (!existsSync(f)) {
+                violations.push({ file: f, line: 1, content: `MISSING FILE: ${f}` });
+            }
+        }
+        return { name: 'quality gate module files exist', passed: violations.length === 0, violations };
+    })(),
+);
+
 // 9. No non-null assertions (!) in .ts files (postfix operator, not negation)
 // Known false-positive exclusions: markdown/image syntax, GraphQL schemas,
 // uppercase string content like 'ATRASADA!', comment text like 'NO!'.
@@ -209,6 +273,50 @@ checks.push(
         /markdown\.ts$|markdown-lexer\.ts$|xray-history\.ts$|xray-client\.ts$|case02\.ts$|pipeline-handler\.test\.ts$/,
     ),
 );
+
+// 14. Auto-integridade — every commit must update the integrity hash
+// Hash is computed on file content EXCLUDING the HASH line itself.
+checks.push(
+    (() => {
+        const violations: CheckResult['violations'] = [];
+        const selfContent = readFileSync('scripts/enforce-quality.ts', 'utf-8');
+        const contentWithoutHash = selfContent.replace(/\/\* HASH:[0-9a-f]{64} \*\//, '');
+        const currentHash = require('crypto').createHash('sha256').update(contentWithoutHash, 'utf-8').digest('hex');
+        /* HASH:a9e8bfc14063901adb9b97f85beebf3a56c48b1e64eeeb15e5b573ff77f2869f */
+        const match = selfContent.match(/\/\* HASH:([0-9a-f]{64}) \*\//);
+        if (!match) {
+            violations.push({
+                file: 'scripts/enforce-quality.ts',
+                line: 1,
+                content: 'Missing HASH comment in enforce-quality.ts',
+            });
+        } else if (match[1] !== currentHash) {
+            violations.push({
+                file: 'scripts/enforce-quality.ts',
+                line: 1,
+                content: `Hash mismatch: expected ${match[1]}, got ${currentHash}. Regenerate HASH after intentional changes.`,
+            });
+        }
+        return { name: 'enforce-quality auto-integrity', passed: violations.length === 0, violations };
+    })(),
+);
+
+// 15. Checks count must match expected minimum (guards against accidental removal)
+// +1: this check hasn't been pushed yet, so checks.length excludes it
+checks.push({
+    name: `enforce-quality has at least 15 checks`,
+    passed: checks.length + 1 >= 15,
+    violations:
+        checks.length + 1 >= 15
+            ? []
+            : [
+                  {
+                      file: 'scripts/enforce-quality.ts',
+                      line: 1,
+                      content: `Expected >= 15 checks, found ${checks.length + 1}`,
+                  },
+              ],
+});
 
 // ---------- output ----------
 

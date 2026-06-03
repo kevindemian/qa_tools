@@ -1,0 +1,467 @@
+import { buildTraceabilityMatrix, generateTraceabilityHtml } from './traceability-matrix';
+import type { MetricsStore } from './metrics';
+import { rootLogger } from './logger';
+import { nonNull } from './test-utils';
+
+function emptyMetrics(): MetricsStore {
+    return { runs: [] };
+}
+
+function singleRunMetrics(
+    tests: Array<{ title: string; state: 'passed' | 'failed' | 'skipped'; duration: number }>,
+): MetricsStore {
+    return {
+        runs: [
+            {
+                timestamp: '2026-01-01T00:00:00.000Z',
+                project: 'test',
+                total: tests.length,
+                passed: tests.filter((t) => t.state === 'passed').length,
+                failed: tests.filter((t) => t.state === 'failed').length,
+                skipped: tests.filter((t) => t.state === 'skipped').length,
+                duration: tests.reduce((s, t) => s + t.duration, 0),
+                tests: tests.map((t) => ({
+                    title: t.title,
+                    state: t.state,
+                    duration: t.duration,
+                })),
+            },
+        ],
+    };
+}
+
+describe('buildTraceabilityMatrix', () => {
+    it('returns empty result for empty metrics', () => {
+        const result = buildTraceabilityMatrix(emptyMetrics());
+        expect(result.nodes).toEqual([]);
+        expect(result.totalEpics).toBe(0);
+        expect(result.totalTests).toBe(0);
+        expect(result.overallCoverage).toBe(0);
+        expect(result.timestamp).toBeTruthy();
+    });
+
+    it('returns empty result when no coverage data provided', () => {
+        const metrics = singleRunMetrics([{ title: 'Test A', state: 'passed', duration: 100 }]);
+        const result = buildTraceabilityMatrix(metrics);
+        expect(result.nodes).toEqual([]);
+        expect(result.totalEpics).toBe(0);
+    });
+
+    it('builds single epic with passed tests', () => {
+        const metrics = singleRunMetrics([
+            { title: 'TC-001', state: 'passed', duration: 200 },
+            { title: 'TC-002', state: 'passed', duration: 150 },
+        ]);
+        const result = buildTraceabilityMatrix(metrics, {
+            items: [{ epic: 'EPIC-1', hasTest: true, linkedTestKeys: ['TC-001', 'TC-002'], issueKey: 'STORY-1' }],
+            totals: { total: 1, covered: 1 },
+            byEpic: { 'EPIC-1': { total: 1, covered: 1, rawPct: 100 } },
+        });
+
+        expect(result.nodes).toHaveLength(1);
+        const node = nonNull(result.nodes[0]);
+        expect(node.epic).toBe('EPIC-1');
+        expect(node.coverage).toBe(100);
+        expect(node.health).toBe(100);
+        expect(node.stories).toHaveLength(1);
+        expect(nonNull(node.stories[0]).tests).toHaveLength(2);
+    });
+
+    it('computes health based on pass rate', () => {
+        const metrics = singleRunMetrics([
+            { title: 'TC-001', state: 'passed', duration: 100 },
+            { title: 'TC-002', state: 'failed', duration: 50 },
+            { title: 'TC-003', state: 'passed', duration: 75 },
+        ]);
+        const result = buildTraceabilityMatrix(metrics, {
+            items: [
+                { epic: 'EPIC-1', hasTest: true, linkedTestKeys: ['TC-001', 'TC-002', 'TC-003'], issueKey: 'STORY-1' },
+            ],
+            totals: { total: 1, covered: 1 },
+            byEpic: { 'EPIC-1': { total: 1, covered: 1, rawPct: 100 } },
+        });
+
+        const node = nonNull(result.nodes[0]);
+        expect(node.health).toBe(67);
+        expect(result.totalTests).toBe(3);
+        expect(result.overallCoverage).toBe(67);
+    });
+
+    it('handles skipped tests', () => {
+        const metrics = singleRunMetrics([
+            { title: 'TC-001', state: 'passed', duration: 100 },
+            { title: 'TC-002', state: 'skipped', duration: 0 },
+        ]);
+        const result = buildTraceabilityMatrix(metrics, {
+            items: [{ epic: 'EPIC-1', hasTest: true, linkedTestKeys: ['TC-001', 'TC-002'], issueKey: 'STORY-1' }],
+            totals: { total: 1, covered: 1 },
+            byEpic: { 'EPIC-1': { total: 1, covered: 1, rawPct: 100 } },
+        });
+
+        const node = nonNull(result.nodes[0]);
+        expect(node.health).toBe(50);
+        expect(nonNull(node.stories[0]).tests).toHaveLength(2);
+        expect(nonNull(node.stories[0]).tests[1]?.status).toBe('skipped');
+    });
+
+    it('builds multiple epics with mixed status', () => {
+        const metrics = singleRunMetrics([
+            { title: 'TC-A1', state: 'passed', duration: 100 },
+            { title: 'TC-A2', state: 'passed', duration: 200 },
+            { title: 'TC-B1', state: 'failed', duration: 50 },
+        ]);
+        const result = buildTraceabilityMatrix(metrics, {
+            items: [
+                { epic: 'EPIC-A', hasTest: true, linkedTestKeys: ['TC-A1', 'TC-A2'], issueKey: 'STORY-A1' },
+                { epic: 'EPIC-B', hasTest: true, linkedTestKeys: ['TC-B1'], issueKey: 'STORY-B1' },
+            ],
+            totals: { total: 2, covered: 2 },
+            byEpic: {
+                'EPIC-A': { total: 1, covered: 1, rawPct: 100 },
+                'EPIC-B': { total: 1, covered: 1, rawPct: 100 },
+            },
+        });
+
+        expect(result.nodes).toHaveLength(2);
+        expect(result.totalEpics).toBe(2);
+        expect(result.totalTests).toBe(3);
+
+        const epicA = nonNull(result.nodes.find((n) => n.epic === 'EPIC-A'));
+        const epicB = nonNull(result.nodes.find((n) => n.epic === 'EPIC-B'));
+        expect(epicA.health).toBe(100);
+        expect(epicB.health).toBe(0);
+        expect(result.overallCoverage).toBe(67);
+    });
+
+    it('handles stories with no linked tests gracefully', () => {
+        const metrics = singleRunMetrics([]);
+        const result = buildTraceabilityMatrix(metrics, {
+            items: [{ epic: 'EPIC-1', hasTest: false, linkedTestKeys: [] }],
+            totals: { total: 1, covered: 0 },
+            byEpic: { 'EPIC-1': { total: 1, covered: 0, rawPct: 0 } },
+        });
+
+        const node = nonNull(result.nodes[0]);
+        expect(node.coverage).toBe(0);
+        expect(node.stories).toHaveLength(0);
+        expect(node.health).toBe(0);
+    });
+
+    it('handles coverage result with no items array', () => {
+        const metrics = singleRunMetrics([{ title: 'TC-001', state: 'passed', duration: 100 }]);
+        const result = buildTraceabilityMatrix(metrics, {
+            byEpic: { 'EPIC-1': { total: 1, covered: 1, rawPct: 100 } },
+        });
+
+        expect(result.nodes).toHaveLength(1);
+        expect(nonNull(result.nodes[0]).stories).toHaveLength(0);
+        expect(nonNull(result.nodes[0]).coverage).toBe(100);
+    });
+
+    it('handles unmatched test keys gracefully', () => {
+        const metrics = singleRunMetrics([{ title: 'TC-001', state: 'passed', duration: 100 }]);
+        const result = buildTraceabilityMatrix(metrics, {
+            items: [{ epic: 'EPIC-1', hasTest: true, linkedTestKeys: ['UNKNOWN-TEST'] }],
+            totals: { total: 1, covered: 1 },
+            byEpic: { 'EPIC-1': { total: 1, covered: 1, rawPct: 100 } },
+        });
+
+        expect(nonNull(result.nodes[0]).stories).toHaveLength(0);
+        expect(result.totalTests).toBe(0);
+    });
+
+    it('handles duplicate test titles in the same run', () => {
+        const metrics: MetricsStore = {
+            runs: [
+                {
+                    timestamp: '2026-01-01T00:00:00.000Z',
+                    project: 'test',
+                    total: 2,
+                    passed: 1,
+                    failed: 1,
+                    skipped: 0,
+                    duration: 150,
+                    tests: [
+                        { title: 'TC-001', state: 'passed', duration: 100 },
+                        { title: 'TC-001', state: 'passed', duration: 50 },
+                    ],
+                },
+            ],
+        };
+        const result = buildTraceabilityMatrix(metrics, {
+            items: [{ epic: 'EPIC-1', hasTest: true, linkedTestKeys: ['TC-001'], issueKey: 'STORY-1' }],
+            totals: { total: 1, covered: 1 },
+            byEpic: { 'EPIC-1': { total: 1, covered: 1, rawPct: 100 } },
+        });
+        expect(result.nodes).toHaveLength(1);
+        expect(nonNull(nonNull(result.nodes[0]).stories[0]).tests).toHaveLength(1);
+        expect(nonNull(nonNull(result.nodes[0]).stories[0]).tests[0]?.status).toBe('passed');
+    });
+
+    it('handles multiple items for the same epic', () => {
+        const metrics = singleRunMetrics([
+            { title: 'TC-001', state: 'passed', duration: 100 },
+            { title: 'TC-002', state: 'failed', duration: 50 },
+        ]);
+        const result = buildTraceabilityMatrix(metrics, {
+            items: [
+                { epic: 'EPIC-1', hasTest: true, linkedTestKeys: ['TC-001'], issueKey: 'STORY-1' },
+                { epic: 'EPIC-1', hasTest: true, linkedTestKeys: ['TC-002'], issueKey: 'STORY-2' },
+            ],
+            totals: { total: 2, covered: 2 },
+            byEpic: { 'EPIC-1': { total: 2, covered: 2, rawPct: 100 } },
+        });
+        const node = nonNull(result.nodes[0]);
+        expect(node.stories).toHaveLength(2);
+        expect(node.health).toBe(50);
+    });
+
+    it('handles item where hasTest is false but tests exist', () => {
+        const metrics = singleRunMetrics([{ title: 'TC-001', state: 'passed', duration: 100 }]);
+        const result = buildTraceabilityMatrix(metrics, {
+            items: [{ epic: 'EPIC-1', hasTest: false, linkedTestKeys: ['TC-001'], issueKey: 'STORY-1' }],
+            totals: { total: 1, covered: 0 },
+            byEpic: { 'EPIC-1': { total: 1, covered: 0, rawPct: 0 } },
+        });
+        const story = nonNull(nonNull(result.nodes[0]).stories[0]);
+        expect(story.coverage).toBe(0);
+        expect(story.tests).toHaveLength(1);
+    });
+
+    it('handles item without linkedTestKeys', () => {
+        const metrics = singleRunMetrics([{ title: 'TC-001', state: 'passed', duration: 100 }]);
+        const result = buildTraceabilityMatrix(metrics, {
+            items: [{ epic: 'EPIC-1', hasTest: true }],
+            totals: { total: 1, covered: 1 },
+            byEpic: { 'EPIC-1': { total: 1, covered: 1, rawPct: 100 } },
+        });
+        expect(nonNull(result.nodes[0]).stories).toHaveLength(0);
+    });
+
+    it('handles item without issueKey', () => {
+        const metrics = singleRunMetrics([{ title: 'TC-001', state: 'passed', duration: 100 }]);
+        const result = buildTraceabilityMatrix(metrics, {
+            items: [{ epic: 'EPIC-1', hasTest: true, linkedTestKeys: ['TC-001'] }],
+            totals: { total: 1, covered: 1 },
+            byEpic: { 'EPIC-1': { total: 1, covered: 1, rawPct: 100 } },
+        });
+        const story = nonNull(nonNull(result.nodes[0]).stories[0]);
+        expect(story.key).toBe('EPIC-1');
+    });
+
+    it('handles error gracefully when metrics store is malformed', () => {
+        jest.spyOn(rootLogger, 'error').mockImplementation(() => {});
+        const result = buildTraceabilityMatrix({} as MetricsStore);
+        expect(result.nodes).toEqual([]);
+        expect(result.totalEpics).toBe(0);
+        jest.restoreAllMocks();
+    });
+
+    it('has progress on flakiness from multiple runs', () => {
+        const metrics: MetricsStore = {
+            runs: [
+                {
+                    timestamp: '2026-01-01T00:00:00.000Z',
+                    project: 'test',
+                    total: 1,
+                    passed: 0,
+                    failed: 1,
+                    skipped: 0,
+                    duration: 50,
+                    tests: [{ title: 'TC-001', state: 'failed', duration: 50 }],
+                },
+                {
+                    timestamp: '2026-01-02T00:00:00.000Z',
+                    project: 'test',
+                    total: 1,
+                    passed: 1,
+                    failed: 0,
+                    skipped: 0,
+                    duration: 100,
+                    tests: [{ title: 'TC-001', state: 'passed', duration: 100 }],
+                },
+            ],
+        };
+        const result = buildTraceabilityMatrix(metrics, {
+            items: [{ epic: 'EPIC-1', hasTest: true, linkedTestKeys: ['TC-001'], issueKey: 'STORY-1' }],
+            totals: { total: 1, covered: 1 },
+            byEpic: { 'EPIC-1': { total: 1, covered: 1, rawPct: 100 } },
+        });
+
+        const firstTest = nonNull(nonNull(result.nodes[0]).stories[0]).tests[0];
+        expect(firstTest?.flakiness).toBe(0.5);
+        expect(firstTest?.status).toBe('passed');
+    });
+});
+
+describe('generateTraceabilityHtml', () => {
+    it('generates valid HTML with summary cards', () => {
+        const result = buildTraceabilityMatrix(emptyMetrics(), {
+            byEpic: { 'EPIC-1': { total: 1, covered: 1, rawPct: 100 } },
+            items: [{ epic: 'EPIC-1', hasTest: true, linkedTestKeys: [], issueKey: 'STORY-1' }],
+            totals: { total: 1, covered: 1 },
+        });
+        const html = generateTraceabilityHtml(result);
+        expect(html).toContain('<!DOCTYPE html>');
+        expect(html).toContain('data-component="metric-card"');
+        expect(html).toContain('Total Epics');
+        expect(html).toContain('Total Tests');
+        expect(html).toContain('Overall Coverage');
+    });
+
+    it('contains tree structure with epic nodes', () => {
+        const metrics = singleRunMetrics([{ title: 'TC-001', state: 'passed', duration: 100 }]);
+        const result = buildTraceabilityMatrix(metrics, {
+            items: [{ epic: 'EPIC-1', hasTest: true, linkedTestKeys: ['TC-001'], issueKey: 'STORY-1' }],
+            totals: { total: 1, covered: 1 },
+            byEpic: { 'EPIC-1': { total: 1, covered: 1, rawPct: 100 } },
+        });
+        const html = generateTraceabilityHtml(result);
+        expect(html).toContain('epic-node');
+        expect(html).toContain('story-node');
+        expect(html).toContain('test-row');
+        expect(html).toContain('EPIC-1');
+        expect(html).toContain('STORY-1');
+        expect(html).toContain('TC-001');
+    });
+
+    it('color-codes test rows by status', () => {
+        const metrics = singleRunMetrics([
+            { title: 'TC-PASS', state: 'passed', duration: 100 },
+            { title: 'TC-FAIL', state: 'failed', duration: 50 },
+            { title: 'TC-SKIP', state: 'skipped', duration: 0 },
+        ]);
+        const result = buildTraceabilityMatrix(metrics, {
+            items: [
+                {
+                    epic: 'EPIC-1',
+                    hasTest: true,
+                    linkedTestKeys: ['TC-PASS', 'TC-FAIL', 'TC-SKIP'],
+                    issueKey: 'STORY-1',
+                },
+            ],
+            totals: { total: 1, covered: 1 },
+            byEpic: { 'EPIC-1': { total: 1, covered: 1, rawPct: 100 } },
+        });
+        const html = generateTraceabilityHtml(result);
+        expect(html).toContain('test-passed');
+        expect(html).toContain('test-failed');
+        expect(html).toContain('test-skipped');
+        expect(html).toContain('status-passed');
+        expect(html).toContain('status-failed');
+        expect(html).toContain('status-skipped');
+    });
+
+    it('shows empty state when no nodes', () => {
+        const result = buildTraceabilityMatrix(emptyMetrics());
+        const html = generateTraceabilityHtml(result);
+        expect(html).toContain('No traceability data available');
+        expect(html).not.toContain('class="epic-node"');
+    });
+
+    it('uses custom title', () => {
+        const result = buildTraceabilityMatrix(emptyMetrics());
+        const html = generateTraceabilityHtml(result, 'My Traceability');
+        expect(html).toContain('My Traceability');
+        expect(html).toContain('<title>My Traceability</title>');
+    });
+
+    it('includes theme script and footer', () => {
+        const result = buildTraceabilityMatrix(emptyMetrics());
+        const html = generateTraceabilityHtml(result);
+        expect(html).toContain('qa-report-theme');
+        expect(html).toContain('Generated by QA Tools');
+        expect(html).toContain('prefers-color-scheme');
+    });
+
+    it('escapes HTML in epic names', () => {
+        const result: ReturnType<typeof buildTraceabilityMatrix> = {
+            nodes: [
+                {
+                    epic: '<script>alert(1)</script>',
+                    coverage: 50,
+                    health: 0,
+                    flakiness: 0,
+                    stories: [],
+                },
+            ],
+            totalEpics: 1,
+            totalTests: 0,
+            overallCoverage: 0,
+            timestamp: '2026-01-01T00:00:00.000Z',
+        };
+        const html = generateTraceabilityHtml(result);
+        expect(html).toContain('&lt;script&gt;');
+        expect(html).not.toContain('<script>alert');
+    });
+
+    it('handles error gracefully when result is null', () => {
+        jest.spyOn(rootLogger, 'error').mockImplementation(() => {});
+        const html = generateTraceabilityHtml(null);
+        expect(html).toContain('Error generating traceability matrix');
+        jest.restoreAllMocks();
+    });
+
+    it('shows error severity for coverage below 50', () => {
+        const result: ReturnType<typeof buildTraceabilityMatrix> = {
+            nodes: [],
+            totalEpics: 0,
+            totalTests: 0,
+            overallCoverage: 30,
+            timestamp: '2026-01-01T00:00:00.000Z',
+        };
+        const html = generateTraceabilityHtml(result);
+        expect(html).toContain('data-severity="error"');
+    });
+
+    it('shows warn severity for coverage between 50 and 80', () => {
+        const result: ReturnType<typeof buildTraceabilityMatrix> = {
+            nodes: [],
+            totalEpics: 0,
+            totalTests: 0,
+            overallCoverage: 65,
+            timestamp: '2026-01-01T00:00:00.000Z',
+        };
+        const html = generateTraceabilityHtml(result);
+        expect(html).toContain('data-severity="warn"');
+    });
+
+    it('shows success severity for coverage above 80', () => {
+        const result: ReturnType<typeof buildTraceabilityMatrix> = {
+            nodes: [],
+            totalEpics: 0,
+            totalTests: 0,
+            overallCoverage: 95,
+            timestamp: '2026-01-01T00:00:00.000Z',
+        };
+        const html = generateTraceabilityHtml(result);
+        expect(html).toContain('data-severity="success"');
+    });
+
+    it('includes health bar for nodes with stories', () => {
+        const metrics = singleRunMetrics([{ title: 'TC-001', state: 'passed', duration: 100 }]);
+        const result = buildTraceabilityMatrix(metrics, {
+            items: [{ epic: 'EPIC-1', hasTest: true, linkedTestKeys: ['TC-001'], issueKey: 'STORY-1' }],
+            totals: { total: 1, covered: 1 },
+            byEpic: { 'EPIC-1': { total: 1, covered: 1, rawPct: 100 } },
+        });
+        const html = generateTraceabilityHtml(result);
+        expect(html).toContain('health-bar');
+        expect(html).toContain('health-fill');
+    });
+
+    it('renders health bar in warn range for epic with partial health', () => {
+        const metrics = singleRunMetrics([
+            { title: 'TC-001', state: 'passed', duration: 100 },
+            { title: 'TC-002', state: 'failed', duration: 50 },
+        ]);
+        const result = buildTraceabilityMatrix(metrics, {
+            items: [{ epic: 'EPIC-1', hasTest: true, linkedTestKeys: ['TC-001', 'TC-002'], issueKey: 'STORY-1' }],
+            totals: { total: 1, covered: 1 },
+            byEpic: { 'EPIC-1': { total: 1, covered: 1, rawPct: 100 } },
+        });
+        expect(nonNull(result.nodes[0]).health).toBe(50);
+        const html = generateTraceabilityHtml(result);
+        expect(html).toContain('health-bar');
+    });
+});

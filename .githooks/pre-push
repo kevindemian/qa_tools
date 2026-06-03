@@ -1,9 +1,11 @@
 #!/bin/sh
 set -e
 
-echo "=== Running pre-push checks (typecheck + tests) ==="
+echo "=== Running pre-push checks (typecheck + enforce-quality + quality gate + tests) ==="
 
 npm run typecheck
+npx tsx scripts/enforce-quality.ts
+npx tsx scripts/quality-gate.ts
 npm test
 
 echo "=== Pre-push checks passed ==="

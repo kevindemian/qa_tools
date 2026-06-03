@@ -65,8 +65,7 @@ describe('_runValidationRules', () => {
     });
 
     it('reports schema errors on invalid test', () => {
-        // @ts-expect-error — R9: testing schema validation with intentionally invalid types
-        const tests: import('../shared/types').TestCase[] = [{ title: 123, steps: 'invalid' }];
+        const tests = [{ title: 123, steps: 'invalid' }];
         const { errors } = _runValidationRules(tests);
         expect(errors.length).toBeGreaterThan(0);
     });

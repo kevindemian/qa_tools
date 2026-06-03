@@ -31,7 +31,7 @@ class PackageVersionManager {
         }
     }
 
-    updateReleaseNotes(versionNumber: string, tasks: string[]): void {
+    updateReleaseNotes(versionNumber: string, tasks: unknown): void {
         if (!Array.isArray(tasks)) {
             rootLogger.error('updateReleaseNotes: tasks deve ser um array.');
             return;

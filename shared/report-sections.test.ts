@@ -19,6 +19,8 @@ import {
     buildQualityGate,
     buildFilterBar,
     buildFailedSummary,
+    buildReleaseSection,
+    buildHealthSection,
 } from './report-sections';
 
 const sampleTests: FlatTest[] = [
@@ -266,5 +268,110 @@ describe('buildFailedSummary', () => {
         const stats: ReportStats = { passed: 0, failed: 1, skipped: 0, total: 1, duration: 100 };
         const html = buildFailedSummary(failedTests, stats);
         expect(html).toContain('&lt;b&gt;');
+    });
+});
+
+describe('buildReleaseSection', () => {
+    it('renders score number', () => {
+        const html = buildReleaseSection(85, 'good', [], 'All clear');
+        expect(html).toContain('85');
+    });
+
+    it('renders grade text', () => {
+        const html = buildReleaseSection(85, 'good', [], 'All clear');
+        expect(html).toContain('good');
+    });
+
+    it('renders recommendation', () => {
+        const html = buildReleaseSection(50, 'needs_attention', [], 'Fix the failing checks');
+        expect(html).toContain('Fix the failing checks');
+    });
+
+    it('renders breakdown items with pass/fail status', () => {
+        const breakdown = [
+            { label: 'Tests', score: 90, status: 'pass' as const },
+            { label: 'Coverage', score: 30, status: 'fail' as const },
+        ];
+        const html = buildReleaseSection(60, 'needs_attention', breakdown, 'Improve coverage');
+        expect(html).toContain('Tests');
+        expect(html).toContain('Coverage');
+        expect(html).toContain('pass');
+        expect(html).toContain('fail');
+        expect(html).toContain('90');
+        expect(html).toContain('30');
+    });
+
+    it('is wrapped in release-readiness div', () => {
+        const html = buildReleaseSection(95, 'excellent', [], 'Ready');
+        expect(html).toContain('release-readiness');
+    });
+
+    it('color-codes score based on threshold', () => {
+        const high = buildReleaseSection(85, 'good', [], '');
+        expect(high).toContain('var(--color-success)');
+        const mid = buildReleaseSection(65, 'needs_attention', [], '');
+        expect(mid).toContain('var(--color-warn)');
+        const low = buildReleaseSection(30, 'critical', [], '');
+        expect(low).toContain('var(--color-error)');
+    });
+});
+
+describe('buildHealthSection', () => {
+    const passingHealth = {
+        overall: 95,
+        grade: 'excellent' as const,
+        qualityGate: 'pass' as const,
+        dimensions: {
+            passRate: { score: 100, status: 'pass' as const },
+            flakyRate: { score: 100, status: 'pass' as const },
+            coverage: { score: 90, status: 'pass' as const },
+            suiteSpeed: { score: 100, status: 'pass' as const },
+        },
+        runCount: 10,
+        timestamp: '2026-06-03T00:00:00.000Z',
+    };
+
+    const failingHealth = {
+        overall: 45,
+        grade: 'critical' as const,
+        qualityGate: 'fail' as const,
+        dimensions: {
+            passRate: { score: 30, status: 'fail' as const },
+            flakyRate: { score: 100, status: 'pass' as const },
+            coverage: { score: 50, status: 'fail' as const },
+            suiteSpeed: { score: 80, status: 'pass' as const },
+        },
+        runCount: 5,
+        timestamp: '2026-06-03T00:00:00.000Z',
+    };
+
+    it('renders overall score and grade', () => {
+        const html = buildHealthSection(passingHealth);
+        expect(html).toContain('95');
+        expect(html).toContain('excellent');
+    });
+
+    it('shows passing quality gate for healthy suite', () => {
+        const html = buildHealthSection(passingHealth);
+        expect(html).toContain('Quality Gate: Pass');
+    });
+
+    it('shows failing quality gate for unhealthy suite', () => {
+        const html = buildHealthSection(failingHealth);
+        expect(html).toContain('Quality Gate: Fail');
+    });
+
+    it('renders dimension bars for each metric', () => {
+        const html = buildHealthSection(passingHealth);
+        expect(html).toContain('Pass Rate');
+        expect(html).toContain('Flaky Rate');
+        expect(html).toContain('Coverage');
+        expect(html).toContain('Suite Speed');
+    });
+
+    it('shows run count and date', () => {
+        const html = buildHealthSection(passingHealth);
+        expect(html).toContain('10 run(s)');
+        expect(html).toContain('2026-06-03');
     });
 });

@@ -20,7 +20,7 @@ describe('AiBugReportSchema', () => {
     });
 
     it('accepts a valid report without optional fields', () => {
-        const { environment, component, ...minimal } = validReport;
+        const minimal = (({ environment: _env, component: _comp, ...rest }) => rest)(validReport);
         const result = AiBugReportSchema.parse(minimal);
         expect(result.environment).toBeUndefined();
         expect(result.component).toBeUndefined();
@@ -47,12 +47,12 @@ describe('AiBugReportSchema', () => {
     });
 
     it('rejects missing expectedResult', () => {
-        const { expectedResult, ...invalid } = validReport;
+        const invalid = (({ expectedResult: _er, ...rest }) => rest)(validReport);
         expect(() => AiBugReportSchema.parse(invalid)).toThrow();
     });
 
     it('rejects missing actualResult', () => {
-        const { actualResult, ...invalid } = validReport;
+        const invalid = (({ actualResult: _ar, ...rest }) => rest)(validReport);
         expect(() => AiBugReportSchema.parse(invalid)).toThrow();
     });
 
