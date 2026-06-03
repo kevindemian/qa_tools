@@ -22,6 +22,7 @@ import { buildIncidentReport, generateIncidentReportHtml } from '../shared/incid
 import { analyzePipelineImpact, generateImpactAlertHtml } from '../shared/impact-alert';
 import { calculatePipelineCost, generatePipelineCostHtml } from '../shared/pipeline-cost';
 import { calculateRequirementScores, generateRequirementScoreHtml } from '../shared/requirement-score';
+import { generateGitMetricsRuns, generateGitFailureClassifications } from '../shared/git-metrics-adapter';
 import Config from '../shared/config';
 import JiraClient from '../shared/jira-client';
 import { writeReport } from '../shared/temp-dir';
@@ -137,10 +138,17 @@ export async function handleRunComparison(): Promise<void> {
             return;
         }
         const store = loadMetrics();
-        const projectRuns = store.runs.filter((r) => r.project === currentProjectName);
+        let projectRuns = store.runs.filter((r) => r.project === currentProjectName);
         if (projectRuns.length < 2) {
-            info('Menos de 2 execuções para comparar.');
-            return;
+            info('Sem dados de pipeline para ' + currentProjectName + ' — tentando fallback para git history...');
+            const gitRuns = generateGitMetricsRuns({ projectName: currentProjectName });
+            if (gitRuns.length >= 2) {
+                projectRuns = gitRuns;
+                info('Usando ' + gitRuns.length + ' runs derivados do git history para ' + currentProjectName + '.');
+            } else {
+                warn('Menos de 2 execuções registradas para ' + currentProjectName + '. Execute pipelines primeiro.');
+                return;
+            }
         }
         const runA: import('../shared/metrics').MetricsRun | null = projectRuns[projectRuns.length - 2] ?? null;
         const runB: import('../shared/metrics').MetricsRun | null = projectRuns[projectRuns.length - 1] ?? null;
@@ -182,13 +190,27 @@ export function generateWeeklyQualityReport(): void {
             return;
         }
         const store = loadMetrics();
-        const projectRuns = store.runs.filter((r) => r.project === currentProjectName);
+        let projectRuns = store.runs.filter((r) => r.project === currentProjectName);
+        let failureClassifications = store.failureClassifications ?? [];
+        let usingGitFallback = false;
+
         if (projectRuns.length < 2) {
-            warn('Menos de 2 execuções registradas para ' + currentProjectName + '. Execute pipelines primeiro.');
-            return;
+            info('Sem dados de pipeline — tentando fallback para git history...');
+            const gitRuns = generateGitMetricsRuns({ projectName: currentProjectName });
+            if (gitRuns.length >= 2) {
+                projectRuns = gitRuns;
+                failureClassifications = generateGitFailureClassifications({ projectName: currentProjectName });
+                usingGitFallback = true;
+                info('Usando ' + gitRuns.length + ' runs derivados do git history.');
+            } else {
+                warn('Menos de 2 execuções registradas. Execute pipelines primeiro.');
+                return;
+            }
         }
 
-        const health = calculateHealthScore(store);
+        const effectiveStore = usingGitFallback ? { ...store, runs: projectRuns, failureClassifications } : store;
+
+        const health = calculateHealthScore(effectiveStore);
         const flaky = calculateFlakiness({ runs: projectRuns }, 2);
         const releaseScore = calculateReleaseScore(
             80,
@@ -199,15 +221,15 @@ export function generateWeeklyQualityReport(): void {
                 ? Math.min(100, Math.round((flaky.filter((f) => f.rate > 0.3).length / flaky.length) * 100))
                 : 0,
         );
-        const defects = aggregateDefectTrends(store.failureClassifications ?? []);
-        const matrix = buildTraceabilityMatrix(store);
+        const defects = aggregateDefectTrends(failureClassifications);
+        const matrix = buildTraceabilityMatrix(effectiveStore);
         const aiResult = computeAiEffectiveness({ records: [] });
         const backlog = analyzeBacklogHealth([]);
 
         /* Fase 2 dashboards */
-        const seasonality = aggregateDefectSeasonality(store.failureClassifications ?? []);
+        const seasonality = aggregateDefectSeasonality(failureClassifications);
         const testDurationMap: Record<string, number[]> = {};
-        for (const run of store.runs) {
+        for (const run of effectiveStore.runs) {
             for (const t of run.tests) {
                 if (t.state === 'skipped') continue;
                 if (!testDurationMap[t.title]) testDurationMap[t.title] = [];
@@ -216,20 +238,20 @@ export function generateWeeklyQualityReport(): void {
         }
         const regression = detectSilentRegression(testDurationMap);
         const devProfile = buildDeveloperProfile(
-            (store.failureClassifications ?? []).map((fc) => ({
+            failureClassifications.map((fc) => ({
                 testTitle: fc.testTitle,
                 category: fc.category,
                 timestamp: fc.timestamp,
             })),
         );
         const aiComparison = compareAiVsManual([]);
-        const flatTests = store.runs.flatMap((r) =>
+        const flatTests = projectRuns.flatMap((r) =>
             r.tests.map((t) => ({ title: t.title, duration: t.duration, flakiness: 0 })),
         );
         const optimization = analyzeSuiteOptimization(flatTests);
 
         /* Cross-squad benchmark: aggregate health across all projects */
-        const projectNames = [...new Set(store.runs.map((r) => r.project))];
+        const projectNames = [...new Set(effectiveStore.runs.map((r) => r.project))];
         const projectBenchmarks = projectNames.map((name) => {
             const pRuns = store.runs.filter((r) => r.project === name);
             const pHealth = calculateHealthScore({ ...store, runs: pRuns });

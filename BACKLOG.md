@@ -480,6 +480,34 @@ Implementação da Fase 2 do STRATEGIC-PLAN.md: análise cross-run, detecção d
 
 ---
 
+## 🚀 Sprint 12.5 — Git Metrics Adapter (P0, ~2h)
+
+Implementação do adaptador git → MetricsRun[] para autovalidação das funcionalidades de saúde/qualidade usando o próprio histórico do projeto.
+
+**Objetivo:** Substituir o estado "sem dados" do quality gate e dashboards por métricas reais derivadas do git log, eliminando a dependência de dados externos de pipeline.
+
+### Fase única — Git Metrics Adapter (P0, ~2h)
+
+| ID  | Componente                            | Arquivo(s)                           | Status |
+| --- | ------------------------------------- | ------------------------------------ | ------ |
+| G1  | `generateGitMetricsRuns()`            | `shared/git-metrics-adapter.ts`      | ⏳     |
+| G2  | `generateGitFailureClassifications()` | `shared/git-metrics-adapter.ts`      | ⏳     |
+| G3  | Tests                                 | `shared/git-metrics-adapter.test.ts` | ⏳     |
+| G4  | Wirear fallback no quality-gate       | `shared/quality-gate.ts`             | ⏳     |
+| G5  | Wirear fallback no schedule-handler   | `git_triggers/schedule-handler.ts`   | ⏳     |
+
+### Métricas alvo
+
+| Mététrica                  | Alvo        |
+| -------------------------- | ----------- |
+| `tsc --noEmit`             | **0 erros** |
+| ESLint errors/warnings     | **0**       |
+| enforce-quality checks     | **15/15**   |
+| `jest` pass                | **100%**    |
+| `jest` fail                | **0**       |
+| Cobertura testes adaptador | **100%**    |
+| Débitos técnicos novos     | **0**       |
+
 ## 🚀 Sprint 12 — Fase 3: Inteligência Avançada (STRATEGIC-PLAN.md) — ✅ CONCLUÍDA
 
 Implementação da Fase 3 do STRATEGIC-PLAN.md: inteligência avançada que correlaciona múltiplas fontes para gerar investigação, alertas, scores e analytics.
