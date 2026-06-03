@@ -1,5 +1,9 @@
 import { runQualityGate, formatQualityGateJson, formatQualityGateText } from './quality-gate';
 
+jest.mock('child_process', () => ({
+    execFileSync: jest.fn(),
+}));
+
 jest.mock('./metrics', () => ({
     loadMetrics: jest.fn(),
     calculateFlakiness: jest.fn(),
@@ -9,10 +13,12 @@ jest.mock('./logger', () => ({
     rootLogger: { error: jest.fn() },
 }));
 
+import { execFileSync } from 'child_process';
 import { loadMetrics, calculateFlakiness } from './metrics';
 
 const mockLoadMetrics = jest.mocked(loadMetrics);
 const mockCalcFlakiness = jest.mocked(calculateFlakiness);
+const mockExecFileSync = jest.mocked(execFileSync);
 
 describe('runQualityGate', () => {
     beforeEach(() => {
@@ -21,6 +27,29 @@ describe('runQualityGate', () => {
         delete process.env.QA_GATE_MAX_FLAKY_PCT;
         delete process.env.QA_GATE_MIN_COVERAGE;
         delete process.env.QA_GATE_MAX_SUITE_SPEED;
+        mockExecFileSync.mockImplementation(() => '');
+    });
+
+    it('returns pass when no metrics data exists (fallback git vazio)', () => {
+        mockLoadMetrics.mockReturnValue({ runs: [] });
+        const result = runQualityGate();
+        expect(result.overall).toBe('pass');
+        expect(result.checks).toHaveLength(1);
+        expect(result.checks[0]?.name).toBe('metrics-data');
+        expect(result.checks[0]?.status).toBe('pass');
+        expect(result.score).toBe(100);
+    });
+
+    it('falls back to git data when metrics store empty', () => {
+        mockLoadMetrics.mockReturnValue({ runs: [] });
+        mockExecFileSync.mockImplementation(
+            () =>
+                'abc123|2026-06-01T10:00:00.000Z|Initial commit|kdemian|\n' +
+                'def456|2026-06-02T11:00:00.000Z|Second commit|kdemian|abc123',
+        );
+        const result = runQualityGate();
+        expect(result.checks.length).toBeGreaterThan(1);
+        expect(result.checks[0]?.name).not.toBe('metrics-data');
     });
 
     it('returns pass when no metrics data exists (gate skipped)', () => {

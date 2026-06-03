@@ -3,6 +3,7 @@
  *  All thresholds are configurable via environment variables. */
 import { loadMetrics, calculateFlakiness } from './metrics';
 import { calculateHealthScore, type HealthScoreConfig } from './health-score';
+import { generateGitMetricsRuns } from './git-metrics-adapter';
 import { rootLogger } from './logger';
 
 export interface QualityGateResult {
@@ -48,17 +49,22 @@ export function runQualityGate(options?: QualityGateOptions): QualityGateResult 
         const maxSuiteSpeed = options?.maxSuiteSpeed ?? envCfg.maxSuiteSpeedGate ?? 8;
 
         const store = loadMetrics();
-        const projectRuns = options?.project ? store.runs.filter((r) => r.project === options.project) : store.runs;
+        let projectRuns = options?.project ? store.runs.filter((r) => r.project === options.project) : store.runs;
 
         if (projectRuns.length < 1) {
-            checks.push({
-                name: 'metrics-data',
-                status: 'pass',
-                score: 100,
-                threshold: 1,
-                details: 'Sem dados históricos — gate não aplicável',
-            });
-            return { overall: 'pass', checks, score: 100 };
+            const gitRuns = generateGitMetricsRuns({ projectName: options?.project ?? 'git' });
+            if (gitRuns.length > 0) {
+                projectRuns = gitRuns;
+            } else {
+                checks.push({
+                    name: 'metrics-data',
+                    status: 'pass',
+                    score: 100,
+                    threshold: 1,
+                    details: 'Sem dados históricos — gate não aplicável',
+                });
+                return { overall: 'pass', checks, score: 100 };
+            }
         }
 
         const health = calculateHealthScore({ ...store, runs: projectRuns }, envCfg);
