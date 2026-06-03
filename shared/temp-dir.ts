@@ -60,20 +60,25 @@ export function ensureDirs(): void {
     mkdirSync(logsDir(), { recursive: true });
 }
 
-/** Register SIGINT/SIGTERM/exit handlers to clean up temp subdirectories. */
-export function registerCleanup(): void {
-    const handler = () => {
-        const td = tempDir();
-        for (const sub of ['previews', 'vars', 'cache']) {
-            const p = join(td, sub);
-            try {
-                if (existsSync(p)) rmSync(p, { recursive: true, force: true });
-            } catch {
-                /* cleanup — temp dir pode não existir ainda */
-            }
+/** Clean up temporary subdirectories. Exported so SIGINT handler in cli_base.ts
+ *  can call it on confirmed exit, avoiding the race condition where SIGINT
+ *  from temp-dir.ts deletes files before the user confirms the exit prompt. */
+export function cleanupTempDirs(): void {
+    const td = tempDir();
+    for (const sub of ['previews', 'vars', 'cache']) {
+        const p = join(td, sub);
+        try {
+            if (existsSync(p)) rmSync(p, { recursive: true, force: true });
+        } catch {
+            /* cleanup — temp dir pode não existir ainda */
         }
-    };
-    process.on('SIGINT', handler);
-    process.on('SIGTERM', handler);
-    process.on('exit', handler);
+    }
+}
+
+/** Register cleanup handlers. SIGINT is intentionally NOT registered here —
+ *  it is owned by cli_base.ts `setupSigint()` to avoid premature deletion
+ *  before the user confirms exit. */
+export function registerCleanup(): void {
+    process.on('SIGTERM', cleanupTempDirs);
+    process.on('exit', cleanupTempDirs);
 }

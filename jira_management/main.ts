@@ -5,12 +5,15 @@ import CsvResource from './csv_resource';
 import PackageVersionManager from './package_version_manager';
 import { showSplash } from '../shared/splash';
 import { calculateHealthScore } from '../shared/health-score';
-import { info, title, prompt, printError } from '../shared/prompt';
+import { version } from '../package.json';
+import { info, title, prompt, printError, warn } from '../shared/prompt';
+import { withSpinner } from '../shared/spinner';
 import {
     mask,
     createValidateEnv,
     offerEnvSetup,
     setupSigint,
+    gracefulExit,
     printSessionSummary as sharedPrintSessionSummary,
 } from '../shared/cli_base';
 import { rootLogger } from '../shared/logger';
@@ -20,7 +23,7 @@ import { loadMetrics } from '../shared/metrics';
 import { palette } from '../shared/palette';
 import chalk from 'chalk';
 import { SessionContext } from '../shared/session-context';
-import type { StateSchema } from '../shared/types';
+import { ExitCode, type StateSchema } from '../shared/types';
 import type { CommandContext } from './commands/context';
 import { ensureDirs, registerCleanup } from '../shared/temp-dir';
 import { CATEGORY_IDS, CATEGORY_TITLES } from './menu-data';
@@ -59,7 +62,7 @@ function _isBatchOrCI(): boolean {
 /** Show a compact coverage badge on Jira module entry.
  *  Makes 1 JQL call (total count), reads cached coverage snapshot from metrics.
  *  Skip if Jira is not configured, or in batch/CI mode. Cached 5 min per project.
- *  Fails silently on API errors — badge is cosmetic. */
+ *  Uses withSpinner to give visual feedback during the API call. */
 async function showGapBadge(jiraResource: JiraResource, project: string): Promise<void> {
     if (_isBatchOrCI()) return;
     if (!_isJiraConfigured()) return;
@@ -71,12 +74,14 @@ async function showGapBadge(jiraResource: JiraResource, project: string): Promis
     }
     try {
         const jql = 'project = ' + project + ' AND issuetype in (Story, Task, Bug, Epic)';
-        const response = await jiraResource.searchJiraIssues(jql, 0);
+        const response = await withSpinner('Verificando métricas do projeto...', () =>
+            jiraResource.searchJiraIssues(jql, 0),
+        );
         const totalCount = response.total;
         _badgeCache.set(cacheKey, { totalCount, timestamp: Date.now() });
         _displayBadge(totalCount, project);
-    } catch {
-        // Fail silently — badge is nice-to-have
+    } catch (err) {
+        rootLogger.debug('Gap badge fetch failed: ' + (err instanceof Error ? err.message : String(err)));
     }
 }
 
@@ -131,7 +136,11 @@ const validateEnv = createValidateEnv([
     },
 ]);
 
-function initializeSession() {
+async function initializeSession() {
+    if (!_isJiraConfigured()) {
+        info('ℹ Jira não configurado. Comandos que dependem de Jira exibirão orientação de configuração.');
+    }
+
     const jiraResource = new JiraResource(personal_token, base_url + '/rest/api/2', jira_mode);
     const jiraResourceXray = new JiraResource(personal_token, xray_url, jira_mode);
     const linkManager = new JiraLinkManager(jiraResource);
@@ -144,6 +153,15 @@ function initializeSession() {
     ctx.project_name = (
         Config.get('jiraProject') || prompt('Nome do projeto Jira', { default: state.lastProject || default_project })
     ).toUpperCase();
+
+    if (_isJiraConfigured() && ctx.project_name) {
+        const jql = 'project=' + ctx.project_name;
+        try {
+            await jiraResource.searchJiraIssues(jql, 1);
+        } catch {
+            warn('Projeto "' + ctx.project_name + '" não encontrado no Jira. Verifique se o nome está correto.');
+        }
+    }
 
     function printSessionSummary(): void {
         const history = loadTypedState().history || [];
@@ -200,13 +218,12 @@ function buildCommandContext(res: RuntimeResources): CommandContext {
 async function dispatchAndHandleResult(
     choice: string,
     cmdCtx: CommandContext,
-    ctx: SessionContext,
+    _ctx: SessionContext,
 ): Promise<'continue'> {
     await dispatchChoice(choice, cmdCtx);
 
     const longOps = ['1', '15', '4', '5', '7', '8'];
-    const hasResults = ctx.results.length > 0 && ctx.results.some((r) => r.status === 'error');
-    if (!Config.get('autoConfirm') && choice !== '0' && longOps.includes(choice) && hasResults) {
+    if (!Config.get('autoConfirm') && choice !== '0' && longOps.includes(choice)) {
         prompt('Pressione Enter para continuar');
     }
 
@@ -221,12 +238,16 @@ async function _executeChoice(choice: string, res: RuntimeResources): Promise<vo
     await dispatchAndHandleResult(choice, cmdCtx, res.ctx);
 }
 
+function _shouldNoClear(): boolean {
+    return process.argv.includes('--no-clear') || process.env.QA_TOOLS_NO_CLEAR === 'true';
+}
+
 async function runMainLoop(res: RuntimeResources): Promise<void> {
     const { ctx, printSessionSummary } = res;
     let currentLevel = 'main';
     clearBreadcrumbs();
     while (true) {
-        if (process.stdout.isTTY) {
+        if (process.stdout.isTTY && !_shouldNoClear()) {
             process.stdout.write('\x1b[2J\x1b[H');
         }
         const choice = await getAndResolveChoice(currentLevel, ctx);
@@ -239,6 +260,7 @@ async function runMainLoop(res: RuntimeResources): Promise<void> {
         if (choice === '__back__') {
             popBreadcrumb();
             currentLevel = 'main';
+            info('Voltando ao menu principal...');
             continue;
         }
         if (choice === '__skip__') continue;
@@ -255,7 +277,23 @@ async function runMainLoop(res: RuntimeResources): Promise<void> {
 }
 
 async function main(): Promise<void> {
-    if (process.stdout.isTTY) {
+    if (process.argv.includes('--help') || process.argv.includes('-h')) {
+        console.log('QA Tools — Jira Management');
+        console.log('');
+        console.log('Uso: npx tsx jira_management/main.ts [opcoes]');
+        console.log('');
+        console.log('Opcoes:');
+        console.log('  --help, -h     Exibe esta ajuda');
+        console.log('  --version      Exibe a versao');
+        gracefulExit(ExitCode.OK);
+        return;
+    }
+    if (process.argv.includes('--version')) {
+        console.log(version);
+        gracefulExit(ExitCode.OK);
+        return;
+    }
+    if (process.stdout.isTTY && !_shouldNoClear()) {
         process.stdout.write('\x1b[2J\x1b[H\x1b[3J');
     }
     const envResult = validateEnv();
@@ -267,21 +305,22 @@ async function main(): Promise<void> {
         const store = loadMetrics();
         const health = calculateHealthScore(store);
         healthScore = { score: health.overall, grade: health.grade };
-    } catch {
-        // health score unavailable — skip
+    } catch (err) {
+        rootLogger.debug('Health score failed: ' + (err instanceof Error ? err.message : String(err)));
     }
     await showSplash(getStatePath(), undefined, undefined, undefined, healthScore);
     rootLogger.writeFileOnly('INFO', 'Sessão iniciada');
 
     if (offerEnvSetup(envResult)) {
-        try {
-            await maybeRunFirstRunWizard();
-        } catch {
-            // wizard failed — continue anyway
-        }
+        // env setup offered
+    }
+    try {
+        await maybeRunFirstRunWizard();
+    } catch {
+        // wizard failed — continue anyway
     }
 
-    const res = initializeSession();
+    const res = await initializeSession();
 
     setupSigint(
         () => res.ctx.isBusy,
@@ -289,16 +328,21 @@ async function main(): Promise<void> {
     );
 
     await showGapBadge(res.jiraResource, res.ctx.project_name);
-    if (!_isJiraConfigured()) {
-        info('ℹ Jira não configurado. Comandos que dependem de Jira exibirão orientação de configuração.');
-    }
 
     await runMainLoop(res);
 }
 
 process.on('unhandledRejection', (reason: unknown) => {
-    printError('Erro interno não tratado', reason);
+    printError('Erro interno não tratado (async)', reason);
     rootLogger.error('Unhandled Rejection', { reason: String(reason) });
+});
+
+process.on('uncaughtException', (err: Error) => {
+    printError('Erro interno não tratado (sync)', err);
+    rootLogger.error('Uncaught Exception', { error: err.message, stack: err.stack });
+    const state = loadTypedState();
+    sharedPrintSessionSummary([], '', state.history || []);
+    gracefulExit(ExitCode.ERROR);
 });
 
 main().catch((err: unknown) => {

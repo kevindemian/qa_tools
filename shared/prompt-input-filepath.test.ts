@@ -82,9 +82,14 @@ const mockGetConfig = jest.mocked(getConfig);
 beforeEach(() => {
     jest.clearAllMocks();
     mockReadlineQuestion.mockReturnValue('');
+    Object.defineProperty(process.stdin, 'isTTY', { value: true, configurable: true });
     const cfg = ConfigAccessor.create();
     cfg.get = <T>(k: string) => ({ quiet: false, autoConfirm: false })[k] as T;
     mockGetConfig.mockReturnValue(cfg);
+});
+
+afterEach(() => {
+    Object.defineProperty(process.stdin, 'isTTY', { value: undefined, configurable: true });
 });
 
 describe('filePathCompleter', () => {

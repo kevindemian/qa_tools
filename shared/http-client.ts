@@ -23,6 +23,16 @@ export interface HttpClientConfig {
  *   10 tentativas com backoff até 120s garantem cobertura do cooldown.
  *   NÃO reduzir sem revalidar contra produção. */
 const HTTP_MAX_RETRIES = 10;
+/** Número máximo de auto-retries silenciosos para erros de rede (ECONNRESET, ECONNREFUSED, etc).
+ *  São tentativas extras antes do retry normal — não interferem no contador principal. */
+const AUTO_RETRY_MAX = 2;
+
+/** Retorna `true` para erros de rede que devem ser reinseridos automaticamente sem prompt.
+ *  Cobre falhas transitórias de conectividade. */
+function shouldAutoRetry(errorCode: string | undefined): boolean {
+    if (!errorCode) return false;
+    return ['ECONNRESET', 'ECONNREFUSED', 'ENOTFOUND', 'ETIMEDOUT'].includes(errorCode);
+}
 /** Base inicial do exponential backoff (ms).
  * @production 2s base * 2^n garante espera progressiva até ~120s.
  *   NÃO alterar sem revalidar contra rate limit de produção. */
@@ -162,6 +172,17 @@ function _setupResponseInterceptor(instance: ReturnType<typeof axios.create>, ma
                 axiosErr.code === 'ECONNRESET' ||
                 axiosErr.code === 'ETIMEDOUT' ||
                 axiosErr.code === 'ECONNABORTED';
+
+            if (shouldAutoRetry(axiosErr.code) && attempts < AUTO_RETRY_MAX) {
+                attempts++;
+                _internals.setRetryCount(key, attempts);
+                rootLogger.debug(
+                    `Auto-retry ${attempts}/${AUTO_RETRY_MAX} para ${cfg.url} (erro de rede: ${axiosErr.code})`,
+                );
+                await _internals.sleep(1000);
+                return instance(cfg);
+            }
+
             if (attempts < effectiveMaxRetries && isRetryable) {
                 attempts++;
                 _internals.setRetryCount(key, attempts);

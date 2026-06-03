@@ -21,6 +21,83 @@
 
 ---
 
+## 🚀 Sprint UX — Débitos de Experiência do Usuário (P0-P3)
+
+Correções estruturais identificadas na auditoria UX completa (jun/2026).
+Agrupadas por gravidade: P0 (crítico) → P3 (nice-to-have).
+
+### Críticos (P0)
+
+| ID  | Item                                                                                                                                           | Arquivos                                          | Esforço | Status |
+| --- | ---------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------- | ------- | ------ |
+| UX1 | 🐛 `uncaughtException` não tratado — exceção síncrona causa crash bruto (stack trace + core dump) sem `printError`/`printSessionSummary`       | `jira_management/main.ts`, `git_triggers/main.ts` | 15min   | ✅     |
+| UX2 | 🐛 SIGINT duplicado: `temp-dir.ts` limpa diretórios temporários ANTES do `cli_base.ts` confirmar saída — se usuário cancela, temp já destruído | `shared/temp-dir.ts`, `shared/cli_base.ts`        | 30min   | ✅     |
+| UX3 | 🐛 `smartPrompt` retorna `""` sem feedback — usuário queima 3 retries sem saber, recebe string vazia que callers não guardam                   | `shared/prompt-input-inquirer.ts`                 | 20min   | ✅     |
+
+### Maiores (P1)
+
+| ID  | Item                                                                                                                               | Arquivos                                                | Esforço | Status |
+| --- | ---------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------- | ------- | ------ |
+| UX4 | 🐛 Inquirer `select()` lança exceção → fallback retorna `'0'` (EXIT) sem explicação — usuário é navegado para fora silenciosamente | `shared/prompt-input-inquirer.ts`                       | 15min   | ✅     |
+| UX5 | 🐛 Seleção de projeto Git depende de `Object.keys()` — ordem imprevisível se `projects.json` é editado manualmente                 | `git_triggers/main.ts`, `git_triggers/session-state.ts` | 20min   | ✅     |
+| UX6 | 🐛 Gap badge fetch sem spinner + falha silenciosa — splash congela 3-5s sem indicador de carregamento                              | `jira_management/main.ts`                               | 20min   | ✅     |
+| UX7 | 🐛 Setup wizard: GitLab CI existente ignorado sem prompt de overwrite (GitHub Actions sobrescreve) — inconsistente                 | `setup/main.ts`                                         | 15min   | ✅     |
+| UX8 | 🐛 Git triggers: `printSessionSummary` não passa `history` — sessão não mostra últimas operações, inconsistente com Jira           | `git_triggers/session-state.ts`                         | 10min   | ✅     |
+
+### Menores (P2)
+
+| ID   | Item                                                                                                                 | Arquivos                                          | Esforço | Status |
+| ---- | -------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------- | ------- | ------ |
+| UX9  | 🐛 Health score falha silenciosa — catch vazio sem `rootLogger.debug()`                                              | `jira_management/main.ts`, `git_triggers/main.ts` | 5min    | ✅     |
+| UX10 | 🐛 First-run wizard nunca roda se `.env` está OK — `isFirstRun()` retorna `true` mas `offerEnvSetup()` bloqueia      | `jira_management/main.ts`, `git_triggers/main.ts` | 10min   | ✅     |
+| UX11 | 🐛 `longOps` pause só com erro — operação longa bem-sucedida volta direto ao menu sem pausa                          | `jira_management/main.ts`                         | 10min   | ✅     |
+| UX12 | 🐛 `/back` no menu principal ≡ `/exit` — usuário vê "Até logo!" em vez de retornar ao seletor de módulos             | `jira_management/ui-helpers.ts`                   | 10min   | ✅     |
+| UX13 | 🐛 Setup wizard lê `.git/config` de `process.cwd()` e não do diretório do projeto — detecção errada em CWD incorreto | `setup/main.ts`                                   | 10min   | ✅     |
+| UX14 | 🐛 Nenhum módulo aceita `--help` / `--version` — flags CLI ignoradas, entra no fluxo normal                          | `jira_management/main.ts`, `git_triggers/main.ts` | 15min   | ✅     |
+
+### Menu mapping gaps (P2)
+
+| ID   | Item                                                                                                                                         | Arquivos                        | Esforço | Status |
+| ---- | -------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------- | ------- | ------ |
+| UX21 | 🐛 Git Triggers menu não lista `/docs` — handler existe (`_dispatchAction` `main.ts:225-228`) mas menu não expõe (inconsistente com Jira)    | `git_triggers/session-state.ts` | 5min    | ✅     |
+| UX22 | 🐛 Entry menu (`entry-menu.ts:49-54`) não lista Setup Wizard — módulo `setup/main.ts` só acessível via comando direto ou dentro de submodulo | `shared/entry-menu.ts`          | 10min   | ✅     |
+
+### Gaps em cenários de erro (P2)
+
+| ID   | Item                                                                                                                | Arquivos                                           | Esforço | Status |
+| ---- | ------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------- | ------- | ------ |
+| UX15 | 🐛 Retry em falha de rede não é automático — usuário precisa escolher [R] manualmente a cada erro transiente        | `shared/http-client.ts`, `shared/prompt-errors.ts` | 30min   | ✅     |
+| UX16 | 🐛 Aviso "Jira não configurado" aparece DEPOIS do prompt de nome do projeto — ordem invertida                       | `jira_management/main.ts`                          | 5min    | ✅     |
+| UX17 | 🐛 Token expira em meio à sessão — sem atalho "reconfigurar token", usuário precisa sair, editar `.env` e reiniciar | `shared/prompt-errors.ts`                          | 20min   | ✅     |
+| UX18 | 🐛 Nome de projeto inválido só descoberto na primeira operação — sem validação proativa no startup                  | `jira_management/main.ts`                          | 20min   | ✅     |
+| UX19 | 🐛 Non-TTY com stdin pipeado pode travar em `/help` — `readline-sync.question` espera input interativo mesmo em CI  | `shared/prompt-input-base.ts`                      | 20min   | ✅     |
+| UX20 | 🐛 Operações multi-step (ex: CSV import) sem progresso intermediário — spinner genérico sem "passo X de Y"          | `jira_management/commands/`                        | 1h      | ✅     |
+
+### Sugestões de melhoria (P3)
+
+| ID   | Item                                                                                                                 | Arquivos                                                | Esforço | Status |
+| ---- | -------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------- | ------- | ------ |
+| UX23 | 💡 Setup wizard: mostrar valor detectado na pergunta (ex: "Test framework [Jest]:")                                  | `setup/main.ts`                                         | 15min   | ✅     |
+| UX24 | 💡 Splash: adicionar dica de navegação "Categorias: 1-6 · /help `<tópico>`" para novos usuários                      | `shared/splash.ts`                                      | 5min    | ✅     |
+| UX25 | 💡 `console.clear()` no menu loop: suporte `--no-clear` ou `QA_TOOLS_NO_CLEAR=true` para preservar scrollback        | `jira_management/main.ts`, `git_triggers/main.ts`       | 15min   | ✅     |
+| UX26 | 💡 Batch mode: flag `--dry-run` que mostra plano de execução sem executar                                            | `git_triggers/batch-mode.ts`                            | 20min   | ✅     |
+| UX27 | 💡 Ações destrutivas (disparar pipeline, publicar versão): confirmação centralizada via `confirmDestructiveAction()` | Ambos `main.ts`                                         | 30min   | ✅     |
+| UX28 | 💡 Cabeçalho do menu: mostrar última operação no contador ("3 op · 2 ✓ 1 ✗ · Última: Criar testes")                  | `jira_management/ui-helpers.ts`, `git_triggers/main.ts` | 15min   | ✅     |
+| UX29 | 💡 Lista de projetos Git: marcar último usado com `*` na exibição                                                    | `git_triggers/session-state.ts`                         | 5min    | ✅     |
+
+### Métricas alvo (Sprint UX)
+
+| Métrica          | Alvo        |
+| ---------------- | ----------- |
+| `tsc --noEmit`   | 0 erros     |
+| `eslint`         | 0 erros     |
+| `jest`           | 100% pass   |
+| Débitos UX novos | 0           |
+| Catch vazios     | 0           |
+| SIGINT handlers  | 1 unificado |
+
+---
+
 ## 🚀 Sprint A — Auditoria Adversarial: Correções (P0-P2)
 
 Correções estruturais identificadas na auditoria adversarial completa (jun/2026).

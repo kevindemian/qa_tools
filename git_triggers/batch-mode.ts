@@ -43,6 +43,7 @@ export function parseBatchArgs(): {
     runImpactedTests?: boolean;
     conservative?: boolean;
     teKey?: string;
+    dryRun?: boolean;
 } {
     const args = process.argv.slice(2);
     const result: {
@@ -53,6 +54,7 @@ export function parseBatchArgs(): {
         runImpactedTests?: boolean;
         conservative?: boolean;
         teKey?: string;
+        dryRun?: boolean;
     } = {};
     for (let i = 0; i < args.length; i++) {
         const val = _nextArg(args, i);
@@ -71,6 +73,8 @@ export function parseBatchArgs(): {
             result.runImpactedTests = true;
         } else if (args[i] === '--conservative') {
             result.conservative = true;
+        } else if (args[i] === '--dry-run') {
+            result.dryRun = true;
         } else if ((args[i] === '--te-key' || args[i] === '-k') && val !== undefined) {
             result.teKey = val;
             i++;
@@ -261,6 +265,25 @@ export async function tryBatchMode(): Promise<boolean> {
         );
         linkManager = new JiraLinkManager(jiraResource);
         jiraBaseUrl = Config.get('jiraBaseUrl');
+    }
+
+    if (batch.dryRun) {
+        info('--dry-run: plano de operações para ' + setup.projectName + ' @ ' + setup.branch);
+        info('  1. Trigger pipeline on ' + setup.branch);
+        info('  2. Poll pipeline result');
+        info('  3. Collect test results');
+        info('  4. Generate flakiness dashboard');
+        info('  5. Generate test export');
+        info('  6. Generate pipeline health report');
+        if (Config.get('jiraBaseUrl') && Config.get('jiraPersonalToken')) {
+            info('  7. Run flaky auto-actions');
+        }
+        info('  8. Run quarantine maintenance');
+        if (batch.runImpactedTests) {
+            info('  9. Run test impact selection');
+        }
+        printSessionSummary();
+        return true;
     }
 
     const done = await triggerAndCollectBatchPipeline(

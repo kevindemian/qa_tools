@@ -88,12 +88,17 @@ const mockWarn = jest.mocked(warn);
 beforeEach(() => {
     jest.clearAllMocks();
     mockReadlineQuestion.mockReturnValue('');
+    Object.defineProperty(process.stdin, 'isTTY', { value: true, configurable: true });
     const cfg = ConfigAccessor.create();
     cfg.get = <T>(k: string) => ({ quiet: false, autoConfirm: false })[k] as T;
     mockGetConfig.mockReturnValue(cfg);
     __setInputMod(null);
     __setSelectMod(null);
     __setConfirmMod(null);
+});
+
+afterEach(() => {
+    Object.defineProperty(process.stdin, 'isTTY', { value: undefined, configurable: true });
 });
 
 describe('smartPrompt', () => {
@@ -401,11 +406,11 @@ describe('showSelect TTY path', () => {
         expect(result).toBe('val');
     });
 
-    it('returns 0 when inquirer mod throws in TTY mode', async () => {
+    it('returns __error__ when inquirer mod throws in TTY mode', async () => {
         const mockSelectMod = jest.fn().mockRejectedValue(new Error('select error'));
         __setSelectMod({ default: mockSelectMod });
         const result = await showSelect('Choose', [{ name: 'Item', value: 'x' }]);
-        expect(result).toBe('0');
+        expect(result).toBe('__error__');
     });
 
     it('calls theme.renderSelected via inquirer select mod', async () => {

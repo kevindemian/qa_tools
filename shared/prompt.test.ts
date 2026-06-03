@@ -41,6 +41,7 @@ describe('Prompt', () => {
         mockError = jest.spyOn(process.stderr, 'write').mockImplementation(() => true);
         mockWarn = jest.spyOn(process.stderr, 'write').mockImplementation(() => true);
         process.stdout.isTTY = false;
+        Object.defineProperty(process.stdin, 'isTTY', { value: true, configurable: true });
         prompt.__setConfig(Config.create({}));
     });
 
@@ -49,6 +50,7 @@ describe('Prompt', () => {
         mockError.mockRestore();
         mockWarn.mockRestore();
         process.stdout.isTTY = false;
+        Object.defineProperty(process.stdin, 'isTTY', { value: undefined, configurable: true });
     });
 
     describe('success', () => {

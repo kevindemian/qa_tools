@@ -28,7 +28,7 @@ const SIMILARITY_THRESHOLD = 0.7;
 /** Simple structural hash of an object: checks field names, types, array lengths. */
 function structuralHash(obj: unknown): string {
     if (obj === null || obj === undefined) return 'null';
-    if (typeof obj === 'string') return `s:${obj.slice(0, 20)}`;
+    if (typeof obj === 'string') return `s:${obj.slice(0, 80)}:len=${obj.length}`;
     if (typeof obj === 'number') return `n:${obj}`;
     if (typeof obj === 'boolean') return `b:${obj}`;
     if (Array.isArray(obj)) {

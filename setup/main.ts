@@ -11,7 +11,8 @@ import type { SetupContext, Framework, GitProvider } from './context';
 
 function detectGitProvider(): GitProvider {
     try {
-        const gitConfig = fs.readFileSync(process.cwd() + '/.git/config', 'utf8');
+        const projectRoot = path.resolve(__dirname, '..');
+        const gitConfig = fs.readFileSync(path.join(projectRoot, '.git/config'), 'utf8');
         if (gitConfig.includes('github.com')) return 'github';
         if (gitConfig.includes('gitlab.com')) return 'gitlab';
     } catch {
@@ -21,13 +22,15 @@ function detectGitProvider(): GitProvider {
 }
 
 async function promptGitProvider(): Promise<GitProvider> {
-    const answer = await ask('Git provider', { default: 'github', hint: 'github ou gitlab' });
+    const def = 'github';
+    const answer = await ask('Git provider [' + def + ']', { default: def, hint: 'github ou gitlab' });
     return answer.trim().toLowerCase() === 'gitlab' ? 'gitlab' : 'github';
 }
 
 async function promptProjectName(detected: string, existing?: string): Promise<string> {
-    const answer = await ask('Project name', { default: existing || detected });
-    return answer.trim() || existing || detected;
+    const def = existing || detected;
+    const answer = await ask('Project name [' + def + ']', { default: def });
+    return answer.trim() || def;
 }
 
 async function gatherSetupContext(): Promise<SetupContext> {
@@ -44,11 +47,15 @@ async function gatherSetupContext(): Promise<SetupContext> {
     const repoOwner = gitInfo.owner || (await ask('Repo owner (user/org)', { default: '' }));
     const repoName = gitInfo.repo || projectName;
 
-    const framework = (await ask('Test framework', { default: detection.framework })) as Framework;
-    const testCmd = await ask('Test command', { default: detection.testCmd });
-    const installCmd = await ask('Install command', { default: detection.installCmd });
-    const ctrfReportPath = await ask('CTRF report path', { default: detection.ctrfReportPath });
-    const nodeVersion = await ask('Node version', { default: detection.nodeVersion });
+    const framework = (await ask('Test framework [' + detection.framework + ']', {
+        default: detection.framework,
+    })) as Framework;
+    const testCmd = await ask('Test command [' + detection.testCmd + ']', { default: detection.testCmd });
+    const installCmd = await ask('Install command [' + detection.installCmd + ']', { default: detection.installCmd });
+    const ctrfReportPath = await ask('CTRF report path [' + detection.ctrfReportPath + ']', {
+        default: detection.ctrfReportPath,
+    });
+    const nodeVersion = await ask('Node version [' + detection.nodeVersion + ']', { default: detection.nodeVersion });
 
     divider();
 
@@ -74,7 +81,7 @@ async function gatherSetupContext(): Promise<SetupContext> {
     };
 }
 
-function generateConfigFiles(ctx: SetupContext): { created: string[]; skipped: string[] } {
+async function generateConfigFiles(ctx: SetupContext): Promise<{ created: string[]; skipped: string[] }> {
     const created: string[] = [];
     const skipped: string[] = [];
 
@@ -89,7 +96,13 @@ function generateConfigFiles(ctx: SetupContext): { created: string[]; skipped: s
         const wfPath = path.resolve(process.cwd(), '.gitlab-ci.yml');
         const yaml = generateGitLabCI(ctx);
         if (fs.existsSync(wfPath)) {
-            skipped.push(wfPath);
+            const shouldOverwrite = await askConfirm('.gitlab-ci.yml já existe. Sobrescrever?', false);
+            if (shouldOverwrite) {
+                fs.writeFileSync(wfPath, yaml, 'utf8');
+                created.push(wfPath);
+            } else {
+                skipped.push(wfPath);
+            }
         } else {
             fs.writeFileSync(wfPath, yaml, 'utf8');
             created.push(wfPath);
@@ -151,7 +164,7 @@ async function main(): Promise<void> {
     divider();
     info('Gerando arquivos...\n');
 
-    const { created, skipped } = generateConfigFiles(ctx);
+    const { created, skipped } = await generateConfigFiles(ctx);
     printSetupSummary(created, skipped);
 }
 
