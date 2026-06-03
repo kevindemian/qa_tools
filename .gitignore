@@ -45,3 +45,4 @@ tmp/
 nul
 .llm-cache/
 a.out
+qa-quarantine.json
