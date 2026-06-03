@@ -35,12 +35,15 @@ Objetivo: `JIRA_MODE=server|cloud` com auth strategy diferenciada.
 
 ### Fase 1 — Contrato: Config Schema + Types (P0, ~0.5h)
 
-| ID  | Componente            | Arquivo                        | Status |
-| --- | --------------------- | ------------------------------ | ------ |
-| C1  | `jiraMode` no schema  | `shared/config-schema.ts`      | ✅     |
-| C2  | `jiraMode` em types   | `shared/types/common.ts`       | ✅     |
-| C3  | Validação do mode     | `shared/config-accessor.ts`    | ✅     |
-| C4  | Testes de schema/mode | `shared/config-schema.test.ts` | ✅     |
+| ID  | Componente           | Arquivo                   | Status |
+| --- | -------------------- | ------------------------- | ------ |
+| C1  | `jiraMode` no schema | `shared/config-schema.ts` | ⏳     |
+
+### Fase 4|
+
+| C2 | `jiraMode` em types | `shared/types/common.ts` | ✅ |
+| C3 | Validação do mode | `shared/config-accessor.ts` | ✅ |
+| C4 | Testes de schema/mode | `shared/config-schema.test.ts` | ✅ |
 
 ### Fase 2 — Mecanismo de Autenticação (P0, ~1h)
 
@@ -251,3 +254,75 @@ Implementação do Design Token System + Component Primitives para unificar os 3
 | X13 | Update coverage-gap tests    | `shared/generate-coverage-gap-html.test.ts` | ✅     |
 | X14 | Update flakiness tests       | `shared/flakiness-dashboard.test.ts`        | ✅     |
 | X15 | Update theme tests           | `shared/theme.test.ts`                      | ✅     |
+
+---
+
+## 🚀 Sprint 9 — Prompt Governance + Standards-Based Enhancement + Anti-Redundancy (P0, ~10h)
+
+Implementação do sistema de governance para prompts do projeto + extensão do benchmark com métricas de cobertura estrutural + enhancement do prompt `user-story-to-tests.md` com técnicas ISTQB-aligned + novos invariantes T-11/T-12/T-13.
+
+**Objetivos**:
+
+1. Substituir diretivas vagas por regras verificáveis baseadas em standards formais (ISO 29119, ISTQB, IEEE 829)
+2. Detectar e prevenir redundância, sobreposição e acoplamento entre casos de teste gerados por LLM (T-13)
+
+### Fase 0 — Governance Document (P0, ~0.5h)
+
+| ID  | Componente            | Arquivo                        | Status |
+| --- | --------------------- | ------------------------------ | ------ |
+| G0  | Prompt governance doc | `shared/prompts/GOVERNANCE.md` | ✅     |
+
+### Fase 1 — Benchmark Extension (P0, ~3h)
+
+| ID  | Componente                          | Arquivo                                    | Status |
+| --- | ----------------------------------- | ------------------------------------------ | ------ |
+| B1  | Fixture schema extendido            | `shared/prompts/__fixtures__/index.ts`     | ✅     |
+| B2  | Fixture: numeric-age-validation     | `shared/prompts/__fixtures__/.../age.json` | ✅     |
+| B3  | Fixture: password-length-validation | `shared/prompts/__fixtures__/.../pwd.json` | ✅     |
+| B4  | Validation: criteria coverage       | `shared/llm-benchmark.ts`                  | ✅     |
+| B5  | Validation: partition coverage      | `shared/llm-benchmark.ts`                  | ✅     |
+| B6  | Validation: boundary coverage       | `shared/llm-benchmark.ts`                  | ✅     |
+| B7  | Tests for new validators            | `shared/llm-benchmark.test.ts`             | ✅     |
+
+### Fase 2 — Prompt Enhancement (P0, ~0.5h)
+
+| ID  | Componente                 | Arquivo                                 | Status |
+| --- | -------------------------- | --------------------------------------- | ------ |
+| P1  | Test Design Techniques sec | `shared/prompts/user-story-to-tests.md` | ✅     |
+| P2  | Updated BAD EXAMPLES       | `shared/prompts/user-story-to-tests.md` | ✅     |
+| P3  | Updated adversarial audit  | `shared/prompts/user-story-to-tests.md` | ✅     |
+
+### Fase 3 — Validator Enhancement (P0, ~2h)
+
+| ID  | Componente               | Arquivo                                 | Status |
+| --- | ------------------------ | --------------------------------------- | ------ |
+| V1  | T-11 Partition cov       | `shared/test-case-validator.ts`         | ✅     |
+| V2  | T-12 Boundary cov        | `shared/test-case-validator.ts`         | ✅     |
+| V3  | Tests T-11/T-12          | `shared/test-case-validator.test.ts`    | ✅     |
+| V4  | T-13 Redundancy/Coupling | `shared/test-case-validator.ts`         | ✅     |
+| V5  | Tests T-13               | `shared/test-case-validator.test.ts`    | ✅     |
+| V6  | Governance definitions   | `shared/prompts/GOVERNANCE.md`          | ✅     |
+| V7  | Prompt audit items       | `shared/prompts/user-story-to-tests.md` | ✅     |
+
+### Fase 4 — Baseline + Post-Measurement (P0, ~1h)
+
+| ID  | Componente               | Arquivo                      | Status |
+| --- | ------------------------ | ---------------------------- | ------ |
+| M1  | Run benchmark (baseline) | `BENCHMARK=true npx tsx ...` | ✅     |
+| M2  | Report delta & metrics   | `BACKLOG.md`                 | ✅     |
+
+### Métricas alvo (Sprint 9)
+
+| Métrica                   | Atual                                       | Alvo        |
+| ------------------------- | ------------------------------------------- | ----------- |
+| `tsc --noEmit`            | **0 erros** ✅                              | **0 erros** |
+| ESLint errors             | **0** ✅                                    | **0**       |
+| ESLint warnings           | **0** ✅                                    | **0**       |
+| `jest` pass               | **3685/3685** ✅                            | **100%**    |
+| `jest` fail               | **0** ✅                                    | **0**       |
+| Benchmark pass rate       | **100%** ✅                                 | **≥85%**    |
+| Criteria coverage metric  | **44%** ⚠️                                  | **≥80%**    |
+| Partition coverage metric | **22%** ⚠️                                  | **≥70%**    |
+| Boundary coverage metric  | **22%** ⚠️                                  | **≥60%**    |
+| Token count increase      | ~6% (5473→5188) ✅                          | **≤15%**    |
+| LLM cost per run          | **~$0.03** (gpt-4o-mini / groq / gh models) | N/A         |

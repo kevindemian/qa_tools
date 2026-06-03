@@ -1,6 +1,7 @@
 /**
  * LLM Prompt Benchmark — runs golden dataset fixtures through the LLM and reports match rates.
  * Runs golden dataset fixtures through the LLM and reports match rates.
+ * Extended with coverage metrics: criteria coverage, partition coverage, boundary coverage.
  * Skip by default. Run with: BENCHMARK=true npx tsx shared/llm-benchmark.ts
  * Requires LLM_API_KEY (and optionally LLM_FAST_API_KEY) in environment.
  */
@@ -43,11 +44,35 @@ function readPrompt(file: string): string {
 
 const CACHED_PROMPTS: Record<string, string> = {};
 
+interface BenchmarkMetrics {
+    /** Fraction of expected criteria covered (0-1) */
+    criteriaCoverage: number;
+    /** Fraction of numeric ranges with partition coverage (0-1) */
+    partitionCoverage: number;
+    /** Fraction of boundary values covered (0-1) */
+    boundaryCoverage: number;
+    /** Total test cases in output */
+    totalTests: number;
+    /** Number of criteria that had at least one covering test */
+    coveredCriteriaCount: number;
+    /** Total number of expected criteria */
+    totalCriteria: number;
+}
+
 interface BenchmarkResult {
     fixture: string;
     passed: boolean;
     error?: string;
     durationMs: number;
+    metrics: BenchmarkMetrics;
+}
+
+interface TestCaseShape {
+    title?: string;
+    steps?: string[];
+    expectedResult?: string;
+    preConditions?: unknown[];
+    coverage?: Array<{ criterionId: string; criterionText: string }>;
 }
 
 /** @internal exported for testing */
@@ -95,6 +120,151 @@ export function validateClassify(body: string, expectedCategory: string): string
     return null;
 }
 
+/**
+ * Check if each expected criterion has at least one covering test case.
+ * Returns the number of covered criteria.
+ */
+function countCoveredCriteria(tests: TestCaseShape[], expectedCriteria: string[]): number {
+    let covered = 0;
+    for (const criterion of expectedCriteria) {
+        const hasCoverage = tests.some((test) => {
+            if (test.coverage) {
+                const hasMatch = test.coverage.some(
+                    (c) =>
+                        c.criterionText.toLowerCase().includes(criterion.toLowerCase()) ||
+                        criterion.toLowerCase().includes(c.criterionText.toLowerCase()),
+                );
+                if (hasMatch) return true;
+            }
+            if (test.title) {
+                if (test.title.toLowerCase().includes(criterion.toLowerCase())) return true;
+            }
+            const stepsText = (test.steps || []).join(' ').toLowerCase();
+            if (stepsText.includes(criterion.toLowerCase())) return true;
+            return false;
+        });
+        if (hasCoverage) covered++;
+    }
+    return covered;
+}
+
+/**
+ * Check if partition coverage exists for a given range.
+ * A partition is covered if there is at least one test:
+ *   - inside the valid range (age between min-max inclusive)
+ *   - below min
+ *   - above max
+ * Returns number of partitions covered (0-3).
+ */
+function countCoveredPartitions(tests: TestCaseShape[], min: number, max: number): number {
+    let partitions = 0;
+
+    const stepsTexts = tests.map((t) => (t.steps || []).join(' ').toLowerCase());
+    const allText = stepsTexts.join(' ');
+
+    const belowMinRe = new RegExp('\\b' + (min - 1) + '\\b', 'i');
+    const aboveMaxRe = new RegExp('\\b' + (max + 1) + '\\b', 'i');
+    const validRe = new RegExp('\\b(?:' + (min + 1) + '|' + min + '|' + max + '|' + (max - 1) + ')\\b', 'i');
+
+    if (validRe.test(allText)) partitions++;
+    if (belowMinRe.test(allText) || /below|less than|under/i.test(allText)) partitions++;
+    if (aboveMaxRe.test(allText) || /above|greater than|over|exceed/i.test(allText)) partitions++;
+
+    return Math.min(partitions, 3);
+}
+
+/**
+ * Check if boundary values for a range are covered in test data.
+ * Expected boundaries: min, max, min-1, max+1 (2-value BVA).
+ * Returns number of boundaries covered (0-4).
+ */
+function countCoveredBoundaries(tests: TestCaseShape[], min: number, max: number): number {
+    let boundaries = 0;
+    const allText = tests
+        .map((t) => {
+            const steps = (t.steps || []).join(' ');
+            const expected = t.expectedResult || '';
+            const title = t.title || '';
+            return (steps + ' ' + expected + ' ' + title).toLowerCase();
+        })
+        .join(' ');
+
+    const boundariesToCheck = [min, max, min - 1, max + 1];
+    for (const b of boundariesToCheck) {
+        const re = new RegExp('\\b' + b + '\\b');
+        if (re.test(allText)) boundaries++;
+    }
+
+    return boundaries;
+}
+
+/** Compute coverage metrics for user story test output. */
+/** @internal exported for testing */
+export function computeCoverageMetrics(body: string, fixture: UserStoryFixture): BenchmarkMetrics {
+    try {
+        const parsed: unknown = JSON.parse(body);
+        if (!Array.isArray(parsed)) {
+            return {
+                criteriaCoverage: 0,
+                partitionCoverage: 0,
+                boundaryCoverage: 0,
+                totalTests: 0,
+                coveredCriteriaCount: 0,
+                totalCriteria: fixture.coverage.expectedCriteria.length,
+            };
+        }
+
+        const tests = parsed as TestCaseShape[];
+
+        const totalCriteria = fixture.coverage.expectedCriteria.length;
+        const coveredCriteriaCount =
+            fixture.coverage.expectedCriteria.length > 0
+                ? countCoveredCriteria(tests, fixture.coverage.expectedCriteria)
+                : 0;
+        const criteriaCoverage = totalCriteria > 0 ? coveredCriteriaCount / totalCriteria : 0;
+
+        let partitionCoverage = 0;
+        let boundaryCoverage = 0;
+        const ranges = fixture.coverage.numericRanges;
+
+        if (ranges.length > 0) {
+            let totalPartitions = 0;
+            let coveredPartitions = 0;
+            let totalBoundaries = 0;
+            let coveredBoundaries = 0;
+
+            for (const range of ranges) {
+                totalPartitions += 3;
+                coveredPartitions += countCoveredPartitions(tests, range.min, range.max);
+
+                totalBoundaries += 4;
+                coveredBoundaries += countCoveredBoundaries(tests, range.min, range.max);
+            }
+
+            partitionCoverage = totalPartitions > 0 ? coveredPartitions / totalPartitions : 0;
+            boundaryCoverage = totalBoundaries > 0 ? coveredBoundaries / totalBoundaries : 0;
+        }
+
+        return {
+            criteriaCoverage,
+            partitionCoverage,
+            boundaryCoverage,
+            totalTests: tests.length,
+            coveredCriteriaCount,
+            totalCriteria,
+        };
+    } catch {
+        return {
+            criteriaCoverage: 0,
+            partitionCoverage: 0,
+            boundaryCoverage: 0,
+            totalTests: 0,
+            coveredCriteriaCount: 0,
+            totalCriteria: fixture.coverage.expectedCriteria.length,
+        };
+    }
+}
+
 async function runFailureAnalysisFixture(fixture: FailureAnalysisFixture): Promise<BenchmarkResult> {
     const start = Date.now();
     const system =
@@ -108,9 +278,35 @@ async function runFailureAnalysisFixture(fixture: FailureAnalysisFixture): Promi
             callerId: 'benchmark-fa',
         });
         const error = validateJsonSchema(result, fixture.validate.minTests);
-        return { fixture: fixture.name, passed: !error, ...(error ? { error } : {}), durationMs: Date.now() - start };
+        return {
+            fixture: fixture.name,
+            passed: !error,
+            ...(error ? { error } : {}),
+            durationMs: Date.now() - start,
+            metrics: {
+                criteriaCoverage: 0,
+                partitionCoverage: 0,
+                boundaryCoverage: 0,
+                totalTests: 0,
+                coveredCriteriaCount: 0,
+                totalCriteria: 0,
+            },
+        };
     } catch (err) {
-        return { fixture: fixture.name, passed: false, error: (err as Error).message, durationMs: Date.now() - start };
+        return {
+            fixture: fixture.name,
+            passed: false,
+            error: (err as Error).message,
+            durationMs: Date.now() - start,
+            metrics: {
+                criteriaCoverage: 0,
+                partitionCoverage: 0,
+                boundaryCoverage: 0,
+                totalTests: 0,
+                coveredCriteriaCount: 0,
+                totalCriteria: 0,
+            },
+        };
     }
 }
 
@@ -124,9 +320,29 @@ async function runUserStoryFixture(fixture: UserStoryFixture): Promise<Benchmark
     try {
         const result = await llmPrompt({ tier: 'main', system, user: userMsg, callerId: 'benchmark-us' });
         const error = validateJsonArray(result, fixture.validate.minItems);
-        return { fixture: fixture.name, passed: !error, ...(error ? { error } : {}), durationMs: Date.now() - start };
+        const metrics = computeCoverageMetrics(result, fixture);
+        return {
+            fixture: fixture.name,
+            passed: !error,
+            ...(error ? { error } : {}),
+            durationMs: Date.now() - start,
+            metrics,
+        };
     } catch (err) {
-        return { fixture: fixture.name, passed: false, error: (err as Error).message, durationMs: Date.now() - start };
+        return {
+            fixture: fixture.name,
+            passed: false,
+            error: (err as Error).message,
+            durationMs: Date.now() - start,
+            metrics: {
+                criteriaCoverage: 0,
+                partitionCoverage: 0,
+                boundaryCoverage: 0,
+                totalTests: 0,
+                coveredCriteriaCount: 0,
+                totalCriteria: fixture.coverage.expectedCriteria.length,
+            },
+        };
     }
 }
 
@@ -137,9 +353,35 @@ async function runClassifyFixture(fixture: ClassifyFixture): Promise<BenchmarkRe
     try {
         const result = await llmPrompt({ tier: 'fast', system, user: userMsg, callerId: 'benchmark-cl' });
         const error = validateClassify(result, fixture.expectedCategory);
-        return { fixture: fixture.name, passed: !error, ...(error ? { error } : {}), durationMs: Date.now() - start };
+        return {
+            fixture: fixture.name,
+            passed: !error,
+            ...(error ? { error } : {}),
+            durationMs: Date.now() - start,
+            metrics: {
+                criteriaCoverage: 0,
+                partitionCoverage: 0,
+                boundaryCoverage: 0,
+                totalTests: 0,
+                coveredCriteriaCount: 0,
+                totalCriteria: 0,
+            },
+        };
     } catch (err) {
-        return { fixture: fixture.name, passed: false, error: (err as Error).message, durationMs: Date.now() - start };
+        return {
+            fixture: fixture.name,
+            passed: false,
+            error: (err as Error).message,
+            durationMs: Date.now() - start,
+            metrics: {
+                criteriaCoverage: 0,
+                partitionCoverage: 0,
+                boundaryCoverage: 0,
+                totalTests: 0,
+                coveredCriteriaCount: 0,
+                totalCriteria: 0,
+            },
+        };
     }
 }
 
@@ -165,11 +407,38 @@ function printResults(results: BenchmarkResult[]): void {
     for (const r of results) {
         const icon = r.passed ? '✅' : '❌';
         const status = r.passed ? 'PASS' : 'FAIL';
-        defaultOutput.print(icon + ' [' + status + '] ' + r.fixture + ' (' + r.durationMs + 'ms)');
+        let line = icon + ' [' + status + '] ' + r.fixture + ' (' + r.durationMs + 'ms)';
         if (r.error) {
-            defaultOutput.print('   Error: ' + r.error);
+            line += '\n   Error: ' + r.error;
         }
+        line +=
+            '\n   Metrics → criteria: ' +
+            r.metrics.coveredCriteriaCount +
+            '/' +
+            r.metrics.totalCriteria +
+            ' (' +
+            Math.round(r.metrics.criteriaCoverage * 100) +
+            '%)' +
+            ' | partitions: ' +
+            Math.round(r.metrics.partitionCoverage * 100) +
+            '%' +
+            ' | boundaries: ' +
+            Math.round(r.metrics.boundaryCoverage * 100) +
+            '%' +
+            ' | tests: ' +
+            r.metrics.totalTests;
+        defaultOutput.print(line);
     }
+
+    // Aggregate metrics
+    const aggCriteria = results.reduce((acc, r) => acc + r.metrics.criteriaCoverage, 0) / results.length;
+    const aggPartitions = results.reduce((acc, r) => acc + r.metrics.partitionCoverage, 0) / results.length;
+    const aggBoundaries = results.reduce((acc, r) => acc + r.metrics.boundaryCoverage, 0) / results.length;
+
+    defaultOutput.print('\n--- Aggregate Coverage Metrics ---');
+    defaultOutput.print('  Average criteria coverage: ' + Math.round(aggCriteria * 100) + '%');
+    defaultOutput.print('  Average partition coverage: ' + Math.round(aggPartitions * 100) + '%');
+    defaultOutput.print('  Average boundary coverage: ' + Math.round(aggBoundaries * 100) + '%');
 }
 
 export async function runBenchmark(): Promise<void> {
@@ -204,6 +473,14 @@ export async function runBenchmark(): Promise<void> {
                     passed: false,
                     error: (r.reason as Error | undefined)?.message || 'Unknown error',
                     durationMs: 0,
+                    metrics: {
+                        criteriaCoverage: 0,
+                        partitionCoverage: 0,
+                        boundaryCoverage: 0,
+                        totalTests: 0,
+                        coveredCriteriaCount: 0,
+                        totalCriteria: 0,
+                    },
                 });
             }
         }
