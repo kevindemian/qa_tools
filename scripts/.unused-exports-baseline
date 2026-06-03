@@ -1,5 +1,5 @@
-git_triggers/schedule-handler.ts:129 - handleRunComparison
-git_triggers/schedule-handler.ts:174 - generateWeeklyQualityReport
+git_triggers/schedule-handler.ts:133 - handleRunComparison
+git_triggers/schedule-handler.ts:178 - generateWeeklyQualityReport
 git_triggers/session-state.ts:161 - _resetForTest
 jira_management/import-prep.ts:2 - PreviewMdOptions
 jira_management/import-prep.ts:3 - ValidationResult
