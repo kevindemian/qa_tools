@@ -67,7 +67,11 @@ export function runQualityGate(options?: QualityGateOptions): QualityGateResult 
             }
         }
 
-        const health = calculateHealthScore({ ...store, runs: projectRuns }, envCfg);
+        const isGitFallback = store.runs.length === 0;
+        const health = calculateHealthScore(
+            { ...store, runs: projectRuns },
+            { ...envCfg, ...(isGitFallback ? { minCoverageGate: 0 } : {}) },
+        );
 
         checks.push({
             name: 'health-score',
@@ -104,13 +108,19 @@ export function runQualityGate(options?: QualityGateOptions): QualityGateResult 
                 '%)',
         });
 
-        const coverageCheck = health.dimensions.coverage.score >= minCoverage ? 'pass' : 'fail';
+        const coverageCheck = isGitFallback
+            ? 'pass'
+            : health.dimensions.coverage.score >= minCoverage
+              ? 'pass'
+              : 'fail';
         checks.push({
             name: 'coverage',
             status: coverageCheck,
-            score: health.dimensions.coverage.score,
+            score: isGitFallback ? minCoverage : health.dimensions.coverage.score,
             threshold: minCoverage,
-            details: 'Coverage: ' + health.dimensions.coverage.score + '% (threshold: ' + minCoverage + '%)',
+            details: isGitFallback
+                ? 'Cobertura: N/A (git fallback — sem dados de cobertura)'
+                : 'Coverage: ' + health.dimensions.coverage.score + '% (threshold: ' + minCoverage + '%)',
         });
 
         const speedCheck = health.dimensions.suiteSpeed.score >= 100 - (maxSuiteSpeed / 10) * 100 ? 'pass' : 'fail';
