@@ -82,7 +82,7 @@ export class Logger {
                 const stat = fs.statSync(this._filePathCached);
                 this._bytesWritten = stat.size;
             } catch {
-                this._bytesWritten = 0;
+                /* arquivo não existe ainda — bytesWritten=0 é o default correto */
             }
             return true;
         } catch (err) {
@@ -144,7 +144,10 @@ export class Logger {
         if (data) {
             try {
                 dataStr = ' | ' + JSON.stringify(maskDeep(data));
-            } catch {
+            } catch (err) {
+                rootLogger.debug(
+                    'Data serialization failed for log entry: ' + (err instanceof Error ? err.message : String(err)),
+                );
                 dataStr = ' | [data serialization error]';
             }
         }

@@ -71,6 +71,7 @@ function parseRawOnce(raw: string): Record<string, unknown> | null {
         const result = z.record(z.string(), z.unknown()).safeParse(json);
         return result.success ? result.data : null;
     } catch {
+        /* cleanup — cache file cleanup, falha não afeta o fluxo */
         return null;
     }
 }

@@ -1,6 +1,7 @@
 import { palette } from './palette';
 import { defaultOutput, Output } from './output';
 import { createJiraAuthHeader } from './jira-auth';
+import { rootLogger } from './logger';
 
 type FigletModule = { textSync: (str: string, opts?: Record<string, unknown>) => string };
 type GradientModule = { default: (colors: string[]) => (text: string) => string };
@@ -67,7 +68,8 @@ export async function checkJiraStatus(baseUrl: string, token: string, mode?: str
         });
         const ms = Date.now() - start;
         return { label: 'Jira API', status: 'ok', detail: '🟢 online (' + ms + 'ms)' };
-    } catch {
+    } catch (err) {
+        rootLogger.debug('Jira status check failed: ' + (err instanceof Error ? err.message : String(err)));
         return { label: 'Jira API', status: 'error', detail: '🔴 offline' };
     }
 }
@@ -154,9 +156,9 @@ export async function showSplash(
 
         const splash = buildSplashLines(colored, statePath, checks.length > 0 ? checks : undefined, healthScore);
         defaultOutput.box(splash, { border: 'double', padding: 1 });
-    } catch {
+    } catch (err) {
+        rootLogger.debug('Splash rendering failed: ' + (err instanceof Error ? err.message : String(err)));
         defaultOutput.print('🔧 QA Tools  v1.0.0 — Gestão de Testes & Automação de CI/CD');
         if (statePath) defaultOutput.print('  State: ' + statePath);
-        if (healthScore) defaultOutput.print('  Health: ' + healthScore.score + '/100 (' + healthScore.grade + ')');
     }
 }

@@ -62,7 +62,10 @@ export function offerEnvSetup(result: EnvValidationResult): boolean {
     if (process.env.CI === 'true' || process.env.AUTO_CONFIRM === 'true') return false;
     try {
         return confirm('Configurações incompletas. Deseja configurar agora?');
-    } catch {
+    } catch (err) {
+        rootLogger.debug(
+            'Env setup prompt failed (assuming no): ' + (err instanceof Error ? err.message : String(err)),
+        );
         return false;
     }
 }
@@ -201,8 +204,8 @@ function _tryPrintHealthScore(): void {
             const gateIcon = hs.qualityGate === 'pass' ? '✓' : '✗';
             info(`Saúde: ${hs.overall}/100 ${gradeIcon} · Quality Gate: ${gateIcon}`);
         }
-    } catch {
-        // metrics store not available — skip health score silently
+    } catch (err) {
+        rootLogger.debug('Health score unavailable: ' + (err instanceof Error ? err.message : String(err)));
     }
 }
 

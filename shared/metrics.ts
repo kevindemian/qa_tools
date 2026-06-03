@@ -121,7 +121,8 @@ function ensureDir(dir: string): boolean {
     try {
         fs.mkdirSync(dir, { recursive: true });
         return true;
-    } catch {
+    } catch (err) {
+        rootLogger.warn('Failed to ensure metrics dir: ' + (err instanceof Error ? err.message : String(err)));
         return false;
     }
 }

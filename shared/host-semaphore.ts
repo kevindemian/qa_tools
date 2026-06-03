@@ -4,6 +4,7 @@ export function extractHost(url: string): string {
         const u = new URL(url);
         return u.hostname;
     } catch {
+        /* URL inválida — fallback */
         return 'unknown';
     }
 }
