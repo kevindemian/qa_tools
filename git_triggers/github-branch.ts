@@ -1,4 +1,4 @@
-import type { AxiosInstance } from 'axios';
+import type { AxiosInstance } from '../shared/deps';
 import { apiGet, formatDiffResponse } from './github-api';
 
 const COMPARE_PAGE_SIZE = 100;

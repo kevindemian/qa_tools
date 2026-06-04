@@ -1,5 +1,5 @@
 /** Issue linker — links test issues to requirements/stories and associates pre-conditions. */
-import chalk from 'chalk';
+import { applyPalette } from '../shared/palette';
 import { success, isQuiet, onError, print } from '../shared/prompt';
 import { rootLogger } from '../shared/logger';
 import { sleep } from '../shared/http-client';
@@ -64,14 +64,14 @@ async function updateGroupLinks(
             await jiraResource.putJiraResource('issue/' + member.id, {
                 fields: { description: currentDesc + refText },
             });
-            if (!isQuiet()) print(chalk.green('+'));
+            if (!isQuiet()) print(applyPalette('green')('+'));
             crossLog.info('  ' + member.id + ': descrição atualizada');
-        } catch (err) {
+        } catch (err: unknown) {
             const status = (err as { response?: { status?: number } }).response?.status;
             crossLog.error('Falha ao atualizar descrição de ' + member.id + ' no grupo "' + group.name + '"', {
                 status,
             });
-            if (!isQuiet()) print(chalk.red('x'));
+            if (!isQuiet()) print(applyPalette('red')('x'));
         }
     }
 }

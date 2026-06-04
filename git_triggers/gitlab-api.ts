@@ -1,4 +1,4 @@
-import type { AxiosInstance } from 'axios';
+import type { AxiosInstance } from '../shared/deps';
 import type { JsonObject } from '../shared/types';
 import { handleError } from '../shared/git-provider-error';
 import { checkCircuitBreaker, recordCircuitFailure, recordCircuitSuccess } from '../shared/circuit-breaker';

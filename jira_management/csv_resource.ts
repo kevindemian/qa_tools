@@ -1,6 +1,6 @@
 /** CSV parsing: single-step, bulk (multi-block), description/precondition/linked-issues extraction. */
 import fs from 'fs';
-import csv from 'csv-parser';
+import { csv } from '../shared/deps';
 import { Readable } from 'stream';
 import { rootLogger } from '../shared/logger';
 import { normalizeFieldName, sanitizeCellValue } from '../shared/field-names';

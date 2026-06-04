@@ -1,4 +1,4 @@
-import type { AxiosInstance } from 'axios';
+import type { AxiosInstance } from '../shared/deps';
 import { info } from '../shared/prompt';
 import { handleError } from '../shared/git-provider-error';
 import type { MergeRequestInfo, JsonObject } from '../shared/types';

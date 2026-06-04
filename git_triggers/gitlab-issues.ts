@@ -1,4 +1,4 @@
-import type { AxiosInstance } from 'axios';
+import type { AxiosInstance } from '../shared/deps';
 import type { Issue } from '../shared/types';
 import { apiGet, projectPath } from './gitlab-api';
 

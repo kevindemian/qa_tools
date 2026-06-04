@@ -1,7 +1,6 @@
 /** Test results — collect, parse, and report test results from CI artifacts to Jira. */
 import path from 'path';
-import AdmZip from 'adm-zip';
-import glob from 'glob';
+import { AdmZip, globSync } from '../shared/deps';
 import Config from '../shared/config';
 import JiraClient from '../shared/jira-client';
 import JiraLinkManager from '../jira_management/jira_link_manager';
@@ -24,7 +23,7 @@ function _jiraEnv(): { base: string; token: string; xray: string; mode: string }
 
 function _resolveGlob(pattern: string): string | null {
     try {
-        const matches = glob.sync(pattern);
+        const matches = globSync(pattern);
         const m = matches[0];
         return m ? path.resolve(m) : null;
     } catch {
