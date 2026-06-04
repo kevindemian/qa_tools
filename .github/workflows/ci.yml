@@ -27,5 +27,7 @@ jobs:
             - name: Quality gate (health + coverage + flaky)
               run: npx tsx scripts/quality-gate.ts --json
             - run: npm audit --audit-level=high
+            - name: Check outdated dependencies (warning only)
+              run: npm outdated --json || true
             - run: npx jest --coverage --forceExit --detectOpenHandles --testPathIgnorePatterns='github-e2e'
             - run: npx jest --no-coverage --forceExit --runInBand git_triggers/github-e2e.test.ts
