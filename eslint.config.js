@@ -131,6 +131,36 @@ module.exports = tseslint.config(
             '@typescript-eslint/no-unsafe-return': 'off',
         },
     },
+    // DepWall — must import through shared/deps, shared/palette, shared/validation,
+    // shared/env-loader, or shared/readline instead of direct npm packages
+    {
+        files: ['**/*.ts'],
+        ignores: ['shared/**', '**/*.test.ts', '**/*.test.js', 'e2e/**'],
+        rules: {
+            'no-restricted-imports': [
+                'error',
+                {
+                    paths: [
+                        { name: 'chalk', message: 'Use shared/palette instead of direct chalk import' },
+                        { name: 'dotenv', message: 'Use shared/env-loader instead of direct dotenv import' },
+                        {
+                            name: 'readline-sync',
+                            message: 'Use shared/readline or shared/deps instead of direct readline-sync',
+                        },
+                        { name: 'zod', message: 'Use shared/validation instead of direct zod import' },
+                        { name: 'axios', message: 'Use shared/deps instead of direct axios import' },
+                        { name: 'adm-zip', message: 'Use shared/deps instead of direct adm-zip import' },
+                        { name: 'cli-progress', message: 'Use shared/deps instead of direct cli-progress import' },
+                        { name: 'cli-table3', message: 'Use shared/deps instead of direct cli-table3 import' },
+                        { name: 'csv-parser', message: 'Use shared/deps instead of direct csv-parser import' },
+                        { name: 'figlet', message: 'Use shared/deps instead of direct figlet import' },
+                        { name: 'glob', message: 'Use shared/deps instead of direct glob import' },
+                        { name: 'yaml', message: 'Use shared/deps instead of direct yaml import' },
+                    ],
+                },
+            ],
+        },
+    },
     { ignores: ['node_modules/', 'docs-archive/', 'scripts/', '**/*.js'] },
     prettier,
 );

@@ -12,6 +12,37 @@
 > - 🔧 **chore** — manutenção (deps, config, tooling)
 > - 📋 **test** — cobertura de testes
 
+## 🗺️ Roteiro de Execução — Sprints de Resiliência
+
+**Ordem de implementação (sequencial, cada uma depende da anterior):**
+
+| Ordem | Sprint                                                        | Branch               | Esforço | Risco   | Status             |
+| ----- | ------------------------------------------------------------- | -------------------- | ------- | ------- | ------------------ |
+| 1°    | 🧱 **Sprint DepWall** — Isolamento de dependências            | `feat/depwall`       | ~4h     | Baixo   | ✅                 |
+| 2°    | 🏗️ **Sprint ESM 2a** — Infraestrutura (type:module + configs) | `feat/esm-migration` | ~2h     | Médio   | ▶️ **Em execução** |
+| 3°    | 🏗️ **Sprint ESM 2b** — Codemod imports + dirname + require    | `feat/esm-migration` | ~3h     | Médio   | ⏳                 |
+| 4°    | 🏗️ **Sprint ESM 2c** — Jest mocking (155 files)               | `feat/esm-migration` | ~10-15h | 🔴 Alto | ⏳                 |
+| 5°    | ✨ **Sprint chalk@5** — Upgrade (1-file change pós-DepWall)   | `feat/esm-migration` | ~2h     | Médio   | ⏳                 |
+
+### 🔄 Disaster Recovery Plan (DRP)
+
+Em caso de falha em qualquer sprint:
+
+1. **Rollback imediato:** `git checkout main && git branch -D feat/<branch>`
+2. **Registro:** Mover sprint para `BACKLOG-historico.md` com causa raiz documentada
+3. **Retry:** Criar nova branch a partir do `main` corrigindo a causa raiz identificada
+4. **Critério de abort:** Se CI não ficar verde após 3 tentativas consecutivas na mesma sprint, escalar
+
+### ✅ Critérios de aceite (todas as sprints)
+
+- `npx tsc --noEmit` → 0 erros
+- `npm test` → 100% pass (nenhum teste a menos que antes)
+- `npm run lint` → 0 erros (nenhum novo warning)
+- `npm audit --audit-level=high` → 0 vulnerabilidades
+- Cobertura de testes para código novo → 100% (linhas + branches)
+- Código antigo obsoleto → removido, não comentado
+- BACKLOG.md atualizado ao final de cada sprint
+
 ## 🚀 Status da Execução
 
 | Onda | Descrição                                  | Status |
@@ -1043,3 +1074,110 @@ Demais 30+ dependências limpas. Ver `AGENTS.md` para metodologia.
 | `jest` pass                  | **100%**    | **100%**         |
 | Dependabot configurado       | ✅          | ✅               |
 | `npm outdated` no CI         | ✅ warning  | ✅               |
+
+## 🚀 Sprint ESM — Migração CJS→ESM + chalk@5 (Branch: `feat/esm-migration`)
+
+**Motivação:** Destravar ecossistema ESM (chalk@5+, futuras deps). Risco principal: 524 `jest.mock()` em 155 arquivos com API diferente em ESM.
+**Estratégia:** Branch dedicada `feat/esm-migration`, commits granulares, merge apenas após CI verde completo.
+
+### ⚠️ Decisões pendentes
+
+| #   | Decisão                | Opções                                                                                         |
+| --- | ---------------------- | ---------------------------------------------------------------------------------------------- |
+| D1  | Ordem dos lotes da 2c  | (a) Priorizar `jest.doMock()` (mais complexos) ou (b) começar pelos `jest.mock()` simples      |
+| D2  | Fase 3 como subfase 2d | (a) Consolidar na mesma sprint ou (b) manter como sprint separada após ESM estável             |
+| D3  | Estratégia de codemod  | (a) Script `add-js-extensions.ts` automatizado com dry-run ou (b) substituição manual por lote |
+
+### Subfase 2a — Infraestrutura (~2h)
+
+| #    | Tarefa                                                                            | Arquivo                                 | Risco | Status |
+| ---- | --------------------------------------------------------------------------------- | --------------------------------------- | ----- | ------ |
+| 2a.1 | `package.json`: `"type": "module"`                                                | `package.json`                          | Baixo | ⏳     |
+| 2a.2 | `eslint.config.js`: `require` → `import`, `module.exports` → `export default`     | `eslint.config.js`                      | Baixo | ⏳     |
+| 2a.3 | `jest.config.js`: `module.exports` → `export default`; `ts-jest` → `useESM: true` | `jest.config.js`                        | Médio | ⏳     |
+| 2a.4 | `scripts/jest-strip-ansi-serializer.js`: `module.exports` → `export default`      | `scripts/jest-strip-ansi-serializer.js` | Baixo | ⏳     |
+| 2a.5 | `shared/entry-menu.ts`: `require.main === module` → `import.meta.main`            | `shared/entry-menu.ts`                  | Baixo | ⏳     |
+
+**Validação:** `npx tsc --noEmit` + `npx eslint . --ext .ts` + `npm test`
+
+### Subfase 2b — Codemod imports + `__dirname` (~3h)
+
+| #    | Tarefa                                                             | Volume    | Risco | Status |
+| ---- | ------------------------------------------------------------------ | --------- | ----- | ------ |
+| 2b.1 | Codemod: adicionar `.js` em ~1999 imports relativos (488 arquivos) | 488 files | Médio | ⏳     |
+| 2b.2 | Codemod: `__dirname` → `import.meta.dirname` (44 ocorrências)      | 30 files  | Baixo | ⏳     |
+| 2b.3 | `require()` → `import`/`import()` (~37 chamadas)                   | 10 files  | Médio | ⏳     |
+| 2b.4 | `require('crypto'/'fs')` → `import` nativo                         | 2 files   | Baixo | ⏳     |
+
+**Codemod:** Script `scripts/add-js-extensions.ts` com dry-run + diff validation.
+
+### Subfase 2c — Jest mocking (~10–15h) 🔴 Maior risco
+
+| #    | Tarefa                                                        | Volume                | Risco   | Status |
+| ---- | ------------------------------------------------------------- | --------------------- | ------- | ------ |
+| 2c.1 | `jest.mock()` → `jest.unstable_mockModule()`                  | 524 calls / 155 files | 🔴 Alto | ⏳     |
+| 2c.2 | `jest.doMock()` → `jest.unstable_mockModule()` + `beforeEach` | 101 calls / 6 files   | 🔴 Alto | ⏳     |
+| 2c.3 | `jest.requireActual/Mock` → `await import()`                  | 89 calls / 20 files   | Alto    | ⏳     |
+| 2c.4 | Validar `jest.isolateModules()` se usado                      | —                     | Médio   | ⏳     |
+
+**Estratégia:** Lotes de ~20 files, `npm test` a cada lote, commit por lote.
+
+### Subfase 3 (ou 2d) — chalk@5 Upgrade (~2h)
+
+Bloqueado pela Fase 2 (chalk@5 é ESM-only).
+
+| #   | Tarefa                                                          | Arquivo                                        | Risco    | Status |
+| --- | --------------------------------------------------------------- | ---------------------------------------------- | -------- | ------ |
+| 3.1 | `package.json`: `"chalk": "^4.1.2"` → `"^5.6.2"`                | `package.json`                                 | Baixo    | ⏳     |
+| 3.2 | `chalk.level` write — read-only em v5. Refatorar `palette.ts:4` | `shared/palette.ts`                            | **Alto** | ⏳     |
+| 3.3 | `chalk.Chalk` type → `typeof chalk`                             | `shared/palette.ts`, `shared/prompt-format.ts` | Médio    | ⏳     |
+| 3.4 | Validar `chalk.hex()` / `chalk.bgHex()`                         | `shared/palette.ts`, `shared/prompt-format.ts` | Médio    | ⏳     |
+
+### Timeline
+
+| Subfase   | Esforço     | CI green?               | Depende |
+| --------- | ----------- | ----------------------- | ------- |
+| 2a        | ~2h         | ❌ (type:module quebra) | —       |
+| 2b        | ~3h         | ❌ (faltam mocks)       | 2a      |
+| 2c        | ~10–15h     | ✅ (no final)           | 2a      |
+| 3         | ~2h         | ✅                      | 2a+2b   |
+| **Total** | **~17–22h** | **✅ apenas merge**     |         |
+
+### Métricas alvo
+
+| Métrica                | Alvo        | Resultado |
+| ---------------------- | ----------- | --------- |
+| `"type": "module"`     | ✅          | ⏳        |
+| Rel. imports sem `.js` | **0**       | ⏳        |
+| `__dirname` residual   | **0**       | ⏳        |
+| `require()` residual   | **0**       | ⏳        |
+| `jest.mock()` residual | **0**       | ⏳        |
+| `chalk@4`              | Removido    | ⏳        |
+| `tsc --noEmit`         | **0 erros** | ⏳        |
+| `jest` pass            | **100%**    | ⏳        |
+
+---
+
+## ✅ Sprint DepWall — Isolamento de Dependências — Concluído 2026-06-04
+
+Ver detalhes completos em `BACKLOG-historico.md`.
+
+| Métrica                       | Antes    | Depois  |
+| ----------------------------- | -------- | ------- |
+| `chalk` import direto         | 10 files | **0**   |
+| `zod` import direto           | 16 files | **0**   |
+| `readline-sync` import direto | 2 files  | **0**   |
+| `dotenv` import direto        | 2 files  | **0**   |
+| Deps só por `shared/deps.ts`  | ❌       | ✅      |
+| `tsc --noEmit`                | 0 erros  | 0 erros |
+| `jest` pass                   | 100%     | 100%    |
+| `npm run lint`                | —        | 0 novos |
+| `no-restricted-imports`       | ❌       | ✅      |
+
+---
+
+## 📋 Decisões resolvidas (para Sprint ESM)
+
+1. **D1 — Ordem dos lotes da 2c**: **Priorizar `jest.doMock()`** (mais complexos, maior risco) — resolvê-los primeiro desbloqueia o padrão para os `jest.mock()` simples.
+2. **D2 — chalk@5 consolidado ou separado**: **Autônomo (subfase 3)** — manter como sprint separada pós-ESM estável reduz risco de rollback.
+3. **D3 — Codemod automatizado ou manual**: **Script automatizado** `add-js-extensions.ts` com dry-run — garante consistência em 488 arquivos sem erro humano.
