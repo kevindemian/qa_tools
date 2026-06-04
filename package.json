@@ -31,7 +31,7 @@
     "type": "commonjs",
     "dependencies": {
         "@inquirer/confirm": "^6.0.13",
-        "@inquirer/input": "^5.0.13",
+        "@inquirer/input": "^5.1.2",
         "@inquirer/select": "^5.1.5",
         "adm-zip": "^0.5.17",
         "axios": "^1.15.2",
