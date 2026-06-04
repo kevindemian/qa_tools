@@ -67,10 +67,11 @@ describe('palette', () => {
     it('uses chalk.hex when chalk.level >= 2', () => {
         jest.isolateModules(() => {
             const origLevel = chalk.level;
-            chalk.level = 2 as typeof chalk.level;
-            const { palette: p } = jest.requireActual('./palette') as {
+            chalk.level = 2;
+            const paletteModule = jest.requireActual<{
                 palette: Record<string, (...args: unknown[]) => string>;
-            };
+            }>('./palette');
+            const { palette: p } = paletteModule;
             expect(nonNull(p.fg)('text')).toContain('text');
             chalk.level = origLevel;
         });

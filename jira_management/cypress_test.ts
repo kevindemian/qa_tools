@@ -1,9 +1,8 @@
 import fs from 'fs';
-import path from 'path';
-import dotenv from 'dotenv';
+import { ensureDotenv } from '../shared/env-loader';
 import { rootLogger } from '../shared/logger';
 
-dotenv.config({ path: path.resolve(__dirname, '../.env') });
+ensureDotenv();
 
 interface CypressParseResult {
     avgPassed: number;

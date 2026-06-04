@@ -1,6 +1,6 @@
 import fs from 'fs';
 import path from 'path';
-import AdmZip from 'adm-zip';
+import { AdmZip } from '../../shared/deps';
 import { createHttpClient } from '../../shared/http-client';
 import Config from '../../shared/config';
 import { rootLogger } from '../../shared/logger';

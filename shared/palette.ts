@@ -73,7 +73,7 @@ export type ChalkKey = Exclude<PaletteKey, 'hex'>;
 
 /** Apply a palette color to text. Returns the colored string. */
 export function applyPalette(key: ChalkKey): chalk.Chalk {
-    return palette[key] as chalk.Chalk;
+    return palette[key];
 }
 
 /** Chalk level — read-only accessor.

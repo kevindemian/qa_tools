@@ -1,5 +1,5 @@
 /** Zod schemas for CSV row validation and test case structure. */
-import { z } from 'zod';
+import { z } from '../shared/validation';
 
 export const CsvRowFieldsSchema = z.object({
     Action: z.string().min(1, 'Action é obrigatório'),

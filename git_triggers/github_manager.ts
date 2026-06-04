@@ -15,7 +15,7 @@ import type {
     Issue,
     JsonObject,
 } from '../shared/types';
-import type { AxiosInstance } from 'axios';
+import type { AxiosInstance } from '../shared/deps';
 import {
     formatPR,
     prCreateMergeRequest,

@@ -28,18 +28,20 @@ import zod = require('zod');
 export { chalk, axios, AdmZip, cliProgress, CliTable3, csv, dotenv, figlet, readlineSync, yaml, zod };
 
 /* glob is lazy-required to avoid Jest ESM parse failures (glob v10+ transitively loads path-scurry TS sources) */
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-let _glob: any = null;
-function requireGlob(): any {
-    if (!_glob) _glob = require('glob');
+type GlobSyncFn = (pattern: string, options?: { cwd?: string }) => string[];
+type GlobModule = { globSync: GlobSyncFn };
+
+let _glob: GlobModule | null = null;
+function requireGlob(): GlobModule {
+    if (!_glob) _glob = require('glob') as GlobModule;
     return _glob;
 }
 
-export function getGlob(): any {
+export function getGlob(): GlobModule {
     return requireGlob();
 }
-export function globSync(...args: any[]): any {
-    return requireGlob().globSync(...args);
+export function globSync(pattern: string, options?: { cwd?: string }): string[] {
+    return requireGlob().globSync(pattern, options);
 }
 
 /* yaml named exports (preserve both value and type via export import) */

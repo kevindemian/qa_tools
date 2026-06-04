@@ -1,4 +1,4 @@
-import { Document, type Node, YAMLMap, YAMLSeq, Scalar, Pair, isMap, parseDocument } from 'yaml';
+import { Document, type Node, YAMLMap, YAMLSeq, Scalar, Pair, isMap, parseDocument } from '../../shared/deps';
 
 export interface StepConfig {
     name?: string;

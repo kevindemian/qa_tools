@@ -1,4 +1,4 @@
-import type { AxiosInstance } from 'axios';
+import type { AxiosInstance } from '../shared/deps';
 import { rootLogger } from '../shared/logger';
 import { handleError } from '../shared/git-provider-error';
 import type {

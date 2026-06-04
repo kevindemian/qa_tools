@@ -1,4 +1,4 @@
-import type { AxiosInstance } from 'axios';
+import type { AxiosInstance } from '../shared/deps';
 import { handleError } from '../shared/git-provider-error';
 import type {
     PipelineTriggerResult,

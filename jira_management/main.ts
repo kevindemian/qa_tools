@@ -20,8 +20,7 @@ import { rootLogger } from '../shared/logger';
 import { pushBreadcrumb, popBreadcrumb, clearBreadcrumbs } from '../shared/breadcrumbs';
 import { loadTypedState, update as updateState, getStatePath } from '../shared/state';
 import { loadMetrics } from '../shared/metrics';
-import { palette } from '../shared/palette';
-import chalk from 'chalk';
+import { palette, applyPalette } from '../shared/palette';
 import { SessionContext } from '../shared/session-context';
 import { ExitCode, type StateSchema } from '../shared/types';
 import type { CommandContext } from './commands/context';
@@ -104,8 +103,10 @@ function _displayBadge(totalCount: number, project: string): void {
         pct !== undefined ? (pct >= 70 ? palette.green : pct >= 40 ? palette.yellow : palette.red) : palette.muted;
     const badge =
         pct !== undefined
-            ? chalk.bold('📊 Cobertura: ' + color(pct + '%') + ' · ' + gapCount + ' gaps · ' + totalCount + ' issues')
-            : chalk.bold('📊 ' + totalCount + ' issues');
+            ? applyPalette('bold')(
+                  '📊 Cobertura: ' + color(pct + '%') + ' · ' + gapCount + ' gaps · ' + totalCount + ' issues',
+              )
+            : applyPalette('bold')('📊 ' + totalCount + ' issues');
     info(badge);
 }
 
