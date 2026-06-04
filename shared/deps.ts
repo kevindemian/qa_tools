@@ -41,7 +41,8 @@ export function getGlob(): GlobModule {
     return requireGlob();
 }
 export function globSync(pattern: string, options?: { cwd?: string }): string[] {
-    return requireGlob().globSync(pattern, options);
+    if (options !== undefined) return requireGlob().globSync(pattern, options);
+    return requireGlob().globSync(pattern);
 }
 
 /* yaml named exports (preserve both value and type via export import) */

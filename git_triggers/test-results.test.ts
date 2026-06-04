@@ -24,7 +24,7 @@ const mockSaveParseResult = jest.fn<(project: string, result: ParseResult) => vo
 
 // ── Module mocks ─────────────────────────────────────────────────────────
 
-jest.mock('glob', () => ({ sync: mockGlobSync }));
+jest.mock('glob', () => ({ globSync: mockGlobSync }));
 
 jest.mock('../shared/config', () => {
     const cfg: Record<string, unknown> = {

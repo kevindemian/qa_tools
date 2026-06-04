@@ -166,7 +166,7 @@ jest.mock('./case00-handler', () => ({
 type MainModule = typeof import('./main').default;
 
 const globSyncMock = jest.fn<(pattern: string) => string[]>().mockReturnValue([]);
-jest.mock('glob', () => ({ sync: globSyncMock }));
+jest.mock('glob', () => ({ globSync: globSyncMock }));
 
 const mockProvider = createMockGitProvider();
 
