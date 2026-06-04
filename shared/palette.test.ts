@@ -5,43 +5,117 @@ import chalk from 'chalk';
 describe('palette', () => {
     it('has all expected palette keys', () => {
         const { palette } = paletteModule;
-        const expected = ['fg', 'muted', 'border', 'blue', 'green', 'yellow', 'red', 'purple', 'orange'] as const;
+        const expected = [
+            'fg',
+            'muted',
+            'border',
+            'blue',
+            'green',
+            'yellow',
+            'red',
+            'purple',
+            'orange',
+            'info',
+            'cyan',
+            'bold',
+            'dim',
+            'gray',
+            'white',
+            'bgBlack',
+            'hex',
+        ] as const;
         for (const key of expected) {
             expect(palette).toHaveProperty(key);
         }
     });
 
-    it('applyPalette returns a chalk function for each key', () => {
-        const { applyPalette, palette } = paletteModule;
-        const keys = Object.keys(palette);
-        for (const key of keys) {
-            const fn = applyPalette(key as keyof typeof palette);
+    it('applyPalette returns a chalk function for each ChalkInstance key', () => {
+        const { applyPalette } = paletteModule;
+        const nonFactoryKeys: Array<paletteModule.ChalkKey> = [
+            'fg',
+            'muted',
+            'border',
+            'blue',
+            'green',
+            'yellow',
+            'red',
+            'purple',
+            'orange',
+            'info',
+            'cyan',
+            'bold',
+            'dim',
+            'gray',
+            'white',
+            'bgBlack',
+        ];
+        for (const key of nonFactoryKeys) {
+            const fn = applyPalette(key);
             expect(typeof fn).toBe('function');
             expect(typeof fn('text')).toBe('string');
         }
     });
 
-    it('hexOrBasic returns basic chalk for level < 2', () => {
-        expect(paletteModule.palette).toBeDefined();
+    it('hex factory returns a function', () => {
+        const { palette } = paletteModule;
+        expect(typeof palette.hex).toBe('function');
+        const chalkFn = palette.hex('#ff6600');
+        expect(typeof chalkFn).toBe('function');
+        expect(chalkFn('text')).toContain('text');
     });
 
     it('uses chalk.hex when chalk.level >= 2', () => {
         jest.isolateModules(() => {
             const origLevel = chalk.level;
-            chalk.level = 2;
-            const { palette: p } = require('./palette') as { palette: Record<string, (...args: unknown[]) => string> };
+            chalk.level = 2 as typeof chalk.level;
+            const { palette: p } = jest.requireActual('./palette') as {
+                palette: Record<string, (...args: unknown[]) => string>;
+            };
             expect(nonNull(p.fg)('text')).toContain('text');
             chalk.level = origLevel;
         });
     });
 
     it('palette colors render text', () => {
-        const { palette, applyPalette } = paletteModule;
-        for (const key of Object.keys(palette)) {
-            const fn = applyPalette(key as keyof typeof palette);
+        const { applyPalette } = paletteModule;
+        const nonFactoryKeys: Array<paletteModule.ChalkKey> = [
+            'fg',
+            'muted',
+            'border',
+            'blue',
+            'green',
+            'yellow',
+            'red',
+            'purple',
+            'orange',
+            'info',
+            'cyan',
+            'bold',
+            'dim',
+            'gray',
+            'white',
+            'bgBlack',
+        ];
+        for (const key of nonFactoryKeys) {
+            const fn = applyPalette(key);
             const result = fn('hello');
             expect(typeof result).toBe('string');
             expect(result).toContain('hello');
         }
+    });
+
+    it('disables chalk when NO_COLOR env is set', () => {
+        jest.isolateModules(() => {
+            process.env.NO_COLOR = '1';
+            const chalkMod: { level: number } = jest.requireActual('chalk');
+            jest.requireActual('./palette');
+            expect(chalkMod.level).toBe(0);
+            delete process.env.NO_COLOR;
+        });
+    });
+
+    it('getColorLevel returns current chalk level', () => {
+        const level = paletteModule.getColorLevel();
+        expect(typeof level).toBe('number');
     });
 });

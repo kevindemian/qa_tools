@@ -1,7 +1,7 @@
 /** ASCII/Unicode box-rendering utilities: bordered boxes, dividers, and card layouts.
  * Powered by the active theme (single, double, round, or none borders). */
 import { stripVTControlCharacters } from 'util';
-import { palette, applyPalette, type PaletteKey } from './palette';
+import { palette, applyPalette, type ChalkKey } from './palette';
 import { getTheme } from './theme';
 
 export type BoxBorder = 'single' | 'double' | 'round' | 'none';
@@ -9,7 +9,7 @@ export type BoxBorder = 'single' | 'double' | 'round' | 'none';
 export interface BoxOptions {
     title?: string;
     border?: BoxBorder;
-    color?: PaletteKey;
+    color?: ChalkKey;
     padding?: number;
     width?: number;
 }
@@ -154,7 +154,7 @@ export function divider(width?: number): string {
 export function card(
     title: string,
     content: string[],
-    options: { border?: BoxBorder; color?: PaletteKey; width?: number } = {},
+    options: { border?: BoxBorder; color?: ChalkKey; width?: number } = {},
 ): string {
     return box(content, {
         title,

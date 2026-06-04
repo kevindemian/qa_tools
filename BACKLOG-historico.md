@@ -1801,3 +1801,50 @@ Adaptador git → MetricsRun[] + FailureClassification[] para autovalidação us
 **Sprint 3**: 8 fases, ~20.5h, ~1.350 pontos de débito (casts + non-null) eliminados ✅
 
 Ver detalhes em commits e BACKOLG original (arquivado).
+
+## ✅ Sprint DepWall — Isolamento de Dependências — Concluído 2026-06-04
+
+**Motivação:** Reduzir acoplamento com 17 dependências runtime. Criar barreira única (`shared/deps.ts`) + wrappers completos.
+
+### Diagnóstico — acoplamento diagnosticado
+
+| Dep                         | Runtime files       | Tipo de acoplamento         | Status |
+| --------------------------- | ------------------- | --------------------------- | ------ |
+| **chalk**                   | 10                  | Direto, sem wrapper         | ✅     |
+| **zod**                     | 16                  | Direto em schemas           | ✅     |
+| **readline-sync**           | 2                   | Direto em 2 files           | ✅     |
+| **dotenv**                  | 2                   | Direto em 2 files           | ✅     |
+| **axios**                   | 1 valor+12 type     | Já isolado (http-client.ts) | ✅     |
+| **@inquirer/\***            | 1 cada              | Dynamic import + injection  | ✅     |
+| **ora, cli-progress**       | 1 cada              | Dynamic import + wrapper    | ✅     |
+| **cli-table3, csv-parser**  | 1 cada              | 1 file wrapper              | ✅     |
+| **adm-zip**                 | 2                   | Direto em 2 files           | ✅     |
+| **figlet, gradient-string** | 1 cada              | Lazy import, splash only    | ✅     |
+| **yaml**                    | 1                   | Direto em 1 file            | ✅     |
+| **glob**                    | 1 runtime+4 scripts | 4/5 build-only scripts      | ✅     |
+
+### Entregues
+
+| #   | Tarefa                                                                 | Arquivos           | Status |
+| --- | ---------------------------------------------------------------------- | ------------------ | ------ |
+| 1   | `shared/deps.ts` — barrel re-exportando 12 deps CJS                    | novo               | ✅     |
+| 2   | `shared/palette.ts` — estendido c/ bold, cyan, dim, hex, getColorLevel | `palette.ts`       | ✅     |
+| 3   | Migrar 25+ files runtime para usar shared wrappers                     | 25 files           | ✅     |
+| 4   | `shared/validation.ts` — re-exporta z + parseOrThrow                   | novo               | ✅     |
+| 5   | `shared/readline.ts` — wrapper readline-sync                           | novo               | ✅     |
+| 6   | `shared/env-loader.ts` — wrapper dotenv                                | novo               | ✅     |
+| 7   | ESLint `no-restricted-imports` bloqueando 12 pacotes                   | `eslint.config.js` | ✅     |
+| 8   | Testes (44) para todos os wrappers                                     | 5 test files       | ✅     |
+
+### Métricas finais
+
+| Métrica                       | Antes           | Depois  |
+| ----------------------------- | --------------- | ------- |
+| `chalk` import direto         | 10 files        | **0**   |
+| `zod` import direto           | 16 files        | **0**   |
+| `readline-sync` import direto | 2 files         | **0**   |
+| `dotenv` import direto        | 2 files         | **0**   |
+| Deps só por wrappers          | ❌              | ✅      |
+| `tsc --noEmit`                | 0 erros         | 0 erros |
+| `jest` pass                   | 100%            | 100%    |
+| `npm run lint`                | 39 pre-existing | 0 novos |
