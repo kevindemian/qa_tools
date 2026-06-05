@@ -1075,109 +1075,85 @@ Demais 30+ dependências limpas. Ver `AGENTS.md` para metodologia.
 | Dependabot configurado       | ✅          | ✅               |
 | `npm outdated` no CI         | ✅ warning  | ✅               |
 
-## 🚀 Sprint ESM — Migração CJS→ESM + chalk@5 (Branch: `feat/esm-migration`)
 
-**Motivação:** Destravar ecossistema ESM (chalk@5+, futuras deps). Risco principal: 524 `jest.mock()` em 155 arquivos com API diferente em ESM.
-**Estratégia:** Branch dedicada `feat/esm-migration`, commits granulares, merge apenas após CI verde completo.
 
-### ⚠️ Decisões pendentes
 
-| #   | Decisão                | Opções                                                                                         |
-| --- | ---------------------- | ---------------------------------------------------------------------------------------------- |
-| D1  | Ordem dos lotes da 2c  | (a) Priorizar `jest.doMock()` (mais complexos) ou (b) começar pelos `jest.mock()` simples      |
-| D2  | Fase 3 como subfase 2d | (a) Consolidar na mesma sprint ou (b) manter como sprint separada após ESM estável             |
-| D3  | Estratégia de codemod  | (a) Script `add-js-extensions.ts` automatizado com dry-run ou (b) substituição manual por lote |
 
-### Subfase 2a — Infraestrutura (~2h)
+## 🚀 Sprint ESM-v2 — Migracao CJS→ESM via Vitest (Branch: main)
 
-| #    | Tarefa                                                                            | Arquivo                                 | Risco | Status |
-| ---- | --------------------------------------------------------------------------------- | --------------------------------------- | ----- | ------ |
-| 2a.1 | `package.json`: `"type": "module"`                                                | `package.json`                          | Baixo | ⏳     |
-| 2a.2 | `eslint.config.js`: `require` → `import`, `module.exports` → `export default`     | `eslint.config.js`                      | Baixo | ⏳     |
-| 2a.3 | `jest.config.js`: `module.exports` → `export default`; `ts-jest` → `useESM: true` | `jest.config.js`                        | Médio | ⏳     |
-| 2a.4 | `scripts/jest-strip-ansi-serializer.js`: `module.exports` → `export default`      | `scripts/jest-strip-ansi-serializer.js` | Baixo | ⏳     |
-| 2a.5 | `shared/entry-menu.ts`: `require.main === module` → `import.meta.main`            | `shared/entry-menu.ts`                  | Baixo | ⏳     |
+**Motivacao:** Destravar ecossistema ESM (chalk@5+, futuras deps).
 
-**Validação:** `npx tsc --noEmit` + `npx eslint . --ext .ts` + `npm test`
+**Runner:** Vitest v4 — vi.mock() nativo em ESM, SEM experimental flags.
 
-### Subfase 2b — Codemod imports + `__dirname` (~3h)
+**Estrategia:** Execucao direto em main com verificacao entre cada fase.
 
-| #    | Tarefa                                                             | Volume    | Risco | Status |
-| ---- | ------------------------------------------------------------------ | --------- | ----- | ------ |
-| 2b.1 | Codemod: adicionar `.js` em ~1999 imports relativos (488 arquivos) | 488 files | Médio | ⏳     |
-| 2b.2 | Codemod: `__dirname` → `import.meta.dirname` (44 ocorrências)      | 30 files  | Baixo | ⏳     |
-| 2b.3 | `require()` → `import`/`import()` (~37 chamadas)                   | 10 files  | Médio | ⏳     |
-| 2b.4 | `require('crypto'/'fs')` → `import` nativo                         | 2 files   | Baixo | ⏳     |
+### Fase 0 — Reset (limpeza)
 
-**Codemod:** Script `scripts/add-js-extensions.ts` com dry-run + diff validation.
+| #   | Tarefa                                  | Risco | Status |
+| --- | --------------------------------------- | ----- | ------ |
+| 0.1 | git checkout main                       | Zero  |        |
+| 0.2 | git branch -D feat/esm-migration        | Zero  |        |
+| 0.3 | git stash drop (4 stashes)              | Zero  |        |
+| 0.4 | Remover untracked ESM scripts           | Zero  |        |
+| 0.5 | Verificar: git status limpo             | —     |        |
 
-### Subfase 2c — Jest mocking (~10–15h) 🔴 Maior risco
+### Fase 1 — Seguranca + CI + AGENTS (ja em main)
 
-| #    | Tarefa                                                        | Volume                | Risco   | Status |
-| ---- | ------------------------------------------------------------- | --------------------- | ------- | ------ |
-| 2c.1 | `jest.mock()` → `jest.unstable_mockModule()`                  | 524 calls / 155 files | 🔴 Alto | ⏳     |
-| 2c.2 | `jest.doMock()` → `jest.unstable_mockModule()` + `beforeEach` | 101 calls / 6 files   | 🔴 Alto | ⏳     |
-| 2c.3 | `jest.requireActual/Mock` → `await import()`                  | 89 calls / 20 files   | Alto    | ⏳     |
-| 2c.4 | Validar `jest.isolateModules()` se usado                      | —                     | Médio   | ⏳     |
+| #   | Tarefa                                        | Status |
+| --- | --------------------------------------------- | ------ |
+| 1.1 | AGENTS.md 17 secoes (incl FINAL INVARIANT)     | ✅     |
+| 1.2 | .husky/pre-commit: tsc + lint-staged + .only   | ✅     |
+| 1.3 | CI.yml: tsc/eslint/unused/quality              | ✅     |
+| 1.4 | eslint.config.js: full security rules + DepWall| ✅     |
+| 1.5 | opencode.json, enforce-quality.ts              | ✅     |
 
-**Estratégia:** Lotes de ~20 files, `npm test` a cada lote, commit por lote.
+### Fase 2 — DepWall gaps
 
-### Subfase 3 (ou 2d) — chalk@5 Upgrade (~2h)
+| #   | Tarefa                                    | Volume | Risco |
+| --- | ----------------------------------------- | ------ | ----- |
+| 2.1 | ESLint no-restricted-imports: allow-list  | 1 file | Baixo |
+| 2.2 | Fix 13 schema files (validation.ts)       | 13     | Baixo |
+| 2.3 | Fix 2 prompt files (readline.ts)          | 2      | Baixo |
 
-Bloqueado pela Fase 2 (chalk@5 é ESM-only).
+### Fase 3 — Verificacao pre-ESM
 
-| #   | Tarefa                                                          | Arquivo                                        | Risco    | Status |
-| --- | --------------------------------------------------------------- | ---------------------------------------------- | -------- | ------ |
-| 3.1 | `package.json`: `"chalk": "^4.1.2"` → `"^5.6.2"`                | `package.json`                                 | Baixo    | ⏳     |
-| 3.2 | `chalk.level` write — read-only em v5. Refatorar `palette.ts:4` | `shared/palette.ts`                            | **Alto** | ⏳     |
-| 3.3 | `chalk.Chalk` type → `typeof chalk`                             | `shared/palette.ts`, `shared/prompt-format.ts` | Médio    | ⏳     |
-| 3.4 | Validar `chalk.hex()` / `chalk.bgHex()`                         | `shared/palette.ts`, `shared/prompt-format.ts` | Médio    | ⏳     |
+| #   | Tarefa                        | Status |
+| --- | ----------------------------- | ------ |
+| 3.1 | npx tsc --noEmit → 0 erros   |        |
+| 3.2 | npm test → 100% pass          |        |
+| 3.3 | npm run lint → 0 erros        |        |
 
-### Timeline
+### Fase 4 — ESM via Vitest
 
-| Subfase   | Esforço     | CI green?               | Depende |
-| --------- | ----------- | ----------------------- | ------- |
-| 2a        | ~2h         | ❌ (type:module quebra) | —       |
-| 2b        | ~3h         | ❌ (faltam mocks)       | 2a      |
-| 2c        | ~10–15h     | ✅ (no final)           | 2a      |
-| 3         | ~2h         | ✅                      | 2a+2b   |
-| **Total** | **~17–22h** | **✅ apenas merge**     |         |
+| #   | Tarefa                                    | Volume           | Risco |
+| --- | ----------------------------------------- | ---------------- | ----- |
+| 4.1 | npm i -D vitest; rm jest/ts-jest/jest-types | package.json   | Baixo |
+| 4.2 | Criar vitest.config.ts                    | 1 file           | Baixo |
+| 4.3 | Remover jest.config.js, jest-setup.ts     | 2 files          | Baixo |
+| 4.4 | package.json: test=vitest run              | 1 file           | Baixo |
+| 4.5 | package.json: type=module                  | 1 file           | Alto  |
+| 4.6 | jest.mock() → vi.mock()                   | 532/142 files    | Medio |
+| 4.7 | jest.doMock() → vi.doMock()               | 34/4 files       | Medio |
+| 4.8 | jest.requireActual() → vi.importActual()  | 2 calls          | Medio |
+| 4.9 | jest.isolateModules() → resetModules+import| 21/8 files       | Alto  |
+| 4.10| jest.fn/spyOn → vi.fn/vi.spyOn            |                  | Baixo |
+| 4.11| remover import { jest } from @jest/globals| ~80 files        | Baixo |
+| 4.12| npx tsc --noEmit → 0 erros                | —                | —     |
+| 4.13| npx vitest run → 100% pass                | —                | —     |
 
-### Métricas alvo
+### Fase 5 — chalk@5 Upgrade
 
-| Métrica                | Alvo        | Resultado |
-| ---------------------- | ----------- | --------- |
-| `"type": "module"`     | ✅          | ⏳        |
-| Rel. imports sem `.js` | **0**       | ⏳        |
-| `__dirname` residual   | **0**       | ⏳        |
-| `require()` residual   | **0**       | ⏳        |
-| `jest.mock()` residual | **0**       | ⏳        |
-| `chalk@4`              | Removido    | ⏳        |
-| `tsc --noEmit`         | **0 erros** | ⏳        |
-| `jest` pass            | **100%**    | ⏳        |
+| #   | Tarefa                                    | Risco |
+| --- | ----------------------------------------- | ----- |
+| 5.1 | chalk@4 → chalk@5                         | Baixo |
+| 5.2 | chalk.level write fix (read-only em v5)   | Alto  |
+| 5.3 | chalk.Chalk type → typeof chalk           | Medio |
 
----
+### Metricas alvo
 
-## ✅ Sprint DepWall — Isolamento de Dependências — Concluído 2026-06-04
-
-Ver detalhes completos em `BACKLOG-historico.md`.
-
-| Métrica                       | Antes    | Depois  |
-| ----------------------------- | -------- | ------- |
-| `chalk` import direto         | 10 files | **0**   |
-| `zod` import direto           | 16 files | **0**   |
-| `readline-sync` import direto | 2 files  | **0**   |
-| `dotenv` import direto        | 2 files  | **0**   |
-| Deps só por `shared/deps.ts`  | ❌       | ✅      |
-| `tsc --noEmit`                | 0 erros  | 0 erros |
-| `jest` pass                   | 100%     | 100%    |
-| `npm run lint`                | —        | 0 novos |
-| `no-restricted-imports`       | ❌       | ✅      |
-
----
-
-## 📋 Decisões resolvidas (para Sprint ESM)
-
-1. **D1 — Ordem dos lotes da 2c**: **Priorizar `jest.doMock()`** (mais complexos, maior risco) — resolvê-los primeiro desbloqueia o padrão para os `jest.mock()` simples.
-2. **D2 — chalk@5 consolidado ou separado**: **Autônomo (subfase 3)** — manter como sprint separada pós-ESM estável reduz risco de rollback.
-3. **D3 — Codemod automatizado ou manual**: **Script automatizado** `add-js-extensions.ts` com dry-run — garante consistência em 488 arquivos sem erro humano.
+| Metrica                | Alvo        |
+| ---------------------- | ----------- |
+| tsc --noEmit           | 0 erros     |
+| vitest run             | 100%        |
+| eslint                 | 0 erros     |
+| chalk@5                | ✅          |

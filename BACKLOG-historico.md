@@ -1838,13 +1838,65 @@ Ver detalhes em commits e BACKOLG original (arquivado).
 
 ### Métricas finais
 
-| Métrica                       | Antes           | Depois  |
-| ----------------------------- | --------------- | ------- |
-| `chalk` import direto         | 10 files        | **0**   |
-| `zod` import direto           | 16 files        | **0**   |
-| `readline-sync` import direto | 2 files         | **0**   |
-| `dotenv` import direto        | 2 files         | **0**   |
-| Deps só por wrappers          | ❌              | ✅      |
-| `tsc --noEmit`                | 0 erros         | 0 erros |
-| `jest` pass                   | 100%            | 100%    |
-| `npm run lint`                | 39 pre-existing | 0 novos |
+| Métrica                       | Antes      | Depois  |
+| ----------------------------- | ---------- | ------- |
+| `chalk` import direto         | 10 files   | **0**   |
+| `zod` import direto           | 16 files   | **0**   |
+| `readline-sync` import direto | 2 files    | **0**   |
+| `dotenv` import direto        | 2 files    | **0**   |
+| Deps só por wrappers          | ❌         | ✅      |
+| `tsc --noEmit`                | 0 erros    | 0 erros |
+| `jest` pass                   | 100%       | 100%    |
+| `npm run lint`                | 39 previas | 0 novos |
+
+
+---
+
+## ❌ Sprint ESM — Abandonada (2026-06-05)
+
+**Motivo:** `jest.unstable_mockModule()` + `--experimental-vm-modules` causou instabilidade. Sistema ficou inutilizavel por 1 semana.
+
+**Substituida por:** `Sprint ESM-v2 — Vitest` (ver BACKLOG.md)
+
+### Subfase 2a — Infraestrutura ✅
+
+| #    | Tarefa                                                               | Status |
+| ---- | -------------------------------------------------------------------- | ------ |
+| 2a.1 | `package.json`: `"type": "module"`                                   | ✅     |
+| 2a.2 | `eslint.config.js`: require→import                                   | ✅     |
+| 2a.3 | `jest.config.js`: module.exports→export default                      | ✅     |
+| 2a.4 | `scripts/jest-strip-ansi-serializer.js`: module.exports→export       | ✅     |
+| 2a.5 | `shared/entry-menu.ts`: require.main→import.meta.main                | ✅     |
+
+### Subfase 2b — Codemod imports + __dirname ✅
+
+| #    | Tarefa                                      | Volume    | Status |
+| ---- | ------------------------------------------- | --------- | ------ |
+| 2b.1 | Adicionar .js em ~1999 imports (488 files)  | 488 files | ✅     |
+| 2b.2 | __dirname→import.meta.dirname (44 ocorr)    | 30 files  | ✅     |
+| 2b.3 | require()→import (37 chamadas)              | 10 files  | ✅     |
+| 2b.4 | require('crypto'/'fs')→import nativo        | 2 files   | ✅     |
+
+### Subfase 2c — Jest mocking (parcial)
+
+| #    | Tarefa                                       | Volume                | Status |
+| ---- | -------------------------------------------- | --------------------- | ------ |
+| 2c.1 | jest.mock()→jest.unstable_mockModule()       | 505 calls / 141 files | ✅     |
+| 2c.5 | Fix TS18004 (822 errors)                     | 30 files              | ✅     |
+| 2c.6 | Fix regressoes TSC dynamic import (22 err)   | 7 files               | ✅     |
+
+### Subfase 3 — chalk@5 (bloqueado)
+
+| #   | Tarefa                                           | Status |
+| --- | ------------------------------------------------ | ------ |
+| 3.1 | chalk@4→chalk@5                                  |        |
+| 3.2 | chalk.level write fix (read-only em v5)          |        |
+
+### Sprint DepWall — Completa
+
+| Metrica                       | Antes    | Depois |
+| ----------------------------- | -------- | ------ |
+| `chalk` import direto         | 10 files | **0**  |
+| `zod` import direto           | 16 files | **0**  |
+| `readline-sync` import direto | 2 files  | **0**  |
+| `dotenv` import direto        | 2 files  | **0**  |
