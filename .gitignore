@@ -41,8 +41,9 @@ tsconfig.json.bak
 # === Temp artifacts ===
 tmp/
 
-# === Gemfile ===
-gemini-code-*.ts
+# === Generated AI code ===
+gemini-code-*
+:Zone.Identifier
 
 # === Windows artifacts ===
 nul
