@@ -1,20 +1,20 @@
-import { glGetOpenIssues } from './gitlab-issues';
-import { apiGet, projectPath } from './gitlab-api';
-import { nonNull } from '../shared/test-utils';
-import { createMockAxiosInstance } from '../shared/test-utils/factories/response-factory';
+import { glGetOpenIssues } from './gitlab-issues.js';
+import { apiGet, projectPath } from './gitlab-api.js';
+import { nonNull } from '../shared/test-utils.js';
+import { createMockAxiosInstance } from '../shared/test-utils/factories/response-factory.js';
 
-jest.mock('./gitlab-api', () => ({
-    apiGet: jest.fn(),
-    apiPost: jest.fn(),
-    apiPut: jest.fn(),
-    projectPath: jest.fn(),
+vi.mock('./gitlab-api', async () => ({
+    apiGet: vi.fn(),
+    apiPost: vi.fn(),
+    apiPut: vi.fn(),
+    projectPath: vi.fn(),
 }));
 
 const mockClient = createMockAxiosInstance();
 
 beforeEach(() => {
-    jest.clearAllMocks();
-    jest.mocked(projectPath).mockImplementation(
+    vi.clearAllMocks();
+    vi.mocked(projectPath).mockImplementation(
         (owner: string, repo: string) =>
             `/projects/${owner ? encodeURIComponent(owner + '/' + repo) : encodeURIComponent(repo)}`,
     );
@@ -32,7 +32,7 @@ const ISSUE_FIXTURE = {
 
 describe('glGetOpenIssues', () => {
     it('returns formatted issues from GET /issues', async () => {
-        jest.mocked(apiGet).mockResolvedValue([ISSUE_FIXTURE]);
+        vi.mocked(apiGet).mockResolvedValue([ISSUE_FIXTURE]);
         const result = await glGetOpenIssues(mockClient, 'owner', 'repo');
         expect(result).toHaveLength(1);
         expect(result[0]).toMatchObject({
@@ -44,7 +44,7 @@ describe('glGetOpenIssues', () => {
     });
 
     it('calls apiGet with correct params', async () => {
-        jest.mocked(apiGet).mockResolvedValue([]);
+        vi.mocked(apiGet).mockResolvedValue([]);
         await glGetOpenIssues(mockClient, 'owner', 'repo');
         expect(projectPath).toHaveBeenCalledWith('owner', 'repo');
         expect(apiGet).toHaveBeenCalledWith(mockClient, expect.stringContaining('/issues'), {
@@ -55,31 +55,31 @@ describe('glGetOpenIssues', () => {
     });
 
     it('returns [] when data is null', async () => {
-        jest.mocked(apiGet).mockResolvedValue(null);
+        vi.mocked(apiGet).mockResolvedValue(null);
         const result = await glGetOpenIssues(mockClient, 'owner', 'repo');
         expect(result).toEqual([]);
     });
 
     it('returns [] when data is not an array', async () => {
-        jest.mocked(apiGet).mockResolvedValue({});
+        vi.mocked(apiGet).mockResolvedValue({});
         const result = await glGetOpenIssues(mockClient, 'owner', 'repo');
         expect(result).toEqual([]);
     });
 
     it('returns [] from empty array', async () => {
-        jest.mocked(apiGet).mockResolvedValue([]);
+        vi.mocked(apiGet).mockResolvedValue([]);
         const result = await glGetOpenIssues(mockClient, 'owner', 'repo');
         expect(result).toEqual([]);
     });
 
     it('maps labels as flat strings', async () => {
-        jest.mocked(apiGet).mockResolvedValue([{ ...ISSUE_FIXTURE, labels: ['bug', 'priority:high'] }]);
+        vi.mocked(apiGet).mockResolvedValue([{ ...ISSUE_FIXTURE, labels: ['bug', 'priority:high'] }]);
         const result = await glGetOpenIssues(mockClient, 'owner', 'repo');
         expect(nonNull(result[0]).labels).toEqual(['bug', 'priority:high']);
     });
 
     it('handles missing optional fields gracefully', async () => {
-        jest.mocked(apiGet).mockResolvedValue([{ iid: 1 }]);
+        vi.mocked(apiGet).mockResolvedValue([{ iid: 1 }]);
         const result = await glGetOpenIssues(mockClient, 'owner', 'repo');
         expect(nonNull(result[0]).title).toBe('');
         expect(nonNull(result[0]).number).toBe(1);
@@ -88,7 +88,7 @@ describe('glGetOpenIssues', () => {
     });
 
     it('filters out null items from array', async () => {
-        jest.mocked(apiGet).mockResolvedValue([null, ISSUE_FIXTURE]);
+        vi.mocked(apiGet).mockResolvedValue([null, ISSUE_FIXTURE]);
         const result = await glGetOpenIssues(mockClient, 'owner', 'repo');
         expect(result).toHaveLength(1);
     });

@@ -1,21 +1,37 @@
-jest.mock('child_process');
-jest.mock('fs', () => {
-    const actual = jest.requireActual<typeof import('fs')>('fs');
-    return { ...actual, existsSync: jest.fn(), readFileSync: jest.fn() };
-});
-jest.mock('./logger', () => ({
-    rootLogger: { error: jest.fn(), warn: jest.fn(), info: jest.fn() },
+const {
+    mockExecFileSync: _mockExecFileSync,
+    mockExistsSync: _mockExistsSync,
+    mockReadFileSync: _mockReadFileSync,
+} = vi.hoisted(() => ({
+    mockExecFileSync: vi.fn<(typeof import('child_process'))['execFileSync']>(),
+    mockExistsSync: vi.fn<(typeof import('fs'))['existsSync']>(),
+    mockReadFileSync: vi.fn<(typeof import('fs'))['readFileSync']>(),
+}));
+
+vi.mock('child_process', () => ({
+    default: { execFileSync: _mockExecFileSync },
+    execFileSync: _mockExecFileSync,
+}));
+
+vi.mock('fs', () => ({
+    default: { existsSync: _mockExistsSync, readFileSync: _mockReadFileSync },
+    existsSync: _mockExistsSync,
+    readFileSync: _mockReadFileSync,
+}));
+
+vi.mock('./logger', () => ({
+    rootLogger: { error: vi.fn(), warn: vi.fn(), info: vi.fn() },
 }));
 
 import { execFileSync } from 'child_process';
 import { existsSync, readFileSync } from 'fs';
 import type { PathLike } from 'fs';
-import { nonNull } from './test-utils';
-import { analyzeTestImpact, generateTestSelectionJson } from './test-impact';
+import { nonNull } from './test-utils.js';
+import { analyzeTestImpact, generateTestSelectionJson } from './test-impact.js';
 
-const mockExecFileSync = jest.mocked(execFileSync);
-const mockExistsSync = jest.mocked(existsSync);
-const mockReadFileSync = jest.mocked(readFileSync);
+const mockExecFileSync = vi.mocked(execFileSync);
+const mockExistsSync = vi.mocked(existsSync);
+const mockReadFileSync = vi.mocked(readFileSync);
 
 function mockPackageJson(hasJest: boolean): void {
     mockExistsSync.mockImplementation((p: PathLike) => typeof p === 'string' && p.includes('package.json'));
@@ -30,7 +46,7 @@ function mockPackageJson(hasJest: boolean): void {
 }
 
 beforeEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
 });
 
 describe('analyzeTestImpact', () => {

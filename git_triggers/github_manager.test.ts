@@ -1,25 +1,27 @@
-import { createThrottledClient } from '../shared/http-client';
-import GitHubManager from './github_manager';
-import { nonNull, nullAs } from '../shared/test-utils';
-import { createMockAxiosInstance } from '../shared/test-utils/factories/response-factory';
+import { createThrottledClient } from '../shared/http-client.js';
+import GitHubManager from './github_manager.js';
+import { nonNull, nullAs } from '../shared/test-utils.js';
+import { createMockAxiosInstance } from '../shared/test-utils/factories/response-factory.js';
 
-jest.mock('../shared/http-client', () => ({
-    createHttpClient: jest.fn(),
-    createThrottledClient: jest.fn(),
+vi.mock('../shared/http-client', async () => ({
+    createHttpClient: vi.fn(),
+    createThrottledClient: vi.fn(),
 }));
 
-jest.mock('../shared/logger', () => ({
-    Logger: jest.fn().mockImplementation(() => ({ error: jest.fn(), warn: jest.fn() })),
-    rootLogger: { error: jest.fn(), warn: jest.fn() },
+vi.mock('../shared/logger', async () => ({
+    Logger: vi.fn().mockImplementation(function () {
+        return { error: vi.fn(), warn: vi.fn() };
+    }),
+    rootLogger: { error: vi.fn(), warn: vi.fn() },
 }));
 
-jest.mock('../shared/prompt', () => ({
-    info: jest.fn(),
-    extractErrorMessage: jest.fn((err: Error) => err?.message || 'Erro desconhecido'),
+vi.mock('../shared/prompt', async () => ({
+    info: vi.fn(),
+    extractErrorMessage: vi.fn((err: Error) => err?.message || 'Erro desconhecido'),
 }));
 
-jest.mock('../shared/git-provider-error', () => ({
-    handleError: jest.fn((err: unknown, opts?: { returnNull?: boolean }) => {
+vi.mock('../shared/git-provider-error', async () => ({
+    handleError: vi.fn((err: unknown, opts?: { returnNull?: boolean }) => {
         if (opts?.returnNull) return null;
         throw err;
     }),
@@ -31,28 +33,28 @@ describe('GitHubManager', () => {
 
     beforeEach(() => {
         mockClient = createMockAxiosInstance();
-        jest.mocked(createThrottledClient).mockReturnValue(mockClient);
+        vi.mocked(createThrottledClient).mockReturnValue(mockClient);
         manager = new GitHubManager('myorg/myrepo', 'ghp_test', 'https://api.github.com');
     });
 
     describe('constructor', () => {
-        it('parses owner/repo from full name', () => {
+        it('parses owner/repo from full name', async () => {
             expect(manager.owner).toBe('myorg');
             expect(manager.repo).toBe('myrepo');
             expect(manager.provider).toBe('github');
         });
 
-        it('defaults api.github.com when no baseUrl', () => {
+        it('defaults api.github.com when no baseUrl', async () => {
             const m = new GitHubManager('a/b', 'tok');
             expect(m.apiUrl).toBe('https://api.github.com');
         });
 
-        it('strips trailing slash from baseUrl', () => {
+        it('strips trailing slash from baseUrl', async () => {
             const m = new GitHubManager('a/b', 'tok', 'https://ghe.test.com/');
             expect(m.apiUrl).toBe('https://ghe.test.com');
         });
 
-        it('throws when apiToken is empty string', () => {
+        it('throws when apiToken is empty string', async () => {
             expect(() => new GitHubManager('myorg/myrepo', '')).toThrow('apiToken é obrigatório');
         });
 
@@ -60,7 +62,7 @@ describe('GitHubManager', () => {
             expect(() => new GitHubManager('invalidrepo', 'ghp_test')).toThrow('repoFullName deve estar no formato');
         });
 
-        it('throws when repoFullName is empty string', () => {
+        it('throws when repoFullName is empty string', async () => {
             expect(() => new GitHubManager('', 'ghp_test')).toThrow('repoFullName deve estar no formato');
         });
     });
@@ -119,8 +121,8 @@ describe('GitHubManager', () => {
     });
 
     describe('runSchedule', () => {
-        it('throws not-implemented error', () => {
-            expect(() => manager.runSchedule('1')).toThrow('not available via REST API');
+        it('throws not-implemented error', async () => {
+            await expect(manager.runSchedule('1')).rejects.toThrow('not available via REST API');
         });
     });
 
@@ -538,7 +540,7 @@ describe('GitHubManager', () => {
     });
 
     describe('_formatPR', () => {
-        it('formats open PR', () => {
+        it('formats open PR', async () => {
             const raw = {
                 number: 1,
                 title: 'T',
@@ -556,7 +558,7 @@ describe('GitHubManager', () => {
             expect(result.approved).toBe(false);
         });
 
-        it('formats merged PR', () => {
+        it('formats merged PR', async () => {
             const raw = {
                 number: 2,
                 title: 'T',
@@ -573,7 +575,7 @@ describe('GitHubManager', () => {
             expect(result.approved).toBe(false);
         });
 
-        it('returns null for null input', () => {
+        it('returns null for null input', async () => {
             expect(manager._formatPR(nullAs<Record<string, unknown>>())).toBeNull();
         });
     });

@@ -4,9 +4,9 @@ import fs from 'fs';
 import path from 'path';
 import os from 'os';
 import { z } from 'zod';
-import Config from './config';
-import { rootLogger } from './logger';
-import type { ParseResult, FlatTest } from './result_parser';
+import Config from './config.js';
+import { rootLogger } from './logger.js';
+import type { ParseResult, FlatTest } from './result_parser.js';
 
 export interface MetricsRun {
     timestamp: string;

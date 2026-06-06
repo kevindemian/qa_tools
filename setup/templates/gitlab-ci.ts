@@ -1,5 +1,5 @@
-import { WorkflowBuilder, type JobConfig } from '../builder/workflow-builder';
-import type { SetupContext } from '../context';
+import { WorkflowBuilder, type JobConfig } from '../builder/workflow-builder.js';
+import type { SetupContext } from '../context.js';
 
 export function generateGitLabCI(ctx: SetupContext): string {
     const builder = new WorkflowBuilder('gitlab', ctx.projectName);

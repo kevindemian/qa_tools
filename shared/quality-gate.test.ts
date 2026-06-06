@@ -1,28 +1,28 @@
-import { runQualityGate, formatQualityGateJson, formatQualityGateText } from './quality-gate';
+import { runQualityGate, formatQualityGateJson, formatQualityGateText } from './quality-gate.js';
 
-jest.mock('child_process', () => ({
-    execFileSync: jest.fn(),
+vi.mock('child_process', async () => ({
+    execFileSync: vi.fn(),
 }));
 
-jest.mock('./metrics', () => ({
-    loadMetrics: jest.fn(),
-    calculateFlakiness: jest.fn(),
+vi.mock('./metrics', async () => ({
+    loadMetrics: vi.fn(),
+    calculateFlakiness: vi.fn(),
 }));
 
-jest.mock('./logger', () => ({
-    rootLogger: { error: jest.fn() },
+vi.mock('./logger', async () => ({
+    rootLogger: { error: vi.fn() },
 }));
 
 import { execFileSync } from 'child_process';
-import { loadMetrics, calculateFlakiness } from './metrics';
+import { loadMetrics, calculateFlakiness } from './metrics.js';
 
-const mockLoadMetrics = jest.mocked(loadMetrics);
-const mockCalcFlakiness = jest.mocked(calculateFlakiness);
-const mockExecFileSync = jest.mocked(execFileSync);
+const mockLoadMetrics = vi.mocked(loadMetrics);
+const mockCalcFlakiness = vi.mocked(calculateFlakiness);
+const mockExecFileSync = vi.mocked(execFileSync);
 
 describe('runQualityGate', () => {
     beforeEach(() => {
-        jest.clearAllMocks();
+        vi.clearAllMocks();
         delete process.env.QA_GATE_MIN_PASS_RATE;
         delete process.env.QA_GATE_MAX_FLAKY_PCT;
         delete process.env.QA_GATE_MIN_COVERAGE;
@@ -30,7 +30,7 @@ describe('runQualityGate', () => {
         mockExecFileSync.mockImplementation(() => '');
     });
 
-    it('returns pass when no metrics data exists (fallback git vazio)', () => {
+    it('returns pass when no metrics data exists (fallback git vazio)', async () => {
         mockLoadMetrics.mockReturnValue({ runs: [] });
         const result = runQualityGate();
         expect(result.overall).toBe('pass');
@@ -40,7 +40,7 @@ describe('runQualityGate', () => {
         expect(result.score).toBe(100);
     });
 
-    it('falls back to git data when metrics store empty', () => {
+    it('falls back to git data when metrics store empty', async () => {
         mockLoadMetrics.mockReturnValue({ runs: [] });
         mockExecFileSync.mockImplementation(
             () =>
@@ -52,7 +52,7 @@ describe('runQualityGate', () => {
         expect(result.checks[0]?.name).not.toBe('metrics-data');
     });
 
-    it('returns pass when no metrics data exists (gate skipped)', () => {
+    it('returns pass when no metrics data exists (gate skipped)', async () => {
         mockLoadMetrics.mockReturnValue({ runs: [] });
         const result = runQualityGate();
         expect(result.overall).toBe('pass');
@@ -62,7 +62,7 @@ describe('runQualityGate', () => {
         expect(result.score).toBe(100);
     });
 
-    it('returns pass when all gates pass', () => {
+    it('returns pass when all gates pass', async () => {
         mockLoadMetrics.mockReturnValue({
             runs: [
                 {
@@ -97,7 +97,7 @@ describe('runQualityGate', () => {
         expect(failChecks).toHaveLength(0);
     });
 
-    it('returns fail when pass rate is below threshold', () => {
+    it('returns fail when pass rate is below threshold', async () => {
         mockLoadMetrics.mockReturnValue({
             runs: [
                 {
@@ -131,7 +131,7 @@ describe('runQualityGate', () => {
         expect(passRateCheck?.status).toBe('fail');
     });
 
-    it('filters by project when project option is passed', () => {
+    it('filters by project when project option is passed', async () => {
         mockLoadMetrics.mockReturnValue({
             runs: [
                 {
@@ -157,7 +157,7 @@ describe('runQualityGate', () => {
         expect(result.checks.length).toBeGreaterThanOrEqual(1);
     });
 
-    it('reads thresholds from environment variables', () => {
+    it('reads thresholds from environment variables', async () => {
         process.env.QA_GATE_MIN_PASS_RATE = '90';
         process.env.QA_GATE_MAX_FLAKY_PCT = '10';
         process.env.QA_GATE_MIN_COVERAGE = '80';
@@ -195,7 +195,7 @@ describe('runQualityGate', () => {
         expect(result.overall).toBe('fail');
     });
 
-    it('handles errors gracefully', () => {
+    it('handles errors gracefully', async () => {
         mockLoadMetrics.mockImplementation(() => {
             throw new Error('simulated error');
         });
@@ -204,7 +204,7 @@ describe('runQualityGate', () => {
         expect(result.checks[0]?.name).toBe('error');
     });
 
-    it('calculates score as average of check scores', () => {
+    it('calculates score as average of check scores', async () => {
         mockLoadMetrics.mockReturnValue({
             runs: [
                 {
@@ -239,7 +239,7 @@ describe('runQualityGate', () => {
 });
 
 describe('formatQualityGateJson', () => {
-    it('formats result as JSON string', () => {
+    it('formats result as JSON string', async () => {
         const result = {
             overall: 'pass' as const,
             checks: [{ name: 'test', status: 'pass' as const, score: 100, threshold: 80, details: 'OK' }],
@@ -253,7 +253,7 @@ describe('formatQualityGateJson', () => {
 });
 
 describe('formatQualityGateText', () => {
-    it('formats result as human-readable text', () => {
+    it('formats result as human-readable text', async () => {
         const result = {
             overall: 'pass' as const,
             checks: [{ name: 'test', status: 'pass' as const, score: 100, threshold: 80, details: 'All good' }],
@@ -264,7 +264,7 @@ describe('formatQualityGateText', () => {
         expect(text).toContain('test');
     });
 
-    it('shows fail icon for failing checks', () => {
+    it('shows fail icon for failing checks', async () => {
         const result = {
             overall: 'fail' as const,
             checks: [{ name: 'broken', status: 'fail' as const, score: 30, threshold: 80, details: 'Too low' }],
@@ -275,7 +275,7 @@ describe('formatQualityGateText', () => {
         expect(text).toContain('broken');
     });
 
-    it('handles empty checks array', () => {
+    it('handles empty checks array', async () => {
         const result = { overall: 'pass' as const, checks: [], score: 0 };
         const text = formatQualityGateText(result);
         expect(text).toContain('PASS');

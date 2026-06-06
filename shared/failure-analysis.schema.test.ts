@@ -3,10 +3,10 @@ import {
     FailureAnalysisTestSchema,
     TestClassificationSchema,
     TestSeveritySchema,
-} from './failure-analysis.schema';
+} from './failure-analysis.schema.js';
 
 describe('TestClassificationSchema', () => {
-    it('accepts valid classifications', () => {
+    it('accepts valid classifications', async () => {
         expect(TestClassificationSchema.parse('ASSERTION')).toBe('ASSERTION');
         expect(TestClassificationSchema.parse('TIMEOUT')).toBe('TIMEOUT');
         expect(TestClassificationSchema.parse('ENVIRONMENT')).toBe('ENVIRONMENT');
@@ -15,27 +15,27 @@ describe('TestClassificationSchema', () => {
         expect(TestClassificationSchema.parse('UNKNOWN')).toBe('UNKNOWN');
     });
 
-    it('rejects invalid classification', () => {
+    it('rejects invalid classification', async () => {
         expect(() => TestClassificationSchema.parse('INVALID')).toThrow();
         expect(() => TestClassificationSchema.parse('')).toThrow();
     });
 });
 
 describe('TestSeveritySchema', () => {
-    it('accepts valid severities', () => {
+    it('accepts valid severities', async () => {
         expect(TestSeveritySchema.parse('high')).toBe('high');
         expect(TestSeveritySchema.parse('medium')).toBe('medium');
         expect(TestSeveritySchema.parse('low')).toBe('low');
     });
 
-    it('rejects invalid severity', () => {
+    it('rejects invalid severity', async () => {
         expect(() => TestSeveritySchema.parse('critical')).toThrow();
         expect(() => TestSeveritySchema.parse('')).toThrow();
     });
 });
 
 describe('FailureAnalysisTestSchema', () => {
-    it('accepts valid test entry', () => {
+    it('accepts valid test entry', async () => {
         const data = {
             title: 'Login fails',
             classification: 'ASSERTION',
@@ -45,7 +45,7 @@ describe('FailureAnalysisTestSchema', () => {
         expect(FailureAnalysisTestSchema.parse(data)).toEqual(data);
     });
 
-    it('rejects test with short recommendation', () => {
+    it('rejects test with short recommendation', async () => {
         expect(() =>
             FailureAnalysisTestSchema.parse({
                 title: 'Test',
@@ -56,7 +56,7 @@ describe('FailureAnalysisTestSchema', () => {
         ).toThrow();
     });
 
-    it('rejects test with missing title', () => {
+    it('rejects test with missing title', async () => {
         expect(() =>
             FailureAnalysisTestSchema.parse({
                 classification: 'ASSERTION',
@@ -68,7 +68,7 @@ describe('FailureAnalysisTestSchema', () => {
 });
 
 describe('FailureAnalysisSchema', () => {
-    it('accepts valid full report', () => {
+    it('accepts valid full report', async () => {
         const data = {
             tests: [
                 {
@@ -82,7 +82,7 @@ describe('FailureAnalysisSchema', () => {
         expect(FailureAnalysisSchema.parse(data)).toEqual(data);
     });
 
-    it('accepts multi-test report', () => {
+    it('accepts multi-test report', async () => {
         const data = {
             tests: [
                 {
@@ -103,15 +103,15 @@ describe('FailureAnalysisSchema', () => {
         expect(result.tests).toHaveLength(2);
     });
 
-    it('rejects empty tests array', () => {
+    it('rejects empty tests array', async () => {
         expect(() => FailureAnalysisSchema.parse({ tests: [] })).toThrow();
     });
 
-    it('rejects non-array tests', () => {
+    it('rejects non-array tests', async () => {
         expect(() => FailureAnalysisSchema.parse({ tests: 'not array' })).toThrow();
     });
 
-    it('rejects missing tests field', () => {
+    it('rejects missing tests field', async () => {
         expect(() => FailureAnalysisSchema.parse({})).toThrow();
     });
 });

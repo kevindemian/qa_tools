@@ -1,4 +1,4 @@
-import type { PreConditionSummary, PreConditionMatchResult } from '../shared/types';
+import type { PreConditionSummary, PreConditionMatchResult } from '../shared/types.js';
 
 /** Stopwords (English + Portuguese) for asymmetric token verification. */
 const STOPWORDS = new Set([

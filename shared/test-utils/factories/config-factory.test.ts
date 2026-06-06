@@ -1,8 +1,7 @@
-import { jest } from '@jest/globals';
-import { createMockConfig } from './config-factory';
+import { createMockConfig } from './config-factory.js';
 
 describe('createMockConfig', () => {
-    it('returns static methods as jest.fn()', () => {
+    it('returns static methods as vi.fn()', async () => {
         const mock = createMockConfig();
         expect(typeof mock.get).toBe('function');
         expect(typeof mock.set).toBe('function');
@@ -15,7 +14,7 @@ describe('createMockConfig', () => {
         expect(typeof mock.validateRequiredEnv).toBe('function');
     });
 
-    it('provides a working instance via getDefault()', () => {
+    it('provides a working instance via getDefault()', async () => {
         const mock = createMockConfig();
         const instance = mock.getDefault();
         expect(typeof instance.get).toBe('function');
@@ -23,20 +22,20 @@ describe('createMockConfig', () => {
         expect(typeof instance.getAllPrefixed).toBe('function');
     });
 
-    it('getDefault() returns a new instance each call', () => {
+    it('getDefault() returns a new instance each call', async () => {
         const mock = createMockConfig();
         const a = mock.getDefault();
         const b = mock.getDefault();
         expect(a).not.toBe(b);
     });
 
-    it('merges overrides correctly', () => {
-        const customGet = jest.fn(() => 'custom-value');
+    it('merges overrides correctly', async () => {
+        const customGet = vi.fn(() => 'custom-value');
         const mock = createMockConfig({ get: customGet });
         expect(mock.get).toBe(customGet);
     });
 
-    it('each call produces independent jest.fn() instances', () => {
+    it('each call produces independent vi.fn() instances', async () => {
         const a = createMockConfig();
         const b = createMockConfig();
         expect(a.get).not.toBe(b.get);

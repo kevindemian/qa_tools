@@ -1,5 +1,5 @@
-import { createMockJiraResource } from '../shared/test-utils/factories/jira-resource-factory';
-import { analyzeCoverage } from './coverage';
+import { createMockJiraResource } from '../shared/test-utils/factories/jira-resource-factory.js';
+import { analyzeCoverage } from './coverage.js';
 
 let mockJiraResource: ReturnType<typeof createMockJiraResource>;
 

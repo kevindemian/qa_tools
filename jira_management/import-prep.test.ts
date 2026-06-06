@@ -1,61 +1,66 @@
 // Mock factories
-const mockConfig: Record<string, unknown> = {
-    autoConfirm: false,
-    dryRun: false,
-    csvDefaultPath: '/default/path.csv',
-    csvPath: '',
-    jsonPath: '',
-    csvLabels: '',
-    jsonLabels: '',
-    get: jest.fn((key: string) => {
-        const val = mockConfig[key] as string | undefined;
-        return val || undefined;
-    }),
-};
-
-jest.mock('../shared/config', () => mockConfig);
-
-jest.mock('../shared/prompt', () => ({
-    confirm: jest.fn(),
-    prompt: jest.fn(),
-    warn: jest.fn(),
-    info: jest.fn(),
-    error: jest.fn(),
-    print: jest.fn(),
-    title: jest.fn(),
-    divider: jest.fn(),
-    smartPrompt: jest.fn(),
-    printSummary: jest.fn(),
-    isQuiet: jest.fn().mockReturnValue(true),
-    success: jest.fn(),
-}));
-
-jest.mock('../shared/state', () => ({
-    load: jest.fn().mockReturnValue({}),
-    update: jest.fn(),
-}));
-
-jest.mock('../shared/logger', () => ({
-    rootLogger: {
-        child: jest.fn().mockReturnValue({
-            info: jest.fn(),
-            warn: jest.fn(),
-            error: jest.fn(),
+const mockConfig = vi.hoisted(() => {
+    const _data: { [key: string]: string | boolean } = {
+        autoConfirm: false,
+        dryRun: false,
+        csvDefaultPath: '/default/path.csv',
+        csvPath: '',
+        jsonPath: '',
+        csvLabels: '',
+        jsonLabels: '',
+    };
+    return {
+        ..._data,
+        get: vi.fn((key: string) => {
+            const val = _data[key] as string | undefined;
+            return val || undefined;
         }),
-        warn: jest.fn(),
-        error: jest.fn(),
-        info: jest.fn(),
+    };
+});
+
+vi.mock('../shared/config', () => ({ default: mockConfig }));
+
+vi.mock('../shared/prompt', async () => ({
+    confirm: vi.fn(),
+    prompt: vi.fn(),
+    warn: vi.fn(),
+    info: vi.fn(),
+    error: vi.fn(),
+    print: vi.fn(),
+    title: vi.fn(),
+    divider: vi.fn(),
+    smartPrompt: vi.fn(),
+    printSummary: vi.fn(),
+    isQuiet: vi.fn().mockReturnValue(true),
+    success: vi.fn(),
+}));
+
+vi.mock('../shared/state', async () => ({
+    load: vi.fn().mockReturnValue({}),
+    update: vi.fn(),
+}));
+
+vi.mock('../shared/logger', async () => ({
+    rootLogger: {
+        child: vi.fn().mockReturnValue({
+            info: vi.fn(),
+            warn: vi.fn(),
+            error: vi.fn(),
+        }),
+        warn: vi.fn(),
+        error: vi.fn(),
+        info: vi.fn(),
     },
 }));
 
-jest.mock('fs', () => {
-    const actual = jest.requireActual<typeof import('fs')>('fs');
-    return { ...actual, writeFileSync: jest.fn<() => void, [string, string]>() };
+vi.mock('fs', async () => {
+    const actual = await vi.importActual<typeof import('fs')>('fs');
+    return { ...actual, writeFileSync: vi.fn<(...args: [string, string]) => () => void>() };
 });
 
-const mockMd = jest.fn<string, [string]>((s: string) => s);
-const mockMdToHtml = jest.fn<string, [string]>((s: string) => '<html>' + s + '</html>');
-jest.mock('../shared/markdown', () => ({ md: mockMd, mdToHtml: mockMdToHtml }));
+const mockMd = vi.hoisted(() => vi.fn<(...args: [string]) => string>((s: string) => s));
+const mockMdToHtml = vi.hoisted(() => vi.fn<(...args: [string]) => string>((s: string) => '<html>' + s + '</html>'));
+vi.mock('../shared/markdown', async () => ({ md: mockMd, mdToHtml: mockMdToHtml }));
 
 import {
     _checkResumeCheckpoint,
@@ -64,13 +69,14 @@ import {
     generatePreviewMarkdown,
     showPreview,
     parseJsonTests,
-} from './import-prep';
-import * as PROMPT from '../shared/prompt';
-import * as STATE from '../shared/state';
+} from './import-prep.js';
+import * as PROMPT from '../shared/prompt.js';
+import type { Mock } from 'vitest';
+import * as STATE from '../shared/state.js';
 import * as FS from 'fs';
-import { nonNull } from '../shared/test-utils';
-import CsvResource from './csv_resource';
-import { rootLogger } from '../shared/logger';
+import { nonNull } from '../shared/test-utils.js';
+import CsvResource from './csv_resource.js';
+import { rootLogger } from '../shared/logger.js';
 
 const makeTestCases = (count: number) =>
     Array.from({ length: count }, (_, i) => ({
@@ -90,90 +96,90 @@ const makeCp = (overrides: Record<string, unknown> = {}) => ({
     ...overrides,
 });
 
-describe('_checkResumeCheckpoint', () => {
+describe('_checkResumeCheckpoint', async () => {
     const tests = makeTestCases(10);
 
-    beforeEach(() => {
-        jest.clearAllMocks();
+    beforeEach(async () => {
+        vi.clearAllMocks();
     });
 
-    it('happy resume: checkpoint exists, age < 24h, done < testCount, confirm true', () => {
-        jest.mocked(STATE.load).mockReturnValue({ _checkpoint: makeCp() });
-        jest.mocked(PROMPT.confirm).mockReturnValue(true);
+    it('happy resume: checkpoint exists, age < 24h, done < testCount, confirm true', async () => {
+        vi.mocked(STATE.load).mockReturnValue({ _checkpoint: makeCp() });
+        vi.mocked(PROMPT.confirm).mockReturnValue(true);
         const result = _checkResumeCheckpoint(tests, '/path/test.csv', 'csv', 'TESTPROJ');
         expect(result.resumeFrom).toBe(2);
         expect(result.inMemoryTasksId).toEqual(['T-1', 'T-2']);
         expect(result.inMemoryTasksText).toEqual(['Test 1', 'Test 2']);
     });
 
-    it('expired checkpoint: age > 24h -> skip', () => {
+    it('expired checkpoint: age > 24h -> skip', async () => {
         const oldTs = new Date(Date.now() - 25 * 60 * 60 * 1000).toISOString();
-        jest.mocked(STATE.load).mockReturnValue({ _checkpoint: makeCp({ ts: oldTs }) });
+        vi.mocked(STATE.load).mockReturnValue({ _checkpoint: makeCp({ ts: oldTs }) });
         const result = _checkResumeCheckpoint(tests, '/path/test.csv', 'csv', 'TESTPROJ');
         expect(result.resumeFrom).toBe(0);
         expect(result.inMemoryTasksId).toEqual([]);
     });
 
-    it('user declines: confirm false -> skip', () => {
-        jest.mocked(STATE.load).mockReturnValue({ _checkpoint: makeCp() });
-        jest.mocked(PROMPT.confirm).mockReturnValue(false);
+    it('user declines: confirm false -> skip', async () => {
+        vi.mocked(STATE.load).mockReturnValue({ _checkpoint: makeCp() });
+        vi.mocked(PROMPT.confirm).mockReturnValue(false);
         const result = _checkResumeCheckpoint(tests, '/path/test.csv', 'csv', 'TESTPROJ');
         expect(result.resumeFrom).toBe(0);
         expect(result.inMemoryTasksId).toEqual([]);
     });
 
-    it('full checkpoint: done.length >= tests.length -> skip', () => {
+    it('full checkpoint: done.length >= tests.length -> skip', async () => {
         const fullDone = Array.from({ length: 10 }, (_, i) => ({ key: `T-${i + 1}`, title: `Test ${i + 1}` }));
-        jest.mocked(STATE.load).mockReturnValue({ _checkpoint: makeCp({ done: fullDone }) });
+        vi.mocked(STATE.load).mockReturnValue({ _checkpoint: makeCp({ done: fullDone }) });
         const result = _checkResumeCheckpoint(tests, '/path/test.csv', 'csv', 'TESTPROJ');
         expect(result.resumeFrom).toBe(0);
     });
 
-    it('no matching checkpoint: sourcePath differs -> skip', () => {
-        jest.mocked(STATE.load).mockReturnValue({ _checkpoint: makeCp() });
+    it('no matching checkpoint: sourcePath differs -> skip', async () => {
+        vi.mocked(STATE.load).mockReturnValue({ _checkpoint: makeCp() });
         const result = _checkResumeCheckpoint(tests, '/different/path.csv', 'csv', 'TESTPROJ');
         expect(result.resumeFrom).toBe(0);
     });
 });
 
-describe('filterTests', () => {
+describe('filterTests', async () => {
     const tests = makeTestCases(5);
 
-    beforeEach(() => {
-        jest.clearAllMocks();
+    beforeEach(async () => {
+        vi.clearAllMocks();
     });
 
-    it('no matches -> warn + null', () => {
-        jest.mocked(PROMPT.prompt).mockReturnValue('zzzzzz');
+    it('no matches -> warn + null', async () => {
+        vi.mocked(PROMPT.prompt).mockReturnValue('zzzzzz');
         const result = filterTests(tests);
         expect(result).toBeNull();
         expect(PROMPT.warn).toHaveBeenCalledWith(expect.stringContaining('Nenhum teste'));
     });
 
-    it('matches + user declines -> warn + null', () => {
-        jest.mocked(PROMPT.prompt).mockReturnValue('Test');
-        jest.mocked(PROMPT.confirm).mockReturnValue(false);
+    it('matches + user declines -> warn + null', async () => {
+        vi.mocked(PROMPT.prompt).mockReturnValue('Test');
+        vi.mocked(PROMPT.confirm).mockReturnValue(false);
         const result = filterTests(tests);
         expect(result).toBeNull();
         expect(PROMPT.warn).toHaveBeenCalledWith(expect.stringContaining('Operação cancelada'));
     });
 
-    it('matches + user accepts -> filtered list', () => {
-        jest.mocked(PROMPT.prompt).mockReturnValue('Test 1');
-        jest.mocked(PROMPT.confirm).mockReturnValue(true);
+    it('matches + user accepts -> filtered list', async () => {
+        vi.mocked(PROMPT.prompt).mockReturnValue('Test 1');
+        vi.mocked(PROMPT.confirm).mockReturnValue(true);
         const result = filterTests(tests);
         expect(result).toHaveLength(1);
         expect(nonNull(nonNull(result)[0]).title).toBe('Test 1');
     });
 });
 
-describe('validateImportBatch', () => {
-    beforeEach(() => {
-        jest.clearAllMocks();
-        jest.mocked(STATE.load).mockReturnValue({});
+describe('validateImportBatch', async () => {
+    beforeEach(async () => {
+        vi.clearAllMocks();
+        vi.mocked(STATE.load).mockReturnValue({});
     });
 
-    it('warnings <= 5 displayed', () => {
+    it('warnings <= 5 displayed', async () => {
         const testsWithWarnings = makeTestCases(3).map((t) => ({
             ...t,
             steps: [{ fields: { Action: '' } }],
@@ -184,7 +190,7 @@ describe('validateImportBatch', () => {
         expect(PROMPT.warn).toHaveBeenCalledWith(expect.stringContaining('Avisos'));
     });
 
-    it('warnings > 5 with truncated message', () => {
+    it('warnings > 5 with truncated message', async () => {
         const manyWarnings = Array.from({ length: 10 }, (_, i) => ({
             title: 'TC' + i,
             steps: [{ fields: { Action: '' } }],
@@ -193,7 +199,7 @@ describe('validateImportBatch', () => {
         expect(PROMPT.warn).toHaveBeenCalledWith(expect.stringContaining('e mais'));
     });
 
-    it('errors displayed -> returns undefined', () => {
+    it('errors displayed -> returns undefined', async () => {
         const invalidTests = [{ title: '', steps: [{ fields: { Action: 'x' } }] }];
         const result = validateImportBatch(invalidTests, '/path.csv', 'csv', 'TESTPROJ');
         expect(result).toBeUndefined();
@@ -201,7 +207,7 @@ describe('validateImportBatch', () => {
     });
 });
 
-describe('generatePreviewMarkdown', () => {
+describe('generatePreviewMarkdown', async () => {
     const tests = [
         {
             title: 'Login test',
@@ -223,27 +229,27 @@ describe('generatePreviewMarkdown', () => {
         },
     ];
 
-    it('renders test sections with headings', () => {
+    it('renders test sections with headings', async () => {
         const md = generatePreviewMarkdown(tests);
         expect(md).toContain('## Test 1 — Login test');
         expect(md).toContain('## Test 2 — Logout test');
         expect(md).toContain('---');
     });
 
-    it('includes description', () => {
+    it('includes description', async () => {
         const md = generatePreviewMarkdown(tests);
         expect(md).toContain('**Description:** Verifica login valido');
         expect(md).toContain('**Description:** —');
     });
 
-    it('includes metadata (group, precondition, links)', () => {
+    it('includes metadata (group, precondition, links)', async () => {
         const md = generatePreviewMarkdown(tests);
         expect(md).toContain('**Group:** Auth');
         expect(md).toContain('**Pre-cond:** Usuario existe');
         expect(md).toContain('**Links:** US-123');
     });
 
-    it('renders steps in Gira-like format (bullet per field)', () => {
+    it('renders steps in Gira-like format (bullet per field)', async () => {
         const md = generatePreviewMarkdown(tests);
         expect(md).toContain('### Steps');
         expect(md).toContain('**Step 1**');
@@ -257,12 +263,12 @@ describe('generatePreviewMarkdown', () => {
         expect(md).toContain('- **Expected Result:** y');
     });
 
-    it('renders Data field only when present', () => {
+    it('renders Data field only when present', async () => {
         const md = generatePreviewMarkdown(tests);
         expect(md).not.toContain('- **Data:** \n');
     });
 
-    it('shows fallback for empty descriptions', () => {
+    it('shows fallback for empty descriptions', async () => {
         const noDesc = [{ title: 'No desc', steps: [{ fields: { Action: 'a' } }] }];
         const md = generatePreviewMarkdown(noDesc);
         expect(md).toContain('**Description:** —');
@@ -274,20 +280,20 @@ describe('generatePreviewMarkdown', () => {
         expect(md).toContain('_No steps defined._');
     });
 
-    describe('with options', () => {
+    describe('with options', async () => {
         const single = [{ title: 'TC1', steps: [{ fields: { Action: 'a', Data: '', 'Expected Result': 'r' } }] }];
 
-        it('includes document title when provided', () => {
+        it('includes document title when provided', async () => {
             const md = generatePreviewMarkdown(single, { documentTitle: 'My Doc' });
             expect(md).toMatch(/^# My Doc/);
         });
 
-        it('includes timestamp when showTimestamp is true', () => {
+        it('includes timestamp when showTimestamp is true', async () => {
             const md = generatePreviewMarkdown(single, { showTimestamp: true });
             expect(md).toContain('*Generated on ');
         });
 
-        it('includes summary with labels, totalSteps, groupsCount', () => {
+        it('includes summary with labels, totalSteps, groupsCount', async () => {
             const md = generatePreviewMarkdown(single, {
                 labels: ['smoke', 'regression'],
                 totalSteps: 1,
@@ -297,19 +303,19 @@ describe('generatePreviewMarkdown', () => {
             expect(md).toContain('**Labels:** smoke, regression');
         });
 
-        it('includes keys in headings when provided', () => {
+        it('includes keys in headings when provided', async () => {
             const md = generatePreviewMarkdown(single, { keys: ['K-100'] });
             expect(md).toContain('## K-100 — TC1');
         });
     });
 });
 
-describe('parseJsonTests', () => {
-    beforeEach(() => {
-        jest.clearAllMocks();
+describe('parseJsonTests', async () => {
+    beforeEach(async () => {
+        vi.clearAllMocks();
     });
 
-    it('accepts ExpectedResult alias and warns once', () => {
+    it('accepts ExpectedResult alias and warns once', async () => {
         const jsonContent = JSON.stringify([
             {
                 title: 'TC1',
@@ -321,7 +327,7 @@ describe('parseJsonTests', () => {
             },
         ]);
         // writeFileSync is mocked in this file — use actual fs for temp file
-        const actualFs = jest.requireActual<typeof import('fs')>('fs');
+        const actualFs = await vi.importActual<typeof import('fs')>('fs');
         const tmp = '/tmp/test-expected-result-alias.json';
         actualFs.writeFileSync(tmp, jsonContent, 'utf-8');
 
@@ -335,14 +341,14 @@ describe('parseJsonTests', () => {
         actualFs.unlinkSync(tmp);
     });
 
-    it('prefers canonical Expected Result over alias', () => {
+    it('prefers canonical Expected Result over alias', async () => {
         const jsonContent = JSON.stringify([
             {
                 title: 'TC1',
                 steps: [{ Action: 'Step1', 'Expected Result': 'Canonical', ExpectedResult: 'Alias' }],
             },
         ]);
-        const actualFs = jest.requireActual<typeof import('fs')>('fs');
+        const actualFs = await vi.importActual<typeof import('fs')>('fs');
         const tmp = '/tmp/test-expected-result-canonical.json';
         actualFs.writeFileSync(tmp, jsonContent, 'utf-8');
 
@@ -352,14 +358,14 @@ describe('parseJsonTests', () => {
         actualFs.unlinkSync(tmp);
     });
 
-    it('handles missing both Expected Result and ExpectedResult', () => {
+    it('handles missing both Expected Result and ExpectedResult', async () => {
         const jsonContent = JSON.stringify([
             {
                 title: 'TC1',
                 steps: [{ Action: 'Step1' }],
             },
         ]);
-        const actualFs = jest.requireActual<typeof import('fs')>('fs');
+        const actualFs = await vi.importActual<typeof import('fs')>('fs');
         const tmp = '/tmp/test-expected-result-missing.json';
         actualFs.writeFileSync(tmp, jsonContent, 'utf-8');
 
@@ -370,7 +376,7 @@ describe('parseJsonTests', () => {
     });
 });
 
-describe('showPreview', () => {
+describe('showPreview', async () => {
     const tests = [
         {
             title: 'Login test',
@@ -380,11 +386,11 @@ describe('showPreview', () => {
         },
     ];
 
-    const mockOpen = jest.fn<Promise<boolean>, [string]>();
+    const mockOpen = vi.fn<(...args: [string]) => Promise<boolean>>();
 
-    beforeEach(() => {
-        jest.clearAllMocks();
-        jest.mocked(PROMPT.isQuiet).mockReturnValue(true);
+    beforeEach(async () => {
+        vi.clearAllMocks();
+        vi.mocked(PROMPT.isQuiet).mockReturnValue(true);
         mockOpen.mockResolvedValue(true);
     });
 
@@ -393,7 +399,7 @@ describe('showPreview', () => {
         expect(PROMPT.title).toHaveBeenCalledWith('Preview dos testes a serem criados');
         expect(mockMdToHtml).toHaveBeenCalledWith(expect.any(String), 'Preview — QA Tools');
         expect(FS.writeFileSync).toHaveBeenCalledTimes(2);
-        const calls = jest.mocked(FS.writeFileSync).mock.calls;
+        const calls = vi.mocked(FS.writeFileSync).mock.calls;
         expect(nonNull(calls[0])[0]).toContain('qa-preview.md');
         expect(nonNull(calls[1])[0]).toContain('qa-preview.html');
     });
@@ -418,14 +424,14 @@ describe('showPreview', () => {
     it('saves both .md and .html files', async () => {
         await showPreview(tests, ['smoke'], 2, 1, mockOpen);
         expect(FS.writeFileSync).toHaveBeenCalledTimes(2);
-        const calls = jest.mocked(FS.writeFileSync).mock.calls.map((c) => c[0] as string);
+        const calls = vi.mocked(FS.writeFileSync).mock.calls.map((c) => c[0] as string);
         expect(calls.some((p) => p.endsWith('.md'))).toBe(true);
         expect(calls.some((p) => p.endsWith('.html'))).toBe(true);
     });
 });
 
-describe('csv -> preview pipeline (e2e)', () => {
-    const fs = jest.requireActual<typeof import('fs')>('fs');
+describe('csv -> preview pipeline (e2e)', async () => {
+    const fs = await vi.importActual<typeof import('fs')>('fs');
     // CsvResource is imported at top level — no requireActual needed
 
     const crlf = '\r\n';
@@ -462,14 +468,14 @@ describe('csv -> preview pipeline (e2e)', () => {
     }
 
     let csvResource: InstanceType<typeof CsvResource>;
-    let loggerWarn: jest.SpyInstance;
+    let loggerWarn: Mock;
 
-    beforeAll(() => {
+    beforeAll(async () => {
         csvResource = new CsvResource();
-        loggerWarn = jest.spyOn(rootLogger, 'warn').mockImplementation(() => {});
+        loggerWarn = vi.spyOn(rootLogger, 'warn').mockImplementation(() => {});
     });
 
-    afterAll(() => {
+    afterAll(async () => {
         loggerWarn.mockRestore();
     });
 

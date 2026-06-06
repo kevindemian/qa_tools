@@ -1,6 +1,6 @@
-import type { AxiosInstance } from '../shared/deps';
-import type { Issue } from '../shared/types';
-import { apiGet, projectPath } from './gitlab-api';
+import type { AxiosInstance } from '../shared/deps.js';
+import type { Issue } from '../shared/types.js';
+import { apiGet, projectPath } from './gitlab-api.js';
 
 const ISSUES_PAGE_SIZE = 30;
 

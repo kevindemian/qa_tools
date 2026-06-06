@@ -1,11 +1,11 @@
 /** Pipeline handler — monitor CI/CD status, parse results, and offer failure analysis. */
-import { print, success, warn, info, title, prompt, confirm, printError, withSpinner } from '../shared/prompt';
-import { load as loadState, update as updateState } from '../shared/state';
-import { sleep } from '../shared/http-client';
-import type { ParseResult } from '../shared/result_parser';
-import type { PipelineTriggerResult, StateContainer } from '../shared/types';
-import type { GitProvider } from '../shared/types';
-import { writeEphemeral } from '../shared/temp-dir';
+import { print, success, warn, info, title, prompt, confirm, printError, withSpinner } from '../shared/prompt.js';
+import { load as loadState, update as updateState } from '../shared/state.js';
+import { sleep } from '../shared/http-client.js';
+import type { ParseResult } from '../shared/result_parser.js';
+import type { PipelineTriggerResult, StateContainer } from '../shared/types.js';
+import type { GitProvider } from '../shared/types.js';
+import { writeEphemeral } from '../shared/temp-dir.js';
 import {
     collectTestResults as _collectTestResults,
     createTestExecution as _createTestExecution,
@@ -14,12 +14,13 @@ import {
     _resolveGlob as __resolveGlob,
     downloadTestArtifacts as _downloadTestArtifacts,
     parseTestResults as _parseTestResults,
-} from './test-results';
-import { offerPipelineFailureAnalysis } from './llm-pipeline';
-import { handleBugCreation } from './pipeline-jira';
-import JiraClient from '../shared/jira-client';
-import JiraLinkManager from '../jira_management/jira_link_manager';
-import { currentProvider, pushHistory, setIsBusy, MSG_OPERATION_CANCELED } from './session-state';
+} from './test-results.js';
+import { offerPipelineFailureAnalysis } from './llm-pipeline.js';
+import { handleBugCreation } from './pipeline-jira.js';
+import JiraClient from '../shared/jira-client.js';
+import JiraLinkManager from '../jira_management/jira_link_manager.js';
+import { currentProvider, pushHistory, setIsBusy, MSG_OPERATION_CANCELED } from './session-state.js';
+import { confirmDestructiveAction } from '../shared/cli_base.js';
 
 const PIPELINE_POLL_INTERVAL_MS = 5000;
 const PIPELINE_POLL_TIMEOUT_MS = 300000;
@@ -117,7 +118,7 @@ async function handleQuickMerge(m: GitProvider, branch: string, pollStatus: stri
 }
 
 async function tryAcceptMerge(m: GitProvider, iid: string | number, prLabel: string): Promise<void> {
-    if (!confirm('Fazer merge de em ' + prLabel + ' #' + String(iid) + ' agora?', false)) return;
+    if (!confirmDestructiveAction('merge em ' + prLabel + ' #' + String(iid))) return;
     try {
         const mergeResult = await withSpinner('Fazendo merge de ' + prLabel + ' #' + String(iid) + '...', () =>
             m.acceptMergeRequest(iid),
@@ -240,7 +241,7 @@ async function buildPipelinePayload(
     print('  Projeto: ' + projectName);
     print('  Branch: ' + branch);
     print('  Variáveis: ' + payload.variables.length);
-    if (!confirm('Confirmar disparo de pipeline?')) {
+    if (!confirmDestructiveAction('disparo de pipeline')) {
         warn(MSG_OPERATION_CANCELED);
         return null;
     }
@@ -337,7 +338,7 @@ export async function handleTriggerPipeline(m: GitProvider, projectName: string)
 }
 
 export async function handleExportVariables(m: GitProvider): Promise<void> {
-    if (!confirm('Exportar TODAS as variáveis CI/CD (incluindo secrets)?', false)) {
+    if (!confirmDestructiveAction('exportar TODAS as variáveis CI/CD')) {
         warn(MSG_OPERATION_CANCELED);
         return;
     }

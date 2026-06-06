@@ -1,28 +1,32 @@
-jest.mock('fs', () => {
-    const actual = jest.requireActual<typeof import('fs')>('fs');
-    return {
-        ...actual,
-        existsSync: jest.fn(),
-        readFileSync: jest.fn(),
-        writeFileSync: jest.fn(),
-        renameSync: jest.fn(),
-        mkdirSync: jest.fn(),
-    };
-});
-jest.mock('./logger', () => ({
-    rootLogger: { error: jest.fn(), warn: jest.fn(), info: jest.fn() },
+const { mockExistsSync, mockReadFileSync, mockWriteFileSync, mockRenameSync, mockMkdirSync } = vi.hoisted(() => ({
+    mockExistsSync: vi.fn<(...args: unknown[]) => boolean>().mockReturnValue(false),
+    mockReadFileSync: vi.fn(),
+    mockWriteFileSync: vi.fn(),
+    mockRenameSync: vi.fn(),
+    mockMkdirSync: vi.fn(),
 }));
 
-import { existsSync, readFileSync, writeFileSync, renameSync, mkdirSync } from 'fs';
-import { recordAiGeneration, recordAiModification, getAiFeedbackSummary, getRecentAiRecords } from './ai-feedback';
-import { nonNull } from './test-utils';
-import type { AiGenerationRecord, AiModification } from './types';
+vi.mock('fs', () => ({
+    default: {
+        existsSync: mockExistsSync,
+        readFileSync: mockReadFileSync,
+        writeFileSync: mockWriteFileSync,
+        renameSync: mockRenameSync,
+        mkdirSync: mockMkdirSync,
+    },
+    existsSync: mockExistsSync,
+    readFileSync: mockReadFileSync,
+    writeFileSync: mockWriteFileSync,
+    renameSync: mockRenameSync,
+    mkdirSync: mockMkdirSync,
+}));
+vi.mock('./logger', () => ({
+    rootLogger: { error: vi.fn(), warn: vi.fn(), info: vi.fn() },
+}));
 
-const mockExistsSync = jest.mocked(existsSync);
-const mockReadFileSync = jest.mocked(readFileSync);
-const mockWriteFileSync = jest.mocked(writeFileSync);
-const mockRenameSync = jest.mocked(renameSync);
-const mockMkdirSync = jest.mocked(mkdirSync);
+import { recordAiGeneration, recordAiModification, getAiFeedbackSummary, getRecentAiRecords } from './ai-feedback.js';
+import { nonNull } from './test-utils.js';
+import type { AiGenerationRecord, AiModification } from './types.js';
 
 function makeRecord(id: string, overrides?: Partial<AiGenerationRecord>): AiGenerationRecord {
     return {
@@ -38,7 +42,7 @@ function makeRecord(id: string, overrides?: Partial<AiGenerationRecord>): AiGene
 }
 
 beforeEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
     mockExistsSync.mockReturnValue(false);
     mockMkdirSync.mockImplementation(() => undefined);
     mockWriteFileSync.mockImplementation(() => undefined);

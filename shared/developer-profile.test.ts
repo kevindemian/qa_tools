@@ -1,12 +1,13 @@
-import { rootLogger } from './logger';
-import { buildHtmlPage, buildErrorPage } from './html-factory';
-import { buildDeveloperProfile, generateDeveloperProfileHtml } from './developer-profile';
+import { rootLogger } from './logger.js';
+import type { Mock } from 'vitest';
+import { buildHtmlPage, buildErrorPage } from './html-factory.js';
+import { buildDeveloperProfile, generateDeveloperProfileHtml } from './developer-profile.js';
 
-jest.mock('./logger');
-jest.mock('./html-factory');
-jest.mock('./report-styles', () => ({ buildCss: () => ':root{}' }));
-jest.mock('./escape', () => ({ sanitizeHtml: (s: string) => s }));
-jest.mock('./primitives', () => ({
+vi.mock('./logger');
+vi.mock('./html-factory');
+vi.mock('./report-styles', () => ({ buildCss: () => ':root{}' }));
+vi.mock('./escape', () => ({ sanitizeHtml: (s: string) => s }));
+vi.mock('./primitives', () => ({
     Badge: ({ variant, children }: { variant?: string; children: string }) =>
         `<span class="badge-${variant}">${children}</span>`,
     MetricCard: ({ label, value }: { label: string; value: string }) =>
@@ -14,12 +15,12 @@ jest.mock('./primitives', () => ({
     MetricGrid: ({ children }: { children: string }) => `<div class="metric-grid">${children}</div>`,
 }));
 
-const mockBuildHtmlPage = buildHtmlPage as jest.MockedFunction<typeof buildHtmlPage>;
-const mockBuildErrorPage = buildErrorPage as jest.MockedFunction<typeof buildErrorPage>;
-const mockRootLoggerError = rootLogger.error as jest.MockedFunction<typeof rootLogger.error>;
+const mockBuildHtmlPage = buildHtmlPage as unknown as Mock<typeof buildHtmlPage>;
+const mockBuildErrorPage = buildErrorPage as unknown as Mock<typeof buildErrorPage>;
+const mockRootLoggerError = rootLogger.error as unknown as Mock<typeof rootLogger.error>;
 
 beforeEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
     mockBuildHtmlPage.mockReturnValue('<html>mocked</html>');
     mockBuildErrorPage.mockReturnValue('<html>error</html>');
 });

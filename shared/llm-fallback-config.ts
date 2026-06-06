@@ -5,10 +5,10 @@
  * Extracted from llm-fallback.ts (F35 debt attack plan).
  * No dependency on HTTP, rate-limiter, or circuit-breaker modules.
  */
-import Config from './config';
-import { rootLogger } from './logger';
+import Config from './config.js';
+import { rootLogger } from './logger.js';
 import { z } from 'zod';
-import type { LlmTier, ResponseFormat } from './types';
+import type { LlmTier, ResponseFormat } from './types.js';
 
 // ---- types ----
 

@@ -6,13 +6,13 @@
  * @module requirement-score
  */
 
-import { sanitizeHtml } from './escape';
-import { buildHtmlPage, buildErrorPage } from './html-factory';
-import { buildCss } from './report-styles';
-import { MetricCard, MetricGrid, DataTable } from './primitives';
-import type { TableColumn, TableRow } from './primitives';
-import { rootLogger } from './logger';
-import type { AiGenerationRecord } from './types/llm';
+import { sanitizeHtml } from './escape.js';
+import { buildHtmlPage, buildErrorPage } from './html-factory.js';
+import { buildCss } from './report-styles.js';
+import { MetricCard, MetricGrid, DataTable } from './primitives/index.js';
+import type { TableColumn, TableRow } from './primitives/index.js';
+import { rootLogger } from './logger.js';
+import type { AiGenerationRecord } from './types/llm.js';
 
 export interface RequirementScoreEntry {
     requirementId: string;

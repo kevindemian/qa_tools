@@ -1,15 +1,15 @@
 /** Parsing and resolution — dry-run handler, CSV/JSON path resolution, label parsing, JSON test parsing. */
 import * as fs from 'fs';
 import * as path from 'path';
-import Config from '../shared/config';
-import { rootLogger } from '../shared/logger';
-import { load as loadState } from '../shared/state';
-import { isPreconditionKey } from '../shared/quoted-string';
-import { ImportJsonSchema } from './csv-import-schema';
-import { warn, prompt, printSummary, askFilePath } from '../shared/prompt';
-import type { TestCase } from '../shared/types';
+import Config from '../shared/config.js';
+import { rootLogger } from '../shared/logger.js';
+import { load as loadState } from '../shared/state.js';
+import { isPreconditionKey } from '../shared/quoted-string.js';
+import { ImportJsonSchema } from './csv-import-schema.js';
+import { warn, prompt, printSummary, askFilePath } from '../shared/prompt.js';
+import type { TestCase } from '../shared/types.js';
 
-const csvDefaultPath = Config.get('csvDefaultPath') || path.join(__dirname, 'test_steps.csv');
+const csvDefaultPath = Config.get('csvDefaultPath') || path.join(import.meta.dirname, 'test_steps.csv');
 
 export function handleDryRun(
     tests: TestCase[],

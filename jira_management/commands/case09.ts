@@ -1,7 +1,7 @@
 /** Change the active Jira project name. */
-import { success, warn, ask } from '../../shared/prompt';
-import { update as updateState } from '../../shared/state';
-import type { CommandContext } from './context';
+import { success, warn, ask } from '../../shared/prompt.js';
+import { update as updateState } from '../../shared/state.js';
+import type { CommandContext } from './context.js';
 
 async function handler(c: CommandContext): Promise<boolean | void> {
     const newName = (await ask('Novo nome do projeto Jira')).toUpperCase().trim();

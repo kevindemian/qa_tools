@@ -5,12 +5,12 @@
  * @module ai-comparison
  */
 
-import { sanitizeHtml } from './escape';
-import { buildHtmlPage, buildErrorPage } from './html-factory';
-import { buildCss } from './report-styles';
-import { rootLogger } from './logger';
-import { MetricCard, MetricGrid, Badge, DataTable } from './primitives';
-import type { TableColumn, TableRow } from './primitives';
+import { sanitizeHtml } from './escape.js';
+import { buildHtmlPage, buildErrorPage } from './html-factory.js';
+import { buildCss } from './report-styles.js';
+import { rootLogger } from './logger.js';
+import { MetricCard, MetricGrid, Badge, DataTable } from './primitives/index.js';
+import type { TableColumn, TableRow } from './primitives/index.js';
 
 export interface AiComparisonRecord {
     testTitle: string;

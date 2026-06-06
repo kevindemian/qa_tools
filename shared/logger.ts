@@ -1,8 +1,8 @@
 import chalk from 'chalk';
 import fs from 'fs';
 import path from 'path';
-import Config from './config';
-import { formatDateISO } from './date-utils';
+import Config from './config.js';
+import { formatDateISO } from './date-utils.js';
 
 /** Numeric severity: DEBUG < INFO < WARN < ERROR. */
 const LEVELS: Record<string, number> = { DEBUG: 0, INFO: 1, WARN: 2, ERROR: 3 };

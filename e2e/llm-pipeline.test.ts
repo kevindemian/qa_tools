@@ -1,30 +1,30 @@
-jest.mock('../shared/llm-client', () => ({
-    llmPrompt: jest.fn(),
-    clearCache: jest.fn(),
-    getLlmClientMetrics: jest.fn(() => ({
+vi.mock('../shared/llm-client', async () => ({
+    llmPrompt: vi.fn(),
+    clearCache: vi.fn(),
+    getLlmClientMetrics: vi.fn(() => ({
         cacheHits: 0,
         cacheMisses: 0,
         totalPromptTokens: 0,
         totalCompletionTokens: 0,
         requestsByProviderKey: {},
     })),
-    resetLlmClientMetrics: jest.fn(),
-    parseRetryAfter: jest.fn(() => 2000),
-    resetCircuitState: jest.fn(),
-    resetRateLimiter: jest.fn(),
+    resetLlmClientMetrics: vi.fn(),
+    parseRetryAfter: vi.fn(() => 2000),
+    resetCircuitState: vi.fn(),
+    resetRateLimiter: vi.fn(),
 }));
-jest.mock('../shared/sanitize', () => ({
+vi.mock('../shared/sanitize', async () => ({
     sanitizeForLlm: (s: string) => s,
     sanitizeTerminal: (s: string) => s,
     sanitizeHtml: (s: string) => s,
 }));
 
-import { llmPrompt } from '../shared/llm-client';
-import { reviewWithLlm } from '../shared/llm-review';
-import { snapshotLlmMetrics } from '../shared/llm-metrics';
-import { clearCache } from '../shared/llm-client';
+import { llmPrompt } from '../shared/llm-client.js';
+import { reviewWithLlm } from '../shared/llm-review.js';
+import { snapshotLlmMetrics } from '../shared/llm-metrics.js';
+import { clearCache } from '../shared/llm-client.js';
 
-const mockLlmPrompt = jest.mocked(llmPrompt);
+const mockLlmPrompt = vi.mocked(llmPrompt);
 
 const validParsedReport = {
     tests: [
@@ -57,7 +57,7 @@ const multiElementParsedReport = {
 const invalidParsedReport = { tests: [{ title: 'Bad' }] };
 
 beforeEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
     clearCache();
 });
 

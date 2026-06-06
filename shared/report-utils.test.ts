@@ -1,6 +1,6 @@
 /** Tests for report-utils — formatting and stats for HTML report generation. */
-import type { FlatTest } from './result_parser';
-import { statsFromTests, fmtDuration, pctClass, pct, pctSub } from './report-utils';
+import type { FlatTest } from './result_parser.js';
+import { statsFromTests, fmtDuration, pctClass, pct, pctSub } from './report-utils.js';
 
 describe('statsFromTests', () => {
     const tests: FlatTest[] = [
@@ -10,7 +10,7 @@ describe('statsFromTests', () => {
         { title: 'T4', state: 'skipped', duration: 0 },
     ];
 
-    it('counts passed/failed/skipped correctly', () => {
+    it('counts passed/failed/skipped correctly', async () => {
         const stats = statsFromTests(tests);
         expect(stats.passed).toBe(2);
         expect(stats.failed).toBe(1);
@@ -18,17 +18,17 @@ describe('statsFromTests', () => {
         expect(stats.total).toBe(4);
     });
 
-    it('sums total duration', () => {
+    it('sums total duration', async () => {
         const stats = statsFromTests(tests);
         expect(stats.duration).toBe(450);
     });
 
-    it('returns zeroes for empty array', () => {
+    it('returns zeroes for empty array', async () => {
         const stats = statsFromTests([]);
         expect(stats).toEqual({ passed: 0, failed: 0, skipped: 0, total: 0, duration: 0 });
     });
 
-    it('handles all-passed tests', () => {
+    it('handles all-passed tests', async () => {
         const allPassed: FlatTest[] = [
             { title: 'X', state: 'passed', duration: 50 },
             { title: 'Y', state: 'passed', duration: 75 },
@@ -41,82 +41,82 @@ describe('statsFromTests', () => {
 });
 
 describe('fmtDuration', () => {
-    it('formats seconds only', () => {
+    it('formats seconds only', async () => {
         expect(fmtDuration(3000)).toBe('3s');
     });
 
-    it('formats minutes and seconds', () => {
+    it('formats minutes and seconds', async () => {
         expect(fmtDuration(125000)).toBe('2m 5s');
     });
 
-    it('handles zero', () => {
+    it('handles zero', async () => {
         expect(fmtDuration(0)).toBe('0s');
     });
 
-    it('handles exact minute', () => {
+    it('handles exact minute', async () => {
         expect(fmtDuration(60000)).toBe('1m 0s');
     });
 
-    it('handles large durations', () => {
+    it('handles large durations', async () => {
         expect(fmtDuration(3661000)).toBe('61m 1s');
     });
 });
 
 describe('pctClass', () => {
-    it('returns rate-good for 90%+', () => {
+    it('returns rate-good for 90%+', async () => {
         expect(pctClass(95)).toBe('rate-good');
         expect(pctClass(90)).toBe('rate-good');
     });
 
-    it('returns rate-warn for 70-89%', () => {
+    it('returns rate-warn for 70-89%', async () => {
         expect(pctClass(85)).toBe('rate-warn');
         expect(pctClass(70)).toBe('rate-warn');
     });
 
-    it('returns rate-bad for below 70%', () => {
+    it('returns rate-bad for below 70%', async () => {
         expect(pctClass(69)).toBe('rate-bad');
         expect(pctClass(0)).toBe('rate-bad');
     });
 
-    it('handles edge case at threshold boundaries', () => {
+    it('handles edge case at threshold boundaries', async () => {
         expect(pctClass(89.9)).toBe('rate-warn');
     });
 });
 
 describe('pct', () => {
-    it('calculates percentage', () => {
+    it('calculates percentage', async () => {
         expect(pct(5, 10)).toBe('50.0');
     });
 
-    it('handles zero total', () => {
+    it('handles zero total', async () => {
         expect(pct(5, 0)).toBe('0.0');
     });
 
-    it('handles all values', () => {
+    it('handles all values', async () => {
         expect(pct(10, 10)).toBe('100.0');
     });
 
-    it('handles zero value', () => {
+    it('handles zero value', async () => {
         expect(pct(0, 10)).toBe('0.0');
     });
 
-    it('formats with one decimal place', () => {
+    it('formats with one decimal place', async () => {
         expect(pct(1, 3)).toBe('33.3');
     });
 });
 
 describe('pctSub', () => {
-    it('returns HTML span with percentage', () => {
+    it('returns HTML span with percentage', async () => {
         const result = pctSub(5, 10);
         expect(result).toContain('50.0%');
         expect(result).toContain('span');
     });
 
-    it('returns empty string for zero total', () => {
+    it('returns empty string for zero total', async () => {
         expect(pctSub(5, 0)).toBe('');
     });
 
-    it('handles zero value', () => {
+    it('handles zero value', async () => {
         const result = pctSub(0, 10);
         expect(result).toContain('0.0%');
     });

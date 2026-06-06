@@ -1,18 +1,18 @@
 /** Create tests — orchestrate CSV/JSON import, issue creation, linking, and test execution reporting.
  * @module Functions ordered by dependency: readers → creators → validators → linkers. 219 lines under the 300-line R2 limit. */
 
-import type { JiraResourceLike } from '../shared/types';
-import type JiraLinkManager from './jira_link_manager';
-import type CsvResource from './csv_resource';
-import type { TestCase } from '../shared/types';
-import { TestCaseSchema } from './csv-import-schema';
-import type TestExecutionCreator from './test-execution-creator';
-import MappingFileGenerator from './mapping-file-generator';
-import { rootLogger } from '../shared/logger';
-import IssueLinker from './issue-linker';
-import { resolveCsvPath, resolveJsonPath, resolveLabels, parseJsonTests } from './import-prep';
-import { createTestsFromTestCases } from './import-orchestrator';
-import { isQuiet, info, warn, printError } from '../shared/prompt';
+import type { JiraResourceLike } from '../shared/types.js';
+import type JiraLinkManager from './jira_link_manager.js';
+import type CsvResource from './csv_resource.js';
+import type { TestCase } from '../shared/types.js';
+import { TestCaseSchema } from './csv-import-schema.js';
+import type TestExecutionCreator from './test-execution-creator.js';
+import MappingFileGenerator from './mapping-file-generator.js';
+import { rootLogger } from '../shared/logger.js';
+import IssueLinker from './issue-linker.js';
+import { resolveCsvPath, resolveJsonPath, resolveLabels, parseJsonTests } from './import-prep.js';
+import { createTestsFromTestCases } from './import-orchestrator.js';
+import { isQuiet, info, warn, printError } from '../shared/prompt.js';
 
 interface CreateFromFileParams {
     jiraResource: JiraResourceLike;

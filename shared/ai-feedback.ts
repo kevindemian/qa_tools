@@ -3,10 +3,10 @@
 import fs from 'fs';
 import path from 'path';
 import os from 'os';
-import Config from './config';
-import { rootLogger } from './logger';
-import { safeParseJson } from './safe-json';
-import type { AiGenerationRecord, AiModification } from './types';
+import Config from './config.js';
+import { rootLogger } from './logger.js';
+import { safeParseJson } from './safe-json.js';
+import type { AiGenerationRecord, AiModification } from './types.js';
 
 const STORE_FILE = 'ai-feedback.json';
 

@@ -1,4 +1,4 @@
-import { rootLogger } from './logger';
+import { rootLogger } from './logger.js';
 
 interface HandleErrorOptions {
     returnNull?: boolean;

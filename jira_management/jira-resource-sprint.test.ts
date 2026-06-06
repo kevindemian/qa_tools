@@ -1,47 +1,51 @@
-import { createHttpClient } from '../shared/http-client';
-import { createMockAxiosInstance } from '../shared/test-utils/factories/response-factory';
+import { createHttpClient } from '../shared/http-client.js';
+import { createMockAxiosInstance } from '../shared/test-utils/factories/response-factory.js';
 
-jest.mock('../shared/http-client', () => ({ createHttpClient: jest.fn() }));
+vi.mock('../shared/http-client', async () => ({ createHttpClient: vi.fn() }));
 
-jest.mock('../shared/logger', () => ({
-    Logger: jest.fn(() => ({
-        debug: jest.fn(),
-        info: jest.fn(),
-        warn: jest.fn(),
-        error: jest.fn(),
-        child: jest.fn(() => ({ debug: jest.fn(), error: jest.fn(), info: jest.fn(), warn: jest.fn() })),
-    })),
-    rootLogger: { debug: jest.fn(), info: jest.fn(), warn: jest.fn(), error: jest.fn() },
+vi.mock('../shared/logger', async () => ({
+    Logger: vi.fn(function () {
+        return {
+            debug: vi.fn(),
+            info: vi.fn(),
+            warn: vi.fn(),
+            error: vi.fn(),
+            child: vi.fn(function () {
+                return { debug: vi.fn(), error: vi.fn(), info: vi.fn(), warn: vi.fn() };
+            }),
+        };
+    }),
+    rootLogger: { debug: vi.fn(), info: vi.fn(), warn: vi.fn(), error: vi.fn() },
 }));
 
-jest.mock('../shared/prompt', () => ({
-    error: jest.fn(),
-    success: jest.fn(),
-    info: jest.fn(),
-    warn: jest.fn(),
-    extractErrorMessage: jest.fn().mockReturnValue('mocked error'),
+vi.mock('../shared/prompt', async () => ({
+    error: vi.fn(),
+    success: vi.fn(),
+    info: vi.fn(),
+    warn: vi.fn(),
+    extractErrorMessage: vi.fn().mockReturnValue('mocked error'),
 }));
 
-import JiraResource from './jira_resource';
-import { getTransitionsForIssue, addTasksToSprint, transitionIssue, WORKFLOW_MAP } from './jira-resource-sprint';
+import JiraResource from './jira_resource.js';
+import { getTransitionsForIssue, addTasksToSprint, transitionIssue, WORKFLOW_MAP } from './jira-resource-sprint.js';
 
-const mockGet = jest.fn();
-const mockPost = jest.fn();
-const mockPut = jest.fn();
+const mockGet = vi.fn();
+const mockPost = vi.fn();
+const mockPut = vi.fn();
 
 function buildResource(): JiraResource {
-    jest.mocked(createHttpClient).mockReturnValue(
+    vi.mocked(createHttpClient).mockReturnValue(
         createMockAxiosInstance({ get: mockGet, post: mockPost, put: mockPut }),
     );
     return new JiraResource('test-token', 'http://test-jira.com');
 }
 
 beforeEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
 });
 
 describe('WORKFLOW_MAP', () => {
-    it('defines expected transitions', () => {
+    it('defines expected transitions', async () => {
         expect(WORKFLOW_MAP.new).toContain('approve');
         expect(WORKFLOW_MAP['coding in progress']).toContain('coding done');
     });

@@ -7,7 +7,7 @@
  * @module primitives/table
  */
 
-import { tokens } from '../theme-tokens';
+import { tokens } from '../theme-tokens.js';
 
 export interface TableColumn {
     key: string;

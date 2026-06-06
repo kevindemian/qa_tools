@@ -1,24 +1,24 @@
-jest.mock('../../shared/prompt');
+vi.mock('../../shared/prompt');
 
-jest.mock('../../shared/bug-report', () => ({
-    collectManual: jest.fn(),
-    interactiveBugReportFlow: jest.fn(),
-    generateBugReportFromDescription: jest.fn(),
+vi.mock('../../shared/bug-report', async () => ({
+    collectManual: vi.fn(),
+    interactiveBugReportFlow: vi.fn(),
+    generateBugReportFromDescription: vi.fn(),
 }));
 
-import { printError, askConfirm, ask } from '../../shared/prompt';
-import { collectManual, interactiveBugReportFlow, generateBugReportFromDescription } from '../../shared/bug-report';
-import type { CommandContext } from './context';
-import { nonNull } from '../../shared/test-utils';
-import { createMockContext } from '../../shared/test-utils/factories/context-factory';
-import { createMockLinkManager } from '../../shared/test-utils/factories/link-manager-factory';
-import case20 from './case20';
+import { printError, askConfirm, ask } from '../../shared/prompt.js';
+import { collectManual, interactiveBugReportFlow, generateBugReportFromDescription } from '../../shared/bug-report.js';
+import type { CommandContext } from './context.js';
+import { nonNull } from '../../shared/test-utils.js';
+import { createMockContext } from '../../shared/test-utils/factories/context-factory.js';
+import { createMockLinkManager } from '../../shared/test-utils/factories/link-manager-factory.js';
+import case20 from './case20.js';
 
-const mockCollectManual = jest.mocked(collectManual);
-const mockInteractiveBugReportFlow = jest.mocked(interactiveBugReportFlow);
-const mockAskConfirm = jest.mocked(askConfirm);
-const mockAsk = jest.mocked(ask);
-const mockGenerateAi = jest.mocked(generateBugReportFromDescription);
+const mockCollectManual = vi.mocked(collectManual);
+const mockInteractiveBugReportFlow = vi.mocked(interactiveBugReportFlow);
+const mockAskConfirm = vi.mocked(askConfirm);
+const mockAsk = vi.mocked(ask);
+const mockGenerateAi = vi.mocked(generateBugReportFromDescription);
 
 function makeCtx(overrides: Partial<CommandContext> = {}): CommandContext {
     return { ...createMockContext({ base_url: '' }), ...overrides };
@@ -26,11 +26,11 @@ function makeCtx(overrides: Partial<CommandContext> = {}): CommandContext {
 
 describe('case20 - Bug Report handler', () => {
     beforeEach(() => {
-        jest.clearAllMocks();
+        vi.clearAllMocks();
     });
 
     it('catches collectManual error with printError', async () => {
-        const pushHistory = jest.fn();
+        const pushHistory = vi.fn();
         const ctx = makeCtx({ pushHistory });
 
         mockAskConfirm.mockResolvedValueOnce(false);
@@ -43,7 +43,7 @@ describe('case20 - Bug Report handler', () => {
     });
 
     it('calls collectManual and interactiveBugReportFlow, pushes history on success', async () => {
-        const pushHistory = jest.fn();
+        const pushHistory = vi.fn();
         const ctx = makeCtx({ pushHistory });
 
         mockAskConfirm.mockResolvedValueOnce(false);
@@ -72,7 +72,7 @@ describe('case20 - Bug Report handler', () => {
     });
 
     it('does not push history when creation fails', async () => {
-        const pushHistory = jest.fn();
+        const pushHistory = vi.fn();
         const ctx = makeCtx({ pushHistory });
 
         mockAskConfirm.mockResolvedValueOnce(false);
@@ -90,7 +90,7 @@ describe('case20 - Bug Report handler', () => {
     });
 
     it('passes linkManager to interactiveBugReportFlow', async () => {
-        const pushHistory = jest.fn();
+        const pushHistory = vi.fn();
         const linkManager = createMockLinkManager();
         const ctx = makeCtx({ pushHistory, linkManager });
 
@@ -114,7 +114,7 @@ describe('case20 - Bug Report handler', () => {
     });
 
     it('uses AI path when askConfirm returns true', async () => {
-        const pushHistory = jest.fn();
+        const pushHistory = vi.fn();
         const ctx = makeCtx({ pushHistory });
 
         mockAskConfirm.mockResolvedValueOnce(true);
@@ -145,7 +145,7 @@ describe('case20 - Bug Report handler', () => {
     });
 
     it('shows short description warning and cancels when user declines', async () => {
-        const pushHistory = jest.fn();
+        const pushHistory = vi.fn();
         const ctx = makeCtx({ pushHistory });
 
         mockAskConfirm.mockResolvedValueOnce(true).mockResolvedValueOnce(false);
@@ -158,7 +158,7 @@ describe('case20 - Bug Report handler', () => {
     });
 
     it('continues with AI generation after short description warning when user accepts', async () => {
-        const pushHistory = jest.fn();
+        const pushHistory = vi.fn();
         const ctx = makeCtx({ pushHistory });
 
         mockAskConfirm.mockResolvedValueOnce(true).mockResolvedValueOnce(true);
@@ -186,7 +186,7 @@ describe('case20 - Bug Report handler', () => {
     });
 
     it('parses linked issues from AI path', async () => {
-        const pushHistory = jest.fn();
+        const pushHistory = vi.fn();
         const ctx = makeCtx({ pushHistory });
 
         mockAskConfirm.mockResolvedValueOnce(true);
@@ -221,7 +221,7 @@ describe('case20 - Bug Report handler', () => {
     });
 
     it('falls back to manual when AI generation returns null', async () => {
-        const pushHistory = jest.fn();
+        const pushHistory = vi.fn();
         const ctx = makeCtx({ pushHistory });
 
         mockAskConfirm.mockResolvedValueOnce(true);

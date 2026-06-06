@@ -1,44 +1,44 @@
-import { jest } from '@jest/globals';
-import type Config from '../../../shared/config-accessor';
+import type Config from '../../../shared/config-accessor.js';
+import type { Mock } from 'vitest';
 
 export type MockConfigStatic = {
-    get: jest.Mock;
-    set: jest.Mock;
-    reset: jest.Mock;
-    load: jest.Mock;
-    getDefault: jest.Mock<() => Config>;
-    setAutoConfirm: jest.Mock;
-    getAllPrefixed: jest.Mock;
-    validateRequiredEnv: jest.Mock;
-    create: jest.Mock<() => Config>;
+    get: Mock;
+    set: Mock;
+    reset: Mock;
+    load: Mock;
+    getDefault: Mock<() => Config>;
+    setAutoConfirm: Mock;
+    getAllPrefixed: Mock;
+    validateRequiredEnv: Mock;
+    create: Mock<() => Config>;
 };
 
 type MockConfigInstance = {
-    get: jest.Mock;
-    setAutoConfirm: jest.Mock;
-    getAllPrefixed: jest.Mock;
+    get: Mock;
+    setAutoConfirm: Mock;
+    getAllPrefixed: Mock;
 };
 
 export function createMockConfigInstance(overrides?: Partial<MockConfigInstance>): Config {
     const base = {
-        get: jest.fn(),
-        setAutoConfirm: jest.fn(),
-        getAllPrefixed: jest.fn(() => ({})),
+        get: vi.fn(),
+        setAutoConfirm: vi.fn(),
+        getAllPrefixed: vi.fn(() => ({})),
     } as unknown as Config;
     return { ...base, ...(overrides as Partial<MockConfigInstance>) } as unknown as Config;
 }
 
 export function createMockConfig(overrides?: Partial<MockConfigStatic>): MockConfigStatic {
     const base: MockConfigStatic = {
-        get: jest.fn(),
-        set: jest.fn(),
-        reset: jest.fn(),
-        load: jest.fn(),
-        setAutoConfirm: jest.fn(),
-        getAllPrefixed: jest.fn(() => ({})),
-        validateRequiredEnv: jest.fn(),
-        create: jest.fn(() => createMockConfigInstance()),
-        getDefault: jest.fn(() => createMockConfigInstance()),
+        get: vi.fn(),
+        set: vi.fn(),
+        reset: vi.fn(),
+        load: vi.fn(),
+        setAutoConfirm: vi.fn(),
+        getAllPrefixed: vi.fn(() => ({})),
+        validateRequiredEnv: vi.fn(),
+        create: vi.fn(() => createMockConfigInstance()),
+        getDefault: vi.fn(() => createMockConfigInstance()),
     };
     return { ...base, ...overrides };
 }

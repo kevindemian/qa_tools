@@ -1,7 +1,7 @@
 /** Spinner (ora ESM) and progress bar (cli-progress) for interactive terminal feedback. */
 import cliProgress from 'cli-progress';
-import { Output, defaultOutput as output } from './output';
-import { isQuiet } from './prompt-ui';
+import { Output, defaultOutput as output } from './output.js';
+import { isQuiet } from './prompt-ui.js';
 
 interface SpinnerOptions {
     type?: 'dots' | 'bouncingBar' | 'earth';

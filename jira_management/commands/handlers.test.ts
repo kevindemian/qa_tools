@@ -1,45 +1,46 @@
-jest.mock('../../shared/prompt');
-jest.mock('../../shared/state');
-jest.mock('../../shared/logger');
-jest.mock('../../shared/cli_base');
-jest.mock('../jira_link_manager');
-jest.mock('../csv_resource');
+vi.mock('../../shared/prompt');
+vi.mock('../../shared/state');
+vi.mock('../../shared/logger');
+vi.mock('../../shared/cli_base');
+vi.mock('../jira_link_manager');
+vi.mock('../csv_resource');
 
-import * as promptModule from '../../shared/prompt';
-import * as stateModule from '../../shared/state';
-import * as loggerModule from '../../shared/logger';
-import case02 from './case02';
-import case03 from './case03';
-import case04 from './case04';
-import case05 from './case05';
-import case06 from './case06';
-import case07 from './case07';
-import case08 from './case08';
-import case09 from './case09';
-import case10 from './case10';
-import case11 from './case11';
-import case12 from './case12';
-import case13 from './case13';
-import case14 from './case14';
-import case15 from './case15';
-import case16 from './case16';
-import case01 from './case01';
-import * as flowModule from './test-execution-flow';
+import * as promptModule from '../../shared/prompt.js';
+import type { Mock } from 'vitest';
+import * as stateModule from '../../shared/state.js';
+import * as loggerModule from '../../shared/logger.js';
+import case02 from './case02.js';
+import case03 from './case03.js';
+import case04 from './case04.js';
+import case05 from './case05.js';
+import case06 from './case06.js';
+import case07 from './case07.js';
+import case08 from './case08.js';
+import case09 from './case09.js';
+import case10 from './case10.js';
+import case11 from './case11.js';
+import case12 from './case12.js';
+import case13 from './case13.js';
+import case14 from './case14.js';
+import case15 from './case15.js';
+import case16 from './case16.js';
+import case01 from './case01.js';
+import * as flowModule from './test-execution-flow.js';
 import fs from 'fs';
-import { createMockAxiosInstance } from '../../shared/test-utils/factories/response-factory';
-import JiraLinkManager from '../jira_link_manager';
-import CsvResource from '../csv_resource';
-import { SessionContext } from '../../shared/session-context';
+import { createMockAxiosInstance } from '../../shared/test-utils/factories/response-factory.js';
+import JiraLinkManager from '../jira_link_manager.js';
+import CsvResource from '../csv_resource.js';
+import { SessionContext } from '../../shared/session-context.js';
 
 // eslint-disable-next-line no-var
 var mockConfigMod: Record<string, unknown>;
 
-jest.mock('../../shared/config', () => {
+vi.mock('../../shared/config', () => {
     mockConfigMod = {};
-    const get = jest.fn((key: string) => (mockConfigMod[key] as string) ?? '');
+    const get = vi.fn((key: string) => (mockConfigMod[key] as string) ?? '');
     mockConfigMod.get = get;
-    mockConfigMod.getInstance = jest.fn(() => ({ get }));
-    return mockConfigMod;
+    mockConfigMod.getInstance = vi.fn(() => ({ get }));
+    return { default: mockConfigMod };
 });
 
 interface CreateTestsResult {
@@ -51,29 +52,29 @@ interface CreateTestsResult {
 }
 
 interface CreateTestsMock {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    createTestsFromCsv: jest.Mock<Promise<CreateTestsResult | undefined>, any[]>;
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    createTestsFromJson: jest.Mock<Promise<CreateTestsResult | undefined>, any[]>;
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    createTestExecutionWithLinks: jest.Mock<Promise<{ key: string; summary: string } | null>, any[]>;
+    createTestsFromCsv: Mock<(...args: any[]) => Promise<CreateTestsResult | undefined>>;
+
+    createTestsFromJson: Mock<(...args: any[]) => Promise<CreateTestsResult | undefined>>;
+
+    createTestExecutionWithLinks: Mock<(...args: any[]) => Promise<{ key: string; summary: string } | null>>;
 }
 
 // eslint-disable-next-line no-var
 var mockCreateTests: CreateTestsMock;
 
-jest.mock('../create_tests', () => {
+vi.mock('../create_tests', () => {
     mockCreateTests = {
-        createTestsFromCsv: jest.fn<Promise<CreateTestsResult | undefined>, [params: object]>(),
-        createTestsFromJson: jest.fn<Promise<CreateTestsResult | undefined>, [params: object]>(),
-        createTestExecutionWithLinks: jest.fn<Promise<{ key: string; summary: string } | null>, [params: object]>(),
+        createTestsFromCsv: vi.fn<(...args: [params: object]) => Promise<CreateTestsResult | undefined>>(),
+        createTestsFromJson: vi.fn<(...args: [params: object]) => Promise<CreateTestsResult | undefined>>(),
+        createTestExecutionWithLinks:
+            vi.fn<(...args: [params: object]) => Promise<{ key: string; summary: string } | null>>(),
     };
-    return mockCreateTests;
+    return { default: mockCreateTests };
 });
 
-jest.mock('./test-execution-flow', () => ({
-    offerTestExecutionAssociation: jest.fn().mockResolvedValue({ associated: false }),
-    showResults: jest.fn().mockResolvedValue(undefined),
+vi.mock('./test-execution-flow', async () => ({
+    offerTestExecutionAssociation: vi.fn().mockResolvedValue({ associated: false }),
+    showResults: vi.fn().mockResolvedValue(undefined),
 }));
 
 const mockJiraResource = {
@@ -85,17 +86,17 @@ const mockJiraResource = {
         _bytesWritten: 0,
         _maxLogSize: 0,
         _config: null,
-        _ensureDir: jest.fn(),
-        _rotateIfNeeded: jest.fn(),
-        _writeConsole: jest.fn(),
-        _writeFile: jest.fn(),
-        _write: jest.fn(),
-        child: jest.fn(),
-        writeFileOnly: jest.fn(),
-        debug: jest.fn(),
-        info: jest.fn(),
-        warn: jest.fn(),
-        error: jest.fn(),
+        _ensureDir: vi.fn(),
+        _rotateIfNeeded: vi.fn(),
+        _writeConsole: vi.fn(),
+        _writeFile: vi.fn(),
+        _write: vi.fn(),
+        child: vi.fn(),
+        writeFileOnly: vi.fn(),
+        debug: vi.fn(),
+        info: vi.fn(),
+        warn: vi.fn(),
+        error: vi.fn(),
         filePath: null,
     },
     baseUrl: 'https://jira.test.com',
@@ -103,27 +104,27 @@ const mockJiraResource = {
     personalToken: 'mock-token',
     jiraMode: 'server',
     axiosInstance: createMockAxiosInstance({
-        get: jest.fn().mockResolvedValue({ status: 200 }),
-        post: jest.fn().mockResolvedValue({}),
+        get: vi.fn().mockResolvedValue({ status: 200 }),
+        post: vi.fn().mockResolvedValue({}),
     }),
-    getProjectId: jest.fn().mockResolvedValue('123'),
-    getProjectVersions: jest.fn().mockResolvedValue([]),
-    updateFixVersions: jest.fn().mockResolvedValue({}),
-    getReleaseTasks: jest.fn().mockResolvedValue([]),
-    moveCardsToDone: jest.fn().mockResolvedValue({}),
-    releaseVersion: jest.fn().mockResolvedValue({}),
-    createVersion: jest.fn().mockResolvedValue({}),
-    checkReleaseTasksStatus: jest.fn().mockResolvedValue(undefined),
-    postJiraResource: jest.fn().mockResolvedValue({}),
-    getJiraResource: jest.fn(),
-    searchJiraIssues: jest.fn(),
-    getTransitionsForIssue: jest.fn(),
-    transitionIssue: jest.fn(),
-    getVersionId: jest.fn(),
-    getLatestReleases: jest.fn(),
-    addTasksToSprint: jest.fn(),
-    putJiraResource: jest.fn(),
-    getFromOriginPath: jest.fn(),
+    getProjectId: vi.fn().mockResolvedValue('123'),
+    getProjectVersions: vi.fn().mockResolvedValue([]),
+    updateFixVersions: vi.fn().mockResolvedValue({}),
+    getReleaseTasks: vi.fn().mockResolvedValue([]),
+    moveCardsToDone: vi.fn().mockResolvedValue({}),
+    releaseVersion: vi.fn().mockResolvedValue({}),
+    createVersion: vi.fn().mockResolvedValue({}),
+    checkReleaseTasksStatus: vi.fn().mockResolvedValue(undefined),
+    postJiraResource: vi.fn().mockResolvedValue({}),
+    getJiraResource: vi.fn(),
+    searchJiraIssues: vi.fn(),
+    getTransitionsForIssue: vi.fn(),
+    transitionIssue: vi.fn(),
+    getVersionId: vi.fn(),
+    getLatestReleases: vi.fn(),
+    addTasksToSprint: vi.fn(),
+    putJiraResource: vi.fn(),
+    getFromOriginPath: vi.fn(),
 };
 
 const mockSessionContext: SessionContext = Object.assign(new SessionContext(), {
@@ -135,12 +136,12 @@ const mockSessionContext: SessionContext = Object.assign(new SessionContext(), {
     results: [],
     lastOperation: '',
     packageManager: undefined,
-    createPackageManager: jest
-        .fn<{ updateReleaseNotes: jest.Mock; updateVersion: jest.Mock }, [dir: string]>()
-        .mockReturnValue({ updateReleaseNotes: jest.fn(), updateVersion: jest.fn() }),
-    pushHistory: jest.fn<void, []>(),
-    withBusy: jest
-        .fn<Promise<void>, [fn: () => Promise<void>, label?: string]>()
+    createPackageManager: vi
+        .fn<(...args: [dir: string]) => { updateReleaseNotes: Mock; updateVersion: Mock }>()
+        .mockReturnValue({ updateReleaseNotes: vi.fn(), updateVersion: vi.fn() }),
+    pushHistory: vi.fn<(...args: []) => void>(),
+    withBusy: vi
+        .fn<(...args: [fn: () => Promise<void>, label?: string]) => Promise<void>>()
         .mockImplementation(async (fn: () => Promise<void>) => fn()),
 });
 
@@ -151,15 +152,15 @@ const baseContext = {
     linkManagerXray: new JiraLinkManager(mockJiraResource),
     csvResource: new CsvResource(),
     ctx: mockSessionContext,
-    pushHistory: jest.fn(),
-    printSessionSummary: jest.fn(),
+    pushHistory: vi.fn(),
+    printSessionSummary: vi.fn(),
     base_url: 'https://jira.test.com',
     sessionLog: new loggerModule.Logger(),
 };
 
 beforeEach(() => {
-    jest.clearAllMocks();
-    jest.restoreAllMocks();
+    vi.clearAllMocks();
+    vi.restoreAllMocks();
     mockSessionContext.project_name = 'TEST';
     mockSessionContext.inMemoryTasksId = [];
     mockSessionContext.inMemoryTasksText = [];
@@ -182,7 +183,7 @@ describe('case02 — list versions', () => {
 
 describe('case03 — create version', () => {
     it('returns early when name is empty', async () => {
-        const prompt = jest.mocked(promptModule);
+        const prompt = vi.mocked(promptModule);
         prompt.ask.mockResolvedValueOnce('');
         const mod = case03;
         await mod.handler(baseContext);
@@ -190,7 +191,7 @@ describe('case03 — create version', () => {
     });
 
     it('creates version successfully', async () => {
-        const prompt = jest.mocked(promptModule);
+        const prompt = vi.mocked(promptModule);
         prompt.ask.mockResolvedValueOnce('v2.0.0').mockResolvedValueOnce('descricao');
         const mod = case03;
         await mod.handler(baseContext);
@@ -198,8 +199,8 @@ describe('case03 — create version', () => {
     });
 
     it('handles API error', async () => {
-        const prompt = jest.mocked(promptModule);
-        const logger = jest.mocked(loggerModule);
+        const prompt = vi.mocked(promptModule);
+        const logger = vi.mocked(loggerModule);
         prompt.ask.mockResolvedValueOnce('v2.0.0').mockResolvedValueOnce('');
         mockJiraResource.createVersion.mockRejectedValueOnce(new Error('API error'));
         const mod = case03;
@@ -211,7 +212,7 @@ describe('case03 — create version', () => {
 
 describe('case04 — assign fixVersion', () => {
     it('returns true when cancelled', async () => {
-        const prompt = jest.mocked(promptModule);
+        const prompt = vi.mocked(promptModule);
         prompt.askConfirm.mockResolvedValueOnce(true).mockResolvedValueOnce(false);
         const mod = case04;
         const result = await mod.handler(baseContext);
@@ -221,7 +222,7 @@ describe('case04 — assign fixVersion', () => {
     it('assigns fixVersion from in-memory tasks', async () => {
         mockSessionContext.inMemoryTasksId = ['TEST-1', 'TEST-2'];
         mockSessionContext.inMemoryTasksText = ['Task one', 'Task two'];
-        const prompt = jest.mocked(promptModule);
+        const prompt = vi.mocked(promptModule);
         prompt.ask.mockResolvedValueOnce('v2.0.0');
         prompt.askConfirm.mockResolvedValueOnce(true).mockResolvedValueOnce(true).mockResolvedValueOnce(false);
         const mod = case04;
@@ -236,7 +237,7 @@ describe('case04 — assign fixVersion', () => {
     it('handles partial error on updateFixVersions', async () => {
         mockSessionContext.inMemoryTasksId = ['TEST-1', 'TEST-2'];
         mockSessionContext.inMemoryTasksText = ['Task one', 'Task two'];
-        const prompt = jest.mocked(promptModule);
+        const prompt = vi.mocked(promptModule);
         prompt.ask.mockResolvedValueOnce('v2.0.0');
         prompt.askConfirm.mockResolvedValueOnce(true).mockResolvedValueOnce(true).mockResolvedValueOnce(false);
         mockJiraResource.updateFixVersions.mockResolvedValueOnce({}).mockRejectedValueOnce(new Error('API error'));
@@ -253,7 +254,7 @@ describe('case04 — assign fixVersion', () => {
     it('accepts manual task entry when not using in-memory tasks', async () => {
         mockSessionContext.inMemoryTasksId = ['TEST-1'];
         mockSessionContext.inMemoryTasksText = ['Existing task'];
-        const prompt = jest.mocked(promptModule);
+        const prompt = vi.mocked(promptModule);
         prompt.askConfirm
             .mockResolvedValueOnce(false) // useInMemory = false
             .mockResolvedValueOnce(true) // confirm fixVersion
@@ -280,8 +281,8 @@ describe('case04 — assign fixVersion', () => {
     it('adds tasks to sprint when confirmed', async () => {
         mockSessionContext.inMemoryTasksId = ['TEST-1'];
         mockSessionContext.inMemoryTasksText = ['Task one'];
-        mockJiraResource.postJiraResource = jest.fn().mockResolvedValueOnce({});
-        const prompt = jest.mocked(promptModule);
+        mockJiraResource.postJiraResource = vi.fn().mockResolvedValueOnce({});
+        const prompt = vi.mocked(promptModule);
         prompt.ask.mockResolvedValueOnce('v2.0.0'); // version name
         prompt.ask.mockResolvedValueOnce('6991'); // sprint ID
         prompt.askConfirm
@@ -296,7 +297,7 @@ describe('case04 — assign fixVersion', () => {
     it('warns when sprint ID is empty after confirming add to sprint', async () => {
         mockSessionContext.inMemoryTasksId = ['TEST-1'];
         mockSessionContext.inMemoryTasksText = ['Task one'];
-        const prompt = jest.mocked(promptModule);
+        const prompt = vi.mocked(promptModule);
         prompt.ask.mockResolvedValueOnce('v2.0.0'); // version name
         prompt.ask.mockResolvedValueOnce(''); // empty sprint ID
         prompt.askConfirm
@@ -311,8 +312,8 @@ describe('case04 — assign fixVersion', () => {
     it('handles error when adding tasks to sprint fails', async () => {
         mockSessionContext.inMemoryTasksId = ['TEST-1'];
         mockSessionContext.inMemoryTasksText = ['Task one'];
-        mockJiraResource.postJiraResource = jest.fn().mockRejectedValueOnce(new Error('Sprint API error'));
-        const prompt = jest.mocked(promptModule);
+        mockJiraResource.postJiraResource = vi.fn().mockRejectedValueOnce(new Error('Sprint API error'));
+        const prompt = vi.mocked(promptModule);
         prompt.ask.mockResolvedValueOnce('v2.0.0'); // version name
         prompt.ask.mockResolvedValueOnce('6991'); // sprint ID
         prompt.askConfirm
@@ -329,7 +330,7 @@ describe('case05 — update package version', () => {
     it('handles missing packageManager by prompting dir', async () => {
         mockSessionContext.packageManager = undefined;
         mockJiraResource.getReleaseTasks.mockResolvedValueOnce(['TASK-1']);
-        const prompt = jest.mocked(promptModule);
+        const prompt = vi.mocked(promptModule);
         prompt.ask.mockResolvedValueOnce('/some/dir').mockResolvedValueOnce('v2.0.0');
         const mod = case05;
         await mod.handler(baseContext);
@@ -337,9 +338,9 @@ describe('case05 — update package version', () => {
     });
 
     it('handles no tasks for version', async () => {
-        mockSessionContext.packageManager = { updateReleaseNotes: jest.fn(), updateVersion: jest.fn() };
+        mockSessionContext.packageManager = { updateReleaseNotes: vi.fn(), updateVersion: vi.fn() };
         mockJiraResource.getReleaseTasks.mockResolvedValueOnce(null);
-        const prompt = jest.mocked(promptModule);
+        const prompt = vi.mocked(promptModule);
         const mod = case05;
         await mod.handler(baseContext);
         expect(prompt.warn).toHaveBeenCalledWith('Nenhuma tarefa encontrada para esta versão.');
@@ -347,7 +348,7 @@ describe('case05 — update package version', () => {
 
     it('handles API error', async () => {
         mockJiraResource.getReleaseTasks.mockRejectedValueOnce(new Error('API error'));
-        const prompt = jest.mocked(promptModule);
+        const prompt = vi.mocked(promptModule);
         const mod = case05;
         await mod.handler(baseContext);
         expect(prompt.printError).toHaveBeenCalled();
@@ -356,7 +357,7 @@ describe('case05 — update package version', () => {
 
 describe('case06 — check release status', () => {
     it('checks status successfully', async () => {
-        const prompt = jest.mocked(promptModule);
+        const prompt = vi.mocked(promptModule);
         prompt.ask.mockResolvedValueOnce('v2.0.0');
         mockJiraResource.checkReleaseTasksStatus.mockResolvedValueOnce(undefined);
         const mod = case06;
@@ -365,7 +366,7 @@ describe('case06 — check release status', () => {
     });
 
     it('handles API error', async () => {
-        const prompt = jest.mocked(promptModule);
+        const prompt = vi.mocked(promptModule);
         prompt.ask.mockResolvedValueOnce('v2.0.0');
         mockJiraResource.checkReleaseTasksStatus.mockRejectedValueOnce(new Error('API error'));
         const mod = case06;
@@ -376,7 +377,7 @@ describe('case06 — check release status', () => {
 
 describe('case07 — close tasks', () => {
     it('returns true when cancelled', async () => {
-        const prompt = jest.mocked(promptModule);
+        const prompt = vi.mocked(promptModule);
         prompt.askConfirm.mockResolvedValueOnce(false);
         const mod = case07;
         const result = await mod.handler(baseContext);
@@ -384,7 +385,7 @@ describe('case07 — close tasks', () => {
     });
 
     it('returns true when no tasks found', async () => {
-        const prompt = jest.mocked(promptModule);
+        const prompt = vi.mocked(promptModule);
         prompt.askConfirm.mockResolvedValueOnce(true);
         mockJiraResource.getReleaseTasks.mockResolvedValueOnce([]);
         const mod = case07;
@@ -394,7 +395,7 @@ describe('case07 — close tasks', () => {
     });
 
     it('handles moveCardsToDone error', async () => {
-        const prompt = jest.mocked(promptModule);
+        const prompt = vi.mocked(promptModule);
         prompt.askConfirm.mockResolvedValueOnce(true);
         mockJiraResource.getReleaseTasks.mockResolvedValueOnce(['[TEST-1] task']);
         mockJiraResource.moveCardsToDone.mockRejectedValueOnce(new Error('API error'));
@@ -404,7 +405,7 @@ describe('case07 — close tasks', () => {
     });
 
     it('moves tasks to done successfully', async () => {
-        const prompt = jest.mocked(promptModule);
+        const prompt = vi.mocked(promptModule);
         prompt.ask.mockResolvedValueOnce('v2.0.0');
         prompt.askConfirm.mockResolvedValueOnce(true);
         mockJiraResource.getReleaseTasks.mockResolvedValueOnce(['[TEST-1] Fix bug', '[TEST-42] Add feature']);
@@ -422,7 +423,7 @@ describe('case07 — close tasks', () => {
     });
 
     it('warns when task IDs cannot be extracted', async () => {
-        const prompt = jest.mocked(promptModule);
+        const prompt = vi.mocked(promptModule);
         prompt.ask.mockResolvedValueOnce('v2.0.0');
         prompt.askConfirm.mockResolvedValueOnce(true);
         mockJiraResource.getReleaseTasks.mockResolvedValueOnce(['TASK-1', 'TASK-2']);
@@ -435,7 +436,7 @@ describe('case07 — close tasks', () => {
 
 describe('case08 — release version', () => {
     it('returns true when cancelled', async () => {
-        const prompt = jest.mocked(promptModule);
+        const prompt = vi.mocked(promptModule);
         prompt.ask.mockResolvedValueOnce('');
         prompt.askConfirm.mockResolvedValueOnce(false);
         const mod = case08;
@@ -445,7 +446,7 @@ describe('case08 — release version', () => {
     });
 
     it('releases version successfully', async () => {
-        const prompt = jest.mocked(promptModule);
+        const prompt = vi.mocked(promptModule);
         prompt.ask.mockResolvedValueOnce('v2.0.0');
         prompt.askConfirm.mockResolvedValueOnce(true);
         const mod = case08;
@@ -455,7 +456,7 @@ describe('case08 — release version', () => {
     });
 
     it('handles API error', async () => {
-        const prompt = jest.mocked(promptModule);
+        const prompt = vi.mocked(promptModule);
         prompt.ask.mockResolvedValueOnce('v2.0.0');
         prompt.askConfirm.mockResolvedValueOnce(true);
         mockJiraResource.releaseVersion.mockRejectedValueOnce(new Error('API error'));
@@ -468,7 +469,7 @@ describe('case08 — release version', () => {
 
 describe('case09 — switch project', () => {
     it('returns early when name is empty', async () => {
-        const prompt = jest.mocked(promptModule);
+        const prompt = vi.mocked(promptModule);
         prompt.ask.mockResolvedValueOnce('');
         const mod = case09;
         await mod.handler(baseContext);
@@ -476,7 +477,7 @@ describe('case09 — switch project', () => {
     });
 
     it('updates project name', async () => {
-        const prompt = jest.mocked(promptModule);
+        const prompt = vi.mocked(promptModule);
         prompt.ask.mockResolvedValueOnce('NEWPROJ');
         const mod = case09;
         await mod.handler(baseContext);
@@ -491,7 +492,7 @@ describe('case10 — show counters', () => {
     });
 
     it('sets directory and creates package manager', async () => {
-        const prompt = jest.mocked(promptModule);
+        const prompt = vi.mocked(promptModule);
         prompt.ask.mockResolvedValueOnce('/my/git/dir');
         const mod = case10;
         await mod.handler(baseContext);
@@ -502,7 +503,7 @@ describe('case10 — show counters', () => {
 
     it('handles missing createPackageManager', async () => {
         delete mockSessionContext.createPackageManager;
-        const prompt = jest.mocked(promptModule);
+        const prompt = vi.mocked(promptModule);
         prompt.ask.mockResolvedValueOnce('/some/dir');
         const mod = case10;
         await mod.handler(baseContext);
@@ -513,7 +514,7 @@ describe('case10 — show counters', () => {
 
 describe('case11 — generate template (CSV/JSON)', () => {
     it('generates CSV template', async () => {
-        const prompt = jest.mocked(promptModule);
+        const prompt = vi.mocked(promptModule);
         prompt.ask.mockResolvedValueOnce('CSV').mockResolvedValueOnce('/tmp/test-template.csv');
         const mod = case11;
         await mod.handler(baseContext);
@@ -523,7 +524,7 @@ describe('case11 — generate template (CSV/JSON)', () => {
     });
 
     it('generates JSON template', async () => {
-        const prompt = jest.mocked(promptModule);
+        const prompt = vi.mocked(promptModule);
         prompt.ask.mockResolvedValueOnce('JSON').mockResolvedValueOnce('/tmp/test-template.json');
         const mod = case11;
         await mod.handler(baseContext);
@@ -533,10 +534,10 @@ describe('case11 — generate template (CSV/JSON)', () => {
     });
 
     it('handles copy error', async () => {
-        const prompt = jest.mocked(promptModule);
+        const prompt = vi.mocked(promptModule);
         prompt.ask.mockResolvedValueOnce('CSV').mockResolvedValueOnce('/tmp/test-template.csv');
 
-        jest.spyOn(fs, 'copyFileSync').mockImplementationOnce(() => {
+        vi.spyOn(fs, 'copyFileSync').mockImplementationOnce(() => {
             throw new Error('permission denied');
         });
         const mod = case11;
@@ -545,7 +546,7 @@ describe('case11 — generate template (CSV/JSON)', () => {
     });
 
     it('rejects invalid format', async () => {
-        const prompt = jest.mocked(promptModule);
+        const prompt = vi.mocked(promptModule);
         prompt.ask.mockResolvedValueOnce('XML');
         const mod = case11;
         await mod.handler(baseContext);
@@ -556,7 +557,7 @@ describe('case11 — generate template (CSV/JSON)', () => {
 describe('case13 — create test execution', () => {
     it('creates from in-memory tasks', async () => {
         mockSessionContext.inMemoryTasksId = ['TEST-1', 'TEST-2'];
-        const prompt = jest.mocked(promptModule);
+        const prompt = vi.mocked(promptModule);
         prompt.askConfirm.mockResolvedValueOnce(true);
         const mod = case13;
         await mod.handler(baseContext);
@@ -564,16 +565,16 @@ describe('case13 — create test execution', () => {
     });
 
     it('returns early when no keys', async () => {
-        const prompt = jest.mocked(promptModule);
+        const prompt = vi.mocked(promptModule);
         const mod = case13;
         await mod.handler(baseContext);
         expect(prompt.warn).toHaveBeenCalledWith('Nenhuma key informada.');
     });
 
     it('creates test execution with manual key entry', async () => {
-        const prompt = jest.mocked(promptModule);
+        const prompt = vi.mocked(promptModule);
         prompt.ask.mockResolvedValueOnce('TEST-3 TEST-4');
-        const flow = jest.mocked(flowModule);
+        const flow = vi.mocked(flowModule);
         flow.offerTestExecutionAssociation.mockResolvedValueOnce({ associated: true, key: 'TE-1', mode: 'created' });
         const mod = case13;
         await mod.handler(baseContext);
@@ -591,10 +592,10 @@ describe('case13 — create test execution', () => {
 
     it('falls back to manual key entry when user declines in-memory tasks', async () => {
         mockSessionContext.inMemoryTasksId = ['TEST-1', 'TEST-2'];
-        const prompt = jest.mocked(promptModule);
+        const prompt = vi.mocked(promptModule);
         prompt.askConfirm.mockResolvedValueOnce(false);
         prompt.ask.mockResolvedValueOnce('MANUAL-1 MANUAL-2');
-        const flow = jest.mocked(flowModule);
+        const flow = vi.mocked(flowModule);
         const mod = case13;
         await mod.handler(baseContext);
         expect(flow.offerTestExecutionAssociation).toHaveBeenCalledWith(
@@ -607,9 +608,9 @@ describe('case13 — create test execution', () => {
     it('creates test execution from in-memory tasks with full flow', async () => {
         mockSessionContext.inMemoryTasksId = ['TEST-1', 'TEST-2'];
         mockSessionContext.inMemoryTasksText = ['Test one', 'Test two'];
-        const prompt = jest.mocked(promptModule);
+        const prompt = vi.mocked(promptModule);
         prompt.askConfirm.mockResolvedValueOnce(true);
-        const flow = jest.mocked(flowModule);
+        const flow = vi.mocked(flowModule);
         const mod = case13;
         await mod.handler(baseContext);
         expect(flow.offerTestExecutionAssociation).toHaveBeenCalledWith(
@@ -622,7 +623,7 @@ describe('case13 — create test execution', () => {
 
 describe('case14 — config Cypress directory', () => {
     it('returns early when dir is empty', async () => {
-        const prompt = jest.mocked(promptModule);
+        const prompt = vi.mocked(promptModule);
         prompt.ask.mockResolvedValueOnce('');
         const mod = case14;
         await mod.handler(baseContext);
@@ -630,8 +631,8 @@ describe('case14 — config Cypress directory', () => {
     });
 
     it('configures Cypress directory', async () => {
-        const prompt = jest.mocked(promptModule);
-        const state = jest.mocked(stateModule);
+        const prompt = vi.mocked(promptModule);
+        const state = vi.mocked(stateModule);
         prompt.ask.mockResolvedValueOnce('/cypress');
         const mod = case14;
         await mod.handler(baseContext);
@@ -641,7 +642,7 @@ describe('case14 — config Cypress directory', () => {
 
 describe('case15 — create tests from JSON', () => {
     it('returns when jsonPath is empty', async () => {
-        const prompt = jest.mocked(promptModule);
+        const prompt = vi.mocked(promptModule);
         prompt.ask.mockResolvedValueOnce('');
         const mod = case15;
         await mod.handler(baseContext);
@@ -657,7 +658,7 @@ describe('case15 — create tests from JSON', () => {
             status: '',
             sourcePath: '/fake/tests.json',
         });
-        const prompt = jest.mocked(promptModule);
+        const prompt = vi.mocked(promptModule);
         const mod = case15;
         await mod.handler(baseContext);
         expect(mockCreateTests.createTestsFromJson).toHaveBeenCalledWith(
@@ -677,11 +678,11 @@ describe('case15 — create tests from JSON', () => {
     });
 
     it('resolves relative jsonPath using lastJsonDir from state', async () => {
-        const state = jest.mocked(stateModule);
+        const state = vi.mocked(stateModule);
         state.load.mockReturnValue({ lastJsonDir: '/base/dir' });
-        const prompt = jest.mocked(promptModule);
+        const prompt = vi.mocked(promptModule);
         prompt.ask.mockResolvedValueOnce('relative/tests.json');
-        jest.spyOn(fs, 'existsSync').mockReturnValueOnce(true);
+        vi.spyOn(fs, 'existsSync').mockReturnValueOnce(true);
         mockCreateTests.createTestsFromJson.mockResolvedValueOnce({
             inMemoryTasksId: ['TEST-1'],
             inMemoryTasksText: ['Test'],
@@ -698,7 +699,7 @@ describe('case15 — create tests from JSON', () => {
     });
 
     it('does not resolve relative path when file does not exist', async () => {
-        const state = jest.mocked(stateModule);
+        const state = vi.mocked(stateModule);
         state.load.mockReturnValue({ lastJsonDir: '/base/dir' });
         mockCreateTests.createTestsFromJson.mockResolvedValueOnce({
             inMemoryTasksId: ['TEST-1'],
@@ -708,8 +709,8 @@ describe('case15 — create tests from JSON', () => {
             sourcePath: '/base/dir/tests.json',
         });
 
-        jest.spyOn(fs, 'existsSync').mockReturnValueOnce(false);
-        const prompt = jest.mocked(promptModule);
+        vi.spyOn(fs, 'existsSync').mockReturnValueOnce(false);
+        const prompt = vi.mocked(promptModule);
         prompt.ask.mockResolvedValueOnce('relative/tests.json');
         const mod = case15;
         await mod.handler(baseContext);
@@ -721,7 +722,7 @@ describe('case15 — create tests from JSON', () => {
 
 describe('case16 — config JSON directory', () => {
     it('returns early when dir is empty', async () => {
-        const prompt = jest.mocked(promptModule);
+        const prompt = vi.mocked(promptModule);
         prompt.ask.mockResolvedValueOnce('');
         const mod = case16;
         await mod.handler(baseContext);
@@ -729,8 +730,8 @@ describe('case16 — config JSON directory', () => {
     });
 
     it('configures JSON directory', async () => {
-        const prompt = jest.mocked(promptModule);
-        const state = jest.mocked(stateModule);
+        const prompt = vi.mocked(promptModule);
+        const state = vi.mocked(stateModule);
         prompt.ask.mockResolvedValueOnce('/json');
         const mod = case16;
         await mod.handler(baseContext);
@@ -746,7 +747,7 @@ describe('case12 — diagnostic connection', () => {
             .mockResolvedValueOnce({ status: 200 });
         const mod = case12;
         await mod.handler(baseContext);
-        const prompt = jest.mocked(promptModule);
+        const prompt = vi.mocked(promptModule);
         expect(prompt.printSummary).toHaveBeenCalled();
         expect(baseContext.pushHistory).toHaveBeenCalledWith('diagnostico', expect.stringContaining('3/4'), 'ok');
     });
@@ -758,7 +759,7 @@ describe('case12 — diagnostic connection', () => {
             .mockResolvedValueOnce({ status: 200 });
         const mod = case12;
         await mod.handler(baseContext);
-        const prompt = jest.mocked(promptModule);
+        const prompt = vi.mocked(promptModule);
         expect(prompt.printSummary).toHaveBeenCalled();
         expect(baseContext.pushHistory).toHaveBeenCalledWith('diagnostico', expect.stringContaining('2/4'), 'error');
     });
@@ -770,7 +771,7 @@ describe('case12 — diagnostic connection', () => {
             .mockResolvedValueOnce({ status: 200 });
         const mod = case12;
         await mod.handler(baseContext);
-        const prompt = jest.mocked(promptModule);
+        const prompt = vi.mocked(promptModule);
         expect(prompt.printSummary).toHaveBeenCalled();
         expect(baseContext.pushHistory).toHaveBeenCalledWith('diagnostico', expect.stringContaining('2/4'), 'error');
     });
@@ -782,7 +783,7 @@ describe('case12 — diagnostic connection', () => {
             .mockResolvedValueOnce({ status: 200 });
         const mod = case12;
         await mod.handler(baseContext);
-        const prompt = jest.mocked(promptModule);
+        const prompt = vi.mocked(promptModule);
         expect(prompt.printSummary).toHaveBeenCalled();
         expect(baseContext.pushHistory).toHaveBeenCalledWith('diagnostico', expect.stringContaining('2/4'), 'error');
     });
@@ -832,7 +833,7 @@ describe('case01 — create tests from CSV', () => {
         mockConfigMod.csvLabels = 'label1';
         mockSessionContext.inMemoryTasksId = ['TEST-1', 'TEST-2'];
         mockSessionContext.inMemoryTasksText = ['Test 1', 'Test 2'];
-        const state = jest.mocked(stateModule);
+        const state = vi.mocked(stateModule);
         state.load.mockReturnValue({ lastCsvPath: '/fake/test.csv' });
         mockCreateTests.createTestsFromCsv.mockResolvedValueOnce({
             inMemoryTasksId: ['TEST-1', 'TEST-2'],
@@ -841,7 +842,7 @@ describe('case01 — create tests from CSV', () => {
             status: 'ok',
             sourcePath: '',
         });
-        const flow = jest.mocked(flowModule);
+        const flow = vi.mocked(flowModule);
         flow.offerTestExecutionAssociation.mockResolvedValueOnce({ associated: true, key: 'TE-1', summary: 'test' });
         const mod = case01;
         await mod.handler(baseContext);
@@ -863,9 +864,9 @@ describe('case01 — create tests from CSV', () => {
             status: '',
             sourcePath: '',
         });
-        const prompt = jest.mocked(promptModule);
+        const prompt = vi.mocked(promptModule);
         prompt.ask.mockResolvedValueOnce('');
-        const state = jest.mocked(stateModule);
+        const state = vi.mocked(stateModule);
         state.load.mockReturnValue({});
         const mod = case01;
         expect(await mod.handler(baseContext)).toBeUndefined();

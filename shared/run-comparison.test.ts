@@ -1,23 +1,23 @@
-jest.mock('./llm-client', () => ({
-    llmPrompt: jest.fn(),
-    getLlmClientMetrics: jest.fn(() => ({
+vi.mock('./llm-client', async () => ({
+    llmPrompt: vi.fn(),
+    getLlmClientMetrics: vi.fn(() => ({
         cacheHits: 0,
         cacheMisses: 0,
         totalPromptTokens: 0,
         totalCompletionTokens: 0,
         requestsByProviderKey: {},
     })),
-    resetLlmClientMetrics: jest.fn(),
-    parseRetryAfter: jest.fn(() => 2000),
+    resetLlmClientMetrics: vi.fn(),
+    parseRetryAfter: vi.fn(() => 2000),
 }));
 
-import { llmPrompt } from './llm-client';
-import { compareRuns } from './run-comparison';
-import { sanitizeForLlm } from './sanitize';
-import { nonNull } from './test-utils';
-import type { MetricsRun } from './metrics';
+import { llmPrompt } from './llm-client.js';
+import { compareRuns } from './run-comparison.js';
+import { sanitizeForLlm } from './sanitize.js';
+import { nonNull } from './test-utils.js';
+import type { MetricsRun } from './metrics.js';
 
-const mockLlmPrompt = jest.mocked(llmPrompt);
+const mockLlmPrompt = vi.mocked(llmPrompt);
 
 const runA: MetricsRun = {
     timestamp: '2026-01-01T00:00:00.000Z',
@@ -42,7 +42,7 @@ const runB: MetricsRun = {
 };
 
 beforeEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
 });
 
 describe('compareRuns', () => {

@@ -1,23 +1,24 @@
-import { executeFlakyActions, calculateFlakinessWithWindow } from './flaky-auto-actions';
-import type { MetricsStore } from './metrics';
-import type { FlatTest } from './result_parser';
-import type { SearchIssuesResponse, JiraResourceLike } from './types';
-import { nonNull } from './test-utils';
+import { executeFlakyActions, calculateFlakinessWithWindow } from './flaky-auto-actions.js';
+import type { Mock } from 'vitest';
+import type { MetricsStore } from './metrics.js';
+import type { FlatTest } from './result_parser.js';
+import type { SearchIssuesResponse, JiraResourceLike } from './types.js';
+import { nonNull } from './test-utils.js';
 
 interface MockJira {
-    searchJiraIssues: jest.Mock;
-    postJiraResource: jest.Mock;
-    getTransitionsForIssue: jest.Mock;
-    transitionIssue: jest.Mock;
-    getJiraResource: jest.Mock;
-    putJiraResource: jest.Mock;
+    searchJiraIssues: Mock;
+    postJiraResource: Mock;
+    getTransitionsForIssue: Mock;
+    transitionIssue: Mock;
+    getJiraResource: Mock;
+    putJiraResource: Mock;
 }
 
 function mockJiraResource(captured: { calls: unknown[] }): MockJira {
     const bugStore = new Map<string, { key: string }>();
 
     return {
-        searchJiraIssues: jest.fn().mockImplementation(async (jql: string): Promise<SearchIssuesResponse> => {
+        searchJiraIssues: vi.fn().mockImplementation(async (jql: string): Promise<SearchIssuesResponse> => {
             captured.calls.push({ method: 'searchJiraIssues', jql });
             const match = jql.match(/\[Flaky\].*?"?([^"]+)"?/);
             if (!match) return { issues: [], total: 0 };
@@ -27,21 +28,21 @@ function mockJiraResource(captured: { calls: unknown[] }): MockJira {
             }
             return { issues: existing, total: existing.length };
         }),
-        postJiraResource: jest.fn().mockImplementation(async (_url: string, data: unknown) => {
+        postJiraResource: vi.fn().mockImplementation(async (_url: string, data: unknown) => {
             captured.calls.push({ method: 'postJiraResource', data });
             const key = 'FLAKY-' + (bugStore.size + 1);
             bugStore.set(key, { key });
             return { key, ...(data as Record<string, unknown>) };
         }),
-        getTransitionsForIssue: jest.fn().mockImplementation(async () => {
+        getTransitionsForIssue: vi.fn().mockImplementation(async () => {
             captured.calls.push({ method: 'getTransitionsForIssue' });
             return { Done: '41', Closed: '31' };
         }),
-        transitionIssue: jest.fn().mockImplementation(async () => {
+        transitionIssue: vi.fn().mockImplementation(async () => {
             captured.calls.push({ method: 'transitionIssue' });
         }),
-        getJiraResource: jest.fn().mockResolvedValue({}),
-        putJiraResource: jest.fn().mockResolvedValue(null),
+        getJiraResource: vi.fn().mockResolvedValue({}),
+        putJiraResource: vi.fn().mockResolvedValue(null),
     };
 }
 
@@ -90,7 +91,7 @@ function asMockJira(m: MockJira): JiraResourceLike {
 }
 
 describe('calculateFlakinessWithWindow', () => {
-    it('respects window size', () => {
+    it('respects window size', async () => {
         const tests: FlatTest[] = Array.from({ length: 30 }, (_, i) => ({
             title: 'FlakyTest',
             state: i % 2 === 0 ? 'failed' : 'passed',
@@ -117,7 +118,7 @@ describe('calculateFlakinessWithWindow', () => {
         }
     });
 
-    it('filters by minRuns', () => {
+    it('filters by minRuns', async () => {
         const minRunsTests: FlatTest[] = Array.from({ length: 3 }, (_, i) => ({
             title: 'MinRunTest',
             state: i % 2 === 0 ? 'failed' : 'passed',
@@ -142,7 +143,7 @@ describe('calculateFlakinessWithWindow', () => {
         expect(withMin2.length).toBeGreaterThan(0);
     });
 
-    it('counts skipped tests', () => {
+    it('counts skipped tests', async () => {
         const tests: FlatTest[] = [
             { title: 'Skippy', state: 'passed', duration: 100 },
             { title: 'Skippy', state: 'failed', duration: 100 },
@@ -247,7 +248,7 @@ describe('executeFlakyActions', () => {
 
     it('throws on Jira API failure when creating a bug', async () => {
         const errJira = mockJiraResource(captured);
-        errJira.postJiraResource = jest.fn().mockRejectedValue(new Error('API timeout'));
+        errJira.postJiraResource = vi.fn().mockRejectedValue(new Error('API timeout'));
         const runs = Array.from({ length: 15 }, (_, i) => flakyRun('ErrTest', i % 2 === 0 ? 'failed' : 'passed'));
         await expect(
             executeFlakyActions(makeStore(runs), asMockJira(errJira), 'PROJ', {
@@ -295,7 +296,7 @@ describe('executeFlakyActions', () => {
     });
 
     it('handles search failure gracefully when checking for re-enable', async () => {
-        jira.searchJiraIssues = jest.fn().mockRejectedValue(new Error('Jira search failed'));
+        jira.searchJiraIssues = vi.fn().mockRejectedValue(new Error('Jira search failed'));
         const runs = Array.from({ length: 15 }, () => flakyRun('SearchFail', 'passed'));
         const actions = await executeFlakyActions(makeStore(runs), asMockJira(jira), 'PROJ', {
             threshold: 0.5,
@@ -305,7 +306,7 @@ describe('executeFlakyActions', () => {
     });
 
     it('handles search failure gracefully during dedup check', async () => {
-        jira.searchJiraIssues = jest.fn().mockRejectedValue(new Error('Jira search failed'));
+        jira.searchJiraIssues = vi.fn().mockRejectedValue(new Error('Jira search failed'));
         const runs = Array.from({ length: 15 }, (_, i) => flakyRun('DedupFail', i % 2 === 0 ? 'failed' : 'passed'));
         const actions = await executeFlakyActions(makeStore(runs), asMockJira(jira), 'PROJ', {
             threshold: 0.1,
@@ -323,7 +324,7 @@ describe('executeFlakyActions', () => {
             minTotalRuns: 5,
             threshold: 0.1,
         });
-        jira.getTransitionsForIssue = jest.fn().mockRejectedValue(new Error('Transition error'));
+        jira.getTransitionsForIssue = vi.fn().mockRejectedValue(new Error('Transition error'));
         const stableRuns = Array.from({ length: 15 }, () => flakyRun('ReenableFail', 'passed'));
         await expect(
             executeFlakyActions(makeStore(stableRuns), asMockJira(jira), 'PROJ', {

@@ -11,8 +11,8 @@
  * I-05: No conclusion without supporting evidence
  */
 
-import type { InvariantFn, ValidationContext, ValidationResult } from './artifact-validator';
-import { fail, pass, warn } from './artifact-validator';
+import type { InvariantFn, ValidationContext, ValidationResult } from './artifact-validator.js';
+import { fail, pass, warn } from './artifact-validator.js';
 
 const PLACEHOLDER_RE = /\b(TODO|FIXME|TBD|asdf|xxxxx)\b/i;
 const MARKDOWN_RE = /[*_~`]/;

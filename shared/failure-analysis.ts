@@ -2,18 +2,19 @@
 import fs from 'fs';
 import path from 'path';
 import { execFileSync } from 'child_process';
-import type { FlatTest } from './result_parser';
-import { llmPrompt, type LlmPromptOptions } from './llm-client';
-import { reviewWithLlm, type ReviewResult } from './llm-review';
-import { rootLogger } from './logger';
-import { generateReportWithFallback } from './report-generator';
-import { snapshotLlmMetrics } from './llm-metrics';
-import Config from './config-accessor';
-import { sanitizeForLlm } from './sanitize';
-import { withSpinner } from './spinner';
-import { ClassifyResponseSchema } from './classify.schema';
-import { consensusGenerate } from './llm-self-consistency';
-import { ArtifactValidator, type ValidationContext, pass, fail } from './artifact-validator';
+import type { FlatTest } from './result_parser.js';
+import { llmPrompt } from './llm-client.js';
+import type { LlmPromptOptions } from './types/llm.js';
+import { reviewWithLlm, type ReviewResult } from './llm-review.js';
+import { rootLogger } from './logger.js';
+import { generateReportWithFallback } from './report-generator.js';
+import { snapshotLlmMetrics } from './llm-metrics.js';
+import Config from './config-accessor.js';
+import { sanitizeForLlm } from './sanitize.js';
+import { withSpinner } from './spinner.js';
+import { ClassifyResponseSchema } from './classify.schema.js';
+import { consensusGenerate } from './llm-self-consistency.js';
+import { ArtifactValidator, type ValidationContext, pass, fail } from './artifact-validator.js';
 
 export interface AnalysisReport {
     content: string;
@@ -83,7 +84,7 @@ classifyValidator.addInvariant('CLASSIFY-SCHEMA', (artifact: string, _context: V
         : [fail('CLASSIFY-SCHEMA', 'Response does not match classification schema: ' + parsed.error.message)];
 });
 
-const PROMPT_DIR = path.resolve(__dirname, 'prompts');
+const PROMPT_DIR = path.resolve(import.meta.dirname, 'prompts');
 
 function readPrompt(file: string): string {
     try {

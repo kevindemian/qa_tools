@@ -2,15 +2,15 @@ import fs from 'fs';
 import path from 'path';
 import os from 'os';
 import nock from 'nock';
-import JiraResource from '../jira_management/jira_resource';
-import JiraLinkManager from '../jira_management/jira_link_manager';
-import { parseTestResults } from '../shared/result_parser';
-import { nonNull } from '../shared/test-utils';
-import { matchResultsToTests, createTestExecutionFromResults } from '../jira_management/result_reporter';
+import JiraResource from '../jira_management/jira_resource.js';
+import JiraLinkManager from '../jira_management/jira_link_manager.js';
+import { parseTestResults } from '../shared/result_parser.js';
+import { nonNull } from '../shared/test-utils.js';
+import { matchResultsToTests, createTestExecutionFromResults } from '../jira_management/result_reporter.js';
 
 const tmpHome = fs.mkdtempSync(path.join(os.tmpdir(), 'qa-e2e-'));
 
-const FIXTURES = path.join(__dirname, 'fixtures');
+const FIXTURES = path.join(import.meta.dirname, 'fixtures');
 
 function setupJiraMocks(base: string): void {
     const api = nock(base + '/rest/api/2');
@@ -66,14 +66,14 @@ describe('E2E: Result Processing Pipeline', () => {
     });
 
     beforeEach(() => {
-        jest.spyOn(console, 'log').mockImplementation(() => {});
-        jest.spyOn(process.stdout, 'write').mockImplementation(() => true);
+        vi.spyOn(console, 'log').mockImplementation(() => {});
+        vi.spyOn(process.stdout, 'write').mockImplementation(() => true);
         nock.cleanAll();
         setupJiraMocks('http://localhost:1997/jira');
     });
 
     afterEach(() => {
-        jest.restoreAllMocks();
+        vi.restoreAllMocks();
         nock.cleanAll();
     });
 
@@ -145,7 +145,7 @@ describe('E2E: Result Processing Pipeline', () => {
         expect(unmatched).toHaveLength(1);
     });
 
-    it('returns empty match for missing mapping file', () => {
+    it('returns empty match for missing mapping file', async () => {
         const result = matchResultsToTests(
             [{ title: 'TC01', state: 'passed', duration: 100 }],
             '/tmp/nonexistent.json',

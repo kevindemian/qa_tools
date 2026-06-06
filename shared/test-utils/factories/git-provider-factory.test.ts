@@ -1,8 +1,7 @@
-import { jest } from '@jest/globals';
-import { createMockGitProvider } from './git-provider-factory';
+import { createMockGitProvider } from './git-provider-factory.js';
 
 describe('createMockGitProvider', () => {
-    it('returns a jest.Mocked<GitProvider> with all methods as jest.fn()', () => {
+    it('returns a Mocked<GitProvider> with all methods as vi.fn()', async () => {
         const mock = createMockGitProvider();
 
         expect(typeof mock.triggerPipeline).toBe('function');
@@ -24,19 +23,19 @@ describe('createMockGitProvider', () => {
         expect(typeof mock.getDiff).toBe('function');
     });
 
-    it('defaults provider to gitlab', () => {
+    it('defaults provider to gitlab', async () => {
         const mock = createMockGitProvider();
         expect(mock.provider).toBe('gitlab');
     });
 
-    it('merges overrides correctly', () => {
-        const customPipeline = jest.fn(() => Promise.resolve({ id: 42 }));
+    it('merges overrides correctly', async () => {
+        const customPipeline = vi.fn(() => Promise.resolve({ id: 42 }));
         const mock = createMockGitProvider({ triggerPipeline: customPipeline });
 
         expect(mock.triggerPipeline).toBe(customPipeline);
     });
 
-    it('each call produces independent jest.fn() instances', () => {
+    it('each call produces independent vi.fn() instances', async () => {
         const a = createMockGitProvider();
         const b = createMockGitProvider();
         expect(a.triggerPipeline).not.toBe(b.triggerPipeline);

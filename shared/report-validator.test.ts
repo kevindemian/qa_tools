@@ -1,4 +1,4 @@
-import { ReportValidator, type ValidationRule } from './report-validator';
+import { ReportValidator, type ValidationRule } from './report-validator.js';
 
 const testSchema: ValidationRule[] = [
     { field: 'title', required: true, type: 'string', minLength: 3 },
@@ -21,7 +21,7 @@ describe('ReportValidator', () => {
         validator = new ReportValidator(testSchema);
     });
 
-    it('validates a complete valid object', () => {
+    it('validates a complete valid object', async () => {
         const data = {
             title: 'Failure Analysis',
             tests: [{ title: 'Login fails', classification: 'ASSERTION', severity: 'high' }],
@@ -31,21 +31,21 @@ describe('ReportValidator', () => {
         expect(result.errors).toHaveLength(0);
     });
 
-    it('returns error for missing required field', () => {
+    it('returns error for missing required field', async () => {
         const data = { tests: [] };
         const result = validator.validate(data);
         expect(result.valid).toBe(false);
         expect(result.errors).toContain('Campo obrigatório "title" ausente');
     });
 
-    it('returns error for wrong type', () => {
+    it('returns error for wrong type', async () => {
         const data = { title: 123, tests: [] };
         const result = validator.validate(data);
         expect(result.valid).toBe(false);
         expect(result.errors).toContain('Campo "title" esperava string, recebeu number');
     });
 
-    it('returns error for regex mismatch', () => {
+    it('returns error for regex mismatch', async () => {
         const data = {
             title: 'Analysis',
             tests: [{ title: 'Login fails', classification: 'INVALID', severity: 'high' }],
@@ -55,7 +55,7 @@ describe('ReportValidator', () => {
         expect(result.errors).toContain('Campo "tests[0].classification" não corresponde ao padrão esperado');
     });
 
-    it('returns warning for short string', () => {
+    it('returns warning for short string', async () => {
         const data = {
             title: 'AB',
             tests: [{ title: 'Login fails', classification: 'ASSERTION', severity: 'high' }],
@@ -65,7 +65,7 @@ describe('ReportValidator', () => {
         expect(result.warnings).toContain('Campo "title" muito curto (2 < 3)');
     });
 
-    it('returns errors for empty array with nested required fields', () => {
+    it('returns errors for empty array with nested required fields', async () => {
         const data = { title: 'Analysis', tests: [] };
         const result = validator.validate(data);
         expect(result.valid).toBe(false);
@@ -73,13 +73,13 @@ describe('ReportValidator', () => {
         expect(result.warnings).toContain('Campo "tests" muito pequeno (0 < 1)');
     });
 
-    it('handles null input', () => {
+    it('handles null input', async () => {
         const result = validator.validate(null);
         expect(result.valid).toBe(false);
         expect(result.errors).toContain('Expected object, got object');
     });
 
-    it('passes for optional field missing', () => {
+    it('passes for optional field missing', async () => {
         const data = {
             title: 'Analysis',
             tests: [{ title: 'Login fails', classification: 'ASSERTION', severity: 'high' }],
@@ -88,7 +88,7 @@ describe('ReportValidator', () => {
         expect(result.valid).toBe(true);
     });
 
-    it('resolves nested array field', () => {
+    it('resolves nested array field', async () => {
         const data = {
             title: 'Analysis',
             tests: [
@@ -113,12 +113,12 @@ describe('validateAll', () => {
         validator = new ReportValidator(allSchema);
     });
 
-    it('passes single test (no-op vs validate)', () => {
+    it('passes single test (no-op vs validate)', async () => {
         const data = { tests: [{ title: 'Alpha', classification: 'A' }] };
         expect(validator.validateAll(data).valid).toBe(true);
     });
 
-    it('validates all elements, not just [0]', () => {
+    it('validates all elements, not just [0]', async () => {
         const data = {
             tests: [
                 { title: 'Alpha', classification: 'A' },
@@ -130,7 +130,7 @@ describe('validateAll', () => {
         expect(result.valid).toBe(true);
     });
 
-    it('rejects when second element fails pattern validation', () => {
+    it('rejects when second element fails pattern validation', async () => {
         const data = {
             tests: [
                 { title: 'Alpha', classification: 'A' },
@@ -143,20 +143,20 @@ describe('validateAll', () => {
         expect(result.errors.some((e) => e.includes('tests[1].classification'))).toBe(true);
     });
 
-    it('returns base result on empty tests array', () => {
+    it('returns base result on empty tests array', async () => {
         const data = { tests: [] };
         const result = validator.validateAll(data);
         expect(result.valid).toBe(false);
     });
 
-    it('early-returns base result for single-element array', () => {
+    it('early-returns base result for single-element array', async () => {
         const data = { tests: [{ title: 'Alpha', classification: 'A' }] };
         const result = validator.validateAll(data);
         expect(result.valid).toBe(true);
         expect(result.errors).toHaveLength(0);
     });
 
-    it('early-returns base result when schema has no array rules', () => {
+    it('early-returns base result when schema has no array rules', async () => {
         const noArrayRules = new ReportValidator([{ field: 'title', required: true, type: 'string' }]);
         const data = { title: 'test', tests: [{ x: 1 }, { x: 2 }] };
         const result = noArrayRules.validateAll(data);
@@ -177,7 +177,7 @@ describe('checkConsistency', () => {
         validator = new ReportValidator(schema);
     });
 
-    it('warns when high severity has short recommendation', () => {
+    it('warns when high severity has short recommendation', async () => {
         const data = {
             tests: [{ title: 'Test', severity: 'high', recommendation: 'Fix' }],
         };
@@ -186,7 +186,7 @@ describe('checkConsistency', () => {
         expect(result.warnings.some((w) => w.includes('severity=high'))).toBe(true);
     });
 
-    it('does not warn when high severity has long recommendation', () => {
+    it('does not warn when high severity has long recommendation', async () => {
         const data = {
             tests: [
                 {
@@ -210,13 +210,13 @@ describe('resolveField — deep nesting', () => {
         validator = new ReportValidator(schema);
     });
 
-    it('resolves 3-level path with array index', () => {
+    it('resolves 3-level path with array index', async () => {
         const data = { metadata: { tests: [{ title: 'Deep test' }] } };
         const result = validator.validate(data);
         expect(result.valid).toBe(true);
     });
 
-    it('reports missing deeply nested field', () => {
+    it('reports missing deeply nested field', async () => {
         const data = { metadata: { tests: [{}] } };
         const result = validator.validate(data);
         expect(result.valid).toBe(false);

@@ -1,18 +1,18 @@
 /** Import orchestrator: coordinates CSV parsing, test-case creation, issue linking, and result reporting. */
-import type { JiraResourceLike } from '../shared/types';
-import JiraLinkManager from './jira_link_manager';
-import type { TestCase, TestResult } from '../shared/types';
-import TestCaseFactory from './test-case-factory';
-import IssueLinker from './issue-linker';
-import MappingFileGenerator from './mapping-file-generator';
-import { rootLogger } from '../shared/logger';
-import { update as updateState } from '../shared/state';
-import { showPreview, filterTests, confirmOrCancel, validateImportBatch, handleDryRun } from './import-prep';
-import { executeTestCreationLoop, updateFinalState, type TestCreationLoopOptions } from './import-loop';
-import { OPERATION_CANCELLED } from './constants';
-import { info, warn, isQuiet, print, printSummary } from '../shared/prompt';
-import Config from '../shared/config';
-import { createStepImporter, type XrayStepImporter } from './xray-client';
+import type { JiraResourceLike } from '../shared/types.js';
+import JiraLinkManager from './jira_link_manager.js';
+import type { TestCase, TestResult } from '../shared/types.js';
+import TestCaseFactory from './test-case-factory.js';
+import IssueLinker from './issue-linker.js';
+import MappingFileGenerator from './mapping-file-generator.js';
+import { rootLogger } from '../shared/logger.js';
+import { update as updateState } from '../shared/state.js';
+import { showPreview, filterTests, confirmOrCancel, validateImportBatch, handleDryRun } from './import-prep.js';
+import { executeTestCreationLoop, updateFinalState, type TestCreationLoopOptions } from './import-loop.js';
+import { OPERATION_CANCELLED } from './constants.js';
+import { info, warn, isQuiet, print, printSummary } from '../shared/prompt.js';
+import Config from '../shared/config.js';
+import { createStepImporter, type XrayStepImporter } from './xray-client.js';
 
 interface CreateTestsFromTestCasesParams {
     tests: TestCase[];

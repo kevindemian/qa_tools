@@ -9,8 +9,11 @@
  * Add new checks by adding entries to the `checks` array.
  */
 
+import { createHash } from 'crypto';
 import { readFileSync, existsSync } from 'fs';
 import { globSync } from 'glob';
+import { gracefulExit } from '../shared/cli_base.js';
+import { ExitCode } from '../shared/types.js';
 
 interface CheckResult {
     name: string;
@@ -115,19 +118,19 @@ checks.push({
         : [{ file: tsconfigPath, line: 1, content: 'noImplicitOverride must be true in compilerOptions' }],
 });
 
-// 7. No jest.fn<unknown, ...> in test files (first type arg is literally unknown)
+// 7. No vi.fn<(...args: ...) => unknown> in test files (first type arg is literally unknown)
 checks.push(
     checkNoPattern(
-        'jest.fn<unknown, ...> in test files',
+        'vi.fn<(...args: ...) => unknown> in test files',
         /jest\.fn<\s*unknown\s*[,>]/,
         allTsFiles().filter((f) => f.endsWith('.test.ts')),
     ),
 );
 
-// 8. No jest.fn<..., unknown[]> in test files (second type arg is literally unknown[])
+// 8. No vi.fn<(...args: unknown[]) => ...> in test files (second type arg is literally unknown[])
 checks.push(
     checkNoPattern(
-        'jest.fn<..., unknown[]> in test files',
+        'vi.fn<(...args: unknown[]) => ...> in test files',
         /jest\.fn<[^)]*,\s*unknown\s*\[/,
         allTsFiles().filter((f) => f.endsWith('.test.ts')),
     ),
@@ -281,8 +284,8 @@ checks.push(
         const violations: CheckResult['violations'] = [];
         const selfContent = readFileSync('scripts/enforce-quality.ts', 'utf-8');
         const contentWithoutHash = selfContent.replace(/\/\* HASH:[0-9a-f]{64} \*\//, '');
-        const currentHash = require('crypto').createHash('sha256').update(contentWithoutHash, 'utf-8').digest('hex');
-        /* HASH:a9e8bfc14063901adb9b97f85beebf3a56c48b1e64eeeb15e5b573ff77f2869f */
+        const currentHash = createHash('sha256').update(contentWithoutHash, 'utf-8').digest('hex');
+        /* HASH:28b221057f9dc4f080a0936527934ceabe2436c546bcdaf43e3f6b79b43b65d3 */
         const match = selfContent.match(/\/\* HASH:([0-9a-f]{64}) \*\//);
         if (!match) {
             violations.push({
@@ -339,8 +342,8 @@ for (const check of checks) {
 console.log('');
 if (allPassed) {
     console.log('✅ All quality checks passed.');
-    process.exit(0);
+    gracefulExit(ExitCode.OK);
 } else {
     console.log('❌ Some quality checks failed. Fix violations before committing.');
-    process.exit(1);
+    gracefulExit(ExitCode.ERROR);
 }

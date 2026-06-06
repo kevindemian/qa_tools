@@ -1,15 +1,15 @@
-import type { VersionData, JiraIssue, SearchResponse, JiraResourceLike } from './jira-resource-types';
-import { nullAs } from '../shared/test-utils';
-import { createMockJiraResource } from '../shared/test-utils/factories/jira-resource-factory';
+import type { VersionData, JiraIssue, SearchResponse, JiraResourceLike } from './jira-resource-types.js';
+import { nullAs } from '../shared/test-utils.js';
+import { createMockJiraResource } from '../shared/test-utils/factories/jira-resource-factory.js';
 
 describe('jira-resource-types', () => {
-    it('VersionData has the correct shape', () => {
+    it('VersionData has the correct shape', async () => {
         const v: VersionData = { id: '1', name: 'v1' };
         expect(v.id).toBe('1');
         expect(v.name).toBe('v1');
     });
 
-    it('JiraIssue has the correct shape', () => {
+    it('JiraIssue has the correct shape', async () => {
         const issue: JiraIssue = {
             key: 'PROJ-1',
             fields: { summary: 'Test' },
@@ -18,32 +18,32 @@ describe('jira-resource-types', () => {
         expect(issue.fields.summary).toBe('Test');
     });
 
-    it('SearchResponse has the correct shape', () => {
+    it('SearchResponse has the correct shape', async () => {
         const resp: SearchResponse = { issues: [], total: 0 };
         expect(resp.issues).toEqual([]);
         expect(resp.total).toBe(0);
     });
 
-    it('JiraResourceLike interface is structurally sound', () => {
+    it('JiraResourceLike interface is structurally sound', async () => {
         const mock: JiraResourceLike = {
-            getJiraResource: jest.fn(),
-            postJiraResource: jest.fn(),
-            putJiraResource: jest.fn(),
+            getJiraResource: vi.fn(),
+            postJiraResource: vi.fn(),
+            putJiraResource: vi.fn(),
             log: createMockJiraResource().log,
-            getProjectId: jest.fn(),
-            getProjectVersions: jest.fn(),
-            getVersionId: jest.fn(),
-            searchJiraIssues: jest.fn(),
-            getTransitionsForIssue: jest.fn(),
-            transitionIssue: jest.fn(),
-            checkReleaseTasksStatus: jest.fn(),
+            getProjectId: vi.fn(),
+            getProjectVersions: vi.fn(),
+            getVersionId: vi.fn(),
+            searchJiraIssues: vi.fn(),
+            getTransitionsForIssue: vi.fn(),
+            transitionIssue: vi.fn(),
+            checkReleaseTasksStatus: vi.fn(),
         };
         expect(typeof mock.getJiraResource).toBe('function');
         expect(typeof mock.log.info).toBe('function');
         expect(typeof mock.log.error).toBe('function');
     });
 
-    it('import from JiraResource class satisfies JiraResourceLike', () => {
+    it('import from JiraResource class satisfies JiraResourceLike', async () => {
         // This is a compile-time check: JiraResource is tested later via integration.
         // Here we just verify the type is exported correctly.
         const typeCheck: { new (personalToken: string, baseUrl: string): JiraResourceLike } = nullAs();

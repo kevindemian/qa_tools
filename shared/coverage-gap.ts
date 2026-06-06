@@ -1,7 +1,7 @@
 /** Coverage gap analysis: fetch Jira issues, detect which have linked tests,
  *  calculate weighted coverage, build hierarchy rollup, and determine quality gate. */
-import { rootLogger } from './logger';
-import { loadMetrics } from './metrics';
+import { rootLogger } from './logger.js';
+import { loadMetrics } from './metrics.js';
 import type {
     JiraIssueFields,
     JiraResourceLike,
@@ -10,14 +10,14 @@ import type {
     CoverageHierarchyNode,
     CoverageGapOptions,
     CoverageGapResult,
-} from './types';
+} from './types.js';
 import {
     buildCoverageItems,
     calculateTotals,
     buildEpicRollup,
     checkQualityGate,
     loadEpicSummaries,
-} from './coverage-gap-utils';
+} from './coverage-gap-utils.js';
 
 async function fetchTotalCount(jiraResource: JiraResourceLike, jql: string): Promise<number> {
     try {

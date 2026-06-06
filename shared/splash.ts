@@ -1,7 +1,7 @@
-import { palette } from './palette';
-import { defaultOutput, Output } from './output';
-import { createJiraAuthHeader } from './jira-auth';
-import { rootLogger } from './logger';
+import { palette } from './palette.js';
+import { defaultOutput, Output } from './output.js';
+import { createJiraAuthHeader } from './jira-auth.js';
+import { rootLogger } from './logger.js';
 
 type FigletModule = { textSync: (str: string, opts?: Record<string, unknown>) => string };
 type GradientModule = { default: (colors: string[]) => (text: string) => string };

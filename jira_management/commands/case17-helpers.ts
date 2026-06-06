@@ -1,7 +1,7 @@
 import fs from 'fs';
 import path from 'path';
-import type { FlatTest, CtrfData, CtrfSummary } from '../../shared/result_parser';
-import Config from '../../shared/config';
+import type { FlatTest, CtrfData, CtrfSummary } from '../../shared/result_parser.js';
+import Config from '../../shared/config.js';
 
 export const CTRF_LAST_FILE = 'last-results.ctrf.json';
 export const GIT_HISTORY_RUNS = 5;

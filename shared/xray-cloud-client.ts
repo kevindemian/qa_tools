@@ -1,9 +1,9 @@
 /** Xray Cloud HTTP client with retry, throttling, TLS, and token caching.
  * Replaces raw axios calls in CloudHistoryProvider and CloudStepImporter
  * so Cloud infrastructure gets the same resilience as Server (retry, backoff, concurrency limit). */
-import { createThrottledClient } from './http-client';
-import { rootLogger } from './logger';
-import Config from './config';
+import { createThrottledClient } from './http-client.js';
+import { rootLogger } from './logger.js';
+import Config from './config.js';
 
 const DEFAULT_XRAY_CLOUD_URL = 'https://xray.cloud.getxray.app';
 const AUTH_PATH = '/api/v2/authenticate';

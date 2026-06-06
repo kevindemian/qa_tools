@@ -1,7 +1,7 @@
-import { createMockLinkManager } from './link-manager-factory';
+import { createMockLinkManager } from './link-manager-factory.js';
 
 describe('createMockLinkManager', () => {
-    it('returns a mock with all methods as jest.fn()', () => {
+    it('returns a mock with all methods as vi.fn()', async () => {
         const mock = createMockLinkManager();
         expect(typeof mock.getIssueLinkTypes).toBe('function');
         expect(typeof mock.resolveLinkTypeId).toBe('function');
@@ -15,19 +15,19 @@ describe('createMockLinkManager', () => {
         expect(typeof mock.getTestCaseSummaries).toBe('function');
     });
 
-    it('returns null for cache properties by default', () => {
+    it('returns null for cache properties by default', async () => {
         const mock = createMockLinkManager();
         expect(mock.linkTypesCache).toBeNull();
         expect(mock.cacheFilePath).toBeNull();
     });
 
-    it('merges overrides correctly', () => {
-        const customLink = jest.fn();
+    it('merges overrides correctly', async () => {
+        const customLink = vi.fn();
         const mock = createMockLinkManager({ linkIssues: customLink });
         expect(mock.linkIssues).toBe(customLink);
     });
 
-    it('each call produces independent jest.fn() instances', () => {
+    it('each call produces independent vi.fn() instances', async () => {
         const a = createMockLinkManager();
         const b = createMockLinkManager();
         expect(a.linkIssues).not.toBe(b.linkIssues);

@@ -4,8 +4,8 @@
  * @module backlog-health
  */
 
-import { sanitizeHtml } from './escape';
-import { Card, MetricCard, MetricGrid, Badge } from './primitives';
+import { sanitizeHtml } from './escape.js';
+import { Card, MetricCard, MetricGrid, Badge } from './primitives/index.js';
 
 export interface BacklogHealthIssue {
     key: string;

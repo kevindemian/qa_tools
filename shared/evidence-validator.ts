@@ -12,7 +12,7 @@
  * Returns structured results: verified, unverifiable, hallucinated.
  */
 
-import { type ValidationResult, type ValidationContext } from './artifact-validator';
+import { type ValidationResult, type ValidationContext } from './artifact-validator.js';
 
 export interface EvidenceVerificationResult {
     totalCitations: number;

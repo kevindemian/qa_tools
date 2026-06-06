@@ -94,7 +94,7 @@ const ClassifyFixtureSchema: z.ZodType<ClassifyFixture> = FixtureBaseSchema.exte
     expectedCategory: z.string(),
 });
 
-const FIXTURE_DIR = __dirname;
+const FIXTURE_DIR = import.meta.dirname;
 
 function loadDir<T>(subdir: string, schema: z.ZodType<T>): T[] {
     const dir = path.join(FIXTURE_DIR, subdir);

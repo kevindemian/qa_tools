@@ -1,15 +1,11 @@
-import { jest } from '@jest/globals';
-import type JiraResource from '../../../jira_management/jira_resource';
+import type JiraResource from '../../../jira_management/jira_resource.js';
+import type { Mock, Mocked } from 'vitest';
 
 type MockProxy<T> = {
-    [P in keyof T]: T[P] extends (...args: unknown[]) => unknown
-        ? jest.Mock
-        : T[P] extends object
-          ? MockProxy<T[P]>
-          : T[P];
+    [P in keyof T]: T[P] extends (...args: unknown[]) => unknown ? Mock : T[P] extends object ? MockProxy<T[P]> : T[P];
 };
 
-export function createMockJiraResource(overrides?: Partial<MockProxy<JiraResource>>): jest.Mocked<JiraResource> {
+export function createMockJiraResource(overrides?: Partial<MockProxy<JiraResource>>): Mocked<JiraResource> {
     const base = {
         baseUrl: 'https://jira.test.com/rest/api/2',
         originUrl: 'https://jira.test.com',
@@ -23,38 +19,38 @@ export function createMockJiraResource(overrides?: Partial<MockProxy<JiraResourc
             _bytesWritten: 0,
             _maxLogSize: 0,
             _config: null,
-            info: jest.fn(),
-            warn: jest.fn(),
-            error: jest.fn(),
-            debug: jest.fn(),
-            child: jest.fn(),
-            writeFileOnly: jest.fn(),
+            info: vi.fn(),
+            warn: vi.fn(),
+            error: vi.fn(),
+            debug: vi.fn(),
+            child: vi.fn(),
+            writeFileOnly: vi.fn(),
             filePath: null,
-            _ensureDir: jest.fn(),
-            _rotateIfNeeded: jest.fn(),
-            _writeConsole: jest.fn(),
-            _writeFile: jest.fn(),
-            _write: jest.fn(),
+            _ensureDir: vi.fn(),
+            _rotateIfNeeded: vi.fn(),
+            _writeConsole: vi.fn(),
+            _writeFile: vi.fn(),
+            _write: vi.fn(),
         },
-        getJiraResource: jest.fn(),
-        postJiraResource: jest.fn(),
-        putJiraResource: jest.fn(),
-        getFromOriginPath: jest.fn(),
-        searchJiraIssues: jest.fn(),
-        getTransitionsForIssue: jest.fn(),
-        transitionIssue: jest.fn(),
-        getProjectId: jest.fn(),
-        getProjectVersions: jest.fn(),
-        getVersionId: jest.fn(),
-        createVersion: jest.fn(),
-        checkReleaseTasksStatus: jest.fn(),
-        getReleaseTasks: jest.fn(),
-        getLatestReleases: jest.fn(),
-        addTasksToSprint: jest.fn(),
-        updateFixVersions: jest.fn(),
-        releaseVersion: jest.fn(),
-        moveCardsToDone: jest.fn(),
-        // jest.Mocked<T> = MockInstance<T> & T — impossible to construct manually
-    } as unknown as jest.Mocked<JiraResource>;
-    return { ...base, ...(overrides as Partial<MockProxy<JiraResource>>) } as unknown as jest.Mocked<JiraResource>;
+        getJiraResource: vi.fn(),
+        postJiraResource: vi.fn(),
+        putJiraResource: vi.fn(),
+        getFromOriginPath: vi.fn(),
+        searchJiraIssues: vi.fn(),
+        getTransitionsForIssue: vi.fn(),
+        transitionIssue: vi.fn(),
+        getProjectId: vi.fn(),
+        getProjectVersions: vi.fn(),
+        getVersionId: vi.fn(),
+        createVersion: vi.fn(),
+        checkReleaseTasksStatus: vi.fn(),
+        getReleaseTasks: vi.fn(),
+        getLatestReleases: vi.fn(),
+        addTasksToSprint: vi.fn(),
+        updateFixVersions: vi.fn(),
+        releaseVersion: vi.fn(),
+        moveCardsToDone: vi.fn(),
+        // Mocked<T> = MockInstance<T> & T — impossible to construct manually
+    } as unknown as Mocked<JiraResource>;
+    return { ...base, ...(overrides as Partial<MockProxy<JiraResource>>) } as unknown as Mocked<JiraResource>;
 }

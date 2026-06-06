@@ -1,6 +1,6 @@
-import Config from '../shared/config';
-import { loadTypedState } from '../shared/state';
-import { NOT_CONFIGURED } from './constants';
+import Config from '../shared/config.js';
+import { loadTypedState } from '../shared/state.js';
+import { NOT_CONFIGURED } from './constants.js';
 
 export interface MenuItem {
     section?: string;

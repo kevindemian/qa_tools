@@ -1,38 +1,39 @@
-jest.mock('../shared/prompt', () => ({
-    info: jest.fn(),
-    warn: jest.fn(),
+import type { Mock } from 'vitest';
+vi.mock('../shared/prompt', async () => ({
+    info: vi.fn(),
+    warn: vi.fn(),
 }));
 
-jest.mock('../shared/logger', () => ({
-    rootLogger: { info: jest.fn(), warn: jest.fn(), error: jest.fn() },
+vi.mock('../shared/logger', async () => ({
+    rootLogger: { info: vi.fn(), warn: vi.fn(), error: vi.fn() },
 }));
 
 import {
     PreconditionHandler,
     matchPreconditionByTokenOverlap,
     matchPreconditionByDualThreshold,
-} from './precondition-handler';
+} from './precondition-handler.js';
 
 describe('PreconditionHandler', () => {
     let mockJiraResource: {
-        getJiraResource: jest.Mock;
-        postJiraResource: jest.Mock;
-        putJiraResource: jest.Mock;
-        searchJiraIssues: jest.Mock;
-        getTransitionsForIssue: jest.Mock;
-        transitionIssue: jest.Mock;
+        getJiraResource: Mock;
+        postJiraResource: Mock;
+        putJiraResource: Mock;
+        searchJiraIssues: Mock;
+        getTransitionsForIssue: Mock;
+        transitionIssue: Mock;
     };
     let handler: PreconditionHandler;
 
     beforeEach(() => {
-        jest.clearAllMocks();
+        vi.clearAllMocks();
         mockJiraResource = {
-            getJiraResource: jest.fn(),
-            postJiraResource: jest.fn(),
-            putJiraResource: jest.fn(),
-            searchJiraIssues: jest.fn(),
-            getTransitionsForIssue: jest.fn(),
-            transitionIssue: jest.fn(),
+            getJiraResource: vi.fn(),
+            postJiraResource: vi.fn(),
+            putJiraResource: vi.fn(),
+            searchJiraIssues: vi.fn(),
+            getTransitionsForIssue: vi.fn(),
+            transitionIssue: vi.fn(),
         };
         handler = new PreconditionHandler(mockJiraResource);
     });
@@ -218,70 +219,70 @@ describe('matchPreconditionByTokenOverlap', () => {
         { key: 'PREC-3', summary: 'Admin role required' },
     ];
 
-    it('returns exact match when summary is identical', () => {
+    it('returns exact match when summary is identical', async () => {
         const result = matchPreconditionByTokenOverlap('User must be logged in', candidates);
         expect(result.key).toBe('PREC-1');
         expect(result.matchType).toBe('exact');
     });
 
-    it('is case insensitive for exact match', () => {
+    it('is case insensitive for exact match', async () => {
         const result = matchPreconditionByTokenOverlap('USER MUST BE LOGGED IN', candidates);
         expect(result.key).toBe('PREC-1');
         expect(result.matchType).toBe('exact');
     });
 
-    it('returns overlap match when query tokens are subset of summary', () => {
+    it('returns overlap match when query tokens are subset of summary', async () => {
         const result = matchPreconditionByTokenOverlap('Database seeded', candidates);
         expect(result.key).toBe('PREC-2');
         expect(result.matchType).toBe('overlap');
     });
 
-    it('returns containment match when query is contiguous substring of summary', () => {
+    it('returns containment match when query is contiguous substring of summary', async () => {
         const result = matchPreconditionByTokenOverlap('must be seeded', candidates);
         expect(result.key).toBe('PREC-2');
         expect(result.matchType).toBe('containment');
     });
 
-    it('returns containment match when summary is substring of query', () => {
+    it('returns containment match when summary is substring of query', async () => {
         const result = matchPreconditionByTokenOverlap('Must ensure Database must be seeded correctly', candidates);
         expect(result.key).toBe('PREC-2');
         expect(result.matchType).toBe('containment');
     });
 
-    it('returns overlap match via Jaccard token similarity', () => {
+    it('returns overlap match via Jaccard token similarity', async () => {
         const result = matchPreconditionByTokenOverlap('User must be logged out', candidates);
         expect(result.key).toBe('PREC-1');
         expect(result.matchType).toBe('overlap');
     });
 
-    it('respects custom threshold for overlap match', () => {
+    it('respects custom threshold for overlap match', async () => {
         const result = matchPreconditionByTokenOverlap('must log the user in', candidates, 0.25);
         expect(result.key).toBe('PREC-1');
         expect(result.matchType).toBe('overlap');
     });
 
-    it('fails overlap match with strict threshold', () => {
+    it('fails overlap match with strict threshold', async () => {
         const result = matchPreconditionByTokenOverlap('must log the user in', candidates, 0.8);
         expect(result.matchType).toBe('create');
     });
 
-    it('returns create when no candidate scores above threshold', () => {
+    it('returns create when no candidate scores above threshold', async () => {
         const result = matchPreconditionByTokenOverlap('Network connectivity must be available', candidates);
         expect(result.key).toBe('__create__');
         expect(result.matchType).toBe('create');
     });
 
-    it('returns create for empty query', () => {
+    it('returns create for empty query', async () => {
         const result = matchPreconditionByTokenOverlap('', candidates);
         expect(result.matchType).toBe('create');
     });
 
-    it('returns create for empty candidates list', () => {
+    it('returns create for empty candidates list', async () => {
         const result = matchPreconditionByTokenOverlap('Anything', []);
         expect(result.matchType).toBe('create');
     });
 
-    it('returns create for single-word no-match query', () => {
+    it('returns create for single-word no-match query', async () => {
         const result = matchPreconditionByTokenOverlap('Network', candidates);
         expect(result.key).toBe('__create__');
         expect(result.matchType).toBe('create');
@@ -295,19 +296,19 @@ describe('matchPreconditionByDualThreshold', () => {
         { key: 'PREC-3', summary: 'Database must be seeded with test data' },
     ];
 
-    it('returns exact match (same safety as single threshold)', () => {
+    it('returns exact match (same safety as single threshold)', async () => {
         const result = matchPreconditionByDualThreshold('User must be logged in', candidates);
         expect(result.key).toBe('PREC-1');
         expect(result.matchType).toBe('exact');
     });
 
-    it('returns containment match (substring, safe)', () => {
+    it('returns containment match (substring, safe)', async () => {
         const result = matchPreconditionByDualThreshold('must be seeded', candidates);
         expect(result.key).toBe('PREC-3');
         expect(result.matchType).toBe('containment');
     });
 
-    it('rejects false positive: User vs Admin in Jaccard 0.5-0.69 zone', () => {
+    it('rejects false positive: User vs Admin in Jaccard 0.5-0.69 zone', async () => {
         const noExactMatch = [
             { key: 'PREC-2', summary: 'Admin must be logged in' },
             { key: 'PREC-3', summary: 'Database must be seeded with test data' },
@@ -316,50 +317,50 @@ describe('matchPreconditionByDualThreshold', () => {
         expect(result.matchType).toBe('create');
     });
 
-    it('accepts subsumption: query is subset of candidate with extra words', () => {
+    it('accepts subsumption: query is subset of candidate with extra words', async () => {
         const subsetCandidates = [{ key: 'PREC-X', summary: 'User must be logged in to the system' }];
         const result = matchPreconditionByDualThreshold('User must be logged in', subsetCandidates);
         expect(result.key).toBe('PREC-X');
         expect(result.matchType === 'containment' || result.matchType === 'overlap').toBe(true);
     });
 
-    it('accepts subsumption: candidate is subset of query with extra words', () => {
+    it('accepts subsumption: candidate is subset of query with extra words', async () => {
         const supersetCandidates = [{ key: 'PREC-Y', summary: 'User must be logged in' }];
         const result = matchPreconditionByDualThreshold('User must be logged in to the system', supersetCandidates);
         expect(result.key).toBe('PREC-Y');
         expect(result.matchType === 'containment' || result.matchType === 'overlap').toBe(true);
     });
 
-    it('rejects when both sides have unique content words (different meaning)', () => {
+    it('rejects when both sides have unique content words (different meaning)', async () => {
         const diffCandidates = [{ key: 'PREC-2', summary: 'Admin must be logged in' }];
         const result = matchPreconditionByDualThreshold('User must be logged in', diffCandidates);
         expect(result.matchType).toBe('create');
     });
 
-    it('rejects when unique content words on both sides even with high overlap', () => {
+    it('rejects when unique content words on both sides even with high overlap', async () => {
         const diffCandidates = [{ key: 'PREC-3', summary: 'Guest user must be logged out' }];
         const result = matchPreconditionByDualThreshold('Admin user must be logged in', diffCandidates);
         expect(result.matchType).toBe('create');
     });
 
-    it('accepts high-confidence match (Jaccard >= 0.7, no containment)', () => {
+    it('accepts high-confidence match (Jaccard >= 0.7, no containment)', async () => {
         const highCandidates = [{ key: 'PREC-1', summary: 'User must be logged in to the application' }];
         const result = matchPreconditionByDualThreshold('User must be logged in to the system', highCandidates);
         expect(result.key).toBe('PREC-1');
         expect(result.matchType).toBe('overlap');
     });
 
-    it('returns create for empty query', () => {
+    it('returns create for empty query', async () => {
         const result = matchPreconditionByDualThreshold('', candidates);
         expect(result.matchType).toBe('create');
     });
 
-    it('returns create for empty candidates list', () => {
+    it('returns create for empty candidates list', async () => {
         const result = matchPreconditionByDualThreshold('Anything', []);
         expect(result.matchType).toBe('create');
     });
 
-    it('returns create for completely unrelated query', () => {
+    it('returns create for completely unrelated query', async () => {
         const result = matchPreconditionByDualThreshold('Network connectivity must be available', candidates);
         expect(result.matchType).toBe('create');
     });

@@ -1,5 +1,5 @@
-import type { SessionContext } from '../session-context';
-import type { Logger } from '../logger';
+import type { SessionContext } from '../session-context.js';
+import type { Logger } from '../logger.js';
 
 export interface CommandContext {
     jiraResource: unknown;

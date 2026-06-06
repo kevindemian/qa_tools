@@ -1,24 +1,24 @@
-import { analyzeCoverageGaps } from './coverage-gap';
-import { loadMetrics } from './metrics';
-import { nonNull } from './test-utils';
+import { analyzeCoverageGaps } from './coverage-gap.js';
+import { loadMetrics } from './metrics.js';
+import { nonNull } from './test-utils.js';
 
-jest.mock('./logger', () => ({
-    rootLogger: { error: jest.fn(), warn: jest.fn(), info: jest.fn(), child: jest.fn().mockReturnThis() },
+vi.mock('./logger', async () => ({
+    rootLogger: { error: vi.fn(), warn: vi.fn(), info: vi.fn(), child: vi.fn().mockReturnThis() },
 }));
 
-jest.mock('./metrics', () => ({
-    loadMetrics: jest.fn(),
+vi.mock('./metrics', async () => ({
+    loadMetrics: vi.fn(),
 }));
 
-const mockLoadMetrics = jest.mocked(loadMetrics);
-const mockSearch = jest.fn();
+const mockLoadMetrics = vi.mocked(loadMetrics);
+const mockSearch = vi.fn();
 const mockJiraResource = {
-    getJiraResource: jest.fn(),
-    postJiraResource: jest.fn(),
-    putJiraResource: jest.fn(),
+    getJiraResource: vi.fn(),
+    postJiraResource: vi.fn(),
+    putJiraResource: vi.fn(),
     searchJiraIssues: mockSearch,
-    getTransitionsForIssue: jest.fn(),
-    transitionIssue: jest.fn(),
+    getTransitionsForIssue: vi.fn(),
+    transitionIssue: vi.fn(),
 };
 
 function makeIssue(key: string, overrides?: Record<string, unknown>): { key: string; fields: Record<string, unknown> } {
@@ -35,7 +35,7 @@ function makeIssue(key: string, overrides?: Record<string, unknown>): { key: str
 }
 
 beforeEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
     mockSearch.mockReset();
     mockSearch.mockResolvedValue({ issues: [], total: 0 });
     mockLoadMetrics.mockReturnValue({ runs: [], coverageHistory: [] });

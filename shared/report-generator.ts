@@ -1,7 +1,7 @@
 import * as fs from 'fs';
-import { toKnownIssues } from './report-types';
-import type { KnownIssue } from './report-types';
-import { rootLogger } from './logger';
+import { toKnownIssues } from './report-types.js';
+import type { KnownIssue } from './report-types.js';
+import { rootLogger } from './logger.js';
 
 export function loadKnownIssues(filePath: string): KnownIssue[] {
     try {
@@ -20,6 +20,13 @@ export function loadKnownIssues(filePath: string): KnownIssue[] {
     }
 }
 
-export { generateHtmlReport, generateReportWithFallback, generateCoverageHtml } from './report-html';
-export { categorizeFailure } from './report-types';
-export type { TestHistoryRun, KnownIssue, TestRunTab, CoverageEpic, ReportOptions, ReportStats } from './report-types';
+export { generateHtmlReport, generateReportWithFallback, generateCoverageHtml } from './report-html.js';
+export { categorizeFailure } from './report-types.js';
+export type {
+    TestHistoryRun,
+    KnownIssue,
+    TestRunTab,
+    CoverageEpic,
+    ReportOptions,
+    ReportStats,
+} from './report-types.js';

@@ -1,29 +1,29 @@
-jest.mock('./output', () => {
-    const mockOutput = { print: jest.fn() };
+vi.mock('./output', async () => {
+    const mockOutput = { print: vi.fn() };
     return {
-        Output: { isTTY: jest.fn(), isCI: jest.fn(), columns: jest.fn(() => 80), rows: jest.fn(() => 24) },
+        Output: { isTTY: vi.fn(), isCI: vi.fn(), columns: vi.fn(() => 80), rows: vi.fn(() => 24) },
         defaultOutput: mockOutput,
     };
 });
 
-jest.mock('./logger', () => ({
-    rootLogger: { info: jest.fn(), warn: jest.fn(), error: jest.fn(), debug: jest.fn(), writeFileOnly: jest.fn() },
+vi.mock('./logger', async () => ({
+    rootLogger: { info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn(), writeFileOnly: vi.fn() },
     Logger: class {
-        info = jest.fn();
-        error = jest.fn();
-        warn = jest.fn();
-        debug = jest.fn();
-        writeFileOnly = jest.fn();
+        info = vi.fn();
+        error = vi.fn();
+        warn = vi.fn();
+        debug = vi.fn();
+        writeFileOnly = vi.fn();
     },
 }));
 
-jest.mock('./box', () => ({
-    box: jest.fn((lines: string[]) => lines.join('\n')),
-    divider: jest.fn(() => '---'),
-    visibleWidth: jest.fn((s: string) => s.length),
+vi.mock('./box', async () => ({
+    box: vi.fn((lines: string[]) => lines.join('\n')),
+    divider: vi.fn(() => '---'),
+    visibleWidth: vi.fn((s: string) => s.length),
 }));
 
-jest.mock('./palette', () => {
+vi.mock('./palette', async () => {
     const purpleFn = (s: string) => s;
     purpleFn.bold = (s: string) => s;
     return {
@@ -40,12 +40,13 @@ jest.mock('./palette', () => {
     };
 });
 
-jest.mock('./prompt-ui', () => {
-    const actual = jest.requireActual<typeof import('./prompt-ui')>('./prompt-ui');
+vi.mock('./prompt-ui', async () => {
+    const actual = await vi.importActual<typeof import('./prompt-ui.js')>('./prompt-ui');
     return {
         ...actual,
-        getConfig: jest.fn(() => {
-            const ConfigAccessorActual = jest.requireActual<typeof import('./config-accessor')>('./config-accessor');
+        getConfig: vi.fn(async () => {
+            const ConfigAccessorActual =
+                await vi.importActual<typeof import('./config-accessor.js')>('./config-accessor');
             const cfg = ConfigAccessorActual.default.create();
             cfg.get = <T>(key: string): T => {
                 const v: Record<string, unknown> = { quiet: false, autoConfirm: false };
@@ -53,23 +54,23 @@ jest.mock('./prompt-ui', () => {
             };
             return cfg;
         }),
-        warn: jest.fn(),
-        icon: jest.fn(() => '!'),
+        warn: vi.fn(),
+        icon: vi.fn(() => '!'),
     };
 });
 
 import readlineSync from 'readline-sync';
-import ConfigAccessor from './config-accessor';
-import { getConfig, warn, CancelError } from './prompt-ui';
-import { defaultOutput as outputMock } from './output';
-import { prompt, confirm, isTTY, NAV_CMDS } from './prompt-input-base';
+import ConfigAccessor from './config-accessor.js';
+import { getConfig, warn, CancelError } from './prompt-ui.js';
+import { defaultOutput as outputMock } from './output.js';
+import { prompt, confirm, isTTY, NAV_CMDS } from './prompt-input-base.js';
 
-const mockReadlineQuestion = jest.spyOn(readlineSync, 'question').mockImplementation(() => '');
-const mockGetConfig = jest.mocked(getConfig);
-const mockWarn = jest.mocked(warn);
+const mockReadlineQuestion = vi.spyOn(readlineSync, 'question').mockImplementation(() => '');
+const mockGetConfig = vi.mocked(getConfig);
+const mockWarn = vi.mocked(warn);
 
-beforeEach(() => {
-    jest.clearAllMocks();
+beforeEach(async () => {
+    vi.clearAllMocks();
     mockReadlineQuestion.mockReturnValue('');
     Object.defineProperty(process.stdin, 'isTTY', { value: true, configurable: true });
     const cfg = ConfigAccessor.create();
@@ -77,58 +78,58 @@ beforeEach(() => {
     mockGetConfig.mockReturnValue(cfg);
 });
 
-describe('prompt', () => {
-    it('returns the user input', () => {
+describe('prompt', async () => {
+    it('returns the user input', async () => {
         mockReadlineQuestion.mockReturnValue('my value');
         expect(prompt('Label')).toBe('my value');
     });
 
-    it('returns default when no input', () => {
+    it('returns default when no input', async () => {
         mockReadlineQuestion.mockReturnValue('');
         expect(prompt('Label', { default: 'def' })).toBe('');
     });
 
-    it('throws CancelError on navigation command', () => {
+    it('throws CancelError on navigation command', async () => {
         mockReadlineQuestion.mockReturnValue('/back');
         expect(() => prompt('Label')).toThrow(CancelError);
     });
 
-    it('rejects short input when minLength set', () => {
+    it('rejects short input when minLength set', async () => {
         mockReadlineQuestion.mockReturnValueOnce('ab').mockReturnValueOnce('abcdef');
         expect(prompt('Label', { minLength: 3 })).toBe('abcdef');
         expect(mockWarn).toHaveBeenCalled();
     });
 
-    it('displays hint when provided', () => {
+    it('displays hint when provided', async () => {
         mockReadlineQuestion.mockReturnValue('value');
         expect(prompt('Label', { hint: 'some hint' })).toBe('value');
     });
 });
 
-describe('confirm', () => {
-    it('returns true for yes answer', () => {
+describe('confirm', async () => {
+    it('returns true for yes answer', async () => {
         mockReadlineQuestion.mockReturnValue('s');
         expect(confirm('Confirm?')).toBe(true);
     });
 
-    it('returns false for no answer', () => {
+    it('returns false for no answer', async () => {
         mockReadlineQuestion.mockReturnValue('n');
         expect(confirm('Confirm?')).toBe(false);
     });
 
-    it('returns defaultYes when autoConfirm', () => {
+    it('returns defaultYes when autoConfirm', async () => {
         const cfg2 = ConfigAccessor.create();
         cfg2.get = <T>(k: string) => ({ quiet: false, autoConfirm: true })[k] as T;
         mockGetConfig.mockReturnValue(cfg2);
         expect(confirm('Confirm?', true)).toBe(true);
     });
 
-    it('throws CancelError on navigation', () => {
+    it('throws CancelError on navigation', async () => {
         mockReadlineQuestion.mockReturnValue('/menu');
         expect(() => confirm('Confirm?')).toThrow(CancelError);
     });
 
-    it('accepts yes synonyms', () => {
+    it('accepts yes synonyms', async () => {
         mockReadlineQuestion.mockReturnValue('y');
         expect(confirm('Confirm?')).toBe(true);
         mockReadlineQuestion.mockReturnValue('yes');
@@ -137,7 +138,7 @@ describe('confirm', () => {
         expect(confirm('Confirm?')).toBe(true);
     });
 
-    it('accepts no synonyms', () => {
+    it('accepts no synonyms', async () => {
         mockReadlineQuestion.mockReturnValue('n');
         expect(confirm('Confirm?')).toBe(false);
         mockReadlineQuestion.mockReturnValue('no');
@@ -146,34 +147,34 @@ describe('confirm', () => {
         expect(confirm('Confirm?')).toBe(false);
     });
 
-    it('retries on invalid answer then accepts yes', () => {
+    it('retries on invalid answer then accepts yes', async () => {
         mockReadlineQuestion.mockReturnValueOnce('x').mockReturnValueOnce('s');
         expect(confirm('Confirm?')).toBe(true);
         expect(outputMock.print).toHaveBeenCalled();
     });
 
-    it('shows Y as default when defaultYes is true', () => {
+    it('shows Y as default when defaultYes is true', async () => {
         mockReadlineQuestion.mockReturnValue('y');
         expect(confirm('Confirm?', true)).toBe(true);
     });
 });
 
-describe('isTTY', () => {
-    afterEach(() => {
+describe('isTTY', async () => {
+    afterEach(async () => {
         Object.defineProperty(process.stdout, 'isTTY', { value: undefined, configurable: true });
     });
 
-    it('returns true when stdout.isTTY and quiet is false', () => {
+    it('returns true when stdout.isTTY and quiet is false', async () => {
         Object.defineProperty(process.stdout, 'isTTY', { value: true, configurable: true });
         expect(isTTY()).toBe(true);
     });
 
-    it('returns false when stdout.isTTY is falsy', () => {
+    it('returns false when stdout.isTTY is falsy', async () => {
         Object.defineProperty(process.stdout, 'isTTY', { value: undefined, configurable: true });
         expect(isTTY()).toBe(false);
     });
 
-    it('returns false when quiet is true', () => {
+    it('returns false when quiet is true', async () => {
         Object.defineProperty(process.stdout, 'isTTY', { value: true, configurable: true });
         const cfg3 = ConfigAccessor.create();
         cfg3.get = <T>(k: string) => ({ quiet: true, autoConfirm: false })[k] as T;
@@ -182,8 +183,8 @@ describe('isTTY', () => {
     });
 });
 
-describe('NAV_CMDS', () => {
-    it('contains expected navigation commands', () => {
+describe('NAV_CMDS', async () => {
+    it('contains expected navigation commands', async () => {
         expect(NAV_CMDS).toEqual(['/back', '/menu', '/exit', '/sair', '/quit', '/help']);
     });
 });

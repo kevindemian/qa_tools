@@ -1,27 +1,27 @@
-jest.mock('../shared/prompt', () => ({
-    print: jest.fn(),
-    success: jest.fn(),
-    warn: jest.fn(),
-    info: jest.fn(),
-    title: jest.fn(),
-    prompt: jest.fn(),
-    confirm: jest.fn(),
-    printError: jest.fn(),
-    withSpinner: jest.fn(<T>(_: string, fn: () => Promise<T>) => fn()),
+vi.mock('../shared/prompt', async () => ({
+    print: vi.fn(),
+    success: vi.fn(),
+    warn: vi.fn(),
+    info: vi.fn(),
+    title: vi.fn(),
+    prompt: vi.fn(),
+    confirm: vi.fn(),
+    printError: vi.fn(),
+    withSpinner: vi.fn(<T>(_: string, fn: () => Promise<T>) => fn()),
 }));
 
 const mockState = { currentProvider: 'gitlab', currentProjectName: '' };
 
-jest.mock('./session-state', () => ({
-    pushHistory: jest.fn(),
-    displayProjects: jest.fn(),
-    displayRecentPipelines: jest.fn(),
-    createManagerForProject: jest.fn(() => mockManager),
-    getProviderForProject: jest.fn(() => 'gitlab'),
-    setCurrentProjectName: jest.fn(),
-    setProjectId: jest.fn(),
-    setManager: jest.fn(),
-    getProjects: jest.fn(() => ({})),
+vi.mock('./session-state', async () => ({
+    pushHistory: vi.fn(),
+    displayProjects: vi.fn(),
+    displayRecentPipelines: vi.fn(),
+    createManagerForProject: vi.fn(() => mockManager),
+    getProviderForProject: vi.fn(() => 'gitlab'),
+    setCurrentProjectName: vi.fn(),
+    setProjectId: vi.fn(),
+    setManager: vi.fn(),
+    getProjects: vi.fn(() => ({})),
     get currentProvider() {
         return mockState.currentProvider;
     },
@@ -30,56 +30,57 @@ jest.mock('./session-state', () => ({
     },
 }));
 
-jest.mock('../shared/metrics', () => ({
-    loadMetrics: jest.fn(() => ({ runs: [] })),
-    calculateFlakiness: jest.fn(() => []),
+vi.mock('../shared/metrics', async () => ({
+    loadMetrics: vi.fn(() => ({ runs: [] })),
+    calculateFlakiness: vi.fn(() => []),
 }));
 
-jest.mock('../shared/flakiness-dashboard', () => ({ generateFlakinessHtml: jest.fn(() => '<html>') }));
+vi.mock('../shared/flakiness-dashboard', async () => ({ generateFlakinessHtml: vi.fn(() => '<html>') }));
 
-jest.mock('../shared/open', () => ({ openWithFallback: jest.fn() }));
+vi.mock('../shared/open', async () => ({ openWithFallback: vi.fn() }));
 
-jest.mock('../shared/state', () => ({ update: jest.fn() }));
+vi.mock('../shared/state', async () => ({ update: vi.fn() }));
 
-jest.mock('fs', () => ({
-    writeFileSync: jest.fn(),
-    mkdirSync: jest.fn(),
-    existsSync: jest.fn(),
-    rmSync: jest.fn(),
+vi.mock('fs', async () => ({
+    writeFileSync: vi.fn(),
+    mkdirSync: vi.fn(),
+    existsSync: vi.fn(),
+    rmSync: vi.fn(),
 }));
 
-import { success, warn, info, print, prompt, printError } from '../shared/prompt';
-import { pushHistory, getProjects } from './session-state';
-import { loadMetrics, calculateFlakiness } from '../shared/metrics';
-import { generateFlakinessHtml } from '../shared/flakiness-dashboard';
+import { success, warn, info, print, prompt, printError } from '../shared/prompt.js';
+import { pushHistory, getProjects } from './session-state.js';
+import { loadMetrics, calculateFlakiness } from '../shared/metrics.js';
+import { generateFlakinessHtml } from '../shared/flakiness-dashboard.js';
 import {
     handleListSchedules,
     handleRunSchedule,
     handleChangeProject,
     handleFlakinessDashboard,
-} from './schedule-handler';
-import { createMockGitProvider } from '../shared/test-utils/factories';
+} from './schedule-handler.js';
+import { createMockGitProvider } from '../shared/test-utils/factories/index.js';
+import type { GitProvider } from '../shared/types.js';
 
-const mockPrompt = jest.mocked(prompt);
-const mockPushHistory = jest.mocked(pushHistory);
-const mockPrintError = jest.mocked(printError);
-const mockWarn = jest.mocked(warn);
-const mockInfo = jest.mocked(info);
-const mockLoadMetrics = jest.mocked(loadMetrics);
-const mockCalculateFlakiness = jest.mocked(calculateFlakiness);
-const mockGenerateHtml = jest.mocked(generateFlakinessHtml);
+const mockPrompt = vi.mocked(prompt);
+const mockPushHistory = vi.mocked(pushHistory);
+const mockPrintError = vi.mocked(printError);
+const mockWarn = vi.mocked(warn);
+const mockInfo = vi.mocked(info);
+const mockLoadMetrics = vi.mocked(loadMetrics);
+const mockCalculateFlakiness = vi.mocked(calculateFlakiness);
+const mockGenerateHtml = vi.mocked(generateFlakinessHtml);
 
 const mockManager = createMockGitProvider();
 
 beforeEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
     mockState.currentProvider = 'gitlab';
     mockState.currentProjectName = '';
 });
 
-beforeAll(() => {
-    const openModule = require('../shared/open') as { openWithFallback: (...args: unknown[]) => unknown };
-    if (!jest.isMockFunction(openModule.openWithFallback)) {
+beforeAll(async () => {
+    const openModule = (await import('../shared/open.js')) as { openWithFallback: (...args: unknown[]) => unknown };
+    if (!vi.isMockFunction(openModule.openWithFallback)) {
         throw new Error('Guard FAILED: openWithFallback is NOT mocked. Browser would open!');
     }
 });
@@ -90,7 +91,7 @@ describe('handleListSchedules', () => {
             { id: '1', description: 'Nightly', next_run_at: '2026-01-01' },
             { id: '2', description: '' },
         ];
-        jest.mocked(mockManager.getSchedules).mockResolvedValue(schedules);
+        vi.mocked(mockManager.getSchedules).mockResolvedValue(schedules);
 
         await handleListSchedules(mockManager);
 
@@ -100,7 +101,7 @@ describe('handleListSchedules', () => {
     });
 
     it('warns on empty schedules', async () => {
-        jest.mocked(mockManager.getSchedules).mockResolvedValue([]);
+        vi.mocked(mockManager.getSchedules).mockResolvedValue([]);
 
         await handleListSchedules(mockManager);
 
@@ -117,7 +118,7 @@ describe('handleListSchedules', () => {
     });
 
     it('handles error', async () => {
-        jest.mocked(mockManager.getSchedules).mockRejectedValue(new Error('API error'));
+        vi.mocked(mockManager.getSchedules).mockRejectedValue(new Error('API error'));
 
         await handleListSchedules(mockManager);
 
@@ -128,7 +129,7 @@ describe('handleListSchedules', () => {
 describe('handleRunSchedule', () => {
     it('runs schedule for gitlab', async () => {
         mockPrompt.mockReturnValue('schedule-1');
-        jest.mocked(mockManager.runSchedule).mockResolvedValue({ status: 'success' });
+        vi.mocked(mockManager.runSchedule).mockResolvedValue({ status: 'success' });
 
         await handleRunSchedule(mockManager);
 
@@ -148,7 +149,7 @@ describe('handleRunSchedule', () => {
 
     it('handles error', async () => {
         mockPrompt.mockReturnValue('sched-1');
-        jest.mocked(mockManager.runSchedule).mockRejectedValue(new Error('fail'));
+        vi.mocked(mockManager.runSchedule).mockRejectedValue(new Error('fail'));
 
         await handleRunSchedule(mockManager);
 
@@ -161,15 +162,19 @@ describe('handleChangeProject', () => {
 
     it('changes to valid project', async () => {
         mockPrompt.mockReturnValue('1');
-        jest.mocked(getProjects).mockReturnValue({ proj1: '1', proj2: '2' });
+        vi.mocked(getProjects).mockReturnValue({ proj1: '1', proj2: '2' });
 
         await handleChangeProject(names);
 
-        const { setCurrentProjectName, setProjectId, setManager } = require('./session-state') as {
+        const {
+            setCurrentProjectName,
+            setProjectId,
+            setManager,
+        }: {
             setCurrentProjectName: (name: string) => void;
             setProjectId: (id: string) => void;
-            setManager: (...args: unknown[]) => void;
-        };
+            setManager: (v: GitProvider | null) => void;
+        } = await import('./session-state.js');
         expect(setCurrentProjectName).toHaveBeenCalledWith('proj1');
         expect(setProjectId).toHaveBeenCalledWith('1');
         expect(setManager).toHaveBeenCalled();
@@ -193,13 +198,13 @@ describe('handleChangeProject', () => {
 });
 
 describe('handleFlakinessDashboard', () => {
-    it('warns when no project selected', () => {
+    it('warns when no project selected', async () => {
         void handleFlakinessDashboard();
 
         expect(mockWarn).toHaveBeenCalledWith(expect.stringContaining('Nenhum projeto'));
     });
 
-    it('warns when less than 2 runs', () => {
+    it('warns when less than 2 runs', async () => {
         mockState.currentProjectName = 'proj1';
         mockLoadMetrics.mockReturnValue({
             runs: [
@@ -212,7 +217,7 @@ describe('handleFlakinessDashboard', () => {
         expect(mockWarn).toHaveBeenCalledWith(expect.stringContaining('Menos de 2'));
     });
 
-    it('informs when no flaky tests', () => {
+    it('informs when no flaky tests', async () => {
         mockState.currentProjectName = 'proj1';
         mockLoadMetrics.mockReturnValue({
             runs: [
@@ -242,9 +247,11 @@ describe('handleFlakinessDashboard', () => {
         await handleFlakinessDashboard();
 
         expect(mockGenerateHtml).toHaveBeenCalled();
-        const { writeFileSync } = require('fs') as typeof import('fs');
+        const { writeFileSync } = await import('fs');
         expect(writeFileSync).toHaveBeenCalled();
-        const { openWithFallback } = require('../shared/open') as { openWithFallback: (...args: unknown[]) => unknown };
+        const { openWithFallback } = (await import('../shared/open.js')) as {
+            openWithFallback: (...args: unknown[]) => unknown;
+        };
         expect(openWithFallback).toHaveBeenCalledWith(expect.stringContaining('flakiness'), 'Dashboard de flaky', info);
     });
 });

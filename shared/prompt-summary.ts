@@ -1,11 +1,11 @@
 /** End-of-run summary rendered as styled boxes. */
 import chalk from 'chalk';
-import { rootLogger } from './logger';
-import { box } from './box';
-import { palette } from './palette';
-import { defaultOutput as output } from './output';
-import { isQuiet, success, SUMMARY_BOX_WIDTH } from './prompt-format';
-import type { TestResult } from './types';
+import { rootLogger } from './logger.js';
+import { box } from './box.js';
+import { palette } from './palette.js';
+import { defaultOutput as output } from './output.js';
+import { isQuiet, success, SUMMARY_BOX_WIDTH } from './prompt-format.js';
+import type { TestResult } from './types.js';
 
 function renderQuietSummary(passed: number, failed: number, results: TestResult[]): void {
     if (failed === 0) {

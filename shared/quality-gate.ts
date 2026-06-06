@@ -1,15 +1,15 @@
 /** Quality gate orchestrator — composes health, coverage, and flakiness thresholds into a single pass/fail decision.
  *  Used by the qa-quality-gate CLI and CI pipeline.
  *  All thresholds are configurable via environment variables. */
-import { loadMetrics, calculateFlakiness } from './metrics';
-import type { MetricsRun, MetricsStore } from './metrics';
-import { calculateHealthScore, type HealthScoreConfig } from './health-score';
-import type { HealthScoreResult } from './types';
-import { generateGitMetricsRuns } from './git-metrics-adapter';
-import Config from './config-accessor';
-import { rootLogger } from './logger';
-import { executeFlakyActions } from './flaky-auto-actions';
-import JiraClient from './jira-client';
+import { loadMetrics, calculateFlakiness } from './metrics.js';
+import type { MetricsRun, MetricsStore } from './metrics.js';
+import { calculateHealthScore, type HealthScoreConfig } from './health-score.js';
+import type { HealthScoreResult } from './types.js';
+import { generateGitMetricsRuns } from './git-metrics-adapter.js';
+import Config from './config-accessor.js';
+import { rootLogger } from './logger.js';
+import { executeFlakyActions } from './flaky-auto-actions.js';
+import JiraClient from './jira-client.js';
 
 export interface QualityGateResult {
     overall: 'pass' | 'fail';

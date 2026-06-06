@@ -1,44 +1,45 @@
-jest.mock('../shared/logger', () => ({
-    rootLogger: { info: jest.fn(), warn: jest.fn(), error: jest.fn() },
+vi.mock('../shared/logger', async () => ({
+    rootLogger: { info: vi.fn(), warn: vi.fn(), error: vi.fn() },
 }));
 
-jest.mock('fs');
+vi.mock('fs');
 
 import fs from 'fs';
+import type { Mock } from 'vitest';
 import path from 'path';
-import { LinkTypeManager } from './link-types';
-import { rootLogger } from '../shared/logger';
-import { tempDirPath } from '../shared/temp-dir';
-import { nonNull } from '../shared/test-utils';
+import { LinkTypeManager } from './link-types.js';
+import { rootLogger } from '../shared/logger.js';
+import { tempDirPath } from '../shared/temp-dir.js';
+import { nonNull } from '../shared/test-utils.js';
 
 const CACHE_PATH = path.join(tempDirPath(), 'cache', 'link-types-cache.json');
 
 describe('LinkTypeManager', () => {
     let manager: LinkTypeManager;
     let mockJiraResource: {
-        getJiraResource: jest.Mock;
-        postJiraResource: jest.Mock;
-        putJiraResource: jest.Mock;
-        searchJiraIssues: jest.Mock;
-        getTransitionsForIssue: jest.Mock;
-        transitionIssue: jest.Mock;
+        getJiraResource: Mock;
+        postJiraResource: Mock;
+        putJiraResource: Mock;
+        searchJiraIssues: Mock;
+        getTransitionsForIssue: Mock;
+        transitionIssue: Mock;
     };
 
     beforeEach(() => {
-        jest.clearAllMocks();
+        vi.clearAllMocks();
         mockJiraResource = {
-            getJiraResource: jest.fn(),
-            postJiraResource: jest.fn(),
-            putJiraResource: jest.fn(),
-            searchJiraIssues: jest.fn(),
-            getTransitionsForIssue: jest.fn(),
-            transitionIssue: jest.fn(),
+            getJiraResource: vi.fn(),
+            postJiraResource: vi.fn(),
+            putJiraResource: vi.fn(),
+            searchJiraIssues: vi.fn(),
+            getTransitionsForIssue: vi.fn(),
+            transitionIssue: vi.fn(),
         };
         manager = new LinkTypeManager(mockJiraResource);
     });
 
     describe('constructor', () => {
-        it('stores jiraResource and sets defaults', () => {
+        it('stores jiraResource and sets defaults', async () => {
             expect(manager.jiraResource).toBe(mockJiraResource);
             expect(manager.linkTypesCache).toBeNull();
             expect(manager.cacheFilePath).toBe(CACHE_PATH);
@@ -66,15 +67,15 @@ describe('LinkTypeManager', () => {
         it('falls back to local cache when API fails', async () => {
             const cachedTypes = [{ id: '99', name: 'Cached' }];
             mockJiraResource.getJiraResource.mockRejectedValue(new Error('API down'));
-            jest.mocked(fs.existsSync).mockReturnValue(true);
-            jest.mocked(fs.readFileSync).mockReturnValue(JSON.stringify(cachedTypes));
+            vi.mocked(fs.existsSync).mockReturnValue(true);
+            vi.mocked(fs.readFileSync).mockReturnValue(JSON.stringify(cachedTypes));
             const result = await manager.getIssueLinkTypes();
             expect(result).toEqual(cachedTypes);
         });
 
         it('falls back to hardcoded types when API and cache fail', async () => {
             mockJiraResource.getJiraResource.mockRejectedValue(new Error('API down'));
-            jest.mocked(fs.existsSync).mockReturnValue(false);
+            vi.mocked(fs.existsSync).mockReturnValue(false);
             const result = await manager.getIssueLinkTypes();
             expect(result).toHaveLength(3);
             expect(nonNull(result[0]).name).toBe('Relates');
@@ -83,7 +84,7 @@ describe('LinkTypeManager', () => {
         it('logs warning when cache write throws', async () => {
             const fakeTypes = [{ id: '10200', name: 'Tested by' }];
             mockJiraResource.getJiraResource.mockResolvedValue({ issueLinkTypes: fakeTypes });
-            jest.mocked(fs.writeFileSync).mockImplementation(() => {
+            vi.mocked(fs.writeFileSync).mockImplementation(() => {
                 throw new Error('Disk full');
             });
             await manager.getIssueLinkTypes();
@@ -92,8 +93,8 @@ describe('LinkTypeManager', () => {
 
         it('logs warning when cache read has invalid JSON', async () => {
             mockJiraResource.getJiraResource.mockRejectedValue(new Error('API down'));
-            jest.mocked(fs.existsSync).mockReturnValue(true);
-            jest.mocked(fs.readFileSync).mockReturnValue('invalid json');
+            vi.mocked(fs.existsSync).mockReturnValue(true);
+            vi.mocked(fs.readFileSync).mockReturnValue('invalid json');
             const result = await manager.getIssueLinkTypes();
             expect(rootLogger.warn).toHaveBeenCalledWith(expect.stringContaining('Falha ao ler cache'));
             expect(result).toHaveLength(3);

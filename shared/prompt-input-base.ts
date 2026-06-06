@@ -2,8 +2,8 @@
  * @module Prompt input base layer — used by filepath and inquirer wrappers. */
 import chalk from 'chalk';
 import readlineSync from 'readline-sync';
-import { defaultOutput as output } from './output';
-import { CancelError, getConfig, icon, warn } from './prompt-ui';
+import { defaultOutput as output } from './output.js';
+import { CancelError, getConfig, icon, warn } from './prompt-ui.js';
 
 export interface PromptOptions {
     default?: string;

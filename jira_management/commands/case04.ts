@@ -1,8 +1,8 @@
 /** Add tasks to sprint — assign issue keys to the current active sprint. */
-import { print, success, warn, title, ask, askConfirm, printError, printSummary } from '../../shared/prompt';
-import { rootLogger } from '../../shared/logger';
-import type { CommandContext } from './context';
-import { OPERATION_CANCELLED, ERR_ADD_TASKS_TO_SPRINT } from '../constants';
+import { print, success, warn, title, ask, askConfirm, printError, printSummary } from '../../shared/prompt.js';
+import { rootLogger } from '../../shared/logger.js';
+import type { CommandContext } from './context.js';
+import { OPERATION_CANCELLED, ERR_ADD_TASKS_TO_SPRINT } from '../constants.js';
 
 async function handler(c: CommandContext): Promise<boolean | void> {
     const useInMemory = await askConfirm('Usar tarefas criadas anteriormente?', true);

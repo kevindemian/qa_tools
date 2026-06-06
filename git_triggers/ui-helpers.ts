@@ -1,9 +1,9 @@
 /** UI helpers — branch formatting, interactive menus, and project-selection prompts. */
 import { stripVTControlCharacters } from 'util';
-import type { JsonObject } from '../shared/types';
-import { title, warn, divider, ask, tableView } from '../shared/prompt';
-import { load as loadState } from '../shared/state';
-import { defaultOutput } from '../shared/output';
+import type { JsonObject } from '../shared/types.js';
+import { title, warn, divider, ask, tableView } from '../shared/prompt.js';
+import { load as loadState } from '../shared/state.js';
+import { defaultOutput } from '../shared/output.js';
 
 const MSG_NO_OPERATION_RECORDED = 'Nenhuma operação registrada.';
 

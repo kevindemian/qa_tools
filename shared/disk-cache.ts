@@ -3,8 +3,8 @@ import crypto from 'crypto';
 import fs from 'fs';
 import path from 'path';
 import { z } from 'zod';
-import { rootLogger } from './logger';
-import Config from './config';
+import { rootLogger } from './logger.js';
+import Config from './config.js';
 
 const DISK_CACHE_TTL_MS = 60 * 60 * 1000;
 const CACHE_DIR_PERM = 0o700;

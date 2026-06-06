@@ -1,18 +1,17 @@
-import { jest } from '@jest/globals';
-import type Config from '../config-accessor';
-import type { StateSchema } from '../types';
+import type Config from '../config-accessor.js';
+import type { StateSchema } from '../types.js';
 
-export const migrateOldState = jest.fn<(config?: Config) => void>();
+export const migrateOldState = vi.fn<(config?: Config) => void>();
 
-export const getStatePath = jest.fn<(config?: Config) => string>().mockReturnValue('/mock/state.json');
+export const getStatePath = vi.fn<(config?: Config) => string>().mockReturnValue('/mock/state.json');
 
-export const loadTypedState = jest.fn<(config?: Config) => StateSchema>(() => ({}));
+export const loadTypedState = vi.fn<(config?: Config) => StateSchema>(() => ({}));
 
-export const load = jest.fn<(config?: Config) => Record<string, unknown>>().mockReturnValue({});
+export const load = vi.fn<(config?: Config) => Record<string, unknown>>().mockReturnValue({});
 
-export const save = jest.fn<(state: Record<string, unknown>, config?: Config) => void>();
+export const save = vi.fn<(state: Record<string, unknown>, config?: Config) => void>();
 
-export const update = jest.fn(
+export const update = vi.fn(
     (fn: (state: Record<string, unknown>) => void, _config?: Config): Record<string, unknown> => {
         const copy: Record<string, unknown> = {};
         fn(copy);

@@ -1,11 +1,11 @@
 /** Preview rendering — Markdown generation, terminal/HTML preview, test filtering, confirmation. */
-import Config from '../shared/config';
-import { md, mdToHtml } from '../shared/markdown';
-import { writeEphemeral } from '../shared/temp-dir';
-import { openWithOsOrFallback } from '../shared/open';
-import { confirm, info, warn, print, title, divider, prompt } from '../shared/prompt';
-import { OPERATION_CANCELLED } from './constants';
-import type { TestCase } from '../shared/types';
+import Config from '../shared/config.js';
+import { md, mdToHtml } from '../shared/markdown.js';
+import { writeEphemeral } from '../shared/temp-dir.js';
+import { openWithOsOrFallback } from '../shared/open.js';
+import { confirm, info, warn, print, title, divider, prompt } from '../shared/prompt.js';
+import { OPERATION_CANCELLED } from './constants.js';
+import type { TestCase } from '../shared/types.js';
 
 /** Options for {@link generatePreviewMarkdown}. */
 export interface PreviewMdOptions {

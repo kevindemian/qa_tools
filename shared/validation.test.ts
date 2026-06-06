@@ -1,19 +1,19 @@
-import { z, parseOrThrow } from './validation';
+import { z, parseOrThrow } from './validation.js';
 
 describe('validation — zod wrapper', () => {
     describe('parseOrThrow', () => {
-        it('parses valid data', () => {
+        it('parses valid data', async () => {
             const schema = z.object({ name: z.string() });
             const result = parseOrThrow(schema, { name: 'test' });
             expect(result).toEqual({ name: 'test' });
         });
 
-        it('throws on invalid data', () => {
+        it('throws on invalid data', async () => {
             const schema = z.object({ name: z.string() });
             expect(() => parseOrThrow(schema, { name: 123 })).toThrow('Validation failed');
         });
 
-        it('preserves transformed data', () => {
+        it('preserves transformed data', async () => {
             const schema = z.string().transform((s) => s.toUpperCase());
             const result = parseOrThrow(schema, 'hello');
             expect(result).toBe('HELLO');
@@ -21,7 +21,7 @@ describe('validation — zod wrapper', () => {
     });
 
     describe('z re-export', () => {
-        it('provides full zod API', () => {
+        it('provides full zod API', async () => {
             expect(typeof z.string).toBe('function');
             expect(typeof z.number).toBe('function');
             expect(typeof z.object).toBe('function');
@@ -29,7 +29,7 @@ describe('validation — zod wrapper', () => {
             expect(typeof z.enum).toBe('function');
         });
 
-        it('schema parsing works', () => {
+        it('schema parsing works', async () => {
             const schema = z.number();
             expect(schema.safeParse('abc').success).toBe(false);
             expect(schema.safeParse(42).success).toBe(true);

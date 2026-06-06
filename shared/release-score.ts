@@ -7,10 +7,10 @@
  * @module release-score
  */
 
-import { buildHtmlPage } from './html-factory';
-import { buildCss } from './report-styles';
-import { buildReleaseSection } from './report-sections';
-import { formatDateISO } from './date-utils';
+import { buildHtmlPage } from './html-factory.js';
+import { buildCss } from './report-styles.js';
+import { buildReleaseSection } from './report-sections.js';
+import { formatDateISO } from './date-utils.js';
 
 export interface ReleaseScoreResult {
     score: number;

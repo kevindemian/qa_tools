@@ -1,6 +1,6 @@
-import type { AxiosInstance } from '../shared/deps';
-import { rootLogger } from '../shared/logger';
-import { handleError } from '../shared/git-provider-error';
+import type { AxiosInstance } from '../shared/deps.js';
+import { rootLogger } from '../shared/logger.js';
+import { handleError } from '../shared/git-provider-error.js';
 import type {
     PipelineTriggerResult,
     ScheduleInfo,
@@ -10,8 +10,8 @@ import type {
     ArtifactInfo,
     CICDVariable,
     JsonObject,
-} from '../shared/types';
-import { apiGet, apiPost } from './github-api';
+} from '../shared/types.js';
+import { apiGet, apiPost } from './github-api.js';
 
 const LIST_WORKFLOWS_PAGE_SIZE = 10;
 const VARIABLES_PAGE_SIZE = 100;

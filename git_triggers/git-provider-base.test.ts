@@ -1,5 +1,5 @@
-import { createMockAxiosInstance } from '../shared/test-utils/factories/response-factory';
-import { GitProviderBase } from './git-provider-base';
+import { createMockAxiosInstance } from '../shared/test-utils/factories/response-factory.js';
+import { GitProviderBase } from './git-provider-base.js';
 
 class TestProvider extends GitProviderBase {
     client = createMockAxiosInstance();
@@ -28,21 +28,21 @@ class TestProvider extends GitProviderBase {
 describe('GitProviderBase._get', () => {
     it('returns data on successful get', async () => {
         const provider = new TestProvider();
-        jest.mocked(provider.client.get).mockResolvedValue({ data: { id: 1 } });
+        vi.mocked(provider.client.get).mockResolvedValue({ data: { id: 1 } });
         const result = await provider.publicGet('/test');
         expect(result).toEqual({ id: 1 });
     });
 
     it('passes params to client.get', async () => {
         const provider = new TestProvider();
-        jest.mocked(provider.client.get).mockResolvedValue({ data: [] });
+        vi.mocked(provider.client.get).mockResolvedValue({ data: [] });
         await provider.publicGet('/test', { params: { page: 2 } });
         expect(provider.client.get).toHaveBeenCalledWith('/test', { params: { page: 2 } });
     });
 
     it('returns null on error when returnNull is set', async () => {
         const provider = new TestProvider();
-        jest.mocked(provider.client.get).mockRejectedValue(new Error('fail'));
+        vi.mocked(provider.client.get).mockRejectedValue(new Error('fail'));
         const result = await provider.publicGet('/test', { returnNull: true });
         expect(result).toBeNull();
     });
@@ -51,21 +51,21 @@ describe('GitProviderBase._get', () => {
 describe('GitProviderBase._post', () => {
     it('returns data on successful post', async () => {
         const provider = new TestProvider();
-        jest.mocked(provider.client.post).mockResolvedValue({ data: { key: 1 } });
+        vi.mocked(provider.client.post).mockResolvedValue({ data: { key: 1 } });
         const result = await provider.publicPost('/test', { name: 'foo' });
         expect(result).toEqual({ key: 1 });
     });
 
     it('calls post without body when body is undefined', async () => {
         const provider = new TestProvider();
-        jest.mocked(provider.client.post).mockResolvedValue({ data: null });
+        vi.mocked(provider.client.post).mockResolvedValue({ data: null });
         await provider.publicPost('/test');
         expect(provider.client.post).toHaveBeenCalledWith('/test');
     });
 });
 
 describe('GitProviderBase._formatDiffResponse', () => {
-    it('formats entries with patch content', () => {
+    it('formats entries with patch content', async () => {
         const provider = new TestProvider();
         const entries = [
             { filename: 'src/index.ts', patch: '@@ -1 +1 @@\n-foo\n+bar', status: 'modified' },
@@ -77,7 +77,7 @@ describe('GitProviderBase._formatDiffResponse', () => {
         );
     });
 
-    it('skips entries without patch field', () => {
+    it('skips entries without patch field', async () => {
         const provider = new TestProvider();
         const entries = [
             { filename: 'a.ts', patch: 'content' },
@@ -88,19 +88,19 @@ describe('GitProviderBase._formatDiffResponse', () => {
         expect(result).toBe('--- a/a.ts\n+++ b/a.ts\ncontent\n--- a/c.ts\n+++ b/c.ts\nmore');
     });
 
-    it('returns empty string for null / undefined / non-array input', () => {
+    it('returns empty string for null / undefined / non-array input', async () => {
         const provider = new TestProvider();
         expect(provider.publicFormatDiffResponse(null, 'patch', 'filename')).toBe('');
         expect(provider.publicFormatDiffResponse(undefined, 'patch', 'filename')).toBe('');
         expect(provider.publicFormatDiffResponse({} as Array<Record<string, unknown>>, 'patch', 'filename')).toBe('');
     });
 
-    it('returns empty string for empty array', () => {
+    it('returns empty string for empty array', async () => {
         const provider = new TestProvider();
         expect(provider.publicFormatDiffResponse([], 'patch', 'filename')).toBe('');
     });
 
-    it('truncates when result exceeds truncationLimit', () => {
+    it('truncates when result exceeds truncationLimit', async () => {
         const provider = new TestProvider();
         const entries = [{ filename: 'big.ts', patch: 'a'.repeat(200) }];
         const result = provider.publicFormatDiffResponse(entries, 'patch', 'filename', 50);
@@ -108,7 +108,7 @@ describe('GitProviderBase._formatDiffResponse', () => {
         expect(result.endsWith('\n... (truncated)')).toBe(true);
     });
 
-    it('does not truncate when result fits within trim', () => {
+    it('does not truncate when result fits within trim', async () => {
         const provider = new TestProvider();
         const entries = [{ filename: 'small.ts', patch: 'content' }];
         const result = provider.publicFormatDiffResponse(entries, 'patch', 'filename', 15000);

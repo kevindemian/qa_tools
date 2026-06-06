@@ -14,13 +14,13 @@ import {
     type ValidationResult,
     fail,
     pass,
-} from './artifact-validator';
+} from './artifact-validator.js';
 import {
     invariantNoPlaceholder,
     invariantNoMarkdown,
     invariantEvidenceExists,
     invariantNoEmptyStrings,
-} from './shared-invariants';
+} from './shared-invariants.js';
 
 interface PipelineShape {
     category?: string;

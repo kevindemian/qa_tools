@@ -1,5 +1,5 @@
 import fs from 'fs';
-import type { Framework } from './context';
+import type { Framework } from './context.js';
 
 export interface DetectionResult {
     framework: Framework;

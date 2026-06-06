@@ -1,7 +1,7 @@
-import { buildTraceabilityMatrix, generateTraceabilityHtml } from './traceability-matrix';
-import type { MetricsStore } from './metrics';
-import { rootLogger } from './logger';
-import { nonNull } from './test-utils';
+import { buildTraceabilityMatrix, generateTraceabilityHtml } from './traceability-matrix.js';
+import type { MetricsStore } from './metrics.js';
+import { rootLogger } from './logger.js';
+import { nonNull } from './test-utils.js';
 
 function emptyMetrics(): MetricsStore {
     return { runs: [] };
@@ -31,7 +31,7 @@ function singleRunMetrics(
 }
 
 describe('buildTraceabilityMatrix', () => {
-    it('returns empty result for empty metrics', () => {
+    it('returns empty result for empty metrics', async () => {
         const result = buildTraceabilityMatrix(emptyMetrics());
         expect(result.nodes).toEqual([]);
         expect(result.totalEpics).toBe(0);
@@ -40,14 +40,14 @@ describe('buildTraceabilityMatrix', () => {
         expect(result.timestamp).toBeTruthy();
     });
 
-    it('returns empty result when no coverage data provided', () => {
+    it('returns empty result when no coverage data provided', async () => {
         const metrics = singleRunMetrics([{ title: 'Test A', state: 'passed', duration: 100 }]);
         const result = buildTraceabilityMatrix(metrics);
         expect(result.nodes).toEqual([]);
         expect(result.totalEpics).toBe(0);
     });
 
-    it('builds single epic with passed tests', () => {
+    it('builds single epic with passed tests', async () => {
         const metrics = singleRunMetrics([
             { title: 'TC-001', state: 'passed', duration: 200 },
             { title: 'TC-002', state: 'passed', duration: 150 },
@@ -67,7 +67,7 @@ describe('buildTraceabilityMatrix', () => {
         expect(nonNull(node.stories[0]).tests).toHaveLength(2);
     });
 
-    it('computes health based on pass rate', () => {
+    it('computes health based on pass rate', async () => {
         const metrics = singleRunMetrics([
             { title: 'TC-001', state: 'passed', duration: 100 },
             { title: 'TC-002', state: 'failed', duration: 50 },
@@ -87,7 +87,7 @@ describe('buildTraceabilityMatrix', () => {
         expect(result.overallCoverage).toBe(67);
     });
 
-    it('handles skipped tests', () => {
+    it('handles skipped tests', async () => {
         const metrics = singleRunMetrics([
             { title: 'TC-001', state: 'passed', duration: 100 },
             { title: 'TC-002', state: 'skipped', duration: 0 },
@@ -104,7 +104,7 @@ describe('buildTraceabilityMatrix', () => {
         expect(nonNull(node.stories[0]).tests[1]?.status).toBe('skipped');
     });
 
-    it('builds multiple epics with mixed status', () => {
+    it('builds multiple epics with mixed status', async () => {
         const metrics = singleRunMetrics([
             { title: 'TC-A1', state: 'passed', duration: 100 },
             { title: 'TC-A2', state: 'passed', duration: 200 },
@@ -133,7 +133,7 @@ describe('buildTraceabilityMatrix', () => {
         expect(result.overallCoverage).toBe(67);
     });
 
-    it('handles stories with no linked tests gracefully', () => {
+    it('handles stories with no linked tests gracefully', async () => {
         const metrics = singleRunMetrics([]);
         const result = buildTraceabilityMatrix(metrics, {
             items: [{ epic: 'EPIC-1', hasTest: false, linkedTestKeys: [] }],
@@ -147,7 +147,7 @@ describe('buildTraceabilityMatrix', () => {
         expect(node.health).toBe(0);
     });
 
-    it('handles coverage result with no items array', () => {
+    it('handles coverage result with no items array', async () => {
         const metrics = singleRunMetrics([{ title: 'TC-001', state: 'passed', duration: 100 }]);
         const result = buildTraceabilityMatrix(metrics, {
             byEpic: { 'EPIC-1': { total: 1, covered: 1, rawPct: 100 } },
@@ -158,7 +158,7 @@ describe('buildTraceabilityMatrix', () => {
         expect(nonNull(result.nodes[0]).coverage).toBe(100);
     });
 
-    it('handles unmatched test keys gracefully', () => {
+    it('handles unmatched test keys gracefully', async () => {
         const metrics = singleRunMetrics([{ title: 'TC-001', state: 'passed', duration: 100 }]);
         const result = buildTraceabilityMatrix(metrics, {
             items: [{ epic: 'EPIC-1', hasTest: true, linkedTestKeys: ['UNKNOWN-TEST'] }],
@@ -170,7 +170,7 @@ describe('buildTraceabilityMatrix', () => {
         expect(result.totalTests).toBe(0);
     });
 
-    it('handles duplicate test titles in the same run', () => {
+    it('handles duplicate test titles in the same run', async () => {
         const metrics: MetricsStore = {
             runs: [
                 {
@@ -198,7 +198,7 @@ describe('buildTraceabilityMatrix', () => {
         expect(nonNull(nonNull(result.nodes[0]).stories[0]).tests[0]?.status).toBe('passed');
     });
 
-    it('handles multiple items for the same epic', () => {
+    it('handles multiple items for the same epic', async () => {
         const metrics = singleRunMetrics([
             { title: 'TC-001', state: 'passed', duration: 100 },
             { title: 'TC-002', state: 'failed', duration: 50 },
@@ -216,7 +216,7 @@ describe('buildTraceabilityMatrix', () => {
         expect(node.health).toBe(50);
     });
 
-    it('handles item where hasTest is false but tests exist', () => {
+    it('handles item where hasTest is false but tests exist', async () => {
         const metrics = singleRunMetrics([{ title: 'TC-001', state: 'passed', duration: 100 }]);
         const result = buildTraceabilityMatrix(metrics, {
             items: [{ epic: 'EPIC-1', hasTest: false, linkedTestKeys: ['TC-001'], issueKey: 'STORY-1' }],
@@ -228,7 +228,7 @@ describe('buildTraceabilityMatrix', () => {
         expect(story.tests).toHaveLength(1);
     });
 
-    it('handles item without linkedTestKeys', () => {
+    it('handles item without linkedTestKeys', async () => {
         const metrics = singleRunMetrics([{ title: 'TC-001', state: 'passed', duration: 100 }]);
         const result = buildTraceabilityMatrix(metrics, {
             items: [{ epic: 'EPIC-1', hasTest: true }],
@@ -238,7 +238,7 @@ describe('buildTraceabilityMatrix', () => {
         expect(nonNull(result.nodes[0]).stories).toHaveLength(0);
     });
 
-    it('handles item without issueKey', () => {
+    it('handles item without issueKey', async () => {
         const metrics = singleRunMetrics([{ title: 'TC-001', state: 'passed', duration: 100 }]);
         const result = buildTraceabilityMatrix(metrics, {
             items: [{ epic: 'EPIC-1', hasTest: true, linkedTestKeys: ['TC-001'] }],
@@ -249,15 +249,15 @@ describe('buildTraceabilityMatrix', () => {
         expect(story.key).toBe('EPIC-1');
     });
 
-    it('handles error gracefully when metrics store is malformed', () => {
-        jest.spyOn(rootLogger, 'error').mockImplementation(() => {});
+    it('handles error gracefully when metrics store is malformed', async () => {
+        vi.spyOn(rootLogger, 'error').mockImplementation(() => {});
         const result = buildTraceabilityMatrix({} as MetricsStore);
         expect(result.nodes).toEqual([]);
         expect(result.totalEpics).toBe(0);
-        jest.restoreAllMocks();
+        vi.restoreAllMocks();
     });
 
-    it('has progress on flakiness from multiple runs', () => {
+    it('has progress on flakiness from multiple runs', async () => {
         const metrics: MetricsStore = {
             runs: [
                 {
@@ -295,7 +295,7 @@ describe('buildTraceabilityMatrix', () => {
 });
 
 describe('generateTraceabilityHtml', () => {
-    it('generates valid HTML with summary cards', () => {
+    it('generates valid HTML with summary cards', async () => {
         const result = buildTraceabilityMatrix(emptyMetrics(), {
             byEpic: { 'EPIC-1': { total: 1, covered: 1, rawPct: 100 } },
             items: [{ epic: 'EPIC-1', hasTest: true, linkedTestKeys: [], issueKey: 'STORY-1' }],
@@ -309,7 +309,7 @@ describe('generateTraceabilityHtml', () => {
         expect(html).toContain('Overall Coverage');
     });
 
-    it('contains tree structure with epic nodes', () => {
+    it('contains tree structure with epic nodes', async () => {
         const metrics = singleRunMetrics([{ title: 'TC-001', state: 'passed', duration: 100 }]);
         const result = buildTraceabilityMatrix(metrics, {
             items: [{ epic: 'EPIC-1', hasTest: true, linkedTestKeys: ['TC-001'], issueKey: 'STORY-1' }],
@@ -325,7 +325,7 @@ describe('generateTraceabilityHtml', () => {
         expect(html).toContain('TC-001');
     });
 
-    it('color-codes test rows by status', () => {
+    it('color-codes test rows by status', async () => {
         const metrics = singleRunMetrics([
             { title: 'TC-PASS', state: 'passed', duration: 100 },
             { title: 'TC-FAIL', state: 'failed', duration: 50 },
@@ -352,21 +352,21 @@ describe('generateTraceabilityHtml', () => {
         expect(html).toContain('status-skipped');
     });
 
-    it('shows empty state when no nodes', () => {
+    it('shows empty state when no nodes', async () => {
         const result = buildTraceabilityMatrix(emptyMetrics());
         const html = generateTraceabilityHtml(result);
         expect(html).toContain('No traceability data available');
         expect(html).not.toContain('class="epic-node"');
     });
 
-    it('uses custom title', () => {
+    it('uses custom title', async () => {
         const result = buildTraceabilityMatrix(emptyMetrics());
         const html = generateTraceabilityHtml(result, 'My Traceability');
         expect(html).toContain('My Traceability');
         expect(html).toContain('<title>My Traceability</title>');
     });
 
-    it('includes theme script and footer', () => {
+    it('includes theme script and footer', async () => {
         const result = buildTraceabilityMatrix(emptyMetrics());
         const html = generateTraceabilityHtml(result);
         expect(html).toContain('qa-report-theme');
@@ -374,7 +374,7 @@ describe('generateTraceabilityHtml', () => {
         expect(html).toContain('prefers-color-scheme');
     });
 
-    it('escapes HTML in epic names', () => {
+    it('escapes HTML in epic names', async () => {
         const result: ReturnType<typeof buildTraceabilityMatrix> = {
             nodes: [
                 {
@@ -395,14 +395,14 @@ describe('generateTraceabilityHtml', () => {
         expect(html).not.toContain('<script>alert');
     });
 
-    it('handles error gracefully when result is null', () => {
-        jest.spyOn(rootLogger, 'error').mockImplementation(() => {});
+    it('handles error gracefully when result is null', async () => {
+        vi.spyOn(rootLogger, 'error').mockImplementation(() => {});
         const html = generateTraceabilityHtml(null);
         expect(html).toContain('Error generating traceability matrix');
-        jest.restoreAllMocks();
+        vi.restoreAllMocks();
     });
 
-    it('shows error severity for coverage below 50', () => {
+    it('shows error severity for coverage below 50', async () => {
         const result: ReturnType<typeof buildTraceabilityMatrix> = {
             nodes: [],
             totalEpics: 0,
@@ -414,7 +414,7 @@ describe('generateTraceabilityHtml', () => {
         expect(html).toContain('data-severity="error"');
     });
 
-    it('shows warn severity for coverage between 50 and 80', () => {
+    it('shows warn severity for coverage between 50 and 80', async () => {
         const result: ReturnType<typeof buildTraceabilityMatrix> = {
             nodes: [],
             totalEpics: 0,
@@ -426,7 +426,7 @@ describe('generateTraceabilityHtml', () => {
         expect(html).toContain('data-severity="warn"');
     });
 
-    it('shows success severity for coverage above 80', () => {
+    it('shows success severity for coverage above 80', async () => {
         const result: ReturnType<typeof buildTraceabilityMatrix> = {
             nodes: [],
             totalEpics: 0,
@@ -438,7 +438,7 @@ describe('generateTraceabilityHtml', () => {
         expect(html).toContain('data-severity="success"');
     });
 
-    it('includes health bar for nodes with stories', () => {
+    it('includes health bar for nodes with stories', async () => {
         const metrics = singleRunMetrics([{ title: 'TC-001', state: 'passed', duration: 100 }]);
         const result = buildTraceabilityMatrix(metrics, {
             items: [{ epic: 'EPIC-1', hasTest: true, linkedTestKeys: ['TC-001'], issueKey: 'STORY-1' }],
@@ -450,7 +450,7 @@ describe('generateTraceabilityHtml', () => {
         expect(html).toContain('health-fill');
     });
 
-    it('renders health bar in warn range for epic with partial health', () => {
+    it('renders health bar in warn range for epic with partial health', async () => {
         const metrics = singleRunMetrics([
             { title: 'TC-001', state: 'passed', duration: 100 },
             { title: 'TC-002', state: 'failed', duration: 50 },

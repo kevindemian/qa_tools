@@ -9,13 +9,13 @@ import {
     showSelect,
     withSpinner,
     askConfirm,
-} from '../../shared/prompt';
-import { loadMetrics, calculateFlakiness, getTrends, saveCoverageSnapshot } from '../../shared/metrics';
-import { calculateHealthScore } from '../../shared/health-score';
-import { executeFlakyActions } from '../../shared/flaky-auto-actions';
-import { analyzeCoverage } from '../coverage';
-import { compareRuns } from '../../shared/run-comparison';
-import type { CommandContext } from './context';
+} from '../../shared/prompt.js';
+import { loadMetrics, calculateFlakiness, getTrends, saveCoverageSnapshot } from '../../shared/metrics.js';
+import { calculateHealthScore } from '../../shared/health-score.js';
+import { executeFlakyActions } from '../../shared/flaky-auto-actions.js';
+import { analyzeCoverage } from '../coverage.js';
+import { compareRuns } from '../../shared/run-comparison.js';
+import type { CommandContext } from './context.js';
 
 function _showRunHistory(store: ReturnType<typeof loadMetrics>): void {
     title('Histórico de execuções');

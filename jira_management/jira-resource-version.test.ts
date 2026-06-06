@@ -1,28 +1,32 @@
-import { createHttpClient } from '../shared/http-client';
-import { createMockAxiosInstance } from '../shared/test-utils/factories/response-factory';
+import { createHttpClient } from '../shared/http-client.js';
+import { createMockAxiosInstance } from '../shared/test-utils/factories/response-factory.js';
 
-jest.mock('../shared/http-client', () => ({ createHttpClient: jest.fn() }));
+vi.mock('../shared/http-client', async () => ({ createHttpClient: vi.fn() }));
 
-jest.mock('../shared/logger', () => ({
-    Logger: jest.fn(() => ({
-        debug: jest.fn(),
-        info: jest.fn(),
-        warn: jest.fn(),
-        error: jest.fn(),
-        child: jest.fn(() => ({ debug: jest.fn(), error: jest.fn(), info: jest.fn(), warn: jest.fn() })),
-    })),
-    rootLogger: { debug: jest.fn(), info: jest.fn(), warn: jest.fn(), error: jest.fn() },
+vi.mock('../shared/logger', async () => ({
+    Logger: vi.fn(function () {
+        return {
+            debug: vi.fn(),
+            info: vi.fn(),
+            warn: vi.fn(),
+            error: vi.fn(),
+            child: vi.fn(function () {
+                return { debug: vi.fn(), error: vi.fn(), info: vi.fn(), warn: vi.fn() };
+            }),
+        };
+    }),
+    rootLogger: { debug: vi.fn(), info: vi.fn(), warn: vi.fn(), error: vi.fn() },
 }));
 
-jest.mock('../shared/prompt', () => ({
-    error: jest.fn(),
-    success: jest.fn(),
-    info: jest.fn(),
-    warn: jest.fn(),
-    extractErrorMessage: jest.fn().mockReturnValue('mocked error'),
-    ProgressBar: jest.fn(() => ({
-        update: jest.fn(),
-        stop: jest.fn(),
+vi.mock('../shared/prompt', async () => ({
+    error: vi.fn(),
+    success: vi.fn(),
+    info: vi.fn(),
+    warn: vi.fn(),
+    extractErrorMessage: vi.fn().mockReturnValue('mocked error'),
+    ProgressBar: vi.fn(() => ({
+        update: vi.fn(),
+        stop: vi.fn(),
         current: 0,
         total: 0,
         startTime: Date.now(),
@@ -30,22 +34,22 @@ jest.mock('../shared/prompt', () => ({
     })),
 }));
 
-import JiraResource from './jira_resource';
-import { getProjectId, getVersionId, getProjectVersions, getLatestReleases } from './jira-resource-version';
+import JiraResource from './jira_resource.js';
+import { getProjectId, getVersionId, getProjectVersions, getLatestReleases } from './jira-resource-version.js';
 
-const mockGet = jest.fn();
-const mockPost = jest.fn();
-const mockPut = jest.fn();
+const mockGet = vi.fn();
+const mockPost = vi.fn();
+const mockPut = vi.fn();
 
 function buildResource(): JiraResource {
-    jest.mocked(createHttpClient).mockReturnValue(
+    vi.mocked(createHttpClient).mockReturnValue(
         createMockAxiosInstance({ get: mockGet, post: mockPost, put: mockPut }),
     );
     return new JiraResource('test-token', 'http://test-jira.com');
 }
 
 beforeEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
 });
 
 describe('getProjectId', () => {
@@ -88,15 +92,15 @@ describe('getProjectVersions', () => {
 describe('getVersionId', () => {
     it('returns version id when found', async () => {
         const resource = buildResource();
-        jest.spyOn(resource, 'getProjectId').mockResolvedValue('10000');
-        jest.spyOn(resource, 'getProjectVersions').mockResolvedValue([{ id: '99', name: 'v1.0' }]);
+        vi.spyOn(resource, 'getProjectId').mockResolvedValue('10000');
+        vi.spyOn(resource, 'getProjectVersions').mockResolvedValue([{ id: '99', name: 'v1.0' }]);
         const id = await getVersionId(resource, 'TEST', 'v1.0');
         expect(id).toBe('99');
     });
 
     it('returns null when no project', async () => {
         const resource = buildResource();
-        jest.spyOn(resource, 'getProjectId').mockResolvedValue('');
+        vi.spyOn(resource, 'getProjectId').mockResolvedValue('');
         const id = await getVersionId(resource, 'TEST', 'v1.0');
         expect(id).toBeNull();
     });
@@ -105,7 +109,7 @@ describe('getVersionId', () => {
 describe('getLatestReleases', () => {
     it('returns empty when project not found', async () => {
         const resource = buildResource();
-        jest.spyOn(resource, 'getProjectId').mockResolvedValue('');
+        vi.spyOn(resource, 'getProjectId').mockResolvedValue('');
         const result = await getLatestReleases(resource, 'NOPE', 3);
         expect(result.latestReleasedVersions).toEqual([]);
         expect(result.unreleasedVersions).toEqual([]);

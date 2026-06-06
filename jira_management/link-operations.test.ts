@@ -1,32 +1,33 @@
-jest.mock('../shared/prompt', () => ({
-    info: jest.fn(),
-    warn: jest.fn(),
+vi.mock('../shared/prompt', async () => ({
+    info: vi.fn(),
+    warn: vi.fn(),
 }));
 
-import { LinkOperations } from './link-operations';
-import { LinkTypeManager } from './link-types';
+import { LinkOperations } from './link-operations.js';
+import type { Mock } from 'vitest';
+import { LinkTypeManager } from './link-types.js';
 
 describe('LinkOperations', () => {
     let mockJiraResource: {
-        getJiraResource: jest.Mock;
-        postJiraResource: jest.Mock;
-        putJiraResource: jest.Mock;
-        searchJiraIssues: jest.Mock;
-        getTransitionsForIssue: jest.Mock;
-        transitionIssue: jest.Mock;
+        getJiraResource: Mock;
+        postJiraResource: Mock;
+        putJiraResource: Mock;
+        searchJiraIssues: Mock;
+        getTransitionsForIssue: Mock;
+        transitionIssue: Mock;
     };
     let linkTypeManager: LinkTypeManager;
     let operations: LinkOperations;
 
     beforeEach(() => {
-        jest.clearAllMocks();
+        vi.clearAllMocks();
         mockJiraResource = {
-            getJiraResource: jest.fn(),
-            postJiraResource: jest.fn(),
-            putJiraResource: jest.fn(),
-            searchJiraIssues: jest.fn(),
-            getTransitionsForIssue: jest.fn(),
-            transitionIssue: jest.fn(),
+            getJiraResource: vi.fn(),
+            postJiraResource: vi.fn(),
+            putJiraResource: vi.fn(),
+            searchJiraIssues: vi.fn(),
+            getTransitionsForIssue: vi.fn(),
+            transitionIssue: vi.fn(),
         };
         linkTypeManager = new LinkTypeManager(mockJiraResource);
         operations = new LinkOperations(mockJiraResource, linkTypeManager);

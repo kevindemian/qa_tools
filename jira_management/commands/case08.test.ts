@@ -1,20 +1,20 @@
-jest.mock('../../shared/prompt');
+vi.mock('../../shared/prompt');
 
-import case08 from './case08';
-import { makeMockCommandContext } from '../../shared/test-utils';
+import case08 from './case08.js';
+import { makeMockCommandContext } from '../../shared/test-utils.js';
 
 const mockJiraResource = {
-    releaseVersion: jest.fn().mockResolvedValue({}),
+    releaseVersion: vi.fn().mockResolvedValue({}),
 };
 
 const mockContext = makeMockCommandContext({ jiraResource: mockJiraResource });
 
 beforeEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
 });
 
 describe('case08 — release version', () => {
-    it('exports a handler function', () => {
+    it('exports a handler function', async () => {
         expect(case08).toBeDefined();
         expect(typeof case08.handler).toBe('function');
     });

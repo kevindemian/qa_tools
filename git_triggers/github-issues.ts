@@ -1,6 +1,6 @@
-import type { AxiosInstance } from '../shared/deps';
-import type { Issue } from '../shared/types';
-import { apiGet } from './github-api';
+import type { AxiosInstance } from '../shared/deps.js';
+import type { Issue } from '../shared/types.js';
+import { apiGet } from './github-api.js';
 
 const ISSUES_PAGE_SIZE = 30;
 

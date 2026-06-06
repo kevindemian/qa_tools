@@ -58,6 +58,18 @@ npx tsc --noEmit
 echo -e "${GREEN}  Typecheck passed.${NC}"
 echo ""
 
+# -- Validation hook check ---------------------------------------------
+VALIDATION_HOOK="$HOME/.config/opencode/validation_hook.ts"
+if [ -f "$VALIDATION_HOOK" ]; then
+    echo "--- Checking validation hook ---"
+    if [ -f "$HOME/.config/opencode/node_modules/.bin/tsc" ]; then
+        "$HOME/.config/opencode/node_modules/.bin/tsc" --noEmit --project "$HOME/.config/opencode/tsconfig.json" 2>/dev/null && \
+            echo -e "${GREEN}  Validation hook OK.${NC}" || \
+            echo -e "${YELLOW}  Validation hook has type errors (run fix separately).${NC}"
+    fi
+    echo ""
+fi
+
 # -- Environment file ---------------------------------------------------
 if [ ! -f .env ]; then
     echo -e "${YELLOW}--- No .env file found ---${NC}"

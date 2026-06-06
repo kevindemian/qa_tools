@@ -1,10 +1,10 @@
 /** LLM pipeline failure analysis — offer to analyze failures and generate a report. */
-import { confirm, info, warn, success, printError, divider, print } from '../shared/prompt';
-import { writeReport } from '../shared/temp-dir';
-import { analyzeFailuresWithReport } from '../shared/failure-analysis';
-import type { ParseResult } from '../shared/result_parser';
-import type { AnalysisReport } from '../shared/failure-analysis';
-import { rootLogger } from '../shared/logger';
+import { confirm, info, warn, success, printError, divider, print } from '../shared/prompt.js';
+import { writeReport } from '../shared/temp-dir.js';
+import { analyzeFailuresWithReport } from '../shared/failure-analysis.js';
+import type { ParseResult } from '../shared/result_parser.js';
+import type { AnalysisReport } from '../shared/failure-analysis.js';
+import { rootLogger } from '../shared/logger.js';
 
 export async function offerPipelineFailureAnalysis(
     parsed: ParseResult,

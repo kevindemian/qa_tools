@@ -1,50 +1,50 @@
-jest.mock('./http-client', () => ({
-    createHttpClient: jest.fn(() => ({
+vi.mock('./http-client', async () => ({
+    createHttpClient: vi.fn(() => ({
         get: mockGet,
         post: mockPost,
         put: mockPut,
     })),
 }));
 
-import JiraClient from './jira-client';
-import { createHttpClient } from './http-client';
+import JiraClient from './jira-client.js';
+import { createHttpClient } from './http-client.js';
 
-const mockGet = jest.fn();
-const mockPost = jest.fn();
-const mockPut = jest.fn();
+const mockGet = vi.fn();
+const mockPost = vi.fn();
+const mockPut = vi.fn();
 
 const TOKEN = 'test-token-12345';
 const BASE_URL = 'https://instance.atlassian.net/rest/api/2';
 const CLOUD_CRED = 'user@example.com:APITOKEN123';
 
 beforeEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
 });
 
 describe('JiraClient', () => {
     describe('constructor — auth mode', () => {
-        it('stores baseUrl and personalToken', () => {
+        it('stores baseUrl and personalToken', async () => {
             const client = new JiraClient(TOKEN, BASE_URL);
             expect(client.baseUrl).toBe(BASE_URL);
             expect(client.personalToken).toBe(TOKEN);
         });
 
-        it('parses originUrl from baseUrl', () => {
+        it('parses originUrl from baseUrl', async () => {
             const client = new JiraClient(TOKEN, BASE_URL);
             expect(client.originUrl).toBe('https://instance.atlassian.net');
         });
 
-        it('defaults jiraMode to server', () => {
+        it('defaults jiraMode to server', async () => {
             const client = new JiraClient(TOKEN, BASE_URL);
             expect(client.jiraMode).toBe('server');
         });
 
-        it('accepts explicit jiraMode', () => {
+        it('accepts explicit jiraMode', async () => {
             const client = new JiraClient(TOKEN, BASE_URL, 'cloud');
             expect(client.jiraMode).toBe('cloud');
         });
 
-        it('uses Bearer auth when mode is server (default)', () => {
+        it('uses Bearer auth when mode is server (default)', async () => {
             new JiraClient(TOKEN, BASE_URL);
             expect(createHttpClient).toHaveBeenCalledWith(
                 expect.objectContaining({
@@ -53,7 +53,7 @@ describe('JiraClient', () => {
             );
         });
 
-        it('uses Basic auth when mode is cloud', () => {
+        it('uses Basic auth when mode is cloud', async () => {
             new JiraClient(CLOUD_CRED, BASE_URL, 'cloud');
             expect(createHttpClient).toHaveBeenCalledWith(
                 expect.objectContaining({

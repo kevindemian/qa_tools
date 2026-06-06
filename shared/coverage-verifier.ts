@@ -13,7 +13,7 @@
  * Returns real coverage % + gap list.
  */
 
-import { type ValidationContext } from './artifact-validator';
+import { type ValidationContext } from './artifact-validator.js';
 
 export interface CoverageVerificationResult {
     declaredCoverage: number | null;

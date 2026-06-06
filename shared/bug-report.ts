@@ -1,18 +1,18 @@
 import * as fs from 'fs';
 import * as path from 'path';
-import { ask, askConfirm, info, printError, title, warn } from './prompt';
-import { rootLogger } from './logger';
-import { classifyFailure } from './failure-analysis';
-import { llmPrompt } from './llm-client';
-import { AiBugReportSchema } from './bug-report.schema';
-import Config from './config';
-import type { BugReport, JiraLinkManagerLike, JiraResourceLike, LLMEnrichment, TestResult } from './types';
-import type { ParseResult } from './result_parser';
+import { ask, askConfirm, info, printError, title, warn } from './prompt.js';
+import { rootLogger } from './logger.js';
+import { classifyFailure } from './failure-analysis.js';
+import { llmPrompt } from './llm-client.js';
+import { AiBugReportSchema } from './bug-report.schema.js';
+import Config from './config.js';
+import type { BugReport, JiraLinkManagerLike, JiraResourceLike, LLMEnrichment, TestResult } from './types.js';
+import type { ParseResult } from './result_parser.js';
 
 const ERROR_TRUNCATION_LIMIT = 500;
 const LLM_DESC_TRUNCATION_LIMIT = 1000;
 const LLM_CONFIDENCE = 0.5;
-const PROMPT_DIR = path.resolve(__dirname, 'prompts');
+const PROMPT_DIR = path.resolve(import.meta.dirname, 'prompts');
 
 function readPrompt(file: string): string {
     try {

@@ -1,12 +1,13 @@
-import type { Logger } from './logger';
-import { createMockContext } from './test-utils/factories/context-factory';
+import type { Logger } from './logger.js';
+import type { Mock } from 'vitest';
+import { createMockContext } from './test-utils/factories/context-factory.js';
 
 type MockLogger = {
-    info: jest.Mock;
-    error: jest.Mock;
-    warn: jest.Mock;
-    debug: jest.Mock;
-    writeFileOnly: jest.Mock;
+    info: Mock;
+    error: Mock;
+    warn: Mock;
+    debug: Mock;
+    writeFileOnly: Mock;
     filePath?: string | undefined;
 };
 
@@ -25,7 +26,7 @@ export function undefinedAs<T>(): T {
 }
 
 /** Create a minimal Logger-compatible mock with all Logger public fields.
- *  Every method is a jest.fn(); properties are set to null/empty defaults. */
+ *  Every method is a vi.fn(); properties are set to null/empty defaults. */
 export function createMockLogger(): Logger {
     return {
         context: {},
@@ -36,35 +37,35 @@ export function createMockLogger(): Logger {
         _maxLogSize: 0,
         _config: null,
         filePath: null,
-        _ensureDir: jest.fn(),
-        _rotateIfNeeded: jest.fn(),
-        _writeConsole: jest.fn(),
-        _writeFile: jest.fn(),
-        _write: jest.fn(),
-        child: jest.fn(),
-        writeFileOnly: jest.fn(),
-        debug: jest.fn(),
-        info: jest.fn(),
-        warn: jest.fn(),
-        error: jest.fn(),
+        _ensureDir: vi.fn(),
+        _rotateIfNeeded: vi.fn(),
+        _writeConsole: vi.fn(),
+        _writeFile: vi.fn(),
+        _write: vi.fn(),
+        child: vi.fn(),
+        writeFileOnly: vi.fn(),
+        debug: vi.fn(),
+        info: vi.fn(),
+        warn: vi.fn(),
+        error: vi.fn(),
     };
 }
 
 export function createMockRootLogger(filePath?: string): MockLogger {
     return {
-        info: jest.fn(),
-        error: jest.fn(),
-        warn: jest.fn(),
-        debug: jest.fn(),
-        writeFileOnly: jest.fn(),
+        info: vi.fn(),
+        error: vi.fn(),
+        warn: vi.fn(),
+        debug: vi.fn(),
+        writeFileOnly: vi.fn(),
         filePath,
     };
 }
 
 export function createConsoleSpies() {
-    const log = jest.spyOn(console, 'log').mockImplementation(() => {});
-    const error = jest.spyOn(console, 'error').mockImplementation(() => {});
-    const warn = jest.spyOn(console, 'warn').mockImplementation(() => {});
+    const log = vi.spyOn(console, 'log').mockImplementation(() => {});
+    const error = vi.spyOn(console, 'error').mockImplementation(() => {});
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
     return { log, error, warn };
 }
 
@@ -75,12 +76,12 @@ export function restoreConsoleSpies(spies: ReturnType<typeof createConsoleSpies>
 }
 
 /** Create a mock CommandContext with standard default fields for handler tests.
- *  Each call produces fresh `jest.fn()` instances, so tests are isolated.
+ *  Each call produces fresh `vi.fn()` instances, so tests are isolated.
  *  Delegates to `createMockContext()` for type-safe defaults, then merges
  *  overrides using `Record<string, unknown>` to preserve loose-override
  *  compatibility (e.g. partial mocks, extra fields on ctx).
  *  @param overrides - Top-level fields to override. `ctx` is deep-merged.
- *  @returns A `jest.Mocked<CommandContext>` compatible with handler signatures. */
+ *  @returns A `Mocked<CommandContext>` compatible with handler signatures. */
 export function makeMockCommandContext(overrides: Record<string, unknown> = {}): ReturnType<typeof createMockContext> {
     const ctx = {
         project_name: 'TEST',

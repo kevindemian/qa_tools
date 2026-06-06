@@ -5,11 +5,11 @@
  * ORCHESTRATION ONLY — prompt builders live in llm-review-prompts.ts,
  * heuristics/analyzers live in llm-review-analyzer.ts.
  */
-import { llmPrompt } from './llm-client';
-import type { LlmTier } from './types';
-import { rootLogger } from './logger';
-import { sanitizeTerminal } from './sanitize';
-import { _llmMetrics } from './llm-fallback';
+import { llmPrompt } from './llm-client.js';
+import type { LlmTier } from './types.js';
+import { rootLogger } from './logger.js';
+import { sanitizeTerminal } from './sanitize.js';
+import { _llmMetrics } from './llm-fallback.js';
 import {
     recordLlmRequest,
     recordLlmFailure,
@@ -18,21 +18,21 @@ import {
     recordConfidence,
     recordAdversarialRetry,
     recordArtifactReview,
-} from './llm-metrics';
+} from './llm-metrics.js';
 import {
     recordInvariantFire,
     recordLayerAttempt,
     recordLayerPass,
     recordArtifactType,
     snapshotQualityMetrics,
-} from './quality-metrics';
-import { createTestCaseValidator } from './test-case-validator';
-import { createAnalysisValidator } from './analysis-validator';
-import { createPipelineValidator } from './pipeline-validator';
-import { createBugReportValidator } from './bug-report-validator';
-import { createComparisonValidator } from './comparison-validator';
-import { verifyEvidence } from './evidence-validator';
-import { recalculateCoverage } from './coverage-verifier';
+} from './quality-metrics.js';
+import { createTestCaseValidator } from './test-case-validator.js';
+import { createAnalysisValidator } from './analysis-validator.js';
+import { createPipelineValidator } from './pipeline-validator.js';
+import { createBugReportValidator } from './bug-report-validator.js';
+import { createComparisonValidator } from './comparison-validator.js';
+import { verifyEvidence } from './evidence-validator.js';
+import { recalculateCoverage } from './coverage-verifier.js';
 import {
     buildReviewPrompt,
     buildSelfCritiquePrompt,
@@ -41,31 +41,14 @@ import {
     getSchemaForType,
     ADVERSARIAL_TIERS,
     REV_TIERS,
-} from './llm-review-prompts';
-import { shouldSkipAdversarialReview, parseVerdict, stripVerdict, parseLayerErrors } from './llm-review-analyzer';
+} from './llm-review-prompts.js';
+import { shouldSkipAdversarialReview, parseVerdict, stripVerdict, parseLayerErrors } from './llm-review-analyzer.js';
 
+import type { ArtifactType, ReviewResult } from './llm-review-types.js';
 // Re-exports for backward compatibility
-export { detectHedging, detectContradictions, shouldSkipAdversarialReview } from './llm-review-analyzer';
-export type { ReviewDecision } from './llm-review-analyzer';
-
-export type ArtifactType = 'test-suite' | 'analysis' | 'bug-report' | 'comparison' | 'pipeline';
-
-export interface ReviewResult {
-    content: string;
-    reviewed: boolean;
-    confidence: 'high' | 'medium' | 'low';
-    fallbackUsed?: boolean;
-    reviewerNotes?: string;
-    adversarialRetried?: boolean;
-    reReviewTier?: string;
-    metrics?: { totalRequests: number; rejectedByValidator: number; retryCount: number };
-    artifactType?: ArtifactType;
-    layerResults?: {
-        layer1Passed: boolean;
-        layer2Passed: boolean;
-        layer3Passed: boolean;
-    };
-}
+export { detectHedging, detectContradictions, shouldSkipAdversarialReview } from './llm-review-analyzer.js';
+export type { ReviewDecision } from './llm-review-analyzer.js';
+export type { ArtifactType, ReviewResult };
 
 const MAX_RETRIES = 3;
 const CONF_RANK: Record<string, number> = { high: 3, medium: 2, low: 1 };

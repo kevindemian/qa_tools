@@ -1,8 +1,8 @@
-import { rootLogger } from './logger';
-import { sanitizeHtml } from './escape';
-import { buildHtmlPage, buildErrorPage } from './html-factory';
-import { buildCss } from './report-styles';
-import { MetricCard, MetricGrid, Badge } from './primitives';
+import { rootLogger } from './logger.js';
+import { sanitizeHtml } from './escape.js';
+import { buildHtmlPage, buildErrorPage } from './html-factory.js';
+import { buildCss } from './report-styles.js';
+import { MetricCard, MetricGrid, Badge } from './primitives/index.js';
 
 export interface AuthorStat {
     author: string;

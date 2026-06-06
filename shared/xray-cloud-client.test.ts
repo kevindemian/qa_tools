@@ -1,35 +1,34 @@
 /** Tests for XrayCloudClient — validates auth token caching, retry/throttle integration, GraphQL calls. */
-import { jest } from '@jest/globals';
-import { XrayCloudClient } from './xray-cloud-client';
+import { XrayCloudClient } from './xray-cloud-client.js';
 
 type PromiseFn = (...args: Array<unknown>) => Promise<unknown>;
-const mockPost = jest.fn<PromiseFn>();
-const mockGet = jest.fn<PromiseFn>();
-const mockPut = jest.fn<PromiseFn>();
+const mockPost = vi.fn<PromiseFn>();
+const mockGet = vi.fn<PromiseFn>();
+const mockPut = vi.fn<PromiseFn>();
 
 const mockHttpClient = {
     post: mockPost,
     get: mockGet,
     put: mockPut,
     interceptors: {
-        request: { use: jest.fn<PromiseFn>() },
-        response: { use: jest.fn<PromiseFn>() },
+        request: { use: vi.fn<PromiseFn>() },
+        response: { use: vi.fn<PromiseFn>() },
     },
 };
 
-jest.mock('./http-client', () => ({
-    createThrottledClient: jest.fn(() => mockHttpClient),
+vi.mock('./http-client', async () => ({
+    createThrottledClient: vi.fn(() => mockHttpClient),
 }));
 
-jest.mock('./config', () => {
-    const mockGet = jest.fn((key: string) => {
+vi.mock('./config', () => {
+    const mockGet = vi.fn((key: string) => {
         const map: Record<string, string> = { xrayCloudUrl: 'https://xray.cloud.getxray.app' };
         return map[key];
     });
     const mockDefault = {
         get: mockGet,
-        getAllPrefixed: jest.fn(() => ({})),
-        getDefault: jest.fn(() => mockDefault),
+        getAllPrefixed: vi.fn(() => ({})),
+        getDefault: vi.fn(() => mockDefault),
     };
     return {
         __esModule: true,
@@ -43,7 +42,7 @@ const CID = 'test-client-id';
 const CSEC = 'test-client-secret';
 
 beforeEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
 });
 
 describe('XrayCloudClient', () => {

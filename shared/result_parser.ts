@@ -2,7 +2,7 @@
  * Provides unified flattening, detection, and file-I/O wrappers. */
 
 import fs from 'fs';
-import { rootLogger } from './logger';
+import { rootLogger } from './logger.js';
 
 const EMPTY_PARSE_RESULT = { tests: [], stats: { passed: 0, failed: 0, skipped: 0, total: 0, duration: 0 } };
 

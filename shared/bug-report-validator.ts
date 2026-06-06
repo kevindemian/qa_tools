@@ -16,14 +16,14 @@ import {
     fail,
     pass,
     warn,
-} from './artifact-validator';
+} from './artifact-validator.js';
 import {
     invariantNoPlaceholder,
     invariantNoMarkdown,
     invariantEvidenceExists,
     invariantNoEmptyStrings,
     invariantConclusionHasEvidence,
-} from './shared-invariants';
+} from './shared-invariants.js';
 
 const IMPERATIVE_RE =
     /^(Click|Type|Navigate|Enter|Select|Executar|Clicar|Preencher|Navegar|Press|Open|Close|Drag|Drop|Scroll|Hover|Focus|Submit|Send|Tap|Swipe|Input|Choose|Check|Uncheck|Fill|Clear|Wait|Verify|Assert|Expect|Run|Execute)/i;

@@ -5,15 +5,16 @@
  * Falls back to usage instructions in non-TTY/CI environments. */
 
 import { spawn } from 'child_process';
-import { showSplash } from './splash';
-import { showSelect } from './prompt';
-import { Output, defaultOutput } from './output';
-import { rootLogger } from './logger';
-import { ExitCode } from './types';
-import { join } from 'path';
-import { gracefulExit } from './cli_base';
+import { showSplash } from './splash.js';
+import { showSelect } from './prompt.js';
+import { Output, defaultOutput } from './output.js';
+import { rootLogger } from './logger.js';
+import { ExitCode } from './types.js';
+import { fileURLToPath } from 'url';
+import { join, resolve } from 'path';
+import { gracefulExit } from './cli_base.js';
 
-const root = join(__dirname, '..');
+const root = join(import.meta.dirname, '..');
 
 /** Spawn a module as a child process. Each module (`jira` or `git`) runs in
  * its own process with inherited stdio and isolated state. Resolves on clean
@@ -82,7 +83,7 @@ export async function main(): Promise<void> {
     }
 }
 
-if (require.main === module) {
+if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
     main().catch((err) => {
         rootLogger.error('Entry menu fatal: ' + String(err));
         gracefulExit(ExitCode.ERROR);

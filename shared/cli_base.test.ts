@@ -1,40 +1,51 @@
-import { createMockRootLogger, nonNull } from './test-utils';
+import { nonNull } from './test-utils.js';
+import type { Mock, Mocked } from 'vitest';
 
-const mockRootLogger = createMockRootLogger();
+const mockRootLogger = vi.hoisted(() => ({
+    info: vi.fn(),
+    error: vi.fn(),
+    warn: vi.fn(),
+    debug: vi.fn(),
+    filePath: undefined as string | undefined,
+    writeFileOnly: vi.fn(),
+    file: vi.fn(),
+    writeSplash: vi.fn(),
+    updateSplashStep: vi.fn(),
+}));
 
-jest.mock('./logger', () => ({
+vi.mock('./logger', async () => ({
     rootLogger: mockRootLogger,
     Logger: class {
-        info = jest.fn();
-        error = jest.fn();
-        warn = jest.fn();
-        debug = jest.fn();
+        info = vi.fn();
+        error = vi.fn();
+        warn = vi.fn();
+        debug = vi.fn();
     },
 }));
 
 const MOCK_PROMPT: {
-    error: jest.Mock;
-    warn: jest.Mock;
-    info: jest.Mock;
-    print?: jest.Mock;
-    success?: jest.Mock;
-    divider?: jest.Mock;
-    confirm?: jest.Mock;
-} = { error: jest.fn(), warn: jest.fn(), info: jest.fn(), confirm: jest.fn().mockReturnValue(false) };
-jest.mock('./prompt', () => MOCK_PROMPT);
-jest.mock('readline', () => ({
-    createInterface: jest.fn(),
+    error: Mock;
+    warn: Mock;
+    info: Mock;
+    print?: Mock;
+    success?: Mock;
+    divider?: Mock;
+    confirm?: Mock;
+} = vi.hoisted(() => ({ error: vi.fn(), warn: vi.fn(), info: vi.fn(), confirm: vi.fn().mockReturnValue(false) }));
+vi.mock('./prompt', () => MOCK_PROMPT);
+vi.mock('readline', async () => ({
+    createInterface: vi.fn(),
 }));
 
-import * as cliBase from './cli_base';
+import * as cliBase from './cli_base.js';
 import * as readline from 'readline';
-import Config from './config';
+import Config from './config.js';
 
 const ENV_BACKUP = { ...process.env };
 
 describe('CLI Base', () => {
     beforeEach(() => {
-        jest.clearAllMocks();
+        vi.clearAllMocks();
     });
 
     afterEach(() => {
@@ -42,15 +53,15 @@ describe('CLI Base', () => {
     });
 
     describe('mask', () => {
-        it('returns first 4 chars plus asterisks', () => {
+        it('returns first 4 chars plus asterisks', async () => {
             expect(cliBase.mask('abcdefgh')).toBe('abcd****');
         });
 
-        it('returns empty string for empty input', () => {
+        it('returns empty string for empty input', async () => {
             expect(cliBase.mask('')).toBe('');
         });
 
-        it('returns 4 asterisks for short strings', () => {
+        it('returns 4 asterisks for short strings', async () => {
             expect(cliBase.mask('ab')).toBe('ab****');
         });
     });
@@ -61,7 +72,7 @@ describe('CLI Base', () => {
             { key: 'TOKEN_B', label: 'Token B', example: 'TOKEN_B=def' },
         ];
 
-        it('does not throw when required vars are missing — returns result and warns', () => {
+        it('does not throw when required vars are missing — returns result and warns', async () => {
             delete process.env.TOKEN_A;
             delete process.env.TOKEN_B;
             const validate = cliBase.createValidateEnv(configs);
@@ -71,7 +82,7 @@ describe('CLI Base', () => {
             expect(MOCK_PROMPT.warn).toHaveBeenCalledWith(expect.stringContaining('Configurações incompletas'));
         });
 
-        it('warns when real credentials are detected', () => {
+        it('warns when real credentials are detected', async () => {
             process.env.TOKEN_A = 'this-is-a-real-token-value-123456';
             process.env.TOKEN_B = 'another-real-credential-here-789';
             const validate = cliBase.createValidateEnv(configs);
@@ -79,7 +90,7 @@ describe('CLI Base', () => {
             expect(mockRootLogger.warn).toHaveBeenCalledWith(expect.stringContaining('VARIÁVEL COM CREDENCIAL REAL'));
         });
 
-        it('does not warn for placeholder values', () => {
+        it('does not warn for placeholder values', async () => {
             process.env.TOKEN_A = 'seu-token-aqui';
             process.env.TOKEN_B = 'your-token-here';
             const validate = cliBase.createValidateEnv(configs);
@@ -89,91 +100,91 @@ describe('CLI Base', () => {
     });
 
     describe('setupSigint', () => {
-        let mockRl: jest.Mocked<readline.Interface>;
+        let mockRl: Mocked<readline.Interface>;
 
         beforeEach(() => {
-            mockRl = jest.mocked<readline.Interface>({
-                question: jest.fn(),
-                close: jest.fn(),
+            mockRl = vi.mocked({
+                question: vi.fn(),
+                close: vi.fn(),
                 terminal: false,
                 line: '',
                 cursor: 0,
-                getPrompt: jest.fn(),
-                setPrompt: jest.fn(),
-                prompt: jest.fn(),
-                pause: jest.fn(),
-                resume: jest.fn(),
-                getCursorPos: jest.fn(),
-                write: jest.fn(),
-                on: jest.fn(),
-                once: jest.fn(),
-                emit: jest.fn(),
-                addListener: jest.fn(),
-                removeListener: jest.fn(),
-                off: jest.fn(),
-                removeAllListeners: jest.fn(),
-                setMaxListeners: jest.fn(),
-                getMaxListeners: jest.fn(),
-                listeners: jest.fn(),
-                rawListeners: jest.fn(),
-                listenerCount: jest.fn(),
-                prependListener: jest.fn(),
-                prependOnceListener: jest.fn(),
-                eventNames: jest.fn(),
-                [Symbol.dispose]: jest.fn(),
-                [Symbol.asyncIterator]: jest.fn(),
-            }) as jest.Mocked<readline.Interface>;
-            jest.mocked(readline.createInterface).mockReturnValue(mockRl);
+                getPrompt: vi.fn(),
+                setPrompt: vi.fn(),
+                prompt: vi.fn(),
+                pause: vi.fn(),
+                resume: vi.fn(),
+                getCursorPos: vi.fn(),
+                write: vi.fn(),
+                on: vi.fn(),
+                once: vi.fn(),
+                emit: vi.fn(),
+                addListener: vi.fn(),
+                removeListener: vi.fn(),
+                off: vi.fn(),
+                removeAllListeners: vi.fn(),
+                setMaxListeners: vi.fn(),
+                getMaxListeners: vi.fn(),
+                listeners: vi.fn(),
+                rawListeners: vi.fn(),
+                listenerCount: vi.fn(),
+                prependListener: vi.fn(),
+                prependOnceListener: vi.fn(),
+                eventNames: vi.fn(),
+                [Symbol.dispose]: vi.fn(),
+                [Symbol.asyncIterator]: vi.fn(),
+            }) as unknown as Mocked<readline.Interface>;
+            vi.mocked(readline.createInterface).mockReturnValue(mockRl);
         });
 
         afterEach(() => {
-            jest.restoreAllMocks();
+            vi.restoreAllMocks();
         });
 
-        it('registers SIGINT handler', () => {
-            jest.spyOn(process, 'on').mockImplementation(() => process);
+        it('registers SIGINT handler', async () => {
+            vi.spyOn(process, 'on').mockImplementation(() => process);
             cliBase.setupSigint(null, () => {});
             expect(process.on).toHaveBeenCalledWith('SIGINT', expect.any(Function));
         });
 
-        it('shows confirmation prompt on SIGINT (not busy)', () => {
-            jest.spyOn(process, 'on').mockImplementation((evt, handler) => {
+        it('shows confirmation prompt on SIGINT (not busy)', async () => {
+            vi.spyOn(process, 'on').mockImplementation((evt, handler) => {
                 if (evt === 'SIGINT') (handler as () => void)();
                 return process;
             });
-            const onExit = jest.fn();
+            const onExit = vi.fn();
             cliBase.setupSigint(null, onExit);
             expect(readline.createInterface).toHaveBeenCalled();
             expect(mockRl.question).toHaveBeenCalledWith('Deseja sair? (s/N) ', expect.any(Function));
         });
 
-        it('calls onExit and exits when user responds s', () => {
-            jest.useFakeTimers();
-            const exitSpy = jest
+        it('calls onExit and exits when user responds s', async () => {
+            vi.useFakeTimers();
+            const exitSpy = vi
                 .spyOn(process, 'exit')
-                .mockImplementation(jest.fn<never, [string | number | null | undefined]>());
-            jest.spyOn(process, 'on').mockImplementation((evt, handler) => {
+                .mockImplementation(vi.fn<(...args: [string | number | null | undefined]) => never>());
+            vi.spyOn(process, 'on').mockImplementation((evt, handler) => {
                 if (evt === 'SIGINT') (handler as () => void)();
                 return process;
             });
-            const onExit = jest.fn();
+            const onExit = vi.fn();
             cliBase.setupSigint(null, onExit);
             const questionFn = nonNull(mockRl.question.mock.calls[0])[1] as (answer: string) => void;
             questionFn('s');
             expect(onExit).toHaveBeenCalled();
             expect(MOCK_PROMPT.info).toHaveBeenCalledWith('Até logo!');
-            jest.advanceTimersByTime(2000);
+            vi.advanceTimersByTime(2000);
             expect(exitSpy).toHaveBeenCalled();
             exitSpy.mockRestore();
-            jest.useRealTimers();
+            vi.useRealTimers();
         });
 
-        it('does not exit when user responds n', () => {
-            jest.spyOn(process, 'on').mockImplementation((evt, handler) => {
+        it('does not exit when user responds n', async () => {
+            vi.spyOn(process, 'on').mockImplementation((evt, handler) => {
                 if (evt === 'SIGINT') (handler as () => void)();
                 return process;
             });
-            const onExit = jest.fn();
+            const onExit = vi.fn();
             cliBase.setupSigint(null, onExit);
             const questionFn = nonNull(mockRl.question.mock.calls[0])[1] as (answer: string) => void;
             questionFn('n');
@@ -181,49 +192,49 @@ describe('CLI Base', () => {
             expect(MOCK_PROMPT.info).toHaveBeenCalledWith('Continuando...');
         });
 
-        it('force exits on 2nd SIGINT during confirmation', () => {
-            jest.useFakeTimers();
-            const exitSpy = jest
+        it('force exits on 2nd SIGINT during confirmation', async () => {
+            vi.useFakeTimers();
+            const exitSpy = vi
                 .spyOn(process, 'exit')
-                .mockImplementation(jest.fn<never, [string | number | null | undefined]>());
+                .mockImplementation(vi.fn<(...args: [string | number | null | undefined]) => never>());
             let capturedHandler: () => void = () => {};
-            jest.spyOn(process, 'on').mockImplementation((evt, handler) => {
+            vi.spyOn(process, 'on').mockImplementation((evt, handler) => {
                 if (evt === 'SIGINT') capturedHandler = handler as () => void;
                 return process;
             });
-            const onExit = jest.fn();
+            const onExit = vi.fn();
             cliBase.setupSigint(null, onExit);
             capturedHandler();
             expect(mockRl.question).toHaveBeenCalled();
             capturedHandler();
             expect(onExit).toHaveBeenCalled();
             expect(MOCK_PROMPT.info).toHaveBeenCalledWith('Até logo!');
-            jest.advanceTimersByTime(2000);
+            vi.advanceTimersByTime(2000);
             expect(exitSpy).toHaveBeenCalled();
             exitSpy.mockRestore();
-            jest.useRealTimers();
+            vi.useRealTimers();
         });
 
-        it('does not exit if isBusy returns true', () => {
+        it('does not exit if isBusy returns true', async () => {
             let capturedHandler: () => void = () => {};
-            jest.spyOn(process, 'on').mockImplementation((evt, handler) => {
+            vi.spyOn(process, 'on').mockImplementation((evt, handler) => {
                 if (evt === 'SIGINT') capturedHandler = handler as () => void;
                 return process;
             });
-            const onExit = jest.fn();
+            const onExit = vi.fn();
             cliBase.setupSigint(() => true, onExit);
             capturedHandler();
             expect(MOCK_PROMPT.info).toHaveBeenCalledWith(expect.stringContaining('Operação em andamento'));
             expect(onExit).not.toHaveBeenCalled();
         });
 
-        it('handles null onExit gracefully on confirmation s', () => {
-            jest.useFakeTimers();
-            const exitSpy = jest
+        it('handles null onExit gracefully on confirmation s', async () => {
+            vi.useFakeTimers();
+            const exitSpy = vi
                 .spyOn(process, 'exit')
-                .mockImplementation(jest.fn<never, [string | number | null | undefined]>());
+                .mockImplementation(vi.fn<(...args: [string | number | null | undefined]) => never>());
             let capturedHandler: () => void = () => {};
-            jest.spyOn(process, 'on').mockImplementation((evt, handler) => {
+            vi.spyOn(process, 'on').mockImplementation((evt, handler) => {
                 if (evt === 'SIGINT') capturedHandler = handler as () => void;
                 return process;
             });
@@ -232,10 +243,79 @@ describe('CLI Base', () => {
             const questionFn = nonNull(mockRl.question.mock.calls[0])[1] as (answer: string) => void;
             questionFn('s');
             expect(MOCK_PROMPT.info).toHaveBeenCalledWith('Até logo!');
-            jest.advanceTimersByTime(2000);
+            vi.advanceTimersByTime(2000);
             expect(exitSpy).toHaveBeenCalled();
             exitSpy.mockRestore();
-            jest.useRealTimers();
+            vi.useRealTimers();
+        });
+
+        it('continues when SIGINT answer is undefined', async () => {
+            let capturedHandler: () => void = () => {};
+            vi.spyOn(process, 'on').mockImplementation((evt, handler) => {
+                if (evt === 'SIGINT') capturedHandler = handler as () => void;
+                return process;
+            });
+            const onExit = vi.fn();
+            cliBase.setupSigint(null, onExit);
+            capturedHandler();
+            const questionFn = nonNull(mockRl.question.mock.calls[0])[1] as (answer: string | undefined) => void;
+            questionFn(undefined);
+            expect(onExit).not.toHaveBeenCalled();
+            expect(MOCK_PROMPT.info).toHaveBeenCalledWith('Continuando...');
+        });
+
+        it('continues when SIGINT answer is empty string', async () => {
+            let capturedHandler: () => void = () => {};
+            vi.spyOn(process, 'on').mockImplementation((evt, handler) => {
+                if (evt === 'SIGINT') capturedHandler = handler as () => void;
+                return process;
+            });
+            const onExit = vi.fn();
+            cliBase.setupSigint(null, onExit);
+            capturedHandler();
+            const questionFn = nonNull(mockRl.question.mock.calls[0])[1] as (answer: string) => void;
+            questionFn('');
+            expect(onExit).not.toHaveBeenCalled();
+            expect(MOCK_PROMPT.info).toHaveBeenCalledWith('Continuando...');
+        });
+    });
+
+    // ---------------------------------------------------------------------------
+    // setupSigint — integration SIGINT (CR-3a)
+    // Uses real process.emit('SIGINT') instead of capturing the handler
+    // ---------------------------------------------------------------------------
+
+    describe('setupSigint — integration SIGINT (CR-3a)', () => {
+        let mockRlInt: Record<string, ReturnType<typeof vi.fn>>;
+        let onExit: () => void;
+
+        beforeEach(() => {
+            onExit = vi.fn() as () => void;
+            mockRlInt = { question: vi.fn(), close: vi.fn() };
+            vi.mocked(readline.createInterface).mockReturnValue(mockRlInt as never);
+        });
+
+        afterEach(() => {
+            process.removeAllListeners('SIGINT');
+            vi.restoreAllMocks();
+        });
+
+        it('continues when answer is undefined after real SIGINT emission', () => {
+            cliBase.setupSigint(null, onExit);
+            process.emit('SIGINT');
+            const questionFn = nonNull(mockRlInt.question?.mock.calls[0]?.[1]) as (a: string | undefined) => void;
+            questionFn(undefined);
+            expect(onExit).not.toHaveBeenCalled();
+            expect(MOCK_PROMPT.info).toHaveBeenCalledWith('Continuando...');
+        });
+
+        it('continues when answer is empty string after real SIGINT emission', () => {
+            cliBase.setupSigint(null, onExit);
+            process.emit('SIGINT');
+            const questionFn = nonNull(mockRlInt.question?.mock.calls[0]?.[1]) as (a: string) => void;
+            questionFn('');
+            expect(onExit).not.toHaveBeenCalled();
+            expect(MOCK_PROMPT.info).toHaveBeenCalledWith('Continuando...');
         });
     });
 
@@ -280,21 +360,21 @@ describe('CLI Base', () => {
     });
 
     describe('sanitizeUrl', () => {
-        it('masks token in URL', () => {
+        it('masks token in URL', async () => {
             expect(cliBase.sanitizeUrl('http://example.com?token=abc123&other=1')).toBe(
                 'http://example.com?token=****&other=1',
             );
         });
 
-        it('returns unchanged URL without token', () => {
+        it('returns unchanged URL without token', async () => {
             expect(cliBase.sanitizeUrl('http://example.com?key=value')).toBe('http://example.com?key=value');
         });
 
-        it('returns empty string for empty input', () => {
+        it('returns empty string for empty input', async () => {
             expect(cliBase.sanitizeUrl('')).toBe('');
         });
 
-        it('does not modify URL with empty token value', () => {
+        it('does not modify URL with empty token value', async () => {
             expect(cliBase.sanitizeUrl('http://example.com?token=')).toBe('http://example.com?token=');
         });
     });
@@ -324,7 +404,7 @@ describe('CLI Base', () => {
         });
 
         it('uses || "" fallback when cfg.get() returns undefined on line 24', () => {
-            const getSpy = jest
+            const getSpy = vi
                 .spyOn(Config, 'get')
                 .mockReturnValueOnce('some-long-enough-value-1234567890')
                 .mockReturnValueOnce(undefined);
@@ -337,9 +417,9 @@ describe('CLI Base', () => {
 
     describe('printSessionSummary', () => {
         beforeAll(() => {
-            MOCK_PROMPT.print = jest.fn();
-            MOCK_PROMPT.success = jest.fn();
-            MOCK_PROMPT.divider = jest.fn();
+            MOCK_PROMPT.print = vi.fn();
+            MOCK_PROMPT.success = vi.fn();
+            MOCK_PROMPT.divider = vi.fn();
             mockRootLogger.writeFileOnly.mockReset();
         });
 
@@ -347,31 +427,31 @@ describe('CLI Base', () => {
             mockRootLogger.filePath = undefined;
         });
 
-        it('prints ok and error counts when both > 0', () => {
+        it('prints ok and error counts when both > 0', async () => {
             cliBase.printSessionSummary([{ status: 'ok' }, { status: 'error' }], null);
             expect(MOCK_PROMPT.success).toHaveBeenCalledWith('1 operação(oes) concluída(s)');
             expect(MOCK_PROMPT.error).toHaveBeenCalledWith('1 operação(oes) com erro');
         });
 
-        it('prints only ok when no errors', () => {
+        it('prints only ok when no errors', async () => {
             cliBase.printSessionSummary([{ status: 'ok' }, { status: 'ok' }], null);
             expect(MOCK_PROMPT.success).toHaveBeenCalledWith('2 operação(oes) concluída(s)');
             expect(MOCK_PROMPT.error).not.toHaveBeenCalled();
         });
 
-        it('prints only error when no oks', () => {
+        it('prints only error when no oks', async () => {
             cliBase.printSessionSummary([{ status: 'error' }, { status: 'error' }], null);
             expect(MOCK_PROMPT.error).toHaveBeenCalledWith('2 operação(oes) com erro');
             expect(MOCK_PROMPT.success).not.toHaveBeenCalled();
         });
 
-        it('skips counters when both are zero', () => {
+        it('skips counters when both are zero', async () => {
             cliBase.printSessionSummary([], null);
             expect(MOCK_PROMPT.success).not.toHaveBeenCalled();
             expect(MOCK_PROMPT.error).not.toHaveBeenCalled();
         });
 
-        it('prints history entries when provided', () => {
+        it('prints history entries when provided', async () => {
             const history = [
                 { status: 'ok', op: 'test', detail: 'passed' },
                 { status: 'error', op: 'build', detail: 'failed' },
@@ -383,18 +463,18 @@ describe('CLI Base', () => {
             expect(MOCK_PROMPT.print).toHaveBeenCalledWith(expect.stringContaining('build: failed'));
         });
 
-        it('prints last operation when provided', () => {
+        it('prints last operation when provided', async () => {
             cliBase.printSessionSummary([], 'test-op');
             expect(MOCK_PROMPT.info).toHaveBeenCalledWith('Última operação: test-op');
         });
 
-        it('prints log path when available', () => {
+        it('prints log path when available', async () => {
             mockRootLogger.filePath = '/tmp/test.log';
             cliBase.printSessionSummary([], null);
             expect(MOCK_PROMPT.info).toHaveBeenCalledWith('Log: /tmp/test.log');
         });
 
-        it('does not print log path when undefined', () => {
+        it('does not print log path when undefined', async () => {
             cliBase.printSessionSummary([], null);
             expect(MOCK_PROMPT.info).not.toHaveBeenCalledWith(expect.stringContaining('Log:'));
         });

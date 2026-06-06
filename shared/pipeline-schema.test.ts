@@ -1,14 +1,14 @@
-import { PipelineClassificationSchema, PipelineCategorySchema } from './pipeline-schema';
+import { PipelineClassificationSchema, PipelineCategorySchema } from './pipeline-schema.js';
 
 describe('PipelineCategorySchema', () => {
-    it('accepts valid categories', () => {
+    it('accepts valid categories', async () => {
         expect(PipelineCategorySchema.parse('infrastructure')).toBe('infrastructure');
         expect(PipelineCategorySchema.parse('code')).toBe('code');
         expect(PipelineCategorySchema.parse('flaky')).toBe('flaky');
         expect(PipelineCategorySchema.parse('unknown')).toBe('unknown');
     });
 
-    it('rejects invalid category', () => {
+    it('rejects invalid category', async () => {
         expect(() => PipelineCategorySchema.parse('invalid')).toThrow();
     });
 });
@@ -21,27 +21,27 @@ describe('PipelineClassificationSchema', () => {
         recommendation: 'Restart the runner and check disk space',
     };
 
-    it('accepts valid classification', () => {
+    it('accepts valid classification', async () => {
         const result = PipelineClassificationSchema.parse(valid);
         expect(result.category).toBe('infrastructure');
         expect(result.confidence).toBe(0.85);
     });
 
-    it('accepts classification without recommendation', () => {
+    it('accepts classification without recommendation', async () => {
         const noRec = (({ recommendation: _rec, ...rest }) => rest)(valid);
         const result = PipelineClassificationSchema.parse(noRec);
         expect(result.recommendation).toBeUndefined();
     });
 
-    it('rejects confidence < 0', () => {
+    it('rejects confidence < 0', async () => {
         expect(() => PipelineClassificationSchema.parse({ ...valid, confidence: -0.1 })).toThrow();
     });
 
-    it('rejects confidence > 1', () => {
+    it('rejects confidence > 1', async () => {
         expect(() => PipelineClassificationSchema.parse({ ...valid, confidence: 1.5 })).toThrow();
     });
 
-    it('rejects empty evidence', () => {
+    it('rejects empty evidence', async () => {
         expect(() => PipelineClassificationSchema.parse({ ...valid, evidence: [] })).toThrow();
     });
 });

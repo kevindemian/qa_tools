@@ -1,45 +1,62 @@
-import { createMockRootLogger, nonNull } from './test-utils';
+import type { Mock, MockInstance } from 'vitest';
+import { nonNull } from './test-utils.js';
 import readlineSync from 'readline-sync';
 
-const mockRootLogger = createMockRootLogger();
+const mockRootLogger = vi.hoisted(() => ({
+    info: vi.fn(),
+    error: vi.fn(),
+    warn: vi.fn(),
+    debug: vi.fn(),
+    writeFileOnly: vi.fn(),
+    filePath: undefined as string | undefined,
+}));
 
-jest.mock('./logger', () => ({
+vi.mock('./logger', () => ({
     rootLogger: mockRootLogger,
     Logger: class {
-        info = jest.fn();
-        error = jest.fn();
-        warn = jest.fn();
-        debug = jest.fn();
-        writeFileOnly = jest.fn();
+        info = vi.fn();
+        error = vi.fn();
+        warn = vi.fn();
+        debug = vi.fn();
+        writeFileOnly = vi.fn();
     },
 }));
 
-const mockSingleBar = { start: jest.fn(), update: jest.fn(), stop: jest.fn() };
+const mockSingleBar = { start: vi.fn(), update: vi.fn(), stop: vi.fn() };
 
-jest.mock('cli-progress', () => ({
-    SingleBar: jest.fn(() => mockSingleBar),
-    Presets: {
-        shades_classic: {},
-    },
+const { mockSingleBarCtor } = vi.hoisted(() => ({
+    mockSingleBarCtor: vi.fn(function () {
+        return mockSingleBar;
+    }),
 }));
 
-import Config from './config';
-import * as promptModule from './prompt';
+vi.mock('cli-progress', () => ({
+    default: {
+        SingleBar: mockSingleBarCtor,
+        Presets: { shades_classic: {} },
+    },
+    SingleBar: mockSingleBarCtor,
+    Presets: { shades_classic: {} },
+}));
+
+vi.mock('@inquirer/input', () => ({ default: vi.fn().mockRejectedValue(new Error('mock fail')) }));
+vi.mock('@inquirer/confirm', () => ({ default: vi.fn().mockResolvedValue(true) }));
+
+import Config from './config.js';
+import * as promptModule from './prompt.js';
 
 describe('Prompt', () => {
-    let prompt: typeof import('./prompt');
-    let mockLog: jest.SpyInstance<boolean, Parameters<typeof process.stdout.write>>,
-        mockError: jest.SpyInstance<boolean, Parameters<typeof process.stderr.write>>,
-        mockWarn: jest.SpyInstance<boolean, Parameters<typeof process.stderr.write>>;
+    let prompt: typeof import('./prompt.js');
+    let mockLog: MockInstance, mockError: MockInstance, mockWarn: MockInstance;
 
     beforeAll(() => {
         prompt = promptModule;
     });
 
     beforeEach(() => {
-        mockLog = jest.spyOn(process.stdout, 'write').mockImplementation(() => true);
-        mockError = jest.spyOn(process.stderr, 'write').mockImplementation(() => true);
-        mockWarn = jest.spyOn(process.stderr, 'write').mockImplementation(() => true);
+        mockLog = vi.spyOn(process.stdout, 'write').mockImplementation(() => true);
+        mockError = vi.spyOn(process.stderr, 'write').mockImplementation(() => true);
+        mockWarn = vi.spyOn(process.stderr, 'write').mockImplementation(() => true);
         process.stdout.isTTY = false;
         Object.defineProperty(process.stdin, 'isTTY', { value: true, configurable: true });
         prompt.__setConfig(Config.create({}));
@@ -300,15 +317,12 @@ describe('Prompt', () => {
                 mockSingleBar.stop.mockClear();
             });
 
-            it('constructs SingleBar with format config', () => {
+            it('constructs SingleBar with format config', async () => {
                 new prompt.ProgressBar(100, { width: 30 });
-                const cliProgressMock = jest.requireMock<{
-                    SingleBar: jest.Mock;
-                    Presets: { shades_classic: Record<string, unknown> };
-                }>('cli-progress');
-                expect(cliProgressMock.SingleBar).toHaveBeenCalledWith(
+                const cliProgressMod = await import('cli-progress');
+                expect(vi.mocked(cliProgressMod.SingleBar)).toHaveBeenCalledWith(
                     expect.objectContaining({ barsize: 30 }),
-                    cliProgressMock.Presets.shades_classic,
+                    {},
                 );
                 expect(mockSingleBar.start).toHaveBeenCalledWith(100, 0);
             });
@@ -440,32 +454,32 @@ describe('Prompt', () => {
         });
     });
 
-    function injectInputMock(): { default: jest.Mock } {
-        const mock = { default: jest.fn().mockResolvedValue('input-value') };
+    function injectInputMock(): { default: Mock } {
+        const mock = { default: vi.fn().mockResolvedValue('input-value') };
         promptModule.__setInputMod(mock);
         return mock;
     }
 
-    function injectConfirmMock(): { default: jest.Mock } {
-        const mock = { default: jest.fn().mockResolvedValue(true) };
+    function injectConfirmMock(): { default: Mock } {
+        const mock = { default: vi.fn().mockResolvedValue(true) };
         promptModule.__setConfirmMod(mock);
         return mock;
     }
 
-    function injectOraMock(): { start: jest.Mock; stop: jest.Mock; succeed: jest.Mock; fail: jest.Mock } {
-        const inst = { start: jest.fn().mockReturnThis(), stop: jest.fn(), succeed: jest.fn(), fail: jest.fn() };
-        const ctr = jest.fn(() => inst);
+    function injectOraMock(): { start: Mock; stop: Mock; succeed: Mock; fail: Mock } {
+        const inst = { start: vi.fn().mockReturnThis(), stop: vi.fn(), succeed: vi.fn(), fail: vi.fn() };
+        const ctr = vi.fn(() => inst);
         promptModule.__setOraDep(ctr);
         return inst;
     }
 
     describe('showSelect', () => {
         afterEach(() => {
-            jest.restoreAllMocks();
+            vi.restoreAllMocks();
         });
 
         it('selects by number', async () => {
-            const spy = jest.spyOn(readlineSync, 'question').mockReturnValue('2');
+            const spy = vi.spyOn(readlineSync, 'question').mockReturnValue('2');
             const result = await prompt.showSelect('Test', [
                 { name: '1', value: '1' },
                 { name: '2', value: '2' },
@@ -476,7 +490,7 @@ describe('Prompt', () => {
         });
 
         it('handles separator', async () => {
-            const spy = jest.spyOn(readlineSync, 'question').mockReturnValue('2');
+            const spy = vi.spyOn(readlineSync, 'question').mockReturnValue('2');
             const result = await prompt.showSelect('With sep', [
                 { name: '1', value: '1' },
                 { type: 'separator', line: '---' },
@@ -487,7 +501,7 @@ describe('Prompt', () => {
         });
 
         it('returns "0" for empty input', async () => {
-            jest.spyOn(readlineSync, 'question').mockReturnValue('');
+            vi.spyOn(readlineSync, 'question').mockReturnValue('');
             const result = await prompt.showSelect('Test', [
                 { name: '1', value: '1' },
                 { name: '2', value: '2' },
@@ -496,7 +510,7 @@ describe('Prompt', () => {
         });
 
         it('returns selected value for numeric input', async () => {
-            jest.spyOn(readlineSync, 'question').mockReturnValue('1');
+            vi.spyOn(readlineSync, 'question').mockReturnValue('1');
             const result = await prompt.showSelect('Test', [
                 { name: 'One', value: '1v' },
                 { name: 'Two', value: '2v' },
@@ -505,13 +519,13 @@ describe('Prompt', () => {
         });
 
         it('returns value from name when value is missing', async () => {
-            jest.spyOn(readlineSync, 'question').mockReturnValue('1');
+            vi.spyOn(readlineSync, 'question').mockReturnValue('1');
             const result = await prompt.showSelect('Test', [{ name: 'Alpha' }, { name: 'Beta' }]);
             expect(result).toBe('Alpha');
         });
 
         it('returns "0" for zero input', async () => {
-            jest.spyOn(readlineSync, 'question').mockReturnValue('0');
+            vi.spyOn(readlineSync, 'question').mockReturnValue('0');
             const result = await prompt.showSelect('Test', [
                 { name: '1', value: '1' },
                 { name: '2', value: '2' },
@@ -520,7 +534,7 @@ describe('Prompt', () => {
         });
 
         it('returns raw value for non-numeric input', async () => {
-            jest.spyOn(readlineSync, 'question').mockReturnValue('criar');
+            vi.spyOn(readlineSync, 'question').mockReturnValue('criar');
             const result = await prompt.showSelect('Test', [{ name: '1', value: '1' }]);
             expect(result).toBe('criar');
         });
@@ -528,29 +542,29 @@ describe('Prompt', () => {
 
     describe('prompt', () => {
         afterEach(() => {
-            jest.restoreAllMocks();
+            vi.restoreAllMocks();
         });
 
         it('returns answer on first prompt', () => {
-            jest.spyOn(readlineSync, 'question').mockReturnValue('my-answer');
+            vi.spyOn(readlineSync, 'question').mockReturnValue('my-answer');
             const result = prompt.prompt('Enter value');
             expect(result).toBe('my-answer');
         });
 
         it('includes hint in prompt text when provided', () => {
-            const spy = jest.spyOn(readlineSync, 'question').mockReturnValue('ok');
+            const spy = vi.spyOn(readlineSync, 'question').mockReturnValue('ok');
             prompt.prompt('Label', { hint: 'optional' });
             expect(spy).toHaveBeenCalledWith(expect.stringContaining('optional'), expect.any(Object));
         });
 
         it('includes default value in prompt text when provided', () => {
-            const spy = jest.spyOn(readlineSync, 'question').mockReturnValue('ok');
+            const spy = vi.spyOn(readlineSync, 'question').mockReturnValue('ok');
             prompt.prompt('Label', { default: 'def' });
             expect(spy).toHaveBeenCalledWith(expect.stringContaining('def'), { defaultInput: 'def' });
         });
 
         it('retries when answer is shorter than minLength', () => {
-            const spy = jest.spyOn(readlineSync, 'question').mockReturnValueOnce('ab').mockReturnValueOnce('abcdef');
+            const spy = vi.spyOn(readlineSync, 'question').mockReturnValueOnce('ab').mockReturnValueOnce('abcdef');
             const result = prompt.prompt('Label', { minLength: 5 });
             expect(result).toBe('abcdef');
             expect(mockLog).toHaveBeenCalledWith(expect.stringContaining('Mínimo de'));
@@ -560,47 +574,47 @@ describe('Prompt', () => {
 
     describe('smartPrompt', () => {
         afterEach(() => {
-            jest.restoreAllMocks();
+            vi.restoreAllMocks();
         });
 
         it('returns value on first attempt', async () => {
-            jest.spyOn(readlineSync, 'question').mockReturnValue('my-value');
+            vi.spyOn(readlineSync, 'question').mockReturnValue('my-value');
             const result = await prompt.smartPrompt('Enter value');
             expect(result).toBe('my-value');
         });
 
         it('calls helpCallback on /help and retries', async () => {
-            const helpCb = jest.fn();
-            jest.spyOn(readlineSync, 'question').mockReturnValueOnce('/help').mockReturnValueOnce('final-value');
+            const helpCb = vi.fn();
+            vi.spyOn(readlineSync, 'question').mockReturnValueOnce('/help').mockReturnValueOnce('final-value');
             const result = await prompt.smartPrompt('Enter', {}, helpCb);
             expect(helpCb).toHaveBeenCalledTimes(1);
             expect(result).toBe('final-value');
         });
 
         it('returns empty string after max retries with empty input', async () => {
-            jest.spyOn(readlineSync, 'question').mockReturnValue('');
+            vi.spyOn(readlineSync, 'question').mockReturnValue('');
             const result = await prompt.smartPrompt('Enter', { maxRetries: 2 });
             expect(result).toBe('');
         });
 
         it('throws CancelError for /back navigation command', async () => {
-            jest.spyOn(readlineSync, 'question').mockReturnValue('/back');
+            vi.spyOn(readlineSync, 'question').mockReturnValue('/back');
             await expect(prompt.smartPrompt('Enter')).rejects.toThrow(prompt.CancelError);
         });
 
         it('throws CancelError for /exit navigation command', async () => {
-            jest.spyOn(readlineSync, 'question').mockReturnValue('/exit');
+            vi.spyOn(readlineSync, 'question').mockReturnValue('/exit');
             await expect(prompt.smartPrompt('Enter')).rejects.toThrow(prompt.CancelError);
         });
 
         it('throws CancelError for /menu navigation command', async () => {
-            jest.spyOn(readlineSync, 'question').mockReturnValue('/menu');
+            vi.spyOn(readlineSync, 'question').mockReturnValue('/menu');
             await expect(prompt.smartPrompt('Enter')).rejects.toThrow(prompt.CancelError);
         });
 
         it('allows unlimited /help and returns on valid input', async () => {
-            const helpCb = jest.fn();
-            jest.spyOn(readlineSync, 'question')
+            const helpCb = vi.fn();
+            vi.spyOn(readlineSync, 'question')
                 .mockReturnValueOnce('/help')
                 .mockReturnValueOnce('/help')
                 .mockReturnValueOnce('/help')
@@ -613,16 +627,16 @@ describe('Prompt', () => {
 
     describe('confirm', () => {
         afterEach(() => {
-            jest.restoreAllMocks();
+            vi.restoreAllMocks();
         });
 
         it('returns true for y input', () => {
-            jest.spyOn(readlineSync, 'question').mockReturnValue('y');
+            vi.spyOn(readlineSync, 'question').mockReturnValue('y');
             expect(prompt.confirm('Continue?', true)).toBe(true);
         });
 
         it('accepts yes and sim as confirmation', () => {
-            jest.spyOn(readlineSync, 'question')
+            vi.spyOn(readlineSync, 'question')
                 .mockReturnValueOnce('yes')
                 .mockReturnValueOnce('sim')
                 .mockReturnValueOnce('Y')
@@ -634,12 +648,12 @@ describe('Prompt', () => {
         });
 
         it('returns false for n input', () => {
-            jest.spyOn(readlineSync, 'question').mockReturnValue('n');
+            vi.spyOn(readlineSync, 'question').mockReturnValue('n');
             expect(prompt.confirm('Continue?', false)).toBe(false);
         });
 
         it('loops on invalid input until valid', () => {
-            const spy = jest.spyOn(readlineSync, 'question').mockReturnValueOnce('x').mockReturnValueOnce('y');
+            const spy = vi.spyOn(readlineSync, 'question').mockReturnValueOnce('x').mockReturnValueOnce('y');
             expect(prompt.confirm('Continue?', false)).toBe(true);
             expect(spy).toHaveBeenCalledTimes(2);
             expect(mockLog).toHaveBeenCalledWith(expect.stringContaining('Resposta inválida'));
@@ -654,7 +668,7 @@ describe('Prompt', () => {
         });
 
         afterEach(() => {
-            jest.restoreAllMocks();
+            vi.restoreAllMocks();
             promptModule.__setInputMod(null);
         });
 
@@ -668,7 +682,7 @@ describe('Prompt', () => {
         });
 
         it('falls back to readline-sync when inquirer throws', async () => {
-            jest.spyOn(readlineSync, 'question').mockReturnValue('fallback');
+            vi.spyOn(readlineSync, 'question').mockReturnValue('fallback');
             process.stdout.isTTY = true;
             mockInput.default.mockRejectedValueOnce(new Error('fail'));
             const result = await promptModule.ask('Label');
@@ -676,7 +690,7 @@ describe('Prompt', () => {
         });
 
         it('uses readline-sync when not TTY', async () => {
-            jest.spyOn(readlineSync, 'question').mockReturnValue('cli-value');
+            vi.spyOn(readlineSync, 'question').mockReturnValue('cli-value');
             const result = await promptModule.ask('Label');
             expect(result).toBe('cli-value');
         });
@@ -684,7 +698,7 @@ describe('Prompt', () => {
         it('attempts import when _inputMod is null with TTY', async () => {
             prompt.__setInputMod(null);
             process.stdout.isTTY = true;
-            jest.spyOn(readlineSync, 'question').mockReturnValue('answer');
+            vi.spyOn(readlineSync, 'question').mockReturnValue('answer');
             const result = await promptModule.ask('Name');
             expect(result).toBe('answer');
         });
@@ -698,7 +712,7 @@ describe('Prompt', () => {
         });
 
         afterEach(() => {
-            jest.restoreAllMocks();
+            vi.restoreAllMocks();
             promptModule.__setConfirmMod(null);
         });
 
@@ -712,7 +726,7 @@ describe('Prompt', () => {
         });
 
         it('falls back to readline-sync when inquirer throws', async () => {
-            jest.spyOn(readlineSync, 'question').mockReturnValue('y');
+            vi.spyOn(readlineSync, 'question').mockReturnValue('y');
             process.stdout.isTTY = true;
             mockConfirm.default.mockRejectedValueOnce(new Error('fail'));
             const result = await promptModule.askConfirm('?');
@@ -720,7 +734,7 @@ describe('Prompt', () => {
         });
 
         it('uses readline-sync when not TTY', async () => {
-            jest.spyOn(readlineSync, 'question').mockReturnValue('n');
+            vi.spyOn(readlineSync, 'question').mockReturnValue('n');
             const result = await promptModule.askConfirm('?');
             expect(result).toBe(false);
         });
@@ -728,7 +742,7 @@ describe('Prompt', () => {
         it('attempts import when _confirmMod is null with TTY', async () => {
             prompt.__setConfirmMod(null);
             process.stdout.isTTY = true;
-            jest.spyOn(readlineSync, 'question').mockReturnValue('y');
+            vi.spyOn(readlineSync, 'question').mockReturnValue('y');
             const result = await promptModule.askConfirm('Proceed?');
             expect(result).toBe(true);
         });
@@ -823,7 +837,7 @@ describe('Prompt', () => {
 
     describe('onError', () => {
         afterEach(() => {
-            jest.restoreAllMocks();
+            vi.restoreAllMocks();
             prompt.__setConfig(Config.create({}));
         });
 
@@ -840,25 +854,25 @@ describe('Prompt', () => {
         });
 
         it('returns "abort" when user chooses A', async () => {
-            jest.spyOn(readlineSync, 'question').mockReturnValue('a');
+            vi.spyOn(readlineSync, 'question').mockReturnValue('a');
             const result = prompt.onError('ctx', new Error('fail'));
             expect(result).toBe('abort');
         });
 
         it('returns "skip" when user chooses S', async () => {
-            jest.spyOn(readlineSync, 'question').mockReturnValue('s');
+            vi.spyOn(readlineSync, 'question').mockReturnValue('s');
             const result = prompt.onError('ctx', new Error('fail'));
             expect(result).toBe('skip');
         });
 
         it('returns "retry" when user chooses R with canRetry', async () => {
-            jest.spyOn(readlineSync, 'question').mockReturnValue('r');
+            vi.spyOn(readlineSync, 'question').mockReturnValue('r');
             const result = prompt.onError('ctx', new Error('fail'), { retry: true });
             expect(result).toBe('retry');
         });
 
         it('shows details and loops when user chooses D with canDetails', async () => {
-            jest.spyOn(readlineSync, 'question').mockReturnValueOnce('d').mockReturnValueOnce('a');
+            vi.spyOn(readlineSync, 'question').mockReturnValueOnce('d').mockReturnValueOnce('a');
             const err = {
                 response: { status: 400, data: { detail: 'invalid' } },
                 message: 'bad request',
@@ -869,14 +883,14 @@ describe('Prompt', () => {
         });
 
         it('shows error with stack details when err is Error', async () => {
-            jest.spyOn(readlineSync, 'question').mockReturnValueOnce('d').mockReturnValueOnce('a');
+            vi.spyOn(readlineSync, 'question').mockReturnValueOnce('d').mockReturnValueOnce('a');
             const result = prompt.onError('ctx', new Error('detail-error'), { details: true });
             expect(result).toBe('abort');
             expect(mockLog).toHaveBeenCalledWith(expect.stringContaining('Stack'));
         });
 
         it('warns on invalid option and retries', async () => {
-            jest.spyOn(readlineSync, 'question').mockReturnValueOnce('x').mockReturnValueOnce('a');
+            vi.spyOn(readlineSync, 'question').mockReturnValueOnce('x').mockReturnValueOnce('a');
             const result = prompt.onError('ctx', new Error('fail'));
             expect(result).toBe('abort');
             expect(mockLog).toHaveBeenCalledWith(expect.stringContaining('Opção inválida'));
@@ -885,7 +899,7 @@ describe('Prompt', () => {
 
     describe('print', () => {
         it('calls process.stdout.write with the message', () => {
-            const spy = jest.spyOn(process.stdout, 'write').mockImplementation(() => true);
+            const spy = vi.spyOn(process.stdout, 'write').mockImplementation(() => true);
             prompt.print('Hello');
             expect(spy).toHaveBeenCalledWith(expect.stringContaining('Hello'));
             spy.mockRestore();

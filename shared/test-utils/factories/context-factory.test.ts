@@ -1,8 +1,7 @@
-import { jest } from '@jest/globals';
-import { createMockContext } from './context-factory';
+import { createMockContext } from './context-factory.js';
 
 describe('createMockContext', () => {
-    it('returns a mock with all required fields', () => {
+    it('returns a mock with all required fields', async () => {
         const ctx = createMockContext();
         expect(ctx.jiraResource).toBeDefined();
         expect(ctx.jiraResourceXray).toBeDefined();
@@ -15,14 +14,14 @@ describe('createMockContext', () => {
         expect(ctx.sessionLog).toBeDefined();
     });
 
-    it('sub-resources are mocked with jest.fn()', () => {
+    it('sub-resources are mocked with vi.fn()', async () => {
         const ctx = createMockContext();
         expect(typeof ctx.jiraResource.getJiraResource).toBe('function');
         expect(typeof ctx.linkManager.linkIssues).toBe('function');
         expect(typeof ctx.csvResource.readCsvFromString).toBe('function');
     });
 
-    it('SessionContext has default values', () => {
+    it('SessionContext has default values', async () => {
         const ctx = createMockContext();
         expect(ctx.ctx.project_name).toBe('TEST');
         expect(ctx.ctx.isBusy).toBe(false);
@@ -30,18 +29,18 @@ describe('createMockContext', () => {
         expect(typeof ctx.ctx.pushHistory).toBe('function');
     });
 
-    it('packageManager is undefined by default', () => {
+    it('packageManager is undefined by default', async () => {
         const ctx = createMockContext();
         expect(ctx.packageManager).toBeUndefined();
     });
 
-    it('merges overrides correctly', () => {
-        const customPush = jest.fn();
+    it('merges overrides correctly', async () => {
+        const customPush = vi.fn();
         const ctx = createMockContext({ pushHistory: customPush });
         expect(ctx.pushHistory).toBe(customPush);
     });
 
-    it('nested overrides merge correctly', () => {
+    it('nested overrides merge correctly', async () => {
         const ctx = createMockContext({
             ctx: {
                 isBusy: false,
@@ -53,10 +52,10 @@ describe('createMockContext', () => {
                 inMemoryTasksText: [],
                 project_name: 'OVERRIDE',
                 results: [],
-                resetResults: jest.fn(),
-                withBusy: jest.fn(),
-                pushHistory: jest.fn(),
-                buildContextLine: jest.fn(),
+                resetResults: vi.fn(),
+                withBusy: vi.fn(),
+                pushHistory: vi.fn(),
+                buildContextLine: vi.fn(),
             },
         });
         expect(ctx.ctx.project_name).toBe('OVERRIDE');

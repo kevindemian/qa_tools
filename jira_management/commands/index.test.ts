@@ -1,6 +1,6 @@
 import * as fs from 'fs';
 import * as path from 'path';
-import { getHandler } from './index';
+import { getHandler } from './index.js';
 
 const KNOWN_CASES = [
     '1',
@@ -28,34 +28,34 @@ const KNOWN_CASES = [
     '23',
 ];
 
-describe('getHandler', () => {
-    it('returns a handler function for known case numbers', () => {
+describe('getHandler', async () => {
+    it('returns a handler function for known case numbers', async () => {
         const handler = getHandler('1');
         expect(handler).toBeInstanceOf(Function);
     });
 
-    it('returns a handler for each known case', () => {
+    it('returns a handler for each known case', async () => {
         for (const num of KNOWN_CASES) {
             const h = getHandler(num);
             expect(h).toBeInstanceOf(Function);
         }
     });
 
-    it('returns null for unknown case number', () => {
+    it('returns null for unknown case number', async () => {
         const handler = getHandler('99');
         expect(handler).toBeNull();
     });
 
-    it('returns null for empty string', () => {
+    it('returns null for empty string', async () => {
         const handler = getHandler('');
         expect(handler).toBeNull();
     });
 });
 
-describe('handler contract (bidirectional)', () => {
-    const caseDir = __dirname;
+describe('handler contract (bidirectional)', async () => {
+    const caseDir = import.meta.dirname;
 
-    it('every registered handler has a corresponding file on disk', () => {
+    it('every registered handler has a corresponding file on disk', async () => {
         for (const num of KNOWN_CASES) {
             const filename = `case${String(num).padStart(2, '0')}.ts`;
             const filePath = path.join(caseDir, filename);
@@ -63,7 +63,7 @@ describe('handler contract (bidirectional)', () => {
         }
     });
 
-    it('every case file on disk has a corresponding registered handler', () => {
+    it('every case file on disk has a corresponding registered handler', async () => {
         const files = fs.readdirSync(caseDir).filter((f) => /^case\d+\.ts$/.test(f) && !f.endsWith('.test.ts'));
         for (const file of files) {
             const rawNum = file.match(/^case(\d+)\.ts$/)?.[1] || '';
@@ -72,10 +72,10 @@ describe('handler contract (bidirectional)', () => {
         }
     });
 
-    it('every handler module exports a handler function', () => {
+    it('every handler module exports a handler function', async () => {
         for (const num of KNOWN_CASES) {
             const padded = String(num).padStart(2, '0');
-            const mod = jest.requireActual<{ default: { handler: (...args: unknown[]) => unknown } }>(
+            const mod = await vi.importActual<{ default: { handler: (...args: unknown[]) => unknown } }>(
                 `./case${padded}`,
             );
             expect(mod.default).toHaveProperty('handler');

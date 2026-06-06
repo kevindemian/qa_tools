@@ -2,12 +2,31 @@
  * Fetches historical test runs for a given test issue key.
  * Falls back gracefully on API errors — never throws. */
 
-import type JiraResource from './jira_resource';
-import Config from '../shared/config';
-import { rootLogger } from '../shared/logger';
-import type { JsonObject, JiraIssue } from '../shared/types';
-import { XrayCloudClient } from '../shared/xray-cloud-client';
+import type JiraResource from './jira_resource.js';
+import Config from '../shared/config.js';
+import { rootLogger } from '../shared/logger.js';
+import type { JsonObject, JiraIssue } from '../shared/types.js';
+import { XrayCloudClient } from '../shared/xray-cloud-client.js';
+import { z } from '../shared/validation.js';
+
 const MAX_RUNS = 20;
+
+const XrayTestRunSchema = z.object({
+    id: z.string().optional(),
+    status: z.union([z.string(), z.object({ name: z.string() })]),
+    testExecution: z.object({ issueId: z.string().nullable() }).optional(),
+    startedOn: z.string().nullable().optional(),
+    finishedOn: z.string().nullable().optional(),
+    testExecKey: z.string().optional(),
+});
+
+const XrayGraphqlResponseSchema = z.object({
+    getTestRuns: z
+        .object({
+            results: z.array(XrayTestRunSchema).optional(),
+        })
+        .optional(),
+});
 
 function safeStr(val: unknown, fallback = ''): string {
     if (typeof val === 'string') return val;
@@ -215,13 +234,15 @@ class CloudHistoryProvider implements TestHistoryProvider {
     }
 
     private async _parseGraphqlHistoryResponse(data: JsonObject): Promise<TestRun[]> {
-        const getTestRuns = data.getTestRuns as JsonObject;
-        const rawResults = getTestRuns?.results as Array<JsonObject> | undefined;
-        if (!Array.isArray(rawResults) || rawResults.length === 0) return [];
+        const parsed = XrayGraphqlResponseSchema.safeParse(data);
+        if (!parsed.success) {
+            this.log.warn('GraphQL history response parse failed: ' + parsed.error.message);
+            return [];
+        }
+        const rawResults = parsed.data.getTestRuns?.results;
+        if (!rawResults || rawResults.length === 0) return [];
 
-        const execIssueIds = rawResults
-            .map((r) => (r.testExecution as JsonObject | undefined)?.issueId as string | undefined)
-            .filter((id): id is string => !!id);
+        const execIssueIds = rawResults.map((r) => r.testExecution?.issueId).filter((id): id is string => !!id);
 
         const execKeyMap =
             execIssueIds.length > 0
@@ -229,16 +250,12 @@ class CloudHistoryProvider implements TestHistoryProvider {
                 : new Map<string, string>();
 
         return rawResults.map((r) => {
-            const teExec = r.testExecution as JsonObject | undefined;
-            const teIssueId = teExec?.issueId as string | undefined;
-            const rawStatus = (r.status as JsonObject | undefined)?.name as string | undefined;
-            const startedOn2 = safeStr(r.startedOn);
-            const finishedOn2 = safeStr(r.finishedOn);
+            const rawStatus = typeof r.status === 'string' ? r.status : r.status.name;
             return {
-                status: safeStr(rawStatus, 'UNKNOWN'),
-                testExecKey: teIssueId ? (execKeyMap.get(teIssueId) ?? teIssueId) : '',
-                ...(startedOn2 ? { startedOn: startedOn2 } : {}),
-                ...(finishedOn2 ? { finishedOn: finishedOn2 } : {}),
+                status: rawStatus || 'UNKNOWN',
+                testExecKey: execKeyMap.get(r.testExecution?.issueId ?? '') ?? '',
+                ...(r.startedOn ? { startedOn: r.startedOn } : {}),
+                ...(r.finishedOn ? { finishedOn: r.finishedOn } : {}),
             };
         });
     }

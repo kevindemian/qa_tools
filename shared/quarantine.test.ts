@@ -5,7 +5,7 @@ import path from 'path';
 const TEST_TITLE = 'tests/login.spec.ts';
 const MOCK_STATE_HOME = '/tmp/qa-tools-quarantine-test-mock';
 
-jest.mock('./config', () => ({
+vi.mock('./config', async () => ({
     __esModule: true,
     default: {
         xdgStateHome: '/tmp/qa-tools-quarantine-test-mock',
@@ -25,8 +25,8 @@ import {
     generatePipelineQuarantine,
     loadQuarantine,
     markPermanent,
-} from './quarantine';
-import { nonNull } from '../shared/test-utils';
+} from './quarantine.js';
+import { nonNull } from '../shared/test-utils.js';
 
 function quarantineStorePath(): string {
     return path.join(MOCK_STATE_HOME, 'qa-tools', 'quarantine', 'quarantine.json');
@@ -63,7 +63,7 @@ afterEach(() => {
 });
 
 describe('quarantineTest / isQuarantined', () => {
-    it('adds and retrieves a quarantine entry', () => {
+    it('adds and retrieves a quarantine entry', async () => {
         quarantineTest({ testTitle: TEST_TITLE, reason: 'flaky', quarantinedBy: 'test', flakyRate: 0.7 });
         const entry = isQuarantined(TEST_TITLE);
         expect(entry).toBeDefined();
@@ -73,11 +73,11 @@ describe('quarantineTest / isQuarantined', () => {
         expect(nonNull(entry).permanent).toBe(false);
     });
 
-    it('returns undefined for non-quarantined test', () => {
+    it('returns undefined for non-quarantined test', async () => {
         expect(isQuarantined('nonexistent')).toBeUndefined();
     });
 
-    it('updates existing non-permanent entry', () => {
+    it('updates existing non-permanent entry', async () => {
         quarantineTest({ testTitle: TEST_TITLE, reason: 'first', quarantinedBy: 'test', flakyRate: 0.5 });
         quarantineTest({ testTitle: TEST_TITLE, reason: 'updated', quarantinedBy: 'test', flakyRate: 0.8 });
         const entry = isQuarantined(TEST_TITLE);
@@ -87,44 +87,44 @@ describe('quarantineTest / isQuarantined', () => {
 });
 
 describe('removeQuarantine', () => {
-    it('removes an existing entry', () => {
+    it('removes an existing entry', async () => {
         quarantineTest({ testTitle: TEST_TITLE, reason: 'flaky', quarantinedBy: 'test', flakyRate: 0.5 });
         expect(removeQuarantine(TEST_TITLE)).toBe(true);
         expect(isQuarantined(TEST_TITLE)).toBeUndefined();
     });
 
-    it('returns false for non-existent entry', () => {
+    it('returns false for non-existent entry', async () => {
         expect(removeQuarantine('nonexistent')).toBe(false);
     });
 });
 
 describe('expireQuarantine', () => {
-    it('expires entries past their TTL', () => {
-        jest.useFakeTimers();
+    it('expires entries past their TTL', async () => {
+        vi.useFakeTimers();
         quarantineTest({ testTitle: TEST_TITLE, reason: 'flaky', quarantinedBy: 'test', flakyRate: 0.5, ttlDays: 0 });
-        jest.advanceTimersByTime(1000);
+        vi.advanceTimersByTime(1000);
         const expired = expireQuarantine();
         expect(expired).toBe(1);
         expect(isQuarantined(TEST_TITLE)).toBeUndefined();
-        jest.useRealTimers();
+        vi.useRealTimers();
     });
 
-    it('does not expire permanent entries', () => {
+    it('does not expire permanent entries', async () => {
         quarantineTest({ testTitle: 'perm-test', reason: 'flaky', quarantinedBy: 'test', flakyRate: 0.5 });
         markPermanent('perm-test');
-        jest.useFakeTimers();
-        jest.advanceTimersByTime(400 * 24 * 60 * 60 * 1000);
+        vi.useFakeTimers();
+        vi.advanceTimersByTime(400 * 24 * 60 * 60 * 1000);
         const expired = expireQuarantine();
         expect(expired).toBe(0);
         const entry = isQuarantined('perm-test');
         expect(entry).toBeDefined();
         expect(nonNull(entry).permanent).toBe(true);
-        jest.useRealTimers();
+        vi.useRealTimers();
     });
 });
 
 describe('listQuarantined', () => {
-    it('returns all non-expired entries', () => {
+    it('returns all non-expired entries', async () => {
         quarantineTest({ testTitle: 'test-1', reason: 'flaky', quarantinedBy: 'test', flakyRate: 0.5 });
         quarantineTest({ testTitle: 'test-2', reason: 'flaky', quarantinedBy: 'test', flakyRate: 0.6 });
         const list = listQuarantined();
@@ -133,7 +133,7 @@ describe('listQuarantined', () => {
 });
 
 describe('quarantineRatio', () => {
-    it('calculates ratio and warns above 5%', () => {
+    it('calculates ratio and warns above 5%', async () => {
         quarantineTest({ testTitle: 't1', reason: 'flaky', quarantinedBy: 'test', flakyRate: 0.5 });
         quarantineTest({ testTitle: 't2', reason: 'flaky', quarantinedBy: 'test', flakyRate: 0.5 });
         const meta = quarantineRatio(10);
@@ -142,7 +142,7 @@ describe('quarantineRatio', () => {
         expect(meta.warning).toContain('exceed 5%');
     });
 
-    it('returns empty warning below 5%', () => {
+    it('returns empty warning below 5%', async () => {
         quarantineTest({ testTitle: 't1', reason: 'flaky', quarantinedBy: 'test', flakyRate: 0.5 });
         const meta = quarantineRatio(100);
         expect(meta.ratio).toBe(0.01);
@@ -151,7 +151,7 @@ describe('quarantineRatio', () => {
 });
 
 describe('generatePipelineQuarantine', () => {
-    it('generates valid pipeline JSON file', () => {
+    it('generates valid pipeline JSON file', async () => {
         quarantineTest({
             testTitle: TEST_TITLE,
             reason: 'flaky',
@@ -173,34 +173,34 @@ describe('generatePipelineQuarantine', () => {
         expect(parsed.metadata.warning).toContain('exceed 5%');
     });
 
-    it('generates empty list when no entries', () => {
+    it('generates empty list when no entries', async () => {
         const pipeline = generatePipelineQuarantine();
         expect(pipeline.excluded).toHaveLength(0);
     });
 });
 
 describe('markPermanent', () => {
-    it('marks entry as permanent', () => {
+    it('marks entry as permanent', async () => {
         quarantineTest({ testTitle: TEST_TITLE, reason: 'flaky', quarantinedBy: 'test', flakyRate: 0.5 });
         expect(markPermanent(TEST_TITLE)).toBe(true);
         const entry = isQuarantined(TEST_TITLE);
         expect(nonNull(entry).permanent).toBe(true);
     });
 
-    it('returns false for non-existent entry', () => {
+    it('returns false for non-existent entry', async () => {
         expect(markPermanent('nonexistent')).toBe(false);
     });
 });
 
 describe('loadQuarantine', () => {
-    it('returns empty store for corrupt data', () => {
+    it('returns empty store for corrupt data', async () => {
         fs.mkdirSync(path.dirname(quarantineStorePath()), { recursive: true });
         fs.writeFileSync(quarantineStorePath(), 'not-json', 'utf8');
         const store = loadQuarantine();
         expect(store.entries).toEqual([]);
     });
 
-    it('returns empty store for missing file', () => {
+    it('returns empty store for missing file', async () => {
         const store = loadQuarantine();
         expect(store.entries).toEqual([]);
     });

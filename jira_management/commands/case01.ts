@@ -1,16 +1,16 @@
 /** Import CSV → Create Test Cases: configure CSV path and start the import pipeline. */
-import Config from '../../shared/config';
-import { ask, askFilePath } from '../../shared/prompt';
-import { load as loadState } from '../../shared/state';
+import Config from '../../shared/config.js';
+import { ask, askFilePath } from '../../shared/prompt.js';
+import { load as loadState } from '../../shared/state.js';
 import path from 'path';
-import type { CommandContext } from './context';
+import type { CommandContext } from './context.js';
 // anti-circular (prompt → create_tests → session-context → prompt)
-import createTests from '../create_tests';
-import { offerTestExecutionAssociation, showResults } from './test-execution-flow';
+import createTests from '../create_tests.js';
+import { offerTestExecutionAssociation, showResults } from './test-execution-flow.js';
 
 async function handler(c: CommandContext): Promise<boolean | void> {
     const state = loadState() as Record<string, string | undefined>;
-    const csvDefaultPath = Config.get('csvDefaultPath') || path.join(__dirname, '../test_steps.csv');
+    const csvDefaultPath = Config.get('csvDefaultPath') || path.join(import.meta.dirname, '../test_steps.csv');
     const csvPath =
         Config.get('csvPath') ||
         (await askFilePath('Caminho do arquivo CSV', {

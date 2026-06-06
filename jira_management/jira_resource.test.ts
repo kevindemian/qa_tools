@@ -1,52 +1,61 @@
-import { nonNull } from '../shared/test-utils';
-import { createHttpClient } from '../shared/http-client';
+import { nonNull } from '../shared/test-utils.js';
+import type { Mock } from 'vitest';
+import { createHttpClient } from '../shared/http-client.js';
 
-jest.mock('../shared/http-client', () => ({ createHttpClient: jest.fn() }));
+vi.mock('../shared/http-client', async () => ({ createHttpClient: vi.fn() }));
 
-jest.mock('../shared/logger', () => ({
-    Logger: jest.fn(() => ({
-        info: jest.fn(),
-        warn: jest.fn(),
-        error: jest.fn(),
-        child: jest.fn(() => ({
-            error: jest.fn(),
-            info: jest.fn(),
-            warn: jest.fn(),
-        })),
-    })),
+vi.mock('../shared/logger', async () => ({
+    Logger: vi.fn(function () {
+        return {
+            info: vi.fn(),
+            warn: vi.fn(),
+            error: vi.fn(),
+            child: vi.fn(function () {
+                return {
+                    error: vi.fn(),
+                    info: vi.fn(),
+                    warn: vi.fn(),
+                };
+            }),
+        };
+    }),
     rootLogger: {
-        debug: jest.fn(),
-        info: jest.fn(),
-        warn: jest.fn(),
-        error: jest.fn(),
-        child: jest.fn(() => ({
-            debug: jest.fn(),
-            error: jest.fn(),
-            info: jest.fn(),
-            warn: jest.fn(),
-        })),
+        debug: vi.fn(),
+        info: vi.fn(),
+        warn: vi.fn(),
+        error: vi.fn(),
+        child: vi.fn(function () {
+            return {
+                debug: vi.fn(),
+                error: vi.fn(),
+                info: vi.fn(),
+                warn: vi.fn(),
+            };
+        }),
     },
 }));
 
-jest.mock('../shared/prompt', () => ({
-    error: jest.fn(),
-    success: jest.fn(),
-    info: jest.fn(),
-    warn: jest.fn(),
-    extractErrorMessage: jest.fn().mockReturnValue('mocked error message'),
-    ProgressBar: jest.fn(() => ({
-        update: jest.fn(),
-        stop: jest.fn(),
-        current: 0,
-        total: 0,
-        startTime: Date.now(),
-        width: 20,
-    })),
+vi.mock('../shared/prompt', async () => ({
+    error: vi.fn(),
+    success: vi.fn(),
+    info: vi.fn(),
+    warn: vi.fn(),
+    extractErrorMessage: vi.fn().mockReturnValue('mocked error message'),
+    ProgressBar: vi.fn(function () {
+        return {
+            update: vi.fn(),
+            stop: vi.fn(),
+            current: 0,
+            total: 0,
+            startTime: Date.now(),
+            width: 20,
+        };
+    }),
 }));
 
-import JiraResource from './jira_resource';
-import { formatDateISO } from '../shared/date-utils';
-import { createMockAxiosInstance } from '../shared/test-utils/factories/response-factory';
+import JiraResource from './jira_resource.js';
+import { formatDateISO } from '../shared/date-utils.js';
+import { createMockAxiosInstance } from '../shared/test-utils/factories/response-factory.js';
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -57,13 +66,13 @@ let jiraResource: JiraResource;
 
 function buildResource(): void {
     mockClient = createMockAxiosInstance();
-    jest.mocked(createHttpClient).mockReturnValue(mockClient);
+    vi.mocked(createHttpClient).mockReturnValue(mockClient);
     jiraResource = new JiraResource('test-token', 'http://test-jira.com');
 }
 
 beforeEach(() => {
-    jest.clearAllMocks();
-    jest.restoreAllMocks();
+    vi.clearAllMocks();
+    vi.restoreAllMocks();
     buildResource();
 });
 
@@ -401,7 +410,7 @@ describe('getVersionId', () => {
 
 describe('createVersion', () => {
     it('creates version when it does not exist', async () => {
-        jest.spyOn(jiraResource, 'getVersionId').mockResolvedValueOnce(null);
+        vi.spyOn(jiraResource, 'getVersionId').mockResolvedValueOnce(null);
         const created = { id: '10001', name: 'v1.0', project: 'TEST' };
         mockClient.post.mockResolvedValue({ data: created });
 
@@ -416,7 +425,7 @@ describe('createVersion', () => {
     });
 
     it('returns null when version already exists', async () => {
-        jest.spyOn(jiraResource, 'getVersionId').mockResolvedValueOnce('existing-id');
+        vi.spyOn(jiraResource, 'getVersionId').mockResolvedValueOnce('existing-id');
 
         const result = await jiraResource.createVersion('TEST', 'v1.0');
         expect(result).toBeNull();
@@ -424,7 +433,7 @@ describe('createVersion', () => {
     });
 
     it('creates version without description', async () => {
-        jest.spyOn(jiraResource, 'getVersionId').mockResolvedValueOnce(null);
+        vi.spyOn(jiraResource, 'getVersionId').mockResolvedValueOnce(null);
         mockClient.post.mockResolvedValue({ data: { id: '1', name: 'v1.0' } });
 
         const result = await jiraResource.createVersion('TEST', 'v1.0');
@@ -433,14 +442,14 @@ describe('createVersion', () => {
     });
 
     it('handles post failure gracefully', async () => {
-        jest.spyOn(jiraResource, 'getVersionId').mockResolvedValueOnce(null);
+        vi.spyOn(jiraResource, 'getVersionId').mockResolvedValueOnce(null);
         mockClient.post.mockRejectedValue(new Error('API error'));
 
         await expect(jiraResource.createVersion('TEST', 'v1.0')).rejects.toThrow('API error');
     });
 
     it('handles null response from postJiraResource', async () => {
-        jest.spyOn(jiraResource, 'getVersionId').mockResolvedValueOnce(null);
+        vi.spyOn(jiraResource, 'getVersionId').mockResolvedValueOnce(null);
         mockClient.post.mockResolvedValue({ data: null });
 
         const result = await jiraResource.createVersion('TEST', 'v1.0');
@@ -454,8 +463,8 @@ describe('createVersion', () => {
 
 describe('checkReleaseTasksStatus', () => {
     it('returns true when all tasks are done', async () => {
-        jest.spyOn(jiraResource, 'getProjectId').mockResolvedValueOnce('10000');
-        jest.spyOn(jiraResource, 'searchJiraIssues').mockResolvedValueOnce({
+        vi.spyOn(jiraResource, 'getProjectId').mockResolvedValueOnce('10000');
+        vi.spyOn(jiraResource, 'searchJiraIssues').mockResolvedValueOnce({
             issues: [
                 { key: 'TASK-1', fields: { status: { name: 'done' } } },
                 { key: 'TASK-2', fields: { status: { name: 'in use' } } },
@@ -468,8 +477,8 @@ describe('checkReleaseTasksStatus', () => {
     });
 
     it('returns false when some tasks are not done', async () => {
-        jest.spyOn(jiraResource, 'getProjectId').mockResolvedValueOnce('10000');
-        jest.spyOn(jiraResource, 'searchJiraIssues').mockResolvedValueOnce({
+        vi.spyOn(jiraResource, 'getProjectId').mockResolvedValueOnce('10000');
+        vi.spyOn(jiraResource, 'searchJiraIssues').mockResolvedValueOnce({
             issues: [
                 { key: 'TASK-1', fields: { status: { name: 'done' } } },
                 { key: 'TASK-2', fields: { status: { name: 'in progress' } } },
@@ -482,8 +491,8 @@ describe('checkReleaseTasksStatus', () => {
     });
 
     it('returns false when no issues found', async () => {
-        jest.spyOn(jiraResource, 'getProjectId').mockResolvedValueOnce('10000');
-        jest.spyOn(jiraResource, 'searchJiraIssues').mockResolvedValueOnce({
+        vi.spyOn(jiraResource, 'getProjectId').mockResolvedValueOnce('10000');
+        vi.spyOn(jiraResource, 'searchJiraIssues').mockResolvedValueOnce({
             issues: [],
             total: 0,
         });
@@ -493,7 +502,7 @@ describe('checkReleaseTasksStatus', () => {
     });
 
     it('returns false on error from getProjectId', async () => {
-        jest.spyOn(jiraResource, 'getProjectId').mockRejectedValueOnce(new Error('Project error'));
+        vi.spyOn(jiraResource, 'getProjectId').mockRejectedValueOnce(new Error('Project error'));
 
         const result = await jiraResource.checkReleaseTasksStatus('TEST', 'v1.0');
         expect(result).toBe(false);
@@ -511,8 +520,8 @@ describe('checkReleaseTasksStatus', () => {
 
 describe('getReleaseTasks', () => {
     it('returns formatted task list', async () => {
-        jest.spyOn(jiraResource, 'getProjectId').mockResolvedValueOnce('10000');
-        jest.spyOn(jiraResource, 'searchJiraIssues').mockResolvedValueOnce({
+        vi.spyOn(jiraResource, 'getProjectId').mockResolvedValueOnce('10000');
+        vi.spyOn(jiraResource, 'searchJiraIssues').mockResolvedValueOnce({
             issues: [
                 { key: 'TASK-1', fields: { summary: 'Implement feature' } },
                 { key: 'TASK-2', fields: { summary: 'Fix bug' } },
@@ -525,8 +534,8 @@ describe('getReleaseTasks', () => {
     });
 
     it('returns empty array when no issues found', async () => {
-        jest.spyOn(jiraResource, 'getProjectId').mockResolvedValueOnce('10000');
-        jest.spyOn(jiraResource, 'searchJiraIssues').mockResolvedValueOnce({
+        vi.spyOn(jiraResource, 'getProjectId').mockResolvedValueOnce('10000');
+        vi.spyOn(jiraResource, 'searchJiraIssues').mockResolvedValueOnce({
             issues: [],
             total: 0,
         });
@@ -536,8 +545,8 @@ describe('getReleaseTasks', () => {
     });
 
     it('filters by type when testOnly=true', async () => {
-        jest.spyOn(jiraResource, 'getProjectId').mockResolvedValueOnce('10000');
-        const searchSpy = jest.spyOn(jiraResource, 'searchJiraIssues').mockResolvedValueOnce({ issues: [], total: 0 });
+        vi.spyOn(jiraResource, 'getProjectId').mockResolvedValueOnce('10000');
+        const searchSpy = vi.spyOn(jiraResource, 'searchJiraIssues').mockResolvedValueOnce({ issues: [], total: 0 });
 
         await jiraResource.getReleaseTasks('TEST', 'v1.0', true);
         const jql = nonNull(searchSpy.mock.calls[0])[0];
@@ -545,8 +554,8 @@ describe('getReleaseTasks', () => {
     });
 
     it('does not add type filter when testOnly=false', async () => {
-        jest.spyOn(jiraResource, 'getProjectId').mockResolvedValueOnce('10000');
-        const searchSpy = jest.spyOn(jiraResource, 'searchJiraIssues').mockResolvedValueOnce({ issues: [], total: 0 });
+        vi.spyOn(jiraResource, 'getProjectId').mockResolvedValueOnce('10000');
+        const searchSpy = vi.spyOn(jiraResource, 'searchJiraIssues').mockResolvedValueOnce({ issues: [], total: 0 });
 
         await jiraResource.getReleaseTasks('TEST', 'v1.0', false);
         const jql = nonNull(searchSpy.mock.calls[0])[0];
@@ -554,7 +563,7 @@ describe('getReleaseTasks', () => {
     });
 
     it('returns empty array on error from getProjectId', async () => {
-        jest.spyOn(jiraResource, 'getProjectId').mockRejectedValueOnce(new Error('Project error'));
+        vi.spyOn(jiraResource, 'getProjectId').mockRejectedValueOnce(new Error('Project error'));
 
         const result = await jiraResource.getReleaseTasks('TEST', 'v1.0');
         expect(result).toEqual([]);
@@ -681,7 +690,7 @@ describe('addTasksToSprint', () => {
 
 describe('updateFixVersions', () => {
     it('updates all task fix versions', async () => {
-        jest.spyOn(jiraResource, 'getVersionId').mockResolvedValueOnce('v-1');
+        vi.spyOn(jiraResource, 'getVersionId').mockResolvedValueOnce('v-1');
         mockClient.put.mockResolvedValue({ data: {}, status: 200 });
 
         await jiraResource.updateFixVersions(['TASK-1', 'TASK-2'], 'TEST', 'v1.0');
@@ -695,14 +704,14 @@ describe('updateFixVersions', () => {
     });
 
     it('skips when version not found', async () => {
-        jest.spyOn(jiraResource, 'getVersionId').mockResolvedValueOnce(null);
+        vi.spyOn(jiraResource, 'getVersionId').mockResolvedValueOnce(null);
 
         await jiraResource.updateFixVersions(['TASK-1'], 'TEST', 'v1.0');
         expect(mockClient.put).not.toHaveBeenCalled();
     });
 
     it('handles single task', async () => {
-        jest.spyOn(jiraResource, 'getVersionId').mockResolvedValueOnce('v-1');
+        vi.spyOn(jiraResource, 'getVersionId').mockResolvedValueOnce('v-1');
         mockClient.put.mockResolvedValue({ data: {}, status: 200 });
 
         await jiraResource.updateFixVersions(['TASK-1'], 'TEST', 'v1.0');
@@ -710,7 +719,7 @@ describe('updateFixVersions', () => {
     });
 
     it('propagates put error', async () => {
-        jest.spyOn(jiraResource, 'getVersionId').mockResolvedValueOnce('v-1');
+        vi.spyOn(jiraResource, 'getVersionId').mockResolvedValueOnce('v-1');
         mockClient.put.mockRejectedValue(new Error('Update error'));
 
         await expect(jiraResource.updateFixVersions(['TASK-1'], 'TEST', 'v1.0')).rejects.toThrow('Update error');
@@ -723,8 +732,8 @@ describe('updateFixVersions', () => {
 
 describe('releaseVersion', () => {
     it('releases version successfully', async () => {
-        jest.spyOn(jiraResource, 'getVersionId').mockResolvedValueOnce('v-1');
-        jest.spyOn(jiraResource, 'checkReleaseTasksStatus').mockResolvedValueOnce(true);
+        vi.spyOn(jiraResource, 'getVersionId').mockResolvedValueOnce('v-1');
+        vi.spyOn(jiraResource, 'checkReleaseTasksStatus').mockResolvedValueOnce(true);
         mockClient.put.mockResolvedValue({ data: {}, status: 200 });
 
         await jiraResource.releaseVersion('TEST', 'v1.0');
@@ -732,23 +741,23 @@ describe('releaseVersion', () => {
     });
 
     it('aborts when version not found', async () => {
-        jest.spyOn(jiraResource, 'getVersionId').mockResolvedValueOnce(null);
+        vi.spyOn(jiraResource, 'getVersionId').mockResolvedValueOnce(null);
 
         await jiraResource.releaseVersion('TEST', 'v1.0');
         expect(mockClient.put).not.toHaveBeenCalled();
     });
 
     it('aborts when tasks not completed', async () => {
-        jest.spyOn(jiraResource, 'getVersionId').mockResolvedValueOnce('v-1');
-        jest.spyOn(jiraResource, 'checkReleaseTasksStatus').mockResolvedValueOnce(false);
+        vi.spyOn(jiraResource, 'getVersionId').mockResolvedValueOnce('v-1');
+        vi.spyOn(jiraResource, 'checkReleaseTasksStatus').mockResolvedValueOnce(false);
 
         await jiraResource.releaseVersion('TEST', 'v1.0');
         expect(mockClient.put).not.toHaveBeenCalled();
     });
 
     it('sets correct releaseDate in payload', async () => {
-        jest.spyOn(jiraResource, 'getVersionId').mockResolvedValueOnce('v-1');
-        jest.spyOn(jiraResource, 'checkReleaseTasksStatus').mockResolvedValueOnce(true);
+        vi.spyOn(jiraResource, 'getVersionId').mockResolvedValueOnce('v-1');
+        vi.spyOn(jiraResource, 'checkReleaseTasksStatus').mockResolvedValueOnce(true);
         mockClient.put.mockResolvedValue({ data: {}, status: 200 });
         const today = formatDateISO();
 
@@ -760,8 +769,8 @@ describe('releaseVersion', () => {
     });
 
     it('propagates put error', async () => {
-        jest.spyOn(jiraResource, 'getVersionId').mockResolvedValueOnce('v-1');
-        jest.spyOn(jiraResource, 'checkReleaseTasksStatus').mockResolvedValueOnce(true);
+        vi.spyOn(jiraResource, 'getVersionId').mockResolvedValueOnce('v-1');
+        vi.spyOn(jiraResource, 'checkReleaseTasksStatus').mockResolvedValueOnce(true);
         mockClient.put.mockRejectedValue(new Error('Release error'));
 
         await expect(jiraResource.releaseVersion('TEST', 'v1.0')).rejects.toThrow('Release error');
@@ -773,10 +782,10 @@ describe('releaseVersion', () => {
 // =====================================================================
 
 describe('moveCardsToDone', () => {
-    let transitionSpy: jest.SpyInstance;
+    let transitionSpy: Mock;
 
     beforeEach(() => {
-        transitionSpy = jest.spyOn(jiraResource, 'transitionIssue').mockResolvedValue();
+        transitionSpy = vi.spyOn(jiraResource, 'transitionIssue').mockResolvedValue();
     });
 
     it('moves single task through full workflow', async () => {

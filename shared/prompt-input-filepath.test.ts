@@ -1,29 +1,29 @@
-jest.mock('./output', () => {
-    const mockOutput = { print: jest.fn() };
+vi.mock('./output', async () => {
+    const mockOutput = { print: vi.fn() };
     return {
-        Output: { isTTY: jest.fn(), isCI: jest.fn(), columns: jest.fn(() => 80), rows: jest.fn(() => 24) },
+        Output: { isTTY: vi.fn(), isCI: vi.fn(), columns: vi.fn(() => 80), rows: vi.fn(() => 24) },
         defaultOutput: mockOutput,
     };
 });
 
-jest.mock('./logger', () => ({
-    rootLogger: { info: jest.fn(), warn: jest.fn(), error: jest.fn(), debug: jest.fn(), writeFileOnly: jest.fn() },
+vi.mock('./logger', async () => ({
+    rootLogger: { info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn(), writeFileOnly: vi.fn() },
     Logger: class {
-        info = jest.fn();
-        error = jest.fn();
-        warn = jest.fn();
-        debug = jest.fn();
-        writeFileOnly = jest.fn();
+        info = vi.fn();
+        error = vi.fn();
+        warn = vi.fn();
+        debug = vi.fn();
+        writeFileOnly = vi.fn();
     },
 }));
 
-jest.mock('./box', () => ({
-    box: jest.fn((lines: string[]) => lines.join('\n')),
-    divider: jest.fn(() => '---'),
-    visibleWidth: jest.fn((s: string) => s.length),
+vi.mock('./box', async () => ({
+    box: vi.fn((lines: string[]) => lines.join('\n')),
+    divider: vi.fn(() => '---'),
+    visibleWidth: vi.fn((s: string) => s.length),
 }));
 
-jest.mock('./palette', () => {
+vi.mock('./palette', async () => {
     const purpleFn = (s: string) => s;
     purpleFn.bold = (s: string) => s;
     return {
@@ -40,12 +40,13 @@ jest.mock('./palette', () => {
     };
 });
 
-jest.mock('./prompt-ui', () => {
-    const actual = jest.requireActual<typeof import('./prompt-ui')>('./prompt-ui');
+vi.mock('./prompt-ui', async () => {
+    const actual = await vi.importActual<typeof import('./prompt-ui.js')>('./prompt-ui');
     return {
         ...actual,
-        getConfig: jest.fn(() => {
-            const ConfigAccessorActual = jest.requireActual<typeof import('./config-accessor')>('./config-accessor');
+        getConfig: vi.fn(async () => {
+            const ConfigAccessorActual =
+                await vi.importActual<typeof import('./config-accessor.js')>('./config-accessor');
             const cfg = ConfigAccessorActual.default.create();
             cfg.get = <T>(key: string): T => {
                 const v: Record<string, unknown> = { quiet: false, autoConfirm: false };
@@ -53,34 +54,34 @@ jest.mock('./prompt-ui', () => {
             };
             return cfg;
         }),
-        warn: jest.fn(),
-        icon: jest.fn(() => '!'),
+        warn: vi.fn(),
+        icon: vi.fn(() => '!'),
     };
 });
 
-const mockRlForReadline = { question: jest.fn(), on: jest.fn(), close: jest.fn() };
-jest.mock('readline', () => ({
-    createInterface: jest.fn(() => mockRlForReadline),
+const mockRlForReadline = { question: vi.fn(), on: vi.fn(), close: vi.fn() };
+vi.mock('readline', async () => ({
+    createInterface: vi.fn(() => mockRlForReadline),
 }));
 
-jest.mock('@inquirer/input', () => ({ default: jest.fn() }));
-jest.mock('@inquirer/select', () => ({ default: jest.fn() }));
-jest.mock('@inquirer/confirm', () => ({ default: jest.fn() }));
+vi.mock('@inquirer/input', async () => ({ default: vi.fn() }));
+vi.mock('@inquirer/select', async () => ({ default: vi.fn() }));
+vi.mock('@inquirer/confirm', async () => ({ default: vi.fn() }));
 
 import * as fs from 'fs';
 import * as os from 'os';
 import * as path from 'path';
 import readlineSync from 'readline-sync';
-import ConfigAccessor from './config-accessor';
-import { CancelError, getConfig } from './prompt-ui';
-import { filePathCompleter, askFilePath } from './prompt-input-filepath';
+import ConfigAccessor from './config-accessor.js';
+import { CancelError, getConfig } from './prompt-ui.js';
+import { filePathCompleter, askFilePath } from './prompt-input-filepath.js';
 const _mockRl = mockRlForReadline;
 
-const mockReadlineQuestion = jest.spyOn(readlineSync, 'question').mockImplementation(() => '');
-const mockGetConfig = jest.mocked(getConfig);
+const mockReadlineQuestion = vi.spyOn(readlineSync, 'question').mockImplementation(() => '');
+const mockGetConfig = vi.mocked(getConfig);
 
-beforeEach(() => {
-    jest.clearAllMocks();
+beforeEach(async () => {
+    vi.clearAllMocks();
     mockReadlineQuestion.mockReturnValue('');
     Object.defineProperty(process.stdin, 'isTTY', { value: true, configurable: true });
     const cfg = ConfigAccessor.create();
@@ -88,29 +89,29 @@ beforeEach(() => {
     mockGetConfig.mockReturnValue(cfg);
 });
 
-afterEach(() => {
+afterEach(async () => {
     Object.defineProperty(process.stdin, 'isTTY', { value: undefined, configurable: true });
 });
 
-describe('filePathCompleter', () => {
-    const testDir = path.join(__dirname, '__test_fixtures__');
+describe('filePathCompleter', async () => {
+    const testDir = path.join(import.meta.dirname, '__test_fixtures__');
     const csvFile = path.join(testDir, 'test.csv');
     const jsonFile = path.join(testDir, 'test.json');
     const txtFile = path.join(testDir, 'test.txt');
     const subDir = path.join(testDir, 'subdir');
 
-    beforeAll(() => {
+    beforeAll(async () => {
         fs.mkdirSync(subDir, { recursive: true });
         fs.writeFileSync(csvFile, '');
         fs.writeFileSync(jsonFile, '');
         fs.writeFileSync(txtFile, '');
     });
 
-    afterAll(() => {
+    afterAll(async () => {
         fs.rmSync(testDir, { recursive: true, force: true });
     });
 
-    it('matches all entries with empty base', () => {
+    it('matches all entries with empty base', async () => {
         const [matches] = filePathCompleter(testDir + '/');
         expect(matches).toContain(csvFile);
         expect(matches).toContain(jsonFile);
@@ -119,7 +120,7 @@ describe('filePathCompleter', () => {
         expect(matches.length).toBe(4);
     });
 
-    it('filters by csv extension', () => {
+    it('filters by csv extension', async () => {
         const [matches] = filePathCompleter(testDir + '/', ['.csv']);
         expect(matches).toContain(csvFile);
         expect(matches).not.toContain(jsonFile);
@@ -127,7 +128,7 @@ describe('filePathCompleter', () => {
         expect(matches).toContain(subDir + '/');
     });
 
-    it('filters by json and txt extensions', () => {
+    it('filters by json and txt extensions', async () => {
         const [matches] = filePathCompleter(testDir + '/', ['.json', '.txt']);
         expect(matches).toContain(jsonFile);
         expect(matches).toContain(txtFile);
@@ -135,30 +136,30 @@ describe('filePathCompleter', () => {
         expect(matches).toContain(subDir + '/');
     });
 
-    it('includes directories with trailing slash', () => {
+    it('includes directories with trailing slash', async () => {
         const [matches] = filePathCompleter(testDir + '/');
         expect(matches).toContain(subDir + '/');
     });
 
-    it('returns original line as second element', () => {
+    it('returns original line as second element', async () => {
         const prefix = testDir + '/test.';
         const [matches, line] = filePathCompleter(prefix);
         expect(matches.length).toBe(3);
         expect(line).toBe(prefix);
     });
 
-    it('returns empty on invalid dir', () => {
+    it('returns empty on invalid dir', async () => {
         const [matches] = filePathCompleter('/nonexistent_dir_xyz/foo');
         expect(matches).toEqual([]);
     });
 
-    it('expands tilde', () => {
+    it('expands tilde', async () => {
         const [matches] = filePathCompleter('~');
         expect(matches.length).toBeGreaterThan(0);
     });
 
-    it('filters out dotfiles when base does not start with dot', () => {
-        const dir = path.join(__dirname, '__test_fixtures__');
+    it('filters out dotfiles when base does not start with dot', async () => {
+        const dir = path.join(import.meta.dirname, '__test_fixtures__');
         const dotfile = path.join(dir, '.hidden');
         fs.writeFileSync(dotfile, '');
         try {
@@ -169,8 +170,8 @@ describe('filePathCompleter', () => {
         }
     });
 
-    it('includes dotfiles when base starts with dot', () => {
-        const dir = path.join(__dirname, '__test_fixtures__');
+    it('includes dotfiles when base starts with dot', async () => {
+        const dir = path.join(import.meta.dirname, '__test_fixtures__');
         const dotfile = path.join(dir, '.hidden');
         fs.writeFileSync(dotfile, '');
         try {
@@ -181,7 +182,7 @@ describe('filePathCompleter', () => {
         }
     });
 
-    it('handles statSync error in filter callback', () => {
+    it('handles statSync error in filter callback', async () => {
         const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'stat-err-'));
         try {
             fs.symlinkSync('/nonexistent-target', path.join(dir, 'dangling.txt'));
@@ -192,7 +193,7 @@ describe('filePathCompleter', () => {
         }
     });
 
-    it('handles stat error in map callback (broken symlink, no ext filter)', () => {
+    it('handles stat error in map callback (broken symlink, no ext filter)', async () => {
         const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'stat-map-err-'));
         try {
             fs.symlinkSync('/nonexistent-target', path.join(dir, 'dangling'));
@@ -203,13 +204,13 @@ describe('filePathCompleter', () => {
         }
     });
 
-    it('defaults to current dir when line is empty', () => {
+    it('defaults to current dir when line is empty', async () => {
         const [matches] = filePathCompleter('');
         expect(Array.isArray(matches)).toBe(true);
     });
 });
 
-describe('askFilePath', () => {
+describe('askFilePath', async () => {
     it('falls back to prompt when no TTY', async () => {
         mockReadlineQuestion.mockReturnValue('/some/path');
         const result = await askFilePath('File:');
@@ -217,8 +218,8 @@ describe('askFilePath', () => {
     });
 });
 
-describe('askFilePath TTY mode', () => {
-    beforeEach(() => {
+describe('askFilePath TTY mode', async () => {
+    beforeEach(async () => {
         Object.defineProperty(process.stdout, 'isTTY', { value: true, configurable: true });
         const mockRl = _mockRl;
         mockRl.question.mockReset();
@@ -226,7 +227,7 @@ describe('askFilePath TTY mode', () => {
         mockRl.close.mockReset();
     });
 
-    afterEach(() => {
+    afterEach(async () => {
         Object.defineProperty(process.stdout, 'isTTY', { value: undefined, configurable: true });
     });
 

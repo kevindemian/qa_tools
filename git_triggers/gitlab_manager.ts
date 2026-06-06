@@ -1,7 +1,7 @@
-import { createThrottledClient } from '../shared/http-client';
-import { Logger } from '../shared/logger';
-import { handleError } from '../shared/git-provider-error';
-import { GitProviderBase } from './git-provider-base';
+import { createThrottledClient } from '../shared/http-client.js';
+import { Logger } from '../shared/logger.js';
+import { handleError } from '../shared/git-provider-error.js';
+import { GitProviderBase } from './git-provider-base.js';
 import type {
     GitProvider,
     PipelineTriggerResult,
@@ -14,7 +14,7 @@ import type {
     CICDVariable,
     Issue,
     JsonObject,
-} from '../shared/types';
+} from '../shared/types.js';
 import {
     glTriggerPipeline,
     glGetRecentPipelines,
@@ -26,7 +26,7 @@ import {
     glGetJobLogs,
     glGetSchedules,
     glRunSchedule,
-} from './gitlab-workflow';
+} from './gitlab-workflow.js';
 import {
     glCreateMergeRequest,
     glUpdateMergeRequest,
@@ -34,9 +34,9 @@ import {
     glSearchMergeRequests,
     glAcceptMergeRequest,
     glIsApproved,
-} from './gitlab-pr';
-import { glGetOpenIssues } from './gitlab-issues';
-import { glGetBranch, glGetDiff } from './gitlab-branch';
+} from './gitlab-pr.js';
+import { glGetOpenIssues } from './gitlab-issues.js';
+import { glGetBranch, glGetDiff } from './gitlab-branch.js';
 
 class GitLabManager extends GitProviderBase implements GitProvider {
     provider = 'gitlab' as const;

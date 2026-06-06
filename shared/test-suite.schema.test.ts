@@ -4,34 +4,34 @@ import {
     PreConditionSchema,
     CoverageRefSchema,
     CoverageTableSchema,
-} from './test-suite.schema';
+} from './test-suite.schema.js';
 
 describe('PreConditionSchema', () => {
-    it('accepts valid preconditions', () => {
+    it('accepts valid preconditions', async () => {
         expect(PreConditionSchema.parse({ type: 'setup', description: 'User must be logged in' })).toEqual({
             type: 'setup',
             description: 'User must be logged in',
         });
     });
 
-    it('rejects empty description', () => {
+    it('rejects empty description', async () => {
         expect(() => PreConditionSchema.parse({ type: 'setup', description: '' })).toThrow();
     });
 
-    it('rejects invalid type', () => {
+    it('rejects invalid type', async () => {
         expect(() => PreConditionSchema.parse({ type: 'invalid', description: 'desc' })).toThrow();
     });
 });
 
 describe('CoverageRefSchema', () => {
-    it('accepts valid coverage ref', () => {
+    it('accepts valid coverage ref', async () => {
         expect(CoverageRefSchema.parse({ criterionId: 'C-1', criterionText: 'User can log in' })).toEqual({
             criterionId: 'C-1',
             criterionText: 'User can log in',
         });
     });
 
-    it('rejects empty criterionId', () => {
+    it('rejects empty criterionId', async () => {
         expect(() => CoverageRefSchema.parse({ criterionId: '', criterionText: 'text' })).toThrow();
     });
 });
@@ -45,40 +45,40 @@ describe('TestCaseSchema', () => {
         coverage: [{ criterionId: 'C-1', criterionText: 'User can log in' }],
     };
 
-    it('accepts valid test case', () => {
+    it('accepts valid test case', async () => {
         const result = TestCaseSchema.parse(validTestCase);
         expect(result.title).toBe(validTestCase.title);
     });
 
-    it('rejects title shorter than 5 chars', () => {
+    it('rejects title shorter than 5 chars', async () => {
         expect(() => TestCaseSchema.parse({ ...validTestCase, title: 'Test' })).toThrow();
     });
 
-    it('rejects title over 200 chars', () => {
+    it('rejects title over 200 chars', async () => {
         expect(() => TestCaseSchema.parse({ ...validTestCase, title: 'x'.repeat(201) })).toThrow();
     });
 
-    it('rejects empty preConditions', () => {
+    it('rejects empty preConditions', async () => {
         expect(() => TestCaseSchema.parse({ ...validTestCase, preConditions: [] })).toThrow();
     });
 
-    it('rejects fewer than 3 steps', () => {
+    it('rejects fewer than 3 steps', async () => {
         expect(() => TestCaseSchema.parse({ ...validTestCase, steps: ['Step 1'] })).toThrow();
     });
 
-    it('rejects step shorter than 5 chars', () => {
+    it('rejects step shorter than 5 chars', async () => {
         expect(() => TestCaseSchema.parse({ ...validTestCase, steps: ['Step 1', 'Step 2', 'x'] })).toThrow();
     });
 
-    it('rejects expectedResult shorter than 10 chars', () => {
+    it('rejects expectedResult shorter than 10 chars', async () => {
         expect(() => TestCaseSchema.parse({ ...validTestCase, expectedResult: 'Short' })).toThrow();
     });
 
-    it('rejects empty coverage', () => {
+    it('rejects empty coverage', async () => {
         expect(() => TestCaseSchema.parse({ ...validTestCase, coverage: [] })).toThrow();
     });
 
-    it('accepts optional evidence', () => {
+    it('accepts optional evidence', async () => {
         const withEvidence = { ...validTestCase, evidence: ['Criterion C-1: User can log in'] };
         const result = TestCaseSchema.parse(withEvidence);
         expect(result.evidence).toEqual(['Criterion C-1: User can log in']);
@@ -86,11 +86,11 @@ describe('TestCaseSchema', () => {
 });
 
 describe('CoverageTableSchema', () => {
-    it('accepts valid coverage table', () => {
+    it('accepts valid coverage table', async () => {
         expect(CoverageTableSchema.parse({ coverage: 95 })).toEqual({ coverage: 95 });
     });
 
-    it('accepts coverage table with gaps', () => {
+    it('accepts coverage table with gaps', async () => {
         const data = {
             coverage: 75,
             gaps: [{ criterion: 'Edge case X', reason: 'Not applicable to this feature' }],
@@ -98,11 +98,11 @@ describe('CoverageTableSchema', () => {
         expect(CoverageTableSchema.parse(data)).toEqual(data);
     });
 
-    it('rejects coverage < 0', () => {
+    it('rejects coverage < 0', async () => {
         expect(() => CoverageTableSchema.parse({ coverage: -1 })).toThrow();
     });
 
-    it('rejects coverage > 100', () => {
+    it('rejects coverage > 100', async () => {
         expect(() => CoverageTableSchema.parse({ coverage: 101 })).toThrow();
     });
 });
@@ -122,16 +122,16 @@ describe('TestSuiteSchema', () => {
         ],
     };
 
-    it('accepts valid test suite', () => {
+    it('accepts valid test suite', async () => {
         const result = TestSuiteSchema.parse(validSuite);
         expect(result.tests).toHaveLength(1);
     });
 
-    it('rejects summary shorter than 10 chars', () => {
+    it('rejects summary shorter than 10 chars', async () => {
         expect(() => TestSuiteSchema.parse({ ...validSuite, summary: 'Short' })).toThrow();
     });
 
-    it('rejects empty tests array', () => {
+    it('rejects empty tests array', async () => {
         expect(() => TestSuiteSchema.parse({ ...validSuite, tests: [] })).toThrow();
     });
 });

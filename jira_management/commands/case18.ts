@@ -12,16 +12,16 @@
 import crypto from 'crypto';
 import fs from 'fs';
 import path from 'path';
-import { formatDateISO } from '../../shared/date-utils';
-import { ask, warn, info, printError, title, divider } from '../../shared/prompt';
-import { rootLogger } from '../../shared/logger';
-import { llmPrompt } from '../../shared/llm-client';
-import { sanitizeForLlm, sanitizeTerminal } from '../../shared/sanitize';
-import { recordAiGeneration } from '../../shared/ai-feedback';
-import type { CommandContext } from './context';
-import { TestCaseArraySchema } from './case18.schema';
-import { matchPreconditionByDualThreshold } from '../jira_link_manager';
-import type { AiGenerationRecord, PreConditionSummary, TestCase, TestStep } from '../../shared/types';
+import { formatDateISO } from '../../shared/date-utils.js';
+import { ask, warn, info, printError, title, divider } from '../../shared/prompt.js';
+import { rootLogger } from '../../shared/logger.js';
+import { llmPrompt } from '../../shared/llm-client.js';
+import { sanitizeForLlm, sanitizeTerminal } from '../../shared/sanitize.js';
+import { recordAiGeneration } from '../../shared/ai-feedback.js';
+import type { CommandContext } from './context.js';
+import { TestCaseArraySchema } from './case18.schema.js';
+import { matchPreconditionByDualThreshold } from '../jira_link_manager.js';
+import type { AiGenerationRecord, PreConditionSummary, TestCase, TestStep } from '../../shared/types.js';
 
 async function handler(c: CommandContext): Promise<boolean | void> {
     const input = await gatherInput(c);
@@ -95,7 +95,7 @@ async function gatherInput(c: CommandContext): Promise<{
         return null;
     }
 
-    const templatePath = path.join(__dirname, '../../shared/prompts/user-story-to-tests.md');
+    const templatePath = path.join(import.meta.dirname, '../../shared/prompts/user-story-to-tests.md');
     try {
         const system = fs.readFileSync(templatePath, 'utf8');
         return { userStory, acceptanceCriteria, project, system };

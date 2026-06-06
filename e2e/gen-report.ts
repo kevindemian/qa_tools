@@ -1,16 +1,16 @@
 /** Gera relatório HTML completo (CTRF + CI/CD) em reports/YYYY-MM-DD/. */
 import path from 'path';
 import fs from 'fs';
-import { parseTestResultsFile } from '../shared/result_parser';
-import { generateHtmlReport } from '../shared/report-generator';
-import { writeReport } from '../shared/temp-dir';
-import { createHttpClient } from '../shared/http-client';
+import { parseTestResultsFile } from '../shared/result_parser.js';
+import { generateHtmlReport } from '../shared/report-generator.js';
+import { writeReport } from '../shared/temp-dir.js';
+import { createHttpClient } from '../shared/http-client.js';
 
 function loadCtrfFixture(): { ctrfPath: string; result: ReturnType<typeof parseTestResultsFile> } {
     const ctrfArg = process.argv.find((a) => a.startsWith('--ctrf='));
     const ctrfPath = ctrfArg
         ? path.resolve(ctrfArg.split('=')[1] ?? '')
-        : path.resolve(__dirname, 'fixtures/ctrf-report.json');
+        : path.resolve(import.meta.dirname, 'fixtures/ctrf-report.json');
     const result = parseTestResultsFile(ctrfPath);
 
     if (result.error) {

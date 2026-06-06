@@ -1,12 +1,12 @@
-import type { GitProvider } from '../shared/types';
-import type JiraClient from '../shared/jira-client';
-import type JiraLinkManager from '../jira_management/jira_link_manager';
-import { createGitHubSmokeManager } from './smoke-shared';
-import { loadMetrics, calculateFlakiness } from '../shared/metrics';
-import { generateFlakinessHtml } from '../shared/flakiness-dashboard';
-import { pollPipeline } from '../git_triggers/pipeline-handler';
-import { collectTestResults } from '../git_triggers/test-results';
-import { offerPipelineFailureAnalysis } from '../git_triggers/llm-pipeline';
+import type { GitProvider } from '../shared/types.js';
+import type JiraClient from '../shared/jira-client.js';
+import type JiraLinkManager from '../jira_management/jira_link_manager.js';
+import { createGitHubSmokeManager } from './smoke-shared.js';
+import { loadMetrics, calculateFlakiness } from '../shared/metrics.js';
+import { generateFlakinessHtml } from '../shared/flakiness-dashboard.js';
+import { pollPipeline } from '../git_triggers/pipeline-handler.js';
+import { collectTestResults } from '../git_triggers/test-results.js';
+import { offerPipelineFailureAnalysis } from '../git_triggers/llm-pipeline.js';
 
 const E2E_PIPELINE = process.env.E2E_PIPELINE === 'true';
 

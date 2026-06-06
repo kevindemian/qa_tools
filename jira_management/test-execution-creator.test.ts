@@ -1,31 +1,32 @@
-jest.mock('../shared/logger', () => ({
+vi.mock('../shared/logger', () => ({
     rootLogger: {
-        info: jest.fn(),
-        warn: jest.fn(),
-        error: jest.fn(),
-        child: jest.fn().mockReturnValue({ info: jest.fn(), error: jest.fn(), warn: jest.fn() }),
+        info: vi.fn(),
+        warn: vi.fn(),
+        error: vi.fn(),
+        child: vi.fn().mockReturnValue({ info: vi.fn(), error: vi.fn(), warn: vi.fn() }),
     },
     Logger: function () {},
 }));
 
-jest.mock('../shared/prompt', () => ({
-    success: jest.fn(),
-    info: jest.fn(),
-    withSpinner: jest.fn(async (_label: string, fn: () => Promise<void>) => {
+vi.mock('../shared/prompt', () => ({
+    success: vi.fn(),
+    info: vi.fn(),
+    withSpinner: vi.fn(async (_label: string, fn: () => Promise<void>) => {
         await fn();
     }),
 }));
 
-import { createMockJiraResource } from '../shared/test-utils/factories/jira-resource-factory';
-import { createMockLinkManager } from '../shared/test-utils/factories/link-manager-factory';
-import TestExecutionCreator from './test-execution-creator';
-import { rootLogger } from '../shared/logger';
+import { createMockJiraResource } from '../shared/test-utils/factories/jira-resource-factory.js';
+import type { Mock } from 'vitest';
+import { createMockLinkManager } from '../shared/test-utils/factories/link-manager-factory.js';
+import TestExecutionCreator from './test-execution-creator.js';
+import { rootLogger } from '../shared/logger.js';
 
 describe('TestExecutionCreator', () => {
     let creator: TestExecutionCreator;
     let mockJiraResource: ReturnType<typeof createMockJiraResource>;
     let mockLinkManager: ReturnType<typeof createMockLinkManager>;
-    let dateSpy: jest.SpyInstance;
+    let dateSpy: Mock;
 
     const fixedTimestamp = '23/05/2026 10:30';
     const projectName = 'PROJ';
@@ -54,7 +55,7 @@ describe('TestExecutionCreator', () => {
     const defaultCreated = { key: 'TE-1', summary: 'my_tests.csv - 23/05/2026 10:30' };
 
     beforeEach(() => {
-        dateSpy = jest.spyOn(Date.prototype, 'toLocaleString').mockReturnValue(fixedTimestamp);
+        dateSpy = vi.spyOn(Date.prototype, 'toLocaleString').mockReturnValue(fixedTimestamp);
 
         mockJiraResource = createMockJiraResource();
         mockLinkManager = createMockLinkManager();
@@ -62,8 +63,8 @@ describe('TestExecutionCreator', () => {
     });
 
     afterEach(() => {
-        jest.clearAllMocks();
-        jest.restoreAllMocks();
+        vi.clearAllMocks();
+        vi.restoreAllMocks();
         dateSpy.mockRestore();
     });
 
@@ -249,7 +250,7 @@ describe('TestExecutionCreator', () => {
             setupCreate('TE-1');
             mockJiraResource.getJiraResource.mockResolvedValueOnce({ fields: {} });
 
-            const prompt = jest.requireMock<{ withSpinner: jest.Mock }>('../shared/prompt');
+            const prompt = await vi.importMock<{ withSpinner: Mock }>('../shared/prompt');
             prompt.withSpinner.mockRejectedValueOnce(new Error('Spinner error'));
 
             await creator.createWithLinks(projectName, testKeys, csvName);

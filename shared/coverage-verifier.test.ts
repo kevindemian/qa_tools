@@ -1,17 +1,17 @@
-import { recalculateCoverage } from './coverage-verifier';
-import type { ValidationContext } from './artifact-validator';
+import { recalculateCoverage } from './coverage-verifier.js';
+import type { ValidationContext } from './artifact-validator.js';
 
 function makeCtx(input: string): ValidationContext {
     return { inputRaw: input, outputRaw: {}, artifactType: 'test-suite' };
 }
 
 describe('recalculateCoverage', () => {
-    it('returns 0 coverage when no criteria in input', () => {
+    it('returns 0 coverage when no criteria in input', async () => {
         const result = recalculateCoverage({ tests: [{ title: 'Test A' }] }, makeCtx('Short text'));
         expect(result.totalCriteria).toBe(0);
     });
 
-    it('returns full coverage when criteria matched by titles', () => {
+    it('returns full coverage when criteria matched by titles', async () => {
         const result = recalculateCoverage(
             {
                 tests: [{ title: 'Test user can log in' }, { title: 'Test payment works' }],
@@ -23,7 +23,7 @@ describe('recalculateCoverage', () => {
         expect(result.coveredCriteria).toBe(2);
     });
 
-    it('returns full coverage when criteria matched by titles', () => {
+    it('returns full coverage when criteria matched by titles', async () => {
         const result = recalculateCoverage(
             {
                 tests: [{ title: 'Test user can log in' }, { title: 'Test payment works' }],
@@ -35,7 +35,7 @@ describe('recalculateCoverage', () => {
         expect(result.coveredCriteria).toBe(2);
     });
 
-    it('reports gaps for uncovered criteria', () => {
+    it('reports gaps for uncovered criteria', async () => {
         const result = recalculateCoverage(
             {
                 tests: [{ title: 'Test user can log in' }],
@@ -47,7 +47,7 @@ describe('recalculateCoverage', () => {
         expect(result.realCoverage).toBeLessThan(100);
     });
 
-    it('detects negative coverage delta (overselling)', () => {
+    it('detects negative coverage delta (overselling)', async () => {
         const result = recalculateCoverage(
             {
                 tests: [{ title: 'Test user can log in' }],
@@ -58,7 +58,7 @@ describe('recalculateCoverage', () => {
         expect(result.coverageDelta).toBeLessThan(0);
     });
 
-    it('extracts criteria from Given/When/Then format', () => {
+    it('extracts criteria from Given/When/Then format', async () => {
         const result = recalculateCoverage(
             {
                 tests: [{ title: 'Test scenario A' }],
@@ -68,17 +68,17 @@ describe('recalculateCoverage', () => {
         expect(result.totalCriteria).toBeGreaterThan(0);
     });
 
-    it('handles artifact with no tests array', () => {
+    it('handles artifact with no tests array', async () => {
         const result = recalculateCoverage({}, makeCtx('Acceptance Criteria: Test'));
         expect(result.realCoverage).toBe(0);
     });
 
-    it('declaredCoverage is null when missing', () => {
+    it('declaredCoverage is null when missing', async () => {
         const result = recalculateCoverage({ tests: [] }, makeCtx('Acceptance Criteria: Test'));
         expect(result.declaredCoverage).toBeNull();
     });
 
-    it('reads declared coverage from artifact', () => {
+    it('reads declared coverage from artifact', async () => {
         const result = recalculateCoverage(
             { tests: [], coverageTable: { coverage: 85 } },
             makeCtx('Acceptance Criteria: Test'),

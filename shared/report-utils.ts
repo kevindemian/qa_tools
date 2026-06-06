@@ -1,8 +1,8 @@
 /** Shared utility functions for HTML report generation — formatting and stats.
  * @module report-utils */
-import type { FlatTest } from './result_parser';
-import { PASS_RATE_GOOD_THRESHOLD, PASS_RATE_WARN_THRESHOLD } from './report-types';
-import type { ReportStats } from './report-types';
+import type { FlatTest } from './result_parser.js';
+import { PASS_RATE_GOOD_THRESHOLD, PASS_RATE_WARN_THRESHOLD } from './report-types.js';
+import type { ReportStats } from './report-types.js';
 
 export function statsFromTests(tests: FlatTest[]): ReportStats {
     const passed = tests.filter((t) => t.state === 'passed').length;
@@ -34,4 +34,4 @@ export function pctSub(value: number, total: number): string {
     return ' <span style="font-size:0.75rem;color:#6b7280;font-weight:400">(' + pct(value, total) + '%)</span>';
 }
 
-export { sanitizeHtml as escapeHtml } from './escape';
+export { sanitizeHtml as escapeHtml } from './escape.js';

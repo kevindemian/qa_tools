@@ -1,16 +1,16 @@
 /** Test results — collect, parse, and report test results from CI artifacts to Jira. */
 import path from 'path';
-import { AdmZip, globSync } from '../shared/deps';
-import Config from '../shared/config';
-import JiraClient from '../shared/jira-client';
-import JiraLinkManager from '../jira_management/jira_link_manager';
-import { warn, info, success, printError, withSpinner, ask } from '../shared/prompt';
-import { reportsDir } from '../shared/temp-dir';
-import { parseTestResults as detectAndParseTestResults } from '../shared/result_parser';
-import type { ParseResult } from '../shared/result_parser';
-import { matchResultsToTests, createTestExecutionFromResults } from '../jira_management/result_reporter';
-import { saveParseResult } from '../shared/metrics';
-import type { GitProvider } from '../shared/types';
+import { AdmZip, globSync } from '../shared/deps.js';
+import Config from '../shared/config.js';
+import JiraClient from '../shared/jira-client.js';
+import JiraLinkManager from '../jira_management/jira_link_manager.js';
+import { warn, info, success, printError, withSpinner, ask } from '../shared/prompt.js';
+import { reportsDir } from '../shared/temp-dir.js';
+import { parseTestResults as detectAndParseTestResults } from '../shared/result_parser.js';
+import type { ParseResult } from '../shared/result_parser.js';
+import { matchResultsToTests, createTestExecutionFromResults } from '../jira_management/result_reporter.js';
+import { saveParseResult } from '../shared/metrics.js';
+import type { GitProvider } from '../shared/types.js';
 
 function _jiraEnv(): { base: string; token: string; xray: string; mode: string } | null {
     const base = Config.get('jiraBaseUrl');

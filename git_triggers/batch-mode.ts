@@ -1,22 +1,28 @@
 /** Batch mode — run metrics, flakiness dashboard, pipeline failure analysis, flaky auto-actions, and test-impact selection headlessly. */
-import { success, error, info, printError, warn, withSpinner } from '../shared/prompt';
-import { loadMetrics, calculateFlakiness } from '../shared/metrics';
-import { generateFlakinessHtml } from '../shared/flakiness-dashboard';
-import { executeFlakyActions } from '../shared/flaky-auto-actions';
-import { expireQuarantine, listQuarantined, quarantineRatio, generatePipelineQuarantine } from '../shared/quarantine';
-import { aggregatePipelineHealth, renderPipelineHealthHtml } from './pipeline-health';
-import type { PipelineRunExtended, PipelineJobExtended } from './pipeline-health';
-import { exportTestsCsv, exportTestsJson } from '../shared/report-export';
-import { generateGitMetricsRuns } from '../shared/git-metrics-adapter';
-import { analyzeTestImpact, generateTestSelectionJson } from '../shared/test-impact';
-import { offerPipelineFailureAnalysis } from './llm-pipeline';
-import { collectTestResults as _collectTestResults } from './test-results';
-import type { PipelineTriggerResult } from '../shared/types';
-import Config from '../shared/config';
-import JiraClient from '../shared/jira-client';
-import JiraLinkManager from '../jira_management/jira_link_manager';
-import { writeReport } from '../shared/temp-dir';
-import { publishReport } from '../shared/publish';
+import { success, error, info, printError, warn, withSpinner } from '../shared/prompt.js';
+import { rootLogger } from '../shared/logger.js';
+import { loadMetrics, calculateFlakiness } from '../shared/metrics.js';
+import { generateFlakinessHtml } from '../shared/flakiness-dashboard.js';
+import { executeFlakyActions } from '../shared/flaky-auto-actions.js';
+import {
+    expireQuarantine,
+    listQuarantined,
+    quarantineRatio,
+    generatePipelineQuarantine,
+} from '../shared/quarantine.js';
+import { aggregatePipelineHealth, renderPipelineHealthHtml } from './pipeline-health.js';
+import type { PipelineRunExtended, PipelineJobExtended } from './pipeline-health.js';
+import { exportTestsCsv, exportTestsJson } from '../shared/report-export.js';
+import { generateGitMetricsRuns } from '../shared/git-metrics-adapter.js';
+import { analyzeTestImpact, generateTestSelectionJson } from '../shared/test-impact.js';
+import { offerPipelineFailureAnalysis } from './llm-pipeline.js';
+import { collectTestResults as _collectTestResults } from './test-results.js';
+import type { PipelineTriggerResult } from '../shared/types.js';
+import Config from '../shared/config.js';
+import JiraClient from '../shared/jira-client.js';
+import JiraLinkManager from '../jira_management/jira_link_manager.js';
+import { writeReport } from '../shared/temp-dir.js';
+import { publishReport } from '../shared/publish.js';
 import {
     currentProjectName,
     currentProvider,
@@ -27,8 +33,8 @@ import {
     setProjectId,
     setManager,
     getProjects,
-} from './session-state';
-import { pollPipeline } from './pipeline-handler';
+} from './session-state.js';
+import { pollPipeline } from './pipeline-handler.js';
 
 /** Extract the next argument value after a flag, or `undefined` if out of bounds. */
 function _nextArg(args: string[], i: number): string | undefined {
@@ -84,7 +90,7 @@ export function parseBatchArgs(): {
 }
 
 async function setupBatchProject(batch: ReturnType<typeof parseBatchArgs>): Promise<{
-    m: import('../shared/types').GitProvider;
+    m: import('../shared/types.js').GitProvider;
     branch: string;
     projectName: string;
 } | null> {
@@ -116,7 +122,7 @@ async function setupBatchProject(batch: ReturnType<typeof parseBatchArgs>): Prom
 }
 
 async function _triggerPipeline(
-    m: import('../shared/types').GitProvider,
+    m: import('../shared/types.js').GitProvider,
     branch: string,
 ): Promise<PipelineTriggerResult | undefined> {
     const payload = { ref: branch, variables: [] as Array<{ key: string; value: string }> };
@@ -135,7 +141,7 @@ async function _triggerPipeline(
 }
 
 async function _collectPipelineResults(
-    m: import('../shared/types').GitProvider,
+    m: import('../shared/types.js').GitProvider,
     pipelineResult: PipelineTriggerResult,
     branch: string,
     projectName: string,
@@ -176,7 +182,7 @@ async function _collectPipelineResults(
 }
 
 export async function triggerAndCollectBatchPipeline(
-    m: import('../shared/types').GitProvider,
+    m: import('../shared/types.js').GitProvider,
     branch: string,
     projectName: string,
     teKey: string | undefined,
@@ -215,6 +221,7 @@ export async function runFlakyAutoActions(projectName: string, jiraResource: Jir
             success(bugs.length + ' flaky auto-action(s) executada(s) para ' + projectName);
         }
     } catch {
+        rootLogger.debug('Flaky auto-actions failed (expected if Jira not configured): insufficient data or config');
         info('Flaky auto-actions skipping (Jira config or insufficient data).');
     }
 }
@@ -381,7 +388,7 @@ function generateTestExport(projectName: string): void {
     }
 }
 
-async function generatePipelineHealthReport(m: import('../shared/types').GitProvider): Promise<void> {
+async function generatePipelineHealthReport(m: import('../shared/types.js').GitProvider): Promise<void> {
     try {
         const runs = (await m.getRecentPipelines(10)) as unknown as PipelineRunExtended[];
         if (!runs || runs.length === 0) return;

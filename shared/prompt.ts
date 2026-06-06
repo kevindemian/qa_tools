@@ -1,5 +1,5 @@
 /** Prompt/UI barrel — re-exports all user-facing functions from prompt-ui, prompt-input, and spinner.
- * @module Use `import { success, ask, withSpinner } from './prompt'` for convenience. */
+ * @module Use `import { success, ask, withSpinner } from './prompt.js'` for convenience. */
 export {
     __setConfig,
     isQuiet,
@@ -19,9 +19,9 @@ export {
     onError,
     tableView,
     CancelError,
-} from './prompt-ui';
+} from './prompt-ui.js';
 
-export { ProgressBar, withSpinner, __setOraDep } from './spinner';
+export { ProgressBar, withSpinner, __setOraDep } from './spinner.js';
 
 export {
     prompt,
@@ -34,4 +34,4 @@ export {
     __setSelectMod,
     __setInputMod,
     __setConfirmMod,
-} from './prompt-input';
+} from './prompt-input.js';

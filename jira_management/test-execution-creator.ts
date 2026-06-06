@@ -1,15 +1,15 @@
 /** Test Execution creator — creates Test Execution issues and associates test results. */
-import { rootLogger } from '../shared/logger';
-import { success, info, withSpinner } from '../shared/prompt';
-import type { JiraResourceLike } from '../shared/types';
-import type JiraLinkManager from './jira_link_manager';
+import { rootLogger } from '../shared/logger.js';
+import { success, info, withSpinner } from '../shared/prompt.js';
+import type { JiraResourceLike } from '../shared/types.js';
+import type JiraLinkManager from './jira_link_manager.js';
 import {
     ISSUE_TYPE_NOT_FOUND,
     CUSTOM_FIELD_NOT_FOUND,
     FAILED_TO_GET_ISSUE_TYPES,
     FAILED_TO_GET_CUSTOM_FIELDS,
-} from './constants';
-import type { JsonObject } from '../shared/types';
+} from './constants.js';
+import type { JsonObject } from '../shared/types.js';
 
 interface TestExecutionResult {
     key: string;

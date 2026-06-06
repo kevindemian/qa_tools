@@ -1,9 +1,9 @@
 /** AI-powered test-impact assessment — analyze which tests to run based on code changes. */
 import fs from 'fs';
-import { llmPrompt } from '../shared/llm-client';
-import { rootLogger } from '../shared/logger';
-import { sanitizeForLlm } from '../shared/sanitize';
-import type { GitProvider } from '../shared/types';
+import { llmPrompt } from '../shared/llm-client.js';
+import { rootLogger } from '../shared/logger.js';
+import { sanitizeForLlm } from '../shared/sanitize.js';
+import type { GitProvider } from '../shared/types.js';
 
 interface MappingItem {
     title: string;

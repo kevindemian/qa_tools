@@ -1,21 +1,21 @@
-jest.mock('../../shared/prompt');
+vi.mock('../../shared/prompt');
 
-jest.mock('./test-execution-flow', () => ({
-    offerTestExecutionAssociation: jest.fn().mockResolvedValue({ associated: false }),
-    showResults: jest.fn().mockResolvedValue(undefined),
+vi.mock('./test-execution-flow', async () => ({
+    offerTestExecutionAssociation: vi.fn().mockResolvedValue({ associated: false }),
+    showResults: vi.fn().mockResolvedValue(undefined),
 }));
 
-import case13 from './case13';
-import { makeMockCommandContext } from '../../shared/test-utils';
+import case13 from './case13.js';
+import { makeMockCommandContext } from '../../shared/test-utils.js';
 
 const mockContext = makeMockCommandContext();
 
 beforeEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
 });
 
 describe('case13 — create test execution', () => {
-    it('exports a handler function', () => {
+    it('exports a handler function', async () => {
         expect(case13).toBeDefined();
         expect(typeof case13.handler).toBe('function');
     });

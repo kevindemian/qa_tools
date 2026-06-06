@@ -1,8 +1,8 @@
-const mockDotenvConfig = jest.fn<() => void, [object]>();
-jest.mock('dotenv', () => ({ config: mockDotenvConfig }));
+const mockDotenvConfig = vi.hoisted(() => vi.fn<(...args: [object]) => () => void>());
+vi.mock('dotenv', async () => ({ default: { config: mockDotenvConfig } }));
 
-import Config from './config';
-import { __resetDotenvLoaded } from './env-utils';
+import Config from './config.js';
+import { __resetDotenvLoaded } from './env-utils.js';
 
 describe('Config', () => {
     const ENV_VARS = [
@@ -43,13 +43,13 @@ describe('Config', () => {
     });
 
     describe('ensureDotenv', () => {
-        it('calls dotenv.config exactly once on module load', () => {
+        it('calls dotenv.config exactly once on module load', async () => {
             __resetDotenvLoaded();
             Config.load();
             expect(mockDotenvConfig).toHaveBeenCalledTimes(1);
         });
 
-        it('does not call dotenv.config again when accessing getters', () => {
+        it('does not call dotenv.config again when accessing getters', async () => {
             Config.get('jiraBaseUrl');
             Config.get('debug');
             Config.get('onError');
@@ -57,7 +57,7 @@ describe('Config', () => {
             expect(mockDotenvConfig).not.toHaveBeenCalled();
         });
 
-        it('handles dotenv.config throwing without crashing', () => {
+        it('handles dotenv.config throwing without crashing', async () => {
             mockDotenvConfig.mockImplementationOnce(() => {
                 throw new Error('fail');
             });
@@ -154,61 +154,61 @@ describe('Config', () => {
             expect(Config.get('xrayMode')).toBe('server');
         });
 
-        it('returns the env value when valid', () => {
+        it('returns the env value when valid', async () => {
             process.env.XRAY_MODE = 'cloud';
             expect(Config.get('xrayMode')).toBe('cloud');
         });
 
-        it('throws when XRAY_MODE is invalid', () => {
+        it('throws when XRAY_MODE is invalid', async () => {
             process.env.XRAY_MODE = 'invalid';
             expect(() => Config.get('xrayMode')).toThrow(/Invalid XRAY_MODE/);
         });
     });
 
     describe('csvLabels', () => {
-        it('defaults to empty string', () => {
+        it('defaults to empty string', async () => {
             expect(Config.get('csvLabels')).toBe('');
         });
 
-        it('returns env value when set', () => {
+        it('returns env value when set', async () => {
             process.env.CSV_LABELS = 'type,summary';
             expect(Config.get('csvLabels')).toBe('type,summary');
         });
     });
 
     describe('jsonLabels', () => {
-        it('defaults to empty string', () => {
+        it('defaults to empty string', async () => {
             expect(Config.get('jsonLabels')).toBe('');
         });
 
-        it('returns env value when set', () => {
+        it('returns env value when set', async () => {
             process.env.JSON_LABELS = 'key,value';
             expect(Config.get('jsonLabels')).toBe('key,value');
         });
     });
 
     describe('logLevel', () => {
-        it('defaults to INFO', () => {
+        it('defaults to INFO', async () => {
             expect(Config.get('logLevel')).toBe('INFO');
         });
 
-        it('returns env value when set', () => {
+        it('returns env value when set', async () => {
             process.env.LOG_LEVEL = 'DEBUG';
             expect(Config.get('logLevel')).toBe('DEBUG');
         });
     });
 
     describe('logDir', () => {
-        it('returns logs by default', () => {
+        it('returns logs by default', async () => {
             expect(Config.get('logDir')).toBe('logs');
         });
 
-        it('returns env value when set', () => {
+        it('returns env value when set', async () => {
             process.env.LOG_DIR = '/var/log';
             expect(Config.get('logDir')).toBe('/var/log');
         });
 
-        it('prioritizes QA_TOOLS_LOGS_DIR over LOG_DIR', () => {
+        it('prioritizes QA_TOOLS_LOGS_DIR over LOG_DIR', async () => {
             process.env.QA_TOOLS_LOGS_DIR = '/qa/logs';
             process.env.LOG_DIR = '/var/log';
             expect(Config.get('logDir')).toBe('/qa/logs');
@@ -216,37 +216,37 @@ describe('Config', () => {
             delete process.env.LOG_DIR;
         });
 
-        it('uses override when provided', () => {
+        it('uses override when provided', async () => {
             const cfg = Config.create({ logDir: '/override/logs' });
             expect(cfg.get('logDir')).toBe('/override/logs');
         });
     });
 
     describe('logMaxSize', () => {
-        it('defaults to 5242880', () => {
+        it('defaults to 5242880', async () => {
             expect(Config.get('logMaxSize')).toBe(5242880);
         });
 
-        it('returns env value when set', () => {
+        it('returns env value when set', async () => {
             process.env.LOG_MAX_SIZE = '2097152';
             expect(Config.get('logMaxSize')).toBe(2097152);
         });
 
-        it('uses override when provided', () => {
+        it('uses override when provided', async () => {
             const cfg = Config.create({ logMaxSize: 4194304 });
             expect(cfg.get('logMaxSize')).toBe(4194304);
         });
     });
 
     describe('xdgStateHome', () => {
-        it('uses XDG_STATE_HOME when set', () => {
+        it('uses XDG_STATE_HOME when set', async () => {
             process.env.XDG_STATE_HOME = '/custom/state';
             expect(Config.get('xdgStateHome')).toBe('/custom/state');
         });
     });
 
     describe('getAllPrefixed', () => {
-        it('returns matching env vars', () => {
+        it('returns matching env vars', async () => {
             process.env.QA_TOOLS_FOO = 'bar';
             process.env.QA_TOOLS_BAZ = 'qux';
             process.env.OTHER = 'ignored';
@@ -256,24 +256,24 @@ describe('Config', () => {
     });
 
     describe('Config.create', () => {
-        it('returns a separate instance with overrides', () => {
+        it('returns a separate instance with overrides', async () => {
             const cfg = Config.create({ jiraBaseUrl: 'https://override.url' });
             expect(cfg.get('jiraBaseUrl')).toBe('https://override.url');
         });
 
-        it('default instance getters are unaffected by create', () => {
+        it('default instance getters are unaffected by create', async () => {
             const cfg = Config.create({ jiraBaseUrl: 'https://override.url' });
             expect(cfg.get('jiraBaseUrl')).toBe('https://override.url');
             expect(Config.get('jiraBaseUrl')).toBe('');
         });
 
-        it('overrides can be partial', () => {
+        it('overrides can be partial', async () => {
             const cfg = Config.create({ debug: true });
             expect(cfg.get('debug')).toBe(true);
             expect(cfg.get('jiraBaseUrl')).toBe('');
         });
 
-        it('overrides take precedence over env vars', () => {
+        it('overrides take precedence over env vars', async () => {
             process.env.JIRA_BASE_URL = 'https://env.url';
             const cfg = Config.create({ jiraBaseUrl: 'https://override.url' });
             expect(cfg.get('jiraBaseUrl')).toBe('https://override.url');
@@ -281,24 +281,24 @@ describe('Config', () => {
     });
 
     describe('setAutoConfirm', () => {
-        it('setAutoConfirm(true) makes get autoConfirm return true', () => {
+        it('setAutoConfirm(true) makes get autoConfirm return true', async () => {
             Config.setAutoConfirm(true);
             expect(Config.get('autoConfirm')).toBe(true);
         });
 
-        it('setAutoConfirm(false) makes get autoConfirm return false', () => {
+        it('setAutoConfirm(false) makes get autoConfirm return false', async () => {
             Config.setAutoConfirm(true);
             Config.setAutoConfirm(false);
             expect(Config.get('autoConfirm')).toBe(false);
         });
 
-        it('setAutoConfirm on static instance is isolated from created instances', () => {
+        it('setAutoConfirm on static instance is isolated from created instances', async () => {
             const cfg = Config.create({ autoConfirm: false });
             Config.setAutoConfirm(true);
             expect(cfg.get('autoConfirm')).toBe(false);
         });
 
-        it('setAutoConfirm on an instance is isolated from static', () => {
+        it('setAutoConfirm on an instance is isolated from static', async () => {
             Config.setAutoConfirm(false);
             const cfg = Config.create({ autoConfirm: true });
             expect(cfg.get('autoConfirm')).toBe(true);
@@ -306,18 +306,18 @@ describe('Config', () => {
     });
 
     describe('set', () => {
-        it('Config.set sets an override', () => {
+        it('Config.set sets an override', async () => {
             Config.set('jiraBaseUrl', 'https://set.url');
             expect(Config.get('jiraBaseUrl')).toBe('https://set.url');
         });
 
-        it('Config.set does not affect create instances', () => {
+        it('Config.set does not affect create instances', async () => {
             Config.set('debug', true);
             const cfg = Config.create({ debug: false });
             expect(cfg.get('debug')).toBe(false);
         });
 
-        it('Config.set can override a previously set value', () => {
+        it('Config.set can override a previously set value', async () => {
             Config.set('jiraBaseUrl', 'https://first.url');
             Config.set('jiraBaseUrl', 'https://second.url');
             expect(Config.get('jiraBaseUrl')).toBe('https://second.url');
@@ -325,14 +325,14 @@ describe('Config', () => {
     });
 
     describe('reset', () => {
-        it('returns a new default instance', () => {
+        it('returns a new default instance', async () => {
             const before = Config.getDefault();
             Config.reset();
             const after = Config.getDefault();
             expect(before).not.toBe(after);
         });
 
-        it('getters return correct values after reset', () => {
+        it('getters return correct values after reset', async () => {
             Config.reset();
             expect(Config.get('jiraBaseUrl')).toBe('');
             expect(Config.get('debug')).toBe(false);
@@ -344,23 +344,23 @@ describe('Config', () => {
             delete process.env.LLM_MAX_TOTAL_TOKENS;
         });
 
-        it('defaults to 0 (unlimited)', () => {
+        it('defaults to 0 (unlimited)', async () => {
             expect(Config.get('llmMaxTotalTokens')).toBe(0);
         });
 
-        it('reads from LLM_MAX_TOTAL_TOKENS env var', () => {
+        it('reads from LLM_MAX_TOTAL_TOKENS env var', async () => {
             process.env.LLM_MAX_TOTAL_TOKENS = '50000';
             expect(Config.get('llmMaxTotalTokens')).toBe(50000);
         });
 
-        it('uses override when provided', () => {
+        it('uses override when provided', async () => {
             const overridden = Config.create({ llmMaxTotalTokens: 100000 });
             expect(overridden.get('llmMaxTotalTokens')).toBe(100000);
         });
     });
 
     describe('Config.create with LLM overrides', () => {
-        it('uses override values for all LLM getters', () => {
+        it('uses override values for all LLM getters', async () => {
             const o = {
                 llmApiKey: 'key-ov',
                 llmModel: 'model-ov',
@@ -406,14 +406,14 @@ describe('Config', () => {
     });
 
     describe('validateRequiredEnv', () => {
-        it('does not throw when a required env var is present', () => {
+        it('does not throw when a required env var is present', async () => {
             process.env.JIRA_BASE_URL = 'https://jira.example.com';
             process.env.JIRA_PERSONAL_TOKEN = 'token-123';
             process.env.XRAY_BASE_URL = 'https://xray.example.com';
             expect(() => Config.validateRequiredEnv()).not.toThrow();
         });
 
-        it('throws when a required env var is missing', () => {
+        it('throws when a required env var is missing', async () => {
             delete process.env.JIRA_BASE_URL;
             expect(() => Config.validateRequiredEnv()).toThrow();
         });

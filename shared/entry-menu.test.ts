@@ -1,23 +1,23 @@
 import { EventEmitter } from 'events';
-import { Output, defaultOutput } from './output';
-import * as entryMenuModule from './entry-menu';
-import * as promptModule from './prompt';
+import { Output, defaultOutput } from './output.js';
+import * as entryMenuModule from './entry-menu.js';
+import * as promptModule from './prompt.js';
 import { type ChildProcess } from 'child_process';
 
-jest.mock('./splash', () => ({ showSplash: jest.fn() }));
-jest.mock('./prompt', () => ({ showSelect: jest.fn() }));
-jest.mock('./output', () => {
-    const mockOutput = { box: jest.fn(), print: jest.fn() };
+vi.mock('./splash', async () => ({ showSplash: vi.fn() }));
+vi.mock('./prompt', async () => ({ showSelect: vi.fn() }));
+vi.mock('./output', () => {
+    const mockOutput = { box: vi.fn(), print: vi.fn() };
     return {
-        Output: { isTTY: jest.fn(), isCI: jest.fn() },
+        Output: { isTTY: vi.fn(), isCI: vi.fn() },
         defaultOutput: mockOutput,
     };
 });
 
-jest.mock('child_process', () => ({ spawn: jest.fn() }));
+vi.mock('child_process', async () => ({ spawn: vi.fn() }));
 
 import { spawn } from 'child_process';
-const mockSpawn = jest.mocked(spawn);
+const mockSpawn = vi.mocked(spawn);
 const entryMenu = entryMenuModule;
 
 function makeMockChildProcess(): ChildProcess {
@@ -34,7 +34,7 @@ function mockSpawnWithExit(code: number): void {
 
 describe('runModule', () => {
     beforeEach(() => {
-        jest.clearAllMocks();
+        vi.clearAllMocks();
     });
 
     it('spawns npx tsx for jira module', async () => {
@@ -82,16 +82,16 @@ describe('runModule', () => {
 
 describe('main', () => {
     beforeEach(() => {
-        jest.clearAllMocks();
-        jest.spyOn(console, 'clear').mockImplementation(() => {});
+        vi.clearAllMocks();
+        vi.spyOn(console, 'clear').mockImplementation(() => {});
     });
 
     afterEach(() => {
-        jest.restoreAllMocks();
+        vi.restoreAllMocks();
     });
 
     it('prints usage when not TTY', async () => {
-        jest.mocked(Output.isTTY).mockReturnValue(false);
+        vi.mocked(Output.isTTY).mockReturnValue(false);
 
         await entryMenu.main();
 
@@ -100,9 +100,9 @@ describe('main', () => {
     });
 
     it('loops and exits on /exit choice', async () => {
-        jest.mocked(Output.isTTY).mockReturnValue(true);
-        jest.mocked(Output.isCI).mockReturnValue(false);
-        const promptMod = jest.mocked(promptModule);
+        vi.mocked(Output.isTTY).mockReturnValue(true);
+        vi.mocked(Output.isCI).mockReturnValue(false);
+        const promptMod = vi.mocked(promptModule);
         promptMod.showSelect.mockResolvedValue('exit');
 
         await entryMenu.main();
@@ -111,9 +111,9 @@ describe('main', () => {
     });
 
     it('launches jira module when selected and exits on failure', async () => {
-        jest.mocked(Output.isTTY).mockReturnValue(true);
-        jest.mocked(Output.isCI).mockReturnValue(false);
-        jest.mocked(promptModule).showSelect.mockResolvedValue('jira');
+        vi.mocked(Output.isTTY).mockReturnValue(true);
+        vi.mocked(Output.isCI).mockReturnValue(false);
+        vi.mocked(promptModule).showSelect.mockResolvedValue('jira');
         mockSpawnWithExit(1);
 
         await entryMenu.main();
@@ -122,12 +122,12 @@ describe('main', () => {
     });
 
     it('continues loop on unknown choice', async () => {
-        jest.mocked(Output.isTTY).mockReturnValue(true);
-        jest.mocked(Output.isCI).mockReturnValue(false);
-        jest.mocked(promptModule).showSelect.mockResolvedValueOnce('unknown').mockResolvedValueOnce('exit');
+        vi.mocked(Output.isTTY).mockReturnValue(true);
+        vi.mocked(Output.isCI).mockReturnValue(false);
+        vi.mocked(promptModule).showSelect.mockResolvedValueOnce('unknown').mockResolvedValueOnce('exit');
 
         await entryMenu.main();
 
-        expect(jest.mocked(promptModule).showSelect).toHaveBeenCalledTimes(2);
+        expect(vi.mocked(promptModule).showSelect).toHaveBeenCalledTimes(2);
     });
 });

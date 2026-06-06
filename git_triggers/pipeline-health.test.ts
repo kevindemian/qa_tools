@@ -1,7 +1,7 @@
 /** Pipeline health — pure function tests with fixture data. */
-import { aggregatePipelineHealth, extractErrorMessages, renderPipelineHealthHtml } from './pipeline-health';
-import type { PipelineRunExtended, PipelineJobExtended } from './pipeline-health';
-import { nonNull } from '../shared/test-utils';
+import { aggregatePipelineHealth, extractErrorMessages, renderPipelineHealthHtml } from './pipeline-health.js';
+import type { PipelineRunExtended, PipelineJobExtended } from './pipeline-health.js';
+import { nonNull } from '../shared/test-utils.js';
 
 /* ------------------------------------------------------------------ */
 /*  Fixtures                                                           */
@@ -104,7 +104,7 @@ const sampleIssues: Array<{ labels: string[]; updated_at: string; created_at: st
 /* ------------------------------------------------------------------ */
 
 describe('extractErrorMessages', () => {
-    it('extracts unique error messages from log text', () => {
+    it('extracts unique error messages from log text', async () => {
         const log = `[INFO] Starting build
 Error: Module not found: 'foo'
 [WARN] retrying
@@ -114,16 +114,16 @@ FATAL: OOMKilled`;
         expect(result).toEqual(["Module not found: 'foo'", 'OOMKilled']);
     });
 
-    it('respects maxEntries limit', () => {
+    it('respects maxEntries limit', async () => {
         const log = `Error: A\nError: B\nError: C\nError: D`;
         expect(extractErrorMessages(log, 2)).toHaveLength(2);
     });
 
-    it('returns empty array for clean log', () => {
+    it('returns empty array for clean log', async () => {
         expect(extractErrorMessages('All tests passed!', 5)).toEqual([]);
     });
 
-    it('handles empty string', () => {
+    it('handles empty string', async () => {
         expect(extractErrorMessages('', 5)).toEqual([]);
     });
 });
@@ -132,18 +132,18 @@ describe('aggregatePipelineHealth', () => {
     const now = new Date('2026-05-29T00:00:00Z');
     const health = aggregatePipelineHealth(sampleRuns, sampleJobs, sampleErrors, sampleIssues, now);
 
-    it('computes pass rate correctly', () => {
+    it('computes pass rate correctly', async () => {
         expect(health.totalRuns).toBe(5);
         expect(health.passedRuns).toBe(3);
         expect(health.failedRuns).toBe(2);
         expect(health.passRate).toBe(60);
     });
 
-    it('computes average duration', () => {
+    it('computes average duration', async () => {
         expect(health.avgDurationSec).toBeGreaterThan(0);
     });
 
-    it('identifies top failing jobs', () => {
+    it('identifies top failing jobs', async () => {
         expect(health.topFailingJobs.length).toBeGreaterThanOrEqual(2);
         const lint = health.topFailingJobs.find((j) => j.name === 'lint');
         expect(lint).toBeDefined();
@@ -154,14 +154,14 @@ describe('aggregatePipelineHealth', () => {
         expect(test).toBeDefined();
     });
 
-    it('aggregates failure reasons', () => {
+    it('aggregates failure reasons', async () => {
         expect(health.failureReasons.length).toBeGreaterThanOrEqual(3);
         const moduleNotFound = health.failureReasons.find((r) => r.message.includes('Module not found'));
         expect(moduleNotFound).toBeDefined();
         expect(nonNull(moduleNotFound).count).toBe(1);
     });
 
-    it('breaks down by branch', () => {
+    it('breaks down by branch', async () => {
         const main = health.branchBreakdown.find((b) => b.branch === 'main');
         expect(main).toBeDefined();
         expect(nonNull(main).count).toBe(4);
@@ -173,23 +173,23 @@ describe('aggregatePipelineHealth', () => {
         expect(nonNull(develop).passRate).toBe(0);
     });
 
-    it('counts open issues by label', () => {
+    it('counts open issues by label', async () => {
         expect(health.openIssues.total).toBe(3);
         expect(health.openIssues.byLabel['bug']).toBe(2);
         expect(health.openIssues.byLabel['frontend']).toBe(1);
     });
 
-    it('detects stale issues (30d+ no update)', () => {
+    it('detects stale issues (30d+ no update)', async () => {
         expect(health.openIssues.staleCount).toBe(1);
     });
 
-    it('returns zero pass rate for empty runs', () => {
+    it('returns zero pass rate for empty runs', async () => {
         const empty = aggregatePipelineHealth([], [], [], [], now);
         expect(empty.totalRuns).toBe(0);
         expect(empty.passRate).toBe(0);
     });
 
-    it('handles runs without duration data', () => {
+    it('handles runs without duration data', async () => {
         const noDurationRuns: PipelineRunExtended[] = [
             { id: 1, status: 'completed', conclusion: 'success', head_branch: 'main' },
         ];
@@ -204,11 +204,11 @@ describe('renderPipelineHealthHtml', () => {
     const health = aggregatePipelineHealth(sampleRuns, sampleJobs, sampleErrors, sampleIssues, now);
     const html = renderPipelineHealthHtml(health, 'Test Report');
 
-    it('contains title', () => {
+    it('contains title', async () => {
         expect(html).toContain('Test Report');
     });
 
-    it('contains summary cards', () => {
+    it('contains summary cards', async () => {
         expect(html).toContain('Total Runs');
         expect(html).toContain('Passed');
         expect(html).toContain('Failed');
@@ -216,33 +216,33 @@ describe('renderPipelineHealthHtml', () => {
         expect(html).toContain('Avg Duration');
     });
 
-    it('contains top failing jobs table', () => {
+    it('contains top failing jobs table', async () => {
         expect(html).toContain('Top Failing Jobs');
         expect(html).toContain('lint');
         expect(html).toContain('test');
     });
 
-    it('contains failure intelligence section', () => {
+    it('contains failure intelligence section', async () => {
         expect(html).toContain('Failure Intelligence');
         expect(html).toContain('Module not found');
     });
 
-    it('contains branch breakdown', () => {
+    it('contains branch breakdown', async () => {
         expect(html).toContain('Branch Breakdown');
         expect(html).toContain('main');
     });
 
-    it('contains open issues section', () => {
+    it('contains open issues section', async () => {
         expect(html).toContain('Open Issues');
         expect(html).toContain('bug');
     });
 
-    it('is valid HTML document', () => {
+    it('is valid HTML document', async () => {
         expect(html).toMatch(/^<!DOCTYPE html>/);
         expect(html).toContain('</html>');
     });
 
-    it('renders empty state gracefully', () => {
+    it('renders empty state gracefully', async () => {
         const emptyHtml = renderPipelineHealthHtml(aggregatePipelineHealth([], [], [], [], now), 'Empty Report');
         expect(emptyHtml).toContain('Empty Report');
         expect(emptyHtml).toContain('0');

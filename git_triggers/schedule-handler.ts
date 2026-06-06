@@ -1,32 +1,31 @@
 /** Scheduled tasks — run metrics, flakiness analysis, flaky auto-actions, and generate scheduled reports. */
-import { print, success, warn, info, prompt, printError, withSpinner } from '../shared/prompt';
-import type { GitProvider, StateContainer } from '../shared/types';
-import { loadMetrics, calculateFlakiness } from '../shared/metrics';
-import { calculateHealthScore } from '../shared/health-score';
-import { aggregateDefectTrends, generateDefectTrendHtml } from '../shared/defect-trend';
-import { calculateReleaseScore, generateReleaseScoreHtml } from '../shared/release-score';
-import { computeAiEffectiveness, generateAiEffectivenessHtml } from '../shared/ai-effectiveness';
-import { buildTraceabilityMatrix, generateTraceabilityHtml } from '../shared/traceability-matrix';
-import { executeFlakyActions } from '../shared/flaky-auto-actions';
-import { openWithFallback } from '../shared/open';
-import { generateFlakinessHtml } from '../shared/flakiness-dashboard';
-import { compareRuns } from '../shared/run-comparison';
-import { analyzeBacklogHealth, generateBacklogHealthHtml } from '../shared/backlog-health';
-import { aggregateDefectSeasonality, generateSeasonalityHtml } from '../shared/defect-seasonality';
-import { detectSilentRegression, generateSilentRegressionHtml } from '../shared/silent-regression';
-import { compareAiVsManual, generateAiComparisonHtml } from '../shared/ai-comparison';
-import { computeCrossSquadBenchmark, generateBenchmarkHtml } from '../shared/cross-squad-benchmark';
-import { buildDeveloperProfile, generateDeveloperProfileHtml } from '../shared/developer-profile';
-import { analyzeSuiteOptimization, generateOptimizationHtml } from '../shared/suite-optimization';
-import { buildIncidentReport, generateIncidentReportHtml } from '../shared/incident-report';
-import { analyzePipelineImpact, generateImpactAlertHtml } from '../shared/impact-alert';
-import { calculatePipelineCost, generatePipelineCostHtml } from '../shared/pipeline-cost';
-import { calculateRequirementScores, generateRequirementScoreHtml } from '../shared/requirement-score';
-import { generateGitMetricsRuns, generateGitFailureClassifications } from '../shared/git-metrics-adapter';
-import { runQualityGate, formatQualityGateText } from '../shared/quality-gate';
-import Config from '../shared/config';
-import JiraClient from '../shared/jira-client';
-import { writeReport } from '../shared/temp-dir';
+import { print, success, warn, info, prompt, printError, withSpinner } from '../shared/prompt.js';
+import type { GitProvider, StateContainer } from '../shared/types.js';
+import { loadMetrics, calculateFlakiness } from '../shared/metrics.js';
+import { calculateHealthScore } from '../shared/health-score.js';
+import { aggregateDefectTrends, generateDefectTrendHtml } from '../shared/defect-trend.js';
+import { calculateReleaseScore, generateReleaseScoreHtml } from '../shared/release-score.js';
+import { computeAiEffectiveness, generateAiEffectivenessHtml } from '../shared/ai-effectiveness.js';
+import { buildTraceabilityMatrix, generateTraceabilityHtml } from '../shared/traceability-matrix.js';
+import { executeFlakyActions } from '../shared/flaky-auto-actions.js';
+import { openWithFallback } from '../shared/open.js';
+import { generateFlakinessHtml } from '../shared/flakiness-dashboard.js';
+import { analyzeBacklogHealth, generateBacklogHealthHtml } from '../shared/backlog-health.js';
+import { aggregateDefectSeasonality, generateSeasonalityHtml } from '../shared/defect-seasonality.js';
+import { detectSilentRegression, generateSilentRegressionHtml } from '../shared/silent-regression.js';
+import { compareAiVsManual, generateAiComparisonHtml } from '../shared/ai-comparison.js';
+import { computeCrossSquadBenchmark, generateBenchmarkHtml } from '../shared/cross-squad-benchmark.js';
+import { buildDeveloperProfile, generateDeveloperProfileHtml } from '../shared/developer-profile.js';
+import { analyzeSuiteOptimization, generateOptimizationHtml } from '../shared/suite-optimization.js';
+import { buildIncidentReport, generateIncidentReportHtml } from '../shared/incident-report.js';
+import { analyzePipelineImpact, generateImpactAlertHtml } from '../shared/impact-alert.js';
+import { calculatePipelineCost, generatePipelineCostHtml } from '../shared/pipeline-cost.js';
+import { calculateRequirementScores, generateRequirementScoreHtml } from '../shared/requirement-score.js';
+import { generateGitMetricsRuns, generateGitFailureClassifications } from '../shared/git-metrics-adapter.js';
+import { runQualityGate, formatQualityGateText } from '../shared/quality-gate.js';
+import Config from '../shared/config.js';
+import JiraClient from '../shared/jira-client.js';
+import { writeReport } from '../shared/temp-dir.js';
 import {
     currentProvider,
     currentProjectName,
@@ -39,8 +38,8 @@ import {
     setProjectId,
     setManager,
     getProjects,
-} from './session-state';
-import { update as updateState } from '../shared/state';
+} from './session-state.js';
+import { update as updateState } from '../shared/state.js';
 
 export async function handleListSchedules(m: GitProvider): Promise<void> {
     if (currentProvider !== 'gitlab') {
@@ -129,58 +128,6 @@ async function runFlakyAutoActionsForProject(projectName: string, jiraResource: 
         }
     } catch {
         info('Flaky auto-actions skipping (Jira config or insufficient data).');
-    }
-}
-
-export async function handleRunComparison(): Promise<void> {
-    try {
-        if (!currentProjectName) {
-            warn('Nenhum projeto selecionado.');
-            return;
-        }
-        const store = loadMetrics();
-        let projectRuns = store.runs.filter((r) => r.project === currentProjectName);
-        if (projectRuns.length < 2) {
-            info('Sem dados de pipeline para ' + currentProjectName + ' — tentando fallback para git history...');
-            const gitRuns = generateGitMetricsRuns({ projectName: currentProjectName });
-            if (gitRuns.length >= 2) {
-                projectRuns = gitRuns;
-                info('Usando ' + gitRuns.length + ' runs derivados do git history para ' + currentProjectName + '.');
-            } else {
-                warn('Menos de 2 execuções registradas para ' + currentProjectName + '. Execute pipelines primeiro.');
-                return;
-            }
-        }
-        const runA: import('../shared/metrics').MetricsRun | null = projectRuns[projectRuns.length - 2] ?? null;
-        const runB: import('../shared/metrics').MetricsRun | null = projectRuns[projectRuns.length - 1] ?? null;
-        if (!runA || !runB) {
-            info('Dados insuficientes para comparação.');
-            return;
-        }
-        const comparison = await compareRuns(runA, runB);
-        const outPath = writeReport(
-            'run-comparison-' + currentProjectName + '.html',
-            '<html><body style="font-family:system-ui,sans-serif;padding:2rem">' +
-                '<h1>Run Comparison: ' +
-                currentProjectName +
-                '</h1>' +
-                '<p style="color:#6b7280">' +
-                runA.timestamp.slice(0, 10) +
-                ' vs ' +
-                runB.timestamp.slice(0, 10) +
-                '</p>' +
-                '<div style="background:#f9fafb;border:1px solid #e5e7eb;border-radius:8px;padding:1rem">' +
-                comparison +
-                '</div></body></html>',
-        );
-        success('Comparação de runs salva: ' + outPath);
-        pushHistory(
-            'run-comparison',
-            currentProjectName + ' (' + runA.timestamp.slice(0, 10) + ' vs ' + runB.timestamp.slice(0, 10) + ')',
-            'ok',
-        );
-    } catch (err) {
-        printError('Falha ao comparar runs', err);
     }
 }
 

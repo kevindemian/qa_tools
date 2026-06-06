@@ -1,8 +1,8 @@
-import type { AxiosInstance } from '../shared/deps';
-import { info } from '../shared/prompt';
-import { handleError } from '../shared/git-provider-error';
-import type { MergeRequestInfo, JsonObject } from '../shared/types';
-import { apiGet, apiPost, apiPatch } from './github-api';
+import type { AxiosInstance } from '../shared/deps.js';
+import { info } from '../shared/prompt.js';
+import { handleError } from '../shared/git-provider-error.js';
+import type { MergeRequestInfo, JsonObject } from '../shared/types.js';
+import { apiGet, apiPost, apiPatch } from './github-api.js';
 
 const SEARCH_PRS_PAGE_SIZE = 100;
 

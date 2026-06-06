@@ -7,7 +7,7 @@
  * @module report-styles
  */
 
-import { tokens } from './theme-tokens';
+import { tokens } from './theme-tokens.js';
 
 /** Generate :root CSS custom properties from design tokens. */
 export function buildCssVars(): string {

@@ -1,20 +1,20 @@
-jest.mock('../../shared/prompt');
+vi.mock('../../shared/prompt');
 
-import case10 from './case10';
-import { makeMockCommandContext } from '../../shared/test-utils';
+import case10 from './case10.js';
+import { makeMockCommandContext } from '../../shared/test-utils.js';
 
 const mockContext = makeMockCommandContext({
     ctx: {
-        createPackageManager: jest.fn().mockReturnValue({ updateReleaseNotes: jest.fn(), updateVersion: jest.fn() }),
+        createPackageManager: vi.fn().mockReturnValue({ updateReleaseNotes: vi.fn(), updateVersion: vi.fn() }),
     },
 });
 
 beforeEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
 });
 
 describe('case10 — set directory', () => {
-    it('exports a handler function', () => {
+    it('exports a handler function', async () => {
         expect(case10).toBeDefined();
         expect(typeof case10.handler).toBe('function');
     });

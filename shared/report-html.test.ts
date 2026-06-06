@@ -2,18 +2,18 @@
  * Tests for report-html — HTML report generation using primitives.
  */
 
-import { nonNull, nullAs } from './test-utils';
-import { generateHtmlReport, generateCoverageHtml, generateReportWithFallback } from './report-html';
-import type { FlatTest } from './result_parser';
-import type { CoverageEpic, TestRunTab } from './report-types';
+import { nonNull, nullAs } from './test-utils.js';
+import { generateHtmlReport, generateCoverageHtml, generateReportWithFallback } from './report-html.js';
+import type { FlatTest } from './result_parser.js';
+import type { CoverageEpic, TestRunTab } from './report-types.js';
 
-jest.mock('./logger', () => ({
-    rootLogger: { error: jest.fn(), info: jest.fn(), child: jest.fn().mockReturnThis() },
+vi.mock('./logger', async () => ({
+    rootLogger: { error: vi.fn(), info: vi.fn(), child: vi.fn().mockReturnThis() },
 }));
 
-jest.mock('./config', () => ({
-    default: { get: jest.fn(() => '') },
-    get: jest.fn((key: string) => {
+vi.mock('./config', async () => ({
+    default: { get: vi.fn(() => '') },
+    get: vi.fn((key: string) => {
         if (key === 'CI_COMMIT_BRANCH') return 'main';
         if (key === 'CI_JOB_URL') return 'https://ci.example.com/job/42';
         return '';
@@ -41,7 +41,7 @@ const MOCK_EPICS: CoverageEpic[] = [
     },
 ];
 
-const HEALTH_SCORE: import('./types').HealthScoreResult = {
+const HEALTH_SCORE: import('./types.js').HealthScoreResult = {
     overall: 85,
     grade: 'good' as const,
     qualityGate: 'pass',
@@ -56,29 +56,29 @@ const HEALTH_SCORE: import('./types').HealthScoreResult = {
 };
 
 describe('generateHtmlReport', () => {
-    it('returns valid HTML for basic test list', () => {
+    it('returns valid HTML for basic test list', async () => {
         const html = generateHtmlReport(MOCK_TESTS);
         expect(html).toContain('Login Test');
         expect(html).toContain('Logout Test');
     });
 
-    it('includes quality gate when provided', () => {
+    it('includes quality gate when provided', async () => {
         const html = generateHtmlReport(MOCK_TESTS, { title: 'Report', qualityGate: 80 });
         expect(html).toContain('Quality Gate');
     });
 
-    it('handles empty test list', () => {
+    it('handles empty test list', async () => {
         const html = generateHtmlReport([], { title: 'Empty' });
         expect(html).toContain('Empty');
     });
 
-    it('includes health score section when provided', () => {
+    it('includes health score section when provided', async () => {
         const html = generateHtmlReport(MOCK_TESTS, { title: 'Health', healthScore: HEALTH_SCORE });
         expect(html).toContain('Test Suite Health');
         expect(html).toContain('Quality Gate: Pass');
     });
 
-    it('includes flakiness dashboard link when url and map provided', () => {
+    it('includes flakiness dashboard link when url and map provided', async () => {
         const html = generateHtmlReport(MOCK_TESTS, {
             title: 'Flaky',
             flakinessDashboardUrl: 'https://dash.example.com',
@@ -87,7 +87,7 @@ describe('generateHtmlReport', () => {
         expect(html).toContain('Flakiness Dashboard');
     });
 
-    it('includes CI branch link when ciUrl and branch provided', () => {
+    it('includes CI branch link when ciUrl and branch provided', async () => {
         const html = generateHtmlReport(MOCK_TESTS, {
             title: 'CI',
             branch: 'feature/test',
@@ -97,12 +97,12 @@ describe('generateHtmlReport', () => {
         expect(html).toContain('href');
     });
 
-    it('includes branch text without link when no ciUrl', () => {
+    it('includes branch text without link when no ciUrl', async () => {
         const html = generateHtmlReport(MOCK_TESTS, { title: 'Branch', branch: 'feature/x' });
         expect(html).toContain('feature/x');
     });
 
-    it('renders multi-run tabs when runs provided', () => {
+    it('renders multi-run tabs when runs provided', async () => {
         const runs: TestRunTab[] = [
             { name: 'Chrome', tests: MOCK_TESTS },
             { name: 'Firefox', tests: [nonNull(MOCK_TESTS[0])] },
@@ -113,7 +113,7 @@ describe('generateHtmlReport', () => {
         expect(html).toContain('switchTab');
     });
 
-    it('includes sidebar hierarchy when tests have fullTitle with >', () => {
+    it('includes sidebar hierarchy when tests have fullTitle with >', async () => {
         const testsWithHierarchy: FlatTest[] = [
             { title: 'T1', state: 'passed', duration: 10, fullTitle: 'Suite > T1' },
             { title: 'T2', state: 'failed', duration: 20, fullTitle: 'Other > T2' },
@@ -123,7 +123,7 @@ describe('generateHtmlReport', () => {
         expect(html).toContain('Other');
     });
 
-    it('includes trend section when trends provided', () => {
+    it('includes trend section when trends provided', async () => {
         const html = generateHtmlReport(MOCK_TESTS, {
             title: 'Trends',
             trends: [
@@ -134,7 +134,7 @@ describe('generateHtmlReport', () => {
         expect(html).toContain('Pass Rate Trend');
     });
 
-    it('includes diff comparison when provided', () => {
+    it('includes diff comparison when provided', async () => {
         const diffComparison = {
             newFailures: [{ title: 'F1', state: 'failed' as const, duration: 100 }],
             newPasses: [{ title: 'P1', state: 'passed' as const, duration: 50 }],
@@ -146,7 +146,7 @@ describe('generateHtmlReport', () => {
 });
 
 describe('generateReportWithFallback', () => {
-    it('returns error page when generation fails', () => {
+    it('returns error page when generation fails', async () => {
         const badTests = nullAs<FlatTest[]>();
         const html = generateReportWithFallback(badTests, { title: 'Fail' });
         expect(html).toContain('Error generating report');
@@ -154,7 +154,7 @@ describe('generateReportWithFallback', () => {
 });
 
 describe('generateCoverageHtml', () => {
-    it('returns valid HTML for epics', () => {
+    it('returns valid HTML for epics', async () => {
         const html = generateCoverageHtml(MOCK_EPICS, 'Coverage Report');
         expect(html).toContain('Coverage Report');
         expect(html).toContain('EPIC-1');
@@ -162,17 +162,17 @@ describe('generateCoverageHtml', () => {
         expect(html).toContain('ISSUE-3');
     });
 
-    it('shows correct close percentage', () => {
+    it('shows correct close percentage', async () => {
         const html = generateCoverageHtml(MOCK_EPICS);
         expect(html).toContain('33.3');
     });
 
-    it('shows 0.0 when no epics', () => {
+    it('shows 0.0 when no epics', async () => {
         const html = generateCoverageHtml([], 'Empty Report');
         expect(html).toContain('0.0');
     });
 
-    it('handles epic with Done and Closed statuses correctly', () => {
+    it('handles epic with Done and Closed statuses correctly', async () => {
         const epics: CoverageEpic[] = [
             {
                 key: 'EPIC-3',
@@ -188,7 +188,7 @@ describe('generateCoverageHtml', () => {
         expect(html).toContain('66.7');
     });
 
-    it('handles In Progress coverage status', () => {
+    it('handles In Progress coverage status', async () => {
         const epics: CoverageEpic[] = [
             {
                 key: 'EPIC-4',
@@ -201,7 +201,7 @@ describe('generateCoverageHtml', () => {
         expect(html).toContain('data-component="badge"');
     });
 
-    it('returns error page on failure', () => {
+    it('returns error page on failure', async () => {
         const badEpics = nullAs<CoverageEpic[]>();
         const html = generateCoverageHtml(badEpics);
         expect(html).toContain('Error generating coverage report');

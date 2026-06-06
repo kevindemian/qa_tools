@@ -1,4 +1,4 @@
-import type { SetupContext } from '../context';
+import type { SetupContext } from '../context.js';
 
 export function generatePrePushHook(ctx: SetupContext): string {
     return `#!/bin/sh

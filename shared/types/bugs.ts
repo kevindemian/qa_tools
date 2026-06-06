@@ -1,5 +1,5 @@
-import { LLMEnrichment } from './llm';
-import { HealthScoreGrade } from './common';
+import { LLMEnrichment } from './llm.js';
+import { HealthScoreGrade } from './common.js';
 
 /** A structured bug report, optionally enriched by LLM analysis. */
 export interface BugReport {

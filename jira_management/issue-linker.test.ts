@@ -1,30 +1,34 @@
-const mockPrompt = {
-    print: jest.fn(),
-    success: jest.fn(),
-    isQuiet: jest.fn().mockReturnValue(true),
-    onError: jest.fn(),
-};
-const mockLogger = {
-    rootLogger: {
-        child: jest.fn().mockReturnValue({ info: jest.fn(), warn: jest.fn(), error: jest.fn() }),
-    },
-};
-const mockHttpClient = {
-    sleep: jest.fn().mockResolvedValue(undefined),
-};
-jest.mock('../shared/prompt', () => mockPrompt);
-jest.mock('../shared/logger', () => mockLogger);
-jest.mock('../shared/http-client', () => mockHttpClient);
+const mockPrompt = vi.hoisted(() => ({
+    print: vi.fn(),
+    success: vi.fn(),
+    isQuiet: vi.fn().mockReturnValue(true),
+    onError: vi.fn(),
+}));
 
-import type { TestCase, JiraResourceLike } from '../shared/types';
-import IssueLinker from './issue-linker';
-import { createMockJiraResource, createMockLinkManager } from '../shared/test-utils/factories';
-import type JiraLinkManager from './jira_link_manager';
+const mockLogger = vi.hoisted(() => ({
+    rootLogger: {
+        child: vi.fn().mockReturnValue({ info: vi.fn(), warn: vi.fn(), error: vi.fn() }),
+    },
+}));
+
+const mockHttpClient = vi.hoisted(() => ({
+    sleep: vi.fn().mockResolvedValue(undefined),
+}));
+
+vi.mock('../shared/prompt', () => mockPrompt);
+vi.mock('../shared/logger', () => mockLogger);
+vi.mock('../shared/http-client', () => mockHttpClient);
+
+import type { TestCase, JiraResourceLike } from '../shared/types.js';
+import type { Mocked } from 'vitest';
+import IssueLinker from './issue-linker.js';
+import { createMockJiraResource, createMockLinkManager } from '../shared/test-utils/factories/index.js';
+import type JiraLinkManager from './jira_link_manager.js';
 
 describe('IssueLinker', () => {
     let linker: IssueLinker;
-    let mockJiraResource: jest.Mocked<JiraResourceLike>;
-    let mockLinkManager: jest.Mocked<JiraLinkManager>;
+    let mockJiraResource: Mocked<JiraResourceLike>;
+    let mockLinkManager: Mocked<JiraLinkManager>;
 
     beforeEach(() => {
         mockJiraResource = createMockJiraResource();
@@ -33,11 +37,11 @@ describe('IssueLinker', () => {
     });
 
     afterEach(() => {
-        jest.clearAllMocks();
+        vi.clearAllMocks();
     });
 
     describe('associatePrecondition', () => {
-        const opLog = { info: jest.fn() };
+        const opLog = { info: vi.fn() };
 
         it('returns null when no precondition', async () => {
             const result = await linker.associatePrecondition({ title: 'Test', steps: [] }, 'TEST-1', opLog);

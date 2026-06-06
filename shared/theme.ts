@@ -8,7 +8,7 @@
  * @module theme
  */
 
-import { tokens } from './theme-tokens';
+import { tokens } from './theme-tokens.js';
 
 export interface UITheme {
     colors: {

@@ -1,9 +1,9 @@
 /** Cypress Dashboard API client: fetch enterprise report data (pass/fail rates per project). */
-import { createHttpClient } from '../shared/http-client';
-import { rootLogger } from '../shared/logger';
-import { info, warn, success } from '../shared/prompt';
-import { sanitizeUrl } from '../shared/cli_base';
-import type { JsonObject } from '../shared/types';
+import { createHttpClient } from '../shared/http-client.js';
+import { rootLogger } from '../shared/logger.js';
+import { info, warn, success } from '../shared/prompt.js';
+import { sanitizeUrl } from '../shared/cli_base.js';
+import type { JsonObject } from '../shared/types.js';
 
 interface CypressReportOptions {
     cypressUrl: string;

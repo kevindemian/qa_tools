@@ -1,12 +1,12 @@
-import type { TestExecutionSummary, JiraResourceLike } from '../shared/types';
-import { rootLogger } from '../shared/logger';
-import { LinkTypeManager } from './link-types';
-import { LinkOperations } from './link-operations';
+import type { TestExecutionSummary, JiraResourceLike } from '../shared/types.js';
+import { rootLogger } from '../shared/logger.js';
+import { LinkTypeManager } from './link-types.js';
+import { LinkOperations } from './link-operations.js';
 import {
     PreconditionHandler,
     matchPreconditionByTokenOverlap,
     matchPreconditionByDualThreshold,
-} from './precondition-handler';
+} from './precondition-handler.js';
 
 export { matchPreconditionByTokenOverlap, matchPreconditionByDualThreshold };
 

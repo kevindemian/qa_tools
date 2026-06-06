@@ -1,8 +1,8 @@
 /** Manage project version and release notes: update `package.json` version and prepend release notes entries. */
 import fs from 'fs';
 import path from 'path';
-import type { JsonObject } from '../shared/types';
-import { rootLogger } from '../shared/logger';
+import type { JsonObject } from '../shared/types.js';
+import { rootLogger } from '../shared/logger.js';
 
 /** Reads/writes `package.json` version and `release_notes/ReleaseNotes.txt`. */
 class PackageVersionManager {

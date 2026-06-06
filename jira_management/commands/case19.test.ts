@@ -1,57 +1,57 @@
-import { expect } from '@jest/globals';
+import { expect } from 'vitest';
 
-jest.mock('../../shared/prompt');
-jest.mock('../../shared/logger');
+vi.mock('../../shared/prompt');
+vi.mock('../../shared/logger');
 
-jest.mock('../../shared/metrics', () => ({
-    loadMetrics: jest.fn(),
-    calculateFlakiness: jest.fn(),
-    getTrends: jest.fn(),
-    saveCoverageSnapshot: jest.fn(),
+vi.mock('../../shared/metrics', async () => ({
+    loadMetrics: vi.fn(),
+    calculateFlakiness: vi.fn(),
+    getTrends: vi.fn(),
+    saveCoverageSnapshot: vi.fn(),
 }));
 
-jest.mock('../../shared/health-score', () => ({
-    calculateHealthScore: jest.fn(),
+vi.mock('../../shared/health-score', async () => ({
+    calculateHealthScore: vi.fn(),
 }));
 
-jest.mock('../../shared/flaky-auto-actions', () => ({
-    executeFlakyActions: jest.fn().mockResolvedValue([]),
+vi.mock('../../shared/flaky-auto-actions', async () => ({
+    executeFlakyActions: vi.fn().mockResolvedValue([]),
 }));
 
-jest.mock('../../shared/run-comparison', () => ({
-    compareRuns: jest.fn(),
+vi.mock('../../shared/run-comparison', async () => ({
+    compareRuns: vi.fn(),
 }));
 
-jest.mock('../coverage', () => ({
-    analyzeCoverage: jest.fn(),
+vi.mock('../coverage', async () => ({
+    analyzeCoverage: vi.fn(),
 }));
 
-jest.mock('../../shared/logger', () => ({
+vi.mock('../../shared/logger', async () => ({
     rootLogger: {
-        error: jest.fn(),
-        child: jest.fn().mockReturnValue({ info: jest.fn(), error: jest.fn(), warn: jest.fn() }),
+        error: vi.fn(),
+        child: vi.fn().mockReturnValue({ info: vi.fn(), error: vi.fn(), warn: vi.fn() }),
     },
 }));
 
-import * as promptModule from '../../shared/prompt';
-import * as metricsModule from '../../shared/metrics';
-import * as comparisonModule from '../../shared/run-comparison';
-import * as flakyActionsModule from '../../shared/flaky-auto-actions';
-import * as healthScoreModule from '../../shared/health-score';
-import * as coverageModule from '../coverage';
-import case19Module from './case19';
-import { createMockContext } from '../../shared/test-utils/factories/context-factory';
+import * as promptModule from '../../shared/prompt.js';
+import * as metricsModule from '../../shared/metrics.js';
+import * as comparisonModule from '../../shared/run-comparison.js';
+import * as flakyActionsModule from '../../shared/flaky-auto-actions.js';
+import * as healthScoreModule from '../../shared/health-score.js';
+import * as coverageModule from '../coverage.js';
+import case19Module from './case19.js';
+import { createMockContext } from '../../shared/test-utils/factories/context-factory.js';
 
 const baseContext = createMockContext();
 
 beforeEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
 });
 
 describe('case19 — History & Coverage', () => {
     it('displays history when option a is selected', async () => {
-        const prompt = jest.mocked(promptModule);
-        const metrics = jest.mocked(metricsModule);
+        const prompt = vi.mocked(promptModule);
+        const metrics = vi.mocked(metricsModule);
 
         prompt.showSelect.mockResolvedValueOnce('a').mockResolvedValueOnce('0');
 
@@ -84,9 +84,9 @@ describe('case19 — History & Coverage', () => {
     });
 
     it('displays coverage when option b is selected', async () => {
-        const prompt = jest.mocked(promptModule);
-        const coverage = jest.mocked(coverageModule);
-        const metrics = jest.mocked(metricsModule);
+        const prompt = vi.mocked(promptModule);
+        const coverage = vi.mocked(coverageModule);
+        const metrics = vi.mocked(metricsModule);
 
         prompt.showSelect.mockResolvedValueOnce('b').mockResolvedValueOnce('0');
 
@@ -115,8 +115,8 @@ describe('case19 — History & Coverage', () => {
     });
 
     it('handles empty metrics gracefully', async () => {
-        const prompt = jest.mocked(promptModule);
-        const metrics = jest.mocked(metricsModule);
+        const prompt = vi.mocked(promptModule);
+        const metrics = vi.mocked(metricsModule);
 
         prompt.showSelect.mockResolvedValueOnce('a').mockResolvedValueOnce('0');
 
@@ -129,7 +129,7 @@ describe('case19 — History & Coverage', () => {
     });
 
     it('returns when user selects voltar', async () => {
-        const prompt = jest.mocked(promptModule);
+        const prompt = vi.mocked(promptModule);
         prompt.showSelect.mockResolvedValueOnce('0');
 
         const mod = case19Module;
@@ -139,9 +139,9 @@ describe('case19 — History & Coverage', () => {
     });
 
     it('displays history comparison, flaky tests and trends when multiple runs exist', async () => {
-        const prompt = jest.mocked(promptModule);
-        const metrics = jest.mocked(metricsModule);
-        const comparison = jest.mocked(comparisonModule);
+        const prompt = vi.mocked(promptModule);
+        const metrics = vi.mocked(metricsModule);
+        const comparison = vi.mocked(comparisonModule);
 
         prompt.showSelect.mockResolvedValueOnce('a').mockResolvedValueOnce('0');
 
@@ -186,8 +186,8 @@ describe('case19 — History & Coverage', () => {
     });
 
     it('handles coverage analysis error', async () => {
-        const prompt = jest.mocked(promptModule);
-        const coverage = jest.mocked(coverageModule);
+        const prompt = vi.mocked(promptModule);
+        const coverage = vi.mocked(coverageModule);
 
         prompt.showSelect.mockResolvedValueOnce('b').mockResolvedValueOnce('0');
         coverage.analyzeCoverage.mockRejectedValueOnce(new Error('Jira API error'));
@@ -199,9 +199,9 @@ describe('case19 — History & Coverage', () => {
     });
 
     it('handles compareRuns returning null (falsy analysis)', async () => {
-        const prompt = jest.mocked(promptModule);
-        const metrics = jest.mocked(metricsModule);
-        const comparison = jest.mocked(comparisonModule);
+        const prompt = vi.mocked(promptModule);
+        const metrics = vi.mocked(metricsModule);
+        const comparison = vi.mocked(comparisonModule);
 
         prompt.showSelect.mockResolvedValueOnce('a').mockResolvedValueOnce('0');
 
@@ -242,8 +242,8 @@ describe('case19 — History & Coverage', () => {
     });
 
     it('shows coverage without unmapped steps or gaps', async () => {
-        const prompt = jest.mocked(promptModule);
-        const coverage = jest.mocked(coverageModule);
+        const prompt = vi.mocked(promptModule);
+        const coverage = vi.mocked(coverageModule);
 
         prompt.showSelect.mockResolvedValueOnce('b').mockResolvedValueOnce('0');
 
@@ -264,9 +264,9 @@ describe('case19 — History & Coverage', () => {
     });
 
     it('shows health score when enough runs exist', async () => {
-        const prompt = jest.mocked(promptModule);
-        const metrics = jest.mocked(metricsModule);
-        const healthScore = jest.mocked(healthScoreModule);
+        const prompt = vi.mocked(promptModule);
+        const metrics = vi.mocked(metricsModule);
+        const healthScore = vi.mocked(healthScoreModule);
 
         prompt.showSelect.mockResolvedValueOnce('a').mockResolvedValueOnce('0');
 
@@ -312,10 +312,10 @@ describe('case19 — History & Coverage', () => {
     });
 
     it('executes flaky auto-actions when confirmed', async () => {
-        const prompt = jest.mocked(promptModule);
-        const metrics = jest.mocked(metricsModule);
-        const flakyActions = jest.mocked(flakyActionsModule);
-        const comparison = jest.mocked(comparisonModule);
+        const prompt = vi.mocked(promptModule);
+        const metrics = vi.mocked(metricsModule);
+        const flakyActions = vi.mocked(flakyActionsModule);
+        const comparison = vi.mocked(comparisonModule);
 
         prompt.showSelect.mockResolvedValueOnce('a').mockResolvedValueOnce('0');
         prompt.askConfirm.mockResolvedValueOnce(true);
@@ -358,9 +358,9 @@ describe('case19 — History & Coverage', () => {
     });
 
     it('shows history without flaky or trends data', async () => {
-        const prompt = jest.mocked(promptModule);
-        const metrics = jest.mocked(metricsModule);
-        const comparison = jest.mocked(comparisonModule);
+        const prompt = vi.mocked(promptModule);
+        const metrics = vi.mocked(metricsModule);
+        const comparison = vi.mocked(comparisonModule);
 
         prompt.showSelect.mockResolvedValueOnce('a').mockResolvedValueOnce('0');
 
@@ -399,10 +399,10 @@ describe('case19 — History & Coverage', () => {
     });
 
     it('handles executeFlakyActions error', async () => {
-        const prompt = jest.mocked(promptModule);
-        const metrics = jest.mocked(metricsModule);
-        const flakyActions = jest.mocked(flakyActionsModule);
-        const comparison = jest.mocked(comparisonModule);
+        const prompt = vi.mocked(promptModule);
+        const metrics = vi.mocked(metricsModule);
+        const flakyActions = vi.mocked(flakyActionsModule);
+        const comparison = vi.mocked(comparisonModule);
 
         prompt.showSelect.mockResolvedValueOnce('a').mockResolvedValueOnce('0');
         prompt.askConfirm.mockResolvedValueOnce(true);
@@ -432,9 +432,9 @@ describe('case19 — History & Coverage', () => {
     });
 
     it('handles run with total=0 to cover Rate branch', async () => {
-        const prompt = jest.mocked(promptModule);
-        const metrics = jest.mocked(metricsModule);
-        const comparison = jest.mocked(comparisonModule);
+        const prompt = vi.mocked(promptModule);
+        const metrics = vi.mocked(metricsModule);
+        const comparison = vi.mocked(comparisonModule);
 
         prompt.showSelect.mockResolvedValueOnce('a').mockResolvedValueOnce('0');
 
@@ -463,10 +463,10 @@ describe('case19 — History & Coverage', () => {
     });
 
     it('handles flaky actions with non-matching action types', async () => {
-        const prompt = jest.mocked(promptModule);
-        const metrics = jest.mocked(metricsModule);
-        const flakyActions = jest.mocked(flakyActionsModule);
-        const comparison = jest.mocked(comparisonModule);
+        const prompt = vi.mocked(promptModule);
+        const metrics = vi.mocked(metricsModule);
+        const flakyActions = vi.mocked(flakyActionsModule);
+        const comparison = vi.mocked(comparisonModule);
 
         prompt.showSelect.mockResolvedValueOnce('a').mockResolvedValueOnce('0');
         prompt.askConfirm.mockResolvedValueOnce(true);
@@ -507,10 +507,10 @@ describe('case19 — History & Coverage', () => {
     });
 
     it('shows health score section when 5+ runs exist', async () => {
-        const prompt = jest.mocked(promptModule);
-        const metrics = jest.mocked(metricsModule);
-        const healthScore = jest.mocked(healthScoreModule);
-        const comparison = jest.mocked(comparisonModule);
+        const prompt = vi.mocked(promptModule);
+        const metrics = vi.mocked(metricsModule);
+        const healthScore = vi.mocked(healthScoreModule);
+        const comparison = vi.mocked(comparisonModule);
 
         prompt.showSelect.mockResolvedValueOnce('a').mockResolvedValueOnce('0');
 
@@ -551,8 +551,8 @@ describe('case19 — History & Coverage', () => {
     });
 
     it('shows coverage with gapsByEpic data', async () => {
-        const prompt = jest.mocked(promptModule);
-        const coverage = jest.mocked(coverageModule);
+        const prompt = vi.mocked(promptModule);
+        const coverage = vi.mocked(coverageModule);
 
         prompt.showSelect.mockResolvedValueOnce('b').mockResolvedValueOnce('0');
 

@@ -1,8 +1,8 @@
 /** Xray Cloud (GraphQL authentication + step import) and Server (REST) client. */
-import type { JiraResourceLike } from '../shared/types';
-import type { TestStep } from '../shared/types';
-import Config from '../shared/config';
-import { XrayCloudClient } from '../shared/xray-cloud-client';
+import type { JiraResourceLike } from '../shared/types.js';
+import type { TestStep } from '../shared/types.js';
+import Config from '../shared/config.js';
+import { XrayCloudClient } from '../shared/xray-cloud-client.js';
 
 export interface XrayStepImporter {
     importStep(issueKey: string, stepIndex: number, step: TestStep): Promise<void>;

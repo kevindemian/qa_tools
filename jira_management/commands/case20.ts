@@ -1,9 +1,9 @@
 /** Interactive bug-report flow — collect details and create Jira issue. */
 
-import { ask, askConfirm, info, printError, title } from '../../shared/prompt';
-import { collectManual, generateBugReportFromDescription, interactiveBugReportFlow } from '../../shared/bug-report';
-import type { CommandContext } from './context';
-import type { BugReport } from '../../shared/types';
+import { ask, askConfirm, info, printError, title } from '../../shared/prompt.js';
+import { collectManual, generateBugReportFromDescription, interactiveBugReportFlow } from '../../shared/bug-report.js';
+import type { CommandContext } from './context.js';
+import type { BugReport } from '../../shared/types.js';
 
 async function handler(c: CommandContext): Promise<boolean | void> {
     title('Bug Report');

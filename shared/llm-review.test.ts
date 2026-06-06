@@ -1,17 +1,17 @@
-jest.mock('./llm-client', () => ({
-    llmPrompt: jest.fn(),
-    getLlmClientMetrics: jest.fn(() => ({
+vi.mock('./llm-client', async () => ({
+    llmPrompt: vi.fn(),
+    getLlmClientMetrics: vi.fn(() => ({
         cacheHits: 0,
         cacheMisses: 0,
         totalPromptTokens: 0,
         totalCompletionTokens: 0,
         requestsByProviderKey: {},
     })),
-    resetLlmClientMetrics: jest.fn(),
-    parseRetryAfter: jest.fn(() => 2000),
+    resetLlmClientMetrics: vi.fn(),
+    parseRetryAfter: vi.fn(() => 2000),
 }));
 
-jest.mock('./config', () => {
+vi.mock('./config', () => {
     const mockConfig: Record<string, string> = {};
     return {
         __esModule: true,
@@ -35,11 +35,11 @@ jest.mock('./config', () => {
     };
 });
 
-import { llmPrompt } from './llm-client';
-import { reviewWithLlm } from './llm-review';
-import { nonNull } from './test-utils';
+import { llmPrompt } from './llm-client.js';
+import { reviewWithLlm } from './llm-review.js';
+import { nonNull } from './test-utils.js';
 
-const mockLlmPrompt = jest.mocked(llmPrompt);
+const mockLlmPrompt = vi.mocked(llmPrompt);
 
 const validParsedReport = {
     tests: [
@@ -55,7 +55,7 @@ const validParsedReport = {
 const invalidParsedReport = { tests: [{ title: 'Bad' }] };
 
 beforeEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
 });
 
 describe('reviewWithLlm', () => {
@@ -180,8 +180,8 @@ describe('reviewWithLlm', () => {
     });
 });
 
-import Config from './config';
-import { detectHedging, detectContradictions, shouldSkipAdversarialReview } from './llm-review';
+import Config from './config.js';
+import { detectHedging, detectContradictions, shouldSkipAdversarialReview } from './llm-review.js';
 
 const mockReviewResult = (content: string, confidence: 'high' | 'medium' | 'low' = 'medium', notes?: string) => ({
     content,
@@ -191,34 +191,34 @@ const mockReviewResult = (content: string, confidence: 'high' | 'medium' | 'low'
 });
 
 describe('detectHedging', () => {
-    it('detects Portuguese hedging patterns', () => {
+    it('detects Portuguese hedging patterns', async () => {
         const text = 'Parece que isso pode ser um problema. Talvez nao tenha certeza.';
         expect(detectHedging(text)).toBeGreaterThan(0);
     });
 
-    it('returns zero for confident text', () => {
+    it('returns zero for confident text', async () => {
         const text = 'assertion mismatch linha 42';
         expect(detectHedging(text)).toBe(0);
     });
 
-    it('counts multiple hedging markers', () => {
+    it('counts multiple hedging markers', async () => {
         const text = 'Parece que possivelmente pode ser. Acho que talvez...';
         expect(detectHedging(text)).toBeGreaterThanOrEqual(4);
     });
 });
 
 describe('detectContradictions', () => {
-    it('detects positive + negative markers in same paragraph', () => {
+    it('detects positive + negative markers in same paragraph', async () => {
         const text = 'Resultado correto com erro grave.';
         expect(detectContradictions(text)).toBeGreaterThan(0);
     });
 
-    it('does not flag cross-paragraph contradictions', () => {
+    it('does not flag cross-paragraph contradictions', async () => {
         const text = 'Passo 1: tudo certo.\n\nPasso 2: erro encontrado.';
         expect(detectContradictions(text)).toBe(0);
     });
 
-    it('returns zero for consistent text', () => {
+    it('returns zero for consistent text', async () => {
         const text = 'Todas as assercoes passaram. Nenhum erro encontrado.';
         expect(detectContradictions(text)).toBe(0);
     });
@@ -229,7 +229,7 @@ describe('shouldSkipAdversarialReview', () => {
         Config.reset();
     });
 
-    it('never skips when strategy is always', () => {
+    it('never skips when strategy is always', async () => {
         Config.set('llmReviewStrategy', 'always');
         const result = mockReviewResult('ok', 'low', 'short');
         const decision = shouldSkipAdversarialReview(result, 'analysis', 0);
@@ -237,7 +237,7 @@ describe('shouldSkipAdversarialReview', () => {
         expect(decision.reason).toBe('strategy_always');
     });
 
-    it('skips when budget is exceeded', () => {
+    it('skips when budget is exceeded', async () => {
         Config.set('llmReviewBudget', '0.01');
         const result = mockReviewResult('detailed notes here for review', 'medium', 'some notes');
         const decision = shouldSkipAdversarialReview(result, 'test-suite', 0.02);
@@ -245,14 +245,14 @@ describe('shouldSkipAdversarialReview', () => {
         expect(decision.reason).toBe('budget_exceeded');
     });
 
-    it('does not skip when budget is not exceeded', () => {
+    it('does not skip when budget is not exceeded', async () => {
         Config.set('llmReviewBudget', '1.00');
         const result = mockReviewResult('detailed notes here for review', 'medium', 'some notes');
         const decision = shouldSkipAdversarialReview(result, 'analysis', 0.02);
         expect(decision.skip).toBe(false);
     });
 
-    it('skips low-risk artifacts with low confidence', () => {
+    it('skips low-risk artifacts with low confidence', async () => {
         Config.set('llmReviewBudget', '1.00');
         const result = mockReviewResult('ok', 'medium', 'notes');
         const decision = shouldSkipAdversarialReview(result, 'comparison', 0);
@@ -260,7 +260,7 @@ describe('shouldSkipAdversarialReview', () => {
         expect(decision.reason).toBe('low_risk_artifact');
     });
 
-    it('triggers on hedging for non-high confidence', () => {
+    it('triggers on hedging for non-high confidence', async () => {
         Config.set('llmReviewBudget', '1.00');
         const text = 'Parece que talvez possivelmente pode ser que isso esteja certo.';
         const result = mockReviewResult(text, 'low', 'notes');
@@ -269,7 +269,7 @@ describe('shouldSkipAdversarialReview', () => {
         expect(decision.reason).toBe('hedging_detected');
     });
 
-    it('triggers on contradiction detection', () => {
+    it('triggers on contradiction detection', async () => {
         Config.set('llmReviewBudget', '1.00');
         Config.set('llmReviewStrategy', 'selective');
         const text = 'Resultado correto com erro grave.';
@@ -279,7 +279,7 @@ describe('shouldSkipAdversarialReview', () => {
         expect(decision.reason).toBe('contradiction_detected');
     });
 
-    it('skips high-confidence normal risk with short notes', () => {
+    it('skips high-confidence normal risk with short notes', async () => {
         Config.set('llmReviewBudget', '1.00');
         const result = mockReviewResult('ok', 'high', 'short');
         const decision = shouldSkipAdversarialReview(result, 'analysis', 0);
@@ -287,7 +287,7 @@ describe('shouldSkipAdversarialReview', () => {
         expect(decision.reason).toBe('high_confidence');
     });
 
-    it('escalates critical risk even with high confidence', () => {
+    it('escalates critical risk even with high confidence', async () => {
         Config.set('llmReviewBudget', '1.00');
         const result = mockReviewResult('ok', 'high', 'short');
         const decision = shouldSkipAdversarialReview(result, 'test-suite', 0);
@@ -295,7 +295,7 @@ describe('shouldSkipAdversarialReview', () => {
         expect(decision.reason).toBe('critical_risk');
     });
 
-    it('defaults to standard when no specific heuristic triggers', () => {
+    it('defaults to standard when no specific heuristic triggers', async () => {
         Config.set('llmReviewBudget', '1.00');
         const result = mockReviewResult('Direct statement without hedging.', 'medium', 'notes here');
         const decision = shouldSkipAdversarialReview(result, 'pipeline', 0);

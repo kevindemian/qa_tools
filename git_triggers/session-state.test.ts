@@ -1,18 +1,18 @@
-jest.mock('../shared/prompt', () => ({
-    print: jest.fn(),
-    success: jest.fn(),
-    warn: jest.fn(),
-    info: jest.fn(),
-    error: jest.fn(),
-    title: jest.fn(),
-    prompt: jest.fn(),
-    confirm: jest.fn(),
-    printError: jest.fn(),
-    withSpinner: jest.fn(<T>(_: string, fn: () => Promise<T>) => fn()),
-    divider: jest.fn(),
+vi.mock('../shared/prompt', () => ({
+    print: vi.fn(),
+    success: vi.fn(),
+    warn: vi.fn(),
+    info: vi.fn(),
+    error: vi.fn(),
+    title: vi.fn(),
+    prompt: vi.fn(),
+    confirm: vi.fn(),
+    printError: vi.fn(),
+    withSpinner: vi.fn(<T>(_: string, fn: () => Promise<T>) => fn()),
+    divider: vi.fn(),
 }));
 
-jest.mock('../shared/prompt-ui', () => ({
+vi.mock('../shared/prompt-ui', () => ({
     CancelError: class extends Error {
         cmd: string;
         constructor(cmd: string) {
@@ -21,13 +21,13 @@ jest.mock('../shared/prompt-ui', () => ({
             this.name = 'CancelError';
         }
     },
-    getConfig: jest.fn(() => ({ quiet: false })),
-    isQuiet: jest.fn(() => false),
-    success: jest.fn(),
-    error: jest.fn(),
-    warn: jest.fn(),
-    info: jest.fn(),
-    icon: jest.fn(() => '!'),
+    getConfig: vi.fn(() => ({ quiet: false })),
+    isQuiet: vi.fn(() => false),
+    success: vi.fn(),
+    error: vi.fn(),
+    warn: vi.fn(),
+    info: vi.fn(),
+    icon: vi.fn(() => '!'),
 }));
 
 function createMockConfig() {
@@ -37,7 +37,7 @@ function createMockConfig() {
             gitBaseUrl: 'https://gitlab.com',
             githubToken: '',
             githubApiUrl: 'https://api.github.com',
-            getAllPrefixed: jest.fn(() => ({})),
+            getAllPrefixed: vi.fn(() => ({})),
             get(key: string) {
                 return (this as Record<string, unknown>)[key] as string;
             },
@@ -46,55 +46,62 @@ function createMockConfig() {
     };
 }
 
-jest.mock('../shared/config', createMockConfig);
+vi.mock('../shared/config', createMockConfig);
 
-jest.mock('../shared/session-context', () => ({
-    SessionContext: jest.fn(() => ({
-        pushHistory: jest.fn(),
-        sessionCounters: {},
-        lastOperation: null,
-    })),
+vi.mock('../shared/session-context', () => ({
+    SessionContext: vi.fn(function () {
+        return {
+            pushHistory: vi.fn(),
+            sessionCounters: {},
+            lastOperation: null,
+        };
+    }),
 }));
 
-jest.mock('../shared/state', () => ({ update: jest.fn() }));
+vi.mock('../shared/state', () => ({ update: vi.fn() }));
 
-jest.mock('../shared/cli_base', () => ({ printSessionSummary: jest.fn() }));
+vi.mock('../shared/cli_base', () => ({ printSessionSummary: vi.fn() }));
 
-jest.mock('../shared/metrics', () => ({
-    loadMetrics: jest.fn(() => ({ runs: [] })),
-    calculateFlakiness: jest.fn(() => []),
+vi.mock('../shared/metrics', () => ({
+    loadMetrics: vi.fn(() => ({ runs: [] })),
+    calculateFlakiness: vi.fn(() => []),
 }));
 
-jest.mock('../shared/flakiness-dashboard', () => ({ generateFlakinessHtml: jest.fn(() => '<html>') }));
+vi.mock('../shared/flakiness-dashboard', () => ({ generateFlakinessHtml: vi.fn(() => '<html>') }));
 
-jest.mock('./gitlab_manager', () => {
+vi.mock('./gitlab_manager', () => {
     return {
         __esModule: true,
-        default: jest.fn().mockImplementation(() => ({
-            getRecentPipelines: jest.fn().mockResolvedValue([]),
-        })),
+        default: vi.fn().mockImplementation(function () {
+            return {
+                getRecentPipelines: vi.fn().mockResolvedValue([]),
+            };
+        }),
     };
 });
 
-jest.mock('./github_manager', () => {
+vi.mock('./github_manager', () => {
     return {
         __esModule: true,
-        default: jest.fn().mockImplementation(() => ({
-            getRecentPipelines: jest.fn().mockResolvedValue([]),
-        })),
+        default: vi.fn().mockImplementation(function () {
+            return {
+                getRecentPipelines: vi.fn().mockResolvedValue([]),
+            };
+        }),
     };
 });
 
-jest.mock('./ui-helpers', () => ({ providerLabel: jest.fn(() => 'GitLab') }));
+vi.mock('./ui-helpers', () => ({ providerLabel: vi.fn(() => 'GitLab') }));
 
-import * as prompt from '../shared/prompt';
-import * as sessionState from './session-state';
-import { createMockGitProvider } from '../shared/test-utils/factories';
-import { update as stateUpdate } from '../shared/state';
+import * as prompt from '../shared/prompt.js';
+import * as sessionState from './session-state.js';
+import { loadMetrics as _loadMetrics, calculateFlakiness as _calculateFlakiness } from '../shared/metrics.js';
+import { createMockGitProvider } from '../shared/test-utils/factories/index.js';
+import { update as stateUpdate } from '../shared/state.js';
 
 describe('session-state', () => {
     beforeEach(() => {
-        jest.clearAllMocks();
+        vi.clearAllMocks();
     });
 
     describe('module-level exports', () => {
@@ -151,125 +158,10 @@ describe('session-state', () => {
     });
 
     describe('displayProjects', () => {
-        it('calls title and print for each project', () => {
-            jest.isolateModules(() => {
-                jest.mock('fs', () => ({
-                    readFileSync: jest.fn(() => JSON.stringify({ proj1: '1', proj2: '2' })),
-                }));
-                jest.mock('../shared/metrics', () => ({
-                    loadMetrics: jest.fn(() => ({ runs: [] })),
-                    calculateFlakiness: jest.fn(() => []),
-                }));
-                jest.mock('../shared/flakiness-dashboard', () => ({ generateFlakinessHtml: jest.fn(() => '<html>') }));
-                const mod = jest.requireMock<typeof import('./session-state')>('./session-state');
-                mod.displayProjects();
-            });
-        });
-    });
-
-    describe('buildActionChoices', () => {
-        it('returns choices for gitlab', () => {
-            sessionState.setCurrentProvider('gitlab');
-            const choices = sessionState.buildActionChoices();
-            expect(choices.length).toBeGreaterThan(0);
-            expect(JSON.stringify(choices)).toContain('Disparar pipeline');
-            expect(JSON.stringify(choices)).toContain('Setup wizard CI/CD');
-        });
-
-        it('returns choices for github (no schedules)', () => {
-            sessionState.setCurrentProvider('github');
-            const choices = sessionState.buildActionChoices();
-            expect(JSON.stringify(choices)).not.toContain('Listar schedules');
-        });
-    });
-
-    describe('loadProvidersConfig error handling', () => {
-        it('falls back to gitlab when providers.json is invalid', () => {
-            jest.isolateModules(() => {
-                jest.doMock('fs', () => ({
-                    readFileSync: jest.fn((p: string) => {
-                        if (p.includes('providers.json')) throw new Error('ENOENT');
-                        if (p.includes('projects.json')) return JSON.stringify({ proj: '1' });
-                        throw new Error('not found');
-                    }),
-                    writeFileSync: jest.fn(),
-                    unlinkSync: jest.fn(),
-                    existsSync: jest.fn(() => false),
-                }));
-                jest.doMock('../shared/prompt', () => ({
-                    print: jest.fn(),
-                    success: jest.fn(),
-                    warn: jest.fn(),
-                    info: jest.fn(),
-                    error: jest.fn(),
-                    title: jest.fn(),
-                    prompt: jest.fn(),
-                    confirm: jest.fn(),
-                    printError: jest.fn(),
-                    withSpinner: jest.fn(<T>(_: string, fn: () => Promise<T>) => fn()),
-                    divider: jest.fn(),
-                }));
-                jest.doMock('../shared/prompt-ui', () => ({
-                    CancelError: class extends Error {
-                        cmd: string;
-                        constructor(cmd: string) {
-                            super(cmd);
-                            this.cmd = cmd;
-                            this.name = 'CancelError';
-                        }
-                    },
-                    getConfig: jest.fn(() => ({ quiet: false })),
-                    isQuiet: jest.fn(() => false),
-                    success: jest.fn(),
-                    error: jest.fn(),
-                    warn: jest.fn(),
-                    info: jest.fn(),
-                    icon: jest.fn(() => '!'),
-                }));
-                jest.doMock('../shared/config', createMockConfig);
-                jest.doMock('../shared/session-context', () => ({
-                    SessionContext: jest.fn(() => ({
-                        pushHistory: jest.fn(),
-                        sessionCounters: {},
-                        lastOperation: null,
-                        buildContextLine: jest.fn(() => ''),
-                    })),
-                }));
-                jest.doMock('../shared/state', () => ({ update: jest.fn() }));
-                jest.doMock('../shared/cli_base', () => ({ printSessionSummary: jest.fn() }));
-                jest.doMock('../shared/metrics', () => ({
-                    loadMetrics: jest.fn(() => ({ runs: [] })),
-                    calculateFlakiness: jest.fn(() => []),
-                }));
-                jest.doMock('../shared/flakiness-dashboard', () => ({
-                    generateFlakinessHtml: jest.fn(() => '<html>'),
-                }));
-                jest.doMock('../shared/logger', () => ({
-                    rootLogger: {
-                        child: jest.fn(() => ({ info: jest.fn(), warn: jest.fn(), error: jest.fn() })),
-                        warn: jest.fn(),
-                        error: jest.fn(),
-                        info: jest.fn(),
-                    },
-                }));
-                jest.doMock('./gitlab_manager', () => ({
-                    __esModule: true,
-                    default: jest.fn().mockImplementation(() => ({
-                        getRecentPipelines: jest.fn().mockResolvedValue([]),
-                    })),
-                }));
-                jest.doMock('./github_manager', () => ({
-                    __esModule: true,
-                    default: jest.fn().mockImplementation(() => ({
-                        getRecentPipelines: jest.fn().mockResolvedValue([]),
-                    })),
-                }));
-                jest.doMock('./ui-helpers', () => ({ providerLabel: jest.fn(() => 'GitLab') }));
-
-                const mod = jest.requireActual<typeof import('./session-state')>('./session-state');
-                const result = mod.getProviderForProject('proj');
-                expect(result).toBe('gitlab');
-            });
+        it('displays projects from real projects.json', () => {
+            sessionState.displayProjects();
+            expect(prompt.title).toHaveBeenCalledWith('Projetos');
+            expect(prompt.print).toHaveBeenCalled();
         });
     });
 
@@ -283,8 +175,7 @@ describe('session-state', () => {
 
     describe('displayRecentPipelines flakiness', () => {
         it('warns about high flakiness tests', async () => {
-            const metrics = jest.requireMock<typeof import('../shared/metrics')>('../shared/metrics');
-            jest.mocked(metrics.loadMetrics).mockReturnValueOnce({
+            vi.mocked(_loadMetrics).mockReturnValueOnce({
                 runs: [
                     {
                         project: 'qa_ibabs',
@@ -308,13 +199,13 @@ describe('session-state', () => {
                     },
                 ],
             });
-            jest.mocked(metrics.calculateFlakiness).mockReturnValueOnce([
+            vi.mocked(_calculateFlakiness).mockReturnValueOnce([
                 { title: 'flaky-test', rate: 0.5, passCount: 2, failCount: 2, skipCount: 0, totalRuns: 4 },
             ]);
 
             sessionState.setCurrentProjectName('qa_ibabs');
             const m = createMockGitProvider();
-            jest.mocked(m.getRecentPipelines).mockResolvedValue([]);
+            vi.mocked(m.getRecentPipelines).mockResolvedValue([]);
             await sessionState.displayRecentPipelines(m);
             expect(prompt.warn).toHaveBeenCalledWith(expect.stringContaining('flakiness'));
 

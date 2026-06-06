@@ -1,6 +1,6 @@
 import fs from 'fs';
 import path from 'path';
-import type { SetupContext } from './context';
+import type { SetupContext } from './context.js';
 
 interface WriterResult {
     filesCreated: string[];

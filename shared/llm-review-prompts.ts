@@ -2,14 +2,14 @@
  * Prompt builders for the LLM review pipeline.
  * Change frequency: prompt engineering / schema changes.
  */
-import type { ZodSchema } from './types';
-import type { ArtifactType } from './llm-review';
-import { FailureAnalysisSchema } from './failure-analysis.schema';
-import { TestSuiteSchema } from './test-suite.schema';
-import { PipelineClassificationSchema } from './pipeline-schema';
-import { AiBugReportSchema } from './bug-report.schema';
-import { RunComparisonSchema } from './comparison-schema';
-import { sanitizeForLlm } from './sanitize';
+import type { ZodSchema } from './types.js';
+import type { ArtifactType } from './llm-review-types.js';
+import { FailureAnalysisSchema } from './failure-analysis.schema.js';
+import { TestSuiteSchema } from './test-suite.schema.js';
+import { PipelineClassificationSchema } from './pipeline-schema.js';
+import { AiBugReportSchema } from './bug-report.schema.js';
+import { RunComparisonSchema } from './comparison-schema.js';
+import { sanitizeForLlm } from './sanitize.js';
 
 export const ADVERSARIAL_TIERS = ['report', 'fast', 'fallback'] as const;
 export const REV_TIERS = ['reviewer', 'fast', 'fallback'] as const;

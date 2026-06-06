@@ -1,6 +1,6 @@
-import { nullAs } from './test-utils';
-import { computeCrossSquadBenchmark, generateBenchmarkHtml } from './cross-squad-benchmark';
-import type { CrossSquadResult } from './cross-squad-benchmark';
+import { nullAs } from './test-utils.js';
+import { computeCrossSquadBenchmark, generateBenchmarkHtml } from './cross-squad-benchmark.js';
+import type { CrossSquadResult } from './cross-squad-benchmark.js';
 
 function makeSquads() {
     return [
@@ -48,28 +48,28 @@ function makeSquads() {
 }
 
 describe('computeCrossSquadBenchmark', () => {
-    it('sorts squads by healthScore descending', () => {
+    it('sorts squads by healthScore descending', async () => {
         const result = computeCrossSquadBenchmark(makeSquads());
         const scores = result.benchmarks.map((b) => b.healthScore);
         expect(scores).toEqual([92, 78, 64, 45]);
     });
 
-    it('identifies top squad', () => {
+    it('identifies top squad', async () => {
         const result = computeCrossSquadBenchmark(makeSquads());
         expect(result.topSquad).toBe('Squad Alpha');
     });
 
-    it('identifies bottom squad', () => {
+    it('identifies bottom squad', async () => {
         const result = computeCrossSquadBenchmark(makeSquads());
         expect(result.bottomSquad).toBe('Squad Delta');
     });
 
-    it('computes average score correctly', () => {
+    it('computes average score correctly', async () => {
         const result = computeCrossSquadBenchmark(makeSquads());
         expect(result.averageScore).toBe(69.75);
     });
 
-    it('computes stdDev for multiple squads', () => {
+    it('computes stdDev for multiple squads', async () => {
         const result = computeCrossSquadBenchmark(makeSquads());
         const expected = Math.sqrt(
             [(92 - 69.75) ** 2, (78 - 69.75) ** 2, (64 - 69.75) ** 2, (45 - 69.75) ** 2].reduce((a, b) => a + b) / 4,
@@ -77,14 +77,14 @@ describe('computeCrossSquadBenchmark', () => {
         expect(result.stdDev).toBeCloseTo(expected, 10);
     });
 
-    it('returns 0 stdDev for single squad', () => {
+    it('returns 0 stdDev for single squad', async () => {
         const result = computeCrossSquadBenchmark([
             { name: 'Solo', healthScore: 80, grade: 'B', passRate: 90, flakyRate: 5, coveragePct: 75, runCount: 50 },
         ]);
         expect(result.stdDev).toBe(0);
     });
 
-    it('handles empty projects array', () => {
+    it('handles empty projects array', async () => {
         const result = computeCrossSquadBenchmark([]);
         expect(result.benchmarks).toEqual([]);
         expect(result.topSquad).toBe('');
@@ -94,7 +94,7 @@ describe('computeCrossSquadBenchmark', () => {
         expect(result.timestamp).toBeDefined();
     });
 
-    it('handles single squad with same top and bottom', () => {
+    it('handles single squad with same top and bottom', async () => {
         const result = computeCrossSquadBenchmark([
             { name: 'Solo', healthScore: 75, grade: 'C', passRate: 80, flakyRate: 10, coveragePct: 65, runCount: 30 },
         ]);
@@ -104,7 +104,7 @@ describe('computeCrossSquadBenchmark', () => {
         expect(result.averageScore).toBe(75);
     });
 
-    it('sets trend to up when current > previous', () => {
+    it('sets trend to up when current > previous', async () => {
         const result = computeCrossSquadBenchmark([
             {
                 name: 'Up Squad',
@@ -120,7 +120,7 @@ describe('computeCrossSquadBenchmark', () => {
         expect(result.benchmarks[0]?.trend).toBe('up');
     });
 
-    it('sets trend to down when current < previous', () => {
+    it('sets trend to down when current < previous', async () => {
         const result = computeCrossSquadBenchmark([
             {
                 name: 'Down Squad',
@@ -136,7 +136,7 @@ describe('computeCrossSquadBenchmark', () => {
         expect(result.benchmarks[0]?.trend).toBe('down');
     });
 
-    it('sets trend to stable when no previousScore', () => {
+    it('sets trend to stable when no previousScore', async () => {
         const result = computeCrossSquadBenchmark([
             {
                 name: 'New Squad',
@@ -151,7 +151,7 @@ describe('computeCrossSquadBenchmark', () => {
         expect(result.benchmarks[0]?.trend).toBe('stable');
     });
 
-    it('sets trend to stable when scores equal', () => {
+    it('sets trend to stable when scores equal', async () => {
         const result = computeCrossSquadBenchmark([
             {
                 name: 'Stable Squad',
@@ -167,19 +167,19 @@ describe('computeCrossSquadBenchmark', () => {
         expect(result.benchmarks[0]?.trend).toBe('stable');
     });
 
-    it('does not mutate the input array', () => {
+    it('does not mutate the input array', async () => {
         const input = makeSquads();
         const original = [...input];
         computeCrossSquadBenchmark(input);
         expect(input).toEqual(original);
     });
 
-    it('includes timestamp in ISO format', () => {
+    it('includes timestamp in ISO format', async () => {
         const result = computeCrossSquadBenchmark(makeSquads());
         expect(result.timestamp).toMatch(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}/);
     });
 
-    it('preserves all squad fields in benchmark output', () => {
+    it('preserves all squad fields in benchmark output', async () => {
         const result = computeCrossSquadBenchmark(makeSquads());
         const alpha = result.benchmarks.find((b) => b.project === 'Squad Alpha');
         expect(alpha).toBeDefined();
@@ -197,7 +197,7 @@ describe('generateBenchmarkHtml', () => {
         return computeCrossSquadBenchmark(makeSquads());
     }
 
-    it('produces valid HTML document structure', () => {
+    it('produces valid HTML document structure', async () => {
         const html = generateBenchmarkHtml(makeResult());
         expect(html).toContain('<!DOCTYPE html>');
         expect(html).toContain('<html');
@@ -206,46 +206,46 @@ describe('generateBenchmarkHtml', () => {
         expect(html).toContain('</html>');
     });
 
-    it('renders default title', () => {
+    it('renders default title', async () => {
         const html = generateBenchmarkHtml(makeResult());
         expect(html).toContain('Cross-Squad Benchmark');
     });
 
-    it('uses custom title when provided', () => {
+    it('uses custom title when provided', async () => {
         const html = generateBenchmarkHtml(makeResult(), 'Sprint 11 Review');
         expect(html).toContain('Sprint 11 Review');
         expect(html).not.toContain('Cross-Squad Benchmark');
     });
 
-    it('renders summary cards with average score', () => {
+    it('renders summary cards with average score', async () => {
         const html = generateBenchmarkHtml(makeResult());
         expect(html).toContain('Average Score');
         expect(html).toContain('69.8');
     });
 
-    it('renders summary card with std deviation', () => {
+    it('renders summary card with std deviation', async () => {
         const html = generateBenchmarkHtml(makeResult());
         expect(html).toContain('Std Deviation');
     });
 
-    it('renders summary card with top squad name', () => {
+    it('renders summary card with top squad name', async () => {
         const html = generateBenchmarkHtml(makeResult());
         expect(html).toContain('Top Squad');
         expect(html).toContain('Squad Alpha');
     });
 
-    it('renders summary card with bottom squad name', () => {
+    it('renders summary card with bottom squad name', async () => {
         const html = generateBenchmarkHtml(makeResult());
         expect(html).toContain('Bottom Squad');
         expect(html).toContain('Squad Delta');
     });
 
-    it('renders leaderboard heading', () => {
+    it('renders leaderboard heading', async () => {
         const html = generateBenchmarkHtml(makeResult());
         expect(html).toContain('Leaderboard');
     });
 
-    it('renders table with all squad rows', () => {
+    it('renders table with all squad rows', async () => {
         const html = generateBenchmarkHtml(makeResult());
         expect(html).toContain('Squad Alpha');
         expect(html).toContain('Squad Beta');
@@ -253,7 +253,7 @@ describe('generateBenchmarkHtml', () => {
         expect(html).toContain('Squad Delta');
     });
 
-    it('renders grade badges with correct variants', () => {
+    it('renders grade badges with correct variants', async () => {
         const html = generateBenchmarkHtml(makeResult());
         expect(html).toContain('data-component="badge"');
         expect(html).toContain('data-variant="pass"');
@@ -262,7 +262,7 @@ describe('generateBenchmarkHtml', () => {
         expect(html).toContain('data-variant="fail"');
     });
 
-    it('renders trend indicators for each squad', () => {
+    it('renders trend indicators for each squad', async () => {
         const result = computeCrossSquadBenchmark([
             {
                 name: 'Trend Up',
@@ -301,7 +301,7 @@ describe('generateBenchmarkHtml', () => {
         expect(html).toContain('\u2192 Stable');
     });
 
-    it('renders empty state when no benchmarks', () => {
+    it('renders empty state when no benchmarks', async () => {
         const empty: CrossSquadResult = {
             benchmarks: [],
             topSquad: '',
@@ -316,7 +316,7 @@ describe('generateBenchmarkHtml', () => {
         expect(html).not.toContain('data-row="squad-0"');
     });
 
-    it('shows dash placeholders for empty benchmarks', () => {
+    it('shows dash placeholders for empty benchmarks', async () => {
         const empty: CrossSquadResult = {
             benchmarks: [],
             topSquad: '',
@@ -329,17 +329,17 @@ describe('generateBenchmarkHtml', () => {
         expect(html).toContain('\u2014');
     });
 
-    it('includes generated footer text', () => {
+    it('includes generated footer text', async () => {
         const html = generateBenchmarkHtml(makeResult());
         expect(html).toContain('Generated by QA Tools');
     });
 
-    it('returns error HTML when result is null', () => {
+    it('returns error HTML when result is null', async () => {
         const html = generateBenchmarkHtml(nullAs());
         expect(html).toContain('Error generating benchmark report');
     });
 
-    it('sanitizes HTML in project names', () => {
+    it('sanitizes HTML in project names', async () => {
         const result = computeCrossSquadBenchmark([
             {
                 name: '<script>alert("xss")</script>',
@@ -356,7 +356,7 @@ describe('generateBenchmarkHtml', () => {
         expect(html).not.toContain('<script>alert');
     });
 
-    it('renders unknown grade with default badge variant', () => {
+    it('renders unknown grade with default badge variant', async () => {
         const result = computeCrossSquadBenchmark([
             {
                 name: 'Squad X',

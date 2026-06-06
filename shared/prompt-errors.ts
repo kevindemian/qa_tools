@@ -1,9 +1,9 @@
 /** Error handling: known error patterns, formatting, user prompts. */
 import chalk from 'chalk';
-import { box, divider as boxDivider } from './box';
-import { palette } from './palette';
-import { defaultOutput as output } from './output';
-import { rootLogger } from './logger';
+import { box, divider as boxDivider } from './box.js';
+import { palette } from './palette.js';
+import { defaultOutput as output } from './output.js';
+import { rootLogger } from './logger.js';
 import {
     isQuiet,
     getConfig,
@@ -15,7 +15,7 @@ import {
     MSG_UNEXPECTED,
     SUMMARY_BOX_WIDTH,
     STACK_TRACE_LINES,
-} from './prompt-format';
+} from './prompt-format.js';
 import readlineSync from 'readline-sync';
 
 interface KnownError {

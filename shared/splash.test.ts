@@ -1,4 +1,5 @@
-import { nonNull } from './test-utils';
+import { nonNull } from './test-utils.js';
+import type { Mock } from 'vitest';
 import http from 'http';
 import {
     buildSplashLines,
@@ -8,10 +9,10 @@ import {
     __setGradientDep,
     __setHttpsDep,
     __setHttpDep,
-} from './splash';
+} from './splash.js';
 
 describe('buildSplashLines', () => {
-    it('formats logo lines with help hint', () => {
+    it('formats logo lines with help hint', async () => {
         const lines = buildSplashLines('QA TOOLS\n======');
         const output = lines.join('\n');
         expect(output).toContain('QA TOOLS');
@@ -19,31 +20,31 @@ describe('buildSplashLines', () => {
         expect(output).toContain('Gestão');
     });
 
-    it('includes statePath when provided', () => {
+    it('includes statePath when provided', async () => {
         const lines = buildSplashLines('QA TOOLS', '/path/to/state.json');
         const output = lines.join('\n');
         expect(output).toContain('/path/to/state.json');
     });
 
-    it('omits statePath when not provided', () => {
+    it('omits statePath when not provided', async () => {
         const lines = buildSplashLines('QA TOOLS');
         const output = lines.join('\n');
         expect(output).not.toContain('State:');
     });
 
-    it('handles empty logo gracefully', () => {
+    it('handles empty logo gracefully', async () => {
         const lines = buildSplashLines('');
         expect(lines.length).toBeGreaterThan(0);
         expect(lines[0]).toBe('');
     });
 
-    it('skips blank logo lines', () => {
+    it('skips blank logo lines', async () => {
         const lines = buildSplashLines('\n\n');
         const output = lines.join('\n');
         expect(output).toContain('Gestão');
     });
 
-    it('includes status checks when provided', () => {
+    it('includes status checks when provided', async () => {
         const lines = buildSplashLines('QA TOOLS', undefined, [
             { label: 'Jira API', status: 'ok', detail: 'online' },
             { label: 'Token', status: 'info', detail: 'não configurado' },
@@ -54,7 +55,7 @@ describe('buildSplashLines', () => {
         expect(output).toContain('online');
     });
 
-    it('renders error status with red dot', () => {
+    it('renders error status with red dot', async () => {
         const lines = buildSplashLines('QA TOOLS', undefined, [
             { label: 'Jira API', status: 'error', detail: 'offline' },
         ]);
@@ -64,9 +65,11 @@ describe('buildSplashLines', () => {
     });
 });
 
-jest.mock('./output', () => ({
-    Output: { isTTY: jest.fn().mockReturnValue(true), isCI: jest.fn().mockReturnValue(false) },
-    defaultOutput: { box: jest.fn(), print: jest.fn() },
+vi.mock('gradient-string', () => ({ default: undefined }));
+
+vi.mock('./output', async () => ({
+    Output: { isTTY: vi.fn().mockReturnValue(true), isCI: vi.fn().mockReturnValue(false) },
+    defaultOutput: { box: vi.fn(), print: vi.fn() },
 }));
 
 describe('checkJiraStatus', () => {
@@ -86,21 +89,23 @@ describe('checkJiraStatus', () => {
         let server: http.Server;
         let port: number;
 
-        beforeAll((done) => {
+        beforeAll(async () => {
             __setHttpDep(http);
-            __setHttpsDep(require('https'));
+            __setHttpsDep(await import('https'));
             server = http.createServer((_req, res) => {
                 res.writeHead(200, { 'Content-Type': 'application/json' });
                 res.end(JSON.stringify({}));
             });
-            server.listen(0, () => {
-                port = (server.address() as { port: number }).port;
-                done();
+            await new Promise<void>((resolve) => {
+                server.listen(0, () => {
+                    port = (server.address() as { port: number }).port;
+                    resolve();
+                });
             });
         });
 
-        afterAll((done) => {
-            server.close(done);
+        afterAll(async () => {
+            await new Promise<void>((resolve, _reject) => server.close((err) => (err ? _reject(err) : resolve())));
         });
 
         it('returns ok when HTTP request succeeds', async () => {
@@ -115,12 +120,12 @@ describe('checkJiraStatus', () => {
         });
 
         it('returns error on timeout', async () => {
-            const mockReq = { on: jest.fn(), setTimeout: jest.fn(), destroy: jest.fn() };
+            const mockReq = { on: vi.fn(), setTimeout: vi.fn(), destroy: vi.fn() };
             mockReq.setTimeout.mockImplementation((_ms: number, handler: () => void) => {
                 handler();
                 return mockReq;
             });
-            __setHttpDep({ get: jest.fn(() => mockReq) });
+            __setHttpDep({ get: vi.fn(() => mockReq) });
             const result = await checkJiraStatus('http://localhost:1', 'valid-token');
             expect(result.status).toBe('error');
             expect(mockReq.destroy).toHaveBeenCalled();
@@ -149,7 +154,7 @@ describe('checkJiraStatus', () => {
             __setHttpsDep(undefined);
             const result = await checkJiraStatus('https://jira.example.com', 'valid-token');
             expect(result.status).toBe('error');
-            __setHttpsDep(require('https'));
+            __setHttpsDep(await import('https'));
         });
 
         it('handles http dynamic import fallback failure', async () => {
@@ -162,12 +167,12 @@ describe('checkJiraStatus', () => {
 });
 
 describe('showSplash', () => {
-    const mockFiglet = { textSync: jest.fn().mockReturnValue('QA TOOLS\n======') };
-    const mockGradientColor = jest.fn((text: string) => text);
-    const mockGradient = jest.fn(() => mockGradientColor);
+    const mockFiglet = { textSync: vi.fn().mockReturnValue('QA TOOLS\n======') };
+    const mockGradientColor = vi.fn((text: string) => text);
+    const mockGradient = vi.fn(() => mockGradientColor);
     let outputMod: {
-        Output: { isTTY: jest.Mock<boolean, []>; isCI: jest.Mock<boolean, []> };
-        defaultOutput: { box: jest.Mock<void, [string[]]>; print: jest.Mock };
+        Output: { isTTY: Mock<(...args: []) => boolean>; isCI: Mock<(...args: []) => boolean> };
+        defaultOutput: { box: Mock<(...args: [string[]]) => void>; print: Mock };
     };
 
     const mockHttpsModule = {
@@ -177,8 +182,8 @@ describe('showSplash', () => {
         },
     };
 
-    beforeEach(() => {
-        outputMod = jest.requireMock<typeof outputMod>('./output');
+    beforeEach(async () => {
+        outputMod = await vi.importMock<typeof outputMod>('./output');
         outputMod.Output.isTTY.mockReturnValue(true);
         outputMod.Output.isCI.mockReturnValue(false);
         __setFigletDep(mockFiglet);
@@ -188,7 +193,7 @@ describe('showSplash', () => {
     });
 
     afterEach(() => {
-        jest.clearAllMocks();
+        vi.clearAllMocks();
     });
 
     it('renders splash with figlet and gradient', async () => {

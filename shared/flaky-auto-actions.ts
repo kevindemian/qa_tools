@@ -1,9 +1,9 @@
-import { rootLogger } from './logger';
-import type { JiraResourceLike } from './types';
-import type { FlakyAction, FlakyActionConfig } from './types';
-import type { FlakinessEntry, MetricsStore } from './metrics';
-import { quarantineTest } from './quarantine';
-import Config from './config-accessor';
+import { rootLogger } from './logger.js';
+import type { JiraResourceLike } from './types.js';
+import type { FlakyAction, FlakyActionConfig } from './types.js';
+import type { FlakinessEntry, MetricsStore } from './metrics.js';
+import { quarantineTest } from './quarantine.js';
+import Config from './config-accessor.js';
 
 const DEFAULT_CONFIG: FlakyActionConfig = {
     threshold: 0.3,

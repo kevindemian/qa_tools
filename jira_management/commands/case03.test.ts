@@ -1,25 +1,25 @@
-jest.mock('../../shared/prompt');
+vi.mock('../../shared/prompt');
 
-jest.mock('../../shared/jira-helper', () => ({
-    safeJiraCall: jest.fn(),
+vi.mock('../../shared/jira-helper', async () => ({
+    safeJiraCall: vi.fn(),
 }));
 
-import case03 from './case03';
-import { makeMockCommandContext } from '../../shared/test-utils';
+import case03 from './case03.js';
+import { makeMockCommandContext } from '../../shared/test-utils.js';
 
 const mockJiraResource = {
-    getProjectId: jest.fn().mockResolvedValue('123'),
-    createVersion: jest.fn().mockResolvedValue({}),
+    getProjectId: vi.fn().mockResolvedValue('123'),
+    createVersion: vi.fn().mockResolvedValue({}),
 };
 
 const mockContext = makeMockCommandContext({ jiraResource: mockJiraResource });
 
 beforeEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
 });
 
 describe('case03 — create version', () => {
-    it('exports a handler function', () => {
+    it('exports a handler function', async () => {
         expect(case03).toBeDefined();
         expect(typeof case03.handler).toBe('function');
     });

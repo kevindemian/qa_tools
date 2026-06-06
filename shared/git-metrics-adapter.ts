@@ -15,9 +15,9 @@
  */
 
 import { execFileSync } from 'child_process';
-import { rootLogger } from './logger';
-import type { MetricsRun, FailureClassification } from './metrics';
-import type { FlatTest } from './result_parser';
+import { rootLogger } from './logger.js';
+import type { MetricsRun, FailureClassification } from './metrics.js';
+import type { FlatTest } from './result_parser.js';
 
 export interface GitCommitEntry {
     hash: string;

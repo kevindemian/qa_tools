@@ -1,25 +1,27 @@
-import { createThrottledClient } from '../shared/http-client';
-import GitLabManager from './gitlab_manager';
-import { createMockAxiosInstance } from '../shared/test-utils/factories/response-factory';
-import { nonNull } from '../shared/test-utils';
+import { createThrottledClient } from '../shared/http-client.js';
+import GitLabManager from './gitlab_manager.js';
+import { createMockAxiosInstance } from '../shared/test-utils/factories/response-factory.js';
+import { nonNull } from '../shared/test-utils.js';
 
-jest.mock('../shared/http-client', () => ({
-    createHttpClient: jest.fn(),
-    createThrottledClient: jest.fn(),
+vi.mock('../shared/http-client', async () => ({
+    createHttpClient: vi.fn(),
+    createThrottledClient: vi.fn(),
 }));
 
-jest.mock('../shared/logger', () => ({
-    Logger: jest.fn().mockImplementation(() => ({ error: jest.fn() })),
-    rootLogger: { error: jest.fn(), warn: jest.fn() },
+vi.mock('../shared/logger', async () => ({
+    Logger: vi.fn().mockImplementation(function () {
+        return { error: vi.fn() };
+    }),
+    rootLogger: { error: vi.fn(), warn: vi.fn() },
 }));
 
-jest.mock('../shared/prompt', () => ({
-    info: jest.fn(),
-    extractErrorMessage: jest.fn((err: Error) => err?.message || 'Erro desconhecido'),
+vi.mock('../shared/prompt', async () => ({
+    info: vi.fn(),
+    extractErrorMessage: vi.fn((err: Error) => err?.message || 'Erro desconhecido'),
 }));
 
-jest.mock('../shared/git-provider-error', () => ({
-    handleError: jest.fn((err: unknown, opts?: { returnNull?: boolean }) => {
+vi.mock('../shared/git-provider-error', async () => ({
+    handleError: vi.fn((err: unknown, opts?: { returnNull?: boolean }) => {
         if (opts?.returnNull) return null;
         throw err;
     }),
@@ -31,18 +33,18 @@ describe('GitLabManager', () => {
 
     beforeEach(() => {
         mockClient = createMockAxiosInstance();
-        jest.mocked(createThrottledClient).mockReturnValue(mockClient);
+        vi.mocked(createThrottledClient).mockReturnValue(mockClient);
         manager = new GitLabManager('project-123', 'test-token', 'https://gitlab.test.com');
     });
 
     describe('constructor', () => {
-        it('throws when apiToken is empty string', () => {
+        it('throws when apiToken is empty string', async () => {
             expect(() => new GitLabManager('project-123', '', 'https://gitlab.test.com')).toThrow(
                 'apiToken é obrigatório',
             );
         });
 
-        it('throws when projectId is empty string', () => {
+        it('throws when projectId is empty string', async () => {
             expect(() => new GitLabManager('', 'test-token', 'https://gitlab.test.com')).toThrow(
                 'projectId é obrigatório',
             );

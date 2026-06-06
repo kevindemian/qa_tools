@@ -44,7 +44,7 @@ export function truncateStacktrace(input: string, maxLines: number = 20): string
     return lines.slice(0, maxLines).join('\n') + '\n[... truncated (' + (lines.length - maxLines) + ' more lines) ...]';
 }
 
-export { sanitizeHtml } from './escape';
+export { sanitizeHtml } from './escape.js';
 
 const ESC = String.fromCharCode(27);
 const ANSI_ESCAPE_RE = new RegExp(ESC + '\\[[0-9;]*[a-zA-Z]', 'g');

@@ -1,12 +1,12 @@
-jest.mock('./llm-client', () => ({
-    llmPrompt: jest.fn(),
+vi.mock('./llm-client', async () => ({
+    llmPrompt: vi.fn(),
 }));
 
-import { llmPrompt } from './llm-client';
-import { ArtifactValidator } from './artifact-validator';
-import { consensusGenerate } from './llm-self-consistency';
+import { llmPrompt } from './llm-client.js';
+import { ArtifactValidator } from './artifact-validator.js';
+import { consensusGenerate } from './llm-self-consistency.js';
 
-const mockLlmPrompt = jest.mocked(llmPrompt);
+const mockLlmPrompt = vi.mocked(llmPrompt);
 
 describe('consensusGenerate', () => {
     const validator = new ArtifactValidator('test-suite');
@@ -17,7 +17,7 @@ describe('consensusGenerate', () => {
     const context = { inputRaw: '', outputRaw: {}, artifactType: 'test-suite' as const };
 
     beforeEach(() => {
-        jest.clearAllMocks();
+        vi.clearAllMocks();
     });
 
     it('returns consensus when all candidates pass and agree', async () => {

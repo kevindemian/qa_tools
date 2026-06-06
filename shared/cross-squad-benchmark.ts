@@ -8,13 +8,13 @@
  * @module cross-squad-benchmark
  */
 
-import { sanitizeHtml } from './sanitize';
-import { buildHtmlPage, buildErrorPage } from './html-factory';
-import { buildCss } from './report-styles';
-import { formatDateISO } from './date-utils';
-import { Card, MetricCard, MetricGrid, Badge, DataTable } from './primitives';
-import type { TableColumn, TableRow } from './primitives';
-import { rootLogger } from './logger';
+import { sanitizeHtml } from './sanitize.js';
+import { buildHtmlPage, buildErrorPage } from './html-factory.js';
+import { buildCss } from './report-styles.js';
+import { formatDateISO } from './date-utils.js';
+import { Card, MetricCard, MetricGrid, Badge, DataTable } from './primitives/index.js';
+import type { TableColumn, TableRow } from './primitives/index.js';
+import { rootLogger } from './logger.js';
 
 export interface SquadBenchmark {
     project: string;

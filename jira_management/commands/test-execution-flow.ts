@@ -1,12 +1,12 @@
 /** Test Execution flow — shared prompt + dispatch for creating or reusing a Test Execution,
  * plus a unified preview of created tests and their TE association.
  * Extracted to a single module per SRP: all creation handlers call this instead of duplicating prompts. */
-import { printError, ask, info, warn, success, title, divider } from '../../shared/prompt';
-import type { CommandContext } from './context';
-import type { TestExecutionSummary } from '../../shared/types';
-import TestExecutionCreator from '../test-execution-creator';
+import { printError, ask, info, warn, success, title, divider } from '../../shared/prompt.js';
+import type { CommandContext } from './context.js';
+import type { TestExecutionSummary } from '../../shared/types.js';
+import TestExecutionCreator from '../test-execution-creator.js';
 // anti-circular (prompt -> create_tests -> session-context -> prompt)
-import createTests from '../create_tests';
+import createTests from '../create_tests.js';
 
 /** Result of a Test Execution association operation. */
 export interface TestExecutionAssociationResult {

@@ -1,12 +1,12 @@
 /** User-facing UI output: styled messages, tables, and formatting helpers. */
-import chalk from 'chalk';
+import chalk, { type ChalkInstance } from 'chalk';
 import CliTable3 from 'cli-table3';
-import ConfigAccessor from './config-accessor';
-import { rootLogger } from './logger';
-import { box, divider as boxDivider, visibleWidth } from './box';
-import { palette } from './palette';
-import { Output, defaultOutput as output } from './output';
-import { getBreadcrumbPath } from './breadcrumbs';
+import ConfigAccessor from './config-accessor.js';
+import { rootLogger } from './logger.js';
+import { box, divider as boxDivider, visibleWidth } from './box.js';
+import { palette } from './palette.js';
+import { Output, defaultOutput as output } from './output.js';
+import { getBreadcrumbPath } from './breadcrumbs.js';
 
 let _config: ConfigAccessor | null = null;
 
@@ -28,7 +28,7 @@ const TITLE_BOX_WIDTH = 60;
 const MIN_COLUMN_WIDTH = 3;
 
 export function badge(count: number, label: string, status: 'ok' | 'error' | 'warn' | 'info'): string {
-    const colors: Record<string, chalk.Chalk> = {
+    const colors: Record<string, ChalkInstance> = {
         ok: chalk.hex('#3fb950'),
         error: chalk.hex('#f85149'),
         warn: chalk.hex('#d29922'),
@@ -51,7 +51,7 @@ export function icon(name: 'ok' | 'err' | 'warn' | 'info'): string {
 
 type LogLevel = 'INFO' | 'ERROR' | 'WARN' | 'HELP';
 
-function _log(level: LogLevel, color: chalk.Chalk, iconName: string, msg: string, quietOk?: boolean): void {
+function _log(level: LogLevel, color: ChalkInstance, iconName: string, msg: string, quietOk?: boolean): void {
     if (quietOk || !isQuiet()) {
         output.print(color.bold(icon(iconName as 'ok' | 'err' | 'warn' | 'info')) + ' ' + msg);
     }

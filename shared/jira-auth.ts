@@ -13,7 +13,7 @@
  *    // => { Authorization: 'Bearer <token>' }
  *    // or { Authorization: 'Basic <base64>' }
  */
-import { rootLogger } from './logger';
+import { rootLogger } from './logger.js';
 
 /** Valid Jira operation modes. */
 export type JiraMode = 'server' | 'cloud';

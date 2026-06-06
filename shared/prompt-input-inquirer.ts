@@ -1,9 +1,9 @@
 /** Inquirer-based interactive prompts: select menus, async text input, confirmations.
  * @module Falls back to synchronous prompt/confirm when inquirer modules are unavailable. */
-import { Output, defaultOutput as output } from './output';
-import { palette } from './palette';
-import { CancelError, warn } from './prompt-ui';
-import { PromptOptions, NAV_CMDS, prompt, confirm, isTTY } from './prompt-input-base';
+import { Output, defaultOutput as output } from './output.js';
+import { palette } from './palette.js';
+import { CancelError, warn } from './prompt-ui.js';
+import { PromptOptions, NAV_CMDS, prompt, confirm, isTTY } from './prompt-input-base.js';
 
 export interface SelectChoice {
     name?: string;

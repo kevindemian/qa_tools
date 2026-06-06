@@ -1,11 +1,11 @@
 /** Generate mapping JSON files that link test titles to Jira issue keys after import. */
 import fs from 'fs';
 import path from 'path';
-import { rootLogger } from '../shared/logger';
-import { info, isQuiet } from '../shared/prompt';
-import { reportsDir } from '../shared/temp-dir';
-import type { TestCase } from '../shared/types';
-import { generatePreviewMarkdown } from './import-prep';
+import { rootLogger } from '../shared/logger.js';
+import { info, isQuiet } from '../shared/prompt.js';
+import { reportsDir } from '../shared/temp-dir.js';
+import type { TestCase } from '../shared/types.js';
+import { generatePreviewMarkdown } from './import-prep.js';
 
 interface MappingEntry {
     title: string;

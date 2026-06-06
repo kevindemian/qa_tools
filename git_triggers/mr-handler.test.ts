@@ -1,48 +1,48 @@
-jest.mock('../shared/prompt', () => ({
-    print: jest.fn(),
-    success: jest.fn(),
-    warn: jest.fn(),
-    info: jest.fn(),
-    prompt: jest.fn(),
-    confirm: jest.fn(),
-    printError: jest.fn(),
-    withSpinner: jest.fn(<T>(_: string, fn: () => Promise<T>) => fn()),
-    divider: jest.fn(),
+vi.mock('../shared/prompt', async () => ({
+    print: vi.fn(),
+    success: vi.fn(),
+    warn: vi.fn(),
+    info: vi.fn(),
+    prompt: vi.fn(),
+    confirm: vi.fn(),
+    printError: vi.fn(),
+    withSpinner: vi.fn(<T>(_: string, fn: () => Promise<T>) => fn()),
+    divider: vi.fn(),
 }));
 
-jest.mock('./session-state', () => ({
+vi.mock('./session-state', async () => ({
     currentProvider: 'gitlab',
-    pushHistory: jest.fn(),
+    pushHistory: vi.fn(),
 }));
 
-jest.mock('./ai-pr-desc', () => ({ generatePrDescription: jest.fn() }));
-jest.mock('./ai-test-impact', () => ({ assessTestImpact: jest.fn() }));
-jest.mock('./nivelar', () => ({ nivelarBranches: jest.fn() }));
+vi.mock('./ai-pr-desc', async () => ({ generatePrDescription: vi.fn() }));
+vi.mock('./ai-test-impact', async () => ({ assessTestImpact: vi.fn() }));
+vi.mock('./nivelar', async () => ({ nivelarBranches: vi.fn() }));
 
-jest.mock('../shared/temp-dir', () => ({
-    reportsDir: jest.fn(() => '/tmp/reports'),
+vi.mock('../shared/temp-dir', async () => ({
+    reportsDir: vi.fn(() => '/tmp/reports'),
 }));
 
-import { success, warn, info, prompt, confirm, printError } from '../shared/prompt';
-import { pushHistory } from './session-state';
-import { generatePrDescription } from './ai-pr-desc';
-import { assessTestImpact } from './ai-test-impact';
-import { nivelarBranches } from './nivelar';
-import { handleCreateMR, handleListApprovedMRs, handleMergeMR, nivelarBranchesWrapper } from './mr-handler';
-import type { MergeRequestInfo } from '../shared/types';
-import { createMockGitProvider } from '../shared/test-utils/factories';
+import { success, warn, info, prompt, confirm, printError } from '../shared/prompt.js';
+import { pushHistory } from './session-state.js';
+import { generatePrDescription } from './ai-pr-desc.js';
+import { assessTestImpact } from './ai-test-impact.js';
+import { nivelarBranches } from './nivelar.js';
+import { handleCreateMR, handleListApprovedMRs, handleMergeMR, nivelarBranchesWrapper } from './mr-handler.js';
+import type { MergeRequestInfo } from '../shared/types.js';
+import { createMockGitProvider } from '../shared/test-utils/factories/index.js';
 
-const mockPrompt = jest.mocked(prompt);
-const mockConfirm = jest.mocked(confirm);
-const mockPrintError = jest.mocked(printError);
-const mockGeneratePrDesc = jest.mocked(generatePrDescription);
-const mockAssessImpact = jest.mocked(assessTestImpact);
-const mockNivelar = jest.mocked(nivelarBranches);
+const mockPrompt = vi.mocked(prompt);
+const mockConfirm = vi.mocked(confirm);
+const mockPrintError = vi.mocked(printError);
+const mockGeneratePrDesc = vi.mocked(generatePrDescription);
+const mockAssessImpact = vi.mocked(assessTestImpact);
+const mockNivelar = vi.mocked(nivelarBranches);
 
 const mockM = createMockGitProvider();
 
 beforeEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
     mockPrompt.mockReturnValue('test-branch');
     mockConfirm.mockReturnValue(false);
 });
@@ -62,7 +62,7 @@ describe('handleCreateMR', () => {
             .mockReturnValueOnce('main')
             .mockReturnValueOnce('Title')
             .mockReturnValueOnce('Manual desc');
-        jest.mocked(mockM.createMergeRequest).mockResolvedValue({ web_url: 'https://gitlab.com/merge/1' });
+        vi.mocked(mockM.createMergeRequest).mockResolvedValue({ web_url: 'https://gitlab.com/merge/1' });
 
         await handleCreateMR(mockM);
 
@@ -74,7 +74,7 @@ describe('handleCreateMR', () => {
         mockConfirm.mockReturnValueOnce(true).mockReturnValueOnce(false);
         mockGeneratePrDesc.mockResolvedValue('AI generated description');
         mockPrompt.mockReturnValueOnce('feat').mockReturnValueOnce('main').mockReturnValueOnce('Title');
-        jest.mocked(mockM.createMergeRequest).mockResolvedValue({ web_url: 'https://gitlab.com/merge/1' });
+        vi.mocked(mockM.createMergeRequest).mockResolvedValue({ web_url: 'https://gitlab.com/merge/1' });
 
         await handleCreateMR(mockM);
 
@@ -90,7 +90,7 @@ describe('handleCreateMR', () => {
             .mockReturnValueOnce('main')
             .mockReturnValueOnce('Title')
             .mockReturnValueOnce('Manual desc');
-        jest.mocked(mockM.createMergeRequest).mockResolvedValue({ web_url: 'https://gitlab.com/merge/1' });
+        vi.mocked(mockM.createMergeRequest).mockResolvedValue({ web_url: 'https://gitlab.com/merge/1' });
 
         await handleCreateMR(mockM);
 
@@ -106,7 +106,7 @@ describe('handleCreateMR', () => {
             .mockReturnValueOnce('main')
             .mockReturnValueOnce('Title')
             .mockReturnValueOnce('Desc');
-        jest.mocked(mockM.createMergeRequest).mockResolvedValue({ web_url: 'https://gitlab.com/merge/1' });
+        vi.mocked(mockM.createMergeRequest).mockResolvedValue({ web_url: 'https://gitlab.com/merge/1' });
 
         await handleCreateMR(mockM);
 
@@ -121,7 +121,7 @@ describe('handleCreateMR', () => {
             .mockReturnValueOnce('main')
             .mockReturnValueOnce('Title')
             .mockReturnValueOnce('Desc');
-        jest.mocked(mockM.createMergeRequest).mockRejectedValue(new Error('API error'));
+        vi.mocked(mockM.createMergeRequest).mockRejectedValue(new Error('API error'));
 
         await handleCreateMR(mockM);
 
@@ -137,8 +137,8 @@ describe('handleListApprovedMRs', () => {
             { iid: 1, title: 'MR 1' },
             { iid: 2, title: 'MR 2' },
         ] as MergeRequestInfo[];
-        jest.mocked(mockM.searchMergeRequests).mockResolvedValue(mrs);
-        jest.mocked(mockM.isApproved).mockResolvedValue(true);
+        vi.mocked(mockM.searchMergeRequests).mockResolvedValue(mrs);
+        vi.mocked(mockM.isApproved).mockResolvedValue(true);
 
         await handleListApprovedMRs(mockM);
 
@@ -148,7 +148,7 @@ describe('handleListApprovedMRs', () => {
 
     it('warns when no approved MRs', async () => {
         mockPrompt.mockReturnValue('opened');
-        jest.mocked(mockM.searchMergeRequests).mockResolvedValue([]);
+        vi.mocked(mockM.searchMergeRequests).mockResolvedValue([]);
 
         await handleListApprovedMRs(mockM);
 
@@ -157,7 +157,7 @@ describe('handleListApprovedMRs', () => {
 
     it('handles search error', async () => {
         mockPrompt.mockReturnValue('opened');
-        jest.mocked(mockM.searchMergeRequests).mockRejectedValue(new Error('search fail'));
+        vi.mocked(mockM.searchMergeRequests).mockRejectedValue(new Error('search fail'));
 
         await handleListApprovedMRs(mockM);
 
@@ -168,7 +168,7 @@ describe('handleListApprovedMRs', () => {
     it('handles provider without isApproved', async () => {
         mockPrompt.mockReturnValue('opened');
         const mrs = [{ iid: 1, title: 'MR 1' }] as MergeRequestInfo[];
-        jest.mocked(mockM.searchMergeRequests).mockResolvedValue(mrs);
+        vi.mocked(mockM.searchMergeRequests).mockResolvedValue(mrs);
         Object.defineProperty(mockM, 'isApproved', { value: undefined, writable: true });
 
         await handleListApprovedMRs(mockM);
@@ -180,7 +180,7 @@ describe('handleListApprovedMRs', () => {
 describe('handleMergeMR', () => {
     it('merges MR successfully', async () => {
         mockPrompt.mockReturnValue('42');
-        jest.mocked(mockM.acceptMergeRequest).mockResolvedValue({ web_url: 'https://gitlab.com/merge/42' });
+        vi.mocked(mockM.acceptMergeRequest).mockResolvedValue({ web_url: 'https://gitlab.com/merge/42' });
 
         await handleMergeMR(mockM);
 
@@ -191,7 +191,7 @@ describe('handleMergeMR', () => {
 
     it('handles merge error', async () => {
         mockPrompt.mockReturnValue('42');
-        jest.mocked(mockM.acceptMergeRequest).mockRejectedValue(new Error('merge fail'));
+        vi.mocked(mockM.acceptMergeRequest).mockRejectedValue(new Error('merge fail'));
 
         await handleMergeMR(mockM);
 

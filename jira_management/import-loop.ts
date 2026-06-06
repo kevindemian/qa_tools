@@ -1,10 +1,10 @@
 /** Import loop — iterates over test cases, creates/fetches issues, and updates state. */
-import type { JsonObject, TestCase, TestResult } from '../shared/types';
-import type TestCaseFactory from './test-case-factory';
-import type IssueLinker from './issue-linker';
-import { rootLogger } from '../shared/logger';
-import { update as updateState } from '../shared/state';
-import { JiraPayloadSchema } from './csv-import-schema';
+import type { JsonObject, TestCase, TestResult } from '../shared/types.js';
+import type TestCaseFactory from './test-case-factory.js';
+import type IssueLinker from './issue-linker.js';
+import { rootLogger } from '../shared/logger.js';
+import { update as updateState } from '../shared/state.js';
+import { JiraPayloadSchema } from './csv-import-schema.js';
 
 interface LinkRelationsResult {
     abort: boolean;

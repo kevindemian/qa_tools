@@ -3,12 +3,14 @@ import { spawn, spawnSync, execFileSync } from 'child_process';
 import { platform } from 'os';
 import { readFileSync, writeFileSync, mkdirSync } from 'fs';
 import { basename, dirname, join, resolve } from 'path';
-import Config from './config';
+import Config from './config.js';
 
 interface OsOpenCommand {
     cmd: string;
     args: string[];
 }
+
+const ALLOWED_CMDS = new Set(['open', 'cmd', 'cmd.exe', 'xdg-open']);
 
 let _wslCached: boolean | null = null;
 
@@ -54,7 +56,7 @@ export function getDocsOutputDir(): string | null {
         return join(winTemp, 'qa_tools_docs');
     }
     const envDir = Config.get('QA_TOOLS_TEMP_DIR');
-    const root = envDir ? resolve(envDir) : resolve(__dirname, '..', 'temp');
+    const root = envDir ? resolve(envDir) : resolve(import.meta.dirname, '..', 'temp');
     return join(root, 'docs');
 }
 
@@ -116,6 +118,10 @@ export async function openWithOsOrFallback(target: string, fallbackViewer?: () =
     }
     const command = getOsOpenCommand(target);
     if (!command) {
+        fallbackViewer?.();
+        return false;
+    }
+    if (!ALLOWED_CMDS.has(command.cmd)) {
         fallbackViewer?.();
         return false;
     }

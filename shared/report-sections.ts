@@ -7,15 +7,15 @@
  * @module report-sections
  */
 
-import { escapeHtml, fmtDuration, pct, pctSub, pctClass } from './report-utils';
-import { extractSuite } from './report-types';
-import type { FlatTest } from './result_parser';
-import type { HealthScoreResult } from './types';
-import type { TestRunTab, TestHistoryRun, KnownIssue, ReportOptions, ReportStats } from './report-types';
-import { buildTestTable } from './report-table';
-import { MetricCard, MetricGrid, Card, Badge } from './primitives';
-import { FilterBar, SearchInput, Button } from './primitives';
-import { tokens } from './theme-tokens';
+import { escapeHtml, fmtDuration, pct, pctSub, pctClass } from './report-utils.js';
+import { extractSuite } from './report-types.js';
+import type { FlatTest } from './result_parser.js';
+import type { HealthScoreResult } from './types.js';
+import type { TestRunTab, TestHistoryRun, KnownIssue, ReportOptions, ReportStats } from './report-types.js';
+import { buildTestTable } from './report-table.js';
+import { MetricCard, MetricGrid, Card, Badge } from './primitives/index.js';
+import { FilterBar, SearchInput, Button } from './primitives/index.js';
+import { tokens } from './theme-tokens.js';
 
 export function buildTabs(runs: TestRunTab[]): string {
     if (runs.length <= 1) return '';

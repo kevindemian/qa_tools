@@ -9,9 +9,9 @@
  * - Refinement on divergence > threshold
  */
 
-import { llmPrompt, type LlmPromptOptions } from './llm-client';
-import { ArtifactValidator, type ValidationContext } from './artifact-validator';
-import { rootLogger } from './logger';
+import { llmPrompt, type LlmPromptOptions } from './llm-client.js';
+import { ArtifactValidator, type ValidationContext } from './artifact-validator.js';
+import { rootLogger } from './logger.js';
 
 export type ArtifactType = 'test-suite' | 'analysis' | 'bug-report' | 'comparison' | 'pipeline';
 

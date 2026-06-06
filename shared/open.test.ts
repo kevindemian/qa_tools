@@ -1,18 +1,21 @@
-jest.mock('child_process');
-jest.mock('os', () => ({
-    platform: jest.fn<() => string, []>(),
+vi.mock('child_process', () => ({ spawn: vi.fn(), spawnSync: vi.fn(), execFileSync: vi.fn() }));
+vi.mock('os', async () => ({
+    platform: vi.fn<(...args: []) => () => string>(),
 }));
-jest.mock('fs', () => ({
-    readFileSync: jest.fn<(path: string, encoding?: string) => string, [string, string?]>(),
-    writeFileSync: jest.fn<(path: string, data: string) => void, [string, string]>(),
-    mkdirSync: jest.fn<(path: string) => string | undefined, [string]>(),
+vi.mock('fs', async () => ({
+    readFileSync: vi.fn<(...args: [string, string?]) => (path: string, encoding?: string) => string>(),
+    writeFileSync: vi.fn<(...args: [string, string]) => (path: string, data: string) => void>(),
+    mkdirSync: vi.fn<(...args: [string]) => (path: string) => string | undefined>(),
 }));
-const mockConfigGet: jest.Mock<string | undefined, [string]> = jest.fn((key: string) => process.env[key] || undefined);
-jest.mock('./config', () => ({
-    get: mockConfigGet,
+const mockConfigGet: Mock<(...args: [string]) => string | undefined> = vi.hoisted(() =>
+    vi.fn((key: string) => process.env[key] || undefined),
+);
+vi.mock('./config', async () => ({
+    default: { get: mockConfigGet },
 }));
 
 import { spawn, spawnSync, execFileSync } from 'child_process';
+import type { Mock } from 'vitest';
 import { platform } from 'os';
 import { readFileSync, writeFileSync, mkdirSync } from 'fs';
 import {
@@ -22,15 +25,15 @@ import {
     getDocsOutputDir,
     getOsOpenCommand,
     __resetWslCache,
-} from './open';
+} from './open.js';
 
-const mockSpawn = jest.mocked(spawn);
-const mockSpawnSync = jest.mocked(spawnSync);
-const mockExecFileSync = jest.mocked(execFileSync);
-const mockPlatform = jest.mocked(platform);
-const mockReadFileSync = jest.mocked(readFileSync);
-const mockWriteFileSync = jest.mocked(writeFileSync);
-const mockMkdirSync = jest.mocked(mkdirSync);
+const mockSpawn = vi.mocked(spawn);
+const mockSpawnSync = vi.mocked(spawnSync);
+const mockExecFileSync = vi.mocked(execFileSync);
+const mockPlatform = vi.mocked(platform);
+const mockReadFileSync = vi.mocked(readFileSync);
+const mockWriteFileSync = vi.mocked(writeFileSync);
+const mockMkdirSync = vi.mocked(mkdirSync);
 
 void mockSpawnSync;
 
@@ -48,11 +51,11 @@ function makeMockChild() {
         signalCode: null,
         spawnargs: [] as string[],
         spawnfile: '',
-        kill: jest.fn(),
-        send: jest.fn(),
-        disconnect: jest.fn(),
-        ref: jest.fn(),
-        unref: jest.fn(),
+        kill: vi.fn(),
+        send: vi.fn(),
+        disconnect: vi.fn(),
+        ref: vi.fn(),
+        unref: vi.fn(),
         on(event: string, handler: (...args: unknown[]) => void) {
             handlers[event] = handler;
             return this;
@@ -60,7 +63,7 @@ function makeMockChild() {
         once() {
             return this;
         },
-        emit: jest.fn(),
+        emit: vi.fn(),
         addListener() {
             return this;
         },
@@ -70,10 +73,10 @@ function makeMockChild() {
         removeAllListeners() {
             return this;
         },
-        listeners: jest.fn(),
-        listenerCount: jest.fn(),
-        eventNames: jest.fn(),
-        rawListeners: jest.fn(),
+        listeners: vi.fn(),
+        listenerCount: vi.fn(),
+        eventNames: vi.fn(),
+        rawListeners: vi.fn(),
         prependListener() {
             return this;
         },
@@ -83,8 +86,8 @@ function makeMockChild() {
         off() {
             return this;
         },
-        getMaxListeners: jest.fn(),
-        setMaxListeners: jest.fn(),
+        getMaxListeners: vi.fn(),
+        setMaxListeners: vi.fn(),
         [Symbol.dispose]() {
             /* noop */
         },
@@ -99,7 +102,7 @@ type MockChild = ReturnType<typeof makeMockChild>;
 let defaultChild: MockChild;
 
 function commonBeforeEach(): void {
-    jest.resetAllMocks();
+    vi.resetAllMocks();
     mockPlatform.mockReturnValue('linux');
     mockReadFileSync.mockReturnValue('Linux version 5.15.0-generic (mock)');
     defaultChild = makeMockChild();
@@ -112,7 +115,7 @@ describe('openWithOsOrFallback', () => {
     it('calls fallback on spawn error', async () => {
         const child = makeMockChild();
         mockSpawn.mockReturnValue(child);
-        const fallback = jest.fn();
+        const fallback = vi.fn();
         const promise = openWithOsOrFallback('/some/file', fallback);
         child.trigger('error');
         const result = await promise;
@@ -123,7 +126,7 @@ describe('openWithOsOrFallback', () => {
     it('calls fallback on non-zero exit code', async () => {
         const child = makeMockChild();
         mockSpawn.mockReturnValue(child);
-        const fallback = jest.fn();
+        const fallback = vi.fn();
         const promise = openWithOsOrFallback('/some/file', fallback);
         child.trigger('exit', 1);
         const result = await promise;
@@ -134,7 +137,7 @@ describe('openWithOsOrFallback', () => {
     it('returns true on successful open (exit 0)', async () => {
         const child = makeMockChild();
         mockSpawn.mockReturnValue(child);
-        const fallback = jest.fn();
+        const fallback = vi.fn();
         const promise = openWithOsOrFallback('/some/file', fallback);
         child.trigger('exit', 0);
         const result = await promise;
@@ -144,7 +147,7 @@ describe('openWithOsOrFallback', () => {
 
     it('calls fallback when no handler is attached (spawn returns undefined)', async () => {
         mockSpawn.mockReset();
-        const fallback = jest.fn();
+        const fallback = vi.fn();
         const result = await openWithOsOrFallback('/some/file', fallback);
         expect(result).toBe(false);
         expect(fallback).toHaveBeenCalledTimes(1);
@@ -153,7 +156,7 @@ describe('openWithOsOrFallback', () => {
     it('calls fallback when getOsOpenCommand returns null', async () => {
         mockPlatform.mockReturnValue('aix');
         mockReadFileSync.mockReturnValue('Linux version 5.15.0-generic');
-        const fallback = jest.fn();
+        const fallback = vi.fn();
         const result = await openWithOsOrFallback('/some/file', fallback);
         expect(result).toBe(false);
         expect(fallback).toHaveBeenCalledTimes(1);
@@ -162,11 +165,11 @@ describe('openWithOsOrFallback', () => {
 
 describe('getOsOpenCommand (platform detection)', () => {
     beforeEach(() => {
-        jest.resetAllMocks();
+        vi.resetAllMocks();
         __resetWslCache();
     });
 
-    it('returns cmd.exe + wslpath for WSL (linux + Microsoft /proc/version)', () => {
+    it('returns cmd.exe + wslpath for WSL (linux + Microsoft /proc/version)', async () => {
         mockPlatform.mockReturnValue('linux');
         mockReadFileSync.mockReturnValue('Linux version ... Microsoft ...');
         mockSpawnSync.mockReturnValue({ stdout: 'C:\\Users\\file.html\n', status: 0 } as never);
@@ -177,28 +180,28 @@ describe('getOsOpenCommand (platform detection)', () => {
         });
     });
 
-    it('returns xdg-open for Linux (non-WSL)', () => {
+    it('returns xdg-open for Linux (non-WSL)', async () => {
         mockPlatform.mockReturnValue('linux');
         mockReadFileSync.mockReturnValue('Linux version 5.15.0-generic');
         const result = getOsOpenCommand('/home/user/file.html');
         expect(result).toEqual({ cmd: 'xdg-open', args: ['/home/user/file.html'] });
     });
 
-    it('returns open for macOS', () => {
+    it('returns open for macOS', async () => {
         mockPlatform.mockReturnValue('darwin');
         mockReadFileSync.mockReturnValue('Linux version 5.15.0-generic');
         const result = getOsOpenCommand('/some/file');
         expect(result).toEqual({ cmd: 'open', args: ['/some/file'] });
     });
 
-    it('returns cmd for Windows', () => {
+    it('returns cmd for Windows', async () => {
         mockPlatform.mockReturnValue('win32');
         mockReadFileSync.mockReturnValue('Linux version 5.15.0-generic');
         const result = getOsOpenCommand('C:\\file.html');
         expect(result).toEqual({ cmd: 'cmd', args: ['/c', 'start', '', 'C:\\file.html'] });
     });
 
-    it('falls back to xdg-open for WSL when toWinPath returns null', () => {
+    it('falls back to xdg-open for WSL when toWinPath returns null', async () => {
         mockPlatform.mockReturnValue('linux');
         mockReadFileSync.mockReturnValue('Linux version ... Microsoft ...');
         mockSpawnSync.mockReturnValue({ stdout: '', error: new Error('ENOENT'), status: null } as never);
@@ -209,7 +212,7 @@ describe('getOsOpenCommand (platform detection)', () => {
         expect(result).toEqual({ cmd: 'xdg-open', args: ['/home/user/file.html'] });
     });
 
-    it('toWinPath fallback: copies file and converts via wslpath', () => {
+    it('toWinPath fallback: copies file and converts via wslpath', async () => {
         mockPlatform.mockReturnValue('linux');
         mockReadFileSync.mockReturnValueOnce('Linux version ... Microsoft ...').mockReturnValueOnce('file content');
         mockWriteFileSync.mockReturnValue();
@@ -228,7 +231,7 @@ describe('getOsOpenCommand (platform detection)', () => {
         });
     });
 
-    it('toWinPath fallback: returns null when writeFileSync throws', () => {
+    it('toWinPath fallback: returns null when writeFileSync throws', async () => {
         mockPlatform.mockReturnValue('linux');
         mockReadFileSync.mockReturnValueOnce('Linux version ... Microsoft ...').mockReturnValueOnce('file content');
         mockWriteFileSync.mockImplementation(() => {
@@ -245,7 +248,7 @@ describe('getOsOpenCommand (platform detection)', () => {
         expect(result).toEqual({ cmd: 'xdg-open', args: ['/home/user/file.html'] });
     });
 
-    it('toWinPath fallback: returns null when wslpath output is invalid', () => {
+    it('toWinPath fallback: returns null when wslpath output is invalid', async () => {
         mockPlatform.mockReturnValue('linux');
         mockReadFileSync.mockReturnValueOnce('Linux version ... Microsoft ...').mockReturnValueOnce('file content');
         mockWriteFileSync.mockReturnValue();
@@ -258,7 +261,7 @@ describe('getOsOpenCommand (platform detection)', () => {
         expect(result).toEqual({ cmd: 'xdg-open', args: ['/home/user/file.html'] });
     });
 
-    it('toWinPath: falls through when first wslpath output is not a Windows path', () => {
+    it('toWinPath: falls through when first wslpath output is not a Windows path', async () => {
         mockPlatform.mockReturnValue('linux');
         mockReadFileSync.mockReturnValueOnce('Linux version ... Microsoft ...').mockReturnValueOnce('file content');
         mockWriteFileSync.mockReturnValue();
@@ -275,14 +278,14 @@ describe('getOsOpenCommand (platform detection)', () => {
         });
     });
 
-    it('returns null for unknown platform', () => {
+    it('returns null for unknown platform', async () => {
         mockPlatform.mockReturnValue('aix');
         mockReadFileSync.mockReturnValue('Linux version 5.15.0-generic');
         const result = getOsOpenCommand('/path');
         expect(result).toBeNull();
     });
 
-    it('does not throw when /proc/version is unreadable', () => {
+    it('does not throw when /proc/version is unreadable', async () => {
         mockPlatform.mockReturnValue('linux');
         mockReadFileSync.mockImplementation(() => {
             throw new Error('ENOENT');
@@ -294,10 +297,10 @@ describe('getOsOpenCommand (platform detection)', () => {
 
 describe('getWinTempDir', () => {
     beforeEach(() => {
-        jest.resetAllMocks();
+        vi.resetAllMocks();
     });
 
-    it('returns TEMP when set with Linux path', () => {
+    it('returns TEMP when set with Linux path', async () => {
         const origTemp = process.env.TEMP;
         process.env.TEMP = '/mnt/c/Users/Test/Temp';
         const result = getWinTempDir();
@@ -305,7 +308,7 @@ describe('getWinTempDir', () => {
         expect(result).toBe('/mnt/c/Users/Test/Temp');
     });
 
-    it('returns TMP when TEMP not set and TMP has Linux path', () => {
+    it('returns TMP when TEMP not set and TMP has Linux path', async () => {
         const origTemp = process.env.TEMP;
         const origTmp = process.env.TMP;
         delete process.env.TEMP;
@@ -316,7 +319,7 @@ describe('getWinTempDir', () => {
         expect(result).toBe('/mnt/c/Users/Test/Tmp');
     });
 
-    it('converts cmd.exe TEMP output to WSL path on success', () => {
+    it('converts cmd.exe TEMP output to WSL path on success', async () => {
         const origTemp = process.env.TEMP;
         const origTmp = process.env.TMP;
         delete process.env.TEMP;
@@ -328,7 +331,7 @@ describe('getWinTempDir', () => {
         expect(result).toBe('/mnt/c/Users/Test/AppData/Local/Temp');
     });
 
-    it('returns null when TEMP/TMP empty and cmd.exe fails', () => {
+    it('returns null when TEMP/TMP empty and cmd.exe fails', async () => {
         const origTemp = process.env.TEMP;
         const origTmp = process.env.TMP;
         delete process.env.TEMP;
@@ -342,7 +345,7 @@ describe('getWinTempDir', () => {
         expect(result).toBeNull();
     });
 
-    it('returns null when execFileSync returns empty string', () => {
+    it('returns null when execFileSync returns empty string', async () => {
         const origTemp = process.env.TEMP;
         const origTmp = process.env.TMP;
         delete process.env.TEMP;
@@ -357,18 +360,18 @@ describe('getWinTempDir', () => {
 
 describe('getDocsOutputDir', () => {
     beforeEach(() => {
-        jest.resetAllMocks();
+        vi.resetAllMocks();
         mockConfigGet.mockImplementation((key: string) => process.env[key] || undefined);
         __resetWslCache();
     });
 
-    it('returns temp/docs/ path on non-WSL', () => {
+    it('returns temp/docs/ path on non-WSL', async () => {
         mockReadFileSync.mockReturnValue('Linux version 5.15.0-generic');
         const result = getDocsOutputDir();
         expect(result).toMatch(/\/temp\/docs$/);
     });
 
-    it('returns null on WSL when getWinTempDir fails', () => {
+    it('returns null on WSL when getWinTempDir fails', async () => {
         mockReadFileSync.mockReturnValue('Linux version ... Microsoft ...');
         mockExecFileSync.mockImplementation(() => {
             throw new Error('ENOENT');
@@ -380,7 +383,7 @@ describe('getDocsOutputDir', () => {
         expect(result).toBeNull();
     });
 
-    it('returns WSL temp path when on WSL and getWinTempDir succeeds', () => {
+    it('returns WSL temp path when on WSL and getWinTempDir succeeds', async () => {
         mockReadFileSync.mockReturnValue('Linux version ... Microsoft ...');
         mockExecFileSync.mockReturnValue('C:\\Users\\Test\\Temp\n');
         const origTemp = process.env.TEMP;
@@ -390,7 +393,7 @@ describe('getDocsOutputDir', () => {
         expect(result).toMatch(/qa_tools_docs$/);
     });
 
-    it('uses QA_TOOLS_TEMP_DIR when set', () => {
+    it('uses QA_TOOLS_TEMP_DIR when set', async () => {
         const origDir = process.env.QA_TOOLS_TEMP_DIR;
         process.env.QA_TOOLS_TEMP_DIR = '/custom/temp';
         mockReadFileSync.mockReturnValue('Linux version 5.15.0-generic');
@@ -414,14 +417,14 @@ describe('openWithFallback', () => {
     beforeEach(commonBeforeEach);
 
     it('logs browser success on exit 0', async () => {
-        const logInfo = jest.fn();
+        const logInfo = vi.fn();
         makeAutoSpawn([0]);
         await openWithFallback('/tmp/report.html', 'Relatório', logInfo);
         expect(logInfo).toHaveBeenCalledWith('Relatório aberto no navegador');
     });
 
     it('opens directory when browser fails', async () => {
-        const logInfo = jest.fn();
+        const logInfo = vi.fn();
         makeAutoSpawn([1, 0]);
         await openWithFallback('/tmp/report.html', 'Relatório', logInfo);
         expect(logInfo).toHaveBeenCalledWith(
@@ -430,7 +433,7 @@ describe('openWithFallback', () => {
     });
 
     it('logs file path when both browser and directory fail', async () => {
-        const logInfo = jest.fn();
+        const logInfo = vi.fn();
         makeAutoSpawn([1, 1]);
         await openWithFallback('/tmp/report.html', 'Relatório', logInfo);
         expect(logInfo).toHaveBeenCalledWith('Relatório salvo em: /tmp/report.html');

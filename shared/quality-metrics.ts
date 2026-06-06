@@ -11,12 +11,12 @@
  * Persisted via the existing llm-metrics.json mechanism.
  */
 
-import { rootLogger } from './logger';
-import { safeParseJson } from './safe-json';
+import { rootLogger } from './logger.js';
+import { safeParseJson } from './safe-json.js';
 import fs from 'fs';
 import path from 'path';
 import os from 'os';
-import Config from './config';
+import Config from './config.js';
 
 export interface QualityMetricsSnapshot {
     timestamp: string;
@@ -205,15 +205,7 @@ export function snapshotQualityMetrics(): QualityMetricsSnapshot {
     return _defaultCollector.snapshot();
 }
 
-export function getQualityMetricsHistory(): QualityMetricsSnapshot[] {
-    return _defaultCollector.getHistory();
-}
-
 export function detectDrift(): string[] {
     const history = _defaultCollector.getHistory();
     return _defaultCollector.detectDrift(history);
-}
-
-export function clearQualityMetrics(): void {
-    _defaultCollector.clear();
 }

@@ -2,9 +2,9 @@
  * Heuristic analyzers for the LLM review pipeline.
  * Change frequency: threshold / pattern adjustments.
  */
-import type { ArtifactType, ReviewResult } from './llm-review';
-import Config from './config';
-import { rootLogger } from './logger';
+import type { ArtifactType, ReviewResult } from './llm-review-types.js';
+import Config from './config.js';
+import { rootLogger } from './logger.js';
 
 /** Portuguese hedging patterns — objective heuristic, not LLM. */
 export const HEDGING_PATTERNS = [

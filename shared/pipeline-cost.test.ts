@@ -2,11 +2,11 @@
  * Tests for pipeline-cost — Pipeline Cost Analytics.
  */
 
-import * as reportStyles from './report-styles';
-import { calculatePipelineCost, generatePipelineCostHtml } from './pipeline-cost';
-import type { PipelineCostResult } from './pipeline-cost';
-import type { MetricsRun } from './metrics';
-import { nullAs, undefinedAs, nonNull } from './test-utils';
+import * as reportStyles from './report-styles.js';
+import { calculatePipelineCost, generatePipelineCostHtml } from './pipeline-cost.js';
+import type { PipelineCostResult } from './pipeline-cost.js';
+import type { MetricsRun } from './metrics.js';
+import { nullAs, undefinedAs, nonNull } from './test-utils.js';
 
 function makeRun(overrides?: Partial<MetricsRun>): MetricsRun {
     return {
@@ -52,7 +52,7 @@ function makeRuns(): MetricsRun[] {
 }
 
 describe('calculatePipelineCost', () => {
-    it('returns zeroed result for null input', () => {
+    it('returns zeroed result for null input', async () => {
         const result = calculatePipelineCost(nullAs<MetricsRun[]>());
         expect(result.totalCost).toBe(0);
         expect(result.avgCostPerRun).toBe(0);
@@ -63,7 +63,7 @@ describe('calculatePipelineCost', () => {
         expect(result.costPerMinute).toBe(0.01);
     });
 
-    it('returns zeroed result for undefined input', () => {
+    it('returns zeroed result for undefined input', async () => {
         const result = calculatePipelineCost(undefinedAs<MetricsRun[]>());
         expect(result.totalCost).toBe(0);
         expect(result.avgCostPerRun).toBe(0);
@@ -72,7 +72,7 @@ describe('calculatePipelineCost', () => {
         expect(result.runCount).toBe(0);
     });
 
-    it('returns zeroed result for empty array', () => {
+    it('returns zeroed result for empty array', async () => {
         const result = calculatePipelineCost([]);
         expect(result.totalCost).toBe(0);
         expect(result.avgCostPerRun).toBe(0);
@@ -81,7 +81,7 @@ describe('calculatePipelineCost', () => {
         expect(result.runCount).toBe(0);
     });
 
-    it('calculates cost correctly for a single run', () => {
+    it('calculates cost correctly for a single run', async () => {
         const runs = [makeRun({ duration: 60 })];
         const result = calculatePipelineCost(runs);
 
@@ -96,7 +96,7 @@ describe('calculatePipelineCost', () => {
         expect(entry.cost).toBeCloseTo(0.01, 5);
     });
 
-    it('aggregates multiple runs correctly', () => {
+    it('aggregates multiple runs correctly', async () => {
         const runs = makeRuns();
         const result = calculatePipelineCost(runs);
 
@@ -107,7 +107,7 @@ describe('calculatePipelineCost', () => {
         expect(result.costByRun).toHaveLength(3);
     });
 
-    it('uses custom cost per minute', () => {
+    it('uses custom cost per minute', async () => {
         const runs = [makeRun({ duration: 60 })];
         const result = calculatePipelineCost(runs, 0.05);
 
@@ -116,7 +116,7 @@ describe('calculatePipelineCost', () => {
         expect(nonNull(result.costByRun[0]).cost).toBeCloseTo(0.05, 5);
     });
 
-    it('uses environment variable for cost per minute', () => {
+    it('uses environment variable for cost per minute', async () => {
         const prev = process.env.QA_COST_PER_COMPUTE_MINUTE;
         process.env.QA_COST_PER_COMPUTE_MINUTE = '0.10';
         try {
@@ -134,7 +134,7 @@ describe('calculatePipelineCost', () => {
         }
     });
 
-    it('sorts entries by timestamp descending', () => {
+    it('sorts entries by timestamp descending', async () => {
         const runs = makeRuns();
         const result = calculatePipelineCost(runs);
 
@@ -143,25 +143,25 @@ describe('calculatePipelineCost', () => {
         expect(nonNull(result.costByRun[2]).timestamp).toBe('2026-06-01T12:00:00.000Z');
     });
 
-    it('determines failed status correctly', () => {
+    it('determines failed status correctly', async () => {
         const runs = [makeRun({ failed: 2, passed: 8, total: 10 })];
         const result = calculatePipelineCost(runs);
         expect(nonNull(result.costByRun[0]).status).toBe('failed');
     });
 
-    it('determines passed status correctly', () => {
+    it('determines passed status correctly', async () => {
         const runs = [makeRun({ failed: 0, passed: 10, total: 10 })];
         const result = calculatePipelineCost(runs);
         expect(nonNull(result.costByRun[0]).status).toBe('passed');
     });
 
-    it('determines partial status correctly', () => {
+    it('determines partial status correctly', async () => {
         const runs = [makeRun({ failed: 0, passed: 8, total: 10, skipped: 2 })];
         const result = calculatePipelineCost(runs);
         expect(nonNull(result.costByRun[0]).status).toBe('partial');
     });
 
-    it('sets period from sorted timestamps', () => {
+    it('sets period from sorted timestamps', async () => {
         const runs = makeRuns();
         const result = calculatePipelineCost(runs);
 
@@ -169,13 +169,13 @@ describe('calculatePipelineCost', () => {
         expect(result.period.to).toBe('2026-06-03T12:00:00.000Z');
     });
 
-    it('sets timestamp to valid ISO string', () => {
+    it('sets timestamp to valid ISO string', async () => {
         const result = calculatePipelineCost([]);
         expect(() => new Date(result.timestamp)).not.toThrow();
         expect(result.timestamp).toMatch(/^\d{4}-\d{2}-\d{2}T/);
     });
 
-    it('handles duration exceeding one hour', () => {
+    it('handles duration exceeding one hour', async () => {
         const runs = [makeRun({ duration: 7200 })];
         const result = calculatePipelineCost(runs);
         expect(result.totalDurationSec).toBe(7200);
@@ -217,23 +217,23 @@ describe('generatePipelineCostHtml', () => {
         };
     }
 
-    it('generates valid HTML page', () => {
+    it('generates valid HTML page', async () => {
         const html = generatePipelineCostHtml(makeResult());
         expect(html).toContain('<!DOCTYPE html>');
         expect(html).toContain('</html>');
     });
 
-    it('returns error page for null result', () => {
+    it('returns error page for null result', async () => {
         const html = generatePipelineCostHtml(nullAs<PipelineCostResult>());
         expect(html).toContain('Pipeline Cost Report Error');
     });
 
-    it('returns error page for undefined result', () => {
+    it('returns error page for undefined result', async () => {
         const html = generatePipelineCostHtml(undefinedAs<PipelineCostResult>());
         expect(html).toContain('Pipeline Cost Report Error');
     });
 
-    it('shows summary cards with cost data', () => {
+    it('shows summary cards with cost data', async () => {
         const html = generatePipelineCostHtml(makeResult());
         expect(html).toContain('Total Cost');
         expect(html).toContain('Avg Cost / Run');
@@ -244,12 +244,12 @@ describe('generatePipelineCostHtml', () => {
         expect(html).toContain('3');
     });
 
-    it('formats duration into human-readable string', () => {
+    it('formats duration into human-readable string', async () => {
         const html = generatePipelineCostHtml(makeResult());
         expect(html).toContain('8m');
     });
 
-    it('includes run entries in the data table', () => {
+    it('includes run entries in the data table', async () => {
         const html = generatePipelineCostHtml(makeResult());
         expect(html).toContain('data-component="table-wrapper"');
         expect(html).toContain('data-component="data-table"');
@@ -258,26 +258,26 @@ describe('generatePipelineCostHtml', () => {
         expect(html).toContain('partial');
     });
 
-    it('shows no-data message when costByRun is empty', () => {
+    it('shows no-data message when costByRun is empty', async () => {
         const result = makeResult({ costByRun: [], totalCost: 0, avgCostPerRun: 0, totalDurationSec: 0, runCount: 0 });
         const html = generatePipelineCostHtml(result);
         expect(html).toContain('No pipeline run data available');
         expect(html).not.toContain('data-component="data-table"');
     });
 
-    it('uses custom title', () => {
+    it('uses custom title', async () => {
         const html = generatePipelineCostHtml(makeResult(), 'My Cost Report');
         expect(html).toContain('<title>My Cost Report</title>');
         expect(html).toContain('<h1>My Cost Report</h1>');
     });
 
-    it('defaults title to Pipeline Cost Analytics', () => {
+    it('defaults title to Pipeline Cost Analytics', async () => {
         const html = generatePipelineCostHtml(makeResult({ costByRun: [] }));
         expect(html).toContain('<title>Pipeline Cost Analytics</title>');
         expect(html).toContain('<h1>Pipeline Cost Analytics</h1>');
     });
 
-    it('formats cost values with $ and 2 decimal places', () => {
+    it('formats cost values with $ and 2 decimal places', async () => {
         const html = generatePipelineCostHtml(makeResult());
         expect(html).toContain('$0.08');
         expect(html).toContain('$0.04');
@@ -286,27 +286,27 @@ describe('generatePipelineCostHtml', () => {
         expect(html).not.toContain('$0.1');
     });
 
-    it('includes theme and dark mode support', () => {
+    it('includes theme and dark mode support', async () => {
         const html = generatePipelineCostHtml(makeResult({ costByRun: [] }));
         expect(html).toContain('qa-report-theme');
         expect(html).toContain('prefers-color-scheme');
         expect(html).toContain('html.dark');
     });
 
-    it('includes footer', () => {
+    it('includes footer', async () => {
         const html = generatePipelineCostHtml(makeResult());
         expect(html).toContain('Pipeline Cost Analytics');
     });
 
-    it('shows data-component attributes from primitives', () => {
+    it('shows data-component attributes from primitives', async () => {
         const html = generatePipelineCostHtml(makeResult());
         expect(html).toContain('data-component="metric-grid"');
         expect(html).toContain('data-component="metric-card"');
         expect(html).toContain('data-component="table-wrapper"');
     });
 
-    it('returns error page when buildCss throws', () => {
-        const spy = jest.spyOn(reportStyles, 'buildCss').mockImplementation(() => {
+    it('returns error page when buildCss throws', async () => {
+        const spy = vi.spyOn(reportStyles, 'buildCss').mockImplementation(() => {
             throw new Error('CSS build failure');
         });
         try {
@@ -317,7 +317,7 @@ describe('generatePipelineCostHtml', () => {
         }
     });
 
-    it('formats duration in hours for long runs', () => {
+    it('formats duration in hours for long runs', async () => {
         const result = makeResult({
             costByRun: [
                 {

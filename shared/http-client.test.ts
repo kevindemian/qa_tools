@@ -1,33 +1,35 @@
 let errorHandler: ((err: Error) => Promise<object>) | undefined;
 let successHandler: ((response: object) => object) | undefined;
-const mockInstance = Object.assign(jest.fn<Promise<{ status: number; data?: string }>, [config: object]>(), {
+const mockInstance = Object.assign(vi.fn<(...args: [config: object]) => Promise<{ status: number; data?: string }>>(), {
     interceptors: {
         request: {
-            use: jest.fn<void, [(config: object) => object | Promise<object>]>(),
+            use: vi.fn<(...args: [(config: object) => object | Promise<object>]) => void>(),
         },
         response: {
-            use: jest
-                .fn<void, [(response: object) => object, (err: Error) => Promise<object>]>()
+            use: vi
+                .fn<(...args: [(response: object) => object, (err: Error) => Promise<object>]) => void>()
                 .mockImplementation((success: (response: object) => object, error: (err: Error) => Promise<object>) => {
                     successHandler = success;
                     errorHandler = error;
                 }),
         },
     },
-    get: jest.fn(),
-    post: jest.fn(),
-    put: jest.fn(),
+    get: vi.fn(),
+    post: vi.fn(),
+    put: vi.fn(),
 });
 
-jest.mock('axios', () => ({ create: jest.fn<typeof mockInstance, [object]>(() => mockInstance) }));
-import * as httpClientModule from './http-client';
-import { rootLogger } from './logger';
-import { HostSemaphore } from './host-semaphore';
+vi.mock('axios', async () => ({
+    default: { create: vi.fn<(...args: [object]) => typeof mockInstance>(() => mockInstance) },
+}));
+import * as httpClientModule from './http-client.js';
+import { rootLogger } from './logger.js';
+import { HostSemaphore } from './host-semaphore.js';
 import axios from 'axios';
-import { nonNull } from './test-utils';
+import { nonNull } from './test-utils.js';
 
 describe('HTTP Client', () => {
-    let httpClient: typeof import('./http-client');
+    let httpClient: typeof import('./http-client.js');
 
     beforeAll(() => {
         httpClient = httpClientModule;
@@ -39,19 +41,19 @@ describe('HTTP Client', () => {
     });
 
     beforeEach(() => {
-        jest.clearAllMocks();
-        jest.spyOn(global, 'setTimeout').mockImplementation(((cb: (...args: unknown[]) => void) => {
+        vi.clearAllMocks();
+        vi.spyOn(global, 'setTimeout').mockImplementation(((cb: (...args: unknown[]) => void) => {
             process.nextTick(() => cb());
             return {} as NodeJS.Timeout;
         }) as typeof global.setTimeout);
     });
 
     afterEach(() => {
-        jest.restoreAllMocks();
+        vi.restoreAllMocks();
     });
 
     describe('createHttpClient', () => {
-        it('creates axios instance with provided config', () => {
+        it('creates axios instance with provided config', async () => {
             httpClient.createHttpClient({
                 baseUrl: 'https://api.test.com',
                 authHeader: { Authorization: 'Bearer token123' },
@@ -67,16 +69,16 @@ describe('HTTP Client', () => {
                     },
                 }),
             );
-            const axCfg = nonNull(jest.mocked(axios.create).mock.calls[0])[0];
+            const axCfg = nonNull(vi.mocked(axios.create).mock.calls[0])[0];
             expect(axCfg).toHaveProperty('httpsAgent');
         });
 
-        it('registers response interceptor', () => {
+        it('registers response interceptor', async () => {
             httpClient.createHttpClient({ baseUrl: 'https://api.test.com' });
             expect(mockInstance.interceptors.response.use).toHaveBeenCalled();
         });
 
-        it('uses default timeout when not specified', () => {
+        it('uses default timeout when not specified', async () => {
             httpClient.createHttpClient({ baseUrl: 'https://api.test.com' });
             expect(axios.create).toHaveBeenCalledWith(expect.objectContaining({ timeout: 120000 }));
         });
@@ -173,7 +175,7 @@ describe('HTTP Client', () => {
             expect(mockInstance).not.toHaveBeenCalled();
         });
 
-        it('success interceptor cleans up retry counts and returns response', () => {
+        it('success interceptor cleans up retry counts and returns response', async () => {
             httpClient.createHttpClient({ baseUrl: 'https://api.test.com' });
             const response = {
                 config: { method: 'get', url: '/test' },
@@ -188,7 +190,7 @@ describe('HTTP Client', () => {
             const err = new Error('no config');
             try {
                 await nonNull(errorHandler)(err);
-                fail('should have thrown');
+                expect.unreachable('should have thrown');
             } catch (e) {
                 expect(e).toBe(err);
             }
@@ -232,8 +234,8 @@ describe('HTTP Client', () => {
         });
 
         it('logs retry attempts at debug level, not warn', async () => {
-            const debugSpy = jest.spyOn(rootLogger, 'debug');
-            const warnSpy = jest.spyOn(rootLogger, 'warn');
+            const debugSpy = vi.spyOn(rootLogger, 'debug');
+            const warnSpy = vi.spyOn(rootLogger, 'warn');
             httpClient.createHttpClient({ baseUrl: 'https://api.test.com' });
             const err = makeError('get', 500, 0);
             mockInstance.mockImplementation((cfg: object) => {
@@ -303,15 +305,15 @@ describe('HTTP Client', () => {
 
     describe('stale retry entry cleanup (lines 70-72)', () => {
         beforeEach(() => {
-            jest.useFakeTimers();
+            vi.useFakeTimers();
             httpClient._resetRetryCleanup();
         });
 
         afterEach(() => {
-            jest.useRealTimers();
+            vi.useRealTimers();
         });
 
-        it('removes entries that have not been used for more than RETRY_STALE_MS', () => {
+        it('removes entries that have not been used for more than RETRY_STALE_MS', async () => {
             httpClient.createHttpClient({ baseUrl: 'https://api.test.com' });
 
             // Create entry in retryCounts via a retry that resolves successfully
@@ -328,7 +330,7 @@ describe('HTTP Client', () => {
 
             // Advance past RETRY_STALE_MS (600s) + one cleanup interval (300s)
             // to trigger stale entry deletion at t=900000
-            jest.advanceTimersByTime(900001);
+            vi.advanceTimersByTime(900001);
         });
     });
 
@@ -354,7 +356,7 @@ describe('HTTP Client', () => {
             await expect(req2Promise).resolves.toBe(cfg2);
         });
 
-        it('response error handler extracts host from empty url', () => {
+        it('response error handler extracts host from empty url', async () => {
             httpClient.createThrottledClient({ baseUrl: 'https://api.test.com', maxConcurrency: 3 });
             const errRespHandler = nonNull(mockInstance.interceptors.response.use.mock.calls[1])[1];
             const error = { config: {}, message: 'test', name: 'Error' };
@@ -388,7 +390,7 @@ describe('HTTP Client', () => {
             await expect(p3).resolves.toBeUndefined();
         });
 
-        it('release calls dispatchNext even when queue is empty', () => {
+        it('release calls dispatchNext even when queue is empty', async () => {
             const sem = new HostSemaphore(1);
             expect(() => sem.release('nonexistent')).not.toThrow();
         });

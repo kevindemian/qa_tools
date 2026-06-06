@@ -2,53 +2,68 @@
  *  Validates that missing config/env vars trigger setup wizard offers.
  *  Uses nock for HTTP isolation and confirms the user is never left without an actionable message. */
 import nock from 'nock';
-import { offerEnvSetup } from '../shared/cli_base';
-import { getProjects } from '../git_triggers/session-state';
-import { resolveAlias } from '../jira_management/menu-data';
-import * as breadcrumbs from '../shared/breadcrumbs';
-import { confirm as _confirm } from '../shared/prompt';
-import { loadTypedState as _loadTypedState } from '../shared/state';
+import { offerEnvSetup } from '../shared/cli_base.js';
+import { getProjects } from '../git_triggers/session-state.js';
+import { resolveAlias } from '../jira_management/menu-data.js';
+import * as breadcrumbs from '../shared/breadcrumbs.js';
+import { confirm as _confirm } from '../shared/prompt.js';
+import { loadTypedState as _loadTypedState } from '../shared/state.js';
 
-const mockConfirm = jest.mocked(_confirm);
-const mockLoadTypedState = jest.mocked(_loadTypedState);
+const mockConfirm = vi.mocked(_confirm);
+const mockLoadTypedState = vi.mocked(_loadTypedState);
 
-jest.mock('../shared/prompt', () => ({
-    print: jest.fn(),
-    success: jest.fn(),
-    error: jest.fn(),
-    warn: jest.fn(),
-    info: jest.fn(),
-    title: jest.fn(),
-    divider: jest.fn(),
-    prompt: jest.fn().mockReturnValue(''),
-    confirm: jest.fn<boolean, []>().mockReturnValue(false),
-    printError: jest.fn(),
-    showSelect: jest.fn().mockResolvedValue('skip'),
-    tableView: jest.fn(),
-    helpLine: jest.fn(),
+vi.mock('../shared/prompt', () => ({
+    print: vi.fn(),
+    success: vi.fn(),
+    error: vi.fn(),
+    warn: vi.fn(),
+    info: vi.fn(),
+    title: vi.fn(),
+    divider: vi.fn(),
+    prompt: vi.fn().mockReturnValue(''),
+    confirm: vi.fn<() => boolean>().mockReturnValue(false),
+    printError: vi.fn(),
+    showSelect: vi.fn().mockResolvedValue('skip'),
+    tableView: vi.fn(),
+    helpLine: vi.fn(),
 }));
 
-jest.mock('../shared/logger', () => ({
+vi.mock('../shared/logger', () => ({
     rootLogger: {
-        child: jest.fn(() => ({ info: jest.fn(), warn: jest.fn(), error: jest.fn() })),
-        warn: jest.fn(),
-        error: jest.fn(),
-        info: jest.fn(),
-        writeFileOnly: jest.fn(),
+        child: vi.fn(() => ({ info: vi.fn(), warn: vi.fn(), error: vi.fn() })),
+        warn: vi.fn(),
+        error: vi.fn(),
+        info: vi.fn(),
+        writeFileOnly: vi.fn(),
     },
-    Logger: jest.fn(),
+    Logger: vi.fn(),
 }));
 
-jest.mock('../shared/state', () => ({
-    load: jest.fn(() => ({})),
-    loadTypedState: jest.fn<object, []>(),
-    update: jest.fn(),
-    getStatePath: jest.fn(() => '/tmp/state.json'),
+vi.mock('../shared/state', () => ({
+    load: vi.fn(() => ({})),
+    loadTypedState: vi.fn<() => object>(),
+    update: vi.fn(),
+    getStatePath: vi.fn(() => '/tmp/state.json'),
+}));
+
+vi.mock('../shared/config', () => ({
+    default: {
+        get(key: string) {
+            const empty: Record<string, string> = {
+                gitToken: '',
+                githubToken: '',
+                gitBaseUrl: 'https://gitlab.com',
+                githubApiUrl: '',
+            };
+            return empty[key] ?? process.env[key] ?? process.env[key.toUpperCase()] ?? '';
+        },
+        getAllPrefixed: vi.fn(() => ({})),
+    },
 }));
 
 describe('friendly error paths (Sprint W)', () => {
     beforeEach(() => {
-        jest.clearAllMocks();
+        vi.clearAllMocks();
         nock.cleanAll();
         nock.disableNetConnect();
         mockLoadTypedState.mockReturnValue({});
@@ -99,125 +114,17 @@ describe('friendly error paths (Sprint W)', () => {
 
     describe('W3 — MissingTokenError', () => {
         it('throws MissingTokenError for GitLab without token', async () => {
-            jest.isolateModules(() => {
-                jest.doMock('../shared/config', () => ({
-                    default: {
-                        gitToken: '',
-                        gitBaseUrl: 'https://gitlab.com',
-                        githubToken: '',
-                        githubApiUrl: '',
-                        getAllPrefixed: jest.fn(() => ({})),
-                        get(key: string) {
-                            return (this as Record<string, unknown>)[key] as string;
-                        },
-                    },
-                    __esModule: true,
-                }));
-                jest.doMock('fs', () => {
-                    const original = jest.requireActual<typeof import('fs')>('fs');
-                    return {
-                        ...original,
-                        readFileSync: jest.fn((p: string) => {
-                            if (p.includes('providers.json')) return '{"test-proj":{}}';
-                            return jest.mocked(original.readFileSync)(p, 'utf8');
-                        }),
-                    };
-                });
-                jest.doMock('../shared/prompt', () => ({
-                    print: jest.fn(),
-                    success: jest.fn(),
-                    error: jest.fn(),
-                    warn: jest.fn(),
-                    info: jest.fn(),
-                    title: jest.fn(),
-                    divider: jest.fn(),
-                    prompt: jest.fn().mockReturnValue(''),
-                    confirm: jest.fn().mockResolvedValue(false),
-                    printError: jest.fn(),
-                    showSelect: jest.fn().mockResolvedValue('skip'),
-                    tableView: jest.fn(),
-                    helpLine: jest.fn(),
-                }));
-                jest.doMock('../shared/logger', () => ({
-                    rootLogger: {
-                        child: jest.fn(() => ({ info: jest.fn(), warn: jest.fn(), error: jest.fn() })),
-                        warn: jest.fn(),
-                        error: jest.fn(),
-                        info: jest.fn(),
-                    },
-                    Logger: jest.fn(),
-                }));
-                jest.doMock('../git_triggers/gitlab_manager', () => ({
-                    __esModule: true,
-                    default: jest.fn(),
-                }));
-
-                const mod = jest.requireActual<typeof import('../git_triggers/session-state')>(
-                    '../git_triggers/session-state',
-                );
-                expect(() => mod.createManagerForProject('test-proj', '123')).toThrow('GIT_TOKEN');
-            });
+            const { createManagerForProject: createMaker } = await vi.importActual<
+                typeof import('../git_triggers/session-state.js')
+            >('../git_triggers/session-state');
+            expect(() => createMaker('qa_tools', '123')).toThrow('GIT_TOKEN');
         });
 
         it('throws MissingTokenError for GitHub without token', async () => {
-            jest.isolateModules(() => {
-                jest.doMock('../shared/config', () => ({
-                    default: {
-                        gitToken: '',
-                        gitBaseUrl: 'https://gitlab.com',
-                        githubToken: '',
-                        githubApiUrl: '',
-                        getAllPrefixed: jest.fn(() => ({})),
-                        get(key: string) {
-                            return (this as Record<string, unknown>)[key] as string;
-                        },
-                    },
-                    __esModule: true,
-                }));
-                jest.doMock('fs', () => {
-                    const original = jest.requireActual<typeof import('fs')>('fs');
-                    return {
-                        ...original,
-                        readFileSync: jest.fn((p: string) => {
-                            if (p.includes('providers.json')) return '{"test-proj":{"provider":"github"}}';
-                            return jest.mocked(original.readFileSync)(p, 'utf8');
-                        }),
-                    };
-                });
-                jest.doMock('../shared/prompt', () => ({
-                    print: jest.fn(),
-                    success: jest.fn(),
-                    error: jest.fn(),
-                    warn: jest.fn(),
-                    info: jest.fn(),
-                    title: jest.fn(),
-                    divider: jest.fn(),
-                    prompt: jest.fn().mockReturnValue(''),
-                    confirm: jest.fn().mockResolvedValue(false),
-                    printError: jest.fn(),
-                    showSelect: jest.fn().mockResolvedValue('skip'),
-                    tableView: jest.fn(),
-                    helpLine: jest.fn(),
-                }));
-                jest.doMock('../shared/logger', () => ({
-                    rootLogger: {
-                        child: jest.fn(() => ({ info: jest.fn(), warn: jest.fn(), error: jest.fn() })),
-                        warn: jest.fn(),
-                        error: jest.fn(),
-                        info: jest.fn(),
-                    },
-                    Logger: jest.fn(),
-                }));
-                jest.doMock('../git_triggers/github_manager', () => ({
-                    __esModule: true,
-                    default: jest.fn(),
-                }));
-
-                const mod = jest.requireActual<typeof import('../git_triggers/session-state')>(
-                    '../git_triggers/session-state',
-                );
-                expect(() => mod.createManagerForProject('test-proj', '456')).toThrow('GITHUB_TOKEN');
-            });
+            const { createManagerForProject: createMaker } = await vi.importActual<
+                typeof import('../git_triggers/session-state.js')
+            >('../git_triggers/session-state');
+            expect(() => createMaker('qa_tools_e2e', '456')).toThrow('GITHUB_TOKEN');
         });
     });
 

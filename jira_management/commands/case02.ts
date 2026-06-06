@@ -1,7 +1,7 @@
 /** View project versions from Jira. */
-import { info, error, divider, printError } from '../../shared/prompt';
-import { rootLogger } from '../../shared/logger';
-import type { CommandContext } from './context';
+import { info, error, divider, printError } from '../../shared/prompt.js';
+import { rootLogger } from '../../shared/logger.js';
+import type { CommandContext } from './context.js';
 
 async function handler(c: CommandContext): Promise<boolean | void> {
     try {

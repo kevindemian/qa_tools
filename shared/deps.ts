@@ -13,45 +13,29 @@
  *
  * @module deps
  */
-import chalk = require('chalk');
-import axios = require('axios');
-import AdmZip = require('adm-zip');
-import cliProgress = require('cli-progress');
-import CliTable3 = require('cli-table3');
-import csv = require('csv-parser');
-import dotenv = require('dotenv');
-import figlet = require('figlet');
-import readlineSync = require('readline-sync');
-import yaml = require('yaml');
-import zod = require('zod');
+import chalk from 'chalk';
+import axios from 'axios';
+import AdmZip from 'adm-zip';
+import cliProgress from 'cli-progress';
+import CliTable3 from 'cli-table3';
+import csv from 'csv-parser';
+import dotenv from 'dotenv';
+import figlet from 'figlet';
+import readlineSync from 'readline-sync';
+import yaml from 'yaml';
+import zod from 'zod';
+import { globSync } from 'glob';
 
 export { chalk, axios, AdmZip, cliProgress, CliTable3, csv, dotenv, figlet, readlineSync, yaml, zod };
 
-/* glob is lazy-required to avoid Jest ESM parse failures (glob v10+ transitively loads path-scurry TS sources) */
-type GlobSyncFn = (pattern: string, options?: { cwd?: string }) => string[];
-type GlobModule = { globSync: GlobSyncFn };
+export { globSync };
 
-let _glob: GlobModule | null = null;
-function requireGlob(): GlobModule {
-    if (!_glob) _glob = require('glob') as GlobModule;
-    return _glob;
+export function getGlob(): { globSync: typeof globSync } {
+    return { globSync };
 }
 
-export function getGlob(): GlobModule {
-    return requireGlob();
-}
-export function globSync(pattern: string, options?: { cwd?: string }): string[] {
-    if (options !== undefined) return requireGlob().globSync(pattern, options);
-    return requireGlob().globSync(pattern);
-}
-
-/* yaml named exports (preserve both value and type via export import) */
-export import Document = yaml.Document;
-export import YAMLMap = yaml.YAMLMap;
-export import YAMLSeq = yaml.YAMLSeq;
-export import Scalar = yaml.Scalar;
-export import Pair = yaml.Pair;
-export const { isMap, parseDocument } = yaml;
+/* yaml named exports (re-export classes + helpers directly) */
+export { Document, YAMLMap, YAMLSeq, Scalar, Pair, isMap, parseDocument } from 'yaml';
 
 export type { AxiosInstance, AxiosResponse, AxiosError } from 'axios';
 export type { Node } from 'yaml';

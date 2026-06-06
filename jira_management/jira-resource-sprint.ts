@@ -1,6 +1,6 @@
 /** Jira sprint management: add tasks to active sprint. */
-import { success, info, warn, extractErrorMessage } from '../shared/prompt';
-import type { JiraResourceLike } from './jira-resource-types';
+import { success, info, warn, extractErrorMessage } from '../shared/prompt.js';
+import type { JiraResourceLike } from './jira-resource-types.js';
 import {
     addingTasksToSprint,
     TASKS_ADDED_TO_SPRINT,
@@ -13,7 +13,7 @@ import {
     transitionNotFound,
     errorMovingTask,
     errorMovingTaskShort,
-} from './constants';
+} from './constants.js';
 
 interface TransitionData {
     id: string;

@@ -3,58 +3,53 @@
  * Run: XRAY_MODE=cloud npx jest e2e/smoke-xray-cloud --no-coverage
  */
 
-import Config from '../shared/config';
-import JiraResource from '../jira_management/jira_resource';
-import { createStepImporter } from '../jira_management/xray-client';
+import Config from '../shared/config.js';
+import JiraResource from '../jira_management/jira_resource.js';
+import { createStepImporter } from '../jira_management/xray-client.js';
 
-const runSmoke = process.env.XRAY_MODE === 'cloud';
+vi.mock('../shared/prompt', async () => {
+    const actual = await vi.importActual<typeof import('../shared/prompt.js')>('../shared/prompt');
+    return {
+        ...actual,
+        prompt: vi.fn().mockReturnValue(''),
+        confirm: vi.fn().mockReturnValue(true),
+        ask: vi.fn().mockResolvedValue(''),
+        askConfirm: vi.fn().mockResolvedValue(true),
+    };
+});
 
-if (!runSmoke) {
-    describe.skip('smoke-xray-cloud', () => {
-        it('skipped — set XRAY_MODE=cloud to run', () => {});
+describe('smoke-xray-cloud', async () => {
+    beforeEach(async () => {
+        vi.clearAllMocks();
+        vi.restoreAllMocks();
     });
-} else {
-    jest.mock('../shared/prompt', () => {
-        const actual = jest.requireActual<typeof import('../shared/prompt')>('../shared/prompt');
-        return {
-            ...actual,
-            prompt: jest.fn().mockReturnValue(''),
-            confirm: jest.fn().mockReturnValue(true),
-            ask: jest.fn().mockResolvedValue(''),
-            askConfirm: jest.fn().mockResolvedValue(true),
+
+    it.runIf(process.env.XRAY_MODE === 'cloud')('config.xrayMode returns "cloud"', () => {
+        expect(Config.get('xrayMode')).toBe('cloud');
+    });
+
+    it.runIf(process.env.XRAY_MODE === 'cloud')('default XrayClient instantiates from JiraResource', async () => {
+        const XrayClient = require('../jira_management/xray-client') as {
+            default: { createTest: unknown; updateTest: unknown };
         };
+        expect(XrayClient).toBeDefined();
+        expect(typeof XrayClient.default?.createTest).toBe('function');
+        expect(typeof XrayClient.default?.updateTest).toBe('function');
     });
 
-    describe('smoke-xray-cloud', () => {
-        beforeEach(() => {
-            jest.clearAllMocks();
-            jest.restoreAllMocks();
-        });
-
-        it('config.xrayMode returns "cloud"', () => {
-            expect(Config.get('xrayMode')).toBe('cloud');
-        });
-
-        it('default XrayClient instantiates from JiraResource', () => {
-            const XrayClient = require('../jira_management/xray-client') as {
-                default: { createTest: unknown; updateTest: unknown };
-            };
-            expect(XrayClient).toBeDefined();
-            expect(typeof XrayClient.default?.createTest).toBe('function');
-            expect(typeof XrayClient.default?.updateTest).toBe('function');
-        });
-
-        it('createStepImporter returns CloudStepImporter when mode=cloud', () => {
+    it.runIf(process.env.XRAY_MODE === 'cloud')(
+        'createStepImporter returns CloudStepImporter when mode=cloud',
+        async () => {
             const jira = new JiraResource('test', 'https://example.atlassian.net');
             const importer = createStepImporter(jira, 'cloud');
 
             expect(importer).toBeDefined();
-        });
+        },
+    );
 
-        it('JiraResource with cloud base URL is valid', () => {
-            const jira = new JiraResource('test', 'https://example.atlassian.net');
-            expect(jira.baseUrl).toContain('atlassian.net');
-            expect(jira.baseUrl).toMatch(/^https/);
-        });
+    it.runIf(process.env.XRAY_MODE === 'cloud')('JiraResource with cloud base URL is valid', async () => {
+        const jira = new JiraResource('test', 'https://example.atlassian.net');
+        expect(jira.baseUrl).toContain('atlassian.net');
+        expect(jira.baseUrl).toMatch(/^https/);
     });
-}
+});

@@ -1,53 +1,53 @@
-import { nonNull } from '../shared/test-utils';
-import { handleDryRun, resolveCsvPath, resolveLabels, resolveJsonPath } from './import-prep-parsers';
+import { nonNull } from '../shared/test-utils.js';
+import { handleDryRun, resolveCsvPath, resolveLabels, resolveJsonPath } from './import-prep-parsers.js';
 
-jest.mock('../shared/config', () => ({ get: jest.fn() }));
-jest.mock('../shared/logger', () => ({
+vi.mock('../shared/config', async () => ({ default: { get: vi.fn() } }));
+vi.mock('../shared/logger', async () => ({
     rootLogger: {
-        child: jest.fn().mockReturnValue({ info: jest.fn(), warn: jest.fn(), error: jest.fn() }),
-        warn: jest.fn(),
-        error: jest.fn(),
-        info: jest.fn(),
+        child: vi.fn().mockReturnValue({ info: vi.fn(), warn: vi.fn(), error: vi.fn() }),
+        warn: vi.fn(),
+        error: vi.fn(),
+        info: vi.fn(),
     },
 }));
-jest.mock('../shared/state', () => ({ load: jest.fn(), update: jest.fn() }));
-jest.mock('../shared/prompt', () => ({
-    warn: jest.fn(),
-    prompt: jest.fn(),
-    printSummary: jest.fn(),
-    askFilePath: jest.fn(),
-    info: jest.fn(),
-    print: jest.fn(),
-    confirm: jest.fn(),
-    title: jest.fn(),
-    divider: jest.fn(),
-    isQuiet: jest.fn().mockReturnValue(true),
+vi.mock('../shared/state', async () => ({ load: vi.fn(), update: vi.fn() }));
+vi.mock('../shared/prompt', async () => ({
+    warn: vi.fn(),
+    prompt: vi.fn(),
+    printSummary: vi.fn(),
+    askFilePath: vi.fn(),
+    info: vi.fn(),
+    print: vi.fn(),
+    confirm: vi.fn(),
+    title: vi.fn(),
+    divider: vi.fn(),
+    isQuiet: vi.fn().mockReturnValue(true),
 }));
-jest.mock('../shared/quoted-string', () => ({ isPreconditionKey: jest.fn() }));
-jest.mock('../shared/markdown', () => ({
-    md: jest.fn((s: string) => s),
-    mdToHtml: jest.fn((s: string) => s),
+vi.mock('../shared/quoted-string', async () => ({ isPreconditionKey: vi.fn() }));
+vi.mock('../shared/markdown', async () => ({
+    md: vi.fn((s: string) => s),
+    mdToHtml: vi.fn((s: string) => s),
 }));
 
-import * as CONFIG from '../shared/config';
-import * as PROMPT from '../shared/prompt';
-import * as STATE from '../shared/state';
+import * as CONFIG from '../shared/config.js';
+import * as PROMPT from '../shared/prompt.js';
+import * as STATE from '../shared/state.js';
 
 describe('handleDryRun', () => {
-    const onBusy = jest.fn();
+    const onBusy = vi.fn();
 
     beforeEach(() => {
-        jest.clearAllMocks();
+        vi.clearAllMocks();
     });
 
-    it('returns null when dryRun is disabled', () => {
-        jest.mocked(CONFIG.default.get).mockReturnValue(false);
+    it('returns null when dryRun is disabled', async () => {
+        vi.mocked(CONFIG.default.get).mockReturnValue(false);
         const result = handleDryRun([{ title: 'TC1', steps: [] }], onBusy, '/path.csv');
         expect(result).toBeNull();
     });
 
-    it('returns dry-run result and calls onBusy when dryRun is enabled', () => {
-        jest.mocked(CONFIG.default.get).mockReturnValue(true);
+    it('returns dry-run result and calls onBusy when dryRun is enabled', async () => {
+        vi.mocked(CONFIG.default.get).mockReturnValue(true);
         const tests = [{ title: 'TC1', steps: [] }];
         const result = handleDryRun(tests, onBusy, '/path.csv');
         expect(result).not.toBeNull();
@@ -60,8 +60,8 @@ describe('handleDryRun', () => {
 
 describe('resolveCsvPath', () => {
     beforeEach(() => {
-        jest.clearAllMocks();
-        jest.mocked(STATE.load).mockReturnValue({});
+        vi.clearAllMocks();
+        vi.mocked(STATE.load).mockReturnValue({});
     });
 
     it('returns input when provided', async () => {
@@ -70,7 +70,7 @@ describe('resolveCsvPath', () => {
     });
 
     it('reads from config when no input', async () => {
-        jest.mocked(CONFIG.default.get).mockImplementation((key: string) => {
+        vi.mocked(CONFIG.default.get).mockImplementation((key: string) => {
             if (key === 'csvPath') return '/config/path.csv';
             return undefined;
         });
@@ -79,8 +79,8 @@ describe('resolveCsvPath', () => {
     });
 
     it('prompts user when no input and no config', async () => {
-        jest.mocked(CONFIG.default.get).mockReturnValue(undefined);
-        jest.mocked(PROMPT.askFilePath).mockResolvedValue('/user/path.csv');
+        vi.mocked(CONFIG.default.get).mockReturnValue(undefined);
+        vi.mocked(PROMPT.askFilePath).mockResolvedValue('/user/path.csv');
         const result = await resolveCsvPath(undefined);
         expect(result).toBe('/user/path.csv');
     });
@@ -88,18 +88,18 @@ describe('resolveCsvPath', () => {
 
 describe('resolveLabels', () => {
     beforeEach(() => {
-        jest.clearAllMocks();
-        jest.mocked(STATE.load).mockReturnValue({});
-        jest.mocked(CONFIG.default.get).mockReturnValue(undefined);
+        vi.clearAllMocks();
+        vi.mocked(STATE.load).mockReturnValue({});
+        vi.mocked(CONFIG.default.get).mockReturnValue(undefined);
     });
 
-    it('returns input array when provided', () => {
+    it('returns input array when provided', async () => {
         const result = resolveLabels(['smoke', 'regression'], 'csvLabels');
         expect(result).toEqual(['smoke', 'regression']);
     });
 
-    it('reads from config when no input', () => {
-        jest.mocked(CONFIG.default.get).mockImplementation((key: string) => {
+    it('reads from config when no input', async () => {
+        vi.mocked(CONFIG.default.get).mockImplementation((key: string) => {
             if (key === 'csvLabels') return 'config-label';
             return undefined;
         });
@@ -107,14 +107,14 @@ describe('resolveLabels', () => {
         expect(result).toEqual(['config-label']);
     });
 
-    it('prompts user and splits by comma', () => {
-        jest.mocked(PROMPT.prompt).mockReturnValue('a, b, c');
+    it('prompts user and splits by comma', async () => {
+        vi.mocked(PROMPT.prompt).mockReturnValue('a, b, c');
         const result = resolveLabels(undefined, 'csvLabels');
         expect(result).toEqual(['a', 'b', 'c']);
     });
 
-    it('returns empty array for empty prompt', () => {
-        jest.mocked(PROMPT.prompt).mockReturnValue('');
+    it('returns empty array for empty prompt', async () => {
+        vi.mocked(PROMPT.prompt).mockReturnValue('');
         const result = resolveLabels(undefined, 'csvLabels');
         expect(result).toEqual([]);
     });
@@ -122,9 +122,9 @@ describe('resolveLabels', () => {
 
 describe('resolveJsonPath', () => {
     beforeEach(() => {
-        jest.clearAllMocks();
-        jest.mocked(STATE.load).mockReturnValue({});
-        jest.mocked(CONFIG.default.get).mockReturnValue(undefined);
+        vi.clearAllMocks();
+        vi.mocked(STATE.load).mockReturnValue({});
+        vi.mocked(CONFIG.default.get).mockReturnValue(undefined);
     });
 
     it('returns input when provided', async () => {
@@ -133,7 +133,7 @@ describe('resolveJsonPath', () => {
     });
 
     it('reads from config when no input', async () => {
-        jest.mocked(CONFIG.default.get).mockImplementation((key: string) => {
+        vi.mocked(CONFIG.default.get).mockImplementation((key: string) => {
             if (key === 'jsonPath') return '/config/tests.json';
             return undefined;
         });
@@ -142,13 +142,13 @@ describe('resolveJsonPath', () => {
     });
 
     it('prompts user when no input and no config', async () => {
-        jest.mocked(PROMPT.askFilePath).mockResolvedValue('/user/tests.json');
+        vi.mocked(PROMPT.askFilePath).mockResolvedValue('/user/tests.json');
         const result = await resolveJsonPath(undefined);
         expect(result).toBe('/user/tests.json');
     });
 
     it('returns undefined for empty path', async () => {
-        jest.mocked(PROMPT.askFilePath).mockResolvedValue('');
+        vi.mocked(PROMPT.askFilePath).mockResolvedValue('');
         const result = await resolveJsonPath(undefined);
         expect(result).toBeUndefined();
         expect(PROMPT.warn).toHaveBeenCalledWith(expect.stringContaining('vazio'));

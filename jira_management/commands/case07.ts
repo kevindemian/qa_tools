@@ -1,8 +1,8 @@
 /** Close all tasks for a given version — transition unresolved issues to Done. */
-import { warn, askConfirm, ask, printSummary, printError } from '../../shared/prompt';
-import { rootLogger } from '../../shared/logger';
-import type { CommandContext } from './context';
-import { NO_TASKS_FOUND_FOR_VERSION, OPERATION_CANCELLED } from '../constants';
+import { warn, askConfirm, ask, printSummary, printError } from '../../shared/prompt.js';
+import { rootLogger } from '../../shared/logger.js';
+import type { CommandContext } from './context.js';
+import { NO_TASKS_FOUND_FOR_VERSION, OPERATION_CANCELLED } from '../constants.js';
 
 async function handler(c: CommandContext): Promise<boolean | void> {
     const version = await ask('Versão a fechar', {});

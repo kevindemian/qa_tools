@@ -1,11 +1,11 @@
-jest.mock('./disk-cache', () => ({
-    diskCacheGet: jest.fn(() => null),
-    diskCacheSet: jest.fn(),
-    clearDiskCache: jest.fn(),
+vi.mock('./disk-cache', async () => ({
+    diskCacheGet: vi.fn(() => null),
+    diskCacheSet: vi.fn(),
+    clearDiskCache: vi.fn(),
 }));
 
 import { z } from 'zod';
-import { diskCacheGet, diskCacheSet, clearDiskCache } from './disk-cache';
+import { diskCacheGet, diskCacheSet, clearDiskCache } from './disk-cache.js';
 import {
     configUniqueKey,
     cacheKey,
@@ -17,8 +17,8 @@ import {
     checkSchema,
     warnIfNotJson,
     CACHE_TTL_MS,
-} from './llm-cache';
-import { rootLogger } from './logger';
+} from './llm-cache.js';
+import { rootLogger } from './logger.js';
 
 const testSchema = z.object({ ok: z.boolean() });
 
@@ -41,56 +41,56 @@ function makeCfg(
 }
 
 beforeEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
     clearCache();
-    jest.useRealTimers();
+    vi.useRealTimers();
 });
 
 describe('configUniqueKey', () => {
-    it('generates a unique key from provider config', () => {
+    it('generates a unique key from provider config', async () => {
         const key = configUniqueKey(makeCfg());
         expect(key).toContain('https://api.test.com/v1');
         expect(key).toContain('gpt-4');
         expect(key).toContain('0.3');
     });
 
-    it('includes api key hash when present', () => {
+    it('includes api key hash when present', async () => {
         const withKey = configUniqueKey(makeCfg({ apiKey: 'sk-test12345' }));
         const withoutKey = configUniqueKey(makeCfg({ apiKey: '' }));
         expect(withKey).not.toBe(withoutKey);
     });
 
-    it('defaults responseFormat to text when not provided', () => {
+    it('defaults responseFormat to text when not provided', async () => {
         const key = configUniqueKey(makeCfg());
         expect(key).toContain('text');
     });
 
-    it('includes responseFormat when provided', () => {
+    it('includes responseFormat when provided', async () => {
         const key = configUniqueKey(makeCfg({ responseFormat: 'json' }));
         expect(key).toContain('json');
     });
 });
 
 describe('cacheKey', () => {
-    it('generates a deterministic 64-char hex string', () => {
+    it('generates a deterministic 64-char hex string', async () => {
         const key = cacheKey('main', 'cfgKey', 'system prompt', 'user message');
         expect(key).toHaveLength(64);
         expect(/^[a-f0-9]+$/.test(key)).toBe(true);
     });
 
-    it('produces different keys for different inputs', () => {
+    it('produces different keys for different inputs', async () => {
         const k1 = cacheKey('main', 'cfg1', 'sys', 'usr');
         const k2 = cacheKey('main', 'cfg1', 'sys', 'different');
         expect(k1).not.toBe(k2);
     });
 
-    it('includes callerId when provided', () => {
+    it('includes callerId when provided', async () => {
         const withCaller = cacheKey('main', 'cfg', 'sys', 'usr', 'caller1');
         const withoutCaller = cacheKey('main', 'cfg', 'sys', 'usr');
         expect(withCaller).not.toBe(withoutCaller);
     });
 
-    it('includes responseFormat when provided', () => {
+    it('includes responseFormat when provided', async () => {
         const jsonKey = cacheKey('main', 'cfg', 'sys', 'usr', undefined, 'json');
         const textKey = cacheKey('main', 'cfg', 'sys', 'usr', undefined, 'text');
         expect(jsonKey).not.toBe(textKey);
@@ -98,39 +98,39 @@ describe('cacheKey', () => {
 });
 
 describe('checkMemoryCache', () => {
-    it('returns miss when key is not in cache', () => {
+    it('returns miss when key is not in cache', async () => {
         const result = checkMemoryCache('nonexistent', 'main', undefined, undefined, undefined);
         expect(result.hit).toBe(false);
         expect(result.data).toBeNull();
     });
 
-    it('returns hit when key is in cache and not expired', () => {
+    it('returns hit when key is in cache and not expired', async () => {
         setMemoryCache('test-key', 'cached response');
         const result = checkMemoryCache('test-key', 'main', undefined, undefined, undefined);
         expect(result.hit).toBe(true);
         expect(result.data).toBe('cached response');
     });
 
-    it('returns miss when cached entry has expired', () => {
+    it('returns miss when cached entry has expired', async () => {
         setMemoryCache('expired-key', 'stale');
-        jest.useFakeTimers();
-        jest.advanceTimersByTime(CACHE_TTL_MS + 1000);
+        vi.useFakeTimers();
+        vi.advanceTimersByTime(CACHE_TTL_MS + 1000);
         const result = checkMemoryCache('expired-key', 'main', undefined, undefined, undefined);
         expect(result.hit).toBe(false);
         expect(result.data).toBeNull();
-        jest.useRealTimers();
+        vi.useRealTimers();
     });
 
-    it('returns validated data when schema matches', () => {
+    it('returns validated data when schema matches', async () => {
         setMemoryCache('schema-key', '{"ok": true}');
         const result = checkMemoryCache('schema-key', 'main', 'caller', testSchema, 'json');
         expect(result.hit).toBe(true);
         expect(result.data).toEqual({ ok: true });
     });
 
-    it('returns miss and deletes entry when schema validation fails', () => {
+    it('returns miss and deletes entry when schema validation fails', async () => {
         setMemoryCache('bad-schema', '{"ok": "not_boolean"}');
-        const warnSpy = jest.spyOn(rootLogger, 'warn').mockImplementation(() => {});
+        const warnSpy = vi.spyOn(rootLogger, 'warn').mockImplementation(() => {});
         const result = checkMemoryCache('bad-schema', 'main', 'caller', testSchema, 'json');
         expect(result.hit).toBe(false);
         expect(result.data).toBeNull();
@@ -140,15 +140,15 @@ describe('checkMemoryCache', () => {
         warnSpy.mockRestore();
     });
 
-    it('warns when responseFormat=json but content is not JSON', () => {
+    it('warns when responseFormat=json but content is not JSON', async () => {
         setMemoryCache('nonjson-key', 'not json at all');
-        const warnSpy = jest.spyOn(rootLogger, 'warn').mockImplementation(() => {});
+        const warnSpy = vi.spyOn(rootLogger, 'warn').mockImplementation(() => {});
         checkMemoryCache('nonjson-key', 'main', undefined, undefined, 'json');
         expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining('not parseable'));
         warnSpy.mockRestore();
     });
 
-    it('returns hit with raw string when no schema and format is text', () => {
+    it('returns hit with raw string when no schema and format is text', async () => {
         setMemoryCache('raw-key', 'plain text');
         const result = checkMemoryCache('raw-key', 'main', undefined, undefined, 'text');
         expect(result.hit).toBe(true);
@@ -157,22 +157,22 @@ describe('checkMemoryCache', () => {
 });
 
 describe('checkDiskCache', () => {
-    it('returns miss when disk cache returns null', () => {
-        jest.mocked(diskCacheGet).mockReturnValue(null);
+    it('returns miss when disk cache returns null', async () => {
+        vi.mocked(diskCacheGet).mockReturnValue(null);
         const result = checkDiskCache('missing', undefined, undefined);
         expect(result.hit).toBe(false);
         expect(result.data).toBeNull();
     });
 
-    it('returns hit with string when disk cache has data without schema', () => {
-        jest.mocked(diskCacheGet).mockReturnValue('disk value');
+    it('returns hit with string when disk cache has data without schema', async () => {
+        vi.mocked(diskCacheGet).mockReturnValue('disk value');
         const result = checkDiskCache('disk-key', undefined, undefined);
         expect(result.hit).toBe(true);
         expect(result.data).toBe('disk value');
     });
 
-    it('returns validated data and populates memory cache when schema matches', () => {
-        jest.mocked(diskCacheGet).mockReturnValue('{"ok": true}');
+    it('returns validated data and populates memory cache when schema matches', async () => {
+        vi.mocked(diskCacheGet).mockReturnValue('{"ok": true}');
         const result = checkDiskCache('disk-schema', testSchema, 'json');
         expect(result.hit).toBe(true);
         expect(result.data).toEqual({ ok: true });
@@ -180,9 +180,9 @@ describe('checkDiskCache', () => {
         expect(memHit.hit).toBe(true);
     });
 
-    it('warns and returns miss when disk cache data fails schema', () => {
-        jest.mocked(diskCacheGet).mockReturnValue('{"ok": "bad"}');
-        const warnSpy = jest.spyOn(rootLogger, 'warn').mockImplementation(() => {});
+    it('warns and returns miss when disk cache data fails schema', async () => {
+        vi.mocked(diskCacheGet).mockReturnValue('{"ok": "bad"}');
+        const warnSpy = vi.spyOn(rootLogger, 'warn').mockImplementation(() => {});
         const result = checkDiskCache('disk-bad-schema', testSchema, 'json');
         expect(result.hit).toBe(false);
         expect(result.data).toBeNull();
@@ -190,9 +190,9 @@ describe('checkDiskCache', () => {
         warnSpy.mockRestore();
     });
 
-    it('warns when responseFormat=json but content is not JSON from disk', () => {
-        jest.mocked(diskCacheGet).mockReturnValue('not json');
-        const warnSpy = jest.spyOn(rootLogger, 'warn').mockImplementation(() => {});
+    it('warns when responseFormat=json but content is not JSON from disk', async () => {
+        vi.mocked(diskCacheGet).mockReturnValue('not json');
+        const warnSpy = vi.spyOn(rootLogger, 'warn').mockImplementation(() => {});
         checkDiskCache('disk-nonjson', undefined, 'json');
         expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining('not parseable'));
         warnSpy.mockRestore();
@@ -200,61 +200,61 @@ describe('checkDiskCache', () => {
 });
 
 describe('setMemoryCache / setDiskCache', () => {
-    it('setMemoryCache stores and can be retrieved', () => {
+    it('setMemoryCache stores and can be retrieved', async () => {
         setMemoryCache('store-key', 'stored value');
         const result = checkMemoryCache('store-key', 'main', undefined, undefined, undefined);
         expect(result.hit).toBe(true);
         expect(result.data).toBe('stored value');
     });
 
-    it('setDiskCache calls diskCacheSet', () => {
+    it('setDiskCache calls diskCacheSet', async () => {
         setDiskCache('disk-write-key', 'disk value');
         expect(diskCacheSet).toHaveBeenCalledWith('disk-write-key', 'disk value');
     });
 });
 
 describe('clearCache', () => {
-    it('clears memory cache', () => {
+    it('clears memory cache', async () => {
         setMemoryCache('clear-key', 'value');
         clearCache();
         const result = checkMemoryCache('clear-key', 'main', undefined, undefined, undefined);
         expect(result.hit).toBe(false);
     });
 
-    it('calls clearDiskCache', () => {
-        jest.mocked(clearDiskCache).mockClear();
+    it('calls clearDiskCache', async () => {
+        vi.mocked(clearDiskCache).mockClear();
         clearCache();
         expect(clearDiskCache).toHaveBeenCalledTimes(1);
     });
 });
 
 describe('checkSchema', () => {
-    it('returns validated data when schema matches', () => {
+    it('returns validated data when schema matches', async () => {
         const result = checkSchema('{"ok": true}', testSchema);
         expect(result).toEqual({ ok: true });
     });
 
-    it('returns null when raw string is not valid JSON', () => {
+    it('returns null when raw string is not valid JSON', async () => {
         const result = checkSchema('not json', testSchema);
         expect(result).toBeNull();
     });
 
-    it('returns null when schema validation fails', () => {
+    it('returns null when schema validation fails', async () => {
         const result = checkSchema('{"ok": "not_boolean"}', testSchema);
         expect(result).toBeNull();
     });
 });
 
 describe('warnIfNotJson', () => {
-    it('does not warn when response is valid JSON', () => {
-        const warnSpy = jest.spyOn(rootLogger, 'warn').mockImplementation(() => {});
+    it('does not warn when response is valid JSON', async () => {
+        const warnSpy = vi.spyOn(rootLogger, 'warn').mockImplementation(() => {});
         warnIfNotJson('{"valid": true}');
         expect(warnSpy).not.toHaveBeenCalled();
         warnSpy.mockRestore();
     });
 
-    it('warns when response is not valid JSON', () => {
-        const warnSpy = jest.spyOn(rootLogger, 'warn').mockImplementation(() => {});
+    it('warns when response is not valid JSON', async () => {
+        const warnSpy = vi.spyOn(rootLogger, 'warn').mockImplementation(() => {});
         warnIfNotJson('plain text with no json');
         expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining('not parseable'));
         warnSpy.mockRestore();

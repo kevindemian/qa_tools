@@ -1,7 +1,7 @@
 import { writeFileSync, unlinkSync } from 'fs';
-import { nonNull } from '../shared/test-utils';
-import { rootLogger } from '../shared/logger';
-import CsvResource from './csv_resource';
+import { nonNull } from '../shared/test-utils.js';
+import { rootLogger } from '../shared/logger.js';
+import CsvResource from './csv_resource.js';
 
 describe('CsvResource', () => {
     let csvResource: InstanceType<typeof CsvResource>;
@@ -11,59 +11,59 @@ describe('CsvResource', () => {
     });
 
     describe('parseDescription', () => {
-        it('extracts description from Description: header', () => {
+        it('extracts description from Description: header', async () => {
             const lines = ['Title: Test', 'Description: Verifica feature Y', 'Action,Data,Expected'];
             expect(csvResource.parseDescription(lines)).toBe('Verifica feature Y');
         });
 
-        it('returns empty string when no Description header', () => {
+        it('returns empty string when no Description header', async () => {
             const lines = ['Title: Test', 'Action,Data,Expected'];
             expect(csvResource.parseDescription(lines)).toBe('');
         });
 
-        it('handles multiline descriptions', () => {
+        it('handles multiline descriptions', async () => {
             const lines = ['Title: Test', 'Description: Line 1\\nLine 2', 'Action,Data,Expected'];
             expect(csvResource.parseDescription(lines)).toBe('Line 1\\nLine 2');
         });
     });
 
     describe('parsePrecondition', () => {
-        it('detects reference type for Jira keys', () => {
+        it('detects reference type for Jira keys', async () => {
             expect(csvResource.parsePrecondition('ECSPOL-PRE-42')).toEqual({
                 type: 'reference',
                 value: 'ECSPOL-PRE-42',
             });
         });
 
-        it('detects inline type for plain text', () => {
+        it('detects inline type for plain text', async () => {
             expect(csvResource.parsePrecondition('User must be logged in')).toEqual({
                 type: 'inline',
                 value: 'User must be logged in',
             });
         });
 
-        it('returns null for null/undefined/empty', () => {
+        it('returns null for null/undefined/empty', async () => {
             expect(csvResource.parsePrecondition(null)).toBeNull();
             expect(csvResource.parsePrecondition(undefined)).toBeNull();
             expect(csvResource.parsePrecondition('')).toBeNull();
             expect(csvResource.parsePrecondition('   ')).toBeNull();
         });
 
-        it('extracts key from KEY-100 (descricao)', () => {
+        it('extracts key from KEY-100 (descricao)', async () => {
             expect(csvResource.parsePrecondition('ECSPOL-PRE-42 (descricao do pre-cond)')).toEqual({
                 type: 'reference',
                 value: 'ECSPOL-PRE-42',
             });
         });
 
-        it('extracts key from KEY-100 (with extra parenthetical info)', () => {
+        it('extracts key from KEY-100 (with extra parenthetical info)', async () => {
             expect(csvResource.parsePrecondition('ABC-123 (some context here)')).toEqual({
                 type: 'reference',
                 value: 'ABC-123',
             });
         });
 
-        it('returns inline for multi-line text (already extracted)', () => {
+        it('returns inline for multi-line text (already extracted)', async () => {
             expect(csvResource.parsePrecondition('User must be logged in\nwith admin privileges')).toEqual({
                 type: 'inline',
                 value: 'User must be logged in\nwith admin privileges',
@@ -140,29 +140,29 @@ describe('CsvResource', () => {
     });
 
     describe('parseGroup', () => {
-        it('extracts group from Group: header', () => {
+        it('extracts group from Group: header', async () => {
             const lines = ['Title: Test', 'Group: LOGIN-FLOW', 'Action,Data,Expected'];
             expect(csvResource.parseGroup(lines)).toBe('LOGIN-FLOW');
         });
 
-        it('returns null when no Group: header', () => {
+        it('returns null when no Group: header', async () => {
             const lines = ['Title: Test', 'Action,Data,Expected'];
             expect(csvResource.parseGroup(lines)).toBeNull();
         });
 
-        it('returns null for whitespace-only Group:', () => {
+        it('returns null for whitespace-only Group:', async () => {
             const lines = ['Title: Test', 'Group:   ', 'Action,Data,Expected'];
             expect(csvResource.parseGroup(lines)).toBeNull();
         });
     });
 
     describe('parseLinkedIssues', () => {
-        it('parses single linked issue', () => {
+        it('parses single linked issue', async () => {
             const lines = ['Title: Test', 'Linked Issues: ECSPOL-100 (is tested by)', 'Action,Data,Expected'];
             expect(csvResource.parseLinkedIssues(lines)).toEqual([{ key: 'ECSPOL-100', linkType: 'is tested by' }]);
         });
 
-        it('parses multiple linked issues', () => {
+        it('parses multiple linked issues', async () => {
             const lines = ['Title: Test', 'Linked Issues: ECSPOL-100 (is tested by), ECSPOL-200 (relates to)'];
             expect(csvResource.parseLinkedIssues(lines)).toEqual([
                 { key: 'ECSPOL-100', linkType: 'is tested by' },
@@ -170,7 +170,7 @@ describe('CsvResource', () => {
             ]);
         });
 
-        it('returns empty array when no Linked Issues header', () => {
+        it('returns empty array when no Linked Issues header', async () => {
             const lines = ['Title: Test', 'Action,Data,Expected'];
             expect(csvResource.parseLinkedIssues(lines)).toEqual([]);
         });
@@ -178,7 +178,7 @@ describe('CsvResource', () => {
 
     describe('readBulkCsv edge cases', () => {
         it('skips block without Title and warns', async () => {
-            const warnSpy = jest.spyOn(rootLogger, 'warn').mockImplementation(() => {});
+            const warnSpy = vi.spyOn(rootLogger, 'warn').mockImplementation(() => {});
             const tmp = '/tmp/test-no-title.csv';
             writeFileSync(tmp, 'Action,Data,Expected\nx,y,z\n---\nTitle: Real\nAction,Data,Expected\na,b,c\n', 'utf-8');
             const results = await csvResource.readBulkCsv(tmp);
@@ -198,7 +198,7 @@ describe('CsvResource', () => {
         });
 
         it('parses multi-line quoted description without closing quote', async () => {
-            const warnSpy = jest.spyOn(rootLogger, 'warn').mockImplementation(() => {});
+            const warnSpy = vi.spyOn(rootLogger, 'warn').mockImplementation(() => {});
             const tmp = '/tmp/test-desc-unclosed.csv';
             writeFileSync(
                 tmp,
@@ -271,7 +271,7 @@ describe('CsvResource', () => {
         });
 
         it('warns on multi-line quoted pre-condition without closing quote', async () => {
-            const warnSpy = jest.spyOn(rootLogger, 'warn').mockImplementation(() => {});
+            const warnSpy = vi.spyOn(rootLogger, 'warn').mockImplementation(() => {});
             const tmp = '/tmp/test-pre-unclosed.csv';
             writeFileSync(
                 tmp,
@@ -293,10 +293,10 @@ describe('CsvResource', () => {
         });
 
         it('throws on CSV parse error', async () => {
-            const errorSpy = jest.spyOn(rootLogger, 'error').mockImplementation(() => {});
+            const errorSpy = vi.spyOn(rootLogger, 'error').mockImplementation(() => {});
             const orig = csvResource.readCsvFromString;
-            csvResource.readCsvFromString = jest
-                .fn<Promise<never>, [string]>()
+            csvResource.readCsvFromString = vi
+                .fn<(...args: [string]) => Promise<never>>()
                 .mockRejectedValue(new Error('CSV parse error'));
             const tmp = '/tmp/test-csv-error.csv';
             writeFileSync(tmp, 'Title: TC\nDescription: Test\nAction,Data,Expected\nx,y,z\n', 'utf-8');
@@ -309,26 +309,26 @@ describe('CsvResource', () => {
     });
 
     describe('parseLinkedIssues edge cases', () => {
-        it('returns empty array when Linked Issues value is empty', () => {
+        it('returns empty array when Linked Issues value is empty', async () => {
             const lines = ['Title: Test', 'Linked Issues:   ', 'Action,Data,Expected'];
             expect(csvResource.parseLinkedIssues(lines)).toEqual([]);
         });
     });
 
     describe('detectSeparator', () => {
-        it('returns comma for normal CSV', () => {
+        it('returns comma for normal CSV', async () => {
             expect(CsvResource.detectSeparator('Action,Data,Expected Result')).toBe(',');
         });
 
-        it('returns semicolon when first line has ; and no comma', () => {
+        it('returns semicolon when first line has ; and no comma', async () => {
             expect(CsvResource.detectSeparator('Action;Data;Expected Result')).toBe(';');
         });
 
-        it('returns comma when first line has both ; and ,', () => {
+        it('returns comma when first line has both ; and ,', async () => {
             expect(CsvResource.detectSeparator('"Action;Extra",Data,Expected Result')).toBe(',');
         });
 
-        it('returns comma for empty first line', () => {
+        it('returns comma for empty first line', async () => {
             expect(CsvResource.detectSeparator('')).toBe(',');
         });
     });
@@ -358,7 +358,7 @@ describe('CsvResource', () => {
         });
 
         it('normalizes ExpectedResult (camelCase) header', async () => {
-            const warnSpy = jest.spyOn(rootLogger, 'warn').mockImplementation(() => {});
+            const warnSpy = vi.spyOn(rootLogger, 'warn').mockImplementation(() => {});
             const csvString = 'Action,Data,ExpectedResult\nx,y,z';
             const result = await csvResource.readCsvFromString(csvString);
             expect(result).toHaveLength(1);
@@ -383,7 +383,7 @@ describe('CsvResource', () => {
         });
 
         it('deduplicates normalization warnings per column', async () => {
-            const warnSpy = jest.spyOn(rootLogger, 'warn').mockImplementation(() => {});
+            const warnSpy = vi.spyOn(rootLogger, 'warn').mockImplementation(() => {});
             const csvString = 'Action,ExpectedResult,ExpectedResult\nx,y,z\nw,v,u';
             const result = await csvResource.readCsvFromString(csvString);
             expect(result).toHaveLength(2);
@@ -413,7 +413,7 @@ describe('CsvResource', () => {
 
     describe('_processBulkCsvBlock flat CSV warning', () => {
         it('warns with diagnostic for flat CSV (Title,Action,... header)', async () => {
-            const warnSpy = jest.spyOn(rootLogger, 'warn').mockImplementation(() => {});
+            const warnSpy = vi.spyOn(rootLogger, 'warn').mockImplementation(() => {});
             // Flat CSV format: header row with Title,Action,Data,Expected Result (no ---, no Title:)
             const tmp = '/tmp/test-flat.csv';
             writeFileSync(tmp, 'Title,Action,Data,Expected Result\nTC1,Step1,,Result1\nTC2,Step2,,Result2\n', 'utf-8');
@@ -426,7 +426,7 @@ describe('CsvResource', () => {
         });
 
         it('warns with diagnostic for flat CSV (just Action,Data,...)', async () => {
-            const warnSpy = jest.spyOn(rootLogger, 'warn').mockImplementation(() => {});
+            const warnSpy = vi.spyOn(rootLogger, 'warn').mockImplementation(() => {});
             const tmp = '/tmp/test-flat-action.csv';
             writeFileSync(tmp, 'Action,Data,Expected Result\nStep1,Data1,Result1\n', 'utf-8');
             const results = await csvResource.readBulkCsv(tmp);

@@ -1,49 +1,49 @@
-import { md, mdBox, mdToHtml, __setLexer } from './markdown';
+import { md, mdBox, mdToHtml, __setLexer } from './markdown.js';
 
 describe('md', () => {
     afterEach(() => {
         __setLexer(null);
     });
 
-    it('renders headings', () => {
+    it('renders headings', async () => {
         const result = md('# Heading 1');
         expect(result).toContain('Heading 1');
     });
 
-    it('renders bold text', () => {
+    it('renders bold text', async () => {
         const result = md('**bold**');
         expect(result).toContain('bold');
     });
 
-    it('renders code block', () => {
+    it('renders code block', async () => {
         const result = md('```\ncode\n```');
         expect(result).toContain('code');
     });
 
-    it('renders lists', () => {
+    it('renders lists', async () => {
         const result = md('- item 1\n- item 2');
         expect(result).toContain('●');
         expect(result).toContain('item 1');
         expect(result).toContain('item 2');
     });
 
-    it('renders table', () => {
+    it('renders table', async () => {
         const result = md('| a | b |\n|---|---|\n| 1 | 2 |');
         expect(result).toContain('a');
         expect(result).toContain('1');
     });
 
-    it('renders hr', () => {
+    it('renders hr', async () => {
         const result = md('---');
         expect(result.length).toBeGreaterThan(0);
     });
 
-    it('handles empty input', () => {
+    it('handles empty input', async () => {
         const result = md('');
         expect(result).toBe('');
     });
 
-    it('renders mixed content', () => {
+    it('renders mixed content', async () => {
         const result = md('# Title\n\nParagraph text\n\n- item');
         expect(result).toContain('Title');
         expect(result).toContain('Paragraph');
@@ -51,55 +51,55 @@ describe('md', () => {
         expect(result).toContain('item');
     });
 
-    it('renders codespan', () => {
+    it('renders codespan', async () => {
         const result = md('use `code` inline');
         expect(result).toContain('code');
     });
 
-    it('renders italic text', () => {
+    it('renders italic text', async () => {
         const result = md('this is *italic* text');
         expect(result).toContain('italic');
         expect(result).toContain('\x1b[3m');
     });
 
-    it('renders strong text inside paragraph', () => {
+    it('renders strong text inside paragraph', async () => {
         const result = md('a **bold** word');
         expect(result).toContain('bold');
         expect(result).toContain('\x1b[1m');
     });
 
-    it('renders mixed inline tokens', () => {
+    it('renders mixed inline tokens', async () => {
         const result = md('text **bold** and *italic* and `code`');
         expect(result).toContain('bold');
         expect(result).toContain('italic');
         expect(result).toContain('code');
     });
 
-    it('renders ordered list', () => {
+    it('renders ordered list', async () => {
         const result = md('1. first\n2. second');
         expect(result).toContain('●');
         expect(result).toContain('first');
         expect(result).toContain('second');
     });
 
-    it('renders blockquote', () => {
+    it('renders blockquote', async () => {
         const result = md('> cited text');
         expect(result).toContain('cited text');
     });
 
-    it('renders strikethrough', () => {
+    it('renders strikethrough', async () => {
         const result = md('~~struck~~');
         expect(result).toContain('~~struck~~');
     });
 });
 
 describe('renderPipeTable edge cases', () => {
-    it('handles long cell content with word wrapping', () => {
+    it('handles long cell content with word wrapping', async () => {
         const result = md('| a | b |\n|---|---|\n| ' + 'x'.repeat(50) + ' | short |');
         expect(result).toContain('x'.repeat(50).slice(0, 10));
     });
 
-    it('handles empty cell content', () => {
+    it('handles empty cell content', async () => {
         const result = md('| a | b |\n|---|---|\n|  | short |');
         expect(result).toContain('a');
         expect(result).toContain('b');
@@ -107,20 +107,20 @@ describe('renderPipeTable edge cases', () => {
 });
 
 describe('mdBox', () => {
-    it('renders box with markdown content', () => {
+    it('renders box with markdown content', async () => {
         const result = mdBox('# Title', { title: 'Doc', border: 'round' });
         expect(result).toContain('Title');
         expect(result).toContain('╭');
         expect(result).toContain('╮');
     });
 
-    it('uses round border by default', () => {
+    it('uses round border by default', async () => {
         const result = mdBox('text');
         expect(result).toContain('╭');
         expect(result).toContain('╰');
     });
 
-    it('accepts custom border style', () => {
+    it('accepts custom border style', async () => {
         const result = mdBox('text', { border: 'double' });
         expect(result).toContain('╔');
         expect(result).toContain('╚');
@@ -132,7 +132,7 @@ describe('__setLexer token injection', () => {
         __setLexer(null);
     });
 
-    it('uses injected tokens for rendering', () => {
+    it('uses injected tokens for rendering', async () => {
         const tokens = [{ type: 'heading', depth: 1, tokens: [{ type: 'text', text: 'From injected tokens' }] }];
         __setLexer(tokens);
         const result = md('');
@@ -155,7 +155,7 @@ describe('wrapCell extended edge cases', () => {
         ];
     }
 
-    it('wraps text longer than column width with spaces', () => {
+    it('wraps text longer than column width with spaces', async () => {
         const text = 'hello world '.repeat(8);
         const tokens = makeTableTokens(['a'], [text]);
         __setLexer(tokens);
@@ -165,7 +165,7 @@ describe('wrapCell extended edge cases', () => {
         expect(result).toContain('hello');
     });
 
-    it('truncates text without spaces at column width', () => {
+    it('truncates text without spaces at column width', async () => {
         const text = 'x'.repeat(80);
         const tokens = makeTableTokens(['a'], [text]);
         __setLexer(tokens);
@@ -174,7 +174,7 @@ describe('wrapCell extended edge cases', () => {
         expect(lines.length).toBeGreaterThan(3);
     });
 
-    it('handles empty cell text', () => {
+    it('handles empty cell text', async () => {
         const tokens = makeTableTokens(['a', 'b'], ['', 'short']);
         __setLexer(tokens);
         const result = md('', 50);
@@ -187,7 +187,7 @@ describe('renderTokens additional types', () => {
         __setLexer(null);
     });
 
-    it('renders space token as empty line', () => {
+    it('renders space token as empty line', async () => {
         const tokens = [
             { type: 'heading', depth: 1, tokens: [{ type: 'text', text: 'A' }] },
             { type: 'space' },
@@ -199,7 +199,7 @@ describe('renderTokens additional types', () => {
         expect(result).toContain('B');
     });
 
-    it('renders blockquote token', () => {
+    it('renders blockquote token', async () => {
         const tokens = [{ type: 'blockquote', tokens: [{ type: 'text', text: 'cited text' }] }];
         __setLexer(tokens);
         const result = md('');
@@ -212,21 +212,21 @@ describe('renderInline additional types', () => {
         __setLexer(null);
     });
 
-    it('renders codespan inline', () => {
+    it('renders codespan inline', async () => {
         const tokens = [{ type: 'paragraph', tokens: [{ type: 'codespan', text: 'inline code' }] }];
         __setLexer(tokens);
         const result = md('');
         expect(result).toContain('inline code');
     });
 
-    it('renders link inline', () => {
+    it('renders link inline', async () => {
         const tokens = [{ type: 'paragraph', tokens: [{ type: 'link', text: 'click here' }] }];
         __setLexer(tokens);
         const result = md('');
         expect(result).toContain('click here');
     });
 
-    it('renders br inline as newline', () => {
+    it('renders br inline as newline', async () => {
         const tokens = [
             {
                 type: 'paragraph',
@@ -239,7 +239,7 @@ describe('renderInline additional types', () => {
         expect(result).toContain('after');
     });
 
-    it('renders del inline with strikethrough', () => {
+    it('renders del inline with strikethrough', async () => {
         const tokens = [
             {
                 type: 'paragraph',
@@ -253,122 +253,122 @@ describe('renderInline additional types', () => {
 });
 
 describe('mdToHtml', () => {
-    it('wraps output in full HTML document', () => {
+    it('wraps output in full HTML document', async () => {
         const result = mdToHtml('# Hello');
         expect(result).toContain('<!DOCTYPE html>');
         expect(result).toContain('<h1>Hello</h1>');
         expect(result).toContain('</body></html>');
     });
 
-    it('renders headings with correct levels', () => {
+    it('renders headings with correct levels', async () => {
         const result = mdToHtml('## Sub\n### Subsub');
         expect(result).toContain('<h2>Sub</h2>');
         expect(result).toContain('<h3>Subsub</h3>');
     });
 
-    it('renders paragraph text', () => {
+    it('renders paragraph text', async () => {
         const result = mdToHtml('a simple paragraph');
         expect(result).toContain('<p>a simple paragraph</p>');
     });
 
-    it('renders bold and italic', () => {
+    it('renders bold and italic', async () => {
         const result = mdToHtml('**bold** and *italic*');
         expect(result).toContain('<strong>bold</strong>');
         expect(result).toContain('<em>italic</em>');
     });
 
-    it('renders inline code', () => {
+    it('renders inline code', async () => {
         const result = mdToHtml('use `code` here');
         expect(result).toContain('<code>code</code>');
     });
 
-    it('renders code block', () => {
+    it('renders code block', async () => {
         const result = mdToHtml('```\nconst x = 1;\n```');
         expect(result).toContain('<pre><code>');
         expect(result).toContain('const x = 1;');
         expect(result).toContain('</code></pre>');
     });
 
-    it('renders unordered list', () => {
+    it('renders unordered list', async () => {
         const result = mdToHtml('- item 1\n- item 2');
         expect(result).toContain('<ul>');
         expect(result).toContain('<li>item 1</li>');
         expect(result).toContain('<li>item 2</li>');
     });
 
-    it('renders ordered list', () => {
+    it('renders ordered list', async () => {
         const result = mdToHtml('1. first\n2. second');
         expect(result).toContain('<ul>');
         expect(result).toContain('<li>first</li>');
     });
 
-    it('renders table', () => {
+    it('renders table', async () => {
         const result = mdToHtml('| a | b |\n|---|---|\n| 1 | 2 |');
         expect(result).toContain('<table>');
         expect(result).toContain('<th>a</th>');
         expect(result).toContain('<td>1</td>');
     });
 
-    it('renders horizontal rule', () => {
+    it('renders horizontal rule', async () => {
         const result = mdToHtml('---');
         expect(result).toContain('<hr>');
     });
 
-    it('renders blockquote', () => {
+    it('renders blockquote', async () => {
         const result = mdToHtml('> cited text');
         expect(result).toContain('<blockquote>');
         expect(result).toContain('cited text');
     });
 
-    it('renders link with href', () => {
+    it('renders link with href', async () => {
         const result = mdToHtml('[click](https://example.com)');
         expect(result).toContain('<a href="https://example.com">');
         expect(result).toContain('click');
         expect(result).toContain('</a>');
     });
 
-    it('escapes HTML in text', () => {
+    it('escapes HTML in text', async () => {
         const result = mdToHtml('<script>alert("xss")</script>');
         expect(result).not.toContain('<script>');
         expect(result).toContain('&lt;script&gt;');
     });
 
-    it('handles empty input', () => {
+    it('handles empty input', async () => {
         const result = mdToHtml('');
         expect(result).toContain('<body></body>');
     });
 
-    it('uses custom title', () => {
+    it('uses custom title', async () => {
         const result = mdToHtml('# Hi', 'My Title');
         expect(result).toContain('<title>My Title</title>');
     });
 
-    it('renders strikethrough', () => {
+    it('renders strikethrough', async () => {
         const result = mdToHtml('~~struck~~');
         expect(result).toContain('<del>struck</del>');
     });
 
-    it('converts .md link to .html', () => {
+    it('converts .md link to .html', async () => {
         const result = mdToHtml('[see](guide.md)');
         expect(result).toContain('<a href="guide.html">');
     });
 
-    it('preserves anchor in .md link conversion', () => {
+    it('preserves anchor in .md link conversion', async () => {
         const result = mdToHtml('[see](guide.md#section)');
         expect(result).toContain('<a href="guide.html#section">');
     });
 
-    it('does NOT convert external .md links', () => {
+    it('does NOT convert external .md links', async () => {
         const result = mdToHtml('[ext](https://example.com/doc.md)');
         expect(result).toContain('href="https://example.com/doc.md"');
     });
 
-    it('does NOT convert non-.md links', () => {
+    it('does NOT convert non-.md links', async () => {
         const result = mdToHtml('[pdf](file.pdf)');
         expect(result).toContain('href="file.pdf"');
     });
 
-    it('injects nav bar when NavConfig provided', () => {
+    it('injects nav bar when NavConfig provided', async () => {
         const result = mdToHtml('Content', 'Test', {
             prev: { label: 'Anterior', file: 'prev.html' },
             next: { label: 'Próximo', file: 'next.html' },
@@ -382,7 +382,7 @@ describe('mdToHtml', () => {
         expect(result).toContain('Índice');
     });
 
-    it('nav bar omits prev/next when not provided', () => {
+    it('nav bar omits prev/next when not provided', async () => {
         const result = mdToHtml('Content', 'Test', {});
         expect(result).toContain('class="nav-bar"');
         expect(result).toContain('Índice');
@@ -390,7 +390,7 @@ describe('mdToHtml', () => {
         expect(result).not.toContain('→');
     });
 
-    it('nav bar does not appear without NavConfig', () => {
+    it('nav bar does not appear without NavConfig', async () => {
         const result = mdToHtml('Content');
         expect(result).not.toContain('nav-bar');
     });

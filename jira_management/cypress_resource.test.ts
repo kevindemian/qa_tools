@@ -1,15 +1,15 @@
-jest.mock('../shared/http-client', () => ({
-    createHttpClient: jest.fn(),
+vi.mock('../shared/http-client', async () => ({
+    createHttpClient: vi.fn(),
 }));
 
-import { createHttpClient } from '../shared/http-client';
-import { createMockAxiosInstance } from '../shared/test-utils/factories/response-factory';
+import { createHttpClient } from '../shared/http-client.js';
+import { createMockAxiosInstance } from '../shared/test-utils/factories/response-factory.js';
 
-jest.mock('../shared/logger', () => ({
-    rootLogger: { info: jest.fn(), error: jest.fn(), warn: jest.fn(), writeFileOnly: jest.fn() },
+vi.mock('../shared/logger', async () => ({
+    rootLogger: { info: vi.fn(), error: vi.fn(), warn: vi.fn(), writeFileOnly: vi.fn() },
 }));
 
-import CypressResource from './cypress_resource';
+import CypressResource from './cypress_resource.js';
 
 describe('CypressResource', () => {
     let mockClient: ReturnType<typeof createMockAxiosInstance>;
@@ -17,7 +17,7 @@ describe('CypressResource', () => {
 
     beforeEach(() => {
         mockClient = createMockAxiosInstance();
-        jest.mocked(createHttpClient).mockReturnValue(mockClient);
+        vi.mocked(createHttpClient).mockReturnValue(mockClient);
         cypress = new CypressResource('http://cypress', 'token');
     });
 

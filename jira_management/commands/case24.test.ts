@@ -1,16 +1,16 @@
 /** Tests for case24 handler — launches first-run wizard on demand. */
-jest.mock('../../shared/first-run', () => ({
-    maybeRunFirstRunWizard: jest.fn(),
+vi.mock('../../shared/first-run', async () => ({
+    maybeRunFirstRunWizard: vi.fn(),
 }));
-jest.mock('../../shared/prompt', () => ({
-    info: jest.fn(),
-    printError: jest.fn(),
+vi.mock('../../shared/prompt', async () => ({
+    info: vi.fn(),
+    printError: vi.fn(),
 }));
 
-import { maybeRunFirstRunWizard } from '../../shared/first-run';
-import { info, printError } from '../../shared/prompt';
-import { createMockContext } from '../../shared/test-utils/factories/context-factory';
-import handlerModule from './case24';
+import { maybeRunFirstRunWizard } from '../../shared/first-run.js';
+import { info, printError } from '../../shared/prompt.js';
+import { createMockContext } from '../../shared/test-utils/factories/context-factory.js';
+import handlerModule from './case24.js';
 
 const mockHandler = handlerModule.handler;
 
@@ -18,11 +18,11 @@ describe('case24 handler', () => {
     const mockContext = createMockContext();
 
     beforeEach(() => {
-        jest.clearAllMocks();
+        vi.clearAllMocks();
     });
 
     it('calls maybeRunFirstRunWizard and pushes history on success', async () => {
-        jest.mocked(maybeRunFirstRunWizard).mockResolvedValue(undefined);
+        vi.mocked(maybeRunFirstRunWizard).mockResolvedValue(undefined);
 
         const result = await mockHandler(mockContext);
 
@@ -33,7 +33,7 @@ describe('case24 handler', () => {
     });
 
     it('returns false and prints error on first-run wizard failure', async () => {
-        jest.mocked(maybeRunFirstRunWizard).mockRejectedValue(new Error('network error'));
+        vi.mocked(maybeRunFirstRunWizard).mockRejectedValue(new Error('network error'));
 
         const result = await mockHandler(mockContext);
 

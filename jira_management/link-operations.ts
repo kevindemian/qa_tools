@@ -1,6 +1,6 @@
-import { info } from '../shared/prompt';
-import type { JsonObject, JiraResourceLike } from '../shared/types';
-import type { LinkTypeManager } from './link-types';
+import { info } from '../shared/prompt.js';
+import type { JsonObject, JiraResourceLike } from '../shared/types.js';
+import type { LinkTypeManager } from './link-types.js';
 
 export class LinkOperations {
     private readonly jiraResource: JiraResourceLike;

@@ -1,11 +1,23 @@
-import { detectFramework, extractRepoFromGit } from './detector';
+import { detectFramework, extractRepoFromGit } from './detector.js';
+import fs from 'fs';
 
-jest.mock('fs');
+const mockReadFileSync = vi.hoisted(() => vi.fn());
+
+vi.mock('fs', () => ({
+    default: { readFileSync: mockReadFileSync, existsSync: vi.fn() },
+    readFileSync: mockReadFileSync,
+    existsSync: vi.fn(),
+}));
+
+const mockFsReadFileSync = vi.mocked(fs.readFileSync);
+
+beforeEach(() => {
+    vi.clearAllMocks();
+});
 
 describe('detectFramework', () => {
     it('detects cypress from devDependencies', () => {
-        const fs = jest.mocked(jest.requireMock<typeof import('fs')>('fs'));
-        fs.readFileSync.mockReturnValueOnce(
+        mockFsReadFileSync.mockReturnValueOnce(
             JSON.stringify({
                 devDependencies: { cypress: '^13.0' },
             }),
@@ -16,8 +28,7 @@ describe('detectFramework', () => {
     });
 
     it('detects playwright from dependencies', () => {
-        const fs = jest.mocked(jest.requireMock<typeof import('fs')>('fs'));
-        fs.readFileSync.mockReturnValueOnce(
+        mockFsReadFileSync.mockReturnValueOnce(
             JSON.stringify({
                 dependencies: { '@playwright/test': '^1.40' },
             }),
@@ -27,8 +38,7 @@ describe('detectFramework', () => {
     });
 
     it('detects jest', () => {
-        const fs = jest.mocked(jest.requireMock<typeof import('fs')>('fs'));
-        fs.readFileSync.mockReturnValueOnce(
+        mockFsReadFileSync.mockReturnValueOnce(
             JSON.stringify({
                 devDependencies: { jest: '^29.0' },
             }),
@@ -38,8 +48,7 @@ describe('detectFramework', () => {
     });
 
     it('detects vitest', () => {
-        const fs = jest.mocked(jest.requireMock<typeof import('fs')>('fs'));
-        fs.readFileSync.mockReturnValueOnce(
+        mockFsReadFileSync.mockReturnValueOnce(
             JSON.stringify({
                 devDependencies: { vitest: '^1.0' },
             }),
@@ -49,8 +58,7 @@ describe('detectFramework', () => {
     });
 
     it('falls back to generic when no framework found', () => {
-        const fs = jest.mocked(jest.requireMock<typeof import('fs')>('fs'));
-        fs.readFileSync.mockReturnValueOnce(
+        mockFsReadFileSync.mockReturnValueOnce(
             JSON.stringify({
                 devDependencies: { eslint: '^8.0' },
             }),
@@ -60,8 +68,7 @@ describe('detectFramework', () => {
     });
 
     it('falls back to generic when file read fails', () => {
-        const fs = jest.mocked(jest.requireMock<typeof import('fs')>('fs'));
-        fs.readFileSync.mockImplementationOnce(() => {
+        mockFsReadFileSync.mockImplementationOnce(() => {
             throw new Error('ENOENT');
         });
         const result = detectFramework('/nonexistent/package.json');
@@ -71,8 +78,7 @@ describe('detectFramework', () => {
 
 describe('extractRepoFromGit', () => {
     it('extracts GitHub owner and repo from git config', () => {
-        const fs = jest.mocked(jest.requireMock<typeof import('fs')>('fs'));
-        fs.readFileSync.mockReturnValueOnce(`[remote "origin"]
+        mockFsReadFileSync.mockReturnValueOnce(`[remote "origin"]
 \turl = git@github.com:myorg/my-repo.git
 \tfetch = +refs/heads/*:refs/remotes/origin/*
 `);
@@ -82,8 +88,7 @@ describe('extractRepoFromGit', () => {
     });
 
     it('extracts GitLab owner and repo', () => {
-        const fs = jest.mocked(jest.requireMock<typeof import('fs')>('fs'));
-        fs.readFileSync.mockReturnValueOnce(`[remote "origin"]
+        mockFsReadFileSync.mockReturnValueOnce(`[remote "origin"]
 \turl = https://gitlab.com/myorg/my-repo.git
 \tfetch = +refs/heads/*:refs/remotes/origin/*
 `);
@@ -93,8 +98,7 @@ describe('extractRepoFromGit', () => {
     });
 
     it('returns empty when not a git repo', () => {
-        const fs = jest.mocked(jest.requireMock<typeof import('fs')>('fs'));
-        fs.readFileSync.mockImplementationOnce(() => {
+        mockFsReadFileSync.mockImplementationOnce(() => {
             throw new Error('ENOENT');
         });
         const result = extractRepoFromGit();

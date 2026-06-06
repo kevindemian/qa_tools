@@ -1,22 +1,22 @@
 /** Tests for shared/jira-helper.ts — safeJiraCall. */
-import { safeJiraCall } from './jira-helper';
-import type { printError as PrintErrorFn } from './prompt';
-import type { rootLogger } from './logger';
+import { safeJiraCall } from './jira-helper.js';
+import type { printError as PrintErrorFn } from './prompt.js';
+import type { rootLogger } from './logger.js';
 type LoggerRoot = typeof rootLogger;
 
-const mockPushHistory = jest.fn();
-const mockPrintError = jest.fn();
-const mockRootLoggerError = jest.fn();
+const mockPushHistory = vi.fn();
+const mockPrintError = vi.fn();
+const mockRootLoggerError = vi.fn();
 
-jest.mock('./prompt', () => ({
-    printError: jest.fn<void, Parameters<typeof PrintErrorFn>>((label, error) => {
+vi.mock('./prompt', async () => ({
+    printError: vi.fn<(...args: Parameters<typeof PrintErrorFn>) => void>((label, error) => {
         mockPrintError(label, error);
     }),
 }));
 
-jest.mock('./logger', () => ({
+vi.mock('./logger', async () => ({
     rootLogger: {
-        error: jest.fn<void, Parameters<LoggerRoot['error']>>((message, meta) => {
+        error: vi.fn<(...args: Parameters<LoggerRoot['error']>) => void>((message, meta) => {
             mockRootLoggerError(message, meta);
         }),
     },
@@ -31,12 +31,12 @@ function makeCtx(overrides?: Record<string, unknown>) {
 }
 
 beforeEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
 });
 
 describe('safeJiraCall', () => {
     it('calls fn, pushes ok history on success', async () => {
-        const fn = jest.fn().mockResolvedValue(undefined);
+        const fn = vi.fn().mockResolvedValue(undefined);
         const ctx = makeCtx() as Parameters<typeof safeJiraCall>[0];
         const result = await safeJiraCall(ctx, 'test-op', 'v1', fn);
         expect(result).toBe(true);
@@ -45,7 +45,7 @@ describe('safeJiraCall', () => {
     });
 
     it('logs error, pushes error history on failure', async () => {
-        const fn = jest.fn().mockRejectedValue(new Error('API error'));
+        const fn = vi.fn().mockRejectedValue(new Error('API error'));
         const ctx = makeCtx() as Parameters<typeof safeJiraCall>[0];
         const result = await safeJiraCall(ctx, 'test-op', 'v1', fn);
         expect(result).toBe(false);
@@ -55,7 +55,7 @@ describe('safeJiraCall', () => {
     });
 
     it('extracts HTTP status from error response', async () => {
-        const fn = jest.fn().mockRejectedValue({ response: { status: 401 } });
+        const fn = vi.fn().mockRejectedValue({ response: { status: 401 } });
         const ctx = makeCtx() as Parameters<typeof safeJiraCall>[0];
         await safeJiraCall(ctx, 'test-op', 'v1', fn);
         expect(mockRootLoggerError).toHaveBeenCalledWith(

@@ -1,79 +1,79 @@
-jest.mock('readline-sync', () => ({ question: jest.fn() }));
-jest.mock('./output', () => ({
-    defaultOutput: { print: jest.fn() },
+vi.mock('readline-sync', async () => ({ question: vi.fn() }));
+vi.mock('./output', async () => ({
+    defaultOutput: { print: vi.fn() },
 }));
-jest.mock('./box', () => ({
-    box: jest.fn<string, [string[]]>((lines) => lines.filter(Boolean).join('\n')),
+vi.mock('./box', async () => ({
+    box: vi.fn<(...args: [string[]]) => string>((lines) => lines.filter(Boolean).join('\n')),
     divider: () => '',
 }));
-jest.mock('./prompt-format', () => ({
-    isQuiet: jest.fn(() => false),
-    getConfig: jest.fn(),
-    icon: jest.fn(() => '!'),
-    error: jest.fn(),
-    warn: jest.fn(),
-    divider: jest.fn(),
+vi.mock('./prompt-format', async () => ({
+    isQuiet: vi.fn(() => false),
+    getConfig: vi.fn(),
+    icon: vi.fn(() => '!'),
+    error: vi.fn(),
+    warn: vi.fn(),
+    divider: vi.fn(),
     MSG_UNKNOWN_ERROR: 'Erro desconhecido',
     MSG_UNEXPECTED: 'Erro inesperado',
     SUMMARY_BOX_WIDTH: 72,
     STACK_TRACE_LINES: 4,
 }));
 
-import { humanizeError, extractErrorMessage, printError, CancelError, onError } from './prompt-errors';
-import { getConfig, isQuiet } from './prompt-format';
-import { defaultOutput as output } from './output';
-import { createMockConfigInstance } from './test-utils/factories';
+import { humanizeError, extractErrorMessage, printError, CancelError, onError } from './prompt-errors.js';
+import { getConfig, isQuiet } from './prompt-format.js';
+import { defaultOutput as output } from './output.js';
+import { createMockConfigInstance } from './test-utils/factories/index.js';
 
 describe('humanizeError', () => {
-    it('returns unknown error for null input', () => {
+    it('returns unknown error for null input', async () => {
         expect(humanizeError(null)?.msg).toBe('Erro desconhecido');
     });
 
-    it('returns unknown error for undefined input', () => {
+    it('returns unknown error for undefined input', async () => {
         expect(humanizeError(undefined)?.msg).toBe('Erro desconhecido');
     });
 
-    it('returns known error for rate limit', () => {
+    it('returns known error for rate limit', async () => {
         const r = humanizeError('rate limit exceeded');
         expect(r?.msg).toBe('Rate limit atingido');
     });
 
-    it('returns known error for project not found', () => {
+    it('returns known error for project not found', async () => {
         const r = humanizeError('project "FOO" not found');
         expect(r?.msg).toBe('Projeto não encontrado');
     });
 
-    it('returns known error for unauthorized', () => {
+    it('returns known error for unauthorized', async () => {
         const r = humanizeError('401 Unauthorized');
         expect(r?.msg).toBe('Token inválido ou expirado');
     });
 
-    it('returns known error for connection reset', () => {
+    it('returns known error for connection reset', async () => {
         const r = humanizeError('ECONNRESET');
         expect(r?.msg).toBe('Erro de conexão');
     });
 
-    it('returns null for unknown error', () => {
+    it('returns null for unknown error', async () => {
         const r = humanizeError('some random error');
         expect(r).toBeNull();
     });
 });
 
 describe('extractErrorMessage', () => {
-    it('returns unknown for null', () => {
+    it('returns unknown for null', async () => {
         expect(extractErrorMessage(null)).toBeTruthy();
     });
 
-    it('extracts axios error message', () => {
+    it('extracts axios error message', async () => {
         const err = { response: { data: { errorMessages: ['Something broke'] } } };
         expect(extractErrorMessage(err)).toMatch(/Something broke/);
     });
 
-    it('extracts plain Error message', () => {
+    it('extracts plain Error message', async () => {
         expect(extractErrorMessage(new Error('fail'))).toMatch(/fail/);
     });
 
-    it('includes HTTP status and URL', () => {
+    it('includes HTTP status and URL', async () => {
         const err = {
             response: { status: 404, data: { message: 'Not Found' } },
             config: { url: 'https://jira.example.com' },
@@ -86,23 +86,23 @@ describe('extractErrorMessage', () => {
 
 describe('printError', () => {
     beforeEach(() => {
-        jest.clearAllMocks();
+        vi.clearAllMocks();
     });
 
-    it('prints error box with context and message', () => {
+    it('prints error box with context and message', async () => {
         printError('contexto', new Error('something failed'));
         expect(output.print).toHaveBeenCalled();
     });
 
-    it('prints single line when quiet', () => {
-        jest.mocked(isQuiet).mockReturnValue(true);
+    it('prints single line when quiet', async () => {
+        vi.mocked(isQuiet).mockReturnValue(true);
         printError('ctx', new Error('err'));
         expect(output.print).toHaveBeenCalledWith(expect.stringMatching(/ctx/));
     });
 });
 
 describe('CancelError', () => {
-    it('stores command name', () => {
+    it('stores command name', async () => {
         const e = new CancelError('/exit');
         expect(e.cmd).toBe('/exit');
         expect(e.message).toMatch('/exit');
@@ -112,8 +112,8 @@ describe('CancelError', () => {
 
 describe('onError', () => {
     beforeEach(() => {
-        jest.clearAllMocks();
-        jest.mocked(getConfig).mockReturnValue(createMockConfigInstance());
+        vi.clearAllMocks();
+        vi.mocked(getConfig).mockReturnValue(createMockConfigInstance());
     });
 
     it('returns abort when autoConfirm and onError is abort', async () => {
@@ -121,7 +121,7 @@ describe('onError', () => {
         mockConfig.get = function <T = string>(k: string): T {
             return (k === 'autoConfirm' ? 'true' : 'abort') as T;
         };
-        jest.mocked(getConfig).mockReturnValue(mockConfig);
+        vi.mocked(getConfig).mockReturnValue(mockConfig);
         const r = onError('ctx', new Error('fail'));
         expect(r).toBe('abort');
     });
@@ -131,7 +131,7 @@ describe('onError', () => {
         mockConfig.get = function <T = string>(k: string): T {
             return (k === 'autoConfirm' ? 'true' : 'skip') as T;
         };
-        jest.mocked(getConfig).mockReturnValue(mockConfig);
+        vi.mocked(getConfig).mockReturnValue(mockConfig);
         const r = onError('ctx', new Error('fail'));
         expect(r).toBe('skip');
     });
