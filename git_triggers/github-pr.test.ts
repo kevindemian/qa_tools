@@ -6,27 +6,33 @@ import {
     prSearchMergeRequests,
     prAcceptMergeRequest,
     prIsApproved,
-} from './github-pr';
-import { nullAs, nonNull } from '../shared/test-utils';
-import { createMockAxiosInstance } from '../shared/test-utils/factories/response-factory';
+} from './github-pr.js';
+import { nullAs, nonNull } from '../shared/test-utils.js';
+import type { Mocked } from 'vitest';
+import { createMockAxiosInstance } from '../shared/test-utils/factories/response-factory.js';
 import type { AxiosInstance } from 'axios';
-import * as prompt from '../shared/prompt';
+import * as prompt from '../shared/prompt.js';
 
-import type { apiGet as ApiGetFn, apiPost as ApiPostFn, apiPatch as ApiPatchFn } from './github-api';
+import type { apiGet as ApiGetFn, apiPost as ApiPostFn, apiPatch as ApiPatchFn } from './github-api.js';
 
-jest.mock('./github-api', () => ({
-    apiGet: jest.fn<ReturnType<typeof ApiGetFn>, Parameters<typeof ApiGetFn>>(),
-    apiPost: jest.fn<ReturnType<typeof ApiPostFn>, Parameters<typeof ApiPostFn>>(),
-    apiPatch: jest.fn<ReturnType<typeof ApiPatchFn>, Parameters<typeof ApiPatchFn>>(),
+vi.mock('./github-api', async () => ({
+    apiGet: vi.fn<(...args: Parameters<typeof ApiGetFn>) => ReturnType<typeof ApiGetFn>>(),
+    apiPost: vi.fn<(...args: Parameters<typeof ApiPostFn>) => ReturnType<typeof ApiPostFn>>(),
+    apiPatch: vi.fn<(...args: Parameters<typeof ApiPatchFn>) => ReturnType<typeof ApiPatchFn>>(),
 }));
 
-jest.mock('../shared/logger', () => ({
-    Logger: jest.fn().mockImplementation(() => ({ error: jest.fn<void, [string]>(), warn: jest.fn<void, [string]>() })),
-    rootLogger: { error: jest.fn<void, [string]>(), warn: jest.fn<void, [string]>() },
+vi.mock('../shared/logger', async () => ({
+    Logger: vi
+        .fn()
+        .mockImplementation(() => ({
+            error: vi.fn<(...args: [string]) => void>(),
+            warn: vi.fn<(...args: [string]) => void>(),
+        })),
+    rootLogger: { error: vi.fn<(...args: [string]) => void>(), warn: vi.fn<(...args: [string]) => void>() },
 }));
 
-jest.mock('../shared/git-provider-error', () => ({
-    handleError: jest.fn<void, [error: unknown, options?: { returnNull?: boolean }]>(
+vi.mock('../shared/git-provider-error', async () => ({
+    handleError: vi.fn<(...args: [error: unknown, options?: { returnNull?: boolean }]) => void>(
         (err: unknown, opts?: { returnNull?: boolean }) => {
             if (opts?.returnNull) return null;
             throw err;
@@ -34,13 +40,13 @@ jest.mock('../shared/git-provider-error', () => ({
     ),
 }));
 
-jest.mock('../shared/prompt', () => ({
-    info: jest.fn<void, [string]>(),
-    extractErrorMessage: jest.fn<string, [Error]>((err: Error) => err?.message || 'Erro desconhecido'),
+vi.mock('../shared/prompt', async () => ({
+    info: vi.fn<(...args: [string]) => void>(),
+    extractErrorMessage: vi.fn<(...args: [Error]) => string>((err: Error) => err?.message || 'Erro desconhecido'),
 }));
 
-jest.mock('../shared/git-provider-error', () => ({
-    handleError: jest.fn<void, [error: unknown, options?: { returnNull?: boolean }]>(
+vi.mock('../shared/git-provider-error', async () => ({
+    handleError: vi.fn<(...args: [error: unknown, options?: { returnNull?: boolean }]) => void>(
         (err: unknown, opts?: { returnNull?: boolean }) => {
             if (opts?.returnNull) return null;
             throw err;
@@ -48,18 +54,18 @@ jest.mock('../shared/git-provider-error', () => ({
     ),
 }));
 
-jest.mock('../shared/prompt', () => ({
-    info: jest.fn<void, [string]>(),
-    extractErrorMessage: jest.fn<string, [Error]>((err: Error) => err?.message || 'Erro desconhecido'),
+vi.mock('../shared/prompt', async () => ({
+    info: vi.fn<(...args: [string]) => void>(),
+    extractErrorMessage: vi.fn<(...args: [Error]) => string>((err: Error) => err?.message || 'Erro desconhecido'),
 }));
 
-import * as githubApi from './github-api';
-const mockApiGet = jest.mocked(githubApi.apiGet);
-const mockApiPost = jest.mocked(githubApi.apiPost);
-const mockApiPatch = jest.mocked(githubApi.apiPatch);
+import * as githubApi from './github-api.js';
+const mockApiGet = vi.mocked(githubApi.apiGet);
+const mockApiPost = vi.mocked(githubApi.apiPost);
+const mockApiPatch = vi.mocked(githubApi.apiPatch);
 
 describe('formatPR', () => {
-    it('returns MergeRequestInfo for open PR', () => {
+    it('returns MergeRequestInfo for open PR', async () => {
         const data = {
             number: 1,
             title: 'My PR',
@@ -81,7 +87,7 @@ describe('formatPR', () => {
         expect(nonNull(result).description).toBe('Desc');
     });
 
-    it('returns state merged when merged is true', () => {
+    it('returns state merged when merged is true', async () => {
         const data = {
             number: 2,
             title: 'Merged PR',
@@ -96,7 +102,7 @@ describe('formatPR', () => {
         expect(nonNull(result).state).toBe('merged');
     });
 
-    it('returns state closed when not merged and state is closed', () => {
+    it('returns state closed when not merged and state is closed', async () => {
         const data = {
             number: 3,
             title: 'Closed PR',
@@ -111,11 +117,11 @@ describe('formatPR', () => {
         expect(nonNull(result).state).toBe('closed');
     });
 
-    it('returns null for null input', () => {
+    it('returns null for null input', async () => {
         expect(formatPR(nullAs<Record<string, unknown>>())).toBeNull();
     });
 
-    it('handles missing head/base gracefully', () => {
+    it('handles missing head/base gracefully', async () => {
         const data = {
             number: 4,
             title: 'No head',
@@ -131,14 +137,14 @@ describe('formatPR', () => {
 });
 
 describe('prCreateMergeRequest', () => {
-    let client: jest.Mocked<AxiosInstance>;
+    let client: Mocked<AxiosInstance>;
 
     beforeEach(() => {
         client = createMockAxiosInstance();
         mockApiGet.mockClear();
         mockApiPost.mockClear();
         mockApiPatch.mockClear();
-        jest.mocked(prompt.info).mockClear();
+        vi.mocked(prompt.info).mockClear();
     });
 
     it('calls POST /pulls and returns formatted PR on success', async () => {
@@ -200,7 +206,7 @@ describe('prCreateMergeRequest', () => {
             { operation: 'atualizar PR' },
         );
         expect(nonNull(result).iid).toBe(5);
-        expect(jest.mocked(prompt.info)).toHaveBeenCalledWith('PR already exists. Searching for existing...');
+        expect(vi.mocked(prompt.info)).toHaveBeenCalledWith('PR already exists. Searching for existing...');
     });
 
     it('throws on 422 without already_exists error', async () => {
@@ -244,7 +250,7 @@ describe('prCreateMergeRequest', () => {
 });
 
 describe('prUpdateMergeRequest', () => {
-    let client: jest.Mocked<AxiosInstance>;
+    let client: Mocked<AxiosInstance>;
 
     beforeEach(() => {
         client = createMockAxiosInstance();
@@ -279,7 +285,7 @@ describe('prUpdateMergeRequest', () => {
 });
 
 describe('prGetMergeRequest', () => {
-    let client: jest.Mocked<AxiosInstance>;
+    let client: Mocked<AxiosInstance>;
 
     beforeEach(() => {
         client = createMockAxiosInstance();
@@ -313,7 +319,7 @@ describe('prGetMergeRequest', () => {
 });
 
 describe('prSearchMergeRequests', () => {
-    let client: jest.Mocked<AxiosInstance>;
+    let client: Mocked<AxiosInstance>;
 
     beforeEach(() => {
         client = createMockAxiosInstance();
@@ -393,12 +399,12 @@ describe('prSearchMergeRequests', () => {
 });
 
 describe('prAcceptMergeRequest', () => {
-    let client: jest.Mocked<AxiosInstance>;
+    let client: Mocked<AxiosInstance>;
 
     beforeEach(() => {
         client = createMockAxiosInstance();
         mockApiGet.mockClear();
-        jest.clearAllMocks();
+        vi.clearAllMocks();
     });
 
     it('calls GET then PUT /pulls/{iid}/merge when PR is open', async () => {
@@ -412,7 +418,7 @@ describe('prAcceptMergeRequest', () => {
             head: { ref: 'f' },
             base: { ref: 'm' },
         });
-        jest.mocked(client.put).mockResolvedValue({
+        vi.mocked(client.put).mockResolvedValue({
             data: {
                 number: 5,
                 state: 'open',
@@ -463,7 +469,7 @@ describe('prAcceptMergeRequest', () => {
             head: { ref: 'f' },
             base: { ref: 'm' },
         });
-        jest.mocked(client.put).mockRejectedValue(new Error('Merge failed'));
+        vi.mocked(client.put).mockRejectedValue(new Error('Merge failed'));
         await expect(prAcceptMergeRequest(client, 'myorg', 'myrepo', 5)).rejects.toThrow('Merge failed');
     });
 
@@ -478,7 +484,7 @@ describe('prAcceptMergeRequest', () => {
             head: { ref: 'f' },
             base: { ref: 'm' },
         });
-        jest.mocked(client.put).mockResolvedValue({
+        vi.mocked(client.put).mockResolvedValue({
             data: {
                 number: 5,
                 state: 'open',
@@ -497,7 +503,7 @@ describe('prAcceptMergeRequest', () => {
 });
 
 describe('prIsApproved', () => {
-    let client: jest.Mocked<AxiosInstance>;
+    let client: Mocked<AxiosInstance>;
 
     beforeEach(() => {
         client = createMockAxiosInstance();

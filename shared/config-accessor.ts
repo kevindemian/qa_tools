@@ -1,7 +1,7 @@
-import { ensureDotenv, envVal, toBool, toInt } from './env-utils';
-import type { ConfigOverrides } from './types';
-import { CONFIG_SCHEMA } from './config-schema';
-import { validateRequiredEnv } from './config-validator';
+import { ensureDotenv, envVal, toBool, toInt } from './env-utils.js';
+import type { ConfigOverrides } from './types.js';
+import { CONFIG_SCHEMA } from './config-schema.js';
+import { validateRequiredEnv } from './config-validator.js';
 
 class Config {
     private static defaultInstance: Config = new Config();

@@ -1,21 +1,28 @@
-import { getBranch, getDiff } from './github-branch';
-import { createMockAxiosInstance } from '../shared/test-utils/factories/response-factory';
+import { getBranch, getDiff } from './github-branch.js';
+import type { Mock, Mocked } from 'vitest';
+import { createMockAxiosInstance } from '../shared/test-utils/factories/response-factory.js';
 import type { AxiosInstance } from 'axios';
 
-jest.mock('./github-api', () => ({
-    apiGet: jest.fn(),
-    formatDiffResponse: jest.requireActual<typeof import('./github-api')>('./github-api').formatDiffResponse,
+vi.mock('./github-api', async () => ({
+    apiGet: vi.fn(),
+    formatDiffResponse: (await vi.importActual('./github-api')).formatDiffResponse,
 }));
 
-jest.mock('../shared/logger', () => ({
-    Logger: jest.fn().mockImplementation(() => ({ error: jest.fn(), warn: jest.fn() })),
-    rootLogger: { error: jest.fn(), warn: jest.fn() },
+vi.mock('../shared/logger', async () => ({
+    Logger: vi.fn().mockImplementation(function () {
+        return { error: vi.fn(), warn: vi.fn() };
+    }),
+    rootLogger: { error: vi.fn(), warn: vi.fn() },
 }));
 
-const mockApiGet = jest.mocked(jest.requireMock<typeof import('./github-api')>('./github-api').apiGet);
+let mockApiGet: Mock;
+import * as apiModule from './github-api.js';
+beforeAll(() => {
+    mockApiGet = vi.mocked(apiModule.apiGet);
+});
 
 describe('getBranch', () => {
-    let client: jest.Mocked<AxiosInstance>;
+    let client: Mocked<AxiosInstance>;
 
     beforeEach(() => {
         client = createMockAxiosInstance();
@@ -51,7 +58,7 @@ describe('getBranch', () => {
 });
 
 describe('getDiff', () => {
-    let client: jest.Mocked<AxiosInstance>;
+    let client: Mocked<AxiosInstance>;
 
     beforeEach(() => {
         client = createMockAxiosInstance();

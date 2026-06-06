@@ -1,14 +1,14 @@
-jest.mock('fs');
+vi.mock('fs');
 
 import { existsSync, readFileSync } from 'fs';
 import type { PathLike, PathOrFileDescriptor } from 'fs';
-import { nonNull, nullAs } from './test-utils';
-import { generateHtmlReport, generateCoverageHtml, loadKnownIssues } from './report-generator';
-import type { FlatTest } from './result_parser';
-import type { CoverageEpic, KnownIssue, TestRunTab } from './report-generator';
+import { nonNull, nullAs } from './test-utils.js';
+import { generateHtmlReport, generateCoverageHtml, loadKnownIssues } from './report-generator.js';
+import type { FlatTest } from './result_parser.js';
+import type { CoverageEpic, KnownIssue, TestRunTab } from './report-generator.js';
 
 describe('generateHtmlReport', () => {
-    it('generates a complete HTML document with summary cards', () => {
+    it('generates a complete HTML document with summary cards', async () => {
         const tests: FlatTest[] = [
             { title: 'Login works', state: 'passed', duration: 1200 },
             { title: 'Logout works', state: 'passed', duration: 800 },
@@ -33,7 +33,7 @@ describe('generateHtmlReport', () => {
         expect(html).toContain('Duration');
     });
 
-    it('displays pass rate as 0% when all tests fail', () => {
+    it('displays pass rate as 0% when all tests fail', async () => {
         const tests: FlatTest[] = [
             { title: 'Fail A', state: 'failed', duration: 100 },
             { title: 'Fail B', state: 'failed', duration: 200 },
@@ -44,7 +44,7 @@ describe('generateHtmlReport', () => {
         expect(html).toContain('0.0%');
     });
 
-    it('displays 100% pass rate when all tests pass', () => {
+    it('displays 100% pass rate when all tests pass', async () => {
         const tests: FlatTest[] = [
             { title: 'Pass A', state: 'passed', duration: 100 },
             { title: 'Pass B', state: 'passed', duration: 200 },
@@ -55,14 +55,14 @@ describe('generateHtmlReport', () => {
         expect(html).toContain('100.0%');
     });
 
-    it('handles empty test list gracefully', () => {
+    it('handles empty test list gracefully', async () => {
         const html = generateHtmlReport([]);
 
         expect(html).toContain('0');
         expect(html).toContain('Total');
     });
 
-    it('includes SVG chart by default', () => {
+    it('includes SVG chart by default', async () => {
         const tests: FlatTest[] = [
             { title: 'A', state: 'passed', duration: 100 },
             { title: 'B', state: 'failed', duration: 100 },
@@ -74,7 +74,7 @@ describe('generateHtmlReport', () => {
         expect(html).toContain('Distribution');
     });
 
-    it('omits chart when includeChart is false', () => {
+    it('omits chart when includeChart is false', async () => {
         const tests: FlatTest[] = [{ title: 'A', state: 'passed', duration: 100 }];
 
         const html = generateHtmlReport(tests, { includeChart: false });
@@ -82,13 +82,13 @@ describe('generateHtmlReport', () => {
         expect(html).not.toContain('<svg');
     });
 
-    it('uses custom title when provided', () => {
+    it('uses custom title when provided', async () => {
         const html = generateHtmlReport([], { title: 'My Custom Report' });
 
         expect(html).toContain('My Custom Report');
     });
 
-    it('generates quality gate warning when pass rate below threshold', () => {
+    it('generates quality gate warning when pass rate below threshold', async () => {
         const tests: FlatTest[] = [
             { title: 'Fail A', state: 'failed', duration: 100 },
             { title: 'Fail B', state: 'failed', duration: 100 },
@@ -100,7 +100,7 @@ describe('generateHtmlReport', () => {
         expect(html).toContain('below the configured threshold');
     });
 
-    it('omits quality gate when pass rate meets threshold', () => {
+    it('omits quality gate when pass rate meets threshold', async () => {
         const tests: FlatTest[] = [
             { title: 'Pass A', state: 'passed', duration: 100 },
             { title: 'Pass B', state: 'passed', duration: 100 },
@@ -111,7 +111,7 @@ describe('generateHtmlReport', () => {
         expect(html).not.toContain('Quality Gate Failed');
     });
 
-    it('includes source and ci URL in footer when provided', () => {
+    it('includes source and ci URL in footer when provided', async () => {
         const tests: FlatTest[] = [{ title: 'A', state: 'passed', duration: 100 }];
 
         const html = generateHtmlReport(tests, {
@@ -125,7 +125,7 @@ describe('generateHtmlReport', () => {
         expect(html).toContain('main');
     });
 
-    it('includes branch without link when ciUrl is empty', () => {
+    it('includes branch without link when ciUrl is empty', async () => {
         const tests: FlatTest[] = [{ title: 'A', state: 'passed', duration: 100 }];
 
         const html = generateHtmlReport(tests, { branch: 'develop' });
@@ -133,13 +133,13 @@ describe('generateHtmlReport', () => {
         expect(html).toContain('develop');
     });
 
-    it('handles generateHtmlReport error gracefully', () => {
+    it('handles generateHtmlReport error gracefully', async () => {
         const html = generateHtmlReport(nullAs<FlatTest[]>());
 
         expect(html).toContain('Error generating report');
     });
 
-    it('escapes HTML in test titles', () => {
+    it('escapes HTML in test titles', async () => {
         const tests: FlatTest[] = [{ title: '<script>alert("xss")</script>', state: 'passed', duration: 0 }];
 
         const html = generateHtmlReport(tests);
@@ -148,26 +148,26 @@ describe('generateHtmlReport', () => {
         expect(html).not.toContain('<script>alert("xss")</script>');
     });
 
-    it('skips chart when tests array is empty', () => {
+    it('skips chart when tests array is empty', async () => {
         const html = generateHtmlReport([]);
 
         expect(html).not.toContain('<svg');
     });
 
-    it('includes LLM analysis section when provided', () => {
+    it('includes LLM analysis section when provided', async () => {
         const tests: FlatTest[] = [{ title: 'A', state: 'passed', duration: 100 }];
         const html = generateHtmlReport(tests, { llmAnalysis: 'All tests passed.' });
         expect(html).toContain('AI Analysis');
         expect(html).toContain('All tests passed.');
     });
 
-    it('shows fallback warning when llmFallback is true', () => {
+    it('shows fallback warning when llmFallback is true', async () => {
         const tests: FlatTest[] = [{ title: 'A', state: 'passed', duration: 100 }];
         const html = generateHtmlReport(tests, { llmAnalysis: 'fallback', llmFallback: true });
         expect(html).toContain('unavailable');
     });
 
-    it('displays confidence badge for each level', () => {
+    it('displays confidence badge for each level', async () => {
         const tests: FlatTest[] = [{ title: 'A', state: 'passed', duration: 100 }];
         const htmlLow = generateHtmlReport(tests, { llmAnalysis: 'ok', llmConfidence: 'low' });
         expect(htmlLow).toContain('low');
@@ -177,7 +177,7 @@ describe('generateHtmlReport', () => {
         expect(htmlHigh).toContain('high');
     });
 
-    it('shows error message in table for failed tests', () => {
+    it('shows error message in table for failed tests', async () => {
         const tests: FlatTest[] = [
             { title: 'Fail', state: 'failed', duration: 100, error: 'Expected true, got false' },
             { title: 'Pass', state: 'passed', duration: 100 },
@@ -186,7 +186,7 @@ describe('generateHtmlReport', () => {
         expect(html).toContain('Expected true, got false');
     });
 
-    it('includes timestamp in footer', () => {
+    it('includes timestamp in footer', async () => {
         const html = generateHtmlReport([]);
         expect(html).toContain('Generated by QA Tools ·');
     });
@@ -202,7 +202,7 @@ describe('generateHtmlReport', () => {
         expect(html).not.toContain("querySelector('.control-bar button')");
     });
 
-    it('hides toggle button when all tests fail', () => {
+    it('hides toggle button when all tests fail', async () => {
         const tests: FlatTest[] = [
             { title: 'Fail A', state: 'failed', duration: 100 },
             { title: 'Fail B', state: 'failed', duration: 200 },
@@ -211,7 +211,7 @@ describe('generateHtmlReport', () => {
         expect(html).not.toContain('Toggle Passed');
     });
 
-    it('CSV export uses dynamic headers from thead', () => {
+    it('CSV export uses dynamic headers from thead', async () => {
         const tests: FlatTest[] = [
             { title: 'A', state: 'passed', duration: 100 },
             { title: 'B', state: 'failed', duration: 100, error: 'err' },
@@ -222,7 +222,7 @@ describe('generateHtmlReport', () => {
         expect(html).not.toContain('#,Test,Status,Duration,Error');
     });
 
-    it('CSV export only exports visible rows (respects filter)', () => {
+    it('CSV export only exports visible rows (respects filter)', async () => {
         const html = generateHtmlReport([]);
         expect(html).toContain("r.style.display !== 'none'");
     });
@@ -239,35 +239,35 @@ describe('generateHtmlReport', () => {
         expect(html).toContain("'dark'");
     });
 
-    it('includes theme toggle button in filter bar', () => {
+    it('includes theme toggle button in filter bar', async () => {
         const html = generateHtmlReport([]);
         expect(html).toContain('toggleTheme()');
         expect(html).toContain('🌓');
     });
 
-    it('shows dash for skipped test duration', () => {
+    it('shows dash for skipped test duration', async () => {
         const tests: FlatTest[] = [{ title: 'Skip', state: 'skipped', duration: 0 }];
         const html = generateHtmlReport(tests);
         expect(html).toContain('\u2014');
     });
 
-    it('includes dark theme CSS via html.dark selector', () => {
+    it('includes dark theme CSS via html.dark selector', async () => {
         const html = generateHtmlReport([]);
         expect(html).toContain('html.dark');
     });
 
-    it('includes theme toggle script in head', () => {
+    it('includes theme toggle script in head', async () => {
         const html = generateHtmlReport([]);
         expect(html).toContain('toggleTheme');
         expect(html).toContain('qa-report-theme');
     });
 
-    it('includes zebra striping CSS', () => {
+    it('includes zebra striping CSS', async () => {
         const html = generateHtmlReport([]);
         expect(html).toContain('nth-child(even)');
     });
 
-    it('includes SVG text labels on chart', () => {
+    it('includes SVG text labels on chart', async () => {
         const tests: FlatTest[] = [
             { title: 'A', state: 'passed', duration: 100 },
             { title: 'B', state: 'passed', duration: 100 },
@@ -277,14 +277,14 @@ describe('generateHtmlReport', () => {
         expect(html).toContain('<text');
     });
 
-    it('shows fullTitle as tooltip when present', () => {
+    it('shows fullTitle as tooltip when present', async () => {
         const tests: FlatTest[] = [{ title: 'Login', state: 'passed', duration: 100, fullTitle: 'Auth Tests > Login' }];
         const html = generateHtmlReport(tests);
         expect(html).toContain('title="Auth Tests &gt; Login"');
         expect(html).toContain('data-hierarchy="Auth Tests &gt; Login"');
     });
 
-    it('shows percentage in summary cards', () => {
+    it('shows percentage in summary cards', async () => {
         const tests: FlatTest[] = [
             { title: 'A', state: 'passed', duration: 100 },
             { title: 'B', state: 'failed', duration: 100 },
@@ -294,7 +294,7 @@ describe('generateHtmlReport', () => {
         expect(html).toContain('(33.3%)');
     });
 
-    it('renders error as expandable when truncated', () => {
+    it('renders error as expandable when truncated', async () => {
         const longMsg = 'x'.repeat(200);
         const tests: FlatTest[] = [{ title: 'Fail', state: 'failed', duration: 100, error: longMsg }];
         const html = generateHtmlReport(tests);
@@ -302,14 +302,14 @@ describe('generateHtmlReport', () => {
         expect(html).toContain('data-full="' + longMsg + '"');
     });
 
-    it('uses responsive SVG viewBox', () => {
+    it('uses responsive SVG viewBox', async () => {
         const tests: FlatTest[] = [{ title: 'A', state: 'passed', duration: 100 }];
         const html = generateHtmlReport(tests);
         expect(html).toContain('viewBox="0 0 300 30"');
         expect(html).toContain('width="100%"');
     });
 
-    it('renders history column with mixed statuses', () => {
+    it('renders history column with mixed statuses', async () => {
         const tests: FlatTest[] = [{ title: 'FlakyTest', state: 'passed', duration: 100 }];
         const html = generateHtmlReport(tests, {
             testHistory: {
@@ -331,7 +331,7 @@ describe('generateHtmlReport', () => {
 
     // ── R1: Trend Chart ──────────────────────────────────────────────
 
-    it('renders trend chart when trends are provided', () => {
+    it('renders trend chart when trends are provided', async () => {
         const tests: FlatTest[] = [{ title: 'A', state: 'passed', duration: 100 }];
         const html = generateHtmlReport(tests, {
             trends: [
@@ -345,7 +345,7 @@ describe('generateHtmlReport', () => {
         expect(html).toContain('6366f1');
     });
 
-    it('omits trend chart when trends have fewer than 2 points', () => {
+    it('omits trend chart when trends have fewer than 2 points', async () => {
         const tests: FlatTest[] = [{ title: 'A', state: 'passed', duration: 100 }];
         const htmlSingle = generateHtmlReport(tests, {
             trends: [{ label: '2026-05-01', passRate: 80, total: 10, failed: 2 }],
@@ -353,13 +353,13 @@ describe('generateHtmlReport', () => {
         expect(htmlSingle).not.toContain('Pass Rate Trend');
     });
 
-    it('omits trend chart when trends is empty', () => {
+    it('omits trend chart when trends is empty', async () => {
         const tests: FlatTest[] = [{ title: 'A', state: 'passed', duration: 100 }];
         const htmlEmpty = generateHtmlReport(tests, { trends: [] });
         expect(htmlEmpty).not.toContain('Pass Rate Trend');
     });
 
-    it('renders trend chart with 90% reference line', () => {
+    it('renders trend chart with 90% reference line', async () => {
         const tests: FlatTest[] = [{ title: 'A', state: 'passed', duration: 100 }];
         const html = generateHtmlReport(tests, {
             trends: [
@@ -373,7 +373,7 @@ describe('generateHtmlReport', () => {
 
     // ── R2: Hierarchy Sidebar ────────────────────────────────────────
 
-    it('renders hierarchy sidebar when tests have fullTitle with suites', () => {
+    it('renders hierarchy sidebar when tests have fullTitle with suites', async () => {
         const tests: FlatTest[] = [
             { title: 'Login', state: 'passed', duration: 100, fullTitle: 'Auth > Login' },
             { title: 'Logout', state: 'passed', duration: 100, fullTitle: 'Auth > Logout' },
@@ -386,7 +386,7 @@ describe('generateHtmlReport', () => {
         expect(html).toContain('tree-node');
     });
 
-    it('omits sidebar when tests have no fullTitle', () => {
+    it('omits sidebar when tests have no fullTitle', async () => {
         const tests: FlatTest[] = [
             { title: 'Login', state: 'passed', duration: 100 },
             { title: 'Logout', state: 'passed', duration: 100 },
@@ -395,13 +395,13 @@ describe('generateHtmlReport', () => {
         expect(html).not.toContain('class="sidebar"');
     });
 
-    it('adds data-hierarchy attribute to table rows', () => {
+    it('adds data-hierarchy attribute to table rows', async () => {
         const tests: FlatTest[] = [{ title: 'Login', state: 'passed', duration: 100, fullTitle: 'Auth > Login' }];
         const html = generateHtmlReport(tests);
         expect(html).toContain('data-hierarchy="Auth &gt; Login"');
     });
 
-    it('includes hierarchy filtering JavaScript functions', () => {
+    it('includes hierarchy filtering JavaScript functions', async () => {
         const tests: FlatTest[] = [{ title: 'A', state: 'passed', duration: 100, fullTitle: 'Suite > A' }];
         const html = generateHtmlReport(tests);
         expect(html).toContain('filterByHierarchy');
@@ -411,7 +411,7 @@ describe('generateHtmlReport', () => {
 
     // ── R3: Timeline ─────────────────────────────────────────────────
 
-    it('renders timeline section', () => {
+    it('renders timeline section', async () => {
         const tests: FlatTest[] = [
             { title: 'Fast', state: 'passed', duration: 100 },
             { title: 'Slow', state: 'failed', duration: 500 },
@@ -423,7 +423,7 @@ describe('generateHtmlReport', () => {
         expect(html).toContain('scrollToTest');
     });
 
-    it('renders timeline with correct status colors', () => {
+    it('renders timeline with correct status colors', async () => {
         const tests: FlatTest[] = [
             { title: 'Pass', state: 'passed', duration: 100 },
             { title: 'Fail', state: 'failed', duration: 200 },
@@ -433,13 +433,13 @@ describe('generateHtmlReport', () => {
         expect(html).toContain('#ef4444');
     });
 
-    it('omits timeline when test list is empty', () => {
+    it('omits timeline when test list is empty', async () => {
         const html = generateHtmlReport([]);
         expect(html).not.toContain('id="timelineBody"');
         expect(html).not.toContain('id="timelineToggle"');
     });
 
-    it('includes timeline toggle function', () => {
+    it('includes timeline toggle function', async () => {
         const tests: FlatTest[] = [{ title: 'A', state: 'passed', duration: 100 }];
         const html = generateHtmlReport(tests);
         expect(html).toContain('toggleTimeline');
@@ -448,7 +448,7 @@ describe('generateHtmlReport', () => {
 
     // ── R5: Steps expansíveis ───────────────────────────────────────
 
-    it('renders detail toggle for test with steps', () => {
+    it('renders detail toggle for test with steps', async () => {
         const tests: FlatTest[] = [
             {
                 title: 'Login',
@@ -464,14 +464,14 @@ describe('generateHtmlReport', () => {
         expect(html).toContain('Page loads');
     });
 
-    it('omits detail row when test has no steps/screenshots/logs', () => {
+    it('omits detail row when test has no steps/screenshots/logs', async () => {
         const tests: FlatTest[] = [{ title: 'Plain', state: 'passed', duration: 100 }];
         const html = generateHtmlReport(tests);
         expect(html).not.toContain('data-detail-for');
         expect(html).not.toContain('id="detail-row-');
     });
 
-    it('renders multiple steps with numbered badges', () => {
+    it('renders multiple steps with numbered badges', async () => {
         const tests: FlatTest[] = [
             {
                 title: 'Multi',
@@ -491,7 +491,7 @@ describe('generateHtmlReport', () => {
         expect(html).toContain('Result 3');
     });
 
-    it('includes toggleDetail JavaScript function', () => {
+    it('includes toggleDetail JavaScript function', async () => {
         const tests: FlatTest[] = [{ title: 'T', state: 'passed', duration: 100, steps: [{ action: 'A' }] }];
         const html = generateHtmlReport(tests);
         expect(html).toContain('toggleDetail');
@@ -499,7 +499,7 @@ describe('generateHtmlReport', () => {
 
     // ── R6: Attachments ─────────────────────────────────────────────
 
-    it('renders screenshot images in detail row', () => {
+    it('renders screenshot images in detail row', async () => {
         const tests: FlatTest[] = [
             {
                 title: 'Visual',
@@ -514,7 +514,7 @@ describe('generateHtmlReport', () => {
         expect(html).toContain('Screenshot 1');
     });
 
-    it('renders collapsible logs in detail row', () => {
+    it('renders collapsible logs in detail row', async () => {
         const tests: FlatTest[] = [
             {
                 title: 'Logger',
@@ -529,7 +529,7 @@ describe('generateHtmlReport', () => {
         expect(html).toContain('2 lines');
     });
 
-    it('shows both steps and screenshots when both present', () => {
+    it('shows both steps and screenshots when both present', async () => {
         const tests: FlatTest[] = [
             {
                 title: 'Combined',
@@ -548,7 +548,7 @@ describe('generateHtmlReport', () => {
 
     // ── R7: Coverage HTML Report ────────────────────────────────────
 
-    it('generates coverage HTML with epics and issues', () => {
+    it('generates coverage HTML with epics and issues', async () => {
         const epics: CoverageEpic[] = [
             {
                 key: 'EPIC-1',
@@ -575,7 +575,7 @@ describe('generateHtmlReport', () => {
         expect(html).toContain('Dashboard');
     });
 
-    it('coverage report shows correct issue counts', () => {
+    it('coverage report shows correct issue counts', async () => {
         const epics: CoverageEpic[] = [
             {
                 key: 'EPIC-1',
@@ -588,12 +588,12 @@ describe('generateHtmlReport', () => {
         expect(html).toContain('1 issues, 100.0% closed');
     });
 
-    it('coverage report uses custom title', () => {
+    it('coverage report uses custom title', async () => {
         const html = generateCoverageHtml([], 'My Coverage');
         expect(html).toContain('My Coverage');
     });
 
-    it('coverage report renders status badges', () => {
+    it('coverage report renders status badges', async () => {
         const epics: CoverageEpic[] = [
             {
                 key: 'EPIC-1',
@@ -613,7 +613,7 @@ describe('generateHtmlReport', () => {
 
     // ── R9: Mini Trend Chart ────────────────────────────────────────
 
-    it('renders mini trend chart when trends have 2+ points', () => {
+    it('renders mini trend chart when trends have 2+ points', async () => {
         const tests: FlatTest[] = [{ title: 'A', state: 'passed', duration: 100 }];
         const html = generateHtmlReport(tests, {
             trends: [
@@ -625,7 +625,7 @@ describe('generateHtmlReport', () => {
         expect(html).toContain('viewBox="0 0 300 100"');
     });
 
-    it('omits mini trend chart when trends have <2 points', () => {
+    it('omits mini trend chart when trends have <2 points', async () => {
         const tests: FlatTest[] = [{ title: 'A', state: 'passed', duration: 100 }];
         const htmlSingle = generateHtmlReport(tests, {
             trends: [{ label: '2026-05-01', passRate: 80, total: 10, failed: 2 }],
@@ -635,7 +635,7 @@ describe('generateHtmlReport', () => {
 
     // ── R10: Known Issues ───────────────────────────────────────────
 
-    it('adds known issue badge to matching failed tests', () => {
+    it('adds known issue badge to matching failed tests', async () => {
         const tests: FlatTest[] = [{ title: 'Login fails', state: 'failed', duration: 100, error: 'err' }];
         const knownIssues: KnownIssue[] = [{ pattern: 'login', reason: 'Known SSL issue', ticket: 'BUG-123' }];
         const html = generateHtmlReport(tests, { knownIssues });
@@ -644,14 +644,14 @@ describe('generateHtmlReport', () => {
         expect(html).toContain('BUG-123');
     });
 
-    it('adds suppressed class to known issue rows', () => {
+    it('adds suppressed class to known issue rows', async () => {
         const tests: FlatTest[] = [{ title: 'Timeout', state: 'failed', duration: 100, error: 'timeout' }];
         const knownIssues: KnownIssue[] = [{ pattern: 'timeout', reason: 'Infra flaky' }];
         const html = generateHtmlReport(tests, { knownIssues });
         expect(html).toContain('ki-suppressed');
     });
 
-    it('does not apply known issue badge to non-matching failures', () => {
+    it('does not apply known issue badge to non-matching failures', async () => {
         const tests: FlatTest[] = [{ title: 'Real bug', state: 'failed', duration: 100, error: 'assert' }];
         const knownIssues: KnownIssue[] = [{ pattern: 'timeout', reason: 'Infra' }];
         const html = generateHtmlReport(tests, { knownIssues });
@@ -660,7 +660,7 @@ describe('generateHtmlReport', () => {
 
     // ── R11: Multi-environment Tabs ─────────────────────────────────
 
-    it('renders tabs when multiple runs provided', () => {
+    it('renders tabs when multiple runs provided', async () => {
         const runs: TestRunTab[] = [
             { name: 'Chrome', tests: [{ title: 'Login', state: 'passed', duration: 100 }] },
             { name: 'Firefox', tests: [{ title: 'Login', state: 'failed', duration: 200 }] },
@@ -672,7 +672,7 @@ describe('generateHtmlReport', () => {
         expect(html).toContain('switchTab');
     });
 
-    it('renders tab content with separate tables per run', () => {
+    it('renders tab content with separate tables per run', async () => {
         const runs: TestRunTab[] = [
             { name: 'Env A', tests: [{ title: 'Test A', state: 'passed', duration: 100 }] },
             { name: 'Env B', tests: [{ title: 'Test B', state: 'failed', duration: 200 }] },
@@ -683,7 +683,7 @@ describe('generateHtmlReport', () => {
         expect(html).toContain('tabContent-1');
     });
 
-    it('shows only first tab as active by default', () => {
+    it('shows only first tab as active by default', async () => {
         const runs: TestRunTab[] = [
             { name: 'A', tests: [{ title: 'T1', state: 'passed', duration: 100 }] },
             { name: 'B', tests: [{ title: 'T2', state: 'failed', duration: 100 }] },
@@ -693,7 +693,7 @@ describe('generateHtmlReport', () => {
         expect(html).toContain('class="tab-content active"');
     });
 
-    it('omits tabs when only 1 run', () => {
+    it('omits tabs when only 1 run', async () => {
         const runs: TestRunTab[] = [{ name: 'Single', tests: [{ title: 'T', state: 'passed', duration: 100 }] }];
         const html = generateHtmlReport(nonNull(runs[0]).tests, { runs });
         expect(html).not.toContain('envTabs');
@@ -701,13 +701,13 @@ describe('generateHtmlReport', () => {
 
     // ── R12: PDF Export ─────────────────────────────────────────────
 
-    it('includes PDF export button', () => {
+    it('includes PDF export button', async () => {
         const html = generateHtmlReport([]);
         expect(html).toContain('window.print()');
         expect(html).toContain('PDF');
     });
 
-    it('includes print CSS media query', () => {
+    it('includes print CSS media query', async () => {
         const html = generateHtmlReport([]);
         expect(html).toContain('@media print');
         expect(html).toContain('.control-bar,.detail-toggle');
@@ -715,18 +715,18 @@ describe('generateHtmlReport', () => {
 
     // ── R10: loadKnownIssues ───────────────────────────────────────────
 
-    it('loadKnownIssues returns empty array for missing file', () => {
+    it('loadKnownIssues returns empty array for missing file', async () => {
         const issues = loadKnownIssues('/nonexistent/path.json');
         expect(issues).toEqual([]);
     });
 
-    it('loadKnownIssues reads issues from a valid JSON file', () => {
+    it('loadKnownIssues reads issues from a valid JSON file', async () => {
         const knownIssues = [
             { pattern: 'timeout', reason: 'Infra flaky', ticket: 'BUG-1' },
             { pattern: 'login', reason: 'Known SSL issue' },
         ];
-        const mockExists = jest.mocked(existsSync);
-        const mockReadFile = jest.mocked(readFileSync);
+        const mockExists = vi.mocked(existsSync);
+        const mockReadFile = vi.mocked(readFileSync);
         mockExists.mockReset();
         mockReadFile.mockReset();
         mockExists.mockImplementation((p: PathLike) => p === '/tmp/known-issues.json');
@@ -742,9 +742,9 @@ describe('generateHtmlReport', () => {
         expect(nonNull(issues[1]).pattern).toBe('login');
     });
 
-    it('loadKnownIssues handles issues as top-level array', () => {
-        const mockExists = jest.mocked(existsSync);
-        const mockReadFile = jest.mocked(readFileSync);
+    it('loadKnownIssues handles issues as top-level array', async () => {
+        const mockExists = vi.mocked(existsSync);
+        const mockReadFile = vi.mocked(readFileSync);
         mockExists.mockReset();
         mockReadFile.mockReset();
         mockExists.mockImplementation((p: PathLike) => p === '/tmp/ki.json');
@@ -758,9 +758,9 @@ describe('generateHtmlReport', () => {
         expect(nonNull(issues[0]).pattern).toBe('flaky');
     });
 
-    it('loadKnownIssues skips invalid JSON and returns empty array', () => {
-        const mockExists = jest.mocked(existsSync);
-        const mockReadFile = jest.mocked(readFileSync);
+    it('loadKnownIssues skips invalid JSON and returns empty array', async () => {
+        const mockExists = vi.mocked(existsSync);
+        const mockReadFile = vi.mocked(readFileSync);
         mockExists.mockReset();
         mockReadFile.mockReset();
         mockExists.mockImplementation((_p: PathLike) => true);

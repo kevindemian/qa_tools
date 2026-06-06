@@ -1,6 +1,6 @@
 /** Health score calculation: 0-100 composite of pass rate, flaky rate, coverage, and suite speed. */
-import type { MetricsStore, MetricsRun, CoverageSnapshot } from './metrics';
-import type { HealthScoreResult, HealthScoreGrade, HealthScoreDimensions } from './types';
+import type { MetricsStore, MetricsRun, CoverageSnapshot } from './metrics.js';
+import type { HealthScoreResult, HealthScoreGrade, HealthScoreDimensions } from './types.js';
 
 export interface HealthScoreConfig {
     weights: { passRate: number; flakyRate: number; coverage: number; suiteSpeed: number };

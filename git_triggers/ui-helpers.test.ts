@@ -1,18 +1,18 @@
-import { formatBranch } from './ui-helpers';
+import { formatBranch } from './ui-helpers.js';
 
 describe('formatBranch', () => {
-    it('strips ANSI escape sequences from branch name', () => {
+    it('strips ANSI escape sequences from branch name', async () => {
         const input = '\u001b[32mmain\u001b[0m';
         const result = formatBranch(input);
         expect(result).toBe('main');
     });
 
-    it('returns clean string when no ANSI codes present', () => {
+    it('returns clean string when no ANSI codes present', async () => {
         const result = formatBranch('feature/new-feature');
         expect(result).toBe('feature/new-feature');
     });
 
-    it('handles empty string', () => {
+    it('handles empty string', async () => {
         const result = formatBranch('');
         expect(result).toBe('');
     });

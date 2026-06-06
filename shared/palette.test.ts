@@ -1,5 +1,4 @@
-import { nonNull } from './test-utils';
-import * as paletteModule from './palette';
+import * as paletteModule from './palette.js';
 import chalk from 'chalk';
 
 describe('palette', () => {
@@ -65,16 +64,11 @@ describe('palette', () => {
     });
 
     it('uses chalk.hex when chalk.level >= 2', () => {
-        jest.isolateModules(() => {
-            const origLevel = chalk.level;
-            chalk.level = 2;
-            const paletteModule = jest.requireActual<{
-                palette: Record<string, (...args: unknown[]) => string>;
-            }>('./palette');
-            const { palette: p } = paletteModule;
-            expect(nonNull(p.fg)('text')).toContain('text');
-            chalk.level = origLevel;
-        });
+        const origLevel = chalk.level;
+        chalk.level = 2;
+        const p = paletteModule.palette;
+        expect(p.fg('text')).toContain('text');
+        chalk.level = origLevel;
     });
 
     it('palette colors render text', () => {
@@ -105,14 +99,11 @@ describe('palette', () => {
         }
     });
 
-    it('disables chalk when NO_COLOR env is set', () => {
-        jest.isolateModules(() => {
-            process.env.NO_COLOR = '1';
-            const chalkMod: { level: number } = jest.requireActual('chalk');
-            jest.requireActual('./palette');
-            expect(chalkMod.level).toBe(0);
-            delete process.env.NO_COLOR;
-        });
+    it('disables chalk when NO_COLOR env is set', async () => {
+        process.env.NO_COLOR = '1';
+        const chalkMod: { level: number } = await vi.importActual('chalk');
+        expect(chalkMod.level).toBe(0);
+        delete process.env.NO_COLOR;
     });
 
     it('getColorLevel returns current chalk level', () => {

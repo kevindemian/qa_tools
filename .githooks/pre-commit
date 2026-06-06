@@ -1,0 +1,33 @@
+#!/bin/sh
+set -e
+
+echo "=== Running pre-commit checks (validation hook + typecheck + lint) ==="
+
+# Validation hook test
+VALIDATION_HOOK="$HOME/.config/opencode/validation_hook.ts"
+if [ -f "$VALIDATION_HOOK" ]; then
+    echo "--- Validation hook (self-test) ---"
+    npx tsx "$VALIDATION_HOOK" --test
+
+    echo "--- Validation hook (diff check) ---"
+    # Exit codes: 0=clean, 1=block, 2=review (non-blocking)
+    set +e
+    git diff --cached | npx tsx "$VALIDATION_HOOK" --check
+    VH_EXIT=$?
+    set -e
+    case "$VH_EXIT" in
+        0|2) ;;
+        *)   exit "$VH_EXIT" ;;
+    esac
+fi
+
+echo "--- Typecheck ---"
+npx tsc --noEmit
+
+echo "--- Lint-staged ---"
+npx lint-staged
+
+echo "--- Checking for .only ---"
+! grep -rn '\.only(' --include='*.test.*' --exclude-dir=node_modules --exclude-dir=.git .
+
+echo "=== Pre-commit checks passed ==="

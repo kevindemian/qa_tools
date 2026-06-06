@@ -1,20 +1,20 @@
-import { _runValidationRules, _printValidationMessages } from './import-prep-validation';
+import { _runValidationRules, _printValidationMessages } from './import-prep-validation.js';
 
-const mockWarn = jest.fn();
-const mockError = jest.fn();
+const mockWarn = vi.fn();
+const mockError = vi.fn();
 
-jest.mock('../shared/logger', () => ({
+vi.mock('../shared/logger', async () => ({
     rootLogger: {
-        child: jest.fn().mockReturnValue({ info: jest.fn(), warn: jest.fn(), error: jest.fn() }),
-        warn: jest.fn(),
-        error: jest.fn(),
-        info: jest.fn(),
+        child: vi.fn().mockReturnValue({ info: vi.fn(), warn: vi.fn(), error: vi.fn() }),
+        warn: vi.fn(),
+        error: vi.fn(),
+        info: vi.fn(),
     },
 }));
 
-jest.mock('../shared/prompt', () => ({
-    confirm: jest.fn(),
-    info: jest.fn(),
+vi.mock('../shared/prompt', async () => ({
+    confirm: vi.fn(),
+    info: vi.fn(),
     warn: (...args: unknown[]) => {
         mockWarn(...args);
     },
@@ -23,21 +23,21 @@ jest.mock('../shared/prompt', () => ({
     },
 }));
 
-jest.mock('../shared/state', () => ({
-    load: jest.fn().mockReturnValue({}),
-    update: jest.fn(),
+vi.mock('../shared/state', async () => ({
+    load: vi.fn().mockReturnValue({}),
+    update: vi.fn(),
 }));
 
-jest.mock('../shared/config', () => ({
-    get: jest.fn(),
+vi.mock('../shared/config', async () => ({
+    get: vi.fn(),
 }));
 
 describe('_runValidationRules', () => {
     beforeEach(() => {
-        jest.clearAllMocks();
+        vi.clearAllMocks();
     });
 
-    it('passes valid tests with no warnings', () => {
+    it('passes valid tests with no warnings', async () => {
         const tests = [
             { title: 'TC1', steps: [{ fields: { Action: 'Step1' } }] },
             { title: 'TC2', steps: [{ fields: { Action: 'Step2' } }] },
@@ -47,7 +47,7 @@ describe('_runValidationRules', () => {
         expect(warnings).toHaveLength(0);
     });
 
-    it('detects duplicate titles', () => {
+    it('detects duplicate titles', async () => {
         const tests = [
             { title: 'Duplicated', steps: [{ fields: { Action: 'Step1' } }] },
             { title: 'Duplicated', steps: [{ fields: { Action: 'Step2' } }] },
@@ -57,14 +57,14 @@ describe('_runValidationRules', () => {
         expect(warnings[0]).toContain('Titulo duplicado');
     });
 
-    it('warns on step without Action', () => {
+    it('warns on step without Action', async () => {
         const tests = [{ title: 'TC1', steps: [{ fields: { Action: '' } }] }];
         const { warnings } = _runValidationRules(tests);
         expect(warnings).toHaveLength(1);
         expect(warnings[0]).toContain('sem Action');
     });
 
-    it('reports schema errors on invalid test', () => {
+    it('reports schema errors on invalid test', async () => {
         const tests = [{ title: 123, steps: 'invalid' }];
         const { errors } = _runValidationRules(tests);
         expect(errors.length).toBeGreaterThan(0);
@@ -73,29 +73,29 @@ describe('_runValidationRules', () => {
 
 describe('_printValidationMessages', () => {
     beforeEach(() => {
-        jest.clearAllMocks();
+        vi.clearAllMocks();
     });
 
-    it('prints warnings up to MAX_WARNINGS_TO_SHOW', () => {
+    it('prints warnings up to MAX_WARNINGS_TO_SHOW', async () => {
         _printValidationMessages([], ['warn1', 'warn2']);
         expect(mockWarn).toHaveBeenCalledWith(expect.stringContaining('Avisos'));
         expect(mockWarn).toHaveBeenCalledWith(expect.stringContaining('warn1'));
     });
 
-    it('prints truncated message when warnings exceed limit', () => {
+    it('prints truncated message when warnings exceed limit', async () => {
         const warnings = Array.from({ length: 10 }, (_, i) => 'warn' + i);
         _printValidationMessages([], warnings);
         expect(mockWarn).toHaveBeenCalledWith(expect.stringContaining('e mais'));
     });
 
-    it('prints errors and advice', () => {
+    it('prints errors and advice', async () => {
         _printValidationMessages(['err1'], []);
         expect(mockError).toHaveBeenCalledWith(expect.stringContaining('Erros'));
         expect(mockError).toHaveBeenCalledWith(expect.stringContaining('err1'));
         expect(mockWarn).toHaveBeenCalledWith(expect.stringContaining('Corrija'));
     });
 
-    it('handles empty warnings and errors', () => {
+    it('handles empty warnings and errors', async () => {
         _printValidationMessages([], []);
         expect(mockWarn).not.toHaveBeenCalledWith(expect.stringContaining('Avisos'));
         expect(mockError).not.toHaveBeenCalledWith(expect.stringContaining('Erros'));

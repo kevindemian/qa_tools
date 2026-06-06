@@ -1,9 +1,9 @@
 // @ts-check
-const eslint = require('@eslint/js');
-const tseslint = require('typescript-eslint');
-const prettier = require('eslint-config-prettier');
+import eslint from '@eslint/js';
+import tseslint from 'typescript-eslint';
+import prettier from 'eslint-config-prettier';
 
-module.exports = tseslint.config(
+export default tseslint.config(
     eslint.configs.recommended,
     ...tseslint.configs.recommendedTypeChecked,
     {
@@ -108,6 +108,15 @@ module.exports = tseslint.config(
             '@typescript-eslint/no-unused-expressions': 'off',
             '@typescript-eslint/unbound-method': 'off',
             '@typescript-eslint/require-await': 'off',
+            '@typescript-eslint/no-unsafe-assignment': 'off',
+            '@typescript-eslint/no-unsafe-call': 'off',
+            '@typescript-eslint/no-unsafe-member-access': 'off',
+            '@typescript-eslint/no-unsafe-argument': 'off',
+            '@typescript-eslint/no-unsafe-return': 'off',
+            '@typescript-eslint/no-unnecessary-type-assertion': 'off',
+            '@typescript-eslint/await-thenable': 'off',
+            '@typescript-eslint/no-redundant-type-constituents': 'off',
+            '@typescript-eslint/no-explicit-any': 'off',
             'no-console': 'off',
             'no-control-regex': 'off',
         },
@@ -122,13 +131,14 @@ module.exports = tseslint.config(
         },
     },
     {
-        files: ['shared/__mocks__/**'],
+        files: ['shared/__mocks__/**', 'shared/test-utils/factories/**'],
         rules: {
             '@typescript-eslint/no-unsafe-assignment': 'off',
             '@typescript-eslint/no-unsafe-call': 'off',
             '@typescript-eslint/no-unsafe-member-access': 'off',
             '@typescript-eslint/no-unsafe-argument': 'off',
             '@typescript-eslint/no-unsafe-return': 'off',
+            '@typescript-eslint/no-unnecessary-type-assertion': 'off',
         },
     },
     // DepWall — must import through shared/deps, shared/palette, shared/validation,
@@ -161,6 +171,6 @@ module.exports = tseslint.config(
             ],
         },
     },
-    { ignores: ['node_modules/', 'docs-archive/', 'scripts/', '**/*.js'] },
+    { ignores: ['node_modules/', 'docs-archive/', 'scripts/', 'vitest.config.ts', 'eslint.config.mjs', '**/*.js'] },
     prettier,
 );

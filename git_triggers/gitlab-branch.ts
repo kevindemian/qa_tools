@@ -1,5 +1,5 @@
-import type { AxiosInstance } from '../shared/deps';
-import { apiGet, formatDiffResponse, projectPath } from './gitlab-api';
+import type { AxiosInstance } from '../shared/deps.js';
+import { apiGet, formatDiffResponse, projectPath } from './gitlab-api.js';
 
 const DIFF_TRUNCATION_LIMIT = 15000;
 

@@ -77,7 +77,7 @@ class JestMockBoilerplate implements Pattern {
             severity: promptFiles.length > 5 || loggerFiles.length > 5 ? 'high' : 'medium',
             count: promptFiles.length + loggerFiles.length,
             description: `${promptFiles.length} test files mock prompt, ${loggerFiles.length} mock logger`,
-            recommendation: 'Create __mocks__/prompt.ts and __mocks__/logger.ts so jest.mock() auto-resolves',
+            recommendation: 'Create __mocks__/prompt.ts and __mocks__/logger.ts so vi.mock() auto-resolves',
         };
     }
 }

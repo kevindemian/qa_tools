@@ -1,8 +1,8 @@
 import fs from 'fs';
 import path from 'path';
-import { rootLogger } from '../shared/logger';
-import { tempDirPath } from '../shared/temp-dir';
-import type { JiraResourceLike } from '../shared/types';
+import { rootLogger } from '../shared/logger.js';
+import { tempDirPath } from '../shared/temp-dir.js';
+import type { JiraResourceLike } from '../shared/types.js';
 
 export interface LinkType {
     id: string;

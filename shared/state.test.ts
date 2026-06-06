@@ -1,17 +1,27 @@
-import { createMockRootLogger, nonNull } from './test-utils';
+const mockRootLogger = vi.hoisted(() => ({
+    info: vi.fn(),
+    error: vi.fn(),
+    warn: vi.fn(),
+    debug: vi.fn(),
+    filePath: undefined as string | undefined,
+    writeFileOnly: vi.fn(),
+    file: vi.fn(),
+    writeSplash: vi.fn(),
+    updateSplashStep: vi.fn(),
+}));
 
-const mockRootLogger = createMockRootLogger();
-
-jest.mock('./logger', () => ({
+vi.mock('./logger', async () => ({
     rootLogger: mockRootLogger,
     Logger: function () {},
 }));
 
+import { nonNull } from './test-utils.js';
+
 import fs from 'fs';
 import path from 'path';
 import os from 'os';
-import Config from './config';
-import * as stateModule from './state';
+import Config from './config.js';
+import * as stateModule from './state.js';
 
 const XDG_HOME = '/tmp/test-xdg-state';
 const STATE_PATH = path.join(XDG_HOME, 'qa-tools', 'state.json');
@@ -21,20 +31,20 @@ function makeConfig(): Config {
 }
 
 function mockFs(files: Record<string, string>) {
-    const exists = jest.spyOn(fs, 'existsSync').mockImplementation((p) => p.toString() in files);
-    const read = jest.spyOn(fs, 'readFileSync').mockImplementation((p: Parameters<typeof fs.readFileSync>[0]) => {
+    const exists = vi.spyOn(fs, 'existsSync').mockImplementation((p) => p.toString() in files);
+    const read = vi.spyOn(fs, 'readFileSync').mockImplementation((p: Parameters<typeof fs.readFileSync>[0]) => {
         const ps = p.toString();
         if (!(ps in files)) throw new Error('ENOENT');
         return nonNull(files[ps]);
     });
-    const write = jest
+    const write = vi
         .spyOn(fs, 'writeFileSync')
         .mockImplementation(
             (p: Parameters<typeof fs.writeFileSync>[0], data: Parameters<typeof fs.writeFileSync>[1]) => {
                 files[p.toString()] = typeof data === 'string' ? data : '';
             },
         );
-    const rename = jest
+    const rename = vi
         .spyOn(fs, 'renameSync')
         .mockImplementation((from: Parameters<typeof fs.renameSync>[0], to: Parameters<typeof fs.renameSync>[1]) => {
             const f = from.toString();
@@ -47,24 +57,24 @@ function mockFs(files: Record<string, string>) {
 }
 
 describe('State', () => {
-    let state: typeof import('./state');
+    let state: typeof import('./state.js');
 
     beforeEach(() => {
         state = stateModule;
     });
 
     afterEach(() => {
-        jest.restoreAllMocks();
+        vi.restoreAllMocks();
     });
 
     describe('load', () => {
-        it('returns empty object when no state file', () => {
+        it('returns empty object when no state file', async () => {
             mockFs({});
             const result = state.load(makeConfig());
             expect(result).toEqual({});
         });
 
-        it('returns parsed state when file exists', () => {
+        it('returns parsed state when file exists', async () => {
             mockFs({ [STATE_PATH]: JSON.stringify({ lastProject: 'ECSPOL' }) });
             const result = state.load(makeConfig());
             expect(result).toEqual({ lastProject: 'ECSPOL' });
@@ -74,7 +84,7 @@ describe('State', () => {
     });
 
     describe('save', () => {
-        it('writes state to backup and main paths', () => {
+        it('writes state to backup and main paths', async () => {
             const mocks = mockFs({});
             state.save({ lastProject: 'TEST' }, makeConfig());
             expect(mocks.write).toHaveBeenCalled();
@@ -82,7 +92,7 @@ describe('State', () => {
     });
 
     describe('update', () => {
-        it('applies mutation and persists', () => {
+        it('applies mutation and persists', async () => {
             mockFs({ [STATE_PATH]: JSON.stringify({ lastProject: 'OLD' }) });
             const result = state.update((s) => {
                 s.lastProject = 'NEW';
@@ -90,7 +100,7 @@ describe('State', () => {
             expect(result.lastProject).toBe('NEW');
         });
 
-        it('returns state with applied mutation', () => {
+        it('returns state with applied mutation', async () => {
             mockFs({ [STATE_PATH]: JSON.stringify({ lastProject: 'OLD' }) });
             const result = state.update((s) => {
                 s.lastProject = 'NEW';
@@ -100,7 +110,7 @@ describe('State', () => {
     });
 
     describe('backup recovery', () => {
-        it('recovers from backup when main file is corrupted', () => {
+        it('recovers from backup when main file is corrupted', async () => {
             const bakPath = STATE_PATH + '.bak';
             mockFs({
                 [STATE_PATH]: 'corrupted{json',
@@ -114,7 +124,7 @@ describe('State', () => {
     describe('state migration from old path', () => {
         const OLD_STATE_PATH = path.join(os.homedir(), '.qa_tools_state.json');
 
-        it('copies old state to new path when old exists and new does not', () => {
+        it('copies old state to new path when old exists and new does not', async () => {
             const mocks = mockFs({
                 [OLD_STATE_PATH]: JSON.stringify({ lastProject: 'MIGRATED' }),
             });
@@ -124,7 +134,7 @@ describe('State', () => {
             expect(state.load(config)).toEqual({ lastProject: 'MIGRATED' });
         });
 
-        it('does not migrate when new state file already exists', () => {
+        it('does not migrate when new state file already exists', async () => {
             const mocks = mockFs({
                 [OLD_STATE_PATH]: JSON.stringify({ lastProject: 'OLD' }),
                 [STATE_PATH]: JSON.stringify({ lastProject: 'NEW' }),
@@ -137,7 +147,7 @@ describe('State', () => {
     });
 
     describe('corrupted state without backup', () => {
-        it('returns empty object when main file corrupted and no backup exists', () => {
+        it('returns empty object when main file corrupted and no backup exists', async () => {
             const config = makeConfig();
             mockFs({
                 [STATE_PATH]: 'corrupted{json',
@@ -146,7 +156,7 @@ describe('State', () => {
             expect(result).toEqual({});
         });
 
-        it('calls rootLogger.warn when state file is corrupted', () => {
+        it('calls rootLogger.warn when state file is corrupted', async () => {
             const config = makeConfig();
             mockFs({
                 [STATE_PATH]: 'corrupted{json',
@@ -157,7 +167,7 @@ describe('State', () => {
     });
 
     describe('load error branches', () => {
-        it('warns when backup recovery fails (backup also corrupted)', () => {
+        it('warns when backup recovery fails (backup also corrupted)', async () => {
             const config = makeConfig();
             const bakPath = STATE_PATH + '.bak';
             mockFs({
@@ -169,12 +179,12 @@ describe('State', () => {
             expect(mockRootLogger.error).toHaveBeenCalledWith(expect.stringContaining('Falha ao recuperar backup'));
         });
 
-        it('warns when backup rename fails', () => {
+        it('warns when backup rename fails', async () => {
             const config = makeConfig();
             mockFs({
                 [STATE_PATH]: 'corrupted{json',
             });
-            jest.spyOn(fs, 'renameSync').mockImplementationOnce(() => {
+            vi.spyOn(fs, 'renameSync').mockImplementationOnce(() => {
                 throw new Error('rename denied');
             });
             const result = state.load(config);
@@ -184,10 +194,10 @@ describe('State', () => {
     });
 
     describe('save error handling', () => {
-        it('warns and logs error when save write fails', () => {
+        it('warns and logs error when save write fails', async () => {
             const config = makeConfig();
             mockFs({});
-            jest.spyOn(fs, 'writeFileSync').mockImplementationOnce(() => {
+            vi.spyOn(fs, 'writeFileSync').mockImplementationOnce(() => {
                 throw new Error('disk full');
             });
             state.save({ key: 'value' }, config);
@@ -196,10 +206,10 @@ describe('State', () => {
     });
 
     describe('ensureStateDir', () => {
-        it('returns false when mkdirSync throws (tested via load)', () => {
+        it('returns false when mkdirSync throws (tested via load)', async () => {
             const config = makeConfig();
             mockFs({});
-            jest.spyOn(fs, 'mkdirSync').mockImplementation(() => {
+            vi.spyOn(fs, 'mkdirSync').mockImplementation(() => {
                 throw new Error('permission denied');
             });
             const result = state.load(config);
@@ -208,12 +218,12 @@ describe('State', () => {
     });
 
     describe('migrateOldState catch', () => {
-        it('logs warn when readFileSync throws during migration', () => {
+        it('logs warn when readFileSync throws during migration', async () => {
             const OLD_STATE_PATH = path.join(os.homedir(), '.qa_tools_state.json');
             mockFs({
                 [OLD_STATE_PATH]: JSON.stringify({ lastProject: 'MIGRATED' }),
             });
-            jest.spyOn(fs, 'readFileSync').mockImplementationOnce(() => {
+            vi.spyOn(fs, 'readFileSync').mockImplementationOnce(() => {
                 throw new Error('read error');
             });
             state.migrateOldState(makeConfig());
@@ -222,7 +232,7 @@ describe('State', () => {
     });
 
     describe('getStatePath', () => {
-        it('returns path ending in state.json', () => {
+        it('returns path ending in state.json', async () => {
             const result = state.getStatePath(makeConfig());
             expect(result.endsWith('state.json')).toBe(true);
         });

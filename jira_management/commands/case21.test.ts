@@ -1,44 +1,44 @@
-import { expect } from '@jest/globals';
+import { expect } from 'vitest';
 
-jest.mock('../../shared/prompt');
-jest.mock('../../shared/logger');
+vi.mock('../../shared/prompt');
+vi.mock('../../shared/logger');
 
-jest.mock('../../shared/coverage-gap', () => ({
-    analyzeCoverageGaps: jest.fn(),
+vi.mock('../../shared/coverage-gap', async () => ({
+    analyzeCoverageGaps: vi.fn(),
 }));
 
-jest.mock('../../shared/generate-coverage-gap-html', () => ({
-    generateCoverageGapHtml: jest.fn().mockReturnValue('<html></html>'),
+vi.mock('../../shared/generate-coverage-gap-html', async () => ({
+    generateCoverageGapHtml: vi.fn().mockReturnValue('<html></html>'),
 }));
 
-jest.mock('../../shared/open', () => ({ openWithFallback: jest.fn() }));
+vi.mock('../../shared/open', async () => ({ openWithFallback: vi.fn() }));
 
-jest.mock('../../shared/ai-feedback', () => ({
-    recordAiGeneration: jest.fn(),
+vi.mock('../../shared/ai-feedback', async () => ({
+    recordAiGeneration: vi.fn(),
 }));
 
-jest.mock('./case18');
+vi.mock('./case18');
 
-jest.mock('crypto', () => ({
-    randomUUID: jest.fn().mockReturnValue('abc-123'),
+vi.mock('crypto', async () => ({
+    randomUUID: vi.fn().mockReturnValue('abc-123'),
 }));
 
-jest.mock('../../shared/logger', () => ({
+vi.mock('../../shared/logger', async () => ({
     rootLogger: {
-        error: jest.fn(),
-        child: jest.fn().mockReturnValue({ info: jest.fn(), error: jest.fn(), warn: jest.fn() }),
+        error: vi.fn(),
+        child: vi.fn().mockReturnValue({ info: vi.fn(), error: vi.fn(), warn: vi.fn() }),
     },
 }));
 
-import * as promptModule from '../../shared/prompt';
-import * as coverageGapModule from '../../shared/coverage-gap';
-import * as htmlModule from '../../shared/generate-coverage-gap-html';
-import * as openModule from '../../shared/open';
+import * as promptModule from '../../shared/prompt.js';
+import * as coverageGapModule from '../../shared/coverage-gap.js';
+import * as htmlModule from '../../shared/generate-coverage-gap-html.js';
+import * as openModule from '../../shared/open.js';
 
-import type { CoverageGapResult, CoverageGapItem } from '../../shared/types/coverage';
-import case21Module from './case21';
-import case18Module from './case18';
-import { createMockContext } from '../../shared/test-utils/factories/context-factory';
+import type { CoverageGapResult, CoverageGapItem } from '../../shared/types/coverage.js';
+import case21Module from './case21.js';
+import case18Module from './case18.js';
+import { createMockContext } from '../../shared/test-utils/factories/context-factory.js';
 
 const baseContext = createMockContext();
 
@@ -63,18 +63,18 @@ const mockGapResult: CoverageGapResult = {
 };
 
 beforeEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
 });
 
 beforeAll(() => {
-    if (!jest.isMockFunction(openModule.openWithFallback)) {
+    if (!vi.isMockFunction(openModule.openWithFallback)) {
         throw new Error('Guard FAILED: openWithFallback is NOT mocked. Browser would open!');
     }
 });
 
 describe('case21 — Gap Analysis', () => {
     it('displays coverage gap summary', async () => {
-        const coverageGap = jest.mocked(coverageGapModule);
+        const coverageGap = vi.mocked(coverageGapModule);
         coverageGap.analyzeCoverageGaps.mockResolvedValueOnce(mockGapResult);
 
         const mod = case21Module;
@@ -85,8 +85,8 @@ describe('case21 — Gap Analysis', () => {
     });
 
     it('handles error from analyzeCoverageGaps', async () => {
-        const prompt = jest.mocked(promptModule);
-        const coverageGap = jest.mocked(coverageGapModule);
+        const prompt = vi.mocked(promptModule);
+        const coverageGap = vi.mocked(coverageGapModule);
         coverageGap.analyzeCoverageGaps.mockRejectedValueOnce(new Error('API error'));
 
         const mod = case21Module;
@@ -96,8 +96,8 @@ describe('case21 — Gap Analysis', () => {
     });
 
     it('shows failing epics when quality gate fails', async () => {
-        const prompt = jest.mocked(promptModule);
-        const coverageGap = jest.mocked(coverageGapModule);
+        const prompt = vi.mocked(promptModule);
+        const coverageGap = vi.mocked(coverageGapModule);
         const resultWithFailures = {
             ...mockGapResult,
             gateConfig: { minCoveragePct: 50, failingEpics: ['EPIC-1'] },
@@ -123,9 +123,9 @@ describe('case21 — Gap Analysis', () => {
     });
 
     it('delegates to case18 when user confirms AI gen', async () => {
-        const prompt = jest.mocked(promptModule);
-        const coverageGap = jest.mocked(coverageGapModule);
-        const case18 = jest.mocked(case18Module);
+        const prompt = vi.mocked(promptModule);
+        const coverageGap = vi.mocked(coverageGapModule);
+        const case18 = vi.mocked(case18Module);
 
         prompt.askConfirm
             .mockResolvedValueOnce(false) // skip create tests
@@ -142,9 +142,9 @@ describe('case21 — Gap Analysis', () => {
     });
 
     it('generates HTML report when user confirms', async () => {
-        const prompt = jest.mocked(promptModule);
-        const coverageGap = jest.mocked(coverageGapModule);
-        const case18 = jest.mocked(case18Module);
+        const prompt = vi.mocked(promptModule);
+        const coverageGap = vi.mocked(coverageGapModule);
+        const case18 = vi.mocked(case18Module);
 
         prompt.askConfirm
             .mockResolvedValueOnce(false) // skip create tests
@@ -157,8 +157,8 @@ describe('case21 — Gap Analysis', () => {
         const mod = case21Module;
         await mod.handler(baseContext);
 
-        expect(jest.mocked(htmlModule).generateCoverageGapHtml).toHaveBeenCalled();
-        expect(jest.mocked(openModule).openWithFallback).toHaveBeenCalledWith(
+        expect(vi.mocked(htmlModule).generateCoverageGapHtml).toHaveBeenCalled();
+        expect(vi.mocked(openModule).openWithFallback).toHaveBeenCalledWith(
             expect.stringContaining('coverage-gap-report.html'),
             'Relatório de cobertura',
             prompt.info,
@@ -166,8 +166,8 @@ describe('case21 — Gap Analysis', () => {
     });
 
     it('handles HTML generation error gracefully', async () => {
-        const prompt = jest.mocked(promptModule);
-        const coverageGap = jest.mocked(coverageGapModule);
+        const prompt = vi.mocked(promptModule);
+        const coverageGap = vi.mocked(coverageGapModule);
 
         prompt.askConfirm
             .mockResolvedValueOnce(false) // skip create tests
@@ -175,7 +175,7 @@ describe('case21 — Gap Analysis', () => {
             .mockResolvedValueOnce(true); // export HTML
 
         coverageGap.analyzeCoverageGaps.mockResolvedValueOnce(mockGapResult);
-        jest.mocked(htmlModule).generateCoverageGapHtml.mockImplementationOnce(() => {
+        vi.mocked(htmlModule).generateCoverageGapHtml.mockImplementationOnce(() => {
             throw new Error('Render error');
         });
 
@@ -186,8 +186,8 @@ describe('case21 — Gap Analysis', () => {
     });
 
     it('handles create tests confirmation', async () => {
-        const prompt = jest.mocked(promptModule);
-        const coverageGap = jest.mocked(coverageGapModule);
+        const prompt = vi.mocked(promptModule);
+        const coverageGap = vi.mocked(coverageGapModule);
 
         prompt.askConfirm
             .mockResolvedValueOnce(true) // create tests
@@ -203,9 +203,9 @@ describe('case21 — Gap Analysis', () => {
     });
 
     it('handles AI gen with more than 5 gaps', async () => {
-        const prompt = jest.mocked(promptModule);
-        const coverageGap = jest.mocked(coverageGapModule);
-        const case18 = jest.mocked(case18Module);
+        const prompt = vi.mocked(promptModule);
+        const coverageGap = vi.mocked(coverageGapModule);
+        const case18 = vi.mocked(case18Module);
 
         const gapItems: CoverageGapItem[] = Array.from({ length: 7 }, (_, i) => ({
             issueKey: `PROJ-${i + 1}`,

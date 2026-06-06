@@ -1,24 +1,26 @@
 /** Tests for Xray per-test history providers, cache, and factory. */
 
-import { createHistoryProvider, TestHistoryCache, type TestRun, type TestHistoryProvider } from './xray-history';
-import Config from '../shared/config';
-import type JiraResource from './jira_resource';
-import { createMockConfigInstance } from '../shared/test-utils/factories';
-import { createMockJiraResource } from '../shared/test-utils/factories/jira-resource-factory';
+import { createHistoryProvider, TestHistoryCache, type TestRun, type TestHistoryProvider } from './xray-history.js';
+import Config from '../shared/config.js';
+import type JiraResource from './jira_resource.js';
+import { createMockConfigInstance } from '../shared/test-utils/factories/index.js';
+import { createMockJiraResource } from '../shared/test-utils/factories/jira-resource-factory.js';
 
 type MockedJiraResource = ReturnType<typeof createMockJiraResource>;
 
-const mockGraphql = jest.fn();
+const mockGraphql = vi.fn();
 
-jest.mock('../shared/xray-cloud-client', () => ({
-    XrayCloudClient: jest.fn(() => ({
-        graphql: mockGraphql,
-        authenticate: jest.fn(),
-        graphqlMutation: jest.fn(),
-    })),
+vi.mock('../shared/xray-cloud-client', async () => ({
+    XrayCloudClient: vi.fn(function () {
+        return {
+            graphql: mockGraphql,
+            authenticate: vi.fn(),
+            graphqlMutation: vi.fn(),
+        };
+    }),
 }));
 
-jest.mock('../shared/config');
+vi.mock('../shared/config');
 
 let mockIssueGet: MockedJiraResource['getJiraResource'];
 let mockOriginGet: MockedJiraResource['getFromOriginPath'];
@@ -33,40 +35,40 @@ function mockJiraResource(): JiraResource {
 }
 
 beforeEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
     const mockConfig = createMockConfigInstance();
     mockConfig.get = function <T = string>(key: string): T {
         const map: Record<string, string> = { xrayMode: 'server', xrayClientId: '', xrayClientSecret: '' };
         return (map[key] ?? '') as T;
     };
-    jest.mocked(Config.getDefault).mockReturnValue(mockConfig);
+    vi.mocked(Config.getDefault).mockReturnValue(mockConfig);
 });
 
 // ─── TestHistoryCache ────────────────────────────────────────────────────────
 
 describe('TestHistoryCache', () => {
-    it('stores and retrieves runs by key', () => {
+    it('stores and retrieves runs by key', async () => {
         const cache = new TestHistoryCache(60_000);
         const runs: TestRun[] = [{ status: 'PASSED', testExecKey: 'TE-1', startedOn: '2024-01-01' }];
         cache.set('TEST-123', runs);
         expect(cache.get('TEST-123')).toEqual(runs);
     });
 
-    it('returns undefined for missing key', () => {
+    it('returns undefined for missing key', async () => {
         const cache = new TestHistoryCache(60_000);
         expect(cache.get('TEST-999')).toBeUndefined();
     });
 
-    it('expires entries after TTL', () => {
-        jest.useFakeTimers();
+    it('expires entries after TTL', async () => {
+        vi.useFakeTimers();
         const cache = new TestHistoryCache(5000);
         cache.set('TEST-123', [{ status: 'PASSED', testExecKey: 'TE-1' }]);
-        jest.advanceTimersByTime(6000);
+        vi.advanceTimersByTime(6000);
         expect(cache.get('TEST-123')).toBeUndefined();
-        jest.useRealTimers();
+        vi.useRealTimers();
     });
 
-    it('clears all entries', () => {
+    it('clears all entries', async () => {
         const cache = new TestHistoryCache(60_000);
         cache.set('TEST-123', [{ status: 'PASSED', testExecKey: 'TE-1' }]);
         cache.clear();
@@ -77,21 +79,21 @@ describe('TestHistoryCache', () => {
 // ─── createHistoryProvider ───────────────────────────────────────────────────
 
 describe('createHistoryProvider', () => {
-    it('returns ServerHistoryProvider when mode=server', () => {
+    it('returns ServerHistoryProvider when mode=server', async () => {
         const jira = mockJiraResource();
         const provider = createHistoryProvider(jira, 'server');
         expect(provider).toBeDefined();
         expect(typeof provider.getHistory).toBe('function');
     });
 
-    it('returns CloudHistoryProvider when mode=cloud', () => {
+    it('returns CloudHistoryProvider when mode=cloud', async () => {
         const jira = mockJiraResource();
         const provider = createHistoryProvider(jira, 'cloud');
         expect(provider).toBeDefined();
         expect(typeof provider.getHistory).toBe('function');
     });
 
-    it('uses Config default when mode is not specified', () => {
+    it('uses Config default when mode is not specified', async () => {
         const jira = mockJiraResource();
         const provider = createHistoryProvider(jira);
         expect(provider).toBeDefined();
@@ -179,7 +181,7 @@ describe('CloudHistoryProvider', () => {
             };
             return (map[key] ?? '') as T;
         };
-        jest.mocked(Config.getDefault).mockReturnValue(cloudMockConfig);
+        vi.mocked(Config.getDefault).mockReturnValue(cloudMockConfig);
         provider = createHistoryProvider(jira, 'cloud');
     });
 
@@ -196,7 +198,7 @@ describe('CloudHistoryProvider', () => {
             const map: Record<string, string> = { xrayMode: 'cloud', xrayClientId: '', xrayClientSecret: '' };
             return (map[key] ?? '') as T;
         };
-        jest.mocked(Config.getDefault).mockReturnValue(missingCredsConfig);
+        vi.mocked(Config.getDefault).mockReturnValue(missingCredsConfig);
         const result = await provider.getHistory('TEST-123');
         expect(result).toEqual([]);
     });

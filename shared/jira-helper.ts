@@ -1,6 +1,6 @@
 /** Jira API helpers — reduce boilerplate across handlers. */
-import { printError } from './prompt';
-import { rootLogger } from './logger';
+import { printError } from './prompt.js';
+import { rootLogger } from './logger.js';
 interface CommandContextLike {
     pushHistory: (op: string, detail: string, status: string) => void;
     ctx: { project_name: string };

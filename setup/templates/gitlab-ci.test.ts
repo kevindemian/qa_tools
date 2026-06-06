@@ -1,5 +1,5 @@
-import { generateGitLabCI } from './gitlab-ci';
-import type { SetupContext } from '../context';
+import { generateGitLabCI } from './gitlab-ci.js';
+import type { SetupContext } from '../context.js';
 
 const MOCK_CTX_BASIC: SetupContext = {
     projectName: 'test-proj',
@@ -31,33 +31,33 @@ const MOCK_CTX_WITH_FEATURES: SetupContext = {
 };
 
 describe('generateGitLabCI', () => {
-    it('returns YAML string with stage test', () => {
+    it('returns YAML string with stage test', async () => {
         const yaml = generateGitLabCI(MOCK_CTX_BASIC);
         expect(yaml).toContain('test');
     });
 
-    it('includes node image with correct version', () => {
+    it('includes node image with correct version', async () => {
         const yaml = generateGitLabCI(MOCK_CTX_BASIC);
         expect(yaml).toContain('node:20');
     });
 
-    it('includes install and test commands', () => {
+    it('includes install and test commands', async () => {
         const yaml = generateGitLabCI(MOCK_CTX_BASIC);
         expect(yaml).toContain('npm ci');
         expect(yaml).toContain('npx jest --reporter ctrf');
     });
 
-    it('includes artifact paths', () => {
+    it('includes artifact paths', async () => {
         const yaml = generateGitLabCI(MOCK_CTX_BASIC);
         expect(yaml).toContain('reports/ctrf-report.json');
     });
 
-    it('adds post-processing step when features enabled', () => {
+    it('adds post-processing step when features enabled', async () => {
         const yaml = generateGitLabCI(MOCK_CTX_WITH_FEATURES);
         expect(yaml).toContain('git_triggers/main.ts');
     });
 
-    it('does not add post-processing when no features', () => {
+    it('does not add post-processing when no features', async () => {
         const yaml = generateGitLabCI(MOCK_CTX_BASIC);
         expect(yaml).not.toContain('git_triggers/main.ts');
     });

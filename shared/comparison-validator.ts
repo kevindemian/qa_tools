@@ -15,14 +15,14 @@ import {
     fail,
     pass,
     warn,
-} from './artifact-validator';
+} from './artifact-validator.js';
 import {
     invariantNoPlaceholder,
     invariantNoMarkdown,
     invariantEvidenceExists,
     invariantNoEmptyStrings,
     invariantConclusionHasEvidence,
-} from './shared-invariants';
+} from './shared-invariants.js';
 
 interface MeaningfulChangeShape {
     metric: string;

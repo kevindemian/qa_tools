@@ -1,19 +1,21 @@
-import { createStepImporter } from './xray-client';
-import type JiraResource from './jira_resource';
-import type { TestStep } from '../shared/types';
-import Config from '../shared/config';
-import { createMockConfigInstance } from '../shared/test-utils/factories';
-import { createMockJiraResource } from '../shared/test-utils/factories/jira-resource-factory';
+import { createStepImporter } from './xray-client.js';
+import type JiraResource from './jira_resource.js';
+import type { TestStep } from '../shared/types.js';
+import Config from '../shared/config.js';
+import { createMockConfigInstance } from '../shared/test-utils/factories/index.js';
+import { createMockJiraResource } from '../shared/test-utils/factories/jira-resource-factory.js';
 
-const mockGraphqlMutation = jest.fn();
+const mockGraphqlMutation = vi.fn();
 
-jest.mock('../shared/xray-cloud-client', () => ({
-    XrayCloudClient: jest.fn(() => ({
-        graphqlMutation: mockGraphqlMutation,
-    })),
+vi.mock('../shared/xray-cloud-client', async () => ({
+    XrayCloudClient: vi.fn(function () {
+        return {
+            graphqlMutation: mockGraphqlMutation,
+        };
+    }),
 }));
 
-jest.mock('../shared/config');
+vi.mock('../shared/config');
 
 describe('ServerStepImporter', () => {
     it('calls postJiraResource with correct endpoint and payload', async () => {
@@ -54,7 +56,7 @@ describe('ServerStepImporter', () => {
 
 describe('CloudStepImporter', () => {
     beforeEach(() => {
-        jest.clearAllMocks();
+        vi.clearAllMocks();
         const mockConfig = createMockConfigInstance();
         mockConfig.get = function <T = string>(key: string): T {
             const map: Record<string, string> = {
@@ -63,7 +65,7 @@ describe('CloudStepImporter', () => {
             };
             return (map[key] ?? '') as T;
         };
-        jest.mocked(Config.getDefault).mockReturnValue(mockConfig);
+        vi.mocked(Config.getDefault).mockReturnValue(mockConfig);
     });
 
     it('happy path — sends GraphQL mutation via XrayCloudClient', async () => {
@@ -88,7 +90,7 @@ describe('CloudStepImporter', () => {
             const map: Record<string, string> = { xrayClientId: '', xrayClientSecret: '' };
             return (map[key] ?? '') as T;
         };
-        jest.mocked(Config.getDefault).mockReturnValue(mockConfig);
+        vi.mocked(Config.getDefault).mockReturnValue(mockConfig);
 
         const importer = createStepImporter({} as JiraResource, 'cloud');
         const step: TestStep = { fields: { Action: 'Click' } };

@@ -1,7 +1,7 @@
 import fs from 'fs';
 import os from 'os';
 import path from 'path';
-import { nonNull } from './test-utils';
+import { nonNull } from './test-utils.js';
 
 let TMP_DIR: string;
 
@@ -14,9 +14,9 @@ afterAll(() => {
     delete process.env.XDG_STATE_HOME;
 });
 
-function loadMod() {
-    jest.resetModules();
-    const mod = require('./llm-metrics') as typeof import('./llm-metrics');
+async function loadMod() {
+    vi.resetModules();
+    const mod = (await import('./llm-metrics.js')) as typeof import('./llm-metrics.js');
     mod.clearLlmMetrics();
     return mod;
 }
@@ -30,8 +30,8 @@ describe('LlmMetrics', () => {
         }
     });
 
-    it('records requests and snapshots', () => {
-        const { recordLlmRequest, snapshotLlmMetrics, getLlmMetricsHistory } = loadMod();
+    it('records requests and snapshots', async () => {
+        const { recordLlmRequest, snapshotLlmMetrics, getLlmMetricsHistory } = await loadMod();
 
         recordLlmRequest('main', 500);
         recordLlmRequest('fast', 150);
@@ -44,21 +44,21 @@ describe('LlmMetrics', () => {
         expect(history).toHaveLength(1);
     });
 
-    it('23.11: snapshotLlmMetrics round-trip persist', () => {
-        const { recordLlmRequest, snapshotLlmMetrics } = loadMod();
+    it('23.11: snapshotLlmMetrics round-trip persist', async () => {
+        const { recordLlmRequest, snapshotLlmMetrics } = await loadMod();
         recordLlmRequest('main', 100);
         snapshotLlmMetrics(); // Should persist to disk
 
         // Reset and load history from the same tmp dir
-        const { getLlmMetricsHistory: getHistory2 } = loadMod();
+        const { getLlmMetricsHistory: getHistory2 } = await loadMod();
         const history = getHistory2();
 
         expect(history).toHaveLength(1);
         expect(nonNull(history[0]).totalRequests).toBe(1);
     });
 
-    it('23.12: recordArtifactReview approved/rejected', () => {
-        const { recordArtifactReview, snapshotLlmMetrics } = loadMod();
+    it('23.12: recordArtifactReview approved/rejected', async () => {
+        const { recordArtifactReview, snapshotLlmMetrics } = await loadMod();
         recordArtifactReview(true); // approved
         recordArtifactReview(false); // rejected
         recordArtifactReview(true); // approved
@@ -68,8 +68,8 @@ describe('LlmMetrics', () => {
         expect(snap.artifactRejected).toBe(1);
     });
 
-    it('records validation rejections', () => {
-        const { recordValidationRejection, snapshotLlmMetrics } = loadMod();
+    it('records validation rejections', async () => {
+        const { recordValidationRejection, snapshotLlmMetrics } = await loadMod();
 
         recordValidationRejection('Campo obrigatório ausente');
         recordValidationRejection('Campo obrigatório ausente');
@@ -81,8 +81,8 @@ describe('LlmMetrics', () => {
         expect(snap.rejectionReasons['Tipo inválido']).toBe(1);
     });
 
-    it('records retries', () => {
-        const { recordRetry, snapshotLlmMetrics } = loadMod();
+    it('records retries', async () => {
+        const { recordRetry, snapshotLlmMetrics } = await loadMod();
 
         recordRetry();
         recordRetry();
@@ -92,8 +92,8 @@ describe('LlmMetrics', () => {
         expect(snap.retryCount).toBe(3);
     });
 
-    it('records confidence and averages', () => {
-        const { recordConfidence, snapshotLlmMetrics } = loadMod();
+    it('records confidence and averages', async () => {
+        const { recordConfidence, snapshotLlmMetrics } = await loadMod();
 
         recordConfidence('high');
         recordConfidence('medium');
@@ -103,8 +103,8 @@ describe('LlmMetrics', () => {
         expect(snap.avgConfidence).toBe(0.5);
     });
 
-    it('records failures by tier', () => {
-        const { recordLlmFailure, snapshotLlmMetrics } = loadMod();
+    it('records failures by tier', async () => {
+        const { recordLlmFailure, snapshotLlmMetrics } = await loadMod();
 
         recordLlmFailure('main');
         recordLlmFailure('main');
@@ -115,8 +115,8 @@ describe('LlmMetrics', () => {
         expect(snap.failuresByTier['fast']).toBe(1);
     });
 
-    it('clears accumulators', () => {
-        const { recordLlmRequest, clearLlmMetrics, snapshotLlmMetrics } = loadMod();
+    it('clears accumulators', async () => {
+        const { recordLlmRequest, clearLlmMetrics, snapshotLlmMetrics } = await loadMod();
 
         recordLlmRequest('main', 100);
         clearLlmMetrics();
@@ -125,8 +125,8 @@ describe('LlmMetrics', () => {
         expect(snap.totalRequests).toBe(0);
     });
 
-    it('persists snapshot and retrieves via history', () => {
-        const { recordLlmRequest, snapshotLlmMetrics, getLlmMetricsHistory } = loadMod();
+    it('persists snapshot and retrieves via history', async () => {
+        const { recordLlmRequest, snapshotLlmMetrics, getLlmMetricsHistory } = await loadMod();
 
         recordLlmRequest('main', 500);
         snapshotLlmMetrics();
@@ -137,8 +137,8 @@ describe('LlmMetrics', () => {
         expect(nonNull(history[0]).avgLatencyMs).toBe(500);
     });
 
-    it('records artifact review counters', () => {
-        const { recordArtifactReview, snapshotLlmMetrics } = loadMod();
+    it('records artifact review counters', async () => {
+        const { recordArtifactReview, snapshotLlmMetrics } = await loadMod();
 
         recordArtifactReview(true);
         recordArtifactReview(true);

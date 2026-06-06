@@ -1,40 +1,42 @@
-import { offerTestExecutionAssociation, showResults } from './test-execution-flow';
+import { offerTestExecutionAssociation, showResults } from './test-execution-flow.js';
 import {
     createMockContext,
     createMockLinkManager,
     createMockTestExecutionCreator,
-} from '../../shared/test-utils/factories';
+} from '../../shared/test-utils/factories/index.js';
 
-jest.mock('../../shared/prompt', () => ({
-    printError: jest.fn(),
-    ask: jest.fn(),
-    info: jest.fn(),
-    warn: jest.fn(),
-    success: jest.fn(),
-    title: jest.fn(),
-    divider: jest.fn(),
+vi.mock('../../shared/prompt', () => ({
+    printError: vi.fn(),
+    ask: vi.fn(),
+    info: vi.fn(),
+    warn: vi.fn(),
+    success: vi.fn(),
+    title: vi.fn(),
+    divider: vi.fn(),
 }));
 
-jest.mock('../create_tests', () => ({
-    __esModule: true,
+const { mockCreateTestExecutionWithLinks } = vi.hoisted(() => ({
+    mockCreateTestExecutionWithLinks: vi.fn(),
+}));
+
+vi.mock('../create_tests', () => ({
     default: {
-        createTestExecutionWithLinks: jest.fn(),
+        createTestExecutionWithLinks: mockCreateTestExecutionWithLinks,
     },
+    createTestExecutionWithLinks: mockCreateTestExecutionWithLinks,
 }));
 
-jest.mock('../test-execution-creator', () => ({
-    __esModule: true,
-    default: jest.fn().mockImplementation(() => ({
-        addTestsToExistingExecution: jest.fn(),
-    })),
+vi.mock('../test-execution-creator', () => ({
+    default: vi.fn(function () {
+        return { addTestsToExistingExecution: vi.fn() };
+    }),
 }));
 
-import { ask, printError } from '../../shared/prompt';
-import createTests from '../create_tests';
-import TestExecutionCreator from '../test-execution-creator';
+import { ask, printError } from '../../shared/prompt.js';
+import TestExecutionCreator from '../test-execution-creator.js';
 
 beforeEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
 });
 
 describe('offerTestExecutionAssociation', () => {
@@ -53,12 +55,12 @@ describe('offerTestExecutionAssociation', () => {
 
     describe('option 1 — create new', () => {
         it('creates a Test Execution successfully', async () => {
-            jest.mocked(ask)
+            vi.mocked(ask)
                 .mockResolvedValueOnce('1')
                 .mockResolvedValueOnce('exec-name')
                 .mockResolvedValueOnce('exec-title')
                 .mockResolvedValueOnce('exec-desc');
-            jest.mocked(createTests.createTestExecutionWithLinks).mockResolvedValue({
+            mockCreateTestExecutionWithLinks.mockResolvedValue({
                 key: 'TEST-TE-1',
                 summary: 'Test Execution 1',
             });
@@ -74,12 +76,12 @@ describe('offerTestExecutionAssociation', () => {
         });
 
         it('handles error during creation', async () => {
-            jest.mocked(ask)
+            vi.mocked(ask)
                 .mockResolvedValueOnce('1')
                 .mockResolvedValueOnce('exec-name')
                 .mockResolvedValueOnce('exec-title')
                 .mockResolvedValueOnce('exec-desc');
-            jest.mocked(createTests.createTestExecutionWithLinks).mockRejectedValue(new Error('API error'));
+            mockCreateTestExecutionWithLinks.mockRejectedValue(new Error('API error'));
             const c = createMockContext();
             const result = await offerTestExecutionAssociation(c, ['TEST-1'], 'src');
             expect(result.associated).toBe(false);
@@ -90,21 +92,21 @@ describe('offerTestExecutionAssociation', () => {
 
     describe('option 2 — use existing', () => {
         it('uses TE from list by numeric index', async () => {
-            jest.mocked(ask).mockResolvedValueOnce('2').mockResolvedValueOnce('1');
+            vi.mocked(ask).mockResolvedValueOnce('2').mockResolvedValueOnce('1');
             const c = createMockContext();
             c.linkManager = createMockLinkManager({
-                listTestExecutions: jest
+                listTestExecutions: vi
                     .fn()
                     .mockResolvedValue([{ key: 'TEST-TE-1', summary: 'TE 1', created: '2024-01-01', status: 'DONE' }]),
-                validateTestExecutionKey: jest.fn().mockResolvedValue(undefined),
-                getTestCaseSummaries: jest.fn(),
+                validateTestExecutionKey: vi.fn().mockResolvedValue(undefined),
+                getTestCaseSummaries: vi.fn(),
             });
-            const addTestsMock = jest.fn().mockResolvedValue({ key: 'TEST-TE-1', summary: 'TE 1' });
-            jest.mocked(TestExecutionCreator).mockImplementationOnce(() =>
-                createMockTestExecutionCreator({
+            const addTestsMock = vi.fn().mockResolvedValue({ key: 'TEST-TE-1', summary: 'TE 1' });
+            vi.mocked(TestExecutionCreator).mockImplementationOnce(function () {
+                return createMockTestExecutionCreator({
                     addTestsToExistingExecution: addTestsMock,
-                }),
-            );
+                });
+            });
             const result = await offerTestExecutionAssociation(c, ['TEST-1'], 'src');
             expect(result).toEqual({
                 associated: true,
@@ -116,92 +118,92 @@ describe('offerTestExecutionAssociation', () => {
         });
 
         it('uses TE by manual key when list is empty', async () => {
-            jest.mocked(ask).mockResolvedValueOnce('2').mockResolvedValueOnce('TEST-TE-999');
+            vi.mocked(ask).mockResolvedValueOnce('2').mockResolvedValueOnce('TEST-TE-999');
             const c = createMockContext();
             c.linkManager = createMockLinkManager({
-                listTestExecutions: jest.fn().mockResolvedValue([]),
-                validateTestExecutionKey: jest.fn().mockResolvedValue(undefined),
-                getTestCaseSummaries: jest.fn(),
+                listTestExecutions: vi.fn().mockResolvedValue([]),
+                validateTestExecutionKey: vi.fn().mockResolvedValue(undefined),
+                getTestCaseSummaries: vi.fn(),
             });
-            const addTestsMock = jest.fn().mockResolvedValue({ key: 'TEST-TE-999', summary: 'Manual TE' });
-            jest.mocked(TestExecutionCreator).mockImplementationOnce(() =>
-                createMockTestExecutionCreator({
+            const addTestsMock = vi.fn().mockResolvedValue({ key: 'TEST-TE-999', summary: 'Manual TE' });
+            vi.mocked(TestExecutionCreator).mockImplementationOnce(function () {
+                return createMockTestExecutionCreator({
                     addTestsToExistingExecution: addTestsMock,
-                }),
-            );
+                });
+            });
             const result = await offerTestExecutionAssociation(c, ['TEST-1'], 'src');
             expect(result.associated).toBe(true);
             expect(result.key).toBe('TEST-TE-999');
         });
 
         it('returns not associated when user enters empty key with empty list', async () => {
-            jest.mocked(ask).mockResolvedValueOnce('2').mockResolvedValueOnce('');
+            vi.mocked(ask).mockResolvedValueOnce('2').mockResolvedValueOnce('');
             const c = createMockContext();
             c.linkManager = createMockLinkManager({
-                listTestExecutions: jest.fn().mockResolvedValue([]),
-                validateTestExecutionKey: jest.fn(),
-                getTestCaseSummaries: jest.fn(),
+                listTestExecutions: vi.fn().mockResolvedValue([]),
+                validateTestExecutionKey: vi.fn(),
+                getTestCaseSummaries: vi.fn(),
             });
             const result = await offerTestExecutionAssociation(c, ['TEST-1'], 'src');
             expect(result.associated).toBe(false);
         });
 
         it('returns not associated when invalid index format entered for list', async () => {
-            jest.mocked(ask).mockResolvedValueOnce('2').mockResolvedValueOnce('garbage');
+            vi.mocked(ask).mockResolvedValueOnce('2').mockResolvedValueOnce('garbage');
             const c = createMockContext();
             c.linkManager = createMockLinkManager({
-                listTestExecutions: jest
+                listTestExecutions: vi
                     .fn()
                     .mockResolvedValue([{ key: 'TEST-TE-1', summary: 'TE 1', created: '2024-01-01', status: 'DONE' }]),
-                validateTestExecutionKey: jest.fn(),
-                getTestCaseSummaries: jest.fn(),
+                validateTestExecutionKey: vi.fn(),
+                getTestCaseSummaries: vi.fn(),
             });
             const result = await offerTestExecutionAssociation(c, ['TEST-1'], 'src');
             expect(result.associated).toBe(false);
         });
 
         it('validates key and retries on failure', async () => {
-            jest.mocked(ask)
+            vi.mocked(ask)
                 .mockResolvedValueOnce('2')
                 .mockResolvedValueOnce('1')
                 .mockResolvedValueOnce('s')
                 .mockResolvedValueOnce('TEST-TE-2');
             const c = createMockContext();
             c.linkManager = createMockLinkManager({
-                listTestExecutions: jest
+                listTestExecutions: vi
                     .fn()
                     .mockResolvedValue([{ key: 'TEST-TE-1', summary: 'TE 1', created: '2024-01-01', status: 'DONE' }]),
-                validateTestExecutionKey: jest
+                validateTestExecutionKey: vi
                     .fn()
                     .mockRejectedValueOnce(new Error('Invalid key'))
                     .mockResolvedValueOnce(undefined),
-                getTestCaseSummaries: jest.fn(),
+                getTestCaseSummaries: vi.fn(),
             });
-            const addTestsMock = jest.fn().mockResolvedValue({ key: 'TEST-TE-2', summary: 'TE 2' });
-            jest.mocked(TestExecutionCreator).mockImplementationOnce(() =>
-                createMockTestExecutionCreator({ addTestsToExistingExecution: addTestsMock }),
-            );
+            const addTestsMock = vi.fn().mockResolvedValue({ key: 'TEST-TE-2', summary: 'TE 2' });
+            vi.mocked(TestExecutionCreator).mockImplementationOnce(function () {
+                return createMockTestExecutionCreator({ addTestsToExistingExecution: addTestsMock });
+            });
             const result = await offerTestExecutionAssociation(c, ['TEST-1'], 'src');
             expect(result.associated).toBe(true);
             expect(result.key).toBe('TEST-TE-2');
         });
 
         it('returns not associated when retry validation fails', async () => {
-            jest.mocked(ask)
+            vi.mocked(ask)
                 .mockResolvedValueOnce('2')
                 .mockResolvedValueOnce('1')
                 .mockResolvedValueOnce('s')
                 .mockResolvedValueOnce('INVALID-KEY');
             const c = createMockContext();
             c.linkManager = createMockLinkManager({
-                listTestExecutions: jest
+                listTestExecutions: vi
                     .fn()
                     .mockResolvedValue([{ key: 'TEST-TE-1', summary: 'TE 1', created: '2024-01-01', status: 'DONE' }]),
-                validateTestExecutionKey: jest
+                validateTestExecutionKey: vi
                     .fn()
                     .mockRejectedValueOnce(new Error('Invalid key'))
                     .mockRejectedValueOnce(new Error('Still invalid')),
-                getTestCaseSummaries: jest.fn(),
+                getTestCaseSummaries: vi.fn(),
             });
             const result = await offerTestExecutionAssociation(c, ['TEST-1'], 'src');
             expect(result.associated).toBe(false);
@@ -209,50 +211,50 @@ describe('offerTestExecutionAssociation', () => {
         });
 
         it('returns not associated when retry canceled', async () => {
-            jest.mocked(ask).mockResolvedValueOnce('2').mockResolvedValueOnce('1').mockResolvedValueOnce('');
+            vi.mocked(ask).mockResolvedValueOnce('2').mockResolvedValueOnce('1').mockResolvedValueOnce('');
             const c = createMockContext();
             c.linkManager = createMockLinkManager({
-                listTestExecutions: jest
+                listTestExecutions: vi
                     .fn()
                     .mockResolvedValue([{ key: 'TEST-TE-1', summary: 'TE 1', created: '2024-01-01', status: 'DONE' }]),
-                validateTestExecutionKey: jest.fn().mockRejectedValue(new Error('Invalid')),
-                getTestCaseSummaries: jest.fn(),
+                validateTestExecutionKey: vi.fn().mockRejectedValue(new Error('Invalid')),
+                getTestCaseSummaries: vi.fn(),
             });
             const result = await offerTestExecutionAssociation(c, ['TEST-1'], 'src');
             expect(result.associated).toBe(false);
         });
 
         it('handles listTestExecutions failure gracefully', async () => {
-            jest.mocked(ask).mockResolvedValueOnce('2').mockResolvedValueOnce('TEST-TE-1');
+            vi.mocked(ask).mockResolvedValueOnce('2').mockResolvedValueOnce('TEST-TE-1');
             const c = createMockContext();
             c.linkManager = createMockLinkManager({
-                listTestExecutions: jest.fn().mockRejectedValue(new Error('Network error')),
-                validateTestExecutionKey: jest.fn().mockResolvedValue(undefined),
-                getTestCaseSummaries: jest.fn(),
+                listTestExecutions: vi.fn().mockRejectedValue(new Error('Network error')),
+                validateTestExecutionKey: vi.fn().mockResolvedValue(undefined),
+                getTestCaseSummaries: vi.fn(),
             });
-            const addTestsMock = jest.fn().mockResolvedValue({ key: 'TEST-TE-1', summary: 'TE 1' });
-            jest.mocked(TestExecutionCreator).mockImplementationOnce(() =>
-                createMockTestExecutionCreator({ addTestsToExistingExecution: addTestsMock }),
-            );
+            const addTestsMock = vi.fn().mockResolvedValue({ key: 'TEST-TE-1', summary: 'TE 1' });
+            vi.mocked(TestExecutionCreator).mockImplementationOnce(function () {
+                return createMockTestExecutionCreator({ addTestsToExistingExecution: addTestsMock });
+            });
             const result = await offerTestExecutionAssociation(c, ['TEST-1'], 'src');
             expect(result.associated).toBe(true);
             expect(result.key).toBe('TEST-TE-1');
         });
 
         it('handles addTestsToExistingExecution error', async () => {
-            jest.mocked(ask).mockResolvedValueOnce('2').mockResolvedValueOnce('1');
+            vi.mocked(ask).mockResolvedValueOnce('2').mockResolvedValueOnce('1');
             const c = createMockContext();
             c.linkManager = createMockLinkManager({
-                listTestExecutions: jest
+                listTestExecutions: vi
                     .fn()
                     .mockResolvedValue([{ key: 'TEST-TE-1', summary: 'TE 1', created: '2024-01-01', status: 'DONE' }]),
-                validateTestExecutionKey: jest.fn().mockResolvedValue(undefined),
-                getTestCaseSummaries: jest.fn(),
+                validateTestExecutionKey: vi.fn().mockResolvedValue(undefined),
+                getTestCaseSummaries: vi.fn(),
             });
-            const addTestsMock = jest.fn().mockRejectedValue(new Error('Link error'));
-            jest.mocked(TestExecutionCreator).mockImplementationOnce(() =>
-                createMockTestExecutionCreator({ addTestsToExistingExecution: addTestsMock }),
-            );
+            const addTestsMock = vi.fn().mockRejectedValue(new Error('Link error'));
+            vi.mocked(TestExecutionCreator).mockImplementationOnce(function () {
+                return createMockTestExecutionCreator({ addTestsToExistingExecution: addTestsMock });
+            });
             const result = await offerTestExecutionAssociation(c, ['TEST-1'], 'src');
             expect(result.associated).toBe(false);
             expect(c.pushHistory).toHaveBeenCalledWith('associate-testexec', 'erro', 'error');
@@ -261,7 +263,7 @@ describe('offerTestExecutionAssociation', () => {
 
     describe('option skip', () => {
         it('returns not associated when user skips (empty choice)', async () => {
-            jest.mocked(ask).mockResolvedValueOnce('');
+            vi.mocked(ask).mockResolvedValueOnce('');
             const c = createMockContext();
             const result = await offerTestExecutionAssociation(c, ['TEST-1'], 'src');
             expect(result.associated).toBe(false);
@@ -273,7 +275,7 @@ describe('showResults', () => {
     it('shows summaries when getTestCaseSummaries succeeds', async () => {
         const c = createMockContext();
         c.linkManager = createMockLinkManager({
-            getTestCaseSummaries: jest.fn().mockResolvedValue([
+            getTestCaseSummaries: vi.fn().mockResolvedValue([
                 { key: 'TEST-1', summary: 'Login test' },
                 { key: 'TEST-2', summary: 'Logout test' },
             ]),
@@ -285,7 +287,7 @@ describe('showResults', () => {
     it('shows keys when getTestCaseSummaries fails', async () => {
         const c = createMockContext();
         c.linkManager = createMockLinkManager({
-            getTestCaseSummaries: jest.fn().mockRejectedValue(new Error('API error')),
+            getTestCaseSummaries: vi.fn().mockRejectedValue(new Error('API error')),
         });
         await showResults(c, ['TEST-1']);
     });
@@ -293,7 +295,7 @@ describe('showResults', () => {
     it('includes TE association info when provided', async () => {
         const c = createMockContext();
         c.linkManager = createMockLinkManager({
-            getTestCaseSummaries: jest.fn().mockResolvedValue([]),
+            getTestCaseSummaries: vi.fn().mockResolvedValue([]),
         });
         await showResults(c, ['TEST-1'], {
             associated: true,
@@ -306,7 +308,7 @@ describe('showResults', () => {
     it('omits TE info when not associated', async () => {
         const c = createMockContext();
         c.linkManager = createMockLinkManager({
-            getTestCaseSummaries: jest.fn().mockResolvedValue([]),
+            getTestCaseSummaries: vi.fn().mockResolvedValue([]),
         });
         await showResults(c, ['TEST-1'], { associated: false });
     });
@@ -315,7 +317,7 @@ describe('showResults', () => {
         const keys = Array.from({ length: 25 }, (_, i) => 'TEST-' + (i + 1));
         const c = createMockContext();
         c.linkManager = createMockLinkManager({
-            getTestCaseSummaries: jest
+            getTestCaseSummaries: vi
                 .fn()
                 .mockResolvedValue(keys.slice(0, 20).map((k: string) => ({ key: k, summary: 'Test ' + k }))),
         });

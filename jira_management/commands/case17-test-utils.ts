@@ -1,19 +1,19 @@
 import fs from 'fs';
 import path from 'path';
-import { AdmZip } from '../../shared/deps';
-import { createHttpClient } from '../../shared/http-client';
-import Config from '../../shared/config';
-import { rootLogger } from '../../shared/logger';
-import type { CtrfData, FlatTest } from '../../shared/result_parser';
-import type { TestHistoryRun } from '../../shared/report-generator';
+import { AdmZip } from '../../shared/deps.js';
+import { createHttpClient } from '../../shared/http-client.js';
+import Config from '../../shared/config.js';
+import { rootLogger } from '../../shared/logger.js';
+import type { CtrfData, FlatTest } from '../../shared/result_parser.js';
+import type { TestHistoryRun } from '../../shared/report-generator.js';
 import type {
     GitHubWorkflowRun,
     GitHubWorkflowRunsResponse,
     GitHubArtifactsResponse,
     GitLabJob,
-} from '../../shared/types';
-import { createHistoryProvider, TestHistoryCache } from '../xray-history';
-import type { CommandContext } from './context';
+} from '../../shared/types.js';
+import { createHistoryProvider, TestHistoryCache } from '../xray-history.js';
+import type { CommandContext } from './context.js';
 import {
     CTRF_LAST_FILE,
     GIT_HISTORY_RUNS,
@@ -22,7 +22,7 @@ import {
     isGitLabCi,
     type CiContext,
     type RunStats,
-} from './case17-helpers';
+} from './case17-helpers.js';
 function getMappingCandidates(): string[] {
     return [Config.get('QA_MAPPING_PATH') || '', path.join(process.cwd(), 'mapping.json')];
 }

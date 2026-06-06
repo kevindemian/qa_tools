@@ -1,5 +1,5 @@
-import type { AxiosInstance } from '../shared/deps';
-import { apiGet, formatDiffResponse } from './github-api';
+import type { AxiosInstance } from '../shared/deps.js';
+import { apiGet, formatDiffResponse } from './github-api.js';
 
 const COMPARE_PAGE_SIZE = 100;
 const DIFF_TRUNCATION_LIMIT = 15000;

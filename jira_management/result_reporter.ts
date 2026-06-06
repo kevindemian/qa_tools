@@ -1,10 +1,10 @@
 /** Match test results to Jira issues via mapping JSON and create Test Executions. */
 import fs from 'fs';
-import { rootLogger } from '../shared/logger';
-import type { JiraResourceLike } from '../shared/types';
+import { rootLogger } from '../shared/logger.js';
+import type { JiraResourceLike } from '../shared/types.js';
 // anti-circular (prompt → create_tests → session-context → prompt)
-import createTests from './create_tests';
-import TestExecutionCreator from './test-execution-creator';
+import createTests from './create_tests.js';
+import TestExecutionCreator from './test-execution-creator.js';
 
 interface TestResultItem {
     title: string;
@@ -44,7 +44,7 @@ interface PipelineInfo {
 
 interface CreateTeOpts {
     jiraResource: JiraResourceLike;
-    linkManager: import('./jira_link_manager').default;
+    linkManager: import('./jira_link_manager.js').default;
     projectName: string;
     matchedResults: Array<{
         key: string;

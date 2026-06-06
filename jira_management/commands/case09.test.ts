@@ -1,21 +1,21 @@
-jest.mock('../../shared/prompt');
+vi.mock('../../shared/prompt');
 
-jest.mock('../../shared/state', () => ({
-    load: jest.fn().mockReturnValue({}),
-    update: jest.fn(),
+vi.mock('../../shared/state', async () => ({
+    load: vi.fn().mockReturnValue({}),
+    update: vi.fn(),
 }));
 
-import case09 from './case09';
-import { makeMockCommandContext } from '../../shared/test-utils';
+import case09 from './case09.js';
+import { makeMockCommandContext } from '../../shared/test-utils.js';
 
 const mockContext = makeMockCommandContext();
 
 beforeEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
 });
 
 describe('case09 — switch project', () => {
-    it('exports a handler function', () => {
+    it('exports a handler function', async () => {
         expect(case09).toBeDefined();
         expect(typeof case09.handler).toBe('function');
     });

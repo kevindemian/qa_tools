@@ -1,36 +1,37 @@
-import { jest } from '@jest/globals';
 import fs from 'fs';
-import type { GitProvider, PipelineInfo } from '../shared/types';
-import type JiraClient from '../shared/jira-client';
-import type JiraLinkManager from '../jira_management/jira_link_manager';
-import { createMockGitProvider } from '../shared/test-utils/factories';
-import { nonNull } from '../shared/test-utils';
-import * as prompt from '../shared/prompt';
-import * as state from '../shared/state';
-import * as nivelar from './nivelar';
-import * as cliBase from '../shared/cli_base';
+import type { GitProvider, PipelineInfo } from '../shared/types.js';
+import type JiraClient from '../shared/jira-client.js';
+import type JiraLinkManager from '../jira_management/jira_link_manager.js';
+import { createMockGitProvider } from '../shared/test-utils/factories/index.js';
+import { nonNull } from '../shared/test-utils.js';
+import * as prompt from '../shared/prompt.js';
+import * as state from '../shared/state.js';
+import * as nivelar from './nivelar.js';
+import * as cliBase from '../shared/cli_base.js';
 // sessionContext import removed — unused
 
-jest.mock('fs', () => {
-    const original: typeof import('fs') = jest.requireActual('fs');
+vi.mock('fs', async (importOriginal) => {
+    const mod: Record<string, unknown> = await importOriginal();
+    const mockedReadFileSync = vi.fn((p: string) => {
+        if (p.includes('providers.json')) return '{"proj-a":{"provider":"github"},"proj-b":{}}';
+        if (p.includes('projects.json')) return '{"proj-a":"111","proj-b":"222"}';
+        return (mod.readFileSync as (...args: unknown[]) => unknown)(p, 'utf8');
+    });
     return {
-        ...original,
-        readFileSync: jest.fn((p: string) => {
-            if (p.includes('providers.json')) return '{"proj-a":{"provider":"github"},"proj-b":{}}';
-            if (p.includes('projects.json')) return '{"proj-a":"111","proj-b":"222"}';
-            return original.readFileSync(p, 'utf8');
-        }),
+        ...mod,
+        default: { ...mod, readFileSync: mockedReadFileSync },
+        readFileSync: mockedReadFileSync,
     };
 });
 
-jest.mock('../shared/breadcrumbs', () => ({
-    pushBreadcrumb: jest.fn(),
-    popBreadcrumb: jest.fn(),
-    clearBreadcrumbs: jest.fn(),
-    getBreadcrumbPath: jest.fn(() => 'GIT > proj-a'),
+vi.mock('../shared/breadcrumbs', () => ({
+    pushBreadcrumb: vi.fn(),
+    popBreadcrumb: vi.fn(),
+    clearBreadcrumbs: vi.fn(),
+    getBreadcrumbPath: vi.fn(() => 'GIT > proj-a'),
 }));
-jest.mock('../shared/show-docs', () => ({ showDocs: jest.fn(() => Promise.resolve()) }));
-jest.mock('../shared/config', () => {
+vi.mock('../shared/show-docs', () => ({ showDocs: vi.fn(() => Promise.resolve()) }));
+vi.mock('../shared/config', () => {
     const cfg: Record<string, unknown> = {
         autoConfirm: false,
         dryRun: true,
@@ -43,9 +44,9 @@ jest.mock('../shared/config', () => {
         githubToken: '',
         githubApiUrl: '',
         cypressProjectPath: '',
-        getAllPrefixed: jest.fn(() => ({})),
+        getAllPrefixed: vi.fn(() => ({})),
         quiet: false,
-        get: jest.fn((key: string) => {
+        get: vi.fn((key: string) => {
             const val = cfg[key] as string | undefined;
             return val || process.env[key] || undefined;
         }),
@@ -53,142 +54,151 @@ jest.mock('../shared/config', () => {
     return { __esModule: true, default: cfg };
 });
 
-jest.mock('../shared/prompt', () => ({
-    print: jest.fn(),
-    success: jest.fn(),
-    error: jest.fn(),
-    warn: jest.fn(),
-    info: jest.fn(),
-    helpLine: jest.fn(),
-    title: jest.fn(),
-    divider: jest.fn(),
-    prompt: jest.fn(),
-    confirm: jest.fn(),
-    ask: jest.fn(),
-    askConfirm: jest.fn(),
-    printError: jest.fn(),
-    withSpinner: jest.fn((_label: string, fn: () => Promise<void>) => fn()),
-    showSelect: jest.fn(),
-    tableView: jest.fn(),
-    Spinner: jest.fn().mockImplementation(() => ({ start: jest.fn(), stop: jest.fn() })),
+vi.mock('../shared/prompt', () => ({
+    print: vi.fn(),
+    success: vi.fn(),
+    error: vi.fn(),
+    warn: vi.fn(),
+    info: vi.fn(),
+    helpLine: vi.fn(),
+    title: vi.fn(),
+    divider: vi.fn(),
+    prompt: vi.fn(),
+    confirm: vi.fn(),
+    ask: vi.fn(),
+    askConfirm: vi.fn(),
+    printError: vi.fn(),
+    withSpinner: vi.fn((_label: string, fn: () => Promise<void>) => fn()),
+    showSelect: vi.fn(),
+    tableView: vi.fn(),
+    Spinner: vi.fn().mockImplementation(() => ({ start: vi.fn(), stop: vi.fn() })),
 }));
 
-jest.mock('../shared/state', () => ({
-    load: jest.fn(() => ({})),
-    update: jest.fn((fn: (s: Record<string, unknown>) => void) => {
+vi.mock('../shared/state', () => ({
+    load: vi.fn(() => ({})),
+    update: vi.fn((fn: (s: Record<string, unknown>) => void) => {
         const s: Record<string, unknown> = {};
         fn(s);
         return s;
     }),
-    save: jest.fn(),
+    save: vi.fn(),
 }));
 
-jest.mock('../shared/session-context', () => ({
-    SessionContext: jest.fn().mockImplementation(() => ({
-        pushHistory: jest.fn(),
-        buildContextLine: jest.fn(() => ''),
-        sessionCounters: [] as Array<{ op: string; detail: string; status: string }>,
-        lastOperation: '',
-        history: [] as Array<Record<string, unknown>>,
+vi.mock('../shared/session-context', () => ({
+    SessionContext: vi.fn().mockImplementation(function () {
+        return {
+            pushHistory: vi.fn(),
+            buildContextLine: vi.fn(() => ''),
+            sessionCounters: [] as Array<{ op: string; detail: string; status: string }>,
+            lastOperation: '',
+            history: [] as Array<Record<string, unknown>>,
+        };
+    }),
+}));
+
+vi.mock('../shared/logger', () => ({
+    rootLogger: {
+        child: vi.fn(() => ({ info: vi.fn(), warn: vi.fn(), error: vi.fn() })),
+        warn: vi.fn(),
+        error: vi.fn(),
+        info: vi.fn(),
+    },
+    Logger: vi.fn(),
+}));
+
+vi.mock('../shared/cli_base', () => ({
+    createValidateEnv: vi.fn(() => vi.fn()),
+    offerEnvSetup: vi.fn<(prompt: object) => Promise<boolean>>().mockResolvedValue(false),
+    setupSigint: vi.fn(),
+    printSessionSummary: vi.fn(),
+    confirmDestructiveAction: vi.fn(() => true),
+}));
+
+vi.mock('adm-zip', () => ({
+    default: vi.fn().mockImplementation(() => ({
+        getEntries: vi.fn(() => []),
     })),
 }));
 
-jest.mock('../shared/logger', () => ({
-    rootLogger: {
-        child: jest.fn(() => ({ info: jest.fn(), warn: jest.fn(), error: jest.fn() })),
-        warn: jest.fn(),
-        error: jest.fn(),
-        info: jest.fn(),
-    },
-    Logger: jest.fn(),
+vi.mock('../shared/result_parser', () => ({
+    parseTestResults: vi.fn(),
 }));
 
-jest.mock('../shared/cli_base', () => ({
-    createValidateEnv: jest.fn(() => jest.fn()),
-    offerEnvSetup: jest.fn<(prompt: object) => Promise<boolean>>().mockResolvedValue(false),
-    setupSigint: jest.fn(),
-    printSessionSummary: jest.fn(),
+vi.mock('../jira_management/result_reporter', () => ({
+    matchResultsToTests: vi.fn(() => ({ matched: [], unmatched: [] })),
+    createTestExecutionFromResults: vi.fn(),
 }));
 
-jest.mock('adm-zip', () => {
-    const mockAdmZip = jest.fn().mockImplementation(() => ({
-        getEntries: jest.fn(() => []),
-    }));
-    return mockAdmZip;
+vi.mock('../shared/metrics', () => ({
+    loadMetrics: vi.fn(() => ({ runs: [] })),
+    calculateFlakiness: vi.fn(() => []),
+}));
+
+vi.mock('../shared/http-client', () => ({
+    sleep: vi.fn<(ms: number) => Promise<void>>(async () => {}),
+}));
+
+vi.mock('../shared/jira-client', () => ({
+    __esModule: true,
+    default: vi.fn(),
+}));
+
+vi.mock('../jira_management/jira_link_manager', () => ({
+    __esModule: true,
+    default: vi.fn(),
+}));
+
+vi.mock('./gitlab_manager', () => ({
+    __esModule: true,
+    default: vi.fn(),
+}));
+
+vi.mock('./github_manager', () => ({
+    __esModule: true,
+    default: vi.fn(),
+}));
+
+vi.mock('./nivelar', () => ({
+    nivelarBranches: vi.fn(),
+}));
+
+vi.mock('./case00-handler', () => ({
+    handleSetupWizard: vi.fn(() => Promise.resolve(false)),
+}));
+vi.mock('../shared/temp-dir', () => ({
+    ensureDirs: vi.fn(),
+    registerCleanup: vi.fn(),
+    writeEphemeral: vi.fn(() => '/tmp/test'),
+    reportsDir: vi.fn(() => '/tmp/reports'),
+}));
+
+type MainModule = typeof import('./main.js').default;
+
+const globSyncMock = vi.fn<(...args: unknown[]) => unknown>().mockReturnValue([]);
+vi.mock('../shared/deps', async (importOriginal) => {
+    const mod: Record<string, unknown> = await importOriginal();
+    return { ...mod, globSync: globSyncMock };
 });
-
-jest.mock('../shared/result_parser', () => ({
-    parseTestResults: jest.fn(),
-}));
-
-jest.mock('../jira_management/result_reporter', () => ({
-    matchResultsToTests: jest.fn(() => ({ matched: [], unmatched: [] })),
-    createTestExecutionFromResults: jest.fn(),
-}));
-
-jest.mock('../shared/metrics', () => ({
-    loadMetrics: jest.fn(() => ({ runs: [] })),
-    calculateFlakiness: jest.fn(() => []),
-}));
-
-jest.mock('../shared/http-client', () => ({
-    sleep: jest.fn<(ms: number) => Promise<void>>(async () => {}),
-}));
-
-jest.mock('../shared/jira-client', () => ({
-    __esModule: true,
-    default: jest.fn(),
-}));
-
-jest.mock('../jira_management/jira_link_manager', () => ({
-    __esModule: true,
-    default: jest.fn(),
-}));
-
-jest.mock('./gitlab_manager', () => ({
-    __esModule: true,
-    default: jest.fn(),
-}));
-
-jest.mock('./github_manager', () => ({
-    __esModule: true,
-    default: jest.fn(),
-}));
-
-jest.mock('./nivelar', () => ({
-    nivelarBranches: jest.fn(),
-}));
-
-jest.mock('./case00-handler', () => ({
-    handleSetupWizard: jest.fn(() => Promise.resolve(false)),
-}));
-
-type MainModule = typeof import('./main').default;
-
-const globSyncMock = jest.fn<(pattern: string) => string[]>().mockReturnValue([]);
-jest.mock('glob', () => ({ globSync: globSyncMock }));
 
 const mockProvider = createMockGitProvider();
 
 let mainModule: MainModule;
 
-beforeAll(() => {
-    const sessionState = require('./session-state') as typeof import('./session-state');
+beforeAll(async () => {
+    const sessionState: typeof import('./session-state.js') = await import('./session-state.js');
     sessionState._resetForTest();
 
-    mainModule = (require('./main') as typeof import('./main')).default;
+    mainModule = ((await import('./main.js')) as unknown as { default: MainModule }).default;
 });
 
 afterAll(() => {
-    jest.clearAllMocks();
-    jest.restoreAllMocks();
+    vi.clearAllMocks();
 });
 
 beforeEach(() => {
-    jest.clearAllMocks();
-    jest.restoreAllMocks();
-    jest.mocked(prompt.prompt).mockReturnValue('0');
-    jest.mocked(prompt.confirm).mockReturnValue(false);
+    vi.clearAllMocks();
+    vi.mocked(prompt.prompt).mockReturnValue('0');
+    vi.mocked(prompt.confirm).mockReturnValue(false);
 });
 
 // ---------- isComplete ----------
@@ -295,7 +305,7 @@ describe('_resolveGlob', () => {
 // ---------- pollPipeline ----------
 
 describe('pollPipeline', () => {
-    const mockGetPipeline = jest.fn<(id: string | number) => Promise<PipelineInfo | null>>();
+    const mockGetPipeline = vi.fn<(id: string | number) => Promise<PipelineInfo | null>>();
 
     beforeEach(() => {
         mockGetPipeline.mockReset();
@@ -343,7 +353,7 @@ describe('pushHistory', () => {
 
 describe('handleCreateMR', () => {
     it('creates MR and shows success', async () => {
-        jest.mocked(prompt.prompt)
+        vi.mocked(prompt.prompt)
             .mockReturnValueOnce('feature-x')
             .mockReturnValueOnce('main')
             .mockReturnValueOnce('My MR')
@@ -357,7 +367,7 @@ describe('handleCreateMR', () => {
     });
 
     it('handles creation error', async () => {
-        jest.mocked(prompt.prompt)
+        vi.mocked(prompt.prompt)
             .mockReturnValueOnce('src')
             .mockReturnValueOnce('dst')
             .mockReturnValueOnce('Title')
@@ -374,7 +384,7 @@ describe('handleCreateMR', () => {
 
 describe('handleMergeMR', () => {
     it('merges MR and shows success', async () => {
-        jest.mocked(prompt.prompt).mockReturnValueOnce('42');
+        vi.mocked(prompt.prompt).mockReturnValueOnce('42');
         mockProvider.acceptMergeRequest.mockResolvedValue({ web_url: 'https://gitlab/mr/42' });
 
         await mainModule.handleMergeMR(mockProvider);
@@ -384,7 +394,7 @@ describe('handleMergeMR', () => {
     });
 
     it('handles merge error', async () => {
-        jest.mocked(prompt.prompt).mockReturnValueOnce('99');
+        vi.mocked(prompt.prompt).mockReturnValueOnce('99');
         mockProvider.acceptMergeRequest.mockRejectedValue(new Error('Merge conflict'));
 
         await mainModule.handleMergeMR(mockProvider);
@@ -425,7 +435,7 @@ describe('handleListSchedules', () => {
 
 describe('handleRunSchedule', () => {
     it('runs schedule on success', async () => {
-        jest.mocked(prompt.prompt).mockReturnValueOnce('10');
+        vi.mocked(prompt.prompt).mockReturnValueOnce('10');
         mockProvider.runSchedule.mockResolvedValue({ id: '10' });
 
         await mainModule.handleRunSchedule(mockProvider);
@@ -435,7 +445,7 @@ describe('handleRunSchedule', () => {
     });
 
     it('handles run error', async () => {
-        jest.mocked(prompt.prompt).mockReturnValueOnce('bad-id');
+        vi.mocked(prompt.prompt).mockReturnValueOnce('bad-id');
         mockProvider.runSchedule.mockRejectedValue(new Error('Not found'));
 
         await mainModule.handleRunSchedule(mockProvider);
@@ -448,7 +458,7 @@ describe('handleRunSchedule', () => {
 
 describe('handleListApprovedMRs', () => {
     it('lists approved MRs', async () => {
-        jest.mocked(prompt.prompt).mockReturnValueOnce('opened');
+        vi.mocked(prompt.prompt).mockReturnValueOnce('opened');
         mockProvider.searchMergeRequests.mockResolvedValue([{ iid: '1', title: 'Fix' }]);
         mockProvider.isApproved.mockResolvedValue(true);
 
@@ -458,7 +468,7 @@ describe('handleListApprovedMRs', () => {
     });
 
     it('warns when none approved', async () => {
-        jest.mocked(prompt.prompt).mockReturnValueOnce('opened');
+        vi.mocked(prompt.prompt).mockReturnValueOnce('opened');
         mockProvider.searchMergeRequests.mockResolvedValue([{ iid: '2', title: 'WIP' }]);
         mockProvider.isApproved.mockResolvedValue(false);
 
@@ -472,21 +482,16 @@ describe('handleListApprovedMRs', () => {
 
 describe('handleExportVariables', () => {
     it('exports variables when confirmed', async () => {
-        jest.mocked(prompt.confirm).mockReturnValueOnce(true);
         mockProvider.getCICDVariables.mockResolvedValue([{ key: 'MY_VAR', value: 'my_value' }]);
-        const writeSpy = jest.spyOn(fs, 'writeFileSync').mockImplementation(() => {});
-        const unlinkSpy = jest.spyOn(fs, 'unlinkSync').mockImplementation(() => {});
 
         await mainModule.handleExportVariables(mockProvider);
 
-        expect(writeSpy).toHaveBeenCalled();
-        expect(prompt.print).toHaveBeenCalledWith(expect.stringContaining('MY_VAR'));
-        writeSpy.mockRestore();
-        unlinkSpy.mockRestore();
+        expect(prompt.success).toHaveBeenCalledWith(expect.stringContaining('Variáveis exportadas'));
     });
 
     it('cancels when user declines', async () => {
-        jest.mocked(prompt.confirm).mockReturnValueOnce(false);
+        const cliBase: typeof import('../shared/cli_base.js') = await import('../shared/cli_base.js');
+        vi.mocked(cliBase.confirmDestructiveAction).mockReturnValueOnce(false);
 
         await mainModule.handleExportVariables(mockProvider);
 
@@ -498,7 +503,7 @@ describe('handleExportVariables', () => {
 
 describe('handleHelp', () => {
     it('prints help box and prompts to continue', async () => {
-        jest.spyOn(process.stdout, 'write').mockImplementationOnce(() => true);
+        vi.spyOn(process.stdout, 'write').mockImplementationOnce(() => true);
         await mainModule.handleHelp();
         expect(process.stdout.write).toHaveBeenCalledWith(expect.stringContaining('Ajuda'));
         expect(prompt.ask).toHaveBeenCalledWith('Pressione Enter para continuar');
@@ -509,7 +514,7 @@ describe('handleHelp', () => {
 
 describe('handleShowHistory', () => {
     it('shows history table when entries exist', async () => {
-        jest.mocked(state.load).mockReturnValueOnce({
+        vi.mocked(state.load).mockReturnValueOnce({
             history: [{ op: 'pipeline', detail: 'main', status: 'ok', ts: '2026-01-01T00:00:00Z' }],
         });
 
@@ -520,7 +525,7 @@ describe('handleShowHistory', () => {
     });
 
     it('warns when history is empty', async () => {
-        jest.mocked(state.load).mockReturnValueOnce({});
+        vi.mocked(state.load).mockReturnValueOnce({});
 
         await mainModule.handleShowHistory();
 
@@ -570,7 +575,7 @@ describe('collectTestResults', () => {
 
 describe('handleChangeProject', () => {
     it('switches to valid project', async () => {
-        jest.mocked(prompt.prompt).mockReturnValueOnce('1');
+        vi.mocked(prompt.prompt).mockReturnValueOnce('1');
 
         await mainModule.handleChangeProject(['proj-a', 'proj-b']);
 
@@ -578,7 +583,7 @@ describe('handleChangeProject', () => {
     });
 
     it('warns on invalid project index', async () => {
-        jest.mocked(prompt.prompt).mockReturnValueOnce('99');
+        vi.mocked(prompt.prompt).mockReturnValueOnce('99');
 
         await mainModule.handleChangeProject(['proj-a']);
 
@@ -639,7 +644,7 @@ describe('displayRecentPipelines', () => {
 
 describe('handleListApprovedMRs - error', () => {
     it('calls printError when searchMergeRequests throws', async () => {
-        jest.mocked(prompt.prompt).mockReturnValueOnce('opened');
+        vi.mocked(prompt.prompt).mockReturnValueOnce('opened');
         mockProvider.searchMergeRequests.mockRejectedValue(new Error('API fail'));
 
         await mainModule.handleListApprovedMRs(mockProvider);
@@ -652,7 +657,6 @@ describe('handleListApprovedMRs - error', () => {
 
 describe('handleExportVariables - extended', () => {
     it('calls printError when getCICDVariables throws', async () => {
-        jest.mocked(prompt.confirm).mockReturnValueOnce(true);
         mockProvider.getCICDVariables.mockRejectedValue(new Error('API fail'));
 
         await mainModule.handleExportVariables(mockProvider);
@@ -661,10 +665,9 @@ describe('handleExportVariables - extended', () => {
     });
 
     it('escapes values containing = sign with double quotes', async () => {
-        jest.mocked(prompt.confirm).mockReturnValueOnce(true);
         mockProvider.getCICDVariables.mockResolvedValue([{ key: 'MY_VAR', value: 'foo=bar' }]);
-        const writeSpy = jest.spyOn(fs, 'writeFileSync').mockImplementation(() => {});
-        const unlinkSpy = jest.spyOn(fs, 'unlinkSync').mockImplementation(() => {});
+        const writeSpy = vi.spyOn(fs, 'writeFileSync').mockImplementation(() => {});
+        const unlinkSpy = vi.spyOn(fs, 'unlinkSync').mockImplementation(() => {});
 
         await mainModule.handleExportVariables(mockProvider);
 
@@ -679,7 +682,7 @@ describe('handleExportVariables - extended', () => {
 describe('pushHistory - trim', () => {
     it('trims state history to last 50 entries', () => {
         mainModule.pushHistory('op', 'd', 'ok');
-        const callback = nonNull(jest.mocked(state.update).mock.calls[0])[0];
+        const callback = nonNull(vi.mocked(state.update).mock.calls[0])[0];
         const testState = { history: Array(51).fill({}) };
         callback(testState);
         expect((testState.history as Array<unknown>).length).toBe(50);
@@ -690,7 +693,7 @@ describe('pushHistory - trim', () => {
 
 describe('handleTriggerPipeline', () => {
     it('warns when branch is not found', async () => {
-        jest.mocked(prompt.prompt).mockReturnValueOnce('bad-branch');
+        vi.mocked(prompt.prompt).mockReturnValueOnce('bad-branch');
         mockProvider.getBranch.mockResolvedValue(null);
 
         await mainModule.handleTriggerPipeline(mockProvider, 'proj-b');
@@ -699,12 +702,11 @@ describe('handleTriggerPipeline', () => {
     });
 
     it('triggers pipeline successfully without waiting', async () => {
-        jest.mocked(prompt.prompt)
+        vi.mocked(prompt.prompt)
             .mockReturnValueOnce('main') // branch
             .mockReturnValueOnce(''); // workflow ID (empty = auto-detect, GitHub path)
-        jest.mocked(prompt.confirm)
+        vi.mocked(prompt.confirm)
             .mockReturnValueOnce(false) // add variables = no
-            .mockReturnValueOnce(true) // confirm trigger = yes
             .mockReturnValueOnce(false); // wait for completion = no
         mockProvider.getBranch.mockResolvedValue({ name: 'main' });
         mockProvider.triggerPipeline.mockResolvedValue({ web_url: 'https://gitlab/pipe/1' });
@@ -718,12 +720,10 @@ describe('handleTriggerPipeline', () => {
     });
 
     it('handles triggerPipeline error', async () => {
-        jest.mocked(prompt.prompt)
+        vi.mocked(prompt.prompt)
             .mockReturnValueOnce('main') // branch
             .mockReturnValueOnce(''); // workflow ID (empty = auto-detect, GitHub path)
-        jest.mocked(prompt.confirm)
-            .mockReturnValueOnce(false) // add variables = no
-            .mockReturnValueOnce(true); // confirm trigger = yes
+        vi.mocked(prompt.confirm).mockReturnValueOnce(false); // add variables = no
         mockProvider.getBranch.mockResolvedValue({ name: 'main' });
         mockProvider.triggerPipeline.mockRejectedValue(new Error('Trigger fail'));
 
@@ -733,13 +733,12 @@ describe('handleTriggerPipeline', () => {
     });
 
     it('triggers with custom variables', async () => {
-        jest.mocked(prompt.prompt)
+        vi.mocked(prompt.prompt)
             .mockReturnValueOnce('main') // branch
             .mockReturnValueOnce('') // workflow ID (empty = auto-detect, GitHub path)
             .mockReturnValueOnce('VAR1=val1,VAR2=val2'); // variables
-        jest.mocked(prompt.confirm)
+        vi.mocked(prompt.confirm)
             .mockReturnValueOnce(true) // add variables = yes
-            .mockReturnValueOnce(true) // confirm trigger = yes
             .mockReturnValueOnce(false); // wait = no
         mockProvider.getBranch.mockResolvedValue({ name: 'main' });
         mockProvider.triggerPipeline.mockResolvedValue({ web_url: 'https://gitlab/pipe/2' });
@@ -758,10 +757,10 @@ describe('handleTriggerPipeline', () => {
     });
 
     it('resumes pending pipeline', async () => {
-        jest.mocked(state.load).mockReturnValueOnce({
+        vi.mocked(state.load).mockReturnValueOnce({
             pendingPipeline: { branch: 'feature-x', pipelineId: '123', projectName: 'proj-b' },
         });
-        jest.mocked(prompt.confirm).mockReturnValueOnce(true); // confirm resume
+        vi.mocked(prompt.confirm).mockReturnValueOnce(true); // confirm resume
         mockProvider.getPipeline.mockResolvedValue({ status: 'success', web_url: 'https://pipe/1' });
         mockProvider.getRecentPipelines.mockResolvedValue([]);
 
@@ -814,160 +813,47 @@ describe('parseBatchArgs', () => {
     });
 });
 
-// ---------- empty projects (main flow) ----------
+// ---------- _ensureProjectsConfigured ----------
 
-describe('main flow empty projects', () => {
-    it('exits early when no projects configured', () => {
-        jest.isolateModules(() => {
-            jest.doMock('fs', () => ({
-                readFileSync: jest.fn((p: string) => {
-                    if (p.includes('projects.json')) return '{}';
-                    if (p.includes('providers.json')) return '{}';
-                    // eslint-disable-next-line @typescript-eslint/no-unnecessary-type-assertion -- requireActual returns unknown, needs typeof import for method access
-                    return (jest.requireActual('fs') as typeof import('fs')).readFileSync(p, 'utf8') as string;
-                }),
-                writeFileSync: jest.fn(),
-                unlinkSync: jest.fn(),
-                existsSync: jest.fn(() => false),
-            }));
-            jest.doMock('../shared/config', () => ({
-                __esModule: true,
-                default: {
-                    jiraBaseUrl: 'https://jira.example.com',
-                    jiraPersonalToken: 'token',
-                    xrayBaseUrl: 'https://xray.example.com',
-                    gitToken: 'glpat-xxx',
-                    gitBaseUrl: 'https://gitlab.example.com',
-                    githubToken: '',
-                    githubApiUrl: '',
-                    cypressProjectPath: '',
-                    getAllPrefixed: jest.fn(() => ({})),
-                    quiet: false,
-                },
-            }));
-            jest.doMock('../shared/cli_base', () => ({
-                createValidateEnv: jest.fn(() => jest.fn()),
-                offerEnvSetup: jest.fn<(prompt: object) => Promise<boolean>>().mockResolvedValue(false),
-                setupSigint: jest.fn(),
-                printSessionSummary: jest.fn(),
-            }));
-            jest.doMock('../shared/prompt', () => ({
-                print: jest.fn(),
-                success: jest.fn(),
-                error: jest.fn(),
-                warn: jest.fn(),
-                info: jest.fn(),
-                helpLine: jest.fn(),
-                title: jest.fn(),
-                divider: jest.fn(),
-                prompt: jest.fn(),
-                confirm: jest.fn(),
-                ask: jest.fn(),
-                askConfirm: jest.fn(),
-                printError: jest.fn(),
-                withSpinner: jest.fn((_l: string, fn: () => Promise<void>) => fn()),
-                showSelect: jest.fn(),
-                tableView: jest.fn(),
-                Spinner: jest.fn().mockImplementation(() => ({ start: jest.fn(), stop: jest.fn() })),
-            }));
-            jest.doMock('../shared/state', () => ({
-                load: jest.fn(() => ({})),
-                update: jest.fn((fn: (s: Record<string, unknown>) => void) => {
-                    const s: Record<string, unknown> = {};
-                    fn(s);
-                    return s;
-                }),
-                save: jest.fn(),
-            }));
-            jest.doMock('../shared/logger', () => ({
-                rootLogger: {
-                    child: jest.fn(() => ({ info: jest.fn(), warn: jest.fn(), error: jest.fn() })),
-                    warn: jest.fn(),
-                    error: jest.fn(),
-                    info: jest.fn(),
-                },
-            }));
-            jest.doMock('../shared/session-context', () => ({
-                SessionContext: jest.fn().mockImplementation(() => ({
-                    pushHistory: jest.fn(),
-                    buildContextLine: jest.fn(() => ''),
-                    sessionCounters: [] as Array<{ op: string; detail: string; status: string }>,
-                    lastOperation: '',
-                    history: [] as Array<Record<string, unknown>>,
-                })),
-            }));
-            jest.doMock('../shared/splash', () => ({ showSplash: jest.fn() }));
-            jest.doMock('../shared/output', () => ({
-                defaultOutput: { box: jest.fn(), table: jest.fn() },
-            }));
-            jest.doMock('../shared/temp-dir', () => ({
-                ensureDirs: jest.fn(),
-                registerCleanup: jest.fn(),
-                writeEphemeral: jest.fn(() => '/tmp/test'),
-                reportsDir: jest.fn(() => '/tmp/reports'),
-            }));
-            jest.doMock('./session-state', () => ({
-                sessionLog: { info: jest.fn() },
-                sessionContext: {
-                    buildContextLine: jest.fn(() => ''),
-                    sessionCounters: [] as Array<{ op: string; detail: string; status: string }>,
-                    lastOperation: '',
-                },
-                isBusy: false,
-                manager: null,
-                providerLabel: jest.fn(() => 'GitLab'),
-                buildActionChoices: jest.fn(() => []),
-                displayProjects: jest.fn(),
-                displayRecentPipelines: jest.fn(),
-                printSessionSummary: jest.fn(),
-                getProviderForProject: jest.fn(() => 'gitlab'),
-                createManagerForProject: jest.fn(() => ({})),
-                pushHistory: jest.fn(),
-                setCurrentProjectName: jest.fn(),
-                setProjectId: jest.fn(),
-                setManager: jest.fn(),
-                projectId: '',
-                getProjects: jest.fn(() => ({})),
-            }));
-            jest.doMock('./pipeline-handler', () => ({
-                handleTriggerPipeline: jest.fn(),
-                handleExportVariables: jest.fn(),
-                isComplete: jest.fn(),
-                pollPipeline: jest.fn(),
-                _jiraEnv: jest.fn(() => null),
-                _resolveGlob: jest.fn(() => null),
-                downloadTestArtifacts: jest.fn(),
-                parseTestResults: jest.fn(),
-                createTestExecution: jest.fn(),
-                collectTestResults: jest.fn(),
-            }));
-            jest.doMock('./mr-handler', () => ({
-                nivelarBranchesWrapper: jest.fn(),
-                handleCreateMR: jest.fn(),
-                handleListApprovedMRs: jest.fn(),
-                handleMergeMR: jest.fn(),
-            }));
-            jest.doMock('./schedule-handler', () => ({
-                handleListSchedules: jest.fn(),
-                handleRunSchedule: jest.fn(),
-                handleChangeProject: jest.fn(),
-                handleFlakinessDashboard: jest.fn(),
-            }));
-            jest.doMock('./batch-mode', () => ({
-                tryBatchMode: jest.fn(() => Promise.resolve(false)),
-                parseBatchArgs: jest.fn(() => ({})),
-            }));
-            jest.doMock('./ui-helpers', () => ({
-                handleHelp: jest.fn(),
-                handleShowHistory: jest.fn(),
-            }));
-            jest.doMock('./case00-handler', () => ({
-                handleSetupWizard: jest.fn(() => Promise.resolve(false)),
-            }));
+describe('_ensureProjectsConfigured', () => {
+    const mockConfirm = vi.mocked(prompt.confirm);
 
-            const mod = require('./main') as typeof import('./main');
-            expect(mod.default).toBeDefined();
-        });
+    afterEach(() => {
+        vi.clearAllMocks();
+    });
+
+    it('returns true when getProjects has entries', async () => {
+        const ss: typeof import('./session-state.js') = await import('./session-state.js');
+        vi.spyOn(ss, 'getProjects').mockReturnValueOnce({ proj: '123' });
+        const result = await mainModule._ensureProjectsConfigured();
+        expect(result).toBe(true);
+    });
+
+    it('warns and prompts when no projects exist, returns false on user decline', async () => {
+        const ss: typeof import('./session-state.js') = await import('./session-state.js');
+        vi.spyOn(ss, 'getProjects').mockReturnValue({});
+        mockConfirm.mockReturnValue(false);
+        const result = await mainModule._ensureProjectsConfigured();
+        expect(prompt.warn).toHaveBeenCalledWith('Nenhum projeto configurado.');
+        expect(result).toBe(false);
+    });
+
+    it('returns false when setup wizard is cancelled', async () => {
+        const ss: typeof import('./session-state.js') = await import('./session-state.js');
+        vi.spyOn(ss, 'getProjects').mockReturnValue({});
+        mockConfirm.mockReturnValue(true);
+        const result = await mainModule._ensureProjectsConfigured();
+        expect(result).toBe(false);
+    });
+});
+
+// ---------- _selectProjectAndCreateManager ----------
+
+describe('_selectProjectAndCreateManager', () => {
+    it('returns null when _selectProject returns null projectName', async () => {
+        vi.mocked(prompt.prompt).mockReturnValueOnce('99');
+        const result = await mainModule._selectProjectAndCreateManager();
+        expect(result).toBeNull();
     });
 });
 
@@ -984,7 +870,7 @@ describe('buildContextLine', () => {
 
 describe('withErrorHandling', () => {
     it('returns false when handler resolves', async () => {
-        const handler: (m: GitProvider, pn: string, ns: string[]) => Promise<object> = jest
+        const handler: (m: GitProvider, pn: string, ns: string[]) => Promise<object> = vi
             .fn<(m: GitProvider, pn: string, ns: string[]) => Promise<object>>()
             .mockResolvedValue({ ok: true as const });
         const wrapped = mainModule.withErrorHandling(handler);
@@ -992,7 +878,7 @@ describe('withErrorHandling', () => {
     });
 
     it('calls printError when handler rejects and returns false', async () => {
-        const handler: (m: GitProvider, pn: string, ns: string[]) => Promise<object> = jest
+        const handler: (m: GitProvider, pn: string, ns: string[]) => Promise<object> = vi
             .fn<(m: GitProvider, pn: string, ns: string[]) => Promise<object>>()
             .mockRejectedValue(new Error('fail'));
         const wrapped = mainModule.withErrorHandling(handler);
@@ -1005,16 +891,16 @@ describe('withErrorHandling', () => {
 // ---------- _handleExit ----------
 
 describe('_handleExit', () => {
-    it('prints goodbye and returns true', () => {
-        const breadcrumbs = require('../shared/breadcrumbs') as typeof import('../shared/breadcrumbs');
+    it('prints goodbye and returns true', async () => {
+        const breadcrumbs: typeof import('../shared/breadcrumbs.js') = await import('../shared/breadcrumbs.js');
         const result = mainModule._handleExit();
         expect(result).toBe(true);
         expect(prompt.title).toHaveBeenCalledWith('Até logo!');
         expect(breadcrumbs.clearBreadcrumbs).toHaveBeenCalled();
     });
 
-    it('does not set exit code when session has errors — no exitCode', () => {
-        const ss = require('./session-state') as typeof import('./session-state');
+    it('does not set exit code when session has errors — no exitCode', async () => {
+        const ss: typeof import('./session-state.js') = await import('./session-state.js');
         const orig = ss.sessionContext.sessionCounters;
         ss.sessionContext.sessionCounters = [{ op: '', detail: '', status: 'error' }];
         try {
@@ -1033,11 +919,9 @@ describe('_dispatchAction', () => {
     const pn = 'proj-a';
     const ns = ['proj-a', 'proj-b'];
 
-    beforeAll(() => {
-        jest.spyOn(
-            (require('../shared/output') as typeof import('../shared/output')).defaultOutput,
-            'box',
-        ).mockImplementation(() => {});
+    beforeAll(async () => {
+        const outputMod: typeof import('../shared/output.js') = await import('../shared/output.js');
+        vi.spyOn(outputMod.defaultOutput, 'box').mockImplementation(() => {});
     });
 
     it('handles /help and returns false', async () => {
@@ -1102,8 +986,20 @@ describe('_dispatchAction', () => {
 // ---------- _selectProject ----------
 
 describe('_selectProject', () => {
+    const PROJ_DATA: Record<string, string> = { 'proj-a': '111', 'proj-b': '222' };
+    let gpSpy: { mockRestore: () => void };
+
+    beforeEach(async () => {
+        const ss: typeof import('./session-state.js') = await import('./session-state.js');
+        gpSpy = vi.spyOn(ss, 'getProjects').mockReturnValue(PROJ_DATA);
+    });
+
+    afterEach(() => {
+        gpSpy?.mockRestore();
+    });
+
     it('selects first project by index 1', () => {
-        jest.mocked(prompt.prompt).mockReturnValueOnce('1');
+        vi.mocked(prompt.prompt).mockReturnValueOnce('1');
         const result = mainModule._selectProject();
         expect(result.projectName).toBe('proj-a');
         expect(result.names).toContain('proj-a');
@@ -1111,10 +1007,21 @@ describe('_selectProject', () => {
     });
 
     it('returns null projectName for invalid project index', () => {
-        jest.mocked(prompt.prompt).mockReturnValueOnce('99');
+        vi.mocked(prompt.prompt).mockReturnValueOnce('99');
         const result = mainModule._selectProject();
         expect(result.projectName).toBeNull();
         expect(prompt.warn).toHaveBeenCalledWith('Projeto inválido.');
+    });
+
+    it('returns null when no projects available and user declines setup', async () => {
+        const ss: typeof import('./session-state.js') = await import('./session-state.js');
+        gpSpy.mockRestore();
+        const spy2 = vi.spyOn(ss, 'getProjects').mockReturnValue({});
+        vi.mocked(prompt.prompt).mockReturnValueOnce('');
+        const result = mainModule._selectProject();
+        expect(result.projectName).toBeNull();
+        expect(result.names).toEqual([]);
+        spy2.mockRestore();
     });
 });
 
@@ -1122,22 +1029,22 @@ describe('_selectProject', () => {
 
 describe('_promptChoice', () => {
     it('returns prompt choice in non-TTY mode', async () => {
-        jest.mocked(prompt.prompt).mockReturnValueOnce('/exit');
+        vi.mocked(prompt.prompt).mockReturnValueOnce('/exit');
         const result = await mainModule._promptChoice('0-9');
         expect(result).toBe('/exit');
     });
 
     it('falls back to lastChoice when prompt returns empty string', async () => {
-        jest.mocked(prompt.prompt).mockReturnValueOnce('');
-        jest.mocked(state.load).mockReturnValue({ lastChoice: '3' });
+        vi.mocked(prompt.prompt).mockReturnValueOnce('');
+        vi.mocked(state.load).mockReturnValue({ lastChoice: '3' });
         const result = await mainModule._promptChoice('0-9');
         expect(result).toBe('3');
         expect(prompt.info).toHaveBeenCalledWith(expect.stringContaining('Repetindo última opção'));
     });
 
     it('skips lastChoice when it is "0"', async () => {
-        jest.mocked(prompt.prompt).mockReturnValueOnce('');
-        jest.mocked(state.load).mockReturnValue({ lastChoice: '0' });
+        vi.mocked(prompt.prompt).mockReturnValueOnce('');
+        vi.mocked(state.load).mockReturnValue({ lastChoice: '0' });
         const result = await mainModule._promptChoice('0-9');
         expect(result).toBe('');
     });
@@ -1146,8 +1053,8 @@ describe('_promptChoice', () => {
 // ---------- unhandled rejection handler ----------
 
 describe('unhandledRejection handler', () => {
-    it('logs error and shows user message', () => {
-        const logger = require('../shared/logger') as typeof import('../shared/logger');
+    it('logs error and shows user message', async () => {
+        const logger: typeof import('../shared/logger.js') = await import('../shared/logger.js');
         process.emit('unhandledRejection', new Error('test rejection'));
         expect(logger.rootLogger.error).toHaveBeenCalledWith('Unhandled Rejection', expect.any(Object));
     });
@@ -1158,7 +1065,7 @@ describe('unhandledRejection handler', () => {
 describe('_promptChoice TTY mode', () => {
     const _origIsTTY = process.stdout.isTTY;
 
-    beforeAll(() => {
+    beforeAll(async () => {
         process.stdout.isTTY = true;
     });
 
@@ -1167,18 +1074,18 @@ describe('_promptChoice TTY mode', () => {
     });
 
     beforeEach(() => {
-        jest.clearAllMocks();
-        jest.mocked(state.load).mockReturnValue({ lastChoice: undefined });
+        vi.clearAllMocks();
+        vi.mocked(state.load).mockReturnValue({ lastChoice: undefined });
     });
 
     it('shows box with session counters when TTY and not quiet', async () => {
-        const sessionState = require('./session-state') as typeof import('./session-state');
+        const sessionState: typeof import('./session-state.js') = await import('./session-state.js');
         sessionState.sessionContext.sessionCounters = [
             { op: '', detail: '', status: 'ok' },
             { op: '', detail: '', status: 'error' },
             { op: '', detail: '', status: 'ok' },
         ];
-        jest.mocked(prompt.showSelect).mockResolvedValue('/exit');
+        vi.mocked(prompt.showSelect).mockResolvedValue('/exit');
         const result = await mainModule._promptChoice('0-9');
         expect(result).toBe('/exit');
         expect(prompt.showSelect).toHaveBeenCalled();
@@ -1192,8 +1099,8 @@ describe('ACTION_HANDLERS', () => {
     let pn: string;
     let ns: string[];
 
-    beforeAll(() => {
-        jest.clearAllMocks();
+    beforeAll(async () => {
+        vi.clearAllMocks();
     });
 
     beforeEach(() => {

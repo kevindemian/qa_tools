@@ -7,10 +7,10 @@
  * @module report-chart
  */
 
-import type { TrendPoint } from './metrics';
-import type { ReportStats } from './report-types';
-import { BarChart, TrendChart, Card } from './primitives';
-import { tokens } from './theme-tokens';
+import type { TrendPoint } from './metrics.js';
+import type { ReportStats } from './report-types.js';
+import { BarChart, TrendChart, Card } from './primitives/index.js';
+import { tokens } from './theme-tokens.js';
 
 export function buildChartSvg(stats: ReportStats): string {
     return BarChart({

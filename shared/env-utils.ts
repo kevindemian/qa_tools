@@ -8,7 +8,7 @@ let dotenvLoaded = false;
 function ensureDotenv(): void {
     if (dotenvLoaded) return;
     try {
-        dotenv.config({ path: path.resolve(__dirname, '../.env') });
+        dotenv.config({ path: path.resolve(import.meta.dirname, '../.env') });
     } catch {
         /* env file optional */
     }

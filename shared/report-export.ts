@@ -1,4 +1,4 @@
-import type { FlatTest } from './result_parser';
+import type { FlatTest } from './result_parser.js';
 
 export interface ExportOptions {
     delimiter?: string;

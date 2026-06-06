@@ -1,6 +1,6 @@
-import Config from '../shared/config';
-import { showSplash } from '../shared/splash';
-import { defaultOutput } from '../shared/output';
+import Config from '../shared/config.js';
+import { showSplash } from '../shared/splash.js';
+import { defaultOutput } from '../shared/output.js';
 import {
     warn,
     helpLine,
@@ -11,14 +11,15 @@ import {
     showSelect,
     tableView,
     CancelError,
-} from '../shared/prompt';
-import { palette } from '../shared/palette';
-import { loadTypedState, getStatePath } from '../shared/state';
-import { getHandler } from './commands';
-import { SessionContext } from '../shared/session-context';
-import type { CommandContext } from './commands/context';
-import { HELP_TOPICS, CATEGORY_IDS, CATEGORY_TITLES, resolveAlias, buildMenuChoices } from './menu-data';
-import { showDocs } from '../shared/show-docs';
+} from '../shared/prompt.js';
+import { palette } from '../shared/palette.js';
+import { rootLogger } from '../shared/logger.js';
+import { loadTypedState, getStatePath } from '../shared/state.js';
+import { getHandler } from './commands/index.js';
+import { SessionContext } from '../shared/session-context.js';
+import type { CommandContext } from './commands/context.js';
+import { HELP_TOPICS, CATEGORY_IDS, CATEGORY_TITLES, resolveAlias, buildMenuChoices } from './menu-data.js';
+import { showDocs } from '../shared/show-docs.js';
 export { showDocs };
 export function showHelp(topic?: string): void {
     if (!topic) {
@@ -65,7 +66,7 @@ function _showAndPause(topic: string): void {
     try {
         prompt('Pressione Enter para continuar');
     } catch {
-        /* ignore */
+        rootLogger.debug('User pressed Ctrl+C or non-TTY during help pause — continuing');
     }
 }
 export function showHelpLoop(): void {

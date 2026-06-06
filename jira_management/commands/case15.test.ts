@@ -1,45 +1,47 @@
-jest.mock('../../shared/prompt');
+vi.mock('../../shared/prompt');
 
-jest.mock('../../shared/state', () => ({
-    load: jest.fn().mockReturnValue({}),
-    update: jest.fn(),
+vi.mock('../../shared/state', async () => ({
+    load: vi.fn().mockReturnValue({}),
+    update: vi.fn(),
 }));
 
-jest.mock('../../shared/config', () => {
-    const mockGet = jest.fn();
+vi.mock('../../shared/config', () => {
+    const mockGet = vi.fn();
     return {
-        get: mockGet,
-        getInstance: jest.fn().mockReturnValue({ get: mockGet }),
+        default: {
+            get: mockGet,
+            getInstance: vi.fn().mockReturnValue({ get: mockGet }),
+        },
     };
 });
 
-jest.mock('../create_tests', () => ({
-    createTestsFromCsv: jest.fn(),
-    createTestsFromJson: jest.fn(),
-    createTestExecutionWithLinks: jest.fn(),
+vi.mock('../create_tests', async () => ({
+    createTestsFromCsv: vi.fn(),
+    createTestsFromJson: vi.fn(),
+    createTestExecutionWithLinks: vi.fn(),
 }));
 
-jest.mock('./test-execution-flow', () => ({
-    offerTestExecutionAssociation: jest.fn().mockResolvedValue({ associated: false }),
-    showResults: jest.fn().mockResolvedValue(undefined),
+vi.mock('./test-execution-flow', async () => ({
+    offerTestExecutionAssociation: vi.fn().mockResolvedValue({ associated: false }),
+    showResults: vi.fn().mockResolvedValue(undefined),
 }));
 
-jest.mock('fs', () => ({
-    existsSync: jest.fn().mockReturnValue(true),
-    readFileSync: jest.fn(),
+vi.mock('fs', async () => ({
+    existsSync: vi.fn().mockReturnValue(true),
+    readFileSync: vi.fn(),
 }));
 
-import case15 from './case15';
-import { makeMockCommandContext } from '../../shared/test-utils';
+import case15 from './case15.js';
+import { makeMockCommandContext } from '../../shared/test-utils.js';
 
 const mockContext = makeMockCommandContext();
 
 beforeEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
 });
 
 describe('case15 — create tests from JSON', () => {
-    it('exports a handler function', () => {
+    it('exports a handler function', async () => {
         expect(case15).toBeDefined();
         expect(typeof case15.handler).toBe('function');
     });

@@ -9,19 +9,19 @@
  *   - llm-cache            → configUniqueKey for deduplication
  *   - circuit-breaker      → per-provider circuit state tracking
  */
-import { checkRateLimit } from './llm-rate-limiter';
-import { configUniqueKey } from './llm-cache';
-import { recordCircuitFailure, recordCircuitSuccess } from './circuit-breaker';
-import { rootLogger } from './logger';
-import { LlmProviderError } from './errors';
-import type { LlmTier, ResponseFormat } from './types';
-import { tierToConfig, ProviderConfig } from './llm-fallback-config';
-import { sendToProvider } from './llm-fallback-http';
+import { checkRateLimit } from './llm-rate-limiter.js';
+import { configUniqueKey } from './llm-cache.js';
+import { recordCircuitFailure, recordCircuitSuccess } from './circuit-breaker.js';
+import { rootLogger } from './logger.js';
+import { LlmProviderError } from './errors.js';
+import type { LlmTier, ResponseFormat } from './types.js';
+import { tierToConfig, ProviderConfig } from './llm-fallback-config.js';
+import { sendToProvider } from './llm-fallback-http.js';
 
 // -- barrel re-exports --
 
-export * from './llm-fallback-config';
-export * from './llm-fallback-http';
+export * from './llm-fallback-config.js';
+export * from './llm-fallback-http.js';
 
 // -- orchestrator --
 

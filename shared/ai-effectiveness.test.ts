@@ -2,8 +2,8 @@
  * Tests for ai-effectiveness — AI Generation Effectiveness Dashboard.
  */
 
-import { computeAiEffectiveness, generateAiEffectivenessHtml } from './ai-effectiveness';
-import * as htmlFactory from './html-factory';
+import { computeAiEffectiveness, generateAiEffectivenessHtml } from './ai-effectiveness.js';
+import * as htmlFactory from './html-factory.js';
 
 interface AiFeedbackRecord {
     timestamp: string;
@@ -19,7 +19,7 @@ interface AiFeedbackStore {
 }
 
 describe('computeAiEffectiveness', () => {
-    it('returns zeroed result for empty store', () => {
+    it('returns zeroed result for empty store', async () => {
         const store: AiFeedbackStore = { records: [] };
         const result = computeAiEffectiveness(store);
         expect(result.acceptanceRate).toBe(0);
@@ -33,7 +33,7 @@ describe('computeAiEffectiveness', () => {
         expect(result.timestamp).toBeTruthy();
     });
 
-    it('computes acceptance rate for a single version with mixed acceptance', () => {
+    it('computes acceptance rate for a single version with mixed acceptance', async () => {
         const store: AiFeedbackStore = {
             records: [
                 { timestamp: '2026-06-01T10:00:00Z', promptVersion: 'v1', testTitle: 't1', accepted: true },
@@ -65,7 +65,7 @@ describe('computeAiEffectiveness', () => {
         expect(result.byVersion[0]).toEqual({ version: 'v1', count: 4, acceptanceRate: 50 });
     });
 
-    it('handles multiple versions', () => {
+    it('handles multiple versions', async () => {
         const store: AiFeedbackStore = {
             records: [
                 { timestamp: '2026-06-01T10:00:00Z', promptVersion: 'v1', testTitle: 't1', accepted: true },
@@ -98,7 +98,7 @@ describe('computeAiEffectiveness', () => {
         expect(result.byVersion).toContainEqual({ version: 'v3', count: 1, acceptanceRate: 100 });
     });
 
-    it('builds daily trend sorted by date', () => {
+    it('builds daily trend sorted by date', async () => {
         const store: AiFeedbackStore = {
             records: [
                 { timestamp: '2026-06-01T10:00:00Z', promptVersion: 'v1', testTitle: 't1', accepted: true },
@@ -133,7 +133,7 @@ describe('computeAiEffectiveness', () => {
         expect(result.trend[2]?.acceptanceRate).toBe(0);
     });
 
-    it('handles all accepted records', () => {
+    it('handles all accepted records', async () => {
         const store: AiFeedbackStore = {
             records: [
                 { timestamp: '2026-06-01T10:00:00Z', promptVersion: 'v1', testTitle: 't1', accepted: true },
@@ -146,7 +146,7 @@ describe('computeAiEffectiveness', () => {
         expect(result.totalDeleted).toBe(0);
     });
 
-    it('handles no accepted records', () => {
+    it('handles no accepted records', async () => {
         const store: AiFeedbackStore = {
             records: [
                 {
@@ -173,7 +173,7 @@ describe('computeAiEffectiveness', () => {
 });
 
 describe('generateAiEffectivenessHtml', () => {
-    it('generates HTML with acceptance rate metric', () => {
+    it('generates HTML with acceptance rate metric', async () => {
         const result = computeAiEffectiveness({
             records: [
                 { timestamp: '2026-06-01T10:00:00Z', promptVersion: 'v1', testTitle: 't1', accepted: true },
@@ -193,7 +193,7 @@ describe('generateAiEffectivenessHtml', () => {
         expect(html).toContain('2 total records');
     });
 
-    it('shows version breakdown table', () => {
+    it('shows version breakdown table', async () => {
         const result = computeAiEffectiveness({
             records: [
                 { timestamp: '2026-06-01T10:00:00Z', promptVersion: 'v2', testTitle: 't1', accepted: true },
@@ -214,7 +214,7 @@ describe('generateAiEffectivenessHtml', () => {
         expect(html).toContain('Records');
     });
 
-    it('shows daily trend table', () => {
+    it('shows daily trend table', async () => {
         const result = computeAiEffectiveness({
             records: [
                 { timestamp: '2026-06-01T10:00:00Z', promptVersion: 'v1', testTitle: 't1', accepted: true },
@@ -233,7 +233,7 @@ describe('generateAiEffectivenessHtml', () => {
         expect(html).toContain('2026-06-02');
     });
 
-    it('shows empty message when no data', () => {
+    it('shows empty message when no data', async () => {
         const result = computeAiEffectiveness({ records: [] });
         const html = generateAiEffectivenessHtml(result);
         expect(html).toContain('No AI generation data available');
@@ -241,7 +241,7 @@ describe('generateAiEffectivenessHtml', () => {
         expect(html).not.toContain('Daily Trend');
     });
 
-    it('uses custom title', () => {
+    it('uses custom title', async () => {
         const result = computeAiEffectiveness({
             records: [{ timestamp: '2026-06-01T10:00:00Z', promptVersion: 'v1', testTitle: 't1', accepted: true }],
         });
@@ -250,7 +250,7 @@ describe('generateAiEffectivenessHtml', () => {
         expect(html).not.toContain('AI Effectiveness Dashboard');
     });
 
-    it('includes theme script and CSS variables', () => {
+    it('includes theme script and CSS variables', async () => {
         const result = computeAiEffectiveness({
             records: [{ timestamp: '2026-06-01T10:00:00Z', promptVersion: 'v1', testTitle: 't1', accepted: true }],
         });
@@ -260,7 +260,7 @@ describe('generateAiEffectivenessHtml', () => {
         expect(html).toContain('html.dark');
     });
 
-    it('escapes HTML in version names', () => {
+    it('escapes HTML in version names', async () => {
         const result = computeAiEffectiveness({
             records: [
                 {
@@ -276,8 +276,8 @@ describe('generateAiEffectivenessHtml', () => {
         expect(html).not.toContain('<script>evil</script>');
     });
 
-    it('handles error by returning error page', () => {
-        const spy = jest.spyOn(htmlFactory, 'buildHtmlPage').mockImplementation(() => {
+    it('handles error by returning error page', async () => {
+        const spy = vi.spyOn(htmlFactory, 'buildHtmlPage').mockImplementation(() => {
             throw new Error('mock build failure');
         });
         const result = computeAiEffectiveness({

@@ -1,61 +1,74 @@
-import { nonNull } from './test-utils';
-import { jest } from '@jest/globals';
+import { nonNull } from './test-utils.js';
 
-const mockReaddirSync = jest.fn();
-const mockReadFileSync = jest.fn();
-const mockMkdirSync = jest.fn();
-const mockWriteFileSync = jest.fn();
-const mockJoin = jest.fn((...args: string[]) => args.join('/'));
-
-const mockPrintError = jest.fn<(label: string, error: Error) => void>();
-const mockWarn = jest.fn<(message: string) => void>();
-const mockInfo = jest.fn<(message: string) => void>();
-const mockDivider = jest.fn<() => void>();
-
-const mockOpenWithFallback = jest.fn<(path: string, label: string, callback?: (err: Error | null) => void) => void>();
-const mockGetDocsOutputDir = jest.fn<() => string | null>();
-
-const mockMdToHtml = jest.fn((content: string) => '<html>' + content + '</html>');
-
-const mockBuildHtmlPage = jest.fn((opts: object) => '<!DOCTYPE html>' + JSON.stringify(opts));
-
-jest.mock('fs', () => ({
-    readdirSync: mockReaddirSync,
-    readFileSync: mockReadFileSync,
-    mkdirSync: mockMkdirSync,
-    writeFileSync: mockWriteFileSync,
+const {
+    mockReaddirSync,
+    mockReadFileSync,
+    mockMkdirSync,
+    mockWriteFileSync,
+    mockJoin,
+    mockPrintError,
+    mockWarn,
+    mockInfo,
+    mockDivider,
+    mockOpenWithFallback,
+    mockGetDocsOutputDir,
+    mockMdToHtml,
+    mockBuildHtmlPage,
+} = vi.hoisted(() => ({
+    mockReaddirSync: vi.fn(),
+    mockReadFileSync: vi.fn(),
+    mockMkdirSync: vi.fn(),
+    mockWriteFileSync: vi.fn(),
+    mockJoin: vi.fn((...args: string[]) => args.join('/')),
+    mockPrintError: vi.fn<(label: string, error: Error) => void>(),
+    mockWarn: vi.fn<(message: string) => void>(),
+    mockInfo: vi.fn<(message: string) => void>(),
+    mockDivider: vi.fn<() => void>(),
+    mockOpenWithFallback: vi.fn<(path: string, label: string, callback?: (err: Error | null) => void) => void>(),
+    mockGetDocsOutputDir: vi.fn<() => string | null>(),
+    mockMdToHtml: vi.fn((content: string) => '<html>' + content + '</html>'),
+    mockBuildHtmlPage: vi.fn((opts: object) => '<!DOCTYPE html>' + JSON.stringify(opts)),
 }));
 
-jest.mock('path', () => ({
-    join: mockJoin,
+vi.mock('fs', () => ({
+    default: {
+        readdirSync: mockReaddirSync,
+        readFileSync: mockReadFileSync,
+        mkdirSync: mockMkdirSync,
+        writeFileSync: mockWriteFileSync,
+    },
 }));
 
-jest.mock('./prompt', () => ({
+vi.mock('path', () => ({
+    default: { join: mockJoin },
+}));
+
+vi.mock('./prompt', () => ({
     printError: mockPrintError,
     warn: mockWarn,
     info: mockInfo,
     divider: mockDivider,
 }));
 
-jest.mock('./open', () => ({
+vi.mock('./open', () => ({
     openWithFallback: mockOpenWithFallback,
     getDocsOutputDir: mockGetDocsOutputDir,
 }));
 
-jest.mock('./markdown', () => ({
+vi.mock('./markdown', () => ({
     mdToHtml: mockMdToHtml,
 }));
 
-jest.mock('./html-factory', () => ({
+vi.mock('./html-factory', () => ({
     buildHtmlPage: mockBuildHtmlPage,
 }));
 
-function loadModule() {
-    return require('./show-docs') as typeof import('./show-docs');
+async function loadModule() {
+    return import('./show-docs.js') as Promise<typeof import('./show-docs.js')>;
 }
 
 beforeEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
 });
 
 describe('showDocs', () => {
@@ -70,7 +83,7 @@ describe('showDocs', () => {
             return '';
         });
 
-        const { showDocs } = loadModule();
+        const { showDocs } = await loadModule();
         await showDocs();
 
         expect(mockMkdirSync).toHaveBeenCalledWith('/tmp/docs', { recursive: true });
@@ -84,7 +97,7 @@ describe('showDocs', () => {
             throw new Error('ENOENT');
         });
 
-        const { showDocs } = loadModule();
+        const { showDocs } = await loadModule();
         await showDocs();
 
         expect(mockPrintError).toHaveBeenCalledWith('Documentação', expect.any(Error));
@@ -96,7 +109,7 @@ describe('showDocs', () => {
         mockGetDocsOutputDir.mockReturnValue('/tmp/docs');
         mockReaddirSync.mockReturnValue(['readme.md', 'notes.txt']);
 
-        const { showDocs } = loadModule();
+        const { showDocs } = await loadModule();
         await showDocs();
 
         expect(mockWarn).toHaveBeenCalledWith('Nenhum documento encontrado em docs/.');
@@ -115,7 +128,7 @@ describe('showDocs', () => {
             return '';
         });
 
-        const { showDocs } = loadModule();
+        const { showDocs } = await loadModule();
         await showDocs();
 
         expect(mockPrintError).toHaveBeenCalledWith('Erro ao ler 02-bad.md', expect.any(Error));
@@ -126,7 +139,7 @@ describe('showDocs', () => {
         mockGetDocsOutputDir.mockReturnValue(null);
         mockReaddirSync.mockReturnValue(['01-intro.md']);
 
-        const { showDocs } = loadModule();
+        const { showDocs } = await loadModule();
         await showDocs();
 
         expect(mockPrintError).toHaveBeenCalledWith('Documentação', expect.any(Error));

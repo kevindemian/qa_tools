@@ -1,14 +1,14 @@
 import path from 'path';
 import fs from 'fs';
 import dotenv from 'dotenv';
-import JiraResource from '../jira_management/jira_resource';
-import JiraLinkManager from '../jira_management/jira_link_manager';
-import CsvResource from '../jira_management/csv_resource';
-import createTestsModule from '../jira_management/create_tests';
+import JiraResource from '../jira_management/jira_resource.js';
+import JiraLinkManager from '../jira_management/jira_link_manager.js';
+import CsvResource from '../jira_management/csv_resource.js';
+import createTestsModule from '../jira_management/create_tests.js';
 const { createTestsFromCsv } = createTestsModule;
-import { rootLogger } from '../shared/logger';
+import { rootLogger } from '../shared/logger.js';
 
-dotenv.config({ path: path.resolve(__dirname, '../.env') });
+dotenv.config({ path: path.resolve(import.meta.dirname, '../.env') });
 
 const BASE_URL = process.env.JIRA_BASE_URL;
 const XRAY_URL = process.env.XRAY_BASE_URL;
@@ -19,7 +19,7 @@ if (!BASE_URL || !XRAY_URL || !TOKEN) {
     process.exit(1);
 }
 
-const csvPath = path.resolve(__dirname, '../jira_management/teste_real.csv');
+const csvPath = path.resolve(import.meta.dirname, '../jira_management/teste_real.csv');
 
 process.env.CSV_PATH = csvPath;
 process.env.CSV_LABELS = 'e2e';

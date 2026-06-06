@@ -7,12 +7,12 @@
  * @module flakiness-dashboard
  */
 
-import type { FlakinessEntry } from './metrics';
-import { rootLogger } from './logger';
-import { sanitizeHtml } from './escape';
-import { buildHtmlPage, buildErrorPage } from './html-factory';
-import { buildCss } from './report-styles';
-import { MetricCard, MetricGrid, Badge, Sparkline } from './primitives';
+import type { FlakinessEntry } from './metrics.js';
+import { rootLogger } from './logger.js';
+import { sanitizeHtml } from './escape.js';
+import { buildHtmlPage, buildErrorPage } from './html-factory.js';
+import { buildCss } from './report-styles.js';
+import { MetricCard, MetricGrid, Badge, Sparkline } from './primitives/index.js';
 
 const THRESHOLD_PCT = 30;
 

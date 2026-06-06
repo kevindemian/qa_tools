@@ -4,7 +4,7 @@
  * @module primitives/table.test
  */
 
-import { DataTable, THead, TBody, Tr, Td, Th } from './table';
+import { DataTable, THead, TBody, Tr, Td, Th } from './table.js';
 
 describe('table primitives', () => {
     describe('DataTable', () => {
@@ -17,7 +17,7 @@ describe('table primitives', () => {
             { key: '2', cells: { name: 'Test 2', value: '99' }, class: 'highlight' },
         ];
 
-        it('renders table with columns and rows', () => {
+        it('renders table with columns and rows', async () => {
             const html = DataTable({ columns, rows });
             expect(html).toContain('data-component="data-table"');
             expect(html).toContain('Test 1');
@@ -26,45 +26,45 @@ describe('table primitives', () => {
             expect(html).toContain('99');
         });
 
-        it('renders column headers', () => {
+        it('renders column headers', async () => {
             const html = DataTable({ columns, rows });
             expect(html).toContain('Name');
             expect(html).toContain('Value');
         });
 
-        it('applies row class', () => {
+        it('applies row class', async () => {
             const html = DataTable({ columns, rows });
             expect(html).toContain('class="highlight"');
         });
 
-        it('renders sortable columns', () => {
+        it('renders sortable columns', async () => {
             const sortCols = [{ key: 'name', label: 'Name', sortable: true }];
             const html = DataTable({ columns: sortCols, rows: [] });
             expect(html).toContain('data-sortable="true"');
             expect(html).toContain('↕');
         });
 
-        it('renders caption', () => {
+        it('renders caption', async () => {
             const html = DataTable({ columns, rows: [], caption: 'test table' });
             expect(html).toContain('test table');
             expect(html).toContain('<caption');
         });
 
-        it('renders with ariaLabel', () => {
+        it('renders with ariaLabel', async () => {
             const html = DataTable({ columns, rows, ariaLabel: 'test results' });
             expect(html).toContain('aria-label="test results"');
         });
     });
 
     describe('THead', () => {
-        it('renders thead', () => {
+        it('renders thead', async () => {
             const html = THead({ children: '<tr><th>Name</th></tr>' });
             expect(html).toContain('<thead');
         });
     });
 
     describe('TBody', () => {
-        it('renders tbody', () => {
+        it('renders tbody', async () => {
             const html = TBody({ children: '<tr><td>data</td></tr>' });
             expect(html).toContain('<tbody>');
             expect(html).toContain('data');
@@ -72,52 +72,52 @@ describe('table primitives', () => {
     });
 
     describe('Tr', () => {
-        it('renders table row', () => {
+        it('renders table row', async () => {
             const html = Tr({ children: '<td>cell</td>' });
             expect(html).toContain('<tr');
             expect(html).toContain('cell');
             expect(html).toContain('role="row"');
         });
 
-        it('renders with key', () => {
+        it('renders with key', async () => {
             const html = Tr({ children: '', key: 'row-1' });
             expect(html).toContain('data-row="row-1"');
         });
 
-        it('renders with onClick', () => {
+        it('renders with onClick', async () => {
             const html = Tr({ children: '', onClick: 'alert()' });
             expect(html).toContain('onclick="alert()"');
             expect(html).toContain('cursor:pointer');
         });
 
-        it('renders with ariaExpanded', () => {
+        it('renders with ariaExpanded', async () => {
             const html = Tr({ children: '', ariaExpanded: false });
             expect(html).toContain('aria-expanded="false"');
         });
     });
 
     describe('Td', () => {
-        it('renders cell', () => {
+        it('renders cell', async () => {
             const html = Td({ children: 'cell data' });
             expect(html).toContain('<td');
             expect(html).toContain('cell data');
             expect(html).toContain('role="cell"');
         });
 
-        it('renders with colSpan', () => {
+        it('renders with colSpan', async () => {
             const html = Td({ children: '', colSpan: 3 });
             expect(html).toContain('colspan="3"');
         });
     });
 
     describe('Th', () => {
-        it('renders header cell', () => {
+        it('renders header cell', async () => {
             const html = Th({ children: 'Name' });
             expect(html).toContain('<th');
             expect(html).toContain('Name');
         });
 
-        it('renders sortable', () => {
+        it('renders sortable', async () => {
             const html = Th({ children: 'Name', sortable: true });
             expect(html).toContain('data-sortable="true"');
         });

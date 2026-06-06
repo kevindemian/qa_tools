@@ -1,22 +1,22 @@
-jest.mock('../../shared/prompt');
-jest.mock('../../shared/logger');
+vi.mock('../../shared/prompt');
+vi.mock('../../shared/logger');
 
-import case07 from './case07';
-import { makeMockCommandContext } from '../../shared/test-utils';
+import case07 from './case07.js';
+import { makeMockCommandContext } from '../../shared/test-utils.js';
 
 const mockJiraResource = {
-    getReleaseTasks: jest.fn().mockResolvedValue([]),
-    moveCardsToDone: jest.fn().mockResolvedValue({}),
+    getReleaseTasks: vi.fn().mockResolvedValue([]),
+    moveCardsToDone: vi.fn().mockResolvedValue({}),
 };
 
 const mockContext = makeMockCommandContext({ jiraResource: mockJiraResource });
 
 beforeEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
 });
 
 describe('case07 — close tasks', () => {
-    it('exports a handler function', () => {
+    it('exports a handler function', async () => {
         expect(case07).toBeDefined();
         expect(typeof case07.handler).toBe('function');
     });

@@ -2,10 +2,10 @@
  * Tests for defect-seasonality — Defect Seasonality Dashboard aggregator and HTML generator.
  */
 
-import { aggregateDefectSeasonality, generateSeasonalityHtml, type SeasonalityResult } from './defect-seasonality';
-import type { FailureClassification } from './metrics';
-import { nonNull } from './test-utils';
-import * as reportStyles from './report-styles';
+import { aggregateDefectSeasonality, generateSeasonalityHtml, type SeasonalityResult } from './defect-seasonality.js';
+import type { FailureClassification } from './metrics.js';
+import { nonNull } from './test-utils.js';
+import * as reportStyles from './report-styles.js';
 
 const sampleClass: FailureClassification = {
     timestamp: '2026-06-01T10:00:00Z',
@@ -24,7 +24,7 @@ function makeFC(dow: number, hour: number, cat: string): FailureClassification {
 }
 
 describe('aggregateDefectSeasonality', () => {
-    it('returns zero-filled structure for empty array', () => {
+    it('returns zero-filled structure for empty array', async () => {
         const result = aggregateDefectSeasonality([]);
         expect(result.byDayOfWeek).toHaveLength(7);
         expect(result.byHour).toHaveLength(24);
@@ -43,14 +43,14 @@ describe('aggregateDefectSeasonality', () => {
         expect(result.timestamp).toBeTruthy();
     });
 
-    it('returns zero-filled structure for empty input', () => {
+    it('returns zero-filled structure for empty input', async () => {
         const result = aggregateDefectSeasonality([]);
         expect(result.totalRecords).toBe(0);
         expect(result.peakDay).toBe('N/A');
         expect(result.peakHour).toBe(-1);
     });
 
-    it('groups single classification by day and hour', () => {
+    it('groups single classification by day and hour', async () => {
         const result = aggregateDefectSeasonality([sampleClass]);
         expect(result.totalRecords).toBe(1);
 
@@ -66,7 +66,7 @@ describe('aggregateDefectSeasonality', () => {
         expect(result.peakHour).toBe(10);
     });
 
-    it('groups multiple classifications across days', () => {
+    it('groups multiple classifications across days', async () => {
         const input: FailureClassification[] = [
             makeFC(1, 10, 'ASSERTION'), // Mon
             makeFC(2, 11, 'TIMEOUT'), // Tue
@@ -88,7 +88,7 @@ describe('aggregateDefectSeasonality', () => {
         expect(result.peakHour).toBe(10);
     });
 
-    it('groups multiple categories on same day and hour', () => {
+    it('groups multiple categories on same day and hour', async () => {
         const input: FailureClassification[] = [
             { ...sampleClass, category: 'ASSERTION' },
             { ...sampleClass, category: 'TIMEOUT' },
@@ -109,7 +109,7 @@ describe('aggregateDefectSeasonality', () => {
         expect(result.peakHour).toBe(10);
     });
 
-    it('sorts days in Mon-Sun order', () => {
+    it('sorts days in Mon-Sun order', async () => {
         const input: FailureClassification[] = [
             makeFC(6, 10, 'A'), // Sat
             makeFC(0, 10, 'B'), // Sun
@@ -120,14 +120,14 @@ describe('aggregateDefectSeasonality', () => {
         expect(dayNames).toEqual(['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']);
     });
 
-    it('sorts hours 0-23', () => {
+    it('sorts hours 0-23', async () => {
         const input: FailureClassification[] = [makeFC(1, 23, 'A'), makeFC(1, 0, 'B'), makeFC(1, 12, 'C')];
         const result = aggregateDefectSeasonality(input);
         const hours = result.byHour.map((h) => h.hour);
         expect(hours).toEqual(Array.from({ length: 24 }, (_, i) => i));
     });
 
-    it('computes peak day correctly when multiple days have records', () => {
+    it('computes peak day correctly when multiple days have records', async () => {
         const input: FailureClassification[] = [
             makeFC(1, 10, 'A'), // Mon
             makeFC(1, 11, 'A'), // Mon
@@ -140,7 +140,7 @@ describe('aggregateDefectSeasonality', () => {
         expect(result.peakDay).toBe('Wed');
     });
 
-    it('computes peak hour correctly when multiple hours have records', () => {
+    it('computes peak hour correctly when multiple hours have records', async () => {
         const input: FailureClassification[] = [
             makeFC(1, 8, 'A'),
             makeFC(1, 8, 'A'),
@@ -152,7 +152,7 @@ describe('aggregateDefectSeasonality', () => {
         expect(result.peakHour).toBe(8);
     });
 
-    it('tracks period from/to across multiple days', () => {
+    it('tracks period from/to across multiple days', async () => {
         const input: FailureClassification[] = [
             { ...sampleClass, timestamp: '2026-06-01T10:00:00Z' },
             { ...sampleClass, timestamp: '2026-06-03T10:00:00Z' },
@@ -161,7 +161,7 @@ describe('aggregateDefectSeasonality', () => {
         expect(result.period).toEqual({ from: '2026-06-01', to: '2026-06-03' });
     });
 
-    it('handles all days of week', () => {
+    it('handles all days of week', async () => {
         const input: FailureClassification[] = [];
         for (let d = 0; d <= 6; d++) {
             for (let h = 0; h < 24; h++) {
@@ -174,7 +174,7 @@ describe('aggregateDefectSeasonality', () => {
         expect(result.byHour.every((h) => h.total === 7)).toBe(true);
     });
 
-    it('preserves categories per day when day is empty', () => {
+    it('preserves categories per day when day is empty', async () => {
         const input: FailureClassification[] = [makeFC(1, 10, 'ASSERTION')];
         const result = aggregateDefectSeasonality(input);
         const tue = nonNull(result.byDayOfWeek.find((d) => d.dayOfWeek === 'Tue'));
@@ -182,7 +182,7 @@ describe('aggregateDefectSeasonality', () => {
         expect(tue.categories).toEqual({});
     });
 
-    it('preserves categories per hour when hour is empty', () => {
+    it('preserves categories per hour when hour is empty', async () => {
         const input: FailureClassification[] = [makeFC(1, 10, 'ASSERTION')];
         const result = aggregateDefectSeasonality(input);
         const hour0 = nonNull(result.byHour.find((h) => h.hour === 0));
@@ -190,14 +190,14 @@ describe('aggregateDefectSeasonality', () => {
         expect(hour0.categories).toEqual({});
     });
 
-    it('returns N/A peak when all totals are zero', () => {
+    it('returns N/A peak when all totals are zero', async () => {
         const input: FailureClassification[] = [];
         const result = aggregateDefectSeasonality(input);
         expect(result.peakDay).toBe('N/A');
         expect(result.peakHour).toBe(-1);
     });
 
-    it('handles invalid timestamps gracefully', () => {
+    it('handles invalid timestamps gracefully', async () => {
         const input: FailureClassification[] = [
             { timestamp: 'not-a-date', testTitle: 't1', category: 'ASSERTION', project: 'p' },
         ];
@@ -209,13 +209,13 @@ describe('aggregateDefectSeasonality', () => {
         expect(result.byHour.every((h) => h.total === 0)).toBe(true);
     });
 
-    it('returns correct peak day when tied', () => {
+    it('returns correct peak day when tied', async () => {
         const input: FailureClassification[] = [makeFC(1, 10, 'A'), makeFC(2, 10, 'B')];
         const result = aggregateDefectSeasonality(input);
         expect(result.peakDay).toBe('Mon');
     });
 
-    it('returns correct peak hour when tied', () => {
+    it('returns correct peak hour when tied', async () => {
         const input: FailureClassification[] = [makeFC(1, 10, 'A'), makeFC(2, 11, 'B')];
         const result = aggregateDefectSeasonality(input);
         expect(result.peakHour).toBe(10);
@@ -223,20 +223,20 @@ describe('aggregateDefectSeasonality', () => {
 });
 
 describe('generateSeasonalityHtml', () => {
-    it('shows no-data message for empty result', () => {
+    it('shows no-data message for empty result', async () => {
         const result = aggregateDefectSeasonality([]);
         const html = generateSeasonalityHtml(result);
         expect(html).toContain('<!DOCTYPE html>');
         expect(html).toContain('No defect data available.');
     });
 
-    it('shows no-data message for result with zero records', () => {
+    it('shows no-data message for result with zero records', async () => {
         const result = aggregateDefectSeasonality([]);
         const html = generateSeasonalityHtml(result);
         expect(html).toContain('No defect data available.');
     });
 
-    it('includes summary cards with correct values', () => {
+    it('includes summary cards with correct values', async () => {
         const input: FailureClassification[] = [sampleClass];
         const result = aggregateDefectSeasonality(input);
         const html = generateSeasonalityHtml(result);
@@ -249,13 +249,13 @@ describe('generateSeasonalityHtml', () => {
         expect(html).toContain('10:00');
     });
 
-    it('shows N/A for peak hour when no records', () => {
+    it('shows N/A for peak hour when no records', async () => {
         const result = aggregateDefectSeasonality([]);
         const html = generateSeasonalityHtml(result);
         expect(html).toContain('No defect data available.');
     });
 
-    it('renders day-of-week table with data', () => {
+    it('renders day-of-week table with data', async () => {
         const input: FailureClassification[] = [makeFC(1, 10, 'ASSERTION'), makeFC(1, 11, 'TIMEOUT')];
         const result = aggregateDefectSeasonality(input);
         const html = generateSeasonalityHtml(result);
@@ -266,7 +266,7 @@ describe('generateSeasonalityHtml', () => {
         expect(html).toContain('Tue');
     });
 
-    it('renders hour table with data', () => {
+    it('renders hour table with data', async () => {
         const input: FailureClassification[] = [sampleClass];
         const result = aggregateDefectSeasonality(input);
         const html = generateSeasonalityHtml(result);
@@ -276,7 +276,7 @@ describe('generateSeasonalityHtml', () => {
         expect(html).toContain('0:00');
     });
 
-    it('shows category columns in day table', () => {
+    it('shows category columns in day table', async () => {
         const input: FailureClassification[] = [makeFC(1, 10, 'ASSERTION'), makeFC(2, 11, 'TIMEOUT')];
         const result = aggregateDefectSeasonality(input);
         const html = generateSeasonalityHtml(result);
@@ -285,7 +285,7 @@ describe('generateSeasonalityHtml', () => {
         expect(html).toContain('TIMEOUT');
     });
 
-    it('shows category columns in hour table', () => {
+    it('shows category columns in hour table', async () => {
         const input: FailureClassification[] = [makeFC(1, 10, 'ENV'), makeFC(1, 11, 'NETWORK')];
         const result = aggregateDefectSeasonality(input);
         const html = generateSeasonalityHtml(result);
@@ -294,13 +294,13 @@ describe('generateSeasonalityHtml', () => {
         expect(html).toContain('NETWORK');
     });
 
-    it('supports custom title', () => {
+    it('supports custom title', async () => {
         const result = aggregateDefectSeasonality([]);
         const html = generateSeasonalityHtml(result, 'Sprint 11 Seasonality');
         expect(html).toContain('Sprint 11 Seasonality');
     });
 
-    it('escapes HTML in category names', () => {
+    it('escapes HTML in category names', async () => {
         const input: FailureClassification[] = [makeFC(1, 10, '<script>alert(1)</script>')];
         const result = aggregateDefectSeasonality(input);
         const html = generateSeasonalityHtml(result);
@@ -309,7 +309,7 @@ describe('generateSeasonalityHtml', () => {
         expect(html).not.toContain('<script>alert');
     });
 
-    it('includes theme toggle script', () => {
+    it('includes theme toggle script', async () => {
         const input: FailureClassification[] = [sampleClass];
         const result = aggregateDefectSeasonality(input);
         const html = generateSeasonalityHtml(result);
@@ -318,7 +318,7 @@ describe('generateSeasonalityHtml', () => {
         expect(html).toContain('prefers-color-scheme');
     });
 
-    it('includes CSS variables from design tokens', () => {
+    it('includes CSS variables from design tokens', async () => {
         const input: FailureClassification[] = [sampleClass];
         const result = aggregateDefectSeasonality(input);
         const html = generateSeasonalityHtml(result);
@@ -327,22 +327,22 @@ describe('generateSeasonalityHtml', () => {
         expect(html).toContain('html.dark');
     });
 
-    it('handles N/A peak hour in summary cards when peakHour is -1', () => {
+    it('handles N/A peak hour in summary cards when peakHour is -1', async () => {
         const base = aggregateDefectSeasonality([sampleClass]);
         const result: SeasonalityResult = { ...base, peakHour: -1 };
         const html = generateSeasonalityHtml(result);
         expect(html).toContain('N/A');
     });
 
-    it('handles N/A peak day in summary cards when peakDay is N/A', () => {
+    it('handles N/A peak day in summary cards when peakDay is N/A', async () => {
         const base = aggregateDefectSeasonality([sampleClass]);
         const result: SeasonalityResult = { ...base, peakDay: 'N/A' };
         const html = generateSeasonalityHtml(result);
         expect(html).toContain('N/A');
     });
 
-    it('handles generation errors gracefully', () => {
-        const spy = jest.spyOn(reportStyles, 'buildCss').mockImplementation(() => {
+    it('handles generation errors gracefully', async () => {
+        const spy = vi.spyOn(reportStyles, 'buildCss').mockImplementation(() => {
             throw new Error('CSS failure');
         });
         const result = aggregateDefectSeasonality([sampleClass]);

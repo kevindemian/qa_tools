@@ -1,14 +1,14 @@
 /** git_triggers entry point — validates environment, shows splash, and dispatches to sub-handlers. */
-import { pushBreadcrumb, clearBreadcrumbs } from '../shared/breadcrumbs';
-import { createValidateEnv, offerEnvSetup, setupSigint, gracefulExit } from '../shared/cli_base';
-import Config from '../shared/config';
-import { showSplash } from '../shared/splash';
-import { loadMetrics } from '../shared/metrics';
-import { calculateHealthScore } from '../shared/health-score';
-import { version } from '../package.json';
-import { palette } from '../shared/palette';
-import { defaultOutput } from '../shared/output';
-import { rootLogger } from '../shared/logger';
+import { pushBreadcrumb, clearBreadcrumbs } from '../shared/breadcrumbs.js';
+import { createValidateEnv, offerEnvSetup, setupSigint, gracefulExit } from '../shared/cli_base.js';
+import Config from '../shared/config.js';
+import { showSplash } from '../shared/splash.js';
+import { loadMetrics } from '../shared/metrics.js';
+import { calculateHealthScore } from '../shared/health-score.js';
+import pkg from '../package.json';
+import { palette } from '../shared/palette.js';
+import { defaultOutput } from '../shared/output.js';
+import { rootLogger } from '../shared/logger.js';
 import {
     CancelError,
     success,
@@ -19,9 +19,9 @@ import {
     showSelect,
     printError,
     confirm as promptConfirm,
-} from '../shared/prompt';
-import { load as loadState, update as updateState } from '../shared/state';
-import { ExitCode, type GitProvider, type JsonObject, type StateContainer } from '../shared/types';
+} from '../shared/prompt.js';
+import { load as loadState, update as updateState } from '../shared/state.js';
+import { ExitCode, type GitProvider, type JsonObject, type StateContainer } from '../shared/types.js';
 import {
     sessionLog,
     sessionContext,
@@ -40,7 +40,7 @@ import {
     projectId,
     getProjects,
     clearProjectCache,
-} from './session-state';
+} from './session-state.js';
 import {
     handleTriggerPipeline,
     handleExportVariables,
@@ -52,20 +52,21 @@ import {
     parseTestResults,
     createTestExecution,
     collectTestResults,
-} from './pipeline-handler';
-import { nivelarBranchesWrapper, handleCreateMR, handleListApprovedMRs, handleMergeMR } from './mr-handler';
-import { ensureDirs, registerCleanup } from '../shared/temp-dir';
+} from './pipeline-handler.js';
+import { nivelarBranchesWrapper, handleCreateMR, handleListApprovedMRs, handleMergeMR } from './mr-handler.js';
+import { ensureDirs, registerCleanup } from '../shared/temp-dir.js';
 import {
     handleListSchedules,
     handleRunSchedule,
     handleChangeProject,
     handleFlakinessDashboard,
     generateWeeklyQualityReport,
-} from './schedule-handler';
-import { tryBatchMode, parseBatchArgs } from './batch-mode';
-import { handleHelp as _handleHelp, handleShowHistory as _handleShowHistory } from './ui-helpers';
-import { handleSetupWizard as _handleSetupWizard } from './case00-handler';
-import { showDocs } from '../shared/show-docs';
+} from './schedule-handler.js';
+import { tryBatchMode, parseBatchArgs } from './batch-mode.js';
+import { parseCliArgs } from './cli-args.js';
+import { handleHelp as _handleHelp, handleShowHistory as _handleShowHistory } from './ui-helpers.js';
+import { handleSetupWizard as _handleSetupWizard } from './case00-handler.js';
+import { showDocs } from '../shared/show-docs.js';
 
 const validateEnv = createValidateEnv([
     { key: 'GIT_TOKEN', label: 'GIT_TOKEN (token de autenticação GitLab)', example: 'GIT_TOKEN=seu-token-aqui' },
@@ -271,13 +272,17 @@ async function _initEnvironment(): Promise<void> {
         () => isBusy,
         () => printSessionSummary(),
     );
-    const envResult = validateEnv();
-    if (offerEnvSetup(envResult)) {
-        try {
-            await _handleSetupWizard();
-        } catch {
-            // wizard failed — continue anyway
+    try {
+        const envResult = validateEnv();
+        if (offerEnvSetup(envResult)) {
+            try {
+                await _handleSetupWizard();
+            } catch {
+                // wizard failed — continue anyway
+            }
         }
+    } catch (err) {
+        rootLogger.debug('Env setup failed: ' + (err instanceof Error ? err.message : String(err)));
     }
     let healthScore: { score: number; grade: string } | undefined;
     try {
@@ -287,7 +292,12 @@ async function _initEnvironment(): Promise<void> {
     } catch (err) {
         rootLogger.debug('Health score failed: ' + (err instanceof Error ? err.message : String(err)));
     }
-    await showSplash(undefined, undefined, undefined, undefined, healthScore);
+    try {
+        await showSplash(undefined, undefined, undefined, undefined, healthScore);
+    } catch (err) {
+        rootLogger.debug('Splash failed: ' + (err instanceof Error ? err.message : String(err)));
+        defaultOutput.print('🔧 QA Tools  v1.0.0 — Gestão de Testes & Automação de CI/CD');
+    }
     sessionLog.info('Sessão iniciada');
 }
 
@@ -326,7 +336,8 @@ async function _selectProjectAndCreateManager(): Promise<{
 }
 
 async function main(): Promise<void> {
-    if (process.argv.includes('--help') || process.argv.includes('-h')) {
+    const cliArgs = parseCliArgs();
+    if (cliArgs.help) {
         console.log('QA Tools — Git Triggers');
         console.log('');
         console.log('Uso: npx tsx git_triggers/main.ts [opcoes]');
@@ -337,8 +348,8 @@ async function main(): Promise<void> {
         gracefulExit(ExitCode.OK);
         return;
     }
-    if (process.argv.includes('--version')) {
-        console.log(version);
+    if (cliArgs.version) {
+        console.log(pkg.version);
         gracefulExit(ExitCode.OK);
         return;
     }
@@ -367,8 +378,7 @@ async function main(): Promise<void> {
             : '0-9';
 
     while (true) {
-        if (process.stdout.isTTY && !process.argv.includes('--no-clear') && process.env.QA_TOOLS_NO_CLEAR !== 'true')
-            console.clear();
+        if (process.stdout.isTTY && !cliArgs.noClear && Config.get<boolean>('qaToolsNoClear') !== true) console.clear();
         const finalChoice = await _promptChoice(stateHint);
         updateState((s: StateContainer) => {
             s.lastChoice = finalChoice;
@@ -440,4 +450,7 @@ export default {
     withErrorHandling,
     _handleExit,
     _dispatchAction,
+    _initEnvironment,
+    _ensureProjectsConfigured,
+    _selectProjectAndCreateManager,
 };

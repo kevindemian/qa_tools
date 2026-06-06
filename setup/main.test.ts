@@ -1,55 +1,56 @@
 import fs from 'fs';
-import * as prompt from '../shared/prompt';
-import { detectFramework, extractRepoFromGit } from './detector';
-import { writeProjectsConfig, writeDotEnvExample, writePrePushHook } from './config-writer';
-import { generateGitHubActions } from './templates/github-ci';
-import { generateGitLabCI } from './templates/gitlab-ci';
-import { generatePrePushHook } from './templates/pre-push-hook';
+import type { Mock } from 'vitest';
+import * as prompt from '../shared/prompt.js';
+import { detectFramework, extractRepoFromGit } from './detector.js';
+import { writeProjectsConfig, writeDotEnvExample, writePrePushHook } from './config-writer.js';
+import { generateGitHubActions } from './templates/github-ci.js';
+import { generateGitLabCI } from './templates/gitlab-ci.js';
+import { generatePrePushHook } from './templates/pre-push-hook.js';
 
-jest.mock('../shared/prompt', () => ({
-    ask: jest.fn(),
-    askConfirm: jest.fn(),
-    title: jest.fn(),
-    info: jest.fn(),
-    divider: jest.fn(),
-}));
-
-jest.mock('fs');
-jest.mock('./detector', () => ({
-    detectFramework: jest.fn(),
-    extractRepoFromGit: jest.fn(),
-}));
-jest.mock('./config-writer', () => ({
-    writeProjectsConfig: jest.fn(),
-    writeDotEnvExample: jest.fn(),
-    writePrePushHook: jest.fn(),
-}));
-jest.mock('./templates/github-ci', () => ({
-    generateGitHubActions: jest.fn(),
-}));
-jest.mock('./templates/gitlab-ci', () => ({
-    generateGitLabCI: jest.fn(),
-}));
-jest.mock('./templates/pre-push-hook', () => ({
-    generatePrePushHook: jest.fn(),
+vi.mock('../shared/prompt', async () => ({
+    ask: vi.fn(),
+    askConfirm: vi.fn(),
+    title: vi.fn(),
+    info: vi.fn(),
+    divider: vi.fn(),
 }));
 
-const MockFs = jest.mocked(fs);
-const MockDetect = jest.mocked(detectFramework);
-const MockExtract = jest.mocked(extractRepoFromGit);
-const MockWriteProjects = jest.mocked(writeProjectsConfig);
-const MockWriteEnv = jest.mocked(writeDotEnvExample);
-const MockWriteHook = jest.mocked(writePrePushHook);
-const MockGenGithub = jest.mocked(generateGitHubActions);
-const MockGenGitlab = jest.mocked(generateGitLabCI);
-const MockGenHook = jest.mocked(generatePrePushHook);
-const MockAsk = prompt.ask as jest.MockedFunction<typeof prompt.ask>;
-const MockAskConfirm = prompt.askConfirm as jest.MockedFunction<typeof prompt.askConfirm>;
+vi.mock('fs');
+vi.mock('./detector', async () => ({
+    detectFramework: vi.fn(),
+    extractRepoFromGit: vi.fn(),
+}));
+vi.mock('./config-writer', async () => ({
+    writeProjectsConfig: vi.fn(),
+    writeDotEnvExample: vi.fn(),
+    writePrePushHook: vi.fn(),
+}));
+vi.mock('./templates/github-ci', async () => ({
+    generateGitHubActions: vi.fn(),
+}));
+vi.mock('./templates/gitlab-ci', async () => ({
+    generateGitLabCI: vi.fn(),
+}));
+vi.mock('./templates/pre-push-hook', async () => ({
+    generatePrePushHook: vi.fn(),
+}));
 
-import { main } from './main';
+const MockFs = vi.mocked(fs);
+const MockDetect = vi.mocked(detectFramework);
+const MockExtract = vi.mocked(extractRepoFromGit);
+const MockWriteProjects = vi.mocked(writeProjectsConfig);
+const MockWriteEnv = vi.mocked(writeDotEnvExample);
+const MockWriteHook = vi.mocked(writePrePushHook);
+const MockGenGithub = vi.mocked(generateGitHubActions);
+const MockGenGitlab = vi.mocked(generateGitLabCI);
+const MockGenHook = vi.mocked(generatePrePushHook);
+const MockAsk = prompt.ask as unknown as Mock<typeof prompt.ask>;
+const MockAskConfirm = prompt.askConfirm as unknown as Mock<typeof prompt.askConfirm>;
+
+import { main } from './main.js';
 
 function mockGitHubDetect() {
-    jest.mocked(MockFs.readFileSync).mockImplementation((p: fs.PathOrFileDescriptor) => {
+    vi.mocked(MockFs.readFileSync).mockImplementation((p: fs.PathOrFileDescriptor) => {
         if (String(p).includes('.git/config')) {
             return '[remote "origin"]\n\turl = git@github.com:myorg/my-repo.git\n';
         }
@@ -72,11 +73,11 @@ function mockAskForTests(prePush: boolean) {
 
 describe('setup main', () => {
     beforeEach(() => {
-        jest.clearAllMocks();
-        jest.mocked(MockFs.existsSync).mockReturnValue(false);
-        jest.mocked(MockFs.mkdirSync).mockImplementation(jest.fn());
-        jest.mocked(MockFs.writeFileSync).mockImplementation(jest.fn());
-        jest.mocked(MockFs.chmodSync).mockImplementation(jest.fn());
+        vi.clearAllMocks();
+        vi.mocked(MockFs.existsSync).mockReturnValue(false);
+        vi.mocked(MockFs.mkdirSync).mockImplementation(vi.fn());
+        vi.mocked(MockFs.writeFileSync).mockImplementation(vi.fn());
+        vi.mocked(MockFs.chmodSync).mockImplementation(vi.fn());
         MockDetect.mockReturnValue({
             framework: 'cypress',
             testCmd: 'npx cypress run',
@@ -175,7 +176,7 @@ describe('setup main', () => {
             .mockResolvedValueOnce(true)
             .mockResolvedValueOnce(true)
             .mockResolvedValueOnce(false);
-        jest.mocked(MockFs.existsSync).mockImplementation((p: string | Buffer | URL) => {
+        vi.mocked(MockFs.existsSync).mockImplementation((p: string | Buffer | URL) => {
             return p.toString().includes('.gitlab-ci.yml');
         });
 

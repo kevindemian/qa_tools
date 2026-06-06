@@ -1,10 +1,10 @@
-jest.mock('../shared/prompt', () => ({
-    confirm: jest.fn(),
-    success: jest.fn(),
-    printError: jest.fn(),
+vi.mock('../shared/prompt', async () => ({
+    confirm: vi.fn(),
+    success: vi.fn(),
+    printError: vi.fn(),
 }));
 
-jest.mock('../shared/config', () => ({
+vi.mock('../shared/config', async () => ({
     default: {
         jiraProject: 'ECSPOL',
         get(key: string) {
@@ -17,29 +17,29 @@ jest.mock('../shared/config', () => ({
     __esModule: true,
 }));
 
-jest.mock('./test-results', () => ({
-    _jiraEnv: jest.fn(),
+vi.mock('./test-results', async () => ({
+    _jiraEnv: vi.fn(),
 }));
 
-jest.mock('./session-state', () => ({
+vi.mock('./session-state', async () => ({
     currentProvider: 'gitlab',
-    pushHistory: jest.fn(),
+    pushHistory: vi.fn(),
 }));
 
-jest.mock('../shared/bug-report', () => ({
-    collectAutomated: jest.fn(),
-    fileToJira: jest.fn(),
+vi.mock('../shared/bug-report', async () => ({
+    collectAutomated: vi.fn(),
+    fileToJira: vi.fn(),
 }));
 
-import { confirm, success, printError } from '../shared/prompt';
-import Config from '../shared/config';
-import { _jiraEnv } from './test-results';
-import { currentProvider, pushHistory } from './session-state';
-import { collectAutomated, fileToJira } from '../shared/bug-report';
-import { handleBugCreation } from './pipeline-jira';
-import type { ParseResult } from '../shared/result_parser';
-import type { AnalysisReport } from '../shared/failure-analysis';
-import type JiraClient from '../shared/jira-client';
+import { confirm, success, printError } from '../shared/prompt.js';
+import Config from '../shared/config.js';
+import { _jiraEnv } from './test-results.js';
+import { currentProvider, pushHistory } from './session-state.js';
+import { collectAutomated, fileToJira } from '../shared/bug-report.js';
+import { handleBugCreation } from './pipeline-jira.js';
+import type { ParseResult } from '../shared/result_parser.js';
+import type { AnalysisReport } from '../shared/failure-analysis.js';
+import type JiraClient from '../shared/jira-client.js';
 
 const mockParseResult: ParseResult = {
     tests: [
@@ -66,20 +66,20 @@ const mockBugReport = {
 const mockJiraResource = {} as JiraClient;
 
 beforeEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
 });
 
 describe('handleBugCreation', () => {
     it('creates bug successfully when jira env is configured and user confirms', async () => {
-        jest.mocked(_jiraEnv).mockReturnValue({
+        vi.mocked(_jiraEnv).mockReturnValue({
             base: 'https://jira.example.com',
             token: 'tok',
             xray: 'xray',
             mode: 'server',
         });
-        jest.mocked(confirm).mockReturnValue(true);
-        jest.mocked(collectAutomated).mockReturnValue(mockBugReport);
-        jest.mocked(fileToJira).mockResolvedValue('ECSPOL-123');
+        vi.mocked(confirm).mockReturnValue(true);
+        vi.mocked(collectAutomated).mockReturnValue(mockBugReport);
+        vi.mocked(fileToJira).mockResolvedValue('ECSPOL-123');
 
         await handleBugCreation(mockParseResult, 42, 'main', mockAnalysisReport, mockJiraResource);
 
@@ -98,15 +98,15 @@ describe('handleBugCreation', () => {
     });
 
     it('prints error when Config.get("jiraProject") is not set', async () => {
-        jest.mocked(_jiraEnv).mockReturnValue({
+        vi.mocked(_jiraEnv).mockReturnValue({
             base: 'https://jira.example.com',
             token: 'tok',
             xray: 'xray',
             mode: 'server',
         });
-        jest.mocked(confirm).mockReturnValue(true);
-        jest.mocked(collectAutomated).mockReturnValue(mockBugReport);
-        jest.mocked(fileToJira).mockRejectedValue(new Error('Project key is required'));
+        vi.mocked(confirm).mockReturnValue(true);
+        vi.mocked(collectAutomated).mockReturnValue(mockBugReport);
+        vi.mocked(fileToJira).mockRejectedValue(new Error('Project key is required'));
         Config.set('jiraProject', '');
 
         await handleBugCreation(mockParseResult, '99', 'develop', mockAnalysisReport, mockJiraResource);
@@ -118,7 +118,7 @@ describe('handleBugCreation', () => {
     });
 
     it('returns early when jira env is not configured', async () => {
-        jest.mocked(_jiraEnv).mockReturnValue(null);
+        vi.mocked(_jiraEnv).mockReturnValue(null);
 
         await handleBugCreation(mockParseResult, 42, 'main', mockAnalysisReport, mockJiraResource);
 
@@ -129,13 +129,13 @@ describe('handleBugCreation', () => {
     });
 
     it('returns early when user declines confirmation', async () => {
-        jest.mocked(_jiraEnv).mockReturnValue({
+        vi.mocked(_jiraEnv).mockReturnValue({
             base: 'https://jira.example.com',
             token: 'tok',
             xray: 'xray',
             mode: 'server',
         });
-        jest.mocked(confirm).mockReturnValue(false);
+        vi.mocked(confirm).mockReturnValue(false);
 
         await handleBugCreation(mockParseResult, 42, 'main', mockAnalysisReport, mockJiraResource);
 
@@ -145,16 +145,16 @@ describe('handleBugCreation', () => {
     });
 
     it('handles jira API failure gracefully', async () => {
-        jest.mocked(_jiraEnv).mockReturnValue({
+        vi.mocked(_jiraEnv).mockReturnValue({
             base: 'https://jira.example.com',
             token: 'tok',
             xray: 'xray',
             mode: 'server',
         });
-        jest.mocked(confirm).mockReturnValue(true);
-        jest.mocked(collectAutomated).mockReturnValue(mockBugReport);
+        vi.mocked(confirm).mockReturnValue(true);
+        vi.mocked(collectAutomated).mockReturnValue(mockBugReport);
         const apiError = new Error('Network timeout');
-        jest.mocked(fileToJira).mockRejectedValue(apiError);
+        vi.mocked(fileToJira).mockRejectedValue(apiError);
 
         await handleBugCreation(mockParseResult, 42, 'main', mockAnalysisReport, mockJiraResource);
 
@@ -163,15 +163,15 @@ describe('handleBugCreation', () => {
     });
 
     it('assigns bugReport description from analysisReport content', async () => {
-        jest.mocked(_jiraEnv).mockReturnValue({
+        vi.mocked(_jiraEnv).mockReturnValue({
             base: 'https://jira.example.com',
             token: 'tok',
             xray: 'xray',
             mode: 'server',
         });
-        jest.mocked(confirm).mockReturnValue(true);
-        jest.mocked(collectAutomated).mockReturnValue({ ...mockBugReport, description: '' });
-        jest.mocked(fileToJira).mockResolvedValue('ECSPOL-789');
+        vi.mocked(confirm).mockReturnValue(true);
+        vi.mocked(collectAutomated).mockReturnValue({ ...mockBugReport, description: '' });
+        vi.mocked(fileToJira).mockResolvedValue('ECSPOL-789');
 
         await handleBugCreation(mockParseResult, 42, 'main', mockAnalysisReport, mockJiraResource);
 
@@ -183,15 +183,15 @@ describe('handleBugCreation', () => {
     });
 
     it('passes pipelineId as string regardless of input type', async () => {
-        jest.mocked(_jiraEnv).mockReturnValue({
+        vi.mocked(_jiraEnv).mockReturnValue({
             base: 'https://jira.example.com',
             token: 'tok',
             xray: 'xray',
             mode: 'server',
         });
-        jest.mocked(confirm).mockReturnValue(true);
-        jest.mocked(collectAutomated).mockReturnValue(mockBugReport);
-        jest.mocked(fileToJira).mockResolvedValue('ECSPOL-ABC');
+        vi.mocked(confirm).mockReturnValue(true);
+        vi.mocked(collectAutomated).mockReturnValue(mockBugReport);
+        vi.mocked(fileToJira).mockResolvedValue('ECSPOL-ABC');
 
         await handleBugCreation(mockParseResult, 7, 'hotfix', mockAnalysisReport, mockJiraResource);
 

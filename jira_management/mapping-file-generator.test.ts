@@ -2,17 +2,17 @@ import fs from 'fs';
 import path from 'path';
 import os from 'os';
 
-jest.mock('../shared/logger', () => ({ rootLogger: { warn: jest.fn() } }));
-jest.mock('../shared/prompt', () => ({ info: jest.fn(), isQuiet: jest.fn().mockReturnValue(true) }));
+vi.mock('../shared/logger', async () => ({ rootLogger: { warn: vi.fn() } }));
+vi.mock('../shared/prompt', async () => ({ info: vi.fn(), isQuiet: vi.fn().mockReturnValue(true) }));
 
-const mockReportsDir = jest.fn();
-jest.mock('../shared/temp-dir', () => ({
+const mockReportsDir = vi.hoisted(() => vi.fn());
+vi.mock('../shared/temp-dir', async () => ({
     reportsDir: mockReportsDir,
 }));
 
-import * as prompt from '../shared/prompt';
-import { nonNull } from '../shared/test-utils';
-import MappingFileGenerator from './mapping-file-generator';
+import * as prompt from '../shared/prompt.js';
+import { nonNull } from '../shared/test-utils.js';
+import MappingFileGenerator from './mapping-file-generator.js';
 
 interface MappingJson {
     project: string;
@@ -32,7 +32,7 @@ describe('MappingFileGenerator', () => {
     beforeEach(() => {
         tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'qa-tools-map-'));
         generator = new MappingFileGenerator();
-        jest.clearAllMocks();
+        vi.clearAllMocks();
         mockReportsDir.mockReturnValue(tmpDir);
     });
 
@@ -40,12 +40,12 @@ describe('MappingFileGenerator', () => {
         fs.rmSync(tmpDir, { recursive: true, force: true });
     });
 
-    it('returns early when tasksId is empty', () => {
+    it('returns early when tasksId is empty', async () => {
         generator.generate('/f.csv', 'P', [], [{ title: '', steps: [] }]);
         expect(fs.readdirSync(tmpDir)).toHaveLength(0);
     });
 
-    it('generate() with valid data creates 3 files with correct content', () => {
+    it('generate() with valid data creates 3 files with correct content', async () => {
         const base = 'my-tests';
         generator.generate(
             '/fake/path/' + base + '.csv',
@@ -82,20 +82,20 @@ describe('MappingFileGenerator', () => {
         expect(txt).toContain('K-200: Logout test');
     });
 
-    it('output directory is created when reportsDir does not exist', () => {
+    it('output directory is created when reportsDir does not exist', async () => {
         mockReportsDir.mockReturnValue(tmpDir);
         generator.generate('/f.csv', 'P', ['K-1'], [{ title: 't', steps: [] }]);
         expect(fs.existsSync(tmpDir)).toBe(true);
         expect(fs.readdirSync(tmpDir)).toHaveLength(3);
     });
 
-    it('test without steps still creates JSON, steps omitted from mapping', () => {
+    it('test without steps still creates JSON, steps omitted from mapping', async () => {
         generator.generate('/f.csv', 'P', ['K-1'], [{ title: 't', description: 'd', steps: [] }]);
         const json = JSON.parse(fs.readFileSync(path.join(tmpDir, 'f-jira-mapping.json'), 'utf8')) as MappingJson;
         expect(nonNull(json.tests[0]).steps).toBeUndefined();
     });
 
-    it('test with precondition includes it in JSON and MD', () => {
+    it('test with precondition includes it in JSON and MD', async () => {
         generator.generate(
             '/f.csv',
             'P',
@@ -114,15 +114,15 @@ describe('MappingFileGenerator', () => {
         expect(md).toContain('must login');
     });
 
-    it('isQuiet returns false — info() is called', () => {
-        const mockIsQuiet = jest.mocked(prompt.isQuiet);
-        const mockInfo = jest.mocked(prompt.info);
+    it('isQuiet returns false — info() is called', async () => {
+        const mockIsQuiet = vi.mocked(prompt.isQuiet);
+        const mockInfo = vi.mocked(prompt.info);
         mockIsQuiet.mockReturnValue(false);
         generator.generate('/f.csv', 'P', ['K-1'], [{ title: 't', steps: [] }]);
         expect(mockInfo).toHaveBeenCalledTimes(2);
     });
 
-    it('extra tasksId beyond tests produce empty-key entries', () => {
+    it('extra tasksId beyond tests produce empty-key entries', async () => {
         generator.generate('/f.csv', 'P', ['KA', 'KB', 'KC'], [{ title: 'only', steps: [] }]);
         const json = JSON.parse(fs.readFileSync(path.join(tmpDir, 'f-jira-mapping.json'), 'utf8')) as MappingJson;
         expect(json.tests).toHaveLength(3);
@@ -133,7 +133,7 @@ describe('MappingFileGenerator', () => {
         expect(txt).toContain('KB: (untitled)');
     });
 
-    it('steps with empty fields default to empty string', () => {
+    it('steps with empty fields default to empty string', async () => {
         generator.generate('/f.csv', 'P', ['KE'], [{ title: 't', steps: [{ fields: {} }] }]);
         const json = JSON.parse(fs.readFileSync(path.join(tmpDir, 'f-jira-mapping.json'), 'utf8')) as MappingJson;
         expect(nonNull(nonNull(nonNull(json.tests[0]).steps)[0]).Action).toBe('');

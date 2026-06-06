@@ -1,13 +1,13 @@
-import { exportTestsCsv, exportTestsJson } from './report-export';
-import type { FlatTest } from './result_parser';
+import { exportTestsCsv, exportTestsJson } from './report-export.js';
+import type { FlatTest } from './result_parser.js';
 
 describe('exportTestsCsv', () => {
-    it('returns header row for empty test list', () => {
+    it('returns header row for empty test list', async () => {
         const csv = exportTestsCsv([]);
         expect(csv).toContain('#,Test,Status,Duration,Suite,Error');
     });
 
-    it('exports basic test data as CSV', () => {
+    it('exports basic test data as CSV', async () => {
         const tests: FlatTest[] = [
             { title: 'Login', state: 'passed', duration: 100 },
             { title: 'Logout', state: 'failed', duration: 200, error: 'Timeout' },
@@ -24,31 +24,31 @@ describe('exportTestsCsv', () => {
         expect(lines[2]).toContain('Timeout');
     });
 
-    it('escapes fields containing commas with quotes', () => {
+    it('escapes fields containing commas with quotes', async () => {
         const tests: FlatTest[] = [{ title: 'Test, with, commas', state: 'passed', duration: 100 }];
         const csv = exportTestsCsv(tests);
         expect(csv).toContain('"Test, with, commas"');
     });
 
-    it('escapes fields containing double quotes', () => {
+    it('escapes fields containing double quotes', async () => {
         const tests: FlatTest[] = [{ title: 'Test says "hello"', state: 'passed', duration: 100 }];
         const csv = exportTestsCsv(tests);
         expect(csv).toContain('"Test says ""hello"""');
     });
 
-    it('includes suite from fullTitle', () => {
+    it('includes suite from fullTitle', async () => {
         const tests: FlatTest[] = [{ title: 'Test', state: 'passed', duration: 100, fullTitle: 'SuiteA > Test' }];
         const csv = exportTestsCsv(tests);
         expect(csv).toContain('SuiteA');
     });
 
-    it('uses custom delimiter when provided', () => {
+    it('uses custom delimiter when provided', async () => {
         const tests: FlatTest[] = [{ title: 'Test', state: 'passed', duration: 100 }];
         const csv = exportTestsCsv(tests, { delimiter: ';' });
         expect(csv).toContain('#;Test;Status;Duration;Suite;Error');
     });
 
-    it('handles test with missing error field', () => {
+    it('handles test with missing error field', async () => {
         const tests: FlatTest[] = [{ title: 'Test', state: 'passed', duration: 100 }];
         const csv = exportTestsCsv(tests);
         expect(csv).toContain('Test,passed,100,,');
@@ -56,20 +56,20 @@ describe('exportTestsCsv', () => {
 });
 
 describe('exportTestsJson', () => {
-    it('returns valid JSON for test list', () => {
+    it('returns valid JSON for test list', async () => {
         const tests: FlatTest[] = [{ title: 'Test', state: 'passed', duration: 100 }];
         const json = exportTestsJson(tests);
         expect(JSON.parse(json)).toHaveLength(1);
         expect(JSON.parse(json)).toContainEqual(expect.objectContaining({ title: 'Test' }));
     });
 
-    it('returns pretty-printed JSON with indentation', () => {
+    it('returns pretty-printed JSON with indentation', async () => {
         const tests: FlatTest[] = [{ title: 'Test', state: 'passed', duration: 100 }];
         const json = exportTestsJson(tests);
         expect(json).toContain('\n  ');
     });
 
-    it('wraps empty array as JSON array', () => {
+    it('wraps empty array as JSON array', async () => {
         const json = exportTestsJson([]);
         expect(json).toBe('[]');
     });

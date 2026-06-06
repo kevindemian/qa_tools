@@ -1,29 +1,29 @@
-jest.mock('./output', () => {
-    const mockOutput = { print: jest.fn() };
+vi.mock('./output', async () => {
+    const mockOutput = { print: vi.fn() };
     return {
-        Output: { isTTY: jest.fn(), isCI: jest.fn(), columns: jest.fn(() => 80), rows: jest.fn(() => 24) },
+        Output: { isTTY: vi.fn(), isCI: vi.fn(), columns: vi.fn(() => 80), rows: vi.fn(() => 24) },
         defaultOutput: mockOutput,
     };
 });
 
-jest.mock('./logger', () => ({
-    rootLogger: { info: jest.fn(), warn: jest.fn(), error: jest.fn(), debug: jest.fn(), writeFileOnly: jest.fn() },
+vi.mock('./logger', async () => ({
+    rootLogger: { info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn(), writeFileOnly: vi.fn() },
     Logger: class {
-        info = jest.fn();
-        error = jest.fn();
-        warn = jest.fn();
-        debug = jest.fn();
-        writeFileOnly = jest.fn();
+        info = vi.fn();
+        error = vi.fn();
+        warn = vi.fn();
+        debug = vi.fn();
+        writeFileOnly = vi.fn();
     },
 }));
 
-jest.mock('./box', () => ({
-    box: jest.fn((lines: string[]) => lines.join('\n')),
-    divider: jest.fn(() => '---'),
-    visibleWidth: jest.fn((s: string) => s.length),
+vi.mock('./box', async () => ({
+    box: vi.fn((lines: string[]) => lines.join('\n')),
+    divider: vi.fn(() => '---'),
+    visibleWidth: vi.fn((s: string) => s.length),
 }));
 
-jest.mock('./palette', () => {
+vi.mock('./palette', async () => {
     const purpleFn = (s: string) => s;
     purpleFn.bold = (s: string) => s;
     return {
@@ -40,12 +40,13 @@ jest.mock('./palette', () => {
     };
 });
 
-jest.mock('./prompt-ui', () => {
-    const actual = jest.requireActual<typeof import('./prompt-ui')>('./prompt-ui');
+vi.mock('./prompt-ui', async () => {
+    const actual = await vi.importActual<typeof import('./prompt-ui.js')>('./prompt-ui');
     return {
         ...actual,
-        getConfig: jest.fn(() => {
-            const ConfigAccessorActual = jest.requireActual<typeof import('./config-accessor')>('./config-accessor');
+        getConfig: vi.fn(async () => {
+            const ConfigAccessorActual =
+                await vi.importActual<typeof import('./config-accessor.js')>('./config-accessor');
             const cfg = ConfigAccessorActual.default.create();
             cfg.get = <T>(key: string): T => {
                 const v: Record<string, unknown> = { quiet: false, autoConfirm: false };
@@ -53,23 +54,23 @@ jest.mock('./prompt-ui', () => {
             };
             return cfg;
         }),
-        warn: jest.fn(),
-        icon: jest.fn(() => '!'),
+        warn: vi.fn(),
+        icon: vi.fn(() => '!'),
     };
 });
 
-jest.mock('readline', () => {
-    const mockRl = { question: jest.fn(), on: jest.fn(), close: jest.fn() };
-    return { createInterface: jest.fn(() => mockRl), _testRl: mockRl };
+vi.mock('readline', async () => {
+    const mockRl = { question: vi.fn(), on: vi.fn(), close: vi.fn() };
+    return { createInterface: vi.fn(() => mockRl), _testRl: mockRl };
 });
 
-jest.mock('@inquirer/input', () => ({ default: jest.fn() }));
-jest.mock('@inquirer/select', () => ({ default: jest.fn() }));
-jest.mock('@inquirer/confirm', () => ({ default: jest.fn() }));
+vi.mock('@inquirer/input', async () => ({ default: vi.fn() }));
+vi.mock('@inquirer/select', async () => ({ default: vi.fn() }));
+vi.mock('@inquirer/confirm', async () => ({ default: vi.fn() }));
 
 import readlineSync from 'readline-sync';
-import ConfigAccessor from './config-accessor';
-import { getConfig, warn, CancelError } from './prompt-ui';
+import ConfigAccessor from './config-accessor.js';
+import { getConfig, warn, CancelError } from './prompt-ui.js';
 import {
     smartPrompt,
     ask,
@@ -79,14 +80,14 @@ import {
     __setInputMod,
     __setConfirmMod,
     SelectChoice,
-} from './prompt-input-inquirer';
+} from './prompt-input-inquirer.js';
 
-const mockReadlineQuestion = jest.spyOn(readlineSync, 'question').mockImplementation(() => '');
-const mockGetConfig = jest.mocked(getConfig);
-const mockWarn = jest.mocked(warn);
+const mockReadlineQuestion = vi.spyOn(readlineSync, 'question').mockImplementation(() => '');
+const mockGetConfig = vi.mocked(getConfig);
+const mockWarn = vi.mocked(warn);
 
-beforeEach(() => {
-    jest.clearAllMocks();
+beforeEach(async () => {
+    vi.clearAllMocks();
     mockReadlineQuestion.mockReturnValue('');
     Object.defineProperty(process.stdin, 'isTTY', { value: true, configurable: true });
     const cfg = ConfigAccessor.create();
@@ -97,11 +98,11 @@ beforeEach(() => {
     __setConfirmMod(null);
 });
 
-afterEach(() => {
+afterEach(async () => {
     Object.defineProperty(process.stdin, 'isTTY', { value: undefined, configurable: true });
 });
 
-describe('smartPrompt', () => {
+describe('smartPrompt', async () => {
     it('returns value on first try', async () => {
         mockReadlineQuestion.mockReturnValue('my value');
         const result = await smartPrompt('Label');
@@ -110,7 +111,7 @@ describe('smartPrompt', () => {
 
     it('triggers help callback on /help', async () => {
         mockReadlineQuestion.mockReturnValueOnce('/help').mockReturnValueOnce('value');
-        const helpCb = jest.fn();
+        const helpCb = vi.fn();
         const result = await smartPrompt('Label', {}, helpCb);
         expect(result).toBe('value');
         expect(helpCb).toHaveBeenCalled();
@@ -123,7 +124,7 @@ describe('smartPrompt', () => {
 
     it('handles CancelError with /help from ask', async () => {
         mockReadlineQuestion.mockReturnValueOnce('/help').mockReturnValueOnce('ok');
-        const helpCb = jest.fn();
+        const helpCb = vi.fn();
         const result = await smartPrompt('Label', {}, helpCb);
         expect(result).toBe('ok');
     });
@@ -149,7 +150,7 @@ describe('smartPrompt', () => {
     });
 });
 
-describe('ask', () => {
+describe('ask', async () => {
     it('returns prompt result when no TTY', async () => {
         mockReadlineQuestion.mockReturnValue('user input');
         const result = await ask('Label');
@@ -168,7 +169,7 @@ describe('ask', () => {
     });
 
     it('works with injected input mod', async () => {
-        __setInputMod({ default: jest.fn().mockResolvedValue('injected') });
+        __setInputMod({ default: vi.fn().mockResolvedValue('injected') });
         mockReadlineQuestion.mockReturnValue('fallback value');
         const result = await ask('Label');
         expect(result).toBe('fallback value');
@@ -180,17 +181,17 @@ describe('ask', () => {
     });
 });
 
-describe('ask with TTY and inquirer mod', () => {
-    beforeEach(() => {
+describe('ask with TTY and inquirer mod', async () => {
+    beforeEach(async () => {
         Object.defineProperty(process.stdout, 'isTTY', { value: true, configurable: true });
     });
 
-    afterEach(() => {
+    afterEach(async () => {
         Object.defineProperty(process.stdout, 'isTTY', { value: undefined, configurable: true });
     });
 
     it('returns inquirer result when mod injected and TTY', async () => {
-        const mockMod = jest.fn().mockResolvedValue('inquirer answer');
+        const mockMod = vi.fn().mockResolvedValue('inquirer answer');
         __setInputMod({ default: mockMod });
         const result = await ask('Label');
         expect(result).toBe('inquirer answer');
@@ -198,7 +199,7 @@ describe('ask with TTY and inquirer mod', () => {
     });
 
     it('falls through to prompt when navigation command from inquirer', async () => {
-        const mockMod = jest.fn().mockResolvedValue('/back');
+        const mockMod = vi.fn().mockResolvedValue('/back');
         __setInputMod({ default: mockMod });
         mockReadlineQuestion.mockReturnValue('backup result');
         const result = await ask('Label');
@@ -206,7 +207,7 @@ describe('ask with TTY and inquirer mod', () => {
     });
 
     it('falls back to prompt when inquirer throws', async () => {
-        const mockMod = jest.fn().mockRejectedValue(new Error('inquirer error'));
+        const mockMod = vi.fn().mockRejectedValue(new Error('inquirer error'));
         __setInputMod({ default: mockMod });
         mockReadlineQuestion.mockReturnValue('fallback answer');
         const result = await ask('Label');
@@ -221,7 +222,7 @@ describe('ask with TTY and inquirer mod', () => {
     });
 
     it('calls theme.answer and theme.message via inquirer input mod', async () => {
-        const mockMod = jest
+        const mockMod = vi
             .fn()
             .mockImplementation(
                 async (opts: {
@@ -238,7 +239,7 @@ describe('ask with TTY and inquirer mod', () => {
     });
 });
 
-describe('askConfirm', () => {
+describe('askConfirm', async () => {
     it('returns confirm result when no TTY', async () => {
         mockReadlineQuestion.mockReturnValue('s');
         const result = await askConfirm('Confirm?');
@@ -253,7 +254,7 @@ describe('askConfirm', () => {
 
     it('returns inquirer result when askConfirm mod injected and TTY', async () => {
         Object.defineProperty(process.stdout, 'isTTY', { value: true, configurable: true });
-        const mockConfirmMod = jest.fn().mockResolvedValue(true);
+        const mockConfirmMod = vi.fn().mockResolvedValue(true);
         __setConfirmMod({ default: mockConfirmMod });
         const result = await askConfirm('Confirm?');
         expect(result).toBe(true);
@@ -263,7 +264,7 @@ describe('askConfirm', () => {
 
     it('falls back to confirm when askConfirm inquirer throws', async () => {
         Object.defineProperty(process.stdout, 'isTTY', { value: true, configurable: true });
-        const mockConfirmMod = jest.fn().mockRejectedValue(new Error('err'));
+        const mockConfirmMod = vi.fn().mockRejectedValue(new Error('err'));
         __setConfirmMod({ default: mockConfirmMod });
         mockReadlineQuestion.mockReturnValue('s');
         const result = await askConfirm('Confirm?');
@@ -281,7 +282,7 @@ describe('askConfirm', () => {
     });
 });
 
-describe('showSelect', () => {
+describe('showSelect', async () => {
     const choices = [
         { name: 'Option 1', value: '1' },
         { name: 'Option 2', value: '2' },
@@ -358,7 +359,7 @@ describe('showSelect', () => {
     });
 });
 
-describe('showSelect with menuMode', () => {
+describe('showSelect with menuMode', async () => {
     it('forces fallback when menuMode is true', async () => {
         mockReadlineQuestion.mockReturnValue('1');
         const result = await showSelect('Choose', [{ name: 'Item A', value: 'a' }], { menuMode: true });
@@ -375,17 +376,17 @@ describe('showSelect with menuMode', () => {
     });
 });
 
-describe('showSelect TTY path', () => {
-    beforeEach(() => {
+describe('showSelect TTY path', async () => {
+    beforeEach(async () => {
         Object.defineProperty(process.stdout, 'isTTY', { value: true, configurable: true });
     });
 
-    afterEach(() => {
+    afterEach(async () => {
         Object.defineProperty(process.stdout, 'isTTY', { value: undefined, configurable: true });
     });
 
     it('returns inquirer result when mod injected and TTY', async () => {
-        const mockSelectMod = jest.fn().mockResolvedValue('selected');
+        const mockSelectMod = vi.fn().mockResolvedValue('selected');
         __setSelectMod({ default: mockSelectMod });
         const result = await showSelect('Choose', [
             { name: 'Item A', value: 'a' },
@@ -396,7 +397,7 @@ describe('showSelect TTY path', () => {
     });
 
     it('handles separator and no-name choices in TTY mode', async () => {
-        const mockSelectMod = jest.fn().mockResolvedValue('val');
+        const mockSelectMod = vi.fn().mockResolvedValue('val');
         __setSelectMod({ default: mockSelectMod });
         const result = await showSelect('Choose', [
             { type: 'separator', line: '---' },
@@ -407,14 +408,14 @@ describe('showSelect TTY path', () => {
     });
 
     it('returns __error__ when inquirer mod throws in TTY mode', async () => {
-        const mockSelectMod = jest.fn().mockRejectedValue(new Error('select error'));
+        const mockSelectMod = vi.fn().mockRejectedValue(new Error('select error'));
         __setSelectMod({ default: mockSelectMod });
         const result = await showSelect('Choose', [{ name: 'Item', value: 'x' }]);
         expect(result).toBe('__error__');
     });
 
     it('calls theme.renderSelected via inquirer select mod', async () => {
-        const mockSelectMod = jest
+        const mockSelectMod = vi
             .fn()
             .mockImplementation(async (opts: { theme: { style: { renderSelected: (s: string) => string } } }) => {
                 opts.theme.style.renderSelected('sel');
@@ -426,21 +427,21 @@ describe('showSelect TTY path', () => {
     });
 
     it('handles separator without line property', async () => {
-        const mockSelectMod = jest.fn().mockResolvedValue('val');
+        const mockSelectMod = vi.fn().mockResolvedValue('val');
         __setSelectMod({ default: mockSelectMod });
         const result = await showSelect('Choose', [{ type: 'separator' as const }, { name: 'Visible', value: 'val' }]);
         expect(result).toBe('val');
     });
 
     it('handles choice without value in TTY mode', async () => {
-        const mockSelectMod = jest.fn().mockResolvedValue('Visible');
+        const mockSelectMod = vi.fn().mockResolvedValue('Visible');
         __setSelectMod({ default: mockSelectMod });
         const result = await showSelect('Choose', [{ name: 'Visible' }]);
         expect(result).toBe('Visible');
     });
 });
 
-describe('showSelect fallback', () => {
+describe('showSelect fallback', async () => {
     it('returns slash command directly when not in NAV_CMDS', async () => {
         mockReadlineQuestion.mockReturnValue('/custom-cmd');
         const result = await showSelect('Choose', [{ name: 'Item A', value: 'a' }]);

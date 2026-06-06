@@ -7,10 +7,10 @@
  *  Sources (both at project root):
  *    - test_steps_template.csv (94 lines, bulk format, 7 example blocks)
  *    - test_cases_template.json (86 lines, 5 example cases, comprehensive) */
-import { success, error, info, ask } from '../../shared/prompt';
+import { success, error, info, ask } from '../../shared/prompt.js';
 import fs from 'fs';
 import path from 'path';
-import type { CommandContext } from './context';
+import type { CommandContext } from './context.js';
 
 const FORMATS = ['CSV', 'JSON'] as const;
 
@@ -43,7 +43,7 @@ async function handler(c: CommandContext): Promise<boolean | void> {
 }
 
 function resolveSource(fmt: string): string {
-    const root = path.resolve(__dirname, '../..');
+    const root = path.resolve(import.meta.dirname, '../..');
     return fmt === 'CSV' ? path.join(root, 'test_steps_template.csv') : path.join(root, 'test_cases_template.json');
 }
 

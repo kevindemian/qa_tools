@@ -5,13 +5,13 @@
  * @module defect-seasonality
  */
 
-import type { FailureClassification } from './metrics';
-import { rootLogger } from './logger';
-import { sanitizeHtml } from './escape';
-import { buildHtmlPage, buildErrorPage } from './html-factory';
-import { buildCss } from './report-styles';
-import { MetricCard, MetricGrid, DataTable } from './primitives';
-import type { TableColumn, TableRow } from './primitives';
+import type { FailureClassification } from './metrics.js';
+import { rootLogger } from './logger.js';
+import { sanitizeHtml } from './escape.js';
+import { buildHtmlPage, buildErrorPage } from './html-factory.js';
+import { buildCss } from './report-styles.js';
+import { MetricCard, MetricGrid, DataTable } from './primitives/index.js';
+import type { TableColumn, TableRow } from './primitives/index.js';
 
 const DAY_NAMES = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'] as const;
 const DAY_SORT_ORDER = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'] as const;

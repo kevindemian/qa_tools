@@ -1,8 +1,8 @@
 /** Jira version management: create, publish, list, and assign fix versions to issues. */
-import { formatDateISO } from '../shared/date-utils';
-import { error as logError, success, info, extractErrorMessage, ProgressBar } from '../shared/prompt';
-import type { Logger } from '../shared/logger';
-import type { VersionData, JiraIssue, SearchResponse, JiraResourceLike } from './jira-resource-types';
+import { formatDateISO } from '../shared/date-utils.js';
+import { error as logError, success, info, extractErrorMessage, ProgressBar } from '../shared/prompt.js';
+import type { Logger } from '../shared/logger.js';
+import type { VersionData, JiraIssue, SearchResponse, JiraResourceLike } from './jira-resource-types.js';
 import {
     noIssuesFoundForVersion,
     noVersionFoundForProject,
@@ -20,8 +20,8 @@ import {
     latestVersions,
     unreleasedVersions as unreleasedVersionsHeader,
     NO_UNRELEASED_VERSIONS,
-} from './constants';
-import type { JsonObject } from '../shared/types';
+} from './constants.js';
+import type { JsonObject } from '../shared/types.js';
 
 function sanitizeJqlValue(value: string): string {
     if (!value || typeof value !== 'string') {

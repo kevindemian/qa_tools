@@ -1,7 +1,7 @@
 /** Update package version and prepend release notes. */
-import { success, warn, ask, printError } from '../../shared/prompt';
-import type { CommandContext } from './context';
-import { NO_TASKS_FOUND_FOR_VERSION } from '../constants';
+import { success, warn, ask, printError } from '../../shared/prompt.js';
+import type { CommandContext } from './context.js';
+import { NO_TASKS_FOUND_FOR_VERSION } from '../constants.js';
 
 async function handler(c: CommandContext): Promise<boolean | void> {
     if (!c.ctx.packageManager) {
@@ -16,7 +16,7 @@ async function handler(c: CommandContext): Promise<boolean | void> {
             warn(NO_TASKS_FOUND_FOR_VERSION);
             return;
         }
-        const pm = c.ctx.packageManager as import('../package_version_manager').default;
+        const pm = c.ctx.packageManager as import('../package_version_manager.js').default;
         const versionNumber = version.split(' ').pop() || '';
         pm.updateReleaseNotes(versionNumber, tasks);
 

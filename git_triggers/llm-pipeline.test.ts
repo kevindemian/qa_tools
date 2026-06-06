@@ -1,6 +1,6 @@
-import { confirm, success } from '../shared/prompt';
-import { analyzeFailuresWithReport } from '../shared/failure-analysis';
-import type { analyzeFailuresWithReport as AnalyzeFailuresFn } from '../shared/failure-analysis';
+import { confirm, success } from '../shared/prompt.js';
+import { analyzeFailuresWithReport } from '../shared/failure-analysis.js';
+import type { analyzeFailuresWithReport as AnalyzeFailuresFn } from '../shared/failure-analysis.js';
 import type {
     confirm as ConfirmFn,
     info as InfoFn,
@@ -9,26 +9,27 @@ import type {
     print as PrintFn,
     printError as PrintErrorFn,
     divider as DividerFn,
-} from '../shared/prompt';
-import { offerPipelineFailureAnalysis } from './llm-pipeline';
+} from '../shared/prompt.js';
+import { offerPipelineFailureAnalysis } from './llm-pipeline.js';
 
-jest.mock('../shared/failure-analysis', () => ({
-    analyzeFailuresWithReport: jest.fn<ReturnType<typeof AnalyzeFailuresFn>, Parameters<typeof AnalyzeFailuresFn>>(),
+vi.mock('../shared/failure-analysis', async () => ({
+    analyzeFailuresWithReport:
+        vi.fn<(...args: Parameters<typeof AnalyzeFailuresFn>) => ReturnType<typeof AnalyzeFailuresFn>>(),
 }));
 
-jest.mock('../shared/prompt', () => ({
-    confirm: jest.fn<ReturnType<typeof ConfirmFn>, Parameters<typeof ConfirmFn>>(),
-    info: jest.fn<ReturnType<typeof InfoFn>, Parameters<typeof InfoFn>>(),
-    warn: jest.fn<ReturnType<typeof WarnFn>, Parameters<typeof WarnFn>>(),
-    success: jest.fn<ReturnType<typeof SuccessFn>, Parameters<typeof SuccessFn>>(),
-    print: jest.fn<ReturnType<typeof PrintFn>, Parameters<typeof PrintFn>>(),
-    printError: jest.fn<ReturnType<typeof PrintErrorFn>, Parameters<typeof PrintErrorFn>>(),
-    divider: jest.fn<ReturnType<typeof DividerFn>, Parameters<typeof DividerFn>>(),
+vi.mock('../shared/prompt', async () => ({
+    confirm: vi.fn<(...args: Parameters<typeof ConfirmFn>) => ReturnType<typeof ConfirmFn>>(),
+    info: vi.fn<(...args: Parameters<typeof InfoFn>) => ReturnType<typeof InfoFn>>(),
+    warn: vi.fn<(...args: Parameters<typeof WarnFn>) => ReturnType<typeof WarnFn>>(),
+    success: vi.fn<(...args: Parameters<typeof SuccessFn>) => ReturnType<typeof SuccessFn>>(),
+    print: vi.fn<(...args: Parameters<typeof PrintFn>) => ReturnType<typeof PrintFn>>(),
+    printError: vi.fn<(...args: Parameters<typeof PrintErrorFn>) => ReturnType<typeof PrintErrorFn>>(),
+    divider: vi.fn<(...args: Parameters<typeof DividerFn>) => ReturnType<typeof DividerFn>>(),
 }));
 
-const mockConfirm = jest.mocked(confirm);
-const mockAnalyzeFailures = jest.mocked(analyzeFailuresWithReport);
-const mockSuccess = jest.mocked(success);
+const mockConfirm = vi.mocked(confirm);
+const mockAnalyzeFailures = vi.mocked(analyzeFailuresWithReport);
+const mockSuccess = vi.mocked(success);
 
 const mockReport = {
     content: '**Analysis:** tests failed due to timeout.',
@@ -48,7 +49,7 @@ describe('offerPipelineFailureAnalysis', () => {
     };
 
     beforeEach(() => {
-        jest.clearAllMocks();
+        vi.clearAllMocks();
     });
 
     it('should skip analysis when no failed tests', async () => {

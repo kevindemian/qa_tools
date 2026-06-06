@@ -2,12 +2,12 @@
  * Tests for flakiness-dashboard — HTML flakiness report using primitives.
  */
 
-import { filterHighFlakiness, generateFlakinessHtml } from './flakiness-dashboard';
-import type { FlakinessEntry } from './metrics';
-import { nonNull } from './test-utils';
+import { filterHighFlakiness, generateFlakinessHtml } from './flakiness-dashboard.js';
+import type { FlakinessEntry } from './metrics.js';
+import { nonNull } from './test-utils.js';
 
 describe('filterHighFlakiness', () => {
-    it('filters entries above threshold', () => {
+    it('filters entries above threshold', async () => {
         const entries: FlakinessEntry[] = [
             { title: 'Very Flaky', passCount: 1, failCount: 9, skipCount: 0, totalRuns: 10, rate: 0.9 },
             { title: 'Stable', passCount: 9, failCount: 1, skipCount: 0, totalRuns: 10, rate: 0.1 },
@@ -20,7 +20,7 @@ describe('filterHighFlakiness', () => {
         expect(nonNull(result[1]).title).toBe('Borderline');
     });
 
-    it('returns empty array when no entries exceed threshold', () => {
+    it('returns empty array when no entries exceed threshold', async () => {
         const entries: FlakinessEntry[] = [
             { title: 'Stable', passCount: 9, failCount: 1, skipCount: 0, totalRuns: 10, rate: 0.1 },
         ];
@@ -28,13 +28,13 @@ describe('filterHighFlakiness', () => {
         expect(filterHighFlakiness(entries, 30)).toEqual([]);
     });
 
-    it('returns empty array for empty input', () => {
+    it('returns empty array for empty input', async () => {
         expect(filterHighFlakiness([], 30)).toEqual([]);
     });
 });
 
 describe('generateFlakinessHtml', () => {
-    it('generates HTML with flaky test table', () => {
+    it('generates HTML with flaky test table', async () => {
         const entries: FlakinessEntry[] = [
             { title: 'Login Flaky', passCount: 5, failCount: 5, skipCount: 0, totalRuns: 10, rate: 0.5 },
         ];
@@ -46,7 +46,7 @@ describe('generateFlakinessHtml', () => {
         expect(html).toContain('Flakiness Dashboard');
     });
 
-    it('shows entries below 50% rate with warn badge', () => {
+    it('shows entries below 50% rate with warn badge', async () => {
         const entries: FlakinessEntry[] = [
             { title: 'Mild', passCount: 7, failCount: 3, skipCount: 0, totalRuns: 10, rate: 0.3 },
         ];
@@ -57,7 +57,7 @@ describe('generateFlakinessHtml', () => {
         expect(html).toContain('data-component="badge"');
     });
 
-    it('shows danger severity when more than 5 high-flakiness entries', () => {
+    it('shows danger severity when more than 5 high-flakiness entries', async () => {
         const entries: FlakinessEntry[] = Array.from({ length: 7 }, (_, i) => ({
             title: `Flaky#${i}`,
             passCount: 1,
@@ -72,7 +72,7 @@ describe('generateFlakinessHtml', () => {
         expect(html).toContain('7');
     });
 
-    it('shows no-threshold message when all below threshold', () => {
+    it('shows no-threshold message when all below threshold', async () => {
         const entries: FlakinessEntry[] = [
             { title: 'Stable', passCount: 9, failCount: 1, skipCount: 0, totalRuns: 10, rate: 0.1 },
         ];
@@ -81,12 +81,12 @@ describe('generateFlakinessHtml', () => {
         expect(html).toContain('No tests exceed');
     });
 
-    it('uses custom title', () => {
+    it('uses custom title', async () => {
         const html = generateFlakinessHtml([], 'My Dashboard');
         expect(html).toContain('My Dashboard');
     });
 
-    it('escapes HTML in test titles', () => {
+    it('escapes HTML in test titles', async () => {
         const entries: FlakinessEntry[] = [
             { title: '<script>alert(1)</script>', passCount: 5, failCount: 5, skipCount: 0, totalRuns: 10, rate: 0.5 },
         ];
@@ -96,7 +96,7 @@ describe('generateFlakinessHtml', () => {
         expect(html).not.toContain('<script>alert');
     });
 
-    it('includes dark mode theme toggle script', () => {
+    it('includes dark mode theme toggle script', async () => {
         const entries: FlakinessEntry[] = [
             { title: 'Test', passCount: 5, failCount: 5, skipCount: 0, totalRuns: 10, rate: 0.5 },
         ];
@@ -105,7 +105,7 @@ describe('generateFlakinessHtml', () => {
         expect(html).toContain('prefers-color-scheme');
     });
 
-    it('includes dark mode CSS selectors', () => {
+    it('includes dark mode CSS selectors', async () => {
         const html = generateFlakinessHtml([]);
         expect(html).toContain('--color-surface-page');
         expect(html).toContain('html.dark');

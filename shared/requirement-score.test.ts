@@ -2,14 +2,14 @@
  * Tests for requirement-score — Requirement Quality Score.
  */
 
-import * as reportStyles from './report-styles';
-import { calculateRequirementScores, generateRequirementScoreHtml } from './requirement-score';
-import type { RequirementScoreResult } from './requirement-score';
-import type { AiGenerationRecord } from './types/llm';
-import { nullAs, undefinedAs } from './test-utils';
+import * as reportStyles from './report-styles.js';
+import { calculateRequirementScores, generateRequirementScoreHtml } from './requirement-score.js';
+import type { RequirementScoreResult } from './requirement-score.js';
+import type { AiGenerationRecord } from './types/llm.js';
+import { nullAs, undefinedAs } from './test-utils.js';
 
-jest.mock('./logger', () => ({
-    rootLogger: { error: jest.fn(), warn: jest.fn(), info: jest.fn(), child: jest.fn().mockReturnThis() },
+vi.mock('./logger', async () => ({
+    rootLogger: { error: vi.fn(), warn: vi.fn(), info: vi.fn(), child: vi.fn().mockReturnThis() },
 }));
 
 function makeRecord(overrides?: Partial<AiGenerationRecord>): AiGenerationRecord {
@@ -73,7 +73,7 @@ function makeRecords(): AiGenerationRecord[] {
 }
 
 describe('calculateRequirementScores', () => {
-    it('returns empty result for null input', () => {
+    it('returns empty result for null input', async () => {
         const result = calculateRequirementScores(nullAs<AiGenerationRecord[]>());
         expect(result.totalRequirements).toBe(0);
         expect(result.overallScore).toBe(0);
@@ -81,53 +81,53 @@ describe('calculateRequirementScores', () => {
         expect(result.entries).toEqual([]);
     });
 
-    it('returns empty result for undefined input', () => {
+    it('returns empty result for undefined input', async () => {
         const result = calculateRequirementScores(undefinedAs<AiGenerationRecord[]>());
         expect(result.totalRequirements).toBe(0);
         expect(result.overallScore).toBe(0);
         expect(result.entries).toEqual([]);
     });
 
-    it('returns empty result for empty array', () => {
+    it('returns empty result for empty array', async () => {
         const result = calculateRequirementScores([]);
         expect(result.totalRequirements).toBe(0);
         expect(result.overallScore).toBe(0);
         expect(result.entries).toEqual([]);
     });
 
-    it('calculates scores for multiple records', () => {
+    it('calculates scores for multiple records', async () => {
         const result = calculateRequirementScores(makeRecords());
         expect(result.totalRequirements).toBe(3);
         expect(result.entries).toHaveLength(3);
         expect(result.totalGenerated).toBe(6);
     });
 
-    it('computes acceptance rate correctly', () => {
+    it('computes acceptance rate correctly', async () => {
         const result = calculateRequirementScores(makeRecords());
         const req3 = result.entries.find((e) => e.requirementId === 'req-003');
         expect(req3?.acceptanceRate).toBe(100);
     });
 
-    it('computes overall score correctly', () => {
+    it('computes overall score correctly', async () => {
         const result = calculateRequirementScores(makeRecords());
         expect(result.overallScore).toBeGreaterThan(0);
         expect(result.overallScore).toBeLessThanOrEqual(100);
     });
 
-    it('sorts entries by score descending', () => {
+    it('sorts entries by score descending', async () => {
         const result = calculateRequirementScores(makeRecords());
         for (let i = 1; i < result.entries.length; i++) {
             expect(result.entries[i]?.score).toBeLessThanOrEqual(result.entries[i - 1]?.score ?? 100);
         }
     });
 
-    it('assigns correct grade for score ranges', () => {
+    it('assigns correct grade for score ranges', async () => {
         const records = [makeRecord({ id: 'a', generatedTests: [{ title: 'T1', preConditions: [], stepCount: 1 }] })];
         const result = calculateRequirementScores(records);
         expect(result.entries[0]?.scoreGrade).toBeDefined();
     });
 
-    it('handles records without feedback', () => {
+    it('handles records without feedback', async () => {
         const records: AiGenerationRecord[] = [
             {
                 id: 'no-feedback',
@@ -145,7 +145,7 @@ describe('calculateRequirementScores', () => {
         expect(result.entries[0]?.acceptanceRate).toBe(0);
     });
 
-    it('handles records with empty feedback', () => {
+    it('handles records with empty feedback', async () => {
         const records = [makeRecord({ feedback: [] })];
         const result = calculateRequirementScores(records);
         expect(result.totalRequirements).toBe(1);
@@ -153,19 +153,19 @@ describe('calculateRequirementScores', () => {
         expect(result.entries[0]?.acceptanceRate).toBe(0);
     });
 
-    it('counts kept, modified, and deleted correctly', () => {
+    it('counts kept, modified, and deleted correctly', async () => {
         const result = calculateRequirementScores(makeRecords());
         expect(result.totalKept).toBeGreaterThan(0);
         expect(result.totalModified).toBeGreaterThan(0);
         expect(result.totalDeleted).toBeGreaterThan(0);
     });
 
-    it('sets timestamp to valid ISO string', () => {
+    it('sets timestamp to valid ISO string', async () => {
         const result = calculateRequirementScores([]);
         expect(result.timestamp).toMatch(/^\d{4}-\d{2}-\d{2}T/);
     });
 
-    it('truncates long user stories to 120 chars', () => {
+    it('truncates long user stories to 120 chars', async () => {
         const longStory = 'A'.repeat(200);
         const records = [makeRecord({ userStory: longStory })];
         const result = calculateRequirementScores(records);
@@ -215,23 +215,23 @@ describe('generateRequirementScoreHtml', () => {
         };
     }
 
-    it('generates valid HTML page', () => {
+    it('generates valid HTML page', async () => {
         const html = generateRequirementScoreHtml(makeResult());
         expect(html).toContain('<!DOCTYPE html>');
         expect(html).toContain('</html>');
     });
 
-    it('returns error page for null result', () => {
+    it('returns error page for null result', async () => {
         const html = generateRequirementScoreHtml(nullAs<RequirementScoreResult>());
         expect(html).toContain('Requirement Score Report Error');
     });
 
-    it('returns error page for undefined result', () => {
+    it('returns error page for undefined result', async () => {
         const html = generateRequirementScoreHtml(undefinedAs<RequirementScoreResult>());
         expect(html).toContain('Requirement Score Report Error');
     });
 
-    it('shows summary cards with score data', () => {
+    it('shows summary cards with score data', async () => {
         const html = generateRequirementScoreHtml(makeResult());
         expect(html).toContain('Requirements');
         expect(html).toContain('Overall Score');
@@ -243,7 +243,7 @@ describe('generateRequirementScoreHtml', () => {
         expect(html).toContain('5');
     });
 
-    it('includes requirement entries in data table', () => {
+    it('includes requirement entries in data table', async () => {
         const html = generateRequirementScoreHtml(makeResult());
         expect(html).toContain('data-component="table-wrapper"');
         expect(html).toContain('data-component="data-table"');
@@ -251,7 +251,7 @@ describe('generateRequirementScoreHtml', () => {
         expect(html).toContain('Password reset flow');
     });
 
-    it('shows no-data message when entries is empty', () => {
+    it('shows no-data message when entries is empty', async () => {
         const result = makeResult({
             entries: [],
             totalRequirements: 0,
@@ -268,39 +268,39 @@ describe('generateRequirementScoreHtml', () => {
         expect(html).not.toContain('data-component="data-table"');
     });
 
-    it('uses custom title', () => {
+    it('uses custom title', async () => {
         const html = generateRequirementScoreHtml(makeResult({ entries: [] }), 'My Score Report');
         expect(html).toContain('<title>My Score Report</title>');
         expect(html).toContain('<h1>My Score Report</h1>');
     });
 
-    it('defaults title to Requirement Quality Score', () => {
+    it('defaults title to Requirement Quality Score', async () => {
         const html = generateRequirementScoreHtml(makeResult({ entries: [] }));
         expect(html).toContain('<title>Requirement Quality Score</title>');
         expect(html).toContain('<h1>Requirement Quality Score</h1>');
     });
 
-    it('includes theme and dark mode support', () => {
+    it('includes theme and dark mode support', async () => {
         const html = generateRequirementScoreHtml(makeResult({ entries: [] }));
         expect(html).toContain('qa-report-theme');
         expect(html).toContain('prefers-color-scheme');
         expect(html).toContain('html.dark');
     });
 
-    it('includes footer', () => {
+    it('includes footer', async () => {
         const html = generateRequirementScoreHtml(makeResult());
         expect(html).toContain('Requirement Quality Score');
     });
 
-    it('shows data-component attributes from primitives', () => {
+    it('shows data-component attributes from primitives', async () => {
         const html = generateRequirementScoreHtml(makeResult());
         expect(html).toContain('data-component="metric-grid"');
         expect(html).toContain('data-component="metric-card"');
         expect(html).toContain('data-component="table-wrapper"');
     });
 
-    it('returns error page when buildCss throws', () => {
-        const spy = jest.spyOn(reportStyles, 'buildCss').mockImplementation(() => {
+    it('returns error page when buildCss throws', async () => {
+        const spy = vi.spyOn(reportStyles, 'buildCss').mockImplementation(() => {
             throw new Error('CSS build failure');
         });
         try {

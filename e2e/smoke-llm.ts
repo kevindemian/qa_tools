@@ -1,7 +1,7 @@
-import type { GitProvider } from '../shared/types';
-import { createGitHubSmokeManager } from './smoke-shared';
-import { generatePrDescription } from '../git_triggers/ai-pr-desc';
-import Config from '../shared/config';
+import type { GitProvider } from '../shared/types.js';
+import { createGitHubSmokeManager } from './smoke-shared.js';
+import { generatePrDescription } from '../git_triggers/ai-pr-desc.js';
+import Config from '../shared/config.js';
 
 function hasLlmKeys(): boolean {
     return !!(Config.get('llmFastApiKey') || Config.get('llmApiKey'));

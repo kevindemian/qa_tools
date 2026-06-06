@@ -5,13 +5,13 @@
  * @module suite-optimization
  */
 
-import { sanitizeHtml } from './escape';
-import { buildHtmlPage } from './html-factory';
-import { Container, Section } from './primitives/layout';
-import { MetricCard, MetricGrid } from './primitives/card';
-import { Badge, SeverityBadge } from './primitives/badge';
-import { DataTable, type TableColumn, type TableRow } from './primitives/table';
-import { buildCss } from './report-styles';
+import { sanitizeHtml } from './escape.js';
+import { buildHtmlPage } from './html-factory.js';
+import { Container, Section } from './primitives/layout.js';
+import { MetricCard, MetricGrid } from './primitives/card.js';
+import { Badge, SeverityBadge } from './primitives/badge.js';
+import { DataTable, type TableColumn, type TableRow } from './primitives/table.js';
+import { buildCss } from './report-styles.js';
 
 export type OptimizationAction = 'parallelize' | 'quarantine' | 'speed_up' | 'split' | 'remove_wait' | 'none';
 

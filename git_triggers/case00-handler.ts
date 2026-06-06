@@ -3,9 +3,9 @@
  * GitLab CI configs, project config files, and git hooks.
  * Previously located in jira_management/commands/case00.ts — moved here
  * during Sprint N UX restructuring. */
-import { title, info, divider, printError } from '../shared/prompt';
-import { pushHistory } from './session-state';
-import { main as setupMain } from '../setup/main';
+import { title, info, divider, printError } from '../shared/prompt.js';
+import { pushHistory } from './session-state.js';
+import { main as setupMain } from '../setup/main.js';
 
 /** Execute the CI/CD setup wizard and record the result in session history.
  * @returns false on success (continues the menu loop), false also on error

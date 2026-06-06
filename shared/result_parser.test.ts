@@ -1,7 +1,7 @@
 import path from 'path';
 import fs from 'fs';
 import os from 'os';
-import { nonNull, nullAs } from './test-utils';
+import { nonNull, nullAs } from './test-utils.js';
 import {
     parseMochawesome,
     parseCypressResults,
@@ -10,7 +10,7 @@ import {
     parseTestResultsFile,
     isCtrfFormat,
     MochawesomeData,
-} from './result_parser';
+} from './result_parser.js';
 
 const SAMPLE_MOCHAWESOME = {
     stats: { passes: 2, failures: 1, pending: 1, tests: 4, duration: 5000 },
@@ -45,7 +45,7 @@ const SAMPLE_MOCHAWESOME = {
 };
 
 describe('parseMochawesome', () => {
-    it('extracts all tests flat from nested suites', () => {
+    it('extracts all tests flat from nested suites', async () => {
         const result = parseMochawesome(SAMPLE_MOCHAWESOME);
         expect(result.tests).toHaveLength(4);
         expect(nonNull(result.tests[0]).title).toBe('TC01 - Login valido');
@@ -56,7 +56,7 @@ describe('parseMochawesome', () => {
         expect(nonNull(result.tests[3]).state).toBe('passed');
     });
 
-    it('returns correct stats', () => {
+    it('returns correct stats', async () => {
         const result = parseMochawesome(SAMPLE_MOCHAWESOME);
         expect(result.stats.passed).toBe(2);
         expect(result.stats.failed).toBe(1);
@@ -65,18 +65,18 @@ describe('parseMochawesome', () => {
         expect(result.stats.duration).toBe(5000);
     });
 
-    it('returns empty for null input', () => {
+    it('returns empty for null input', async () => {
         const result = parseMochawesome(nullAs<MochawesomeData>());
         expect(result.tests).toEqual([]);
         expect(result.stats.total).toBe(0);
     });
 
-    it('returns empty for input without results', () => {
+    it('returns empty for input without results', async () => {
         const result = parseMochawesome({});
         expect(result.tests).toEqual([]);
     });
 
-    it('maps pending state to skipped', () => {
+    it('maps pending state to skipped', async () => {
         const input = {
             results: [{ suites: [{ tests: [{ title: 'X', state: 'pending', duration: 0 }] }] }],
         };
@@ -84,7 +84,7 @@ describe('parseMochawesome', () => {
         expect(nonNull(result.tests[0]).state).toBe('skipped');
     });
 
-    it('_flattenTests skips suite without tests and processes nested suites', () => {
+    it('_flattenTests skips suite without tests and processes nested suites', async () => {
         const input = {
             results: [
                 {
@@ -106,7 +106,7 @@ describe('parseMochawesome', () => {
         expect(nonNull(result.tests[0]).title).toBe('TC01');
     });
 
-    it('defaults missing state to pending (mapped to skipped)', () => {
+    it('defaults missing state to pending (mapped to skipped)', async () => {
         const input = {
             results: [{ suites: [{ tests: [{ title: 'TC01' }] }] }],
         };
@@ -114,7 +114,7 @@ describe('parseMochawesome', () => {
         expect(nonNull(result.tests[0]).state).toBe('skipped');
     });
 
-    it('defaults missing title to empty string and missing duration to 0', () => {
+    it('defaults missing title to empty string and missing duration to 0', async () => {
         const input = {
             results: [{ suites: [{ tests: [{ state: 'passed' }] }] }],
         };
@@ -123,7 +123,7 @@ describe('parseMochawesome', () => {
         expect(nonNull(result.tests[0]).duration).toBe(0);
     });
 
-    it('handles result without suites property', () => {
+    it('handles result without suites property', async () => {
         const input = {
             results: [{}],
         };
@@ -148,20 +148,20 @@ describe('parseCypressResults', () => {
         }
     });
 
-    it('reads JSON file and parses it', () => {
+    it('reads JSON file and parses it', async () => {
         const result = parseCypressResults(tmpFile);
         expect(result.tests).toHaveLength(4);
         expect(result.stats.passed).toBe(2);
     });
 
-    it('returns error object for nonexistent file', () => {
+    it('returns error object for nonexistent file', async () => {
         const result = parseCypressResults('/nonexistent-' + Date.now() + '.json');
         expect(result.error).toContain('Arquivo não encontrado');
         expect(result.stats.total).toBe(0);
         expect(result.tests).toEqual([]);
     });
 
-    it('returns error for invalid JSON content', () => {
+    it('returns error for invalid JSON content', async () => {
         const invalidFile = tmpFile + '-invalid.json';
         fs.writeFileSync(invalidFile, 'not json', 'utf8');
         const result = parseCypressResults(invalidFile);
@@ -195,22 +195,22 @@ const CTRF_EMPTY = {
 };
 
 describe('isCtrfFormat', () => {
-    it('detects CTRF format by results.tests + results.summary', () => {
+    it('detects CTRF format by results.tests + results.summary', async () => {
         expect(isCtrfFormat(CTRF_SAMPLE)).toBe(true);
     });
 
-    it('rejects null/undefined', () => {
+    it('rejects null/undefined', async () => {
         expect(isCtrfFormat(null)).toBe(false);
         expect(isCtrfFormat(undefined)).toBe(false);
     });
 
-    it('rejects plain object without results.tests', () => {
+    it('rejects plain object without results.tests', async () => {
         expect(isCtrfFormat({})).toBe(false);
     });
 });
 
 describe('parseCtrfResults', () => {
-    it('extracts all tests from CTRF format', () => {
+    it('extracts all tests from CTRF format', async () => {
         const result = parseCtrfResults(CTRF_SAMPLE);
         expect(result.tests).toHaveLength(3);
         expect(nonNull(result.tests[0]).title).toBe('Login');
@@ -218,12 +218,12 @@ describe('parseCtrfResults', () => {
         expect(nonNull(result.tests[0]).fullTitle).toBe('Auth > Login');
     });
 
-    it('captures error message from CTRF format', () => {
+    it('captures error message from CTRF format', async () => {
         const result = parseCtrfResults(CTRF_SAMPLE);
         expect(nonNull(result.tests[1]).error).toBe('Assertion failed');
     });
 
-    it('uses CTRF summary stats when available', () => {
+    it('uses CTRF summary stats when available', async () => {
         const result = parseCtrfResults(CTRF_SAMPLE);
         expect(result.stats.passed).toBe(2);
         expect(result.stats.failed).toBe(1);
@@ -231,12 +231,12 @@ describe('parseCtrfResults', () => {
         expect(result.stats.total).toBe(3);
     });
 
-    it('returns empty for missing tests array', () => {
+    it('returns empty for missing tests array', async () => {
         const result = parseCtrfResults(CTRF_EMPTY);
         expect(result.tests).toEqual([]);
     });
 
-    it('maps pending/other status to skipped', () => {
+    it('maps pending/other status to skipped', async () => {
         const input = {
             results: {
                 summary: { tests: 2, passed: 0, failed: 0, skipped: 2, pending: 1, other: 1, start: 0, stop: 0 },
@@ -250,7 +250,7 @@ describe('parseCtrfResults', () => {
         expect(result.tests.every((t: { state: string }) => t.state === 'skipped')).toBe(true);
     });
 
-    it('maps explicit skipped status correctly', () => {
+    it('maps explicit skipped status correctly', async () => {
         const input = {
             results: {
                 summary: { tests: 1, passed: 0, failed: 0, skipped: 1, pending: 0, other: 0, start: 0, stop: 0 },
@@ -261,7 +261,7 @@ describe('parseCtrfResults', () => {
         expect(nonNull(result.tests[0]).state).toBe('skipped');
     });
 
-    it('falls back to computed stats when summary fields are missing', () => {
+    it('falls back to computed stats when summary fields are missing', async () => {
         const input = {
             results: {
                 summary: { tests: 2, passed: 1, failed: 1, skipped: 0, pending: 0, other: 0, start: 0, stop: 0 },
@@ -279,13 +279,13 @@ describe('parseCtrfResults', () => {
 });
 
 describe('parseTestResults (dispatch)', () => {
-    it('routes CTRF format to parseCtrfResults', () => {
+    it('routes CTRF format to parseCtrfResults', async () => {
         const result = parseTestResults(CTRF_SAMPLE);
         expect(result.tests).toHaveLength(3);
         expect(result.stats.passed).toBe(2);
     });
 
-    it('routes Mochawesome format to parseMochawesome', () => {
+    it('routes Mochawesome format to parseMochawesome', async () => {
         const mochaInput = {
             stats: { duration: 100 },
             results: [{ suites: [{ tests: [{ title: 'Mocha Test', state: 'passed', duration: 100 }] }] }],
@@ -295,41 +295,41 @@ describe('parseTestResults (dispatch)', () => {
         expect(nonNull(result.tests[0]).title).toBe('Mocha Test');
     });
 
-    it('returns empty for unknown format', () => {
+    it('returns empty for unknown format', async () => {
         const result = parseTestResults({ unexpected: true });
         expect(result.tests).toEqual([]);
     });
 
-    it('returns empty for null input', () => {
+    it('returns empty for null input', async () => {
         expect(parseTestResults(null).tests).toEqual([]);
     });
 
-    it('returns empty for undefined input', () => {
+    it('returns empty for undefined input', async () => {
         expect(parseTestResults(undefined).tests).toEqual([]);
     });
 
-    it('returns empty for empty object', () => {
+    it('returns empty for empty object', async () => {
         expect(parseTestResults({}).tests).toEqual([]);
     });
 });
 
 describe('parseTestResultsFile', () => {
-    it('reads CTRF file and parses it', () => {
-        const fixtures = path.join(__dirname, '../e2e/fixtures');
+    it('reads CTRF file and parses it', async () => {
+        const fixtures = path.join(import.meta.dirname, '../e2e/fixtures');
         const result = parseTestResultsFile(path.join(fixtures, 'ctrf-report.json'));
         expect(result.tests).toHaveLength(4);
         expect(result.stats.passed).toBe(2);
         expect(result.stats.failed).toBe(1);
     });
 
-    it('reads Mochawesome file via dispatch', () => {
-        const fixtures = path.join(__dirname, '../e2e/fixtures');
+    it('reads Mochawesome file via dispatch', async () => {
+        const fixtures = path.join(import.meta.dirname, '../e2e/fixtures');
         const result = parseTestResultsFile(path.join(fixtures, 'mochawesome.json'));
         expect(result.tests).toHaveLength(3);
         expect(result.stats.passed).toBe(2);
     });
 
-    it('returns error for nonexistent file', () => {
+    it('returns error for nonexistent file', async () => {
         const result = parseTestResultsFile('/nonexistent-' + Date.now() + '.json');
         expect(result.error).toContain('Arquivo não encontrado');
     });

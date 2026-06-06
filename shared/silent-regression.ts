@@ -7,12 +7,12 @@
  * @module silent-regression
  */
 
-import { sanitizeHtml } from './escape';
-import { buildHtmlPage, buildErrorPage } from './html-factory';
-import { buildCss } from './report-styles';
-import { MetricCard, MetricGrid, DataTable, Badge } from './primitives';
-import type { TableColumn, TableRow } from './primitives';
-import { rootLogger } from './logger';
+import { sanitizeHtml } from './escape.js';
+import { buildHtmlPage, buildErrorPage } from './html-factory.js';
+import { buildCss } from './report-styles.js';
+import { MetricCard, MetricGrid, DataTable, Badge } from './primitives/index.js';
+import type { TableColumn, TableRow } from './primitives/index.js';
+import { rootLogger } from './logger.js';
 
 export interface RegressionEntry {
     title: string;

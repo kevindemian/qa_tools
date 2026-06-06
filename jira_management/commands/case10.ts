@@ -1,6 +1,6 @@
 /** Set the git working directory for version management. */
-import { success, ask } from '../../shared/prompt';
-import type { CommandContext } from './context';
+import { success, ask } from '../../shared/prompt.js';
+import type { CommandContext } from './context.js';
 
 async function handler(c: CommandContext): Promise<boolean | void> {
     const dir = await ask('Caminho do diretório git');

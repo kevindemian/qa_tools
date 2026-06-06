@@ -1,4 +1,4 @@
-jest.mock('../shared/prompt', () => {
+vi.mock('../shared/prompt', () => {
     class CancelError extends Error {
         constructor(msg?: string) {
             super(msg);
@@ -6,116 +6,124 @@ jest.mock('../shared/prompt', () => {
         }
     }
     return {
-        print: jest.fn(),
-        warn: jest.fn(),
-        info: jest.fn(),
-        helpLine: jest.fn(),
-        title: jest.fn(),
-        divider: jest.fn(),
-        prompt: jest.fn().mockReturnValue('0'),
-        printError: jest.fn(),
-        showSelect: jest.fn().mockReturnValue('0'),
-        tableView: jest.fn(),
+        print: vi.fn(),
+        warn: vi.fn(),
+        info: vi.fn(),
+        helpLine: vi.fn(),
+        title: vi.fn(),
+        divider: vi.fn(),
+        prompt: vi.fn().mockReturnValue('0'),
+        printError: vi.fn(),
+        showSelect: vi.fn().mockReturnValue('0'),
+        tableView: vi.fn(),
         CancelError,
     };
 });
 
-jest.mock('../shared/show-docs', () => ({ showDocs: jest.fn(() => Promise.resolve()) }));
-jest.mock('../shared/config', () => ({
-    jiraBaseUrl: '',
-    jiraPersonalToken: '',
-    xrayBaseUrl: '',
-    jiraProject: '',
-    debug: false,
-    autoChoice: '',
-    autoConfirm: false,
-    quiet: false,
-    cypressProjectPath: '',
-    dryRun: false,
-    get: jest.fn().mockReturnValue(''),
+vi.mock('../shared/show-docs', () => ({ showDocs: vi.fn(() => Promise.resolve()) }));
+vi.mock('../shared/config', () => ({
+    default: {
+        jiraBaseUrl: '',
+        jiraPersonalToken: '',
+        xrayBaseUrl: '',
+        jiraProject: '',
+        debug: false,
+        autoChoice: '',
+        autoConfirm: false,
+        quiet: false,
+        cypressProjectPath: '',
+        dryRun: false,
+        get: vi.fn().mockReturnValue(''),
+    },
 }));
 
-jest.mock('../shared/state', () => ({
-    load: jest.fn().mockReturnValue({}),
-    loadTypedState: jest.fn().mockReturnValue({}),
-    update: jest.fn(),
-    getStatePath: jest.fn().mockReturnValue('/tmp/state.json'),
+vi.mock('../shared/state', () => ({
+    load: vi.fn().mockReturnValue({}),
+    loadTypedState: vi.fn().mockReturnValue({}),
+    update: vi.fn(),
+    getStatePath: vi.fn().mockReturnValue('/tmp/state.json'),
 }));
 
-import { createMockRootLogger } from '../shared/test-utils';
+const mockRootLogger = vi.hoisted(() => ({
+    info: vi.fn(),
+    error: vi.fn(),
+    warn: vi.fn(),
+    debug: vi.fn(),
+    filePath: undefined as string | undefined,
+    writeFileOnly: vi.fn(),
+    file: vi.fn(),
+    writeSplash: vi.fn(),
+    updateSplashStep: vi.fn(),
+    child: vi.fn().mockReturnThis(),
+}));
 
-const mockRootLogger = {
-    ...createMockRootLogger(),
-    child: jest.fn().mockReturnThis(),
-};
-
-jest.mock('../shared/logger', () => ({
+vi.mock('../shared/logger', () => ({
     rootLogger: mockRootLogger,
-    Logger: jest.fn(),
+    Logger: vi.fn(),
 }));
 
-jest.mock('../shared/cli_base', () => ({
-    mask: jest.fn((v: string) => (v ? v.slice(0, 4) + '****' : '')),
-    createValidateEnv: jest.fn().mockReturnValue(jest.fn()),
-    setupSigint: jest.fn(),
-    printSessionSummary: jest.fn(),
-    sanitizeUrl: jest.fn((url: string) => url),
+vi.mock('../shared/cli_base', () => ({
+    mask: vi.fn((v: string) => (v ? v.slice(0, 4) + '****' : '')),
+    createValidateEnv: vi.fn().mockReturnValue(vi.fn()),
+    setupSigint: vi.fn(),
+    printSessionSummary: vi.fn(),
+    sanitizeUrl: vi.fn((url: string) => url),
 }));
 
-jest.mock('../shared/session-context', () => ({
-    SessionContext: jest.fn().mockImplementation(() => ({
+vi.mock('../shared/session-context', () => ({
+    SessionContext: vi.fn().mockImplementation(() => ({
         project_name: 'TESTPROJ',
         sessionCounters: [] as Array<{ status: string }>,
         results: [] as Array<{ status: string }>,
         lastOperation: '',
         git_directory: '/tmp',
-        buildContextLine: jest.fn().mockReturnValue('TESTPROJ'),
+        buildContextLine: vi.fn().mockReturnValue('TESTPROJ'),
         isBusy: false,
-        createPackageManager: jest.fn(),
+        createPackageManager: vi.fn(),
     })),
 }));
 
-jest.mock('./commands', () => ({
-    getHandler: jest.fn().mockReturnValue(null),
+vi.mock('./commands', () => ({
+    getHandler: vi.fn().mockReturnValue(null),
 }));
 
-jest.mock('child_process', () => ({
-    spawn: jest.fn().mockReturnValue({
-        on: jest.fn((_event: string, handler: (...args: unknown[]) => void) => {
+vi.mock('child_process', () => ({
+    spawn: vi.fn().mockReturnValue({
+        on: vi.fn((_event: string, handler: (...args: unknown[]) => void) => {
             if (_event === 'exit') handler(0);
         }),
-        unref: jest.fn(),
+        unref: vi.fn(),
     }),
-    spawnSync: jest.fn().mockReturnValue({ error: null, status: 0, stdout: '', stderr: '' }),
-    execSync: jest.fn().mockImplementation(() => {
+    spawnSync: vi.fn().mockReturnValue({ error: null, status: 0, stdout: '', stderr: '' }),
+    execSync: vi.fn().mockImplementation(() => {
         throw new Error('not mocked');
     }),
 }));
 
-jest.mock('../shared/open', () => ({
-    getDocsOutputDir: jest.fn().mockReturnValue('/tmp/qa_docs_test'),
-    openWithFallback: jest.fn(),
+vi.mock('../shared/open', () => ({
+    getDocsOutputDir: vi.fn().mockReturnValue('/tmp/qa_docs_test'),
+    openWithFallback: vi.fn(),
 }));
 
-import { warn, helpLine, title, prompt } from '../shared/prompt';
+import { warn, helpLine, title, prompt } from '../shared/prompt.js';
 
-import { showHelp, showHelpLoop, handleSpecialInput, dispatchChoice } from './ui-helpers';
-import { _configHint, buildMenuChoices, type MenuChoice } from './menu-data';
-import { createMockContext } from '../shared/test-utils/factories/context-factory';
+import { showHelp, showHelpLoop, handleSpecialInput, dispatchChoice } from './ui-helpers.js';
+import { _configHint, buildMenuChoices, type MenuChoice } from './menu-data.js';
+import { createMockContext } from '../shared/test-utils/factories/context-factory.js';
 
-beforeAll(() => {
-    const openModule = jest.mocked(jest.requireMock<typeof import('../shared/open')>('../shared/open'));
-    if (!jest.isMockFunction(openModule.openWithFallback)) {
+beforeAll(async () => {
+    const openModule = vi.mocked(await vi.importMock<typeof import('../shared/open.js')>('../shared/open'));
+    if (!vi.isMockFunction(openModule.openWithFallback)) {
         throw new Error('Guard FAILED: openWithFallback is NOT mocked. Browser would open!');
     }
-    const cp = jest.mocked(jest.requireMock<typeof import('child_process')>('child_process'));
-    if (!jest.isMockFunction(cp.spawn)) {
+    const cp = vi.mocked(await vi.importMock<typeof import('child_process')>('child_process'));
+    if (!vi.isMockFunction(cp.spawn)) {
         throw new Error('Guard FAILED: child_process.spawn is NOT mocked. Browser would open!');
     }
 });
 
 beforeEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
 });
 
 describe('showHelp', () => {
@@ -189,11 +197,11 @@ describe('buildMenuChoices', () => {
 
 describe('handleSpecialInput', () => {
     beforeEach(() => {
-        jest.mocked(prompt).mockReturnValue('/back');
+        vi.mocked(prompt).mockReturnValue('/back');
     });
 
     afterEach(() => {
-        jest.mocked(prompt).mockReturnValue('0');
+        vi.mocked(prompt).mockReturnValue('0');
     });
 
     it('returns true and shows help for /help', async () => {
@@ -222,8 +230,8 @@ describe('handleSpecialInput', () => {
 describe('dispatchChoice', () => {
     const minimalCtx = createMockContext();
 
-    beforeEach(() => {
-        const commands = jest.mocked(jest.requireMock<typeof import('./commands')>('./commands'));
+    beforeEach(async () => {
+        const commands = vi.mocked(await vi.importMock<typeof import('./commands/index.js')>('./commands'));
         commands.getHandler.mockReturnValue(null);
     });
 
@@ -239,8 +247,8 @@ describe('dispatchChoice', () => {
     });
 
     it('dispatches to handler', async () => {
-        const handler = jest.fn().mockResolvedValue(false);
-        const commands = jest.mocked(jest.requireMock<typeof import('./commands')>('./commands'));
+        const handler = vi.fn().mockResolvedValue(false);
+        const commands = vi.mocked(await vi.importMock<typeof import('./commands/index.js')>('./commands'));
         commands.getHandler.mockReturnValue(handler);
 
         const result = await dispatchChoice('1', minimalCtx);
@@ -251,11 +259,11 @@ describe('dispatchChoice', () => {
 
 describe('showHelpLoop', () => {
     beforeEach(() => {
-        jest.mocked(prompt).mockReturnValue('/back');
+        vi.mocked(prompt).mockReturnValue('/back');
     });
 
     afterEach(() => {
-        jest.mocked(prompt).mockReturnValue('0');
+        vi.mocked(prompt).mockReturnValue('0');
     });
 
     it('shows help and exits on /back', () => {
@@ -264,20 +272,20 @@ describe('showHelpLoop', () => {
     });
 
     it('handles specific topic input', () => {
-        jest.mocked(prompt).mockReturnValueOnce('csv').mockReturnValueOnce('/back');
+        vi.mocked(prompt).mockReturnValueOnce('csv').mockReturnValueOnce('/back');
         showHelpLoop();
         expect(title).toHaveBeenCalled();
     });
 
     it('warns for unknown topic', () => {
-        jest.mocked(prompt).mockReturnValueOnce('nonexistent_topic_xyz').mockReturnValueOnce('/back');
+        vi.mocked(prompt).mockReturnValueOnce('nonexistent_topic_xyz').mockReturnValueOnce('/back');
         showHelpLoop();
         expect(warn).toHaveBeenCalledWith(expect.stringContaining('não encontrado'));
     });
 
-    it('handles CancelError in showHelpLoop (line 84-85)', () => {
-        const { CancelError } = jest.requireMock<typeof import('../shared/prompt')>('../shared/prompt');
-        jest.mocked(prompt).mockImplementationOnce(() => {
+    it('handles CancelError in showHelpLoop (line 84-85)', async () => {
+        const { CancelError } = await vi.importMock<typeof import('../shared/prompt.js')>('../shared/prompt');
+        vi.mocked(prompt).mockImplementationOnce(() => {
             throw new CancelError('/back');
         });
         // Should not throw, just return
@@ -285,7 +293,7 @@ describe('showHelpLoop', () => {
     });
 
     it('handles /help and /h prefix commands', () => {
-        jest.mocked(prompt).mockReturnValueOnce('/help csv').mockReturnValueOnce('/back');
+        vi.mocked(prompt).mockReturnValueOnce('/help csv').mockReturnValueOnce('/back');
         showHelpLoop();
         expect(title).toHaveBeenCalledWith(expect.stringContaining('csv'));
     });

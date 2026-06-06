@@ -19,16 +19,9 @@
         "forceConsistentCasingInFileNames": true,
         "resolveJsonModule": true,
         "isolatedModules": true,
-        "types": ["node", "jest"]
+        "types": ["node", "vitest/globals"]
     },
     "_noPropertyAccessFromIndexSignature": "DEFERIDO (2026-06-02). 613 erros em 87 arquivos, zero ganho. noUncheckedIndexedAccess já cobre safety.",
-    "include": [
-        "jest-setup.ts",
-        "setup/**/*.ts",
-        "shared/**/*.ts",
-        "jira_management/**/*.ts",
-        "git_triggers/**/*.ts",
-        "e2e/**/*.ts"
-    ],
+    "include": ["setup/**/*.ts", "shared/**/*.ts", "jira_management/**/*.ts", "git_triggers/**/*.ts", "e2e/**/*.ts"],
     "exclude": ["node_modules", "docs-archive"]
 }

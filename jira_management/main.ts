@@ -1,13 +1,13 @@
-import Config from '../shared/config';
-import JiraResource from './jira_resource';
-import JiraLinkManager from './jira_link_manager';
-import CsvResource from './csv_resource';
-import PackageVersionManager from './package_version_manager';
-import { showSplash } from '../shared/splash';
-import { calculateHealthScore } from '../shared/health-score';
-import { version } from '../package.json';
-import { info, title, prompt, printError, warn } from '../shared/prompt';
-import { withSpinner } from '../shared/spinner';
+import Config from '../shared/config.js';
+import JiraResource from './jira_resource.js';
+import JiraLinkManager from './jira_link_manager.js';
+import CsvResource from './csv_resource.js';
+import PackageVersionManager from './package_version_manager.js';
+import { showSplash } from '../shared/splash.js';
+import { calculateHealthScore } from '../shared/health-score.js';
+import pkg from '../package.json';
+import { info, title, prompt, printError, warn } from '../shared/prompt.js';
+import { withSpinner } from '../shared/spinner.js';
 import {
     mask,
     createValidateEnv,
@@ -15,19 +15,19 @@ import {
     setupSigint,
     gracefulExit,
     printSessionSummary as sharedPrintSessionSummary,
-} from '../shared/cli_base';
-import { rootLogger } from '../shared/logger';
-import { pushBreadcrumb, popBreadcrumb, clearBreadcrumbs } from '../shared/breadcrumbs';
-import { loadTypedState, update as updateState, getStatePath } from '../shared/state';
-import { loadMetrics } from '../shared/metrics';
-import { palette, applyPalette } from '../shared/palette';
-import { SessionContext } from '../shared/session-context';
-import { ExitCode, type StateSchema } from '../shared/types';
-import type { CommandContext } from './commands/context';
-import { ensureDirs, registerCleanup } from '../shared/temp-dir';
-import { CATEGORY_IDS, CATEGORY_TITLES } from './menu-data';
-import { dispatchChoice, getAndResolveChoice } from './ui-helpers';
-import { maybeRunFirstRunWizard } from '../shared/first-run';
+} from '../shared/cli_base.js';
+import { rootLogger } from '../shared/logger.js';
+import { pushBreadcrumb, popBreadcrumb, clearBreadcrumbs } from '../shared/breadcrumbs.js';
+import { loadTypedState, update as updateState, getStatePath } from '../shared/state.js';
+import { loadMetrics } from '../shared/metrics.js';
+import { palette, applyPalette } from '../shared/palette.js';
+import { SessionContext } from '../shared/session-context.js';
+import { ExitCode, type StateSchema } from '../shared/types.js';
+import type { CommandContext } from './commands/context.js';
+import { ensureDirs, registerCleanup } from '../shared/temp-dir.js';
+import { CATEGORY_IDS, CATEGORY_TITLES } from './menu-data.js';
+import { dispatchChoice, getAndResolveChoice } from './ui-helpers.js';
+import { maybeRunFirstRunWizard } from '../shared/first-run.js';
 
 /** Type-safe wrapper around `updateState` that provides a `StateSchema` callback. */
 function updateStateTyped(fn: (state: StateSchema) => void): void {
@@ -151,9 +151,16 @@ async function initializeSession() {
     ctx.createPackageManager = (dir: string) => new PackageVersionManager(dir);
 
     const state = loadTypedState();
-    ctx.project_name = (
-        Config.get('jiraProject') || prompt('Nome do projeto Jira', { default: state.lastProject || default_project })
-    ).toUpperCase();
+    try {
+        ctx.project_name = (
+            Config.get('jiraProject') ||
+            prompt('Nome do projeto Jira', { default: state.lastProject || default_project })
+        ).toUpperCase();
+    } catch {
+        rootLogger.debug('Prompt de projeto falhou (SIGINT/erro TTY), usando fallback');
+        warn('Não foi possível obter o nome do projeto. Usando o último projeto da sessão anterior.');
+        ctx.project_name = (state.lastProject || default_project).toUpperCase();
+    }
 
     if (_isJiraConfigured() && ctx.project_name) {
         const jql = 'project=' + ctx.project_name;
@@ -240,7 +247,7 @@ async function _executeChoice(choice: string, res: RuntimeResources): Promise<vo
 }
 
 function _shouldNoClear(): boolean {
-    return process.argv.includes('--no-clear') || process.env.QA_TOOLS_NO_CLEAR === 'true';
+    return process.argv.includes('--no-clear') || Config.get<boolean>('qaToolsNoClear') === true;
 }
 
 async function runMainLoop(res: RuntimeResources): Promise<void> {
@@ -290,7 +297,7 @@ async function main(): Promise<void> {
         return;
     }
     if (process.argv.includes('--version')) {
-        console.log(version);
+        console.log(pkg.version);
         gracefulExit(ExitCode.OK);
         return;
     }
@@ -321,8 +328,15 @@ async function main(): Promise<void> {
         // wizard failed — continue anyway
     }
 
+    // Early SIGINT handler: protege contra crash durante prompts síncronos
+    // (readline-sync) que ocorrem dentro de initializeSession.
+    // Removido após initializeSession e substituído pelo handler definitivo.
+    const _earlyHandler = () => {};
+    process.on('SIGINT', _earlyHandler);
+
     const res = await initializeSession();
 
+    process.removeListener('SIGINT', _earlyHandler);
     setupSigint(
         () => res.ctx.isBusy,
         () => res.printSessionSummary(),
@@ -354,7 +368,7 @@ main().catch((err: unknown) => {
 });
 
 // Re-exports for backward compatibility (tests use require('./main'))
-export { resolveAlias, buildMenuChoices, _configHint } from './menu-data';
-export { showHelp, showDocs, showHelpLoop, handleSpecialInput } from './ui-helpers';
+export { resolveAlias, buildMenuChoices, _configHint } from './menu-data.js';
+export { showHelp, showDocs, showHelpLoop, handleSpecialInput } from './ui-helpers.js';
 
 export { main, showSplash, dispatchChoice, dispatchAndHandleResult, showGapBadge, _isJiraConfigured };

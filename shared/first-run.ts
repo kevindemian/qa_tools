@@ -5,16 +5,17 @@
  *   - state.history already exists (returning user)
  *   - SKIP_FIRST_RUN=true env var is set
  * Once acknowledged, stores a flag in state so it never shows again. */
-import { title, info, divider, warn, showSelect } from './prompt';
-import { loadTypedState, update as updateState } from './state';
-import { main as setupMain } from '../setup/main';
+import { title, info, divider, warn, showSelect } from './prompt.js';
+import { loadTypedState, update as updateState } from './state.js';
+import { main as setupMain } from '../setup/main.js';
+import Config from './config.js';
 
 const FIRST_RUN_FLAG = '_firstRunDone';
 
 function _isBatchOrCI(): boolean {
-    if (process.env.CI === 'true') return true;
-    if (process.env.AUTO_CONFIRM === 'true') return true;
-    if (process.env.SKIP_FIRST_RUN === 'true') return true;
+    if (Config.get('ci') === 'true') return true;
+    if (Config.get('autoConfirm')) return true;
+    if (Config.get('skipFirstRun')) return true;
     const args = process.argv.slice(2).join(' ');
     if (args.includes('--batch') || args.includes('--auto')) return true;
     return false;

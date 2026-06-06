@@ -13,16 +13,16 @@
 import path from 'path';
 import fs from 'fs';
 import dotenv from 'dotenv';
-import JiraResource from '../jira_management/jira_resource';
-import JiraLinkManager from '../jira_management/jira_link_manager';
-import TestExecutionCreator from '../jira_management/test-execution-creator';
-import CsvResource from '../jira_management/csv_resource';
-import createTestsModule from '../jira_management/create_tests';
-import { rootLogger } from '../shared/logger';
+import JiraResource from '../jira_management/jira_resource.js';
+import JiraLinkManager from '../jira_management/jira_link_manager.js';
+import TestExecutionCreator from '../jira_management/test-execution-creator.js';
+import CsvResource from '../jira_management/csv_resource.js';
+import createTestsModule from '../jira_management/create_tests.js';
+import { rootLogger } from '../shared/logger.js';
 
 const { createTestsFromCsv, createTestExecutionWithLinks } = createTestsModule;
 
-dotenv.config({ path: path.resolve(__dirname, '../.env') });
+dotenv.config({ path: path.resolve(import.meta.dirname, '../.env') });
 
 // ── Config ─────────────────────────────────────────────────────
 const BASE_URL = process.env.JIRA_BASE_URL ?? '';
@@ -38,7 +38,7 @@ const EXISTING_PRECOND = 'ECSPOL-1202';
 const LABEL = 'e2e';
 
 // CSV temporário para o novo test case
-const CSV_PATH = path.resolve(__dirname, '../e2e/e2e-test-data.csv');
+const CSV_PATH = path.resolve(import.meta.dirname, '../e2e/e2e-test-data.csv');
 
 const jiraResource = new JiraResource(TOKEN, BASE_URL + '/rest/api/2');
 const jiraResourceXray = new JiraResource(TOKEN, XRAY_URL);

@@ -3,8 +3,8 @@
  *
  *  Both JiraResource (jira_resource.ts) and sub-resource modules import this interface
  *  instead of importing each other's concrete types. */
-import type { Logger } from '../shared/logger';
-import type { JsonObject } from '../shared/types';
+import type { Logger } from '../shared/logger.js';
+import type { JsonObject } from '../shared/types.js';
 
 export interface VersionData {
     id: string;

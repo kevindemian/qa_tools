@@ -1,12 +1,12 @@
 import chalk from 'chalk';
 import * as readline from 'readline';
-import { print, success, error, warn, info, divider, confirm } from './prompt';
-import { rootLogger } from './logger';
-import Config from './config';
-import { loadMetrics } from './metrics';
-import { calculateHealthScore } from './health-score';
-import { ExitCode } from './types';
-import { cleanupTempDirs } from './temp-dir';
+import { print, success, error, warn, info, divider, confirm } from './prompt.js';
+import { rootLogger } from './logger.js';
+import Config from './config.js';
+import { loadMetrics } from './metrics.js';
+import { calculateHealthScore } from './health-score.js';
+import { ExitCode } from './types.js';
+import { cleanupTempDirs } from './temp-dir.js';
 
 const _sessionStart = Date.now();
 const CREDENTIAL_MIN_LENGTH = 20;
@@ -60,7 +60,7 @@ export function createValidateEnv(configs: EnvConfig[], config?: Config): () => 
  *  Skips the prompt in batch/CI mode or when `confirm` is unavailable. */
 export function offerEnvSetup(result: EnvValidationResult): boolean {
     if (result.ok) return false;
-    if (process.env.CI === 'true' || process.env.AUTO_CONFIRM === 'true') return false;
+    if (Config.get('ci') === 'true' || Config.get<boolean>('autoConfirm')) return false;
     try {
         return confirm('Configurações incompletas. Deseja configurar agora?');
     } catch (err) {
@@ -72,7 +72,7 @@ export function offerEnvSetup(result: EnvValidationResult): boolean {
 }
 
 export function confirmDestructiveAction(action: string): boolean {
-    return confirm(`Confirm ${action}? (s/N)`);
+    return confirm(`Confirmar ${action}? (s/N)`);
 }
 
 export function sanitizeUrl(url: string): string {
@@ -127,11 +127,17 @@ function _createSigintHandler(getIsBusy: (() => boolean) | null, onExit: (() => 
             process.on('SIGINT', handler);
         }, 10000);
         rl.question('Deseja sair? (s/N) ', (answer) => {
-            clearTimeout(timeout);
-            _cleanupConfirm();
-            if (answer.toLowerCase() === 's') {
-                _forceExit();
-            } else {
+            try {
+                clearTimeout(timeout);
+                _cleanupConfirm();
+                if (answer && answer.toLowerCase() === 's') {
+                    _forceExit();
+                } else {
+                    info('Continuando...');
+                    process.on('SIGINT', handler);
+                }
+            } catch {
+                _cleanupConfirm();
                 info('Continuando...');
                 process.on('SIGINT', handler);
             }

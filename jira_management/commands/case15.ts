@@ -1,13 +1,13 @@
 /** Import JSON/TXT test results (CTRF format) to create Test Executions. */
-import Config from '../../shared/config';
-import { ask, warn, success } from '../../shared/prompt';
-import { load as loadState } from '../../shared/state';
+import Config from '../../shared/config.js';
+import { ask, warn, success } from '../../shared/prompt.js';
+import { load as loadState } from '../../shared/state.js';
 import path from 'path';
 import fs from 'fs';
-import type { CommandContext } from './context';
+import type { CommandContext } from './context.js';
 // anti-circular (prompt → create_tests → session-context → prompt)
-import createTests from '../create_tests';
-import { offerTestExecutionAssociation, showResults } from './test-execution-flow';
+import createTests from '../create_tests.js';
+import { offerTestExecutionAssociation, showResults } from './test-execution-flow.js';
 
 async function handler(c: CommandContext): Promise<boolean | void> {
     const state = loadState() as Record<string, string | undefined>;

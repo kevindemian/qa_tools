@@ -1,84 +1,85 @@
-import { expect } from '@jest/globals';
+import { expect } from 'vitest';
+import type { Mock } from 'vitest';
 
-jest.mock('../../shared/prompt');
-jest.mock('../../shared/logger');
+vi.mock('../../shared/prompt');
+vi.mock('../../shared/logger');
 
-jest.mock('../../shared/result_parser', () => ({
-    parseTestResultsFile: jest.fn(),
+vi.mock('../../shared/result_parser', async () => ({
+    parseTestResultsFile: vi.fn(),
 }));
 
-jest.mock('../../shared/report-generator', () => ({
-    generateHtmlReport: jest.fn(),
-    loadKnownIssues: jest.fn(() => []),
-    categorizeFailure: jest.fn(),
+vi.mock('../../shared/report-generator', async () => ({
+    generateHtmlReport: vi.fn(),
+    loadKnownIssues: vi.fn(() => []),
+    categorizeFailure: vi.fn(),
 }));
 
-jest.mock('../../shared/publish', () => ({
-    publishReport: jest.fn(),
+vi.mock('../../shared/publish', async () => ({
+    publishReport: vi.fn(),
 }));
 
-jest.mock('../../shared/failure-analysis', () => ({
-    analyzeFailuresWithReport: jest.fn(),
+vi.mock('../../shared/failure-analysis', async () => ({
+    analyzeFailuresWithReport: vi.fn(),
 }));
 
-jest.mock('../../shared/open', () => ({
-    openWithOsOrFallback: jest.fn(),
-    openWithFallback: jest.fn(),
+vi.mock('../../shared/open', async () => ({
+    openWithOsOrFallback: vi.fn(),
+    openWithFallback: vi.fn(),
 }));
 
-jest.mock('../../shared/temp-dir', () => ({
-    writeReport: jest.fn(() => '/tmp/report.html'),
+vi.mock('../../shared/temp-dir', async () => ({
+    writeReport: vi.fn(() => '/tmp/report.html'),
 }));
 
-jest.mock('../../shared/bug-report', () => ({
-    collectAutomated: jest.fn(),
-    interactiveBugReportFlow: jest.fn(),
+vi.mock('../../shared/bug-report', async () => ({
+    collectAutomated: vi.fn(),
+    interactiveBugReportFlow: vi.fn(),
 }));
 
-jest.mock('../../shared/logger', () => ({
+vi.mock('../../shared/logger', async () => ({
     rootLogger: {
-        error: jest.fn(),
-        warn: jest.fn(),
-        child: jest.fn().mockReturnValue({ info: jest.fn(), error: jest.fn(), warn: jest.fn() }),
+        error: vi.fn(),
+        warn: vi.fn(),
+        child: vi.fn().mockReturnValue({ info: vi.fn(), error: vi.fn(), warn: vi.fn() }),
     },
 }));
 
-jest.mock('fs');
+vi.mock('fs');
 
-jest.mock('../../shared/http-client', () => ({
-    createHttpClient: jest.fn(),
-    setTestSleep: jest.fn(),
+vi.mock('../../shared/http-client', async () => ({
+    createHttpClient: vi.fn(),
+    setTestSleep: vi.fn(),
 }));
 
-import * as promptModule from '../../shared/prompt';
-import * as parserModule from '../../shared/result_parser';
-import * as reportGenModule from '../../shared/report-generator';
-import * as analysisModule from '../../shared/failure-analysis';
-import * as publishModule from '../../shared/publish';
-import * as openModule from '../../shared/open';
+import * as promptModule from '../../shared/prompt.js';
+import * as parserModule from '../../shared/result_parser.js';
+import * as reportGenModule from '../../shared/report-generator.js';
+import * as analysisModule from '../../shared/failure-analysis.js';
+import * as publishModule from '../../shared/publish.js';
+import * as openModule from '../../shared/open.js';
 import fs from 'fs';
-import case17Module from './case17';
-import { createMockContext } from '../../shared/test-utils/factories/context-factory';
+import case17Module from './case17.js';
+import { createMockContext } from '../../shared/test-utils/factories/context-factory.js';
 
 const baseContext = createMockContext();
 
 beforeEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
 });
 
 beforeAll(() => {
-    if (!jest.isMockFunction(openModule.openWithFallback)) {
+    if (!vi.isMockFunction(openModule.openWithFallback)) {
         throw new Error('Guard FAILED: openWithFallback is NOT mocked. Browser would open!');
     }
 });
 
 describe('case17 — HTML report generator', () => {
     it('generates report successfully', async () => {
-        const prompt = jest.mocked(promptModule);
-        const parser = jest.mocked(parserModule);
-        const reportGen = jest.mocked(reportGenModule);
+        const prompt = vi.mocked(promptModule);
+        const parser = vi.mocked(parserModule);
+        const reportGen = vi.mocked(reportGenModule);
 
-        baseContext.jiraResource.getJiraResource.mockResolvedValueOnce({
+        (baseContext.jiraResource.getJiraResource as unknown as Mock).mockResolvedValueOnce({
             issues: [{ key: 'BUG-1', fields: { summary: 'Login fails', status: { name: 'Open' } } }],
         });
 
@@ -99,12 +100,12 @@ describe('case17 — HTML report generator', () => {
     });
 
     it('computes diff against last run and logs info', async () => {
-        const prompt = jest.mocked(promptModule);
-        const parser = jest.mocked(parserModule);
-        const reportGen = jest.mocked(reportGenModule);
+        const prompt = vi.mocked(promptModule);
+        const parser = vi.mocked(parserModule);
+        const reportGen = vi.mocked(reportGenModule);
 
-        jest.mocked(fs).existsSync.mockReturnValue(true);
-        jest.mocked(fs).readFileSync.mockReturnValue(
+        vi.mocked(fs).existsSync.mockReturnValue(true);
+        vi.mocked(fs).readFileSync.mockReturnValue(
             JSON.stringify({
                 results: {
                     tests: [
@@ -134,14 +135,14 @@ describe('case17 — HTML report generator', () => {
     });
 
     it('skips AI analysis and prompts bug report when failures and user accepts', async () => {
-        const prompt = jest.mocked(promptModule);
-        const parser = jest.mocked(parserModule);
-        const reportGen = jest.mocked(reportGenModule);
+        const prompt = vi.mocked(promptModule);
+        const parser = vi.mocked(parserModule);
+        const reportGen = vi.mocked(reportGenModule);
 
         process.env.QA_AUTO_BUG = 'true';
 
-        jest.mocked(fs).existsSync.mockReturnValueOnce(true);
-        jest.mocked(fs).readFileSync.mockReturnValueOnce(
+        vi.mocked(fs).existsSync.mockReturnValueOnce(true);
+        vi.mocked(fs).readFileSync.mockReturnValueOnce(
             JSON.stringify({
                 results: { tests: [{ name: 'Fail', status: 'passed' }] },
             }),
@@ -159,10 +160,10 @@ describe('case17 — HTML report generator', () => {
 
         reportGen.generateHtmlReport.mockReturnValueOnce('<html>report</html>');
 
-        const reportGenFull = jest.mocked(reportGenModule);
+        const reportGenFull = vi.mocked(reportGenModule);
         reportGenFull.categorizeFailure.mockReturnValue('regression');
 
-        baseContext.jiraResource.postJiraResource.mockResolvedValue({ key: 'BUG-42' });
+        (baseContext.jiraResource.postJiraResource as unknown as Mock).mockResolvedValue({ key: 'BUG-42' });
 
         const mod = case17Module;
         await mod.handler(baseContext);
@@ -171,14 +172,14 @@ describe('case17 — HTML report generator', () => {
     });
 
     it('resolves mapping file and test history', async () => {
-        const prompt = jest.mocked(promptModule);
-        const parser = jest.mocked(parserModule);
-        const reportGen = jest.mocked(reportGenModule);
+        const prompt = vi.mocked(promptModule);
+        const parser = vi.mocked(parserModule);
+        const reportGen = vi.mocked(reportGenModule);
 
         process.env.QA_MAPPING_PATH = '/tmp/qa-mapping.json';
 
-        jest.mocked(fs).existsSync.mockReturnValue(true);
-        jest.mocked(fs).readFileSync.mockReturnValue(
+        vi.mocked(fs).existsSync.mockReturnValue(true);
+        vi.mocked(fs).readFileSync.mockReturnValue(
             JSON.stringify({
                 tests: [
                     { title: 'Test 1', key: 'TEST-123' },
@@ -211,10 +212,10 @@ describe('case17 — HTML report generator', () => {
     });
 
     it('handles AI analysis with empty content returning html unchanged', async () => {
-        const prompt = jest.mocked(promptModule);
-        const parser = jest.mocked(parserModule);
-        const reportGen = jest.mocked(reportGenModule);
-        const analysis = jest.mocked(analysisModule);
+        const prompt = vi.mocked(promptModule);
+        const parser = vi.mocked(parserModule);
+        const reportGen = vi.mocked(reportGenModule);
+        const analysis = vi.mocked(analysisModule);
 
         prompt.ask.mockResolvedValueOnce('/path/to/report.json').mockResolvedValueOnce('');
 
@@ -234,11 +235,11 @@ describe('case17 — HTML report generator', () => {
     });
 
     it('handles _fetchJiraContext when issues list is empty', async () => {
-        const prompt = jest.mocked(promptModule);
-        const parser = jest.mocked(parserModule);
-        const reportGen = jest.mocked(reportGenModule);
+        const prompt = vi.mocked(promptModule);
+        const parser = vi.mocked(parserModule);
+        const reportGen = vi.mocked(reportGenModule);
 
-        baseContext.jiraResource.getJiraResource.mockResolvedValueOnce({
+        (baseContext.jiraResource.getJiraResource as unknown as Mock).mockResolvedValueOnce({
             issues: [],
         });
 
@@ -259,11 +260,11 @@ describe('case17 — HTML report generator', () => {
     });
 
     it('handles fetchJiraContext with missing issues field', async () => {
-        const prompt = jest.mocked(promptModule);
-        const parser = jest.mocked(parserModule);
-        const reportGen = jest.mocked(reportGenModule);
+        const prompt = vi.mocked(promptModule);
+        const parser = vi.mocked(parserModule);
+        const reportGen = vi.mocked(reportGenModule);
 
-        baseContext.jiraResource.getJiraResource.mockResolvedValueOnce({
+        (baseContext.jiraResource.getJiraResource as unknown as Mock).mockResolvedValueOnce({
             // no issues field at all
         });
 
@@ -283,12 +284,12 @@ describe('case17 — HTML report generator', () => {
     });
 
     it('handles computeDiff with missing tests field', async () => {
-        const prompt = jest.mocked(promptModule);
-        const parser = jest.mocked(parserModule);
-        const reportGen = jest.mocked(reportGenModule);
+        const prompt = vi.mocked(promptModule);
+        const parser = vi.mocked(parserModule);
+        const reportGen = vi.mocked(reportGenModule);
 
-        jest.mocked(fs).existsSync.mockReturnValueOnce(true);
-        jest.mocked(fs).readFileSync.mockReturnValueOnce(
+        vi.mocked(fs).existsSync.mockReturnValueOnce(true);
+        vi.mocked(fs).readFileSync.mockReturnValueOnce(
             JSON.stringify({
                 results: {
                     // no tests field
@@ -312,14 +313,14 @@ describe('case17 — HTML report generator', () => {
     });
 
     it('resolves mapping with missing tests field', async () => {
-        const prompt = jest.mocked(promptModule);
-        const parser = jest.mocked(parserModule);
-        const reportGen = jest.mocked(reportGenModule);
+        const prompt = vi.mocked(promptModule);
+        const parser = vi.mocked(parserModule);
+        const reportGen = vi.mocked(reportGenModule);
 
         process.env.QA_MAPPING_PATH = '/tmp/missing-tests.json';
 
-        jest.mocked(fs).existsSync.mockReturnValue(true);
-        jest.mocked(fs).readFileSync.mockReturnValue(JSON.stringify({ otherField: true }));
+        vi.mocked(fs).existsSync.mockReturnValue(true);
+        vi.mocked(fs).readFileSync.mockReturnValue(JSON.stringify({ otherField: true }));
 
         prompt.ask.mockResolvedValueOnce('/path/to/report.json').mockResolvedValueOnce('');
 
@@ -337,9 +338,9 @@ describe('case17 — HTML report generator', () => {
     });
 
     it('handles parseCliExtra with invalid flags', async () => {
-        const prompt = jest.mocked(promptModule);
-        const parser = jest.mocked(parserModule);
-        const reportGen = jest.mocked(reportGenModule);
+        const prompt = vi.mocked(promptModule);
+        const parser = vi.mocked(parserModule);
+        const reportGen = vi.mocked(reportGenModule);
 
         const origArgv = process.argv;
         process.argv = ['node', 'script', '--unknown-flag', '--publish', '', '--run', 'nofile'];
@@ -362,13 +363,13 @@ describe('case17 — HTML report generator', () => {
     });
 
     it('builds diff summary with failure that has no error message', async () => {
-        const prompt = jest.mocked(promptModule);
-        const parser = jest.mocked(parserModule);
-        const reportGen = jest.mocked(reportGenModule);
+        const prompt = vi.mocked(promptModule);
+        const parser = vi.mocked(parserModule);
+        const reportGen = vi.mocked(reportGenModule);
 
         // Previous run had one test that was passing
-        jest.mocked(fs).existsSync.mockReturnValue(true);
-        jest.mocked(fs).readFileSync.mockReturnValue(
+        vi.mocked(fs).existsSync.mockReturnValue(true);
+        vi.mocked(fs).readFileSync.mockReturnValue(
             JSON.stringify({
                 results: { tests: [{ name: 'Only Fail', status: 'passed' }] },
             }),
@@ -394,9 +395,9 @@ describe('case17 — HTML report generator', () => {
     });
 
     it('handles parseCliExtra with --run edge cases', async () => {
-        const prompt = jest.mocked(promptModule);
-        const parser = jest.mocked(parserModule);
-        const reportGen = jest.mocked(reportGenModule);
+        const prompt = vi.mocked(promptModule);
+        const parser = vi.mocked(parserModule);
+        const reportGen = vi.mocked(reportGenModule);
 
         const origArgv = process.argv;
         process.argv = ['node', 'script', '--run', '=onlyfile', '--run', 'name='];
@@ -419,10 +420,10 @@ describe('case17 — HTML report generator', () => {
     });
 
     it('injects AI analysis into html without bodyEnd', async () => {
-        const prompt = jest.mocked(promptModule);
-        const parser = jest.mocked(parserModule);
-        const reportGen = jest.mocked(reportGenModule);
-        const analysis = jest.mocked(analysisModule);
+        const prompt = vi.mocked(promptModule);
+        const parser = vi.mocked(parserModule);
+        const reportGen = vi.mocked(reportGenModule);
+        const analysis = vi.mocked(analysisModule);
 
         prompt.askConfirm.mockResolvedValue(true);
         analysis.analyzeFailuresWithReport.mockResolvedValue({
@@ -448,7 +449,7 @@ describe('case17 — HTML report generator', () => {
     });
 
     it('handles empty filepath early return (line 166-167)', async () => {
-        const prompt = jest.mocked(promptModule);
+        const prompt = vi.mocked(promptModule);
 
         prompt.ask.mockResolvedValueOnce('');
 
@@ -460,8 +461,8 @@ describe('case17 — HTML report generator', () => {
     });
 
     it('handles parse error in report file (line 175-176)', async () => {
-        const prompt = jest.mocked(promptModule);
-        const parser = jest.mocked(parserModule);
+        const prompt = vi.mocked(promptModule);
+        const parser = vi.mocked(parserModule);
 
         prompt.ask.mockResolvedValueOnce('/report.json');
 
@@ -479,9 +480,9 @@ describe('case17 — HTML report generator', () => {
     });
 
     it('handles extra runs via --run flag', async () => {
-        const prompt = jest.mocked(promptModule);
-        const parser = jest.mocked(parserModule);
-        const reportGen = jest.mocked(reportGenModule);
+        const prompt = vi.mocked(promptModule);
+        const parser = vi.mocked(parserModule);
+        const reportGen = vi.mocked(reportGenModule);
 
         const origArgv = process.argv;
         process.argv = ['node', 'script', '--run', 'extra=extra-report.json'];
@@ -511,10 +512,10 @@ describe('case17 — HTML report generator', () => {
     });
 
     it('handles quality gate and publish target (lines 208-209, 263-264)', async () => {
-        const prompt = jest.mocked(promptModule);
-        const parser = jest.mocked(parserModule);
-        const reportGen = jest.mocked(reportGenModule);
-        const publish = jest.mocked(publishModule);
+        const prompt = vi.mocked(promptModule);
+        const parser = vi.mocked(parserModule);
+        const reportGen = vi.mocked(reportGenModule);
+        const publish = vi.mocked(publishModule);
 
         process.env.QA_FAIL_ON = '80';
         process.env.QA_PUBLISH = 's3';
@@ -538,9 +539,9 @@ describe('case17 — HTML report generator', () => {
     });
 
     it('fails quality gate when pass rate below threshold (lines 283-284)', async () => {
-        const prompt = jest.mocked(promptModule);
-        const parser = jest.mocked(parserModule);
-        const reportGen = jest.mocked(reportGenModule);
+        const prompt = vi.mocked(promptModule);
+        const parser = vi.mocked(parserModule);
+        const reportGen = vi.mocked(reportGenModule);
 
         process.env.QA_FAIL_ON = '90';
 
@@ -567,12 +568,12 @@ describe('case17 — HTML report generator', () => {
     });
 
     it('writes to custom output path when user provides non-empty path (lines 84-87)', async () => {
-        const prompt = jest.mocked(promptModule);
-        const parser = jest.mocked(parserModule);
-        const reportGen = jest.mocked(reportGenModule);
+        const prompt = vi.mocked(promptModule);
+        const parser = vi.mocked(parserModule);
+        const reportGen = vi.mocked(reportGenModule);
 
-        jest.mocked(fs).existsSync.mockReturnValue(true);
-        jest.mocked(fs).readFileSync.mockReturnValue(JSON.stringify({ results: { tests: [] } }));
+        vi.mocked(fs).existsSync.mockReturnValue(true);
+        vi.mocked(fs).readFileSync.mockReturnValue(JSON.stringify({ results: { tests: [] } }));
 
         prompt.ask.mockResolvedValueOnce('/path/to/report.json').mockResolvedValueOnce('/custom/output/report.html');
 
@@ -586,11 +587,11 @@ describe('case17 — HTML report generator', () => {
         const mod = case17Module;
         await mod.handler(baseContext);
 
-        expect(jest.mocked(fs).mkdirSync).toHaveBeenCalledWith(
+        expect(vi.mocked(fs).mkdirSync).toHaveBeenCalledWith(
             expect.stringContaining('/custom/output'),
             expect.objectContaining({ recursive: true }),
         );
-        expect(jest.mocked(fs).writeFileSync).toHaveBeenCalledWith(
+        expect(vi.mocked(fs).writeFileSync).toHaveBeenCalledWith(
             expect.stringContaining('/custom/output'),
             expect.any(String),
             'utf8',
@@ -598,9 +599,9 @@ describe('case17 — HTML report generator', () => {
     });
 
     it('handles extra run parse error (lines 190-191)', async () => {
-        const prompt = jest.mocked(promptModule);
-        const parser = jest.mocked(parserModule);
-        const reportGen = jest.mocked(reportGenModule);
+        const prompt = vi.mocked(promptModule);
+        const parser = vi.mocked(parserModule);
+        const reportGen = vi.mocked(reportGenModule);
 
         const origArgv = process.argv;
         process.argv = ['node', 'script', '--run', 'extra=bad-file.json'];

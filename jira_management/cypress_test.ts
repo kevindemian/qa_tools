@@ -1,6 +1,6 @@
 import fs from 'fs';
-import { ensureDotenv } from '../shared/env-loader';
-import { rootLogger } from '../shared/logger';
+import { ensureDotenv } from '../shared/env-loader.js';
+import { rootLogger } from '../shared/logger.js';
 
 ensureDotenv();
 

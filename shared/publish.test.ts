@@ -1,27 +1,32 @@
-import { publishReport, type PublishTarget } from './publish';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
 
-jest.mock('child_process', () => ({
-    execFileSync: jest.fn(),
+const { mockExecFileSync, mockCpSync, mockMkdirSync, mockLoggerInfo, mockLoggerError } = vi.hoisted(() => ({
+    mockExecFileSync: vi.fn<(typeof import('child_process'))['execFileSync']>(),
+    mockCpSync: vi.fn<(typeof import('fs'))['cpSync']>(),
+    mockMkdirSync: vi.fn<(typeof import('fs'))['mkdirSync']>(),
+    mockLoggerInfo: vi.fn(),
+    mockLoggerError: vi.fn(),
 }));
 
-jest.mock('fs', () => {
-    const actual = jest.requireActual<typeof import('fs')>('fs');
-    return {
-        ...actual,
-        cpSync: jest.fn(),
-        mkdirSync: jest.fn(),
-    };
-});
-
-jest.mock('./logger', () => ({
-    rootLogger: { info: jest.fn(), error: jest.fn() },
+vi.mock('child_process', () => ({
+    default: { execFileSync: mockExecFileSync },
+    execFileSync: mockExecFileSync,
 }));
 
-const mockExecFileSync = jest.mocked(jest.requireMock<typeof import('child_process')>('child_process').execFileSync);
-const mockLogger = jest.mocked(jest.requireMock<typeof import('./logger')>('./logger').rootLogger);
+vi.mock('fs', () => ({
+    default: { cpSync: mockCpSync, mkdirSync: mockMkdirSync },
+    cpSync: mockCpSync,
+    mkdirSync: mockMkdirSync,
+}));
+
+vi.mock('./logger', () => ({
+    rootLogger: { info: mockLoggerInfo, error: mockLoggerError },
+}));
+
+import { publishReport, type PublishTarget } from './publish.js';
 
 beforeEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
 });
 
 describe('publishReport', () => {
@@ -53,14 +58,14 @@ describe('publishReport', () => {
             ['s3', 'cp', maliciousPath, 's3://bucket', '--no-progress'],
             { stdio: 'inherit' },
         );
-        expect(mockLogger.error).not.toHaveBeenCalled();
+        expect(mockLoggerError).not.toHaveBeenCalled();
     });
 
     it('should log error when s3 dest is missing', () => {
         delete process.env.AWS_S3_BUCKET;
         publishReport({ target: 's3', filePath: './report.html' });
         expect(mockExecFileSync).not.toHaveBeenCalled();
-        expect(mockLogger.error).toHaveBeenCalledWith('S3 publish requires either --dest or AWS_S3_BUCKET env var');
+        expect(mockLoggerError).toHaveBeenCalledWith('S3 publish requires either --dest or AWS_S3_BUCKET env var');
     });
 
     it('should log error when s3 publish fails', () => {
@@ -69,12 +74,12 @@ describe('publishReport', () => {
             throw new Error('aws failed');
         });
         publishReport({ target: 's3', filePath: './report.html' });
-        expect(mockLogger.error).toHaveBeenCalledWith(expect.stringContaining('S3 publish failed'));
+        expect(mockLoggerError).toHaveBeenCalledWith(expect.stringContaining('S3 publish failed'));
     });
 
     it('should log info about target and file path', () => {
         publishReport({ target: 's3', filePath: './report.html', destination: 's3://b' });
-        expect(mockLogger.info).toHaveBeenCalledWith('Publishing report to s3: ./report.html');
+        expect(mockLoggerInfo).toHaveBeenCalledWith('Publishing report to s3: ./report.html');
     });
 
     it('should handle missing origin url gracefully', () => {
@@ -86,12 +91,12 @@ describe('publishReport', () => {
             .mockReturnValueOnce('')
             .mockReturnValueOnce('');
         publishReport({ target: 'gh-pages', filePath: './report.html' });
-        expect(mockLogger.error).not.toHaveBeenCalled();
+        expect(mockLoggerError).not.toHaveBeenCalled();
     });
 
     it('should handle unsupported target gracefully', () => {
         publishReport({ target: 'ftp' as PublishTarget, filePath: './x.html' });
-        expect(mockLogger.error).toHaveBeenCalledWith(expect.stringContaining('Unknown publish target'));
+        expect(mockLoggerError).toHaveBeenCalledWith(expect.stringContaining('Unknown publish target'));
         expect(mockExecFileSync).not.toHaveBeenCalled();
     });
 });

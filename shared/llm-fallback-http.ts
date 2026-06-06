@@ -5,14 +5,14 @@
  * Extracted from llm-fallback.ts (F35 debt attack plan).
  * Depends on: llm-fallback-config, llm-rate-limiter, llm-cache, circuit-breaker.
  */
-import { jitter } from './llm-rate-limiter';
-import { configUniqueKey } from './llm-cache';
-import { checkCircuitBreaker } from './circuit-breaker';
-import { rootLogger } from './logger';
-import { sanitizeForLlm } from './sanitize';
+import { jitter } from './llm-rate-limiter.js';
+import { configUniqueKey } from './llm-cache.js';
+import { checkCircuitBreaker } from './circuit-breaker.js';
+import { rootLogger } from './logger.js';
+import { sanitizeForLlm } from './sanitize.js';
 import { z } from 'zod';
-import { LlmError, LlmProviderError, LlmAuthError } from './errors';
-import type { LlmTier, ResponseFormat } from './types';
+import { LlmError, LlmProviderError, LlmAuthError } from './errors.js';
+import type { LlmTier, ResponseFormat } from './types.js';
 import {
     ProviderConfig,
     LLM_TEMP_DEFAULT,
@@ -24,7 +24,7 @@ import {
     _trackUsage,
     extractContent,
     LlmErrorPayloadSchema,
-} from './llm-fallback-config';
+} from './llm-fallback-config.js';
 
 // ---- payload builders ----
 

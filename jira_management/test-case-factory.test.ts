@@ -1,20 +1,23 @@
-const mockPrompt = {
-    success: jest.fn(),
-    info: jest.fn(),
-    onError: jest.fn(),
-    isQuiet: jest.fn().mockReturnValue(true),
-    ProgressBar: jest.fn<{ update: jest.Mock; stop: jest.Mock }, [total: number, options?: { width?: number }]>(() => ({
-        update: jest.fn(),
-        stop: jest.fn(),
-    })),
-};
-jest.mock('../shared/prompt', () => mockPrompt);
+const mockPrompt = vi.hoisted(() => ({
+    success: vi.fn(),
+    info: vi.fn(),
+    onError: vi.fn(),
+    isQuiet: vi.fn().mockReturnValue(true),
+    ProgressBar: vi.fn<(...args: [total: number, options?: { width?: number }]) => { update: Mock; stop: Mock }>(
+        function () {
+            return { update: vi.fn(), stop: vi.fn() };
+        },
+    ),
+}));
 
-import { createMockJiraResource } from '../shared/test-utils/factories/jira-resource-factory';
-import TestCaseFactory from './test-case-factory';
+vi.mock('../shared/prompt', () => mockPrompt);
+
+import { createMockJiraResource } from '../shared/test-utils/factories/jira-resource-factory.js';
+import type { Mock } from 'vitest';
+import TestCaseFactory from './test-case-factory.js';
 
 function createMockImporter() {
-    return { importStep: jest.fn() };
+    return { importStep: vi.fn() };
 }
 
 describe('TestCaseFactory', () => {
@@ -27,16 +30,18 @@ describe('TestCaseFactory', () => {
         mockImporter = createMockImporter();
         factory = new TestCaseFactory(mockJiraResource, mockImporter);
         mockPrompt.isQuiet.mockReturnValue(true);
-        mockPrompt.ProgressBar.mockImplementation(() => ({ update: jest.fn(), stop: jest.fn() }));
+        mockPrompt.ProgressBar.mockImplementation(function () {
+            return { update: vi.fn(), stop: vi.fn() };
+        });
     });
 
     afterEach(() => {
-        jest.resetAllMocks();
+        vi.resetAllMocks();
     });
 
     describe('createIssue', () => {
         const testData = { fields: { summary: 'Test' } };
-        const opLog = { info: jest.fn() };
+        const opLog = { info: vi.fn() };
 
         it('returns key on success', async () => {
             mockJiraResource.postJiraResource.mockResolvedValue({ key: 'TEST-123' });
@@ -88,7 +93,7 @@ describe('TestCaseFactory', () => {
 
     describe('createIssue with skipExisting', () => {
         const testData = { project: 'TEST', fields: { summary: 'Login Test' } };
-        const opLog = { info: jest.fn() };
+        const opLog = { info: vi.fn() };
 
         it('skips creation when existing issue found by title', async () => {
             mockJiraResource.searchJiraIssues.mockResolvedValue({
@@ -192,7 +197,7 @@ describe('TestCaseFactory', () => {
             title: 'Test',
             steps: [{ fields: { Action: 'Click' } }, { fields: { Action: 'Type' } }],
         };
-        const opLog = { info: jest.fn() };
+        const opLog = { info: vi.fn() };
 
         it('returns null on all steps success', async () => {
             mockImporter.importStep.mockResolvedValue({});
@@ -202,9 +207,11 @@ describe('TestCaseFactory', () => {
         });
 
         it('calls update on ProgressBar when not quiet', async () => {
-            const update = jest.fn();
-            const stop = jest.fn();
-            mockPrompt.ProgressBar.mockImplementation(() => ({ update, stop }));
+            const update = vi.fn();
+            const stop = vi.fn();
+            mockPrompt.ProgressBar.mockImplementation(function () {
+                return { update, stop };
+            });
             mockImporter.importStep.mockResolvedValue({});
             mockPrompt.isQuiet.mockReturnValue(false);
             await factory.postSteps(issueKey, test, opLog);

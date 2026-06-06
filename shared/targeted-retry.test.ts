@@ -1,27 +1,22 @@
-jest.mock('./llm-client', () => ({
-    llmPrompt: jest.fn(),
+vi.mock('./llm-metrics', async () => ({
+    recordRetry: vi.fn(),
 }));
 
-jest.mock('./llm-metrics', () => ({
-    recordRetry: jest.fn(),
-}));
+import { generateWithRetry } from './targeted-retry.js';
 
-import { llmPrompt } from './llm-client';
-import { generateWithRetry } from './targeted-retry';
-
-const mockLlmPrompt = jest.mocked(llmPrompt);
+const mockLlmPrompt = vi.fn<(...args: unknown[]) => Promise<string>>();
 
 describe('generateWithRetry', () => {
     const mockSchema = {
-        safeParse: jest.fn(),
+        safeParse: vi.fn(),
     };
 
     const mockLayer2Validator = {
-        validate: jest.fn(),
+        validate: vi.fn(),
     };
 
     const mockLayer3Validator = {
-        validate: jest.fn(),
+        validate: vi.fn(),
     };
 
     const context = { inputRaw: '', artifactType: 'test-suite' };
@@ -29,7 +24,7 @@ describe('generateWithRetry', () => {
     const baseOpts = { tier: 'fast' as const, system: 'system', user: 'user' };
 
     beforeEach(() => {
-        jest.clearAllMocks();
+        vi.clearAllMocks();
     });
 
     it('returns data when all layers pass on first try', async () => {
@@ -41,6 +36,7 @@ describe('generateWithRetry', () => {
         const result = await generateWithRetry(
             baseOpts,
             mockSchema,
+            mockLlmPrompt,
             mockLayer2Validator,
             mockLayer3Validator,
             context,
@@ -62,6 +58,7 @@ describe('generateWithRetry', () => {
         const result = await generateWithRetry(
             baseOpts,
             mockSchema,
+            mockLlmPrompt,
             mockLayer2Validator,
             mockLayer3Validator,
             context,
@@ -92,6 +89,7 @@ describe('generateWithRetry', () => {
         const result = await generateWithRetry(
             baseOpts,
             mockSchema,
+            mockLlmPrompt,
             mockLayer2Validator,
             mockLayer3Validator,
             context,

@@ -1,6 +1,14 @@
-import fs from 'fs';
-import os from 'os';
+import { vi } from 'vitest';
 import path from 'path';
+
+vi.mock('fs', async () => {
+    const memfs = await import('memfs');
+    const mfs = memfs.fs;
+    return { default: mfs, ...mfs };
+});
+
+import fs from 'fs';
+
 import {
     loadMetrics,
     saveRunMetrics,
@@ -8,30 +16,17 @@ import {
     saveCoverageSnapshot,
     calculateFlakiness,
     getTrends,
-} from './metrics';
-import Config from './config';
-import type { MetricsRun, MetricsStore, CoverageSnapshot } from './metrics';
-import type { ParseResult } from './result_parser';
-import { nonNull } from './test-utils';
+} from './metrics.js';
+import Config from './config.js';
+import type { MetricsRun, MetricsStore, CoverageSnapshot } from './metrics.js';
+import type { ParseResult } from './result_parser.js';
+import { nonNull } from './test-utils.js';
 
-const TMP_DIR = path.join(os.tmpdir(), 'qa-tools-metrics-test-' + Date.now());
+const TMP_DIR = '/tmp/test-metrics';
 
 beforeEach(() => {
-    // Clean any leftover files
-    try {
-        fs.rmSync(TMP_DIR, { recursive: true });
-    } catch {
-        /* ok */
-    }
+    fs.rmSync(TMP_DIR, { recursive: true, force: true });
     fs.mkdirSync(TMP_DIR, { recursive: true });
-});
-
-afterAll(() => {
-    try {
-        fs.rmSync(TMP_DIR, { recursive: true });
-    } catch {
-        /* ok */
-    }
 });
 
 function makeConfig(tmpDir: string): Config {
@@ -39,7 +34,7 @@ function makeConfig(tmpDir: string): Config {
 }
 
 describe('saveRunMetrics / loadMetrics', () => {
-    it('saves and loads a metrics run', () => {
+    it('saves and loads a metrics run', async () => {
         const cfg = makeConfig(TMP_DIR);
         const run: MetricsRun = {
             timestamp: '2026-01-01T00:00:00.000Z',
@@ -65,13 +60,13 @@ describe('saveRunMetrics / loadMetrics', () => {
         expect(nonNull(loaded.runs[0]).tests).toHaveLength(3);
     });
 
-    it('returns empty store when no metrics file exists', () => {
+    it('returns empty store when no metrics file exists', async () => {
         const cfg = makeConfig(path.join(TMP_DIR, 'nonexistent'));
         const store = loadMetrics(cfg);
         expect(store.runs).toEqual([]);
     });
 
-    it('returns empty store on corrupted JSON', () => {
+    it('returns empty store on corrupted JSON', async () => {
         const cfg = makeConfig(TMP_DIR);
         const dir = path.join(TMP_DIR, 'qa-tools', 'metrics');
         fs.mkdirSync(dir, { recursive: true });
@@ -81,7 +76,7 @@ describe('saveRunMetrics / loadMetrics', () => {
         expect(store.runs).toEqual([]);
     });
 
-    it('persists multiple runs', () => {
+    it('persists multiple runs', async () => {
         const cfg = makeConfig(TMP_DIR);
         saveRunMetrics(
             {
@@ -116,7 +111,7 @@ describe('saveRunMetrics / loadMetrics', () => {
 });
 
 describe('saveParseResult', () => {
-    it('creates a MetricsRun from a ParseResult and saves it', () => {
+    it('creates a MetricsRun from a ParseResult and saves it', async () => {
         const cfg = makeConfig(TMP_DIR);
         const parseResult: ParseResult = {
             tests: [
@@ -139,12 +134,12 @@ describe('saveParseResult', () => {
 });
 
 describe('calculateFlakiness', () => {
-    it('returns empty when no runs', () => {
+    it('returns empty when no runs', async () => {
         const store: MetricsStore = { runs: [] };
         expect(calculateFlakiness(store)).toEqual([]);
     });
 
-    it('detects flaky tests across runs', () => {
+    it('detects flaky tests across runs', async () => {
         const store: MetricsStore = {
             runs: [
                 {
@@ -184,7 +179,7 @@ describe('calculateFlakiness', () => {
         expect(nonNull(flaky[0]).rate).toBe(0.5);
     });
 
-    it('handles skipped test state', () => {
+    it('handles skipped test state', async () => {
         const store: MetricsStore = {
             runs: [
                 {
@@ -203,7 +198,7 @@ describe('calculateFlakiness', () => {
         expect(flaky).toHaveLength(0);
     });
 
-    it('handles test with pass and fail in different runs', () => {
+    it('handles test with pass and fail in different runs', async () => {
         const store: MetricsStore = {
             runs: [
                 {
@@ -234,7 +229,7 @@ describe('calculateFlakiness', () => {
         expect(nonNull(flaky[0]).passCount).toBe(1);
     });
 
-    it('ignores tests below minRuns threshold', () => {
+    it('ignores tests below minRuns threshold', async () => {
         const store: MetricsStore = {
             runs: [
                 {
@@ -255,7 +250,7 @@ describe('calculateFlakiness', () => {
 });
 
 describe('saveCoverageSnapshot', () => {
-    it('saves and loads coverage snapshots', () => {
+    it('saves and loads coverage snapshots', async () => {
         const cfg = makeConfig(TMP_DIR);
         const snapshot: CoverageSnapshot = {
             timestamp: '2026-01-01T00:00:00.000Z',
@@ -274,7 +269,7 @@ describe('saveCoverageSnapshot', () => {
 });
 
 describe('getTrends', () => {
-    it('returns pass rate trend for recent runs', () => {
+    it('returns pass rate trend for recent runs', async () => {
         const store: MetricsStore = {
             runs: [
                 {
@@ -306,7 +301,7 @@ describe('getTrends', () => {
         expect(nonNull(trends[1]).passRate).toBe(0);
     });
 
-    it('respects window parameter', () => {
+    it('respects window parameter', async () => {
         const runs: MetricsRun[] = Array.from({ length: 20 }, (_, i) => ({
             timestamp: `2026-01-${i + 1}T00:00:00.000Z`,
             project: 'p',

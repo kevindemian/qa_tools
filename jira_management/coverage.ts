@@ -1,7 +1,7 @@
 /** Jira test coverage analysis: check which test cases have test steps and which are missing them. */
-import type { JsonObject } from '../shared/types';
-import { rootLogger } from '../shared/logger';
-import type JiraResource from './jira_resource';
+import type { JsonObject } from '../shared/types.js';
+import { rootLogger } from '../shared/logger.js';
+import type JiraResource from './jira_resource.js';
 
 interface CoverageResult {
     totalIssues: number;

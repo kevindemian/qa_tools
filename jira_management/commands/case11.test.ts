@@ -1,21 +1,21 @@
-jest.mock('../../shared/prompt');
+vi.mock('../../shared/prompt');
 
-jest.mock('fs', () => ({
-    copyFileSync: jest.fn(),
-    existsSync: jest.fn().mockReturnValue(true),
+vi.mock('fs', async () => ({
+    copyFileSync: vi.fn(),
+    existsSync: vi.fn().mockReturnValue(true),
 }));
 
-import case11 from './case11';
-import { makeMockCommandContext } from '../../shared/test-utils';
+import case11 from './case11.js';
+import { makeMockCommandContext } from '../../shared/test-utils.js';
 
 const mockContext = makeMockCommandContext();
 
 beforeEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
 });
 
 describe('case11 — generate template', () => {
-    it('exports a handler function', () => {
+    it('exports a handler function', async () => {
         expect(case11).toBeDefined();
         expect(typeof case11.handler).toBe('function');
     });

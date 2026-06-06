@@ -1,24 +1,24 @@
-import { glGetBranch, glGetDiff } from './gitlab-branch';
-import { apiGet, projectPath, formatDiffResponse } from './gitlab-api';
-import { createMockAxiosInstance } from '../shared/test-utils/factories/response-factory';
+import { glGetBranch, glGetDiff } from './gitlab-branch.js';
+import { apiGet, projectPath, formatDiffResponse } from './gitlab-api.js';
+import { createMockAxiosInstance } from '../shared/test-utils/factories/response-factory.js';
 
-jest.mock('./gitlab-api', () => ({
-    apiGet: jest.fn(),
-    apiPost: jest.fn(),
-    apiPut: jest.fn(),
-    projectPath: jest.fn(),
-    formatDiffResponse: jest.fn(),
+vi.mock('./gitlab-api', async () => ({
+    apiGet: vi.fn(),
+    apiPost: vi.fn(),
+    apiPut: vi.fn(),
+    projectPath: vi.fn(),
+    formatDiffResponse: vi.fn(),
 }));
 
 const mockClient = createMockAxiosInstance();
 
 beforeEach(() => {
-    jest.clearAllMocks();
-    jest.mocked(projectPath).mockImplementation(
+    vi.clearAllMocks();
+    vi.mocked(projectPath).mockImplementation(
         (owner: string, repo: string) =>
             `/projects/${owner ? encodeURIComponent(owner + '/' + repo) : encodeURIComponent(repo)}`,
     );
-    jest.mocked(formatDiffResponse).mockImplementation(
+    vi.mocked(formatDiffResponse).mockImplementation(
         (entries: Array<Record<string, unknown>> | undefined | null, _patchField: string, _nameField: string) => {
             if (!entries || !Array.isArray(entries)) return '';
             return entries
@@ -35,19 +35,19 @@ beforeEach(() => {
 
 describe('glGetBranch', () => {
     it('returns { name } on success', async () => {
-        jest.mocked(apiGet).mockResolvedValue({ name: 'main' });
+        vi.mocked(apiGet).mockResolvedValue({ name: 'main' });
         const result = await glGetBranch(mockClient, 'owner', 'repo', 'main');
         expect(result).toEqual({ name: 'main' });
     });
 
     it('returns null when apiGet returns null', async () => {
-        jest.mocked(apiGet).mockResolvedValue(null);
+        vi.mocked(apiGet).mockResolvedValue(null);
         const result = await glGetBranch(mockClient, 'owner', 'repo', 'main');
         expect(result).toBeNull();
     });
 
     it('calls apiGet with correct URL encoding branch name', async () => {
-        jest.mocked(apiGet).mockResolvedValue(null);
+        vi.mocked(apiGet).mockResolvedValue(null);
         await glGetBranch(mockClient, 'my-group', 'my-project', 'feature/x');
         expect(projectPath).toHaveBeenCalledWith('my-group', 'my-project');
         expect(apiGet).toHaveBeenCalledWith(mockClient, expect.stringContaining('/repository/branches/feature%2Fx'), {
@@ -59,7 +59,7 @@ describe('glGetBranch', () => {
 
 describe('glGetDiff', () => {
     it('returns formatted diff string', async () => {
-        jest.mocked(apiGet).mockResolvedValue({
+        vi.mocked(apiGet).mockResolvedValue({
             diffs: [{ diff: '+console.log("hi")', new_path: 'src/main.ts' }],
         });
         const result = await glGetDiff(mockClient, 'owner', 'repo', 'feature', 'main');
@@ -68,19 +68,19 @@ describe('glGetDiff', () => {
     });
 
     it('returns empty string when no diffs', async () => {
-        jest.mocked(apiGet).mockResolvedValue({ diffs: [] });
+        vi.mocked(apiGet).mockResolvedValue({ diffs: [] });
         const result = await glGetDiff(mockClient, 'owner', 'repo', 'feature', 'main');
         expect(result).toBe('');
     });
 
     it('returns empty string when apiGet returns null', async () => {
-        jest.mocked(apiGet).mockResolvedValue(null);
+        vi.mocked(apiGet).mockResolvedValue(null);
         const result = await glGetDiff(mockClient, 'owner', 'repo', 'feature', 'main');
         expect(result).toBe('');
     });
 
     it('calls apiGet with compare endpoint and params', async () => {
-        jest.mocked(apiGet).mockResolvedValue(null);
+        vi.mocked(apiGet).mockResolvedValue(null);
         await glGetDiff(mockClient, 'owner', 'repo', 'source', 'target');
         expect(apiGet).toHaveBeenCalledWith(mockClient, expect.stringContaining('/repository/compare'), {
             operation: 'comparar branches',

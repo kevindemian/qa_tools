@@ -1,8 +1,8 @@
 /** Auto-publish report files to S3 or gh-pages.
  * Provides CLI-wrapper functions for uploading generated HTML reports. */
 import { execFileSync } from 'child_process';
-import { rootLogger } from './logger';
-import Config from './config';
+import { rootLogger } from './logger.js';
+import Config from './config.js';
 import { cpSync, mkdirSync } from 'fs';
 import { join } from 'path';
 

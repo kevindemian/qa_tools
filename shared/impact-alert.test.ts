@@ -2,13 +2,13 @@
  * Tests for impact-alert — Impact-Aware Pipeline Alert.
  */
 
-import * as reportStyles from './report-styles';
-import { analyzePipelineImpact, generateImpactAlertHtml } from './impact-alert';
-import type { ImpactAlertResult } from './impact-alert';
-import { nullAs, undefinedAs, nonNull } from './test-utils';
+import * as reportStyles from './report-styles.js';
+import { analyzePipelineImpact, generateImpactAlertHtml } from './impact-alert.js';
+import type { ImpactAlertResult } from './impact-alert.js';
+import { nullAs, undefinedAs, nonNull } from './test-utils.js';
 
 describe('analyzePipelineImpact', () => {
-    it('returns default result for null passRate', () => {
+    it('returns default result for null passRate', async () => {
         const result = analyzePipelineImpact(nullAs<number>(), 0, [], 80, []);
         expect(result.alerts).toHaveLength(1);
         expect(nonNull(result.alerts[0]).title).toBe('Insufficient data');
@@ -17,7 +17,7 @@ describe('analyzePipelineImpact', () => {
         expect(result.infoCount).toBe(1);
     });
 
-    it('returns default result for undefined passRate', () => {
+    it('returns default result for undefined passRate', async () => {
         const result = analyzePipelineImpact(undefinedAs<number>(), 0, [], 80, []);
         expect(result.alerts).toHaveLength(1);
         expect(nonNull(result.alerts[0]).title).toBe('Insufficient data');
@@ -26,19 +26,19 @@ describe('analyzePipelineImpact', () => {
         expect(result.infoCount).toBe(1);
     });
 
-    it('returns default result for null coveragePct', () => {
+    it('returns default result for null coveragePct', async () => {
         const result = analyzePipelineImpact(90, 0, [], nullAs<number>(), []);
         expect(result.alerts).toHaveLength(1);
         expect(nonNull(result.alerts[0]).title).toBe('Insufficient data');
     });
 
-    it('returns default result for undefined coveragePct', () => {
+    it('returns default result for undefined coveragePct', async () => {
         const result = analyzePipelineImpact(90, 0, [], undefinedAs<number>(), []);
         expect(result.alerts).toHaveLength(1);
         expect(nonNull(result.alerts[0]).title).toBe('Insufficient data');
     });
 
-    it('generates CRITICAL alert when passRate < 70 and coveragePct < 70', () => {
+    it('generates CRITICAL alert when passRate < 70 and coveragePct < 70', async () => {
         const result = analyzePipelineImpact(50, 3, ['Login failure', 'DB timeout'], 45, ['Epic-1']);
         expect(result.criticalCount).toBe(1);
         expect(result.warningCount).toBeGreaterThanOrEqual(1);
@@ -47,25 +47,25 @@ describe('analyzePipelineImpact', () => {
         expect(critical?.title).toBe('Low pass rate in low-coverage area');
     });
 
-    it('generates WARNING alert for elevated failure rate', () => {
+    it('generates WARNING alert for elevated failure rate', async () => {
         const result = analyzePipelineImpact(50, 3, ['Login failure'], 80, []);
         expect(result.warningCount).toBeGreaterThanOrEqual(1);
         expect(result.alerts.some((a) => a.title === 'Elevated failure rate')).toBe(true);
     });
 
-    it('generates WARNING alert for coverage below threshold', () => {
+    it('generates WARNING alert for coverage below threshold', async () => {
         const result = analyzePipelineImpact(90, 0, [], 50, []);
         expect(result.warningCount).toBeGreaterThanOrEqual(1);
         expect(result.alerts.some((a) => a.title === 'Coverage below threshold')).toBe(true);
     });
 
-    it('generates WARNING for failures in uncovered epics', () => {
+    it('generates WARNING for failures in uncovered epics', async () => {
         const result = analyzePipelineImpact(90, 2, ['Timeout'], 80, ['Epic-X', 'Epic-Y']);
         expect(result.warningCount).toBeGreaterThanOrEqual(1);
         expect(result.alerts.some((a) => a.title === 'Failures in uncovered epics')).toBe(true);
     });
 
-    it('generates INFO all-clear alert when passRate >= 80 and coveragePct >= 80', () => {
+    it('generates INFO all-clear alert when passRate >= 80 and coveragePct >= 80', async () => {
         const result = analyzePipelineImpact(95, 0, [], 90, []);
         expect(result.infoCount).toBeGreaterThanOrEqual(1);
         expect(result.alerts.some((a) => a.title === 'All clear')).toBe(true);
@@ -73,13 +73,13 @@ describe('analyzePipelineImpact', () => {
         expect(result.warningCount).toBe(0);
     });
 
-    it('deduplicates alerts by title', () => {
+    it('deduplicates alerts by title', async () => {
         const result = analyzePipelineImpact(50, 3, ['Login failure'], 45, ['Epic-1']);
         const titles = result.alerts.map((a) => a.title);
         expect(new Set(titles).size).toBe(titles.length);
     });
 
-    it('tracks severity counts correctly', () => {
+    it('tracks severity counts correctly', async () => {
         const result = analyzePipelineImpact(50, 3, ['Login failure'], 45, ['Epic-1']);
         const actualCritical = result.alerts.filter((a) => a.severity === 'critical').length;
         const actualWarning = result.alerts.filter((a) => a.severity === 'warning').length;
@@ -89,13 +89,13 @@ describe('analyzePipelineImpact', () => {
         expect(result.infoCount).toBe(actualInfo);
     });
 
-    it('produces valid timestamp', () => {
+    it('produces valid timestamp', async () => {
         const result = analyzePipelineImpact(95, 0, [], 90, []);
         expect(() => new Date(result.timestamp)).not.toThrow();
         expect(result.timestamp).toMatch(/^\d{4}-\d{2}-\d{2}T/);
     });
 
-    it('does not generate critical alert when only one condition is low', () => {
+    it('does not generate critical alert when only one condition is low', async () => {
         const lowPass = analyzePipelineImpact(50, 0, [], 80, []);
         expect(lowPass.criticalCount).toBe(0);
         expect(lowPass.alerts.some((a) => a.severity === 'critical')).toBe(false);
@@ -105,7 +105,7 @@ describe('analyzePipelineImpact', () => {
         expect(lowCoverage.alerts.some((a) => a.severity === 'critical')).toBe(false);
     });
 
-    it('handles zero failing jobs and no uncovered epics', () => {
+    it('handles zero failing jobs and no uncovered epics', async () => {
         const result = analyzePipelineImpact(95, 0, [], 90, []);
         expect(result.alerts.length).toBeGreaterThanOrEqual(1);
         expect(result.warningCount).toBe(0);
@@ -125,7 +125,7 @@ describe('generateImpactAlertHtml', () => {
         };
     }
 
-    it('generates valid HTML page with real alerts', () => {
+    it('generates valid HTML page with real alerts', async () => {
         const result = makeResult({
             alerts: [
                 {
@@ -162,7 +162,7 @@ describe('generateImpactAlertHtml', () => {
         expect(html).toContain('All clear');
     });
 
-    it('shows summary cards with alert counts', () => {
+    it('shows summary cards with alert counts', async () => {
         const result = makeResult({
             alerts: [
                 {
@@ -186,37 +186,37 @@ describe('generateImpactAlertHtml', () => {
         expect(html).toContain('data-component="metric-card"');
     });
 
-    it('returns error page for null result', () => {
+    it('returns error page for null result', async () => {
         const html = generateImpactAlertHtml(nullAs<ImpactAlertResult>());
         expect(html).toContain('Impact Alert Report Error');
     });
 
-    it('returns error page for undefined result', () => {
+    it('returns error page for undefined result', async () => {
         const html = generateImpactAlertHtml(undefinedAs<ImpactAlertResult>());
         expect(html).toContain('Impact Alert Report Error');
     });
 
-    it('shows no-alerts message when alerts list is empty', () => {
+    it('shows no-alerts message when alerts list is empty', async () => {
         const result = makeResult();
         const html = generateImpactAlertHtml(result);
         expect(html).toContain('No alerts to display');
     });
 
-    it('uses custom title', () => {
+    it('uses custom title', async () => {
         const result = makeResult();
         const html = generateImpactAlertHtml(result, 'My Alert Report');
         expect(html).toContain('<title>My Alert Report</title>');
         expect(html).toContain('<h1>My Alert Report</h1>');
     });
 
-    it('defaults title to Impact-Aware Pipeline Alert', () => {
+    it('defaults title to Impact-Aware Pipeline Alert', async () => {
         const result = makeResult();
         const html = generateImpactAlertHtml(result);
         expect(html).toContain('<title>Impact-Aware Pipeline Alert</title>');
         expect(html).toContain('<h1>Impact-Aware Pipeline Alert</h1>');
     });
 
-    it('includes theme and dark mode support', () => {
+    it('includes theme and dark mode support', async () => {
         const result = makeResult();
         const html = generateImpactAlertHtml(result);
         expect(html).toContain('qa-report-theme');
@@ -224,13 +224,13 @@ describe('generateImpactAlertHtml', () => {
         expect(html).toContain('html.dark');
     });
 
-    it('includes footer', () => {
+    it('includes footer', async () => {
         const result = makeResult();
         const html = generateImpactAlertHtml(result);
         expect(html).toContain('Impact-Aware Pipeline Alert');
     });
 
-    it('renders alert cards with severity colors', () => {
+    it('renders alert cards with severity colors', async () => {
         const result = makeResult({
             alerts: [
                 {
@@ -274,7 +274,7 @@ describe('generateImpactAlertHtml', () => {
         expect(html).toContain('Monitor');
     });
 
-    it('sanitizes alert content in HTML', () => {
+    it('sanitizes alert content in HTML', async () => {
         const result = makeResult({
             alerts: [
                 {
@@ -296,8 +296,8 @@ describe('generateImpactAlertHtml', () => {
         expect(html).toContain('&lt;input&gt;');
     });
 
-    it('returns error page when buildCss throws', () => {
-        const spy = jest.spyOn(reportStyles, 'buildCss').mockImplementation(() => {
+    it('returns error page when buildCss throws', async () => {
+        const spy = vi.spyOn(reportStyles, 'buildCss').mockImplementation(() => {
             throw new Error('CSS build failure');
         });
         try {

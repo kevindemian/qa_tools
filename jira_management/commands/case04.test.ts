@@ -1,22 +1,22 @@
-jest.mock('../../shared/prompt');
-jest.mock('../../shared/logger');
+vi.mock('../../shared/prompt');
+vi.mock('../../shared/logger');
 
-import case04 from './case04';
-import { makeMockCommandContext } from '../../shared/test-utils';
+import case04 from './case04.js';
+import { makeMockCommandContext } from '../../shared/test-utils.js';
 
 const mockJiraResource = {
-    updateFixVersions: jest.fn().mockResolvedValue({}),
-    postJiraResource: jest.fn().mockResolvedValue({}),
+    updateFixVersions: vi.fn().mockResolvedValue({}),
+    postJiraResource: vi.fn().mockResolvedValue({}),
 };
 
 const mockContext = makeMockCommandContext({ jiraResource: mockJiraResource });
 
 beforeEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
 });
 
 describe('case04 — assign fixVersion', () => {
-    it('exports a handler function', () => {
+    it('exports a handler function', async () => {
         expect(case04).toBeDefined();
         expect(typeof case04.handler).toBe('function');
     });

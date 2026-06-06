@@ -1,8 +1,8 @@
-import { nonNull } from '../../shared/test-utils';
-import { TestCaseDataSchema, TestCaseArraySchema, PreConditionInputSchema } from './case18.schema';
+import { nonNull } from '../../shared/test-utils.js';
+import { TestCaseDataSchema, TestCaseArraySchema, PreConditionInputSchema } from './case18.schema.js';
 
 describe('TestCaseDataSchema', () => {
-    it('accepts valid test case', () => {
+    it('accepts valid test case', async () => {
         const data = {
             title: 'Login with valid credentials',
             steps: ['Enter user', 'Enter password', 'Click login'],
@@ -11,7 +11,7 @@ describe('TestCaseDataSchema', () => {
         expect(TestCaseDataSchema.parse(data)).toEqual(data);
     });
 
-    it('rejects short title (<5 chars)', () => {
+    it('rejects short title (<5 chars)', async () => {
         expect(() =>
             TestCaseDataSchema.parse({
                 title: 'Log',
@@ -21,7 +21,7 @@ describe('TestCaseDataSchema', () => {
         ).toThrow();
     });
 
-    it('rejects empty steps array', () => {
+    it('rejects empty steps array', async () => {
         expect(() =>
             TestCaseDataSchema.parse({
                 title: 'Login with valid credentials',
@@ -31,7 +31,7 @@ describe('TestCaseDataSchema', () => {
         ).toThrow();
     });
 
-    it('rejects short expectedResult (<10 chars)', () => {
+    it('rejects short expectedResult (<10 chars)', async () => {
         expect(() =>
             TestCaseDataSchema.parse({
                 title: 'Login with valid credentials',
@@ -41,7 +41,7 @@ describe('TestCaseDataSchema', () => {
         ).toThrow();
     });
 
-    it('rejects missing optional fields gracefully', () => {
+    it('rejects missing optional fields gracefully', async () => {
         expect(() =>
             TestCaseDataSchema.parse({
                 steps: ['Enter user'],
@@ -52,21 +52,21 @@ describe('TestCaseDataSchema', () => {
 });
 
 describe('PreConditionInputSchema', () => {
-    it('accepts reference type with key', () => {
+    it('accepts reference type with key', async () => {
         const data = { type: 'reference', key: 'PREC-123' };
         expect(PreConditionInputSchema.parse(data)).toEqual(data);
     });
 
-    it('accepts create type with summary', () => {
+    it('accepts create type with summary', async () => {
         const data = { type: 'create', summary: 'User must be logged in' };
         expect(PreConditionInputSchema.parse(data)).toEqual(data);
     });
 
-    it('rejects invalid type', () => {
+    it('rejects invalid type', async () => {
         expect(() => PreConditionInputSchema.parse({ type: 'invalid', key: 'PREC-123' })).toThrow();
     });
 
-    it('accepts test case with preConditions array', () => {
+    it('accepts test case with preConditions array', async () => {
         const data = {
             title: 'Login with valid credentials',
             steps: ['Enter user', 'Enter password'],
@@ -82,7 +82,7 @@ describe('PreConditionInputSchema', () => {
         expect(nonNull(parsed.preConditions)[0]).toEqual({ type: 'reference', key: 'PREC-123' });
     });
 
-    it('accepts test case without preConditions', () => {
+    it('accepts test case without preConditions', async () => {
         const data = {
             title: 'Login with valid credentials',
             steps: ['Enter user', 'Enter password'],
@@ -93,7 +93,7 @@ describe('PreConditionInputSchema', () => {
 });
 
 describe('TestCaseArraySchema', () => {
-    it('accepts array of valid test cases', () => {
+    it('accepts array of valid test cases', async () => {
         const data = [
             {
                 title: 'Login with valid credentials',
@@ -104,11 +104,11 @@ describe('TestCaseArraySchema', () => {
         expect(TestCaseArraySchema.parse(data)).toEqual(data);
     });
 
-    it('rejects empty array', () => {
+    it('rejects empty array', async () => {
         expect(() => TestCaseArraySchema.parse([])).toThrow();
     });
 
-    it('rejects non-array input', () => {
+    it('rejects non-array input', async () => {
         expect(() => TestCaseArraySchema.parse({})).toThrow();
     });
 });

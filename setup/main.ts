@@ -1,17 +1,17 @@
 import fs from 'fs';
 import path from 'path';
-import { ask, askConfirm, title, info, divider } from '../shared/prompt';
-import { loadTypedState } from '../shared/state';
-import { detectFramework, extractRepoFromGit } from './detector';
-import { writeProjectsConfig, writeDotEnvExample, writePrePushHook as writeHookFile } from './config-writer';
-import { generateGitHubActions } from './templates/github-ci';
-import { generateGitLabCI } from './templates/gitlab-ci';
-import { generatePrePushHook } from './templates/pre-push-hook';
-import type { SetupContext, Framework, GitProvider } from './context';
+import { ask, askConfirm, title, info, divider } from '../shared/prompt.js';
+import { loadTypedState } from '../shared/state.js';
+import { detectFramework, extractRepoFromGit } from './detector.js';
+import { writeProjectsConfig, writeDotEnvExample, writePrePushHook as writeHookFile } from './config-writer.js';
+import { generateGitHubActions } from './templates/github-ci.js';
+import { generateGitLabCI } from './templates/gitlab-ci.js';
+import { generatePrePushHook } from './templates/pre-push-hook.js';
+import type { SetupContext, Framework, GitProvider } from './context.js';
 
 function detectGitProvider(): GitProvider {
     try {
-        const projectRoot = path.resolve(__dirname, '..');
+        const projectRoot = path.resolve(import.meta.dirname, '..');
         const gitConfig = fs.readFileSync(path.join(projectRoot, '.git/config'), 'utf8');
         if (gitConfig.includes('github.com')) return 'github';
         if (gitConfig.includes('gitlab.com')) return 'gitlab';

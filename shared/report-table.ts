@@ -7,13 +7,13 @@
  * @module report-table
  */
 
-import { escapeHtml, fmtDuration } from './report-utils';
-import { extractSuite, CATEGORY_COLORS, categorizeFailure } from './report-types';
-import type { FlatTest } from './result_parser';
-import type { TestHistoryRun, KnownIssue } from './report-types';
-import { Badge } from './primitives';
-import { Tr, Td } from './primitives';
-import { tokens } from './theme-tokens';
+import { escapeHtml, fmtDuration } from './report-utils.js';
+import { extractSuite, CATEGORY_COLORS, categorizeFailure } from './report-types.js';
+import type { FlatTest } from './result_parser.js';
+import type { TestHistoryRun, KnownIssue } from './report-types.js';
+import { Badge } from './primitives/index.js';
+import { Tr, Td } from './primitives/index.js';
+import { tokens } from './theme-tokens.js';
 
 export function matchKnownIssue(title: string, knownIssues: KnownIssue[]): KnownIssue | undefined {
     const lower = title.toLowerCase();

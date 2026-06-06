@@ -1,17 +1,17 @@
-jest.mock('../shared/open', () => ({ openWithOsOrFallback: jest.fn() }));
+vi.mock('../shared/open', async () => ({ openWithOsOrFallback: vi.fn() }));
 
 import fs from 'fs';
 import path from 'path';
 import os from 'os';
 import nock from 'nock';
-import JiraResource from '../jira_management/jira_resource';
-import JiraLinkManager from '../jira_management/jira_link_manager';
-import CsvResource from '../jira_management/csv_resource';
-import createTests from '../jira_management/create_tests';
-import { rootLogger } from '../shared/logger';
-import { tempDirPath } from '../shared/temp-dir';
-import { nonNull } from '../shared/test-utils';
-import { setTestSleep } from '../shared/http-client';
+import JiraResource from '../jira_management/jira_resource.js';
+import JiraLinkManager from '../jira_management/jira_link_manager.js';
+import CsvResource from '../jira_management/csv_resource.js';
+import createTests from '../jira_management/create_tests.js';
+import { rootLogger } from '../shared/logger.js';
+import { tempDirPath } from '../shared/temp-dir.js';
+import { nonNull } from '../shared/test-utils.js';
+import { setTestSleep } from '../shared/http-client.js';
 
 const { createTestsFromCsv } = createTests;
 
@@ -32,7 +32,7 @@ function makeState() {
         project_name: 'ECSPOL',
         base_url: 'http://localhost:1999/jira',
         sessionLog: rootLogger.child({ session: 'test-err' }),
-        onBusy: jest.fn(),
+        onBusy: vi.fn(),
     };
 }
 
@@ -74,13 +74,13 @@ describe('E2E: CSV Import - Error Paths', () => {
     });
 
     beforeEach(() => {
-        jest.spyOn(console, 'log').mockImplementation(() => {});
+        vi.spyOn(console, 'log').mockImplementation(() => {});
         nock.cleanAll();
         nock.disableNetConnect();
     });
 
     afterEach(() => {
-        jest.restoreAllMocks();
+        vi.restoreAllMocks();
         nock.cleanAll();
         nock.enableNetConnect();
         process.env.ON_ERROR = 'skip';

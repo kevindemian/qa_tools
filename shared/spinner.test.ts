@@ -1,35 +1,39 @@
-jest.mock('../shared/prompt-ui', () => ({ isQuiet: jest.fn() }));
-jest.mock('../shared/output', () => {
-    const mockOutput = { print: jest.fn() };
+vi.mock('../shared/prompt-ui', async () => ({ isQuiet: vi.fn() }));
+vi.mock('../shared/output', () => {
+    const mockOutput = { print: vi.fn() };
     return {
-        Output: { isTTY: jest.fn(), isCI: jest.fn(), columns: jest.fn(() => 80) },
+        Output: { isTTY: vi.fn(), isCI: vi.fn(), columns: vi.fn(() => 80) },
         defaultOutput: mockOutput,
     };
 });
 
-const mockSingleBar = { start: jest.fn(), update: jest.fn(), stop: jest.fn() };
-jest.mock('cli-progress', () => ({
-    SingleBar: jest.fn(() => mockSingleBar),
-    Presets: { shades_classic: {} },
+const mockSingleBar = vi.hoisted(() => ({ start: vi.fn(), update: vi.fn(), stop: vi.fn() }));
+vi.mock('cli-progress', async () => ({
+    default: {
+        SingleBar: vi.fn(function () {
+            return mockSingleBar;
+        }),
+        Presets: { shades_classic: {} },
+    },
 }));
 
-import { isQuiet } from '../shared/prompt-ui';
-import { Output, defaultOutput } from '../shared/output';
-import { withSpinner, ProgressBar, __setOraDep } from './spinner';
+import { isQuiet } from '../shared/prompt-ui.js';
+import { Output, defaultOutput } from '../shared/output.js';
+import { withSpinner, ProgressBar, __setOraDep } from './spinner.js';
 
-const mockIsQuiet = jest.mocked(isQuiet);
-const mockIsTTY = jest.mocked(Output.isTTY);
-const mockIsCI = jest.mocked(Output.isCI);
+const mockIsQuiet = vi.mocked(isQuiet);
+const mockIsTTY = vi.mocked(Output.isTTY);
+const mockIsCI = vi.mocked(Output.isCI);
 
 beforeEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
     mockIsQuiet.mockReturnValue(false);
     mockIsTTY.mockReturnValue(true);
     mockIsCI.mockReturnValue(false);
 });
 
 describe('withSpinner', () => {
-    const fn = jest.fn().mockResolvedValue(42);
+    const fn = vi.fn().mockResolvedValue(42);
 
     it('calls fn directly when quiet', async () => {
         mockIsQuiet.mockReturnValue(true);
@@ -50,8 +54,8 @@ describe('withSpinner', () => {
     });
 
     it('uses ora spinner when TTY and not quiet', async () => {
-        const mockSpinner = { start: jest.fn().mockReturnThis(), succeed: jest.fn(), fail: jest.fn() };
-        const mockOra = jest.fn(() => mockSpinner);
+        const mockSpinner = { start: vi.fn().mockReturnThis(), succeed: vi.fn(), fail: vi.fn() };
+        const mockOra = vi.fn(() => mockSpinner);
         __setOraDep(mockOra);
 
         const result = await withSpinner('loading', fn);
@@ -62,9 +66,9 @@ describe('withSpinner', () => {
     });
 
     it('calls spinner.fail on fn rejection', async () => {
-        const mockSpinner = { start: jest.fn().mockReturnThis(), succeed: jest.fn(), fail: jest.fn() };
-        __setOraDep(jest.fn(() => mockSpinner));
-        const failingFn = jest.fn().mockRejectedValue(new Error('fail'));
+        const mockSpinner = { start: vi.fn().mockReturnThis(), succeed: vi.fn(), fail: vi.fn() };
+        __setOraDep(vi.fn(() => mockSpinner));
+        const failingFn = vi.fn().mockRejectedValue(new Error('fail'));
 
         await expect(withSpinner('loading', failingFn)).rejects.toThrow('fail');
         expect(mockSpinner.fail).toHaveBeenCalled();
@@ -77,12 +81,12 @@ describe('ProgressBar', () => {
     });
 
     describe('constructor', () => {
-        it('creates cli-progress bar when TTY enabled', () => {
+        it('creates cli-progress bar when TTY enabled', async () => {
             const bar = new ProgressBar(100);
             expect(bar.current).toBe(0);
         });
 
-        it('does not create bar when not TTY', () => {
+        it('does not create bar when not TTY', async () => {
             mockIsTTY.mockReturnValue(false);
             const bar = new ProgressBar(100);
             expect(bar.current).toBe(0);
@@ -90,14 +94,14 @@ describe('ProgressBar', () => {
     });
 
     describe('update', () => {
-        it('delegates to bar.update when enabled', () => {
+        it('delegates to bar.update when enabled', async () => {
             const bar = new ProgressBar(100);
             bar.update(50);
             expect(bar.current).toBe(50);
             expect(mockSingleBar.update).toHaveBeenCalledWith(50);
         });
 
-        it('falls back to output.print when not TTY', () => {
+        it('falls back to output.print when not TTY', async () => {
             mockIsTTY.mockReturnValue(false);
             const bar = new ProgressBar(100);
             bar.update(50);
@@ -106,13 +110,13 @@ describe('ProgressBar', () => {
     });
 
     describe('stop', () => {
-        it('calls bar.stop when enabled', () => {
+        it('calls bar.stop when enabled', async () => {
             const bar = new ProgressBar(100);
             bar.stop();
             expect(mockSingleBar.stop).toHaveBeenCalled();
         });
 
-        it('no-ops when not TTY', () => {
+        it('no-ops when not TTY', async () => {
             mockIsTTY.mockReturnValue(false);
             const bar = new ProgressBar(100);
             expect(() => bar.stop()).not.toThrow();

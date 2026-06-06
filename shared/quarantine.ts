@@ -5,8 +5,8 @@ import fs from 'fs';
 import path from 'path';
 import os from 'os';
 import { z } from 'zod';
-import { rootLogger } from './logger';
-import Config from './config';
+import { rootLogger } from './logger.js';
+import Config from './config.js';
 
 export interface QuarantineEntry {
     testTitle: string;

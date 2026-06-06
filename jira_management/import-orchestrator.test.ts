@@ -1,96 +1,98 @@
-jest.mock('../shared/prompt', () => ({
-    warn: jest.fn(),
-    info: jest.fn(),
-    print: jest.fn(),
-    printSummary: jest.fn(),
-    isQuiet: jest.fn().mockReturnValue(true),
+vi.mock('../shared/prompt', async () => ({
+    warn: vi.fn(),
+    info: vi.fn(),
+    print: vi.fn(),
+    printSummary: vi.fn(),
+    isQuiet: vi.fn().mockReturnValue(true),
 }));
 
-jest.mock('../shared/state', () => ({
-    update: jest.fn(),
-    load: jest.fn().mockReturnValue({}),
+vi.mock('../shared/state', async () => ({
+    update: vi.fn(),
+    load: vi.fn().mockReturnValue({}),
 }));
 
-jest.mock('../shared/logger', () => ({
+vi.mock('../shared/logger', async () => ({
     rootLogger: {
-        child: jest.fn().mockReturnValue({
-            info: jest.fn(),
-            warn: jest.fn(),
-            error: jest.fn(),
+        child: vi.fn().mockReturnValue({
+            info: vi.fn(),
+            warn: vi.fn(),
+            error: vi.fn(),
         }),
     },
 }));
 
-jest.mock('./import-prep', () => ({
-    validateImportBatch: jest.fn(),
-    showPreview: jest.fn(),
-    filterTests: jest.fn(),
-    confirmOrCancel: jest.fn(),
-    handleDryRun: jest.fn(),
+vi.mock('./import-prep', async () => ({
+    validateImportBatch: vi.fn(),
+    showPreview: vi.fn(),
+    filterTests: vi.fn(),
+    confirmOrCancel: vi.fn(),
+    handleDryRun: vi.fn(),
 }));
 
-jest.mock('./mapping-file-generator', () => {
-    return jest.fn().mockImplementation(() => ({
-        generate: jest.fn(),
-    }));
-});
-
-jest.mock('./import-loop', () => ({
-    executeTestCreationLoop: jest.fn(),
-    updateFinalState: jest.fn(),
+vi.mock('./mapping-file-generator', () => ({
+    default: vi.fn(function () {
+        return {
+            generate: vi.fn(),
+        };
+    }),
 }));
 
-import { createMockLogger } from '../shared/test-utils';
-import { createMockLinkManager } from '../shared/test-utils/factories';
-import type IssueLinker from './issue-linker';
-import { prepareTestRun, finalizeTestCreation, postProcessCheckpoint } from './import-orchestrator';
-import { validateImportBatch, filterTests, confirmOrCancel, handleDryRun } from './import-prep';
-import * as STATE from '../shared/state';
-import { updateFinalState } from './import-loop';
+vi.mock('./import-loop', async () => ({
+    executeTestCreationLoop: vi.fn(),
+    updateFinalState: vi.fn(),
+}));
+
+import { createMockLogger } from '../shared/test-utils.js';
+import { createMockLinkManager } from '../shared/test-utils/factories/index.js';
+import type IssueLinker from './issue-linker.js';
+import { prepareTestRun, finalizeTestCreation, postProcessCheckpoint } from './import-orchestrator.js';
+import { validateImportBatch, filterTests, confirmOrCancel, handleDryRun } from './import-prep.js';
+import * as STATE from '../shared/state.js';
+import { updateFinalState } from './import-loop.js';
 const makeTestCases = (count: number) =>
     Array.from({ length: count }, (_, i) => ({
         title: `Test ${i + 1}`,
         steps: [{ fields: { Action: 'a' } }],
     }));
 
-const onBusy = jest.fn();
-const warn = jest.fn();
+const onBusy = vi.fn();
+const warn = vi.fn();
 
 function linkerMock(
     overrides: Partial<Pick<IssueLinker, 'associatePrecondition' | 'linkIssues' | 'updateCrossReferences'>> = {},
 ): IssueLinker {
     return {
         jiraResource: {
-            getJiraResource: jest.fn(),
-            postJiraResource: jest.fn(),
-            putJiraResource: jest.fn(),
-            searchJiraIssues: jest.fn(),
-            getTransitionsForIssue: jest.fn(),
-            transitionIssue: jest.fn(),
+            getJiraResource: vi.fn(),
+            postJiraResource: vi.fn(),
+            putJiraResource: vi.fn(),
+            searchJiraIssues: vi.fn(),
+            getTransitionsForIssue: vi.fn(),
+            transitionIssue: vi.fn(),
         },
         linkManager: createMockLinkManager(),
-        associatePrecondition: jest.fn(),
-        linkIssues: jest.fn(),
-        updateCrossReferences: jest.fn().mockResolvedValue(undefined),
+        associatePrecondition: vi.fn(),
+        linkIssues: vi.fn(),
+        updateCrossReferences: vi.fn().mockResolvedValue(undefined),
         ...overrides,
     };
 }
 
 beforeEach(() => {
-    jest.clearAllMocks();
-    jest.mocked(validateImportBatch).mockReturnValue({
+    vi.clearAllMocks();
+    vi.mocked(validateImportBatch).mockReturnValue({
         resumeFrom: 0,
         inMemoryTasksId: [],
         inMemoryTasksText: [],
         opLog: createMockLogger(),
     });
-    jest.mocked(filterTests).mockImplementation((t: unknown[]) => t as []);
-    jest.mocked(confirmOrCancel).mockReturnValue(true);
+    vi.mocked(filterTests).mockImplementation((t: unknown[]) => t as []);
+    vi.mocked(confirmOrCancel).mockReturnValue(true);
 });
 
 describe('prepareTestRun', () => {
     it('user cancels via confirmOrCancel', async () => {
-        jest.mocked(confirmOrCancel).mockReturnValue(false);
+        vi.mocked(confirmOrCancel).mockReturnValue(false);
         const result = await prepareTestRun({
             tests: makeTestCases(2),
             sourcePath: '/p.csv',
@@ -105,7 +107,7 @@ describe('prepareTestRun', () => {
     });
 
     it('filterTests returns null', async () => {
-        jest.mocked(filterTests).mockReturnValue(null);
+        vi.mocked(filterTests).mockReturnValue(null);
         const result = await prepareTestRun({
             tests: makeTestCases(2),
             sourcePath: '/p.csv',
@@ -119,7 +121,7 @@ describe('prepareTestRun', () => {
     });
 
     it('dry-run returns early', async () => {
-        jest.mocked(handleDryRun).mockReturnValue({
+        vi.mocked(handleDryRun).mockReturnValue({
             inMemoryTasksId: [],
             inMemoryTasksText: [],
             summary: 'DRY-RUN simulado',
@@ -152,9 +154,9 @@ describe('finalizeTestCreation', () => {
             { status: 'error' as const, label: 'Test 2', message: 'fail' },
         ];
         const linker = linkerMock({
-            associatePrecondition: jest.fn(),
-            linkIssues: jest.fn(),
-            updateCrossReferences: jest.fn(),
+            associatePrecondition: vi.fn(),
+            linkIssues: vi.fn(),
+            updateCrossReferences: vi.fn(),
         });
         const result = await finalizeTestCreation({
             results,
@@ -168,8 +170,8 @@ describe('finalizeTestCreation', () => {
             jiraLabels: [],
             opLog: createMockLogger(),
             onBusy,
-            info: jest.fn(),
-            printSummary: jest.fn(),
+            info: vi.fn(),
+            printSummary: vi.fn(),
         });
         expect(result).toBeDefined();
         expect(result?.status).toBe('error');
@@ -180,7 +182,7 @@ describe('finalizeTestCreation', () => {
 describe('postProcessCheckpoint', () => {
     it('deletes checkpoint and updates xrefs', async () => {
         const linker = linkerMock({
-            updateCrossReferences: jest.fn().mockResolvedValue(undefined),
+            updateCrossReferences: vi.fn().mockResolvedValue(undefined),
         });
         const results = [{ status: 'ok' as const, label: 'Test 1', message: '' }];
         await postProcessCheckpoint({
@@ -192,7 +194,7 @@ describe('postProcessCheckpoint', () => {
             sourcePath: '/p.csv',
             sourceType: 'csv',
             linker,
-            info: jest.fn(),
+            info: vi.fn(),
         });
         expect(STATE.update).toHaveBeenCalledWith(expect.any(Function));
         expect(updateFinalState).toHaveBeenCalled();

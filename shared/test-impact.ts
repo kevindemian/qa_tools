@@ -3,9 +3,9 @@ import { execFileSync } from 'child_process';
 import fs from 'fs';
 import path from 'path';
 import { z } from 'zod';
-import { rootLogger } from './logger';
-import { safeParseJson } from './safe-json';
-import type { TestImpactResult, ImpactedTest, FileTestMapping, TestSelectionJson } from './types';
+import { rootLogger } from './logger.js';
+import { safeParseJson } from './safe-json.js';
+import type { TestImpactResult, ImpactedTest, FileTestMapping, TestSelectionJson } from './types.js';
 
 // ---- helpers ----
 

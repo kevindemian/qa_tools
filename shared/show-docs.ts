@@ -3,10 +3,10 @@
  * can serve documentation without cross-module dependency. */
 import fs from 'fs';
 import path from 'path';
-import { printError, warn, info, divider } from './prompt';
-import { openWithFallback, getDocsOutputDir } from './open';
-import { mdToHtml } from './markdown';
-import { buildHtmlPage } from './html-factory';
+import { printError, warn, info, divider } from './prompt.js';
+import { openWithFallback, getDocsOutputDir } from './open.js';
+import { mdToHtml } from './markdown.js';
+import { buildHtmlPage } from './html-factory.js';
 
 function _loadDocFiles(docsDir: string): Array<{ label: string; file: string }> | null {
     let files: string[];
@@ -55,7 +55,7 @@ function _buildIndexHtml(docs: Array<{ label: string; file: string }>): string {
 /** Convert all Markdown docs to HTML, write them to the docs output directory,
  * and open the index in the browser. Safe to call from any module. */
 export async function showDocs(): Promise<void> {
-    const docsDir = path.join(__dirname, '../docs');
+    const docsDir = path.join(import.meta.dirname, '../docs');
     const docs = _loadDocFiles(docsDir);
     if (!docs) return;
     const outDir = getDocsOutputDir();

@@ -2,8 +2,6 @@ import { z } from 'zod';
 
 export const ChangeImpactSchema = z.enum(['positive', 'negative', 'neutral']);
 
-export type ChangeImpact = z.infer<typeof ChangeImpactSchema>;
-
 export const MeaningfulChangeSchema = z.object({
     metric: z.string().min(1, 'metric must be non-empty'),
     before: z.union([z.string(), z.number()]),

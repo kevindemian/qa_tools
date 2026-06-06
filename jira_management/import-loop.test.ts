@@ -1,64 +1,64 @@
-jest.mock('../shared/state', () => ({ update: jest.fn() }));
-jest.mock('../shared/logger', () => ({
+vi.mock('../shared/state', async () => ({ update: vi.fn() }));
+vi.mock('../shared/logger', async () => ({
     rootLogger: {
-        child: jest.fn().mockReturnValue({
-            info: jest.fn(),
-            warn: jest.fn(),
-            error: jest.fn(),
+        child: vi.fn().mockReturnValue({
+            info: vi.fn(),
+            warn: vi.fn(),
+            error: vi.fn(),
         }),
     },
 }));
 
-import type { TestCase, TestResult } from '../shared/types';
-import type IssueLinker from './issue-linker';
-import type TestCaseFactory from './test-case-factory';
-import type { Logger } from '../shared/logger';
-import type { JiraResourceLike } from '../shared/types';
-import type { XrayStepImporter } from './xray-client';
-import JiraLinkManager from './jira_link_manager';
-import { nonNull } from '../shared/test-utils';
-import { createMockJiraResource } from '../shared/test-utils/factories/jira-resource-factory';
-import { update as updateState } from '../shared/state';
+import type { TestCase, TestResult } from '../shared/types.js';
+import type { Mocked } from 'vitest';
+import type IssueLinker from './issue-linker.js';
+import type TestCaseFactory from './test-case-factory.js';
+import type { JiraResourceLike } from '../shared/types.js';
+import type { XrayStepImporter } from './xray-client.js';
+import JiraLinkManager from './jira_link_manager.js';
+import { nonNull } from '../shared/test-utils.js';
+import { createMockJiraResource } from '../shared/test-utils/factories/jira-resource-factory.js';
+import { update as updateState } from '../shared/state.js';
 import {
     linkTestRelations,
     buildTestData,
     saveCheckpoint,
     createIssueForTest,
     executeTestCreationLoop,
-} from './import-loop';
+} from './import-loop.js';
 
 const testBase: TestCase = {
     title: 'My Test',
     steps: [{ fields: { Action: 'Click', Data: '', 'Expected Result': 'OK' } }],
 };
 
-const makeLinker = (): jest.Mocked<IssueLinker> => {
-    const mockJiraResource: jest.Mocked<JiraResourceLike> = createMockJiraResource();
+const makeLinker = (): Mocked<IssueLinker> => {
+    const mockJiraResource: Mocked<JiraResourceLike> = createMockJiraResource();
     const realLinkMgr = new JiraLinkManager(mockJiraResource);
-    const mockLinkMgr = jest.mocked(realLinkMgr);
-    mockLinkMgr.associatePrecondition = jest.fn();
-    mockLinkMgr.linkIssues = jest.fn();
+    const mockLinkMgr = vi.mocked(realLinkMgr);
+    mockLinkMgr.associatePrecondition = vi.fn();
+    mockLinkMgr.linkIssues = vi.fn();
     return {
-        associatePrecondition: jest.fn(),
-        linkIssues: jest.fn(),
-        updateCrossReferences: jest.fn(),
+        associatePrecondition: vi.fn(),
+        linkIssues: vi.fn(),
+        updateCrossReferences: vi.fn(),
         jiraResource: mockJiraResource,
         linkManager: mockLinkMgr,
     };
 };
 
-const makeFactory = (): jest.Mocked<TestCaseFactory> => {
-    const mockJiraResource: jest.Mocked<JiraResourceLike> = createMockJiraResource();
-    const stepImporter: XrayStepImporter = { importStep: jest.fn() };
+const makeFactory = (): Mocked<TestCaseFactory> => {
+    const mockJiraResource: Mocked<JiraResourceLike> = createMockJiraResource();
+    const stepImporter: XrayStepImporter = { importStep: vi.fn() };
     return {
-        createIssue: jest.fn(),
-        postSteps: jest.fn(),
+        createIssue: vi.fn(),
+        postSteps: vi.fn(),
         jiraResource: mockJiraResource,
         stepImporter,
     };
 };
 
-const opLog = jest.mocked<Logger>({
+const opLog = vi.mocked({
     context: {},
     _logDir: null,
     _filePathCached: null,
@@ -66,17 +66,17 @@ const opLog = jest.mocked<Logger>({
     _bytesWritten: 0,
     _maxLogSize: 0,
     _config: null,
-    _ensureDir: jest.fn(),
-    _rotateIfNeeded: jest.fn(),
-    _writeConsole: jest.fn(),
-    _writeFile: jest.fn(),
-    _write: jest.fn(),
-    child: jest.fn(),
-    writeFileOnly: jest.fn(),
-    debug: jest.fn(),
-    info: jest.fn(),
-    warn: jest.fn(),
-    error: jest.fn(),
+    _ensureDir: vi.fn(),
+    _rotateIfNeeded: vi.fn(),
+    _writeConsole: vi.fn(),
+    _writeFile: vi.fn(),
+    _write: vi.fn(),
+    child: vi.fn(),
+    writeFileOnly: vi.fn(),
+    debug: vi.fn(),
+    info: vi.fn(),
+    warn: vi.fn(),
+    error: vi.fn(),
     get filePath() {
         return '';
     },
@@ -84,7 +84,7 @@ const opLog = jest.mocked<Logger>({
 const resultSink: TestResult[] = [];
 
 beforeEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
     resultSink.length = 0;
 });
 
@@ -132,7 +132,7 @@ describe('linkTestRelations', () => {
 });
 
 describe('buildTestData', () => {
-    it('without jiraLabels', () => {
+    it('without jiraLabels', async () => {
         const test: TestCase = { ...testBase, description: 'desc' };
         const result = buildTestData(test, 'PROJ', []);
         expect(result.fields).toMatchObject({
@@ -144,13 +144,13 @@ describe('buildTestData', () => {
         expect((result.fields as Record<string, unknown>).labels).toEqual([]);
     });
 
-    it('with jiraLabels', () => {
+    it('with jiraLabels', async () => {
         const test: TestCase = { ...testBase, description: 'desc' };
         const result = buildTestData(test, 'PROJ', ['label1', 'label2']);
         expect((result.fields as Record<string, unknown>).labels).toEqual(['label1', 'label2']);
     });
 
-    it('inline precondition appended to description', () => {
+    it('inline precondition appended to description', async () => {
         const test: TestCase = { ...testBase, precondition: { type: 'inline', value: 'must login' } };
         const result = buildTestData(test, 'PROJ', []);
         expect((result.fields as Record<string, unknown>).description).toContain('Pre-condition: must login');
@@ -158,7 +158,7 @@ describe('buildTestData', () => {
 });
 
 describe('saveCheckpoint', () => {
-    it('happy path', () => {
+    it('happy path', async () => {
         saveCheckpoint({
             sourcePath: '/path.csv',
             sourceType: 'csv',
@@ -170,8 +170,8 @@ describe('saveCheckpoint', () => {
         expect(updateState).toHaveBeenCalledWith(expect.any(Function));
     });
 
-    it('file error propagates', () => {
-        jest.mocked(updateState).mockImplementationOnce(() => {
+    it('file error propagates', async () => {
+        vi.mocked(updateState).mockImplementationOnce(() => {
             throw new Error('write failed');
         });
         expect(() =>
@@ -284,8 +284,8 @@ describe('executeTestCreationLoop', () => {
             results: resultSink,
             resumeFrom: 0,
             isQuiet: () => true,
-            reportInfo: jest.fn(),
-            reportPrint: jest.fn(),
+            reportInfo: vi.fn(),
+            reportPrint: vi.fn(),
         });
 
         expect(inMemoryTasksId).toEqual(['T-NEW']);

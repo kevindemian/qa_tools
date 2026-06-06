@@ -1,21 +1,23 @@
-const mockPrompt = {
-    ask: jest.fn(),
-    askConfirm: jest.fn(),
-    info: jest.fn(),
-    printError: jest.fn(),
-    title: jest.fn(),
-    warn: jest.fn(),
-};
-jest.mock('./prompt', () => mockPrompt);
+const mockPrompt = vi.hoisted(() => ({
+    ask: vi.fn(),
+    askConfirm: vi.fn(),
+    info: vi.fn(),
+    printError: vi.fn(),
+    title: vi.fn(),
+    warn: vi.fn(),
+}));
 
-const mockFailureAnalysis = {
-    classifyFailure: jest.fn(),
-};
-jest.mock('./failure-analysis', () => mockFailureAnalysis);
+vi.mock('./prompt', () => mockPrompt);
 
-jest.mock('./logger');
+const mockFailureAnalysis = vi.hoisted(() => ({
+    classifyFailure: vi.fn(),
+}));
 
-jest.mock('./config', () => ({
+vi.mock('./failure-analysis', () => mockFailureAnalysis);
+
+vi.mock('./logger');
+
+vi.mock('./config', async () => ({
     __esModule: true,
     default: {
         jiraProject: '',
@@ -25,14 +27,15 @@ jest.mock('./config', () => ({
     },
 }));
 
-import { collectManual, collectAutomated, compose, fileToJira, interactiveBugReportFlow } from './bug-report';
-import type { ParseResult } from './result_parser';
-import type { BugReport } from './types';
-import { nonNull } from './test-utils';
+import { collectManual, collectAutomated, compose, fileToJira, interactiveBugReportFlow } from './bug-report.js';
+import type { Mock } from 'vitest';
+import type { ParseResult } from './result_parser.js';
+import type { BugReport } from './types.js';
+import { nonNull } from './test-utils.js';
 
 describe('BugReport Service', () => {
     beforeEach(() => {
-        jest.clearAllMocks();
+        vi.clearAllMocks();
     });
 
     describe('collectManual', () => {
@@ -305,22 +308,22 @@ describe('BugReport Service', () => {
 
     describe('fileToJira', () => {
         let mockJiraResource: {
-            getJiraResource: jest.Mock;
-            postJiraResource: jest.Mock;
-            putJiraResource: jest.Mock;
-            searchJiraIssues: jest.Mock;
-            getTransitionsForIssue: jest.Mock;
-            transitionIssue: jest.Mock;
+            getJiraResource: Mock;
+            postJiraResource: Mock;
+            putJiraResource: Mock;
+            searchJiraIssues: Mock;
+            getTransitionsForIssue: Mock;
+            transitionIssue: Mock;
         };
 
         beforeEach(() => {
             mockJiraResource = {
-                getJiraResource: jest.fn(),
-                postJiraResource: jest.fn(),
-                putJiraResource: jest.fn(),
-                searchJiraIssues: jest.fn(),
-                getTransitionsForIssue: jest.fn(),
-                transitionIssue: jest.fn(),
+                getJiraResource: vi.fn(),
+                postJiraResource: vi.fn(),
+                putJiraResource: vi.fn(),
+                searchJiraIssues: vi.fn(),
+                getTransitionsForIssue: vi.fn(),
+                transitionIssue: vi.fn(),
             };
         });
 
@@ -364,27 +367,27 @@ describe('BugReport Service', () => {
 
     describe('interactiveBugReportFlow', () => {
         let mockJiraResource: {
-            postJiraResource: jest.Mock;
-            getJiraResource: jest.Mock;
-            putJiraResource: jest.Mock;
-            searchJiraIssues: jest.Mock;
-            getTransitionsForIssue: jest.Mock;
-            transitionIssue: jest.Mock;
+            postJiraResource: Mock;
+            getJiraResource: Mock;
+            putJiraResource: Mock;
+            searchJiraIssues: Mock;
+            getTransitionsForIssue: Mock;
+            transitionIssue: Mock;
         };
         let mockLinkManager: {
-            linkIssues: jest.Mock;
+            linkIssues: Mock;
         };
 
         beforeEach(() => {
             mockJiraResource = {
-                postJiraResource: jest.fn(),
-                getJiraResource: jest.fn(),
-                putJiraResource: jest.fn(),
-                searchJiraIssues: jest.fn(),
-                getTransitionsForIssue: jest.fn(),
-                transitionIssue: jest.fn(),
+                postJiraResource: vi.fn(),
+                getJiraResource: vi.fn(),
+                putJiraResource: vi.fn(),
+                searchJiraIssues: vi.fn(),
+                getTransitionsForIssue: vi.fn(),
+                transitionIssue: vi.fn(),
             };
-            mockLinkManager = { linkIssues: jest.fn() };
+            mockLinkManager = { linkIssues: vi.fn() };
         });
 
         it('calls collectManual, creates and links issues if confirmed', async () => {
@@ -485,21 +488,26 @@ describe('BugReport Service', () => {
     });
 });
 
-jest.mock('./llm-client', () => ({ llmPrompt: jest.fn() }));
-jest.mock('fs', () => {
-    const actual = jest.requireActual<typeof import('fs')>('fs');
+vi.mock('./llm-client', async () => ({ llmPrompt: vi.fn() }));
+vi.mock('fs', async () => {
+    const actual = await vi.importActual<typeof import('fs')>('fs');
     return {
         ...actual,
-        readFileSync: jest.fn((p: string) => {
+        readFileSync: vi.fn((p: string) => {
             if (p.includes('bug-report-from-description.md')) return 'mock prompt content';
             return actual.readFileSync(p);
         }),
     };
 });
 
-import { generateBugReportFromDescription } from './bug-report';
+import { generateBugReportFromDescription } from './bug-report.js';
 
-const mockLlmPrompt = jest.mocked(jest.requireMock<typeof import('./llm-client')>('./llm-client').llmPrompt);
+let mockLlmPrompt: Mock;
+
+beforeAll(async () => {
+    const llmClient = await vi.importMock<typeof import('./llm-client.js')>('./llm-client');
+    mockLlmPrompt = vi.mocked(llmClient.llmPrompt);
+});
 
 describe('generateBugReportFromDescription', () => {
     beforeEach(() => {
@@ -550,8 +558,9 @@ describe('generateBugReportFromDescription', () => {
     });
 
     it('returns null when prompt template file cannot be read', async () => {
-        const fsMock = jest.mocked(jest.requireMock<typeof import('fs')>('fs'));
-        fsMock.readFileSync.mockImplementationOnce(() => {
+        const fs = await import('fs');
+        const readMock = vi.mocked((fs as any).readFileSync);
+        readMock.mockImplementationOnce(() => {
             throw new Error('ENOENT');
         });
 

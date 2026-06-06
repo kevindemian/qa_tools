@@ -1,13 +1,13 @@
 /** CSV parsing: single-step, bulk (multi-block), description/precondition/linked-issues extraction. */
 import fs from 'fs';
-import { csv } from '../shared/deps';
+import { csv } from '../shared/deps.js';
 import { Readable } from 'stream';
-import { rootLogger } from '../shared/logger';
-import { normalizeFieldName, sanitizeCellValue } from '../shared/field-names';
-import type { TestCase } from '../shared/types';
-import { parseQuotedValue, extractPreconditionKey } from '../shared/quoted-string';
-import { CsvRowSchema } from './csv-import-schema';
-import type { CsvRow } from './csv-import-schema';
+import { rootLogger } from '../shared/logger.js';
+import { normalizeFieldName, sanitizeCellValue } from '../shared/field-names.js';
+import type { TestCase } from '../shared/types.js';
+import { parseQuotedValue, extractPreconditionKey } from '../shared/quoted-string.js';
+import { CsvRowSchema } from './csv-import-schema.js';
+import type { CsvRow } from './csv-import-schema.js';
 
 class CsvResource {
     /** Detect CSV separator: prefers `;` when first line has `;` and no `,`.

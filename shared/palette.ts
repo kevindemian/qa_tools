@@ -8,24 +8,25 @@
  * - Respects NO_COLOR env var automatically
  *
  * Usage:
- *   import { palette } from '../palette';
+ *   import { palette } from '../palette.js';
  *   output.print(palette.red('error') + palette.bold(' important'));
  *
  * @module palette
  */
-import chalk from 'chalk';
+import chalk, { type ChalkInstance } from 'chalk';
+import Config from './config.js';
 
-if (process.env.NO_COLOR !== undefined) {
+if (Config.get<boolean>('noColor')) {
     chalk.level = 0;
 }
 
 const level = chalk.level;
 
-function hexOrBasic(hex: string, basic: chalk.Chalk): chalk.Chalk {
+function hexOrBasic(hex: string, basic: ChalkInstance): ChalkInstance {
     return level >= 2 ? chalk.hex(hex) : basic;
 }
 
-function bgHexOrBasic(hex: string, basic: chalk.Chalk): chalk.Chalk {
+function bgHexOrBasic(hex: string, basic: ChalkInstance): ChalkInstance {
     return level >= 2 ? chalk.bgHex(hex) : basic;
 }
 
@@ -63,7 +64,7 @@ export const palette = {
 
     /** Hex color — creates a chalk instance with the given hex color.
      * Falls back to plain instance when color level < 2. */
-    hex: (hex: string): chalk.Chalk => (level >= 2 ? chalk.hex(hex) : chalk),
+    hex: (hex: string): ChalkInstance => (level >= 2 ? chalk.hex(hex) : chalk),
 } as const;
 
 export type PaletteKey = keyof typeof palette;
@@ -72,7 +73,7 @@ export type PaletteKey = keyof typeof palette;
 export type ChalkKey = Exclude<PaletteKey, 'hex'>;
 
 /** Apply a palette color to text. Returns the colored string. */
-export function applyPalette(key: ChalkKey): chalk.Chalk {
+export function applyPalette(key: ChalkKey): ChalkInstance {
     return palette[key];
 }
 

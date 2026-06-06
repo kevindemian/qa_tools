@@ -14,5 +14,3 @@ export const AiBugReportSchema = z.object({
         .describe('Specific sentences from the description that support each field')
         .optional(),
 });
-
-export type AiBugReport = z.infer<typeof AiBugReportSchema>;

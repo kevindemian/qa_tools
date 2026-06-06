@@ -10,10 +10,10 @@
  * Total max attempts: layer1_max + layer2_max + layer3_max (default 6).
  */
 
-import { llmPrompt, type LlmPromptOptions } from './llm-client';
-import { type ValidationResult, type ValidatorSummary } from './artifact-validator';
-import { type ZodSchema } from './types';
-import { recordRetry } from './llm-metrics';
+import type { LlmPromptOptions } from './types/llm.js';
+import { type ValidationResult, type ValidatorSummary } from './artifact-validator.js';
+import { type ZodSchema } from './types.js';
+import { recordRetry } from './llm-metrics.js';
 
 export interface LayerConfig {
     maxRetries: number;
@@ -52,6 +52,7 @@ function buildInvariantHint(results: ValidationResult[]): string {
 export async function generateWithRetry<T>(
     opts: LlmPromptOptions,
     schema: ZodSchema,
+    llmPromptFn: (opts: LlmPromptOptions) => Promise<string>,
     layer2Validator: {
         validate: (
             data: unknown,
@@ -74,11 +75,7 @@ export async function generateWithRetry<T>(
         const hintSystem = hint ? `${system}\n\n[${layer.toUpperCase()} VALIDATION FAILED]\n${hint}` : system;
 
         try {
-            const result = await llmPrompt({
-                ...opts,
-                system: hintSystem,
-                user,
-            });
+            const result = await llmPromptFn({ ...opts, system: hintSystem, user });
             return result as unknown as T;
         } catch {
             return null;

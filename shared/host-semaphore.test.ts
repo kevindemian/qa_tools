@@ -1,15 +1,15 @@
-import { extractHost, HostSemaphore } from './host-semaphore';
+import { extractHost, HostSemaphore } from './host-semaphore.js';
 
 describe('extractHost', () => {
-    it('returns hostname for valid URL', () => {
+    it('returns hostname for valid URL', async () => {
         expect(extractHost('https://api.github.com/resource')).toBe('api.github.com');
     });
 
-    it('returns unknown for invalid URL', () => {
+    it('returns unknown for invalid URL', async () => {
         expect(extractHost(':::invalid')).toBe('unknown');
     });
 
-    it('returns unknown for empty string', () => {
+    it('returns unknown for empty string', async () => {
         expect(extractHost('')).toBe('unknown');
     });
 });
@@ -45,7 +45,7 @@ describe('HostSemaphore', () => {
         await expect(p3).resolves.toBeUndefined();
     });
 
-    it('release handles nonexistent host without throwing', () => {
+    it('release handles nonexistent host without throwing', async () => {
         const sem = new HostSemaphore(1);
         expect(() => sem.release('nonexistent')).not.toThrow();
     });
@@ -66,18 +66,18 @@ describe('HostSemaphore', () => {
     });
 
     it('rateLimitWait delays when releases are recent', async () => {
-        jest.useFakeTimers();
+        vi.useFakeTimers();
         const sem = new HostSemaphore(1);
 
         await sem.acquire('h');
         sem.release('h');
 
         const p = sem.acquire('h');
-        jest.advanceTimersByTime(100);
+        vi.advanceTimersByTime(100);
         expect(await Promise.race([p.then(() => 'done'), Promise.resolve('waiting')])).toBe('waiting');
 
-        jest.advanceTimersByTime(100);
+        vi.advanceTimersByTime(100);
         await expect(p).resolves.toBeUndefined();
-        jest.useRealTimers();
+        vi.useRealTimers();
     });
 });

@@ -1,6 +1,6 @@
-import { info } from '../shared/prompt';
-import { rootLogger } from '../shared/logger';
-import type { JsonObject, PreConditionSummary, JiraResourceLike } from '../shared/types';
+import { info } from '../shared/prompt.js';
+import { rootLogger } from '../shared/logger.js';
+import type { JsonObject, PreConditionSummary, JiraResourceLike } from '../shared/types.js';
 
 interface IssueField {
     id: string;

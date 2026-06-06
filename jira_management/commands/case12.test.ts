@@ -1,50 +1,50 @@
-jest.mock('../../shared/prompt');
-jest.mock('../../shared/logger');
+vi.mock('../../shared/prompt');
+vi.mock('../../shared/logger');
 
-jest.mock('../../shared/cli_base', () => ({
-    sanitizeUrl: jest.fn((url: string) => url),
+vi.mock('../../shared/cli_base', async () => ({
+    sanitizeUrl: vi.fn((url: string) => url),
 }));
 
-const mockLoadMetrics = jest.fn<object, []>().mockReturnValue({ runs: [] });
-const mockPrint = jest.fn<void, [string]>();
-const mockPaletteYellow = jest.fn<string, [string]>();
+const mockLoadMetrics = vi.hoisted(() => vi.fn<(...args: []) => object>().mockReturnValue({ runs: [] }));
+const mockPrint = vi.hoisted(() => vi.fn<(...args: [string]) => void>());
+const mockPaletteYellow = vi.hoisted(() => vi.fn<(...args: [string]) => string>());
 
-jest.mock('../../shared/palette', () => ({
+vi.mock('../../shared/palette', async () => ({
     palette: {
-        red: jest.fn<string, [string]>(),
-        green: jest.fn<string, [string]>(),
+        red: vi.fn<(...args: [string]) => string>(),
+        green: vi.fn<(...args: [string]) => string>(),
         yellow: mockPaletteYellow,
-        blue: jest.fn<string, [string]>(),
+        blue: vi.fn<(...args: [string]) => string>(),
     },
 }));
 
-jest.mock('../../shared/output', () => ({
+vi.mock('../../shared/output', async () => ({
     defaultOutput: { print: mockPrint },
 }));
 
-jest.mock('../../shared/metrics', () => ({
+vi.mock('../../shared/metrics', async () => ({
     loadMetrics: mockLoadMetrics,
 }));
 
-import { tableView } from '../../shared/prompt';
-import case12 from './case12';
-import { makeMockCommandContext } from '../../shared/test-utils';
+import { tableView } from '../../shared/prompt.js';
+import case12 from './case12.js';
+import { makeMockCommandContext } from '../../shared/test-utils.js';
 
 const mockJiraResource = {
     axiosInstance: {
-        get: jest.fn().mockResolvedValue({ status: 200 }),
-        post: jest.fn().mockResolvedValue({}),
+        get: vi.fn().mockResolvedValue({ status: 200 }),
+        post: vi.fn().mockResolvedValue({}),
     },
 };
 
 const mockContext = makeMockCommandContext({ jiraResource: mockJiraResource });
 
 beforeEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
 });
 
 describe('case12 — diagnostic connection', () => {
-    it('exports a handler function', () => {
+    it('exports a handler function', async () => {
         expect(case12).toBeDefined();
         expect(typeof case12.handler).toBe('function');
     });
@@ -119,7 +119,7 @@ describe('case12 — diagnostic connection', () => {
 
         await case12.handler(mockContext);
 
-        expect(jest.mocked(tableView)).toHaveBeenCalledWith(
+        expect(vi.mocked(tableView)).toHaveBeenCalledWith(
             expect.arrayContaining([
                 expect.objectContaining({
                     Endpoint: 'Health Score',
@@ -158,7 +158,7 @@ describe('case12 — diagnostic connection', () => {
 
         await case12.handler(mockContext);
 
-        expect(jest.mocked(tableView)).toHaveBeenCalledWith(
+        expect(vi.mocked(tableView)).toHaveBeenCalledWith(
             expect.arrayContaining([
                 expect.objectContaining({ Endpoint: 'Health Score', Status: '🟡 insuficiente (1/10 runs)' }),
             ]),

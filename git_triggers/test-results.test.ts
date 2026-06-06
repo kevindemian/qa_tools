@@ -1,103 +1,110 @@
-import { jest } from '@jest/globals';
-import { createMockGitProvider, createMockJiraResource, createMockLinkManager } from '../shared/test-utils/factories';
-import type { ParseResult } from '../shared/result_parser';
-import type { ArtifactInfo } from '../shared/types';
-import JiraClient from '../shared/jira-client';
-import JiraLinkManager from '../jira_management/jira_link_manager';
+import {
+    createMockGitProvider,
+    createMockJiraResource,
+    createMockLinkManager,
+} from '../shared/test-utils/factories/index.js';
+import type { ParseResult } from '../shared/result_parser.js';
+import type { ArtifactInfo } from '../shared/types.js';
+import JiraClient from '../shared/jira-client.js';
+import JiraLinkManager from '../jira_management/jira_link_manager.js';
 
 // ── Shared mock functions ───────────────────────────────────────────────────
-// These are referenced by jest.mock factories below. Must be declared before
-// jest.mock calls (jest.mock is hoisted but factories are lazy-evaluated).
+// These are referenced by vi.mock factories below. Must be declared before
+// vi.mock calls (vi.mock is hoisted but factories are lazy-evaluated).
 
-const mockGlobSync = jest.fn<(pattern: string) => string[]>();
-const mockParseTestResults = jest.fn<(raw: string) => ParseResult>();
+const mockGlobSync = vi.fn<(pattern: string) => string[]>();
+const mockParseTestResults = vi.fn<(raw: string) => ParseResult>();
 const mockMatchResultsToTests =
-    jest.fn<(parsed: ParseResult, keys: string[]) => { matched: object[]; unmatched: object[] }>();
-const mockCreateTestExecutionFromResults = jest.fn<(results: object, config: object) => Promise<object | null>>();
-const mockPrompt = jest.fn<(message: string) => Promise<string>>();
-const mockListPipelineArtifacts = jest.fn<(pipelineId: string | number) => Promise<ArtifactInfo[]>>();
-const mockDownloadArtifact = jest.fn<(artifactId: string | number) => Promise<{ buffer: Buffer; filename: string }>>();
-const mockAdmZipGetEntries = jest.fn<() => { entryName: string; isDirectory: boolean; getData: () => Buffer }[]>();
-const mockLoadState = jest.fn<() => object>();
-const mockReportsDir = jest.fn<() => string>();
-const mockSaveParseResult = jest.fn<(project: string, result: ParseResult) => void>();
+    vi.fn<(parsed: ParseResult, keys: string[]) => { matched: object[]; unmatched: object[] }>();
+const mockCreateTestExecutionFromResults = vi.fn<(results: object, config: object) => Promise<object | null>>();
+const mockPrompt = vi.fn<(message: string) => Promise<string>>();
+const mockListPipelineArtifacts = vi.fn<(pipelineId: string | number) => Promise<ArtifactInfo[]>>();
+const mockDownloadArtifact = vi.fn<(artifactId: string | number) => Promise<{ buffer: Buffer; filename: string }>>();
+const mockAdmZipGetEntries = vi.fn<() => { entryName: string; isDirectory: boolean; getData: () => Buffer }[]>();
+const mockLoadState = vi.fn<() => object>();
+const mockReportsDir = vi.fn<() => string>();
+const mockSaveParseResult = vi.fn<(project: string, result: ParseResult) => void>();
 
 // ── Module mocks ─────────────────────────────────────────────────────────
 
-jest.mock('glob', () => ({ globSync: mockGlobSync }));
+vi.mock('../shared/deps', () => ({
+    globSync: mockGlobSync,
+    AdmZip: vi.fn(function () {
+        return { getEntries: mockAdmZipGetEntries };
+    }),
+}));
 
-jest.mock('../shared/config', () => {
+vi.mock('../shared/config', () => {
     const cfg: Record<string, unknown> = {
         jiraBaseUrl: 'https://jira.example.com',
         jiraPersonalToken: 'token',
         jiraMode: 'server',
         xrayBaseUrl: 'https://xray.example.com',
         cypressProjectPath: '',
-        getAllPrefixed: jest.fn(() => ({})),
-        get: jest.fn((key: string) => cfg[key] as string),
+        getAllPrefixed: vi.fn(() => ({})),
+        get: vi.fn((key: string) => cfg[key] as string),
     };
     return { __esModule: true, default: cfg };
 });
 
-jest.mock('../shared/prompt', () => ({
-    warn: jest.fn(),
-    info: jest.fn(),
-    success: jest.fn(),
-    printError: jest.fn(),
-    withSpinner: jest.fn((_label: string, fn: () => Promise<void>) => fn()),
+vi.mock('../shared/prompt', () => ({
+    warn: vi.fn(),
+    info: vi.fn(),
+    success: vi.fn(),
+    printError: vi.fn(),
+    withSpinner: vi.fn((_label: string, fn: () => Promise<void>) => fn()),
     ask: mockPrompt,
 }));
 
-jest.mock('../shared/state', () => ({
+vi.mock('../shared/state', () => ({
     load: mockLoadState,
-    update: jest.fn(),
-    save: jest.fn(),
+    update: vi.fn(),
+    save: vi.fn(),
 }));
 
-jest.mock('../shared/logger', () => ({
+vi.mock('../shared/logger', () => ({
     rootLogger: {
-        child: jest.fn(() => ({ info: jest.fn(), warn: jest.fn(), error: jest.fn() })),
-        warn: jest.fn(),
-        error: jest.fn(),
-        info: jest.fn(),
+        child: vi.fn(() => ({ info: vi.fn(), warn: vi.fn(), error: vi.fn() })),
+        warn: vi.fn(),
+        error: vi.fn(),
+        info: vi.fn(),
     },
-    Logger: jest.fn(),
+    Logger: vi.fn(),
 }));
 
-jest.mock('../shared/temp-dir', () => ({
+vi.mock('../shared/temp-dir', () => ({
     reportsDir: mockReportsDir,
 }));
 
-jest.mock('../shared/result_parser', () => ({
+vi.mock('../shared/result_parser', () => ({
     parseTestResults: mockParseTestResults,
     // detectAndParseTestResults is an alias for parseTestResults
 }));
 
-jest.mock('../jira_management/result_reporter', () => ({
+vi.mock('../jira_management/result_reporter', () => ({
     matchResultsToTests: mockMatchResultsToTests,
     createTestExecutionFromResults: mockCreateTestExecutionFromResults,
 }));
 
-jest.mock('../shared/metrics', () => ({
+vi.mock('../shared/metrics', () => ({
     saveParseResult: mockSaveParseResult,
 }));
 
-jest.mock('../shared/jira-client', () => ({
+vi.mock('../shared/jira-client', () => ({
     __esModule: true,
-    default: jest.fn(),
+    default: vi.fn(),
 }));
 
-jest.mock('../jira_management/jira_link_manager', () => ({
+vi.mock('../jira_management/jira_link_manager', () => ({
     __esModule: true,
-    default: jest.fn(),
+    default: vi.fn(),
 }));
 
-jest.mock('adm-zip', () => {
-    const mockAdmZip = jest.fn().mockImplementation(() => ({
+vi.mock('adm-zip', () => ({
+    default: vi.fn().mockImplementation(() => ({
         getEntries: mockAdmZipGetEntries,
-    }));
-    return mockAdmZip;
-});
+    })),
+}));
 
 // ── Provider mock ─────────────────────────────────────────────────────────
 
@@ -108,15 +115,15 @@ const mockProvider = createMockGitProvider({
 
 // ── Module under test ─────────────────────────────────────────────────────
 
-type TestResultsModule = typeof import('./test-results');
+type TestResultsModule = typeof import('./test-results.js');
 let mod: TestResultsModule;
 
-beforeAll(() => {
-    mod = require('./test-results') as TestResultsModule;
+beforeAll(async () => {
+    mod = (await import('./test-results.js')) as TestResultsModule;
 });
 
 beforeEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
     mockPrompt.mockResolvedValue('');
     mockLoadState.mockReturnValue({ lastCypressPath: '' });
     mockReportsDir.mockReturnValue('/tmp/reports');
@@ -368,7 +375,7 @@ describe('createTestExecution', () => {
             failed: 2,
             skipped: 1,
         });
-        const pushHistory = jest.fn();
+        const pushHistory = vi.fn();
 
         await mod.createTestExecution({
             matched: [{ key: 'T1', title: 'test1', status: 'passed', duration: 100 }],
@@ -391,7 +398,7 @@ describe('createTestExecution', () => {
 
     it('handles error, pushes error history, and re-throws', async () => {
         mockCreateTestExecutionFromResults.mockRejectedValue(new Error('Creation failed'));
-        const pushHistory = jest.fn();
+        const pushHistory = vi.fn();
 
         await expect(
             mod.createTestExecution({
@@ -442,7 +449,7 @@ describe('collectTestResults', () => {
             failed: 0,
             skipped: 0,
         });
-        const pushHistory = jest.fn();
+        const pushHistory = vi.fn();
 
         const mockJiraRes = {} as JiraClient;
         const mockLinkMgr = {} as JiraLinkManager;
@@ -472,7 +479,7 @@ describe('collectTestResults', () => {
 
     it('returns early when downloadTestArtifacts returns null', async () => {
         mockListPipelineArtifacts.mockResolvedValue([]);
-        const pushHistory = jest.fn();
+        const pushHistory = vi.fn();
 
         const mockJiraRes = {} as JiraClient;
         const mockLinkMgr = {} as JiraLinkManager;
@@ -509,7 +516,7 @@ describe('collectTestResults', () => {
             stats: { passed: 1, failed: 0, skipped: 0, total: 1, duration: 100 },
         });
         // mockPrompt default (empty string) makes parseTestResults return null
-        const pushHistory = jest.fn();
+        const pushHistory = vi.fn();
 
         const mockJiraRes = {} as JiraClient;
         const mockLinkMgr = {} as JiraLinkManager;

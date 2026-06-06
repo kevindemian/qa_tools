@@ -1,7 +1,7 @@
-import { createThrottledClient } from '../shared/http-client';
-import { Logger } from '../shared/logger';
-import { handleError } from '../shared/git-provider-error';
-import { GitProviderBase } from './git-provider-base';
+import { createThrottledClient } from '../shared/http-client.js';
+import { Logger } from '../shared/logger.js';
+import { handleError } from '../shared/git-provider-error.js';
+import { GitProviderBase } from './git-provider-base.js';
 import type {
     GitProvider,
     PipelineTriggerResult,
@@ -14,8 +14,8 @@ import type {
     CICDVariable,
     Issue,
     JsonObject,
-} from '../shared/types';
-import type { AxiosInstance } from '../shared/deps';
+} from '../shared/types.js';
+import type { AxiosInstance } from '../shared/deps.js';
 import {
     formatPR,
     prCreateMergeRequest,
@@ -24,7 +24,7 @@ import {
     prSearchMergeRequests,
     prAcceptMergeRequest,
     prIsApproved,
-} from './github-pr';
+} from './github-pr.js';
 import {
     wfTriggerPipeline,
     wfGetRecentPipelines,
@@ -36,9 +36,9 @@ import {
     wfGetCICDVariables,
     wfGetSchedules,
     wfRunSchedule,
-} from './github-workflow';
-import { getOpenIssues } from './github-issues';
-import { getBranch, getDiff } from './github-branch';
+} from './github-workflow.js';
+import { getOpenIssues } from './github-issues.js';
+import { getBranch, getDiff } from './github-branch.js';
 
 class GitHubManager extends GitProviderBase implements GitProvider {
     provider = 'github' as const;
@@ -175,11 +175,11 @@ class GitHubManager extends GitProviderBase implements GitProvider {
         return wfGetJobLogs(this.client, this.owner, this.repo, jobId, maxBytes);
     }
 
-    getSchedules(): Promise<ScheduleInfo[]> {
+    async getSchedules(): Promise<ScheduleInfo[]> {
         return wfGetSchedules();
     }
 
-    runSchedule(scheduleId: string | number): Promise<JsonObject> {
+    async runSchedule(scheduleId: string | number): Promise<JsonObject> {
         return wfRunSchedule(scheduleId);
     }
 }

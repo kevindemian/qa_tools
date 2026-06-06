@@ -1,18 +1,18 @@
 /** Session state — persist/load session context as JSON for the git_triggers lifecycle. */
 import fs from 'fs';
 import path from 'path';
-import Config from '../shared/config';
-import { rootLogger } from '../shared/logger';
-import { SessionContext } from '../shared/session-context';
-import { load as loadState, update as updateState } from '../shared/state';
-import { printSessionSummary as sharedPrintSessionSummary } from '../shared/cli_base';
-import { providerLabel as _providerLabel } from './ui-helpers';
-import { error, print, title, warn } from '../shared/prompt';
-import { palette } from '../shared/palette';
-import { loadMetrics, calculateFlakiness } from '../shared/metrics';
-import type { GitProvider, JsonObject, StateContainer } from '../shared/types';
-import GitLabManager from './gitlab_manager';
-import GitHubManager from './github_manager';
+import Config from '../shared/config.js';
+import { rootLogger } from '../shared/logger.js';
+import { SessionContext } from '../shared/session-context.js';
+import { load as loadState, update as updateState } from '../shared/state.js';
+import { printSessionSummary as sharedPrintSessionSummary } from '../shared/cli_base.js';
+import { providerLabel as _providerLabel } from './ui-helpers.js';
+import { error, print, title, warn } from '../shared/prompt.js';
+import { palette } from '../shared/palette.js';
+import { loadMetrics, calculateFlakiness } from '../shared/metrics.js';
+import type { GitProvider, JsonObject, StateContainer } from '../shared/types.js';
+import GitLabManager from './gitlab_manager.js';
+import GitHubManager from './github_manager.js';
 
 interface ProviderConfig {
     provider: string;
@@ -57,8 +57,8 @@ export class MissingTokenError extends Error {
     }
 }
 
-const PROVIDERS_PATH = path.resolve(__dirname, '../config/providers.json');
-const PROJECTS_PATH = path.resolve(__dirname, '../config/projects.json');
+const PROVIDERS_PATH = path.resolve(import.meta.dirname, '../config/providers.json');
+const PROJECTS_PATH = path.resolve(import.meta.dirname, '../config/projects.json');
 
 let _providersConfig: Record<string, ProviderConfig> | undefined;
 let _projects: Record<string, string> | undefined;

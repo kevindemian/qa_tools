@@ -7,17 +7,17 @@
  * @module report-html
  */
 
-import { rootLogger } from './logger';
-import { sanitizeUrl } from './cli_base';
-import { escapeHtml, statsFromTests } from './report-utils';
-import type { FlatTest } from './result_parser';
-import type { CoverageEpic, ReportOptions } from './report-types';
-import { DEFAULT_TITLE } from './report-types';
-import { buildCss } from './report-styles';
-import { buildHtmlPage, buildErrorPage } from './html-factory';
-import { buildToggleScript } from './report-scripts';
-import { buildChartSection, buildTrendSection } from './report-chart';
-export { buildTrendSection } from './report-chart';
+import { rootLogger } from './logger.js';
+import { sanitizeUrl } from './cli_base.js';
+import { escapeHtml, statsFromTests } from './report-utils.js';
+import type { FlatTest } from './result_parser.js';
+import type { CoverageEpic, ReportOptions } from './report-types.js';
+import { DEFAULT_TITLE } from './report-types.js';
+import { buildCss } from './report-styles.js';
+import { buildHtmlPage, buildErrorPage } from './html-factory.js';
+import { buildToggleScript } from './report-scripts.js';
+import { buildChartSection, buildTrendSection } from './report-chart.js';
+export { buildTrendSection } from './report-chart.js';
 import {
     buildSummaryCards,
     buildFailedSummary,
@@ -29,11 +29,11 @@ import {
     buildHierarchySidebar,
     buildTimeline,
     buildHealthSection,
-} from './report-sections';
-import { buildTestTable, precomputeCategories } from './report-table';
-import { buildDiffComparisonSection } from './report-diff';
-import Config from './config';
-import { Card, MetricCard, Badge } from './primitives';
+} from './report-sections.js';
+import { buildTestTable, precomputeCategories } from './report-table.js';
+import { buildDiffComparisonSection } from './report-diff.js';
+import Config from './config.js';
+import { Card, MetricCard, Badge } from './primitives/index.js';
 
 export function generateHtmlReport(tests: FlatTest[], options?: ReportOptions): string {
     return generateReportWithFallback(tests, options);

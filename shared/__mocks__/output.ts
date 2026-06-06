@@ -1,16 +1,15 @@
-import { jest } from '@jest/globals';
-import type { BoxOptions } from '../box';
+import type { BoxOptions } from '../box.js';
 
 export class Output {
-    static isTTY = jest.fn<() => boolean>().mockReturnValue(true);
-    static isCI = jest.fn<() => boolean>().mockReturnValue(false);
-    static columns = jest.fn<() => number>().mockReturnValue(80);
-    static rows = jest.fn<() => number>().mockReturnValue(24);
+    static isTTY = vi.fn<() => boolean>().mockReturnValue(true);
+    static isCI = vi.fn<() => boolean>().mockReturnValue(false);
+    static columns = vi.fn<() => number>().mockReturnValue(80);
+    static rows = vi.fn<() => number>().mockReturnValue(24);
 
-    print = jest.fn<(...args: string[]) => void>();
-    error = jest.fn<(...args: string[]) => void>();
-    warn = jest.fn<(...args: string[]) => void>();
-    box = jest.fn<(lines: string[], options?: BoxOptions) => void>();
+    print = vi.fn<(...args: string[]) => void>();
+    error = vi.fn<(...args: string[]) => void>();
+    warn = vi.fn<(...args: string[]) => void>();
+    box = vi.fn<(lines: string[], options?: BoxOptions) => void>();
 }
 
 export const defaultOutput = new Output();

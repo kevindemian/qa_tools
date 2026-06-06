@@ -41,6 +41,9 @@ tsconfig.json.bak
 # === Temp artifacts ===
 tmp/
 
+# === Gemfile ===
+gemini-code-*.ts
+
 # === Windows artifacts ===
 nul
 .llm-cache/

@@ -1,30 +1,31 @@
-jest.mock('fs');
-jest.mock('./llm-client', () => ({
-    llmPrompt: jest.fn<Promise<string>, [opts: import('./llm-client').LlmPromptOptions]>(),
-    getLlmClientMetrics: jest.fn(() => ({
+vi.mock('fs');
+vi.mock('./llm-client', async () => ({
+    llmPrompt: vi.fn<(...args: [opts: import('./llm-client.js').LlmPromptOptions]) => Promise<string>>(),
+    getLlmClientMetrics: vi.fn(() => ({
         cacheHits: 0,
         cacheMisses: 0,
         totalPromptTokens: 0,
         totalCompletionTokens: 0,
         requestsByProviderKey: {},
     })),
-    resetLlmClientMetrics: jest.fn(),
-    parseRetryAfter: jest.fn(() => 2000),
+    resetLlmClientMetrics: vi.fn(),
+    parseRetryAfter: vi.fn(() => 2000),
 }));
-jest.mock('./llm-review', () => ({ reviewWithLlm: jest.fn() }));
+vi.mock('./llm-review', async () => ({ reviewWithLlm: vi.fn() }));
 
 import fs from 'fs';
-import { llmPrompt } from './llm-client';
-import { reviewWithLlm } from './llm-review';
-import { analyzeFailuresWithReport, classifyFailure } from './failure-analysis';
-import type { FlatTest } from './result_parser';
-import { nonNull } from './test-utils';
 
-const mockReviewWithLlm = jest.mocked(reviewWithLlm);
-const mockLlmPrompt = jest.mocked(llmPrompt);
+import { llmPrompt } from './llm-client.js';
+import { reviewWithLlm } from './llm-review.js';
+import { analyzeFailuresWithReport, classifyFailure } from './failure-analysis.js';
+import type { FlatTest } from './result_parser.js';
+import { nonNull } from './test-utils.js';
+
+const mockReviewWithLlm = vi.mocked(reviewWithLlm);
+const mockLlmPrompt = vi.mocked(llmPrompt);
 
 beforeEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
 });
 
 describe('analyzeFailuresWithReport', () => {
@@ -38,7 +39,7 @@ describe('analyzeFailuresWithReport', () => {
 
     it('passes LlmContext to reviewWithLlm when provided', async () => {
         const promptContent = 'Analyze these failures:\n{{FAILED_TESTS}}';
-        jest.mocked(fs.readFileSync).mockReturnValue(promptContent);
+        vi.mocked(fs.readFileSync).mockReturnValue(promptContent);
         mockReviewWithLlm.mockResolvedValueOnce({
             content: 'Root cause with context',
             reviewed: true,
@@ -66,7 +67,7 @@ describe('analyzeFailuresWithReport', () => {
     it('23.9: analyzeFailuresWithReport HTML exception path', async () => {
         // Mock to trigger exception during HTML report generation
         const promptContent = 'Analyze these failures:\n{{FAILED_TESTS}}';
-        jest.mocked(fs.readFileSync).mockReturnValue(promptContent);
+        vi.mocked(fs.readFileSync).mockReturnValue(promptContent);
 
         // Mock reviewWithLlm to fail or behave in a way that generates error in report generation
         mockReviewWithLlm.mockRejectedValueOnce(new Error('HTML report generation failed'));
@@ -80,7 +81,7 @@ describe('analyzeFailuresWithReport', () => {
 
     it('23.10: HTML report output verified', async () => {
         const promptContent = 'Analyze these failures:\n{{FAILED_TESTS}}';
-        jest.mocked(fs.readFileSync).mockReturnValue(promptContent);
+        vi.mocked(fs.readFileSync).mockReturnValue(promptContent);
         mockReviewWithLlm.mockResolvedValueOnce({
             content: 'Root cause: assertion error',
             reviewed: true,
@@ -94,7 +95,7 @@ describe('analyzeFailuresWithReport', () => {
     });
 
     it('handles missing prompt template gracefully', async () => {
-        jest.mocked(fs.readFileSync).mockImplementation(() => {
+        vi.mocked(fs.readFileSync).mockImplementation(() => {
             throw new Error('ENOENT');
         });
 
@@ -105,7 +106,7 @@ describe('analyzeFailuresWithReport', () => {
     });
 
     it('returns fallback=true when template is missing', async () => {
-        jest.mocked(fs.readFileSync).mockImplementation(() => {
+        vi.mocked(fs.readFileSync).mockImplementation(() => {
             throw new Error('ENOENT');
         });
 
@@ -119,7 +120,7 @@ describe('analyzeFailuresWithReport', () => {
 describe('classifyFailure', () => {
     it('calls llmPrompt (fast tier) with test title and Zod schema', async () => {
         const promptContent = 'Classify: ';
-        jest.mocked(fs.readFileSync).mockReturnValue(promptContent);
+        vi.mocked(fs.readFileSync).mockReturnValue(promptContent);
         mockLlmPrompt.mockResolvedValueOnce('ASSERTION: expected true but got false');
 
         const result = await classifyFailure('Login test', 'expected true, got false');
@@ -133,7 +134,7 @@ describe('classifyFailure', () => {
 
     it('returns valid classification when llmPrompt returns matching format', async () => {
         const promptContent = 'Classify: ';
-        jest.mocked(fs.readFileSync).mockReturnValue(promptContent);
+        vi.mocked(fs.readFileSync).mockReturnValue(promptContent);
         mockLlmPrompt.mockResolvedValueOnce('ASSERTION: expected 200 got 500');
 
         const result = await classifyFailure('Login test', 'expected 200, got 500');
@@ -142,7 +143,7 @@ describe('classifyFailure', () => {
 
     it('falls back to UNKNOWN when llmPrompt throws (Zod validation failed after retry)', async () => {
         const promptContent = 'Classify: ';
-        jest.mocked(fs.readFileSync).mockReturnValue(promptContent);
+        vi.mocked(fs.readFileSync).mockReturnValue(promptContent);
         // Self-consistency calls llmPrompt 3×; fallback calls it 1× more
         mockLlmPrompt.mockRejectedValue(new Error('LLM response failed schema validation after retry'));
 
@@ -151,7 +152,7 @@ describe('classifyFailure', () => {
     });
 
     it('returns UNKNOWN when classify.md cannot be read', async () => {
-        jest.mocked(fs.readFileSync).mockImplementation(() => {
+        vi.mocked(fs.readFileSync).mockImplementation(() => {
             throw new Error('ENOENT');
         });
         const result = await classifyFailure('Login test', 'error');
@@ -162,39 +163,39 @@ describe('classifyFailure', () => {
 describe('classifyRegex — edge case mutations', () => {
     const regex = /^(ASSERTION|TIMEOUT|ENVIRONMENT|FLAKY|APPLICATION|UNKNOWN):\s/;
 
-    it('matches valid classification with explanation', () => {
+    it('matches valid classification with explanation', async () => {
         expect(regex.test('ASSERTION: expected 200 got 500')).toBe(true);
     });
 
-    it('matches TIMEOUT classification', () => {
+    it('matches TIMEOUT classification', async () => {
         expect(regex.test('TIMEOUT: test exceeded 30s limit')).toBe(true);
     });
 
-    it('rejects AGREEMENT (not a valid category)', () => {
+    it('rejects AGREEMENT (not a valid category)', async () => {
         expect(regex.test('AGREEMENT: some issue')).toBe(false);
     });
 
-    it('rejects lowercase classification', () => {
+    it('rejects lowercase classification', async () => {
         expect(regex.test('assertion: expected 200')).toBe(false);
     });
 
-    it('rejects missing colon and space after category', () => {
+    it('rejects missing colon and space after category', async () => {
         expect(regex.test('ASSERTION expected 200')).toBe(false);
     });
 
-    it('matches first line of multi-line response', () => {
+    it('matches first line of multi-line response', async () => {
         expect(regex.test('ASSERTION: expected 200\nsome extra text')).toBe(true);
     });
 
-    it('matches ENVIRONMENT classification', () => {
+    it('matches ENVIRONMENT classification', async () => {
         expect(regex.test('ENVIRONMENT: database connection failed')).toBe(true);
     });
 
-    it('rejects empty string', () => {
+    it('rejects empty string', async () => {
         expect(regex.test('')).toBe(false);
     });
 
-    it('rejects category-only without colon', () => {
+    it('rejects category-only without colon', async () => {
         expect(regex.test('ASSERTION')).toBe(false);
     });
 });

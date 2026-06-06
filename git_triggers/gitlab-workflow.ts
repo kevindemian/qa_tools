@@ -1,5 +1,5 @@
-import type { AxiosInstance } from '../shared/deps';
-import { handleError } from '../shared/git-provider-error';
+import type { AxiosInstance } from '../shared/deps.js';
+import { handleError } from '../shared/git-provider-error.js';
 import type {
     PipelineTriggerResult,
     ScheduleInfo,
@@ -9,8 +9,8 @@ import type {
     ArtifactInfo,
     CICDVariable,
     JsonObject,
-} from '../shared/types';
-import { apiGet, apiPost, projectPath } from './gitlab-api';
+} from '../shared/types.js';
+import { apiGet, apiPost, projectPath } from './gitlab-api.js';
 
 const SCHEDULES_PAGE_SIZE = 100;
 const VARIABLES_PAGE_SIZE = 100;

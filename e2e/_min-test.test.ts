@@ -1,36 +1,36 @@
-jest.mock('../shared/prompt', () => {
-    const actual = jest.requireActual<typeof import('../shared/prompt')>('../shared/prompt');
-    const askMock = jest
+vi.mock('../shared/prompt', async () => {
+    const actual = await vi.importActual('../shared/prompt');
+    const askMock = vi
         .fn()
         .mockResolvedValueOnce('v2.0.0') // Nome da versão
         .mockResolvedValueOnce(''); // ID da sprint (empty → skip)
-    const askConfirmMock = jest
+    const askConfirmMock = vi
         .fn()
         .mockResolvedValueOnce(true) // Usar tarefas criadas anteriormente
         .mockResolvedValueOnce(true) // Confirmar atribuicao de fixVersion
         .mockResolvedValueOnce(false); // Adicionar tarefas a uma sprint (no)
     return {
         ...actual,
-        prompt: jest.fn().mockReturnValue(''),
-        confirm: jest.fn().mockReturnValue(true),
-        smartPrompt: jest.fn().mockResolvedValue('v2.0.0'),
+        prompt: vi.fn().mockReturnValue(''),
+        confirm: vi.fn().mockReturnValue(true),
+        smartPrompt: vi.fn().mockResolvedValue('v2.0.0'),
         ask: askMock,
         askConfirm: askConfirmMock,
     };
 });
-jest.mock('../shared/state', () => ({ load: jest.fn().mockReturnValue({}), update: jest.fn() }));
+vi.mock('../shared/state', async () => ({ load: vi.fn().mockReturnValue({}), update: vi.fn() }));
 
 import nock from 'nock';
-import { SessionContext } from '../shared/session-context';
-import type { CommandContext } from '../jira_management/commands/context';
-import { createMockLinkManager } from '../shared/test-utils/factories/link-manager-factory';
-import CsvResource from '../jira_management/csv_resource';
-import { createMockLogger } from '../shared/test-utils';
+import { SessionContext } from '../shared/session-context.js';
+import type { CommandContext } from '../jira_management/commands/context.js';
+import { createMockLinkManager } from '../shared/test-utils/factories/link-manager-factory.js';
+import CsvResource from '../jira_management/csv_resource.js';
+import { createMockLogger } from '../shared/test-utils.js';
 
 describe('case04', () => {
     beforeEach(() => {
-        jest.clearAllMocks();
-        jest.restoreAllMocks();
+        vi.clearAllMocks();
+        vi.restoreAllMocks();
         nock.cleanAll();
         nock.disableNetConnect();
     });
@@ -41,7 +41,7 @@ describe('case04', () => {
     });
 
     it('happy path', async () => {
-        const { default: JiraResource } = jest.requireActual<typeof import('../jira_management/jira_resource')>(
+        const { default: JiraResource } = await vi.importActual<typeof import('../jira_management/jira_resource.js')>(
             '../jira_management/jira_resource',
         );
         const API = 'http://localhost:1999/rest/api/2';
@@ -54,7 +54,7 @@ describe('case04', () => {
             .reply(200, [{ name: 'v2.0.0', id: '99' }]);
         api.put('/issue/IMT-1').reply(204);
         api.put('/issue/IMT-2').reply(204);
-        jest.spyOn(console, 'log').mockImplementation(() => {});
+        vi.spyOn(console, 'log').mockImplementation(() => {});
 
         const jira = new JiraResource('e2e', API);
         const ctx = new SessionContext();
@@ -67,14 +67,16 @@ describe('case04', () => {
             linkManagerXray: createMockLinkManager(),
             csvResource: new CsvResource(),
             ctx,
-            pushHistory: jest.fn(),
-            printSessionSummary: jest.fn(),
+            pushHistory: vi.fn(),
+            printSessionSummary: vi.fn(),
             base_url: 'http://localhost:1999',
             sessionLog: createMockLogger(),
         };
 
-        const mod = jest.requireActual<typeof import('../jira_management/commands/case04')>(
-            '../jira_management/commands/case04',
+        const mod = (
+            await vi.importActual<typeof import('../jira_management/commands/case04.js')>(
+                '../jira_management/commands/case04',
+            )
         ).default;
         await mod.handler(c);
         expect(c.pushHistory).toHaveBeenCalled();

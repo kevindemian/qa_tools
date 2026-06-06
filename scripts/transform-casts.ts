@@ -2,13 +2,14 @@
  * Fase 2 + Step 1 of Fase 3 — bulk transforms.
  *
  * Config.set() fix (196 occ):  (Config as unknown as { set: ... }).set(k,v)  →  Config.set(k,v)
- * jest.mocked() migration (409 occ):  (expr as jest.Mock)  →  jest.mocked(expr)
+ * vi.mocked() migration (409 occ):  (expr as Mock)  →  vi.mocked(expr)
  *
  * After running, fix ALL TSC errors. No workarounds.
  *
  * Usage: npx tsx scripts/transform-casts.ts
  */
 import { readFileSync, writeFileSync } from 'fs';
+import type { Mock } from 'vitest';
 import { globSync } from 'glob';
 
 const TEST_FILES = globSync('**/*.test.ts', {
@@ -38,10 +39,10 @@ for (const file of TEST_FILES) {
         'Config.set(',
     );
 
-    // Step 2: (expr as jest.Mock)  →  jest.mocked(expr)
+    // Step 2: (expr as Mock)  →  vi.mocked(expr)
     content = content.replace(
         /\((\w+(?:\.\w+)*)\s+as jest\.Mock\s*\)/g,
-        (_, expr: string) => `jest.mocked(${expr.trim()})`,
+        (_, expr: string) => `vi.mocked(${expr.trim()})`,
     );
 
     if (content !== original) {

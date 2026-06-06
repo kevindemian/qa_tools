@@ -1,15 +1,16 @@
 /**
- * Fase 2 — jest.mocked() Migration (completion).
+ * Fase 2 — vi.mocked() Migration (completion).
  *
- * Replaces all remaining `as jest.Mock` / `as jest.Mocked<Type>` / `as jest.MockedFunction<typeof fn>`
- * patterns with `jest.mocked()`.
+ * Replaces all remaining `as Mock` / `as Mocked<Type>` / `as Mocked<typeof fn>`
+ * patterns with `vi.mocked()`.
  *
- * Skipped intentionally (Fase 3): object literals cast to `jest.Mocked<AxiosInstance>` — will be handled
+ * Skipped intentionally (Fase 3): object literals cast to `Mocked<AxiosInstance>` — will be handled
  * by `createMockAxiosInstance()` factory.
  *
  * Usage: npx tsx scripts/transform-fase2.ts
  */
 import { readFileSync, writeFileSync } from 'fs';
+import type { Mock, Mocked } from 'vitest';
 import { globSync } from 'glob';
 
 const TEST_FILES = globSync('**/*.test.ts', {
@@ -23,18 +24,18 @@ for (const file of TEST_FILES) {
     let content = readFileSync(file, 'utf8');
     const original = content;
 
-    // Step 1: expr as jest.Mock<Type, Args>  →  jest.mocked(expr)  (preserve surrounding parens if any)
-    // Handle: expr as jest.Mock (no generics)
+    // Step 1: expr as Mock<(...args: Args) => Type>  →  vi.mocked(expr)  (preserve surrounding parens if any)
+    // Handle: expr as Mock (no generics)
     const step1Before = content;
     content = content.replace(/(\w+(?:\.\w+)*)\s+as jest\.Mock\b(?:<[^>]+>)?/g, (match, expr) => {
-        // Skip if already wrapped in jest.mocked()
+        // Skip if already wrapped in vi.mocked()
         const lineStart = Math.max(0, content.indexOf(match) - 20);
         const prefix = content.slice(lineStart, content.indexOf(match));
-        if (prefix.includes('jest.mocked(')) return match;
-        return `jest.mocked(${expr.trim()})`;
+        if (prefix.includes('vi.mocked(')) return match;
+        return `vi.mocked(${expr.trim()})`;
     });
-    // Fix double-wrapping: jest.mocked(jest.mocked( → jest.mocked(
-    content = content.replace(/jest\.mocked\(jest\.mocked\(/g, 'jest.mocked(');
+    // Fix double-wrapping: vi.mocked(vi.mocked( → vi.mocked(
+    content = content.replace(/jest\.mocked\(jest\.mocked\(/g, 'vi.mocked(');
 
     const step1After = content;
     if (step1Before !== step1After) {
@@ -42,45 +43,45 @@ for (const file of TEST_FILES) {
         totalChanges += Math.abs(diff) || 1;
     }
 
-    // Step 2: (expr as jest.Mock)  →  jest.mocked(expr)  (parenthesized form, from original script)
+    // Step 2: (expr as Mock)  →  vi.mocked(expr)  (parenthesized form, from original script)
     content = content.replace(
         /\((\w+(?:\.\w+)*)\s+as jest\.Mock\b(?:<[^>]+>)?\s*\)/g,
-        (_, expr: string) => `jest.mocked(${expr.trim()})`,
+        (_, expr: string) => `vi.mocked(${expr.trim()})`,
     );
 
-    // Step 3: expr as jest.Mocked<Type>  →  jest.mocked(expr)  (NO AxiosInstance)
+    // Step 3: expr as Mocked<Type>  →  vi.mocked(expr)  (NO AxiosInstance)
     content = content.replace(
         /(\w+(?:\.\w+)*)\s+as jest\.Mocked<((?!AxiosInstance)[^>]+)>/g,
-        (_, expr: string) => `jest.mocked(${expr.trim()})`,
+        (_, expr: string) => `vi.mocked(${expr.trim()})`,
     );
 
-    // Step 4: new Class(args) as jest.Mocked<Class>  →  jest.mocked(new Class(args))
+    // Step 4: new Class(args) as Mocked<Class>  →  vi.mocked(new Class(args))
     content = content.replace(
         /new\s+(\w+)\(([^)]*)\)\s+as jest\.Mocked<(?:\w+)>/g,
-        (_, cls: string, args: string) => `jest.mocked(new ${cls}(${args}))`,
+        (_, cls: string, args: string) => `vi.mocked(new ${cls}(${args}))`,
     );
 
-    // Step 5: expr as jest.MockedFunction<typeof fn>  →  jest.mocked(fn)
+    // Step 5: expr as Mocked<typeof fn>  →  vi.mocked(fn)
     content = content.replace(
         /(\w+(?:\.\w+)*)\s+as jest\.MockedFunction<typeof\s+(\w+)>/g,
-        (_, _expr: string, fn: string) => `jest.mocked(${fn})`,
+        (_, _expr: string, fn: string) => `vi.mocked(${fn})`,
     );
 
-    // Step 6: expr as unknown as jest.Mock  →  jest.mocked(expr)
-    // But NOT expr as unknown as jest.Mocked<AxiosInstance> (will be factory in Fase 3)
+    // Step 6: expr as unknown as Mock  →  vi.mocked(expr)
+    // But NOT expr as unknown as Mocked<AxiosInstance> (will be factory in Fase 3)
     content = content.replace(
         /(\w+(?:\.\w+)*)\s+as unknown as jest\.Mock\b(?:<[^>]+>)?/g,
-        (_, expr: string) => `jest.mocked(${expr.trim()})`,
+        (_, expr: string) => `vi.mocked(${expr.trim()})`,
     );
 
-    // Step 7: expr as unknown as jest.Mocked<Type>  →  jest.mocked(expr)  (NO AxiosInstance)
+    // Step 7: expr as unknown as Mocked<Type>  →  vi.mocked(expr)  (NO AxiosInstance)
     content = content.replace(
         /(\w+(?:\.\w+)*)\s+as unknown as jest\.Mocked<((?!AxiosInstance)[^>]+)>/g,
-        (_, expr: string) => `jest.mocked(${expr.trim()})`,
+        (_, expr: string) => `vi.mocked(${expr.trim()})`,
     );
 
-    // Step 8: fs as jest.Mocked<typeof fs>  →  jest.mocked(fs)
-    content = content.replace(/(\w+)\s+as jest\.Mocked<typeof\s+\1>/g, (_, name: string) => `jest.mocked(${name})`);
+    // Step 8: fs as Mocked<typeof fs>  →  vi.mocked(fs)
+    content = content.replace(/(\w+)\s+as jest\.Mocked<typeof\s+\1>/g, (_, name: string) => `vi.mocked(${name})`);
 
     if (content !== original) {
         writeFileSync(file, content, 'utf8');

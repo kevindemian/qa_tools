@@ -1,5 +1,5 @@
-jest.useFakeTimers();
-jest.mock('./config', () => {
+vi.useFakeTimers();
+vi.mock('./config', () => {
     const mockConfig: Record<string, string> = {};
     const ConfigMock = {
         get llmApiKey() {
@@ -90,13 +90,14 @@ jest.mock('./config', () => {
     };
     return { __esModule: true, default: ConfigMock };
 });
-jest.mock('./disk-cache', () => ({
-    diskCacheGet: jest.fn(() => null),
-    diskCacheSet: jest.fn(),
-    clearDiskCache: jest.fn(),
+vi.mock('./disk-cache', async () => ({
+    diskCacheGet: vi.fn(() => null),
+    diskCacheSet: vi.fn(),
+    clearDiskCache: vi.fn(),
 }));
-import { diskCacheGet } from './disk-cache';
-import Config from './config';
+import { diskCacheGet } from './disk-cache.js';
+import { LlmError } from './errors.js';
+import Config from './config.js';
 import {
     llmPrompt,
     clearCache,
@@ -105,40 +106,40 @@ import {
     parseRetryAfter,
     getLlmClientMetrics,
     resetLlmClientMetrics,
-} from './llm-client';
-import { rootLogger } from './logger';
-import { safeParseJson } from './safe-json';
+} from './llm-client.js';
+import { rootLogger } from './logger.js';
+import { safeParseJson } from './safe-json.js';
 
-const mockFetch = jest.fn<Promise<Response>, [input: string | URL | Request, init?: RequestInit]>();
+const mockFetch = vi.fn<(...args: [input: string | URL | Request, init?: RequestInit]) => Promise<Response>>();
 global.fetch = mockFetch;
 
 function mockOkResponse(body: string): Response {
     const r = new Response(body, { status: 200 });
-    jest.spyOn(r, 'text').mockResolvedValue(body);
-    jest.spyOn(r.headers, 'get').mockReturnValue(null);
+    vi.spyOn(r, 'text').mockResolvedValue(body);
+    vi.spyOn(r.headers, 'get').mockReturnValue(null);
     return r;
 }
 function mockErrorResponse(status: number): Response {
     const r = new Response('error', { status });
-    jest.spyOn(r, 'text').mockResolvedValue('error');
-    jest.spyOn(r.headers, 'get').mockReturnValue(null);
+    vi.spyOn(r, 'text').mockResolvedValue('error');
+    vi.spyOn(r.headers, 'get').mockReturnValue(null);
     return r;
 }
 function mockResponseWithHeader(status: number, headerKey: string, headerValue: string | null): Response {
     const r = new Response('error', { status });
-    jest.spyOn(r, 'text').mockResolvedValue('error');
-    jest.spyOn(r.headers, 'get').mockImplementation((k: string) => (k === headerKey ? headerValue : null));
+    vi.spyOn(r, 'text').mockResolvedValue('error');
+    vi.spyOn(r.headers, 'get').mockImplementation((k: string) => (k === headerKey ? headerValue : null));
     return r;
 }
 
 beforeEach(() => {
-    jest.restoreAllMocks();
+    vi.restoreAllMocks();
     mockFetch.mockReset();
     clearCache();
     resetRateLimiter();
     resetCircuitState();
     Config.reset();
-    jest.mocked(diskCacheGet).mockReturnValue(null);
+    vi.mocked(diskCacheGet).mockReturnValue(null);
 });
 
 describe('llmPrompt', () => {
@@ -203,7 +204,7 @@ describe('llmPrompt', () => {
         Config.set('llmBatchModel', 'gpt4o-mini');
         Config.set('llmBatchBaseUrl', 'https://models.inference.ai.azure.com');
 
-        jest.spyOn(global, 'setTimeout').mockImplementation(((cb: (...args: unknown[]) => void) => {
+        vi.spyOn(global, 'setTimeout').mockImplementation(((cb: (...args: unknown[]) => void) => {
             cb();
             return {} as NodeJS.Timeout;
         }) as typeof global.setTimeout);
@@ -246,7 +247,7 @@ describe('llmPrompt', () => {
             .mockResolvedValueOnce(mockErrorResponse(429))
             .mockResolvedValueOnce(mockOkResponse(JSON.stringify({ choices: [{ message: { content: 'OK' } }] })));
 
-        jest.spyOn(global, 'setTimeout').mockImplementation(((cb: (...args: unknown[]) => void) => {
+        vi.spyOn(global, 'setTimeout').mockImplementation(((cb: (...args: unknown[]) => void) => {
             cb();
             return {} as NodeJS.Timeout;
         }) as typeof global.setTimeout);
@@ -316,7 +317,7 @@ describe('llmPrompt', () => {
         Config.set('llmFallbackApiKey', 'sk-test');
         Config.set('llmFallbackModel', 'gpt-4');
         Config.set('llmFallbackBaseUrl', 'https://api.test.com/v1');
-        jest.spyOn(global, 'setTimeout').mockImplementation(((cb: (...args: unknown[]) => void) => {
+        vi.spyOn(global, 'setTimeout').mockImplementation(((cb: (...args: unknown[]) => void) => {
             cb();
             return {} as NodeJS.Timeout;
         }) as typeof global.setTimeout);
@@ -341,7 +342,7 @@ describe('llmPrompt', () => {
                 mockOkResponse(JSON.stringify({ choices: [{ message: { content: 'Recovered' } }] })),
             );
 
-        jest.spyOn(global, 'setTimeout').mockImplementation(((cb: (...args: unknown[]) => void) => {
+        vi.spyOn(global, 'setTimeout').mockImplementation(((cb: (...args: unknown[]) => void) => {
             cb();
             return {} as NodeJS.Timeout;
         }) as typeof global.setTimeout);
@@ -351,14 +352,13 @@ describe('llmPrompt', () => {
         expect(mockFetch).toHaveBeenCalledTimes(2);
     });
 
-    it('returns empty string for unparseable response', async () => {
+    it('rejects unparseable response via validation hook', async () => {
         Config.set('llmApiKey', 'sk-test');
         Config.set('llmModel', 'google/gemini-2.0-flash-exp');
-        const warnSpy = jest.spyOn(rootLogger, 'warn').mockImplementation(() => {});
+        const warnSpy = vi.spyOn(rootLogger, 'warn').mockImplementation(() => {});
         mockFetch.mockResolvedValueOnce(mockOkResponse('not json'));
 
-        const result = await llmPrompt({ tier: 'main', system: 'system', user: 'bad response' });
-        expect(result).toBe('');
+        await expect(llmPrompt({ tier: 'main', system: 'system', user: 'bad response' })).rejects.toThrow(LlmError);
         expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining('non-JSON'));
         warnSpy.mockRestore();
     });
@@ -393,13 +393,13 @@ describe('llmPrompt', () => {
         });
 
         it('recovers after rate limit window passes', async () => {
-            jest.useFakeTimers();
+            vi.useFakeTimers();
             Config.set('LLM_RATE_LIMIT', '2');
             Config.set('llmApiKey', 'sk-test');
             Config.set('llmModel', 'gpt-4');
             Config.set('llmBaseUrl', 'https://api.test.com/v1');
             mockFetch.mockResolvedValue(mockOkResponse(JSON.stringify({ choices: [{ message: { content: 'ok' } }] })));
-            jest.spyOn(global, 'setTimeout').mockImplementation(((cb: (...args: unknown[]) => void) => {
+            vi.spyOn(global, 'setTimeout').mockImplementation(((cb: (...args: unknown[]) => void) => {
                 cb();
                 return {} as NodeJS.Timeout;
             }) as typeof global.setTimeout);
@@ -417,7 +417,7 @@ describe('llmPrompt', () => {
             Config.set('llmApiKey', 'sk-test');
             Config.set('llmModel', 'gpt-4');
             Config.set('llmBaseUrl', 'https://api.test.com/v1');
-            jest.spyOn(global, 'setTimeout').mockImplementation(((cb: (...args: unknown[]) => void) => {
+            vi.spyOn(global, 'setTimeout').mockImplementation(((cb: (...args: unknown[]) => void) => {
                 cb();
                 return {} as NodeJS.Timeout;
             }) as typeof global.setTimeout);
@@ -475,13 +475,13 @@ describe('llmPrompt', () => {
     });
 
     describe('parseRetryAfter', () => {
-        it('parses seconds from Retry-After header', () => {
+        it('parses seconds from Retry-After header', async () => {
             const resp = mockResponseWithHeader(429, 'Retry-After', '30');
             const result = parseRetryAfter(resp, 2000);
             expect(result).toBe(10000); // capped at LLM_RETRY_MAX_WAIT_MS
         });
 
-        it('parses RFC 7231 date from Retry-After header', () => {
+        it('parses RFC 7231 date from Retry-After header', async () => {
             const future = new Date(Date.now() + 5000);
             const resp = mockResponseWithHeader(429, 'Retry-After', future.toUTCString());
             const result = parseRetryAfter(resp, 2000);
@@ -489,13 +489,13 @@ describe('llmPrompt', () => {
             expect(result).toBeLessThanOrEqual(10000);
         });
 
-        it('returns default when no Retry-After header', () => {
+        it('returns default when no Retry-After header', async () => {
             const resp = mockResponseWithHeader(429, 'Retry-After', null);
             const result = parseRetryAfter(resp, 2000);
             expect(result).toBe(2000);
         });
 
-        it('returns default for invalid Retry-After value', () => {
+        it('returns default for invalid Retry-After value', async () => {
             const resp = mockResponseWithHeader(429, 'Retry-After', 'invalid');
             const result = parseRetryAfter(resp, 2000);
             expect(result).toBe(2000);
@@ -564,14 +564,15 @@ describe('llmPrompt', () => {
 
     describe('non-JSON 200 response', () => {
         it('calls logger.warn when provider returns 200 with non-JSON body', async () => {
-            const warnSpy = jest.spyOn(rootLogger, 'warn');
+            const warnSpy = vi.spyOn(rootLogger, 'warn');
             Config.set('llmApiKey', 'sk-warn');
             Config.set('llmModel', 'gpt-4');
             Config.set('llmBaseUrl', 'https://api.test.com/v1');
             mockFetch.mockResolvedValueOnce(mockOkResponse('plain text body'));
 
-            const result = await llmPrompt({ tier: 'main', system: 'system', user: 'non-json body' });
-            expect(result).toBe('');
+            await expect(llmPrompt({ tier: 'main', system: 'system', user: 'non-json body' })).rejects.toThrow(
+                LlmError,
+            );
             expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining('non-JSON'));
         });
     });
@@ -588,7 +589,7 @@ describe('llmPrompt', () => {
             Config.set('llmBatchModel', 'gpt-4');
             Config.set('llmBatchBaseUrl', 'https://api.test.com/v1');
 
-            jest.spyOn(global, 'setTimeout').mockImplementation(((cb: (...args: unknown[]) => void) => {
+            vi.spyOn(global, 'setTimeout').mockImplementation(((cb: (...args: unknown[]) => void) => {
                 cb();
                 return {} as NodeJS.Timeout;
             }) as typeof global.setTimeout);
@@ -664,13 +665,13 @@ describe('llmPrompt', () => {
         function openAiResponse(content: string): Response {
             const body = JSON.stringify({ choices: [{ message: { content } }] });
             const r = new Response(body, { status: 200 });
-            jest.spyOn(r, 'text').mockResolvedValue(body);
-            jest.spyOn(r.headers, 'get').mockReturnValue(null);
+            vi.spyOn(r, 'text').mockResolvedValue(body);
+            vi.spyOn(r.headers, 'get').mockReturnValue(null);
             return r;
         }
 
         it('does not warn when response is valid JSON (responseFormat=json)', async () => {
-            const warnSpy = jest.spyOn(rootLogger, 'warn').mockImplementation(() => {});
+            const warnSpy = vi.spyOn(rootLogger, 'warn').mockImplementation(() => {});
             mockFetch.mockResolvedValueOnce(openAiResponse(JSON.stringify({ ok: true })));
             await llmPrompt({
                 tier: 'main',
@@ -684,7 +685,7 @@ describe('llmPrompt', () => {
         });
 
         it('warns when responseFormat=json but extracted content is not valid JSON', async () => {
-            const warnSpy = jest.spyOn(rootLogger, 'warn').mockImplementation(() => {});
+            const warnSpy = vi.spyOn(rootLogger, 'warn').mockImplementation(() => {});
             mockFetch.mockResolvedValueOnce(openAiResponse('not json'));
             await llmPrompt({
                 tier: 'main',
@@ -700,7 +701,7 @@ describe('llmPrompt', () => {
         });
 
         it('does not call _warnIfNotJson when responseFormat is not json', async () => {
-            const warnSpy = jest.spyOn(rootLogger, 'warn').mockImplementation(() => {});
+            const warnSpy = vi.spyOn(rootLogger, 'warn').mockImplementation(() => {});
             mockFetch.mockResolvedValueOnce(openAiResponse('не json, а plain text'));
             await llmPrompt({ tier: 'main', system: 'sys', user: 'user', callerId: 'test29.3-nojson' });
             expect(warnSpy).not.toHaveBeenCalledWith(
@@ -807,7 +808,7 @@ describe('llmPrompt', () => {
 
     describe('schema validation', () => {
         beforeEach(() => {
-            jest.useRealTimers();
+            vi.useRealTimers();
             Config.set('llmApiKey', 'sk-schema');
             Config.set('llmModel', 'gpt-4');
             Config.set('llmBaseUrl', 'https://api.test.com/v1');
@@ -1053,7 +1054,7 @@ describe('llmPrompt', () => {
 
     describe('cache expiry', () => {
         it('re-requests when cached entry expires', async () => {
-            jest.useFakeTimers();
+            vi.useFakeTimers();
 
             Config.set('llmApiKey', 'sk-cache-expire');
             Config.set('llmModel', 'gpt-4');
@@ -1067,7 +1068,7 @@ describe('llmPrompt', () => {
             expect(r1).toBe('first');
             expect(mockFetch).toHaveBeenCalledTimes(1);
 
-            jest.advanceTimersByTime(5 * 60 * 1000 + 1000);
+            vi.advanceTimersByTime(5 * 60 * 1000 + 1000);
 
             mockFetch.mockResolvedValue(
                 mockOkResponse(JSON.stringify({ choices: [{ message: { content: 'second' } }] })),
@@ -1099,7 +1100,7 @@ describe('llmPrompt', () => {
             expect(r1).toBe('to-clean');
             expect(mockFetch).toHaveBeenCalledTimes(1);
 
-            jest.advanceTimersByTime(600 * 1000);
+            vi.advanceTimersByTime(600 * 1000);
             const r2 = await llmPrompt({
                 tier: 'main',
                 system: 'system',
@@ -1136,7 +1137,7 @@ describe('llmPrompt', () => {
             Config.set('llmBaseUrl', 'https://api.test.com/v1');
             mockFetch.mockRejectedValue(new Error('Network down'));
 
-            jest.spyOn(global, 'setTimeout').mockImplementation(((cb: (...args: unknown[]) => void) => {
+            vi.spyOn(global, 'setTimeout').mockImplementation(((cb: (...args: unknown[]) => void) => {
                 cb();
                 return {} as NodeJS.Timeout;
             }) as typeof global.setTimeout);
@@ -1153,7 +1154,7 @@ describe('llmPrompt', () => {
             // 3 retries + 1 extra fallback config = 4 calls total, all 429
             mockFetch.mockResolvedValue(mockErrorResponse(429));
 
-            jest.spyOn(global, 'setTimeout').mockImplementation(((cb: (...args: unknown[]) => void) => {
+            vi.spyOn(global, 'setTimeout').mockImplementation(((cb: (...args: unknown[]) => void) => {
                 cb();
                 return {} as NodeJS.Timeout;
             }) as typeof global.setTimeout);
@@ -1196,7 +1197,7 @@ describe('llmPrompt', () => {
         });
 
         it('returns disk cached response without schema', async () => {
-            jest.mocked(diskCacheGet).mockReturnValue('cached from disk');
+            vi.mocked(diskCacheGet).mockReturnValue('cached from disk');
 
             const result = await llmPrompt({ tier: 'main', system: 'sys', user: 'usr', callerId: 'disk-noschema' });
             expect(result).toBe('cached from disk');
@@ -1204,7 +1205,7 @@ describe('llmPrompt', () => {
         });
 
         it('returns disk cached response with valid schema', async () => {
-            jest.mocked(diskCacheGet).mockReturnValue('{"ok": true}');
+            vi.mocked(diskCacheGet).mockReturnValue('{"ok": true}');
 
             const result = await llmPrompt({
                 tier: 'main',
@@ -1219,8 +1220,8 @@ describe('llmPrompt', () => {
         });
 
         it('falls through to fetch when disk cache has schema-invalid content', async () => {
-            const warnSpy = jest.spyOn(rootLogger, 'warn').mockImplementation(() => {});
-            jest.mocked(diskCacheGet).mockReturnValue('{"not_ok": "string_value"}');
+            const warnSpy = vi.spyOn(rootLogger, 'warn').mockImplementation(() => {});
+            vi.mocked(diskCacheGet).mockReturnValue('{"not_ok": "string_value"}');
 
             mockFetch.mockResolvedValue(
                 mockOkResponse(JSON.stringify({ choices: [{ message: { content: '{"ok": true}' } }] })),

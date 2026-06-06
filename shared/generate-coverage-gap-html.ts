@@ -8,14 +8,23 @@
  * @module generate-coverage-gap-html
  */
 
-import type { CoverageGapResult, CoverageHierarchyNode } from './types';
-import { rootLogger } from './logger';
-import { sanitizeHtml } from './sanitize';
-import { formatDateISO } from './date-utils';
-import { buildHtmlPage, buildErrorPage } from './html-factory';
-import { buildCss } from './report-styles';
-import { Card, MetricCard, MetricGrid, Badge, ProgressBar, SearchInput, Button, FilterBar } from './primitives';
-import { tokens } from './theme-tokens';
+import type { CoverageGapResult, CoverageHierarchyNode } from './types.js';
+import { rootLogger } from './logger.js';
+import { sanitizeHtml } from './sanitize.js';
+import { formatDateISO } from './date-utils.js';
+import { buildHtmlPage, buildErrorPage } from './html-factory.js';
+import { buildCss } from './report-styles.js';
+import {
+    Card,
+    MetricCard,
+    MetricGrid,
+    Badge,
+    ProgressBar,
+    SearchInput,
+    Button,
+    FilterBar,
+} from './primitives/index.js';
+import { tokens } from './theme-tokens.js';
 
 function buildSummaryCards(result: CoverageGapResult): string {
     const t = result.totals;

@@ -1,7 +1,7 @@
 /** qa-quality-gate CLI — evaluates health, coverage, flakiness thresholds and exits with 0/1.
  *  Usage: npx tsx scripts/quality-gate.ts [--json] [--project <name>]
  *  Environment: QA_GATE_MIN_PASS_RATE, QA_GATE_MAX_FLAKY_PCT, QA_GATE_MIN_COVERAGE, QA_GATE_MAX_SUITE_SPEED */
-import { runQualityGate, formatQualityGateJson, formatQualityGateText } from '../shared/quality-gate';
+import { runQualityGate, formatQualityGateJson, formatQualityGateText } from '../shared/quality-gate.js';
 
 function parseArgs(): { json: boolean; project?: string } {
     const args = process.argv.slice(2);

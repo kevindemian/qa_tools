@@ -1,10 +1,10 @@
-import { envVal, toBool, toInt } from './env-utils';
+import { envVal, toBool, toInt } from './env-utils.js';
 
 describe('envVal', () => {
     const _origEnv = process.env;
 
     beforeEach(() => {
-        jest.resetModules();
+        vi.resetModules();
         process.env = { ..._origEnv };
     });
 
@@ -12,17 +12,17 @@ describe('envVal', () => {
         process.env = _origEnv;
     });
 
-    it('returns env var value when set', () => {
+    it('returns env var value when set', async () => {
         process.env.TEST_VAL = 'hello';
         expect(envVal('TEST_VAL')).toBe('hello');
     });
 
-    it('returns fallback when env var is not set', () => {
+    it('returns fallback when env var is not set', async () => {
         delete process.env.TEST_MISSING;
         expect(envVal('TEST_MISSING', 'default')).toBe('default');
     });
 
-    it('returns empty string when no fallback', () => {
+    it('returns empty string when no fallback', async () => {
         delete process.env.TEST_EMPTY;
         expect(envVal('TEST_EMPTY')).toBe('');
     });
@@ -37,35 +37,35 @@ describe('toBool', () => {
         expect(toBool('false')).toBe(false);
     });
 
-    it('returns false for undefined', () => {
+    it('returns false for undefined', async () => {
         expect(toBool(undefined)).toBe(false);
     });
 
-    it('returns boolean value as-is', () => {
+    it('returns boolean value as-is', async () => {
         expect(toBool(true)).toBe(true);
         expect(toBool(false)).toBe(false);
     });
 
-    it('returns false for any other string', () => {
+    it('returns false for any other string', async () => {
         expect(toBool('maybe')).toBe(false);
         expect(toBool('')).toBe(false);
     });
 });
 
 describe('toInt', () => {
-    it('parses a valid integer string', () => {
+    it('parses a valid integer string', async () => {
         expect(toInt('42', 0)).toBe(42);
     });
 
-    it('returns fallback for NaN string', () => {
+    it('returns fallback for NaN string', async () => {
         expect(toInt('abc', 10)).toBe(10);
     });
 
-    it('returns undefined as fallback', () => {
+    it('returns undefined as fallback', async () => {
         expect(toInt(undefined, 5)).toBe(5);
     });
 
-    it('returns number value as-is', () => {
+    it('returns number value as-is', async () => {
         expect(toInt(100, 0)).toBe(100);
     });
 });

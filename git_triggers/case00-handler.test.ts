@@ -1,25 +1,29 @@
-jest.mock('../shared/prompt');
-jest.mock('../shared/logger');
-jest.mock('./session-state', () => ({
-    pushHistory: jest.fn(),
+vi.mock('../shared/prompt');
+vi.mock('../shared/logger');
+vi.mock('./session-state', async () => ({
+    pushHistory: vi.fn(),
 }));
 
-jest.mock('../setup/main', () => {
-    const mainFn = jest.fn().mockResolvedValue(undefined);
+vi.mock('../setup/main', async () => {
+    const mainFn = vi.fn().mockResolvedValue(undefined);
     return { main: mainFn };
 });
 
-import { title, info, divider, printError } from '../shared/prompt';
-import { pushHistory } from './session-state';
-import { handleSetupWizard } from './case00-handler';
+import { title, info, divider, printError } from '../shared/prompt.js';
+import type { Mocked } from 'vitest';
+import { pushHistory } from './session-state.js';
+import { handleSetupWizard } from './case00-handler.js';
 
-const mockSetupModule = jest.mocked(jest.requireMock<typeof import('../setup/main')>('../setup/main'));
-
-beforeEach(() => {
-    jest.clearAllMocks();
+let mockSetupModule: Mocked<typeof import('../setup/main.js')>;
+beforeAll(async () => {
+    mockSetupModule = await vi.importMock<typeof import('../setup/main.js')>('../setup/main');
 });
 
-describe('handleSetupWizard', () => {
+beforeEach(async () => {
+    vi.clearAllMocks();
+});
+
+describe('handleSetupWizard', async () => {
     it('calls setup main and records history on success', async () => {
         mockSetupModule.main.mockResolvedValue(undefined);
 

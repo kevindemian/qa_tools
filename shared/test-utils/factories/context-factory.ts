@@ -1,18 +1,14 @@
-import { jest } from '@jest/globals';
-import type { CommandContext } from '../../../jira_management/commands/context';
-import { createMockJiraResource } from './jira-resource-factory';
-import { createMockLinkManager } from './link-manager-factory';
+import type { CommandContext } from '../../../jira_management/commands/context.js';
+import type { Mock, Mocked } from 'vitest';
+import { createMockJiraResource } from './jira-resource-factory.js';
+import { createMockLinkManager } from './link-manager-factory.js';
 
 type MockProxy<T> = {
-    [P in keyof T]: T[P] extends (...args: unknown[]) => unknown
-        ? jest.Mock
-        : T[P] extends object
-          ? MockProxy<T[P]>
-          : T[P];
+    [P in keyof T]: T[P] extends (...args: unknown[]) => unknown ? Mock : T[P] extends object ? MockProxy<T[P]> : T[P];
 };
 
-export function createMockContext(overrides?: Partial<MockProxy<CommandContext>>): jest.Mocked<CommandContext> {
-    // Cast 1/1: jest.Mocked<T> is a mapped type that cannot be constructed manually.
+export function createMockContext(overrides?: Partial<MockProxy<CommandContext>>): Mocked<CommandContext> {
+    // Cast 1/1: Mocked<T> is a mapped type that cannot be constructed manually.
     // TypeScript cannot prove structural equivalence between the literal and the mapped type.
 
     const base = {
@@ -21,13 +17,13 @@ export function createMockContext(overrides?: Partial<MockProxy<CommandContext>>
         linkManager: createMockLinkManager(),
         linkManagerXray: createMockLinkManager(),
         csvResource: {
-            detectSeparator: jest.fn(),
-            readCsvFromString: jest.fn(),
-            parseDescription: jest.fn(),
-            parseGroup: jest.fn(),
-            parsePrecondition: jest.fn(),
-            parseLinkedIssues: jest.fn(),
-            readBulkCsv: jest.fn(),
+            detectSeparator: vi.fn(),
+            readCsvFromString: vi.fn(),
+            parseDescription: vi.fn(),
+            parseGroup: vi.fn(),
+            parsePrecondition: vi.fn(),
+            parseLinkedIssues: vi.fn(),
+            readBulkCsv: vi.fn(),
         },
         packageManager: undefined,
         ctx: {
@@ -40,13 +36,13 @@ export function createMockContext(overrides?: Partial<MockProxy<CommandContext>>
             inMemoryTasksText: [],
             project_name: 'TEST',
             results: [],
-            resetResults: jest.fn(),
-            withBusy: jest.fn(),
-            pushHistory: jest.fn(),
-            buildContextLine: jest.fn(),
+            resetResults: vi.fn(),
+            withBusy: vi.fn(),
+            pushHistory: vi.fn(),
+            buildContextLine: vi.fn(),
         },
-        pushHistory: jest.fn(),
-        printSessionSummary: jest.fn(),
+        pushHistory: vi.fn(),
+        printSessionSummary: vi.fn(),
         base_url: 'https://jira.test.com',
         sessionLog: {
             context: {} as Record<string, unknown>,
@@ -56,19 +52,19 @@ export function createMockContext(overrides?: Partial<MockProxy<CommandContext>>
             _bytesWritten: 0,
             _maxLogSize: 0,
             _config: null,
-            info: jest.fn(),
-            warn: jest.fn(),
-            error: jest.fn(),
-            debug: jest.fn(),
-            child: jest.fn(),
-            writeFileOnly: jest.fn(),
+            info: vi.fn(),
+            warn: vi.fn(),
+            error: vi.fn(),
+            debug: vi.fn(),
+            child: vi.fn(),
+            writeFileOnly: vi.fn(),
             filePath: null,
-            _ensureDir: jest.fn(),
-            _rotateIfNeeded: jest.fn(),
-            _writeConsole: jest.fn(),
-            _writeFile: jest.fn(),
-            _write: jest.fn(),
+            _ensureDir: vi.fn(),
+            _rotateIfNeeded: vi.fn(),
+            _writeConsole: vi.fn(),
+            _writeFile: vi.fn(),
+            _write: vi.fn(),
         },
-    } as unknown as jest.Mocked<CommandContext>;
-    return { ...base, ...(overrides as Partial<MockProxy<CommandContext>>) } as unknown as jest.Mocked<CommandContext>;
+    } as unknown as Mocked<CommandContext>;
+    return { ...base, ...(overrides as Partial<MockProxy<CommandContext>>) } as unknown as Mocked<CommandContext>;
 }

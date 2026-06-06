@@ -1,37 +1,37 @@
 import fs from 'fs';
 import path from 'path';
-import { createHttpClient } from '../../shared/http-client';
-import { rootLogger } from '../../shared/logger';
-import { ask, askConfirm, info, printError, title, withSpinner } from '../../shared/prompt';
-import type { JiraSearchResult } from '../../shared/types';
-import type { ParseResult, FlatTest } from '../../shared/result_parser';
-import { writeReport } from '../../shared/temp-dir';
-import { parseTestResultsFile } from '../../shared/result_parser';
+import { createHttpClient } from '../../shared/http-client.js';
+import { rootLogger } from '../../shared/logger.js';
+import { ask, askConfirm, info, printError, title, withSpinner } from '../../shared/prompt.js';
+import type { JiraSearchResult } from '../../shared/types.js';
+import type { ParseResult, FlatTest } from '../../shared/result_parser.js';
+import { writeReport } from '../../shared/temp-dir.js';
+import { parseTestResultsFile } from '../../shared/result_parser.js';
 import {
     generateHtmlReport,
     categorizeFailure,
     loadKnownIssues,
     type TestRunTab,
     type ReportOptions,
-} from '../../shared/report-generator';
-import { loadMetrics, calculateFlakiness } from '../../shared/metrics';
-import { analyzeFailuresWithReport, type LlmContext } from '../../shared/failure-analysis';
-import { collectAutomated, interactiveBugReportFlow } from '../../shared/bug-report';
-import { openWithFallback } from '../../shared/open';
-import { publishReport } from '../../shared/publish';
-import { TestHistoryCache } from '../xray-history';
-import type { CommandContext } from './context';
+} from '../../shared/report-generator.js';
+import { loadMetrics, calculateFlakiness } from '../../shared/metrics.js';
+import { analyzeFailuresWithReport, type LlmContext } from '../../shared/failure-analysis.js';
+import { collectAutomated, interactiveBugReportFlow } from '../../shared/bug-report.js';
+import { openWithFallback } from '../../shared/open.js';
+import { publishReport } from '../../shared/publish.js';
+import { TestHistoryCache } from '../xray-history.js';
+import type { CommandContext } from './context.js';
 import {
     buildGitTrendHtml,
     buildJiraContextHtml,
     injectAnalysisSection,
     parseCliExtra,
     saveMetricsJson,
-} from './case17-helpers';
-import { computeDiff, fetchGitHistory, resolveTestHistory } from './case17-test-utils';
-import Config from '../../shared/config';
+} from './case17-helpers.js';
+import { computeDiff, fetchGitHistory, resolveTestHistory } from './case17-test-utils.js';
+import Config from '../../shared/config.js';
 
-export type { RunStats, CiContext } from './case17-helpers';
+export type { RunStats, CiContext } from './case17-helpers.js';
 export {
     CTRF_LAST_FILE,
     GIT_HISTORY_RUNS,
@@ -44,8 +44,8 @@ export {
     isValidCtrfData,
     parseCliExtra,
     saveMetricsJson,
-} from './case17-helpers';
-export { resolveMapping, resolveTestHistory, computeDiff, fetchGitHistory } from './case17-test-utils';
+} from './case17-helpers.js';
+export { resolveMapping, resolveTestHistory, computeDiff, fetchGitHistory } from './case17-test-utils.js';
 
 async function _fetchJiraContext(
     failedTests: FlatTest[],

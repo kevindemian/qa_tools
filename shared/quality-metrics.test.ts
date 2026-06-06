@@ -1,4 +1,4 @@
-import { QualityMetricsCollector } from './quality-metrics';
+import { QualityMetricsCollector } from './quality-metrics.js';
 
 describe('QualityMetricsCollector', () => {
     let collector: QualityMetricsCollector;
@@ -8,7 +8,7 @@ describe('QualityMetricsCollector', () => {
     });
 
     describe('invariant fire tracking', () => {
-        it('records invariant fires', () => {
+        it('records invariant fires', async () => {
             collector.recordInvariantFire('T-01');
             collector.recordInvariantFire('T-01');
             collector.recordInvariantFire('T-02');
@@ -17,7 +17,7 @@ describe('QualityMetricsCollector', () => {
             expect(snapshot.invariantFireCount['T-02']).toBe(1);
         });
 
-        it('calculates fire rate', () => {
+        it('calculates fire rate', async () => {
             collector.recordInvariantFire('T-01');
             collector.recordInvariantFire('T-02');
             collector.recordInvariantFire('T-02');
@@ -25,13 +25,13 @@ describe('QualityMetricsCollector', () => {
             expect(rate).toBeCloseTo(2 / 3);
         });
 
-        it('returns 0 fire rate for unknown invariant', () => {
+        it('returns 0 fire rate for unknown invariant', async () => {
             expect(collector.invariantFireRate('UNKNOWN')).toBe(0);
         });
     });
 
     describe('layer tracking', () => {
-        it('tracks layer attempts and passes', () => {
+        it('tracks layer attempts and passes', async () => {
             collector.recordLayerAttempt('layer1');
             collector.recordLayerPass('layer1');
             collector.recordLayerAttempt('layer1');
@@ -42,7 +42,7 @@ describe('QualityMetricsCollector', () => {
     });
 
     describe('artifact type tracking', () => {
-        it('records artifact types', () => {
+        it('records artifact types', async () => {
             collector.recordArtifactType('test-suite');
             collector.recordArtifactType('test-suite');
             collector.recordArtifactType('analysis');
@@ -53,21 +53,21 @@ describe('QualityMetricsCollector', () => {
     });
 
     describe('structure score', () => {
-        it('averages structure scores', () => {
+        it('averages structure scores', async () => {
             collector.recordStructureScore(0.8);
             collector.recordStructureScore(1.0);
             const snapshot = collector.snapshot();
             expect(snapshot.avgStructureScore).toBe(0.9);
         });
 
-        it('returns 0 when no scores recorded', () => {
+        it('returns 0 when no scores recorded', async () => {
             const snapshot = collector.snapshot();
             expect(snapshot.avgStructureScore).toBe(0);
         });
     });
 
     describe('clear', () => {
-        it('resets all counters', () => {
+        it('resets all counters', async () => {
             collector.recordInvariantFire('T-01');
             collector.recordLayerAttempt('layer1');
             collector.recordArtifactType('test-suite');
@@ -79,7 +79,7 @@ describe('QualityMetricsCollector', () => {
     });
 
     describe('drift detection', () => {
-        it('returns empty alerts with insufficient history', () => {
+        it('returns empty alerts with insufficient history', async () => {
             const alerts = collector.detectDrift([]);
             expect(alerts).toHaveLength(0);
         });

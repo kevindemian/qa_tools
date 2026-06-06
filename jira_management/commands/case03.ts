@@ -1,7 +1,7 @@
 /** Create a new version in the Jira project. */
-import { warn, ask } from '../../shared/prompt';
-import { safeJiraCall } from '../../shared/jira-helper';
-import type { CommandContext } from './context';
+import { warn, ask } from '../../shared/prompt.js';
+import { safeJiraCall } from '../../shared/jira-helper.js';
+import type { CommandContext } from './context.js';
 
 async function handler(c: CommandContext): Promise<boolean | void> {
     const name = await ask('Nome da nova versão');

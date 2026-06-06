@@ -9,17 +9,17 @@
  * HTML output generates a complete self-contained page with navigation sidebar
  * and responsive CSS for documentation rendering. */
 
-import { box, type BoxBorder } from './box';
-import { sanitizeHtml } from './escape';
-import { buildHtmlPage } from './html-factory';
-import { lexMarkdown, getTestTokens } from './markdown-lexer';
-import { renderTokens } from './markdown-renderer';
-import { renderTokensToHtml, HTML_DOC_CSS, NAV_CSS } from './markdown-html';
-import type { NavConfig } from './markdown-nav';
+import { box, type BoxBorder } from './box.js';
+import { sanitizeHtml } from './escape.js';
+import { buildHtmlPage } from './html-factory.js';
+import { lexMarkdown, getTestTokens } from './markdown-lexer.js';
+import { renderTokens } from './markdown-renderer.js';
+import { renderTokensToHtml, HTML_DOC_CSS, NAV_CSS } from './markdown-html.js';
+import type { NavConfig } from './markdown-nav.js';
 
 // Re-export public types and test support
-export { __setLexer } from './markdown-lexer';
-export type { NavLink, NavConfig } from './markdown-nav';
+export { __setLexer } from './markdown-lexer.js';
+export type { NavLink, NavConfig } from './markdown-nav.js';
 
 // ─── Public API ─────────────────────────────────────────────────────────────────
 

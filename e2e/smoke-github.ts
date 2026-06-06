@@ -1,4 +1,4 @@
-import { createGitHubSmokeManager } from './smoke-shared';
+import { createGitHubSmokeManager } from './smoke-shared.js';
 
 async function testGetBranch(
     gh: ReturnType<typeof createGitHubSmokeManager>,

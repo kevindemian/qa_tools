@@ -6,7 +6,7 @@
  * @module primitives/chart
  */
 
-import { tokens } from '../theme-tokens';
+import { tokens } from '../theme-tokens.js';
 
 export interface BarSegment {
     value: number;

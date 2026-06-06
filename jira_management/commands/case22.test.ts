@@ -1,41 +1,52 @@
-jest.mock('child_process');
-jest.mock('fs', () => {
-    const actual = jest.requireActual<typeof import('fs')>('fs');
-    return { ...actual, existsSync: jest.fn(), readFileSync: jest.fn() };
-});
-jest.mock('../../shared/prompt');
-jest.mock('../../shared/logger');
-jest.mock('../../shared/test-impact', () => ({
-    analyzeTestImpact: jest.fn(),
+const { mockCpExecFileSync, mockFsExistsSync, mockFsReadFileSync } = vi.hoisted(() => ({
+    mockCpExecFileSync: vi.fn(),
+    mockFsExistsSync: vi.fn<(...args: unknown[]) => boolean>(),
+    mockFsReadFileSync: vi.fn(),
 }));
-jest.mock('../../shared/metrics', () => ({
-    loadMetrics: jest.fn(),
-    calculateFlakiness: jest.fn(),
+
+vi.mock('child_process', () => ({
+    default: { execFileSync: mockCpExecFileSync },
+    execFileSync: mockCpExecFileSync,
 }));
-jest.mock('../../shared/logger', () => ({
+
+vi.mock('fs', () => ({
+    default: { existsSync: mockFsExistsSync, readFileSync: mockFsReadFileSync },
+    existsSync: mockFsExistsSync,
+    readFileSync: mockFsReadFileSync,
+}));
+vi.mock('../../shared/prompt');
+vi.mock('../../shared/logger');
+vi.mock('../../shared/test-impact', () => ({
+    analyzeTestImpact: vi.fn(),
+}));
+vi.mock('../../shared/metrics', () => ({
+    loadMetrics: vi.fn(),
+    calculateFlakiness: vi.fn(),
+}));
+vi.mock('../../shared/logger', () => ({
     rootLogger: {
-        error: jest.fn(),
-        child: jest.fn().mockReturnValue({ info: jest.fn(), error: jest.fn(), warn: jest.fn() }),
+        error: vi.fn(),
+        child: vi.fn().mockReturnValue({ info: vi.fn(), error: vi.fn(), warn: vi.fn() }),
     },
 }));
 
 import { execFileSync } from 'child_process';
 import { existsSync, PathLike } from 'fs';
-import { ask, info, warn, title, printError } from '../../shared/prompt';
-import { analyzeTestImpact } from '../../shared/test-impact';
-import { loadMetrics, calculateFlakiness } from '../../shared/metrics';
-import { makeMockCommandContext } from '../../shared/test-utils';
-import case22Module from './case22';
+import { ask, info, warn, title, printError } from '../../shared/prompt.js';
+import { analyzeTestImpact } from '../../shared/test-impact.js';
+import { loadMetrics, calculateFlakiness } from '../../shared/metrics.js';
+import { makeMockCommandContext } from '../../shared/test-utils.js';
+import case22Module from './case22.js';
 
-const mockExecFileSync = jest.mocked(execFileSync);
-const mockExistsSync = jest.mocked(existsSync);
-const mockAsk = jest.mocked(ask);
-const mockAnalyzeTestImpact = jest.mocked(analyzeTestImpact);
-const mockLoadMetrics = jest.mocked(loadMetrics);
-const mockCalcFlaky = jest.mocked(calculateFlakiness);
+const mockExecFileSync = vi.mocked(execFileSync);
+const mockExistsSync = vi.mocked(existsSync);
+const mockAsk = vi.mocked(ask);
+const mockAnalyzeTestImpact = vi.mocked(analyzeTestImpact);
+const mockLoadMetrics = vi.mocked(loadMetrics);
+const mockCalcFlaky = vi.mocked(calculateFlakiness);
 
 beforeEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
     mockLoadMetrics.mockReturnValue({ runs: [] });
     mockCalcFlaky.mockReturnValue([]);
 });

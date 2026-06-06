@@ -2,10 +2,10 @@
  * Generates a concise narrative of changes in pass rate, failures, and trends.
  * Returns empty string on error (never throws). */
 
-import type { MetricsRun } from './metrics';
-import { llmPrompt } from './llm-client';
-import { sanitizeForLlm } from './sanitize';
-import { rootLogger } from './logger';
+import type { MetricsRun } from './metrics.js';
+import { llmPrompt } from './llm-client.js';
+import { sanitizeForLlm } from './sanitize.js';
+import { rootLogger } from './logger.js';
 
 function runSummary(run: MetricsRun): string {
     const date = run.timestamp.slice(0, 10);

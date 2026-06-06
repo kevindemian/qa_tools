@@ -1,8 +1,8 @@
 /** Markdown HTML renderer — converts InlineToken AST to HTML fragments.
  * @module Produces complete self-contained HTML with responsive CSS for documentation rendering. */
 
-import { sanitizeHtml } from './escape';
-import type { InlineToken } from './markdown-lexer';
+import { sanitizeHtml } from './escape.js';
+import type { InlineToken } from './markdown-lexer.js';
 
 // ─── Inline token → HTML ────────────────────────────────────────────────────────
 

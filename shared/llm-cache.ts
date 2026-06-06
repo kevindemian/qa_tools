@@ -4,9 +4,9 @@
  */
 import crypto from 'crypto';
 import { z } from 'zod';
-import { diskCacheGet, diskCacheSet, clearDiskCache } from './disk-cache';
-import { rootLogger } from './logger';
-import type { ZodSchemaTyped as ZodSchema } from './types';
+import { diskCacheGet, diskCacheSet, clearDiskCache } from './disk-cache.js';
+import { rootLogger } from './logger.js';
+import type { ZodSchemaTyped as ZodSchema } from './types.js';
 
 // ---- types ----
 

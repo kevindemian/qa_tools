@@ -18,11 +18,12 @@
  *   llm-cache         — in-memory + disk response cache
  *   llm-fallback      — tier configs, provider calls, fallback chain
  */
-import Config from './config';
-import { rootLogger } from './logger';
-import { LlmError } from './errors';
+import Config from './config.js';
+import { rootLogger } from './logger.js';
+import { LlmError } from './errors.js';
 
-import { generateWithRetry } from './targeted-retry';
+import { validateLlmResponse } from './llm-validation.js';
+import { generateWithRetry } from './targeted-retry.js';
 import {
     _llmMetrics,
     getLlmClientMetrics,
@@ -31,8 +32,8 @@ import {
     _estimateInputTokens,
     sendWithFallback,
     tierToConfig,
-} from './llm-fallback';
-import type { LlmTier, ResponseFormat, ZodSchema, ZodSchemaTyped, InferSchemaData } from './types';
+} from './llm-fallback.js';
+import type { LlmTier, LlmPromptOptions, ResponseFormat, ZodSchema, ZodSchemaTyped, InferSchemaData } from './types.js';
 
 import {
     checkMemoryCache,
@@ -43,16 +44,16 @@ import {
     setDiskCache,
     checkSchema,
     warnIfNotJson,
-} from './llm-cache';
+} from './llm-cache.js';
 
 // ---- re-exports ----
 
-export { clearCache } from './llm-cache';
-export { resetRateLimiter } from './llm-rate-limiter';
-export { resetCircuitState } from './circuit-breaker';
+export type { LlmPromptOptions } from './types.js';
+export { clearCache } from './llm-cache.js';
+export { resetRateLimiter } from './llm-rate-limiter.js';
+export { resetCircuitState } from './circuit-breaker.js';
 export { getLlmClientMetrics, resetLlmClientMetrics, parseRetryAfter, _estimateInputTokens };
-export { generateWithRetry } from './targeted-retry';
-export type { LlmTier } from './types';
+export type { LlmTier } from './types.js';
 
 // ---- token limits ----
 
@@ -121,6 +122,7 @@ async function _validateWithRetry<T>(opts: ValidateWithRetryOptions<T>): Promise
     const retryResult = await generateWithRetry<T>(
         optsForRetry as Parameters<typeof generateWithRetry>[0],
         schema,
+        llmPrompt,
         noopValidator,
         noopValidator,
         { inputRaw: user, artifactType: 'schema-validation' },
@@ -155,15 +157,6 @@ async function _validateWithRetry<T>(opts: ValidateWithRetryOptions<T>): Promise
  * @returns The LLM response text (or parsed data when schema is provided).
  * @throws When every provider in the fallback chain fails, or schema validation fails after retry.
  */
-export interface LlmPromptOptions<S extends ZodSchema = never> {
-    tier: LlmTier;
-    system: string;
-    user: string;
-    callerId?: string;
-    responseFormat?: ResponseFormat;
-    schema?: S;
-}
-
 export async function llmPrompt<S extends ZodSchema = never>(
     opts: LlmPromptOptions<S>,
 ): Promise<[S] extends [never] ? string : InferSchemaData<S>> {
@@ -200,6 +193,8 @@ export async function llmPrompt<S extends ZodSchema = never>(
     }
 
     const response = await sendWithFallback(tier, system, user, responseFormat);
+
+    await validateLlmResponse(response);
 
     if (typedSchema)
         return _validateWithRetry({

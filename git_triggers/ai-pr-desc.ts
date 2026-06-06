@@ -1,8 +1,8 @@
 /** AI-powered PR description generation from git diff + branch metadata. */
-import { llmPrompt } from '../shared/llm-client';
-import { rootLogger } from '../shared/logger';
-import { sanitizeForLlm } from '../shared/sanitize';
-import type { GitProvider } from '../shared/types';
+import { llmPrompt } from '../shared/llm-client.js';
+import { rootLogger } from '../shared/logger.js';
+import { sanitizeForLlm } from '../shared/sanitize.js';
+import type { GitProvider } from '../shared/types.js';
 
 function buildPrompt(diff: string, source: string, target: string): string {
     return [

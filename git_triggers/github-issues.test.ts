@@ -1,21 +1,27 @@
-import { getOpenIssues } from './github-issues';
-import { nonNull } from '../shared/test-utils';
-import { createMockAxiosInstance } from '../shared/test-utils/factories/response-factory';
+import { getOpenIssues } from './github-issues.js';
+import type { Mock, Mocked } from 'vitest';
+import { nonNull } from '../shared/test-utils.js';
+import { createMockAxiosInstance } from '../shared/test-utils/factories/response-factory.js';
 import type { AxiosInstance } from 'axios';
 
-jest.mock('./github-api', () => ({
-    apiGet: jest.fn(),
+vi.mock('./github-api', async () => ({
+    apiGet: vi.fn(),
 }));
 
-jest.mock('../shared/logger', () => ({
-    Logger: jest.fn().mockImplementation(() => ({ error: jest.fn(), warn: jest.fn() })),
-    rootLogger: { error: jest.fn(), warn: jest.fn() },
+vi.mock('../shared/logger', async () => ({
+    Logger: vi.fn().mockImplementation(function () {
+        return { error: vi.fn(), warn: vi.fn() };
+    }),
+    rootLogger: { error: vi.fn(), warn: vi.fn() },
 }));
 
-const mockApiGet = jest.mocked(jest.requireMock<typeof import('./github-api')>('./github-api').apiGet);
+let mockApiGet: Mock;
+beforeAll(async () => {
+    mockApiGet = vi.mocked((await vi.importMock<typeof import('./github-api.js')>('./github-api')).apiGet);
+});
 
 describe('getOpenIssues', () => {
-    let client: jest.Mocked<AxiosInstance>;
+    let client: Mocked<AxiosInstance>;
 
     beforeEach(() => {
         client = createMockAxiosInstance();

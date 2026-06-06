@@ -1,34 +1,35 @@
-jest.mock('../shared/prompt', () => ({
-    info: jest.fn(),
-    warn: jest.fn(),
+vi.mock('../shared/prompt', async () => ({
+    info: vi.fn(),
+    warn: vi.fn(),
 }));
 
-jest.mock('../shared/logger', () => ({
-    rootLogger: { info: jest.fn(), warn: jest.fn(), error: jest.fn() },
+vi.mock('../shared/logger', async () => ({
+    rootLogger: { info: vi.fn(), warn: vi.fn(), error: vi.fn() },
 }));
 
-import { PreconditionHandler } from './precondition-importer';
+import { PreconditionHandler } from './precondition-importer.js';
+import type { Mock } from 'vitest';
 
 describe('PreconditionHandler', () => {
     let mockJiraResource: {
-        getJiraResource: jest.Mock;
-        postJiraResource: jest.Mock;
-        putJiraResource: jest.Mock;
-        searchJiraIssues: jest.Mock;
-        getTransitionsForIssue: jest.Mock;
-        transitionIssue: jest.Mock;
+        getJiraResource: Mock;
+        postJiraResource: Mock;
+        putJiraResource: Mock;
+        searchJiraIssues: Mock;
+        getTransitionsForIssue: Mock;
+        transitionIssue: Mock;
     };
     let handler: PreconditionHandler;
 
     beforeEach(() => {
-        jest.clearAllMocks();
+        vi.clearAllMocks();
         mockJiraResource = {
-            getJiraResource: jest.fn(),
-            postJiraResource: jest.fn(),
-            putJiraResource: jest.fn(),
-            searchJiraIssues: jest.fn(),
-            getTransitionsForIssue: jest.fn(),
-            transitionIssue: jest.fn(),
+            getJiraResource: vi.fn(),
+            postJiraResource: vi.fn(),
+            putJiraResource: vi.fn(),
+            searchJiraIssues: vi.fn(),
+            getTransitionsForIssue: vi.fn(),
+            transitionIssue: vi.fn(),
         };
         handler = new PreconditionHandler(mockJiraResource);
     });

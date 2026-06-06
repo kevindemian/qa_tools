@@ -439,4 +439,18 @@ export const CONFIG_SCHEMA: ConfigField[] = [
         defaultVal: false,
         description: 'Skip first-run wizard',
     },
+    {
+        key: 'noColor',
+        envVar: 'NO_COLOR',
+        type: 'boolean',
+        defaultVal: false,
+        description: 'Disable ANSI color output (NO_COLOR standard)',
+    },
+    {
+        key: 'qaToolsNoClear',
+        envVar: 'QA_TOOLS_NO_CLEAR',
+        type: 'boolean',
+        defaultVal: false,
+        description: 'Disable console.clear() between screens',
+    },
 ];

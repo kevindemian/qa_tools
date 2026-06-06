@@ -1,6 +1,6 @@
 /** Per-session state: counters, results, busy flag, and history.
  * Each command handler receives a {@link SessionContext} to track progress and build context lines. */
-import { withSpinner } from './prompt';
+import { withSpinner } from './prompt.js';
 
 interface SessionCountersItem {
     op: string;

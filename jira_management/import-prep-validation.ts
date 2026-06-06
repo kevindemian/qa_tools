@@ -1,9 +1,9 @@
 /** Validation logic for import preparation — checkpoint resume, schema validation, error/warning display. */
-import type { JsonObject, TestCase } from '../shared/types';
-import { TestCaseSchema } from './csv-import-schema';
-import { rootLogger } from '../shared/logger';
-import { load as loadState } from '../shared/state';
-import { confirm, info, warn, error } from '../shared/prompt';
+import type { JsonObject, TestCase } from '../shared/types.js';
+import { TestCaseSchema } from './csv-import-schema.js';
+import { rootLogger } from '../shared/logger.js';
+import { load as loadState } from '../shared/state.js';
+import { confirm, info, warn, error } from '../shared/prompt.js';
 
 const CHECKPOINT_MAX_AGE_MS = 86400000;
 const MAX_WARNINGS_TO_SHOW = 5;

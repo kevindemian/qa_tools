@@ -1,8 +1,7 @@
-import { jest } from '@jest/globals';
-import type { TestExecutionSummary } from '../../shared/types';
+import type { TestExecutionSummary } from '../../shared/types.js';
 
-export const matchPreconditionByTokenOverlap = jest.fn<(...args: unknown[]) => string[]>();
-export const matchPreconditionByDualThreshold = jest.fn<(...args: unknown[]) => string[]>();
+export const matchPreconditionByTokenOverlap = vi.fn<(...args: unknown[]) => string[]>();
+export const matchPreconditionByDualThreshold = vi.fn<(...args: unknown[]) => string[]>();
 
 export class JiraLinkManager {
     jiraResource: Record<string, unknown>;
@@ -24,19 +23,18 @@ export class JiraLinkManager {
         return null;
     }
 
-    getIssueLinkTypes = jest.fn<() => Promise<unknown>>();
-    resolveLinkTypeId = jest.fn<(linkTypeName: string) => Promise<string | null>>();
-    linkIssues =
-        jest.fn<(sourceKey: string, linkedIssues: Array<{ key: string; linkType: string }>) => Promise<void>>();
-    createIssueLink = jest.fn<(sourceKey: string, targetKey: string, linkTypeName: string) => Promise<void>>();
-    _getPreconditionFieldId = jest.fn<() => Promise<string | null>>();
-    associatePrecondition = jest.fn<(testKey: string, preconditionKey: string) => Promise<void>>();
-    _resolvePreconditionIssueTypeId = jest.fn<() => Promise<string | null>>();
-    listPreconditions = jest.fn<(project: string, maxResults?: number) => Promise<unknown[]>>();
-    createPrecondition = jest.fn<(project: string, summary: string) => Promise<unknown>>();
-    listTestExecutions = jest.fn<(project: string, maxResults?: number) => Promise<TestExecutionSummary[]>>();
-    validateTestExecutionKey = jest.fn<(issueKey: string) => Promise<boolean>>();
-    getTestCaseSummaries = jest.fn<(keys: string[]) => Promise<Array<{ key: string; summary: string }>>>();
+    getIssueLinkTypes = vi.fn<() => Promise<unknown>>();
+    resolveLinkTypeId = vi.fn<(linkTypeName: string) => Promise<string | null>>();
+    linkIssues = vi.fn<(sourceKey: string, linkedIssues: Array<{ key: string; linkType: string }>) => Promise<void>>();
+    createIssueLink = vi.fn<(sourceKey: string, targetKey: string, linkTypeName: string) => Promise<void>>();
+    _getPreconditionFieldId = vi.fn<() => Promise<string | null>>();
+    associatePrecondition = vi.fn<(testKey: string, preconditionKey: string) => Promise<void>>();
+    _resolvePreconditionIssueTypeId = vi.fn<() => Promise<string | null>>();
+    listPreconditions = vi.fn<(project: string, maxResults?: number) => Promise<unknown[]>>();
+    createPrecondition = vi.fn<(project: string, summary: string) => Promise<unknown>>();
+    listTestExecutions = vi.fn<(project: string, maxResults?: number) => Promise<TestExecutionSummary[]>>();
+    validateTestExecutionKey = vi.fn<(issueKey: string) => Promise<boolean>>();
+    getTestCaseSummaries = vi.fn<(keys: string[]) => Promise<Array<{ key: string; summary: string }>>>();
 }
 
 export default JiraLinkManager;

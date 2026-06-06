@@ -1,4 +1,4 @@
-import { AiBugReportSchema } from './bug-report.schema';
+import { AiBugReportSchema } from './bug-report.schema.js';
 
 describe('AiBugReportSchema', () => {
     const validReport = {
@@ -12,58 +12,58 @@ describe('AiBugReportSchema', () => {
         component: 'auth-service',
     };
 
-    it('accepts a valid report with all fields', () => {
+    it('accepts a valid report with all fields', async () => {
         const result = AiBugReportSchema.parse(validReport);
         expect(result.summary).toBe(validReport.summary);
         expect(result.severity).toBe('major');
         expect(result.component).toBe('auth-service');
     });
 
-    it('accepts a valid report without optional fields', () => {
+    it('accepts a valid report without optional fields', async () => {
         const minimal = (({ environment: _env, component: _comp, ...rest }) => rest)(validReport);
         const result = AiBugReportSchema.parse(minimal);
         expect(result.environment).toBeUndefined();
         expect(result.component).toBeUndefined();
     });
 
-    it('rejects empty summary', () => {
+    it('rejects empty summary', async () => {
         const invalid = { ...validReport, summary: '' };
         expect(() => AiBugReportSchema.parse(invalid)).toThrow();
     });
 
-    it('rejects summary exceeding 80 chars', () => {
+    it('rejects summary exceeding 80 chars', async () => {
         const invalid = { ...validReport, summary: 'x'.repeat(81) };
         expect(() => AiBugReportSchema.parse(invalid)).toThrow();
     });
 
-    it('rejects invalid severity', () => {
+    it('rejects invalid severity', async () => {
         const invalid = { ...validReport, severity: 'invalid' };
         expect(() => AiBugReportSchema.parse(invalid)).toThrow();
     });
 
-    it('rejects empty steps array', () => {
+    it('rejects empty steps array', async () => {
         const invalid = { ...validReport, stepsToReproduce: [] };
         expect(() => AiBugReportSchema.parse(invalid)).toThrow();
     });
 
-    it('rejects missing expectedResult', () => {
+    it('rejects missing expectedResult', async () => {
         const invalid = (({ expectedResult: _er, ...rest }) => rest)(validReport);
         expect(() => AiBugReportSchema.parse(invalid)).toThrow();
     });
 
-    it('rejects missing actualResult', () => {
+    it('rejects missing actualResult', async () => {
         const invalid = (({ actualResult: _ar, ...rest }) => rest)(validReport);
         expect(() => AiBugReportSchema.parse(invalid)).toThrow();
     });
 
-    it('accepts all severity values', () => {
+    it('accepts all severity values', async () => {
         for (const severity of ['trivial', 'minor', 'major', 'critical'] as const) {
             const result = AiBugReportSchema.parse({ ...validReport, severity });
             expect(result.severity).toBe(severity);
         }
     });
 
-    it('accepts report with evidence field', () => {
+    it('accepts report with evidence field', async () => {
         const withEvidence = {
             ...validReport,
             evidence: ['Request times out with 504 Gateway Timeout', 'Firefox 120, staging'],
@@ -72,7 +72,7 @@ describe('AiBugReportSchema', () => {
         expect(result.evidence).toEqual(['Request times out with 504 Gateway Timeout', 'Firefox 120, staging']);
     });
 
-    it('accepts report without evidence (optional)', () => {
+    it('accepts report without evidence (optional)', async () => {
         const result = AiBugReportSchema.parse(validReport);
         expect(result.evidence).toBeUndefined();
     });

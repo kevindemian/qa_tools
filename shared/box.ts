@@ -1,8 +1,8 @@
 /** ASCII/Unicode box-rendering utilities: bordered boxes, dividers, and card layouts.
  * Powered by the active theme (single, double, round, or none borders). */
 import { stripVTControlCharacters } from 'util';
-import { palette, applyPalette, type ChalkKey } from './palette';
-import { getTheme } from './theme';
+import { palette, applyPalette, type ChalkKey } from './palette.js';
+import { getTheme } from './theme.js';
 
 export type BoxBorder = 'single' | 'double' | 'round' | 'none';
 

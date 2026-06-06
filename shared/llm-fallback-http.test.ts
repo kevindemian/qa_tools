@@ -1,4 +1,4 @@
-jest.mock('./config', () => {
+vi.mock('./config', async () => {
     const mockConfig: Record<string, string> = {};
     return {
         __esModule: true,
@@ -30,29 +30,29 @@ jest.mock('./config', () => {
         },
     };
 });
-jest.mock('./llm-rate-limiter', () => {
-    const original = jest.requireActual<typeof import('./llm-rate-limiter')>('./llm-rate-limiter');
+vi.mock('./llm-rate-limiter', async () => {
+    const original = await vi.importActual<typeof import('./llm-rate-limiter.js')>('./llm-rate-limiter');
     return {
         ...original,
-        checkRateLimit: jest.fn(),
+        checkRateLimit: vi.fn(),
     };
 });
-jest.mock('./circuit-breaker', () => ({
-    checkCircuitBreaker: jest.fn(),
-    recordCircuitFailure: jest.fn(),
-    recordCircuitSuccess: jest.fn(),
+vi.mock('./circuit-breaker', async () => ({
+    checkCircuitBreaker: vi.fn(),
+    recordCircuitFailure: vi.fn(),
+    recordCircuitSuccess: vi.fn(),
 }));
-jest.mock('./sanitize', () => ({
-    sanitizeForLlm: jest.fn((s: string) => s),
+vi.mock('./sanitize', async () => ({
+    sanitizeForLlm: vi.fn((s: string) => s),
 }));
-jest.mock('./llm-cache', () => ({
-    configUniqueKey: jest.fn(
+vi.mock('./llm-cache', async () => ({
+    configUniqueKey: vi.fn(
         (cfg: { apiKey: string; model: string; baseUrl: string }) => cfg.apiKey + '@' + cfg.model + '@' + cfg.baseUrl,
     ),
 }));
 
-import { checkCircuitBreaker } from './circuit-breaker';
-import Config from './config';
+import { checkCircuitBreaker } from './circuit-breaker.js';
+import Config from './config.js';
 import {
     parseRawOnce,
     parseRetryAfter,
@@ -60,82 +60,82 @@ import {
     buildGeminiPayload,
     fetchWithRetry,
     sendToProvider,
-} from './llm-fallback-http';
-import { resetLlmClientMetrics, getLlmClientMetrics } from './llm-fallback-config';
-import { LlmAuthError } from './errors';
+} from './llm-fallback-http.js';
+import { resetLlmClientMetrics, getLlmClientMetrics } from './llm-fallback-config.js';
+import { LlmAuthError } from './errors.js';
 
-const mockFetch = jest.fn();
+const mockFetch = vi.fn();
 global.fetch = mockFetch;
 
 function mockOkResponse(body: string): Response {
     const r = new Response(body, { status: 200 });
-    jest.spyOn(r, 'text').mockResolvedValue(body);
-    jest.spyOn(r.headers, 'get').mockReturnValue(null);
+    vi.spyOn(r, 'text').mockResolvedValue(body);
+    vi.spyOn(r.headers, 'get').mockReturnValue(null);
     return r;
 }
 
 function mockErrorResponse(status: number): Response {
     const r = new Response('error', { status });
-    jest.spyOn(r, 'text').mockResolvedValue('error');
-    jest.spyOn(r.headers, 'get').mockReturnValue(null);
+    vi.spyOn(r, 'text').mockResolvedValue('error');
+    vi.spyOn(r.headers, 'get').mockReturnValue(null);
     return r;
 }
 
-beforeEach(() => {
-    jest.clearAllMocks();
+beforeEach(async () => {
+    vi.clearAllMocks();
     mockFetch.mockReset();
     Config.reset();
     resetLlmClientMetrics();
     Config.set('llmApiKey', 'sk-test');
     Config.set('llmModel', 'gpt-4');
     Config.set('llmBaseUrl', 'https://api.test.com/v1');
-    jest.mocked(checkCircuitBreaker).mockImplementation(() => {});
+    vi.mocked(checkCircuitBreaker).mockImplementation(() => {});
 });
 
-describe('parseRawOnce', () => {
-    it('parses valid JSON string', () => {
+describe('parseRawOnce', async () => {
+    it('parses valid JSON string', async () => {
         const result = parseRawOnce('{"key": "value"}');
         expect(result).toEqual({ key: 'value' });
     });
 
-    it('returns null for invalid JSON', () => {
+    it('returns null for invalid JSON', async () => {
         const result = parseRawOnce('not json');
         expect(result).toBeNull();
     });
 
-    it('returns null for empty string', () => {
+    it('returns null for empty string', async () => {
         const result = parseRawOnce('');
         expect(result).toBeNull();
     });
 });
 
-describe('parseRetryAfter', () => {
+describe('parseRetryAfter', async () => {
     function mockResponseWithHeader(key: string, value: string | null): Response {
         const r = new Response('', { status: 429 });
-        jest.spyOn(r, 'text').mockResolvedValue('');
-        jest.spyOn(r.headers, 'get').mockImplementation((k: string) => (k === key ? value : null));
+        vi.spyOn(r, 'text').mockResolvedValue('');
+        vi.spyOn(r.headers, 'get').mockImplementation((k: string) => (k === key ? value : null));
         return r;
     }
 
-    it('parses seconds from Retry-After header', () => {
+    it('parses seconds from Retry-After header', async () => {
         const resp = mockResponseWithHeader('Retry-After', '30');
         const result = parseRetryAfter(resp, 2000);
         expect(result).toBe(10000);
     });
 
-    it('returns default when no Retry-After header', () => {
+    it('returns default when no Retry-After header', async () => {
         const resp = mockResponseWithHeader('Retry-After', null);
         const result = parseRetryAfter(resp, 2000);
         expect(result).toBe(2000);
     });
 
-    it('returns default for invalid Retry-After value', () => {
+    it('returns default for invalid Retry-After value', async () => {
         const resp = mockResponseWithHeader('Retry-After', 'invalid');
         const result = parseRetryAfter(resp, 2000);
         expect(result).toBe(2000);
     });
 
-    it('caps at 10000ms', () => {
+    it('caps at 10000ms', async () => {
         const resp = mockResponseWithHeader('Retry-After', '999');
         const result = parseRetryAfter(resp, 2000);
         expect(result).toBe(10000);
@@ -149,8 +149,8 @@ interface OpenAiPayload {
     response_format?: { type: string };
 }
 
-describe('buildOpenAiPayload', () => {
-    it('builds a valid JSON payload', () => {
+describe('buildOpenAiPayload', async () => {
+    it('builds a valid JSON payload', async () => {
         const result = buildOpenAiPayload('sys', 'usr', 'gpt-4', 0.5);
         const parsed = JSON.parse(result) as OpenAiPayload;
         expect(parsed.model).toBe('gpt-4');
@@ -162,19 +162,19 @@ describe('buildOpenAiPayload', () => {
         expect(parsed.messages[1]?.content).toBe('usr');
     });
 
-    it('uses default temperature when not provided', () => {
+    it('uses default temperature when not provided', async () => {
         const result = buildOpenAiPayload('sys', 'usr', 'gpt-4');
         const parsed = JSON.parse(result) as OpenAiPayload;
         expect(parsed.temperature).toBe(0.3);
     });
 
-    it('includes response_format when format is json', () => {
+    it('includes response_format when format is json', async () => {
         const result = buildOpenAiPayload('sys', 'usr', 'gpt-4', 0.3, 'json');
         const parsed = JSON.parse(result) as OpenAiPayload;
         expect(parsed.response_format).toEqual({ type: 'json_object' });
     });
 
-    it('omits response_format when format is not json', () => {
+    it('omits response_format when format is not json', async () => {
         const result = buildOpenAiPayload('sys', 'usr', 'gpt-4', 0.3, 'text');
         const parsed = JSON.parse(result) as OpenAiPayload;
         expect(parsed.response_format).toBeUndefined();
@@ -186,8 +186,8 @@ interface GeminiPayload {
     contents: Array<{ role: string; parts: Array<{ text: string }> }>;
 }
 
-describe('buildGeminiPayload', () => {
-    it('builds a valid Gemini JSON payload', () => {
+describe('buildGeminiPayload', async () => {
+    it('builds a valid Gemini JSON payload', async () => {
         const result = buildGeminiPayload('sys', 'usr');
         const parsed = JSON.parse(result) as GeminiPayload;
         expect(parsed.system_instruction.parts[0]?.text).toBe('sys');
@@ -196,16 +196,16 @@ describe('buildGeminiPayload', () => {
     });
 });
 
-describe('fetchWithRetry', () => {
-    beforeEach(() => {
-        jest.spyOn(global, 'setTimeout').mockImplementation(((cb: (...args: unknown[]) => void) => {
+describe('fetchWithRetry', async () => {
+    beforeEach(async () => {
+        vi.spyOn(global, 'setTimeout').mockImplementation(((cb: (...args: unknown[]) => void) => {
             cb();
             return {} as NodeJS.Timeout;
         }) as typeof global.setTimeout);
     });
 
-    afterEach(() => {
-        jest.restoreAllMocks();
+    afterEach(async () => {
+        vi.restoreAllMocks();
     });
 
     it('returns response on successful fetch', async () => {
@@ -249,16 +249,16 @@ describe('fetchWithRetry', () => {
     });
 });
 
-describe('sendToProvider', () => {
-    beforeEach(() => {
-        jest.spyOn(global, 'setTimeout').mockImplementation(((cb: (...args: unknown[]) => void) => {
+describe('sendToProvider', async () => {
+    beforeEach(async () => {
+        vi.spyOn(global, 'setTimeout').mockImplementation(((cb: (...args: unknown[]) => void) => {
             cb();
             return {} as NodeJS.Timeout;
         }) as typeof global.setTimeout);
     });
 
-    afterEach(() => {
-        jest.restoreAllMocks();
+    afterEach(async () => {
+        vi.restoreAllMocks();
     });
 
     it('sends to OpenAI provider and returns content', async () => {

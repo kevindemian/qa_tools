@@ -1,11 +1,22 @@
 #!/bin/sh
 set -e
 
-echo "=== Running pre-push checks (typecheck + enforce-quality + quality gate + tests) ==="
+echo "=== Running pre-push checks (typecheck + enforce-quality + quality gate + validation hook + tests) ==="
 
 npm run typecheck
 npx tsx scripts/enforce-quality.ts
 npx tsx scripts/quality-gate.ts
+
+# Validation hook test
+VALIDATION_HOOK="$HOME/.config/opencode/validation_hook.ts"
+if [ -f "$VALIDATION_HOOK" ]; then
+    echo "--- Running validation hook test ---"
+    npx tsx "$VALIDATION_HOOK" --test
+
+    echo "--- Validation hook (diff check) ---"
+    git diff --cached | npx tsx "$VALIDATION_HOOK" --check
+fi
+
 npm test
 
 echo "=== Pre-push checks passed ==="

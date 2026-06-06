@@ -4,10 +4,10 @@
 import fs from 'fs';
 import path from 'path';
 import os from 'os';
-import Config from './config';
-import { rootLogger } from './logger';
-import { warn } from './prompt';
-import type { StateSchema } from './types';
+import Config from './config.js';
+import { rootLogger } from './logger.js';
+import { warn } from './prompt.js';
+import type { StateSchema } from './types.js';
 
 const UTF8 = 'utf8';
 
@@ -50,17 +50,17 @@ export function migrateOldState(config?: Config): void {
             try {
                 fs.unlinkSync(OLD_STATE_PATH + '.bak');
             } catch {
-                /* best-effort cleanup — old backup file may not exist */
+                rootLogger.debug('Old backup file not found for cleanup — expected during first migration');
             }
             try {
                 fs.unlinkSync(OLD_STATE_PATH + '.tmp');
             } catch {
-                /* best-effort cleanup — old tmp file may not exist */
+                rootLogger.debug('Old tmp file not found for cleanup — expected during first migration');
             }
             try {
                 fs.unlinkSync(OLD_STATE_PATH);
             } catch {
-                /* best-effort cleanup — old state file may not exist */
+                rootLogger.debug('Old state file not found for cleanup — expected during first migration');
             }
         }
     } catch (err: unknown) {

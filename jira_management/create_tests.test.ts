@@ -1,82 +1,93 @@
-type FsModule = typeof import('fs');
-
 // 1. Define mock factory values FIRST (before jest.mock)
-const mockPrompt = {
-    success: jest.fn<void, [string]>(),
-    error: jest.fn<void, [string]>(),
-    warn: jest.fn<void, [string]>(),
-    info: jest.fn<void, [string]>(),
-    title: jest.fn<void, [string]>(),
-    divider: jest.fn<void, []>(),
-    prompt: jest.fn<string, [string]>().mockReturnValue(''),
-    confirm: jest.fn<boolean, [string]>(),
-    ask: jest.fn<Promise<string>, [string]>().mockResolvedValue(''),
-    askConfirm: jest.fn<Promise<boolean>, [string]>().mockResolvedValue(true),
-    smartPrompt: jest.fn<Promise<string>, [string]>(),
-    printError: jest.fn<void, [label: string, error: Error]>(),
-    printSummary: jest.fn<void, [results: object[], header?: string]>(),
-    onError: jest.fn<'retry' | 'abort' | 'continue', [context: string, error: Error]>(),
-    ProgressBar: jest.fn<object, [total: number]>(),
-    Spinner: jest.fn<object, [opts: object]>(),
-    isQuiet: jest.fn<boolean, []>().mockReturnValue(true),
-    withSpinner: jest
-        .fn<Promise<void>, [label: string, fn: () => Promise<void>]>()
+const mockPrompt = vi.hoisted(() => ({
+    success: vi.fn<(...args: [string]) => void>(),
+    error: vi.fn<(...args: [string]) => void>(),
+    warn: vi.fn<(...args: [string]) => void>(),
+    info: vi.fn<(...args: [string]) => void>(),
+    title: vi.fn<(...args: [string]) => void>(),
+    divider: vi.fn<(...args: []) => void>(),
+    prompt: vi.fn<(...args: [string]) => string>().mockReturnValue(''),
+    confirm: vi.fn<(...args: [string]) => boolean>(),
+    ask: vi.fn<(...args: [string]) => Promise<string>>().mockResolvedValue(''),
+    askConfirm: vi.fn<(...args: [string]) => Promise<boolean>>().mockResolvedValue(true),
+    smartPrompt: vi.fn<(...args: [string]) => Promise<string>>(),
+    printError: vi.fn<(...args: [label: string, error: Error]) => void>(),
+    printSummary: vi.fn<(...args: [results: object[], header?: string]) => void>(),
+    onError: vi.fn<(...args: [context: string, error: Error]) => 'retry' | 'abort' | 'continue'>(),
+    ProgressBar: vi.fn<(...args: [total: number]) => object>(),
+    Spinner: vi.fn<(...args: [opts: object]) => object>(),
+    isQuiet: vi.fn<(...args: []) => boolean>().mockReturnValue(true),
+    withSpinner: vi
+        .fn<(...args: [label: string, fn: () => Promise<void>]) => Promise<void>>()
         .mockImplementation(async (_label: string, fn: () => Promise<void>) => fn()),
-    print: jest.fn<void, [string]>(),
-    askFilePath: jest.fn<Promise<string>, [string]>().mockResolvedValue('/fake/path.json'),
-};
+    print: vi.fn<(...args: [string]) => void>(),
+    askFilePath: vi.fn<(...args: [string]) => Promise<string>>().mockResolvedValue('/fake/path.json'),
+}));
 
 // 2. jest.mock BEFORE any require that uses those modules
-jest.mock('../shared/prompt', () => mockPrompt);
+vi.mock('../shared/prompt', () => mockPrompt);
 
-jest.mock('fs', () => {
-    const actual = jest.requireActual<FsModule>('fs');
-    return { ...actual, readFileSync: jest.fn<string, [string]>(), existsSync: jest.fn<boolean, [string]>() };
+const mockFsMod = vi.hoisted(() => ({
+    readFileSync: vi.fn<(...args: [string]) => string>(),
+    existsSync: vi.fn<(...args: [string]) => boolean>(),
+    // Add other needed fs properties
+}));
+vi.mock('fs', async () => {
+    const actual = await vi.importActual<typeof import('fs')>('fs');
+    return { ...actual, ...mockFsMod };
 });
 
-jest.mock('../shared/state', () => ({
-    load: jest.fn<object, []>().mockReturnValue({}),
-    update: jest.fn<object, [(state: object) => void]>(),
+vi.mock('../shared/state', async () => ({
+    load: vi.fn<(...args: []) => object>().mockReturnValue({}),
+    update: vi.fn<(...args: [(state: object) => void]) => object>(),
 }));
 
-jest.mock('../shared/temp-dir', () => ({
-    reportsDir: jest.fn<string, []>(),
-    writeEphemeral: jest.fn<string, [string, string, string]>(),
-    tempDirPath: jest.fn<string, []>().mockReturnValue('/tmp/qa-tools-temp'),
+vi.mock('../shared/temp-dir', async () => ({
+    reportsDir: vi.fn<(...args: []) => string>(),
+    writeEphemeral: vi.fn<(...args: [string, string, string]) => string>(),
+    tempDirPath: vi.fn<(...args: []) => string>().mockReturnValue('/tmp/qa-tools-temp'),
 }));
 
-jest.mock('axios', () => {
+vi.mock('axios', async () => {
     const mockInstance = {
         interceptors: {
             request: {
-                use: jest.fn<
-                    void,
-                    [onFulfilled: (value: object) => object | Promise<object>, onRejected: (error: object) => object]
+                use: vi.fn<
+                    (
+                        ...args: [
+                            onFulfilled: (value: object) => object | Promise<object>,
+                            onRejected: (error: object) => object,
+                        ]
+                    ) => void
                 >(),
             },
             response: {
-                use: jest.fn<
-                    void,
-                    [onFulfilled: (response: object) => object, onRejected: (error: object) => object]
+                use: vi.fn<
+                    (
+                        ...args: [onFulfilled: (response: object) => object, onRejected: (error: object) => object]
+                    ) => void
                 >(),
             },
         },
-        get: jest.fn<Promise<object>, [url: string]>(),
-        post: jest.fn<Promise<object>, [url: string, data?: object]>(),
-        put: jest.fn<Promise<object>, [url: string, data?: object]>(),
+        get: vi.fn<(...args: [url: string]) => Promise<object>>(),
+        post: vi.fn<(...args: [url: string, data?: object]) => Promise<object>>(),
+        put: vi.fn<(...args: [url: string, data?: object]) => Promise<object>>(),
     };
-    return { create: jest.fn<typeof mockInstance, [config?: object]>().mockReturnValue(mockInstance) };
+    return {
+        default: { create: vi.fn<(...args: [config?: object]) => typeof mockInstance>().mockReturnValue(mockInstance) },
+    };
 });
 
 // 3. THEN import the source modules (they'll get the mocked dependencies)
-import JiraResource from './jira_resource';
-import JiraLinkManager from './jira_link_manager';
-import TestExecutionCreator from './test-execution-creator';
-import type { TestCase } from '../shared/types';
-import CsvResource from './csv_resource';
-import IssueLinker from './issue-linker';
-import createTestsModule from './create_tests';
-import * as tempDirModule from '../shared/temp-dir';
+import JiraResource from './jira_resource.js';
+import type { Mock, Mocked } from 'vitest';
+import JiraLinkManager from './jira_link_manager.js';
+import TestExecutionCreator from './test-execution-creator.js';
+import type { TestCase } from '../shared/types.js';
+import CsvResource from './csv_resource.js';
+import IssueLinker from './issue-linker.js';
+import createTestsModule from './create_tests.js';
+import * as tempDirModule from '../shared/temp-dir.js';
 const {
     createTestsFromCsv,
     createTestExecution,
@@ -86,13 +97,13 @@ const {
     createTestsFromJson,
     updateCrossReferences,
 } = createTestsModule;
-import * as PROMPT from '../shared/prompt';
-import * as STATE from '../shared/state';
+import * as PROMPT from '../shared/prompt.js';
+import * as STATE from '../shared/state.js';
 import fs from 'fs';
 
-import { createMockLogger, nonNull } from '../shared/test-utils';
-import { createMockJiraResource } from '../shared/test-utils/factories/jira-resource-factory';
-import { createMockLinkManager } from '../shared/test-utils/factories/link-manager-factory';
+import { createMockLogger, nonNull } from '../shared/test-utils.js';
+import { createMockJiraResource } from '../shared/test-utils/factories/jira-resource-factory.js';
+import { createMockLinkManager } from '../shared/test-utils/factories/link-manager-factory.js';
 
 const MOCK_ISSUE_TYPES = [
     { id: '11200', name: 'Epic' },
@@ -116,14 +127,14 @@ const MOCK_FIELDS = [
 
 const PROJECT = 'TESTPROJ';
 
-describe('createTestExecution', () => {
-    let jiraResource: jest.MockedObjectDeep<JiraResource>;
+describe('createTestExecution', async () => {
+    let jiraResource: Mocked<JiraResource>;
     let testExecutionCreator: TestExecutionCreator;
 
-    beforeEach(() => {
-        jiraResource = jest.mocked(new JiraResource('fake-token', 'http://jira/rest/api/2'));
-        jest.spyOn(jiraResource, 'getJiraResource');
-        jest.spyOn(jiraResource, 'postJiraResource');
+    beforeEach(async () => {
+        jiraResource = vi.mocked(new JiraResource('fake-token', 'http://jira/rest/api/2'));
+        vi.spyOn(jiraResource, 'getJiraResource');
+        vi.spyOn(jiraResource, 'postJiraResource');
         const linkManager = new JiraLinkManager(jiraResource);
         testExecutionCreator = new TestExecutionCreator(jiraResource, linkManager);
     });
@@ -256,19 +267,19 @@ describe('createTestExecution', () => {
     });
 });
 
-describe('createTestExecutionWithLinks', () => {
-    let jiraResource: jest.MockedObjectDeep<JiraResource>;
-    let linkJiraRes: jest.MockedObjectDeep<JiraResource>;
+describe('createTestExecutionWithLinks', async () => {
+    let jiraResource: Mocked<JiraResource>;
+    let linkJiraRes: Mocked<JiraResource>;
     let testExecutionCreator: TestExecutionCreator;
 
-    beforeEach(() => {
-        jiraResource = jest.mocked(new JiraResource('fake-token', 'http://jira/rest/api/2'));
-        jest.spyOn(jiraResource, 'getJiraResource');
-        jest.spyOn(jiraResource, 'postJiraResource');
+    beforeEach(async () => {
+        jiraResource = vi.mocked(new JiraResource('fake-token', 'http://jira/rest/api/2'));
+        vi.spyOn(jiraResource, 'getJiraResource');
+        vi.spyOn(jiraResource, 'postJiraResource');
 
-        linkJiraRes = jest.mocked(new JiraResource('fake-token', 'http://jira/rest/api/2'));
-        jest.spyOn(linkJiraRes, 'getJiraResource');
-        jest.spyOn(linkJiraRes, 'postJiraResource');
+        linkJiraRes = vi.mocked(new JiraResource('fake-token', 'http://jira/rest/api/2'));
+        vi.spyOn(linkJiraRes, 'getJiraResource');
+        vi.spyOn(linkJiraRes, 'postJiraResource');
         linkJiraRes.getJiraResource.mockImplementation((url: string) => {
             if (url === 'issueLinkType')
                 return Promise.resolve({
@@ -359,19 +370,19 @@ describe('createTestExecutionWithLinks', () => {
     });
 });
 
-describe('generateMappingFiles', () => {
-    const realFs = jest.requireActual<FsModule>('fs');
+describe('generateMappingFiles', async () => {
+    const realFs = await vi.importActual<typeof import('fs')>('fs');
     const tmpDir = '/tmp/qa-tools-test-mapping-' + Date.now();
     const csvPath = '/tmp/test-csv.csv';
     let testIdx = 0;
     const nextBase = () => '/tmp/test-csv-' + ++testIdx;
 
-    beforeAll(() => {
+    beforeAll(async () => {
         realFs.writeFileSync(csvPath, 'Title: X\nAction,Data,Expected\nx,y,z\n', 'utf8');
-        jest.mocked(tempDirModule).reportsDir.mockReturnValue(tmpDir);
+        vi.mocked(tempDirModule).reportsDir.mockReturnValue(tmpDir);
     });
 
-    afterAll(() => {
+    afterAll(async () => {
         try {
             realFs.rmSync(tmpDir, { recursive: true, force: true });
         } catch {
@@ -388,7 +399,7 @@ describe('generateMappingFiles', () => {
         return actions.map((a) => ({ fields: { Action: a, Data: '', 'Expected Result': '' } }));
     }
 
-    it('creates JSON and MD mapping files', () => {
+    it('creates JSON and MD mapping files', async () => {
         const base = nextBase();
         const testCases: Partial<TestCase>[] = [
             { title: 'TC1', description: 'Descricao do TC1', steps: makeSteps('a1', 'a2') },
@@ -412,7 +423,7 @@ describe('generateMappingFiles', () => {
         expect(content).toContain('"Action": "a2"');
     });
 
-    it('generates mapping files regardless of CYPRESS_PROJECT_PATH', () => {
+    it('generates mapping files regardless of CYPRESS_PROJECT_PATH', async () => {
         delete process.env.CYPRESS_PROJECT_PATH;
         const base = nextBase();
         const testCases: TestCase[] = [{ title: 'TC', steps: [] }];
@@ -421,16 +432,16 @@ describe('generateMappingFiles', () => {
         process.env.CYPRESS_PROJECT_PATH = tmpDir;
     });
 
-    it('returns early when tasksId is empty', () => {
-        const capture = jest.fn<void, [...string[]]>();
-        jest.spyOn(console, 'log').mockImplementation(capture);
+    it('returns early when tasksId is empty', async () => {
+        const capture = vi.fn<(...args: [...string[]]) => void>();
+        vi.spyOn(console, 'log').mockImplementation(capture);
         generateMappingFiles(nextBase() + '.csv', 'PROJ', [], []);
         expect(capture).not.toHaveBeenCalled();
-        jest.clearAllMocks();
-        jest.restoreAllMocks();
+        vi.clearAllMocks();
+        vi.restoreAllMocks();
     });
 
-    it('includes steps and precondition in JSON mapping', () => {
+    it('includes steps and precondition in JSON mapping', async () => {
         const base = nextBase();
         const testCases: TestCase[] = [
             {
@@ -446,7 +457,7 @@ describe('generateMappingFiles', () => {
         expect(content2).toContain('"Action": "Click login"');
     });
 
-    it('generates MD with full steps for each test', () => {
+    it('generates MD with full steps for each test', async () => {
         const base = nextBase();
         const testCases: Partial<TestCase>[] = [
             { title: 'TC1', description: 'Descricao do TC1', steps: makeSteps('a1') },
@@ -467,13 +478,13 @@ describe('generateMappingFiles', () => {
     });
 });
 
-describe('validateCsvTests', () => {
-    it('returns error for empty title', () => {
+describe('validateCsvTests', async () => {
+    it('returns error for empty title', async () => {
         const { errors } = validateCsvTests([{ title: '', steps: [{ fields: { Action: 'x' } }] }]);
         expect(errors[0]).toContain('Título é obrigatório');
     });
 
-    it('returns warning for duplicate titles', () => {
+    it('returns warning for duplicate titles', async () => {
         const { warnings } = validateCsvTests([
             { title: 'TC1', steps: [{ fields: { Action: 'x' } }] },
             { title: 'TC1', steps: [{ fields: { Action: 'y' } }] },
@@ -481,40 +492,42 @@ describe('validateCsvTests', () => {
         expect(warnings).toContain('Teste 2: Titulo duplicado "TC1"');
     });
 
-    it('returns error for no steps', () => {
+    it('returns error for no steps', async () => {
         const { errors } = validateCsvTests([{ title: 'TC1', steps: [] }]);
         expect(errors[0]).toContain('Pelo menos um step');
     });
 
-    it('returns warning for empty Action in step', () => {
+    it('returns warning for empty Action in step', async () => {
         const { warnings } = validateCsvTests([{ title: 'TC1', steps: [{ fields: { Action: '' } }] }]);
         expect(warnings[0]).toContain('sem Action');
     });
 
-    it('returns no errors for valid test', () => {
+    it('returns no errors for valid test', async () => {
         const { errors, warnings } = validateCsvTests([{ title: 'TC1', steps: [{ fields: { Action: 'Click' } }] }]);
         expect(errors).toHaveLength(0);
         expect(warnings).toHaveLength(0);
     });
 });
 
-describe('createTestsFromJson', () => {
-    const FS: jest.MockedObjectDeep<typeof fs> = jest.mocked(fs);
+describe('createTestsFromJson', async () => {
+    const FS = { ...fs, ...mockFsMod } as unknown as Mocked<typeof fs>;
 
-    function makeJiraResource(): jest.MockedObjectDeep<JiraResource> {
-        const r = jest.mocked(new JiraResource('fake-token', 'http://jira/rest/api/2'));
-        jest.spyOn(r, 'getJiraResource');
-        jest.spyOn(r, 'postJiraResource');
+    function makeJiraResource(): Mocked<JiraResource> {
+        const r = vi.mocked(new JiraResource('fake-token', 'http://jira/rest/api/2'));
+        vi.spyOn(r, 'getJiraResource');
+        vi.spyOn(r, 'postJiraResource');
         return r;
     }
 
-    function makeLinkManager(): JiraLinkManager & { postLink: jest.Mock } {
+    function makeLinkManager(): JiraLinkManager & { postLink: Mock } {
         const fakeJira = createMockJiraResource();
-        const lm = new JiraLinkManager(fakeJira) as JiraLinkManager & { postLink: jest.Mock };
-        lm.postLink = jest.fn<
-            Promise<{ action?: string } | null>,
-            [resource: JiraResource, payload: Record<string, object>]
-        >();
+        const lm = new JiraLinkManager(fakeJira) as JiraLinkManager & { postLink: Mock };
+        lm.postLink =
+            vi.fn<
+                (
+                    ...args: [resource: JiraResource, payload: Record<string, object>]
+                ) => Promise<{ action?: string } | null>
+            >();
         return lm;
     }
 
@@ -527,27 +540,27 @@ describe('createTestsFromJson', () => {
             project_name: 'TESTPROJ' as const,
             base_url: 'http://jira',
             sessionLog: createMockLogger(),
-            onBusy: jest.fn<void, [boolean]>(),
+            onBusy: vi.fn<(...args: [boolean]) => void>(),
         } satisfies Parameters<typeof createTestsFromJson>[0];
     }
-    afterEach(() => {
+    afterEach(async () => {
         delete process.env.JSON_PATH;
         delete process.env.AUTO_CONFIRM;
         delete process.env.DRY_RUN;
         delete process.env.JSON_LABELS;
-        jest.clearAllMocks();
-        jest.restoreAllMocks();
+        vi.clearAllMocks();
+        vi.restoreAllMocks();
     });
 
     it('cancela com caminho vazio', async () => {
-        jest.mocked(PROMPT.askFilePath).mockResolvedValueOnce('');
+        vi.mocked(PROMPT.askFilePath).mockResolvedValueOnce('');
         const result = await createTestsFromJson(BASE_PARAMS());
         expect(result).toBeUndefined();
         expect(PROMPT.warn).toHaveBeenCalledWith(expect.stringContaining('vazio'));
     });
 
     it('cancela com JSON invalido', async () => {
-        jest.mocked(PROMPT.ask).mockResolvedValue('/fake/path.json');
+        vi.mocked(PROMPT.ask).mockResolvedValue('/fake/path.json');
         FS.readFileSync.mockReturnValue('not json');
         const result = await createTestsFromJson(BASE_PARAMS());
         expect(result).toBeUndefined();
@@ -555,7 +568,7 @@ describe('createTestsFromJson', () => {
     });
 
     it('cancela com array vazio', async () => {
-        jest.mocked(PROMPT.ask).mockResolvedValue('/fake/path.json');
+        vi.mocked(PROMPT.ask).mockResolvedValue('/fake/path.json');
         FS.readFileSync.mockReturnValue('[]');
         const result = await createTestsFromJson(BASE_PARAMS());
         expect(result).toBeUndefined();
@@ -563,7 +576,7 @@ describe('createTestsFromJson', () => {
     });
 
     it('cancela com item sem title/steps', async () => {
-        jest.mocked(PROMPT.ask).mockResolvedValue('/fake/path.json');
+        vi.mocked(PROMPT.ask).mockResolvedValue('/fake/path.json');
         FS.readFileSync.mockReturnValue(JSON.stringify([{}]));
         const result = await createTestsFromJson(BASE_PARAMS());
         expect(result).toBeUndefined();
@@ -573,7 +586,7 @@ describe('createTestsFromJson', () => {
     it('executa dry-run com JSON valido', async () => {
         process.env.AUTO_CONFIRM = 'true';
         process.env.DRY_RUN = 'true';
-        jest.mocked(PROMPT.ask).mockResolvedValue('/fake/path.json');
+        vi.mocked(PROMPT.ask).mockResolvedValue('/fake/path.json');
         FS.readFileSync.mockReturnValue(
             JSON.stringify([
                 { title: 'TC1', steps: [{ Action: 'Click' }] },
@@ -589,8 +602,8 @@ describe('createTestsFromJson', () => {
     it('usa state.lastJsonDir para resolver caminho relativo', async () => {
         process.env.AUTO_CONFIRM = 'true';
         process.env.DRY_RUN = 'true';
-        jest.mocked(STATE.load).mockReturnValue({ lastJsonDir: '/base/dir' });
-        jest.mocked(PROMPT.askFilePath).mockResolvedValueOnce('sub/testes.json');
+        vi.mocked(STATE.load).mockReturnValue({ lastJsonDir: '/base/dir' });
+        vi.mocked(PROMPT.askFilePath).mockResolvedValueOnce('sub/testes.json');
         FS.existsSync.mockReturnValue(true);
         FS.readFileSync.mockImplementation(((p: string) => {
             if (p === '/base/dir/sub/testes.json') {
@@ -607,7 +620,7 @@ describe('createTestsFromJson', () => {
     it('parseia precondition como reference (formato ABC-123)', async () => {
         process.env.AUTO_CONFIRM = 'true';
         process.env.DRY_RUN = 'true';
-        jest.mocked(PROMPT.ask).mockResolvedValue('/fake/path.json');
+        vi.mocked(PROMPT.ask).mockResolvedValue('/fake/path.json');
         FS.readFileSync.mockReturnValue(
             JSON.stringify([{ title: 'TC1', steps: [{ Action: 'Click' }], precondition: 'PREC-001' }]),
         );
@@ -619,7 +632,7 @@ describe('createTestsFromJson', () => {
     it('parseia linkedIssues como strings', async () => {
         process.env.AUTO_CONFIRM = 'true';
         process.env.DRY_RUN = 'true';
-        jest.mocked(PROMPT.ask).mockResolvedValue('/fake/path.json');
+        vi.mocked(PROMPT.ask).mockResolvedValue('/fake/path.json');
         FS.readFileSync.mockReturnValue(
             JSON.stringify([{ title: 'TC1', steps: [{ Action: 'Click' }], linkedIssues: ['BUG-1', 'BUG-2'] }]),
         );
@@ -631,7 +644,7 @@ describe('createTestsFromJson', () => {
     it('parseia linkedIssues como objetos', async () => {
         process.env.AUTO_CONFIRM = 'true';
         process.env.DRY_RUN = 'true';
-        jest.mocked(PROMPT.ask).mockResolvedValue('/fake/path.json');
+        vi.mocked(PROMPT.ask).mockResolvedValue('/fake/path.json');
         FS.readFileSync.mockReturnValue(
             JSON.stringify([
                 { title: 'TC1', steps: [{ Action: 'Click' }], linkedIssues: [{ key: 'BUG-1', linkType: 'Blocks' }] },
@@ -643,13 +656,13 @@ describe('createTestsFromJson', () => {
     });
 });
 
-describe('readCsvTests (via createTestsFromCsv)', () => {
-    let csvResource: jest.MockedObjectDeep<CsvResource>;
+describe('readCsvTests (via createTestsFromCsv)', async () => {
+    let csvResource: Mocked<CsvResource>;
 
-    function makeJiraResForCsv(): jest.MockedObjectDeep<JiraResource> {
-        const r = jest.mocked(new JiraResource('fake-token', 'http://jira/rest/api/2'));
-        jest.spyOn(r, 'getJiraResource');
-        jest.spyOn(r, 'postJiraResource');
+    function makeJiraResForCsv(): Mocked<JiraResource> {
+        const r = vi.mocked(new JiraResource('fake-token', 'http://jira/rest/api/2'));
+        vi.spyOn(r, 'getJiraResource');
+        vi.spyOn(r, 'postJiraResource');
         return r;
     }
 
@@ -669,15 +682,15 @@ describe('readCsvTests (via createTestsFromCsv)', () => {
             project_name: 'TESTPROJ',
             base_url: 'http://jira',
             sessionLog,
-            onBusy: jest.fn<void, [boolean]>(),
+            onBusy: vi.fn<(...args: [boolean]) => void>(),
             ...overrides,
         } satisfies Parameters<typeof createTestsFromCsv>[0];
     }
 
-    beforeEach(() => {
-        jest.clearAllMocks();
-        csvResource = jest.mocked(new CsvResource());
-        jest.spyOn(csvResource, 'readBulkCsv');
+    beforeEach(async () => {
+        vi.clearAllMocks();
+        csvResource = vi.mocked(new CsvResource());
+        vi.spyOn(csvResource, 'readBulkCsv');
     });
 
     it('empty CSV -> warn', async () => {
@@ -695,18 +708,20 @@ describe('readCsvTests (via createTestsFromCsv)', () => {
     });
 });
 
-describe('updateCrossReferences', () => {
+describe('updateCrossReferences', async () => {
     it('delegates to linker', async () => {
         const linker: IssueLinker = {
             jiraResource: createMockJiraResource(),
             linkManager: createMockLinkManager(),
-            associatePrecondition: jest.fn<
-                Promise<{ action?: string } | null>,
-                [tc: TestCase, key: string, opts?: { info: (msg: string) => void }]
-            >(),
-            linkIssues: jest.fn<Promise<{ action?: string } | null>, [key: string, tc: TestCase]>(),
-            updateCrossReferences: jest
-                .fn<Promise<void>, [tests: TestCase[], keys: string[]]>()
+            associatePrecondition:
+                vi.fn<
+                    (
+                        ...args: [tc: TestCase, key: string, opts?: { info: (msg: string) => void }]
+                    ) => Promise<{ action?: string } | null>
+                >(),
+            linkIssues: vi.fn<(...args: [key: string, tc: TestCase]) => Promise<{ action?: string } | null>>(),
+            updateCrossReferences: vi
+                .fn<(...args: [tests: TestCase[], keys: string[]]) => Promise<void>>()
                 .mockResolvedValue(undefined),
         };
         const tests: TestCase[] = [{ title: 'T1', steps: [], group: 'g1' }];
@@ -715,13 +730,13 @@ describe('updateCrossReferences', () => {
     });
 });
 
-describe('createTestsFromCsv', () => {
-    let csvResource: jest.MockedObjectDeep<CsvResource>;
+describe('createTestsFromCsv', async () => {
+    let csvResource: Mocked<CsvResource>;
 
-    function makeJiraResCSV(): jest.MockedObjectDeep<JiraResource> {
-        const r = jest.mocked(new JiraResource('fake-token', 'http://jira/rest/api/2'));
-        jest.spyOn(r, 'getJiraResource');
-        jest.spyOn(r, 'postJiraResource');
+    function makeJiraResCSV(): Mocked<JiraResource> {
+        const r = vi.mocked(new JiraResource('fake-token', 'http://jira/rest/api/2'));
+        vi.spyOn(r, 'getJiraResource');
+        vi.spyOn(r, 'postJiraResource');
         return r;
     }
 
@@ -735,21 +750,21 @@ describe('createTestsFromCsv', () => {
             project_name: 'TESTPROJ' as const,
             base_url: 'http://jira' as const,
             sessionLog: createMockLogger(),
-            onBusy: jest.fn<void, [boolean]>(),
+            onBusy: vi.fn<(...args: [boolean]) => void>(),
             csvPath: '/test.csv' as const,
         };
         return { ...base, ...overrides };
     }
 
-    beforeEach(() => {
-        jest.clearAllMocks();
-        csvResource = jest.mocked(new CsvResource());
-        jest.spyOn(csvResource, 'readBulkCsv');
+    beforeEach(async () => {
+        vi.clearAllMocks();
+        csvResource = vi.mocked(new CsvResource());
+        vi.spyOn(csvResource, 'readBulkCsv');
     });
 
     it('success path with valid CSV -> creates tests', async () => {
-        jest.mocked(PROMPT.smartPrompt).mockResolvedValue('/test.csv');
-        jest.mocked(PROMPT.prompt).mockReturnValue('');
+        vi.mocked(PROMPT.smartPrompt).mockResolvedValue('/test.csv');
+        vi.mocked(PROMPT.prompt).mockReturnValue('');
         process.env.AUTO_CONFIRM = 'true';
         process.env.DRY_RUN = 'true';
         csvResource.readBulkCsv.mockResolvedValue([{ title: 'TC1', steps: [{ fields: { Action: 'Click' } }] }]);

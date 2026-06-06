@@ -8,12 +8,12 @@
  *
  *  Circuit breaker key: 'jira-client' — all HTTP methods check the breaker before
  *  issuing requests and record success/failure after completion. */
-import { createHttpClient } from './http-client';
-import { extractErrorMessage } from './prompt';
-import { rootLogger } from './logger';
-import { createJiraAuthHeader } from './jira-auth';
-import { checkCircuitBreaker, recordCircuitFailure, recordCircuitSuccess } from './circuit-breaker';
-import type { JsonObject, JiraResourceLike, SearchIssuesResponse } from './types';
+import { createHttpClient } from './http-client.js';
+import { extractErrorMessage } from './prompt.js';
+import { rootLogger } from './logger.js';
+import { createJiraAuthHeader } from './jira-auth.js';
+import { checkCircuitBreaker, recordCircuitFailure, recordCircuitSuccess } from './circuit-breaker.js';
+import type { JsonObject, JiraResourceLike, SearchIssuesResponse } from './types.js';
 
 class JiraClient implements JiraResourceLike {
     baseUrl: string;

@@ -1,21 +1,21 @@
-jest.mock('../../shared/prompt');
+vi.mock('../../shared/prompt');
 
-jest.mock('../../shared/state', () => ({
-    load: jest.fn().mockReturnValue({}),
-    update: jest.fn(),
+vi.mock('../../shared/state', async () => ({
+    load: vi.fn().mockReturnValue({}),
+    update: vi.fn(),
 }));
 
-import case14 from './case14';
-import { makeMockCommandContext } from '../../shared/test-utils';
+import case14 from './case14.js';
+import { makeMockCommandContext } from '../../shared/test-utils.js';
 
 const mockContext = makeMockCommandContext();
 
 beforeEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
 });
 
 describe('case14 — config Cypress directory', () => {
-    it('exports a handler function', () => {
+    it('exports a handler function', async () => {
         expect(case14).toBeDefined();
         expect(typeof case14.handler).toBe('function');
     });

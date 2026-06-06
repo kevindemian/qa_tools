@@ -2,9 +2,9 @@
  * Per-tier client-side rate limiter for LLM providers.
  * Tracks request timestamps per tier and enforces a sliding-window limit.
  */
-import type { LlmTier } from './types';
-import { LlmRateLimitError } from './errors';
-import Config from './config';
+import type { LlmTier } from './types.js';
+import { LlmRateLimitError } from './errors.js';
+import Config from './config.js';
 
 export const LLM_RATE_WINDOW_MS = 60000;
 

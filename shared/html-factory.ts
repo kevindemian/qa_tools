@@ -6,7 +6,7 @@
  * @module html-factory
  */
 
-import { sanitizeHtml } from './escape';
+import { sanitizeHtml } from './escape.js';
 
 export interface HtmlPageParams {
     title: string;

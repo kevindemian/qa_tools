@@ -1,7 +1,7 @@
 /** Create a Test Execution for existing test issues (standalone flow). */
-import { warn, info, ask, askConfirm } from '../../shared/prompt';
-import type { CommandContext } from './context';
-import { offerTestExecutionAssociation, showResults } from './test-execution-flow';
+import { warn, info, ask, askConfirm } from '../../shared/prompt.js';
+import type { CommandContext } from './context.js';
+import { offerTestExecutionAssociation, showResults } from './test-execution-flow.js';
 
 async function handler(c: CommandContext): Promise<boolean | void> {
     let keys: string[] = [];

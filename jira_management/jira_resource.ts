@@ -1,7 +1,7 @@
 /** Jira REST API client — extends shared JiraClient with project/version/sprint operations. */
-import JiraClient from '../shared/jira-client';
-import { extractErrorMessage } from '../shared/prompt';
-import { Logger } from '../shared/logger';
+import JiraClient from '../shared/jira-client.js';
+import { extractErrorMessage } from '../shared/prompt.js';
+import { Logger } from '../shared/logger.js';
 import {
     getProjectId as versionGetProjectId,
     getProjectVersions as versionGetProjectVersions,
@@ -13,15 +13,15 @@ import {
     updateFixVersions as versionUpdateFixVersions,
     releaseVersion as versionReleaseVersion,
     searchJiraIssuesCore as versionSearchJiraIssues,
-} from './jira-resource-version';
+} from './jira-resource-version.js';
 import {
     addTasksToSprint as sprintAddTasksToSprint,
     getTransitionsForIssue as sprintGetTransitionsForIssue,
     transitionIssue as sprintTransitionIssue,
     moveCardsToDone as sprintMoveCardsToDone,
-} from './jira-resource-sprint';
-import type { JsonObject } from '../shared/types';
-import type { VersionData, JiraIssue, SearchResponse, JiraResourceLike } from './jira-resource-types';
+} from './jira-resource-sprint.js';
+import type { JsonObject } from '../shared/types.js';
+import type { VersionData, JiraIssue, SearchResponse, JiraResourceLike } from './jira-resource-types.js';
 
 /** Facade over Jira REST API — delegates to resource-specific modules.
  *  Extends the base JiraClient (shared) with project version and sprint management. */

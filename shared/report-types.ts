@@ -1,4 +1,4 @@
-import type { FlatTest } from './result_parser';
+import type { FlatTest } from './result_parser.js';
 
 export interface TestHistoryRun {
     status: string;
@@ -42,19 +42,19 @@ export interface ReportOptions {
     qualityGate?: number;
     testCategories?: Record<string, string>;
     testHistory?: Record<string, TestHistoryRun[]>;
-    trends?: import('./metrics').TrendPoint[];
+    trends?: import('./metrics.js').TrendPoint[];
     theme?: 'dark' | 'light';
     knownIssues?: KnownIssue[];
     runs?: TestRunTab[];
-    healthScore?: import('./types').HealthScoreResult;
+    healthScore?: import('./types.js').HealthScoreResult;
     diffComparison?: {
-        newFailures: import('./result_parser').FlatTest[];
-        newPasses: import('./result_parser').FlatTest[];
-        flaky: import('./result_parser').FlatTest[];
+        newFailures: import('./result_parser.js').FlatTest[];
+        newPasses: import('./result_parser.js').FlatTest[];
+        flaky: import('./result_parser.js').FlatTest[];
     };
     flakinessMap?: Record<string, number>;
     flakinessDashboardUrl?: string;
-    previousRunTests?: import('./result_parser').FlatTest[];
+    previousRunTests?: import('./result_parser.js').FlatTest[];
 }
 
 export interface ReportStats {

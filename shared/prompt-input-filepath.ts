@@ -4,8 +4,8 @@ import * as fs from 'fs';
 import * as path from 'path';
 import * as readline from 'readline';
 import chalk from 'chalk';
-import { CancelError } from './prompt-ui';
-import { NAV_CMDS, prompt, isTTY, PromptOptions } from './prompt-input-base';
+import { CancelError } from './prompt-ui.js';
+import { NAV_CMDS, prompt, isTTY, PromptOptions } from './prompt-input-base.js';
 
 export interface FilePathOptions extends PromptOptions {
     extensions?: string[];

@@ -13,6 +13,6 @@ export {
     title,
     divider,
     tableView,
-} from './prompt-format';
-export { printSummary } from './prompt-summary';
-export { humanizeError, extractErrorMessage, printError, onError, CancelError } from './prompt-errors';
+} from './prompt-format.js';
+export { printSummary } from './prompt-summary.js';
+export { humanizeError, extractErrorMessage, printError, onError, CancelError } from './prompt-errors.js';

@@ -1,9 +1,9 @@
 /** HTTP client with automatic retry (GET/PUT), exponential backoff + jitter, and TLS config.
  * Uses axios under the hood. */
-import axios from 'axios';
-import { createAgent } from './tls';
-import { rootLogger } from './logger';
-import { extractHost, HostSemaphore } from './host-semaphore';
+import axios, { type AxiosInstance } from 'axios';
+import { createAgent } from './tls.js';
+import { rootLogger } from './logger.js';
+import { extractHost, HostSemaphore } from './host-semaphore.js';
 
 /** Configuration for {@link createHttpClient}. */
 export interface HttpClientConfig {
@@ -210,7 +210,7 @@ export function createHttpClient({
     authHeader,
     timeout = DEFAULT_HTTP_TIMEOUT_MS,
     maxRetries,
-}: HttpClientConfig): axios.AxiosInstance {
+}: HttpClientConfig): AxiosInstance {
     const instance = axios.create({
         baseURL: baseUrl,
         timeout,
@@ -251,7 +251,7 @@ export interface ThrottledClientConfig extends HttpClientConfig {
  */
 const _throttled = new WeakMap<object, true>();
 
-export function createThrottledClient(config: ThrottledClientConfig): axios.AxiosInstance {
+export function createThrottledClient(config: ThrottledClientConfig): AxiosInstance {
     const maxConcurrency = config.maxConcurrency ?? 3;
     const semaphore = new HostSemaphore(maxConcurrency);
     const instance = createHttpClient(config);

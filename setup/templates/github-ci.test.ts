@@ -1,5 +1,5 @@
-import { generateGitHubActions } from './github-ci';
-import type { SetupContext } from '../context';
+import { generateGitHubActions } from './github-ci.js';
+import type { SetupContext } from '../context.js';
 
 const MOCK_CTX_BASIC: SetupContext = {
     projectName: 'test-proj',
@@ -31,37 +31,37 @@ const MOCK_CTX_FULL: SetupContext = {
 };
 
 describe('generateGitHubActions', () => {
-    it('returns YAML string with workflow name', () => {
+    it('returns YAML string with workflow name', async () => {
         const yaml = generateGitHubActions(MOCK_CTX_BASIC);
         expect(yaml).toContain('QA Pipeline');
         expect(yaml).toContain('push');
         expect(yaml).toContain('pull_request');
     });
 
-    it('includes test steps', () => {
+    it('includes test steps', async () => {
         const yaml = generateGitHubActions(MOCK_CTX_BASIC);
         expect(yaml).toContain('npm ci');
         expect(yaml).toContain('npx cypress run');
     });
 
-    it('adds post-processing step when features enabled', () => {
+    it('adds post-processing step when features enabled', async () => {
         const yaml = generateGitHubActions(MOCK_CTX_FULL);
         expect(yaml).toContain('QA Tools Post-Processing');
         expect(yaml).toContain('git_triggers/main.ts');
     });
 
-    it('does not add post-processing when no features', () => {
+    it('does not add post-processing when no features', async () => {
         const yaml = generateGitHubActions(MOCK_CTX_BASIC);
         expect(yaml).not.toContain('QA Tools Post-Processing');
     });
 
-    it('includes upload-artifact step', () => {
+    it('includes upload-artifact step', async () => {
         const yaml = generateGitHubActions(MOCK_CTX_BASIC);
         expect(yaml).toContain('actions/upload-artifact@v4');
         expect(yaml).toContain('cypress/reports/ctrf-report.json');
     });
 
-    it('includes setup-node with correct version', () => {
+    it('includes setup-node with correct version', async () => {
         const yaml = generateGitHubActions(MOCK_CTX_BASIC);
         expect(yaml).toContain('node-version: "20"');
     });

@@ -2,8 +2,8 @@
  * @module Uses ANSI escape codes via the palette module for colors and styles. */
 
 import { stripVTControlCharacters } from 'util';
-import { palette } from './palette';
-import type { InlineToken } from './markdown-lexer';
+import { palette } from './palette.js';
+import type { InlineToken } from './markdown-lexer.js';
 
 // ─── Pipe-table renderer ────────────────────────────────────────────────────────
 

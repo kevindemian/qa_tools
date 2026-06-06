@@ -7,11 +7,11 @@
 import fs from 'fs';
 import path from 'path';
 import os from 'os';
-import Config from './config';
-import { rootLogger } from './logger';
-import { safeParseJson } from './safe-json';
-import type { LlmTier } from './types';
-import { getLlmClientMetrics, resetLlmClientMetrics } from './llm-client';
+import Config from './config.js';
+import { rootLogger } from './logger.js';
+import { safeParseJson } from './safe-json.js';
+import type { LlmTier } from './types.js';
+import { getLlmClientMetrics, resetLlmClientMetrics } from './llm-fallback.js';
 
 /** Snapshot of all LLM telemetry at a point in time. Persisted to disk for
  * cross-session trend analysis (see `getLlmMetricsHistory`). */

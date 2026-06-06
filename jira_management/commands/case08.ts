@@ -1,7 +1,7 @@
 /** Publish a version — mark it as released in Jira. */
-import { warn, askConfirm, ask, printError, printSummary } from '../../shared/prompt';
-import type { CommandContext } from './context';
-import { OPERATION_CANCELLED } from '../constants';
+import { warn, askConfirm, ask, printError, printSummary } from '../../shared/prompt.js';
+import type { CommandContext } from './context.js';
+import { OPERATION_CANCELLED } from '../constants.js';
 
 async function handler(c: CommandContext): Promise<boolean | void> {
     const version = await ask('Versão a publicar', {});

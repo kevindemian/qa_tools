@@ -2,11 +2,11 @@
  *  mapping.json liga títulos CTRF → Jira keys para history. */
 import path from 'path';
 import fs from 'fs';
-import { parseTestResultsFile } from '../shared/result_parser';
-import { generateHtmlReport } from '../shared/report-generator';
-import { writeReport } from '../shared/temp-dir';
-import { createHttpClient } from '../shared/http-client';
-import JiraResource from '../jira_management/jira_resource';
+import { parseTestResultsFile } from '../shared/result_parser.js';
+import { generateHtmlReport } from '../shared/report-generator.js';
+import { writeReport } from '../shared/temp-dir.js';
+import { createHttpClient } from '../shared/http-client.js';
+import JiraResource from '../jira_management/jira_resource.js';
 
 const JIRA_BASE = process.env.JIRA_BASE_URL || 'https://jiraprod.srv.euronext.com';
 const TOKEN = process.env.JIRA_PERSONAL_TOKEN || '';
@@ -15,7 +15,7 @@ function loadCtrfFixture(): { ctrfPath: string; result: ReturnType<typeof parseT
     const ctrfArg = process.argv.find((a) => a.startsWith('--ctrf='));
     const ctrfPath = ctrfArg
         ? path.resolve(ctrfArg.split('=')[1] ?? '')
-        : path.resolve(__dirname, 'fixtures/ctrf-report.json');
+        : path.resolve(import.meta.dirname, 'fixtures/ctrf-report.json');
     const result = parseTestResultsFile(ctrfPath);
     if (result.error) {
         console.error('Parse error:', result.error);

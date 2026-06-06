@@ -1,12 +1,11 @@
-import { jest } from '@jest/globals';
-import type Config from '../config-accessor';
-import type { MetricsRun, MetricsStore, FlakinessEntry, TrendPoint, CoverageSnapshot } from '../metrics';
+import type Config from '../config-accessor.js';
+import type { MetricsRun, MetricsStore, FlakinessEntry, TrendPoint, CoverageSnapshot } from '../metrics.js';
 
-export const loadMetrics = jest.fn<(config?: Config) => MetricsStore>().mockReturnValue({ runs: [] });
+export const loadMetrics = vi.fn<(config?: Config) => MetricsStore>().mockReturnValue({ runs: [] });
 
-export const saveRunMetrics = jest.fn<(run: MetricsRun, config?: Config) => void>();
+export const saveRunMetrics = vi.fn<(run: MetricsRun, config?: Config) => void>();
 
-export const saveParseResult = jest.fn<(project: string, result: unknown, config?: Config) => MetricsRun>(() => ({
+export const saveParseResult = vi.fn<(project: string, result: unknown, config?: Config) => MetricsRun>(() => ({
     timestamp: '',
     project: '',
     total: 0,
@@ -17,10 +16,10 @@ export const saveParseResult = jest.fn<(project: string, result: unknown, config
     tests: [],
 }));
 
-export const calculateFlakiness = jest
+export const calculateFlakiness = vi
     .fn<(store: MetricsStore, minRuns?: number) => FlakinessEntry[]>()
     .mockReturnValue([]);
 
-export const saveCoverageSnapshot = jest.fn<(snapshot: CoverageSnapshot, config?: Config) => void>();
+export const saveCoverageSnapshot = vi.fn<(snapshot: CoverageSnapshot, config?: Config) => void>();
 
-export const getTrends = jest.fn<(store: MetricsStore, window?: number) => TrendPoint[]>().mockReturnValue([]);
+export const getTrends = vi.fn<(store: MetricsStore, window?: number) => TrendPoint[]>().mockReturnValue([]);

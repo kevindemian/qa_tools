@@ -1,9 +1,9 @@
 import nock from 'nock';
-import JiraResource from '../jira_management/jira_resource';
-import JiraLinkManager from '../jira_management/jira_link_manager';
-import TestExecutionCreator from '../jira_management/test-execution-creator';
-import { nonNull } from '../shared/test-utils';
-import createTests from '../jira_management/create_tests';
+import JiraResource from '../jira_management/jira_resource.js';
+import JiraLinkManager from '../jira_management/jira_link_manager.js';
+import TestExecutionCreator from '../jira_management/test-execution-creator.js';
+import { nonNull } from '../shared/test-utils.js';
+import createTests from '../jira_management/create_tests.js';
 
 const { createTestExecution } = createTests;
 

@@ -6,10 +6,10 @@
  * @module report-diff
  */
 
-import { escapeHtml } from './report-utils';
-import type { FlatTest } from './result_parser';
-import type { ReportOptions } from './report-types';
-import { Card, Badge, MetricCard, FlexRow } from './primitives';
+import { escapeHtml } from './report-utils.js';
+import type { FlatTest } from './result_parser.js';
+import type { ReportOptions } from './report-types.js';
+import { Card, Badge, MetricCard, FlexRow } from './primitives/index.js';
 
 function _buildDiffSummaryCards(newFails: number, newPasses: number, flakyCount: number): string {
     let html = MetricCard({ label: 'new failures', value: String(newFails), severity: 'error', icon: '❌' });

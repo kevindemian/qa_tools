@@ -1,5 +1,5 @@
-import Config from '../shared/config';
-import GitHubManager from '../git_triggers/github_manager';
+import Config from '../shared/config.js';
+import GitHubManager from '../git_triggers/github_manager.js';
 
 const E2E_REPO = 'kevindemian/qa_tools';
 

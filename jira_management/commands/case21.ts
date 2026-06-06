@@ -1,17 +1,27 @@
 /** Gap Analysis handler — "Analyze coverage gaps" command.
  *  Runs coverage gap analysis, displays CLI table, prompts for test creation, offers HTML export and AI gen.
  *  Supports --ci-gate flag: saves snapshot, compares with previous, fails if gap increased. */
-import { info, warn, error, title, divider, tableView, printError, withSpinner, askConfirm } from '../../shared/prompt';
-import { analyzeCoverageGaps } from '../../shared/coverage-gap';
-import { openWithFallback } from '../../shared/open';
-import { generateCoverageGapHtml } from '../../shared/generate-coverage-gap-html';
-import { loadMetrics, saveCoverageSnapshot } from '../../shared/metrics';
-import { rootLogger } from '../../shared/logger';
+import {
+    info,
+    warn,
+    error,
+    title,
+    divider,
+    tableView,
+    printError,
+    withSpinner,
+    askConfirm,
+} from '../../shared/prompt.js';
+import { analyzeCoverageGaps } from '../../shared/coverage-gap.js';
+import { openWithFallback } from '../../shared/open.js';
+import { generateCoverageGapHtml } from '../../shared/generate-coverage-gap-html.js';
+import { loadMetrics, saveCoverageSnapshot } from '../../shared/metrics.js';
+import { rootLogger } from '../../shared/logger.js';
 import fs from 'fs';
 import path from 'path';
-import type { CommandContext } from './context';
-import type { CoverageGapResult } from '../../shared/types';
-import case18Handler from './case18';
+import type { CommandContext } from './context.js';
+import type { CoverageGapResult } from '../../shared/types.js';
+import case18Handler from './case18.js';
 
 function checkCiGateFlag(): boolean {
     return process.argv.slice(2).some((a) => a === '--ci-gate');

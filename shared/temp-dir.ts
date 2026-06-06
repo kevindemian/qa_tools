@@ -1,10 +1,10 @@
 /** Temporary directory management: reports, ephemeral files, and cleanup handlers. */
 import { resolve, join } from 'path';
 import { mkdirSync, writeFileSync, existsSync, rmSync } from 'fs';
-import Config from './config';
-import { formatDateISO } from './date-utils';
+import Config from './config.js';
+import { formatDateISO } from './date-utils.js';
 
-const PROJECT_ROOT = resolve(__dirname, '..');
+const PROJECT_ROOT = resolve(import.meta.dirname, '..');
 
 function resolveEnvOrPath(envVar: string, defaultValue: string): string {
     return Config.get(envVar) ? resolve(Config.get(envVar)) : join(PROJECT_ROOT, defaultValue);

@@ -1,18 +1,26 @@
 import * as fs from 'fs';
-import { reportsDir, logsDir, tempDirPath, writeReport, writeEphemeral, ensureDirs, registerCleanup } from './temp-dir';
+import {
+    reportsDir,
+    logsDir,
+    tempDirPath,
+    writeReport,
+    writeEphemeral,
+    ensureDirs,
+    registerCleanup,
+} from './temp-dir.js';
 
-jest.mock(
+vi.mock(
     'fs',
     (): Pick<typeof fs, 'mkdirSync' | 'writeFileSync' | 'existsSync' | 'rmSync'> => ({
-        mkdirSync: jest.fn<ReturnType<typeof fs.mkdirSync>, Parameters<typeof fs.mkdirSync>>(),
-        writeFileSync: jest.fn<ReturnType<typeof fs.writeFileSync>, Parameters<typeof fs.writeFileSync>>(),
-        existsSync: jest.fn<ReturnType<typeof fs.existsSync>, Parameters<typeof fs.existsSync>>(() => false),
-        rmSync: jest.fn<ReturnType<typeof fs.rmSync>, Parameters<typeof fs.rmSync>>(),
+        mkdirSync: vi.fn<(...args: Parameters<typeof fs.mkdirSync>) => ReturnType<typeof fs.mkdirSync>>(),
+        writeFileSync: vi.fn<(...args: Parameters<typeof fs.writeFileSync>) => ReturnType<typeof fs.writeFileSync>>(),
+        existsSync: vi.fn<(...args: Parameters<typeof fs.existsSync>) => ReturnType<typeof fs.existsSync>>(() => false),
+        rmSync: vi.fn<(...args: Parameters<typeof fs.rmSync>) => ReturnType<typeof fs.rmSync>>(),
     }),
 );
 
 beforeEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
     delete process.env.QA_TOOLS_REPORTS_DIR;
     delete process.env.QA_TOOLS_LOGS_DIR;
     delete process.env.QA_TOOLS_TEMP_DIR;
@@ -20,52 +28,52 @@ beforeEach(() => {
 });
 
 afterEach(() => {
-    jest.restoreAllMocks();
+    vi.restoreAllMocks();
 });
 
 describe('reportsDir', () => {
-    it('returns default reports path when no env var set', () => {
+    it('returns default reports path when no env var set', async () => {
         const result = reportsDir();
         expect(result).toMatch(/reports$/);
     });
 
-    it('uses QA_TOOLS_REPORTS_DIR env var when set', () => {
+    it('uses QA_TOOLS_REPORTS_DIR env var when set', async () => {
         process.env.QA_TOOLS_REPORTS_DIR = '/custom/reports';
         expect(reportsDir()).toBe('/custom/reports');
     });
 });
 
 describe('logsDir', () => {
-    it('returns default logs path when no env var set', () => {
+    it('returns default logs path when no env var set', async () => {
         const result = logsDir();
         expect(result).toMatch(/logs$/);
     });
 
-    it('uses QA_TOOLS_LOGS_DIR env var when set', () => {
+    it('uses QA_TOOLS_LOGS_DIR env var when set', async () => {
         process.env.QA_TOOLS_LOGS_DIR = '/custom/logs';
         expect(logsDir()).toBe('/custom/logs');
     });
 
-    it('uses LOG_DIR env var as fallback', () => {
+    it('uses LOG_DIR env var as fallback', async () => {
         process.env.LOG_DIR = '/legacy/logs';
         expect(logsDir()).toBe('/legacy/logs');
     });
 });
 
 describe('tempDirPath', () => {
-    it('returns default temp path when no env var set', () => {
+    it('returns default temp path when no env var set', async () => {
         const result = tempDirPath();
         expect(result).toMatch(/temp$/);
     });
 
-    it('uses QA_TOOLS_TEMP_DIR env var when set', () => {
+    it('uses QA_TOOLS_TEMP_DIR env var when set', async () => {
         process.env.QA_TOOLS_TEMP_DIR = '/custom/temp';
         expect(tempDirPath()).toBe('/custom/temp');
     });
 });
 
 describe('writeReport', () => {
-    it('writes content to date-subfolder under reports directory', () => {
+    it('writes content to date-subfolder under reports directory', async () => {
         process.env.QA_TOOLS_REPORTS_DIR = '/tmp/test-reports';
         const result = writeReport('test.json', '{}');
         expect(result).toMatch(/\/tmp\/test-reports\/\d{4}-\d{2}-\d{2}\/test\.json$/);
@@ -73,7 +81,7 @@ describe('writeReport', () => {
 });
 
 describe('writeEphemeral', () => {
-    it('writes content to temp category directory', () => {
+    it('writes content to temp category directory', async () => {
         process.env.QA_TOOLS_TEMP_DIR = '/tmp/test-temp';
         const result = writeEphemeral('previews', 'snap.html', '<html/>');
         expect(result).toBe('/tmp/test-temp/previews/snap.html');
@@ -81,7 +89,7 @@ describe('writeEphemeral', () => {
 });
 
 describe('ensureDirs', () => {
-    it('creates all required directories', () => {
+    it('creates all required directories', async () => {
         process.env.QA_TOOLS_REPORTS_DIR = '/tmp/test-reports';
         process.env.QA_TOOLS_LOGS_DIR = '/tmp/test-logs';
         process.env.QA_TOOLS_TEMP_DIR = '/tmp/test-temp';
@@ -91,9 +99,9 @@ describe('ensureDirs', () => {
 });
 
 describe('registerCleanup', () => {
-    it('registers SIGINT, SIGTERM, and exit handlers', () => {
+    it('registers SIGINT, SIGTERM, and exit handlers', async () => {
         const handlers: Array<string | symbol> = [];
-        jest.spyOn(process, 'on').mockImplementation((event: string | symbol) => {
+        vi.spyOn(process, 'on').mockImplementation((event: string | symbol) => {
             handlers.push(event);
             return process;
         });
@@ -103,30 +111,30 @@ describe('registerCleanup', () => {
         expect(handlers).toContain('exit');
     });
 
-    it('catches error during cleanup gracefully', () => {
+    it('catches error during cleanup gracefully', async () => {
         const handlerRef: { current?: () => void } = {};
-        jest.spyOn(process, 'on').mockImplementation(
+        vi.spyOn(process, 'on').mockImplementation(
             (_event: string | symbol, listener: (...args: unknown[]) => void) => {
                 handlerRef.current = listener;
                 return process;
             },
         );
-        jest.mocked(fs.existsSync).mockImplementation(() => {
+        vi.mocked(fs.existsSync).mockImplementation(() => {
             throw new Error('fail');
         });
         registerCleanup();
         expect(() => handlerRef.current?.()).not.toThrow();
     });
 
-    it('removes subdirectories during cleanup when they exist', () => {
+    it('removes subdirectories during cleanup when they exist', async () => {
         const handlerRef: { current?: () => void } = {};
-        jest.spyOn(process, 'on').mockImplementation(
+        vi.spyOn(process, 'on').mockImplementation(
             (_event: string | symbol, listener: (...args: unknown[]) => void) => {
                 handlerRef.current = listener;
                 return process;
             },
         );
-        jest.mocked(fs.existsSync).mockReturnValue(true);
+        vi.mocked(fs.existsSync).mockReturnValue(true);
         registerCleanup();
         handlerRef.current?.();
         expect(fs.rmSync).toHaveBeenCalled();

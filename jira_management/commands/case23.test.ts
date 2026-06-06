@@ -1,29 +1,29 @@
-jest.mock('../../shared/prompt');
-jest.mock('../../shared/logger');
+vi.mock('../../shared/prompt');
+vi.mock('../../shared/logger');
 
-jest.mock('../../shared/ai-feedback', () => ({
-    getAiFeedbackSummary: jest.fn(),
-    getRecentAiRecords: jest.fn(),
+vi.mock('../../shared/ai-feedback', async () => ({
+    getAiFeedbackSummary: vi.fn(),
+    getRecentAiRecords: vi.fn(),
 }));
 
-jest.mock('../../shared/logger', () => ({
+vi.mock('../../shared/logger', async () => ({
     rootLogger: {
-        error: jest.fn(),
-        child: jest.fn().mockReturnValue({ info: jest.fn(), error: jest.fn(), warn: jest.fn() }),
+        error: vi.fn(),
+        child: vi.fn().mockReturnValue({ info: vi.fn(), error: vi.fn(), warn: vi.fn() }),
     },
 }));
 
-import { warn, tableView, showSelect } from '../../shared/prompt';
-import { getAiFeedbackSummary, getRecentAiRecords } from '../../shared/ai-feedback';
+import { warn, tableView, showSelect } from '../../shared/prompt.js';
+import { getAiFeedbackSummary, getRecentAiRecords } from '../../shared/ai-feedback.js';
 
-const mockGetSummary = jest.mocked(getAiFeedbackSummary);
-const mockGetRecent = jest.mocked(getRecentAiRecords);
-const mockShowSelect = jest.mocked(showSelect);
-import { makeMockCommandContext } from '../../shared/test-utils';
-import case23Handler from './case23';
+const mockGetSummary = vi.mocked(getAiFeedbackSummary);
+const mockGetRecent = vi.mocked(getRecentAiRecords);
+const mockShowSelect = vi.mocked(showSelect);
+import { makeMockCommandContext } from '../../shared/test-utils.js';
+import case23Handler from './case23.js';
 
 beforeEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
     mockShowSelect.mockResolvedValue('0');
 });
 

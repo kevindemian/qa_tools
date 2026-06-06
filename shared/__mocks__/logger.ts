@@ -1,5 +1,3 @@
-import { jest } from '@jest/globals';
-
 export class Logger {
     context: Record<string, unknown> = {};
     _logDir: string | null = null;
@@ -13,12 +11,12 @@ export class Logger {
         if (context) this.context = context;
     }
 
-    child = jest.fn<(extra: Record<string, unknown>) => Logger>().mockReturnValue(this);
-    writeFileOnly = jest.fn<(level: string, msg: string) => void>();
-    debug = jest.fn<(msg: string, data?: unknown) => void>();
-    info = jest.fn<(msg: string, data?: unknown) => void>();
-    warn = jest.fn<(msg: string, data?: unknown) => void>();
-    error = jest.fn<(msg: string, data?: unknown) => void>();
+    child = vi.fn<(extra: Record<string, unknown>) => Logger>().mockReturnValue(this);
+    writeFileOnly = vi.fn<(level: string, msg: string) => void>();
+    debug = vi.fn<(msg: string, data?: unknown) => void>();
+    info = vi.fn<(msg: string, data?: unknown) => void>();
+    warn = vi.fn<(msg: string, data?: unknown) => void>();
+    error = vi.fn<(msg: string, data?: unknown) => void>();
 
     get filePath(): string | null {
         return this._filePathCached;
@@ -27,4 +25,4 @@ export class Logger {
 
 export const rootLogger = new Logger();
 
-export const maskDeep = jest.fn<(obj: unknown) => unknown>().mockImplementation((obj: unknown) => obj);
+export const maskDeep = vi.fn<(obj: unknown) => unknown>().mockImplementation((obj: unknown) => obj);

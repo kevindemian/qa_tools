@@ -1,5 +1,5 @@
-import { nonNull } from './test-utils';
-import { SessionContext } from './session-context';
+import { nonNull } from './test-utils.js';
+import { SessionContext } from './session-context.js';
 
 describe('SessionContext', () => {
     let ctx: InstanceType<typeof SessionContext>;
@@ -8,7 +8,7 @@ describe('SessionContext', () => {
         ctx = new SessionContext();
     });
 
-    it('initializes with defaults', () => {
+    it('initializes with defaults', async () => {
         expect(ctx.isBusy).toBe(false);
         expect(ctx.lastOperation).toBe('');
         expect(ctx.sessionCounters).toEqual([]);
@@ -20,7 +20,7 @@ describe('SessionContext', () => {
         expect(ctx.results).toEqual([]);
     });
 
-    it('resetResults clears results array', () => {
+    it('resetResults clears results array', async () => {
         ctx.results.push({ status: 'ok', label: 'T1', message: '' });
         ctx.resetResults();
         expect(ctx.results).toEqual([]);
@@ -48,12 +48,12 @@ describe('SessionContext', () => {
         expect(ctx.isBusy).toBe(false);
     });
 
-    it('pushHistory appends to sessionCounters', () => {
+    it('pushHistory appends to sessionCounters', async () => {
         ctx.pushHistory('test-op', 'detail-1', 'ok');
         expect(ctx.sessionCounters).toEqual([{ op: 'test-op', detail: 'detail-1', status: 'ok' }]);
     });
 
-    it('pushHistory appends multiple entries', () => {
+    it('pushHistory appends multiple entries', async () => {
         ctx.pushHistory('op1', 'd1', 'ok');
         ctx.pushHistory('op2', 'd2', 'error');
         expect(ctx.sessionCounters.length).toBe(2);
@@ -62,11 +62,11 @@ describe('SessionContext', () => {
     });
 
     describe('buildContextLine', () => {
-        it('returns project name when no operations', () => {
+        it('returns project name when no operations', async () => {
             expect(ctx.buildContextLine('PROJ')).toBe('PROJ');
         });
 
-        it('includes counter summary when operations exist', () => {
+        it('includes counter summary when operations exist', async () => {
             ctx.pushHistory('op1', 'd1', 'ok');
             ctx.pushHistory('op2', 'd2', 'error');
             const line = ctx.buildContextLine('PROJ');
@@ -75,13 +75,13 @@ describe('SessionContext', () => {
             expect(line).toContain('1 erro');
         });
 
-        it('includes lastOperation when set', () => {
+        it('includes lastOperation when set', async () => {
             ctx.pushHistory('test-op', 'detail-1', 'ok');
             const line = ctx.buildContextLine('PROJ');
             expect(line).toContain('test-op');
         });
 
-        it('returns empty string when projectName is empty', () => {
+        it('returns empty string when projectName is empty', async () => {
             const line = ctx.buildContextLine('');
             expect(line).toBe('');
         });

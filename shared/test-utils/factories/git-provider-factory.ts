@@ -1,26 +1,26 @@
-import { jest } from '@jest/globals';
-import type { GitProvider } from '../../types/ci-cd';
+import type { GitProvider } from '../../types/ci-cd.js';
+import type { Mocked } from 'vitest';
 
-export function createMockGitProvider(overrides?: Partial<jest.Mocked<GitProvider>>): jest.Mocked<GitProvider> {
-    const base: jest.Mocked<GitProvider> = {
+export function createMockGitProvider(overrides?: Partial<Mocked<GitProvider>>): Mocked<GitProvider> {
+    const base: Mocked<GitProvider> = {
         provider: 'gitlab',
-        triggerPipeline: jest.fn(),
-        getSchedules: jest.fn(),
-        runSchedule: jest.fn(),
-        createMergeRequest: jest.fn(),
-        updateMergeRequest: jest.fn(),
-        getMergeRequest: jest.fn(),
-        searchMergeRequests: jest.fn(),
-        acceptMergeRequest: jest.fn(),
-        isApproved: jest.fn(),
-        getCICDVariables: jest.fn(),
-        getRecentPipelines: jest.fn(),
-        getBranch: jest.fn(),
-        getPipeline: jest.fn(),
-        getPipelineJobs: jest.fn(),
-        listPipelineArtifacts: jest.fn(),
-        downloadArtifact: jest.fn(),
-        getDiff: jest.fn(),
+        triggerPipeline: vi.fn(),
+        getSchedules: vi.fn(),
+        runSchedule: vi.fn(),
+        createMergeRequest: vi.fn(),
+        updateMergeRequest: vi.fn(),
+        getMergeRequest: vi.fn(),
+        searchMergeRequests: vi.fn(),
+        acceptMergeRequest: vi.fn(),
+        isApproved: vi.fn(),
+        getCICDVariables: vi.fn(),
+        getRecentPipelines: vi.fn(),
+        getBranch: vi.fn(),
+        getPipeline: vi.fn(),
+        getPipelineJobs: vi.fn(),
+        listPipelineArtifacts: vi.fn(),
+        downloadArtifact: vi.fn(),
+        getDiff: vi.fn(),
     };
     return { ...base, ...overrides };
 }

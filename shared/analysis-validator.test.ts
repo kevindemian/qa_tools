@@ -5,15 +5,15 @@ import {
     invariantHighSeverityRecommendation,
     invariantSeverityConsistent,
     invariantRecommendationReferencesError,
-} from './analysis-validator';
-import type { ValidationContext } from './artifact-validator';
+} from './analysis-validator.js';
+import type { ValidationContext } from './artifact-validator.js';
 
 function makeCtx(input: string): ValidationContext {
     return { inputRaw: input, outputRaw: {}, artifactType: 'analysis' };
 }
 
 describe('AnalysisValidator — createAnalysisValidator', () => {
-    it('creates validator with all invariants registered', () => {
+    it('creates validator with all invariants registered', async () => {
         const v = createAnalysisValidator();
         const invariants = v.listInvariants();
         expect(invariants).toContain('A-01');
@@ -28,7 +28,7 @@ describe('AnalysisValidator — createAnalysisValidator', () => {
         expect(invariants).toContain('I-05');
     });
 
-    it('passes a well-formed analysis', () => {
+    it('passes a well-formed analysis', async () => {
         const v = createAnalysisValidator();
         const analysis = {
             tests: [
@@ -47,7 +47,7 @@ describe('AnalysisValidator — createAnalysisValidator', () => {
 });
 
 describe('invariantTestTitleExists (A-01)', () => {
-    it('passes when titles match input', () => {
+    it('passes when titles match input', async () => {
         const results = invariantTestTitleExists(
             { tests: [{ title: 'Login fails' }] },
             makeCtx('1. [failed] Login fails (100ms)'),
@@ -55,7 +55,7 @@ describe('invariantTestTitleExists (A-01)', () => {
         expect(results.some((r) => r.passed)).toBe(true);
     });
 
-    it('fails when title not in input', () => {
+    it('fails when title not in input', async () => {
         const results = invariantTestTitleExists(
             { tests: [{ title: 'Missing test' }] },
             makeCtx('1. [failed] Login fails (100ms)'),
@@ -65,7 +65,7 @@ describe('invariantTestTitleExists (A-01)', () => {
 });
 
 describe('invariantUnknownHasReason (A-04)', () => {
-    it('passes UNKNOWN with reason', () => {
+    it('passes UNKNOWN with reason', async () => {
         const results = invariantUnknownHasReason(
             {
                 tests: [
@@ -81,7 +81,7 @@ describe('invariantUnknownHasReason (A-04)', () => {
         expect(results.some((r) => r.passed)).toBe(true);
     });
 
-    it('fails UNKNOWN with short recommendation', () => {
+    it('fails UNKNOWN with short recommendation', async () => {
         const results = invariantUnknownHasReason(
             { tests: [{ classification: 'UNKNOWN', recommendation: 'Not sure' }] },
             makeCtx(''),
@@ -91,7 +91,7 @@ describe('invariantUnknownHasReason (A-04)', () => {
 });
 
 describe('invariantHighSeverityRecommendation (A-05)', () => {
-    it('passes when high severity has long recommendation', () => {
+    it('passes when high severity has long recommendation', async () => {
         const results = invariantHighSeverityRecommendation(
             {
                 tests: [
@@ -106,7 +106,7 @@ describe('invariantHighSeverityRecommendation (A-05)', () => {
         expect(results.some((r) => r.passed)).toBe(true);
     });
 
-    it('fails when high severity has short recommendation', () => {
+    it('fails when high severity has short recommendation', async () => {
         const results = invariantHighSeverityRecommendation(
             { tests: [{ severity: 'high', recommendation: 'Fix it' }] },
             makeCtx(''),
@@ -116,7 +116,7 @@ describe('invariantHighSeverityRecommendation (A-05)', () => {
 });
 
 describe('invariantSeverityConsistent (A-03)', () => {
-    it('passes consistent severity', () => {
+    it('passes consistent severity', async () => {
         const results = invariantSeverityConsistent(
             { tests: [{ classification: 'ASSERTION', severity: 'high' }] },
             makeCtx(''),
@@ -124,7 +124,7 @@ describe('invariantSeverityConsistent (A-03)', () => {
         expect(results.some((r) => r.passed)).toBe(true);
     });
 
-    it('warns on ASSERTION low severity', () => {
+    it('warns on ASSERTION low severity', async () => {
         const results = invariantSeverityConsistent(
             { tests: [{ classification: 'ASSERTION', severity: 'low' }] },
             makeCtx(''),
@@ -134,7 +134,7 @@ describe('invariantSeverityConsistent (A-03)', () => {
 });
 
 describe('invariantRecommendationReferencesError (A-02)', () => {
-    it('passes when recommendation references error', () => {
+    it('passes when recommendation references error', async () => {
         const results = invariantRecommendationReferencesError(
             { tests: [{ title: 'Test', recommendation: 'Fix assertion error in login module' }] },
             makeCtx('error: assertion failed in login module\nexception: timeout'),

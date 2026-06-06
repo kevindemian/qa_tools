@@ -1,11 +1,11 @@
 /** Diagnose Jira/Xray connection by probing key endpoints, plus local health readiness. */
-import { title, printSummary, divider, badge, tableView } from '../../shared/prompt';
-import { sanitizeUrl } from '../../shared/cli_base';
-import { rootLogger } from '../../shared/logger';
-import { palette } from '../../shared/palette';
-import { defaultOutput } from '../../shared/output';
-import { loadMetrics } from '../../shared/metrics';
-import type { CommandContext } from './context';
+import { title, printSummary, divider, badge, tableView } from '../../shared/prompt.js';
+import { sanitizeUrl } from '../../shared/cli_base.js';
+import { rootLogger } from '../../shared/logger.js';
+import { palette } from '../../shared/palette.js';
+import { defaultOutput } from '../../shared/output.js';
+import { loadMetrics } from '../../shared/metrics.js';
+import type { CommandContext } from './context.js';
 
 async function handler(c: CommandContext): Promise<boolean | void> {
     title('12 · Diagnosticar Conexão');

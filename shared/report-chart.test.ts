@@ -2,10 +2,10 @@
  * Tests for report-chart — SVG chart builders using primitives.
  */
 
-import { buildChartSvg, buildMiniTrendChart, buildTrendSection, buildChartSection } from './report-chart';
+import { buildChartSvg, buildMiniTrendChart, buildTrendSection, buildChartSection } from './report-chart.js';
 
 describe('buildChartSvg', () => {
-    it('returns SVG string with passed/failed/skipped sections', () => {
+    it('returns SVG string with passed/failed/skipped sections', async () => {
         const svg = buildChartSvg({ passed: 10, failed: 3, skipped: 2, total: 15, duration: 5000 });
         expect(svg).toContain('<svg');
         expect(svg).toContain('data-component="bar-chart"');
@@ -13,14 +13,14 @@ describe('buildChartSvg', () => {
         expect(svg).toContain('#ef4444');
     });
 
-    it('handles zero values gracefully', () => {
+    it('handles zero values gracefully', async () => {
         const svg = buildChartSvg({ passed: 0, failed: 0, skipped: 0, total: 0, duration: 0 });
         expect(svg).toContain('<svg');
     });
 });
 
 describe('buildMiniTrendChart', () => {
-    it('returns SVG string with data points', () => {
+    it('returns SVG string with data points', async () => {
         const svg = buildMiniTrendChart([
             { label: 'Mon', passRate: 90, total: 10, failed: 1 },
             { label: 'Tue', passRate: 85, total: 10, failed: 2 },
@@ -32,19 +32,19 @@ describe('buildMiniTrendChart', () => {
         expect(svg).toContain('#6366f1');
     });
 
-    it('handles empty data', () => {
+    it('handles empty data', async () => {
         const svg = buildMiniTrendChart([]);
         expect(svg).toBe('');
     });
 });
 
 describe('buildTrendSection', () => {
-    it('returns empty for <2 points', () => {
+    it('returns empty for <2 points', async () => {
         const html = buildTrendSection([{ label: 'Mon', passRate: 90, total: 10, failed: 1 }]);
         expect(html).toBe('');
     });
 
-    it('returns card for >=2 points', () => {
+    it('returns card for >=2 points', async () => {
         const html = buildTrendSection([
             { label: 'Mon', passRate: 90, total: 10, failed: 1 },
             { label: 'Tue', passRate: 85, total: 10, failed: 2 },
@@ -55,12 +55,12 @@ describe('buildTrendSection', () => {
 });
 
 describe('buildChartSection', () => {
-    it('returns empty when wantChart is false', () => {
+    it('returns empty when wantChart is false', async () => {
         const html = buildChartSection({ passed: 5, failed: 1, skipped: 0, total: 6, duration: 100 }, false);
         expect(html).toBe('');
     });
 
-    it('returns chart section with legend', () => {
+    it('returns chart section with legend', async () => {
         const stats = { passed: 5, failed: 1, skipped: 0, total: 6, duration: 100 };
         const html = buildChartSection(stats, true);
         expect(html).toContain('Distribution');

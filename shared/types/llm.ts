@@ -36,6 +36,16 @@ export interface LLMEnrichment {
     confidence?: number;
 }
 
+/** Options for sending a prompt to the LLM. */
+export interface LlmPromptOptions<S extends ZodSchema = never> {
+    tier: LlmTier;
+    system: string;
+    user: string;
+    callerId?: string;
+    responseFormat?: ResponseFormat;
+    schema?: S;
+}
+
 /** AI generation feedback record. */
 export interface AiGenerationRecord {
     id: string;
