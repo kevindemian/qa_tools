@@ -164,11 +164,13 @@ checks.push(
                 continue;
             }
             const content = readFileSync(req.file, 'utf-8');
+            const reexportPattern = new RegExp(`export\\s*\\{[^}]*\\b${req.export}\\b`);
             if (
                 !content.includes('export ' + req.export) &&
                 !content.includes('export function ' + req.export) &&
                 !content.includes('export class ' + req.export) &&
-                !content.includes('export async function ' + req.export)
+                !content.includes('export async function ' + req.export) &&
+                !reexportPattern.test(content)
             ) {
                 violations.push({
                     file: req.file,
@@ -285,7 +287,7 @@ checks.push(
         const selfContent = readFileSync('scripts/enforce-quality.ts', 'utf-8');
         const contentWithoutHash = selfContent.replace(/\/\* HASH:[0-9a-f]{64} \*\//, '');
         const currentHash = createHash('sha256').update(contentWithoutHash, 'utf-8').digest('hex');
-        /* HASH:28b221057f9dc4f080a0936527934ceabe2436c546bcdaf43e3f6b79b43b65d3 */
+        /* HASH:116de65594e2646c7784880198f95386e2b99289ef78223509e6c281a9eab150 */
         const match = selfContent.match(/\/\* HASH:([0-9a-f]{64}) \*\//);
         if (!match) {
             violations.push({

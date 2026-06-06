@@ -1,5 +1,4 @@
 import fs from 'fs';
-import type { Mock } from 'vitest';
 import * as prompt from '../shared/prompt.js';
 import { detectFramework, extractRepoFromGit } from './detector.js';
 import { writeProjectsConfig, writeDotEnvExample, writePrePushHook } from './config-writer.js';
@@ -44,8 +43,8 @@ const MockWriteHook = vi.mocked(writePrePushHook);
 const MockGenGithub = vi.mocked(generateGitHubActions);
 const MockGenGitlab = vi.mocked(generateGitLabCI);
 const MockGenHook = vi.mocked(generatePrePushHook);
-const MockAsk = prompt.ask as unknown as Mock<typeof prompt.ask>;
-const MockAskConfirm = prompt.askConfirm as unknown as Mock<typeof prompt.askConfirm>;
+const MockAsk = vi.mocked(prompt.ask);
+const MockAskConfirm = vi.mocked(prompt.askConfirm);
 
 import { main } from './main.js';
 

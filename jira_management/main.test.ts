@@ -178,8 +178,8 @@ beforeAll(() => {
 });
 
 beforeAll(async () => {
-    mod = (await import('./main.js')) as unknown as MainModule;
-    const imported = (await import('./main.js')) as unknown as MainModule;
+    mod = (await import('./main.js')) as MainModule;
+    const imported = (await import('./main.js')) as MainModule;
     mod = imported;
     // Intentional: yield to microtask queue so main() (called at module scope) completes
     await new Promise<void>((resolve) => setTimeout(resolve, 0));

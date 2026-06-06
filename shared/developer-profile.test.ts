@@ -1,5 +1,4 @@
 import { rootLogger } from './logger.js';
-import type { Mock } from 'vitest';
 import { buildHtmlPage, buildErrorPage } from './html-factory.js';
 import { buildDeveloperProfile, generateDeveloperProfileHtml } from './developer-profile.js';
 
@@ -15,9 +14,9 @@ vi.mock('./primitives', () => ({
     MetricGrid: ({ children }: { children: string }) => `<div class="metric-grid">${children}</div>`,
 }));
 
-const mockBuildHtmlPage = buildHtmlPage as unknown as Mock<typeof buildHtmlPage>;
-const mockBuildErrorPage = buildErrorPage as unknown as Mock<typeof buildErrorPage>;
-const mockRootLoggerError = rootLogger.error as unknown as Mock<typeof rootLogger.error>;
+const mockBuildHtmlPage = vi.mocked(buildHtmlPage);
+const mockBuildErrorPage = vi.mocked(buildErrorPage);
+const mockRootLoggerError = vi.mocked(rootLogger.error);
 
 beforeEach(() => {
     vi.clearAllMocks();

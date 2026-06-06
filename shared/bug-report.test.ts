@@ -559,7 +559,7 @@ describe('generateBugReportFromDescription', () => {
 
     it('returns null when prompt template file cannot be read', async () => {
         const fs = await import('fs');
-        const readMock = vi.mocked((fs as any).readFileSync);
+        const readMock = vi.mocked(fs.readFileSync);
         readMock.mockImplementationOnce(() => {
             throw new Error('ENOENT');
         });

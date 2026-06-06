@@ -153,13 +153,13 @@ describe('createTestExecutionFromResults', () => {
 
     beforeEach(() => {
         jiraResource = vi.mocked(new JiraResource('fake-token', 'http://jira/rest/api/2')) as Mocked<JiraResource>;
-        jiraResource.getJiraResource = vi.fn() as unknown as typeof jiraResource.getJiraResource;
-        jiraResource.postJiraResource = vi.fn() as unknown as typeof jiraResource.postJiraResource;
-        jiraResource.putJiraResource = vi.fn() as unknown as typeof jiraResource.putJiraResource;
+        jiraResource.getJiraResource = vi.fn() as typeof jiraResource.getJiraResource;
+        jiraResource.postJiraResource = vi.fn() as typeof jiraResource.postJiraResource;
+        jiraResource.putJiraResource = vi.fn() as typeof jiraResource.putJiraResource;
 
         linkJiraRes = vi.mocked(new JiraResource('fake-token', 'http://jira/rest/api/2')) as Mocked<JiraResource>;
-        linkJiraRes.getJiraResource = vi.fn() as unknown as typeof linkJiraRes.getJiraResource;
-        linkJiraRes.postJiraResource = vi.fn() as unknown as typeof linkJiraRes.postJiraResource;
+        linkJiraRes.getJiraResource = vi.fn() as typeof linkJiraRes.getJiraResource;
+        linkJiraRes.postJiraResource = vi.fn() as typeof linkJiraRes.postJiraResource;
         linkJiraRes.getJiraResource.mockImplementation((url: string) => {
             if (url === 'issueLinkType')
                 return Promise.resolve({
