@@ -1,5 +1,4 @@
 import { expect } from 'vitest';
-import type { Mock } from 'vitest';
 
 vi.mock('../../shared/prompt');
 vi.mock('../../shared/logger');
@@ -79,7 +78,7 @@ describe('case17 — HTML report generator', () => {
         const parser = vi.mocked(parserModule);
         const reportGen = vi.mocked(reportGenModule);
 
-        (baseContext.jiraResource.getJiraResource as unknown as Mock).mockResolvedValueOnce({
+        vi.mocked(baseContext.jiraResource.getJiraResource).mockResolvedValueOnce({
             issues: [{ key: 'BUG-1', fields: { summary: 'Login fails', status: { name: 'Open' } } }],
         });
 
@@ -163,7 +162,7 @@ describe('case17 — HTML report generator', () => {
         const reportGenFull = vi.mocked(reportGenModule);
         reportGenFull.categorizeFailure.mockReturnValue('regression');
 
-        (baseContext.jiraResource.postJiraResource as unknown as Mock).mockResolvedValue({ key: 'BUG-42' });
+        vi.mocked(baseContext.jiraResource.postJiraResource).mockResolvedValue({ key: 'BUG-42' });
 
         const mod = case17Module;
         await mod.handler(baseContext);
@@ -239,7 +238,7 @@ describe('case17 — HTML report generator', () => {
         const parser = vi.mocked(parserModule);
         const reportGen = vi.mocked(reportGenModule);
 
-        (baseContext.jiraResource.getJiraResource as unknown as Mock).mockResolvedValueOnce({
+        vi.mocked(baseContext.jiraResource.getJiraResource).mockResolvedValueOnce({
             issues: [],
         });
 
@@ -264,7 +263,7 @@ describe('case17 — HTML report generator', () => {
         const parser = vi.mocked(parserModule);
         const reportGen = vi.mocked(reportGenModule);
 
-        (baseContext.jiraResource.getJiraResource as unknown as Mock).mockResolvedValueOnce({
+        vi.mocked(baseContext.jiraResource.getJiraResource).mockResolvedValueOnce({
             // no issues field at all
         });
 

@@ -28,9 +28,12 @@ const mockPrompt = vi.hoisted(() => ({
 vi.mock('../shared/prompt', () => mockPrompt);
 
 const mockFsMod = vi.hoisted(() => ({
-    readFileSync: vi.fn<(...args: [string]) => string>(),
-    existsSync: vi.fn<(...args: [string]) => boolean>(),
-    // Add other needed fs properties
+    readFileSync:
+        vi.fn<
+            (...args: Parameters<typeof import('fs').readFileSync>) => ReturnType<typeof import('fs').readFileSync>
+        >(),
+    existsSync:
+        vi.fn<(...args: Parameters<typeof import('fs').existsSync>) => ReturnType<typeof import('fs').existsSync>>(),
 }));
 vi.mock('fs', async () => {
     const actual = await vi.importActual<typeof import('fs')>('fs');
@@ -510,7 +513,7 @@ describe('validateCsvTests', async () => {
 });
 
 describe('createTestsFromJson', async () => {
-    const FS = { ...fs, ...mockFsMod } as unknown as Mocked<typeof fs>;
+    const FS = vi.mocked({ ...fs, ...mockFsMod } as typeof fs);
 
     function makeJiraResource(): Mocked<JiraResource> {
         const r = vi.mocked(new JiraResource('fake-token', 'http://jira/rest/api/2'));

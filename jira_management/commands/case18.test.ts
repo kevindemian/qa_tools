@@ -1,5 +1,4 @@
 import { expect } from 'vitest';
-import type { Mock } from 'vitest';
 
 vi.mock('../../shared/prompt');
 vi.mock('../../shared/logger');
@@ -194,7 +193,7 @@ describe('case18 — AI tests generator', () => {
         prompt.ask.mockResolvedValueOnce('User wants to login').mockResolvedValueOnce('Must validate credentials');
         fs.readFileSync.mockReturnValue('You are a QA engineer.');
 
-        (baseContext.linkManager.listPreconditions as unknown as Mock).mockResolvedValue([
+        vi.mocked(baseContext.linkManager.listPreconditions).mockResolvedValue([
             { key: 'PC-1', summary: 'User is logged in' },
         ]);
 
@@ -221,7 +220,7 @@ describe('case18 — AI tests generator', () => {
         prompt.ask.mockResolvedValueOnce('User wants to login').mockResolvedValueOnce('Must validate');
         fs.readFileSync.mockReturnValue('You are a QA engineer.');
 
-        (baseContext.linkManager.listPreconditions as unknown as Mock).mockResolvedValue([
+        vi.mocked(baseContext.linkManager.listPreconditions).mockResolvedValue([
             { key: 'PC-1', summary: 'User must be logged in' },
         ]);
 
@@ -239,7 +238,7 @@ describe('case18 — AI tests generator', () => {
             matchType: 'create',
         });
 
-        (baseContext.linkManager.createPrecondition as unknown as Mock).mockResolvedValue('PC-NEW-1');
+        vi.mocked(baseContext.linkManager.createPrecondition).mockResolvedValue('PC-NEW-1');
 
         const mod = case18Module;
         await mod.handler(baseContext);
@@ -259,7 +258,7 @@ describe('case18 — AI tests generator', () => {
         prompt.ask.mockResolvedValueOnce('User story').mockResolvedValueOnce('Criteria');
         fs.readFileSync.mockReturnValue('You are a QA engineer.');
 
-        (baseContext.linkManager.listPreconditions as unknown as Mock).mockResolvedValue([
+        vi.mocked(baseContext.linkManager.listPreconditions).mockResolvedValue([
             { key: 'PC-1', summary: 'User must be logged in' },
         ]);
 
@@ -296,7 +295,7 @@ describe('case18 — AI tests generator', () => {
         prompt.ask.mockResolvedValueOnce('User story').mockResolvedValueOnce('Criteria');
         fs.readFileSync.mockReturnValue('You are a QA engineer.');
 
-        (baseContext.linkManager.listPreconditions as unknown as Mock).mockRejectedValue(new Error('Jira unavailable'));
+        vi.mocked(baseContext.linkManager.listPreconditions).mockRejectedValue(new Error('Jira unavailable'));
 
         llm.llmPrompt.mockResolvedValue([
             {
@@ -320,7 +319,7 @@ describe('case18 — AI tests generator', () => {
         prompt.ask.mockResolvedValueOnce('User wants to login').mockResolvedValueOnce('Must validate');
         fs.readFileSync.mockReturnValue('You are a QA engineer.');
 
-        (baseContext.linkManager.listPreconditions as unknown as Mock).mockResolvedValue([]);
+        vi.mocked(baseContext.linkManager.listPreconditions).mockResolvedValue([]);
 
         llm.llmPrompt.mockResolvedValue([
             {
@@ -357,7 +356,7 @@ describe('case18 — AI tests generator', () => {
         prompt.ask.mockResolvedValueOnce('User story').mockResolvedValueOnce('Criteria');
         fs.readFileSync.mockReturnValue('You are a QA engineer.');
 
-        (baseContext.linkManager.listPreconditions as unknown as Mock).mockResolvedValue([
+        vi.mocked(baseContext.linkManager.listPreconditions).mockResolvedValue([
             { key: 'PC-1', summary: 'User is logged in' },
         ]);
 
@@ -375,7 +374,7 @@ describe('case18 — AI tests generator', () => {
             matchType: 'create',
         });
 
-        (baseContext.linkManager.createPrecondition as unknown as Mock).mockRejectedValue(new Error('Jira error'));
+        vi.mocked(baseContext.linkManager.createPrecondition).mockRejectedValue(new Error('Jira error'));
 
         const mod = case18Module;
         await mod.handler(baseContext);
@@ -392,7 +391,7 @@ describe('case18 — AI tests generator', () => {
         prompt.ask.mockResolvedValueOnce('User story').mockResolvedValueOnce('Criteria');
         fs.readFileSync.mockReturnValue('You are a QA engineer.');
 
-        (baseContext.linkManager.listPreconditions as unknown as Mock).mockResolvedValue([
+        vi.mocked(baseContext.linkManager.listPreconditions).mockResolvedValue([
             { key: 'PC-1', summary: 'User is logged in' },
         ]);
 
@@ -416,7 +415,7 @@ describe('case18 — AI tests generator', () => {
             matchType: 'create',
         });
 
-        (baseContext.linkManager.createPrecondition as unknown as Mock).mockResolvedValue('PC-NEW-1');
+        vi.mocked(baseContext.linkManager.createPrecondition).mockResolvedValue('PC-NEW-1');
 
         const mod = case18Module;
         await mod.handler(baseContext);
@@ -433,7 +432,7 @@ describe('case18 — AI tests generator', () => {
         prompt.ask.mockResolvedValueOnce('User story').mockResolvedValueOnce('Criteria');
         fs.readFileSync.mockReturnValue('You are a QA engineer.');
 
-        (baseContext.linkManager.listPreconditions as unknown as Mock).mockResolvedValue([]);
+        vi.mocked(baseContext.linkManager.listPreconditions).mockResolvedValue([]);
 
         llm.llmPrompt.mockResolvedValue([
             {
@@ -455,7 +454,7 @@ describe('case18 — AI tests generator', () => {
             matchType: 'create',
         });
 
-        (baseContext.linkManager.createPrecondition as unknown as Mock).mockResolvedValue('PC-NEW-1');
+        vi.mocked(baseContext.linkManager.createPrecondition).mockResolvedValue('PC-NEW-1');
 
         const mod = case18Module;
         await mod.handler(baseContext);
@@ -474,7 +473,7 @@ describe('case18 — AI tests generator', () => {
 
         prompt.ask.mockResolvedValueOnce('User story text').mockResolvedValueOnce('Some criteria');
         fs.readFileSync.mockReturnValue('You are a QA engineer.');
-        (baseContext.linkManager.listPreconditions as unknown as Mock).mockResolvedValue([]);
+        vi.mocked(baseContext.linkManager.listPreconditions).mockResolvedValue([]);
 
         llm.llmPrompt.mockResolvedValue([
             {
@@ -489,7 +488,7 @@ describe('case18 — AI tests generator', () => {
             summary: 'Precondition A',
             matchType: 'create',
         });
-        (baseContext.linkManager.createPrecondition as unknown as Mock).mockResolvedValue('PC-NEW-1');
+        vi.mocked(baseContext.linkManager.createPrecondition).mockResolvedValue('PC-NEW-1');
 
         const mod = case18Module;
         await mod.handler(baseContext);

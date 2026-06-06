@@ -188,7 +188,7 @@ beforeAll(async () => {
     const sessionState: typeof import('./session-state.js') = await import('./session-state.js');
     sessionState._resetForTest();
 
-    mainModule = ((await import('./main.js')) as unknown as { default: MainModule }).default;
+    mainModule = ((await import('./main.js')) as { default: MainModule }).default;
 });
 
 afterAll(() => {
