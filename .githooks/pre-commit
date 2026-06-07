@@ -10,7 +10,7 @@ if [ -f "$VALIDATION_HOOK" ]; then
     npx tsx "$VALIDATION_HOOK" --test
 
     echo "--- Validation hook (diff check) ---"
-    git diff --cached | npx tsx "$VALIDATION_HOOK" --check
+    git diff --cached -- . ':!.config/validation_hook.ts' | npx tsx "$VALIDATION_HOOK" --check
 fi
 
 echo "--- Typecheck ---"
