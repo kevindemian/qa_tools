@@ -40,6 +40,9 @@ async function _getValidator(): Promise<(response: string) => ValidationResult> 
 }
 
 export async function validateLlmResponse(response: string): Promise<void> {
+    if (!response) {
+        throw new LlmError('LLM response rejected: empty response');
+    }
     const validate = await _getValidator();
     const result = validate(response);
     if (!result.valid) {
