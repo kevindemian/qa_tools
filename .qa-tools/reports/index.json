@@ -42,5 +42,16 @@
     "passed": 1,
     "failed": 0,
     "skipped": 0
+  },
+  "3969ea6a10daa01e63c810c2f2f5669bac3562fd": {
+    "sha": "3969ea6a10daa01e63c810c2f2f5669bac3562fd",
+    "project": "proj",
+    "timestamp": 1780856730684,
+    "tool": "",
+    "branch": "",
+    "total": 1,
+    "passed": 1,
+    "failed": 0,
+    "skipped": 0
   }
 }
