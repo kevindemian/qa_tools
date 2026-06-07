@@ -1,7 +1,7 @@
 import { createMockAxiosInstance } from '../shared/test-utils/factories/response-factory.js';
 import type { Mock, Mocked } from 'vitest';
 import { nonNull } from '../shared/test-utils.js';
-import type { AxiosInstance } from 'axios';
+import type { AxiosInstance } from '../shared/deps.js';
 import type { JsonObject } from '../shared/types.js';
 import { apiGet, apiPost } from './github-api.js';
 import {

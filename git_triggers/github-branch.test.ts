@@ -1,7 +1,7 @@
 import { getBranch, getDiff } from './github-branch.js';
 import type { Mock, Mocked } from 'vitest';
 import { createMockAxiosInstance } from '../shared/test-utils/factories/response-factory.js';
-import type { AxiosInstance } from 'axios';
+import type { AxiosInstance } from '../shared/deps.js';
 
 vi.mock('./github-api', async () => ({
     apiGet: vi.fn(),

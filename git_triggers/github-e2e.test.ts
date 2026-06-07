@@ -4,7 +4,7 @@
  *  functions in pipeline-health.ts + writeReport().
  *  All tests are skipped when GITHUB_TOKEN is not set (CI-safe).
  *  Pure aggregation logic is tested separately in pipeline-health.test.ts. */
-import dotenv from 'dotenv';
+import { dotenv } from '../shared/deps.js';
 import path from 'path';
 import fs from 'fs';
 import GitHubManager from './github_manager.js';

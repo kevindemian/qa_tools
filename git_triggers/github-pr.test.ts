@@ -10,7 +10,7 @@ import {
 import { nullAs, nonNull } from '../shared/test-utils.js';
 import type { Mocked } from 'vitest';
 import { createMockAxiosInstance } from '../shared/test-utils/factories/response-factory.js';
-import type { AxiosInstance } from 'axios';
+import type { AxiosInstance } from '../shared/deps.js';
 import * as prompt from '../shared/prompt.js';
 
 import type { apiGet as ApiGetFn, apiPost as ApiPostFn, apiPatch as ApiPatchFn } from './github-api.js';
@@ -22,12 +22,10 @@ vi.mock('./github-api', async () => ({
 }));
 
 vi.mock('../shared/logger', async () => ({
-    Logger: vi
-        .fn()
-        .mockImplementation(() => ({
-            error: vi.fn<(...args: [string]) => void>(),
-            warn: vi.fn<(...args: [string]) => void>(),
-        })),
+    Logger: vi.fn().mockImplementation(() => ({
+        error: vi.fn<(...args: [string]) => void>(),
+        warn: vi.fn<(...args: [string]) => void>(),
+    })),
     rootLogger: { error: vi.fn<(...args: [string]) => void>(), warn: vi.fn<(...args: [string]) => void>() },
 }));
 

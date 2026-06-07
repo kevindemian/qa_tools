@@ -273,12 +273,13 @@
 **Origem:** Features bifurcadas (código existe mas handler não usa), submenus sem alias, handlers sem entrada de menu.
 **Foco:** Impedir criação de débitos novos, detectar débitos existentes.
 
-| ID  | Item                                                                                                 | Arquivo(s)                           | Esforço | Status |
-| --- | ---------------------------------------------------------------------------------------------------- | ------------------------------------ | ------- | ------ |
-| B1  | 🔧 CI Gate: handler ↔ menu ↔ alias 3-way consistency                                                 | `scripts/enforce-quality.ts`         | 1h      | ✅     |
-| B2  | 🔧 ux-auditor agent script (soft: jornada ruidosa, dead utility, friction score)                     | (novo) `scripts/ux-auditor.ts`       | 3h      | ✅     |
-| B3  | 🔧 Rodar auditor + corrigir achados (4 fases: hints + submenu FP + import-aware detector + re-audit) | Codebase, `scripts/ux-auditor.ts`    | 3h      | ✅     |
-| B4  | 📋 docs/ux-auditor.md + HELP_TOPICS entry                                                            | `docs/ux-auditor.md`, `menu-data.ts` | 30min   | ✅     |
+| ID  | Item                                                                                                 | Arquivo(s)                                                                | Esforço | Status |
+| --- | ---------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------- | ------- | ------ |
+| B1  | 🔧 CI Gate: handler ↔ menu ↔ alias 3-way consistency                                                 | `scripts/enforce-quality.ts`                                              | 1h      | ✅     |
+| B2  | 🔧 ux-auditor agent script (soft: jornada ruidosa, dead utility, friction score)                     | (novo) `scripts/ux-auditor.ts`                                            | 3h      | ✅     |
+| B3  | 🔧 Rodar auditor + corrigir achados (4 fases: hints + submenu FP + import-aware detector + re-audit) | Codebase, `scripts/ux-auditor.ts`                                         | 3h      | ✅     |
+| B2b | 🔧 Commit missing modules (report-cache.ts, case17-test-utils.ts) from prior session — CI fix        | `shared/report-cache.ts`, `jira_management/commands/case17-test-utils.ts` | 5min    | 🔄     |
+| B4  | 📋 docs/ux-auditor.md + HELP_TOPICS entry                                                            | `docs/ux-auditor.md`, `menu-data.ts`                                      | 30min   | ✅     |
 
 ### Métricas alvo — Sprint B
 

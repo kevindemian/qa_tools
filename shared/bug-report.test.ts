@@ -338,7 +338,7 @@ describe('BugReport Service', () => {
 
             mockJiraResource.postJiraResource.mockResolvedValueOnce({ key: 'PROJ-101' });
 
-            const key = await fileToJira(mockJiraResource, report, 'PROJ');
+            const key = await fileToJira(mockJiraResource, report, 'PROJ', { confirm: false });
 
             expect(key).toBe('PROJ-101');
             expect(mockJiraResource.postJiraResource).toHaveBeenCalledWith('issue', {
@@ -361,7 +361,9 @@ describe('BugReport Service', () => {
                 source: 'manual',
                 severity: 'minor',
             };
-            await expect(fileToJira(mockJiraResource, report)).rejects.toThrow('Project key is required');
+            await expect(fileToJira(mockJiraResource, report, undefined, { confirm: false })).rejects.toThrow(
+                'Project key is required',
+            );
         });
     });
 

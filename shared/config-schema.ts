@@ -453,4 +453,18 @@ export const CONFIG_SCHEMA: ConfigField[] = [
         defaultVal: false,
         description: 'Disable console.clear() between screens',
     },
+    {
+        key: 'metricsMaxRuns',
+        envVar: 'METRICS_MAX_RUNS',
+        type: 'number',
+        defaultVal: 50,
+        description: 'Max metrics runs retained (prune oldest on save)',
+    },
+    {
+        key: 'reportCacheMax',
+        envVar: 'REPORT_CACHE_MAX',
+        type: 'number',
+        defaultVal: 20,
+        description: 'Max cached CTRF reports retained (prune oldest on save)',
+    },
 ];

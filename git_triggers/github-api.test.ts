@@ -1,7 +1,7 @@
 import { apiGet, apiPost, apiPatch, formatDiffResponse } from './github-api.js';
 import type { Mocked } from 'vitest';
 import { createMockAxiosInstance } from '../shared/test-utils/factories/response-factory.js';
-import type { AxiosInstance } from 'axios';
+import type { AxiosInstance } from '../shared/deps.js';
 
 vi.mock('../shared/logger', async () => ({
     Logger: vi.fn().mockImplementation(function () {

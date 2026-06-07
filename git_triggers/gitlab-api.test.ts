@@ -1,6 +1,6 @@
 import { createMockAxiosInstance } from '../shared/test-utils/factories/response-factory.js';
 import type { Mocked } from 'vitest';
-import type { AxiosInstance } from 'axios';
+import type { AxiosInstance } from '../shared/deps.js';
 import { apiGet, apiPost, apiPut, projectPath, formatDiffResponse } from './gitlab-api.js';
 
 vi.mock('../shared/git-provider-error', async () => ({

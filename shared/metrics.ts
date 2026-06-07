@@ -157,6 +157,10 @@ export function saveMetrics(store: MetricsStore, config?: Config): void {
 export function saveRunMetrics(run: MetricsRun, config?: Config): void {
     const store = loadMetrics(config);
     store.runs.push(run);
+    const max = parseInt(String(config ? config.get('METRICS_MAX_RUNS') : Config.get('METRICS_MAX_RUNS')), 10) || 50;
+    if (store.runs.length > max) {
+        store.runs = store.runs.slice(-max);
+    }
     saveMetrics(store, config);
 }
 
