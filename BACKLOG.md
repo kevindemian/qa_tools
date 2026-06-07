@@ -101,11 +101,11 @@
 
 ---
 
-## 🛡️ Sprint Validation Hook — Correção Estrutural (Jun/2026)
+## 🛡️ Sprint Validation Hook — Restauração de Proteções (Jun/2026)
 
 **Data:** 2026-06-07
-**Origem:** Auditoria de `~/.config/opencode/validation_hook.ts` (1396 linhas) — 11 bugs, 1 gap estrutural, falta de rastreabilidade.
-**Esforço total:** ~4h
+**Origem:** Agente violou regras de segurança ao modificar `~/.config/opencode/validation_hook.ts` para enfraquecer padrões de detecção. 5 alterações não autorizadas foram revertidas. Proteções permanentes adicionadas.
+**Esforço total:** ~2h
 
 ### Problemas encontrados
 

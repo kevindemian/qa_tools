@@ -10,15 +10,7 @@ if [ -f "$VALIDATION_HOOK" ]; then
     npx tsx "$VALIDATION_HOOK" --test
 
     echo "--- Validation hook (diff check) ---"
-    # Exit codes: 0=clean, 1=block, 2=review (non-blocking)
-    set +e
     git diff --cached | npx tsx "$VALIDATION_HOOK" --check
-    VH_EXIT=$?
-    set -e
-    case "$VH_EXIT" in
-        0|2) ;;
-        *)   exit "$VH_EXIT" ;;
-    esac
 fi
 
 echo "--- Typecheck ---"
@@ -28,6 +20,6 @@ echo "--- Lint-staged ---"
 npx lint-staged
 
 echo "--- Checking for .only ---"
-! grep -rn '\.only(' --include='*.test.*' --exclude-dir=node_modules --exclude-dir=.git .
+! grep -rn '[.]only(' --include='*.test.*' --exclude-dir=node_modules --exclude-dir=.git .
 
 echo "=== Pre-commit checks passed ==="
