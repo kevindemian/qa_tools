@@ -5,7 +5,7 @@ import type { CiContext, RunStats } from '../../shared/ci-detect.js';
 
 export const CTRF_LAST_FILE = 'last-results.ctrf.json';
 
-export { isGitHubCi, isGitLabCi, GIT_HISTORY_RUNS } from '../../shared/ci-detect.js';
+export { isGitHubCi, isGitLabCi } from '../../shared/ci-detect.js';
 export type { CiContext, RunStats } from '../../shared/ci-detect.js';
 
 function buildRunsBarChartHtml(runs: RunStats[]): string {
