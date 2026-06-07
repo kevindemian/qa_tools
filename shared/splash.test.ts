@@ -144,8 +144,8 @@ describe('checkJiraStatus', () => {
             expect(result.detail).toContain('online');
         });
 
-        it('falls back to server mode when mode is empty', async () => {
-            const result = await checkJiraStatus(`http://localhost:${port}`, 'valid-token', '');
+        it('falls back to server mode when mode is not provided', async () => {
+            const result = await checkJiraStatus(`http://localhost:${port}`, 'valid-token');
             expect(result.status).toBe('ok');
             expect(result.detail).toContain('online');
         });

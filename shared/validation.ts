@@ -7,23 +7,6 @@
  * @module validation
  */
 export { z } from 'zod';
-export type {
-    ZodSchema,
-    ZodType,
-    ZodString,
-    ZodNumber,
-    ZodBoolean,
-    ZodObject,
-    ZodArray,
-    ZodEnum,
-    ZodUnion,
-    ZodOptional,
-    ZodNullable,
-    ZodError,
-    ZodRawShape,
-    ZodTypeAny,
-    ZodFirstPartyTypeKind,
-} from 'zod';
 
 /** Parse and throw on failure — convenience wrapper. */
 export function parseOrThrow<T>(schema: import('zod').ZodSchema<T>, data: unknown): T {

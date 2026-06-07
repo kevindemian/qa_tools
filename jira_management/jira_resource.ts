@@ -1,5 +1,6 @@
 /** Jira REST API client — extends shared JiraClient with project/version/sprint operations. */
 import JiraClient from '../shared/jira-client.js';
+import type { JiraMode } from '../shared/jira-auth.js';
 import { extractErrorMessage } from '../shared/prompt.js';
 import { Logger } from '../shared/logger.js';
 import {
@@ -28,7 +29,7 @@ import type { VersionData, JiraIssue, SearchResponse, JiraResourceLike } from '.
 class JiraResource extends JiraClient implements JiraResourceLike {
     log: Logger;
 
-    constructor(personalToken: string, baseUrl: string, mode?: string) {
+    constructor(personalToken: string, baseUrl: string, mode?: JiraMode) {
         super(personalToken, baseUrl, mode);
         this.log = new Logger({ resource: 'JiraAPI' });
     }

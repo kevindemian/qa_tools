@@ -19,7 +19,7 @@ import type { NavConfig } from './markdown-nav.js';
 
 // Re-export public types and test support
 export { __setLexer } from './markdown-lexer.js';
-export type { NavLink, NavConfig } from './markdown-nav.js';
+export type { NavConfig } from './markdown-nav.js';
 
 // ─── Public API ─────────────────────────────────────────────────────────────────
 

@@ -4,6 +4,7 @@ import JiraLinkManager from './jira_link_manager.js';
 import CsvResource from './csv_resource.js';
 import PackageVersionManager from './package_version_manager.js';
 import { showSplash } from '../shared/splash.js';
+import type { JiraMode } from '../shared/jira-auth.js';
 import { calculateHealthScore } from '../shared/health-score.js';
 import pkg from '../package.json';
 import { info, title, prompt, printError, warn } from '../shared/prompt.js';
@@ -113,7 +114,7 @@ function _displayBadge(totalCount: number, project: string): void {
 const base_url: string = Config.get('jiraBaseUrl');
 const personal_token: string = Config.get('jiraPersonalToken');
 const xray_url: string = Config.get('xrayBaseUrl');
-const jira_mode: string = Config.get('jiraMode');
+const jira_mode = Config.get<JiraMode>('jiraMode');
 const default_project = '';
 
 const sessionLog = rootLogger.child({ session: 'jira' });

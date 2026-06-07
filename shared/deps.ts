@@ -37,7 +37,7 @@ export function getGlob(): { globSync: typeof globSync } {
 /* yaml named exports (re-export classes + helpers directly) */
 export { Document, YAMLMap, YAMLSeq, Scalar, Pair, isMap, parseDocument } from 'yaml';
 
-export type { AxiosInstance, AxiosResponse, AxiosError } from 'axios';
+export type { AxiosInstance } from 'axios';
 export type { Node } from 'yaml';
 
 /** Re-export z from zod for schema definitions. */

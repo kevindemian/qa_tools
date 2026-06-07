@@ -437,3 +437,37 @@ reports/
 | Complexidade      | Baixa                | Alta                   |
 | Compatibilidade   | Universal            | Requer framework       |
 | Manutenibilidade  | Independente         | Acoplado ao runtime    |
+
+---
+
+## ♻️ Sprint Dead Code — Eliminação de Exports Mortos (Jun/2026)
+
+**Data:** 2026-06-07
+**Origem:** Análise ts-prune identificou 59 exports não-importados por nenhum módulo. Destes, **28 são risco zero** (type re-exports puros, zero valor de negócio perdido). Os demais (~31) são itens com risco >0 (test re-exports intencionais, barrel `export *` estrutural, funções órfãs com valor de domínio) — deferidos sine die.
+**Abordagem:** Remoção cirúrgica apenas de type/exports de barrel que ninguém importa. Nenhuma mudança em runtime. Nenhum contrato afetado (as definições reais continuam nos submódulos).
+
+| ID    | Item                                                          | Arquivo(s)                         | Itens | Risco | Status |
+| ----- | ------------------------------------------------------------- | ---------------------------------- | ----- | ----- | ------ |
+| DC-01 | ♻️ Remover 14 type re-exports Zod                             | `shared/validation.ts`             | 14    | ZERO  | ✅     |
+| DC-02 | ♻️ Remover AxiosResponse, AxiosError                          | `shared/deps.ts`                   | 2     | ZERO  | ✅     |
+| DC-03 | ♻️ Remover ConfigField, CONFIG_SCHEMA, validateRequiredEnv    | `shared/config.ts`                 | 3     | ZERO  | ✅     |
+| DC-04 | ♻️ Remover PromptOptions, FilePathOptions, Select\* in barrel | `shared/prompt-input.ts`           | 5     | ZERO  | ✅     |
+| DC-05 | ♻️ Remover NavLink da barrel                                  | `shared/markdown.ts`               | 1     | ZERO  | ✅     |
+| DC-06 | ♻️ Remover ReviewDecision duplicado                           | `shared/llm-review-types.ts`       | 1     | ZERO  | ✅     |
+| DC-07 | ♻️ Remover ReviewDecision re-export morto                     | `shared/llm-review.ts`             | 1     | ZERO  | ✅     |
+| DC-08 | ♻️ Remover ArtifactType duplicado (autodefinido não-usado)    | `shared/llm-self-consistency.ts`   | 1     | ZERO  | ✅     |
+| DC-09 | 🔧 Atualizar baseline .unused-exports-baseline                | `scripts/.unused-exports-baseline` | —     | ZERO  | ✅     |
+| DC-10 | 📋 Documentar itens diferidos sine die                        | `docs/DEFERRED-DEAD-CODE.md`       | —     | —     | ✅     |
+
+**Total removido:** 28 exports em 8 arquivos.
+
+### Métricas alvo — Sprint Dead Code
+
+| Métrica                       | Alvo                 | Resultado                       |
+| ----------------------------- | -------------------- | ------------------------------- |
+| `tsc --noEmit`                | **0 erros**          | ✅ 0                            |
+| `vitest run`                  | **100% pass**        | ✅ 4231                         |
+| `npm run lint`                | **0 erros**          | ✅ 0                            |
+| `check-unused-exports.sh`     | **0 new** (`exit 0`) | ✅ exit 0                       |
+| Exports removidos             | **28**               | ✅ 28                           |
+| Itens diferidos (não tocados) | **—** (registrados)  | ✅ `docs/DEFERRED-DEAD-CODE.md` |

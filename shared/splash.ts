@@ -1,6 +1,7 @@
 import { palette } from './palette.js';
 import { defaultOutput, Output } from './output.js';
 import { createJiraAuthHeader } from './jira-auth.js';
+import type { JiraMode } from './jira-auth.js';
 import { rootLogger } from './logger.js';
 
 type FigletModule = { textSync: (str: string, opts?: Record<string, unknown>) => string };
@@ -43,7 +44,7 @@ interface StatusCheck {
     detail: string;
 }
 
-export async function checkJiraStatus(baseUrl: string, token: string, mode?: string): Promise<StatusCheck> {
+export async function checkJiraStatus(baseUrl: string, token: string, mode?: JiraMode): Promise<StatusCheck> {
     if (!baseUrl || !token) return { label: 'Jira API', status: 'info', detail: 'não configurado' };
     try {
         const start = Date.now();
@@ -121,7 +122,7 @@ export async function showSplash(
     statePath?: string,
     jiraBaseUrl?: string,
     jiraToken?: string,
-    jiraMode?: string,
+    jiraMode?: JiraMode,
     healthScore?: { score: number; grade: string },
 ): Promise<void> {
     const isTTY = Output.isTTY() && !Output.isCI();

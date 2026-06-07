@@ -3,6 +3,7 @@ import path from 'path';
 import { AdmZip, globSync } from '../shared/deps.js';
 import Config from '../shared/config.js';
 import JiraClient from '../shared/jira-client.js';
+import type { JiraMode } from '../shared/jira-auth.js';
 import JiraLinkManager from '../jira_management/jira_link_manager.js';
 import { warn, info, success, printError, withSpinner, ask } from '../shared/prompt.js';
 import { reportsDir } from '../shared/temp-dir.js';
@@ -12,13 +13,13 @@ import { matchResultsToTests, createTestExecutionFromResults } from '../jira_man
 import { saveParseResult } from '../shared/metrics.js';
 import type { GitProvider } from '../shared/types.js';
 
-function _jiraEnv(): { base: string; token: string; xray: string; mode: string } | null {
+function _jiraEnv(): { base: string; token: string; xray: string; mode: JiraMode } | null {
     const base = Config.get('jiraBaseUrl');
     const token = Config.get('jiraPersonalToken');
     const xray = Config.get('xrayBaseUrl');
     const mode = Config.get('jiraMode');
     if (!base || !token || !xray) return null;
-    return { base, token, xray, mode };
+    return { base, token, xray, mode: mode as JiraMode };
 }
 
 function _resolveGlob(pattern: string): string | null {
