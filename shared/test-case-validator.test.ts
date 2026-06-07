@@ -664,3 +664,115 @@ describe('invariantRedundancyCoupling (T-13)', () => {
         expect(couplingWarnings.length).toBeGreaterThan(0);
     });
 });
+
+describe('T-01 edge cases', () => {
+    it('fails when no tests exist', () => {
+        const results = invariantCoverageComplete({ tests: [] }, makeCtx('Acceptance Criteria: User can log in'));
+        expect(results.some((r) => !r.passed && r.invariantId === 'T-01')).toBe(true);
+    });
+});
+
+describe('T-02 edge cases', () => {
+    it('handles non-object artifact', () => {
+        const results = invariantCoverageThreshold('string', makeCtx(''));
+        expect(results.some((r) => !r.passed && r.invariantId === 'T-02')).toBe(true);
+    });
+
+    it('handles invalid coverage value', () => {
+        const results = invariantCoverageThreshold({ coverageTable: { coverage: -1 } }, makeCtx(''));
+        expect(results.some((r) => !r.passed && r.invariantId === 'T-02')).toBe(true);
+    });
+
+    it('passes when coverage < 90% with justified gaps', () => {
+        const results = invariantCoverageThreshold(
+            { coverageTable: { coverage: 80, gaps: [{ reason: 'Not implemented yet' }] } },
+            makeCtx(''),
+        );
+        expect(results.some((r) => r.passed && r.invariantId === 'T-02')).toBe(true);
+    });
+
+    it('fails when gaps are missing reasons', () => {
+        const results = invariantCoverageThreshold(
+            { coverageTable: { coverage: 80, gaps: [{ reason: '' }] } },
+            makeCtx(''),
+        );
+        expect(results.some((r) => !r.passed && r.invariantId === 'T-02')).toBe(true);
+    });
+});
+
+describe('T-03 edge cases', () => {
+    it('warns when input has mutation keywords but too few tests', () => {
+        const results = invariantStateMutation(
+            { tests: [{ title: 'Test', steps: ['Create user'], expectedResult: 'OK' }] },
+            makeCtx('user can create and delete records'),
+        );
+        expect(results.some((r) => !r.passed && r.invariantId === 'T-03')).toBe(true);
+    });
+});
+
+describe('T-04 edge cases', () => {
+    it('fails when no tests exist', () => {
+        const results = invariantConcreteSteps({ tests: [] }, makeCtx(''));
+        expect(results.some((r) => !r.passed && r.invariantId === 'T-04')).toBe(true);
+    });
+});
+
+describe('T-05 edge cases', () => {
+    it('fails when no tests exist', () => {
+        const results = invariantVerifiableResult({ tests: [] }, makeCtx(''));
+        expect(results.some((r) => !r.passed && r.invariantId === 'T-05')).toBe(true);
+    });
+});
+
+describe('T-06 edge cases', () => {
+    it('fails when no tests exist', () => {
+        const results = invariantUniqueTitles({ tests: [] }, makeCtx(''));
+        expect(results.some((r) => !r.passed && r.invariantId === 'T-06')).toBe(true);
+    });
+});
+
+describe('T-07 edge cases', () => {
+    it('fails when no tests exist', () => {
+        const results = invariantPreconditionsExist({ tests: [] }, makeCtx(''));
+        expect(results.some((r) => !r.passed && r.invariantId === 'T-07')).toBe(true);
+    });
+});
+
+describe('T-09 edge cases', () => {
+    it('passes for non-object artifact', () => {
+        const results = invariantNumericConsistency('string', makeCtx(''));
+        expect(results.some((r) => r.passed && r.invariantId === 'T-09')).toBe(true);
+    });
+
+    it('passes for array artifact', () => {
+        const results = invariantNumericConsistency([1, 2, 3], makeCtx(''));
+        expect(results.some((r) => r.passed && r.invariantId === 'T-09')).toBe(true);
+    });
+});
+
+describe('T-10 edge cases', () => {
+    it('passes for fewer than 2 tests', () => {
+        const results = invariantNoDuplicateTests({ tests: [{ title: 'Only test' }] }, makeCtx(''));
+        expect(results.some((r) => r.passed && r.invariantId === 'T-10')).toBe(true);
+    });
+
+    it('warns on similar test steps', () => {
+        const results = invariantNoDuplicateTests(
+            {
+                tests: [
+                    { title: 'Test A', steps: ['Click button', 'Enter text', 'Submit'] },
+                    { title: 'Test B', steps: ['Click button', 'Enter text', 'Submit'] },
+                ],
+            },
+            makeCtx(''),
+        );
+        expect(results.some((r) => !r.passed && r.invariantId === 'T-10')).toBe(true);
+    });
+});
+
+describe('T-11 edge cases', () => {
+    it('fails when no tests exist', () => {
+        const results = invariantPartitionCoverage({ tests: [] }, makeCtx('ages between 18 and 65'));
+        expect(results.some((r) => !r.passed && r.invariantId === 'T-11')).toBe(true);
+    });
+});

@@ -51,4 +51,9 @@ describe('extractCriteria', () => {
         const result = extractCriteria('Just a long line of descriptive text without any criteria headers at all');
         expect(result.length).toBeGreaterThan(0);
     });
+
+    it('stops parsing criteria on empty line or section header', () => {
+        const result = extractCriteria('Acceptance Criteria:\n- Item 1\n\nDescription:\nIgnore this');
+        expect(result).toEqual(['Item 1']);
+    });
 });

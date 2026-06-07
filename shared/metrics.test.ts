@@ -1,4 +1,4 @@
-import { vi } from 'vitest';
+import { vi, describe, expect, it, beforeEach } from 'vitest';
 import path from 'path';
 
 vi.mock('fs', async () => {
@@ -316,5 +316,61 @@ describe('getTrends', () => {
 
         const trends = getTrends(store, 5);
         expect(trends).toHaveLength(5);
+    });
+});
+
+describe('edge cases', () => {
+    it('handles ensureDir mkdir failure gracefully', async () => {
+        const cfg = makeConfig(TMP_DIR);
+        const mkdirSpy = vi.spyOn(fs, 'mkdirSync').mockImplementation(() => {
+            throw new Error('EACCES');
+        });
+        try {
+            const store = loadMetrics(cfg);
+            expect(store.runs).toEqual([]);
+        } finally {
+            mkdirSpy.mockRestore();
+        }
+    });
+
+    it('handles saveMetrics write failure gracefully', async () => {
+        const cfg = makeConfig(TMP_DIR);
+        const writeSpy = vi.spyOn(fs, 'writeFileSync').mockImplementation(() => {
+            throw new Error('ENOSPC');
+        });
+        try {
+            const run: MetricsRun = {
+                timestamp: '2026-01-01T00:00:00.000Z',
+                project: 'fail-project',
+                total: 1,
+                passed: 1,
+                failed: 0,
+                skipped: 0,
+                duration: 100,
+                tests: [{ title: 'T1', state: 'passed', duration: 100 }],
+            };
+            expect(() => saveRunMetrics(run, cfg)).not.toThrow();
+        } finally {
+            writeSpy.mockRestore();
+        }
+    });
+
+    it('prunes runs when exceeding max', async () => {
+        const cfg = makeConfig(TMP_DIR);
+        (cfg as any).overrides = { METRICS_MAX_RUNS: '1' };
+        const run: MetricsRun = {
+            timestamp: '2026-01-01T00:00:00.000Z',
+            project: 'prune-test',
+            total: 1,
+            passed: 1,
+            failed: 0,
+            skipped: 0,
+            duration: 100,
+            tests: [{ title: 'T1', state: 'passed', duration: 100 }],
+        };
+        saveRunMetrics(run, cfg);
+        saveRunMetrics(run, cfg);
+        const loaded = loadMetrics(cfg);
+        expect(loaded.runs.length).toBe(1);
     });
 });

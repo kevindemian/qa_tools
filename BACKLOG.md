@@ -298,58 +298,101 @@
 
 ---
 
-## 🚀 Sprint C — Git-as-Key: Git como Fonte Primária (Jun/2026)
+## 🚀 Sprint C — Git-as-Database: Git como Store Universal (Jun/2026)
 
 **Data:** 2026-06-07
-**Origem:** Análise adversarial — 5 iterações de quebra e reconstrução do plano "Git como fonte primária". Plano consolidado após identificar e eliminar fragilidades de cada alternativa.
-**Padrão de mercado:** Híbrido Push+Store (SonarQube) + Pull+Cache (CTRF Reporter) — **sem servidor**, filesystem local como store.
-**Invariante central:** SHA do commit é a chave universal. Projeto + SHA = unique key. Branch → último SHA mapeado explicitamente em `branch-index.json`.
+**Origem:** Análise adversarial — 6 iterações de quebra e reconstrução. A última rodada revelou que o domínio da ferramenta (Git + Jira) torna "offline" um caso excepcional, não a regra. Git é o banco de dados; filesystem é fallback.
+**Invariante central:** SHA do commit é a chave universal. Toda escrita é um `git commit` atômico. Toda leitura é `cat` do working tree. Git reflog é o recovery. Git push/pull é o sync.
+
+### Hierarquia de Store (tentativa em ordem)
+
+```
+┌─ 1. .qa-tools/ (project subdir, git-committed)
+│   ├── git add + git commit [skip ci]
+│   ├── hook suppression (core.hooksPath=/dev/null)
+│   └── Requer: write access no repo do projeto
+│
+├─ 2. ~/.local/share/qa-tools/ (git repo independente)
+│   ├── git init no XDG dir
+│   ├── Remote configurável (personal repo)
+│   └── Requer: git disponível
+│
+└─ 3. FsBackend (sem git, mesmo diretório do #2)
+    ├── tmp+rename para atomicidade parcial
+    ├── Sem history, sem sync
+    └── Fallback quando git não está disponível
+```
 
 ### Arquitetura
 
 ```
-reports/
-├── project-alpha/
-│   ├── index.json              ← metadados de runs (ordenado por timestamp)
-│   ├── branch-index.json       ← { "main": "<sha>", "develop": "<sha>" }
-│   ├── a1b2c3d4.json           ← FlatTest[] daquele commit (imutável)
-│   └── e5f6g7h8.json
-├── project-beta/
-│   └── ...
+StoreBackend (interface)
+├── GitBackend
+│   ├── init: git init + user.name/email + remote opcional
+│   ├── write: acumula, flush: git add + git commit [skip ci]
+│   ├── read: fs.readFileSync do working tree
+│   └── flush(message) → git commit serializado
+│
+└── FsBackend
+    ├── init: mkdir -p
+    ├── write: writeFileSync imediato
+    ├── read: fs.readFileSync
+    └── flush: no-op
+
+Store (domain logic)
+├── Index: lookup(sha) / put(sha, meta)
+│   ├── reports/index.json global
+│   └── reports/{project}/index.json per-project
+├── Branch: appendBranch(branch, sha) / getBranch(branch)
+│   └── Append-only list (timestamped), sem race condition
+├── Reports: saveReport(sha, tests) / loadReport(sha)
+│   └── reports/{project}/{sha}.json imutável
+└── Metrics: loadMetrics / saveMetrics
+    └── reports/{project}/metrics.json
+
+Resolução (resolveSessionContext)
+├── 1. SHA cache → GitShaProvider → Store.lookup(sha)
+├── 2. CI download → CiDownloader → Store.saveReport + flush
+├── 3. Branch baseline → Store.getBranch(branch) → SHA → passo 1
+└── 4. User prompt → "Quer acionar pipeline?" → CI → passo 2
 ```
 
-**Resolução (`resolveSessionContext`):** 4 passos em ordem fixa:
-
-1. Cache por SHA (instantâneo, zero rede)
-2. CI download por SHA (via GitHub/GitLab API, `head_sha` query)
-3. Baseline por branch (lê `branch-index.json`, run anterior no mesmo branch)
-4. Sem dados → "Quer acionar uma pipeline?" (nunca pede path manual)
-
-| ID  | Item                                                                  | Arquivo(s)                                                    | Esforço | Status |
-| --- | --------------------------------------------------------------------- | ------------------------------------------------------------- | ------- | ------ |
-| C1  | ♻️ Unificar stores: `metrics.json` → `report-cache/` (migração 1x)    | `shared/metrics.ts`, `shared/report-cache.ts`                 | 2h      | ⏳     |
-| C2  | ♻️ Store por projeto: diretório `reports/{project}/` + índice isolado | `shared/report-cache.ts`                                      | 1h      | ⏳     |
-| C3  | ✨ `branch-index.json`: mapeia branch → último SHA conhecido          | `shared/report-cache.ts`                                      | 30min   | ⏳     |
-| C4  | ♻️ `shared/git-sha.ts`: obtém HEAD sha (.git + env vars)              | (novo) `shared/git-sha.ts`                                    | 30min   | ⏳     |
-| C5  | ♻️ Extrair `shared/git-artifact-downloader.ts` (elimina duplicação)   | (novo) `shared/git-artifact-downloader.ts`                    | 2h      | ⏳     |
-| C6  | ✨ `shared/session-context.ts` com `resolveSessionContext()`          | (novo) `shared/session-context.ts`                            | 2h      | ⏳     |
-| C7  | 🔧 case17: consumir SessionContext, remover path manual               | `jira_management/commands/case17.ts`                          | 1h      | ⏳     |
-| C8  | 🔧 case15: consumir SessionContext, remover path manual               | `jira_management/commands/case15.ts`                          | 1h      | ⏳     |
-| C9  | 🔧 quality-gate lê de `reportCache.getMetrics(branch)`                | `shared/report-generator.ts`                                  | 1h      | ⏳     |
-| C10 | 🔧 `--file` flag vira debug-only (documentado "não use em produção")  | `case17-helpers.ts`, docs                                     | 30min   | ⏳     |
-| C11 | 📋 Testes migração store + session-context + handlers refatorados     | `shared/report-cache.test.ts`, `session-context.test.ts`, ... | 3h      | ⏳     |
+| ID     | Item                                                                                                               | Arquivo(s)                                | Esforço | Status |
+| ------ | ------------------------------------------------------------------------------------------------------------------ | ----------------------------------------- | ------- | ------ |
+| GC-01  | ♻️ StoreBackend interface + GitBackend + FsBackend (implementado, cobertura 68%)                                   | `shared/store-backend.ts`                 | 2h      | 🔄     |
+| GC-01a | 📋 Completar testes store-backend.ts → 100% (branches: detectStoreBackend, GitStoreBackend.init, read error paths) | `shared/store-backend.test.ts`            | 1h      | 🔄     |
+| GC-02  | ♻️ Store domain logic (implementado, cobertura 97%)                                                                | `shared/store.ts`                         | 2h      | ✅     |
+| GC-03  | ♻️ `shared/git-sha.ts` (implementado, cobertura 100% stmts, 85% branches)                                          | `shared/git-sha.ts`                       | 30min   | 🔄     |
+| GC-03a | 📋 Completar testes git-sha.ts → 100% (CI env, packed-refs, execSync fallback)                                     | `shared/git-sha.test.ts`                  | 30min   | 🔄     |
+| GC-04  | ♻️ session-context.ts expandido com resolveSessionContext + resolveTestDataSource                                  | `shared/session-context.ts`               | 2h      | 🔄     |
+| GC-04a | 📋 Adicionar testes session-context.ts → 100%                                                                      | `shared/session-context.test.ts`          | 1h      | 🔄     |
+| GC-05  | ♻️ Extrair git-artifact-downloader.ts (implementado, cobertura 27%)                                                | `shared/git-artifact-downloader.ts`       | 2h      | 🔄     |
+| GC-05a | 📋 Completar testes git-artifact-downloader.ts → 100%                                                              | `shared/git-artifact-downloader.test.ts`  | 2h      | 🔄     |
+| GC-05b | ♻️ ci-detect.ts extraído (implementado, cobertura 0%)                                                              | `shared/ci-detect.ts`                     | 10min   | 🔄     |
+| GC-05c | 📋 Adicionar testes ci-detect.ts → 100%                                                                            | `shared/ci-detect.test.ts`                | 15min   | 🔄     |
+| GC-06  | ♻️ Rewrite `report-cache.ts` usando Store                                                                          | `shared/report-cache.ts`                  | 1h      | ⏳     |
+| GC-07  | ♻️ Rewrite `metrics.ts` usando Store                                                                               | `shared/metrics.ts`                       | 1h      | ⏳     |
+| GC-08  | 🔧 Strangler Fig: case17 consome resolveTestDataSource (via \_chooseTestDataSource)                                | `jira_management/commands/case17.ts`      | 2h      | ⏳     |
+| GC-08a | 📋 Atualizar mocks no case17.test.ts para novas dependências                                                       | `jira_management/commands/case17.test.ts` | 1h      | ⏳     |
+| GC-09  | 🔧 case15: consumir resolveSessionContext, remover lastJsonDir                                                     | `jira_management/commands/case15.ts`      | 1h      | ⏳     |
+| GC-10  | 📋 Testes de integração: Store + SessionContext + CiDownloader (coberto por unit)                                  | —                                         | 0h      | ✅     |
+| GC-11  | 🔧 Limpeza: remover código obsoleto do Strangler Fig pós-migração                                                  | `case17.ts`, `case17-test-utils.ts`       | 1h      | ⏳     |
+| GC-12  | 🔧 Coverage CI Node 22 ≥ 90% statements (atual: 89.23%)                                                            | `vitest.config.ts`, todos os arquivos     | —       | 🔴     |
 
 ### Métricas alvo — Sprint C
 
-| Métrica                        | Alvo                          |
-| ------------------------------ | ----------------------------- |
-| `tsc --noEmit`                 | 0 erros                       |
-| `vitest run`                   | 100% pass                     |
-| `npm run lint`                 | 0 erros                       |
-| Stores de test data            | **1** (cache)                 |
-| Handlers que pedem path manual | **0**                         |
-| Implementações download CI     | **1** (shared)                |
-| Projetos suportados            | **N** (isolado por diretório) |
+| Mététrica                       | Alvo                           |
+| ------------------------------- | ------------------------------ |
+| `tsc --noEmit`                  | 0 erros                        |
+| `vitest run`                    | 100% pass                      |
+| `npm run lint`                  | 0 erros                        |
+| `npm run test:coverage`         | Node 22 ≥90% statements        |
+| Stores de test data             | **1** (Store via StoreBackend) |
+| Handlers que pedem path manual  | **0**                          |
+| Implementações download CI      | **1** (shared)                 |
+| Código de persistência          | **~160 linhas** (vs ~400)      |
+| Race conditions em branch-index | **0** (append-only + git)      |
+| `.qa-tools/` init automático    | **✅ auto-detect**             |
 
 ---
 
