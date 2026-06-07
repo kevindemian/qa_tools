@@ -776,3 +776,20 @@ describe('T-11 edge cases', () => {
         expect(results.some((r) => !r.passed && r.invariantId === 'T-11')).toBe(true);
     });
 });
+
+describe('T-01 more edge cases', () => {
+    it('matches criteria via test title', () => {
+        const results = invariantCoverageComplete(
+            { tests: [{ title: 'User can log in to dashboard' }] },
+            makeCtx('Acceptance Criteria: User can log in'),
+        );
+        expect(results.some((r) => r.passed && r.invariantId === 'T-01')).toBe(true);
+    });
+});
+
+describe('T-09 more edge cases', () => {
+    it('skips non-numeric count values', () => {
+        const results = invariantNumericConsistency({ item_count: 'N/A', items: [1, 2] }, makeCtx(''));
+        expect(results.some((r) => r.passed && r.invariantId === 'T-09')).toBe(true);
+    });
+});
