@@ -1,0 +1,282 @@
+import fs from 'fs';
+import path from 'path';
+import os from 'os';
+import { afterAll, beforeEach, describe, expect, it, vi } from 'vitest';
+import { FsStoreBackend, GitStoreBackend, detectStoreBackend, detectProjectGitDir } from './store-backend.js';
+
+const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'qa-store-backend-test-'));
+
+afterAll(() => {
+    fs.rmSync(tmpDir, { recursive: true, force: true });
+});
+
+beforeEach(() => {
+    for (const f of fs.readdirSync(tmpDir)) {
+        const fp = path.join(tmpDir, f);
+        fs.rmSync(fp, { recursive: true, force: true });
+    }
+});
+
+describe('FsStoreBackend', () => {
+    it('init creates base directory', () => {
+        const dir = path.join(tmpDir, 'fs-test');
+        const backend = new FsStoreBackend(dir);
+        backend.init();
+        expect(fs.existsSync(dir)).toBe(true);
+    });
+
+    it('write creates intermediate directories and writes file', () => {
+        const dir = path.join(tmpDir, 'fs-write');
+        const backend = new FsStoreBackend(dir);
+        backend.init();
+        backend.write('subdir/test.json', Buffer.from(JSON.stringify({ key: 'value' })));
+        const full = path.join(dir, 'subdir', 'test.json');
+        expect(fs.existsSync(full)).toBe(true);
+        const content = JSON.parse(fs.readFileSync(full, 'utf8'));
+        expect(content.key).toBe('value');
+    });
+
+    it('read returns null for missing file', () => {
+        const dir = path.join(tmpDir, 'fs-read');
+        const backend = new FsStoreBackend(dir);
+        backend.init();
+        expect(backend.read('nonexistent.json')).toBeNull();
+    });
+
+    it('read returns file content', () => {
+        const dir = path.join(tmpDir, 'fs-read-existing');
+        const backend = new FsStoreBackend(dir);
+        backend.init();
+        backend.write('data.json', Buffer.from('hello'));
+        const result = backend.read('data.json');
+        expect(result).not.toBeNull();
+        if (result) expect(result.toString()).toBe('hello');
+    });
+
+    it('exists returns true for existing file', () => {
+        const dir = path.join(tmpDir, 'fs-exists');
+        const backend = new FsStoreBackend(dir);
+        backend.init();
+        backend.write('data.json', Buffer.from(''));
+        expect(backend.exists('data.json')).toBe(true);
+        expect(backend.exists('missing.json')).toBe(false);
+    });
+
+    it('flush is a no-op', () => {
+        const dir = path.join(tmpDir, 'fs-flush');
+        const backend = new FsStoreBackend(dir);
+        backend.init();
+        expect(() => backend.flush('test')).not.toThrow();
+    });
+
+    it('write overwrites existing file', () => {
+        const dir = path.join(tmpDir, 'fs-overwrite');
+        const backend = new FsStoreBackend(dir);
+        backend.init();
+        backend.write('data.json', Buffer.from('first'));
+        backend.write('data.json', Buffer.from('second'));
+        const result = backend.read('data.json');
+        if (result) expect(result.toString()).toBe('second');
+    });
+
+    it('read handles corrupted file gracefully', () => {
+        const dir = path.join(tmpDir, 'fs-corrupt');
+        const backend = new FsStoreBackend(dir);
+        backend.init();
+        const full = path.join(dir, 'bad.json');
+        fs.writeFileSync(full, 'not valid buffer', 'utf8');
+        const result = backend.read('bad.json');
+        expect(result).not.toBeNull();
+        if (result) expect(result.toString()).toBe('not valid buffer');
+    });
+});
+
+describe('GitStoreBackend', () => {
+    it('init creates directory and initializes git repo', () => {
+        const dir = path.join(tmpDir, 'git-test-init');
+        const backend = new GitStoreBackend(dir, '.');
+        backend.init();
+        expect(fs.existsSync(dir)).toBe(true);
+        expect(fs.existsSync(path.join(dir, '.git'))).toBe(true);
+        expect(fs.existsSync(path.join(dir, '.git', 'config'))).toBe(true);
+    });
+
+    it('write and read round-trips data in working tree', () => {
+        const dir = path.join(tmpDir, 'git-test-rw');
+        const backend = new GitStoreBackend(dir, '.');
+        backend.init();
+        backend.write('test.json', Buffer.from(JSON.stringify({ a: 1 })));
+        const result = backend.read('test.json');
+        expect(result).not.toBeNull();
+        if (result) {
+            expect(JSON.parse(result.toString()).a).toBe(1);
+        }
+    });
+
+    it('flush creates a git commit', () => {
+        const dir = path.join(tmpDir, 'git-test-flush');
+        const backend = new GitStoreBackend(dir, '.');
+        backend.init();
+        backend.write('data.json', Buffer.from('test'));
+        backend.flush('qa-tools: test commit [skip ci]');
+        const log = require('child_process').execSync(`git -C "${dir}" log --oneline`, { encoding: 'utf8' });
+        expect(log).toContain('qa-tools: test commit');
+    });
+
+    it('flush with no changes creates empty commit', () => {
+        const dir = path.join(tmpDir, 'git-test-empty');
+        const backend = new GitStoreBackend(dir, '.');
+        backend.init();
+        backend.flush('qa-tools: empty [skip ci]');
+        const log = require('child_process').execSync(`git -C "${dir}" log --oneline`, { encoding: 'utf8' });
+        expect(log).toContain('qa-tools: empty');
+    });
+
+    it('works with subdirectory relStoreDir', () => {
+        const dir = path.join(tmpDir, 'git-test-subdir');
+        const backend = new GitStoreBackend(dir, '.qa-tools');
+        backend.init();
+        backend.write('data.json', Buffer.from('subdir test'));
+        const full = path.join(dir, '.qa-tools', 'data.json');
+        expect(fs.existsSync(full)).toBe(true);
+    });
+
+    it('pre-existing git repo is not re-initialized', () => {
+        const dir = path.join(tmpDir, 'git-test-existing');
+        fs.mkdirSync(dir, { recursive: true });
+        require('child_process').execSync(`git init "${dir}"`, { stdio: 'ignore' });
+        require('child_process').execSync(`git -C "${dir}" config user.name "preexisting"`, { stdio: 'ignore' });
+        const backend = new GitStoreBackend(dir, '.');
+        backend.init();
+        const config = fs.readFileSync(path.join(dir, '.git', 'config'), 'utf8');
+        expect(config).toContain('preexisting');
+    });
+});
+
+describe('GitStoreBackend additional coverage', () => {
+    it('read returns null on filesystem error', () => {
+        const dir = path.join(tmpDir, 'git-read-error');
+        const backend = new GitStoreBackend(dir, '.');
+        backend.init();
+        const spy = vi.spyOn(fs, 'existsSync').mockReturnValue(true);
+        const readSpy = vi.spyOn(fs, 'readFileSync').mockImplementation(() => {
+            throw new Error('EIO');
+        });
+        expect(backend.read('any.json')).toBeNull();
+        spy.mockRestore();
+        readSpy.mockRestore();
+    });
+
+    it('exists checks file existence', () => {
+        const dir = path.join(tmpDir, 'git-exists');
+        const backend = new GitStoreBackend(dir, '.');
+        backend.init();
+        backend.write('test.txt', Buffer.from('data'));
+        expect(backend.exists('test.txt')).toBe(true);
+        expect(backend.exists('missing.txt')).toBe(false);
+    });
+
+    it('write creates intermediate directories', () => {
+        const dir = path.join(tmpDir, 'git-write-deep');
+        const backend = new GitStoreBackend(dir, '.qa-tools');
+        backend.init();
+        backend.write('deeply/nested/file.json', Buffer.from('nested'));
+        const full = path.join(dir, '.qa-tools', 'deeply', 'nested', 'file.json');
+        expect(fs.existsSync(full)).toBe(true);
+    });
+});
+
+describe('FsStoreBackend additional coverage', () => {
+    it('read returns null on filesystem error', () => {
+        const dir = path.join(tmpDir, 'fs-read-error');
+        const backend = new FsStoreBackend(dir);
+        backend.init();
+        const spy = vi.spyOn(fs, 'existsSync').mockReturnValue(true);
+        const readSpy = vi.spyOn(fs, 'readFileSync').mockImplementation(() => {
+            throw new Error('EIO');
+        });
+        expect(backend.read('bad.json')).toBeNull();
+        spy.mockRestore();
+        readSpy.mockRestore();
+    });
+});
+
+describe('detectProjectGitDir', () => {
+    it('returns null when no .git found', () => {
+        expect(detectProjectGitDir('/nonexistent-path-xyz')).toBeNull();
+    });
+
+    it('returns git dir for project with .git', () => {
+        const dir = path.join(tmpDir, 'detect-proj');
+        fs.mkdirSync(path.join(dir, '.git'), { recursive: true });
+        expect(detectProjectGitDir(dir)).toBe(dir);
+    });
+
+    it('finds .git in parent directory', () => {
+        const gitDir = path.join(tmpDir, 'detect-parent');
+        const subDir = path.join(gitDir, 'sub', 'deep');
+        fs.mkdirSync(subDir, { recursive: true });
+        fs.mkdirSync(path.join(gitDir, '.git'));
+        expect(detectProjectGitDir(subDir)).toBe(gitDir);
+    });
+});
+
+describe('detectStoreBackend', () => {
+    const origXdg = process.env.XDG_STATE_HOME;
+    const origHome = process.env.HOME;
+
+    afterAll(() => {
+        if (origXdg) process.env.XDG_STATE_HOME = origXdg;
+        else delete process.env.XDG_STATE_HOME;
+        if (origHome) process.env.HOME = origHome;
+        else delete process.env.HOME;
+    });
+
+    it('returns FsStoreBackend when no git and no project dir', () => {
+        process.env.XDG_STATE_HOME = path.join(tmpDir, 'xdg-fallback');
+        const backend = detectStoreBackend();
+        const hasGit = (() => {
+            try {
+                require('child_process').execSync('git --version', { stdio: 'ignore' });
+                return true;
+            } catch {
+                return false;
+            }
+        })();
+        if (hasGit) {
+            expect(backend.constructor.name).toBe('GitStoreBackend');
+        } else {
+            expect(backend.constructor.name).toBe('FsStoreBackend');
+        }
+    });
+
+    it('returns GitStoreBackend when project has .git', () => {
+        const projDir = path.join(tmpDir, 'proj-with-git');
+        fs.mkdirSync(path.join(projDir, '.git'), { recursive: true });
+        const backend = detectStoreBackend(projDir);
+        expect(backend.constructor.name).toBe('GitStoreBackend');
+        expect((backend as any).gitWorkDir).toBe(projDir);
+        expect((backend as any).relStoreDir).toBe('.qa-tools');
+    });
+
+    it('returns FsStoreBackend when git dir check throws', () => {
+        const xdgDir = path.join(tmpDir, 'xdg-throw-fallback');
+        process.env.XDG_STATE_HOME = xdgDir;
+
+        const origExists = fs.existsSync;
+        const existsSpy = vi.spyOn(fs, 'existsSync').mockImplementation((p) => {
+            const pStr = typeof p === 'string' ? p : String(p);
+            if (pStr.includes('xdg-throw-fallback') && pStr.includes('.git')) {
+                throw new Error('EACCES');
+            }
+            return origExists(p);
+        });
+
+        try {
+            const backend = detectStoreBackend();
+            expect(backend).toBeInstanceOf(FsStoreBackend);
+        } finally {
+            existsSpy.mockRestore();
+        }
+    });
+});

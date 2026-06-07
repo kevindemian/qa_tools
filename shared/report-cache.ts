@@ -2,10 +2,6 @@
  * Report Cache — local persistent cache of test run data (CTRF JSON) for reuse
  * by the HTML report generator (case17) without requiring manual file upload.
  *
- * When a pipeline completes via the project's own CI trigger, the raw test
- * results are automatically cached here. When the user opens the report
- * generator, cached reports are offered as selectable options.
- *
  * Retention: pruned to REPORT_CACHE_MAX (default 20) on each write.
  * Storage: ~/.local/state/qa-tools/reports/
  */

@@ -1,0 +1,332 @@
+import { describe, expect, it, vi, beforeEach } from 'vitest';
+import { createHttpClient } from './http-client.js';
+
+vi.mock('./http-client', async () => ({
+    createHttpClient: vi.fn(),
+}));
+
+vi.mock('./config', async () => ({
+    default: {
+        get: vi.fn((key: string) => {
+            if (key === 'githubToken') return 'gh_token_abc';
+            if (key === 'GITHUB_REPOSITORY') return 'owner/repo';
+            if (key === 'CI_JOB_TOKEN') return '';
+            if (key === 'CI_PROJECT_ID') return '';
+            return undefined;
+        }),
+        getDefault: vi.fn(() => ({
+            get: vi.fn((key: string) => {
+                if (key === 'githubToken') return 'gh_token_abc';
+                return undefined;
+            }),
+        })),
+    },
+}));
+
+vi.mock('./logger', async () => ({
+    rootLogger: { warn: vi.fn(), error: vi.fn(), child: vi.fn().mockReturnValue({ info: vi.fn(), error: vi.fn() }) },
+}));
+
+vi.mock('./deps', async () => ({
+    AdmZip: class {
+        entries: Array<{ name: string; getData: () => Buffer }>;
+        constructor(data: Buffer) {
+            this.entries = [{ name: 'ctrf.json', getData: () => data }];
+        }
+        getEntries() {
+            return this.entries;
+        }
+    },
+}));
+
+const CTRF_SAMPLE = {
+    reportFormat: 'CTRF',
+    specVersion: '1.0',
+    results: {
+        summary: { tests: 2, passed: 1, failed: 1, skipped: 0 },
+        tests: [
+            { name: 'Passing test', status: 'passed', duration: 100 },
+            { name: 'Failing test', status: 'failed', duration: 200, message: 'Assertion failed' },
+        ],
+    },
+};
+
+describe('fetchLatestTestRun', () => {
+    beforeEach(() => {
+        vi.clearAllMocks();
+    });
+
+    it('resolves GitHub run with CTRF artifact and returns ParseResult', async () => {
+        const mockGet = vi.fn();
+        mockGet
+            .mockResolvedValueOnce({
+                data: { workflow_runs: [{ id: 123, created_at: '2026-06-01T00:00:00Z' }] },
+            })
+            .mockResolvedValueOnce({
+                data: { artifacts: [{ id: 456, name: 'ctrf-report' }] },
+            })
+            .mockResolvedValueOnce({
+                data: Buffer.from(JSON.stringify(CTRF_SAMPLE)),
+            });
+        vi.mocked(createHttpClient).mockReturnValue({ get: mockGet } as never);
+
+        const { fetchLatestTestRun } = await import('./git-artifact-downloader.js');
+        const result = await fetchLatestTestRun();
+        expect(result).not.toBeNull();
+        if (result) {
+            expect(result.tests).toHaveLength(2);
+            expect(result.stats.passed).toBe(1);
+            expect(result.stats.failed).toBe(1);
+            expect(result.stats.total).toBe(2);
+        }
+    });
+
+    it('returns null when no runs found', async () => {
+        const mockGet = vi.fn().mockResolvedValueOnce({
+            data: { workflow_runs: [] },
+        });
+        vi.mocked(createHttpClient).mockReturnValue({ get: mockGet } as never);
+
+        const { fetchLatestTestRun } = await import('./git-artifact-downloader.js');
+        const result = await fetchLatestTestRun();
+        expect(result).toBeNull();
+    });
+
+    it('returns null when no CTRF artifact in latest run', async () => {
+        const mockGet = vi
+            .fn()
+            .mockResolvedValueOnce({
+                data: { workflow_runs: [{ id: 123, created_at: '2026-06-01T00:00:00Z' }] },
+            })
+            .mockResolvedValueOnce({
+                data: { artifacts: [{ id: 789, name: 'coverage-report' }] },
+            });
+        vi.mocked(createHttpClient).mockReturnValue({ get: mockGet } as never);
+
+        const { fetchLatestTestRun } = await import('./git-artifact-downloader.js');
+        const result = await fetchLatestTestRun();
+        expect(result).toBeNull();
+    });
+
+    it('returns null when CI returns no runs', async () => {
+        const mockGet = vi.fn().mockResolvedValueOnce({
+            data: { workflow_runs: [] },
+        });
+        vi.mocked(createHttpClient).mockReturnValue({ get: mockGet } as never);
+
+        const { fetchLatestTestRun } = await import('./git-artifact-downloader.js');
+        const result = await fetchLatestTestRun();
+        expect(result).toBeNull();
+    });
+});
+
+describe('fetchLatestTestRun — GitLab', () => {
+    beforeEach(() => {
+        vi.clearAllMocks();
+    });
+
+    it('downloads and parses GitLab pipeline artifact', async () => {
+        const cfg = (await import('./config.js')).default;
+        vi.mocked(cfg.get).mockImplementation((key: string) => {
+            if (key === 'CI_JOB_TOKEN') return 'gl_token_xyz';
+            if (key === 'CI_PROJECT_ID') return '12345';
+            if (key === 'CI_SERVER_URL') return 'https://gitlab.example.com';
+            return undefined;
+        });
+
+        const mockGet = vi
+            .fn()
+            .mockResolvedValueOnce({ data: [{ id: 789, created_at: '2026-06-01T00:00:00Z' }] })
+            .mockResolvedValueOnce({ data: [{ id: 111, name: 'test-job', stage: 'test' }] })
+            .mockResolvedValueOnce({ data: Buffer.from(JSON.stringify(CTRF_SAMPLE)) });
+        vi.mocked(createHttpClient).mockReturnValue({ get: mockGet } as never);
+
+        const { fetchLatestTestRun } = await import('./git-artifact-downloader.js');
+        const result = await fetchLatestTestRun();
+        expect(result).not.toBeNull();
+        if (result) {
+            expect(result.tests).toHaveLength(2);
+            expect(result.stats.passed).toBe(1);
+            expect(result.stats.failed).toBe(1);
+        }
+    });
+
+    it('returns null when GitLab pipeline has no jobs', async () => {
+        const cfg = (await import('./config.js')).default;
+        vi.mocked(cfg.get).mockImplementation((key: string) => {
+            if (key === 'CI_JOB_TOKEN') return 'gl_token_xyz';
+            if (key === 'CI_PROJECT_ID') return '12345';
+            return undefined;
+        });
+
+        const mockGet = vi
+            .fn()
+            .mockResolvedValueOnce({ data: [{ id: 789, created_at: '2026-06-01T00:00:00Z' }] })
+            .mockResolvedValueOnce({ data: [] });
+        vi.mocked(createHttpClient).mockReturnValue({ get: mockGet } as never);
+
+        const { fetchLatestTestRun } = await import('./git-artifact-downloader.js');
+        const result = await fetchLatestTestRun();
+        expect(result).toBeNull();
+    });
+
+    it('returns null when GitLab has no pipelines', async () => {
+        const cfg = (await import('./config.js')).default;
+        vi.mocked(cfg.get).mockImplementation((key: string) => {
+            if (key === 'CI_JOB_TOKEN') return 'gl_token_xyz';
+            if (key === 'CI_PROJECT_ID') return '12345';
+            return undefined;
+        });
+
+        const mockGet = vi.fn().mockResolvedValueOnce({ data: [] });
+        vi.mocked(createHttpClient).mockReturnValue({ get: mockGet } as never);
+
+        const { fetchLatestTestRun } = await import('./git-artifact-downloader.js');
+        const result = await fetchLatestTestRun();
+        expect(result).toBeNull();
+    });
+
+    it('handles GitLab API error gracefully', async () => {
+        const cfg = (await import('./config.js')).default;
+        vi.mocked(cfg.get).mockImplementation((key: string) => {
+            if (key === 'CI_JOB_TOKEN') return 'gl_token_xyz';
+            if (key === 'CI_PROJECT_ID') return '12345';
+            return undefined;
+        });
+
+        const mockGet = vi.fn().mockRejectedValueOnce(new Error('API error'));
+        vi.mocked(createHttpClient).mockReturnValue({ get: mockGet } as never);
+
+        const { fetchLatestTestRun } = await import('./git-artifact-downloader.js');
+        const result = await fetchLatestTestRun();
+        expect(result).toBeNull();
+    });
+});
+
+describe('fetchLatestTestRun — no CI', () => {
+    beforeEach(() => {
+        vi.clearAllMocks();
+    });
+
+    it('returns null when no CI is configured', async () => {
+        const cfg = (await import('./config.js')).default;
+        vi.mocked(cfg.get).mockReturnValue(undefined);
+        vi.mocked(cfg.getDefault).mockReturnValue({
+            get: vi.fn(() => undefined),
+        } as never);
+
+        const { fetchLatestTestRun } = await import('./git-artifact-downloader.js');
+        const result = await fetchLatestTestRun();
+        expect(result).toBeNull();
+    });
+});
+
+describe('fetchGitHistory', () => {
+    beforeEach(() => {
+        vi.clearAllMocks();
+    });
+
+    it('returns empty context when no CI configured', async () => {
+        vi.mocked(createHttpClient).mockReturnValue({ get: vi.fn() } as never);
+
+        const { fetchGitHistory } = await import('./git-artifact-downloader.js');
+        const result = await fetchGitHistory();
+        expect(result).toEqual({ commits: '', runs: [], flakyTests: '' });
+    });
+
+    it('returns history with runs and flaky tests for GitHub', async () => {
+        const cfg = (await import('./config.js')).default;
+        vi.mocked(cfg.get).mockImplementation((key: string) => {
+            if (key === 'githubToken') return 'gh_token_abc';
+            if (key === 'GITHUB_REPOSITORY') return 'owner/repo';
+            return undefined;
+        });
+        vi.mocked(cfg.getDefault).mockReturnValue({
+            get: vi.fn((key: string) => {
+                if (key === 'githubToken') return 'gh_token_abc';
+                return undefined;
+            }),
+        } as never);
+
+        const mockGet = vi
+            .fn()
+            .mockResolvedValueOnce({
+                data: {
+                    workflow_runs: [
+                        {
+                            id: 1,
+                            created_at: '2026-06-01T00:00:00Z',
+                            head_commit: { message: 'Fix test\nDetails', author: { name: 'dev1' } },
+                        },
+                        {
+                            id: 2,
+                            created_at: '2026-06-02T00:00:00Z',
+                            head_commit: { message: 'Add feature', author: { name: 'dev2' } },
+                        },
+                    ],
+                },
+            })
+            .mockResolvedValueOnce({
+                data: { artifacts: [{ id: 10, name: 'ctrf-report' }] },
+            })
+            .mockResolvedValueOnce({
+                data: Buffer.from(
+                    JSON.stringify({
+                        results: {
+                            summary: { tests: 2, passed: 1, failed: 1, skipped: 0 },
+                            tests: [
+                                { name: 'FlakyTest A', status: 'passed', duration: 100 },
+                                { name: 'FlakyTest B', status: 'failed', duration: 200 },
+                            ],
+                        },
+                    }),
+                ),
+            })
+            .mockResolvedValueOnce({
+                data: { artifacts: [{ id: 20, name: 'ctrf-report' }] },
+            })
+            .mockResolvedValueOnce({
+                data: Buffer.from(
+                    JSON.stringify({
+                        results: {
+                            summary: { tests: 2, passed: 2, failed: 0, skipped: 0 },
+                            tests: [
+                                { name: 'FlakyTest A', status: 'failed', duration: 100 },
+                                { name: 'StableTest', status: 'passed', duration: 150 },
+                            ],
+                        },
+                    }),
+                ),
+            });
+        vi.mocked(createHttpClient).mockReturnValue({ get: mockGet } as never);
+
+        const { fetchGitHistory } = await import('./git-artifact-downloader.js');
+        const result = await fetchGitHistory();
+        expect(result.commits).toContain('Fix test');
+        expect(result.commits).toContain('Add feature');
+        expect(result.runs.length).toBeGreaterThanOrEqual(1);
+        expect(result.flakyTests).toContain('FlakyTest A');
+    });
+
+    it('handles GitHub history API error gracefully', async () => {
+        const mockGet = vi.fn().mockRejectedValueOnce(new Error('Network error'));
+        vi.mocked(createHttpClient).mockReturnValue({ get: mockGet } as never);
+
+        const { fetchGitHistory } = await import('./git-artifact-downloader.js');
+        const result = await fetchGitHistory();
+        expect(result).toEqual({ commits: '', runs: [], flakyTests: '' });
+    });
+});
+
+describe('ci helpers', () => {
+    it('exports isGitHubCi and isGitLabCi from ci-detect', async () => {
+        const mod = await import('./git-artifact-downloader.js');
+        expect(mod.isGitHubCi).toBeDefined();
+        expect(mod.isGitLabCi).toBeDefined();
+    });
+
+    it('exports GIT_HISTORY_RUNS constant', async () => {
+        const mod = await import('./git-artifact-downloader.js');
+        expect(mod.GIT_HISTORY_RUNS).toBe(5);
+    });
+});

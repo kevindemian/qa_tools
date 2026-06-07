@@ -148,4 +148,32 @@ describe('LlmMetrics', () => {
         expect(snap.artifactApproved).toBe(2);
         expect(snap.artifactRejected).toBe(1);
     });
+
+    it('handles loadStore read failure gracefully', async () => {
+        const mod = await loadMod();
+        mod.recordLlmRequest('main', 100);
+        mod.snapshotLlmMetrics();
+        const readSpy = vi.spyOn(fs, 'readFileSync').mockImplementation(() => {
+            throw new Error('EIO');
+        });
+        try {
+            const history = mod.getLlmMetricsHistory();
+            expect(history).toEqual([]);
+        } finally {
+            readSpy.mockRestore();
+        }
+    });
+
+    it('handles saveStore write failure gracefully', async () => {
+        const renameSpy = vi.spyOn(fs, 'renameSync').mockImplementation(() => {
+            throw new Error('ENOSPC');
+        });
+        try {
+            const mod = await loadMod();
+            mod.recordLlmRequest('main', 100);
+            expect(() => mod.snapshotLlmMetrics()).toThrow('Failed to persist LLM metrics');
+        } finally {
+            renameSpy.mockRestore();
+        }
+    });
 });

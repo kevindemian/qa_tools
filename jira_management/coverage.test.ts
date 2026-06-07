@@ -69,4 +69,16 @@ describe('analyzeCoverage', () => {
         expect(result.gapsByEpic['EPIC-1']).toEqual(['TEST-1']);
         expect(result.gapsByEpic['EPIC-2']).toEqual(['TEST-2', 'TEST-3']);
     });
+
+    it('handles epic as object without key property', async () => {
+        mockJiraResource.searchJiraIssues.mockResolvedValueOnce({
+            issues: [
+                { key: 'TEST-1', fields: { summary: 'No steps', customfield_10014: { value: 'something' } } },
+                { key: 'TEST-2', fields: { summary: 'No steps', epic: true } },
+            ],
+            total: 2,
+        });
+        const result = await analyzeCoverage(mockJiraResource, 'TEST');
+        expect(result.gapsByEpic).toEqual({});
+    });
 });

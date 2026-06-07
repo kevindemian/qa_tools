@@ -1,34 +1,12 @@
 import fs from 'fs';
 import path from 'path';
 import type { FlatTest, CtrfData, CtrfSummary } from '../../shared/result_parser.js';
-import Config from '../../shared/config.js';
+import type { CiContext, RunStats } from '../../shared/ci-detect.js';
 
 export const CTRF_LAST_FILE = 'last-results.ctrf.json';
-export const GIT_HISTORY_RUNS = 5;
 
-export interface RunStats {
-    runId: number | string;
-    createdAt: string;
-    passed: number;
-    failed: number;
-    skipped: number;
-    total: number;
-    passRate: number;
-}
-
-export interface CiContext {
-    commits: string;
-    runs: RunStats[];
-    flakyTests: string;
-}
-
-export function isGitHubCi(): boolean {
-    return !!(Config.get('githubToken') && Config.get('GITHUB_REPOSITORY'));
-}
-
-export function isGitLabCi(): boolean {
-    return !!(Config.get('CI_JOB_TOKEN') && Config.get('CI_PROJECT_ID'));
-}
+export { isGitHubCi, isGitLabCi, GIT_HISTORY_RUNS } from '../../shared/ci-detect.js';
+export type { CiContext, RunStats } from '../../shared/ci-detect.js';
 
 function buildRunsBarChartHtml(runs: RunStats[]): string {
     let html = '<div style="margin-bottom:8px">';
