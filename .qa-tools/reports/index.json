@@ -1,0 +1,13 @@
+{
+  "19bf76e00aeecda3a36541ae409d276d84d4b76f": {
+    "sha": "19bf76e00aeecda3a36541ae409d276d84d4b76f",
+    "project": "proj-x",
+    "timestamp": 1780856730598,
+    "tool": "",
+    "branch": "",
+    "total": 3,
+    "passed": 2,
+    "failed": 1,
+    "skipped": 0
+  }
+}
