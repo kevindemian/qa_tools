@@ -162,58 +162,21 @@
 | Infra automática       | 1   | Git Metrics Adapter                                                                                                                                                                                                                                                            | Automático (fallback)         |
 | Infra interna          | 4   | Circuit Breaker, Config Safety, Error Handling, Security                                                                                                                                                                                                                       | Internal (não user-facing)    |
 
-**Features user-facing a expor:** 22 (4 handlers + 16 dashboards + 2 CLI/env)
+**Features user-facing a expor:** 22 (✅ todas expostas)
 
-### Wave 1 — Handlers Órfãos + Novos (P0)
+> Sprint Menu completamente implementado. Todo item completado (WA-1 a WA-14, DT).
+> Histórico detalhado migrado para `BACKLOG-historico.md`.
 
-| ID    | Item                                                                                               | Arquivo(s)                                                          | Esforço | Status |
-| ----- | -------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------- | ------- | ------ |
-| WA-1  | Wirear `handleRunComparison` → handler `'c'` no ACTION_HANDLERS + menu "Comparar execuções (HTML)" | `git_triggers/session-state.ts`, `git_triggers/interactive-mode.ts` | 15min   | ✅     |
-| WA-2  | Wirear Pipeline Health standalone → handler `'p'` + menu "Pipeline health (HTML)"                  | `git_triggers/batch-mode.ts`, `git_triggers/interactive-mode.ts`    | 20min   | ✅     |
-| WA-11 | Wirear AI PR Description → handler `'i'` + menu "AI PR Description"                                | `git_triggers/ai-pr-desc.ts`, `git_triggers/interactive-mode.ts`    | 15min   | ✅     |
-| WA-13 | Wirear Bug Report Flow → handler `'g'` + menu "Bug Report Interativo"                              | `shared/bug-report.ts`, `git_triggers/interactive-mode.ts`          | 45min   | ✅     |
+### Métricas alvo — Sprint Menu (atingidas)
 
-### Wave 2 — Submenu de Dashboards Individuais + Novos (P0) ✅
-
-| ID     | Item                                                                                      | Arquivo(s)                                                          | Esforço | Status |
-| ------ | ----------------------------------------------------------------------------------------- | ------------------------------------------------------------------- | ------- | ------ |
-| WA-3   | Criar `_showDashboardMenu()` com `showSelect()` listando 17 dashboards                    | `git_triggers/interactive-mode.ts`                                  | 30min   | ✅     |
-| WA-4   | Criar funções de geração standalone p/ cada dashboard (reusa helper `_loadProjectRuns()`) | `git_triggers/schedule-handler.ts`                                  | 2h      | ✅     |
-| WA-5   | Adicionar entry `'d'` + "Dashboards individuais" no menu UTILITARIOS                      | `git_triggers/session-state.ts`, `git_triggers/interactive-mode.ts` | 10min   | ✅     |
-| WA-12  | Adicionar Coverage Gap no submenu Dashboards                                              | `shared/generate-coverage-gap-html.ts`                              | 30min   | ✅     |
-| **DT** | Implementar Defect Trend dashboard `generateDefectTrendHtml`                              | `shared/defect-trend.ts` (novo)                                     | 2h      | ✅     |
-
-### Wave 3 — Features CLI/Env + Auto-Triage (P0) ✅
-
-| ID    | Item                                                                                                   | Arquivo(s)                                                                           | Esforço | Status |
-| ----- | ------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------ | ------- | ------ |
-| WA-6  | Wirear Quality Gate → handler `'q'` + menu "Quality Gate"                                              | `git_triggers/interactive-mode.ts`, `shared/quality-gate.ts`                         | 20min   | ✅     |
-| WA-7  | Wirear Auto-Triage Toggle → handler `'t'` + `Config.autoTriageEnabled` + menu "Toggle: Bug automático" | `git_triggers/batch-mode.ts`, `git_triggers/interactive-mode.ts`, `shared/config.ts` | 1h      | ✅     |
-| WA-14 | Wirear Git Metrics Adapter → handler `'e'` + menu "Git Metrics Adapter (doc)"                          | `git_triggers/interactive-mode.ts`, `git_triggers/session-state.ts`                  | 10min   | ✅     |
-
-### Wave 4 — Jira Management (P1)
-
-| ID   | Item                                                                                    | Arquivo(s)                                      | Esforço | Status |
-| ---- | --------------------------------------------------------------------------------------- | ----------------------------------------------- | ------- | ------ |
-| WA-8 | Adicionar dashboards no submenu REPORTS do Jira (Traceability, Release Score, Coverage) | `jira_management/menu-data.ts`, `ui-helpers.ts` | 1h      | ⏳     |
-
-### Wave 5 — Testes (P1)
-
-| ID    | Item                                    | Arquivo(s)                                                        | Esforço | Status |
-| ----- | --------------------------------------- | ----------------------------------------------------------------- | ------- | ------ |
-| WA-9  | Testes para novos handlers/menu entries | `git_triggers/main.test.ts`, `git_triggers/session-state.test.ts` | 1h      | ⏳     |
-| WA-10 | Atualizar snapshot de menu se existir   | `git_triggers/session-state.test.ts`                              | 10min   | ⏳     |
-
-### Métricas alvo
-
-| Métrica                          | Alvo          |
-| -------------------------------- | ------------- |
-| `tsc --noEmit`                   | **0 erros**   |
-| `vitest run`                     | **100% pass** |
-| `npm run lint`                   | **0 erros**   |
-| Handlers órfãos (sem menu)       | **0**         |
-| Dashboards sem acesso individual | **0**         |
-| Features CLI/env sem menu        | **0**         |
+| Métrica                          | Alvo          | Resultado |
+| -------------------------------- | ------------- | --------- |
+| `tsc --noEmit`                   | **0 erros**   | ✅ 0      |
+| `vitest run`                     | **100% pass** | ✅ 4212   |
+| `npm run lint`                   | **0 erros**   | ✅ 0      |
+| Handlers órfãos (sem menu)       | **0**         | ✅ 0      |
+| Dashboards sem acesso individual | **0**         | ✅ 0      |
+| Features CLI/env sem menu        | **0**         | ✅ 0      |
 
 ---
 
