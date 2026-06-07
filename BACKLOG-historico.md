@@ -3113,3 +3113,43 @@ Demais 30+ dependências limpas. Ver `AGENTS.md` para metodologia.
 | Imports relativos com `.js` | 1933        | ✅              |
 
 ---
+
+## ✅ Sprint Dead Code — Eliminação de Exports Mortos — CONCLUÍDA
+
+**Data:** 2026-06-07
+**Origem:** Análise ts-prune — 59 exports não-importados. 28 removidos (risco zero), 31 deferidos sine die.
+**Abordagem:** Remoção cirúrgica apenas de type/exports de barrel que ninguém importa.
+
+### Itens removidos (28 exports em 8 arquivos)
+
+| ID    | Item                                                          | Arquivo(s)                         | Itens |
+| ----- | ------------------------------------------------------------- | ---------------------------------- | ----- |
+| DC-01 | ♻️ Remover 14 type re-exports Zod                             | `shared/validation.ts`             | 14    |
+| DC-02 | ♻️ Remover AxiosResponse, AxiosError                          | `shared/deps.ts`                   | 2     |
+| DC-03 | ♻️ Remover ConfigField, CONFIG_SCHEMA, validateRequiredEnv    | `shared/config.ts`                 | 3     |
+| DC-04 | ♻️ Remover PromptOptions, FilePathOptions, Select\* in barrel | `shared/prompt-input.ts`           | 5     |
+| DC-05 | ♻️ Remover NavLink da barrel                                  | `shared/markdown.ts`               | 1     |
+| DC-06 | ♻️ Remover ReviewDecision duplicado                           | `shared/llm-review-types.ts`       | 1     |
+| DC-07 | ♻️ Remover ReviewDecision re-export morto                     | `shared/llm-review.ts`             | 1     |
+| DC-08 | ♻️ Remover ArtifactType duplicado (autodefinido não-usado)    | `shared/llm-self-consistency.ts`   | 1     |
+| DC-09 | 🔧 Atualizar baseline .unused-exports-baseline                | `scripts/.unused-exports-baseline` | —     |
+| DC-10 | 📋 Documentar itens diferidos sine die                        | `docs/DEFERRED-DEAD-CODE.md`       | —     |
+
+### Deferidos sine die (31 itens)
+
+Lista completa: `docs/DEFERRED-DEAD-CODE.md`
+
+Categorias: refineWithConsistency (função órfã com valor), JiraMode (type não-integrado), 9 case17 test re-exports, 2 underscore test-only exports, \~17 barrel `export *` (llm-fallback.ts), \~1 entry point default.
+
+### Métricas finais
+
+| Métrica                   | Alvo          | Resultado |
+| ------------------------- | ------------- | --------- |
+| `tsc --noEmit`            | **0 erros**   | ✅ 0      |
+| `vitest run`              | **100% pass** | ✅ 4231   |
+| `npm run lint`            | **0 erros**   | ✅ 0      |
+| `check-unused-exports.sh` | **0 new**     | ✅ exit 0 |
+| Exports removidos         | **28**        | ✅ 28     |
+| Baseline atualizado       | **31 itens**  | ✅        |
+
+---

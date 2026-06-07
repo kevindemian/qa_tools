@@ -1,19 +1,8 @@
 {
     "$schema": "https://opencode.ai/config.json",
 
-    "plugin": [["~/.config/opencode/plugin/validation_plugin.ts"]],
+    "plugin": ["~/.config/opencode/plugin/validation_plugin.ts"],
 
-    "validation": {
-        "hook": "~/.config/opencode/validation_hook.ts",
-        "functions": {
-            "validate": "validateResponse",
-            "sanitize": "sanitizeAndReject",
-            "command": "validateCommand"
-        },
-        "blockOnViolation": true,
-        "requireHumanReview": true,
-        "logViolations": true
-    },
     "model": "opencode/deepseek-v4-flash-free",
     "small_model": "google/gemini-2.0-flash",
     "default_agent": "general",

@@ -31,13 +31,8 @@ describe('createJiraAuthHeader', () => {
     });
 
     describe('default behavior', () => {
-        it('defaults to Bearer when mode is unknown', async () => {
-            const result = createJiraAuthHeader(SERVER_TOKEN, 'unknown');
-            expect(result).toEqual({ Authorization: `Bearer ${SERVER_TOKEN}` });
-        });
-
-        it('defaults to Bearer when mode is empty string', async () => {
-            const result = createJiraAuthHeader(SERVER_TOKEN, '');
+        it('defaults to server mode when called without mode', async () => {
+            const result = createJiraAuthHeader(SERVER_TOKEN);
             expect(result).toEqual({ Authorization: `Bearer ${SERVER_TOKEN}` });
         });
 

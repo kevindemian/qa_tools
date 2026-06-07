@@ -18,5 +18,3 @@ export interface ReviewResult {
         layer3Passed: boolean;
     };
 }
-
-export type ReviewDecision = 'approved' | 'rejected' | 'needs-review';

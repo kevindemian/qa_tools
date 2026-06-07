@@ -19,6 +19,7 @@ import {
 import { offerPipelineFailureAnalysis } from './llm-pipeline.js';
 import { handleBugCreation } from './pipeline-jira.js';
 import JiraClient from '../shared/jira-client.js';
+import type { JiraMode } from '../shared/jira-auth.js';
 import JiraLinkManager from '../jira_management/jira_link_manager.js';
 import { currentProvider, pushHistory, setIsBusy, MSG_OPERATION_CANCELED } from './session-state.js';
 import { confirmDestructiveAction } from '../shared/cli_base.js';
@@ -54,7 +55,7 @@ export async function pollPipeline(
     });
 }
 
-export function _jiraEnv(): { base: string; token: string; xray: string; mode: string } | null {
+export function _jiraEnv(): { base: string; token: string; xray: string; mode: JiraMode } | null {
     return __jiraEnv();
 }
 

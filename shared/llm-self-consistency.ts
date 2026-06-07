@@ -13,8 +13,6 @@ import { llmPrompt, type LlmPromptOptions } from './llm-client.js';
 import { ArtifactValidator, type ValidationContext } from './artifact-validator.js';
 import { rootLogger } from './logger.js';
 
-export type ArtifactType = 'test-suite' | 'analysis' | 'bug-report' | 'comparison' | 'pipeline';
-
 export interface ConsistencyResult<T> {
     winner: T;
     candidates: T[];
@@ -82,7 +80,7 @@ function levenshtein(a: string, b: string): number {
 
 /**
  * Generate n candidate responses and select by majority structural vote.
- * If divergence is high, optionally refine with consistency instruction.
+ * If divergence is high, automatically refines with a consistency instruction.
  */
 export async function consensusGenerate<T>(
     opts: LlmPromptOptions,
@@ -174,13 +172,29 @@ export async function consensusGenerate<T>(
         votes[i] = voteCounts[hashes[i] as string]?.length ?? 1;
     }
 
-    return {
+    const preliminary: ConsistencyResult<T> = {
         winner,
         candidates,
         votes,
         divergence,
         refined: false,
     };
+
+    if (divergence === 'high') {
+        rootLogger.info('Self-consistency: high divergence detected — attempting refinement');
+        const refined = await refineWithConsistency(opts, validator, context, preliminary);
+        if (refined.refined) {
+            const validationResult = validator.validate(refined.winner, context);
+            if (validationResult.allPassed) {
+                return refined;
+            }
+            rootLogger.warn('Self-consistency: refinement produced invalid result — using preliminary winner');
+        } else {
+            rootLogger.warn('Self-consistency: refinement failed — using preliminary winner');
+        }
+    }
+
+    return preliminary;
 }
 
 /**
@@ -189,8 +203,8 @@ export async function consensusGenerate<T>(
  */
 export async function refineWithConsistency<T>(
     opts: LlmPromptOptions,
-    _validator: ArtifactValidator<T>,
-    _context: ValidationContext,
+    validator: ArtifactValidator<T>,
+    context: ValidationContext,
     previousResult: ConsistencyResult<T>,
 ): Promise<ConsistencyResult<T>> {
     const refinementPrompt = [
@@ -210,10 +224,14 @@ export async function refineWithConsistency<T>(
 
     try {
         const singleResult = await llmPrompt(refinedOpts);
-        const singletons = [singleResult as T];
+        const validationResult = validator.validate(singleResult as T, context);
+        if (!validationResult.allPassed) {
+            rootLogger.warn('Consistency refinement: result failed validation — falling back to previous winner');
+            return previousResult;
+        }
         return {
-            winner: singletons[0] as T,
-            candidates: singletons,
+            winner: singleResult as T,
+            candidates: [singleResult as T],
             votes: { 0: 1 },
             divergence: previousResult.divergence,
             refined: true,

@@ -28,9 +28,8 @@ export interface AuthHeader extends Record<string, string> {
  *  @param token - Personal Access Token (server) or email:apiToken (cloud).
  *  @param mode  - `'server'` (default) or `'cloud'`.
  *  @returns     - `{ Authorization: '<scheme> <credentials>' }`.
- *  @throws      - If mode is invalid.
  */
-export function createJiraAuthHeader(token: string, mode: string): AuthHeader {
+export function createJiraAuthHeader(token: string, mode: JiraMode = 'server'): AuthHeader {
     if (mode === 'cloud') {
         const encoded = Buffer.from(token).toString('base64');
         rootLogger.debug('Jira Cloud mode: using Basic auth (email:apiToken base64)');

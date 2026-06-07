@@ -47,7 +47,6 @@ import { shouldSkipAdversarialReview, parseVerdict, stripVerdict, parseLayerErro
 import type { ArtifactType, ReviewResult } from './llm-review-types.js';
 // Re-exports for backward compatibility
 export { detectHedging, detectContradictions, shouldSkipAdversarialReview } from './llm-review-analyzer.js';
-export type { ReviewDecision } from './llm-review-analyzer.js';
 export type { ArtifactType, ReviewResult };
 
 const MAX_RETRIES = 3;

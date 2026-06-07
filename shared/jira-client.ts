@@ -11,7 +11,7 @@
 import { createHttpClient } from './http-client.js';
 import { extractErrorMessage } from './prompt.js';
 import { rootLogger } from './logger.js';
-import { createJiraAuthHeader } from './jira-auth.js';
+import { createJiraAuthHeader, type JiraMode } from './jira-auth.js';
 import { checkCircuitBreaker, recordCircuitFailure, recordCircuitSuccess } from './circuit-breaker.js';
 import type { JsonObject, JiraResourceLike, SearchIssuesResponse } from './types.js';
 
@@ -19,7 +19,7 @@ class JiraClient implements JiraResourceLike {
     baseUrl: string;
     originUrl: string;
     personalToken: string;
-    jiraMode: string;
+    jiraMode: JiraMode;
     axiosInstance: ReturnType<typeof createHttpClient>;
 
     /**
@@ -29,7 +29,7 @@ class JiraClient implements JiraResourceLike {
      * @param baseUrl       - Jira instance base URL (e.g. `https://your-domain.atlassian.net/rest/api/2`).
      * @param mode          - `'server'` (default, Bearer PAT) or `'cloud'` (Basic base64).
      */
-    constructor(personalToken: string, baseUrl: string, mode?: string) {
+    constructor(personalToken: string, baseUrl: string, mode?: JiraMode) {
         this.baseUrl = baseUrl;
         this.personalToken = personalToken;
         this.jiraMode = mode ?? 'server';
