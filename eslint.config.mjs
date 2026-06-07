@@ -171,6 +171,16 @@ export default tseslint.config(
             ],
         },
     },
-    { ignores: ['node_modules/', 'docs-archive/', 'scripts/', 'vitest.config.ts', 'eslint.config.mjs', '**/*.js'] },
+    {
+        ignores: [
+            'node_modules/',
+            'docs-archive/',
+            'scripts/',
+            'vitest.config.ts',
+            'eslint.config.mjs',
+            '**/*.js',
+            '.config/',
+        ],
+    },
     prettier,
 );
