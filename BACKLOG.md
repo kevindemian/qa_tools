@@ -146,45 +146,50 @@
 
 ## 🚀 Sprint Menu — Mapeamento de Features no Menu (P0)
 
-**Data:** 2026-06-06
-**Origem:** Auditoria de menu vs. features implementadas — 25 features invisíveis ao usuário.
+**Data:** 2026-06-07
+**Origem:** Auditoria de menu vs. features implementadas — 29 features invisíveis ao usuário (4 descobertas em 07/06).
 
-**Problema:** Sprints 10/11/12/V1-V5 implementaram 25 funcionalidades que não aparecem em nenhum menu. Usuário não consegue descobri-las ou acessá-las sem conhecimento prévio de comandos CLI ou env vars.
+**Problema:** Sprints 10/11/12/V1-V5 implementaram 29 funcionalidades que não aparecem em nenhum menu. Usuário não consegue descobri-las ou acessá-las sem conhecimento prévio de comandos CLI ou env vars.
 
-**Agrupamento das 25 features invisíveis:**
+**Agrupamento das 29 features invisíveis:**
 
-| Grupo                  | Qtd | Features                                                                                                                                                                                                                                                         | Acesso atual                  |
-| ---------------------- | --- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------- |
-| Handlers órfãos        | 2   | Run Comparison, Pipeline Health                                                                                                                                                                                                                                  | Nenhum                        |
-| Dashboards silenciados | 15  | Release Score, Defect Trend, Traceability, Backlog Health, AI Effectiveness, Defect Seasonality, Silent Regression, AI Comparison, Cross-Squad Benchmark, Developer Profile, Suite Optimization, Pipeline Cost, Impact Alert, Incident Report, Requirement Score | Só no relatório semanal (`r`) |
-| Features CLI/env       | 2   | Quality Gate, Auto-Triage Toggle                                                                                                                                                                                                                                 | CLI/env var                   |
-| Documentação           | 1   | Flaky Thresholds Docs                                                                                                                                                                                                                                            | `.env.example` + docs         |
-| Infra automática       | 1   | Git Metrics Adapter                                                                                                                                                                                                                                              | Automático (fallback)         |
-| Infra interna          | 4   | Circuit Breaker, Config Safety, Error Handling, Security                                                                                                                                                                                                         | Internal (não user-facing)    |
+| Grupo                  | Qtd | Features                                                                                                                                                                                                                                                                       | Acesso atual                  |
+| ---------------------- | --- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ----------------------------- |
+| Handlers órfãos        | 4   | Run Comparison, Pipeline Health, AI PR Description, Bug Report Flow                                                                                                                                                                                                            | Nenhum                        |
+| Dashboards silenciados | 16  | Release Score, Defect Trend, Traceability, Backlog Health, AI Effectiveness, Defect Seasonality, Silent Regression, AI Comparison, Cross-Squad Benchmark, Developer Profile, Suite Optimization, Pipeline Cost, Impact Alert, Incident Report, Requirement Score, Coverage Gap | Só no relatório semanal (`r`) |
+| Features CLI/env       | 2   | Quality Gate, Auto-Triage Toggle                                                                                                                                                                                                                                               | CLI/env var                   |
+| Documentação           | 1   | Flaky Thresholds Docs                                                                                                                                                                                                                                                          | `.env.example` + docs         |
+| Infra automática       | 1   | Git Metrics Adapter                                                                                                                                                                                                                                                            | Automático (fallback)         |
+| Infra interna          | 4   | Circuit Breaker, Config Safety, Error Handling, Security                                                                                                                                                                                                                       | Internal (não user-facing)    |
 
-**Features user-facing a expor:** 19 (2 handlers + 15 dashboards + 2 CLI/env)
+**Features user-facing a expor:** 22 (4 handlers + 16 dashboards + 2 CLI/env)
 
-### Wave 1 — Handlers Órfãos (P0)
+### Wave 1 — Handlers Órfãos + Novos (P0)
 
-| ID   | Item                                                                                               | Arquivo(s)                                                  | Esforço | Status |
-| ---- | -------------------------------------------------------------------------------------------------- | ----------------------------------------------------------- | ------- | ------ |
-| WA-1 | Wirear `handleRunComparison` → handler `'c'` no ACTION_HANDLERS + menu "Comparar execuções (HTML)" | `git_triggers/main.ts`, `session-state.ts`                  | 15min   | ⏳     |
-| WA-2 | Wirear Pipeline Health standalone → handler `'p'` + menu "Pipeline health (HTML)"                  | `git_triggers/batch-mode.ts`, `main.ts`, `session-state.ts` | 20min   | ⏳     |
+| ID    | Item                                                                                               | Arquivo(s)                                                          | Esforço | Status |
+| ----- | -------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------- | ------- | ------ |
+| WA-1  | Wirear `handleRunComparison` → handler `'c'` no ACTION_HANDLERS + menu "Comparar execuções (HTML)" | `git_triggers/session-state.ts`, `git_triggers/interactive-mode.ts` | 15min   | ✅     |
+| WA-2  | Wirear Pipeline Health standalone → handler `'p'` + menu "Pipeline health (HTML)"                  | `git_triggers/batch-mode.ts`, `git_triggers/interactive-mode.ts`    | 20min   | ✅     |
+| WA-11 | Wirear AI PR Description → handler `'i'` + menu "AI PR Description"                                | `git_triggers/ai-pr-desc.ts`, `git_triggers/interactive-mode.ts`    | 15min   | ✅     |
+| WA-13 | Wirear Bug Report Flow → handler `'g'` + menu "Bug Report Interativo"                              | `shared/bug-report.ts`, `git_triggers/interactive-mode.ts`          | 45min   | ✅     |
 
-### Wave 2 — Submenu de Dashboards Individuais (P0)
+### Wave 2 — Submenu de Dashboards Individuais + Novos (P0) ✅
 
-| ID   | Item                                                                                      | Arquivo(s)                                      | Esforço | Status |
-| ---- | ----------------------------------------------------------------------------------------- | ----------------------------------------------- | ------- | ------ |
-| WA-3 | Criar `_showDashboardMenu()` com `showSelect()` listando 15 dashboards                    | `git_triggers/main.ts`                          | 30min   | ⏳     |
-| WA-4 | Criar funções de geração standalone p/ cada dashboard (reusa helper `_loadProjectRuns()`) | `git_triggers/schedule-handler.ts` ou `main.ts` | 2h      | ⏳     |
-| WA-5 | Adicionar entry `'d'` + "Dashboards individuais" no menu UTILITARIOS                      | `session-state.ts`, `main.ts`                   | 10min   | ⏳     |
+| ID     | Item                                                                                      | Arquivo(s)                                                          | Esforço | Status |
+| ------ | ----------------------------------------------------------------------------------------- | ------------------------------------------------------------------- | ------- | ------ |
+| WA-3   | Criar `_showDashboardMenu()` com `showSelect()` listando 17 dashboards                    | `git_triggers/interactive-mode.ts`                                  | 30min   | ✅     |
+| WA-4   | Criar funções de geração standalone p/ cada dashboard (reusa helper `_loadProjectRuns()`) | `git_triggers/schedule-handler.ts`                                  | 2h      | ✅     |
+| WA-5   | Adicionar entry `'d'` + "Dashboards individuais" no menu UTILITARIOS                      | `git_triggers/session-state.ts`, `git_triggers/interactive-mode.ts` | 10min   | ✅     |
+| WA-12  | Adicionar Coverage Gap no submenu Dashboards                                              | `shared/generate-coverage-gap-html.ts`                              | 30min   | ✅     |
+| **DT** | Implementar Defect Trend dashboard `generateDefectTrendHtml`                              | `shared/defect-trend.ts` (novo)                                     | 2h      | ✅     |
 
-### Wave 3 — Features CLI/Env no Menu (P0)
+### Wave 3 — Features CLI/Env + Auto-Triage (P0) ✅
 
-| ID   | Item                                                                      | Arquivo(s)                                 | Esforço | Status |
-| ---- | ------------------------------------------------------------------------- | ------------------------------------------ | ------- | ------ |
-| WA-6 | Wirear Quality Gate → handler `'q'` + menu "Quality Gate"                 | `git_triggers/main.ts`, `session-state.ts` | 20min   | ⏳     |
-| WA-7 | Wirear Auto-Triage toggle → handler `'t'` + menu "Toggle: Bug automático" | `git_triggers/main.ts`, `session-state.ts` | 20min   | ⏳     |
+| ID    | Item                                                                                                   | Arquivo(s)                                                                           | Esforço | Status |
+| ----- | ------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------ | ------- | ------ |
+| WA-6  | Wirear Quality Gate → handler `'q'` + menu "Quality Gate"                                              | `git_triggers/interactive-mode.ts`, `shared/quality-gate.ts`                         | 20min   | ✅     |
+| WA-7  | Wirear Auto-Triage Toggle → handler `'t'` + `Config.autoTriageEnabled` + menu "Toggle: Bug automático" | `git_triggers/batch-mode.ts`, `git_triggers/interactive-mode.ts`, `shared/config.ts` | 1h      | ✅     |
+| WA-14 | Wirear Git Metrics Adapter → handler `'e'` + menu "Git Metrics Adapter (doc)"                          | `git_triggers/interactive-mode.ts`, `git_triggers/session-state.ts`                  | 10min   | ✅     |
 
 ### Wave 4 — Jira Management (P1)
 
@@ -194,10 +199,10 @@
 
 ### Wave 5 — Testes (P1)
 
-| ID    | Item                                    | Arquivo(s)                                           | Esforço | Status |
-| ----- | --------------------------------------- | ---------------------------------------------------- | ------- | ------ |
-| WA-9  | Testes para novos handlers/menu entries | `git_triggers/main.test.ts`, `session-state.test.ts` | 1h      | ⏳     |
-| WA-10 | Atualizar snapshot de menu se existir   | `session-state.test.ts`                              | 10min   | ⏳     |
+| ID    | Item                                    | Arquivo(s)                                                        | Esforço | Status |
+| ----- | --------------------------------------- | ----------------------------------------------------------------- | ------- | ------ |
+| WA-9  | Testes para novos handlers/menu entries | `git_triggers/main.test.ts`, `git_triggers/session-state.test.ts` | 1h      | ⏳     |
+| WA-10 | Atualizar snapshot de menu se existir   | `git_triggers/session-state.test.ts`                              | 10min   | ⏳     |
 
 ### Métricas alvo
 

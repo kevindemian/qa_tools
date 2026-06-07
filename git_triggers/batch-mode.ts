@@ -395,3 +395,12 @@ async function generatePipelineHealthReport(m: import('../shared/types.js').GitP
         printError('Falha ao gerar pipeline health', err);
     }
 }
+
+/**
+ * Standalone handler for pipeline health report — callable from interactive mode.
+ * @param m GitProvider instance for the current project
+ */
+export async function handlePipelineHealth(m: import('../shared/types.js').GitProvider): Promise<boolean> {
+    await generatePipelineHealthReport(m);
+    return false;
+}

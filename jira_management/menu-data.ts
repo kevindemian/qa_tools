@@ -93,6 +93,9 @@ export const ALIASES: Record<string, string> = {
     d: 'docs',
     documentação: 'docs',
     docs: 'docs',
+    'traceability-matrix': '25',
+    'release-score': '26',
+    'coverage-dashboard': '27',
     sair: '0',
     exit: '0',
     voltar: '/menu',
@@ -118,6 +121,10 @@ export const CATEGORIES: MenuItem[] = [
 export const SUB_MENUS: Record<string, MenuItem[]> = {
     reports: [
         { id: '17', label: 'Gerar relatório HTML' },
+        { section: '       DASHBOARDS' },
+        { id: '25', label: 'Traceability Matrix' },
+        { id: '26', label: 'Release Score' },
+        { id: '27', label: 'Coverage Dashboard' },
         { id: '0', label: 'Voltar' },
     ],
     tests: [

@@ -110,6 +110,7 @@ describe('SUB_MENUS', () => {
             const [, items] = entry;
             expect(items.length).toBeGreaterThan(0);
             for (const item of items) {
+                if (item.section) continue;
                 expect(item.id).toBeTruthy();
                 expect(item.label).toBeTruthy();
             }
@@ -123,6 +124,15 @@ describe('SUB_MENUS', () => {
         expect(ids).toContain('3');
         expect(ids).toContain('7');
         expect(ids).toContain('8');
+    });
+
+    it('reports sub-menu contains dashboard entries', async () => {
+        const reports = nonNull(SUB_MENUS.reports);
+        const ids = reports.map((i) => i.id);
+        expect(ids).toContain('25');
+        expect(ids).toContain('26');
+        expect(ids).toContain('27');
+        expect(ids).toContain('17');
     });
 
     it('config sub-menu has configKey on directory items', async () => {
