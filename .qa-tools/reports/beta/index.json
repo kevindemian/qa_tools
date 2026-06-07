@@ -20,5 +20,16 @@
     "passed": 1,
     "failed": 0,
     "skipped": 0
+  },
+  "e8c9c7fa7f7097d505c279cf24ad990aeac6ab9c": {
+    "sha": "e8c9c7fa7f7097d505c279cf24ad990aeac6ab9c",
+    "project": "beta",
+    "timestamp": 1780856731061,
+    "tool": "",
+    "branch": "",
+    "total": 2,
+    "passed": 2,
+    "failed": 0,
+    "skipped": 0
   }
 }
