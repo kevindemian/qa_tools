@@ -8,14 +8,17 @@ import { consensusGenerate, refineWithConsistency } from './llm-self-consistency
 
 const mockLlmPrompt = vi.mocked(llmPrompt);
 
-describe('consensusGenerate', () => {
-    const validator = new ArtifactValidator('test-suite');
-    validator.addInvariant('PASS', () => [
+function makeValidator(): ArtifactValidator<unknown> {
+    const v = new ArtifactValidator('test-suite');
+    v.addInvariant('PASS', () => [
         { passed: true, invariantId: 'PASS', message: 'ok', severity: 'error', artifactPath: '' },
     ]);
+    return v;
+}
 
-    const context = { inputRaw: '', outputRaw: {}, artifactType: 'test-suite' as const };
+const context = { inputRaw: '', outputRaw: {}, artifactType: 'test-suite' as const };
 
+describe('consensusGenerate', () => {
     beforeEach(() => {
         vi.clearAllMocks();
     });
@@ -23,7 +26,7 @@ describe('consensusGenerate', () => {
     it('returns consensus when all candidates pass and agree', async () => {
         mockLlmPrompt.mockResolvedValue({ tests: [] });
 
-        const result = await consensusGenerate({ tier: 'fast', system: '', user: '' }, validator, context, 2);
+        const result = await consensusGenerate({ tier: 'fast', system: '', user: '' }, makeValidator(), context, 2);
 
         expect(result.winner).toBeDefined();
         expect(result.candidates.length).toBeGreaterThan(0);
@@ -32,7 +35,7 @@ describe('consensusGenerate', () => {
     it('tries all candidates even if some fail validation', async () => {
         mockLlmPrompt.mockResolvedValueOnce(null).mockResolvedValueOnce({ tests: [] });
 
-        const result = await consensusGenerate({ tier: 'fast', system: '', user: '' }, validator, context, 2);
+        const result = await consensusGenerate({ tier: 'fast', system: '', user: '' }, makeValidator(), context, 2);
 
         expect(result.candidates.length).toBeGreaterThan(0);
     });
@@ -41,7 +44,7 @@ describe('consensusGenerate', () => {
         mockLlmPrompt.mockRejectedValue(new Error('API error'));
 
         await expect(
-            consensusGenerate({ tier: 'fast', system: '', user: '' }, validator, context, 2),
+            consensusGenerate({ tier: 'fast', system: '', user: '' }, makeValidator(), context, 2),
         ).rejects.toThrow();
     });
 
@@ -50,9 +53,49 @@ describe('consensusGenerate', () => {
             .mockResolvedValueOnce({ tests: [{ title: 'Test A' }] })
             .mockResolvedValueOnce({ tests: [{ title: 'Test B' }] });
 
+        const result = await consensusGenerate({ tier: 'fast', system: '', user: '' }, makeValidator(), context, 2);
+
+        expect(['none', 'low', 'high']).toContain(result.divergence);
+    });
+
+    it('reports low divergence for moderately similar candidates', async () => {
+        mockLlmPrompt.mockResolvedValueOnce({ a: 1, b: 2, c: 3, d: 4 }).mockResolvedValueOnce({ a: 5, b: 6, c: 7 });
+
+        const result = await consensusGenerate({ tier: 'fast', system: '', user: '' }, makeValidator(), context, 2);
+
+        expect(result.divergence).toBe('low');
+    });
+
+    it('recovers with fallback when all candidates fail validation', async () => {
+        const rejectInvariant = (a: unknown) =>
+            a && typeof a === 'object'
+                ? [
+                      {
+                          passed: false,
+                          invariantId: 'REJECT_ALL',
+                          message: 'no',
+                          severity: 'error' as const,
+                          artifactPath: '',
+                      },
+                  ]
+                : [
+                      {
+                          passed: true,
+                          invariantId: 'REJECT_ALL',
+                          message: 'ok',
+                          severity: 'error' as const,
+                          artifactPath: '',
+                      },
+                  ];
+        const validator = makeValidator();
+        validator.addInvariant('REJECT_ALL', rejectInvariant);
+
+        mockLlmPrompt.mockResolvedValueOnce({ some: 'data' }).mockResolvedValueOnce(null);
+
         const result = await consensusGenerate({ tier: 'fast', system: '', user: '' }, validator, context, 2);
 
-        expect(result.divergence).toBeDefined();
+        expect(result.winner).toBeDefined();
+        expect(result.refined).toBe(false);
     });
 
     it('auto-refines when divergence is high and refinement passes validation', async () => {
@@ -63,7 +106,7 @@ describe('consensusGenerate', () => {
             .mockResolvedValueOnce(SMALL_VAL)
             .mockResolvedValueOnce({ tests: [{ title: 'Test Converged' }] });
 
-        const result = await consensusGenerate({ tier: 'fast', system: '', user: '' }, validator, context, 2);
+        const result = await consensusGenerate({ tier: 'fast', system: '', user: '' }, makeValidator(), context, 2);
 
         expect(result.refined).toBe(true);
         expect(mockLlmPrompt).toHaveBeenCalledTimes(3);
@@ -72,11 +115,25 @@ describe('consensusGenerate', () => {
     it('falls back to preliminary winner when refinement result fails validation', async () => {
         const BIG_OBJ = { items: Array.from({ length: 20 }, (_, i) => ({ id: i, name: `field-${i}` })) };
         const SMALL_VAL = { single: 'value' };
-        mockLlmPrompt.mockResolvedValueOnce(BIG_OBJ).mockResolvedValueOnce(SMALL_VAL).mockResolvedValueOnce(null);
+        mockLlmPrompt
+            .mockResolvedValueOnce(BIG_OBJ)
+            .mockResolvedValueOnce(SMALL_VAL)
+            .mockResolvedValueOnce({ passing: false, _marked: true });
 
-        validator.addInvariant('REJECT_REFINED', () => [
-            { passed: false, invariantId: 'REJECT_REFINED', message: 'reject', severity: 'error', artifactPath: '' },
-        ]);
+        const validator = makeValidator();
+        validator.addInvariant('REJECT_MARKER', (a) =>
+            a && typeof a === 'object' && '_marked' in (a as Record<string, unknown>)
+                ? [
+                      {
+                          passed: false,
+                          invariantId: 'REJECT_MARKER',
+                          message: 'marked',
+                          severity: 'error',
+                          artifactPath: '',
+                      },
+                  ]
+                : [{ passed: true, invariantId: 'REJECT_MARKER', message: 'ok', severity: 'error', artifactPath: '' }],
+        );
 
         const result = await consensusGenerate({ tier: 'fast', system: '', user: '' }, validator, context, 2);
 
@@ -92,6 +149,38 @@ describe('consensusGenerate', () => {
             .mockResolvedValueOnce(SMALL_VAL)
             .mockRejectedValueOnce(new Error('Refinement API error'));
 
+        const result = await consensusGenerate({ tier: 'fast', system: '', user: '' }, makeValidator(), context, 2);
+
+        expect(result.refined).toBe(false);
+        expect(result.winner).toBeDefined();
+    });
+
+    it('falls back when refinement succeeds but re-validation rejects it', async () => {
+        const BIG_OBJ = { items: Array.from({ length: 20 }, (_, i) => ({ id: i, name: `field-${i}` })) };
+        const SMALL_VAL = { single: 'value' };
+        mockLlmPrompt
+            .mockResolvedValueOnce(BIG_OBJ)
+            .mockResolvedValueOnce(SMALL_VAL)
+            .mockResolvedValueOnce({ valid: 'refined' });
+
+        let callCount = 0;
+        const validator = makeValidator();
+        validator.addInvariant('CHECK', (a) => {
+            callCount++;
+            if (callCount === 4 && a && typeof a === 'object' && 'valid' in (a as Record<string, unknown>)) {
+                return [
+                    {
+                        passed: false,
+                        invariantId: 'CHECK',
+                        message: 'reject-on-revalidate',
+                        severity: 'error',
+                        artifactPath: '',
+                    },
+                ];
+            }
+            return [{ passed: true, invariantId: 'CHECK', message: 'ok', severity: 'error', artifactPath: '' }];
+        });
+
         const result = await consensusGenerate({ tier: 'fast', system: '', user: '' }, validator, context, 2);
 
         expect(result.refined).toBe(false);
@@ -100,13 +189,6 @@ describe('consensusGenerate', () => {
 });
 
 describe('refineWithConsistency', () => {
-    const validator = new ArtifactValidator('test-suite');
-    validator.addInvariant('PASS', () => [
-        { passed: true, invariantId: 'PASS', message: 'ok', severity: 'error', artifactPath: '' },
-    ]);
-
-    const context = { inputRaw: '', outputRaw: {}, artifactType: 'test-suite' as const };
-
     beforeEach(() => {
         vi.clearAllMocks();
     });
@@ -124,7 +206,7 @@ describe('refineWithConsistency', () => {
 
         const result = await refineWithConsistency(
             { tier: 'fast', system: '', user: '' },
-            validator,
+            makeValidator(),
             context,
             previousResult,
         );
@@ -134,11 +216,14 @@ describe('refineWithConsistency', () => {
     });
 
     it('falls back to previous result when refined output fails validation', async () => {
-        mockLlmPrompt.mockResolvedValue({ tests: [] });
+        mockLlmPrompt.mockResolvedValue({ _marked: true });
 
-        validator.addInvariant('REJECT', () => [
-            { passed: false, invariantId: 'REJECT', message: 'no', severity: 'error', artifactPath: '' },
-        ]);
+        const validator = makeValidator();
+        validator.addInvariant('REJECT', (a) =>
+            a && typeof a === 'object' && '_marked' in (a as Record<string, unknown>)
+                ? [{ passed: false, invariantId: 'REJECT', message: 'no', severity: 'error', artifactPath: '' }]
+                : [{ passed: true, invariantId: 'REJECT', message: 'ok', severity: 'error', artifactPath: '' }],
+        );
 
         const previousResult = {
             winner: { tests: [{ title: 'Original' }] },
@@ -172,7 +257,7 @@ describe('refineWithConsistency', () => {
 
         const result = await refineWithConsistency(
             { tier: 'fast', system: '', user: '' },
-            validator,
+            makeValidator(),
             context,
             previousResult,
         );
