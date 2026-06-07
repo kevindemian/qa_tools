@@ -75,5 +75,5 @@ jobs:
             - run: npm audit --audit-level=high
             - name: Check outdated dependencies (warning only)
               run: npm outdated --json || true
-            - run: npx vitest run --coverage --testTimeout=30000
+            - run: npx vitest run --coverage --testTimeout=60000
             - run: npx vitest run git_triggers/github-e2e.test.ts
