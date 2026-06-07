@@ -96,6 +96,9 @@ export default tseslint.config(
             'docs/**/*.ts',
             'jira_management/main.ts',
             'git_triggers/main.ts',
+            'git_triggers/cli-args.ts',
+            'git_triggers/cli-dispatch.ts',
+            'git_triggers/interactive-mode.ts',
         ],
         rules: {
             'no-console': 'off',

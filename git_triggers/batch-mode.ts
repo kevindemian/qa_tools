@@ -1,4 +1,7 @@
-/** Batch mode — run metrics, flakiness dashboard, pipeline failure analysis, flaky auto-actions, and test-impact selection headlessly. */
+/**
+ * Batch mode — run metrics, flakiness dashboard, pipeline failure analysis, flaky auto-actions, and test-impact selection headlessly.
+ * Uses unified CLI args from cli-args.ts.
+ */
 import { success, error, info, printError, warn, withSpinner } from '../shared/prompt.js';
 import { rootLogger } from '../shared/logger.js';
 import { loadMetrics, calculateFlakiness } from '../shared/metrics.js';
@@ -35,12 +38,13 @@ import {
     getProjects,
 } from './session-state.js';
 import { pollPipeline } from './pipeline-handler.js';
+import type { BatchCliArgs } from './cli-args.js';
+import { parseCliArgs } from './cli-args.js';
 
-/** Extract the next argument value after a flag, or `undefined` if out of bounds. */
-function _nextArg(args: string[], i: number): string | undefined {
-    return i + 1 < args.length ? args[i + 1] : undefined;
-}
-
+/**
+ * @deprecated Use parseCliArgs() from cli-args.ts instead.
+ * Backward-compatible wrapper that returns only set fields.
+ */
 export function parseBatchArgs(): {
     project?: string;
     branch?: string;
@@ -51,45 +55,26 @@ export function parseBatchArgs(): {
     teKey?: string;
     dryRun?: boolean;
 } {
-    const args = process.argv.slice(2);
-    const result: {
-        project?: string;
-        branch?: string;
-        auto?: boolean;
-        publish?: string;
-        runImpactedTests?: boolean;
-        conservative?: boolean;
-        teKey?: string;
-        dryRun?: boolean;
-    } = {};
-    for (let i = 0; i < args.length; i++) {
-        const val = _nextArg(args, i);
-        if ((args[i] === '--project' || args[i] === '-p') && val !== undefined) {
-            result.project = val;
-            i++;
-        } else if ((args[i] === '--branch' || args[i] === '-b') && val !== undefined) {
-            result.branch = val;
-            i++;
-        } else if (args[i] === '--auto' || args[i] === '--batch') {
-            result.auto = true;
-        } else if (args[i] === '--publish' && val !== undefined) {
-            result.publish = val;
-            i++;
-        } else if (args[i] === '--run-impacted-tests') {
-            result.runImpactedTests = true;
-        } else if (args[i] === '--conservative') {
-            result.conservative = true;
-        } else if (args[i] === '--dry-run') {
-            result.dryRun = true;
-        } else if ((args[i] === '--te-key' || args[i] === '-k') && val !== undefined) {
-            result.teKey = val;
-            i++;
-        }
-    }
+    const args = parseCliArgs();
+    if (args.mode !== 'batch') return {};
+    const result: Record<string, string | boolean> = {};
+    if (args.project !== undefined) result.project = args.project;
+    if (args.branch !== undefined) result.branch = args.branch;
+    if (args.auto) result.auto = true;
+    if (args.publish !== undefined) result.publish = args.publish;
+    if (args.runImpactedTests) result.runImpactedTests = true;
+    if (args.conservative) result.conservative = true;
+    if (args.teKey !== undefined) result.teKey = args.teKey;
+    if (args.dryRun) result.dryRun = true;
     return result;
 }
 
-async function setupBatchProject(batch: ReturnType<typeof parseBatchArgs>): Promise<{
+/**
+ * Sets up a batch project from CLI args.
+ * @param batch Parsed batch CLI arguments
+ * @returns Project setup info or null on failure
+ */
+async function setupBatchProject(batch: BatchCliArgs): Promise<{
     m: import('../shared/types.js').GitProvider;
     branch: string;
     projectName: string;
@@ -248,9 +233,14 @@ export function generateFlakinessDashboard(projectName: string, publishTarget?: 
     }
 }
 
-export async function tryBatchMode(): Promise<boolean> {
-    const batch = parseBatchArgs();
-    if (!batch.auto && !batch.project && !batch.branch) return false;
+/**
+ * Tries to run in batch mode.
+ * @param batchArgs Optional pre-parsed batch args (if not provided, parses from process.argv)
+ * @returns true if batch mode was executed, false otherwise
+ */
+export async function tryBatchMode(batchArgs?: BatchCliArgs): Promise<boolean> {
+    const batch = batchArgs ?? (parseCliArgs() as BatchCliArgs);
+    if (batch.mode !== 'batch' || (!batch.auto && !batch.project && !batch.branch)) return false;
 
     if (batch.auto) {
         Config.setAutoConfirm(true);
