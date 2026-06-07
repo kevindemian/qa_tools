@@ -234,9 +234,22 @@ export async function fileToJira(
     jiraResource: JiraResourceLike,
     report: BugReport,
     projectKey?: string,
+    options?: { confirm?: boolean },
 ): Promise<string> {
     const key = projectKey || Config.get('jiraProject');
     if (!key) throw new Error('Project key is required — set JIRA_PROJECT env var or provide projectKey param.');
+
+    const shouldConfirm = options?.confirm !== false;
+    if (shouldConfirm) {
+        info('');
+        info('=== Pré-visualização do Bug Report ===');
+        info(compose(report));
+        info('');
+        if (!(await askConfirm('Criar bug no Jira?', true))) {
+            info('Bug report cancelado.');
+            throw new Error('Bug report cancelled by user.');
+        }
+    }
 
     const fields: Record<string, unknown> = {
         project: { key },
@@ -273,7 +286,7 @@ export async function interactiveBugReportFlow(
     }
 
     try {
-        const key = await fileToJira(jiraResource, report, projectKey);
+        const key = await fileToJira(jiraResource, report, projectKey, { confirm: false });
         info(`Bug criado: ${key}`);
 
         if (report.linkedIssues && report.linkedIssues.length > 0 && linkManager) {

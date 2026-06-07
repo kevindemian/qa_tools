@@ -2,7 +2,7 @@ import { getOpenIssues } from './github-issues.js';
 import type { Mock, Mocked } from 'vitest';
 import { nonNull } from '../shared/test-utils.js';
 import { createMockAxiosInstance } from '../shared/test-utils/factories/response-factory.js';
-import type { AxiosInstance } from 'axios';
+import type { AxiosInstance } from '../shared/deps.js';
 
 vi.mock('./github-api', async () => ({
     apiGet: vi.fn(),

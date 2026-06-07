@@ -111,6 +111,8 @@ import { generateGitMetricsRuns, generateGitFailureClassifications } from '../sh
 import { handleHelp as _handleHelp, handleShowHistory as _handleShowHistory } from './ui-helpers.js';
 import { handleSetupWizard as _handleSetupWizard } from './case00-handler.js';
 import { showDocs } from '../shared/show-docs.js';
+import { showDashboardMenu } from '../shared/dashboard-menu.js';
+import type { DashboardDef } from '../shared/dashboard-menu.js';
 import type { CliArgs } from './cli-args.js';
 
 const validateEnv = createValidateEnv([
@@ -585,11 +587,7 @@ async function _dashboardCoverageGap(): Promise<void> {
 }
 
 async function _showDashboardMenu(): Promise<void> {
-    if (!currentProjectName) {
-        warn('Nenhum projeto selecionado.');
-        return;
-    }
-    const dashboards: Array<{ id: string; label: string; handler: () => Promise<void> }> = [
+    const dashboards: DashboardDef[] = [
         { id: '1', label: 'Release Score', handler: _dashboardReleaseScore },
         { id: '2', label: 'Defect Trends', handler: _dashboardDefectTrends },
         { id: '3', label: 'Traceability Matrix', handler: _dashboardTraceabilityMatrix },
@@ -608,15 +606,7 @@ async function _showDashboardMenu(): Promise<void> {
         { id: '16', label: 'Quality Gate', handler: _dashboardQualityGate },
         { id: '17', label: 'Coverage Gap', handler: _dashboardCoverageGap },
     ];
-    const choice = await showSelect('      Selecione um dashboard', [
-        ...dashboards.map((d) => ({ name: d.id + ' — ' + d.label, value: d.id })),
-        { name: '0 — Voltar', value: '0' },
-    ]);
-    if (choice === '0') return;
-    const dashboard = dashboards.find((d) => d.id === choice);
-    if (dashboard) {
-        await dashboard.handler();
-    }
+    await showDashboardMenu(currentProjectName, dashboards);
 }
 
 const ACTION_HANDLERS: Record<string, (m: GitProvider, pn: string, ns: string[]) => Promise<boolean>> = {

@@ -524,7 +524,7 @@ describe('case14 — change Cypress directory', async () => {
         const c = buildContext();
         const mod = case14;
         await mod.handler(c);
-        expect(c.pushHistory).toHaveBeenCalledWith('config-cypress', '/tmp/cypress', 'ok');
+        expect(c.pushHistory).toHaveBeenCalledWith('config-tests', '/tmp/cypress', 'ok');
         expect(stateModule.update).toHaveBeenCalled();
     });
 });

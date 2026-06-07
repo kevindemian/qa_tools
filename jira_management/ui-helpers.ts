@@ -114,7 +114,17 @@ export async function handleSpecialInput(
     level: string = 'main',
 ): Promise<boolean | '__exit__' | '__back__'> {
     const cmd = input.trim().toLowerCase();
-    if (cmd.startsWith('/help') || cmd === '/h' || cmd.startsWith('/h ')) {
+    if (
+        cmd.startsWith('/help') ||
+        cmd.startsWith('/h ') ||
+        cmd === '/h' ||
+        cmd === 'help' ||
+        cmd === 'ajuda' ||
+        cmd === 'h' ||
+        cmd.startsWith('help ') ||
+        cmd.startsWith('ajuda ') ||
+        cmd.startsWith('h ')
+    ) {
         showHelpLoop();
         return true;
     }
@@ -139,7 +149,7 @@ export async function handleSpecialInput(
     return false;
 }
 export async function dispatchChoice(choice: string, cmdCtx: CommandContext): Promise<'exit' | 'continue'> {
-    if (choice === 'd' || choice === 'docs') {
+    if (choice === 'docs') {
         await showDocs();
         return 'continue';
     }
@@ -207,7 +217,7 @@ export async function getAndResolveChoice(level: string, ctx: SessionContext): P
     if (choice === '/exit' || choice === '/sair' || choice === '/quit') choice = '0';
     const resolved = resolveAlias(choice);
     if (resolved !== choice) {
-        if (resolved === 'd' || resolved === 'docs' || getHandler(resolved)) return resolved;
+        if (resolved === 'docs' || getHandler(resolved)) return resolved;
         choice = resolved;
     }
     if (CATEGORY_IDS.has(choice)) return choice;
@@ -216,7 +226,7 @@ export async function getAndResolveChoice(level: string, ctx: SessionContext): P
     if (sr === '__back__') return '__back__';
     if (sr === true) return '__skip__';
     if (choice === '0') return level === 'main' ? '__exit__' : '__back__';
-    if (getHandler(choice) || choice === 'd' || choice === 'docs') return choice;
+    if (getHandler(choice) || choice === 'docs') return choice;
     warn('Opção inválida. Escolha entre as opções disponíveis ou digite /help.');
     return '__skip__';
 }

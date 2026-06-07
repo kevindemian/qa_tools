@@ -6,6 +6,7 @@ import type { ParseResult } from '../shared/result_parser.js';
 import type { PipelineTriggerResult, StateContainer } from '../shared/types.js';
 import type { GitProvider } from '../shared/types.js';
 import { writeEphemeral } from '../shared/temp-dir.js';
+import { cacheReport } from '../shared/report-cache.js';
 import {
     collectTestResults as _collectTestResults,
     createTestExecution as _createTestExecution,
@@ -151,7 +152,8 @@ async function _postPipeline(
             jiraBaseUrl,
         });
     }
-    if (parsed) {
+    if (parsed && parsed.stats) {
+        cacheReport(projectName, pipelineId, parsed.tests, parsed.stats, '', branch);
         await offerPipelineFailureAnalysis(parsed, (analysisReport) => {
             return handleBugCreation(parsed, pipelineId, branch, analysisReport, jiraResource);
         });
