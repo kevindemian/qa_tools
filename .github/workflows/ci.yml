@@ -25,7 +25,9 @@ jobs:
             - name: Verify protected config integrity
               run: |
                   FAIL=0
-                  while IFS='|' read -r FILE HASHFILE; do
+                  for spec in "validation_hook.ts|validation-hook.expected-hash" "AGENTS.md|agents.expected-hash" "opencode.jsonc|opencode-config.expected-hash"; do
+                    FILE="${spec%%|*}"
+                    HASHFILE="${spec##*|}"
                     EXPECTED=$(cat ".config/$HASHFILE" 2>/dev/null)
                     CONFIG_PATH="$HOME/.config/opencode/$FILE"
                     if [ -f "$CONFIG_PATH" ] && [ -n "$EXPECTED" ]; then
@@ -39,11 +41,7 @@ jobs:
                         echo "✅ $FILE integrity verified"
                       fi
                     fi
-                  done << 'CHECKEOF'
-                    validation_hook.ts|validation-hook.expected-hash
-                    AGENTS.md|agents.expected-hash
-                    opencode.jsonc|opencode-config.expected-hash
-            CHECKEOF
+                  done
                   exit $FAIL
             - name: Validation hook
               run: npx tsx ~/.config/opencode/validation_hook.ts --test
