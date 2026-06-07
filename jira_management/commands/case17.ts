@@ -33,22 +33,6 @@ import { cacheReport, listReports, loadReport } from '../../shared/report-cache.
 
 import Config from '../../shared/config.js';
 
-export type { RunStats, CiContext } from './case17-helpers.js';
-export {
-    CTRF_LAST_FILE,
-    GIT_HISTORY_RUNS,
-    isGitHubCi,
-    isGitLabCi,
-    buildGitTrendHtml,
-    buildJiraContextHtml,
-    injectAnalysisSection,
-    buildDiffSummary,
-    isValidCtrfData,
-    parseCliExtra,
-    saveMetricsJson,
-} from './case17-helpers.js';
-export { resolveMapping, resolveTestHistory, computeDiff, fetchGitHistory } from './case17-test-utils.js';
-
 export interface SourceResult {
     result: ParseResult;
     source: 'cache' | 'ci' | 'file';
