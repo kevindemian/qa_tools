@@ -25,11 +25,12 @@ jobs:
             - name: Verify protected config integrity
               run: |
                   FAIL=0
-                  for spec in "validation_hook.ts|validation-hook.expected-hash" "AGENTS.md|agents.expected-hash" "opencode.jsonc|opencode-config.expected-hash"; do
+                  # validation_hook.ts: committed copy in .config/ exists on CI
+                  for spec in "validation_hook.ts|validation-hook.expected-hash"; do
                     FILE="${spec%%|*}"
                     HASHFILE="${spec##*|}"
                     EXPECTED=$(cat ".config/$HASHFILE" 2>/dev/null)
-                    CONFIG_PATH="$HOME/.config/opencode/$FILE"
+                    CONFIG_PATH=".config/$FILE"
                     if [ -f "$CONFIG_PATH" ] && [ -n "$EXPECTED" ]; then
                       ACTUAL=$(sha256sum "$CONFIG_PATH" | cut -d' ' -f1)
                       if [ "$ACTUAL" != "$EXPECTED" ]; then
@@ -39,6 +40,22 @@ jobs:
                         FAIL=1
                       else
                         echo "✅ $FILE integrity verified"
+                      fi
+                    fi
+                  done
+                  # ~/.config/opencode/ files: warn-only (config files, not in repo)
+                  for spec in "AGENTS.md|agents.expected-hash" "opencode.jsonc|opencode-config.expected-hash"; do
+                    FILE="${spec%%|*}"
+                    HASHFILE="${spec##*|}"
+                    EXPECTED=$(cat ".config/$HASHFILE" 2>/dev/null)
+                    CONFIG_PATH="$HOME/.config/opencode/$FILE"
+                    if [ -f "$CONFIG_PATH" ] && [ -n "$EXPECTED" ]; then
+                      ACTUAL=$(sha256sum "$CONFIG_PATH" | cut -d' ' -f1)
+                      if [ "$ACTUAL" != "$EXPECTED" ]; then
+                        echo "⚠️ $FILE hash mismatch (dev machine only)"
+                        FAIL=1
+                      else
+                        echo "✅ $FILE integrity verified (dev machine)"
                       fi
                     fi
                   done
@@ -58,5 +75,5 @@ jobs:
             - run: npm audit --audit-level=high
             - name: Check outdated dependencies (warning only)
               run: npm outdated --json || true
-            - run: npx vitest run --coverage --forceExit --testTimeout=30000
-            - run: npx vitest run --forceExit git_triggers/github-e2e.test.ts
+            - run: npx vitest run --coverage --testTimeout=30000
+            - run: npx vitest run git_triggers/github-e2e.test.ts
