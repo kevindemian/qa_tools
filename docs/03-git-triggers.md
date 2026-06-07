@@ -14,20 +14,30 @@ Ao iniciar, um menu interativo é exibido. O usuário seleciona um projeto (mape
 
 **Opções do menu:**
 
-| #   | Operação                                 |
-| --- | ---------------------------------------- |
-| 00  | Setup wizard CI/CD                       |
-| 1   | Disparar pipeline                        |
-| 2   | Listar schedules (GitLab)                |
-| 3   | Disparar schedule (GitLab)               |
-| 4   | Criar MR/PR                              |
-| 5   | Listar MRs/PRs aprovados                 |
-| 6   | Fazer merge por ID                       |
-| 7   | Nivelar branches (main → rel_cand → dev) |
-| 8   | Exportar variáveis CI/CD                 |
-| 9   | Trocar de projeto                        |
-| a   | Dashboard flakiness (HTML)               |
-| 0   | Sair / Voltar                            |
+| #      | Operação                                 |
+| ------ | ---------------------------------------- |
+| 00 / w | Setup wizard CI/CD                       |
+| 1      | Disparar pipeline                        |
+| 2      | Listar schedules (GitLab)                |
+| 3      | Disparar schedule (GitLab)               |
+| 4      | Criar MR/PR                              |
+| 5      | Listar MRs/PRs aprovados                 |
+| 6      | Fazer merge por ID                       |
+| 7      | Nivelar branches (main → rel_cand → dev) |
+| 8      | Exportar variáveis CI/CD                 |
+| 9      | Trocar de projeto                        |
+| a      | Dashboard flakiness (HTML)               |
+| b      | Executar batch                           |
+| c      | Comparar execuções (HTML)                |
+| d      | Dashboards individuais (submenu)         |
+| e      | Git Metrics Adapter (doc)                |
+| g      | Bug Report Interativo                    |
+| i      | AI PR Description                        |
+| p      | Pipeline health (HTML)                   |
+| q      | Quality Gate (HTML)                      |
+| r      | Relatório completo de qualidade          |
+| t      | Toggle: Bug automático                   |
+| 0      | Sair / Voltar                            |
 
 Em qualquer prompt, comandos adicionais estão disponíveis:
 
@@ -308,11 +318,11 @@ Gera um dashboard HTML com análises de flakiness dos testes a partir do histór
 
 ---
 
-## 10. Batch Mode
+## 10. Batch Mode (Opção `b`)
 
 > Execução não-interativa para pipelines CI/CD. Detecta automaticamente os argumentos `--batch` / `--auto` (e também `--project` ou `--branch` sozinhos) e executa sem prompts.
 
-O batch mode permite disparar uma pipeline, coletar resultados, analisar falhas com IA e gerar dashboard de flakiness em **um único comando**.
+O batch mode permite disparar uma pipeline, coletar resultados, analisar falhas com IA e gerar dashboard de flakiness em **um único comando**. No menu interativo, a opção `b` executa `tryBatchMode()`.
 
 ### Flags
 
@@ -468,6 +478,156 @@ Analisa o impacto de alterações nos testes existentes usando o diff entre bran
 | `QA_TOOLS_LOGS_DIR`   | Não         | Sobrescreve `LOG_DIR` para diretório de logs                            |
 
 > Consulte [`docs/06-env-vars.md`](06-env-vars.md) para a tabela completa de todas as 16 variáveis LLM.
+
+---
+
+## 13. Comparar execuções (Opção `c`)
+
+Gera relatório comparando as duas execuções mais recentes do projeto via LLM. O resultado é exibido no terminal.
+
+### Fluxo
+
+1. Carrega métricas do projeto atual (`loadMetrics()`)
+2. Valida mínimo de **2 execuções** registradas
+3. Envia os dados para IA via `compareRuns()`
+4. Exibe a análise comparativa
+
+**Arquivo:** `shared/run-comparison.ts`
+
+---
+
+## 14. Pipeline Health (Opção `p`)
+
+Gera um dashboard HTML com a saúde consolidada do pipeline — métricas agregadas de todas as execuções do projeto.
+
+### Fluxo
+
+1. Carrega métricas e chama `aggregatePipelineHealth()`
+2. Gera HTML via `generatePipelineHealthHtml()`
+3. Salva e abre no navegador
+
+**Arquivo:** `git_triggers/batch-mode.ts` — `handlePipelineHealth()`
+
+---
+
+## 15. Quality Gate (Opção `q`)
+
+Exibe o Quality Gate do projeto — verifica se pass rate, flaky rate, cobertura e velocidade estão dentro dos thresholds.
+
+| Métrica         | Threshold |
+| --------------- | --------: |
+| Pass rate mín.  |       80% |
+| Flaky rate máx. |       30% |
+| Cobertura mín.  |       70% |
+| Velocidade máx. |   8s/test |
+
+**Arquivo:** `shared/quality-gate.ts` — `runQualityGate()`
+
+---
+
+## 16. Bug Report Interativo (Opção `g`)
+
+Cria Bug Reports no Jira com auxílio de IA. Descreva o bug em linguagem natural; o sistema gera e cria a issue automaticamente.
+
+### Pré-requisitos
+
+`JIRA_BASE_URL`, `JIRA_PERSONAL_TOKEN`, `JIRA_PROJECT` configurados.
+
+### Fluxo
+
+1. Verifica configuração Jira
+2. Pergunta detalhes do bug (título, descrição, componente)
+3. Opcional: enriquece com IA
+4. Cria a issue no Jira via `interactiveBugReportFlow()`
+
+**Arquivo:** `shared/bug-report.ts`
+
+---
+
+## 17. AI PR Description (Opção `i`)
+
+Gera descrição de PR/MR a partir do diff entre branches usando IA (tier **fast**). Diferente da opção 4 (que gera durante o fluxo de criação), esta é **standalone** — apenas gera a descrição, sem criar o MR.
+
+### Fluxo
+
+1. Solicita branch de origem e destino
+2. Obtém o diff via `getDiff()`
+3. Envia para LLM via `generatePrDescription()`
+4. Exibe a descrição gerada
+
+**Arquivo:** `git_triggers/ai-pr-desc.ts`
+
+---
+
+## 18. Dashboards Individuais (Opção `d`)
+
+Submenu interativo com **17 dashboards HTML**. Cada um abre no navegador com dados do projeto atual.
+
+| #   | Dashboard             | Fonte de dados                     |
+| --- | --------------------- | ---------------------------------- |
+| 1   | Release Score         | Métricas + health score            |
+| 2   | Defect Trends         | Classificação de falhas            |
+| 3   | Traceability Matrix   | Métricas (épicos × testes)         |
+| 4   | AI Effectiveness      | Registros de IA                    |
+| 5   | Defect Seasonality    | Classificação de falhas            |
+| 6   | Silent Regression     | Duração dos testes                 |
+| 7   | AI Test Comparison    | Registros de IA                    |
+| 8   | Cross-Squad Benchmark | Todos os projetos                  |
+| 9   | Developer Profile     | Classificação de falhas            |
+| 10  | Suite Optimization    | Duração/flakiness dos testes       |
+| 11  | Backlog Health        | —                                  |
+| 12  | Incident Report       | Health + regressão + sazonalidade  |
+| 13  | Pipeline Cost         | Execuções (custo por minuto)       |
+| 14  | Pipeline Impact Alert | Pass rate + falhas + cobertura     |
+| 15  | Requirement Score     | —                                  |
+| 16  | Quality Gate          | Config thresholds                  |
+| 17  | Coverage Gap          | Jira (requer `JIRA_*` configurado) |
+
+**Arquivo:** `git_triggers/interactive-mode.ts`
+
+---
+
+## 19. Relatório Completo de Qualidade (Opção `r`)
+
+Gera um **HTML único** com todos os 16 dashboards acima em uma página, via `generateWeeklyQualityReport()`.
+
+### Diferença para a opção `d`
+
+|            | `d` (individuais)   | `r` (completo)            |
+| ---------- | ------------------- | ------------------------- |
+| Escopo     | 1 dashboard por vez | Todos os 16 em uma página |
+| Navegação  | Submenu interativo  | Abre direto               |
+| Uso típico | Investigação focada | Visão geral semanal       |
+
+**Arquivo:** `git_triggers/schedule-handler.ts`
+
+---
+
+## 20. Auto-Triage Toggle (Opção `t`)
+
+Alterna a criação automática de bugs Jira para novas falhas. O estado dura apenas a sessão atual.
+
+| Estado     | Comportamento                                |
+| ---------- | -------------------------------------------- |
+| Ativado    | Bugs criados automaticamente                 |
+| Desativado | Usuário é perguntado antes de criar cada bug |
+
+Para persistir entre sessões: `QA_AUTO_BUG=true` no `.env`.
+
+**Arquivo:** `git_triggers/interactive-mode.ts`
+
+---
+
+## 21. Git Metrics Adapter (Opção `e`)
+
+Exibe informações sobre o adaptador que gera métricas sintéticas a partir do histórico Git quando não há pipelines (menos de 2 execuções).
+
+| Função                                | O que gera                         |
+| ------------------------------------- | ---------------------------------- |
+| `generateGitMetricsRuns()`            | Execuções simuladas do git history |
+| `generateGitFailureClassifications()` | Classificação de falhas simuladas  |
+
+**Arquivo:** `shared/git-metrics-adapter.ts`
 
 ---
 

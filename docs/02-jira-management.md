@@ -28,6 +28,9 @@
 - [18 — Gerar testes de user story (IA)](#18--gerar-testes-de-user-story-ia)
 - [19 — Histórico / Cobertura](#19--histórico--cobertura)
 - [20 — Criar Bug Report](#20--criar-bug-report)
+- [25 — Traceability Matrix](#25--traceability-matrix)
+- [26 — Release Score](#26--release-score)
+- [27 — Coverage Dashboard](#27--coverage-dashboard)
 - [21 — Análise de gaps de cobertura](#21--análise-de-gaps-de-cobertura)
 - [22 — Impacto de mudanças (test impact)](#22--impacto-de-mudanças-test-impact)
 - [23 — Feedback de IA](#23--feedback-de-ia)
@@ -40,7 +43,7 @@ O menu é organizado em categorias com sub-menus:
 
 | Categoria                 | Opções                                                                                                                                                   |
 | ------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| GERAÇÃO DE RELATÓRIOS     | 17 — Gerar relatório HTML                                                                                                                                |
+| GERAÇÃO DE RELATÓRIOS     | 17 — Gerar relatório HTML, 25 — Traceability Matrix, 26 — Release Score, 27 — Coverage Dashboard                                                         |
 | GERAÇÃO DE CASOS DE TESTE | 1 — Criar testes a partir de CSV, 11 — Gerar template, 13 — Criar Test Execution, 15 — Importar JSON, 18 — Gerar testes via IA                           |
 | BUG REPORT                | 20 — Criar Bug Report                                                                                                                                    |
 | ANÁLISE E HISTÓRICO       | 19 — Histórico / Cobertura, 21 — Gaps de cobertura, 22 — Test impact, 23 — Feedback de IA, 24 — Setup wizard CI/CD                                       |
@@ -731,10 +734,61 @@ Executa o wizard interativo de configuração de CI/CD. Gera pipelines GitHub Ac
 
 **Saída:** O feedback é persistido em `~/.local/state/qa_tools_state.json` e exibido no sumário da sessão.
 
-| Alias         | Resolve para |
-| ------------- | ------------ |
-| `ai-feedback` | `23`         |
-| `feedback`    | `23`         |
+| Alias                 | Resolve para |
+| --------------------- | ------------ |
+| `ai-feedback`         | `23`         |
+| `feedback`            | `23`         |
+| `traceability-matrix` | `25`         |
+| `release-score`       | `26`         |
+| `coverage-dashboard`  | `27`         |
+
+---
+
+### 25 — Traceability Matrix
+
+Gera uma matriz de rastreabilidade HTML a partir das métricas armazenadas no `metrics.json`. Mostra o mapeamento entre épicos, testes e cobertura.
+
+**Fluxo:**
+
+1. Carrega métricas via `loadMetrics()`
+2. Constrói a matriz via `buildTraceabilityMatrix()`
+3. Gera HTML via `generateTraceabilityHtml()`
+4. Salva em `reports/traceability-matrix-<projeto>.html` e abre no navegador
+
+**Arquivos:** `jira_management/commands/case25.ts`, `shared/traceability-matrix.ts`
+
+### 26 — Release Score
+
+Gera um dashboard HTML com a pontuação de release baseada em:
+
+- Health score do projeto (pass rate, flaky rate, coverage)
+- Release score calculado via `calculateReleaseScore()`
+- Score final e status (pass/fail)
+
+**Fluxo:**
+
+1. Carrega métricas via `loadMetrics()`
+2. Filtra execuções do projeto atual
+3. Calcula health score e flakiness
+4. Gera HTML via `generateReleaseScoreHtml()`
+5. Salva e abre no navegador
+
+**Arquivos:** `jira_management/commands/case26.ts`, `shared/release-score.ts`
+
+### 27 — Coverage Dashboard
+
+Gera um dashboard HTML de cobertura de testes a partir da análise de gaps no Jira. Similar à opção 21, mas sem prompts interativos — gera e abre o HTML diretamente.
+
+**Fluxo:**
+
+1. Chama `analyzeCoverageGaps()` com o JiraResource do projeto atual
+2. Gera HTML via `generateCoverageGapHtml()` com:
+    - Resumo de cobertura (total de issues, cobertas, gaps, % raw e ponderada)
+    - Épicos abaixo do threshold
+    - Tabela de gaps com chave, resumo, tipo, prioridade, peso e link do épico
+3. Salva em `reports/coverage-dashboard-<projeto>.html` e abre no navegador
+
+**Arquivos:** `jira_management/commands/case27.ts`, `shared/coverage-gap.ts`, `shared/generate-coverage-gap-html.ts`
 
 ---
 
