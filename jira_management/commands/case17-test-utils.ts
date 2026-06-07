@@ -4,7 +4,8 @@ import { AdmZip } from '../../shared/deps.js';
 import { createHttpClient } from '../../shared/http-client.js';
 import Config from '../../shared/config.js';
 import { rootLogger } from '../../shared/logger.js';
-import type { CtrfData, FlatTest } from '../../shared/result_parser.js';
+import type { CtrfData, FlatTest, ParseResult } from '../../shared/result_parser.js';
+import { parseTestResults } from '../../shared/result_parser.js';
 import type { TestHistoryRun } from '../../shared/report-generator.js';
 import type {
     GitHubWorkflowRun,
@@ -286,4 +287,91 @@ async function fetchGitLabHistory(): Promise<CiContext> {
         rootLogger.warn('fetchGitLabHistory failed: ' + (err as Error).message);
         return { commits: '', runs: [], flakyTests: '' };
     }
+}
+
+async function _downloadAndParseLatestGitHubRun(): Promise<ParseResult | null> {
+    const token = Config.getDefault().get('githubToken') || '';
+    const repo = Config.get('GITHUB_REPOSITORY') || '';
+    if (!token || !repo) return null;
+    const client = createHttpClient({
+        baseUrl: 'https://api.github.com',
+        authHeader: { Authorization: 'Bearer ' + token },
+    });
+    try {
+        const runsResp = await client.get<GitHubWorkflowRunsResponse>(
+            `/repos/${repo}/actions/runs?per_page=1&status=success`,
+        );
+        const runs = runsResp.data.workflow_runs || [];
+        if (runs.length === 0) return null;
+        const latest = runs[0];
+        if (!latest) return null;
+        const artResp = await client.get<GitHubArtifactsResponse>(
+            `/repos/${repo}/actions/runs/${String(latest.id)}/artifacts`,
+        );
+        const artifacts = artResp.data.artifacts || [];
+        const ctrf = artifacts.find((a) => {
+            const name = (a.name || '').toLowerCase();
+            return name.includes('ctrf') || name.includes('test-results');
+        });
+        if (!ctrf) return null;
+        const zipResp = await client.get(`/repos/${repo}/actions/artifacts/${String(ctrf.id)}/zip`, {
+            responseType: 'arraybuffer' as const,
+        });
+        const zip = new AdmZip(Buffer.from(zipResp.data));
+        for (const entry of zip.getEntries()) {
+            if (!entry.name.endsWith('.json')) continue;
+            const raw = entry.getData().toString('utf8');
+            const parsed = parseTestResults(JSON.parse(raw));
+            if (parsed.stats.total > 0) return parsed;
+        }
+        return null;
+    } catch (err: unknown) {
+        rootLogger.warn('downloadLatestArtifact failed: ' + (err instanceof Error ? err.message : String(err)));
+        return null;
+    }
+}
+
+async function _downloadAndParseLatestGitLabRun(): Promise<ParseResult | null> {
+    const token = Config.get('CI_JOB_TOKEN') || '';
+    const projectId = Config.get('CI_PROJECT_ID') || '';
+    const serverUrl = Config.get('CI_SERVER_URL') || 'https://gitlab.com';
+    if (!token || !projectId) return null;
+    const client = createHttpClient({
+        baseUrl: serverUrl + '/api/v4',
+        authHeader: { 'PRIVATE-TOKEN': token },
+    });
+    try {
+        const runsResp = await client.get(`/projects/${projectId}/pipelines?per_page=1`);
+        const runs: unknown[] = (runsResp.data as unknown[]) || [];
+        if (runs.length === 0) return null;
+        const pipeline = runs[0] as { id?: number; created_at?: string };
+        const jobsResp = await client.get(`/projects/${projectId}/pipelines/${String(pipeline.id)}/jobs`);
+        const jobs: GitLabJob[] = (jobsResp.data as GitLabJob[]) || [];
+        const testJob = jobs.find((j) => {
+            const name = (j.name || '').toLowerCase();
+            return name.includes('test') || name.includes('e2e') || name.includes('ctrf');
+        });
+        if (!testJob) return null;
+        const artResp = await client.get(`/projects/${projectId}/jobs/${String(testJob.id)}/artifacts`, {
+            responseType: 'arraybuffer' as const,
+            maxRedirects: 5,
+        });
+        const zip = new AdmZip(Buffer.from(artResp.data));
+        for (const entry of zip.getEntries()) {
+            if (!entry.name.endsWith('.json')) continue;
+            const raw = entry.getData().toString('utf8');
+            const parsed = parseTestResults(JSON.parse(raw));
+            if (parsed.stats.total > 0) return parsed;
+        }
+        return null;
+    } catch (err: unknown) {
+        rootLogger.warn('downloadLatestArtifact failed: ' + (err instanceof Error ? err.message : String(err)));
+        return null;
+    }
+}
+
+export async function fetchLatestTestRun(): Promise<ParseResult | null> {
+    if (isGitHubCi()) return _downloadAndParseLatestGitHubRun();
+    if (isGitLabCi()) return _downloadAndParseLatestGitLabRun();
+    return null;
 }
