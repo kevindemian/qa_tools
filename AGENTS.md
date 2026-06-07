@@ -348,3 +348,25 @@ No rule may be reinterpreted, weakened, bypassed or combined to violate another 
 If ambiguity, uncertainty, contradiction or insufficient authority exists:
 
 STOP.
+
+
+## 17. PROTECTED PATHS — ZERO ACCESS (ABSOLUTE)
+
+The following files are ABSOLUTELY OFF-LIMITS:
+
+- `~/.config/opencode/validation_hook.ts`
+- `~/.config/opencode/AGENTS.md`
+- `~/.config/opencode/opencode.jsonc`
+
+RULES:
+- No read, write, stat, import, grep, diff, execute, or reference of any kind
+- No suggestion, proposal, or plan involving these files
+- No "just checking if they exist"
+- No "root cause analysis" that requires reading them
+
+If a task cannot be completed without accessing these files:
+→ The agent MUST IMMEDIATELY STOP and report:
+  "TASK REJECTED: involves protected config file(s): <paths>. No action taken."
+
+VIOLATION: Any access = critical failure. Session terminates immediately.
+This rule may only be modified by explicit user command, never by agent initiative.
