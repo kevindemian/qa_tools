@@ -126,13 +126,14 @@ describe('SUB_MENUS', () => {
         expect(ids).toContain('8');
     });
 
-    it('reports sub-menu contains dashboard entries', async () => {
+    it('reports sub-menu has dashboards entry via d', async () => {
         const reports = nonNull(SUB_MENUS.reports);
         const ids = reports.map((i) => i.id);
-        expect(ids).toContain('25');
-        expect(ids).toContain('26');
-        expect(ids).toContain('27');
+        expect(ids).toContain('d');
         expect(ids).toContain('17');
+        expect(ids).not.toContain('25');
+        expect(ids).not.toContain('26');
+        expect(ids).not.toContain('27');
     });
 
     it('config sub-menu has configKey on directory items', async () => {
