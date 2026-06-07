@@ -6,7 +6,8 @@ import { pushBreadcrumb, clearBreadcrumbs } from '../shared/breadcrumbs.js';
 import { createValidateEnv, offerEnvSetup, setupSigint } from '../shared/cli_base.js';
 import Config from '../shared/config.js';
 import { showSplash } from '../shared/splash.js';
-import { loadMetrics } from '../shared/metrics.js';
+import { loadMetrics, calculateFlakiness, type MetricsRun } from '../shared/metrics.js';
+import { compareRuns } from '../shared/run-comparison.js';
 import { calculateHealthScore } from '../shared/health-score.js';
 import { palette } from '../shared/palette.js';
 import { defaultOutput } from '../shared/output.js';
@@ -42,6 +43,7 @@ import {
     projectId,
     getProjects,
     clearProjectCache,
+    currentProjectName,
 } from './session-state.js';
 import {
     handleTriggerPipeline,
@@ -64,7 +66,48 @@ import {
     handleFlakinessDashboard,
     generateWeeklyQualityReport,
 } from './schedule-handler.js';
-import { tryBatchMode, parseBatchArgs } from './batch-mode.js';
+import { tryBatchMode, parseBatchArgs, handlePipelineHealth } from './batch-mode.js';
+import { generatePrDescription } from './ai-pr-desc.js';
+import { interactiveBugReportFlow } from '../shared/bug-report.js';
+import JiraClient from '../shared/jira-client.js';
+import JiraLinkManager from '../jira_management/jira_link_manager.js';
+
+import { generateReleaseScoreHtml } from '../shared/release-score.js';
+import { generateDefectTrendHtml } from '../shared/defect-trend.js';
+import { generateTraceabilityHtml } from '../shared/traceability-matrix.js';
+import { generateAiEffectivenessHtml } from '../shared/ai-effectiveness.js';
+import { generateSeasonalityHtml } from '../shared/defect-seasonality.js';
+import { generateSilentRegressionHtml } from '../shared/silent-regression.js';
+import { generateAiComparisonHtml } from '../shared/ai-comparison.js';
+import { generateBenchmarkHtml } from '../shared/cross-squad-benchmark.js';
+import { generateDeveloperProfileHtml } from '../shared/developer-profile.js';
+import { generateOptimizationHtml } from '../shared/suite-optimization.js';
+import { generateBacklogHealthHtml } from '../shared/backlog-health.js';
+import { generateIncidentReportHtml } from '../shared/incident-report.js';
+import { generatePipelineCostHtml } from '../shared/pipeline-cost.js';
+import { generateImpactAlertHtml } from '../shared/impact-alert.js';
+import { generateRequirementScoreHtml } from '../shared/requirement-score.js';
+import { calculateReleaseScore } from '../shared/release-score.js';
+import { aggregateDefectTrends } from '../shared/defect-trend.js';
+import { buildTraceabilityMatrix } from '../shared/traceability-matrix.js';
+import { computeAiEffectiveness } from '../shared/ai-effectiveness.js';
+import { aggregateDefectSeasonality } from '../shared/defect-seasonality.js';
+import { detectSilentRegression } from '../shared/silent-regression.js';
+import { compareAiVsManual } from '../shared/ai-comparison.js';
+import { computeCrossSquadBenchmark } from '../shared/cross-squad-benchmark.js';
+import { buildDeveloperProfile } from '../shared/developer-profile.js';
+import { analyzeSuiteOptimization } from '../shared/suite-optimization.js';
+import { analyzeBacklogHealth } from '../shared/backlog-health.js';
+import { buildIncidentReport } from '../shared/incident-report.js';
+import { analyzePipelineImpact } from '../shared/impact-alert.js';
+import { calculatePipelineCost } from '../shared/pipeline-cost.js';
+import { calculateRequirementScores } from '../shared/requirement-score.js';
+import { writeReport } from '../shared/temp-dir.js';
+import { runQualityGate, formatQualityGateText } from '../shared/quality-gate.js';
+import { openWithFallback } from '../shared/open.js';
+import { generateCoverageGapHtml } from '../shared/generate-coverage-gap-html.js';
+import { analyzeCoverageGaps } from '../shared/coverage-gap.js';
+import { generateGitMetricsRuns, generateGitFailureClassifications } from '../shared/git-metrics-adapter.js';
 import { handleHelp as _handleHelp, handleShowHistory as _handleShowHistory } from './ui-helpers.js';
 import { handleSetupWizard as _handleSetupWizard } from './case00-handler.js';
 import { showDocs } from '../shared/show-docs.js';
@@ -179,6 +222,403 @@ function withErrorHandling(
         );
 }
 
+/**
+ * Handler for run comparison — compares the two most recent runs for the current project.
+ */
+async function handleRunComparison(): Promise<boolean> {
+    const project = currentProjectName;
+    if (!project) {
+        warn('Nenhum projeto selecionado.');
+        return false;
+    }
+    const store = loadMetrics();
+    const projectRuns = store.runs
+        .filter((r) => r.project === project)
+        .sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
+    if (projectRuns.length < 2) {
+        warn('São necessárias pelo menos 2 execuções para comparar.');
+        return false;
+    }
+    const runA = projectRuns[projectRuns.length - 2] as MetricsRun;
+    const runB = projectRuns[projectRuns.length - 1] as MetricsRun;
+    const comparison = await compareRuns(runA, runB);
+    if (comparison) {
+        title('Comparação de Execuções');
+        info(comparison);
+    } else {
+        warn('Falha ao gerar comparação.');
+    }
+    return false;
+}
+
+/**
+ * Handler for pipeline health report — generates standalone pipeline health HTML.
+ */
+async function handlePipelineHealthWrapper(m: GitProvider): Promise<boolean> {
+    await handlePipelineHealth(m);
+    return false;
+}
+
+/**
+ * Handler for AI PR Description — generates PR/MR description from git diff.
+ */
+async function handleAiPrDescription(m: GitProvider): Promise<boolean> {
+    const source = prompt('Branch de origem (ex: feature/minha-branch):', { hint: 'source branch' });
+    if (!source.trim()) {
+        warn('Branch de origem obrigatória.');
+        return false;
+    }
+    const target = prompt('Branch de destino (ex: main, develop):', { hint: 'target branch', default: 'main' });
+    if (!target.trim()) {
+        warn('Branch de destino obrigatória.');
+        return false;
+    }
+    info('Gerando descrição do PR/MR via IA...');
+    const description = await generatePrDescription(m, source.trim(), target.trim());
+    if (description) {
+        title('Descrição do PR/MR Gerada');
+        info(description);
+    } else {
+        warn('Falha ao gerar descrição (diff vazio ou erro na IA).');
+    }
+    return false;
+}
+
+/**
+ * Handler for Bug Report Interactive Flow — creates bug reports in Jira.
+ */
+async function handleBugReportFlow(_m: GitProvider): Promise<boolean> {
+    if (!Config.get('jiraBaseUrl') || !Config.get('jiraPersonalToken')) {
+        warn('Jira não configurado. Configure JIRA_BASE_URL e JIRA_PERSONAL_TOKEN no .env');
+        return false;
+    }
+    const projectKey = Config.get('jiraProject');
+    if (!projectKey) {
+        warn('JIRA_PROJECT não configurado no .env');
+        return false;
+    }
+    const jiraResource = new JiraClient(
+        Config.get('jiraPersonalToken'),
+        Config.get('jiraBaseUrl') + '/rest/api/2',
+        Config.get('jiraMode'),
+    );
+    const linkManager = new JiraLinkManager(jiraResource);
+    await interactiveBugReportFlow(jiraResource, projectKey, undefined, linkManager);
+    return false;
+}
+
+/**
+ * Load project runs with git fallback — shared helper for dashboards.
+ */
+function _loadProjectRunsHelper(): {
+    projectRuns: MetricsRun[];
+    failureClassifications: import('../shared/metrics.js').FailureClassification[];
+    usingGitFallback: boolean;
+} | null {
+    if (!currentProjectName) {
+        warn('Nenhum projeto selecionado.');
+        return null;
+    }
+    const store = loadMetrics();
+    let projectRuns = store.runs.filter((r) => r.project === currentProjectName);
+    let failureClassifications = store.failureClassifications ?? [];
+    let usingGitFallback = false;
+    if (projectRuns.length < 2) {
+        const gitRuns = generateGitMetricsRuns({ projectName: currentProjectName });
+        if (gitRuns.length >= 2) {
+            projectRuns = gitRuns;
+            failureClassifications = generateGitFailureClassifications({ projectName: currentProjectName });
+            usingGitFallback = true;
+        } else {
+            warn('Menos de 2 execuções registradas. Execute pipelines primeiro.');
+            return null;
+        }
+    }
+    return { projectRuns, failureClassifications, usingGitFallback };
+}
+
+async function _generateAndOpenDashboard(html: string, suffix: string, label: string): Promise<void> {
+    const outPath = writeReport('dashboard-' + suffix + '-' + currentProjectName + '.html', html);
+    await openWithFallback(outPath, label, info);
+}
+
+async function _dashboardReleaseScore(): Promise<void> {
+    const data = _loadProjectRunsHelper();
+    if (!data) return;
+    const health = calculateHealthScore({
+        runs: data.projectRuns,
+        failureClassifications: data.failureClassifications,
+    });
+    const flaky = calculateFlakiness({ runs: data.projectRuns }, 2);
+    const releaseScore = calculateReleaseScore(
+        80,
+        health.overall ?? 50,
+        health.overall >= 70 ? 'pass' : 'fail',
+        70,
+        flaky.length > 0
+            ? Math.min(100, Math.round((flaky.filter((f) => f.rate > 0.3).length / flaky.length) * 100))
+            : 0,
+    );
+    await _generateAndOpenDashboard(generateReleaseScoreHtml(releaseScore), 'release-score', 'Release Score');
+}
+
+async function _dashboardDefectTrends(): Promise<void> {
+    const data = _loadProjectRunsHelper();
+    if (!data) return;
+    const defects = aggregateDefectTrends(data.failureClassifications);
+    await _generateAndOpenDashboard(generateDefectTrendHtml(defects), 'defect-trends', 'Defect Trends');
+}
+
+async function _dashboardTraceabilityMatrix(): Promise<void> {
+    const data = _loadProjectRunsHelper();
+    if (!data) return;
+    const effectiveStore = { runs: data.projectRuns, failureClassifications: data.failureClassifications };
+    const matrix = buildTraceabilityMatrix(effectiveStore);
+    await _generateAndOpenDashboard(generateTraceabilityHtml(matrix), 'traceability', 'Traceability Matrix');
+}
+
+async function _dashboardAiEffectiveness(): Promise<void> {
+    const aiResult = computeAiEffectiveness({ records: [] });
+    await _generateAndOpenDashboard(generateAiEffectivenessHtml(aiResult), 'ai-effectiveness', 'AI Effectiveness');
+}
+
+async function _dashboardSeasonality(): Promise<void> {
+    const data = _loadProjectRunsHelper();
+    if (!data) return;
+    const seasonality = aggregateDefectSeasonality(data.failureClassifications);
+    await _generateAndOpenDashboard(generateSeasonalityHtml(seasonality), 'seasonality', 'Defect Seasonality');
+}
+
+async function _dashboardSilentRegression(): Promise<void> {
+    const data = _loadProjectRunsHelper();
+    if (!data) return;
+    const testDurationMap: Record<string, number[]> = {};
+    for (const run of data.projectRuns) {
+        for (const t of run.tests) {
+            if (t.state === 'skipped') continue;
+            if (!testDurationMap[t.title]) testDurationMap[t.title] = [];
+            testDurationMap[t.title]?.push(t.duration);
+        }
+    }
+    const regression = detectSilentRegression(testDurationMap);
+    await _generateAndOpenDashboard(generateSilentRegressionHtml(regression), 'silent-regression', 'Silent Regression');
+}
+
+async function _dashboardAiComparison(): Promise<void> {
+    const aiComparison = compareAiVsManual([]);
+    await _generateAndOpenDashboard(generateAiComparisonHtml(aiComparison), 'ai-comparison', 'AI Test Comparison');
+}
+
+async function _dashboardBenchmark(): Promise<void> {
+    const data = _loadProjectRunsHelper();
+    if (!data) return;
+    const projectNames = [...new Set(data.projectRuns.map((r) => r.project))];
+    const store = loadMetrics();
+    const projectBenchmarks = projectNames.map((name) => {
+        const pRuns = store.runs.filter((r) => r.project === name);
+        const pHealth = calculateHealthScore({ runs: pRuns, failureClassifications: data.failureClassifications });
+        return {
+            name,
+            healthScore: pHealth.overall,
+            grade: pHealth.grade,
+            passRate: pHealth.dimensions.passRate.score,
+            flakyRate: pHealth.dimensions.flakyRate.score,
+            coveragePct: pHealth.dimensions.coverage.score,
+            runCount: pRuns.length,
+        };
+    });
+    const benchmark = computeCrossSquadBenchmark(projectBenchmarks);
+    await _generateAndOpenDashboard(generateBenchmarkHtml(benchmark), 'benchmark', 'Cross-Squad Benchmark');
+}
+
+async function _dashboardDeveloperProfile(): Promise<void> {
+    const data = _loadProjectRunsHelper();
+    if (!data) return;
+    const devProfile = buildDeveloperProfile(
+        data.failureClassifications.map((fc) => ({
+            testTitle: fc.testTitle,
+            category: fc.category,
+            timestamp: fc.timestamp,
+        })),
+    );
+    await _generateAndOpenDashboard(generateDeveloperProfileHtml(devProfile), 'developer-profile', 'Developer Profile');
+}
+
+async function _dashboardSuiteOptimization(): Promise<void> {
+    const data = _loadProjectRunsHelper();
+    if (!data) return;
+    const flatTests = data.projectRuns.flatMap((r) =>
+        r.tests.map((t) => ({ title: t.title, duration: t.duration, flakiness: 0 })),
+    );
+    const optimization = analyzeSuiteOptimization(flatTests);
+    await _generateAndOpenDashboard(generateOptimizationHtml(optimization), 'suite-optimization', 'Suite Optimization');
+}
+
+async function _dashboardBacklogHealth(): Promise<void> {
+    const backlog = analyzeBacklogHealth([]);
+    await _generateAndOpenDashboard(generateBacklogHealthHtml(backlog), 'backlog-health', 'Backlog Health');
+}
+
+async function _dashboardIncidentReport(): Promise<void> {
+    const data = _loadProjectRunsHelper();
+    if (!data) return;
+    const health = calculateHealthScore({
+        runs: data.projectRuns,
+        failureClassifications: data.failureClassifications,
+    });
+    const defects = aggregateDefectTrends(data.failureClassifications);
+    const matrix = buildTraceabilityMatrix({
+        runs: data.projectRuns,
+        failureClassifications: data.failureClassifications,
+    });
+    const testDurationMap: Record<string, number[]> = {};
+    for (const run of data.projectRuns) {
+        for (const t of run.tests) {
+            if (t.state === 'skipped') continue;
+            if (!testDurationMap[t.title]) testDurationMap[t.title] = [];
+            testDurationMap[t.title]?.push(t.duration);
+        }
+    }
+    const regression = detectSilentRegression(testDurationMap);
+    const seasonality = aggregateDefectSeasonality(data.failureClassifications);
+    const failRate =
+        data.projectRuns.length > 0
+            ? Math.round((data.projectRuns.filter((r) => r.failed > 0).length / data.projectRuns.length) * 100)
+            : 0;
+    const uncoveredEpics = matrix.nodes.filter((n) => n.coverage < 100).map((n) => n.epic);
+    const trendCategories = new Set<string>();
+    for (const t of defects.trends ?? []) {
+        for (const cat of Object.keys(t.categories)) {
+            trendCategories.add(cat);
+        }
+    }
+    const incidentReport = buildIncidentReport(
+        failRate,
+        regression.regressions.length,
+        seasonality.peakDay,
+        uncoveredEpics,
+        health.overall ?? 100,
+    );
+    await _generateAndOpenDashboard(generateIncidentReportHtml(incidentReport), 'incident-report', 'Incident Report');
+}
+
+async function _dashboardPipelineCost(): Promise<void> {
+    const data = _loadProjectRunsHelper();
+    if (!data) return;
+    const pipelineCost = calculatePipelineCost(data.projectRuns);
+    await _generateAndOpenDashboard(generatePipelineCostHtml(pipelineCost), 'pipeline-cost', 'Pipeline Cost');
+}
+
+async function _dashboardImpactAlert(): Promise<void> {
+    const data = _loadProjectRunsHelper();
+    if (!data) return;
+    const health = calculateHealthScore({
+        runs: data.projectRuns,
+        failureClassifications: data.failureClassifications,
+    });
+    const defects = aggregateDefectTrends(data.failureClassifications);
+    const matrix = buildTraceabilityMatrix({
+        runs: data.projectRuns,
+        failureClassifications: data.failureClassifications,
+    });
+    const uncoveredEpics = matrix.nodes.filter((n) => n.coverage < 100).map((n) => n.epic);
+    const trendCategories = new Set<string>();
+    for (const t of defects.trends ?? []) {
+        for (const cat of Object.keys(t.categories)) {
+            trendCategories.add(cat);
+        }
+    }
+    const impactAlert = analyzePipelineImpact(
+        health.dimensions.passRate.score,
+        data.projectRuns.filter((r) => r.failed > 0).length,
+        [...trendCategories].slice(0, 5),
+        health.dimensions.coverage.score,
+        uncoveredEpics,
+    );
+    await _generateAndOpenDashboard(generateImpactAlertHtml(impactAlert), 'impact-alert', 'Pipeline Impact Alert');
+}
+
+async function _dashboardRequirementScore(): Promise<void> {
+    const requirementScores = calculateRequirementScores([]);
+    await _generateAndOpenDashboard(
+        generateRequirementScoreHtml(requirementScores),
+        'requirement-score',
+        'Requirement Score',
+    );
+}
+
+async function _dashboardQualityGate(): Promise<void> {
+    if (!currentProjectName) {
+        warn('Nenhum projeto selecionado.');
+        return;
+    }
+    const qualityGate = runQualityGate({ project: currentProjectName });
+    const html = '<html><body><h1>Quality Gate</h1><pre>' + formatQualityGateText(qualityGate) + '</pre></body></html>';
+    await _generateAndOpenDashboard(html, 'quality-gate', 'Quality Gate');
+}
+
+async function _dashboardCoverageGap(): Promise<void> {
+    if (!currentProjectName) {
+        warn('Nenhum projeto selecionado.');
+        return;
+    }
+    if (!Config.get('jiraBaseUrl') || !Config.get('jiraPersonalToken')) {
+        warn('Jira não configurado. Coverage Gap requer JIRA_BASE_URL e JIRA_PERSONAL_TOKEN.');
+        return;
+    }
+    const projectKey = Config.get('jiraProject');
+    if (!projectKey) {
+        warn('JIRA_PROJECT não configurado.');
+        return;
+    }
+    const jiraResource = new JiraClient(
+        Config.get('jiraPersonalToken'),
+        Config.get('jiraBaseUrl') + '/rest/api/2',
+        Config.get('jiraMode'),
+    );
+    const result = await analyzeCoverageGaps(jiraResource, projectKey);
+    await _generateAndOpenDashboard(
+        generateCoverageGapHtml(result, 'Coverage Gap — ' + currentProjectName),
+        'coverage-gap',
+        'Coverage Gap',
+    );
+}
+
+async function _showDashboardMenu(): Promise<void> {
+    if (!currentProjectName) {
+        warn('Nenhum projeto selecionado.');
+        return;
+    }
+    const dashboards: Array<{ id: string; label: string; handler: () => Promise<void> }> = [
+        { id: '1', label: 'Release Score', handler: _dashboardReleaseScore },
+        { id: '2', label: 'Defect Trends', handler: _dashboardDefectTrends },
+        { id: '3', label: 'Traceability Matrix', handler: _dashboardTraceabilityMatrix },
+        { id: '4', label: 'AI Effectiveness', handler: _dashboardAiEffectiveness },
+        { id: '5', label: 'Defect Seasonality', handler: _dashboardSeasonality },
+        { id: '6', label: 'Silent Regression', handler: _dashboardSilentRegression },
+        { id: '7', label: 'AI Test Comparison', handler: _dashboardAiComparison },
+        { id: '8', label: 'Cross-Squad Benchmark', handler: _dashboardBenchmark },
+        { id: '9', label: 'Developer Profile', handler: _dashboardDeveloperProfile },
+        { id: '10', label: 'Suite Optimization', handler: _dashboardSuiteOptimization },
+        { id: '11', label: 'Backlog Health', handler: _dashboardBacklogHealth },
+        { id: '12', label: 'Incident Report', handler: _dashboardIncidentReport },
+        { id: '13', label: 'Pipeline Cost', handler: _dashboardPipelineCost },
+        { id: '14', label: 'Pipeline Impact Alert', handler: _dashboardImpactAlert },
+        { id: '15', label: 'Requirement Score', handler: _dashboardRequirementScore },
+        { id: '16', label: 'Quality Gate', handler: _dashboardQualityGate },
+        { id: '17', label: 'Coverage Gap', handler: _dashboardCoverageGap },
+    ];
+    const choice = await showSelect('      Selecione um dashboard', [
+        ...dashboards.map((d) => ({ name: d.id + ' — ' + d.label, value: d.id })),
+        { name: '0 — Voltar', value: '0' },
+    ]);
+    if (choice === '0') return;
+    const dashboard = dashboards.find((d) => d.id === choice);
+    if (dashboard) {
+        await dashboard.handler();
+    }
+}
+
 const ACTION_HANDLERS: Record<string, (m: GitProvider, pn: string, ns: string[]) => Promise<boolean>> = {
     '00': () => _handleSetupWizard(),
     w: () => _handleSetupWizard(),
@@ -198,6 +638,35 @@ const ACTION_HANDLERS: Record<string, (m: GitProvider, pn: string, ns: string[])
     b: async () => {
         await tryBatchMode();
         return false;
+    },
+    c: async () => {
+        await handleRunComparison();
+        return false;
+    },
+    d: async () => {
+        await _showDashboardMenu();
+        return false;
+    },
+    e: () => {
+        info(
+            'Git Metrics Adapter — gera métricas de pipeline a partir do git history como fallback.\n' +
+                'Funções: generateGitMetricsRuns() e generateGitFailureClassifications().\n' +
+                'Usado automaticamente quando não há dados de pipeline (menos de 2 execuções).',
+        );
+        return Promise.resolve(false);
+    },
+    g: withErrorHandling((m) => handleBugReportFlow(m)),
+    i: withErrorHandling((m) => handleAiPrDescription(m)),
+    p: withErrorHandling((m) => handlePipelineHealthWrapper(m)),
+    q: async () => {
+        await _dashboardQualityGate();
+        return false;
+    },
+    t: () => {
+        const current = Config.get<boolean>('qaAutoBug');
+        Config.set('qaAutoBug', !current);
+        success('Bug automático ' + (!current ? 'ativado' : 'desativado') + '.');
+        return Promise.resolve(false);
     },
     r: () => {
         generateWeeklyQualityReport();

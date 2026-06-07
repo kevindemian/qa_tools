@@ -24,6 +24,9 @@ import case21 from './case21.js';
 import case22 from './case22.js';
 import case23 from './case23.js';
 import case24 from './case24.js';
+import case25 from './case25.js';
+import case26 from './case26.js';
+import case27 from './case27.js';
 
 type HandlerFn = (ctx: CommandContext) => Promise<boolean | void> | boolean | void;
 
@@ -52,6 +55,9 @@ const handlers: Record<string, { handler: HandlerFn }> = {
     '22': { handler: case22.handler },
     '23': { handler: case23.handler },
     '24': { handler: case24.handler },
+    '25': { handler: case25.handler },
+    '26': { handler: case26.handler },
+    '27': { handler: case27.handler },
 };
 
 function getHandler(caseNumber: string): HandlerFn | null {
