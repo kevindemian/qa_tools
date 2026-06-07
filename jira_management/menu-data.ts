@@ -32,6 +32,8 @@ export const HELP_TOPICS: Record<string, string> = {
     template: 'Template CSV/JSON:\n  Use a opção 11 (GERAÇÃO DE CASOS DE TESTE) para gerar um arquivo de exemplo.',
     diagnostics:
         'Diagnostico de conexão:\n  Opção 12 (CONFIGURAÇÃO). Testa conectividade com Jira API, Xray API,\n  e valida o projeto atual. Mostra tempos de resposta e status HTTP.',
+    uxauditor:
+        'UX Auditor:\n  Auditoria de experiencia do usuario.\n  Detecta prompts sem hint, itens de submenu sem alias,\n  utilitarios mortos. Gera relatorio em .audit/.\n  Uso: npx tsx scripts/ux-auditor.ts',
 };
 
 export const ALIASES: Record<string, string> = {
@@ -90,9 +92,9 @@ export const ALIASES: Record<string, string> = {
     'criar-bug': '20',
     json: '15',
     'diretório-json': '16',
-    d: 'docs',
     documentação: 'docs',
     docs: 'docs',
+    dashboards: 'd',
     'traceability-matrix': '25',
     'release-score': '26',
     'coverage-dashboard': '27',
@@ -121,10 +123,7 @@ export const CATEGORIES: MenuItem[] = [
 export const SUB_MENUS: Record<string, MenuItem[]> = {
     reports: [
         { id: '17', label: 'Gerar relatório HTML' },
-        { section: '       DASHBOARDS' },
-        { id: '25', label: 'Traceability Matrix' },
-        { id: '26', label: 'Release Score' },
-        { id: '27', label: 'Coverage Dashboard' },
+        { id: 'd', label: 'Dashboards individuais' },
         { id: '0', label: 'Voltar' },
     ],
     tests: [
@@ -159,7 +158,7 @@ export const SUB_MENUS: Record<string, MenuItem[]> = {
     config: [
         { id: '9', label: 'Alterar projeto Jira' },
         { id: '10', label: 'Alterar diretório git', configKey: 'gitDir' },
-        { id: '14', label: 'Alterar diretório Cypress', configKey: 'cypressDir' },
+        { id: '14', label: 'Alterar diretório de testes', configKey: 'cypressDir' },
         { id: '16', label: 'Alterar diretório JSON', configKey: 'jsonDir' },
         { id: '12', label: 'Diagnosticar conexão' },
         { id: '24', label: 'Setup wizard / Primeiros passos' },

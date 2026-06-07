@@ -5,7 +5,7 @@ import type { CommandContext } from './context.js';
 import { NO_TASKS_FOUND_FOR_VERSION, OPERATION_CANCELLED } from '../constants.js';
 
 async function handler(c: CommandContext): Promise<boolean | void> {
-    const version = await ask('Versão a fechar', {});
+    const version = await ask('Versão a fechar', { hint: 'ex: v2.8.0' });
     if (
         !(await askConfirm('Fechar todas as tarefas da versão ' + version + '? Esta operação não pode ser desfeita.'))
     ) {

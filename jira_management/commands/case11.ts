@@ -27,6 +27,7 @@ async function handler(c: CommandContext): Promise<boolean | void> {
 
     const src = resolveSource(fmt);
     const tmplPath = await ask('Caminho para salvar', {
+        hint: 'ex: ./modelos/',
         default: path.join(process.cwd(), fmt === 'CSV' ? 'test_steps_template.csv' : 'test_cases_template.json'),
     });
 

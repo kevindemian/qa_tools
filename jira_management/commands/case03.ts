@@ -4,12 +4,12 @@ import { safeJiraCall } from '../../shared/jira-helper.js';
 import type { CommandContext } from './context.js';
 
 async function handler(c: CommandContext): Promise<boolean | void> {
-    const name = await ask('Nome da nova versão');
+    const name = await ask('Nome da nova versão', { hint: 'ex: v2.8.0' });
     if (!name.trim()) {
         warn('Nome da versão não pode ser vazio.');
         return;
     }
-    const desc = await ask('Descrição da versão (opcional)');
+    const desc = await ask('Descrição da versão (opcional)', { hint: 'ex: corrige bug de login' });
     await safeJiraCall(c, 'criar-versão', name, () => c.jiraResource.createVersion(c.ctx.project_name, name, desc));
 }
 

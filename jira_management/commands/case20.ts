@@ -13,7 +13,7 @@ async function handler(c: CommandContext): Promise<boolean | void> {
         let report: BugReport;
 
         if (useAi) {
-            const raw = await ask('Descreva o bug em linguagem natural');
+            const raw = await ask('Descreva o bug em linguagem natural', { hint: 'ex: Ao clicar em salvar...' });
             if (raw.trim().length < 20) {
                 const proceed = await askConfirm(
                     'Descrição muito curta. A IA pode não gerar um report preciso. Continuar?',
@@ -28,7 +28,9 @@ async function handler(c: CommandContext): Promise<boolean | void> {
                 info('Retornando ao fluxo manual...');
                 report = await collectManual();
             } else {
-                const linkedInput = await ask('Issues relacionadas (KEY-123, KEY-456) — opcional');
+                const linkedInput = await ask('Issues relacionadas (KEY-123, KEY-456) — opcional', {
+                    hint: 'ex: PROJ-123 PROJ-456',
+                });
                 if (linkedInput.trim()) {
                     aiReport.linkedIssues = linkedInput.split(',').map((k) => ({
                         key: k.trim().toUpperCase(),
