@@ -5,7 +5,7 @@ import path from 'path';
 import type { CommandContext } from './context.js';
 
 async function handler(c: CommandContext): Promise<boolean | void> {
-    const dir = await ask('Caminho do diretório Cypress');
+    const dir = await ask('Caminho do diretório de testes', { hint: 'ex: ./testes/' });
     if (!dir.trim()) {
         warn('Caminho vazio, ignorando.');
         return;
@@ -14,8 +14,8 @@ async function handler(c: CommandContext): Promise<boolean | void> {
     updateState((state) => {
         state.lastCypressPath = resolved;
     });
-    success('Diretório Cypress alterado para: ' + resolved);
-    c.pushHistory('config-cypress', resolved, 'ok');
+    success('Diretório de testes alterado para: ' + resolved);
+    c.pushHistory('config-tests', resolved, 'ok');
 }
 
 export default { handler };

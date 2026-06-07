@@ -11,7 +11,7 @@ async function handler(c: CommandContext): Promise<boolean | void> {
     if (useInMemory) {
         if (c.ctx.inMemoryTasksId.length === 0) {
             warn('Nenhuma tarefa criada anteriormente. Insira manualmente.');
-            const input = await ask('IDs das tarefas (separadas por espaco)');
+            const input = await ask('IDs das tarefas (separadas por espaco)', { hint: 'ex: KEY-123 KEY-456' });
             taskIds = input.split(' ').filter(Boolean);
         } else {
             c.ctx.inMemoryTasksId.forEach((id, idx) => {
@@ -20,11 +20,11 @@ async function handler(c: CommandContext): Promise<boolean | void> {
             });
         }
     } else {
-        const input = await ask('IDs das tarefas (separadas por espaco)');
+        const input = await ask('IDs das tarefas (separadas por espaco)', { hint: 'ex: KEY-123 KEY-456' });
         taskIds = input.split(' ').filter(Boolean);
     }
 
-    const version = await ask('Nome da versão', {});
+    const version = await ask('Nome da versão', { hint: 'ex: v2.8.0' });
 
     title('Preview da operação');
     print('  Versão: ' + version);

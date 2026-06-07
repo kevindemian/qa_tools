@@ -80,7 +80,7 @@ async function handleCreateNew(
     const nameInput = await ask('Nome da execução', { hint: 'Enter = ' + srcName });
     const csvName = nameInput.trim() || srcName;
     const execTitle = await ask('Título do Test Execution', { hint: 'Enter = ' + csvName });
-    const execDesc = await ask('Descrição (opcional)');
+    const execDesc = await ask('Descrição (opcional)', { hint: 'ex: testes de regressão sprint 30' });
     try {
         const executor = new TestExecutionCreator(c.jiraResource, c.linkManager);
         const execResult = await createTests.createTestExecutionWithLinks({
@@ -146,7 +146,7 @@ async function validateAndLinkTe(
         await c.linkManager.validateTestExecutionKey(teKey);
     } catch (err: unknown) {
         warn((err as Error).message);
-        const retry = await ask('Tentar novamente? (s/N)', { default: '' });
+        const retry = await ask('Tentar novamente? (s/N)', { hint: 's ou Enter para não', default: '' });
         if (retry.toLowerCase() === 's' || retry.toLowerCase() === 'sim') {
             teKey = await ask('Informe a key da Test Execution', { hint: 'ex: ' + c.ctx.project_name + '-TE-999' });
             if (!teKey) return { associated: false };

@@ -13,7 +13,10 @@ async function handler(c: CommandContext): Promise<boolean | void> {
     const state = loadState() as Record<string, string | undefined>;
     const jsonPathInput =
         Config.get('jsonPath') ||
-        (await ask('Caminho do arquivo JSON ou TXT (formato JSON)', { default: state.lastJsonPath || '' }));
+        (await ask('Caminho do arquivo JSON ou TXT (formato JSON)', {
+            hint: 'ex: ./results/ctrf.json',
+            default: state.lastJsonPath || '',
+        }));
 
     let jsonPath = jsonPathInput.trim();
     if (!jsonPath) {

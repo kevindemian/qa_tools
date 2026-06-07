@@ -62,7 +62,7 @@ function _showFlakyWarning(result: ReturnType<typeof analyzeTestImpact>): void {
 }
 
 async function handler(c: CommandContext): Promise<boolean | void> {
-    const range = (await ask('Git range (default: HEAD~1):')) || 'HEAD~1';
+    const range = (await ask('Git range (default: HEAD~1):', { hint: 'ex: HEAD~3..HEAD' })) || 'HEAD~1';
     const diff = _getGitDiff(range);
     if (diff === null) return false;
     if (!diff) {

@@ -4,7 +4,7 @@ import type { CommandContext } from './context.js';
 import { OPERATION_CANCELLED } from '../constants.js';
 
 async function handler(c: CommandContext): Promise<boolean | void> {
-    const version = await ask('Versão a publicar', {});
+    const version = await ask('Versão a publicar', { hint: 'ex: v2.8.0' });
     if (!(await askConfirm('Publicar versão ' + version + '? Isso marcara a versão como released.'))) {
         warn(OPERATION_CANCELLED);
         return true;

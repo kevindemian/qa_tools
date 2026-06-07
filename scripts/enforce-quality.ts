@@ -11,6 +11,7 @@
 
 import { createHash } from 'crypto';
 import { readFileSync, existsSync } from 'fs';
+import { isBuiltin } from 'module';
 import { globSync } from 'glob';
 import { gracefulExit } from '../shared/cli_base.js';
 import { ExitCode } from '../shared/types.js';
@@ -287,7 +288,7 @@ checks.push(
         const selfContent = readFileSync('scripts/enforce-quality.ts', 'utf-8');
         const contentWithoutHash = selfContent.replace(/\/\* HASH:[0-9a-f]{64} \*\//, '');
         const currentHash = createHash('sha256').update(contentWithoutHash, 'utf-8').digest('hex');
-        /* HASH:116de65594e2646c7784880198f95386e2b99289ef78223509e6c281a9eab150 */
+        /* HASH:eb7afe26974c162123eb943edc605c744b586077ecffd1c99328af10ab3be696 */
         const match = selfContent.match(/\/\* HASH:([0-9a-f]{64}) \*\//);
         if (!match) {
             violations.push({
@@ -306,19 +307,115 @@ checks.push(
     })(),
 );
 
-// 15. Checks count must match expected minimum (guards against accidental removal)
-// +1: this check hasn't been pushed yet, so checks.length excludes it
+// 15. DepWall: git_triggers and jira_management must not import external packages directly
+// External packages (chalk, axios, zod, etc.) should only be imported through shared/deps.ts.
+// Exceptions: vitest (test framework, allowed in .test.ts files), node: builtins.
+checks.push(
+    (() => {
+        const violations: CheckResult['violations'] = [];
+        const dirs = ['git_triggers', 'jira_management'];
+        const extPkgImport = /from\s+['"](?!\.)(?!\/)(?!node:)([a-z@][^'"]*)/;
+        for (const dir of dirs) {
+            const files = globSync(`${dir}/**/*.ts`, { ignore: ['node_modules/**'] });
+            for (const file of files) {
+                const matches = grepLines(file, extPkgImport);
+                for (const { line, content } of matches) {
+                    const m = content.match(extPkgImport);
+                    const pkg = m?.[1];
+                    if (pkg && pkg !== 'vitest' && !isBuiltin(pkg)) {
+                        violations.push({
+                            file,
+                            line,
+                            content: `Direct external import '${pkg}' — must go through shared/deps.ts (DepWal)`,
+                        });
+                    }
+                }
+            }
+        }
+        return {
+            name: 'DepWall: direct external imports forbidden outside shared/',
+            passed: violations.length === 0,
+            violations,
+        };
+    })(),
+);
+
+// 16. 3-way handler ↔ menu ↔ alias consistency (CI Gate)
+// Every handler registered in commands/index.ts must have a SUB_MENUS entry
+// or an ALIAS in menu-data.ts. Every SUB_MENUS entry must have a handler.
+// Parsed via regex to avoid module import (Config not initialized in CI script).
+checks.push(
+    (() => {
+        const violations: CheckResult['violations'] = [];
+        const menuSource = readFileSync('jira_management/menu-data.ts', 'utf-8');
+        const indexSource = readFileSync('jira_management/commands/index.ts', 'utf-8');
+
+        const registered = new Set<string>();
+        for (const m of indexSource.matchAll(/'(\d+|d)'\s*:\s*\{/g)) {
+            registered.add(m[1]!);
+        }
+        for (const m of indexSource.matchAll(/(?:\b)(d)\s*:\s*\{/g)) {
+            registered.add(m[1]!);
+        }
+
+        const menuIds = new Set<string>();
+        for (const m of menuSource.matchAll(/id:\s+'(\d+|d)'/g)) {
+            menuIds.add(m[1]!);
+        }
+
+        const aliasTargets = new Set<string>();
+        for (const m of menuSource.matchAll(/['"]([\w-]+)['"]:\s*['"]([\w\d\/]+)['"]/g)) {
+            if (m[2]) aliasTargets.add(m[2]!);
+        }
+
+        const categoryIds = new Set<string>();
+        for (const m of menuSource.matchAll(/['"](reports|tests|bugreport|analytics|releases|config)['"]/g)) {
+            categoryIds.add(m[1]!);
+        }
+
+        const allowedExceptions = new Set(['0', 'docs', '/menu', '/help']);
+
+        for (const id of registered) {
+            if (!menuIds.has(id) && !aliasTargets.has(id) && !categoryIds.has(id) && !allowedExceptions.has(id)) {
+                violations.push({
+                    file: 'jira_management/commands/index.ts',
+                    line: 1,
+                    content: `Handler '${id}' registered but has no SUB_MENUS entry or ALIAS`,
+                });
+            }
+        }
+
+        for (const id of menuIds) {
+            if (id === '0') continue;
+            if (!registered.has(id)) {
+                violations.push({
+                    file: 'jira_management/menu-data.ts',
+                    line: 1,
+                    content: `SUB_MENUS entry '${id}' has no registered handler`,
+                });
+            }
+        }
+
+        return {
+            name: '3-way handler ↔ menu ↔ alias consistency (CI Gate)',
+            passed: violations.length === 0,
+            violations,
+        };
+    })(),
+);
+
+// 17. Checks count must match expected minimum (guards against accidental removal)
 checks.push({
-    name: `enforce-quality has at least 15 checks`,
-    passed: checks.length + 1 >= 15,
+    name: `enforce-quality has at least 17 checks`,
+    passed: checks.length + 1 >= 17,
     violations:
-        checks.length + 1 >= 15
+        checks.length + 1 >= 17
             ? []
             : [
                   {
                       file: 'scripts/enforce-quality.ts',
                       line: 1,
-                      content: `Expected >= 15 checks, found ${checks.length + 1}`,
+                      content: `Expected >= 17 checks, found ${checks.length + 1}`,
                   },
               ],
 });

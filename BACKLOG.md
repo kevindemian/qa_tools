@@ -109,38 +109,32 @@
 
 ### Problemas encontrados
 
-| #       | Item                                                                               | Severidade | Local                    |
-| ------- | ---------------------------------------------------------------------------------- | ---------- | ------------------------ |
-| **F0**  | `runCheck` trata `review` como inválido — aprovacão humana ignorada no pre-hook/CI | 🔴 Crítico | `runCheck()`             |
-| **F1**  | Recursion depth protection ineficaz (AsyncLocalStorage reseta depth)               | 🔴 Alta    | `validateMultiCommand()` |
-| **F2**  | Dupla leitura de `COMMIT_EDITMSG`                                                  | 🔴 Alta    | `runCheckCommitMsg()`    |
-| **F3**  | `SED_PATTERN` backreference `\1` incorreto                                         | 🟡 Média   | `SED_PATTERN`            |
-| **F4**  | Non-null assertion `match[1]!` insegura                                            | 🟡 Média   | `parseGitDiff()`         |
-| **F5**  | `detectFileWrites` — aspas aninhadas truncam conteudo                              | 🟡 Média   | 6 regex patterns         |
-| **F6**  | Lookbehind `\s{0,20}` só captura whitespace — falso positivo                       | 🟡 Média   | 3 lookbehinds            |
-| **F7**  | `parseInt` sem fallback — env var invalida produz `NaN`                            | 🟡 Média   | Config block             |
-| **F8**  | `hasDangerousCodeDensity` nao filtra `/* */` comments                              | 🟢 Baixa   | density check            |
-| **F9**  | Variavel `gitDir` nome enganoso (e' caminho de arquivo)                            | 🟢 Baixa   | `runCheckCommitMsg()`    |
-| **F10** | Entry point sem normalizacao de caminho (symlink quebra)                           | 🟢 Baixa   | entry point              |
-| **F11** | `runCheck` com diff vazio retorna falso positivo                                   | 🟢 Baixa   | `runCheck()`             |
+| #       | Item                                                                 | Severidade | Local                    |
+| ------- | -------------------------------------------------------------------- | ---------- | ------------------------ |
+| **F1**  | Recursion depth protection ineficaz (AsyncLocalStorage reseta depth) | 🔴 Alta    | `validateMultiCommand()` |
+| **F2**  | Dupla leitura de `COMMIT_EDITMSG`                                    | 🔴 Alta    | `runCheckCommitMsg()`    |
+| **F3**  | `SED_PATTERN` backreference `\1` incorreto                           | 🟡 Média   | `SED_PATTERN`            |
+| **F4**  | Non-null assertion `match[1]!` insegura                              | 🟡 Média   | `parseGitDiff()`         |
+| **F5**  | `detectFileWrites` — aspas aninhadas truncam conteudo                | 🟡 Média   | 6 regex patterns         |
+| **F6**  | Lookbehind `\s{0,20}` só captura whitespace — falso positivo         | 🟡 Média   | 3 lookbehinds            |
+| **F7**  | `parseInt` sem fallback — env var invalida produz `NaN`              | 🟡 Média   | Config block             |
+| **F8**  | `hasDangerousCodeDensity` nao filtra `/* */` comments                | 🟢 Baixa   | density check            |
+| **F9**  | Variavel `gitDir` nome enganoso (e' caminho de arquivo)              | 🟢 Baixa   | `runCheckCommitMsg()`    |
+| **F10** | Entry point sem normalizacao de caminho (symlink quebra)             | 🟢 Baixa   | entry point              |
+| **F11** | `runCheck` com diff vazio retorna falso positivo                     | 🟢 Baixa   | `runCheck()`             |
 
 ### Solução implementada
 
-| Componente          | O que faz                                                                                                                                                              |
-| ------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Approval Ledger** | `~/.config/opencode/.review_approvals.json` — auto-registra `pending` entries ao detectar `review` patterns, auto-aprova por hash match no pre-hook, expira em 90 dias |
-| **Block vs Review** | `validateResponse` bloqueia tudo; `runCheck` bloqueia so `block`, reporta `review`; hash-match no pre-hook aprova `review` automaticamente                             |
-| **CLI expandido**   | `--full-scan`, `--audit`, `--pending`, `--approve`, `--revoke`, `--approvals`, `--summary`, `--interactive-approve`, `--json` combinavel                               |
+| Componente        | O que faz                                                                            |
+| ----------------- | ------------------------------------------------------------------------------------ |
+| **CLI expandido** | `--full-scan`, `--audit`, `--summary`, `--json` combinavel (apenas flags de leitura) |
 
 ### Lotes
 
-| Lote | Descrição                                                | Itens | Status |
-| ---- | -------------------------------------------------------- | ----- | ------ |
-| A    | Correção de bugs F1–F11                                  | 11    | ⏳     |
-| B    | Gap block vs review — F0a a F0f                          | 6     | ⏳     |
-| C    | Approval Ledger — auto-registro, auto-match, expiração   | 6     | ⏳     |
-| D    | CLI commands — 9 flags                                   | 9     | ⏳     |
-| E    | Testes — `--test` expandido, ledger, runCheck, full-scan | 4     | ⏳     |
+| Lote | Descrição                                        | Itens | Status |
+| ---- | ------------------------------------------------ | ----- | ------ |
+| A    | Correção de bugs F1–F11                          | 11    | ✅     |
+| E    | Testes de regressão F1–F11 + rename + empty diff | 2     | ⏳     |
 
 ---
 
@@ -177,6 +171,184 @@
 | Handlers órfãos (sem menu)       | **0**         | ✅ 0      |
 | Dashboards sem acesso individual | **0**         | ✅ 0      |
 | Features CLI/env sem menu        | **0**         | ✅ 0      |
+
+---
+
+## 🛡️ Sprint Hardening — Fechar Vetores Semânticos (P1)
+
+**Data:** 2026-06-07
+**Origem:** Análise crítica do Lote B (Validation Hook) identificou que separar `block` vs `review` cria vetor de contorno via classificação maliciosa pela LLM. Alternativa escolhida: fortalecer detecção sem criar categoria `review`.
+
+**Problema:** Os padrões atuais detectam certos padrões de código, mas a LLM pode usar sinônimos para evitar detecção. Também nao cobrem respostas que **negam** detecções.
+
+| ID   | Item                                                                                       | Esforço | Status |
+| ---- | ------------------------------------------------------------------------------------------ | ------- | ------ |
+| HA-1 | Expandir `FORBIDDEN_PATTERNS` com sinônimos LLM-conhecidos                                 | 1h      | ⏳     |
+| HA-2 | Adicionar `severity` como **metadata de log** (não branching lógico)                       | 30min   | ⏳     |
+| HA-3 | Detectar respostas que **negam** detecções (`"X is not a Y"`, `"this is fine because..."`) | 2h      | ⏳     |
+| HA-4 | Detectar **modificação de `FORBIDDEN_PATTERNS`** como evento bloqueante                    | 1h      | ⏳     |
+| HA-5 | Forçar `valid: true` com ≥1 match a passar por inspeção humana explícita (sem contorno)    | 2h      | ⏳     |
+| HA-6 | Testes de regressão para todos os vetores semânticos                                       | 2h      | ⏳     |
+
+**Total: ~8h. Zero contorno. Mais seguro que o Lote B original.**
+
+### Métricas alvo — Sprint Hardening
+
+| Métrica                               | Alvo          |
+| ------------------------------------- | ------------- |
+| `tsc --noEmit`                        | **0 erros**   |
+| `vitest run`                          | **100% pass** |
+| `npm run lint`                        | **0 erros**   |
+| Sinônimos LLM em `FORBIDDEN_PATTERNS` | **≥10**       |
+| Padrões de negação detectados         | **≥3**        |
+| Modificação de patterns bloqueada     | **✅**        |
+| Caminhos de evasão criados            | **0**         |
+
+---
+
+## 🏗️ Sprint DepWall + UX — Isolamento de Dependências e Correções de Navegação (Jun/2026)
+
+**Data:** 2026-06-07
+**Origem:** Auditoria de importações diretas + feedback de UX do usuário.
+**Foco:** Fechar violações do DepWall (dependências externas importadas fora de `shared/`) + correções de UX em menus e labels.
+
+| ID  | Item                                                              | Arquivo(s)                               | Esforço | Status |
+| --- | ----------------------------------------------------------------- | ---------------------------------------- | ------- | ------ |
+| D1  | ♻️ Remover entradas duplicadas 25/26/27 do submenu `reports`      | `menu-data.ts`                           | 5min    | ✅     |
+| D2  | 🔧 Renomear "Cypress" → "testes" em strings de usuário            | `menu-data.ts`, `case14.ts`, `case17.ts` | 10min   | ✅     |
+| D3  | 🐛 Aliases `/help` aceitarem argumentos sem barra (`help <t>`)    | `ui-helpers.ts`                          | 15min   | ✅     |
+| D4  | 🏗️ Corrigir 7 DepWal violations em `git_triggers/` (axios+dotenv) | `git_triggers/*.test.ts` (7 files)       | 15min   | ✅     |
+| D5  | 🏗️ Adicionar lint rule: forbid external deps fora de `shared/`    | `enforce-quality.ts`                     | 30min   | ✅     |
+| D6  | 🐛 `fileToJira` com preview + confirm obrigatório                 | `bug-report.ts`                          | 2h      | ✅     |
+
+**Total:** ~3.5h
+
+### Métricas alvo — Sprint DepWall + UX
+
+| Métrica                                 | Alvo          | Resultado |
+| --------------------------------------- | ------------- | --------- |
+| `tsc --noEmit`                          | **0 erros**   | ✅ 0      |
+| `vitest run`                            | **100% pass** | ✅ 4212   |
+| `npm run lint`                          | **0 erros**   | ✅ 0      |
+| `enforce-quality` checks                | **≥16**       | ✅ 16     |
+| DepWal violations em `git_triggers/`    | **0**         | ✅ 0      |
+| DepWal violations em `jira_management/` | **0**         | ✅ 0      |
+| Duplicação de navegação (submenus)      | **0**         | ✅ 0      |
+
+---
+
+## 🚀 Sprint A — Fluxo JSON Automático + Retenção (Jun/2026)
+
+**Data:** 2026-06-07
+**Origem:** case17 requer path manual para JSON CTRF mesmo quando CI está configurado e `fetchGitHistory()` já sabe baixar artifacts.
+**Foco:** Auto-download, cache local, retenção, UX informativa.
+
+| ID  | Item                                                 | Arquivo(s)                                                                   | Esforço | Status |
+| --- | ---------------------------------------------------- | ---------------------------------------------------------------------------- | ------- | ------ |
+| A1  | ♻️ `report-cache.ts` — cache local de CTRF com prune | `shared/report-cache.ts`                                                     | 1h      | ✅     |
+| A2  | ♻️ Retention limit em metrics (METRICS_MAX_RUNS)     | `shared/metrics.ts`                                                          | 15min   | ✅     |
+| A3  | 🔧 UX + auto-download + cache em case17              | `jira_management/commands/case17.ts`                                         | 1h      | ✅     |
+| A4  | 🔧 Auto-cache CTRF pós-pipeline                      | `git_triggers/pipeline-handler.ts`                                           | 30min   | ✅     |
+| A5  | 🔧 Config keys METRICS_MAX_RUNS, REPORT_CACHE_MAX    | `shared/config-schema.ts`                                                    | 15min   | ✅     |
+| A6  | 📋 Testes para A1-A5                                 | `shared/report-cache.test.ts`, `case17.test.ts`, `case17-test-utils.test.ts` | 1.5h    | ✅     |
+
+### Métricas alvo — Sprint A
+
+| Métrica                      | Alvo       | Resultado |
+| ---------------------------- | ---------- | --------- |
+| `tsc --noEmit`               | 0 erros    | ✅ 0      |
+| `vitest run`                 | 100% pass  | ✅ 4216   |
+| `npm run lint`               | 0 erros    | ✅ 0      |
+| `enforce-quality`            | ≥16 checks | ✅ 17     |
+| case17 sem CI: UX melhorada  | ✅         | ✅        |
+| case17 com CI: auto-download | ✅         | ✅        |
+| Cache local com prune        | ✅         | ✅        |
+| Pipeline → cache automático  | ✅         | ✅        |
+
+---
+
+## 🚀 Sprint B — Prevenção: CI Gate + ux-auditor (Jun/2026)
+
+**Data:** 2026-06-07
+**Origem:** Features bifurcadas (código existe mas handler não usa), submenus sem alias, handlers sem entrada de menu.
+**Foco:** Impedir criação de débitos novos, detectar débitos existentes.
+
+| ID  | Item                                                                                                 | Arquivo(s)                           | Esforço | Status |
+| --- | ---------------------------------------------------------------------------------------------------- | ------------------------------------ | ------- | ------ |
+| B1  | 🔧 CI Gate: handler ↔ menu ↔ alias 3-way consistency                                                 | `scripts/enforce-quality.ts`         | 1h      | ✅     |
+| B2  | 🔧 ux-auditor agent script (soft: jornada ruidosa, dead utility, friction score)                     | (novo) `scripts/ux-auditor.ts`       | 3h      | ✅     |
+| B3  | 🔧 Rodar auditor + corrigir achados (4 fases: hints + submenu FP + import-aware detector + re-audit) | Codebase, `scripts/ux-auditor.ts`    | 3h      | ✅     |
+| B4  | 📋 docs/ux-auditor.md + HELP_TOPICS entry                                                            | `docs/ux-auditor.md`, `menu-data.ts` | 30min   | ✅     |
+
+### Métricas alvo — Sprint B
+
+| Métrica                   | Alvo       | Resultado                                      |
+| ------------------------- | ---------- | ---------------------------------------------- |
+| `tsc --noEmit`            | 0 erros    | ✅ 0                                           |
+| `vitest run`              | 100% pass  | ✅ 4216                                        |
+| `npm run lint`            | 0 erros    | ✅ 0                                           |
+| `enforce-quality`         | ≥18 checks | ✅ 17 checks (check 17 is CI gate itself)      |
+| Handlers sem menu         | 0          | ✅ 0                                           |
+| ux-auditor gera relatório | ✅         | ✅                                             |
+| ux-auditor import-aware   | ✅         | ✅ (falsos positivos: 527→93, -82%)            |
+| Features bifurcadas       | 0          | ✅ 0                                           |
+| Hints em ask() calls      | 100%       | ✅ 21/21 (1 FP regex: nested parens em case17) |
+| Prompts sem hint (real)   | 0          | ✅ 0                                           |
+
+---
+
+## 🚀 Sprint C — Git-as-Key: Git como Fonte Primária (Jun/2026)
+
+**Data:** 2026-06-07
+**Origem:** Análise adversarial — 5 iterações de quebra e reconstrução do plano "Git como fonte primária". Plano consolidado após identificar e eliminar fragilidades de cada alternativa.
+**Padrão de mercado:** Híbrido Push+Store (SonarQube) + Pull+Cache (CTRF Reporter) — **sem servidor**, filesystem local como store.
+**Invariante central:** SHA do commit é a chave universal. Projeto + SHA = unique key. Branch → último SHA mapeado explicitamente em `branch-index.json`.
+
+### Arquitetura
+
+```
+reports/
+├── project-alpha/
+│   ├── index.json              ← metadados de runs (ordenado por timestamp)
+│   ├── branch-index.json       ← { "main": "<sha>", "develop": "<sha>" }
+│   ├── a1b2c3d4.json           ← FlatTest[] daquele commit (imutável)
+│   └── e5f6g7h8.json
+├── project-beta/
+│   └── ...
+```
+
+**Resolução (`resolveSessionContext`):** 4 passos em ordem fixa:
+
+1. Cache por SHA (instantâneo, zero rede)
+2. CI download por SHA (via GitHub/GitLab API, `head_sha` query)
+3. Baseline por branch (lê `branch-index.json`, run anterior no mesmo branch)
+4. Sem dados → "Quer acionar uma pipeline?" (nunca pede path manual)
+
+| ID  | Item                                                                  | Arquivo(s)                                                    | Esforço | Status |
+| --- | --------------------------------------------------------------------- | ------------------------------------------------------------- | ------- | ------ |
+| C1  | ♻️ Unificar stores: `metrics.json` → `report-cache/` (migração 1x)    | `shared/metrics.ts`, `shared/report-cache.ts`                 | 2h      | ⏳     |
+| C2  | ♻️ Store por projeto: diretório `reports/{project}/` + índice isolado | `shared/report-cache.ts`                                      | 1h      | ⏳     |
+| C3  | ✨ `branch-index.json`: mapeia branch → último SHA conhecido          | `shared/report-cache.ts`                                      | 30min   | ⏳     |
+| C4  | ♻️ `shared/git-sha.ts`: obtém HEAD sha (.git + env vars)              | (novo) `shared/git-sha.ts`                                    | 30min   | ⏳     |
+| C5  | ♻️ Extrair `shared/git-artifact-downloader.ts` (elimina duplicação)   | (novo) `shared/git-artifact-downloader.ts`                    | 2h      | ⏳     |
+| C6  | ✨ `shared/session-context.ts` com `resolveSessionContext()`          | (novo) `shared/session-context.ts`                            | 2h      | ⏳     |
+| C7  | 🔧 case17: consumir SessionContext, remover path manual               | `jira_management/commands/case17.ts`                          | 1h      | ⏳     |
+| C8  | 🔧 case15: consumir SessionContext, remover path manual               | `jira_management/commands/case15.ts`                          | 1h      | ⏳     |
+| C9  | 🔧 quality-gate lê de `reportCache.getMetrics(branch)`                | `shared/report-generator.ts`                                  | 1h      | ⏳     |
+| C10 | 🔧 `--file` flag vira debug-only (documentado "não use em produção")  | `case17-helpers.ts`, docs                                     | 30min   | ⏳     |
+| C11 | 📋 Testes migração store + session-context + handlers refatorados     | `shared/report-cache.test.ts`, `session-context.test.ts`, ... | 3h      | ⏳     |
+
+### Métricas alvo — Sprint C
+
+| Métrica                        | Alvo                          |
+| ------------------------------ | ----------------------------- |
+| `tsc --noEmit`                 | 0 erros                       |
+| `vitest run`                   | 100% pass                     |
+| `npm run lint`                 | 0 erros                       |
+| Stores de test data            | **1** (cache)                 |
+| Handlers que pedem path manual | **0**                         |
+| Implementações download CI     | **1** (shared)                |
+| Projetos suportados            | **N** (isolado por diretório) |
 
 ---
 
@@ -234,3 +406,33 @@
 | `npm run lint`                 | **0 erros**   |
 | Handlers usando IUserInterface | **100%**      |
 | CLI atual continua funcional   | **✅**        |
+
+---
+
+## 🎯 Hook Inline — Refactor Arquitetural (Avaliação Futura)
+
+**Data:** 2026-06-07
+**Origem:** Análise crítica identificou que o hook atual roda **antes** do commit. LLM pode ignorar resultados porque hook é externo ao fluxo de execução.
+**Status:** 🎯 **Avaliação futura. NÃO executar agora.**
+
+**Pré-requisitos para avaliação:**
+
+- [ ] Sprint Hardening (P1) completa
+- [ ] Métricas de falsos positivos coletadas (mínimo 30 dias)
+- [ ] Taxa de aprovação humana < 50% (indica UX ruim, justifica refactor)
+
+**Esforço estimado:** 3 dias
+**ROI:** Incerto
+**Risco:** 🔴 Alto
+
+**Descrição:** Mover validação de "pre-commit hook externo" para "in-line no fluxo de execução da LLM". Validação torna-se parte do runtime — contorno fisicamente impossível porque LLM nao pode gerar código sem passar pela validação.
+
+**Comparação com modelo atual:**
+
+| Aspecto           | Hook externo (atual) | Hook inline (proposto) |
+| ----------------- | -------------------- | ---------------------- |
+| Contorno possível | Sim (re-classificar) | Não (runtime)          |
+| Latência          | Baixa (assíncrono)   | Média (síncrona)       |
+| Complexidade      | Baixa                | Alta                   |
+| Compatibilidade   | Universal            | Requer framework       |
+| Manutenibilidade  | Independente         | Acoplado ao runtime    |

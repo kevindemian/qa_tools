@@ -2,7 +2,7 @@ import fs from 'fs';
 import path from 'path';
 import { createHttpClient } from '../../shared/http-client.js';
 import { rootLogger } from '../../shared/logger.js';
-import { ask, askConfirm, info, printError, title, withSpinner } from '../../shared/prompt.js';
+import { ask, askConfirm, info, print, printError, title, withSpinner } from '../../shared/prompt.js';
 import type { JiraSearchResult } from '../../shared/types.js';
 import type { ParseResult, FlatTest } from '../../shared/result_parser.js';
 import { writeReport } from '../../shared/temp-dir.js';
@@ -28,7 +28,8 @@ import {
     parseCliExtra,
     saveMetricsJson,
 } from './case17-helpers.js';
-import { computeDiff, fetchGitHistory, resolveTestHistory } from './case17-test-utils.js';
+import { computeDiff, fetchGitHistory, fetchLatestTestRun, resolveTestHistory } from './case17-test-utils.js';
+import { cacheReport, listReports, loadReport } from '../../shared/report-cache.js';
 import Config from '../../shared/config.js';
 
 export type { RunStats, CiContext } from './case17-helpers.js';
@@ -46,6 +47,31 @@ export {
     saveMetricsJson,
 } from './case17-helpers.js';
 export { resolveMapping, resolveTestHistory, computeDiff, fetchGitHistory } from './case17-test-utils.js';
+
+export interface SourceResult {
+    result: ParseResult;
+    source: 'cache' | 'ci' | 'file';
+}
+
+export function resolveSource(
+    loadedCache: {
+        tests: FlatTest[];
+        stats: { passed: number; failed: number; skipped: number; total: number };
+    } | null,
+    ciRun: ParseResult | null,
+    fileResult: ParseResult | null,
+): SourceResult | null {
+    if (loadedCache) {
+        const result: ParseResult = {
+            tests: loadedCache.tests,
+            stats: { ...loadedCache.stats, duration: 0 },
+        };
+        if (result.stats.total > 0) return { result, source: 'cache' };
+    }
+    if (ciRun && ciRun.stats.total > 0) return { result: ciRun, source: 'ci' };
+    if (fileResult && fileResult.stats.total > 0) return { result: fileResult, source: 'file' };
+    return null;
+}
 
 async function _fetchJiraContext(
     failedTests: FlatTest[],
@@ -86,7 +112,7 @@ async function _addAiAnalysis(html: string, tests: ParseResult['tests'], context
 
 async function _writeReportFile(html: string, projectName: string): Promise<string> {
     const defaultName = `report-${projectName}-${Date.now()}.html`;
-    const outPath = await ask('Caminho de saída do HTML', { default: '' });
+    const outPath = await ask('Caminho de saída do HTML', { hint: 'ex: ./relatorio.html', default: '' });
     if (outPath.trim()) {
         const resolvedPath = path.resolve(outPath.trim());
         fs.mkdirSync(path.dirname(resolvedPath), { recursive: true });
@@ -317,22 +343,94 @@ async function _handleInteractiveBugReport(c: CommandContext, result: ParseResul
     }
 }
 
-async function handler(c: CommandContext): Promise<boolean | void> {
+async function _chooseTestDataSource(projectName: string): Promise<{ result: ParseResult; source: string } | null> {
+    const cached = listReports(projectName);
+    const githubToken = Config.getDefault().get('githubToken') || '';
+    const gitlabToken = Config.get('CI_JOB_TOKEN') || '';
+    const canAutoDownload = !!(githubToken || gitlabToken);
+
+    print('');
+    info('O relatório precisa dos resultados dos testes em formato CTRF (JSON).');
+    info('Este arquivo é gerado pelo framework de testes durante a execução da pipeline CI.');
+    print('');
+
+    if (cached.length > 0) {
+        info('Relatórios em cache disponíveis (pipelines anteriores):');
+        const slice = cached.slice(0, 10);
+        for (let i = 0; i < slice.length; i++) {
+            const r = slice[i];
+            if (!r) continue;
+            const date = r.timestamp ? new Date(r.timestamp).toLocaleDateString() : 'N/A';
+            print(
+                `  ${i + 1}. Pipeline #${r.pipelineId} — ${r.passed}/${r.total} passed, ${r.failed} failed (${date})`,
+            );
+        }
+        print('');
+        const useCache = await askConfirm('Usar relatório em cache?', true);
+        if (useCache) {
+            const choice = await ask('Escolha o número (1-' + Math.min(cached.length, 10) + ')', {
+                hint: 'ex: 1',
+                default: '1',
+            });
+            const idx = parseInt(choice.trim(), 10) - 1;
+            if (idx >= 0 && idx < cached.length) {
+                const entry = cached[idx];
+                if (entry) {
+                    const loaded = loadReport(entry.id);
+                    const resolved = resolveSource(loaded, null, null);
+                    if (resolved) return resolved;
+                    printError('Falha ao carregar relatório em cache', new Error('loadReport returned null'));
+                }
+            }
+        }
+    }
+
+    if (canAutoDownload) {
+        print('');
+        info('CI detectada (' + (githubToken ? 'GitHub' : 'GitLab') + ').');
+        if (await askConfirm('Baixar resultados da última pipeline automaticamente?', true)) {
+            const fetched = await withSpinner('Baixando artefatos da pipeline...', () => fetchLatestTestRun());
+            if (fetched && fetched.stats.total > 0) {
+                info('Resultados baixados: ' + fetched.stats.passed + '/' + fetched.stats.total + ' passed');
+                cacheReport(projectName, 'auto-' + Date.now(), fetched.tests, fetched.stats);
+                return { result: fetched, source: 'ci' };
+            }
+            printError(
+                'Nenhum artefato CTRF encontrado na última pipeline',
+                new Error('fetchLatestTestRun returned null/empty'),
+            );
+        }
+    }
+
+    print('');
+    info('Informe o caminho manual do arquivo JSON com os resultados dos testes.');
+    info('O arquivo deve estar no formato CTRF (Common Test Report Format).');
+    print('');
+
     const filePath = await ask('Caminho do arquivo de resultados JSON', {
-        hint: 'ex: cypress/reports/ctrf-report.json',
+        hint: 'reports/ctrf-report.json',
     });
     if (!filePath.trim()) {
         printError('Relatório HTML', new Error('Caminho do arquivo vazio.'));
-        return;
+        return null;
     }
+
+    const fileResult = parseTestResultsFile(filePath.trim());
+    if (fileResult.error) {
+        printError('Erro ao ler relatório', new Error(fileResult.error));
+        return null;
+    }
+
+    return { result: fileResult, source: 'file' };
+}
+
+async function handler(c: CommandContext): Promise<boolean | void> {
+    const data = await _chooseTestDataSource(c.ctx.project_name);
+    if (!data) return;
 
     const cliExtra = parseCliExtra();
     title('Analisando relatório...');
-    const result = parseTestResultsFile(filePath.trim());
-    if (result.error) {
-        printError('Erro ao ler relatório', new Error(result.error));
-        return;
-    }
+    const result = data.result;
 
     const diff = computeDiff(result.tests);
     const genOptions = await _buildReportOptions(c, result, diff, cliExtra);

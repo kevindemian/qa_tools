@@ -5,7 +5,7 @@ import path from 'path';
 import type { CommandContext } from './context.js';
 
 async function handler(c: CommandContext): Promise<boolean | void> {
-    const dir = await ask('Caminho do diretório padrão de JSON');
+    const dir = await ask('Caminho do diretório padrão de JSON', { hint: 'ex: ./resultados/' });
     if (!dir.trim()) {
         warn('Caminho vazio, ignorando.');
         return;
