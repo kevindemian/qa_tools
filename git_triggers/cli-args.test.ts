@@ -11,9 +11,9 @@ describe('parseCliArgs', () => {
         process.argv = ORIG_ARGV;
     });
 
-    it('returns all false when no flags', () => {
+    it('returns interactive mode when no flags', () => {
         const args = parseCliArgs();
-        expect(args).toEqual({ help: false, version: false, noClear: false });
+        expect(args).toEqual({ mode: 'interactive', help: false, version: false, noClear: false });
     });
 
     it('detects --help', () => {
@@ -36,11 +36,11 @@ describe('parseCliArgs', () => {
         expect(parseCliArgs().noClear).toBe(true);
     });
 
-    it('detects multiple flags', () => {
+    it('detects multiple flags (help takes priority)', () => {
         process.argv.push('--help', '--version');
         const args = parseCliArgs();
         expect(args.help).toBe(true);
-        expect(args.version).toBe(true);
+        expect(args.mode).toBe('help');
         expect(args.noClear).toBe(false);
     });
 });

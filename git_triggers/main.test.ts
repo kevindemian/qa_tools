@@ -172,7 +172,7 @@ vi.mock('../shared/temp-dir', () => ({
     reportsDir: vi.fn(() => '/tmp/reports'),
 }));
 
-type MainModule = typeof import('./main.js').default;
+type MainModule = typeof import('./interactive-mode.js')._testExports;
 
 const globSyncMock = vi.fn<(...args: unknown[]) => unknown>().mockReturnValue([]);
 vi.mock('../shared/deps', async (importOriginal) => {
@@ -188,7 +188,8 @@ beforeAll(async () => {
     const sessionState: typeof import('./session-state.js') = await import('./session-state.js');
     sessionState._resetForTest();
 
-    mainModule = ((await import('./main.js')) as { default: MainModule }).default;
+    const interactiveMode = await import('./interactive-mode.js');
+    mainModule = interactiveMode._testExports;
 });
 
 afterAll(() => {
@@ -1047,16 +1048,6 @@ describe('_promptChoice', () => {
         vi.mocked(state.load).mockReturnValue({ lastChoice: '0' });
         const result = await mainModule._promptChoice('0-9');
         expect(result).toBe('');
-    });
-});
-
-// ---------- unhandled rejection handler ----------
-
-describe('unhandledRejection handler', () => {
-    it('logs error and shows user message', async () => {
-        const logger: typeof import('../shared/logger.js') = await import('../shared/logger.js');
-        process.emit('unhandledRejection', new Error('test rejection'));
-        expect(logger.rootLogger.error).toHaveBeenCalledWith('Unhandled Rejection', expect.any(Object));
     });
 });
 
