@@ -63,7 +63,7 @@ describeGh('GitHub e2e — real API', () => {
             }
             errorMessagesPerJob.push(errors);
         }
-    }, 120000);
+    }, 300000);
 
     describe('data fetching', () => {
         it('fetches recent workflow runs with correct structure', async () => {
