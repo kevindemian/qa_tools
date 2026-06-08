@@ -104,6 +104,25 @@ describe('prompt', async () => {
         mockReadlineQuestion.mockReturnValue('value');
         expect(prompt('Label', { hint: 'some hint' })).toBe('value');
     });
+
+    it('returns default when readlineSync throws (e.g. no /dev/tty)', async () => {
+        mockReadlineQuestion.mockImplementation(() => {
+            throw new Error("The current environment doesn't support interactive reading from TTY.");
+        });
+        expect(prompt('Label', { default: 'fallback' })).toBe('fallback');
+    });
+
+    it('returns empty default when readlineSync throws and no default set', async () => {
+        mockReadlineQuestion.mockImplementation(() => {
+            throw new Error('TTY unavailable');
+        });
+        expect(prompt('Label')).toBe('');
+    });
+
+    it('returns default when stdin.isTTY is false', async () => {
+        Object.defineProperty(process.stdin, 'isTTY', { value: false, configurable: true });
+        expect(prompt('Label', { default: 'tty-false' })).toBe('tty-false');
+    });
 });
 
 describe('confirm', async () => {
@@ -155,6 +174,19 @@ describe('confirm', async () => {
 
     it('shows Y as default when defaultYes is true', async () => {
         mockReadlineQuestion.mockReturnValue('y');
+        expect(confirm('Confirm?', true)).toBe(true);
+    });
+
+    it('returns defaultYes when readlineSync throws', async () => {
+        mockReadlineQuestion.mockImplementation(() => {
+            throw new Error('TTY unavailable');
+        });
+        expect(confirm('Confirm?', true)).toBe(true);
+        expect(confirm('Confirm?', false)).toBe(false);
+    });
+
+    it('returns defaultYes when stdin.isTTY is false', async () => {
+        Object.defineProperty(process.stdin, 'isTTY', { value: false, configurable: true });
         expect(confirm('Confirm?', true)).toBe(true);
     });
 });

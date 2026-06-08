@@ -212,7 +212,7 @@ export async function getAndResolveChoice(level: string, ctx: SessionContext): P
         choice = await getUserChoice(level, ctx.project_name, ctx);
     } catch (e) {
         if (e instanceof CancelError) choice = '/menu';
-        else throw e;
+        else return '__exit__';
     }
     if (choice === '/exit' || choice === '/sair' || choice === '/quit') choice = '0';
     const resolved = resolveAlias(choice);

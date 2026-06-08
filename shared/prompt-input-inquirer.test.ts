@@ -136,11 +136,12 @@ describe('smartPrompt', async () => {
         expect(mockWarn).toHaveBeenCalled();
     });
 
-    it('re-throws non-CancelError from ask', async () => {
+    it('returns default after retries when readlineSync throws (TTY unavailable)', async () => {
         mockReadlineQuestion.mockImplementation(() => {
             throw new Error('readline error');
         });
-        await expect(smartPrompt('Label')).rejects.toThrow('readline error');
+        const result = await smartPrompt('Label', { default: 'fallback' });
+        expect(result).toBe('fallback');
     });
 
     it('continues on /help CancelError without callback', async () => {
