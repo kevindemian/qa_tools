@@ -21,6 +21,33 @@
 
 ---
 
+## 🚀 Sprint Finalização — Git-as-Key + Prevenção de Crashes (Jun/2026)
+
+**Data:** 2026-06-08
+**Estratégia:** 4 fases sequenciais — corrigir 1 teste quebrado, commitar 8 arquivos (+617 linhas) com Store migration + crash prevention + error hardening, remover dead code, sincronizar backlog.
+
+| Fase | Descrição | Arquivos | Esforço | Status |
+|------|-----------|----------|---------|--------|
+| 1 | Corrigir `mockExecSync` — remover teste duplicado (já coberto por `store-backend.fallback.test.ts`) | `shared/store-backend.test.ts` | 15min | ✅ |
+| 2 | Commitar 8 arquivos: case15 Store, error hardening, crash fallbacks | `shared/store-backend.ts`, `shared/store-backend.test.ts`, `jira_management/commands/case15.ts`, `jira_management/commands/case15.test.ts`, `jira_management/import-prep-parsers.ts`, `jira_management/create_tests.test.ts`, `shared/prompt-errors.ts` | 15min | ⏳ |
+| 3 | Remover `CTRF_LAST_FILE` dead code (Store substituiu fallback) | `jira_management/commands/case17-test-utils.ts` | 10min | ⏳ |
+| 4 | Sincronizar BACKLOG.md — mover Sprint C completo para histórico | `BACKLOG.md`, `BACKLOG-historico.md` | 20min | ⏳ |
+
+### Métricas alvo
+
+| Métrica | Atual | Alvo |
+|---------|-------|------|
+| `npm test` | 1 failed | **0 failed** |
+| `tsc --noEmit` | 0 erros | **0 erros** |
+| `npm run lint` | 0 erros | **0 erros** |
+| Crash points cobertos (C1-C8) | 4 committed + 2 uncommitted | **6 cobertos** |
+| `CTRF_LAST_FILE` | 1 ocorrência | **0** |
+| `lastJsonDir`/`lastJsonPath` | 0 | **0** |
+| Handlers com path manual | 2 (case15, case17) | **0** |
+| Store consumido por handlers | 3 | **≥3** |
+
+---
+
 ## 🚀 Sprint Senior Audit — Correções Pós-Auditoria (Jun/2026)
 
 **Origem:** Senior Codebase Audit — 37 achados (1 CRÍTICO, 3 ALTO, 8 MÉDIO, 15 BAIXO, 10 INFO).

@@ -196,7 +196,14 @@ export function onError(
         output.print('  ' + boxDivider());
         output.print('    ' + opts.join('   '));
         output.print('  ' + boxDivider());
-        const answer = readlineSync.question('  Escolha: ').trim().toLowerCase();
+        let answer: string;
+        try {
+            answer = readlineSync.question('  Escolha: ').trim().toLowerCase();
+        } catch {
+            /* stdin indisponível (ex: WSL sem /dev/tty) — aborta como fallback seguro */
+            error('Entrada padrão indisponível. Abortando.');
+            return 'abort';
+        }
         if (NAV_CMDS.includes(answer)) throw new CancelError(answer);
 
         if (answer === 'r' && canRetry) return 'retry';

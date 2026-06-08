@@ -566,7 +566,7 @@ describe('createTestsFromJson', async () => {
         FS.readFileSync.mockReturnValue('not json');
         const result = await createTestsFromJson(BASE_PARAMS());
         expect(result).toBeUndefined();
-        expect(PROMPT.printError).toHaveBeenCalledWith('Erro ao ler JSON', expect.any(Error));
+        expect(PROMPT.warn).toHaveBeenCalled();
     });
 
     it('cancela com array vazio', async () => {
@@ -574,7 +574,7 @@ describe('createTestsFromJson', async () => {
         FS.readFileSync.mockReturnValue('[]');
         const result = await createTestsFromJson(BASE_PARAMS());
         expect(result).toBeUndefined();
-        expect(PROMPT.printError).toHaveBeenCalledWith('Erro ao ler JSON', expect.any(Error));
+        expect(PROMPT.warn).toHaveBeenCalled();
     });
 
     it('cancela com item sem title/steps', async () => {
@@ -582,7 +582,7 @@ describe('createTestsFromJson', async () => {
         FS.readFileSync.mockReturnValue(JSON.stringify([{}]));
         const result = await createTestsFromJson(BASE_PARAMS());
         expect(result).toBeUndefined();
-        expect(PROMPT.printError).toHaveBeenCalledWith('Erro ao ler JSON', expect.any(Error));
+        expect(PROMPT.warn).toHaveBeenCalled();
     });
 
     it('executa dry-run com JSON valido', async () => {

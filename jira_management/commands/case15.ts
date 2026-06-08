@@ -1,24 +1,65 @@
-/** Import JSON/TXT test results (CTRF format) to create Test Executions. */
+/** Import JSON/TXT test definitions to create Test Executions in Jira.
+ * Uses Store-backed resolution: SHA cache → CI download → branch baseline,
+ * falling back to manual file path when no automated data source is available. */
 import path from 'path';
 import Config from '../../shared/config.js';
 import { ask, warn, success } from '../../shared/prompt.js';
+import { writeEphemeral } from '../../shared/temp-dir.js';
+import { resolveTestDataSource, resolveSessionContext } from '../../shared/session-context.js';
 import type { CommandContext } from './context.js';
 // anti-circular (prompt → create_tests → session-context → prompt)
 import createTests from '../create_tests.js';
 import { offerTestExecutionAssociation, showResults } from './test-execution-flow.js';
 
 async function handler(c: CommandContext): Promise<boolean | void> {
-    const jsonPathInput =
-        Config.get('jsonPath') ||
-        (await ask('Caminho do arquivo JSON ou TXT (formato JSON)', {
-            hint: 'ex: ./results/ctrf.json',
-            default: Config.get('jsonPath') || '',
-        }));
-
-    const jsonPath = jsonPathInput.trim();
-    if (!jsonPath) {
-        warn('Caminho do JSON vazio. Operação cancelada.');
+    const projectName = c.ctx.project_name;
+    if (!projectName) {
+        warn('Nenhum projeto Jira selecionado.');
         return;
+    }
+
+    const { sha, branch, store } = resolveSessionContext(c.ctx, projectName);
+
+    /* Attempt automated resolution: SHA cache → CI download → branch baseline */
+    const resolvedData = sha ? await resolveTestDataSource(projectName, sha, branch, store) : null;
+
+    let jsonPath: string;
+    if (resolvedData && resolvedData.result.tests.length > 0) {
+        /* Write resolved test data to a temp file for the import pipeline */
+        const ctrfContent = JSON.stringify(
+            {
+                results: {
+                    tests: resolvedData.result.tests.map((t) => ({
+                        name: t.title,
+                        status: t.state,
+                        duration: t.duration,
+                    })),
+                },
+            },
+            null,
+            2,
+        );
+        jsonPath = writeEphemeral('ctrf-import', `resolve-${sha ?? 'nosha'}-${Date.now()}.json`, ctrfContent);
+        success(
+            resolvedData.source === 'cache'
+                ? 'Usando dados em cache (SHA ' + (sha as string).slice(0, 7) + ')'
+                : resolvedData.source === 'ci'
+                  ? 'Resultados baixados do CI'
+                  : 'Usando baseline do branch ' + branch,
+        );
+    } else {
+        /* Fallback: prompt user for manual file path */
+        const jsonPathInput =
+            Config.get('jsonPath') ||
+            (await ask('Caminho do arquivo JSON ou TXT (formato JSON)', {
+                hint: 'ex: ./results/ctrf.json',
+                default: Config.get('jsonPath') || '',
+            }));
+        jsonPath = jsonPathInput.trim();
+        if (!jsonPath) {
+            warn('Caminho do JSON vazio. Operação cancelada.');
+            return;
+        }
     }
 
     const result = await createTests.createTestsFromJson({
@@ -26,14 +67,32 @@ async function handler(c: CommandContext): Promise<boolean | void> {
         jiraResourceXray: c.jiraResourceXray,
         linkManager: c.linkManager,
         linkManagerXray: c.linkManagerXray,
-        project_name: c.ctx.project_name,
+        project_name: projectName,
         base_url: c.base_url,
         sessionLog: c.sessionLog,
         onBusy: (val: boolean) => {
             c.ctx.isBusy = val;
         },
-        jsonPath: jsonPath,
+        jsonPath,
     });
+
+    /* Register import in Store for future cache hits */
+    if (result && sha && resolvedData) {
+        store.saveReport(sha, resolvedData.result.tests);
+        store.put(sha, {
+            sha,
+            project: projectName,
+            timestamp: Date.now(),
+            tool: 'case15-import',
+            branch: branch || '',
+            total: resolvedData.result.stats.total,
+            passed: resolvedData.result.stats.passed,
+            failed: resolvedData.result.stats.failed,
+            skipped: resolvedData.result.stats.skipped,
+        });
+        store.flush('qa-tools: case15 import ' + sha.slice(0, 7) + ' [skip ci]');
+    }
+
     if (result) {
         c.ctx.inMemoryTasksId = result.inMemoryTasksId;
         c.ctx.inMemoryTasksText = result.inMemoryTasksText;
