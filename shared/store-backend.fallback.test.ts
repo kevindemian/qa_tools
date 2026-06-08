@@ -1,19 +1,15 @@
-import { describe, expect, it, vi, beforeEach } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 
 vi.mock('child_process', async () => {
     const actual = await vi.importActual('child_process');
     return {
         ...actual,
-        execSync: vi.fn(),
+        execFileSync: vi.fn(),
     };
 });
 
-import { execSync } from 'child_process';
+import { execFileSync } from 'child_process';
 import { detectStoreBackend, FsStoreBackend } from './store-backend.js';
-
-beforeEach(() => {
-    vi.clearAllMocks();
-});
 
 describe('detectStoreBackend fallback', () => {
     const origXdg = process.env.XDG_STATE_HOME;
@@ -25,7 +21,7 @@ describe('detectStoreBackend fallback', () => {
 
     it('returns FsStoreBackend when git is unavailable', () => {
         process.env.XDG_STATE_HOME = '/tmp/nonexistent-xdg-fallback';
-        vi.mocked(execSync).mockImplementation(() => {
+        vi.mocked(execFileSync).mockImplementation(() => {
             throw new Error('ENOGIT');
         });
 

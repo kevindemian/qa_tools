@@ -201,6 +201,13 @@ describe('GitStoreBackend additional coverage', () => {
         }
     });
 
+    it('read returns null for non-existent file in GitStoreBackend', () => {
+        const dir = path.join(tmpDir, 'git-read-missing');
+        const backend = new GitStoreBackend(dir, '.');
+        backend.init();
+        expect(backend.read('nonexistent.json')).toBeNull();
+    });
+
     it('read returns null on filesystem error', () => {
         const dir = path.join(tmpDir, 'git-read-error');
         const backend = new GitStoreBackend(dir, '.');
@@ -262,6 +269,18 @@ describe('FsStoreBackend additional coverage', () => {
 describe('detectProjectGitDir', () => {
     it('returns null when no .git found', () => {
         expect(detectProjectGitDir('/nonexistent-path-xyz')).toBeNull();
+    });
+
+    it('returns null when no .git found from cwd', () => {
+        const noGitDir = path.join(tmpDir, 'no-git-cwd');
+        fs.mkdirSync(noGitDir, { recursive: true });
+        const origCwd = process.cwd();
+        process.chdir(noGitDir);
+        try {
+            expect(detectProjectGitDir()).toBeNull();
+        } finally {
+            process.chdir(origCwd);
+        }
     });
 
     it('returns git dir for project with .git', () => {
@@ -348,6 +367,50 @@ describe('detectStoreBackend', () => {
             expect(backend).toBeInstanceOf(FsStoreBackend);
         } finally {
             existsSpy.mockRestore();
+        }
+    });
+
+    it('returns GitStoreBackend when XDG dir already has .git', () => {
+        const xdgDir = path.join(tmpDir, 'xdg-has-git');
+        fs.mkdirSync(path.join(xdgDir, '.git'), { recursive: true });
+        process.env.XDG_STATE_HOME = xdgDir;
+        try {
+            const backend = detectStoreBackend();
+            expect(backend).toBeInstanceOf(GitStoreBackend);
+        } finally {
+            delete process.env.XDG_STATE_HOME;
+        }
+    });
+
+    it('returns FsStoreBackend when canExecGit throws', () => {
+        const xdgDir = path.join(tmpDir, 'xdg-execfile-throw');
+        fs.mkdirSync(xdgDir, { recursive: true });
+        process.env.XDG_STATE_HOME = xdgDir;
+        /* Remove git from PATH so canExecGit throws */
+        const origPath = process.env.PATH;
+        process.env.PATH = '';
+        try {
+            const backend = detectStoreBackend('/nonexistent-project-dir');
+            expect(backend).toBeInstanceOf(FsStoreBackend);
+        } finally {
+            process.env.PATH = origPath;
+        }
+    });
+
+    it('falls back to os.homedir when XDG_STATE_HOME is not set', () => {
+        const origXdg = process.env.XDG_STATE_HOME;
+        const origHome = process.env.HOME;
+        const xdgDir = path.join(tmpDir, 'xdg-homedir');
+        process.env.HOME = xdgDir;
+        delete process.env.XDG_STATE_HOME;
+        try {
+            const backend = detectStoreBackend();
+            expect(backend).toBeInstanceOf(GitStoreBackend);
+        } finally {
+            if (origXdg) process.env.XDG_STATE_HOME = origXdg;
+            else delete process.env.XDG_STATE_HOME;
+            if (origHome) process.env.HOME = origHome;
+            else delete process.env.HOME;
         }
     });
 });

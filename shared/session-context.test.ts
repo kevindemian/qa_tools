@@ -89,6 +89,12 @@ describe('SessionContext', () => {
         expect(ctx.isBusy).toBe(false);
     });
 
+    it('withBusy passes label to spinner', async () => {
+        const result = await ctx.withBusy(async () => 'labelled', 'working');
+        expect(result).toBe('labelled');
+        expect(ctx.isBusy).toBe(false);
+    });
+
     it('pushHistory appends to sessionCounters', async () => {
         ctx.pushHistory('test-op', 'detail-1', 'ok');
         expect(ctx.sessionCounters).toEqual([{ op: 'test-op', detail: 'detail-1', status: 'ok' }]);
@@ -286,6 +292,25 @@ describe('resolveTestDataSource', () => {
                 project: 'project',
                 branch: 'feature-x',
                 sha: 'sha-abc',
+            }),
+        );
+    });
+
+    it('stores CI result with empty branch when branch is null', async () => {
+        const { resolveTestDataSource } = await import('./session-context.js');
+        const store = createMockStore();
+        vi.mocked(store.loadReport).mockReturnValue(null);
+        vi.mocked(fetchLatestTestRun).mockResolvedValue({
+            tests: [{ title: 'T1', state: 'passed', duration: 100 }],
+            stats: { passed: 1, failed: 0, skipped: 0, total: 1, duration: 100 },
+        } as never);
+
+        await resolveTestDataSource('project', 'sha-abc', null, store as never);
+
+        expect(store.put).toHaveBeenCalledWith(
+            'sha-abc',
+            expect.objectContaining({
+                branch: '',
             }),
         );
     });

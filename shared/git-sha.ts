@@ -1,7 +1,6 @@
-/* eslint-disable no-restricted-syntax -- execSync used intentionally for git */
 import fs from 'fs';
 import path from 'path';
-import { execSync } from 'child_process';
+import { execFileSync } from 'child_process';
 
 export function detectGitDir(startDir?: string): string | null {
     let dir = startDir ? path.resolve(startDir) : process.cwd();
@@ -49,7 +48,7 @@ export function getHeadSha(env?: NodeJS.ProcessEnv): string | null {
     }
 
     try {
-        const sha = execSync('git rev-parse HEAD', {
+        const sha = execFileSync('git', ['rev-parse', 'HEAD'], {
             encoding: 'utf8',
             stdio: ['ignore', 'pipe', 'ignore'],
         }).trim();
@@ -67,7 +66,7 @@ export function getCurrentBranch(env?: NodeJS.ProcessEnv): string | null {
 
     try {
         return (
-            execSync('git rev-parse --abbrev-ref HEAD', {
+            execFileSync('git', ['rev-parse', '--abbrev-ref', 'HEAD'], {
                 encoding: 'utf8',
                 stdio: ['ignore', 'pipe', 'ignore'],
             }).trim() || null
