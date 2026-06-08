@@ -140,6 +140,7 @@ consistência com os demais barrel re-exports.
 
 ## Histórico
 
-| Data       | Ação                                                                                   |
-| ---------- | -------------------------------------------------------------------------------------- |
-| 2026-06-07 | Criação do registro. Sprint Dead Code removeu 28 exports (fase 1). 31 itens deferidos. |
+| Data       | Ação                                                                                     |
+| ---------- | ---------------------------------------------------------------------------------------- |
+| 2026-06-07 | Criação do registro. Sprint Dead Code removeu 28 exports (fase 1). 31 itens deferidos.   |
+| 2026-06-08 | `scripts/sandbox-exec.sh` removido (superseded by container podman em Sprint Container). |

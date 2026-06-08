@@ -1,27 +1,79 @@
-#!/bin/sh
-set -e
+#!/usr/bin/env bash
+# Layer 3.2 — Pre-push hook: CI checks + --no-verify anti-bypass security
+set -euo pipefail
 
-echo "=== Running pre-push checks (typecheck + enforce-quality + quality gate + validation hook + tests) ==="
+PROJECT_ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
+AUDIT_LOG="$PROJECT_ROOT/.opencode/warden/audit.log"
 
-npm run typecheck
-npx tsx scripts/enforce-quality.ts
-npx tsx scripts/quality-gate.ts
+# ─── Security: --no-verify detection ────────────────────────────────────
+# Git sets GIT_PUSH_NO_VERIFY=1 when --no-verify is passed
+if [[ "${GIT_PUSH_NO_VERIFY:-0}" == "1" ]]; then
+  TIMESTAMP=$(date -Iseconds)
+  USER_NAME=$(git config user.name || echo "unknown")
+  USER_EMAIL=$(git config user.email || echo "unknown")
+  BRANCH=$(git rev-parse --abbrev-ref HEAD 2>/dev/null || echo "unknown")
 
-# Validation hook test
-VALIDATION_HOOK="$HOME/.config/opencode/validation_hook.ts"
-if [ -f "$VALIDATION_HOOK" ]; then
-    echo "--- Running validation hook test ---"
-    npx tsx "$VALIDATION_HOOK" --test
-
-    echo "--- Validation hook (diff check) ---"
-    DIFF=$(git diff --cached)
-    if [ -n "$DIFF" ]; then
-        echo "$DIFF" | npx tsx "$VALIDATION_HOOK" --check
-    else
-        echo "   (no staged changes to check)"
-    fi
+  BYPASS_MARKER="$PROJECT_ROOT/.opencode/warden/.bypass-authorized"
+  if [[ -f "$BYPASS_MARKER" ]]; then
+    echo "[pre-push] Authorized bypass detected. Logging to $AUDIT_LOG"
+    mkdir -p "$(dirname "$AUDIT_LOG")"
+    echo "{\"timestamp\":\"$TIMESTAMP\",\"type\":\"bypass\",\"subtype\":\"push-no-verify\",\"user\":\"$USER_NAME <$USER_EMAIL>\",\"branch\":\"$BRANCH\",\"authorized\":true}" >> "$AUDIT_LOG"
+    rm -f "$BYPASS_MARKER"
+    # Bypass authorized — still run CI checks
+  else
+    cat <<'BLOCK'
+================================================================
+  SECURITY: git push --no-verify detected (unauthorized)
+================================================================
+  Pushing with --no-verify bypasses all safety hooks.
+  To authorize, create: touch .opencode/warden/.bypass-authorized
+  See Rule 18 in AGENTS.md for the protocol.
+================================================================
+BLOCK
+    mkdir -p "$(dirname "$AUDIT_LOG")"
+    echo "{\"timestamp\":\"$TIMESTAMP\",\"type\":\"bypass\",\"subtype\":\"push-no-verify-blocked\",\"user\":\"$USER_NAME <$USER_EMAIL>\",\"branch\":\"$BRANCH\",\"authorized\":false}" >> "$AUDIT_LOG"
+    exit 1
+  fi
 fi
 
+# ─── CI Checks ──────────────────────────────────────────────────────────
+echo "=== Running pre-push checks ==="
+
+# 1. Typecheck
+echo "--- Typecheck ---"
+npm run typecheck
+
+# 2. Quality enforcement
+echo "--- Quality enforcement ---"
+npx tsx scripts/enforce-quality.ts
+
+# 3. Quality gate
+echo "--- Quality gate ---"
+npx tsx scripts/quality-gate.ts
+
+# 4. Validation hook test
+VALIDATION_HOOK="$HOME/.config/opencode/validation_hook.ts"
+if [ -f "$VALIDATION_HOOK" ]; then
+  echo "--- Validation hook test ---"
+  npx tsx "$VALIDATION_HOOK" --test
+
+  echo "--- Validation hook (diff check) ---"
+  DIFF=$(git diff --cached)
+  if [ -n "$DIFF" ]; then
+    echo "$DIFF" | npx tsx "$VALIDATION_HOOK" --check
+  else
+    echo "   (no staged changes to check)"
+  fi
+fi
+
+# 5. Tests
+echo "--- Tests ---"
 npm test
 
-echo "=== Pre-push checks passed ==="
+# 6. Security scan (lightweight)
+if [[ -x "$PROJECT_ROOT/scripts/scan-sec-logs.sh" ]]; then
+  echo "--- Security log scan ---"
+  "$PROJECT_ROOT/scripts/scan-sec-logs.sh" --quiet || true
+fi
+
+echo "=== All checks passed ==="

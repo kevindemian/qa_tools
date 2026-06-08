@@ -1,24 +1,67 @@
-/**
- * Environment loader — isolates dotenv for dependency management.
- *
- * All .env loading must go through this module.
- * Replacing dotenv requires changing only this file.
- *
- * @module env-loader
- */
 import dotenv from 'dotenv';
 import * as path from 'path';
+import * as fs from 'fs';
 
 let dotenvLoaded = false;
 
-/** Load `.env` file once (idempotent). Silent on failure. */
+const SECRET_PATTERNS: { label: string; regex: RegExp }[] = [
+    { label: 'GitHub PAT', regex: /^github_pat_/ },
+    { label: 'OpenRouter key', regex: /^sk-or-v1-/ },
+    { label: 'Groq key', regex: /^gsk_/ },
+    { label: 'Gemini key', regex: /^AIza/ },
+    { label: 'NVIDIA key', regex: /^nvapi-/ },
+    { label: 'HuggingFace key', regex: /^hf_/ },
+];
+
+function hasSecretPattern(val: string): string | null {
+    for (const p of SECRET_PATTERNS) {
+        if (p.regex.test(val)) return p.label;
+    }
+    return null;
+}
+
+function warnSecretsInFile(filePath: string, label: string): void {
+    try {
+        const content = fs.readFileSync(filePath, 'utf-8');
+        const lines = content.split('\n');
+        for (const line of lines) {
+            const trimmed = line.trim();
+            if (!trimmed || trimmed.startsWith('#')) continue;
+            const eqIdx = trimmed.indexOf('=');
+            if (eqIdx === -1) continue;
+            const val = trimmed.slice(eqIdx + 1);
+            const match = hasSecretPattern(val);
+            if (match) {
+                console.warn(`[env-loader] WARNING: ${match} detected in ${label}. Move to .env.local.`);
+            }
+        }
+    } catch {
+        /* ignore */
+    }
+}
+
+/** Load `.env.local` (priority) then `.env` (fallback). Idempotent. */
 export function ensureDotenv(): void {
     if (dotenvLoaded) return;
+    const projectRoot = path.resolve(import.meta.dirname, '..');
+
+    const localPath = path.join(projectRoot, '.env.local');
+    const envPath = path.join(projectRoot, '.env');
+
     try {
-        dotenv.config({ path: path.resolve(import.meta.dirname, '../.env') });
+        dotenv.config({ path: localPath });
     } catch {
-        /* env file optional */
+        /* .env.local optional */
     }
+
+    try {
+        dotenv.config({ path: envPath });
+    } catch {
+        /* .env optional */
+    }
+
+    warnSecretsInFile(envPath, '.env');
+
     dotenvLoaded = true;
 }
 

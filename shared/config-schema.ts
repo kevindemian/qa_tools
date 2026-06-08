@@ -158,7 +158,7 @@ export const CONFIG_SCHEMA: ConfigField[] = [
         defaultVal: 'https://integrate.api.nvidia.com/v1',
         description: 'LLM fallback base URL',
     },
-    { key: 'llmBatchApiKey', envVar: 'LLM_BATCH_API_KEY', type: 'string', description: 'LLM batch API key' },
+    { key: 'llmBatchApiKey', envVar: 'LLM_BATCH_API_KEY', type: 'string', description: 'LLM batch API key (same as GITHUB_TOKEN)' },
     {
         key: 'llmBatchModel',
         envVar: 'LLM_BATCH_MODEL',
