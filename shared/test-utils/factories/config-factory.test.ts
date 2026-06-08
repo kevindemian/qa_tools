@@ -1,4 +1,4 @@
-import { createMockConfig } from './config-factory.js';
+import { createMockConfig, createMockConfigInstance } from './config-factory.js';
 
 describe('createMockConfig', () => {
     it('returns static methods as vi.fn()', async () => {
@@ -39,5 +39,37 @@ describe('createMockConfig', () => {
         const a = createMockConfig();
         const b = createMockConfig();
         expect(a.get).not.toBe(b.get);
+    });
+
+    it('createMockConfigInstance returns a mock with all fields', async () => {
+        const instance = createMockConfigInstance();
+        expect(typeof instance.get).toBe('function');
+        expect(typeof instance.setAutoConfirm).toBe('function');
+        expect(typeof instance.getAllPrefixed).toBe('function');
+    });
+
+    it('createMockConfigInstance getAllPrefixed returns empty object when called', async () => {
+        const instance = createMockConfigInstance();
+        expect(instance.getAllPrefixed('test')).toEqual({});
+    });
+
+    it('createMockConfigInstance merges overrides', async () => {
+        const customGet = vi.fn(() => 'custom');
+        const instance = createMockConfigInstance({ get: customGet });
+        expect(instance.get('test')).toBe('custom');
+    });
+
+    it('mock.create calls createMockConfigInstance and returns a config', async () => {
+        const mock = createMockConfig();
+        const instance = mock.create();
+        expect(typeof instance.get).toBe('function');
+        expect(typeof instance.setAutoConfirm).toBe('function');
+    });
+
+    it('mock.create returns independent instances each call', async () => {
+        const mock = createMockConfig();
+        const a = mock.create();
+        const b = mock.create();
+        expect(a).not.toBe(b);
     });
 });

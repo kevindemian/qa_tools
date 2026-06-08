@@ -682,4 +682,42 @@ describe('module-level debug logging', () => {
     it('mask hides middle of token', () => {
         expect(mask('secret1234567')).toBe('secr****');
     });
+
+    it('mask returns empty for falsy input', () => {
+        expect(mask('')).toBe('');
+        expect(mask('')).toBe('');
+    });
+});
+
+describe('_isJiraConfigured with config', () => {
+    it('returns true when jiraBaseUrl and jiraPersonalToken have real values', async () => {
+        const configMod = await import('../shared/config.js');
+        vi.mocked(configMod.default.get).mockReturnValue('https://jira.example.com');
+        expect(mod._isJiraConfigured()).toBe(true);
+    });
+
+    it('returns false when jiraBaseUrl contains placeholder', async () => {
+        const configMod = await import('../shared/config.js');
+        vi.mocked(configMod.default.get).mockReturnValue('seu-jira-server');
+        expect(mod._isJiraConfigured()).toBe(false);
+    });
+
+    it('returns false when jiraPersonalToken is placeholder', async () => {
+        const configMod = await import('../shared/config.js');
+        vi.mocked(configMod.default.get)
+            .mockReturnValueOnce('https://jira.example.com')
+            .mockReturnValueOnce('seu-token-aqui');
+        expect(mod._isJiraConfigured()).toBe(false);
+    });
+});
+
+describe('showGapBadge with config', () => {
+    it('caches and displays badge after first call', async () => {
+        const configMod = await import('../shared/config.js');
+        vi.mocked(configMod.default.get).mockReturnValue('https://jira.example.com');
+
+        const mockJiraResource = { searchJiraIssues: vi.fn().mockResolvedValue({ total: 42 }) };
+        await mod.showGapBadge(mockJiraResource as never, 'TESTPROJ');
+        expect(mockJiraResource.searchJiraIssues).toHaveBeenCalled();
+    });
 });

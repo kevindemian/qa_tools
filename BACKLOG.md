@@ -514,3 +514,35 @@ Resolução (resolveSessionContext)
 | `check-unused-exports.sh`     | **0 new** (`exit 0`) | ✅ exit 0                       |
 | Exports removidos             | **28**               | ✅ 28                           |
 | Itens diferidos (não tocados) | **—** (registrados)  | ✅ `docs/DEFERRED-DEAD-CODE.md` |
+
+---
+
+## 🚀 Sprint Coverage — Elevar Cobertura para >92% (Jun/2026)
+
+**Data:** 2026-06-08
+**Origem:** Meta de cobertura: >92% statements geral + todo arquivo >50%.
+**Cobertura atual:** 90.1% statements (12017/13337)
+**Alvo:** >92% statements (>12270/13337)
+
+| ID    | Item                                                   | Arquivo(s)                                                           | Esforço | Status |
+| ----- | ------------------------------------------------------ | -------------------------------------------------------------------- | ------- | ------ |
+| CV-01 | 📋 Testes para `test-execution-creator-factory.ts`     | `shared/test-utils/factories/test-execution-creator-factory.test.ts` | 10min   | ✅     |
+| CV-02 | 📋 Completar testes `config-factory.ts` (62→92%)       | `shared/test-utils/factories/config-factory.test.ts`                 | 10min   | 🔄     |
+| CV-03 | 📋 Completar testes `palette.ts` (88→92%)              | `shared/palette.test.ts`                                             | 5min    | ⏳     |
+| CV-04 | 📋 Completar testes `quality-metrics.ts` (71→92%)      | `shared/quality-metrics.test.ts`                                     | 30min   | ⏳     |
+| CV-05 | 📋 Completar testes `targeted-retry.ts` (72→92%)       | `shared/targeted-retry.test.ts`                                      | 20min   | ⏳     |
+| CV-06 | 📋 Completar testes `schedule-handler.ts` (43→92%)     | `git_triggers/schedule-handler.test.ts`                              | 30min   | ⏳     |
+| CV-07 | 📋 Completar testes `main.ts` jira_management (38→92%) | `jira_management/main.test.ts`                                       | 30min   | ⏳     |
+| CV-08 | 📋 Criar testes `interactive-mode.ts` (25→92%)         | `git_triggers/interactive-mode.test.ts`                              | 2h      | ⏳     |
+| CV-09 | 📋 Elevar `batch-mode.ts` (57→92%)                     | `git_triggers/batch-mode.test.ts`                                    | 20min   | ⏳     |
+| CV-10 | 📋 Elevar demais arquivos 50-92%                       | múltiplos                                                            | 1h      | ⏳     |
+
+### Métricas alvo — Sprint Coverage
+
+| Métrica                     | Alvo          |
+| --------------------------- | ------------- |
+| `tsc --noEmit`              | **0 erros**   |
+| `vitest run`                | **100% pass** |
+| `npm run lint`              | **0 erros**   |
+| Statements coverage         | **>92%**      |
+| Menor cobertura por arquivo | **>50%**      |

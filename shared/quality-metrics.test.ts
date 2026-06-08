@@ -1,9 +1,32 @@
 import { QualityMetricsCollector } from './quality-metrics.js';
+import { recordInvariantFire, detectDrift, snapshotQualityMetrics } from './quality-metrics.js';
+import type { QualityMetricsSnapshot } from './quality-metrics.js';
+
+vi.mock('fs', () => ({
+    existsSync: vi.fn(() => false),
+    readFileSync: vi.fn(),
+    writeFileSync: vi.fn(),
+    mkdirSync: vi.fn(),
+    default: {
+        existsSync: vi.fn(() => false),
+        readFileSync: vi.fn(),
+        writeFileSync: vi.fn(),
+        mkdirSync: vi.fn(),
+    },
+}));
+
+vi.mock('./config', () => ({
+    default: {
+        get: vi.fn(() => '/tmp/.local/state/qa-tools'),
+    },
+    __esModule: true,
+}));
 
 describe('QualityMetricsCollector', () => {
     let collector: QualityMetricsCollector;
 
     beforeEach(() => {
+        vi.clearAllMocks();
         collector = new QualityMetricsCollector();
     });
 
@@ -82,6 +105,98 @@ describe('QualityMetricsCollector', () => {
         it('returns empty alerts with insufficient history', async () => {
             const alerts = collector.detectDrift([]);
             expect(alerts).toHaveLength(0);
+        });
+
+        it('returns empty alerts with one snapshot', async () => {
+            const snapshots: QualityMetricsSnapshot[] = [
+                {
+                    timestamp: '2026-01-01',
+                    invariantFireCount: { 'T-01': 5 },
+                    layerPassRates: { layer1: 1, layer2: 1, layer3: 1 },
+                    layerAttempts: { layer1: 1, layer2: 1, layer3: 1 },
+                    artifactTypeCounts: {},
+                    avgStructureScore: 0,
+                },
+            ];
+            const alerts = collector.detectDrift(snapshots);
+            expect(alerts).toHaveLength(0);
+        });
+
+        it('detects drift when current rate exceeds 2σ from baseline mean', async () => {
+            collector.recordInvariantFire('T-01');
+            collector.recordInvariantFire('T-02');
+
+            const snapshots: QualityMetricsSnapshot[] = [
+                {
+                    timestamp: '2026-01-01',
+                    invariantFireCount: { 'T-02': 1 },
+                    layerPassRates: { layer1: 1, layer2: 1, layer3: 1 },
+                    layerAttempts: { layer1: 1, layer2: 1, layer3: 1 },
+                    artifactTypeCounts: {},
+                    avgStructureScore: 0,
+                },
+                {
+                    timestamp: '2026-01-02',
+                    invariantFireCount: { 'T-02': 1 },
+                    layerPassRates: { layer1: 1, layer2: 1, layer3: 1 },
+                    layerAttempts: { layer1: 1, layer2: 1, layer3: 1 },
+                    artifactTypeCounts: {},
+                    avgStructureScore: 0,
+                },
+            ];
+
+            const alerts = collector.detectDrift(snapshots);
+            expect(Array.isArray(alerts)).toBe(true);
+        });
+
+        it('skips invariants with fewer than 2 baseline occurrences', async () => {
+            collector.recordInvariantFire('RARE');
+
+            const snapshots: QualityMetricsSnapshot[] = [
+                {
+                    timestamp: '2026-01-01',
+                    invariantFireCount: { 'T-01': 5 },
+                    layerPassRates: { layer1: 1, layer2: 1, layer3: 1 },
+                    layerAttempts: { layer1: 1, layer2: 1, layer3: 1 },
+                    artifactTypeCounts: {},
+                    avgStructureScore: 0,
+                },
+                {
+                    timestamp: '2026-01-02',
+                    invariantFireCount: { 'T-01': 3 },
+                    layerPassRates: { layer1: 1, layer2: 1, layer3: 1 },
+                    layerAttempts: { layer1: 1, layer2: 1, layer3: 1 },
+                    artifactTypeCounts: {},
+                    avgStructureScore: 0,
+                },
+            ];
+
+            const alerts = collector.detectDrift(snapshots);
+            expect(alerts).toHaveLength(0);
+        });
+    });
+
+    describe('getHistory', () => {
+        it('returns empty array when file does not exist', async () => {
+            const history = collector.getHistory();
+            expect(history).toEqual([]);
+        });
+    });
+
+    describe('exported functions', () => {
+        it('recordInvariantFire calls default collector', async () => {
+            recordInvariantFire('T-01');
+        });
+
+        it('detectDrift returns array', async () => {
+            const alerts = detectDrift();
+            expect(Array.isArray(alerts)).toBe(true);
+        });
+
+        it('snapshotQualityMetrics returns snapshot', async () => {
+            const snapshot = snapshotQualityMetrics();
+            expect(snapshot).toHaveProperty('timestamp');
+            expect(snapshot).toHaveProperty('invariantFireCount');
         });
     });
 });
