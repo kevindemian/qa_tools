@@ -197,6 +197,39 @@ describe('getCurrentBranch', () => {
         }
     });
 
+    it('returns null when packed-refs file does not exist', () => {
+        const dir = path.join(tmpDir, 'git-no-packed-refs');
+        fs.mkdirSync(path.join(dir, '.git', 'refs', 'heads'), { recursive: true });
+        fs.writeFileSync(path.join(dir, '.git', 'HEAD'), 'ref: refs/heads/main\n');
+        const origCwd = process.cwd();
+        process.chdir(dir);
+        try {
+            const sha = getHeadSha({} as NodeJS.ProcessEnv);
+            expect(sha).toBeNull();
+        } finally {
+            process.chdir(origCwd);
+        }
+    });
+
+    it('handles packed-refs entry without SHA prefix gracefully', () => {
+        const dir = path.join(tmpDir, 'git-no-sha-packed');
+        fs.mkdirSync(path.join(dir, '.git', 'refs', 'heads'), { recursive: true });
+        fs.writeFileSync(
+            path.join(dir, '.git', 'packed-refs'),
+            '# pack-refs with: peeled fully-peeled sorted\nrefs/heads/main\n',
+        );
+        fs.writeFileSync(path.join(dir, '.git', 'HEAD'), 'ref: refs/heads/main\n');
+        const origCwd = process.cwd();
+        process.chdir(dir);
+        try {
+            const sha = getHeadSha({} as NodeJS.ProcessEnv);
+            /* Line without SHA prefix returns the ref itself, not null */
+            expect(sha).toBe('refs/heads/main');
+        } finally {
+            process.chdir(origCwd);
+        }
+    });
+
     it('uses process.env when env argument is omitted for getCurrentBranch', () => {
         const origRef = process.env.GITHUB_REF_NAME;
         const origBranch = process.env.CI_COMMIT_BRANCH;

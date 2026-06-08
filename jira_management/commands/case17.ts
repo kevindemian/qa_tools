@@ -27,31 +27,6 @@ import { resolveTestDataSource, resolveSessionContext } from '../../shared/sessi
 
 import Config from '../../shared/config.js';
 
-export interface SourceResult {
-    result: ParseResult;
-    source: 'cache' | 'ci' | 'file';
-}
-
-export function resolveSource(
-    loadedCache: {
-        tests: FlatTest[];
-        stats: { passed: number; failed: number; skipped: number; total: number };
-    } | null,
-    ciRun: ParseResult | null,
-    fileResult: ParseResult | null,
-): SourceResult | null {
-    if (loadedCache) {
-        const result: ParseResult = {
-            tests: loadedCache.tests,
-            stats: { ...loadedCache.stats, duration: 0 },
-        };
-        if (result.stats.total > 0) return { result, source: 'cache' };
-    }
-    if (ciRun && ciRun.stats.total > 0) return { result: ciRun, source: 'ci' };
-    if (fileResult && fileResult.stats.total > 0) return { result: fileResult, source: 'file' };
-    return null;
-}
-
 async function _fetchJiraContext(
     failedTests: FlatTest[],
     jiraResource: CommandContext['jiraResource'],

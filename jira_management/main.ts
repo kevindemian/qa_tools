@@ -351,6 +351,7 @@ async function main(): Promise<void> {
 process.on('unhandledRejection', (reason: unknown) => {
     printError('Erro interno não tratado (async)', reason);
     rootLogger.error('Unhandled Rejection', { reason: String(reason) });
+    gracefulExit(ExitCode.ERROR);
 });
 
 process.on('uncaughtException', (err: Error) => {
