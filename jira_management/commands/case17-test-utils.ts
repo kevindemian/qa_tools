@@ -93,25 +93,6 @@ export function computeDiff(
     }
 
     if (lastTests.length === 0) {
-        const CTRF_LAST_FILE = 'last-results.ctrf.json';
-        const lastPath = path.join(process.cwd(), CTRF_LAST_FILE);
-        if (fs.existsSync(lastPath)) {
-            try {
-                const raw = fs.readFileSync(lastPath, 'utf8');
-                const parsed: unknown = JSON.parse(raw);
-                if (parsed && typeof parsed === 'object') {
-                    const obj = parsed as { results?: { tests?: Array<{ name: string; status: string }> } };
-                    if (obj.results?.tests) {
-                        lastTests = obj.results.tests;
-                    }
-                }
-            } catch {
-                /* corrupted file, use empty */
-            }
-        }
-    }
-
-    if (lastTests.length === 0) {
         return { newFailures: [], newPasses: [], flaky: [] };
     }
 
