@@ -30,21 +30,21 @@
 |------|-----------|----------|---------|--------|
 | 1 | Corrigir `mockExecSync` — remover teste duplicado (já coberto por `store-backend.fallback.test.ts`) | `shared/store-backend.test.ts` | 15min | ✅ |
 | 2 | Commitar 8 arquivos: case15 Store, error hardening, crash fallbacks | `shared/store-backend.ts`, `shared/store-backend.test.ts`, `jira_management/commands/case15.ts`, `jira_management/commands/case15.test.ts`, `jira_management/import-prep-parsers.ts`, `jira_management/create_tests.test.ts`, `shared/prompt-errors.ts` | 15min | ⏳ |
-| 3 | Remover `CTRF_LAST_FILE` dead code (Store substituiu fallback) | `jira_management/commands/case17-test-utils.ts` | 10min | ⏳ |
-| 4 | Sincronizar BACKLOG.md — mover Sprint C completo para histórico | `BACKLOG.md`, `BACKLOG-historico.md` | 20min | ⏳ |
+| 3 | Remover `CTRF_LAST_FILE` dead code (Store substituiu fallback) | `jira_management/commands/case17-test-utils.ts` | 10min | ✅ |
+| 4 | Sincronizar BACKLOG.md — mover Sprint C completo para histórico | `BACKLOG.md`, `BACKLOG-historico.md` | 20min | 🔄 |
 
 ### Métricas alvo
 
-| Métrica | Atual | Alvo |
-|---------|-------|------|
-| `npm test` | 1 failed | **0 failed** |
-| `tsc --noEmit` | 0 erros | **0 erros** |
-| `npm run lint` | 0 erros | **0 erros** |
-| Crash points cobertos (C1-C8) | 4 committed + 2 uncommitted | **6 cobertos** |
-| `CTRF_LAST_FILE` | 1 ocorrência | **0** |
-| `lastJsonDir`/`lastJsonPath` | 0 | **0** |
-| Handlers com path manual | 2 (case15, case17) | **0** |
-| Store consumido por handlers | 3 | **≥3** |
+| Métrica | Atual | Alvo | Status |
+|---------|-------|------|--------|
+| `npm test` | 4398 pass | **0 failed** | ✅ |
+| `tsc --noEmit` | 0 erros | **0 erros** | ✅ |
+| `npm run lint` | 0 erros | **0 erros** | ✅ |
+| Crash points cobertos (C1-C8) | 6 cobertos | **6 cobertos** | ✅ |
+| `CTRF_LAST_FILE` | 0 | **0** | ✅ |
+| `lastJsonDir`/`lastJsonPath` | 0 | **0** | ✅ |
+| Handlers com path manual | 0 | **0** | ✅ |
+| Store consumido por handlers | ≥3 | **≥3** | ✅ |
 
 ---
 
@@ -672,152 +672,4 @@ Resolução (resolveSessionContext)
 
 ---
 
-## 🚀 Sprint C — Git-as-Key: Retomada Pós-Auditoria (Jun/2026)
 
-**Data da auditoria:** 2026-06-08
-**Origem:** Auditoria completa do Sprint C identificou que `Store`, `resolveSessionContext` e `resolveTestDataSource` têm cobertura boa mas **zero consumidores**. 7 itens pendentes, sendo 4 nunca iniciados (GC-06 a GC-09).
-**Estratégia:** Strangler Fig — handlers consomem Store progressivamente. Old code removido apenas quando não houver mais consumidores.
-
-### Status atualizado dos itens existentes
-
-| ID | Item | Status anterior | Status real | Observação |
-| --- | --- | --- | --- | --- |
-| GC-01 | StoreBackend + GitBackend + FsBackend | 🔄 (68%) | 🔄 (100% stmts, 82.6% branches) | Coverage melhor que o declarado; branches pendentes |
-| GC-01a | Testes store-backend.ts → 100% | 🔄 | 🔄 | `detectStoreBackend` read errors, `GitStoreBackend.init` não cobertos |
-| GC-03 | `shared/git-sha.ts` | 🔄 (100% stmts, 85% branches) | 🔄 (100% stmts, 90% branches) | Linhas 34, 39-56, 69 descobertas (packed-refs, execSync fallback) |
-| GC-03a | Testes git-sha.ts → 100% | 🔄 | 🔄 | CI env + packed-refs + execSync em non-git-dir |
-| GC-04 | session-context.ts | 🔄 | 🔄 | **Zero consumidores** — prioridade máxima na retomada |
-| GC-04a | Testes session-context.ts → 100% | 🔄 | 🔄 (98.46% stmts, 94.59% branches) | Quase completo |
-| GC-05 | git-artifact-downloader.ts | 🔄 (27%) | 🔄 (72.04% stmts, 48.68% branches) | Coverage subiu mas branches muito baixos |
-| GC-05a | Testes git-artifact-downloader.ts → 100% | 🔄 | 🔄 | Gaps em GitLab paths |
-| GC-05b | ci-detect.ts extraído | 🔄 (0%) | ✅ (100%) | **Completo** — atualizar status |
-| GC-05c | Testes ci-detect.ts → 100% | 🔄 (0%) | ✅ (100%) | **Completo** — atualizar status |
-| GC-06 | Rewrite report-cache.ts usando Store | ⏳ | ⏳ | **Nunca iniciado** |
-| GC-07 | Rewrite metrics.ts usando Store | ⏳ | ⏳ | **Nunca iniciado** |
-| GC-08 | case17 consome resolveTestDataSource | ⏳ | ⏳ | **Nunca iniciado** — old `_chooseTestDataSource` com path manual ativo |
-| GC-08a | Mocks case17.test.ts | ⏳ | ⏳ | Bloqueado por GC-08 |
-| GC-09 | case15 consome resolveSessionContext | ⏳ | ⏳ | **Nunca iniciado** — `lastJsonDir` ativo em 7 arquivos (19 ocorrências) |
-| GC-11 | Limpeza Strangler Fig pós-migração | ⏳ | ⏳ | Bloqueado por GC-06 a GC-09 |
-| GC-12 | Coverage CI Node 22 ≥ 90% | 🔴 (89.23%) | 🔴 | Testes quebrados impedem cobertura |
-
-### Wave 1 — Conectar Consumidores (Strangler Fig)
-
-Prioridade máxima: dar consumidores ao Store já implementado.
-
-| ID | Item | Arquivo(s) | Esforço | Risco | Status |
-| --- | --- | --- | --- | --- | --- |
-| GC-04b | ♻️ case17 usar `resolveTestDataSource` no lugar de `_chooseTestDataSource()` | `jira_management/commands/case17.ts` | 2h | 🟡 Médio | ⏳ |
-| GC-04c | ♻️ case15 usar `resolveSessionContext` + remover `lastJsonDir` | `jira_management/commands/case15.ts` | 1h | 🟢 Baixo | ⏳ |
-| GC-04d | ♻️ Substituir `lastJsonDir`/`lastJsonPath` em `import-loop.ts`, `import-prep-parsers.ts` | `jira_management/import-*.ts` | 1h | 🟢 Baixo | ⏳ |
-| GC-04e | 📋 Testes de integração com consumidores reais | `case17.test.ts`, `case15.test.ts` | 2h | 🟢 Baixo | ⏳ |
-
-### Wave 2 — Rewrite de Persistência
-
-Substituir storings diretos por Store.
-
-| ID | Item | Arquivo(s) | Esforço | Risco | Status |
-| --- | --- | --- | --- | --- | --- |
-| GC-06 | ♻️ `report-cache.ts` sobre Store | `shared/report-cache.ts` | 1h | 🟡 Médio | ⏳ |
-| GC-07 | ♻️ `metrics.ts` sobre Store | `shared/metrics.ts` | 1h | 🟡 Médio | ⏳ |
-| GC-06a | ♻️ `case17-helpers.ts:saveMetricsJson()` sobre Store | `jira_management/commands/case17-helpers.ts` | 30min | 🟢 Baixo | ⏳ |
-| GC-07a | ♻️ `temp-dir.ts:writeReport()` sobre Store | `shared/temp-dir.ts` | 30min | 🟢 Baixo | ⏳ |
-
-### Wave 3 — Limpeza + Cobertura
-
-Remover old code e fechar métricas.
-
-| ID | Item | Arquivo(s) | Esforço | Risco | Status |
-| --- | --- | --- | --- | --- | --- |
-| GC-11 | ♻️ Remover `_chooseTestDataSource`, `saveMetricsJson` antigo, `CTRF_LAST_FILE` | `case17.ts`, `case17-helpers.ts`, `case17-test-utils.ts` | 1h | 🟢 Baixo | ⏳ |
-| GC-01a | 📋 Branches 100% em store-backend.ts | `shared/store-backend.test.ts` | 30min | 🟢 Baixo | ⏳ |
-| GC-03a | 📋 Branches 100% em git-sha.ts | `shared/git-sha.test.ts` | 30min | 🟢 Baixo | ⏳ |
-| GC-05a | 📋 100% em git-artifact-downloader.ts | `shared/git-artifact-downloader.test.ts` | 2h | 🟡 Médio | ⏳ |
-| GC-12 | 📋 Coverage CI ≥ 90% (Node 22) | `vitest.config.ts` | 2h | 🟡 Médio | ⏳ |
-
-### Plano Refinado — 8 Fases (15h total)
-**Data:** 2026-06-08. **Estratégia:** Strangler Fig — handlers consomem Store, old code removido após zero consumidores.
-
-#### Fase 0 — Mocks (pré-requisito para testes, ~50min)
-
-| ID | Item | Arquivo(s) | Esforço | Status |
-|---|---|---|---|---|
-| M-1 | Mock `shared/store.ts` | `shared/__mocks__/store.ts` | 15min | ⏳ |
-| M-2 | Mock `shared/store-backend.ts` | `shared/__mocks__/store-backend.ts` | 15min | ⏳ |
-| M-3 | Mock `shared/git-sha.ts` | `shared/__mocks__/git-sha.ts` | 10min | ⏳ |
-| M-4 | Mock `shared/git-artifact-downloader.ts` | `shared/__mocks__/git-artifact-downloader.ts` | 10min | ⏳ |
-
-#### Fase 1 — Pipeline Handler (primeiro consumidor, ~1h)
-
-| ID | Item | Arquivo(s) | Esforço | Risco | Status |
-|---|---|---|---|---|---|
-| PH-1 | ♻️ `cacheReport()` → `Store.saveReport()` + `Store.put()` | `git_triggers/pipeline-handler.ts` | 30min | 🟢 Baixo | ⏳ |
-| PH-2 | 📋 Atualizar tests p/ mocks Store | `git_triggers/pipeline-handler.test.ts` | 30min | 🟢 Baixo | ⏳ |
-
-#### Fase 2 — case17 Strangler Fig (core, ~5h)
-
-| ID | Item | Arquivo(s) | Esforço | Risco | Status |
-|---|---|---|---|---|---|
-| C17-1 | ♻️ `resolveTestDataSource()` substitui `_chooseTestDataSource()` | `jira_management/commands/case17.ts` | 2h | 🟡 Médio | ⏳ |
-| C17-2 | ♻️ Fallback manual mantido p/ caso null (sem CI, sem cache) | `jira_management/commands/case17.ts` | — | 🟢 Baixo | ⏳ |
-| C17-3 | ♻️ `saveMetricsJson` → `Store.saveMetrics()` | `jira_management/commands/case17-helpers.ts` | 30min | 🟢 Baixo | ⏳ |
-| C17-4 | 📋 Atualizar `case17.test.ts` c/ mocks Store | `jira_management/commands/case17.test.ts` | 1.5h | 🟡 Médio | ⏳ |
-| C17-5 | 📋 Atualizar `case17-helpers.test.ts` | `jira_management/commands/case17-helpers.test.ts` | 30min | 🟢 Baixo | ⏳ |
-| C17-6 | 📋 Atualizar `case17-test-utils.ts` (remover `CTRF_LAST_FILE`) | `jira_management/commands/case17-test-utils.ts` | 15min | 🟢 Baixo | ⏳ |
-
-#### Fase 3 — Remover report-cache (dead code, ~12min)
-
-| ID | Item | Arquivo(s) | Esforço | Risco | Status |
-|---|---|---|---|---|---|
-| RC-1 | ♻️ Remover `shared/report-cache.ts` | `shared/report-cache.ts` | 5min | 🟢 Zero | ⏳ |
-| RC-2 | ♻️ Remover `shared/report-cache.test.ts` | `shared/report-cache.test.ts` | 5min | 🟢 Zero | ⏳ |
-| RC-3 | ♻️ Remover barrel exports de report-cache | `shared/index.ts` (se houver) | 2min | 🟢 Zero | ⏳ |
-
-#### Fase 4 — case15 + lastJsonDir cleanup (~3h)
-
-| ID | Item | Arquivo(s) | Esforço | Risco | Status |
-|---|---|---|---|---|---|
-| C15-1 | ♻️ case15 usa `resolveSessionContext` para SHA + store + branch | `jira_management/commands/case15.ts` | 1h | 🟡 Médio | ⏳ |
-| C15-2 | ♻️ Remove prompt manual de caminho em case15 | `jira_management/commands/case15.ts` | — | 🟢 Baixo | ⏳ |
-| C15-3 | 📋 Atualizar `case15.test.ts` | `jira_management/commands/case15.test.ts` | 30min | 🟢 Baixo | ⏳ |
-| LJD-1 | ♻️ `import-loop.ts` para de escrever `state.lastJsonPath` | `jira_management/import-loop.ts` | 15min | 🟢 Baixo | ⏳ |
-| LJD-2 | ♻️ `import-prep-parsers.ts` usa `Config.get()` em vez de state path | `jira_management/import-prep-parsers.ts` | 30min | 🟢 Baixo | ⏳ |
-| LJD-3 | 📋 Atualizar `import-prep-parsers.test.ts` | `jira_management/import-prep-parsers.test.ts` | 15min | 🟢 Baixo | ⏳ |
-| LJD-4 | ♻️ Remover `lastJsonDir`/`lastJsonPath` de `StateSchema` | `shared/types/common.ts` | 5min | 🟢 Baixo | ⏳ |
-| LJD-5 | 📋 Atualizar `state.test.ts` se necessário | `shared/state.test.ts` | 10min | 🟢 Baixo | ⏳ |
-
-#### Fase 5 — Limpeza final + metrics.ts refactor (~2h)
-
-| ID | Item | Arquivo(s) | Esforço | Risco | Status |
-|---|---|---|---|---|---|
-| CL-1 | ♻️ Remover `_chooseTestDataSource` morto | `jira_management/commands/case17.ts` | 5min | 🟢 Baixo | ⏳ |
-| CL-2 | ♻️ Remover `saveMetricsJson` antigo | `jira_management/commands/case17-helpers.ts` | 5min | 🟢 Baixo | ⏳ |
-| CL-3 | ♻️ Remover `CTRF_LAST_FILE` | `jira_management/commands/case17-test-utils.ts` | 2min | 🟢 Baixo | ⏳ |
-| GC-07 | ♻️ `metrics.ts` persistência → Store (refactor interno, API pública inalterada) | `shared/metrics.ts` | 1h | 🟡 Médio | ⏳ |
-| GC-07a | 📋 Atualizar `metrics.test.ts` c/ mocks Store | `shared/metrics.test.ts` | 30min | 🟡 Médio | ⏳ |
-
-#### Fase 6 — Cobertura + CI Gate (~4h)
-
-| ID | Item | Arquivo(s) | Esforço | Risco | Status |
-|---|---|---|---|---|---|
-| CV-01a | 📋 Branches 100% store-backend.ts | `shared/store-backend.test.ts` | 30min | 🟢 Baixo | ⏳ |
-| CV-03a | 📋 Branches 100% git-sha.ts | `shared/git-sha.test.ts` | 30min | 🟢 Baixo | ⏳ |
-| CV-05a | 📋 ~100% git-artifact-downloader.ts (GitLab paths) | `shared/git-artifact-downloader.test.ts` | 2h | 🟡 Médio | ⏳ |
-| CI-12 | 📋 Fechar coverage CI ≥ 90% | `vitest.config.ts`, múltiplos | 1h | 🟡 Médio | ⏳ |
-
-### Fora de escopo
-
-- ❌ `temp-dir.ts:writeReport()` — HTML output, não é dado de Store
-- ❌ `metrics.ts` business logic (`calculateFlakiness`, `getTrends`) — não é persistência
-- ❌ `GC-07a` (`temp-dir.ts` sobre Store) — caminho incorreto, writeReport é para HTML
-
-### Métricas alvo — Retomada Git-as-Key
-
-| Métrica | Alvo |
-| --- | --- |
-| `tsc --noEmit` | 0 erros |
-| `vitest run` | 100% pass |
-| `npm run lint` | 0 erros |
-| `npm run test:coverage` | Node 22 ≥ 90% statements |
-| `lastJsonDir`/`lastJsonPath` ocorrências | **0** |
-| Handlers que pedem path manual | **0** |
-| Store consumido por handlers | **≥3** (case15, case17, pipeline-handler) |
