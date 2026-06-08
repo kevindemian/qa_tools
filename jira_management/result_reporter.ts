@@ -134,7 +134,10 @@ function _buildExecutionPayload(
     if (tag) tag = ' (' + tag + ')';
 
     const summary = 'Results: ' + (csvName || 'Tests') + tag + ' - ' + now;
-    const testKeys = matchedResults.filter((m) => m.status !== 'skipped').map((m) => m.key);
+    const testKeys = matchedResults.reduce((acc: string[], m) => {
+        if (m.status !== 'skipped') acc.push(m.key);
+        return acc;
+    }, []);
     return { summary, testKeys };
 }
 

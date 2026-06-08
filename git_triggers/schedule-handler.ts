@@ -221,7 +221,10 @@ export function generateWeeklyQualityReport(): void {
                 ? Math.round((projectRuns.filter((r) => r.failed > 0).length / projectRuns.length) * 100)
                 : 0;
 
-        const uncoveredEpics: string[] = matrix.nodes.filter((n) => n.coverage < 100).map((n) => n.epic);
+        const uncoveredEpics: string[] = matrix.nodes.reduce((acc: string[], n) => {
+            if (n.coverage < 100) acc.push(n.epic);
+            return acc;
+        }, []);
 
         const incidentReport = buildIncidentReport(
             failRate,

@@ -8,6 +8,8 @@ import { parseTestResults } from '../shared/result_parser.js';
 import { nonNull } from '../shared/test-utils.js';
 import { matchResultsToTests, createTestExecutionFromResults } from '../jira_management/result_reporter.js';
 
+const E2E_TOKEN = process.env.E2E_JIRA_TOKEN ?? (process.env.CI ? '' : 'e2e-token');
+
 const tmpHome = fs.mkdtempSync(path.join(os.tmpdir(), 'qa-e2e-'));
 
 const FIXTURES = path.join(import.meta.dirname, 'fixtures');
@@ -50,7 +52,7 @@ describe('E2E: Result Processing Pipeline', () => {
         nock.cleanAll();
         process.env.HOME = tmpHome;
         process.env.JIRA_BASE_URL = 'http://localhost:1997/jira';
-        process.env.JIRA_PERSONAL_TOKEN = 'e2e-token';
+        process.env.JIRA_PERSONAL_TOKEN = E2E_TOKEN;
         process.env.XRAY_BASE_URL = 'http://localhost:1997/xray';
         process.env.QUIET = 'true';
         setupJiraMocks('http://localhost:1997/jira');
@@ -94,7 +96,7 @@ describe('E2E: Result Processing Pipeline', () => {
         expect(matchStats.passed).toBe(2);
         expect(matchStats.failed).toBe(1);
 
-        const jiraResource = new JiraResource('e2e-token', 'http://localhost:1997/jira/rest/api/2');
+        const jiraResource = new JiraResource(E2E_TOKEN, 'http://localhost:1997/jira/rest/api/2');
         const linkManager = new JiraLinkManager(jiraResource);
         const result = await createTestExecutionFromResults({
             jiraResource,

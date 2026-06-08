@@ -5,6 +5,8 @@ import { parseTestResultsFile } from '../shared/result_parser.js';
 import { generateHtmlReport } from '../shared/report-generator.js';
 import { writeReport } from '../shared/temp-dir.js';
 import { createHttpClient } from '../shared/http-client.js';
+import { rootLogger } from '../shared/logger.js';
+import { gracefulExit } from '../shared/cli_base.js';
 
 function loadCtrfFixture(): { ctrfPath: string; result: ReturnType<typeof parseTestResultsFile> } {
     const ctrfArg = process.argv.find((a) => a.startsWith('--ctrf='));
@@ -14,8 +16,8 @@ function loadCtrfFixture(): { ctrfPath: string; result: ReturnType<typeof parseT
     const result = parseTestResultsFile(ctrfPath);
 
     if (result.error) {
-        console.error('Parse error:', result.error);
-        process.exit(1);
+        rootLogger.error('Parse error:', result.error);
+        gracefulExit(1);
     }
 
     writeReport('last-results.ctrf.json', fs.readFileSync(ctrfPath, 'utf8'));
@@ -27,7 +29,7 @@ async function fetchCiCdContext(): Promise<string> {
     const ghRepo = process.env.GITHUB_REPOSITORY || 'kevindemian/qa_tools';
 
     if (!ghToken) {
-        console.log('GITHUB_TOKEN not set — CI/CD section omitted');
+        rootLogger.info('GITHUB_TOKEN not set — CI/CD section omitted');
         return '';
     }
 
@@ -58,10 +60,10 @@ async function fetchCiCdContext(): Promise<string> {
             html += `<li><b>#${run.runId}</b> ${run.name} — ${(run.createdAt || '').slice(0, 10)} ✅</li>`;
         }
         html += '</ul></div>';
-        console.log(`CI/CD context: ${runStats.length} runs fetched`);
+        rootLogger.info(`CI/CD context: ${runStats.length} runs fetched`);
         return html;
     } catch (e: unknown) {
-        console.log(`CI/CD fetch skipped: ${(e as Error).message}`);
+        rootLogger.info(`CI/CD fetch skipped: ${(e as Error).message}`);
         return '';
     }
 }
@@ -76,7 +78,7 @@ function assembleAndWriteReport(ciHtml: string, result: ReturnType<typeof parseT
     const finalHtml = ciHtml ? htmlBody.replace('</body>', ciHtml + '</body>') : htmlBody;
 
     const outPath = writeReport('report-e2e-smoke.html', finalHtml);
-    console.log(`Report: ${outPath}`);
+    rootLogger.info(`Report: ${outPath}`);
 }
 
 async function main() {
@@ -86,6 +88,6 @@ async function main() {
 }
 
 main().catch((e: unknown) => {
-    console.error('Fatal:', (e as Error).message);
-    process.exit(1);
+    rootLogger.error('Fatal:', (e as Error).message);
+    gracefulExit(1);
 });

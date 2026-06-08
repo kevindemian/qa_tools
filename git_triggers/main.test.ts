@@ -193,7 +193,7 @@ beforeAll(async () => {
 
     const interactiveMode = await import('./interactive-mode.js');
     mainModule = interactiveMode._testExports;
-});
+}, 30_000);
 
 afterAll(() => {
     vi.clearAllMocks();

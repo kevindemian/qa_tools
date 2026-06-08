@@ -14,6 +14,8 @@ import { setupHandlers, resetHandlers } from './handlers.js';
 
 const { createTestsFromCsv } = createTests;
 
+const E2E_TOKEN = process.env.E2E_JIRA_TOKEN ?? (process.env.CI ? '' : 'e2e-token');
+
 const tmpHome = fs.mkdtempSync(path.join(os.tmpdir(), 'qa-e2e-'));
 
 describe('E2E: CSV Import', () => {
@@ -21,7 +23,7 @@ describe('E2E: CSV Import', () => {
         nock.cleanAll();
         process.env.HOME = tmpHome;
         process.env.JIRA_BASE_URL = 'http://localhost:9999/jira';
-        process.env.JIRA_PERSONAL_TOKEN = 'e2e-token';
+        process.env.JIRA_PERSONAL_TOKEN = E2E_TOKEN;
         process.env.XRAY_BASE_URL = 'http://localhost:9999/xray';
         process.env.CSV_PATH = path.join(import.meta.dirname, 'fixtures', 'testes-simples.csv');
         process.env.CSV_LABELS = 'e2e,automated';
@@ -49,8 +51,8 @@ describe('E2E: CSV Import', () => {
     });
 
     it('cria 2 issues, preconditions, steps, linked issue, e cross-ref', async () => {
-        const jiraResource = new JiraResource('e2e-token', 'http://localhost:9999/jira/rest/api/2');
-        const jiraResourceXray = new JiraResource('e2e-token', 'http://localhost:9999/xray');
+        const jiraResource = new JiraResource(E2E_TOKEN, 'http://localhost:9999/jira/rest/api/2');
+        const jiraResourceXray = new JiraResource(E2E_TOKEN, 'http://localhost:9999/xray');
         const linkManager = new JiraLinkManager(jiraResource);
         const linkManagerXray = new JiraLinkManager(jiraResourceXray);
         const csvResource = new CsvResource();

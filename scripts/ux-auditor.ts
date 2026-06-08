@@ -104,15 +104,13 @@ function parseImports(src: string, importingFile: string): Map<string, Set<strin
     /* named imports: import { a, b as alias } from './x' */
     const namedRe = /import\s+\{\s*([^}]+)\s*\}\s+from\s+['"]([^'"]+)['"]/g;
     for (const m of src.matchAll(namedRe)) {
-        const normalized = resolveModulePath(m[2]!, importingFile);
+        const normalized = resolveModulePath(m[2] ?? '', importingFile);
         if (!normalized) continue;
         if (!imports.has(normalized)) imports.set(normalized, new Set());
-        const symbols = imports.get(normalized)!;
-        for (const part of m[1]!.split(',')) {
-            const name = part
-                .trim()
-                .split(/\s+as\s+/)[0]!
-                .trim();
+        const symbols = imports.get(normalized) ?? new Set();
+        imports.set(normalized, symbols);
+        for (const part of (m[1] ?? '').split(',')) {
+            const name = part.trim().split(/\s+as\s+/)[0] ?? '';
             if (name) symbols.add(name);
         }
     }
@@ -120,20 +118,20 @@ function parseImports(src: string, importingFile: string): Map<string, Set<strin
     /* default imports: import a from './x' */
     const defaultRe = /import\s+(\w+)\s+from\s+['"]([^'"]+)['"]/g;
     for (const m of src.matchAll(defaultRe)) {
-        const normalized = resolveModulePath(m[2]!, importingFile);
+        const normalized = resolveModulePath(m[2] ?? '', importingFile);
         if (!normalized) continue;
         if (!imports.has(normalized)) imports.set(normalized, new Set());
-        imports.get(normalized)!.add(m[1]!);
+        imports.get(normalized)?.add(m[1] ?? '');
     }
 
     /* namespace imports: import * as X from './x' */
     const nsRe = /import\s+\*\s+as\s+\w+\s+from\s+['"]([^'"]+)['"]/g;
     for (const m of src.matchAll(nsRe)) {
-        const normalized = resolveModulePath(m[1]!, importingFile);
+        const normalized = resolveModulePath(m[1] ?? '', importingFile);
         if (!normalized) continue;
         /* namespace = wildcard, assume all exports used */
         if (!imports.has(normalized)) imports.set(normalized, new Set());
-        imports.get(normalized)!.add('*');
+        imports.get(normalized)?.add('*');
     }
 
     return imports;
@@ -144,15 +142,13 @@ function parseReExports(src: string, exportingFile: string): Map<string, Set<str
     const reExports = new Map<string, Set<string>>();
     const reRe = /export\s+\{\s*([^}]+)\s*\}\s+from\s+['"]([^'"]+)['"]/g;
     for (const m of src.matchAll(reRe)) {
-        const normalized = resolveModulePath(m[2]!, exportingFile);
+        const normalized = resolveModulePath(m[2] ?? '', exportingFile);
         if (!normalized) continue;
         if (!reExports.has(normalized)) reExports.set(normalized, new Set());
-        const symbols = reExports.get(normalized)!;
-        for (const part of m[1]!.split(',')) {
-            const name = part
-                .trim()
-                .split(/\s+as\s+/)[0]!
-                .trim();
+        const symbols = reExports.get(normalized) ?? new Set();
+        reExports.set(normalized, symbols);
+        for (const part of (m[1] ?? '').split(',')) {
+            const name = part.trim().split(/\s+as\s+/)[0] ?? '';
             if (name) symbols.add(name);
         }
     }
@@ -178,14 +174,14 @@ function buildImportGraph(allNonTestFiles: string[]): ImportGraph {
         const imports = parseImports(src, file);
         for (const [exportingModule, symbols] of imports) {
             if (!reverse.has(exportingModule)) reverse.set(exportingModule, []);
-            reverse.get(exportingModule)!.push({ file, symbols });
+            reverse.get(exportingModule)?.push({ file, symbols });
         }
 
         /* re-exports — a file that re-exports symbols acts as an importer of the original module */
         const reExports = parseReExports(src, file);
         for (const [originalModule, symbols] of reExports) {
             if (!reverse.has(originalModule)) reverse.set(originalModule, []);
-            reverse.get(originalModule)!.push({ file, symbols });
+            reverse.get(originalModule)?.push({ file, symbols });
         }
     }
 

@@ -1,4 +1,4 @@
-import { expect } from 'vitest';
+import { expect, vi } from 'vitest';
 
 vi.mock('../../shared/prompt');
 vi.mock('../../shared/logger');
@@ -55,20 +55,23 @@ vi.mock('../../shared/git-artifact-downloader', async () => ({
     fetchLatestTestRun: vi.fn().mockResolvedValue(null),
 }));
 
+let loadMetricsValue: unknown = null;
+
 vi.mock('../../shared/store', async () => {
     function makeMockStore() {
-        return {
+        const store = {
             lookup: vi.fn(),
             put: vi.fn(),
             listByProject: vi.fn().mockReturnValue([]),
             saveReport: vi.fn(),
             loadReport: vi.fn().mockReturnValue(null),
-            loadMetrics: vi.fn().mockReturnValue(null),
+            loadMetrics: vi.fn(() => loadMetricsValue),
             saveMetrics: vi.fn(),
             appendBranch: vi.fn(),
             getBranch: vi.fn().mockReturnValue([]),
             flush: vi.fn(),
         };
+        return store;
     }
     return {
         Store: vi.fn(function () {
@@ -98,6 +101,7 @@ import * as reportGenModule from '../../shared/report-generator.js';
 import * as analysisModule from '../../shared/failure-analysis.js';
 import * as publishModule from '../../shared/publish.js';
 import * as openModule from '../../shared/open.js';
+import * as gitArtifactDownloaderModule from '../../shared/git-artifact-downloader.js';
 import fs from 'fs';
 import case17Module from './case17.js';
 import { createMockContext } from '../../shared/test-utils/factories/context-factory.js';
@@ -107,6 +111,7 @@ const baseContext = createMockContext();
 
 beforeEach(() => {
     vi.clearAllMocks();
+    loadMetricsValue = null;
 });
 
 beforeAll(() => {
@@ -143,32 +148,27 @@ describe('case17 — HTML report generator', () => {
 
     it('computes diff against last run and logs info', async () => {
         const prompt = vi.mocked(promptModule);
-        const parser = vi.mocked(parserModule);
         const reportGen = vi.mocked(reportGenModule);
+        const gitDownloader = vi.mocked(gitArtifactDownloaderModule);
 
-        vi.mocked(fs).existsSync.mockReturnValue(true);
-        vi.mocked(fs).readFileSync.mockReturnValue(
-            JSON.stringify({
-                results: {
-                    tests: [
-                        { name: 'Test A', status: 'failed' },
-                        { name: 'Test B', status: 'passed' },
-                    ],
-                },
-            }),
-        );
-
-        prompt.ask.mockResolvedValueOnce('/path/to/report.json').mockResolvedValueOnce('');
-
-        parser.parseTestResultsFile.mockReturnValueOnce({
+        gitDownloader.fetchLatestTestRun.mockResolvedValueOnce({
             tests: [
-                { title: 'Test A', state: 'passed', duration: 100 },
-                { title: 'Test B', state: 'failed', duration: 50, error: 'fail' },
+                { title: 'Test A', state: 'passed', duration: 100, fullTitle: 'Test A' },
+                { title: 'Test B', state: 'failed', duration: 50, fullTitle: 'Test B', error: 'fail' },
             ],
             stats: { passed: 1, failed: 1, skipped: 0, total: 2, duration: 150 },
         });
 
+        prompt.ask.mockResolvedValueOnce('');
+
         reportGen.generateHtmlReport.mockReturnValueOnce('<html>report</html>');
+
+        loadMetricsValue = {
+            tests: [
+                { title: 'Test A', state: 'failed' },
+                { title: 'Test B', state: 'passed' },
+            ],
+        };
 
         const mod = case17Module;
         await mod.handler(baseContext);
@@ -178,27 +178,20 @@ describe('case17 — HTML report generator', () => {
 
     it('skips AI analysis and prompts bug report when failures and user accepts', async () => {
         const prompt = vi.mocked(promptModule);
-        const parser = vi.mocked(parserModule);
         const reportGen = vi.mocked(reportGenModule);
+        const gitDownloader = vi.mocked(gitArtifactDownloaderModule);
 
         process.env.QA_AUTO_BUG = 'true';
 
-        vi.mocked(fs).existsSync.mockReturnValueOnce(true);
-        vi.mocked(fs).readFileSync.mockReturnValueOnce(
-            JSON.stringify({
-                results: { tests: [{ name: 'Fail', status: 'passed' }] },
-            }),
-        );
-
-        prompt.ask.mockResolvedValueOnce('/path/to/report.json').mockResolvedValueOnce('');
-
-        parser.parseTestResultsFile.mockReturnValueOnce({
+        gitDownloader.fetchLatestTestRun.mockResolvedValueOnce({
             tests: [
-                { title: 'Pass', state: 'passed', duration: 100 },
-                { title: 'Fail', state: 'failed', duration: 50, error: 'Timeout' },
+                { title: 'Pass', state: 'passed', duration: 100, fullTitle: 'Pass' },
+                { title: 'Fail', state: 'failed', duration: 50, fullTitle: 'Fail', error: 'Timeout' },
             ],
             stats: { passed: 1, failed: 1, skipped: 0, total: 2, duration: 150 },
         });
+
+        prompt.ask.mockResolvedValueOnce('');
 
         reportGen.generateHtmlReport.mockReturnValueOnce('<html>report</html>');
 
@@ -206,6 +199,10 @@ describe('case17 — HTML report generator', () => {
         reportGenFull.categorizeFailure.mockReturnValue('regression');
 
         vi.mocked(baseContext.jiraResource.postJiraResource).mockResolvedValue({ key: 'BUG-42' });
+
+        loadMetricsValue = {
+            tests: [{ title: 'Fail', state: 'passed' }],
+        };
 
         const mod = case17Module;
         await mod.handler(baseContext);

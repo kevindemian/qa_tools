@@ -487,7 +487,10 @@ async function _dashboardIncidentReport(): Promise<void> {
         data.projectRuns.length > 0
             ? Math.round((data.projectRuns.filter((r) => r.failed > 0).length / data.projectRuns.length) * 100)
             : 0;
-    const uncoveredEpics = matrix.nodes.filter((n) => n.coverage < 100).map((n) => n.epic);
+    const uncoveredEpics = matrix.nodes.reduce((acc: string[], n) => {
+        if (n.coverage < 100) acc.push(n.epic);
+        return acc;
+    }, []);
     const trendCategories = new Set<string>();
     for (const t of defects.trends ?? []) {
         for (const cat of Object.keys(t.categories)) {
@@ -523,7 +526,10 @@ async function _dashboardImpactAlert(): Promise<void> {
         runs: data.projectRuns,
         failureClassifications: data.failureClassifications,
     });
-    const uncoveredEpics = matrix.nodes.filter((n) => n.coverage < 100).map((n) => n.epic);
+    const uncoveredEpics = matrix.nodes.reduce((acc: string[], n) => {
+        if (n.coverage < 100) acc.push(n.epic);
+        return acc;
+    }, []);
     const trendCategories = new Set<string>();
     for (const t of defects.trends ?? []) {
         for (const cat of Object.keys(t.categories)) {

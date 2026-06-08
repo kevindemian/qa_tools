@@ -7,6 +7,8 @@ import { generateHtmlReport } from '../shared/report-generator.js';
 import { writeReport } from '../shared/temp-dir.js';
 import { createHttpClient } from '../shared/http-client.js';
 import JiraResource from '../jira_management/jira_resource.js';
+import { rootLogger } from '../shared/logger.js';
+import { gracefulExit } from '../shared/cli_base.js';
 
 const JIRA_BASE = process.env.JIRA_BASE_URL || 'https://jiraprod.srv.euronext.com';
 const TOKEN = process.env.JIRA_PERSONAL_TOKEN || '';
@@ -18,8 +20,8 @@ function loadCtrfFixture(): { ctrfPath: string; result: ReturnType<typeof parseT
         : path.resolve(import.meta.dirname, 'fixtures/ctrf-report.json');
     const result = parseTestResultsFile(ctrfPath);
     if (result.error) {
-        console.error('Parse error:', result.error);
-        process.exit(1);
+        rootLogger.error('Parse error:', result.error);
+        gracefulExit(1);
     }
     writeReport('last-results.ctrf.json', fs.readFileSync(ctrfPath, 'utf8'));
     return { ctrfPath, result };
@@ -34,7 +36,7 @@ function setupMappingFile(): void {
         };
         const mappingCopy = writeReport('mapping.json', JSON.stringify(raw, null, 2));
         process.env.QA_MAPPING_PATH = mappingCopy;
-        console.log(`Mapping loaded: ${mappingPath}`);
+        rootLogger.info(`Mapping loaded: ${mappingPath}`);
     } else {
         const mapping = {
             tests: [
@@ -44,7 +46,7 @@ function setupMappingFile(): void {
         };
         const mappingPath = writeReport('mapping.json', JSON.stringify(mapping, null, 2));
         process.env.QA_MAPPING_PATH = mappingPath;
-        console.log(`Mapping (default): ${mappingPath}`);
+        rootLogger.info(`Mapping (default): ${mappingPath}`);
     }
 }
 
@@ -68,7 +70,7 @@ function buildXrayHistoryHtml(historyRows: Array<{ key: string; runs: unknown[] 
         html += '</div>';
     }
     html += '</div>';
-    console.log(`Xray history: ${historyRows.map((h) => `${h.key}=${h.runs.length}`).join(', ')}`);
+    rootLogger.info(`Xray history: ${historyRows.map((h) => `${h.key}=${h.runs.length}`).join(', ')}`);
     return html;
 }
 
@@ -93,7 +95,7 @@ async function fetchXrayHistory(): Promise<string> {
             return buildXrayHistoryHtml(historyRows);
         }
     } catch (e: unknown) {
-        console.log(`Xray history skipped: ${(e as Error).message}`);
+        rootLogger.info(`Xray history skipped: ${(e as Error).message}`);
     }
     return '';
 }
@@ -130,10 +132,10 @@ async function fetchCiCdContext(): Promise<string> {
             html += `<li><b>#${run.runId}</b> ${run.name} — ${(run.createdAt || '').slice(0, 10)} ✅</li>`;
         }
         html += '</ul></div>';
-        console.log(`CI/CD context: ${String(runStats.length)} runs`);
+        rootLogger.info(`CI/CD context: ${String(runStats.length)} runs`);
         return html;
     } catch (e: unknown) {
-        console.log(`CI/CD fetch: ${(e as Error).message}`);
+        rootLogger.info(`CI/CD fetch: ${(e as Error).message}`);
         return '';
     }
 }
@@ -152,7 +154,7 @@ function generateFinalReport(
     const finalHtml = sections ? htmlBody.replace('</body>', sections + '</body>') : htmlBody;
 
     const outPath = writeReport('report-e2e-complete.html', finalHtml);
-    console.log(`\nReport: ${outPath}`);
+    rootLogger.info(`\nReport: ${outPath}`);
 }
 
 async function main() {
@@ -164,6 +166,6 @@ async function main() {
 }
 
 main().catch((e: unknown) => {
-    console.error('Fatal:', (e as Error).message);
-    process.exit(1);
+    rootLogger.error('Fatal:', (e as Error).message);
+    gracefulExit(1);
 });

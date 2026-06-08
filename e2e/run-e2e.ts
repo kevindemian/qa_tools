@@ -19,6 +19,7 @@ import TestExecutionCreator from '../jira_management/test-execution-creator.js';
 import CsvResource from '../jira_management/csv_resource.js';
 import createTestsModule from '../jira_management/create_tests.js';
 import { rootLogger } from '../shared/logger.js';
+import { gracefulExit } from '../shared/cli_base.js';
 
 const { createTestsFromCsv, createTestExecutionWithLinks } = createTestsModule;
 
@@ -29,8 +30,8 @@ const BASE_URL = process.env.JIRA_BASE_URL ?? '';
 const XRAY_URL = process.env.XRAY_BASE_URL ?? '';
 const TOKEN = process.env.JIRA_PERSONAL_TOKEN ?? '';
 if (!BASE_URL || !XRAY_URL || !TOKEN) {
-    console.error('Missing required env vars: JIRA_BASE_URL, XRAY_BASE_URL, JIRA_PERSONAL_TOKEN');
-    process.exit(1);
+    rootLogger.error('Missing required env vars: JIRA_BASE_URL, XRAY_BASE_URL, JIRA_PERSONAL_TOKEN');
+    gracefulExit(1);
 }
 const PROJECT = 'ECSPOL';
 const EXISTING_TEST = 'ECSPOL-1255';
