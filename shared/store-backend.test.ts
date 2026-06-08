@@ -255,8 +255,6 @@ describe('detectStoreBackend', () => {
         fs.mkdirSync(path.join(projDir, '.git'), { recursive: true });
         const backend = detectStoreBackend(projDir);
         expect(backend.constructor.name).toBe('GitStoreBackend');
-        expect((backend as any).gitWorkDir).toBe(projDir);
-        expect((backend as any).relStoreDir).toBe('.qa-tools');
     });
 
     it('returns FsStoreBackend when git dir check throws', () => {

@@ -357,7 +357,7 @@ describe('edge cases', () => {
 
     it('prunes runs when exceeding max', async () => {
         const cfg = makeConfig(TMP_DIR);
-        (cfg as any).overrides = { METRICS_MAX_RUNS: '1' };
+        (cfg as unknown as { overrides: Record<string, string> }).overrides = { METRICS_MAX_RUNS: '1' };
         const run: MetricsRun = {
             timestamp: '2026-01-01T00:00:00.000Z',
             project: 'prune-test',
