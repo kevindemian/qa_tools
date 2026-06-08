@@ -351,8 +351,10 @@ ${_renderIssuesSection(health)}`;
 /*  Helpers                                                            */
 /* ------------------------------------------------------------------ */
 
+const SECONDS_PER_HOUR = 3600;
+
 function formatDuration(sec: number): string {
     if (sec < 60) return sec + 's';
-    if (sec < 3600) return Math.floor(sec / 60) + 'm ' + (sec % 60) + 's';
-    return Math.floor(sec / 3600) + 'h ' + Math.floor((sec % 3600) / 60) + 'm';
+    if (sec < SECONDS_PER_HOUR) return Math.floor(sec / 60) + 'm ' + (sec % 60) + 's';
+    return Math.floor(sec / SECONDS_PER_HOUR) + 'h ' + Math.floor((sec % SECONDS_PER_HOUR) / 60) + 'm';
 }

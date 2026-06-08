@@ -31,13 +31,13 @@
 | 1 | Corrigir `mockExecSync` — remover teste duplicado (já coberto por `store-backend.fallback.test.ts`) | `shared/store-backend.test.ts` | 15min | ✅ |
 | 2 | Commitar 8 arquivos: case15 Store, error hardening, crash fallbacks | `shared/store-backend.ts`, `shared/store-backend.test.ts`, `jira_management/commands/case15.ts`, `jira_management/commands/case15.test.ts`, `jira_management/import-prep-parsers.ts`, `jira_management/create_tests.test.ts`, `shared/prompt-errors.ts` | 15min | ⏳ |
 | 3 | Remover `CTRF_LAST_FILE` dead code (Store substituiu fallback) | `jira_management/commands/case17-test-utils.ts` | 10min | ✅ |
-| 4 | Sincronizar BACKLOG.md — mover Sprint C completo para histórico | `BACKLOG.md`, `BACKLOG-historico.md` | 20min | 🔄 |
+| 4 | Sincronizar BACKLOG.md — mover Sprint C completo para histórico | `BACKLOG.md`, `BACKLOG-historico.md` | 20min | ✅ |
 
 ### Métricas alvo
 
 | Métrica | Atual | Alvo | Status |
 |---------|-------|------|--------|
-| `npm test` | 4398 pass | **0 failed** | ✅ |
+| `npm test` | 4455 pass | **0 failed** | ✅ |
 | `tsc --noEmit` | 0 erros | **0 erros** | ✅ |
 | `npm run lint` | 0 erros | **0 erros** | ✅ |
 | Crash points cobertos (C1-C8) | 6 cobertos | **6 cobertos** | ✅ |
@@ -161,7 +161,7 @@
 | Lote | Descrição                                        | Itens | Status |
 | ---- | ------------------------------------------------ | ----- | ------ |
 | A    | Correção de bugs F1–F11                          | 11    | ✅     |
-| E    | Testes de regressão F1–F11 + rename + empty diff | 2     | ⏳     |
+| E    | Testes de regressão F1–F11 + rename + empty diff | 2     | ✅     |
 
 ---
 
@@ -305,7 +305,7 @@
 | B1  | 🔧 CI Gate: handler ↔ menu ↔ alias 3-way consistency                                                 | `scripts/enforce-quality.ts`                                              | 1h      | ✅     |
 | B2  | 🔧 ux-auditor agent script (soft: jornada ruidosa, dead utility, friction score)                     | (novo) `scripts/ux-auditor.ts`                                            | 3h      | ✅     |
 | B3  | 🔧 Rodar auditor + corrigir achados (4 fases: hints + submenu FP + import-aware detector + re-audit) | Codebase, `scripts/ux-auditor.ts`                                         | 3h      | ✅     |
-| B2b | 🔧 Commit missing modules (report-cache.ts, case17-test-utils.ts) from prior session — CI fix        | `shared/report-cache.ts`, `jira_management/commands/case17-test-utils.ts` | 5min    | 🔄     |
+| B2b | 🔧 Commit missing modules (report-cache.ts, case17-test-utils.ts) from prior session — CI fix        | `shared/report-cache.ts`, `jira_management/commands/case17-test-utils.ts` | 5min    | ✅     |
 | B4  | 📋 docs/ux-auditor.md + HELP_TOPICS entry                                                            | `docs/ux-auditor.md`, `menu-data.ts`                                      | 30min   | ✅     |
 
 ### Métricas alvo — Sprint B
@@ -669,6 +669,76 @@ Resolução (resolveSessionContext)
 | 🔴 Crítico   | `opencode.json`, `.env`, `validation_hook.ts`, `validation_plugin.ts`, `package.json`, `pre-push`                                                                 | 🔥 Notificação crítica na tela |
 | 🟡 Segurança | `eslint.config.mjs`, `tsconfig*.json`, `vitest.config.ts`, `jest.config.js`, `ci.yml`, `gitlab-ci.yml`, `dependabot.yml`, `quality-gate.ts`, `enforce-quality.ts` | 🟡 Notificação normal + log    |
 | 🔵 Config    | `AGENTS.md`, `.gitignore`, `qa-quarantine.json`, `warden.json`, `validation.json`, `agents/*.md`, `config/*.json`                                                 | 🔵 Log + journald              |
+
+---
+
+## 🚀 Sprint Senior Audit II — Correções Pós-Auditoria (2026-06-08)
+
+**Origem:** Senior Codebase Audit — 28 achados (1 CRÍTICO, 7 HIGH, 8 MEDIUM, 8 LOW, 4 INFO).
+**Relatório completo:** `.audit/senior-audit-2026-06-08.json`
+**Estratégia:** 5 fases — Quick Wins primeiro, arquitetura em paralelo, testes depois do TSC estável, segurança no fim.
+
+### Fase 0 — Quick Wins (minutos, risco baixo) ✅ Concluída
+
+| ID | Issue | Severidade | Arquivo(s) | Ação | Esforço | Status |
+|----|-------|-----------|-----------|------|---------|--------|
+| SA2-01 | TSC errors + test timeout | 🔴 CRITICAL | `e2e/real-import.ts`, `git_triggers/main.test.ts`, `scripts/check-unused-exports.sh` | Fix TSC (3 erros `string|undefined`), test timeout (beforeAll 10s→30s), unused-exports falso positivo npm notice | 10min | ✅ |
+| SA2-02 | Non-null assertions em `ux-auditor.ts` (6 `!` em Map.get) | 🟠 HIGH | `scripts/ux-auditor.ts` | Substituir `!` por `?? ''` com fallback | 15min | ✅ |
+| SA2-03 | Magic literal `3600` em `pipeline-health.ts` | 🟢 LOW | `git_triggers/pipeline-health.ts` | `SECONDS_PER_HOUR = 3600` já extraído (linha 354) | 5min | ✅ |
+| SA2-04 | Variáveis mortas `mockStore`/`parser` | 🟢 LOW | `jira_management/commands/case17.test.ts` | Remover declarações não usadas | 5min | ✅ |
+| SA2-05 | Hardcoded `'e2e-token'` em 4 e2e tests | 🟡 MEDIUM | `e2e/csv-import.test.ts`, `e2e/result-pipeline.test.ts`, `e2e/testexec.test.ts`, `e2e/csv-import-errors.test.ts` | Mover para `process.env.E2E_JIRA_TOKEN` com fallback CI | 15min | ✅ |
+| SA2-06 | `.filter().map()` em hot paths | 🟡 MEDIUM | `jira_management/result_reporter.ts`, `git_triggers/interactive-mode.ts`, `git_triggers/schedule-handler.ts` | Substituir por `reduce()` (já resolvido em sprints anteriores) | 10min | ✅ |
+
+### Fase 1 — Arquitetura e Dívida Estrutural (dias, risco médio-alto)
+
+| ID | Issue | Severidade | Arquivo(s) | Ação | Esforço | Status |
+|----|-------|-----------|-----------|------|---------|--------|
+| SA2-07 | Cross-layer: `git_triggers` importa `jira_management` internos | 🟠 HIGH | `git_triggers/pipeline-handler.ts`, `git_triggers/interactive-mode.ts`, `git_triggers/batch-mode.ts`, `git_triggers/test-results.ts` | Extrair interfaces compartilhadas para `shared/` | dias | ⏳ |
+| SA2-08 | `interactive-mode.ts` com 913 linhas (SRP violation) | 🟡 MEDIUM | `git_triggers/interactive-mode.ts` | Extrair: `menu-navigation.ts`, `project-actions.ts`, `pipeline-actions.ts`, `ai-features.ts` | dias | ⏳ |
+| SA2-09 | `console.log` em e2e scripts em vez de Logger | 🟠 HIGH | `e2e/gen-report.ts`, `e2e/gen-report-complete.ts`, `e2e/smoke-pipeline.ts` | Substituir por `rootLogger` de `shared/logger.js` | horas | ⏳ |
+| SA2-10 | `process.exit` direto em e2e scripts | 🟡 MEDIUM | `e2e/gen-report.ts`, `e2e/gen-report-complete.ts`, `e2e/real-import.ts`, `e2e/run-e2e.ts` | Substituir por `gracefulExit` de `shared/cli_base.ts` | horas | ⏳ |
+| SA2-11 | 85 exports potencialmente não usados (ts-prune) | 🟠 HIGH | Múltiplos (principal `shared/llm-fallback.ts`) | Auditar e remover exports mortos; marcar type-only com `export type` | dias | ⏳ |
+
+### Fase 2 — Cobertura de Testes (dias, risco médio)
+
+| ID | Issue | Severidade | Arquivo(s) | Ação | Esforço | Status |
+|----|-------|-----------|-----------|------|---------|--------|
+| SA2-12 | 18 módulos sem `.test.ts` | 🟠 HIGH | `scripts/*`, `e2e/*`, `jira_management/commands/case25-27.ts`, `shared/dashboard-menu.ts` | Adicionar testes para cada módulo | dias | ⏳ |
+| SA2-13 | `case25/26/27` sem testes | 🟡 MEDIUM | `jira_management/commands/case25.test.ts`, `case26.test.ts`, `case27.test.ts` | Adicionar testes básicos + verificar registro em `commands/index.ts` | horas | ⏳ |
+| SA2-14 | Invariants `t-01..t-13` sem cobertura | ⚪ INFO | `shared/invariants/t-*.ts` | Esclarecer papel e adicionar testes | horas | ⏳ |
+| SA2-15 | E2E tests acoplados a construtores | ⚪ INFO | `e2e/csv-import.test.ts` | Usar factory functions (`test-utils/factories/`) | horas | ⏳ |
+
+### Fase 3 — Segurança e Correções (horas, risco médio)
+
+| ID | Issue | Severidade | Arquivo(s) | Ação | Esforço | Status |
+|----|-------|-----------|-----------|------|---------|--------|
+| SA2-16 | `execSync` com concatenação de string | 🟠 HIGH | `shared/git-sha.ts`, `shared/store-backend.ts` | Substituir por `execFile` ou `spawn` com args array | horas | ⏳ |
+| SA2-17 | Mock `store-backend` diverge da implementação real | 🟠 HIGH | `shared/__mocks__/store-backend.ts` | Alinhar mock com `StoreBackend` interface real | horas | ⏳ |
+| SA2-18 | `llm-fallback.ts` exporta muitos internos | 🟢 LOW | `shared/llm-fallback.ts` | Reduzir exports públicos; mover constantes | horas | ⏳ |
+
+### Fase 4 — Polimento (horas, risco baixo)
+
+| ID | Issue | Severidade | Arquivo(s) | Ação | Esforço | Status |
+|----|-------|-----------|-----------|------|---------|--------|
+| SA2-19 | Nomenclatura inconsistente: `pr` vs `mergeRequest` | ⚪ INFO | `git_triggers/github_pr.ts`, `git_triggers/gitlab_pr.ts` | Padronizar prefixo `mergeRequest` | horas | ⏳ |
+| SA2-20 | `constants.ts` sem cobertura de teste | ⚪ INFO | `jira_management/constants.test.ts` | Verificar/adicionar teste de constantes | minutos | ⏳ |
+
+### Métricas alvo — Sprint Senior Audit II
+
+| Métrica | Atual | Alvo | Status |
+|---------|-------|------|--------|
+| `tsc --noEmit` | 9 erros | **0 erros** | ✅ 0 |
+| `npm test` | 4398 pass ✅ | 100% pass | ✅ 4455 pass |
+| `npm run lint` | 0 erros ✅ | 0 erros | ✅ 0 |
+| Módulos sem teste | 18 | **0** | ⏳ |
+| Non-null assertions (`!`) | 6 | **0** | ✅ 0 |
+| `console.log` em produção | ~50+ | **0** | ⏳ |
+| Unused exports (ts-prune) | 85 | **0** | ⏳ |
+| Arquivos >400 linhas | 6 | **<3** | ⏳ |
+| `process.exit` direto | ~10+ | **0** | ⏳ |
+| Hardcoded tokens | 4 | **0** | ✅ 0 |
+| Cross-layer `git_triggers -> jira_management` | 4 files | **0** | ⏳ |
+| execSync string concat | 2 files | **0** | ⏳ |
 
 ---
 

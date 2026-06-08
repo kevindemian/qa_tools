@@ -15,14 +15,16 @@ import { setTestSleep } from '../shared/http-client.js';
 
 const { createTestsFromCsv } = createTests;
 
+const E2E_TOKEN = process.env.E2E_JIRA_TOKEN ?? (process.env.CI ? '' : 'e2e-token');
+
 const tmpHome = fs.mkdtempSync(path.join(os.tmpdir(), 'qa-e2e-err-'));
 
 const BASE = 'http://localhost:1999/jira/rest/api/2';
 const XRAY = 'http://localhost:1999/xray';
 
 function makeState() {
-    const jiraResource = new JiraResource('e2e-token', BASE);
-    const jiraResourceXray = new JiraResource('e2e-token', XRAY);
+    const jiraResource = new JiraResource(E2E_TOKEN, BASE);
+    const jiraResourceXray = new JiraResource(E2E_TOKEN, XRAY);
     return {
         jiraResource,
         jiraResourceXray,
@@ -52,7 +54,7 @@ describe('E2E: CSV Import - Error Paths', () => {
         setTestSleep(() => Promise.resolve());
         process.env.HOME = tmpHome;
         process.env.JIRA_BASE_URL = 'http://localhost:1999/jira';
-        process.env.JIRA_PERSONAL_TOKEN = 'e2e-token';
+        process.env.JIRA_PERSONAL_TOKEN = E2E_TOKEN;
         process.env.XRAY_BASE_URL = 'http://localhost:1999/xray';
         process.env.CSV_LABELS = 'e2e';
         process.env.QUIET = 'true';

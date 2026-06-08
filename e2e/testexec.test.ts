@@ -7,6 +7,7 @@ import createTests from '../jira_management/create_tests.js';
 
 const { createTestExecution } = createTests;
 
+const E2E_TOKEN = process.env.E2E_JIRA_TOKEN ?? (process.env.CI ? '' : 'e2e-token');
 const JIRA = 'http://localhost:1998/jira';
 
 let testExecutionCreator: TestExecutionCreator;
@@ -47,7 +48,7 @@ beforeAll(() => {
             return { key: 'EXEC-' + keys.length, id: '20001' };
         });
 
-    jiraResource = new JiraResource('e2e-token', JIRA + '/rest/api/2');
+    jiraResource = new JiraResource(E2E_TOKEN, JIRA + '/rest/api/2');
     const linkManager = new JiraLinkManager(jiraResource);
     testExecutionCreator = new TestExecutionCreator(jiraResource, linkManager);
 });

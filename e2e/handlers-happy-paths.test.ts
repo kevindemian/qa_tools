@@ -58,6 +58,7 @@ import case15 from '../jira_management/commands/case15.js';
 import case16 from '../jira_management/commands/case16.js';
 import PackageVersionManager from '../jira_management/package_version_manager.js';
 
+const E2E_TOKEN = process.env.E2E_JIRA_TOKEN ?? 'e2e-token';
 const HOST = 'http://localhost:1996';
 const API = HOST + '/rest/api/2';
 
@@ -65,7 +66,7 @@ beforeAll(async () => {
     nock.cleanAll();
     process.env.HOME = tmpHome;
     process.env.JIRA_BASE_URL = HOST;
-    process.env.JIRA_PERSONAL_TOKEN = 'e2e-token';
+    process.env.JIRA_PERSONAL_TOKEN = E2E_TOKEN;
     process.env.XRAY_BASE_URL = HOST;
     process.env.QUIET = 'true';
     nock.disableNetConnect();
@@ -110,8 +111,8 @@ afterEach(async () => {
 });
 
 function buildContext() {
-    const jira = new JiraResource('e2e-token', API);
-    const jiraXray = new JiraResource('e2e-token', HOST);
+    const jira = new JiraResource(E2E_TOKEN, API);
+    const jiraXray = new JiraResource(E2E_TOKEN, HOST);
     const lm = new JiraLinkManager(jira);
     const lmXray = new JiraLinkManager(jiraXray);
     const csv = new CsvResource();

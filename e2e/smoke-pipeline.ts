@@ -7,12 +7,13 @@ import { generateFlakinessHtml } from '../shared/flakiness-dashboard.js';
 import { pollPipeline } from '../git_triggers/pipeline-handler.js';
 import { collectTestResults } from '../git_triggers/test-results.js';
 import { offerPipelineFailureAnalysis } from '../git_triggers/llm-pipeline.js';
+import { rootLogger } from '../shared/logger.js';
 
 const E2E_PIPELINE = process.env.E2E_PIPELINE === 'true';
 
 function assert(condition: unknown, message: string): asserts condition {
     if (!condition) {
-        console.error('FAIL: ' + message);
+        rootLogger.error('FAIL: ' + message);
         process.exitCode = 1;
     }
 }
@@ -20,11 +21,11 @@ function assert(condition: unknown, message: string): asserts condition {
 async function triggerAndFindRun(
     gh: ReturnType<typeof createGitHubSmokeManager>,
 ): Promise<{ runId: string; runStatus: string }> {
-    console.log('Triggering CI workflow on main...');
+    rootLogger.info('Triggering CI workflow on main...');
     const result = await gh.triggerPipeline({ ref: 'main', variables: [] });
     assert(result, 'triggerPipeline returned undefined');
     assert(result.web_url, 'triggerPipeline result missing web_url');
-    console.log('  Workflow dispatched: ' + result.web_url);
+    rootLogger.info('  Workflow dispatched: ' + result.web_url);
 
     const runs = await gh.getRecentPipelines(3);
     assert(runs, 'getRecentPipelines returned null/undefined');
@@ -38,7 +39,7 @@ async function triggerAndFindRun(
         ['completed', 'success', 'in_progress', 'pending'].includes(runStatus),
         'Unexpected run status: ' + runStatus,
     );
-    console.log('  Latest run ID: ' + runId + ' (status: ' + runStatus + ')');
+    rootLogger.info('  Latest run ID: ' + runId + ' (status: ' + runStatus + ')');
     return { runId, runStatus };
 }
 
@@ -48,20 +49,20 @@ async function pollIfNeeded(
     runStatus: string,
 ): Promise<void> {
     if (runStatus === 'in_progress' || runStatus === 'pending') {
-        console.log('Polling pipeline ' + runId + '...');
+        rootLogger.info('Polling pipeline ' + runId + '...');
         const pollResult = await pollPipeline(gh as unknown as GitProvider, runId);
         assert(pollResult, 'pollPipeline returned undefined');
         assert(pollResult.status, 'pollPipeline result missing status');
-        console.log('  Pipeline result: ' + pollResult.status + '\n');
+        rootLogger.info('  Pipeline result: ' + pollResult.status + '\n');
     } else {
-        console.log('  Run already completed, skipping poll.\n');
+        rootLogger.info('  Run already completed, skipping poll.\n');
     }
 
     const artifacts = await gh.listPipelineArtifacts(runId);
     if (!artifacts || artifacts.length === 0) {
-        console.log('  No artifacts found (expected — CI workflow does not upload artifacts yet).\n');
+        rootLogger.info('  No artifacts found (expected — CI workflow does not upload artifacts yet).\n');
     } else {
-        console.log('  Artifacts: ' + artifacts.length + '\n');
+        rootLogger.info('  Artifacts: ' + artifacts.length + '\n');
     }
 }
 
@@ -80,7 +81,7 @@ async function collectAndReportResults(gh: ReturnType<typeof createGitHubSmokeMa
         jiraBaseUrl: '',
     });
     if (!parsed) {
-        console.log('  No test results collected (expected if no artifacts).\n');
+        rootLogger.info('  No test results collected (expected if no artifacts).\n');
         return;
     }
 
@@ -92,7 +93,7 @@ async function collectAndReportResults(gh: ReturnType<typeof createGitHubSmokeMa
         parsed.tests.length <= parsed.stats.passed + parsed.stats.failed + parsed.stats.skipped + 1,
         'stats mismatch: tests > passed+failed+skipped',
     );
-    console.log(
+    rootLogger.info(
         '  Parsed ' +
             parsed.tests.length +
             ' tests (' +
@@ -114,26 +115,28 @@ async function collectAndReportResults(gh: ReturnType<typeof createGitHubSmokeMa
         const html = generateFlakinessHtml(flaky, 'Flakiness — qa_tools_e2e');
         assert(html, 'generateFlakinessHtml returned empty');
         assert(html.length > 0, 'Flakiness dashboard HTML is empty');
-        console.log('  Flakiness dashboard generated (' + html.length + ' chars)');
+        rootLogger.info('  Flakiness dashboard generated (' + html.length + ' chars)');
     } else {
-        console.log('  Not enough runs for flakiness calculation (need >= 2, have ' + projectRuns.length + ')');
+        rootLogger.info('  Not enough runs for flakiness calculation (need >= 2, have ' + projectRuns.length + ')');
     }
 }
 
 function printPipelineSummary(): void {
     if (process.exitCode) {
-        console.error('\nFAIL: Pipeline E2E smoke test completed with errors.');
+        rootLogger.error('\nFAIL: Pipeline E2E smoke test completed with errors.');
     } else {
-        console.log('OK: Pipeline E2E flow completed.');
+        rootLogger.info('OK: Pipeline E2E flow completed.');
     }
 }
 
 async function main() {
-    console.log('=== Camada 3: Pipeline E2E Smoke Test ===\n');
+    rootLogger.info('=== Camada 3: Pipeline E2E Smoke Test ===\n');
 
     if (!E2E_PIPELINE) {
-        console.log('SKIP: Set E2E_PIPELINE=true to run this test (triggers a real GitHub Actions run).');
-        console.log('  This test: triggers workflow → polls completion → downloads artifacts → generates dashboard.');
+        rootLogger.info('SKIP: Set E2E_PIPELINE=true to run this test (triggers a real GitHub Actions run).');
+        rootLogger.info(
+            '  This test: triggers workflow → polls completion → downloads artifacts → generates dashboard.',
+        );
         return;
     }
 
@@ -145,6 +148,6 @@ async function main() {
 }
 
 main().catch((err) => {
-    console.error('Unhandled error:', err);
+    rootLogger.error('Unhandled error:', err);
     process.exitCode = 1;
 });

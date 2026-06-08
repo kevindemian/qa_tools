@@ -5,7 +5,7 @@ set -o pipefail
 
 BASELINE="scripts/.unused-exports-baseline"
 
-output=$(npx ts-prune -e 2>&1 | grep -v "used in module" | grep -v "/__mocks__/" | grep -v "schema\.ts:" | grep -v "/index\.ts:" | grep -v "^shared/test-utils/" | grep -v "^shared/types\.ts:")
+output=$(npx ts-prune -e 2>/dev/null | grep -v "used in module" | grep -v "/__mocks__/" | grep -v "schema\.ts:" | grep -v "/index\.ts:" | grep -v "^shared/test-utils/" | grep -v "^shared/types\.ts:")
 
 ts_exit=${PIPESTATUS[0]}
 

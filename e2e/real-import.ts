@@ -7,17 +7,22 @@ import CsvResource from '../jira_management/csv_resource.js';
 import createTestsModule from '../jira_management/create_tests.js';
 const { createTestsFromCsv } = createTestsModule;
 import { rootLogger } from '../shared/logger.js';
+import { gracefulExit } from '../shared/cli_base.js';
 
 dotenv.config({ path: path.resolve(import.meta.dirname, '../.env') });
 
-const BASE_URL = process.env.JIRA_BASE_URL;
-const XRAY_URL = process.env.XRAY_BASE_URL;
-const TOKEN = process.env.JIRA_PERSONAL_TOKEN;
+const envBaseUrl = process.env.JIRA_BASE_URL;
+const envXrayUrl = process.env.XRAY_BASE_URL;
+const envToken = process.env.JIRA_PERSONAL_TOKEN;
 
-if (!BASE_URL || !XRAY_URL || !TOKEN) {
-    console.error('ERRO: .env com JIRA_BASE_URL, XRAY_BASE_URL e JIRA_PERSONAL_TOKEN obrigatorios');
+if (!envBaseUrl || !envXrayUrl || !envToken) {
+    rootLogger.error('ERRO: .env com JIRA_BASE_URL, XRAY_BASE_URL e JIRA_PERSONAL_TOKEN obrigatorios');
     process.exit(1);
 }
+
+const BASE_URL: string = envBaseUrl;
+const XRAY_URL: string = envXrayUrl;
+const TOKEN: string = envToken;
 
 const csvPath = path.resolve(import.meta.dirname, '../jira_management/teste_real.csv');
 
@@ -29,7 +34,7 @@ process.env.JIRA_PROJECT = 'ECSPOL';
 process.env.QUIET = 'false';
 
 if (!fs.existsSync(csvPath)) {
-    console.error('CSV nao encontrado:', csvPath);
+    rootLogger.error('CSV nao encontrado:', csvPath);
     process.exit(1);
 }
 
@@ -89,17 +94,17 @@ async function main() {
             console.log('');
         }
 
-        process.exit(result && result.status === 'ok' ? 0 : 1);
+        gracefulExit(result && result.status === 'ok' ? 0 : 1);
     } catch (err: unknown) {
-        console.error('');
-        console.error('ERRO nao tratado durante importacao:');
-        console.error('  ' + ((err as { message?: string }).message || String(err)));
+        rootLogger.error('');
+        rootLogger.error('ERRO nao tratado durante importacao:');
+        rootLogger.error('  ' + ((err as { message?: string }).message || String(err)));
         if ((err as { response?: { status?: number; data?: unknown } }).response) {
             const e = err as { response: { status: number; data: unknown } };
-            console.error('  Status: ' + e.response.status);
-            console.error('  Data:   ' + JSON.stringify(e.response.data).slice(0, 500));
+            rootLogger.error('  Status: ' + e.response.status);
+            rootLogger.error('  Data:   ' + JSON.stringify(e.response.data).slice(0, 500));
         }
-        process.exit(1);
+        gracefulExit(1);
     }
 }
 
