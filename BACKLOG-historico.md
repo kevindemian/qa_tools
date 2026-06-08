@@ -3186,3 +3186,44 @@ Categorias: refineWithConsistency (função órfã com valor), JiraMode (type n�
 | `BACKLOG.md`                              | Modificado |
 
 ---
+
+## ✅ Sprint C — Git-as-Key: Retomada Pós-Auditoria (Jun/2026)
+
+**Data da auditoria:** 2026-06-08
+**Origem:** Auditoria completa do Sprint C identificou que `Store`, `resolveSessionContext` e `resolveTestDataSource` têm cobertura boa mas **zero consumidores**. 7 itens pendentes, sendo 4 nunca iniciados (GC-06 a GC-09).
+**Estratégia:** Strangler Fig — handlers consomem Store progressivamente. Old code removido apenas quando não houver mais consumidores.
+
+### Resultado Final
+
+| Componente | Status |
+|---|---|
+| StoreBackend + GitBackend + FsBackend | ✅ 100% stmts |
+| `git-sha.ts` | ✅ 100% stmts |
+| `session-context.ts` | ✅ 100% stmts, 94.59% branches |
+| `git-artifact-downloader.ts` | ✅ 72.04% stmts |
+| `ci-detect.ts` | ✅ 100% |
+| `report-cache.ts` | ✅ Removido (Store substituiu) |
+| `CTRF_LAST_FILE` | ✅ Removido (Store substituiu) |
+| `saveMetricsJson` | ✅ Removido (Store.saveMetrics) |
+| `lastJsonDir`/`lastJsonPath` | ✅ 0 ocorrências |
+| Handlers que pedem path manual | ✅ 0 (case15, case17, pipeline-handler) |
+| Store consumido por handlers | ✅ ≥3 (case15, case17, pipeline-handler) |
+| Mocks (store, store-backend, git-sha, git-artifact-downloader) | ✅ 4 mocks criados |
+| `_chooseTestDataSource` | ✅ Removido (resolveTestDataSource) |
+| Pipeline handler Store | ✅ cacheReport → Store.saveReport + Store.put |
+
+### Commits
+
+| Commit | Descrição |
+|--------|-----------|
+| `46ddd56` | Sprint C Fase 0-6: Store migration, mocks, case17, pipeline-handler, report-cache removal |
+| `9e8738e` | Lint fixes: non-null assertion, zod import, preserve-caught-error |
+| `60fbdd8` | Remove CTRF_LAST_FILE dead code |
+| (Pendente) | Sprint Finalization Fase 4 — este commit |
+
+### Fora de escopo (deferido)
+
+- `metrics.ts` persistência → Store — API pública estável, `StoreBackend` direto é intencional. Risco: mudança de path `metrics/global.json` → `reports/{project}/metrics.json` quebra compatibilidade.
+- Sprint Coverage (CV-02 a CV-10) — 9 itens, ~5h, independente.
+
+---
