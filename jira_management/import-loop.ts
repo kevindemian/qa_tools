@@ -35,7 +35,6 @@ interface CheckpointData {
 interface StateUpdateData {
     lastLabels: string;
     lastProject: string;
-    lastJsonPath?: string;
     lastCsvPath?: string;
 }
 
@@ -174,9 +173,7 @@ function yieldToEventLoop(): Promise<void> {
 
 function updateFinalState(sourceType: string, sourcePath: string, projectName: string, jiraLabels: string[]): void {
     const stateUpdate: StateUpdateData = { lastLabels: jiraLabels.join(','), lastProject: projectName };
-    if (sourceType === 'json') {
-        stateUpdate.lastJsonPath = sourcePath;
-    } else {
+    if (sourceType !== 'json') {
         stateUpdate.lastCsvPath = sourcePath;
     }
     updateState((state) => Object.assign(state, stateUpdate));

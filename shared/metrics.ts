@@ -1,11 +1,10 @@
 /** Metrics persistence: run history, flakiness calculation, and coverage tracking.
- * Stores JSON files per-project and calculates flakiness rates from historical runs. */
-import fs from 'fs';
-import path from 'path';
-import os from 'os';
+ * Internal persistence uses StoreBackend (git-backed or fs-backed). */
 import { z } from 'zod';
 import Config from './config.js';
 import { rootLogger } from './logger.js';
+import { detectProjectGitDir, detectStoreBackend, FsStoreBackend } from './store-backend.js';
+import type { StoreBackend } from './store-backend.js';
 import type { ParseResult, FlatTest } from './result_parser.js';
 
 export interface MetricsRun {
@@ -101,39 +100,34 @@ export interface TrendPoint {
     failed: number;
 }
 
-const STORE_FILE = 'metrics.json';
+const METRICS_FILE = 'metrics/global.json';
 
-function getMetricsDir(config?: Config): string {
-    const xdg = config ? config.get('xdgStateHome') : Config.get('xdgStateHome');
-    const base = xdg ? path.join(xdg, 'qa-tools') : path.join(os.homedir(), '.local', 'state', 'qa-tools');
-    return path.join(base, 'metrics');
-}
+let _backend: StoreBackend | null = null;
 
-function storePath(config?: Config): string {
-    return path.join(getMetricsDir(config), STORE_FILE);
-}
+function getBackend(config?: Config): StoreBackend {
+    if (_backend) return _backend;
 
-function tmpPath(config?: Config): string {
-    return storePath(config) + '.tmp';
-}
-
-function ensureDir(dir: string): boolean {
-    try {
-        fs.mkdirSync(dir, { recursive: true });
-        return true;
-    } catch (err) {
-        rootLogger.warn('Failed to ensure metrics dir: ' + (err instanceof Error ? err.message : String(err)));
-        return false;
+    if (config) {
+        const xdg = config.get('xdgStateHome');
+        if (xdg) {
+            _backend = new FsStoreBackend(xdg);
+            _backend.init();
+            return _backend;
+        }
     }
+
+    const gitDir = detectProjectGitDir();
+    _backend = detectStoreBackend(gitDir ?? undefined);
+    _backend.init();
+    return _backend;
 }
 
 export function loadMetrics(config?: Config): MetricsStore {
     try {
-        ensureDir(getMetricsDir(config));
-        const sp = storePath(config);
-        if (!fs.existsSync(sp)) return { runs: [] };
-        const raw = fs.readFileSync(sp, 'utf8');
-        const parsed: unknown = JSON.parse(raw);
+        const backend = getBackend(config);
+        const raw = backend.read(METRICS_FILE);
+        if (!raw) return { runs: [] };
+        const parsed: unknown = JSON.parse(raw.toString('utf8'));
         return MetricsStoreSchema.parse(parsed) as MetricsStore;
     } catch (err) {
         rootLogger.warn('Failed to load metrics: ' + (err instanceof Error ? err.message : String(err)));
@@ -143,12 +137,8 @@ export function loadMetrics(config?: Config): MetricsStore {
 
 export function saveMetrics(store: MetricsStore, config?: Config): void {
     try {
-        const dir = getMetricsDir(config);
-        ensureDir(dir);
-        const sp = storePath(config);
-        const tp = tmpPath(config);
-        fs.writeFileSync(tp, JSON.stringify(store, null, 2), 'utf8');
-        fs.renameSync(tp, sp);
+        const backend = getBackend(config);
+        backend.write(METRICS_FILE, Buffer.from(JSON.stringify(store, null, 2), 'utf8'));
     } catch (err) {
         rootLogger.error('Failed to save metrics: ' + (err as Error).message);
     }

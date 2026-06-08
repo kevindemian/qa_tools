@@ -35,12 +35,47 @@ vi.mock('../../shared/bug-report', async () => ({
     interactiveBugReportFlow: vi.fn(),
 }));
 
-vi.mock('../../shared/report-cache', async () => ({
-    cacheReport: vi.fn(),
-    listReports: vi.fn(() => []),
-    loadReport: vi.fn(),
-    pruneReports: vi.fn(),
+vi.mock('../../shared/git-sha', async () => ({
+    detectGitDir: vi.fn().mockReturnValue(null),
+    getHeadSha: vi.fn().mockReturnValue(null),
+    getCurrentBranch: vi.fn().mockReturnValue(null),
 }));
+
+vi.mock('../../shared/store-backend', async () => ({
+    detectStoreBackend: vi.fn(),
+    detectProjectGitDir: vi.fn().mockReturnValue(null),
+}));
+
+vi.mock('../../shared/git-artifact-downloader', async () => ({
+    fetchGitHistory: vi.fn().mockResolvedValue({
+        runs: [],
+        commits: '',
+        flakyTests: '',
+    }),
+    fetchLatestTestRun: vi.fn().mockResolvedValue(null),
+}));
+
+vi.mock('../../shared/store', async () => {
+    function makeMockStore() {
+        return {
+            lookup: vi.fn(),
+            put: vi.fn(),
+            listByProject: vi.fn().mockReturnValue([]),
+            saveReport: vi.fn(),
+            loadReport: vi.fn().mockReturnValue(null),
+            loadMetrics: vi.fn().mockReturnValue(null),
+            saveMetrics: vi.fn(),
+            appendBranch: vi.fn(),
+            getBranch: vi.fn().mockReturnValue([]),
+            flush: vi.fn(),
+        };
+    }
+    return {
+        Store: vi.fn(function () {
+            return makeMockStore();
+        }),
+    };
+});
 
 vi.mock('../../shared/logger', async () => ({
     rootLogger: {

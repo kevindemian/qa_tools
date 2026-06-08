@@ -676,48 +676,6 @@ describe('case15 — create tests from JSON', () => {
         expect(await mod.handler(baseContext)).toBeUndefined();
         expect(mockSessionContext.inMemoryTasksId).toEqual([]);
     });
-
-    it('resolves relative jsonPath using lastJsonDir from state', async () => {
-        const state = vi.mocked(stateModule);
-        state.load.mockReturnValue({ lastJsonDir: '/base/dir' });
-        const prompt = vi.mocked(promptModule);
-        prompt.ask.mockResolvedValueOnce('relative/tests.json');
-        vi.spyOn(fs, 'existsSync').mockReturnValueOnce(true);
-        mockCreateTests.createTestsFromJson.mockResolvedValueOnce({
-            inMemoryTasksId: ['TEST-1'],
-            inMemoryTasksText: ['Test'],
-            summary: '',
-            status: '',
-            sourcePath: '/base/dir/tests.json',
-        });
-        const mod = case15;
-        await mod.handler(baseContext);
-        // path.resolve('/base/dir', 'relative/tests.json') = '/base/dir/relative/tests.json'
-        expect(mockCreateTests.createTestsFromJson).toHaveBeenCalledWith(
-            expect.objectContaining({ jsonPath: '/base/dir/relative/tests.json' }),
-        );
-    });
-
-    it('does not resolve relative path when file does not exist', async () => {
-        const state = vi.mocked(stateModule);
-        state.load.mockReturnValue({ lastJsonDir: '/base/dir' });
-        mockCreateTests.createTestsFromJson.mockResolvedValueOnce({
-            inMemoryTasksId: ['TEST-1'],
-            inMemoryTasksText: ['Test'],
-            summary: '',
-            status: '',
-            sourcePath: '/base/dir/tests.json',
-        });
-
-        vi.spyOn(fs, 'existsSync').mockReturnValueOnce(false);
-        const prompt = vi.mocked(promptModule);
-        prompt.ask.mockResolvedValueOnce('relative/tests.json');
-        const mod = case15;
-        await mod.handler(baseContext);
-        expect(mockCreateTests.createTestsFromJson).toHaveBeenCalledWith(
-            expect.objectContaining({ jsonPath: 'relative/tests.json' }),
-        );
-    });
 });
 
 describe('case16 — config JSON directory', () => {
@@ -731,11 +689,9 @@ describe('case16 — config JSON directory', () => {
 
     it('configures JSON directory', async () => {
         const prompt = vi.mocked(promptModule);
-        const state = vi.mocked(stateModule);
         prompt.ask.mockResolvedValueOnce('/json');
         const mod = case16;
         await mod.handler(baseContext);
-        expect(state.update).toHaveBeenCalled();
     });
 });
 

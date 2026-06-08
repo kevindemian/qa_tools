@@ -588,13 +588,12 @@ describe('case15 — import JSON tests', async () => {
 // case16 — Change JSON directory  (local — no HTTP)
 // ──────────────────────────────────────────────
 describe('case16 — change JSON directory', async () => {
-    it('sets json dir in state', async () => {
+    it('sets json dir', async () => {
         getPrompt().ask.mockResolvedValueOnce('/tmp/json');
         const c = buildContext();
         const mod = case16;
         await mod.handler(c);
         expect(c.pushHistory).toHaveBeenCalledWith('config-json-dir', '/tmp/json', 'ok');
-        expect(stateModule.update).toHaveBeenCalled();
     });
 });
 

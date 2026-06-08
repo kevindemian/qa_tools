@@ -21,15 +21,9 @@ import { openWithFallback } from '../../shared/open.js';
 import { publishReport } from '../../shared/publish.js';
 import { TestHistoryCache } from '../xray-history.js';
 import type { CommandContext } from './context.js';
-import {
-    buildGitTrendHtml,
-    buildJiraContextHtml,
-    injectAnalysisSection,
-    parseCliExtra,
-    saveMetricsJson,
-} from './case17-helpers.js';
-import { computeDiff, fetchGitHistory, fetchLatestTestRun, resolveTestHistory } from './case17-test-utils.js';
-import { cacheReport, listReports, loadReport } from '../../shared/report-cache.js';
+import { buildGitTrendHtml, buildJiraContextHtml, injectAnalysisSection, parseCliExtra } from './case17-helpers.js';
+import { computeDiff, fetchGitHistory, resolveTestHistory } from './case17-test-utils.js';
+import { resolveTestDataSource, resolveSessionContext } from '../../shared/session-context.js';
 
 import Config from '../../shared/config.js';
 
@@ -328,65 +322,11 @@ async function _handleInteractiveBugReport(c: CommandContext, result: ParseResul
     }
 }
 
-async function _chooseTestDataSource(projectName: string): Promise<{ result: ParseResult; source: string } | null> {
-    const cached = listReports(projectName);
-    const githubToken = Config.getDefault().get('githubToken') || '';
-    const gitlabToken = Config.get('CI_JOB_TOKEN') || '';
-    const canAutoDownload = !!(githubToken || gitlabToken);
-
+// Manual file fallback — shown when resolveTestDataSource returns null (no SHA, CI, or branch data).
+async function _chooseFileDataSource(): Promise<{ result: ParseResult; source: 'file' } | null> {
     print('');
     info('O relatório precisa dos resultados dos testes em formato CTRF (JSON).');
     info('Este arquivo é gerado pelo framework de testes durante a execução da pipeline CI.');
-    print('');
-
-    if (cached.length > 0) {
-        info('Relatórios em cache disponíveis (pipelines anteriores):');
-        const slice = cached.slice(0, 10);
-        for (let i = 0; i < slice.length; i++) {
-            const r = slice[i];
-            if (!r) continue;
-            const date = r.timestamp ? new Date(r.timestamp).toLocaleDateString() : 'N/A';
-            print(
-                `  ${i + 1}. Pipeline #${r.pipelineId} — ${r.passed}/${r.total} passed, ${r.failed} failed (${date})`,
-            );
-        }
-        print('');
-        const useCache = await askConfirm('Usar relatório em cache?', true);
-        if (useCache) {
-            const choice = await ask('Escolha o número (1-' + Math.min(cached.length, 10) + ')', {
-                hint: 'ex: 1',
-                default: '1',
-            });
-            const idx = parseInt(choice.trim(), 10) - 1;
-            if (idx >= 0 && idx < cached.length) {
-                const entry = cached[idx];
-                if (entry) {
-                    const loaded = loadReport(entry.id);
-                    const resolved = resolveSource(loaded, null, null);
-                    if (resolved) return resolved;
-                    printError('Falha ao carregar relatório em cache', new Error('loadReport returned null'));
-                }
-            }
-        }
-    }
-
-    if (canAutoDownload) {
-        print('');
-        info('CI detectada (' + (githubToken ? 'GitHub' : 'GitLab') + ').');
-        if (await askConfirm('Baixar resultados da última pipeline automaticamente?', true)) {
-            const fetched = await withSpinner('Baixando artefatos da pipeline...', () => fetchLatestTestRun());
-            if (fetched && fetched.stats.total > 0) {
-                info('Resultados baixados: ' + fetched.stats.passed + '/' + fetched.stats.total + ' passed');
-                cacheReport(projectName, 'auto-' + Date.now(), fetched.tests, fetched.stats);
-                return { result: fetched, source: 'ci' };
-            }
-            printError(
-                'Nenhum artefato CTRF encontrado na última pipeline',
-                new Error('fetchLatestTestRun returned null/empty'),
-            );
-        }
-    }
-
     print('');
     info('Informe o caminho manual do arquivo JSON com os resultados dos testes.');
     info('O arquivo deve estar no formato CTRF (Common Test Report Format).');
@@ -410,14 +350,19 @@ async function _chooseTestDataSource(projectName: string): Promise<{ result: Par
 }
 
 async function handler(c: CommandContext): Promise<boolean | void> {
-    const data = await _chooseTestDataSource(c.ctx.project_name);
+    const { sha, branch, store } = resolveSessionContext(c.ctx, c.ctx.project_name);
+    let data: Awaited<ReturnType<typeof resolveTestDataSource>> | Awaited<ReturnType<typeof _chooseFileDataSource>> =
+        await resolveTestDataSource(c.ctx.project_name, sha, branch, store);
+    if (!data) {
+        data = await _chooseFileDataSource();
+    }
     if (!data) return;
 
     const cliExtra = parseCliExtra();
     title('Analisando relatório...');
     const result = data.result;
 
-    const diff = computeDiff(result.tests);
+    const diff = computeDiff(result.tests, store, c.ctx.project_name);
     const genOptions = await _buildReportOptions(c, result, diff, cliExtra);
     let html = generateHtmlReport(result.tests, genOptions);
 
@@ -427,7 +372,49 @@ async function handler(c: CommandContext): Promise<boolean | void> {
     html = await _runAiAnalysis(html, result, enriched.ciContext, enriched.jiraContext);
 
     const resolvedPath = await _writeReportFile(html, c.ctx.project_name);
-    saveMetricsJson(result.tests, path.dirname(resolvedPath));
+
+    const htmlDir = path.dirname(resolvedPath);
+    const passed = result.tests.filter((t) => t.state === 'passed').length;
+    const failed = result.tests.filter((t) => t.state === 'failed').length;
+    const skipped = result.tests.filter((t) => t.state === 'skipped').length;
+    fs.writeFileSync(
+        path.join(htmlDir, 'report.ctrf.json'),
+        JSON.stringify(
+            {
+                results: { tests: result.tests.map((t) => ({ name: t.title, status: t.state, duration: t.duration })) },
+            },
+            null,
+            2,
+        ),
+        'utf8',
+    );
+    fs.writeFileSync(
+        path.join(htmlDir, 'report.stats.json'),
+        JSON.stringify(
+            {
+                generatedAt: new Date().toISOString(),
+                total: result.tests.length,
+                passed,
+                failed,
+                skipped,
+                passRate: result.tests.length > 0 ? ((passed / result.tests.length) * 100).toFixed(1) : '0.0',
+            },
+            null,
+            2,
+        ),
+        'utf8',
+    );
+    store.saveMetrics({
+        project: c.ctx.project_name,
+        sha: sha || 'no-sha',
+        timestamp: Date.now(),
+        total: result.stats.total,
+        passed,
+        failed,
+        skipped,
+        tests: result.tests,
+    });
+
     await openWithFallback(resolvedPath, 'Relatório', info);
     c.pushHistory(
         'html-report',

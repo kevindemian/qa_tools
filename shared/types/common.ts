@@ -25,14 +25,10 @@ export interface StateSchema {
     lastProject?: string;
     /** Last Cypress results path. */
     lastCypressPath?: string;
-    /** Last JSON output directory. */
-    lastJsonDir?: string;
     /** Last labels filter string. */
     lastLabels?: string;
     /** Last CSV import path. */
     lastCsvPath?: string;
-    /** Last JSON test file path. */
-    lastJsonPath?: string;
     /** Command history log. */
     history?: Array<{
         op: string;

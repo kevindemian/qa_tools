@@ -65,25 +65,18 @@ export function resolveLabels(jiraLabelsInput: string[] | undefined, configKey: 
 }
 
 export async function resolveJsonPath(jsonPathInput: string | undefined): Promise<string | undefined> {
-    const state = loadState();
     const rawPath =
         jsonPathInput ||
         Config.get('jsonPath') ||
         (await askFilePath('Caminho do arquivo JSON ou TXT (formato JSON)', {
             extensions: ['.json', '.txt'],
-            default: (state.lastJsonPath as string) || '',
+            default: Config.get('jsonPath') || '',
         }));
 
-    let jsonPath = rawPath.trim();
+    const jsonPath = rawPath.trim();
     if (!jsonPath) {
         warn('Caminho do JSON vazio. Operação cancelada.');
         return;
-    }
-    if (state.lastJsonDir && !path.isAbsolute(jsonPath)) {
-        const potential = path.resolve(state.lastJsonDir as string, jsonPath);
-        if (fs.existsSync(potential)) {
-            jsonPath = potential;
-        }
     }
     return jsonPath;
 }
