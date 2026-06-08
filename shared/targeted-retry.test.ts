@@ -4,7 +4,7 @@ vi.mock('./llm-metrics', async () => ({
 
 import { generateWithRetry } from './targeted-retry.js';
 
-const mockLlmPrompt = vi.fn<(...args: unknown[]) => Promise<string>>();
+const mockLlmPrompt = vi.fn();
 
 describe('generateWithRetry', () => {
     const mockSchema = {
@@ -102,5 +102,135 @@ describe('generateWithRetry', () => {
 
         expect(result.data).toBeDefined();
         expect(result.layerFailures.layer2).toBe(1);
+    });
+
+    it('retries layer 3 when semantic validation fails', async () => {
+        mockLlmPrompt.mockResolvedValue('{"tests":[]}');
+        mockSchema.safeParse.mockReturnValue({ success: true, data: { tests: [] } });
+        mockLayer2Validator.validate.mockReturnValue({ allPassed: true, results: [] });
+        mockLayer3Validator.validate
+            .mockReturnValueOnce({
+                allPassed: false,
+                results: [
+                    {
+                        passed: false,
+                        invariantId: 'S-01',
+                        message: 'Semantic fail',
+                        severity: 'error',
+                        artifactPath: '',
+                    },
+                ],
+            })
+            .mockReturnValueOnce({ allPassed: true, results: [] });
+
+        const result = await generateWithRetry(
+            baseOpts,
+            mockSchema,
+            mockLlmPrompt,
+            mockLayer2Validator,
+            mockLayer3Validator,
+            context,
+            {
+                layer1: { maxRetries: 1, enabled: true },
+                layer2: { maxRetries: 1, enabled: true },
+                layer3: { maxRetries: 2, enabled: true },
+            },
+        );
+
+        expect(result.data).toBeDefined();
+        expect(result.layerFailures.layer3).toBe(1);
+    });
+
+    it('accumulates final errors when validation persists after all retries', async () => {
+        mockLlmPrompt.mockResolvedValue('{"tests":[]}');
+        mockSchema.safeParse.mockReturnValue({ success: true, data: { tests: [] } });
+        mockLayer2Validator.validate.mockReturnValue({
+            allPassed: false,
+            results: [
+                { passed: false, invariantId: 'T-01', message: 'Still failing', severity: 'error', artifactPath: '' },
+            ],
+        });
+        mockLayer3Validator.validate.mockReturnValue({
+            allPassed: false,
+            results: [
+                { passed: false, invariantId: 'S-01', message: 'Semantic fail', severity: 'error', artifactPath: '' },
+            ],
+        });
+
+        const result = await generateWithRetry(
+            baseOpts,
+            mockSchema,
+            mockLlmPrompt,
+            mockLayer2Validator,
+            mockLayer3Validator,
+            context,
+            {
+                layer1: { maxRetries: 1, enabled: true },
+                layer2: { maxRetries: 1, enabled: true },
+                layer3: { maxRetries: 1, enabled: true },
+            },
+        );
+
+        expect(result.data).toBeNull();
+        expect(result.layerFailures.layer2).toBe(1);
+        expect(result.layerFailures.layer3).toBe(1);
+    });
+
+    it('builds schema error hints when schema validation fails', async () => {
+        mockLlmPrompt.mockResolvedValue('{"tests":[]}');
+        mockSchema.safeParse
+            .mockReturnValueOnce({
+                success: false,
+                error: { issues: [{ path: ['tests'], message: 'Expected array' }] },
+            })
+            .mockReturnValueOnce({ success: true, data: { tests: [] } });
+        mockLayer2Validator.validate.mockReturnValue({ allPassed: true, results: [] });
+        mockLayer3Validator.validate.mockReturnValue({ allPassed: true, results: [] });
+
+        const result = await generateWithRetry(
+            baseOpts,
+            mockSchema,
+            mockLlmPrompt,
+            mockLayer2Validator,
+            mockLayer3Validator,
+            context,
+            {
+                layer1: { maxRetries: 2, enabled: true },
+                layer2: { maxRetries: 1, enabled: true },
+                layer3: { maxRetries: 1, enabled: true },
+            },
+        );
+
+        expect(result.data).toBeDefined();
+        expect(result.layerFailures.layer1).toBe(1);
+    });
+
+    it('returns null when layer3 retry returns null and final validation fails', async () => {
+        mockLlmPrompt.mockResolvedValueOnce('{"tests":[]}').mockResolvedValueOnce(null);
+        mockSchema.safeParse.mockReturnValue({ success: true, data: { tests: [] } });
+        mockLayer2Validator.validate.mockReturnValueOnce({ allPassed: true, results: [] }).mockReturnValueOnce({
+            allPassed: false,
+            results: [{ passed: false, invariantId: 'T-01', message: 'Fail', severity: 'error', artifactPath: '' }],
+        });
+        mockLayer3Validator.validate.mockReturnValueOnce({ allPassed: true, results: [] }).mockReturnValueOnce({
+            allPassed: false,
+            results: [{ passed: false, invariantId: 'S-01', message: 'Fail', severity: 'error', artifactPath: '' }],
+        });
+
+        const result = await generateWithRetry(
+            baseOpts,
+            mockSchema,
+            mockLlmPrompt,
+            mockLayer2Validator,
+            mockLayer3Validator,
+            context,
+            {
+                layer1: { maxRetries: 1, enabled: true },
+                layer2: { maxRetries: 2, enabled: true },
+                layer3: { maxRetries: 2, enabled: true },
+            },
+        );
+
+        expect(result.data).toBeNull();
     });
 });

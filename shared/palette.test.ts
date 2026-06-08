@@ -1,3 +1,13 @@
+vi.mock('./config', () => ({
+    default: {
+        get: vi.fn((key: string) => {
+            if (key === 'noColor') return true;
+            return false;
+        }),
+    },
+    __esModule: true,
+}));
+
 import * as paletteModule from './palette.js';
 import chalk from 'chalk';
 

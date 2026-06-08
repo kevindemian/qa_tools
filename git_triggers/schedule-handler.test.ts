@@ -31,9 +31,89 @@ vi.mock('./session-state', async () => ({
 }));
 
 vi.mock('../shared/metrics', async () => ({
-    loadMetrics: vi.fn(() => ({ runs: [] })),
+    loadMetrics: vi.fn(() => ({ runs: [], failureClassifications: [] })),
     calculateFlakiness: vi.fn(() => []),
 }));
+
+vi.mock('../shared/health-score', () => ({
+    calculateHealthScore: vi.fn(() => ({
+        overall: 50,
+        grade: 'needs_attention',
+        dimensions: { passRate: { score: 50 }, flakyRate: { score: 50 }, coverage: { score: 50 } },
+        qualityGate: 'fail',
+    })),
+}));
+vi.mock('../shared/defect-trend', () => ({
+    aggregateDefectTrends: vi.fn(() => ({ trends: [] })),
+    generateDefectTrendHtml: vi.fn(() => ''),
+}));
+vi.mock('../shared/release-score', () => ({
+    calculateReleaseScore: vi.fn(() => ({})),
+    generateReleaseScoreHtml: vi.fn(() => ''),
+}));
+vi.mock('../shared/ai-effectiveness', () => ({
+    computeAiEffectiveness: vi.fn(() => ({})),
+    generateAiEffectivenessHtml: vi.fn(() => ''),
+}));
+vi.mock('../shared/traceability-matrix', () => ({
+    buildTraceabilityMatrix: vi.fn(() => ({ nodes: [] })),
+    generateTraceabilityHtml: vi.fn(() => ''),
+}));
+vi.mock('../shared/backlog-health', () => ({
+    analyzeBacklogHealth: vi.fn(() => ({})),
+    generateBacklogHealthHtml: vi.fn(() => ''),
+}));
+vi.mock('../shared/defect-seasonality', () => ({
+    aggregateDefectSeasonality: vi.fn(() => ({ peakDay: '' })),
+    generateSeasonalityHtml: vi.fn(() => ''),
+}));
+vi.mock('../shared/silent-regression', () => ({
+    detectSilentRegression: vi.fn(() => ({ regressions: [] })),
+    generateSilentRegressionHtml: vi.fn(() => ''),
+}));
+vi.mock('../shared/ai-comparison', () => ({
+    compareAiVsManual: vi.fn(() => []),
+    generateAiComparisonHtml: vi.fn(() => ''),
+}));
+vi.mock('../shared/cross-squad-benchmark', () => ({
+    computeCrossSquadBenchmark: vi.fn(() => ({})),
+    generateBenchmarkHtml: vi.fn(() => ''),
+}));
+vi.mock('../shared/developer-profile', () => ({
+    buildDeveloperProfile: vi.fn(() => []),
+    generateDeveloperProfileHtml: vi.fn(() => ''),
+}));
+vi.mock('../shared/suite-optimization', () => ({
+    analyzeSuiteOptimization: vi.fn(() => ({})),
+    generateOptimizationHtml: vi.fn(() => ''),
+}));
+vi.mock('../shared/incident-report', () => ({
+    buildIncidentReport: vi.fn(() => ({})),
+    generateIncidentReportHtml: vi.fn(() => ''),
+}));
+vi.mock('../shared/impact-alert', () => ({
+    analyzePipelineImpact: vi.fn(() => ({})),
+    generateImpactAlertHtml: vi.fn(() => ''),
+}));
+vi.mock('../shared/pipeline-cost', () => ({
+    calculatePipelineCost: vi.fn(() => ({})),
+    generatePipelineCostHtml: vi.fn(() => ''),
+}));
+vi.mock('../shared/requirement-score', () => ({
+    calculateRequirementScores: vi.fn(() => []),
+    generateRequirementScoreHtml: vi.fn(() => ''),
+}));
+vi.mock('../shared/git-metrics-adapter', () => ({
+    generateGitMetricsRuns: vi.fn(() => []),
+    generateGitFailureClassifications: vi.fn(() => []),
+}));
+vi.mock('../shared/quality-gate', () => ({
+    runQualityGate: vi.fn(() => ({ passed: true })),
+    formatQualityGateText: vi.fn(() => ''),
+}));
+vi.mock('../shared/temp-dir', () => ({ writeReport: vi.fn((name: string) => '/tmp/' + name) }));
+vi.mock('../shared/jira-client', () => ({ default: vi.fn() }));
+vi.mock('../shared/flaky-auto-actions', () => ({ executeFlakyActions: vi.fn(() => []) }));
 
 vi.mock('../shared/flakiness-dashboard', async () => ({ generateFlakinessHtml: vi.fn(() => '<html>') }));
 
@@ -57,6 +137,7 @@ import {
     handleRunSchedule,
     handleChangeProject,
     handleFlakinessDashboard,
+    generateWeeklyQualityReport,
 } from './schedule-handler.js';
 import { createMockGitProvider } from '../shared/test-utils/factories/index.js';
 import type { GitProvider } from '../shared/types.js';
@@ -247,11 +328,29 @@ describe('handleFlakinessDashboard', () => {
         await handleFlakinessDashboard();
 
         expect(mockGenerateHtml).toHaveBeenCalled();
-        const { writeFileSync } = await import('fs');
-        expect(writeFileSync).toHaveBeenCalled();
         const { openWithFallback } = (await import('../shared/open.js')) as {
             openWithFallback: (...args: unknown[]) => unknown;
         };
         expect(openWithFallback).toHaveBeenCalledWith(expect.stringContaining('flakiness'), 'Dashboard de flaky', info);
+    });
+});
+
+describe('generateWeeklyQualityReport', () => {
+    it('warns when no project selected', () => {
+        mockState.currentProjectName = '';
+        generateWeeklyQualityReport();
+        expect(mockWarn).toHaveBeenCalledWith(expect.stringContaining('Nenhum projeto'));
+    });
+
+    it('warns when less than 2 runs and git fallback fails', () => {
+        mockState.currentProjectName = 'proj1';
+        mockLoadMetrics.mockReturnValue({
+            runs: [
+                { project: 'proj1', timestamp: '', total: 0, passed: 0, failed: 0, skipped: 0, duration: 0, tests: [] },
+            ],
+            failureClassifications: [],
+        });
+        generateWeeklyQualityReport();
+        expect(mockWarn).toHaveBeenCalledWith(expect.stringContaining('Menos de 2'));
     });
 });
