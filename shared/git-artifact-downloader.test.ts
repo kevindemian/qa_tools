@@ -482,7 +482,7 @@ describe('fetchGitHistory', () => {
         } as never);
 
         const { AdmZip: MockZip } = await import('./deps.js');
-        vi.mocked(MockZip.prototype.getEntries).mockReturnValue([
+        const mockEntries = [
             { name: 'readme.txt', getData: () => Buffer.from('not json') },
             {
                 name: 'results.json',
@@ -496,7 +496,12 @@ describe('fetchGitHistory', () => {
                         }),
                     ),
             },
-        ] as never);
+        ];
+        Object.defineProperty(MockZip.prototype, 'getEntries', {
+            value: () => mockEntries,
+            writable: true,
+            configurable: true,
+        });
 
         const mockGet = vi
             .fn()
