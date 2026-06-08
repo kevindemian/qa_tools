@@ -92,6 +92,7 @@ export default tseslint.config(
             'shared/prompt.ts',
             'shared/logger.ts',
             'shared/splash.ts',
+            'shared/env-loader.ts',
             'jira_management/ui-helpers.ts',
             'docs/**/*.ts',
             'jira_management/main.ts',
