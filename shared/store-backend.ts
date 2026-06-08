@@ -23,11 +23,20 @@ export class GitStoreBackend implements StoreBackend {
     }
 
     init(): void {
-        fs.mkdirSync(this.fullPath, { recursive: true });
+        try {
+            fs.mkdirSync(this.fullPath, { recursive: true });
+        } catch {
+            /* if mkdir fails, subsequent operations will also fail — propagate */
+            throw new Error(`GitStoreBackend: não foi possível criar diretório ${this.fullPath}`);
+        }
         if (!fs.existsSync(path.join(this.gitWorkDir, '.git'))) {
-            execSync(`git init "${this.gitWorkDir}"`, { stdio: 'ignore' });
-            execSync(`git -C "${this.gitWorkDir}" config user.name "qa-tools"`, { stdio: 'ignore' });
-            execSync(`git -C "${this.gitWorkDir}" config user.email "qa-tools@localhost"`, { stdio: 'ignore' });
+            try {
+                execSync(`git init "${this.gitWorkDir}"`, { stdio: 'ignore' });
+                execSync(`git -C "${this.gitWorkDir}" config user.name "qa-tools"`, { stdio: 'ignore' });
+                execSync(`git -C "${this.gitWorkDir}" config user.email "qa-tools@localhost"`, { stdio: 'ignore' });
+            } catch {
+                throw new Error(`GitStoreBackend: git init falhou em ${this.gitWorkDir}`);
+            }
         }
     }
 
@@ -42,8 +51,14 @@ export class GitStoreBackend implements StoreBackend {
 
     write(relPath: string, data: Buffer): void {
         const full = path.join(this.fullPath, relPath);
-        fs.mkdirSync(path.dirname(full), { recursive: true });
-        fs.writeFileSync(full, data);
+        try {
+            fs.mkdirSync(path.dirname(full), { recursive: true });
+            fs.writeFileSync(full, data);
+        } catch (err) {
+            throw new Error(`GitStoreBackend: falha ao escrever ${relPath} — ${(err as Error).message}`, {
+                cause: err,
+            });
+        }
     }
 
     exists(relPath: string): boolean {
@@ -51,10 +66,17 @@ export class GitStoreBackend implements StoreBackend {
     }
 
     flush(message: string): void {
-        execSync(`git -C "${this.gitWorkDir}" add "${this.relStoreDir}"`, { stdio: 'ignore' });
-        execSync(`git -C "${this.gitWorkDir}" -c core.hooksPath=/dev/null commit --allow-empty -m "${message}"`, {
-            stdio: 'ignore',
-        });
+        try {
+            execSync(`git -C "${this.gitWorkDir}" add "${this.relStoreDir}"`, { stdio: 'ignore' });
+            execSync(`git -C "${this.gitWorkDir}" -c core.hooksPath=/dev/null commit --allow-empty -m "${message}"`, {
+                stdio: 'ignore',
+            });
+        } catch (err) {
+            throw new Error(
+                `GitStoreBackend: git add/commit falhou em ${this.gitWorkDir} — ${(err as Error).message}`,
+                { cause: err },
+            );
+        }
     }
 }
 
@@ -76,8 +98,12 @@ export class FsStoreBackend implements StoreBackend {
 
     write(relPath: string, data: Buffer): void {
         const full = path.join(this.baseDir, relPath);
-        fs.mkdirSync(path.dirname(full), { recursive: true });
-        fs.writeFileSync(full, data);
+        try {
+            fs.mkdirSync(path.dirname(full), { recursive: true });
+            fs.writeFileSync(full, data);
+        } catch (err) {
+            throw new Error(`FsStoreBackend: falha ao escrever ${relPath} — ${(err as Error).message}`, { cause: err });
+        }
     }
 
     exists(relPath: string): boolean {

@@ -154,6 +154,53 @@ describe('GitStoreBackend', () => {
 });
 
 describe('GitStoreBackend additional coverage', () => {
+    it('init throws when mkdir fails', () => {
+        const dir = path.join(tmpDir, 'git-init-mkdir-fail');
+        const backend = new GitStoreBackend(dir, '.');
+        const spy = vi.spyOn(fs, 'mkdirSync').mockImplementation(() => {
+            throw new Error('EACCES');
+        });
+        expect(() => backend.init()).toThrow('GitStoreBackend: não foi possível criar diretório');
+        spy.mockRestore();
+    });
+
+    it('init throws when git init fails', () => {
+        const dir = path.join(tmpDir, 'git-init-git-fail');
+        fs.mkdirSync(dir, { recursive: true });
+        const backend = new GitStoreBackend(dir, '.');
+        /* Make dir read-only so git init cannot create .git */
+        fs.chmodSync(dir, 0o444);
+        try {
+            expect(() => backend.init()).toThrow('GitStoreBackend: git init falhou');
+        } finally {
+            fs.chmodSync(dir, 0o755);
+        }
+    });
+
+    it('write throws on filesystem error', () => {
+        const dir = path.join(tmpDir, 'git-write-fail');
+        const backend = new GitStoreBackend(dir, '.');
+        backend.init();
+        const spy = vi.spyOn(fs, 'writeFileSync').mockImplementation(() => {
+            throw new Error('ENOSPC');
+        });
+        expect(() => backend.write('fail.json', Buffer.from('data'))).toThrow('GitStoreBackend: falha ao escrever');
+        spy.mockRestore();
+    });
+
+    it('flush throws when git add/commit fails', () => {
+        const dir = path.join(tmpDir, 'git-flush-fail');
+        const backend = new GitStoreBackend(dir, '.');
+        backend.init();
+        /* Make .git read-only so git add/commit fails */
+        fs.chmodSync(path.join(dir, '.git'), 0o444);
+        try {
+            expect(() => backend.flush('test [skip ci]')).toThrow('GitStoreBackend: git add/commit falhou');
+        } finally {
+            fs.chmodSync(path.join(dir, '.git'), 0o755);
+        }
+    });
+
     it('read returns null on filesystem error', () => {
         const dir = path.join(tmpDir, 'git-read-error');
         const backend = new GitStoreBackend(dir, '.');
@@ -198,6 +245,17 @@ describe('FsStoreBackend additional coverage', () => {
         expect(backend.read('bad.json')).toBeNull();
         spy.mockRestore();
         readSpy.mockRestore();
+    });
+
+    it('write throws on filesystem error', () => {
+        const dir = path.join(tmpDir, 'fs-write-error');
+        const backend = new FsStoreBackend(dir);
+        backend.init();
+        const spy = vi.spyOn(fs, 'writeFileSync').mockImplementation(() => {
+            throw new Error('ENOSPC');
+        });
+        expect(() => backend.write('fail.json', Buffer.from('data'))).toThrow('FsStoreBackend: falha ao escrever');
+        spy.mockRestore();
     });
 });
 
@@ -255,6 +313,21 @@ describe('detectStoreBackend', () => {
         fs.mkdirSync(path.join(projDir, '.git'), { recursive: true });
         const backend = detectStoreBackend(projDir);
         expect(backend.constructor.name).toBe('GitStoreBackend');
+    });
+
+    it('falls through to XDG when projectDir has no .git', () => {
+        const projDir = path.join(tmpDir, 'proj-no-git');
+        fs.mkdirSync(projDir, { recursive: true });
+        const prevXdg = process.env.XDG_STATE_HOME;
+        const xdgDir = path.join(tmpDir, 'xdg-fallback-no-git');
+        process.env.XDG_STATE_HOME = xdgDir;
+        try {
+            const backend = detectStoreBackend(projDir);
+            expect(backend.constructor.name).toBe('GitStoreBackend');
+        } finally {
+            if (prevXdg) process.env.XDG_STATE_HOME = prevXdg;
+            else delete process.env.XDG_STATE_HOME;
+        }
     });
 
     it('returns FsStoreBackend when git dir check throws', () => {
