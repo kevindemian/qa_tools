@@ -6,7 +6,9 @@ import type { ParseResult } from '../shared/result_parser.js';
 import type { PipelineTriggerResult, StateContainer } from '../shared/types.js';
 import type { GitProvider } from '../shared/types.js';
 import { writeEphemeral } from '../shared/temp-dir.js';
-import { cacheReport } from '../shared/report-cache.js';
+import { getHeadSha } from '../shared/git-sha.js';
+import { detectStoreBackend } from '../shared/store-backend.js';
+import { Store } from '../shared/store.js';
 import {
     collectTestResults as _collectTestResults,
     createTestExecution as _createTestExecution,
@@ -154,7 +156,22 @@ async function _postPipeline(
         });
     }
     if (parsed && parsed.stats) {
-        cacheReport(projectName, pipelineId, parsed.tests, parsed.stats, '', branch);
+        const sha = getHeadSha() || 'no-sha';
+        const backend = detectStoreBackend();
+        const store = new Store(backend, projectName);
+        store.saveReport(sha, parsed.tests);
+        store.put(sha, {
+            sha,
+            project: projectName,
+            timestamp: Date.now(),
+            tool: '',
+            branch,
+            total: parsed.stats.total,
+            passed: parsed.stats.passed,
+            failed: parsed.stats.failed,
+            skipped: parsed.stats.skipped,
+        });
+        store.flush(`cache: pipeline #${pipelineId}`);
         await offerPipelineFailureAnalysis(parsed, (analysisReport) => {
             return handleBugCreation(parsed, pipelineId, branch, analysisReport, jiraResource);
         });

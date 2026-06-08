@@ -1,9 +1,5 @@
-import fs from 'fs';
-import path from 'path';
-import type { FlatTest, CtrfData, CtrfSummary } from '../../shared/result_parser.js';
+import type { FlatTest, CtrfData } from '../../shared/result_parser.js';
 import type { CiContext, RunStats } from '../../shared/ci-detect.js';
-
-export const CTRF_LAST_FILE = 'last-results.ctrf.json';
 
 export { isGitHubCi, isGitLabCi } from '../../shared/ci-detect.js';
 export type { CiContext, RunStats } from '../../shared/ci-detect.js';
@@ -159,48 +155,4 @@ export function parseCliExtra(): { publishTarget?: string; extraRuns: Array<{ na
         }
     }
     return result;
-}
-
-export function saveMetricsJson(tests: FlatTest[], htmlDir: string): void {
-    const passed = tests.filter((t) => t.state === 'passed').length;
-    const failed = tests.filter((t) => t.state === 'failed').length;
-    const skipped = tests.filter((t) => t.state === 'skipped').length;
-    const duration = tests.reduce((sum, t) => sum + t.duration, 0);
-    const summary: CtrfSummary = {
-        tests: tests.length,
-        passed,
-        failed,
-        skipped,
-        pending: 0,
-        other: 0,
-        start: Date.now() - duration,
-        stop: Date.now(),
-    };
-
-    const ctrfData: CtrfData = {
-        results: {
-            summary,
-            tests: tests.map((t) => ({
-                name: t.title,
-                status: t.state,
-                duration: t.duration,
-                ...(t.error ? { message: t.error } : {}),
-                ...(t.fullTitle ? { suite: t.fullTitle } : {}),
-            })),
-        },
-    };
-
-    const statsData = {
-        generatedAt: new Date().toISOString(),
-        total: tests.length,
-        passed,
-        failed,
-        skipped,
-        passRate: tests.length > 0 ? ((passed / tests.length) * 100).toFixed(1) : '0.0',
-        duration,
-    };
-
-    fs.writeFileSync(path.join(htmlDir, 'report.ctrf.json'), JSON.stringify(ctrfData, null, 2), 'utf8');
-    fs.writeFileSync(path.join(htmlDir, 'report.stats.json'), JSON.stringify(statsData, null, 2), 'utf8');
-    fs.writeFileSync(path.join(htmlDir, CTRF_LAST_FILE), JSON.stringify(ctrfData, null, 2), 'utf8');
 }

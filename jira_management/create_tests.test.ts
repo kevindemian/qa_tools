@@ -101,7 +101,6 @@ const {
     updateCrossReferences,
 } = createTestsModule;
 import * as PROMPT from '../shared/prompt.js';
-import * as STATE from '../shared/state.js';
 import fs from 'fs';
 
 import { createMockLogger, nonNull } from '../shared/test-utils.js';
@@ -600,24 +599,6 @@ describe('createTestsFromJson', async () => {
         expect(result).toBeDefined();
         expect(nonNull(result).summary).toContain('2');
         expect(nonNull(result).sourcePath).toBe('/fake/path.json');
-    });
-
-    it('usa state.lastJsonDir para resolver caminho relativo', async () => {
-        process.env.AUTO_CONFIRM = 'true';
-        process.env.DRY_RUN = 'true';
-        vi.mocked(STATE.load).mockReturnValue({ lastJsonDir: '/base/dir' });
-        vi.mocked(PROMPT.askFilePath).mockResolvedValueOnce('sub/testes.json');
-        FS.existsSync.mockReturnValue(true);
-        FS.readFileSync.mockImplementation(((p: string) => {
-            if (p === '/base/dir/sub/testes.json') {
-                return JSON.stringify([{ title: 'TC1', steps: [{ Action: 'Click' }] }]);
-            }
-            return '[]';
-        }) as typeof FS.readFileSync);
-        const result = await createTestsFromJson(BASE_PARAMS());
-        expect(result).toBeDefined();
-        expect(nonNull(result).summary).toContain('1');
-        expect(nonNull(result).sourcePath).toBe('/base/dir/sub/testes.json');
     });
 
     it('parseia precondition como reference (formato ABC-123)', async () => {

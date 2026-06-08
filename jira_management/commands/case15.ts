@@ -1,33 +1,24 @@
 /** Import JSON/TXT test results (CTRF format) to create Test Executions. */
+import path from 'path';
 import Config from '../../shared/config.js';
 import { ask, warn, success } from '../../shared/prompt.js';
-import { load as loadState } from '../../shared/state.js';
-import path from 'path';
-import fs from 'fs';
 import type { CommandContext } from './context.js';
 // anti-circular (prompt → create_tests → session-context → prompt)
 import createTests from '../create_tests.js';
 import { offerTestExecutionAssociation, showResults } from './test-execution-flow.js';
 
 async function handler(c: CommandContext): Promise<boolean | void> {
-    const state = loadState() as Record<string, string | undefined>;
     const jsonPathInput =
         Config.get('jsonPath') ||
         (await ask('Caminho do arquivo JSON ou TXT (formato JSON)', {
             hint: 'ex: ./results/ctrf.json',
-            default: state.lastJsonPath || '',
+            default: Config.get('jsonPath') || '',
         }));
 
-    let jsonPath = jsonPathInput.trim();
+    const jsonPath = jsonPathInput.trim();
     if (!jsonPath) {
         warn('Caminho do JSON vazio. Operação cancelada.');
         return;
-    }
-    if (state.lastJsonDir && !path.isAbsolute(jsonPath)) {
-        const potential = path.resolve(state.lastJsonDir, jsonPath);
-        if (fs.existsSync(potential)) {
-            jsonPath = potential;
-        }
     }
 
     const result = await createTests.createTestsFromJson({

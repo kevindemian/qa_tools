@@ -5,7 +5,6 @@ import type { FlatTest } from '../../shared/result_parser.js';
 import type { TestHistoryRun } from '../../shared/report-generator.js';
 import { createHistoryProvider, TestHistoryCache } from '../xray-history.js';
 import type { CommandContext } from './context.js';
-import { CTRF_LAST_FILE, isValidCtrfData } from './case17-helpers.js';
 
 export { fetchGitHistory, fetchLatestTestRun } from '../../shared/git-artifact-downloader.js';
 
@@ -73,34 +72,59 @@ export async function resolveTestHistory(
     return titleToHistory;
 }
 
-export function computeDiff(current: FlatTest[]): {
+export function computeDiff(
+    current: FlatTest[],
+    store?: import('../../shared/store.js').Store,
+    project?: string,
+): {
     newFailures: FlatTest[];
     newPasses: FlatTest[];
     flaky: FlatTest[];
 } {
-    const lastPath = path.join(process.cwd(), CTRF_LAST_FILE);
-    if (!fs.existsSync(lastPath)) {
-        return { newFailures: [], newPasses: [], flaky: [] };
-    }
-    try {
-        const raw = fs.readFileSync(lastPath, 'utf8');
-        const parsed: unknown = JSON.parse(raw);
-        if (!isValidCtrfData(parsed)) return { newFailures: [], newPasses: [], flaky: [] };
-        const lastData = parsed;
-        const lastTests = lastData.results.tests || [];
-        const lastByTitle = new Map(lastTests.map((t) => [t.name, t]));
-        const newFailures: FlatTest[] = [];
-        const newPasses: FlatTest[] = [];
-        const flaky: FlatTest[] = [];
-        for (const t of current) {
-            const last = lastByTitle.get(t.title);
-            if (!last) continue;
-            if (t.state === 'failed' && last.status === 'passed') newFailures.push(t);
-            if (t.state === 'passed' && last.status === 'failed') newPasses.push(t);
-            if (last.status === 'failed') flaky.push(t);
+    let lastTests: Array<{ name: string; status: string }> = [];
+
+    if (store && project) {
+        const stored = store.loadMetrics<{
+            tests?: Array<{ title: string; state: string }>;
+        }>();
+        if (stored?.tests && Array.isArray(stored.tests) && stored.tests.length > 0) {
+            lastTests = stored.tests.map((t) => ({ name: t.title, status: t.state }));
         }
-        return { newFailures, newPasses, flaky };
-    } catch {
+    }
+
+    if (lastTests.length === 0) {
+        const CTRF_LAST_FILE = 'last-results.ctrf.json';
+        const lastPath = path.join(process.cwd(), CTRF_LAST_FILE);
+        if (fs.existsSync(lastPath)) {
+            try {
+                const raw = fs.readFileSync(lastPath, 'utf8');
+                const parsed: unknown = JSON.parse(raw);
+                if (parsed && typeof parsed === 'object') {
+                    const obj = parsed as { results?: { tests?: Array<{ name: string; status: string }> } };
+                    if (obj.results?.tests) {
+                        lastTests = obj.results.tests;
+                    }
+                }
+            } catch {
+                /* corrupted file, use empty */
+            }
+        }
+    }
+
+    if (lastTests.length === 0) {
         return { newFailures: [], newPasses: [], flaky: [] };
     }
+
+    const lastByTitle = new Map(lastTests.map((t) => [t.name, t]));
+    const newFailures: FlatTest[] = [];
+    const newPasses: FlatTest[] = [];
+    const flaky: FlatTest[] = [];
+    for (const t of current) {
+        const last = lastByTitle.get(t.title);
+        if (!last) continue;
+        if (t.state === 'failed' && last.status === 'passed') newFailures.push(t);
+        if (t.state === 'passed' && last.status === 'failed') newPasses.push(t);
+        if (last.status === 'failed') flaky.push(t);
+    }
+    return { newFailures, newPasses, flaky };
 }

@@ -31,6 +31,36 @@ vi.mock('../shared/state', async () => ({
 }));
 
 vi.mock('../shared/http-client', async () => ({ sleep: vi.fn() }));
+vi.mock('../shared/git-sha.js', async () => ({
+    getHeadSha: vi.fn().mockReturnValue('pipeline-sha-999'),
+    getCurrentBranch: vi.fn().mockReturnValue('main'),
+    detectGitDir: vi.fn().mockReturnValue('/project'),
+}));
+vi.mock('../shared/store-backend.js', async () => ({
+    detectStoreBackend: vi.fn(),
+    detectProjectGitDir: vi.fn().mockReturnValue('/project'),
+}));
+vi.mock('../shared/store.js', async () => {
+    function makeMockStore() {
+        return {
+            lookup: vi.fn(),
+            put: vi.fn(),
+            listByProject: vi.fn().mockReturnValue([]),
+            saveReport: vi.fn(),
+            loadReport: vi.fn(),
+            loadMetrics: vi.fn(),
+            saveMetrics: vi.fn(),
+            appendBranch: vi.fn(),
+            getBranch: vi.fn().mockReturnValue([]),
+            flush: vi.fn(),
+        };
+    }
+    return {
+        Store: vi.fn(function () {
+            return makeMockStore();
+        }),
+    };
+});
 
 vi.mock('../shared/config', async () => ({
     __esModule: true,

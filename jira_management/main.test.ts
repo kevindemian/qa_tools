@@ -297,10 +297,9 @@ describe('buildMenuChoices', () => {
         expect(choices.find((c) => c.value === '10')?.description).toContain('/custom/git');
     });
 
-    it('shows "não configurado" for unset cypress and JSON dirs in config sub-menu', () => {
+    it('shows "não configurado" for unset cypress dir in config sub-menu', () => {
         const choices = mod.buildMenuChoices('config', 'ECSPOL', ctx);
         expect(choices.find((c) => c.value === '14')?.description).toContain('não configurado');
-        expect(choices.find((c) => c.value === '16')?.description).toContain('não configurado');
     });
 
     it('fallback to main categories when sub-menu not found', () => {
@@ -403,11 +402,6 @@ describe('_configHint', () => {
     it('reads cypress path from state', () => {
         vi.mocked(loadTypedState).mockReturnValue({ lastCypressPath: '/cy/path' });
         expect(mod._configHint('cypressDir', ctx)).toBe('(atual: /cy/path)');
-    });
-
-    it('reads json dir from state', () => {
-        vi.mocked(loadTypedState).mockReturnValue({ lastJsonDir: '/json/dir' });
-        expect(mod._configHint('jsonDir', ctx)).toBe('(atual: /json/dir)');
     });
 
     it('returns empty string for unknown key', () => {

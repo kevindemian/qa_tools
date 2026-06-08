@@ -1,8 +1,3 @@
-vi.mock('fs');
-
-import * as fs from 'fs';
-import type { FlatTest } from '../../shared/result_parser.js';
-import { nonNull } from '../../shared/test-utils.js';
 import {
     isGitHubCi,
     isGitLabCi,
@@ -12,7 +7,6 @@ import {
     buildDiffSummary,
     isValidCtrfData,
     parseCliExtra,
-    saveMetricsJson,
 } from './case17-helpers.js';
 
 describe('isGitHubCi', () => {
@@ -237,41 +231,5 @@ describe('parseCliExtra', () => {
         const result = parseCliExtra();
         expect(result.publishTarget).toBeUndefined();
         expect(result.extraRuns).toHaveLength(0);
-    });
-});
-
-describe('saveMetricsJson', () => {
-    beforeEach(() => {
-        vi.clearAllMocks();
-    });
-
-    it('writes three JSON files', async () => {
-        const tests = [{ title: 'T1', state: 'passed', duration: 100 }];
-        saveMetricsJson(tests as FlatTest[], '/tmp/html');
-
-        expect(vi.mocked(fs.writeFileSync)).toHaveBeenCalledTimes(3);
-        const calls = vi.mocked(fs.writeFileSync).mock.calls;
-        expect(String(nonNull(calls[0])[0])).toContain('report.ctrf.json');
-        expect(String(nonNull(calls[1])[0])).toContain('report.stats.json');
-        expect(String(nonNull(calls[2])[0])).toContain('last-results.ctrf.json');
-    });
-
-    it('writes correct stats for mixed results', async () => {
-        const tests = [
-            { title: 'P1', state: 'passed', duration: 50 },
-            { title: 'F1', state: 'failed', duration: 30, error: 'err' },
-            { title: 'S1', state: 'skipped', duration: 0 },
-        ];
-        saveMetricsJson(tests as FlatTest[], '/tmp/html');
-
-        const writeFileMock = vi.mocked(fs.writeFileSync);
-        const raw = nonNull(writeFileMock.mock.calls[1])[1];
-        const dataStr = raw as string;
-        expect(JSON.parse(dataStr)).toMatchObject({
-            passed: 1,
-            failed: 1,
-            skipped: 1,
-            total: 3,
-        });
     });
 });

@@ -194,7 +194,6 @@ export function _configHint(key: string, ctx: { git_directory: string }): string
         return (
             '(atual: ' + (Config.get('cypressProjectPath') || loadTypedState().lastCypressPath || NOT_CONFIGURED) + ')'
         );
-    if (key === 'jsonDir') return '(atual: ' + (loadTypedState().lastJsonDir || NOT_CONFIGURED) + ')';
     return '';
 }
 
@@ -215,7 +214,6 @@ export function buildMenuChoices(level: string, proj: string, ctx: { git_directo
             else if (item.configKey === 'cypressDir')
                 entry.description =
                     Config.get('cypressProjectPath') || loadTypedState().lastCypressPath || NOT_CONFIGURED;
-            else if (item.configKey === 'jsonDir') entry.description = loadTypedState().lastJsonDir || NOT_CONFIGURED;
             else if (item.id === '9') entry.description = proj;
             if (item.id && ID_TO_ALIASES[item.id]) {
                 const a = ID_TO_ALIASES[item.id] as string[];
