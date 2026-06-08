@@ -39,6 +39,17 @@ describe('JiraClient', () => {
             expect(client.jiraMode).toBe('server');
         });
 
+        it('handles empty baseUrl without crashing', async () => {
+            const client = new JiraClient(TOKEN, '');
+            expect(client.baseUrl).toBe('');
+            expect(client.originUrl).toBe('');
+        });
+
+        it('handles invalid baseUrl without crashing', async () => {
+            const client = new JiraClient(TOKEN, '/rest/api/2');
+            expect(client.originUrl).toBe('');
+        });
+
         it('accepts explicit jiraMode', async () => {
             const client = new JiraClient(TOKEN, BASE_URL, 'cloud');
             expect(client.jiraMode).toBe('cloud');

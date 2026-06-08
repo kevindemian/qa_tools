@@ -33,8 +33,12 @@ class JiraClient implements JiraResourceLike {
         this.baseUrl = baseUrl;
         this.personalToken = personalToken;
         this.jiraMode = mode ?? 'server';
-        const parsed = new URL(baseUrl);
-        this.originUrl = parsed.origin;
+        try {
+            const parsed = new URL(baseUrl);
+            this.originUrl = parsed.origin;
+        } catch {
+            this.originUrl = '';
+        }
         this.axiosInstance = createHttpClient({
             baseUrl,
             authHeader: createJiraAuthHeader(personalToken, this.jiraMode),

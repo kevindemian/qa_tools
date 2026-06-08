@@ -28,7 +28,12 @@ export function prompt(label: string, options: PromptOptions = {}): string {
         if (hint) text += ' ' + chalk.yellow('(' + hint + ')');
         if (def) text += ' ' + chalk.yellow('[' + def + ']');
         text += chalk.dim('  (/help)');
-        const answer = readlineSync.question(text + ': ', { defaultInput: def ?? '' }).trim();
+        let answer: string;
+        try {
+            answer = readlineSync.question(text + ': ', { defaultInput: def ?? '' }).trim();
+        } catch {
+            return def ?? '';
+        }
         const trimmed = answer.toLowerCase();
         if (NAV_CMDS.includes(trimmed)) throw new CancelError(trimmed);
         if (minLength !== undefined && answer.length < minLength) {
@@ -47,10 +52,15 @@ export function confirm(label: string, defaultYes = false): boolean {
     const def = defaultYes ? 'Y' : 'N';
     while (true) {
         const text = '\n' + chalk.yellow('?') + ' ' + label + ' ' + chalk.yellow('(' + def + ')');
-        const answer = readlineSync
-            .question(text + ': ', { defaultInput: def.toLowerCase() })
-            .trim()
-            .toLowerCase();
+        let answer: string;
+        try {
+            answer = readlineSync
+                .question(text + ': ', { defaultInput: def.toLowerCase() })
+                .trim()
+                .toLowerCase();
+        } catch {
+            return defaultYes;
+        }
         if (NAV_CMDS.includes(answer)) throw new CancelError(answer);
         if (['y', 'yes', 'sim', 's'].includes(answer)) return true;
         if (['n', 'no', 'nao', 'não'].includes(answer)) return false;

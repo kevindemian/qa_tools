@@ -10,7 +10,11 @@ param(
 $wsl = Get-Command wsl.exe -ErrorAction SilentlyContinue
 if ($wsl -or $env:WSL_DISTRO_NAME) {
     $shPath = Join-Path $PSScriptRoot "qatools.sh"
-    wsl.exe -e bash $shPath $args
+    if ($tool) {
+        wsl.exe -e bash $shPath $tool $args
+    } else {
+        wsl.exe -e bash $shPath $args
+    }
     exit $LASTEXITCODE
 }
 
