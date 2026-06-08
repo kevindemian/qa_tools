@@ -183,6 +183,7 @@ export default tseslint.config(
             'eslint.config.mjs',
             '**/*.js',
             '.config/',
+            '.opencode/',
         ],
     },
     prettier,

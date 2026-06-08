@@ -15,6 +15,7 @@ config/*.local.json
 
 # === Sensitive ===
 .env
+.env.local
 
 # === Dev Tooling (OpenCode agents, commands, briefing) ===
 .opencode/

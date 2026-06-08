@@ -349,7 +349,6 @@ If ambiguity, uncertainty, contradiction or insufficient authority exists:
 
 STOP.
 
-
 ## 17. PROTECTED PATHS — ZERO ACCESS (ABSOLUTE)
 
 The following files are ABSOLUTELY OFF-LIMITS:
@@ -359,6 +358,7 @@ The following files are ABSOLUTELY OFF-LIMITS:
 - `~/.config/opencode/opencode.jsonc`
 
 RULES:
+
 - No read, write, stat, import, grep, diff, execute, or reference of any kind
 - No suggestion, proposal, or plan involving these files
 - No "just checking if they exist"
@@ -366,7 +366,38 @@ RULES:
 
 If a task cannot be completed without accessing these files:
 → The agent MUST IMMEDIATELY STOP and report:
-  "TASK REJECTED: involves protected config file(s): <paths>. No action taken."
+"TASK REJECTED: involves protected config file(s): <paths>. No action taken."
 
 VIOLATION: Any access = critical failure. Session terminates immediately.
 This rule may only be modified by explicit user command, never by agent initiative.
+
+---
+
+## 18. SAFETY BYPASS NOTIFICATION
+
+Any bypass of a safety mechanism requires **explicit user authorization** before execution.
+
+Safety mechanisms include, but are not limited to:
+
+- `--no-verify` / `--no-verify` (git commit/push hooks)
+- `[skip ci]` / `[ci skip]` in commit messages
+- `# noqa`, `// NOLINT`, `@SuppressWarnings`, `eslint-disable`
+- `as any` / `!` (non-null assertion) / `@ts-ignore` / `@ts-expect-error`
+- Disabling, weakening, or removing tests
+- `describe.skip` / `it.skip` / `test.skip`
+- Any form of error suppression
+- Any form of compiler/linter warning suppression
+- Any form of validation bypass
+
+Protocol:
+
+1. Agent identifies that task requires bypassing a safety mechanism
+2. Agent must **STOP** and explicitly report to the user:
+    - Which safety mechanism needs bypassing
+    - Why the root cause cannot be corrected instead
+    - The exact command or action required
+3. Only after receiving **explicit user authorization** may the agent execute the bypass
+4. The bypass must be logged in the project's audit trail
+5. A root-cause issue must be created/updated to track the permanent fix
+
+**TEMPORARY BYPASS IS PERMANENT DAMAGE.** Any bypass without explicit user authorization is a violation of this rule.

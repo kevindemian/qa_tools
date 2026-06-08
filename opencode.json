@@ -3,42 +3,29 @@
 
     "plugin": ["~/.config/opencode/plugin/validation_plugin.ts"],
 
-    "validation": {
-        "hook": "~/.config/opencode/validation_hook.ts",
-        "functions": {
-            "validate": "validateResponse",
-            "sanitize": "sanitizeAndReject",
-            "command": "validateCommand"
-        },
-        "blockOnViolation": true,
-        "requireHumanReview": true,
-        "logViolations": true
-    },
-
     "model": "opencode/deepseek-v4-flash-free",
     "small_model": "google/gemini-2.0-flash",
-    "default_agent": "general",
     "instructions": ["AGENTS.md"],
 
     "command": {
         "verify": {
             "description": "Run R6 verification pipeline for the current TS migration layer",
-            "template": "Rodar pipeline de verificação R6:\n1. npx tsc --noEmit\n2. npx jest --no-coverage\n3. grep -rn \"throw '\" shared/ jira_management/ git_triggers/ 2>/dev/null || true\n4. grep -rn \".only(\" **/*.test.* 2>/dev/null || true\n\nReportar resultado de cada passo. Se algum falhar, parar.",
+            "template": "Rodar pipeline de verificacao R6:\n1. npx tsc --noEmit\n2. npx jest --no-coverage\n3. grep -rn \"throw '\" shared/ jira_management/ git_triggers/ 2>/dev/null || true\n4. grep -rn \".only(\" **/*.test.* 2>/dev/null || true\n\nReportar resultado de cada passo. Se algum falhar, parar.",
             "agent": "explore"
         },
         "rollback": {
             "description": "Rollback an incomplete/broken TS migration layer (R8.4)",
-            "template": "Executar rollback R8.4:\n- Se já commitou: git revert HEAD --no-edit\n- Se não: git checkout -- shared/ jira_management/ git_triggers/ && git clean -fd\n\nVerificar se working tree voltou ao estado anterior com git status.",
+            "template": "Executar rollback R8.4:\n- Se ja commitou: git revert HEAD --no-edit\n- Se nao: git checkout -- shared/ jira_management/ git_triggers/ && git clean -fd\n\nVerificar se working tree voltou ao estado anterior com git status.",
             "agent": "explore"
         },
         "check-layer": {
             "description": "Check prerequisites before starting a TS migration layer (R8.1)",
-            "template": "Verificar pré-requisitos:\n1. git status --porcelain (deve estar limpo)\n2. git stash list (deve estar vazio)\n3. Listar .ts já existentes em shared/ jira_management/ git_triggers/\n4. npx tsc --noEmit (deve passar sem erros)\n\nSe tudo verde, reportar 'Pronto para começar o layer'. Se não, explicar o bloqueio.",
+            "template": "Verificar pre-requisitos:\n1. git status --porcelain (deve estar limpo)\n2. git stash list (deve estar vazio)\n3. Listar .ts ja existentes em shared/ jira_management/ git_triggers/\n4. npx tsc --noEmit (deve passar sem erros)\n\nSe tudo verde, reportar 'Pronto para comecar o layer'. Se nao, explicar o bloqueio.",
             "agent": "explore"
         },
         "duplicated": {
             "description": "Run the codebase duplication auditor across 8 systematic categories",
-            "template": "Execute a auditoria de duplicação completa no codebase seguindo as 8 categorias do seu prompt. Salve o relatório em .audit/ e apresente o sumário ao final.",
+            "template": "Execute a auditoria de duplicacao completa no codebase seguindo as 8 categorias do seu prompt. Salve o relatorio em .audit/ e apresente o sumario ao final.",
             "agent": "duplication-auditor"
         }
     },
@@ -55,10 +42,10 @@
                 "bash": "ask",
                 "question": "ask"
             },
-            "prompt": "Você está executando a migração TypeScript do QA Tools, seguindo o plano em BACKLOG.md.\n\nREGRAS OBRIGATÓRIAS:\n1. Ordem estrita: Layer 0 → 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8 (nunca pular, nunca fazer duas de uma vez)\n2. Cada layer = UM commit atômico\n3. Após CADA layer: rodar R6 completo (tsc --noEmit + jest --no-coverage + grep throw + grep .only)\n4. Só começar um layer se houver tempo para terminá-lo (R8.1)\n5. create_tests.js (732 linhas) DEVE ser quebrado em classes menores durante a migração (SRP)\n6. Nunca usar `any` sem comentário de justificativa\n7. `throw 'string'` ou `throw \"string\"` proibido — sempre `throw new Error()`\n8. Handlers (commands/) nunca podem dar `new JiraResource()` — viola DIP (R2)\n9. Manter module.exports até o último commit (config final) para compatibilidade com .js remanescentes\n10. TODO arquivo .ts novo precisa de um .test.ts correspondente (R1)\n11. Nenhum .only() em testes (R6)\n12. Se quebrar testes existentes: rollback imediato (R8.3), nunca 'consertar depois'"
+            "prompt": "Voce esta executando a migracao TypeScript do QA Tools, seguindo o plano em BACKLOG.md.\n\nREGRAS OBRIGATORIAS:\n1. Ordem estrita: Layer 0 \u2192 1 \u2192 2 \u2192 3 \u2192 4 \u2192 5 \u2192 6 \u2192 7 \u2192 8 (nunca pular, nunca fazer duas de uma vez)\n2. Cada layer = UM commit atomico\n3. Apos CADA layer: rodar R6 completo (tsc --noEmit + jest --no-coverage + grep throw + grep .only)\n4. So comecar um layer se houver tempo para termina-lo (R8.1)\n5. create_tests.js (732 linhas) DEVE ser quebrado em classes menores durante a migracao (SRP)\n6. Nunca usar `any` sem comentario de justificativa\n7. `throw 'string'` ou `throw \"string\"` proibido \u2014 sempre `throw new Error()`\n8. Handlers (commands/) nunca podem dar `new JiraResource()` \u2014 viola DIP (R2)\n9. Manter module.exports ate o ultimo commit (config final) para compatibilidade com .js remanescentes\n10. TODO arquivo .ts novo precisa de um .test.ts correspondente (R1)\n11. Nenhum .only() em testes (R6)\n12. Se quebrar testes existentes: rollback imediato (R8.3), nunca 'consertar depois'"
         },
         "ts-reviewer": {
-            "description": "Review a TS migration layer for correctness before commit. Read-only — never edits.",
+            "description": "Review a TS migration layer for correctness before commit. Read-only \u2014 never edits.",
             "mode": "subagent",
             "permission": {
                 "read": "allow",
@@ -68,7 +55,7 @@
                 "edit": "deny",
                 "question": "allow"
             },
-            "prompt": "Você é um revisor de migração TypeScript. Revise o layer recém-migrado antes do commit.\n\nVERIFIQUE:\n- Todos os @typedef foram substituídos por interface/type nativos?\n- Algum `any` ou `as any` sem comentário de justificativa?\n- module.exports mantido (se ainda há arquivos .js remanescentes)?\n- Todo arquivo .ts tem um .test.ts correspondente?\n- Algum `throw 'string'` ou `throw \"string\"`?\n- Algum `.only(` nos arquivos de teste?\n- Algum handler faz `new JiraResource()` ou `new JiraLinkManager()`?\n- create_tests.ts ≤ 300 linhas? (se aplicável)\n- Funções com mais de 50 linhas?\n\nListe TODAS as violações encontradas, com arquivo e linha."
+            "prompt": "Voce e um revisor de migracao TypeScript. Revise o layer recermigrado antes do commit.\n\nVERIFIQUE:\n- Todos os @typedef foram substituidos por interface/type nativos?\n- Algum `any` ou `as any` sem comentario de justificativa?\n- module.exports mantido (se ainda ha arquivos .js remanescentes)?\n- Todo arquivo .ts tem um .test.ts correspondente?\n- Algum `throw 'string'` ou `throw \"string\"`?\n- Algum `.only(` nos arquivos de teste?\n- Algum handler faz `new JiraResource()` ou `new JiraLinkManager()`?\n- create_tests.ts \u2264 300 linhas? (se aplicavel)\n- Funcoes com mais de 50 linhas?\n\nListe TODAS as violacoes encontradas, com arquivo e linha."
         },
         "duplication-auditor": {
             "description": "Audit the codebase for code duplication, inconsistencies, and anti-patterns across 8 systematic categories.",
@@ -104,9 +91,49 @@
         "read": "allow",
         "glob": "allow",
         "grep": "allow",
-        "edit": "allow",
-        "bash": "allow",
+        "edit": {
+            "*": "allow",
+            "/home/kdemian/.config/opencode/validation_hook.ts": "deny",
+            "/home/kdemian/.config/opencode/plugin/**": "deny",
+            "/home/kdemian/.config/opencode/opencode.jsonc": "deny",
+            "/home/kdemian/.config/opencode/package.json": "deny",
+            "/home/kdemian/.config/opencode/tsconfig.json": "deny",
+            "/home/kdemian/.config/opencode/.validation_cache.*": "deny",
+            "/home/kdemian/.config/opencode/.security_violations.log": "deny",
+            "/home/coder/.config/opencode/validation_hook.ts": "deny",
+            "/home/coder/.config/opencode/plugin/**": "deny",
+            "/home/coder/.config/opencode/opencode.jsonc": "deny",
+            "/home/coder/.config/opencode/package.json": "deny",
+            "/home/coder/.config/opencode/tsconfig.json": "deny",
+            "/home/coder/.config/opencode/.validation_cache.*": "deny",
+            "/home/coder/.config/opencode/.security_violations.log": "deny"
+        },
+        "bash": {
+            "*": "allow",
+            "rm -rf /": "deny",
+            "rm -rf ~": "deny",
+            "rm -rf /home": "deny",
+            "chmod -R 777": "deny",
+            "chown -R": "deny",
+            "git push --force": "deny",
+            "git push --no-verify": "deny",
+            "rm /home/kdemian/.config/opencode/validation_hook.ts*": "deny",
+            "rm /home/kdemian/.config/opencode/plugin*": "deny",
+            "rm /home/kdemian/.config/opencode/opencode.jsonc*": "deny",
+            "rm /home/kdemian/.config/opencode/tsconfig.json*": "deny",
+            "rm /home/kdemian/.config/opencode/.validation_cache*": "deny",
+            "rm /home/kdemian/.config/opencode/.security_violations*": "deny",
+            "rm /home/coder/.config/opencode/validation_hook.ts*": "deny",
+            "rm /home/coder/.config/opencode/plugin*": "deny",
+            "rm /home/coder/.config/opencode/opencode.jsonc*": "deny",
+            "rm /home/coder/.config/opencode/tsconfig.json*": "deny",
+            "rm /home/coder/.config/opencode/.validation_cache*": "deny",
+            "rm /home/coder/.config/opencode/.security_violations*": "deny"
+        },
+        "webfetch": "ask",
+        "websearch": "ask",
         "task": "allow",
-        "question": "allow"
+        "question": "allow",
+        "share": "deny"
     }
 }

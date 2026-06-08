@@ -10,6 +10,8 @@ describe('Config', () => {
         'JIRA_PERSONAL_TOKEN',
         'XRAY_BASE_URL',
         'XRAY_MODE',
+        'XRAY_CLIENT_ID',
+        'XRAY_CLIENT_SECRET',
         'JIRA_PROJECT',
         'GIT_TOKEN',
         'GIT_BASE_URL',
@@ -34,6 +36,60 @@ describe('Config', () => {
         'LOG_MAX_SIZE',
         'XDG_STATE_HOME',
         'LLM_MAX_TOTAL_TOKENS',
+        'LLM_API_KEY',
+        'LLM_MODEL',
+        'LLM_BASE_URL',
+        'LLM_SMALL_API_KEY',
+        'LLM_SMALL_MODEL',
+        'LLM_FAST_API_KEY',
+        'LLM_FAST_MODEL',
+        'LLM_FAST_BASE_URL',
+        'LLM_REVIEW_API_KEY',
+        'LLM_REVIEW_MODEL',
+        'LLM_REVIEW_BASE_URL',
+        'LLM_FALLBACK_API_KEY',
+        'LLM_FALLBACK_MODEL',
+        'LLM_FALLBACK_BASE_URL',
+        'LLM_BATCH_API_KEY',
+        'LLM_BATCH_MODEL',
+        'LLM_BATCH_BASE_URL',
+        'LLM_MAX_TOKENS_PER_OP',
+        'LLM_RATE_LIMIT',
+        'LLM_FETCH_RETRIES',
+        'LLM_DISK_CACHE_DIR',
+        'LLM_CACHE_KEY',
+        'LLM_REVIEW_BUDGET',
+        'LLM_REVIEW_STRATEGY',
+        'SKIP_FIRST_RUN',
+        'NO_COLOR',
+        'QA_TOOLS_NO_CLEAR',
+        'METRICS_MAX_RUNS',
+        'REPORT_CACHE_MAX',
+        'QA_AUTO_BUG',
+        'QA_FAIL_ON',
+        'GITHUB_PR_NUMBER',
+        'QA_PUBLISH',
+        'QA_MAPPING_PATH',
+        'BENCHMARK',
+        'QA_COST_PER_COMPUTE_MINUTE',
+        'AWS_S3_BUCKET',
+        'QA_GATE_MIN_PASS_RATE',
+        'QA_GATE_MAX_FLAKY_PCT',
+        'QA_GATE_MIN_COVERAGE',
+        'QA_GATE_MAX_SUITE_SPEED',
+        'QA_GIT_BLAME_IGNORE',
+        'CI',
+        'GITHUB_REPOSITORY',
+        'CI_JOB_NAME',
+        'GITHUB_WORKFLOW',
+        'CI_JOB_URL',
+        'GITHUB_SERVER_URL',
+        'CI_COMMIT_BRANCH',
+        'GITHUB_REF_NAME',
+        'CI_JOB_TOKEN',
+        'CI_PROJECT_ID',
+        'CI_SERVER_URL',
+        'CI_PR_NUMBER',
     ];
 
     beforeEach(() => {
@@ -43,10 +99,10 @@ describe('Config', () => {
     });
 
     describe('ensureDotenv', () => {
-        it('calls dotenv.config exactly once on module load', async () => {
+        it('calls dotenv.config twice on module load (.env.local + .env)', async () => {
             __resetDotenvLoaded();
             Config.load();
-            expect(mockDotenvConfig).toHaveBeenCalledTimes(1);
+            expect(mockDotenvConfig).toHaveBeenCalledTimes(2);
         });
 
         it('does not call dotenv.config again when accessing getters', async () => {

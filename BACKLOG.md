@@ -546,3 +546,175 @@ Resolução (resolveSessionContext)
 | `npm run lint`              | **0 erros**   |
 | Statements coverage         | **>92%**      |
 | Menor cobertura por arquivo | **>50%**      |
+
+---
+
+## 🔒 Sprint Security — OpenCode Local Machine Hardening (Jun/2026)
+
+**Origem:** Security audit — project-level `opencode.json` has wide-open permissions that override restricted user-level config.
+
+**Problema:** Config precedence (project > user) means `"edit": "allow"` and `"bash": "allow"` in `./opencode.json` bypass the user's restrictive `"ask"` policies.
+
+**Ordem de implementação:** risco decrescente — o que mais expõe primeiro.
+
+| Layer | Foco                        | Risco | Justificativa                                              |
+| ----- | --------------------------- | ----- | ---------------------------------------------------------- |
+| 1     | Project config permissions  | Alto  | Fechar a brecha principal — overrides de permissão         |
+| 2     | Plugin de segurança         | Alto  | opencode-warden + external_directory para detecção passiva |
+| 3     | Hooks + regras do agente    | Médio | Prevenir bypass futuro, auditar ações                      |
+| 4     | Sandbox + branch protection | Baixo | Defesa em profundidade, opcional                           |
+
+---
+
+### Layer 1 — 🔧 Project Config Permissions
+
+| ID   | Item                                                                           | Arquivo         | Esforço | Status |
+| ---- | ------------------------------------------------------------------------------ | --------------- | ------- | ------ |
+| SC-1 | 🔧 Restringir `permission.edit` de `"allow"` para `"ask"` com paths bloqueados | `opencode.json` | 5min    | ✅     |
+| SC-2 | 🔧 Restringir `permission.bash` de `"allow"` para pattern-based `"ask"`        | `opencode.json` | 5min    | ✅     |
+| SC-3 | 🔧 Adicionar `permission.webfetch: "ask"`, `websearch: "ask"`                  | `opencode.json` | 2min    | ✅     |
+| SC-4 | 🔧 Adicionar `permission.share: "disabled"`                                    | `opencode.json` | 1min    | ✅     |
+
+### Layer 2 — 🔧 Security Plugin + External Directory
+
+| ID   | Item                                                                               | Arquivo                             | Esforço | Status |
+| ---- | ---------------------------------------------------------------------------------- | ----------------------------------- | ------- | ------ |
+| SC-5 | 🔧 Adicionar `opencode-warden` ao array `plugin` (auto-instala via Bun)            | `opencode.json`                     | 2min    | ✅     |
+| SC-6 | 🔧 Adicionar `external_directory` com denies para `.ssh`, `.gnupg`, `.aws`, `/etc` | `~/.config/opencode/opencode.jsonc` | 5min    | ✅     |
+| SC-7 | 🔧 Criar config do warden (`.opencode/opencode-warden.json`)                       | `.opencode/opencode-warden.json`    | 5min    | ✅     |
+
+### Layer 3 — 🔧 Hooks + Agent Rules
+
+| ID    | Item                                                                               | Arquivo                    | Esforço | Status |
+| ----- | ---------------------------------------------------------------------------------- | -------------------------- | ------- | ------ |
+| SC-8  | 🔧 Adicionar Rule 18 no AGENTS.md: bypass de segurança exige autorização explícita | `AGENTS.md`                | 5min    | ✅     |
+| SC-9  | 🔧 Criar script post-session log scanner (secrets, audit)                          | `scripts/scan-sec-logs.sh` | 15min   | ✅     |
+| SC-10 | 🔧 Criar git pre-push hook que bloqueia `--no-verify` sem audit trail              | `.githooks/pre-push`       | 15min   | ✅     |
+
+### Layer 4 — 🔧 Defesa em Profundidade (Opcional)
+
+| ID    | Item                                                                           | Arquivo                                         | Esforço | Status |
+| ----- | ------------------------------------------------------------------------------ | ----------------------------------------------- | ------- | ------ |
+| SC-11 | 🔧 sandbox-exec.sh para execução isolada de bash (bwrap/unshare)               | `scripts/sandbox-exec.sh`                       | 15min   | ✅     |
+| SC-12 | 🔧 Script de configuração de branch protection (GitHub UI/gh CLI)              | `scripts/setup-branch-protection.sh`            | 5min    | ✅     |
+| SC-13 | 🔧 Managed config instructions (root-owned, chattr +i) incluso no setup script | `scripts/setup-branch-protection.sh`            | 5min    | ✅     |
+| SC-14 | 🔧 opencode-guard.sh — daemon de monitoramento em tempo real (systemd --user)  | `scripts/opencode-guard.sh`                     | 30min   | ✅     |
+| SC-15 | 🔧 Instalação do guard como systemd --user service (auto-start no login)       | `~/.config/systemd/user/opencode-guard.service` | 5min    | ✅     |
+| SC-16 | 🔧 Dependências: inotify-tools + libnotify-bin para notificações desktop       | (apt)                                           | 2min    | ✅     |
+
+---
+
+## 🐳 Sprint Container — Isolamento Podman para opencode (Jun/2026)
+
+**Data:** 2026-06-08
+**Origem:** Sprint Security Layer 4 (SC-11 sandbox-exec.sh) migrado de bwrap/unshare para isolamento via Podman. Container minimal com Node 24 LTS + opencode.
+**Motivação:** bwrap/unshare não isolam filesystem do host adequadamente. Container rootless com `--read-only`, `--cap-drop ALL`, `--userns keep-id` oferece isolamento real.
+
+| ID   | Item                                                                                 | Arquivo(s)                                | Esforço | Status |
+| ---- | ------------------------------------------------------------------------------------ | ----------------------------------------- | ------- | ------ |
+| CN-1 | 🔧 Criar Dockerfile: Debian slim + Node 24 LTS + opencode + utilidades mínimas       | `~/.config/opencode/container/Dockerfile` | 20min   | ✅     |
+| CN-2 | 🔧 Criar wrapper qa.sh: podman run com volumes, --read-only, --cap-drop ALL          | `scripts/qa.sh`                           | 15min   | ✅     |
+| CN-3 | 🏗️ Build imagem opencode-qa                                                          | `podman build -t opencode-qa`             | 5min    | ✅     |
+| CN-4 | 🔧 Adicionar alias `qa` ao .bashrc                                                   | `~/.bashrc`                               | 2min    | ✅     |
+| CN-5 | ♻️ Remover sandbox-exec.sh (superseded by podman container)                          | `scripts/sandbox-exec.sh`                 | 2min    | ✅     |
+| CN-6 | 🔧 Adaptar opencode-guard.sh com verificação de container running + volumes corretos | `scripts/opencode-guard.sh`               | 15min   | ✅     |
+| CN-7 | 📋 Testes: qa.sh — sintaxe bash, argument passthrough, detecção de podman            | `scripts/qa.test.ts`                      | 20min   | ✅     |
+| CN-8 | 🧪 Teste de integração: qa --version, isolamento ~/.ssh, npm test no container       | (manual, documentado)                     | 15min   | ✅     |
+
+### Métricas alvo — Sprint Container
+
+| Métrica                            | Alvo          | Resultado |
+| ---------------------------------- | ------------- | --------- |
+| `tsc --noEmit`                     | **0 erros**   | ✅ 0      |
+| `vitest run`                       | **100% pass** | ✅ 4454   |
+| `npm run lint`                     | **0 erros**   | ✅ 0      |
+| Dockerfile build pass              | **✅**        | ✅        |
+| `qa --version` = opencode 1.16.2   | **✅**        | ✅        |
+| Container não acessa `~/.ssh`      | **✅**        | ✅        |
+| Container não acessa `/etc/shadow` | **✅**        | ✅        |
+| sandbox-exec.sh removido           | **✅**        | ✅        |
+| Guard detecta container offline    | **✅**        | ✅        |
+
+### O que o Guard Monitora (30 arquivos)
+
+| Severidade   | Arquivos                                                                                                                                                          | Quando muda...                 |
+| ------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------ |
+| 🔴 Crítico   | `opencode.json`, `.env`, `validation_hook.ts`, `validation_plugin.ts`, `package.json`, `pre-push`                                                                 | 🔥 Notificação crítica na tela |
+| 🟡 Segurança | `eslint.config.mjs`, `tsconfig*.json`, `vitest.config.ts`, `jest.config.js`, `ci.yml`, `gitlab-ci.yml`, `dependabot.yml`, `quality-gate.ts`, `enforce-quality.ts` | 🟡 Notificação normal + log    |
+| 🔵 Config    | `AGENTS.md`, `.gitignore`, `qa-quarantine.json`, `warden.json`, `validation.json`, `agents/*.md`, `config/*.json`                                                 | 🔵 Log + journald              |
+
+---
+
+## 🚀 Sprint C — Git-as-Key: Retomada Pós-Auditoria (Jun/2026)
+
+**Data da auditoria:** 2026-06-08
+**Origem:** Auditoria completa do Sprint C identificou que `Store`, `resolveSessionContext` e `resolveTestDataSource` têm cobertura boa mas **zero consumidores**. 7 itens pendentes, sendo 4 nunca iniciados (GC-06 a GC-09).
+**Estratégia:** Strangler Fig — handlers consomem Store progressivamente. Old code removido apenas quando não houver mais consumidores.
+
+### Status atualizado dos itens existentes
+
+| ID | Item | Status anterior | Status real | Observação |
+| --- | --- | --- | --- | --- |
+| GC-01 | StoreBackend + GitBackend + FsBackend | 🔄 (68%) | 🔄 (100% stmts, 82.6% branches) | Coverage melhor que o declarado; branches pendentes |
+| GC-01a | Testes store-backend.ts → 100% | 🔄 | 🔄 | `detectStoreBackend` read errors, `GitStoreBackend.init` não cobertos |
+| GC-03 | `shared/git-sha.ts` | 🔄 (100% stmts, 85% branches) | 🔄 (100% stmts, 90% branches) | Linhas 34, 39-56, 69 descobertas (packed-refs, execSync fallback) |
+| GC-03a | Testes git-sha.ts → 100% | 🔄 | 🔄 | CI env + packed-refs + execSync em non-git-dir |
+| GC-04 | session-context.ts | 🔄 | 🔄 | **Zero consumidores** — prioridade máxima na retomada |
+| GC-04a | Testes session-context.ts → 100% | 🔄 | 🔄 (98.46% stmts, 94.59% branches) | Quase completo |
+| GC-05 | git-artifact-downloader.ts | 🔄 (27%) | 🔄 (72.04% stmts, 48.68% branches) | Coverage subiu mas branches muito baixos |
+| GC-05a | Testes git-artifact-downloader.ts → 100% | 🔄 | 🔄 | Gaps em GitLab paths |
+| GC-05b | ci-detect.ts extraído | 🔄 (0%) | ✅ (100%) | **Completo** — atualizar status |
+| GC-05c | Testes ci-detect.ts → 100% | 🔄 (0%) | ✅ (100%) | **Completo** — atualizar status |
+| GC-06 | Rewrite report-cache.ts usando Store | ⏳ | ⏳ | **Nunca iniciado** |
+| GC-07 | Rewrite metrics.ts usando Store | ⏳ | ⏳ | **Nunca iniciado** |
+| GC-08 | case17 consome resolveTestDataSource | ⏳ | ⏳ | **Nunca iniciado** — old `_chooseTestDataSource` com path manual ativo |
+| GC-08a | Mocks case17.test.ts | ⏳ | ⏳ | Bloqueado por GC-08 |
+| GC-09 | case15 consome resolveSessionContext | ⏳ | ⏳ | **Nunca iniciado** — `lastJsonDir` ativo em 7 arquivos (19 ocorrências) |
+| GC-11 | Limpeza Strangler Fig pós-migração | ⏳ | ⏳ | Bloqueado por GC-06 a GC-09 |
+| GC-12 | Coverage CI Node 22 ≥ 90% | 🔴 (89.23%) | 🔴 | Testes quebrados impedem cobertura |
+
+### Wave 1 — Conectar Consumidores (Strangler Fig)
+
+Prioridade máxima: dar consumidores ao Store já implementado.
+
+| ID | Item | Arquivo(s) | Esforço | Risco | Status |
+| --- | --- | --- | --- | --- | --- |
+| GC-04b | ♻️ case17 usar `resolveTestDataSource` no lugar de `_chooseTestDataSource()` | `jira_management/commands/case17.ts` | 2h | 🟡 Médio | ⏳ |
+| GC-04c | ♻️ case15 usar `resolveSessionContext` + remover `lastJsonDir` | `jira_management/commands/case15.ts` | 1h | 🟢 Baixo | ⏳ |
+| GC-04d | ♻️ Substituir `lastJsonDir`/`lastJsonPath` em `import-loop.ts`, `import-prep-parsers.ts` | `jira_management/import-*.ts` | 1h | 🟢 Baixo | ⏳ |
+| GC-04e | 📋 Testes de integração com consumidores reais | `case17.test.ts`, `case15.test.ts` | 2h | 🟢 Baixo | ⏳ |
+
+### Wave 2 — Rewrite de Persistência
+
+Substituir storings diretos por Store.
+
+| ID | Item | Arquivo(s) | Esforço | Risco | Status |
+| --- | --- | --- | --- | --- | --- |
+| GC-06 | ♻️ `report-cache.ts` sobre Store | `shared/report-cache.ts` | 1h | 🟡 Médio | ⏳ |
+| GC-07 | ♻️ `metrics.ts` sobre Store | `shared/metrics.ts` | 1h | 🟡 Médio | ⏳ |
+| GC-06a | ♻️ `case17-helpers.ts:saveMetricsJson()` sobre Store | `jira_management/commands/case17-helpers.ts` | 30min | 🟢 Baixo | ⏳ |
+| GC-07a | ♻️ `temp-dir.ts:writeReport()` sobre Store | `shared/temp-dir.ts` | 30min | 🟢 Baixo | ⏳ |
+
+### Wave 3 — Limpeza + Cobertura
+
+Remover old code e fechar métricas.
+
+| ID | Item | Arquivo(s) | Esforço | Risco | Status |
+| --- | --- | --- | --- | --- | --- |
+| GC-11 | ♻️ Remover `_chooseTestDataSource`, `saveMetricsJson` antigo, `CTRF_LAST_FILE` | `case17.ts`, `case17-helpers.ts`, `case17-test-utils.ts` | 1h | 🟢 Baixo | ⏳ |
+| GC-01a | 📋 Branches 100% em store-backend.ts | `shared/store-backend.test.ts` | 30min | 🟢 Baixo | ⏳ |
+| GC-03a | 📋 Branches 100% em git-sha.ts | `shared/git-sha.test.ts` | 30min | 🟢 Baixo | ⏳ |
+| GC-05a | 📋 100% em git-artifact-downloader.ts | `shared/git-artifact-downloader.test.ts` | 2h | 🟡 Médio | ⏳ |
+| GC-12 | 📋 Coverage CI ≥ 90% (Node 22) | `vitest.config.ts` | 2h | 🟡 Médio | ⏳ |
+
+### Métricas alvo — Retomada Git-as-Key
+
+| Métrica | Alvo |
+| --- | --- |
+| `tsc --noEmit` | 0 erros |
+| `vitest run` | 100% pass |
+| `npm run lint` | 0 erros |
+| `npm run test:coverage` | Node 22 ≥ 90% statements |
+| `lastJsonDir`/`lastJsonPath` ocorrências | **0** |
+| Handlers que pedem path manual | **0** |
+| Store consumido por handlers | **≥2** (case15, case17) |

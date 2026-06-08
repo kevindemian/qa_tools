@@ -3153,3 +3153,36 @@ Categorias: refineWithConsistency (função órfã com valor), JiraMode (type n�
 | Baseline atualizado       | **31 itens**  | ✅        |
 
 ---
+
+## 🐳 Sprint Container — Isolamento Podman para opencode (2026-06-08)
+
+**Origem:** Sprint Security Layer 4 (SC-11 sandbox-exec.sh) migrado de bwrap/unshare para isolamento via Podman.
+**Motivação:** bwrap/unshare não isolam filesystem do host adequadamente. Container rootless com `--read-only`, `--cap-drop ALL`, `--userns keep-id` oferece isolamento real.
+**Resultados:** 8/8 tasks completadas. Nenhum débito criado.
+
+| Métrica                            | Alvo          | Resultado |
+| ---------------------------------- | ------------- | --------- |
+| `tsc --noEmit`                     | **0 erros**   | ✅ 0      |
+| `vitest run`                       | **100% pass** | ✅ 4454   |
+| `npm run lint`                     | **0 erros**   | ✅ 0      |
+| Dockerfile build                   | **✅**        | ✅        |
+| `qa --version` = opencode 1.16.2   | **✅**        | ✅        |
+| Container não acessa `~/.ssh`      | **✅**        | ✅        |
+| Container não acessa `/etc/shadow` | **✅**        | ✅        |
+| sandbox-exec.sh removido           | **✅**        | ✅        |
+| Guard detecta container offline    | **✅**        | ✅        |
+
+### Arquivos criados/modificados
+
+| Arquivo                                   | Ação       |
+| ----------------------------------------- | ---------- |
+| `~/.config/opencode/container/Dockerfile` | Criado     |
+| `scripts/qa.sh`                           | Criado     |
+| `scripts/qa.test.ts`                      | Criado     |
+| `scripts/opencode-guard.sh`               | Modificado |
+| `scripts/sandbox-exec.sh`                 | Removido   |
+| `~/.bashrc`                               | Modificado |
+| `docs/DEFERRED-DEAD-CODE.md`              | Modificado |
+| `BACKLOG.md`                              | Modificado |
+
+---
