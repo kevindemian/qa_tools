@@ -1,5 +1,5 @@
-vi.mock('../shared/state', async () => ({ update: vi.fn() }));
-vi.mock('../shared/logger', async () => ({
+vi.mock('../shared/state', () => ({ update: vi.fn() }));
+vi.mock('../shared/logger', () => ({
     rootLogger: {
         child: vi.fn().mockReturnValue({
             info: vi.fn(),
@@ -132,7 +132,7 @@ describe('linkTestRelations', () => {
 });
 
 describe('buildTestData', () => {
-    it('without jiraLabels', async () => {
+    it('without jiraLabels', () => {
         const test: TestCase = { ...testBase, description: 'desc' };
         const result = buildTestData(test, 'PROJ', []);
         expect(result.fields).toMatchObject({
@@ -144,13 +144,13 @@ describe('buildTestData', () => {
         expect((result.fields as Record<string, unknown>).labels).toEqual([]);
     });
 
-    it('with jiraLabels', async () => {
+    it('with jiraLabels', () => {
         const test: TestCase = { ...testBase, description: 'desc' };
         const result = buildTestData(test, 'PROJ', ['label1', 'label2']);
         expect((result.fields as Record<string, unknown>).labels).toEqual(['label1', 'label2']);
     });
 
-    it('inline precondition appended to description', async () => {
+    it('inline precondition appended to description', () => {
         const test: TestCase = { ...testBase, precondition: { type: 'inline', value: 'must login' } };
         const result = buildTestData(test, 'PROJ', []);
         expect((result.fields as Record<string, unknown>).description).toContain('Pre-condition: must login');
@@ -158,7 +158,7 @@ describe('buildTestData', () => {
 });
 
 describe('saveCheckpoint', () => {
-    it('happy path', async () => {
+    it('happy path', () => {
         saveCheckpoint({
             sourcePath: '/path.csv',
             sourceType: 'csv',
@@ -170,7 +170,7 @@ describe('saveCheckpoint', () => {
         expect(updateState).toHaveBeenCalledWith(expect.any(Function));
     });
 
-    it('file error propagates', async () => {
+    it('file error propagates', () => {
         vi.mocked(updateState).mockImplementationOnce(() => {
             throw new Error('write failed');
         });

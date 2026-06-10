@@ -65,7 +65,7 @@ describe('GitProviderBase._post', () => {
 });
 
 describe('GitProviderBase._formatDiffResponse', () => {
-    it('formats entries with patch content', async () => {
+    it('formats entries with patch content', () => {
         const provider = new TestProvider();
         const entries = [
             { filename: 'src/index.ts', patch: '@@ -1 +1 @@\n-foo\n+bar', status: 'modified' },
@@ -77,7 +77,7 @@ describe('GitProviderBase._formatDiffResponse', () => {
         );
     });
 
-    it('skips entries without patch field', async () => {
+    it('skips entries without patch field', () => {
         const provider = new TestProvider();
         const entries = [
             { filename: 'a.ts', patch: 'content' },
@@ -88,19 +88,19 @@ describe('GitProviderBase._formatDiffResponse', () => {
         expect(result).toBe('--- a/a.ts\n+++ b/a.ts\ncontent\n--- a/c.ts\n+++ b/c.ts\nmore');
     });
 
-    it('returns empty string for null / undefined / non-array input', async () => {
+    it('returns empty string for null / undefined / non-array input', () => {
         const provider = new TestProvider();
         expect(provider.publicFormatDiffResponse(null, 'patch', 'filename')).toBe('');
         expect(provider.publicFormatDiffResponse(undefined, 'patch', 'filename')).toBe('');
         expect(provider.publicFormatDiffResponse({} as Array<Record<string, unknown>>, 'patch', 'filename')).toBe('');
     });
 
-    it('returns empty string for empty array', async () => {
+    it('returns empty string for empty array', () => {
         const provider = new TestProvider();
         expect(provider.publicFormatDiffResponse([], 'patch', 'filename')).toBe('');
     });
 
-    it('truncates when result exceeds truncationLimit', async () => {
+    it('truncates when result exceeds truncationLimit', () => {
         const provider = new TestProvider();
         const entries = [{ filename: 'big.ts', patch: 'a'.repeat(200) }];
         const result = provider.publicFormatDiffResponse(entries, 'patch', 'filename', 50);
@@ -108,7 +108,7 @@ describe('GitProviderBase._formatDiffResponse', () => {
         expect(result.endsWith('\n... (truncated)')).toBe(true);
     });
 
-    it('does not truncate when result fits within trim', async () => {
+    it('does not truncate when result fits within trim', () => {
         const provider = new TestProvider();
         const entries = [{ filename: 'small.ts', patch: 'content' }];
         const result = provider.publicFormatDiffResponse(entries, 'patch', 'filename', 15000);

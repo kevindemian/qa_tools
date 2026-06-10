@@ -13,7 +13,7 @@ import {
 } from './menu-data.js';
 
 describe('HELP_TOPICS', () => {
-    it('contains expected topics', async () => {
+    it('contains expected topics', () => {
         expect(HELP_TOPICS).toHaveProperty('csv');
         expect(HELP_TOPICS).toHaveProperty('labels');
         expect(HELP_TOPICS).toHaveProperty('group');
@@ -25,7 +25,7 @@ describe('HELP_TOPICS', () => {
         expect(HELP_TOPICS).toHaveProperty('diagnostics');
     });
 
-    it('each topic is a non-empty string', async () => {
+    it('each topic is a non-empty string', () => {
         for (const entry of Object.entries(HELP_TOPICS)) {
             const [, value] = entry;
             expect(value.length).toBeGreaterThan(0);
@@ -34,7 +34,7 @@ describe('HELP_TOPICS', () => {
 });
 
 describe('ALIASES', () => {
-    it('contains known command aliases', async () => {
+    it('contains known command aliases', () => {
         expect(ALIASES['criar']).toBe('1');
         expect(ALIASES['sair']).toBe('0');
         expect(ALIASES['help']).toBe('/help');
@@ -42,7 +42,7 @@ describe('ALIASES', () => {
         expect(ALIASES['template']).toBe('11');
     });
 
-    it('every alias resolves to a string value', async () => {
+    it('every alias resolves to a string value', () => {
         for (const entry of Object.entries(ALIASES)) {
             const [alias, value] = entry;
             expect(alias.length).toBeGreaterThan(0);
@@ -52,36 +52,36 @@ describe('ALIASES', () => {
 });
 
 describe('resolveAlias', () => {
-    it('returns mapped value for known alias', async () => {
+    it('returns mapped value for known alias', () => {
         expect(resolveAlias('criar')).toBe('1');
         expect(resolveAlias('versoes')).toBe('2');
     });
 
-    it('is case insensitive', async () => {
+    it('is case insensitive', () => {
         expect(resolveAlias('CRIAR')).toBe('1');
         expect(resolveAlias('Criar')).toBe('1');
     });
 
-    it('returns original input for unknown alias', async () => {
+    it('returns original input for unknown alias', () => {
         expect(resolveAlias('unknown')).toBe('unknown');
         expect(resolveAlias('99')).toBe('99');
     });
 
-    it('handles empty string', async () => {
+    it('handles empty string', () => {
         expect(resolveAlias('')).toBe('');
     });
 
-    it('trims whitespace', async () => {
+    it('trims whitespace', () => {
         expect(resolveAlias('  criar  ')).toBe('1');
     });
 });
 
 describe('CATEGORIES', () => {
-    it('contains expected number of categories', async () => {
+    it('contains expected number of categories', () => {
         expect(CATEGORIES.length).toBeGreaterThanOrEqual(7);
     });
 
-    it('includes main category IDs', async () => {
+    it('includes main category IDs', () => {
         const ids = CATEGORIES.map((c) => c.id);
         expect(ids).toContain('reports');
         expect(ids).toContain('tests');
@@ -89,7 +89,7 @@ describe('CATEGORIES', () => {
         expect(ids).toContain('config');
     });
 
-    it('each category has id and label', async () => {
+    it('each category has id and label', () => {
         for (const cat of CATEGORIES) {
             expect(cat.id).toBeTruthy();
             expect(cat.label).toBeTruthy();
@@ -98,14 +98,14 @@ describe('CATEGORIES', () => {
 });
 
 describe('SUB_MENUS', () => {
-    it('has all expected category keys', async () => {
+    it('has all expected category keys', () => {
         expect(SUB_MENUS).toHaveProperty('reports');
         expect(SUB_MENUS).toHaveProperty('tests');
         expect(SUB_MENUS).toHaveProperty('releases');
         expect(SUB_MENUS).toHaveProperty('config');
     });
 
-    it('each sub-menu has items with id and label', async () => {
+    it('each sub-menu has items with id and label', () => {
         for (const entry of Object.entries(SUB_MENUS)) {
             const [, items] = entry;
             expect(items.length).toBeGreaterThan(0);
@@ -117,7 +117,7 @@ describe('SUB_MENUS', () => {
         }
     });
 
-    it('releases sub-menu contains version commands', async () => {
+    it('releases sub-menu contains version commands', () => {
         const releases = nonNull(SUB_MENUS.releases);
         const ids = releases.map((i) => i.id);
         expect(ids).toContain('2');
@@ -126,7 +126,7 @@ describe('SUB_MENUS', () => {
         expect(ids).toContain('8');
     });
 
-    it('reports sub-menu has dashboards entry via d', async () => {
+    it('reports sub-menu has dashboards entry via d', () => {
         const reports = nonNull(SUB_MENUS.reports);
         const ids = reports.map((i) => i.id);
         expect(ids).toContain('d');
@@ -136,7 +136,7 @@ describe('SUB_MENUS', () => {
         expect(ids).not.toContain('27');
     });
 
-    it('config sub-menu has configKey on directory items', async () => {
+    it('config sub-menu has configKey on directory items', () => {
         const configMenu = nonNull(SUB_MENUS.config);
         const gitItem = configMenu.find((i) => i.id === '10');
         expect(gitItem?.configKey).toBe('gitDir');
@@ -146,26 +146,26 @@ describe('SUB_MENUS', () => {
 });
 
 describe('CATEGORY_IDS', () => {
-    it('is a Set with all sub-menu keys', async () => {
+    it('is a Set with all sub-menu keys', () => {
         expect(CATEGORY_IDS.has('reports')).toBe(true);
         expect(CATEGORY_IDS.has('tests')).toBe(true);
         expect(CATEGORY_IDS.has('releases')).toBe(true);
         expect(CATEGORY_IDS.has('nonexistent')).toBe(false);
     });
 
-    it('is frozen from Object.keys', async () => {
+    it('is frozen from Object.keys', () => {
         expect(CATEGORY_IDS.size).toBe(Object.keys(SUB_MENUS).length);
     });
 });
 
 describe('CATEGORY_TITLES', () => {
-    it('has titles for all categories', async () => {
+    it('has titles for all categories', () => {
         for (const key of CATEGORY_IDS) {
             expect(CATEGORY_TITLES[key]).toBeTruthy();
         }
     });
 
-    it('contains expected title strings', async () => {
+    it('contains expected title strings', () => {
         expect(CATEGORY_TITLES.reports).toContain('RELATÓRIOS');
         expect(CATEGORY_TITLES.tests).toContain('TESTE');
         expect(CATEGORY_TITLES.releases).toContain('RELEASES');
@@ -173,20 +173,20 @@ describe('CATEGORY_TITLES', () => {
 });
 
 describe('ID_TO_ALIASES', () => {
-    it('maps command IDs to their alias lists', async () => {
+    it('maps command IDs to their alias lists', () => {
         expect(ID_TO_ALIASES['1']).toContain('criar');
         expect(ID_TO_ALIASES['0']).toContain('sair');
         expect(ID_TO_ALIASES['11']).toContain('template');
     });
 
-    it('includes all variants for each ID', async () => {
+    it('includes all variants for each ID', () => {
         const criarAliases = ID_TO_ALIASES['1'];
         expect(criarAliases).toContain('criar');
         expect(criarAliases).toContain('criar-teste');
         expect(criarAliases).toContain('criar-testes');
     });
 
-    it('covers all non-special command IDs from ALIASES', async () => {
+    it('covers all non-special command IDs from ALIASES', () => {
         for (const entry of Object.entries(ALIASES)) {
             const [, value] = entry;
             if (value.startsWith('/')) continue;
@@ -196,13 +196,13 @@ describe('ID_TO_ALIASES', () => {
 });
 
 describe('_configHint', () => {
-    it('returns empty string for unknown key', async () => {
+    it('returns empty string for unknown key', () => {
         expect(_configHint('unknown', { git_directory: '/tmp' })).toBe('');
     });
 });
 
 describe('buildMenuChoices', () => {
-    it('returns array for main level', async () => {
+    it('returns array for main level', () => {
         expect(Array.isArray(buildMenuChoices('main', 'ECSPOL', { git_directory: '/tmp' }))).toBe(true);
     });
 });

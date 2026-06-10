@@ -9,7 +9,7 @@
  * Usage: npx tsx scripts/transform-casts.ts
  */
 import { readFileSync, writeFileSync } from 'fs';
-import type { Mock } from 'vitest';
+
 import { globSync } from 'glob';
 
 const TEST_FILES = globSync('**/*.test.ts', {

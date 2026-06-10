@@ -1,39 +1,39 @@
 import { createMockResponse, createMockAxiosInstance } from './response-factory.js';
 
 describe('createMockResponse', () => {
-    it('returns an object with data property', async () => {
+    it('returns an object with data property', () => {
         const result = createMockResponse({ key: 'TEST-123' });
         expect(result).toEqual({ data: { key: 'TEST-123' } });
     });
 
-    it('preserves the data type', async () => {
+    it('preserves the data type', () => {
         const result = createMockResponse(42);
         expect(result.data).toBe(42);
     });
 
-    it('works with string data', async () => {
+    it('works with string data', () => {
         const result = createMockResponse('hello');
         expect(result.data).toBe('hello');
     });
 
-    it('works with array data', async () => {
+    it('works with array data', () => {
         const result = createMockResponse([1, 2, 3]);
         expect(result.data).toEqual([1, 2, 3]);
     });
 
-    it('works with null data', async () => {
+    it('works with null data', () => {
         const result = createMockResponse(null);
         expect(result.data).toBeNull();
     });
 
-    it('works with undefined data', async () => {
+    it('works with undefined data', () => {
         const result = createMockResponse(undefined);
         expect(result.data).toBeUndefined();
     });
 });
 
 describe('createMockAxiosInstance', () => {
-    it('returns a mock with all axios methods', async () => {
+    it('returns a mock with all axios methods', () => {
         const mock = createMockAxiosInstance();
         expect(typeof mock.get).toBe('function');
         expect(typeof mock.post).toBe('function');
@@ -49,13 +49,13 @@ describe('createMockAxiosInstance', () => {
         expect(typeof mock.interceptors.request.use).toBe('function');
     });
 
-    it('merges overrides correctly', async () => {
+    it('merges overrides correctly', () => {
         const customGet = vi.fn();
         const mock = createMockAxiosInstance({ get: customGet });
         expect(mock.get).toBe(customGet);
     });
 
-    it('each call produces independent vi.fn() instances', async () => {
+    it('each call produces independent vi.fn() instances', () => {
         const a = createMockAxiosInstance();
         const b = createMockAxiosInstance();
         expect(a.get).not.toBe(b.get);

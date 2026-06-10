@@ -90,7 +90,7 @@ vi.mock('./config', () => {
     };
     return { __esModule: true, default: ConfigMock };
 });
-vi.mock('./disk-cache', async () => ({
+vi.mock('./disk-cache', () => ({
     diskCacheGet: vi.fn(() => null),
     diskCacheSet: vi.fn(),
     clearDiskCache: vi.fn(),
@@ -475,13 +475,13 @@ describe('llmPrompt', () => {
     });
 
     describe('parseRetryAfter', () => {
-        it('parses seconds from Retry-After header', async () => {
+        it('parses seconds from Retry-After header', () => {
             const resp = mockResponseWithHeader(429, 'Retry-After', '30');
             const result = parseRetryAfter(resp, 2000);
             expect(result).toBe(10000); // capped at LLM_RETRY_MAX_WAIT_MS
         });
 
-        it('parses RFC 7231 date from Retry-After header', async () => {
+        it('parses RFC 7231 date from Retry-After header', () => {
             const future = new Date(Date.now() + 5000);
             const resp = mockResponseWithHeader(429, 'Retry-After', future.toUTCString());
             const result = parseRetryAfter(resp, 2000);
@@ -489,13 +489,13 @@ describe('llmPrompt', () => {
             expect(result).toBeLessThanOrEqual(10000);
         });
 
-        it('returns default when no Retry-After header', async () => {
+        it('returns default when no Retry-After header', () => {
             const resp = mockResponseWithHeader(429, 'Retry-After', null);
             const result = parseRetryAfter(resp, 2000);
             expect(result).toBe(2000);
         });
 
-        it('returns default for invalid Retry-After value', async () => {
+        it('returns default for invalid Retry-After value', () => {
             const resp = mockResponseWithHeader(429, 'Retry-After', 'invalid');
             const result = parseRetryAfter(resp, 2000);
             expect(result).toBe(2000);

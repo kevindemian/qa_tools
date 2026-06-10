@@ -17,7 +17,7 @@ vi.mock('./failure-analysis', () => mockFailureAnalysis);
 
 vi.mock('./logger');
 
-vi.mock('./config', async () => ({
+vi.mock('./config', () => ({
     __esModule: true,
     default: {
         jiraProject: '',
@@ -490,7 +490,7 @@ describe('BugReport Service', () => {
     });
 });
 
-vi.mock('./llm-client', async () => ({ llmPrompt: vi.fn() }));
+vi.mock('./llm-client', () => ({ llmPrompt: vi.fn() }));
 vi.mock('fs', async () => {
     const actual = await vi.importActual<typeof import('fs')>('fs');
     return {

@@ -2,11 +2,11 @@ import { analyzeCoverageGaps } from './coverage-gap.js';
 import { loadMetrics } from './metrics.js';
 import { nonNull } from './test-utils.js';
 
-vi.mock('./logger', async () => ({
+vi.mock('./logger', () => ({
     rootLogger: { error: vi.fn(), warn: vi.fn(), info: vi.fn(), child: vi.fn().mockReturnThis() },
 }));
 
-vi.mock('./metrics', async () => ({
+vi.mock('./metrics', () => ({
     loadMetrics: vi.fn(),
 }));
 

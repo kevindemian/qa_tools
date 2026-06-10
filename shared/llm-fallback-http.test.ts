@@ -1,4 +1,4 @@
-vi.mock('./config', async () => {
+vi.mock('./config', () => {
     const mockConfig: Record<string, string> = {};
     return {
         __esModule: true,
@@ -37,15 +37,15 @@ vi.mock('./llm-rate-limiter', async () => {
         checkRateLimit: vi.fn(),
     };
 });
-vi.mock('./circuit-breaker', async () => ({
+vi.mock('./circuit-breaker', () => ({
     checkCircuitBreaker: vi.fn(),
     recordCircuitFailure: vi.fn(),
     recordCircuitSuccess: vi.fn(),
 }));
-vi.mock('./sanitize', async () => ({
+vi.mock('./sanitize', () => ({
     sanitizeForLlm: vi.fn((s: string) => s),
 }));
-vi.mock('./llm-cache', async () => ({
+vi.mock('./llm-cache', () => ({
     configUniqueKey: vi.fn(
         (cfg: { apiKey: string; model: string; baseUrl: string }) => cfg.apiKey + '@' + cfg.model + '@' + cfg.baseUrl,
     ),
@@ -81,7 +81,7 @@ function mockErrorResponse(status: number): Response {
     return r;
 }
 
-beforeEach(async () => {
+beforeEach(() => {
     vi.clearAllMocks();
     mockFetch.mockReset();
     Config.reset();
@@ -92,24 +92,24 @@ beforeEach(async () => {
     vi.mocked(checkCircuitBreaker).mockImplementation(() => {});
 });
 
-describe('parseRawOnce', async () => {
-    it('parses valid JSON string', async () => {
+describe('parseRawOnce', () => {
+    it('parses valid JSON string', () => {
         const result = parseRawOnce('{"key": "value"}');
         expect(result).toEqual({ key: 'value' });
     });
 
-    it('returns null for invalid JSON', async () => {
+    it('returns null for invalid JSON', () => {
         const result = parseRawOnce('not json');
         expect(result).toBeNull();
     });
 
-    it('returns null for empty string', async () => {
+    it('returns null for empty string', () => {
         const result = parseRawOnce('');
         expect(result).toBeNull();
     });
 });
 
-describe('parseRetryAfter', async () => {
+describe('parseRetryAfter', () => {
     function mockResponseWithHeader(key: string, value: string | null): Response {
         const r = new Response('', { status: 429 });
         vi.spyOn(r, 'text').mockResolvedValue('');
@@ -117,25 +117,25 @@ describe('parseRetryAfter', async () => {
         return r;
     }
 
-    it('parses seconds from Retry-After header', async () => {
+    it('parses seconds from Retry-After header', () => {
         const resp = mockResponseWithHeader('Retry-After', '30');
         const result = parseRetryAfter(resp, 2000);
         expect(result).toBe(10000);
     });
 
-    it('returns default when no Retry-After header', async () => {
+    it('returns default when no Retry-After header', () => {
         const resp = mockResponseWithHeader('Retry-After', null);
         const result = parseRetryAfter(resp, 2000);
         expect(result).toBe(2000);
     });
 
-    it('returns default for invalid Retry-After value', async () => {
+    it('returns default for invalid Retry-After value', () => {
         const resp = mockResponseWithHeader('Retry-After', 'invalid');
         const result = parseRetryAfter(resp, 2000);
         expect(result).toBe(2000);
     });
 
-    it('caps at 10000ms', async () => {
+    it('caps at 10000ms', () => {
         const resp = mockResponseWithHeader('Retry-After', '999');
         const result = parseRetryAfter(resp, 2000);
         expect(result).toBe(10000);
@@ -149,8 +149,8 @@ interface OpenAiPayload {
     response_format?: { type: string };
 }
 
-describe('buildOpenAiPayload', async () => {
-    it('builds a valid JSON payload', async () => {
+describe('buildOpenAiPayload', () => {
+    it('builds a valid JSON payload', () => {
         const result = buildOpenAiPayload('sys', 'usr', 'gpt-4', 0.5);
         const parsed = JSON.parse(result) as OpenAiPayload;
         expect(parsed.model).toBe('gpt-4');
@@ -162,19 +162,19 @@ describe('buildOpenAiPayload', async () => {
         expect(parsed.messages[1]?.content).toBe('usr');
     });
 
-    it('uses default temperature when not provided', async () => {
+    it('uses default temperature when not provided', () => {
         const result = buildOpenAiPayload('sys', 'usr', 'gpt-4');
         const parsed = JSON.parse(result) as OpenAiPayload;
         expect(parsed.temperature).toBe(0.3);
     });
 
-    it('includes response_format when format is json', async () => {
+    it('includes response_format when format is json', () => {
         const result = buildOpenAiPayload('sys', 'usr', 'gpt-4', 0.3, 'json');
         const parsed = JSON.parse(result) as OpenAiPayload;
         expect(parsed.response_format).toEqual({ type: 'json_object' });
     });
 
-    it('omits response_format when format is not json', async () => {
+    it('omits response_format when format is not json', () => {
         const result = buildOpenAiPayload('sys', 'usr', 'gpt-4', 0.3, 'text');
         const parsed = JSON.parse(result) as OpenAiPayload;
         expect(parsed.response_format).toBeUndefined();
@@ -186,8 +186,8 @@ interface GeminiPayload {
     contents: Array<{ role: string; parts: Array<{ text: string }> }>;
 }
 
-describe('buildGeminiPayload', async () => {
-    it('builds a valid Gemini JSON payload', async () => {
+describe('buildGeminiPayload', () => {
+    it('builds a valid Gemini JSON payload', () => {
         const result = buildGeminiPayload('sys', 'usr');
         const parsed = JSON.parse(result) as GeminiPayload;
         expect(parsed.system_instruction.parts[0]?.text).toBe('sys');
@@ -196,15 +196,15 @@ describe('buildGeminiPayload', async () => {
     });
 });
 
-describe('fetchWithRetry', async () => {
-    beforeEach(async () => {
+describe('fetchWithRetry', () => {
+    beforeEach(() => {
         vi.spyOn(global, 'setTimeout').mockImplementation(((cb: (...args: unknown[]) => void) => {
             cb();
             return {} as NodeJS.Timeout;
         }) as typeof global.setTimeout);
     });
 
-    afterEach(async () => {
+    afterEach(() => {
         vi.restoreAllMocks();
     });
 
@@ -249,15 +249,15 @@ describe('fetchWithRetry', async () => {
     });
 });
 
-describe('sendToProvider', async () => {
-    beforeEach(async () => {
+describe('sendToProvider', () => {
+    beforeEach(() => {
         vi.spyOn(global, 'setTimeout').mockImplementation(((cb: (...args: unknown[]) => void) => {
             cb();
             return {} as NodeJS.Timeout;
         }) as typeof global.setTimeout);
     });
 
-    afterEach(async () => {
+    afterEach(() => {
         vi.restoreAllMocks();
     });
 

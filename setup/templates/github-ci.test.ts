@@ -31,37 +31,37 @@ const MOCK_CTX_FULL: SetupContext = {
 };
 
 describe('generateGitHubActions', () => {
-    it('returns YAML string with workflow name', async () => {
+    it('returns YAML string with workflow name', () => {
         const yaml = generateGitHubActions(MOCK_CTX_BASIC);
         expect(yaml).toContain('QA Pipeline');
         expect(yaml).toContain('push');
         expect(yaml).toContain('pull_request');
     });
 
-    it('includes test steps', async () => {
+    it('includes test steps', () => {
         const yaml = generateGitHubActions(MOCK_CTX_BASIC);
         expect(yaml).toContain('npm ci');
         expect(yaml).toContain('npx cypress run');
     });
 
-    it('adds post-processing step when features enabled', async () => {
+    it('adds post-processing step when features enabled', () => {
         const yaml = generateGitHubActions(MOCK_CTX_FULL);
         expect(yaml).toContain('QA Tools Post-Processing');
         expect(yaml).toContain('git_triggers/main.ts');
     });
 
-    it('does not add post-processing when no features', async () => {
+    it('does not add post-processing when no features', () => {
         const yaml = generateGitHubActions(MOCK_CTX_BASIC);
         expect(yaml).not.toContain('QA Tools Post-Processing');
     });
 
-    it('includes upload-artifact step', async () => {
+    it('includes upload-artifact step', () => {
         const yaml = generateGitHubActions(MOCK_CTX_BASIC);
         expect(yaml).toContain('actions/upload-artifact@v4');
         expect(yaml).toContain('cypress/reports/ctrf-report.json');
     });
 
-    it('includes setup-node with correct version', async () => {
+    it('includes setup-node with correct version', () => {
         const yaml = generateGitHubActions(MOCK_CTX_BASIC);
         expect(yaml).toContain('node-version: "20"');
     });

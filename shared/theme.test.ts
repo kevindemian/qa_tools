@@ -5,11 +5,11 @@
 import { getTheme, defaultTheme } from './theme.js';
 
 describe('theme', () => {
-    it('getTheme returns defaultTheme', async () => {
+    it('getTheme returns defaultTheme', () => {
         expect(getTheme()).toBe(defaultTheme);
     });
 
-    it('has expected color keys matching design tokens', async () => {
+    it('has expected color keys matching design tokens', () => {
         expect(defaultTheme.colors.success).toBe('#4ade80');
         expect(defaultTheme.colors.error).toBe('#f87171');
         expect(defaultTheme.colors.warn).toBe('#fbbf24');
@@ -18,20 +18,20 @@ describe('theme', () => {
         expect(defaultTheme.colors.border).toBe('#30363d');
     });
 
-    it('has border config with type and padding', async () => {
+    it('has border config with type and padding', () => {
         expect(defaultTheme.borders.type).toBe('single');
         expect(defaultTheme.borders.padding).toBe(1);
     });
 
-    it('typography title uppercases input', async () => {
+    it('typography title uppercases input', () => {
         expect(defaultTheme.typography.title('hello')).toBe('HELLO');
     });
 
-    it('typography label returns input as-is', async () => {
+    it('typography label returns input as-is', () => {
         expect(defaultTheme.typography.label('hello')).toBe('hello');
     });
 
-    it('typography value returns input as-is', async () => {
+    it('typography value returns input as-is', () => {
         expect(defaultTheme.typography.value('hello')).toBe('hello');
     });
 });

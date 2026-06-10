@@ -3,24 +3,24 @@ import GitLabManager from './gitlab_manager.js';
 import { createMockAxiosInstance } from '../shared/test-utils/factories/response-factory.js';
 import { nonNull } from '../shared/test-utils.js';
 
-vi.mock('../shared/http-client', async () => ({
+vi.mock('../shared/http-client', () => ({
     createHttpClient: vi.fn(),
     createThrottledClient: vi.fn(),
 }));
 
-vi.mock('../shared/logger', async () => ({
+vi.mock('../shared/logger', () => ({
     Logger: vi.fn().mockImplementation(function () {
         return { error: vi.fn() };
     }),
     rootLogger: { error: vi.fn(), warn: vi.fn() },
 }));
 
-vi.mock('../shared/prompt', async () => ({
+vi.mock('../shared/prompt', () => ({
     info: vi.fn(),
     extractErrorMessage: vi.fn((err: Error) => err?.message || 'Erro desconhecido'),
 }));
 
-vi.mock('../shared/git-provider-error', async () => ({
+vi.mock('../shared/git-provider-error', () => ({
     handleError: vi.fn((err: unknown, opts?: { returnNull?: boolean }) => {
         if (opts?.returnNull) return null;
         throw err;
@@ -38,13 +38,13 @@ describe('GitLabManager', () => {
     });
 
     describe('constructor', () => {
-        it('throws when apiToken is empty string', async () => {
+        it('throws when apiToken is empty string', () => {
             expect(() => new GitLabManager('project-123', '', 'https://gitlab.test.com')).toThrow(
                 'apiToken é obrigatório',
             );
         });
 
-        it('throws when projectId is empty string', async () => {
+        it('throws when projectId is empty string', () => {
             expect(() => new GitLabManager('', 'test-token', 'https://gitlab.test.com')).toThrow(
                 'projectId é obrigatório',
             );

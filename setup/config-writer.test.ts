@@ -13,7 +13,7 @@ describe('writeProjectsConfig', () => {
         vi.mocked(MockFs.writeFileSync).mockImplementation(vi.fn());
     });
 
-    it('creates projects.json and providers.json when neither exists', async () => {
+    it('creates projects.json and providers.json when neither exists', () => {
         const result = writeProjectsConfig({
             projectName: 'myapp',
             gitProvider: 'github',
@@ -25,7 +25,7 @@ describe('writeProjectsConfig', () => {
         expect(MockFs.writeFileSync).toHaveBeenCalledTimes(2);
     });
 
-    it('appends new project to existing projects.json', async () => {
+    it('appends new project to existing projects.json', () => {
         vi.mocked(MockFs.existsSync).mockReturnValue(true);
         vi.mocked(MockFs.readFileSync).mockReturnValue(JSON.stringify({ existing: '123' }));
 
@@ -42,7 +42,7 @@ describe('writeProjectsConfig', () => {
         expect(lastProjectsWrite).toContain('newapp');
     });
 
-    it('skips when project already exists', async () => {
+    it('skips when project already exists', () => {
         vi.mocked(MockFs.existsSync).mockReturnValue(true);
         vi.mocked(MockFs.readFileSync).mockReturnValue(JSON.stringify({ myapp: 'myapp' }));
 
@@ -55,7 +55,7 @@ describe('writeProjectsConfig', () => {
         expect(result.filesSkipped.length).toBe(2);
     });
 
-    it('handles corrupt existing file by overwriting', async () => {
+    it('handles corrupt existing file by overwriting', () => {
         vi.mocked(MockFs.existsSync).mockReturnValue(true);
         vi.mocked(MockFs.readFileSync).mockReturnValue('not json');
 
@@ -76,7 +76,7 @@ describe('writeDotEnvExample', () => {
         vi.mocked(MockFs.writeFileSync).mockImplementation(vi.fn());
     });
 
-    it('creates .env.example with GitHub vars', async () => {
+    it('creates .env.example with GitHub vars', () => {
         const result = writeDotEnvExample({ projectName: 'myapp', gitProvider: 'github' });
         expect(result.filesCreated).toContain(path.resolve(process.cwd(), '.env.example'));
         const content = (MockFs.writeFileSync.mock.calls[0]?.[1] ?? '') as string;
@@ -84,7 +84,7 @@ describe('writeDotEnvExample', () => {
         expect(content).not.toContain('GIT_TOKEN');
     });
 
-    it('creates .env.example with GitLab vars', async () => {
+    it('creates .env.example with GitLab vars', () => {
         const result = writeDotEnvExample({ projectName: 'myapp', gitProvider: 'gitlab' });
         expect(result.filesCreated.length).toBe(1);
         const content = (MockFs.writeFileSync.mock.calls[0]?.[1] ?? '') as string;
@@ -92,7 +92,7 @@ describe('writeDotEnvExample', () => {
         expect(content).toContain('GIT_BASE_URL');
     });
 
-    it('skips when .env.example already exists', async () => {
+    it('skips when .env.example already exists', () => {
         vi.mocked(MockFs.existsSync).mockReturnValue(true);
         const result = writeDotEnvExample({ projectName: 'myapp', gitProvider: 'github' });
         expect(result.filesSkipped.length).toBe(1);

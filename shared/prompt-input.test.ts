@@ -16,55 +16,55 @@ import {
 } from './prompt-input.js';
 
 describe('prompt-input barrel', () => {
-    it('re-exports prompt', async () => {
+    it('re-exports prompt', () => {
         expect(typeof prompt).toBe('function');
     });
 
-    it('re-exports confirm', async () => {
+    it('re-exports confirm', () => {
         expect(typeof confirm).toBe('function');
     });
 
-    it('re-exports isTTY', async () => {
+    it('re-exports isTTY', () => {
         expect(typeof isTTY).toBe('function');
     });
 
-    it('re-exports NAV_CMDS', async () => {
+    it('re-exports NAV_CMDS', () => {
         expect(Array.isArray(NAV_CMDS)).toBe(true);
     });
 
-    it('re-exports filePathCompleter', async () => {
+    it('re-exports filePathCompleter', () => {
         expect(typeof filePathCompleter).toBe('function');
     });
 
-    it('re-exports askFilePath', async () => {
+    it('re-exports askFilePath', () => {
         expect(typeof askFilePath).toBe('function');
     });
 
-    it('re-exports smartPrompt', async () => {
+    it('re-exports smartPrompt', () => {
         expect(typeof smartPrompt).toBe('function');
     });
 
-    it('re-exports ask', async () => {
+    it('re-exports ask', () => {
         expect(typeof ask).toBe('function');
     });
 
-    it('re-exports askConfirm', async () => {
+    it('re-exports askConfirm', () => {
         expect(typeof askConfirm).toBe('function');
     });
 
-    it('re-exports showSelect', async () => {
+    it('re-exports showSelect', () => {
         expect(typeof showSelect).toBe('function');
     });
 
-    it('re-exports __setSelectMod', async () => {
+    it('re-exports __setSelectMod', () => {
         expect(typeof __setSelectMod).toBe('function');
     });
 
-    it('re-exports __setInputMod', async () => {
+    it('re-exports __setInputMod', () => {
         expect(typeof __setInputMod).toBe('function');
     });
 
-    it('re-exports __setConfirmMod', async () => {
+    it('re-exports __setConfirmMod', () => {
         expect(typeof __setConfirmMod).toBe('function');
     });
 });

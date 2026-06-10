@@ -12,12 +12,12 @@ import type {
 } from '../shared/prompt.js';
 import { offerPipelineFailureAnalysis } from './llm-pipeline.js';
 
-vi.mock('../shared/failure-analysis', async () => ({
+vi.mock('../shared/failure-analysis', () => ({
     analyzeFailuresWithReport:
         vi.fn<(...args: Parameters<typeof AnalyzeFailuresFn>) => ReturnType<typeof AnalyzeFailuresFn>>(),
 }));
 
-vi.mock('../shared/prompt', async () => ({
+vi.mock('../shared/prompt', () => ({
     confirm: vi.fn<(...args: Parameters<typeof ConfirmFn>) => ReturnType<typeof ConfirmFn>>(),
     info: vi.fn<(...args: Parameters<typeof InfoFn>) => ReturnType<typeof InfoFn>>(),
     warn: vi.fn<(...args: Parameters<typeof WarnFn>) => ReturnType<typeof WarnFn>>(),

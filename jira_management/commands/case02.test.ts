@@ -16,7 +16,7 @@ beforeEach(() => {
 });
 
 describe('case02 — list versions', () => {
-    it('exports a handler function', async () => {
+    it('exports a handler function', () => {
         expect(case02).toBeDefined();
         expect(typeof case02.handler).toBe('function');
     });

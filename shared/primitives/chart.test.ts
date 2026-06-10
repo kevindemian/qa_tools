@@ -8,7 +8,7 @@ import { BarChart, TrendChart, Sparkline, ProgressBar } from './chart.js';
 
 describe('chart primitives', () => {
     describe('BarChart', () => {
-        it('renders SVG with segments', async () => {
+        it('renders SVG with segments', () => {
             const html = BarChart({
                 segments: [
                     { value: 10, color: '#22c55e', label: 'pass' },
@@ -21,7 +21,7 @@ describe('chart primitives', () => {
             expect(html).toContain('role="img"');
         });
 
-        it('renders labels for wide segments', async () => {
+        it('renders labels for wide segments', () => {
             const html = BarChart({
                 segments: [{ value: 100, color: '#22c55e', label: 'all' }],
                 width: 300,
@@ -30,7 +30,7 @@ describe('chart primitives', () => {
             expect(html).toContain('all');
         });
 
-        it('handles empty total gracefully', async () => {
+        it('handles empty total gracefully', () => {
             const html = BarChart({
                 segments: [{ value: 0, color: '#22c55e' }],
             });
@@ -39,7 +39,7 @@ describe('chart primitives', () => {
     });
 
     describe('TrendChart', () => {
-        it('renders SVG for 2+ points', async () => {
+        it('renders SVG for 2+ points', () => {
             const html = TrendChart({
                 points: [{ passRate: 80 }, { passRate: 90 }, { passRate: 85 }],
             });
@@ -47,12 +47,12 @@ describe('chart primitives', () => {
             expect(html).toContain('path');
         });
 
-        it('returns empty for < 2 points', async () => {
+        it('returns empty for < 2 points', () => {
             const html = TrendChart({ points: [{ passRate: 80 }] });
             expect(html).toBe('');
         });
 
-        it('renders ref line', async () => {
+        it('renders ref line', () => {
             const html = TrendChart({
                 points: [{ passRate: 80 }, { passRate: 90 }],
                 refLine: 85,
@@ -63,7 +63,7 @@ describe('chart primitives', () => {
     });
 
     describe('Sparkline', () => {
-        it('renders bar element', async () => {
+        it('renders bar element', () => {
             const html = Sparkline({ value: 50 });
             expect(html).toContain('data-component="sparkline"');
             expect(html).toContain('role="img"');
@@ -71,14 +71,14 @@ describe('chart primitives', () => {
             expect(html).toContain('height:8px');
         });
 
-        it('uses high color for >= 50', async () => {
+        it('uses high color for >= 50', () => {
             const html = Sparkline({ value: 75 });
             expect(html).toContain('#ef4444');
         });
     });
 
     describe('ProgressBar', () => {
-        it('renders progress element', async () => {
+        it('renders progress element', () => {
             const html = ProgressBar({ value: 75 });
             expect(html).toContain('data-component="progress-bar"');
             expect(html).toContain('role="progressbar"');
@@ -86,12 +86,12 @@ describe('chart primitives', () => {
             expect(html).toContain('width:75%');
         });
 
-        it('renders with showLabel', async () => {
+        it('renders with showLabel', () => {
             const html = ProgressBar({ value: 50, showLabel: true });
             expect(html).toContain('50%');
         });
 
-        it('clamps value to max', async () => {
+        it('clamps value to max', () => {
             const html = ProgressBar({ value: 150, max: 100 });
             expect(html).toContain('width:100%');
         });

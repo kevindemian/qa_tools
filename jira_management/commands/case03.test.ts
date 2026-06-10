@@ -1,6 +1,6 @@
 vi.mock('../../shared/prompt');
 
-vi.mock('../../shared/jira-helper', async () => ({
+vi.mock('../../shared/jira-helper', () => ({
     safeJiraCall: vi.fn(),
 }));
 
@@ -19,7 +19,7 @@ beforeEach(() => {
 });
 
 describe('case03 — create version', () => {
-    it('exports a handler function', async () => {
+    it('exports a handler function', () => {
         expect(case03).toBeDefined();
         expect(typeof case03.handler).toBe('function');
     });

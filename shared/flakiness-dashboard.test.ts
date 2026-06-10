@@ -7,7 +7,7 @@ import type { FlakinessEntry } from './metrics.js';
 import { nonNull } from './test-utils.js';
 
 describe('filterHighFlakiness', () => {
-    it('filters entries above threshold', async () => {
+    it('filters entries above threshold', () => {
         const entries: FlakinessEntry[] = [
             { title: 'Very Flaky', passCount: 1, failCount: 9, skipCount: 0, totalRuns: 10, rate: 0.9 },
             { title: 'Stable', passCount: 9, failCount: 1, skipCount: 0, totalRuns: 10, rate: 0.1 },
@@ -20,7 +20,7 @@ describe('filterHighFlakiness', () => {
         expect(nonNull(result[1]).title).toBe('Borderline');
     });
 
-    it('returns empty array when no entries exceed threshold', async () => {
+    it('returns empty array when no entries exceed threshold', () => {
         const entries: FlakinessEntry[] = [
             { title: 'Stable', passCount: 9, failCount: 1, skipCount: 0, totalRuns: 10, rate: 0.1 },
         ];
@@ -28,13 +28,13 @@ describe('filterHighFlakiness', () => {
         expect(filterHighFlakiness(entries, 30)).toEqual([]);
     });
 
-    it('returns empty array for empty input', async () => {
+    it('returns empty array for empty input', () => {
         expect(filterHighFlakiness([], 30)).toEqual([]);
     });
 });
 
 describe('generateFlakinessHtml', () => {
-    it('generates HTML with flaky test table', async () => {
+    it('generates HTML with flaky test table', () => {
         const entries: FlakinessEntry[] = [
             { title: 'Login Flaky', passCount: 5, failCount: 5, skipCount: 0, totalRuns: 10, rate: 0.5 },
         ];
@@ -46,7 +46,7 @@ describe('generateFlakinessHtml', () => {
         expect(html).toContain('Flakiness Dashboard');
     });
 
-    it('shows entries below 50% rate with warn badge', async () => {
+    it('shows entries below 50% rate with warn badge', () => {
         const entries: FlakinessEntry[] = [
             { title: 'Mild', passCount: 7, failCount: 3, skipCount: 0, totalRuns: 10, rate: 0.3 },
         ];
@@ -57,7 +57,7 @@ describe('generateFlakinessHtml', () => {
         expect(html).toContain('data-component="badge"');
     });
 
-    it('shows danger severity when more than 5 high-flakiness entries', async () => {
+    it('shows danger severity when more than 5 high-flakiness entries', () => {
         const entries: FlakinessEntry[] = Array.from({ length: 7 }, (_, i) => ({
             title: `Flaky#${i}`,
             passCount: 1,
@@ -72,7 +72,7 @@ describe('generateFlakinessHtml', () => {
         expect(html).toContain('7');
     });
 
-    it('shows no-threshold message when all below threshold', async () => {
+    it('shows no-threshold message when all below threshold', () => {
         const entries: FlakinessEntry[] = [
             { title: 'Stable', passCount: 9, failCount: 1, skipCount: 0, totalRuns: 10, rate: 0.1 },
         ];
@@ -81,12 +81,12 @@ describe('generateFlakinessHtml', () => {
         expect(html).toContain('No tests exceed');
     });
 
-    it('uses custom title', async () => {
+    it('uses custom title', () => {
         const html = generateFlakinessHtml([], 'My Dashboard');
         expect(html).toContain('My Dashboard');
     });
 
-    it('escapes HTML in test titles', async () => {
+    it('escapes HTML in test titles', () => {
         const entries: FlakinessEntry[] = [
             { title: '<script>alert(1)</script>', passCount: 5, failCount: 5, skipCount: 0, totalRuns: 10, rate: 0.5 },
         ];
@@ -96,7 +96,7 @@ describe('generateFlakinessHtml', () => {
         expect(html).not.toContain('<script>alert');
     });
 
-    it('includes dark mode theme toggle script', async () => {
+    it('includes dark mode theme toggle script', () => {
         const entries: FlakinessEntry[] = [
             { title: 'Test', passCount: 5, failCount: 5, skipCount: 0, totalRuns: 10, rate: 0.5 },
         ];
@@ -105,7 +105,7 @@ describe('generateFlakinessHtml', () => {
         expect(html).toContain('prefers-color-scheme');
     });
 
-    it('includes dark mode CSS selectors', async () => {
+    it('includes dark mode CSS selectors', () => {
         const html = generateFlakinessHtml([]);
         expect(html).toContain('--color-surface-page');
         expect(html).toContain('html.dark');

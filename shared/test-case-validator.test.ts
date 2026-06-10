@@ -21,7 +21,7 @@ function makeCtx(input: string): ValidationContext {
 }
 
 describe('TestCaseValidator — createTestCaseValidator', () => {
-    it('creates validator with all invariants registered', async () => {
+    it('creates validator with all invariants registered', () => {
         const v = createTestCaseValidator();
         const invariants = v.listInvariants();
         expect(invariants).toContain('T-01');
@@ -43,7 +43,7 @@ describe('TestCaseValidator — createTestCaseValidator', () => {
         expect(invariants).toContain('I-05');
     });
 
-    it('passes a well-formed test suite', async () => {
+    it('passes a well-formed test suite', () => {
         const v = createTestCaseValidator();
         const suite = {
             summary: 'Test suite for login functionality covering happy path and errors',
@@ -66,7 +66,7 @@ describe('TestCaseValidator — createTestCaseValidator', () => {
 });
 
 describe('invariantCoverageComplete (T-01)', () => {
-    it('passes when all criteria covered', async () => {
+    it('passes when all criteria covered', () => {
         const results = invariantCoverageComplete(
             { tests: [{ title: 'Test login', coverage: [{ criterionId: 'C-1', criterionText: 'User can log in' }] }] },
             makeCtx('Acceptance Criteria: User can log in'),
@@ -74,7 +74,7 @@ describe('invariantCoverageComplete (T-01)', () => {
         expect(results.some((r) => r.passed)).toBe(true);
     });
 
-    it('fails when criteria uncovered', async () => {
+    it('fails when criteria uncovered', () => {
         const results = invariantCoverageComplete(
             { tests: [{ title: 'Test login', coverage: [{ criterionId: 'C-1', criterionText: 'User can log in' }] }] },
             makeCtx('Given user can log in\nWhen payment works'),
@@ -86,19 +86,19 @@ describe('invariantCoverageComplete (T-01)', () => {
 });
 
 describe('invariantCoverageThreshold (T-02)', () => {
-    it('passes when coverage >= 90', async () => {
+    it('passes when coverage >= 90', () => {
         const results = invariantCoverageThreshold({ coverageTable: { coverage: 95 } }, makeCtx(''));
         expect(results.some((r) => r.passed)).toBe(true);
     });
 
-    it('fails when coverage < 90 and no gaps', async () => {
+    it('fails when coverage < 90 and no gaps', () => {
         const results = invariantCoverageThreshold({ coverageTable: { coverage: 75 } }, makeCtx(''));
         expect(results.some((r) => !r.passed && r.invariantId === 'T-02')).toBe(true);
     });
 });
 
 describe('invariantConcreteSteps (T-04)', () => {
-    it('passes concrete steps', async () => {
+    it('passes concrete steps', () => {
         const results = invariantConcreteSteps(
             { tests: [{ steps: ['Click button', 'Enter text', 'Submit form', 'Verify result'] }] },
             makeCtx(''),
@@ -106,7 +106,7 @@ describe('invariantConcreteSteps (T-04)', () => {
         expect(results.some((r) => r.passed)).toBe(true);
     });
 
-    it('fails on passive steps', async () => {
+    it('fails on passive steps', () => {
         const results = invariantConcreteSteps(
             { tests: [{ steps: ['validate that form works', 'check if button exists'] }] },
             makeCtx(''),
@@ -116,7 +116,7 @@ describe('invariantConcreteSteps (T-04)', () => {
 });
 
 describe('invariantVerifiableResult (T-05)', () => {
-    it('passes verifiable result', async () => {
+    it('passes verifiable result', () => {
         const results = invariantVerifiableResult(
             { tests: [{ expectedResult: 'User is redirected to dashboard page with 200 status' }] },
             makeCtx(''),
@@ -124,7 +124,7 @@ describe('invariantVerifiableResult (T-05)', () => {
         expect(results.some((r) => r.passed)).toBe(true);
     });
 
-    it('fails on vague result', async () => {
+    it('fails on vague result', () => {
         const results = invariantVerifiableResult(
             { tests: [{ expectedResult: 'should work correctly' }] },
             makeCtx(''),
@@ -134,12 +134,12 @@ describe('invariantVerifiableResult (T-05)', () => {
 });
 
 describe('invariantUniqueTitles (T-06)', () => {
-    it('passes unique titles', async () => {
+    it('passes unique titles', () => {
         const results = invariantUniqueTitles({ tests: [{ title: 'Test A' }, { title: 'Test B' }] }, makeCtx(''));
         expect(results.some((r) => r.passed)).toBe(true);
     });
 
-    it('fails on duplicate titles', async () => {
+    it('fails on duplicate titles', () => {
         const results = invariantUniqueTitles(
             { tests: [{ title: 'Same Title' }, { title: 'Same Title' }] },
             makeCtx(''),
@@ -149,7 +149,7 @@ describe('invariantUniqueTitles (T-06)', () => {
 });
 
 describe('invariantPreconditionsExist (T-07)', () => {
-    it('passes with preconditions', async () => {
+    it('passes with preconditions', () => {
         const results = invariantPreconditionsExist(
             { tests: [{ preConditions: [{ type: 'setup', description: 'd' }] }] },
             makeCtx(''),
@@ -157,14 +157,14 @@ describe('invariantPreconditionsExist (T-07)', () => {
         expect(results.some((r) => r.passed)).toBe(true);
     });
 
-    it('fails without preconditions', async () => {
+    it('fails without preconditions', () => {
         const results = invariantPreconditionsExist({ tests: [{ preConditions: [] }] }, makeCtx(''));
         expect(results.some((r) => !r.passed && r.invariantId === 'T-07')).toBe(true);
     });
 });
 
 describe('invariantResultMatchesAction (T-08)', () => {
-    it('passes when expectedResult matches create action', async () => {
+    it('passes when expectedResult matches create action', () => {
         const results = invariantResultMatchesAction(
             { tests: [{ steps: ['Create user', 'Submit form'], expectedResult: 'User created successfully' }] },
             makeCtx(''),
@@ -172,7 +172,7 @@ describe('invariantResultMatchesAction (T-08)', () => {
         expect(results.some((r) => r.passed && r.invariantId === 'T-08')).toBe(true);
     });
 
-    it('warns when expectedResult does not match create action', async () => {
+    it('warns when expectedResult does not match create action', () => {
         const results = invariantResultMatchesAction(
             { tests: [{ steps: ['Create user', 'Submit form'], expectedResult: 'Page loads' }] },
             makeCtx(''),
@@ -181,7 +181,7 @@ describe('invariantResultMatchesAction (T-08)', () => {
         expect(warnings.length).toBeGreaterThan(0);
     });
 
-    it('passes when expectedResult matches update action', async () => {
+    it('passes when expectedResult matches update action', () => {
         const results = invariantResultMatchesAction(
             { tests: [{ steps: ['Edit profile', 'Save changes'], expectedResult: 'Profile updated successfully' }] },
             makeCtx(''),
@@ -189,7 +189,7 @@ describe('invariantResultMatchesAction (T-08)', () => {
         expect(results.some((r) => r.passed && r.invariantId === 'T-08')).toBe(true);
     });
 
-    it('warns when expectedResult does not match delete action', async () => {
+    it('warns when expectedResult does not match delete action', () => {
         const results = invariantResultMatchesAction(
             { tests: [{ steps: ['Delete account', 'Confirm'], expectedResult: 'Page loads' }] },
             makeCtx(''),
@@ -198,7 +198,7 @@ describe('invariantResultMatchesAction (T-08)', () => {
         expect(warnings.length).toBeGreaterThan(0);
     });
 
-    it('passes when no action keywords found', async () => {
+    it('passes when no action keywords found', () => {
         const results = invariantResultMatchesAction(
             { tests: [{ steps: ['View page', 'Read info'], expectedResult: 'Info displayed' }] },
             makeCtx(''),
@@ -206,14 +206,14 @@ describe('invariantResultMatchesAction (T-08)', () => {
         expect(results.some((r) => r.passed)).toBe(true);
     });
 
-    it('fails when no tests exist', async () => {
+    it('fails when no tests exist', () => {
         const results = invariantResultMatchesAction({ tests: [] }, makeCtx(''));
         expect(results.some((r) => !r.passed && r.invariantId === 'T-08')).toBe(true);
     });
 });
 
 describe('invariantNoDuplicateTests (T-10)', () => {
-    it('passes unique test steps', async () => {
+    it('passes unique test steps', () => {
         const results = invariantNoDuplicateTests(
             { tests: [{ steps: ['Step one', 'Step two'] }, { steps: ['Different steps', 'Other actions'] }] },
             makeCtx(''),
@@ -223,7 +223,7 @@ describe('invariantNoDuplicateTests (T-10)', () => {
 });
 
 describe('invariantStateMutation (T-03)', () => {
-    it('passes when no mutation keywords', async () => {
+    it('passes when no mutation keywords', () => {
         const results = invariantStateMutation(
             { tests: [{ steps: ['View page', 'Read data'] }] },
             makeCtx('Just viewing content'),
@@ -233,19 +233,19 @@ describe('invariantStateMutation (T-03)', () => {
 });
 
 describe('invariantNumericConsistency (T-09)', () => {
-    it('passes consistent numbers', async () => {
+    it('passes consistent numbers', () => {
         const results = invariantNumericConsistency({ item_count: 3, items: [1, 2, 3] }, makeCtx(''));
         expect(results.some((r) => r.passed)).toBe(true);
     });
 
-    it('fails inconsistent numbers', async () => {
+    it('fails inconsistent numbers', () => {
         const results = invariantNumericConsistency({ item_count: 5, items: [1, 2, 3] }, makeCtx(''));
         expect(results.some((r) => !r.passed && r.invariantId === 'T-09')).toBe(true);
     });
 });
 
 describe('invariantPartitionCoverage (T-11)', () => {
-    it('passes when all partitions are covered', async () => {
+    it('passes when all partitions are covered', () => {
         const results = invariantPartitionCoverage(
             {
                 tests: [
@@ -271,7 +271,7 @@ describe('invariantPartitionCoverage (T-11)', () => {
         expect(results.some((r) => r.passed && r.invariantId === 'T-11')).toBe(true);
     });
 
-    it('passes when no numeric range is present (skipped)', async () => {
+    it('passes when no numeric range is present (skipped)', () => {
         const results = invariantPartitionCoverage(
             { tests: [{ title: 'Test', steps: ['Step'], expectedResult: 'OK' }] },
             makeCtx('No numbers here'),
@@ -279,7 +279,7 @@ describe('invariantPartitionCoverage (T-11)', () => {
         expect(results.some((r) => r.passed && r.invariantId === 'T-11')).toBe(true);
     });
 
-    it('warns when below-min partition is missing', async () => {
+    it('warns when below-min partition is missing', () => {
         const results = invariantPartitionCoverage(
             {
                 tests: [
@@ -302,7 +302,7 @@ describe('invariantPartitionCoverage (T-11)', () => {
         expect(warnings[0]?.message.toLowerCase()).toContain('below');
     });
 
-    it('warns when above-max partition is missing', async () => {
+    it('warns when above-max partition is missing', () => {
         const results = invariantPartitionCoverage(
             {
                 tests: [
@@ -325,14 +325,14 @@ describe('invariantPartitionCoverage (T-11)', () => {
         expect(warnings[0]?.message.toLowerCase()).toContain('above');
     });
 
-    it('fails when no tests exist', async () => {
+    it('fails when no tests exist', () => {
         const results = invariantPartitionCoverage({ tests: [] }, makeCtx('ages between 18 and 65'));
         expect(results.some((r) => !r.passed && r.invariantId === 'T-11')).toBe(true);
     });
 });
 
 describe('invariantBoundaryCoverage (T-12)', () => {
-    it('passes when all boundaries are covered (2-value BVA)', async () => {
+    it('passes when all boundaries are covered (2-value BVA)', () => {
         const results = invariantBoundaryCoverage(
             {
                 tests: [
@@ -363,7 +363,7 @@ describe('invariantBoundaryCoverage (T-12)', () => {
         expect(results.some((r) => r.passed && r.invariantId === 'T-12')).toBe(true);
     });
 
-    it('passes when no numeric range is present (skipped)', async () => {
+    it('passes when no numeric range is present (skipped)', () => {
         const results = invariantBoundaryCoverage(
             { tests: [{ title: 'Test', steps: ['Step'], expectedResult: 'OK' }] },
             makeCtx('No numbers here'),
@@ -371,7 +371,7 @@ describe('invariantBoundaryCoverage (T-12)', () => {
         expect(results.some((r) => r.passed && r.invariantId === 'T-12')).toBe(true);
     });
 
-    it('warns when some boundaries are missing', async () => {
+    it('warns when some boundaries are missing', () => {
         const results = invariantBoundaryCoverage(
             {
                 tests: [
@@ -395,14 +395,14 @@ describe('invariantBoundaryCoverage (T-12)', () => {
         expect(warnings[0]?.message).toContain('Missing');
     });
 
-    it('fails when no tests exist', async () => {
+    it('fails when no tests exist', () => {
         const results = invariantBoundaryCoverage({ tests: [] }, makeCtx('ages between 18 and 65'));
         expect(results.some((r) => !r.passed && r.invariantId === 'T-12')).toBe(true);
     });
 });
 
 describe('invariantRedundancyCoupling (T-13)', () => {
-    it('passes with fewer than 2 tests', async () => {
+    it('passes with fewer than 2 tests', () => {
         const results = invariantRedundancyCoupling(
             { tests: [{ title: 'Only test', steps: ['Do something'] }] },
             makeCtx(''),
@@ -410,7 +410,7 @@ describe('invariantRedundancyCoupling (T-13)', () => {
         expect(results.some((r) => r.passed && r.invariantId === 'T-13')).toBe(true);
     });
 
-    it('passes with completely different tests', async () => {
+    it('passes with completely different tests', () => {
         const artifact = {
             tests: [
                 {
@@ -431,7 +431,7 @@ describe('invariantRedundancyCoupling (T-13)', () => {
         expect(results.some((r) => r.passed && r.invariantId === 'T-13')).toBe(true);
     });
 
-    it('fails when steps are identical and title+result are similar (A + D → error)', async () => {
+    it('fails when steps are identical and title+result are similar (A + D → error)', () => {
         const results = invariantRedundancyCoupling(
             {
                 tests: [
@@ -454,7 +454,7 @@ describe('invariantRedundancyCoupling (T-13)', () => {
         expect(errors[0]?.message).toContain('identical');
     });
 
-    it('warns when only steps overlap without title+result duplicate (A only → warning)', async () => {
+    it('warns when only steps overlap without title+result duplicate (A only → warning)', () => {
         const results = invariantRedundancyCoupling(
             {
                 tests: [
@@ -477,7 +477,7 @@ describe('invariantRedundancyCoupling (T-13)', () => {
         expect(warnings[0]?.message).toContain('similar');
     });
 
-    it('warns when coverage overlaps (B → warning)', async () => {
+    it('warns when coverage overlaps (B → warning)', () => {
         const results = invariantRedundancyCoupling(
             {
                 tests: [
@@ -511,7 +511,7 @@ describe('invariantRedundancyCoupling (T-13)', () => {
         expect(coverageWarnings.length).toBeGreaterThan(0);
     });
 
-    it('warns when tests are coupled via shared resource (C → warning)', async () => {
+    it('warns when tests are coupled via shared resource (C → warning)', () => {
         const artifact = {
             tests: [
                 {
@@ -532,7 +532,7 @@ describe('invariantRedundancyCoupling (T-13)', () => {
         expect(couplingWarnings.length).toBeGreaterThan(0);
     });
 
-    it('passes for EP/BVA variations that should not be flagged', async () => {
+    it('passes for EP/BVA variations that should not be flagged', () => {
         const results = invariantRedundancyCoupling(
             {
                 tests: [
@@ -559,7 +559,7 @@ describe('invariantRedundancyCoupling (T-13)', () => {
         expect(errors.length).toBe(0);
     });
 
-    it('passes when coverage sets are completely different', async () => {
+    it('passes when coverage sets are completely different', () => {
         const artifact = {
             tests: [
                 {
@@ -580,7 +580,7 @@ describe('invariantRedundancyCoupling (T-13)', () => {
         expect(results.some((r) => r.passed && r.invariantId === 'T-13')).toBe(true);
     });
 
-    it('warns on Portuguese resource coupling', async () => {
+    it('warns on Portuguese resource coupling', () => {
         const results = invariantRedundancyCoupling(
             {
                 tests: [
@@ -603,7 +603,7 @@ describe('invariantRedundancyCoupling (T-13)', () => {
         expect(couplingWarnings.length).toBeGreaterThan(0);
     });
 
-    it('warns when test A creates resource and test B deletes different resource (no coupling)', async () => {
+    it('warns when test A creates resource and test B deletes different resource (no coupling)', () => {
         const results = invariantRedundancyCoupling(
             {
                 tests: [
@@ -625,7 +625,7 @@ describe('invariantRedundancyCoupling (T-13)', () => {
         expect(results.some((r) => r.passed && r.invariantId === 'T-13')).toBe(true);
     });
 
-    it('detects both error and warning in the same test set', async () => {
+    it('detects both error and warning in the same test set', () => {
         const results = invariantRedundancyCoupling(
             {
                 tests: [

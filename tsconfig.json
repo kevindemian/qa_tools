@@ -21,7 +21,7 @@
         "isolatedModules": true,
         "types": ["node", "vitest/globals"]
     },
-    "_noPropertyAccessFromIndexSignature": "DEFERIDO (2026-06-02). 613 erros em 87 arquivos, zero ganho. noUncheckedIndexedAccess já cobre safety.",
-    "include": ["setup/**/*.ts", "shared/**/*.ts", "jira_management/**/*.ts", "git_triggers/**/*.ts", "e2e/**/*.ts"],
+    "noPropertyAccessFromIndexSignature": true,
+    "include": ["setup/**/*.ts", "shared/**/*.ts", "jira_management/**/*.ts", "git_triggers/**/*.ts", "e2e/**/*.ts", "scripts/**/*.ts"],
     "exclude": ["node_modules", "docs-archive"]
 }

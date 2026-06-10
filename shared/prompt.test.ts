@@ -841,37 +841,37 @@ describe('Prompt', () => {
             prompt.__setConfig(Config.create({}));
         });
 
-        it('returns "skip" when autoConfirm and autoAction is skip', async () => {
+        it('returns "skip" when autoConfirm and autoAction is skip', () => {
             prompt.__setConfig(Config.create({ autoConfirm: true, onError: 'skip' }));
             const result = prompt.onError('ctx', new Error('fail'), { retry: true });
             expect(result).toBe('skip');
         });
 
-        it('returns "abort" when autoConfirm and autoAction is abort', async () => {
+        it('returns "abort" when autoConfirm and autoAction is abort', () => {
             prompt.__setConfig(Config.create({ autoConfirm: true, onError: 'abort' }));
             const result = prompt.onError('ctx', new Error('fail'));
             expect(result).toBe('abort');
         });
 
-        it('returns "abort" when user chooses A', async () => {
+        it('returns "abort" when user chooses A', () => {
             vi.spyOn(readlineSync, 'question').mockReturnValue('a');
             const result = prompt.onError('ctx', new Error('fail'));
             expect(result).toBe('abort');
         });
 
-        it('returns "skip" when user chooses S', async () => {
+        it('returns "skip" when user chooses S', () => {
             vi.spyOn(readlineSync, 'question').mockReturnValue('s');
             const result = prompt.onError('ctx', new Error('fail'));
             expect(result).toBe('skip');
         });
 
-        it('returns "retry" when user chooses R with canRetry', async () => {
+        it('returns "retry" when user chooses R with canRetry', () => {
             vi.spyOn(readlineSync, 'question').mockReturnValue('r');
             const result = prompt.onError('ctx', new Error('fail'), { retry: true });
             expect(result).toBe('retry');
         });
 
-        it('shows details and loops when user chooses D with canDetails', async () => {
+        it('shows details and loops when user chooses D with canDetails', () => {
             vi.spyOn(readlineSync, 'question').mockReturnValueOnce('d').mockReturnValueOnce('a');
             const err = {
                 response: { status: 400, data: { detail: 'invalid' } },
@@ -882,14 +882,14 @@ describe('Prompt', () => {
             expect(mockLog).toHaveBeenCalledWith(expect.stringContaining('400'));
         });
 
-        it('shows error with stack details when err is Error', async () => {
+        it('shows error with stack details when err is Error', () => {
             vi.spyOn(readlineSync, 'question').mockReturnValueOnce('d').mockReturnValueOnce('a');
             const result = prompt.onError('ctx', new Error('detail-error'), { details: true });
             expect(result).toBe('abort');
             expect(mockLog).toHaveBeenCalledWith(expect.stringContaining('Stack'));
         });
 
-        it('warns on invalid option and retries', async () => {
+        it('warns on invalid option and retries', () => {
             vi.spyOn(readlineSync, 'question').mockReturnValueOnce('x').mockReturnValueOnce('a');
             const result = prompt.onError('ctx', new Error('fail'));
             expect(result).toBe('abort');

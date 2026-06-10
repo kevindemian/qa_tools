@@ -6,7 +6,7 @@ import { generateGitHubActions } from './templates/github-ci.js';
 import { generateGitLabCI } from './templates/gitlab-ci.js';
 import { generatePrePushHook } from './templates/pre-push-hook.js';
 
-vi.mock('../shared/prompt', async () => ({
+vi.mock('../shared/prompt', () => ({
     ask: vi.fn(),
     askConfirm: vi.fn(),
     title: vi.fn(),
@@ -15,22 +15,22 @@ vi.mock('../shared/prompt', async () => ({
 }));
 
 vi.mock('fs');
-vi.mock('./detector', async () => ({
+vi.mock('./detector', () => ({
     detectFramework: vi.fn(),
     extractRepoFromGit: vi.fn(),
 }));
-vi.mock('./config-writer', async () => ({
+vi.mock('./config-writer', () => ({
     writeProjectsConfig: vi.fn(),
     writeDotEnvExample: vi.fn(),
     writePrePushHook: vi.fn(),
 }));
-vi.mock('./templates/github-ci', async () => ({
+vi.mock('./templates/github-ci', () => ({
     generateGitHubActions: vi.fn(),
 }));
-vi.mock('./templates/gitlab-ci', async () => ({
+vi.mock('./templates/gitlab-ci', () => ({
     generateGitLabCI: vi.fn(),
 }));
-vi.mock('./templates/pre-push-hook', async () => ({
+vi.mock('./templates/pre-push-hook', () => ({
     generatePrePushHook: vi.fn(),
 }));
 

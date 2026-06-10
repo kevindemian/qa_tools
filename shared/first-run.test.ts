@@ -6,7 +6,7 @@ const mockWarn = vi.fn<(...args: [message: string]) => void>();
 const mockLoadTypedState = vi.fn<(...args: []) => Record<string, unknown>>();
 const mockUpdateState = vi.fn<(...args: [(state: object) => void]) => void>();
 
-vi.mock('./prompt', async () => ({
+vi.mock('./prompt', () => ({
     title: mockTitle,
     info: mockInfo,
     divider: mockDivider,
@@ -14,7 +14,7 @@ vi.mock('./prompt', async () => ({
     showSelect: mockShowSelect,
 }));
 
-vi.mock('./state', async () => ({
+vi.mock('./state', () => ({
     loadTypedState: mockLoadTypedState,
     update: mockUpdateState,
 }));
@@ -23,11 +23,11 @@ const mockSetupMain = vi.fn().mockResolvedValue(undefined);
 
 const mockShowDocs = vi.fn().mockResolvedValue(undefined);
 
-vi.mock('../setup/main', async () => ({
+vi.mock('../setup/main', () => ({
     main: mockSetupMain,
 }));
 
-vi.mock('./show-docs', async () => ({
+vi.mock('./show-docs', () => ({
     showDocs: mockShowDocs,
 }));
 
@@ -35,7 +35,7 @@ const OLD_ENV = { ...process.env };
 const OLD_ARGV = [...process.argv];
 
 async function loadModule() {
-    return import('./first-run.js') as Promise<typeof import('./first-run.js')>;
+    return import('./first-run.js');
 }
 
 beforeEach(() => {

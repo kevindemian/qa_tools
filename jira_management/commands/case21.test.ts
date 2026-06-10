@@ -3,27 +3,27 @@ import { expect } from 'vitest';
 vi.mock('../../shared/prompt');
 vi.mock('../../shared/logger');
 
-vi.mock('../../shared/coverage-gap', async () => ({
+vi.mock('../../shared/coverage-gap', () => ({
     analyzeCoverageGaps: vi.fn(),
 }));
 
-vi.mock('../../shared/generate-coverage-gap-html', async () => ({
+vi.mock('../../shared/generate-coverage-gap-html', () => ({
     generateCoverageGapHtml: vi.fn().mockReturnValue('<html></html>'),
 }));
 
-vi.mock('../../shared/open', async () => ({ openWithFallback: vi.fn() }));
+vi.mock('../../shared/open', () => ({ openWithFallback: vi.fn() }));
 
-vi.mock('../../shared/ai-feedback', async () => ({
+vi.mock('../../shared/ai-feedback', () => ({
     recordAiGeneration: vi.fn(),
 }));
 
 vi.mock('./case18');
 
-vi.mock('crypto', async () => ({
+vi.mock('crypto', () => ({
     randomUUID: vi.fn().mockReturnValue('abc-123'),
 }));
 
-vi.mock('../../shared/logger', async () => ({
+vi.mock('../../shared/logger', () => ({
     rootLogger: {
         error: vi.fn(),
         child: vi.fn().mockReturnValue({ info: vi.fn(), error: vi.fn(), warn: vi.fn() }),

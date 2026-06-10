@@ -1,4 +1,3 @@
-import type { GitProvider } from '../shared/types.js';
 import type JiraClient from '../shared/jira-client.js';
 import type JiraLinkManager from '../jira_management/jira_link_manager.js';
 import { createGitHubSmokeManager } from './smoke-shared.js';
@@ -50,7 +49,7 @@ async function pollIfNeeded(
 ): Promise<void> {
     if (runStatus === 'in_progress' || runStatus === 'pending') {
         rootLogger.info('Polling pipeline ' + runId + '...');
-        const pollResult = await pollPipeline(gh as unknown as GitProvider, runId);
+        const pollResult = await pollPipeline(gh, runId);
         assert(pollResult, 'pollPipeline returned undefined');
         assert(pollResult.status, 'pollPipeline result missing status');
         rootLogger.info('  Pipeline result: ' + pollResult.status + '\n');
@@ -70,7 +69,7 @@ async function collectAndReportResults(gh: ReturnType<typeof createGitHubSmokeMa
     const jiraResource = {} as JiraClient;
     const linkManager = {} as JiraLinkManager;
     const parsed = await collectTestResults({
-        m: gh as unknown as GitProvider,
+        m: gh,
         pipelineId: runId,
         branch: 'main',
         projectName: 'qa_tools_e2e',

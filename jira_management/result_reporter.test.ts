@@ -18,7 +18,7 @@ vi.mock('axios', () => ({
     },
 }));
 
-vi.mock('../shared/logger', async () => ({
+vi.mock('../shared/logger', () => ({
     rootLogger: {
         debug: vi.fn(),
         warn: vi.fn(),
@@ -29,7 +29,7 @@ vi.mock('../shared/logger', async () => ({
     }),
 }));
 
-vi.mock('../shared/prompt', async () => ({
+vi.mock('../shared/prompt', () => ({
     info: vi.fn(),
     success: vi.fn(),
     warn: vi.fn(),
@@ -81,7 +81,7 @@ describe('matchResultsToTests', () => {
         }
     });
 
-    it('matches exact titles to Jira keys', async () => {
+    it('matches exact titles to Jira keys', () => {
         const results = [
             { title: 'TC01 - Login valido', state: 'passed' as const, duration: 300 },
             { title: 'TC02 - Login invalido', state: 'failed' as const, duration: 200 },
@@ -95,7 +95,7 @@ describe('matchResultsToTests', () => {
         expect(result.unmatched).toHaveLength(0);
     });
 
-    it('flags unmatched titles', async () => {
+    it('flags unmatched titles', () => {
         const results = [{ title: 'TC99 - Unknown', state: 'passed' as const, duration: 100 }];
         const result = matchResultsToTests(results, mappingPath);
         expect(result.matched).toHaveLength(0);
@@ -103,7 +103,7 @@ describe('matchResultsToTests', () => {
         expect(nonNull(result.unmatched[0]).title).toBe('TC99 - Unknown');
     });
 
-    it('calculates stats correctly', async () => {
+    it('calculates stats correctly', () => {
         const results = [
             { title: 'TC01 - Login valido', state: 'passed' as const, duration: 300 },
             { title: 'TC02 - Login invalido', state: 'failed' as const, duration: 200 },
@@ -116,19 +116,19 @@ describe('matchResultsToTests', () => {
         expect(result.stats.total).toBe(2);
     });
 
-    it('returns empty for missing mapping file', async () => {
+    it('returns empty for missing mapping file', () => {
         const result = matchResultsToTests([], '/nonexistent.json');
         expect(result.matched).toEqual([]);
     });
 
-    it('performs fuzzy match when title differs slightly', async () => {
+    it('performs fuzzy match when title differs slightly', () => {
         const results = [{ title: 'Login valido', state: 'passed' as const, duration: 100 }];
         const result = matchResultsToTests(results, mappingPath);
         expect(result.matched).toHaveLength(1);
         expect(nonNull(result.matched[0]).key).toBe('TEST-1');
     });
 
-    it('returns empty result and warns when tests array is empty', async () => {
+    it('returns empty result and warns when tests array is empty', () => {
         const emptyMappingPath = tmpDir + '/empty_mapping.json';
         fs.writeFileSync(emptyMappingPath, JSON.stringify({ tests: [] }), 'utf8');
 
@@ -138,7 +138,7 @@ describe('matchResultsToTests', () => {
         expect(rootLogger.warn).toHaveBeenCalledWith('Mapping JSON vazio');
     });
 
-    it('returns null for empty/undefined title in _fuzzyMatch', async () => {
+    it('returns null for empty/undefined title in _fuzzyMatch', () => {
         const results = [{ title: '', state: 'passed' as const, duration: 100 }];
         const result = matchResultsToTests(results, mappingPath);
         expect(result.unmatched).toHaveLength(1);
@@ -152,12 +152,12 @@ describe('createTestExecutionFromResults', () => {
     let linkManager: JiraLinkManager;
 
     beforeEach(() => {
-        jiraResource = vi.mocked(new JiraResource('fake-token', 'http://jira/rest/api/2')) as Mocked<JiraResource>;
+        jiraResource = vi.mocked(new JiraResource('fake-token', 'http://jira/rest/api/2'));
         jiraResource.getJiraResource = vi.fn() as typeof jiraResource.getJiraResource;
         jiraResource.postJiraResource = vi.fn() as typeof jiraResource.postJiraResource;
         jiraResource.putJiraResource = vi.fn() as typeof jiraResource.putJiraResource;
 
-        linkJiraRes = vi.mocked(new JiraResource('fake-token', 'http://jira/rest/api/2')) as Mocked<JiraResource>;
+        linkJiraRes = vi.mocked(new JiraResource('fake-token', 'http://jira/rest/api/2'));
         linkJiraRes.getJiraResource = vi.fn() as typeof linkJiraRes.getJiraResource;
         linkJiraRes.postJiraResource = vi.fn() as typeof linkJiraRes.postJiraResource;
         linkJiraRes.getJiraResource.mockImplementation((url: string) => {

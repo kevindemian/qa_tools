@@ -52,34 +52,34 @@ const PASSING_RUN = run({
 });
 
 describe('evaluateQualityGate', () => {
-    it('returns pass when all dimensions meet thresholds', async () => {
+    it('returns pass when all dimensions meet thresholds', () => {
         expect(evaluateQualityGate(95, 0, 90, 2)).toBe('pass');
     });
 
-    it('returns fail when passRate is below gate', async () => {
+    it('returns fail when passRate is below gate', () => {
         expect(evaluateQualityGate(70, 0, 90, 2)).toBe('fail');
     });
 
-    it('returns fail when flakyPct exceeds gate', async () => {
+    it('returns fail when flakyPct exceeds gate', () => {
         expect(evaluateQualityGate(95, 15, 90, 2)).toBe('fail');
     });
 
-    it('returns fail when coverage is below gate', async () => {
+    it('returns fail when coverage is below gate', () => {
         expect(evaluateQualityGate(95, 0, 60, 2)).toBe('fail');
     });
 
-    it('returns fail when suiteSpeed exceeds gate', async () => {
+    it('returns fail when suiteSpeed exceeds gate', () => {
         expect(evaluateQualityGate(95, 0, 90, 10)).toBe('fail');
     });
 
-    it('accepts custom config overrides', async () => {
+    it('accepts custom config overrides', () => {
         expect(evaluateQualityGate(70, 0, 90, 2, { minPassRateGate: 60 })).toBe('pass');
     });
 });
 
 describe('calculateHealthScore', () => {
     describe('empty store', () => {
-        it('returns low overall for empty store', async () => {
+        it('returns low overall for empty store', () => {
             const store = makeStore();
             const result = calculateHealthScore(store);
             expect(result.overall).toBeLessThan(50);
@@ -88,7 +88,7 @@ describe('calculateHealthScore', () => {
             expect(result.qualityGate).toBe('fail');
         });
 
-        it('handles store with only runs but no coverage history', async () => {
+        it('handles store with only runs but no coverage history', () => {
             const store = makeStore({ runs: [PASSING_RUN] });
             const result = calculateHealthScore(store);
             expect(result.dimensions.coverage.score).toBe(0);
@@ -97,7 +97,7 @@ describe('calculateHealthScore', () => {
     });
 
     describe('single run in store', () => {
-        it('scores well with a perfect run and good coverage', async () => {
+        it('scores well with a perfect run and good coverage', () => {
             const store = makeStore({
                 runs: [PASSING_RUN],
                 coverageHistory: [
@@ -117,7 +117,7 @@ describe('calculateHealthScore', () => {
     });
 
     describe('pass rate dimension', () => {
-        it('scores 100 when pass rate meets target', async () => {
+        it('scores 100 when pass rate meets target', () => {
             const store = makeStore({
                 runs: [run({ total: 100, passed: 95, failed: 5, duration: 10000 })],
                 coverageHistory: [
@@ -134,7 +134,7 @@ describe('calculateHealthScore', () => {
             expect(result.dimensions.passRate.score).toBe(100);
         });
 
-        it('scores 0 when pass rate <= 50%', async () => {
+        it('scores 0 when pass rate <= 50%', () => {
             const store = makeStore({
                 runs: [run({ total: 100, passed: 40, failed: 60, duration: 10000 })],
                 coverageHistory: [
@@ -151,7 +151,7 @@ describe('calculateHealthScore', () => {
             expect(result.dimensions.passRate.score).toBe(0);
         });
 
-        it('linearly interpolates between 50% and target', async () => {
+        it('linearly interpolates between 50% and target', () => {
             const store = makeStore({
                 runs: [run({ total: 100, passed: 72, failed: 28, duration: 10000 })],
                 coverageHistory: [
@@ -170,7 +170,7 @@ describe('calculateHealthScore', () => {
     });
 
     describe('flaky rate dimension', () => {
-        it('scores 100 when no flaky tests exist', async () => {
+        it('scores 100 when no flaky tests exist', () => {
             const store = makeStore({
                 runs: [
                     run({ tests: [testT('T', 'passed')], total: 1, passed: 1, failed: 0 }),
@@ -190,7 +190,7 @@ describe('calculateHealthScore', () => {
             expect(result.dimensions.flakyRate.score).toBe(100);
         });
 
-        it('scores 0 when 20% or more tests are flaky', async () => {
+        it('scores 0 when 20% or more tests are flaky', () => {
             const store = makeStore({
                 runs: [
                     run({
@@ -220,7 +220,7 @@ describe('calculateHealthScore', () => {
             expect(result.dimensions.flakyRate.score).toBeLessThanOrEqual(0);
         });
 
-        it('interpolates linearly for intermediate flaky rates', async () => {
+        it('interpolates linearly for intermediate flaky rates', () => {
             const store = makeStore({
                 runs: [
                     run({
@@ -252,7 +252,7 @@ describe('calculateHealthScore', () => {
     });
 
     describe('coverage dimension', () => {
-        it('scores 100 when coverage meets target', async () => {
+        it('scores 100 when coverage meets target', () => {
             const store = makeStore({
                 runs: [PASSING_RUN],
                 coverageHistory: [
@@ -269,7 +269,7 @@ describe('calculateHealthScore', () => {
             expect(result.dimensions.coverage.score).toBe(100);
         });
 
-        it('scores 0 when coverage <= 30%', async () => {
+        it('scores 0 when coverage <= 30%', () => {
             const store = makeStore({
                 runs: [PASSING_RUN],
                 coverageHistory: [
@@ -286,7 +286,7 @@ describe('calculateHealthScore', () => {
             expect(result.dimensions.coverage.score).toBe(0);
         });
 
-        it('linearly interpolates between 30% and target', async () => {
+        it('linearly interpolates between 30% and target', () => {
             const store = makeStore({
                 runs: [PASSING_RUN],
                 coverageHistory: [
@@ -305,7 +305,7 @@ describe('calculateHealthScore', () => {
     });
 
     describe('suite speed dimension', () => {
-        it('scores 100 when speed is within target', async () => {
+        it('scores 100 when speed is within target', () => {
             const store = makeStore({
                 runs: [run({ total: 10, passed: 10, duration: 5000 })],
                 coverageHistory: [
@@ -322,7 +322,7 @@ describe('calculateHealthScore', () => {
             expect(result.dimensions.suiteSpeed.score).toBe(100);
         });
 
-        it('scores 0 when speed >= 10s per test', async () => {
+        it('scores 0 when speed >= 10s per test', () => {
             const store = makeStore({
                 runs: [run({ total: 10, passed: 10, duration: 200000 })],
                 coverageHistory: [
@@ -339,7 +339,7 @@ describe('calculateHealthScore', () => {
             expect(result.dimensions.suiteSpeed.score).toBe(0);
         });
 
-        it('linearly interpolates between target and 10s', async () => {
+        it('linearly interpolates between target and 10s', () => {
             const store = makeStore({
                 runs: [run({ total: 10, passed: 10, duration: 60000 })],
                 coverageHistory: [
@@ -358,7 +358,7 @@ describe('calculateHealthScore', () => {
     });
 
     describe('overall score with default weights', () => {
-        it('computes weighted average correctly', async () => {
+        it('computes weighted average correctly', () => {
             const store = makeStore({
                 runs: [PASSING_RUN],
                 coverageHistory: [
@@ -378,7 +378,7 @@ describe('calculateHealthScore', () => {
     });
 
     describe('quality gate', () => {
-        it('passes when all dimensions are healthy', async () => {
+        it('passes when all dimensions are healthy', () => {
             const store = makeStore({
                 runs: [PASSING_RUN],
                 coverageHistory: [
@@ -395,7 +395,7 @@ describe('calculateHealthScore', () => {
             expect(result.qualityGate).toBe('pass');
         });
 
-        it('fails when pass rate is below gate', async () => {
+        it('fails when pass rate is below gate', () => {
             const store = makeStore({
                 runs: [run({ total: 10, passed: 7, failed: 3, duration: 5000 })],
                 coverageHistory: [
@@ -413,7 +413,7 @@ describe('calculateHealthScore', () => {
             expect(result.dimensions.passRate.status).toBe('fail');
         });
 
-        it('fails when flaky rate exceeds gate', async () => {
+        it('fails when flaky rate exceeds gate', () => {
             const store = makeStore({
                 runs: [
                     run({
@@ -444,7 +444,7 @@ describe('calculateHealthScore', () => {
             expect(result.dimensions.flakyRate.status).toBe('fail');
         });
 
-        it('fails when coverage is below gate', async () => {
+        it('fails when coverage is below gate', () => {
             const store = makeStore({
                 runs: [PASSING_RUN],
                 coverageHistory: [
@@ -462,7 +462,7 @@ describe('calculateHealthScore', () => {
             expect(result.dimensions.coverage.status).toBe('fail');
         });
 
-        it('fails when suite speed exceeds gate', async () => {
+        it('fails when suite speed exceeds gate', () => {
             const store = makeStore({
                 runs: [run({ total: 5, passed: 5, duration: 50000 })],
                 coverageHistory: [
@@ -482,7 +482,7 @@ describe('calculateHealthScore', () => {
     });
 
     describe('penalty', () => {
-        it('caps overall at 60 when any dimension < 40', async () => {
+        it('caps overall at 60 when any dimension < 40', () => {
             const store = makeStore({
                 runs: [PASSING_RUN],
                 coverageHistory: [
@@ -502,7 +502,7 @@ describe('calculateHealthScore', () => {
     });
 
     describe('grade boundaries', () => {
-        it('grades excellent at 90+', async () => {
+        it('grades excellent at 90+', () => {
             const store = makeStore({
                 runs: [PASSING_RUN],
                 coverageHistory: [
@@ -520,7 +520,7 @@ describe('calculateHealthScore', () => {
             expect(result.grade).toBe('excellent');
         });
 
-        it('grades good at 70-89', async () => {
+        it('grades good at 70-89', () => {
             const store = makeStore({
                 runs: [run({ total: 10, passed: 8, failed: 2, duration: 5000 })],
                 coverageHistory: [
@@ -537,7 +537,7 @@ describe('calculateHealthScore', () => {
             expect(result.grade).toBe('good');
         });
 
-        it('grades needs_attention at 50-69', async () => {
+        it('grades needs_attention at 50-69', () => {
             const store = makeStore({
                 runs: [run({ total: 10, passed: 5, failed: 5, duration: 5000 })],
                 coverageHistory: [
@@ -554,14 +554,14 @@ describe('calculateHealthScore', () => {
             expect(result.grade).toBe('needs_attention');
         });
 
-        it('grades critical below 50', async () => {
+        it('grades critical below 50', () => {
             const store = makeStore();
             const result = calculateHealthScore(store);
             expect(result.overall).toBeLessThan(50);
             expect(result.grade).toBe('critical');
         });
 
-        it('boundary: 89 is good, 90 is excellent', async () => {
+        it('boundary: 89 is good, 90 is excellent', () => {
             const store89 = makeStore({
                 runs: [run({ total: 100, passed: 89, failed: 11, duration: 5000 })],
                 coverageHistory: [
@@ -601,7 +601,7 @@ describe('calculateHealthScore', () => {
             expect(r90.grade).toBe('excellent');
         });
 
-        it('boundary: 49 is critical, 50 is needs_attention', async () => {
+        it('boundary: 49 is critical, 50 is needs_attention', () => {
             const store49 = makeStore({
                 runs: [run({ total: 10, passed: 5, failed: 5, duration: 5000 })],
             });
@@ -632,7 +632,7 @@ describe('calculateHealthScore', () => {
     });
 
     describe('config override', () => {
-        it('accepts custom weights', async () => {
+        it('accepts custom weights', () => {
             const store = makeStore({
                 runs: [run({ total: 10, passed: 8, failed: 2, duration: 5000 })],
                 coverageHistory: [
@@ -652,7 +652,7 @@ describe('calculateHealthScore', () => {
             expect(resultDefault.overall).not.toBe(resultCustom.overall);
         });
 
-        it('accepts custom targets', async () => {
+        it('accepts custom targets', () => {
             const store = makeStore({
                 runs: [run({ total: 10, passed: 8, failed: 2, duration: 5000 })],
                 coverageHistory: [
@@ -672,7 +672,7 @@ describe('calculateHealthScore', () => {
     });
 
     describe('edge: all passing with 0% flaky', () => {
-        it('scores 100 in every dimension with ideal metrics', async () => {
+        it('scores 100 in every dimension with ideal metrics', () => {
             const runs = Array.from({ length: 20 }, (_, i) =>
                 run({
                     timestamp: `2026-01-${i + 1}T00:00:00.000Z`,
@@ -706,7 +706,7 @@ describe('calculateHealthScore', () => {
     });
 
     describe('edge: everything failing', () => {
-        it('scores 0 and quality gate fails', async () => {
+        it('scores 0 and quality gate fails', () => {
             const store = makeStore({
                 runs: [
                     run({

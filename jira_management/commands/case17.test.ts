@@ -3,50 +3,50 @@ import { expect, vi } from 'vitest';
 vi.mock('../../shared/prompt');
 vi.mock('../../shared/logger');
 
-vi.mock('../../shared/result_parser', async () => ({
+vi.mock('../../shared/result_parser', () => ({
     parseTestResultsFile: vi.fn(),
 }));
 
-vi.mock('../../shared/report-generator', async () => ({
+vi.mock('../../shared/report-generator', () => ({
     generateHtmlReport: vi.fn(),
     loadKnownIssues: vi.fn(() => []),
     categorizeFailure: vi.fn(),
 }));
 
-vi.mock('../../shared/publish', async () => ({
+vi.mock('../../shared/publish', () => ({
     publishReport: vi.fn(),
 }));
 
-vi.mock('../../shared/failure-analysis', async () => ({
+vi.mock('../../shared/failure-analysis', () => ({
     analyzeFailuresWithReport: vi.fn(),
 }));
 
-vi.mock('../../shared/open', async () => ({
+vi.mock('../../shared/open', () => ({
     openWithOsOrFallback: vi.fn(),
     openWithFallback: vi.fn(),
 }));
 
-vi.mock('../../shared/temp-dir', async () => ({
+vi.mock('../../shared/temp-dir', () => ({
     writeReport: vi.fn(() => '/tmp/report.html'),
 }));
 
-vi.mock('../../shared/bug-report', async () => ({
+vi.mock('../../shared/bug-report', () => ({
     collectAutomated: vi.fn(),
     interactiveBugReportFlow: vi.fn(),
 }));
 
-vi.mock('../../shared/git-sha', async () => ({
+vi.mock('../../shared/git-sha', () => ({
     detectGitDir: vi.fn().mockReturnValue(null),
     getHeadSha: vi.fn().mockReturnValue(null),
     getCurrentBranch: vi.fn().mockReturnValue(null),
 }));
 
-vi.mock('../../shared/store-backend', async () => ({
+vi.mock('../../shared/store-backend', () => ({
     detectStoreBackend: vi.fn(),
     detectProjectGitDir: vi.fn().mockReturnValue(null),
 }));
 
-vi.mock('../../shared/git-artifact-downloader', async () => ({
+vi.mock('../../shared/git-artifact-downloader', () => ({
     fetchGitHistory: vi.fn().mockResolvedValue({
         runs: [],
         commits: '',
@@ -57,7 +57,7 @@ vi.mock('../../shared/git-artifact-downloader', async () => ({
 
 let loadMetricsValue: unknown = null;
 
-vi.mock('../../shared/store', async () => {
+vi.mock('../../shared/store', () => {
     function makeMockStore() {
         const store = {
             lookup: vi.fn(),
@@ -80,7 +80,7 @@ vi.mock('../../shared/store', async () => {
     };
 });
 
-vi.mock('../../shared/logger', async () => ({
+vi.mock('../../shared/logger', () => ({
     rootLogger: {
         error: vi.fn(),
         warn: vi.fn(),
@@ -90,7 +90,7 @@ vi.mock('../../shared/logger', async () => ({
 
 vi.mock('fs');
 
-vi.mock('../../shared/http-client', async () => ({
+vi.mock('../../shared/http-client', () => ({
     createHttpClient: vi.fn(),
     setTestSleep: vi.fn(),
 }));
@@ -735,7 +735,7 @@ describe('case17 — HTML report generator', () => {
                             skipped: 0,
                             total: 0,
                             duration: 0,
-                        } as import('../../shared/result_parser.js').ParseResult['stats'],
+                        },
                     },
                     null,
                 ),

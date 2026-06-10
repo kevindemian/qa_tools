@@ -2,7 +2,7 @@ import { glGetBranch, glGetDiff } from './gitlab-branch.js';
 import { apiGet, projectPath, formatDiffResponse } from './gitlab-api.js';
 import { createMockAxiosInstance } from '../shared/test-utils/factories/response-factory.js';
 
-vi.mock('./gitlab-api', async () => ({
+vi.mock('./gitlab-api', () => ({
     apiGet: vi.fn(),
     apiPost: vi.fn(),
     apiPut: vi.fn(),

@@ -1,11 +1,11 @@
 import { describe, expect, it, vi, beforeEach } from 'vitest';
 import { createHttpClient } from './http-client.js';
 
-vi.mock('./http-client', async () => ({
+vi.mock('./http-client', () => ({
     createHttpClient: vi.fn(),
 }));
 
-vi.mock('./config', async () => ({
+vi.mock('./config', () => ({
     default: {
         get: vi.fn((key: string) => {
             if (key === 'githubToken') return 'gh_token_abc';
@@ -23,11 +23,11 @@ vi.mock('./config', async () => ({
     },
 }));
 
-vi.mock('./logger', async () => ({
+vi.mock('./logger', () => ({
     rootLogger: { warn: vi.fn(), error: vi.fn(), child: vi.fn().mockReturnValue({ info: vi.fn(), error: vi.fn() }) },
 }));
 
-vi.mock('./deps', async () => ({
+vi.mock('./deps', () => ({
     AdmZip: class {
         entries: Array<{ name: string; getData: () => Buffer }>;
         constructor(data: Buffer) {

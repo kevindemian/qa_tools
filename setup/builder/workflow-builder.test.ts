@@ -1,13 +1,13 @@
 import { WorkflowBuilder } from './workflow-builder.js';
 
 describe('WorkflowBuilder', () => {
-    it('builds an empty workflow for GitHub', async () => {
+    it('builds an empty workflow for GitHub', () => {
         const b = new WorkflowBuilder('github', 'test');
         const yaml = b.toString();
         expect(yaml.trim()).toBe('{}');
     });
 
-    it('sets workflow name and on events', async () => {
+    it('sets workflow name and on events', () => {
         const b = new WorkflowBuilder('github', 'test');
         b.setWorkflowName('QA Pipeline');
         b.setOn(['push', 'pull_request']);
@@ -18,7 +18,7 @@ describe('WorkflowBuilder', () => {
         expect(yaml).toContain('pull_request');
     });
 
-    it('adds a GitHub job with steps', async () => {
+    it('adds a GitHub job with steps', () => {
         const b = new WorkflowBuilder('github', 'test');
         b.addJob('qa', {
             runsOn: 'ubuntu-latest',
@@ -31,7 +31,7 @@ describe('WorkflowBuilder', () => {
         expect(yaml).toContain('npm test');
     });
 
-    it('adds a GitLab job with script and stage', async () => {
+    it('adds a GitLab job with script and stage', () => {
         const b = new WorkflowBuilder('gitlab', 'test');
         b.setStages(['test']);
         b.addJob('qa', {
@@ -49,7 +49,7 @@ describe('WorkflowBuilder', () => {
         expect(yaml).toContain('paths:');
     });
 
-    it('parses existing YAML and adds a job', async () => {
+    it('parses existing YAML and adds a job', () => {
         const existing = `name: CI
 on: [push]
 
@@ -79,7 +79,7 @@ jobs:
         expect(yaml).toContain('lint');
     });
 
-    it('removes a job', async () => {
+    it('removes a job', () => {
         const b = new WorkflowBuilder('github', 'test');
         b.addJob('qa', { runsOn: 'ubuntu-latest', steps: [{ run: 'echo hi' }] });
         expect(b.hasJob('qa')).toBe(true);
@@ -88,7 +88,7 @@ jobs:
         expect(b.jobNames()).toEqual([]);
     });
 
-    it('supports env vars in GitHub steps', async () => {
+    it('supports env vars in GitHub steps', () => {
         const b = new WorkflowBuilder('github', 'test');
         b.addJob('qa', {
             runsOn: 'ubuntu-latest',
@@ -99,7 +99,7 @@ jobs:
         expect(yaml).toContain('TOKEN');
     });
 
-    it('supports services in GitHub jobs', async () => {
+    it('supports services in GitHub jobs', () => {
         const b = new WorkflowBuilder('github', 'test');
         b.addJob('qa', {
             runsOn: 'ubuntu-latest',
@@ -114,7 +114,7 @@ jobs:
         expect(yaml).toContain('image: postgres:16');
     });
 
-    it('sets stages for GitLab', async () => {
+    it('sets stages for GitLab', () => {
         const b = new WorkflowBuilder('gitlab', 'test');
         b.setStages(['build', 'test', 'deploy']);
         const yaml = b.toString();
@@ -123,7 +123,7 @@ jobs:
         expect(yaml).toContain('deploy');
     });
 
-    it('adds global variables for any provider', async () => {
+    it('adds global variables for any provider', () => {
         const b = new WorkflowBuilder('github', 'test');
         b.addGlobalVariable('NODE_VERSION', '20');
         b.addGlobalVariable('CI', 'true');
@@ -132,7 +132,7 @@ jobs:
         expect(yaml).toContain('CI');
     });
 
-    it('handles invalid YAML in parseExisting gracefully', async () => {
+    it('handles invalid YAML in parseExisting gracefully', () => {
         const b = new WorkflowBuilder('github', 'test');
         b.parseExisting('{{{ not valid yaml }}}');
         expect(b.jobNames()).toEqual([]);

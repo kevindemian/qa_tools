@@ -201,7 +201,7 @@ function detectNoisyJourneys(): AuditFinding[] {
         const src = readSource(hf);
         for (const call of src.matchAll(/ask\(['"]([^'"]+)['"][^)]*\)/g)) {
             if (!call[0].includes('hint:')) {
-                const lineNum = src.slice(0, call.index!).split('\n').length;
+                const lineNum = src.slice(0, call.index).split('\n').length;
                 const handlerName = path.basename(hf, '.ts');
                 findings.push({
                     type: 'noisy-journey',
@@ -244,11 +244,11 @@ function detectDeadUtilities(importGraph: ImportGraph): AuditFinding[] {
         /* Find exports */
         const exports_: Array<{ name: string; line: number }> = [];
         for (const m of src.matchAll(/^export (?:async )?function (\w+)/gm)) {
-            const lineNum = src.slice(0, m.index!).split('\n').length;
+            const lineNum = src.slice(0, m.index).split('\n').length;
             exports_.push({ name: m[1]!, line: lineNum });
         }
         for (const m of src.matchAll(/^export (?:const|let|var) (\w+)/gm)) {
-            const lineNum = src.slice(0, m.index!).split('\n').length;
+            const lineNum = src.slice(0, m.index).split('\n').length;
             exports_.push({ name: m[1]!, line: lineNum });
         }
 
@@ -321,7 +321,7 @@ function computeFrictionScore(): number {
         const askCalls = [...src.matchAll(/ask\(['"]([^'"]+)['"]/g)];
         totalPrompts += askCalls.length;
         for (const call of askCalls) {
-            const snippet = src.slice(Math.max(0, call.index! - 50), call.index! + 100);
+            const snippet = src.slice(Math.max(0, call.index - 50), call.index + 100);
             if (!snippet.includes('hint:')) {
                 promptsWithoutHint++;
             }
@@ -350,7 +350,7 @@ function computeFrictionScore(): number {
     /* AL: submenu items without alias / total submenu items */
     const aliasTargets = new Set<string>();
     for (const m of menuSource.matchAll(/['"]([\w-]+)['"]:\s*['"]([\w\d\/]+)['"]/g)) {
-        if (m[2]) aliasTargets.add(m[2]!);
+        if (m[2]) aliasTargets.add(m[2]);
     }
     let itemsWithAlias = 0;
     let totalItems = 0;

@@ -96,7 +96,7 @@ beforeEach(() => {
 });
 
 describe('tierToConfig', () => {
-    it('returns main config for main tier', async () => {
+    it('returns main config for main tier', () => {
         Config.set('llmApiKey', 'sk-main');
         Config.set('llmModel', 'gpt-4');
         Config.set('llmBaseUrl', 'https://api.test.com/v1');
@@ -106,7 +106,7 @@ describe('tierToConfig', () => {
         expect(cfg.format).toBe('openai');
     });
 
-    it('returns fast tier config', async () => {
+    it('returns fast tier config', () => {
         Config.set('llmFastApiKey', 'gsk-fast');
         Config.set('llmFastModel', 'llama3');
         const cfg = tierToConfig('fast');
@@ -115,7 +115,7 @@ describe('tierToConfig', () => {
         expect(cfg.format).toBe('openai');
     });
 
-    it('returns reviewer tier config with gemini format', async () => {
+    it('returns reviewer tier config with gemini format', () => {
         Config.set('llmReviewApiKey', 'AIza-review');
         Config.set('llmReviewModel', 'gemini-2.0-flash-exp');
         const cfg = tierToConfig('reviewer');
@@ -124,7 +124,7 @@ describe('tierToConfig', () => {
         expect(cfg.format).toBe('gemini');
     });
 
-    it('returns report tier config with json responseFormat', async () => {
+    it('returns report tier config with json responseFormat', () => {
         Config.set('llmApiKey', 'sk-report');
         Config.set('llmModel', 'gpt-4-report');
         const cfg = tierToConfig('report');
@@ -132,7 +132,7 @@ describe('tierToConfig', () => {
         expect(cfg.responseFormat).toBe('json');
     });
 
-    it('falls back to main when tier is unknown', async () => {
+    it('falls back to main when tier is unknown', () => {
         Config.set('llmApiKey', 'sk-main');
         const cfg = (tierToConfig as (tier: string) => ReturnType<typeof tierToConfig>)('nonexistent');
         expect(cfg.apiKey).toBe('sk-main');
@@ -140,7 +140,7 @@ describe('tierToConfig', () => {
 });
 
 describe('getLlmClientMetrics / resetLlmClientMetrics', () => {
-    it('returns initial zero metrics', async () => {
+    it('returns initial zero metrics', () => {
         const metrics = getLlmClientMetrics();
         expect(metrics.cacheHits).toBe(0);
         expect(metrics.cacheMisses).toBe(0);
@@ -148,7 +148,7 @@ describe('getLlmClientMetrics / resetLlmClientMetrics', () => {
         expect(metrics.totalCompletionTokens).toBe(0);
     });
 
-    it('resets metrics to zero', async () => {
+    it('resets metrics to zero', () => {
         _llmMetrics.cacheHits = 10;
         _llmMetrics.cacheMisses = 5;
         resetLlmClientMetrics();
@@ -159,12 +159,12 @@ describe('getLlmClientMetrics / resetLlmClientMetrics', () => {
 });
 
 describe('getFetchRetries', () => {
-    it('returns default 3 when not configured', async () => {
+    it('returns default 3 when not configured', () => {
         const result = getFetchRetries();
         expect(result).toBe(3);
     });
 
-    it('parses LLM_FETCH_RETRIES from Config', async () => {
+    it('parses LLM_FETCH_RETRIES from Config', () => {
         Config.set('LLM_FETCH_RETRIES', '5');
         const result = getFetchRetries();
         expect(result).toBe(5);
@@ -176,7 +176,7 @@ describe('_trackUsage', () => {
         resetLlmClientMetrics();
     });
 
-    it('tracks OpenAI-style usage and updates metrics', async () => {
+    it('tracks OpenAI-style usage and updates metrics', () => {
         const data = {
             usage: { prompt_tokens: 10, completion_tokens: 20, total_tokens: 30 },
         };
@@ -188,7 +188,7 @@ describe('_trackUsage', () => {
         expect(metrics.requestsByProviderKey['test-provider']).toBe(1);
     });
 
-    it('tracks Gemini-style usage metadata', async () => {
+    it('tracks Gemini-style usage metadata', () => {
         const data = {
             usageMetadata: { promptTokenCount: 5, candidatesTokenCount: 15, totalTokenCount: 20 },
         };
@@ -199,7 +199,7 @@ describe('_trackUsage', () => {
         expect(metrics.totalCostUSD).toBeGreaterThan(0);
     });
 
-    it('counts multiple requests to same provider with cost accumulation', async () => {
+    it('counts multiple requests to same provider with cost accumulation', () => {
         _trackUsage({ usage: { prompt_tokens: 1, completion_tokens: 2 } }, 'same', 'main');
         _trackUsage({ usage: { prompt_tokens: 3, completion_tokens: 4 } }, 'same', 'main');
         expect(_llmMetrics.requestsByProviderKey['same']).toBe(2);
@@ -208,7 +208,7 @@ describe('_trackUsage', () => {
         expect(_llmMetrics.totalCostUSD).toBeGreaterThan(0);
     });
 
-    it('tracks cost per tier separately', async () => {
+    it('tracks cost per tier separately', () => {
         _trackUsage({ usage: { prompt_tokens: 1000, completion_tokens: 500 } }, 'p1', 'main');
         _trackUsage({ usage: { prompt_tokens: 2000, completion_tokens: 1000 } }, 'p2', 'reviewer');
         expect(_llmMetrics.costPerTier['main']).toBeGreaterThan(0);
@@ -218,7 +218,7 @@ describe('_trackUsage', () => {
 });
 
 describe('extractContent', () => {
-    it('extracts text from OpenAI-style response', async () => {
+    it('extracts text from OpenAI-style response', () => {
         const data = {
             choices: [{ message: { content: 'hello world' } }],
         };
@@ -226,7 +226,7 @@ describe('extractContent', () => {
         expect(result).toBe('hello world');
     });
 
-    it('extracts text from Gemini-style response', async () => {
+    it('extracts text from Gemini-style response', () => {
         const data = {
             candidates: [{ content: { parts: [{ text: 'gemini response' }] } }],
         };
@@ -234,13 +234,13 @@ describe('extractContent', () => {
         expect(result).toBe('gemini response');
     });
 
-    it('returns empty string for empty OpenAI response', async () => {
+    it('returns empty string for empty OpenAI response', () => {
         const data = { choices: [{ message: { content: '' } }] };
         const result = extractContent(data, 'openai');
         expect(result).toBe('');
     });
 
-    it('returns empty string for missing content in Gemini', async () => {
+    it('returns empty string for missing content in Gemini', () => {
         const data = { candidates: [{}] };
         const result = extractContent(data, 'gemini');
         expect(result).toBe('');
@@ -248,11 +248,11 @@ describe('extractContent', () => {
 });
 
 describe('constants', () => {
-    it('exports LLM_TEMP_DEFAULT', async () => {
+    it('exports LLM_TEMP_DEFAULT', () => {
         expect(LLM_TEMP_DEFAULT).toBe(0.3);
     });
 
-    it('exports retry constants', async () => {
+    it('exports retry constants', () => {
         expect(LLM_RETRY_BASE_WAIT_MS).toBe(2000);
         expect(LLM_RETRY_MAX_WAIT_MS).toBe(10000);
         expect(LLM_FETCH_TIMEOUT_MS).toBe(30000);
@@ -261,7 +261,7 @@ describe('constants', () => {
 });
 
 describe('LlmErrorPayloadSchema', () => {
-    it('parses a valid error payload', async () => {
+    it('parses a valid error payload', () => {
         const result = LlmErrorPayloadSchema.safeParse({
             message: 'rate limit',
             type: 'rate_limit_error',
@@ -270,30 +270,30 @@ describe('LlmErrorPayloadSchema', () => {
         expect(result.success).toBe(true);
     });
 
-    it('accepts empty error payload', async () => {
+    it('accepts empty error payload', () => {
         const result = LlmErrorPayloadSchema.safeParse({});
         expect(result.success).toBe(true);
     });
 });
 
 describe('estimateCostUSD', () => {
-    it('calculates cost for known model', async () => {
+    it('calculates cost for known model', () => {
         const cost = estimateCostUSD('google/gemini-2.0-flash-exp', 1000, 500);
         expect(cost).toBeGreaterThan(0);
         expect(cost).toBeLessThan(0.01);
     });
 
-    it('falls back to default pricing for unknown model', async () => {
+    it('falls back to default pricing for unknown model', () => {
         const cost = estimateCostUSD('nonexistent-model', 1000, 500);
         expect(cost).toBeGreaterThan(0);
     });
 
-    it('handles zero tokens', async () => {
+    it('handles zero tokens', () => {
         const cost = estimateCostUSD('google/gemini-2.0-flash-exp', 0, 0);
         expect(cost).toBe(0);
     });
 
-    it('pricing is proportional to token count', async () => {
+    it('pricing is proportional to token count', () => {
         const small = estimateCostUSD('google/gemini-2.0-flash-exp', 1000, 500);
         const large = estimateCostUSD('google/gemini-2.0-flash-exp', 2000, 1000);
         expect(large).toBeCloseTo(small * 2, 5);
@@ -301,7 +301,7 @@ describe('estimateCostUSD', () => {
 });
 
 describe('getModelPricing', () => {
-    it('returns pricing for known model', async () => {
+    it('returns pricing for known model', () => {
         const pricing = getModelPricing('google/gemini-2.0-flash-exp');
         expect(pricing).toBeDefined();
         if (!pricing) throw new Error('Expected pricing to be defined');
@@ -309,21 +309,21 @@ describe('getModelPricing', () => {
         expect(pricing.outputPer1K).toBeGreaterThan(0);
     });
 
-    it('returns undefined for unknown model', async () => {
+    it('returns undefined for unknown model', () => {
         expect(getModelPricing('unknown')).toBeUndefined();
     });
 });
 
 describe('hasPricingForModel', () => {
-    it('returns true for known model', async () => {
+    it('returns true for known model', () => {
         expect(hasPricingForModel('google/gemini-2.0-flash-exp')).toBe(true);
     });
 
-    it('returns false for unknown model', async () => {
+    it('returns false for unknown model', () => {
         expect(hasPricingForModel('unknown')).toBe(false);
     });
 
-    it('returns true for llama-3.1-8b-instant', async () => {
+    it('returns true for llama-3.1-8b-instant', () => {
         expect(hasPricingForModel('llama-3.1-8b-instant')).toBe(true);
     });
 });

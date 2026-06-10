@@ -40,18 +40,18 @@ vi.mock('fs', async () => {
     return { ...actual, ...mockFsMod };
 });
 
-vi.mock('../shared/state', async () => ({
+vi.mock('../shared/state', () => ({
     load: vi.fn<(...args: []) => object>().mockReturnValue({}),
     update: vi.fn<(...args: [(state: object) => void]) => object>(),
 }));
 
-vi.mock('../shared/temp-dir', async () => ({
+vi.mock('../shared/temp-dir', () => ({
     reportsDir: vi.fn<(...args: []) => string>(),
     writeEphemeral: vi.fn<(...args: [string, string, string]) => string>(),
     tempDirPath: vi.fn<(...args: []) => string>().mockReturnValue('/tmp/qa-tools-temp'),
 }));
 
-vi.mock('axios', async () => {
+vi.mock('axios', () => {
     const mockInstance = {
         interceptors: {
             request: {
@@ -129,11 +129,11 @@ const MOCK_FIELDS = [
 
 const PROJECT = 'TESTPROJ';
 
-describe('createTestExecution', async () => {
+describe('createTestExecution', () => {
     let jiraResource: Mocked<JiraResource>;
     let testExecutionCreator: TestExecutionCreator;
 
-    beforeEach(async () => {
+    beforeEach(() => {
         jiraResource = vi.mocked(new JiraResource('fake-token', 'http://jira/rest/api/2'));
         vi.spyOn(jiraResource, 'getJiraResource');
         vi.spyOn(jiraResource, 'postJiraResource');
@@ -269,12 +269,12 @@ describe('createTestExecution', async () => {
     });
 });
 
-describe('createTestExecutionWithLinks', async () => {
+describe('createTestExecutionWithLinks', () => {
     let jiraResource: Mocked<JiraResource>;
     let linkJiraRes: Mocked<JiraResource>;
     let testExecutionCreator: TestExecutionCreator;
 
-    beforeEach(async () => {
+    beforeEach(() => {
         jiraResource = vi.mocked(new JiraResource('fake-token', 'http://jira/rest/api/2'));
         vi.spyOn(jiraResource, 'getJiraResource');
         vi.spyOn(jiraResource, 'postJiraResource');
@@ -379,12 +379,12 @@ describe('generateMappingFiles', async () => {
     let testIdx = 0;
     const nextBase = () => '/tmp/test-csv-' + ++testIdx;
 
-    beforeAll(async () => {
+    beforeAll(() => {
         realFs.writeFileSync(csvPath, 'Title: X\nAction,Data,Expected\nx,y,z\n', 'utf8');
         vi.mocked(tempDirModule).reportsDir.mockReturnValue(tmpDir);
     });
 
-    afterAll(async () => {
+    afterAll(() => {
         try {
             realFs.rmSync(tmpDir, { recursive: true, force: true });
         } catch {
@@ -401,7 +401,7 @@ describe('generateMappingFiles', async () => {
         return actions.map((a) => ({ fields: { Action: a, Data: '', 'Expected Result': '' } }));
     }
 
-    it('creates JSON and MD mapping files', async () => {
+    it('creates JSON and MD mapping files', () => {
         const base = nextBase();
         const testCases: Partial<TestCase>[] = [
             { title: 'TC1', description: 'Descricao do TC1', steps: makeSteps('a1', 'a2') },
@@ -425,7 +425,7 @@ describe('generateMappingFiles', async () => {
         expect(content).toContain('"Action": "a2"');
     });
 
-    it('generates mapping files regardless of CYPRESS_PROJECT_PATH', async () => {
+    it('generates mapping files regardless of CYPRESS_PROJECT_PATH', () => {
         delete process.env.CYPRESS_PROJECT_PATH;
         const base = nextBase();
         const testCases: TestCase[] = [{ title: 'TC', steps: [] }];
@@ -434,7 +434,7 @@ describe('generateMappingFiles', async () => {
         process.env.CYPRESS_PROJECT_PATH = tmpDir;
     });
 
-    it('returns early when tasksId is empty', async () => {
+    it('returns early when tasksId is empty', () => {
         const capture = vi.fn<(...args: [...string[]]) => void>();
         vi.spyOn(console, 'log').mockImplementation(capture);
         generateMappingFiles(nextBase() + '.csv', 'PROJ', [], []);
@@ -443,7 +443,7 @@ describe('generateMappingFiles', async () => {
         vi.restoreAllMocks();
     });
 
-    it('includes steps and precondition in JSON mapping', async () => {
+    it('includes steps and precondition in JSON mapping', () => {
         const base = nextBase();
         const testCases: TestCase[] = [
             {
@@ -459,7 +459,7 @@ describe('generateMappingFiles', async () => {
         expect(content2).toContain('"Action": "Click login"');
     });
 
-    it('generates MD with full steps for each test', async () => {
+    it('generates MD with full steps for each test', () => {
         const base = nextBase();
         const testCases: Partial<TestCase>[] = [
             { title: 'TC1', description: 'Descricao do TC1', steps: makeSteps('a1') },
@@ -480,13 +480,13 @@ describe('generateMappingFiles', async () => {
     });
 });
 
-describe('validateCsvTests', async () => {
-    it('returns error for empty title', async () => {
+describe('validateCsvTests', () => {
+    it('returns error for empty title', () => {
         const { errors } = validateCsvTests([{ title: '', steps: [{ fields: { Action: 'x' } }] }]);
         expect(errors[0]).toContain('Título é obrigatório');
     });
 
-    it('returns warning for duplicate titles', async () => {
+    it('returns warning for duplicate titles', () => {
         const { warnings } = validateCsvTests([
             { title: 'TC1', steps: [{ fields: { Action: 'x' } }] },
             { title: 'TC1', steps: [{ fields: { Action: 'y' } }] },
@@ -494,24 +494,24 @@ describe('validateCsvTests', async () => {
         expect(warnings).toContain('Teste 2: Titulo duplicado "TC1"');
     });
 
-    it('returns error for no steps', async () => {
+    it('returns error for no steps', () => {
         const { errors } = validateCsvTests([{ title: 'TC1', steps: [] }]);
         expect(errors[0]).toContain('Pelo menos um step');
     });
 
-    it('returns warning for empty Action in step', async () => {
+    it('returns warning for empty Action in step', () => {
         const { warnings } = validateCsvTests([{ title: 'TC1', steps: [{ fields: { Action: '' } }] }]);
         expect(warnings[0]).toContain('sem Action');
     });
 
-    it('returns no errors for valid test', async () => {
+    it('returns no errors for valid test', () => {
         const { errors, warnings } = validateCsvTests([{ title: 'TC1', steps: [{ fields: { Action: 'Click' } }] }]);
         expect(errors).toHaveLength(0);
         expect(warnings).toHaveLength(0);
     });
 });
 
-describe('createTestsFromJson', async () => {
+describe('createTestsFromJson', () => {
     const FS = vi.mocked({ ...fs, ...mockFsMod } as typeof fs);
 
     function makeJiraResource(): Mocked<JiraResource> {
@@ -545,7 +545,7 @@ describe('createTestsFromJson', async () => {
             onBusy: vi.fn<(...args: [boolean]) => void>(),
         } satisfies Parameters<typeof createTestsFromJson>[0];
     }
-    afterEach(async () => {
+    afterEach(() => {
         delete process.env.JSON_PATH;
         delete process.env.AUTO_CONFIRM;
         delete process.env.DRY_RUN;
@@ -640,7 +640,7 @@ describe('createTestsFromJson', async () => {
     });
 });
 
-describe('readCsvTests (via createTestsFromCsv)', async () => {
+describe('readCsvTests (via createTestsFromCsv)', () => {
     let csvResource: Mocked<CsvResource>;
 
     function makeJiraResForCsv(): Mocked<JiraResource> {
@@ -671,7 +671,7 @@ describe('readCsvTests (via createTestsFromCsv)', async () => {
         } satisfies Parameters<typeof createTestsFromCsv>[0];
     }
 
-    beforeEach(async () => {
+    beforeEach(() => {
         vi.clearAllMocks();
         csvResource = vi.mocked(new CsvResource());
         vi.spyOn(csvResource, 'readBulkCsv');
@@ -692,7 +692,7 @@ describe('readCsvTests (via createTestsFromCsv)', async () => {
     });
 });
 
-describe('updateCrossReferences', async () => {
+describe('updateCrossReferences', () => {
     it('delegates to linker', async () => {
         const linker: IssueLinker = {
             jiraResource: createMockJiraResource(),
@@ -714,7 +714,7 @@ describe('updateCrossReferences', async () => {
     });
 });
 
-describe('createTestsFromCsv', async () => {
+describe('createTestsFromCsv', () => {
     let csvResource: Mocked<CsvResource>;
 
     function makeJiraResCSV(): Mocked<JiraResource> {
@@ -740,7 +740,7 @@ describe('createTestsFromCsv', async () => {
         return { ...base, ...overrides };
     }
 
-    beforeEach(async () => {
+    beforeEach(() => {
         vi.clearAllMocks();
         csvResource = vi.mocked(new CsvResource());
         vi.spyOn(csvResource, 'readBulkCsv');

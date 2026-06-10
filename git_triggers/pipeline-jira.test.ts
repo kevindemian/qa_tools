@@ -1,10 +1,10 @@
-vi.mock('../shared/prompt', async () => ({
+vi.mock('../shared/prompt', () => ({
     confirm: vi.fn(),
     success: vi.fn(),
     printError: vi.fn(),
 }));
 
-vi.mock('../shared/config', async () => ({
+vi.mock('../shared/config', () => ({
     default: {
         jiraProject: 'ECSPOL',
         get(key: string) {
@@ -17,16 +17,16 @@ vi.mock('../shared/config', async () => ({
     __esModule: true,
 }));
 
-vi.mock('./test-results', async () => ({
+vi.mock('./test-results', () => ({
     _jiraEnv: vi.fn(),
 }));
 
-vi.mock('./session-state', async () => ({
+vi.mock('./session-state', () => ({
     currentProvider: 'gitlab',
     pushHistory: vi.fn(),
 }));
 
-vi.mock('../shared/bug-report', async () => ({
+vi.mock('../shared/bug-report', () => ({
     collectAutomated: vi.fn(),
     fileToJira: vi.fn(),
 }));

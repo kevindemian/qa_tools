@@ -14,7 +14,7 @@ beforeEach(() => {
 });
 
 describe('case10 — set directory', () => {
-    it('exports a handler function', async () => {
+    it('exports a handler function', () => {
         expect(case10).toBeDefined();
         expect(typeof case10.handler).toBe('function');
     });

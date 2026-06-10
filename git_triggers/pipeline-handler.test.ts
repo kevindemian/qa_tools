@@ -14,14 +14,14 @@ vi.mock('../shared/prompt', () => {
     };
 });
 
-vi.mock('./session-state', async () => ({
+vi.mock('./session-state', () => ({
     currentProvider: 'gitlab',
     pushHistory: vi.fn(),
     setIsBusy: vi.fn(),
     MSG_OPERATION_CANCELED: 'Operação cancelada.',
 }));
 
-vi.mock('../shared/state', async () => ({
+vi.mock('../shared/state', () => ({
     load: vi.fn(() => ({})),
     update: vi.fn((fn: (s: Record<string, unknown>) => void) => {
         const s: Record<string, unknown> = {};
@@ -30,17 +30,17 @@ vi.mock('../shared/state', async () => ({
     }),
 }));
 
-vi.mock('../shared/http-client', async () => ({ sleep: vi.fn() }));
-vi.mock('../shared/git-sha.js', async () => ({
+vi.mock('../shared/http-client', () => ({ sleep: vi.fn() }));
+vi.mock('../shared/git-sha.js', () => ({
     getHeadSha: vi.fn().mockReturnValue('pipeline-sha-999'),
     getCurrentBranch: vi.fn().mockReturnValue('main'),
     detectGitDir: vi.fn().mockReturnValue('/project'),
 }));
-vi.mock('../shared/store-backend.js', async () => ({
+vi.mock('../shared/store-backend.js', () => ({
     detectStoreBackend: vi.fn(),
     detectProjectGitDir: vi.fn().mockReturnValue('/project'),
 }));
-vi.mock('../shared/store.js', async () => {
+vi.mock('../shared/store.js', () => {
     function makeMockStore() {
         return {
             lookup: vi.fn(),
@@ -62,7 +62,7 @@ vi.mock('../shared/store.js', async () => {
     };
 });
 
-vi.mock('../shared/config', async () => ({
+vi.mock('../shared/config', () => ({
     __esModule: true,
     default: {
         jiraProject: 'TEST',
@@ -70,7 +70,7 @@ vi.mock('../shared/config', async () => ({
     },
 }));
 
-vi.mock('./test-results', async () => ({
+vi.mock('./test-results', () => ({
     collectTestResults: vi.fn(),
     createTestExecution: vi.fn(),
     _jiraEnv: vi.fn(() => ({ base: 'https://jira.com', token: 'tok', xray: 'xray', mode: 'server' })),
@@ -79,16 +79,16 @@ vi.mock('./test-results', async () => ({
     parseTestResults: vi.fn(),
 }));
 
-vi.mock('./llm-pipeline', async () => ({
+vi.mock('./llm-pipeline', () => ({
     offerPipelineFailureAnalysis: vi.fn(),
 }));
 
-vi.mock('../shared/bug-report', async () => ({
+vi.mock('../shared/bug-report', () => ({
     collectAutomated: vi.fn(() => ({ description: '', title: 'Bug', severity: 'major' })),
     fileToJira: vi.fn(() => 'BUG-1'),
 }));
 
-vi.mock('../shared/jira-client', async () => ({
+vi.mock('../shared/jira-client', () => ({
     __esModule: true,
     default: vi.fn(function () {
         return {
@@ -134,14 +134,14 @@ beforeEach(() => {
 });
 
 describe('isComplete', () => {
-    it('returns true for terminal statuses', async () => {
+    it('returns true for terminal statuses', () => {
         expect(isComplete('success')).toBe(true);
         expect(isComplete('failed')).toBe(true);
         expect(isComplete('canceled')).toBe(true);
         expect(isComplete('skipped')).toBe(true);
     });
 
-    it('returns false for pending statuses', async () => {
+    it('returns false for pending statuses', () => {
         expect(isComplete('pending')).toBe(false);
         expect(isComplete('running')).toBe(false);
         expect(isComplete('')).toBe(false);
@@ -175,6 +175,7 @@ describe('pollPipeline', () => {
     it('handles missing status/state and web_url', async () => {
         let callCount = 0;
         vi.mocked(mockM.getPipeline).mockImplementation(async () => {
+            await undefined;
             callCount++;
             if (callCount === 1) return { web_url: '' };
             return { status: 'success', web_url: 'https://gitlab.com/pipe/1' };

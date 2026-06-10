@@ -18,7 +18,7 @@ vi.mock('../shared/prompt', async () => {
         askConfirm: askConfirmMock,
     };
 });
-vi.mock('../shared/state', async () => ({ load: vi.fn().mockReturnValue({}), update: vi.fn() }));
+vi.mock('../shared/state', () => ({ load: vi.fn().mockReturnValue({}), update: vi.fn() }));
 
 import nock from 'nock';
 import { SessionContext } from '../shared/session-context.js';

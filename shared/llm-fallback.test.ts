@@ -1,4 +1,4 @@
-vi.mock('./config', async () => {
+vi.mock('./config', () => {
     const mockConfig: Record<string, string> = {};
     return {
         __esModule: true,
@@ -76,12 +76,12 @@ vi.mock('./llm-rate-limiter', async () => {
         checkRateLimit: vi.fn(),
     };
 });
-vi.mock('./circuit-breaker', async () => ({
+vi.mock('./circuit-breaker', () => ({
     checkCircuitBreaker: vi.fn(),
     recordCircuitFailure: vi.fn(),
     recordCircuitSuccess: vi.fn(),
 }));
-vi.mock('./sanitize', async () => ({
+vi.mock('./sanitize', () => ({
     sanitizeForLlm: vi.fn((s: string) => s),
 }));
 
@@ -115,7 +115,7 @@ function mockErrorResponse(status: number): Response {
     return r;
 }
 
-beforeEach(async () => {
+beforeEach(() => {
     vi.clearAllMocks();
     mockFetch.mockReset();
     Config.reset();
@@ -124,8 +124,8 @@ beforeEach(async () => {
     vi.mocked(checkCircuitBreaker).mockImplementation(() => {});
 });
 
-describe('tierToConfig', async () => {
-    it('returns main config for main tier', async () => {
+describe('tierToConfig', () => {
+    it('returns main config for main tier', () => {
         Config.set('llmApiKey', 'sk-main');
         Config.set('llmModel', 'gpt-4');
         Config.set('llmBaseUrl', 'https://api.test.com/v1');
@@ -135,7 +135,7 @@ describe('tierToConfig', async () => {
         expect(cfg.format).toBe('openai');
     });
 
-    it('returns fast tier config', async () => {
+    it('returns fast tier config', () => {
         Config.set('llmFastApiKey', 'gsk-fast');
         Config.set('llmFastModel', 'llama3');
         const cfg = tierToConfig('fast');
@@ -144,7 +144,7 @@ describe('tierToConfig', async () => {
         expect(cfg.format).toBe('openai');
     });
 
-    it('returns reviewer tier config with gemini format', async () => {
+    it('returns reviewer tier config with gemini format', () => {
         Config.set('llmReviewApiKey', 'AIza-review');
         Config.set('llmReviewModel', 'gemini-2.0-flash-exp');
         const cfg = tierToConfig('reviewer');
@@ -153,7 +153,7 @@ describe('tierToConfig', async () => {
         expect(cfg.format).toBe('gemini');
     });
 
-    it('returns report tier config with json responseFormat', async () => {
+    it('returns report tier config with json responseFormat', () => {
         Config.set('llmApiKey', 'sk-report');
         Config.set('llmModel', 'gpt-4-report');
         const cfg = tierToConfig('report');
@@ -161,31 +161,31 @@ describe('tierToConfig', async () => {
         expect(cfg.responseFormat).toBe('json');
     });
 
-    it('falls back to main when tier is unknown', async () => {
+    it('falls back to main when tier is unknown', () => {
         Config.set('llmApiKey', 'sk-main');
         const cfg = (tierToConfig as (tier: string) => ReturnType<typeof tierToConfig>)('nonexistent');
         expect(cfg.apiKey).toBe('sk-main');
     });
 });
 
-describe('parseRawOnce', async () => {
-    it('parses valid JSON string', async () => {
+describe('parseRawOnce', () => {
+    it('parses valid JSON string', () => {
         const result = parseRawOnce('{"key": "value"}');
         expect(result).toEqual({ key: 'value' });
     });
 
-    it('returns null for invalid JSON', async () => {
+    it('returns null for invalid JSON', () => {
         const result = parseRawOnce('not json');
         expect(result).toBeNull();
     });
 
-    it('returns null for empty string', async () => {
+    it('returns null for empty string', () => {
         const result = parseRawOnce('');
         expect(result).toBeNull();
     });
 });
 
-describe('parseRetryAfter', async () => {
+describe('parseRetryAfter', () => {
     function mockResponseWithHeader(key: string, value: string | null): Response {
         const r = new Response('', { status: 429 });
         vi.spyOn(r, 'text').mockResolvedValue('');
@@ -193,50 +193,50 @@ describe('parseRetryAfter', async () => {
         return r;
     }
 
-    it('parses seconds from Retry-After header', async () => {
+    it('parses seconds from Retry-After header', () => {
         const resp = mockResponseWithHeader('Retry-After', '30');
         const result = parseRetryAfter(resp, 2000);
         expect(result).toBe(10000);
     });
 
-    it('returns default when no Retry-After header', async () => {
+    it('returns default when no Retry-After header', () => {
         const resp = mockResponseWithHeader('Retry-After', null);
         const result = parseRetryAfter(resp, 2000);
         expect(result).toBe(2000);
     });
 
-    it('returns default for invalid Retry-After value', async () => {
+    it('returns default for invalid Retry-After value', () => {
         const resp = mockResponseWithHeader('Retry-After', 'invalid');
         const result = parseRetryAfter(resp, 2000);
         expect(result).toBe(2000);
     });
 
-    it('caps at LLM_RETRY_MAX_WAIT_MS (10000)', async () => {
+    it('caps at LLM_RETRY_MAX_WAIT_MS (10000)', () => {
         const resp = mockResponseWithHeader('Retry-After', '999');
         const result = parseRetryAfter(resp, 2000);
         expect(result).toBe(10000);
     });
 });
 
-describe('_estimateInputTokens', async () => {
-    it('estimates token count as ceil((sys + user) / 4)', async () => {
+describe('_estimateInputTokens', () => {
+    it('estimates token count as ceil((sys + user) / 4)', () => {
         const result = _estimateInputTokens('abcd', 'efgh');
         expect(result).toBe(2);
     });
 
-    it('returns 0 for empty strings', async () => {
+    it('returns 0 for empty strings', () => {
         const result = _estimateInputTokens('', '');
         expect(result).toBe(0);
     });
 
-    it('rounds up fractional estimates', async () => {
+    it('rounds up fractional estimates', () => {
         const result = _estimateInputTokens('a', '');
         expect(result).toBe(1);
     });
 });
 
-describe('getLlmClientMetrics / resetLlmClientMetrics', async () => {
-    it('returns initial zero metrics', async () => {
+describe('getLlmClientMetrics / resetLlmClientMetrics', () => {
+    it('returns initial zero metrics', () => {
         const metrics = getLlmClientMetrics();
         expect(metrics.cacheHits).toBe(0);
         expect(metrics.cacheMisses).toBe(0);
@@ -244,7 +244,7 @@ describe('getLlmClientMetrics / resetLlmClientMetrics', async () => {
         expect(metrics.totalCompletionTokens).toBe(0);
     });
 
-    it('resets metrics to zero', async () => {
+    it('resets metrics to zero', () => {
         const metrics = getLlmClientMetrics();
         metrics.cacheHits = 10;
         metrics.cacheMisses = 5;
@@ -255,15 +255,15 @@ describe('getLlmClientMetrics / resetLlmClientMetrics', async () => {
     });
 });
 
-describe('sendWithFallback', async () => {
-    beforeEach(async () => {
+describe('sendWithFallback', () => {
+    beforeEach(() => {
         vi.spyOn(global, 'setTimeout').mockImplementation(((cb: (...args: unknown[]) => void) => {
             cb();
             return {} as NodeJS.Timeout;
         }) as typeof global.setTimeout);
     });
 
-    afterEach(async () => {
+    afterEach(() => {
         vi.restoreAllMocks();
     });
 

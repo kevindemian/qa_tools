@@ -12,7 +12,7 @@
 import { createHash } from 'crypto';
 import { readFileSync, existsSync } from 'fs';
 import { isBuiltin } from 'module';
-import { globSync } from 'glob';
+import { globSync } from '../shared/deps.js';
 import { gracefulExit } from '../shared/cli_base.js';
 import { ExitCode } from '../shared/types.js';
 
@@ -108,7 +108,7 @@ checks.push(
 const tsconfigPath = 'tsconfig.json';
 let noImplicitOverrideActive = false;
 if (existsSync(tsconfigPath)) {
-    const tsconfig = JSON.parse(readFileSync(tsconfigPath, 'utf-8'));
+    const tsconfig = JSON.parse(readFileSync(tsconfigPath, 'utf-8')) as { compilerOptions?: { noImplicitOverride?: boolean } };
     noImplicitOverrideActive = tsconfig.compilerOptions?.noImplicitOverride === true;
 }
 checks.push({
@@ -352,25 +352,25 @@ checks.push(
 
         const registered = new Set<string>();
         for (const m of indexSource.matchAll(/'(\d+|d)'\s*:\s*\{/g)) {
-            registered.add(m[1]!);
+            registered.add(m[1] ?? '');
         }
         for (const m of indexSource.matchAll(/(?:\b)(d)\s*:\s*\{/g)) {
-            registered.add(m[1]!);
+            registered.add(m[1] ?? '');
         }
 
         const menuIds = new Set<string>();
         for (const m of menuSource.matchAll(/id:\s+'(\d+|d)'/g)) {
-            menuIds.add(m[1]!);
+            menuIds.add(m[1] ?? '');
         }
 
         const aliasTargets = new Set<string>();
-        for (const m of menuSource.matchAll(/['"]([\w-]+)['"]:\s*['"]([\w\d\/]+)['"]/g)) {
-            if (m[2]) aliasTargets.add(m[2]!);
+        for (const m of menuSource.matchAll(/['"]([\w-]+)['"]:\s*['"]([\w\d/]+)['"]/g)) {
+            if (m[2]) aliasTargets.add(m[2]);
         }
 
         const categoryIds = new Set<string>();
         for (const m of menuSource.matchAll(/['"](reports|tests|bugreport|analytics|releases|config)['"]/g)) {
-            categoryIds.add(m[1]!);
+            categoryIds.add(m[1] ?? '');
         }
 
         const allowedExceptions = new Set(['0', 'docs', '/menu', '/help']);
@@ -425,24 +425,24 @@ checks.push({
 let allPassed = true;
 for (const check of checks) {
     if (check.passed) {
-        console.log(`  ✅ ${check.name}`);
+        process.stdout.write(`  ✅ ${check.name}\n`);
     } else {
         allPassed = false;
-        console.log(`  ❌ ${check.name} — ${check.violations.length} violation(s)`);
+        process.stdout.write(`  ❌ ${check.name} — ${check.violations.length} violation(s)\n`);
         for (const v of check.violations.slice(0, 10)) {
-            console.log(`       ${v.file}:${v.line}  ${v.content.slice(0, 100)}`);
+            process.stdout.write(`       ${v.file}:${v.line}  ${v.content.slice(0, 100)}\n`);
         }
         if (check.violations.length > 10) {
-            console.log(`       ... and ${check.violations.length - 10} more`);
+            process.stdout.write(`       ... and ${check.violations.length - 10} more\n`);
         }
     }
 }
 
-console.log('');
+process.stdout.write('\n');
 if (allPassed) {
-    console.log('✅ All quality checks passed.');
+    process.stdout.write('✅ All quality checks passed.\n');
     gracefulExit(ExitCode.OK);
 } else {
-    console.log('❌ Some quality checks failed. Fix violations before committing.');
+    process.stdout.write('❌ Some quality checks failed. Fix violations before committing.\n');
     gracefulExit(ExitCode.ERROR);
 }

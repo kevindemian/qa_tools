@@ -4,8 +4,8 @@ import * as entryMenuModule from './entry-menu.js';
 import * as promptModule from './prompt.js';
 import { type ChildProcess } from 'child_process';
 
-vi.mock('./splash', async () => ({ showSplash: vi.fn() }));
-vi.mock('./prompt', async () => ({ showSelect: vi.fn() }));
+vi.mock('./splash', () => ({ showSplash: vi.fn() }));
+vi.mock('./prompt', () => ({ showSelect: vi.fn() }));
 vi.mock('./output', () => {
     const mockOutput = { box: vi.fn(), print: vi.fn() };
     return {
@@ -14,7 +14,7 @@ vi.mock('./output', () => {
     };
 });
 
-vi.mock('child_process', async () => ({ spawn: vi.fn() }));
+vi.mock('child_process', () => ({ spawn: vi.fn() }));
 
 import { spawn } from 'child_process';
 const mockSpawn = vi.mocked(spawn);

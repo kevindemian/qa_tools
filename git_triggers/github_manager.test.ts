@@ -3,24 +3,24 @@ import GitHubManager from './github_manager.js';
 import { nonNull, nullAs } from '../shared/test-utils.js';
 import { createMockAxiosInstance } from '../shared/test-utils/factories/response-factory.js';
 
-vi.mock('../shared/http-client', async () => ({
+vi.mock('../shared/http-client', () => ({
     createHttpClient: vi.fn(),
     createThrottledClient: vi.fn(),
 }));
 
-vi.mock('../shared/logger', async () => ({
+vi.mock('../shared/logger', () => ({
     Logger: vi.fn().mockImplementation(function () {
         return { error: vi.fn(), warn: vi.fn() };
     }),
     rootLogger: { error: vi.fn(), warn: vi.fn() },
 }));
 
-vi.mock('../shared/prompt', async () => ({
+vi.mock('../shared/prompt', () => ({
     info: vi.fn(),
     extractErrorMessage: vi.fn((err: Error) => err?.message || 'Erro desconhecido'),
 }));
 
-vi.mock('../shared/git-provider-error', async () => ({
+vi.mock('../shared/git-provider-error', () => ({
     handleError: vi.fn((err: unknown, opts?: { returnNull?: boolean }) => {
         if (opts?.returnNull) return null;
         throw err;
@@ -38,23 +38,23 @@ describe('GitHubManager', () => {
     });
 
     describe('constructor', () => {
-        it('parses owner/repo from full name', async () => {
+        it('parses owner/repo from full name', () => {
             expect(manager.owner).toBe('myorg');
             expect(manager.repo).toBe('myrepo');
             expect(manager.provider).toBe('github');
         });
 
-        it('defaults api.github.com when no baseUrl', async () => {
+        it('defaults api.github.com when no baseUrl', () => {
             const m = new GitHubManager('a/b', 'tok');
             expect(m.apiUrl).toBe('https://api.github.com');
         });
 
-        it('strips trailing slash from baseUrl', async () => {
+        it('strips trailing slash from baseUrl', () => {
             const m = new GitHubManager('a/b', 'tok', 'https://ghe.test.com/');
             expect(m.apiUrl).toBe('https://ghe.test.com');
         });
 
-        it('throws when apiToken is empty string', async () => {
+        it('throws when apiToken is empty string', () => {
             expect(() => new GitHubManager('myorg/myrepo', '')).toThrow('apiToken é obrigatório');
         });
 
@@ -62,7 +62,7 @@ describe('GitHubManager', () => {
             expect(() => new GitHubManager('invalidrepo', 'ghp_test')).toThrow('repoFullName deve estar no formato');
         });
 
-        it('throws when repoFullName is empty string', async () => {
+        it('throws when repoFullName is empty string', () => {
             expect(() => new GitHubManager('', 'ghp_test')).toThrow('repoFullName deve estar no formato');
         });
     });
@@ -540,7 +540,7 @@ describe('GitHubManager', () => {
     });
 
     describe('_formatPR', () => {
-        it('formats open PR', async () => {
+        it('formats open PR', () => {
             const raw = {
                 number: 1,
                 title: 'T',
@@ -558,7 +558,7 @@ describe('GitHubManager', () => {
             expect(result.approved).toBe(false);
         });
 
-        it('formats merged PR', async () => {
+        it('formats merged PR', () => {
             const raw = {
                 number: 2,
                 title: 'T',
@@ -575,7 +575,7 @@ describe('GitHubManager', () => {
             expect(result.approved).toBe(false);
         });
 
-        it('returns null for null input', async () => {
+        it('returns null for null input', () => {
             expect(manager._formatPR(nullAs<Record<string, unknown>>())).toBeNull();
         });
     });

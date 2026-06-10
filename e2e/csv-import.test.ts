@@ -1,4 +1,4 @@
-vi.mock('../shared/open', async () => ({ openWithOsOrFallback: vi.fn() }));
+vi.mock('../shared/open', () => ({ openWithOsOrFallback: vi.fn() }));
 
 import fs from 'fs';
 import path from 'path';

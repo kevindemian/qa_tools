@@ -12,33 +12,33 @@ function makeCtx(input = ''): ValidationContext {
 }
 
 describe('invariantNoPlaceholder (I-01)', () => {
-    it('passes clean content', async () => {
+    it('passes clean content', () => {
         const results = invariantNoPlaceholder({ text: 'Clean content' }, makeCtx());
         expect(results.some((r) => r.passed && r.invariantId === 'I-01')).toBe(true);
     });
 
-    it('fails on TODO', async () => {
+    it('fails on TODO', () => {
         const results = invariantNoPlaceholder({ text: 'TODO: fix this' }, makeCtx());
         expect(results.some((r) => !r.passed && r.invariantId === 'I-01')).toBe(true);
     });
 
-    it('fails on FIXME', async () => {
+    it('fails on FIXME', () => {
         const results = invariantNoPlaceholder({ text: 'FIXME: not implemented' }, makeCtx());
         expect(results.some((r) => !r.passed && r.invariantId === 'I-01')).toBe(true);
     });
 
-    it('fails on asdf', async () => {
+    it('fails on asdf', () => {
         const results = invariantNoPlaceholder({ value: 'asdf test' }, makeCtx());
         expect(results.some((r) => !r.passed && r.invariantId === 'I-01')).toBe(true);
     });
 
-    it('scans nested objects', async () => {
+    it('scans nested objects', () => {
         const nested = { tests: [{ title: 'TODO: implement login' }] };
         const results = invariantNoPlaceholder(nested, makeCtx());
         expect(results.some((r) => !r.passed)).toBe(true);
     });
 
-    it('scans arrays', async () => {
+    it('scans arrays', () => {
         const arr = ['Clean string', 'Another TODO: fix'];
         const results = invariantNoPlaceholder(arr, makeCtx());
         expect(results.some((r) => !r.passed)).toBe(true);
@@ -46,24 +46,24 @@ describe('invariantNoPlaceholder (I-01)', () => {
 });
 
 describe('invariantNoMarkdown (I-02)', () => {
-    it('passes clean content', async () => {
+    it('passes clean content', () => {
         const results = invariantNoMarkdown({ text: 'Clean text without marks' }, makeCtx());
         expect(results.some((r) => r.passed && r.invariantId === 'I-02')).toBe(true);
     });
 
-    it('warns on asterisk', async () => {
+    it('warns on asterisk', () => {
         const results = invariantNoMarkdown({ text: 'Some *italic* text' }, makeCtx());
         expect(results.some((r) => !r.passed && r.invariantId === 'I-02')).toBe(true);
     });
 
-    it('warns on backticks', async () => {
+    it('warns on backticks', () => {
         const results = invariantNoMarkdown({ code: 'use `variable` here' }, makeCtx());
         expect(results.some((r) => !r.passed && r.invariantId === 'I-02')).toBe(true);
     });
 });
 
 describe('invariantEvidenceExists (I-03)', () => {
-    it('passes when evidence matches input', async () => {
+    it('passes when evidence matches input', () => {
         const results = invariantEvidenceExists(
             { evidence: ['Valid reason for failure'] },
             makeCtx('Valid reason for failure appears here'),
@@ -71,7 +71,7 @@ describe('invariantEvidenceExists (I-03)', () => {
         expect(results.some((r) => r.passed && r.invariantId === 'I-03')).toBe(true);
     });
 
-    it('warns when evidence not found in input', async () => {
+    it('warns when evidence not found in input', () => {
         const results = invariantEvidenceExists(
             { evidence: ['Something not in input'] },
             makeCtx('Completely different content'),
@@ -81,34 +81,34 @@ describe('invariantEvidenceExists (I-03)', () => {
 });
 
 describe('invariantNoEmptyStrings (I-04)', () => {
-    it('passes with no empty strings', async () => {
+    it('passes with no empty strings', () => {
         const results = invariantNoEmptyStrings({ text: 'content' }, makeCtx());
         expect(results.some((r) => r.passed && r.invariantId === 'I-04')).toBe(true);
     });
 
-    it('fails on empty string', async () => {
+    it('fails on empty string', () => {
         const results = invariantNoEmptyStrings({ text: '' }, makeCtx());
         expect(results.some((r) => !r.passed && r.invariantId === 'I-04')).toBe(true);
     });
 
-    it('fails on whitespace-only string', async () => {
+    it('fails on whitespace-only string', () => {
         const results = invariantNoEmptyStrings({ text: '   ' }, makeCtx());
         expect(results.some((r) => !r.passed && r.invariantId === 'I-04')).toBe(true);
     });
 });
 
 describe('invariantConclusionHasEvidence (I-05)', () => {
-    it('passes when evidence array exists', async () => {
+    it('passes when evidence array exists', () => {
         const results = invariantConclusionHasEvidence({ summary: 'Some conclusion', evidence: ['source'] }, makeCtx());
         expect(results.some((r) => r.passed && r.invariantId === 'I-05')).toBe(true);
     });
 
-    it('warns when conclusion present but no evidence', async () => {
+    it('warns when conclusion present but no evidence', () => {
         const results = invariantConclusionHasEvidence({ summary: 'Some conclusion' }, makeCtx());
         expect(results.some((r) => !r.passed && r.invariantId === 'I-05')).toBe(true);
     });
 
-    it('passes when no conclusion fields', async () => {
+    it('passes when no conclusion fields', () => {
         const results = invariantConclusionHasEvidence({ unrelated: 'data' }, makeCtx());
         expect(results.some((r) => r.passed && r.invariantId === 'I-05')).toBe(true);
     });

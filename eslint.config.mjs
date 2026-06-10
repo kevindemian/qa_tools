@@ -14,12 +14,13 @@ export default tseslint.config(
             '@typescript-eslint/no-explicit-any': ['error', { fixToUnknown: true }],
             '@typescript-eslint/no-unused-vars': ['error', { argsIgnorePattern: '^_' }],
             '@typescript-eslint/return-await': 'error',
-            '@typescript-eslint/prefer-readonly': 'warn',
-            '@typescript-eslint/no-require-imports': 'off',
+            '@typescript-eslint/prefer-readonly': 'error',
+            '@typescript-eslint/no-require-imports': 'error',
             'no-console': 'error',
             'no-throw-literal': 'error',
             'no-empty': ['error', { allowEmptyCatch: false }],
             '@typescript-eslint/no-floating-promises': 'error',
+            '@typescript-eslint/no-unnecessary-condition': 'error',
             '@typescript-eslint/no-unnecessary-type-assertion': 'error',
             '@typescript-eslint/no-non-null-assertion': 'error',
             '@typescript-eslint/no-unsafe-assignment': 'error',
@@ -87,64 +88,7 @@ export default tseslint.config(
             ],
         },
     },
-    {
-        files: [
-            'shared/prompt.ts',
-            'shared/logger.ts',
-            'shared/splash.ts',
-            'shared/env-loader.ts',
-            'jira_management/ui-helpers.ts',
-            'docs/**/*.ts',
-            'jira_management/main.ts',
-            'git_triggers/main.ts',
-            'git_triggers/cli-args.ts',
-            'git_triggers/cli-dispatch.ts',
-            'git_triggers/interactive-mode.ts',
-        ],
-        rules: {
-            'no-console': 'off',
-        },
-    },
-    {
-        files: ['**/*.test.ts', '**/*.test.js', '**/__tests__/**'],
-        rules: {
-            '@typescript-eslint/no-require-imports': 'off',
-            '@typescript-eslint/no-unused-expressions': 'off',
-            '@typescript-eslint/unbound-method': 'off',
-            '@typescript-eslint/require-await': 'off',
-            '@typescript-eslint/no-unsafe-assignment': 'off',
-            '@typescript-eslint/no-unsafe-call': 'off',
-            '@typescript-eslint/no-unsafe-member-access': 'off',
-            '@typescript-eslint/no-unsafe-argument': 'off',
-            '@typescript-eslint/no-unsafe-return': 'off',
-            '@typescript-eslint/no-unnecessary-type-assertion': 'off',
-            '@typescript-eslint/await-thenable': 'off',
-            '@typescript-eslint/no-redundant-type-constituents': 'off',
-            '@typescript-eslint/no-explicit-any': 'off',
-            'no-console': 'off',
-            'no-control-regex': 'off',
-        },
-    },
-    {
-        files: ['e2e/**/*.ts'],
-        rules: {
-            'no-console': 'off',
-            '@typescript-eslint/no-require-imports': 'off',
-            '@typescript-eslint/no-unnecessary-type-assertion': 'off',
-            'no-restricted-imports': 'off',
-        },
-    },
-    {
-        files: ['shared/__mocks__/**', 'shared/test-utils/factories/**'],
-        rules: {
-            '@typescript-eslint/no-unsafe-assignment': 'off',
-            '@typescript-eslint/no-unsafe-call': 'off',
-            '@typescript-eslint/no-unsafe-member-access': 'off',
-            '@typescript-eslint/no-unsafe-argument': 'off',
-            '@typescript-eslint/no-unsafe-return': 'off',
-            '@typescript-eslint/no-unnecessary-type-assertion': 'off',
-        },
-    },
+
     // DepWall — must import through shared/deps, shared/palette, shared/validation,
     // shared/env-loader, or shared/readline instead of direct npm packages
     {
@@ -175,14 +119,25 @@ export default tseslint.config(
             ],
         },
     },
+    // shared/test-utils.test.ts tests console spy utilities intentionally
+    {
+        files: ['shared/test-utils.test.ts'],
+        rules: { 'no-console': 'off' },
+    },
+    // shared/logger.ts implements console-based logging — needs console
+    {
+        files: ['shared/logger.ts', 'shared/logger.test.ts'],
+        rules: { 'no-console': 'off' },
+    },
+
     {
         ignores: [
             'node_modules/',
             'docs-archive/',
-            'scripts/',
             'vitest.config.ts',
             'eslint.config.mjs',
             '**/*.js',
+            '**/*.mjs',
             '.config/',
             '.opencode/',
         ],

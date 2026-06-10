@@ -17,7 +17,7 @@ import {
     wfRunSchedule,
 } from './github-workflow.js';
 
-vi.mock('./github-api', async () => ({
+vi.mock('./github-api', () => ({
     apiGet: vi.fn<(...args: [client: AxiosInstance, url: string, options?: object]) => Promise<JsonObject | null>>(),
     apiPost:
         vi.fn<
@@ -25,7 +25,7 @@ vi.mock('./github-api', async () => ({
         >(),
 }));
 
-vi.mock('../shared/logger', async () => ({
+vi.mock('../shared/logger', () => ({
     Logger: vi.fn<(...args: [opts?: object]) => Record<string, Mock>>().mockImplementation(function () {
         return {
             error: vi.fn<(...args: [msg: string, meta?: object]) => void>(),
@@ -38,7 +38,7 @@ vi.mock('../shared/logger', async () => ({
     },
 }));
 
-vi.mock('../shared/git-provider-error', async () => ({
+vi.mock('../shared/git-provider-error', () => ({
     handleError: vi.fn<(...args: [err: Error, opts?: { returnNull?: boolean }]) => null>(
         (err: Error, opts?: { returnNull?: boolean }) => {
             if (opts?.returnNull) return null;
@@ -381,7 +381,7 @@ describe('wfGetSchedules', () => {
 });
 
 describe('wfRunSchedule', () => {
-    it('throws not-implemented error', async () => {
+    it('throws not-implemented error', () => {
         expect(() => wfRunSchedule('1')).toThrow('not available via REST API');
     });
 });

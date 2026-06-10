@@ -67,7 +67,7 @@ if [[ -d "$OPENDATA_DIR" ]]; then
 
   TOTAL_HITS=0
   for pattern in "${SECRET_PATTERNS[@]}"; do
-    HITS=$(grep -rn "$pattern" "$OPENDATA_DIR" 2>/dev/null | grep -v ".log:" | wc -l || echo 0)
+    HITS=$(grep -rnE "$pattern" "$OPENDATA_DIR" 2>/dev/null | grep -v ".log:" | wc -l || echo 0)
     TOTAL_HITS=$((TOTAL_HITS + HITS))
   done
 

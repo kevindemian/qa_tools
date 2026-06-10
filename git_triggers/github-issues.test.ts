@@ -4,11 +4,11 @@ import { nonNull } from '../shared/test-utils.js';
 import { createMockAxiosInstance } from '../shared/test-utils/factories/response-factory.js';
 import type { AxiosInstance } from '../shared/deps.js';
 
-vi.mock('./github-api', async () => ({
+vi.mock('./github-api', () => ({
     apiGet: vi.fn(),
 }));
 
-vi.mock('../shared/logger', async () => ({
+vi.mock('../shared/logger', () => ({
     Logger: vi.fn().mockImplementation(function () {
         return { error: vi.fn(), warn: vi.fn() };
     }),

@@ -1,15 +1,15 @@
 import { extractHost, HostSemaphore } from './host-semaphore.js';
 
 describe('extractHost', () => {
-    it('returns hostname for valid URL', async () => {
+    it('returns hostname for valid URL', () => {
         expect(extractHost('https://api.github.com/resource')).toBe('api.github.com');
     });
 
-    it('returns unknown for invalid URL', async () => {
+    it('returns unknown for invalid URL', () => {
         expect(extractHost(':::invalid')).toBe('unknown');
     });
 
-    it('returns unknown for empty string', async () => {
+    it('returns unknown for empty string', () => {
         expect(extractHost('')).toBe('unknown');
     });
 });
@@ -45,7 +45,7 @@ describe('HostSemaphore', () => {
         await expect(p3).resolves.toBeUndefined();
     });
 
-    it('release handles nonexistent host without throwing', async () => {
+    it('release handles nonexistent host without throwing', () => {
         const sem = new HostSemaphore(1);
         expect(() => sem.release('nonexistent')).not.toThrow();
     });

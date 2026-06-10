@@ -13,7 +13,7 @@ const mockRootLogger = vi.hoisted(() => ({
     updateSplashStep: vi.fn(),
 }));
 
-vi.mock('./logger', async () => ({
+vi.mock('./logger', () => ({
     rootLogger: mockRootLogger,
     Logger: class {
         info = vi.fn();
@@ -33,7 +33,7 @@ const MOCK_PROMPT: {
     confirm?: Mock;
 } = vi.hoisted(() => ({ error: vi.fn(), warn: vi.fn(), info: vi.fn(), confirm: vi.fn().mockReturnValue(false) }));
 vi.mock('./prompt', () => MOCK_PROMPT);
-vi.mock('readline', async () => ({
+vi.mock('readline', () => ({
     createInterface: vi.fn(),
 }));
 
@@ -53,15 +53,15 @@ describe('CLI Base', () => {
     });
 
     describe('mask', () => {
-        it('returns first 4 chars plus asterisks', async () => {
+        it('returns first 4 chars plus asterisks', () => {
             expect(cliBase.mask('abcdefgh')).toBe('abcd****');
         });
 
-        it('returns empty string for empty input', async () => {
+        it('returns empty string for empty input', () => {
             expect(cliBase.mask('')).toBe('');
         });
 
-        it('returns 4 asterisks for short strings', async () => {
+        it('returns 4 asterisks for short strings', () => {
             expect(cliBase.mask('ab')).toBe('ab****');
         });
     });
@@ -72,7 +72,7 @@ describe('CLI Base', () => {
             { key: 'TOKEN_B', label: 'Token B', example: 'TOKEN_B=def' },
         ];
 
-        it('does not throw when required vars are missing — returns result and warns', async () => {
+        it('does not throw when required vars are missing — returns result and warns', () => {
             delete process.env.TOKEN_A;
             delete process.env.TOKEN_B;
             const validate = cliBase.createValidateEnv(configs);
@@ -82,7 +82,7 @@ describe('CLI Base', () => {
             expect(MOCK_PROMPT.warn).toHaveBeenCalledWith(expect.stringContaining('Configurações incompletas'));
         });
 
-        it('warns when real credentials are detected', async () => {
+        it('warns when real credentials are detected', () => {
             process.env.TOKEN_A = 'this-is-a-real-token-value-123456';
             process.env.TOKEN_B = 'another-real-credential-here-789';
             const validate = cliBase.createValidateEnv(configs);
@@ -90,7 +90,7 @@ describe('CLI Base', () => {
             expect(mockRootLogger.warn).toHaveBeenCalledWith(expect.stringContaining('VARIÁVEL COM CREDENCIAL REAL'));
         });
 
-        it('does not warn for placeholder values', async () => {
+        it('does not warn for placeholder values', () => {
             process.env.TOKEN_A = 'seu-token-aqui';
             process.env.TOKEN_B = 'your-token-here';
             const validate = cliBase.createValidateEnv(configs);
@@ -141,13 +141,13 @@ describe('CLI Base', () => {
             vi.restoreAllMocks();
         });
 
-        it('registers SIGINT handler', async () => {
+        it('registers SIGINT handler', () => {
             vi.spyOn(process, 'on').mockImplementation(() => process);
             cliBase.setupSigint(null, () => {});
             expect(process.on).toHaveBeenCalledWith('SIGINT', expect.any(Function));
         });
 
-        it('shows confirmation prompt on SIGINT (not busy)', async () => {
+        it('shows confirmation prompt on SIGINT (not busy)', () => {
             vi.spyOn(process, 'on').mockImplementation((evt, handler) => {
                 if (evt === 'SIGINT') (handler as () => void)();
                 return process;
@@ -158,7 +158,7 @@ describe('CLI Base', () => {
             expect(mockRl.question).toHaveBeenCalledWith('Deseja sair? (s/N) ', expect.any(Function));
         });
 
-        it('calls onExit and exits when user responds s', async () => {
+        it('calls onExit and exits when user responds s', () => {
             vi.useFakeTimers();
             const exitSpy = vi
                 .spyOn(process, 'exit')
@@ -179,7 +179,7 @@ describe('CLI Base', () => {
             vi.useRealTimers();
         });
 
-        it('does not exit when user responds n', async () => {
+        it('does not exit when user responds n', () => {
             vi.spyOn(process, 'on').mockImplementation((evt, handler) => {
                 if (evt === 'SIGINT') (handler as () => void)();
                 return process;
@@ -192,7 +192,7 @@ describe('CLI Base', () => {
             expect(MOCK_PROMPT.info).toHaveBeenCalledWith('Continuando...');
         });
 
-        it('force exits on 2nd SIGINT during confirmation', async () => {
+        it('force exits on 2nd SIGINT during confirmation', () => {
             vi.useFakeTimers();
             const exitSpy = vi
                 .spyOn(process, 'exit')
@@ -215,7 +215,7 @@ describe('CLI Base', () => {
             vi.useRealTimers();
         });
 
-        it('does not exit if isBusy returns true', async () => {
+        it('does not exit if isBusy returns true', () => {
             let capturedHandler: () => void = () => {};
             vi.spyOn(process, 'on').mockImplementation((evt, handler) => {
                 if (evt === 'SIGINT') capturedHandler = handler as () => void;
@@ -228,7 +228,7 @@ describe('CLI Base', () => {
             expect(onExit).not.toHaveBeenCalled();
         });
 
-        it('handles null onExit gracefully on confirmation s', async () => {
+        it('handles null onExit gracefully on confirmation s', () => {
             vi.useFakeTimers();
             const exitSpy = vi
                 .spyOn(process, 'exit')
@@ -249,7 +249,7 @@ describe('CLI Base', () => {
             vi.useRealTimers();
         });
 
-        it('continues when SIGINT answer is undefined', async () => {
+        it('continues when SIGINT answer is undefined', () => {
             let capturedHandler: () => void = () => {};
             vi.spyOn(process, 'on').mockImplementation((evt, handler) => {
                 if (evt === 'SIGINT') capturedHandler = handler as () => void;
@@ -264,7 +264,7 @@ describe('CLI Base', () => {
             expect(MOCK_PROMPT.info).toHaveBeenCalledWith('Continuando...');
         });
 
-        it('continues when SIGINT answer is empty string', async () => {
+        it('continues when SIGINT answer is empty string', () => {
             let capturedHandler: () => void = () => {};
             vi.spyOn(process, 'on').mockImplementation((evt, handler) => {
                 if (evt === 'SIGINT') capturedHandler = handler as () => void;
@@ -320,13 +320,13 @@ describe('CLI Base', () => {
     });
 
     describe('offerEnvSetup', () => {
-        it('returns false when validation ok', async () => {
+        it('returns false when validation ok', () => {
             const result = cliBase.offerEnvSetup({ ok: true, missing: [] });
             expect(result).toBe(false);
             expect(MOCK_PROMPT.confirm).not.toHaveBeenCalled();
         });
 
-        it('returns false and does not prompt in CI mode', async () => {
+        it('returns false and does not prompt in CI mode', () => {
             process.env.CI = 'true';
             const result = cliBase.offerEnvSetup({ ok: false, missing: ['TOKEN_A'] });
             expect(result).toBe(false);
@@ -334,7 +334,7 @@ describe('CLI Base', () => {
             delete process.env.CI;
         });
 
-        it('returns false when confirm returns false', async () => {
+        it('returns false when confirm returns false', () => {
             delete process.env.CI;
             nonNull(MOCK_PROMPT.confirm).mockReturnValueOnce(false);
             const result = cliBase.offerEnvSetup({ ok: false, missing: ['TOKEN_A'] });
@@ -342,14 +342,14 @@ describe('CLI Base', () => {
             expect(MOCK_PROMPT.confirm).toHaveBeenCalledWith(expect.stringContaining('configurar'));
         });
 
-        it('returns true when user accepts', async () => {
+        it('returns true when user accepts', () => {
             delete process.env.CI;
             nonNull(MOCK_PROMPT.confirm).mockReturnValueOnce(true);
             const result = cliBase.offerEnvSetup({ ok: false, missing: ['TOKEN_A'] });
             expect(result).toBe(true);
         });
 
-        it('returns false when confirm throws (CancelError)', async () => {
+        it('returns false when confirm throws (CancelError)', () => {
             delete process.env.CI;
             nonNull(MOCK_PROMPT.confirm).mockImplementationOnce(() => {
                 throw new Error('cancel');
@@ -360,21 +360,21 @@ describe('CLI Base', () => {
     });
 
     describe('sanitizeUrl', () => {
-        it('masks token in URL', async () => {
+        it('masks token in URL', () => {
             expect(cliBase.sanitizeUrl('http://example.com?token=abc123&other=1')).toBe(
                 'http://example.com?token=****&other=1',
             );
         });
 
-        it('returns unchanged URL without token', async () => {
+        it('returns unchanged URL without token', () => {
             expect(cliBase.sanitizeUrl('http://example.com?key=value')).toBe('http://example.com?key=value');
         });
 
-        it('returns empty string for empty input', async () => {
+        it('returns empty string for empty input', () => {
             expect(cliBase.sanitizeUrl('')).toBe('');
         });
 
-        it('does not modify URL with empty token value', async () => {
+        it('does not modify URL with empty token value', () => {
             expect(cliBase.sanitizeUrl('http://example.com?token=')).toBe('http://example.com?token=');
         });
     });
@@ -427,31 +427,31 @@ describe('CLI Base', () => {
             mockRootLogger.filePath = undefined;
         });
 
-        it('prints ok and error counts when both > 0', async () => {
+        it('prints ok and error counts when both > 0', () => {
             cliBase.printSessionSummary([{ status: 'ok' }, { status: 'error' }], null);
             expect(MOCK_PROMPT.success).toHaveBeenCalledWith('1 operação(oes) concluída(s)');
             expect(MOCK_PROMPT.error).toHaveBeenCalledWith('1 operação(oes) com erro');
         });
 
-        it('prints only ok when no errors', async () => {
+        it('prints only ok when no errors', () => {
             cliBase.printSessionSummary([{ status: 'ok' }, { status: 'ok' }], null);
             expect(MOCK_PROMPT.success).toHaveBeenCalledWith('2 operação(oes) concluída(s)');
             expect(MOCK_PROMPT.error).not.toHaveBeenCalled();
         });
 
-        it('prints only error when no oks', async () => {
+        it('prints only error when no oks', () => {
             cliBase.printSessionSummary([{ status: 'error' }, { status: 'error' }], null);
             expect(MOCK_PROMPT.error).toHaveBeenCalledWith('2 operação(oes) com erro');
             expect(MOCK_PROMPT.success).not.toHaveBeenCalled();
         });
 
-        it('skips counters when both are zero', async () => {
+        it('skips counters when both are zero', () => {
             cliBase.printSessionSummary([], null);
             expect(MOCK_PROMPT.success).not.toHaveBeenCalled();
             expect(MOCK_PROMPT.error).not.toHaveBeenCalled();
         });
 
-        it('prints history entries when provided', async () => {
+        it('prints history entries when provided', () => {
             const history = [
                 { status: 'ok', op: 'test', detail: 'passed' },
                 { status: 'error', op: 'build', detail: 'failed' },
@@ -463,18 +463,18 @@ describe('CLI Base', () => {
             expect(MOCK_PROMPT.print).toHaveBeenCalledWith(expect.stringContaining('build: failed'));
         });
 
-        it('prints last operation when provided', async () => {
+        it('prints last operation when provided', () => {
             cliBase.printSessionSummary([], 'test-op');
             expect(MOCK_PROMPT.info).toHaveBeenCalledWith('Última operação: test-op');
         });
 
-        it('prints log path when available', async () => {
+        it('prints log path when available', () => {
             mockRootLogger.filePath = '/tmp/test.log';
             cliBase.printSessionSummary([], null);
             expect(MOCK_PROMPT.info).toHaveBeenCalledWith('Log: /tmp/test.log');
         });
 
-        it('does not print log path when undefined', async () => {
+        it('does not print log path when undefined', () => {
             cliBase.printSessionSummary([], null);
             expect(MOCK_PROMPT.info).not.toHaveBeenCalledWith(expect.stringContaining('Log:'));
         });

@@ -1,7 +1,7 @@
 import { createMockGitProvider } from './git-provider-factory.js';
 
 describe('createMockGitProvider', () => {
-    it('returns a Mocked<GitProvider> with all methods as vi.fn()', async () => {
+    it('returns a Mocked<GitProvider> with all methods as vi.fn()', () => {
         const mock = createMockGitProvider();
 
         expect(typeof mock.triggerPipeline).toBe('function');
@@ -23,19 +23,19 @@ describe('createMockGitProvider', () => {
         expect(typeof mock.getDiff).toBe('function');
     });
 
-    it('defaults provider to gitlab', async () => {
+    it('defaults provider to gitlab', () => {
         const mock = createMockGitProvider();
         expect(mock.provider).toBe('gitlab');
     });
 
-    it('merges overrides correctly', async () => {
+    it('merges overrides correctly', () => {
         const customPipeline = vi.fn(() => Promise.resolve({ id: 42 }));
         const mock = createMockGitProvider({ triggerPipeline: customPipeline });
 
         expect(mock.triggerPipeline).toBe(customPipeline);
     });
 
-    it('each call produces independent vi.fn() instances', async () => {
+    it('each call produces independent vi.fn() instances', () => {
         const a = createMockGitProvider();
         const b = createMockGitProvider();
         expect(a.triggerPipeline).not.toBe(b.triggerPipeline);

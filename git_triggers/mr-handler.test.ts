@@ -1,4 +1,4 @@
-vi.mock('../shared/prompt', async () => ({
+vi.mock('../shared/prompt', () => ({
     print: vi.fn(),
     success: vi.fn(),
     warn: vi.fn(),
@@ -10,16 +10,16 @@ vi.mock('../shared/prompt', async () => ({
     divider: vi.fn(),
 }));
 
-vi.mock('./session-state', async () => ({
+vi.mock('./session-state', () => ({
     currentProvider: 'gitlab',
     pushHistory: vi.fn(),
 }));
 
-vi.mock('./ai-pr-desc', async () => ({ generatePrDescription: vi.fn() }));
-vi.mock('./ai-test-impact', async () => ({ assessTestImpact: vi.fn() }));
-vi.mock('./nivelar', async () => ({ nivelarBranches: vi.fn() }));
+vi.mock('./ai-pr-desc', () => ({ generatePrDescription: vi.fn() }));
+vi.mock('./ai-test-impact', () => ({ assessTestImpact: vi.fn() }));
+vi.mock('./nivelar', () => ({ nivelarBranches: vi.fn() }));
 
-vi.mock('../shared/temp-dir', async () => ({
+vi.mock('../shared/temp-dir', () => ({
     reportsDir: vi.fn(() => '/tmp/reports'),
 }));
 

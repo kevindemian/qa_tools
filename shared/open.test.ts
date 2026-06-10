@@ -1,8 +1,8 @@
 vi.mock('child_process', () => ({ spawn: vi.fn(), spawnSync: vi.fn(), execFileSync: vi.fn() }));
-vi.mock('os', async () => ({
+vi.mock('os', () => ({
     platform: vi.fn<(...args: []) => () => string>(),
 }));
-vi.mock('fs', async () => ({
+vi.mock('fs', () => ({
     readFileSync: vi.fn<(...args: [string, string?]) => (path: string, encoding?: string) => string>(),
     writeFileSync: vi.fn<(...args: [string, string]) => (path: string, data: string) => void>(),
     mkdirSync: vi.fn<(...args: [string]) => (path: string) => string | undefined>(),
@@ -10,7 +10,7 @@ vi.mock('fs', async () => ({
 const mockConfigGet: Mock<(...args: [string]) => string | undefined> = vi.hoisted(() =>
     vi.fn((key: string) => process.env[key] || undefined),
 );
-vi.mock('./config', async () => ({
+vi.mock('./config', () => ({
     default: { get: mockConfigGet },
 }));
 
@@ -169,7 +169,7 @@ describe('getOsOpenCommand (platform detection)', () => {
         __resetWslCache();
     });
 
-    it('returns cmd.exe + wslpath for WSL (linux + Microsoft /proc/version)', async () => {
+    it('returns cmd.exe + wslpath for WSL (linux + Microsoft /proc/version)', () => {
         mockPlatform.mockReturnValue('linux');
         mockReadFileSync.mockReturnValue('Linux version ... Microsoft ...');
         mockSpawnSync.mockReturnValue({ stdout: 'C:\\Users\\file.html\n', status: 0 } as never);
@@ -180,28 +180,28 @@ describe('getOsOpenCommand (platform detection)', () => {
         });
     });
 
-    it('returns xdg-open for Linux (non-WSL)', async () => {
+    it('returns xdg-open for Linux (non-WSL)', () => {
         mockPlatform.mockReturnValue('linux');
         mockReadFileSync.mockReturnValue('Linux version 5.15.0-generic');
         const result = getOsOpenCommand('/home/user/file.html');
         expect(result).toEqual({ cmd: 'xdg-open', args: ['/home/user/file.html'] });
     });
 
-    it('returns open for macOS', async () => {
+    it('returns open for macOS', () => {
         mockPlatform.mockReturnValue('darwin');
         mockReadFileSync.mockReturnValue('Linux version 5.15.0-generic');
         const result = getOsOpenCommand('/some/file');
         expect(result).toEqual({ cmd: 'open', args: ['/some/file'] });
     });
 
-    it('returns cmd for Windows', async () => {
+    it('returns cmd for Windows', () => {
         mockPlatform.mockReturnValue('win32');
         mockReadFileSync.mockReturnValue('Linux version 5.15.0-generic');
         const result = getOsOpenCommand('C:\\file.html');
         expect(result).toEqual({ cmd: 'cmd', args: ['/c', 'start', '', 'C:\\file.html'] });
     });
 
-    it('falls back to xdg-open for WSL when toWinPath returns null', async () => {
+    it('falls back to xdg-open for WSL when toWinPath returns null', () => {
         mockPlatform.mockReturnValue('linux');
         mockReadFileSync.mockReturnValue('Linux version ... Microsoft ...');
         mockSpawnSync.mockReturnValue({ stdout: '', error: new Error('ENOENT'), status: null } as never);
@@ -212,7 +212,7 @@ describe('getOsOpenCommand (platform detection)', () => {
         expect(result).toEqual({ cmd: 'xdg-open', args: ['/home/user/file.html'] });
     });
 
-    it('toWinPath fallback: copies file and converts via wslpath', async () => {
+    it('toWinPath fallback: copies file and converts via wslpath', () => {
         mockPlatform.mockReturnValue('linux');
         mockReadFileSync.mockReturnValueOnce('Linux version ... Microsoft ...').mockReturnValueOnce('file content');
         mockWriteFileSync.mockReturnValue();
@@ -231,7 +231,7 @@ describe('getOsOpenCommand (platform detection)', () => {
         });
     });
 
-    it('toWinPath fallback: returns null when writeFileSync throws', async () => {
+    it('toWinPath fallback: returns null when writeFileSync throws', () => {
         mockPlatform.mockReturnValue('linux');
         mockReadFileSync.mockReturnValueOnce('Linux version ... Microsoft ...').mockReturnValueOnce('file content');
         mockWriteFileSync.mockImplementation(() => {
@@ -248,7 +248,7 @@ describe('getOsOpenCommand (platform detection)', () => {
         expect(result).toEqual({ cmd: 'xdg-open', args: ['/home/user/file.html'] });
     });
 
-    it('toWinPath fallback: returns null when wslpath output is invalid', async () => {
+    it('toWinPath fallback: returns null when wslpath output is invalid', () => {
         mockPlatform.mockReturnValue('linux');
         mockReadFileSync.mockReturnValueOnce('Linux version ... Microsoft ...').mockReturnValueOnce('file content');
         mockWriteFileSync.mockReturnValue();
@@ -261,7 +261,7 @@ describe('getOsOpenCommand (platform detection)', () => {
         expect(result).toEqual({ cmd: 'xdg-open', args: ['/home/user/file.html'] });
     });
 
-    it('toWinPath: falls through when first wslpath output is not a Windows path', async () => {
+    it('toWinPath: falls through when first wslpath output is not a Windows path', () => {
         mockPlatform.mockReturnValue('linux');
         mockReadFileSync.mockReturnValueOnce('Linux version ... Microsoft ...').mockReturnValueOnce('file content');
         mockWriteFileSync.mockReturnValue();
@@ -278,14 +278,14 @@ describe('getOsOpenCommand (platform detection)', () => {
         });
     });
 
-    it('returns null for unknown platform', async () => {
+    it('returns null for unknown platform', () => {
         mockPlatform.mockReturnValue('aix');
         mockReadFileSync.mockReturnValue('Linux version 5.15.0-generic');
         const result = getOsOpenCommand('/path');
         expect(result).toBeNull();
     });
 
-    it('does not throw when /proc/version is unreadable', async () => {
+    it('does not throw when /proc/version is unreadable', () => {
         mockPlatform.mockReturnValue('linux');
         mockReadFileSync.mockImplementation(() => {
             throw new Error('ENOENT');
@@ -300,7 +300,7 @@ describe('getWinTempDir', () => {
         vi.resetAllMocks();
     });
 
-    it('returns TEMP when set with Linux path', async () => {
+    it('returns TEMP when set with Linux path', () => {
         const origTemp = process.env.TEMP;
         process.env.TEMP = '/mnt/c/Users/Test/Temp';
         const result = getWinTempDir();
@@ -308,7 +308,7 @@ describe('getWinTempDir', () => {
         expect(result).toBe('/mnt/c/Users/Test/Temp');
     });
 
-    it('returns TMP when TEMP not set and TMP has Linux path', async () => {
+    it('returns TMP when TEMP not set and TMP has Linux path', () => {
         const origTemp = process.env.TEMP;
         const origTmp = process.env.TMP;
         delete process.env.TEMP;
@@ -319,7 +319,7 @@ describe('getWinTempDir', () => {
         expect(result).toBe('/mnt/c/Users/Test/Tmp');
     });
 
-    it('converts cmd.exe TEMP output to WSL path on success', async () => {
+    it('converts cmd.exe TEMP output to WSL path on success', () => {
         const origTemp = process.env.TEMP;
         const origTmp = process.env.TMP;
         delete process.env.TEMP;
@@ -331,7 +331,7 @@ describe('getWinTempDir', () => {
         expect(result).toBe('/mnt/c/Users/Test/AppData/Local/Temp');
     });
 
-    it('returns null when TEMP/TMP empty and cmd.exe fails', async () => {
+    it('returns null when TEMP/TMP empty and cmd.exe fails', () => {
         const origTemp = process.env.TEMP;
         const origTmp = process.env.TMP;
         delete process.env.TEMP;
@@ -345,7 +345,7 @@ describe('getWinTempDir', () => {
         expect(result).toBeNull();
     });
 
-    it('returns null when execFileSync returns empty string', async () => {
+    it('returns null when execFileSync returns empty string', () => {
         const origTemp = process.env.TEMP;
         const origTmp = process.env.TMP;
         delete process.env.TEMP;
@@ -365,13 +365,13 @@ describe('getDocsOutputDir', () => {
         __resetWslCache();
     });
 
-    it('returns temp/docs/ path on non-WSL', async () => {
+    it('returns temp/docs/ path on non-WSL', () => {
         mockReadFileSync.mockReturnValue('Linux version 5.15.0-generic');
         const result = getDocsOutputDir();
         expect(result).toMatch(/\/temp\/docs$/);
     });
 
-    it('returns null on WSL when getWinTempDir fails', async () => {
+    it('returns null on WSL when getWinTempDir fails', () => {
         mockReadFileSync.mockReturnValue('Linux version ... Microsoft ...');
         mockExecFileSync.mockImplementation(() => {
             throw new Error('ENOENT');
@@ -383,7 +383,7 @@ describe('getDocsOutputDir', () => {
         expect(result).toBeNull();
     });
 
-    it('returns WSL temp path when on WSL and getWinTempDir succeeds', async () => {
+    it('returns WSL temp path when on WSL and getWinTempDir succeeds', () => {
         mockReadFileSync.mockReturnValue('Linux version ... Microsoft ...');
         mockExecFileSync.mockReturnValue('C:\\Users\\Test\\Temp\n');
         const origTemp = process.env.TEMP;
@@ -393,7 +393,7 @@ describe('getDocsOutputDir', () => {
         expect(result).toMatch(/qa_tools_docs$/);
     });
 
-    it('uses QA_TOOLS_TEMP_DIR when set', async () => {
+    it('uses QA_TOOLS_TEMP_DIR when set', () => {
         const origDir = process.env.QA_TOOLS_TEMP_DIR;
         process.env.QA_TOOLS_TEMP_DIR = '/custom/temp';
         mockReadFileSync.mockReturnValue('Linux version 5.15.0-generic');

@@ -1,5 +1,5 @@
 vi.mock('fs');
-vi.mock('./llm-client', async () => ({
+vi.mock('./llm-client', () => ({
     llmPrompt: vi.fn<(...args: [opts: import('./llm-client.js').LlmPromptOptions]) => Promise<string>>(),
     getLlmClientMetrics: vi.fn(() => ({
         cacheHits: 0,
@@ -11,7 +11,7 @@ vi.mock('./llm-client', async () => ({
     resetLlmClientMetrics: vi.fn(),
     parseRetryAfter: vi.fn(() => 2000),
 }));
-vi.mock('./llm-review', async () => ({ reviewWithLlm: vi.fn() }));
+vi.mock('./llm-review', () => ({ reviewWithLlm: vi.fn() }));
 
 import fs from 'fs';
 
@@ -163,39 +163,39 @@ describe('classifyFailure', () => {
 describe('classifyRegex — edge case mutations', () => {
     const regex = /^(ASSERTION|TIMEOUT|ENVIRONMENT|FLAKY|APPLICATION|UNKNOWN):\s/;
 
-    it('matches valid classification with explanation', async () => {
+    it('matches valid classification with explanation', () => {
         expect(regex.test('ASSERTION: expected 200 got 500')).toBe(true);
     });
 
-    it('matches TIMEOUT classification', async () => {
+    it('matches TIMEOUT classification', () => {
         expect(regex.test('TIMEOUT: test exceeded 30s limit')).toBe(true);
     });
 
-    it('rejects AGREEMENT (not a valid category)', async () => {
+    it('rejects AGREEMENT (not a valid category)', () => {
         expect(regex.test('AGREEMENT: some issue')).toBe(false);
     });
 
-    it('rejects lowercase classification', async () => {
+    it('rejects lowercase classification', () => {
         expect(regex.test('assertion: expected 200')).toBe(false);
     });
 
-    it('rejects missing colon and space after category', async () => {
+    it('rejects missing colon and space after category', () => {
         expect(regex.test('ASSERTION expected 200')).toBe(false);
     });
 
-    it('matches first line of multi-line response', async () => {
+    it('matches first line of multi-line response', () => {
         expect(regex.test('ASSERTION: expected 200\nsome extra text')).toBe(true);
     });
 
-    it('matches ENVIRONMENT classification', async () => {
+    it('matches ENVIRONMENT classification', () => {
         expect(regex.test('ENVIRONMENT: database connection failed')).toBe(true);
     });
 
-    it('rejects empty string', async () => {
+    it('rejects empty string', () => {
         expect(regex.test('')).toBe(false);
     });
 
-    it('rejects category-only without colon', async () => {
+    it('rejects category-only without colon', () => {
         expect(regex.test('ASSERTION')).toBe(false);
     });
 });

@@ -66,7 +66,7 @@ describeGh('GitHub e2e — real API', () => {
     }, 300000);
 
     describe('data fetching', () => {
-        it('fetches recent workflow runs with correct structure', async () => {
+        it('fetches recent workflow runs with correct structure', () => {
             expect(Array.isArray(runs)).toBe(true);
             for (const run of runs) {
                 expect(run).toHaveProperty('id');
@@ -76,7 +76,7 @@ describeGh('GitHub e2e — real API', () => {
             }
         });
 
-        it('fetches pipeline jobs for each run', async () => {
+        it('fetches pipeline jobs for each run', () => {
             expect(allJobs.length).toBe(runs.length);
             for (const jobs of allJobs) {
                 expect(Array.isArray(jobs)).toBe(true);
@@ -88,7 +88,7 @@ describeGh('GitHub e2e — real API', () => {
             }
         });
 
-        it('fetches open PRs with correct structure', async () => {
+        it('fetches open PRs with correct structure', () => {
             expect(Array.isArray(prs)).toBe(true);
             for (const pr of prs) {
                 expect(pr).toHaveProperty('iid');
@@ -98,7 +98,7 @@ describeGh('GitHub e2e — real API', () => {
             }
         });
 
-        it('fetches open issues (excluding PRs)', async () => {
+        it('fetches open issues (excluding PRs)', () => {
             expect(Array.isArray(issues)).toBe(true);
             for (const issue of issues) {
                 expect(issue).toHaveProperty('number');
@@ -109,7 +109,7 @@ describeGh('GitHub e2e — real API', () => {
             }
         });
 
-        it('fetches branch information for main', async () => {
+        it('fetches branch information for main', () => {
             if (!branchInfo) return;
             expect(branchInfo).toHaveProperty('name');
         });
@@ -122,14 +122,14 @@ describeGh('GitHub e2e — real API', () => {
             health = aggregatePipelineHealth(runs, allJobs, errorMessagesPerJob, issues);
         });
 
-        it('computes totals correctly', async () => {
+        it('computes totals correctly', () => {
             expect(health.totalRuns).toBe(runs.length);
             expect(health.passedRuns + health.failedRuns).toBeLessThanOrEqual(health.totalRuns);
             expect(health.passRate).toBeGreaterThanOrEqual(0);
             expect(health.passRate).toBeLessThanOrEqual(100);
         });
 
-        it('identifies top failing jobs when failures exist', async () => {
+        it('identifies top failing jobs when failures exist', () => {
             expect(Array.isArray(health.topFailingJobs)).toBe(true);
             for (const j of health.topFailingJobs) {
                 expect(j.failCount).toBeGreaterThan(0);
@@ -138,11 +138,11 @@ describeGh('GitHub e2e — real API', () => {
             }
         });
 
-        it('aggregates failure reasons from job logs', async () => {
+        it('aggregates failure reasons from job logs', () => {
             expect(Array.isArray(health.failureReasons)).toBe(true);
         });
 
-        it('breaks down by branch', async () => {
+        it('breaks down by branch', () => {
             expect(health.branchBreakdown.length).toBeGreaterThanOrEqual(1);
             for (const b of health.branchBreakdown) {
                 expect(b).toHaveProperty('branch');
@@ -151,14 +151,14 @@ describeGh('GitHub e2e — real API', () => {
             }
         });
 
-        it('provides issue statistics', async () => {
+        it('provides issue statistics', () => {
             expect(health.openIssues.total).toBe(issues.length);
             expect(typeof health.openIssues.staleCount).toBe('number');
         });
     });
 
     describe('HTML report', () => {
-        it('generates consolidated HTML health report', async () => {
+        it('generates consolidated HTML health report', () => {
             const health = aggregatePipelineHealth(runs, allJobs, errorMessagesPerJob, issues);
             const html = renderPipelineHealthHtml(health, 'GitHub Health Report — e2e');
 

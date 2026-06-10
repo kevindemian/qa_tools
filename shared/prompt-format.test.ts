@@ -1,9 +1,9 @@
-vi.mock('./output', async () => ({
+vi.mock('./output', () => ({
     defaultOutput: { print: vi.fn() },
     Output: { columns: vi.fn(() => 80), isTTY: vi.fn(() => true) },
 }));
-vi.mock('./breadcrumbs', async () => ({ getBreadcrumbPath: vi.fn(() => '') }));
-vi.mock('./logger', async () => ({ rootLogger: { writeFileOnly: vi.fn() } }));
+vi.mock('./breadcrumbs', () => ({ getBreadcrumbPath: vi.fn(() => '') }));
+vi.mock('./logger', () => ({ rootLogger: { writeFileOnly: vi.fn() } }));
 vi.mock('./config', () => {
     const mockConfig = { quiet: false };
     return {
@@ -33,13 +33,13 @@ import { getBreadcrumbPath } from './breadcrumbs.js';
 import ConfigAccessor from './config-accessor.js';
 
 describe('badge', () => {
-    it('formats ok badge', async () => {
+    it('formats ok badge', () => {
         const result = badge(5, 'passed', 'ok');
         expect(result).toContain('5');
         expect(result).toContain('passed');
     });
 
-    it('formats error badge', async () => {
+    it('formats error badge', () => {
         const result = badge(2, 'failed', 'error');
         expect(result).toContain('2');
         expect(result).toContain('failed');
@@ -47,11 +47,11 @@ describe('badge', () => {
 });
 
 describe('icon', () => {
-    it('returns unicode checkmark', async () => {
+    it('returns unicode checkmark', () => {
         expect(icon('ok')).toBe('\u2713');
     });
 
-    it('returns unicode cross', async () => {
+    it('returns unicode cross', () => {
         expect(icon('err')).toBe('\u2717');
     });
 });
@@ -61,29 +61,29 @@ describe('success/error/warn/info', () => {
         vi.clearAllMocks();
     });
 
-    it('success prints green message', async () => {
+    it('success prints green message', () => {
         success('done');
         expect(output.print).toHaveBeenCalledWith(expect.stringMatching(/done/));
     });
 
-    it('error prints red message', async () => {
+    it('error prints red message', () => {
         error('fail');
         expect(output.print).toHaveBeenCalledWith(expect.stringMatching(/fail/));
     });
 
-    it('warn prints yellow message', async () => {
+    it('warn prints yellow message', () => {
         warn('caution');
         expect(output.print).toHaveBeenCalledWith(expect.stringMatching(/caution/));
     });
 
-    it('info prints cyan message', async () => {
+    it('info prints cyan message', () => {
         info('hello');
         expect(output.print).toHaveBeenCalledWith(expect.stringMatching(/hello/));
     });
 });
 
 describe('title', () => {
-    it('prints title with breadcrumbs', async () => {
+    it('prints title with breadcrumbs', () => {
         vi.mocked(getBreadcrumbPath).mockReturnValue('main');
         title('My Title');
         expect(output.print).toHaveBeenCalledWith(expect.stringMatching(/My Title/));
@@ -91,7 +91,7 @@ describe('title', () => {
 });
 
 describe('divider', () => {
-    it('prints divider', async () => {
+    it('prints divider', () => {
         divider();
         expect(output.print).toHaveBeenCalled();
     });
@@ -102,34 +102,34 @@ describe('tableView', () => {
         vi.clearAllMocks();
     });
 
-    it('prints warning for null data', async () => {
+    it('prints warning for null data', () => {
         tableView(null);
         expect(output.print).toHaveBeenCalledWith(expect.stringMatching(/Nenhum dado/));
     });
 
-    it('prints warning for empty array', async () => {
+    it('prints warning for empty array', () => {
         tableView([]);
         expect(output.print).toHaveBeenCalledWith(expect.stringMatching(/Nenhum dado/));
     });
 
-    it('renders data rows', async () => {
+    it('renders data rows', () => {
         tableView([{ name: 'foo', status: 'pass' }]);
         expect(output.print).toHaveBeenCalled();
     });
 
-    it('renders with specific columns', async () => {
+    it('renders with specific columns', () => {
         tableView([{ name: 'foo', status: 'pass' }], ['name', 'status']);
         expect(output.print).toHaveBeenCalled();
     });
 });
 
 describe('getConfig / __setConfig', () => {
-    it('returns default config when none set', async () => {
+    it('returns default config when none set', () => {
         const c = getConfig();
         expect(c).toBeTruthy();
     });
 
-    it('returns set config after __setConfig', async () => {
+    it('returns set config after __setConfig', () => {
         const mockC = ConfigAccessor.create({});
         __setConfig(mockC);
         expect(getConfig()).toBe(mockC);

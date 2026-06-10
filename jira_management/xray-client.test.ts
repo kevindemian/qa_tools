@@ -7,7 +7,7 @@ import { createMockJiraResource } from '../shared/test-utils/factories/jira-reso
 
 const mockGraphqlMutation = vi.fn();
 
-vi.mock('../shared/xray-cloud-client', async () => ({
+vi.mock('../shared/xray-cloud-client', () => ({
     XrayCloudClient: vi.fn(function () {
         return {
             graphqlMutation: mockGraphqlMutation,

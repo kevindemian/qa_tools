@@ -7,7 +7,7 @@ import type { RegressionResult } from './silent-regression.js';
 import { nonNull } from './test-utils.js';
 
 describe('detectSilentRegression', () => {
-    it('detects regressions above default threshold', async () => {
+    it('detects regressions above default threshold', () => {
         const histories: Record<string, number[]> = {
             'auth test': [1.0, 1.1, 0.9, 1.0, 3.5],
             'api test': [2.0, 2.1, 1.9, 2.0, 2.1],
@@ -22,7 +22,7 @@ describe('detectSilentRegression', () => {
         expect(result.threshold).toBe(2);
     });
 
-    it('returns empty regressions when all within range', async () => {
+    it('returns empty regressions when all within range', () => {
         const histories: Record<string, number[]> = {
             'stable test': [1.0, 1.1, 0.9, 1.0, 1.05],
         };
@@ -32,13 +32,13 @@ describe('detectSilentRegression', () => {
         expect(result.totalTests).toBe(1);
     });
 
-    it('returns empty result for empty input', async () => {
+    it('returns empty result for empty input', () => {
         const result = detectSilentRegression({});
         expect(result.regressions).toEqual([]);
         expect(result.totalTests).toBe(0);
     });
 
-    it('skips tests with fewer than 2 durations', async () => {
+    it('skips tests with fewer than 2 durations', () => {
         const histories: Record<string, number[]> = {
             'single duration': [1.5],
             'empty array': [],
@@ -49,7 +49,7 @@ describe('detectSilentRegression', () => {
         expect(result.totalTests).toBe(0);
     });
 
-    it('handles identical historical durations (stdDev = 0)', async () => {
+    it('handles identical historical durations (stdDev = 0)', () => {
         const histories: Record<string, number[]> = {
             identical: [1.0, 1.0, 1.0, 1.0, 10.0],
         };
@@ -61,7 +61,7 @@ describe('detectSilentRegression', () => {
         expect(reg.stdDev).toBe(0);
     });
 
-    it('computes severity levels correctly', async () => {
+    it('computes severity levels correctly', () => {
         // hist = [1, 2, 3, 4] → mean=2.5, stdDev≈1.118
         const histories: Record<string, number[]> = {
             'critical regression': [1.0, 2.0, 3.0, 4.0, 10.0],
@@ -99,7 +99,7 @@ describe('detectSilentRegression', () => {
         expect(byTitle('faster test')).toBeUndefined();
     });
 
-    it('computes z-score correctly', async () => {
+    it('computes z-score correctly', () => {
         const hist = [1.0, 2.0, 3.0];
         const mean = (1.0 + 2.0 + 3.0) / 3;
         const variance = ((1 - mean) ** 2 + (2 - mean) ** 2 + (3 - mean) ** 2) / 3;
@@ -116,7 +116,7 @@ describe('detectSilentRegression', () => {
         expect(reg.zScore).toBeCloseTo(expectedZ, 10);
     });
 
-    it('uses custom threshold', async () => {
+    it('uses custom threshold', () => {
         // hist = [1, 2, 3] → mean=2, stdDev≈0.8165, z = (3.5-2)/0.8165 ≈ 1.837
         const histories: Record<string, number[]> = {
             'mild increase': [1.0, 2.0, 3.0, 3.5],
@@ -130,7 +130,7 @@ describe('detectSilentRegression', () => {
         expect(customResult.threshold).toBe(1);
     });
 
-    it('includes previous durations in the entry', async () => {
+    it('includes previous durations in the entry', () => {
         const histories: Record<string, number[]> = {
             test: [1.0, 2.0, 3.0, 10.0],
         };
@@ -140,7 +140,7 @@ describe('detectSilentRegression', () => {
         expect(reg.previousDurations).toEqual([1.0, 2.0, 3.0]);
     });
 
-    it('sets timestamp to valid ISO string', async () => {
+    it('sets timestamp to valid ISO string', () => {
         const result = detectSilentRegression({});
         expect(() => new Date(result.timestamp)).not.toThrow();
         expect(result.timestamp).toMatch(/^\d{4}-\d{2}-\d{2}T/);
@@ -168,13 +168,13 @@ describe('generateSilentRegressionHtml', () => {
         };
     }
 
-    it('generates valid HTML page', async () => {
+    it('generates valid HTML page', () => {
         const html = generateSilentRegressionHtml(makeResult());
         expect(html).toContain('<!DOCTYPE html>');
         expect(html).toContain('</html>');
     });
 
-    it('shows summary cards with test counts', async () => {
+    it('shows summary cards with test counts', () => {
         const html = generateSilentRegressionHtml(makeResult());
         expect(html).toContain('Total Tests');
         expect(html).toContain('10');
@@ -184,7 +184,7 @@ describe('generateSilentRegressionHtml', () => {
         expect(html).toContain('>2');
     });
 
-    it('includes regression entry in table cells', async () => {
+    it('includes regression entry in table cells', () => {
         const html = generateSilentRegressionHtml(makeResult());
         expect(html).toContain('auth test');
         expect(html).toContain('3.500');
@@ -192,13 +192,13 @@ describe('generateSilentRegressionHtml', () => {
         expect(html).toContain('25.00');
     });
 
-    it('shows severity badge in each row', async () => {
+    it('shows severity badge in each row', () => {
         const html = generateSilentRegressionHtml(makeResult());
         expect(html).toContain('data-component="badge"');
         expect(html).toContain('critical');
     });
 
-    it('shows no-regressions message when empty', async () => {
+    it('shows no-regressions message when empty', () => {
         const result = makeResult({ regressions: [] });
         const html = generateSilentRegressionHtml(result);
         expect(html).toContain('No silent regressions detected');
@@ -214,13 +214,13 @@ describe('generateSilentRegressionHtml', () => {
         }
     });
 
-    it('uses custom title', async () => {
+    it('uses custom title', () => {
         const html = generateSilentRegressionHtml(makeResult({ regressions: [] }), 'My Report');
         expect(html).toContain('<title>My Report</title>');
         expect(html).toContain('<h1>My Report</h1>');
     });
 
-    it('escapes HTML in test titles', async () => {
+    it('escapes HTML in test titles', () => {
         const result = makeResult({
             regressions: [
                 {
@@ -240,7 +240,7 @@ describe('generateSilentRegressionHtml', () => {
         expect(html).not.toContain('<script>alert');
     });
 
-    it('includes theme and dark mode support', async () => {
+    it('includes theme and dark mode support', () => {
         const html = generateSilentRegressionHtml(makeResult({ regressions: [] }));
         expect(html).toContain('qa-report-theme');
         expect(html).toContain('prefers-color-scheme');
@@ -248,19 +248,19 @@ describe('generateSilentRegressionHtml', () => {
         expect(html).toContain('html.dark');
     });
 
-    it('includes footer', async () => {
+    it('includes footer', () => {
         const html = generateSilentRegressionHtml(makeResult({ regressions: [] }));
         expect(html).toContain('Silent Regression Detector');
     });
 
-    it('shows data-component attributes from primitives', async () => {
+    it('shows data-component attributes from primitives', () => {
         const html = generateSilentRegressionHtml(makeResult());
         expect(html).toContain('data-component="metric-grid"');
         expect(html).toContain('data-component="metric-card"');
         expect(html).toContain('data-component="table-wrapper"');
     });
 
-    it('handles regressions at all severity levels', async () => {
+    it('handles regressions at all severity levels', () => {
         const result = makeResult({
             regressions: [
                 {
@@ -309,7 +309,7 @@ describe('generateSilentRegressionHtml', () => {
         expect(html).toContain('low');
     });
 
-    it('handles multiple regression entries', async () => {
+    it('handles multiple regression entries', () => {
         const result = makeResult({
             regressions: [
                 {
@@ -338,17 +338,17 @@ describe('generateSilentRegressionHtml', () => {
         expect(html).toContain('test B');
     });
 
-    it('uses error severity on MetricCard when regressions exist', async () => {
+    it('uses error severity on MetricCard when regressions exist', () => {
         const html = generateSilentRegressionHtml(makeResult());
         expect(html).toContain('data-severity="error"');
     });
 
-    it('uses success severity on MetricCard when no regressions', async () => {
+    it('uses success severity on MetricCard when no regressions', () => {
         const html = generateSilentRegressionHtml(makeResult({ regressions: [] }));
         expect(html).toContain('data-severity="success"');
     });
 
-    it('renders severity badge for none severity (default variant)', async () => {
+    it('renders severity badge for none severity (default variant)', () => {
         const result = makeResult({
             regressions: [
                 {
@@ -368,7 +368,7 @@ describe('generateSilentRegressionHtml', () => {
         expect(html).toContain('none');
     });
 
-    it('handles error during HTML generation gracefully', async () => {
+    it('handles error during HTML generation gracefully', () => {
         const html = generateSilentRegressionHtml(null);
         expect(html).toContain('Error generating silent regression report');
     });

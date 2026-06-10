@@ -9,11 +9,11 @@ vi.mock('../shared/prompt', async () => {
         smartPrompt: vi.fn<(...args: []) => Promise<string>>().mockResolvedValue('v2.0.0'),
     };
 });
-vi.mock('../shared/state', async () => ({
+vi.mock('../shared/state', () => ({
     load: vi.fn<(...args: []) => Record<string, unknown>>().mockReturnValue({}),
     update: vi.fn<(...args: [Record<string, unknown>]) => void>(),
 }));
-vi.mock('../shared/open', async () => ({ openWithOsOrFallback: vi.fn<(...args: [string]) => void>() }));
+vi.mock('../shared/open', () => ({ openWithOsOrFallback: vi.fn<(...args: [string]) => void>() }));
 
 import fs from 'fs';
 import path from 'path';
@@ -62,7 +62,7 @@ const E2E_TOKEN = process.env.E2E_JIRA_TOKEN ?? 'e2e-token';
 const HOST = 'http://localhost:1996';
 const API = HOST + '/rest/api/2';
 
-beforeAll(async () => {
+beforeAll(() => {
     nock.cleanAll();
     process.env.HOME = tmpHome;
     process.env.JIRA_BASE_URL = HOST;
@@ -72,7 +72,7 @@ beforeAll(async () => {
     nock.disableNetConnect();
 });
 
-afterAll(async () => {
+afterAll(() => {
     nock.cleanAll();
     nock.enableNetConnect();
     nock.restore();
@@ -85,7 +85,7 @@ afterAll(async () => {
     });
 });
 
-beforeEach(async () => {
+beforeEach(() => {
     vi.clearAllMocks();
     vi.restoreAllMocks();
     nock.cleanAll();
@@ -103,7 +103,7 @@ beforeEach(async () => {
     );
 });
 
-afterEach(async () => {
+afterEach(() => {
     vi.clearAllMocks();
     vi.restoreAllMocks();
     nock.cleanAll();
@@ -144,7 +144,7 @@ const getPrompt = () => vi.mocked(promptModule);
 // ──────────────────────────────────────────────
 // case02 — List versions  (GET project + versions)
 // ──────────────────────────────────────────────
-describe('case02 — list versions', async () => {
+describe('case02 — list versions', () => {
     it('happy path: project found, 2 versions returned', async () => {
         const { api } = freshScope();
         api.get('/project/ECSPOL').reply(200, { id: '123' });
@@ -185,7 +185,7 @@ describe('case02 — list versions', async () => {
 // ──────────────────────────────────────────────
 // case03 — Create version  (postJiraResource → POST /version)
 // ──────────────────────────────────────────────
-describe('case03 — create version', async () => {
+describe('case03 — create version', () => {
     it('happy path: creates version', async () => {
         const { api } = freshScope();
         // createVersion → getVersionId → getProjectId + getProjectVersions, then POST
@@ -213,7 +213,7 @@ describe('case03 — create version', async () => {
 // ──────────────────────────────────────────────
 // case04 — Assign fixVersion  (uses in-memory tasks + updateFixVersions)
 // ──────────────────────────────────────────────
-describe('case04 — assign fixVersion', async () => {
+describe('case04 — assign fixVersion', () => {
     it('happy path with in-memory tasks: updateFixVersions for each', async () => {
         const { api } = freshScope();
         // Handler calls updateFixVersions per task (in a for loop)
@@ -242,7 +242,7 @@ describe('case04 — assign fixVersion', async () => {
 // ──────────────────────────────────────────────
 // case05 — Update package + release notes  (getReleaseTasks + PackageVersionManager)
 // ──────────────────────────────────────────────
-describe('case05 — update package + release notes', async () => {
+describe('case05 — update package + release notes', () => {
     it('happy path: fetches tasks, updates package.json and release notes', async () => {
         const { api } = freshScope();
         api.get('/project/ECSPOL').reply(200, { id: '123' });
@@ -277,7 +277,7 @@ describe('case05 — update package + release notes', async () => {
 // ──────────────────────────────────────────────
 // case06 — Check task status  (checkReleaseTasksStatus)
 // ──────────────────────────────────────────────
-describe('case06 — check task status', async () => {
+describe('case06 — check task status', () => {
     it('happy path: all tasks done', async () => {
         const { api } = freshScope();
         api.get('/project/ECSPOL').reply(200, { id: '123' });
@@ -299,7 +299,7 @@ describe('case06 — check task status', async () => {
 // ──────────────────────────────────────────────
 // case07 — Close tasks  (getReleaseTasks + moveCardsToDone)
 // ──────────────────────────────────────────────
-describe('case07 — close tasks', async () => {
+describe('case07 — close tasks', () => {
     it('happy path: close 2 tasks from New → approve → use test case', async () => {
         const { api } = freshScope();
         api.get('/project/ECSPOL').reply(200, { id: '123' });
@@ -358,7 +358,7 @@ describe('case07 — close tasks', async () => {
 // ──────────────────────────────────────────────
 // case08 — Publish version  (releaseVersion)
 // ──────────────────────────────────────────────
-describe('case08 — publish version', async () => {
+describe('case08 — publish version', () => {
     it('happy path: releases version', async () => {
         const { api } = freshScope();
         // releaseVersion → getVersionId → getProjectId + getProjectVersions
@@ -387,7 +387,7 @@ describe('case08 — publish version', async () => {
 // ──────────────────────────────────────────────
 // case09 — Switch project  (local — no HTTP)
 // ──────────────────────────────────────────────
-describe('case09 — switch project', async () => {
+describe('case09 — switch project', () => {
     it('updates ctx.project_name and persists to state', async () => {
         getPrompt().ask.mockResolvedValueOnce('NEWPROJ');
         const c = buildContext();
@@ -402,7 +402,7 @@ describe('case09 — switch project', async () => {
 // ──────────────────────────────────────────────
 // case10 — Change git directory  (local — no HTTP)
 // ──────────────────────────────────────────────
-describe('case10 — change git directory', async () => {
+describe('case10 — change git directory', () => {
     it('sets git directory and packageManager', async () => {
         getPrompt().ask.mockResolvedValueOnce(tmpGitDir);
         const c = buildContext();
@@ -416,7 +416,7 @@ describe('case10 — change git directory', async () => {
 // ──────────────────────────────────────────────
 // case11 — Generate CSV/JSON template  (local — copies file)
 // ──────────────────────────────────────────────
-describe('case11 — generate CSV/JSON template', async () => {
+describe('case11 — generate CSV/JSON template', () => {
     it('copies CSV template file to target path', async () => {
         const dest = path.join(tmpHome, 'template.csv');
         getPrompt().ask.mockResolvedValueOnce('CSV').mockResolvedValueOnce(dest);
@@ -441,7 +441,7 @@ describe('case11 — generate CSV/JSON template', async () => {
 // ──────────────────────────────────────────────
 // case12 — Diagnose connection  (3 GET endpoints)
 // ──────────────────────────────────────────────
-describe('case12 — diagnose connection', async () => {
+describe('case12 — diagnose connection', () => {
     it('all 3 endpoints respond 200', async () => {
         const { api, xray } = freshScope();
         api.get('/myself').reply(200, { displayName: 'Bot' });
@@ -470,7 +470,7 @@ describe('case12 — diagnose connection', async () => {
 // ──────────────────────────────────────────────
 // case13 — Create Test Execution  (uses in-memory tasks, helper → HTTP)
 // ──────────────────────────────────────────────
-describe('case13 — create Test Execution', async () => {
+describe('case13 — create Test Execution', () => {
     it('happy path with in-memory tasks', async () => {
         const { api } = freshScope();
         // createTestExecution → findExistingTe(GET /search), GET /issuetype, GET /field, POST /issue
@@ -519,7 +519,7 @@ describe('case13 — create Test Execution', async () => {
 // ──────────────────────────────────────────────
 // case14 — Change Cypress directory  (local — no HTTP)
 // ──────────────────────────────────────────────
-describe('case14 — change Cypress directory', async () => {
+describe('case14 — change Cypress directory', () => {
     it('sets cypress dir in state', async () => {
         getPrompt().ask.mockResolvedValueOnce('/tmp/cypress');
         const c = buildContext();
@@ -533,7 +533,7 @@ describe('case14 — change Cypress directory', async () => {
 // ──────────────────────────────────────────────
 // case15 — Import JSON tests  (createTestsFromJson + optional TE)
 // ──────────────────────────────────────────────
-describe('case15 — import JSON tests', async () => {
+describe('case15 — import JSON tests', () => {
     it('happy path: creates test from JSON then Test Execution', async () => {
         const { api, xray } = freshScope();
         // createTestsFromJson creates 1 test from JSON fixture:
@@ -588,7 +588,7 @@ describe('case15 — import JSON tests', async () => {
 // ──────────────────────────────────────────────
 // case16 — Change JSON directory  (local — no HTTP)
 // ──────────────────────────────────────────────
-describe('case16 — change JSON directory', async () => {
+describe('case16 — change JSON directory', () => {
     it('sets json dir', async () => {
         getPrompt().ask.mockResolvedValueOnce('/tmp/json');
         const c = buildContext();

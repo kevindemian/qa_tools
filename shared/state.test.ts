@@ -10,7 +10,7 @@ const mockRootLogger = vi.hoisted(() => ({
     updateSplashStep: vi.fn(),
 }));
 
-vi.mock('./logger', async () => ({
+vi.mock('./logger', () => ({
     rootLogger: mockRootLogger,
     Logger: function () {},
 }));
@@ -68,13 +68,13 @@ describe('State', () => {
     });
 
     describe('load', () => {
-        it('returns empty object when no state file', async () => {
+        it('returns empty object when no state file', () => {
             mockFs({});
             const result = state.load(makeConfig());
             expect(result).toEqual({});
         });
 
-        it('returns parsed state when file exists', async () => {
+        it('returns parsed state when file exists', () => {
             mockFs({ [STATE_PATH]: JSON.stringify({ lastProject: 'ECSPOL' }) });
             const result = state.load(makeConfig());
             expect(result).toEqual({ lastProject: 'ECSPOL' });
@@ -84,7 +84,7 @@ describe('State', () => {
     });
 
     describe('save', () => {
-        it('writes state to backup and main paths', async () => {
+        it('writes state to backup and main paths', () => {
             const mocks = mockFs({});
             state.save({ lastProject: 'TEST' }, makeConfig());
             expect(mocks.write).toHaveBeenCalled();
@@ -92,7 +92,7 @@ describe('State', () => {
     });
 
     describe('update', () => {
-        it('applies mutation and persists', async () => {
+        it('applies mutation and persists', () => {
             mockFs({ [STATE_PATH]: JSON.stringify({ lastProject: 'OLD' }) });
             const result = state.update((s) => {
                 s.lastProject = 'NEW';
@@ -100,7 +100,7 @@ describe('State', () => {
             expect(result.lastProject).toBe('NEW');
         });
 
-        it('returns state with applied mutation', async () => {
+        it('returns state with applied mutation', () => {
             mockFs({ [STATE_PATH]: JSON.stringify({ lastProject: 'OLD' }) });
             const result = state.update((s) => {
                 s.lastProject = 'NEW';
@@ -110,7 +110,7 @@ describe('State', () => {
     });
 
     describe('backup recovery', () => {
-        it('recovers from backup when main file is corrupted', async () => {
+        it('recovers from backup when main file is corrupted', () => {
             const bakPath = STATE_PATH + '.bak';
             mockFs({
                 [STATE_PATH]: 'corrupted{json',
@@ -124,7 +124,7 @@ describe('State', () => {
     describe('state migration from old path', () => {
         const OLD_STATE_PATH = path.join(os.homedir(), '.qa_tools_state.json');
 
-        it('copies old state to new path when old exists and new does not', async () => {
+        it('copies old state to new path when old exists and new does not', () => {
             const mocks = mockFs({
                 [OLD_STATE_PATH]: JSON.stringify({ lastProject: 'MIGRATED' }),
             });
@@ -134,7 +134,7 @@ describe('State', () => {
             expect(state.load(config)).toEqual({ lastProject: 'MIGRATED' });
         });
 
-        it('does not migrate when new state file already exists', async () => {
+        it('does not migrate when new state file already exists', () => {
             const mocks = mockFs({
                 [OLD_STATE_PATH]: JSON.stringify({ lastProject: 'OLD' }),
                 [STATE_PATH]: JSON.stringify({ lastProject: 'NEW' }),
@@ -147,7 +147,7 @@ describe('State', () => {
     });
 
     describe('corrupted state without backup', () => {
-        it('returns empty object when main file corrupted and no backup exists', async () => {
+        it('returns empty object when main file corrupted and no backup exists', () => {
             const config = makeConfig();
             mockFs({
                 [STATE_PATH]: 'corrupted{json',
@@ -156,7 +156,7 @@ describe('State', () => {
             expect(result).toEqual({});
         });
 
-        it('calls rootLogger.warn when state file is corrupted', async () => {
+        it('calls rootLogger.warn when state file is corrupted', () => {
             const config = makeConfig();
             mockFs({
                 [STATE_PATH]: 'corrupted{json',
@@ -167,7 +167,7 @@ describe('State', () => {
     });
 
     describe('load error branches', () => {
-        it('warns when backup recovery fails (backup also corrupted)', async () => {
+        it('warns when backup recovery fails (backup also corrupted)', () => {
             const config = makeConfig();
             const bakPath = STATE_PATH + '.bak';
             mockFs({
@@ -179,7 +179,7 @@ describe('State', () => {
             expect(mockRootLogger.error).toHaveBeenCalledWith(expect.stringContaining('Falha ao recuperar backup'));
         });
 
-        it('warns when backup rename fails', async () => {
+        it('warns when backup rename fails', () => {
             const config = makeConfig();
             mockFs({
                 [STATE_PATH]: 'corrupted{json',
@@ -194,7 +194,7 @@ describe('State', () => {
     });
 
     describe('save error handling', () => {
-        it('warns and logs error when save write fails', async () => {
+        it('warns and logs error when save write fails', () => {
             const config = makeConfig();
             mockFs({});
             vi.spyOn(fs, 'writeFileSync').mockImplementationOnce(() => {
@@ -206,7 +206,7 @@ describe('State', () => {
     });
 
     describe('ensureStateDir', () => {
-        it('returns false when mkdirSync throws (tested via load)', async () => {
+        it('returns false when mkdirSync throws (tested via load)', () => {
             const config = makeConfig();
             mockFs({});
             vi.spyOn(fs, 'mkdirSync').mockImplementation(() => {
@@ -218,7 +218,7 @@ describe('State', () => {
     });
 
     describe('migrateOldState catch', () => {
-        it('logs warn when readFileSync throws during migration', async () => {
+        it('logs warn when readFileSync throws during migration', () => {
             const OLD_STATE_PATH = path.join(os.homedir(), '.qa_tools_state.json');
             mockFs({
                 [OLD_STATE_PATH]: JSON.stringify({ lastProject: 'MIGRATED' }),
@@ -232,7 +232,7 @@ describe('State', () => {
     });
 
     describe('getStatePath', () => {
-        it('returns path ending in state.json', async () => {
+        it('returns path ending in state.json', () => {
             const result = state.getStatePath(makeConfig());
             expect(result.endsWith('state.json')).toBe(true);
         });

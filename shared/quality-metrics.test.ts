@@ -31,7 +31,7 @@ describe('QualityMetricsCollector', () => {
     });
 
     describe('invariant fire tracking', () => {
-        it('records invariant fires', async () => {
+        it('records invariant fires', () => {
             collector.recordInvariantFire('T-01');
             collector.recordInvariantFire('T-01');
             collector.recordInvariantFire('T-02');
@@ -40,7 +40,7 @@ describe('QualityMetricsCollector', () => {
             expect(snapshot.invariantFireCount['T-02']).toBe(1);
         });
 
-        it('calculates fire rate', async () => {
+        it('calculates fire rate', () => {
             collector.recordInvariantFire('T-01');
             collector.recordInvariantFire('T-02');
             collector.recordInvariantFire('T-02');
@@ -48,13 +48,13 @@ describe('QualityMetricsCollector', () => {
             expect(rate).toBeCloseTo(2 / 3);
         });
 
-        it('returns 0 fire rate for unknown invariant', async () => {
+        it('returns 0 fire rate for unknown invariant', () => {
             expect(collector.invariantFireRate('UNKNOWN')).toBe(0);
         });
     });
 
     describe('layer tracking', () => {
-        it('tracks layer attempts and passes', async () => {
+        it('tracks layer attempts and passes', () => {
             collector.recordLayerAttempt('layer1');
             collector.recordLayerPass('layer1');
             collector.recordLayerAttempt('layer1');
@@ -65,7 +65,7 @@ describe('QualityMetricsCollector', () => {
     });
 
     describe('artifact type tracking', () => {
-        it('records artifact types', async () => {
+        it('records artifact types', () => {
             collector.recordArtifactType('test-suite');
             collector.recordArtifactType('test-suite');
             collector.recordArtifactType('analysis');
@@ -76,21 +76,21 @@ describe('QualityMetricsCollector', () => {
     });
 
     describe('structure score', () => {
-        it('averages structure scores', async () => {
+        it('averages structure scores', () => {
             collector.recordStructureScore(0.8);
             collector.recordStructureScore(1.0);
             const snapshot = collector.snapshot();
             expect(snapshot.avgStructureScore).toBe(0.9);
         });
 
-        it('returns 0 when no scores recorded', async () => {
+        it('returns 0 when no scores recorded', () => {
             const snapshot = collector.snapshot();
             expect(snapshot.avgStructureScore).toBe(0);
         });
     });
 
     describe('clear', () => {
-        it('resets all counters', async () => {
+        it('resets all counters', () => {
             collector.recordInvariantFire('T-01');
             collector.recordLayerAttempt('layer1');
             collector.recordArtifactType('test-suite');
@@ -102,12 +102,12 @@ describe('QualityMetricsCollector', () => {
     });
 
     describe('drift detection', () => {
-        it('returns empty alerts with insufficient history', async () => {
+        it('returns empty alerts with insufficient history', () => {
             const alerts = collector.detectDrift([]);
             expect(alerts).toHaveLength(0);
         });
 
-        it('returns empty alerts with one snapshot', async () => {
+        it('returns empty alerts with one snapshot', () => {
             const snapshots: QualityMetricsSnapshot[] = [
                 {
                     timestamp: '2026-01-01',
@@ -122,7 +122,7 @@ describe('QualityMetricsCollector', () => {
             expect(alerts).toHaveLength(0);
         });
 
-        it('detects drift when current rate exceeds 2σ from baseline mean', async () => {
+        it('detects drift when current rate exceeds 2σ from baseline mean', () => {
             collector.recordInvariantFire('T-01');
             collector.recordInvariantFire('T-02');
 
@@ -149,7 +149,7 @@ describe('QualityMetricsCollector', () => {
             expect(Array.isArray(alerts)).toBe(true);
         });
 
-        it('skips invariants with fewer than 2 baseline occurrences', async () => {
+        it('skips invariants with fewer than 2 baseline occurrences', () => {
             collector.recordInvariantFire('RARE');
 
             const snapshots: QualityMetricsSnapshot[] = [
@@ -177,23 +177,23 @@ describe('QualityMetricsCollector', () => {
     });
 
     describe('getHistory', () => {
-        it('returns empty array when file does not exist', async () => {
+        it('returns empty array when file does not exist', () => {
             const history = collector.getHistory();
             expect(history).toEqual([]);
         });
     });
 
     describe('exported functions', () => {
-        it('recordInvariantFire calls default collector', async () => {
+        it('recordInvariantFire calls default collector', () => {
             recordInvariantFire('T-01');
         });
 
-        it('detectDrift returns array', async () => {
+        it('detectDrift returns array', () => {
             const alerts = detectDrift();
             expect(Array.isArray(alerts)).toBe(true);
         });
 
-        it('snapshotQualityMetrics returns snapshot', async () => {
+        it('snapshotQualityMetrics returns snapshot', () => {
             const snapshot = snapshotQualityMetrics();
             expect(snapshot).toHaveProperty('timestamp');
             expect(snapshot).toHaveProperty('invariantFireCount');

@@ -119,7 +119,7 @@ type TestResultsModule = typeof import('./test-results.js');
 let mod: TestResultsModule;
 
 beforeAll(async () => {
-    mod = (await import('./test-results.js')) as TestResultsModule;
+    mod = (await import('./test-results.js'));
 });
 
 beforeEach(() => {

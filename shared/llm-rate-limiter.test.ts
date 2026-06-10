@@ -32,11 +32,11 @@ beforeEach(() => {
 });
 
 describe('jitter', () => {
-    it('returns 0 when waitMs is 0', async () => {
+    it('returns 0 when waitMs is 0', () => {
         expect(jitter(0)).toBe(0);
     });
 
-    it('returns a value between 0 and waitMs', async () => {
+    it('returns a value between 0 and waitMs', () => {
         for (let i = 0; i < 50; i++) {
             const result = jitter(1000);
             expect(result).toBeGreaterThanOrEqual(0);
@@ -44,20 +44,20 @@ describe('jitter', () => {
         }
     });
 
-    it('returns an integer value', async () => {
+    it('returns an integer value', () => {
         const result = jitter(500);
         expect(Number.isInteger(result)).toBe(true);
     });
 });
 
 describe('checkRateLimit', () => {
-    it('allows requests within limit', async () => {
+    it('allows requests within limit', () => {
         Config.set('LLM_RATE_LIMIT', '5');
         expect(() => checkRateLimit('main')).not.toThrow();
         expect(() => checkRateLimit('main')).not.toThrow();
     });
 
-    it('throws when rate limit exceeded', async () => {
+    it('throws when rate limit exceeded', () => {
         Config.set('LLM_RATE_LIMIT', '2');
         resetRateLimiter();
         checkRateLimit('main');
@@ -65,14 +65,14 @@ describe('checkRateLimit', () => {
         expect(() => checkRateLimit('main')).toThrow(LlmRateLimitError);
     });
 
-    it('uses default limit of 30 when env not set', async () => {
+    it('uses default limit of 30 when env not set', () => {
         for (let i = 0; i < 30; i++) {
             expect(() => checkRateLimit('main')).not.toThrow();
         }
         expect(() => checkRateLimit('main')).toThrow(LlmRateLimitError);
     });
 
-    it('recovers after rate limit window passes', async () => {
+    it('recovers after rate limit window passes', () => {
         vi.useFakeTimers();
         Config.set('LLM_RATE_LIMIT', '1');
         resetRateLimiter();
@@ -83,7 +83,7 @@ describe('checkRateLimit', () => {
         vi.useRealTimers();
     });
 
-    it('enforces tier-specific limits independently', async () => {
+    it('enforces tier-specific limits independently', () => {
         Config.set('LLM_RATE_LIMIT', '1');
         resetRateLimiter();
         checkRateLimit('main');
@@ -91,7 +91,7 @@ describe('checkRateLimit', () => {
         expect(() => checkRateLimit('fast')).not.toThrow();
     });
 
-    it('throws error message containing tier name and limit', async () => {
+    it('throws error message containing tier name and limit', () => {
         Config.set('LLM_RATE_LIMIT', '1');
         resetRateLimiter();
         checkRateLimit('reviewer');
@@ -100,7 +100,7 @@ describe('checkRateLimit', () => {
 });
 
 describe('resetRateLimiter', () => {
-    it('resets the rate limiter state', async () => {
+    it('resets the rate limiter state', () => {
         Config.set('LLM_RATE_LIMIT', '1');
         resetRateLimiter();
         checkRateLimit('main');

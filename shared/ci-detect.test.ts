@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-vi.mock('./config.js', async () => ({
+vi.mock('./config.js', () => ({
     default: {
         get: vi.fn(),
     },

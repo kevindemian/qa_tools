@@ -6,13 +6,13 @@ function makeCtx(input: string): ValidationContext {
 }
 
 describe('verifyEvidence', () => {
-    it('returns zero citations for artifact without evidence', async () => {
+    it('returns zero citations for artifact without evidence', () => {
         const result = verifyEvidence({ title: 'No evidence' }, makeCtx('anything'));
         expect(result.totalCitations).toBe(0);
         expect(result.allVerified).toBe(true);
     });
 
-    it('verifies direct substring match', async () => {
+    it('verifies direct substring match', () => {
         const result = verifyEvidence(
             { tests: [{ evidence: ['User can log in with valid credentials'] }] },
             makeCtx('User can log in with valid credentials'),
@@ -21,7 +21,7 @@ describe('verifyEvidence', () => {
         expect(result.allVerified).toBe(true);
     });
 
-    it('detects hallucinated citations', async () => {
+    it('detects hallucinated citations', () => {
         const result = verifyEvidence(
             { evidence: ['Something completely unrelated to the input'] },
             makeCtx('This is about a completely different topic with no overlap'),
@@ -29,7 +29,7 @@ describe('verifyEvidence', () => {
         expect(result.hallucinated).toBeGreaterThanOrEqual(0);
     });
 
-    it('handles test-level evidence array', async () => {
+    it('handles test-level evidence array', () => {
         const result = verifyEvidence(
             { tests: [{ evidence: ['Criterion C-1: User can log in'] }] },
             makeCtx('Criterion C-1: User can log in'),
@@ -37,19 +37,19 @@ describe('verifyEvidence', () => {
         expect(result.verified).toBe(1);
     });
 
-    it('handles short citations as unverifiable', async () => {
+    it('handles short citations as unverifiable', () => {
         const result = verifyEvidence({ evidence: ['abc'] }, makeCtx('anything'));
         expect(result.unverifiable).toBeGreaterThanOrEqual(0);
     });
 });
 
 describe('evidenceValidationResult', () => {
-    it('returns passed result when no citations', async () => {
+    it('returns passed result when no citations', () => {
         const results = evidenceValidationResult({}, makeCtx('anything'));
         expect(results.some((r) => r.passed && r.invariantId === 'E-00')).toBe(true);
     });
 
-    it('returns E-01 when hallucinated citations exist', async () => {
+    it('returns E-01 when hallucinated citations exist', () => {
         const results = evidenceValidationResult(
             { evidence: ['Something completely unrelated to the input which should trigger hallucination'] },
             makeCtx('Completely different content without any overlap between the two'),

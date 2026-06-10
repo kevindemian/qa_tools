@@ -16,7 +16,7 @@ beforeEach(() => {
 });
 
 describe('case04 — assign fixVersion', () => {
-    it('exports a handler function', async () => {
+    it('exports a handler function', () => {
         expect(case04).toBeDefined();
         expect(typeof case04.handler).toBe('function');
     });

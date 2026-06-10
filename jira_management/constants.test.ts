@@ -2,7 +2,7 @@ import { statusNotMapped } from './constants.js';
 
 describe('constants', () => {
     describe('statusNotMapped', () => {
-        it('returns formatted string', async () => {
+        it('returns formatted string', () => {
             const result = statusNotMapped('TASK-42', 'In Progress');
             expect(result).toContain('TASK-42');
             expect(result).toContain('In Progress');

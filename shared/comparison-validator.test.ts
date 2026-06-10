@@ -11,7 +11,7 @@ function makeCtx(input: string): ValidationContext {
 }
 
 describe('ComparisonValidator — createComparisonValidator', () => {
-    it('creates validator with all invariants', async () => {
+    it('creates validator with all invariants', () => {
         const v = createComparisonValidator();
         const invariants = v.listInvariants();
         expect(invariants).toContain('C-01');
@@ -19,7 +19,7 @@ describe('ComparisonValidator — createComparisonValidator', () => {
         expect(invariants).toContain('C-03');
     });
 
-    it('passes valid comparison', async () => {
+    it('passes valid comparison', () => {
         const v = createComparisonValidator();
         const comparison = {
             summary: 'Pass rate dropped from 95% to 82% due to 13 new failures in checkout module',
@@ -33,7 +33,7 @@ describe('ComparisonValidator — createComparisonValidator', () => {
 });
 
 describe('invariantChangesNonEmpty (C-01)', () => {
-    it('passes with changes', async () => {
+    it('passes with changes', () => {
         const results = invariantChangesNonEmpty(
             { meaningfulChanges: [{ metric: 'Rate', before: 95, after: 82, impact: 'negative' }] },
             makeCtx(''),
@@ -41,7 +41,7 @@ describe('invariantChangesNonEmpty (C-01)', () => {
         expect(results.some((r: { passed: boolean }) => r.passed)).toBe(true);
     });
 
-    it('fails empty changes', async () => {
+    it('fails empty changes', () => {
         const results = invariantChangesNonEmpty({ meaningfulChanges: [] }, makeCtx(''));
         expect(
             results.some((r: { passed: boolean; invariantId: string }) => !r.passed && r.invariantId === 'C-01'),
@@ -50,12 +50,12 @@ describe('invariantChangesNonEmpty (C-01)', () => {
 });
 
 describe('invariantSummaryLength (C-03)', () => {
-    it('passes short summary', async () => {
+    it('passes short summary', () => {
         const results = invariantSummaryLength({ summary: 'Simple change.' }, makeCtx(''));
         expect(results.some((r: { passed: boolean }) => r.passed)).toBe(true);
     });
 
-    it('warns on long summary', async () => {
+    it('warns on long summary', () => {
         const results = invariantSummaryLength(
             {
                 summary:
@@ -70,7 +70,7 @@ describe('invariantSummaryLength (C-03)', () => {
 });
 
 describe('invariantNumbersMatchInput (C-02)', () => {
-    it('passes when numbers match input', async () => {
+    it('passes when numbers match input', () => {
         const results = invariantNumbersMatchInput(
             { meaningfulChanges: [{ metric: 'Pass rate', before: '95%', after: '82%', impact: 'negative' }] },
             makeCtx('95% pass rate dropped to 82%'),

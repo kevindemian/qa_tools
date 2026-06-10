@@ -6,11 +6,11 @@
  */
 import { describe, expect, it, vi, beforeEach } from 'vitest';
 
-vi.mock('../../shared/http-client', async () => ({
+vi.mock('../../shared/http-client', () => ({
     createHttpClient: vi.fn(),
 }));
 
-vi.mock('../../shared/config', async () => ({
+vi.mock('../../shared/config', () => ({
     default: {
         get: vi.fn((key: string) => {
             if (key === 'githubToken') return 'gh_token_abc';
@@ -27,11 +27,11 @@ vi.mock('../../shared/config', async () => ({
     },
 }));
 
-vi.mock('../../shared/logger', async () => ({
+vi.mock('../../shared/logger', () => ({
     rootLogger: { warn: vi.fn(), error: vi.fn(), child: vi.fn().mockReturnValue({ info: vi.fn(), error: vi.fn() }) },
 }));
 
-vi.mock('../../shared/deps', async () => ({
+vi.mock('../../shared/deps', () => ({
     AdmZip: class {
         entries: Array<{ name: string; getData: () => Buffer }>;
         constructor(data: Buffer) {

@@ -6,14 +6,14 @@ import { aggregateDefectTrends, generateDefectTrendHtml } from './defect-trend.j
 import type { FailureClassification } from './metrics.js';
 
 describe('aggregateDefectTrends', () => {
-    it('returns empty result for empty array', async () => {
+    it('returns empty result for empty array', () => {
         const result = aggregateDefectTrends([]);
         expect(result.trends).toEqual([]);
         expect(result.topCategories).toEqual([]);
         expect(result.period).toEqual({ from: '', to: '' });
     });
 
-    it('returns empty result for null/undefined', async () => {
+    it('returns empty result for null/undefined', () => {
         const r1 = aggregateDefectTrends(null);
         expect(r1.trends).toEqual([]);
         expect(r1.topCategories).toEqual([]);
@@ -22,7 +22,7 @@ describe('aggregateDefectTrends', () => {
         expect(r2.trends).toEqual([]);
     });
 
-    it('groups single day with multiple categories', async () => {
+    it('groups single day with multiple categories', () => {
         const input: FailureClassification[] = [
             { timestamp: '2026-06-01T10:00:00Z', testTitle: 't1', category: 'ASSERTION', project: 'proj' },
             { timestamp: '2026-06-01T11:00:00Z', testTitle: 't2', category: 'TIMEOUT', project: 'proj' },
@@ -37,7 +37,7 @@ describe('aggregateDefectTrends', () => {
         expect(result.period).toEqual({ from: '2026-06-01', to: '2026-06-01' });
     });
 
-    it('handles multiple days with same category', async () => {
+    it('handles multiple days with same category', () => {
         const input: FailureClassification[] = [
             { timestamp: '2026-05-31T08:00:00Z', testTitle: 't1', category: 'ASSERTION', project: 'p' },
             { timestamp: '2026-06-01T09:00:00Z', testTitle: 't2', category: 'ASSERTION', project: 'p' },
@@ -58,7 +58,7 @@ describe('aggregateDefectTrends', () => {
         expect(result.trends[2]?.total).toBe(1);
     });
 
-    it('sorts by date ascending', async () => {
+    it('sorts by date ascending', () => {
         const input: FailureClassification[] = [
             { timestamp: '2026-06-03T00:00:00Z', testTitle: 't1', category: 'A', project: 'p' },
             { timestamp: '2026-06-01T00:00:00Z', testTitle: 't2', category: 'B', project: 'p' },
@@ -69,7 +69,7 @@ describe('aggregateDefectTrends', () => {
         expect(result.trends.map((t) => t.date)).toEqual(['2026-06-01', '2026-06-02', '2026-06-03']);
     });
 
-    it('computes topCategories sorted by count descending', async () => {
+    it('computes topCategories sorted by count descending', () => {
         const input: FailureClassification[] = [
             { timestamp: '2026-06-01T00:00:00Z', testTitle: 't1', category: 'TIMEOUT', project: 'p' },
             { timestamp: '2026-06-01T01:00:00Z', testTitle: 't2', category: 'ASSERTION', project: 'p' },
@@ -88,19 +88,19 @@ describe('aggregateDefectTrends', () => {
 });
 
 describe('generateDefectTrendHtml', () => {
-    it('shows no-data message for empty trends', async () => {
+    it('shows no-data message for empty trends', () => {
         const result = aggregateDefectTrends([]);
         const html = generateDefectTrendHtml(result);
         expect(html).toContain('<!DOCTYPE html>');
         expect(html).toContain('No defect data available.');
     });
 
-    it('shows no-data message for null/undefined result trends', async () => {
+    it('shows no-data message for null/undefined result trends', () => {
         const html = generateDefectTrendHtml({ trends: [], topCategories: [], period: { from: '', to: '' } });
         expect(html).toContain('No defect data available.');
     });
 
-    it('includes table and category names in HTML', async () => {
+    it('includes table and category names in HTML', () => {
         const input: FailureClassification[] = [
             { timestamp: '2026-06-01T10:00:00Z', testTitle: 't1', category: 'ASSERTION', project: 'p' },
             { timestamp: '2026-06-01T11:00:00Z', testTitle: 't2', category: 'TIMEOUT', project: 'p' },
@@ -116,7 +116,7 @@ describe('generateDefectTrendHtml', () => {
         expect(html).toContain('Defect Trend Dashboard');
     });
 
-    it('renders metric cards for top categories', async () => {
+    it('renders metric cards for top categories', () => {
         const input: FailureClassification[] = [
             { timestamp: '2026-06-01T00:00:00Z', testTitle: 't1', category: 'ASSERTION', project: 'p' },
             { timestamp: '2026-06-01T01:00:00Z', testTitle: 't2', category: 'TIMEOUT', project: 'p' },
@@ -129,13 +129,13 @@ describe('generateDefectTrendHtml', () => {
         expect(html).toContain('TIMEOUT');
     });
 
-    it('supports custom title', async () => {
+    it('supports custom title', () => {
         const result = aggregateDefectTrends([]);
         const html = generateDefectTrendHtml(result, 'Sprint 10 Defects');
         expect(html).toContain('Sprint 10 Defects');
     });
 
-    it('escapes HTML in category names', async () => {
+    it('escapes HTML in category names', () => {
         const input: FailureClassification[] = [
             { timestamp: '2026-06-01T00:00:00Z', testTitle: 't1', category: '<script>alert(1)</script>', project: 'p' },
         ];
@@ -145,21 +145,21 @@ describe('generateDefectTrendHtml', () => {
         expect(html).not.toContain('<script>alert');
     });
 
-    it('includes theme toggle script', async () => {
+    it('includes theme toggle script', () => {
         const result = aggregateDefectTrends([]);
         const html = generateDefectTrendHtml(result);
         expect(html).toContain('qa-report-theme');
         expect(html).toContain('prefers-color-scheme');
     });
 
-    it('includes CSS variables from design tokens', async () => {
+    it('includes CSS variables from design tokens', () => {
         const result = aggregateDefectTrends([]);
         const html = generateDefectTrendHtml(result);
         expect(html).toContain('--color-surface-page');
         expect(html).toContain('html.dark');
     });
 
-    it('shows period range in heading', async () => {
+    it('shows period range in heading', () => {
         const input: FailureClassification[] = [
             { timestamp: '2026-06-01T00:00:00Z', testTitle: 't1', category: 'ASSERTION', project: 'p' },
             { timestamp: '2026-06-03T00:00:00Z', testTitle: 't2', category: 'TIMEOUT', project: 'p' },
@@ -170,7 +170,7 @@ describe('generateDefectTrendHtml', () => {
         expect(html).toContain('2026-06-03');
     });
 
-    it('handles NaN in total gracefully', async () => {
+    it('handles NaN in total gracefully', () => {
         const result = {
             trends: [{ date: '2026-06-01', categories: { ASSERTION: NaN }, total: NaN }],
             topCategories: [{ category: 'ASSERTION', count: NaN }],

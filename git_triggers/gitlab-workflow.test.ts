@@ -12,13 +12,13 @@ import {
 } from './gitlab-workflow.js';
 import { apiGet, apiPost, projectPath } from './gitlab-api.js';
 import { createMockAxiosInstance } from '../shared/test-utils/factories/response-factory.js';
-vi.mock('./gitlab-api', async () => ({
+vi.mock('./gitlab-api', () => ({
     apiGet: vi.fn(),
     apiPost: vi.fn(),
     projectPath: vi.fn(),
 }));
 
-vi.mock('../shared/git-provider-error', async () => ({
+vi.mock('../shared/git-provider-error', () => ({
     handleError: vi.fn((err: unknown, opts?: { returnNull?: boolean }) => {
         if (opts?.returnNull) return null;
         throw err;
