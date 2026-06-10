@@ -5,9 +5,11 @@ vi.mock('../../shared/cli_base');
 vi.mock('../jira_link_manager');
 vi.mock('../csv_resource');
 
-import * as promptModule from '../../shared/prompt.js';
 import type { Mock } from 'vitest';
+import { mockedSafe } from '../../shared/test-utils/mock-types.js';
+import * as promptModule from '../../shared/prompt.js';
 import * as stateModule from '../../shared/state.js';
+
 import * as loggerModule from '../../shared/logger.js';
 import case02 from './case02.js';
 import case03 from './case03.js';
@@ -37,7 +39,7 @@ var mockConfigMod: Record<string, unknown>;
 
 vi.mock('../../shared/config', () => {
     mockConfigMod = {};
-    const get = vi.fn((key: string) => (mockConfigMod[key] as string) ?? '');
+    const get = vi.fn((key: string) => mockConfigMod[key] as string);
     mockConfigMod.get = get;
     mockConfigMod.getInstance = vi.fn(() => ({ get }));
     return { default: mockConfigMod };
@@ -199,7 +201,7 @@ describe('case03 — create version', () => {
 
     it('handles API error', async () => {
         const prompt = vi.mocked(promptModule);
-        const logger = vi.mocked(loggerModule);
+        const logger = mockedSafe(vi.mocked(loggerModule));
         prompt.ask.mockResolvedValueOnce('v2.0.0').mockResolvedValueOnce('');
         mockJiraResource.createVersion.mockRejectedValueOnce(new Error('API error'));
         const mod = case03;
@@ -768,7 +770,7 @@ describe('case01 — create tests from CSV', () => {
         mockConfigMod.csvPath = '/fake/test.csv';
         mockConfigMod.csvLabels = 'label1';
         mockCreateTests.createTestsFromCsv.mockImplementationOnce(async (_opts: { onBusy: (v: boolean) => void }) => {
-            await undefined;
+            await Promise.resolve();
             _opts.onBusy(true);
             _opts.onBusy(false);
             return {

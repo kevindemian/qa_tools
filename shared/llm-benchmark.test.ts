@@ -92,7 +92,7 @@ describe('runBenchmark', () => {
 
         const llmMock = vi.mocked(llmPrompt);
         llmMock.mockImplementation(async (opts) => {
-            await undefined;
+            await Promise.resolve();
             const callerId = opts.callerId;
             if (callerId === 'benchmark-fa') {
                 return JSON.stringify({
