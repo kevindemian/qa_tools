@@ -104,7 +104,7 @@ const sampleIssues: Array<{ labels: string[]; updated_at: string; created_at: st
 /* ------------------------------------------------------------------ */
 
 describe('extractErrorMessages', () => {
-    it('extracts unique error messages from log text', async () => {
+    it('extracts unique error messages from log text', () => {
         const log = `[INFO] Starting build
 Error: Module not found: 'foo'
 [WARN] retrying
@@ -114,16 +114,16 @@ FATAL: OOMKilled`;
         expect(result).toEqual(["Module not found: 'foo'", 'OOMKilled']);
     });
 
-    it('respects maxEntries limit', async () => {
+    it('respects maxEntries limit', () => {
         const log = `Error: A\nError: B\nError: C\nError: D`;
         expect(extractErrorMessages(log, 2)).toHaveLength(2);
     });
 
-    it('returns empty array for clean log', async () => {
+    it('returns empty array for clean log', () => {
         expect(extractErrorMessages('All tests passed!', 5)).toEqual([]);
     });
 
-    it('handles empty string', async () => {
+    it('handles empty string', () => {
         expect(extractErrorMessages('', 5)).toEqual([]);
     });
 });
@@ -132,18 +132,18 @@ describe('aggregatePipelineHealth', () => {
     const now = new Date('2026-05-29T00:00:00Z');
     const health = aggregatePipelineHealth(sampleRuns, sampleJobs, sampleErrors, sampleIssues, now);
 
-    it('computes pass rate correctly', async () => {
+    it('computes pass rate correctly', () => {
         expect(health.totalRuns).toBe(5);
         expect(health.passedRuns).toBe(3);
         expect(health.failedRuns).toBe(2);
         expect(health.passRate).toBe(60);
     });
 
-    it('computes average duration', async () => {
+    it('computes average duration', () => {
         expect(health.avgDurationSec).toBeGreaterThan(0);
     });
 
-    it('identifies top failing jobs', async () => {
+    it('identifies top failing jobs', () => {
         expect(health.topFailingJobs.length).toBeGreaterThanOrEqual(2);
         const lint = health.topFailingJobs.find((j) => j.name === 'lint');
         expect(lint).toBeDefined();
@@ -154,14 +154,14 @@ describe('aggregatePipelineHealth', () => {
         expect(test).toBeDefined();
     });
 
-    it('aggregates failure reasons', async () => {
+    it('aggregates failure reasons', () => {
         expect(health.failureReasons.length).toBeGreaterThanOrEqual(3);
         const moduleNotFound = health.failureReasons.find((r) => r.message.includes('Module not found'));
         expect(moduleNotFound).toBeDefined();
         expect(nonNull(moduleNotFound).count).toBe(1);
     });
 
-    it('breaks down by branch', async () => {
+    it('breaks down by branch', () => {
         const main = health.branchBreakdown.find((b) => b.branch === 'main');
         expect(main).toBeDefined();
         expect(nonNull(main).count).toBe(4);
@@ -173,23 +173,23 @@ describe('aggregatePipelineHealth', () => {
         expect(nonNull(develop).passRate).toBe(0);
     });
 
-    it('counts open issues by label', async () => {
+    it('counts open issues by label', () => {
         expect(health.openIssues.total).toBe(3);
         expect(health.openIssues.byLabel['bug']).toBe(2);
         expect(health.openIssues.byLabel['frontend']).toBe(1);
     });
 
-    it('detects stale issues (30d+ no update)', async () => {
+    it('detects stale issues (30d+ no update)', () => {
         expect(health.openIssues.staleCount).toBe(1);
     });
 
-    it('returns zero pass rate for empty runs', async () => {
+    it('returns zero pass rate for empty runs', () => {
         const empty = aggregatePipelineHealth([], [], [], [], now);
         expect(empty.totalRuns).toBe(0);
         expect(empty.passRate).toBe(0);
     });
 
-    it('handles runs without duration data', async () => {
+    it('handles runs without duration data', () => {
         const noDurationRuns: PipelineRunExtended[] = [
             { id: 1, status: 'completed', conclusion: 'success', head_branch: 'main' },
         ];
@@ -204,11 +204,11 @@ describe('renderPipelineHealthHtml', () => {
     const health = aggregatePipelineHealth(sampleRuns, sampleJobs, sampleErrors, sampleIssues, now);
     const html = renderPipelineHealthHtml(health, 'Test Report');
 
-    it('contains title', async () => {
+    it('contains title', () => {
         expect(html).toContain('Test Report');
     });
 
-    it('contains summary cards', async () => {
+    it('contains summary cards', () => {
         expect(html).toContain('Total Runs');
         expect(html).toContain('Passed');
         expect(html).toContain('Failed');
@@ -216,33 +216,33 @@ describe('renderPipelineHealthHtml', () => {
         expect(html).toContain('Avg Duration');
     });
 
-    it('contains top failing jobs table', async () => {
+    it('contains top failing jobs table', () => {
         expect(html).toContain('Top Failing Jobs');
         expect(html).toContain('lint');
         expect(html).toContain('test');
     });
 
-    it('contains failure intelligence section', async () => {
+    it('contains failure intelligence section', () => {
         expect(html).toContain('Failure Intelligence');
         expect(html).toContain('Module not found');
     });
 
-    it('contains branch breakdown', async () => {
+    it('contains branch breakdown', () => {
         expect(html).toContain('Branch Breakdown');
         expect(html).toContain('main');
     });
 
-    it('contains open issues section', async () => {
+    it('contains open issues section', () => {
         expect(html).toContain('Open Issues');
         expect(html).toContain('bug');
     });
 
-    it('is valid HTML document', async () => {
+    it('is valid HTML document', () => {
         expect(html).toMatch(/^<!DOCTYPE html>/);
         expect(html).toContain('</html>');
     });
 
-    it('renders empty state gracefully', async () => {
+    it('renders empty state gracefully', () => {
         const emptyHtml = renderPipelineHealthHtml(aggregatePipelineHealth([], [], [], [], now), 'Empty Report');
         expect(emptyHtml).toContain('Empty Report');
         expect(emptyHtml).toContain('0');

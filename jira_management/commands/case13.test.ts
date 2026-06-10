@@ -1,6 +1,6 @@
 vi.mock('../../shared/prompt');
 
-vi.mock('./test-execution-flow', async () => ({
+vi.mock('./test-execution-flow', () => ({
     offerTestExecutionAssociation: vi.fn().mockResolvedValue({ associated: false }),
     showResults: vi.fn().mockResolvedValue(undefined),
 }));
@@ -15,7 +15,7 @@ beforeEach(() => {
 });
 
 describe('case13 — create test execution', () => {
-    it('exports a handler function', async () => {
+    it('exports a handler function', () => {
         expect(case13).toBeDefined();
         expect(typeof case13.handler).toBe('function');
     });

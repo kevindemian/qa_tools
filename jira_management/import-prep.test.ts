@@ -20,7 +20,7 @@ const mockConfig = vi.hoisted(() => {
 
 vi.mock('../shared/config', () => ({ default: mockConfig }));
 
-vi.mock('../shared/prompt', async () => ({
+vi.mock('../shared/prompt', () => ({
     confirm: vi.fn(),
     prompt: vi.fn(),
     warn: vi.fn(),
@@ -35,12 +35,12 @@ vi.mock('../shared/prompt', async () => ({
     success: vi.fn(),
 }));
 
-vi.mock('../shared/state', async () => ({
+vi.mock('../shared/state', () => ({
     load: vi.fn().mockReturnValue({}),
     update: vi.fn(),
 }));
 
-vi.mock('../shared/logger', async () => ({
+vi.mock('../shared/logger', () => ({
     rootLogger: {
         child: vi.fn().mockReturnValue({
             info: vi.fn(),
@@ -60,7 +60,7 @@ vi.mock('fs', async () => {
 
 const mockMd = vi.hoisted(() => vi.fn<(...args: [string]) => string>((s: string) => s));
 const mockMdToHtml = vi.hoisted(() => vi.fn<(...args: [string]) => string>((s: string) => '<html>' + s + '</html>'));
-vi.mock('../shared/markdown', async () => ({ md: mockMd, mdToHtml: mockMdToHtml }));
+vi.mock('../shared/markdown', () => ({ md: mockMd, mdToHtml: mockMdToHtml }));
 
 import {
     _checkResumeCheckpoint,
@@ -96,14 +96,14 @@ const makeCp = (overrides: Record<string, unknown> = {}) => ({
     ...overrides,
 });
 
-describe('_checkResumeCheckpoint', async () => {
+describe('_checkResumeCheckpoint', () => {
     const tests = makeTestCases(10);
 
-    beforeEach(async () => {
+    beforeEach(() => {
         vi.clearAllMocks();
     });
 
-    it('happy resume: checkpoint exists, age < 24h, done < testCount, confirm true', async () => {
+    it('happy resume: checkpoint exists, age < 24h, done < testCount, confirm true', () => {
         vi.mocked(STATE.load).mockReturnValue({ _checkpoint: makeCp() });
         vi.mocked(PROMPT.confirm).mockReturnValue(true);
         const result = _checkResumeCheckpoint(tests, '/path/test.csv', 'csv', 'TESTPROJ');
@@ -112,7 +112,7 @@ describe('_checkResumeCheckpoint', async () => {
         expect(result.inMemoryTasksText).toEqual(['Test 1', 'Test 2']);
     });
 
-    it('expired checkpoint: age > 24h -> skip', async () => {
+    it('expired checkpoint: age > 24h -> skip', () => {
         const oldTs = new Date(Date.now() - 25 * 60 * 60 * 1000).toISOString();
         vi.mocked(STATE.load).mockReturnValue({ _checkpoint: makeCp({ ts: oldTs }) });
         const result = _checkResumeCheckpoint(tests, '/path/test.csv', 'csv', 'TESTPROJ');
@@ -120,7 +120,7 @@ describe('_checkResumeCheckpoint', async () => {
         expect(result.inMemoryTasksId).toEqual([]);
     });
 
-    it('user declines: confirm false -> skip', async () => {
+    it('user declines: confirm false -> skip', () => {
         vi.mocked(STATE.load).mockReturnValue({ _checkpoint: makeCp() });
         vi.mocked(PROMPT.confirm).mockReturnValue(false);
         const result = _checkResumeCheckpoint(tests, '/path/test.csv', 'csv', 'TESTPROJ');
@@ -128,35 +128,35 @@ describe('_checkResumeCheckpoint', async () => {
         expect(result.inMemoryTasksId).toEqual([]);
     });
 
-    it('full checkpoint: done.length >= tests.length -> skip', async () => {
+    it('full checkpoint: done.length >= tests.length -> skip', () => {
         const fullDone = Array.from({ length: 10 }, (_, i) => ({ key: `T-${i + 1}`, title: `Test ${i + 1}` }));
         vi.mocked(STATE.load).mockReturnValue({ _checkpoint: makeCp({ done: fullDone }) });
         const result = _checkResumeCheckpoint(tests, '/path/test.csv', 'csv', 'TESTPROJ');
         expect(result.resumeFrom).toBe(0);
     });
 
-    it('no matching checkpoint: sourcePath differs -> skip', async () => {
+    it('no matching checkpoint: sourcePath differs -> skip', () => {
         vi.mocked(STATE.load).mockReturnValue({ _checkpoint: makeCp() });
         const result = _checkResumeCheckpoint(tests, '/different/path.csv', 'csv', 'TESTPROJ');
         expect(result.resumeFrom).toBe(0);
     });
 });
 
-describe('filterTests', async () => {
+describe('filterTests', () => {
     const tests = makeTestCases(5);
 
-    beforeEach(async () => {
+    beforeEach(() => {
         vi.clearAllMocks();
     });
 
-    it('no matches -> warn + null', async () => {
+    it('no matches -> warn + null', () => {
         vi.mocked(PROMPT.prompt).mockReturnValue('zzzzzz');
         const result = filterTests(tests);
         expect(result).toBeNull();
         expect(PROMPT.warn).toHaveBeenCalledWith(expect.stringContaining('Nenhum teste'));
     });
 
-    it('matches + user declines -> warn + null', async () => {
+    it('matches + user declines -> warn + null', () => {
         vi.mocked(PROMPT.prompt).mockReturnValue('Test');
         vi.mocked(PROMPT.confirm).mockReturnValue(false);
         const result = filterTests(tests);
@@ -164,7 +164,7 @@ describe('filterTests', async () => {
         expect(PROMPT.warn).toHaveBeenCalledWith(expect.stringContaining('Operação cancelada'));
     });
 
-    it('matches + user accepts -> filtered list', async () => {
+    it('matches + user accepts -> filtered list', () => {
         vi.mocked(PROMPT.prompt).mockReturnValue('Test 1');
         vi.mocked(PROMPT.confirm).mockReturnValue(true);
         const result = filterTests(tests);
@@ -173,13 +173,13 @@ describe('filterTests', async () => {
     });
 });
 
-describe('validateImportBatch', async () => {
-    beforeEach(async () => {
+describe('validateImportBatch', () => {
+    beforeEach(() => {
         vi.clearAllMocks();
         vi.mocked(STATE.load).mockReturnValue({});
     });
 
-    it('warnings <= 5 displayed', async () => {
+    it('warnings <= 5 displayed', () => {
         const testsWithWarnings = makeTestCases(3).map((t) => ({
             ...t,
             steps: [{ fields: { Action: '' } }],
@@ -190,7 +190,7 @@ describe('validateImportBatch', async () => {
         expect(PROMPT.warn).toHaveBeenCalledWith(expect.stringContaining('Avisos'));
     });
 
-    it('warnings > 5 with truncated message', async () => {
+    it('warnings > 5 with truncated message', () => {
         const manyWarnings = Array.from({ length: 10 }, (_, i) => ({
             title: 'TC' + i,
             steps: [{ fields: { Action: '' } }],
@@ -199,7 +199,7 @@ describe('validateImportBatch', async () => {
         expect(PROMPT.warn).toHaveBeenCalledWith(expect.stringContaining('e mais'));
     });
 
-    it('errors displayed -> returns undefined', async () => {
+    it('errors displayed -> returns undefined', () => {
         const invalidTests = [{ title: '', steps: [{ fields: { Action: 'x' } }] }];
         const result = validateImportBatch(invalidTests, '/path.csv', 'csv', 'TESTPROJ');
         expect(result).toBeUndefined();
@@ -207,7 +207,7 @@ describe('validateImportBatch', async () => {
     });
 });
 
-describe('generatePreviewMarkdown', async () => {
+describe('generatePreviewMarkdown', () => {
     const tests = [
         {
             title: 'Login test',
@@ -229,27 +229,27 @@ describe('generatePreviewMarkdown', async () => {
         },
     ];
 
-    it('renders test sections with headings', async () => {
+    it('renders test sections with headings', () => {
         const md = generatePreviewMarkdown(tests);
         expect(md).toContain('## Test 1 — Login test');
         expect(md).toContain('## Test 2 — Logout test');
         expect(md).toContain('---');
     });
 
-    it('includes description', async () => {
+    it('includes description', () => {
         const md = generatePreviewMarkdown(tests);
         expect(md).toContain('**Description:** Verifica login valido');
         expect(md).toContain('**Description:** —');
     });
 
-    it('includes metadata (group, precondition, links)', async () => {
+    it('includes metadata (group, precondition, links)', () => {
         const md = generatePreviewMarkdown(tests);
         expect(md).toContain('**Group:** Auth');
         expect(md).toContain('**Pre-cond:** Usuario existe');
         expect(md).toContain('**Links:** US-123');
     });
 
-    it('renders steps in Gira-like format (bullet per field)', async () => {
+    it('renders steps in Gira-like format (bullet per field)', () => {
         const md = generatePreviewMarkdown(tests);
         expect(md).toContain('### Steps');
         expect(md).toContain('**Step 1**');
@@ -263,12 +263,12 @@ describe('generatePreviewMarkdown', async () => {
         expect(md).toContain('- **Expected Result:** y');
     });
 
-    it('renders Data field only when present', async () => {
+    it('renders Data field only when present', () => {
         const md = generatePreviewMarkdown(tests);
         expect(md).not.toContain('- **Data:** \n');
     });
 
-    it('shows fallback for empty descriptions', async () => {
+    it('shows fallback for empty descriptions', () => {
         const noDesc = [{ title: 'No desc', steps: [{ fields: { Action: 'a' } }] }];
         const md = generatePreviewMarkdown(noDesc);
         expect(md).toContain('**Description:** —');
@@ -280,20 +280,20 @@ describe('generatePreviewMarkdown', async () => {
         expect(md).toContain('_No steps defined._');
     });
 
-    describe('with options', async () => {
+    describe('with options', () => {
         const single = [{ title: 'TC1', steps: [{ fields: { Action: 'a', Data: '', 'Expected Result': 'r' } }] }];
 
-        it('includes document title when provided', async () => {
+        it('includes document title when provided', () => {
             const md = generatePreviewMarkdown(single, { documentTitle: 'My Doc' });
             expect(md).toMatch(/^# My Doc/);
         });
 
-        it('includes timestamp when showTimestamp is true', async () => {
+        it('includes timestamp when showTimestamp is true', () => {
             const md = generatePreviewMarkdown(single, { showTimestamp: true });
             expect(md).toContain('*Generated on ');
         });
 
-        it('includes summary with labels, totalSteps, groupsCount', async () => {
+        it('includes summary with labels, totalSteps, groupsCount', () => {
             const md = generatePreviewMarkdown(single, {
                 labels: ['smoke', 'regression'],
                 totalSteps: 1,
@@ -303,15 +303,15 @@ describe('generatePreviewMarkdown', async () => {
             expect(md).toContain('**Labels:** smoke, regression');
         });
 
-        it('includes keys in headings when provided', async () => {
+        it('includes keys in headings when provided', () => {
             const md = generatePreviewMarkdown(single, { keys: ['K-100'] });
             expect(md).toContain('## K-100 — TC1');
         });
     });
 });
 
-describe('parseJsonTests', async () => {
-    beforeEach(async () => {
+describe('parseJsonTests', () => {
+    beforeEach(() => {
         vi.clearAllMocks();
     });
 
@@ -376,7 +376,7 @@ describe('parseJsonTests', async () => {
     });
 });
 
-describe('showPreview', async () => {
+describe('showPreview', () => {
     const tests = [
         {
             title: 'Login test',
@@ -388,7 +388,7 @@ describe('showPreview', async () => {
 
     const mockOpen = vi.fn<(...args: [string]) => Promise<boolean>>();
 
-    beforeEach(async () => {
+    beforeEach(() => {
         vi.clearAllMocks();
         vi.mocked(PROMPT.isQuiet).mockReturnValue(true);
         mockOpen.mockResolvedValue(true);
@@ -470,12 +470,12 @@ describe('csv -> preview pipeline (e2e)', async () => {
     let csvResource: InstanceType<typeof CsvResource>;
     let loggerWarn: Mock;
 
-    beforeAll(async () => {
+    beforeAll(() => {
         csvResource = new CsvResource();
         loggerWarn = vi.spyOn(rootLogger, 'warn').mockImplementation(() => {});
     });
 
-    afterAll(async () => {
+    afterAll(() => {
         loggerWarn.mockRestore();
     });
 

@@ -74,7 +74,7 @@ function makeFixture(): CoverageGapResult {
 }
 
 describe('generateCoverageGapHtml', () => {
-    it('produces valid HTML with summary cards', async () => {
+    it('produces valid HTML with summary cards', () => {
         const html = generateCoverageGapHtml(makeFixture());
         expect(html).toContain('<!DOCTYPE html>');
         expect(html).toContain('Coverage Gap Analysis');
@@ -82,7 +82,7 @@ describe('generateCoverageGapHtml', () => {
         expect(html).toContain('Total Issues');
     });
 
-    it('includes total, covered, and gap counts in summary', async () => {
+    it('includes total, covered, and gap counts in summary', () => {
         const html = generateCoverageGapHtml(makeFixture());
         expect(html).toContain('>2<');
         expect(html).toContain('>1<');
@@ -90,13 +90,13 @@ describe('generateCoverageGapHtml', () => {
         expect(html).toContain('50%');
     });
 
-    it('shows quality gate section with failing epics', async () => {
+    it('shows quality gate section with failing epics', () => {
         const html = generateCoverageGapHtml(makeFixture());
         expect(html).toContain('Quality Gate');
         expect(html).toContain('epic(s) below');
     });
 
-    it('shows quality gate pass when all epics pass threshold', async () => {
+    it('shows quality gate pass when all epics pass threshold', () => {
         const fixture = makeFixture();
         fixture.gateConfig.failingEpics = [];
         (fixture.byEpic['EPIC-1'] as { gatePass: boolean; weightedPct: number }).gatePass = true;
@@ -108,26 +108,26 @@ describe('generateCoverageGapHtml', () => {
         expect(html).toContain('All epics pass');
     });
 
-    it('renders epic cards with progress bars', async () => {
+    it('renders epic cards with progress bars', () => {
         const html = generateCoverageGapHtml(makeFixture());
         expect(html).toContain('Authentication Module');
         expect(html).toContain('data-component="progress-bar"');
         expect(html).toContain('1/2 covered');
     });
 
-    it('renders hierarchy tree', async () => {
+    it('renders hierarchy tree', () => {
         const html = generateCoverageGapHtml(makeFixture());
         expect(html).toContain('Hierarchy');
         expect(html).toContain('tree-node');
     });
 
-    it('renders gaps table for uncovered items', async () => {
+    it('renders gaps table for uncovered items', () => {
         const html = generateCoverageGapHtml(makeFixture());
         expect(html).toContain('GAP');
         expect(html).toContain('PROJ-1');
     });
 
-    it('shows no-gaps message when all items have tests', async () => {
+    it('shows no-gaps message when all items have tests', () => {
         const fixture = makeFixture();
         fixture.items.forEach((i) => (i.hasTest = true));
         fixture.totals.gap = 0;
@@ -139,35 +139,35 @@ describe('generateCoverageGapHtml', () => {
         expect(html).not.toContain('GAP</span>');
     });
 
-    it('uses custom title when provided', async () => {
+    it('uses custom title when provided', () => {
         const html = generateCoverageGapHtml(makeFixture(), 'My Report');
         expect(html).toContain('My Report');
         expect(html).not.toContain('Coverage Gap Analysis');
     });
 
-    it('returns error HTML on invalid input', async () => {
+    it('returns error HTML on invalid input', () => {
         const result = generateCoverageGapHtml(nullAs());
         expect(result).toContain('Error generating coverage gap report');
     });
 
-    it('includes theme toggle script', async () => {
+    it('includes theme toggle script', () => {
         const html = generateCoverageGapHtml(makeFixture());
         expect(html).toContain('_toggleTheme');
         expect(html).toContain('dark');
     });
 
-    it('includes filter script for gaps table', async () => {
+    it('includes filter script for gaps table', () => {
         const html = generateCoverageGapHtml(makeFixture());
         expect(html).toContain('function filterGaps()');
         expect(html).toContain('gapSearchInput');
     });
 
-    it('includes collapsible tree toggle', async () => {
+    it('includes collapsible tree toggle', () => {
         const html = generateCoverageGapHtml(makeFixture());
         expect(html).toContain('function toggleTree');
     });
 
-    it('escapes HTML in issue summaries', async () => {
+    it('escapes HTML in issue summaries', () => {
         const fixture = makeFixture();
         (fixture.items[0] as { summary: string }).summary = '<script>alert("xss")</script>';
         const html = generateCoverageGapHtml(fixture);

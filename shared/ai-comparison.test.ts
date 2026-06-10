@@ -19,7 +19,7 @@ function makeRecord(overrides: Partial<AiComparisonRecord> & { generatedBy: 'ai'
 }
 
 describe('compareAiVsManual', () => {
-    it('returns zeroed result for empty array', async () => {
+    it('returns zeroed result for empty array', () => {
         const result = compareAiVsManual([]);
         expect(result.aiTotal).toBe(0);
         expect(result.aiPassRate).toBe(0);
@@ -34,7 +34,7 @@ describe('compareAiVsManual', () => {
         expect(result.timestamp).toBeTruthy();
     });
 
-    it('computes stats for AI-only records', async () => {
+    it('computes stats for AI-only records', () => {
         const records: AiComparisonRecord[] = [
             makeRecord({ generatedBy: 'ai', passed: true, flakiness: 0.1, accepted: true }),
             makeRecord({ generatedBy: 'ai', passed: false, flakiness: 0.3, accepted: false }),
@@ -52,7 +52,7 @@ describe('compareAiVsManual', () => {
         expect(result.aiAdvantage).toBe('none');
     });
 
-    it('computes stats for manual-only records', async () => {
+    it('computes stats for manual-only records', () => {
         const records: AiComparisonRecord[] = [
             makeRecord({ generatedBy: 'manual', passed: true, flakiness: 0.2 }),
             makeRecord({ generatedBy: 'manual', passed: true, flakiness: 0.1 }),
@@ -66,7 +66,7 @@ describe('compareAiVsManual', () => {
         expect(result.aiAdvantage).toBe('none');
     });
 
-    it('determines aiAdvantage as pass_rate when AI pass rate is higher', async () => {
+    it('determines aiAdvantage as pass_rate when AI pass rate is higher', () => {
         const records: AiComparisonRecord[] = [
             makeRecord({ generatedBy: 'ai', passed: true, flakiness: 0.3, accepted: true }),
             makeRecord({ generatedBy: 'ai', passed: true, flakiness: 0.3, accepted: true }),
@@ -79,7 +79,7 @@ describe('compareAiVsManual', () => {
         expect(result.aiAdvantage).toBe('pass_rate');
     });
 
-    it('determines aiAdvantage as flakiness when AI flakiness is lower and pass rate not higher', async () => {
+    it('determines aiAdvantage as flakiness when AI flakiness is lower and pass rate not higher', () => {
         const records: AiComparisonRecord[] = [
             makeRecord({ generatedBy: 'ai', passed: true, flakiness: 0.05, accepted: true }),
             makeRecord({ generatedBy: 'manual', passed: true, flakiness: 0.5 }),
@@ -92,7 +92,7 @@ describe('compareAiVsManual', () => {
         expect(result.aiAdvantage).toBe('flakiness');
     });
 
-    it('determines aiAdvantage as none when AI is worse in both metrics', async () => {
+    it('determines aiAdvantage as none when AI is worse in both metrics', () => {
         const records: AiComparisonRecord[] = [
             makeRecord({ generatedBy: 'ai', passed: false, flakiness: 0.5, accepted: true }),
             makeRecord({ generatedBy: 'manual', passed: true, flakiness: 0.05 }),
@@ -105,7 +105,7 @@ describe('compareAiVsManual', () => {
         expect(result.aiAdvantage).toBe('none');
     });
 
-    it('groups AI records by prompt version', async () => {
+    it('groups AI records by prompt version', () => {
         const records: AiComparisonRecord[] = [
             makeRecord({ generatedBy: 'ai', promptVersion: 'v1', passed: true }),
             makeRecord({ generatedBy: 'ai', promptVersion: 'v1', passed: false }),
@@ -130,7 +130,7 @@ describe('compareAiVsManual', () => {
         expect(result.byVersion[0]).toEqual({ version: 'unknown', count: 2, passRate: 50 });
     });
 
-    it('handles all-pass and all-fail edge cases', async () => {
+    it('handles all-pass and all-fail edge cases', () => {
         const allPass: AiComparisonRecord[] = [
             makeRecord({ generatedBy: 'ai', passed: true, flakiness: 0, accepted: true }),
             makeRecord({ generatedBy: 'ai', passed: true, flakiness: 0, accepted: true }),
@@ -152,7 +152,7 @@ describe('compareAiVsManual', () => {
         expect(r2.aiAdvantage).toBe('none');
     });
 
-    it('returns correct timestamp format', async () => {
+    it('returns correct timestamp format', () => {
         const result = compareAiVsManual([]);
         expect(result.timestamp).toMatch(/^\d{4}-\d{2}-\d{2}T/);
     });
@@ -179,7 +179,7 @@ describe('generateAiComparisonHtml', () => {
         };
     }
 
-    it('generates full HTML page structure', async () => {
+    it('generates full HTML page structure', () => {
         const html = generateAiComparisonHtml(sampleResult());
         expect(html).toContain('<!DOCTYPE html>');
         expect(html).toContain('<html lang="en">');
@@ -190,18 +190,18 @@ describe('generateAiComparisonHtml', () => {
         expect(html).toContain('</html>');
     });
 
-    it('includes title in h1', async () => {
+    it('includes title in h1', () => {
         const html = generateAiComparisonHtml(sampleResult());
         expect(html).toContain('AI vs Manual Test Comparison');
     });
 
-    it('uses custom title', async () => {
+    it('uses custom title', () => {
         const html = generateAiComparisonHtml(sampleResult(), 'Sprint 11 AI Analysis');
         expect(html).toContain('Sprint 11 AI Analysis');
         expect(html).not.toContain('AI vs Manual Test Comparison');
     });
 
-    it('shows no-data message when both groups empty', async () => {
+    it('shows no-data message when both groups empty', () => {
         const result = sampleResult({ aiTotal: 0, manualTotal: 0, byVersion: [] });
         const html = generateAiComparisonHtml(result);
         expect(html).toContain('No comparison data available.');
@@ -210,7 +210,7 @@ describe('generateAiComparisonHtml', () => {
         expect(html).not.toContain('Version Breakdown');
     });
 
-    it('renders MetricCard components for comparison', async () => {
+    it('renders MetricCard components for comparison', () => {
         const html = generateAiComparisonHtml(sampleResult());
         expect(html).toContain('data-component="metric-card"');
         expect(html).toContain('AI Pass Rate');
@@ -223,35 +223,35 @@ describe('generateAiComparisonHtml', () => {
         expect(html).toContain('67%');
     });
 
-    it('renders AI advantage section with Badge', async () => {
+    it('renders AI advantage section with Badge', () => {
         const html = generateAiComparisonHtml(sampleResult());
         expect(html).toContain('AI Advantage');
         expect(html).toContain('data-component="badge"');
         expect(html).toContain('Pass Rate');
     });
 
-    it('shows flakiness advantage variant', async () => {
+    it('shows flakiness advantage variant', () => {
         const result = sampleResult({ aiAdvantage: 'flakiness' });
         const html = generateAiComparisonHtml(result);
         expect(html).toContain('less flaky');
         expect(html).toContain('data-component="badge"');
     });
 
-    it('shows none advantage variant', async () => {
+    it('shows none advantage variant', () => {
         const result = sampleResult({ aiAdvantage: 'none', aiPassRate: 50, manualPassRate: 60 });
         const html = generateAiComparisonHtml(result);
         expect(html).toContain('no clear advantage');
         expect(html).toContain('data-component="badge"');
     });
 
-    it('shows N/A when one group is missing', async () => {
+    it('shows N/A when one group is missing', () => {
         const result = sampleResult({ aiTotal: 0, aiAdvantage: 'none' });
         const html = generateAiComparisonHtml(result);
         expect(html).toContain('N/A');
         expect(html).toContain('Both AI and manual test data required');
     });
 
-    it('renders version breakdown table', async () => {
+    it('renders version breakdown table', () => {
         const html = generateAiComparisonHtml(sampleResult());
         expect(html).toContain('Version Breakdown');
         expect(html).toContain('data-component="data-table"');
@@ -261,20 +261,20 @@ describe('generateAiComparisonHtml', () => {
         expect(html).toContain('50%');
     });
 
-    it('omits version table when byVersion is empty', async () => {
+    it('omits version table when byVersion is empty', () => {
         const result = sampleResult({ byVersion: [] });
         const html = generateAiComparisonHtml(result);
         expect(html).not.toContain('Version Breakdown');
     });
 
-    it('includes theme script and CSS variables', async () => {
+    it('includes theme script and CSS variables', () => {
         const html = generateAiComparisonHtml(sampleResult());
         expect(html).toContain('prefers-color-scheme');
         expect(html).toContain('--color-surface-page');
         expect(html).toContain('html.dark');
     });
 
-    it('escapes HTML in version names', async () => {
+    it('escapes HTML in version names', () => {
         const result = sampleResult({
             byVersion: [{ version: '<script>evil</script>', count: 1, passRate: 100 }],
         });
@@ -283,7 +283,7 @@ describe('generateAiComparisonHtml', () => {
         expect(html).not.toContain('<script>evil</script>');
     });
 
-    it('handles error by returning error page', async () => {
+    it('handles error by returning error page', () => {
         const spy = vi.spyOn(htmlFactory, 'buildHtmlPage').mockImplementation(() => {
             throw new Error('mock build failure');
         });
@@ -292,14 +292,14 @@ describe('generateAiComparisonHtml', () => {
         spy.mockRestore();
     });
 
-    it('formats flakiness values with 3 decimal places', async () => {
+    it('formats flakiness values with 3 decimal places', () => {
         const result = sampleResult({ aiFlakinessAvg: 0.1, manualFlakinessAvg: 0.2346 });
         const html = generateAiComparisonHtml(result);
         expect(html).toContain('0.100');
         expect(html).toContain('0.235');
     });
 
-    it('formats acceptance rate with 2 decimal places', async () => {
+    it('formats acceptance rate with 2 decimal places', () => {
         const result = sampleResult({ aiAcceptanceRate: 0.6667 });
         const html = generateAiComparisonHtml(result);
         expect(html).toContain('0.67');

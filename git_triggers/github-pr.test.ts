@@ -15,13 +15,13 @@ import * as prompt from '../shared/prompt.js';
 
 import type { apiGet as ApiGetFn, apiPost as ApiPostFn, apiPatch as ApiPatchFn } from './github-api.js';
 
-vi.mock('./github-api', async () => ({
+vi.mock('./github-api', () => ({
     apiGet: vi.fn<(...args: Parameters<typeof ApiGetFn>) => ReturnType<typeof ApiGetFn>>(),
     apiPost: vi.fn<(...args: Parameters<typeof ApiPostFn>) => ReturnType<typeof ApiPostFn>>(),
     apiPatch: vi.fn<(...args: Parameters<typeof ApiPatchFn>) => ReturnType<typeof ApiPatchFn>>(),
 }));
 
-vi.mock('../shared/logger', async () => ({
+vi.mock('../shared/logger', () => ({
     Logger: vi.fn().mockImplementation(() => ({
         error: vi.fn<(...args: [string]) => void>(),
         warn: vi.fn<(...args: [string]) => void>(),
@@ -29,7 +29,7 @@ vi.mock('../shared/logger', async () => ({
     rootLogger: { error: vi.fn<(...args: [string]) => void>(), warn: vi.fn<(...args: [string]) => void>() },
 }));
 
-vi.mock('../shared/git-provider-error', async () => ({
+vi.mock('../shared/git-provider-error', () => ({
     handleError: vi.fn<(...args: [error: unknown, options?: { returnNull?: boolean }]) => void>(
         (err: unknown, opts?: { returnNull?: boolean }) => {
             if (opts?.returnNull) return null;
@@ -38,12 +38,12 @@ vi.mock('../shared/git-provider-error', async () => ({
     ),
 }));
 
-vi.mock('../shared/prompt', async () => ({
+vi.mock('../shared/prompt', () => ({
     info: vi.fn<(...args: [string]) => void>(),
     extractErrorMessage: vi.fn<(...args: [Error]) => string>((err: Error) => err?.message || 'Erro desconhecido'),
 }));
 
-vi.mock('../shared/git-provider-error', async () => ({
+vi.mock('../shared/git-provider-error', () => ({
     handleError: vi.fn<(...args: [error: unknown, options?: { returnNull?: boolean }]) => void>(
         (err: unknown, opts?: { returnNull?: boolean }) => {
             if (opts?.returnNull) return null;
@@ -52,7 +52,7 @@ vi.mock('../shared/git-provider-error', async () => ({
     ),
 }));
 
-vi.mock('../shared/prompt', async () => ({
+vi.mock('../shared/prompt', () => ({
     info: vi.fn<(...args: [string]) => void>(),
     extractErrorMessage: vi.fn<(...args: [Error]) => string>((err: Error) => err?.message || 'Erro desconhecido'),
 }));
@@ -63,7 +63,7 @@ const mockApiPost = vi.mocked(githubApi.apiPost);
 const mockApiPatch = vi.mocked(githubApi.apiPatch);
 
 describe('formatPR', () => {
-    it('returns MergeRequestInfo for open PR', async () => {
+    it('returns MergeRequestInfo for open PR', () => {
         const data = {
             number: 1,
             title: 'My PR',
@@ -85,7 +85,7 @@ describe('formatPR', () => {
         expect(nonNull(result).description).toBe('Desc');
     });
 
-    it('returns state merged when merged is true', async () => {
+    it('returns state merged when merged is true', () => {
         const data = {
             number: 2,
             title: 'Merged PR',
@@ -100,7 +100,7 @@ describe('formatPR', () => {
         expect(nonNull(result).state).toBe('merged');
     });
 
-    it('returns state closed when not merged and state is closed', async () => {
+    it('returns state closed when not merged and state is closed', () => {
         const data = {
             number: 3,
             title: 'Closed PR',
@@ -115,11 +115,11 @@ describe('formatPR', () => {
         expect(nonNull(result).state).toBe('closed');
     });
 
-    it('returns null for null input', async () => {
+    it('returns null for null input', () => {
         expect(formatPR(nullAs<Record<string, unknown>>())).toBeNull();
     });
 
-    it('handles missing head/base gracefully', async () => {
+    it('handles missing head/base gracefully', () => {
         const data = {
             number: 4,
             title: 'No head',

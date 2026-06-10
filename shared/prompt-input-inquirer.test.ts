@@ -1,4 +1,4 @@
-vi.mock('./output', async () => {
+vi.mock('./output', () => {
     const mockOutput = { print: vi.fn() };
     return {
         Output: { isTTY: vi.fn(), isCI: vi.fn(), columns: vi.fn(() => 80), rows: vi.fn(() => 24) },
@@ -6,7 +6,7 @@ vi.mock('./output', async () => {
     };
 });
 
-vi.mock('./logger', async () => ({
+vi.mock('./logger', () => ({
     rootLogger: { info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn(), writeFileOnly: vi.fn() },
     Logger: class {
         info = vi.fn();
@@ -17,13 +17,13 @@ vi.mock('./logger', async () => ({
     },
 }));
 
-vi.mock('./box', async () => ({
+vi.mock('./box', () => ({
     box: vi.fn((lines: string[]) => lines.join('\n')),
     divider: vi.fn(() => '---'),
     visibleWidth: vi.fn((s: string) => s.length),
 }));
 
-vi.mock('./palette', async () => {
+vi.mock('./palette', () => {
     const purpleFn = (s: string) => s;
     purpleFn.bold = (s: string) => s;
     return {
@@ -59,14 +59,14 @@ vi.mock('./prompt-ui', async () => {
     };
 });
 
-vi.mock('readline', async () => {
+vi.mock('readline', () => {
     const mockRl = { question: vi.fn(), on: vi.fn(), close: vi.fn() };
     return { createInterface: vi.fn(() => mockRl), _testRl: mockRl };
 });
 
-vi.mock('@inquirer/input', async () => ({ default: vi.fn() }));
-vi.mock('@inquirer/select', async () => ({ default: vi.fn() }));
-vi.mock('@inquirer/confirm', async () => ({ default: vi.fn() }));
+vi.mock('@inquirer/input', () => ({ default: vi.fn() }));
+vi.mock('@inquirer/select', () => ({ default: vi.fn() }));
+vi.mock('@inquirer/confirm', () => ({ default: vi.fn() }));
 
 import readlineSync from 'readline-sync';
 import ConfigAccessor from './config-accessor.js';
@@ -86,7 +86,7 @@ const mockReadlineQuestion = vi.spyOn(readlineSync, 'question').mockImplementati
 const mockGetConfig = vi.mocked(getConfig);
 const mockWarn = vi.mocked(warn);
 
-beforeEach(async () => {
+beforeEach(() => {
     vi.clearAllMocks();
     mockReadlineQuestion.mockReturnValue('');
     Object.defineProperty(process.stdin, 'isTTY', { value: true, configurable: true });
@@ -98,11 +98,11 @@ beforeEach(async () => {
     __setConfirmMod(null);
 });
 
-afterEach(async () => {
+afterEach(() => {
     Object.defineProperty(process.stdin, 'isTTY', { value: undefined, configurable: true });
 });
 
-describe('smartPrompt', async () => {
+describe('smartPrompt', () => {
     it('returns value on first try', async () => {
         mockReadlineQuestion.mockReturnValue('my value');
         const result = await smartPrompt('Label');
@@ -151,7 +151,7 @@ describe('smartPrompt', async () => {
     });
 });
 
-describe('ask', async () => {
+describe('ask', () => {
     it('returns prompt result when no TTY', async () => {
         mockReadlineQuestion.mockReturnValue('user input');
         const result = await ask('Label');
@@ -182,12 +182,12 @@ describe('ask', async () => {
     });
 });
 
-describe('ask with TTY and inquirer mod', async () => {
-    beforeEach(async () => {
+describe('ask with TTY and inquirer mod', () => {
+    beforeEach(() => {
         Object.defineProperty(process.stdout, 'isTTY', { value: true, configurable: true });
     });
 
-    afterEach(async () => {
+    afterEach(() => {
         Object.defineProperty(process.stdout, 'isTTY', { value: undefined, configurable: true });
     });
 
@@ -226,9 +226,7 @@ describe('ask with TTY and inquirer mod', async () => {
         const mockMod = vi
             .fn()
             .mockImplementation(
-                async (opts: {
-                    theme: { style: { answer: (s: string) => string; message: (s: string) => string } };
-                }) => {
+                (opts: { theme: { style: { answer: (s: string) => string; message: (s: string) => string } } }) => {
                     opts.theme.style.answer('ans');
                     opts.theme.style.message('msg');
                     return 'result';
@@ -240,7 +238,7 @@ describe('ask with TTY and inquirer mod', async () => {
     });
 });
 
-describe('askConfirm', async () => {
+describe('askConfirm', () => {
     it('returns confirm result when no TTY', async () => {
         mockReadlineQuestion.mockReturnValue('s');
         const result = await askConfirm('Confirm?');
@@ -283,7 +281,7 @@ describe('askConfirm', async () => {
     });
 });
 
-describe('showSelect', async () => {
+describe('showSelect', () => {
     const choices = [
         { name: 'Option 1', value: '1' },
         { name: 'Option 2', value: '2' },
@@ -360,7 +358,7 @@ describe('showSelect', async () => {
     });
 });
 
-describe('showSelect with menuMode', async () => {
+describe('showSelect with menuMode', () => {
     it('forces fallback when menuMode is true', async () => {
         mockReadlineQuestion.mockReturnValue('1');
         const result = await showSelect('Choose', [{ name: 'Item A', value: 'a' }], { menuMode: true });
@@ -377,12 +375,12 @@ describe('showSelect with menuMode', async () => {
     });
 });
 
-describe('showSelect TTY path', async () => {
-    beforeEach(async () => {
+describe('showSelect TTY path', () => {
+    beforeEach(() => {
         Object.defineProperty(process.stdout, 'isTTY', { value: true, configurable: true });
     });
 
-    afterEach(async () => {
+    afterEach(() => {
         Object.defineProperty(process.stdout, 'isTTY', { value: undefined, configurable: true });
     });
 
@@ -418,7 +416,7 @@ describe('showSelect TTY path', async () => {
     it('calls theme.renderSelected via inquirer select mod', async () => {
         const mockSelectMod = vi
             .fn()
-            .mockImplementation(async (opts: { theme: { style: { renderSelected: (s: string) => string } } }) => {
+            .mockImplementation((opts: { theme: { style: { renderSelected: (s: string) => string } } }) => {
                 opts.theme.style.renderSelected('sel');
                 return 'selected';
             });
@@ -442,7 +440,7 @@ describe('showSelect TTY path', async () => {
     });
 });
 
-describe('showSelect fallback', async () => {
+describe('showSelect fallback', () => {
     it('returns slash command directly when not in NAV_CMDS', async () => {
         mockReadlineQuestion.mockReturnValue('/custom-cmd');
         const result = await showSelect('Choose', [{ name: 'Item A', value: 'a' }]);

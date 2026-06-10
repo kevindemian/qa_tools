@@ -12,7 +12,7 @@ function makeCtx(input: string): ValidationContext {
 }
 
 describe('BugReportValidator — createBugReportValidator', () => {
-    it('creates validator with all invariants', async () => {
+    it('creates validator with all invariants', () => {
         const v = createBugReportValidator();
         const invariants = v.listInvariants();
         expect(invariants).toContain('B-01');
@@ -21,7 +21,7 @@ describe('BugReportValidator — createBugReportValidator', () => {
         expect(invariants).toContain('B-04');
     });
 
-    it('passes valid bug report', async () => {
+    it('passes valid bug report', () => {
         const v = createBugReportValidator();
         const report = {
             summary: 'Login fails on Firefox with valid credentials',
@@ -45,12 +45,12 @@ describe('BugReportValidator — createBugReportValidator', () => {
 });
 
 describe('invariantMinSteps (B-01)', () => {
-    it('passes with >= 3 steps', async () => {
+    it('passes with >= 3 steps', () => {
         const results = invariantMinSteps({ stepsToReproduce: ['Step 1', 'Step 2', 'Step 3'] }, makeCtx(''));
         expect(results.some((r: { passed: boolean }) => r.passed)).toBe(true);
     });
 
-    it('fails with < 3 steps', async () => {
+    it('fails with < 3 steps', () => {
         const results = invariantMinSteps({ stepsToReproduce: ['Step 1'] }, makeCtx(''));
         expect(
             results.some((r: { passed: boolean; invariantId: string }) => !r.passed && r.invariantId === 'B-01'),
@@ -59,7 +59,7 @@ describe('invariantMinSteps (B-01)', () => {
 });
 
 describe('invariantImperativeSteps (B-02)', () => {
-    it('passes with imperative verbs', async () => {
+    it('passes with imperative verbs', () => {
         const results = invariantImperativeSteps(
             { stepsToReproduce: ['Click button', 'Type text', 'Navigate to page'] },
             makeCtx(''),
@@ -67,7 +67,7 @@ describe('invariantImperativeSteps (B-02)', () => {
         expect(results.some((r: { passed: boolean }) => r.passed)).toBe(true);
     });
 
-    it('warns on non-imperative steps', async () => {
+    it('warns on non-imperative steps', () => {
         const results = invariantImperativeSteps(
             { stepsToReproduce: ['The user clicks', 'The system responds'] },
             makeCtx(''),
@@ -79,7 +79,7 @@ describe('invariantImperativeSteps (B-02)', () => {
 });
 
 describe('invariantSeverityConsistentWithDescription (B-03)', () => {
-    it('passes critical with long description', async () => {
+    it('passes critical with long description', () => {
         const results = invariantSeverityConsistentWithDescription(
             { severity: 'critical', description: 'Long description '.repeat(10) },
             makeCtx(''),
@@ -87,7 +87,7 @@ describe('invariantSeverityConsistentWithDescription (B-03)', () => {
         expect(results.some((r: { passed: boolean }) => r.passed)).toBe(true);
     });
 
-    it('warns critical with short description', async () => {
+    it('warns critical with short description', () => {
         const results = invariantSeverityConsistentWithDescription(
             { severity: 'critical', description: 'Short' },
             makeCtx(''),

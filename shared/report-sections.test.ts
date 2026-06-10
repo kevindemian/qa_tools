@@ -2,7 +2,7 @@
  * Tests for report-sections — HTML UI section builders.
  */
 
-vi.mock('./report-table', async () => ({
+vi.mock('./report-table', () => ({
     buildTestTable: vi.fn(() => '<table>mock</table>'),
 }));
 
@@ -32,11 +32,11 @@ const sampleTests: FlatTest[] = [
 const sampleStats: ReportStats = { passed: 1, failed: 1, skipped: 1, total: 3, duration: 300 };
 
 describe('buildTabs', () => {
-    it('returns empty string for single run', async () => {
+    it('returns empty string for single run', () => {
         expect(buildTabs([{ name: 'Default', tests: sampleTests }])).toBe('');
     });
 
-    it('returns tab buttons for multiple runs', async () => {
+    it('returns tab buttons for multiple runs', () => {
         const runs: TestRunTab[] = [
             { name: 'Chrome', tests: sampleTests },
             { name: 'Firefox', tests: sampleTests },
@@ -47,7 +47,7 @@ describe('buildTabs', () => {
         expect(html).toContain('switchTab');
     });
 
-    it('first tab is marked active', async () => {
+    it('first tab is marked active', () => {
         const runs: TestRunTab[] = [
             { name: 'A', tests: [nonNull(sampleTests[0])] },
             { name: 'B', tests: [nonNull(sampleTests[0])] },
@@ -56,17 +56,17 @@ describe('buildTabs', () => {
         expect(html).toContain('active');
     });
 
-    it('handles empty runs array gracefully', async () => {
+    it('handles empty runs array gracefully', () => {
         expect(buildTabs([])).toBe('');
     });
 });
 
 describe('buildTabContents', () => {
-    it('returns empty string for single run', async () => {
+    it('returns empty string for single run', () => {
         expect(buildTabContents([{ name: 'Default', tests: sampleTests }])).toBe('');
     });
 
-    it('returns tab contents for multiple runs', async () => {
+    it('returns tab contents for multiple runs', () => {
         const runs: TestRunTab[] = [
             { name: 'Chrome', tests: [nonNull(sampleTests[0])] },
             { name: 'Firefox', tests: [nonNull(sampleTests[0])] },
@@ -77,18 +77,18 @@ describe('buildTabContents', () => {
         expect(html).toContain('searchInput');
     });
 
-    it('handles empty runs array', async () => {
+    it('handles empty runs array', () => {
         expect(buildTabContents([])).toBe('');
     });
 });
 
 describe('buildHierarchySidebar', () => {
-    it('returns empty string for tests without suite info', async () => {
+    it('returns empty string for tests without suite info', () => {
         const html = buildHierarchySidebar(sampleTests);
         expect(html).toBe('');
     });
 
-    it('includes suites from tests with hierarchy', async () => {
+    it('includes suites from tests with hierarchy', () => {
         const testsWithSuite: FlatTest[] = [
             { title: 'T1', state: 'passed', duration: 10, fullTitle: 'Login > T1' },
             { title: 'T2', state: 'passed', duration: 10, fullTitle: 'Dashboard > T2' },
@@ -99,7 +99,7 @@ describe('buildHierarchySidebar', () => {
         expect(html).toContain('tree-node');
     });
 
-    it('deduplicates suites', async () => {
+    it('deduplicates suites', () => {
         const tests: FlatTest[] = [
             { title: 'T1', state: 'passed', duration: 10, fullTitle: 'Login > T1' },
             { title: 'T2', state: 'passed', duration: 10, fullTitle: 'Login > T2' },
@@ -109,7 +109,7 @@ describe('buildHierarchySidebar', () => {
         expect(occurrences).toBe(2);
     });
 
-    it('adds clear filter link', async () => {
+    it('adds clear filter link', () => {
         const tests: FlatTest[] = [{ title: 'T', state: 'passed', duration: 10, fullTitle: 'Suite > T' }];
         const html = buildHierarchySidebar(tests);
         expect(html).toContain('Clear filter');
@@ -117,11 +117,11 @@ describe('buildHierarchySidebar', () => {
 });
 
 describe('buildTimeline', () => {
-    it('returns empty string for empty tests', async () => {
+    it('returns empty string for empty tests', () => {
         expect(buildTimeline([])).toBe('');
     });
 
-    it('returns timeline chart for tests with durations', async () => {
+    it('returns timeline chart for tests with durations', () => {
         const html = buildTimeline(sampleTests);
         expect(html).toContain('Timeline');
         expect(html).toContain('timelineBody');
@@ -129,12 +129,12 @@ describe('buildTimeline', () => {
         expect(html).toContain('TC02');
     });
 
-    it('includes state badges', async () => {
+    it('includes state badges', () => {
         const html = buildTimeline(sampleTests);
         expect(html).toContain('data-component="badge"');
     });
 
-    it('handles zero-duration tests without division by zero', async () => {
+    it('handles zero-duration tests without division by zero', () => {
         const tests: FlatTest[] = [
             { title: 'T1', state: 'passed', duration: 0 },
             { title: 'T2', state: 'passed', duration: 0 },
@@ -144,14 +144,14 @@ describe('buildTimeline', () => {
         expect(html).not.toBe('');
     });
 
-    it('includes duration labels', async () => {
+    it('includes duration labels', () => {
         const html = buildTimeline(sampleTests);
         expect(html).toContain('0s');
     });
 });
 
 describe('buildSummaryCards', () => {
-    it('builds cards for each stat', async () => {
+    it('builds cards for each stat', () => {
         const html = buildSummaryCards(sampleStats, 33.3);
         expect(html).toContain('Passed');
         expect(html).toContain('Failed');
@@ -161,45 +161,45 @@ describe('buildSummaryCards', () => {
         expect(html).toContain('Pass Rate');
     });
 
-    it('displays correct counts', async () => {
+    it('displays correct counts', () => {
         const html = buildSummaryCards(sampleStats, 33.3);
         expect(html).toContain('>1 <');
         expect(html).toContain('>3<');
     });
 
-    it('handles zero stats', async () => {
+    it('handles zero stats', () => {
         const zero: ReportStats = { passed: 0, failed: 0, skipped: 0, total: 0, duration: 0 };
         const html = buildSummaryCards(zero, 0);
         expect(html).toContain('0.0%');
     });
 
-    it('shows pass rate with severity', async () => {
+    it('shows pass rate with severity', () => {
         const html = buildSummaryCards(sampleStats, 95);
         expect(html).toContain('data-severity');
     });
 });
 
 describe('buildLlmSection', () => {
-    it('returns empty string when no llmAnalysis', async () => {
+    it('returns empty string when no llmAnalysis', () => {
         const opts: ReportOptions = {};
         expect(buildLlmSection(opts)).toBe('');
     });
 
-    it('shows fallback notice when llmFallback is true', async () => {
+    it('shows fallback notice when llmFallback is true', () => {
         const opts = { llmAnalysis: 'template', llmFallback: true };
         const html = buildLlmSection(opts);
         expect(html).toContain('unavailable');
         expect(html).toContain('template');
     });
 
-    it('includes confidence badge when available', async () => {
+    it('includes confidence badge when available', () => {
         const opts: ReportOptions = { llmAnalysis: 'analysis', llmConfidence: 'high' };
         const html = buildLlmSection(opts);
         expect(html).toContain('Confiança');
         expect(html).toContain('high');
     });
 
-    it('escapes HTML content in analysis text', async () => {
+    it('escapes HTML content in analysis text', () => {
         const opts: ReportOptions = { llmAnalysis: '<script>alert(1)</script>' };
         const html = buildLlmSection(opts);
         expect(html).not.toContain('<script>');
@@ -207,29 +207,29 @@ describe('buildLlmSection', () => {
 });
 
 describe('buildQualityGate', () => {
-    it('returns empty string when pass rate meets threshold', async () => {
+    it('returns empty string when pass rate meets threshold', () => {
         expect(buildQualityGate(95, 90)).toBe('');
     });
 
-    it('warns when pass rate is below threshold', async () => {
+    it('warns when pass rate is below threshold', () => {
         const html = buildQualityGate(75, 90);
         expect(html).toContain('Quality Gate Failed');
         expect(html).toContain('75.0%');
     });
 
-    it('displays exact threshold value', async () => {
+    it('displays exact threshold value', () => {
         const html = buildQualityGate(50, 75);
         expect(html).toContain('75%');
     });
 
-    it('handles zero pass rate', async () => {
+    it('handles zero pass rate', () => {
         const html = buildQualityGate(0, 50);
         expect(html).toContain('0.0%');
     });
 });
 
 describe('buildFilterBar', () => {
-    it('returns filter bar HTML', async () => {
+    it('returns filter bar HTML', () => {
         const html = buildFilterBar();
         expect(html).toContain('searchInput');
         expect(html).toContain('exportCsv');
@@ -239,12 +239,12 @@ describe('buildFilterBar', () => {
 });
 
 describe('buildFailedSummary', () => {
-    it('returns empty string when no failures', async () => {
+    it('returns empty string when no failures', () => {
         const allPassed: ReportStats = { passed: 5, failed: 0, skipped: 0, total: 5, duration: 500 };
         expect(buildFailedSummary([], allPassed)).toBe('');
     });
 
-    it('lists failed tests when failures exist', async () => {
+    it('lists failed tests when failures exist', () => {
         const failedTests: FlatTest[] = [
             { title: 'F1', state: 'failed', duration: 200 },
             { title: 'F2', state: 'failed', duration: 150 },
@@ -256,14 +256,14 @@ describe('buildFailedSummary', () => {
         expect(html).toContain('Failed Tests');
     });
 
-    it('includes duration for failed tests', async () => {
+    it('includes duration for failed tests', () => {
         const failedTests: FlatTest[] = [{ title: 'F1', state: 'failed', duration: 300 }];
         const stats: ReportStats = { passed: 0, failed: 1, skipped: 0, total: 1, duration: 300 };
         const html = buildFailedSummary(failedTests, stats);
         expect(html).toContain('0s');
     });
 
-    it('escapes HTML in test titles', async () => {
+    it('escapes HTML in test titles', () => {
         const failedTests: FlatTest[] = [{ title: '<b>XSS</b>', state: 'failed', duration: 100 }];
         const stats: ReportStats = { passed: 0, failed: 1, skipped: 0, total: 1, duration: 100 };
         const html = buildFailedSummary(failedTests, stats);
@@ -272,22 +272,22 @@ describe('buildFailedSummary', () => {
 });
 
 describe('buildReleaseSection', () => {
-    it('renders score number', async () => {
+    it('renders score number', () => {
         const html = buildReleaseSection(85, 'good', [], 'All clear');
         expect(html).toContain('85');
     });
 
-    it('renders grade text', async () => {
+    it('renders grade text', () => {
         const html = buildReleaseSection(85, 'good', [], 'All clear');
         expect(html).toContain('good');
     });
 
-    it('renders recommendation', async () => {
+    it('renders recommendation', () => {
         const html = buildReleaseSection(50, 'needs_attention', [], 'Fix the failing checks');
         expect(html).toContain('Fix the failing checks');
     });
 
-    it('renders breakdown items with pass/fail status', async () => {
+    it('renders breakdown items with pass/fail status', () => {
         const breakdown = [
             { label: 'Tests', score: 90, status: 'pass' as const },
             { label: 'Coverage', score: 30, status: 'fail' as const },
@@ -301,12 +301,12 @@ describe('buildReleaseSection', () => {
         expect(html).toContain('30');
     });
 
-    it('is wrapped in release-readiness div', async () => {
+    it('is wrapped in release-readiness div', () => {
         const html = buildReleaseSection(95, 'excellent', [], 'Ready');
         expect(html).toContain('release-readiness');
     });
 
-    it('color-codes score based on threshold', async () => {
+    it('color-codes score based on threshold', () => {
         const high = buildReleaseSection(85, 'good', [], '');
         expect(high).toContain('var(--color-success)');
         const mid = buildReleaseSection(65, 'needs_attention', [], '');
@@ -345,23 +345,23 @@ describe('buildHealthSection', () => {
         timestamp: '2026-06-03T00:00:00.000Z',
     };
 
-    it('renders overall score and grade', async () => {
+    it('renders overall score and grade', () => {
         const html = buildHealthSection(passingHealth);
         expect(html).toContain('95');
         expect(html).toContain('excellent');
     });
 
-    it('shows passing quality gate for healthy suite', async () => {
+    it('shows passing quality gate for healthy suite', () => {
         const html = buildHealthSection(passingHealth);
         expect(html).toContain('Quality Gate: Pass');
     });
 
-    it('shows failing quality gate for unhealthy suite', async () => {
+    it('shows failing quality gate for unhealthy suite', () => {
         const html = buildHealthSection(failingHealth);
         expect(html).toContain('Quality Gate: Fail');
     });
 
-    it('renders dimension bars for each metric', async () => {
+    it('renders dimension bars for each metric', () => {
         const html = buildHealthSection(passingHealth);
         expect(html).toContain('Pass Rate');
         expect(html).toContain('Flaky Rate');
@@ -369,7 +369,7 @@ describe('buildHealthSection', () => {
         expect(html).toContain('Suite Speed');
     });
 
-    it('shows run count and date', async () => {
+    it('shows run count and date', () => {
         const html = buildHealthSection(passingHealth);
         expect(html).toContain('10 run(s)');
         expect(html).toContain('2026-06-03');

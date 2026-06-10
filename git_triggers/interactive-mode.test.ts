@@ -252,7 +252,7 @@ describe('interactive-mode test exports', () => {
 
     describe('_selectProject', () => {
         it('returns null project when prompt returns invalid index', () => {
-            mockLoad.mockReturnValue({ lastProject: '' } as never);
+            mockLoad.mockReturnValue({ lastProject: '' });
             const result = _testExports._selectProject();
             expect(result.projectName).toBeNull();
         });

@@ -64,7 +64,7 @@ describe('getHeadSha', () => {
         const origCwd = process.cwd();
         process.chdir(dir);
         try {
-            const sha = getHeadSha({} as NodeJS.ProcessEnv);
+            const sha = getHeadSha({});
             expect(sha).toBe('abc123def');
         } finally {
             process.chdir(origCwd);
@@ -91,7 +91,7 @@ describe('getHeadSha', () => {
         const origCwd = process.cwd();
         process.chdir(dir);
         try {
-            const sha = getHeadSha({} as NodeJS.ProcessEnv);
+            const sha = getHeadSha({});
             expect(sha).toBe('abc123def');
         } finally {
             process.chdir(origCwd);
@@ -105,7 +105,7 @@ describe('getHeadSha', () => {
         const origCwd = process.cwd();
         process.chdir(dir);
         try {
-            const sha = getHeadSha({} as NodeJS.ProcessEnv);
+            const sha = getHeadSha({});
             expect(sha).toBe('abc123def');
         } finally {
             process.chdir(origCwd);
@@ -123,7 +123,7 @@ describe('getHeadSha', () => {
         const origCwd = process.cwd();
         process.chdir(fakeDir);
         try {
-            const result = getHeadSha({} as NodeJS.ProcessEnv);
+            const result = getHeadSha({});
             expect(result).toBeNull();
         } finally {
             process.chdir(origCwd);
@@ -190,7 +190,7 @@ describe('getCurrentBranch', () => {
         const origCwd = process.cwd();
         process.chdir(fakeDir);
         try {
-            const result = getCurrentBranch({} as NodeJS.ProcessEnv);
+            const result = getCurrentBranch({});
             expect(result).toBeNull();
         } finally {
             process.chdir(origCwd);

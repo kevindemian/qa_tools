@@ -1,44 +1,44 @@
 import { parseQuotedValue, isPreconditionKey, extractPreconditionKey } from './quoted-string.js';
 
 describe('parseQuotedValue', () => {
-    it('returns unquoted value as-is', async () => {
+    it('returns unquoted value as-is', () => {
         const result = parseQuotedValue('hello', ['hello'], 0);
         expect(result.value).toBe('hello');
         expect(result.endIndex).toBe(1);
     });
 
-    it('unquotes simple quoted value', async () => {
+    it('unquotes simple quoted value', () => {
         const result = parseQuotedValue('"hello"', ['"hello"'], 0);
         expect(result.value).toBe('hello');
     });
 
-    it('unquotes with escaped double-quotes', async () => {
+    it('unquotes with escaped double-quotes', () => {
         const result = parseQuotedValue('"he""llo"', ['"he""llo"'], 0);
         expect(result.value).toBe('he"llo');
     });
 
-    it('handles multi-line quoted value', async () => {
+    it('handles multi-line quoted value', () => {
         const lines = ['"hello', 'world"', 'next'];
         const result = parseQuotedValue('"hello', lines, 0);
         expect(result.value).toBe('hello\nworld');
         expect(result.endIndex).toBe(2);
     });
 
-    it('handles multi-line with escaped quotes', async () => {
+    it('handles multi-line with escaped quotes', () => {
         const lines = ['"he""llo', 'wo""rld"', 'next'];
         const result = parseQuotedValue('"he""llo', lines, 0);
         expect(result.value).toBe('he"llo\nwo"rld');
         expect(result.endIndex).toBe(2);
     });
 
-    it('returns raw value when unquoted and stop indexes not relevant', async () => {
+    it('returns raw value when unquoted and stop indexes not relevant', () => {
         const lines = ['plain', 'value', 'next'];
         const result = parseQuotedValue('plain', lines, 0);
         expect(result.value).toBe('plain');
         expect(result.endIndex).toBe(1);
     });
 
-    it('returns raw value when value is empty string', async () => {
+    it('returns raw value when value is empty string', () => {
         const result = parseQuotedValue('', [''], 0);
         expect(result.value).toBe('');
         expect(result.endIndex).toBe(1);
@@ -46,14 +46,14 @@ describe('parseQuotedValue', () => {
 });
 
 describe('isPreconditionKey', () => {
-    it('returns true for valid project keys', async () => {
+    it('returns true for valid project keys', () => {
         expect(isPreconditionKey('ABC-123')).toBe(true);
         expect(isPreconditionKey('PREC-001')).toBe(true);
         expect(isPreconditionKey('ECSPOL-PRE-42')).toBe(true);
         expect(isPreconditionKey('PROJECT-1')).toBe(true);
     });
 
-    it('returns false for invalid keys', async () => {
+    it('returns false for invalid keys', () => {
         expect(isPreconditionKey('abc-123')).toBe(false);
         expect(isPreconditionKey('123-ABC')).toBe(false);
         expect(isPreconditionKey('ABC 123')).toBe(false);
@@ -63,18 +63,18 @@ describe('isPreconditionKey', () => {
 });
 
 describe('extractPreconditionKey', () => {
-    it('extracts key from the beginning of a string', async () => {
+    it('extracts key from the beginning of a string', () => {
         expect(extractPreconditionKey('ECSPOL-PRE-42 (descricao)')).toBe('ECSPOL-PRE-42');
         expect(extractPreconditionKey('ABC-123: something')).toBe('ABC-123');
     });
 
-    it('returns null when no key found', async () => {
+    it('returns null when no key found', () => {
         expect(extractPreconditionKey('just a description')).toBeNull();
         expect(extractPreconditionKey('')).toBeNull();
         expect(extractPreconditionKey('123-ABC')).toBeNull();
     });
 
-    it('handles keys with multiple hyphens', async () => {
+    it('handles keys with multiple hyphens', () => {
         expect(extractPreconditionKey('ECSPOL-PRE-42')).toBe('ECSPOL-PRE-42');
     });
 });

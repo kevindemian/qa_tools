@@ -1,15 +1,15 @@
 import { runQualityGate, formatQualityGateJson, formatQualityGateText } from './quality-gate.js';
 
-vi.mock('child_process', async () => ({
+vi.mock('child_process', () => ({
     execFileSync: vi.fn(),
 }));
 
-vi.mock('./metrics', async () => ({
+vi.mock('./metrics', () => ({
     loadMetrics: vi.fn(),
     calculateFlakiness: vi.fn(),
 }));
 
-vi.mock('./logger', async () => ({
+vi.mock('./logger', () => ({
     rootLogger: { error: vi.fn() },
 }));
 
@@ -30,7 +30,7 @@ describe('runQualityGate', () => {
         mockExecFileSync.mockImplementation(() => '');
     });
 
-    it('returns pass when no metrics data exists (fallback git vazio)', async () => {
+    it('returns pass when no metrics data exists (fallback git vazio)', () => {
         mockLoadMetrics.mockReturnValue({ runs: [] });
         const result = runQualityGate();
         expect(result.overall).toBe('pass');
@@ -40,7 +40,7 @@ describe('runQualityGate', () => {
         expect(result.score).toBe(100);
     });
 
-    it('falls back to git data when metrics store empty', async () => {
+    it('falls back to git data when metrics store empty', () => {
         mockLoadMetrics.mockReturnValue({ runs: [] });
         mockExecFileSync.mockImplementation(
             () =>
@@ -52,7 +52,7 @@ describe('runQualityGate', () => {
         expect(result.checks[0]?.name).not.toBe('metrics-data');
     });
 
-    it('returns pass when no metrics data exists (gate skipped)', async () => {
+    it('returns pass when no metrics data exists (gate skipped)', () => {
         mockLoadMetrics.mockReturnValue({ runs: [] });
         const result = runQualityGate();
         expect(result.overall).toBe('pass');
@@ -62,7 +62,7 @@ describe('runQualityGate', () => {
         expect(result.score).toBe(100);
     });
 
-    it('returns pass when all gates pass', async () => {
+    it('returns pass when all gates pass', () => {
         mockLoadMetrics.mockReturnValue({
             runs: [
                 {
@@ -97,7 +97,7 @@ describe('runQualityGate', () => {
         expect(failChecks).toHaveLength(0);
     });
 
-    it('returns fail when pass rate is below threshold', async () => {
+    it('returns fail when pass rate is below threshold', () => {
         mockLoadMetrics.mockReturnValue({
             runs: [
                 {
@@ -131,7 +131,7 @@ describe('runQualityGate', () => {
         expect(passRateCheck?.status).toBe('fail');
     });
 
-    it('filters by project when project option is passed', async () => {
+    it('filters by project when project option is passed', () => {
         mockLoadMetrics.mockReturnValue({
             runs: [
                 {
@@ -157,7 +157,7 @@ describe('runQualityGate', () => {
         expect(result.checks.length).toBeGreaterThanOrEqual(1);
     });
 
-    it('reads thresholds from environment variables', async () => {
+    it('reads thresholds from environment variables', () => {
         process.env.QA_GATE_MIN_PASS_RATE = '90';
         process.env.QA_GATE_MAX_FLAKY_PCT = '10';
         process.env.QA_GATE_MIN_COVERAGE = '80';
@@ -195,7 +195,7 @@ describe('runQualityGate', () => {
         expect(result.overall).toBe('fail');
     });
 
-    it('handles errors gracefully', async () => {
+    it('handles errors gracefully', () => {
         mockLoadMetrics.mockImplementation(() => {
             throw new Error('simulated error');
         });
@@ -204,7 +204,7 @@ describe('runQualityGate', () => {
         expect(result.checks[0]?.name).toBe('error');
     });
 
-    it('calculates score as average of check scores', async () => {
+    it('calculates score as average of check scores', () => {
         mockLoadMetrics.mockReturnValue({
             runs: [
                 {
@@ -239,7 +239,7 @@ describe('runQualityGate', () => {
 });
 
 describe('formatQualityGateJson', () => {
-    it('formats result as JSON string', async () => {
+    it('formats result as JSON string', () => {
         const result = {
             overall: 'pass' as const,
             checks: [{ name: 'test', status: 'pass' as const, score: 100, threshold: 80, details: 'OK' }],
@@ -253,7 +253,7 @@ describe('formatQualityGateJson', () => {
 });
 
 describe('formatQualityGateText', () => {
-    it('formats result as human-readable text', async () => {
+    it('formats result as human-readable text', () => {
         const result = {
             overall: 'pass' as const,
             checks: [{ name: 'test', status: 'pass' as const, score: 100, threshold: 80, details: 'All good' }],
@@ -264,7 +264,7 @@ describe('formatQualityGateText', () => {
         expect(text).toContain('test');
     });
 
-    it('shows fail icon for failing checks', async () => {
+    it('shows fail icon for failing checks', () => {
         const result = {
             overall: 'fail' as const,
             checks: [{ name: 'broken', status: 'fail' as const, score: 30, threshold: 80, details: 'Too low' }],
@@ -275,7 +275,7 @@ describe('formatQualityGateText', () => {
         expect(text).toContain('broken');
     });
 
-    it('handles empty checks array', async () => {
+    it('handles empty checks array', () => {
         const result = { overall: 'pass' as const, checks: [], score: 0 };
         const text = formatQualityGateText(result);
         expect(text).toContain('PASS');

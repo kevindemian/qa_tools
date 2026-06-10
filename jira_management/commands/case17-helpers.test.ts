@@ -18,19 +18,19 @@ describe('isGitHubCi', () => {
         process.env.GITHUB_REPOSITORY = OGR;
     });
 
-    it('returns true when both env vars are set', async () => {
+    it('returns true when both env vars are set', () => {
         process.env.GITHUB_TOKEN = 'token';
         process.env.GITHUB_REPOSITORY = 'owner/repo';
         expect(isGitHubCi()).toBe(true);
     });
 
-    it('returns false when GITHUB_TOKEN missing', async () => {
+    it('returns false when GITHUB_TOKEN missing', () => {
         delete process.env.GITHUB_TOKEN;
         process.env.GITHUB_REPOSITORY = 'owner/repo';
         expect(isGitHubCi()).toBe(false);
     });
 
-    it('returns false when GITHUB_REPOSITORY missing', async () => {
+    it('returns false when GITHUB_REPOSITORY missing', () => {
         process.env.GITHUB_TOKEN = 'token';
         delete process.env.GITHUB_REPOSITORY;
         expect(isGitHubCi()).toBe(false);
@@ -46,19 +46,19 @@ describe('isGitLabCi', () => {
         process.env.CI_PROJECT_ID = OGP;
     });
 
-    it('returns true when both env vars are set', async () => {
+    it('returns true when both env vars are set', () => {
         process.env.CI_JOB_TOKEN = 'token';
         process.env.CI_PROJECT_ID = '123';
         expect(isGitLabCi()).toBe(true);
     });
 
-    it('returns false when CI_JOB_TOKEN missing', async () => {
+    it('returns false when CI_JOB_TOKEN missing', () => {
         delete process.env.CI_JOB_TOKEN;
         process.env.CI_PROJECT_ID = '123';
         expect(isGitLabCi()).toBe(false);
     });
 
-    it('returns false when CI_PROJECT_ID missing', async () => {
+    it('returns false when CI_PROJECT_ID missing', () => {
         process.env.CI_JOB_TOKEN = 'token';
         delete process.env.CI_PROJECT_ID;
         expect(isGitLabCi()).toBe(false);
@@ -66,11 +66,11 @@ describe('isGitLabCi', () => {
 });
 
 describe('buildGitTrendHtml', () => {
-    it('returns empty string when CI context is empty', async () => {
+    it('returns empty string when CI context is empty', () => {
         expect(buildGitTrendHtml({ commits: '', runs: [], flakyTests: '' })).toBe('');
     });
 
-    it('returns HTML with run bars when runs are present', async () => {
+    it('returns HTML with run bars when runs are present', () => {
         const html = buildGitTrendHtml({
             commits: '',
             runs: [
@@ -90,7 +90,7 @@ describe('buildGitTrendHtml', () => {
         expect(html).toContain('100.0%');
     });
 
-    it('includes flaky tests section', async () => {
+    it('includes flaky tests section', () => {
         const html = buildGitTrendHtml({
             commits: '',
             runs: [],
@@ -100,7 +100,7 @@ describe('buildGitTrendHtml', () => {
         expect(html).toContain('Test A');
     });
 
-    it('includes commits section', async () => {
+    it('includes commits section', () => {
         const html = buildGitTrendHtml({
             commits: '- fix login (user, 2024-01-15)',
             runs: [],
@@ -112,11 +112,11 @@ describe('buildGitTrendHtml', () => {
 });
 
 describe('buildJiraContextHtml', () => {
-    it('returns empty string for empty context', async () => {
+    it('returns empty string for empty context', () => {
         expect(buildJiraContextHtml('')).toBe('');
     });
 
-    it('returns HTML with issues when context is present', async () => {
+    it('returns HTML with issues when context is present', () => {
         const html = buildJiraContextHtml('- BUG-1 (Open): Login fails\n');
         expect(html).toContain('Related Jira Issues');
         expect(html).toContain('BUG-1');
@@ -124,25 +124,25 @@ describe('buildJiraContextHtml', () => {
 });
 
 describe('injectAnalysisSection', () => {
-    it('injects analysis before </body>', async () => {
+    it('injects analysis before </body>', () => {
         const result = injectAnalysisSection('<html><body>content</body></html>', 'Analysis text');
         expect(result).toContain('Failure Analysis');
         expect(result).toContain('Analysis text');
         expect(result).toContain('<html><body>content');
     });
 
-    it('returns original HTML when no </body> tag', async () => {
+    it('returns original HTML when no </body> tag', () => {
         const html = '<html><div>no body</div></html>';
         expect(injectAnalysisSection(html, 'text')).toBe(html);
     });
 });
 
 describe('buildDiffSummary', () => {
-    it('returns empty string when no changes', async () => {
+    it('returns empty string when no changes', () => {
         expect(buildDiffSummary({ newFailures: [], newPasses: [], flaky: [] })).toBe('');
     });
 
-    it('includes new failures', async () => {
+    it('includes new failures', () => {
         const html = buildDiffSummary({
             newFailures: [{ title: 'Fail A', state: 'failed', duration: 100, error: 'timeout' }],
             newPasses: [],
@@ -152,7 +152,7 @@ describe('buildDiffSummary', () => {
         expect(html).toContain('Fail A');
     });
 
-    it('includes new passes', async () => {
+    it('includes new passes', () => {
         const html = buildDiffSummary({
             newFailures: [],
             newPasses: [{ title: 'Pass B', state: 'passed', duration: 50 }],
@@ -161,7 +161,7 @@ describe('buildDiffSummary', () => {
         expect(html).toContain('new pass');
     });
 
-    it('truncates long failure lists', async () => {
+    it('truncates long failure lists', () => {
         const failures = Array.from({ length: 7 }, (_, i) => ({
             title: `Fail ${i}`,
             state: 'failed' as const,
@@ -174,24 +174,24 @@ describe('buildDiffSummary', () => {
 });
 
 describe('isValidCtrfData', () => {
-    it('returns true for valid data', async () => {
+    it('returns true for valid data', () => {
         const data = { results: { tests: [{ name: 'T1', status: 'passed' }] } };
         expect(isValidCtrfData(data)).toBe(true);
     });
 
-    it('returns false for null', async () => {
+    it('returns false for null', () => {
         expect(isValidCtrfData(null)).toBe(false);
     });
 
-    it('returns false for non-object', async () => {
+    it('returns false for non-object', () => {
         expect(isValidCtrfData('string')).toBe(false);
     });
 
-    it('returns false when results missing', async () => {
+    it('returns false when results missing', () => {
         expect(isValidCtrfData({})).toBe(false);
     });
 
-    it('returns false when tests missing', async () => {
+    it('returns false when tests missing', () => {
         expect(isValidCtrfData({ results: {} })).toBe(false);
     });
 });
@@ -203,30 +203,30 @@ describe('parseCliExtra', () => {
         process.argv = origArgv;
     });
 
-    it('parses --publish flag', async () => {
+    it('parses --publish flag', () => {
         process.argv = ['node', 'script', '--publish', 's3'];
         expect(parseCliExtra().publishTarget).toBe('s3');
     });
 
-    it('parses --run flag', async () => {
+    it('parses --run flag', () => {
         process.argv = ['node', 'script', '--run', 'chrome=results.json'];
         const result = parseCliExtra();
         expect(result.extraRuns).toHaveLength(1);
         expect(result.extraRuns[0]).toEqual({ name: 'chrome', file: 'results.json' });
     });
 
-    it('skips empty --publish value', async () => {
+    it('skips empty --publish value', () => {
         process.argv = ['node', 'script', '--publish', ''];
         expect(parseCliExtra().publishTarget).toBeUndefined();
     });
 
-    it('skips malformed --run value', async () => {
+    it('skips malformed --run value', () => {
         process.argv = ['node', 'script', '--run', '=onlyfile', '--run', 'name='];
         const result = parseCliExtra();
         expect(result.extraRuns).toHaveLength(0);
     });
 
-    it('returns empty result for no args', async () => {
+    it('returns empty result for no args', () => {
         process.argv = ['node', 'script'];
         const result = parseCliExtra();
         expect(result.publishTarget).toBeUndefined();

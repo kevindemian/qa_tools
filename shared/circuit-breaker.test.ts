@@ -16,25 +16,25 @@ beforeEach(() => {
 });
 
 describe('CircuitBreaker', () => {
-    it('starts CLOSED for any provider', async () => {
+    it('starts CLOSED for any provider', () => {
         expect(getCircuitState(CFG_KEY)).toBe('CLOSED');
     });
 
-    it('opens after threshold failures', async () => {
+    it('opens after threshold failures', () => {
         for (let i = 0; i < CIRCUIT_BREAK_THRESHOLD; i++) {
             recordCircuitFailure(CFG_KEY);
         }
         expect(getCircuitState(CFG_KEY)).toBe('OPEN');
     });
 
-    it('blocks requests when OPEN', async () => {
+    it('blocks requests when OPEN', () => {
         for (let i = 0; i < CIRCUIT_BREAK_THRESHOLD; i++) {
             recordCircuitFailure(CFG_KEY);
         }
         expect(() => checkCircuitBreaker(CFG_KEY)).toThrow('Circuit breaker open');
     });
 
-    it('enters HALF_OPEN after cooldown expires', async () => {
+    it('enters HALF_OPEN after cooldown expires', () => {
         for (let i = 0; i < CIRCUIT_BREAK_THRESHOLD; i++) {
             recordCircuitFailure(CFG_KEY);
         }
@@ -45,7 +45,7 @@ describe('CircuitBreaker', () => {
         vi.useRealTimers();
     });
 
-    it('allows probe in HALF_OPEN and transitions to CLOSED on success', async () => {
+    it('allows probe in HALF_OPEN and transitions to CLOSED on success', () => {
         for (let i = 0; i < CIRCUIT_BREAK_THRESHOLD; i++) {
             recordCircuitFailure(CFG_KEY);
         }
@@ -58,7 +58,7 @@ describe('CircuitBreaker', () => {
         vi.useRealTimers();
     });
 
-    it('rejects second probe within interval', async () => {
+    it('rejects second probe within interval', () => {
         for (let i = 0; i < CIRCUIT_BREAK_THRESHOLD; i++) {
             recordCircuitFailure(CFG_KEY);
         }
@@ -69,7 +69,7 @@ describe('CircuitBreaker', () => {
         vi.useRealTimers();
     });
 
-    it('opens again when probe fails', async () => {
+    it('opens again when probe fails', () => {
         for (let i = 0; i < CIRCUIT_BREAK_THRESHOLD; i++) {
             recordCircuitFailure(CFG_KEY);
         }
@@ -81,7 +81,7 @@ describe('CircuitBreaker', () => {
         vi.useRealTimers();
     });
 
-    it('allows second probe after interval passes', async () => {
+    it('allows second probe after interval passes', () => {
         for (let i = 0; i < CIRCUIT_BREAK_THRESHOLD; i++) {
             recordCircuitFailure(CFG_KEY);
         }
@@ -93,13 +93,13 @@ describe('CircuitBreaker', () => {
         vi.useRealTimers();
     });
 
-    it('resets to CLOSED after success', async () => {
+    it('resets to CLOSED after success', () => {
         recordCircuitFailure(CFG_KEY);
         recordCircuitSuccess(CFG_KEY);
         expect(getCircuitState(CFG_KEY)).toBe('CLOSED');
     });
 
-    it('remains CLOSED below threshold', async () => {
+    it('remains CLOSED below threshold', () => {
         for (let i = 0; i < CIRCUIT_BREAK_THRESHOLD - 1; i++) {
             recordCircuitFailure(CFG_KEY);
         }

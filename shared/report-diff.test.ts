@@ -2,12 +2,12 @@ import { buildDiffComparisonSection } from './report-diff.js';
 import type { FlatTest } from './result_parser.js';
 
 describe('buildDiffComparisonSection', () => {
-    it('returns empty when no changes', async () => {
+    it('returns empty when no changes', () => {
         const html = buildDiffComparisonSection({ newFailures: [], newPasses: [], flaky: [] });
         expect(html).toBe('');
     });
 
-    it('renders new failures section', async () => {
+    it('renders new failures section', () => {
         const diff = {
             newFailures: [{ title: 'Login test', state: 'failed', duration: 100, error: 'Timeout' } as FlatTest],
             newPasses: [],
@@ -19,7 +19,7 @@ describe('buildDiffComparisonSection', () => {
         expect(html).toContain('Timeout');
     });
 
-    it('renders fixed tests section', async () => {
+    it('renders fixed tests section', () => {
         const diff = {
             newFailures: [],
             newPasses: [{ title: 'API test', state: 'passed', duration: 50 } as FlatTest],
@@ -30,7 +30,7 @@ describe('buildDiffComparisonSection', () => {
         expect(html).toContain('API test');
     });
 
-    it('renders flaky tests section', async () => {
+    it('renders flaky tests section', () => {
         const diff = {
             newFailures: [],
             newPasses: [],
@@ -41,7 +41,7 @@ describe('buildDiffComparisonSection', () => {
         expect(html).toContain('Flaky test');
     });
 
-    it('renders all sections together', async () => {
+    it('renders all sections together', () => {
         const diff = {
             newFailures: [{ title: 'F1', state: 'failed', duration: 100 } as FlatTest],
             newPasses: [{ title: 'P1', state: 'passed', duration: 50 } as FlatTest],

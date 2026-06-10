@@ -1,4 +1,4 @@
-vi.mock('../shared/prompt', async () => ({
+vi.mock('../shared/prompt', () => ({
     warn: vi.fn(),
     info: vi.fn(),
     print: vi.fn(),
@@ -6,12 +6,12 @@ vi.mock('../shared/prompt', async () => ({
     isQuiet: vi.fn().mockReturnValue(true),
 }));
 
-vi.mock('../shared/state', async () => ({
+vi.mock('../shared/state', () => ({
     update: vi.fn(),
     load: vi.fn().mockReturnValue({}),
 }));
 
-vi.mock('../shared/logger', async () => ({
+vi.mock('../shared/logger', () => ({
     rootLogger: {
         child: vi.fn().mockReturnValue({
             info: vi.fn(),
@@ -21,7 +21,7 @@ vi.mock('../shared/logger', async () => ({
     },
 }));
 
-vi.mock('./import-prep', async () => ({
+vi.mock('./import-prep', () => ({
     validateImportBatch: vi.fn(),
     showPreview: vi.fn(),
     filterTests: vi.fn(),
@@ -37,7 +37,7 @@ vi.mock('./mapping-file-generator', () => ({
     }),
 }));
 
-vi.mock('./import-loop', async () => ({
+vi.mock('./import-loop', () => ({
     executeTestCreationLoop: vi.fn(),
     updateFinalState: vi.fn(),
 }));

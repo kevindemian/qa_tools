@@ -8,7 +8,7 @@ vi.mock('./github-api', async () => ({
     formatDiffResponse: (await vi.importActual('./github-api')).formatDiffResponse,
 }));
 
-vi.mock('../shared/logger', async () => ({
+vi.mock('../shared/logger', () => ({
     Logger: vi.fn().mockImplementation(function () {
         return { error: vi.fn(), warn: vi.fn() };
     }),

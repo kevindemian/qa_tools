@@ -1,6 +1,6 @@
 vi.mock('../../shared/prompt');
 
-vi.mock('../../shared/bug-report', async () => ({
+vi.mock('../../shared/bug-report', () => ({
     collectManual: vi.fn(),
     interactiveBugReportFlow: vi.fn(),
     generateBugReportFromDescription: vi.fn(),

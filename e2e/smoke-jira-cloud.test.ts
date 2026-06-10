@@ -17,7 +17,7 @@ const mockCreateHttpClient = vi.fn(() => ({
     put: vi.fn().mockResolvedValue({ data: {} }),
 }));
 
-vi.mock('../shared/http-client', async () => ({
+vi.mock('../shared/http-client', () => ({
     createHttpClient: mockCreateHttpClient,
 }));
 
@@ -36,11 +36,11 @@ let JiraClient: typeof JiraClientType;
 
 beforeAll(async () => {
     JiraClient = (await vi.importActual<typeof import('../shared/jira-client.js')>('../shared/jira-client'))
-        .default as typeof JiraClientType;
+        .default;
 });
 
-describe('smoke-jira-cloud', async () => {
-    beforeEach(async () => {
+describe('smoke-jira-cloud', () => {
+    beforeEach(() => {
         vi.clearAllMocks();
     });
 
@@ -48,7 +48,7 @@ describe('smoke-jira-cloud', async () => {
         expect(Config.get('jiraMode')).toBe('cloud');
     });
 
-    it.runIf(process.env.JIRA_MODE === 'cloud')('createJiraAuthHeader produces Basic auth for cloud mode', async () => {
+    it.runIf(process.env.JIRA_MODE === 'cloud')('createJiraAuthHeader produces Basic auth for cloud mode', () => {
         const cred = 'user@example.com:APITOKEN123';
         const header = createJiraAuthHeader(cred, 'cloud');
         expect(header.Authorization).toMatch(/^Basic /);
@@ -56,7 +56,7 @@ describe('smoke-jira-cloud', async () => {
         expect(decoded).toBe(cred);
     });
 
-    it.runIf(process.env.JIRA_MODE === 'cloud')('JiraClient uses Basic auth when mode is cloud', async () => {
+    it.runIf(process.env.JIRA_MODE === 'cloud')('JiraClient uses Basic auth when mode is cloud', () => {
         const client = new JiraClient(
             'user@example.com:APITOKEN123',
             'https://example.atlassian.net/rest/api/2',
@@ -70,12 +70,12 @@ describe('smoke-jira-cloud', async () => {
         );
     });
 
-    it.runIf(process.env.JIRA_MODE === 'cloud')('JiraClient defaults to server mode without mode param', async () => {
+    it.runIf(process.env.JIRA_MODE === 'cloud')('JiraClient defaults to server mode without mode param', () => {
         const client = new JiraClient('pat-123', 'https://jira.example.com/rest/api/2');
         expect(client.jiraMode).toBe('server');
     });
 
-    it.runIf(process.env.JIRA_MODE === 'cloud')('config-schema defaults jiraMode to server', async () => {
+    it.runIf(process.env.JIRA_MODE === 'cloud')('config-schema defaults jiraMode to server', () => {
         const f = CONFIG_SCHEMA.find((r) => r.key === 'jiraMode');
         expect(f?.defaultVal).toBe('server');
         expect(f?.description).toMatch(/server.*cloud/i);

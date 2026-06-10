@@ -19,7 +19,7 @@ const mockInstance = Object.assign(vi.fn<(...args: [config: object]) => Promise<
     put: vi.fn(),
 });
 
-vi.mock('axios', async () => ({
+vi.mock('axios', () => ({
     default: { create: vi.fn<(...args: [object]) => typeof mockInstance>(() => mockInstance) },
 }));
 import * as httpClientModule from './http-client.js';
@@ -53,7 +53,7 @@ describe('HTTP Client', () => {
     });
 
     describe('createHttpClient', () => {
-        it('creates axios instance with provided config', async () => {
+        it('creates axios instance with provided config', () => {
             httpClient.createHttpClient({
                 baseUrl: 'https://api.test.com',
                 authHeader: { Authorization: 'Bearer token123' },
@@ -73,12 +73,12 @@ describe('HTTP Client', () => {
             expect(axCfg).toHaveProperty('httpsAgent');
         });
 
-        it('registers response interceptor', async () => {
+        it('registers response interceptor', () => {
             httpClient.createHttpClient({ baseUrl: 'https://api.test.com' });
             expect(mockInstance.interceptors.response.use).toHaveBeenCalled();
         });
 
-        it('uses default timeout when not specified', async () => {
+        it('uses default timeout when not specified', () => {
             httpClient.createHttpClient({ baseUrl: 'https://api.test.com' });
             expect(axios.create).toHaveBeenCalledWith(expect.objectContaining({ timeout: 120000 }));
         });
@@ -175,7 +175,7 @@ describe('HTTP Client', () => {
             expect(mockInstance).not.toHaveBeenCalled();
         });
 
-        it('success interceptor cleans up retry counts and returns response', async () => {
+        it('success interceptor cleans up retry counts and returns response', () => {
             httpClient.createHttpClient({ baseUrl: 'https://api.test.com' });
             const response = {
                 config: { method: 'get', url: '/test' },
@@ -313,7 +313,7 @@ describe('HTTP Client', () => {
             vi.useRealTimers();
         });
 
-        it('removes entries that have not been used for more than RETRY_STALE_MS', async () => {
+        it('removes entries that have not been used for more than RETRY_STALE_MS', () => {
             httpClient.createHttpClient({ baseUrl: 'https://api.test.com' });
 
             // Create entry in retryCounts via a retry that resolves successfully
@@ -356,7 +356,7 @@ describe('HTTP Client', () => {
             await expect(req2Promise).resolves.toBe(cfg2);
         });
 
-        it('response error handler extracts host from empty url', async () => {
+        it('response error handler extracts host from empty url', () => {
             httpClient.createThrottledClient({ baseUrl: 'https://api.test.com', maxConcurrency: 3 });
             const errRespHandler = nonNull(mockInstance.interceptors.response.use.mock.calls[1])[1];
             const error = { config: {}, message: 'test', name: 'Error' };
@@ -390,7 +390,7 @@ describe('HTTP Client', () => {
             await expect(p3).resolves.toBeUndefined();
         });
 
-        it('release calls dispatchNext even when queue is empty', async () => {
+        it('release calls dispatchNext even when queue is empty', () => {
             const sem = new HostSemaphore(1);
             expect(() => sem.release('nonexistent')).not.toThrow();
         });

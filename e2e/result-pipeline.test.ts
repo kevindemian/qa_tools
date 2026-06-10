@@ -116,7 +116,7 @@ describe('E2E: Result Processing Pipeline', () => {
         expect(nock.isDone()).toBe(true);
     });
 
-    it('handles unmatched test gracefully', async () => {
+    it('handles unmatched test gracefully', () => {
         const mochaPath = path.join(FIXTURES, 'mochawesome.json');
         const raw = fs.readFileSync(mochaPath, 'utf8');
         const parsed = parseTestResults(JSON.parse(raw));
@@ -131,7 +131,7 @@ describe('E2E: Result Processing Pipeline', () => {
         expect(nonNull(unmatched[0]).title).toBe('TC99 - Unknown test');
     });
 
-    it('flows end-to-end: CTRF → match → TE creation', async () => {
+    it('flows end-to-end: CTRF → match → TE creation', () => {
         const ctrfPath = path.join(FIXTURES, 'ctrf-report.json');
         const raw = fs.readFileSync(ctrfPath, 'utf8');
         const parsed = parseTestResults(JSON.parse(raw));
@@ -147,7 +147,7 @@ describe('E2E: Result Processing Pipeline', () => {
         expect(unmatched).toHaveLength(1);
     });
 
-    it('returns empty match for missing mapping file', async () => {
+    it('returns empty match for missing mapping file', () => {
         const result = matchResultsToTests(
             [{ title: 'TC01', state: 'passed', duration: 100 }],
             '/tmp/nonexistent.json',

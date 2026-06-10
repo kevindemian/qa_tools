@@ -188,7 +188,7 @@ describe('Store', () => {
                 exists: () => false,
             };
             const spy = vi.spyOn(mockBackend, 'flush');
-            const s = new Store(mockBackend as never, project);
+            const s = new Store(mockBackend, project);
             s.flush('test message');
             expect(spy).toHaveBeenCalledWith('test message');
         });

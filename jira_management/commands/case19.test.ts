@@ -3,30 +3,30 @@ import { expect } from 'vitest';
 vi.mock('../../shared/prompt');
 vi.mock('../../shared/logger');
 
-vi.mock('../../shared/metrics', async () => ({
+vi.mock('../../shared/metrics', () => ({
     loadMetrics: vi.fn(),
     calculateFlakiness: vi.fn(),
     getTrends: vi.fn(),
     saveCoverageSnapshot: vi.fn(),
 }));
 
-vi.mock('../../shared/health-score', async () => ({
+vi.mock('../../shared/health-score', () => ({
     calculateHealthScore: vi.fn(),
 }));
 
-vi.mock('../../shared/flaky-auto-actions', async () => ({
+vi.mock('../../shared/flaky-auto-actions', () => ({
     executeFlakyActions: vi.fn().mockResolvedValue([]),
 }));
 
-vi.mock('../../shared/run-comparison', async () => ({
+vi.mock('../../shared/run-comparison', () => ({
     compareRuns: vi.fn(),
 }));
 
-vi.mock('../coverage', async () => ({
+vi.mock('../coverage', () => ({
     analyzeCoverage: vi.fn(),
 }));
 
-vi.mock('../../shared/logger', async () => ({
+vi.mock('../../shared/logger', () => ({
     rootLogger: {
         error: vi.fn(),
         child: vi.fn().mockReturnValue({ info: vi.fn(), error: vi.fn(), warn: vi.fn() }),

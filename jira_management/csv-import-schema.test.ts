@@ -1,17 +1,17 @@
 import { CsvRowSchema, TestCaseSchema, ImportJsonSchema, JiraPayloadSchema } from './csv-import-schema.js';
 
 describe('CsvRowSchema', () => {
-    it('accepts valid CSV row', async () => {
+    it('accepts valid CSV row', () => {
         const data = { fields: { Action: 'Click login', Data: 'user@test.com', 'Expected Result': 'Dashboard' } };
         const result = CsvRowSchema.parse(data);
         expect(result.fields.Action).toBe('Click login');
     });
 
-    it('rejects row without Action', async () => {
+    it('rejects row without Action', () => {
         expect(() => CsvRowSchema.parse({ fields: { Action: '', Data: '', 'Expected Result': '' } })).toThrow();
     });
 
-    it('defaults Data and Expected Result when missing', async () => {
+    it('defaults Data and Expected Result when missing', () => {
         const result = CsvRowSchema.parse({ fields: { Action: 'Click' } });
         expect(result.fields.Data).toBe('');
         expect(result.fields['Expected Result']).toBe('');
@@ -19,7 +19,7 @@ describe('CsvRowSchema', () => {
 });
 
 describe('TestCaseSchema', () => {
-    it('accepts valid test case', async () => {
+    it('accepts valid test case', () => {
         const data = {
             title: 'Login test',
             steps: [{ fields: { Action: 'Enter user', Data: 'admin', 'Expected Result': 'Logged in' } }],
@@ -27,19 +27,19 @@ describe('TestCaseSchema', () => {
         expect(TestCaseSchema.parse(data)).toEqual(data);
     });
 
-    it('rejects empty title', async () => {
+    it('rejects empty title', () => {
         expect(() => TestCaseSchema.parse({ title: '', steps: [{ fields: { Action: 'x' } }] })).toThrow();
     });
 
-    it('rejects empty steps', async () => {
+    it('rejects empty steps', () => {
         expect(() => TestCaseSchema.parse({ title: 'Test', steps: [] })).toThrow();
     });
 
-    it('rejects missing steps', async () => {
+    it('rejects missing steps', () => {
         expect(() => TestCaseSchema.parse({ title: 'Test' })).toThrow();
     });
 
-    it('accepts full test case with all fields', async () => {
+    it('accepts full test case with all fields', () => {
         const data = {
             title: 'Full test',
             description: 'Description text',
@@ -55,7 +55,7 @@ describe('TestCaseSchema', () => {
 });
 
 describe('ImportJsonSchema', () => {
-    it('accepts valid JSON array', async () => {
+    it('accepts valid JSON array', () => {
         const data = [
             {
                 title: 'TC1',
@@ -68,15 +68,15 @@ describe('ImportJsonSchema', () => {
         expect(result[0]?.steps).toHaveLength(1);
     });
 
-    it('rejects empty array', async () => {
+    it('rejects empty array', () => {
         expect(() => ImportJsonSchema.parse([])).toThrow();
     });
 
-    it('rejects item without title', async () => {
+    it('rejects item without title', () => {
         expect(() => ImportJsonSchema.parse([{ steps: [{ Action: 'Click' }] }])).toThrow();
     });
 
-    it('accepts linkedIssues as strings or objects', async () => {
+    it('accepts linkedIssues as strings or objects', () => {
         const data = [
             {
                 title: 'TC1',
@@ -90,7 +90,7 @@ describe('ImportJsonSchema', () => {
 });
 
 describe('JiraPayloadSchema', () => {
-    it('accepts valid Jira payload', async () => {
+    it('accepts valid Jira payload', () => {
         const data = {
             fields: {
                 project: { key: 'PROJ' },
@@ -102,7 +102,7 @@ describe('JiraPayloadSchema', () => {
         expect(JiraPayloadSchema.parse(data)).toEqual(data);
     });
 
-    it('accepts payload with labels', async () => {
+    it('accepts payload with labels', () => {
         const data = {
             fields: {
                 project: { key: 'PROJ' },
@@ -116,7 +116,7 @@ describe('JiraPayloadSchema', () => {
         expect(result.fields.labels).toHaveLength(2);
     });
 
-    it('rejects wrong issuetype', async () => {
+    it('rejects wrong issuetype', () => {
         expect(() =>
             JiraPayloadSchema.parse({
                 fields: {
@@ -129,7 +129,7 @@ describe('JiraPayloadSchema', () => {
         ).toThrow();
     });
 
-    it('rejects empty summary', async () => {
+    it('rejects empty summary', () => {
         expect(() =>
             JiraPayloadSchema.parse({
                 fields: {

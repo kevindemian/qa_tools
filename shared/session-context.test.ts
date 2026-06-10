@@ -1,17 +1,17 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { SessionContext } from './session-context.js';
 
-vi.mock('./git-sha.js', async () => ({
+vi.mock('./git-sha.js', () => ({
     getHeadSha: vi.fn(),
     getCurrentBranch: vi.fn(),
 }));
 
-vi.mock('./store-backend.js', async () => ({
+vi.mock('./store-backend.js', () => ({
     detectStoreBackend: vi.fn(),
     detectProjectGitDir: vi.fn(),
 }));
 
-vi.mock('./git-artifact-downloader.js', async () => ({
+vi.mock('./git-artifact-downloader.js', () => ({
     fetchLatestTestRun: vi.fn(),
 }));
 
@@ -49,7 +49,7 @@ describe('SessionContext', () => {
         ctx = new SessionContext();
     });
 
-    it('initializes with defaults', async () => {
+    it('initializes with defaults', () => {
         expect(ctx.isBusy).toBe(false);
         expect(ctx.lastOperation).toBe('');
         expect(ctx.sessionCounters).toEqual([]);
@@ -61,7 +61,7 @@ describe('SessionContext', () => {
         expect(ctx.results).toEqual([]);
     });
 
-    it('resetResults clears results array', async () => {
+    it('resetResults clears results array', () => {
         ctx.results.push({ status: 'ok', label: 'T1', message: '' });
         ctx.resetResults();
         expect(ctx.results).toEqual([]);
@@ -71,6 +71,7 @@ describe('SessionContext', () => {
         expect(ctx.isBusy).toBe(false);
 
         const result = await ctx.withBusy(async () => {
+            await undefined;
             expect(ctx.isBusy).toBe(true);
             return 42;
         });
@@ -81,7 +82,7 @@ describe('SessionContext', () => {
 
     it('withBusy ensures isBusy is false on error', async () => {
         await expect(
-            ctx.withBusy(async () => {
+            ctx.withBusy(() => {
                 throw new Error('fail');
             }),
         ).rejects.toThrow('fail');
@@ -89,12 +90,12 @@ describe('SessionContext', () => {
         expect(ctx.isBusy).toBe(false);
     });
 
-    it('pushHistory appends to sessionCounters', async () => {
+    it('pushHistory appends to sessionCounters', () => {
         ctx.pushHistory('test-op', 'detail-1', 'ok');
         expect(ctx.sessionCounters).toEqual([{ op: 'test-op', detail: 'detail-1', status: 'ok' }]);
     });
 
-    it('pushHistory appends multiple entries', async () => {
+    it('pushHistory appends multiple entries', () => {
         ctx.pushHistory('op1', 'd1', 'ok');
         ctx.pushHistory('op2', 'd2', 'error');
         expect(ctx.sessionCounters.length).toBe(2);
@@ -103,11 +104,11 @@ describe('SessionContext', () => {
     });
 
     describe('buildContextLine', () => {
-        it('returns project name when no operations', async () => {
+        it('returns project name when no operations', () => {
             expect(ctx.buildContextLine('PROJ')).toBe('PROJ');
         });
 
-        it('includes counter summary when operations exist', async () => {
+        it('includes counter summary when operations exist', () => {
             ctx.pushHistory('op1', 'd1', 'ok');
             ctx.pushHistory('op2', 'd2', 'error');
             const line = ctx.buildContextLine('PROJ');
@@ -116,13 +117,13 @@ describe('SessionContext', () => {
             expect(line).toContain('1 erro');
         });
 
-        it('includes lastOperation when set', async () => {
+        it('includes lastOperation when set', () => {
             ctx.pushHistory('test-op', 'detail-1', 'ok');
             const line = ctx.buildContextLine('PROJ');
             expect(line).toContain('test-op');
         });
 
-        it('returns empty string when projectName is empty', async () => {
+        it('returns empty string when projectName is empty', () => {
             const line = ctx.buildContextLine('');
             expect(line).toBe('');
         });
@@ -145,7 +146,7 @@ describe('resolveSessionContext', () => {
             write: vi.fn(),
             exists: vi.fn(() => false),
             flush: vi.fn(),
-        } as never);
+        });
 
         const ctx = new SessionContext();
         const result = await resolveSessionContext(ctx, 'test-project');
@@ -187,7 +188,7 @@ describe('resolveTestDataSource', () => {
                 { title: 'T1', state: 'passed', duration: 100 },
                 { title: 'T2', state: 'failed', duration: 50, error: 'fail' },
             ],
-        } as never);
+        });
 
         const result = await resolveTestDataSource('project', 'sha123', 'main', store as never);
 
@@ -245,7 +246,7 @@ describe('resolveTestDataSource', () => {
             .mockReturnValueOnce(null)
             .mockReturnValueOnce({
                 tests: [{ title: 'T1', state: 'passed', duration: 100 }],
-            } as never);
+            });
 
         const result = await resolveTestDataSource('project', 'sha789', 'main', store as never);
 
@@ -311,7 +312,7 @@ describe('resolveTestDataSource', () => {
     it('handles loadReport returning non-array tests', async () => {
         const { resolveTestDataSource } = await import('./session-context.js');
         const store = createMockStore();
-        vi.mocked(store.loadReport).mockReturnValue({ tests: 'not-an-array' } as never);
+        vi.mocked(store.loadReport).mockReturnValue({ tests: 'not-an-array' });
         vi.mocked(fetchLatestTestRun).mockResolvedValue(null);
 
         const result = await resolveTestDataSource('project', 'sha123', 'main', store as never);
@@ -322,7 +323,7 @@ describe('resolveTestDataSource', () => {
     it('handles loadReport returning empty array', async () => {
         const { resolveTestDataSource } = await import('./session-context.js');
         const store = createMockStore();
-        vi.mocked(store.loadReport).mockReturnValue({ tests: [] } as never);
+        vi.mocked(store.loadReport).mockReturnValue({ tests: [] });
         vi.mocked(fetchLatestTestRun).mockResolvedValue(null);
 
         const result = await resolveTestDataSource('project', 'sha123', 'main', store as never);

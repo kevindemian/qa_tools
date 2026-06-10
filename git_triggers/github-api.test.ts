@@ -3,14 +3,14 @@ import type { Mocked } from 'vitest';
 import { createMockAxiosInstance } from '../shared/test-utils/factories/response-factory.js';
 import type { AxiosInstance } from '../shared/deps.js';
 
-vi.mock('../shared/logger', async () => ({
+vi.mock('../shared/logger', () => ({
     Logger: vi.fn().mockImplementation(function () {
         return { error: vi.fn(), warn: vi.fn() };
     }),
     rootLogger: { error: vi.fn(), warn: vi.fn() },
 }));
 
-vi.mock('../shared/git-provider-error', async () => ({
+vi.mock('../shared/git-provider-error', () => ({
     handleError: vi.fn((err: unknown, opts?: { returnNull?: boolean }) => {
         if (opts?.returnNull) return null;
         throw err;
@@ -112,7 +112,7 @@ describe('apiPatch', () => {
 });
 
 describe('formatDiffResponse', () => {
-    it('formats entries with patch content', async () => {
+    it('formats entries with patch content', () => {
         const entries = [
             { filename: 'src/index.ts', patch: '@@ -1 +1 @@\n-foo\n+bar' },
             { filename: 'src/utils.ts', patch: '@@ -5 +5 @@\n-old\n+new' },
@@ -123,7 +123,7 @@ describe('formatDiffResponse', () => {
         );
     });
 
-    it('skips entries without patch field', async () => {
+    it('skips entries without patch field', () => {
         const entries = [
             { filename: 'a.ts', patch: 'content' },
             { filename: 'b.ts' },
@@ -133,37 +133,37 @@ describe('formatDiffResponse', () => {
         expect(result).toBe('--- a/a.ts\n+++ b/a.ts\ncontent\n--- a/c.ts\n+++ b/c.ts\nmore');
     });
 
-    it('returns empty string for null/undefined/non-array input', async () => {
+    it('returns empty string for null/undefined/non-array input', () => {
         expect(formatDiffResponse(null, 'patch', 'filename')).toBe('');
         expect(formatDiffResponse(undefined, 'patch', 'filename')).toBe('');
         expect(formatDiffResponse({} as Array<Record<string, unknown>>, 'patch', 'filename')).toBe('');
     });
 
-    it('returns empty string for empty array', async () => {
+    it('returns empty string for empty array', () => {
         expect(formatDiffResponse([], 'patch', 'filename')).toBe('');
     });
 
-    it('truncates when result exceeds truncationLimit', async () => {
+    it('truncates when result exceeds truncationLimit', () => {
         const entries = [{ filename: 'big.ts', patch: 'a'.repeat(200) }];
         const result = formatDiffResponse(entries, 'patch', 'filename', 50);
         expect(result.endsWith('\n... (truncated)')).toBe(true);
         expect(result.length).toBeLessThanOrEqual(70);
     });
 
-    it('does not truncate when result fits within limit', async () => {
+    it('does not truncate when result fits within limit', () => {
         const entries = [{ filename: 'small.ts', patch: 'content' }];
         const result = formatDiffResponse(entries, 'patch', 'filename', 15000);
         expect(result).toBe('--- a/small.ts\n+++ b/small.ts\ncontent');
         expect(result.endsWith('\n... (truncated)')).toBe(false);
     });
 
-    it('handles non-string name field gracefully', async () => {
+    it('handles non-string name field gracefully', () => {
         const entries = [{ patch: 'diff', name: 123 }];
         const result = formatDiffResponse(entries, 'patch', 'name');
         expect(result).toBe('--- a/\n+++ b/\ndiff');
     });
 
-    it('handles non-string patch field gracefully', async () => {
+    it('handles non-string patch field gracefully', () => {
         const entries = [{ filename: 'f.ts', patch: 42 }];
         const result = formatDiffResponse(entries, 'patch', 'filename');
         expect(result).toBe('');

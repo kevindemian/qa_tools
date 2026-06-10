@@ -1,4 +1,4 @@
-vi.mock('../shared/prompt-ui', async () => ({ isQuiet: vi.fn() }));
+vi.mock('../shared/prompt-ui', () => ({ isQuiet: vi.fn() }));
 vi.mock('../shared/output', () => {
     const mockOutput = { print: vi.fn() };
     return {
@@ -8,7 +8,7 @@ vi.mock('../shared/output', () => {
 });
 
 const mockSingleBar = vi.hoisted(() => ({ start: vi.fn(), update: vi.fn(), stop: vi.fn() }));
-vi.mock('cli-progress', async () => ({
+vi.mock('cli-progress', () => ({
     default: {
         SingleBar: vi.fn(function () {
             return mockSingleBar;
@@ -81,12 +81,12 @@ describe('ProgressBar', () => {
     });
 
     describe('constructor', () => {
-        it('creates cli-progress bar when TTY enabled', async () => {
+        it('creates cli-progress bar when TTY enabled', () => {
             const bar = new ProgressBar(100);
             expect(bar.current).toBe(0);
         });
 
-        it('does not create bar when not TTY', async () => {
+        it('does not create bar when not TTY', () => {
             mockIsTTY.mockReturnValue(false);
             const bar = new ProgressBar(100);
             expect(bar.current).toBe(0);
@@ -94,14 +94,14 @@ describe('ProgressBar', () => {
     });
 
     describe('update', () => {
-        it('delegates to bar.update when enabled', async () => {
+        it('delegates to bar.update when enabled', () => {
             const bar = new ProgressBar(100);
             bar.update(50);
             expect(bar.current).toBe(50);
             expect(mockSingleBar.update).toHaveBeenCalledWith(50);
         });
 
-        it('falls back to output.print when not TTY', async () => {
+        it('falls back to output.print when not TTY', () => {
             mockIsTTY.mockReturnValue(false);
             const bar = new ProgressBar(100);
             bar.update(50);
@@ -110,13 +110,13 @@ describe('ProgressBar', () => {
     });
 
     describe('stop', () => {
-        it('calls bar.stop when enabled', async () => {
+        it('calls bar.stop when enabled', () => {
             const bar = new ProgressBar(100);
             bar.stop();
             expect(mockSingleBar.stop).toHaveBeenCalled();
         });
 
-        it('no-ops when not TTY', async () => {
+        it('no-ops when not TTY', () => {
             mockIsTTY.mockReturnValue(false);
             const bar = new ProgressBar(100);
             expect(() => bar.stop()).not.toThrow();

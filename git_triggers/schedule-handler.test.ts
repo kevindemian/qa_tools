@@ -1,4 +1,4 @@
-vi.mock('../shared/prompt', async () => ({
+vi.mock('../shared/prompt', () => ({
     print: vi.fn(),
     success: vi.fn(),
     warn: vi.fn(),
@@ -12,7 +12,7 @@ vi.mock('../shared/prompt', async () => ({
 
 const mockState = { currentProvider: 'gitlab', currentProjectName: '' };
 
-vi.mock('./session-state', async () => ({
+vi.mock('./session-state', () => ({
     pushHistory: vi.fn(),
     displayProjects: vi.fn(),
     displayRecentPipelines: vi.fn(),
@@ -30,7 +30,7 @@ vi.mock('./session-state', async () => ({
     },
 }));
 
-vi.mock('../shared/metrics', async () => ({
+vi.mock('../shared/metrics', () => ({
     loadMetrics: vi.fn(() => ({ runs: [], failureClassifications: [] })),
     calculateFlakiness: vi.fn(() => []),
 }));
@@ -115,13 +115,13 @@ vi.mock('../shared/temp-dir', () => ({ writeReport: vi.fn((name: string) => '/tm
 vi.mock('../shared/jira-client', () => ({ default: vi.fn() }));
 vi.mock('../shared/flaky-auto-actions', () => ({ executeFlakyActions: vi.fn(() => []) }));
 
-vi.mock('../shared/flakiness-dashboard', async () => ({ generateFlakinessHtml: vi.fn(() => '<html>') }));
+vi.mock('../shared/flakiness-dashboard', () => ({ generateFlakinessHtml: vi.fn(() => '<html>') }));
 
-vi.mock('../shared/open', async () => ({ openWithFallback: vi.fn() }));
+vi.mock('../shared/open', () => ({ openWithFallback: vi.fn() }));
 
-vi.mock('../shared/state', async () => ({ update: vi.fn() }));
+vi.mock('../shared/state', () => ({ update: vi.fn() }));
 
-vi.mock('fs', async () => ({
+vi.mock('fs', () => ({
     writeFileSync: vi.fn(),
     mkdirSync: vi.fn(),
     existsSync: vi.fn(),
@@ -279,13 +279,13 @@ describe('handleChangeProject', () => {
 });
 
 describe('handleFlakinessDashboard', () => {
-    it('warns when no project selected', async () => {
+    it('warns when no project selected', () => {
         void handleFlakinessDashboard();
 
         expect(mockWarn).toHaveBeenCalledWith(expect.stringContaining('Nenhum projeto'));
     });
 
-    it('warns when less than 2 runs', async () => {
+    it('warns when less than 2 runs', () => {
         mockState.currentProjectName = 'proj1';
         mockLoadMetrics.mockReturnValue({
             runs: [
@@ -298,7 +298,7 @@ describe('handleFlakinessDashboard', () => {
         expect(mockWarn).toHaveBeenCalledWith(expect.stringContaining('Menos de 2'));
     });
 
-    it('informs when no flaky tests', async () => {
+    it('informs when no flaky tests', () => {
         mockState.currentProjectName = 'proj1';
         mockLoadMetrics.mockReturnValue({
             runs: [

@@ -1,6 +1,6 @@
 vi.mock('../../shared/prompt');
 
-vi.mock('../../shared/state', async () => ({
+vi.mock('../../shared/state', () => ({
     load: vi.fn().mockReturnValue({}),
     update: vi.fn(),
 }));
@@ -15,7 +15,7 @@ beforeEach(() => {
 });
 
 describe('case09 — switch project', () => {
-    it('exports a handler function', async () => {
+    it('exports a handler function', () => {
         expect(case09).toBeDefined();
         expect(typeof case09.handler).toBe('function');
     });

@@ -21,24 +21,24 @@ function mockJiraResource(captured: { calls: unknown[] }): MockJira {
         searchJiraIssues: vi.fn().mockImplementation(async (jql: string): Promise<SearchIssuesResponse> => {
             captured.calls.push({ method: 'searchJiraIssues', jql });
             const match = jql.match(/\[Flaky\].*?"?([^"]+)"?/);
-            if (!match) return { issues: [], total: 0 };
+            if (!match) return await Promise.resolve({ issues: [], total: 0 });
             const existing: Array<{ key: string; fields: Record<string, unknown> }> = [];
             for (const [key] of bugStore) {
                 existing.push({ key, fields: { summary: '[Flaky] ' + match[1], status: { name: 'Open' } } });
             }
-            return { issues: existing, total: existing.length };
+            return await Promise.resolve({ issues: existing, total: existing.length });
         }),
-        postJiraResource: vi.fn().mockImplementation(async (_url: string, data: unknown) => {
+        postJiraResource: vi.fn().mockImplementation((_url: string, data: unknown) => {
             captured.calls.push({ method: 'postJiraResource', data });
             const key = 'FLAKY-' + (bugStore.size + 1);
             bugStore.set(key, { key });
             return { key, ...(data as Record<string, unknown>) };
         }),
-        getTransitionsForIssue: vi.fn().mockImplementation(async () => {
+        getTransitionsForIssue: vi.fn().mockImplementation(() => {
             captured.calls.push({ method: 'getTransitionsForIssue' });
             return { Done: '41', Closed: '31' };
         }),
-        transitionIssue: vi.fn().mockImplementation(async () => {
+        transitionIssue: vi.fn().mockImplementation(() => {
             captured.calls.push({ method: 'transitionIssue' });
         }),
         getJiraResource: vi.fn().mockResolvedValue({}),
@@ -91,7 +91,7 @@ function asMockJira(m: MockJira): JiraResourceLike {
 }
 
 describe('calculateFlakinessWithWindow', () => {
-    it('respects window size', async () => {
+    it('respects window size', () => {
         const tests: FlatTest[] = Array.from({ length: 30 }, (_, i) => ({
             title: 'FlakyTest',
             state: i % 2 === 0 ? 'failed' : 'passed',
@@ -118,7 +118,7 @@ describe('calculateFlakinessWithWindow', () => {
         }
     });
 
-    it('filters by minRuns', async () => {
+    it('filters by minRuns', () => {
         const minRunsTests: FlatTest[] = Array.from({ length: 3 }, (_, i) => ({
             title: 'MinRunTest',
             state: i % 2 === 0 ? 'failed' : 'passed',
@@ -143,7 +143,7 @@ describe('calculateFlakinessWithWindow', () => {
         expect(withMin2.length).toBeGreaterThan(0);
     });
 
-    it('counts skipped tests', async () => {
+    it('counts skipped tests', () => {
         const tests: FlatTest[] = [
             { title: 'Skippy', state: 'passed', duration: 100 },
             { title: 'Skippy', state: 'failed', duration: 100 },

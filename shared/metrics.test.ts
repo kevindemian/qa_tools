@@ -34,7 +34,7 @@ function makeConfig(tmpDir: string): Config {
 }
 
 describe('saveRunMetrics / loadMetrics', () => {
-    it('saves and loads a metrics run', async () => {
+    it('saves and loads a metrics run', () => {
         const cfg = makeConfig(TMP_DIR);
         const run: MetricsRun = {
             timestamp: '2026-01-01T00:00:00.000Z',
@@ -60,13 +60,13 @@ describe('saveRunMetrics / loadMetrics', () => {
         expect(nonNull(loaded.runs[0]).tests).toHaveLength(3);
     });
 
-    it('returns empty store when no metrics file exists', async () => {
+    it('returns empty store when no metrics file exists', () => {
         const cfg = makeConfig(path.join(TMP_DIR, 'nonexistent'));
         const store = loadMetrics(cfg);
         expect(store.runs).toEqual([]);
     });
 
-    it('returns empty store on corrupted JSON', async () => {
+    it('returns empty store on corrupted JSON', () => {
         const cfg = makeConfig(TMP_DIR);
         const dir = path.join(TMP_DIR, 'qa-tools', 'metrics');
         fs.mkdirSync(dir, { recursive: true });
@@ -76,7 +76,7 @@ describe('saveRunMetrics / loadMetrics', () => {
         expect(store.runs).toEqual([]);
     });
 
-    it('persists multiple runs', async () => {
+    it('persists multiple runs', () => {
         const cfg = makeConfig(TMP_DIR);
         saveRunMetrics(
             {
@@ -111,7 +111,7 @@ describe('saveRunMetrics / loadMetrics', () => {
 });
 
 describe('saveParseResult', () => {
-    it('creates a MetricsRun from a ParseResult and saves it', async () => {
+    it('creates a MetricsRun from a ParseResult and saves it', () => {
         const cfg = makeConfig(TMP_DIR);
         const parseResult: ParseResult = {
             tests: [
@@ -134,12 +134,12 @@ describe('saveParseResult', () => {
 });
 
 describe('calculateFlakiness', () => {
-    it('returns empty when no runs', async () => {
+    it('returns empty when no runs', () => {
         const store: MetricsStore = { runs: [] };
         expect(calculateFlakiness(store)).toEqual([]);
     });
 
-    it('detects flaky tests across runs', async () => {
+    it('detects flaky tests across runs', () => {
         const store: MetricsStore = {
             runs: [
                 {
@@ -179,7 +179,7 @@ describe('calculateFlakiness', () => {
         expect(nonNull(flaky[0]).rate).toBe(0.5);
     });
 
-    it('handles skipped test state', async () => {
+    it('handles skipped test state', () => {
         const store: MetricsStore = {
             runs: [
                 {
@@ -198,7 +198,7 @@ describe('calculateFlakiness', () => {
         expect(flaky).toHaveLength(0);
     });
 
-    it('handles test with pass and fail in different runs', async () => {
+    it('handles test with pass and fail in different runs', () => {
         const store: MetricsStore = {
             runs: [
                 {
@@ -229,7 +229,7 @@ describe('calculateFlakiness', () => {
         expect(nonNull(flaky[0]).passCount).toBe(1);
     });
 
-    it('ignores tests below minRuns threshold', async () => {
+    it('ignores tests below minRuns threshold', () => {
         const store: MetricsStore = {
             runs: [
                 {
@@ -250,7 +250,7 @@ describe('calculateFlakiness', () => {
 });
 
 describe('saveCoverageSnapshot', () => {
-    it('saves and loads coverage snapshots', async () => {
+    it('saves and loads coverage snapshots', () => {
         const cfg = makeConfig(TMP_DIR);
         const snapshot: CoverageSnapshot = {
             timestamp: '2026-01-01T00:00:00.000Z',
@@ -269,7 +269,7 @@ describe('saveCoverageSnapshot', () => {
 });
 
 describe('getTrends', () => {
-    it('returns pass rate trend for recent runs', async () => {
+    it('returns pass rate trend for recent runs', () => {
         const store: MetricsStore = {
             runs: [
                 {
@@ -301,7 +301,7 @@ describe('getTrends', () => {
         expect(nonNull(trends[1]).passRate).toBe(0);
     });
 
-    it('respects window parameter', async () => {
+    it('respects window parameter', () => {
         const runs: MetricsRun[] = Array.from({ length: 20 }, (_, i) => ({
             timestamp: `2026-01-${i + 1}T00:00:00.000Z`,
             project: 'p',
@@ -320,7 +320,7 @@ describe('getTrends', () => {
 });
 
 describe('edge cases', () => {
-    it('handles ensureDir mkdir failure gracefully', async () => {
+    it('handles ensureDir mkdir failure gracefully', () => {
         const cfg = makeConfig(TMP_DIR);
         const mkdirSpy = vi.spyOn(fs, 'mkdirSync').mockImplementation(() => {
             throw new Error('EACCES');
@@ -333,7 +333,7 @@ describe('edge cases', () => {
         }
     });
 
-    it('handles saveMetrics write failure gracefully', async () => {
+    it('handles saveMetrics write failure gracefully', () => {
         const cfg = makeConfig(TMP_DIR);
         const writeSpy = vi.spyOn(fs, 'writeFileSync').mockImplementation(() => {
             throw new Error('ENOSPC');
@@ -355,7 +355,7 @@ describe('edge cases', () => {
         }
     });
 
-    it('prunes runs when exceeding max', async () => {
+    it('prunes runs when exceeding max', () => {
         const cfg = makeConfig(TMP_DIR);
         (cfg as unknown as { overrides: Record<string, string> }).overrides = { METRICS_MAX_RUNS: '1' };
         const run: MetricsRun = {

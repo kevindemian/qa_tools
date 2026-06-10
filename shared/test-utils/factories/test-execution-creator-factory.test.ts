@@ -1,7 +1,7 @@
 import { createMockTestExecutionCreator } from './test-execution-creator-factory.js';
 
 describe('createMockTestExecutionCreator', () => {
-    it('returns a mock with all required fields', async () => {
+    it('returns a mock with all required fields', () => {
         const mock = createMockTestExecutionCreator();
         expect(mock.jiraResource).toBeDefined();
         expect(mock.linkManager).toBeDefined();
@@ -11,7 +11,7 @@ describe('createMockTestExecutionCreator', () => {
         expect(typeof mock.create).toBe('function');
     });
 
-    it('default methods return expected mock shapes', async () => {
+    it('default methods return expected mock shapes', () => {
         const mock = createMockTestExecutionCreator();
         const linkResult = mock._linkTestsToExecution('TE-1', ['T-1']);
         expect(linkResult).toEqual({ linked: 0, failed: 0 });
@@ -26,7 +26,7 @@ describe('createMockTestExecutionCreator', () => {
         expect(createWithLinksResult).toEqual({ key: 'MOCK-TE', summary: 'Mock Test Execution' });
     });
 
-    it('merges overrides correctly', async () => {
+    it('merges overrides correctly', () => {
         const customCreate = vi.fn(() => ({ key: 'CUSTOM', summary: 'Custom' }));
         const mock = createMockTestExecutionCreator({ create: customCreate });
         expect(mock.create).toBe(customCreate);
@@ -34,7 +34,7 @@ describe('createMockTestExecutionCreator', () => {
         expect(result).toEqual({ key: 'CUSTOM', summary: 'Custom' });
     });
 
-    it('each call produces independent mock instances', async () => {
+    it('each call produces independent mock instances', () => {
         const a = createMockTestExecutionCreator();
         const b = createMockTestExecutionCreator();
         expect(a.create).not.toBe(b.create);

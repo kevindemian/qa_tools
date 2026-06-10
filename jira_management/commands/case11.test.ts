@@ -1,6 +1,6 @@
 vi.mock('../../shared/prompt');
 
-vi.mock('fs', async () => ({
+vi.mock('fs', () => ({
     copyFileSync: vi.fn(),
     existsSync: vi.fn().mockReturnValue(true),
 }));
@@ -15,7 +15,7 @@ beforeEach(() => {
 });
 
 describe('case11 — generate template', () => {
-    it('exports a handler function', async () => {
+    it('exports a handler function', () => {
         expect(case11).toBeDefined();
         expect(typeof case11.handler).toBe('function');
     });

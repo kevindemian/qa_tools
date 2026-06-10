@@ -11,59 +11,59 @@ describe('CsvResource', () => {
     });
 
     describe('parseDescription', () => {
-        it('extracts description from Description: header', async () => {
+        it('extracts description from Description: header', () => {
             const lines = ['Title: Test', 'Description: Verifica feature Y', 'Action,Data,Expected'];
             expect(csvResource.parseDescription(lines)).toBe('Verifica feature Y');
         });
 
-        it('returns empty string when no Description header', async () => {
+        it('returns empty string when no Description header', () => {
             const lines = ['Title: Test', 'Action,Data,Expected'];
             expect(csvResource.parseDescription(lines)).toBe('');
         });
 
-        it('handles multiline descriptions', async () => {
+        it('handles multiline descriptions', () => {
             const lines = ['Title: Test', 'Description: Line 1\\nLine 2', 'Action,Data,Expected'];
             expect(csvResource.parseDescription(lines)).toBe('Line 1\\nLine 2');
         });
     });
 
     describe('parsePrecondition', () => {
-        it('detects reference type for Jira keys', async () => {
+        it('detects reference type for Jira keys', () => {
             expect(csvResource.parsePrecondition('ECSPOL-PRE-42')).toEqual({
                 type: 'reference',
                 value: 'ECSPOL-PRE-42',
             });
         });
 
-        it('detects inline type for plain text', async () => {
+        it('detects inline type for plain text', () => {
             expect(csvResource.parsePrecondition('User must be logged in')).toEqual({
                 type: 'inline',
                 value: 'User must be logged in',
             });
         });
 
-        it('returns null for null/undefined/empty', async () => {
+        it('returns null for null/undefined/empty', () => {
             expect(csvResource.parsePrecondition(null)).toBeNull();
             expect(csvResource.parsePrecondition(undefined)).toBeNull();
             expect(csvResource.parsePrecondition('')).toBeNull();
             expect(csvResource.parsePrecondition('   ')).toBeNull();
         });
 
-        it('extracts key from KEY-100 (descricao)', async () => {
+        it('extracts key from KEY-100 (descricao)', () => {
             expect(csvResource.parsePrecondition('ECSPOL-PRE-42 (descricao do pre-cond)')).toEqual({
                 type: 'reference',
                 value: 'ECSPOL-PRE-42',
             });
         });
 
-        it('extracts key from KEY-100 (with extra parenthetical info)', async () => {
+        it('extracts key from KEY-100 (with extra parenthetical info)', () => {
             expect(csvResource.parsePrecondition('ABC-123 (some context here)')).toEqual({
                 type: 'reference',
                 value: 'ABC-123',
             });
         });
 
-        it('returns inline for multi-line text (already extracted)', async () => {
+        it('returns inline for multi-line text (already extracted)', () => {
             expect(csvResource.parsePrecondition('User must be logged in\nwith admin privileges')).toEqual({
                 type: 'inline',
                 value: 'User must be logged in\nwith admin privileges',
@@ -140,29 +140,29 @@ describe('CsvResource', () => {
     });
 
     describe('parseGroup', () => {
-        it('extracts group from Group: header', async () => {
+        it('extracts group from Group: header', () => {
             const lines = ['Title: Test', 'Group: LOGIN-FLOW', 'Action,Data,Expected'];
             expect(csvResource.parseGroup(lines)).toBe('LOGIN-FLOW');
         });
 
-        it('returns null when no Group: header', async () => {
+        it('returns null when no Group: header', () => {
             const lines = ['Title: Test', 'Action,Data,Expected'];
             expect(csvResource.parseGroup(lines)).toBeNull();
         });
 
-        it('returns null for whitespace-only Group:', async () => {
+        it('returns null for whitespace-only Group:', () => {
             const lines = ['Title: Test', 'Group:   ', 'Action,Data,Expected'];
             expect(csvResource.parseGroup(lines)).toBeNull();
         });
     });
 
     describe('parseLinkedIssues', () => {
-        it('parses single linked issue', async () => {
+        it('parses single linked issue', () => {
             const lines = ['Title: Test', 'Linked Issues: ECSPOL-100 (is tested by)', 'Action,Data,Expected'];
             expect(csvResource.parseLinkedIssues(lines)).toEqual([{ key: 'ECSPOL-100', linkType: 'is tested by' }]);
         });
 
-        it('parses multiple linked issues', async () => {
+        it('parses multiple linked issues', () => {
             const lines = ['Title: Test', 'Linked Issues: ECSPOL-100 (is tested by), ECSPOL-200 (relates to)'];
             expect(csvResource.parseLinkedIssues(lines)).toEqual([
                 { key: 'ECSPOL-100', linkType: 'is tested by' },
@@ -170,7 +170,7 @@ describe('CsvResource', () => {
             ]);
         });
 
-        it('returns empty array when no Linked Issues header', async () => {
+        it('returns empty array when no Linked Issues header', () => {
             const lines = ['Title: Test', 'Action,Data,Expected'];
             expect(csvResource.parseLinkedIssues(lines)).toEqual([]);
         });
@@ -309,26 +309,26 @@ describe('CsvResource', () => {
     });
 
     describe('parseLinkedIssues edge cases', () => {
-        it('returns empty array when Linked Issues value is empty', async () => {
+        it('returns empty array when Linked Issues value is empty', () => {
             const lines = ['Title: Test', 'Linked Issues:   ', 'Action,Data,Expected'];
             expect(csvResource.parseLinkedIssues(lines)).toEqual([]);
         });
     });
 
     describe('detectSeparator', () => {
-        it('returns comma for normal CSV', async () => {
+        it('returns comma for normal CSV', () => {
             expect(CsvResource.detectSeparator('Action,Data,Expected Result')).toBe(',');
         });
 
-        it('returns semicolon when first line has ; and no comma', async () => {
+        it('returns semicolon when first line has ; and no comma', () => {
             expect(CsvResource.detectSeparator('Action;Data;Expected Result')).toBe(';');
         });
 
-        it('returns comma when first line has both ; and ,', async () => {
+        it('returns comma when first line has both ; and ,', () => {
             expect(CsvResource.detectSeparator('"Action;Extra",Data,Expected Result')).toBe(',');
         });
 
-        it('returns comma for empty first line', async () => {
+        it('returns comma for empty first line', () => {
             expect(CsvResource.detectSeparator('')).toBe(',');
         });
     });

@@ -1,7 +1,7 @@
 vi.mock('../../shared/prompt');
 vi.mock('../../shared/logger');
 
-vi.mock('../../shared/cli_base', async () => ({
+vi.mock('../../shared/cli_base', () => ({
     sanitizeUrl: vi.fn((url: string) => url),
 }));
 
@@ -9,7 +9,7 @@ const mockLoadMetrics = vi.hoisted(() => vi.fn<(...args: []) => object>().mockRe
 const mockPrint = vi.hoisted(() => vi.fn<(...args: [string]) => void>());
 const mockPaletteYellow = vi.hoisted(() => vi.fn<(...args: [string]) => string>());
 
-vi.mock('../../shared/palette', async () => ({
+vi.mock('../../shared/palette', () => ({
     palette: {
         red: vi.fn<(...args: [string]) => string>(),
         green: vi.fn<(...args: [string]) => string>(),
@@ -18,11 +18,11 @@ vi.mock('../../shared/palette', async () => ({
     },
 }));
 
-vi.mock('../../shared/output', async () => ({
+vi.mock('../../shared/output', () => ({
     defaultOutput: { print: mockPrint },
 }));
 
-vi.mock('../../shared/metrics', async () => ({
+vi.mock('../../shared/metrics', () => ({
     loadMetrics: mockLoadMetrics,
 }));
 
@@ -44,7 +44,7 @@ beforeEach(() => {
 });
 
 describe('case12 — diagnostic connection', () => {
-    it('exports a handler function', async () => {
+    it('exports a handler function', () => {
         expect(case12).toBeDefined();
         expect(typeof case12.handler).toBe('function');
     });

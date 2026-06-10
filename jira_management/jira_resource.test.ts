@@ -2,9 +2,9 @@ import { nonNull } from '../shared/test-utils.js';
 import type { Mock } from 'vitest';
 import { createHttpClient } from '../shared/http-client.js';
 
-vi.mock('../shared/http-client', async () => ({ createHttpClient: vi.fn() }));
+vi.mock('../shared/http-client', () => ({ createHttpClient: vi.fn() }));
 
-vi.mock('../shared/logger', async () => ({
+vi.mock('../shared/logger', () => ({
     Logger: vi.fn(function () {
         return {
             info: vi.fn(),
@@ -35,7 +35,7 @@ vi.mock('../shared/logger', async () => ({
     },
 }));
 
-vi.mock('../shared/prompt', async () => ({
+vi.mock('../shared/prompt', () => ({
     error: vi.fn(),
     success: vi.fn(),
     info: vi.fn(),

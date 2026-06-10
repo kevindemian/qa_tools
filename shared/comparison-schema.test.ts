@@ -1,13 +1,13 @@
 import { RunComparisonSchema, ChangeImpactSchema } from './comparison-schema.js';
 
 describe('ChangeImpactSchema', () => {
-    it('accepts valid impacts', async () => {
+    it('accepts valid impacts', () => {
         expect(ChangeImpactSchema.parse('positive')).toBe('positive');
         expect(ChangeImpactSchema.parse('negative')).toBe('negative');
         expect(ChangeImpactSchema.parse('neutral')).toBe('neutral');
     });
 
-    it('rejects invalid impact', async () => {
+    it('rejects invalid impact', () => {
         expect(() => ChangeImpactSchema.parse('unknown')).toThrow();
     });
 });
@@ -20,29 +20,29 @@ describe('RunComparisonSchema', () => {
         evidence: ['Pass rate: 95% vs 82%', '13 new failures in checkout'],
     };
 
-    it('accepts valid comparison', async () => {
+    it('accepts valid comparison', () => {
         const result = RunComparisonSchema.parse(valid);
         expect(result.meaningfulChanges).toHaveLength(1);
     });
 
-    it('rejects summary shorter than 20 chars', async () => {
+    it('rejects summary shorter than 20 chars', () => {
         expect(() => RunComparisonSchema.parse({ ...valid, summary: 'Short summary' })).toThrow();
     });
 
-    it('rejects summary longer than 500 chars', async () => {
+    it('rejects summary longer than 500 chars', () => {
         const longSummary = 'x'.repeat(501);
         expect(() => RunComparisonSchema.parse({ ...valid, summary: longSummary })).toThrow();
     });
 
-    it('rejects empty meaningfulChanges', async () => {
+    it('rejects empty meaningfulChanges', () => {
         expect(() => RunComparisonSchema.parse({ ...valid, meaningfulChanges: [] })).toThrow();
     });
 
-    it('rejects empty evidence', async () => {
+    it('rejects empty evidence', () => {
         expect(() => RunComparisonSchema.parse({ ...valid, evidence: [] })).toThrow();
     });
 
-    it('rejects confidence < 0', async () => {
+    it('rejects confidence < 0', () => {
         expect(() => RunComparisonSchema.parse({ ...valid, confidence: -0.5 })).toThrow();
     });
 });

@@ -10,7 +10,7 @@ type MockedJiraResource = ReturnType<typeof createMockJiraResource>;
 
 const mockGraphql = vi.fn();
 
-vi.mock('../shared/xray-cloud-client', async () => ({
+vi.mock('../shared/xray-cloud-client', () => ({
     XrayCloudClient: vi.fn(function () {
         return {
             graphql: mockGraphql,
@@ -47,19 +47,19 @@ beforeEach(() => {
 // ─── TestHistoryCache ────────────────────────────────────────────────────────
 
 describe('TestHistoryCache', () => {
-    it('stores and retrieves runs by key', async () => {
+    it('stores and retrieves runs by key', () => {
         const cache = new TestHistoryCache(60_000);
         const runs: TestRun[] = [{ status: 'PASSED', testExecKey: 'TE-1', startedOn: '2024-01-01' }];
         cache.set('TEST-123', runs);
         expect(cache.get('TEST-123')).toEqual(runs);
     });
 
-    it('returns undefined for missing key', async () => {
+    it('returns undefined for missing key', () => {
         const cache = new TestHistoryCache(60_000);
         expect(cache.get('TEST-999')).toBeUndefined();
     });
 
-    it('expires entries after TTL', async () => {
+    it('expires entries after TTL', () => {
         vi.useFakeTimers();
         const cache = new TestHistoryCache(5000);
         cache.set('TEST-123', [{ status: 'PASSED', testExecKey: 'TE-1' }]);
@@ -68,7 +68,7 @@ describe('TestHistoryCache', () => {
         vi.useRealTimers();
     });
 
-    it('clears all entries', async () => {
+    it('clears all entries', () => {
         const cache = new TestHistoryCache(60_000);
         cache.set('TEST-123', [{ status: 'PASSED', testExecKey: 'TE-1' }]);
         cache.clear();
@@ -79,21 +79,21 @@ describe('TestHistoryCache', () => {
 // ─── createHistoryProvider ───────────────────────────────────────────────────
 
 describe('createHistoryProvider', () => {
-    it('returns ServerHistoryProvider when mode=server', async () => {
+    it('returns ServerHistoryProvider when mode=server', () => {
         const jira = mockJiraResource();
         const provider = createHistoryProvider(jira, 'server');
         expect(provider).toBeDefined();
         expect(typeof provider.getHistory).toBe('function');
     });
 
-    it('returns CloudHistoryProvider when mode=cloud', async () => {
+    it('returns CloudHistoryProvider when mode=cloud', () => {
         const jira = mockJiraResource();
         const provider = createHistoryProvider(jira, 'cloud');
         expect(provider).toBeDefined();
         expect(typeof provider.getHistory).toBe('function');
     });
 
-    it('uses Config default when mode is not specified', async () => {
+    it('uses Config default when mode is not specified', () => {
         const jira = mockJiraResource();
         const provider = createHistoryProvider(jira);
         expect(provider).toBeDefined();

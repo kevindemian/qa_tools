@@ -178,7 +178,7 @@ beforeAll(() => {
 });
 
 beforeAll(async () => {
-    mod = (await import('./main.js')) as MainModule;
+    mod = (await import('./main.js'));
     const imported = (await import('./main.js')) as MainModule;
     mod = imported;
     // Intentional: yield to microtask queue so main() (called at module scope) completes
@@ -712,7 +712,7 @@ describe('showGapBadge with config', () => {
         vi.mocked(configMod.default.get).mockReturnValue('https://jira.example.com');
 
         const mockJiraResource = { searchJiraIssues: vi.fn().mockResolvedValue({ total: 42 }) };
-        await mod.showGapBadge(mockJiraResource as never, 'TESTPROJ');
+        await mod.showGapBadge(mockJiraResource, 'TESTPROJ');
         expect(mockJiraResource.searchJiraIssues).toHaveBeenCalled();
     });
 });

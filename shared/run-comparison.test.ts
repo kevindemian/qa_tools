@@ -1,4 +1,4 @@
-vi.mock('./llm-client', async () => ({
+vi.mock('./llm-client', () => ({
     llmPrompt: vi.fn(),
     getLlmClientMetrics: vi.fn(() => ({
         cacheHits: 0,

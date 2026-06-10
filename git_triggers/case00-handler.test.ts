@@ -1,10 +1,10 @@
 vi.mock('../shared/prompt');
 vi.mock('../shared/logger');
-vi.mock('./session-state', async () => ({
+vi.mock('./session-state', () => ({
     pushHistory: vi.fn(),
 }));
 
-vi.mock('../setup/main', async () => {
+vi.mock('../setup/main', () => {
     const mainFn = vi.fn().mockResolvedValue(undefined);
     return { main: mainFn };
 });
@@ -19,11 +19,11 @@ beforeAll(async () => {
     mockSetupModule = await vi.importMock<typeof import('../setup/main.js')>('../setup/main');
 });
 
-beforeEach(async () => {
+beforeEach(() => {
     vi.clearAllMocks();
 });
 
-describe('handleSetupWizard', async () => {
+describe('handleSetupWizard', () => {
     it('calls setup main and records history on success', async () => {
         mockSetupModule.main.mockResolvedValue(undefined);
 

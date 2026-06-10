@@ -1,4 +1,4 @@
-vi.mock('./llm-metrics', async () => ({
+vi.mock('./llm-metrics', () => ({
     recordRetry: vi.fn(),
 }));
 

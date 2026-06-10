@@ -1,4 +1,4 @@
-vi.mock('../shared/prompt', async () => ({
+vi.mock('../shared/prompt', () => ({
     info: vi.fn(),
     warn: vi.fn(),
 }));

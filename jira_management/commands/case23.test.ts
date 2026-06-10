@@ -1,12 +1,12 @@
 vi.mock('../../shared/prompt');
 vi.mock('../../shared/logger');
 
-vi.mock('../../shared/ai-feedback', async () => ({
+vi.mock('../../shared/ai-feedback', () => ({
     getAiFeedbackSummary: vi.fn(),
     getRecentAiRecords: vi.fn(),
 }));
 
-vi.mock('../../shared/logger', async () => ({
+vi.mock('../../shared/logger', () => ({
     rootLogger: {
         error: vi.fn(),
         child: vi.fn().mockReturnValue({ info: vi.fn(), error: vi.fn(), warn: vi.fn() }),

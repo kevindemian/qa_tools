@@ -12,7 +12,7 @@ import {
 } from './splash.js';
 
 describe('buildSplashLines', () => {
-    it('formats logo lines with help hint', async () => {
+    it('formats logo lines with help hint', () => {
         const lines = buildSplashLines('QA TOOLS\n======');
         const output = lines.join('\n');
         expect(output).toContain('QA TOOLS');
@@ -20,31 +20,31 @@ describe('buildSplashLines', () => {
         expect(output).toContain('Gestão');
     });
 
-    it('includes statePath when provided', async () => {
+    it('includes statePath when provided', () => {
         const lines = buildSplashLines('QA TOOLS', '/path/to/state.json');
         const output = lines.join('\n');
         expect(output).toContain('/path/to/state.json');
     });
 
-    it('omits statePath when not provided', async () => {
+    it('omits statePath when not provided', () => {
         const lines = buildSplashLines('QA TOOLS');
         const output = lines.join('\n');
         expect(output).not.toContain('State:');
     });
 
-    it('handles empty logo gracefully', async () => {
+    it('handles empty logo gracefully', () => {
         const lines = buildSplashLines('');
         expect(lines.length).toBeGreaterThan(0);
         expect(lines[0]).toBe('');
     });
 
-    it('skips blank logo lines', async () => {
+    it('skips blank logo lines', () => {
         const lines = buildSplashLines('\n\n');
         const output = lines.join('\n');
         expect(output).toContain('Gestão');
     });
 
-    it('includes status checks when provided', async () => {
+    it('includes status checks when provided', () => {
         const lines = buildSplashLines('QA TOOLS', undefined, [
             { label: 'Jira API', status: 'ok', detail: 'online' },
             { label: 'Token', status: 'info', detail: 'não configurado' },
@@ -55,7 +55,7 @@ describe('buildSplashLines', () => {
         expect(output).toContain('online');
     });
 
-    it('renders error status with red dot', async () => {
+    it('renders error status with red dot', () => {
         const lines = buildSplashLines('QA TOOLS', undefined, [
             { label: 'Jira API', status: 'error', detail: 'offline' },
         ]);
@@ -67,7 +67,7 @@ describe('buildSplashLines', () => {
 
 vi.mock('gradient-string', () => ({ default: undefined }));
 
-vi.mock('./output', async () => ({
+vi.mock('./output', () => ({
     Output: { isTTY: vi.fn().mockReturnValue(true), isCI: vi.fn().mockReturnValue(false) },
     defaultOutput: { box: vi.fn(), print: vi.fn() },
 }));

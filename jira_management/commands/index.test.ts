@@ -28,34 +28,34 @@ const KNOWN_CASES = [
     '23',
 ];
 
-describe('getHandler', async () => {
-    it('returns a handler function for known case numbers', async () => {
+describe('getHandler', () => {
+    it('returns a handler function for known case numbers', () => {
         const handler = getHandler('1');
         expect(handler).toBeInstanceOf(Function);
     });
 
-    it('returns a handler for each known case', async () => {
+    it('returns a handler for each known case', () => {
         for (const num of KNOWN_CASES) {
             const h = getHandler(num);
             expect(h).toBeInstanceOf(Function);
         }
     });
 
-    it('returns null for unknown case number', async () => {
+    it('returns null for unknown case number', () => {
         const handler = getHandler('99');
         expect(handler).toBeNull();
     });
 
-    it('returns null for empty string', async () => {
+    it('returns null for empty string', () => {
         const handler = getHandler('');
         expect(handler).toBeNull();
     });
 });
 
-describe('handler contract (bidirectional)', async () => {
+describe('handler contract (bidirectional)', () => {
     const caseDir = import.meta.dirname;
 
-    it('every registered handler has a corresponding file on disk', async () => {
+    it('every registered handler has a corresponding file on disk', () => {
         for (const num of KNOWN_CASES) {
             const filename = `case${String(num).padStart(2, '0')}.ts`;
             const filePath = path.join(caseDir, filename);
@@ -63,7 +63,7 @@ describe('handler contract (bidirectional)', async () => {
         }
     });
 
-    it('every case file on disk has a corresponding registered handler', async () => {
+    it('every case file on disk has a corresponding registered handler', () => {
         const files = fs.readdirSync(caseDir).filter((f) => /^case\d+\.ts$/.test(f) && !f.endsWith('.test.ts'));
         for (const file of files) {
             const rawNum = file.match(/^case(\d+)\.ts$/)?.[1] || '';

@@ -1,4 +1,4 @@
-vi.mock('../shared/logger', async () => ({
+vi.mock('../shared/logger', () => ({
     rootLogger: { warn: vi.fn(), info: vi.fn(), error: vi.fn() },
 }));
 

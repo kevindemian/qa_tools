@@ -2,14 +2,14 @@
  * Tests for git-metrics-adapter — transforms git history into MetricsRun[].
  */
 
-vi.mock('child_process', async () => ({
+vi.mock('child_process', () => ({
     execFileSync: vi.fn(),
 }));
 
 import { execFileSync } from 'child_process';
 import { fetchGitLog, generateGitMetricsRuns, generateGitFailureClassifications } from './git-metrics-adapter.js';
 
-vi.mock('./logger', async () => ({
+vi.mock('./logger', () => ({
     rootLogger: { error: vi.fn(), warn: vi.fn(), info: vi.fn(), child: vi.fn().mockReturnThis() },
 }));
 
@@ -33,7 +33,7 @@ describe('fetchGitLog', () => {
         vi.clearAllMocks();
     });
 
-    it('parses git log output correctly', async () => {
+    it('parses git log output correctly', () => {
         mockGitOutput(SAMPLE_GIT_LOG);
         const commits = fetchGitLog();
         expect(commits).toHaveLength(6);
@@ -43,14 +43,14 @@ describe('fetchGitLog', () => {
         expect(commits[0]?.parents).toEqual([]);
     });
 
-    it('parses merge commit parents correctly', async () => {
+    it('parses merge commit parents correctly', () => {
         mockGitOutput(SAMPLE_GIT_LOG);
         const commits = fetchGitLog();
         expect(commits[4]?.subject).toBe('Merge branch feat');
         expect(commits[4]?.parents).toEqual(['jkl012', 'abc123']);
     });
 
-    it('returns empty array when git command fails', async () => {
+    it('returns empty array when git command fails', () => {
         mockExecFileSync.mockImplementation(() => {
             throw new Error('git: command not found');
         });
@@ -58,13 +58,13 @@ describe('fetchGitLog', () => {
         expect(commits).toEqual([]);
     });
 
-    it('returns empty array for empty git log', async () => {
+    it('returns empty array for empty git log', () => {
         mockGitOutput('');
         const commits = fetchGitLog();
         expect(commits).toEqual([]);
     });
 
-    it('uses repoPath option', async () => {
+    it('uses repoPath option', () => {
         mockGitOutput(SAMPLE_GIT_LOG);
         fetchGitLog({ repoPath: '/custom/path' });
         expect(mockExecFileSync).toHaveBeenCalledWith(
@@ -80,7 +80,7 @@ describe('generateGitMetricsRuns', () => {
         vi.clearAllMocks();
     });
 
-    it('returns empty array when git log fails', async () => {
+    it('returns empty array when git log fails', () => {
         mockExecFileSync.mockImplementation(() => {
             throw new Error('git error');
         });
@@ -88,7 +88,7 @@ describe('generateGitMetricsRuns', () => {
         expect(runs).toEqual([]);
     });
 
-    it('groups commits by day into separate runs', async () => {
+    it('groups commits by day into separate runs', () => {
         mockGitOutput(SAMPLE_GIT_LOG);
         const runs = generateGitMetricsRuns();
         expect(runs).toHaveLength(3);
@@ -97,7 +97,7 @@ describe('generateGitMetricsRuns', () => {
         expect(runs[2]?.timestamp).toContain('2026-06-03');
     });
 
-    it('maps each commit to a FlatTest', async () => {
+    it('maps each commit to a FlatTest', () => {
         mockGitOutput(SAMPLE_GIT_LOG);
         const runs = generateGitMetricsRuns();
         expect(runs[0]?.tests).toHaveLength(2);
@@ -105,7 +105,7 @@ describe('generateGitMetricsRuns', () => {
         expect(runs[0]?.tests[1]?.title).toBe('Add feature X');
     });
 
-    it('marks revert commits as failed', async () => {
+    it('marks revert commits as failed', () => {
         mockGitOutput(SAMPLE_GIT_LOG);
         const runs = generateGitMetricsRuns();
         const revertTest = runs[1]?.tests.find((t) => t.title.startsWith('Revert'));
@@ -113,14 +113,14 @@ describe('generateGitMetricsRuns', () => {
         expect(revertTest?.error).toBe('Commit was reverted');
     });
 
-    it('marks merge commits as skipped', async () => {
+    it('marks merge commits as skipped', () => {
         mockGitOutput(SAMPLE_GIT_LOG);
         const runs = generateGitMetricsRuns();
         const mergeTest = runs[1]?.tests.find((t) => t.title.startsWith('Merge'));
         expect(mergeTest?.state).toBe('skipped');
     });
 
-    it('marks normal commits as passed', async () => {
+    it('marks normal commits as passed', () => {
         mockGitOutput(SAMPLE_GIT_LOG);
         const runs = generateGitMetricsRuns();
         const normalTests = runs.flatMap((r) => r.tests.filter((t) => t.state === 'passed'));
@@ -128,14 +128,14 @@ describe('generateGitMetricsRuns', () => {
         normalTests.forEach((t) => expect(t.state).toBe('passed'));
     });
 
-    it('calculates duration between commits', async () => {
+    it('calculates duration between commits', () => {
         mockGitOutput(SAMPLE_GIT_LOG);
         const runs = generateGitMetricsRuns();
         expect(runs[0]?.tests[1]?.duration).toBeGreaterThan(0);
         expect(runs[0]?.tests[0]?.duration).toBe(0);
     });
 
-    it('sets total/passed/failed/skipped counts per run', async () => {
+    it('sets total/passed/failed/skipped counts per run', () => {
         mockGitOutput(SAMPLE_GIT_LOG);
         const runs = generateGitMetricsRuns();
         expect(runs[0]?.total).toBe(2);
@@ -147,25 +147,25 @@ describe('generateGitMetricsRuns', () => {
         expect(runs[1]?.skipped).toBe(1);
     });
 
-    it('respects maxDays option', async () => {
+    it('respects maxDays option', () => {
         mockGitOutput(SAMPLE_GIT_LOG);
         const runs = generateGitMetricsRuns({ maxDays: 1 });
         expect(runs.length).toBeLessThanOrEqual(1);
     });
 
-    it('uses custom project name', async () => {
+    it('uses custom project name', () => {
         mockGitOutput(SAMPLE_GIT_LOG);
         const runs = generateGitMetricsRuns({ projectName: 'my-project' });
         expect(runs[0]?.project).toBe('my-project');
     });
 
-    it('defaults project to git', async () => {
+    it('defaults project to git', () => {
         mockGitOutput(SAMPLE_GIT_LOG);
         const runs = generateGitMetricsRuns();
         expect(runs[0]?.project).toBe('git');
     });
 
-    it('handles single commit correctly', async () => {
+    it('handles single commit correctly', () => {
         mockGitOutput('abc123|2026-06-01T10:00:00.000Z|Only commit|kdemian|');
         const runs = generateGitMetricsRuns();
         expect(runs).toHaveLength(1);
@@ -179,7 +179,7 @@ describe('generateGitFailureClassifications', () => {
         vi.clearAllMocks();
     });
 
-    it('returns empty array when git log fails', async () => {
+    it('returns empty array when git log fails', () => {
         mockExecFileSync.mockImplementation(() => {
             throw new Error('git error');
         });
@@ -187,14 +187,14 @@ describe('generateGitFailureClassifications', () => {
         expect(result).toEqual([]);
     });
 
-    it('creates classifications for revert commits only', async () => {
+    it('creates classifications for revert commits only', () => {
         mockGitOutput(SAMPLE_GIT_LOG);
         const result = generateGitFailureClassifications();
         expect(result.length).toBeGreaterThanOrEqual(1);
         result.forEach((c) => expect(c.category).toBe('REVERT'));
     });
 
-    it('sets correct fields on classification', async () => {
+    it('sets correct fields on classification', () => {
         mockGitOutput(SAMPLE_GIT_LOG);
         const result = generateGitFailureClassifications();
         const revertClass = result.find((c) => c.testTitle.includes('Revert'));
@@ -203,7 +203,7 @@ describe('generateGitFailureClassifications', () => {
         expect(revertClass?.timestamp).toBeDefined();
     });
 
-    it('respects maxDays option filtering out older commits', async () => {
+    it('respects maxDays option filtering out older commits', () => {
         mockGitOutput(SAMPLE_GIT_LOG);
         const result = generateGitFailureClassifications({ maxDays: 1 });
         expect(result.length).toBeLessThanOrEqual(1);

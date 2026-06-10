@@ -52,11 +52,11 @@ interface CreateTestsResult {
 }
 
 interface CreateTestsMock {
-    createTestsFromCsv: Mock<(...args: any[]) => Promise<CreateTestsResult | undefined>>;
+    createTestsFromCsv: Mock<(opts: { onBusy: (v: boolean) => void }) => Promise<CreateTestsResult | undefined>>;
 
-    createTestsFromJson: Mock<(...args: any[]) => Promise<CreateTestsResult | undefined>>;
+    createTestsFromJson: Mock<(params: object) => Promise<CreateTestsResult | undefined>>;
 
-    createTestExecutionWithLinks: Mock<(...args: any[]) => Promise<{ key: string; summary: string } | null>>;
+    createTestExecutionWithLinks: Mock<(params: object) => Promise<{ key: string; summary: string } | null>>;
 }
 
 // eslint-disable-next-line no-var
@@ -64,15 +64,14 @@ var mockCreateTests: CreateTestsMock;
 
 vi.mock('../create_tests', () => {
     mockCreateTests = {
-        createTestsFromCsv: vi.fn<(...args: [params: object]) => Promise<CreateTestsResult | undefined>>(),
-        createTestsFromJson: vi.fn<(...args: [params: object]) => Promise<CreateTestsResult | undefined>>(),
-        createTestExecutionWithLinks:
-            vi.fn<(...args: [params: object]) => Promise<{ key: string; summary: string } | null>>(),
+        createTestsFromCsv: vi.fn<(opts: { onBusy: (v: boolean) => void }) => Promise<CreateTestsResult | undefined>>(),
+        createTestsFromJson: vi.fn<(params: object) => Promise<CreateTestsResult | undefined>>(),
+        createTestExecutionWithLinks: vi.fn<(params: object) => Promise<{ key: string; summary: string } | null>>(),
     };
     return { default: mockCreateTests };
 });
 
-vi.mock('./test-execution-flow', async () => ({
+vi.mock('./test-execution-flow', () => ({
     offerTestExecutionAssociation: vi.fn().mockResolvedValue({ associated: false }),
     showResults: vi.fn().mockResolvedValue(undefined),
 }));
@@ -769,6 +768,7 @@ describe('case01 — create tests from CSV', () => {
         mockConfigMod.csvPath = '/fake/test.csv';
         mockConfigMod.csvLabels = 'label1';
         mockCreateTests.createTestsFromCsv.mockImplementationOnce(async (_opts: { onBusy: (v: boolean) => void }) => {
+            await undefined;
             _opts.onBusy(true);
             _opts.onBusy(false);
             return {

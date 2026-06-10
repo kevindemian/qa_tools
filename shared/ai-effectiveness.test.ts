@@ -19,7 +19,7 @@ interface AiFeedbackStore {
 }
 
 describe('computeAiEffectiveness', () => {
-    it('returns zeroed result for empty store', async () => {
+    it('returns zeroed result for empty store', () => {
         const store: AiFeedbackStore = { records: [] };
         const result = computeAiEffectiveness(store);
         expect(result.acceptanceRate).toBe(0);
@@ -33,7 +33,7 @@ describe('computeAiEffectiveness', () => {
         expect(result.timestamp).toBeTruthy();
     });
 
-    it('computes acceptance rate for a single version with mixed acceptance', async () => {
+    it('computes acceptance rate for a single version with mixed acceptance', () => {
         const store: AiFeedbackStore = {
             records: [
                 { timestamp: '2026-06-01T10:00:00Z', promptVersion: 'v1', testTitle: 't1', accepted: true },
@@ -65,7 +65,7 @@ describe('computeAiEffectiveness', () => {
         expect(result.byVersion[0]).toEqual({ version: 'v1', count: 4, acceptanceRate: 50 });
     });
 
-    it('handles multiple versions', async () => {
+    it('handles multiple versions', () => {
         const store: AiFeedbackStore = {
             records: [
                 { timestamp: '2026-06-01T10:00:00Z', promptVersion: 'v1', testTitle: 't1', accepted: true },
@@ -98,7 +98,7 @@ describe('computeAiEffectiveness', () => {
         expect(result.byVersion).toContainEqual({ version: 'v3', count: 1, acceptanceRate: 100 });
     });
 
-    it('builds daily trend sorted by date', async () => {
+    it('builds daily trend sorted by date', () => {
         const store: AiFeedbackStore = {
             records: [
                 { timestamp: '2026-06-01T10:00:00Z', promptVersion: 'v1', testTitle: 't1', accepted: true },
@@ -133,7 +133,7 @@ describe('computeAiEffectiveness', () => {
         expect(result.trend[2]?.acceptanceRate).toBe(0);
     });
 
-    it('handles all accepted records', async () => {
+    it('handles all accepted records', () => {
         const store: AiFeedbackStore = {
             records: [
                 { timestamp: '2026-06-01T10:00:00Z', promptVersion: 'v1', testTitle: 't1', accepted: true },
@@ -146,7 +146,7 @@ describe('computeAiEffectiveness', () => {
         expect(result.totalDeleted).toBe(0);
     });
 
-    it('handles no accepted records', async () => {
+    it('handles no accepted records', () => {
         const store: AiFeedbackStore = {
             records: [
                 {
@@ -173,7 +173,7 @@ describe('computeAiEffectiveness', () => {
 });
 
 describe('generateAiEffectivenessHtml', () => {
-    it('generates HTML with acceptance rate metric', async () => {
+    it('generates HTML with acceptance rate metric', () => {
         const result = computeAiEffectiveness({
             records: [
                 { timestamp: '2026-06-01T10:00:00Z', promptVersion: 'v1', testTitle: 't1', accepted: true },
@@ -193,7 +193,7 @@ describe('generateAiEffectivenessHtml', () => {
         expect(html).toContain('2 total records');
     });
 
-    it('shows version breakdown table', async () => {
+    it('shows version breakdown table', () => {
         const result = computeAiEffectiveness({
             records: [
                 { timestamp: '2026-06-01T10:00:00Z', promptVersion: 'v2', testTitle: 't1', accepted: true },
@@ -214,7 +214,7 @@ describe('generateAiEffectivenessHtml', () => {
         expect(html).toContain('Records');
     });
 
-    it('shows daily trend table', async () => {
+    it('shows daily trend table', () => {
         const result = computeAiEffectiveness({
             records: [
                 { timestamp: '2026-06-01T10:00:00Z', promptVersion: 'v1', testTitle: 't1', accepted: true },
@@ -233,7 +233,7 @@ describe('generateAiEffectivenessHtml', () => {
         expect(html).toContain('2026-06-02');
     });
 
-    it('shows empty message when no data', async () => {
+    it('shows empty message when no data', () => {
         const result = computeAiEffectiveness({ records: [] });
         const html = generateAiEffectivenessHtml(result);
         expect(html).toContain('No AI generation data available');
@@ -241,7 +241,7 @@ describe('generateAiEffectivenessHtml', () => {
         expect(html).not.toContain('Daily Trend');
     });
 
-    it('uses custom title', async () => {
+    it('uses custom title', () => {
         const result = computeAiEffectiveness({
             records: [{ timestamp: '2026-06-01T10:00:00Z', promptVersion: 'v1', testTitle: 't1', accepted: true }],
         });
@@ -250,7 +250,7 @@ describe('generateAiEffectivenessHtml', () => {
         expect(html).not.toContain('AI Effectiveness Dashboard');
     });
 
-    it('includes theme script and CSS variables', async () => {
+    it('includes theme script and CSS variables', () => {
         const result = computeAiEffectiveness({
             records: [{ timestamp: '2026-06-01T10:00:00Z', promptVersion: 'v1', testTitle: 't1', accepted: true }],
         });
@@ -260,7 +260,7 @@ describe('generateAiEffectivenessHtml', () => {
         expect(html).toContain('html.dark');
     });
 
-    it('escapes HTML in version names', async () => {
+    it('escapes HTML in version names', () => {
         const result = computeAiEffectiveness({
             records: [
                 {
@@ -276,7 +276,7 @@ describe('generateAiEffectivenessHtml', () => {
         expect(html).not.toContain('<script>evil</script>');
     });
 
-    it('handles error by returning error page', async () => {
+    it('handles error by returning error page', () => {
         const spy = vi.spyOn(htmlFactory, 'buildHtmlPage').mockImplementation(() => {
             throw new Error('mock build failure');
         });

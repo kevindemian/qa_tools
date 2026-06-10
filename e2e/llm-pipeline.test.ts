@@ -1,4 +1,4 @@
-vi.mock('../shared/llm-client', async () => ({
+vi.mock('../shared/llm-client', () => ({
     llmPrompt: vi.fn(),
     clearCache: vi.fn(),
     getLlmClientMetrics: vi.fn(() => ({
@@ -13,7 +13,7 @@ vi.mock('../shared/llm-client', async () => ({
     resetCircuitState: vi.fn(),
     resetRateLimiter: vi.fn(),
 }));
-vi.mock('../shared/sanitize', async () => ({
+vi.mock('../shared/sanitize', () => ({
     sanitizeForLlm: (s: string) => s,
     sanitizeTerminal: (s: string) => s,
     sanitizeHtml: (s: string) => s,

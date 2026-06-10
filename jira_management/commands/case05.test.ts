@@ -17,7 +17,7 @@ beforeEach(() => {
 });
 
 describe('case05 — update package version', () => {
-    it('exports a handler function', async () => {
+    it('exports a handler function', () => {
         expect(case05).toBeDefined();
         expect(typeof case05.handler).toBe('function');
     });

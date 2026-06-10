@@ -1059,7 +1059,7 @@ describe('_promptChoice', () => {
 describe('_promptChoice TTY mode', () => {
     const _origIsTTY = process.stdout.isTTY;
 
-    beforeAll(async () => {
+    beforeAll(() => {
         process.stdout.isTTY = true;
     });
 
@@ -1093,7 +1093,7 @@ describe('ACTION_HANDLERS', () => {
     let pn: string;
     let ns: string[];
 
-    beforeAll(async () => {
+    beforeAll(() => {
         vi.clearAllMocks();
     });
 

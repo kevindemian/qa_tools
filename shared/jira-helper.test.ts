@@ -8,13 +8,13 @@ const mockPushHistory = vi.fn();
 const mockPrintError = vi.fn();
 const mockRootLoggerError = vi.fn();
 
-vi.mock('./prompt', async () => ({
+vi.mock('./prompt', () => ({
     printError: vi.fn<(...args: Parameters<typeof PrintErrorFn>) => void>((label, error) => {
         mockPrintError(label, error);
     }),
 }));
 
-vi.mock('./logger', async () => ({
+vi.mock('./logger', () => ({
     rootLogger: {
         error: vi.fn<(...args: Parameters<LoggerRoot['error']>) => void>((message, meta) => {
             mockRootLoggerError(message, meta);

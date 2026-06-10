@@ -3,7 +3,7 @@ import type { Mocked } from 'vitest';
 import type { AxiosInstance } from '../shared/deps.js';
 import { apiGet, apiPost, apiPut, projectPath, formatDiffResponse } from './gitlab-api.js';
 
-vi.mock('../shared/git-provider-error', async () => ({
+vi.mock('../shared/git-provider-error', () => ({
     handleError: vi.fn((err: unknown, opts?: { returnNull?: boolean }) => {
         if (opts?.returnNull) return null;
         throw err;
@@ -15,15 +15,15 @@ function mockClient(): Mocked<AxiosInstance> {
 }
 
 describe('projectPath', () => {
-    it('encodes owner/repo pair', async () => {
+    it('encodes owner/repo pair', () => {
         expect(projectPath('my-group', 'my-project')).toBe('/projects/my-group%2Fmy-project');
     });
 
-    it('uses only repo when owner is empty', async () => {
+    it('uses only repo when owner is empty', () => {
         expect(projectPath('', 'my-project')).toBe('/projects/my-project');
     });
 
-    it('encodes special characters in owner and repo', async () => {
+    it('encodes special characters in owner and repo', () => {
         expect(projectPath('group/sub', 'my/project')).toBe('/projects/group%2Fsub%2Fmy%2Fproject');
     });
 });
@@ -132,7 +132,7 @@ describe('apiPut', () => {
 });
 
 describe('formatDiffResponse', () => {
-    it('formats entries with patch content', async () => {
+    it('formats entries with patch content', () => {
         const entries = [
             { new_path: 'src/index.ts', diff: '@@ -1 +1 @@\n-foo\n+bar' },
             { new_path: 'src/utils.ts', diff: '@@ -5 +5 @@\n-old\n+new' },
@@ -143,7 +143,7 @@ describe('formatDiffResponse', () => {
         );
     });
 
-    it('skips entries without patch field', async () => {
+    it('skips entries without patch field', () => {
         const entries = [
             { new_path: 'a.ts', diff: 'content' },
             { new_path: 'b.ts' },
@@ -153,7 +153,7 @@ describe('formatDiffResponse', () => {
         expect(result).toBe('--- a/a.ts\n+++ b/a.ts\ncontent\n--- a/c.ts\n+++ b/c.ts\nmore');
     });
 
-    it('skips entries where patch is not a string', async () => {
+    it('skips entries where patch is not a string', () => {
         const entries = [
             { new_path: 'a.ts', diff: 123 },
             { new_path: 'b.ts', diff: null },
@@ -162,25 +162,25 @@ describe('formatDiffResponse', () => {
         expect(result).toBe('');
     });
 
-    it('returns empty string for null / undefined / non-array input', async () => {
+    it('returns empty string for null / undefined / non-array input', () => {
         expect(formatDiffResponse(null, 'diff', 'name')).toBe('');
         expect(formatDiffResponse(undefined, 'diff', 'name')).toBe('');
 
         expect(formatDiffResponse({} as Record<string, unknown>[], 'diff', 'name')).toBe('');
     });
 
-    it('returns empty string for empty array', async () => {
+    it('returns empty string for empty array', () => {
         expect(formatDiffResponse([], 'diff', 'name')).toBe('');
     });
 
-    it('truncates when result exceeds limit', async () => {
+    it('truncates when result exceeds limit', () => {
         const entries = [{ new_path: 'big.ts', diff: 'a'.repeat(200) }];
         const result = formatDiffResponse(entries, 'diff', 'new_path', 50);
         expect(result.length).toBeLessThanOrEqual(70);
         expect(result.endsWith('\n... (truncated)')).toBe(true);
     });
 
-    it('does not truncate when result fits within limit', async () => {
+    it('does not truncate when result fits within limit', () => {
         const entries = [{ new_path: 'small.ts', diff: 'content' }];
         const result = formatDiffResponse(entries, 'diff', 'new_path', 15000);
         expect(result).toBe('--- a/small.ts\n+++ b/small.ts\ncontent');

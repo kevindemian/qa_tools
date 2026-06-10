@@ -10,7 +10,7 @@
  * Usage: npx tsx scripts/transform-fase2.ts
  */
 import { readFileSync, writeFileSync } from 'fs';
-import type { Mock, Mocked } from 'vitest';
+
 import { globSync } from 'glob';
 
 const TEST_FILES = globSync('**/*.test.ts', {

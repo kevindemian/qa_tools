@@ -1,8 +1,8 @@
 /** Tests for case24 handler — launches first-run wizard on demand. */
-vi.mock('../../shared/first-run', async () => ({
+vi.mock('../../shared/first-run', () => ({
     maybeRunFirstRunWizard: vi.fn(),
 }));
-vi.mock('../../shared/prompt', async () => ({
+vi.mock('../../shared/prompt', () => ({
     info: vi.fn(),
     printError: vi.fn(),
 }));

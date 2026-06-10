@@ -1,4 +1,4 @@
-vi.mock('../shared/logger', async () => ({
+vi.mock('../shared/logger', () => ({
     rootLogger: { info: vi.fn(), warn: vi.fn(), error: vi.fn() },
 }));
 
@@ -39,7 +39,7 @@ describe('LinkTypeManager', () => {
     });
 
     describe('constructor', () => {
-        it('stores jiraResource and sets defaults', async () => {
+        it('stores jiraResource and sets defaults', () => {
             expect(manager.jiraResource).toBe(mockJiraResource);
             expect(manager.linkTypesCache).toBeNull();
             expect(manager.cacheFilePath).toBe(CACHE_PATH);

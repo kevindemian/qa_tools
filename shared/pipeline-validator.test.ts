@@ -11,7 +11,7 @@ function makeCtx(input: string): ValidationContext {
 }
 
 describe('PipelineValidator — createPipelineValidator', () => {
-    it('creates validator with all invariants', async () => {
+    it('creates validator with all invariants', () => {
         const v = createPipelineValidator();
         const invariants = v.listInvariants();
         expect(invariants).toContain('P-01');
@@ -23,7 +23,7 @@ describe('PipelineValidator — createPipelineValidator', () => {
         expect(invariants).toContain('I-04');
     });
 
-    it('passes valid pipeline classification', async () => {
+    it('passes valid pipeline classification', () => {
         const v = createPipelineValidator();
         const data = {
             category: 'infrastructure' as const,
@@ -37,19 +37,19 @@ describe('PipelineValidator — createPipelineValidator', () => {
 });
 
 describe('invariantMinConfidence (P-01)', () => {
-    it('passes when confidence >= 0.6', async () => {
+    it('passes when confidence >= 0.6', () => {
         const results = invariantMinConfidence({ confidence: 0.75 }, makeCtx(''));
         expect(results.some((r: { passed: boolean }) => r.passed)).toBe(true);
     });
 
-    it('fails when confidence < 0.6', async () => {
+    it('fails when confidence < 0.6', () => {
         const results = invariantMinConfidence({ confidence: 0.5 }, makeCtx(''));
         expect(
             results.some((r: { passed: boolean; invariantId: string }) => !r.passed && r.invariantId === 'P-01'),
         ).toBe(true);
     });
 
-    it('fails when confidence missing', async () => {
+    it('fails when confidence missing', () => {
         const results = invariantMinConfidence({}, makeCtx(''));
         expect(
             results.some((r: { passed: boolean; invariantId: string }) => !r.passed && r.invariantId === 'P-01'),
@@ -58,12 +58,12 @@ describe('invariantMinConfidence (P-01)', () => {
 });
 
 describe('invariantEvidenceNonEmpty (P-02)', () => {
-    it('passes with evidence', async () => {
+    it('passes with evidence', () => {
         const results = invariantEvidenceNonEmpty({ evidence: ['Line 42: error'] }, makeCtx(''));
         expect(results.some((r: { passed: boolean }) => r.passed)).toBe(true);
     });
 
-    it('fails with empty evidence', async () => {
+    it('fails with empty evidence', () => {
         const results = invariantEvidenceNonEmpty({ evidence: [] }, makeCtx(''));
         expect(
             results.some((r: { passed: boolean; invariantId: string }) => !r.passed && r.invariantId === 'P-02'),
@@ -72,7 +72,7 @@ describe('invariantEvidenceNonEmpty (P-02)', () => {
 });
 
 describe('invariantCategoryHasRecommendation (P-03)', () => {
-    it('passes when code has recommendation', async () => {
+    it('passes when code has recommendation', () => {
         const results = invariantCategoryHasRecommendation(
             { category: 'code', recommendation: 'Fix compilation error in main.ts' },
             makeCtx(''),
@@ -80,14 +80,14 @@ describe('invariantCategoryHasRecommendation (P-03)', () => {
         expect(results.some((r: { passed: boolean }) => r.passed)).toBe(true);
     });
 
-    it('fails when code missing recommendation', async () => {
+    it('fails when code missing recommendation', () => {
         const results = invariantCategoryHasRecommendation({ category: 'code' }, makeCtx(''));
         expect(
             results.some((r: { passed: boolean; invariantId: string }) => !r.passed && r.invariantId === 'P-03'),
         ).toBe(true);
     });
 
-    it('passes when unknown (no recommendation needed)', async () => {
+    it('passes when unknown (no recommendation needed)', () => {
         const results = invariantCategoryHasRecommendation({ category: 'unknown' }, makeCtx(''));
         expect(results.some((r: { passed: boolean }) => r.passed)).toBe(true);
     });

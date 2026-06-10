@@ -13,7 +13,7 @@ function makeCtx(input: string): ValidationContext {
 }
 
 describe('AnalysisValidator — createAnalysisValidator', () => {
-    it('creates validator with all invariants registered', async () => {
+    it('creates validator with all invariants registered', () => {
         const v = createAnalysisValidator();
         const invariants = v.listInvariants();
         expect(invariants).toContain('A-01');
@@ -28,7 +28,7 @@ describe('AnalysisValidator — createAnalysisValidator', () => {
         expect(invariants).toContain('I-05');
     });
 
-    it('passes a well-formed analysis', async () => {
+    it('passes a well-formed analysis', () => {
         const v = createAnalysisValidator();
         const analysis = {
             tests: [
@@ -47,7 +47,7 @@ describe('AnalysisValidator — createAnalysisValidator', () => {
 });
 
 describe('invariantTestTitleExists (A-01)', () => {
-    it('passes when titles match input', async () => {
+    it('passes when titles match input', () => {
         const results = invariantTestTitleExists(
             { tests: [{ title: 'Login fails' }] },
             makeCtx('1. [failed] Login fails (100ms)'),
@@ -55,7 +55,7 @@ describe('invariantTestTitleExists (A-01)', () => {
         expect(results.some((r) => r.passed)).toBe(true);
     });
 
-    it('fails when title not in input', async () => {
+    it('fails when title not in input', () => {
         const results = invariantTestTitleExists(
             { tests: [{ title: 'Missing test' }] },
             makeCtx('1. [failed] Login fails (100ms)'),
@@ -65,7 +65,7 @@ describe('invariantTestTitleExists (A-01)', () => {
 });
 
 describe('invariantUnknownHasReason (A-04)', () => {
-    it('passes UNKNOWN with reason', async () => {
+    it('passes UNKNOWN with reason', () => {
         const results = invariantUnknownHasReason(
             {
                 tests: [
@@ -81,7 +81,7 @@ describe('invariantUnknownHasReason (A-04)', () => {
         expect(results.some((r) => r.passed)).toBe(true);
     });
 
-    it('fails UNKNOWN with short recommendation', async () => {
+    it('fails UNKNOWN with short recommendation', () => {
         const results = invariantUnknownHasReason(
             { tests: [{ classification: 'UNKNOWN', recommendation: 'Not sure' }] },
             makeCtx(''),
@@ -91,7 +91,7 @@ describe('invariantUnknownHasReason (A-04)', () => {
 });
 
 describe('invariantHighSeverityRecommendation (A-05)', () => {
-    it('passes when high severity has long recommendation', async () => {
+    it('passes when high severity has long recommendation', () => {
         const results = invariantHighSeverityRecommendation(
             {
                 tests: [
@@ -106,7 +106,7 @@ describe('invariantHighSeverityRecommendation (A-05)', () => {
         expect(results.some((r) => r.passed)).toBe(true);
     });
 
-    it('fails when high severity has short recommendation', async () => {
+    it('fails when high severity has short recommendation', () => {
         const results = invariantHighSeverityRecommendation(
             { tests: [{ severity: 'high', recommendation: 'Fix it' }] },
             makeCtx(''),
@@ -116,7 +116,7 @@ describe('invariantHighSeverityRecommendation (A-05)', () => {
 });
 
 describe('invariantSeverityConsistent (A-03)', () => {
-    it('passes consistent severity', async () => {
+    it('passes consistent severity', () => {
         const results = invariantSeverityConsistent(
             { tests: [{ classification: 'ASSERTION', severity: 'high' }] },
             makeCtx(''),
@@ -124,7 +124,7 @@ describe('invariantSeverityConsistent (A-03)', () => {
         expect(results.some((r) => r.passed)).toBe(true);
     });
 
-    it('warns on ASSERTION low severity', async () => {
+    it('warns on ASSERTION low severity', () => {
         const results = invariantSeverityConsistent(
             { tests: [{ classification: 'ASSERTION', severity: 'low' }] },
             makeCtx(''),
@@ -134,7 +134,7 @@ describe('invariantSeverityConsistent (A-03)', () => {
 });
 
 describe('invariantRecommendationReferencesError (A-02)', () => {
-    it('passes when recommendation references error', async () => {
+    it('passes when recommendation references error', () => {
         const results = invariantRecommendationReferencesError(
             { tests: [{ title: 'Test', recommendation: 'Fix assertion error in login module' }] },
             makeCtx('error: assertion failed in login module\nexception: timeout'),

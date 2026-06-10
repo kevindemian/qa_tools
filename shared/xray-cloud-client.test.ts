@@ -16,7 +16,7 @@ const mockHttpClient = {
     },
 };
 
-vi.mock('./http-client', async () => ({
+vi.mock('./http-client', () => ({
     createThrottledClient: vi.fn(() => mockHttpClient),
 }));
 

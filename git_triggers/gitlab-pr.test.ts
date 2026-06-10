@@ -12,7 +12,7 @@ import {
 } from './gitlab-pr.js';
 import { apiGet, apiPost, apiPut, projectPath } from './gitlab-api.js';
 
-vi.mock('./gitlab-api', async () => ({
+vi.mock('./gitlab-api', () => ({
     apiGet: vi.fn(),
     apiPost: vi.fn(),
     apiPut: vi.fn(),
@@ -20,11 +20,11 @@ vi.mock('./gitlab-api', async () => ({
     formatDiffResponse: vi.fn(),
 }));
 
-vi.mock('../shared/prompt', async () => ({
+vi.mock('../shared/prompt', () => ({
     info: vi.fn(),
 }));
 
-vi.mock('../shared/git-provider-error', async () => ({
+vi.mock('../shared/git-provider-error', () => ({
     handleError: vi.fn((err: unknown, opts?: { returnNull?: boolean }) => {
         if (opts?.returnNull) return null;
         throw err;
@@ -42,7 +42,7 @@ beforeEach(() => {
 });
 
 describe('formatPR', () => {
-    it('formats a complete MR object', async () => {
+    it('formats a complete MR object', () => {
         const data = {
             iid: 5,
             title: 'MR Title',
@@ -63,15 +63,15 @@ describe('formatPR', () => {
         });
     });
 
-    it('returns null for null input', async () => {
+    it('returns null for null input', () => {
         expect(formatPR(nullAs<JsonObject>())).toBeNull();
     });
 
-    it('returns null for undefined input', async () => {
+    it('returns null for undefined input', () => {
         expect(formatPR(undefinedAs<JsonObject>())).toBeNull();
     });
 
-    it('coerces approved to boolean false', async () => {
+    it('coerces approved to boolean false', () => {
         const data = { iid: 1, approved: false };
         const result = formatPR(data);
         expect(nonNull(result).approved).toBe(false);

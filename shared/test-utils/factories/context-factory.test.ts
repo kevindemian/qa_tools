@@ -1,7 +1,7 @@
 import { createMockContext } from './context-factory.js';
 
 describe('createMockContext', () => {
-    it('returns a mock with all required fields', async () => {
+    it('returns a mock with all required fields', () => {
         const ctx = createMockContext();
         expect(ctx.jiraResource).toBeDefined();
         expect(ctx.jiraResourceXray).toBeDefined();
@@ -14,14 +14,14 @@ describe('createMockContext', () => {
         expect(ctx.sessionLog).toBeDefined();
     });
 
-    it('sub-resources are mocked with vi.fn()', async () => {
+    it('sub-resources are mocked with vi.fn()', () => {
         const ctx = createMockContext();
         expect(typeof ctx.jiraResource.getJiraResource).toBe('function');
         expect(typeof ctx.linkManager.linkIssues).toBe('function');
         expect(typeof ctx.csvResource.readCsvFromString).toBe('function');
     });
 
-    it('SessionContext has default values', async () => {
+    it('SessionContext has default values', () => {
         const ctx = createMockContext();
         expect(ctx.ctx.project_name).toBe('TEST');
         expect(ctx.ctx.isBusy).toBe(false);
@@ -29,18 +29,18 @@ describe('createMockContext', () => {
         expect(typeof ctx.ctx.pushHistory).toBe('function');
     });
 
-    it('packageManager is undefined by default', async () => {
+    it('packageManager is undefined by default', () => {
         const ctx = createMockContext();
         expect(ctx.packageManager).toBeUndefined();
     });
 
-    it('merges overrides correctly', async () => {
+    it('merges overrides correctly', () => {
         const customPush = vi.fn();
         const ctx = createMockContext({ pushHistory: customPush });
         expect(ctx.pushHistory).toBe(customPush);
     });
 
-    it('nested overrides merge correctly', async () => {
+    it('nested overrides merge correctly', () => {
         const ctx = createMockContext({
             ctx: {
                 isBusy: false,

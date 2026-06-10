@@ -1,11 +1,11 @@
-vi.mock('../shared/http-client', async () => ({
+vi.mock('../shared/http-client', () => ({
     createHttpClient: vi.fn(),
 }));
 
 import { createHttpClient } from '../shared/http-client.js';
 import { createMockAxiosInstance } from '../shared/test-utils/factories/response-factory.js';
 
-vi.mock('../shared/logger', async () => ({
+vi.mock('../shared/logger', () => ({
     rootLogger: { info: vi.fn(), error: vi.fn(), warn: vi.fn(), writeFileOnly: vi.fn() },
 }));
 

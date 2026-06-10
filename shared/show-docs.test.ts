@@ -64,7 +64,7 @@ vi.mock('./html-factory', () => ({
 }));
 
 async function loadModule() {
-    return import('./show-docs.js') as Promise<typeof import('./show-docs.js')>;
+    return import('./show-docs.js');
 }
 
 beforeEach(() => {

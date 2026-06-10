@@ -21,25 +21,25 @@ const MOCK_CTX: SetupContext = {
 };
 
 describe('generatePrePushHook', () => {
-    it('returns shell script with project name', async () => {
+    it('returns shell script with project name', () => {
         const script = generatePrePushHook(MOCK_CTX);
         expect(script).toContain('#!/bin/sh');
         expect(script).toContain('test-proj');
     });
 
-    it('includes batch mode call', async () => {
+    it('includes batch mode call', () => {
         const script = generatePrePushHook(MOCK_CTX);
         expect(script).toContain('git_triggers/main.ts');
         expect(script).toContain('--batch');
     });
 
-    it('includes exit code check', async () => {
+    it('includes exit code check', () => {
         const script = generatePrePushHook(MOCK_CTX);
         expect(script).toContain('EXIT_CODE');
         expect(script).toContain('exit 1');
     });
 
-    it('includes skip message', async () => {
+    it('includes skip message', () => {
         const script = generatePrePushHook(MOCK_CTX);
         expect(script).toContain('git push --no-verify');
     });

@@ -46,7 +46,7 @@ describe('case-d — dashboard menu', () => {
 
     it('executes selected case26 dashboard handler', async () => {
         const { showSelect } = await import('../shared/prompt.js');
-        vi.mocked(showSelect).mockResolvedValue('26' as never);
+        vi.mocked(showSelect).mockResolvedValue('26');
         const ctx = createMockContext();
         const { writeReport } = await import('../shared/temp-dir.js');
         vi.mocked(writeReport).mockReturnValue('/tmp/report.html');
@@ -60,7 +60,7 @@ describe('case-d — dashboard menu', () => {
 
     it('executes selected case27 dashboard handler', async () => {
         const { showSelect } = await import('../shared/prompt.js');
-        vi.mocked(showSelect).mockResolvedValue('27' as never);
+        vi.mocked(showSelect).mockResolvedValue('27');
         const ctx = createMockContext();
         const { writeReport } = await import('../shared/temp-dir.js');
         vi.mocked(writeReport).mockReturnValue('/tmp/report.html');
@@ -71,7 +71,7 @@ describe('case-d — dashboard menu', () => {
 
     it('calls showDashboardMenu when project name is set', async () => {
         const { showSelect } = await import('../shared/prompt.js');
-        vi.mocked(showSelect).mockResolvedValue('0' as never);
+        vi.mocked(showSelect).mockResolvedValue('0');
         const ctx = createMockContext();
         const { default: caseD } = await import('./commands/case-d.js');
         await caseD.handler(ctx);
@@ -80,12 +80,12 @@ describe('case-d — dashboard menu', () => {
 
     it('executes selected dashboard handler', async () => {
         const { showSelect } = await import('../shared/prompt.js');
-        vi.mocked(showSelect).mockResolvedValue('25' as never);
+        vi.mocked(showSelect).mockResolvedValue('25');
         const ctx = createMockContext();
         const { writeReport } = await import('../shared/temp-dir.js');
         vi.mocked(writeReport).mockReturnValue('/tmp/report.html');
         const { loadMetrics } = await import('../shared/metrics.js');
-        vi.mocked(loadMetrics).mockReturnValue({ runs: [] } as never);
+        vi.mocked(loadMetrics).mockReturnValue({ runs: [] });
         const { default: caseD } = await import('./commands/case-d.js');
         await caseD.handler(ctx);
         expect(showSelect).toHaveBeenCalled();
@@ -97,7 +97,7 @@ describe('case25 — Traceability Matrix', () => {
     it('generates report and pushes history', async () => {
         const { loadMetrics } = await import('../shared/metrics.js');
         const { writeReport } = await import('../shared/temp-dir.js');
-        vi.mocked(loadMetrics).mockReturnValue({ runs: [] } as never);
+        vi.mocked(loadMetrics).mockReturnValue({ runs: [] });
         vi.mocked(writeReport).mockReturnValue('/tmp/report.html');
         const ctx = createMockContext();
         const { default: case25 } = await import('./commands/case25.js');

@@ -1,6 +1,6 @@
 vi.mock('../../shared/prompt');
 
-vi.mock('../../shared/state', async () => ({
+vi.mock('../../shared/state', () => ({
     load: vi.fn().mockReturnValue({}),
     update: vi.fn(),
 }));
@@ -15,7 +15,7 @@ vi.mock('../../shared/config', () => {
     };
 });
 
-vi.mock('../create_tests', async () => {
+vi.mock('../create_tests', () => {
     const mockCreateTestsFromJson = vi.fn();
     return {
         default: {
@@ -26,12 +26,12 @@ vi.mock('../create_tests', async () => {
     };
 });
 
-vi.mock('./test-execution-flow', async () => ({
+vi.mock('./test-execution-flow', () => ({
     offerTestExecutionAssociation: vi.fn().mockResolvedValue({ associated: false }),
     showResults: vi.fn().mockResolvedValue(undefined),
 }));
 
-vi.mock('../../shared/session-context', async () => ({
+vi.mock('../../shared/session-context', () => ({
     resolveSessionContext: vi.fn(),
     resolveTestDataSource: vi.fn(),
 }));
@@ -79,7 +79,7 @@ beforeEach(() => {
 });
 
 describe('case15 — create tests from JSON', () => {
-    it('exports a handler function', async () => {
+    it('exports a handler function', () => {
         expect(case15).toBeDefined();
         expect(typeof case15.handler).toBe('function');
     });

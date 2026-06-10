@@ -4,14 +4,14 @@ import { nivelarBranches } from './nivelar.js';
 import type { GitProvider } from '../shared/types.js';
 import { createMockGitProvider } from '../shared/test-utils/factories/index.js';
 
-vi.mock('../shared/prompt', async () => ({
+vi.mock('../shared/prompt', () => ({
     ask: vi.fn(),
     info: vi.fn(),
     success: vi.fn(),
     warn: vi.fn(),
     printError: vi.fn(),
     Spinner: vi.fn().mockImplementation(() => ({ start: vi.fn(), stop: vi.fn() })),
-    withSpinner: vi.fn().mockImplementation(async (_label: string, fn: () => Promise<void>) => fn()),
+    withSpinner: vi.fn().mockImplementation((_label: string, fn: () => Promise<void>) => fn()),
 }));
 
 describe('nivelarBranches', () => {

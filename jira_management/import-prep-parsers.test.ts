@@ -1,8 +1,8 @@
 import { nonNull } from '../shared/test-utils.js';
 import { handleDryRun, resolveCsvPath, resolveLabels, resolveJsonPath } from './import-prep-parsers.js';
 
-vi.mock('../shared/config', async () => ({ default: { get: vi.fn() } }));
-vi.mock('../shared/logger', async () => ({
+vi.mock('../shared/config', () => ({ default: { get: vi.fn() } }));
+vi.mock('../shared/logger', () => ({
     rootLogger: {
         child: vi.fn().mockReturnValue({ info: vi.fn(), warn: vi.fn(), error: vi.fn() }),
         warn: vi.fn(),
@@ -10,8 +10,8 @@ vi.mock('../shared/logger', async () => ({
         info: vi.fn(),
     },
 }));
-vi.mock('../shared/state', async () => ({ load: vi.fn(), update: vi.fn() }));
-vi.mock('../shared/prompt', async () => ({
+vi.mock('../shared/state', () => ({ load: vi.fn(), update: vi.fn() }));
+vi.mock('../shared/prompt', () => ({
     warn: vi.fn(),
     prompt: vi.fn(),
     printSummary: vi.fn(),
@@ -23,8 +23,8 @@ vi.mock('../shared/prompt', async () => ({
     divider: vi.fn(),
     isQuiet: vi.fn().mockReturnValue(true),
 }));
-vi.mock('../shared/quoted-string', async () => ({ isPreconditionKey: vi.fn() }));
-vi.mock('../shared/markdown', async () => ({
+vi.mock('../shared/quoted-string', () => ({ isPreconditionKey: vi.fn() }));
+vi.mock('../shared/markdown', () => ({
     md: vi.fn((s: string) => s),
     mdToHtml: vi.fn((s: string) => s),
 }));
@@ -40,13 +40,13 @@ describe('handleDryRun', () => {
         vi.clearAllMocks();
     });
 
-    it('returns null when dryRun is disabled', async () => {
+    it('returns null when dryRun is disabled', () => {
         vi.mocked(CONFIG.default.get).mockReturnValue(false);
         const result = handleDryRun([{ title: 'TC1', steps: [] }], onBusy, '/path.csv');
         expect(result).toBeNull();
     });
 
-    it('returns dry-run result and calls onBusy when dryRun is enabled', async () => {
+    it('returns dry-run result and calls onBusy when dryRun is enabled', () => {
         vi.mocked(CONFIG.default.get).mockReturnValue(true);
         const tests = [{ title: 'TC1', steps: [] }];
         const result = handleDryRun(tests, onBusy, '/path.csv');
@@ -93,12 +93,12 @@ describe('resolveLabels', () => {
         vi.mocked(CONFIG.default.get).mockReturnValue(undefined);
     });
 
-    it('returns input array when provided', async () => {
+    it('returns input array when provided', () => {
         const result = resolveLabels(['smoke', 'regression'], 'csvLabels');
         expect(result).toEqual(['smoke', 'regression']);
     });
 
-    it('reads from config when no input', async () => {
+    it('reads from config when no input', () => {
         vi.mocked(CONFIG.default.get).mockImplementation((key: string) => {
             if (key === 'csvLabels') return 'config-label';
             return undefined;
@@ -107,13 +107,13 @@ describe('resolveLabels', () => {
         expect(result).toEqual(['config-label']);
     });
 
-    it('prompts user and splits by comma', async () => {
+    it('prompts user and splits by comma', () => {
         vi.mocked(PROMPT.prompt).mockReturnValue('a, b, c');
         const result = resolveLabels(undefined, 'csvLabels');
         expect(result).toEqual(['a', 'b', 'c']);
     });
 
-    it('returns empty array for empty prompt', async () => {
+    it('returns empty array for empty prompt', () => {
         vi.mocked(PROMPT.prompt).mockReturnValue('');
         const result = resolveLabels(undefined, 'csvLabels');
         expect(result).toEqual([]);

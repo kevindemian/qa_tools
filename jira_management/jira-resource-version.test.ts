@@ -1,9 +1,9 @@
 import { createHttpClient } from '../shared/http-client.js';
 import { createMockAxiosInstance } from '../shared/test-utils/factories/response-factory.js';
 
-vi.mock('../shared/http-client', async () => ({ createHttpClient: vi.fn() }));
+vi.mock('../shared/http-client', () => ({ createHttpClient: vi.fn() }));
 
-vi.mock('../shared/logger', async () => ({
+vi.mock('../shared/logger', () => ({
     Logger: vi.fn(function () {
         return {
             debug: vi.fn(),
@@ -18,7 +18,7 @@ vi.mock('../shared/logger', async () => ({
     rootLogger: { debug: vi.fn(), info: vi.fn(), warn: vi.fn(), error: vi.fn() },
 }));
 
-vi.mock('../shared/prompt', async () => ({
+vi.mock('../shared/prompt', () => ({
     error: vi.fn(),
     success: vi.fn(),
     info: vi.fn(),

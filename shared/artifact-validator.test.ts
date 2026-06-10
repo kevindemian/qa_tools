@@ -7,14 +7,14 @@ describe('ArtifactValidator', () => {
         artifactType: 'test-suite',
     };
 
-    it('validates with no invariants (empty)', async () => {
+    it('validates with no invariants (empty)', () => {
         const validator = new ArtifactValidator('test-suite');
         const result = validator.validate({}, ctx);
         expect(result.allPassed).toBe(true);
         expect(result.totalInvariants).toBe(0);
     });
 
-    it('runs a single invariant that passes', async () => {
+    it('runs a single invariant that passes', () => {
         const validator = new ArtifactValidator('test-suite');
         validator.addInvariant('T-01', () => [pass('T-01', 'OK')]);
         const result = validator.validate({}, ctx);
@@ -22,7 +22,7 @@ describe('ArtifactValidator', () => {
         expect(result.passed).toBe(1);
     });
 
-    it('runs a single invariant that fails', async () => {
+    it('runs a single invariant that fails', () => {
         const validator = new ArtifactValidator('test-suite');
         validator.addInvariant('T-01', () => [fail('T-01', 'Failed')]);
         const result = validator.validate({}, ctx);
@@ -30,7 +30,7 @@ describe('ArtifactValidator', () => {
         expect(result.failed).toBe(1);
     });
 
-    it('runs a warning-level invariant', async () => {
+    it('runs a warning-level invariant', () => {
         const validator = new ArtifactValidator('test-suite');
         validator.addInvariant('T-01', () => [warn('T-01', 'Warning')]);
         const result = validator.validate({}, ctx);
@@ -38,7 +38,7 @@ describe('ArtifactValidator', () => {
         expect(result.warnings).toBe(1);
     });
 
-    it('runs multiple invariants', async () => {
+    it('runs multiple invariants', () => {
         const validator = new ArtifactValidator('test-suite');
         validator.addInvariant('T-01', () => [pass('T-01', 'Pass')]);
         validator.addInvariant('T-02', () => [fail('T-02', 'Fail')]);
@@ -48,7 +48,7 @@ describe('ArtifactValidator', () => {
         expect(result.failed).toBe(1);
     });
 
-    it('handles invariant that throws', async () => {
+    it('handles invariant that throws', () => {
         const validator = new ArtifactValidator('test-suite');
         validator.addInvariant('T-01', () => {
             throw new Error('Unexpected error');
@@ -58,20 +58,20 @@ describe('ArtifactValidator', () => {
         expect(result.failed).toBe(1);
     });
 
-    it('prevents duplicate invariant registration', async () => {
+    it('prevents duplicate invariant registration', () => {
         const validator = new ArtifactValidator('test-suite');
         validator.addInvariant('T-01', () => [pass('T-01', '')]);
         expect(() => validator.addInvariant('T-01', () => [pass('T-01', '')])).toThrow();
     });
 
-    it('reports hasInvariant correctly', async () => {
+    it('reports hasInvariant correctly', () => {
         const validator = new ArtifactValidator('test-suite');
         validator.addInvariant('T-01', () => [pass('T-01', '')]);
         expect(validator.hasInvariant('T-01')).toBe(true);
         expect(validator.hasInvariant('T-02')).toBe(false);
     });
 
-    it('lists registered invariants', async () => {
+    it('lists registered invariants', () => {
         const validator = new ArtifactValidator('test-suite');
         validator.addInvariant('T-01', () => [pass('T-01', '')]);
         validator.addInvariant('T-02', () => [pass('T-02', '')]);
@@ -81,7 +81,7 @@ describe('ArtifactValidator', () => {
         expect(names).toHaveLength(2);
     });
 
-    it('runs cross-field checks', async () => {
+    it('runs cross-field checks', () => {
         const validator = new ArtifactValidator('test-suite');
         validator.addCrossFieldCheck((artifact) => {
             const obj = artifact as Record<string, unknown>;
@@ -99,7 +99,7 @@ describe('ArtifactValidator', () => {
         expect(result.allPassed).toBe(false);
     });
 
-    it('catches cross-field check exceptions', async () => {
+    it('catches cross-field check exceptions', () => {
         const validator = new ArtifactValidator('test-suite');
         validator.addCrossFieldCheck(() => {
             throw new Error('check error');
@@ -109,7 +109,7 @@ describe('ArtifactValidator', () => {
         expect(result.results.some((r) => r.message.toLowerCase().includes('cross-field'))).toBe(true);
     });
 
-    it('validates with artifactType context', async () => {
+    it('validates with artifactType context', () => {
         const validator = new ArtifactValidator('bug-report');
         validator.addInvariant('B-01', (_artifact, context) => {
             if (context.artifactType === 'bug-report') return [pass('B-01', 'Correct type')];
@@ -122,21 +122,21 @@ describe('ArtifactValidator', () => {
 });
 
 describe('factory functions', () => {
-    it('pass builds passing result', async () => {
+    it('pass builds passing result', () => {
         const r = pass('I-01', 'OK');
         expect(r.passed).toBe(true);
         expect(r.invariantId).toBe('I-01');
         expect(r.severity).toBe('error');
     });
 
-    it('fail builds failing result', async () => {
+    it('fail builds failing result', () => {
         const r = fail('T-01', 'Error', 'path');
         expect(r.passed).toBe(false);
         expect(r.severity).toBe('error');
         expect(r.artifactPath).toBe('path');
     });
 
-    it('warn builds warning result', async () => {
+    it('warn builds warning result', () => {
         const r = warn('T-02', 'Warning');
         expect(r.passed).toBe(false);
         expect(r.severity).toBe('warning');

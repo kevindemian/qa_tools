@@ -1,7 +1,7 @@
 vi.mock('../../shared/prompt');
 vi.mock('../../shared/logger');
 
-vi.mock('../../shared/state', async () => ({
+vi.mock('../../shared/state', () => ({
     load: vi.fn().mockReturnValue({}),
     update: vi.fn(),
 }));
@@ -16,7 +16,7 @@ vi.mock('../../shared/config', () => {
     };
 });
 
-vi.mock('../create_tests', async () => ({
+vi.mock('../create_tests', () => ({
     default: {
         createTestsFromCsv: vi.fn(),
         createTestsFromJson: vi.fn(),
@@ -24,7 +24,7 @@ vi.mock('../create_tests', async () => ({
     },
 }));
 
-vi.mock('./test-execution-flow', async () => ({
+vi.mock('./test-execution-flow', () => ({
     offerTestExecutionAssociation: vi.fn().mockResolvedValue({ associated: false }),
     showResults: vi.fn().mockResolvedValue(undefined),
 }));
@@ -39,7 +39,7 @@ beforeEach(() => {
 });
 
 describe('case01 — create tests from CSV', () => {
-    it('exports a handler function', async () => {
+    it('exports a handler function', () => {
         expect(case01).toBeDefined();
         expect(typeof case01.handler).toBe('function');
     });

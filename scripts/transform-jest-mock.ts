@@ -10,7 +10,7 @@
  *   (which appears in `as unknown as Mocked<Type>` patterns from Fase 3)
  */
 import { readFileSync, writeFileSync } from 'fs';
-import type { Mock, Mocked } from 'vitest';
+
 import { globSync } from 'glob';
 
 const TEST_FILES = globSync('**/*.test.ts', {

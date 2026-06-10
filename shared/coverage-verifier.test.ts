@@ -6,12 +6,12 @@ function makeCtx(input: string): ValidationContext {
 }
 
 describe('recalculateCoverage', () => {
-    it('returns 0 coverage when no criteria in input', async () => {
+    it('returns 0 coverage when no criteria in input', () => {
         const result = recalculateCoverage({ tests: [{ title: 'Test A' }] }, makeCtx('Short text'));
         expect(result.totalCriteria).toBe(0);
     });
 
-    it('returns full coverage when criteria matched by titles', async () => {
+    it('returns full coverage when criteria matched by titles', () => {
         const result = recalculateCoverage(
             {
                 tests: [{ title: 'Test user can log in' }, { title: 'Test payment works' }],
@@ -23,7 +23,7 @@ describe('recalculateCoverage', () => {
         expect(result.coveredCriteria).toBe(2);
     });
 
-    it('returns full coverage when criteria matched by titles', async () => {
+    it('returns full coverage when criteria matched by titles', () => {
         const result = recalculateCoverage(
             {
                 tests: [{ title: 'Test user can log in' }, { title: 'Test payment works' }],
@@ -35,7 +35,7 @@ describe('recalculateCoverage', () => {
         expect(result.coveredCriteria).toBe(2);
     });
 
-    it('reports gaps for uncovered criteria', async () => {
+    it('reports gaps for uncovered criteria', () => {
         const result = recalculateCoverage(
             {
                 tests: [{ title: 'Test user can log in' }],
@@ -47,7 +47,7 @@ describe('recalculateCoverage', () => {
         expect(result.realCoverage).toBeLessThan(100);
     });
 
-    it('detects negative coverage delta (overselling)', async () => {
+    it('detects negative coverage delta (overselling)', () => {
         const result = recalculateCoverage(
             {
                 tests: [{ title: 'Test user can log in' }],
@@ -58,7 +58,7 @@ describe('recalculateCoverage', () => {
         expect(result.coverageDelta).toBeLessThan(0);
     });
 
-    it('extracts criteria from Given/When/Then format', async () => {
+    it('extracts criteria from Given/When/Then format', () => {
         const result = recalculateCoverage(
             {
                 tests: [{ title: 'Test scenario A' }],
@@ -68,17 +68,17 @@ describe('recalculateCoverage', () => {
         expect(result.totalCriteria).toBeGreaterThan(0);
     });
 
-    it('handles artifact with no tests array', async () => {
+    it('handles artifact with no tests array', () => {
         const result = recalculateCoverage({}, makeCtx('Acceptance Criteria: Test'));
         expect(result.realCoverage).toBe(0);
     });
 
-    it('declaredCoverage is null when missing', async () => {
+    it('declaredCoverage is null when missing', () => {
         const result = recalculateCoverage({ tests: [] }, makeCtx('Acceptance Criteria: Test'));
         expect(result.declaredCoverage).toBeNull();
     });
 
-    it('reads declared coverage from artifact', async () => {
+    it('reads declared coverage from artifact', () => {
         const result = recalculateCoverage(
             { tests: [], coverageTable: { coverage: 85 } },
             makeCtx('Acceptance Criteria: Test'),

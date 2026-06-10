@@ -1,4 +1,3 @@
-import type { GitProvider } from '../shared/types.js';
 import { createGitHubSmokeManager } from './smoke-shared.js';
 import { generatePrDescription } from '../git_triggers/ai-pr-desc.js';
 import Config from '../shared/config.js';
@@ -27,7 +26,7 @@ async function main() {
     console.log('  Diff: ' + diff.length + ' chars\n');
 
     console.log('Generating PR description via LLM (tier: fast)...');
-    const description = await generatePrDescription(gh as unknown as GitProvider, 'main', 'dev');
+    const description = await generatePrDescription(gh, 'main', 'dev');
 
     if (!description) {
         console.error('FAIL: generatePrDescription returned empty string');
