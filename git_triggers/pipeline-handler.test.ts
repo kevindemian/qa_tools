@@ -175,7 +175,7 @@ describe('pollPipeline', () => {
     it('handles missing status/state and web_url', async () => {
         let callCount = 0;
         vi.mocked(mockM.getPipeline).mockImplementation(async () => {
-            await undefined;
+            await Promise.resolve();
             callCount++;
             if (callCount === 1) return { web_url: '' };
             return { status: 'success', web_url: 'https://gitlab.com/pipe/1' };

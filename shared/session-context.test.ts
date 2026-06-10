@@ -71,7 +71,7 @@ describe('SessionContext', () => {
         expect(ctx.isBusy).toBe(false);
 
         const result = await ctx.withBusy(async () => {
-            await undefined;
+            await Promise.resolve();
             expect(ctx.isBusy).toBe(true);
             return 42;
         });
@@ -149,7 +149,7 @@ describe('resolveSessionContext', () => {
         });
 
         const ctx = new SessionContext();
-        const result = await resolveSessionContext(ctx, 'test-project');
+        const result = resolveSessionContext(ctx, 'test-project');
 
         expect(result.sha).toBe('abc123def456');
         expect(result.branch).toBe('main');
@@ -167,7 +167,7 @@ describe('resolveSessionContext', () => {
         vi.mocked(detectProjectGitDir).mockReturnValue(null);
 
         const ctx = new SessionContext();
-        const result = await resolveSessionContext(ctx, 'test-project');
+        const result = resolveSessionContext(ctx, 'test-project');
 
         expect(result.sha).toBeNull();
         expect(result.branch).toBeNull();
