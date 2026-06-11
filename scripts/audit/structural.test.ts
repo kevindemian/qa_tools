@@ -24,12 +24,14 @@ describe('structural.ts — module loads and runs', () => {
         mockExecFileSync.mockReturnValue(Buffer.from(''));
         await import('./structural.js');
         const output = String(spy.mock.calls[0]?.[0] ?? '[]');
-        const data: Finding[] = JSON.parse(output);
+        const data: Finding[] = JSON.parse(output) as Finding[];
         expect(data).toHaveLength(6);
-        expect(data[0]!.pattern).toBe('Config getter pattern');
-        expect(data[0]!.severity).toMatch(/^high|medium|low$/);
-        expect(typeof data[0]!.count).toBe('number');
-        expect(data[5]!.pattern).toBe('Git provider method post-processing');
+        const d0 = data[0] as Finding;
+        const d5 = data[5] as Finding;
+        expect(d0.pattern).toBe('Config getter pattern');
+        expect(d0.severity).toMatch(/^high|medium|low$/);
+        expect(typeof d0.count).toBe('number');
+        expect(d5.pattern).toBe('Git provider method post-processing');
         for (const f of data) {
             expect(f).toHaveProperty('pattern');
             expect(f).toHaveProperty('severity');

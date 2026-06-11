@@ -35,8 +35,7 @@ vi.mock('../shared/prompt', async () => {
 let JiraClient: typeof JiraClientType;
 
 beforeAll(async () => {
-    JiraClient = (await vi.importActual<typeof import('../shared/jira-client.js')>('../shared/jira-client'))
-        .default;
+    JiraClient = (await vi.importActual<typeof import('../shared/jira-client.js')>('../shared/jira-client')).default;
 });
 
 describe('smoke-jira-cloud', () => {

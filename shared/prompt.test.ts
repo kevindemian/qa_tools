@@ -792,7 +792,7 @@ describe('Prompt', () => {
 
         it('filters columns when specified', () => {
             prompt.tableView([{ a: 1, b: 2, c: 3 }], ['a', 'c']);
-            const output = mockLog.mock.calls.map((c) => c[0]).join(' ');
+            const output = mockLog.mock.calls.map((c) => c[0] as string).join(' ');
             expect(output).toContain('a');
             expect(output).toContain('c');
             expect(output).not.toContain('b');
@@ -804,7 +804,7 @@ describe('Prompt', () => {
 
         it('uses custom border chars in table output', () => {
             prompt.tableView([{ x: 1, y: 2 }]);
-            const output = mockLog.mock.calls.map((c) => c[0]).join(' ');
+            const output = mockLog.mock.calls.map((c) => c[0] as string).join(' ');
             expect(output).toContain('┌');
             expect(output).toContain('┐');
             expect(output).toContain('└');
@@ -824,7 +824,7 @@ describe('Prompt', () => {
                 ['name', 'result'],
                 'result',
             );
-            const output = mockLog.mock.calls.map((c) => c[0]).join(' ');
+            const output = mockLog.mock.calls.map((c) => c[0] as string).join(' ');
             expect(output).toContain('pass');
             expect(output).toContain('fail');
             expect(output).toContain('skip');
