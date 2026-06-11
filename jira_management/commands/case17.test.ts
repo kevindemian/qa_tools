@@ -248,7 +248,7 @@ describe('case17 — HTML report generator', () => {
         expect(reportGen.generateHtmlReport).toHaveBeenCalledWith(
             expect.any(Array),
             expect.objectContaining({
-                testHistory: expect.any(Object),
+                testHistory: expect.any(Object) as object,
             }),
         );
     });
@@ -551,7 +551,9 @@ describe('case17 — HTML report generator', () => {
 
         expect(reportGen.generateHtmlReport).toHaveBeenCalledWith(
             expect.any(Array),
-            expect.objectContaining({ runs: expect.arrayContaining([expect.objectContaining({ name: 'Primary' })]) }),
+            expect.objectContaining({
+                runs: expect.arrayContaining([expect.objectContaining({ name: 'Primary' })]) as Array<{ name: string }>,
+            }),
         );
 
         process.argv = origArgv;

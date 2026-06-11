@@ -64,7 +64,7 @@ describe('smoke-jira-cloud', () => {
         expect(client.jiraMode).toBe('cloud');
         expect(mockCreateHttpClient).toHaveBeenCalledWith(
             expect.objectContaining({
-                authHeader: { Authorization: expect.stringMatching(/^Basic /) },
+                authHeader: { Authorization: expect.stringMatching(/^Basic /) as string },
             }),
         );
     });

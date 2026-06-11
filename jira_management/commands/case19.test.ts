@@ -104,7 +104,7 @@ describe('case19 — History & Coverage', () => {
 
         expect(coverage.analyzeCoverage).toHaveBeenCalledWith(baseContext.jiraResource, 'TEST');
         expect(metrics.saveCoverageSnapshot).toHaveBeenCalledWith({
-            timestamp: expect.any(String),
+            timestamp: expect.any(String) as string,
             project: 'TEST',
             totalIssues: 10,
             mappedIssues: 6,
