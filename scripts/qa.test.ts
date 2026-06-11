@@ -120,7 +120,7 @@ describe('qa.sh — OpenCode container wrapper', () => {
 
         it('detects missing image with build instruction', () => {
             expect(content).toContain('imagem');
-            expect(content).toContain('podman build');
+            expect(content).toContain('podman build -t');
         });
     });
 

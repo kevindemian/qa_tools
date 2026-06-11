@@ -63,11 +63,29 @@ beforeEach(() => {
     });
 });
 
-describe('DB_DIR constant', () => {
-    it('is derived from homedir and ends with share/opencode', async () => {
+describe('DB constants', () => {
+    it('DB_DIR is derived from homedir and ends with share/opencode', async () => {
         const { DB_DIR: dir } = await loadModule();
         expect(dir).toContain('share/opencode');
         expect(dir).not.toBe('');
+    });
+
+    it('DB_TIMEOUT_MS defaults to 300000 (5min) for large databases', async () => {
+        const { DB_TIMEOUT_MS } = await loadModule();
+        expect(DB_TIMEOUT_MS).toBe(300_000);
+    });
+
+    it('DB_TIMEOUT_MS may be overridden by OPENCODE_DB_TIMEOUT_MS env var', async () => {
+        const origEnv = process.env['OPENCODE_DB_TIMEOUT_MS'];
+        process.env['OPENCODE_DB_TIMEOUT_MS'] = '60000';
+        vi.resetModules();
+        const { DB_TIMEOUT_MS } = await import('./opencode-db-maintenance.js');
+        expect(DB_TIMEOUT_MS).toBe(60_000);
+        delete process.env['OPENCODE_DB_TIMEOUT_MS'];
+        if (origEnv !== undefined) {
+            process.env['OPENCODE_DB_TIMEOUT_MS'] = origEnv;
+        }
+        vi.resetModules();
     });
 });
 
