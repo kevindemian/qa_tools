@@ -108,7 +108,9 @@ checks.push(
 const tsconfigPath = 'tsconfig.json';
 let noImplicitOverrideActive = false;
 if (existsSync(tsconfigPath)) {
-    const tsconfig = JSON.parse(readFileSync(tsconfigPath, 'utf-8')) as { compilerOptions?: { noImplicitOverride?: boolean } };
+    const tsconfig = JSON.parse(readFileSync(tsconfigPath, 'utf-8')) as {
+        compilerOptions?: { noImplicitOverride?: boolean };
+    };
     noImplicitOverrideActive = tsconfig.compilerOptions?.noImplicitOverride === true;
 }
 checks.push({
@@ -288,7 +290,7 @@ checks.push(
         const selfContent = readFileSync('scripts/enforce-quality.ts', 'utf-8');
         const contentWithoutHash = selfContent.replace(/\/\* HASH:[0-9a-f]{64} \*\//, '');
         const currentHash = createHash('sha256').update(contentWithoutHash, 'utf-8').digest('hex');
-        /* HASH:eb7afe26974c162123eb943edc605c744b586077ecffd1c99328af10ab3be696 */
+        /* HASH:7a510c37249aa40dc5023ab630bc7d92970217d80b2f375351d294b6135ffbb4 */
         const match = selfContent.match(/\/\* HASH:([0-9a-f]{64}) \*\//);
         if (!match) {
             violations.push({
@@ -404,18 +406,29 @@ checks.push(
     })(),
 );
 
+// 18. No if (true) or if (false) as condition replacement (auto-fix guard)
+// Auto-fix scripts for no-unnecessary-condition may replace runtime guards with
+// if(true) or if(false), disabling safety checks. This must never pass review.
+checks.push(
+    checkNoPattern(
+        'if(true)/if(false) condition replacement (auto-fix guard)',
+        /if\s*\(\s*(?:true|false)\s*\)\s*(?:\{|return|break|continue|throw|;)/,
+        allTsFiles(),
+    ),
+);
+
 // 17. Checks count must match expected minimum (guards against accidental removal)
 checks.push({
-    name: `enforce-quality has at least 17 checks`,
-    passed: checks.length + 1 >= 17,
+    name: `enforce-quality has at least 18 checks`,
+    passed: checks.length + 1 >= 18,
     violations:
-        checks.length + 1 >= 17
+        checks.length + 1 >= 18
             ? []
             : [
                   {
                       file: 'scripts/enforce-quality.ts',
                       line: 1,
-                      content: `Expected >= 17 checks, found ${checks.length + 1}`,
+                      content: `Expected >= 18 checks, found ${checks.length + 1}`,
                   },
               ],
 });

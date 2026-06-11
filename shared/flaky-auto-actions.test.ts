@@ -21,12 +21,12 @@ function mockJiraResource(captured: { calls: unknown[] }): MockJira {
         searchJiraIssues: vi.fn().mockImplementation(async (jql: string): Promise<SearchIssuesResponse> => {
             captured.calls.push({ method: 'searchJiraIssues', jql });
             const match = jql.match(/\[Flaky\].*?"?([^"]+)"?/);
-            if (!match) return await Promise.resolve({ issues: [], total: 0 });
+            if (!match) return Promise.resolve({ issues: [], total: 0 });
             const existing: Array<{ key: string; fields: Record<string, unknown> }> = [];
             for (const [key] of bugStore) {
                 existing.push({ key, fields: { summary: '[Flaky] ' + match[1], status: { name: 'Open' } } });
             }
-            return await Promise.resolve({ issues: existing, total: existing.length });
+            return Promise.resolve({ issues: existing, total: existing.length });
         }),
         postJiraResource: vi.fn().mockImplementation((_url: string, data: unknown) => {
             captured.calls.push({ method: 'postJiraResource', data });
