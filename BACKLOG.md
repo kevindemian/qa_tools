@@ -1092,6 +1092,70 @@ F1 (22min) ────► C1 C2 C3 C4 (paralelo) ✅
 
 ---
 
+## 🛡️ Sprint GracefulFix — Restaurar Block no quality-check + Corrigir gracefulExit (Jun/2026)
+
+**Data:** 2026-06-11
+**Problema:** `gracefulExit()` em `shared/cli_base.ts` usa `setTimeout(() => process.exit(code), EXIT_DELAY_MS).unref()`. O `.unref()` permite que o Node.js saia naturalmente com exit code **0** antes do timer de 2s disparar. `quality-check.ts` SEMPRE retorna 0, mesmo com falhas — `set -e` do pre-push nunca é acionado.
+
+**Root cause:** Em scripts não-interativos, não há handles mantendo o event loop vivo além do timer unrefed. O processo termina com 0 (default) antes do `process.exit(code)` executar.
+
+| Fase | Descrição                                                              | Itens | Status |
+| ---- | ---------------------------------------------------------------------- | ----- | ------ |
+| 1    | Fix `gracefulExit` — remover `.unref()` (causa raiz do block quebrado) | GF-01 | ✅     |
+| 2    | Corrigir `checkAsUnknownAs` — comment-based structural exclusion       | GF-02 | ✅     |
+| 3    | Corrigir unused-exports baseline (line number shift)                   | GF-03 | ✅     |
+| 4    | Regenerar hash integrity                                               | GF-04 | ✅     |
+| 5    | Verificação: typecheck + quality-check + tests + 100% cobertura        | GF-05 | ✅     |
+| 6    | Push via SSH + monitor CI                                              | GF-06 | ⏳     |
+
+### Detalhamento
+
+#### Fase 1 — Fix gracefulExit (GF-01) ✅
+
+| ID    | Item                                                                            | Arquivo              | Esforço |
+| ----- | ------------------------------------------------------------------------------- | -------------------- | ------- |
+| GF-01 | 🔧 Remover `.unref()` de `gracefulExit` — garantir `process.exit(code)` executa | `shared/cli_base.ts` | 5min    |
+
+**Resultado:** Exit code 1 confirmado em quality-check após violações.
+
+#### Fase 2 — Corrigir `checkAsUnknownAs`
+
+| ID     | Item                                                                                                                 | Arquivo(s)                      |
+| ------ | -------------------------------------------------------------------------------------------------------------------- | ------------------------------- |
+| GF-02  | 🐛 `checkAsUnknownAs`: adicionar `excludePattern` para linhas com comentário `// structural:` que documenta o motivo | `scripts/quality-check.ts`      |
+| GF-02b | 📋 Atualizar teste `checkAsUnknownAs` no quality-check.test.ts para cobrir exclusão por comentário structural        | `scripts/quality-check.test.ts` |
+
+**Abordagem:** A regra fica mais sofisticada — `as unknown as` COM comentário `// structural: <razão>` é aceito (caso classe com campos privados). SEM comentário, ainda flag. O desenvolvedor é OBRIGADO a documentar o porquê do cast.
+
+#### Fase 3 — Corrigir unused-exports baseline
+
+| ID    | Item                                                        | Arquivo                            |
+| ----- | ----------------------------------------------------------- | ---------------------------------- |
+| GF-03 | 🔧 Atualizar line number no baseline (31→32, arquivo mudou) | `scripts/.unused-exports-baseline` |
+
+#### Fase 4 — Regenerar hash
+
+| ID    | Item                                                  | Arquivo                    |
+| ----- | ----------------------------------------------------- | -------------------------- |
+| GF-04 | 🔧 Regenerar hash integrity comment após modificações | `scripts/quality-check.ts` |
+
+#### Fase 5 — Verificação Final (100% cobertura)
+
+| ID     | Item                                          | Critério                     |
+| ------ | --------------------------------------------- | ---------------------------- |
+| GF-05a | tsc --noEmit                                  | 0 erros                      |
+| GF-05b | npx tsx scripts/quality-check.ts              | ✅ exit 0, todas checks pass |
+| GF-05c | vitest run                                    | 100% pass                    |
+| GF-05d | quality-check.test.ts cobertura 100% branches | ✅                           |
+
+#### Fase 6 — Push
+
+| ID    | Item                          |
+| ----- | ----------------------------- |
+| GF-06 | git push via SSH + monitor CI |
+
+---
+
 ## 🚀 Sprint Final — Correção Sistêmica de Contratos + Container + Lint Zero (Jun/2026)
 
 **Data:** 2026-06-11
