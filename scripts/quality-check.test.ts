@@ -227,6 +227,25 @@ describe('quality-check unit tests', () => {
             expect('passed' in r).toBe(true);
         });
 
+        it('checkAsUnknownAs detects undocumented cast', async () => {
+            vi.mocked(readFileSync).mockReturnValue('const x = foo() as unknown as Bar;\n');
+            const { checkAsUnknownAs } = await import('./quality-check.js');
+            const r = checkAsUnknownAs();
+            expect(r.passed).toBe(false);
+            expect(r.violations.length).toBe(1);
+            expect(r.violations[0]?.content).toContain('as unknown as');
+        });
+
+        it('checkAsUnknownAs excludes documented structural cast', async () => {
+            vi.mocked(readFileSync).mockReturnValue(
+                'const x = foo() as unknown as Bar; // structural: Bar has private fields\n',
+            );
+            const { checkAsUnknownAs } = await import('./quality-check.js');
+            const r = checkAsUnknownAs();
+            expect(r.passed).toBe(true);
+            expect(r.violations.length).toBe(0);
+        });
+
         it('checkAsAny has correct structure', async () => {
             vi.mocked(readFileSync).mockReturnValue('clean content\n');
             const { checkAsAny } = await import('./quality-check.js');

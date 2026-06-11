@@ -79,9 +79,20 @@ export function sanitizeUrl(url: string): string {
     return url.replace(/(token|api_key|secret|password|access_token|client_secret)=[^&]+/gi, '$1=****');
 }
 
-/** Graceful shutdown: logs message and exits after EXIT_DELAY_MS to allow pending I/O to flush. */
+/**
+ * Graceful shutdown: logs message and exits after EXIT_DELAY_MS to allow pending I/O to flush.
+ *
+ * NOTA: NÃO use .unref() — .unref() permite que Node.js saia naturalmente com exit code 0
+ * antes do setTimeout disparar process.exit(code). Em scripts não-interativos sem handles
+ * mantendo o event loop vivo, o exit code correto nunca é aplicado, quebrando o blocking
+ * do pre-push hook e de qualquer script que dependa do exit code.
+ *
+ * O timer sem .unref() mantém o event loop vivo por EXIT_DELAY_MS, tempo suficiente para
+ * pending I/O (stdout, stderr) flusharem. Em contextos interativos, event loop já tem
+ * handles (readline, stdin) que mantêm o processo vivo — timer sempre dispara.
+ */
 export function gracefulExit(code: ExitCode): void {
-    setTimeout(() => process.exit(code), EXIT_DELAY_MS).unref();
+    setTimeout(() => process.exit(code), EXIT_DELAY_MS);
 }
 
 export function setupSigint(getIsBusy: (() => boolean) | null, onExit: (() => void) | null): void {
@@ -106,7 +117,7 @@ function _createSigintHandler(getIsBusy: (() => boolean) | null, onExit: (() => 
         cleanupTempDirs();
         if (onExit) onExit();
         info('Até logo!');
-        setTimeout(() => process.exit(ExitCode.OK), EXIT_DELAY_MS).unref();
+        setTimeout(() => process.exit(ExitCode.OK), EXIT_DELAY_MS);
     }
 
     return function handler(): void {
