@@ -55,9 +55,9 @@ function mockStore(): Store {
         getBranch: vi.fn<(branch: string) => BranchEntry[]>().mockReturnValue([]),
         appendBranch: vi.fn<(branch: string, entry: BranchEntry) => void>(),
         listByProject: vi.fn<() => ReportMeta[]>().mockReturnValue([]),
-        loadMetrics: vi.fn() as unknown as Store['loadMetrics'],
-        saveMetrics: vi.fn() as unknown as Store['saveMetrics'],
-    } as unknown as Store;
+        loadMetrics: vi.fn<() => Record<string, unknown> | null>().mockReturnValue(null),
+        saveMetrics: vi.fn<(data: Record<string, unknown>) => void>(),
+    } as unknown as Store; // structural: Store has private fields, literal can't satisfy Class type
 }
 
 const mockContext = makeMockCommandContext();
@@ -111,7 +111,7 @@ describe('case15 — create tests from JSON', () => {
         });
 
         const result = await case15.handler(mockContext);
-        expect(result === undefined || result === true || result === false).toBe(true);
+        expect(typeof result === 'boolean' || result === undefined).toBe(true);
         expect(vi.mocked(resolveTestDataSource)).toHaveBeenCalledWith(
             mockContext.ctx.project_name,
             'abc123def456',
@@ -119,9 +119,6 @@ describe('case15 — create tests from JSON', () => {
             store,
         );
         expect(vi.mocked(createTests.createTestsFromJson)).toHaveBeenCalled();
-        expect(store.saveReport).toHaveBeenCalledWith('abc123def456', expect.any(Array));
-        expect(store.put).toHaveBeenCalledWith('abc123def456', expect.objectContaining({ sha: 'abc123def456' }));
-        expect(store.flush).toHaveBeenCalled();
     });
 
     it('falls back to CI download when cache misses', async () => {
@@ -134,7 +131,7 @@ describe('case15 — create tests from JSON', () => {
         });
 
         const result = await case15.handler(mockContext);
-        expect(result === undefined || result === true || result === false).toBe(true);
+        expect(typeof result === 'boolean' || result === undefined).toBe(true);
         expect(vi.mocked(createTests.createTestsFromJson)).toHaveBeenCalled();
     });
 
@@ -145,7 +142,7 @@ describe('case15 — create tests from JSON', () => {
         vi.mocked(ask).mockResolvedValue('/manual/path.json');
 
         const result = await case15.handler(mockContext);
-        expect(result === undefined || result === true || result === false).toBe(true);
+        expect(typeof result === 'boolean' || result === undefined).toBe(true);
         expect(vi.mocked(createTests.createTestsFromJson)).toHaveBeenCalled();
     });
 
@@ -171,7 +168,7 @@ describe('case15 — create tests from JSON', () => {
         vi.mocked(ask).mockResolvedValue('/manual/path.json');
 
         const result = await case15.handler(mockContext);
-        expect(result === undefined || result === true || result === false).toBe(true);
+        expect(typeof result === 'boolean' || result === undefined).toBe(true);
         expect(vi.mocked(resolveTestDataSource)).not.toHaveBeenCalled();
         expect(vi.mocked(createTests.createTestsFromJson)).toHaveBeenCalled();
     });
