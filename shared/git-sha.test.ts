@@ -204,7 +204,7 @@ describe('getCurrentBranch', () => {
         const origCwd = process.cwd();
         process.chdir(dir);
         try {
-            const sha = getHeadSha();
+            const sha = getHeadSha({});
             expect(sha).toBeNull();
         } finally {
             process.chdir(origCwd);
@@ -222,7 +222,7 @@ describe('getCurrentBranch', () => {
         const origCwd = process.cwd();
         process.chdir(dir);
         try {
-            const sha = getHeadSha();
+            const sha = getHeadSha({});
             /* Line without SHA prefix returns the ref itself, not null */
             expect(sha).toBe('refs/heads/main');
         } finally {
