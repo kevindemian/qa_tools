@@ -55,7 +55,7 @@ describe('entry-menu to module spawn — full flow (CR-3c)', () => {
             ['tsx', expect.stringContaining('git_triggers/main.ts')],
             expect.objectContaining({
                 stdio: 'inherit',
-                cwd: expect.any(String) as unknown as string,
+                cwd: expect.any(String),
             }),
         );
     });
