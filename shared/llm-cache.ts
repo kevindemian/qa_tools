@@ -101,7 +101,7 @@ function startCacheCleanup(): void {
             if (entry.expiresAt <= now) cache.delete(key);
         }
     }, CACHE_CLEANUP_INTERVAL_MS);
-    if (_cleanupTimer && typeof _cleanupTimer === 'object' && 'unref' in _cleanupTimer) {
+    if (typeof _cleanupTimer === 'object' && 'unref' in _cleanupTimer) {
         _cleanupTimer.unref();
     }
 }

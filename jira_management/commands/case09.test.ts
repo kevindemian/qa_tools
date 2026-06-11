@@ -22,6 +22,6 @@ describe('case09 — switch project', () => {
 
     it('executes without error with basic context', async () => {
         const result = await case09.handler(mockContext);
-        expect(result === undefined || result === true || result === false).toBe(true);
+        expect(result === undefined || typeof result === 'boolean').toBe(true);
     });
 });

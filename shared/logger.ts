@@ -60,7 +60,7 @@ export class Logger {
         this._filePathCached = null;
         this._fileError = false;
         this._bytesWritten = 0;
-        this._maxLogSize = config?.get?.('logMaxSize') ?? Config.get('logMaxSize');
+        this._maxLogSize = config?.get('logMaxSize') ?? Config.get('logMaxSize');
         this._config = config ?? null;
     }
 

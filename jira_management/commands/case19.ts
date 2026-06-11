@@ -165,7 +165,7 @@ async function showCoverage(c: CommandContext): Promise<void> {
 }
 
 async function handler(c: CommandContext): Promise<boolean | void> {
-    while (true) {
+    for (;;) {
         title('Histórico / Cobertura');
         const choice = await showSelect('Selecione uma opção', [
             { name: 'Mostrar histórico de execuções', value: 'a' },

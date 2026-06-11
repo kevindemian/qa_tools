@@ -41,7 +41,7 @@ function showRecentRecords(): void {
 }
 
 async function handler(_c: CommandContext): Promise<boolean | void> {
-    while (true) {
+    for (;;) {
         title('Feedback de IA');
         const choice = await showSelect('Selecione uma opção', [
             { name: 'Resumo de feedback', value: 'a' },

@@ -96,7 +96,7 @@ async function searchExistingBug(
         'project = ' + project + ' AND issuetype = Bug AND summary ~ "[Flaky] ' + escapedTitle + '" AND status != Done';
     try {
         const result = await jiraResource.searchJiraIssues(jql, 5);
-        if (result.issues && result.issues.length > 0) {
+        if (result.issues.length > 0) {
             const first = result.issues[0];
             if (first) return first.key;
         }

@@ -509,7 +509,7 @@ describe('handleHelp', () => {
     it('prints help box and prompts to continue', async () => {
         vi.spyOn(process.stdout, 'write').mockImplementationOnce(() => true);
         await mainModule.handleHelp();
-        expect(process.stdout.write).toHaveBeenCalledWith(expect.stringContaining('Ajuda'));
+        expect(process.stdout['write']).toHaveBeenCalledWith(expect.stringContaining('Ajuda'));
         expect(prompt.ask).toHaveBeenCalledWith('Pressione Enter para continuar');
     });
 });
@@ -999,7 +999,7 @@ describe('_selectProject', () => {
     });
 
     afterEach(() => {
-        gpSpy?.mockRestore();
+        gpSpy.mockRestore();
     });
 
     it('selects first project by index 1', () => {

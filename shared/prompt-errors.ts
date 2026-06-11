@@ -186,7 +186,7 @@ export function onError(
         return autoAction as 'abort' | 'skip' | 'retry';
     }
 
-    while (true) {
+    for (;;) {
         const opts: string[] = [];
         if (canRetry) opts.push('[R]etry');
         opts.push('[S]kip');

@@ -117,7 +117,7 @@ export class FsStoreBackend implements StoreBackend {
 
 export function detectProjectGitDir(startDir?: string): string | null {
     let dir = startDir ? path.resolve(startDir) : process.cwd();
-    while (true) {
+    for (;;) {
         if (fs.existsSync(path.join(dir, '.git'))) return dir;
         const parent = path.dirname(dir);
         if (parent === dir) return null;

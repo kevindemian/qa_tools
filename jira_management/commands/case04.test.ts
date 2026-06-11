@@ -23,6 +23,6 @@ describe('case04 — assign fixVersion', () => {
 
     it('executes without error with basic context', async () => {
         const result = await case04.handler(mockContext);
-        expect(result === undefined || result === true || result === false).toBe(true);
+        expect([undefined, true, false]).toContain(result);
     });
 });

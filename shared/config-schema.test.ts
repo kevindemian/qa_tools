@@ -20,7 +20,7 @@ describe('CONFIG_SCHEMA', () => {
             if (f.defaultVal === undefined) continue;
             if (f.type === 'string') expect(typeof f.defaultVal).toBe('string');
             else if (f.type === 'boolean') expect(typeof f.defaultVal).toBe('boolean');
-            else if (f.type === 'number') expect(typeof f.defaultVal).toBe('number');
+            else expect(typeof f.defaultVal).toBe('number');
         }
     });
 

@@ -207,7 +207,7 @@ export async function llmPrompt<S extends ZodSchema = never>(
             response,
         });
 
-    if (responseFormat === 'json' && !typedSchema) warnIfNotJson(response);
+    if (responseFormat === 'json') warnIfNotJson(response);
 
     setMemoryCache(cKey, response);
     setDiskCache(cKey, response);

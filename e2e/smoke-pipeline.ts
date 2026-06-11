@@ -58,7 +58,7 @@ async function pollIfNeeded(
     }
 
     const artifacts = await gh.listPipelineArtifacts(runId);
-    if (!artifacts || artifacts.length === 0) {
+    if (artifacts.length === 0) {
         rootLogger.info('  No artifacts found (expected — CI workflow does not upload artifacts yet).\n');
     } else {
         rootLogger.info('  Artifacts: ' + artifacts.length + '\n');

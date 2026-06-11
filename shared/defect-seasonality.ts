@@ -110,7 +110,7 @@ function buildHourTable(hours: SeasonalityHour[]): string {
 }
 
 export function aggregateDefectSeasonality(classifications: FailureClassification[]): SeasonalityResult {
-    if (!classifications || classifications.length === 0) {
+    if (classifications.length === 0) {
         const emptyDays: SeasonalityDay[] = DAY_SORT_ORDER.map((d) => ({
             dayOfWeek: d,
             total: 0,

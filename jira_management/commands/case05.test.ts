@@ -24,6 +24,6 @@ describe('case05 — update package version', () => {
 
     it('executes without error with basic context', async () => {
         const result = await case05.handler(mockContext);
-        expect(result === undefined || result === true || result === false).toBe(true);
+        expect([undefined, true, false]).toContain(result);
     });
 });

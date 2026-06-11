@@ -96,7 +96,7 @@ function buildHierarchyHtml(nodes: CoverageHierarchyNode[], depth = 0): string {
     let html = '<div class="tree">';
     for (const node of nodes) {
         const color = node.coveragePct >= 50 ? tokens.color.chart.pass : tokens.color.chart.fail;
-        const hasChildren = node.children && node.children.length > 0;
+        const hasChildren = node.children.length > 0;
         html += '<div class="tree-node">';
         if (hasChildren) {
             html += '<span class="tree-toggle" onclick="toggleTree(this)">▶</span>';
