@@ -11,9 +11,9 @@ import { gracefulExit } from '../shared/cli_base.js';
 
 dotenv.config({ path: path.resolve(import.meta.dirname, '../.env') });
 
-const envBaseUrl = process.env.JIRA_BASE_URL;
-const envXrayUrl = process.env.XRAY_BASE_URL;
-const envToken = process.env.JIRA_PERSONAL_TOKEN;
+const envBaseUrl = process.env['JIRA_BASE_URL'];
+const envXrayUrl = process.env['XRAY_BASE_URL'];
+const envToken = process.env['JIRA_PERSONAL_TOKEN'];
 
 if (!envBaseUrl || !envXrayUrl || !envToken) {
     rootLogger.error('ERRO: .env com JIRA_BASE_URL, XRAY_BASE_URL e JIRA_PERSONAL_TOKEN obrigatorios');
@@ -26,12 +26,12 @@ const TOKEN: string = envToken;
 
 const csvPath = path.resolve(import.meta.dirname, '../jira_management/teste_real.csv');
 
-process.env.CSV_PATH = csvPath;
-process.env.CSV_LABELS = 'e2e';
-process.env.AUTO_CONFIRM = 'true';
-process.env.ON_ERROR = 'abort';
-process.env.JIRA_PROJECT = 'ECSPOL';
-process.env.QUIET = 'false';
+process.env['CSV_PATH'] = csvPath;
+process.env['CSV_LABELS'] = 'e2e';
+process.env['AUTO_CONFIRM'] = 'true';
+process.env['ON_ERROR'] = 'abort';
+process.env['JIRA_PROJECT'] = 'ECSPOL';
+process.env['QUIET'] = 'false';
 
 if (!fs.existsSync(csvPath)) {
     rootLogger.error('CSV nao encontrado:', csvPath);
@@ -54,44 +54,44 @@ const state = {
     base_url: BASE_URL,
     sessionLog: rootLogger.child({ session: 'real-import' }),
     onBusy: (val: boolean) => {
-        console.log('  [onBusy:', val + ']');
+        rootLogger.info('  [onBusy:', val + ']');
     },
 };
 
 async function main() {
-    console.log('');
-    console.log('='.repeat(60));
-    console.log('  IMPORTACAO REAL DE TESTES NO JIRA');
-    console.log('  Projeto: ECSPOL');
-    console.log('  CSV: ' + csvPath);
-    console.log('  Jira: ' + BASE_URL);
-    console.log('  Xray: ' + XRAY_URL);
-    console.log('='.repeat(60));
-    console.log('');
+    rootLogger.info('');
+    rootLogger.info('='.repeat(60));
+    rootLogger.info('  IMPORTACAO REAL DE TESTES NO JIRA');
+    rootLogger.info('  Projeto: ECSPOL');
+    rootLogger.info('  CSV: ' + csvPath);
+    rootLogger.info('  Jira: ' + BASE_URL);
+    rootLogger.info('  Xray: ' + XRAY_URL);
+    rootLogger.info('='.repeat(60));
+    rootLogger.info('');
 
-    console.log('Iniciando importacao...');
+    rootLogger.info('Iniciando importacao...');
     const start = Date.now();
 
     try {
         const result = await createTestsFromCsv(state);
 
         const elapsed = ((Date.now() - start) / 1000).toFixed(1);
-        console.log('');
-        console.log('-'.repeat(60));
-        console.log('  RESULTADO (' + elapsed + 's)');
-        console.log('-'.repeat(60));
-        console.log('  Status:    ' + (result ? result.status : 'undefined'));
-        console.log('  Summary:   ' + (result ? result.summary : 'N/A'));
-        console.log('  Issues:    ' + (result ? result.inMemoryTasksId.join(', ') : 'N/A'));
-        console.log('  Titles:    ' + (result ? result.inMemoryTasksText.join(', ') : 'N/A'));
-        console.log('-'.repeat(60));
+        rootLogger.info('');
+        rootLogger.info('-'.repeat(60));
+        rootLogger.info('  RESULTADO (' + elapsed + 's)');
+        rootLogger.info('-'.repeat(60));
+        rootLogger.info('  Status:    ' + (result ? result.status : 'undefined'));
+        rootLogger.info('  Summary:   ' + (result ? result.summary : 'N/A'));
+        rootLogger.info('  Issues:    ' + (result ? result.inMemoryTasksId.join(', ') : 'N/A'));
+        rootLogger.info('  Titles:    ' + (result ? result.inMemoryTasksText.join(', ') : 'N/A'));
+        rootLogger.info('-'.repeat(60));
 
         if (result && result.status === 'ok') {
             const issues = result.inMemoryTasksId;
-            console.log('');
-            console.log('  Issues criadas:');
-            issues.forEach((id) => console.log('    ' + BASE_URL + '/browse/' + id));
-            console.log('');
+            rootLogger.info('');
+            rootLogger.info('  Issues criadas:');
+            issues.forEach((id) => rootLogger.info('    ' + BASE_URL + '/browse/' + id));
+            rootLogger.info('');
         }
 
         gracefulExit(result && result.status === 'ok' ? 0 : 1);

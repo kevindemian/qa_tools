@@ -12,7 +12,7 @@ async function handler(c: CommandContext): Promise<boolean | void> {
     }
     const resolved = path.resolve(dir.trim());
     updateState((state) => {
-        state.lastCypressPath = resolved;
+        state['lastCypressPath'] = resolved;
     });
     success('Diretório de testes alterado para: ' + resolved);
     c.pushHistory('config-tests', resolved, 'ok');

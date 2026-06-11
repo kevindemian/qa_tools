@@ -6,17 +6,18 @@ import { apiGet, apiPost, apiPut, projectPath } from './gitlab-api.js';
 
 const SEARCH_MRS_PAGE_SIZE = 100;
 
-export function formatPR(data: JsonObject): MergeRequestInfo | null {
+export function formatPR(data: JsonObject | null | undefined): MergeRequestInfo | null {
+    if (!data) return null;
     return {
-        iid: data.iid as string | number,
-        number: data.iid as string | number,
-        title: data.title as string,
-        state: data.state as string,
-        web_url: data.web_url as string,
-        description: data.description as string,
-        source_branch: data.source_branch as string,
-        target_branch: data.target_branch as string,
-        approved: !!data.approved,
+        iid: data['iid'] as string | number,
+        number: data['iid'] as string | number,
+        title: data['title'] as string,
+        state: data['state'] as string,
+        web_url: data['web_url'] as string,
+        description: data['description'] as string,
+        source_branch: data['source_branch'] as string,
+        target_branch: data['target_branch'] as string,
+        approved: !!data['approved'],
     };
 }
 

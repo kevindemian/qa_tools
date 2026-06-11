@@ -58,17 +58,17 @@ import case15 from '../jira_management/commands/case15.js';
 import case16 from '../jira_management/commands/case16.js';
 import PackageVersionManager from '../jira_management/package_version_manager.js';
 
-const E2E_TOKEN = process.env.E2E_JIRA_TOKEN ?? 'e2e-token';
+const E2E_TOKEN = process.env['E2E_JIRA_TOKEN'] ?? 'e2e-token';
 const HOST = 'http://localhost:1996';
 const API = HOST + '/rest/api/2';
 
 beforeAll(() => {
     nock.cleanAll();
-    process.env.HOME = tmpHome;
-    process.env.JIRA_BASE_URL = HOST;
-    process.env.JIRA_PERSONAL_TOKEN = E2E_TOKEN;
-    process.env.XRAY_BASE_URL = HOST;
-    process.env.QUIET = 'true';
+    process.env['HOME'] = tmpHome;
+    process.env['JIRA_BASE_URL'] = HOST;
+    process.env['JIRA_PERSONAL_TOKEN'] = E2E_TOKEN;
+    process.env['XRAY_BASE_URL'] = HOST;
+    process.env['QUIET'] = 'true';
     nock.disableNetConnect();
 });
 
@@ -266,7 +266,7 @@ describe('case05 — update package + release notes', () => {
         ) as Record<string, unknown>;
         const rn = fs.readFileSync(path.join(rnDir, 'ReleaseNotes.txt'), 'utf8');
 
-        expect(pkg.version).toBe('2.0.0');
+        expect(pkg['version']).toBe('2.0.0');
         expect(rn).toContain('TEST-1');
         expect(rn).toContain('TEST-2');
         expect(c.pushHistory).toHaveBeenCalledWith('atualizar-package', expect.stringContaining('2.0.0'), 'ok');

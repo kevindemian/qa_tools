@@ -15,12 +15,12 @@ export async function glGetOpenIssues(client: AxiosInstance, owner: string, repo
     return items
         .filter((item): item is Record<string, unknown> => item !== null && typeof item === 'object')
         .map((i) => ({
-            number: typeof i.iid === 'number' ? i.iid : 0,
-            title: typeof i.title === 'string' ? i.title : '',
-            state: typeof i.state === 'string' ? i.state : '',
-            updated_at: typeof i.updated_at === 'string' ? i.updated_at : '',
-            created_at: typeof i.created_at === 'string' ? i.created_at : '',
-            labels: (Array.isArray(i.labels) ? i.labels : []).filter((l): l is string => typeof l === 'string'),
-            html_url: typeof i.web_url === 'string' ? i.web_url : '',
+            number: typeof i['iid'] === 'number' ? i['iid'] : 0,
+            title: typeof i['title'] === 'string' ? i['title'] : '',
+            state: typeof i['state'] === 'string' ? i['state'] : '',
+            updated_at: typeof i['updated_at'] === 'string' ? i['updated_at'] : '',
+            created_at: typeof i['created_at'] === 'string' ? i['created_at'] : '',
+            labels: (Array.isArray(i['labels']) ? i['labels'] : []).filter((l): l is string => typeof l === 'string'),
+            html_url: typeof i['web_url'] === 'string' ? i['web_url'] : '',
         }));
 }

@@ -104,11 +104,11 @@ class ServerHistoryProvider implements TestHistoryProvider {
             }
             return data.slice(0, MAX_RUNS).map((r: unknown) => {
                 const row = r as JsonObject;
-                const startedOn = safeStr(row.startedOn);
-                const finishedOn = safeStr(row.finishedOn);
+                const startedOn = safeStr(row['startedOn']);
+                const finishedOn = safeStr(row['finishedOn']);
                 return {
-                    status: safeStr(row.status, 'UNKNOWN'),
-                    testExecKey: safeStr(row.testExecKey),
+                    status: safeStr(row['status'], 'UNKNOWN'),
+                    testExecKey: safeStr(row['testExecKey']),
                     ...(startedOn ? { startedOn } : {}),
                     ...(finishedOn ? { finishedOn } : {}),
                 };

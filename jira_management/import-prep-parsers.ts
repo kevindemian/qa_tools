@@ -46,7 +46,7 @@ export async function resolveCsvPath(csvPathInput: string | undefined): Promise<
         Config.get('csvPath') ||
         (await askFilePath('Caminho do arquivo CSV', {
             extensions: ['.csv'],
-            default: (state.lastCsvPath as string) || csvDefaultPath,
+            default: (state['lastCsvPath'] as string) || csvDefaultPath,
         }))
     );
 }
@@ -58,8 +58,8 @@ export function resolveLabels(jiraLabelsInput: string[] | undefined, configKey: 
     const labels =
         configValue ||
         prompt('Labels Jira (separadas por virgula)', {
-            hint: state.lastLabels ? 'último: ' + (state.lastLabels as string) : 'vazio para nenhuma',
-            default: (state.lastLabels as string) || '',
+            hint: state['lastLabels'] ? 'último: ' + (state['lastLabels'] as string) : 'vazio para nenhuma',
+            default: (state['lastLabels'] as string) || '',
         });
     return labels
         .split(',')

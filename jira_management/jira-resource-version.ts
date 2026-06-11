@@ -123,9 +123,10 @@ export async function createVersion(
     const payload = { description, name: versionName, project: projectName, released: false };
 
     info(creatingVersion(versionName));
-    const response = await resource.postJiraResource('version', payload);
+    const response = (await resource.postJiraResource('version', payload)) as JsonObject | null;
+    if (!response) return null;
 
-    success(versionCreated(response.name as string));
+    success(versionCreated(response['name'] as string));
     return response;
 }
 

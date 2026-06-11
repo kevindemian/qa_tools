@@ -91,10 +91,10 @@ export async function glGetPipelineJobs(
         returnNull: true,
     });
     return (data ?? []).map((j: JsonObject) => ({
-        id: j.id as string | number,
-        name: j.name as string,
-        stage: j.stage as string,
-        status: j.status as string,
+        id: j['id'] as string | number,
+        name: j['name'] as string,
+        stage: j['stage'] as string,
+        status: j['status'] as string,
     }));
 }
 
@@ -111,8 +111,8 @@ export async function glListPipelineArtifacts(
     });
     const jobs = data ?? [];
     return jobs
-        .filter((j) => j.artifacts_file || (j.artifacts && (j.artifacts as unknown[]).length > 0))
-        .map((j: JsonObject) => ({ id: j.id as string | number, name: j.name as string }));
+        .filter((j) => j['artifacts_file'] || (j['artifacts'] && (j['artifacts'] as unknown[]).length > 0))
+        .map((j: JsonObject) => ({ id: j['id'] as string | number, name: j['name'] as string }));
 }
 
 export async function glGetCICDVariables(client: AxiosInstance, owner: string, repo: string): Promise<CICDVariable[]> {

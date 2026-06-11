@@ -95,17 +95,17 @@ describe('State', () => {
         it('applies mutation and persists', () => {
             mockFs({ [STATE_PATH]: JSON.stringify({ lastProject: 'OLD' }) });
             const result = state.update((s) => {
-                s.lastProject = 'NEW';
+                s['lastProject'] = 'NEW';
             }, makeConfig());
-            expect(result.lastProject).toBe('NEW');
+            expect(result['lastProject']).toBe('NEW');
         });
 
         it('returns state with applied mutation', () => {
             mockFs({ [STATE_PATH]: JSON.stringify({ lastProject: 'OLD' }) });
             const result = state.update((s) => {
-                s.lastProject = 'NEW';
+                s['lastProject'] = 'NEW';
             }, makeConfig());
-            expect(result.lastProject).toBe('NEW');
+            expect(result['lastProject']).toBe('NEW');
         });
     });
 

@@ -68,8 +68,8 @@ describe('friendly error paths (Sprint W)', () => {
         nock.disableNetConnect();
         mockLoadTypedState.mockReturnValue({});
         mockConfirm.mockReturnValue(false);
-        delete process.env.CI;
-        delete process.env.AUTO_CONFIRM;
+        delete process.env['CI'];
+        delete process.env['AUTO_CONFIRM'];
     });
 
     afterEach(() => {
@@ -92,7 +92,7 @@ describe('friendly error paths (Sprint W)', () => {
         });
 
         it('skips prompt in CI mode', () => {
-            process.env.CI = 'true';
+            process.env['CI'] = 'true';
             const result = offerEnvSetup({ ok: false, missing: ['GIT_TOKEN'] });
             expect(result).toBe(false);
             expect(mockConfirm).not.toHaveBeenCalled();

@@ -1,4 +1,5 @@
 import { createGitHubSmokeManager } from './smoke-shared.js';
+import { rootLogger } from '../shared/logger.js';
 
 async function testGetBranch(
     gh: ReturnType<typeof createGitHubSmokeManager>,
@@ -6,19 +7,19 @@ async function testGetBranch(
 ): Promise<void> {
     const mainBranch = await gh.getBranch('main');
     if (mainBranch?.name === 'main') {
-        console.log('  OK: getBranch(main) = ' + mainBranch.name);
+        rootLogger.info('  OK: getBranch(main) = ' + mainBranch.name);
         counters.passed++;
     } else {
-        console.error('  FAIL: getBranch(main) returned ' + JSON.stringify(mainBranch));
+        rootLogger.error('  FAIL: getBranch(main) returned ' + JSON.stringify(mainBranch));
         counters.failed++;
     }
 
     const missing = await gh.getBranch('__nonexistent_branch_xyz__');
     if (missing === null) {
-        console.log('  OK: getBranch(nonexistent) = null');
+        rootLogger.info('  OK: getBranch(nonexistent) = null');
         counters.passed++;
     } else {
-        console.error('  FAIL: getBranch(nonexistent) = ' + JSON.stringify(missing));
+        rootLogger.error('  FAIL: getBranch(nonexistent) = ' + JSON.stringify(missing));
         counters.failed++;
     }
 }
@@ -29,10 +30,10 @@ async function testGetDiff(
 ): Promise<void> {
     const diff = await gh.getDiff('main', 'dev');
     if (typeof diff === 'string') {
-        console.log('  OK: getDiff(main, dev) = ' + diff.length + ' chars' + (diff ? ' (non-empty)' : ' (empty)'));
+        rootLogger.info('  OK: getDiff(main, dev) = ' + diff.length + ' chars' + (diff ? ' (non-empty)' : ' (empty)'));
         counters.passed++;
     } else {
-        console.error('  FAIL: getDiff returned ' + typeof diff);
+        rootLogger.error('  FAIL: getDiff returned ' + typeof diff);
         counters.failed++;
     }
 }
@@ -43,28 +44,28 @@ async function testListOperations(
 ): Promise<void> {
     const runs = await gh.getRecentPipelines(5);
     if (Array.isArray(runs)) {
-        console.log('  OK: getRecentPipelines(5) = ' + runs.length + ' runs');
+        rootLogger.info('  OK: getRecentPipelines(5) = ' + runs.length + ' runs');
         counters.passed++;
     } else {
-        console.error('  FAIL: getRecentPipelines returned non-array');
+        rootLogger.error('  FAIL: getRecentPipelines returned non-array');
         counters.failed++;
     }
 
     const vars = await gh.getCICDVariables();
     if (Array.isArray(vars)) {
-        console.log('  OK: getCICDVariables() = ' + vars.length + ' variables');
+        rootLogger.info('  OK: getCICDVariables() = ' + vars.length + ' variables');
         counters.passed++;
     } else {
-        console.error('  FAIL: getCICDVariables returned non-array');
+        rootLogger.error('  FAIL: getCICDVariables returned non-array');
         counters.failed++;
     }
 
     const prs = await gh.searchMergeRequests('', '', 'open');
     if (Array.isArray(prs)) {
-        console.log('  OK: searchMergeRequests(open) = ' + prs.length + ' PRs');
+        rootLogger.info('  OK: searchMergeRequests(open) = ' + prs.length + ' PRs');
         counters.passed++;
     } else {
-        console.error('  FAIL: searchMergeRequests returned non-array');
+        rootLogger.error('  FAIL: searchMergeRequests returned non-array');
         counters.failed++;
     }
 }
@@ -82,12 +83,12 @@ async function runAllApiTests(
 }
 
 function printSmokeResults(passed: number, failed: number): void {
-    console.log('\n=== Results: ' + passed + ' passed, ' + failed + ' failed ===');
+    rootLogger.info('\n=== Results: ' + passed + ' passed, ' + failed + ' failed ===');
     if (failed > 0) process.exitCode = 1;
 }
 
 async function main() {
-    console.log('=== Camada 1: Read-Only GitHub Smoke Test ===\n');
+    rootLogger.info('=== Camada 1: Read-Only GitHub Smoke Test ===\n');
 
     const gh = createGitHubSmokeManager();
     const { passed, failed } = await runAllApiTests(gh);
@@ -95,6 +96,6 @@ async function main() {
 }
 
 main().catch((err) => {
-    console.error('Unhandled error:', err);
+    rootLogger.error('Unhandled error:', err);
     process.exitCode = 1;
 });

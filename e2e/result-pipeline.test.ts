@@ -8,7 +8,7 @@ import { parseTestResults } from '../shared/result_parser.js';
 import { nonNull } from '../shared/test-utils.js';
 import { matchResultsToTests, createTestExecutionFromResults } from '../jira_management/result_reporter.js';
 
-const E2E_TOKEN = process.env.E2E_JIRA_TOKEN ?? (process.env.CI ? '' : 'e2e-token');
+const E2E_TOKEN = process.env['E2E_JIRA_TOKEN'] ?? (process.env['CI'] ? '' : 'e2e-token');
 
 const tmpHome = fs.mkdtempSync(path.join(os.tmpdir(), 'qa-e2e-'));
 
@@ -50,11 +50,11 @@ function setupJiraMocks(base: string): void {
 describe('E2E: Result Processing Pipeline', () => {
     beforeAll(() => {
         nock.cleanAll();
-        process.env.HOME = tmpHome;
-        process.env.JIRA_BASE_URL = 'http://localhost:1997/jira';
-        process.env.JIRA_PERSONAL_TOKEN = E2E_TOKEN;
-        process.env.XRAY_BASE_URL = 'http://localhost:1997/xray';
-        process.env.QUIET = 'true';
+        process.env['HOME'] = tmpHome;
+        process.env['JIRA_BASE_URL'] = 'http://localhost:1997/jira';
+        process.env['JIRA_PERSONAL_TOKEN'] = E2E_TOKEN;
+        process.env['XRAY_BASE_URL'] = 'http://localhost:1997/xray';
+        process.env['QUIET'] = 'true';
         setupJiraMocks('http://localhost:1997/jira');
     });
 

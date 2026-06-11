@@ -118,7 +118,7 @@ describe('SUB_MENUS', () => {
     });
 
     it('releases sub-menu contains version commands', () => {
-        const releases = nonNull(SUB_MENUS.releases);
+        const releases = nonNull(SUB_MENUS['releases']);
         const ids = releases.map((i) => i.id);
         expect(ids).toContain('2');
         expect(ids).toContain('3');
@@ -127,7 +127,7 @@ describe('SUB_MENUS', () => {
     });
 
     it('reports sub-menu has dashboards entry via d', () => {
-        const reports = nonNull(SUB_MENUS.reports);
+        const reports = nonNull(SUB_MENUS['reports']);
         const ids = reports.map((i) => i.id);
         expect(ids).toContain('d');
         expect(ids).toContain('17');
@@ -137,7 +137,7 @@ describe('SUB_MENUS', () => {
     });
 
     it('config sub-menu has configKey on directory items', () => {
-        const configMenu = nonNull(SUB_MENUS.config);
+        const configMenu = nonNull(SUB_MENUS['config']);
         const gitItem = configMenu.find((i) => i.id === '10');
         expect(gitItem?.configKey).toBe('gitDir');
         const cypressItem = configMenu.find((i) => i.id === '14');
@@ -166,9 +166,9 @@ describe('CATEGORY_TITLES', () => {
     });
 
     it('contains expected title strings', () => {
-        expect(CATEGORY_TITLES.reports).toContain('RELATÓRIOS');
-        expect(CATEGORY_TITLES.tests).toContain('TESTE');
-        expect(CATEGORY_TITLES.releases).toContain('RELEASES');
+        expect(CATEGORY_TITLES['reports']).toContain('RELATÓRIOS');
+        expect(CATEGORY_TITLES['tests']).toContain('TESTE');
+        expect(CATEGORY_TITLES['releases']).toContain('RELEASES');
     });
 });
 

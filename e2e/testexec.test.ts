@@ -7,7 +7,7 @@ import createTests from '../jira_management/create_tests.js';
 
 const { createTestExecution } = createTests;
 
-const E2E_TOKEN = process.env.E2E_JIRA_TOKEN ?? (process.env.CI ? '' : 'e2e-token');
+const E2E_TOKEN = process.env['E2E_JIRA_TOKEN'] ?? (process.env['CI'] ? '' : 'e2e-token');
 const JIRA = 'http://localhost:1998/jira';
 
 let testExecutionCreator: TestExecutionCreator;
@@ -44,7 +44,7 @@ beforeAll(() => {
         .times(2)
         .reply(201, (_, body) => {
             const b = body as Record<string, unknown>;
-            const keys = (b.fields as Record<string, unknown>).customfield_13715 as string[];
+            const keys = (b['fields'] as Record<string, unknown>)['customfield_13715'] as string[];
             return { key: 'EXEC-' + keys.length, id: '20001' };
         });
 

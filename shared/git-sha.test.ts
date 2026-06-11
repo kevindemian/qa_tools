@@ -131,12 +131,12 @@ describe('getHeadSha', () => {
     });
 
     it('uses process.env when env argument is omitted', () => {
-        const origGithubSha = process.env.GITHUB_SHA;
-        const origCiSha = process.env.CI_COMMIT_SHA;
-        const origBuildSha = process.env.BUILD_SOURCEVERSION;
-        delete process.env.GITHUB_SHA;
-        delete process.env.CI_COMMIT_SHA;
-        delete process.env.BUILD_SOURCEVERSION;
+        const origGithubSha = process.env['GITHUB_SHA'];
+        const origCiSha = process.env['CI_COMMIT_SHA'];
+        const origBuildSha = process.env['BUILD_SOURCEVERSION'];
+        delete process.env['GITHUB_SHA'];
+        delete process.env['CI_COMMIT_SHA'];
+        delete process.env['BUILD_SOURCEVERSION'];
 
         const fakeDir = path.join(tmpDir, 'no-git-omit-env');
         fs.mkdirSync(fakeDir, { recursive: true });
@@ -147,9 +147,9 @@ describe('getHeadSha', () => {
             expect(result).toBeNull();
         } finally {
             process.chdir(origCwd);
-            if (origGithubSha) process.env.GITHUB_SHA = origGithubSha;
-            if (origCiSha) process.env.CI_COMMIT_SHA = origCiSha;
-            if (origBuildSha) process.env.BUILD_SOURCEVERSION = origBuildSha;
+            if (origGithubSha) process.env['GITHUB_SHA'] = origGithubSha;
+            if (origCiSha) process.env['CI_COMMIT_SHA'] = origCiSha;
+            if (origBuildSha) process.env['BUILD_SOURCEVERSION'] = origBuildSha;
         }
     });
 });
@@ -198,12 +198,12 @@ describe('getCurrentBranch', () => {
     });
 
     it('uses process.env when env argument is omitted for getCurrentBranch', () => {
-        const origRef = process.env.GITHUB_REF_NAME;
-        const origBranch = process.env.CI_COMMIT_BRANCH;
-        const origBuildBranch = process.env.BUILD_SOURCEBRANCHNAME;
-        delete process.env.GITHUB_REF_NAME;
-        delete process.env.CI_COMMIT_BRANCH;
-        delete process.env.BUILD_SOURCEBRANCHNAME;
+        const origRef = process.env['GITHUB_REF_NAME'];
+        const origBranch = process.env['CI_COMMIT_BRANCH'];
+        const origBuildBranch = process.env['BUILD_SOURCEBRANCHNAME'];
+        delete process.env['GITHUB_REF_NAME'];
+        delete process.env['CI_COMMIT_BRANCH'];
+        delete process.env['BUILD_SOURCEBRANCHNAME'];
 
         const fakeDir = path.join(tmpDir, 'no-git-omit-env-branch');
         fs.mkdirSync(fakeDir, { recursive: true });
@@ -214,9 +214,9 @@ describe('getCurrentBranch', () => {
             expect(result).toBeNull();
         } finally {
             process.chdir(origCwd);
-            if (origRef) process.env.GITHUB_REF_NAME = origRef;
-            if (origBranch) process.env.CI_COMMIT_BRANCH = origBranch;
-            if (origBuildBranch) process.env.BUILD_SOURCEBRANCHNAME = origBuildBranch;
+            if (origRef) process.env['GITHUB_REF_NAME'] = origRef;
+            if (origBranch) process.env['CI_COMMIT_BRANCH'] = origBranch;
+            if (origBuildBranch) process.env['BUILD_SOURCEBRANCHNAME'] = origBuildBranch;
         }
     });
 });

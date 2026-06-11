@@ -1,47 +1,48 @@
 import { createGitHubSmokeManager } from './smoke-shared.js';
 import { generatePrDescription } from '../git_triggers/ai-pr-desc.js';
 import Config from '../shared/config.js';
+import { rootLogger } from '../shared/logger.js';
 
 function hasLlmKeys(): boolean {
     return !!(Config.get('llmFastApiKey') || Config.get('llmApiKey'));
 }
 
 async function main() {
-    console.log('=== Camada 2: LLM Cross-Validation Smoke Test ===\n');
+    rootLogger.info('=== Camada 2: LLM Cross-Validation Smoke Test ===\n');
 
     if (!hasLlmKeys()) {
-        console.log('SKIP: No LLM API keys configured (LLM_FAST_API_KEY or LLM_API_KEY)');
-        console.log('  Set them in .env to run this test.');
+        rootLogger.info('SKIP: No LLM API keys configured (LLM_FAST_API_KEY or LLM_API_KEY)');
+        rootLogger.info('  Set them in .env to run this test.');
         return;
     }
 
     const gh = createGitHubSmokeManager();
 
-    console.log('Fetching real diff between main and dev...');
+    rootLogger.info('Fetching real diff between main and dev...');
     const diff = await gh.getDiff('main', 'dev');
     if (!diff) {
-        console.log('SKIP: diff is empty (branches may have no divergence)');
+        rootLogger.info('SKIP: diff is empty (branches may have no divergence)');
         return;
     }
-    console.log('  Diff: ' + diff.length + ' chars\n');
+    rootLogger.info('  Diff: ' + diff.length + ' chars\n');
 
-    console.log('Generating PR description via LLM (tier: fast)...');
+    rootLogger.info('Generating PR description via LLM (tier: fast)...');
     const description = await generatePrDescription(gh, 'main', 'dev');
 
     if (!description) {
-        console.error('FAIL: generatePrDescription returned empty string');
+        rootLogger.error('FAIL: generatePrDescription returned empty string');
         process.exitCode = 1;
         return;
     }
 
-    console.log('\n=== Generated PR Description ===');
-    console.log(description);
-    console.log('=== End ===\n');
+    rootLogger.info('\n=== Generated PR Description ===');
+    rootLogger.info(description);
+    rootLogger.info('=== End ===\n');
 
-    console.log('OK: LLM PR description generated successfully (' + description.length + ' chars)');
+    rootLogger.info('OK: LLM PR description generated successfully (' + description.length + ' chars)');
 }
 
 main().catch((err) => {
-    console.error('Unhandled error:', err);
+    rootLogger.error('Unhandled error:', err);
     process.exitCode = 1;
 });

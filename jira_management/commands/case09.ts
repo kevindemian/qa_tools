@@ -13,7 +13,7 @@ async function handler(c: CommandContext): Promise<boolean | void> {
     c.ctx.lastOperation = 'Projeto alterado para ' + c.ctx.project_name;
     c.pushHistory('trocar-projeto', c.ctx.project_name, 'ok');
     updateState((state) => {
-        state.lastProject = c.ctx.project_name;
+        state['lastProject'] = c.ctx.project_name;
     });
     success('Projeto alterado para: ' + c.ctx.project_name);
 }

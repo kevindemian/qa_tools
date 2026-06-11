@@ -110,10 +110,10 @@ describe('palette', () => {
     });
 
     it('disables chalk when NO_COLOR env is set', async () => {
-        process.env.NO_COLOR = '1';
+        process.env['NO_COLOR'] = '1';
         const chalkMod: { level: number } = await vi.importActual('chalk');
         expect(chalkMod.level).toBe(0);
-        delete process.env.NO_COLOR;
+        delete process.env['NO_COLOR'];
     });
 
     it('getColorLevel returns current chalk level', () => {

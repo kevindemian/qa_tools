@@ -32,8 +32,8 @@ function isWsl(): boolean {
 
 /** Get a writable Windows temp directory under WSL (`/mnt/c/...`). */
 export function getWinTempDir(): string | null {
-    if (process.env.TEMP && process.env.TEMP.startsWith('/')) return process.env.TEMP;
-    if (process.env.TMP && process.env.TMP.startsWith('/')) return process.env.TMP;
+    if (process.env['TEMP'] && process.env['TEMP'].startsWith('/')) return process.env['TEMP'];
+    if (process.env['TMP'] && process.env['TMP'].startsWith('/')) return process.env['TMP'];
     try {
         const raw = execFileSync('cmd.exe', ['/c', 'echo', '%TEMP%'], {
             encoding: 'utf8',

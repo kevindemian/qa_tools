@@ -26,7 +26,7 @@ class CypressResource {
     async getCypressResource(resourceUrl: string, opts: { headers?: Record<string, string> } = {}): Promise<unknown> {
         try {
             const config: JsonObject = {};
-            if (opts.headers) config.headers = opts.headers;
+            if (opts.headers) config['headers'] = opts.headers;
             const response = await this.client.get(resourceUrl, config);
             return response.data;
         } catch (err: unknown) {

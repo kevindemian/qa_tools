@@ -39,7 +39,7 @@ describe('precomputeCategories', () => {
     it('categorizes failed tests', () => {
         const tests: FlatTest[] = [{ title: 'fail', state: 'failed', error: 'TimeoutError' } as FlatTest];
         const cats = precomputeCategories(tests);
-        expect(cats.fail).toBeTruthy();
+        expect(cats['fail']).toBeTruthy();
     });
 
     it('skips failed tests without error', () => {

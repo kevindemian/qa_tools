@@ -259,9 +259,9 @@ export async function fileToJira(
         labels: ['bug-report', report.source],
     };
 
-    if (report.severity === 'critical') fields.priority = { name: 'Highest' };
-    else if (report.severity === 'major') fields.priority = { name: 'High' };
-    if (report.component) fields.components = [{ name: report.component }];
+    if (report.severity === 'critical') fields['priority'] = { name: 'Highest' };
+    else if (report.severity === 'major') fields['priority'] = { name: 'High' };
+    if (report.component) fields['components'] = [{ name: report.component }];
 
     const result = await jiraResource.postJiraResource<{ key: string }>('issue', { fields });
     return result.key;

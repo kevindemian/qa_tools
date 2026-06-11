@@ -130,15 +130,15 @@ export function pushHistory(op: string, detail: string, status: string): void {
     sessionContext.pushHistory(op, detail, status);
     updateState((state: StateContainer) => {
         let history: Array<{ op: string; detail: string; status: string; ts: string }>;
-        if (Array.isArray(state.history)) {
-            history = state.history as Array<{ op: string; detail: string; status: string; ts: string }>;
+        if (Array.isArray(state['history'])) {
+            history = state['history'] as Array<{ op: string; detail: string; status: string; ts: string }>;
         } else {
             history = [];
-            state.history = history;
+            state['history'] = history;
         }
         history.push({ op, detail, status, ts: new Date().toISOString() });
         if (history.length > 50) {
-            state.history = history.slice(-50);
+            state['history'] = history.slice(-50);
         }
     });
 }

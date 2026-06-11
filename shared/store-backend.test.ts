@@ -34,7 +34,7 @@ describe('FsStoreBackend', () => {
         const full = path.join(dir, 'subdir', 'test.json');
         expect(fs.existsSync(full)).toBe(true);
         const content = JSON.parse(fs.readFileSync(full, 'utf8')) as Record<string, string>;
-        expect(content.key).toBe('value');
+        expect(content['key']).toBe('value');
     });
 
     it('read returns null for missing file', () => {
@@ -110,7 +110,7 @@ describe('GitStoreBackend', () => {
         const result = backend.read('test.json');
         expect(result).not.toBeNull();
         if (result) {
-            expect((JSON.parse(result.toString()) as Record<string, number>).a).toBe(1);
+            expect((JSON.parse(result.toString()) as Record<string, number>)['a']).toBe(1);
         }
     });
 
@@ -281,18 +281,18 @@ describe('detectProjectGitDir', () => {
 });
 
 describe('detectStoreBackend', () => {
-    const origXdg = process.env.XDG_STATE_HOME;
-    const origHome = process.env.HOME;
+    const origXdg = process.env['XDG_STATE_HOME'];
+    const origHome = process.env['HOME'];
 
     afterAll(() => {
-        if (origXdg) process.env.XDG_STATE_HOME = origXdg;
-        else delete process.env.XDG_STATE_HOME;
-        if (origHome) process.env.HOME = origHome;
-        else delete process.env.HOME;
+        if (origXdg) process.env['XDG_STATE_HOME'] = origXdg;
+        else delete process.env['XDG_STATE_HOME'];
+        if (origHome) process.env['HOME'] = origHome;
+        else delete process.env['HOME'];
     });
 
     it('returns FsStoreBackend when no git and no project dir', () => {
-        process.env.XDG_STATE_HOME = path.join(tmpDir, 'xdg-fallback');
+        process.env['XDG_STATE_HOME'] = path.join(tmpDir, 'xdg-fallback');
         const backend = detectStoreBackend();
         const hasGit = (() => {
             try {
@@ -319,21 +319,21 @@ describe('detectStoreBackend', () => {
     it('falls through to XDG when projectDir has no .git', () => {
         const projDir = path.join(tmpDir, 'proj-no-git');
         fs.mkdirSync(projDir, { recursive: true });
-        const prevXdg = process.env.XDG_STATE_HOME;
+        const prevXdg = process.env['XDG_STATE_HOME'];
         const xdgDir = path.join(tmpDir, 'xdg-fallback-no-git');
-        process.env.XDG_STATE_HOME = xdgDir;
+        process.env['XDG_STATE_HOME'] = xdgDir;
         try {
             const backend = detectStoreBackend(projDir);
             expect(backend.constructor.name).toBe('GitStoreBackend');
         } finally {
-            if (prevXdg) process.env.XDG_STATE_HOME = prevXdg;
-            else delete process.env.XDG_STATE_HOME;
+            if (prevXdg) process.env['XDG_STATE_HOME'] = prevXdg;
+            else delete process.env['XDG_STATE_HOME'];
         }
     });
 
     it('returns FsStoreBackend when git dir check throws', () => {
         const xdgDir = path.join(tmpDir, 'xdg-throw-fallback');
-        process.env.XDG_STATE_HOME = xdgDir;
+        process.env['XDG_STATE_HOME'] = xdgDir;
 
         const origExists = fs.existsSync;
         const existsSpy = vi.spyOn(fs, 'existsSync').mockImplementation((p) => {

@@ -42,9 +42,9 @@ beforeEach(() => {
     vi.clearAllMocks();
     process.env = { ...OLD_ENV };
     process.argv = [...OLD_ARGV];
-    delete process.env.CI;
-    delete process.env.AUTO_CONFIRM;
-    delete process.env.SKIP_FIRST_RUN;
+    delete process.env['CI'];
+    delete process.env['AUTO_CONFIRM'];
+    delete process.env['SKIP_FIRST_RUN'];
 });
 
 afterEach(() => {
@@ -54,19 +54,19 @@ afterEach(() => {
 
 describe('isFirstRun', () => {
     it('returns false when CI=true', async () => {
-        process.env.CI = 'true';
+        process.env['CI'] = 'true';
         const { isFirstRun } = await loadModule();
         expect(isFirstRun()).toBe(false);
     });
 
     it('returns false when AUTO_CONFIRM=true', async () => {
-        process.env.AUTO_CONFIRM = 'true';
+        process.env['AUTO_CONFIRM'] = 'true';
         const { isFirstRun } = await loadModule();
         expect(isFirstRun()).toBe(false);
     });
 
     it('returns false when SKIP_FIRST_RUN=true', async () => {
-        process.env.SKIP_FIRST_RUN = 'true';
+        process.env['SKIP_FIRST_RUN'] = 'true';
         const { isFirstRun } = await loadModule();
         expect(isFirstRun()).toBe(false);
     });
@@ -112,7 +112,7 @@ describe('_markFirstRunDone', () => {
         expect(typeof cb).toBe('function');
         const state: Record<string, unknown> = {};
         cb(state);
-        expect(state._firstRunDone).toBe(true);
+        expect(state['_firstRunDone']).toBe(true);
     });
 });
 

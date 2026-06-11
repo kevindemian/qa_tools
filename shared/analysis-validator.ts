@@ -36,7 +36,7 @@ interface AnalysisTestShape {
 function parseTests(artifact: unknown): AnalysisTestShape[] {
     if (typeof artifact !== 'object' || artifact === null) return [];
     const obj = artifact as Record<string, unknown>;
-    if (Array.isArray(obj.tests)) return obj.tests as AnalysisTestShape[];
+    if (Array.isArray(obj['tests'])) return obj['tests'] as AnalysisTestShape[];
     return [];
 }
 

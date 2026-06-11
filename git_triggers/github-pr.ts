@@ -6,16 +6,17 @@ import { apiGet, apiPost, apiPatch } from './github-api.js';
 
 const SEARCH_PRS_PAGE_SIZE = 100;
 
-export function formatPR(data: JsonObject): MergeRequestInfo | null {
+export function formatPR(data: JsonObject | null | undefined): MergeRequestInfo | null {
+    if (!data) return null;
     return {
-        iid: data.number as string | number,
-        number: data.number as string | number,
-        title: data.title as string,
-        state: data.merged ? 'merged' : data.state === 'closed' ? 'closed' : 'opened',
-        web_url: data.html_url as string,
-        description: data.body as string,
-        source_branch: (data.head as JsonObject).ref as string,
-        target_branch: (data.base as JsonObject).ref as string,
+        iid: data['number'] as string | number,
+        number: data['number'] as string | number,
+        title: data['title'] as string,
+        state: data['merged'] ? 'merged' : data['state'] === 'closed' ? 'closed' : 'opened',
+        web_url: data['html_url'] as string,
+        description: data['body'] as string,
+        ...(data['head'] ? { source_branch: (data['head'] as JsonObject)['ref'] as string } : {}),
+        ...(data['base'] ? { target_branch: (data['base'] as JsonObject)['ref'] as string } : {}),
         approved: false,
     };
 }
@@ -101,9 +102,9 @@ export async function prSearchMergeRequests(
 ): Promise<MergeRequestInfo[]> {
     const repoPath = '/repos/' + owner + '/' + repo;
     const params: JsonObject = { per_page: SEARCH_PRS_PAGE_SIZE };
-    if (sourceBranch) params.head = owner + ':' + sourceBranch;
-    if (targetBranch) params.base = targetBranch;
-    if (searchStatus) params.state = searchStatus === 'opened' ? 'open' : searchStatus;
+    if (sourceBranch) params['head'] = owner + ':' + sourceBranch;
+    if (targetBranch) params['base'] = targetBranch;
+    if (searchStatus) params['state'] = searchStatus === 'opened' ? 'open' : searchStatus;
 
     const data = await apiGet<JsonObject[]>(client, repoPath + '/pulls', {
         operation: 'buscar PRs',
@@ -134,7 +135,7 @@ export async function prAcceptMergeRequest(
             return pr;
         }
         const body: JsonObject = {};
-        if (shouldRemoveSourceBranch) body.delete_branch_on_merge = true;
+        if (shouldRemoveSourceBranch) body['delete_branch_on_merge'] = true;
         const response = await client.put<JsonObject>(repoPath + '/pulls/' + iid + '/merge', body);
         return formatPR(response.data);
     } catch (err) {
@@ -153,5 +154,5 @@ export async function prIsApproved(
         operation: 'verificar reviews',
         returnNull: true,
     });
-    return (data || []).some((r: JsonObject) => r.state === 'APPROVED');
+    return (data || []).some((r: JsonObject) => r['state'] === 'APPROVED');
 }

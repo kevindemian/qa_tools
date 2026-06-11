@@ -31,7 +31,7 @@ beforeEach(() => {
 
 describe('publishReport', () => {
     it('should call aws s3 cp for s3 target', () => {
-        process.env.AWS_S3_BUCKET = 's3://my-bucket';
+        process.env['AWS_S3_BUCKET'] = 's3://my-bucket';
         publishReport({ target: 's3', filePath: './report.html' });
         expect(mockExecFileSync).toHaveBeenCalledWith(
             'aws',
@@ -50,7 +50,7 @@ describe('publishReport', () => {
     });
 
     it('should not execute shell when path contains injection characters', () => {
-        process.env.AWS_S3_BUCKET = 's3://bucket';
+        process.env['AWS_S3_BUCKET'] = 's3://bucket';
         const maliciousPath = './report; rm -rf /; .html';
         publishReport({ target: 's3', filePath: maliciousPath });
         expect(mockExecFileSync).toHaveBeenCalledWith(
@@ -62,14 +62,14 @@ describe('publishReport', () => {
     });
 
     it('should log error when s3 dest is missing', () => {
-        delete process.env.AWS_S3_BUCKET;
+        delete process.env['AWS_S3_BUCKET'];
         publishReport({ target: 's3', filePath: './report.html' });
         expect(mockExecFileSync).not.toHaveBeenCalled();
         expect(mockLoggerError).toHaveBeenCalledWith('S3 publish requires either --dest or AWS_S3_BUCKET env var');
     });
 
     it('should log error when s3 publish fails', () => {
-        process.env.AWS_S3_BUCKET = 's3://bucket';
+        process.env['AWS_S3_BUCKET'] = 's3://bucket';
         mockExecFileSync.mockImplementationOnce(() => {
             throw new Error('aws failed');
         });

@@ -15,7 +15,7 @@ vi.mock('fs', async (importOriginal) => {
     const mockedReadFileSync = vi.fn((p: string) => {
         if (p.includes('providers.json')) return '{"proj-a":{"provider":"github"},"proj-b":{}}';
         if (p.includes('projects.json')) return '{"proj-a":"111","proj-b":"222"}';
-        return (mod.readFileSync as (...args: unknown[]) => unknown)(p, 'utf8');
+        return (mod['readFileSync'] as (...args: unknown[]) => unknown)(p, 'utf8');
     });
     return {
         ...mod,
@@ -263,8 +263,8 @@ describe('getProviderForProject', () => {
 describe('buildActionChoices', () => {
     it('includes schedule options when provider is gitlab', () => {
         const choices = mainModule.buildActionChoices();
-        expect(choices.some((c) => c.value === '2')).toBe(true);
-        expect(choices.some((c) => c.value === '3')).toBe(true);
+        expect(choices.some((c) => c['value'] === '2')).toBe(true);
+        expect(choices.some((c) => c['value'] === '3')).toBe(true);
     });
 });
 

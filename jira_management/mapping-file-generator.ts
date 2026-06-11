@@ -55,7 +55,7 @@ class MappingFileGenerator {
             if (test.precondition && test.precondition.value) {
                 m.precondition = test.precondition.value;
             }
-            if (test.steps.length > 0) {
+            if (test.steps.length) {
                 m.steps = test.steps.map((s) => ({
                     Action: s.fields.Action || '',
                     Data: s.fields.Data || '',

@@ -10,8 +10,8 @@ import JiraResource from '../jira_management/jira_resource.js';
 import { rootLogger } from '../shared/logger.js';
 import { gracefulExit } from '../shared/cli_base.js';
 
-const JIRA_BASE = process.env.JIRA_BASE_URL || 'https://jiraprod.srv.euronext.com';
-const TOKEN = process.env.JIRA_PERSONAL_TOKEN || '';
+const JIRA_BASE = process.env['JIRA_BASE_URL'] || 'https://jiraprod.srv.euronext.com';
+const TOKEN = process.env['JIRA_PERSONAL_TOKEN'] || '';
 
 function loadCtrfFixture(): { ctrfPath: string; result: ReturnType<typeof parseTestResultsFile> } {
     const ctrfArg = process.argv.find((a) => a.startsWith('--ctrf='));
@@ -35,7 +35,7 @@ function setupMappingFile(): void {
             tests?: Array<{ title: string; key: string }>;
         };
         const mappingCopy = writeReport('mapping.json', JSON.stringify(raw, null, 2));
-        process.env.QA_MAPPING_PATH = mappingCopy;
+        process.env['QA_MAPPING_PATH'] = mappingCopy;
         rootLogger.info(`Mapping loaded: ${mappingPath}`);
     } else {
         const mapping = {
@@ -45,7 +45,7 @@ function setupMappingFile(): void {
             ],
         };
         const mappingPath = writeReport('mapping.json', JSON.stringify(mapping, null, 2));
-        process.env.QA_MAPPING_PATH = mappingPath;
+        process.env['QA_MAPPING_PATH'] = mappingPath;
         rootLogger.info(`Mapping (default): ${mappingPath}`);
     }
 }
@@ -59,10 +59,10 @@ function buildXrayHistoryHtml(historyRows: Array<{ key: string; runs: unknown[] 
             html += '<ul style="font-size:0.85rem;margin:4px 0 0 16px">';
             for (const run of h.runs) {
                 const r = run as Record<string, unknown>;
-                const status = (r.status as string) || 'TODO';
+                const status = (r['status'] as string) || 'TODO';
                 const color = status === 'PASS' ? '#22c55e' : status === 'FAIL' ? '#ef4444' : '#6b7280';
-                html += `<li>${(r.testExecKey as string) || '?'} — <span style="color:${color};font-weight:600">${status}</span>`;
-                if (r.finishedOn) html += ` (${(r.finishedOn as string).slice(0, 10)})`;
+                html += `<li>${(r['testExecKey'] as string) || '?'} — <span style="color:${color};font-weight:600">${status}</span>`;
+                if (r['finishedOn']) html += ` (${(r['finishedOn'] as string).slice(0, 10)})`;
                 html += '</li>';
             }
             html += '</ul>';
@@ -101,8 +101,8 @@ async function fetchXrayHistory(): Promise<string> {
 }
 
 async function fetchCiCdContext(): Promise<string> {
-    const ghToken = process.env.GITHUB_TOKEN;
-    const ghRepo = process.env.GITHUB_REPOSITORY || 'kevindemian/qa_tools';
+    const ghToken = process.env['GITHUB_TOKEN'];
+    const ghRepo = process.env['GITHUB_REPOSITORY'] || 'kevindemian/qa_tools';
 
     if (!ghToken) return '';
 

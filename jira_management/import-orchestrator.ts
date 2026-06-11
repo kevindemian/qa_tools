@@ -174,7 +174,7 @@ async function postProcessCheckpoint(opts: PostProcessCheckpointOptions): Promis
     const { results, tests, projectName, inMemoryTasksId, jiraLabels, sourcePath, sourceType, linker, info } = opts;
     if (results.filter((r) => r.status === 'ok').length === tests.length) {
         updateState((state) => {
-            delete state._checkpoint;
+            delete state['_checkpoint'];
         });
     }
 

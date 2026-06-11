@@ -10,57 +10,57 @@ import {
 } from './case17-helpers.js';
 
 describe('isGitHubCi', () => {
-    const OGT = process.env.GITHUB_TOKEN;
-    const OGR = process.env.GITHUB_REPOSITORY;
+    const OGT = process.env['GITHUB_TOKEN'];
+    const OGR = process.env['GITHUB_REPOSITORY'];
 
     afterEach(() => {
-        process.env.GITHUB_TOKEN = OGT;
-        process.env.GITHUB_REPOSITORY = OGR;
+        process.env['GITHUB_TOKEN'] = OGT;
+        process.env['GITHUB_REPOSITORY'] = OGR;
     });
 
     it('returns true when both env vars are set', () => {
-        process.env.GITHUB_TOKEN = 'token';
-        process.env.GITHUB_REPOSITORY = 'owner/repo';
+        process.env['GITHUB_TOKEN'] = 'token';
+        process.env['GITHUB_REPOSITORY'] = 'owner/repo';
         expect(isGitHubCi()).toBe(true);
     });
 
     it('returns false when GITHUB_TOKEN missing', () => {
-        delete process.env.GITHUB_TOKEN;
-        process.env.GITHUB_REPOSITORY = 'owner/repo';
+        delete process.env['GITHUB_TOKEN'];
+        process.env['GITHUB_REPOSITORY'] = 'owner/repo';
         expect(isGitHubCi()).toBe(false);
     });
 
     it('returns false when GITHUB_REPOSITORY missing', () => {
-        process.env.GITHUB_TOKEN = 'token';
-        delete process.env.GITHUB_REPOSITORY;
+        process.env['GITHUB_TOKEN'] = 'token';
+        delete process.env['GITHUB_REPOSITORY'];
         expect(isGitHubCi()).toBe(false);
     });
 });
 
 describe('isGitLabCi', () => {
-    const OGT = process.env.CI_JOB_TOKEN;
-    const OGP = process.env.CI_PROJECT_ID;
+    const OGT = process.env['CI_JOB_TOKEN'];
+    const OGP = process.env['CI_PROJECT_ID'];
 
     afterEach(() => {
-        process.env.CI_JOB_TOKEN = OGT;
-        process.env.CI_PROJECT_ID = OGP;
+        process.env['CI_JOB_TOKEN'] = OGT;
+        process.env['CI_PROJECT_ID'] = OGP;
     });
 
     it('returns true when both env vars are set', () => {
-        process.env.CI_JOB_TOKEN = 'token';
-        process.env.CI_PROJECT_ID = '123';
+        process.env['CI_JOB_TOKEN'] = 'token';
+        process.env['CI_PROJECT_ID'] = '123';
         expect(isGitLabCi()).toBe(true);
     });
 
     it('returns false when CI_JOB_TOKEN missing', () => {
-        delete process.env.CI_JOB_TOKEN;
-        process.env.CI_PROJECT_ID = '123';
+        delete process.env['CI_JOB_TOKEN'];
+        process.env['CI_PROJECT_ID'] = '123';
         expect(isGitLabCi()).toBe(false);
     });
 
     it('returns false when CI_PROJECT_ID missing', () => {
-        process.env.CI_JOB_TOKEN = 'token';
-        delete process.env.CI_PROJECT_ID;
+        process.env['CI_JOB_TOKEN'] = 'token';
+        delete process.env['CI_PROJECT_ID'];
         expect(isGitLabCi()).toBe(false);
     });
 });

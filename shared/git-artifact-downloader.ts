@@ -113,7 +113,7 @@ async function processGitLabPipelineArtifacts(
     pipeline: Record<string, unknown>,
     client: ReturnType<typeof createHttpClient>,
 ): Promise<RunStats[]> {
-    const jobsResp = await client.get<GitLabJob[]>(`/projects/${projectId}/pipelines/${String(pipeline.id)}/jobs`);
+    const jobsResp = await client.get<GitLabJob[]>(`/projects/${projectId}/pipelines/${String(pipeline['id'])}/jobs`);
     const jobs: GitLabJob[] = jobsResp.data;
     const testJob = jobs.find((j) => {
         const name = (j.name || '').toLowerCase();
@@ -133,8 +133,8 @@ async function processGitLabPipelineArtifacts(
         const summary = parsed.results?.summary;
         if (summary) {
             stats.push({
-                runId: pipeline.id as number,
-                createdAt: (pipeline.created_at as string) || '',
+                runId: pipeline['id'] as number,
+                createdAt: (pipeline['created_at'] as string) || '',
                 passed: summary.passed || 0,
                 failed: summary.failed || 0,
                 skipped: summary.skipped || 0,

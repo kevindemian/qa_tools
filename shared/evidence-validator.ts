@@ -35,33 +35,33 @@ function extractEvidenceStrings(artifact: unknown): string[] {
     const obj = artifact as Record<string, unknown>;
 
     // Direct evidence[] field at root
-    if (Array.isArray(obj.evidence)) {
-        results.push(...obj.evidence.filter((e): e is string => typeof e === 'string'));
+    if (Array.isArray(obj['evidence'])) {
+        results.push(...obj['evidence'].filter((e): e is string => typeof e === 'string'));
     }
 
     // Evidence in individual tests
-    const tests = obj.tests;
+    const tests = obj['tests'];
     if (Array.isArray(tests)) {
         for (const test of tests) {
             if (typeof test === 'object' && test !== null) {
                 const testObj = test as Record<string, unknown>;
-                if (Array.isArray(testObj.evidence)) {
-                    results.push(...testObj.evidence.filter((e): e is string => typeof e === 'string'));
+                if (Array.isArray(testObj['evidence'])) {
+                    results.push(...testObj['evidence'].filter((e): e is string => typeof e === 'string'));
                 }
                 // Evidence in coverage references
-                if (Array.isArray(testObj.coverage)) {
-                    for (const cov of testObj.coverage) {
+                if (Array.isArray(testObj['coverage'])) {
+                    for (const cov of testObj['coverage']) {
                         if (typeof cov === 'object' && cov !== null) {
                             const covObj = cov as Record<string, unknown>;
-                            if (typeof covObj.criterionText === 'string') {
-                                results.push(covObj.criterionText);
+                            if (typeof covObj['criterionText'] === 'string') {
+                                results.push(covObj['criterionText']);
                             }
                         }
                     }
                 }
                 // Steps as implicit evidence
-                if (Array.isArray(testObj.steps)) {
-                    for (const step of testObj.steps) {
+                if (Array.isArray(testObj['steps'])) {
+                    for (const step of testObj['steps']) {
                         if (typeof step === 'string' && step.length > 20) {
                             results.push(step);
                         }

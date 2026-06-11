@@ -101,16 +101,16 @@ function extractTestTexts(artifact: unknown): string[] {
     if (typeof artifact !== 'object' || artifact === null) return texts;
 
     const obj = artifact as Record<string, unknown>;
-    const tests = obj.tests;
+    const tests = obj['tests'];
     if (Array.isArray(tests)) {
         for (const test of tests) {
             if (typeof test !== 'object' || test === null) continue;
             const t = test as Record<string, unknown>;
-            if (typeof t.title === 'string') texts.push(t.title);
-            if (Array.isArray(t.steps)) {
-                texts.push(t.steps.filter((s): s is string => typeof s === 'string').join(' '));
+            if (typeof t['title'] === 'string') texts.push(t['title']);
+            if (Array.isArray(t['steps'])) {
+                texts.push(t['steps'].filter((s): s is string => typeof s === 'string').join(' '));
             }
-            if (typeof t.expectedResult === 'string') texts.push(t.expectedResult);
+            if (typeof t['expectedResult'] === 'string') texts.push(t['expectedResult']);
         }
     }
     return texts;
@@ -126,9 +126,9 @@ export function recalculateCoverage(artifact: unknown, context: ValidationContex
     let declaredCoverage: number | null = null;
     if (typeof artifact === 'object' && artifact !== null) {
         const obj = artifact as Record<string, unknown>;
-        const ct = obj.coverageTable as Record<string, unknown> | undefined;
-        if (ct && typeof ct.coverage === 'number') {
-            declaredCoverage = ct.coverage;
+        const ct = obj['coverageTable'] as Record<string, unknown> | undefined;
+        if (ct && typeof ct['coverage'] === 'number') {
+            declaredCoverage = ct['coverage'];
         }
     }
 

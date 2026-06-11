@@ -22,10 +22,10 @@ beforeEach(() => {
         (entries: Array<Record<string, unknown>> | undefined | null, _patchField: string, _nameField: string) => {
             if (!entries || !Array.isArray(entries)) return '';
             return entries
-                .filter((e) => e.diff && typeof e.diff === 'string')
+                .filter((e) => e['diff'] && typeof e['diff'] === 'string')
                 .map((e) => {
-                    const newPath = typeof e.new_path === 'string' ? e.new_path : '';
-                    const diff = typeof e.diff === 'string' ? e.diff : '';
+                    const newPath = typeof e['new_path'] === 'string' ? e['new_path'] : '';
+                    const diff = typeof e['diff'] === 'string' ? e['diff'] : '';
                     return `--- a/${newPath}\n+++ b/${newPath}\n${diff}`;
                 })
                 .join('\n');

@@ -24,7 +24,7 @@ export function resolveMapping(): Map<string, string> {
             if (tests.length === 0) return new Map();
             const entries: Array<[string, string]> = [];
             for (const t of tests) {
-                if (t.title && t.key) entries.push([t.title, t.key]);
+                if (t['title'] && t['key']) entries.push([t['title'], t['key']]);
             }
             return new Map(entries);
         } catch {

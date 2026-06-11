@@ -36,10 +36,10 @@ class TestCaseFactory {
         const { testData, testTitle, testIdx, totalTests, opLog, skipExisting } = params;
         if (skipExisting && testTitle) {
             try {
-                const jql = `project = "${((testData as Record<string, unknown>).project as string) || ''}" AND summary ~ "${testTitle.replace(/"/g, '\\"')}"`;
+                const jql = `project = "${((testData as Record<string, unknown>)['project'] as string) || ''}" AND summary ~ "${testTitle.replace(/"/g, '\\"')}"`;
                 const existing = await this.jiraResource.searchJiraIssues(jql, 5);
                 const found = existing.issues.find(
-                    (i) => (i.fields.summary as string).trim().toLowerCase() === testTitle.trim().toLowerCase(),
+                    (i) => (i.fields['summary'] as string).trim().toLowerCase() === testTitle.trim().toLowerCase(),
                 );
                 if (found) {
                     const key = found.key;
@@ -54,9 +54,9 @@ class TestCaseFactory {
 
         try {
             const issue = await this.jiraResource.postJiraResource<JsonObject>('issue', testData);
-            if (!isQuiet()) success('Issue criada: ' + String(issue.key));
-            opLog.info('Issue criada', { key: issue.key });
-            return { key: issue.key as string };
+            if (!isQuiet()) success('Issue criada: ' + String(issue['key']));
+            opLog.info('Issue criada', { key: issue['key'] });
+            return { key: issue['key'] as string };
         } catch (err) {
             const action = onError('[' + (testIdx + 1) + '/' + totalTests + '] Criar issue "' + testTitle + '"', err, {
                 retry: true,

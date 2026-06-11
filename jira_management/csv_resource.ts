@@ -29,8 +29,8 @@ class CsvResource {
                     const nd = this._normalizeCsvRow(data, warnedHeaders);
                     const parsed = CsvRowSchema.safeParse({
                         fields: {
-                            Action: nd.Action || '',
-                            Data: nd.Data || '',
+                            Action: nd['Action'] || '',
+                            Data: nd['Data'] || '',
                             'Expected Result': nd['Expected Result'] || '',
                         },
                     });

@@ -34,7 +34,7 @@ export function calculatePipelineCost(
     runs: MetricsRun[] | null | undefined,
     costPerMinute?: number,
 ): PipelineCostResult {
-    const cpm = (costPerMinute ?? Number(process.env.QA_COST_PER_COMPUTE_MINUTE)) || 0.01;
+    const cpm = (costPerMinute ?? Number(process.env['QA_COST_PER_COMPUTE_MINUTE'])) || 0.01;
 
     if (!runs || runs.length === 0) {
         const now = new Date().toISOString();

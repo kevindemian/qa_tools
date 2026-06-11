@@ -22,7 +22,7 @@ class PackageVersionManager {
         try {
             const data = fs.readFileSync(filePath, 'utf8');
             const json: JsonObject = JSON.parse(data) as JsonObject;
-            json.version = newVersion;
+            json['version'] = newVersion;
             if (extraUpdate) extraUpdate(json);
             fs.writeFileSync(filePath, JSON.stringify(json, null, 2), 'utf8');
             rootLogger.info(`Versão atualizada em ${path.basename(filePath)}: ${newVersion}`);

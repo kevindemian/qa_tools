@@ -46,7 +46,7 @@ beforeEach(() => {
 
 describe('WORKFLOW_MAP', () => {
     it('defines expected transitions', () => {
-        expect(WORKFLOW_MAP.new).toContain('approve');
+        expect(WORKFLOW_MAP['new']).toContain('approve');
         expect(WORKFLOW_MAP['coding in progress']).toContain('coding done');
     });
 });
@@ -63,7 +63,7 @@ describe('getTransitionsForIssue', () => {
         });
         const resource = buildResource();
         const map = await getTransitionsForIssue(resource, 'TEST-1');
-        expect(map.done).toBe('11');
+        expect(map['done']).toBe('11');
         expect(map['in progress']).toBe('21');
     });
 

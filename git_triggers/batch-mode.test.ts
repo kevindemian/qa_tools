@@ -95,16 +95,16 @@ let originalAutoConfirm: string | undefined;
 beforeEach(() => {
     vi.clearAllMocks();
     originalArgv = process.argv;
-    originalAutoConfirm = process.env.AUTO_CONFIRM;
-    delete process.env.AUTO_CONFIRM;
+    originalAutoConfirm = process.env['AUTO_CONFIRM'];
+    delete process.env['AUTO_CONFIRM'];
 });
 
 afterEach(() => {
     process.argv = originalArgv;
     if (originalAutoConfirm !== undefined) {
-        process.env.AUTO_CONFIRM = originalAutoConfirm;
+        process.env['AUTO_CONFIRM'] = originalAutoConfirm;
     } else {
-        delete process.env.AUTO_CONFIRM;
+        delete process.env['AUTO_CONFIRM'];
     }
 });
 

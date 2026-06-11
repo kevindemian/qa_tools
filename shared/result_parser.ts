@@ -105,7 +105,7 @@ export interface CtrfResults {
     /** Tool that generated the report. */
     tool?: { name?: string };
     /** Aggregate run summary. */
-    summary: CtrfSummary;
+    summary: CtrfSummary | null | undefined;
     /** Array of individual test results. */
     tests: CtrfTest[];
     /** Environment context. */
@@ -114,7 +114,7 @@ export interface CtrfResults {
 
 /** CTRF JSON envelope. */
 export interface CtrfData {
-    results: CtrfResults;
+    results: CtrfResults | null | undefined;
 }
 
 /** A single test step for display in the HTML report. */
@@ -149,9 +149,13 @@ export interface FlatTest {
     logs?: string[];
 }
 
-/** Parsed output with flat test list and aggregate stats. */
+/** Parsed output with flat test list and aggregate stats.
+ * Both `tests` and `stats` are always present — empty array / zero-filled stats
+ * are returned when the input is malformed or absent. */
 export interface ParseResult {
+    /** Flat test list. Always an array — empty if no tests parsed. */
     tests: FlatTest[];
+    /** Aggregate statistics derived from the test list. Always present. */
     stats: {
         passed: number;
         failed: number;
@@ -196,11 +200,11 @@ function _flattenTests(suite: MochawesomeSuite, parentTitle?: string): FlatTest[
  * Returns an empty result if the input structure is invalid.
  * @deprecated Use CTRF format (https://ctrf.io) instead. This parser will be removed in the next major version.
  * @internal Not part of public API. Only used internally by `parseTestResults` and `parseCypressResults`. */
-export function parseMochawesome(jsonData: MochawesomeData): ParseResult {
+export function parseMochawesome(jsonData: MochawesomeData | null | undefined): ParseResult {
     rootLogger.warn(
         '[deprecated] Mochawesome format detected. Migrate to CTRF (ctrf.io) — mochawesome support will be removed in a future version.',
     );
-    if (!jsonData.results) return EMPTY_PARSE_RESULT;
+    if (!jsonData?.results) return EMPTY_PARSE_RESULT;
 
     const allTests: FlatTest[] = [];
     for (const result of jsonData.results) {
@@ -239,7 +243,7 @@ export function parseMochawesome(jsonData: MochawesomeData): ParseResult {
  * Falls back to computed test counts when summary fields are missing.
  * @internal Not part of public API. Use `parseTestResults` (auto-dispatch) instead. */
 export function parseCtrfResults(jsonData: CtrfData): ParseResult {
-    if (!Array.isArray(jsonData.results.tests)) {
+    if (!Array.isArray(jsonData.results?.tests)) {
         return EMPTY_PARSE_RESULT;
     }
 
@@ -264,14 +268,14 @@ export function parseCtrfResults(jsonData: CtrfData): ParseResult {
     );
 
     const stats = {
-        passed: typeof summary.passed === 'number' ? summary.passed : testCounts.passed,
-        failed: typeof summary.failed === 'number' ? summary.failed : testCounts.failed,
-        skipped: typeof summary.skipped === 'number' ? summary.skipped : testCounts.skipped,
-        total: typeof summary.tests === 'number' ? summary.tests : tests.length,
+        passed: typeof summary?.passed === 'number' ? summary.passed : testCounts.passed,
+        failed: typeof summary?.failed === 'number' ? summary.failed : testCounts.failed,
+        skipped: typeof summary?.skipped === 'number' ? summary.skipped : testCounts.skipped,
+        total: typeof summary?.tests === 'number' ? summary.tests : tests.length,
         duration:
-            summary.stop && summary.start
+            summary?.stop && summary.start
                 ? summary.stop - summary.start
-                : summary.tests
+                : summary?.tests
                   ? 0
                   : tests.reduce((s, t) => s + t.duration, 0),
     };
@@ -285,7 +289,7 @@ export function parseCtrfResults(jsonData: CtrfData): ParseResult {
 export function isCtrfFormat(jsonData: unknown): jsonData is CtrfData {
     if (typeof jsonData !== 'object' || jsonData === null) return false;
     const obj = jsonData as CtrfData;
-    if (typeof obj.results !== 'object') return false;
+    if (typeof obj.results !== 'object' || obj.results === null) return false;
     const results = obj.results;
     return Array.isArray(results.tests) && typeof results.summary === 'object';
 }

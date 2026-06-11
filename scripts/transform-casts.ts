@@ -10,7 +10,8 @@
  */
 import { readFileSync, writeFileSync } from 'fs';
 
-import { globSync } from 'glob';
+import { globSync } from '../shared/deps.js';
+import { rootLogger } from '../shared/logger.js';
 
 const TEST_FILES = globSync('**/*.test.ts', {
     ignore: ['node_modules/**', '**/__mocks__/**'],
@@ -50,8 +51,8 @@ for (const file of TEST_FILES) {
         const changes = countChanges(original, content);
         totalFiles++;
         totalChanges += changes;
-        if (changes > 2) console.log(`✏️  ${file} – ${changes} change(s)`);
+        if (changes > 2) rootLogger.info(`✏️  ${file} – ${changes} change(s)`);
     }
 }
 
-console.log(`\n✅ Done. ${totalFiles} files modified, ${totalChanges} total changes.`);
+rootLogger.info(`\n✅ Done. ${totalFiles} files modified, ${totalChanges} total changes.`);

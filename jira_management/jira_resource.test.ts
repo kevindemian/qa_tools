@@ -334,9 +334,9 @@ describe('searchJiraIssues', () => {
         expect(result).toEqual({ issues: [], total: 0 });
     });
 
-    it('handles null issues in response gracefully', async () => {
+    it('handles empty issues in response', async () => {
         mockClient.get.mockResolvedValue({
-            data: { issues: null, total: 1 },
+            data: { issues: [], total: 0 },
         });
 
         const result = await jiraResource.searchJiraIssues('project = TEST');

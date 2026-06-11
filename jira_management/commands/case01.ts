@@ -15,13 +15,13 @@ async function handler(c: CommandContext): Promise<boolean | void> {
         Config.get('csvPath') ||
         (await askFilePath('Caminho do arquivo CSV', {
             extensions: ['.csv'],
-            default: state.lastCsvPath || csvDefaultPath,
+            default: state['lastCsvPath'] || csvDefaultPath,
         }));
 
-    const labelsHint = state.lastLabels ? 'último: ' + state.lastLabels : 'vazio para nenhuma';
+    const labelsHint = state['lastLabels'] ? 'último: ' + state['lastLabels'] : 'vazio para nenhuma';
     const jiraLabelsInput =
         Config.get('csvLabels') ||
-        (await ask('Labels Jira (separadas por virgula)', { hint: labelsHint, default: state.lastLabels || '' }));
+        (await ask('Labels Jira (separadas por virgula)', { hint: labelsHint, default: state['lastLabels'] || '' }));
     const jiraLabels = jiraLabelsInput
         .split(',')
         .map((l) => l.trim())
@@ -50,7 +50,7 @@ async function handler(c: CommandContext): Promise<boolean | void> {
     }
     if (result && c.ctx.inMemoryTasksId.length > 0) {
         const execState = loadState() as Record<string, string | undefined>;
-        const csvPathHint = execState.lastCsvPath || '';
+        const csvPathHint = execState['lastCsvPath'] || '';
         const csvName = csvPathHint ? path.basename(csvPathHint, '.csv') : 'Automated Execution';
         const teResult = await offerTestExecutionAssociation(c, c.ctx.inMemoryTasksId, csvName);
         await showResults(c, c.ctx.inMemoryTasksId, teResult);

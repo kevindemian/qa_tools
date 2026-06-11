@@ -325,12 +325,12 @@ describe('Logger', () => {
 
         it('maskValue with non-string value does not mask', () => {
             const result = maskDeep({ secret: 123 }) as { [key: string]: unknown };
-            expect(result.secret).toBe(123);
+            expect(result['secret']).toBe(123);
         });
 
         it('maskValue with short string (≤8 chars) returns ****', () => {
             const result = maskDeep({ secret: 'ab' }) as Record<string, string>;
-            expect(result.secret).toBe('****');
+            expect(result['secret']).toBe('****');
         });
     });
 

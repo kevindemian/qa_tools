@@ -112,6 +112,8 @@ const baseContext = createMockContext();
 beforeEach(() => {
     vi.clearAllMocks();
     loadMetricsValue = null;
+    // Ensure withSpinner invokes the callback (auto-mock returns undefined otherwise)
+    vi.mocked(promptModule).withSpinner.mockImplementation(async (_label: string, fn: () => Promise<unknown>) => fn());
 });
 
 beforeAll(() => {
@@ -181,7 +183,7 @@ describe('case17 — HTML report generator', () => {
         const reportGen = vi.mocked(reportGenModule);
         const gitDownloader = vi.mocked(gitArtifactDownloaderModule);
 
-        process.env.QA_AUTO_BUG = 'true';
+        process.env['QA_AUTO_BUG'] = 'true';
 
         gitDownloader.fetchLatestTestRun.mockResolvedValueOnce({
             tests: [
@@ -215,7 +217,7 @@ describe('case17 — HTML report generator', () => {
         const parser = vi.mocked(parserModule);
         const reportGen = vi.mocked(reportGenModule);
 
-        process.env.QA_MAPPING_PATH = '/tmp/qa-mapping.json';
+        process.env['QA_MAPPING_PATH'] = '/tmp/qa-mapping.json';
 
         vi.mocked(fs).existsSync.mockReturnValue(true);
         vi.mocked(fs).readFileSync.mockReturnValue(
@@ -255,6 +257,8 @@ describe('case17 — HTML report generator', () => {
         const parser = vi.mocked(parserModule);
         const reportGen = vi.mocked(reportGenModule);
         const analysis = vi.mocked(analysisModule);
+
+        analysis.analyzeFailuresWithReport.mockResolvedValue({ content: '', confidence: 'low', fallbackUsed: false });
 
         prompt.ask.mockResolvedValueOnce('/path/to/report.json').mockResolvedValueOnce('');
 
@@ -356,7 +360,7 @@ describe('case17 — HTML report generator', () => {
         const parser = vi.mocked(parserModule);
         const reportGen = vi.mocked(reportGenModule);
 
-        process.env.QA_MAPPING_PATH = '/tmp/missing-tests.json';
+        process.env['QA_MAPPING_PATH'] = '/tmp/missing-tests.json';
 
         vi.mocked(fs).existsSync.mockReturnValue(true);
         vi.mocked(fs).readFileSync.mockReturnValue(JSON.stringify({ otherField: true }));
@@ -556,8 +560,8 @@ describe('case17 — HTML report generator', () => {
         const reportGen = vi.mocked(reportGenModule);
         const publish = vi.mocked(publishModule);
 
-        process.env.QA_FAIL_ON = '80';
-        process.env.QA_PUBLISH = 's3';
+        process.env['QA_FAIL_ON'] = '80';
+        process.env['QA_PUBLISH'] = 's3';
 
         prompt.ask.mockResolvedValueOnce('/report.json').mockResolvedValueOnce('');
 
@@ -573,8 +577,8 @@ describe('case17 — HTML report generator', () => {
 
         expect(publish.publishReport).toHaveBeenCalledWith(expect.objectContaining({ target: 's3' }));
 
-        process.env.QA_FAIL_ON = undefined;
-        process.env.QA_PUBLISH = undefined;
+        process.env['QA_FAIL_ON'] = undefined;
+        process.env['QA_PUBLISH'] = undefined;
     });
 
     it('fails quality gate when pass rate below threshold (lines 283-284)', async () => {
@@ -582,7 +586,7 @@ describe('case17 — HTML report generator', () => {
         const parser = vi.mocked(parserModule);
         const reportGen = vi.mocked(reportGenModule);
 
-        process.env.QA_FAIL_ON = '90';
+        process.env['QA_FAIL_ON'] = '90';
 
         prompt.ask.mockResolvedValueOnce('/report.json').mockResolvedValueOnce('');
         prompt.askConfirm.mockResolvedValueOnce(false);
@@ -603,7 +607,7 @@ describe('case17 — HTML report generator', () => {
         expect(result).toBe(false);
         expect(prompt.printError).toHaveBeenCalledWith('Quality Gate', expect.any(Error));
 
-        process.env.QA_FAIL_ON = undefined;
+        process.env['QA_FAIL_ON'] = undefined;
     });
 
     it('writes to custom output path when user provides non-empty path (lines 84-87)', async () => {

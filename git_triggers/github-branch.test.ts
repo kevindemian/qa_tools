@@ -5,7 +5,7 @@ import type { AxiosInstance } from '../shared/deps.js';
 
 vi.mock('./github-api', async () => ({
     apiGet: vi.fn(),
-    formatDiffResponse: (await vi.importActual('./github-api')).formatDiffResponse,
+    formatDiffResponse: (await vi.importActual('./github-api'))['formatDiffResponse'],
 }));
 
 vi.mock('../shared/logger', () => ({

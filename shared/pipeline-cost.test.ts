@@ -117,8 +117,8 @@ describe('calculatePipelineCost', () => {
     });
 
     it('uses environment variable for cost per minute', () => {
-        const prev = process.env.QA_COST_PER_COMPUTE_MINUTE;
-        process.env.QA_COST_PER_COMPUTE_MINUTE = '0.10';
+        const prev = process.env['QA_COST_PER_COMPUTE_MINUTE'];
+        process.env['QA_COST_PER_COMPUTE_MINUTE'] = '0.10';
         try {
             const runs = [makeRun({ duration: 60 })];
             const result = calculatePipelineCost(runs);
@@ -127,9 +127,9 @@ describe('calculatePipelineCost', () => {
             expect(result.totalCost).toBeCloseTo(0.1, 5);
         } finally {
             if (prev === undefined) {
-                delete process.env.QA_COST_PER_COMPUTE_MINUTE;
+                delete process.env['QA_COST_PER_COMPUTE_MINUTE'];
             } else {
-                process.env.QA_COST_PER_COMPUTE_MINUTE = prev;
+                process.env['QA_COST_PER_COMPUTE_MINUTE'] = prev;
             }
         }
     });

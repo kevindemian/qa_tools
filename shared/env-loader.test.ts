@@ -20,10 +20,10 @@ describe('env-loader — dotenv wrapper', () => {
         });
 
         it('returns process.env value when set', () => {
-            process.env.__TEST_VAR__ = 'hello';
+            process.env['__TEST_VAR__'] = 'hello';
             const val = envVal('__TEST_VAR__');
             expect(val).toBe('hello');
-            delete process.env.__TEST_VAR__;
+            delete process.env['__TEST_VAR__'];
         });
 
         it('returns fallback when key is missing', () => {

@@ -14,6 +14,7 @@
         "exactOptionalPropertyTypes": true,
         "noImplicitOverride": true,
         "noImplicitReturns": true,
+        "noPropertyAccessFromIndexSignature": true,
         "esModuleInterop": true,
         "skipLibCheck": true,
         "forceConsistentCasingInFileNames": true,
@@ -22,6 +23,13 @@
         "types": ["node", "vitest/globals"]
     },
     "noPropertyAccessFromIndexSignature": true,
-    "include": ["setup/**/*.ts", "shared/**/*.ts", "jira_management/**/*.ts", "git_triggers/**/*.ts", "e2e/**/*.ts", "scripts/**/*.ts"],
+    "include": [
+        "setup/**/*.ts",
+        "shared/**/*.ts",
+        "jira_management/**/*.ts",
+        "git_triggers/**/*.ts",
+        "e2e/**/*.ts",
+        "scripts/**/*.ts"
+    ],
     "exclude": ["node_modules", "docs-archive"]
 }
