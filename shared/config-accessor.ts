@@ -59,6 +59,10 @@ class Config {
         return this._resolve<T>(key);
     }
 
+    set(key: string, value: unknown): void {
+        (this.overrides as Record<string, unknown>)[key] = value;
+    }
+
     getAllPrefixed(prefix: string): Record<string, string> {
         ensureDotenv();
         const r: Record<string, string> = {};
