@@ -46,6 +46,9 @@ tmp/
 gemini-code-*
 :Zone.Identifier
 
+# === Container build context (local only, not part of the project) ===
+.container/
+
 # === Windows artifacts ===
 nul
 .llm-cache/
