@@ -1255,3 +1255,33 @@ Cada fase (0-5) é committada separadamente com verificação:
 3. `vitest run` = 100% pass
 
 ---
+
+## 🚀 Sprint Container — Resiliência + Build Parametrizado + Persistência SQLite (Jun/2026)
+
+**Data:** 2026-06-11
+**Origem:** Container não iniciava por conflito de nome (container órfão), versão 1.16.0 desatualizada (Dockerfile já em 1.17.3 mas imagem não rebuildada), SQLite DB perdido entre sessões (`~/.local` era tmpfs inteiro).
+
+### Fases
+
+| Fase | Descrição                                                                     | Itens | Status |
+| ---- | ----------------------------------------------------------------------------- | ----- | ------ |
+| 0    | Atualizar BACKLOG.md + migrar completados ao histórico                        | —     | ✅     |
+| 1    | `--replace` no `qa.sh` para resiliência a container órfão                     | CO-1  | ✅     |
+| 2    | Dockerfile parametrizado (ARG) com validação de SHA256 obrigatório            | CO-2  | ✅     |
+| 3    | Volume persistente SQLite (`~/.local/share/opencode`) em vez de tmpfs inteiro | CO-3  | ✅     |
+| 4    | Testes para qa.sh com `--replace` + volume persistente                        | CO-4  | ✅     |
+| 5    | Rebuildar imagem e verificar                                                  | CO-5  | 🔄     |
+| 6    | Verificação final: TSC + lint + tests + quality-check                         | CO-6  | ⏳     |
+
+### Detalhamento
+
+| ID   | Item                                                                         | Arquivo(s)                                | Esforço |
+| ---- | ---------------------------------------------------------------------------- | ----------------------------------------- | ------- |
+| CO-1 | 🔧 Adicionar `--replace` ao `podman run` — container órfão não bloqueia mais | `scripts/qa.sh`                           | 2min    |
+| CO-2 | ♻️ Dockerfile: versão + SHA256 como ARG com validação de non-empty           | `~/.config/opencode/container/Dockerfile` | 10min   |
+| CO-3 | 🔧 Bind mount `~/.local/share/opencode` + tmpfs granular nos demais subdirs  | `scripts/qa.sh`                           | 5min    |
+| CO-4 | 📋 Testes: `--replace` presente, volume persistente no comando podman        | `scripts/qa.test.ts`                      | 5min    |
+| CO-5 | 🏗️ Rebuildar imagem opencode-qa                                              | `podman build -t opencode-qa`             | 5min    |
+| CO-6 | ✅ Verificação: TSC + lint + vitest + quality-check                          | —                                         | 5min    |
+
+---

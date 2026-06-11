@@ -45,6 +45,10 @@ describe('qa.sh — OpenCode container wrapper', () => {
             expect(content).toContain('podman run --rm -it');
         });
 
+        it('uses --replace for resilience against orphan containers', () => {
+            expect(content).toContain('--replace');
+        });
+
         it('enables --read-only filesystem', () => {
             expect(content).toContain('--read-only');
         });
@@ -67,6 +71,15 @@ describe('qa.sh — OpenCode container wrapper', () => {
 
         it('mounts opencode config as read-only', () => {
             expect(content).toContain('-v "${OPENCODE_CONFIG_HOME}:/home/coder/.config/opencode:ro,z"');
+        });
+
+        it('mounts opencode data directory for persistent SQLite DB', () => {
+            expect(content).toContain('OPENCODE_DATA_HOME');
+            expect(content).toContain('-v "${OPENCODE_DATA_HOME}:/home/coder/.local/share/opencode:rw,z"');
+        });
+
+        it('creates data directory if it does not exist', () => {
+            expect(content).toContain('mkdir -p "${OPENCODE_DATA_HOME}"');
         });
 
         it('mounts .gitconfig conditionally with :ro', () => {
