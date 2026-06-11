@@ -123,8 +123,8 @@ export function buildDiffSummary(diff: { newFailures: FlatTest[]; newPasses: Fla
 export function isValidCtrfData(data: unknown): data is CtrfData {
     if (!data || typeof data !== 'object') return false;
     const obj = data as CtrfData;
-    if (!obj.results || typeof obj.results !== 'object') return false;
-    return Array.isArray(obj.results?.tests);
+    if (typeof obj.results !== 'object') return false;
+    return Array.isArray(obj.results.tests);
 }
 
 export function parseCliExtra(): { publishTarget?: string; extraRuns: Array<{ name: string; file: string }> } {

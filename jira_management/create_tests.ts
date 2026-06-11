@@ -188,7 +188,7 @@ function validateCsvTests(tests: TestCase[]): { errors: string[]; warnings: stri
         if (test.title) titles.add(test.title);
 
         test.steps.forEach((step, si) => {
-            const action = step.fields?.Action || '';
+            const action = step.fields.Action || '';
             if (!action.trim()) {
                 warnings.push('Teste ' + idx + ' "' + test.title + '": Step ' + (si + 1) + ' sem Action');
             }

@@ -155,7 +155,7 @@ async function _postPipeline(
             jiraBaseUrl,
         });
     }
-    if (parsed && parsed.stats) {
+    if (parsed) {
         const sha = getHeadSha() || 'no-sha';
         const backend = detectStoreBackend();
         const store = new Store(backend, projectName);

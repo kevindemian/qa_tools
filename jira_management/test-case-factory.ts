@@ -39,7 +39,7 @@ class TestCaseFactory {
                 const jql = `project = "${((testData as Record<string, unknown>).project as string) || ''}" AND summary ~ "${testTitle.replace(/"/g, '\\"')}"`;
                 const existing = await this.jiraResource.searchJiraIssues(jql, 5);
                 const found = existing.issues.find(
-                    (i) => (i.fields?.summary as string)?.trim().toLowerCase() === testTitle.trim().toLowerCase(),
+                    (i) => (i.fields.summary as string).trim().toLowerCase() === testTitle.trim().toLowerCase(),
                 );
                 if (found) {
                     const key = found.key;

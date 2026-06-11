@@ -28,7 +28,7 @@ export function extractEpicKey(fields: JiraIssueFields): string | undefined {
     const epicField = fields['customfield_10014'] ?? fields['epic'] ?? fields['Epic'];
     if (!epicField) return undefined;
     if (typeof epicField === 'string') return epicField;
-    if (typeof epicField === 'object' && epicField !== null) {
+    if (typeof epicField === 'object') {
         return (epicField as JiraIssue).key;
     }
     return undefined;
@@ -39,10 +39,10 @@ export function extractLinkedTestKeys(fields: JiraIssueFields): string[] {
     if (!Array.isArray(links)) return [];
     const keys: string[] = [];
     for (const link of links) {
-        const linkType = link?.type;
+        const linkType = link.type;
         if (!linkType || linkType.name !== 'Test') continue;
-        const inward = link?.inwardIssue;
-        const outward = link?.outwardIssue;
+        const inward = link.inwardIssue;
+        const outward = link.outwardIssue;
         if (inward?.key) keys.push(inward.key);
         if (outward?.key) keys.push(outward.key);
     }

@@ -7,7 +7,6 @@ import { apiGet, apiPost, apiPut, projectPath } from './gitlab-api.js';
 const SEARCH_MRS_PAGE_SIZE = 100;
 
 export function formatPR(data: JsonObject): MergeRequestInfo | null {
-    if (!data) return null;
     return {
         iid: data.iid as string | number,
         number: data.iid as string | number,
@@ -46,8 +45,9 @@ export async function glCreateMergeRequest(
         if (glErr.response?.status === 409) {
             info('MR already exists. Searching for existing...');
             const existing = await glSearchMergeRequests(client, owner, repo, sourceBranch, targetBranch, 'opened');
-            if (existing && existing.length > 0 && existing[0]?.iid) {
-                return glUpdateMergeRequest(client, owner, repo, existing[0].iid, title, description);
+            const first = existing[0];
+            if (first && first.iid) {
+                return glUpdateMergeRequest(client, owner, repo, first.iid, title, description);
             }
         }
         throw err;

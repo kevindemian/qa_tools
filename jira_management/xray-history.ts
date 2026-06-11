@@ -151,7 +151,7 @@ class CloudHistoryProvider implements TestHistoryProvider {
             const data = await this.jiraResource.getJiraResource<{ id: string }>(
                 'issue/' + encodeURIComponent(testKey) + '?fields=id',
             );
-            if (data?.id) {
+            if (data.id) {
                 this.issueIdCache.set(testKey, data.id);
                 return data.id;
             }
@@ -174,9 +174,9 @@ class CloudHistoryProvider implements TestHistoryProvider {
         try {
             const jql = 'id IN (' + uncached.map((id) => '"' + id.replace(/[^0-9]/g, '') + '"').join(',') + ')';
             const data = await this.jiraResource.searchJiraIssues(jql, uncached.length);
-            for (const issue of data.issues ?? []) {
+            for (const issue of data.issues) {
                 const id = (issue as JiraIssue).id;
-                const key = issue.key ?? '';
+                const key = issue.key;
                 if (id && key) {
                     this.execKeyCache.set(id, key);
                     result.set(id, key);

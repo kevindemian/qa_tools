@@ -80,7 +80,7 @@ async function setupBatchProject(batch: BatchCliArgs): Promise<{
     projectName: string;
 } | null> {
     const projs = getProjects();
-    if (!projs || Object.keys(projs).length === 0) {
+    if (Object.keys(projs).length === 0) {
         error('Nenhum projeto configurado.');
         return null;
     }
@@ -240,7 +240,7 @@ export function generateFlakinessDashboard(projectName: string, publishTarget?: 
  */
 export async function tryBatchMode(batchArgs?: BatchCliArgs): Promise<boolean> {
     const batch = batchArgs ?? (parseCliArgs() as BatchCliArgs);
-    if (batch.mode !== 'batch' || (!batch.auto && !batch.project && !batch.branch)) return false;
+    if (!batch.auto && !batch.project && !batch.branch) return false;
 
     if (batch.auto) {
         Config.setAutoConfirm(true);
@@ -381,11 +381,11 @@ function generateTestExport(projectName: string): void {
 async function generatePipelineHealthReport(m: import('../shared/types.js').GitProvider): Promise<void> {
     try {
         const runs = (await m.getRecentPipelines(10)) as unknown as PipelineRunExtended[];
-        if (!runs || runs.length === 0) return;
+        if (runs.length === 0) return;
         const allJobs: PipelineJobExtended[][] = [];
         for (const run of runs) {
             const jobs = (await m.getPipelineJobs(run.id ?? '')) as unknown as PipelineJobExtended[];
-            allJobs.push(jobs || []);
+            allJobs.push(jobs);
         }
         const health = aggregatePipelineHealth(runs, allJobs, [], [], new Date());
         const html = renderPipelineHealthHtml(health, 'Pipeline Health \u2014 ' + currentProjectName);

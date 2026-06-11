@@ -105,7 +105,7 @@ export function buildErrorCell(t: FlatTest): string {
 }
 
 export function buildHistoryCell(history: TestHistoryRun[]): string {
-    if (!history || history.length === 0) return '<td>—</td>';
+    if (history.length === 0) return '<td>—</td>';
     const isPass = (s: string) => s.toUpperCase() === 'PASSED' || s === 'PASS';
     const isFail = (s: string) => s.toUpperCase() === 'FAILED' || s === 'FAIL';
     const isSkip = (s: string) => s.toUpperCase() === 'SKIPPED' || s === 'ABORTED';
@@ -212,7 +212,7 @@ export function buildTestTable(
         const durationCell = t.state === 'skipped' ? '—' : fmtDuration(t.duration);
 
         let flakyCell = '';
-        if (hasFlakiness && flakinessMap) {
+        if (hasFlakiness) {
             const rate = flakinessMap[t.title] ?? flakinessMap[t.fullTitle ?? ''] ?? 0;
             flakyCell = rate > 0 ? buildFlakinessBadge(rate) : '<span style="color:var(--color-text-muted)">—</span>';
         }
@@ -229,7 +229,7 @@ export function buildTestTable(
         cells += Td({ children: durationCell });
         if (hasError) cells += Td({ children: buildErrorCell(t) });
         if (hasHistory) {
-            const testHistory = history?.[t.title] ?? history?.[t.fullTitle ?? ''] ?? [];
+            const testHistory = history[t.title] ?? history[t.fullTitle ?? ''] ?? [];
             cells += Td({ children: buildHistoryCell(testHistory) });
         }
         if (hasFlakiness) cells += Td({ children: flakyCell });

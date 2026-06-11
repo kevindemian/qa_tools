@@ -92,11 +92,11 @@ function explicitMapping(changedFiles: string[], mappingPath: string): ImpactedT
         const impacted: ImpactedTest[] = [];
         for (const file of changedFiles) {
             for (const mapping of mappings) {
-                const files = mapping.files ?? [];
+                const files = mapping.files;
                 const matched = files.some((pattern) => file.includes(pattern));
                 if (!matched) continue;
-                const keys = mapping.testKeys ?? [];
-                const titles = mapping.testTitles ?? [];
+                const keys = mapping.testKeys;
+                const titles = mapping.testTitles;
                 for (let i = 0; i < keys.length; i++) {
                     const key = keys[i];
                     if (!key) continue;

@@ -34,7 +34,7 @@ export function _checkResumeCheckpoint(
         cp.testCount === tests.length &&
         Array.isArray(cp.done)
     ) {
-        const age = Date.now() - new Date((cp.ts as string) ?? '').getTime();
+        const age = Date.now() - new Date(cp.ts as string).getTime();
         if (age < CHECKPOINT_MAX_AGE_MS && (cp.done as Array<unknown>).length < tests.length) {
             const ans = confirm(
                 (cp.done as Array<unknown>).length + '/' + tests.length + ' testes ja criados. Continuar?',
@@ -75,7 +75,7 @@ export function _runValidationRules(tests: unknown[]): { errors: string[]; warni
             if (data.title) titles.add(data.title);
 
             data.steps.forEach((step, si) => {
-                const action = step.fields?.Action || '';
+                const action = step.fields.Action || '';
                 if (!action.trim()) {
                     warnings.push('Teste ' + idx + ' "' + data.title + '": Step ' + (si + 1) + ' sem Action');
                 }

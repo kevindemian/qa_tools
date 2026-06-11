@@ -16,7 +16,7 @@ function getEpicFromIssue(fields: JsonObject): string | null {
     const epic = fields['customfield_10014'] ?? fields['epic'] ?? fields['Epic'] ?? null;
     if (!epic) return null;
     if (typeof epic === 'string') return epic;
-    if (typeof epic === 'object' && epic !== null && 'key' in epic) {
+    if (typeof epic === 'object' && 'key' in epic) {
         return String(epic.key);
     }
     return null;
@@ -43,7 +43,7 @@ export async function analyzeCoverage(jiraResource: JiraResource, project: strin
         };
     }
 
-    const issues = response.issues ?? [];
+    const issues = response.issues;
     const unmappedSteps: string[] = [];
     const gapsByEpic: Record<string, string[]> = {};
     let mappedCount = 0;

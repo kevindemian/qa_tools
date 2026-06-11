@@ -71,8 +71,8 @@ function _showAndPause(topic: string): void {
 }
 export function showHelpLoop(): void {
     const topicEntries = Object.entries(HELP_TOPICS);
-    while (true) {
-        if (process.stdout.isTTY) console.clear();
+    for (;;) {
+        if (process.stdout.isTTY) process.stdout.write('\x1Bc');
         defaultOutput.box([], { border: 'double', padding: 1, title: 'QA Tools · Ajuda', width: 80 });
         showHelp();
         let input: string;
@@ -186,7 +186,7 @@ export async function getUserChoice(level: string, proj: string, ctx: SessionCon
         headerLines.push(
             `   ${palette.muted(ctx.sessionCounters.length + ' operações')}  ·  ${palette.green('' + ok + ' ✓')}${err > 0 ? '  ' + palette.red('' + err + ' ✗') : ''}`,
         );
-    const contextLine = ctx.buildContextLine ? ctx.buildContextLine(proj) : '';
+    const contextLine = ctx.buildContextLine(proj);
     const pathLine =
         level === 'main'
             ? `   ${proj}${contextLine ? ' | ' + contextLine : ''}`
