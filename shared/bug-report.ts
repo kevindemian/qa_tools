@@ -24,14 +24,14 @@ function readPrompt(file: string): string {
 }
 
 function buildSummaryFromFailures(result: ParseResult): string {
-    const failed = result.stats?.failed ?? 0;
-    const total = result.stats?.total ?? 0;
+    const failed = result.stats.failed;
+    const total = result.stats.total;
     return `${failed}/${total} tests failed`;
 }
 
 function buildDescriptionFromFailures(result: ParseResult): string {
     const lines: string[] = [];
-    for (const t of result.tests || []) {
+    for (const t of result.tests) {
         if (t.state === 'failed') {
             lines.push(`*${t.title}*`);
             if (t.error) lines.push(`  Error: ${t.error.slice(0, ERROR_TRUNCATION_LIMIT)}`);
@@ -80,7 +80,7 @@ export async function generateBugReportFromDescription(raw: string): Promise<Bug
             summary: aiReport.summary,
             description: aiReport.description,
             source: 'manual',
-            ...(aiReport.stepsToReproduce ? { stepsToReproduce: aiReport.stepsToReproduce } : {}),
+            stepsToReproduce: aiReport.stepsToReproduce,
             ...(aiReport.expectedResult ? { expectedResult: aiReport.expectedResult } : {}),
             ...(aiReport.actualResult ? { actualResult: aiReport.actualResult } : {}),
             ...(aiReport.environment ? { environment: aiReport.environment } : {}),

@@ -255,7 +255,7 @@ async function runMainLoop(res: RuntimeResources): Promise<void> {
     const { ctx, printSessionSummary } = res;
     let currentLevel = 'main';
     clearBreadcrumbs();
-    while (true) {
+    for (;;) {
         if (process.stdout.isTTY && !_shouldNoClear()) {
             process.stdout.write('\x1b[2J\x1b[H');
         }
@@ -287,18 +287,18 @@ async function runMainLoop(res: RuntimeResources): Promise<void> {
 
 async function main(): Promise<void> {
     if (process.argv.includes('--help') || process.argv.includes('-h')) {
-        console.log('QA Tools — Jira Management');
-        console.log('');
-        console.log('Uso: npx tsx jira_management/main.ts [opcoes]');
-        console.log('');
-        console.log('Opcoes:');
-        console.log('  --help, -h     Exibe esta ajuda');
-        console.log('  --version      Exibe a versao');
+        rootLogger.info('QA Tools — Jira Management');
+        rootLogger.info('');
+        rootLogger.info('Uso: npx tsx jira_management/main.ts [opcoes]');
+        rootLogger.info('');
+        rootLogger.info('Opcoes:');
+        rootLogger.info('  --help, -h     Exibe esta ajuda');
+        rootLogger.info('  --version      Exibe a versao');
         gracefulExit(ExitCode.OK);
         return;
     }
     if (process.argv.includes('--version')) {
-        console.log(pkg.version);
+        rootLogger.info(pkg.version);
         gracefulExit(ExitCode.OK);
         return;
     }

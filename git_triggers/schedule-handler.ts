@@ -48,7 +48,7 @@ export async function handleListSchedules(m: GitProvider): Promise<void> {
     }
     try {
         const schedules = await withSpinner('Buscando schedules...', () => m.getSchedules());
-        if (schedules && schedules.length > 0) {
+        if (schedules.length > 0) {
             info('Schedules encontrados:');
             schedules.forEach((s) => {
                 const line =
@@ -79,11 +79,9 @@ export async function handleRunSchedule(m: GitProvider): Promise<void> {
     }
     const scheduleId = prompt('ID do schedule');
     try {
-        const result = await withSpinner('Disparando schedule ' + scheduleId + '...', () => m.runSchedule(scheduleId));
-        if (result) {
-            success('Schedule disparado: ' + scheduleId);
-            pushHistory('schedule-run', scheduleId, 'ok');
-        }
+        await withSpinner('Disparando schedule ' + scheduleId + '...', () => m.runSchedule(scheduleId));
+        success('Schedule disparado: ' + scheduleId);
+        pushHistory('schedule-run', scheduleId, 'ok');
     } catch (err) {
         printError('Erro ao disparar schedule', err);
         pushHistory('schedule-run', scheduleId, 'error');
@@ -162,7 +160,7 @@ export function generateWeeklyQualityReport(): void {
         const flaky = calculateFlakiness({ runs: projectRuns }, 2);
         const releaseScore = calculateReleaseScore(
             80,
-            health.overall ?? 50,
+            health.overall,
             health.overall >= 70 ? 'pass' : 'fail',
             70,
             flaky.length > 0
@@ -231,11 +229,11 @@ export function generateWeeklyQualityReport(): void {
             regression.regressions.length,
             seasonality.peakDay,
             uncoveredEpics,
-            health.overall ?? 100,
+            health.overall,
         );
 
         const trendCategories = new Set<string>();
-        for (const t of defects.trends ?? []) {
+        for (const t of defects.trends) {
             for (const cat of Object.keys(t.categories)) {
                 trendCategories.add(cat);
             }

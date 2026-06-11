@@ -85,7 +85,7 @@ function _validateLayer1(parsed: unknown, type: ArtifactType): { passed: boolean
     const schema = getSchemaForType(type);
     const schemaResult = schema.safeParse(parsed);
     if (!schemaResult.success) {
-        const issues = schemaResult.error?.issues || [];
+        const issues = schemaResult.error.issues;
         for (const issue of issues) {
             const msg = `Layer1: ${issue.path.join('.')} — ${issue.message}`;
             errors.push(msg);
@@ -335,7 +335,7 @@ async function _handleAdversarialRetry(
         content: sanitizeTerminal(finalContent),
         reviewed: true,
         confidence: bestConf,
-        ...(result.reviewerNotes !== undefined && { reviewerNotes: result.reviewerNotes }),
+        reviewerNotes: result.reviewerNotes,
         adversarialRetried: true,
         reReviewTier: reReview.tier,
         artifactType: type,

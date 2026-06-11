@@ -191,7 +191,7 @@ export function displayProjects(names?: string[], lastProject?: string): void {
 export async function displayRecentPipelines(m: GitProvider): Promise<void> {
     try {
         const pipelines = await m.getRecentPipelines(5);
-        if (pipelines && pipelines.length > 0) {
+        if (pipelines.length > 0) {
             print('  Últimas pipelines:');
             pipelines.slice(0, 3).forEach((p) => {
                 const id = p.id ?? p.run_number ?? '?';

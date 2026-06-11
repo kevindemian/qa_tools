@@ -65,7 +65,7 @@ function toWinPath(target: string): string | null {
     try {
         const result = spawnSync('wslpath', ['-w', target], { encoding: 'utf8' });
         if (result.status === 0) {
-            const wp = (result.stdout ?? '').trim();
+            const wp = result.stdout.trim();
             if (/^[A-Za-z]:\\/.test(wp)) return wp;
         }
     } catch {
@@ -83,7 +83,7 @@ function toWinPath(target: string): string | null {
         writeFileSync(dest, content);
         const result2 = spawnSync('wslpath', ['-w', dest], { encoding: 'utf8' });
         if (result2.status === 0) {
-            const wp = (result2.stdout ?? '').trim();
+            const wp = result2.stdout.trim();
             return /^[A-Za-z]:\\/.test(wp) ? wp : null;
         }
         return null;
@@ -130,11 +130,6 @@ export async function openWithOsOrFallback(target: string, fallbackViewer?: () =
             stdio: 'ignore',
             detached: true,
         });
-        if (!child) {
-            fallbackViewer?.();
-            resolve(false);
-            return;
-        }
         child.on('error', () => {
             fallbackViewer?.();
             resolve(false);

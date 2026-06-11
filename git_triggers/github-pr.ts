@@ -7,7 +7,6 @@ import { apiGet, apiPost, apiPatch } from './github-api.js';
 const SEARCH_PRS_PAGE_SIZE = 100;
 
 export function formatPR(data: JsonObject): MergeRequestInfo | null {
-    if (!data) return null;
     return {
         iid: data.number as string | number,
         number: data.number as string | number,
@@ -15,8 +14,8 @@ export function formatPR(data: JsonObject): MergeRequestInfo | null {
         state: data.merged ? 'merged' : data.state === 'closed' ? 'closed' : 'opened',
         web_url: data.html_url as string,
         description: data.body as string,
-        source_branch: ((data.head as JsonObject) || {}).ref as string,
-        target_branch: ((data.base as JsonObject) || {}).ref as string,
+        source_branch: (data.head as JsonObject).ref as string,
+        target_branch: (data.base as JsonObject).ref as string,
         approved: false,
     };
 }
@@ -41,17 +40,18 @@ export async function prCreateMergeRequest(
         const data = await apiPost(client, repoPath + '/pulls', body, { operation: 'criar PR' });
         return formatPR(data);
     } catch (err: unknown) {
-        const ghErr = err as { response?: { status?: number; data?: { errors?: Array<{ message: string }> } } };
-        if (ghErr.response?.status === 422) {
-            const errors = ghErr.response?.data?.errors || [];
+        const ghErr = err as { response: { status?: number; data?: { errors?: Array<{ message: string }> } } };
+        if (ghErr.response.status === 422) {
+            const errors = ghErr.response.data?.errors || [];
             const alreadyExists = errors.some(
                 (e: { message: string }) => e.message && e.message.includes('already exists'),
             );
             if (alreadyExists) {
                 info('PR already exists. Searching for existing...');
                 const existing = await prSearchMergeRequests(client, owner, repo, sourceBranch, targetBranch, 'open');
-                if (existing && existing.length > 0 && existing[0]?.number) {
-                    return prUpdateMergeRequest(client, owner, repo, existing[0].number, title, description);
+                const first = existing[0];
+                if (first && first.number) {
+                    return prUpdateMergeRequest(client, owner, repo, first.number, title, description);
                 }
             }
         }

@@ -141,7 +141,7 @@ class TestExecutionCreator {
             const te = await this.jiraResource.getJiraResource<{
                 fields?: { issuelinks?: Array<{ outwardIssue?: { key: string } }> };
             }>('issue/' + teKey);
-            if (te?.fields?.issuelinks) {
+            if (te.fields?.issuelinks) {
                 for (const link of te.fields.issuelinks) {
                     if (link.outwardIssue?.key && testKeys.includes(link.outwardIssue.key)) {
                         linkedKeys.push(link.outwardIssue.key);
@@ -187,8 +187,8 @@ class TestExecutionCreator {
             fields: { summary?: string; issuetype?: { name: string } };
         }>('issue/' + teKey);
 
-        if (teIssue.fields?.issuetype?.name !== 'Test Execution') {
-            const actualType = teIssue.fields?.issuetype?.name || 'desconhecido';
+        if (teIssue.fields.issuetype?.name !== 'Test Execution') {
+            const actualType = teIssue.fields.issuetype?.name || 'desconhecido';
             rootLogger.error('"' + teKey + '" não é uma Test Execution (tipo: ' + actualType + ')');
             return null;
         }
@@ -210,7 +210,7 @@ class TestExecutionCreator {
             return null;
         }
 
-        const currentTests: string[] = ((teIssue.fields as Record<string, unknown>)?.[testField.id] as string[]) || [];
+        const currentTests: string[] = (teIssue.fields as Record<string, unknown>)[testField.id] as string[];
         const merged = [...new Set([...currentTests, ...testKeys])];
 
         const payload: JsonObject = {};
@@ -221,7 +221,7 @@ class TestExecutionCreator {
 
         const { linked, failed } = await this._linkTestsToExecution(teKey, testKeys);
 
-        const summary = teIssue.fields?.summary || teKey;
+        const summary = teIssue.fields.summary || teKey;
         if (failed > 0) {
             info('✓ Associados: ' + linked + ' | ✗ Falha: ' + failed);
         }

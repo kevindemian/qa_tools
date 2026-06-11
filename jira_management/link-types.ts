@@ -32,7 +32,7 @@ export class LinkTypeManager {
         if (this.linkTypesCache) return this.linkTypesCache;
         try {
             const data = await this.jiraResource.getJiraResource<{ issueLinkTypes?: LinkType[] }>('issueLinkType');
-            if (data && data.issueLinkTypes) {
+            if (data.issueLinkTypes) {
                 this.linkTypesCache = data.issueLinkTypes;
                 try {
                     fs.writeFileSync(this.cacheFilePath, JSON.stringify(data.issueLinkTypes), 'utf8');

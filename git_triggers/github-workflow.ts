@@ -20,7 +20,7 @@ const MAX_REDIRECTS = 5;
 const DEFAULT_PIPELINE_COUNT = 5;
 
 function toInputs(variables: Array<{ key: string; value: string }>): Record<string, string> {
-    if (!variables || !Array.isArray(variables)) return {};
+    if (!Array.isArray(variables)) return {};
     const inputs: Record<string, string> = {};
     for (const v of variables) {
         if (v.key) inputs[v.key] = v.value;
@@ -56,7 +56,7 @@ export async function wfTriggerPipeline(
         const workflowId = payload.workflow_id;
         if (!workflowId) {
             const workflows = await listWorkflows(client, owner, repo);
-            if (!workflows || workflows.length === 0) {
+            if (workflows.length === 0) {
                 rootLogger.warn('No workflows found in repository for project ' + owner + '/' + repo);
                 return undefined;
             }

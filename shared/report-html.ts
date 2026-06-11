@@ -79,7 +79,7 @@ function _buildTestTableSection(
     if (runs && runs.length > 1) {
         return (
             buildTabs(runs) +
-            buildTabContents(runs, categories, options?.testHistory, options?.knownIssues, options?.flakinessMap)
+            buildTabContents(runs, categories, options.testHistory, options.knownIssues, options.flakinessMap)
         );
     }
     const hasSidebar = tests.some((t) => t.fullTitle && t.fullTitle.indexOf(' > ') !== -1);

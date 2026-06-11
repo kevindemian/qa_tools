@@ -65,7 +65,7 @@ async function _fetchJiraContext(
         const data = await jiraResource.getJiraResource<JiraSearchResult>(
             'search?jql=' + encodeURIComponent(jql) + '&maxResults=5',
         );
-        const issues = data.issues || [];
+        const issues = data.issues;
         if (issues.length === 0) return '';
 
         let s = '';
@@ -85,7 +85,7 @@ async function _fetchJiraContext(
 
 async function _addAiAnalysis(html: string, tests: ParseResult['tests'], context?: LlmContext): Promise<string> {
     const analysis = await withSpinner('Analisando falhas com IA...', () => analyzeFailuresWithReport(tests, context));
-    if (!analysis || !analysis.content) return html;
+    if (!analysis.content) return html;
     return injectAnalysisSection(html, analysis.content);
 }
 

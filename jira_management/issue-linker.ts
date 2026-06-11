@@ -52,7 +52,7 @@ async function updateGroupLinks(
             const current = await jiraResource.getJiraResource<{ fields?: { description?: string } }>(
                 'issue/' + member.id,
             );
-            const currentDesc = current?.fields?.description || '';
+            const currentDesc = current.fields?.description || '';
             if (
                 currentDesc.includes('faz parte do conjunto') ||
                 currentDesc.includes('This test case is part of the set')

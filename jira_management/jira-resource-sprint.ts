@@ -46,7 +46,7 @@ export async function getTransitionsForIssue(
         const data = await resource.getJiraResource<{ transitions?: TransitionData[] }>(
             `issue/${issueKey}/transitions`,
         );
-        if (!data || !data.transitions) return {};
+        if (!data.transitions) return {};
         const map: Record<string, string> = {};
         for (const t of data.transitions) {
             if (t.to && t.to.name) {

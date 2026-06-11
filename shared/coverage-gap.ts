@@ -38,9 +38,9 @@ async function collectAllPages(
         const allIssues: Array<{ key: string; fields: Record<string, unknown> }> = [];
         let startAt = 0;
 
-        while (true) {
+        for (;;) {
             const response = await jiraResource.searchJiraIssues(jql, pageSize);
-            if (!response.issues || response.issues.length === 0) break;
+            if (response.issues.length === 0) break;
             for (const issue of response.issues) {
                 allIssues.push({ key: issue.key, fields: issue.fields });
             }
@@ -65,15 +65,14 @@ async function fetchLinkedTestsBatch(
         if (chunk.length === 0) return linkMap;
         const jql = `issueType = Test AND issue in linkedIssuesOf("${chunk.join('","')}")`;
         const response = await jiraResource.searchJiraIssues(jql, 500);
-        if (!response.issues) return linkMap;
 
         for (const test of response.issues) {
             const testKey = test.key;
             const testLinks = (test.fields as JiraIssueFields)['issuelinks'];
             if (!Array.isArray(testLinks)) continue;
             for (const link of testLinks) {
-                const inward = link?.inwardIssue;
-                const outward = link?.outwardIssue;
+                const inward = link.inwardIssue;
+                const outward = link.outwardIssue;
                 const linkedKey = inward?.key === testKey ? outward?.key : inward?.key;
                 if (typeof linkedKey === 'string' && issueKeys.includes(linkedKey)) {
                     if (!linkMap.has(linkedKey)) linkMap.set(linkedKey, []);

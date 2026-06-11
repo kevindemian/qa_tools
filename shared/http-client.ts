@@ -84,11 +84,7 @@ class HttpClientInternals {
                 if (now - entry.lastUsed > RETRY_STALE_MS) this.retryCounts.delete(key);
             }
         }, RETRY_CLEANUP_INTERVAL_MS);
-        if (
-            this._retryCleanupTimer &&
-            typeof this._retryCleanupTimer === 'object' &&
-            'unref' in this._retryCleanupTimer
-        ) {
+        if (typeof this._retryCleanupTimer === 'object' && 'unref' in this._retryCleanupTimer) {
             this._retryCleanupTimer.unref();
         }
     }
@@ -134,7 +130,7 @@ function _calculateRetryDelay(
     errorResponse: { status?: number; headers?: Record<string, string> } | undefined,
     attempt: number,
 ): number {
-    const retryAfter = errorResponse?.status === 429 ? errorResponse?.headers?.['retry-after'] : undefined;
+    const retryAfter = errorResponse?.status === 429 ? errorResponse.headers?.['retry-after'] : undefined;
     let waitMs: number;
     if (retryAfter) {
         const parsed = parseInt(String(retryAfter), 10);
@@ -188,7 +184,7 @@ function _setupResponseInterceptor(instance: ReturnType<typeof axios.create>, ma
                 _internals.setRetryCount(key, attempts);
                 const delayMs = _calculateRetryDelay(axiosErr.response, attempts);
                 const retryAfter =
-                    axiosErr.response?.status === 429 ? axiosErr.response?.headers?.['retry-after'] : undefined;
+                    axiosErr.response?.status === 429 ? axiosErr.response.headers?.['retry-after'] : undefined;
                 rootLogger.debug(
                     `Retry ${attempts}/${effectiveMaxRetries} para ${cfg.url} (espera ${Math.round(delayMs)}ms)` +
                         (retryAfter ? ' — Retry-After: ' + String(retryAfter) + 's' : ''),
@@ -272,7 +268,7 @@ export function createThrottledClient(config: ThrottledClientConfig): AxiosInsta
             return response;
         },
         (error) => {
-            const host = extractHost((error as { config?: { url?: string } })?.config?.url || '');
+            const host = extractHost((error as { config?: { url?: string } }).config?.url || '');
             semaphore.release(host);
             throw error;
         },
