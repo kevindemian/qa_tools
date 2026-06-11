@@ -11,7 +11,7 @@
  */
 import { readFileSync, writeFileSync } from 'fs';
 
-import { globSync } from 'glob';
+import { globSync } from '../shared/deps.js';
 
 const TEST_FILES = globSync('**/*.test.ts', {
     ignore: ['node_modules/**', '**/__mocks__/**'],
@@ -27,7 +27,7 @@ for (const file of TEST_FILES) {
     // Step 1: expr as Mock<(...args: Args) => Type>  →  vi.mocked(expr)  (preserve surrounding parens if any)
     // Handle: expr as Mock (no generics)
     const step1Before = content;
-    content = content.replace(/(\w+(?:\.\w+)*)\s+as jest\.Mock\b(?:<[^>]+>)?/g, (match, expr) => {
+    content = content.replace(/(\w+(?:\.\w+)*)\s+as jest\.Mock\b(?:<[^>]+>)?/g, (match, expr: string) => {
         // Skip if already wrapped in vi.mocked()
         const lineStart = Math.max(0, content.indexOf(match) - 20);
         const prefix = content.slice(lineStart, content.indexOf(match));
@@ -88,7 +88,7 @@ for (const file of TEST_FILES) {
         totalFiles++;
         const changeCount = countChanges(original, content);
         totalChanges += changeCount;
-        console.log(`✏️  ${file} – ${changeCount} change(s)`);
+        process.stdout.write(`✏️  ${file} – ${changeCount} change(s)\n`);
     }
 }
 
@@ -102,4 +102,4 @@ function countChanges(original: string, modified: string): number {
     return changes;
 }
 
-console.log(`\n✅ Done. ${totalFiles} files modified, ${totalChanges} total changes.`);
+process.stdout.write(`\nDone. ${totalFiles} files modified, ${totalChanges} total changes.\n`);

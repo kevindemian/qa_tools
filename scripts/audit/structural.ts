@@ -130,7 +130,7 @@ class DarkModeInconsistency implements Pattern {
                   ...new Set(
                       keys.split('\n').map((l) => {
                           const m = l.match(/['"]([^'"]+theme[^'"]*)['"]/);
-                          return m ? m[1]! : 'unknown';
+                          return m ? (m[1] ?? 'unknown') : 'unknown';
                       }),
                   ),
               ]

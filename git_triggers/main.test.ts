@@ -545,7 +545,9 @@ describe('nivelarBranchesWrapper', () => {
         await mainModule.nivelarBranchesWrapper(gitlab);
         expect(nivelar.nivelarBranches).toHaveBeenCalledWith(
             gitlab,
-            expect.objectContaining({ pushHistory: expect.any(Function) as (...args: unknown[]) => unknown }),
+            expect.objectContaining({
+                pushHistory: expect.any(Function) as unknown as (...args: unknown[]) => unknown,
+            }),
         );
     });
 });

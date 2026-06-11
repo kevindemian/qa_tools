@@ -345,7 +345,7 @@ describe('BugReport Service', () => {
                 fields: {
                     project: { key: 'PROJ' },
                     summary: 'Login issue',
-                    description: expect.any(String) as string,
+                    description: expect.any(String) as unknown as string,
                     issuetype: { name: 'Bug' },
                     labels: ['bug-report', 'manual'],
                     priority: { name: 'Highest' },

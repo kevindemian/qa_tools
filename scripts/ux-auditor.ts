@@ -245,11 +245,11 @@ function detectDeadUtilities(importGraph: ImportGraph): AuditFinding[] {
         const exports_: Array<{ name: string; line: number }> = [];
         for (const m of src.matchAll(/^export (?:async )?function (\w+)/gm)) {
             const lineNum = src.slice(0, m.index).split('\n').length;
-            exports_.push({ name: m[1]!, line: lineNum });
+            exports_.push({ name: m[1] ?? '', line: lineNum });
         }
         for (const m of src.matchAll(/^export (?:const|let|var) (\w+)/gm)) {
             const lineNum = src.slice(0, m.index).split('\n').length;
-            exports_.push({ name: m[1]!, line: lineNum });
+            exports_.push({ name: m[1] ?? '', line: lineNum });
         }
 
         const normalizedPath = path.normalize(f);
@@ -332,11 +332,11 @@ function computeFrictionScore(): number {
     /* EX: handlers without HELP_TOPICS entry / total handlers */
     const helpTopics: Record<string, string> = {};
     for (const m of menuSource.matchAll(/(\w+):\s*'[^']*'/g)) {
-        helpTopics[m[1]!] = '';
+        helpTopics[m[1] ?? ''] = '';
     }
     const handlerIds = new Set<string>();
     for (const m of menuSource.matchAll(/id:\s+'(\d+|d)'/g)) {
-        handlerIds.add(m[1]!);
+        handlerIds.add(m[1] ?? '');
     }
     let handlersWithHelp = 0;
     let totalHandlers = 0;
@@ -349,13 +349,13 @@ function computeFrictionScore(): number {
 
     /* AL: submenu items without alias / total submenu items */
     const aliasTargets = new Set<string>();
-    for (const m of menuSource.matchAll(/['"]([\w-]+)['"]:\s*['"]([\w\d\/]+)['"]/g)) {
+    for (const m of menuSource.matchAll(/['"]([\w-]+)['"]:\s*['"]([\w\d/]+)['"]/g)) {
         if (m[2]) aliasTargets.add(m[2]);
     }
     let itemsWithAlias = 0;
     let totalItems = 0;
     for (const m of menuSource.matchAll(/id:\s+'(\d+|d)'\s*,\s*label:\s+'[^']+'/g)) {
-        const id = m[1]!;
+        const id = m[1] ?? '';
         if (id === '0') continue;
         totalItems++;
         if (aliasTargets.has(id)) itemsWithAlias++;
@@ -402,13 +402,13 @@ function main() {
     const outPath = path.join(auditDir, `ux-audit-${date}.json`);
     fs.writeFileSync(outPath, JSON.stringify(report, null, 2), UTF8);
 
-    console.log(`\nUX Auditor Report: ${outPath}`);
-    console.log(`Friction Score: ${report.frictionScore}`);
-    console.log(`Findings: ${report.findings.length}`);
+    process.stdout.write(`\nUX Auditor Report: ${outPath}\n`);
+    process.stdout.write(`Friction Score: ${report.frictionScore}\n`);
+    process.stdout.write(`Findings: ${report.findings.length}\n`);
     for (const f of report.findings) {
-        console.log(`  [${f.type}] ${f.file}:${f.line} — ${f.detail}`);
+        process.stdout.write(`  [${f.type}] ${f.file}:${f.line} — ${f.detail}\n`);
     }
-    console.log('');
+    process.stdout.write('\n');
 }
 
 main();
