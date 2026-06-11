@@ -44,7 +44,7 @@ beforeAll(() => {
         .times(2)
         .reply(201, (_, body) => {
             const b = body as Record<string, unknown>;
-            const keys = ((b.fields as Record<string, unknown>)?.customfield_13715 as string[]) || [];
+            const keys = (b.fields as Record<string, unknown>).customfield_13715 as string[];
             return { key: 'EXEC-' + keys.length, id: '20001' };
         });
 

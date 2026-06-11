@@ -23,7 +23,7 @@ describe('case02 — list versions', () => {
 
     it('executes without error with basic context', async () => {
         const result = await case02.handler(mockContext);
-        expect(result === undefined || result === true || result === false).toBe(true);
+        expect([undefined, true, false]).toContain(result);
     });
 
     it('handles missing projectId gracefully', async () => {
@@ -39,7 +39,7 @@ describe('case02 — list versions', () => {
         ]);
         const result = await case02.handler(mockContext);
         expect(mockContext.pushHistory).toHaveBeenCalledWith('listar-versoes', expect.stringContaining('versão'), 'ok');
-        expect(result === undefined || result === true || result === false).toBe(true);
+        expect([undefined, true, false]).toContain(result);
     });
 
     it('handles versions list with overdue release', async () => {
@@ -48,12 +48,12 @@ describe('case02 — list versions', () => {
             { name: 'v1.0', description: 'Desc', released: false, releaseDate: pastDate },
         ]);
         const result = await case02.handler(mockContext);
-        expect(result === undefined || result === true || result === false).toBe(true);
+        expect([undefined, true, false]).toContain(result);
     });
 
     it('handles catch error block (lines 27-32)', async () => {
         mockJiraResource.getProjectId.mockRejectedValueOnce(new Error('API failure'));
         const result = await case02.handler(mockContext);
-        expect(result === undefined || result === true || result === false).toBe(true);
+        expect([undefined, true, false]).toContain(result);
     });
 });

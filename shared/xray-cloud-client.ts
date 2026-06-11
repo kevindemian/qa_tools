@@ -5,7 +5,6 @@ import { createThrottledClient } from './http-client.js';
 import { rootLogger } from './logger.js';
 import Config from './config.js';
 
-const DEFAULT_XRAY_CLOUD_URL = 'https://xray.cloud.getxray.app';
 const AUTH_PATH = '/api/v2/authenticate';
 const GRAPHQL_PATH = '/api/v2/graphql';
 
@@ -23,7 +22,7 @@ export class XrayCloudClient {
     private readonly baseUrl: string;
 
     constructor(baseUrl?: string) {
-        this.baseUrl = baseUrl ?? Config.getDefault().get('xrayCloudUrl') ?? DEFAULT_XRAY_CLOUD_URL;
+        this.baseUrl = baseUrl ?? Config.getDefault().get('xrayCloudUrl');
         this.httpClient = createThrottledClient({ baseUrl: this.baseUrl, maxConcurrency: 3 });
     }
 
@@ -74,7 +73,7 @@ export class XrayCloudClient {
                 { query, variables },
                 { headers: { Authorization: 'Bearer ' + token } },
             );
-            return res.data?.data ?? null;
+            return res.data.data ?? null;
         } catch (err) {
             rootLogger.warn('Xray Cloud GraphQL call failed: ' + (err as Error).message);
             return null;

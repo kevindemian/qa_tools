@@ -100,7 +100,7 @@ export function analyzeSuiteOptimization(
 
     const impactOrder: Record<'high' | 'medium' | 'low', number> = { high: 3, medium: 2, low: 1 };
     entries.sort((a, b) => {
-        const orderDiff = (impactOrder[b.impact] ?? 0) - (impactOrder[a.impact] ?? 0);
+        const orderDiff = impactOrder[b.impact] - impactOrder[a.impact];
         if (orderDiff !== 0) return orderDiff;
         return b.duration - a.duration;
     });
