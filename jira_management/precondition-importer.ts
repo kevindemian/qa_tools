@@ -44,7 +44,7 @@ export class PreconditionHandler {
         const fieldId = await this._getPreconditionFieldId();
         info(`Associando pre-condition ${preconditionKey} ao teste ${testKey}...`);
         const testIssue = await this.jiraResource.getJiraResource<{ fields?: JsonObject }>(`issue/${testKey}`);
-        const current = ((testIssue && testIssue.fields && testIssue.fields[fieldId]) as string[]) || [];
+        const current = (testIssue.fields?.[fieldId] ?? []) as string[];
         if (!current.includes(preconditionKey)) {
             current.push(preconditionKey);
         }
@@ -67,9 +67,9 @@ export class PreconditionHandler {
     async listPreconditions(project: string, maxResults = 200): Promise<PreConditionSummary[]> {
         const jql = `project=${project}+AND+issuetype="Pre-condition"+ORDER+BY+summary`;
         const response = await this.jiraResource.searchJiraIssues(jql, maxResults);
-        return (response.issues || []).map((issue: { key: string; fields: { summary?: string } }) => ({
+        return response.issues.map((issue: { key: string; fields: { summary?: string } }) => ({
             key: issue.key,
-            summary: issue.fields?.summary || '',
+            summary: issue.fields.summary || '',
         }));
     }
 
@@ -79,10 +79,10 @@ export class PreconditionHandler {
         const escaped = summary.replace(/['\\]/g, '\\\\$&');
         const jql = `project=${project}+AND+issuetype="Pre-condition"+AND+summary~"${escaped}"`;
         const response = await this.jiraResource.searchJiraIssues(jql, 5);
-        if (response.issues && response.issues.length > 0) {
+        if (response.issues.length > 0) {
             const exact = response.issues.find(
                 (i: { key: string; fields: { summary?: string } }) =>
-                    (i.fields?.summary || '').toLowerCase().trim() === summary.toLowerCase().trim(),
+                    (i.fields.summary || '').toLowerCase().trim() === summary.toLowerCase().trim(),
             );
             if (exact) return exact.key;
         }

@@ -23,7 +23,7 @@ export function prompt(label: string, options: PromptOptions = {}): string {
     if (!process.stdin.isTTY) {
         return def ?? '';
     }
-    while (true) {
+    for (;;) {
         let text = '\n' + chalk.cyan('->') + ' ' + label;
         if (hint) text += ' ' + chalk.yellow('(' + hint + ')');
         if (def) text += ' ' + chalk.yellow('[' + def + ']');
@@ -50,7 +50,7 @@ export function confirm(label: string, defaultYes = false): boolean {
     if (!process.stdin.isTTY) return defaultYes;
     if (getConfig().get<boolean>('autoConfirm')) return defaultYes;
     const def = defaultYes ? 'Y' : 'N';
-    while (true) {
+    for (;;) {
         const text = '\n' + chalk.yellow('?') + ' ' + label + ' ' + chalk.yellow('(' + def + ')');
         let answer: string;
         try {

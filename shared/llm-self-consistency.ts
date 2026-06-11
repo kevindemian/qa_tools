@@ -38,7 +38,7 @@ function structuralHash(obj: unknown): string {
     }
     if (typeof obj === 'bigint') return `big:${obj}`;
     if (typeof obj === 'symbol') return `sym:${obj.description ?? ''}`;
-    if (typeof obj === 'function') return `fn:${obj.name ?? 'anonymous'}`;
+    if (typeof obj === 'function') return `fn:${obj.name}`;
     return 'unknown';
 }
 
@@ -118,19 +118,20 @@ export async function consensusGenerate<T>(
         rootLogger.warn(
             `Self-consistency: all ${n} candidates failed validation. Returning first candidate despite errors.`,
         );
+        let fallback: T | undefined;
         for (const result of results) {
             if (result.status === 'fulfilled' && result.value !== null) {
-                candidates.push(result.value as T);
+                fallback = result.value as T;
                 break;
             }
         }
-        if (candidates.length === 0) {
+        if (!fallback) {
             throw new Error(
                 `Self-consistency: all ${n} candidates failed and no fallback available. Errors: ${errors.join('; ')}`,
             );
         }
         return {
-            winner: candidates[0] as T,
+            winner: fallback,
             candidates,
             votes: { 0: 1 },
             divergence: 'high',

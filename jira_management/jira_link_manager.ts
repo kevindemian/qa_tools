@@ -61,12 +61,12 @@ class JiraLinkManager {
     async listTestExecutions(project: string, maxResults = 20): Promise<TestExecutionSummary[]> {
         const jql = `project=${project}+AND+issuetype="Test Execution"+ORDER+BY+created+DESC`;
         const response = await this.jiraResource.searchJiraIssues(jql, maxResults);
-        return (response.issues || []).map(
+        return response.issues.map(
             (issue: { key: string; fields: { summary?: string; status?: { name?: string }; created?: string } }) => ({
                 key: issue.key,
-                summary: issue.fields?.summary || '',
-                status: issue.fields?.status?.name || '',
-                created: issue.fields?.created || '',
+                summary: issue.fields.summary || '',
+                status: issue.fields.status?.name || '',
+                created: issue.fields.created || '',
             }),
         );
     }
@@ -76,7 +76,7 @@ class JiraLinkManager {
             const issue = await this.jiraResource.getJiraResource<{
                 fields: { issuetype?: { name: string } };
             }>('issue/' + issueKey + '?fields=issuetype');
-            if (!issue?.fields?.issuetype) {
+            if (!issue.fields.issuetype) {
                 rootLogger.warn('Issue "' + issueKey + '" não encontrada');
                 return false;
             }
