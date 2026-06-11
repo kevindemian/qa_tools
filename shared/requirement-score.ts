@@ -98,7 +98,7 @@ export function calculateRequirementScores(records: AiGenerationRecord[] | null 
             for (const fb of record.feedback) {
                 if (fb.action === 'kept') keptCount++;
                 else if (fb.action === 'modified') modifiedCount++;
-                else if (fb.action === 'deleted') deletedCount++;
+                else deletedCount++;
             }
         }
 

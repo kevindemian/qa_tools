@@ -17,7 +17,7 @@ vi.mock('../shared/logger', () => ({
 
 vi.mock('../shared/prompt', () => ({
     info: vi.fn(),
-    extractErrorMessage: vi.fn((err: Error) => err?.message || 'Erro desconhecido'),
+    extractErrorMessage: vi.fn((err: Error) => err.message || 'Erro desconhecido'),
 }));
 
 vi.mock('../shared/git-provider-error', () => ({
@@ -75,7 +75,7 @@ describe('GitHubManager', () => {
                 variables: [{ key: 'VAR', value: 'val' }],
                 workflow_id: '123',
             })) as Record<string, unknown>;
-            expect(mockClient.post).toHaveBeenCalledWith('/repos/myorg/myrepo/actions/workflows/123/dispatches', {
+            expect(mockClient['post']).toHaveBeenCalledWith('/repos/myorg/myrepo/actions/workflows/123/dispatches', {
                 ref: 'main',
                 inputs: { VAR: 'val' },
             });
@@ -90,10 +90,10 @@ describe('GitHubManager', () => {
                 ref: 'dev',
                 variables: [],
             })) as Record<string, unknown>;
-            expect(mockClient.get).toHaveBeenCalledWith('/repos/myorg/myrepo/actions/workflows', {
+            expect(mockClient['get']).toHaveBeenCalledWith('/repos/myorg/myrepo/actions/workflows', {
                 params: { per_page: 10 },
             });
-            expect(mockClient.post).toHaveBeenCalledWith('/repos/myorg/myrepo/actions/workflows/42/dispatches', {
+            expect(mockClient['post']).toHaveBeenCalledWith('/repos/myorg/myrepo/actions/workflows/42/dispatches', {
                 ref: 'dev',
                 inputs: {},
             });
@@ -146,7 +146,7 @@ describe('GitHubManager', () => {
                 string,
                 unknown
             >;
-            expect(mockClient.post).toHaveBeenCalledWith('/repos/myorg/myrepo/pulls', {
+            expect(mockClient['post']).toHaveBeenCalledWith('/repos/myorg/myrepo/pulls', {
                 head: 'feature',
                 base: 'main',
                 title: 'PR Title',
@@ -182,7 +182,7 @@ describe('GitHubManager', () => {
                 string,
                 unknown
             >;
-            expect(mockClient.patch).toHaveBeenCalledWith('/repos/myorg/myrepo/pulls/5', {
+            expect(mockClient['patch']).toHaveBeenCalledWith('/repos/myorg/myrepo/pulls/5', {
                 title: 'PR Title',
                 body: 'PR Desc',
             });
@@ -224,7 +224,7 @@ describe('GitHubManager', () => {
                 'New Title',
                 'New Desc',
             )) as Record<string, unknown>;
-            expect(mockClient.patch).toHaveBeenCalledWith('/repos/myorg/myrepo/pulls/5', {
+            expect(mockClient['patch']).toHaveBeenCalledWith('/repos/myorg/myrepo/pulls/5', {
                 title: 'New Title',
                 body: 'New Desc',
             });
@@ -253,7 +253,7 @@ describe('GitHubManager', () => {
                 },
             });
             const result: Record<string, unknown> = (await manager.getMergeRequest('5')) as Record<string, unknown>;
-            expect(mockClient.get).toHaveBeenCalledWith('/repos/myorg/myrepo/pulls/5');
+            expect(mockClient['get']).toHaveBeenCalledWith('/repos/myorg/myrepo/pulls/5');
             expect(result.iid).toBe(5);
         });
 
@@ -292,7 +292,7 @@ describe('GitHubManager', () => {
             ];
             mockClient.get.mockResolvedValue({ data: mockPRs });
             const result = await manager.searchMergeRequests('dev', 'main', 'opened');
-            expect(mockClient.get).toHaveBeenCalledWith('/repos/myorg/myrepo/pulls', {
+            expect(mockClient['get']).toHaveBeenCalledWith('/repos/myorg/myrepo/pulls', {
                 params: { head: 'myorg:dev', base: 'main', state: 'open', per_page: 100 },
             });
             expect(result).toHaveLength(2);
@@ -301,7 +301,7 @@ describe('GitHubManager', () => {
         it('maps opened status correctly', async () => {
             mockClient.get.mockResolvedValue({ data: [] });
             await manager.searchMergeRequests('', '', 'opened');
-            expect(mockClient.get).toHaveBeenCalledWith(expect.any(String), expect.anything());
+            expect(mockClient['get']).toHaveBeenCalledWith(expect.any(String), expect.anything());
             expect(nonNull(mockClient.get.mock.calls[0])[1]).toHaveProperty('params.state', 'open');
             expect(nonNull(mockClient.get.mock.calls[0])[1]).toHaveProperty('params.per_page', 100);
         });
@@ -343,7 +343,7 @@ describe('GitHubManager', () => {
             });
 
             const result: Record<string, unknown> = (await manager.acceptMergeRequest('5')) as Record<string, unknown>;
-            expect(mockClient.put).toHaveBeenCalledWith('/repos/myorg/myrepo/pulls/5/merge', {
+            expect(mockClient['put']).toHaveBeenCalledWith('/repos/myorg/myrepo/pulls/5/merge', {
                 delete_branch_on_merge: true,
             });
             expect(result.web_url).toBe('https://merge');
@@ -365,7 +365,7 @@ describe('GitHubManager', () => {
             });
 
             const result: Record<string, unknown> = (await manager.acceptMergeRequest('5')) as Record<string, unknown>;
-            expect(mockClient.put).not.toHaveBeenCalled();
+            expect(mockClient['put']).not.toHaveBeenCalled();
             expect(result.state).toBe('merged');
         });
 
@@ -421,7 +421,7 @@ describe('GitHubManager', () => {
             });
 
             await manager.acceptMergeRequest('5', false);
-            expect(mockClient.put).toHaveBeenCalledWith('/repos/myorg/myrepo/pulls/5/merge', {});
+            expect(mockClient['put']).toHaveBeenCalledWith('/repos/myorg/myrepo/pulls/5/merge', {});
         });
     });
 
@@ -448,7 +448,7 @@ describe('GitHubManager', () => {
                 },
             });
             const result = await manager.getPipelineJobs('42');
-            expect(mockClient.get).toHaveBeenCalledWith('/repos/myorg/myrepo/actions/runs/42/jobs');
+            expect(mockClient['get']).toHaveBeenCalledWith('/repos/myorg/myrepo/actions/runs/42/jobs');
             expect(result).toHaveLength(2);
             expect(nonNull(result[0]).name).toContain('test');
             expect(nonNull(result[1]).status).toBe('failure');
@@ -469,7 +469,7 @@ describe('GitHubManager', () => {
                 },
             });
             const result = await manager.listPipelineArtifacts('42');
-            expect(mockClient.get).toHaveBeenCalledWith('/repos/myorg/myrepo/actions/runs/42/artifacts');
+            expect(mockClient['get']).toHaveBeenCalledWith('/repos/myorg/myrepo/actions/runs/42/artifacts');
             expect(result).toEqual([{ id: 301, name: 'mochawesome-report' }]);
         });
 
@@ -486,7 +486,7 @@ describe('GitHubManager', () => {
                 data: Buffer.from('zip-data'),
             });
             const result = await manager.downloadArtifact('301');
-            expect(mockClient.get).toHaveBeenCalledWith('/repos/myorg/myrepo/actions/artifacts/301/zip', {
+            expect(mockClient['get']).toHaveBeenCalledWith('/repos/myorg/myrepo/actions/artifacts/301/zip', {
                 responseType: 'arraybuffer',
                 maxRedirects: 5,
             });
@@ -505,7 +505,7 @@ describe('GitHubManager', () => {
         it('calls GET /actions/variables', async () => {
             mockClient.get.mockResolvedValue({ data: { variables: [{ name: 'MY_VAR', value: 'myval' }] } });
             const result = await manager.getCICDVariables();
-            expect(mockClient.get).toHaveBeenCalledWith('/repos/myorg/myrepo/actions/variables', {
+            expect(mockClient['get']).toHaveBeenCalledWith('/repos/myorg/myrepo/actions/variables', {
                 params: { per_page: 100 },
             });
             expect(result).toEqual([{ key: 'MY_VAR', value: 'myval', type: 'variable' }]);
@@ -523,7 +523,7 @@ describe('GitHubManager', () => {
             mockClient.get.mockResolvedValue({ data: [{ state: 'APPROVED' }] });
             const result = await manager.isApproved(42);
             expect(result).toBe(true);
-            expect(mockClient.get).toHaveBeenCalledWith('/repos/myorg/myrepo/pulls/42/reviews');
+            expect(mockClient['get']).toHaveBeenCalledWith('/repos/myorg/myrepo/pulls/42/reviews');
         });
 
         it('returns false when no APPROVED review', async () => {
@@ -590,7 +590,7 @@ describe('GitHubManager', () => {
                 },
             });
             const result = await manager.getRecentPipelines(3);
-            expect(mockClient.get).toHaveBeenCalledWith('/repos/myorg/myrepo/actions/runs', {
+            expect(mockClient['get']).toHaveBeenCalledWith('/repos/myorg/myrepo/actions/runs', {
                 params: { per_page: 3 },
             });
             expect(result).toHaveLength(1);
@@ -599,7 +599,7 @@ describe('GitHubManager', () => {
         it('defaults to count=5', async () => {
             mockClient.get.mockResolvedValue({ data: { workflow_runs: [] } });
             await manager.getRecentPipelines();
-            expect(mockClient.get).toHaveBeenCalledWith(expect.any(String), {
+            expect(mockClient['get']).toHaveBeenCalledWith(expect.any(String), {
                 params: { per_page: 5 },
             });
         });
@@ -635,7 +635,7 @@ describe('GitHubManager', () => {
         it('calls GET /actions/runs/{id}', async () => {
             mockClient.get.mockResolvedValue({ data: { id: 42, status: 'completed', conclusion: 'success' } });
             const result = await manager.getPipeline('42');
-            expect(mockClient.get).toHaveBeenCalledWith('/repos/myorg/myrepo/actions/runs/42');
+            expect(mockClient['get']).toHaveBeenCalledWith('/repos/myorg/myrepo/actions/runs/42');
             expect(result).toEqual({ id: 42, status: 'completed', conclusion: 'success' });
         });
 

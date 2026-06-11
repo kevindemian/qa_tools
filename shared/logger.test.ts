@@ -117,7 +117,7 @@ describe('Logger', () => {
         it('has no ANSI escape codes in the log file', () => {
             const result = writeAndCheck('info', 'Sem ANSI no arquivo');
             expect(result.fileFound).toBe(true);
-            expect(result.lastLine).not.toMatch(/\x1b\[/);
+            expect(result.lastLine).not.toMatch(new RegExp(String.fromCharCode(0x1b) + '\\['));
         });
 
         it('writes ERROR level correctly', () => {
@@ -148,7 +148,7 @@ describe('Logger', () => {
     });
 
     describe('_ensureDir error paths', () => {
-        let spyError: MockInstance;
+        let spyError: MockInstance | undefined;
 
         afterEach(() => {
             if (spyError) spyError.mockRestore();
@@ -233,7 +233,7 @@ describe('Logger', () => {
     });
 
     describe('_writeFile error paths', () => {
-        let spyError: MockInstance;
+        let spyError: MockInstance | undefined;
 
         afterEach(() => {
             if (spyError) spyError.mockRestore();

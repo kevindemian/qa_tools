@@ -114,7 +114,7 @@ async function fetchCiCdContext(): Promise<string> {
         const runsResp = await client.get<{
             workflow_runs?: Array<{ id: number; created_at?: string; name?: string; display_title?: string }>;
         }>(`/repos/${ghRepo}/actions/runs?per_page=5&status=success&status=failure`);
-        const runs = runsResp.data?.workflow_runs || [];
+        const runs = runsResp.data.workflow_runs || [];
 
         const runStats: Array<{ runId: number; createdAt: string; name: string }> = runs.map((run) => ({
             runId: run.id,

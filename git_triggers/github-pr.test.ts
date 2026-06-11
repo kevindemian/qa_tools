@@ -40,7 +40,7 @@ vi.mock('../shared/git-provider-error', () => ({
 
 vi.mock('../shared/prompt', () => ({
     info: vi.fn<(...args: [string]) => void>(),
-    extractErrorMessage: vi.fn<(...args: [Error]) => string>((err: Error) => err?.message || 'Erro desconhecido'),
+    extractErrorMessage: vi.fn<(...args: [Error]) => string>((err: Error) => err.message || 'Erro desconhecido'),
 }));
 
 vi.mock('../shared/git-provider-error', () => ({
@@ -54,7 +54,7 @@ vi.mock('../shared/git-provider-error', () => ({
 
 vi.mock('../shared/prompt', () => ({
     info: vi.fn<(...args: [string]) => void>(),
-    extractErrorMessage: vi.fn<(...args: [Error]) => string>((err: Error) => err?.message || 'Erro desconhecido'),
+    extractErrorMessage: vi.fn<(...args: [Error]) => string>((err: Error) => err.message || 'Erro desconhecido'),
 }));
 
 import * as githubApi from './github-api.js';
@@ -416,7 +416,7 @@ describe('prAcceptMergeRequest', () => {
             head: { ref: 'f' },
             base: { ref: 'm' },
         });
-        vi.mocked(client.put).mockResolvedValue({
+        vi.mocked(client['put']).mockResolvedValue({
             data: {
                 number: 5,
                 state: 'open',
@@ -430,7 +430,9 @@ describe('prAcceptMergeRequest', () => {
         });
 
         const result = await prAcceptMergeRequest(client, 'myorg', 'myrepo', 5);
-        expect(client.put).toHaveBeenCalledWith('/repos/myorg/myrepo/pulls/5/merge', { delete_branch_on_merge: true });
+        expect(client['put']).toHaveBeenCalledWith('/repos/myorg/myrepo/pulls/5/merge', {
+            delete_branch_on_merge: true,
+        });
         expect(nonNull(result).web_url).toBe('https://merge');
     });
 
@@ -447,7 +449,7 @@ describe('prAcceptMergeRequest', () => {
         });
 
         const result = await prAcceptMergeRequest(client, 'myorg', 'myrepo', 5);
-        expect(client.put).not.toHaveBeenCalled();
+        expect(client['put']).not.toHaveBeenCalled();
         expect(nonNull(result).state).toBe('merged');
     });
 
@@ -467,7 +469,7 @@ describe('prAcceptMergeRequest', () => {
             head: { ref: 'f' },
             base: { ref: 'm' },
         });
-        vi.mocked(client.put).mockRejectedValue(new Error('Merge failed'));
+        vi.mocked(client['put']).mockRejectedValue(new Error('Merge failed'));
         await expect(prAcceptMergeRequest(client, 'myorg', 'myrepo', 5)).rejects.toThrow('Merge failed');
     });
 
@@ -482,7 +484,7 @@ describe('prAcceptMergeRequest', () => {
             head: { ref: 'f' },
             base: { ref: 'm' },
         });
-        vi.mocked(client.put).mockResolvedValue({
+        vi.mocked(client['put']).mockResolvedValue({
             data: {
                 number: 5,
                 state: 'open',
@@ -496,7 +498,7 @@ describe('prAcceptMergeRequest', () => {
         });
 
         await prAcceptMergeRequest(client, 'myorg', 'myrepo', 5, false);
-        expect(client.put).toHaveBeenCalledWith('/repos/myorg/myrepo/pulls/5/merge', {});
+        expect(client['put']).toHaveBeenCalledWith('/repos/myorg/myrepo/pulls/5/merge', {});
     });
 });
 

@@ -96,7 +96,7 @@ function readPrompt(file: string): string {
 }
 
 function formatFailedTests(failed: FlatTest[]): string {
-    return failed.map((t, i) => `${i + 1}. [${t.state}] ${t.title} (${t.duration ?? '?'}ms)`).join('\n');
+    return failed.map((t, i) => `${i + 1}. [${t.state}] ${t.title} (${t.duration}ms)`).join('\n');
 }
 
 /** Analyze all failed tests via an LLM review, generate a full HTML report, and snapshot LLM metrics.

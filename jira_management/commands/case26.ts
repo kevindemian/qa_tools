@@ -23,7 +23,7 @@ async function handler(c: CommandContext): Promise<boolean | void> {
 
         const releaseScore = calculateReleaseScore(
             80,
-            health.overall ?? 50,
+            health.overall,
             health.overall >= 70 ? 'pass' : 'fail',
             70,
             flaky.length > 0

@@ -43,7 +43,7 @@ export async function main(): Promise<void> {
         return;
     }
 
-    while (true) {
+    for (;;) {
         if (process.stdout.isTTY) process.stdout.write('\x1Bc');
         await showSplash();
 

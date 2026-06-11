@@ -242,5 +242,5 @@ const TIER_CONFIGS: Record<LlmTier, () => ProviderConfig> = {
 
 export function tierToConfig(tier: LlmTier): ProviderConfig {
     const factory = TIER_CONFIGS[tier];
-    return factory ? factory() : TIER_CONFIGS.main();
+    return factory();
 }

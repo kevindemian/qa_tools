@@ -145,7 +145,7 @@ export function generateGitMetricsRuns(options?: GitMetricsAdapterOptions): Metr
 
             if (test.state === 'passed') passedCount++;
             else if (test.state === 'failed') failedCount++;
-            else if (test.state === 'skipped') skippedCount++;
+            else skippedCount++;
 
             tests.push(test);
             prevCommitTime = commitTime;

@@ -46,6 +46,6 @@ describe('case01 — create tests from CSV', () => {
 
     it('executes without error with basic context', async () => {
         const result = await case01.handler(mockContext);
-        expect(result === undefined || result === true || result === false).toBe(true);
+        expect([undefined, true, false]).toContain(result);
     });
 });
