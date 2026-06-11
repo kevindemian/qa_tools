@@ -56,17 +56,17 @@ let createdTestExecKey: string | null = null;
 let originalDescription: string | null = null;
 
 function ok(label: string) {
-    console.log(`  ✅ ${label}`);
+    process.stdout.write(`  ✅ ${label}` + '\n');
     passed++;
 }
 function fail(label: string, detail?: string) {
-    console.log(`  ❌ ${label}${detail ? ': ' + detail : ''}`);
+    process.stdout.write(`  ❌ ${label}${detail ? ': ' + detail : ''}` + '\n');
     failed++;
 }
 function section(title: string) {
-    console.log(`\n${'='.repeat(60)}`);
-    console.log(`  ${title}`);
-    console.log(`${'='.repeat(60)}`);
+    process.stdout.write(`\n${'='.repeat(60)}` + '\n');
+    process.stdout.write(`  ${title}` + '\n');
+    process.stdout.write(`${'='.repeat(60)}` + '\n');
 }
 
 // ── Helpers ─────────────────────────────────────────────────────
@@ -103,11 +103,11 @@ async function readExistingTest(): Promise<boolean> {
         }
         originalDescription = (f.description as string) || '';
         ok(`Test ${EXISTING_TEST} lido: "${f.summary as string}"`);
-        if ((f.labels as string[])?.includes(LABEL)) ok(`Label "${LABEL}" presente`);
+        if ((f.labels as string[]).includes(LABEL)) ok(`Label "${LABEL}" presente`);
         else fail(`Label "${LABEL}" ausente em ${EXISTING_TEST}`);
-        if ((f.issuetype as Record<string, string>)?.name === 'Test') ok(`Issue type = Test`);
-        else fail(`Issue type = ${(f.issuetype as Record<string, string>)?.name}`);
-        if ((f.customfield_13708 as string[])?.includes(EXISTING_PRECOND))
+        if ((f.issuetype as Record<string, string>).name === 'Test') ok(`Issue type = Test`);
+        else fail(`Issue type = ${(f.issuetype as Record<string, string>).name}`);
+        if ((f.customfield_13708 as string[]).includes(EXISTING_PRECOND))
             ok(`Pre-condition ${EXISTING_PRECOND} linkada`);
         else fail(`Pre-condition não encontrada`);
         return true;
@@ -236,7 +236,7 @@ function criarCsv() {
         ].join('\n') + '\n';
 
     fs.writeFileSync(CSV_PATH, csvContent, 'utf8');
-    console.log(`  CSV criado: ${CSV_PATH}`);
+    process.stdout.write(`  CSV criado: ${CSV_PATH}` + '\n');
 }
 
 async function fase3CriarTest() {
@@ -266,7 +266,7 @@ async function fase3CriarTest() {
         if (result && result.status === 'ok' && result.inMemoryTasksId.length > 0) {
             createdIssueKey = result.inMemoryTasksId[0] ?? null;
             ok(`Test criado: ${createdIssueKey} — "${result.inMemoryTasksText[0]}"`);
-            console.log(`  ${BASE_URL}/browse/${createdIssueKey}`);
+            process.stdout.write(`  ${BASE_URL}/browse/${createdIssueKey}` + '\n');
             return true;
         } else {
             fail('createTestsFromCsv', result ? `status=${result.status}` : 'undefined');
@@ -276,8 +276,8 @@ async function fase3CriarTest() {
         const err = e as Error & { response?: { status?: number; data?: unknown } };
         fail('createTestsFromCsv exception', err.message);
         if (err.response) {
-            console.log(`  Status: ${err.response.status}`);
-            console.log(`  Data: ${JSON.stringify(err.response.data).slice(0, 400)}`);
+            process.stdout.write(`  Status: ${err.response.status}` + '\n');
+            process.stdout.write(`  Data: ${JSON.stringify(err.response.data).slice(0, 400)}` + '\n');
         }
         return false;
     }
@@ -305,8 +305,8 @@ async function fase4CriarTestExecution() {
         if (result && result.key) {
             createdTestExecKey = result.key;
             ok(`Test Execution criada: ${result.key}`);
-            console.log(`  ${BASE_URL}/browse/${result.key}`);
-            console.log(`  Summary: ${result.summary}`);
+            process.stdout.write(`  ${BASE_URL}/browse/${result.key}` + '\n');
+            process.stdout.write(`  Summary: ${result.summary}` + '\n');
         } else {
             fail('createTestExecutionWithLinks retornou sem key');
         }
@@ -314,8 +314,8 @@ async function fase4CriarTestExecution() {
         const err = e as Error & { response?: { status?: number; data?: unknown } };
         fail('createTestExecutionWithLinks', err.message);
         if (err.response) {
-            console.log(`  Status: ${err.response.status}`);
-            console.log(`  Data: ${JSON.stringify(err.response.data).slice(0, 400)}`);
+            process.stdout.write(`  Status: ${err.response.status}` + '\n');
+            process.stdout.write(`  Data: ${JSON.stringify(err.response.data).slice(0, 400)}` + '\n');
         }
     }
 }
@@ -331,22 +331,24 @@ async function verifyNewTestCase(): Promise<boolean> {
             fail('issue.fields missing');
             return false;
         }
-        ok(`${createdIssueKey} existe, type=${(f.issuetype as Record<string, string>)?.name}`);
-        if ((f.labels as string[])?.includes(LABEL)) ok(`Label "${LABEL}" presente`);
+        ok(`${createdIssueKey} existe, type=${(f.issuetype as Record<string, string>).name}`);
+        if ((f.labels as string[]).includes(LABEL)) ok(`Label "${LABEL}" presente`);
         else fail(`Label "${LABEL}" ausente`);
-        if ((f.customfield_13708 as string[])?.includes(EXISTING_PRECOND))
+        if ((f.customfield_13708 as string[]).includes(EXISTING_PRECOND))
             ok(`Pre-condition ${EXISTING_PRECOND} linkada`);
         else fail(`Pre-condition ausente`);
-        console.log(`  Summary: ${f.summary as string}`);
-        console.log(`  Description: ${((f.description as string) || '').slice(0, 100)}`);
+        process.stdout.write(`  Summary: ${f.summary as string}` + '\n');
+        process.stdout.write(`  Description: ${((f.description as string) || '').slice(0, 100)}` + '\n');
 
         const steps = (await getSteps(createdIssueKey)) as unknown as Record<string, unknown>[];
         ok(`Steps: ${steps.length} steps`);
         for (const s of steps) {
             const fields = s.fields as Record<string, unknown> | undefined;
-            const a = ((fields?.Action as Record<string, unknown> | undefined)?.value as string) ?? '';
-            const e = ((fields?.['Expected Result'] as Record<string, unknown> | undefined)?.value as string) ?? '';
-            console.log(`    Step ${String(s.index)}: ${a} → ${e}`);
+            const a = ((fields?.Action as Record<string, unknown> | undefined)?.value as string | undefined) ?? '';
+            const e =
+                ((fields?.['Expected Result'] as Record<string, unknown> | undefined)?.value as string | undefined) ??
+                '';
+            process.stdout.write(`    Step ${String(s.index)}: ${a} → ${e}` + '\n');
         }
         return true;
     } catch (e: unknown) {
@@ -366,9 +368,9 @@ async function verifyTestExecution(): Promise<boolean> {
             };
         }>(`issue/${createdTestExecKey}?fields=summary,issuelinks`);
 
-        const links = te.fields?.issuelinks || [];
+        const links = te.fields.issuelinks || [];
         const linkedKeys = links.map((l) => l.outwardIssue?.key).filter(Boolean);
-        ok(`TE ${createdTestExecKey} criada: "${te.fields?.summary}"`);
+        ok(`TE ${createdTestExecKey} criada: "${te.fields.summary}"`);
         ok(`TE contém ${linkedKeys.length} link(s): ${linkedKeys.join(', ')}`);
         const found1255 = linkedKeys.includes(EXISTING_TEST);
         const foundNew = createdIssueKey ? linkedKeys.includes(createdIssueKey) : false;
@@ -409,25 +411,25 @@ async function fase6XrayHistory() {
                         : typeof entry.evolution === 'string'
                           ? entry.evolution
                           : 'N/A';
-                console.log(`    ${entryDate}: ${entryStatus}`);
+                process.stdout.write(`    ${entryDate}: ${entryStatus}` + '\n');
             });
         } else {
-            console.log(`  ℹ️ Nenhum histórico encontrado para ${EXISTING_TEST} (pode ser normal)`);
+            process.stdout.write(`  ℹ️ Nenhum histórico encontrado para ${EXISTING_TEST} (pode ser normal)` + '\n');
         }
     } catch (e: unknown) {
-        console.log(`  ℹ️ XrayHistory indisponível: ${(e as Error).message}`);
+        process.stdout.write(`  ℹ️ XrayHistory indisponível: ${(e as Error).message}` + '\n');
     }
 }
 
 // ── Main ────────────────────────────────────────────────────────
 async function main() {
-    console.log(`\n${'#'.repeat(60)}`);
-    console.log(`  QA TOOLS — E2E REAL EM PRODUÇÃO`);
-    console.log(`  Jira: ${BASE_URL}`);
-    console.log(`  Projeto: ${PROJECT}`);
-    console.log(`  Issues: ${EXISTING_TEST}, ${EXISTING_PRECOND}`);
-    console.log(`  Data: ${new Date().toISOString()}`);
-    console.log(`${'#'.repeat(60)}\n`);
+    process.stdout.write(`\n${'#'.repeat(60)}` + '\n');
+    process.stdout.write(`  QA TOOLS — E2E REAL EM PRODUÇÃO` + '\n');
+    process.stdout.write(`  Jira: ${BASE_URL}` + '\n');
+    process.stdout.write(`  Projeto: ${PROJECT}` + '\n');
+    process.stdout.write(`  Issues: ${EXISTING_TEST}, ${EXISTING_PRECOND}` + '\n');
+    process.stdout.write(`  Data: ${new Date().toISOString()}` + '\n');
+    process.stdout.write(`${'#'.repeat(60)}\n` + '\n');
 
     try {
         await fase1Diagnostico();
@@ -443,15 +445,15 @@ async function main() {
         await fase6XrayHistory();
     } catch (e: unknown) {
         fail('ERRO INESPERADO', (e as Error).message);
-        console.error(e);
+        process.stderr.write(String(e) + '\n');
     }
 
     // Summary
-    console.log(`\n${'='.repeat(60)}`);
-    console.log(`  RESULTADO: ${passed} passed, ${failed} failed`);
-    if (createdIssueKey) console.log(`  Novo test: ${BASE_URL}/browse/${createdIssueKey}`);
-    if (createdTestExecKey) console.log(`  TE criada: ${BASE_URL}/browse/${createdTestExecKey}`);
-    console.log(`${'='.repeat(60)}\n`);
+    process.stdout.write(`\n${'='.repeat(60)}` + '\n');
+    process.stdout.write(`  RESULTADO: ${passed} passed, ${failed} failed` + '\n');
+    if (createdIssueKey) process.stdout.write(`  Novo test: ${BASE_URL}/browse/${createdIssueKey}` + '\n');
+    if (createdTestExecKey) process.stdout.write(`  TE criada: ${BASE_URL}/browse/${createdTestExecKey}` + '\n');
+    process.stdout.write(`${'='.repeat(60)}\n` + '\n');
 
     // Cleanup CSV
     if (fs.existsSync(CSV_PATH)) {

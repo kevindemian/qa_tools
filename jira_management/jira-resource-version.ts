@@ -1,6 +1,6 @@
 /** Jira version management: create, publish, list, and assign fix versions to issues. */
 import { formatDateISO } from '../shared/date-utils.js';
-import { error as logError, success, info, extractErrorMessage, ProgressBar } from '../shared/prompt.js';
+import { success, info, extractErrorMessage, ProgressBar } from '../shared/prompt.js';
 import type { Logger } from '../shared/logger.js';
 import type { VersionData, JiraIssue, SearchResponse, JiraResourceLike } from './jira-resource-types.js';
 import {
@@ -11,7 +11,6 @@ import {
     versionAlreadyExists,
     creatingVersion,
     versionCreated,
-    FAILED_TO_CREATE_VERSION,
     publishingVersion,
     versionPublished,
     versionNotFoundForProject,
@@ -55,7 +54,7 @@ export async function searchJiraIssuesCore(
                 if (total > MAX_TOTAL) log.warn(`Total (${total}) excede limite de ${MAX_TOTAL}, truncando.`);
             }
 
-            allIssues = allIssues.concat(data.issues || []);
+            allIssues = allIssues.concat(data.issues);
             startAt += maxResults;
         }
 
@@ -126,11 +125,7 @@ export async function createVersion(
     info(creatingVersion(versionName));
     const response = await resource.postJiraResource('version', payload);
 
-    if (response) {
-        success(versionCreated(response.name as string));
-    } else {
-        logError(FAILED_TO_CREATE_VERSION);
-    }
+    success(versionCreated(response.name as string));
     return response;
 }
 
@@ -145,14 +140,14 @@ export async function checkReleaseTasksStatus(
         const jql = `project = ${projectId} AND fixVersion = "${safeVersion}"`;
 
         const issuesData = await resource.searchJiraIssues(jql);
-        if (!issuesData || !issuesData.issues || issuesData.issues.length === 0) {
+        if (issuesData.issues.length === 0) {
             info(noIssuesFoundForVersion(versionName, projectName));
             return false;
         }
 
         let allTasksCompleted = true;
         for (const issue of issuesData.issues) {
-            const status = issue.fields?.status?.name || '';
+            const status = issue.fields.status?.name || '';
             if (!['done', 'in use'].includes(status.toLowerCase())) {
                 info(issueNotCompleted(issue.key, status));
                 allTasksCompleted = false;
@@ -182,7 +177,7 @@ export async function getReleaseTasks(
         const jql = `project = ${projectId} AND fixVersion = "${safeVersion}"${typeFilter}`;
 
         const issuesData = await resource.searchJiraIssues(jql);
-        if (!issuesData || !issuesData.issues || issuesData.issues.length === 0) {
+        if (issuesData.issues.length === 0) {
             info(noIssuesFoundForVersion(versionName, projectName));
             return [];
         }

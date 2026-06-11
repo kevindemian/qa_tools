@@ -35,14 +35,14 @@ function _renderTestMeta(t: TestCase): string {
 }
 
 function _renderSteps(t: TestCase): string {
-    if (!t.steps || t.steps.length === 0) return '_No steps defined._\n\n';
+    if (t.steps.length === 0) return '_No steps defined._\n\n';
     let out = '### Steps\n\n';
     for (let j = 0; j < t.steps.length; j++) {
         const s = t.steps[j] as NonNullable<NonNullable<(typeof t)['steps']>[number]>;
         out += '**Step ' + (j + 1) + '**\n';
-        out += '- **Action:** ' + (s.fields?.Action || '') + '\n';
-        if (s.fields?.Data) out += '- **Data:** ' + s.fields.Data + '\n';
-        out += '- **Expected Result:** ' + (s.fields?.['Expected Result'] || '') + '\n\n';
+        out += '- **Action:** ' + (s.fields.Action || '') + '\n';
+        if (s.fields.Data) out += '- **Data:** ' + s.fields.Data + '\n';
+        out += '- **Expected Result:** ' + (s.fields['Expected Result'] || '') + '\n\n';
     }
     return out;
 }
@@ -55,8 +55,8 @@ export function generatePreviewMarkdown(tests: TestCase[], options?: PreviewMdOp
 
     const summaryParts: string[] = [];
     if (options?.totalSteps !== undefined || options?.groupsCount !== undefined) {
-        const total = options?.totalSteps ?? tests.reduce((s, t) => s + t.steps.length, 0);
-        const groups = options?.groupsCount ?? new Set(tests.map((t) => t.group).filter(Boolean)).size;
+        const total = options.totalSteps ?? tests.reduce((s, t) => s + t.steps.length, 0);
+        const groups = options.groupsCount ?? new Set(tests.map((t) => t.group).filter(Boolean)).size;
         summaryParts.push(
             tests.length + ' teste(s), ' + total + ' step(s)' + (groups > 0 ? ', ' + groups + ' grupo(s)' : ''),
         );

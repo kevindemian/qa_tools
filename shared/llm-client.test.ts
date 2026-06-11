@@ -271,7 +271,7 @@ describe('llmPrompt', () => {
         );
 
         await llmPrompt({ tier: 'main', system: 'system', user: 'json test', responseFormat: 'json' });
-        const body = safeParseJson<Record<string, unknown>>((mockFetch.mock.calls[0]?.[1]?.body as string) ?? '', {});
+        const body = safeParseJson<Record<string, unknown>>(mockFetch.mock.calls[0]?.[1]?.body as string, {});
         expect(body.response_format).toEqual({ type: 'json_object' });
     });
 
@@ -301,7 +301,7 @@ describe('llmPrompt', () => {
         );
 
         await llmPrompt({ tier: 'reviewer', system: 'system instruction', user: 'user message' });
-        const body = safeParseJson<Record<string, unknown>>((mockFetch.mock.calls[0]?.[1]?.body as string) ?? '', {});
+        const body = safeParseJson<Record<string, unknown>>(mockFetch.mock.calls[0]?.[1]?.body as string, {});
         expect(body).toHaveProperty('system_instruction');
         expect(body).toHaveProperty('system_instruction.parts[0].text', 'system instruction');
         expect(body).toHaveProperty('contents[0].parts[0].text', 'user message');
@@ -512,10 +512,7 @@ describe('llmPrompt', () => {
             );
 
             await llmPrompt({ tier: 'main', system: 'system', user: 'json test', responseFormat: 'json' });
-            const body = safeParseJson<Record<string, unknown>>(
-                (mockFetch.mock.calls[0]?.[1]?.body as string) ?? '',
-                {},
-            );
+            const body = safeParseJson<Record<string, unknown>>(mockFetch.mock.calls[0]?.[1]?.body as string, {});
             expect(body.response_format).toEqual({ type: 'json_object' });
         });
 
@@ -552,10 +549,7 @@ describe('llmPrompt', () => {
             );
 
             await llmPrompt({ tier: 'reviewer', system: 'custom system instruction', user: 'user text' });
-            const body = safeParseJson<Record<string, unknown>>(
-                (mockFetch.mock.calls[0]?.[1]?.body as string) ?? '',
-                {},
-            );
+            const body = safeParseJson<Record<string, unknown>>(mockFetch.mock.calls[0]?.[1]?.body as string, {});
             expect(body).toHaveProperty('system_instruction');
             expect(body).toHaveProperty('system_instruction.parts[0].text', 'custom system instruction');
             expect(body).toHaveProperty('contents[0].parts[0].text', 'user text');
@@ -617,10 +611,7 @@ describe('llmPrompt', () => {
 
             await llmPrompt({ tier: 'main', system: 'sys', user: 'user', callerId: 'caller', responseFormat: 'json' });
 
-            const body = safeParseJson<Record<string, unknown>>(
-                (mockFetch.mock.calls[0]?.[1]?.body as string) ?? '',
-                {},
-            );
+            const body = safeParseJson<Record<string, unknown>>(mockFetch.mock.calls[0]?.[1]?.body as string, {});
             expect(body.response_format).toEqual({ type: 'json_object' });
         });
 
@@ -646,10 +637,7 @@ describe('llmPrompt', () => {
 
             await llmPrompt({ tier: 'reviewer', system: 'sys', user: 'user' });
 
-            const body = safeParseJson<Record<string, unknown>>(
-                (mockFetch.mock.calls[0]?.[1]?.body as string) ?? '',
-                {},
-            );
+            const body = safeParseJson<Record<string, unknown>>(mockFetch.mock.calls[0]?.[1]?.body as string, {});
             expect(body).toHaveProperty('system_instruction');
             expect(body).toHaveProperty('system_instruction.parts[0].text', 'sys');
         });
@@ -1122,10 +1110,7 @@ describe('llmPrompt', () => {
             );
 
             await llmPrompt({ tier: 'report', system: 'system', user: 'report test', responseFormat: 'json' });
-            const body = safeParseJson<Record<string, unknown>>(
-                (mockFetch.mock.calls[0]?.[1]?.body as string) ?? '',
-                {},
-            );
+            const body = safeParseJson<Record<string, unknown>>(mockFetch.mock.calls[0]?.[1]?.body as string, {});
             expect(body.response_format).toEqual({ type: 'json_object' });
         });
     });
