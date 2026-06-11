@@ -36,6 +36,7 @@ set -euo pipefail
 IMAGE="opencode-qa"
 PROJECT_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 OPENCODE_CONFIG_HOME="${HOME}/.config/opencode"
+OPENCODE_DATA_HOME="${HOME}/.local/share/opencode"
 GITCONFIG="${HOME}/.gitconfig"
 
 # ── Verificação de dependências ─────────────────────────────────────────────
@@ -48,6 +49,14 @@ if ! podman image exists "${IMAGE}" &>/dev/null; then
     echo "[qa.sh] ERRO: imagem '${IMAGE}' não encontrada." >&2
     echo "[qa.sh] Execute: podman build -t ${IMAGE} ${HOME}/.config/opencode/container" >&2
     exit 1
+fi
+
+# ── Garantir diretório de dados persistente ──────────────────────────────────
+# SQLite DB do opencode (~/.local/share/opencode/opencode.db) precisa
+# persistir entre sessões do container. Cria o diretório no host se
+# não existir para que o bind mount funcione.
+if [[ ! -d "${OPENCODE_DATA_HOME}" ]]; then
+    mkdir -p "${OPENCODE_DATA_HOME}"
 fi
 
 # ── Montagens condicionais ──────────────────────────────────────────────────
@@ -72,11 +81,13 @@ fi
 # ── Execução ────────────────────────────────────────────────────────────────
 
 exec podman run --rm -it \
+    --replace \
     --name opencode-qa \
     --user "$(id -u):$(id -g)" \
     --userns keep-id \
     -v "${PROJECT_ROOT}:/project:rw,z" \
     -v "${OPENCODE_CONFIG_HOME}:/home/coder/.config/opencode:ro,z" \
+    -v "${OPENCODE_DATA_HOME}:/home/coder/.local/share/opencode:rw,z" \
     ${GITCONFIG_MOUNT} \
     ${ENV_FILE} \
     -w /project \
