@@ -1,6 +1,7 @@
 import fs from 'fs';
 import path from 'path';
 import os from 'os';
+import { execFileSync } from 'child_process';
 import { afterAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import { FsStoreBackend, GitStoreBackend, detectStoreBackend, detectProjectGitDir } from './store-backend.js';
 
@@ -32,7 +33,7 @@ describe('FsStoreBackend', () => {
         backend.write('subdir/test.json', Buffer.from(JSON.stringify({ key: 'value' })));
         const full = path.join(dir, 'subdir', 'test.json');
         expect(fs.existsSync(full)).toBe(true);
-        const content = JSON.parse(fs.readFileSync(full, 'utf8'));
+        const content = JSON.parse(fs.readFileSync(full, 'utf8')) as Record<string, string>;
         expect(content.key).toBe('value');
     });
 
@@ -109,7 +110,7 @@ describe('GitStoreBackend', () => {
         const result = backend.read('test.json');
         expect(result).not.toBeNull();
         if (result) {
-            expect(JSON.parse(result.toString()).a).toBe(1);
+            expect((JSON.parse(result.toString()) as Record<string, number>).a).toBe(1);
         }
     });
 
@@ -119,7 +120,7 @@ describe('GitStoreBackend', () => {
         backend.init();
         backend.write('data.json', Buffer.from('test'));
         backend.flush('qa-tools: test commit [skip ci]');
-        const log = require('child_process').execSync(`git -C "${dir}" log --oneline`, { encoding: 'utf8' });
+        const log = execFileSync('git', ['-C', dir, 'log', '--oneline'], { encoding: 'utf8' });
         expect(log).toContain('qa-tools: test commit');
     });
 
@@ -128,7 +129,7 @@ describe('GitStoreBackend', () => {
         const backend = new GitStoreBackend(dir, '.');
         backend.init();
         backend.flush('qa-tools: empty [skip ci]');
-        const log = require('child_process').execSync(`git -C "${dir}" log --oneline`, { encoding: 'utf8' });
+        const log = execFileSync('git', ['-C', dir, 'log', '--oneline'], { encoding: 'utf8' });
         expect(log).toContain('qa-tools: empty');
     });
 
@@ -144,8 +145,8 @@ describe('GitStoreBackend', () => {
     it('pre-existing git repo is not re-initialized', () => {
         const dir = path.join(tmpDir, 'git-test-existing');
         fs.mkdirSync(dir, { recursive: true });
-        require('child_process').execSync(`git init "${dir}"`, { stdio: 'ignore' });
-        require('child_process').execSync(`git -C "${dir}" config user.name "preexisting"`, { stdio: 'ignore' });
+        execFileSync('git', ['init', dir], { stdio: 'ignore' });
+        execFileSync('git', ['-C', dir, 'config', 'user.name', 'preexisting'], { stdio: 'ignore' });
         const backend = new GitStoreBackend(dir, '.');
         backend.init();
         const config = fs.readFileSync(path.join(dir, '.git', 'config'), 'utf8');
@@ -295,7 +296,7 @@ describe('detectStoreBackend', () => {
         const backend = detectStoreBackend();
         const hasGit = (() => {
             try {
-                require('child_process').execSync('git --version', { stdio: 'ignore' });
+                execFileSync('git', ['--version'], { stdio: 'ignore' });
                 return true;
             } catch {
                 return false;

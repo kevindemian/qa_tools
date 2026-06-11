@@ -178,7 +178,7 @@ beforeAll(() => {
 });
 
 beforeAll(async () => {
-    mod = (await import('./main.js'));
+    mod = await import('./main.js');
     const imported = (await import('./main.js')) as MainModule;
     mod = imported;
     // Intentional: yield to microtask queue so main() (called at module scope) completes
@@ -534,7 +534,7 @@ describe('showDocs', () => {
             'Documentação',
             expect.any(Function),
         );
-        readFileSpy.mockRestore?.();
+        readFileSpy.mockRestore();
     });
 
     it('handles missing docs directory', async () => {
@@ -561,44 +561,44 @@ describe('showHelpLoop', () => {
         vi.mocked(prompt).mockReturnValue('0');
     });
 
-    it('shows help topics then exits on /back', async () => {
-        await mod.showHelpLoop();
+    it('shows help topics then exits on /back', () => {
+        mod.showHelpLoop();
         expect(title).toHaveBeenCalled();
     });
 
-    it('handles specific topic then exits', async () => {
+    it('handles specific topic then exits', () => {
         vi.mocked(prompt).mockReturnValueOnce('csv').mockReturnValueOnce('/back');
-        await mod.showHelpLoop();
+        mod.showHelpLoop();
         expect(title).toHaveBeenCalled();
     });
 
-    it('handles empty input by continuing loop', async () => {
+    it('handles empty input by continuing loop', () => {
         vi.mocked(prompt).mockReturnValueOnce('').mockReturnValueOnce('/back');
-        await mod.showHelpLoop();
+        mod.showHelpLoop();
         expect(title).toHaveBeenCalled();
     });
 
-    it('shows help on /help command and continues', async () => {
+    it('shows help on /help command and continues', () => {
         vi.mocked(prompt).mockReturnValueOnce('/help').mockReturnValueOnce('/back');
-        await mod.showHelpLoop();
+        mod.showHelpLoop();
         expect(title).toHaveBeenCalled();
     });
 
-    it('shows specific help topic on /help <topic>', async () => {
+    it('shows specific help topic on /help <topic>', () => {
         vi.mocked(prompt).mockReturnValueOnce('/help csv').mockReturnValueOnce('/back');
-        await mod.showHelpLoop();
+        mod.showHelpLoop();
         expect(helpLine).toHaveBeenCalled();
     });
 
-    it('shows multiple matching topics when input matches several', async () => {
+    it('shows multiple matching topics when input matches several', () => {
         vi.mocked(prompt).mockReturnValueOnce('a').mockReturnValueOnce('/back');
-        await mod.showHelpLoop();
+        mod.showHelpLoop();
         expect(title).toHaveBeenCalled();
     });
 
-    it('warns when topic is not found', async () => {
+    it('warns when topic is not found', () => {
         vi.mocked(prompt).mockReturnValueOnce('nonexistent_topic_xyz').mockReturnValueOnce('/back');
-        await mod.showHelpLoop();
+        mod.showHelpLoop();
         expect(warn).toHaveBeenCalledWith(expect.stringContaining('não encontrado'));
     });
 });
@@ -686,19 +686,19 @@ describe('module-level debug logging', () => {
 describe('_isJiraConfigured with config', () => {
     it('returns true when jiraBaseUrl and jiraPersonalToken have real values', async () => {
         const configMod = await import('../shared/config.js');
-        vi.mocked(configMod.default.get).mockReturnValue('https://jira.example.com');
+        vi.spyOn(configMod.default, 'get').mockReturnValue('https://jira.example.com');
         expect(mod._isJiraConfigured()).toBe(true);
     });
 
     it('returns false when jiraBaseUrl contains placeholder', async () => {
         const configMod = await import('../shared/config.js');
-        vi.mocked(configMod.default.get).mockReturnValue('seu-jira-server');
+        vi.spyOn(configMod.default, 'get').mockReturnValue('seu-jira-server');
         expect(mod._isJiraConfigured()).toBe(false);
     });
 
     it('returns false when jiraPersonalToken is placeholder', async () => {
         const configMod = await import('../shared/config.js');
-        vi.mocked(configMod.default.get)
+        vi.spyOn(configMod.default, 'get')
             .mockReturnValueOnce('https://jira.example.com')
             .mockReturnValueOnce('seu-token-aqui');
         expect(mod._isJiraConfigured()).toBe(false);
@@ -709,7 +709,7 @@ describe('showGapBadge with config', () => {
     it('caches and displays badge after first call', async () => {
         process.env.CI = 'false';
         const configMod = await import('../shared/config.js');
-        vi.mocked(configMod.default.get).mockReturnValue('https://jira.example.com');
+        vi.spyOn(configMod.default, 'get').mockReturnValue('https://jira.example.com');
 
         const mockJiraResource = { searchJiraIssues: vi.fn().mockResolvedValue({ total: 42 }) };
         await mod.showGapBadge(mockJiraResource, 'TESTPROJ');
