@@ -29,8 +29,6 @@ export function versionCreated(name: string): string {
     return 'Versão criada com sucesso: ' + name;
 }
 
-export const FAILED_TO_CREATE_VERSION = 'Falha ao criar versão.';
-
 export function publishingVersion(versionName: string): string {
     return `Publicando versão '${versionName}'...`;
 }
