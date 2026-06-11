@@ -15,7 +15,7 @@ import type { PipelineRun, PipelineJob, Issue } from '../shared/types.js';
 
 dotenv.config({ path: path.resolve(import.meta.dirname, '../.env') });
 
-const GITHUB_TOKEN = process.env.GITHUB_TOKEN;
+const GITHUB_TOKEN = process.env['GITHUB_TOKEN'];
 const REPO = 'kevindemian/qa_tools';
 const RUNS_TO_FETCH = 30;
 

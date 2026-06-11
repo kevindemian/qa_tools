@@ -8,7 +8,7 @@ import { collectTestResults } from '../git_triggers/test-results.js';
 import { offerPipelineFailureAnalysis } from '../git_triggers/llm-pipeline.js';
 import { rootLogger } from '../shared/logger.js';
 
-const E2E_PIPELINE = process.env.E2E_PIPELINE === 'true';
+const E2E_PIPELINE = process.env['E2E_PIPELINE'] === 'true';
 
 function assert(condition: unknown, message: string): asserts condition {
     if (!condition) {

@@ -403,11 +403,11 @@ describe('generateMappingFiles', async () => {
 
     it('creates JSON and MD mapping files', () => {
         const base = nextBase();
-        const testCases: Partial<TestCase>[] = [
+        const testCases: TestCase[] = [
             { title: 'TC1', description: 'Descricao do TC1', steps: makeSteps('a1', 'a2') },
-            { title: 'TC2' },
+            { title: 'TC2', steps: [] },
         ];
-        generateMappingFiles(base + '.csv', 'PROJ', ['TEST-1', 'TEST-2'], testCases as TestCase[]);
+        generateMappingFiles(base + '.csv', 'PROJ', ['TEST-1', 'TEST-2'], testCases);
 
         const jsonPath = tmpDir + '/test-csv-' + testIdx + '-jira-mapping.json';
         const mdPath = tmpDir + '/test-csv-' + testIdx + '-jira-mapping.md';
@@ -426,12 +426,12 @@ describe('generateMappingFiles', async () => {
     });
 
     it('generates mapping files regardless of CYPRESS_PROJECT_PATH', () => {
-        delete process.env.CYPRESS_PROJECT_PATH;
+        delete process.env['CYPRESS_PROJECT_PATH'];
         const base = nextBase();
         const testCases: TestCase[] = [{ title: 'TC', steps: [] }];
         generateMappingFiles(base + '.csv', 'PROJ', ['TEST-1'], testCases);
         expect(realFs.existsSync(tmpDir + '/test-csv-' + testIdx + '-jira-mapping.json')).toBe(true);
-        process.env.CYPRESS_PROJECT_PATH = tmpDir;
+        process.env['CYPRESS_PROJECT_PATH'] = tmpDir;
     });
 
     it('returns early when tasksId is empty', () => {
@@ -461,11 +461,11 @@ describe('generateMappingFiles', async () => {
 
     it('generates MD with full steps for each test', () => {
         const base = nextBase();
-        const testCases: Partial<TestCase>[] = [
+        const testCases: TestCase[] = [
             { title: 'TC1', description: 'Descricao do TC1', steps: makeSteps('a1') },
-            { title: 'TC2' },
+            { title: 'TC2', steps: [] },
         ];
-        generateMappingFiles(base + '.csv', 'PROJ', ['TEST-1', 'TEST-2'], testCases as TestCase[]);
+        generateMappingFiles(base + '.csv', 'PROJ', ['TEST-1', 'TEST-2'], testCases);
         const md = realFs.readFileSync(tmpDir + '/test-csv-' + testIdx + '-jira-mapping.md', 'utf8');
         const mdLines = md.split('\n');
         expect(md).toContain('## TEST-1 — TC1');
@@ -546,10 +546,10 @@ describe('createTestsFromJson', () => {
         } satisfies Parameters<typeof createTestsFromJson>[0];
     }
     afterEach(() => {
-        delete process.env.JSON_PATH;
-        delete process.env.AUTO_CONFIRM;
-        delete process.env.DRY_RUN;
-        delete process.env.JSON_LABELS;
+        delete process.env['JSON_PATH'];
+        delete process.env['AUTO_CONFIRM'];
+        delete process.env['DRY_RUN'];
+        delete process.env['JSON_LABELS'];
         vi.clearAllMocks();
         vi.restoreAllMocks();
     });
@@ -586,8 +586,8 @@ describe('createTestsFromJson', () => {
     });
 
     it('executa dry-run com JSON valido', async () => {
-        process.env.AUTO_CONFIRM = 'true';
-        process.env.DRY_RUN = 'true';
+        process.env['AUTO_CONFIRM'] = 'true';
+        process.env['DRY_RUN'] = 'true';
         vi.mocked(PROMPT.ask).mockResolvedValue('/fake/path.json');
         FS.readFileSync.mockReturnValue(
             JSON.stringify([
@@ -602,8 +602,8 @@ describe('createTestsFromJson', () => {
     });
 
     it('parseia precondition como reference (formato ABC-123)', async () => {
-        process.env.AUTO_CONFIRM = 'true';
-        process.env.DRY_RUN = 'true';
+        process.env['AUTO_CONFIRM'] = 'true';
+        process.env['DRY_RUN'] = 'true';
         vi.mocked(PROMPT.ask).mockResolvedValue('/fake/path.json');
         FS.readFileSync.mockReturnValue(
             JSON.stringify([{ title: 'TC1', steps: [{ Action: 'Click' }], precondition: 'PREC-001' }]),
@@ -614,8 +614,8 @@ describe('createTestsFromJson', () => {
     });
 
     it('parseia linkedIssues como strings', async () => {
-        process.env.AUTO_CONFIRM = 'true';
-        process.env.DRY_RUN = 'true';
+        process.env['AUTO_CONFIRM'] = 'true';
+        process.env['DRY_RUN'] = 'true';
         vi.mocked(PROMPT.ask).mockResolvedValue('/fake/path.json');
         FS.readFileSync.mockReturnValue(
             JSON.stringify([{ title: 'TC1', steps: [{ Action: 'Click' }], linkedIssues: ['BUG-1', 'BUG-2'] }]),
@@ -626,8 +626,8 @@ describe('createTestsFromJson', () => {
     });
 
     it('parseia linkedIssues como objetos', async () => {
-        process.env.AUTO_CONFIRM = 'true';
-        process.env.DRY_RUN = 'true';
+        process.env['AUTO_CONFIRM'] = 'true';
+        process.env['DRY_RUN'] = 'true';
         vi.mocked(PROMPT.ask).mockResolvedValue('/fake/path.json');
         FS.readFileSync.mockReturnValue(
             JSON.stringify([
@@ -749,8 +749,8 @@ describe('createTestsFromCsv', () => {
     it('success path with valid CSV -> creates tests', async () => {
         vi.mocked(PROMPT.smartPrompt).mockResolvedValue('/test.csv');
         vi.mocked(PROMPT.prompt).mockReturnValue('');
-        process.env.AUTO_CONFIRM = 'true';
-        process.env.DRY_RUN = 'true';
+        process.env['AUTO_CONFIRM'] = 'true';
+        process.env['DRY_RUN'] = 'true';
         csvResource.readBulkCsv.mockResolvedValue([{ title: 'TC1', steps: [{ fields: { Action: 'Click' } }] }]);
         const result = await createTestsFromCsv(makeFullArgs());
         expect(result).toBeDefined();

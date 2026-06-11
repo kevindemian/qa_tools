@@ -58,14 +58,14 @@ export function parseBatchArgs(): {
     const args = parseCliArgs();
     if (args.mode !== 'batch') return {};
     const result: Record<string, string | boolean> = {};
-    if (args.project !== undefined) result.project = args.project;
-    if (args.branch !== undefined) result.branch = args.branch;
-    if (args.auto) result.auto = true;
-    if (args.publish !== undefined) result.publish = args.publish;
-    if (args.runImpactedTests) result.runImpactedTests = true;
-    if (args.conservative) result.conservative = true;
-    if (args.teKey !== undefined) result.teKey = args.teKey;
-    if (args.dryRun) result.dryRun = true;
+    if (args.project !== undefined) result['project'] = args.project;
+    if (args.branch !== undefined) result['branch'] = args.branch;
+    if (args.auto) result['auto'] = true;
+    if (args.publish !== undefined) result['publish'] = args.publish;
+    if (args.runImpactedTests) result['runImpactedTests'] = true;
+    if (args.conservative) result['conservative'] = true;
+    if (args.teKey !== undefined) result['teKey'] = args.teKey;
+    if (args.dryRun) result['dryRun'] = true;
     return result;
 }
 

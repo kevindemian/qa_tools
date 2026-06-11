@@ -136,7 +136,7 @@ async function _autoCreateJiraBugs(
 
         try {
             const result = await jiraResource.postJiraResource('issue', payload);
-            const keyVal: unknown = result.key;
+            const keyVal: unknown = result['key'];
             info('Jira bug auto-criado: ' + (typeof keyVal === 'string' ? keyVal : ''));
         } catch (err) {
             printError('Erro ao criar bug no Jira para: ' + failure.title, err);

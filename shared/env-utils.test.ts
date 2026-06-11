@@ -13,17 +13,17 @@ describe('envVal', () => {
     });
 
     it('returns env var value when set', () => {
-        process.env.TEST_VAL = 'hello';
+        process.env['TEST_VAL'] = 'hello';
         expect(envVal('TEST_VAL')).toBe('hello');
     });
 
     it('returns fallback when env var is not set', () => {
-        delete process.env.TEST_MISSING;
+        delete process.env['TEST_MISSING'];
         expect(envVal('TEST_MISSING', 'default')).toBe('default');
     });
 
     it('returns empty string when no fallback', () => {
-        delete process.env.TEST_EMPTY;
+        delete process.env['TEST_EMPTY'];
         expect(envVal('TEST_EMPTY')).toBe('');
     });
 });

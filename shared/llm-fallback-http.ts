@@ -44,7 +44,7 @@ export function buildOpenAiPayload(
         ],
     };
     if (responseFormat === 'json') {
-        payload.response_format = { type: 'json_object' };
+        payload['response_format'] = { type: 'json_object' };
     }
     return JSON.stringify(payload);
 }
@@ -173,7 +173,7 @@ export async function sendToProvider(
         return '';
     }
 
-    const errPayload = data.error;
+    const errPayload = data['error'];
     if (errPayload !== undefined) {
         if (typeof errPayload === 'string') throw new LlmProviderError('LLM API error: ' + errPayload);
         const errResult = LlmErrorPayloadSchema.safeParse(errPayload);

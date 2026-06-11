@@ -187,7 +187,7 @@ async function resumePendingPipeline(
     linkManager: JiraLinkManager,
 ): Promise<string | null> {
     const savedState = loadState();
-    const pending = savedState.pendingPipeline as
+    const pending = savedState['pendingPipeline'] as
         | { branch?: string; pipelineId?: string; projectName?: string }
         | undefined;
     if (!pending || pending.projectName !== projectName || !pending.pipelineId) return null;
@@ -203,7 +203,7 @@ async function resumePendingPipeline(
         )
     ) {
         updateState((s: StateContainer) => {
-            delete s.pendingPipeline;
+            delete s['pendingPipeline'];
         });
         return null;
     }
@@ -212,7 +212,7 @@ async function resumePendingPipeline(
     const id = pending.pipelineId;
     info('Retomando pipeline #' + id + '...');
     updateState((s: StateContainer) => {
-        delete s.pendingPipeline;
+        delete s['pendingPipeline'];
     });
     const pollResult = await pollPipeline(m, id);
     setIsBusy(false);
@@ -299,7 +299,7 @@ async function triggerAndPollPipeline(
     if (!id) return;
 
     updateState((s: StateContainer) => {
-        s.pendingPipeline = { branch, pipelineId: id, projectName };
+        s['pendingPipeline'] = { branch, pipelineId: id, projectName };
     });
     setIsBusy(true);
     info('Aguardando pipeline #' + id + '...');
@@ -308,7 +308,7 @@ async function triggerAndPollPipeline(
     const icon = pollResult.status === 'success' ? '\u2713' : '\u2717';
     info('Pipeline #' + id + ': ' + icon + ' ' + pollResult.status);
     updateState((s: StateContainer) => {
-        delete s.pendingPipeline;
+        delete s['pendingPipeline'];
     });
     if (pollResult.status !== 'canceled' && pollResult.status !== 'skipped') {
         await _postPipeline(m, id, branch, projectName, jiraResource, jiraBaseUrl, linkManager, pollResult.status);

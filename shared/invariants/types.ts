@@ -13,7 +13,7 @@ export function parseTests(artifact: unknown): TestCaseShape[] {
     if (typeof artifact !== 'object' || artifact === null) return [];
     const obj = artifact as Record<string, unknown>;
     if (Array.isArray(obj)) return obj as TestCaseShape[];
-    if (Array.isArray(obj.tests)) return obj.tests as TestCaseShape[];
+    if (Array.isArray(obj['tests'])) return obj['tests'] as TestCaseShape[];
     return [];
 }
 

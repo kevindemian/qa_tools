@@ -45,7 +45,7 @@ npm run typecheck
 
 # 2. Quality enforcement
 echo "--- Quality enforcement ---"
-npx tsx scripts/enforce-quality.ts
+npx tsx scripts/quality-check.ts
 
 # 3. Quality gate
 echo "--- Quality gate ---"
@@ -73,7 +73,7 @@ npm test
 # 6. Security scan (lightweight)
 if [[ -x "$PROJECT_ROOT/scripts/scan-sec-logs.sh" ]]; then
   echo "--- Security log scan ---"
-  "$PROJECT_ROOT/scripts/scan-sec-logs.sh" --quiet || true
+  "$PROJECT_ROOT/scripts/scan-sec-logs.sh" --quiet
 fi
 
 echo "=== All checks passed ==="

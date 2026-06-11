@@ -2,6 +2,20 @@ import dotenv from 'dotenv';
 import * as path from 'path';
 import * as fs from 'fs';
 
+let _rootLogger: { warn: (msg: string) => void; info: (msg: string) => void; error: (msg: string) => void } | null =
+    null;
+async function getRootLogger(): Promise<{
+    warn: (msg: string) => void;
+    info: (msg: string) => void;
+    error: (msg: string) => void;
+}> {
+    if (!_rootLogger) {
+        const mod = await import('./logger.js');
+        _rootLogger = mod.rootLogger;
+    }
+    return _rootLogger;
+}
+
 let dotenvLoaded = false;
 
 const SECRET_PATTERNS: { label: string; regex: RegExp }[] = [
@@ -32,7 +46,9 @@ function warnSecretsInFile(filePath: string, label: string): void {
             const val = trimmed.slice(eqIdx + 1);
             const match = hasSecretPattern(val);
             if (match) {
-                console.warn(`[env-loader] WARNING: ${match} detected in ${label}. Move to .env.local.`);
+                getRootLogger()
+                    .then((l) => l.warn(`[env-loader] WARNING: ${match} detected in ${label}. Move to .env.local.`))
+                    .catch(() => {});
             }
         }
     } catch {

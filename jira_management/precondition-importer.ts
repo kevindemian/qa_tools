@@ -104,6 +104,6 @@ export class PreconditionHandler {
             },
         };
         const result = await this.jiraResource.postJiraResource<JsonObject>('issue', payload);
-        return result.key as string;
+        return result['key'] as string;
     }
 }

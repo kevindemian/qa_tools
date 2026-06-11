@@ -11,5 +11,5 @@ test:
         - npm ci
         - npm run typecheck
         - npx eslint . --ext .ts
-        - npm run unused-exports || true
+        - npm run unused-exports
         - npm run test:coverage

@@ -92,8 +92,8 @@ export function makeMockCommandContext(overrides: Record<string, unknown> = {}):
         results: [],
     };
     const mergedOverrides = { ...overrides };
-    if (overrides.ctx && typeof overrides.ctx === 'object' && !Array.isArray(overrides.ctx)) {
-        mergedOverrides.ctx = { ...ctx, ...(overrides.ctx as Record<string, unknown>) };
+    if (overrides['ctx'] && typeof overrides['ctx'] === 'object' && !Array.isArray(overrides['ctx'])) {
+        mergedOverrides['ctx'] = { ...ctx, ...(overrides['ctx'] as Record<string, unknown>) };
     }
     return { ...createMockContext(), ...mergedOverrides };
 }

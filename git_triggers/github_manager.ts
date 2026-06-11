@@ -86,7 +86,8 @@ class GitHubManager extends GitProviderBase implements GitProvider {
         }
     }
 
-    _formatPR(data: JsonObject): MergeRequestInfo | null {
+    _formatPR(data: JsonObject | null | undefined): MergeRequestInfo | null {
+        if (!data) return null;
         return formatPR(data);
     }
 

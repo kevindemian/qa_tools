@@ -56,7 +56,7 @@ describe('quality-check unit tests', () => {
 
         it('skips files matching excludePattern', async () => {
             vi.mocked(readFileSync).mockImplementation((path: PathOrFileDescriptor) => {
-                if (path === 'skip.ts') return 'xyz found\n';
+                if (path === 'skip.ts') return 'xyz found with skip pattern\n';
                 return 'no match here\n';
             });
             const { checkNoPattern } = await import('./quality-check.js');

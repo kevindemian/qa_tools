@@ -71,7 +71,7 @@ describe('MappingFileGenerator', () => {
         expect(nonNull(json.tests[0]).key).toBe('K-100');
         expect(nonNull(json.tests[0]).title).toBe('Login test');
         expect(nonNull(json.tests[0]).description).toBe('Verifies login flow');
-        expect(nonNull(nonNull(nonNull(json.tests[0]).steps)[0]).Action).toBe('Type user');
+        expect(nonNull(nonNull(nonNull(json.tests[0]).steps)[0])['Action']).toBe('Type user');
         expect(nonNull(json.tests[1]).key).toBe('K-200');
         expect(nonNull(json.tests[1]).title).toBe('Logout test');
         const md = fs.readFileSync(path.join(tmpDir, base + '-jira-mapping.md'), 'utf8');
@@ -136,8 +136,8 @@ describe('MappingFileGenerator', () => {
     it('steps with empty fields default to empty string', () => {
         generator.generate('/f.csv', 'P', ['KE'], [{ title: 't', steps: [{ fields: {} }] }]);
         const json = JSON.parse(fs.readFileSync(path.join(tmpDir, 'f-jira-mapping.json'), 'utf8')) as MappingJson;
-        expect(nonNull(nonNull(nonNull(json.tests[0]).steps)[0]).Action).toBe('');
-        expect(nonNull(nonNull(nonNull(json.tests[0]).steps)[0]).Data).toBe('');
+        expect(nonNull(nonNull(nonNull(json.tests[0]).steps)[0])['Action']).toBe('');
+        expect(nonNull(nonNull(nonNull(json.tests[0]).steps)[0])['Data']).toBe('');
         expect(nonNull(nonNull(nonNull(json.tests[0]).steps)[0])['Expected Result']).toBe('');
     });
 });

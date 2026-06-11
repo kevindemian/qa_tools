@@ -81,8 +81,8 @@ function matchResultsToTests(results: TestResultItem[], mappingJsonPath: string)
             tests?: Array<Record<string, string>>;
         };
         mappings = (data.tests || []).map((t) => ({
-            title: t.title || '',
-            key: t.key || '',
+            title: t['title'] || '',
+            key: t['key'] || '',
         }));
     } catch (err) {
         rootLogger.warn('Não foi possível ler mapping JSON: ' + (err as Error).message);

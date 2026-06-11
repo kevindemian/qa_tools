@@ -7,11 +7,11 @@ let TMP_DIR: string;
 
 beforeEach(() => {
     TMP_DIR = fs.mkdtempSync(path.join(os.tmpdir(), 'qa-tools-llm-metrics-test-'));
-    process.env.XDG_STATE_HOME = TMP_DIR;
+    process.env['XDG_STATE_HOME'] = TMP_DIR;
 });
 
 afterAll(() => {
-    delete process.env.XDG_STATE_HOME;
+    delete process.env['XDG_STATE_HOME'];
 });
 
 async function loadMod() {

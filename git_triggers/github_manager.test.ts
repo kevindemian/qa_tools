@@ -79,8 +79,8 @@ describe('GitHubManager', () => {
                 ref: 'main',
                 inputs: { VAR: 'val' },
             });
-            expect(result.id).toBe('123');
-            expect(result.web_url).toContain('actions/runs');
+            expect(result['id']).toBe('123');
+            expect(result['web_url']).toContain('actions/runs');
         });
 
         it('auto-detects first workflow when workflow_id not given', async () => {
@@ -97,7 +97,7 @@ describe('GitHubManager', () => {
                 ref: 'dev',
                 inputs: {},
             });
-            expect(result.id).toBe(42);
+            expect(result['id']).toBe(42);
         });
 
         it('returns undefined when no workflows found', async () => {
@@ -152,8 +152,8 @@ describe('GitHubManager', () => {
                 title: 'PR Title',
                 body: 'PR Desc',
             });
-            expect(result.iid).toBe(10);
-            expect(result.web_url).toBe('https://...');
+            expect(result['iid']).toBe(10);
+            expect(result['web_url']).toBe('https://...');
         });
 
         it('handles 422 (already exists) by searching and updating existing PR', async () => {
@@ -186,7 +186,7 @@ describe('GitHubManager', () => {
                 title: 'PR Title',
                 body: 'PR Desc',
             });
-            expect(result.iid).toBe(5);
+            expect(result['iid']).toBe(5);
         });
 
         it('re-throws on 422 without already_exists error', async () => {
@@ -228,7 +228,7 @@ describe('GitHubManager', () => {
                 title: 'New Title',
                 body: 'New Desc',
             });
-            expect(result.iid).toBe(5);
+            expect(result['iid']).toBe(5);
         });
 
         it('throws on API error', async () => {
@@ -254,7 +254,7 @@ describe('GitHubManager', () => {
             });
             const result: Record<string, unknown> = (await manager.getMergeRequest('5')) as Record<string, unknown>;
             expect(mockClient['get']).toHaveBeenCalledWith('/repos/myorg/myrepo/pulls/5');
-            expect(result.iid).toBe(5);
+            expect(result['iid']).toBe(5);
         });
 
         it('returns null on API error', async () => {
@@ -346,7 +346,7 @@ describe('GitHubManager', () => {
             expect(mockClient['put']).toHaveBeenCalledWith('/repos/myorg/myrepo/pulls/5/merge', {
                 delete_branch_on_merge: true,
             });
-            expect(result.web_url).toBe('https://merge');
+            expect(result['web_url']).toBe('https://merge');
         });
 
         it('returns early without PUT when already merged', async () => {
@@ -366,7 +366,7 @@ describe('GitHubManager', () => {
 
             const result: Record<string, unknown> = (await manager.acceptMergeRequest('5')) as Record<string, unknown>;
             expect(mockClient['put']).not.toHaveBeenCalled();
-            expect(result.state).toBe('merged');
+            expect(result['state']).toBe('merged');
         });
 
         it('throws when PR not found', async () => {
@@ -553,9 +553,9 @@ describe('GitHubManager', () => {
                 requested_reviewers: [],
             };
             const result: Record<string, unknown> = manager._formatPR(raw) as Record<string, unknown>;
-            expect(result.iid).toBe(1);
-            expect(result.state).toBe('opened');
-            expect(result.approved).toBe(false);
+            expect(result['iid']).toBe(1);
+            expect(result['state']).toBe('opened');
+            expect(result['approved']).toBe(false);
         });
 
         it('formats merged PR', () => {
@@ -571,8 +571,8 @@ describe('GitHubManager', () => {
                 requested_reviewers: [{ id: 1 }],
             };
             const result: Record<string, unknown> = manager._formatPR(raw) as Record<string, unknown>;
-            expect(result.state).toBe('merged');
-            expect(result.approved).toBe(false);
+            expect(result['state']).toBe('merged');
+            expect(result['approved']).toBe(false);
         });
 
         it('returns null for null input', () => {

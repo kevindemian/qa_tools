@@ -10,18 +10,18 @@ export const invariantCoverageThreshold: InvariantFn = (
     const obj = artifact as Record<string, unknown>;
     if (Array.isArray(obj)) return [pass('T-02', 'Array artifact has no coverage table — skipping')];
 
-    const coverageTable = obj.coverageTable as Record<string, unknown> | undefined;
+    const coverageTable = obj['coverageTable'] as Record<string, unknown> | undefined;
     if (!coverageTable) return [warn('T-02', 'No coverageTable found in artifact')];
 
-    const coverage = coverageTable.coverage as number | undefined;
+    const coverage = coverageTable['coverage'] as number | undefined;
     if (coverage === undefined || coverage < 0) return [fail('T-02', 'coverageTable.coverage must be a valid number')];
 
     if (coverage >= 90) return [pass('T-02', `Coverage is ${coverage}% — meets threshold`)];
-    const gaps = coverageTable.gaps as Array<Record<string, unknown>> | undefined;
+    const gaps = coverageTable['gaps'] as Array<Record<string, unknown>> | undefined;
     if (!gaps || gaps.length === 0) {
         return [fail('T-02', `Coverage is ${coverage}% (< 90%) but no gaps array with reasons provided`)];
     }
-    const missingReasons = gaps.filter((g) => !g.reason || typeof g.reason !== 'string' || g.reason.trim() === '');
+    const missingReasons = gaps.filter((g) => !g['reason'] || typeof g['reason'] !== 'string' || g['reason'].trim() === '');
     if (missingReasons.length > 0) {
         return [fail('T-02', `Coverage is ${coverage}% but ${missingReasons.length} gap(s) missing reason`)];
     }

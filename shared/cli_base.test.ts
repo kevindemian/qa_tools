@@ -73,8 +73,8 @@ describe('CLI Base', () => {
         ];
 
         it('does not throw when required vars are missing — returns result and warns', () => {
-            delete process.env.TOKEN_A;
-            delete process.env.TOKEN_B;
+            delete process.env['TOKEN_A'];
+            delete process.env['TOKEN_B'];
             const validate = cliBase.createValidateEnv(configs);
             const result = validate();
             expect(result.ok).toBe(false);
@@ -83,16 +83,16 @@ describe('CLI Base', () => {
         });
 
         it('warns when real credentials are detected', () => {
-            process.env.TOKEN_A = 'this-is-a-real-token-value-123456';
-            process.env.TOKEN_B = 'another-real-credential-here-789';
+            process.env['TOKEN_A'] = 'this-is-a-real-token-value-123456';
+            process.env['TOKEN_B'] = 'another-real-credential-here-789';
             const validate = cliBase.createValidateEnv(configs);
             validate();
             expect(mockRootLogger.warn).toHaveBeenCalledWith(expect.stringContaining('VARIÁVEL COM CREDENCIAL REAL'));
         });
 
         it('does not warn for placeholder values', () => {
-            process.env.TOKEN_A = 'seu-token-aqui';
-            process.env.TOKEN_B = 'your-token-here';
+            process.env['TOKEN_A'] = 'seu-token-aqui';
+            process.env['TOKEN_B'] = 'your-token-here';
             const validate = cliBase.createValidateEnv(configs);
             validate();
             expect(mockRootLogger.warn).not.toHaveBeenCalled();
@@ -303,7 +303,7 @@ describe('CLI Base', () => {
         it('continues when answer is undefined after real SIGINT emission', () => {
             cliBase.setupSigint(null, onExit);
             process.emit('SIGINT');
-            const questionFn = nonNull(mockRlInt.question?.mock.calls[0]?.[1]) as (a: string | undefined) => void;
+            const questionFn = nonNull(mockRlInt['question']?.mock.calls[0]?.[1]) as (a: string | undefined) => void;
             questionFn(undefined);
             expect(onExit).not.toHaveBeenCalled();
             expect(MOCK_PROMPT.info).toHaveBeenCalledWith('Continuando...');
@@ -312,7 +312,7 @@ describe('CLI Base', () => {
         it('continues when answer is empty string after real SIGINT emission', () => {
             cliBase.setupSigint(null, onExit);
             process.emit('SIGINT');
-            const questionFn = nonNull(mockRlInt.question?.mock.calls[0]?.[1]) as (a: string) => void;
+            const questionFn = nonNull(mockRlInt['question']?.mock.calls[0]?.[1]) as (a: string) => void;
             questionFn('');
             expect(onExit).not.toHaveBeenCalled();
             expect(MOCK_PROMPT.info).toHaveBeenCalledWith('Continuando...');
@@ -327,15 +327,15 @@ describe('CLI Base', () => {
         });
 
         it('returns false and does not prompt in CI mode', () => {
-            process.env.CI = 'true';
+            process.env['CI'] = 'true';
             const result = cliBase.offerEnvSetup({ ok: false, missing: ['TOKEN_A'] });
             expect(result).toBe(false);
             expect(MOCK_PROMPT.confirm).not.toHaveBeenCalled();
-            delete process.env.CI;
+            delete process.env['CI'];
         });
 
         it('returns false when confirm returns false', () => {
-            delete process.env.CI;
+            delete process.env['CI'];
             nonNull(MOCK_PROMPT.confirm).mockReturnValueOnce(false);
             const result = cliBase.offerEnvSetup({ ok: false, missing: ['TOKEN_A'] });
             expect(result).toBe(false);
@@ -343,14 +343,14 @@ describe('CLI Base', () => {
         });
 
         it('returns true when user accepts', () => {
-            delete process.env.CI;
+            delete process.env['CI'];
             nonNull(MOCK_PROMPT.confirm).mockReturnValueOnce(true);
             const result = cliBase.offerEnvSetup({ ok: false, missing: ['TOKEN_A'] });
             expect(result).toBe(true);
         });
 
         it('returns false when confirm throws (CancelError)', () => {
-            delete process.env.CI;
+            delete process.env['CI'];
             nonNull(MOCK_PROMPT.confirm).mockImplementationOnce(() => {
                 throw new Error('cancel');
             });
@@ -383,21 +383,21 @@ describe('CLI Base', () => {
         const config = [{ key: 'TOKEN_A', label: 'Token A', example: 'TOKEN_A=abc' }];
 
         it('does not warn when long value contains "seu-"', () => {
-            process.env.TOKEN_A = 'este-eh-seu-token-aqui-amigo-12345678';
+            process.env['TOKEN_A'] = 'este-eh-seu-token-aqui-amigo-12345678';
             const validate = cliBase.createValidateEnv(config);
             validate();
             expect(mockRootLogger.warn).not.toHaveBeenCalled();
         });
 
         it('does not warn when long value contains "your-"', () => {
-            process.env.TOKEN_A = 'this-is-your-token-here-friend-1234567';
+            process.env['TOKEN_A'] = 'this-is-your-token-here-friend-1234567';
             const validate = cliBase.createValidateEnv(config);
             validate();
             expect(mockRootLogger.warn).not.toHaveBeenCalled();
         });
 
         it('does not warn when long value contains "placeholder"', () => {
-            process.env.TOKEN_A = 'this-is-a-placeholder-value-for-test-123';
+            process.env['TOKEN_A'] = 'this-is-a-placeholder-value-for-test-123';
             const validate = cliBase.createValidateEnv(config);
             validate();
             expect(mockRootLogger.warn).not.toHaveBeenCalled();

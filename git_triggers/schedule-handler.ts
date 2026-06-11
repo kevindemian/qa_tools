@@ -99,7 +99,7 @@ export async function handleChangeProject(names: string[]): Promise<void> {
         const newManager = createManagerForProject(newName, getProjects()[newName] as string);
         setManager(newManager);
         updateState((s: StateContainer) => {
-            s.lastProject = newName;
+            s['lastProject'] = newName;
         });
         success('Projeto alterado para: ' + newName + ' (' + getProviderForProject(newName) + ')');
         await displayRecentPipelines(newManager);

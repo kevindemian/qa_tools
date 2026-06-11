@@ -271,7 +271,7 @@ describe('CloudHistoryProvider', () => {
         expect(mockGraphql).toHaveBeenCalledTimes(1);
         const callArgs = mockGraphql.mock.calls[0] as unknown[];
         expect(callArgs[0] as string).toContain('getTestRuns');
-        expect((callArgs[1] as Record<string, unknown>).testIssueIds).toEqual(['12345']);
+        expect((callArgs[1] as Record<string, unknown>)['testIssueIds']).toEqual(['12345']);
         expect(callArgs[2]).toBe('client-123');
         expect(callArgs[3]).toBe('secret-456');
     });

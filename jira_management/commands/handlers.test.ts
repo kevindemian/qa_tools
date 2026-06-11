@@ -40,8 +40,8 @@ var mockConfigMod: Record<string, unknown>;
 vi.mock('../../shared/config', () => {
     mockConfigMod = {};
     const get = vi.fn((key: string) => mockConfigMod[key] as string);
-    mockConfigMod.get = get;
-    mockConfigMod.getInstance = vi.fn(() => ({ get }));
+    mockConfigMod['get'] = get;
+    mockConfigMod['getInstance'] = vi.fn(() => ({ get }));
     return { default: mockConfigMod };
 });
 
@@ -167,11 +167,11 @@ beforeEach(() => {
     mockSessionContext.inMemoryTasksText = [];
     mockSessionContext.packageManager = undefined;
     mockSessionContext.results = [];
-    mockConfigMod.csvDefaultPath = undefined;
-    mockConfigMod.csvPath = undefined;
-    mockConfigMod.csvLabels = undefined;
-    mockConfigMod.jsonPath = undefined;
-    mockConfigMod.jsonLabels = undefined;
+    mockConfigMod['csvDefaultPath'] = undefined;
+    mockConfigMod['csvPath'] = undefined;
+    mockConfigMod['csvLabels'] = undefined;
+    mockConfigMod['jsonPath'] = undefined;
+    mockConfigMod['jsonLabels'] = undefined;
 });
 
 describe('case02 — list versions', () => {
@@ -651,7 +651,7 @@ describe('case15 — create tests from JSON', () => {
     });
 
     it('imports tests from JSON successfully', async () => {
-        mockConfigMod.jsonPath = '/fake/tests.json';
+        mockConfigMod['jsonPath'] = '/fake/tests.json';
         mockCreateTests.createTestsFromJson.mockResolvedValueOnce({
             inMemoryTasksId: ['TEST-10', 'TEST-11'],
             inMemoryTasksText: ['JSON test 1', 'JSON test 2'],
@@ -671,7 +671,7 @@ describe('case15 — create tests from JSON', () => {
     });
 
     it('handles null result from createTestsFromJson', async () => {
-        mockConfigMod.jsonPath = '/fake/tests.json';
+        mockConfigMod['jsonPath'] = '/fake/tests.json';
         mockCreateTests.createTestsFromJson.mockResolvedValueOnce(undefined);
         const mod = case15;
         expect(await mod.handler(baseContext)).toBeUndefined();
@@ -748,8 +748,8 @@ describe('case12 — diagnostic connection', () => {
 
 describe('case01 — create tests from CSV', () => {
     it('creates tests with Config csvPath and stores in-memory tasks', async () => {
-        mockConfigMod.csvPath = '/fake/test.csv';
-        mockConfigMod.csvLabels = 'label1, label2';
+        mockConfigMod['csvPath'] = '/fake/test.csv';
+        mockConfigMod['csvLabels'] = 'label1, label2';
         mockCreateTests.createTestsFromCsv.mockResolvedValueOnce({
             inMemoryTasksId: ['TEST-1', 'TEST-2'],
             inMemoryTasksText: ['First test', 'Second test'],
@@ -767,8 +767,8 @@ describe('case01 — create tests from CSV', () => {
     });
 
     it('invokes onBusy callback during CSV import', async () => {
-        mockConfigMod.csvPath = '/fake/test.csv';
-        mockConfigMod.csvLabels = 'label1';
+        mockConfigMod['csvPath'] = '/fake/test.csv';
+        mockConfigMod['csvLabels'] = 'label1';
         mockCreateTests.createTestsFromCsv.mockImplementationOnce(async (_opts: { onBusy: (v: boolean) => void }) => {
             await Promise.resolve();
             _opts.onBusy(true);
@@ -787,8 +787,8 @@ describe('case01 — create tests from CSV', () => {
     });
 
     it('prompts to create test execution after CSV import', async () => {
-        mockConfigMod.csvPath = '/fake/test.csv';
-        mockConfigMod.csvLabels = 'label1';
+        mockConfigMod['csvPath'] = '/fake/test.csv';
+        mockConfigMod['csvLabels'] = 'label1';
         mockSessionContext.inMemoryTasksId = ['TEST-1', 'TEST-2'];
         mockSessionContext.inMemoryTasksText = ['Test 1', 'Test 2'];
         const state = vi.mocked(stateModule);
@@ -813,8 +813,8 @@ describe('case01 — create tests from CSV', () => {
     });
 
     it('handles null result from createTestsFromCsv gracefully', async () => {
-        mockConfigMod.csvPath = '/fake/test.csv';
-        mockConfigMod.csvLabels = '';
+        mockConfigMod['csvPath'] = '/fake/test.csv';
+        mockConfigMod['csvLabels'] = '';
         mockCreateTests.createTestsFromJson.mockResolvedValueOnce({
             inMemoryTasksId: ['TEST-10', 'TEST-11'],
             inMemoryTasksText: ['JSON test 2b', 'JSON test 2c'],

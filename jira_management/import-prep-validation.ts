@@ -21,7 +21,7 @@ export function _checkResumeCheckpoint(
     sourceType: string,
     projectName: string,
 ): { resumeFrom: number; inMemoryTasksId: string[]; inMemoryTasksText: string[] } {
-    const cp = loadState()._checkpoint as JsonObject | undefined;
+    const cp = loadState()['_checkpoint'] as JsonObject | undefined;
     const cpKey = sourceType === 'json' ? 'jsonPath' : 'csvPath';
     let resumeFrom = 0;
     const inMemoryTasksId: string[] = [];
@@ -30,19 +30,19 @@ export function _checkResumeCheckpoint(
     if (
         cp &&
         cp[cpKey] === sourcePath &&
-        cp.project === projectName &&
-        cp.testCount === tests.length &&
-        Array.isArray(cp.done)
+        cp['project'] === projectName &&
+        cp['testCount'] === tests.length &&
+        Array.isArray(cp['done'])
     ) {
-        const age = Date.now() - new Date(cp.ts as string).getTime();
-        if (age < CHECKPOINT_MAX_AGE_MS && (cp.done as Array<unknown>).length < tests.length) {
+        const age = Date.now() - new Date(cp['ts'] as string).getTime();
+        if (age < CHECKPOINT_MAX_AGE_MS && (cp['done'] as Array<unknown>).length < tests.length) {
             const ans = confirm(
-                (cp.done as Array<unknown>).length + '/' + tests.length + ' testes ja criados. Continuar?',
+                (cp['done'] as Array<unknown>).length + '/' + tests.length + ' testes ja criados. Continuar?',
                 true,
             );
             if (ans) {
-                resumeFrom = (cp.done as Array<{ key: string; title: string }>).length;
-                for (const d of cp.done as Array<{ key: string; title: string }>) {
+                resumeFrom = (cp['done'] as Array<{ key: string; title: string }>).length;
+                for (const d of cp['done'] as Array<{ key: string; title: string }>) {
                     inMemoryTasksId.push(d.key);
                     inMemoryTasksText.push(d.title);
                 }

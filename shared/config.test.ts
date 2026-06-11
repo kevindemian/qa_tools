@@ -211,12 +211,12 @@ describe('Config', () => {
         });
 
         it('returns the env value when valid', () => {
-            process.env.XRAY_MODE = 'cloud';
+            process.env['XRAY_MODE'] = 'cloud';
             expect(Config.get('xrayMode')).toBe('cloud');
         });
 
         it('throws when XRAY_MODE is invalid', () => {
-            process.env.XRAY_MODE = 'invalid';
+            process.env['XRAY_MODE'] = 'invalid';
             expect(() => Config.get('xrayMode')).toThrow(/Invalid XRAY_MODE/);
         });
     });
@@ -227,7 +227,7 @@ describe('Config', () => {
         });
 
         it('returns env value when set', () => {
-            process.env.CSV_LABELS = 'type,summary';
+            process.env['CSV_LABELS'] = 'type,summary';
             expect(Config.get('csvLabels')).toBe('type,summary');
         });
     });
@@ -238,7 +238,7 @@ describe('Config', () => {
         });
 
         it('returns env value when set', () => {
-            process.env.JSON_LABELS = 'key,value';
+            process.env['JSON_LABELS'] = 'key,value';
             expect(Config.get('jsonLabels')).toBe('key,value');
         });
     });
@@ -249,7 +249,7 @@ describe('Config', () => {
         });
 
         it('returns env value when set', () => {
-            process.env.LOG_LEVEL = 'DEBUG';
+            process.env['LOG_LEVEL'] = 'DEBUG';
             expect(Config.get('logLevel')).toBe('DEBUG');
         });
     });
@@ -260,16 +260,16 @@ describe('Config', () => {
         });
 
         it('returns env value when set', () => {
-            process.env.LOG_DIR = '/var/log';
+            process.env['LOG_DIR'] = '/var/log';
             expect(Config.get('logDir')).toBe('/var/log');
         });
 
         it('prioritizes QA_TOOLS_LOGS_DIR over LOG_DIR', () => {
-            process.env.QA_TOOLS_LOGS_DIR = '/qa/logs';
-            process.env.LOG_DIR = '/var/log';
+            process.env['QA_TOOLS_LOGS_DIR'] = '/qa/logs';
+            process.env['LOG_DIR'] = '/var/log';
             expect(Config.get('logDir')).toBe('/qa/logs');
-            delete process.env.QA_TOOLS_LOGS_DIR;
-            delete process.env.LOG_DIR;
+            delete process.env['QA_TOOLS_LOGS_DIR'];
+            delete process.env['LOG_DIR'];
         });
 
         it('uses override when provided', () => {
@@ -284,7 +284,7 @@ describe('Config', () => {
         });
 
         it('returns env value when set', () => {
-            process.env.LOG_MAX_SIZE = '2097152';
+            process.env['LOG_MAX_SIZE'] = '2097152';
             expect(Config.get('logMaxSize')).toBe(2097152);
         });
 
@@ -296,16 +296,16 @@ describe('Config', () => {
 
     describe('xdgStateHome', () => {
         it('uses XDG_STATE_HOME when set', () => {
-            process.env.XDG_STATE_HOME = '/custom/state';
+            process.env['XDG_STATE_HOME'] = '/custom/state';
             expect(Config.get('xdgStateHome')).toBe('/custom/state');
         });
     });
 
     describe('getAllPrefixed', () => {
         it('returns matching env vars', () => {
-            process.env.QA_TOOLS_FOO = 'bar';
-            process.env.QA_TOOLS_BAZ = 'qux';
-            process.env.OTHER = 'ignored';
+            process.env['QA_TOOLS_FOO'] = 'bar';
+            process.env['QA_TOOLS_BAZ'] = 'qux';
+            process.env['OTHER'] = 'ignored';
             const result = Config.getAllPrefixed('QA_TOOLS_');
             expect(result).toEqual({ QA_TOOLS_FOO: 'bar', QA_TOOLS_BAZ: 'qux' });
         });
@@ -330,7 +330,7 @@ describe('Config', () => {
         });
 
         it('overrides take precedence over env vars', () => {
-            process.env.JIRA_BASE_URL = 'https://env.url';
+            process.env['JIRA_BASE_URL'] = 'https://env.url';
             const cfg = Config.create({ jiraBaseUrl: 'https://override.url' });
             expect(cfg.get('jiraBaseUrl')).toBe('https://override.url');
         });
@@ -397,7 +397,7 @@ describe('Config', () => {
 
     describe('llmMaxTotalTokens', () => {
         beforeEach(() => {
-            delete process.env.LLM_MAX_TOTAL_TOKENS;
+            delete process.env['LLM_MAX_TOTAL_TOKENS'];
         });
 
         it('defaults to 0 (unlimited)', () => {
@@ -405,7 +405,7 @@ describe('Config', () => {
         });
 
         it('reads from LLM_MAX_TOTAL_TOKENS env var', () => {
-            process.env.LLM_MAX_TOTAL_TOKENS = '50000';
+            process.env['LLM_MAX_TOTAL_TOKENS'] = '50000';
             expect(Config.get('llmMaxTotalTokens')).toBe(50000);
         });
 
@@ -463,14 +463,14 @@ describe('Config', () => {
 
     describe('validateRequiredEnv', () => {
         it('does not throw when a required env var is present', () => {
-            process.env.JIRA_BASE_URL = 'https://jira.example.com';
-            process.env.JIRA_PERSONAL_TOKEN = 'token-123';
-            process.env.XRAY_BASE_URL = 'https://xray.example.com';
+            process.env['JIRA_BASE_URL'] = 'https://jira.example.com';
+            process.env['JIRA_PERSONAL_TOKEN'] = 'token-123';
+            process.env['XRAY_BASE_URL'] = 'https://xray.example.com';
             expect(() => Config.validateRequiredEnv()).not.toThrow();
         });
 
         it('throws when a required env var is missing', () => {
-            delete process.env.JIRA_BASE_URL;
+            delete process.env['JIRA_BASE_URL'];
             expect(() => Config.validateRequiredEnv()).toThrow();
         });
     });

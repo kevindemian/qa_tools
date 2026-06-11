@@ -35,7 +35,7 @@ class TestExecutionCreator {
             if (result.issues.length > 0) {
                 const issue = result.issues[0] as NonNullable<(typeof result.issues)[number]>;
                 rootLogger.info('Test Execution existente encontrado: ' + issue.key);
-                return { key: issue.key, summary: (issue.fields.summary as string) || summary };
+                return { key: issue.key, summary: (issue.fields['summary'] as string) || summary };
             }
         } catch (err) {
             rootLogger.warn('Falha ao buscar Test Execution existente: ' + (err as Error).message);
@@ -74,9 +74,9 @@ class TestExecutionCreator {
         };
 
         const created = await this.jiraResource.postJiraResource<JsonObject>('issue', payload);
-        success('Test Execution criado: ' + String(created.key) + ' — ' + summary);
-        execLog.info('Test Execution criado', { key: created.key, summary });
-        return { key: created.key as string, summary };
+        success('Test Execution criado: ' + String(created['key']) + ' — ' + summary);
+        execLog.info('Test Execution criado', { key: created['key'], summary });
+        return { key: created['key'] as string, summary };
     }
 
     private _buildTimestampedSummary(csvName: string, titleOverride?: string): string {
@@ -210,8 +210,8 @@ class TestExecutionCreator {
             return null;
         }
 
-        const currentTests: string[] = (teIssue.fields as Record<string, unknown>)[testField.id] as string[];
-        const merged = [...new Set([...currentTests, ...testKeys])];
+        const currentTests = (teIssue.fields as Record<string, unknown>)[testField.id] as string[] | undefined;
+        const merged = [...new Set([...(currentTests || []), ...testKeys])];
 
         const payload: JsonObject = {};
         payload[testField.id] = merged;

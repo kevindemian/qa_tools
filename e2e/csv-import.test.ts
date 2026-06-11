@@ -14,22 +14,22 @@ import { setupHandlers, resetHandlers } from './handlers.js';
 
 const { createTestsFromCsv } = createTests;
 
-const E2E_TOKEN = process.env.E2E_JIRA_TOKEN ?? (process.env.CI ? '' : 'e2e-token');
+const E2E_TOKEN = process.env['E2E_JIRA_TOKEN'] ?? (process.env['CI'] ? '' : 'e2e-token');
 
 const tmpHome = fs.mkdtempSync(path.join(os.tmpdir(), 'qa-e2e-'));
 
 describe('E2E: CSV Import', () => {
     beforeAll(() => {
         nock.cleanAll();
-        process.env.HOME = tmpHome;
-        process.env.JIRA_BASE_URL = 'http://localhost:9999/jira';
-        process.env.JIRA_PERSONAL_TOKEN = E2E_TOKEN;
-        process.env.XRAY_BASE_URL = 'http://localhost:9999/xray';
-        process.env.CSV_PATH = path.join(import.meta.dirname, 'fixtures', 'testes-simples.csv');
-        process.env.CSV_LABELS = 'e2e,automated';
-        process.env.AUTO_CONFIRM = 'true';
-        process.env.ON_ERROR = 'skip';
-        process.env.QUIET = 'true';
+        process.env['HOME'] = tmpHome;
+        process.env['JIRA_BASE_URL'] = 'http://localhost:9999/jira';
+        process.env['JIRA_PERSONAL_TOKEN'] = E2E_TOKEN;
+        process.env['XRAY_BASE_URL'] = 'http://localhost:9999/xray';
+        process.env['CSV_PATH'] = path.join(import.meta.dirname, 'fixtures', 'testes-simples.csv');
+        process.env['CSV_LABELS'] = 'e2e,automated';
+        process.env['AUTO_CONFIRM'] = 'true';
+        process.env['ON_ERROR'] = 'skip';
+        process.env['QUIET'] = 'true';
         setupHandlers();
     });
 

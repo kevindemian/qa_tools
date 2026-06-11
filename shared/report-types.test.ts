@@ -18,12 +18,12 @@ describe('report-types constants', () => {
     });
 
     it('CATEGORY_COLORS has all expected keys', () => {
-        expect(CATEGORY_COLORS.ASSERTION).toBe('#6366f1');
-        expect(CATEGORY_COLORS.TIMEOUT).toBe('#f59e0b');
-        expect(CATEGORY_COLORS.ENVIRONMENT).toBe('#10b981');
-        expect(CATEGORY_COLORS.APPLICATION).toBe('#ef4444');
-        expect(CATEGORY_COLORS.FLAKY).toBe('#8b5cf6');
-        expect(CATEGORY_COLORS.UNKNOWN).toBe('#6b7280');
+        expect(CATEGORY_COLORS['ASSERTION']).toBe('#6366f1');
+        expect(CATEGORY_COLORS['TIMEOUT']).toBe('#f59e0b');
+        expect(CATEGORY_COLORS['ENVIRONMENT']).toBe('#10b981');
+        expect(CATEGORY_COLORS['APPLICATION']).toBe('#ef4444');
+        expect(CATEGORY_COLORS['FLAKY']).toBe('#8b5cf6');
+        expect(CATEGORY_COLORS['UNKNOWN']).toBe('#6b7280');
     });
 });
 

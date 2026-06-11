@@ -206,8 +206,11 @@ describe('BugReport Service', () => {
             expect(report.description).toBe('No details available.');
         });
 
-        it('handles missing stats and tests gracefully', () => {
-            const report = collectAutomated({} as ParseResult);
+        it('handles empty stats and tests gracefully', () => {
+            const report = collectAutomated({
+                tests: [],
+                stats: { passed: 0, failed: 0, skipped: 0, total: 0, duration: 0 },
+            });
             expect(report.summary).toBe('0/0 tests failed');
             expect(report.description).toBe('No details available.');
         });

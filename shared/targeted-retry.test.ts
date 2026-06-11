@@ -70,7 +70,7 @@ describe('generateWithRetry', () => {
         );
 
         expect(result.data).toBeNull();
-        expect(result.layerFailures.layer1).toBeGreaterThan(0);
+        expect(result.layerFailures['layer1']).toBeGreaterThan(0);
     });
 
     it('retries layer 2 when invariants fail', async () => {
@@ -101,7 +101,7 @@ describe('generateWithRetry', () => {
         );
 
         expect(result.data).toBeDefined();
-        expect(result.layerFailures.layer2).toBe(1);
+        expect(result.layerFailures['layer2']).toBe(1);
     });
 
     it('retries layer 3 when semantic validation fails', async () => {
@@ -138,7 +138,7 @@ describe('generateWithRetry', () => {
         );
 
         expect(result.data).toBeDefined();
-        expect(result.layerFailures.layer3).toBe(1);
+        expect(result.layerFailures['layer3']).toBe(1);
     });
 
     it('accumulates final errors when validation persists after all retries', async () => {
@@ -172,8 +172,8 @@ describe('generateWithRetry', () => {
         );
 
         expect(result.data).toBeNull();
-        expect(result.layerFailures.layer2).toBe(1);
-        expect(result.layerFailures.layer3).toBe(1);
+        expect(result.layerFailures['layer2']).toBe(1);
+        expect(result.layerFailures['layer3']).toBe(1);
     });
 
     it('builds schema error hints when schema validation fails', async () => {
@@ -202,7 +202,7 @@ describe('generateWithRetry', () => {
         );
 
         expect(result.data).toBeDefined();
-        expect(result.layerFailures.layer1).toBe(1);
+        expect(result.layerFailures['layer1']).toBe(1);
     });
 
     it('returns null when layer3 retry returns null and final validation fails', async () => {

@@ -23,10 +23,10 @@ const mockExecFileSync = vi.mocked(execFileSync);
 describe('runQualityGate', () => {
     beforeEach(() => {
         vi.clearAllMocks();
-        delete process.env.QA_GATE_MIN_PASS_RATE;
-        delete process.env.QA_GATE_MAX_FLAKY_PCT;
-        delete process.env.QA_GATE_MIN_COVERAGE;
-        delete process.env.QA_GATE_MAX_SUITE_SPEED;
+        delete process.env['QA_GATE_MIN_PASS_RATE'];
+        delete process.env['QA_GATE_MAX_FLAKY_PCT'];
+        delete process.env['QA_GATE_MIN_COVERAGE'];
+        delete process.env['QA_GATE_MAX_SUITE_SPEED'];
         mockExecFileSync.mockImplementation(() => '');
     });
 
@@ -158,10 +158,10 @@ describe('runQualityGate', () => {
     });
 
     it('reads thresholds from environment variables', () => {
-        process.env.QA_GATE_MIN_PASS_RATE = '90';
-        process.env.QA_GATE_MAX_FLAKY_PCT = '10';
-        process.env.QA_GATE_MIN_COVERAGE = '80';
-        process.env.QA_GATE_MAX_SUITE_SPEED = '5';
+        process.env['QA_GATE_MIN_PASS_RATE'] = '90';
+        process.env['QA_GATE_MAX_FLAKY_PCT'] = '10';
+        process.env['QA_GATE_MIN_COVERAGE'] = '80';
+        process.env['QA_GATE_MAX_SUITE_SPEED'] = '5';
         mockLoadMetrics.mockReturnValue({
             runs: [
                 {

@@ -145,8 +145,8 @@ function _selectProject(): { projectName: string | null; names: string[] } {
     const state = loadState();
     const allProjects = getProjects();
     const names = Object.keys(allProjects).sort();
-    displayProjects(names, state.lastProject as string);
-    const firstDefault = (state.lastProject as string) || '';
+    displayProjects(names, state['lastProject'] as string);
+    const firstDefault = (state['lastProject'] as string) || '';
     const firstChoice = prompt('Escolha um projeto', {
         hint: '1-' + names.length,
         default: firstDefault,
@@ -160,7 +160,7 @@ function _selectProject(): { projectName: string | null; names: string[] } {
     setCurrentProjectName(projectName);
     setProjectId(allProjects[projectName] as string);
     updateState((s: StateContainer) => {
-        s.lastProject = projectName;
+        s['lastProject'] = projectName;
     });
     success('Projeto selecionado: ' + projectName + ' (' + getProviderForProject(projectName) + ')');
     return { projectName, names };
@@ -182,8 +182,8 @@ async function _promptChoice(stateHint: string): Promise<string> {
         }
 
         const stateHint2 =
-            loadState().lastChoice && (loadState().lastChoice as string) !== '0'
-                ? (loadState().lastChoice as string)
+            loadState()['lastChoice'] && (loadState()['lastChoice'] as string) !== '0'
+                ? (loadState()['lastChoice'] as string)
                 : undefined;
         return showSelect('      Escolha uma opção', buildActionChoices(), {
             ...(stateHint2 ? { default: stateHint2 } : {}),
@@ -191,8 +191,8 @@ async function _promptChoice(stateHint: string): Promise<string> {
         });
     }
     const nonTtyLines = buildActionChoices()
-        .filter((c: JsonObject) => c.name)
-        .map((c: JsonObject) => '  ' + String(c.name));
+        .filter((c: JsonObject) => c['name'])
+        .map((c: JsonObject) => '  ' + String(c['name']));
     nonTtyLines.unshift('');
     nonTtyLines.push('  /help   Ajuda');
     nonTtyLines.push('  /exit   Voltar ao menu principal');
@@ -204,8 +204,8 @@ async function _promptChoice(stateHint: string): Promise<string> {
     });
     const choice = prompt('Escolha uma opção', { hint: stateHint });
     const resolved =
-        !choice.trim() && (loadState().lastChoice as string) && (loadState().lastChoice as string) !== '0'
-            ? (loadState().lastChoice as string)
+        !choice.trim() && (loadState()['lastChoice'] as string) && (loadState()['lastChoice'] as string) !== '0'
+            ? (loadState()['lastChoice'] as string)
             : choice;
     if (resolved !== choice) info('Repetindo última opção: ' + resolved);
     return resolved;
@@ -825,8 +825,8 @@ export async function runInteractiveMode(args: CliArgs): Promise<void> {
     await displayRecentPipelines(m);
 
     const stateHint =
-        loadState().lastChoice && (loadState().lastChoice as string) !== '0'
-            ? 'Enter = ' + (loadState().lastChoice as string)
+        loadState()['lastChoice'] && (loadState()['lastChoice'] as string) !== '0'
+            ? 'Enter = ' + (loadState()['lastChoice'] as string)
             : '0-9';
 
     for (;;) {
@@ -834,7 +834,7 @@ export async function runInteractiveMode(args: CliArgs): Promise<void> {
             process.stdout.write('\x1b[2J\x1b[H');
         const finalChoice = await _promptChoice(stateHint);
         updateState((s: StateContainer) => {
-            s.lastChoice = finalChoice;
+            s['lastChoice'] = finalChoice;
         });
         try {
             const shouldExit = await _dispatchAction(finalChoice, m, projectName, names);

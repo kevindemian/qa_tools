@@ -3,62 +3,62 @@ vi.mock('./config', () => {
     const mockConfig: Record<string, string> = {};
     const ConfigMock = {
         get llmApiKey() {
-            return mockConfig.llmApiKey ?? '';
+            return mockConfig['llmApiKey'] ?? '';
         },
         get llmModel() {
-            return mockConfig.llmModel ?? 'google/gemini-2.0-flash-exp';
+            return mockConfig['llmModel'] ?? 'google/gemini-2.0-flash-exp';
         },
         get llmBaseUrl() {
-            return mockConfig.llmBaseUrl ?? 'https://openrouter.ai/api/v1';
+            return mockConfig['llmBaseUrl'] ?? 'https://openrouter.ai/api/v1';
         },
         get llmSmallApiKey() {
-            return mockConfig.llmSmallApiKey ?? '';
+            return mockConfig['llmSmallApiKey'] ?? '';
         },
         get llmSmallModel() {
-            return mockConfig.llmSmallModel ?? 'gemini-2.0-flash-lite';
+            return mockConfig['llmSmallModel'] ?? 'gemini-2.0-flash-lite';
         },
         get llmFastApiKey() {
-            return mockConfig.llmFastApiKey ?? '';
+            return mockConfig['llmFastApiKey'] ?? '';
         },
         get llmFastModel() {
-            return mockConfig.llmFastModel ?? 'llama3-8b-8192';
+            return mockConfig['llmFastModel'] ?? 'llama3-8b-8192';
         },
         get llmFastBaseUrl() {
-            return mockConfig.llmFastBaseUrl ?? 'https://api.groq.com/openai/v1';
+            return mockConfig['llmFastBaseUrl'] ?? 'https://api.groq.com/openai/v1';
         },
         get llmReviewApiKey() {
-            return mockConfig.llmReviewApiKey ?? '';
+            return mockConfig['llmReviewApiKey'] ?? '';
         },
         get llmReviewModel() {
-            return mockConfig.llmReviewModel ?? 'gemini-2.0-flash-exp';
+            return mockConfig['llmReviewModel'] ?? 'gemini-2.0-flash-exp';
         },
         get llmReviewBaseUrl() {
-            return mockConfig.llmReviewBaseUrl ?? 'https://generativelanguage.googleapis.com/v1beta';
+            return mockConfig['llmReviewBaseUrl'] ?? 'https://generativelanguage.googleapis.com/v1beta';
         },
         get llmFallbackApiKey() {
-            return mockConfig.llmFallbackApiKey ?? '';
+            return mockConfig['llmFallbackApiKey'] ?? '';
         },
         get llmFallbackModel() {
-            return mockConfig.llmFallbackModel ?? 'meta/llama3-70b-instruct';
+            return mockConfig['llmFallbackModel'] ?? 'meta/llama3-70b-instruct';
         },
         get llmFallbackBaseUrl() {
-            return mockConfig.llmFallbackBaseUrl ?? 'https://integrate.api.nvidia.com/v1';
+            return mockConfig['llmFallbackBaseUrl'] ?? 'https://integrate.api.nvidia.com/v1';
         },
         get llmBatchApiKey() {
-            return mockConfig.llmBatchApiKey ?? '';
+            return mockConfig['llmBatchApiKey'] ?? '';
         },
         get llmBatchModel() {
-            return mockConfig.llmBatchModel ?? 'gpt-4o-mini';
+            return mockConfig['llmBatchModel'] ?? 'gpt-4o-mini';
         },
         get llmBatchBaseUrl() {
-            return mockConfig.llmBatchBaseUrl ?? 'https://models.inference.ai.azure.com';
+            return mockConfig['llmBatchBaseUrl'] ?? 'https://models.inference.ai.azure.com';
         },
         get llmMaxTotalTokens() {
-            const v = mockConfig.llmMaxTotalTokens;
+            const v = mockConfig['llmMaxTotalTokens'];
             return v ? parseInt(v, 10) : 0;
         },
         get llmMaxTokens() {
-            const v = mockConfig.llmMaxTokens;
+            const v = mockConfig['llmMaxTokens'];
             return v ? parseInt(v, 10) : 128000;
         },
         set(key: string, value: string) {
@@ -272,7 +272,7 @@ describe('llmPrompt', () => {
 
         await llmPrompt({ tier: 'main', system: 'system', user: 'json test', responseFormat: 'json' });
         const body = safeParseJson<Record<string, unknown>>(mockFetch.mock.calls[0]?.[1]?.body as string, {});
-        expect(body.response_format).toEqual({ type: 'json_object' });
+        expect(body['response_format']).toEqual({ type: 'json_object' });
     });
 
     it('different responseFormat produces different cache keys', async () => {
@@ -513,7 +513,7 @@ describe('llmPrompt', () => {
 
             await llmPrompt({ tier: 'main', system: 'system', user: 'json test', responseFormat: 'json' });
             const body = safeParseJson<Record<string, unknown>>(mockFetch.mock.calls[0]?.[1]?.body as string, {});
-            expect(body.response_format).toEqual({ type: 'json_object' });
+            expect(body['response_format']).toEqual({ type: 'json_object' });
         });
 
         it('different responseFormat produces different cache keys (via metrics)', async () => {
@@ -612,7 +612,7 @@ describe('llmPrompt', () => {
             await llmPrompt({ tier: 'main', system: 'sys', user: 'user', callerId: 'caller', responseFormat: 'json' });
 
             const body = safeParseJson<Record<string, unknown>>(mockFetch.mock.calls[0]?.[1]?.body as string, {});
-            expect(body.response_format).toEqual({ type: 'json_object' });
+            expect(body['response_format']).toEqual({ type: 'json_object' });
         });
 
         it('23.3: uses different cache keys for different responseFormat', async () => {
@@ -780,7 +780,7 @@ describe('llmPrompt', () => {
                 typeof data === 'object' &&
                 data !== null &&
                 'ok' in data &&
-                typeof (data as Record<string, unknown>).ok === 'boolean'
+                typeof (data as Record<string, unknown>)['ok'] === 'boolean'
             ) {
                 return { success: true as const, data };
             }
@@ -1111,7 +1111,7 @@ describe('llmPrompt', () => {
 
             await llmPrompt({ tier: 'report', system: 'system', user: 'report test', responseFormat: 'json' });
             const body = safeParseJson<Record<string, unknown>>(mockFetch.mock.calls[0]?.[1]?.body as string, {});
-            expect(body.response_format).toEqual({ type: 'json_object' });
+            expect(body['response_format']).toEqual({ type: 'json_object' });
         });
     });
 

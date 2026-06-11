@@ -76,9 +76,11 @@ function allTsFiles(): string[] {
 export function checkNoPattern(name: string, pattern: RegExp, files: string[], excludePattern?: RegExp): CheckResult {
     const violations: Violation[] = [];
     for (const file of files) {
-        if (excludePattern && excludePattern.test(file)) continue;
         const matches = grepLines(file, pattern);
-        violations.push(...matches.map((m) => ({ file, ...m })));
+        for (const m of matches) {
+            if (excludePattern && excludePattern.test(m.content)) continue;
+            violations.push({ file, ...m });
+        }
     }
     return { name, passed: violations.length === 0, violations };
 }
@@ -108,7 +110,7 @@ export async function checkEslintBaseline(): Promise<CheckResult> {
             for (const msg of result.messages) {
                 if (msg.ruleId === '@typescript-eslint/unbound-method') {
                     totalUnboundMethod++;
-                } else if (msg.severity === 2) {
+                } else if (msg.severity >= 1) {
                     violations.push({
                         file,
                         line: msg.line,
@@ -455,13 +457,23 @@ export function checkQualityGateFiles(): CheckResult {
     return { name: 'quality gate module files exist', passed: violations.length === 0, violations };
 }
 
+// markdown.ts/markdown-lexer.ts: `!` is markdown image syntax, not non-null assertion
+// xray-history.ts/xray-client.ts: GraphQL return types have known non-null fields
+// case02.ts: structured test assertions
+// pipeline-handler.test.ts: test assertions
 export function checkNonNullAssertion(): CheckResult {
-    const files = allTsFiles().filter((f) => !f.startsWith('scripts/'));
+    const files = allTsFiles()
+        .filter((f) => !f.startsWith('scripts/'))
+        .filter(
+            (f) =>
+                !/markdown\.ts$|markdown-lexer\.ts$|xray-history\.ts$|xray-client\.ts$|case02\.ts$|pipeline-handler\.test\.ts$/.test(
+                    f,
+                ),
+        );
     return checkNoPattern(
         'non-null assertion (!) in .ts files',
         /(?:\)|\]|\w+)\s*!\s*(?:\.|\[|;|,|\)|$|(?:\s+as\b))/,
         files,
-        /markdown\.ts$|markdown-lexer\.ts$|xray-history\.ts$|xray-client\.ts$|case02\.ts$|pipeline-handler\.test\.ts$/,
     );
 }
 
@@ -469,12 +481,23 @@ export function checkDepWall(): CheckResult {
     const violations: Violation[] = [];
     const dirs = ['git_triggers', 'jira_management'];
     const extPkgImport = /from\s+['"](?!\.)(?!\/)(?!node:)([a-z@][^'"]*)/;
+    const requirePkg = /require\s*\(\s*['"]([a-z@][^'"]*)['"]\s*\)/;
     for (const dir of dirs) {
         const files = globSync(`${dir}/**/*.ts`, { ignore: ['node_modules/**'] });
         for (const file of files) {
-            const matches = grepLines(file, extPkgImport);
-            for (const { line, content } of matches) {
+            for (const { line, content } of grepLines(file, extPkgImport)) {
                 const m = content.match(extPkgImport);
+                const pkg = m?.[1];
+                if (pkg && pkg !== 'vitest' && !isBuiltin(pkg)) {
+                    violations.push({
+                        file,
+                        line,
+                        content: `Direct external import '${pkg}' — must go through shared/deps.ts (DepWal)`,
+                    });
+                }
+            }
+            for (const { line, content } of grepLines(file, requirePkg)) {
+                const m = content.match(requirePkg);
                 const pkg = m?.[1];
                 if (pkg && pkg !== 'vitest' && !isBuiltin(pkg)) {
                     violations.push({
@@ -509,9 +532,9 @@ export function checkIntegrity(): CheckResult {
     const violations: Violation[] = [];
     try {
         const selfContent = readFileSync('scripts/quality-check.ts', 'utf-8');
-        const contentWithoutHash = selfContent.replace(/\/\* HASH:[0-9a-f]{64} \*\//, '');
+        const contentWithoutHash = selfContent.replace(/\/\* HASH:[0-9a-f]{64} \*\//g, '');
         const currentHash = createHash('sha256').update(contentWithoutHash, 'utf-8').digest('hex');
-        /* HASH:215bb9bf7f1785176191e462fcb97354296c0c0c7aae52ffd04c7437785255dc */
+        /* HASH:52eaaf23bffe58e3d912e55128c2ee4708e14b94f0f6bfe4a00770f15f3b4ed3 */
         const match = selfContent.match(/\/\* HASH:([0-9a-f]{64}) \*\//);
         if (!match) {
             violations.push({ file: 'scripts/quality-check.ts', line: 1, content: 'Missing HASH comment' });
@@ -606,5 +629,5 @@ export async function main(): Promise<void> {
 
 main().catch((err: unknown) => {
     process.stderr.write(err instanceof Error ? err.message : String(err));
-    process.exit(1);
+    gracefulExit(ExitCode.ERROR);
 });

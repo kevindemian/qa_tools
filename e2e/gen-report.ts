@@ -25,8 +25,8 @@ function loadCtrfFixture(): { ctrfPath: string; result: ReturnType<typeof parseT
 }
 
 async function fetchCiCdContext(): Promise<string> {
-    const ghToken = process.env.GITHUB_TOKEN;
-    const ghRepo = process.env.GITHUB_REPOSITORY || 'kevindemian/qa_tools';
+    const ghToken = process.env['GITHUB_TOKEN'];
+    const ghRepo = process.env['GITHUB_REPOSITORY'] || 'kevindemian/qa_tools';
 
     if (!ghToken) {
         rootLogger.info('GITHUB_TOKEN not set — CI/CD section omitted');

@@ -58,7 +58,7 @@ SAFETY=(
   "$PROJECT_ROOT/.github/dependabot.yml"
   "$PROJECT_ROOT/.gitlab-ci.yml"
   "$PROJECT_ROOT/scripts/quality-gate.ts"
-  "$PROJECT_ROOT/scripts/enforce-quality.ts"
+  "$PROJECT_ROOT/scripts/quality-check.ts"
 )
 
 CONFIG=(
@@ -256,7 +256,7 @@ except Exception as e:
     *.env)
       analysis="Variaveis de ambiente alteradas"
       ;;
-    *quality-gate*|*enforce-quality*)
+    *quality-gate*|*quality-check*)
       analysis="Quality gate alterado"
       ;;
     *warden*|*validation*)

@@ -13,7 +13,7 @@ export interface FilePathOptions extends PromptOptions {
 
 function expandHome(filepath: string): string {
     if (!filepath.startsWith('~')) return filepath;
-    const home = process.env.HOME || process.env.USERPROFILE || '';
+    const home = process.env['HOME'] || process.env['USERPROFILE'] || '';
     return home + filepath.slice(1);
 }
 

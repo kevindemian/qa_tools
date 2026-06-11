@@ -137,12 +137,12 @@ export function _trackUsage(data: Record<string, unknown>, providerKey: string, 
     _llmMetrics.requestsByProviderKey[providerKey] = (_llmMetrics.requestsByProviderKey[providerKey] || 0) + 1;
     let promptTokens = 0;
     let completionTokens = 0;
-    const usageResult = LlmUsageSchema.safeParse(data.usage);
+    const usageResult = LlmUsageSchema.safeParse(data['usage']);
     if (usageResult.success) {
         promptTokens = usageResult.data.prompt_tokens || 0;
         completionTokens = usageResult.data.completion_tokens || 0;
     } else {
-        const metaResult = LlmUsageMetaSchema.safeParse(data.usageMetadata);
+        const metaResult = LlmUsageMetaSchema.safeParse(data['usageMetadata']);
         if (metaResult.success) {
             promptTokens = metaResult.data.promptTokenCount || 0;
             completionTokens = metaResult.data.candidatesTokenCount || 0;
@@ -171,10 +171,10 @@ export function _trackUsage(data: Record<string, unknown>, providerKey: string, 
 
 export function extractContent(data: Record<string, unknown>, format: ProviderFormat): string {
     if (format === 'gemini') {
-        const result = z.array(LlmCandidateSchema).safeParse(data.candidates);
+        const result = z.array(LlmCandidateSchema).safeParse(data['candidates']);
         return result.success ? result.data[0]?.content?.parts?.[0]?.text || '' : '';
     }
-    const result = z.array(LlmChoiceSchema).safeParse(data.choices);
+    const result = z.array(LlmChoiceSchema).safeParse(data['choices']);
     return result.success ? result.data[0]?.message?.content || '' : '';
 }
 
@@ -194,7 +194,7 @@ export function resetLlmClientMetrics(): void {
 
 // ---- tier configuration ----
 
-const TIER_CONFIGS: Record<LlmTier, () => ProviderConfig> = {
+const TIER_CONFIGS: Partial<Record<LlmTier, () => ProviderConfig>> = {
     main: () => ({
         apiKey: Config.get('llmApiKey'),
         model: Config.get('llmModel'),
@@ -242,5 +242,10 @@ const TIER_CONFIGS: Record<LlmTier, () => ProviderConfig> = {
 
 export function tierToConfig(tier: LlmTier): ProviderConfig {
     const factory = TIER_CONFIGS[tier];
-    return factory();
+    const mainFactory = TIER_CONFIGS.main;
+    return factory
+        ? factory()
+        : mainFactory
+          ? mainFactory()
+          : { apiKey: '', model: '', baseUrl: '', format: 'openai', temperature: 0 };
 }

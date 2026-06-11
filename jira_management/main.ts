@@ -52,8 +52,8 @@ const _badgeCache = new Map<string, { totalCount: number; timestamp: number }>()
 const BADGE_CACHE_TTL_MS = 5 * 60 * 1000;
 
 function _isBatchOrCI(): boolean {
-    if (process.env.CI === 'true') return true;
-    if (process.env.AUTO_CONFIRM === 'true') return true;
+    if (process.env['CI'] === 'true') return true;
+    if (process.env['AUTO_CONFIRM'] === 'true') return true;
     const args = process.argv.slice(2).join(' ');
     if (args.includes('--batch') || args.includes('--auto')) return true;
     return false;

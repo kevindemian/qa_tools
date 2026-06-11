@@ -49,14 +49,14 @@ const DEFAULTS: Record<Framework, DetectionResult> = {
 
 function detectFromPkg(pkg: Record<string, unknown>): Framework {
     const deps = {
-        ...(pkg.dependencies as Record<string, string>),
-        ...(pkg.devDependencies as Record<string, string>),
+        ...(pkg['dependencies'] as Record<string, string>),
+        ...(pkg['devDependencies'] as Record<string, string>),
     };
 
-    if (deps.cypress) return 'cypress';
-    if (deps['@playwright/test'] || deps.playwright) return 'playwright';
-    if (deps.jest) return 'jest';
-    if (deps.vitest) return 'vitest';
+    if (deps['cypress']) return 'cypress';
+    if (deps['@playwright/test'] || deps['playwright']) return 'playwright';
+    if (deps['jest']) return 'jest';
+    if (deps['vitest']) return 'vitest';
     return 'generic';
 }
 

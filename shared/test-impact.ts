@@ -28,7 +28,7 @@ function loadPackageJson(): { devDependencies?: Record<string, string> | undefin
 
 function hasJest(pkg: { devDependencies?: Record<string, string> | undefined } | null): boolean {
     if (!pkg?.devDependencies) return false;
-    return pkg.devDependencies.jest !== undefined;
+    return pkg.devDependencies['jest'] !== undefined;
 }
 
 function parseDiffLines(diff: string): string[] {

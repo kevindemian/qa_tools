@@ -28,7 +28,7 @@ export function generateGitHubActions(ctx: SetupContext): string {
     if (ctx.features.jiraIntegration || ctx.features.aiFailureAnalysis || ctx.features.flakinessDashboard) {
         const postStepEnv: Record<string, string> = {};
         if (ctx.gitProvider === 'github') {
-            postStepEnv.GITHUB_TOKEN = '${{ secrets.GITHUB_TOKEN }}';
+            postStepEnv['GITHUB_TOKEN'] = '${{ secrets.GITHUB_TOKEN }}';
         }
         const postCmd = `npx tsx git_triggers/main.ts --batch --project ${ctx.projectName} --branch \${{ github.ref_name }}`;
         testSteps.push({

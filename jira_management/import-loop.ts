@@ -160,8 +160,8 @@ function saveCheckpoint(opts: SaveCheckpointOptions): void {
     };
     cpSave[cpKey] = sourcePath;
     updateState((state) => {
-        if (!state._checkpoint) state._checkpoint = {};
-        Object.assign(state._checkpoint as JsonObject, cpSave);
+        if (!state['_checkpoint']) state['_checkpoint'] = {};
+        Object.assign(state['_checkpoint'] as JsonObject, cpSave);
     });
 }
 

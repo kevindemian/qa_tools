@@ -145,10 +145,13 @@ describe('openWithOsOrFallback', () => {
         expect(fallback).not.toHaveBeenCalled();
     });
 
-    it('calls fallback when no handler is attached (spawn returns undefined)', async () => {
-        mockSpawn.mockReset();
+    it('calls fallback when no handler is attached', async () => {
+        const child = makeMockChild();
+        mockSpawn.mockReturnValue(child);
         const fallback = vi.fn();
-        const result = await openWithOsOrFallback('/some/file', fallback);
+        const promise = openWithOsOrFallback('/some/file', fallback);
+        child.trigger('error');
+        const result = await promise;
         expect(result).toBe(false);
         expect(fallback).toHaveBeenCalledTimes(1);
     });
@@ -301,59 +304,59 @@ describe('getWinTempDir', () => {
     });
 
     it('returns TEMP when set with Linux path', () => {
-        const origTemp = process.env.TEMP;
-        process.env.TEMP = '/mnt/c/Users/Test/Temp';
+        const origTemp = process.env['TEMP'];
+        process.env['TEMP'] = '/mnt/c/Users/Test/Temp';
         const result = getWinTempDir();
-        process.env.TEMP = origTemp;
+        process.env['TEMP'] = origTemp;
         expect(result).toBe('/mnt/c/Users/Test/Temp');
     });
 
     it('returns TMP when TEMP not set and TMP has Linux path', () => {
-        const origTemp = process.env.TEMP;
-        const origTmp = process.env.TMP;
-        delete process.env.TEMP;
-        process.env.TMP = '/mnt/c/Users/Test/Tmp';
+        const origTemp = process.env['TEMP'];
+        const origTmp = process.env['TMP'];
+        delete process.env['TEMP'];
+        process.env['TMP'] = '/mnt/c/Users/Test/Tmp';
         const result = getWinTempDir();
-        process.env.TEMP = origTemp;
-        process.env.TMP = origTmp;
+        process.env['TEMP'] = origTemp;
+        process.env['TMP'] = origTmp;
         expect(result).toBe('/mnt/c/Users/Test/Tmp');
     });
 
     it('converts cmd.exe TEMP output to WSL path on success', () => {
-        const origTemp = process.env.TEMP;
-        const origTmp = process.env.TMP;
-        delete process.env.TEMP;
-        delete process.env.TMP;
+        const origTemp = process.env['TEMP'];
+        const origTmp = process.env['TMP'];
+        delete process.env['TEMP'];
+        delete process.env['TMP'];
         mockExecFileSync.mockReturnValue('C:\\Users\\Test\\AppData\\Local\\Temp\n');
         const result = getWinTempDir();
-        process.env.TEMP = origTemp;
-        process.env.TMP = origTmp;
+        process.env['TEMP'] = origTemp;
+        process.env['TMP'] = origTmp;
         expect(result).toBe('/mnt/c/Users/Test/AppData/Local/Temp');
     });
 
     it('returns null when TEMP/TMP empty and cmd.exe fails', () => {
-        const origTemp = process.env.TEMP;
-        const origTmp = process.env.TMP;
-        delete process.env.TEMP;
-        delete process.env.TMP;
+        const origTemp = process.env['TEMP'];
+        const origTmp = process.env['TMP'];
+        delete process.env['TEMP'];
+        delete process.env['TMP'];
         mockExecFileSync.mockImplementation(() => {
             throw new Error('ENOENT');
         });
         const result = getWinTempDir();
-        process.env.TEMP = origTemp;
-        process.env.TMP = origTmp;
+        process.env['TEMP'] = origTemp;
+        process.env['TMP'] = origTmp;
         expect(result).toBeNull();
     });
 
     it('returns null when execFileSync returns empty string', () => {
-        const origTemp = process.env.TEMP;
-        const origTmp = process.env.TMP;
-        delete process.env.TEMP;
-        delete process.env.TMP;
+        const origTemp = process.env['TEMP'];
+        const origTmp = process.env['TMP'];
+        delete process.env['TEMP'];
+        delete process.env['TMP'];
         mockExecFileSync.mockReturnValue('');
         const result = getWinTempDir();
-        process.env.TEMP = origTemp;
-        process.env.TMP = origTmp;
+        process.env['TEMP'] = origTemp;
+        process.env['TMP'] = origTmp;
         expect(result).toBeNull();
     });
 });
@@ -376,29 +379,29 @@ describe('getDocsOutputDir', () => {
         mockExecFileSync.mockImplementation(() => {
             throw new Error('ENOENT');
         });
-        const origTemp = process.env.TEMP;
-        delete process.env.TEMP;
+        const origTemp = process.env['TEMP'];
+        delete process.env['TEMP'];
         const result = getDocsOutputDir();
-        process.env.TEMP = origTemp;
+        process.env['TEMP'] = origTemp;
         expect(result).toBeNull();
     });
 
     it('returns WSL temp path when on WSL and getWinTempDir succeeds', () => {
         mockReadFileSync.mockReturnValue('Linux version ... Microsoft ...');
         mockExecFileSync.mockReturnValue('C:\\Users\\Test\\Temp\n');
-        const origTemp = process.env.TEMP;
-        delete process.env.TEMP;
+        const origTemp = process.env['TEMP'];
+        delete process.env['TEMP'];
         const result = getDocsOutputDir();
-        process.env.TEMP = origTemp;
+        process.env['TEMP'] = origTemp;
         expect(result).toMatch(/qa_tools_docs$/);
     });
 
     it('uses QA_TOOLS_TEMP_DIR when set', () => {
-        const origDir = process.env.QA_TOOLS_TEMP_DIR;
-        process.env.QA_TOOLS_TEMP_DIR = '/custom/temp';
+        const origDir = process.env['QA_TOOLS_TEMP_DIR'];
+        process.env['QA_TOOLS_TEMP_DIR'] = '/custom/temp';
         mockReadFileSync.mockReturnValue('Linux version 5.15.0-generic');
         const result = getDocsOutputDir();
-        process.env.QA_TOOLS_TEMP_DIR = origDir;
+        process.env['QA_TOOLS_TEMP_DIR'] = origDir;
         expect(result).toMatch(/^\/custom\/temp\/docs$/);
     });
 });

@@ -707,7 +707,7 @@ describe('_isJiraConfigured with config', () => {
 
 describe('showGapBadge with config', () => {
     it('caches and displays badge after first call', async () => {
-        process.env.CI = 'false';
+        process.env['CI'] = 'false';
         const configMod = await import('../shared/config.js');
         vi.spyOn(configMod.default, 'get').mockReturnValue('https://jira.example.com');
 

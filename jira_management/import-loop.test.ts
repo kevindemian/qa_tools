@@ -141,19 +141,19 @@ describe('buildTestData', () => {
             description: 'desc',
             issuetype: { name: 'Test' },
         });
-        expect((result.fields as Record<string, unknown>).labels).toEqual([]);
+        expect((result.fields as Record<string, unknown>)['labels']).toEqual([]);
     });
 
     it('with jiraLabels', () => {
         const test: TestCase = { ...testBase, description: 'desc' };
         const result = buildTestData(test, 'PROJ', ['label1', 'label2']);
-        expect((result.fields as Record<string, unknown>).labels).toEqual(['label1', 'label2']);
+        expect((result.fields as Record<string, unknown>)['labels']).toEqual(['label1', 'label2']);
     });
 
     it('inline precondition appended to description', () => {
         const test: TestCase = { ...testBase, precondition: { type: 'inline', value: 'must login' } };
         const result = buildTestData(test, 'PROJ', []);
-        expect((result.fields as Record<string, unknown>).description).toContain('Pre-condition: must login');
+        expect((result.fields as Record<string, unknown>)['description']).toContain('Pre-condition: must login');
     });
 });
 

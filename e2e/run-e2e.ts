@@ -26,9 +26,9 @@ const { createTestsFromCsv, createTestExecutionWithLinks } = createTestsModule;
 dotenv.config({ path: path.resolve(import.meta.dirname, '../.env') });
 
 // ── Config ─────────────────────────────────────────────────────
-const BASE_URL = process.env.JIRA_BASE_URL ?? '';
-const XRAY_URL = process.env.XRAY_BASE_URL ?? '';
-const TOKEN = process.env.JIRA_PERSONAL_TOKEN ?? '';
+const BASE_URL = process.env['JIRA_BASE_URL'] ?? '';
+const XRAY_URL = process.env['XRAY_BASE_URL'] ?? '';
+const TOKEN = process.env['JIRA_PERSONAL_TOKEN'] ?? '';
 if (!BASE_URL || !XRAY_URL || !TOKEN) {
     rootLogger.error('Missing required env vars: JIRA_BASE_URL, XRAY_BASE_URL, JIRA_PERSONAL_TOKEN');
     gracefulExit(1);
@@ -96,18 +96,18 @@ async function checkAuthentication(): Promise<boolean> {
 async function readExistingTest(): Promise<boolean> {
     try {
         const issue = await getIssueRaw(EXISTING_TEST);
-        const f = issue.fields as Record<string, unknown> | undefined;
+        const f = issue['fields'] as Record<string, unknown> | undefined;
         if (!f) {
             fail('issue.fields missing');
             return false;
         }
-        originalDescription = (f.description as string) || '';
-        ok(`Test ${EXISTING_TEST} lido: "${f.summary as string}"`);
-        if ((f.labels as string[]).includes(LABEL)) ok(`Label "${LABEL}" presente`);
+        originalDescription = (f['description'] as string) || '';
+        ok(`Test ${EXISTING_TEST} lido: "${f['summary'] as string}"`);
+        if ((f['labels'] as string[]).includes(LABEL)) ok(`Label "${LABEL}" presente`);
         else fail(`Label "${LABEL}" ausente em ${EXISTING_TEST}`);
-        if ((f.issuetype as Record<string, string>).name === 'Test') ok(`Issue type = Test`);
-        else fail(`Issue type = ${(f.issuetype as Record<string, string>).name}`);
-        if ((f.customfield_13708 as string[]).includes(EXISTING_PRECOND))
+        if ((f['issuetype'] as Record<string, string>)['name'] === 'Test') ok(`Issue type = Test`);
+        else fail(`Issue type = ${(f['issuetype'] as Record<string, string>)['name']}`);
+        if ((f['customfield_13708'] as string[]).includes(EXISTING_PRECOND))
             ok(`Pre-condition ${EXISTING_PRECOND} linkada`);
         else fail(`Pre-condition não encontrada`);
         return true;
@@ -129,8 +129,8 @@ async function checkTestSteps(): Promise<void> {
 async function checkPrecondition(): Promise<void> {
     try {
         const prec = await getIssueRaw(EXISTING_PRECOND);
-        const precFields = prec.fields as Record<string, unknown>;
-        ok(`Pre-condition ${EXISTING_PRECOND} lida: "${precFields.summary as string}"`);
+        const precFields = prec['fields'] as Record<string, unknown>;
+        ok(`Pre-condition ${EXISTING_PRECOND} lida: "${precFields['summary'] as string}"`);
     } catch (e: unknown) {
         fail(`Ler ${EXISTING_PRECOND}`, (e as Error).message);
     }
@@ -174,8 +174,8 @@ async function updateDescription(testDesc: string): Promise<boolean> {
 async function verifyUpdateApplied(testDesc: string): Promise<void> {
     try {
         const issue2 = await getIssueRaw(EXISTING_TEST);
-        const f2 = issue2.fields as Record<string, unknown>;
-        const newDesc = (f2.description as string) || '';
+        const f2 = issue2['fields'] as Record<string, unknown>;
+        const newDesc = (f2['description'] as string) || '';
         if (newDesc === testDesc) ok('Description atualizada confirmada via GET');
         else fail(`Description mismatch: "${newDesc.slice(0, 80)}..."`);
     } catch (e: unknown) {
@@ -197,8 +197,8 @@ async function rollbackDescription(): Promise<void> {
 async function verifyRollbackApplied(): Promise<void> {
     try {
         const issue3 = await getIssueRaw(EXISTING_TEST);
-        const f3 = issue3.fields as Record<string, unknown>;
-        const finalDesc = (f3.description as string) || '';
+        const f3 = issue3['fields'] as Record<string, unknown>;
+        const finalDesc = (f3['description'] as string) || '';
         if (finalDesc === originalDescription) ok('Rollback confirmado via GET');
         else fail('Rollback não refletido');
     } catch (e: unknown) {
@@ -242,11 +242,11 @@ function criarCsv() {
 async function fase3CriarTest() {
     section('FASE 3 — Criar Test Case via CSV');
 
-    process.env.CSV_PATH = CSV_PATH;
-    process.env.CSV_LABELS = LABEL;
-    process.env.AUTO_CONFIRM = 'true';
-    process.env.ON_ERROR = 'abort';
-    process.env.QUIET = 'true';
+    process.env['CSV_PATH'] = CSV_PATH;
+    process.env['CSV_LABELS'] = LABEL;
+    process.env['AUTO_CONFIRM'] = 'true';
+    process.env['ON_ERROR'] = 'abort';
+    process.env['QUIET'] = 'true';
 
     try {
         const result = await createTestsFromCsv({
@@ -326,29 +326,31 @@ async function verifyNewTestCase(): Promise<boolean> {
 
     try {
         const issue = await getIssueRaw(createdIssueKey);
-        const f = issue.fields as Record<string, unknown> | undefined;
+        const f = issue['fields'] as Record<string, unknown> | undefined;
         if (!f) {
             fail('issue.fields missing');
             return false;
         }
-        ok(`${createdIssueKey} existe, type=${(f.issuetype as Record<string, string>).name}`);
-        if ((f.labels as string[]).includes(LABEL)) ok(`Label "${LABEL}" presente`);
+        ok(`${createdIssueKey} existe, type=${(f['issuetype'] as Record<string, string>)['name']}`);
+        if ((f['labels'] as string[]).includes(LABEL)) ok(`Label "${LABEL}" presente`);
         else fail(`Label "${LABEL}" ausente`);
-        if ((f.customfield_13708 as string[]).includes(EXISTING_PRECOND))
+        if ((f['customfield_13708'] as string[]).includes(EXISTING_PRECOND))
             ok(`Pre-condition ${EXISTING_PRECOND} linkada`);
         else fail(`Pre-condition ausente`);
-        process.stdout.write(`  Summary: ${f.summary as string}` + '\n');
-        process.stdout.write(`  Description: ${((f.description as string) || '').slice(0, 100)}` + '\n');
+        process.stdout.write(`  Summary: ${f['summary'] as string}` + '\n');
+        process.stdout.write(`  Description: ${((f['description'] as string) || '').slice(0, 100)}` + '\n');
 
         const steps = (await getSteps(createdIssueKey)) as unknown as Record<string, unknown>[];
         ok(`Steps: ${steps.length} steps`);
         for (const s of steps) {
-            const fields = s.fields as Record<string, unknown> | undefined;
-            const a = ((fields?.Action as Record<string, unknown> | undefined)?.value as string | undefined) ?? '';
+            const fields = s['fields'] as Record<string, unknown> | undefined;
+            const a =
+                ((fields?.['Action'] as Record<string, unknown> | undefined)?.['value'] as string | undefined) ?? '';
             const e =
-                ((fields?.['Expected Result'] as Record<string, unknown> | undefined)?.value as string | undefined) ??
-                '';
-            process.stdout.write(`    Step ${String(s.index)}: ${a} → ${e}` + '\n');
+                ((fields?.['Expected Result'] as Record<string, unknown> | undefined)?.['value'] as
+                    | string
+                    | undefined) ?? '';
+            process.stdout.write(`    Step ${String(s['index'])}: ${a} → ${e}` + '\n');
         }
         return true;
     } catch (e: unknown) {
@@ -404,12 +406,12 @@ async function fase6XrayHistory() {
             ok(`History para ${EXISTING_TEST}: ${result.length} entrada(s)`);
             result.slice(0, 3).forEach((h) => {
                 const entry = h as unknown as Record<string, unknown>;
-                const entryDate = typeof entry.date === 'string' ? entry.date : '?';
+                const entryDate = typeof entry['date'] === 'string' ? entry['date'] : '?';
                 const entryStatus =
-                    typeof entry.status === 'string'
-                        ? entry.status
-                        : typeof entry.evolution === 'string'
-                          ? entry.evolution
+                    typeof entry['status'] === 'string'
+                        ? entry['status']
+                        : typeof entry['evolution'] === 'string'
+                          ? entry['evolution']
                           : 'N/A';
                 process.stdout.write(`    ${entryDate}: ${entryStatus}` + '\n');
             });

@@ -2,6 +2,137 @@
 
 > **ORIENTAÇÃO**: Este arquivo contém **APENAS** tarefas pendentes ou em andamento.
 > Tarefas concluídas devem ser **imediatamente migradas** para [`BACKLOG-historico.md`](BACKLOG-historico.md).
+>
+> Cada tarefa é classificada como:
+>
+> - 🐛 **débito** — código existente que precisa de correção/conexão
+> - ✨ **feature** — nova funcionalidade a ser implementada
+> - ♻️ **refactor** — reestruturação sem mudança de comportamento
+> - 🔧 **chore** — manutenção (deps, config, tooling)
+> - 📋 **test** — cobertura de testes
+>
+> ## Critério de prioridade
+>
+> - **P0**: Bloqueia CI ou funcionalidade crítica
+> - **P1**: Impacto alto em manutenibilidade, risco médio
+> - **P2**: Melhoria desejável, baixo risco
+> - **P3**: Nice-to-have, oportunidade futura
+
+---
+
+## 🛡️ Sprint Security Audit — Correção Completa (Jun/2026)
+
+**Data:** 2026-06-11
+**Origem:** Auditoria sistêmica de segurança: 24 achados (4 CRÍTICOS, 7 ALTOS, 5 MÉDIOS, 4 BAIXOS).
+**Ordem de execução:** Infra → Overrides → Quality-check bugs → Type safety → Consolidação → Testes.
+
+### Plano de Fases
+
+| Fase | Descrição                                                         | Itens                       | Status |
+| ---- | ----------------------------------------------------------------- | --------------------------- | ------ |
+| 0    | Infra: unused-exports, tsconfig, wiring pre-push                  | P0b, P0c, P0d, P0e          | ✅     |
+| 1    | File-level eslint-disable → execFileSync + argv array             | A4 (store-backend, git-sha) | ✅     |
+| 2    | quality-check.ts bugs (checkAsAny, depWall, exit, hash, severity) | A2, A3, M2, M3, M4, B1      | ✅     |
+| 3    | `as unknown as` em produção → cast direto                         | A6 (5 arquivos)             | ✅     |
+| 4    | Consolidação: remover enforce-quality.ts + duplicações            | M1, A5, B2, B3              | ✅     |
+| 5    | Segurança: scan-sec-logs.sh blocking + tsconfig fix + CI          | A1, C4                      | ✅     |
+| 6    | Testes (271 files, 4539 pass)                                     | Todos os anteriores         | ✅     |
+| 7    | Verificação final: TSC + lint + vitest + quality-check            | —                           | ✅     |
+
+### Detalhamento por Fase
+
+#### Fase 0 — Infra (dependências zero)
+
+| ID  | Item                                                                        | Arquivos                                   | Esforço |
+| --- | --------------------------------------------------------------------------- | ------------------------------------------ | ------- |
+| P0a | BACKLOG.md atualizado                                                       | BACKLOG.md                                 | 5min    |
+| P0b | Adicionar script `unused-exports` ao package.json                           | package.json                               | 2min    |
+| P0c | Mover `noPropertyAccessFromIndexSignature` para dentro de `compilerOptions` | tsconfig.json                              | 2min    |
+| P0d | Trocar `enforce-quality.ts` → `quality-check.ts` no pre-push hook           | .githooks/pre-push                         | 2min    |
+| P0e | Trocar `enforce-quality.ts` → `quality-check.ts` no opencode-guard          | scripts/opencode-guard.sh (linhas 61, 259) | 2min    |
+
+#### Fase 1 — ESLint File-Level Overrides (A4)
+
+| ID  | Item                                                               | Arquivos                |
+| --- | ------------------------------------------------------------------ | ----------------------- |
+| P1a | Trocar file-level eslint-disable para per-line em store-backend.ts | shared/store-backend.ts |
+| P1b | Trocar file-level eslint-disable para per-line em git-sha.ts       | shared/git-sha.ts       |
+
+#### Fase 2 — quality-check.ts Bugs (A2, A3, M2, M3, M4, B1)
+
+| ID  | Item                                                  | Descrição                |
+| --- | ----------------------------------------------------- | ------------------------ |
+| P2a | Fix `checkAsAny` — testar conteúdo da linha, não path | quality-check.ts:76-83   |
+| P2b | Fix `checkDepWall` — detectar `require(`              | quality-check.ts:471     |
+| P2c | Fix `process.exit(1)` → `gracefulExit`                | quality-check.ts:607-609 |
+| P2d | Fix hash `replace()` sem flag g                       | quality-check.ts:512     |
+| P2e | Detectar severidade 1 (warn) do ESLint                | quality-check.ts:111     |
+| P2f | Documentar exclusões non-null assertion               | quality-check.ts:458-465 |
+
+#### Fase 3 — `as unknown as` em Produção (A6)
+
+| ID  | Arquivo                    | Linhas   | Solução                                   |
+| --- | -------------------------- | -------- | ----------------------------------------- |
+| P3a | shared/llm-client.ts       | 165, 214 | Extrair tipo, usar cast seguro com schema |
+| P3b | shared/targeted-retry.ts   | 79       | Usar schema do retorno llmPrompt          |
+| P3c | shared/splash.ts           | 37       | Tipar import() dinâmico                   |
+| P3d | git_triggers/batch-mode.ts | 383, 387 | Usar zod parse                            |
+| P3e | e2e/run-e2e.ts             | 343, 406 | Tipar com Record tipado                   |
+
+#### Fase 4 — Consolidação (M1, A5, B2)
+
+| ID  | Item                                                      | Descrição                                   |
+| --- | --------------------------------------------------------- | ------------------------------------------- |
+| P4a | Remover enforce-quality.ts                                | Após wiring completo                        |
+| P4b | Documentar baseline unused-exports                        | quality-check.ts + .unused-exports-baseline |
+| P4c | Adicionar justificativa nos eslint-disable-no-var em test | handlers.test.ts:37,64                      |
+| P4d | Remover exclusão de quality-check.test.ts de 3 checks     | quality-check.ts:287,295,303                |
+
+#### Fase 5 — Segurança (A1, C4)
+
+| ID  | Item                                  | Descrição             |
+| --- | ------------------------------------- | --------------------- |
+| P5a | Remover \|\| true do scan-sec-logs.sh | .githooks/pre-push:76 |
+| P5b | Remover \|\| true do GitLab CI        | .gitlab-ci.yml:14     |
+
+#### Fase 6 — Testes
+
+| ID  | Item                                      | Cobertura               |
+| --- | ----------------------------------------- | ----------------------- |
+| P6a | Testes para checkAsAny fix                | quality-check.test.ts   |
+| P6b | Testes para checkDepWall require()        | quality-check.test.ts   |
+| P6c | Testes para process.exit → gracefulExit   | quality-check.test.ts   |
+| P6d | Testes para hash replaceAll               | quality-check.test.ts   |
+| P6e | Testes para warn severity detection       | quality-check.test.ts   |
+| P6f | Testes para zod validation nos 5 arquivos | llm-client.test.ts, etc |
+
+#### Fase 7 — Verificação Final
+
+| ID  | Item                            | Critério                 |
+| --- | ------------------------------- | ------------------------ |
+| P7a | tsc --noEmit                    | 0 erros                  |
+| P7b | npm run lint (quality-check.ts) | 0 violações não-baseline |
+| P7c | vitest run                      | 100% pass                |
+| P7d | quality-check auto-integrity    | hash válido              |
+
+### Métricas Finais
+
+| Métrica                                         | Antes                             | Depois                                    | Alvo     |
+| ----------------------------------------------- | --------------------------------- | ----------------------------------------- | -------- |
+| Achados de segurança                            | 24 (4C, 7A, 5M, 4B)               | **1 remanescente** (case15:60, infixável) | 0        |
+| `no-restricted-syntax` suppression (file-level) | 2                                 | **0**                                     | 0        |
+| `execSync` + template literals (injection risk) | 8                                 | **0** (todos `execFileSync` + argv)       | 0        |
+| `as unknown as` em produção                     | 7                                 | **0**                                     | 0        |
+| `process.exit(1)` replacing gracefulExit        | 1                                 | **0**                                     | 0        |
+| `scan-sec-logs.sh` suprimido (`\|\| true`)      | 1                                 | **0** (blocking)                          | 0        |
+| `noPropertyAccessFromIndexSignature`            | ignorado (fora `compilerOptions`) | **ativo**                                 | ativo    |
+| TSC --noEmit                                    | 0 + 716 (após ativar flag)        | **0** (716 corrigidos)                    | 0        |
+| quality-check gates                             | 18 (2 scripts)                    | **18** (1 script)                         | 1 script |
+| enforce-quality.ts                              | ativo (duplicado)                 | **removido**                              | 0        |
+| npm test                                        | 4534 pass                         | **4539 pass**                             | 100%     |
+
+> **ORIENTAÇÃO**: Este arquivo contém **APENAS** tarefas pendentes ou em andamento.
+> Tarefas concluídas devem ser **imediatamente migradas** para [`BACKLOG-historico.md`](BACKLOG-historico.md).
 > Após concluir um item, copie sua linha/raw para o histórico e remova-a daqui.
 >
 > Cada tarefa é classificada como:
@@ -870,5 +1001,105 @@ Resolução (resolveSessionContext)
 | Hardcoded tokens                              | 4            | **0**       | ✅ 0         |
 | Cross-layer `git_triggers -> jira_management` | 4 files      | **0**       | ⏳           |
 | execSync string concat                        | 2 files      | **0**       | ⏳           |
+
+---
+
+## 🚀 Sprint Final — Correção Sistêmica de Contratos + Container + Lint Zero (Jun/2026)
+
+**Data:** 2026-06-11
+
+**Ordem de execução (superioridade técnica):**
+
+1. **Correção sistêmica de contratos** — completar consumidores de `ParseResult` comfields nullable
+2. **DepWall** — adicionar `glob` a `shared/deps.ts`
+3. **Container** — SQLite persistente + entrypoint robusto
+4. **Lint zero** — 78 violações restantes
+5. **Testes** — 100% cobertura
+
+### Diagnóstico inicial
+
+| Métrica                           | Atual  | Alvo  |
+| --------------------------------- | ------ | ----- |
+| `tsc --noEmit`                    | **39** | **0** |
+| `eslint` (não-baseline)           | **78** | **0** |
+| `vitest run`                      | ?      | 100%  |
+| `unbound-method` (baseline 313)   | 261    | ≤313  |
+| Arquivos alterados não-commitados | 17     | 0     |
+| Container SQLite DB persistente   | ❌     | ✅    |
+| Container build reproduzível      | ❌     | ✅    |
+
+### Fase 0 — Correção Sistêmica de Contratos (39 TSC errors)
+
+**Problema:** `shared/result_parser.ts` mudou `ParseResult.tests` e `.stats` para nullable, mas 8 arquivos consumidores não foram atualizados — 39 erros TSC.
+
+| ID    | Arquivo                                              | Erros | Ação                               |
+| ----- | ---------------------------------------------------- | ----- | ---------------------------------- |
+| TSC-1 | `e2e/gen-report-complete.ts`                         | 1     | Adicionar `?? []` ao passar tests  |
+| TSC-2 | `e2e/gen-report.ts`                                  | 1     | Adicionar `?? []` ao passar tests  |
+| TSC-3 | `e2e/result-pipeline.test.ts`                        | 8     | Null guards em tests e stats       |
+| TSC-4 | `e2e/smoke-pipeline.ts`                              | 11    | Null guards em tests e stats       |
+| TSC-5 | `git_triggers/pipeline-handler.ts`                   | 5     | Null guards em tests e stats       |
+| TSC-6 | `git_triggers/test-results.ts`                       | 5     | Null guards em tests e stats       |
+| TSC-7 | `jira_management/commands/case15.ts`                 | 6     | Null guards em resolvedData.result |
+| TSC-8 | `jira_management/commands/case17-helpers.ts`         | 1     | Null guard em obj.results          |
+| TSC-9 | `jira_management/commands/case17-test-utils.test.ts` | 1     | Null guard em result.stats         |
+
+### Fase 1 — DepWall (glob)
+
+**Problema:** `scripts/transform-casts.ts` e `scripts/transform-jest-mock.ts` importam `glob` diretamente em vez de via `shared/deps.ts`.
+
+| ID    | Arquivo                          | Ação                                                         |
+| ----- | -------------------------------- | ------------------------------------------------------------ |
+| DEP-1 | `shared/deps.ts`                 | Adicionar `export { glob }` (re-export do glob)              |
+| DEP-2 | `scripts/transform-casts.ts`     | Substituir `import { globSync } from 'glob'` → `shared/deps` |
+| DEP-3 | `scripts/transform-jest-mock.ts` | Substituir `import { globSync } from 'glob'` → `shared/deps` |
+
+### Fase 2 — Container (SQLite + Entrypoint)
+
+**Problema:** Container monta `~/.local` inteiro como tmpfs, perdendo SQLite DB do opencode entre sessões. Dockerfile tem SHA256 não-verificado.
+
+| ID    | Item                                            | Arquivo(s)                                | Ação                                                  |
+| ----- | ----------------------------------------------- | ----------------------------------------- | ----------------------------------------------------- |
+| CN-9  | 🔧 Volume persistente SQLite DB                 | `scripts/qa.sh`                           | Bind mount `~/.local/share/opencode` + tmpfs granular |
+| CN-10 | 🔧 Verificar SHA256 + atualizar versão opencode | `~/.config/opencode/container/Dockerfile` | Corrigir checksum, atualizar versão se necessário     |
+| CN-11 | 🔧 Entrypoint build robusto                     | `scripts/qa.sh`                           | `cp` explícito do entrypoint antes do build           |
+| CN-12 | 📋 Testes: qa.sh — volume persistente           | `scripts/qa.test.ts`                      | Testar bind mount /home/coder/.local/share/opencode   |
+
+### Fase 3 — Lint: no-console (57 violações)
+
+| ID    | Arquivo                          | Violações | Ação                                  |
+| ----- | -------------------------------- | --------- | ------------------------------------- |
+| LNT-1 | `e2e/real-import.ts`             | 25        | Substituir console.log por rootLogger |
+| LNT-2 | `e2e/smoke-github.ts`            | 16        | Substituir console.log por rootLogger |
+| LNT-3 | `e2e/smoke-llm.ts`               | 13        | Substituir console.log por rootLogger |
+| LNT-4 | `scripts/transform-casts.ts`     | 2         | Substituir console.log por rootLogger |
+| LNT-5 | `scripts/transform-jest-mock.ts` | 2         | Substituir console.log por rootLogger |
+| LNT-6 | `shared/env-loader.ts`           | 1         | Substituir console.log por rootLogger |
+
+### Fase 4 — Lint: demais regras (21 violações)
+
+| ID     | Regra                      | Violações | Arquivos-alvo                                                                                                      |
+| ------ | -------------------------- | --------- | ------------------------------------------------------------------------------------------------------------------ |
+| LNT-7  | `no-unnecessary-condition` | 13        | `shared/result_parser.ts` (8), `shared/open.ts` (3), `import-prep-preview.ts` (1), `mapping-file-generator.ts` (1) |
+| LNT-8  | `no-unsafe-member-access`  | 3         | `jira_management/test-execution-creator.ts`                                                                        |
+| LNT-9  | `no-unsafe-assignment`     | 2         | `jira_management/test-execution-creator.ts`                                                                        |
+| LNT-10 | `no-restricted-imports`    | 2         | `scripts/transform-casts.ts`, `scripts/transform-jest-mock.ts`                                                     |
+| LNT-11 | `no-non-null-assertion`    | 1         | `shared/llm-fallback-config.ts`                                                                                    |
+
+### Fase 5 — Testes
+
+| ID    | Item                                             | Ação                                                   |
+| ----- | ------------------------------------------------ | ------------------------------------------------------ |
+| TST-1 | Atualizar testes existentes para novos contratos | Adicionar null guards nos asserts que usam ParseResult |
+| TST-2 | Testar cobertura do qa.sh (volume persistente)   | Verificar string de bind mount no qa.test.ts           |
+| TST-3 | `vitest run` = 100%                              | Verificar execução completa                            |
+
+### Critério de commit
+
+Cada fase (0-5) é committada separadamente com verificação:
+
+1. `tsc --noEmit` = 0
+2. `npm run lint` = 0 (ou baseline ≤ 313)
+3. `vitest run` = 100% pass
 
 ---
