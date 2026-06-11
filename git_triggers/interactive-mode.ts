@@ -354,7 +354,7 @@ async function _dashboardReleaseScore(): Promise<void> {
     const flaky = calculateFlakiness({ runs: data.projectRuns }, 2);
     const releaseScore = calculateReleaseScore(
         80,
-        health.overall ?? 50,
+        health.overall,
         health.overall >= 70 ? 'pass' : 'fail',
         70,
         flaky.length > 0
@@ -492,7 +492,7 @@ async function _dashboardIncidentReport(): Promise<void> {
         return acc;
     }, []);
     const trendCategories = new Set<string>();
-    for (const t of defects.trends ?? []) {
+    for (const t of defects.trends) {
         for (const cat of Object.keys(t.categories)) {
             trendCategories.add(cat);
         }
@@ -502,7 +502,7 @@ async function _dashboardIncidentReport(): Promise<void> {
         regression.regressions.length,
         seasonality.peakDay,
         uncoveredEpics,
-        health.overall ?? 100,
+        health.overall,
     );
     await _generateAndOpenDashboard(generateIncidentReportHtml(incidentReport), 'incident-report', 'Incident Report');
 }
@@ -531,7 +531,7 @@ async function _dashboardImpactAlert(): Promise<void> {
         return acc;
     }, []);
     const trendCategories = new Set<string>();
-    for (const t of defects.trends ?? []) {
+    for (const t of defects.trends) {
         for (const cat of Object.keys(t.categories)) {
             trendCategories.add(cat);
         }
@@ -714,7 +714,7 @@ function _initInfrastructure(): void {
 
 async function _ensureProjectsConfigured(): Promise<boolean> {
     let projs = getProjects();
-    if (!projs || Object.keys(projs).length === 0) {
+    if (Object.keys(projs).length === 0) {
         warn('Nenhum projeto configurado.');
         try {
             const wantsSetup = promptConfirm('Deseja configurar um projeto agora?');
@@ -726,7 +726,7 @@ async function _ensureProjectsConfigured(): Promise<boolean> {
         } catch {
             // confirm cancelled — exit
         }
-        if (!projs || Object.keys(projs).length === 0) {
+        if (Object.keys(projs).length === 0) {
             warn('É necessário configurar ao menos um projeto. Configure projects.json ou execute o setup wizard.');
             return false;
         }
@@ -829,8 +829,9 @@ export async function runInteractiveMode(args: CliArgs): Promise<void> {
             ? 'Enter = ' + (loadState().lastChoice as string)
             : '0-9';
 
-    while (true) {
-        if (process.stdout.isTTY && !args.noClear && Config.get<boolean>('qaToolsNoClear') !== true) console.clear();
+    for (;;) {
+        if (process.stdout.isTTY && !args.noClear && Config.get<boolean>('qaToolsNoClear') !== true)
+            process.stdout.write('\x1b[2J\x1b[H');
         const finalChoice = await _promptChoice(stateHint);
         updateState((s: StateContainer) => {
             s.lastChoice = finalChoice;

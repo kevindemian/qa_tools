@@ -200,7 +200,7 @@ export function parseMochawesome(jsonData: MochawesomeData): ParseResult {
     rootLogger.warn(
         '[deprecated] Mochawesome format detected. Migrate to CTRF (ctrf.io) — mochawesome support will be removed in a future version.',
     );
-    if (!jsonData?.results) return EMPTY_PARSE_RESULT;
+    if (!jsonData.results) return EMPTY_PARSE_RESULT;
 
     const allTests: FlatTest[] = [];
     for (const result of jsonData.results) {
@@ -239,7 +239,7 @@ export function parseMochawesome(jsonData: MochawesomeData): ParseResult {
  * Falls back to computed test counts when summary fields are missing.
  * @internal Not part of public API. Use `parseTestResults` (auto-dispatch) instead. */
 export function parseCtrfResults(jsonData: CtrfData): ParseResult {
-    if (!jsonData?.results?.tests || !Array.isArray(jsonData.results.tests)) {
+    if (!Array.isArray(jsonData.results.tests)) {
         return EMPTY_PARSE_RESULT;
     }
 
@@ -264,14 +264,14 @@ export function parseCtrfResults(jsonData: CtrfData): ParseResult {
     );
 
     const stats = {
-        passed: typeof summary?.passed === 'number' ? summary.passed : testCounts.passed,
-        failed: typeof summary?.failed === 'number' ? summary.failed : testCounts.failed,
-        skipped: typeof summary?.skipped === 'number' ? summary.skipped : testCounts.skipped,
-        total: typeof summary?.tests === 'number' ? summary.tests : tests.length,
+        passed: typeof summary.passed === 'number' ? summary.passed : testCounts.passed,
+        failed: typeof summary.failed === 'number' ? summary.failed : testCounts.failed,
+        skipped: typeof summary.skipped === 'number' ? summary.skipped : testCounts.skipped,
+        total: typeof summary.tests === 'number' ? summary.tests : tests.length,
         duration:
-            summary?.stop && summary?.start
+            summary.stop && summary.start
                 ? summary.stop - summary.start
-                : summary?.tests
+                : summary.tests
                   ? 0
                   : tests.reduce((s, t) => s + t.duration, 0),
     };
@@ -285,7 +285,7 @@ export function parseCtrfResults(jsonData: CtrfData): ParseResult {
 export function isCtrfFormat(jsonData: unknown): jsonData is CtrfData {
     if (typeof jsonData !== 'object' || jsonData === null) return false;
     const obj = jsonData as CtrfData;
-    if (typeof obj.results !== 'object' || obj.results === null) return false;
+    if (typeof obj.results !== 'object') return false;
     const results = obj.results;
     return Array.isArray(results.tests) && typeof results.summary === 'object';
 }
