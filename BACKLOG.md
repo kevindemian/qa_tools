@@ -1270,8 +1270,9 @@ Cada fase (0-5) é committada separadamente com verificação:
 | 2    | Dockerfile parametrizado (ARG) com validação de SHA256 obrigatório            | CO-2  | ✅     |
 | 3    | Volume persistente SQLite (`~/.local/share/opencode`) em vez de tmpfs inteiro | CO-3  | ✅     |
 | 4    | Testes para qa.sh com `--replace` + volume persistente                        | CO-4  | ✅     |
-| 5    | Rebuildar imagem e verificar                                                  | CO-5  | 🔄     |
-| 6    | Verificação final: TSC + lint + tests + quality-check                         | CO-6  | ⏳     |
+| 5    | Rebuildar imagem e verificar                                                  | CO-5  | ✅     |
+| 6    | Fix SQLite timeout (30s→300s) + env var override `OPENCODE_DB_TIMEOUT_MS`     | CO-6  | ✅     |
+| 7    | Verificação final: TSC + lint + tests + quality-check                         | CO-7  | ✅     |
 
 ### Detalhamento
 

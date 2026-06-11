@@ -47,7 +47,7 @@ fi
 
 if ! podman image exists "${IMAGE}" &>/dev/null; then
     echo "[qa.sh] ERRO: imagem '${IMAGE}' não encontrada." >&2
-    echo "[qa.sh] Execute: podman build -t ${IMAGE} ${HOME}/.config/opencode/container" >&2
+    echo "[qa.sh] Execute: podman build -t ${IMAGE} -f ${HOME}/.config/opencode/container/Dockerfile ${PROJECT_ROOT}/.container" >&2
     exit 1
 fi
 

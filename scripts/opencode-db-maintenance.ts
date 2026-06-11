@@ -30,6 +30,13 @@ const DB_DIR = resolve(homedir(), '.local', 'share', 'opencode');
 const DB_PATH = resolve(DB_DIR, 'opencode.db');
 const SQLITE_BIN = 'sqlite3';
 
+/**
+ * Timeout (ms) for each sqlite3 CLI call.
+ * Default: 300s (5 minutes) — large databases (4GB+) need extended time
+ * for integrity_check. Override via OPENCODE_DB_TIMEOUT_MS env var.
+ */
+const DB_TIMEOUT_MS = Number(process.env['OPENCODE_DB_TIMEOUT_MS']) || 300_000;
+
 interface MaintenanceResult {
     mode: 'check-only' | 'repair' | 'vacuum';
     dbPath: string;
@@ -55,7 +62,7 @@ function getDbSizeBytes(): number {
 function runSqlite(...args: string[]): string {
     return execFileSync(SQLITE_BIN, [DB_PATH, ...args], {
         encoding: 'utf-8',
-        timeout: 30_000,
+        timeout: DB_TIMEOUT_MS,
         maxBuffer: 10 * 1024 * 1024,
     }).trim();
 }
@@ -304,6 +311,7 @@ export {
     ensureDbDir,
     DB_DIR,
     DB_PATH,
+    DB_TIMEOUT_MS,
     SQLITE_BIN,
     main,
     runAsScript,
