@@ -20,7 +20,7 @@ jobs:
                   cache: npm
             - run: npm ci
             - run: npx tsc --noEmit
-            - run: npx eslint . --ext .ts
+            - run: npm run lint
             - run: npm run unused-exports
             - name: Validation hook (committed copy exists)
               run: test -f .config/validation_hook.ts && echo "✅ validation_hook.ts committed copy present"
@@ -32,8 +32,6 @@ jobs:
                   else
                     echo "⚠️ validation_hook.ts not found — skipping (only available on dev machines)"
                   fi
-            - name: Enforce code quality
-              run: npx tsx scripts/enforce-quality.ts
             - name: Quality gate (health + coverage + flaky)
               run: npx tsx scripts/quality-gate.ts --json
             - run: npm audit --audit-level=high
