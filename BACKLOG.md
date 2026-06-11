@@ -646,27 +646,27 @@ Resolução (resolveSessionContext)
 └── 4. User prompt → "Quer acionar pipeline?" → CI → passo 2
 ```
 
-| ID     | Item                                                                                                               | Arquivo(s)                                | Esforço | Status |
-| ------ | ------------------------------------------------------------------------------------------------------------------ | ----------------------------------------- | ------- | ------ |
-| GC-01  | ♻️ StoreBackend interface + GitBackend + FsBackend (implementado, cobertura 68%)                                   | `shared/store-backend.ts`                 | 2h      | 🔄     |
-| GC-01a | 📋 Completar testes store-backend.ts → 100% (branches: detectStoreBackend, GitStoreBackend.init, read error paths) | `shared/store-backend.test.ts`            | 1h      | 🔄     |
-| GC-02  | ♻️ Store domain logic (implementado, cobertura 97%)                                                                | `shared/store.ts`                         | 2h      | ✅     |
-| GC-03  | ♻️ `shared/git-sha.ts` (implementado, cobertura 100% stmts, 85% branches)                                          | `shared/git-sha.ts`                       | 30min   | 🔄     |
-| GC-03a | 📋 Completar testes git-sha.ts → 100% (CI env, packed-refs, execSync fallback)                                     | `shared/git-sha.test.ts`                  | 30min   | 🔄     |
-| GC-04  | ♻️ session-context.ts expandido com resolveSessionContext + resolveTestDataSource                                  | `shared/session-context.ts`               | 2h      | 🔄     |
-| GC-04a | 📋 Adicionar testes session-context.ts → 100%                                                                      | `shared/session-context.test.ts`          | 1h      | 🔄     |
-| GC-05  | ♻️ Extrair git-artifact-downloader.ts (implementado, cobertura 27%)                                                | `shared/git-artifact-downloader.ts`       | 2h      | 🔄     |
-| GC-05a | 📋 Completar testes git-artifact-downloader.ts → 100%                                                              | `shared/git-artifact-downloader.test.ts`  | 2h      | 🔄     |
-| GC-05b | ♻️ ci-detect.ts extraído (implementado, cobertura 0%)                                                              | `shared/ci-detect.ts`                     | 10min   | 🔄     |
-| GC-05c | 📋 Adicionar testes ci-detect.ts → 100%                                                                            | `shared/ci-detect.test.ts`                | 15min   | 🔄     |
-| GC-06  | ♻️ Rewrite `report-cache.ts` usando Store                                                                          | `shared/report-cache.ts`                  | 1h      | ⏳     |
-| GC-07  | ♻️ Rewrite `metrics.ts` usando Store                                                                               | `shared/metrics.ts`                       | 1h      | ⏳     |
-| GC-08  | 🔧 Strangler Fig: case17 consome resolveTestDataSource (via \_chooseTestDataSource)                                | `jira_management/commands/case17.ts`      | 2h      | ⏳     |
-| GC-08a | 📋 Atualizar mocks no case17.test.ts para novas dependências                                                       | `jira_management/commands/case17.test.ts` | 1h      | ⏳     |
-| GC-09  | 🔧 case15: consumir resolveSessionContext, remover lastJsonDir                                                     | `jira_management/commands/case15.ts`      | 1h      | ⏳     |
-| GC-10  | 📋 Testes de integração: Store + SessionContext + CiDownloader (coberto por unit)                                  | —                                         | 0h      | ✅     |
-| GC-11  | 🔧 Limpeza: remover código obsoleto do Strangler Fig pós-migração                                                  | `case17.ts`, `case17-test-utils.ts`       | 1h      | ⏳     |
-| GC-12  | 🔧 Coverage CI Node 22 ≥ 90% statements (atual: 89.23%)                                                            | `vitest.config.ts`, todos os arquivos     | —       | 🔴     |
+| ID     | Item                                                                                                              | Arquivo(s)                                | Esforço      | Status                           |
+| ------ | ----------------------------------------------------------------------------------------------------------------- | ----------------------------------------- | ------------ | -------------------------------- | --- | --- |
+| GC-01  | ♻️ StoreBackend interface + GitBackend + FsBackend (implementado, cobertura 68%)                                  | `shared/store-backend.ts`                 | 2h           | 🔄                               |
+| GC-01a | 📋 Completar testes store-backend.ts → 100% branches (detectStoreBackend, GitStoreBackend.init, read error paths) | `shared/store-backend.test.ts`            | 1h           | ✅                               |
+| GC-02  | ♻️ Store domain logic (implementado, cobertura 97%)                                                               | `shared/store.ts`                         | 2h           | ✅                               |
+| GC-03  | ♻️ `shared/git-sha.ts` (implementado, cobertura 100% stmts, 92,5% branches)                                       | `shared/git-sha.ts`                       | 30min        | 🔄                               |
+| GC-03a | 📋 Completar testes git-sha.ts → 100% (CI env, packed-refs, execFileSync fallback)                                | `shared/git-sha.test.ts`                  | 30min        | 🔄                               |
+| GC-04  | ♻️ session-context.ts expandido com resolveSessionContext + resolveTestDataSource                                 | `shared/session-context.ts`               | 2h           | ✅                               |
+| GC-04a | 📋 session-context.ts → 100% cobertura (withBusy label, branch                                                    |                                           | '' fallback) | `shared/session-context.test.ts` | 1h  | ✅  |
+| GC-05  | ♻️ Extrair git-artifact-downloader.ts (implementado, cobertura 95,6% stmts)                                       | `shared/git-artifact-downloader.ts`       | 2h           | 🔄                               |
+| GC-05a | 📋 Completar testes git-artifact-downloader.ts → 100%                                                             | `shared/git-artifact-downloader.test.ts`  | 2h           | 🔄                               |
+| GC-05b | ♻️ ci-detect.ts extraído (implementado)                                                                           | `shared/ci-detect.ts`                     | 10min        | ✅                               |
+| GC-05c | 📋 Testes ci-detect.ts → 100%                                                                                     | `shared/ci-detect.test.ts`                | 15min        | ✅                               |
+| GC-06  | ♻️ Rewrite `report-cache.ts` usando Store (obsoleto — report-cache.ts removido)                                   | `shared/report-cache.ts`                  | 1h           | ⏳                               |
+| GC-07  | ♻️ Rewrite `metrics.ts` usando Store (Store é per-project, metrics global — precisa análise)                      | `shared/metrics.ts`                       | 1h           | ⏳                               |
+| GC-08  | 🔧 Strangler Fig: limpeza dead code (SourceResult, resolveSource)                                                 | `jira_management/commands/case17.ts`      | 2h           | ✅                               |
+| GC-08a | 📋 Atualizar mocks/testes case17 após Strangler Fig                                                               | `jira_management/commands/case17.test.ts` | 1h           | ✅                               |
+| GC-09  | 🔧 case15: consumir resolveSessionContext, remover lastJsonDir (já feito)                                         | `jira_management/commands/case15.ts`      | 1h           | ✅                               |
+| GC-10  | 📋 Testes de integração: Store + SessionContext + CiDownloader (coberto por unit)                                 | —                                         | 0h           | ✅                               |
+| GC-11  | 🔧 Limpeza pós-Strangler Fig (feito junto com GC-08)                                                              | `case17.ts`, `case17-test-utils.ts`       | 1h           | ✅                               |
+| GC-12  | 🔧 Coverage CI ≥ 90% statements (atual: 92,5%)                                                                    | `vitest.config.ts`, todos os arquivos     | —            | ✅                               |
 
 ### Métricas alvo — Sprint C
 
@@ -1001,6 +1001,94 @@ Resolução (resolveSessionContext)
 | Hardcoded tokens                              | 4            | **0**       | ✅ 0         |
 | Cross-layer `git_triggers -> jira_management` | 4 files      | **0**       | ⏳           |
 | execSync string concat                        | 2 files      | **0**       | ⏳           |
+
+---
+
+## 🚀 Sprint Crash Prevention + Git-as-Database (2026-06-08)
+
+**Origem:** Análise de crash em produção + Sprint C (Git-as-Database) pendente.
+**Estratégia:** 4 fases — Crash Stoppers primeiro, Git-as-Database em paralelo, Hardening depois, Validação no fim.
+
+### Fase 1 — 🔴 Crash Stoppers (22min)
+
+_Previne crashes que afetam produção HOJE. Paralelizável 100%._
+
+| ID  | Arquivo                                                         | O quê                                                                                                | Esforço | Status |
+| --- | --------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------- | ------- | ------ |
+| C1  | `git_triggers/interactive-mode.ts:631`                          | `void handleFlakinessDashboard()` sem `.catch()` — unhandled rejection crasha Node 16+               | 2min    | ✅     |
+| C2  | `shared/store-backend.ts:34-36,70-71`                           | `execSync` com template string em paths de usuário — shell crasha com espaço/$/`                     | 10min   | ✅     |
+| C3  | `shared/git-sha.ts:52,70`                                       | `execSync` com string (mesmo padrão inseguro)                                                        | 5min    | ✅     |
+| C4  | `git_triggers/main.ts:13-15`, `jira_management/main.ts:351-353` | `unhandledRejection` só loga, não faz exit — Node 16+ crasha de qualquer jeito, estado inconsistente | 5min    | ✅     |
+
+### Fase 2 — 🟡 Git-as-Database Completo (10h)
+
+_Completar todos os componentes restantes do ecossistema Store. Testes em paralelo com implementação._
+
+| ID     | Backlog Origem | Arquivo                                   | O quê                                                                                                              | Esforço | Status |
+| ------ | -------------- | ----------------------------------------- | ------------------------------------------------------------------------------------------------------------------ | ------- | ------ |
+| GC-01a | Sprint C       | `shared/store-backend.test.ts`            | ✅ 100% branches (3 branches adicionadas: XDG já tem .git, canExecGit sem PATH, GitStoreBackend read non-existent) | 1h      | ✅     |
+| GC-03a | Sprint C       | `shared/git-sha.test.ts`                  | 🔄 92,5% (37/40) — faltam 3 branches: empty execFileSync output (defensive)                                        | 30min   | ⏳     |
+| GC-05a | Sprint C       | `shared/git-artifact-downloader.test.ts`  | Cobertura 27% → 100%                                                                                               | 2h      | ⏳     |
+| GC-05c | Sprint C       | `shared/ci-detect.test.ts`                | ✅ 100% — ci-detect.ts 3/3 statements cobertos                                                                     | 15min   | ✅     |
+| GC-04a | Sprint C       | `shared/session-context.test.ts`          | ✅ 100% — session-context.ts 65/65 stmts, 37/37 branches, 12/12 funcs                                              | 1h      | ✅     |
+| GC-07  | Sprint C       | `shared/metrics.ts`                       | ⏳ Store é per-project, metrics.ts é global — requer análise de design                                             | 1h      | ⏳     |
+| GC-08  | Sprint C       | `jira_management/commands/case17.ts`      | ✅ Dead code removido: `SourceResult`, `resolveSource`, imports limpos                                             | 2h      | ✅     |
+| GC-08a | Sprint C       | `jira_management/commands/case17.test.ts` | ✅ 12 testes `resolveSource` removidos, imports atualizados, 20/20 pass                                            | 1h      | ✅     |
+| GC-09  | Sprint C       | `jira_management/commands/case15.ts`      | ✅ Já feito: `resolveSessionContext` consumido, 0 refs `lastJsonDir`                                               | 30min   | ✅     |
+| GC-11  | Sprint C       | `case17.ts`, `case17-test-utils.ts`       | ✅ Feito junto com GC-08: código morto removido                                                                    | 1h      | ✅     |
+
+### Fase 3 — 🟠 Crash Hardening (1,5h)
+
+_Defesas adicionais contra crashes._
+
+| ID  | Arquivo                                                        | O quê                                                    | Esforço | Status |
+| --- | -------------------------------------------------------------- | -------------------------------------------------------- | ------- | ------ |
+| C5  | `e2e/real-import.ts:20,38`                                     | `process.exit(1)` sem graceful                           | 10min   | ⏳     |
+| C6  | `e2e/run-e2e.ts:461`                                           | `process.exit(failed ? 1 : 0)` sem graceful              | 5min    | ⏳     |
+| C7  | `eslint.config.mjs`                                            | Falta `no-unnecessary-condition` — null deref silenciosa | 1h      | ⏳     |
+| C8  | `shared/llm-fallback-http.ts:68`, `shared/disk-cache.ts:61,97` | `JSON.parse` sem fallback (corrupção crasha)             | 10min   | ⏳     |
+| C9  | `git_triggers/session-state.ts:69,84`                          | `as Record<...>` sem validação — JSON malformado crasha  | 15min   | ⏳     |
+
+### Fase 4 — 🟢 Validação Final
+
+| #   | O quê                       | Critério               |
+| --- | --------------------------- | ---------------------- |
+| V1  | `npx tsc --noEmit`          | 0 erros                |
+| V2  | `npm run lint`              | 0 erros                |
+| V3  | `npx vitest run`            | 100% pass              |
+| V4  | `npx vitest run --coverage` | ≥90% statements        |
+| V5  | Push + CI monitor           | GitHub Actions success |
+
+### Linha do Tempo
+
+```
+F1 (22min) ────► C1 C2 C3 C4 (paralelo) ✅
+  │
+  ├─ F2-GC-01a (1h) ✅
+  ├─ F2-GC-03a (30min) [92,5% — 3 branches edge-case restam]
+  ├─ F2-GC-04a (1h) ✅
+  ├─ F2-GC-05a (2h) [95,6% — cobertura incompleta]
+  ├─ F2-GC-05c (15min) ✅
+  ├─ F2-GC-07 (1h) [requer análise de design — Store per-project vs metrics global]
+  ├─ F2-GC-08+08a (3h) ◄── GC-09 (30min) ◄── GC-11 (1h) ✅
+  │
+  └─ F3 (1,5h) ────► C5 C6 C7 C8 C9 (pendente)
+                     │
+                     └─ F4 Validação ✅ (TSC 0, Lint 0, 4454/4454 tests, coverage ≥ thresholds)
+```
+
+### Métricas Alvo
+
+| Métrica                   | Antes        | Alvo          |
+| ------------------------- | ------------ | ------------- |
+| `tsc --noEmit`            | 0 ✅         | 0             |
+| `npm test`                | 4455 pass ✅ | 100% pass     |
+| `npm run lint`            | 0 ✅         | 0             |
+| Coverage statements       | 92.52%       | ≥90%          |
+| execSync string concat    | 2 files      | **0**         |
+| `process.exit` direto     | 3 e2e        | **0**         |
+| `as T` sem validação      | 2 locais     | **0**         |
+| Store components coverage | 19-98%       | **100% cada** |
 
 ---
 

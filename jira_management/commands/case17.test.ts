@@ -105,7 +105,6 @@ import * as gitArtifactDownloaderModule from '../../shared/git-artifact-download
 import fs from 'fs';
 import case17Module from './case17.js';
 import { createMockContext } from '../../shared/test-utils/factories/context-factory.js';
-import { resolveSource } from './case17.js';
 
 const baseContext = createMockContext();
 
@@ -127,8 +126,9 @@ describe('case17 — HTML report generator', () => {
         const prompt = vi.mocked(promptModule);
         const parser = vi.mocked(parserModule);
         const reportGen = vi.mocked(reportGenModule);
+        const mockGetJira = vi.spyOn(baseContext.jiraResource, 'getJiraResource');
 
-        vi.mocked(baseContext.jiraResource.getJiraResource).mockResolvedValueOnce({
+        mockGetJira.mockResolvedValueOnce({
             issues: [{ key: 'BUG-1', fields: { summary: 'Login fails', status: { name: 'Open' } } }],
         });
 
@@ -144,7 +144,7 @@ describe('case17 — HTML report generator', () => {
         const mod = case17Module;
         await mod.handler(baseContext);
 
-        expect(baseContext.jiraResource.getJiraResource).toHaveBeenCalled();
+        expect(mockGetJira).toHaveBeenCalled();
         expect(openModule.openWithFallback).toHaveBeenCalledWith(expect.any(String), 'Relatório', prompt.info);
     });
 
@@ -200,7 +200,8 @@ describe('case17 — HTML report generator', () => {
         const reportGenFull = vi.mocked(reportGenModule);
         reportGenFull.categorizeFailure.mockReturnValue('regression');
 
-        vi.mocked(baseContext.jiraResource.postJiraResource).mockResolvedValue({ key: 'BUG-42' });
+        const mockPostJira = vi.spyOn(baseContext.jiraResource, 'postJiraResource');
+        mockPostJira.mockResolvedValue({ key: 'BUG-42' });
 
         loadMetricsValue = {
             tests: [{ title: 'Fail', state: 'passed' }],
@@ -281,8 +282,9 @@ describe('case17 — HTML report generator', () => {
         const prompt = vi.mocked(promptModule);
         const parser = vi.mocked(parserModule);
         const reportGen = vi.mocked(reportGenModule);
+        const mockGetJira = vi.spyOn(baseContext.jiraResource, 'getJiraResource');
 
-        vi.mocked(baseContext.jiraResource.getJiraResource).mockResolvedValueOnce({
+        mockGetJira.mockResolvedValueOnce({
             issues: [],
         });
 
@@ -298,7 +300,7 @@ describe('case17 — HTML report generator', () => {
         const mod = case17Module;
         await mod.handler(baseContext);
 
-        expect(baseContext.jiraResource.getJiraResource).toHaveBeenCalled();
+        expect(mockGetJira).toHaveBeenCalled();
         expect(openModule.openWithFallback).toHaveBeenCalledWith(expect.any(String), 'Relatório', prompt.info);
     });
 
@@ -306,8 +308,9 @@ describe('case17 — HTML report generator', () => {
         const prompt = vi.mocked(promptModule);
         const parser = vi.mocked(parserModule);
         const reportGen = vi.mocked(reportGenModule);
+        const mockGetJira = vi.spyOn(baseContext.jiraResource, 'getJiraResource');
 
-        vi.mocked(baseContext.jiraResource.getJiraResource).mockResolvedValueOnce({
+        mockGetJira.mockResolvedValueOnce({
             // no issues field at all
         });
 
@@ -323,7 +326,7 @@ describe('case17 — HTML report generator', () => {
         const mod = case17Module;
         await mod.handler(baseContext);
 
-        expect(baseContext.jiraResource.getJiraResource).toHaveBeenCalled();
+        expect(mockGetJira).toHaveBeenCalled();
     });
 
     it('handles computeDiff with missing tests field', async () => {
@@ -672,99 +675,5 @@ describe('case17 — HTML report generator', () => {
         );
 
         process.argv = origArgv;
-    });
-
-    describe('resolveSource — pure function', () => {
-        const cacheData = {
-            tests: [{ title: 't1', state: 'passed' as const, duration: 10 }],
-            stats: { passed: 1, failed: 0, skipped: 0, total: 1 },
-        };
-        const ciRun = {
-            tests: [{ title: 'ci-test', state: 'failed' as const, duration: 20, error: 'err' }],
-            stats: { passed: 0, failed: 1, skipped: 0, total: 1, duration: 20 },
-        };
-        const fileResult = {
-            tests: [{ title: 'file-test', state: 'passed' as const, duration: 15 }],
-            stats: { passed: 1, failed: 0, skipped: 0, total: 1, duration: 15 },
-        };
-
-        function checkResult(result: ReturnType<typeof resolveSource>, expectedSource: string): void {
-            expect(result).not.toBeNull();
-            if (result) {
-                expect(result.source).toBe(expectedSource);
-            }
-        }
-
-        it('returns cache when cache is available', () => {
-            checkResult(resolveSource(cacheData, null, null), 'cache');
-            const result = resolveSource(cacheData, null, null);
-            if (result) expect(result.result.tests).toHaveLength(1);
-        });
-
-        it('returns CI when cache null and CI available', () => {
-            checkResult(resolveSource(null, ciRun, null), 'ci');
-        });
-
-        it('returns file when cache and CI null and file available', () => {
-            checkResult(resolveSource(null, null, fileResult), 'file');
-        });
-
-        it('prefers cache over CI over file', () => {
-            checkResult(resolveSource(cacheData, ciRun, fileResult), 'cache');
-        });
-
-        it('prefers CI over file when cache null', () => {
-            checkResult(resolveSource(null, ciRun, fileResult), 'ci');
-        });
-
-        it('returns null when all sources null', () => {
-            expect(resolveSource(null, null, null)).toBeNull();
-        });
-
-        it('returns null when cache has zero tests', () => {
-            expect(
-                resolveSource({ tests: [], stats: { passed: 0, failed: 0, skipped: 0, total: 0 } }, null, null),
-            ).toBeNull();
-        });
-
-        it('returns null when CI run has zero tests', () => {
-            expect(
-                resolveSource(
-                    null,
-                    {
-                        tests: [],
-                        stats: {
-                            passed: 0,
-                            failed: 0,
-                            skipped: 0,
-                            total: 0,
-                            duration: 0,
-                        },
-                    },
-                    null,
-                ),
-            ).toBeNull();
-        });
-
-        it('returns null when file result has zero tests', () => {
-            expect(
-                resolveSource(null, null, {
-                    tests: [],
-                    stats: { passed: 0, failed: 0, skipped: 0, total: 0, duration: 0 },
-                }),
-            ).toBeNull();
-        });
-
-        it('adds duration 0 to cache-derived ParseResult', () => {
-            const result = resolveSource(
-                {
-                    tests: [{ title: 't', state: 'passed' as const, duration: 5 }],
-                    stats: { passed: 1, failed: 0, skipped: 0, total: 1 },
-                },
-                null,
-                null,
-            );
-            if (result) expect(result.result.stats.duration).toBe(0);
-        });
     });
 });

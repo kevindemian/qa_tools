@@ -142,7 +142,7 @@ export function detectStoreBackend(projectDir?: string): StoreBackend {
 
     try {
         const gitDir = path.join(xdgDir, '.git');
-        if (fs.existsSync(gitDir) || canExecSync()) {
+        if (fs.existsSync(gitDir) || canExecGit()) {
             return new GitStoreBackend(xdgDir, '.');
         }
     } catch {
@@ -152,7 +152,7 @@ export function detectStoreBackend(projectDir?: string): StoreBackend {
     return new FsStoreBackend(xdgDir);
 }
 
-function canExecSync(): boolean {
+function canExecGit(): boolean {
     try {
         execFileSync('git', ['--version'], { stdio: 'ignore' });
         return true;
