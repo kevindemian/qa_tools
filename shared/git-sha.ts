@@ -45,6 +45,10 @@ export function getHeadSha(env?: NodeJS.ProcessEnv): string | null {
         } catch {
             /* fall through */
         }
+        /* .git found but ref could not be resolved via filesystem —
+         * do NOT fall back to git CLI: it may resolve in parent repo
+         * (e.g., CI detached HEAD scenario) or produce wrong SHA. */
+        return null;
     }
 
     try {
