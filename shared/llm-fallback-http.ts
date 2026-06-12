@@ -61,6 +61,28 @@ export function buildGeminiPayload(system: string, user: string): string {
     });
 }
 
+export function buildAnthropicPayload(
+    system: string,
+    user: string,
+    model: string,
+    temperature?: number,
+    responseFormat?: ResponseFormat,
+): string {
+    const payload: Record<string, unknown> = {
+        model,
+        max_tokens: 4096,
+        temperature: temperature ?? LLM_TEMP_DEFAULT,
+        messages: [{ role: 'user', content: user }],
+    };
+    if (system) {
+        payload['system'] = system;
+    }
+    if (responseFormat === 'json') {
+        payload['metadata'] = { response_format: 'json' };
+    }
+    return JSON.stringify(payload);
+}
+
 const RawRecordSchema = z.record(z.string(), z.unknown());
 
 export function parseRawOnce(raw: string): Record<string, unknown> | null {
@@ -151,16 +173,23 @@ export async function sendToProvider(
     const url =
         cfg.format === 'gemini'
             ? cfg.baseUrl + '/models/' + cfg.model + ':generateContent'
-            : cfg.baseUrl.replace(/\/+$/, '') + '/chat/completions';
+            : cfg.format === 'anthropic'
+              ? cfg.baseUrl.replace(/\/+$/, '') + '/messages'
+              : cfg.baseUrl.replace(/\/+$/, '') + '/chat/completions';
 
     const payload =
         cfg.format === 'gemini'
             ? buildGeminiPayload(system, user)
-            : buildOpenAiPayload(system, user, cfg.model, cfg.temperature, cfg.responseFormat);
+            : cfg.format === 'anthropic'
+              ? buildAnthropicPayload(system, user, cfg.model, cfg.temperature, cfg.responseFormat)
+              : buildOpenAiPayload(system, user, cfg.model, cfg.temperature, cfg.responseFormat);
 
     const headers: Record<string, string> = { 'Content-Type': 'application/json' };
     if (cfg.format === 'gemini') {
         headers['X-Goog-Api-Key'] = cfg.apiKey;
+    } else if (cfg.format === 'anthropic') {
+        headers['x-api-key'] = cfg.apiKey;
+        headers['anthropic-version'] = '2023-06-01';
     } else {
         headers['Authorization'] = 'Bearer ' + cfg.apiKey;
     }

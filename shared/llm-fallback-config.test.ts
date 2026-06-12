@@ -3,6 +3,9 @@ vi.mock('./config', () => {
     return {
         __esModule: true,
         default: {
+            get llmProvider() {
+                return mockConfig['llmProvider'] ?? '';
+            },
             get llmApiKey() {
                 return mockConfig['llmApiKey'] ?? '';
             },
@@ -11,12 +14,6 @@ vi.mock('./config', () => {
             },
             get llmBaseUrl() {
                 return mockConfig['llmBaseUrl'] ?? 'https://api.test.com/v1';
-            },
-            get llmSmallApiKey() {
-                return mockConfig['llmSmallApiKey'] ?? '';
-            },
-            get llmSmallModel() {
-                return mockConfig['llmSmallModel'] ?? 'gemini-2.0-flash-lite';
             },
             get llmFastApiKey() {
                 return mockConfig['llmFastApiKey'] ?? '';
@@ -94,7 +91,7 @@ beforeEach(() => {
 });
 
 describe('tierToConfig', () => {
-    it('returns main config for main tier', () => {
+    it('returns main config for main tier (explicit)', () => {
         Config.set('llmApiKey', 'sk-main');
         Config.set('llmModel', 'gpt-4');
         Config.set('llmBaseUrl', 'https://api.test.com/v1');
@@ -104,7 +101,7 @@ describe('tierToConfig', () => {
         expect(cfg.format).toBe('openai');
     });
 
-    it('returns fast tier config', () => {
+    it('returns fast tier config (explicit)', () => {
         Config.set('llmFastApiKey', 'gsk-fast');
         Config.set('llmFastModel', 'llama3');
         const cfg = tierToConfig('fast');
@@ -113,7 +110,7 @@ describe('tierToConfig', () => {
         expect(cfg.format).toBe('openai');
     });
 
-    it('returns reviewer tier config with gemini format', () => {
+    it('returns reviewer tier config with gemini format (explicit)', () => {
         Config.set('llmReviewApiKey', 'AIza-review');
         Config.set('llmReviewModel', 'gemini-2.0-flash-exp');
         const cfg = tierToConfig('reviewer');
@@ -122,18 +119,41 @@ describe('tierToConfig', () => {
         expect(cfg.format).toBe('gemini');
     });
 
-    it('returns report tier config with json responseFormat', () => {
+    it('returns report tier config with json responseFormat (explicit)', () => {
         Config.set('llmApiKey', 'sk-report');
-        Config.set('llmModel', 'gpt-4-report');
+        Config.set('llmModel', 'gpt-4');
         const cfg = tierToConfig('report');
-        expect(cfg.apiKey).toBe('sk-report');
         expect(cfg.responseFormat).toBe('json');
     });
 
-    it('falls back to main when tier is unknown', () => {
-        Config.set('llmApiKey', 'sk-main');
-        const cfg = (tierToConfig as (tier: string) => ReturnType<typeof tierToConfig>)('nonexistent');
-        expect(cfg.apiKey).toBe('sk-main');
+    it('resolves from LLM_PROVIDER profile when no explicit tier key', () => {
+        Config.set('llmProvider', 'openai');
+        Config.set('llmApiKey', 'sk-test');
+        const cfg = tierToConfig('main');
+        expect(cfg.apiKey).toBe('sk-test');
+        expect(cfg.model).toBe('gpt-4o');
+        expect(cfg.baseUrl).toBe('https://api.openai.com/v1');
+        expect(cfg.format).toBe('openai');
+    });
+
+    it('auto-detects provider from key pattern', () => {
+        Config.set('llmApiKey', 'sk-or-v1-test123');
+        const cfg = tierToConfig('main');
+        expect(cfg.apiKey).toBe('sk-or-v1-test123');
+        expect(cfg.model).toBe('google/gemini-2.0-flash-exp');
+        expect(cfg.baseUrl).toBe('https://openrouter.ai/api/v1');
+    });
+
+    it('uses OpenRouter tier defaults when detected', () => {
+        Config.set('llmApiKey', 'sk-or-v1-test');
+        const fastCfg = tierToConfig('fast');
+        expect(fastCfg.model).toBe('meta-llama/llama-3.1-8b-instruct');
+    });
+
+    it('defaults to opencode-go when no config set', () => {
+        const cfg = tierToConfig('main');
+        expect(cfg.baseUrl).toContain('opencode.ai');
+        expect(cfg.model).toBe('deepseek-v4-pro');
     });
 });
 
@@ -241,6 +261,31 @@ describe('extractContent', () => {
     it('returns empty string for missing content in Gemini', () => {
         const data = { candidates: [{}] };
         const result = extractContent(data, 'gemini');
+        expect(result).toBe('');
+    });
+
+    it('extracts text from Anthropic-style response', () => {
+        const data = {
+            content: [{ type: 'text', text: 'hello from claude' }],
+        };
+        const result = extractContent(data, 'anthropic');
+        expect(result).toBe('hello from claude');
+    });
+
+    it('concatenates multiple Anthropic content blocks', () => {
+        const data = {
+            content: [
+                { type: 'text', text: 'part1' },
+                { type: 'text', text: 'part2' },
+            ],
+        };
+        const result = extractContent(data, 'anthropic');
+        expect(result).toBe('part1part2');
+    });
+
+    it('returns empty string for empty Anthropic content array', () => {
+        const data = { content: [] };
+        const result = extractContent(data, 'anthropic');
         expect(result).toBe('');
     });
 });

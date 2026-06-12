@@ -11,12 +11,6 @@ vi.mock('./config', () => {
         get llmBaseUrl() {
             return mockConfig['llmBaseUrl'] ?? 'https://openrouter.ai/api/v1';
         },
-        get llmSmallApiKey() {
-            return mockConfig['llmSmallApiKey'] ?? '';
-        },
-        get llmSmallModel() {
-            return mockConfig['llmSmallModel'] ?? 'gemini-2.0-flash-lite';
-        },
         get llmFastApiKey() {
             return mockConfig['llmFastApiKey'] ?? '';
         },
@@ -68,7 +62,6 @@ vi.mock('./config', () => {
             const defaults: Record<string, string | number> = {
                 llmModel: 'google/gemini-2.0-flash-exp',
                 llmBaseUrl: 'https://openrouter.ai/api/v1',
-                llmSmallModel: 'gemini-2.0-flash-lite',
                 llmFastModel: 'llama3-8b-8192',
                 llmFastBaseUrl: 'https://api.groq.com/openai/v1',
                 llmReviewModel: 'gemini-2.0-flash-exp',
@@ -324,13 +317,16 @@ describe('llmPrompt', () => {
         mockFetch
             .mockResolvedValueOnce(mockErrorResponse(500))
             .mockResolvedValueOnce(mockErrorResponse(500))
+            .mockResolvedValueOnce(mockErrorResponse(500))
+            .mockResolvedValueOnce(mockErrorResponse(500))
+            .mockResolvedValueOnce(mockErrorResponse(500))
             .mockResolvedValueOnce(mockErrorResponse(500));
 
         await expect(llmPrompt({ tier: 'main', system: 'system', user: 'dedup test' })).rejects.toThrow(
             'All LLM providers failed',
         );
-        // main:3 retries, no fallback call because same config key
-        expect(mockFetch).toHaveBeenCalledTimes(3);
+        // main:3 retries (fallback dedup'd), + batch:3 retries (resolved from provider profile)
+        expect(mockFetch).toHaveBeenCalledTimes(6);
     });
 
     it('handles network error with retry', async () => {
@@ -572,7 +568,7 @@ describe('llmPrompt', () => {
     });
 
     describe('tier fallback deduplication', () => {
-        it('skips batch when all fallback candidates have same configUniqueKey', async () => {
+        it('deduplicates fallback when same config, batch still resolved from profile', async () => {
             Config.set('llmApiKey', 'sk-dd');
             Config.set('llmModel', 'gpt-4');
             Config.set('llmBaseUrl', 'https://api.test.com/v1');
@@ -591,12 +587,16 @@ describe('llmPrompt', () => {
             mockFetch
                 .mockResolvedValueOnce(mockErrorResponse(500))
                 .mockResolvedValueOnce(mockErrorResponse(500))
+                .mockResolvedValueOnce(mockErrorResponse(500))
+                .mockResolvedValueOnce(mockErrorResponse(500))
+                .mockResolvedValueOnce(mockErrorResponse(500))
                 .mockResolvedValueOnce(mockErrorResponse(500));
 
             await expect(llmPrompt({ tier: 'main', system: 'system', user: 'full dedup' })).rejects.toThrow(
                 'All LLM providers failed',
             );
-            expect(mockFetch).toHaveBeenCalledTimes(4);
+            // main:3 + batch:3 (batch has temp 0.5 ≠ 0.3, not dedup'd)
+            expect(mockFetch).toHaveBeenCalledTimes(6);
         });
     });
 

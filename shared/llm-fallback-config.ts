@@ -2,17 +2,19 @@
  * LLM fallback configuration — types, Zod schemas, constants, tier configs,
  * and usage metrics.
  *
- * Extracted from llm-fallback.ts (F35 debt attack plan).
- * No dependency on HTTP, rate-limiter, or circuit-breaker modules.
+ * tierToConfig now resolves config in two layers:
+ * 1. Explicit LLM_{TIER}_API_KEY env vars (existing, backward compatible)
+ * 2. LLM_PROVIDER → provider profile → auto-fill baseUrl/format/model per tier
+ *
+ * This allows users to set just LLM_PROVIDER + LLM_API_KEY and get all
+ * 6 tiers configured automatically.
  */
 import Config from './config.js';
 import { rootLogger } from './logger.js';
 import { z } from 'zod';
 import type { LlmTier, ResponseFormat } from './types.js';
-
-// ---- types ----
-
-export type ProviderFormat = 'openai' | 'gemini';
+import { getProviderProfile, inferProviderFromKey, isKnownProvider } from './llm-provider-profiles.js';
+import type { ProviderFormat } from './llm-provider-profiles.js';
 
 export interface ProviderConfig {
     apiKey: string;
@@ -161,10 +163,19 @@ export function _trackUsage(data: Record<string, unknown>, providerKey: string, 
     );
 }
 
+const LlmAnthropicContentSchema = z.object({
+    type: z.string(),
+    text: z.string().optional(),
+});
+
 export function extractContent(data: Record<string, unknown>, format: ProviderFormat): string {
     if (format === 'gemini') {
         const result = z.array(LlmCandidateSchema).safeParse(data['candidates']);
         return result.success ? result.data[0]?.content?.parts?.[0]?.text || '' : '';
+    }
+    if (format === 'anthropic') {
+        const result = z.array(LlmAnthropicContentSchema).safeParse(data['content']);
+        return result.success ? result.data.map((c) => c.text ?? '').join('') : '';
     }
     const result = z.array(LlmChoiceSchema).safeParse(data['choices']);
     return result.success ? result.data[0]?.message?.content || '' : '';
@@ -186,58 +197,99 @@ export function resetLlmClientMetrics(): void {
 
 // ---- tier configuration ----
 
-const TIER_CONFIGS: Partial<Record<LlmTier, () => ProviderConfig>> = {
-    main: () => ({
-        apiKey: Config.get('llmApiKey'),
-        model: Config.get('llmModel'),
-        baseUrl: Config.get('llmBaseUrl'),
-        format: 'openai',
-        temperature: LLM_TEMP_MAIN,
-    }),
-    fast: () => ({
-        apiKey: Config.get('llmFastApiKey'),
-        model: Config.get('llmFastModel'),
-        baseUrl: Config.get('llmFastBaseUrl'),
-        format: 'openai',
-        temperature: LLM_TEMP_MAIN,
-    }),
-    reviewer: () => ({
-        apiKey: Config.get('llmReviewApiKey') || Config.get('llmSmallApiKey'),
-        model: Config.get('llmReviewModel') || Config.get('llmSmallModel'),
-        baseUrl: Config.get('llmReviewBaseUrl') || 'https://generativelanguage.googleapis.com/v1beta',
-        format: 'gemini',
-        temperature: LLM_TEMP_REVIEWER,
-    }),
-    report: () => ({
-        apiKey: Config.get('llmApiKey'),
-        model: Config.get('llmModel'),
-        baseUrl: Config.get('llmBaseUrl'),
-        format: 'openai',
-        temperature: LLM_TEMP_REPORT,
-        responseFormat: 'json',
-    }),
-    fallback: () => ({
-        apiKey: Config.get('llmFallbackApiKey'),
-        model: Config.get('llmFallbackModel'),
-        baseUrl: Config.get('llmFallbackBaseUrl'),
-        format: 'openai',
-        temperature: LLM_TEMP_FALLBACK,
-    }),
-    batch: () => ({
-        apiKey: Config.get('llmBatchApiKey'),
-        model: Config.get('llmBatchModel'),
-        baseUrl: Config.get('llmBatchBaseUrl'),
-        format: 'openai',
-        temperature: LLM_TEMP_BATCH,
-    }),
+/** Temperature values per tier. */
+const TIER_TEMPS: Record<LlmTier, number> = {
+    main: LLM_TEMP_MAIN,
+    fast: LLM_TEMP_MAIN,
+    reviewer: LLM_TEMP_REVIEWER,
+    report: LLM_TEMP_REPORT,
+    fallback: LLM_TEMP_FALLBACK,
+    batch: LLM_TEMP_BATCH,
 };
 
+/** Config key prefix for a given tier. */
+function tierPrefix(tier: LlmTier): string {
+    if (tier === 'reviewer') return 'llmReview';
+    if (tier === 'main' || tier === 'report') return 'llm';
+    return 'llm' + tier.charAt(0).toUpperCase() + tier.slice(1);
+}
+
+/** Get tier-specific Config key: e.g. tierKey('fast', 'ApiKey') → 'llmFastApiKey'. */
+function tierKey(tier: LlmTier, prop: string): string {
+    return tierPrefix(tier) + prop;
+}
+
+/**
+ * Build a ProviderConfig from explicit tier-specific env vars.
+ * Used when the user has set LLM_{TIER}_API_KEY (fast, reviewer, fallback, batch).
+ * Main and report tiers always resolve through the provider profile path
+ * since they share LLM_API_KEY.
+ */
+function configFromExplicit(tier: LlmTier): ProviderConfig | null {
+    if (tier === 'main' || tier === 'report') return null;
+    const apiKey = Config.get(tierKey(tier, 'ApiKey'));
+    if (!apiKey) return null;
+    const temp = TIER_TEMPS[tier];
+    const model = Config.get(tierKey(tier, 'Model'));
+    const baseUrl = Config.get(tierKey(tier, 'BaseUrl'));
+    return {
+        apiKey,
+        model,
+        baseUrl,
+        format: tier === 'reviewer' ? 'gemini' : 'openai',
+        temperature: temp,
+    };
+}
+
+/**
+ * Resolve provider ID with fallback chain:
+ * 1. LLM_PROVIDER env var
+ * 2. Auto-detect from LLM_API_KEY pattern
+ * 3. Default to opencode-go
+ */
+function resolveProvider(): string {
+    const explicit = Config.get('llmProvider');
+    if (explicit && isKnownProvider(explicit)) return explicit;
+    const mainKey = Config.get('llmApiKey');
+    if (mainKey) {
+        const detected = inferProviderFromKey(mainKey);
+        if (detected) return detected;
+    }
+    return 'opencode-go';
+}
+
+/**
+ * Resolve LLM provider config for a given tier.
+ *
+ * Resolution order:
+ * 1. Explicit LLM_{TIER}_API_KEY env var (backward compatible)
+ * 2. LLM_PROVIDER → provider profile → auto-fill baseUrl/format/model
+ * 3. Fallback: main-like config with whatever keys are available
+ */
 export function tierToConfig(tier: LlmTier): ProviderConfig {
-    const factory = TIER_CONFIGS[tier];
-    const mainFactory = TIER_CONFIGS.main;
-    return factory
-        ? factory()
-        : mainFactory
-          ? mainFactory()
-          : { apiKey: '', model: '', baseUrl: '', format: 'openai', temperature: 0 };
+    const temp = TIER_TEMPS[tier];
+
+    // 1. Explicit tier-specific config
+    const explicit = configFromExplicit(tier);
+    if (explicit) return explicit;
+
+    // 2. Provider profile resolution
+    const provider = resolveProvider();
+    const profile = getProviderProfile(provider);
+    if (profile) {
+        const apiKey = Config.get('llmApiKey');
+        const explicitModel = Config.get('llmModel') || Config.get(tierKey(tier, 'Model'));
+        const explicitBaseUrl = Config.get('llmBaseUrl') || Config.get(tierKey(tier, 'BaseUrl'));
+        return {
+            apiKey,
+            model: explicitModel || profile.tiers[tier],
+            baseUrl: explicitBaseUrl || profile.baseUrl,
+            format: profile.format,
+            temperature: temp,
+            ...(tier === 'report' ? { responseFormat: 'json' as const } : {}),
+        };
+    }
+
+    // 3. Fallback: empty config (should not happen with valid provider)
+    return { apiKey: '', model: '', baseUrl: '', format: 'openai', temperature: temp };
 }

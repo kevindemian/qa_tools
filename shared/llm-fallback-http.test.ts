@@ -58,6 +58,7 @@ import {
     parseRetryAfter,
     buildOpenAiPayload,
     buildGeminiPayload,
+    buildAnthropicPayload,
     fetchWithRetry,
     sendToProvider,
 } from './llm-fallback-http.js';
@@ -196,6 +197,47 @@ describe('buildGeminiPayload', () => {
     });
 });
 
+interface AnthropicPayload {
+    model: string;
+    max_tokens: number;
+    temperature: number;
+    system?: string;
+    messages: Array<{ role: string; content: string }>;
+    metadata?: Record<string, unknown>;
+}
+
+describe('buildAnthropicPayload', () => {
+    it('builds a valid Anthropic JSON payload', () => {
+        const result = buildAnthropicPayload('sys', 'usr', 'claude-sonnet-4-20250514', 0.5);
+        const parsed = JSON.parse(result) as AnthropicPayload;
+        expect(parsed.model).toBe('claude-sonnet-4-20250514');
+        expect(parsed.max_tokens).toBe(4096);
+        expect(parsed.temperature).toBe(0.5);
+        expect(parsed.system).toBe('sys');
+        expect(parsed.messages).toHaveLength(1);
+        expect(parsed.messages[0]?.role).toBe('user');
+        expect(parsed.messages[0]?.content).toBe('usr');
+    });
+
+    it('omits system field when system is empty', () => {
+        const result = buildAnthropicPayload('', 'usr', 'claude-haiku-3-5-20241022');
+        const parsed = JSON.parse(result) as AnthropicPayload;
+        expect(parsed.system).toBeUndefined();
+    });
+
+    it('uses default temperature when not provided', () => {
+        const result = buildAnthropicPayload('sys', 'usr', 'claude-sonnet-4-20250514');
+        const parsed = JSON.parse(result) as AnthropicPayload;
+        expect(parsed.temperature).toBe(0.3);
+    });
+
+    it('includes metadata for json responseFormat', () => {
+        const result = buildAnthropicPayload('sys', 'usr', 'claude-sonnet-4-20250514', 0.3, 'json');
+        const parsed = JSON.parse(result) as AnthropicPayload;
+        expect(parsed.metadata).toEqual({ response_format: 'json' });
+    });
+});
+
 describe('fetchWithRetry', () => {
     beforeEach(() => {
         vi.spyOn(global, 'setTimeout').mockImplementation(((cb: (...args: unknown[]) => void) => {
@@ -293,6 +335,25 @@ describe('sendToProvider', () => {
         };
         const result = await sendToProvider(cfg, 'system', 'user');
         expect(result).toBe('gemini success');
+    });
+
+    it('sends to Anthropic provider and returns content', async () => {
+        mockFetch.mockResolvedValueOnce(
+            mockOkResponse(
+                JSON.stringify({
+                    content: [{ type: 'text', text: 'anthropic response' }],
+                }),
+            ),
+        );
+        const cfg = {
+            apiKey: 'sk-ant-test',
+            model: 'claude-sonnet-4-20250514',
+            baseUrl: 'https://api.anthropic.com/v1',
+            format: 'anthropic' as const,
+            temperature: 0.3,
+        };
+        const result = await sendToProvider(cfg, 'system', 'user');
+        expect(result).toBe('anthropic response');
     });
 
     it('throws LlmAuthError when API key is empty', async () => {
