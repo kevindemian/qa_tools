@@ -81,9 +81,12 @@ describe('runModule', () => {
 });
 
 describe('main', () => {
+    let printSpy: ReturnType<typeof vi.spyOn>;
+
     beforeEach(() => {
         vi.clearAllMocks();
         vi.spyOn(console, 'clear').mockImplementation(() => {});
+        printSpy = vi.spyOn(defaultOutput, 'print');
     });
 
     afterEach(() => {
@@ -95,9 +98,8 @@ describe('main', () => {
 
         await entryMenu.main();
 
-        const mockPrint = defaultOutput.print.bind(defaultOutput);
-        expect(mockPrint).toHaveBeenCalledWith(expect.stringContaining('npm run jira'));
-        expect(mockPrint).toHaveBeenCalledWith(expect.stringContaining('npm run git'));
+        expect(printSpy).toHaveBeenCalledWith(expect.stringContaining('npm run jira'));
+        expect(printSpy).toHaveBeenCalledWith(expect.stringContaining('npm run git'));
     });
 
     it('loops and exits on /exit choice', async () => {
