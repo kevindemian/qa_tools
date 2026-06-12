@@ -16,7 +16,7 @@ afterAll(() => {
 
 async function loadMod() {
     vi.resetModules();
-    const mod = (await import('./llm-metrics.js'));
+    const mod = await import('./llm-metrics.js');
     mod.clearLlmMetrics();
     return mod;
 }
@@ -162,6 +162,19 @@ describe('LlmMetrics', () => {
         } finally {
             readSpy.mockRestore();
         }
+    });
+
+    it('records per-model latency', async () => {
+        const { recordLlmRequest, snapshotLlmMetrics } = await loadMod();
+
+        recordLlmRequest('main', 500, 'gpt-4o');
+        recordLlmRequest('main', 300, 'gpt-4o');
+        recordLlmRequest('fast', 100, 'gpt-4o-mini');
+
+        const snap = snapshotLlmMetrics();
+        expect(snap.totalRequests).toBe(3);
+        expect(snap.latencyByModel['gpt-4o']).toEqual({ avgMs: 400, count: 2 });
+        expect(snap.latencyByModel['gpt-4o-mini']).toEqual({ avgMs: 100, count: 1 });
     });
 
     it('handles saveStore write failure gracefully', async () => {

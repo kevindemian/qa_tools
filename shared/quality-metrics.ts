@@ -61,6 +61,7 @@ function saveStore(store: StoredQualityMetrics): void {
         fs.mkdirSync(path.dirname(p), { recursive: true });
         const tmp = p + '.tmp';
         fs.writeFileSync(tmp, JSON.stringify(store, null, 2), 'utf8');
+        fs.renameSync(tmp, p);
     } catch (err) {
         rootLogger.error('Failed to persist quality metrics: ' + (err instanceof Error ? err.message : String(err)));
     }

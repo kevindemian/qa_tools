@@ -74,6 +74,7 @@ vi.mock('./circuit-breaker', () => ({
     checkCircuitBreaker: vi.fn(),
     recordCircuitFailure: vi.fn(),
     recordCircuitSuccess: vi.fn(),
+    getCircuitState: vi.fn(() => 'CLOSED' as const),
 }));
 vi.mock('./sanitize', () => ({
     sanitizeForLlm: vi.fn((s: string) => s),

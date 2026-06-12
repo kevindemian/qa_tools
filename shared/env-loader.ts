@@ -108,6 +108,16 @@ export function toInt(val: string | number | undefined, fallback: number): numbe
     return isNaN(n) ? fallback : n;
 }
 
+/**
+ * Reload .env.local + .env into process.env.
+ * Use after writing new values to .env.local (e.g., after SmartWizard LLM).
+ * Safe to call multiple times — resets flag and re-reads.
+ */
+export function reloadDotenv(): void {
+    dotenvLoaded = false;
+    ensureDotenv();
+}
+
 /** Reset dotenv loaded flag for testing. */
 export function __resetDotenvLoaded(): void {
     dotenvLoaded = false;

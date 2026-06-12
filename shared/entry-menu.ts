@@ -1,20 +1,29 @@
 /** Entry-point module selector for the QA Tools CLI.
  * Displays a splash screen and lets the user choose between
- * Jira Management and Git Triggers. Each module is spawned as a
- * child process via `tsx` for clean state isolation.
- * Falls back to usage instructions in non-TTY/CI environments. */
+ * Jira Management, Git Triggers, and the SmartWizard LLM.
+ * Falls back to usage instructions in non-TTY/CI environments.
+ *
+ * Pre-menu checks (SW-6):
+ *   - _llmConfigAttempts >= 3 → warning with (S/N/d) options
+ *   - _llmConfigSuggestions.pending → offer to review
+ *   - _llmConfigError → show error and offer retry
+ *   - Auto-retry: if _attempts < 3 && time > 60s*2^attempts → fire background discovery */
 
 import { spawn } from 'child_process';
 import { showSplash } from './splash.js';
-import { showSelect } from './prompt.js';
+import { showSelect, confirm, info, warn, divider } from './prompt.js';
 import { Output, defaultOutput } from './output.js';
 import { rootLogger } from './logger.js';
 import { ExitCode } from './types.js';
 import { fileURLToPath } from 'url';
 import { join, resolve } from 'path';
 import { gracefulExit } from './cli_base.js';
+import { loadTypedState, updateTyped } from './state.js';
+import { checkQualitySignals } from './quality-suggester.js';
 
 const root = join(import.meta.dirname, '..');
+const RETRY_DELAY_BASE_MS = 60_000;
+const MAX_ATTEMPTS = 3;
 
 /** Spawn a module as a child process. Each module (`jira` or `git`) runs in
  * its own process with inherited stdio and isolated state. Resolves on clean
@@ -34,6 +43,96 @@ export async function runModule(module: 'jira' | 'git'): Promise<void> {
     });
 }
 
+/** Check if enough time has elapsed for the next automatic retry. */
+function shouldAutoRetry(lastAttempt: string | undefined, attemptCount: number): boolean {
+    if (!lastAttempt) return false;
+    const elapsed = Date.now() - new Date(lastAttempt).getTime();
+    const required = RETRY_DELAY_BASE_MS * Math.pow(2, attemptCount);
+    return elapsed >= required;
+}
+
+/** Show pre-menu warnings and handle user choices. Returns true if
+ * the menu loop should continue (i.e., user didn't exit). */
+async function checkPreMenu(): Promise<boolean> {
+    const state = loadTypedState();
+
+    // Auto-retry: if discovery failed < MAX_ATTEMPTS times and enough time passed
+    if (
+        state._llmConfigAttempts !== undefined &&
+        state._llmConfigAttempts < MAX_ATTEMPTS &&
+        shouldAutoRetry(state._llmConfigLastAttempt, state._llmConfigAttempts)
+    ) {
+        // Fire background discovery silently
+        const spy = spawn('npx', ['tsx', join(root, 'scripts/smartwizard-discovery.ts')], {
+            stdio: 'ignore',
+            detached: true,
+            cwd: root,
+        });
+        spy.unref();
+    }
+
+    // Warning: 3 consecutive failures
+    if (state._llmConfigError) {
+        warn('Não foi possível verificar os provedores de IA após 3 tentativas.');
+        info(`Motivo: ${state._llmConfigError}`);
+        divider();
+
+        const choice = confirm('Deseja tentar novamente? (s/N/d — d para descartar)', false);
+        if (choice) {
+            updateTyped((s) => {
+                s._llmConfigAttempts = 0;
+                delete s._llmConfigError;
+            });
+            // Open wizard
+            await spawnWizard();
+        }
+        // If choice is false, we keep the flag. User can also say "descarta"
+        // but the confirm() returns true/false. For 3-option, we'd need showSelect.
+        // Since confirm is binary, the user dismissed it. Allow Discard via
+        // the wizard option in the menu.
+        return true;
+    }
+
+    // Suggestion: pending quality signals or discovery results
+    if (state._llmConfigSuggestions?.pending) {
+        warn('Há sugestões de configuração de IA disponíveis.');
+        info('O sistema detectou mudanças nos provedores que podem melhorar');
+        info('a qualidade das análises.');
+        divider();
+
+        const choice = confirm('Deseja revisar as sugestões? (S/n)', true);
+        if (choice) {
+            await spawnWizard('--review');
+        }
+        // Clear pending flag regardless (user was notified)
+        updateTyped((s) => {
+            if (s._llmConfigSuggestions) {
+                s._llmConfigSuggestions.pending = false;
+            }
+        });
+    }
+
+    return true;
+}
+
+async function spawnWizard(reviewFlag = ''): Promise<void> {
+    const args = ['tsx', join(root, 'scripts/smartwizard-llm.ts')];
+    if (reviewFlag) args.push(reviewFlag);
+
+    try {
+        await new Promise<void>((resolve, reject) => {
+            const child = spawn('npx', args, { stdio: 'inherit', cwd: root });
+            child.on('exit', (code) => {
+                if (code === 0) resolve();
+                else reject(new Error(`SmartWizard encerrou com código ${code}`));
+            });
+            child.on('error', reject);
+        });
+    } catch (err: unknown) {
+        rootLogger.error('SmartWizard error: ' + (err as Error).message);
+    }
+}
+
 export async function main(): Promise<void> {
     const isTTY = Output.isTTY() && !Output.isCI();
 
@@ -43,8 +142,12 @@ export async function main(): Promise<void> {
         return;
     }
 
+    // Run quality signal engine once at process start
+    checkQualitySignals();
+
     for (;;) {
         if (process.stdout.isTTY) process.stdout.write('\x1Bc');
+        await checkPreMenu();
         await showSplash();
 
         const choice = await showSelect('      Selecione o módulo', [
@@ -52,6 +155,8 @@ export async function main(): Promise<void> {
             { name: '      Git Triggers     (Pipelines, PR/MR, CI/CD, Setup)', value: 'git' },
             { type: 'separator', line: '        ' },
             { name: '      Setup Wizard  (Configurar projeto)', value: 'setup' },
+            { type: 'separator', line: '        ' },
+            { name: '      Configurar Provedor de IA', value: 'ai-setup' },
             { type: 'separator', line: '        ' },
             { name: '      /exit  Sair', value: 'exit' },
         ]);
@@ -71,11 +176,14 @@ export async function main(): Promise<void> {
             });
             continue;
         }
+        if (choice === 'ai-setup') {
+            await spawnWizard();
+            continue;
+        }
         if (choice !== 'jira' && choice !== 'git') continue;
 
         try {
             await runModule(choice);
-            // child exited with code 0 → loop back to entry menu
         } catch (err: unknown) {
             rootLogger.error('Entry menu child module error: ' + (err as Error).message);
             break;

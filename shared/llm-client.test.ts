@@ -83,6 +83,11 @@ vi.mock('./config', () => {
     };
     return { __esModule: true, default: ConfigMock };
 });
+vi.mock('./model-resolver', () => ({
+    initModelResolver: vi.fn(),
+    getRegistry: vi.fn(() => ({ providers: {} })),
+    resolveModel: vi.fn(() => ({ id: 'test-model' })),
+}));
 vi.mock('./disk-cache', () => ({
     diskCacheGet: vi.fn(() => null),
     diskCacheSet: vi.fn(),

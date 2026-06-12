@@ -237,4 +237,31 @@ describe('State', () => {
             expect(result.endsWith('state.json')).toBe(true);
         });
     });
+
+    describe('updateTyped', () => {
+        it('sets _llmConfigured via typed callback', () => {
+            const s = state.updateTyped((st) => {
+                st._llmConfigured = true;
+            }, makeConfig());
+            expect(s._llmConfigured).toBe(true);
+            // Verify persisted
+            const loaded = state.loadTypedState(makeConfig());
+            expect(loaded._llmConfigured).toBe(true);
+        });
+
+        it('deletes field via typed callback', () => {
+            // First set
+            state.updateTyped((st) => {
+                st._llmConfigured = true;
+                st._llmConfigAttempts = 2;
+            }, makeConfig());
+            // Then delete
+            state.updateTyped((st) => {
+                delete st._llmConfigAttempts;
+            }, makeConfig());
+            const loaded = state.loadTypedState(makeConfig());
+            expect(loaded._llmConfigured).toBe(true);
+            expect(loaded._llmConfigAttempts).toBeUndefined();
+        });
+    });
 });

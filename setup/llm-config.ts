@@ -200,10 +200,13 @@ export async function configureLlm(): Promise<boolean> {
         envUpdates[envVar] = model;
     }
 
-    // Write .env.local
+    // Write .env.local — atomic write + permission hardening
     const existing = readEnvLocal();
     const newContent = mergeEnvLocal(envUpdates, existing);
-    fs.writeFileSync(ENV_LOCAL, newContent, 'utf8');
+    const tmpPath = ENV_LOCAL + '.tmp';
+    fs.writeFileSync(tmpPath, newContent, 'utf8');
+    fs.chmodSync(tmpPath, 0o600);
+    fs.renameSync(tmpPath, ENV_LOCAL);
     info('✅ Configuração salva em ' + ENV_LOCAL);
 
     divider();
