@@ -6,7 +6,13 @@ import { showSelect } from '../shared/prompt.js';
 import { Output } from '../shared/output.js';
 
 vi.mock('../shared/splash', () => ({ showSplash: vi.fn() }));
-vi.mock('../shared/prompt', () => ({ showSelect: vi.fn() }));
+vi.mock('../shared/prompt', () => ({
+    showSelect: vi.fn(),
+    confirm: vi.fn(),
+    info: vi.fn(),
+    warn: vi.fn(),
+    divider: vi.fn(),
+}));
 vi.mock('../shared/output', () => {
     const mockOutput = { box: vi.fn(), print: vi.fn() };
     return {
