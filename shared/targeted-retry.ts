@@ -12,7 +12,7 @@
 
 import type { LlmPromptOptions } from './types/llm.js';
 import { type ValidationResult, type ValidatorSummary } from './artifact-validator.js';
-import { type ZodSchema } from './types.js';
+import { type ZodSchemaTyped } from './types.js';
 import { recordRetry } from './llm-metrics.js';
 
 export interface LayerConfig {
@@ -51,7 +51,7 @@ function buildInvariantHint(results: ValidationResult[]): string {
  */
 export async function generateWithRetry<T>(
     opts: LlmPromptOptions,
-    schema: ZodSchema,
+    schema: ZodSchemaTyped<T>,
     llmPromptFn: (opts: LlmPromptOptions) => Promise<string>,
     layer2Validator: {
         validate: (
@@ -76,7 +76,9 @@ export async function generateWithRetry<T>(
 
         try {
             const result = await llmPromptFn({ ...opts, system: hintSystem, user });
-            return result as unknown as T;
+            const parsed = schema.safeParse(result);
+            if (parsed.success) return parsed.data;
+            return null;
         } catch {
             return null;
         }

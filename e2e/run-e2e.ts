@@ -20,6 +20,7 @@ import CsvResource from '../jira_management/csv_resource.js';
 import createTestsModule from '../jira_management/create_tests.js';
 import { rootLogger } from '../shared/logger.js';
 import { gracefulExit } from '../shared/cli_base.js';
+import { z } from '../shared/validation.js';
 
 const { createTestsFromCsv, createTestExecutionWithLinks } = createTestsModule;
 
@@ -340,7 +341,8 @@ async function verifyNewTestCase(): Promise<boolean> {
         process.stdout.write(`  Summary: ${f['summary'] as string}` + '\n');
         process.stdout.write(`  Description: ${((f['description'] as string) || '').slice(0, 100)}` + '\n');
 
-        const steps = (await getSteps(createdIssueKey)) as unknown as Record<string, unknown>[];
+        const StepSchema = z.record(z.string(), z.unknown());
+        const steps = StepSchema.array().parse(await getSteps(createdIssueKey));
         ok(`Steps: ${steps.length} steps`);
         for (const s of steps) {
             const fields = s['fields'] as Record<string, unknown> | undefined;
@@ -405,7 +407,8 @@ async function fase6XrayHistory() {
         if (result.length > 0) {
             ok(`History para ${EXISTING_TEST}: ${result.length} entrada(s)`);
             result.slice(0, 3).forEach((h) => {
-                const entry = h as unknown as Record<string, unknown>;
+                const EntrySchema = z.record(z.string(), z.unknown());
+                const entry = EntrySchema.parse(h);
                 const entryDate = typeof entry['date'] === 'string' ? entry['date'] : '?';
                 const entryStatus =
                     typeof entry['status'] === 'string'
