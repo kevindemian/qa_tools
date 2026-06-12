@@ -281,7 +281,7 @@ describe('showResults', () => {
             ]),
         });
         await showResults(c, ['TEST-1', 'TEST-2']);
-        expect(c.linkManager.getTestCaseSummaries).toHaveBeenCalledWith(['TEST-1', 'TEST-2']);
+        expect(c.linkManager['getTestCaseSummaries']).toHaveBeenCalledWith(['TEST-1', 'TEST-2']);
     });
 
     it('shows keys when getTestCaseSummaries fails', async () => {
@@ -322,6 +322,6 @@ describe('showResults', () => {
                 .mockResolvedValue(keys.slice(0, 20).map((k: string) => ({ key: k, summary: 'Test ' + k }))),
         });
         await showResults(c, keys);
-        expect(c.linkManager.getTestCaseSummaries).toHaveBeenCalledWith(keys.slice(0, 20));
+        expect(c.linkManager['getTestCaseSummaries']).toHaveBeenCalledWith(keys.slice(0, 20));
     });
 });

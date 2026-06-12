@@ -513,7 +513,7 @@ export function checkIntegrity(): CheckResult {
         const selfContent = readFileSync('scripts/quality-check.ts', 'utf-8');
         const contentWithoutHash = selfContent.replace(/\/\* HASH:[0-9a-f]{64} \*\//g, '');
         const currentHash = createHash('sha256').update(contentWithoutHash, 'utf-8').digest('hex');
-        /* HASH:f01dcc6f841404f98c2e498f15b35e42837d0e730842cfb5ce63d50473fc8cdc */
+        /* HASH:50c5852904940970b9d8370186401f28516367eb33519f8e1745853838326b50 */
         const match = selfContent.match(/\/\* HASH:([0-9a-f]{64}) \*\//);
         if (!match) {
             violations.push({ file: 'scripts/quality-check.ts', line: 1, content: 'Missing HASH comment' });

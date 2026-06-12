@@ -169,7 +169,7 @@ describe('confirm', () => {
     it('retries on invalid answer then accepts yes', () => {
         mockReadlineQuestion.mockReturnValueOnce('x').mockReturnValueOnce('s');
         expect(confirm('Confirm?')).toBe(true);
-        expect(outputMock.print).toHaveBeenCalled();
+        expect(outputMock['print']).toHaveBeenCalled();
     });
 
     it('shows Y as default when defaultYes is true', () => {

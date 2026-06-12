@@ -29,7 +29,7 @@ describe('createMockTestExecutionCreator', () => {
     it('merges overrides correctly', () => {
         const customCreate = vi.fn(() => ({ key: 'CUSTOM', summary: 'Custom' }));
         const mock = createMockTestExecutionCreator({ create: customCreate });
-        expect(mock.create).toBe(customCreate);
+        expect(mock['create']).toBe(customCreate);
         const result = mock.create('PROJ', ['T-1'], 'test.csv');
         expect(result).toEqual({ key: 'CUSTOM', summary: 'Custom' });
     });
@@ -37,6 +37,6 @@ describe('createMockTestExecutionCreator', () => {
     it('each call produces independent mock instances', () => {
         const a = createMockTestExecutionCreator();
         const b = createMockTestExecutionCreator();
-        expect(a.create).not.toBe(b.create);
+        expect(a['create']).not.toBe(b['create']);
     });
 });

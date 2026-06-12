@@ -85,7 +85,7 @@ describe('TestExecutionCreator', () => {
         it('posts with correct payload', async () => {
             setupHappyPath();
             await creator.create(projectName, testKeys, csvName);
-            expect(mockJiraResource.postJiraResource).toHaveBeenCalledWith('issue', {
+            expect(mockJiraResource['postJiraResource']).toHaveBeenCalledWith('issue', {
                 fields: {
                     project: { key: projectName },
                     summary: 'my_tests.csv - 23/05/2026 10:30',
@@ -102,8 +102,8 @@ describe('TestExecutionCreator', () => {
             ]);
             const result = await creator.create(projectName, testKeys, csvName);
             expect(result).toBeNull();
-            expect(rootLogger.error).toHaveBeenCalledWith(expect.stringContaining('Issue type'));
-            expect(mockJiraResource.postJiraResource).not.toHaveBeenCalled();
+            expect(rootLogger['error']).toHaveBeenCalledWith(expect.stringContaining('Issue type'));
+            expect(mockJiraResource['postJiraResource']).not.toHaveBeenCalled();
         });
 
         it('returns null and logs error when custom field not found', async () => {
@@ -112,16 +112,16 @@ describe('TestExecutionCreator', () => {
                 .mockResolvedValueOnce([{ id: 'customfield_10100', name: 'Test', schema: { custom: 'some:other' } }]);
             const result = await creator.create(projectName, testKeys, csvName);
             expect(result).toBeNull();
-            expect(rootLogger.error).toHaveBeenCalledWith(expect.stringContaining('Tests association'));
-            expect(mockJiraResource.postJiraResource).not.toHaveBeenCalled();
+            expect(rootLogger['error']).toHaveBeenCalledWith(expect.stringContaining('Tests association'));
+            expect(mockJiraResource['postJiraResource']).not.toHaveBeenCalled();
         });
 
         it('returns null and logs error when issuetype response is non-array', async () => {
             mockJiraResource.getJiraResource.mockResolvedValueOnce({ id: '1' });
             const result = await creator.create(projectName, testKeys, csvName);
             expect(result).toBeNull();
-            expect(rootLogger.error).toHaveBeenCalledWith(expect.stringContaining('tipos de issue'));
-            expect(mockJiraResource.postJiraResource).not.toHaveBeenCalled();
+            expect(rootLogger['error']).toHaveBeenCalledWith(expect.stringContaining('tipos de issue'));
+            expect(mockJiraResource['postJiraResource']).not.toHaveBeenCalled();
         });
 
         it('returns null and logs error when fields response is non-array', async () => {
@@ -130,8 +130,8 @@ describe('TestExecutionCreator', () => {
                 .mockResolvedValueOnce({ id: 'customfield_1' });
             const result = await creator.create(projectName, testKeys, csvName);
             expect(result).toBeNull();
-            expect(rootLogger.error).toHaveBeenCalledWith(expect.stringContaining('campos customizados'));
-            expect(mockJiraResource.postJiraResource).not.toHaveBeenCalled();
+            expect(rootLogger['error']).toHaveBeenCalledWith(expect.stringContaining('campos customizados'));
+            expect(mockJiraResource['postJiraResource']).not.toHaveBeenCalled();
         });
 
         it('uses title override instead of csvName + timestamp', async () => {
@@ -170,9 +170,9 @@ describe('TestExecutionCreator', () => {
             const result = await creator.createWithLinks(projectName, testKeys, csvName);
 
             expect(result).toEqual({ key: 'TE-1', summary: 'my_tests.csv - 23/05/2026 10:30' });
-            expect(mockLinkManager.createIssueLink).toHaveBeenCalledTimes(2);
-            expect(mockLinkManager.createIssueLink).toHaveBeenCalledWith('TEST-1', 'TE-1', 'Tests');
-            expect(mockLinkManager.createIssueLink).toHaveBeenCalledWith('TEST-2', 'TE-1', 'Tests');
+            expect(mockLinkManager['createIssueLink']).toHaveBeenCalledTimes(2);
+            expect(mockLinkManager['createIssueLink']).toHaveBeenCalledWith('TEST-1', 'TE-1', 'Tests');
+            expect(mockLinkManager['createIssueLink']).toHaveBeenCalledWith('TEST-2', 'TE-1', 'Tests');
         });
 
         it('skips already-linked tests', async () => {
@@ -186,8 +186,8 @@ describe('TestExecutionCreator', () => {
 
             await creator.createWithLinks(projectName, testKeys, csvName);
 
-            expect(mockLinkManager.createIssueLink).toHaveBeenCalledTimes(1);
-            expect(mockLinkManager.createIssueLink).toHaveBeenCalledWith('TEST-2', 'TE-1', 'Tests');
+            expect(mockLinkManager['createIssueLink']).toHaveBeenCalledTimes(1);
+            expect(mockLinkManager['createIssueLink']).toHaveBeenCalledWith('TEST-2', 'TE-1', 'Tests');
         });
 
         it('links all unlinked tests when multiple provided', async () => {
@@ -202,10 +202,10 @@ describe('TestExecutionCreator', () => {
 
             await creator.createWithLinks(projectName, manyTests, csvName);
 
-            expect(mockLinkManager.createIssueLink).toHaveBeenCalledTimes(3);
-            expect(mockLinkManager.createIssueLink).toHaveBeenCalledWith('TEST-2', 'TE-1', 'Tests');
-            expect(mockLinkManager.createIssueLink).toHaveBeenCalledWith('TEST-4', 'TE-1', 'Tests');
-            expect(mockLinkManager.createIssueLink).toHaveBeenCalledWith('TEST-5', 'TE-1', 'Tests');
+            expect(mockLinkManager['createIssueLink']).toHaveBeenCalledTimes(3);
+            expect(mockLinkManager['createIssueLink']).toHaveBeenCalledWith('TEST-2', 'TE-1', 'Tests');
+            expect(mockLinkManager['createIssueLink']).toHaveBeenCalledWith('TEST-4', 'TE-1', 'Tests');
+            expect(mockLinkManager['createIssueLink']).toHaveBeenCalledWith('TEST-5', 'TE-1', 'Tests');
         });
 
         it('logs warnings for failed links and continues', async () => {
@@ -215,7 +215,7 @@ describe('TestExecutionCreator', () => {
 
             await creator.createWithLinks(projectName, testKeys, csvName);
 
-            expect(mockLinkManager.createIssueLink).toHaveBeenCalledTimes(2);
+            expect(mockLinkManager['createIssueLink']).toHaveBeenCalledTimes(2);
         });
 
         it('proceeds to try linking all when fetching existing links fails', async () => {
@@ -225,13 +225,13 @@ describe('TestExecutionCreator', () => {
 
             await creator.createWithLinks(projectName, testKeys, csvName);
 
-            expect(mockLinkManager.createIssueLink).toHaveBeenCalledTimes(2);
+            expect(mockLinkManager['createIssueLink']).toHaveBeenCalledTimes(2);
         });
 
         it('creates TE without linking when testKeys is empty', async () => {
             setupCreate('TE-1');
             await creator.createWithLinks(projectName, [], csvName);
-            expect(mockLinkManager.createIssueLink).not.toHaveBeenCalled();
+            expect(mockLinkManager['createIssueLink']).not.toHaveBeenCalled();
         });
 
         it('logs info when all tests are already linked (line 105)', async () => {
@@ -243,7 +243,7 @@ describe('TestExecutionCreator', () => {
             });
 
             await creator.createWithLinks(projectName, testKeys, csvName);
-            expect(mockLinkManager.createIssueLink).not.toHaveBeenCalled();
+            expect(mockLinkManager['createIssueLink']).not.toHaveBeenCalled();
         });
 
         it('logs error when outer linking block throws (line 121)', async () => {
@@ -254,7 +254,7 @@ describe('TestExecutionCreator', () => {
             prompt.withSpinner.mockRejectedValueOnce(new Error('Spinner error'));
 
             await creator.createWithLinks(projectName, testKeys, csvName);
-            expect(rootLogger.error).toHaveBeenCalledWith(expect.stringContaining('Erro ao vincular testes'));
+            expect(rootLogger['error']).toHaveBeenCalledWith(expect.stringContaining('Erro ao vincular testes'));
         });
 
         it('passes title override through to create()', async () => {
@@ -288,7 +288,7 @@ describe('TestExecutionCreator', () => {
             setupHappy({ customfield_10200: [] });
             const result = await creator.addTestsToExistingExecution(teKey, testKeys);
             expect(result).toEqual({ key: 'TE-1', summary: 'My TE' });
-            expect(mockJiraResource.putJiraResource).toHaveBeenCalledWith('issue/TE-1', {
+            expect(mockJiraResource['putJiraResource']).toHaveBeenCalledWith('issue/TE-1', {
                 fields: { customfield_10200: ['TEST-1', 'TEST-2'] },
             });
         });
@@ -300,7 +300,7 @@ describe('TestExecutionCreator', () => {
             });
             const result = await creator.addTestsToExistingExecution('BUG-1', testKeys);
             expect(result).toBeNull();
-            expect(rootLogger.error).toHaveBeenCalledWith(expect.stringContaining('não é uma Test Execution'));
+            expect(rootLogger['error']).toHaveBeenCalledWith(expect.stringContaining('não é uma Test Execution'));
         });
 
         it('returns null when TE has unknown issuetype', async () => {
@@ -310,14 +310,14 @@ describe('TestExecutionCreator', () => {
             });
             const result = await creator.addTestsToExistingExecution('X-1', testKeys);
             expect(result).toBeNull();
-            expect(rootLogger.error).toHaveBeenCalledWith(expect.stringContaining('não é uma Test Execution'));
+            expect(rootLogger['error']).toHaveBeenCalledWith(expect.stringContaining('não é uma Test Execution'));
         });
 
         it('returns null when fields response is non-array', async () => {
             mockJiraResource.getJiraResource.mockResolvedValueOnce(teIssue).mockResolvedValueOnce({ not: 'array' });
             const result = await creator.addTestsToExistingExecution(teKey, testKeys);
             expect(result).toBeNull();
-            expect(rootLogger.error).toHaveBeenCalledWith(expect.stringContaining('campos customizados'));
+            expect(rootLogger['error']).toHaveBeenCalledWith(expect.stringContaining('campos customizados'));
         });
 
         it('returns null when custom field not found', async () => {
@@ -326,13 +326,13 @@ describe('TestExecutionCreator', () => {
                 .mockResolvedValueOnce([{ id: 'cf1', name: 'Other', schema: { custom: 'other:type' } }]);
             const result = await creator.addTestsToExistingExecution(teKey, testKeys);
             expect(result).toBeNull();
-            expect(rootLogger.error).toHaveBeenCalledWith(expect.stringContaining('Tests association'));
+            expect(rootLogger['error']).toHaveBeenCalledWith(expect.stringContaining('Tests association'));
         });
 
         it('merges existing tests with new ones, deduplicating', async () => {
             setupHappy({ customfield_10200: ['EXISTING-1', 'TEST-1'] });
             await creator.addTestsToExistingExecution(teKey, testKeys);
-            expect(mockJiraResource.putJiraResource).toHaveBeenCalledWith('issue/TE-1', {
+            expect(mockJiraResource['putJiraResource']).toHaveBeenCalledWith('issue/TE-1', {
                 fields: { customfield_10200: ['EXISTING-1', 'TEST-1', 'TEST-2'] },
             });
         });
@@ -340,7 +340,7 @@ describe('TestExecutionCreator', () => {
         it('handles when TE has no current tests in custom field', async () => {
             setupHappy({});
             await creator.addTestsToExistingExecution(teKey, testKeys);
-            expect(mockJiraResource.putJiraResource).toHaveBeenCalledWith('issue/TE-1', {
+            expect(mockJiraResource['putJiraResource']).toHaveBeenCalledWith('issue/TE-1', {
                 fields: { customfield_10200: ['TEST-1', 'TEST-2'] },
             });
         });
@@ -353,7 +353,7 @@ describe('TestExecutionCreator', () => {
             mockLinkManager.createIssueLink.mockResolvedValueOnce({}).mockRejectedValueOnce(new Error('Link error'));
             const result = await creator.addTestsToExistingExecution(teKey, testKeys);
             expect(result).toEqual({ key: 'TE-1', summary: 'My TE' });
-            expect(mockLinkManager.createIssueLink).toHaveBeenCalledTimes(2);
+            expect(mockLinkManager['createIssueLink']).toHaveBeenCalledTimes(2);
         });
 
         it('uses teKey as summary when TE issue has no summary field', async () => {

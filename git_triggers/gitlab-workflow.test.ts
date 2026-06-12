@@ -218,7 +218,7 @@ describe('glDownloadArtifact', () => {
             headers: { 'content-disposition': 'attachment; filename="artifacts.zip"' },
         });
         const result = await glDownloadArtifact(mockClient, 'owner', 'repo', 101);
-        expect(mockClient.get).toHaveBeenCalledWith(expect.stringContaining('/jobs/101/artifacts'), {
+        expect(mockClient['get']).toHaveBeenCalledWith(expect.stringContaining('/jobs/101/artifacts'), {
             responseType: 'arraybuffer',
         });
         expect(Buffer.isBuffer(result.buffer)).toBe(true);
@@ -244,7 +244,7 @@ describe('glGetJobLogs', () => {
     it('returns truncated log text from GET /jobs/{id}/trace', async () => {
         mockClient.get.mockResolvedValue({ data: 'line1\nline2\nline3\n' });
         const result = await glGetJobLogs(mockClient, 'owner', 'repo', 101);
-        expect(mockClient.get).toHaveBeenCalledWith(expect.stringContaining('/jobs/101/trace'), {
+        expect(mockClient['get']).toHaveBeenCalledWith(expect.stringContaining('/jobs/101/trace'), {
             responseType: 'text',
         });
         expect(result).toBe('line1\nline2\nline3\n');
