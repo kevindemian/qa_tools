@@ -1,18 +1,7 @@
 /** History/Coverage dashboard — execution trends, flakiness analysis, health score, coverage gaps. */
-import {
-    info,
-    warn,
-    title,
-    divider,
-    tableView,
-    printError,
-    showSelect,
-    withSpinner,
-    askConfirm,
-} from '../../shared/prompt.js';
+import { info, warn, title, divider, tableView, printError, showSelect, withSpinner } from '../../shared/prompt.js';
 import { loadMetrics, calculateFlakiness, getTrends, saveCoverageSnapshot } from '../../shared/metrics.js';
 import { calculateHealthScore } from '../../shared/health-score.js';
-import { executeFlakyActions } from '../../shared/flaky-auto-actions.js';
 import { analyzeCoverage } from '../coverage.js';
 import { compareRuns } from '../../shared/run-comparison.js';
 import type { CommandContext } from './context.js';
@@ -44,7 +33,7 @@ async function _compareLastTwoRuns(store: ReturnType<typeof loadMetrics>): Promi
     if (analysis) info('Análise comparativa: ' + analysis);
 }
 
-async function _handleFlakySection(c: CommandContext, store: ReturnType<typeof loadMetrics>): Promise<void> {
+function _handleFlakySection(store: ReturnType<typeof loadMetrics>): void {
     const flaky = calculateFlakiness(store, 2);
     if (flaky.length === 0) return;
     divider();
@@ -56,18 +45,6 @@ async function _handleFlakySection(c: CommandContext, store: ReturnType<typeof l
         Rate: `${Math.round(f.rate * 100)}%`,
     }));
     tableView(flakyRows, ['Teste', 'Pass', 'Fail', 'Rate']);
-    if (!(await askConfirm('Aplicar auto-actions (criar bugs) para testes flaky?', false))) return;
-    try {
-        const actions = await executeFlakyActions(store, c.jiraResource, c.ctx.project_name, {
-            autoCreateBug: true,
-            minTotalRuns: 5,
-            dedupSearch: true,
-        });
-        const bugs = actions.filter((a) => a.action === 'create_bug' || a.action === 'reenable');
-        info(bugs.length + ' auto-action(s) executada(s) para testes flaky.');
-    } catch (err: unknown) {
-        printError('Erro ao executar auto-actions', err);
-    }
 }
 
 function _showTrends(store: ReturnType<typeof loadMetrics>): void {
@@ -105,7 +82,7 @@ function _showHealthScore(store: ReturnType<typeof loadMetrics>): void {
     tableView(dimRows, ['Dimensão', 'Score', 'Status']);
 }
 
-async function showHistory(c: CommandContext): Promise<void> {
+async function showHistory(): Promise<void> {
     const store = loadMetrics();
     if (store.runs.length === 0) {
         warn('Nenhuma execução registrada.');
@@ -113,7 +90,7 @@ async function showHistory(c: CommandContext): Promise<void> {
     }
     _showRunHistory(store);
     await _compareLastTwoRuns(store);
-    await _handleFlakySection(c, store);
+    _handleFlakySection(store);
     _showTrends(store);
     _showHealthScore(store);
 }
@@ -176,7 +153,7 @@ async function handler(c: CommandContext): Promise<boolean | void> {
         if (choice === '0') return;
 
         if (choice === 'a') {
-            await showHistory(c);
+            await showHistory();
         } else if (choice === 'b') {
             await showCoverage(c);
         }

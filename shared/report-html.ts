@@ -77,10 +77,7 @@ function _buildTestTableSection(
 ): string {
     const runs = options?.runs;
     if (runs && runs.length > 1) {
-        return (
-            buildTabs(runs) +
-            buildTabContents(runs, categories, options.testHistory, options.knownIssues, options.flakinessMap)
-        );
+        return buildTabs(runs) + buildTabContents(runs, categories, options.testHistory, options.flakinessMap);
     }
     const hasSidebar = tests.some((t) => t.fullTitle && t.fullTitle.indexOf(' > ') !== -1);
     let html = '';
@@ -88,7 +85,7 @@ function _buildTestTableSection(
         html += '<div style="display:flex;gap:0">' + buildHierarchySidebar(tests) + '<div style="flex:1;min-width:0">';
     }
     html += buildFilterBar();
-    html += buildTestTable(tests, categories, options?.testHistory, options?.knownIssues, options?.flakinessMap);
+    html += buildTestTable(tests, categories, options?.testHistory, options?.flakinessMap);
     if (hasSidebar) html += '</div></div>';
     return html;
 }

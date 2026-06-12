@@ -37,29 +37,6 @@ export interface BugReport {
     };
 }
 
-/** Configuration for flaky auto-actions. */
-export interface FlakyActionConfig {
-    threshold: number;
-    autoCreateBug: boolean;
-    bugPriority: string;
-    minTotalRuns: number;
-    dedupSearch: boolean;
-    windowSize: number;
-}
-
-/** A flaky auto-action result. */
-export interface FlakyAction {
-    testTitle: string;
-    flakyRate: number;
-    passCount: number;
-    failCount: number;
-    totalRuns: number;
-    lastErrorMessages: string[];
-    action: 'create_bug' | 'flag_in_report' | 'quarantine' | 'reenable' | 'none';
-    jiraBugKey?: string;
-    reason: string;
-}
-
 /** Maps source file patterns to associated test metadata (for Tier 3 explicit mapping). */
 export interface FileTestMapping {
     files: string[];

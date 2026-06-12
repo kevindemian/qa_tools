@@ -119,7 +119,7 @@ describe('registerCleanup', () => {
                 return process;
             },
         );
-        vi.mocked(fs.existsSync).mockImplementation(() => {
+        vi.spyOn(fs, 'existsSync').mockImplementation(() => {
             throw new Error('fail');
         });
         registerCleanup();
@@ -134,7 +134,7 @@ describe('registerCleanup', () => {
                 return process;
             },
         );
-        vi.mocked(fs.existsSync).mockReturnValue(true);
+        vi.spyOn(fs, 'existsSync').mockReturnValue(true);
         registerCleanup();
         handlerRef.current?.();
         expect(fs.rmSync).toHaveBeenCalled();

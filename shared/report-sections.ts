@@ -11,7 +11,7 @@ import { escapeHtml, fmtDuration, pct, pctSub, pctClass } from './report-utils.j
 import { extractSuite } from './report-types.js';
 import type { FlatTest } from './result_parser.js';
 import type { HealthScoreResult } from './types.js';
-import type { TestRunTab, TestHistoryRun, KnownIssue, ReportOptions, ReportStats } from './report-types.js';
+import type { TestRunTab, TestHistoryRun, ReportOptions, ReportStats } from './report-types.js';
 import { buildTestTable } from './report-table.js';
 import { MetricCard, MetricGrid, Card, Badge } from './primitives/index.js';
 import { FilterBar, SearchInput, Button } from './primitives/index.js';
@@ -38,7 +38,6 @@ export function buildTabContents(
     runs: TestRunTab[],
     categories?: Record<string, string>,
     history?: Record<string, TestHistoryRun[]>,
-    knownIssues?: KnownIssue[],
     flakinessMap?: Record<string, number>,
 ): string {
     if (runs.length <= 1) return '';
@@ -47,7 +46,7 @@ export function buildTabContents(
     for (const run of runs) {
         html += '<div id="tabContent-' + tabIdx + '" class="tab-content' + (tabIdx === 0 ? ' active' : '') + '">';
         html += buildFilterBar();
-        html += buildTestTable(run.tests, categories, history, knownIssues, flakinessMap);
+        html += buildTestTable(run.tests, categories, history, flakinessMap);
         html += '</div>';
         tabIdx++;
     }

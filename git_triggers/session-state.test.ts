@@ -98,6 +98,7 @@ import * as sessionState from './session-state.js';
 import { loadMetrics as _loadMetrics, calculateFlakiness as _calculateFlakiness } from '../shared/metrics.js';
 import { createMockGitProvider } from '../shared/test-utils/factories/index.js';
 import { update as stateUpdate } from '../shared/state.js';
+const pushHistorySpy = vi.spyOn(sessionState.sessionContext, 'pushHistory');
 
 describe('session-state', () => {
     beforeEach(() => {
@@ -145,7 +146,7 @@ describe('session-state', () => {
     describe('pushHistory', () => {
         it('calls sessionContext.pushHistory and updateState', () => {
             sessionState.pushHistory('test-op', 'detail', 'ok');
-            expect(sessionState.sessionContext.pushHistory).toHaveBeenCalledWith('test-op', 'detail', 'ok');
+            expect(pushHistorySpy).toHaveBeenCalledWith('test-op', 'detail', 'ok');
             expect(stateUpdate).toHaveBeenCalled();
         });
     });
@@ -205,7 +206,7 @@ describe('session-state', () => {
 
             sessionState.setCurrentProjectName('qa_ibabs');
             const m = createMockGitProvider();
-            vi.mocked(m.getRecentPipelines).mockResolvedValue([]);
+            vi.spyOn(m, 'getRecentPipelines').mockResolvedValue([]);
             await sessionState.displayRecentPipelines(m);
             expect(prompt.warn).toHaveBeenCalledWith(expect.stringContaining('flakiness'));
 

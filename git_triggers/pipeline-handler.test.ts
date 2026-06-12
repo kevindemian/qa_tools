@@ -150,14 +150,14 @@ describe('isComplete', () => {
 
 describe('pollPipeline', () => {
     it('returns completed status when pipeline finishes', async () => {
-        vi.mocked(mockM.getPipeline).mockResolvedValue({ status: 'success', web_url: 'https://gitlab.com/pipe/1' });
+        vi.spyOn(mockM, 'getPipeline').mockResolvedValue({ status: 'success', web_url: 'https://gitlab.com/pipe/1' });
 
         const result = await pollPipeline(mockM, '1', 100, 10000);
         expect(result).toEqual({ status: 'success', web_url: 'https://gitlab.com/pipe/1' });
     });
 
     it('continues polling when pipeline returns null', async () => {
-        vi.mocked(mockM.getPipeline)
+        vi.spyOn(mockM, 'getPipeline')
             .mockResolvedValueOnce(null)
             .mockResolvedValueOnce({ status: 'success', web_url: 'https://gitlab.com/pipe/1' });
 
@@ -166,7 +166,7 @@ describe('pollPipeline', () => {
     });
 
     it('returns timeout when pipeline does not complete', async () => {
-        vi.mocked(mockM.getPipeline).mockResolvedValue({ status: 'running', web_url: '' });
+        vi.spyOn(mockM, 'getPipeline').mockResolvedValue({ status: 'running', web_url: '' });
 
         const result = await pollPipeline(mockM, '1', 50, 0);
         expect(result).toEqual({ status: 'timeout', web_url: '' });
@@ -174,7 +174,7 @@ describe('pollPipeline', () => {
 
     it('handles missing status/state and web_url', async () => {
         let callCount = 0;
-        vi.mocked(mockM.getPipeline).mockImplementation(async () => {
+        vi.spyOn(mockM, 'getPipeline').mockImplementation(async () => {
             await Promise.resolve();
             callCount++;
             if (callCount === 1) return { web_url: '' };
@@ -192,8 +192,8 @@ describe('handleTriggerPipeline', () => {
             .mockReturnValueOnce(true) // Confirmar disparo?
             .mockReturnValue(false); // Aguardar conclusao?
         mockPrompt.mockReturnValue('main');
-        vi.mocked(mockM.getBranch).mockResolvedValue({ name: 'main' });
-        vi.mocked(mockM.triggerPipeline).mockResolvedValue({ id: '42', web_url: 'https://gitlab.com/pipe/42' });
+        vi.spyOn(mockM, 'getBranch').mockResolvedValue({ name: 'main' });
+        vi.spyOn(mockM, 'triggerPipeline').mockResolvedValue({ id: '42', web_url: 'https://gitlab.com/pipe/42' });
 
         await handleTriggerPipeline(mockM, 'my-project');
 
@@ -204,7 +204,7 @@ describe('handleTriggerPipeline', () => {
 
     it('warns when branch not found', async () => {
         mockPrompt.mockReturnValue('unknown-branch');
-        vi.mocked(mockM.getBranch).mockResolvedValue(null);
+        vi.spyOn(mockM, 'getBranch').mockResolvedValue(null);
 
         await handleTriggerPipeline(mockM, 'my-project');
 
@@ -217,8 +217,8 @@ describe('handleTriggerPipeline', () => {
             .mockReturnValueOnce(false) // Adicionar variáveis?
             .mockReturnValueOnce(true); // Confirmar disparo?
         mockPrompt.mockReturnValue('main');
-        vi.mocked(mockM.getBranch).mockResolvedValue({ name: 'main' });
-        vi.mocked(mockM.triggerPipeline).mockRejectedValue(new Error('API fail'));
+        vi.spyOn(mockM, 'getBranch').mockResolvedValue({ name: 'main' });
+        vi.spyOn(mockM, 'triggerPipeline').mockRejectedValue(new Error('API fail'));
 
         await handleTriggerPipeline(mockM, 'my-project');
 
@@ -227,14 +227,14 @@ describe('handleTriggerPipeline', () => {
     });
 
     it('resumes pending pipeline when confirmed', async () => {
-        const mockLoad = vi.mocked(stateModule.load);
+        const mockLoad = vi.spyOn(stateModule, 'load');
         mockLoad.mockReturnValueOnce({
             pendingPipeline: { branch: 'feat', pipelineId: '99', projectName: 'my-project' },
         });
         mockConfirm
             .mockReturnValueOnce(true) // Continuar deste ponto?
             .mockReturnValue(false); // Coletar resultados?
-        vi.mocked(mockM.getPipeline).mockResolvedValue({
+        vi.spyOn(mockM, 'getPipeline').mockResolvedValue({
             status: 'success',
             web_url: 'https://gitlab.com/pipe/99',
         });
@@ -246,14 +246,14 @@ describe('handleTriggerPipeline', () => {
     });
 
     it('resumes pending pipeline with failed status triggers quick-merge early return', async () => {
-        const mockLoad = vi.mocked(stateModule.load);
+        const mockLoad = vi.spyOn(stateModule, 'load');
         mockLoad.mockReturnValueOnce({
             pendingPipeline: { branch: 'feat', pipelineId: '99', projectName: 'my-project' },
         });
         mockConfirm
             .mockReturnValueOnce(true) // Continuar deste ponto?
             .mockReturnValue(false); // Coletar resultados?
-        vi.mocked(mockM.getPipeline).mockResolvedValue({
+        vi.spyOn(mockM, 'getPipeline').mockResolvedValue({
             status: 'failed',
             web_url: '',
         });
@@ -265,12 +265,12 @@ describe('handleTriggerPipeline', () => {
     });
 
     it('resumes pending pipeline with canceled status skips post-pipeline', async () => {
-        const mockLoad = vi.mocked(stateModule.load);
+        const mockLoad = vi.spyOn(stateModule, 'load');
         mockLoad.mockReturnValueOnce({
             pendingPipeline: { branch: 'feat', pipelineId: '99', projectName: 'my-project' },
         });
         mockConfirm.mockReturnValueOnce(true); // Continuar deste ponto?
-        vi.mocked(mockM.getPipeline).mockResolvedValue({
+        vi.spyOn(mockM, 'getPipeline').mockResolvedValue({
             status: 'canceled',
             web_url: '',
         });
@@ -280,14 +280,14 @@ describe('handleTriggerPipeline', () => {
     });
 
     it('resumes pending pipeline with undefined branch', async () => {
-        const mockLoad = vi.mocked(stateModule.load);
+        const mockLoad = vi.spyOn(stateModule, 'load');
         mockLoad.mockReturnValueOnce({
             pendingPipeline: { pipelineId: '77', projectName: 'my-project' },
         });
         mockConfirm
             .mockReturnValueOnce(true) // Continuar deste ponto?
             .mockReturnValue(false); // Coletar resultados?
-        vi.mocked(mockM.getPipeline).mockResolvedValue({
+        vi.spyOn(mockM, 'getPipeline').mockResolvedValue({
             status: 'success',
             web_url: 'https://gitlab.com/pipe/77',
         });
@@ -301,7 +301,7 @@ describe('handleTriggerPipeline', () => {
 describe('handleExportVariables', () => {
     it('exports variables when confirmed', async () => {
         mockConfirm.mockReturnValue(true);
-        vi.mocked(mockM.getCICDVariables).mockResolvedValue([
+        vi.spyOn(mockM, 'getCICDVariables').mockResolvedValue([
             { key: 'VAR1', value: 'val1' },
             { key: 'VAR2', value: 'val2' },
         ]);
@@ -323,7 +323,7 @@ describe('handleExportVariables', () => {
 
     it('handles fetch error', async () => {
         mockConfirm.mockReturnValue(true);
-        vi.mocked(mockM.getCICDVariables).mockRejectedValue(new Error('fetch fail'));
+        vi.spyOn(mockM, 'getCICDVariables').mockRejectedValue(new Error('fetch fail'));
 
         await handleExportVariables(mockM);
 
@@ -333,7 +333,7 @@ describe('handleExportVariables', () => {
 
     it('handles null variables', async () => {
         mockConfirm.mockReturnValue(true);
-        vi.mocked(mockM.getCICDVariables).mockResolvedValue(null);
+        vi.spyOn(mockM, 'getCICDVariables').mockResolvedValue(null);
 
         await handleExportVariables(mockM);
 
@@ -342,7 +342,7 @@ describe('handleExportVariables', () => {
 
     it('handles empty variable value', async () => {
         mockConfirm.mockReturnValue(true);
-        vi.mocked(mockM.getCICDVariables).mockResolvedValue([
+        vi.spyOn(mockM, 'getCICDVariables').mockResolvedValue([
             { key: 'VAR1', value: '' },
             { key: 'VAR2', value: 'val2' },
         ]);
@@ -358,7 +358,7 @@ describe('handleExportVariables', () => {
 describe('parseTestResults', () => {
     it('delegates to test-results parseTestResults', async () => {
         const testResults = vi.mocked(testResultsModule);
-        vi.mocked(testResults.parseTestResults).mockResolvedValue({
+        vi.spyOn(testResults, 'parseTestResults').mockResolvedValue({
             matched: [],
             unmatched: [],
             csvName: 'test',
@@ -372,7 +372,7 @@ describe('parseTestResults', () => {
 
     it('returns null when delegate returns null', async () => {
         const testResults = vi.mocked(testResultsModule);
-        vi.mocked(testResults.parseTestResults).mockResolvedValue(null);
+        vi.spyOn(testResults, 'parseTestResults').mockResolvedValue(null);
         const result = await parseTestResults({
             stats: { passed: 0, failed: 0, skipped: 0, total: 0, duration: 0 },
             tests: [],
@@ -386,7 +386,7 @@ describe('parseTestResults', () => {
 describe('createTestExecution', () => {
     it('delegates to test-results createTestExecution', async () => {
         const testResults = vi.mocked(testResultsModule);
-        vi.mocked(testResults.createTestExecution).mockResolvedValue(undefined);
+        vi.spyOn(testResults, 'createTestExecution').mockResolvedValue(undefined);
         const jiraResource = {} as JiraClient;
         const linkManager = {} as JiraLinkManager;
         await expect(
@@ -412,7 +412,7 @@ describe('createTestExecution', () => {
 describe('downloadTestArtifacts', () => {
     it('delegates to test-results downloadTestArtifacts', async () => {
         const testResults = vi.mocked(testResultsModule);
-        vi.mocked(testResults.downloadTestArtifacts).mockResolvedValue(null);
+        vi.spyOn(testResults, 'downloadTestArtifacts').mockResolvedValue(null);
         const result = await downloadTestArtifacts(mockM, '1');
         expect(result).toBeNull();
         expect(testResults.downloadTestArtifacts).toHaveBeenCalledWith(mockM, '1');
@@ -424,7 +424,7 @@ describe('downloadTestArtifacts', () => {
 describe('collectTestResults', () => {
     it('delegates to test-results collectTestResults', async () => {
         const testResults = vi.mocked(testResultsModule);
-        vi.mocked(testResults.collectTestResults).mockResolvedValue(null);
+        vi.spyOn(testResults, 'collectTestResults').mockResolvedValue(null);
         const jiraResource = {} as JiraClient;
         const linkManager = {} as JiraLinkManager;
         const result = await collectTestResults(mockM, '1', 'main', 'proj', {
@@ -441,7 +441,7 @@ describe('collectTestResults', () => {
 describe('buildPipelinePayload cancel', () => {
     it('cancels when user declines trigger confirmation', async () => {
         mockPrompt.mockReturnValue('main');
-        vi.mocked(mockM.getBranch).mockResolvedValue({ name: 'main' });
+        vi.spyOn(mockM, 'getBranch').mockResolvedValue({ name: 'main' });
         mockConfirm
             .mockReturnValueOnce(false) // Adicionar variáveis?
             .mockReturnValueOnce(false); // Confirmar disparo?
@@ -458,20 +458,20 @@ describe('triggerAndPollPipeline full flow', () => {
     beforeEach(() => {
         vi.clearAllMocks();
         mockPrompt.mockReturnValue('main');
-        vi.mocked(mockM.getBranch).mockResolvedValue({ name: 'main' });
-        vi.mocked(mockM.triggerPipeline).mockResolvedValue({
+        vi.spyOn(mockM, 'getBranch').mockResolvedValue({ name: 'main' });
+        vi.spyOn(mockM, 'triggerPipeline').mockResolvedValue({
             id: '42',
             web_url: 'https://gitlab.com/pipe/42',
         });
-        vi.mocked(mockM.getPipeline).mockResolvedValue({
+        vi.spyOn(mockM, 'getPipeline').mockResolvedValue({
             status: 'success',
             web_url: 'https://gitlab.com/pipe/42',
         });
-        vi.mocked(mockM.createMergeRequest).mockResolvedValue({
+        vi.spyOn(mockM, 'createMergeRequest').mockResolvedValue({
             web_url: 'https://gitlab.com/mr/1',
             iid: '1',
         });
-        vi.mocked(mockM.acceptMergeRequest).mockResolvedValue({
+        vi.spyOn(mockM, 'acceptMergeRequest').mockResolvedValue({
             web_url: 'https://gitlab.com/mr/1/merge',
         });
     });
@@ -488,7 +488,7 @@ describe('triggerAndPollPipeline full flow', () => {
 
         // Make collectTestResults return a parsed result
         const testResults = vi.mocked(testResultsModule);
-        vi.mocked(testResults.collectTestResults).mockResolvedValue({
+        vi.spyOn(testResults, 'collectTestResults').mockResolvedValue({
             stats: { passed: 5, failed: 2, skipped: 1, total: 7, duration: 100 },
             tests: [
                 { title: 'test-1', state: 'failed', duration: 0 },
@@ -498,7 +498,7 @@ describe('triggerAndPollPipeline full flow', () => {
 
         // Make offerPipelineFailureAnalysis call the callback
         const llmPipeline = vi.mocked(llmModule);
-        vi.mocked(llmPipeline.offerPipelineFailureAnalysis).mockImplementation(
+        vi.spyOn(llmPipeline, 'offerPipelineFailureAnalysis').mockImplementation(
             (_parsed: ParseResult, onAnalysis?: (report: AnalysisReport) => Promise<void>) => {
                 if (onAnalysis)
                     return onAnalysis({ content: 'analysis result', confidence: 'high', fallbackUsed: false });
@@ -520,7 +520,7 @@ describe('triggerAndPollPipeline full flow', () => {
 
     it('handles bug creation error', async () => {
         const bugReport = vi.mocked(bugReportModule);
-        vi.mocked(bugReport.fileToJira).mockRejectedValue(new Error('Jira API error'));
+        vi.spyOn(bugReport, 'fileToJira').mockRejectedValue(new Error('Jira API error'));
 
         mockConfirm
             .mockReturnValueOnce(false) // Adicionar variáveis?
@@ -531,7 +531,7 @@ describe('triggerAndPollPipeline full flow', () => {
             .mockReturnValueOnce(false); // Não criar merge request (padrão)
 
         const testResults = vi.mocked(testResultsModule);
-        vi.mocked(testResults.collectTestResults).mockResolvedValue({
+        vi.spyOn(testResults, 'collectTestResults').mockResolvedValue({
             stats: { passed: 5, failed: 2, skipped: 1, total: 7, duration: 100 },
             tests: [
                 { title: 'test-1', state: 'failed', duration: 0 },
@@ -540,7 +540,7 @@ describe('triggerAndPollPipeline full flow', () => {
         });
 
         const llmPipeline = vi.mocked(llmModule);
-        vi.mocked(llmPipeline.offerPipelineFailureAnalysis).mockImplementation(
+        vi.spyOn(llmPipeline, 'offerPipelineFailureAnalysis').mockImplementation(
             (_parsed: ParseResult, onAnalysis?: (report: AnalysisReport) => Promise<void>) => {
                 if (onAnalysis)
                     return onAnalysis({ content: 'analysis result', confidence: 'high', fallbackUsed: false });
@@ -555,7 +555,7 @@ describe('triggerAndPollPipeline full flow', () => {
     });
 
     it('handles quick merge creation error', async () => {
-        vi.mocked(mockM.createMergeRequest).mockRejectedValue(new Error('Merge create error'));
+        vi.spyOn(mockM, 'createMergeRequest').mockRejectedValue(new Error('Merge create error'));
 
         mockConfirm
             .mockReturnValueOnce(false) // Adicionar variáveis?
@@ -571,11 +571,11 @@ describe('triggerAndPollPipeline full flow', () => {
     });
 
     it('handles merge acceptance error', async () => {
-        vi.mocked(mockM.createMergeRequest).mockResolvedValue({
+        vi.spyOn(mockM, 'createMergeRequest').mockResolvedValue({
             web_url: 'https://gitlab.com/mr/1',
             iid: '1',
         });
-        vi.mocked(mockM.acceptMergeRequest).mockRejectedValue(new Error('Merge accept error'));
+        vi.spyOn(mockM, 'acceptMergeRequest').mockRejectedValue(new Error('Merge accept error'));
 
         mockConfirm
             .mockReturnValueOnce(false) // Adicionar variáveis?
@@ -599,8 +599,8 @@ describe('triggerAndPollPipeline full flow', () => {
             .mockReturnValueOnce(true) // Adicionar variáveis? yes
             .mockReturnValueOnce(true) // Confirmar disparo?
             .mockReturnValueOnce(false); // Aguardar conclusao?
-        vi.mocked(mockM.getBranch).mockResolvedValue({ name: 'main' });
-        vi.mocked(mockM.triggerPipeline).mockResolvedValue({ id: '42', web_url: 'https://gitlab.com/pipe/42' });
+        vi.spyOn(mockM, 'getBranch').mockResolvedValue({ name: 'main' });
+        vi.spyOn(mockM, 'triggerPipeline').mockResolvedValue({ id: '42', web_url: 'https://gitlab.com/pipe/42' });
 
         await handleTriggerPipeline(mockM, 'my-project');
 
@@ -613,9 +613,9 @@ describe('triggerAndPollPipeline full flow', () => {
 
     it('skips bug creation when jira env is null', async () => {
         const testResults = vi.mocked(testResultsModule);
-        vi.mocked(testResults._jiraEnv).mockReturnValueOnce(null);
+        vi.spyOn(testResults, '_jiraEnv').mockReturnValueOnce(null);
         const testResults2 = vi.mocked(testResultsModule);
-        vi.mocked(testResults2.collectTestResults).mockResolvedValue({
+        vi.spyOn(testResults2, 'collectTestResults').mockResolvedValue({
             stats: { passed: 5, failed: 2, skipped: 1, total: 7, duration: 100 },
             tests: [
                 { title: 'test-1', state: 'failed', duration: 0 },
@@ -636,7 +636,7 @@ describe('triggerAndPollPipeline full flow', () => {
     });
 
     it('triggers pipeline with canceled status skips post-pipeline', async () => {
-        vi.mocked(mockM.getPipeline).mockResolvedValue({ status: 'canceled', web_url: '' });
+        vi.spyOn(mockM, 'getPipeline').mockResolvedValue({ status: 'canceled', web_url: '' });
         mockConfirm
             .mockReturnValueOnce(false) // Adicionar variáveis?
             .mockReturnValueOnce(true) // Confirmar disparo?
@@ -647,7 +647,7 @@ describe('triggerAndPollPipeline full flow', () => {
     });
 
     it('handles pipelineResult being null from triggerPipeline', async () => {
-        vi.mocked(mockM.triggerPipeline).mockResolvedValue(undefined);
+        vi.spyOn(mockM, 'triggerPipeline').mockResolvedValue(undefined);
         mockConfirm
             .mockReturnValueOnce(false) // Adicionar variáveis?
             .mockReturnValueOnce(true); // Confirmar disparo?
@@ -659,7 +659,7 @@ describe('triggerAndPollPipeline full flow', () => {
     });
 
     it('creates merge request returning null', async () => {
-        vi.mocked(mockM.createMergeRequest).mockResolvedValue(null);
+        vi.spyOn(mockM, 'createMergeRequest').mockResolvedValue(null);
         mockConfirm
             .mockReturnValueOnce(false) // Adicionar variáveis?
             .mockReturnValueOnce(true) // Confirmar disparo?
@@ -667,7 +667,7 @@ describe('triggerAndPollPipeline full flow', () => {
             .mockReturnValueOnce(true) // Coletar resultados?
             .mockReturnValueOnce(true); // Criar bug no Jira?
         const testResults = vi.mocked(testResultsModule);
-        vi.mocked(testResults.collectTestResults).mockResolvedValue({
+        vi.spyOn(testResults, 'collectTestResults').mockResolvedValue({
             stats: { passed: 0, failed: 0, skipped: 0, total: 0, duration: 0 },
             tests: [],
         });
@@ -678,7 +678,7 @@ describe('triggerAndPollPipeline full flow', () => {
     });
 
     it('accepts merge returning null', async () => {
-        vi.mocked(mockM.acceptMergeRequest).mockResolvedValue(null);
+        vi.spyOn(mockM, 'acceptMergeRequest').mockResolvedValue(null);
         mockConfirm
             .mockReturnValueOnce(false) // Adicionar variáveis?
             .mockReturnValueOnce(true) // Confirmar disparo?
@@ -713,8 +713,8 @@ describe('triggerAndPollPipeline full flow', () => {
 describe('triggerPipeline missing id', () => {
     it('returns early when pipeline result has no id', async () => {
         mockPrompt.mockReturnValue('main');
-        vi.mocked(mockM.getBranch).mockResolvedValue({ name: 'main' });
-        vi.mocked(mockM.triggerPipeline).mockResolvedValue({
+        vi.spyOn(mockM, 'getBranch').mockResolvedValue({ name: 'main' });
+        vi.spyOn(mockM, 'triggerPipeline').mockResolvedValue({
             web_url: 'https://gitlab.com/pipe/42',
         });
         mockConfirm
@@ -734,7 +734,7 @@ describe('triggerPipeline missing id', () => {
 describe('resumePendingPipeline decline', () => {
     it('deletes pending state when user declines resume', async () => {
         const state = vi.mocked(stateModule);
-        vi.mocked(state.load).mockReturnValueOnce({
+        vi.spyOn(state, 'load').mockReturnValueOnce({
             pendingPipeline: { branch: 'feat', pipelineId: '99', projectName: 'my-project' },
         });
         mockConfirm.mockReturnValue(false); // Continuar deste ponto? → não

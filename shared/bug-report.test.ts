@@ -511,7 +511,7 @@ let mockLlmPrompt: Mock;
 
 beforeAll(async () => {
     const llmClient = await vi.importMock<typeof import('./llm-client.js')>('./llm-client');
-    mockLlmPrompt = vi.mocked(llmClient.llmPrompt);
+    mockLlmPrompt = vi.spyOn(llmClient, 'llmPrompt');
 });
 
 describe('generateBugReportFromDescription', () => {
@@ -564,7 +564,7 @@ describe('generateBugReportFromDescription', () => {
 
     it('returns null when prompt template file cannot be read', async () => {
         const fs = await import('fs');
-        const readMock = vi.mocked(fs.readFileSync);
+        const readMock = vi.spyOn(fs, 'readFileSync');
         readMock.mockImplementationOnce(() => {
             throw new Error('ENOENT');
         });

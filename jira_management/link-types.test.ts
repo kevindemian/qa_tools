@@ -10,6 +10,8 @@ import path from 'path';
 import { LinkTypeManager } from './link-types.js';
 import { rootLogger } from '../shared/logger.js';
 import { tempDirPath } from '../shared/temp-dir.js';
+
+const rootLoggerWarnSpy = vi.spyOn(rootLogger, 'warn');
 import { nonNull } from '../shared/test-utils.js';
 
 const CACHE_PATH = path.join(tempDirPath(), 'cache', 'link-types-cache.json');
@@ -67,15 +69,15 @@ describe('LinkTypeManager', () => {
         it('falls back to local cache when API fails', async () => {
             const cachedTypes = [{ id: '99', name: 'Cached' }];
             mockJiraResource.getJiraResource.mockRejectedValue(new Error('API down'));
-            vi.mocked(fs.existsSync).mockReturnValue(true);
-            vi.mocked(fs.readFileSync).mockReturnValue(JSON.stringify(cachedTypes));
+            vi.spyOn(fs, 'existsSync').mockReturnValue(true);
+            vi.spyOn(fs, 'readFileSync').mockReturnValue(JSON.stringify(cachedTypes));
             const result = await manager.getIssueLinkTypes();
             expect(result).toEqual(cachedTypes);
         });
 
         it('falls back to hardcoded types when API and cache fail', async () => {
             mockJiraResource.getJiraResource.mockRejectedValue(new Error('API down'));
-            vi.mocked(fs.existsSync).mockReturnValue(false);
+            vi.spyOn(fs, 'existsSync').mockReturnValue(false);
             const result = await manager.getIssueLinkTypes();
             expect(result).toHaveLength(3);
             expect(nonNull(result[0]).name).toBe('Relates');
@@ -84,19 +86,19 @@ describe('LinkTypeManager', () => {
         it('logs warning when cache write throws', async () => {
             const fakeTypes = [{ id: '10200', name: 'Tested by' }];
             mockJiraResource.getJiraResource.mockResolvedValue({ issueLinkTypes: fakeTypes });
-            vi.mocked(fs.writeFileSync).mockImplementation(() => {
+            vi.spyOn(fs, 'writeFileSync').mockImplementation(() => {
                 throw new Error('Disk full');
             });
             await manager.getIssueLinkTypes();
-            expect(rootLogger.warn).toHaveBeenCalledWith(expect.stringContaining('Falha ao escrever cache'));
+            expect(rootLoggerWarnSpy).toHaveBeenCalledWith(expect.stringContaining('Falha ao escrever cache'));
         });
 
         it('logs warning when cache read has invalid JSON', async () => {
             mockJiraResource.getJiraResource.mockRejectedValue(new Error('API down'));
-            vi.mocked(fs.existsSync).mockReturnValue(true);
-            vi.mocked(fs.readFileSync).mockReturnValue('invalid json');
+            vi.spyOn(fs, 'existsSync').mockReturnValue(true);
+            vi.spyOn(fs, 'readFileSync').mockReturnValue('invalid json');
             const result = await manager.getIssueLinkTypes();
-            expect(rootLogger.warn).toHaveBeenCalledWith(expect.stringContaining('Falha ao ler cache'));
+            expect(rootLoggerWarnSpy).toHaveBeenCalledWith(expect.stringContaining('Falha ao ler cache'));
             expect(result).toHaveLength(3);
             expect(nonNull(result[0]).name).toBe('Relates');
         });

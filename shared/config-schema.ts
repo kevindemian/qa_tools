@@ -334,14 +334,7 @@ export const CONFIG_SCHEMA: ConfigField[] = [
         defaultVal: 0,
         description: 'LLM max total tokens',
     },
-    {
-        key: 'knownIssuesPath',
-        envVar: 'KNOWN_ISSUES_PATH',
-        type: 'string',
-        category: 'llm',
-        defaultVal: '',
-        description: 'Known issues JSON path',
-    },
+
     {
         key: 'llmReviewBudget',
         envVar: 'LLM_REVIEW_BUDGET',

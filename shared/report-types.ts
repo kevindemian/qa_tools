@@ -7,12 +7,6 @@ export interface TestHistoryRun {
     finishedOn?: string;
 }
 
-export interface KnownIssue {
-    pattern: string;
-    reason: string;
-    ticket?: string;
-}
-
 export interface TestRunTab {
     name: string;
     tests: FlatTest[];
@@ -44,7 +38,6 @@ export interface ReportOptions {
     testHistory?: Record<string, TestHistoryRun[]>;
     trends?: import('./metrics.js').TrendPoint[];
     theme?: 'dark' | 'light';
-    knownIssues?: KnownIssue[];
     runs?: TestRunTab[];
     healthScore?: import('./types.js').HealthScoreResult;
     diffComparison?: {
@@ -77,24 +70,6 @@ export const CATEGORY_COLORS: Record<string, string> = {
     FLAKY: '#8b5cf6',
     UNKNOWN: '#6b7280',
 };
-
-export function toKnownIssues(raw: unknown): KnownIssue[] {
-    if (!Array.isArray(raw)) return [];
-    const result: KnownIssue[] = [];
-    for (const item of raw) {
-        if (item && typeof item === 'object' && 'pattern' in item && 'reason' in item) {
-            const obj = item as { pattern: unknown; reason: unknown; ticket?: unknown };
-            if (typeof obj.pattern === 'string' && typeof obj.reason === 'string') {
-                result.push({
-                    pattern: obj.pattern,
-                    reason: obj.reason,
-                    ...(typeof obj.ticket === 'string' ? { ticket: obj.ticket } : {}),
-                });
-            }
-        }
-    }
-    return result;
-}
 
 export function categorizeFailure(error: string): string {
     const upper = error.toUpperCase();

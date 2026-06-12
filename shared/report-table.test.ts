@@ -3,7 +3,6 @@
  */
 
 import {
-    matchKnownIssue,
     precomputeCategories,
     buildDetailRow,
     buildErrorCell,
@@ -13,22 +12,7 @@ import {
     buildTestTable,
 } from './report-table.js';
 import type { FlatTest } from './result_parser.js';
-import type { TestHistoryRun, KnownIssue } from './report-types.js';
-
-describe('matchKnownIssue', () => {
-    it('finds matching known issue by pattern', () => {
-        const issues: KnownIssue[] = [{ pattern: 'login', ticket: 'BUG-42', reason: 'known flaky' }];
-        expect(matchKnownIssue('Login test failed', issues)).toEqual(issues[0]);
-    });
-
-    it('returns undefined for no match', () => {
-        expect(matchKnownIssue('Logout test', [{ pattern: 'login', ticket: 'BUG-42', reason: '' }])).toBeUndefined();
-    });
-
-    it('handles empty known issues list', () => {
-        expect(matchKnownIssue('Login test', [])).toBeUndefined();
-    });
-});
+import type { TestHistoryRun } from './report-types.js';
 
 describe('precomputeCategories', () => {
     it('returns empty map when no failures', () => {
@@ -167,7 +151,7 @@ describe('buildTestTable', () => {
 
     it('includes flakiness column when map provided', () => {
         const tests: FlatTest[] = [{ title: 'T1', state: 'passed', duration: 100 }];
-        const html = buildTestTable(tests, undefined, undefined, undefined, { T1: 0.3 });
+        const html = buildTestTable(tests, undefined, undefined, { T1: 0.3 });
         expect(html).toContain('Flaky');
     });
 

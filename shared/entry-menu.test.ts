@@ -105,7 +105,7 @@ describe('main', () => {
     it('loops and exits on /exit choice', async () => {
         vi.spyOn(Output, 'isTTY').mockReturnValue(true);
         vi.spyOn(Output, 'isCI').mockReturnValue(false);
-        const showSelectMock = vi.mocked(promptModule.showSelect);
+        const showSelectMock = vi.spyOn(promptModule, 'showSelect');
         showSelectMock.mockResolvedValue('exit');
 
         await entryMenu.main();
@@ -116,7 +116,7 @@ describe('main', () => {
     it('launches jira module when selected and exits on failure', async () => {
         vi.spyOn(Output, 'isTTY').mockReturnValue(true);
         vi.spyOn(Output, 'isCI').mockReturnValue(false);
-        vi.mocked(promptModule.showSelect).mockResolvedValue('jira');
+        vi.spyOn(promptModule, 'showSelect').mockResolvedValue('jira');
         mockSpawnWithExit(1);
 
         await entryMenu.main();
@@ -127,7 +127,7 @@ describe('main', () => {
     it('continues loop on unknown choice', async () => {
         vi.spyOn(Output, 'isTTY').mockReturnValue(true);
         vi.spyOn(Output, 'isCI').mockReturnValue(false);
-        const showSelectMock = vi.mocked(promptModule.showSelect);
+        const showSelectMock = vi.spyOn(promptModule, 'showSelect');
         showSelectMock.mockResolvedValueOnce('unknown').mockResolvedValueOnce('exit');
 
         await entryMenu.main();

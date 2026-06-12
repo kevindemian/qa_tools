@@ -18,7 +18,7 @@ vi.mock('../shared/logger', () => ({
 let mockApiGet: Mock;
 import * as apiModule from './github-api.js';
 beforeAll(() => {
-    mockApiGet = vi.mocked(apiModule.apiGet);
+    mockApiGet = vi.spyOn(apiModule, 'apiGet');
 });
 
 describe('getBranch', () => {

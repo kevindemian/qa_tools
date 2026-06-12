@@ -1,11 +1,7 @@
-vi.mock('fs');
-
-import { existsSync, readFileSync } from 'fs';
-import type { PathLike, PathOrFileDescriptor } from 'fs';
 import { nonNull, nullAs } from './test-utils.js';
-import { generateHtmlReport, generateCoverageHtml, loadKnownIssues } from './report-generator.js';
+import { generateHtmlReport, generateCoverageHtml } from './report-generator.js';
 import type { FlatTest } from './result_parser.js';
-import type { CoverageEpic, KnownIssue, TestRunTab } from './report-generator.js';
+import type { CoverageEpic, TestRunTab } from './report-generator.js';
 
 describe('generateHtmlReport', () => {
     it('generates a complete HTML document with summary cards', () => {
@@ -633,31 +629,6 @@ describe('generateHtmlReport', () => {
         expect(htmlSingle).not.toContain('viewBox="0 0 300 100"');
     });
 
-    // ── R10: Known Issues ───────────────────────────────────────────
-
-    it('adds known issue badge to matching failed tests', () => {
-        const tests: FlatTest[] = [{ title: 'Login fails', state: 'failed', duration: 100, error: 'err' }];
-        const knownIssues: KnownIssue[] = [{ pattern: 'login', reason: 'Known SSL issue', ticket: 'BUG-123' }];
-        const html = generateHtmlReport(tests, { knownIssues });
-        expect(html).toContain('ki-badge');
-        expect(html).toContain('Known Issue');
-        expect(html).toContain('BUG-123');
-    });
-
-    it('adds suppressed class to known issue rows', () => {
-        const tests: FlatTest[] = [{ title: 'Timeout', state: 'failed', duration: 100, error: 'timeout' }];
-        const knownIssues: KnownIssue[] = [{ pattern: 'timeout', reason: 'Infra flaky' }];
-        const html = generateHtmlReport(tests, { knownIssues });
-        expect(html).toContain('ki-suppressed');
-    });
-
-    it('does not apply known issue badge to non-matching failures', () => {
-        const tests: FlatTest[] = [{ title: 'Real bug', state: 'failed', duration: 100, error: 'assert' }];
-        const knownIssues: KnownIssue[] = [{ pattern: 'timeout', reason: 'Infra' }];
-        const html = generateHtmlReport(tests, { knownIssues });
-        expect(html).not.toContain('>Known Issue<');
-    });
-
     // ── R11: Multi-environment Tabs ─────────────────────────────────
 
     it('renders tabs when multiple runs provided', () => {
@@ -711,64 +682,5 @@ describe('generateHtmlReport', () => {
         const html = generateHtmlReport([]);
         expect(html).toContain('@media print');
         expect(html).toContain('.control-bar,.detail-toggle');
-    });
-
-    // ── R10: loadKnownIssues ───────────────────────────────────────────
-
-    it('loadKnownIssues returns empty array for missing file', () => {
-        const issues = loadKnownIssues('/nonexistent/path.json');
-        expect(issues).toEqual([]);
-    });
-
-    it('loadKnownIssues reads issues from a valid JSON file', () => {
-        const knownIssues = [
-            { pattern: 'timeout', reason: 'Infra flaky', ticket: 'BUG-1' },
-            { pattern: 'login', reason: 'Known SSL issue' },
-        ];
-        const mockExists = vi.mocked(existsSync);
-        const mockReadFile = vi.mocked(readFileSync);
-        mockExists.mockReset();
-        mockReadFile.mockReset();
-        mockExists.mockImplementation((p: PathLike) => p === '/tmp/known-issues.json');
-        mockReadFile.mockImplementation((p: PathOrFileDescriptor, _options?: unknown): string => {
-            if (p === '/tmp/known-issues.json') return JSON.stringify({ issues: knownIssues });
-            throw new Error('not found');
-        });
-
-        const issues = loadKnownIssues('/tmp/known-issues.json');
-        expect(issues).toHaveLength(2);
-        expect(nonNull(issues[0]).pattern).toBe('timeout');
-        expect(nonNull(issues[0]).ticket).toBe('BUG-1');
-        expect(nonNull(issues[1]).pattern).toBe('login');
-    });
-
-    it('loadKnownIssues handles issues as top-level array', () => {
-        const mockExists = vi.mocked(existsSync);
-        const mockReadFile = vi.mocked(readFileSync);
-        mockExists.mockReset();
-        mockReadFile.mockReset();
-        mockExists.mockImplementation((p: PathLike) => p === '/tmp/ki.json');
-        mockReadFile.mockImplementation((p: PathOrFileDescriptor, _options?: unknown): string => {
-            if (p === '/tmp/ki.json') return JSON.stringify([{ pattern: 'flaky', reason: 'Intermittent' }]);
-            throw new Error('not found');
-        });
-
-        const issues = loadKnownIssues('/tmp/ki.json');
-        expect(issues).toHaveLength(1);
-        expect(nonNull(issues[0]).pattern).toBe('flaky');
-    });
-
-    it('loadKnownIssues skips invalid JSON and returns empty array', () => {
-        const mockExists = vi.mocked(existsSync);
-        const mockReadFile = vi.mocked(readFileSync);
-        mockExists.mockReset();
-        mockReadFile.mockReset();
-        mockExists.mockImplementation((_p: PathLike) => true);
-        mockReadFile.mockImplementation(() => {
-            throw new Error('bad json');
-        });
-
-        const issues = loadKnownIssues('/tmp/bad.json');
-        expect(issues).toEqual([]);
     });
 });

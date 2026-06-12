@@ -28,9 +28,9 @@ let mockSearchGet: MockedJiraResource['searchJiraIssues'];
 
 function mockJiraResource(): JiraResource {
     const mock = createMockJiraResource();
-    mockIssueGet = mock.getJiraResource;
-    mockOriginGet = mock.getFromOriginPath;
-    mockSearchGet = mock.searchJiraIssues;
+    mockIssueGet = mock['getJiraResource'];
+    mockOriginGet = mock['getFromOriginPath'];
+    mockSearchGet = mock['searchJiraIssues'];
     return mock;
 }
 
@@ -41,7 +41,7 @@ beforeEach(() => {
         const map: Record<string, string> = { xrayMode: 'server', xrayClientId: '', xrayClientSecret: '' };
         return (map[key] ?? '') as T;
     };
-    vi.mocked(Config.getDefault).mockReturnValue(mockConfig);
+    vi.spyOn(Config, 'getDefault').mockReturnValue(mockConfig);
 });
 
 // ─── TestHistoryCache ────────────────────────────────────────────────────────
@@ -181,7 +181,7 @@ describe('CloudHistoryProvider', () => {
             };
             return (map[key] ?? '') as T;
         };
-        vi.mocked(Config.getDefault).mockReturnValue(cloudMockConfig);
+        vi.spyOn(Config, 'getDefault').mockReturnValue(cloudMockConfig);
         provider = createHistoryProvider(jira, 'cloud');
     });
 
@@ -198,7 +198,7 @@ describe('CloudHistoryProvider', () => {
             const map: Record<string, string> = { xrayMode: 'cloud', xrayClientId: '', xrayClientSecret: '' };
             return (map[key] ?? '') as T;
         };
-        vi.mocked(Config.getDefault).mockReturnValue(missingCredsConfig);
+        vi.spyOn(Config, 'getDefault').mockReturnValue(missingCredsConfig);
         const result = await provider.getHistory('TEST-123');
         expect(result).toEqual([]);
     });

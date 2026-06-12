@@ -104,8 +104,8 @@ describe('_checkResumeCheckpoint', () => {
     });
 
     it('happy resume: checkpoint exists, age < 24h, done < testCount, confirm true', () => {
-        vi.mocked(STATE.load).mockReturnValue({ _checkpoint: makeCp() });
-        vi.mocked(PROMPT.confirm).mockReturnValue(true);
+        vi.spyOn(STATE, 'load').mockReturnValue({ _checkpoint: makeCp() });
+        vi.spyOn(PROMPT, 'confirm').mockReturnValue(true);
         const result = _checkResumeCheckpoint(tests, '/path/test.csv', 'csv', 'TESTPROJ');
         expect(result.resumeFrom).toBe(2);
         expect(result.inMemoryTasksId).toEqual(['T-1', 'T-2']);
@@ -114,15 +114,15 @@ describe('_checkResumeCheckpoint', () => {
 
     it('expired checkpoint: age > 24h -> skip', () => {
         const oldTs = new Date(Date.now() - 25 * 60 * 60 * 1000).toISOString();
-        vi.mocked(STATE.load).mockReturnValue({ _checkpoint: makeCp({ ts: oldTs }) });
+        vi.spyOn(STATE, 'load').mockReturnValue({ _checkpoint: makeCp({ ts: oldTs }) });
         const result = _checkResumeCheckpoint(tests, '/path/test.csv', 'csv', 'TESTPROJ');
         expect(result.resumeFrom).toBe(0);
         expect(result.inMemoryTasksId).toEqual([]);
     });
 
     it('user declines: confirm false -> skip', () => {
-        vi.mocked(STATE.load).mockReturnValue({ _checkpoint: makeCp() });
-        vi.mocked(PROMPT.confirm).mockReturnValue(false);
+        vi.spyOn(STATE, 'load').mockReturnValue({ _checkpoint: makeCp() });
+        vi.spyOn(PROMPT, 'confirm').mockReturnValue(false);
         const result = _checkResumeCheckpoint(tests, '/path/test.csv', 'csv', 'TESTPROJ');
         expect(result.resumeFrom).toBe(0);
         expect(result.inMemoryTasksId).toEqual([]);
@@ -130,13 +130,13 @@ describe('_checkResumeCheckpoint', () => {
 
     it('full checkpoint: done.length >= tests.length -> skip', () => {
         const fullDone = Array.from({ length: 10 }, (_, i) => ({ key: `T-${i + 1}`, title: `Test ${i + 1}` }));
-        vi.mocked(STATE.load).mockReturnValue({ _checkpoint: makeCp({ done: fullDone }) });
+        vi.spyOn(STATE, 'load').mockReturnValue({ _checkpoint: makeCp({ done: fullDone }) });
         const result = _checkResumeCheckpoint(tests, '/path/test.csv', 'csv', 'TESTPROJ');
         expect(result.resumeFrom).toBe(0);
     });
 
     it('no matching checkpoint: sourcePath differs -> skip', () => {
-        vi.mocked(STATE.load).mockReturnValue({ _checkpoint: makeCp() });
+        vi.spyOn(STATE, 'load').mockReturnValue({ _checkpoint: makeCp() });
         const result = _checkResumeCheckpoint(tests, '/different/path.csv', 'csv', 'TESTPROJ');
         expect(result.resumeFrom).toBe(0);
     });
@@ -150,23 +150,23 @@ describe('filterTests', () => {
     });
 
     it('no matches -> warn + null', () => {
-        vi.mocked(PROMPT.prompt).mockReturnValue('zzzzzz');
+        vi.spyOn(PROMPT, 'prompt').mockReturnValue('zzzzzz');
         const result = filterTests(tests);
         expect(result).toBeNull();
         expect(PROMPT.warn).toHaveBeenCalledWith(expect.stringContaining('Nenhum teste'));
     });
 
     it('matches + user declines -> warn + null', () => {
-        vi.mocked(PROMPT.prompt).mockReturnValue('Test');
-        vi.mocked(PROMPT.confirm).mockReturnValue(false);
+        vi.spyOn(PROMPT, 'prompt').mockReturnValue('Test');
+        vi.spyOn(PROMPT, 'confirm').mockReturnValue(false);
         const result = filterTests(tests);
         expect(result).toBeNull();
         expect(PROMPT.warn).toHaveBeenCalledWith(expect.stringContaining('Operação cancelada'));
     });
 
     it('matches + user accepts -> filtered list', () => {
-        vi.mocked(PROMPT.prompt).mockReturnValue('Test 1');
-        vi.mocked(PROMPT.confirm).mockReturnValue(true);
+        vi.spyOn(PROMPT, 'prompt').mockReturnValue('Test 1');
+        vi.spyOn(PROMPT, 'confirm').mockReturnValue(true);
         const result = filterTests(tests);
         expect(result).toHaveLength(1);
         expect(nonNull(nonNull(result)[0]).title).toBe('Test 1');
@@ -176,7 +176,7 @@ describe('filterTests', () => {
 describe('validateImportBatch', () => {
     beforeEach(() => {
         vi.clearAllMocks();
-        vi.mocked(STATE.load).mockReturnValue({});
+        vi.spyOn(STATE, 'load').mockReturnValue({});
     });
 
     it('warnings <= 5 displayed', () => {
@@ -331,12 +331,13 @@ describe('parseJsonTests', () => {
         const tmp = '/tmp/test-expected-result-alias.json';
         actualFs.writeFileSync(tmp, jsonContent, 'utf-8');
 
+        const warnSpy = vi.spyOn(rootLogger, 'warn');
         const result = parseJsonTests(tmp);
         expect(result).toHaveLength(2);
         expect(nonNull(nonNull(result[0]).steps[0]).fields['Expected Result']).toBe('Result1');
         expect(nonNull(nonNull(result[1]).steps[0]).fields['Expected Result']).toBe('Result2');
 
-        expect(rootLogger.warn).toHaveBeenCalledWith(expect.stringContaining('ExpectedResult'));
+        expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining('ExpectedResult'));
 
         actualFs.unlinkSync(tmp);
     });
@@ -390,7 +391,7 @@ describe('showPreview', () => {
 
     beforeEach(() => {
         vi.clearAllMocks();
-        vi.mocked(PROMPT.isQuiet).mockReturnValue(true);
+        vi.spyOn(PROMPT, 'isQuiet').mockReturnValue(true);
         mockOpen.mockResolvedValue(true);
     });
 
@@ -399,7 +400,7 @@ describe('showPreview', () => {
         expect(PROMPT.title).toHaveBeenCalledWith('Preview dos testes a serem criados');
         expect(mockMdToHtml).toHaveBeenCalledWith(expect.any(String), 'Preview — QA Tools');
         expect(FS.writeFileSync).toHaveBeenCalledTimes(2);
-        const calls = vi.mocked(FS.writeFileSync).mock.calls;
+        const calls = vi.spyOn(FS, 'writeFileSync').mock.calls;
         expect(nonNull(calls[0])[0]).toContain('qa-preview.md');
         expect(nonNull(calls[1])[0]).toContain('qa-preview.html');
     });
@@ -424,7 +425,7 @@ describe('showPreview', () => {
     it('saves both .md and .html files', async () => {
         await showPreview(tests, ['smoke'], 2, 1, mockOpen);
         expect(FS.writeFileSync).toHaveBeenCalledTimes(2);
-        const calls = vi.mocked(FS.writeFileSync).mock.calls.map((c) => c[0] as string);
+        const calls = vi.spyOn(FS, 'writeFileSync').mock.calls.map((c) => c[0] as string);
         expect(calls.some((p) => p.endsWith('.md'))).toBe(true);
         expect(calls.some((p) => p.endsWith('.html'))).toBe(true);
     });

@@ -8,9 +8,9 @@ const MockFs = vi.mocked(fs);
 describe('writeProjectsConfig', () => {
     beforeEach(() => {
         vi.clearAllMocks();
-        vi.mocked(MockFs.existsSync).mockReturnValue(false);
-        vi.mocked(MockFs.mkdirSync).mockImplementation(vi.fn());
-        vi.mocked(MockFs.writeFileSync).mockImplementation(vi.fn());
+        vi.spyOn(MockFs, 'existsSync').mockReturnValue(false);
+        vi.spyOn(MockFs, 'mkdirSync').mockImplementation(vi.fn());
+        vi.spyOn(MockFs, 'writeFileSync').mockImplementation(vi.fn());
     });
 
     it('creates projects.json and providers.json when neither exists', () => {
@@ -26,8 +26,8 @@ describe('writeProjectsConfig', () => {
     });
 
     it('appends new project to existing projects.json', () => {
-        vi.mocked(MockFs.existsSync).mockReturnValue(true);
-        vi.mocked(MockFs.readFileSync).mockReturnValue(JSON.stringify({ existing: '123' }));
+        vi.spyOn(MockFs, 'existsSync').mockReturnValue(true);
+        vi.spyOn(MockFs, 'readFileSync').mockReturnValue(JSON.stringify({ existing: '123' }));
 
         const result = writeProjectsConfig({
             projectName: 'newapp',
@@ -43,8 +43,8 @@ describe('writeProjectsConfig', () => {
     });
 
     it('skips when project already exists', () => {
-        vi.mocked(MockFs.existsSync).mockReturnValue(true);
-        vi.mocked(MockFs.readFileSync).mockReturnValue(JSON.stringify({ myapp: 'myapp' }));
+        vi.spyOn(MockFs, 'existsSync').mockReturnValue(true);
+        vi.spyOn(MockFs, 'readFileSync').mockReturnValue(JSON.stringify({ myapp: 'myapp' }));
 
         const result = writeProjectsConfig({
             projectName: 'myapp',
@@ -56,8 +56,8 @@ describe('writeProjectsConfig', () => {
     });
 
     it('handles corrupt existing file by overwriting', () => {
-        vi.mocked(MockFs.existsSync).mockReturnValue(true);
-        vi.mocked(MockFs.readFileSync).mockReturnValue('not json');
+        vi.spyOn(MockFs, 'existsSync').mockReturnValue(true);
+        vi.spyOn(MockFs, 'readFileSync').mockReturnValue('not json');
 
         const result = writeProjectsConfig({
             projectName: 'myapp',
@@ -72,8 +72,8 @@ describe('writeProjectsConfig', () => {
 describe('writeDotEnvExample', () => {
     beforeEach(() => {
         vi.clearAllMocks();
-        vi.mocked(MockFs.existsSync).mockReturnValue(false);
-        vi.mocked(MockFs.writeFileSync).mockImplementation(vi.fn());
+        vi.spyOn(MockFs, 'existsSync').mockReturnValue(false);
+        vi.spyOn(MockFs, 'writeFileSync').mockImplementation(vi.fn());
     });
 
     it('creates .env.example with GitHub vars', () => {
@@ -93,7 +93,7 @@ describe('writeDotEnvExample', () => {
     });
 
     it('skips when .env.example already exists', () => {
-        vi.mocked(MockFs.existsSync).mockReturnValue(true);
+        vi.spyOn(MockFs, 'existsSync').mockReturnValue(true);
         const result = writeDotEnvExample({ projectName: 'myapp', gitProvider: 'github' });
         expect(result.filesSkipped.length).toBe(1);
         expect(MockFs.writeFileSync).not.toHaveBeenCalled();

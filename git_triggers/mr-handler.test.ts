@@ -62,7 +62,7 @@ describe('handleCreateMR', () => {
             .mockReturnValueOnce('main')
             .mockReturnValueOnce('Title')
             .mockReturnValueOnce('Manual desc');
-        vi.mocked(mockM.createMergeRequest).mockResolvedValue({ web_url: 'https://gitlab.com/merge/1' });
+        vi.spyOn(mockM, 'createMergeRequest').mockResolvedValue({ web_url: 'https://gitlab.com/merge/1' });
 
         await handleCreateMR(mockM);
 
@@ -74,7 +74,7 @@ describe('handleCreateMR', () => {
         mockConfirm.mockReturnValueOnce(true).mockReturnValueOnce(false);
         mockGeneratePrDesc.mockResolvedValue('AI generated description');
         mockPrompt.mockReturnValueOnce('feat').mockReturnValueOnce('main').mockReturnValueOnce('Title');
-        vi.mocked(mockM.createMergeRequest).mockResolvedValue({ web_url: 'https://gitlab.com/merge/1' });
+        vi.spyOn(mockM, 'createMergeRequest').mockResolvedValue({ web_url: 'https://gitlab.com/merge/1' });
 
         await handleCreateMR(mockM);
 
@@ -90,7 +90,7 @@ describe('handleCreateMR', () => {
             .mockReturnValueOnce('main')
             .mockReturnValueOnce('Title')
             .mockReturnValueOnce('Manual desc');
-        vi.mocked(mockM.createMergeRequest).mockResolvedValue({ web_url: 'https://gitlab.com/merge/1' });
+        vi.spyOn(mockM, 'createMergeRequest').mockResolvedValue({ web_url: 'https://gitlab.com/merge/1' });
 
         await handleCreateMR(mockM);
 
@@ -106,7 +106,7 @@ describe('handleCreateMR', () => {
             .mockReturnValueOnce('main')
             .mockReturnValueOnce('Title')
             .mockReturnValueOnce('Desc');
-        vi.mocked(mockM.createMergeRequest).mockResolvedValue({ web_url: 'https://gitlab.com/merge/1' });
+        vi.spyOn(mockM, 'createMergeRequest').mockResolvedValue({ web_url: 'https://gitlab.com/merge/1' });
 
         await handleCreateMR(mockM);
 
@@ -121,7 +121,7 @@ describe('handleCreateMR', () => {
             .mockReturnValueOnce('main')
             .mockReturnValueOnce('Title')
             .mockReturnValueOnce('Desc');
-        vi.mocked(mockM.createMergeRequest).mockRejectedValue(new Error('API error'));
+        vi.spyOn(mockM, 'createMergeRequest').mockRejectedValue(new Error('API error'));
 
         await handleCreateMR(mockM);
 
@@ -137,8 +137,8 @@ describe('handleListApprovedMRs', () => {
             { iid: 1, title: 'MR 1' },
             { iid: 2, title: 'MR 2' },
         ] as MergeRequestInfo[];
-        vi.mocked(mockM.searchMergeRequests).mockResolvedValue(mrs);
-        vi.mocked(mockM.isApproved).mockResolvedValue(true);
+        vi.spyOn(mockM, 'searchMergeRequests').mockResolvedValue(mrs);
+        vi.spyOn(mockM, 'isApproved').mockResolvedValue(true);
 
         await handleListApprovedMRs(mockM);
 
@@ -148,7 +148,7 @@ describe('handleListApprovedMRs', () => {
 
     it('warns when no approved MRs', async () => {
         mockPrompt.mockReturnValue('opened');
-        vi.mocked(mockM.searchMergeRequests).mockResolvedValue([]);
+        vi.spyOn(mockM, 'searchMergeRequests').mockResolvedValue([]);
 
         await handleListApprovedMRs(mockM);
 
@@ -157,7 +157,7 @@ describe('handleListApprovedMRs', () => {
 
     it('handles search error', async () => {
         mockPrompt.mockReturnValue('opened');
-        vi.mocked(mockM.searchMergeRequests).mockRejectedValue(new Error('search fail'));
+        vi.spyOn(mockM, 'searchMergeRequests').mockRejectedValue(new Error('search fail'));
 
         await handleListApprovedMRs(mockM);
 
@@ -168,7 +168,7 @@ describe('handleListApprovedMRs', () => {
     it('handles provider without isApproved', async () => {
         mockPrompt.mockReturnValue('opened');
         const mrs = [{ iid: 1, title: 'MR 1' }] as MergeRequestInfo[];
-        vi.mocked(mockM.searchMergeRequests).mockResolvedValue(mrs);
+        vi.spyOn(mockM, 'searchMergeRequests').mockResolvedValue(mrs);
         Object.defineProperty(mockM, 'isApproved', { value: undefined, writable: true });
 
         await handleListApprovedMRs(mockM);
@@ -180,7 +180,7 @@ describe('handleListApprovedMRs', () => {
 describe('handleMergeMR', () => {
     it('merges MR successfully', async () => {
         mockPrompt.mockReturnValue('42');
-        vi.mocked(mockM.acceptMergeRequest).mockResolvedValue({ web_url: 'https://gitlab.com/merge/42' });
+        vi.spyOn(mockM, 'acceptMergeRequest').mockResolvedValue({ web_url: 'https://gitlab.com/merge/42' });
 
         await handleMergeMR(mockM);
 
@@ -191,7 +191,7 @@ describe('handleMergeMR', () => {
 
     it('handles merge error', async () => {
         mockPrompt.mockReturnValue('42');
-        vi.mocked(mockM.acceptMergeRequest).mockRejectedValue(new Error('merge fail'));
+        vi.spyOn(mockM, 'acceptMergeRequest').mockRejectedValue(new Error('merge fail'));
 
         await handleMergeMR(mockM);
 

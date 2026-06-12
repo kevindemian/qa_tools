@@ -58,9 +58,9 @@ vi.mock('../shared/prompt', () => ({
 }));
 
 import * as githubApi from './github-api.js';
-const mockApiGet = vi.mocked(githubApi.apiGet);
-const mockApiPost = vi.mocked(githubApi.apiPost);
-const mockApiPatch = vi.mocked(githubApi.apiPatch);
+const mockApiGet = vi.spyOn(githubApi, 'apiGet');
+const mockApiPost = vi.spyOn(githubApi, 'apiPost');
+const mockApiPatch = vi.spyOn(githubApi, 'apiPatch');
 
 describe('formatPR', () => {
     it('returns MergeRequestInfo for open PR', () => {
@@ -142,7 +142,7 @@ describe('prCreateMergeRequest', () => {
         mockApiGet.mockClear();
         mockApiPost.mockClear();
         mockApiPatch.mockClear();
-        vi.mocked(prompt.info).mockClear();
+        vi.spyOn(prompt, 'info').mockClear();
     });
 
     it('calls POST /pulls and returns formatted PR on success', async () => {
@@ -204,7 +204,7 @@ describe('prCreateMergeRequest', () => {
             { operation: 'atualizar PR' },
         );
         expect(nonNull(result).iid).toBe(5);
-        expect(vi.mocked(prompt.info)).toHaveBeenCalledWith('PR already exists. Searching for existing...');
+        expect(vi.spyOn(prompt, 'info')).toHaveBeenCalledWith('PR already exists. Searching for existing...');
     });
 
     it('throws on 422 without already_exists error', async () => {

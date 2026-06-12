@@ -132,11 +132,13 @@ const PROJECT = 'TESTPROJ';
 describe('createTestExecution', () => {
     let jiraResource: Mocked<JiraResource>;
     let testExecutionCreator: TestExecutionCreator;
+    let getJiraResourceSpy: Mock;
+    let postJiraResourceSpy: Mock;
 
     beforeEach(() => {
         jiraResource = vi.mocked(new JiraResource('fake-token', 'http://jira/rest/api/2'));
-        vi.spyOn(jiraResource, 'getJiraResource');
-        vi.spyOn(jiraResource, 'postJiraResource');
+        getJiraResourceSpy = vi.spyOn(jiraResource, 'getJiraResource');
+        postJiraResourceSpy = vi.spyOn(jiraResource, 'postJiraResource');
         const linkManager = new JiraLinkManager(jiraResource);
         testExecutionCreator = new TestExecutionCreator(jiraResource, linkManager);
     });
@@ -157,9 +159,9 @@ describe('createTestExecution', () => {
         });
 
         expect(nonNull(result).key).toBe('EXEC-1');
-        expect(jiraResource.getJiraResource).toHaveBeenCalledWith('issuetype');
-        expect(jiraResource.getJiraResource).toHaveBeenCalledWith('field');
-        expect(jiraResource.postJiraResource).toHaveBeenCalled();
+        expect(getJiraResourceSpy).toHaveBeenCalledWith('issuetype');
+        expect(getJiraResourceSpy).toHaveBeenCalledWith('field');
+        expect(postJiraResourceSpy).toHaveBeenCalled();
         expect(jiraResource.postJiraResource.mock.lastCall?.[1]).toHaveProperty('fields.project', { key: PROJECT });
         expect(jiraResource.postJiraResource.mock.lastCall?.[1]).toHaveProperty('fields.issuetype', { id: '11802' });
         expect(jiraResource.postJiraResource.mock.lastCall?.[1]).toHaveProperty('fields.customfield_13715', [
@@ -188,7 +190,7 @@ describe('createTestExecution', () => {
         });
 
         expect(nonNull(result).key).toBe('EXEC-2');
-        expect(jiraResource.postJiraResource).toHaveBeenCalled();
+        expect(postJiraResourceSpy).toHaveBeenCalled();
         expect(jiraResource.postJiraResource.mock.lastCall?.[1]).toHaveProperty('fields.project', { key: PROJECT });
         expect(jiraResource.postJiraResource.mock.lastCall?.[1]).toHaveProperty('fields.issuetype', { id: '11802' });
         expect(jiraResource.postJiraResource.mock.lastCall?.[1]).toHaveProperty('fields.customfield_13715', ['TEST-3']);
@@ -273,6 +275,7 @@ describe('createTestExecutionWithLinks', () => {
     let jiraResource: Mocked<JiraResource>;
     let linkJiraRes: Mocked<JiraResource>;
     let testExecutionCreator: TestExecutionCreator;
+    let linkPostJiraResourceSpy: Mock;
 
     beforeEach(() => {
         jiraResource = vi.mocked(new JiraResource('fake-token', 'http://jira/rest/api/2'));
@@ -281,7 +284,7 @@ describe('createTestExecutionWithLinks', () => {
 
         linkJiraRes = vi.mocked(new JiraResource('fake-token', 'http://jira/rest/api/2'));
         vi.spyOn(linkJiraRes, 'getJiraResource');
-        vi.spyOn(linkJiraRes, 'postJiraResource');
+        linkPostJiraResourceSpy = vi.spyOn(linkJiraRes, 'postJiraResource');
         linkJiraRes.getJiraResource.mockImplementation((url: string) => {
             if (url === 'issueLinkType')
                 return Promise.resolve({
@@ -313,7 +316,7 @@ describe('createTestExecutionWithLinks', () => {
         });
 
         expect(nonNull(result).key).toBe('EXEC-1');
-        expect(linkJiraRes.postJiraResource).toHaveBeenCalledWith('issueLink', {
+        expect(linkPostJiraResourceSpy).toHaveBeenCalledWith('issueLink', {
             type: { id: '10201' },
             inwardIssue: { key: 'EXEC-1' },
             outwardIssue: { key: 'TEST-1' },
@@ -555,14 +558,14 @@ describe('createTestsFromJson', () => {
     });
 
     it('cancela com caminho vazio', async () => {
-        vi.mocked(PROMPT.askFilePath).mockResolvedValueOnce('');
+        vi.spyOn(PROMPT, 'askFilePath').mockResolvedValueOnce('');
         const result = await createTestsFromJson(BASE_PARAMS());
         expect(result).toBeUndefined();
         expect(PROMPT.warn).toHaveBeenCalledWith(expect.stringContaining('vazio'));
     });
 
     it('cancela com JSON invalido', async () => {
-        vi.mocked(PROMPT.ask).mockResolvedValue('/fake/path.json');
+        vi.spyOn(PROMPT, 'ask').mockResolvedValue('/fake/path.json');
         FS.readFileSync.mockReturnValue('not json');
         const result = await createTestsFromJson(BASE_PARAMS());
         expect(result).toBeUndefined();
@@ -570,7 +573,7 @@ describe('createTestsFromJson', () => {
     });
 
     it('cancela com array vazio', async () => {
-        vi.mocked(PROMPT.ask).mockResolvedValue('/fake/path.json');
+        vi.spyOn(PROMPT, 'ask').mockResolvedValue('/fake/path.json');
         FS.readFileSync.mockReturnValue('[]');
         const result = await createTestsFromJson(BASE_PARAMS());
         expect(result).toBeUndefined();
@@ -578,7 +581,7 @@ describe('createTestsFromJson', () => {
     });
 
     it('cancela com item sem title/steps', async () => {
-        vi.mocked(PROMPT.ask).mockResolvedValue('/fake/path.json');
+        vi.spyOn(PROMPT, 'ask').mockResolvedValue('/fake/path.json');
         FS.readFileSync.mockReturnValue(JSON.stringify([{}]));
         const result = await createTestsFromJson(BASE_PARAMS());
         expect(result).toBeUndefined();
@@ -588,7 +591,7 @@ describe('createTestsFromJson', () => {
     it('executa dry-run com JSON valido', async () => {
         process.env['AUTO_CONFIRM'] = 'true';
         process.env['DRY_RUN'] = 'true';
-        vi.mocked(PROMPT.ask).mockResolvedValue('/fake/path.json');
+        vi.spyOn(PROMPT, 'ask').mockResolvedValue('/fake/path.json');
         FS.readFileSync.mockReturnValue(
             JSON.stringify([
                 { title: 'TC1', steps: [{ Action: 'Click' }] },
@@ -604,7 +607,7 @@ describe('createTestsFromJson', () => {
     it('parseia precondition como reference (formato ABC-123)', async () => {
         process.env['AUTO_CONFIRM'] = 'true';
         process.env['DRY_RUN'] = 'true';
-        vi.mocked(PROMPT.ask).mockResolvedValue('/fake/path.json');
+        vi.spyOn(PROMPT, 'ask').mockResolvedValue('/fake/path.json');
         FS.readFileSync.mockReturnValue(
             JSON.stringify([{ title: 'TC1', steps: [{ Action: 'Click' }], precondition: 'PREC-001' }]),
         );
@@ -616,7 +619,7 @@ describe('createTestsFromJson', () => {
     it('parseia linkedIssues como strings', async () => {
         process.env['AUTO_CONFIRM'] = 'true';
         process.env['DRY_RUN'] = 'true';
-        vi.mocked(PROMPT.ask).mockResolvedValue('/fake/path.json');
+        vi.spyOn(PROMPT, 'ask').mockResolvedValue('/fake/path.json');
         FS.readFileSync.mockReturnValue(
             JSON.stringify([{ title: 'TC1', steps: [{ Action: 'Click' }], linkedIssues: ['BUG-1', 'BUG-2'] }]),
         );
@@ -628,7 +631,7 @@ describe('createTestsFromJson', () => {
     it('parseia linkedIssues como objetos', async () => {
         process.env['AUTO_CONFIRM'] = 'true';
         process.env['DRY_RUN'] = 'true';
-        vi.mocked(PROMPT.ask).mockResolvedValue('/fake/path.json');
+        vi.spyOn(PROMPT, 'ask').mockResolvedValue('/fake/path.json');
         FS.readFileSync.mockReturnValue(
             JSON.stringify([
                 { title: 'TC1', steps: [{ Action: 'Click' }], linkedIssues: [{ key: 'BUG-1', linkType: 'Blocks' }] },
@@ -694,6 +697,9 @@ describe('readCsvTests (via createTestsFromCsv)', () => {
 
 describe('updateCrossReferences', () => {
     it('delegates to linker', async () => {
+        const updateCrossRefSpy = vi
+            .fn<(...args: [tests: TestCase[], keys: string[]]) => Promise<void>>()
+            .mockResolvedValue(undefined);
         const linker: IssueLinker = {
             jiraResource: createMockJiraResource(),
             linkManager: createMockLinkManager(),
@@ -704,13 +710,11 @@ describe('updateCrossReferences', () => {
                     ) => Promise<{ action?: string } | null>
                 >(),
             linkIssues: vi.fn<(...args: [key: string, tc: TestCase]) => Promise<{ action?: string } | null>>(),
-            updateCrossReferences: vi
-                .fn<(...args: [tests: TestCase[], keys: string[]]) => Promise<void>>()
-                .mockResolvedValue(undefined),
+            updateCrossReferences: updateCrossRefSpy,
         };
         const tests: TestCase[] = [{ title: 'T1', steps: [], group: 'g1' }];
         await updateCrossReferences(linker, tests, ['T-1']);
-        expect(linker.updateCrossReferences).toHaveBeenCalledWith(tests, ['T-1']);
+        expect(updateCrossRefSpy).toHaveBeenCalledWith(tests, ['T-1']);
     });
 });
 
@@ -747,8 +751,8 @@ describe('createTestsFromCsv', () => {
     });
 
     it('success path with valid CSV -> creates tests', async () => {
-        vi.mocked(PROMPT.smartPrompt).mockResolvedValue('/test.csv');
-        vi.mocked(PROMPT.prompt).mockReturnValue('');
+        vi.spyOn(PROMPT, 'smartPrompt').mockResolvedValue('/test.csv');
+        vi.spyOn(PROMPT, 'prompt').mockReturnValue('');
         process.env['AUTO_CONFIRM'] = 'true';
         process.env['DRY_RUN'] = 'true';
         csvResource.readBulkCsv.mockResolvedValue([{ title: 'TC1', steps: [{ fields: { Action: 'Click' } }] }]);

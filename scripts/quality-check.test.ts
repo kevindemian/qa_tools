@@ -66,16 +66,11 @@ describe('quality-check unit tests', () => {
     });
 
     describe('checkEslintBaseline', () => {
-        it('passes when violations ≤ baseline and no other errors', async () => {
+        it('passes when no eslint violations', async () => {
             mockLintResults.mockResolvedValue([
                 {
                     filePath: 't.ts',
-                    messages: Array.from({ length: 300 }, () => ({
-                        ruleId: '@typescript-eslint/unbound-method',
-                        severity: 2,
-                        message: 'x',
-                        line: 1,
-                    })),
+                    messages: [],
                 },
             ]);
             const { checkEslintBaseline } = await import('./quality-check.js');
@@ -83,26 +78,24 @@ describe('quality-check unit tests', () => {
             expect(r.passed).toBe(true);
         });
 
-        it('fails when other rule has errors', async () => {
+        it('fails on any eslint violation', async () => {
             mockLintResults.mockResolvedValue([
                 {
                     filePath: 't.ts',
-                    messages: [
-                        { ruleId: 'no-console', severity: 2, message: 'x', line: 1 },
-                        { ruleId: '@typescript-eslint/unbound-method', severity: 2, message: 'x', line: 2 },
-                    ],
+                    messages: [{ ruleId: 'no-console', severity: 2, message: 'x', line: 1 }],
                 },
             ]);
             const { checkEslintBaseline } = await import('./quality-check.js');
             const r = await checkEslintBaseline();
             expect(r.passed).toBe(false);
+            expect(r.violations).toHaveLength(1);
         });
 
-        it('fails on unbound-method regression > 313', async () => {
+        it('fails on unbound-method violations (no baseline)', async () => {
             mockLintResults.mockResolvedValue([
                 {
                     filePath: 't.ts',
-                    messages: Array.from({ length: 314 }, () => ({
+                    messages: Array.from({ length: 3 }, () => ({
                         ruleId: '@typescript-eslint/unbound-method',
                         severity: 2,
                         message: 'x',
@@ -113,6 +106,7 @@ describe('quality-check unit tests', () => {
             const { checkEslintBaseline } = await import('./quality-check.js');
             const r = await checkEslintBaseline();
             expect(r.passed).toBe(false);
+            expect(r.violations).toHaveLength(3);
         });
 
         it('handles lintFiles error', async () => {
@@ -131,27 +125,8 @@ describe('quality-check unit tests', () => {
             expect(r.passed).toBe(true);
         });
 
-        it('passes when output matches baseline', async () => {
+        it('fails when any unused export exists (no baseline)', async () => {
             vi.mocked(execFileSync).mockReturnValue('file.ts:123 - item\n');
-            vi.mocked(existsSync).mockReturnValue(true);
-            vi.mocked(readFileSync).mockReturnValue('file.ts:123 - item\n');
-            const { checkUnusedExports } = await import('./quality-check.js');
-            const r = checkUnusedExports();
-            expect(r.passed).toBe(true);
-        });
-
-        it('fails when new unused exports appear', async () => {
-            vi.mocked(execFileSync).mockReturnValue('old.ts:1 - old\nnew.ts:2 - new\n');
-            vi.mocked(existsSync).mockReturnValue(true);
-            vi.mocked(readFileSync).mockReturnValue('old.ts:1 - old\n');
-            const { checkUnusedExports } = await import('./quality-check.js');
-            const r = checkUnusedExports();
-            expect(r.passed).toBe(false);
-        });
-
-        it('fails when baseline file missing', async () => {
-            vi.mocked(execFileSync).mockReturnValue('file.ts:1 - item\n');
-            vi.mocked(existsSync).mockReturnValue(false);
             const { checkUnusedExports } = await import('./quality-check.js');
             const r = checkUnusedExports();
             expect(r.passed).toBe(false);
@@ -161,8 +136,6 @@ describe('quality-check unit tests', () => {
             vi.mocked(execFileSync).mockReturnValue(
                 'shared/test-utils/x.ts:1 - x\nshared/types.ts:2 - y\nother.ts:3 - z\n',
             );
-            vi.mocked(existsSync).mockReturnValue(true);
-            vi.mocked(readFileSync).mockReturnValue('');
             const { checkUnusedExports } = await import('./quality-check.js');
             const r = checkUnusedExports();
             expect(r.violations.length).toBe(1);

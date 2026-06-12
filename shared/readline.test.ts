@@ -13,7 +13,7 @@ describe('readline — readline-sync wrapper', () => {
     describe('question', () => {
         it('calls readlineSync.question with query and options', async () => {
             const { question } = await import('./readline.js');
-            vi.mocked(readlineSync.default.question).mockReturnValue('answer');
+            vi.spyOn(readlineSync.default, 'question').mockReturnValue('answer');
             const result = question('prompt> ', { defaultInput: 'yes' });
             expect(result).toBe('answer');
             expect(readlineSync.default.question).toHaveBeenCalledWith('prompt> ', { defaultInput: 'yes' });
@@ -21,7 +21,7 @@ describe('readline — readline-sync wrapper', () => {
 
         it('calls readlineSync.question without options', async () => {
             const { question } = await import('./readline.js');
-            vi.mocked(readlineSync.default.question).mockReturnValue('yes');
+            vi.spyOn(readlineSync.default, 'question').mockReturnValue('yes');
             const result = question('ask: ');
             expect(result).toBe('yes');
             expect(readlineSync.default.question).toHaveBeenCalledWith('ask: ', undefined);
@@ -31,7 +31,7 @@ describe('readline — readline-sync wrapper', () => {
     describe('keyInYN', () => {
         it('calls readlineSync.keyInYN and returns result', async () => {
             const { keyInYN } = await import('./readline.js');
-            vi.mocked(readlineSync.default.keyInYN).mockReturnValue(true);
+            vi.spyOn(readlineSync.default, 'keyInYN').mockReturnValue(true);
             const result = keyInYN('Continue? ');
             expect(result).toBe(true);
             expect(readlineSync.default.keyInYN).toHaveBeenCalledWith('Continue? ');
@@ -41,7 +41,7 @@ describe('readline — readline-sync wrapper', () => {
     describe('password', () => {
         it('calls readlineSync.question with hideEchoBack', async () => {
             const { password } = await import('./readline.js');
-            vi.mocked(readlineSync.default.question).mockReturnValue('secret');
+            vi.spyOn(readlineSync.default, 'question').mockReturnValue('secret');
             const result = password('Password: ');
             expect(result).toBe('secret');
             expect(readlineSync.default.question).toHaveBeenCalledWith('Password: ', { hideEchoBack: true });
@@ -49,7 +49,7 @@ describe('readline — readline-sync wrapper', () => {
 
         it('passes mask option', async () => {
             const { password } = await import('./readline.js');
-            vi.mocked(readlineSync.default.question).mockReturnValue('pwd');
+            vi.spyOn(readlineSync.default, 'question').mockReturnValue('pwd');
             const result = password('PIN: ', { mask: '*' });
             expect(result).toBe('pwd');
             expect(readlineSync.default.question).toHaveBeenCalledWith('PIN: ', { hideEchoBack: true, mask: '*' });

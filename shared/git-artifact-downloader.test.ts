@@ -127,7 +127,7 @@ describe('fetchLatestTestRun — GitLab', () => {
 
     it('downloads and parses GitLab pipeline artifact', async () => {
         const cfg = (await import('./config.js')).default;
-        vi.mocked(cfg.get).mockImplementation((key: string) => {
+        vi.spyOn(cfg, 'get').mockImplementation((key: string) => {
             if (key === 'CI_JOB_TOKEN') return 'gl_token_xyz';
             if (key === 'CI_PROJECT_ID') return '12345';
             if (key === 'CI_SERVER_URL') return 'https://gitlab.example.com';
@@ -153,7 +153,7 @@ describe('fetchLatestTestRun — GitLab', () => {
 
     it('returns null when GitLab pipeline has no jobs', async () => {
         const cfg = (await import('./config.js')).default;
-        vi.mocked(cfg.get).mockImplementation((key: string) => {
+        vi.spyOn(cfg, 'get').mockImplementation((key: string) => {
             if (key === 'CI_JOB_TOKEN') return 'gl_token_xyz';
             if (key === 'CI_PROJECT_ID') return '12345';
             return undefined;
@@ -172,7 +172,7 @@ describe('fetchLatestTestRun — GitLab', () => {
 
     it('returns null when GitLab has no pipelines', async () => {
         const cfg = (await import('./config.js')).default;
-        vi.mocked(cfg.get).mockImplementation((key: string) => {
+        vi.spyOn(cfg, 'get').mockImplementation((key: string) => {
             if (key === 'CI_JOB_TOKEN') return 'gl_token_xyz';
             if (key === 'CI_PROJECT_ID') return '12345';
             return undefined;
@@ -188,7 +188,7 @@ describe('fetchLatestTestRun — GitLab', () => {
 
     it('handles GitLab API error gracefully', async () => {
         const cfg = (await import('./config.js')).default;
-        vi.mocked(cfg.get).mockImplementation((key: string) => {
+        vi.spyOn(cfg, 'get').mockImplementation((key: string) => {
             if (key === 'CI_JOB_TOKEN') return 'gl_token_xyz';
             if (key === 'CI_PROJECT_ID') return '12345';
             return undefined;
@@ -210,8 +210,8 @@ describe('fetchLatestTestRun — no CI', () => {
 
     it('returns null when no CI is configured', async () => {
         const cfg = (await import('./config.js')).default;
-        vi.mocked(cfg.get).mockReturnValue(undefined);
-        vi.mocked(cfg.getDefault).mockReturnValue({
+        vi.spyOn(cfg, 'get').mockReturnValue(undefined);
+        vi.spyOn(cfg, 'getDefault').mockReturnValue({
             get: vi.fn(() => undefined),
         } as never);
 
@@ -222,12 +222,12 @@ describe('fetchLatestTestRun — no CI', () => {
 
     it('returns null when GitHub ZIP entry has zero total', async () => {
         const cfg = (await import('./config.js')).default;
-        vi.mocked(cfg.get).mockImplementation((key: string) => {
+        vi.spyOn(cfg, 'get').mockImplementation((key: string) => {
             if (key === 'githubToken') return 'gh_token_abc';
             if (key === 'GITHUB_REPOSITORY') return 'owner/repo';
             return undefined;
         });
-        vi.mocked(cfg.getDefault).mockReturnValue({
+        vi.spyOn(cfg, 'getDefault').mockReturnValue({
             get: vi.fn((key: string) => {
                 if (key === 'githubToken') return 'gh_token_abc';
                 return undefined;
@@ -258,12 +258,12 @@ describe('fetchLatestTestRun — no CI', () => {
 
     it('handles GitHub download API error gracefully', async () => {
         const cfg = (await import('./config.js')).default;
-        vi.mocked(cfg.get).mockImplementation((key: string) => {
+        vi.spyOn(cfg, 'get').mockImplementation((key: string) => {
             if (key === 'githubToken') return 'gh_token_abc';
             if (key === 'GITHUB_REPOSITORY') return 'owner/repo';
             return undefined;
         });
-        vi.mocked(cfg.getDefault).mockReturnValue({
+        vi.spyOn(cfg, 'getDefault').mockReturnValue({
             get: vi.fn((key: string) => {
                 if (key === 'githubToken') return 'gh_token_abc';
                 return undefined;
@@ -288,7 +288,7 @@ describe('fetchLatestTestRun — no CI', () => {
 
     it('returns null when GitLab ZIP entry has zero total', async () => {
         const cfg = (await import('./config.js')).default;
-        vi.mocked(cfg.get).mockImplementation((key: string) => {
+        vi.spyOn(cfg, 'get').mockImplementation((key: string) => {
             if (key === 'CI_JOB_TOKEN') return 'gl_token_xyz';
             if (key === 'CI_PROJECT_ID') return '12345';
             if (key === 'CI_SERVER_URL') return 'https://gitlab.example.com';
@@ -315,7 +315,7 @@ describe('fetchLatestTestRun — no CI', () => {
 
     it('handles GitLab download API error gracefully', async () => {
         const cfg = (await import('./config.js')).default;
-        vi.mocked(cfg.get).mockImplementation((key: string) => {
+        vi.spyOn(cfg, 'get').mockImplementation((key: string) => {
             if (key === 'CI_JOB_TOKEN') return 'gl_token_xyz';
             if (key === 'CI_PROJECT_ID') return '12345';
             if (key === 'CI_SERVER_URL') return 'https://gitlab.example.com';
@@ -349,12 +349,12 @@ describe('fetchGitHistory', () => {
 
     it('returns history with runs and flaky tests for GitHub', async () => {
         const cfg = (await import('./config.js')).default;
-        vi.mocked(cfg.get).mockImplementation((key: string) => {
+        vi.spyOn(cfg, 'get').mockImplementation((key: string) => {
             if (key === 'githubToken') return 'gh_token_abc';
             if (key === 'GITHUB_REPOSITORY') return 'owner/repo';
             return undefined;
         });
-        vi.mocked(cfg.getDefault).mockReturnValue({
+        vi.spyOn(cfg, 'getDefault').mockReturnValue({
             get: vi.fn((key: string) => {
                 if (key === 'githubToken') return 'gh_token_abc';
                 return undefined;
@@ -432,12 +432,12 @@ describe('fetchGitHistory', () => {
 
     it('handles runs without head_commit in buildCommitsFromRuns', async () => {
         const cfg = (await import('./config.js')).default;
-        vi.mocked(cfg.get).mockImplementation((key: string) => {
+        vi.spyOn(cfg, 'get').mockImplementation((key: string) => {
             if (key === 'githubToken') return 'gh_token_abc';
             if (key === 'GITHUB_REPOSITORY') return 'owner/repo';
             return undefined;
         });
-        vi.mocked(cfg.getDefault).mockReturnValue({
+        vi.spyOn(cfg, 'getDefault').mockReturnValue({
             get: vi.fn((key: string) => {
                 if (key === 'githubToken') return 'gh_token_abc';
                 return undefined;
@@ -469,12 +469,12 @@ describe('fetchGitHistory', () => {
 
     it('filters out non-JSON entries in processGitHubArtifacts', async () => {
         const cfg = (await import('./config.js')).default;
-        vi.mocked(cfg.get).mockImplementation((key: string) => {
+        vi.spyOn(cfg, 'get').mockImplementation((key: string) => {
             if (key === 'githubToken') return 'gh_token_abc';
             if (key === 'GITHUB_REPOSITORY') return 'owner/repo';
             return undefined;
         });
-        vi.mocked(cfg.getDefault).mockReturnValue({
+        vi.spyOn(cfg, 'getDefault').mockReturnValue({
             get: vi.fn((key: string) => {
                 if (key === 'githubToken') return 'gh_token_abc';
                 return undefined;
@@ -531,7 +531,7 @@ describe('fetchGitHistory', () => {
 
     it('returns GitLab history via fetchGitHistory', async () => {
         const cfg = (await import('./config.js')).default;
-        vi.mocked(cfg.get).mockImplementation((key: string) => {
+        vi.spyOn(cfg, 'get').mockImplementation((key: string) => {
             if (key === 'CI_JOB_TOKEN') return 'gl_token_xyz';
             if (key === 'CI_PROJECT_ID') return '12345';
             if (key === 'CI_SERVER_URL') return 'https://gitlab.example.com';
@@ -578,7 +578,7 @@ describe('fetchGitHistory', () => {
 
     it('handles GitLab pipeline processing error in fetchGitHistory', async () => {
         const cfg = (await import('./config.js')).default;
-        vi.mocked(cfg.get).mockImplementation((key: string) => {
+        vi.spyOn(cfg, 'get').mockImplementation((key: string) => {
             if (key === 'CI_JOB_TOKEN') return 'gl_token_xyz';
             if (key === 'CI_PROJECT_ID') return '12345';
             if (key === 'CI_SERVER_URL') return 'https://gitlab.example.com';

@@ -10,17 +10,10 @@
 import { escapeHtml, fmtDuration } from './report-utils.js';
 import { extractSuite, CATEGORY_COLORS, categorizeFailure } from './report-types.js';
 import type { FlatTest } from './result_parser.js';
-import type { TestHistoryRun, KnownIssue } from './report-types.js';
+import type { TestHistoryRun } from './report-types.js';
 import { Badge } from './primitives/index.js';
 import { Tr, Td } from './primitives/index.js';
 import { tokens } from './theme-tokens.js';
-
-export function matchKnownIssue(title: string, knownIssues: KnownIssue[]): KnownIssue | undefined {
-    const lower = title.toLowerCase();
-    return knownIssues.find(function (ki) {
-        return lower.includes(ki.pattern.toLowerCase());
-    });
-}
 
 export function precomputeCategories(tests: FlatTest[]): Record<string, string> {
     const cats: Record<string, string> = {};
@@ -146,7 +139,6 @@ export function buildTestTable(
     tests: FlatTest[],
     categories?: Record<string, string>,
     history?: Record<string, TestHistoryRun[]>,
-    knownIssues?: KnownIssue[],
     flakinessMap?: Record<string, number>,
 ): string {
     const hasPassed = tests.some((t) => t.state === 'passed');
@@ -190,16 +182,12 @@ export function buildTestTable(
 
     let tbody = '<tbody>';
     for (const [i, t] of tests.entries()) {
-        const matchedKi = knownIssues && t.state === 'failed' ? matchKnownIssue(t.title, knownIssues) : undefined;
         const cat = t.state === 'failed' && categories ? categories[t.title] : undefined;
         const hasStepsOrScreenshotsOrLogs =
             (t.steps?.length ?? 0) > 0 || (t.screenshots?.length ?? 0) > 0 || (t.logs?.length ?? 0) > 0;
 
         let testCell = escapeHtml(t.title);
         if (cat) testCell += buildCategoryBadge(cat);
-        if (matchedKi) {
-            testCell += `<span class="ki-badge">Known Issue${matchedKi.ticket ? ': ' + matchedKi.ticket : ''}</span>`;
-        }
         if (hasStepsOrScreenshotsOrLogs) {
             testCell += '<span class="detail-toggle" onclick="toggleDetail(' + i + ')"> \u25BC</span>';
         }
@@ -217,7 +205,7 @@ export function buildTestTable(
             flakyCell = rate > 0 ? buildFlakinessBadge(rate) : '<span style="color:var(--color-text-muted)">—</span>';
         }
 
-        const rowClass = (t.state === 'passed' ? 'row-passed' : '') + (matchedKi ? ' ki-suppressed' : '');
+        const rowClass = t.state === 'passed' ? 'row-passed' : '';
         const hierarchyAttr = t.fullTitle ? ` data-hierarchy="${escapeHtml(t.fullTitle)}"` : '';
         const fullTitle = t.fullTitle;
 

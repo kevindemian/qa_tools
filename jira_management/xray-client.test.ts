@@ -20,12 +20,13 @@ vi.mock('../shared/config');
 describe('ServerStepImporter', () => {
     it('calls postJiraResource with correct endpoint and payload', async () => {
         const mockJira = createMockJiraResource();
+        const postSpy = vi.spyOn(mockJira, 'postJiraResource');
         const importer = createStepImporter(mockJira, 'server');
         const step: TestStep = { fields: { Action: 'Click', Data: 'Button', 'Expected Result': 'Done' } };
 
         await importer.importStep('TEST-1', 1, step);
 
-        expect(mockJira.postJiraResource).toHaveBeenCalledWith('test/TEST-1/steps', {
+        expect(postSpy).toHaveBeenCalledWith('test/TEST-1/steps', {
             index: 1,
             fields: { Action: 'Click', Data: 'Button', 'Expected Result': 'Done' },
         });
@@ -33,12 +34,13 @@ describe('ServerStepImporter', () => {
 
     it('sends step data in the POST payload', async () => {
         const mockJira = createMockJiraResource();
+        const postSpy = vi.spyOn(mockJira, 'postJiraResource');
         const importer = createStepImporter(mockJira, 'server');
         const step: TestStep = { fields: { Action: 'Verify', Data: 'Response', 'Expected Result': '200' } };
 
         await importer.importStep('TEST-2', 2, step);
 
-        expect(mockJira.postJiraResource).toHaveBeenCalledWith('test/TEST-2/steps', {
+        expect(postSpy).toHaveBeenCalledWith('test/TEST-2/steps', {
             index: 2,
             fields: { Action: 'Verify', Data: 'Response', 'Expected Result': '200' },
         });
@@ -65,7 +67,7 @@ describe('CloudStepImporter', () => {
             };
             return (map[key] ?? '') as T;
         };
-        vi.mocked(Config.getDefault).mockReturnValue(mockConfig);
+        vi.spyOn(Config, 'getDefault').mockReturnValue(mockConfig);
     });
 
     it('happy path — sends GraphQL mutation via XrayCloudClient', async () => {
@@ -90,7 +92,7 @@ describe('CloudStepImporter', () => {
             const map: Record<string, string> = { xrayClientId: '', xrayClientSecret: '' };
             return (map[key] ?? '') as T;
         };
-        vi.mocked(Config.getDefault).mockReturnValue(mockConfig);
+        vi.spyOn(Config, 'getDefault').mockReturnValue(mockConfig);
 
         const importer = createStepImporter({} as JiraResource, 'cloud');
         const step: TestStep = { fields: { Action: 'Click' } };

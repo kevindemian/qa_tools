@@ -9,7 +9,7 @@ vi.mock('../../shared/result_parser', () => ({
 
 vi.mock('../../shared/report-generator', () => ({
     generateHtmlReport: vi.fn(),
-    loadKnownIssues: vi.fn(() => []),
+
     categorizeFailure: vi.fn(),
 }));
 

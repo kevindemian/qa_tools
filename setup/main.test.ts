@@ -46,8 +46,8 @@ const MockWriteHook = vi.mocked(writePrePushHook);
 const MockGenGithub = vi.mocked(generateGitHubActions);
 const MockGenGitlab = vi.mocked(generateGitLabCI);
 const MockGenHook = vi.mocked(generatePrePushHook);
-const MockAsk = vi.mocked(prompt.ask);
-const MockAskConfirm = vi.mocked(prompt.askConfirm);
+const MockAsk = vi.spyOn(prompt, 'ask');
+const MockAskConfirm = vi.spyOn(prompt, 'askConfirm');
 
 import { main } from './main.js';
 
@@ -55,7 +55,7 @@ import { main as configureLlm } from '../scripts/smartwizard-llm.js';
 const MockConfigureLlm = vi.mocked(configureLlm);
 
 function mockGitHubDetect() {
-    vi.mocked(MockFs.readFileSync).mockImplementation((p: fs.PathOrFileDescriptor) => {
+    vi.spyOn(MockFs, 'readFileSync').mockImplementation((p: fs.PathOrFileDescriptor) => {
         if (String(p).includes('.git/config')) {
             return '[remote "origin"]\n\turl = git@github.com:myorg/my-repo.git\n';
         }
@@ -80,10 +80,10 @@ function mockAskForTests(prePush: boolean) {
 describe('setup main', () => {
     beforeEach(() => {
         vi.clearAllMocks();
-        vi.mocked(MockFs.existsSync).mockReturnValue(false);
-        vi.mocked(MockFs.mkdirSync).mockImplementation(vi.fn());
-        vi.mocked(MockFs.writeFileSync).mockImplementation(vi.fn());
-        vi.mocked(MockFs.chmodSync).mockImplementation(vi.fn());
+        vi.spyOn(MockFs, 'existsSync').mockReturnValue(false);
+        vi.spyOn(MockFs, 'mkdirSync').mockImplementation(vi.fn());
+        vi.spyOn(MockFs, 'writeFileSync').mockImplementation(vi.fn());
+        vi.spyOn(MockFs, 'chmodSync').mockImplementation(vi.fn());
         MockDetect.mockReturnValue({
             framework: 'cypress',
             testCmd: 'npx cypress run',
@@ -224,7 +224,7 @@ describe('setup main', () => {
             .mockResolvedValueOnce(true)
             .mockResolvedValueOnce(false)
             .mockResolvedValueOnce(false);
-        vi.mocked(MockFs.existsSync).mockImplementation((p: string | Buffer | URL) => {
+        vi.spyOn(MockFs, 'existsSync').mockImplementation((p: string | Buffer | URL) => {
             return p.toString().includes('.gitlab-ci.yml');
         });
 

@@ -7,7 +7,7 @@ import { aggregateDefectTrends, generateDefectTrendHtml } from '../shared/defect
 import { calculateReleaseScore, generateReleaseScoreHtml } from '../shared/release-score.js';
 import { computeAiEffectiveness, generateAiEffectivenessHtml } from '../shared/ai-effectiveness.js';
 import { buildTraceabilityMatrix, generateTraceabilityHtml } from '../shared/traceability-matrix.js';
-import { executeFlakyActions } from '../shared/flaky-auto-actions.js';
+
 import { openWithFallback } from '../shared/open.js';
 import { generateFlakinessHtml } from '../shared/flakiness-dashboard.js';
 import { analyzeBacklogHealth, generateBacklogHealthHtml } from '../shared/backlog-health.js';
@@ -23,8 +23,7 @@ import { calculatePipelineCost, generatePipelineCostHtml } from '../shared/pipel
 import { calculateRequirementScores, generateRequirementScoreHtml } from '../shared/requirement-score.js';
 import { generateGitMetricsRuns, generateGitFailureClassifications } from '../shared/git-metrics-adapter.js';
 import { runQualityGate, formatQualityGateText } from '../shared/quality-gate.js';
-import Config from '../shared/config.js';
-import JiraClient from '../shared/jira-client.js';
+
 import { writeReport } from '../shared/temp-dir.js';
 import {
     currentProvider,
@@ -106,26 +105,6 @@ export async function handleChangeProject(names: string[]): Promise<void> {
         pushHistory('trocar-projeto', newName, 'ok');
     } else {
         warn('Opção inválida.');
-    }
-}
-
-async function runFlakyAutoActionsForProject(projectName: string, jiraResource: JiraClient): Promise<void> {
-    try {
-        if (!Config.get('jiraBaseUrl') || !Config.get('jiraPersonalToken')) return;
-        const store = loadMetrics();
-        const projectRuns = store.runs.filter((r) => r.project === currentProjectName);
-        if (projectRuns.length < 5) return;
-        const actions = await executeFlakyActions({ runs: projectRuns }, jiraResource, projectName, {
-            autoCreateBug: true,
-            minTotalRuns: 10,
-            dedupSearch: true,
-        });
-        const bugs = actions.filter((a) => a.action === 'create_bug' || a.action === 'reenable');
-        if (bugs.length > 0) {
-            success(bugs.length + ' flaky auto-action(s) executada(s) para ' + projectName);
-        }
-    } catch {
-        info('Flaky auto-actions skipping (Jira config or insufficient data).');
     }
 }
 
@@ -314,14 +293,6 @@ export async function handleFlakinessDashboard(): Promise<void> {
             currentProjectName + ' (' + flaky.filter((f: { rate: number }) => f.rate > 0.3).length + ' >30%)',
             'ok',
         );
-        if (Config.get('jiraBaseUrl') && Config.get('jiraPersonalToken')) {
-            const jiraResource = new JiraClient(
-                Config.get('jiraPersonalToken'),
-                Config.get('jiraBaseUrl') + '/rest/api/2',
-                Config.get('jiraMode'),
-            );
-            await runFlakyAutoActionsForProject(currentProjectName, jiraResource);
-        }
     } catch (err) {
         printError('Falha ao gerar dashboard de flaky', err);
     }

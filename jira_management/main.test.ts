@@ -449,7 +449,7 @@ describe('dispatchChoice', () => {
     };
 
     beforeEach(() => {
-        vi.mocked(commandsModule.getHandler).mockReturnValue(null);
+        vi.spyOn(commandsModule, 'getHandler').mockReturnValue(null);
     });
 
     it("returns 'continue' for choice '0' (handled by getAndResolveChoice now)", async () => {
@@ -460,7 +460,7 @@ describe('dispatchChoice', () => {
 
     it("dispatches to handler and returns 'continue' for choice '1'", async () => {
         const handler = vi.fn().mockResolvedValue(false);
-        vi.mocked(commandsModule.getHandler).mockReturnValue(handler);
+        vi.spyOn(commandsModule, 'getHandler').mockReturnValue(handler);
 
         const result = await mod.dispatchChoice('1', minimalCtx);
 
@@ -470,7 +470,7 @@ describe('dispatchChoice', () => {
 
     it("dispatches to handler and returns 'continue' for choice '7'", async () => {
         const handler = vi.fn().mockResolvedValue(false);
-        vi.mocked(commandsModule.getHandler).mockReturnValue(handler);
+        vi.spyOn(commandsModule, 'getHandler').mockReturnValue(handler);
 
         const result = await mod.dispatchChoice('7', minimalCtx);
 
@@ -496,7 +496,7 @@ describe('dispatchChoice', () => {
 
     it('handler returning true triggers continue properly', async () => {
         const handler = vi.fn().mockResolvedValue(true);
-        vi.mocked(commandsModule.getHandler).mockReturnValue(handler);
+        vi.spyOn(commandsModule, 'getHandler').mockReturnValue(handler);
 
         const result = await mod.dispatchChoice('1', minimalCtx);
 
@@ -506,7 +506,7 @@ describe('dispatchChoice', () => {
 
     it("handler that throws CancelError returns 'continue'", async () => {
         const handler = vi.fn().mockRejectedValue(new CancelError('canceled'));
-        vi.mocked(commandsModule.getHandler).mockReturnValue(handler);
+        vi.spyOn(commandsModule, 'getHandler').mockReturnValue(handler);
 
         const result = await mod.dispatchChoice('1', minimalCtx);
 
@@ -515,7 +515,7 @@ describe('dispatchChoice', () => {
 
     it("catches generic Error from handler and returns 'continue'", async () => {
         const handler = vi.fn().mockRejectedValue(new Error('generic error'));
-        vi.mocked(commandsModule.getHandler).mockReturnValue(handler);
+        vi.spyOn(commandsModule, 'getHandler').mockReturnValue(handler);
 
         const result = await mod.dispatchChoice('1', minimalCtx);
 
@@ -636,7 +636,7 @@ describe('dispatchAndHandleResult', () => {
     };
 
     beforeEach(() => {
-        vi.mocked(commandsModule.getHandler).mockReturnValue(vi.fn().mockResolvedValue(false));
+        vi.spyOn(commandsModule, 'getHandler').mockReturnValue(vi.fn().mockResolvedValue(false));
     });
 
     it('calls prompt when autoConfirm off with long op and error results', async () => {

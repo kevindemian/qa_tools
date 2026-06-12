@@ -41,13 +41,13 @@ describe('handleDryRun', () => {
     });
 
     it('returns null when dryRun is disabled', () => {
-        vi.mocked(CONFIG.default.get).mockReturnValue(false);
+        vi.spyOn(CONFIG.default, 'get').mockReturnValue(false);
         const result = handleDryRun([{ title: 'TC1', steps: [] }], onBusy, '/path.csv');
         expect(result).toBeNull();
     });
 
     it('returns dry-run result and calls onBusy when dryRun is enabled', () => {
-        vi.mocked(CONFIG.default.get).mockReturnValue(true);
+        vi.spyOn(CONFIG.default, 'get').mockReturnValue(true);
         const tests = [{ title: 'TC1', steps: [] }];
         const result = handleDryRun(tests, onBusy, '/path.csv');
         expect(result).not.toBeNull();
@@ -61,7 +61,7 @@ describe('handleDryRun', () => {
 describe('resolveCsvPath', () => {
     beforeEach(() => {
         vi.clearAllMocks();
-        vi.mocked(STATE.load).mockReturnValue({});
+        vi.spyOn(STATE, 'load').mockReturnValue({});
     });
 
     it('returns input when provided', async () => {
@@ -70,7 +70,7 @@ describe('resolveCsvPath', () => {
     });
 
     it('reads from config when no input', async () => {
-        vi.mocked(CONFIG.default.get).mockImplementation((key: string) => {
+        vi.spyOn(CONFIG.default, 'get').mockImplementation((key: string) => {
             if (key === 'csvPath') return '/config/path.csv';
             return undefined;
         });
@@ -79,8 +79,8 @@ describe('resolveCsvPath', () => {
     });
 
     it('prompts user when no input and no config', async () => {
-        vi.mocked(CONFIG.default.get).mockReturnValue(undefined);
-        vi.mocked(PROMPT.askFilePath).mockResolvedValue('/user/path.csv');
+        vi.spyOn(CONFIG.default, 'get').mockReturnValue(undefined);
+        vi.spyOn(PROMPT, 'askFilePath').mockResolvedValue('/user/path.csv');
         const result = await resolveCsvPath(undefined);
         expect(result).toBe('/user/path.csv');
     });
@@ -89,8 +89,8 @@ describe('resolveCsvPath', () => {
 describe('resolveLabels', () => {
     beforeEach(() => {
         vi.clearAllMocks();
-        vi.mocked(STATE.load).mockReturnValue({});
-        vi.mocked(CONFIG.default.get).mockReturnValue(undefined);
+        vi.spyOn(STATE, 'load').mockReturnValue({});
+        vi.spyOn(CONFIG.default, 'get').mockReturnValue(undefined);
     });
 
     it('returns input array when provided', () => {
@@ -99,7 +99,7 @@ describe('resolveLabels', () => {
     });
 
     it('reads from config when no input', () => {
-        vi.mocked(CONFIG.default.get).mockImplementation((key: string) => {
+        vi.spyOn(CONFIG.default, 'get').mockImplementation((key: string) => {
             if (key === 'csvLabels') return 'config-label';
             return undefined;
         });
@@ -108,13 +108,13 @@ describe('resolveLabels', () => {
     });
 
     it('prompts user and splits by comma', () => {
-        vi.mocked(PROMPT.prompt).mockReturnValue('a, b, c');
+        vi.spyOn(PROMPT, 'prompt').mockReturnValue('a, b, c');
         const result = resolveLabels(undefined, 'csvLabels');
         expect(result).toEqual(['a', 'b', 'c']);
     });
 
     it('returns empty array for empty prompt', () => {
-        vi.mocked(PROMPT.prompt).mockReturnValue('');
+        vi.spyOn(PROMPT, 'prompt').mockReturnValue('');
         const result = resolveLabels(undefined, 'csvLabels');
         expect(result).toEqual([]);
     });
@@ -123,8 +123,8 @@ describe('resolveLabels', () => {
 describe('resolveJsonPath', () => {
     beforeEach(() => {
         vi.clearAllMocks();
-        vi.mocked(STATE.load).mockReturnValue({});
-        vi.mocked(CONFIG.default.get).mockReturnValue(undefined);
+        vi.spyOn(STATE, 'load').mockReturnValue({});
+        vi.spyOn(CONFIG.default, 'get').mockReturnValue(undefined);
     });
 
     it('returns input when provided', async () => {
@@ -133,7 +133,7 @@ describe('resolveJsonPath', () => {
     });
 
     it('reads from config when no input', async () => {
-        vi.mocked(CONFIG.default.get).mockImplementation((key: string) => {
+        vi.spyOn(CONFIG.default, 'get').mockImplementation((key: string) => {
             if (key === 'jsonPath') return '/config/tests.json';
             return undefined;
         });
@@ -142,13 +142,13 @@ describe('resolveJsonPath', () => {
     });
 
     it('prompts user when no input and no config', async () => {
-        vi.mocked(PROMPT.askFilePath).mockResolvedValue('/user/tests.json');
+        vi.spyOn(PROMPT, 'askFilePath').mockResolvedValue('/user/tests.json');
         const result = await resolveJsonPath(undefined);
         expect(result).toBe('/user/tests.json');
     });
 
     it('returns undefined for empty path', async () => {
-        vi.mocked(PROMPT.askFilePath).mockResolvedValue('');
+        vi.spyOn(PROMPT, 'askFilePath').mockResolvedValue('');
         const result = await resolveJsonPath(undefined);
         expect(result).toBeUndefined();
         expect(PROMPT.warn).toHaveBeenCalledWith(expect.stringContaining('vazio'));

@@ -14,10 +14,6 @@ vi.mock('../../shared/health-score', () => ({
     calculateHealthScore: vi.fn(),
 }));
 
-vi.mock('../../shared/flaky-auto-actions', () => ({
-    executeFlakyActions: vi.fn().mockResolvedValue([]),
-}));
-
 vi.mock('../../shared/run-comparison', () => ({
     compareRuns: vi.fn(),
 }));
@@ -36,7 +32,6 @@ vi.mock('../../shared/logger', () => ({
 import * as promptModule from '../../shared/prompt.js';
 import * as metricsModule from '../../shared/metrics.js';
 import * as comparisonModule from '../../shared/run-comparison.js';
-import * as flakyActionsModule from '../../shared/flaky-auto-actions.js';
 import * as healthScoreModule from '../../shared/health-score.js';
 import * as coverageModule from '../coverage.js';
 import case19Module from './case19.js';
@@ -311,52 +306,6 @@ describe('case19 — History & Coverage', () => {
         );
     });
 
-    it('executes flaky auto-actions when confirmed', async () => {
-        const prompt = vi.mocked(promptModule);
-        const metrics = vi.mocked(metricsModule);
-        const flakyActions = vi.mocked(flakyActionsModule);
-        const comparison = vi.mocked(comparisonModule);
-
-        prompt.showSelect.mockResolvedValueOnce('a').mockResolvedValueOnce('0');
-        prompt.askConfirm.mockResolvedValueOnce(true);
-
-        const runData = {
-            timestamp: '2026-01-01T10:00:00Z',
-            project: 'TEST',
-            total: 10,
-            passed: 5,
-            failed: 5,
-            skipped: 0,
-            duration: 100,
-            tests: [{ title: 'FlakyTest', state: 'failed' as const, duration: 100 }],
-        };
-        metrics.loadMetrics.mockReturnValueOnce({ runs: [runData, runData] });
-        metrics.calculateFlakiness.mockReturnValueOnce([
-            { title: 'FlakyTest', passCount: 1, failCount: 1, skipCount: 0, totalRuns: 2, rate: 0.5 },
-        ]);
-        metrics.getTrends.mockReturnValueOnce([]);
-        comparison.compareRuns.mockResolvedValueOnce('analysis');
-        flakyActions.executeFlakyActions.mockResolvedValueOnce([
-            {
-                action: 'create_bug',
-                testTitle: 'FlakyTest',
-                flakyRate: 0.5,
-                passCount: 1,
-                failCount: 1,
-                totalRuns: 2,
-                lastErrorMessages: [],
-                jiraBugKey: 'BUG-1',
-                reason: 'flaky',
-            },
-        ]);
-
-        const mod = case19Module;
-        await mod.handler(baseContext);
-
-        expect(flakyActions.executeFlakyActions).toHaveBeenCalled();
-        expect(prompt.info).toHaveBeenCalledWith(expect.stringContaining('auto-action'));
-    });
-
     it('shows history without flaky or trends data', async () => {
         const prompt = vi.mocked(promptModule);
         const metrics = vi.mocked(metricsModule);
@@ -398,39 +347,6 @@ describe('case19 — History & Coverage', () => {
         expect(prompt.tableView).toHaveBeenCalled();
     });
 
-    it('handles executeFlakyActions error', async () => {
-        const prompt = vi.mocked(promptModule);
-        const metrics = vi.mocked(metricsModule);
-        const flakyActions = vi.mocked(flakyActionsModule);
-        const comparison = vi.mocked(comparisonModule);
-
-        prompt.showSelect.mockResolvedValueOnce('a').mockResolvedValueOnce('0');
-        prompt.askConfirm.mockResolvedValueOnce(true);
-
-        const runData = {
-            timestamp: '2026-01-01T10:00:00Z',
-            project: 'TEST',
-            total: 10,
-            passed: 5,
-            failed: 5,
-            skipped: 0,
-            duration: 100,
-            tests: [{ title: 'FlakyTest', state: 'failed' as const, duration: 100 }],
-        };
-        metrics.loadMetrics.mockReturnValueOnce({ runs: [runData, runData] });
-        metrics.calculateFlakiness.mockReturnValueOnce([
-            { title: 'FlakyTest', passCount: 1, failCount: 1, skipCount: 0, totalRuns: 2, rate: 0.5 },
-        ]);
-        metrics.getTrends.mockReturnValueOnce([]);
-        comparison.compareRuns.mockResolvedValueOnce('analysis');
-        flakyActions.executeFlakyActions.mockRejectedValueOnce(new Error('API error'));
-
-        const mod = case19Module;
-        await mod.handler(baseContext);
-
-        expect(prompt.printError).toHaveBeenCalledWith('Erro ao executar auto-actions', expect.any(Error));
-    });
-
     it('handles run with total=0 to cover Rate branch', async () => {
         const prompt = vi.mocked(promptModule);
         const metrics = vi.mocked(metricsModule);
@@ -460,50 +376,6 @@ describe('case19 — History & Coverage', () => {
         await mod.handler(baseContext);
 
         expect(prompt.tableView).toHaveBeenCalled();
-    });
-
-    it('handles flaky actions with non-matching action types', async () => {
-        const prompt = vi.mocked(promptModule);
-        const metrics = vi.mocked(metricsModule);
-        const flakyActions = vi.mocked(flakyActionsModule);
-        const comparison = vi.mocked(comparisonModule);
-
-        prompt.showSelect.mockResolvedValueOnce('a').mockResolvedValueOnce('0');
-        prompt.askConfirm.mockResolvedValueOnce(true);
-
-        const runData = {
-            timestamp: '2026-01-01T10:00:00Z',
-            project: 'TEST',
-            total: 10,
-            passed: 5,
-            failed: 5,
-            skipped: 0,
-            duration: 100,
-            tests: [{ title: 'FlakyTest', state: 'failed' as const, duration: 100 }],
-        };
-        metrics.loadMetrics.mockReturnValueOnce({ runs: [runData, runData] });
-        metrics.calculateFlakiness.mockReturnValueOnce([
-            { title: 'FlakyTest', passCount: 1, failCount: 1, skipCount: 0, totalRuns: 2, rate: 0.5 },
-        ]);
-        metrics.getTrends.mockReturnValueOnce([]);
-        comparison.compareRuns.mockResolvedValueOnce('analysis');
-        flakyActions.executeFlakyActions.mockResolvedValueOnce([
-            {
-                action: 'none' as const,
-                testTitle: 'FlakyTest',
-                flakyRate: 0.5,
-                passCount: 1,
-                failCount: 1,
-                totalRuns: 2,
-                lastErrorMessages: [],
-                reason: 'no actionable flaky',
-            },
-        ]);
-
-        const mod = case19Module;
-        await mod.handler(baseContext);
-
-        expect(prompt.info).toHaveBeenCalledWith('0 auto-action(s) executada(s) para testes flaky.');
     });
 
     it('shows health score section when 5+ runs exist', async () => {

@@ -1,12 +1,10 @@
 /**
- * Batch mode — run metrics, flakiness dashboard, pipeline failure analysis, flaky auto-actions, and test-impact selection headlessly.
+ * Batch mode — run metrics, flakiness dashboard, pipeline failure analysis, and test-impact selection headlessly.
  * Uses unified CLI args from cli-args.ts.
  */
 import { success, error, info, printError, warn, withSpinner } from '../shared/prompt.js';
-import { rootLogger } from '../shared/logger.js';
 import { loadMetrics, calculateFlakiness } from '../shared/metrics.js';
 import { generateFlakinessHtml } from '../shared/flakiness-dashboard.js';
-import { executeFlakyActions } from '../shared/flaky-auto-actions.js';
 import {
     expireQuarantine,
     listQuarantined,
@@ -190,27 +188,6 @@ export async function triggerAndCollectBatchPipeline(
     );
 }
 
-export async function runFlakyAutoActions(projectName: string, jiraResource: JiraClient): Promise<void> {
-    try {
-        if (!Config.get('jiraBaseUrl') || !Config.get('jiraPersonalToken')) return;
-        const store = loadMetrics();
-        const projectRuns = store.runs.filter((r) => r.project === currentProjectName);
-        if (projectRuns.length < 5) return;
-        const actions = await executeFlakyActions({ runs: projectRuns }, jiraResource, projectName, {
-            autoCreateBug: true,
-            minTotalRuns: 10,
-            dedupSearch: true,
-        });
-        const bugs = actions.filter((a) => a.action === 'create_bug' || a.action === 'reenable');
-        if (bugs.length > 0) {
-            success(bugs.length + ' flaky auto-action(s) executada(s) para ' + projectName);
-        }
-    } catch {
-        rootLogger.debug('Flaky auto-actions failed (expected if Jira not configured): insufficient data or config');
-        info('Flaky auto-actions skipping (Jira config or insufficient data).');
-    }
-}
-
 export function generateFlakinessDashboard(projectName: string, publishTarget?: string): void {
     if (!currentProjectName) return;
     const store = loadMetrics();
@@ -297,9 +274,6 @@ export async function tryBatchMode(batchArgs?: BatchCliArgs): Promise<boolean> {
     generateFlakinessDashboard(setup.projectName, batch.publish);
     generateTestExport(setup.projectName);
     await generatePipelineHealthReport(setup.m);
-    if (jiraResource) {
-        await runFlakyAutoActions(setup.projectName, jiraResource);
-    }
     runQuarantineMaintenance();
     if (batch.runImpactedTests) {
         runTestImpactSelection(batch.conservative);

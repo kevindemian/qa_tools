@@ -101,6 +101,7 @@ describe('CLI Base', () => {
 
     describe('setupSigint', () => {
         let mockRl: Mocked<readline.Interface>;
+        let createInterfaceSpy: ReturnType<typeof vi.spyOn>;
 
         beforeEach(() => {
             mockRl = {
@@ -134,7 +135,7 @@ describe('CLI Base', () => {
                 [Symbol.dispose]: vi.fn() as readline.Interface[typeof Symbol.dispose],
                 [Symbol.asyncIterator]: vi.fn() as readline.Interface[typeof Symbol.asyncIterator],
             } as Mocked<readline.Interface>;
-            vi.mocked(readline.createInterface).mockReturnValue(mockRl);
+            createInterfaceSpy = vi.spyOn(readline, 'createInterface').mockReturnValue(mockRl);
         });
 
         afterEach(() => {
@@ -142,9 +143,9 @@ describe('CLI Base', () => {
         });
 
         it('registers SIGINT handler', () => {
-            vi.spyOn(process, 'on').mockImplementation(() => process);
+            const processOnSpy = vi.spyOn(process, 'on').mockImplementation(() => process);
             cliBase.setupSigint(null, () => {});
-            expect(process.on).toHaveBeenCalledWith('SIGINT', expect.any(Function));
+            expect(processOnSpy).toHaveBeenCalledWith('SIGINT', expect.any(Function));
         });
 
         it('shows confirmation prompt on SIGINT (not busy)', () => {
@@ -154,8 +155,9 @@ describe('CLI Base', () => {
             });
             const onExit = vi.fn();
             cliBase.setupSigint(null, onExit);
-            expect(readline.createInterface).toHaveBeenCalled();
-            expect(mockRl.question).toHaveBeenCalledWith('Deseja sair? (s/N) ', expect.any(Function));
+            expect(createInterfaceSpy).toHaveBeenCalled();
+            const questionSpy = vi.spyOn(mockRl, 'question');
+            expect(questionSpy).toHaveBeenCalledWith('Deseja sair? (s/N) ', expect.any(Function));
         });
 
         it('calls onExit and exits when user responds s', () => {
@@ -203,9 +205,10 @@ describe('CLI Base', () => {
                 return process;
             });
             const onExit = vi.fn();
+            const questionSpy = vi.spyOn(mockRl, 'question');
             cliBase.setupSigint(null, onExit);
             capturedHandler();
-            expect(mockRl.question).toHaveBeenCalled();
+            expect(questionSpy).toHaveBeenCalled();
             capturedHandler();
             expect(onExit).toHaveBeenCalled();
             expect(MOCK_PROMPT.info).toHaveBeenCalledWith('Até logo!');
@@ -292,7 +295,7 @@ describe('CLI Base', () => {
         beforeEach(() => {
             onExit = vi.fn() as () => void;
             mockRlInt = { question: vi.fn(), close: vi.fn() };
-            vi.mocked(readline.createInterface).mockReturnValue(mockRlInt as never);
+            vi.spyOn(readline, 'createInterface').mockReturnValue(mockRlInt as never);
         });
 
         afterEach(() => {

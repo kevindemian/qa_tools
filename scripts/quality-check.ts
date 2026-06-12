@@ -7,11 +7,8 @@
  *
  * ## Baseline (falsos positivos aceitos)
  *
- * - unbound-method ≤ 313: aceito (vitest Mocked<T> = MockedObject<T> & T preserva this: T)
- *   Ver shared/test-utils/mock-types.ts para documentação completa.
  * - unused-exports: baseline em scripts/.unused-exports-baseline
- * - unbound-method > 313: REGRESSÃO (falha)
- * - OUTRAS regras eslint com erros: FALHA (bug real)
+ * - Qualquer regra eslint com erro: FALHA (bug real)
  *
  * ## Exit codes
  * - 0: todas as verificações passam (respeitando baselines)
@@ -29,9 +26,6 @@ import { ExitCode } from '../shared/types.js';
 // ---------------------------------------------------------------------------
 // Configuration
 // ---------------------------------------------------------------------------
-
-const UNBOUND_METHOD_BASELINE = 313;
-const UNUSED_EXPORTS_BASELINE_FILE = 'scripts/.unused-exports-baseline';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -102,45 +96,31 @@ export async function checkEslintBaseline(): Promise<CheckResult> {
 
         const results = await eslint.lintFiles(['.']);
 
-        let totalUnboundMethod = 0;
-        let otherErrors = 0;
-
         for (const result of results) {
             const file = result.filePath;
             for (const msg of result.messages) {
-                if (msg.ruleId === '@typescript-eslint/unbound-method') {
-                    totalUnboundMethod++;
-                } else if (msg.severity >= 1) {
+                if (msg.severity >= 1) {
                     violations.push({
                         file,
                         line: msg.line,
                         content: `${msg.message} (${msg.ruleId})`,
                     });
-                    otherErrors++;
                 }
             }
         }
 
-        if (totalUnboundMethod > UNBOUND_METHOD_BASELINE) {
-            violations.push({
-                file: 'scripts/quality-check.ts',
-                line: 1,
-                content: `unbound-method regression: ${totalUnboundMethod} > ${UNBOUND_METHOD_BASELINE} (baseline). Fix or update baseline.`,
-            });
+        if (violations.length > 0) {
+            return { name: 'eslint (zero violations)', passed: false, violations };
         }
 
-        if (otherErrors > 0 || totalUnboundMethod > UNBOUND_METHOD_BASELINE) {
-            return { name: 'eslint baseline (unbound-method ≤ 313)', passed: false, violations };
-        }
-
-        return { name: 'eslint baseline (unbound-method ≤ 313)', passed: true, violations };
+        return { name: 'eslint (zero violations)', passed: true, violations };
     } catch (err) {
         violations.push({
             file: 'scripts/quality-check.ts',
             line: 1,
             content: `ESLint check failed: ${err instanceof Error ? err.message : String(err)}`,
         });
-        return { name: 'eslint baseline (unbound-method ≤ 313)', passed: false, violations };
+        return { name: 'eslint (zero violations)', passed: false, violations };
     }
 }
 
@@ -167,23 +147,11 @@ export function checkUnusedExports(): CheckResult {
             .filter((l) => !l.startsWith('shared/types.ts:'));
 
         if (filtered.length === 0) {
-            return { name: 'unused-exports (baseline)', passed: true, violations };
+            return { name: 'unused-exports (zero)', passed: true, violations };
         }
 
-        if (!existsSync(UNUSED_EXPORTS_BASELINE_FILE)) {
-            violations.push(...filtered.map((l) => ({ file: l.split(':')[0] || '', line: 1, content: l })));
-            return { name: 'unused-exports (baseline)', passed: false, violations };
-        }
-
-        const baseline = readFileSync(UNUSED_EXPORTS_BASELINE_FILE, 'utf-8').split('\n').filter(Boolean);
-        const newItems = filtered.filter((l) => !baseline.includes(l));
-
-        if (newItems.length === 0) {
-            return { name: 'unused-exports (baseline)', passed: true, violations };
-        }
-
-        violations.push(...newItems.map((l) => ({ file: l.split(':')[0] || '', line: 1, content: l })));
-        return { name: 'unused-exports (baseline)', passed: false, violations };
+        violations.push(...filtered.map((l) => ({ file: l.split(':')[0] || '', line: 1, content: l })));
+        return { name: 'unused-exports (zero)', passed: false, violations };
     } catch (err) {
         violations.push({
             file: 'scripts/quality-check.ts',
@@ -312,10 +280,9 @@ export function checkAsUnknownAs(): CheckResult {
 
 export function checkAsAny(): CheckResult {
     return checkNoPattern(
-        'as-any cast in test files (excluding eslint disables)',
+        'as-any cast in test files',
         /as\s+any\b/,
         allTsFiles().filter((f) => f.endsWith('.test.ts') && f !== 'scripts/quality-check.test.ts'),
-        /eslint-disable/,
     );
 }
 
@@ -546,7 +513,7 @@ export function checkIntegrity(): CheckResult {
         const selfContent = readFileSync('scripts/quality-check.ts', 'utf-8');
         const contentWithoutHash = selfContent.replace(/\/\* HASH:[0-9a-f]{64} \*\//g, '');
         const currentHash = createHash('sha256').update(contentWithoutHash, 'utf-8').digest('hex');
-        /* HASH:07f7b1de29d053cf37c3b75e3332a3957de01d0678b1928e148ba03fb643c2f9 */
+        /* HASH:f01dcc6f841404f98c2e498f15b35e42837d0e730842cfb5ce63d50473fc8cdc */
         const match = selfContent.match(/\/\* HASH:([0-9a-f]{64}) \*\//);
         if (!match) {
             violations.push({ file: 'scripts/quality-check.ts', line: 1, content: 'Missing HASH comment' });
