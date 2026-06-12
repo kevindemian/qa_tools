@@ -26,6 +26,8 @@ import { getAdapter } from '../shared/model-adapter.js';
 import type { RegistryModel } from '../shared/model-resolver.js';
 import type { LlmProvider } from '../shared/llm-provider-profiles.js';
 
+export { diffModels, writeMarkdownReport, parseArgs, getProviderModels, enrichFromOpenRouter };
+
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 const REGISTRY_PATH = resolve(__dirname, '..', 'data', 'model-registry.json');
@@ -310,7 +312,9 @@ async function main(): Promise<void> {
     }
 }
 
-main().catch((err) => {
-    process.stderr.write(`Probe failed: ${err instanceof Error ? err.message : String(err)}\n`);
-    process.exit(1);
-});
+if (!process.env['VITEST'] && process.argv[1]?.includes('probe-registry')) {
+    main().catch((err) => {
+        process.stderr.write(`Probe failed: ${err instanceof Error ? err.message : String(err)}\n`);
+        process.exit(1);
+    });
+}

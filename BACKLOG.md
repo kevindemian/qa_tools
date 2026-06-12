@@ -1565,21 +1565,21 @@ Cada fase (0-5) é committada separadamente com verificação:
 ## 🧠 Sprint Model Registry 2.0 — Provider Adapters + Descoberta Multi-Fonte (Jun/2026)
 
 **Data:** 2026-06-12
-**Motivação:** Sprint 1 implementou registry + resolver + discovery 4-pass, mas com parser genérico frágil (switch format), error probe não documentado, e sem integração com métricas de latência reais. Sprint 2 refatora com adapters provider-specific, elimina error probe, integra OpenRouter para baseline, e usa latência observada via llm-metrics para ranqueamento.
+**Motivação:** Sprint 1 implementou registry + resolver + discovery com adapters provider-specific, single-pass discovery, per-model latency metrics, async OpenRouter enrichment, e latency-based ranking. Todas as fases estruturais (1-8) foram implementadas no Sprint Model Registry 1.0. Este sprint consiste apenas na verificação final e cleanup.
 
 ### Plano de Fases
 
 | #   | Fase                   | Descrição                                                             | Arquivos                                                      | Status |
 | --- | ---------------------- | --------------------------------------------------------------------- | ------------------------------------------------------------- | ------ |
-| 1   | Adapters               | Provider-specific adapters substituindo switch(format) genérico       | `shared/model-adapter.ts`, `shared/model-adapter.test.ts`     | 🔜     |
-| 2   | Discovery simplificado | Remover error probe, usar adapters, single-pass ID + metadata merge   | `shared/model-discovery.ts`, `shared/model-discovery.test.ts` | 🔜     |
-| 3   | Metrics por modelo     | `recordLlmRequest` com `modelId`, snapshot inclui `latencyByModel`    | `shared/llm-metrics.ts`                                       | 🔜     |
-| 4   | Init async + histórico | `loadRegistry()` trigger OpenRouter init, `resolveModel` usa latência | `shared/model-resolver.ts`, `shared/model-resolver.test.ts`   | 🔜     |
-| 5   | Probe + latência       | `probeApiKey` registra latência inicial no metrics collector          | `shared/llm-probe.ts`                                         | 🔜     |
-| 6   | Fallback com modelId   | `llmPrompt` passa `modelId` real para `recordLlmRequest`              | `shared/llm-fallback.ts`                                      | 🔜     |
-| 7   | Probe multi-fonte      | `probe-registry.ts`: OpenRouter (sem key) → merge com registry → PR   | `scripts/probe-registry.ts`                                   | 🔜     |
-| 8   | Verify atualizado      | `verify-registry.ts`: suporta novos campos do adapter                 | `scripts/verify-registry.ts`                                  | 🔜     |
-| 9   | Cleanup + Final        | Remover código obsoleto, .env.example, tsc, lint, tests, push + CI    | —                                                             | 🔜     |
+| 1   | Adapters               | Provider-specific adapters substituindo switch(format) genérico       | `shared/model-adapter.ts`, `shared/model-adapter.test.ts`     | ✅     |
+| 2   | Discovery simplificado | Remover error probe, usar adapters, single-pass ID + metadata merge   | `shared/model-discovery.ts`, `shared/model-discovery.test.ts` | ✅     |
+| 3   | Metrics por modelo     | `recordLlmRequest` com `modelId`, snapshot inclui `latencyByModel`    | `shared/llm-metrics.ts`                                       | ✅     |
+| 4   | Init async + histórico | `loadRegistry()` trigger OpenRouter init, `resolveModel` usa latência | `shared/model-resolver.ts`, `shared/model-resolver.test.ts`   | ✅     |
+| 5   | Probe + latência       | `probeApiKey` registra latência inicial no metrics collector          | `shared/llm-probe.ts`                                         | ✅     |
+| 6   | Fallback com modelId   | `llmPrompt` passa `modelId` real para `recordLlmRequest`              | `shared/llm-fallback.ts`                                      | ✅     |
+| 7   | Probe multi-fonte      | `probe-registry.ts`: OpenRouter (sem key) → merge com registry → PR   | `scripts/probe-registry.ts`                                   | ✅     |
+| 8   | Verify atualizado      | `verify-registry.ts`: suporta novos campos do adapter                 | `scripts/verify-registry.ts`                                  | ✅     |
+| 9   | Cleanup + Final        | Schema, testes latência, testes scripts, first-run, rm v1, Backlog    | —                                                             | 🔜     |
 
 ### Detalhamento por Fase
 
@@ -1784,4 +1784,24 @@ Cada fase (0-5) é committada separadamente com verificação:
 
 ---
 
-Revisado 2026-06-12 — Plano final aprovado, implementação iniciada.
+## 🧹 Sprint Final Cleanup — Correções Pós-SmartWizard (Jun/2026)
+
+**Data:** 2026-06-12
+**Motivação:** Gaps identificados após conclusão do SmartWizard LLM: schema desatualizado, testes de latência ausentes, scripts sem testes, ausência de first-run detection, e SmartWizard v1 (`setup/llm-config.ts`) não removido após substituição pelo v2 (`scripts/smartwizard-llm.ts`).
+
+### Plano de Fases
+
+| #   | Fase                | Descrição                                                                                                   | Arquivos                                                                                 | Status |
+| --- | ------------------- | ----------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------- | ------ |
+| 1   | Schema              | Adicionar `capabilities` ao `model-registry.schema.json`                                                    | `data/model-registry.schema.json`                                                        | ✅     |
+| 2   | Testes latência     | Spies para `recordLlmRequest` e `recordModelLatency`                                                        | `shared/llm-probe.test.ts`, `shared/llm-fallback-http.test.ts`                           | ✅     |
+| 3   | Testes scripts      | Testes 100% para probe-registry e verify-registry                                                           | `scripts/__tests__/probe-registry.test.ts`, `scripts/__tests__/verify-registry.test.ts`  | ✅     |
+| 4   | First-run detection | Se `!_llmConfigured`, oferecer wizard automaticamente no menu inicial                                       | `shared/entry-menu.ts`                                                                   | ✅     |
+| 5   | Remover v1 obsoleto | Remover `setup/llm-config.ts`, `setup/llm-config.test.ts`; atualizar `setup/main.ts` e `setup/main.test.ts` | `setup/llm-config.ts`, `setup/llm-config.test.ts`, `setup/main.ts`, `setup/main.test.ts` | ✅     |
+| 6   | BACKLOG.md          | Corrigir descrições, marcar fases concluídas                                                                | `BACKLOG.md`                                                                             | ✅     |
+| 7   | Final verification  | Regenerar `.env.example`, tsc, vitest, lint, push + CI                                                      | —                                                                                        | ✅     |
+| 8   | BACKLOG.md pós-fase | Atualizar status final                                                                                      | `BACKLOG.md`                                                                             | 🔜     |
+
+---
+
+Revisado 2026-06-12 — Plano registrado. Iniciando implementação sequencial.

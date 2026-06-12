@@ -56,6 +56,11 @@
                                 "enum": ["main", "fast", "reviewer", "report", "fallback", "batch"]
                             },
                             "description": "Tiers this model can serve. Determined by heuristic or PR review."
+                        },
+                        "capabilities": {
+                            "type": "array",
+                            "items": { "type": "string" },
+                            "description": "Provider-reported capabilities (e.g., vision, function_calling, structured_outputs)."
                         }
                     }
                 }

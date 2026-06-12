@@ -71,6 +71,27 @@ async function checkPreMenu(): Promise<boolean> {
         spy.unref();
     }
 
+    // First-run detection: no LLM configured and no legacy key in environment
+    if (state._llmConfigured === undefined && !process.env['LLM_API_KEY']) {
+        warn('Nenhum provedor de IA configurado.');
+        info('O SmartWizard pode detectar automaticamente seu provedor e');
+        info('configurar os tiers de IA para análises.');
+        divider();
+
+        const choice = confirm('Deseja configurar agora? (S/n)', true);
+        if (choice) {
+            await spawnWizard();
+            updateTyped((s) => {
+                s._llmConfigured = true;
+            });
+        } else {
+            updateTyped((s) => {
+                s._llmConfigured = false;
+            });
+        }
+        return true;
+    }
+
     // Warning: 3 consecutive failures
     if (state._llmConfigError) {
         warn('Não foi possível verificar os provedores de IA após 3 tentativas.');

@@ -136,6 +136,21 @@ describe('probeApiKey', () => {
         const result = await probeApiKey('sk-test', 'openai');
         expect(result.valid).toBe(true);
     });
+
+    it('records latency via recordLlmRequest on successful probe', async () => {
+        mockFetch.mockResolvedValueOnce(okResponse());
+
+        const { getDefaultMetrics } = await import('./llm-metrics.js');
+        const recordSpy = vi.spyOn(getDefaultMetrics(), 'recordLlmRequest');
+
+        const result = await probeApiKey('sk-test', 'openai');
+        expect(result.valid).toBe(true);
+
+        expect(recordSpy).toHaveBeenCalledTimes(1);
+        expect(recordSpy).toHaveBeenCalledWith('probe', expect.any(Number), 'probe:openai');
+
+        recordSpy.mockRestore();
+    });
 });
 
 describe('discoverProvider', () => {

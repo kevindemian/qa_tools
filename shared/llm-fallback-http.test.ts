@@ -440,4 +440,25 @@ describe('sendToProvider', () => {
         expect(metrics.totalPromptTokens).toBe(10);
         expect(metrics.totalCompletionTokens).toBe(5);
     });
+
+    it('records per-model latency via recordModelLatency', async () => {
+        mockFetch.mockResolvedValueOnce(mockOkResponse(JSON.stringify({ choices: [{ message: { content: 'ok' } }] })));
+
+        const { getDefaultMetrics } = await import('./llm-metrics.js');
+        const latencySpy = vi.spyOn(getDefaultMetrics(), 'recordModelLatency');
+
+        const cfg = {
+            apiKey: 'sk-test',
+            model: 'gpt-4',
+            baseUrl: 'https://api.test.com/v1',
+            format: 'openai' as const,
+            temperature: 0.3,
+        };
+        await sendToProvider(cfg, 'system', 'user');
+
+        expect(latencySpy).toHaveBeenCalledTimes(1);
+        expect(latencySpy).toHaveBeenCalledWith('gpt-4', expect.any(Number));
+
+        latencySpy.mockRestore();
+    });
 });
