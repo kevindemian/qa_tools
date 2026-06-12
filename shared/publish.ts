@@ -22,7 +22,7 @@ function publishToS3(localPath: string, destination?: string): void {
         return;
     }
     try {
-        execFileSync('aws', ['s3', 'cp', localPath, dest, '--no-progress'], { stdio: 'inherit' });
+        execFileSync('aws', ['s3', 'cp', localPath, dest, '--no-progress'], { stdio: 'inherit', timeout: 120_000 });
     } catch (err: unknown) {
         rootLogger.error('S3 publish failed: ' + (err as Error).message);
     }
@@ -35,15 +35,20 @@ function publishToGhPages(localPath: string, destination?: string): void {
     try {
         execFileSync('git', ['clone', '--branch', 'gh-pages', '--single-branch', getOriginUrl(), tmpDir], {
             stdio: 'ignore',
+            timeout: 120_000,
         });
     } catch {
         mkdirSync(tmpDir, { recursive: true });
     }
     try {
         cpSync(localPath, join(tmpDir, dest));
-        execFileSync('git', ['add', dest], { stdio: 'inherit', cwd: tmpDir });
-        execFileSync('git', ['commit', '-m', 'Auto-publish report'], { stdio: 'inherit', cwd: tmpDir });
-        execFileSync('git', ['push'], { stdio: 'inherit', cwd: tmpDir });
+        execFileSync('git', ['add', dest], { stdio: 'inherit', cwd: tmpDir, timeout: 120_000 });
+        execFileSync('git', ['commit', '-m', 'Auto-publish report'], {
+            stdio: 'inherit',
+            cwd: tmpDir,
+            timeout: 120_000,
+        });
+        execFileSync('git', ['push'], { stdio: 'inherit', cwd: tmpDir, timeout: 120_000 });
     } catch (err: unknown) {
         rootLogger.error('gh-pages publish failed: ' + (err as Error).message);
     }

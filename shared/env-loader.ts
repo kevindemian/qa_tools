@@ -48,7 +48,13 @@ function warnSecretsInFile(filePath: string, label: string): void {
             if (match) {
                 getRootLogger()
                     .then((l) => l.warn(`[env-loader] WARNING: ${match} detected in ${label}. Move to .env.local.`))
-                    .catch(() => {});
+                    .catch((err: unknown) => {
+                        process.stderr.write(
+                            '[env-loader] Logger init failed: ' +
+                                (err instanceof Error ? err.message : String(err)) +
+                                '\n',
+                        );
+                    });
             }
         }
     } catch {

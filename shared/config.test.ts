@@ -217,7 +217,7 @@ describe('Config', () => {
 
         it('throws when XRAY_MODE is invalid', () => {
             process.env['XRAY_MODE'] = 'invalid';
-            expect(() => Config.get('xrayMode')).toThrow(/Invalid XRAY_MODE/);
+            expect(() => Config.get('xrayMode')).toThrow(/XRAY_MODE/);
         });
     });
 

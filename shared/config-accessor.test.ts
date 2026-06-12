@@ -59,12 +59,12 @@ describe('Config (accessor)', () => {
 
         it('throws for invalid xrayMode value', () => {
             process.env['XRAY_MODE'] = 'invalid';
-            expect(() => Config.get('xrayMode')).toThrow(/Must be "server" or "cloud"/);
+            expect(() => Config.get('xrayMode')).toThrow(/Permitidos: server, cloud/);
         });
 
         it('throws for invalid jiraMode value', () => {
             process.env['JIRA_MODE'] = 'invalid';
-            expect(() => Config.get('jiraMode')).toThrow(/Must be "server" or "cloud"/);
+            expect(() => Config.get('jiraMode')).toThrow(/Permitidos: server, cloud/);
         });
 
         it('defaults jiraMode to server when env var is unset', () => {

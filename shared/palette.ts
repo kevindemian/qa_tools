@@ -67,7 +67,7 @@ export const palette = {
     hex: (hex: string): ChalkInstance => (level >= 2 ? chalk.hex(hex) : chalk),
 } as const;
 
-export type PaletteKey = keyof typeof palette;
+type PaletteKey = keyof typeof palette;
 
 /** Keys that are chalk instances (callable with `'text'`), excluding factory functions. */
 export type ChalkKey = Exclude<PaletteKey, 'hex'>;

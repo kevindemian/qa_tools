@@ -6,7 +6,7 @@ import type { InlineToken } from './markdown-lexer.js';
 
 // ─── Inline token → HTML ────────────────────────────────────────────────────────
 
-export function renderInlineToHtml(tokens: InlineToken[] | undefined): string {
+function renderInlineToHtml(tokens: InlineToken[] | undefined): string {
     if (!tokens) return '';
     let out = '';
     for (const t of tokens) {

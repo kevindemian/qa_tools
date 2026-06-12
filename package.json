@@ -23,7 +23,8 @@
         "smoke:github": "npx tsx e2e/smoke-github.ts",
         "smoke:llm": "npx tsx e2e/smoke-llm.ts",
         "smoke:pipeline": "E2E_PIPELINE=true npx tsx e2e/smoke-pipeline.ts",
-        "smoke": "npx tsx e2e/smoke-github.ts"
+        "smoke": "npx tsx e2e/smoke-github.ts",
+        "generate-env-example": "npx tsx scripts/generate-env-example.ts"
     },
     "license": "ISC",
     "type": "module",

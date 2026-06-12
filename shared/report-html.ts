@@ -17,7 +17,7 @@ import { buildCss } from './report-styles.js';
 import { buildHtmlPage, buildErrorPage } from './html-factory.js';
 import { buildToggleScript } from './report-scripts.js';
 import { buildChartSection, buildTrendSection } from './report-chart.js';
-export { buildTrendSection } from './report-chart.js';
+
 import {
     buildSummaryCards,
     buildFailedSummary,

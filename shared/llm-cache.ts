@@ -6,6 +6,7 @@ import crypto from 'crypto';
 import { z } from 'zod';
 import { diskCacheGet, diskCacheSet, clearDiskCache } from './disk-cache.js';
 import { rootLogger } from './logger.js';
+import { parseRawOnce } from './llm-fallback-http.js';
 import type { ZodSchemaTyped as ZodSchema } from './types.js';
 
 // ---- types ----
@@ -63,17 +64,6 @@ export function cacheKey(
             (callerId || '') + '|' + tier + '|' + cfgKey + '|' + (responseFormat || 'text') + '|' + system + '|' + user,
         )
         .digest('hex');
-}
-
-function parseRawOnce(raw: string): Record<string, unknown> | null {
-    try {
-        const json: unknown = JSON.parse(raw);
-        const result = z.record(z.string(), z.unknown()).safeParse(json);
-        return result.success ? result.data : null;
-    } catch {
-        /* cleanup — cache file cleanup, falha não afeta o fluxo */
-        return null;
-    }
 }
 
 function _validateWithSchema<T>(raw: string, schema: ZodSchema<T>): T | null {

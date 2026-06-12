@@ -60,7 +60,7 @@ function renderPipeTable(head: string[], rows: string[][], availWidth: number): 
 
 // ─── Inline token → ANSI string ────────────────────────────────────────────────
 
-export function renderInline(tokens: InlineToken[] | undefined): string {
+function renderInline(tokens: InlineToken[] | undefined): string {
     if (!tokens) return '';
     let out = '';
     for (const t of tokens) {
@@ -85,7 +85,7 @@ export function renderInline(tokens: InlineToken[] | undefined): string {
 
 // ─── Block token → ANSI lines ──────────────────────────────────────────────────
 
-export function renderBlockToken(token: InlineToken, availWidth?: number): string[] {
+function renderBlockToken(token: InlineToken, availWidth?: number): string[] {
     const out: string[] = [];
 
     if (token.type === 'heading') {

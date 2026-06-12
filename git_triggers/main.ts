@@ -28,5 +28,3 @@ dispatchCli(parseCliArgs()).catch((err) => {
     printSessionSummary();
     rootLogger.error('Main error', { error: String(err) });
 });
-
-export default {} as Record<string, never>;
