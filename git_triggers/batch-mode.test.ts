@@ -77,6 +77,7 @@ vi.mock('fs', () => ({
 vi.mock('../shared/temp-dir', () => ({ writeReport: vi.fn(() => '/tmp/flakiness-test.html') }));
 
 import Config from '../shared/config.js';
+const setAutoConfirmSpy = vi.spyOn(Config, 'setAutoConfirm');
 import { success, error, printError } from '../shared/prompt.js';
 import { pushHistory, getProjects } from './session-state.js';
 import { pollPipeline } from './pipeline-handler.js';
@@ -188,7 +189,7 @@ describe('tryBatchMode', () => {
     it('errors when branch not found', async () => {
         process.argv = ['node', 'script.js', '--project', 'proj1', '--branch', 'bad'];
         mockGetProjects.mockReturnValue({ proj1: '1' });
-        vi.mocked(mockManager.getBranch).mockResolvedValue(null);
+        vi.spyOn(mockManager, 'getBranch').mockResolvedValue(null);
 
         const result = await tryBatchMode();
 
@@ -199,8 +200,8 @@ describe('tryBatchMode', () => {
     it('triggers pipeline and polls when batch mode', async () => {
         process.argv = ['node', 'script.js', '--project', 'proj1', '--branch', 'main'];
         mockGetProjects.mockReturnValue({ proj1: '1' });
-        vi.mocked(mockManager.getBranch).mockResolvedValue({ name: 'main' });
-        vi.mocked(mockManager.triggerPipeline).mockResolvedValue({
+        vi.spyOn(mockManager, 'getBranch').mockResolvedValue({ name: 'main' });
+        vi.spyOn(mockManager, 'triggerPipeline').mockResolvedValue({
             id: '42',
             web_url: 'https://gitlab.com/pipe/42',
         });
@@ -217,20 +218,20 @@ describe('tryBatchMode', () => {
     it('sets AUTO_CONFIRM when --auto flag passed', async () => {
         process.argv = ['node', 'script.js', '--auto', '--project', 'proj1'];
         mockGetProjects.mockReturnValue({ proj1: '1' });
-        vi.mocked(mockManager.getBranch).mockResolvedValue({ name: 'main' });
-        vi.mocked(mockManager.triggerPipeline).mockResolvedValue({ id: '1', web_url: '' });
+        vi.spyOn(mockManager, 'getBranch').mockResolvedValue({ name: 'main' });
+        vi.spyOn(mockManager, 'triggerPipeline').mockResolvedValue({ id: '1', web_url: '' });
         mockPollPipeline.mockResolvedValue({ status: 'success', web_url: '' });
 
         await tryBatchMode();
 
-        expect(Config.setAutoConfirm).toHaveBeenCalledWith(true);
+        expect(setAutoConfirmSpy).toHaveBeenCalledWith(true);
     });
 
     it('handles pipeline trigger error', async () => {
         process.argv = ['node', 'script.js', '--project', 'proj1'];
         mockGetProjects.mockReturnValue({ proj1: '1' });
-        vi.mocked(mockManager.getBranch).mockResolvedValue({ name: 'main' });
-        vi.mocked(mockManager.triggerPipeline).mockRejectedValue(new Error('fail'));
+        vi.spyOn(mockManager, 'getBranch').mockResolvedValue({ name: 'main' });
+        vi.spyOn(mockManager, 'triggerPipeline').mockRejectedValue(new Error('fail'));
 
         const result = await tryBatchMode();
 
@@ -241,8 +242,8 @@ describe('tryBatchMode', () => {
     it('returns early when pipelineResult is undefined', async () => {
         process.argv = ['node', 'script.js', '--project', 'proj1'];
         mockGetProjects.mockReturnValue({ proj1: '1' });
-        vi.mocked(mockManager.getBranch).mockResolvedValue({ name: 'main' });
-        vi.mocked(mockManager.triggerPipeline).mockResolvedValue(undefined);
+        vi.spyOn(mockManager, 'getBranch').mockResolvedValue({ name: 'main' });
+        vi.spyOn(mockManager, 'triggerPipeline').mockResolvedValue(undefined);
 
         const result = await tryBatchMode();
 
@@ -252,8 +253,8 @@ describe('tryBatchMode', () => {
     it('calls offerPipelineFailureAnalysis when results are collected', async () => {
         process.argv = ['node', 'script.js', '--project', 'proj1', '--branch', 'main'];
         mockGetProjects.mockReturnValue({ proj1: '1' });
-        vi.mocked(mockManager.getBranch).mockResolvedValue({ name: 'main' });
-        vi.mocked(mockManager.triggerPipeline).mockResolvedValue({
+        vi.spyOn(mockManager, 'getBranch').mockResolvedValue({ name: 'main' });
+        vi.spyOn(mockManager, 'triggerPipeline').mockResolvedValue({
             id: '42',
             web_url: 'https://gitlab.com/pipe/42',
         });
@@ -266,8 +267,8 @@ describe('tryBatchMode', () => {
     it('handles empty pipelineId', async () => {
         process.argv = ['node', 'script.js', '--project', 'proj1'];
         mockGetProjects.mockReturnValue({ proj1: '1' });
-        vi.mocked(mockManager.getBranch).mockResolvedValue({ name: 'main' });
-        vi.mocked(mockManager.triggerPipeline).mockResolvedValue({ web_url: '' });
+        vi.spyOn(mockManager, 'getBranch').mockResolvedValue({ name: 'main' });
+        vi.spyOn(mockManager, 'triggerPipeline').mockResolvedValue({ web_url: '' });
 
         const result = await tryBatchMode();
 

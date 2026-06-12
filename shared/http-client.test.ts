@@ -54,12 +54,13 @@ describe('HTTP Client', () => {
 
     describe('createHttpClient', () => {
         it('creates axios instance with provided config', () => {
+            const createSpy = vi.spyOn(axios, 'create');
             httpClient.createHttpClient({
                 baseUrl: 'https://api.test.com',
                 authHeader: { Authorization: 'Bearer token123' },
                 timeout: 5000,
             });
-            expect(axios.create).toHaveBeenCalledWith(
+            expect(createSpy).toHaveBeenCalledWith(
                 expect.objectContaining({
                     baseURL: 'https://api.test.com',
                     timeout: 5000,
@@ -69,7 +70,7 @@ describe('HTTP Client', () => {
                     },
                 }),
             );
-            const axCfg = nonNull(vi.mocked(axios.create).mock.calls[0])[0];
+            const axCfg = nonNull(createSpy.mock.calls[0])[0];
             expect(axCfg).toHaveProperty('httpsAgent');
         });
 
@@ -79,8 +80,9 @@ describe('HTTP Client', () => {
         });
 
         it('uses default timeout when not specified', () => {
+            const createSpy2 = vi.spyOn(axios, 'create');
             httpClient.createHttpClient({ baseUrl: 'https://api.test.com' });
-            expect(axios.create).toHaveBeenCalledWith(expect.objectContaining({ timeout: 120000 }));
+            expect(createSpy2).toHaveBeenCalledWith(expect.objectContaining({ timeout: 120000 }));
         });
 
         it('sleep uses default setTimeout when no test override is active', async () => {

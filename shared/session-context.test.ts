@@ -189,7 +189,7 @@ describe('resolveTestDataSource', () => {
     it('returns cached result when SHA cache hit', async () => {
         const { resolveTestDataSource } = await import('./session-context.js');
         const store = createMockStore();
-        vi.mocked(store.loadReport).mockReturnValue({
+        vi.spyOn(store, 'loadReport').mockReturnValue({
             tests: [
                 { title: 'T1', state: 'passed', duration: 100 },
                 { title: 'T2', state: 'failed', duration: 50, error: 'fail' },
@@ -211,7 +211,7 @@ describe('resolveTestDataSource', () => {
     it('returns null when cache miss and no CI download', async () => {
         const { resolveTestDataSource } = await import('./session-context.js');
         const store = createMockStore();
-        vi.mocked(store.loadReport).mockReturnValue(null);
+        vi.spyOn(store, 'loadReport').mockReturnValue(null);
         vi.mocked(fetchLatestTestRun).mockResolvedValue(null);
 
         const result = await resolveTestDataSource('project', null, null, store as never);
@@ -222,7 +222,7 @@ describe('resolveTestDataSource', () => {
     it('returns CI result when CI download succeeds', async () => {
         const { resolveTestDataSource } = await import('./session-context.js');
         const store = createMockStore();
-        vi.mocked(store.loadReport).mockReturnValue(null);
+        vi.spyOn(store, 'loadReport').mockReturnValue(null);
         vi.mocked(fetchLatestTestRun).mockResolvedValue({
             tests: [
                 { title: 'T1', state: 'passed', duration: 100 },
@@ -245,10 +245,10 @@ describe('resolveTestDataSource', () => {
     it('falls back to branch baseline when cache and CI fail', async () => {
         const { resolveTestDataSource } = await import('./session-context.js');
         const store = createMockStore();
-        vi.mocked(store.loadReport).mockReturnValue(null);
+        vi.spyOn(store, 'loadReport').mockReturnValue(null);
         vi.mocked(fetchLatestTestRun).mockResolvedValue(null);
-        vi.mocked(store.getBranch).mockReturnValue([{ sha: 'baseline-sha', timestamp: 1000 }] as never);
-        vi.mocked(store.loadReport)
+        vi.spyOn(store, 'getBranch').mockReturnValue([{ sha: 'baseline-sha', timestamp: 1000 }] as never);
+        vi.spyOn(store, 'loadReport')
             .mockReturnValueOnce(null)
             .mockReturnValueOnce({
                 tests: [{ title: 'T1', state: 'passed', duration: 100 }],
@@ -266,7 +266,7 @@ describe('resolveTestDataSource', () => {
     it('handles corrupted cache entry gracefully', async () => {
         const { resolveTestDataSource } = await import('./session-context.js');
         const store = createMockStore();
-        vi.mocked(store.loadReport).mockImplementation(() => {
+        vi.spyOn(store, 'loadReport').mockImplementation(() => {
             throw new Error('corrupted');
         });
 
@@ -278,7 +278,7 @@ describe('resolveTestDataSource', () => {
     it('stores CI result in cache when sha is available', async () => {
         const { resolveTestDataSource } = await import('./session-context.js');
         const store = createMockStore();
-        vi.mocked(store.loadReport).mockReturnValue(null);
+        vi.spyOn(store, 'loadReport').mockReturnValue(null);
         vi.mocked(fetchLatestTestRun).mockResolvedValue({
             tests: [{ title: 'T1', state: 'passed', duration: 100 }],
             stats: { passed: 1, failed: 0, skipped: 0, total: 1, duration: 100 },
@@ -300,7 +300,7 @@ describe('resolveTestDataSource', () => {
     it('stores CI result with empty branch when branch is null', async () => {
         const { resolveTestDataSource } = await import('./session-context.js');
         const store = createMockStore();
-        vi.mocked(store.loadReport).mockReturnValue(null);
+        vi.spyOn(store, 'loadReport').mockReturnValue(null);
         vi.mocked(fetchLatestTestRun).mockResolvedValue({
             tests: [{ title: 'T1', state: 'passed', duration: 100 }],
             stats: { passed: 1, failed: 0, skipped: 0, total: 1, duration: 100 },
@@ -319,7 +319,7 @@ describe('resolveTestDataSource', () => {
     it('skips CI download when no sha provided', async () => {
         const { resolveTestDataSource } = await import('./session-context.js');
         const store = createMockStore();
-        vi.mocked(store.loadReport).mockReturnValue(null);
+        vi.spyOn(store, 'loadReport').mockReturnValue(null);
         vi.mocked(fetchLatestTestRun).mockResolvedValue({
             tests: [{ title: 'T1', state: 'passed', duration: 100 }],
             stats: { passed: 1, failed: 0, skipped: 0, total: 1, duration: 100 },
@@ -337,7 +337,7 @@ describe('resolveTestDataSource', () => {
     it('handles loadReport returning non-array tests', async () => {
         const { resolveTestDataSource } = await import('./session-context.js');
         const store = createMockStore();
-        vi.mocked(store.loadReport).mockReturnValue({ tests: 'not-an-array' });
+        vi.spyOn(store, 'loadReport').mockReturnValue({ tests: 'not-an-array' });
         vi.mocked(fetchLatestTestRun).mockResolvedValue(null);
 
         const result = await resolveTestDataSource('project', 'sha123', 'main', store as never);
@@ -348,7 +348,7 @@ describe('resolveTestDataSource', () => {
     it('handles loadReport returning empty array', async () => {
         const { resolveTestDataSource } = await import('./session-context.js');
         const store = createMockStore();
-        vi.mocked(store.loadReport).mockReturnValue({ tests: [] });
+        vi.spyOn(store, 'loadReport').mockReturnValue({ tests: [] });
         vi.mocked(fetchLatestTestRun).mockResolvedValue(null);
 
         const result = await resolveTestDataSource('project', 'sha123', 'main', store as never);
@@ -359,9 +359,9 @@ describe('resolveTestDataSource', () => {
     it('handles branch baseline entry with no sha', async () => {
         const { resolveTestDataSource } = await import('./session-context.js');
         const store = createMockStore();
-        vi.mocked(store.loadReport).mockReturnValue(null);
+        vi.spyOn(store, 'loadReport').mockReturnValue(null);
         vi.mocked(fetchLatestTestRun).mockResolvedValue(null);
-        vi.mocked(store.getBranch).mockReturnValue([{ sha: null, timestamp: 1000 }] as never);
+        vi.spyOn(store, 'getBranch').mockReturnValue([{ sha: null, timestamp: 1000 }] as never);
 
         const result = await resolveTestDataSource('project', 'sha789', 'main', store as never);
 

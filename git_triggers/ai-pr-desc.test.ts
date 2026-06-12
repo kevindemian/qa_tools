@@ -14,14 +14,14 @@ describe('generatePrDescription', () => {
     });
 
     it('should return empty when diff is empty', async () => {
-        vi.mocked(mockProvider.getDiff).mockResolvedValue('');
+        vi.spyOn(mockProvider, 'getDiff').mockResolvedValue('');
         const result = await generatePrDescription(mockProvider, 'feature/a', 'main');
         expect(result).toBe('');
         expect(llmPrompt).not.toHaveBeenCalled();
     });
 
     it('should call llmPrompt with diff content', async () => {
-        vi.mocked(mockProvider.getDiff).mockResolvedValue('diff --git a/src/test.ts b/src/test.ts\n+new test');
+        vi.spyOn(mockProvider, 'getDiff').mockResolvedValue('diff --git a/src/test.ts b/src/test.ts\n+new test');
         vi.mocked(llmPrompt).mockResolvedValue('Resumo: adicionado novo teste.');
 
         const result = await generatePrDescription(mockProvider, 'feature/a', 'main');
@@ -37,7 +37,7 @@ describe('generatePrDescription', () => {
     });
 
     it('should return empty on llm error', async () => {
-        vi.mocked(mockProvider.getDiff).mockResolvedValue('some diff');
+        vi.spyOn(mockProvider, 'getDiff').mockResolvedValue('some diff');
         vi.mocked(llmPrompt).mockRejectedValue(new Error('API error'));
 
         const result = await generatePrDescription(mockProvider, 'feature/a', 'main');

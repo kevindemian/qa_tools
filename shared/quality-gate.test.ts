@@ -1,9 +1,5 @@
 import { runQualityGate, formatQualityGateJson, formatQualityGateText } from './quality-gate.js';
 
-vi.mock('child_process', () => ({
-    execFileSync: vi.fn(),
-}));
-
 vi.mock('./metrics', () => ({
     loadMetrics: vi.fn(),
     calculateFlakiness: vi.fn(),
@@ -13,53 +9,24 @@ vi.mock('./logger', () => ({
     rootLogger: { error: vi.fn() },
 }));
 
-import { execFileSync } from 'child_process';
 import { loadMetrics, calculateFlakiness } from './metrics.js';
 
 const mockLoadMetrics = vi.mocked(loadMetrics);
 const mockCalcFlakiness = vi.mocked(calculateFlakiness);
-const mockExecFileSync = vi.mocked(execFileSync);
 
 describe('runQualityGate', () => {
     beforeEach(() => {
         vi.clearAllMocks();
-        delete process.env['QA_GATE_MIN_PASS_RATE'];
-        delete process.env['QA_GATE_MAX_FLAKY_PCT'];
-        delete process.env['QA_GATE_MIN_COVERAGE'];
-        delete process.env['QA_GATE_MAX_SUITE_SPEED'];
-        mockExecFileSync.mockImplementation(() => '');
     });
 
-    it('returns pass when no metrics data exists (fallback git vazio)', () => {
+    it('returns fail when no metrics data exists', () => {
         mockLoadMetrics.mockReturnValue({ runs: [] });
         const result = runQualityGate();
-        expect(result.overall).toBe('pass');
+        expect(result.overall).toBe('fail');
         expect(result.checks).toHaveLength(1);
         expect(result.checks[0]?.name).toBe('metrics-data');
-        expect(result.checks[0]?.status).toBe('pass');
-        expect(result.score).toBe(100);
-    });
-
-    it('falls back to git data when metrics store empty', () => {
-        mockLoadMetrics.mockReturnValue({ runs: [] });
-        mockExecFileSync.mockImplementation(
-            () =>
-                'abc123|2026-06-01T10:00:00.000Z|Initial commit|kdemian|\n' +
-                'def456|2026-06-02T11:00:00.000Z|Second commit|kdemian|abc123',
-        );
-        const result = runQualityGate();
-        expect(result.checks.length).toBeGreaterThan(1);
-        expect(result.checks[0]?.name).not.toBe('metrics-data');
-    });
-
-    it('returns pass when no metrics data exists (gate skipped)', () => {
-        mockLoadMetrics.mockReturnValue({ runs: [] });
-        const result = runQualityGate();
-        expect(result.overall).toBe('pass');
-        expect(result.checks).toHaveLength(1);
-        expect(result.checks[0]?.name).toBe('metrics-data');
-        expect(result.checks[0]?.status).toBe('pass');
-        expect(result.score).toBe(100);
+        expect(result.checks[0]?.status).toBe('fail');
+        expect(result.score).toBe(0);
     });
 
     it('returns pass when all gates pass', () => {
@@ -90,7 +57,7 @@ describe('runQualityGate', () => {
             ],
         });
         mockCalcFlakiness.mockReturnValue([]);
-        const result = runQualityGate({ minPassRate: 80, maxFlakyPct: 30, minCoverage: 70, maxSuiteSpeed: 8 });
+        const result = runQualityGate();
         expect(result.overall).toBe('pass');
         expect(result.checks.length).toBeGreaterThan(1);
         const failChecks = result.checks.filter((c) => c.status === 'fail');
@@ -125,7 +92,7 @@ describe('runQualityGate', () => {
             ],
         });
         mockCalcFlakiness.mockReturnValue([]);
-        const result = runQualityGate({ minPassRate: 80, maxFlakyPct: 30, minCoverage: 70, maxSuiteSpeed: 8 });
+        const result = runQualityGate();
         expect(result.overall).toBe('fail');
         const passRateCheck = result.checks.find((c) => c.name === 'pass-rate');
         expect(passRateCheck?.status).toBe('fail');
@@ -147,52 +114,8 @@ describe('runQualityGate', () => {
             ],
         });
         mockCalcFlakiness.mockReturnValue([]);
-        const result = runQualityGate({
-            project: 'nonexistent',
-            minPassRate: 80,
-            maxFlakyPct: 30,
-            minCoverage: 70,
-            maxSuiteSpeed: 8,
-        });
+        const result = runQualityGate({ project: 'nonexistent' });
         expect(result.checks.length).toBeGreaterThanOrEqual(1);
-    });
-
-    it('reads thresholds from environment variables', () => {
-        process.env['QA_GATE_MIN_PASS_RATE'] = '90';
-        process.env['QA_GATE_MAX_FLAKY_PCT'] = '10';
-        process.env['QA_GATE_MIN_COVERAGE'] = '80';
-        process.env['QA_GATE_MAX_SUITE_SPEED'] = '5';
-        mockLoadMetrics.mockReturnValue({
-            runs: [
-                {
-                    timestamp: '2025-01-01T00:00:00.000Z',
-                    project: 'test',
-                    total: 100,
-                    passed: 85,
-                    failed: 10,
-                    skipped: 5,
-                    duration: 10000,
-                    tests: [
-                        { title: 't1', state: 'passed', duration: 100 },
-                        { title: 't2', state: 'failed', duration: 100 },
-                    ],
-                },
-            ],
-            coverageHistory: [
-                {
-                    timestamp: '2025-01-01T00:00:00.000Z',
-                    project: 'test',
-                    totalIssues: 10,
-                    mappedIssues: 8,
-                    coveragePct: 75,
-                },
-            ],
-        });
-        mockCalcFlakiness.mockReturnValue([
-            { title: 't2', passCount: 0, failCount: 1, skipCount: 0, totalRuns: 1, rate: 1 },
-        ]);
-        const result = runQualityGate({ project: 'test' });
-        expect(result.overall).toBe('fail');
     });
 
     it('handles errors gracefully', () => {

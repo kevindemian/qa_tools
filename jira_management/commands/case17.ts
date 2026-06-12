@@ -10,7 +10,6 @@ import { parseTestResultsFile } from '../../shared/result_parser.js';
 import {
     generateHtmlReport,
     categorizeFailure,
-    loadKnownIssues,
     type TestRunTab,
     type ReportOptions,
 } from '../../shared/report-generator.js';
@@ -169,8 +168,6 @@ async function _buildReportOptions(
 ): Promise<ReportOptions> {
     const historyCache = new TestHistoryCache();
     const testHistory = await resolveTestHistory(result.tests, c, historyCache);
-    const knownIssues = loadKnownIssues(Config.get('knownIssuesPath'));
-
     const runs: TestRunTab[] = [];
     for (const extra of cliExtra.extraRuns) {
         const r = parseTestResultsFile(extra.file);
@@ -192,7 +189,6 @@ async function _buildReportOptions(
         generatedAt: new Date().toISOString(),
         source: 'Relatório HTML',
         ...(Object.keys(testHistory).length > 0 ? { testHistory } : {}),
-        ...(knownIssues.length > 0 ? { knownIssues } : {}),
         ...(runs.length > 0 ? { runs } : {}),
         diffComparison: diff,
         ...(Object.keys(flakinessMap).length > 0 ? { flakinessMap } : {}),

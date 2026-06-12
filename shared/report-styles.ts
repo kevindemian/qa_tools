@@ -133,8 +133,7 @@ const ERROR_HISTORY_CSS = `
 .hist-tooltip{display:none;position:absolute;background:#1f2937;color:#f9fafb;padding:8px 12px;border-radius:6px;font-size:0.75rem;white-space:nowrap;z-index:100;pointer-events:none}
 .hist-cell{position:relative;cursor:default;white-space:nowrap}
 .hist-cell:hover .hist-tooltip{display:block}
-.ki-badge{display:inline-block;padding:1px 6px;border-radius:4px;background:var(--color-badge-skip-bg);color:var(--color-badge-skip-text);font-size:0.7rem;font-weight:600;margin-left:4px;vertical-align:middle}
-.ki-suppressed{opacity:0.6}
+
 `;
 
 const DETAIL_CSS = `

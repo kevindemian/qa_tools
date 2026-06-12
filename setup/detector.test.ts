@@ -9,7 +9,7 @@ vi.mock('fs', () => ({
     existsSync: vi.fn(),
 }));
 
-const mockFsReadFileSync = vi.mocked(fs.readFileSync);
+const mockFsReadFileSync = vi.spyOn(fs, 'readFileSync');
 
 beforeEach(() => {
     vi.clearAllMocks();

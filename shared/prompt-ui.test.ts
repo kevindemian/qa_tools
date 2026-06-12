@@ -78,7 +78,7 @@ import {
 } from './prompt-ui.js';
 import Config from './config.js';
 
-const mockIsTTY = vi.mocked(Output.isTTY);
+const mockIsTTY = vi.spyOn(Output, 'isTTY');
 
 function makeConfig(overrides: Record<string, unknown> = {}) {
     return Config.create({ quiet: false, onError: 'abort', ...overrides });
@@ -428,9 +428,9 @@ describe('onError', () => {
     });
 
     it('throws CancelError when user types navigation cmd', () => {
-        vi.mocked(readlineSync.question).mockReturnValue('/back');
+        vi.spyOn(readlineSync, 'question').mockReturnValue('/back');
         expect(() => onError('ctx', new Error('fail'))).toThrow('/back');
-        vi.mocked(readlineSync.question).mockReturnValue('');
+        vi.spyOn(readlineSync, 'question').mockReturnValue('');
     });
 });
 

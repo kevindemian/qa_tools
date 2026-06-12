@@ -113,7 +113,6 @@ vi.mock('../shared/quality-gate', () => ({
 }));
 vi.mock('../shared/temp-dir', () => ({ writeReport: vi.fn((name: string) => '/tmp/' + name) }));
 vi.mock('../shared/jira-client', () => ({ default: vi.fn() }));
-vi.mock('../shared/flaky-auto-actions', () => ({ executeFlakyActions: vi.fn(() => []) }));
 
 vi.mock('../shared/flakiness-dashboard', () => ({ generateFlakinessHtml: vi.fn(() => '<html>') }));
 
@@ -172,7 +171,7 @@ describe('handleListSchedules', () => {
             { id: '1', description: 'Nightly', next_run_at: '2026-01-01' },
             { id: '2', description: '' },
         ];
-        vi.mocked(mockManager.getSchedules).mockResolvedValue(schedules);
+        vi.spyOn(mockManager, 'getSchedules').mockResolvedValue(schedules);
 
         await handleListSchedules(mockManager);
 
@@ -182,7 +181,7 @@ describe('handleListSchedules', () => {
     });
 
     it('warns on empty schedules', async () => {
-        vi.mocked(mockManager.getSchedules).mockResolvedValue([]);
+        vi.spyOn(mockManager, 'getSchedules').mockResolvedValue([]);
 
         await handleListSchedules(mockManager);
 
@@ -199,7 +198,7 @@ describe('handleListSchedules', () => {
     });
 
     it('handles error', async () => {
-        vi.mocked(mockManager.getSchedules).mockRejectedValue(new Error('API error'));
+        vi.spyOn(mockManager, 'getSchedules').mockRejectedValue(new Error('API error'));
 
         await handleListSchedules(mockManager);
 
@@ -210,7 +209,7 @@ describe('handleListSchedules', () => {
 describe('handleRunSchedule', () => {
     it('runs schedule for gitlab', async () => {
         mockPrompt.mockReturnValue('schedule-1');
-        vi.mocked(mockManager.runSchedule).mockResolvedValue({ status: 'success' });
+        vi.spyOn(mockManager, 'runSchedule').mockResolvedValue({ status: 'success' });
 
         await handleRunSchedule(mockManager);
 
@@ -230,7 +229,7 @@ describe('handleRunSchedule', () => {
 
     it('handles error', async () => {
         mockPrompt.mockReturnValue('sched-1');
-        vi.mocked(mockManager.runSchedule).mockRejectedValue(new Error('fail'));
+        vi.spyOn(mockManager, 'runSchedule').mockRejectedValue(new Error('fail'));
 
         await handleRunSchedule(mockManager);
 

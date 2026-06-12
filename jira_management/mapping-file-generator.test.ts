@@ -115,8 +115,8 @@ describe('MappingFileGenerator', () => {
     });
 
     it('isQuiet returns false — info() is called', () => {
-        const mockIsQuiet = vi.mocked(prompt.isQuiet);
-        const mockInfo = vi.mocked(prompt.info);
+        const mockIsQuiet = vi.spyOn(prompt, 'isQuiet');
+        const mockInfo = vi.spyOn(prompt, 'info');
         mockIsQuiet.mockReturnValue(false);
         generator.generate('/f.csv', 'P', ['K-1'], [{ title: 't', steps: [] }]);
         expect(mockInfo).toHaveBeenCalledTimes(2);

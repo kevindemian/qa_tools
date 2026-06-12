@@ -280,9 +280,9 @@ describe('wfDownloadArtifact', () => {
     });
 
     it('returns buffer and filename from artifact zip', async () => {
-        vi.mocked(client.get).mockResolvedValue({ data: Buffer.from('zip-data') });
+        const getSpy = vi.spyOn(client, 'get').mockResolvedValue({ data: Buffer.from('zip-data') });
         const result = await wfDownloadArtifact(client, 'myorg', 'myrepo', '301');
-        expect(client.get).toHaveBeenCalledWith('/repos/myorg/myrepo/actions/artifacts/301/zip', {
+        expect(getSpy).toHaveBeenCalledWith('/repos/myorg/myrepo/actions/artifacts/301/zip', {
             responseType: 'arraybuffer',
             maxRedirects: 5,
         });
@@ -292,7 +292,7 @@ describe('wfDownloadArtifact', () => {
     });
 
     it('throws on API error', async () => {
-        vi.mocked(client.get).mockRejectedValue(new Error('Download failed'));
+        vi.spyOn(client, 'get').mockRejectedValue(new Error('Download failed'));
         await expect(wfDownloadArtifact(client, 'myorg', 'myrepo', '999')).rejects.toThrow('Download failed');
     });
 });
@@ -305,9 +305,9 @@ describe('wfGetJobLogs', () => {
     });
 
     it('returns truncated log text on success', async () => {
-        vi.mocked(client.get).mockResolvedValue({ data: 'line1\nline2\nline3\n' });
+        const getSpy2 = vi.spyOn(client, 'get').mockResolvedValue({ data: 'line1\nline2\nline3\n' });
         const result = await wfGetJobLogs(client, 'myorg', 'myrepo', 42, 100);
-        expect(client.get).toHaveBeenCalledWith('/repos/myorg/myrepo/actions/jobs/42/logs', {
+        expect(getSpy2).toHaveBeenCalledWith('/repos/myorg/myrepo/actions/jobs/42/logs', {
             responseType: 'text' as const,
             maxRedirects: 5,
         });
@@ -315,20 +315,20 @@ describe('wfGetJobLogs', () => {
     });
 
     it('truncates log when exceeding maxBytes', async () => {
-        vi.mocked(client.get).mockResolvedValue({ data: 'a'.repeat(100) });
+        vi.spyOn(client, 'get').mockResolvedValue({ data: 'a'.repeat(100) });
         const result = await wfGetJobLogs(client, 'myorg', 'myrepo', 42, 10);
         expect(result).toBe('a'.repeat(10));
         expect(nonNull(result).length).toBe(10);
     });
 
     it('handles non-string response data', async () => {
-        vi.mocked(client.get).mockResolvedValue({ data: Buffer.from('text-data') });
+        vi.spyOn(client, 'get').mockResolvedValue({ data: Buffer.from('text-data') });
         const result = await wfGetJobLogs(client, 'myorg', 'myrepo', 42, 100);
         expect(result).toBe('text-data');
     });
 
     it('throws on API error', async () => {
-        vi.mocked(client.get).mockRejectedValue(new Error('Log fetch error'));
+        vi.spyOn(client, 'get').mockRejectedValue(new Error('Log fetch error'));
         await expect(wfGetJobLogs(client, 'myorg', 'myrepo', 42)).rejects.toThrow('Log fetch error');
     });
 });

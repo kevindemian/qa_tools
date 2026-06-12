@@ -39,7 +39,7 @@ describe('analyzeFailuresWithReport', () => {
 
     it('passes LlmContext to reviewWithLlm when provided', async () => {
         const promptContent = 'Analyze these failures:\n{{FAILED_TESTS}}';
-        vi.mocked(fs.readFileSync).mockReturnValue(promptContent);
+        vi.spyOn(fs, 'readFileSync').mockReturnValue(promptContent);
         mockReviewWithLlm.mockResolvedValueOnce({
             content: 'Root cause with context',
             reviewed: true,
@@ -67,7 +67,7 @@ describe('analyzeFailuresWithReport', () => {
     it('23.9: analyzeFailuresWithReport HTML exception path', async () => {
         // Mock to trigger exception during HTML report generation
         const promptContent = 'Analyze these failures:\n{{FAILED_TESTS}}';
-        vi.mocked(fs.readFileSync).mockReturnValue(promptContent);
+        vi.spyOn(fs, 'readFileSync').mockReturnValue(promptContent);
 
         // Mock reviewWithLlm to fail or behave in a way that generates error in report generation
         mockReviewWithLlm.mockRejectedValueOnce(new Error('HTML report generation failed'));
@@ -81,7 +81,7 @@ describe('analyzeFailuresWithReport', () => {
 
     it('23.10: HTML report output verified', async () => {
         const promptContent = 'Analyze these failures:\n{{FAILED_TESTS}}';
-        vi.mocked(fs.readFileSync).mockReturnValue(promptContent);
+        vi.spyOn(fs, 'readFileSync').mockReturnValue(promptContent);
         mockReviewWithLlm.mockResolvedValueOnce({
             content: 'Root cause: assertion error',
             reviewed: true,
@@ -95,7 +95,7 @@ describe('analyzeFailuresWithReport', () => {
     });
 
     it('handles missing prompt template gracefully', async () => {
-        vi.mocked(fs.readFileSync).mockImplementation(() => {
+        vi.spyOn(fs, 'readFileSync').mockImplementation(() => {
             throw new Error('ENOENT');
         });
 
@@ -106,7 +106,7 @@ describe('analyzeFailuresWithReport', () => {
     });
 
     it('returns fallback=true when template is missing', async () => {
-        vi.mocked(fs.readFileSync).mockImplementation(() => {
+        vi.spyOn(fs, 'readFileSync').mockImplementation(() => {
             throw new Error('ENOENT');
         });
 
@@ -120,7 +120,7 @@ describe('analyzeFailuresWithReport', () => {
 describe('classifyFailure', () => {
     it('calls llmPrompt (fast tier) with test title and Zod schema', async () => {
         const promptContent = 'Classify: ';
-        vi.mocked(fs.readFileSync).mockReturnValue(promptContent);
+        vi.spyOn(fs, 'readFileSync').mockReturnValue(promptContent);
         mockLlmPrompt.mockResolvedValueOnce('ASSERTION: expected true but got false');
 
         const result = await classifyFailure('Login test', 'expected true, got false');
@@ -134,7 +134,7 @@ describe('classifyFailure', () => {
 
     it('returns valid classification when llmPrompt returns matching format', async () => {
         const promptContent = 'Classify: ';
-        vi.mocked(fs.readFileSync).mockReturnValue(promptContent);
+        vi.spyOn(fs, 'readFileSync').mockReturnValue(promptContent);
         mockLlmPrompt.mockResolvedValueOnce('ASSERTION: expected 200 got 500');
 
         const result = await classifyFailure('Login test', 'expected 200, got 500');
@@ -143,7 +143,7 @@ describe('classifyFailure', () => {
 
     it('falls back to UNKNOWN when llmPrompt throws (Zod validation failed after retry)', async () => {
         const promptContent = 'Classify: ';
-        vi.mocked(fs.readFileSync).mockReturnValue(promptContent);
+        vi.spyOn(fs, 'readFileSync').mockReturnValue(promptContent);
         // Self-consistency calls llmPrompt 3×; fallback calls it 1× more
         mockLlmPrompt.mockRejectedValue(new Error('LLM response failed schema validation after retry'));
 
@@ -152,7 +152,7 @@ describe('classifyFailure', () => {
     });
 
     it('returns UNKNOWN when classify.md cannot be read', async () => {
-        vi.mocked(fs.readFileSync).mockImplementation(() => {
+        vi.spyOn(fs, 'readFileSync').mockImplementation(() => {
             throw new Error('ENOENT');
         });
         const result = await classifyFailure('Login test', 'error');

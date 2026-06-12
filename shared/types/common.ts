@@ -153,5 +153,4 @@ export interface ConfigOverrides {
     xrayCloudUrl?: string;
     llmMaxTokens?: string | number;
     llmMaxTotalTokens?: string | number;
-    knownIssuesPath?: string;
 }

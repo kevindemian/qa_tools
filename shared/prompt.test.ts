@@ -320,7 +320,7 @@ describe('Prompt', () => {
             it('constructs SingleBar with format config', async () => {
                 new prompt.ProgressBar(100, { width: 30 });
                 const cliProgressMod = await import('cli-progress');
-                expect(vi.mocked(cliProgressMod.SingleBar)).toHaveBeenCalledWith(
+                expect(vi.spyOn(cliProgressMod, 'SingleBar')).toHaveBeenCalledWith(
                     expect.objectContaining({ barsize: 30 }),
                     {},
                 );

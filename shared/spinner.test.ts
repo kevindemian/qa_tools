@@ -22,8 +22,8 @@ import { Output, defaultOutput } from '../shared/output.js';
 import { withSpinner, ProgressBar, __setOraDep } from './spinner.js';
 
 const mockIsQuiet = vi.mocked(isQuiet);
-const mockIsTTY = vi.mocked(Output.isTTY);
-const mockIsCI = vi.mocked(Output.isCI);
+const mockIsTTY = vi.spyOn(Output, 'isTTY');
+const mockIsCI = vi.spyOn(Output, 'isCI');
 
 beforeEach(() => {
     vi.clearAllMocks();
@@ -103,9 +103,10 @@ describe('ProgressBar', () => {
 
         it('falls back to output.print when not TTY', () => {
             mockIsTTY.mockReturnValue(false);
+            const printSpy = vi.spyOn(defaultOutput, 'print');
             const bar = new ProgressBar(100);
             bar.update(50);
-            expect(defaultOutput.print).toHaveBeenCalled();
+            expect(printSpy).toHaveBeenCalled();
         });
     });
 

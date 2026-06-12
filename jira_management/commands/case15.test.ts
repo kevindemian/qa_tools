@@ -69,7 +69,7 @@ beforeEach(() => {
         branch: 'main',
         store: mockStore(),
     });
-    vi.mocked(createTests.createTestsFromJson).mockResolvedValue({
+    vi.spyOn(createTests, 'createTestsFromJson').mockResolvedValue({
         inMemoryTasksId: ['TEST-1', 'TEST-2'],
         inMemoryTasksText: ['test 1', 'test 2'],
         summary: '2 testes importados',
@@ -118,7 +118,7 @@ describe('case15 — create tests from JSON', () => {
             'main',
             store,
         );
-        expect(vi.mocked(createTests.createTestsFromJson)).toHaveBeenCalled();
+        expect(vi.spyOn(createTests, 'createTestsFromJson')).toHaveBeenCalled();
     });
 
     it('falls back to CI download when cache misses', async () => {
@@ -132,7 +132,7 @@ describe('case15 — create tests from JSON', () => {
 
         const result = await case15.handler(mockContext);
         expect(typeof result === 'boolean' || result === undefined).toBe(true);
-        expect(vi.mocked(createTests.createTestsFromJson)).toHaveBeenCalled();
+        expect(vi.spyOn(createTests, 'createTestsFromJson')).toHaveBeenCalled();
     });
 
     it('falls back to manual path when resolveTestDataSource returns null', async () => {
@@ -143,7 +143,7 @@ describe('case15 — create tests from JSON', () => {
 
         const result = await case15.handler(mockContext);
         expect(typeof result === 'boolean' || result === undefined).toBe(true);
-        expect(vi.mocked(createTests.createTestsFromJson)).toHaveBeenCalled();
+        expect(vi.spyOn(createTests, 'createTestsFromJson')).toHaveBeenCalled();
     });
 
     it('cancels when manual path is empty', async () => {
@@ -153,7 +153,7 @@ describe('case15 — create tests from JSON', () => {
 
         const result = await case15.handler(mockContext);
         expect(result).toBeUndefined();
-        expect(vi.mocked(createTests.createTestsFromJson)).not.toHaveBeenCalled();
+        expect(vi.spyOn(createTests, 'createTestsFromJson')).not.toHaveBeenCalled();
         expect(warn).toHaveBeenCalled();
     });
 
@@ -170,7 +170,7 @@ describe('case15 — create tests from JSON', () => {
         const result = await case15.handler(mockContext);
         expect(typeof result === 'boolean' || result === undefined).toBe(true);
         expect(vi.mocked(resolveTestDataSource)).not.toHaveBeenCalled();
-        expect(vi.mocked(createTests.createTestsFromJson)).toHaveBeenCalled();
+        expect(vi.spyOn(createTests, 'createTestsFromJson')).toHaveBeenCalled();
     });
 
     it('displays results after successful import', async () => {

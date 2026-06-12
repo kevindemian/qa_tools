@@ -1,5 +1,116 @@
 # Backlog
 
+> ⚠️ Sprints anteriores a esta estão **concluídos**. Movidos para `BACKLOG-historico.md`.
+> Consulte os históricos para detalhes de sprints passados.
+
+## 🛡️ Sprint Baseline Zero — Eliminação de Todos os Mecanismos de Supressão (Jun/2026)
+
+**Data:** 2026-06-12
+**Origem:** Auditoria sistêmica de segurança: 20 mecanismos de baseline/supressão identificados.
+**Estratégia:** Order by safety impact — mecanismos que mascaram regressões primeiro.
+**Regra absoluta:** no workarounds, no debt, no safety rule violations.
+
+### Plano de Fases
+
+| Fase | Descrição | Status |
+|------|-----------|--------|
+| 1 | Remover Known Issues + Endurecer Quality Gate | ✅ |
+| 2 | Remover Quarantine + Flaky Auto-Actions | ✅ |
+| 3 | Refatorar 342 `vi.mocked()` → `vi.spyOn()` + remover UNBOUND_METHOD_BASELINE | ✅ |
+| 4 | Eliminar unused-exports baseline + deferred dead code | ✅ |
+| 5 | Corrigir non-null exclusions + `as unknown as` produção + `eslint-disable` | ⏳ |
+| 6 | Criar suppression-auditor agent (18 categorias de detecção + correção) | ⏳ |
+
+### Fase 1 — Remover Known Issues + Endurecer Quality Gate ✅
+
+**Objetivo:** Falhas de teste não podem mais ser mascaradas. Thresholds de qualidade são fixos.
+
+**Mudanças realizadas:**
+
+| ID | Arquivo | Ação | Status |
+|----|---------|------|--------|
+| BZ-01 | `shared/report-types.ts` | Remover interface `KnownIssue`, função `toKnownIssues()` | ✅ |
+| BZ-02 | `shared/report-sections.ts` | Remover parâmetro `knownIssues` de `buildTabContents()` | ✅ |
+| BZ-03 | `shared/report-generator.ts` | Remover `loadKnownIssues()`, `KnownIssue` de export | ✅ |
+| BZ-04 | `shared/report-table.ts` | Remover `matchKnownIssue()` + parâmetro `knownIssues` | ✅ |
+| BZ-05 | `shared/config-schema.ts` | Remover `knownIssuesPath` do schema | ✅ |
+| BZ-06 | `shared/types/common.ts` | Remover `knownIssuesPath?` do `ReportConfig` | ✅ |
+| BZ-07 | `shared/report-styles.ts` | Remover `.ki-suppressed`, `.ki-badge` CSS | ✅ |
+| BZ-08 | `shared/quality-gate.ts` | Thresholds fixos `as const`, remover `loadEnvThresholds()`, `isGitFallback`, `_maybeTriggerFlakyActions()`, `generateGitMetricsRuns()` | ✅ |
+| BZ-09 | `jira_management/commands/case17.ts` | Remover `loadKnownIssues()` import e uso | ✅ |
+| BZ-T | Testes | Atualizar 4 arquivos de teste | ✅ |
+
+### Fase 2 — Remover Quarantine + Flaky Auto-Actions ✅
+
+**Mudanças realizadas:**
+
+| ID | Arquivo | Ação | Status |
+|----|---------|------|--------|
+| BZ-11 | `shared/flaky-auto-actions.ts` | Remover arquivo (272 linhas) | ✅ |
+| BZ-12 | `shared/flaky-auto-actions.test.ts` | Remover arquivo | ✅ |
+| BZ-13 | `.opencode/guard/backups/qa-quarantine.json` | Remover arquivo | ✅ |
+| BZ-14 | `shared/quality-gate.ts` | Import já removido na Fase 1 (BZ-10) | ✅ |
+| BZ-15 | `jira_management/commands/case19.ts` | Remover import + `executeFlakyActions` + `askConfirm` | ✅ |
+| BZ-16 | `jira_management/commands/case19.test.ts` | Remover 3 testes de auto-actions + mock | ✅ |
+| BZ-17 | `git_triggers/batch-mode.ts` | Remover `runFlakyAutoActions()` + import | ✅ |
+| BZ-18 | `git_triggers/schedule-handler.ts` | Remover `runFlakyAutoActionsForProject()` + imports | ✅ |
+| BZ-19 | `git_triggers/schedule-handler.test.ts` | Remover mock `flaky-auto-actions` | ✅ |
+| BZ-20 | `shared/types/bugs.ts` | Remover `FlakyAction`, `FlakyActionConfig` interfaces | ✅ |
+
+### Fase 3 — Refatorar `vi.mocked()` → `vi.spyOn()` ✅
+
+**342 ocorrências em 41 arquivos de teste transformadas.**
+
+**Padrão:** `vi.mocked(obj.method)` → `vi.spyOn(obj, 'method')`
+**Script:** `/tmp/fix-vimocked.mjs` (transformação regex em massa)
+**Removido:** `UNBOUND_METHOD_BASELINE = 313` de `scripts/quality-check.ts`
+**Mantido:** `MockedSafe<T>` (ainda usado por `handlers.test.ts`)
+**`checkEslintBaseline` simplificado:** sem tracking de baseline, qualquer violação = falha
+
+### Fase 4 — Eliminar Unused-Exports Baseline ✅
+
+**Mudanças realizadas:**
+
+| ID | Arquivo | Ação | Status |
+|----|---------|------|--------|
+| BZ-21 | `scripts/.unused-exports-baseline` | Removido (baseline stale — 0 unused exports atuais) | ✅ |
+| BZ-22 | `docs/DEFERRED-DEAD-CODE.md` | Removido | ✅ |
+| BZ-23 | `scripts/quality-check.ts` | Remover `checkUnusedExports` baseline comparison + `UNUSED_EXPORTS_BASELINE_FILE` constante | ✅ |
+| BZ-24 | `scripts/quality-check.test.ts` | Atualizar 4 testes de `checkUnusedExports` | ✅ |
+
+**Nota:** Baseline estava completamente stale — `npx ts-prune --error` com filtros de path retorna 0 unused exports. Todos os 31 itens do baseline foram endereçados por refatorações anteriores.
+
+### Fase 5 — Corrigir Non-Null Exclusions + as-unknown-as + eslint-disable
+
+**Non-null exclusions (6 arquivos):** Refatorar → tipo seguro
+**`as unknown as` em produção (~24 arquivos):** Refatorar → tipo correto ou schema
+**`eslint-disable` inline (6 ocorrências):** Refatorar → sem supressão
+**Remover:** Filtro `/eslint-disable/` de `checkAsAny()` em `quality-check.ts:313-320`
+
+### Fase 6 — Criar suppression-auditor Agent
+
+**Novo:** `.opencode/agents/suppression-auditor.md`
+
+18 categorias de detecção + protocolo de correção + validação pós-edição.
+
+### Métricas Alvo
+
+| Métrica | Antes | Depois |
+|---------|-------|--------|
+| Baselines em quality-check.ts | 2 | **0** |
+| Known Issues system | Ativo | **Removido** |
+| Flaky Auto-Actions | Ativo | **Removido** |
+| Thresholds override por env var | 4 | **0** |
+| Git fallback auto-pass | 1 | **0** |
+| `vi.mocked()` em testes | ~313 | **0** |
+| File exclusions (non-null) | 6 arquivos | **0** |
+| `as unknown as` em produção | ~24 arquivos | **0** |
+| `eslint-disable` inline | 6 | **0** |
+| Dead code deferido | 62 | **0** |
+| Suppression auditor | ❌ | **✅** |
+
+---
+
 ## 🛡️ Sprint Inverse Audit — Correção de Achados (Jun/2026)
 
 **Data:** 2026-06-12
@@ -1729,7 +1840,7 @@ Cada fase (0-5) é committada separadamente com verificação:
 
 **Data:** 2026-06-12
 **Origem:** Model Registry 2.0 — UX simplificada, descoberta assíncrona, reordenação dinâmica.
-**Foco:** Eficiência (validação síncrona + descoberta background) e segurança (sem workarounds).
+**Foco:** Eficiência (validação síncrona + descoberta background) e segurança (no workarounds).
 **Ordem de execução:** Pré-requisitos → SmartWizard menu → Auto-probe day-0 → Dynamic reassign.
 
 ### Plano de Fases

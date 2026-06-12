@@ -201,8 +201,8 @@ afterAll(() => {
 
 beforeEach(() => {
     vi.clearAllMocks();
-    vi.mocked(prompt.prompt).mockReturnValue('0');
-    vi.mocked(prompt.confirm).mockReturnValue(false);
+    vi.spyOn(prompt, 'prompt').mockReturnValue('0');
+    vi.spyOn(prompt, 'confirm').mockReturnValue(false);
 });
 
 // ---------- isComplete ----------
@@ -357,7 +357,7 @@ describe('pushHistory', () => {
 
 describe('handleCreateMR', () => {
     it('creates MR and shows success', async () => {
-        vi.mocked(prompt.prompt)
+        vi.spyOn(prompt, 'prompt')
             .mockReturnValueOnce('feature-x')
             .mockReturnValueOnce('main')
             .mockReturnValueOnce('My MR')
@@ -371,7 +371,7 @@ describe('handleCreateMR', () => {
     });
 
     it('handles creation error', async () => {
-        vi.mocked(prompt.prompt)
+        vi.spyOn(prompt, 'prompt')
             .mockReturnValueOnce('src')
             .mockReturnValueOnce('dst')
             .mockReturnValueOnce('Title')
@@ -388,7 +388,7 @@ describe('handleCreateMR', () => {
 
 describe('handleMergeMR', () => {
     it('merges MR and shows success', async () => {
-        vi.mocked(prompt.prompt).mockReturnValueOnce('42');
+        vi.spyOn(prompt, 'prompt').mockReturnValueOnce('42');
         mockProvider.acceptMergeRequest.mockResolvedValue({ web_url: 'https://gitlab/mr/42' });
 
         await mainModule.handleMergeMR(mockProvider);
@@ -398,7 +398,7 @@ describe('handleMergeMR', () => {
     });
 
     it('handles merge error', async () => {
-        vi.mocked(prompt.prompt).mockReturnValueOnce('99');
+        vi.spyOn(prompt, 'prompt').mockReturnValueOnce('99');
         mockProvider.acceptMergeRequest.mockRejectedValue(new Error('Merge conflict'));
 
         await mainModule.handleMergeMR(mockProvider);
@@ -439,7 +439,7 @@ describe('handleListSchedules', () => {
 
 describe('handleRunSchedule', () => {
     it('runs schedule on success', async () => {
-        vi.mocked(prompt.prompt).mockReturnValueOnce('10');
+        vi.spyOn(prompt, 'prompt').mockReturnValueOnce('10');
         mockProvider.runSchedule.mockResolvedValue({ id: '10' });
 
         await mainModule.handleRunSchedule(mockProvider);
@@ -449,7 +449,7 @@ describe('handleRunSchedule', () => {
     });
 
     it('handles run error', async () => {
-        vi.mocked(prompt.prompt).mockReturnValueOnce('bad-id');
+        vi.spyOn(prompt, 'prompt').mockReturnValueOnce('bad-id');
         mockProvider.runSchedule.mockRejectedValue(new Error('Not found'));
 
         await mainModule.handleRunSchedule(mockProvider);
@@ -462,7 +462,7 @@ describe('handleRunSchedule', () => {
 
 describe('handleListApprovedMRs', () => {
     it('lists approved MRs', async () => {
-        vi.mocked(prompt.prompt).mockReturnValueOnce('opened');
+        vi.spyOn(prompt, 'prompt').mockReturnValueOnce('opened');
         mockProvider.searchMergeRequests.mockResolvedValue([{ iid: '1', title: 'Fix' }]);
         mockProvider.isApproved.mockResolvedValue(true);
 
@@ -472,7 +472,7 @@ describe('handleListApprovedMRs', () => {
     });
 
     it('warns when none approved', async () => {
-        vi.mocked(prompt.prompt).mockReturnValueOnce('opened');
+        vi.spyOn(prompt, 'prompt').mockReturnValueOnce('opened');
         mockProvider.searchMergeRequests.mockResolvedValue([{ iid: '2', title: 'WIP' }]);
         mockProvider.isApproved.mockResolvedValue(false);
 
@@ -495,7 +495,7 @@ describe('handleExportVariables', () => {
 
     it('cancels when user declines', async () => {
         const cliBase: typeof import('../shared/cli_base.js') = await import('../shared/cli_base.js');
-        vi.mocked(cliBase.confirmDestructiveAction).mockReturnValueOnce(false);
+        vi.spyOn(cliBase, 'confirmDestructiveAction').mockReturnValueOnce(false);
 
         await mainModule.handleExportVariables(mockProvider);
 
@@ -518,7 +518,7 @@ describe('handleHelp', () => {
 
 describe('handleShowHistory', () => {
     it('shows history table when entries exist', async () => {
-        vi.mocked(state.load).mockReturnValueOnce({
+        vi.spyOn(state, 'load').mockReturnValueOnce({
             history: [{ op: 'pipeline', detail: 'main', status: 'ok', ts: '2026-01-01T00:00:00Z' }],
         });
 
@@ -529,7 +529,7 @@ describe('handleShowHistory', () => {
     });
 
     it('warns when history is empty', async () => {
-        vi.mocked(state.load).mockReturnValueOnce({});
+        vi.spyOn(state, 'load').mockReturnValueOnce({});
 
         await mainModule.handleShowHistory();
 
@@ -579,7 +579,7 @@ describe('collectTestResults', () => {
 
 describe('handleChangeProject', () => {
     it('switches to valid project', async () => {
-        vi.mocked(prompt.prompt).mockReturnValueOnce('1');
+        vi.spyOn(prompt, 'prompt').mockReturnValueOnce('1');
 
         await mainModule.handleChangeProject(['proj-a', 'proj-b']);
 
@@ -587,7 +587,7 @@ describe('handleChangeProject', () => {
     });
 
     it('warns on invalid project index', async () => {
-        vi.mocked(prompt.prompt).mockReturnValueOnce('99');
+        vi.spyOn(prompt, 'prompt').mockReturnValueOnce('99');
 
         await mainModule.handleChangeProject(['proj-a']);
 
@@ -648,7 +648,7 @@ describe('displayRecentPipelines', () => {
 
 describe('handleListApprovedMRs - error', () => {
     it('calls printError when searchMergeRequests throws', async () => {
-        vi.mocked(prompt.prompt).mockReturnValueOnce('opened');
+        vi.spyOn(prompt, 'prompt').mockReturnValueOnce('opened');
         mockProvider.searchMergeRequests.mockRejectedValue(new Error('API fail'));
 
         await mainModule.handleListApprovedMRs(mockProvider);
@@ -686,7 +686,7 @@ describe('handleExportVariables - extended', () => {
 describe('pushHistory - trim', () => {
     it('trims state history to last 50 entries', () => {
         mainModule.pushHistory('op', 'd', 'ok');
-        const callback = nonNull(vi.mocked(state.update).mock.calls[0])[0];
+        const callback = nonNull(vi.spyOn(state, 'update').mock.calls[0])[0];
         const testState = { history: Array(51).fill({}) };
         callback(testState);
         expect((testState.history as Array<unknown>).length).toBe(50);
@@ -697,7 +697,7 @@ describe('pushHistory - trim', () => {
 
 describe('handleTriggerPipeline', () => {
     it('warns when branch is not found', async () => {
-        vi.mocked(prompt.prompt).mockReturnValueOnce('bad-branch');
+        vi.spyOn(prompt, 'prompt').mockReturnValueOnce('bad-branch');
         mockProvider.getBranch.mockResolvedValue(null);
 
         await mainModule.handleTriggerPipeline(mockProvider, 'proj-b');
@@ -706,10 +706,10 @@ describe('handleTriggerPipeline', () => {
     });
 
     it('triggers pipeline successfully without waiting', async () => {
-        vi.mocked(prompt.prompt)
+        vi.spyOn(prompt, 'prompt')
             .mockReturnValueOnce('main') // branch
             .mockReturnValueOnce(''); // workflow ID (empty = auto-detect, GitHub path)
-        vi.mocked(prompt.confirm)
+        vi.spyOn(prompt, 'confirm')
             .mockReturnValueOnce(false) // add variables = no
             .mockReturnValueOnce(false); // wait for completion = no
         mockProvider.getBranch.mockResolvedValue({ name: 'main' });
@@ -724,10 +724,10 @@ describe('handleTriggerPipeline', () => {
     });
 
     it('handles triggerPipeline error', async () => {
-        vi.mocked(prompt.prompt)
+        vi.spyOn(prompt, 'prompt')
             .mockReturnValueOnce('main') // branch
             .mockReturnValueOnce(''); // workflow ID (empty = auto-detect, GitHub path)
-        vi.mocked(prompt.confirm).mockReturnValueOnce(false); // add variables = no
+        vi.spyOn(prompt, 'confirm').mockReturnValueOnce(false); // add variables = no
         mockProvider.getBranch.mockResolvedValue({ name: 'main' });
         mockProvider.triggerPipeline.mockRejectedValue(new Error('Trigger fail'));
 
@@ -737,11 +737,11 @@ describe('handleTriggerPipeline', () => {
     });
 
     it('triggers with custom variables', async () => {
-        vi.mocked(prompt.prompt)
+        vi.spyOn(prompt, 'prompt')
             .mockReturnValueOnce('main') // branch
             .mockReturnValueOnce('') // workflow ID (empty = auto-detect, GitHub path)
             .mockReturnValueOnce('VAR1=val1,VAR2=val2'); // variables
-        vi.mocked(prompt.confirm)
+        vi.spyOn(prompt, 'confirm')
             .mockReturnValueOnce(true) // add variables = yes
             .mockReturnValueOnce(false); // wait = no
         mockProvider.getBranch.mockResolvedValue({ name: 'main' });
@@ -761,10 +761,10 @@ describe('handleTriggerPipeline', () => {
     });
 
     it('resumes pending pipeline', async () => {
-        vi.mocked(state.load).mockReturnValueOnce({
+        vi.spyOn(state, 'load').mockReturnValueOnce({
             pendingPipeline: { branch: 'feature-x', pipelineId: '123', projectName: 'proj-b' },
         });
-        vi.mocked(prompt.confirm).mockReturnValueOnce(true); // confirm resume
+        vi.spyOn(prompt, 'confirm').mockReturnValueOnce(true); // confirm resume
         mockProvider.getPipeline.mockResolvedValue({ status: 'success', web_url: 'https://pipe/1' });
         mockProvider.getRecentPipelines.mockResolvedValue([]);
 
@@ -820,7 +820,7 @@ describe('parseBatchArgs', () => {
 // ---------- _ensureProjectsConfigured ----------
 
 describe('_ensureProjectsConfigured', () => {
-    const mockConfirm = vi.mocked(prompt.confirm);
+    const mockConfirm = vi.spyOn(prompt, 'confirm');
 
     afterEach(() => {
         vi.clearAllMocks();
@@ -855,7 +855,7 @@ describe('_ensureProjectsConfigured', () => {
 
 describe('_selectProjectAndCreateManager', () => {
     it('returns null when _selectProject returns null projectName', async () => {
-        vi.mocked(prompt.prompt).mockReturnValueOnce('99');
+        vi.spyOn(prompt, 'prompt').mockReturnValueOnce('99');
         const result = await mainModule._selectProjectAndCreateManager();
         expect(result).toBeNull();
     });
@@ -1003,7 +1003,7 @@ describe('_selectProject', () => {
     });
 
     it('selects first project by index 1', () => {
-        vi.mocked(prompt.prompt).mockReturnValueOnce('1');
+        vi.spyOn(prompt, 'prompt').mockReturnValueOnce('1');
         const result = mainModule._selectProject();
         expect(result.projectName).toBe('proj-a');
         expect(result.names).toContain('proj-a');
@@ -1011,7 +1011,7 @@ describe('_selectProject', () => {
     });
 
     it('returns null projectName for invalid project index', () => {
-        vi.mocked(prompt.prompt).mockReturnValueOnce('99');
+        vi.spyOn(prompt, 'prompt').mockReturnValueOnce('99');
         const result = mainModule._selectProject();
         expect(result.projectName).toBeNull();
         expect(prompt.warn).toHaveBeenCalledWith('Projeto inválido.');
@@ -1021,7 +1021,7 @@ describe('_selectProject', () => {
         const ss: typeof import('./session-state.js') = await import('./session-state.js');
         gpSpy.mockRestore();
         const spy2 = vi.spyOn(ss, 'getProjects').mockReturnValue({});
-        vi.mocked(prompt.prompt).mockReturnValueOnce('');
+        vi.spyOn(prompt, 'prompt').mockReturnValueOnce('');
         const result = mainModule._selectProject();
         expect(result.projectName).toBeNull();
         expect(result.names).toEqual([]);
@@ -1033,22 +1033,22 @@ describe('_selectProject', () => {
 
 describe('_promptChoice', () => {
     it('returns prompt choice in non-TTY mode', async () => {
-        vi.mocked(prompt.prompt).mockReturnValueOnce('/exit');
+        vi.spyOn(prompt, 'prompt').mockReturnValueOnce('/exit');
         const result = await mainModule._promptChoice('0-9');
         expect(result).toBe('/exit');
     });
 
     it('falls back to lastChoice when prompt returns empty string', async () => {
-        vi.mocked(prompt.prompt).mockReturnValueOnce('');
-        vi.mocked(state.load).mockReturnValue({ lastChoice: '3' });
+        vi.spyOn(prompt, 'prompt').mockReturnValueOnce('');
+        vi.spyOn(state, 'load').mockReturnValue({ lastChoice: '3' });
         const result = await mainModule._promptChoice('0-9');
         expect(result).toBe('3');
         expect(prompt.info).toHaveBeenCalledWith(expect.stringContaining('Repetindo última opção'));
     });
 
     it('skips lastChoice when it is "0"', async () => {
-        vi.mocked(prompt.prompt).mockReturnValueOnce('');
-        vi.mocked(state.load).mockReturnValue({ lastChoice: '0' });
+        vi.spyOn(prompt, 'prompt').mockReturnValueOnce('');
+        vi.spyOn(state, 'load').mockReturnValue({ lastChoice: '0' });
         const result = await mainModule._promptChoice('0-9');
         expect(result).toBe('');
     });
@@ -1069,7 +1069,7 @@ describe('_promptChoice TTY mode', () => {
 
     beforeEach(() => {
         vi.clearAllMocks();
-        vi.mocked(state.load).mockReturnValue({ lastChoice: undefined });
+        vi.spyOn(state, 'load').mockReturnValue({ lastChoice: undefined });
     });
 
     it('shows box with session counters when TTY and not quiet', async () => {
@@ -1079,7 +1079,7 @@ describe('_promptChoice TTY mode', () => {
             { op: '', detail: '', status: 'error' },
             { op: '', detail: '', status: 'ok' },
         ];
-        vi.mocked(prompt.showSelect).mockResolvedValue('/exit');
+        vi.spyOn(prompt, 'showSelect').mockResolvedValue('/exit');
         const result = await mainModule._promptChoice('0-9');
         expect(result).toBe('/exit');
         expect(prompt.showSelect).toHaveBeenCalled();

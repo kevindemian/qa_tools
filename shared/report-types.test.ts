@@ -1,7 +1,11 @@
-import { nonNull } from './test-utils.js';
-import { categorizeFailure, extractSuite, toKnownIssues } from './report-types.js';
-import { DEFAULT_TITLE, PASS_RATE_GOOD_THRESHOLD, PASS_RATE_WARN_THRESHOLD, CATEGORY_COLORS } from './report-types.js';
-import type { KnownIssue } from './report-types.js';
+import {
+    categorizeFailure,
+    extractSuite,
+    DEFAULT_TITLE,
+    PASS_RATE_GOOD_THRESHOLD,
+    PASS_RATE_WARN_THRESHOLD,
+    CATEGORY_COLORS,
+} from './report-types.js';
 import type { FlatTest } from './result_parser.js';
 
 describe('report-types constants', () => {
@@ -87,48 +91,5 @@ describe('extractSuite', () => {
     it('returns empty string when fullTitle has no separator', () => {
         const t: FlatTest = { title: 'Login', state: 'passed', duration: 100, fullTitle: 'Login' };
         expect(extractSuite(t)).toBe('');
-    });
-});
-
-describe('toKnownIssues', () => {
-    it('returns empty array for null input', () => {
-        expect(toKnownIssues(null)).toEqual([]);
-    });
-
-    it('returns empty array for non-array input', () => {
-        expect(toKnownIssues({})).toEqual([]);
-    });
-
-    it('parses valid known issue objects', () => {
-        const input = [
-            { pattern: 'timeout', reason: 'Infra flaky', ticket: 'BUG-1' },
-            { pattern: 'login', reason: 'Known SSL issue' },
-        ];
-        const result = toKnownIssues(input);
-        expect(result).toHaveLength(2);
-        expect(nonNull(result[0]).pattern).toBe('timeout');
-        expect(nonNull(result[0]).reason).toBe('Infra flaky');
-        expect(nonNull(result[0]).ticket).toBe('BUG-1');
-        expect(nonNull(result[1]).pattern).toBe('login');
-        expect(nonNull(result[1]).ticket).toBeUndefined();
-    });
-
-    it('skips invalid items', () => {
-        const input = [
-            { pattern: 'valid', reason: 'ok' },
-            { pattern: 123, reason: 'invalid pattern type' },
-            { notPattern: 'missing', notReason: 'fields' },
-            null,
-        ];
-        const result = toKnownIssues(input);
-        expect(result).toHaveLength(1);
-        expect(nonNull(result[0]).pattern).toBe('valid');
-    });
-
-    it('KnownIssue interface is usable as a type', () => {
-        const issue: KnownIssue = { pattern: 'test', reason: 'reason', ticket: 'TICKET-1' };
-        expect(issue.pattern).toBe('test');
-        expect(issue.reason).toBe('reason');
-        expect(issue.ticket).toBe('TICKET-1');
     });
 });

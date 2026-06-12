@@ -16,7 +16,7 @@ vi.mock('./primitives', () => ({
 
 const mockBuildHtmlPage = vi.mocked(buildHtmlPage);
 const mockBuildErrorPage = vi.mocked(buildErrorPage);
-const mockRootLoggerError = vi.mocked(rootLogger.error);
+const mockRootLoggerError = vi.spyOn(rootLogger, 'error');
 
 beforeEach(() => {
     vi.clearAllMocks();
