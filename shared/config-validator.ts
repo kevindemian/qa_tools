@@ -95,6 +95,8 @@ export function warnUnknownEnv(): string[] {
     known.add('NODE_ENV');
     known.add('XDG_STATE_HOME');
     known.add('GIT_TERMINAL_PROMPT');
+    known.add('GIT_PREFIX');
+    known.add('GIT_PUSH_NO_VERIFY');
     known.add('GIT_DIR');
     known.add('GIT_WORK_TREE');
     known.add('GIT_INDEX_FILE');
