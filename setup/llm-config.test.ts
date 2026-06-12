@@ -63,16 +63,13 @@ describe('configureLlm', () => {
         const result = await configureLlm();
 
         expect(result).toBe(true);
+        const writtenContent = (MockFs.writeFileSync.mock.calls[0]?.[1] ?? '') as string;
         expect(MockFs.writeFileSync).toHaveBeenCalledWith(
-            '.env.local',
+            '.env.local.tmp',
             expect.stringContaining('LLM_PROVIDER=openai'),
             'utf8',
         );
-        expect(MockFs.writeFileSync).toHaveBeenCalledWith(
-            '.env.local',
-            expect.stringContaining('LLM_API_KEY=sk-test123'),
-            'utf8',
-        );
+        expect(writtenContent).toContain('LLM_API_KEY=sk-test123');
     });
 
     it('preserves non-LLM existing env vars', async () => {
@@ -121,7 +118,7 @@ describe('configureLlm', () => {
         await configureLlm();
 
         expect(MockFs.writeFileSync).toHaveBeenCalledWith(
-            '.env.local',
+            '.env.local.tmp',
             expect.stringContaining('LLM_PROVIDER=anthropic'),
             'utf8',
         );
@@ -147,10 +144,13 @@ describe('configureLlm', () => {
 
         await configureLlm();
 
+        // Atomic write: first to .tmp, then rename
         expect(MockFs.writeFileSync).toHaveBeenCalledWith(
-            '.env.local',
+            '.env.local.tmp',
             expect.stringContaining('LLM_PROVIDER=opencode-go'),
             'utf8',
         );
+        expect(MockFs.chmodSync).toHaveBeenCalledWith('.env.local.tmp', 0o600);
+        expect(MockFs.renameSync).toHaveBeenCalledWith('.env.local.tmp', '.env.local');
     });
 });

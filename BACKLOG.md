@@ -1561,3 +1561,227 @@ Cada fase (0-5) é committada separadamente com verificação:
 | ALL-4 | Todas as novas funções com testes | 100% cover |
 
 ---
+
+## 🧠 Sprint Model Registry 2.0 — Provider Adapters + Descoberta Multi-Fonte (Jun/2026)
+
+**Data:** 2026-06-12
+**Motivação:** Sprint 1 implementou registry + resolver + discovery 4-pass, mas com parser genérico frágil (switch format), error probe não documentado, e sem integração com métricas de latência reais. Sprint 2 refatora com adapters provider-specific, elimina error probe, integra OpenRouter para baseline, e usa latência observada via llm-metrics para ranqueamento.
+
+### Plano de Fases
+
+| #   | Fase                   | Descrição                                                             | Arquivos                                                      | Status |
+| --- | ---------------------- | --------------------------------------------------------------------- | ------------------------------------------------------------- | ------ |
+| 1   | Adapters               | Provider-specific adapters substituindo switch(format) genérico       | `shared/model-adapter.ts`, `shared/model-adapter.test.ts`     | 🔜     |
+| 2   | Discovery simplificado | Remover error probe, usar adapters, single-pass ID + metadata merge   | `shared/model-discovery.ts`, `shared/model-discovery.test.ts` | 🔜     |
+| 3   | Metrics por modelo     | `recordLlmRequest` com `modelId`, snapshot inclui `latencyByModel`    | `shared/llm-metrics.ts`                                       | 🔜     |
+| 4   | Init async + histórico | `loadRegistry()` trigger OpenRouter init, `resolveModel` usa latência | `shared/model-resolver.ts`, `shared/model-resolver.test.ts`   | 🔜     |
+| 5   | Probe + latência       | `probeApiKey` registra latência inicial no metrics collector          | `shared/llm-probe.ts`                                         | 🔜     |
+| 6   | Fallback com modelId   | `llmPrompt` passa `modelId` real para `recordLlmRequest`              | `shared/llm-fallback.ts`                                      | 🔜     |
+| 7   | Probe multi-fonte      | `probe-registry.ts`: OpenRouter (sem key) → merge com registry → PR   | `scripts/probe-registry.ts`                                   | 🔜     |
+| 8   | Verify atualizado      | `verify-registry.ts`: suporta novos campos do adapter                 | `scripts/verify-registry.ts`                                  | 🔜     |
+| 9   | Cleanup + Final        | Remover código obsoleto, .env.example, tsc, lint, tests, push + CI    | —                                                             | 🔜     |
+
+### Detalhamento por Fase
+
+#### Fase 1 — Provider Adapters
+
+| ID    | Item                                | Arquivo                        | Ação                                                        |
+| ----- | ----------------------------------- | ------------------------------ | ----------------------------------------------------------- |
+| MR2-1 | `ModelAdapter` interface            | `shared/model-adapter.ts`      | Schema canônico: `parseListResponse(raw) → RawModelEntry[]` |
+| MR2-2 | OpenAI adapter (só ID)              | `shared/model-adapter.ts`      | `{ data: [{ id }] }` → extrai `id` apenas                   |
+| MR2-3 | Anthropic adapter (ID + context)    | `shared/model-adapter.ts`      | `{ data: [{ id, max_input_tokens, capabilities }] }`        |
+| MR2-4 | Gemini adapter (ID + context)       | `shared/model-adapter.ts`      | `{ models: [{ name: "models/...", inputTokenLimit }] }`     |
+| MR2-5 | OpenRouter adapter (full metadata)  | `shared/model-adapter.ts`      | `{ data: [{ id, context_length, supported_parameters }] }`  |
+| MR2-6 | Groq adapter (só ID)                | `shared/model-adapter.ts`      | OpenAI-compatible, extrai `id` apenas                       |
+| MR2-7 | GitHub Models / NVIDIA NIM adapters | `shared/model-adapter.ts`      | OpenAI-compatible, extrai `id` apenas                       |
+| MR2-8 | Testes 100% cobertura               | `shared/model-adapter.test.ts` | Fixture de cada provider com response real esperado         |
+
+#### Fase 2 — Discovery Simplificado
+
+| ID     | Item                                                   | Arquivo                          | Ação                                                       |
+| ------ | ------------------------------------------------------ | -------------------------------- | ---------------------------------------------------------- |
+| MR2-9  | `discoverModels()` single-pass                         | `shared/model-discovery.ts`      | Usa adapter do provider, chama /v1/models, retorna modelos |
+| MR2-10 | Remove `parseModelEntry`, `parseErrorModels`           | `shared/model-discovery.ts`      | Eliminado — substituído por adapters                       |
+| MR2-11 | Remove `passMetadata`, `passIdsOnly`, `passErrorProbe` | `shared/model-discovery.ts`      | Eliminado — single-pass com adapter                        |
+| MR2-12 | `assignTierHints` mantido e atualizado                 | `shared/model-discovery.ts`      | Usa capabilities do adapter se disponível (vision, tools)  |
+| MR2-13 | Testes 100% cobertura                                  | `shared/model-discovery.test.ts` | Atualizado para novo adapter-based flow                    |
+
+#### Fase 3 — Metrics por Modelo
+
+| ID     | Item                                         | Arquivo                      | Ação                                    |
+| ------ | -------------------------------------------- | ---------------------------- | --------------------------------------- |
+| MR2-14 | `recordLlmRequest(tier, modelId, latencyMs)` | `shared/llm-metrics.ts`      | Parâmetro `modelId` opcional adicionado |
+| MR2-15 | `latencyByModel` no snapshot                 | `shared/llm-metrics.ts`      | Mapa `{ [modelId]: { avgMs, count } }`  |
+| MR2-16 | Testes atualizados                           | `shared/llm-metrics.test.ts` | Cobrir novo campo, backward compat      |
+
+#### Fase 4 — Init Async + Ranqueamento por Latência
+
+| ID     | Item                                         | Arquivo                         | Ação                                                     |
+| ------ | -------------------------------------------- | ------------------------------- | -------------------------------------------------------- |
+| MR2-17 | `loadRegistry()` trigger init assíncrono     | `shared/model-resolver.ts`      | Tenta fetch OpenRouter em background, merge com registry |
+| MR2-18 | `resolveModel()` consulta latência histórica | `shared/model-resolver.ts`      | Critério de desempate: latência observada vs context     |
+| MR2-19 | Testes 100% cobertura                        | `shared/model-resolver.test.ts` | Mock OpenRouter, mock histórico, fallback                |
+
+#### Fase 5 — Probe com Latência
+
+| ID     | Item                                       | Arquivo                    | Ação                                                   |
+| ------ | ------------------------------------------ | -------------------------- | ------------------------------------------------------ |
+| MR2-20 | `probeApiKey` registra latência no metrics | `shared/llm-probe.ts`      | Após /v1/models OK, chama `recordLlmRequest` com tempo |
+| MR2-21 | Testes atualizados                         | `shared/llm-probe.test.ts` | Verifica que latência é registrada no collector        |
+
+#### Fase 6 — Fallback com modelId
+
+| ID     | Item                           | Arquivo                  | Ação                                                        |
+| ------ | ------------------------------ | ------------------------ | ----------------------------------------------------------- |
+| MR2-22 | `llmPrompt` passa modelId real | `shared/llm-fallback.ts` | Config final tem `modelId`, passado para `recordLlmRequest` |
+
+#### Fase 7 — Probe Multi-Fonte
+
+| ID     | Item                                        | Arquivo                     | Ação                                            |
+| ------ | ------------------------------------------- | --------------------------- | ----------------------------------------------- |
+| MR2-23 | OpenRouter sem key → context + capabilities | `scripts/probe-registry.ts` | Fetch, parse com adapter, merge com registry    |
+| MR2-24 | Auto-merge em adições, PR em alterações     | `scripts/probe-registry.ts` | Modelos novos com context. Preços via PR manual |
+
+#### Fase 8 — Verify Atualizado
+
+| ID     | Item                                 | Arquivo                      | Ação                             |
+| ------ | ------------------------------------ | ---------------------------- | -------------------------------- |
+| MR2-25 | Suporta `capabilities`, `provenance` | `scripts/verify-registry.ts` | Novos campos opcionais validados |
+
+#### Fase 9 — Cleanup + Final
+
+| ID     | Item                    | Critério                                                     |
+| ------ | ----------------------- | ------------------------------------------------------------ |
+| MR2-26 | Remover código obsoleto | `parseModelEntry`, `parseErrorModels`, testes do error probe |
+| MR2-27 | .env.example regenerado | `scripts/generate-env-example.ts`                            |
+| MR2-28 | tsc --noEmit            | 0 erros                                                      |
+| MR2-29 | vitest run              | 100% pass                                                    |
+| MR2-30 | npm run lint            | 0 violações                                                  |
+| MR2-31 | Commit + push + CI      | green                                                        |
+
+---
+
+#### Fase 1 — Registry Data
+
+| ID   | Item                               | Arquivo                           | Ação                                                  |
+| ---- | ---------------------------------- | --------------------------------- | ----------------------------------------------------- |
+| MR-1 | Schema JSON com validação de tipos | `data/model-registry.schema.json` | Schema JSON Schema para validar estrutura do registry |
+| MR-2 | Registry inicial com 10 providers  | `data/model-registry.json`        | Seed com modelos atuais de todos profiles             |
+
+#### Fase 2 — Resolver
+
+| ID   | Item                                         | Arquivo                         | Ação                                                  |
+| ---- | -------------------------------------------- | ------------------------------- | ----------------------------------------------------- |
+| MR-3 | Pure function `resolveModel(tier, provider)` | `shared/model-resolver.ts`      | 3-stage: override → registry → profile fallback       |
+| MR-4 | Testes 100% cobertura                        | `shared/model-resolver.test.ts` | Registry válido, registry ausente, override, fallback |
+
+#### Fase 3 — Discovery
+
+| ID   | Item                      | Arquivo                          | Ação                                                                                                                            |
+| ---- | ------------------------- | -------------------------------- | ------------------------------------------------------------------------------------------------------------------------------- |
+| MR-5 | `discoverModels()` 4-pass | `shared/model-discovery.ts`      | Pass 1: GET /v1/models (metadata). Pass 2: GET /v1/models (IDs). Pass 3: GET /v1/models/invalid (error parse). Pass 4: fallback |
+| MR-6 | Testes 100% cobertura     | `shared/model-discovery.test.ts` | Mock fetch para cada provider, cada pass, cada fallback                                                                         |
+
+#### Fase 4 — Profiles
+
+| ID   | Item                                                 | Arquivo                           | Ação                                                            |
+| ---- | ---------------------------------------------------- | --------------------------------- | --------------------------------------------------------------- |
+| MR-7 | Reduzir `ProviderProfile.tiers` para fallback mínimo | `shared/llm-provider-profiles.ts` | Manter 1 modelo por tier (fallback), mover lógica para registry |
+
+#### Fase 5 — Fallback Config
+
+| ID   | Item                                 | Arquivo                         | Ação                                                             |
+| ---- | ------------------------------------ | ------------------------------- | ---------------------------------------------------------------- |
+| MR-8 | `tierToConfig()` com resolver opt-in | `shared/llm-fallback-config.ts` | Parameter injection: resolver?. Se ausente → comportamento atual |
+
+#### Fase 6 — Schema
+
+| ID    | Item                                | Arquivo                   | Ação            |
+| ----- | ----------------------------------- | ------------------------- | --------------- |
+| MR-9  | `LLM_DISCOVERY_MODE` (static\|auto) | `shared/config-schema.ts` | Default: static |
+| MR-10 | `LLM_DISCOVERY_CACHE_TTL` (horas)   | `shared/config-schema.ts` | Default: 168    |
+
+#### Fase 7 — Verify Registry
+
+| ID    | Item                            | Arquivo                      | Ação                                |
+| ----- | ------------------------------- | ---------------------------- | ----------------------------------- |
+| MR-11 | Script de validação de registry | `scripts/verify-registry.ts` | Valida contra schema, reporta erros |
+
+#### Fase 8 — Probe Registry
+
+| ID    | Item                        | Arquivo                     | Ação                         |
+| ----- | --------------------------- | --------------------------- | ---------------------------- |
+| MR-12 | Sweep semanal de descoberta | `scripts/probe-registry.ts` | Fetch /v1/models → diff → PR |
+
+#### Fase 9 — Verificação Final
+
+| ID    | Item                    | Critério                          |
+| ----- | ----------------------- | --------------------------------- |
+| MR-13 | .env.example regenerado | `scripts/generate-env-example.ts` |
+| MR-14 | tsc --noEmit            | 0 erros                           |
+| MR-15 | vitest run              | 100% pass                         |
+| MR-16 | npm run lint            | 0 violações                       |
+| MR-17 | Commit + push + CI      | green                             |
+
+---
+
+## 🚀 Sprint SmartWizard LLM — Configuração Multi-Provedor (Jun/2026)
+
+**Data:** 2026-06-12
+**Origem:** Model Registry 2.0 — UX simplificada, descoberta assíncrona, reordenação dinâmica.
+**Foco:** Eficiência (validação síncrona + descoberta background) e segurança (sem workarounds).
+**Ordem de execução:** Pré-requisitos → SmartWizard menu → Auto-probe day-0 → Dynamic reassign.
+
+### Plano de Fases
+
+| Fase | Descrição                                                                   | Itens      | Status |
+| ---- | --------------------------------------------------------------------------- | ---------- | ------ |
+| 0    | Pré-requisitos — correção de débitos existentes que bloqueiam o sprint      | SW-0 a 0b  | ✅     |
+| 1    | SmartWizard LLM — menu + wizard multi-key com validação síncrona + bg async | SW-1 a 6   | ✅     |
+| 2    | Auto-probe day-0 — trigger por schema vazio + flag de configuração          | SW-7 a 9   | ✅     |
+| 3    | Dynamic reassign — latência tiebreaker + circuit breaker avoidance          | SW-10 a 15 | ✅     |
+| TST  | tsc + vitest + lint + push + CI                                             | —          | ✅     |
+
+### Detalhamento por Fase
+
+#### Fase 0 — Pré-requisitos (débitos existentes) ✅
+
+| ID    | Arquivo                           | Problema                                                                            | Correção                                               |
+| ----- | --------------------------------- | ----------------------------------------------------------------------------------- | ------------------------------------------------------ |
+| SW-0  | `shared/quality-metrics.ts:62-63` | `saveStore` escreve `.tmp` e nunca renomeia — toda métrica de qualidade perdida     | ✅ Add `fs.renameSync(tmp, p)`                         |
+| SW-0a | `shared/env-loader.ts:19,66-88`   | `dotenvLoaded` permanente — alterações no `.env.local` invisíveis no mesmo processo | ✅ Add `reloadDotenv()` público que reseta flag        |
+| SW-0b | `setup/llm-config.ts:206`         | `.env.local` escrito sem `chmod 0o600` e sem atomicidade (tmp+rename)               | ✅ tmp+rename + `fs.chmodSync(0o600)` + teste ajustado |
+
+#### Fase 1 — SmartWizard LLM ✅
+
+| ID   | Item                                                   | Arquivo(s)                                    | Ação                                                                                                                                                                          |
+| ---- | ------------------------------------------------------ | --------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| SW-1 | Opção "Configurar Provedor de IA" no menu inicial      | `shared/entry-menu.ts`                        | ✅ Adicionar entrada entre Setup e Sair. Handler: spawn wizard                                                                                                                |
+| SW-2 | Script `scripts/smartwizard-llm.ts` — wizard multi-key | `scripts/smartwizard-llm.ts`                  | ✅ Fluxo: coleta key → `inferProviderFromKey` → armazena → repete → `autoAssignTiers` → tabela → Aceita? → `writeEnvLocal` atômico → `reloadDotenv()` → bg discovery detached |
+| SW-3 | Validação síncrona via `inferProviderFromKey`          | `shared/llm-provider-profiles.ts` (já existe) | ✅ Integrado                                                                                                                                                                  |
+| SW-4 | Background async discovery                             | `scripts/smartwizard-discovery.ts`            | ✅ `spawn(detached, unref)` → `initModelResolver()` → `discoverModels()` por provider → merge → escreve state                                                                 |
+| SW-5 | State flags LLM                                        | `shared/state.ts`                             | ✅ `updateTyped()` helper + `_llmConfigured`, `_llmConfigAttempts`, `_llmConfigLastAttempt`, `_llmConfigSuggestions`, `_llmConfigError`                                       |
+| SW-6 | Warning no menu + retry automático entre sessões       | `shared/entry-menu.ts`                        | ✅ Se `_attempts >= 3`: warning (S/N/d). Se `suggestions.pending`: "Deseja atualizar?". Retry automático silencioso entre sessões                                             |
+
+#### Fase 2 — Auto-Probe Day-0 ✅
+
+| ID   | Item                                                                | Arquivo(s)                 | Ação                                                                                     |
+| ---- | ------------------------------------------------------------------- | -------------------------- | ---------------------------------------------------------------------------------------- |
+| SW-7 | Auto-trigger `initModelResolver` em `llmPrompt()` se enriched vazio | `shared/llm-client.ts`     | ✅ `initModelResolver()` fire-and-forget antes de `sendWithFallback` (llm-client.ts:196) |
+| SW-8 | Verificar schema vazio no startup                                   | `shared/llm-client.ts`     | ✅ `getRegistry()` check inline + mock em llm-client.test.ts                             |
+| SW-9 | Proteção contra re-trigger repetido                                 | `shared/model-resolver.ts` | ✅ Já existia via `if (_enriched) return` em `initModelResolver()`                       |
+
+#### Fase 3 — Dynamic Reassign ✅
+
+| ID    | Item                                                 | Arquivo(s)                                | Ação                                                                                       |
+| ----- | ---------------------------------------------------- | ----------------------------------------- | ------------------------------------------------------------------------------------------ |
+| SW-10 | Latência como tiebreaker em `resolveModel`           | `shared/model-resolver.ts`                | ✅ `sortByFitness` add 3º critério: `getDefaultMetrics().getModelAvgLatency()`             |
+| SW-11 | Evitar circuit breaker aberto na resolução           | `shared/model-resolver.ts`                | ✅ `getCircuitState(m.id)` — se OPEN, filtra candidato                                     |
+| SW-12 | Reordenação intra-tier por latência                  | `shared/model-resolver.ts`                | ✅ Já coberto pelo SW-10: `sortByFitness` ordena (context desc, cost asc, lat asc)         |
+| SW-13 | `checkQualitySignals()` — engine central de detecção | `shared/quality-suggester.ts` (novo)      | ✅ `checkQualitySignals()`: drift + latência + falhas + benchmark → `QualitySignal[]`      |
+| SW-14 | Integrar `checkQualitySignals()` no menu + state     | `shared/entry-menu.ts`, `shared/state.ts` | ✅ `checkQualitySignals()` chamado no início do `main()` antes do menu loop                |
+| SW-15 | Feedback loop benchmark → quality signals            | `shared/llm-benchmark.ts`                 | ✅ Após `printResults()`, benchmarkSignals gerados e passados para `checkQualitySignals()` |
+
+---
+
+Revisado 2026-06-12 — Plano final aprovado, implementação iniciada.

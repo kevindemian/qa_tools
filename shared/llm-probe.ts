@@ -10,6 +10,8 @@
  * (OpenAI format) or checks header-derived auth errors.
  */
 import { getProviderProfile, inferProviderFromKey, KNOWN_PROVIDERS } from './llm-provider-profiles.js';
+import { resolveModel } from './model-resolver.js';
+import { recordLlmRequest } from './llm-metrics.js';
 import { rootLogger } from './logger.js';
 import type { LlmProvider } from './llm-provider-profiles.js';
 import type { TierDefaults } from './llm-provider-profiles.js';
@@ -42,8 +44,10 @@ export function detectProvider(apiKey: string): LlmProvider | null {
 /**
  * Build a probe URL and headers for a given provider.
  * Uses free/cheap endpoints that don't consume quota.
+ *
+ * Exported for reuse by model-discovery.ts and probe-registry.ts.
  */
-function buildProbeRequest(provider: LlmProvider, apiKey: string): { url: string; init: RequestInit } | null {
+export function buildProbeRequest(provider: LlmProvider, apiKey: string): { url: string; init: RequestInit } | null {
     const profile = getProviderProfile(provider);
     if (!profile) return null;
     if (!profile.baseUrl && profile.requiresBaseUrl) return null;
@@ -117,12 +121,16 @@ export async function probeApiKey(apiKey: string, provider: LlmProvider): Promis
     }
 
     try {
+        const start = performance.now();
         const response = await fetch(request.url, request.init);
+        const elapsed = Math.round(performance.now() - start);
+
+        recordLlmRequest('probe' as never, elapsed, `probe:${provider}`);
+
         if (response.ok) {
             return { valid: true, provider, detected: true };
         }
 
-        // 401/403 = invalid key, 404 = endpoint not found but key may be valid
         if (response.status === 401 || response.status === 403) {
             return { valid: false, provider, detected: true, error: `Invalid API key (HTTP ${response.status})` };
         }
@@ -172,10 +180,20 @@ export async function discoverProvider(apiKey: string): Promise<ProbeResult> {
  * Auto-assign tier defaults from a provider profile.
  * Returns the tier mapping for all 6 tiers.
  */
+/**
+ * Auto-assign tier defaults using the model resolver.
+ * Uses registry first, falls back to provider profile.
+ * Returns the tier mapping for all 6 tiers.
+ */
 export function autoAssignTiers(provider: LlmProvider): TierAssignment {
     const profile = getProviderProfile(provider);
     if (!profile) {
         throw new Error(`Unknown provider: ${provider}`);
     }
-    return { provider, tiers: { ...profile.tiers } };
+    const tierNames = ['main', 'fast', 'reviewer', 'report', 'fallback', 'batch'] as const;
+    const tiers = {} as TierDefaults;
+    for (const t of tierNames) {
+        tiers[t] = resolveModel(t, provider).id;
+    }
+    return { provider, tiers };
 }

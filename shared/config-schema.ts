@@ -392,6 +392,23 @@ export const CONFIG_SCHEMA: ConfigField[] = [
         description: 'LLM cache key override',
     },
     {
+        key: 'llmDiscoveryMode',
+        envVar: 'LLM_DISCOVERY_MODE',
+        type: 'string',
+        category: 'llm',
+        defaultVal: 'static',
+        allowedValues: ['static', 'auto'],
+        description: 'Model discovery mode (static=registry only, auto=probe API for updates)',
+    },
+    {
+        key: 'llmDiscoveryCacheTtl',
+        envVar: 'LLM_DISCOVERY_CACHE_TTL',
+        type: 'number',
+        category: 'llm',
+        defaultVal: 168,
+        description: 'Model discovery cache TTL in hours (default: 1 week)',
+    },
+    {
         key: 'qaToolsLogsDir',
         envVar: 'QA_TOOLS_LOGS_DIR',
         type: 'string',

@@ -14,6 +14,8 @@ import { rootLogger } from './logger.js';
 import { z } from 'zod';
 import type { LlmTier, ResponseFormat } from './types.js';
 import { getProviderProfile, inferProviderFromKey, isKnownProvider } from './llm-provider-profiles.js';
+import type { LlmProvider } from './llm-provider-profiles.js';
+import { resolveModel } from './model-resolver.js';
 import type { ProviderFormat } from './llm-provider-profiles.js';
 
 export interface ProviderConfig {
@@ -247,7 +249,7 @@ function configFromExplicit(tier: LlmTier): ProviderConfig | null {
  * 2. Auto-detect from LLM_API_KEY pattern
  * 3. Default to opencode-go
  */
-function resolveProvider(): string {
+function resolveProvider(): LlmProvider {
     const explicit = Config.get('llmProvider');
     if (explicit && isKnownProvider(explicit)) return explicit;
     const mainKey = Config.get('llmApiKey');
@@ -280,9 +282,10 @@ export function tierToConfig(tier: LlmTier): ProviderConfig {
         const apiKey = Config.get('llmApiKey');
         const explicitModel = Config.get('llmModel') || Config.get(tierKey(tier, 'Model'));
         const explicitBaseUrl = Config.get('llmBaseUrl') || Config.get(tierKey(tier, 'BaseUrl'));
+        const model = explicitModel || resolveModel(tier, provider).id || profile.tiers[tier];
         return {
             apiKey,
-            model: explicitModel || profile.tiers[tier],
+            model,
             baseUrl: explicitBaseUrl || profile.baseUrl,
             format: profile.format,
             temperature: temp,

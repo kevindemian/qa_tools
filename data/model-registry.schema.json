@@ -1,0 +1,65 @@
+{
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "$id": "model-registry.schema.json",
+    "title": "LLM Model Registry",
+    "description": "Versioned registry of known LLM models per provider. Used by model-resolver.ts for deterministic tier-to-model assignment. Updated by CI sweep and PR review.",
+    "type": "object",
+    "required": ["version", "updated", "providers"],
+    "properties": {
+        "version": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Schema version. Increment on breaking structural changes."
+        },
+        "updated": {
+            "type": "string",
+            "format": "date",
+            "description": "ISO 8601 date of last modification."
+        },
+        "providers": {
+            "type": "object",
+            "description": "Per-provider model catalog. Key is LlmProvider id.",
+            "additionalProperties": {
+                "type": "array",
+                "items": {
+                    "type": "object",
+                    "required": ["id", "tiers"],
+                    "properties": {
+                        "id": {
+                            "type": "string",
+                            "minLength": 1,
+                            "description": "Model identifier as used in API calls (e.g., gpt-4o, claude-sonnet-4-20250514)."
+                        },
+                        "context": {
+                            "type": "integer",
+                            "minimum": 0,
+                            "default": 0,
+                            "description": "Maximum input context length in tokens. 0 = unknown."
+                        },
+                        "costPer1kPrompt": {
+                            "type": "number",
+                            "minimum": 0,
+                            "default": 0,
+                            "description": "USD per 1K prompt tokens. 0 = unknown."
+                        },
+                        "costPer1kCompletion": {
+                            "type": "number",
+                            "minimum": 0,
+                            "default": 0,
+                            "description": "USD per 1K completion tokens. 0 = unknown."
+                        },
+                        "tiers": {
+                            "type": "array",
+                            "minItems": 1,
+                            "items": {
+                                "type": "string",
+                                "enum": ["main", "fast", "reviewer", "report", "fallback", "batch"]
+                            },
+                            "description": "Tiers this model can serve. Determined by heuristic or PR review."
+                        }
+                    }
+                }
+            }
+        }
+    }
+}

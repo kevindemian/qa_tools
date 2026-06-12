@@ -48,6 +48,26 @@ export interface StateSchema {
         }>;
         ts: string;
     };
+    /** True if at least one LLM provider has been configured via SmartWizard. */
+    _llmConfigured?: boolean;
+    /** Consecutive discovery failure count (reset on success, capped at 3 before warning). */
+    _llmConfigAttempts?: number;
+    /** ISO timestamp of the last discovery attempt (for exponential retry spacing). */
+    _llmConfigLastAttempt?: string;
+    /** Pending configuration suggestions from background discovery or quality signals. */
+    _llmConfigSuggestions?: {
+        pending: boolean;
+        qualitySignals?: Array<{
+            severity: 'info' | 'warning' | 'critical';
+            source: string;
+            message: string;
+            suggestedAction: string;
+        }>;
+        tierData?: Record<string, string>;
+        timestamp?: string;
+    };
+    /** Error message from last failed discovery (only set after 3 consecutive failures). */
+    _llmConfigError?: string;
 }
 
 /** Grade label for health score classification. */

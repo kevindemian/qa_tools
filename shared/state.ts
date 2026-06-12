@@ -147,3 +147,9 @@ export function update(fn: (state: Record<string, unknown>) => void, config?: Co
     save(copy, config);
     return copy;
 }
+
+/** Type-safe variant of {@link update}. Callback receives typed StateSchema.
+ * @example `updateTyped((s) => { s._llmConfigured = true; })` */
+export function updateTyped(fn: (state: StateSchema) => void, config?: Config): StateSchema {
+    return update((s) => fn(s), config);
+}

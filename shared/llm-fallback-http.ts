@@ -8,6 +8,7 @@
 import { jitter } from './llm-rate-limiter.js';
 import { configUniqueKey } from './llm-cache.js';
 import { checkCircuitBreaker } from './circuit-breaker.js';
+import { recordModelLatency } from './llm-metrics.js';
 import { rootLogger } from './logger.js';
 import { sanitizeForLlm } from './sanitize.js';
 import { z } from 'zod';
@@ -194,8 +195,13 @@ export async function sendToProvider(
         headers['Authorization'] = 'Bearer ' + cfg.apiKey;
     }
 
+    const start = performance.now();
     const resp = await fetchWithRetry(url, { method: 'POST', headers, body: payload });
     const raw = await resp.text();
+    const elapsed = Math.round(performance.now() - start);
+
+    recordModelLatency(cfg.model, elapsed);
+
     const data = parseRawOnce(raw);
     if (!data) {
         rootLogger.warn('LLM provider returned non-JSON response on 200 OK (raw length: ' + raw.length + ')');

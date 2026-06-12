@@ -1,0 +1,186 @@
+{
+    "version": 1,
+    "updated": "2026-06-12",
+    "providers": {
+        "opencode-go": [
+            {
+                "id": "deepseek-v4-pro",
+                "context": 128000,
+                "costPer1kPrompt": 0,
+                "costPer1kCompletion": 0,
+                "tiers": ["main", "report"]
+            },
+            {
+                "id": "deepseek-v4-flash",
+                "context": 128000,
+                "costPer1kPrompt": 0,
+                "costPer1kCompletion": 0,
+                "tiers": ["fast", "reviewer"]
+            },
+            {
+                "id": "kimi-k2.5",
+                "context": 128000,
+                "costPer1kPrompt": 0,
+                "costPer1kCompletion": 0,
+                "tiers": ["fallback", "batch"]
+            }
+        ],
+        "opencode-zen": [
+            {
+                "id": "opencode/deepseek-v4-pro",
+                "context": 128000,
+                "costPer1kPrompt": 0,
+                "costPer1kCompletion": 0,
+                "tiers": ["main", "report"]
+            },
+            {
+                "id": "opencode/deepseek-v4-flash",
+                "context": 128000,
+                "costPer1kPrompt": 0,
+                "costPer1kCompletion": 0,
+                "tiers": ["fast", "reviewer"]
+            },
+            {
+                "id": "opencode/kimi-k2.5",
+                "context": 128000,
+                "costPer1kPrompt": 0,
+                "costPer1kCompletion": 0,
+                "tiers": ["fallback", "batch"]
+            }
+        ],
+        "openrouter": [
+            {
+                "id": "google/gemini-2.0-flash-exp",
+                "context": 1048576,
+                "costPer1kPrompt": 0,
+                "costPer1kCompletion": 0,
+                "tiers": ["main", "reviewer", "report"]
+            },
+            {
+                "id": "meta-llama/llama-3.1-8b-instruct",
+                "context": 131072,
+                "costPer1kPrompt": 0.00005,
+                "costPer1kCompletion": 0.00008,
+                "tiers": ["fast"]
+            },
+            {
+                "id": "meta-llama/llama-3.1-70b-instruct",
+                "context": 131072,
+                "costPer1kPrompt": 0.0009,
+                "costPer1kCompletion": 0.0009,
+                "tiers": ["fallback"]
+            },
+            {
+                "id": "openai/gpt-4o-mini",
+                "context": 128000,
+                "costPer1kPrompt": 0.00015,
+                "costPer1kCompletion": 0.0006,
+                "tiers": ["batch"]
+            }
+        ],
+        "openai": [
+            {
+                "id": "gpt-4o",
+                "context": 128000,
+                "costPer1kPrompt": 0.0025,
+                "costPer1kCompletion": 0.01,
+                "tiers": ["main", "report"]
+            },
+            {
+                "id": "gpt-4o-mini",
+                "context": 128000,
+                "costPer1kPrompt": 0.00015,
+                "costPer1kCompletion": 0.0006,
+                "tiers": ["fast", "reviewer", "fallback", "batch"]
+            },
+            {
+                "id": "o3-mini",
+                "context": 200000,
+                "costPer1kPrompt": 0.0011,
+                "costPer1kCompletion": 0.0044,
+                "tiers": []
+            }
+        ],
+        "anthropic": [
+            {
+                "id": "claude-sonnet-4-20250514",
+                "context": 200000,
+                "costPer1kPrompt": 0.003,
+                "costPer1kCompletion": 0.015,
+                "tiers": ["main", "report"]
+            },
+            {
+                "id": "claude-haiku-3-5-20241022",
+                "context": 200000,
+                "costPer1kPrompt": 0.0008,
+                "costPer1kCompletion": 0.004,
+                "tiers": ["fast", "reviewer", "fallback", "batch"]
+            }
+        ],
+        "gemini": [
+            {
+                "id": "gemini-2.0-flash-exp",
+                "context": 1048576,
+                "costPer1kPrompt": 0,
+                "costPer1kCompletion": 0,
+                "tiers": ["main", "reviewer", "report"]
+            },
+            {
+                "id": "gemini-2.0-flash-lite",
+                "context": 1048576,
+                "costPer1kPrompt": 0.000075,
+                "costPer1kCompletion": 0.0003,
+                "tiers": ["fast", "fallback", "batch"]
+            }
+        ],
+        "groq": [
+            {
+                "id": "llama-3.3-70b-versatile",
+                "context": 131072,
+                "costPer1kPrompt": 0,
+                "costPer1kCompletion": 0,
+                "tiers": ["main", "report"]
+            },
+            {
+                "id": "llama-3.1-8b-instant",
+                "context": 131072,
+                "costPer1kPrompt": 0.00005,
+                "costPer1kCompletion": 0.00008,
+                "tiers": ["fast", "batch"]
+            },
+            {
+                "id": "mixtral-8x7b-32768",
+                "context": 32768,
+                "costPer1kPrompt": 0,
+                "costPer1kCompletion": 0,
+                "tiers": ["reviewer", "fallback"]
+            }
+        ],
+        "github-models": [
+            {
+                "id": "gpt-4o-mini",
+                "context": 128000,
+                "costPer1kPrompt": 0,
+                "costPer1kCompletion": 0,
+                "tiers": ["main", "fast", "reviewer", "report", "fallback", "batch"]
+            }
+        ],
+        "nvidia-nim": [
+            {
+                "id": "meta/llama3-70b-instruct",
+                "context": 131072,
+                "costPer1kPrompt": 0.0009,
+                "costPer1kCompletion": 0.0009,
+                "tiers": ["main", "reviewer", "report", "fallback"]
+            },
+            {
+                "id": "meta/llama3-8b-instruct",
+                "context": 8192,
+                "costPer1kPrompt": 0,
+                "costPer1kCompletion": 0,
+                "tiers": ["fast", "batch"]
+            }
+        ],
+        "custom": []
+    }
+}

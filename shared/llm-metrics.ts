@@ -34,6 +34,8 @@ export interface LlmMetricsSnapshot {
     totalCostUSD: number;
     costPerTier: Partial<Record<LlmTier, number>>;
     requestsByProvider: Record<string, number>;
+    /** Latency stats per model ID (e.g. "gpt-4o", "claude-sonnet-4"). */
+    latencyByModel: Record<string, { avgMs: number; count: number }>;
     /** @deprecated Moved to quality-metrics.ts. Kept for backward compat. */
     invariantFires?: Record<string, number>;
     /** @deprecated Moved to quality-metrics.ts. Kept for backward compat. */
@@ -87,11 +89,43 @@ export class LlmMetricsCollector {
     private _adversarialRetryCount = 0;
     private readonly _failuresByTier: Partial<Record<LlmTier, number>> = {};
     private readonly _rejectionReasons: Record<string, number> = {};
+    private readonly _modelLatency: Record<string, { sum: number; count: number }> = {};
 
-    recordLlmRequest(_tier: LlmTier, latencyMs: number): void {
+    /** Record that an LLM request was made. modelId is optional — if provided, per-model latency is tracked. */
+    recordLlmRequest(_tier: LlmTier, latencyMs: number, modelId?: string): void {
         this._totalRequests++;
         this._latencySum += latencyMs;
         this._latencyCount++;
+        this.recordModelLatency(modelId, latencyMs);
+    }
+
+    /** Record per-model latency without incrementing total request count.
+     * Used by sendToProvider to track individual model performance.
+     * modelId may be omitted to skip per-model tracking. */
+    recordModelLatency(modelId: string | undefined, latencyMs: number): void {
+        if (!modelId) return;
+        const existing = this._modelLatency[modelId];
+        if (existing) {
+            existing.sum += latencyMs;
+            existing.count++;
+        } else {
+            this._modelLatency[modelId] = { sum: latencyMs, count: 1 };
+        }
+    }
+
+    /** Return average latency in ms for a given model, or 0 if no data. */
+    getModelAvgLatency(modelId: string): number {
+        const data = this._modelLatency[modelId];
+        return data && data.count > 0 ? Math.round(data.sum / data.count) : 0;
+    }
+
+    /** Return all per-model latency data. */
+    getModelLatencyData(): Record<string, { avgMs: number; count: number }> {
+        const result: Record<string, { avgMs: number; count: number }> = {};
+        for (const [modelId, data] of Object.entries(this._modelLatency)) {
+            result[modelId] = { avgMs: Math.round(data.sum / data.count), count: data.count };
+        }
+        return result;
     }
 
     recordLlmFailure(tier: LlmTier): void {
@@ -144,6 +178,7 @@ export class LlmMetricsCollector {
             totalCostUSD: cm.totalCostUSD,
             costPerTier: { ...cm.costPerTier },
             requestsByProvider: { ...cm.requestsByProviderKey },
+            latencyByModel: this.getModelLatencyData(),
         };
 
         const store = loadStore();
@@ -173,14 +208,26 @@ export class LlmMetricsCollector {
         this._artifactRejected = 0;
         for (const key of Object.keys(this._failuresByTier)) delete this._failuresByTier[key as LlmTier];
         for (const key of Object.keys(this._rejectionReasons)) delete this._rejectionReasons[key];
+        for (const key of Object.keys(this._modelLatency)) delete this._modelLatency[key];
         resetLlmClientMetrics();
     }
 }
 
 const _defaultCollector = new LlmMetricsCollector();
 
-export function recordLlmRequest(tier: LlmTier, latencyMs: number): void {
-    _defaultCollector.recordLlmRequest(tier, latencyMs);
+export function recordLlmRequest(tier: LlmTier, latencyMs: number, modelId?: string): void {
+    _defaultCollector.recordLlmRequest(tier, latencyMs, modelId);
+}
+
+/** Record per-model latency without incrementing total request counter.
+ * Used for low-level model timing where the request is already counted
+ * by a higher-level recordLlmRequest call. */
+export function recordModelLatency(modelId: string, latencyMs: number): void {
+    _defaultCollector.recordModelLatency(modelId, latencyMs);
+}
+
+export function getDefaultMetrics(): LlmMetricsCollector {
+    return _defaultCollector;
 }
 
 export function recordLlmFailure(tier: LlmTier): void {

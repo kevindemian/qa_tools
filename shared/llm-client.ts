@@ -24,6 +24,7 @@ import { LlmError } from './errors.js';
 
 import { validateLlmResponse } from './llm-validation.js';
 import { generateWithRetry } from './targeted-retry.js';
+import { initModelResolver } from './model-resolver.js';
 import {
     _llmMetrics,
     getLlmClientMetrics,
@@ -191,6 +192,10 @@ export async function llmPrompt<S extends ZodSchema = never>(
         _llmMetrics.cacheHits++;
         return diskResult.data;
     }
+
+    // Auto-probe day-0: fire initModelResolver in background if never ran.
+    // Safe to call multiple times — initModelResolver guards against re-entry.
+    void initModelResolver();
 
     const response = await sendWithFallback(tier, system, user, responseFormat);
 
