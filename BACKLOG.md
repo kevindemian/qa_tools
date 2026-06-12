@@ -1413,3 +1413,54 @@ Cada fase (0-5) é committada separadamente com verificação:
 | VF-4 | `npx tsx scripts/quality-check.ts` | 0 violações não-baseline  |
 
 ---
+
+## 🛡️ Sprint Container DB Resilience — Correção de Mount Overlap + Proteções Runtime (Jun/2026)
+
+**Data:** 2026-06-12
+**Origem:** SQLite runtime failures dentro do container rootless Podman. O tmpfs em `~/.local` sombreia o bind mount em `~/.local/share/opencode`, fazendo o opencode.db ficar em tmpfs volátil (64MB) em vez de storage persistente do host.
+**Ordem de execução:** Fix mount → Proteções DB → Testes → CI.
+
+### Plano de Fases
+
+| Fase | Descrição                                                             | Itens       | Status |
+| ---- | --------------------------------------------------------------------- | ----------- | ------ |
+| 1    | Remover tmpfs `/home/coder/.local` que conflita com bind mount do DB  | QA-SH-1     | 🔜     |
+| 2    | Adicionar backup pré-execução + WAL mode + device diag no maintenance | DB-1 a DB-3 | 🔜     |
+| 3    | Testes (100% cobertura para novas funcionalidades)                    | TST-1       | 🔜     |
+| 4    | Commit, push, monitorar CI                                            | CI-1        | 🔜     |
+
+### Detalhamento por Fase
+
+#### Fase 1 — Fix mount overlap
+
+| ID      | Item                                                       | Arquivo         | Correção                                                   |
+| ------- | ---------------------------------------------------------- | --------------- | ---------------------------------------------------------- |
+| QA-SH-1 | 🔧 tmpfs `/home/coder/.local` overlap com bind mount do DB | `scripts/qa.sh` | Remover linha `--tmpfs /home/coder/.local:noexec,size=64m` |
+
+#### Fase 2 — Proteções DB runtime
+
+| ID   | Item                                                  | Arquivo                              | Correção                                                           |
+| ---- | ----------------------------------------------------- | ------------------------------------ | ------------------------------------------------------------------ |
+| DB-1 | 🔧 Backup snapshot do DB antes de qualquer operação   | `scripts/opencode-db-maintenance.ts` | Adicionar `copyFileSync(db, db + '.pre-run')`                      |
+| DB-2 | 🔧 `PRAGMA journal_mode=WAL` persistente para runtime | `scripts/opencode-db-maintenance.ts` | Adicionar `runSqlite('PRAGMA journal_mode=WAL;')` no modeCheckOnly |
+| DB-3 | 🔧 Device diagnostic — detectar se DB está no tmpfs   | `scripts/opencode-db-maintenance.ts` | Comparar `stat(db).dev` com `stat(~/.local).dev`                   |
+
+#### Fase 3 — Testes
+
+| ID    | Item                                                                  | Arquivo                                   |
+| ----- | --------------------------------------------------------------------- | ----------------------------------------- |
+| TST-1 | 📋 Testes para backupDb, ensureWalMode, checkMountDevice + integração | `scripts/opencode-db-maintenance.test.ts` |
+
+### Métricas Alvo
+
+| Métrica                 | Atual | Alvo |
+| ----------------------- | ----- | ---- |
+| `tsc --noEmit`          | 0     | 0    |
+| `vitest run`            | 4554  | 4554 |
+| `npm run lint`          | 0     | 0    |
+| Fitros de mount overlap | ❌    | ✅   |
+| Backup pré-execução     | ❌    | ✅   |
+| WAL mode runtime        | ❌    | ✅   |
+| Diagnóstico device DB   | ❌    | ✅   |
+
+---
