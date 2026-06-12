@@ -268,7 +268,9 @@ export async function main(): Promise<void> {
     }
 }
 
-main().catch((err) => {
-    process.stderr.write(`SmartWizard LLM failed: ${err instanceof Error ? err.message : String(err)}\n`);
-    process.exit(1);
-});
+if (!process.env['VITEST'] && process.argv[1]?.includes('smartwizard-llm')) {
+    main().catch((err) => {
+        process.stderr.write(`SmartWizard LLM failed: ${err instanceof Error ? err.message : String(err)}\n`);
+        process.exit(1);
+    });
+}

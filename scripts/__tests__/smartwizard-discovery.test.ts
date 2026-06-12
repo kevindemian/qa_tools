@@ -22,6 +22,10 @@ vi.mock('../../shared/model-discovery', () => ({
 
 vi.mock('../../shared/state', () => ({
     updateTyped: vi.fn(),
+    loadTypedState: vi.fn(() => ({
+        _llmConfigAttempts: 0,
+        _llmConfigLastAttempt: undefined,
+    })),
 }));
 
 describe('smartwizard-discovery', () => {
@@ -30,7 +34,14 @@ describe('smartwizard-discovery', () => {
     });
 
     it('module loads without error', async () => {
+        // Prevent process.exit from being called during module import
+        vi.spyOn(process, 'exit').mockImplementation((() => {
+            // no-op
+        }) as typeof process.exit);
+
         const mod = await import('../smartwizard-discovery.js');
         expect(mod).toBeDefined();
+
+        vi.restoreAllMocks();
     });
 });
