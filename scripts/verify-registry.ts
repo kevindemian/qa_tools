@@ -125,6 +125,8 @@ function validateRegistry(): ValidationError[] {
     return errors;
 }
 
+export { validateRegistry };
+
 function main(): void {
     const errors = validateRegistry();
 
@@ -141,4 +143,6 @@ function main(): void {
     process.exitCode = 1;
 }
 
-main();
+if (!process.env['VITEST'] && process.argv[1]?.includes('verify-registry')) {
+    main();
+}

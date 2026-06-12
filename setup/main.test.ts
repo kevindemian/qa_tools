@@ -33,8 +33,8 @@ vi.mock('./templates/gitlab-ci', () => ({
 vi.mock('./templates/pre-push-hook', () => ({
     generatePrePushHook: vi.fn(),
 }));
-vi.mock('./llm-config', () => ({
-    configureLlm: vi.fn(),
+vi.mock('../scripts/smartwizard-llm', () => ({
+    main: vi.fn(),
 }));
 
 const MockFs = vi.mocked(fs);
@@ -51,7 +51,7 @@ const MockAskConfirm = vi.mocked(prompt.askConfirm);
 
 import { main } from './main.js';
 
-import { configureLlm } from './llm-config.js';
+import { main as configureLlm } from '../scripts/smartwizard-llm.js';
 const MockConfigureLlm = vi.mocked(configureLlm);
 
 function mockGitHubDetect() {

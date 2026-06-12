@@ -8,7 +8,7 @@ import { generateGitHubActions } from './templates/github-ci.js';
 import { generateGitLabCI } from './templates/gitlab-ci.js';
 import { generatePrePushHook } from './templates/pre-push-hook.js';
 import type { SetupContext, Framework, GitProvider } from './context.js';
-import { configureLlm } from './llm-config.js';
+import { main as configureLlm } from '../scripts/smartwizard-llm.js';
 
 function detectGitProvider(): GitProvider {
     try {
@@ -157,7 +157,7 @@ function printSetupSummary(created: string[], skipped: string[]): void {
     info('4. Rode: npx tsx setup/main.ts para reconfigurar');
     info('');
     info('Dica: configure seus provedores LLM com:');
-    info('  npx tsx setup/llm-config.ts');
+    info('  npx tsx scripts/smartwizard-llm.ts');
 }
 
 async function main(): Promise<void> {
