@@ -18,31 +18,10 @@ import type { LlmTier, ResponseFormat } from './types.js';
 import { tierToConfig, ProviderConfig } from './llm-fallback-config.js';
 import { sendToProvider } from './llm-fallback-http.js';
 
-// -- barrel re-exports --
+// -- barrel re-exports (only symbols consumed from this barrel) --
 
-export type { LlmClientMetrics, LlmErrorPayloadSchema, ProviderConfig, ProviderFormat } from './llm-fallback-config.js';
-export {
-    _llmMetrics,
-    _trackUsage,
-    estimateCostUSD,
-    extractContent,
-    getLlmClientMetrics,
-    LLM_ERROR_BODY_TRUNCATION,
-    LLM_FETCH_TIMEOUT_MS,
-    LLM_RETRY_BASE_WAIT_MS,
-    LLM_RETRY_MAX_WAIT_MS,
-    LLM_TEMP_DEFAULT,
-    resetLlmClientMetrics,
-    tierToConfig,
-} from './llm-fallback-config.js';
-export {
-    buildGeminiPayload,
-    buildOpenAiPayload,
-    fetchWithRetry,
-    parseRawOnce,
-    parseRetryAfter,
-    sendToProvider,
-} from './llm-fallback-http.js';
+export { _llmMetrics, getLlmClientMetrics, resetLlmClientMetrics, tierToConfig } from './llm-fallback-config.js';
+export { parseRawOnce, parseRetryAfter } from './llm-fallback-http.js';
 
 // -- orchestrator --
 
