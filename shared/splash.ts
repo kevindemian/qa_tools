@@ -34,7 +34,7 @@ export function __setHttpDep(mod: unknown): void {
 }
 
 async function ensureDeps(): Promise<void> {
-    if (!_cache.figlet) _cache.figlet = (await import('figlet')) as unknown as FigletModule;
+    if (!_cache.figlet) _cache.figlet = (await import('figlet')) as unknown as FigletModule; // structural: dual CJS/ESM — @types/figlet declares `export =` but runtime ESM entry wraps in `{ default: f }`
     if (!_cache.gradient) _cache.gradient = await import('gradient-string');
 }
 

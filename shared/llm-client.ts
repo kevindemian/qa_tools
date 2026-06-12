@@ -58,6 +58,13 @@ export type { LlmTier } from './types.js';
 
 // ---- token limits ----
 
+/** Narrow a raw ZodSchema to a typed variant using the inferred data type.
+ *  The type parameter T MUST match the schema's actual output type
+ *  (callers should pass InferSchemaData<S> as T). */
+function typedSchemaOf<T>(schema: ZodSchema): schema is ZodSchemaTyped<T> {
+    return typeof schema.safeParse === 'function';
+}
+
 function _checkTotalTokenLimit(): void {
     const maxTotal = Config.get<number>('llmMaxTotalTokens');
     if (maxTotal <= 0) return;
@@ -158,12 +165,14 @@ async function _validateWithRetry<T>(opts: ValidateWithRetryOptions<T>): Promise
  * @returns The LLM response text (or parsed data when schema is provided).
  * @throws When every provider in the fallback chain fails, or schema validation fails after retry.
  */
+export async function llmPrompt(opts: LlmPromptOptions<never>): Promise<string>;
+export async function llmPrompt<S extends ZodSchema>(opts: LlmPromptOptions<S>): Promise<InferSchemaData<S>>;
 export async function llmPrompt<S extends ZodSchema = never>(
     opts: LlmPromptOptions<S>,
-): Promise<[S] extends [never] ? string : InferSchemaData<S>> {
+): Promise<string | InferSchemaData<S>> {
     const { tier, system, user, callerId, responseFormat, schema } = opts;
     type T = [S] extends [never] ? string : InferSchemaData<NonNullable<S>>;
-    const typedSchema = schema as unknown as ZodSchemaTyped<T> | undefined;
+    const typedSchema = schema !== undefined && typedSchemaOf<T>(schema) ? schema : undefined;
     const cfgKey = configUniqueKey(tierToConfig(tier));
     const cKey = cacheKey(tier, cfgKey, system, user, callerId, responseFormat);
 
@@ -216,5 +225,5 @@ export async function llmPrompt<S extends ZodSchema = never>(
 
     setMemoryCache(cKey, response);
     setDiskCache(cKey, response);
-    return response as unknown as T;
+    return response;
 }

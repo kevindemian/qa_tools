@@ -354,11 +354,11 @@ function generateTestExport(projectName: string): void {
 
 async function generatePipelineHealthReport(m: import('../shared/types.js').GitProvider): Promise<void> {
     try {
-        const runs = (await m.getRecentPipelines(10)) as unknown as PipelineRunExtended[];
+        const runs: PipelineRunExtended[] = await m.getRecentPipelines(10);
         if (runs.length === 0) return;
         const allJobs: PipelineJobExtended[][] = [];
         for (const run of runs) {
-            const jobs = (await m.getPipelineJobs(run.id ?? '')) as unknown as PipelineJobExtended[];
+            const jobs: PipelineJobExtended[] = await m.getPipelineJobs(run.id ?? '');
             allJobs.push(jobs);
         }
         const health = aggregatePipelineHealth(runs, allJobs, [], [], new Date());
