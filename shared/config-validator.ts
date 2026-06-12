@@ -94,6 +94,28 @@ export function warnUnknownEnv(): string[] {
     known.add('TMP');
     known.add('NODE_ENV');
     known.add('XDG_STATE_HOME');
+    known.add('GIT_TERMINAL_PROMPT');
+    known.add('GIT_DIR');
+    known.add('GIT_WORK_TREE');
+    known.add('GIT_INDEX_FILE');
+    known.add('GIT_OBJECT_DIRECTORY');
+    known.add('GIT_ALTERNATE_OBJECT_DIRECTORIES');
+    known.add('GIT_SSH');
+    known.add('GIT_SSH_COMMAND');
+    known.add('GIT_ASKPASS');
+    known.add('GIT_AUTHOR_NAME');
+    known.add('GIT_AUTHOR_EMAIL');
+    known.add('GIT_COMMITTER_NAME');
+    known.add('GIT_COMMITTER_EMAIL');
+    known.add('SSH_AUTH_SOCK');
+    known.add('SSH_AGENT_PID');
+    known.add('SSH_CLIENT');
+    known.add('SSH_CONNECTION');
+    known.add('DISPLAY');
+    known.add('LANG');
+    known.add('LC_ALL');
+    known.add('LC_MESSAGES');
+    known.add('LC_CTYPE');
 
     const warnings: string[] = [];
     for (const k of Object.keys(process.env)) {
