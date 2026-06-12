@@ -5,7 +5,7 @@ import * as promptModule from './prompt.js';
 import { type ChildProcess } from 'child_process';
 
 vi.mock('./splash', () => ({ showSplash: vi.fn() }));
-vi.mock('./prompt', () => ({ showSelect: vi.fn() }));
+vi.mock('./prompt', () => ({ showSelect: vi.fn(), confirm: vi.fn(), info: vi.fn(), warn: vi.fn(), divider: vi.fn() }));
 vi.mock('./output', () => {
     const mockOutput = { box: vi.fn(), print: vi.fn() };
     return {
@@ -91,29 +91,30 @@ describe('main', () => {
     });
 
     it('prints usage when not TTY', async () => {
-        vi.mocked(Output.isTTY).mockReturnValue(false);
+        vi.spyOn(Output, 'isTTY').mockReturnValue(false);
 
         await entryMenu.main();
 
-        expect(defaultOutput.print).toHaveBeenCalledWith(expect.stringContaining('npm run jira'));
-        expect(defaultOutput.print).toHaveBeenCalledWith(expect.stringContaining('npm run git'));
+        const mockPrint = defaultOutput.print.bind(defaultOutput);
+        expect(mockPrint).toHaveBeenCalledWith(expect.stringContaining('npm run jira'));
+        expect(mockPrint).toHaveBeenCalledWith(expect.stringContaining('npm run git'));
     });
 
     it('loops and exits on /exit choice', async () => {
-        vi.mocked(Output.isTTY).mockReturnValue(true);
-        vi.mocked(Output.isCI).mockReturnValue(false);
-        const promptMod = vi.mocked(promptModule);
-        promptMod.showSelect.mockResolvedValue('exit');
+        vi.spyOn(Output, 'isTTY').mockReturnValue(true);
+        vi.spyOn(Output, 'isCI').mockReturnValue(false);
+        const showSelectMock = vi.mocked(promptModule.showSelect);
+        showSelectMock.mockResolvedValue('exit');
 
         await entryMenu.main();
 
-        expect(promptMod.showSelect).toHaveBeenCalledTimes(1);
+        expect(showSelectMock).toHaveBeenCalledTimes(1);
     });
 
     it('launches jira module when selected and exits on failure', async () => {
-        vi.mocked(Output.isTTY).mockReturnValue(true);
-        vi.mocked(Output.isCI).mockReturnValue(false);
-        vi.mocked(promptModule).showSelect.mockResolvedValue('jira');
+        vi.spyOn(Output, 'isTTY').mockReturnValue(true);
+        vi.spyOn(Output, 'isCI').mockReturnValue(false);
+        vi.mocked(promptModule.showSelect).mockResolvedValue('jira');
         mockSpawnWithExit(1);
 
         await entryMenu.main();
@@ -122,12 +123,13 @@ describe('main', () => {
     });
 
     it('continues loop on unknown choice', async () => {
-        vi.mocked(Output.isTTY).mockReturnValue(true);
-        vi.mocked(Output.isCI).mockReturnValue(false);
-        vi.mocked(promptModule).showSelect.mockResolvedValueOnce('unknown').mockResolvedValueOnce('exit');
+        vi.spyOn(Output, 'isTTY').mockReturnValue(true);
+        vi.spyOn(Output, 'isCI').mockReturnValue(false);
+        const showSelectMock = vi.mocked(promptModule.showSelect);
+        showSelectMock.mockResolvedValueOnce('unknown').mockResolvedValueOnce('exit');
 
         await entryMenu.main();
 
-        expect(vi.mocked(promptModule).showSelect).toHaveBeenCalledTimes(2);
+        expect(showSelectMock).toHaveBeenCalledTimes(2);
     });
 });
