@@ -21,7 +21,7 @@
  *   tsx scripts/opencode-db-maintenance.ts --vacuum
  */
 import { execFileSync } from 'node:child_process';
-import { existsSync, mkdirSync } from 'node:fs';
+import { copyFileSync, existsSync, mkdirSync, statSync } from 'node:fs';
 import { homedir } from 'node:os';
 import { resolve } from 'node:path';
 import { rootLogger } from '../shared/logger.js';
@@ -83,9 +83,82 @@ function vacuum(): string {
     return runSqlite('VACUUM;');
 }
 
+/**
+ * Backup the database file before any maintenance operation.
+ * Copies to {dbPath}.pre-run for crash recovery.
+ * Returns the backup path on success, null on failure.
+ */
+function backupDb(dbPath: string): string | null {
+    try {
+        const backupPath = dbPath + '.pre-run';
+        copyFileSync(dbPath, backupPath);
+        return backupPath;
+    } catch {
+        return null;
+    }
+}
+
+/**
+ * Ensure the database uses WAL journal mode.
+ * This is persistent in the database header and improves
+ * concurrent read/write performance in container environments.
+ * Silent if database does not exist yet (first run).
+ */
+function ensureWalMode(): string | null {
+    try {
+        return runSqlite('PRAGMA journal_mode=WAL;');
+    } catch {
+        return null;
+    }
+}
+
+/**
+ * Check if the database file is on the same device as the ~/.local directory.
+ * If they share the same device, the tmpfs at ~/.local may be shadowing
+ * the bind mount, meaning the DB is on volatile storage instead of persistent.
+ *
+ * Returns a warning message if overlap is detected, null if everything is fine
+ * or if the check cannot be performed (e.g., database does not exist yet).
+ */
+function checkMountDevice(dbPath: string): string | null {
+    try {
+        const dbStat = statSync(dbPath);
+        const localDir = resolve(dbPath, '..', '..', '..');
+        const localStat = statSync(localDir);
+        if (dbStat.dev === localStat.dev) {
+            return (
+                `AVISO: opencode.db (device ${dbStat.dev}) está no mesmo device de ~/.local ` +
+                `(device ${localStat.dev}) — possível overlap de mounts. ` +
+                `O banco pode estar em tmpfs volátil em vez de armazenamento persistente.`
+            );
+        }
+        return null;
+    } catch {
+        return null;
+    }
+}
+
 function modeCheckOnly(dbPath: string): MaintenanceResult {
     const dbSizeBytes = getDbSizeBytes();
     const errors: string[] = [];
+
+    // 1. Backup snapshot before any DB modification
+    const backupPath = backupDb(dbPath);
+    if (backupPath) {
+        rootLogger.info(`[opencode-db-maintenance] backup=${backupPath}`);
+    }
+
+    // 2. Ensure WAL journal mode — persists in DB header, improves runtime concurrency
+    const walMode = ensureWalMode();
+    if (walMode) {
+        rootLogger.info(`[opencode-db-maintenance] journal_mode=${walMode}`);
+    }
+
+    // 3. Device diagnostic — detect if DB is on same device as ~/.local (tmpfs overlap)
+    const mountWarn = checkMountDevice(dbPath);
+    if (mountWarn) {
+        rootLogger.warn(`[opencode-db-maintenance] ${mountWarn}`);
+    }
 
     let integrityCheck: string;
     let walCheckpoint: string;
@@ -309,6 +382,9 @@ export {
     getDbSizeBytes,
     checkSqlite3,
     ensureDbDir,
+    backupDb,
+    ensureWalMode,
+    checkMountDevice,
     DB_DIR,
     DB_PATH,
     DB_TIMEOUT_MS,

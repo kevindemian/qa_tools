@@ -9,6 +9,8 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 const mockExecFileSync = vi.fn();
 const mockExistsSync = vi.fn();
 const mockMkdirSync = vi.fn();
+const mockCopyFileSync = vi.fn();
+const mockStatSync = vi.fn();
 
 vi.unmock('../shared/deps.js');
 
@@ -19,7 +21,14 @@ vi.mock('node:child_process', () => ({
 vi.mock('node:fs', () => ({
     existsSync: mockExistsSync,
     mkdirSync: mockMkdirSync,
-    default: { existsSync: mockExistsSync, mkdirSync: mockMkdirSync },
+    copyFileSync: mockCopyFileSync,
+    statSync: mockStatSync,
+    default: {
+        existsSync: mockExistsSync,
+        mkdirSync: mockMkdirSync,
+        copyFileSync: mockCopyFileSync,
+        statSync: mockStatSync,
+    },
 }));
 
 let DB_PATH: string;
@@ -33,12 +42,17 @@ beforeEach(() => {
     vi.clearAllMocks();
     mockExistsSync.mockReturnValue(true);
     mockMkdirSync.mockReturnValue(undefined);
+    mockCopyFileSync.mockReturnValue(undefined);
+    mockStatSync.mockReturnValue({ dev: 1, isFile: () => true });
     mockExecFileSync.mockImplementation((bin: string, args: string[], _opts?: unknown) => {
         if (bin === 'stat') {
             return '65536\n';
         }
         if (bin === 'sqlite3') {
             const sqlCmd = args[1];
+            if (sqlCmd === 'PRAGMA journal_mode=WAL;') {
+                return 'wal\n';
+            }
             if (sqlCmd === 'PRAGMA integrity_check;') {
                 return 'ok\n';
             }
@@ -251,6 +265,76 @@ describe('getDbSizeBytes', () => {
         const size = getDbSizeBytes();
         expect(size).toBe(0);
         expect(mockExecFileSync).not.toHaveBeenCalledWith('stat', expect.anything(), expect.anything());
+    });
+});
+
+describe('backupDb', () => {
+    it('copies database to .pre-run path and returns it', async () => {
+        const { backupDb } = await loadModule();
+        mockCopyFileSync.mockReturnValue(undefined);
+        const result = backupDb('/tmp/test.db');
+        expect(result).toBe('/tmp/test.db.pre-run');
+        expect(mockCopyFileSync).toHaveBeenCalledWith('/tmp/test.db', '/tmp/test.db.pre-run');
+    });
+
+    it('returns null when copy fails', async () => {
+        const { backupDb } = await loadModule();
+        mockCopyFileSync.mockImplementation(() => {
+            throw new Error('EACCES');
+        });
+        const result = backupDb('/tmp/test.db');
+        expect(result).toBeNull();
+    });
+});
+
+describe('ensureWalMode', () => {
+    it('returns WAL journal mode string on success', async () => {
+        const { ensureWalMode } = await loadModule();
+        const result = ensureWalMode();
+        expect(result).toBe('wal');
+        expect(mockExecFileSync).toHaveBeenCalledWith(
+            'sqlite3',
+            [expect.stringContaining('opencode.db'), 'PRAGMA journal_mode=WAL;'],
+            expect.any(Object),
+        );
+    });
+
+    it('returns null when sqlite3 throws', async () => {
+        mockExecFileSync.mockImplementation((bin: string) => {
+            if (bin === 'sqlite3') throw new Error('ENOENT');
+            return '';
+        });
+        const { ensureWalMode } = await loadModule();
+        const result = ensureWalMode();
+        expect(result).toBeNull();
+    });
+});
+
+describe('checkMountDevice', () => {
+    it('returns warning when DB and ~/.local are on the same device', async () => {
+        mockStatSync.mockReturnValue({ dev: 1, isFile: () => true });
+        const { checkMountDevice } = await loadModule();
+        const result = checkMountDevice('/home/user/.local/share/opencode/opencode.db');
+        expect(result).toContain('AVISO');
+        expect(result).toContain('mesmo device');
+    });
+
+    it('returns null when DB and ~/.local are on different devices', async () => {
+        mockStatSync
+            .mockReturnValueOnce({ dev: 1, isFile: () => true })
+            .mockReturnValueOnce({ dev: 2, isFile: () => true });
+        const { checkMountDevice } = await loadModule();
+        const result = checkMountDevice('/home/user/.local/share/opencode/opencode.db');
+        expect(result).toBeNull();
+    });
+
+    it('returns null when stat fails', async () => {
+        mockStatSync.mockImplementation(() => {
+            throw new Error('ENOENT');
+        });
+        const { checkMountDevice } = await loadModule();
+        const result = checkMountDevice('/home/user/.local/share/opencode/opencode.db');
+        expect(result).toBeNull();
     });
 });
 
