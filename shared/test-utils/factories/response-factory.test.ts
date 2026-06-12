@@ -52,12 +52,12 @@ describe('createMockAxiosInstance', () => {
     it('merges overrides correctly', () => {
         const customGet = vi.fn();
         const mock = createMockAxiosInstance({ get: customGet });
-        expect(mock.get).toBe(customGet);
+        expect(mock['get']).toBe(customGet);
     });
 
     it('each call produces independent vi.fn() instances', () => {
         const a = createMockAxiosInstance();
         const b = createMockAxiosInstance();
-        expect(a.get).not.toBe(b.get);
+        expect(a['get']).not.toBe(b['get']);
     });
 });

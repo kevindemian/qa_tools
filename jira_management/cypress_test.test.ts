@@ -80,7 +80,7 @@ describe('CypressTest', () => {
             });
 
             const result = await cypressTest.parseResults('/fake/path');
-            expect(rootLogger.warn).toHaveBeenCalledWith('Skipping block 1: not enough numeric lines');
+            expect(rootLogger['warn']).toHaveBeenCalledWith('Skipping block 1: not enough numeric lines');
             expect(result).toEqual({ avgPassed: 0, avgFailed: 0, percentPassed: 0 });
         });
 

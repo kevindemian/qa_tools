@@ -294,7 +294,7 @@ describe('CsvResource', () => {
 
         it('throws on CSV parse error', async () => {
             const errorSpy = vi.spyOn(rootLogger, 'error').mockImplementation(() => {});
-            const orig = csvResource.readCsvFromString;
+            const orig = csvResource['readCsvFromString'];
             csvResource.readCsvFromString = vi
                 .fn<(...args: [string]) => Promise<never>>()
                 .mockRejectedValue(new Error('CSV parse error'));

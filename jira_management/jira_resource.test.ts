@@ -86,7 +86,7 @@ describe('getJiraResource', () => {
         mockClient.get.mockResolvedValue({ data: expected });
 
         const result = await jiraResource.getJiraResource('project/TEST');
-        expect(mockClient.get).toHaveBeenCalledWith('/project/TEST');
+        expect(mockClient['get']).toHaveBeenCalledWith('/project/TEST');
         expect(result).toEqual(expected);
     });
 
@@ -116,7 +116,7 @@ describe('postJiraResource', () => {
         mockClient.post.mockResolvedValue({ data: expected });
 
         const result = await jiraResource.postJiraResource('version', payload);
-        expect(mockClient.post).toHaveBeenCalledWith('/version', payload);
+        expect(mockClient['post']).toHaveBeenCalledWith('/version', payload);
         expect(result).toEqual(expected);
     });
 
@@ -146,7 +146,7 @@ describe('putJiraResource', () => {
         mockClient.put.mockResolvedValue({ data: expected, status: 200 });
 
         const result = await jiraResource.putJiraResource('version/10001', payload);
-        expect(mockClient.put).toHaveBeenCalledWith('/version/10001', payload);
+        expect(mockClient['put']).toHaveBeenCalledWith('/version/10001', payload);
         expect(result).toEqual(expected);
     });
 
@@ -181,7 +181,7 @@ describe('getProjectId', () => {
         mockClient.get.mockResolvedValue({ data: { id: '12345' } });
 
         const result = await jiraResource.getProjectId('TEST');
-        expect(mockClient.get).toHaveBeenCalledWith('/project/TEST');
+        expect(mockClient['get']).toHaveBeenCalledWith('/project/TEST');
         expect(result).toBe('12345');
     });
 
@@ -213,7 +213,7 @@ describe('getProjectVersions', () => {
         mockClient.get.mockResolvedValue({ data: versions });
 
         const result = await jiraResource.getProjectVersions('12345');
-        expect(mockClient.get).toHaveBeenCalledWith('/project/12345/versions');
+        expect(mockClient['get']).toHaveBeenCalledWith('/project/12345/versions');
         expect(result).toEqual(versions);
     });
 
@@ -415,7 +415,7 @@ describe('createVersion', () => {
         mockClient.post.mockResolvedValue({ data: created });
 
         const result = await jiraResource.createVersion('TEST', 'v1.0', 'First release');
-        expect(mockClient.post).toHaveBeenCalledWith('/version', {
+        expect(mockClient['post']).toHaveBeenCalledWith('/version', {
             description: 'First release',
             name: 'v1.0',
             project: 'TEST',
@@ -429,7 +429,7 @@ describe('createVersion', () => {
 
         const result = await jiraResource.createVersion('TEST', 'v1.0');
         expect(result).toBeNull();
-        expect(mockClient.post).not.toHaveBeenCalled();
+        expect(mockClient['post']).not.toHaveBeenCalled();
     });
 
     it('creates version without description', async () => {
@@ -437,7 +437,10 @@ describe('createVersion', () => {
         mockClient.post.mockResolvedValue({ data: { id: '1', name: 'v1.0' } });
 
         const result = await jiraResource.createVersion('TEST', 'v1.0');
-        expect(mockClient.post).toHaveBeenCalledWith('/version', expect.objectContaining({ description: undefined }));
+        expect(mockClient['post']).toHaveBeenCalledWith(
+            '/version',
+            expect.objectContaining({ description: undefined }),
+        );
         expect(result).toEqual({ id: '1', name: 'v1.0' });
     });
 
@@ -663,7 +666,7 @@ describe('addTasksToSprint', () => {
         mockClient.post.mockResolvedValue({ data: {} });
 
         await jiraResource.addTasksToSprint(['TASK-1', 'TASK-2'], 'sprint-1');
-        expect(mockClient.post).toHaveBeenCalledWith('/sprint/sprint-1/issue', {
+        expect(mockClient['post']).toHaveBeenCalledWith('/sprint/sprint-1/issue', {
             issues: ['TASK-1', 'TASK-2'],
         });
     });
@@ -678,7 +681,7 @@ describe('addTasksToSprint', () => {
         mockClient.post.mockResolvedValue({ data: {} });
 
         await jiraResource.addTasksToSprint([], 'sprint-1');
-        expect(mockClient.post).toHaveBeenCalledWith('/sprint/sprint-1/issue', {
+        expect(mockClient['post']).toHaveBeenCalledWith('/sprint/sprint-1/issue', {
             issues: [],
         });
     });
@@ -694,11 +697,11 @@ describe('updateFixVersions', () => {
         mockClient.put.mockResolvedValue({ data: {}, status: 200 });
 
         await jiraResource.updateFixVersions(['TASK-1', 'TASK-2'], 'TEST', 'v1.0');
-        expect(mockClient.put).toHaveBeenCalledTimes(2);
-        expect(mockClient.put).toHaveBeenNthCalledWith(1, '/issue/TASK-1', {
+        expect(mockClient['put']).toHaveBeenCalledTimes(2);
+        expect(mockClient['put']).toHaveBeenNthCalledWith(1, '/issue/TASK-1', {
             update: { fixVersions: [{ set: [{ id: 'v-1' }] }] },
         });
-        expect(mockClient.put).toHaveBeenNthCalledWith(2, '/issue/TASK-2', {
+        expect(mockClient['put']).toHaveBeenNthCalledWith(2, '/issue/TASK-2', {
             update: { fixVersions: [{ set: [{ id: 'v-1' }] }] },
         });
     });
@@ -707,7 +710,7 @@ describe('updateFixVersions', () => {
         vi.spyOn(jiraResource, 'getVersionId').mockResolvedValueOnce(null);
 
         await jiraResource.updateFixVersions(['TASK-1'], 'TEST', 'v1.0');
-        expect(mockClient.put).not.toHaveBeenCalled();
+        expect(mockClient['put']).not.toHaveBeenCalled();
     });
 
     it('handles single task', async () => {
@@ -715,7 +718,7 @@ describe('updateFixVersions', () => {
         mockClient.put.mockResolvedValue({ data: {}, status: 200 });
 
         await jiraResource.updateFixVersions(['TASK-1'], 'TEST', 'v1.0');
-        expect(mockClient.put).toHaveBeenCalledTimes(1);
+        expect(mockClient['put']).toHaveBeenCalledTimes(1);
     });
 
     it('propagates put error', async () => {
@@ -737,14 +740,14 @@ describe('releaseVersion', () => {
         mockClient.put.mockResolvedValue({ data: {}, status: 200 });
 
         await jiraResource.releaseVersion('TEST', 'v1.0');
-        expect(mockClient.put).toHaveBeenCalledWith('/version/v-1', expect.objectContaining({ released: true }));
+        expect(mockClient['put']).toHaveBeenCalledWith('/version/v-1', expect.objectContaining({ released: true }));
     });
 
     it('aborts when version not found', async () => {
         vi.spyOn(jiraResource, 'getVersionId').mockResolvedValueOnce(null);
 
         await jiraResource.releaseVersion('TEST', 'v1.0');
-        expect(mockClient.put).not.toHaveBeenCalled();
+        expect(mockClient['put']).not.toHaveBeenCalled();
     });
 
     it('aborts when tasks not completed', async () => {
@@ -752,7 +755,7 @@ describe('releaseVersion', () => {
         vi.spyOn(jiraResource, 'checkReleaseTasksStatus').mockResolvedValueOnce(false);
 
         await jiraResource.releaseVersion('TEST', 'v1.0');
-        expect(mockClient.put).not.toHaveBeenCalled();
+        expect(mockClient['put']).not.toHaveBeenCalled();
     });
 
     it('sets correct releaseDate in payload', async () => {
@@ -762,7 +765,7 @@ describe('releaseVersion', () => {
         const today = formatDateISO();
 
         await jiraResource.releaseVersion('TEST', 'v1.0');
-        expect(mockClient.put).toHaveBeenCalledWith('/version/v-1', {
+        expect(mockClient['put']).toHaveBeenCalledWith('/version/v-1', {
             releaseDate: today,
             released: true,
         });
@@ -929,7 +932,7 @@ describe('getFromOriginPath', () => {
         mockClient.get.mockResolvedValue({ data: expected });
 
         const result = await jiraResource.getFromOriginPath('rest/raven/1.0/api/test/TEST-1/testruns');
-        expect(mockClient.get).toHaveBeenCalledWith('http://test-jira.com/rest/raven/1.0/api/test/TEST-1/testruns');
+        expect(mockClient['get']).toHaveBeenCalledWith('http://test-jira.com/rest/raven/1.0/api/test/TEST-1/testruns');
         expect(result).toEqual(expected);
     });
 
@@ -937,7 +940,7 @@ describe('getFromOriginPath', () => {
         mockClient.get.mockResolvedValue({ data: { key: 'TEST-1' } });
 
         const result = await jiraResource.getFromOriginPath('/rest/raven/1.0/api/test/TEST-1/testruns');
-        expect(mockClient.get).toHaveBeenCalledWith('http://test-jira.com/rest/raven/1.0/api/test/TEST-1/testruns');
+        expect(mockClient['get']).toHaveBeenCalledWith('http://test-jira.com/rest/raven/1.0/api/test/TEST-1/testruns');
         expect(result).toEqual({ key: 'TEST-1' });
     });
 
@@ -965,7 +968,7 @@ describe('transitionIssue', () => {
         mockClient.post.mockResolvedValue({ data: {} });
 
         await jiraResource.transitionIssue('TASK-1', '31');
-        expect(mockClient.post).toHaveBeenCalledWith('/issue/TASK-1/transitions', { transition: { id: '31' } });
+        expect(mockClient['post']).toHaveBeenCalledWith('/issue/TASK-1/transitions', { transition: { id: '31' } });
     });
 
     it('re-throws error after logging', async () => {
@@ -978,6 +981,6 @@ describe('transitionIssue', () => {
         mockClient.post.mockResolvedValue({ data: {} });
 
         await jiraResource.transitionIssue('TASK-1', '999');
-        expect(mockClient.post).toHaveBeenCalledWith('/issue/TASK-1/transitions', { transition: { id: '999' } });
+        expect(mockClient['post']).toHaveBeenCalledWith('/issue/TASK-1/transitions', { transition: { id: '999' } });
     });
 });

@@ -91,13 +91,13 @@ describe('printError', () => {
 
     it('prints error box with context and message', () => {
         printError('contexto', new Error('something failed'));
-        expect(output.print).toHaveBeenCalled();
+        expect(output['print']).toHaveBeenCalled();
     });
 
     it('prints single line when quiet', () => {
         vi.mocked(isQuiet).mockReturnValue(true);
         printError('ctx', new Error('err'));
-        expect(output.print).toHaveBeenCalledWith(expect.stringMatching(/ctx/));
+        expect(output['print']).toHaveBeenCalledWith(expect.stringMatching(/ctx/));
     });
 });
 

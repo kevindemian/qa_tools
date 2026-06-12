@@ -4,7 +4,7 @@ describe('createMockJiraResource', () => {
     it('returns a mock with all methods as vi.fn()', () => {
         const mock = createMockJiraResource();
         expect(typeof mock.getJiraResource).toBe('function');
-        expect(mock.getJiraResource).not.toThrow();
+        expect(mock['getJiraResource']).not.toThrow();
         expect(typeof mock.postJiraResource).toBe('function');
         expect(typeof mock.putJiraResource).toBe('function');
         expect(typeof mock.searchJiraIssues).toBe('function');
@@ -40,12 +40,12 @@ describe('createMockJiraResource', () => {
     it('merges overrides correctly', () => {
         const customGet = vi.fn();
         const mock = createMockJiraResource({ getJiraResource: customGet });
-        expect(mock.getJiraResource).toBe(customGet);
+        expect(mock['getJiraResource']).toBe(customGet);
     });
 
     it('each call produces independent vi.fn() instances', () => {
         const a = createMockJiraResource();
         const b = createMockJiraResource();
-        expect(a.getJiraResource).not.toBe(b.getJiraResource);
+        expect(a['getJiraResource']).not.toBe(b['getJiraResource']);
     });
 });

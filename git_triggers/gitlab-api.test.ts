@@ -40,14 +40,14 @@ describe('apiGet', () => {
         const client = mockClient();
         client.get.mockResolvedValue({ data: [] });
         await apiGet(client, '/test', { params: { page: 2 } });
-        expect(client.get).toHaveBeenCalledWith('/test', { params: { page: 2 } });
+        expect(client['get']).toHaveBeenCalledWith('/test', { params: { page: 2 } });
     });
 
     it('calls get without params when no opts provided', async () => {
         const client = mockClient();
         client.get.mockResolvedValue({ data: 'ok' });
         await apiGet(client, '/test');
-        expect(client.get).toHaveBeenCalledWith('/test');
+        expect(client['get']).toHaveBeenCalledWith('/test');
     });
 
     it('returns null on error when returnNull is true', async () => {
@@ -70,28 +70,28 @@ describe('apiPost', () => {
         client.post.mockResolvedValue({ data: { id: 1 } });
         const result = await apiPost(client, '/test', { name: 'foo' });
         expect(result).toEqual({ id: 1 });
-        expect(client.post).toHaveBeenCalledWith('/test', { name: 'foo' });
+        expect(client['post']).toHaveBeenCalledWith('/test', { name: 'foo' });
     });
 
     it('calls post without body when body is undefined', async () => {
         const client = mockClient();
         client.post.mockResolvedValue({ data: null });
         await apiPost(client, '/test');
-        expect(client.post).toHaveBeenCalledWith('/test');
+        expect(client['post']).toHaveBeenCalledWith('/test');
     });
 
     it('calls post with explicit undefined body', async () => {
         const client = mockClient();
         client.post.mockResolvedValue({ data: null });
         await apiPost(client, '/test', undefined);
-        expect(client.post).toHaveBeenCalledWith('/test');
+        expect(client['post']).toHaveBeenCalledWith('/test');
     });
 
     it('calls post with null body', async () => {
         const client = mockClient();
         client.post.mockResolvedValue({ data: null });
         await apiPost(client, '/test', null);
-        expect(client.post).toHaveBeenCalledWith('/test', null);
+        expect(client['post']).toHaveBeenCalledWith('/test', null);
     });
 
     it('re-throws on error', async () => {
@@ -107,7 +107,7 @@ describe('apiPut', () => {
         client.put.mockResolvedValue({ data: { id: 1 }, status: 200 });
         const result = await apiPut(client, '/test', { name: 'foo' });
         expect(result).toEqual({ id: 1 });
-        expect(client.put).toHaveBeenCalledWith('/test', { name: 'foo' });
+        expect(client['put']).toHaveBeenCalledWith('/test', { name: 'foo' });
     });
 
     it('returns null on 204 status', async () => {
@@ -121,7 +121,7 @@ describe('apiPut', () => {
         const client = mockClient();
         client.put.mockResolvedValue({ data: null, status: 200 });
         await apiPut(client, '/test');
-        expect(client.put).toHaveBeenCalledWith('/test');
+        expect(client['put']).toHaveBeenCalledWith('/test');
     });
 
     it('re-throws on error', async () => {

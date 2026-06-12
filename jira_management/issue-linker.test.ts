@@ -46,7 +46,7 @@ describe('IssueLinker', () => {
         it('returns null when no precondition', async () => {
             const result = await linker.associatePrecondition({ title: 'Test', steps: [] }, 'TEST-1', opLog);
             expect(result).toBeNull();
-            expect(mockLinkManager.associatePrecondition).not.toHaveBeenCalled();
+            expect(mockLinkManager['associatePrecondition']).not.toHaveBeenCalled();
         });
 
         it('returns null on success', async () => {
@@ -54,7 +54,7 @@ describe('IssueLinker', () => {
             const test: TestCase = { title: 'Test', steps: [], precondition: { type: 'reference', value: 'PREC-001' } };
             const result = await linker.associatePrecondition(test, 'TEST-1', opLog);
             expect(result).toBeNull();
-            expect(mockLinkManager.associatePrecondition).toHaveBeenCalledWith('TEST-1', 'PREC-001');
+            expect(mockLinkManager['associatePrecondition']).toHaveBeenCalledWith('TEST-1', 'PREC-001');
         });
 
         it('calls success when not quiet', async () => {
@@ -78,7 +78,7 @@ describe('IssueLinker', () => {
         it('returns null when no linkedIssues', async () => {
             const result = await linker.linkIssues('TEST-1', { title: 'Test', steps: [] });
             expect(result).toBeNull();
-            expect(mockLinkManager.linkIssues).not.toHaveBeenCalled();
+            expect(mockLinkManager['linkIssues']).not.toHaveBeenCalled();
         });
 
         it('returns null when linkedIssues is empty array', async () => {
@@ -95,7 +95,7 @@ describe('IssueLinker', () => {
             };
             const result = await linker.linkIssues('TEST-1', test);
             expect(result).toBeNull();
-            expect(mockLinkManager.linkIssues).toHaveBeenCalledWith('TEST-1', test.linkedIssues);
+            expect(mockLinkManager['linkIssues']).toHaveBeenCalledWith('TEST-1', test.linkedIssues);
         });
 
         it('calls success when not quiet', async () => {
@@ -126,19 +126,19 @@ describe('IssueLinker', () => {
     describe('updateCrossReferences', () => {
         it('does nothing when tests array is empty', async () => {
             await linker.updateCrossReferences([], []);
-            expect(mockJiraResource.getJiraResource).not.toHaveBeenCalled();
+            expect(mockJiraResource['getJiraResource']).not.toHaveBeenCalled();
         });
 
         it('skips tests without id or group', async () => {
             const tests: TestCase[] = [{ title: 'Test', steps: [], group: '' }];
             await linker.updateCrossReferences(tests, ['']);
-            expect(mockJiraResource.getJiraResource).not.toHaveBeenCalled();
+            expect(mockJiraResource['getJiraResource']).not.toHaveBeenCalled();
         });
 
         it('skips groups with fewer than 2 members', async () => {
             const tests: TestCase[] = [{ title: 'Test', steps: [], group: 'G1' }];
             await linker.updateCrossReferences(tests, ['TEST-1']);
-            expect(mockJiraResource.getJiraResource).not.toHaveBeenCalled();
+            expect(mockJiraResource['getJiraResource']).not.toHaveBeenCalled();
         });
 
         it('updates descriptions for all group members', async () => {
@@ -151,10 +151,10 @@ describe('IssueLinker', () => {
                 { title: 'Test2', group: 'G1', description: 'Second', steps: [] },
             ];
             await linker.updateCrossReferences(tests, ['TEST-1', 'TEST-2']);
-            expect(mockJiraResource.getJiraResource).toHaveBeenCalledTimes(2);
-            expect(mockJiraResource.putJiraResource).toHaveBeenCalledTimes(2);
-            expect(mockJiraResource.putJiraResource).toHaveBeenCalledWith('issue/TEST-1', expect.any(Object));
-            expect(mockJiraResource.putJiraResource).toHaveBeenCalledWith('issue/TEST-2', expect.any(Object));
+            expect(mockJiraResource['getJiraResource']).toHaveBeenCalledTimes(2);
+            expect(mockJiraResource['putJiraResource']).toHaveBeenCalledTimes(2);
+            expect(mockJiraResource['putJiraResource']).toHaveBeenCalledWith('issue/TEST-1', expect.any(Object));
+            expect(mockJiraResource['putJiraResource']).toHaveBeenCalledWith('issue/TEST-2', expect.any(Object));
         });
 
         it('skips already updated issues', async () => {
@@ -166,7 +166,7 @@ describe('IssueLinker', () => {
                 { title: 'Test2', group: 'G1', steps: [] },
             ];
             await linker.updateCrossReferences(tests, ['TEST-1', 'TEST-2']);
-            expect(mockJiraResource.putJiraResource).not.toHaveBeenCalled();
+            expect(mockJiraResource['putJiraResource']).not.toHaveBeenCalled();
         });
 
         it('handles getJiraResource error', async () => {
@@ -176,7 +176,7 @@ describe('IssueLinker', () => {
                 { title: 'Test2', group: 'G1', steps: [] },
             ];
             await linker.updateCrossReferences(tests, ['TEST-1', 'TEST-2']);
-            expect(mockJiraResource.putJiraResource).not.toHaveBeenCalled();
+            expect(mockJiraResource['putJiraResource']).not.toHaveBeenCalled();
         });
 
         it('handles putJiraResource error', async () => {
@@ -189,7 +189,7 @@ describe('IssueLinker', () => {
                 { title: 'Test2', group: 'G1', steps: [] },
             ];
             await linker.updateCrossReferences(tests, ['TEST-1', 'TEST-2']);
-            expect(mockJiraResource.putJiraResource).toHaveBeenCalledTimes(2);
+            expect(mockJiraResource['putJiraResource']).toHaveBeenCalledTimes(2);
         });
 
         it('writes green char on success when not quiet', async () => {

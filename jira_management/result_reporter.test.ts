@@ -135,7 +135,7 @@ describe('matchResultsToTests', () => {
         const result = matchResultsToTests([], emptyMappingPath);
         expect(result.stats.total).toBe(0);
         expect(result.matched).toEqual([]);
-        expect(rootLogger.warn).toHaveBeenCalledWith('Mapping JSON vazio');
+        expect(rootLogger['warn']).toHaveBeenCalledWith('Mapping JSON vazio');
     });
 
     it('returns null for empty/undefined title in _fuzzyMatch', () => {
@@ -196,7 +196,7 @@ describe('createTestExecutionFromResults', () => {
         expect(result.key).toBe('EXEC-1');
         expect(result.passed).toBe(1);
         expect(result.failed).toBe(1);
-        expect(jiraResource.postJiraResource).toHaveBeenCalledWith('issue', expect.anything());
+        expect(jiraResource['postJiraResource']).toHaveBeenCalledWith('issue', expect.anything());
         const [, postArg] = nonNull(jiraResource.postJiraResource.mock.calls[0]);
         expect(postArg).toHaveProperty('fields.summary', expect.stringContaining('Results:'));
     });
@@ -252,7 +252,7 @@ describe('createTestExecutionFromResults', () => {
             csvName: 'test-csv',
         });
         expect(result.key).toBe('EXEC-3');
-        expect(rootLogger.warn).toHaveBeenCalledWith(expect.stringContaining('Falha ao linkar'));
+        expect(rootLogger['warn']).toHaveBeenCalledWith(expect.stringContaining('Falha ao linkar'));
     });
 
     it('uses existingTeKey to add tests to existing TE instead of creating new', async () => {
@@ -287,9 +287,9 @@ describe('createTestExecutionFromResults', () => {
         expect(result.key).toBe(teKey);
         expect(result.passed).toBe(1);
         expect(result.failed).toBe(1);
-        expect(jiraResource.putJiraResource).toHaveBeenCalledWith('issue/' + teKey, expect.anything());
+        expect(jiraResource['putJiraResource']).toHaveBeenCalledWith('issue/' + teKey, expect.anything());
         const [, putArg] = nonNull(jiraResource.putJiraResource.mock.calls[0]);
         expect(putArg).toHaveProperty('fields.customfield_13715', expect.any(Array));
-        expect(jiraResource.postJiraResource).not.toHaveBeenCalledWith('issue', expect.anything());
+        expect(jiraResource['postJiraResource']).not.toHaveBeenCalledWith('issue', expect.anything());
     });
 });

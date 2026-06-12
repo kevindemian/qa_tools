@@ -24,12 +24,12 @@ describe('createMockLinkManager', () => {
     it('merges overrides correctly', () => {
         const customLink = vi.fn();
         const mock = createMockLinkManager({ linkIssues: customLink });
-        expect(mock.linkIssues).toBe(customLink);
+        expect(mock['linkIssues']).toBe(customLink);
     });
 
     it('each call produces independent vi.fn() instances', () => {
         const a = createMockLinkManager();
         const b = createMockLinkManager();
-        expect(a.linkIssues).not.toBe(b.linkIssues);
+        expect(a['linkIssues']).not.toBe(b['linkIssues']);
     });
 });

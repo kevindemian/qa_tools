@@ -53,7 +53,7 @@ describe('TestCaseFactory', () => {
                 opLog,
             });
             expect(result).toEqual({ key: 'TEST-123' });
-            expect(mockJiraResource.postJiraResource).toHaveBeenCalledWith('issue', testData);
+            expect(mockJiraResource['postJiraResource']).toHaveBeenCalledWith('issue', testData);
             expect(opLog.info).toHaveBeenCalledWith('Issue criada', { key: 'TEST-123' });
         });
 
@@ -111,7 +111,7 @@ describe('TestCaseFactory', () => {
             });
 
             expect(result).toEqual({ key: 'TEST-42', skipped: true });
-            expect(mockJiraResource.postJiraResource).not.toHaveBeenCalled();
+            expect(mockJiraResource['postJiraResource']).not.toHaveBeenCalled();
             expect(opLog.info).toHaveBeenCalledWith('Issue pulada (já existe)', {
                 key: 'TEST-42',
                 title: 'Login Test',
@@ -135,7 +135,7 @@ describe('TestCaseFactory', () => {
             });
 
             expect(result).toEqual({ key: 'TEST-43' });
-            expect(mockJiraResource.postJiraResource).toHaveBeenCalledWith('issue', testData);
+            expect(mockJiraResource['postJiraResource']).toHaveBeenCalledWith('issue', testData);
         });
 
         it('falls through to create when search fails gracefully', async () => {
@@ -152,7 +152,7 @@ describe('TestCaseFactory', () => {
             });
 
             expect(result).toEqual({ key: 'TEST-44' });
-            expect(mockJiraResource.postJiraResource).toHaveBeenCalled();
+            expect(mockJiraResource['postJiraResource']).toHaveBeenCalled();
         });
 
         it('does not search when skipExisting is false', async () => {
@@ -167,8 +167,8 @@ describe('TestCaseFactory', () => {
                 skipExisting: false,
             });
 
-            expect(mockJiraResource.searchJiraIssues).not.toHaveBeenCalled();
-            expect(mockJiraResource.postJiraResource).toHaveBeenCalled();
+            expect(mockJiraResource['searchJiraIssues']).not.toHaveBeenCalled();
+            expect(mockJiraResource['postJiraResource']).toHaveBeenCalled();
         });
 
         it('shows prompt info when quiet is false and issue skipped', async () => {
