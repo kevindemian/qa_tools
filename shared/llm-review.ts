@@ -72,8 +72,9 @@ async function attemptPrimary(system: string, user: string, startTime: number, t
         const primary = await llmPrompt({ tier, system, user, schema });
         recordLlmRequest(tier, Date.now() - startTime);
         return primary;
-    } catch {
+    } catch (err: unknown) {
         recordLlmFailure(tier);
+        rootLogger.warn('Primary LLM review failed — skipping: ' + (err instanceof Error ? err.message : String(err)));
         return null;
     }
 }
@@ -201,8 +202,12 @@ async function runRetryLoop(
                 schema,
             });
             recordLlmRequest('report', Date.now() - startTime);
-        } catch {
+        } catch (err: unknown) {
             recordLlmFailure('report');
+            rootLogger.warn(
+                'Retry LLM review failed — returning last valid result: ' +
+                    (err instanceof Error ? err.message : String(err)),
+            );
             return { parsed: null, retries, valid: false, layerErrors: errors };
         }
         const validationResult = validateUsingLayers(parsed, type, user);
@@ -265,7 +270,13 @@ async function adversarialRetryParallel(
                 const { layer1Passed } = validateUsingLayers(parsed, type, user);
                 if (!layer1Passed) return null;
                 return { content: JSON.stringify(parsed, null, 2), tier };
-            } catch {
+            } catch (err: unknown) {
+                rootLogger.warn(
+                    'Adversarial LLM review tier ' +
+                        tier +
+                        ' failed: ' +
+                        (err instanceof Error ? err.message : String(err)),
+                );
                 return null;
             }
         }),

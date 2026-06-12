@@ -22,9 +22,6 @@ import {
 import { validateJsonSchema, validateJsonArray, validateClassify } from './benchmark-validators.js';
 import { computeCoverageMetrics, type BenchmarkMetrics } from './benchmark-metrics.js';
 
-export { validateJsonSchema, validateJsonArray, validateClassify } from './benchmark-validators.js';
-export { computeCoverageMetrics } from './benchmark-metrics.js';
-
 const PROMPT_DIR = import.meta.dirname + '/prompts';
 
 function readPrompt(file: string): string {

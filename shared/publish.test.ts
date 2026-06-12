@@ -36,7 +36,7 @@ describe('publishReport', () => {
         expect(mockExecFileSync).toHaveBeenCalledWith(
             'aws',
             ['s3', 'cp', './report.html', 's3://my-bucket', '--no-progress'],
-            { stdio: 'inherit' },
+            { stdio: 'inherit', timeout: 120_000 },
         );
     });
 
@@ -45,7 +45,7 @@ describe('publishReport', () => {
         expect(mockExecFileSync).toHaveBeenCalledWith(
             'aws',
             ['s3', 'cp', './report.html', 's3://other', '--no-progress'],
-            { stdio: 'inherit' },
+            { stdio: 'inherit', timeout: 120_000 },
         );
     });
 
@@ -56,7 +56,7 @@ describe('publishReport', () => {
         expect(mockExecFileSync).toHaveBeenCalledWith(
             'aws',
             ['s3', 'cp', maliciousPath, 's3://bucket', '--no-progress'],
-            { stdio: 'inherit' },
+            { stdio: 'inherit', timeout: 120_000 },
         );
         expect(mockLoggerError).not.toHaveBeenCalled();
     });

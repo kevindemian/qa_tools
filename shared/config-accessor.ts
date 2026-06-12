@@ -42,10 +42,9 @@ class Config {
         const f = CONFIG_SCHEMA.find((r) => r.key === key);
         if (!f) return envVal(key) as T;
         const raw = envVal(f.envVar, String(f.defaultVal ?? ''));
-        if (f.key === 'xrayMode' && raw !== 'server' && raw !== 'cloud')
-            throw new Error(`Invalid XRAY_MODE: "${raw}". Must be "server" or "cloud".`);
-        if (f.key === 'jiraMode' && raw !== 'server' && raw !== 'cloud')
-            throw new Error(`Invalid JIRA_MODE: "${raw}". Must be "server" or "cloud".`);
+        if (f.allowedValues && f.allowedValues.length > 0 && raw !== '' && !f.allowedValues.includes(raw)) {
+            throw new Error(`${f.envVar}="${raw}" não é um valor válido. Permitidos: ${f.allowedValues.join(', ')}.`);
+        }
         if (f.key === 'logDir' && envVal('QA_TOOLS_LOGS_DIR')) return envVal('QA_TOOLS_LOGS_DIR') as T;
         if (f.type === 'boolean') return toBool(raw) as T;
         if (f.type === 'number') return toInt(raw, f.defaultVal as number) as T;

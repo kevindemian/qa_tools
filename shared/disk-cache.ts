@@ -63,7 +63,10 @@ function decrypt(data: string): string | null {
         const decipher = crypto.createDecipheriv('aes-256-gcm', key, Buffer.from(p.iv, 'base64'));
         decipher.setAuthTag(Buffer.from(p.t, 'base64'));
         return decipher.update(Buffer.from(p.e, 'base64'), undefined, 'utf8') + decipher.final('utf8');
-    } catch {
+    } catch (err: unknown) {
+        rootLogger.debug(
+            'Disk cache decrypt failed — treating as cache miss: ' + (err instanceof Error ? err.message : String(err)),
+        );
         return null;
     }
 }

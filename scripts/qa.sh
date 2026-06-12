@@ -95,6 +95,7 @@ exec podman run --rm -it \
     --tmpfs /tmp:nosuid,size=128m \
     --tmpfs /home/coder/.opencode:noexec,size=64m \
     --tmpfs /home/coder/.local:noexec,size=64m \
+    --tmpfs /home/coder/.local/state:noexec,size=128m \
     --tmpfs /home/coder/.cache:noexec,size=64m \
     --cap-drop ALL \
     --network host \

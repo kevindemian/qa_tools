@@ -1,5 +1,64 @@
 # Backlog
 
+## 🛡️ Sprint Inverse Audit — Correção de Achados (Jun/2026)
+
+**Data:** 2026-06-12
+**Origem:** Auditoria inversa — funcionalidades que dependem de código ausente ou incompleto. 4 achados (1 HIGH, 3 MEDIUM).
+**Ordem de execução:** Placeholder → Env var faltante → .env.example sync → Validação runtime.
+
+### Plano de Fases
+
+| Fase | Descrição                                                       | Itens | Status |
+| ---- | --------------------------------------------------------------- | ----- | ------ |
+| 1    | Remover placeholder órfão (cast-test.test.ts)                   | IA-1  | ✅     |
+| 2    | Adicionar OPENCODE_DB_TIMEOUT_MS ao schema + .env.example       | IA-2  | ✅     |
+| 3    | Sincronizar .env.example com CONFIG_SCHEMA (geração automática) | IA-3  | ✅     |
+| 4    | Expandir validação runtime (data-driven, enum checks, unknown)  | IA-4  | ✅     |
+| TST  | tsc + vitest + lint                                             | —     | ✅     |
+
+### Detalhamento por Fase
+
+#### Fase 1 — Remover placeholder órfão
+
+| ID   | Item                                                | Arquivo                 | Correção        |
+| ---- | --------------------------------------------------- | ----------------------- | --------------- |
+| IA-1 | 🐛 Test placeholder sem produção: cast-test.test.ts | `e2e/cast-test.test.ts` | Remover arquivo |
+
+#### Fase 2 — OPENCODE_DB_TIMEOUT_MS no schema
+
+| ID   | Item                                                                   | Arquivo(s)                | Correção                         |
+| ---- | ---------------------------------------------------------------------- | ------------------------- | -------------------------------- |
+| IA-2 | 🔧 OPENCODE_DB_TIMEOUT_MS consumido mas ausente do schema/.env.example | `shared/config-schema.ts` | Adicionar entry no CONFIG_SCHEMA |
+
+#### Fase 3 — .env.example sync automático
+
+| ID   | Item                                                  | Arquivo(s)                                                        | Correção                                              |
+| ---- | ----------------------------------------------------- | ----------------------------------------------------------------- | ----------------------------------------------------- |
+| IA-3 | 🔧 32 env vars no schema mas ausentes do .env.example | `scripts/generate-env-example.ts`, `.env.example`, `package.json` | Criar gerador, regenerar .env.example, add npm script |
+
+#### Fase 4 — Validação runtime expandida
+
+| ID   | Item                                                                | Arquivo(s)                                                      | Correção                                              |
+| ---- | ------------------------------------------------------------------- | --------------------------------------------------------------- | ----------------------------------------------------- |
+| IA-4 | 🔧 Apenas 3 de ~87 configs validadas — typos silenciosos em runtime | `shared/config-validator.ts`, `shared/config-validator.test.ts` | Validar tipos + valores conhecidos + unknown env vars |
+
+### Métricas Alcançadas
+
+| Métrica                         | Antes | Resultado        |
+| ------------------------------- | ----- | ---------------- |
+| `tsc --noEmit`                  | 0     | ✅ 0             |
+| `vitest run`                    | 4541  | ✅ 4541 pass     |
+| Placeholders sem produção       | 1     | ✅ 0             |
+| Env vars no schema              | 86    | ✅ 90            |
+| Env vars no .env.example        | 54    | ✅ 90 (total)    |
+| Configs validadas               | 3     | ✅ All (~90)     |
+| Env vars c/ allowedValues enum  | 0     | ✅ 6             |
+| Env vars c/ category            | 0     | ✅ 90            |
+| Validação data-driven           | ❌    | ✅ CONFIG_SCHEMA |
+| Geração .env.example automática | ❌    | ✅ npm script    |
+
+---
+
 > **ORIENTAÇÃO**: Este arquivo contém **APENAS** tarefas pendentes ou em andamento.
 > Tarefas concluídas devem ser **imediatamente migradas** para [`BACKLOG-historico.md`](BACKLOG-historico.md).
 >
@@ -1270,8 +1329,9 @@ Cada fase (0-5) é committada separadamente com verificação:
 | 2    | Dockerfile parametrizado (ARG) com validação de SHA256 obrigatório            | CO-2  | ✅     |
 | 3    | Volume persistente SQLite (`~/.local/share/opencode`) em vez de tmpfs inteiro | CO-3  | ✅     |
 | 4    | Testes para qa.sh com `--replace` + volume persistente                        | CO-4  | ✅     |
-| 5    | Rebuildar imagem e verificar                                                  | CO-5  | ✅     |
+| 5    | Rebuildar imagem + build context explícito                                    | CO-5  | ✅     |
 | 6    | Fix SQLite timeout (30s→300s) + env var override `OPENCODE_DB_TIMEOUT_MS`     | CO-6  | ✅     |
+| 7    | `.container/` removido do tracking git + gitignore                            | CO-7  | ✅     |
 | 7    | Verificação final: TSC + lint + tests + quality-check                         | CO-7  | ✅     |
 
 ### Detalhamento
@@ -1284,5 +1344,72 @@ Cada fase (0-5) é committada separadamente com verificação:
 | CO-4 | 📋 Testes: `--replace` presente, volume persistente no comando podman        | `scripts/qa.test.ts`                      | 5min    |
 | CO-5 | 🏗️ Rebuildar imagem opencode-qa                                              | `podman build -t opencode-qa`             | 5min    |
 | CO-6 | ✅ Verificação: TSC + lint + vitest + quality-check                          | —                                         | 5min    |
+
+---
+
+## 🔒 Sprint Code Audit — Correção de Dead Code + Error Handling + Limpeza de Exports (Jun/2026)
+
+**Data:** 2026-06-12
+**Origem:** Auditoria profunda de código de produção — 86 achados (4 HIGH, 17 MEDIUM, 65 LOW).
+**Relatório:** `.audit/dead-code-audit.md`
+**Ordem de execução:** Safety → Dead code → Unused exports → Barrel hygiene
+
+| Fase | Descrição                                                                        | Itens | Status |
+| ---- | -------------------------------------------------------------------------------- | ----- | ------ |
+| P0   | Safety: catch silenciosos, timeout, error swallowing sem log                     | 4     | ✅     |
+| P1   | Dead code: remoção de funções/exports/re-exports sem consumidores                | 5     | 🔜     |
+| P2   | Unused exports: remover `export` de funções internas (markdown, palette, report) | 5     | 🔜     |
+| P3   | Barrel hygiene: `export *` → exports nomeados em `llm-fallback.ts`               | 1     | 🔜     |
+| TST  | Testes para todas as correções + verificação final                               | All   | 🔜     |
+
+### P0 — Safety (violação de mecanismos de segurança)
+
+| ID   | Severidade | Arquivo                | Linha      | Problema                                           | Correção                                         |
+| ---- | ---------- | ---------------------- | ---------- | -------------------------------------------------- | ------------------------------------------------ |
+| SA-1 | 🔴 HIGH    | `shared/env-loader.ts` | 51         | `.catch(() => {})` vazio — erro do logger engolido | Substituir por `.catch(e => console.error(...))` |
+| SA-2 | 🟡 MEDIUM  | `shared/publish.ts`    | 25,36-46   | `execFileSync` sem timeout (5 chamadas de rede)    | Adicionar `timeout: 120_000` em cada             |
+| SA-3 | 🟡 MEDIUM  | `shared/disk-cache.ts` | 66         | Decrypt failure retorna null sem log               | Adicionar `rootLogger.debug()`                   |
+| SA-4 | 🟡 MEDIUM  | `shared/llm-review.ts` | 75,204,268 | LLM review fallha sem warning                      | Adicionar `rootLogger.warn()`                    |
+
+### P1 — Dead Code (remoção)
+
+| ID   | Severidade | Arquivo                                               | Linha(s) | Problema                                                                    | Correção                |
+| ---- | ---------- | ----------------------------------------------------- | -------- | --------------------------------------------------------------------------- | ----------------------- |
+| DC-1 | 🔴 HIGH    | `shared/llm-fallback-config.ts`                       | 106-112  | `getModelPricing` e `hasPricingForModel` — zero chamadas                    | Remover funções         |
+| DC-2 | 🔴 HIGH    | `shared/llm-benchmark.ts`                             | 25-26    | Re-exports de `benchmark-validators` e `benchmark-metrics` sem consumidores | Remover linhas          |
+| DC-3 | 🟡 MEDIUM  | `git_triggers/main.ts`                                | 32       | `export default {}` — dummy nunca importado                                 | Remover                 |
+| DC-4 | 🟡 MEDIUM  | `jira_management/import-prep.ts`                      | 2-3      | `PreviewMdOptions` e `ValidationResult` nunca importados nominalmente       | Remover type re-exports |
+| DC-5 | 🟡 MEDIUM  | `shared/llm-fallback-http.ts` + `shared/llm-cache.ts` | 66,68    | `parseRawOnce` duplicado (2 implementações)                                 | Consolidar para uma     |
+
+### P2 — Unused Exports (limpeza de export interno)
+
+| ID   | Severidade | Arquivo                       | Linha | Função                        | Correção              |
+| ---- | ---------- | ----------------------------- | ----- | ----------------------------- | --------------------- |
+| UE-1 | 🟢 LOW     | `shared/markdown-html.ts`     | 9     | `renderInlineToHtml`          | Remover `export`      |
+| UE-2 | 🟢 LOW     | `shared/markdown-renderer.ts` | 63    | `renderInline`                | Remover `export`      |
+| UE-3 | 🟢 LOW     | `shared/markdown-renderer.ts` | 88    | `renderBlockToken`            | Remover `export`      |
+| UE-4 | 🟢 LOW     | `shared/palette.ts`           | 70    | `PaletteKey`                  | Remover `export type` |
+| UE-5 | 🟢 LOW     | `shared/report-html.ts`       | 20    | Re-export `buildTrendSection` | Remover linha 20      |
+
+### P3 — Barrel Hygiene
+
+| ID   | Severidade | Arquivo                  | Linha(s) | Problema                               | Correção                        |
+| ---- | ---------- | ------------------------ | -------- | -------------------------------------- | ------------------------------- |
+| BH-1 | 🟢 LOW     | `shared/llm-fallback.ts` | 23-24    | `export *` 2 wildcards → unbounded API | Substituir por exports nomeados |
+
+### Critério de commit (cada fase)
+
+1. `tsc --noEmit` = 0
+2. `vitest run` = 100% pass
+3. `npm run lint` = 0 (ou baseline)
+
+### Verificação Final
+
+| ID   | Item                               | Critério                  |
+| ---- | ---------------------------------- | ------------------------- |
+| VF-1 | `tsc --noEmit`                     | 0 erros                   |
+| VF-2 | `vitest run`                       | 100% pass                 |
+| VF-3 | `npm run lint`                     | 0 violações (ou baseline) |
+| VF-4 | `npx tsx scripts/quality-check.ts` | 0 violações não-baseline  |
 
 ---

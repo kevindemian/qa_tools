@@ -103,14 +103,6 @@ export function estimateCostUSD(model: string, promptTokens: number, completionT
     return (promptTokens / 1000) * pricing.inputPer1K + (completionTokens / 1000) * pricing.outputPer1K;
 }
 
-export function getModelPricing(model: string): ModelPricing | undefined {
-    return MODEL_PRICING[model];
-}
-
-export function hasPricingForModel(model: string): boolean {
-    return model in MODEL_PRICING;
-}
-
 // ---- metrics (shared with llm-client.ts) ----
 
 export interface LlmClientMetrics {

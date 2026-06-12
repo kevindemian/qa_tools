@@ -110,6 +110,10 @@ describe('qa.sh — OpenCode container wrapper', () => {
             expect(content).toContain('--tmpfs /home/coder/.local:noexec,size=64m');
         });
 
+        it('creates writable .local/state via tmpfs com noexec (fix EACCES opencode state dir)', () => {
+            expect(content).toContain('--tmpfs /home/coder/.local/state:noexec,size=128m');
+        });
+
         it('creates writable .cache via tmpfs com noexec', () => {
             expect(content).toContain('--tmpfs /home/coder/.cache:noexec,size=64m');
         });

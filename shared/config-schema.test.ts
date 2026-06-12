@@ -2,8 +2,8 @@ import { CONFIG_SCHEMA } from './config-schema.js';
 import { nonNull } from './test-utils.js';
 
 describe('CONFIG_SCHEMA', () => {
-    it('has at least 40 entries', () => {
-        expect(CONFIG_SCHEMA.length).toBeGreaterThanOrEqual(40);
+    it('has at least 86 entries', () => {
+        expect(CONFIG_SCHEMA.length).toBeGreaterThanOrEqual(86);
     });
 
     it('every entry has key, envVar, type, description', () => {
@@ -70,6 +70,32 @@ describe('CONFIG_SCHEMA', () => {
         const f = nonNull(CONFIG_SCHEMA.find((r) => r.key === 'logMaxSize'));
         expect(f.type).toBe('number');
         expect(f.defaultVal).toBe(5242880);
+    });
+
+    it('opencodeDbTimeoutMs is number with default 300000', () => {
+        const f = nonNull(CONFIG_SCHEMA.find((r) => r.key === 'opencodeDbTimeoutMs'));
+        expect(f.type).toBe('number');
+        expect(f.defaultVal).toBe(300_000);
+        expect(f.envVar).toBe('OPENCODE_DB_TIMEOUT_MS');
+    });
+
+    it('entries with allowedValues have matching type', () => {
+        for (const f of CONFIG_SCHEMA) {
+            if (f.allowedValues) {
+                expect(f.type).toBe('string');
+                expect(Array.isArray(f.allowedValues)).toBe(true);
+                expect(f.allowedValues.length).toBeGreaterThanOrEqual(2);
+            }
+        }
+    });
+
+    it('entries with category are properly grouped', () => {
+        for (const f of CONFIG_SCHEMA) {
+            if (f.category) {
+                expect(typeof f.category).toBe('string');
+                expect(f.category.length).toBeGreaterThan(0);
+            }
+        }
     });
 
     it('all keys defined in alphabetical order within groups', () => {
