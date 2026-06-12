@@ -39,8 +39,6 @@ describe('Config', () => {
         'LLM_API_KEY',
         'LLM_MODEL',
         'LLM_BASE_URL',
-        'LLM_SMALL_API_KEY',
-        'LLM_SMALL_MODEL',
         'LLM_FAST_API_KEY',
         'LLM_FAST_MODEL',
         'LLM_FAST_BASE_URL',
@@ -164,8 +162,6 @@ describe('Config', () => {
             ['llmApiKey', ''],
             ['llmModel', 'google/gemini-2.0-flash-exp'],
             ['llmBaseUrl', 'https://openrouter.ai/api/v1'],
-            ['llmSmallApiKey', ''],
-            ['llmSmallModel', 'gemini-2.0-flash-lite'],
             ['llmFastApiKey', ''],
             ['llmFastModel', 'llama-3.1-8b-instant'],
             ['llmFastBaseUrl', 'https://api.groq.com/openai/v1'],
@@ -421,8 +417,6 @@ describe('Config', () => {
                 llmApiKey: 'key-ov',
                 llmModel: 'model-ov',
                 llmBaseUrl: 'url-ov',
-                llmSmallApiKey: 'small-key',
-                llmSmallModel: 'small-model-ov',
                 llmFastApiKey: 'fast-key',
                 llmFastModel: 'fast-model-ov',
                 llmFastBaseUrl: 'fast-url-ov',
@@ -442,8 +436,6 @@ describe('Config', () => {
             expect(cfg.get('llmApiKey')).toBe('key-ov');
             expect(cfg.get('llmModel')).toBe('model-ov');
             expect(cfg.get('llmBaseUrl')).toBe('url-ov');
-            expect(cfg.get('llmSmallApiKey')).toBe('small-key');
-            expect(cfg.get('llmSmallModel')).toBe('small-model-ov');
             expect(cfg.get('llmFastApiKey')).toBe('fast-key');
             expect(cfg.get('llmFastModel')).toBe('fast-model-ov');
             expect(cfg.get('llmFastBaseUrl')).toBe('fast-url-ov');

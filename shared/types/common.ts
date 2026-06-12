@@ -111,11 +111,11 @@ export interface ConfigOverrides {
     logDir?: string;
     logMaxSize?: string | number;
     xdgStateHome?: string;
+    llmProvider?: string;
+    llmFallbackProvider?: string;
     llmApiKey?: string;
     llmModel?: string;
     llmBaseUrl?: string;
-    llmSmallApiKey?: string;
-    llmSmallModel?: string;
     llmFastApiKey?: string;
     llmFastModel?: string;
     llmFastBaseUrl?: string;

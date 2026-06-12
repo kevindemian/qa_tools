@@ -33,6 +33,9 @@ vi.mock('./templates/gitlab-ci', () => ({
 vi.mock('./templates/pre-push-hook', () => ({
     generatePrePushHook: vi.fn(),
 }));
+vi.mock('./llm-config', () => ({
+    configureLlm: vi.fn(),
+}));
 
 const MockFs = vi.mocked(fs);
 const MockDetect = vi.mocked(detectFramework);
@@ -47,6 +50,9 @@ const MockAsk = vi.mocked(prompt.ask);
 const MockAskConfirm = vi.mocked(prompt.askConfirm);
 
 import { main } from './main.js';
+
+import { configureLlm } from './llm-config.js';
+const MockConfigureLlm = vi.mocked(configureLlm);
 
 function mockGitHubDetect() {
     vi.mocked(MockFs.readFileSync).mockImplementation((p: fs.PathOrFileDescriptor) => {
@@ -67,7 +73,8 @@ function mockAskForTests(prePush: boolean) {
     MockAskConfirm.mockResolvedValueOnce(true)
         .mockResolvedValueOnce(true)
         .mockResolvedValueOnce(true)
-        .mockResolvedValueOnce(prePush);
+        .mockResolvedValueOnce(prePush)
+        .mockResolvedValueOnce(false);
 }
 
 describe('setup main', () => {
@@ -123,6 +130,7 @@ describe('setup main', () => {
         MockAskConfirm.mockResolvedValueOnce(true)
             .mockResolvedValueOnce(true)
             .mockResolvedValueOnce(true)
+            .mockResolvedValueOnce(false)
             .mockResolvedValueOnce(false);
 
         await main();
@@ -161,6 +169,46 @@ describe('setup main', () => {
         expect(MockGenHook).not.toHaveBeenCalled();
     });
 
+    it('asks to configure LLM and does so when accepted', async () => {
+        MockExtract.mockReturnValue({ owner: 'myorg', repo: 'my-repo' });
+        mockGitHubDetect();
+        MockAsk.mockResolvedValueOnce('myapp')
+            .mockResolvedValueOnce('cypress')
+            .mockResolvedValueOnce('npx cypress run')
+            .mockResolvedValueOnce('npm ci')
+            .mockResolvedValueOnce('ctrf-report.json')
+            .mockResolvedValueOnce('20');
+        MockAskConfirm.mockResolvedValueOnce(true)
+            .mockResolvedValueOnce(true)
+            .mockResolvedValueOnce(true)
+            .mockResolvedValueOnce(false)
+            .mockResolvedValueOnce(true); // configure LLM = yes
+
+        await main();
+
+        expect(MockConfigureLlm).toHaveBeenCalled();
+    });
+
+    it('skips LLM config when user declines', async () => {
+        MockExtract.mockReturnValue({ owner: 'myorg', repo: 'my-repo' });
+        mockGitHubDetect();
+        MockAsk.mockResolvedValueOnce('myapp')
+            .mockResolvedValueOnce('cypress')
+            .mockResolvedValueOnce('npx cypress run')
+            .mockResolvedValueOnce('npm ci')
+            .mockResolvedValueOnce('ctrf-report.json')
+            .mockResolvedValueOnce('20');
+        MockAskConfirm.mockResolvedValueOnce(true)
+            .mockResolvedValueOnce(true)
+            .mockResolvedValueOnce(true)
+            .mockResolvedValueOnce(false)
+            .mockResolvedValueOnce(false); // configure LLM = no
+
+        await main();
+
+        expect(MockConfigureLlm).not.toHaveBeenCalled();
+    });
+
     it('skips existing GitLab pipeline file', async () => {
         MockExtract.mockReturnValue({ owner: '', repo: '' });
         MockAsk.mockResolvedValueOnce('myapp')
@@ -174,6 +222,7 @@ describe('setup main', () => {
         MockAskConfirm.mockResolvedValueOnce(true)
             .mockResolvedValueOnce(true)
             .mockResolvedValueOnce(true)
+            .mockResolvedValueOnce(false)
             .mockResolvedValueOnce(false);
         vi.mocked(MockFs.existsSync).mockImplementation((p: string | Buffer | URL) => {
             return p.toString().includes('.gitlab-ci.yml');

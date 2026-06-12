@@ -1464,3 +1464,100 @@ Cada fase (0-5) é committada separadamente com verificação:
 | Diagnóstico device DB   | ❌    | ✅   |
 
 ---
+
+## 🚀 Sprint Smart LLM Config — Provider Profiles + Key Wizard + Unified Config (Jun/2026)
+
+**Data:** 2026-06-12
+**Origem:** Configuração LLM fragmentada em 18+ env vars, sem wizard de setup, sem detecção automática de provedor. Usuário precisa configurar tiers manualmente.
+**Ordem de execução:** Provider Profiles → Schema → Fallback Config → Key Probe → HTTP (Anthropic) → Validator → Wizard → Setup → Tests.
+
+### Decisões Arquiteturais
+
+| Ponto                                   | Decisão                                                     | Justificativa técnica                        |
+| --------------------------------------- | ----------------------------------------------------------- | -------------------------------------------- |
+| Provider Registry                       | Fixo no código (`llm-provider-profiles.ts`) como union type | Type safety, zero I/O, descoberta automática |
+| Opencode Go vs Zen                      | Go como default, Zen opt-in                                 | Custo fixo previsível                        |
+| GitHub Models                           | Auto-config batch se `GITHUB_TOKEN` existir                 | Gratuito, zero atrito                        |
+| `.env.local` merge                      | Substituição seletiva de linhas LLM* / OPENCODE*            | Idempotente, preserva não-LLM                |
+| `LLM_SMALL_API_KEY` / `LLM_SMALL_MODEL` | Remover do schema                                           | Config surface morta                         |
+| Formato Anthropic                       | Suporte nativo via `format: 'anthropic'`                    | Sem vendor lock-in, latência mínima          |
+| Key storage                             | `.env.local` apenas                                         | Portátil, sem dependências nativas           |
+| Smart Wizard                            | Key-first, detect-second, auto-assign tiers                 | Zero atrito, descoberta automática           |
+
+### Fases
+
+| Fase | Descrição                                                                        | Itens  | Status |
+| ---- | -------------------------------------------------------------------------------- | ------ | ------ |
+| 0    | BACKLOG.md                                                                       | —      | ✅     |
+| 1    | `shared/llm-provider-profiles.ts` — registry de provedores + tipos               | PP-1   | ✅     |
+| 2    | `config-schema.ts` — add `LLM_PROVIDER`, `LLM_FALLBACK_PROVIDER`; remove `small` | CS-1   | ✅     |
+| 3    | `llm-fallback-config.ts` — `tierToConfig` com auto-resolve de provider profiles  | FC-1   | ✅     |
+| 4    | `shared/llm-probe.ts` — key detection + API validation + auto-assign tiers       | PR-1   | ✅     |
+| 5    | `llm-fallback-http.ts` — `format: 'anthropic'` payload builder                   | HTTP-1 | ✅     |
+| 6    | `config-validator.ts` — validate `LLM_PROVIDER` known provider                   | CV-1   | ✅     |
+| 7    | `setup/llm-config.ts` — smart wizard interativo                                  | WZ-1   | ✅     |
+| 8    | `setup/main.ts` — link para LLM config ao final                                  | SM-1   | ✅     |
+| 9    | Regenerar `.env.example`, tests 100% cobertura, tsc, lint                        | ALL    | 🔜     |
+
+### Detalhamento
+
+#### Fase 1 — Provider Profiles
+
+| ID   | Item                                                            | Arquivo                           | Ação                                                                                       |
+| ---- | --------------------------------------------------------------- | --------------------------------- | ------------------------------------------------------------------------------------------ |
+| PP-1 | Criar provider profiles para 10 provedores + tipo `LlmProvider` | `shared/llm-provider-profiles.ts` | ✅ Registry com baseUrl, format, defaultModel, tiers, keyHint, docsUrl, free. 17/17 testes |
+
+**Provedores suportados:** `opencode-go`, `opencode-zen`, `openrouter`, `openai`, `anthropic`, `gemini`, `groq`, `github-models`, `nvidia-nim`, `custom`
+
+#### Fase 2 — Schema
+
+| ID   | Item                                         | Arquivo                   | Ação                                                                                                     |
+| ---- | -------------------------------------------- | ------------------------- | -------------------------------------------------------------------------------------------------------- |
+| CS-1 | Add `LLM_PROVIDER` + `LLM_FALLBACK_PROVIDER` | `shared/config-schema.ts` | ✅ Adicionados com allowedValues. `llmSmallApiKey`/`llmSmallModel` removidos do schema e de 4 test files |
+
+#### Fase 3 — Fallback Config
+
+| ID   | Item                                                                 | Arquivo                         | Ação                                                                                                                                               |
+| ---- | -------------------------------------------------------------------- | ------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------- |
+| FC-1 | `tierToConfig` resolve via provider profile quando explícito ausente | `shared/llm-fallback-config.ts` | ✅ 2-layer resolution (explicit → profile). Main/report sempre via profile. Fast/reviewer/fallback/batch via explicit key ou profile. 28/28 testes |
+
+#### Fase 4 — Key Probe
+
+| ID   | Item                                                       | Arquivo               | Ação                                                                                                      |
+| ---- | ---------------------------------------------------------- | --------------------- | --------------------------------------------------------------------------------------------------------- |
+| PR-1 | `probeApiKey()` + `detectProvider()` + `autoAssignTiers()` | `shared/llm-probe.ts` | ✅ 3 funções, probe HTTP para 3 formats (openai/gemini/anthropic), discoverProvider cascade. 28/28 testes |
+
+#### Fase 5 — HTTP + Anthropic
+
+| ID     | Item                                                                                     | Arquivo                                                         | Ação                                                                                           |
+| ------ | ---------------------------------------------------------------------------------------- | --------------------------------------------------------------- | ---------------------------------------------------------------------------------------------- |
+| HTTP-1 | `buildAnthropicPayload()` + `format: 'anthropic'` em `sendToProvider` + `extractContent` | `shared/llm-fallback-http.ts` + `shared/llm-fallback-config.ts` | ✅ Payload `/v1/messages`, header `x-api-key`, content extraction. Testes em ambos os arquivos |
+
+#### Fase 6 — Validator
+
+| ID   | Item                                     | Arquivo                      | Ação                                                  |
+| ---- | ---------------------------------------- | ---------------------------- | ----------------------------------------------------- |
+| CV-1 | Validate `LLM_PROVIDER` contra known set | `shared/config-validator.ts` | Warn se provider desconhecido, hint para setup wizard |
+
+#### Fase 7 — Wizard
+
+| ID   | Item                    | Arquivo               | Ação                                                          |
+| ---- | ----------------------- | --------------------- | ------------------------------------------------------------- |
+| WZ-1 | Smart LLM config wizard | `setup/llm-config.ts` | Coleta keys → detecta → auto-assign → review → selective save |
+
+#### Fase 8 — Setup link
+
+| ID   | Item                      | Arquivo         | Ação                                           |
+| ---- | ------------------------- | --------------- | ---------------------------------------------- |
+| SM-1 | Pergunta "Configure LLM?" | `setup/main.ts` | Chama `llm-config.ts` wizard se usuário quiser |
+
+#### Fase 9 — Verificação Final
+
+| ID    | Item                              | Critério   |
+| ----- | --------------------------------- | ---------- |
+| ALL-1 | `tsc --noEmit`                    | 0 erros    |
+| ALL-2 | `vitest run`                      | 100% pass  |
+| ALL-3 | `npm run lint`                    | 0          |
+| ALL-4 | Todas as novas funções com testes | 100% cover |
+
+---

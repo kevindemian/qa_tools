@@ -12,12 +12,6 @@ vi.mock('./config', () => {
             get llmBaseUrl() {
                 return mockConfig['llmBaseUrl'] ?? 'https://api.test.com/v1';
             },
-            get llmSmallApiKey() {
-                return mockConfig['llmSmallApiKey'] ?? '';
-            },
-            get llmSmallModel() {
-                return mockConfig['llmSmallModel'] ?? 'gemini-2.0-flash-lite';
-            },
             get llmFastApiKey() {
                 return mockConfig['llmFastApiKey'] ?? '';
             },
