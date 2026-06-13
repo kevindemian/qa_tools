@@ -88,6 +88,8 @@ export interface CtrfSummary {
     start: number;
     /** Stop timestamp (epoch ms). */
     stop: number;
+    /** Total duration in ms. */
+    duration?: number;
 }
 
 /** Environment metadata for a CTRF test run. */

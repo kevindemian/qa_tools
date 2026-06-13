@@ -157,7 +157,7 @@ function generateFinalReport(
     rootLogger.info(`\nReport: ${outPath}`);
 }
 
-async function main() {
+export async function main() {
     const { result } = loadCtrfFixture();
     setupMappingFile();
     const xrayHistoryHtml = await fetchXrayHistory();
