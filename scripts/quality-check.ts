@@ -469,7 +469,7 @@ export function checkIntegrity(): CheckResult {
         const selfContent = readFileSync('scripts/quality-check.ts', 'utf-8');
         const contentWithoutHash = selfContent.replace(/\/\* HASH:[0-9a-f]{64} \*\//g, '');
         const currentHash = createHash('sha256').update(contentWithoutHash, 'utf-8').digest('hex');
-        /* HASH:8a8538d1b5484ede2b682a16fc2635e3c643d3071917ba3f5b87428b9e3cac49 */
+        /* HASH:a253cbb11190ce72d83559d63cd8475bb3d050ff2a7f8100d3848baf4f4f4c9e */
         const match = selfContent.match(/\/\* HASH:([0-9a-f]{64}) \*\//);
         if (!match) {
             violations.push({ file: 'scripts/quality-check.ts', line: 1, content: 'Missing HASH comment' });
