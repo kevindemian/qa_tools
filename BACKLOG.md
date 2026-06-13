@@ -1975,6 +1975,22 @@ Cada fase (0-5) é committada separadamente com verificação:
 | 3 | BACKLOG.md | Registrar sprint e atualizar status | `BACKLOG.md` | ✅ |
 | 4 | Verificação final | tsc + eslint + quality-check + vitest | — | ✅ |
 
+### Fase 2 — Remover script CLI redundante (06-13)
+
+**Decisão:** `scripts/run-quality-gate.ts` era um wrapper CLI sem função própria — tudo que fazia, `pr-report.ts` já faz via `shared/quality-gate.ts` no momento correto (pós-teste). Removido para eliminar a ambiguidade arquitetural e o falso positivo de cobertura no pre-push.
+
+| # | Ação | Detalhes | Status |
+|---|------|----------|--------|
+| 1 | Remover script | `scripts/run-quality-gate.ts` | ✅ |
+| 2 | Atualizar pre-push | Remover chamada do quality gate | ✅ |
+| 3 | Atualizar CI | Remover step quality gate (redundante com pr-report.ts) | ✅ |
+| 4 | Atualizar package.json | Remover npm script `quality-gate` | ✅ |
+| 5 | Atualizar setup template | Remover `npx tsx scripts/quality-gate.ts` | ✅ |
+| 6 | Atualizar opencode-guard.sh | Trocar referência para `quality-check.ts` | ✅ |
+| 7 | Atualizar quality-check.ts | Remover `scripts/run-quality-gate.ts` da verificação de existência | ✅ |
+| 8 | Atualizar hash | Recalcular hash do quality-check.ts | ✅ |
+| 9 | BACKLOG.md | Registrar decisão e atualizar status | ✅ |
+
 ---
 
-Revisado 2026-06-13 — Sprint concluído. Todas as fases implementadas.
+Revisado 2026-06-13 — Sprint concluído. Script redundante removido. Engine `shared/quality-gate.ts` mantida intacta (usada por `pr-report.ts`).

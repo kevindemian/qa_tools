@@ -47,11 +47,7 @@ npm run typecheck
 echo "--- Quality enforcement ---"
 npx tsx scripts/quality-check.ts
 
-# 3. Quality gate
-echo "--- Quality gate ---"
-npx tsx scripts/run-quality-gate.ts
-
-# 4. Validation hook test
+# 3. Validation hook test
 VALIDATION_HOOK="$HOME/.config/opencode/validation_hook.ts"
 if [ -f "$VALIDATION_HOOK" ]; then
   echo "--- Validation hook test ---"

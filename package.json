@@ -19,7 +19,6 @@
         "docs": "echo 'Documentation generation removed (docs-archive/)'",
         "jira": "npx tsx jira_management/main.ts",
         "git": "npx tsx git_triggers/main.ts",
-        "quality-gate": "npx tsx scripts/quality-gate.ts",
         "smoke:github": "npx tsx e2e/smoke-github.ts",
         "smoke:llm": "npx tsx e2e/smoke-llm.ts",
         "smoke:pipeline": "E2E_PIPELINE=true npx tsx e2e/smoke-pipeline.ts",
