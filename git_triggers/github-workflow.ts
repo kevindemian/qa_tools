@@ -185,6 +185,8 @@ export async function wfGetJobLogs(
         const raw = typeof response.data === 'string' ? response.data : String(response.data);
         return raw.slice(0, maxBytes);
     } catch (err) {
+        const axiosErr = err as { response?: { status?: number } };
+        if (axiosErr.response?.status === 404) return null;
         return handleError(err, { context: 'baixar log do job' });
     }
 }
