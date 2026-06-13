@@ -2177,11 +2177,23 @@ Revisado 2026-06-13 — Sprint concluído. Script redundante removido. Engine `s
 | 3   | **github-ci.ts** | Post-processing com `scripts/pr-report.ts` ao invés de `--batch`                  | `setup/templates/github-ci.ts`, `setup/templates/__tests__/github-ci.test.ts`                    | 🔜     |
 | 4   | **Testes**       | Cobertura 100% para todas as mudanças                                             | `setup/detector.test.ts`, `setup/context.test.ts`, `setup/templates/__tests__/github-ci.test.ts` | 🔜     |
 | 5   | **ci.yml**       | Remover step manual (linhas 50-61)                                                | `.github/workflows/ci.yml`                                                                       | 🔜     |
-| 6   | **Wizard**       | Executar wizard no qa_tools → gerar `qa.yml`                                      | `.github/workflows/qa.yml` (gerado)                                                              | 🔜     |
-| 7   | **Verificação**  | tsc + lint + vitest + quality check                                               | —                                                                                                | 🔜     |
-| 8   | **Push + CI**    | Commit, push, monitorar via GitHub API                                            | —                                                                                                | 🔜     |
-| 9   | **BACKLOG**      | Atualizar status final                                                            | `BACKLOG.md`                                                                                     | 🔜     |
+| 6   | **Wizard**       | Executar wizard no qa_tools → gerar `qa.yml`                                      | `.github/workflows/qa.yml` (gerado)                                                              | ✅     |
+| 7   | **Verificação**  | tsc + lint + vitest + quality check                                               | —                                                                                                | ✅     |
+| 8   | **Push + CI**    | Commit, push, monitorar via GitHub API                                            | —                                                                                                | ✅     |
+| 9   | **BACKLOG**      | Atualizar status final                                                            | `BACKLOG.md`                                                                                     | ✅     |
 
 ### Dependências Externas
 
 Nenhuma. O projeto já possui `shared/vitest-ctrf-reporter.ts` próprio — zero dependência externa para CTRF.
+
+---
+
+## 🔧 Root Cause Fix — CI Coverage Race Condition (coverage-source.test.ts)
+
+> Correção aplicada em c3f4911. CI validado: `ci.yml` ✅ + `qa.yml` ✅.
+
+**Defeito:** `shared/__tests__/coverage-source.test.ts:6` definia `TEST_DIR = path.resolve('coverage')`. O `afterEach` fazia `fs.rmSync('coverage', { recursive: true })`, que deletava o diretório `coverage/.tmp/` do V8 coverage provider do vitest durante a execução em paralelo.
+
+**Resultado:** `Unhandled Rejection: Error: Something removed the coverage directory` — race condition determinística entre o test fixture cleanup e o coverage provider.
+
+**Correção:** `TEST_DIR` alterado para `path.resolve('coverage-test-fixtures')` e todos os calls de `readIstanbulCoverage()` no test file passam `TEST_PATH` explicitamente. Produção (`coverage-source.ts`) mantém o default `coverage/coverage-summary.json`.
