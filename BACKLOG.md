@@ -2049,3 +2049,139 @@ Revisado 2026-06-13 — Sprint concluído. Script redundante removido. Engine `s
 | CI artifact upload                               | ✅ `actions/upload-artifact@v4`                                                   |
 
 **Nota:** `git_triggers/github-e2e.test.ts` falha por limitação de rede (`AxiosError: getaddrinfo ENOTFOUND`) — pre-existente, não relacionado a esta fase.
+
+---
+
+## 🚀 Sprint PR Report — Link Fix + Coverage Standalone + Pipeline Integration (Jun/2026) ✅
+
+> Completado em 2026-06-13. Migrado para `BACKLOG-historico.md`.
+
+---
+
+## 🛡️ Sprint Health Score Reform — Correção de Métricas, Proveniência e Alinhamento com Padrões (Jun/2026)
+
+**Data:** 2026-06-13
+**Origem:** Auditoria de cálculo de scores identificou 3 defeitos (pass rate inclui skipped, health score ignora run atual, suite speed usa avg em vez de p95) + 5 débitos de alinhamento com padrões de mercado (ISO 25023, DORA, ISTQB, Allure v2.25).
+
+**Estratégia:** Correções primeiro (Fase 0), depois novas dimensões (Fase 1), proveniência (Fase 2), configurabilidade (Fase 3). no workarounds, no debt, no degradation of safety mechanisms.
+
+### Plano de Execução
+
+| Fase | Descrição                                                       | Status |
+| ---- | --------------------------------------------------------------- | ------ |
+| 0    | **Correções**: run atual, pass rate denominator, unused import  | ✅     |
+| 1    | **Novas dimensões**: execution rate, p95 suite speed, reweights | ✅     |
+| 2    | **Proveniência**: fontes/normas no HealthScoreResult + renders  | ⏳     |
+| 3    | **Configurabilidade**: grade boundaries overridable             | ⏳     |
+| V    | **Verificação**: tsc + vitest + lint                            | ⏳     |
+
+### Referências Técnicas
+
+| Padrão                         | Aplicação                                                        |
+| ------------------------------ | ---------------------------------------------------------------- |
+| **DORA State of DevOps 2025**  | Pass Rate threshold: Elite ≥95% (Change Failure Rate <5%)        |
+| **Allure Report v2.25**        | Pass Rate formula: `passed/(passed+failed)×100` — exclui skipped |
+| **ISO/IEC 25023:2016**         | Coverage measures, quality measurement framework                 |
+| **ISO/IEC 25020:2019 Annex D** | Normalized measurement function, grade boundaries                |
+| **ISTQB CTFL**                 | Execution Rate: `(passed+failed)/total×100`                      |
+| **QASkills.sh / Kualitatem**   | Flaky Rate target <3%, action threshold >5%                      |
+| **ThinkSys / Google SRE**      | Suite Speed: p95 test duration, target <1000ms                   |
+
+### Fase 0 — Correções (P0) ✅
+
+| ID   | Item                                                                            | Arquivo(s)                                         | Esforço | Status |
+| ---- | ------------------------------------------------------------------------------- | -------------------------------------------------- | ------- | ------ |
+| HS-1 | 🐛 Incluir run atual no health score (saveParseResult antes de loadMetrics)     | `shared/pr-report-core.ts`, `scripts/pr-report.ts` | 15min   | ✅     |
+| HS-2 | 🐛 Fix pass rate denominator: `passed/(passed+failed)` em vez de `passed/total` | `shared/health-score.ts`                           | 5min    | ✅     |
+| HS-3 | 🔧 Remover `readIstanbulCoverage` import não usado                              | `scripts/pr-report.ts`                             | 1min    | ✅     |
+| HS-T | 📋 Testes para Fase 0                                                           | `shared/__tests__/health-score.test.ts`            | 15min   | ✅     |
+
+### Fase 1 — Novas Dimensões e Thresholds (P1) ✅
+
+| ID   | Item                                                                                          | Arquivo(s)                              | Esforço | Status |
+| ---- | --------------------------------------------------------------------------------------------- | --------------------------------------- | ------- | ------ |
+| HS-4 | ♻️ Adicionar `executionRate` como nova dimensão: `(passed+failed)/total×100`                  | `shared/health-score.ts`                | 10min   | ✅     |
+| HS-5 | ♻️ Transformar `suiteSpeed` de avg per-test para p95 test duration (ms)                       | `shared/health-score.ts`                | 15min   | ✅     |
+| HS-6 | ♻️ Rebalancear pesos: passRate=30, flakyRate=20, coverage=25, executionRate=15, suiteSpeed=10 | `shared/health-score.ts`                | 5min    | ✅     |
+| HS-7 | ♻️ Ajustar thresholds: flakyTarget=3%, maxFlakyGate=5, coverageTarget=80%, minCoverageGate=70 | `shared/health-score.ts`                | 5min    | ✅     |
+| HS-8 | ♻️ Atualizar grade boundaries: A≥90, B≥80, C≥70, D≥60, F<60 + nova grade `'poor'`             | `shared/health-score.ts`                | 5min    | ✅     |
+| HS-9 | ♻️ `suiteSpeed` migrado para ms, target=1000ms, maxGate=10000ms                               | `shared/health-score.ts`                | 2min    | ✅     |
+| HS-T | 📋 Testes para Fase 1 (39 tests, todos pass)                                                  | `shared/__tests__/health-score.test.ts` | 20min   | ✅     |
+
+### Fase 2 — Proveniência (P1) ✅
+
+| ID    | Item                                                                                                  | Arquivo(s)                                                                         | Esforço | Status |
+| ----- | ----------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------- | ------- | ------ |
+| HS-10 | ✨ Criar interface `HealthScoreProvenance` — dimension, source, formula, thresholdBasis, configurable | `shared/types/bugs.ts`                                                             | 5min    | ✅     |
+| HS-11 | ♻️ Adicionar `provenance` opcional ao `HealthScoreResult`                                             | `shared/types/bugs.ts`                                                             | 2min    | ✅     |
+| HS-12 | ♻️ Gerar provenance em `calculateHealthScore()` — 1 entry por dimensão                                | `shared/health-score.ts`                                                           | 15min   | ✅     |
+| HS-13 | ✨ Renderizar provenance no HTML report (collapsible table dentro do health card)                     | `shared/report-html.ts`, `shared/report-sections.ts`                               | 10min   | ✅     |
+| HS-14 | ♻️ Renderizar provenance compacta no PR comment footer                                                | `shared/pr-report-core.ts`                                                         | 5min    | ✅     |
+| HS-T  | 📋 Testes para Fase 2 (7 tests novos — proveniência + rendering + override detection)                 | `shared/__tests__/health-score.test.ts`, `shared/__tests__/pr-report-core.test.ts` | 20min   | ✅     |
+
+### Fase 3 — Configurabilidade (P2) ✅
+
+| ID    | Item                                                                                     | Arquivo(s)                              | Esforço | Status |
+| ----- | ---------------------------------------------------------------------------------------- | --------------------------------------- | ------- | ------ |
+| HS-15 | ♻️ Adicionar `gradeBoundaries` ao `HealthScoreConfig` — override de thresholds por grade | `shared/health-score.ts`                | 10min   | ✅     |
+| HS-16 | ♻️ `computeGrade()` usar `config.gradeBoundaries` se presente                            | `shared/health-score.ts`                | 5min    | ✅     |
+| HS-17 | ♻️ Provenance reflete overrides via detecção de divergência de defaults                  | `shared/health-score.ts`                | 5min    | ✅     |
+| HS-T  | 📋 Testes (integrados nos testes de Fase 1 e Fase 2)                                     | `shared/__tests__/health-score.test.ts` | 15min   | ✅     |
+
+### Verificação Final ✅
+
+| Check                 | Critério                                        | Resultado |
+| --------------------- | ----------------------------------------------- | --------- |
+| `tsc --noEmit`        | 0 erros                                         | ✅        |
+| `vitest run shared/`  | 2908+ tests pass                                | ✅        |
+| `vitest run scripts/` | 152 tests pass                                  | ✅        |
+| `passed/total`        | 0 ocorrências no health-score                   | ✅        |
+| Proveniência completa | 5 dimensões com source, formula, thresholdBasis | ✅        |
+| Override detection    | `overridden: true` quando config difere default | ✅        |
+| Grade boundaries      | A≥90 B≥80 C≥70 D≥60 F<60, configurável          | ✅        |
+| Suite speed           | p95 individual test duration (ms)               | ✅        |
+| Execution rate        | `(passed+failed)/total×100` como 5ª dimensão    | ✅        |
+
+---
+
+## Sprint 2026-06-13 — Fase 8: Fix Wizard Detector + Template + Remover Step Manual PR Report
+
+**Data:** 2026-06-13
+**Origem:** `ci.yml` had a manually written step calling `pr-report.ts` directly instead of using the setup wizard. Root cause analysis revealed 2 domain defects in the wizard:
+
+1. **`setup/detector.ts`** — Hardcoded `--reporter ctrf` for vitest, which is not a valid reporter name. No detection of CTRF configured via `vitest.config.ts` (project already uses custom `shared/vitest-ctrf-reporter.ts` via config file).
+2. **`setup/templates/github-ci.ts`** — Post-processing step uses `git_triggers/main.ts --batch` which calls `triggerPipeline()` → dispatches a new workflow via API → infinite loop (if target has `workflow_dispatch`) or silent failure. For GitHub Actions, the correct pattern is `scripts/pr-report.ts` which reads CTRF from filesystem.
+
+**Strategy:** Fix root causes in wizard → run wizard to generate correct `qa.yml` → remove the manual step from `ci.yml` → validate end-to-end. Zero debt, zero validation evasion.
+
+**Regra absoluta:** Zero validation evasion, zero debt, zero safety rule violations.
+
+### Architecture Decision
+
+**Path for within-CI pr_report on GitHub Actions:**
+`vitest run` (via config: `vitest.config.ts` → `VitestCtrfReporter`) → `reports/ctrf-report.json` → `scripts/pr-report.ts --ctrf reports/ctrf-report.json`
+
+**Path for consumer projects (wizard-generated):**
+
+- Vitest with config-based CTRF: `npx vitest run` → `reports/ctrf-report.json` → `scripts/pr-report.ts`
+- Vitest without config-based CTRF: wizard detects + suggests installation
+- Other frameworks (cypress/playwright/jest): use CLI flag `--reporter ctrf-json-reporter`
+
+### Plano de Execução
+
+| #   | Fase             | Descrição                                                                         | Arquivos                                                                                         | Status |
+| --- | ---------------- | --------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------ | ------ |
+| 0   | **BACKLOG**      | Registrar sprint e plano                                                          | `BACKLOG.md`                                                                                     | ✅     |
+| 1   | **detector.ts**  | Detectar CTRF via `vitest.config.ts`; remover `--reporter ctrf` do default vitest | `setup/detector.ts`, `setup/detector.test.ts`                                                    | 🔜     |
+| 2   | **context.ts**   | Adicionar `ctrfSource` ao `SetupContext`                                          | `setup/context.ts`                                                                               | 🔜     |
+| 3   | **github-ci.ts** | Post-processing com `scripts/pr-report.ts` ao invés de `--batch`                  | `setup/templates/github-ci.ts`, `setup/templates/__tests__/github-ci.test.ts`                    | 🔜     |
+| 4   | **Testes**       | Cobertura 100% para todas as mudanças                                             | `setup/detector.test.ts`, `setup/context.test.ts`, `setup/templates/__tests__/github-ci.test.ts` | 🔜     |
+| 5   | **ci.yml**       | Remover step manual (linhas 50-61)                                                | `.github/workflows/ci.yml`                                                                       | 🔜     |
+| 6   | **Wizard**       | Executar wizard no qa_tools → gerar `qa.yml`                                      | `.github/workflows/qa.yml` (gerado)                                                              | 🔜     |
+| 7   | **Verificação**  | tsc + lint + vitest + quality check                                               | —                                                                                                | 🔜     |
+| 8   | **Push + CI**    | Commit, push, monitorar via GitHub API                                            | —                                                                                                | 🔜     |
+| 9   | **BACKLOG**      | Atualizar status final                                                            | `BACKLOG.md`                                                                                     | 🔜     |
+
+### Dependências Externas
+
+Nenhuma. O projeto já possui `shared/vitest-ctrf-reporter.ts` próprio — zero dependência externa para CTRF.
