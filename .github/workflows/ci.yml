@@ -43,7 +43,7 @@ jobs:
               run: npx vitest run --testTimeout=120000
             - run: npx vitest run git_triggers/github-e2e.test.ts
             - name: Post PR report
-              if: github.event_name == 'pull_request' && matrix.node-version == 22
+              if: matrix.node-version == 22
               env:
                   GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
               run: npx tsx scripts/pr-report.ts --no-ai
