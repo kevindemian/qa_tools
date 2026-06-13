@@ -43,16 +43,42 @@ vi.mock('../../shared/quarantine.js', () => ({
     isQuarantined: vi.fn(() => undefined),
 }));
 
+// Mock health-score
+vi.mock('../../shared/health-score.js', () => ({
+    calculateHealthScore: vi.fn(() => ({
+        overall: 90,
+        grade: 'good',
+        qualityGate: 'pass',
+        dimensions: {
+            passRate: { score: 94, status: 'pass' },
+            flakyRate: { score: 88, status: 'pass' },
+            coverage: { score: 73, status: 'pass' },
+            suiteSpeed: { score: 97, status: 'pass' },
+        },
+        runCount: 5,
+        timestamp: '2026-06-13T12:00:00.000Z',
+    })),
+}));
+
+// Mock report-html (pure string builder, no side effects)
+const mockGenerateHtmlReport = vi.fn(
+    (_tests: unknown, _options?: unknown) => '<html><body>Mock HTML Report</body></html>',
+);
+vi.mock('../../shared/report-html.js', () => ({
+    generateHtmlReport: mockGenerateHtmlReport,
+}));
+
 // Mock metrics
 vi.mock('../../shared/metrics.js', () => ({
     loadMetrics: vi.fn(() => ({ runs: [] })),
     calculateFlakiness: vi.fn(() => []),
+    getTrends: vi.fn(() => []),
 }));
 
 // Import after mocks
 const { postPrComment } = await import('../../shared/github-pr-comment.js');
 
-const TEST_CTRF_DIR = path.resolve('reports-test-pr');
+const TEST_CTRF_DIR = path.resolve('reports');
 const TEST_CTRF_PATH = path.join(TEST_CTRF_DIR, 'ctrf-report.json');
 
 function createCtrfFixture(
@@ -422,6 +448,257 @@ describe('pr-report flaky detection with quarantine', () => {
         const commentBody = firstCall5[0];
         // No flaky section → no quarantine header
         expect(commentBody).not.toContain('⚠️ Flaky Tests');
+
+        exitSpy.mockRestore();
+    });
+});
+
+describe('pr-report HTML report generation', () => {
+    const originalEnv = { ...process.env };
+    let penv = process.env as Record<string, string | undefined>;
+
+    beforeEach(() => {
+        penv = process.env;
+        penv['GITHUB_TOKEN'] = 'test-token';
+        penv['GITHUB_REPOSITORY'] = 'owner/repo';
+        penv['GITHUB_PR_NUMBER'] = '42';
+        penv['GITHUB_SERVER_URL'] = 'https://github.com';
+        penv['GITHUB_RUN_ID'] = 'run-123';
+        penv['GITHUB_REF_NAME'] = 'feature-branch';
+        vi.clearAllMocks();
+    });
+
+    afterEach(() => {
+        process.env = { ...originalEnv };
+        fs.rmSync(TEST_CTRF_DIR, { recursive: true, force: true });
+    });
+
+    it('generates HTML report file when main succeeds', async () => {
+        createCtrfFixture([
+            { name: 'pass-1', status: 'passed', duration: 100 },
+            { name: 'fail-1', status: 'failed', duration: 200, message: 'Expected 5 got 4' },
+            { name: 'skip-1', status: 'skipped', duration: 0 },
+        ]);
+
+        const { main } = await import('../pr-report.js');
+        const exitSpy = vi.spyOn(process, 'exit').mockImplementation(() => undefined as never);
+
+        await main();
+
+        // Verify the HTML file was written
+        expect(fs.existsSync('reports/pr-report.html')).toBe(true);
+        const content = fs.readFileSync('reports/pr-report.html', 'utf8');
+        expect(content).toBe('<html><body>Mock HTML Report</body></html>');
+
+        // Verify generateHtmlReport was called with the right args
+        expect(mockGenerateHtmlReport).toHaveBeenCalledTimes(1);
+        const genCall0 = mockGenerateHtmlReport.mock.calls[0];
+        const opts0 = genCall0?.[1] as Record<string, unknown> | undefined;
+        expect(opts0).toBeDefined();
+        expect(opts0?.['title']).toContain('PR Report');
+        expect(opts0?.['branch']).toBe('feature-branch');
+        expect(opts0?.['healthScore']).toBeDefined();
+        expect(opts0?.['trends']).toEqual([]);
+        expect(opts0?.['includeChart']).toBe(true);
+
+        exitSpy.mockRestore();
+    });
+
+    it('includes health score in HTML report options', async () => {
+        createCtrfFixture([{ name: 'pass-1', status: 'passed', duration: 100 }]);
+
+        const healthMod = await import('../../shared/health-score.js');
+        vi.mocked(healthMod.calculateHealthScore).mockReturnValueOnce({
+            overall: 75,
+            grade: 'needs_attention',
+            qualityGate: 'pass',
+            dimensions: {
+                passRate: { score: 80, status: 'pass' },
+                flakyRate: { score: 70, status: 'pass' },
+                coverage: { score: 65, status: 'fail' },
+                suiteSpeed: { score: 85, status: 'pass' },
+            },
+            runCount: 3,
+            timestamp: '2026-06-13T12:00:00.000Z',
+        });
+
+        const { main } = await import('../pr-report.js');
+        const exitSpy = vi.spyOn(process, 'exit').mockImplementation(() => undefined as never);
+
+        await main();
+
+        // Verify healthScore was passed to generateHtmlReport
+        expect(mockGenerateHtmlReport).toHaveBeenCalledTimes(1);
+        const genCall2 = mockGenerateHtmlReport.mock.calls[0];
+        const opts2 = genCall2?.[1] as Record<string, unknown> | undefined;
+        const hs = opts2?.['healthScore'] as Record<string, unknown> | undefined;
+        expect(hs?.['overall']).toBe(75);
+        expect(hs?.['grade']).toBe('needs_attention');
+
+        exitSpy.mockRestore();
+    });
+
+    it('computes diff comparison when store has a previous run', async () => {
+        createCtrfFixture([
+            { name: 'stable-test', status: 'passed', duration: 100 },
+            { name: 'regression-test', status: 'failed', duration: 200, message: 'Expected 5 got 4' },
+        ]);
+
+        // Set up metrics mock with a previous run
+        const metricsMod = await import('../../shared/metrics.js');
+        vi.mocked(metricsMod.loadMetrics).mockReturnValueOnce({
+            runs: [
+                {
+                    timestamp: '2026-06-12T12:00:00.000Z',
+                    project: 'qa_tools',
+                    total: 2,
+                    passed: 2,
+                    failed: 0,
+                    skipped: 0,
+                    duration: 300,
+                    tests: [
+                        { title: 'stable-test', state: 'passed', duration: 100 },
+                        { title: 'regression-test', state: 'passed', duration: 200 },
+                    ],
+                },
+            ],
+        });
+
+        const { main } = await import('../pr-report.js');
+        const exitSpy = vi.spyOn(process, 'exit').mockImplementation(() => undefined as never);
+
+        await main();
+
+        // Verify diffComparison was computed and passed
+        expect(mockGenerateHtmlReport).toHaveBeenCalledTimes(1);
+        const genCall3 = mockGenerateHtmlReport.mock.calls[0];
+        const opts3 = genCall3?.[1] as Record<string, unknown> | undefined;
+        const diff = opts3?.['diffComparison'] as Record<string, unknown> | undefined;
+        expect(diff).toBeDefined();
+        expect(((diff?.['newFailures'] ?? []) as unknown[]).length).toBe(1);
+        expect((diff?.['newFailures'] as Array<{ title: string }> | undefined)?.[0]?.title).toBe('regression-test');
+
+        exitSpy.mockRestore();
+    });
+
+    it('skips diff comparison when store is empty', async () => {
+        createCtrfFixture([{ name: 'pass-1', status: 'passed', duration: 100 }]);
+
+        // Default mock returns { runs: [] } — diff should be undefined
+        const { main } = await import('../pr-report.js');
+        const exitSpy = vi.spyOn(process, 'exit').mockImplementation(() => undefined as never);
+
+        await main();
+
+        expect(mockGenerateHtmlReport).toHaveBeenCalledTimes(1);
+        const genCall4 = mockGenerateHtmlReport.mock.calls[0];
+        const opts4 = genCall4?.[1] as Record<string, unknown> | undefined;
+        expect(opts4?.['diffComparison']).toBeUndefined();
+
+        exitSpy.mockRestore();
+    });
+
+    it('includes trends in HTML report options', async () => {
+        createCtrfFixture([{ name: 'pass-1', status: 'passed', duration: 100 }]);
+
+        const metricsMod = await import('../../shared/metrics.js');
+        vi.mocked(metricsMod.getTrends).mockReturnValue([
+            { label: '2026-06-11', passRate: 92, total: 100, failed: 8 },
+            { label: '2026-06-12', passRate: 95, total: 100, failed: 5 },
+        ]);
+
+        const { main } = await import('../pr-report.js');
+        const exitSpy = vi.spyOn(process, 'exit').mockImplementation(() => undefined as never);
+
+        await main();
+
+        expect(mockGenerateHtmlReport).toHaveBeenCalledTimes(1);
+        const genFirstCall = mockGenerateHtmlReport.mock.calls[0];
+        const options = genFirstCall?.[1] as Record<string, unknown> | undefined;
+        const trends = options?.['trends'] as Array<{ label: string; passRate: number }> | undefined;
+        expect(trends).toHaveLength(2);
+        expect(trends?.[0]?.label).toBe('2026-06-11');
+        expect(trends?.[1]?.passRate).toBe(95);
+
+        exitSpy.mockRestore();
+    });
+
+    it('includes grade and artifact link in Check Run summary', async () => {
+        createCtrfFixture([{ name: 'pass-1', status: 'passed', duration: 100 }]);
+
+        const { main } = await import('../pr-report.js');
+        const exitSpy = vi.spyOn(process, 'exit').mockImplementation(() => undefined as never);
+
+        await main();
+
+        // Check Run should have correct metadata
+        expect(mockCreateCheckRun).toHaveBeenCalledWith(
+            expect.objectContaining({
+                name: 'Quality Gate',
+                status: 'completed',
+                conclusion: 'success',
+            }),
+        );
+
+        // Check Run output should contain grade in title
+        const crFirstArg = mockCreateCheckRun.mock.calls[0]?.[0] as Record<string, unknown> | undefined;
+        const crOutput = crFirstArg?.['output'] as Record<string, unknown> | undefined;
+        expect(crOutput?.['title'] as string).toContain('Grade: GOOD');
+
+        // Check Run summary should contain artifact link
+        const summary = crOutput?.['summary'] as string | undefined;
+        expect(summary).toContain('Download HTML report');
+        expect(summary).toContain('#artifacts');
+
+        exitSpy.mockRestore();
+    });
+
+    it('creates flakiness map from flaky entries for HTML report', async () => {
+        createCtrfFixture([{ name: 'pass-1', status: 'passed', duration: 100 }]);
+
+        const metricsMod = await import('../../shared/metrics.js');
+        vi.mocked(metricsMod.calculateFlakiness).mockReturnValue([
+            { title: 'flaky-1', rate: 0.5, passCount: 3, failCount: 3, skipCount: 1, totalRuns: 7 },
+            { title: 'flaky-2', rate: 0.33, passCount: 4, failCount: 2, skipCount: 1, totalRuns: 7 },
+        ]);
+
+        const { main } = await import('../pr-report.js');
+        const exitSpy = vi.spyOn(process, 'exit').mockImplementation(() => undefined as never);
+
+        await main();
+
+        expect(mockGenerateHtmlReport).toHaveBeenCalledTimes(1);
+        const genFirstCall = mockGenerateHtmlReport.mock.calls[0];
+        const options = genFirstCall?.[1] as Record<string, unknown> | undefined;
+        const flakinessMap = options?.['flakinessMap'] as Record<string, number> | undefined;
+        expect(flakinessMap).toBeDefined();
+        expect(flakinessMap?.['flaky-1']).toBe(0.5);
+        expect(flakinessMap?.['flaky-2']).toBe(0.33);
+
+        exitSpy.mockRestore();
+    });
+
+    it('handles missing env vars gracefully in HTML report', async () => {
+        createCtrfFixture([{ name: 'pass-1', status: 'passed', duration: 100 }]);
+
+        // Clear optional env vars
+        delete penv['GITHUB_REF_NAME'];
+        delete penv['GITHUB_SERVER_URL'];
+
+        const { main } = await import('../pr-report.js');
+        const exitSpy = vi.spyOn(process, 'exit').mockImplementation(() => undefined as never);
+
+        await main();
+
+        expect(mockGenerateHtmlReport).toHaveBeenCalledTimes(1);
+        const genFirstCall = mockGenerateHtmlReport.mock.calls[0];
+        const opts = genFirstCall?.[1] as Record<string, unknown> | undefined;
+        // Without GITHUB_REF_NAME, title should not have branch suffix
+        expect((opts?.['title'] ?? '') as string).not.toContain('(');
+        // Without GITHUB_SERVER_URL, ciUrl should be undefined
+        expect(opts?.['ciUrl']).toBeUndefined();
+        // Without GITHUB_REF_NAME, branch should be undefined
+        expect(opts?.['branch']).toBeUndefined();
 
         exitSpy.mockRestore();
     });

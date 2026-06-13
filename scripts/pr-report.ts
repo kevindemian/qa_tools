@@ -19,16 +19,22 @@
  *   GITHUB_TOKEN         Required for posting PR comments
  *   GITHUB_REPOSITORY    Repository in owner/repo format
  *   GITHUB_PR_NUMBER     PR number
+ *
+ * Generates a full HTML report (shared/report-html.ts) with 28+ health
+ * information points, uploaded as a CI artifact for download.
  */
 
 import fs from 'node:fs';
 import { rootLogger } from '../shared/logger.js';
 import { postPrComment } from '../shared/github-pr-comment.js';
-import { parseTestResultsFile, type ParseResult } from '../shared/result_parser.js';
+import { parseTestResultsFile, type ParseResult, type FlatTest } from '../shared/result_parser.js';
 import { runQualityGate } from '../shared/quality-gate.js';
 import { createCheckRun } from '../shared/github-check-run.js';
-import { loadMetrics, calculateFlakiness } from '../shared/metrics.js';
+import { loadMetrics, calculateFlakiness, getTrends } from '../shared/metrics.js';
 import { isQuarantined } from '../shared/quarantine.js';
+import { generateHtmlReport } from '../shared/report-html.js';
+import type { ReportOptions } from '../shared/report-types.js';
+import { calculateHealthScore } from '../shared/health-score.js';
 
 // ---------------------------------------------------------------------------
 // CLI argument parsing
@@ -65,6 +71,59 @@ function parseArgs(args: string[]): CliOptions {
         }
     }
     return opts;
+}
+
+// ---------------------------------------------------------------------------
+// Diff comparison helpers
+// ---------------------------------------------------------------------------
+
+interface DiffComparison {
+    newFailures: FlatTest[];
+    newPasses: FlatTest[];
+    flaky: FlatTest[];
+}
+
+/** Compare current test run against a previous run, returning new failures, fixes, and flaky tests. */
+function computeDiffComparison(current: FlatTest[], previous: FlatTest[]): DiffComparison | undefined {
+    if (previous.length === 0) return undefined;
+
+    const prevByTitle = new Map<string, FlatTest>();
+    for (const t of previous) {
+        prevByTitle.set(t.title, t);
+    }
+
+    const currByTitle = new Map<string, FlatTest>();
+    for (const t of current) {
+        currByTitle.set(t.title, t);
+    }
+
+    const newFailures: FlatTest[] = [];
+    const newPasses: FlatTest[] = [];
+    const flaky: FlatTest[] = [];
+
+    for (const [title, test] of currByTitle) {
+        const prev = prevByTitle.get(title);
+        if (!prev) continue;
+
+        const currFailed = test.state === 'failed';
+        const prevFailed = prev.state === 'failed';
+
+        if (currFailed && !prevFailed) {
+            newFailures.push(test);
+        } else if (!currFailed && prevFailed) {
+            newPasses.push(test);
+        }
+
+        if (test.state !== prev.state) {
+            flaky.push(test);
+        }
+    }
+
+    if (newFailures.length === 0 && newPasses.length === 0 && flaky.length === 0) {
+        return undefined;
+    }
+
+    return { newFailures, newPasses, flaky };
 }
 
 // ---------------------------------------------------------------------------
@@ -111,23 +170,28 @@ function buildFailureTable(result: ParseResult): string {
     ].join('\n');
 }
 
-function buildQGCHeckSummary(result: {
-    overall: 'pass' | 'fail';
-    score: number;
-    checks: Array<{ name: string; status: 'pass' | 'fail'; score: number; threshold: number }>;
-}): string {
+function buildQGCHeckSummary(
+    result: {
+        overall: 'pass' | 'fail';
+        score: number;
+        checks: Array<{ name: string; status: 'pass' | 'fail'; score: number; threshold: number }>;
+    },
+    grade?: string,
+): string {
     const lines: string[] = [
         `**Quality Gate: ${result.overall === 'pass' ? '✅ PASSED' : '❌ FAILED'}**`,
         '',
         `**Score:** ${result.score}/100`,
-        '',
-        '| Check | Score | Threshold | Status |',
-        '|---|---|---|---|',
     ];
+    if (grade) {
+        lines.push(`**Grade:** ${grade}`);
+    }
+    lines.push('', '| Check | Score | Threshold | Status |', '|---|---|---|---|');
     for (const check of result.checks) {
         const icon = check.status === 'pass' ? '✅' : '❌';
         lines.push(`| ${check.name} | ${check.score} | ${check.threshold} | ${icon} |`);
     }
+    lines.push('', '📄 [Download HTML report](#artifacts)');
     return lines.join('\n');
 }
 
@@ -245,6 +309,15 @@ export async function main(): Promise<void> {
         process.exit(0);
     }
 
+    // Load metrics store once for health score, trends, flaky, and diff comparison
+    const store = loadMetrics();
+    const healthScore = calculateHealthScore(store, {});
+    const trends = getTrends(store);
+
+    // Compute diff comparison against the most recent run in the metrics store
+    const previousRun = store.runs.length > 0 ? store.runs[store.runs.length - 1] : undefined;
+    const diffComparison = previousRun ? computeDiffComparison(result.tests, previousRun.tests) : undefined;
+
     const sections: string[] = [];
 
     // 1. Summary table
@@ -265,11 +338,15 @@ export async function main(): Promise<void> {
         try {
             qgResult = runQualityGate();
         } catch {
-            /* runQualityGate will handle its own errors */
+            /* runQualityGate handles its own errors */
         }
 
         if (qgResult) {
             sections.push(buildQualityGateSection(qgResult));
+
+            // Build expanded Check Run summary with grade + artifact link
+            const gradeStr = healthScore.grade.replace(/_/g, ' ').toUpperCase();
+            const checkSummary = buildQGCHeckSummary(qgResult, gradeStr);
 
             // Create a Check Run on the commit for the quality gate result
             await createCheckRun({
@@ -277,8 +354,8 @@ export async function main(): Promise<void> {
                 status: 'completed',
                 conclusion: qgResult.overall === 'pass' ? 'success' : 'failure',
                 output: {
-                    title: `Quality Gate: ${qgResult.overall.toUpperCase()} (Score: ${qgResult.score}/100)`,
-                    summary: buildQGCHeckSummary(qgResult),
+                    title: `Quality Gate: ${qgResult.overall.toUpperCase()} (Score: ${qgResult.score}/100) | Grade: ${gradeStr}`,
+                    summary: checkSummary,
                 },
             });
         }
@@ -290,7 +367,40 @@ export async function main(): Promise<void> {
         if (flakySection) sections.push(flakySection);
     }
 
-    // 6. Footer
+    // 6. Generate full HTML report with health score, trends, diff, and flakiness
+    const ghServer = process.env['GITHUB_SERVER_URL'];
+    const ghRepo = process.env['GITHUB_REPOSITORY'];
+    const ghRunId = process.env['GITHUB_RUN_ID'];
+    const ghBranch = process.env['GITHUB_REF_NAME'];
+    const workflowUrl = ghServer && ghRepo && ghRunId ? `${ghServer}/${ghRepo}/actions/runs/${ghRunId}` : undefined;
+
+    const passRate = result.stats.total > 0 ? (result.stats.passed / result.stats.total) * 100 : 0;
+
+    // Build flakiness map for the HTML report
+    const flakyEntries = calculateFlakiness(store, 2);
+    const flakinessMap: Record<string, number> = {};
+    for (const entry of flakyEntries) {
+        flakinessMap[entry.title] = entry.rate;
+    }
+
+    const htmlOptions: ReportOptions = {
+        title: `QA Tools — PR Report${ghBranch ? ` (${ghBranch})` : ''}`,
+        qualityGate: Math.round(passRate),
+        healthScore,
+        trends,
+        includeChart: true,
+        ...(workflowUrl ? { ciUrl: workflowUrl } : {}),
+        ...(ghBranch ? { branch: ghBranch } : {}),
+        ...(Object.keys(flakinessMap).length > 0 ? { flakinessMap } : {}),
+        ...(diffComparison ? { diffComparison } : {}),
+    };
+
+    const html = generateHtmlReport(result.tests, htmlOptions);
+    fs.mkdirSync('reports', { recursive: true });
+    fs.writeFileSync('reports/pr-report.html', html, 'utf8');
+    rootLogger.info(`HTML report generated: reports/pr-report.html (${html.length} bytes)`);
+
+    // 7. Footer
     sections.push(buildFooter());
 
     const commentBody = sections.join('\n');
