@@ -1,12 +1,13 @@
 {
     "$schema": "https://opencode.ai/config.json",
-
-    "plugin": ["~/.config/opencode/plugin/validation_plugin.ts"],
-
+    "plugin": [
+        "~/.config/opencode/plugin/validation_plugin.ts"
+    ],
     "model": "opencode/deepseek-v4-flash-free",
     "small_model": "google/gemini-2.0-flash",
-    "instructions": ["AGENTS.md"],
-
+    "instructions": [
+        "AGENTS.md"
+    ],
     "command": {
         "verify": {
             "description": "Run R6 verification pipeline for the current TS migration layer",
@@ -29,7 +30,6 @@
             "agent": "duplication-auditor"
         }
     },
-
     "agent": {
         "ts-migrator": {
             "description": "Migrate JS to TS following the 8-layer plan from BACKLOG.md. Use for the TS migration task.",
@@ -68,9 +68,20 @@
                 "edit": "deny",
                 "question": "deny"
             }
+        },
+        "suppression-auditor": {
+            "description": "Audit the codebase for all 18 categories of type/lint/safety suppression mechanisms.",
+            "mode": "subagent",
+            "permission": {
+                "read": "allow",
+                "glob": "allow",
+                "grep": "allow",
+                "bash": "allow",
+                "edit": "deny",
+                "question": "deny"
+            }
         }
     },
-
     "compaction": {
         "auto": true,
         "prune": true,
@@ -78,7 +89,6 @@
         "preserve_recent_tokens": 12000,
         "reserved": 2000
     },
-
     "tool_output": {
         "max_lines": 500,
         "max_bytes": 20480
@@ -126,9 +136,7 @@
             "npm test *": "allow",
             "npx vitest *": "allow",
             "npm run test *": "allow",
-
             "*": "ask",
-
             "rm -rf /": "deny",
             "rm -rf ~": "deny",
             "rm -rf /home": "deny",
@@ -137,30 +145,24 @@
             "git push --force": "deny",
             "git push --no-verify": "deny",
             "git commit --no-verify *": "deny",
-
             "sed -i*": "deny",
             "tee *": "deny",
             "dd *": "deny",
-
             "node -e *": "deny",
             "node --eval *": "deny",
             "python3 -c *": "deny",
             "python -c *": "deny",
-
             "sudo *": "deny",
             "su *": "deny",
             "chattr *": "deny",
-
             "cp *": "deny",
             "mv *": "deny",
-
             "bash /project/scripts/sync-hooks.sh*": "deny",
             "bash scripts/sync-hooks.sh*": "deny",
             "sh /project/scripts/sync-hooks.sh*": "deny",
             "sh scripts/sync-hooks.sh*": "deny",
             "rm /project/scripts/sync-hooks.sh*": "deny",
             "rm -rf /project/scripts/sync-hooks.sh*": "deny",
-
             "rm /home/kdemian/.config/opencode/validation_hook.ts*": "deny",
             "rm /home/kdemian/.config/opencode/plugin*": "deny",
             "rm /home/kdemian/.config/opencode/opencode.jsonc*": "deny",
@@ -173,7 +175,6 @@
             "rm /home/coder/.config/opencode/tsconfig.json*": "deny",
             "rm /home/coder/.config/opencode/.validation_cache*": "deny",
             "rm /home/coder/.config/opencode/.security_violations*": "deny",
-
             "rm /project/opencode.json*": "deny",
             "rm /project/.opencode/validation.json*": "deny",
             "rm /project/eslint.config.mjs*": "deny",
@@ -192,7 +193,6 @@
             "rm -rf /project/scripts/enforce-quality.ts*": "deny",
             "rm /project/.config/validation_hook.ts*": "deny",
             "rm -rf /project/.config/validation_hook.ts*": "deny",
-
             "VALIDATION_TIMEOUT_MS=* *": "deny",
             "OPENCODE_CONFIG_DIR=* *": "deny"
         },
