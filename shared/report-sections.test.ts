@@ -326,6 +326,7 @@ describe('buildHealthSection', () => {
             flakyRate: { score: 100, status: 'pass' as const },
             coverage: { score: 90, status: 'pass' as const },
             suiteSpeed: { score: 100, status: 'pass' as const },
+            executionRate: { score: 100, status: 'pass' as const },
         },
         runCount: 10,
         timestamp: '2026-06-03T00:00:00.000Z',
@@ -340,6 +341,7 @@ describe('buildHealthSection', () => {
             flakyRate: { score: 100, status: 'pass' as const },
             coverage: { score: 50, status: 'fail' as const },
             suiteSpeed: { score: 80, status: 'pass' as const },
+            executionRate: { score: 100, status: 'pass' as const },
         },
         runCount: 5,
         timestamp: '2026-06-03T00:00:00.000Z',
@@ -367,11 +369,51 @@ describe('buildHealthSection', () => {
         expect(html).toContain('Flaky Rate');
         expect(html).toContain('Coverage');
         expect(html).toContain('Suite Speed');
+        expect(html).toContain('Execution Rate');
     });
 
     it('shows run count and date', () => {
         const html = buildHealthSection(passingHealth);
         expect(html).toContain('10 run(s)');
         expect(html).toContain('2026-06-03');
+    });
+
+    it('renders provenance when healthScore has provenance data', () => {
+        const healthWithProvenance = {
+            ...passingHealth,
+            provenance: [
+                {
+                    dimension: 'passRate',
+                    source: 'DORA',
+                    standard: 'DORA',
+                    formula: 'passed/(passed+failed)×100',
+                    thresholdBasis: 'Elite ≥95%',
+                    configurable: true,
+                },
+                {
+                    dimension: 'flakyRate',
+                    source: 'QASkills.sh',
+                    standard: 'Industry Best Practice',
+                    formula: 'flaky/total×100',
+                    thresholdBasis: 'Target <3%',
+                    configurable: false,
+                },
+            ],
+        };
+        const html = buildHealthSection(healthWithProvenance);
+        expect(html).toContain('Methodology & References');
+        expect(html).toContain('passed/(passed+failed)×100');
+        expect(html).toContain('DORA');
+    });
+
+    it('does not render provenance section when provenance is absent', () => {
+        const html = buildHealthSection(passingHealth);
+        expect(html).not.toContain('Methodology & References');
+    });
+
+    it('does not render provenance section when provenance is empty', () => {
+        const healthEmptyProvenance = { ...passingHealth, provenance: [] };
+        const html = buildHealthSection(healthEmptyProvenance);
+        expect(html).not.toContain('Methodology & References');
     });
 });

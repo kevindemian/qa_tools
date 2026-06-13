@@ -90,6 +90,7 @@ describe('setup main', () => {
             installCmd: 'npm ci',
             ctrfReportPath: 'cypress/reports/ctrf-report.json',
             nodeVersion: '20',
+            ctrfSource: 'cli-flag',
         });
         MockWriteProjects.mockReturnValue({
             filesCreated: ['config/projects.json', 'config/providers.json'],

@@ -10,7 +10,7 @@
 import { escapeHtml, fmtDuration, pct, pctSub, pctClass } from './report-utils.js';
 import { extractSuite } from './report-types.js';
 import type { FlatTest } from './result_parser.js';
-import type { HealthScoreResult } from './types.js';
+import type { HealthScoreResult, HealthScoreProvenance } from './types.js';
 import type { TestRunTab, TestHistoryRun, ReportOptions, ReportStats } from './report-types.js';
 import { buildTestTable } from './report-table.js';
 import { MetricCard, MetricGrid, Card, Badge } from './primitives/index.js';
@@ -311,6 +311,7 @@ export function buildHealthSection(health: HealthScoreResult): string {
         { label: 'Flaky Rate', score: dims.flakyRate.score, status: dims.flakyRate.status },
         { label: 'Coverage', score: dims.coverage.score, status: dims.coverage.status },
         { label: 'Suite Speed', score: dims.suiteSpeed.score, status: dims.suiteSpeed.status },
+        { label: 'Execution Rate', score: dims.executionRate.score, status: dims.executionRate.status },
     ];
 
     let dimCards = '';
@@ -329,6 +330,11 @@ export function buildHealthSection(health: HealthScoreResult): string {
         </div>`;
     }
 
+    let provenanceHtml = '';
+    if (health.provenance && health.provenance.length > 0) {
+        provenanceHtml = buildProvenanceSection(health.provenance);
+    }
+
     const html = Card({
         variant: 'default',
         children:
@@ -339,7 +345,47 @@ export function buildHealthSection(health: HealthScoreResult): string {
             `<span style="padding:4px 12px;border-radius:9999px;font-size:0.85rem;font-weight:600;background:${qcBg};color:${qcColor}">${qcIcon} Quality Gate: ${qcText}</span>` +
             `<span style="font-size:0.75rem;color:var(--color-text-muted)">${health.runCount} run(s) · ${health.timestamp.slice(0, 10)}</span>` +
             `</div>` +
-            `<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:8px">${dimCards}</div>`,
+            `<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:8px">${dimCards}</div>` +
+            provenanceHtml,
     });
     return html;
+}
+
+/** Renders provenance metadata as a compact collapsible section below the health score. */
+export function buildProvenanceSection(provenance: HealthScoreProvenance): string {
+    if (provenance.length === 0) return '';
+
+    let rows = '';
+    for (const entry of provenance) {
+        const overrideBadge = entry.overridden ? Badge({ variant: 'warn', children: 'overridden' }) : '';
+        rows += `<tr>
+            <td style="padding:6px 8px;font-size:0.75rem;white-space:nowrap;font-weight:600">${escapeHtml(entry.dimension)}</td>
+            <td style="padding:6px 8px;font-size:0.75rem">${escapeHtml(entry.formula)}</td>
+            <td style="padding:6px 8px;font-size:0.75rem;white-space:nowrap">${escapeHtml(entry.source)}</td>
+            <td style="padding:6px 8px;font-size:0.75rem;white-space:nowrap">${escapeHtml(entry.standard)}</td>
+            <td style="padding:6px 8px;font-size:0.7rem;color:var(--color-text-muted)">${escapeHtml(entry.thresholdBasis)}</td>
+            <td style="padding:6px 8px;text-align:center">${overrideBadge}</td>
+        </tr>`;
+    }
+
+    return `<details style="margin-top:12px;font-size:0.75rem">
+        <summary style="cursor:pointer;color:var(--color-text-muted);font-weight:600;padding:4px 0">
+            📖 Methodology & References
+        </summary>
+        <div style="overflow-x:auto;margin-top:8px">
+            <table style="width:100%;border-collapse:collapse">
+                <thead>
+                    <tr style="border-bottom:1px solid var(--color-border-subtle)">
+                        <th style="padding:6px 8px;font-size:0.7rem;text-align:left;color:var(--color-text-muted)">Dimension</th>
+                        <th style="padding:6px 8px;font-size:0.7rem;text-align:left;color:var(--color-text-muted)">Formula</th>
+                        <th style="padding:6px 8px;font-size:0.7rem;text-align:left;color:var(--color-text-muted)">Source</th>
+                        <th style="padding:6px 8px;font-size:0.7rem;text-align:left;color:var(--color-text-muted)">Standard</th>
+                        <th style="padding:6px 8px;font-size:0.7rem;text-align:left;color:var(--color-text-muted)">Threshold Basis</th>
+                        <th style="padding:6px 8px;font-size:0.7rem;text-align:center;color:var(--color-text-muted)">Config</th>
+                    </tr>
+                </thead>
+                <tbody>${rows}</tbody>
+            </table>
+        </div>
+    </details>`;
 }

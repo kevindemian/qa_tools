@@ -52,6 +52,7 @@ const HEALTH_SCORE: import('./types.js').HealthScoreResult = {
         flakyRate: { score: 85, status: 'pass' },
         coverage: { score: 80, status: 'pass' },
         suiteSpeed: { score: 75, status: 'fail' },
+        executionRate: { score: 100, status: 'pass' },
     },
 };
 

@@ -51,13 +51,30 @@ export interface HealthScoreDimensionResult {
     status: 'pass' | 'fail';
 }
 
-/** All four dimensions of the health score. */
+/** All five dimensions of the health score. */
 export interface HealthScoreDimensions {
     passRate: HealthScoreDimensionResult;
     flakyRate: HealthScoreDimensionResult;
     coverage: HealthScoreDimensionResult;
     suiteSpeed: HealthScoreDimensionResult;
+    executionRate: HealthScoreDimensionResult;
 }
+
+/** Provenance entry for a single health score dimension — documents source, formula, and threshold basis. */
+export interface HealthScoreProvenanceEntry {
+    dimension: string;
+    source: string;
+    standard: string;
+    formula: string;
+    thresholdBasis: string;
+    /** Whether the threshold/boundary can be overridden by config. */
+    configurable: boolean;
+    /** True when the user provided a non-default value for this dimension. */
+    overridden?: boolean;
+}
+
+/** Full provenance for all health score dimensions. */
+export type HealthScoreProvenance = HealthScoreProvenanceEntry[];
 
 /** Overall health score result with per-dimension breakdown. */
 export interface HealthScoreResult {
@@ -65,6 +82,8 @@ export interface HealthScoreResult {
     grade: HealthScoreGrade;
     qualityGate: 'pass' | 'fail';
     dimensions: HealthScoreDimensions;
+    /** Provenance metadata for each dimension, when enabled. */
+    provenance?: HealthScoreProvenance;
     runCount: number;
     timestamp: string;
 }

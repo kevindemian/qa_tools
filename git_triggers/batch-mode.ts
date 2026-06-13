@@ -18,6 +18,7 @@ import { generateGitMetricsRuns } from '../shared/git-metrics-adapter.js';
 import { analyzeTestImpact, generateTestSelectionJson } from '../shared/test-impact.js';
 import { offerPipelineFailureAnalysis } from './llm-pipeline.js';
 import { collectTestResults as _collectTestResults } from './test-results.js';
+import { generatePrReport } from '../shared/pr-report-core.js';
 import type { PipelineTriggerResult } from '../shared/types.js';
 import Config from '../shared/config.js';
 import JiraClient from '../shared/jira-client.js';
@@ -159,6 +160,26 @@ async function _collectPipelineResults(
         });
         if (parsed) {
             await offerPipelineFailureAnalysis(parsed);
+            if (process.env['GITHUB_TOKEN']) {
+                try {
+                    const reportResult = await generatePrReport({
+                        tests: parsed.tests,
+                        stats: {
+                            passed: parsed.stats.passed,
+                            failed: parsed.stats.failed,
+                            skipped: parsed.stats.skipped,
+                            total: parsed.stats.total,
+                            duration: parsed.stats.duration,
+                        },
+                        htmlOutputPath: 'reports/pr-report.html',
+                    });
+                    if (reportResult.htmlPath) {
+                        success('PR report gerado: ' + reportResult.htmlPath);
+                    }
+                } catch {
+                    /* PR report errors are non-fatal */
+                }
+            }
         }
     }
     return false;
