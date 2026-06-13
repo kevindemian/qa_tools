@@ -1960,4 +1960,21 @@ Cada fase (0-5) é committada separadamente com verificação:
 
 ---
 
-Revisado 2026-06-12 — Plano registrado. Iniciando implementação sequencial.
+## Sprint 2026-06-13 — Fase 5-6: Renomear quality-gate CLI + Conectar PR Report na CI
+
+**Data:** 2026-06-13
+**Origem:** Confusão de nomenclatura entre `scripts/quality-gate.ts` (CLI) e `shared/quality-gate.ts` (funcionalidade). CI não gerava PR report após testes.
+**Estratégia:** Renomear o script CLI para eliminar ambiguidade; conectar PR report no pipeline de CI; registrar no BACKLOG.
+
+### Plano de Execução
+
+| # | Fase | Descrição | Arquivos | Status |
+|---|------|-----------|----------|--------|
+| 1 | Renomear CLI | `scripts/quality-gate.ts` → `scripts/run-quality-gate.ts` | `scripts/quality-gate.ts`, `.githooks/pre-push`, `.github/workflows/ci.yml`, `scripts/quality-check.ts` | ✅ |
+| 2 | CI: PR report | Adicionar step `Post PR report` após testes | `.github/workflows/ci.yml` | ✅ |
+| 3 | BACKLOG.md | Registrar sprint e atualizar status | `BACKLOG.md` | ✅ |
+| 4 | Verificação final | tsc + eslint + quality-check + vitest | — | ✅ |
+
+---
+
+Revisado 2026-06-13 — Sprint concluído. Todas as fases implementadas.

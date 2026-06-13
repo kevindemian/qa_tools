@@ -33,7 +33,7 @@ jobs:
                     echo "⚠️ validation_hook.ts not found — skipping (only available on dev machines)"
                   fi
             - name: Quality gate (health + coverage + flaky)
-              run: npx tsx scripts/quality-gate.ts --json
+              run: npx tsx scripts/run-quality-gate.ts --json
             - run: npm audit --audit-level=high
             - name: Check outdated dependencies (warning only)
               run: npm outdated --json || true
@@ -44,3 +44,8 @@ jobs:
               if: matrix.node-version != 22
               run: npx vitest run --testTimeout=120000
             - run: npx vitest run git_triggers/github-e2e.test.ts
+            - name: Post PR report
+              if: github.event_name == 'pull_request' && matrix.node-version == 22
+              env:
+                  GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+              run: npx tsx scripts/pr-report.ts --no-ai
