@@ -5,6 +5,7 @@ const MOCK_CTX: SetupContext = {
     projectName: 'test-proj',
     framework: 'jest',
     ctrfReportPath: 'reports/ctrf-report.json',
+    ctrfSource: 'cli-flag',
     nodeVersion: '20',
     installCmd: 'npm ci',
     testCmd: 'npx jest',

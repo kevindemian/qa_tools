@@ -53,27 +53,27 @@ const PASSING_RUN = run({
 
 describe('evaluateQualityGate', () => {
     it('returns pass when all dimensions meet thresholds', () => {
-        expect(evaluateQualityGate(95, 0, 90, 2)).toBe('pass');
+        expect(evaluateQualityGate(95, 0, 90, 100, 2)).toBe('pass');
     });
 
     it('returns fail when passRate is below gate', () => {
-        expect(evaluateQualityGate(70, 0, 90, 2)).toBe('fail');
+        expect(evaluateQualityGate(70, 0, 90, 100, 2)).toBe('fail');
     });
 
     it('returns fail when flakyPct exceeds gate', () => {
-        expect(evaluateQualityGate(95, 15, 90, 2)).toBe('fail');
+        expect(evaluateQualityGate(95, 15, 90, 100, 2)).toBe('fail');
     });
 
     it('returns fail when coverage is below gate', () => {
-        expect(evaluateQualityGate(95, 0, 60, 2)).toBe('fail');
+        expect(evaluateQualityGate(95, 0, 60, 100, 2)).toBe('fail');
     });
 
     it('returns fail when suiteSpeed exceeds gate', () => {
-        expect(evaluateQualityGate(95, 0, 90, 10)).toBe('fail');
+        expect(evaluateQualityGate(95, 0, 90, 100, 20000)).toBe('fail');
     });
 
     it('accepts custom config overrides', () => {
-        expect(evaluateQualityGate(70, 0, 90, 2, { minPassRateGate: 60 })).toBe('pass');
+        expect(evaluateQualityGate(70, 0, 90, 100, 2, { minPassRateGate: 60 })).toBe('pass');
     });
 });
 
@@ -307,7 +307,14 @@ describe('calculateHealthScore', () => {
     describe('suite speed dimension', () => {
         it('scores 100 when speed is within target', () => {
             const store = makeStore({
-                runs: [run({ total: 10, passed: 10, duration: 5000 })],
+                runs: [
+                    run({
+                        total: 10,
+                        passed: 10,
+                        duration: 5000,
+                        tests: Array.from({ length: 10 }, (_, i) => testT(`T${i}`, 'passed', 500)),
+                    }),
+                ],
                 coverageHistory: [
                     {
                         timestamp: '2026-01-01T00:00:00.000Z',
@@ -318,13 +325,20 @@ describe('calculateHealthScore', () => {
                     },
                 ],
             });
-            const result = calculateHealthScore(store, { suiteSpeedTarget: 2 });
+            const result = calculateHealthScore(store, { suiteSpeedTarget: 1000 });
             expect(result.dimensions.suiteSpeed.score).toBe(100);
         });
 
         it('scores 0 when speed >= 10s per test', () => {
             const store = makeStore({
-                runs: [run({ total: 10, passed: 10, duration: 200000 })],
+                runs: [
+                    run({
+                        total: 10,
+                        passed: 10,
+                        duration: 200000,
+                        tests: Array.from({ length: 10 }, (_, i) => testT(`T${i}`, 'passed', 20000)),
+                    }),
+                ],
                 coverageHistory: [
                     {
                         timestamp: '2026-01-01T00:00:00.000Z',
@@ -335,13 +349,20 @@ describe('calculateHealthScore', () => {
                     },
                 ],
             });
-            const result = calculateHealthScore(store, { suiteSpeedTarget: 2 });
+            const result = calculateHealthScore(store, { suiteSpeedTarget: 1000 });
             expect(result.dimensions.suiteSpeed.score).toBe(0);
         });
 
         it('linearly interpolates between target and 10s', () => {
             const store = makeStore({
-                runs: [run({ total: 10, passed: 10, duration: 60000 })],
+                runs: [
+                    run({
+                        total: 10,
+                        passed: 10,
+                        duration: 60000,
+                        tests: Array.from({ length: 10 }, (_, i) => testT(`T${i}`, 'passed', 5500)),
+                    }),
+                ],
                 coverageHistory: [
                     {
                         timestamp: '2026-01-01T00:00:00.000Z',
@@ -352,7 +373,7 @@ describe('calculateHealthScore', () => {
                     },
                 ],
             });
-            const result = calculateHealthScore(store, { suiteSpeedTarget: 2 });
+            const result = calculateHealthScore(store, { suiteSpeedTarget: 1000 });
             expect(result.dimensions.suiteSpeed.score).toBe(50);
         });
     });
@@ -464,7 +485,14 @@ describe('calculateHealthScore', () => {
 
         it('fails when suite speed exceeds gate', () => {
             const store = makeStore({
-                runs: [run({ total: 5, passed: 5, duration: 50000 })],
+                runs: [
+                    run({
+                        total: 5,
+                        passed: 5,
+                        duration: 50000,
+                        tests: Array.from({ length: 5 }, (_, i) => testT(`T${i}`, 'passed', 20000)),
+                    }),
+                ],
                 coverageHistory: [
                     {
                         timestamp: '2026-01-01T00:00:00.000Z',
@@ -520,7 +548,7 @@ describe('calculateHealthScore', () => {
             expect(result.grade).toBe('excellent');
         });
 
-        it('grades good at 70-89', () => {
+        it('grades good at 80-89', () => {
             const store = makeStore({
                 runs: [run({ total: 10, passed: 8, failed: 2, duration: 5000 })],
                 coverageHistory: [
@@ -537,9 +565,26 @@ describe('calculateHealthScore', () => {
             expect(result.grade).toBe('good');
         });
 
-        it('grades needs_attention at 50-69', () => {
+        it('grades needs_attention at 70-79', () => {
             const store = makeStore({
-                runs: [run({ total: 10, passed: 5, failed: 5, duration: 5000 })],
+                runs: [run({ total: 10, passed: 7, failed: 3, duration: 5000 })],
+                coverageHistory: [
+                    {
+                        timestamp: '2026-01-01T00:00:00.000Z',
+                        project: 'test',
+                        totalIssues: 10,
+                        mappedIssues: 6,
+                        coveragePct: 60,
+                    },
+                ],
+            });
+            const result = calculateHealthScore(store);
+            expect(result.grade).toBe('needs_attention');
+        });
+
+        it('grades poor at 60-69', () => {
+            const store = makeStore({
+                runs: [run({ total: 10, passed: 7, failed: 3, duration: 5000 })],
                 coverageHistory: [
                     {
                         timestamp: '2026-01-01T00:00:00.000Z',
@@ -551,13 +596,13 @@ describe('calculateHealthScore', () => {
                 ],
             });
             const result = calculateHealthScore(store);
-            expect(result.grade).toBe('needs_attention');
+            expect(result.grade).toBe('poor');
         });
 
-        it('grades critical below 50', () => {
+        it('grades critical below 60', () => {
             const store = makeStore();
             const result = calculateHealthScore(store);
-            expect(result.overall).toBeLessThan(50);
+            expect(result.overall).toBeLessThan(60);
             expect(result.grade).toBe('critical');
         });
 
@@ -575,7 +620,7 @@ describe('calculateHealthScore', () => {
                 ],
             });
             const r89 = calculateHealthScore(store89, {
-                weights: { passRate: 100, flakyRate: 0, coverage: 0, suiteSpeed: 0 },
+                weights: { passRate: 100, flakyRate: 0, coverage: 0, executionRate: 0, suiteSpeed: 0 },
                 passRateTarget: 95,
             });
             expect(r89.overall).toBeLessThan(90);
@@ -594,25 +639,25 @@ describe('calculateHealthScore', () => {
                 ],
             });
             const r90 = calculateHealthScore(store90, {
-                weights: { passRate: 100, flakyRate: 0, coverage: 0, suiteSpeed: 0 },
+                weights: { passRate: 100, flakyRate: 0, coverage: 0, executionRate: 0, suiteSpeed: 0 },
                 passRateTarget: 95,
             });
             expect(r90.overall).toBeGreaterThanOrEqual(90);
             expect(r90.grade).toBe('excellent');
         });
 
-        it('boundary: 49 is critical, 50 is needs_attention', () => {
-            const store49 = makeStore({
-                runs: [run({ total: 10, passed: 5, failed: 5, duration: 5000 })],
+        it('boundary: 59 is critical, 60 is poor', () => {
+            const store59 = makeStore({
+                runs: [run({ total: 100, passed: 50, failed: 50, duration: 5000 })],
             });
-            const r49 = calculateHealthScore(store49, {
-                weights: { passRate: 100, flakyRate: 0, coverage: 0, suiteSpeed: 0 },
+            const r59 = calculateHealthScore(store59, {
+                weights: { passRate: 100, flakyRate: 0, coverage: 0, executionRate: 0, suiteSpeed: 0 },
                 passRateTarget: 95,
             });
-            expect(r49.overall).toBeLessThan(50);
+            expect(r59.overall).toBeLessThan(60);
 
-            const store50 = makeStore({
-                runs: [run({ total: 10, passed: 10, failed: 0, duration: 5000 })],
+            const store60 = makeStore({
+                runs: [run({ total: 100, passed: 77, failed: 23, duration: 5000 })],
                 coverageHistory: [
                     {
                         timestamp: '2026-01-01T00:00:00.000Z',
@@ -623,11 +668,11 @@ describe('calculateHealthScore', () => {
                     },
                 ],
             });
-            const r50 = calculateHealthScore(store50, {
-                weights: { passRate: 0, flakyRate: 0, coverage: 100, suiteSpeed: 0 },
-                coverageTarget: 90,
+            const r60 = calculateHealthScore(store60, {
+                weights: { passRate: 100, flakyRate: 0, coverage: 0, executionRate: 0, suiteSpeed: 0 },
+                passRateTarget: 95,
             });
-            expect(r50.overall).toBeGreaterThanOrEqual(50);
+            expect(r60.overall).toBeGreaterThanOrEqual(60);
         });
     });
 
@@ -647,7 +692,7 @@ describe('calculateHealthScore', () => {
             });
             const resultDefault = calculateHealthScore(store);
             const resultCustom = calculateHealthScore(store, {
-                weights: { passRate: 100, flakyRate: 0, coverage: 0, suiteSpeed: 0 },
+                weights: { passRate: 100, flakyRate: 0, coverage: 0, executionRate: 0, suiteSpeed: 0 },
             });
             expect(resultDefault.overall).not.toBe(resultCustom.overall);
         });
@@ -700,6 +745,7 @@ describe('calculateHealthScore', () => {
             expect(result.dimensions.flakyRate.score).toBe(100);
             expect(result.dimensions.coverage.score).toBe(100);
             expect(result.dimensions.suiteSpeed.score).toBe(100);
+            expect(result.dimensions.executionRate.score).toBe(100);
             expect(result.qualityGate).toBe('pass');
             expect(result.grade).toBe('excellent');
         });
@@ -714,7 +760,7 @@ describe('calculateHealthScore', () => {
                         passed: 0,
                         failed: 100,
                         duration: 2000000,
-                        tests: Array.from({ length: 100 }, (_, j) => testT(`Test${j}`, 'failed')),
+                        tests: Array.from({ length: 100 }, (_, j) => testT(`Test${j}`, 'failed', 20000)),
                     }),
                 ],
                 coverageHistory: [
@@ -732,8 +778,148 @@ describe('calculateHealthScore', () => {
             expect(result.dimensions.flakyRate.score).toBe(100);
             expect(result.dimensions.coverage.score).toBe(0);
             expect(result.dimensions.suiteSpeed.score).toBe(0);
+            expect(result.dimensions.executionRate.score).toBe(100);
             expect(result.qualityGate).toBe('fail');
             expect(result.grade).toBe('critical');
+        });
+    });
+
+    describe('provenance', () => {
+        it('returns 5 provenance entries for a default calculation', () => {
+            const store = makeStore({
+                runs: [PASSING_RUN],
+                coverageHistory: [
+                    {
+                        timestamp: '2026-01-01T00:00:00.000Z',
+                        project: 'test',
+                        totalIssues: 10,
+                        mappedIssues: 10,
+                        coveragePct: 100,
+                    },
+                ],
+            });
+            const result = calculateHealthScore(store);
+            expect(result.provenance?.length).toBe(5);
+        });
+
+        it('each entry has required fields', () => {
+            const store = makeStore({
+                runs: [PASSING_RUN],
+                coverageHistory: [
+                    {
+                        timestamp: '2026-01-01T00:00:00.000Z',
+                        project: 'test',
+                        totalIssues: 10,
+                        mappedIssues: 10,
+                        coveragePct: 100,
+                    },
+                ],
+            });
+            const result = calculateHealthScore(store);
+            for (const entry of result.provenance ?? []) {
+                expect(entry.dimension).toBeTruthy();
+                expect(entry.source).toBeTruthy();
+                expect(entry.formula).toBeTruthy();
+                expect(entry.standard).toBeTruthy();
+                expect(entry.thresholdBasis).toBeTruthy();
+                expect(typeof entry.configurable).toBe('boolean');
+            }
+        });
+
+        it('marks dimensions as overridden when user provides custom target', () => {
+            const store = makeStore({
+                runs: [PASSING_RUN],
+                coverageHistory: [
+                    {
+                        timestamp: '2026-01-01T00:00:00.000Z',
+                        project: 'test',
+                        totalIssues: 10,
+                        mappedIssues: 10,
+                        coveragePct: 100,
+                    },
+                ],
+            });
+            const result = calculateHealthScore(store, { passRateTarget: 90 });
+            const passRateEntry = result.provenance?.find((p) => p.dimension === 'passRate');
+            expect(passRateEntry?.overridden).toBe(true);
+        });
+
+        it('does not mark dimensions as overridden with default config', () => {
+            const store = makeStore({
+                runs: [PASSING_RUN],
+                coverageHistory: [
+                    {
+                        timestamp: '2026-01-01T00:00:00.000Z',
+                        project: 'test',
+                        totalIssues: 10,
+                        mappedIssues: 10,
+                        coveragePct: 100,
+                    },
+                ],
+            });
+            const result = calculateHealthScore(store);
+            for (const entry of result.provenance ?? []) {
+                expect(entry.overridden).toBeUndefined();
+            }
+        });
+
+        it('includes dimension-specific provenance data for passRate', () => {
+            const store = makeStore({
+                runs: [PASSING_RUN],
+                coverageHistory: [
+                    {
+                        timestamp: '2026-01-01T00:00:00.000Z',
+                        project: 'test',
+                        totalIssues: 10,
+                        mappedIssues: 10,
+                        coveragePct: 100,
+                    },
+                ],
+            });
+            const result = calculateHealthScore(store);
+            const passRateEntry = result.provenance?.find((p) => p.dimension === 'passRate');
+            expect(passRateEntry?.source).toContain('DORA');
+            expect(passRateEntry?.formula).toContain('passed/(passed+failed)');
+            expect(passRateEntry?.configurable).toBe(true);
+        });
+
+        it('includes dimension-specific provenance data for suiteSpeed', () => {
+            const store = makeStore({
+                runs: [PASSING_RUN],
+                coverageHistory: [
+                    {
+                        timestamp: '2026-01-01T00:00:00.000Z',
+                        project: 'test',
+                        totalIssues: 10,
+                        mappedIssues: 10,
+                        coveragePct: 100,
+                    },
+                ],
+            });
+            const result = calculateHealthScore(store);
+            const speedEntry = result.provenance?.find((p) => p.dimension === 'suiteSpeed');
+            expect(speedEntry?.source).toContain('Google SRE');
+            expect(speedEntry?.formula).toContain('p95');
+            expect(speedEntry?.configurable).toBe(true);
+        });
+
+        it('includes dimension-specific provenance data for flakyRate', () => {
+            const store = makeStore({
+                runs: [PASSING_RUN],
+                coverageHistory: [
+                    {
+                        timestamp: '2026-01-01T00:00:00.000Z',
+                        project: 'test',
+                        totalIssues: 10,
+                        mappedIssues: 10,
+                        coveragePct: 100,
+                    },
+                ],
+            });
+            const result = calculateHealthScore(store);
+            const flakyEntry = result.provenance?.find((p) => p.dimension === 'flakyRate');
+            expect(flakyEntry?.source).toContain('Kualitatem');
+            expect(flakyEntry?.configurable).toBe(false);
         });
     });
 });

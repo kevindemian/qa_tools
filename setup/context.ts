@@ -1,10 +1,19 @@
 export type Framework = 'cypress' | 'playwright' | 'jest' | 'vitest' | 'generic';
 export type GitProvider = 'github' | 'gitlab';
 
+/**
+ * Describes how the project generates CTRF test reports.
+ * - 'config-file': CTRF reporter is configured in vitest.config.ts/vite.config.ts (project already has it)
+ * - 'cli-flag': CTRF reporter is added via --reporter CLI flag (framework default)
+ * - 'missing': No CTRF reporter detected; wizard should suggest installation
+ */
+export type CtrfSource = 'config-file' | 'cli-flag' | 'missing';
+
 export interface SetupContext {
     projectName: string;
     framework: Framework;
     ctrfReportPath: string;
+    ctrfSource: CtrfSource;
     nodeVersion: string;
     installCmd: string;
     testCmd: string;

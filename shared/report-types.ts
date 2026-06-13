@@ -48,6 +48,7 @@ export interface ReportOptions {
     flakinessMap?: Record<string, number>;
     flakinessDashboardUrl?: string;
     previousRunTests?: import('./result_parser.js').FlatTest[];
+    coverageSource?: string;
 }
 
 export interface ReportStats {

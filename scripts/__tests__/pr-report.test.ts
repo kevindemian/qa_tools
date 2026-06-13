@@ -71,6 +71,7 @@ vi.mock('../../shared/report-html.js', () => ({
 // Mock metrics
 vi.mock('../../shared/metrics.js', () => ({
     loadMetrics: vi.fn(() => ({ runs: [] })),
+    saveParseResult: vi.fn(),
     calculateFlakiness: vi.fn(() => []),
     getTrends: vi.fn(() => []),
 }));
@@ -311,7 +312,7 @@ describe('pr-report flaky detection with quarantine', () => {
         const mockEntries = [
             { title: 'flaky-test-1', rate: 0.5, passCount: 2, failCount: 2, skipCount: 1, totalRuns: 5 },
         ];
-        vi.mocked(metricsMod.calculateFlakiness).mockReturnValueOnce(mockEntries);
+        vi.mocked(metricsMod.calculateFlakiness).mockImplementation(() => mockEntries);
 
         createCtrfFixture([{ name: 'pass-1', status: 'passed', duration: 100 }]);
 
@@ -337,7 +338,7 @@ describe('pr-report flaky detection with quarantine', () => {
         const mockEntries = [
             { title: 'flaky-test-2', rate: 0.8, passCount: 1, failCount: 4, skipCount: 1, totalRuns: 6 },
         ];
-        vi.mocked(metricsMod.calculateFlakiness).mockReturnValueOnce(mockEntries);
+        vi.mocked(metricsMod.calculateFlakiness).mockImplementation(() => mockEntries);
 
         const quarantineMod = await import('../../shared/quarantine.js');
         vi.mocked(quarantineMod.isQuarantined).mockImplementation((title: string) =>
@@ -377,7 +378,7 @@ describe('pr-report flaky detection with quarantine', () => {
             { title: 'new-flaky-1', rate: 0.4, passCount: 3, failCount: 3, skipCount: 1, totalRuns: 7 },
             { title: 'new-flaky-2', rate: 0.35, passCount: 2, failCount: 3, skipCount: 1, totalRuns: 6 },
         ];
-        vi.mocked(metricsMod.calculateFlakiness).mockReturnValueOnce(mockEntries);
+        vi.mocked(metricsMod.calculateFlakiness).mockImplementation(() => mockEntries);
 
         const quarantineMod = await import('../../shared/quarantine.js');
         vi.mocked(quarantineMod.isQuarantined).mockReturnValue(undefined);
@@ -403,7 +404,7 @@ describe('pr-report flaky detection with quarantine', () => {
         const mockEntries: import('../../shared/metrics.js').FlakinessEntry[] = [
             { title: 'known-flaky', rate: 0.6, passCount: 2, failCount: 2, skipCount: 1, totalRuns: 5 },
         ];
-        vi.mocked(metricsMod.calculateFlakiness).mockReturnValueOnce(mockEntries);
+        vi.mocked(metricsMod.calculateFlakiness).mockImplementation(() => mockEntries);
 
         const quarantineMod = await import('../../shared/quarantine.js');
         vi.mocked(quarantineMod.isQuarantined).mockReturnValue({
@@ -434,7 +435,7 @@ describe('pr-report flaky detection with quarantine', () => {
 
     it('handles flaky section when calculateFlakiness returns empty', async () => {
         const metricsMod = await import('../../shared/metrics.js');
-        vi.mocked(metricsMod.calculateFlakiness).mockReturnValueOnce([]);
+        vi.mocked(metricsMod.calculateFlakiness).mockImplementation(() => []);
 
         createCtrfFixture([{ name: 'pass-1', status: 'passed', duration: 100 }]);
 
@@ -517,6 +518,7 @@ describe('pr-report HTML report generation', () => {
                 flakyRate: { score: 70, status: 'pass' },
                 coverage: { score: 65, status: 'fail' },
                 suiteSpeed: { score: 85, status: 'pass' },
+                executionRate: { score: 100, status: 'pass' },
             },
             runCount: 3,
             timestamp: '2026-06-13T12:00:00.000Z',
@@ -645,10 +647,13 @@ describe('pr-report HTML report generation', () => {
         const crOutput = crFirstArg?.['output'] as Record<string, unknown> | undefined;
         expect(crOutput?.['title'] as string).toContain('Grade: GOOD');
 
-        // Check Run summary should contain artifact link
+        // Check Run summary should contain artifact link with full URL
         const summary = crOutput?.['summary'] as string | undefined;
         expect(summary).toContain('Download HTML report');
-        expect(summary).toContain('#artifacts');
+        // Verify full artifact URL (not relative #artifacts)
+        expect(summary).toContain('https://github.com/owner/repo/actions/runs/run-123?pr=1#artifacts');
+        // Verify it's NOT the old broken relative link
+        expect(summary).not.toContain('](#artifacts)');
 
         exitSpy.mockRestore();
     });
@@ -674,6 +679,22 @@ describe('pr-report HTML report generation', () => {
         expect(flakinessMap).toBeDefined();
         expect(flakinessMap?.['flaky-1']).toBe(0.5);
         expect(flakinessMap?.['flaky-2']).toBe(0.33);
+
+        exitSpy.mockRestore();
+    });
+
+    it('includes coverageSource in HTML report options', async () => {
+        createCtrfFixture([{ name: 'pass-1', status: 'passed', duration: 100 }]);
+
+        const { main } = await import('../pr-report.js');
+        const exitSpy = vi.spyOn(process, 'exit').mockImplementation(() => undefined as never);
+
+        await main();
+
+        expect(mockGenerateHtmlReport).toHaveBeenCalledTimes(1);
+        const genCall = mockGenerateHtmlReport.mock.calls[0];
+        const opts = genCall?.[1] as Record<string, unknown> | undefined;
+        expect(opts?.['coverageSource']).toBe('none');
 
         exitSpy.mockRestore();
     });

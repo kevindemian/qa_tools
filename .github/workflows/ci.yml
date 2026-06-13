@@ -47,15 +47,3 @@ jobs:
               if: matrix.node-version != 22
               run: npx vitest run --testTimeout=120000
             - run: npx vitest run git_triggers/github-e2e.test.ts
-            - name: Post PR report
-              if: matrix.node-version == 22
-              env:
-                  GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-              run: npx tsx scripts/pr-report.ts --no-ai
-            - name: Upload HTML report
-              if: matrix.node-version == 22
-              uses: actions/upload-artifact@v4
-              with:
-                  name: pr-html-report
-                  path: reports/pr-report.html
-                  if-no-files-found: ignore

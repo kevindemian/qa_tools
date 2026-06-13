@@ -293,6 +293,7 @@ describe('case19 — History & Coverage', () => {
                 flakyRate: { score: 80, status: 'pass' },
                 coverage: { score: 85, status: 'pass' },
                 suiteSpeed: { score: 75, status: 'pass' },
+                executionRate: { score: 90, status: 'pass' },
             },
         });
 
@@ -412,6 +413,7 @@ describe('case19 — History & Coverage', () => {
                 flakyRate: { score: 80, status: 'pass' as const },
                 coverage: { score: 70, status: 'pass' as const },
                 suiteSpeed: { score: 95, status: 'pass' as const },
+                executionRate: { score: 100, status: 'pass' as const },
             },
         });
 

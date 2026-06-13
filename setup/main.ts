@@ -67,10 +67,23 @@ async function gatherSetupContext(): Promise<SetupContext> {
         prePushHook: await askConfirm('Criar hook pre-push (executa testes antes do push)?', false),
     };
 
+    if (
+        detection.ctrfSource === 'missing' &&
+        (features.jiraIntegration || features.flakinessDashboard || features.aiFailureAnalysis)
+    ) {
+        info(
+            '⚠️  Nenhum reporter CTRF detectado. O pipeline gerado usará o comando de teste existente,' +
+                ' mas o PR report pode não ter dados de teste completos.',
+        );
+        info('   Considere adicionar um reporter CTRF ao seu framework de testes.');
+        divider();
+    }
+
     return {
         projectName,
         framework,
         ctrfReportPath,
+        ctrfSource: detection.ctrfSource,
         nodeVersion,
         installCmd,
         testCmd,

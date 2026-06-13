@@ -30,11 +30,12 @@ import { postPrComment } from '../shared/github-pr-comment.js';
 import { parseTestResultsFile, type ParseResult, type FlatTest } from '../shared/result_parser.js';
 import { runQualityGate } from '../shared/quality-gate.js';
 import { createCheckRun } from '../shared/github-check-run.js';
-import { loadMetrics, calculateFlakiness, getTrends } from '../shared/metrics.js';
+import { loadMetrics, saveParseResult, calculateFlakiness, getTrends } from '../shared/metrics.js';
 import { isQuarantined } from '../shared/quarantine.js';
 import { generateHtmlReport } from '../shared/report-html.js';
 import type { ReportOptions } from '../shared/report-types.js';
 import { calculateHealthScore } from '../shared/health-score.js';
+import { resolveCoverage } from '../shared/coverage-source.js';
 
 // ---------------------------------------------------------------------------
 // CLI argument parsing
@@ -177,6 +178,7 @@ function buildQGCHeckSummary(
         checks: Array<{ name: string; status: 'pass' | 'fail'; score: number; threshold: number }>;
     },
     grade?: string,
+    artifactUrl?: string,
 ): string {
     const lines: string[] = [
         `**Quality Gate: ${result.overall === 'pass' ? '✅ PASSED' : '❌ FAILED'}**`,
@@ -191,7 +193,9 @@ function buildQGCHeckSummary(
         const icon = check.status === 'pass' ? '✅' : '❌';
         lines.push(`| ${check.name} | ${check.score} | ${check.threshold} | ${icon} |`);
     }
-    lines.push('', '📄 [Download HTML report](#artifacts)');
+    if (artifactUrl) {
+        lines.push('', `📄 [Download HTML report](${artifactUrl})`);
+    }
     return lines.join('\n');
 }
 
@@ -267,15 +271,7 @@ function buildAiAnalysisSection(): string {
     ].join('\n');
 }
 
-function buildFooter(): string {
-    const penv = process.env as Record<string, string | undefined>;
-    const ghServer = penv['GITHUB_SERVER_URL'];
-    const ghRepo = penv['GITHUB_REPOSITORY'];
-    const ghRunId = penv['GITHUB_RUN_ID'];
-    const workflowUrl = ghServer && ghRepo && ghRunId ? `${ghServer}/${ghRepo}/actions/runs/${ghRunId}` : undefined;
-
-    const artifactUrl = workflowUrl ? `${workflowUrl}?pr=1#artifacts` : undefined;
-
+function buildFooter(artifactUrl?: string, workflowUrl?: string): string {
     const parts: string[] = ['---', ''];
 
     if (workflowUrl) {
@@ -309,9 +305,17 @@ export async function main(): Promise<void> {
         process.exit(0);
     }
 
+    // Persist current run to MetricsStore so health score includes it
+    const projectName = process.env['GITHUB_REPOSITORY'] ?? 'pr-report';
+    saveParseResult(projectName, result);
+
     // Load metrics store once for health score, trends, flaky, and diff comparison
     const store = loadMetrics();
-    const healthScore = calculateHealthScore(store, {});
+
+    // Resolve coverage from available sources (Istanbul standalone > Jira coverage history)
+    const coverageResult = resolveCoverage();
+    const healthScoreConfig = coverageResult ? { coverageOverride: coverageResult.coveragePct } : {};
+    const healthScore = calculateHealthScore(store, healthScoreConfig);
     const trends = getTrends(store);
 
     // Compute diff comparison against the most recent run in the metrics store
@@ -332,6 +336,14 @@ export async function main(): Promise<void> {
         sections.push(buildAiAnalysisSection());
     }
 
+    // Compute CI URLs early (used by Check Run and HTML report)
+    const ghServer = process.env['GITHUB_SERVER_URL'];
+    const ghRepo = process.env['GITHUB_REPOSITORY'];
+    const ghRunId = process.env['GITHUB_RUN_ID'];
+    const ghBranch = process.env['GITHUB_REF_NAME'];
+    const workflowUrl = ghServer && ghRepo && ghRunId ? `${ghServer}/${ghRepo}/actions/runs/${ghRunId}` : undefined;
+    const artifactUrl = workflowUrl ? `${workflowUrl}?pr=1#artifacts` : undefined;
+
     // 4. Quality gate (unless skipped)
     if (!opts.skipQuality) {
         let qgResult: ReturnType<typeof runQualityGate> | null = null;
@@ -346,7 +358,7 @@ export async function main(): Promise<void> {
 
             // Build expanded Check Run summary with grade + artifact link
             const gradeStr = healthScore.grade.replace(/_/g, ' ').toUpperCase();
-            const checkSummary = buildQGCHeckSummary(qgResult, gradeStr);
+            const checkSummary = buildQGCHeckSummary(qgResult, gradeStr, artifactUrl);
 
             // Create a Check Run on the commit for the quality gate result
             await createCheckRun({
@@ -368,11 +380,6 @@ export async function main(): Promise<void> {
     }
 
     // 6. Generate full HTML report with health score, trends, diff, and flakiness
-    const ghServer = process.env['GITHUB_SERVER_URL'];
-    const ghRepo = process.env['GITHUB_REPOSITORY'];
-    const ghRunId = process.env['GITHUB_RUN_ID'];
-    const ghBranch = process.env['GITHUB_REF_NAME'];
-    const workflowUrl = ghServer && ghRepo && ghRunId ? `${ghServer}/${ghRepo}/actions/runs/${ghRunId}` : undefined;
 
     const passRate = result.stats.total > 0 ? (result.stats.passed / result.stats.total) * 100 : 0;
 
@@ -383,12 +390,14 @@ export async function main(): Promise<void> {
         flakinessMap[entry.title] = entry.rate;
     }
 
+    const coberturaSource = coverageResult?.source ?? 'none';
     const htmlOptions: ReportOptions = {
         title: `QA Tools — PR Report${ghBranch ? ` (${ghBranch})` : ''}`,
         qualityGate: Math.round(passRate),
         healthScore,
         trends,
         includeChart: true,
+        coverageSource: coberturaSource,
         ...(workflowUrl ? { ciUrl: workflowUrl } : {}),
         ...(ghBranch ? { branch: ghBranch } : {}),
         ...(Object.keys(flakinessMap).length > 0 ? { flakinessMap } : {}),
@@ -401,7 +410,7 @@ export async function main(): Promise<void> {
     rootLogger.info(`HTML report generated: reports/pr-report.html (${html.length} bytes)`);
 
     // 7. Footer
-    sections.push(buildFooter());
+    sections.push(buildFooter(artifactUrl, workflowUrl));
 
     const commentBody = sections.join('\n');
 

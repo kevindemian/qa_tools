@@ -71,7 +71,7 @@ export interface StateSchema {
 }
 
 /** Grade label for health score classification. */
-export type HealthScoreGrade = 'excellent' | 'good' | 'needs_attention' | 'critical';
+export type HealthScoreGrade = 'excellent' | 'good' | 'needs_attention' | 'poor' | 'critical';
 
 /** Inline token shape used internally by the markdown lexer/renderer.
  *  Exported here for cross-module type references (F3: replaces `any[]`). */
