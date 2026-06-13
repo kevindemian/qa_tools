@@ -3,7 +3,7 @@ import path from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
 import { readIstanbulCoverage, resolveCoverage } from '../coverage-source.js';
 
-const TEST_DIR = path.resolve('coverage');
+const TEST_DIR = path.resolve('coverage-test-fixtures');
 const TEST_PATH = path.join(TEST_DIR, 'coverage-summary.json');
 
 function writeIstanbulFixture(data: unknown): void {
@@ -25,7 +25,7 @@ describe('readIstanbulCoverage', () => {
                 branches: { total: 40, covered: 30, pct: 75.0 },
             },
         });
-        const result = readIstanbulCoverage();
+        const result = readIstanbulCoverage(TEST_PATH);
         expect(result?.coveragePct).toBe(80.0);
         expect(result?.source).toBe('istanbul');
         expect(result?.detail).toContain('80.0%');
@@ -37,14 +37,14 @@ describe('readIstanbulCoverage', () => {
                 statements: { total: 50, covered: 25, pct: 50.0 },
             },
         });
-        const result = readIstanbulCoverage();
+        const result = readIstanbulCoverage(TEST_PATH);
         expect(result?.coveragePct).toBe(50.0);
         expect(result?.source).toBe('istanbul');
     });
 
     it('returns undefined when total is missing', () => {
         writeIstanbulFixture({});
-        const result = readIstanbulCoverage();
+        const result = readIstanbulCoverage(TEST_PATH);
         expect(result).toBeUndefined();
     });
 
@@ -59,14 +59,14 @@ describe('readIstanbulCoverage', () => {
                 lines: { total: 100, covered: 80 },
             },
         });
-        const result = readIstanbulCoverage();
+        const result = readIstanbulCoverage(TEST_PATH);
         expect(result).toBeUndefined();
     });
 
     it('handles malformed JSON gracefully', () => {
         fs.mkdirSync(TEST_DIR, { recursive: true });
         fs.writeFileSync(TEST_PATH, 'not valid json', 'utf8');
-        const result = readIstanbulCoverage();
+        const result = readIstanbulCoverage(TEST_PATH);
         expect(result).toBeUndefined();
     });
 
@@ -97,7 +97,7 @@ describe('resolveCoverage', () => {
                 lines: { total: 100, covered: 85, pct: 85.0 },
             },
         });
-        const result = resolveCoverage({ ctrfCoverage: 70 });
+        const result = resolveCoverage({ istanbulPath: TEST_PATH, ctrfCoverage: 70 });
         expect(result?.source).toBe('istanbul');
         expect(result?.coveragePct).toBe(85.0);
     });
