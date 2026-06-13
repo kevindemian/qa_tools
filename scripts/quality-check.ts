@@ -383,7 +383,7 @@ export function checkDashboardExports(): CheckResult {
 
 export function checkQualityGateFiles(): CheckResult {
     const violations: Violation[] = [];
-    const files = ['shared/quality-gate.ts', 'scripts/quality-gate.ts'];
+    const files = ['shared/quality-gate.ts', 'scripts/run-quality-gate.ts'];
     for (const f of files) {
         if (!existsSync(f)) {
             violations.push({ file: f, line: 1, content: `MISSING FILE: ${f}` });
@@ -469,7 +469,7 @@ export function checkIntegrity(): CheckResult {
         const selfContent = readFileSync('scripts/quality-check.ts', 'utf-8');
         const contentWithoutHash = selfContent.replace(/\/\* HASH:[0-9a-f]{64} \*\//g, '');
         const currentHash = createHash('sha256').update(contentWithoutHash, 'utf-8').digest('hex');
-        /* HASH:a253cbb11190ce72d83559d63cd8475bb3d050ff2a7f8100d3848baf4f4f4c9e */
+        /* HASH:d17cf127f30b1eecc8e1aeeaabb2ad741db8f8076289d04858f25ffa71b404a6 */
         const match = selfContent.match(/\/\* HASH:([0-9a-f]{64}) \*\//);
         if (!match) {
             violations.push({ file: 'scripts/quality-check.ts', line: 1, content: 'Missing HASH comment' });
