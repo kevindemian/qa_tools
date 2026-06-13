@@ -1,9 +1,11 @@
 import { defineConfig } from 'vitest/config';
+import VitestCtrfReporter from './shared/vitest-ctrf-reporter.js';
 
 export default defineConfig({
     test: {
         globals: true,
         environment: 'node',
+        reporters: ['default', new VitestCtrfReporter()],
         setupFiles: [],
         exclude: ['**/node_modules/**'],
         coverage: {

@@ -68,15 +68,13 @@ interface MockTestCase {
     toTestSpecification: () => unknown;
 }
 
-/** Wrap a MockTestCase as TestCase for vitest's Reporter interface (private fields are incompatible). */
+/** Wrap a MockTestCase as TestCase for vitest's Reporter interface (private fields are structurally incompatible). */
 function asTestCase(mock: MockTestCase): TestCase {
-    return mock as unknown as TestCase;
+    return mock as unknown as TestCase; // structural: vitest's TestCase has private fields — no object literal satisfies it
 }
 
 /** Non-null results accessor for tests (reporter always populates these). */
-function resultsOf(
-    d: CtrfData,
-): Required<NonNullable<CtrfData['results']>> & {
+function resultsOf(d: CtrfData): Required<NonNullable<CtrfData['results']>> & {
     summary: Required<NonNullable<NonNullable<CtrfData['results']>['summary']>>;
 } {
     if (!d.results) throw new Error('results are null');

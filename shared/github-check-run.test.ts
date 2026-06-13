@@ -5,20 +5,17 @@
 import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest';
 import { createCheckRun } from './github-check-run.js';
 
+const mockPost = vi.hoisted(() => vi.fn<(...args: unknown[]) => unknown>());
+
 vi.mock('./deps.js', async () => {
     const actual = await vi.importActual('./deps.js');
     return {
         ...(actual as Record<string, unknown>),
         axios: {
-            post: vi.fn(),
+            post: mockPost,
         },
     };
 });
-
-const mockAxios = await (async () => {
-    const mod = await import('./deps.js');
-    return mod.axios as unknown as { post: ReturnType<typeof vi.fn> };
-})();
 
 describe('createCheckRun', () => {
     const originalEnv = { ...process.env };
@@ -37,7 +34,7 @@ describe('createCheckRun', () => {
     });
 
     it('sends POST to correct GitHub API URL', async () => {
-        mockAxios.post.mockResolvedValueOnce({
+        mockPost.mockResolvedValueOnce({
             data: { id: 1, html_url: 'https://github.com/owner/repo/checks/1' },
         });
 
@@ -47,7 +44,7 @@ describe('createCheckRun', () => {
             conclusion: 'success',
         });
 
-        expect(mockAxios.post).toHaveBeenCalledWith(
+        expect(mockPost).toHaveBeenCalledWith(
             'https://api.github.com/repos/owner/repo/check-runs',
             expect.objectContaining({
                 name: 'Quality Gate',
@@ -63,7 +60,7 @@ describe('createCheckRun', () => {
     });
 
     it('includes output when provided', async () => {
-        mockAxios.post.mockResolvedValueOnce({
+        mockPost.mockResolvedValueOnce({
             data: { id: 2, html_url: '' },
         });
 
@@ -78,7 +75,7 @@ describe('createCheckRun', () => {
             },
         });
 
-        expect(mockAxios.post).toHaveBeenCalledWith(
+        expect(mockPost).toHaveBeenCalledWith(
             expect.any(String),
             expect.objectContaining({
                 output: {
@@ -92,7 +89,7 @@ describe('createCheckRun', () => {
     });
 
     it('includes details_url when provided', async () => {
-        mockAxios.post.mockResolvedValueOnce({
+        mockPost.mockResolvedValueOnce({
             data: { id: 3, html_url: '' },
         });
 
@@ -103,7 +100,7 @@ describe('createCheckRun', () => {
             detailsUrl: 'https://example.com/report',
         });
 
-        expect(mockAxios.post).toHaveBeenCalledWith(
+        expect(mockPost).toHaveBeenCalledWith(
             expect.any(String),
             expect.objectContaining({
                 details_url: 'https://example.com/report',
@@ -121,7 +118,7 @@ describe('createCheckRun', () => {
             conclusion: 'success',
         });
 
-        expect(mockAxios.post).not.toHaveBeenCalled();
+        expect(mockPost).not.toHaveBeenCalled();
         expect(result).toBeNull();
     });
 
@@ -134,7 +131,7 @@ describe('createCheckRun', () => {
             conclusion: 'success',
         });
 
-        expect(mockAxios.post).not.toHaveBeenCalled();
+        expect(mockPost).not.toHaveBeenCalled();
         expect(result).toBeNull();
     });
 
@@ -147,12 +144,12 @@ describe('createCheckRun', () => {
             conclusion: 'success',
         });
 
-        expect(mockAxios.post).not.toHaveBeenCalled();
+        expect(mockPost).not.toHaveBeenCalled();
         expect(result).toBeNull();
     });
 
     it('handles API error gracefully', async () => {
-        mockAxios.post.mockRejectedValueOnce({
+        mockPost.mockRejectedValueOnce({
             response: { status: 403 },
             message: 'Forbidden',
         });
@@ -167,7 +164,7 @@ describe('createCheckRun', () => {
     });
 
     it('handles network error gracefully', async () => {
-        mockAxios.post.mockRejectedValueOnce(new Error('Network error'));
+        mockPost.mockRejectedValueOnce(new Error('Network error'));
 
         const result = await createCheckRun({
             name: 'Gate',
