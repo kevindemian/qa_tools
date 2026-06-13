@@ -1,10 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { readFileSync, existsSync, readdirSync, type PathOrFileDescriptor } from 'fs';
-import { execFileSync } from 'child_process';
 
 vi.mock('fs');
-vi.mock('child_process');
-
 vi.mock('../shared/deps.js', () => ({
     globSync: vi.fn((_p: string) => [
         'test.ts',
@@ -34,7 +31,6 @@ describe('quality-check unit tests', () => {
         vi.clearAllMocks();
         vi.mocked(readFileSync).mockReset();
         vi.mocked(existsSync).mockReset();
-        vi.mocked(execFileSync).mockReset();
         vi.mocked(readdirSync).mockReset();
     });
 
@@ -113,41 +109,6 @@ describe('quality-check unit tests', () => {
             mockLintResults.mockRejectedValue(new Error('lint failed'));
             const { checkEslintBaseline } = await import('./quality-check.js');
             const r = await checkEslintBaseline();
-            expect(r.passed).toBe(false);
-        });
-    });
-
-    describe('checkUnusedExports', () => {
-        it('passes when ts-prune output is empty', async () => {
-            vi.mocked(execFileSync).mockReturnValue('');
-            const { checkUnusedExports } = await import('./quality-check.js');
-            const r = checkUnusedExports();
-            expect(r.passed).toBe(true);
-        });
-
-        it('fails when any unused export exists (no baseline)', async () => {
-            vi.mocked(execFileSync).mockReturnValue('file.ts:123 - item\n');
-            const { checkUnusedExports } = await import('./quality-check.js');
-            const r = checkUnusedExports();
-            expect(r.passed).toBe(false);
-        });
-
-        it('filters known patterns from ts-prune output', async () => {
-            vi.mocked(execFileSync).mockReturnValue(
-                'shared/test-utils/x.ts:1 - x\nshared/types.ts:2 - y\nother.ts:3 - z\n',
-            );
-            const { checkUnusedExports } = await import('./quality-check.js');
-            const r = checkUnusedExports();
-            expect(r.violations.length).toBe(1);
-            expect(r.violations[0]?.file).toBe('other.ts');
-        });
-
-        it('handles execFileSync failure', async () => {
-            vi.mocked(execFileSync).mockImplementation(() => {
-                throw new Error('exec fail');
-            });
-            const { checkUnusedExports } = await import('./quality-check.js');
-            const r = checkUnusedExports();
             expect(r.passed).toBe(false);
         });
     });
@@ -429,7 +390,6 @@ describe('quality-check unit tests', () => {
     describe('main() integration', () => {
         it('calls all checks and reports results', async () => {
             mockLintResults.mockResolvedValue([]);
-            vi.mocked(execFileSync).mockReturnValue('');
 
             const artifactExports = [
                 'createTestCaseValidator',

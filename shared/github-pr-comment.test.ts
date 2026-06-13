@@ -7,21 +7,18 @@
 import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest';
 import { postPrComment } from './github-pr-comment.js';
 
+const mockPost = vi.hoisted(() => vi.fn<(...args: unknown[]) => unknown>());
+
 // Axios mock
 vi.mock('./deps.js', async () => {
     const actual = await vi.importActual('./deps.js');
     return {
         ...(actual as Record<string, unknown>),
         axios: {
-            post: vi.fn(),
+            post: mockPost,
         },
     };
 });
-
-const mockAxios = await (async () => {
-    const mod = await import('./deps.js');
-    return mod.axios as unknown as { post: ReturnType<typeof vi.fn> };
-})();
 
 describe('postPrComment', () => {
     const originalEnv = { ...process.env };
@@ -40,13 +37,13 @@ describe('postPrComment', () => {
     });
 
     it('posts comment to correct GitHub API URL', async () => {
-        mockAxios.post.mockResolvedValueOnce({
+        mockPost.mockResolvedValueOnce({
             data: { id: 123, html_url: 'https://github.com/owner/repo/pull/42#issuecomment-123' },
         });
 
         const result = await postPrComment('Test comment body');
 
-        expect(mockAxios.post).toHaveBeenCalledWith(
+        expect(mockPost).toHaveBeenCalledWith(
             'https://api.github.com/repos/owner/repo/issues/42/comments',
             { body: 'Test comment body' },
             expect.objectContaining({
@@ -64,7 +61,7 @@ describe('postPrComment', () => {
 
         const result = await postPrComment('body');
 
-        expect(mockAxios.post).not.toHaveBeenCalled();
+        expect(mockPost).not.toHaveBeenCalled();
         expect(result).toBeNull();
     });
 
@@ -73,7 +70,7 @@ describe('postPrComment', () => {
 
         const result = await postPrComment('body');
 
-        expect(mockAxios.post).not.toHaveBeenCalled();
+        expect(mockPost).not.toHaveBeenCalled();
         expect(result).toBeNull();
     });
 
@@ -82,12 +79,12 @@ describe('postPrComment', () => {
 
         const result = await postPrComment('body');
 
-        expect(mockAxios.post).not.toHaveBeenCalled();
+        expect(mockPost).not.toHaveBeenCalled();
         expect(result).toBeNull();
     });
 
     it('uses explicit config over env vars', async () => {
-        mockAxios.post.mockResolvedValueOnce({
+        mockPost.mockResolvedValueOnce({
             data: { id: 456, html_url: 'https://github.com/custom/repo/pull/99#issuecomment-456' },
         });
 
@@ -97,7 +94,7 @@ describe('postPrComment', () => {
             prNumber: 99,
         });
 
-        expect(mockAxios.post).toHaveBeenCalledWith(
+        expect(mockPost).toHaveBeenCalledWith(
             'https://api.github.com/repos/custom/repo/issues/99/comments',
             { body: 'Custom body' },
             expect.objectContaining({
@@ -111,7 +108,7 @@ describe('postPrComment', () => {
     });
 
     it('handles API error gracefully', async () => {
-        mockAxios.post.mockRejectedValueOnce({
+        mockPost.mockRejectedValueOnce({
             response: { status: 403 },
             message: 'Forbidden',
         });
@@ -122,7 +119,7 @@ describe('postPrComment', () => {
     });
 
     it('handles network error without response', async () => {
-        mockAxios.post.mockRejectedValueOnce(new Error('Network error'));
+        mockPost.mockRejectedValueOnce(new Error('Network error'));
 
         const result = await postPrComment('body');
 
@@ -133,13 +130,13 @@ describe('postPrComment', () => {
         delete penv['GITHUB_PR_NUMBER'];
         penv['CI_PR_NUMBER'] = '77';
 
-        mockAxios.post.mockResolvedValueOnce({
+        mockPost.mockResolvedValueOnce({
             data: { id: 789, html_url: 'https://github.com/owner/repo/pull/77#issuecomment-789' },
         });
 
         const result = await postPrComment('body');
 
-        expect(mockAxios.post).toHaveBeenCalledWith(
+        expect(mockPost).toHaveBeenCalledWith(
             expect.stringContaining('/issues/77/comments'),
             expect.any(Object),
             expect.any(Object),
@@ -148,7 +145,7 @@ describe('postPrComment', () => {
     });
 
     it('uses custom apiBaseUrl when provided', async () => {
-        mockAxios.post.mockResolvedValueOnce({
+        mockPost.mockResolvedValueOnce({
             data: { id: 111, html_url: 'https://ghe.example.com/repos/owner/repo/issues/42#issuecomment-111' },
         });
 
@@ -156,7 +153,7 @@ describe('postPrComment', () => {
             apiBaseUrl: 'https://ghe.example.com/api/v3',
         });
 
-        expect(mockAxios.post).toHaveBeenCalledWith(
+        expect(mockPost).toHaveBeenCalledWith(
             'https://ghe.example.com/api/v3/repos/owner/repo/issues/42/comments',
             expect.any(Object),
             expect.any(Object),

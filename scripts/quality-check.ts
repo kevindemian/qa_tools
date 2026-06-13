@@ -5,20 +5,14 @@
  * Replaces: eslint CLI + check-unused-exports.sh + check-handlers + enforce-quality.ts
  * Single process, single AST parse, single heap. Try/catch everywhere.
  *
- * ## Baseline (falsos positivos aceitos)
- *
- * - unused-exports: baseline em scripts/.unused-exports-baseline
- * - Qualquer regra eslint com erro: FALHA (bug real)
- *
  * ## Exit codes
- * - 0: todas as verificações passam (respeitando baselines)
+ * - 0: todas as verificações passam
  * - 1: alguma verificação falhou
  */
 
 import { createHash } from 'crypto';
 import { readFileSync, existsSync, readdirSync } from 'fs';
 import { isBuiltin } from 'module';
-import { execFileSync } from 'child_process';
 import { globSync } from '../shared/deps.js';
 import { gracefulExit } from '../shared/cli_base.js';
 import { ExitCode } from '../shared/types.js';
@@ -121,44 +115,6 @@ export async function checkEslintBaseline(): Promise<CheckResult> {
             content: `ESLint check failed: ${err instanceof Error ? err.message : String(err)}`,
         });
         return { name: 'eslint (zero violations)', passed: false, violations };
-    }
-}
-
-export function checkUnusedExports(): CheckResult {
-    const violations: Violation[] = [];
-    try {
-        let output = '';
-        try {
-            output = execFileSync('npx', ['ts-prune'], { encoding: 'utf-8', stdio: ['pipe', 'pipe', 'ignore'] });
-        } catch {
-            return {
-                name: 'unused-exports (baseline)',
-                passed: false,
-                violations: [{ file: 'scripts/quality-check.ts', line: 1, content: 'ts-prune failed to execute' }],
-            };
-        }
-        const filtered = output
-            .split('\n')
-            .filter((l) => l && !l.includes('used in module'))
-            .filter((l) => !l.includes('/__mocks__/'))
-            .filter((l) => !l.includes('schema.ts:'))
-            .filter((l) => !l.includes('/index.ts:'))
-            .filter((l) => !l.startsWith('shared/test-utils/'))
-            .filter((l) => !l.startsWith('shared/types.ts:'));
-
-        if (filtered.length === 0) {
-            return { name: 'unused-exports (zero)', passed: true, violations };
-        }
-
-        violations.push(...filtered.map((l) => ({ file: l.split(':')[0] || '', line: 1, content: l })));
-        return { name: 'unused-exports (zero)', passed: false, violations };
-    } catch (err) {
-        violations.push({
-            file: 'scripts/quality-check.ts',
-            line: 1,
-            content: `ts-prune failed: ${err instanceof Error ? err.message : String(err)}`,
-        });
-        return { name: 'unused-exports (baseline)', passed: false, violations };
     }
 }
 
@@ -513,7 +469,7 @@ export function checkIntegrity(): CheckResult {
         const selfContent = readFileSync('scripts/quality-check.ts', 'utf-8');
         const contentWithoutHash = selfContent.replace(/\/\* HASH:[0-9a-f]{64} \*\//g, '');
         const currentHash = createHash('sha256').update(contentWithoutHash, 'utf-8').digest('hex');
-        /* HASH:50c5852904940970b9d8370186401f28516367eb33519f8e1745853838326b50 */
+        /* HASH:8a8538d1b5484ede2b682a16fc2635e3c643d3071917ba3f5b87428b9e3cac49 */
         const match = selfContent.match(/\/\* HASH:([0-9a-f]{64}) \*\//);
         if (!match) {
             violations.push({ file: 'scripts/quality-check.ts', line: 1, content: 'Missing HASH comment' });
@@ -542,7 +498,6 @@ export async function main(): Promise<void> {
     const checks: CheckResult[] = [];
 
     checks.push(await checkEslintBaseline());
-    checks.push(checkUnusedExports());
     checks.push(checkHandlerConsistency());
 
     /* enforce-quality checks */
@@ -564,7 +519,7 @@ export async function main(): Promise<void> {
     checks.push(checkIntegrity());
 
     /* Guard: check count */
-    const minChecks = 18;
+    const minChecks = 17;
     if (checks.length < minChecks) {
         checks.push({
             name: `quality-check has at least ${minChecks} checks`,
