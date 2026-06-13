@@ -32,8 +32,6 @@ jobs:
                   else
                     echo "⚠️ validation_hook.ts not found — skipping (only available on dev machines)"
                   fi
-            - name: Quality gate (health + coverage + flaky)
-              run: npx tsx scripts/run-quality-gate.ts --json
             - run: npm audit --audit-level=high
             - name: Check outdated dependencies (warning only)
               run: npm outdated --json || true

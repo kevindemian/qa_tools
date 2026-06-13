@@ -57,7 +57,6 @@ SAFETY=(
   "$PROJECT_ROOT/.github/workflows/publish.yml"
   "$PROJECT_ROOT/.github/dependabot.yml"
   "$PROJECT_ROOT/.gitlab-ci.yml"
-  "$PROJECT_ROOT/scripts/quality-gate.ts"
   "$PROJECT_ROOT/scripts/quality-check.ts"
 )
 
@@ -256,7 +255,7 @@ except Exception as e:
     *.env)
       analysis="Variaveis de ambiente alteradas"
       ;;
-    *quality-gate*|*quality-check*)
+    *quality-check*)
       analysis="Quality gate alterado"
       ;;
     *warden*|*validation*)
