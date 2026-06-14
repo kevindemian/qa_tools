@@ -21,7 +21,7 @@ import type { SetupContext } from '../context.js';
 function generateQaPostProcessActionYaml(): string {
     return [
         'name: QA Tools Post-Process',
-        'description: Run QA Tools post-processing on test results',
+        'description: Run QA Tools post-processing on test results and upload artifacts',
         'inputs:',
         '  ctrf-path:',
         '    description: Path to CTRF report JSON',
@@ -39,6 +39,13 @@ function generateQaPostProcessActionYaml(): string {
         '      run: npx tsx shared/pr-report-core.ts --ctrf ${{ inputs.ctrf-path }} --project ${{ inputs.project-name }}',
         '      env:',
         '        GITHUB_TOKEN: ${{ github.token }}',
+        '    - name: Upload PR Report HTML',
+        '      uses: actions/upload-artifact@v4',
+        '      if: always()',
+        '      with:',
+        '        name: pr-report-html',
+        '        path: reports/pr-report.html',
+        '        if-no-files-found: warn',
     ].join('\n');
 }
 
