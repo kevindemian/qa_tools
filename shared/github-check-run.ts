@@ -117,8 +117,15 @@ export async function createCheckRun(
             err && typeof err === 'object' && 'response' in err
                 ? (err as { response?: { status?: number } }).response?.status
                 : undefined;
+        // D3 FIX: Add context about PAT limitations for Check Runs.
+        // GitHub Checks API requires `checks:write` permission.
+        // GITHUB_TOKEN (CI) has this by default. PATs need it explicitly.
+        const hint =
+            status === 403
+                ? ' (Check Runs require checks:write permission — GITHUB_TOKEN in CI has this, but PATs may not)'
+                : '';
         rootLogger.error(
-            `Failed to create Check Run (HTTP ${status ?? 'error'}): ${err instanceof Error ? err.message : String(err)}`,
+            `Failed to create Check Run (HTTP ${status ?? 'error'}): ${err instanceof Error ? err.message : String(err)}${hint}`,
         );
         return null;
     }

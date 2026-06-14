@@ -167,6 +167,17 @@ export class VitestCtrfReporter implements Reporter {
         const total = this.tests.length;
         const totalDuration = this.tests.reduce((sum, t) => sum + t.duration, 0);
 
+        /**
+         * D1 FIX: Count flaky tests (passed after retry) and retried tests.
+         * This addresses the issue where CI failures from post-test steps
+         * were invisible because CTRF only showed final test states.
+         * With retries, a test that initially failed but passed after retry
+         * is recorded as "passed" with flaky=true. These counts make the
+         * discrepancy between "test results" and "CI status" visible.
+         */
+        const flakyCount = this.tests.filter((t) => t.flaky === true).length;
+        const retriedCount = this.tests.filter((t) => (t.retries ?? 0) > 0).length;
+
         const tests: CtrfTest[] = this.tests.map((t) => ({
             name: t.name,
             status: t.status,
@@ -192,6 +203,8 @@ export class VitestCtrfReporter implements Reporter {
                     other: 0,
                     start: this.startTime,
                     stop: endTime,
+                    ...(flakyCount > 0 ? { flaky: flakyCount } : {}),
+                    ...(retriedCount > 0 ? { retried: retriedCount } : {}),
                 },
                 tests,
                 environment: {
