@@ -498,4 +498,49 @@ describe('VitestCtrfReporter', () => {
         // stop must be >= start (same ms is possible for fast runs)
         expect(resultsOf(data).summary.stop).toBeGreaterThanOrEqual(resultsOf(data).summary.start);
     });
+
+    describe('env var override (CI-01)', () => {
+        const originalEnv = { ...process.env };
+
+        afterEach(() => {
+            process.env = { ...originalEnv };
+        });
+
+        it('uses CTRF_OUTPUT_DIR env to override output directory', () => {
+            process.env['CTRF_OUTPUT_DIR'] = 'reports-env-override';
+            process.env['CTRF_OUTPUT_FILE'] = 'env-ctrf.json';
+
+            const reporter = new VitestCtrfReporter();
+            reporter.onTestRunStart();
+            reporter.onTestCaseResult(asTestCase(createMockTestCase({ name: 'env-override-test', state: 'passed' })));
+            reporter.onTestRunEnd();
+
+            const fileName = resolve('reports-env-override', 'env-ctrf.json');
+            expect(existsSync(fileName)).toBe(true);
+            const data = JSON.parse(readFileSync(fileName, 'utf8')) as CtrfData;
+            expect(resultsOf(data).tests).toHaveLength(1);
+            expect(resultsOf(data).tests[0]?.name).toBe('env-override-test');
+            rmSync('reports-env-override', { recursive: true, force: true });
+        });
+
+        it('constructor options take precedence over env vars', () => {
+            process.env['CTRF_OUTPUT_DIR'] = 'reports-env-should-not-exist';
+            process.env['CTRF_OUTPUT_FILE'] = 'env-should-not-exist.json';
+
+            const reporter = new VitestCtrfReporter({
+                outputDir: TEST_OUTPUT_DIR,
+                outputFile: TEST_OUTPUT_FILE,
+            });
+            reporter.onTestRunStart();
+            reporter.onTestCaseResult(asTestCase(createMockTestCase({ name: 'precedence-test', state: 'passed' })));
+            reporter.onTestRunEnd();
+
+            // Should use TEST_OUTPUT_DIR/TEST_OUTPUT_FILE, not env var paths
+            const fileName = resolve(TEST_OUTPUT_DIR, TEST_OUTPUT_FILE);
+            expect(existsSync(fileName)).toBe(true);
+            const data = JSON.parse(readFileSync(fileName, 'utf8')) as CtrfData;
+            expect(resultsOf(data).tests[0]?.name).toBe('precedence-test');
+            expect(existsSync('reports-env-should-not-exist')).toBe(false);
+        });
+    });
 });

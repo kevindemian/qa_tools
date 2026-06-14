@@ -80,8 +80,8 @@ export class VitestCtrfReporter implements Reporter {
     constructor(options: VitestCtrfReporterOptions = {}) {
         const env = process.env as Record<string, string | undefined>;
         this.options = {
-            outputDir: options.outputDir ?? 'reports',
-            outputFile: options.outputFile ?? 'ctrf-report.json',
+            outputDir: options.outputDir ?? env['CTRF_OUTPUT_DIR'] ?? 'reports',
+            outputFile: options.outputFile ?? env['CTRF_OUTPUT_FILE'] ?? 'ctrf-report.json',
             testType: options.testType ?? 'unit',
             appName: options.appName ?? env['APP_NAME'] ?? 'qa-tools',
             buildName: options.buildName ?? env['BUILD_NAME'] ?? env['GITHUB_RUN_ID'] ?? '',

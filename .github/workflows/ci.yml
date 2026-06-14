@@ -46,10 +46,20 @@ jobs:
             - name: Tests without coverage (Node 24+)
               if: matrix.node-version != 22
               run: npx vitest run --testTimeout=120000
-            - run: npx vitest run git_triggers/github-e2e.test.ts
+            - name: E2E tests (separate CTRF output to avoid overwriting main suite report)
+              run: npx vitest run git_triggers/github-e2e.test.ts
+              env:
+                  CTRF_OUTPUT_FILE: ctrf-report-e2e.json
 
-            - name: QA Tools Post-Processing
-              if: always()
+            - name: QA Tools Post-Processing (Node 22 only — has coverage data)
+              if: always() && matrix.node-version == 22
               uses: ./.github/actions/qa-post-process
               with:
-                project-name: qa_tools
+                  project-name: qa_tools
+
+            - name: Upload PR Report HTML artifact
+              if: always() && matrix.node-version == 22
+              uses: actions/upload-artifact@v4
+              with:
+                  name: pr-report-html
+                  path: reports/pr-report.html

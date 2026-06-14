@@ -144,6 +144,36 @@ describe('postPrComment', () => {
         expect(result?.id).toBe(789);
     });
 
+    it('parses PR number from GITHUB_REF (github-actions fallback)', async () => {
+        delete penv['GITHUB_PR_NUMBER'];
+        delete penv['CI_PR_NUMBER'];
+        penv['GITHUB_REF'] = 'refs/pull/123/merge';
+
+        mockPost.mockResolvedValueOnce({
+            data: { id: 999, html_url: 'https://github.com/owner/repo/pull/123#issuecomment-999' },
+        });
+
+        const result = await postPrComment('body');
+
+        expect(mockPost).toHaveBeenCalledWith(
+            expect.stringContaining('/issues/123/comments'),
+            expect.any(Object),
+            expect.any(Object),
+        );
+        expect(result?.id).toBe(999);
+    });
+
+    it('does not parse non-PR GITHUB_REF as number', async () => {
+        delete penv['GITHUB_PR_NUMBER'];
+        delete penv['CI_PR_NUMBER'];
+        penv['GITHUB_REF'] = 'refs/heads/main';
+
+        const result = await postPrComment('body');
+
+        expect(mockPost).not.toHaveBeenCalled();
+        expect(result).toBeNull();
+    });
+
     it('uses custom apiBaseUrl when provided', async () => {
         mockPost.mockResolvedValueOnce({
             data: { id: 111, html_url: 'https://ghe.example.com/repos/owner/repo/issues/42#issuecomment-111' },

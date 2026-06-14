@@ -23,7 +23,10 @@ export interface PrCommentConfig {
 }
 
 /**
- * Extracts PR number from available context sources.
+ * Extract PR number from available context sources.
+ * GitHub Actions does NOT set GITHUB_PR_NUMBER as an environment variable.
+ * For pull_request events, GITHUB_REF = "refs/pull/{number}/merge".
+ * Parse this as fallback when the direct env var is missing.
  */
 function resolvePrNumber(config: PrCommentConfig): number | undefined {
     if (config.prNumber !== undefined) return config.prNumber;
@@ -31,6 +34,12 @@ function resolvePrNumber(config: PrCommentConfig): number | undefined {
     const env = penv['GITHUB_PR_NUMBER'] || penv['CI_PR_NUMBER'];
     if (env) {
         const parsed = Number(env);
+        if (Number.isFinite(parsed) && parsed > 0) return parsed;
+    }
+    const ref = penv['GITHUB_REF'] || '';
+    const match = ref.match(/^refs\/pull\/(\d+)\//);
+    if (match) {
+        const parsed = Number(match[1]);
         if (Number.isFinite(parsed) && parsed > 0) return parsed;
     }
     return undefined;

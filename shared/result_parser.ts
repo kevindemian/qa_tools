@@ -293,7 +293,7 @@ export function isCtrfFormat(jsonData: unknown): jsonData is CtrfData {
     const obj = jsonData as CtrfData;
     if (typeof obj.results !== 'object' || obj.results === null) return false;
     const results = obj.results;
-    return Array.isArray(results.tests) && typeof results.summary === 'object';
+    return Array.isArray(results.tests) && results.summary !== null && typeof results.summary === 'object';
 }
 
 /** Auto-detect format (CTRF or Mochawesome) and dispatch to the correct parser. */

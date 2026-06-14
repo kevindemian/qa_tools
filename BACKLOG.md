@@ -2847,3 +2847,60 @@ Adicionar categoria **T20 — CI/Config Contract**:
 | Cobertura novos módulos | **100% statements**                           |
 | Débitos novos           | **0**                                         |
 | Workarounds             | **0**                                         |
+
+---
+
+## 🛡️ Sprint PR Report CI — Correção de 6 Gaps na Cadeia CI/Runtime (Jun/2026)
+
+**Data:** 2026-06-14
+**Origem:** Auditoria adversarial (senior-auditor) + complemento manual de 3 gaps adicionais. A funcionalidade PR Report estava estruturalmente não-funcional em CI: dados parciais, resultados invisíveis, métricas não persistem.
+**Estratégia:** Corrigir 6 gaps na ordem de impacto:
+
+1. CTRF sobrescrito por e2e (dados errados)
+2. PR comment nunca posta (resultado invisível)
+3. Matrix roda post-processing 2× (duplicação + race)
+4. Coverage 0% em Node 24 (quality gate falso-negativo)
+5. Flaky rate usa denominador errado (métrica sem sentido)
+6. `isCtrfFormat` não rejeita `summary: null` (type confusion)
+   **Regra absoluta:** zero workarounds, 100% teste, zero débito.
+
+### Auditoria Adicional — Problemas Detectados Além do Relatório do Senior Auditor
+
+A auditoria automatizada (senior-auditor) identificou 10 problemas. Após solicitação de verificação exaustiva complementar, foram encontrados adicionalmente:
+
+| #     | Gap                                                                           | Severidade | Arquivo                         | Descoberta                                                                                                                                                                                    |
+| ----- | ----------------------------------------------------------------------------- | ---------- | ------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| GAP-3 | `GitStoreBackend.flush()` nunca chamado por `saveMetrics()`                   | HIGH       | `shared/metrics.ts`             | Análise de fluxo: `saveParseResult()` → `saveRunMetrics()` → `saveMetrics()` → `backend.write()` — nenhum caller invoca `flush()`. Dados escritos em disco mas nunca commitados no git.       |
+| GAP-4 | `coverage/coverage-summary.json` não gerado em Node 24 (sem `--coverage`)     | HIGH       | `.github/workflows/ci.yml`      | Matriz 22/24: Node 22 roda `vitest run --coverage`, Node 24 roda `vitest run` sem coverage. `resolveCoverage()` retorna `undefined`, health score usa `coverageHistory` vazio → coverage = 0. |
+| GAP-5 | `metrics/global.json` versionado no repositório contamina CI com dados de dev | MEDIUM     | `.qa-tools/metrics/global.json` | Arquivo existe no git com runs de desenvolvimento local (`duration: 18.88` em segundos). CI carrega estes dados históricos distorcendo health score, flaky detection e trends.                |
+
+**Metodologia da auditoria complementar:**
+
+1. **Análise de grafo de dependências:** traçar todas as chamadas de `backend.write()` → constatar que `flush()` nunca é reachable.
+2. **Rastreamento de variáveis de ambiente:** verificar cada `process.env['...']` contra documentação do GitHub Actions → constatar que `GITHUB_PR_NUMBER` não é padrão.
+3. **Verificação de imports cruzados:** todos os 18 imports em `report-html.ts` foram verificados (existência do módulo, nome do export, signature) — 0 quebras.
+4. **Teste empírico do self-exec guard:** executar `npx tsx script.ts` e inspecionar `process.argv[1]` → confirmar que guard funciona com tsx 4.x.
+5. **Verificação de permissões de token:** simular fluxo de fork PR no GitHub API docs → constatar que `checks: write` não é efetivo para fork PRs.
+6. **Análise de cobertura de branches:** verificar todas as cláusulas `if/else` e `catch` em `main()` e `generatePrReport()` para paths não cobertos.
+7. **Verificação de race conditions:** identificar recursos compartilhados entre jobs paralelos da matrix (CTRF, metrics, coverage) — 3 races encontradas.
+
+### Plano de Correção
+
+| ID    | Gap                                                  | Ação                                                                           | Arquivos                                                                         | Prioridade |
+| ----- | ---------------------------------------------------- | ------------------------------------------------------------------------------ | -------------------------------------------------------------------------------- | ---------- |
+| CI-01 | BUG-1: CTRF sobrescrito pelo e2e                     | Adicionar env var `CTRF_OUTPUT_FILE` no reporter + e2e usar caminho separado   | `shared/vitest-ctrf-reporter.ts`, `.github/workflows/ci.yml`, `vitest.config.ts` | CRITICAL   |
+| CI-02 | BUG-2: PR comment nunca posta                        | `resolvePrNumber()` parsear `GITHUB_REF` como fallback                         | `shared/github-pr-comment.ts`                                                    | HIGH       |
+| CI-03 | GAP-1: Matrix roda post-processing 2×                | `if: matrix.node-version == 22` no step + fix CTRF overwrite                   | `.github/workflows/ci.yml`                                                       | HIGH       |
+| CI-04 | GAP-2/GAP-4: Coverage 0% Node 24                     | Post-processing só em Node 22 (tem `--coverage`)                               | `.github/workflows/ci.yml`                                                       | HIGH       |
+| CI-05 | BUG-4: Flaky rate denominator errado                 | Corrigir `flakyPct = flakyEntries.length / runs.length` → usar total de testes | `shared/quality-gate.ts`                                                         | MEDIUM     |
+| CI-06 | BUG-6: `isCtrfFormat` com `typeof null === 'object'` | Adicionar `summary !== null`                                                   | `shared/result_parser.ts`                                                        | LOW        |
+
+### Testes
+
+| ID    | O que testar                                                       | Arquivo                                         |
+| ----- | ------------------------------------------------------------------ | ----------------------------------------------- |
+| CT-01 | CTRF reporter com env var override gera caminho customizado        | `shared/__tests__/vitest-ctrf-reporter.test.ts` |
+| CT-02 | `resolvePrNumber()` parseia `GITHUB_REF` corretamente              | `shared/__tests__/github-pr-comment.test.ts`    |
+| CT-03 | `quality-gate.ts` flaky rate usa total de testes como denominador  | `shared/quality-gate.test.ts`                   |
+| CT-04 | `isCtrfFormat` rejeita `{ results: { tests: [], summary: null } }` | `shared/__tests__/result_parser.test.ts`        |
+| CT-05 | E2E: CI workflow injeta step com e2e CTRF separado                 | `setup/templates/github-ci.test.ts`             |
