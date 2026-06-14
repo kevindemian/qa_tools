@@ -1,23 +1,58 @@
 /**
  * GitHub Actions CI pipeline template generator.
  *
- * Generates a `.github/workflows/qa.yml` file that:
+ * Generates a complete `.github/workflows/ci.yml` file that:
  * 1. Checks out code and installs dependencies
  * 2. Runs tests (with CTRF reporter if configured)
  * 3. Uploads the CTRF report as a CI artifact
- * 4. Runs QA Tools post-processing (PR report via pr-report.ts)
+ * 4. Runs QA Tools post-processing (PR report via pr-report-core.ts)
  *
- * For within-CI post-processing on GitHub Actions, we use scripts/pr-report.ts
+ * For within-CI post-processing on GitHub Actions, we use shared/pr-report-core.ts
  * directly (which reads CTRF from the filesystem in the same job) rather than
  * git_triggers/main.ts --batch (which is designed for local/interactive use and
  * would trigger a new workflow via API, causing an infinite loop).
+ *
+ * When the CI already exists (ci.yml), the wizard uses the composite action
+ * (qa-action.ts) instead and injects a uses: step into the existing workflow.
  */
 import { WorkflowBuilder, type JobConfig, type StepConfig } from '../builder/workflow-builder.js';
 import type { SetupContext } from '../context.js';
 
-export function generateGitHubActions(ctx: SetupContext): string {
+function generateQaPostProcessActionYaml(): string {
+    return [
+        'name: QA Tools Post-Process',
+        'description: Run QA Tools post-processing on test results',
+        'inputs:',
+        '  ctrf-path:',
+        '    description: Path to CTRF report JSON',
+        '    required: false',
+        '    default: reports/ctrf-report.json',
+        '  project-name:',
+        '    description: Project name for feature config lookup',
+        '    required: true',
+        'runs:',
+        '  using: composite',
+        '  steps:',
+        '    - name: Run QA Tools Post-Processing',
+        '      shell: bash',
+        '      working-directory: ${{ github.workspace }}',
+        '      run: npx tsx shared/pr-report-core.ts --ctrf ${{ inputs.ctrf-path }} --project ${{ inputs.project-name }}',
+        '      env:',
+        '        GITHUB_TOKEN: ${{ github.token }}',
+    ].join('\n');
+}
+
+export function generateQaPostProcessAction(): string {
+    return generateQaPostProcessActionYaml();
+}
+
+/**
+ * Generate a complete CI workflow for a GitHub project.
+ * Used when no ci.yml exists yet.
+ */
+export function generateCIWorkflow(ctx: SetupContext): string {
     const builder = new WorkflowBuilder('github', ctx.projectName);
-    builder.setWorkflowName('QA Pipeline');
+    builder.setWorkflowName('CI');
     builder.setOn(['push', 'pull_request', 'workflow_dispatch']);
 
     const checkoutStep: StepConfig = { uses: 'actions/checkout@v4' };
@@ -39,25 +74,14 @@ export function generateGitHubActions(ctx: SetupContext): string {
 
     const testSteps: StepConfig[] = [checkoutStep, setupNodeStep, installStep, testStep, uploadStep];
 
-    if (ctx.features.jiraIntegration || ctx.features.aiFailureAnalysis || ctx.features.flakinessDashboard) {
-        const postStepEnv: Record<string, string> = {};
-        if (ctx.gitProvider === 'github') {
-            postStepEnv['GITHUB_TOKEN'] = '${{ secrets.GITHUB_TOKEN }}';
-        }
-        const postCmd = [
-            'npx tsx scripts/pr-report.ts',
-            ctx.features.aiFailureAnalysis ? '' : '--no-ai',
-            ctx.features.flakinessDashboard ? '' : '--no-flaky',
-            ctx.features.jiraIntegration ? '' : '--no-quality',
-            `--ctrf ${ctx.ctrfReportPath}`,
-        ]
-            .filter(Boolean)
-            .join(' ');
+    if (ctx.features.prReport) {
         testSteps.push({
             name: 'QA Tools Post-Processing',
             if: 'always()',
-            run: postCmd,
-            ...(Object.keys(postStepEnv).length > 0 ? { env: postStepEnv } : {}),
+            uses: './.github/actions/qa-post-process',
+            with: {
+                'project-name': ctx.projectName,
+            },
         });
     }
 

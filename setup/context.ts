@@ -22,9 +22,11 @@ export interface SetupContext {
     repoName: string;
     workflowDir: string;
     features: {
-        jiraIntegration: boolean;
+        qualityGate: boolean;
         flakinessDashboard: boolean;
         aiFailureAnalysis: boolean;
         prePushHook: boolean;
+        prReport: boolean;
+        prReportPublishTarget: string;
     };
 }

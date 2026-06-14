@@ -19,6 +19,7 @@ import { analyzeTestImpact, generateTestSelectionJson } from '../shared/test-imp
 import { offerPipelineFailureAnalysis } from './llm-pipeline.js';
 import { collectTestResults as _collectTestResults } from './test-results.js';
 import { generatePrReport } from '../shared/pr-report-core.js';
+import { isPrReportEnabled, getPrReportConfig } from '../shared/feature-config.js';
 import type { PipelineTriggerResult } from '../shared/types.js';
 import Config from '../shared/config.js';
 import JiraClient from '../shared/jira-client.js';
@@ -160,7 +161,9 @@ async function _collectPipelineResults(
         });
         if (parsed) {
             await offerPipelineFailureAnalysis(parsed);
-            if (process.env['GITHUB_TOKEN']) {
+            const prReportEnabled = isPrReportEnabled(projectName);
+            if (process.env['GITHUB_TOKEN'] && prReportEnabled) {
+                const prConfig = getPrReportConfig(projectName);
                 try {
                     const reportResult = await generatePrReport({
                         tests: parsed.tests,
@@ -171,6 +174,9 @@ async function _collectPipelineResults(
                             total: parsed.stats.total,
                             duration: parsed.stats.duration,
                         },
+                        skipAi: prConfig.skipAi ?? false,
+                        skipQuality: prConfig.skipQuality ?? false,
+                        skipFlaky: prConfig.skipFlaky ?? false,
                         htmlOutputPath: 'reports/pr-report.html',
                     });
                     if (reportResult.htmlPath) {

@@ -1,6 +1,7 @@
 import fs from 'fs';
 import path from 'path';
 import type { SetupContext } from './context.js';
+import { setPrReportConfig } from '../shared/feature-config.js';
 
 interface WriterResult {
     filesCreated: string[];
@@ -128,5 +129,18 @@ exit 0
     fs.writeFileSync(hookPath, script, 'utf8');
     fs.chmodSync(hookPath, 0o755);
     result.filesCreated.push(hookPath);
+    return result;
+}
+
+export function writeFeaturesConfig(ctx: SetupContext): WriterResult {
+    const result: WriterResult = { filesCreated: [], filesSkipped: [] };
+    if (!ctx.features.prReport) {
+        return result;
+    }
+    setPrReportConfig(ctx.projectName, {
+        enabled: true,
+        publishTarget: ctx.features.prReportPublishTarget as 'github-actions' | 'gitlab-ci',
+    });
+    result.filesCreated.push('config/features.json');
     return result;
 }

@@ -110,6 +110,7 @@ import { analyzeCoverageGaps } from '../shared/coverage-gap.js';
 import { generateGitMetricsRuns, generateGitFailureClassifications } from '../shared/git-metrics-adapter.js';
 import { handleHelp as _handleHelp, handleShowHistory as _handleShowHistory } from './ui-helpers.js';
 import { handleSetupWizard as _handleSetupWizard } from './case00-handler.js';
+import { handlePrReportReconfig } from './pr-report-setup-handler.js';
 import { showDocs } from '../shared/show-docs.js';
 import { showDashboardMenu } from '../shared/dashboard-menu.js';
 import type { DashboardDef } from '../shared/dashboard-menu.js';
@@ -649,6 +650,10 @@ const ACTION_HANDLERS: Record<string, (m: GitProvider, pn: string, ns: string[])
                 'Funções: generateGitMetricsRuns() e generateGitFailureClassifications().\n' +
                 'Usado automaticamente quando não há dados de pipeline (menos de 2 execuções).',
         );
+        return Promise.resolve(false);
+    },
+    f: () => {
+        handlePrReportReconfig();
         return Promise.resolve(false);
     },
     g: withErrorHandling((m) => handleBugReportFlow(m)),

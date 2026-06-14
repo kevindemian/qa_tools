@@ -1,0 +1,11 @@
+{
+    "qa_tools": {
+        "gitProvider": "github",
+        "features": {
+            "prReport": {
+                "enabled": true,
+                "publishTarget": "github-actions"
+            }
+        }
+    }
+}
