@@ -1,86 +1,88 @@
 import { describe, expect, it, vi, beforeEach } from 'vitest';
-import { handlePrReportReconfig } from '../pr-report-setup-handler.js';
 
-const mockGetPrReportConfig = vi.fn();
-const mockSetPrReportConfig = vi.fn();
-const mockPromptConfirm = vi.fn();
-const mockAsk = vi.fn();
-const mockInfo = vi.fn();
-const mockSuccess = vi.fn();
-const mockTitle = vi.fn();
-const mockDivider = vi.fn();
-const mockPushHistory = vi.fn();
-
-let mockCurrentProjectName = 'test-project';
+const mocks = vi.hoisted(() => ({
+    mockGetPrReportConfig: vi.fn(),
+    mockSetPrReportConfig: vi.fn(),
+    mockPromptConfirm: vi.fn(),
+    mockAsk: vi.fn(),
+    mockInfo: vi.fn(),
+    mockSuccess: vi.fn(),
+    mockTitle: vi.fn(),
+    mockDivider: vi.fn(),
+    mockPushHistory: vi.fn(),
+    mockCurrentProjectName: 'test-project',
+}));
 
 vi.mock('../../shared/feature-config.js', () => ({
-    getPrReportConfig: mockGetPrReportConfig,
-    setPrReportConfig: mockSetPrReportConfig,
+    getPrReportConfig: mocks.mockGetPrReportConfig,
+    setPrReportConfig: mocks.mockSetPrReportConfig,
 }));
 
 vi.mock('../../shared/prompt.js', () => ({
-    confirm: mockPromptConfirm,
-    prompt: mockAsk,
-    info: mockInfo,
-    success: mockSuccess,
-    title: mockTitle,
-    divider: mockDivider,
+    confirm: mocks.mockPromptConfirm,
+    prompt: mocks.mockAsk,
+    info: mocks.mockInfo,
+    success: mocks.mockSuccess,
+    title: mocks.mockTitle,
+    divider: mocks.mockDivider,
 }));
 
 vi.mock('../session-state.js', () => ({
-    pushHistory: mockPushHistory,
+    pushHistory: mocks.mockPushHistory,
     get currentProjectName() {
-        return mockCurrentProjectName;
+        return mocks.mockCurrentProjectName;
     },
 }));
 
+import { handlePrReportReconfig } from '../pr-report-setup-handler.js';
+
 beforeEach(() => {
     vi.clearAllMocks();
-    mockCurrentProjectName = 'test-project';
+    mocks.mockCurrentProjectName = 'test-project';
 });
 
 describe('handlePrReportReconfig', () => {
     it('shows warning when no project is selected', () => {
-        mockCurrentProjectName = '';
+        mocks.mockCurrentProjectName = '';
 
         handlePrReportReconfig();
 
-        expect(mockInfo).toHaveBeenCalledWith('Nenhum projeto selecionado. Use "Trocar de projeto" primeiro.');
-        expect(mockSetPrReportConfig).not.toHaveBeenCalled();
+        expect(mocks.mockInfo).toHaveBeenCalledWith('Nenhum projeto selecionado. Use "Trocar de projeto" primeiro.');
+        expect(mocks.mockSetPrReportConfig).not.toHaveBeenCalled();
     });
 
     it('displays current configuration', () => {
-        mockGetPrReportConfig.mockReturnValue({
+        mocks.mockGetPrReportConfig.mockReturnValue({
             enabled: false,
             publishTarget: 'github-actions',
         });
 
         handlePrReportReconfig();
 
-        expect(mockTitle).toHaveBeenCalledWith('Configuração do PR Report');
-        expect(mockInfo).toHaveBeenCalledWith('  Habilitado: Não');
-        expect(mockInfo).toHaveBeenCalledWith('  Target:     github-actions');
-        expect(mockDivider).toHaveBeenCalled();
+        expect(mocks.mockTitle).toHaveBeenCalledWith('Configuração do PR Report');
+        expect(mocks.mockInfo).toHaveBeenCalledWith('  Habilitado: Não');
+        expect(mocks.mockInfo).toHaveBeenCalledWith('  Target:     github-actions');
+        expect(mocks.mockDivider).toHaveBeenCalled();
     });
 
     it('disables PR Report when user declines', () => {
-        mockGetPrReportConfig.mockReturnValue({
+        mocks.mockGetPrReportConfig.mockReturnValue({
             enabled: true,
             publishTarget: 'github-actions',
         });
-        mockPromptConfirm.mockReturnValueOnce(false);
+        mocks.mockPromptConfirm.mockReturnValueOnce(false);
 
         handlePrReportReconfig();
 
-        expect(mockSetPrReportConfig).toHaveBeenCalledWith('test-project', {
+        expect(mocks.mockSetPrReportConfig).toHaveBeenCalledWith('test-project', {
             enabled: false,
             publishTarget: 'github-actions',
             skipAi: false,
             skipQuality: false,
             skipFlaky: false,
         });
-        expect(mockSuccess).toHaveBeenCalledWith('Configuração do PR Report salva em config/features.json.');
-        expect(mockPushHistory).toHaveBeenCalledWith(
+        expect(mocks.mockSuccess).toHaveBeenCalledWith('Configuração do PR Report salva em config/features.json.');
+        expect(mocks.mockPushHistory).toHaveBeenCalledWith(
             'pr-report-reconfig',
             'PR Report: desativado, target: github-actions',
             'ok',
@@ -88,20 +90,20 @@ describe('handlePrReportReconfig', () => {
     });
 
     it('enables PR Report and asks for target and sub-features', () => {
-        mockGetPrReportConfig.mockReturnValue({
+        mocks.mockGetPrReportConfig.mockReturnValue({
             enabled: false,
             publishTarget: 'github-actions',
         });
-        mockPromptConfirm
+        mocks.mockPromptConfirm
             .mockReturnValueOnce(true)
             .mockReturnValueOnce(false)
             .mockReturnValueOnce(false)
             .mockReturnValueOnce(false);
-        mockAsk.mockReturnValue('gitlab-ci');
+        mocks.mockAsk.mockReturnValue('gitlab-ci');
 
         handlePrReportReconfig();
 
-        expect(mockSetPrReportConfig).toHaveBeenCalledWith('test-project', {
+        expect(mocks.mockSetPrReportConfig).toHaveBeenCalledWith('test-project', {
             enabled: true,
             publishTarget: 'gitlab-ci',
             skipAi: false,
@@ -111,20 +113,20 @@ describe('handlePrReportReconfig', () => {
     });
 
     it('enables PR Report with all sub-features skipped', () => {
-        mockGetPrReportConfig.mockReturnValue({
+        mocks.mockGetPrReportConfig.mockReturnValue({
             enabled: false,
             publishTarget: 'github-actions',
         });
-        mockPromptConfirm
+        mocks.mockPromptConfirm
             .mockReturnValueOnce(true)
             .mockReturnValueOnce(true)
             .mockReturnValueOnce(true)
             .mockReturnValueOnce(true);
-        mockAsk.mockReturnValue('github-actions');
+        mocks.mockAsk.mockReturnValue('github-actions');
 
         handlePrReportReconfig();
 
-        expect(mockSetPrReportConfig).toHaveBeenCalledWith('test-project', {
+        expect(mocks.mockSetPrReportConfig).toHaveBeenCalledWith('test-project', {
             enabled: true,
             publishTarget: 'github-actions',
             skipAi: true,
@@ -134,20 +136,20 @@ describe('handlePrReportReconfig', () => {
     });
 
     it('validates publish target: invalid input falls back to github-actions', () => {
-        mockGetPrReportConfig.mockReturnValue({
+        mocks.mockGetPrReportConfig.mockReturnValue({
             enabled: true,
             publishTarget: 'gitlab-ci',
         });
-        mockPromptConfirm
+        mocks.mockPromptConfirm
             .mockReturnValueOnce(true)
             .mockReturnValueOnce(false)
             .mockReturnValueOnce(false)
             .mockReturnValueOnce(false);
-        mockAsk.mockReturnValue('invalid-target');
+        mocks.mockAsk.mockReturnValue('invalid-target');
 
         handlePrReportReconfig();
 
-        expect(mockSetPrReportConfig).toHaveBeenCalledWith('test-project', {
+        expect(mocks.mockSetPrReportConfig).toHaveBeenCalledWith('test-project', {
             enabled: true,
             publishTarget: 'github-actions',
             skipAi: false,
@@ -157,18 +159,18 @@ describe('handlePrReportReconfig', () => {
     });
 
     it('preserves current config when sub-feature prompts not asked (disabled)', () => {
-        mockGetPrReportConfig.mockReturnValue({
+        mocks.mockGetPrReportConfig.mockReturnValue({
             enabled: true,
             publishTarget: 'github-actions',
             skipAi: true,
             skipQuality: false,
             skipFlaky: true,
         });
-        mockPromptConfirm.mockReturnValueOnce(false);
+        mocks.mockPromptConfirm.mockReturnValueOnce(false);
 
         handlePrReportReconfig();
 
-        expect(mockSetPrReportConfig).toHaveBeenCalledWith('test-project', {
+        expect(mocks.mockSetPrReportConfig).toHaveBeenCalledWith('test-project', {
             enabled: false,
             publishTarget: 'github-actions',
             skipAi: true,
@@ -178,20 +180,20 @@ describe('handlePrReportReconfig', () => {
     });
 
     it('uses defaults for sub-features when current config is undefined', () => {
-        mockGetPrReportConfig.mockReturnValue({
+        mocks.mockGetPrReportConfig.mockReturnValue({
             enabled: true,
             publishTarget: 'github-actions',
         });
-        mockPromptConfirm
+        mocks.mockPromptConfirm
             .mockReturnValueOnce(true)
             .mockReturnValueOnce(false)
             .mockReturnValueOnce(false)
             .mockReturnValueOnce(false);
-        mockAsk.mockReturnValue('github-actions');
+        mocks.mockAsk.mockReturnValue('github-actions');
 
         handlePrReportReconfig();
 
-        expect(mockSetPrReportConfig).toHaveBeenCalledWith('test-project', {
+        expect(mocks.mockSetPrReportConfig).toHaveBeenCalledWith('test-project', {
             enabled: true,
             publishTarget: 'github-actions',
             skipAi: false,
