@@ -25,6 +25,7 @@
  */
 
 import fs from 'node:fs';
+import path from 'node:path';
 import { rootLogger } from '../shared/logger.js';
 import { postPrComment } from '../shared/github-pr-comment.js';
 import { parseTestResultsFile, type ParseResult, type FlatTest } from '../shared/result_parser.js';
@@ -43,6 +44,7 @@ import { resolveCoverage } from '../shared/coverage-source.js';
 
 interface CliOptions {
     ctrfPath: string;
+    htmlOutputPath?: string;
     skipAi: boolean;
     skipQuality: boolean;
     skipFlaky: boolean;
@@ -59,6 +61,12 @@ function parseArgs(args: string[]): CliOptions {
         switch (args[i]) {
             case '--ctrf':
                 opts.ctrfPath = args[++i] ?? opts.ctrfPath;
+                break;
+            case '--html-output':
+                {
+                    const v = args[++i];
+                    if (v !== undefined) opts.htmlOutputPath = v;
+                }
                 break;
             case '--no-ai':
                 opts.skipAi = true;
@@ -405,9 +413,10 @@ export async function main(): Promise<void> {
     };
 
     const html = generateHtmlReport(result.tests, htmlOptions);
-    fs.mkdirSync('reports', { recursive: true });
-    fs.writeFileSync('reports/pr-report.html', html, 'utf8');
-    rootLogger.info(`HTML report generated: reports/pr-report.html (${html.length} bytes)`);
+    const htmlOutputPath = opts.htmlOutputPath ?? 'reports/pr-report.html';
+    fs.mkdirSync(path.dirname(htmlOutputPath), { recursive: true });
+    fs.writeFileSync(htmlOutputPath, html, 'utf8');
+    rootLogger.info(`HTML report generated: ${htmlOutputPath} (${html.length} bytes)`);
 
     // 7. Footer
     sections.push(buildFooter(artifactUrl, workflowUrl));

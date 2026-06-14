@@ -433,6 +433,7 @@ function buildFooter(
 
 interface CliOptions {
     ctrfPath: string;
+    htmlOutputPath?: string;
     skipAi: boolean;
     skipQuality: boolean;
     skipFlaky: boolean;
@@ -457,6 +458,7 @@ function parseArgs(args: string[]): CliOptions {
                         '',
                         'Opções:',
                         '  --ctrf <path>          Caminho do CTRF (default: reports/ctrf-report.json)',
+                        '  --html-output <path>   Caminho do HTML (default: reports/pr-report.html)',
                         '  --project <name>       Nome do projeto (default: GITHUB_REPOSITORY env)',
                         '  --no-ai                Pular análise de IA',
                         '  --no-quality           Pular quality gate',
@@ -468,6 +470,12 @@ function parseArgs(args: string[]): CliOptions {
                 break;
             case '--ctrf':
                 opts.ctrfPath = args[++i] ?? opts.ctrfPath;
+                break;
+            case '--html-output':
+                {
+                    const v = args[++i];
+                    if (v !== undefined) opts.htmlOutputPath = v;
+                }
                 break;
             case '--project':
                 opts.projectName = args[++i] ?? opts.projectName;
@@ -543,6 +551,7 @@ export async function main(): Promise<void> {
         skipAi,
         skipQuality,
         skipFlaky,
+        ...(opts.htmlOutputPath ? { htmlOutputPath: opts.htmlOutputPath } : {}),
         ...(diffComparison ? { diffComparison } : {}),
     });
 
