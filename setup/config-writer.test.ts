@@ -1,9 +1,14 @@
 import fs from 'fs';
 import path from 'path';
-import { writeProjectsConfig, writeDotEnvExample } from './config-writer.js';
+import { writeProjectsConfig, writeDotEnvExample, writeFeaturesConfig } from './config-writer.js';
 
 vi.mock('fs');
 const MockFs = vi.mocked(fs);
+
+const mockSetPrReportConfig = vi.hoisted(() => vi.fn());
+vi.mock('../shared/feature-config.js', () => ({
+    setPrReportConfig: mockSetPrReportConfig,
+}));
 
 describe('writeProjectsConfig', () => {
     beforeEach(() => {
@@ -97,5 +102,101 @@ describe('writeDotEnvExample', () => {
         const result = writeDotEnvExample({ projectName: 'myapp', gitProvider: 'github' });
         expect(result.filesSkipped.length).toBe(1);
         expect(MockFs.writeFileSync).not.toHaveBeenCalled();
+    });
+});
+
+describe('writeFeaturesConfig', () => {
+    beforeEach(() => {
+        vi.clearAllMocks();
+        mockSetPrReportConfig.mockClear();
+    });
+
+    it('returns empty result when prReport is disabled', () => {
+        const ctx = {
+            projectName: 'myapp',
+            features: {
+                prReport: false,
+                prReportPublishTarget: 'github-actions',
+                qualityGate: true,
+                flakinessDashboard: true,
+                aiFailureAnalysis: true,
+                prePushHook: false,
+            },
+        } as Parameters<typeof writeFeaturesConfig>[0];
+
+        const result = writeFeaturesConfig(ctx);
+        expect(result.filesCreated).toHaveLength(0);
+        expect(result.filesSkipped).toHaveLength(0);
+        expect(mockSetPrReportConfig).not.toHaveBeenCalled();
+    });
+
+    it('calls setPrReportConfig with correct args when prReport enabled', () => {
+        const ctx = {
+            projectName: 'myapp',
+            features: {
+                prReport: true,
+                prReportPublishTarget: 'github-actions',
+                qualityGate: true,
+                flakinessDashboard: true,
+                aiFailureAnalysis: true,
+                prePushHook: false,
+            },
+        } as Parameters<typeof writeFeaturesConfig>[0];
+
+        const result = writeFeaturesConfig(ctx);
+        expect(result.filesCreated).toContain('config/features.json');
+        expect(mockSetPrReportConfig).toHaveBeenCalledWith('myapp', {
+            enabled: true,
+            publishTarget: 'github-actions',
+            skipAi: false,
+            skipQuality: false,
+            skipFlaky: false,
+        });
+    });
+
+    it('persists inverted skip flags correctly', () => {
+        const ctx = {
+            projectName: 'myapp',
+            features: {
+                prReport: true,
+                prReportPublishTarget: 'gitlab-ci',
+                qualityGate: false,
+                flakinessDashboard: false,
+                aiFailureAnalysis: false,
+                prePushHook: false,
+            },
+        } as Parameters<typeof writeFeaturesConfig>[0];
+
+        writeFeaturesConfig(ctx);
+        expect(mockSetPrReportConfig).toHaveBeenCalledWith('myapp', {
+            enabled: true,
+            publishTarget: 'gitlab-ci',
+            skipAi: true,
+            skipQuality: true,
+            skipFlaky: true,
+        });
+    });
+
+    it('handles mixed skip flags correctly', () => {
+        const ctx = {
+            projectName: 'myapp',
+            features: {
+                prReport: true,
+                prReportPublishTarget: 'github-actions',
+                qualityGate: true,
+                flakinessDashboard: false,
+                aiFailureAnalysis: true,
+                prePushHook: false,
+            },
+        } as Parameters<typeof writeFeaturesConfig>[0];
+
+        writeFeaturesConfig(ctx);
+        expect(mockSetPrReportConfig).toHaveBeenCalledWith('myapp', {
+            enabled: true,
+            publishTarget: 'github-actions',
+            skipAi: false,
+            skipQuality: false,
+            skipFlaky: true,
+        });
     });
 });

@@ -140,6 +140,10 @@ export function writeFeaturesConfig(ctx: SetupContext): WriterResult {
     setPrReportConfig(ctx.projectName, {
         enabled: true,
         publishTarget: ctx.features.prReportPublishTarget as 'github-actions' | 'gitlab-ci',
+        // Persist skip flags — when feature is disabled, skip it in runtime
+        skipAi: !ctx.features.aiFailureAnalysis,
+        skipQuality: !ctx.features.qualityGate,
+        skipFlaky: !ctx.features.flakinessDashboard,
     });
     result.filesCreated.push('config/features.json');
     return result;

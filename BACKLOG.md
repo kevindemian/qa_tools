@@ -3,6 +3,163 @@
 > ⚠️ Sprints anteriores a esta estão **concluídos**. Movidos para `BACKLOG-historico.md`.
 > Consulte os históricos para detalhes de sprints passados.
 
+## 🐛 Sprint PR Report Fix — Correção da Causa Raiz do PR Report (Jun/2026)
+
+**Data:** 2026-06-14
+**Origem:** PR Report não gera report no CI. Causa raiz: `config/features.json` não existe, `feature-config.test.ts` opera no arquivo real sem cleanup, setup wizard não persiste sub-features.
+**Estratégia:** 5 fases — criar config → corrigir testes → atualizar wizard → rodar testes → auditoria completa.
+**Regra absoluta:** zero workarounds, 100% teste para código novo, deletar código obsoleto, nenhum débito deixado.
+
+| Fase | Descrição                                                      | Itens         | Status |
+| ---- | -------------------------------------------------------------- | ------------- | ------ |
+| 1    | Criar `config/features.json` com configuração para qa_tools    | PRFIX-1a      | ✅     |
+| 2    | Corrigir `feature-config.test.ts` — tmp dir + afterEach        | PRFIX-2a a 2c | ✅     |
+| 3    | Atualizar `setup/config-writer.ts` para persistir sub-features | PRFIX-3a      | ✅     |
+| 4    | Rodar testes e validar (vitest, tsc, lint)                     | PRFIX-4a a 4c | ✅     |
+| 5    | Auditoria completa da funcionalidade + testes 100% cobertura   | PRFIX-5a a 5c | ✅     |
+
+### Fase 1 — Criar `config/features.json`
+
+| ID       | Item                                                              | Arquivo                | Status |
+| -------- | ----------------------------------------------------------------- | ---------------------- | ------ |
+| PRFIX-1a | 🔧 Criar `config/features.json` com entrada `qa_tools` habilitada | `config/features.json` | ✅     |
+
+### Fase 2 — Corrigir `feature-config.test.ts`
+
+| ID       | Item                                                                | Arquivo                                   | Status |
+| -------- | ------------------------------------------------------------------- | ----------------------------------------- | ------ |
+| PRFIX-2a | ♻️ Usar diretório temporário (`os.tmpdir()`) em vez de project root | `shared/__tests__/feature-config.test.ts` | ✅     |
+| PRFIX-2b | 🔧 Adicionar `afterEach` para limpar diretório temporário           | `shared/__tests__/feature-config.test.ts` | ✅     |
+| PRFIX-2c | 📋 Verificar que nenhum arquivo real é afetado pelos testes         | `shared/__tests__/feature-config.test.ts` | ✅     |
+
+### Fase 3 — Atualizar `setup/config-writer.ts`
+
+| ID       | Item                                                                                              | Arquivo                  | Status |
+| -------- | ------------------------------------------------------------------------------------------------- | ------------------------ | ------ |
+| PRFIX-3a | ✨ Persistir `skipAi`, `skipQuality`, `skipFlaky` no `features.json` quando `prReport` habilitado | `setup/config-writer.ts` | ✅     |
+
+### Fase 4 — Rodar testes e validar
+
+| ID       | Item                  | Critério  | Status |
+| -------- | --------------------- | --------- | ------ |
+| PRFIX-4a | 🔧 `npx vitest run`   | 100% pass | ✅     |
+| PRFIX-4b | 🔧 `npx tsc --noEmit` | 0 erros   | ✅     |
+| PRFIX-4c | 🔧 `npm run lint`     | 0 erros   | ✅     |
+
+### Fase 5 — Auditoria completa
+
+| ID       | Item                                                       | Arquivo                                   | Status |
+| -------- | ---------------------------------------------------------- | ----------------------------------------- | ------ |
+| PRFIX-5a | 🔧 Verificar conexão: wizard → config → runtime → CI       | —                                         | ✅     |
+| PRFIX-5b | 🔧 Verificar menu: PR Report configurável via git_triggers | —                                         | ✅     |
+| PRFIX-5c | 🔧 Testes com cobertura 100% para paths corrigidos         | `shared/__tests__/feature-config.test.ts` | ✅     |
+
+### Métricas Alvo
+
+| Métrica                                  | Alvo          |
+| ---------------------------------------- | ------------- |
+| `config/features.json` existe            | **sim**       |
+| `feature-config.test.ts` usa tmp dir     | **sim**       |
+| `feature-config.test.ts` tem cleanup     | **sim**       |
+| `config-writer.ts` persiste sub-features | **sim**       |
+| `tsc --noEmit`                           | **0 erros**   |
+| `vitest run`                             | **100% pass** |
+| `npm run lint`                           | **0 erros**   |
+| Cobertura feature-config.test.ts         | **100%**      |
+
+---
+
+## 🔍 Sprint Auditoria Sistêmica — Verificação Completa de Implementação e Testes (Jun/2026)
+
+**Data:** 2026-06-14
+**Origem:** Descoberta em Sprint PR Report Fix — `feature-config.test.ts` operava no arquivo real do projeto sem isolamento. Necessário verificar se o mesmo padrão problemático existe em outras funcionalidades. Auditoria de 4 dimensões: isolamento de testes, robustez, boas práticas, implementação ótima.
+**Estratégia:** 3 fases — varredura automatizada → auditoria manual por feature → correção.
+**Regra absoluta:** uma feature por vez, registrar todo achado, corrigir antes de avançar.
+
+| Fase | Descrição                                                            | Itens      | Status |
+| ---- | -------------------------------------------------------------------- | ---------- | ------ |
+| 1    | Varredura automatizada: identificar testes que afetam arquivos reais | SA-1a a 1c | 🔜     |
+| 2    | Auditoria manual: 4 dimensões por feature (13 features mapeadas)     | SA-2a a 2n | 🔜     |
+| 3    | Correção: isolar testes, corrigir implementações conforme achados    | SA-3a a 3n | 🔜     |
+
+### Fase 1 — Varredura Automatizada de Isolamento
+
+**Objetivo:** Identificar automaticamente todos os arquivos de teste que possivelmente afetam o filesystem real do projeto.
+
+| ID    | Item                                                                 | Critério                                  | Status |
+| ----- | -------------------------------------------------------------------- | ----------------------------------------- | ------ |
+| SA-1a | 🔍 Buscar `fs.rmSync`, `fs.unlinkSync`, `fs.writeFileSync` em testes | Listar todos os arquivos com operações fs | 🔜     |
+| SA-1b | 🔍 Classificar: tmp dir ✅ / project root ❌ / mock ✅               | Para cada arquivo, classificar isolamento | 🔜     |
+| SA-1c | 📋 Registrar resultado em backlog                                    | Tabela consolidada de achados             | 🔜     |
+
+### Fase 2 — Auditoria Manual por Feature (4 Dimensões)
+
+Para cada feature: ler código fonte + teste, aplicar 4 dimensões, registrar achados.
+
+**Features mapeadas (13):**
+
+| #   | Feature          | Módulo Fonte                       | Arquivo de Teste                          | Status |
+| --- | ---------------- | ---------------------------------- | ----------------------------------------- | ------ |
+| 1   | feature-config   | `shared/feature-config.ts`         | `shared/__tests__/feature-config.test.ts` | ✅     |
+| 2   | metrics          | `shared/metrics.ts`                | `shared/__tests__/metrics.test.ts`        | 🔜     |
+| 3   | quality-gate     | `shared/quality-gate.ts`           | `shared/__tests__/quality-gate.test.ts`   | 🔜     |
+| 4   | health-score     | `shared/health-score.ts`           | `shared/__tests__/health-score.test.ts`   | 🔜     |
+| 5   | quarantine       | `shared/quarantine.ts`             | `shared/__tests__/quarantine.test.ts`     | 🔜     |
+| 6   | store            | `shared/store.ts`                  | `shared/__tests__/store.test.ts`          | 🔜     |
+| 7   | state            | `shared/state.ts`                  | `shared/__tests__/state.test.ts`          | 🔜     |
+| 8   | config-writer    | `setup/config-writer.ts`           | `setup/config-writer.test.ts`             | 🔜     |
+| 9   | batch-mode       | `git_triggers/batch-mode.ts`       | `git_triggers/batch-mode.test.ts`         | 🔜     |
+| 10  | interactive-mode | `git_triggers/interactive-mode.ts` | `git_triggers/interactive-mode.test.ts`   | 🔜     |
+| 11  | pr-report-core   | `shared/pr-report-core.ts`         | `shared/__tests__/pr-report-core.test.ts` | 🔜     |
+| 12  | setup-main       | `setup/main.ts`                    | `setup/main.test.ts`                      | 🔜     |
+| 13  | report-html      | `shared/report-html.ts`            | `shared/__tests__/report-html.test.ts`    | 🔜     |
+
+**Critérios de auditoria por feature:**
+
+| Dimensão               | O que verificar                                                                  |
+| ---------------------- | -------------------------------------------------------------------------------- |
+| 1. Isolamento Testes   | Testes criam/deletam arquivos reais? Usam tmp dir? Limpo após execução?          |
+| 2. Robustez            | Contratos tipados? Edge cases? Error handling? Validação de entrada?             |
+| 3. Boas Práticas       | Padrão Wizard→Config→Runtime? SRP? DIP? Dependency Wall? Sem workarounds?        |
+| 4. Implementação Ótima | Poderia ser mais simples? Duplicação? Acoplamento desnecessário? Padrão correto? |
+
+**ID dos itens de auditoria por feature:**
+
+| ID    | Feature                      | Status |
+| ----- | ---------------------------- | ------ |
+| SA-2a | feature-config               | ✅     |
+| SA-2b | metrics                      | 🔜     |
+| SA-2c | quality-gate                 | 🔜     |
+| SA-2d | health-score                 | 🔜     |
+| SA-2e | quarantine                   | 🔜     |
+| SA-2f | store                        | 🔜     |
+| SA-2g | state                        | 🔜     |
+| SA-2h | config-writer                | 🔜     |
+| SA-2i | batch-mode                   | 🔜     |
+| SA-2j | interactive-mode             | 🔜     |
+| SA-2k | pr-report-core               | 🔜     |
+| SA-2l | setup-main                   | 🔜     |
+| SA-2m | report-html                  | 🔜     |
+| SA-2n | Síntese: débitos registrados | 🔜     |
+
+### Fase 3 — Correção
+
+Cada achado da Fase 2 gera itens de correção nesta fase. IDs serão alocados durante a execução.
+
+### Métricas Alvo
+
+| Métrica                              | Alvo      |
+| ------------------------------------ | --------- |
+| Testes afetando arquivos reais       | **0**     |
+| Features com isolamento adequado     | **13/13** |
+| Débitos de implementação registrados | **todos** |
+| Débitos corrigidos                   | **todos** |
+| `tsc --noEmit`                       | **0**     |
+| `vitest run`                         | **100%**  |
+| `npm run lint`                       | **0**     |
+
+---
+
 ## 📋 TECHDOC — Documentação Técnica para Consulta de IA (Jun/2026)
 
 **Data:** 2026-06-13
@@ -2938,5 +3095,96 @@ Sem warning, sem info adicional. A causa (`config/features.json` não encontrado
 2. Investigar por que `config/features.json` não é encontrado no CI (CWD vs checkout)
 3. Corrigir LOG-02 a LOG-06 em sequência de severidade
 4. Garantir que o sistema de log produza evidência rastreável para qualquer ponto de falha em produção
+
+---
+
+## 📋 Feature Audit — Inventário Completo e Estimativas (Jun/2026)
+
+**Data:** 2026-06-14
+**Origem:** Investigação de causa raiz do PR Report em CI + análise exploratória completa do codebase para subsidiar plano de ação.
+**Escopo:** Todas as features do projeto, categorizadas por maturidade e aderência ao Padrão Feature Workflow (Wizard → Config → Runtime).
+**Total de arquivos `.ts`:** 639 (289 testes + 350 fonte) | **Total LoC:** ~111.930
+
+---
+
+### A. Features Core do Pipeline CI (devem seguir o Feature Workflow Pattern)
+
+| Feature                                                                      | Arquivos | LoC  | Testes   | Status Atual                                 | Auditado?   | Wizard?           | Config?            | Runtime?                                | Est. (dias) |
+| ---------------------------------------------------------------------------- | -------- | ---- | -------- | -------------------------------------------- | ----------- | ----------------- | ------------------ | --------------------------------------- | ----------- |
+| **PR Report** (`shared/pr-report-core.ts`, `shared/feature-config.ts`, etc.) | 18+      | ~2K  | 7 testes | Fase 1-2 ✅, Fase 3 ✅, Fase 4 🔜, Fase 5 🔜 | ✅ (6 gaps) | ✅ (wizard setup) | ✅ (features.json) | ⚠️ Parcial (BUG: config não lida em CI) | **2-3**     |
+| **Quality Gate** (`shared/quality-gate.ts`)                                  | 1        | ~250 | 2 testes | Código completo                              | ❌          | ❌                | ⚠️ Env vars apenas | ✅                                      | **3-5**     |
+| **AI Failure Analysis** (`shared/pr-report-core.ts:209-218`)                 | 1        | ~10  | 0        | Esqueleto (placeholder)                      | ❌          | ❌                | ❌                 | ⚠️ Placeholder                          | **2-4**     |
+| **Flaky Dashboard** (`shared/metrics.ts`, menu 'a')                          | 2        | ~300 | 2 testes | Dashboard completo                           | ❌          | ❌                | ❌                 | ✅ (CLI)                                | **2-3**     |
+
+### B. Módulos Grandes — Arquitetura Própria
+
+| Feature                                              | Arquivos | LoC    | Testes          | Status Atual                        | Auditado? | Wizard?           | Config?       | Runtime? | Est. (dias) |
+| ---------------------------------------------------- | -------- | ------ | --------------- | ----------------------------------- | --------- | ----------------- | ------------- | -------- | ----------- |
+| **Jira Integration** (`jira_management/`)            | 134      | ~22K   | 66 (31 command) | Completo. CLI própria.              | ❌        | ❌ (setup apenas) | ❌ (env vars) | ✅ (CLI) | **10-15**   |
+| **Git Triggers (GitHub + GitLab)** (`git_triggers/`) | 64       | ~14.6K | 32              | Providers completos. Menu 21 ações. | ❌        | ❌                | ❌            | ✅ (CLI) | **5-8**     |
+
+### C. Módulos Médios
+
+| Feature                                                        | Arquivos | LoC  | Testes | Status Atual                              | Auditado? | Wizard?           | Config?          | Runtime?   | Est. (dias) |
+| -------------------------------------------------------------- | -------- | ---- | ------ | ----------------------------------------- | --------- | ----------------- | ---------------- | ---------- | ----------- |
+| **Pre-Push Hook** (`setup/templates/pre-push-hook.ts`)         | 1        | ~80  | 1      | Template + runtime                        | ❌        | ✅ (wizard setup) | ❌               | ✅         | **1-2**     |
+| **Schedule Handler** (`git_triggers/schedule-handler.ts`)      | 1        | ~120 | 1      | Completo em git_triggers                  | ❌        | ❌                | ❌               | ✅ (CLI)   | **1-2**     |
+| **Publish Targets** (`shared/types/feature-config.ts`)         | 1        | ~10  | 0      | Schema enum. Só `github-actions` impl.    | ❌        | ❌                | ⚠️ Schema existe | ⚠️ Parcial | **5-8**     |
+| **Coverage System** (`shared/coverage-source.ts`)              | 2        | ~200 | 0      | Multi-source (Istanbul > CTRF > Jira > 0) | ❌        | ❌                | ❌               | ✅         | **2-3**     |
+| **LLM System** (`shared/llm-*.ts`, `scripts/smartwizard-*.ts`) | 20+      | ~3K  | 13     | Completo. Já segue o padrão.              | ❌        | ✅ (SmartWizard)  | ✅ (state.json)  | ✅         | **1-2**     |
+
+### D. 17 Dashboards Individuais
+
+Cada um gerado sob demanda pelo menu, sem wizard, sem config feature-flag, sem feature toggle.
+
+| #   | Dashboard                | Arquivo                           | Testes   | LoC  | Est. (dias) |
+| --- | ------------------------ | --------------------------------- | -------- | ---- | ----------- |
+| 1   | Release Score            | `shared/release-score.ts`         | ❌       | ~150 | 1-2         |
+| 2   | Defect Trends            | `shared/defect-trend.ts`          | ❌       | ~180 | 1-2         |
+| 3   | Traceability Matrix      | `shared/traceability-matrix.ts`   | ✅       | ~200 | 1-2         |
+| 4   | AI Effectiveness         | `shared/ai-effectiveness.ts`      | ✅       | ~120 | 1-2         |
+| 5   | Defect Seasonality       | `shared/defect-seasonality.ts`    | ❌       | ~100 | 1-2         |
+| 6   | Silent Regression        | `shared/silent-regression.ts`     | ❌       | ~130 | 1-2         |
+| 7   | AI Test Comparison       | `shared/ai-comparison.ts`         | ❌       | ~140 | 1-2         |
+| 8   | Cross-Squad Benchmark    | `shared/cross-squad-benchmark.ts` | ✅       | ~180 | 1-2         |
+| 9   | Developer Profile        | `shared/developer-profile.ts`     | ✅       | ~160 | 1-2         |
+| 10  | Suite Optimization       | `shared/suite-optimization.ts`    | ✅       | ~170 | 1-2         |
+| 11  | Backlog Health           | `shared/backlog-health.ts`        | ❌       | ~100 | 1-2         |
+| 12  | Incident Report          | `shared/incident-report.ts`       | ✅       | ~200 | 1-2         |
+| 13  | Pipeline Cost            | `shared/pipeline-cost.ts`         | ❌       | ~80  | 1-2         |
+| 14  | Pipeline Impact Alert    | `shared/impact-alert.ts`          | ✅       | ~160 | 1-2         |
+| 15  | Requirement Score        | `shared/requirement-score.ts`     | ❌       | ~90  | 1-2         |
+| 16  | Quality Gate (dashboard) | `shared/quality-gate.ts`          | ✅       | ~250 | 1-2         |
+| 17  | Coverage Gap             | `shared/coverage-gap.ts`          | ⚠️ utils | ~300 | 1-2         |
+
+### E. Infraestrutura Transversal
+
+| Item                                                         | Est. (dias)                     |
+| ------------------------------------------------------------ | ------------------------------- |
+| **LOG-01 a LOG-06** — Investigar + corrigir sistema de log   | **1-2**                         |
+| **Senior-auditor**: aplicar framework T1-T20 em cada feature | **~30s/feature** (automatizado) |
+| **Auditoria de conformidade unificada** pós-correções        | **2-3**                         |
+| **Validação CI end-to-end** para cada feature                | **1-2 por feature**             |
+
+---
+
+### Estimativa Consolidada
+
+| Categoria               | Features                                    | Dias                         |
+| ----------------------- | ------------------------------------------- | ---------------------------- |
+| **A. Core do Pipeline** | PR Report, Quality Gate, AI Analysis, Flaky | 9-15                         |
+| **B. Módulos Grandes**  | Jira Integration, Git Triggers              | 15-23                        |
+| **C. Módulos Médios**   | Pre-Push, Schedule, Publish, Coverage, LLM  | 10-17                        |
+| **D. 17 Dashboards**    | 17 dashboards individuais                   | 17-25                        |
+| **E. Infraestrutura**   | Log + auditoria + CI validation             | 3-5                          |
+| **TOTAL**               |                                             | **~54-85 dias (~3-4 meses)** |
+
+### Observações
+
+1. **A auditoria em si é rápida** (~30s/feature com senior-auditor automatizado). O custo real está em **corrigir causa raiz** sem workarounds + **criar wizard/config** para features que nunca tiveram + **100% statement coverage** para código novo + **validação CI end-to-end**.
+2. **Features que já seguem o padrão** (LLM System, SmartWizard) levam apenas 1-2 dias para auditoria de conformidade.
+3. **Dashboards (grupo D)** podem ser priorizados individualmente — não precisam todos de uma vez.
+4. **Módulos grandes (grupo B)** exigem decisão arquitetural: adaptar ao padrão FW ou aceitar arquitetura própria.
+5. O gargalo real não é identificar gaps — é **corrigir na origem** respeitando as invariantes (zero workaround, zero débito, 100% cobertura).
 
 ---
