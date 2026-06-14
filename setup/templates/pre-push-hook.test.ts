@@ -14,10 +14,12 @@ const MOCK_CTX: SetupContext = {
     repoName: 'test-proj',
     workflowDir: '.github/workflows',
     features: {
-        jiraIntegration: false,
+        qualityGate: false,
         flakinessDashboard: false,
         aiFailureAnalysis: false,
         prePushHook: false,
+        prReport: false,
+        prReportPublishTarget: 'github-actions',
     },
 };
 

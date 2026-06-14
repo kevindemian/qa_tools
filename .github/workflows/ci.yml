@@ -47,3 +47,9 @@ jobs:
               if: matrix.node-version != 22
               run: npx vitest run --testTimeout=120000
             - run: npx vitest run git_triggers/github-e2e.test.ts
+
+            - name: QA Tools Post-Processing
+              if: always()
+              uses: ./.github/actions/qa-post-process
+              with:
+                project-name: qa_tools

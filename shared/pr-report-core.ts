@@ -1,10 +1,16 @@
 /**
- * PR Report core — reusable function for generating PR test reports.
+ * PR Report core — self-contained module for generating PR test reports.
  *
- * Designed to be called from:
- *   1. CLI (scripts/pr-report.ts) — thin wrapper
+ * An entry point (`main()`) with self-exec guard enables direct CLI usage:
+ *   npx tsx shared/pr-report-core.ts [--ctrf <path>] [--no-ai] [--no-quality] [--no-flaky]
+ *
+ * Programmatic API:
+ *   import { generatePrReport, computeDiffComparison } from './pr-report-core.js'
+ *
+ * Consumido por:
+ *   1. CLI (ator principal) — via self-exec guard
  *   2. Pipeline (git_triggers/batch-mode.ts) — post-test-collection
- *   3. Tests — direct invocation
+ *   3. Tests — invocação direta
  *
  * Layered data sources:
  *   - Coverage: Istanbul standalone > CTRF > Jira coverage history > 0
@@ -24,7 +30,22 @@ import { generateHtmlReport } from './report-html.js';
 import type { ReportOptions } from './report-types.js';
 import { calculateHealthScore } from './health-score.js';
 import { resolveCoverage } from './coverage-source.js';
+import { parseTestResultsFile } from './result_parser.js';
 import type { FlatTest, ParseResult } from './result_parser.js';
+import { getPrReportConfig } from './feature-config.js';
+
+/**
+ * Read CI-injected environment variables with typed fallbacks.
+ * These are GitHub Actions runtime vars, not user configuration.
+ */
+function getCiEnv(): { serverUrl: string; repo: string; runId: string; refName: string } {
+    return {
+        serverUrl: process.env['GITHUB_SERVER_URL'] ?? 'https://github.com',
+        repo: process.env['GITHUB_REPOSITORY'] ?? 'unknown',
+        runId: process.env['GITHUB_RUN_ID'] ?? '0',
+        refName: process.env['GITHUB_REF_NAME'] ?? '',
+    };
+}
 
 export interface PrReportStats {
     passed: number;
@@ -58,6 +79,52 @@ export interface PrReportResult {
     commentUrl?: string;
     healthScore: ReturnType<typeof calculateHealthScore>;
     passRate: number;
+}
+
+/**
+ * Compare current test run against a previous run, returning new failures, fixes, and flaky tests.
+ * Returns undefined when both runs are identical.
+ */
+export function computeDiffComparison(current: FlatTest[], previous: FlatTest[]): DiffComparison | undefined {
+    if (previous.length === 0) return undefined;
+
+    const prevByTitle = new Map<string, FlatTest>();
+    for (const t of previous) {
+        prevByTitle.set(t.title, t);
+    }
+
+    const currByTitle = new Map<string, FlatTest>();
+    for (const t of current) {
+        currByTitle.set(t.title, t);
+    }
+
+    const newFailures: FlatTest[] = [];
+    const newPasses: FlatTest[] = [];
+    const flaky: FlatTest[] = [];
+
+    for (const [title, test] of currByTitle) {
+        const prev = prevByTitle.get(title);
+        if (!prev) continue;
+
+        const currFailed = test.state === 'failed';
+        const prevFailed = prev.state === 'failed';
+
+        if (currFailed && !prevFailed) {
+            newFailures.push(test);
+        } else if (!currFailed && prevFailed) {
+            newPasses.push(test);
+        }
+
+        if (test.state !== prev.state) {
+            flaky.push(test);
+        }
+    }
+
+    if (newFailures.length === 0 && newPasses.length === 0 && flaky.length === 0) {
+        return undefined;
+    }
+
+    return { newFailures, newPasses, flaky };
 }
 
 function buildSummaryTable(stats: PrReportStats): string {
@@ -275,7 +342,7 @@ export async function generatePrReport(options: PrReportCoreOptions): Promise<Pr
     };
 }
 
-// Re-used from scripts/pr-report.ts — markdown builders
+// Markdown builders for PR comment sections
 function buildQGCHeckSummary(
     result: {
         overall: 'pass' | 'fail';
@@ -360,4 +427,137 @@ function buildFooter(
     parts.push(`_Generated at ${new Date().toISOString()}_`);
     parts.push('');
     return parts.join('\n');
+}
+
+// ─── CLI entry point ─────────────────────────────────────────────────────────
+
+interface CliOptions {
+    ctrfPath: string;
+    skipAi: boolean;
+    skipQuality: boolean;
+    skipFlaky: boolean;
+    projectName: string;
+}
+
+function parseArgs(args: string[]): CliOptions {
+    const opts: CliOptions = {
+        ctrfPath: 'reports/ctrf-report.json',
+        skipAi: false,
+        skipQuality: false,
+        skipFlaky: false,
+        projectName: process.env['GITHUB_REPOSITORY'] ?? 'unknown',
+    };
+    for (let i = 0; i < args.length; i++) {
+        switch (args[i]) {
+            case '--help':
+            case '-h':
+                rootLogger.info(
+                    [
+                        'Uso: npx tsx shared/pr-report-core.ts [opções]',
+                        '',
+                        'Opções:',
+                        '  --ctrf <path>          Caminho do CTRF (default: reports/ctrf-report.json)',
+                        '  --project <name>       Nome do projeto (default: GITHUB_REPOSITORY env)',
+                        '  --no-ai                Pular análise de IA',
+                        '  --no-quality           Pular quality gate',
+                        '  --no-flaky             Pular flakiness dashboard',
+                        '  --help, -h             Mostrar esta ajuda',
+                    ].join('\n'),
+                );
+                process.exit(0);
+                break;
+            case '--ctrf':
+                opts.ctrfPath = args[++i] ?? opts.ctrfPath;
+                break;
+            case '--project':
+                opts.projectName = args[++i] ?? opts.projectName;
+                break;
+            case '--no-ai':
+                opts.skipAi = true;
+                break;
+            case '--no-quality':
+                opts.skipQuality = true;
+                break;
+            case '--no-flaky':
+                opts.skipFlaky = true;
+                break;
+            default:
+                rootLogger.warn(`Flag desconhecida ignorada: ${args[i]}`);
+        }
+    }
+    return opts;
+}
+
+export async function main(): Promise<void> {
+    const opts = parseArgs(process.argv.slice(2));
+
+    if (!fs.existsSync(opts.ctrfPath)) {
+        rootLogger.warn(`CTRF report not found: ${opts.ctrfPath}. Skipping PR comment.`);
+        return;
+    }
+
+    const result = parseTestResultsFile(opts.ctrfPath);
+    if (result.error) {
+        rootLogger.warn(`Error parsing CTRF report: ${result.error}. Skipping PR comment.`);
+        return;
+    }
+
+    const project = opts.projectName;
+    const ciEnv = getCiEnv();
+
+    // Read feature config for runtime toggles. CLI flags override config values.
+    const featureConfig = getPrReportConfig(project);
+    if (!featureConfig.enabled) {
+        rootLogger.info('PR Report disabled in config. Skipping.');
+        return;
+    }
+
+    // Validate publish target: warn if running on GitHub but target is gitlab-ci
+    if (ciEnv.repo !== 'unknown' && featureConfig.publishTarget === 'gitlab-ci') {
+        rootLogger.warn(
+            'PR Report publish target is gitlab-ci but running on GitHub. ' + 'PR comment may not post correctly.',
+        );
+    }
+
+    // CLI flags override config values (config values are defaults)
+    const skipAi = opts.skipAi || (featureConfig.skipAi ?? false);
+    const skipQuality = opts.skipQuality || (featureConfig.skipQuality ?? false);
+    const skipFlaky = opts.skipFlaky || (featureConfig.skipFlaky ?? false);
+
+    // Load store before saveParseResult so the diff comparison uses the
+    // previous run's data (before the current run is persisted).
+    const store = loadMetrics();
+    const previousRun = store.runs.length > 0 ? store.runs[store.runs.length - 1] : undefined;
+    const diffComparison = previousRun ? computeDiffComparison(result.tests, previousRun.tests) : undefined;
+
+    const resultSummary = await generatePrReport({
+        tests: result.tests,
+        stats: {
+            passed: result.stats.passed,
+            failed: result.stats.failed,
+            skipped: result.stats.skipped,
+            total: result.stats.total,
+            duration: result.stats.duration,
+        },
+        project,
+        skipAi,
+        skipQuality,
+        skipFlaky,
+        ...(diffComparison ? { diffComparison } : {}),
+    });
+
+    if (resultSummary.commentUrl) {
+        rootLogger.info(`PR report posted: ${resultSummary.commentUrl}`);
+    } else {
+        rootLogger.info('PR comment not posted (required env vars missing, or running outside PR context)');
+    }
+}
+
+// Self-exec guard: run main() only when invoked directly (not when imported by tests or modules).
+const runningEntry = process.argv[1]?.replace(/\\/g, '/');
+if (!process.env['VITEST'] && runningEntry?.includes('pr-report-core')) {
+    main().catch((err) => {
+        rootLogger.error(`pr-report failed: ${err instanceof Error ? err.message : String(err)}`);
+        process.exit(1);
+    });
 }

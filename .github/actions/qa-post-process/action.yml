@@ -1,0 +1,19 @@
+name: QA Tools Post-Process
+description: Run QA Tools post-processing on test results
+inputs:
+  ctrf-path:
+    description: Path to CTRF report JSON
+    required: false
+    default: reports/ctrf-report.json
+  project-name:
+    description: Project name for feature config lookup
+    required: true
+runs:
+  using: composite
+  steps:
+    - name: Run QA Tools Post-Processing
+      shell: bash
+      working-directory: ${{ github.workspace }}
+      run: npx tsx shared/pr-report-core.ts --ctrf ${{ inputs.ctrf-path }} --project ${{ inputs.project-name }}
+      env:
+        GITHUB_TOKEN: ${{ github.token }}

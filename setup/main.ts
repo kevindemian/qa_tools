@@ -3,8 +3,13 @@ import path from 'path';
 import { ask, askConfirm, title, info, divider } from '../shared/prompt.js';
 import { loadTypedState } from '../shared/state.js';
 import { detectFramework, extractRepoFromGit } from './detector.js';
-import { writeProjectsConfig, writeDotEnvExample, writePrePushHook as writeHookFile } from './config-writer.js';
-import { generateGitHubActions } from './templates/github-ci.js';
+import {
+    writeProjectsConfig,
+    writeDotEnvExample,
+    writePrePushHook as writeHookFile,
+    writeFeaturesConfig,
+} from './config-writer.js';
+import { generateCIWorkflow, generateQaPostProcessAction } from './templates/github-ci.js';
 import { generateGitLabCI } from './templates/gitlab-ci.js';
 import { generatePrePushHook } from './templates/pre-push-hook.js';
 import type { SetupContext, Framework, GitProvider } from './context.js';
@@ -60,16 +65,30 @@ async function gatherSetupContext(): Promise<SetupContext> {
 
     divider();
 
+    const prReport = await askConfirm('Habilitar PR Report (relatório pós-CI nos PRs)?', true);
+    const prReportPublishTarget = prReport
+        ? (
+              await ask('Target de publicação [' + (gitProvider === 'github' ? 'github-actions' : 'gitlab-ci') + ']', {
+                  default: gitProvider === 'github' ? 'github-actions' : 'gitlab-ci',
+                  hint: 'github-actions | gitlab-ci',
+              })
+          )
+              .trim()
+              .toLowerCase() || (gitProvider === 'github' ? 'github-actions' : 'gitlab-ci')
+        : 'github-actions';
+
     const features = {
-        jiraIntegration: await askConfirm('Integrar com Jira (Test Execution, bugs)?', true),
+        qualityGate: await askConfirm('Habilitar Quality Gate (bloqueio de PR por qualidade)?', true),
         flakinessDashboard: await askConfirm('Gerar Flakiness Dashboard?', true),
         aiFailureAnalysis: await askConfirm('Análise de falhas com IA?', true),
         prePushHook: await askConfirm('Criar hook pre-push (executa testes antes do push)?', false),
+        prReport,
+        prReportPublishTarget,
     };
 
     if (
         detection.ctrfSource === 'missing' &&
-        (features.jiraIntegration || features.flakinessDashboard || features.aiFailureAnalysis)
+        (features.qualityGate || features.flakinessDashboard || features.aiFailureAnalysis)
     ) {
         info(
             '⚠️  Nenhum reporter CTRF detectado. O pipeline gerado usará o comando de teste existente,' +
@@ -95,6 +114,57 @@ async function gatherSetupContext(): Promise<SetupContext> {
     };
 }
 
+/**
+ * Inject the QA Tools post-processing step into an existing workflow YAML.
+ * Finds the last job's step (a line matching `\n<indent>- `), detects its
+ * indentation, and appends the composite action call after the step block
+ * (skipping over any continuation lines at deeper indent).
+ */
+export function injectQaStepIntoWorkflow(yaml: string, projectName: string): string {
+    // Find the last step-level line and determine where its block ends
+    const stepPattern = /\n( +)- /g;
+    let lastIndent = '            '; // default 12-space indent
+    let lastBlockEnd = -1;
+    let match;
+    while ((match = stepPattern.exec(yaml)) !== null) {
+        lastIndent = match[1] as string;
+        const blockStart = match.index + 1; // skip leading \n
+        const rest = yaml.slice(match.index + 1 + match[0].length);
+        // Look for next line at same or shallower indent
+        const minIndent = Math.max(1, lastIndent.length - 1);
+        const nextStepRe = new RegExp('\\n {0,' + minIndent + '}\\S');
+        const nextMatch = rest.search(nextStepRe);
+        lastBlockEnd = nextMatch === -1 ? yaml.length : blockStart + match[0].length + nextMatch;
+    }
+
+    const stepSnippet = [
+        lastIndent + '- name: QA Tools Post-Processing',
+        lastIndent + '  if: always()',
+        lastIndent + '  uses: ./.github/actions/qa-post-process',
+        lastIndent + '  with:',
+        lastIndent + '    project-name: ' + projectName,
+    ].join('\n');
+
+    if (lastBlockEnd === -1) {
+        // No steps found — append before final newline
+        const jobEnd = Math.max(yaml.lastIndexOf('\n'), 0);
+        return (
+            yaml.slice(0, jobEnd) +
+            '\n' +
+            lastIndent.slice(0, -4) +
+            'steps:\n' +
+            stepSnippet +
+            '\n' +
+            yaml.slice(jobEnd)
+        );
+    }
+
+    const before = yaml.slice(0, lastBlockEnd);
+    const after = yaml.slice(lastBlockEnd);
+    const separator = after.startsWith('\n') ? '' : '\n';
+    return before + separator + stepSnippet + after;
+}
+
 async function generateConfigFiles(ctx: SetupContext): Promise<{ created: string[]; skipped: string[] }> {
     const created: string[] = [];
     const skipped: string[] = [];
@@ -102,10 +172,35 @@ async function generateConfigFiles(ctx: SetupContext): Promise<{ created: string
     if (ctx.gitProvider === 'github') {
         const workflowDir = path.resolve(process.cwd(), '.github/workflows');
         fs.mkdirSync(workflowDir, { recursive: true });
-        const wfPath = path.join(workflowDir, 'qa.yml');
-        const yaml = generateGitHubActions(ctx);
-        fs.writeFileSync(wfPath, yaml, 'utf8');
-        created.push(wfPath);
+        const wfPath = path.join(workflowDir, 'ci.yml');
+        const actionsDir = path.resolve(process.cwd(), '.github/actions/qa-post-process');
+        fs.mkdirSync(actionsDir, { recursive: true });
+        const actionPath = path.join(actionsDir, 'action.yml');
+
+        if (fs.existsSync(wfPath)) {
+            const shouldInject = await askConfirm('ci.yml já existe. Injetar step de post-processing?', true);
+            if (shouldInject) {
+                const existing = fs.readFileSync(wfPath, 'utf8');
+                const actionYaml = generateQaPostProcessAction();
+                fs.writeFileSync(actionPath, actionYaml, 'utf8');
+                if (!created.includes(actionPath)) created.push(actionPath);
+                const extended = injectQaStepIntoWorkflow(existing, ctx.projectName);
+                fs.writeFileSync(wfPath, extended, 'utf8');
+                if (!created.includes(wfPath)) created.push(wfPath);
+            } else {
+                skipped.push(wfPath);
+                skipped.push(actionPath);
+            }
+        } else {
+            const yaml = generateCIWorkflow(ctx);
+            fs.writeFileSync(wfPath, yaml, 'utf8');
+            created.push(wfPath);
+            if (ctx.features.prReport) {
+                const actionYaml = generateQaPostProcessAction();
+                fs.writeFileSync(actionPath, actionYaml, 'utf8');
+                if (!created.includes(actionPath)) created.push(actionPath);
+            }
+        }
     } else {
         const wfPath = path.resolve(process.cwd(), '.gitlab-ci.yml');
         const yaml = generateGitLabCI(ctx);
@@ -130,6 +225,10 @@ async function generateConfigFiles(ctx: SetupContext): Promise<{ created: string
     const envResult = writeDotEnvExample(ctx);
     created.push(...envResult.filesCreated);
     skipped.push(...envResult.filesSkipped);
+
+    const featuresResult = writeFeaturesConfig(ctx);
+    created.push(...featuresResult.filesCreated);
+    skipped.push(...featuresResult.filesSkipped);
 
     if (ctx.features.prePushHook) {
         const hookResult = writeHookFile(ctx);

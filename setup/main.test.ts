@@ -2,7 +2,7 @@ import fs from 'fs';
 import * as prompt from '../shared/prompt.js';
 import { detectFramework, extractRepoFromGit } from './detector.js';
 import { writeProjectsConfig, writeDotEnvExample, writePrePushHook } from './config-writer.js';
-import { generateGitHubActions } from './templates/github-ci.js';
+import { generateCIWorkflow } from './templates/github-ci.js';
 import { generateGitLabCI } from './templates/gitlab-ci.js';
 import { generatePrePushHook } from './templates/pre-push-hook.js';
 
@@ -23,9 +23,11 @@ vi.mock('./config-writer', () => ({
     writeProjectsConfig: vi.fn(),
     writeDotEnvExample: vi.fn(),
     writePrePushHook: vi.fn(),
+    writeFeaturesConfig: vi.fn(() => ({ filesCreated: [], filesSkipped: [] })),
 }));
 vi.mock('./templates/github-ci', () => ({
-    generateGitHubActions: vi.fn(),
+    generateCIWorkflow: vi.fn(() => 'name: CI\n'),
+    generateQaPostProcessAction: vi.fn(() => 'name: QA Tools Post-Process\n'),
 }));
 vi.mock('./templates/gitlab-ci', () => ({
     generateGitLabCI: vi.fn(),
@@ -43,7 +45,7 @@ const MockExtract = vi.mocked(extractRepoFromGit);
 const MockWriteProjects = vi.mocked(writeProjectsConfig);
 const MockWriteEnv = vi.mocked(writeDotEnvExample);
 const MockWriteHook = vi.mocked(writePrePushHook);
-const MockGenGithub = vi.mocked(generateGitHubActions);
+const MockGenGithub = vi.mocked(generateCIWorkflow);
 const MockGenGitlab = vi.mocked(generateGitLabCI);
 const MockGenHook = vi.mocked(generatePrePushHook);
 const MockAsk = vi.spyOn(prompt, 'ask');
@@ -69,12 +71,14 @@ function mockAskForTests(prePush: boolean) {
         .mockResolvedValueOnce('npx cypress run')
         .mockResolvedValueOnce('npm ci')
         .mockResolvedValueOnce('ctrf-report.json')
-        .mockResolvedValueOnce('20');
-    MockAskConfirm.mockResolvedValueOnce(true)
-        .mockResolvedValueOnce(true)
-        .mockResolvedValueOnce(true)
-        .mockResolvedValueOnce(prePush)
-        .mockResolvedValueOnce(false);
+        .mockResolvedValueOnce('20')
+        .mockResolvedValueOnce('github-actions');
+    MockAskConfirm.mockResolvedValueOnce(true) // prReport
+        .mockResolvedValueOnce(true) // qualityGate
+        .mockResolvedValueOnce(true) // flakinessDashboard
+        .mockResolvedValueOnce(true) // aiFailureAnalysis
+        .mockResolvedValueOnce(prePush) // prePushHook
+        .mockResolvedValueOnce(false); // configureLlm
 }
 
 describe('setup main', () => {
@@ -112,7 +116,7 @@ describe('setup main', () => {
 
         expect(MockGenGithub).toHaveBeenCalled();
         expect(MockFs.writeFileSync).toHaveBeenCalledWith(
-            expect.stringContaining('.github/workflows/qa.yml'),
+            expect.stringContaining('.github/workflows/ci.yml'),
             expect.any(String),
             'utf8',
         );
@@ -127,12 +131,14 @@ describe('setup main', () => {
             .mockResolvedValueOnce('npx cypress run')
             .mockResolvedValueOnce('npm ci')
             .mockResolvedValueOnce('ctrf-report.json')
-            .mockResolvedValueOnce('20');
-        MockAskConfirm.mockResolvedValueOnce(true)
-            .mockResolvedValueOnce(true)
-            .mockResolvedValueOnce(true)
-            .mockResolvedValueOnce(false)
-            .mockResolvedValueOnce(false);
+            .mockResolvedValueOnce('20')
+            .mockResolvedValueOnce('gitlab-ci');
+        MockAskConfirm.mockResolvedValueOnce(true) // prReport
+            .mockResolvedValueOnce(true) // qualityGate
+            .mockResolvedValueOnce(true) // flakinessDashboard
+            .mockResolvedValueOnce(true) // aiFailureAnalysis
+            .mockResolvedValueOnce(false) // prePushHook
+            .mockResolvedValueOnce(false); // configureLlm
 
         await main();
 
@@ -178,11 +184,13 @@ describe('setup main', () => {
             .mockResolvedValueOnce('npx cypress run')
             .mockResolvedValueOnce('npm ci')
             .mockResolvedValueOnce('ctrf-report.json')
-            .mockResolvedValueOnce('20');
-        MockAskConfirm.mockResolvedValueOnce(true)
-            .mockResolvedValueOnce(true)
-            .mockResolvedValueOnce(true)
-            .mockResolvedValueOnce(false)
+            .mockResolvedValueOnce('20')
+            .mockResolvedValueOnce('github-actions');
+        MockAskConfirm.mockResolvedValueOnce(true) // prReport
+            .mockResolvedValueOnce(true) // qualityGate
+            .mockResolvedValueOnce(true) // flakinessDashboard
+            .mockResolvedValueOnce(true) // aiFailureAnalysis
+            .mockResolvedValueOnce(false) // prePushHook
             .mockResolvedValueOnce(true); // configure LLM = yes
 
         await main();
@@ -198,11 +206,13 @@ describe('setup main', () => {
             .mockResolvedValueOnce('npx cypress run')
             .mockResolvedValueOnce('npm ci')
             .mockResolvedValueOnce('ctrf-report.json')
-            .mockResolvedValueOnce('20');
-        MockAskConfirm.mockResolvedValueOnce(true)
-            .mockResolvedValueOnce(true)
-            .mockResolvedValueOnce(true)
-            .mockResolvedValueOnce(false)
+            .mockResolvedValueOnce('20')
+            .mockResolvedValueOnce('github-actions');
+        MockAskConfirm.mockResolvedValueOnce(true) // prReport
+            .mockResolvedValueOnce(true) // qualityGate
+            .mockResolvedValueOnce(true) // flakinessDashboard
+            .mockResolvedValueOnce(true) // aiFailureAnalysis
+            .mockResolvedValueOnce(false) // prePushHook
             .mockResolvedValueOnce(false); // configure LLM = no
 
         await main();
@@ -219,12 +229,14 @@ describe('setup main', () => {
             .mockResolvedValueOnce('npx cypress run')
             .mockResolvedValueOnce('npm ci')
             .mockResolvedValueOnce('ctrf-report.json')
-            .mockResolvedValueOnce('20');
-        MockAskConfirm.mockResolvedValueOnce(true)
-            .mockResolvedValueOnce(true)
-            .mockResolvedValueOnce(true)
-            .mockResolvedValueOnce(false)
-            .mockResolvedValueOnce(false);
+            .mockResolvedValueOnce('20')
+            .mockResolvedValueOnce('gitlab-ci');
+        MockAskConfirm.mockResolvedValueOnce(true) // prReport
+            .mockResolvedValueOnce(true) // qualityGate
+            .mockResolvedValueOnce(true) // flakinessDashboard
+            .mockResolvedValueOnce(true) // aiFailureAnalysis
+            .mockResolvedValueOnce(false) // prePushHook
+            .mockResolvedValueOnce(false); // configureLlm
         vi.spyOn(MockFs, 'existsSync').mockImplementation((p: string | Buffer | URL) => {
             return p.toString().includes('.gitlab-ci.yml');
         });
@@ -237,5 +249,42 @@ describe('setup main', () => {
             expect.any(String),
             'utf8',
         );
+    });
+});
+
+describe('injectQaStepIntoWorkflow', () => {
+    it('injects QA Tools Post-Processing step with project-name', async () => {
+        const { injectQaStepIntoWorkflow } = await import('./main.js');
+
+        const input = ['    - uses: actions/checkout@v4', '    - run: npm ci'].join('\n');
+
+        const result = injectQaStepIntoWorkflow(input, 'my-project');
+
+        expect(result).toContain('QA Tools Post-Processing');
+        expect(result).toContain('./.github/actions/qa-post-process');
+        expect(result).toContain('project-name: my-project');
+    });
+
+    it('preserves existing steps and appends new step after last name step', async () => {
+        const { injectQaStepIntoWorkflow } = await import('./main.js');
+
+        const input = ['    - uses: actions/checkout@v4', '    - name: Run tests', '      run: npm test'].join('\n');
+
+        const result = injectQaStepIntoWorkflow(input, 'qa_tools');
+
+        expect(result).toContain('actions/checkout@v4');
+        expect(result).toContain('npm test');
+        expect(result).toContain('project-name: qa_tools');
+    });
+
+    it('handles workflow without any - name: steps', async () => {
+        const { injectQaStepIntoWorkflow } = await import('./main.js');
+
+        const input = ['    - uses: actions/checkout@v4'].join('\n');
+
+        const result = injectQaStepIntoWorkflow(input, 'fallback');
+
+        expect(result).toContain('project-name: fallback');
+        expect(result).toContain('./.github/actions/qa-post-process');
     });
 });

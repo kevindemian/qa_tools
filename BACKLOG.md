@@ -3,6 +3,122 @@
 > ⚠️ Sprints anteriores a esta estão **concluídos**. Movidos para `BACKLOG-historico.md`.
 > Consulte os históricos para detalhes de sprints passados.
 
+## 📋 TECHDOC — Documentação Técnica para Consulta de IA (Jun/2026)
+
+**Data:** 2026-06-13
+**Objetivo:** Criar `docs/TECHDOC.md` — documentação técnica consolidada otimizada para consulta por IA durante o desenvolvimento. Contém modelo de domínio completo (tipos/interfaces), mapa de módulos, arquitetura, CLI reference, configuração (124 env vars), e decisões arquiteturais.
+**Manutenção:** Deve ser atualizado simultaneamente sempre que contratos, tipos ou arquitetura forem alterados.
+**Destinado a:** consumo por IA (não substitui `docs/*` que são orientados a humanos).
+
+| ID    | Item                                                                                   | Status |
+| ----- | -------------------------------------------------------------------------------------- | ------ |
+| TD-01 | 🔧 Criar `docs/TECHDOC.md` com modelo de domínio completo (todos os tipos/ interfaces) | ✅     |
+| TD-02 | 🔧 Registrar no backlog existência e objetivo do TECHDOC.md                            | ✅     |
+
+---
+
+## 🏗️ Sprint PR Report — Feature Workflow Pattern + PR Report como Feature Gerenciada (Jun/2026)
+
+**Data:** 2026-06-13
+**Origem:** PR Report era script externo (CI manual). Necessário transformar em feature configurável via wizard, com suporte a GitHub e GitLab, seguindo o padrão Wizard → Config → Runtime.
+**Estratégia:** 6 fases sequenciais — documentar padrão → fundir entry → estender config → estender wizard → runtime ler config → auditar conformidade.
+**Regra absoluta:** zero workarounds, 100% teste para código novo, deletar código obsoleto, nenhum débito deixado.
+
+| Fase | Descrição                                                               | Itens         | Status |
+| ---- | ----------------------------------------------------------------------- | ------------- | ------ |
+| 0    | Documentar Feature Workflow Pattern no TECHDOC.md                       | PR-0          | ✅     |
+| 1    | Merge pr-report-entry.ts → pr-report-core.ts (autocontido)              | PR-1a a PR-1i | ✅     |
+| 2    | Criar sistema de config de features (feature-config.ts + features.json) | PR-2a a PR-2c | ✅     |
+| 3    | Estender setup/main.ts + git_triggers menu para configurar PR Report    | PR-3a a PR-3i | 🔜     |
+| 4    | Runtime pr-report-core.ts ler config em vez de só flags                 | PR-4a a PR-4d | 🔜     |
+| 5    | Auditoria de conformidade contra o padrão + registro de débitos         | PR-5a a PR-5b | 🔜     |
+
+### Fase 0 — Documentar Feature Workflow Pattern ✅
+
+| ID   | Item                                                      | Arquivo           | Status |
+| ---- | --------------------------------------------------------- | ----------------- | ------ |
+| PR-0 | 🔧 Adicionar seção FEATURE WORKFLOW PATTERN no TECHDOC.md | `docs/TECHDOC.md` | ✅     |
+
+### Fase 1 — Merge pr-report-entry → pr-report-core ✅
+
+| ID    | Item                                                                                    | Arquivo(s)                           | Status |
+| ----- | --------------------------------------------------------------------------------------- | ------------------------------------ | ------ |
+| PR-1a | ♻️ Adicionar parseArgs() + main() + self-exec guard em pr-report-core.ts                | `shared/pr-report-core.ts`           | ✅     |
+| PR-1b | 🔧 Deletar shared/pr-report-entry.ts                                                    | `shared/pr-report-entry.ts`          | ✅     |
+| PR-1c | 🔧 Atualizar .github/workflows/qa.yml: entry → core                                     | `.github/workflows/qa.yml`           | ✅     |
+| PR-1d | 🔧 Atualizar setup/templates/github-ci.ts: entry → core                                 | `setup/templates/github-ci.ts`       | ✅     |
+| PR-1e | 🔧 Corrigir setup/templates/gitlab-ci.ts: chamar core direto (sem git_triggers --batch) | `setup/templates/gitlab-ci.ts`       | ✅     |
+| PR-1f | 📋 Atualizar shared/**tests**/pr-report.test.ts: imports → pr-report-core.js            | `shared/__tests__/pr-report.test.ts` | ✅     |
+| PR-1g | 📋 Atualizar setup/templates/github-ci.test.ts                                          | `setup/templates/github-ci.test.ts`  | ✅     |
+| PR-1h | 📋 Atualizar setup/templates/gitlab-ci.test.ts                                          | `setup/templates/gitlab-ci.test.ts`  | ✅     |
+| PR-1i | 🔧 ✓ tsc --noEmit + vitest run (57 pass) + lint                                         | —                                    | ✅     |
+
+### Fase 2 — Sistema de Config de Features ✅
+
+| ID    | Item                                                           | Arquivo(s)                                | Status |
+| ----- | -------------------------------------------------------------- | ----------------------------------------- | ------ |
+| PR-2a | ✨ Criar shared/types/feature-config.ts com tipos + Zod schema | `shared/types/feature-config.ts`          | ✅     |
+| PR-2b | ✨ Criar shared/feature-config.ts (config accessor)            | `shared/feature-config.ts`                | ✅     |
+| PR-2c | 📋 Testes 100% feature-config.ts (20 tests, 0 TSC)             | `shared/__tests__/feature-config.test.ts` | ✅     |
+
+### Fase 3 — Wizard de Configuração PR Report ✅
+
+| ID    | Item                                                             | Arquivo(s)                                       | Status |
+| ----- | ---------------------------------------------------------------- | ------------------------------------------------ | ------ |
+| PR-3a | ✨ Estender SetupContext com prReport feature flags              | `setup/context.ts`                               | ✅     |
+| PR-3b | ✨ Estender config-writer.ts para escrever features.json         | `setup/config-writer.ts`                         | ✅     |
+| PR-3c | ✨ Adicionar perguntas PR Report no gatherSetupContext()         | `setup/main.ts`                                  | ✅     |
+| PR-3d | ✨ Atualizar github-ci.ts: usar config em vez de flags fixas     | `setup/templates/github-ci.ts`                   | ✅     |
+| PR-3e | ✨ Atualizar gitlab-ci.ts: chamar core direto                    | `setup/templates/gitlab-ci.ts`                   | ✅     |
+| PR-3f | ✨ Adicionar entrada "Configurar PR Report" no git_triggers menu | `git_triggers/interactive-mode.ts` + `menu-data` | ✅     |
+| PR-3g | ✨ Criar handler de reconfiguração PR Report em git_triggers     | `git_triggers/pr-report-setup-handler.ts`        | ✅     |
+| PR-3h | 📋 Testes 100% para novos módulos                                | múltiplos                                        | ✅     |
+| PR-3i | 🔧 ✓ tsc --noEmit + vitest run + lint                            | —                                                | ✅     |
+
+### Fase 4 — Runtime Lê Config
+
+| ID    | Item                                                   | Arquivo(s)                                | Status |
+| ----- | ------------------------------------------------------ | ----------------------------------------- | ------ |
+| PR-4a | ✨ pr-report-core.ts main() ler feature-config         | `shared/pr-report-core.ts`                | 🔜     |
+| PR-4b | ✨ Suporte GitLab MR comment (postar comentário em MR) | `shared/pr-report-core.ts` ou novo módulo | 🔜     |
+| PR-4c | 📋 Testes 100% para novos caminhos                     | `shared/__tests__/pr-report-core.test.ts` | 🔜     |
+| PR-4d | 🔧 ✓ tsc --noEmit + vitest run + lint                  | —                                         | 🔜     |
+
+### Fase 5 — Auditoria de Conformidade
+
+| ID    | Item                                                                    | Arquivo(s)                           | Status |
+| ----- | ----------------------------------------------------------------------- | ------------------------------------ | ------ |
+| PR-5a | 🔧 Mapear todas as features contra padrão, registrar débitos no backlog | `BACKLOG.md`                         | 🔜     |
+| PR-5b | 🔧 Sincronizar BACKLOG.md e BACKLOG-historico.md                        | `BACKLOG.md`, `BACKLOG-historico.md` | 🔜     |
+
+### Features Futuras (registradas para não cair em esquecimento)
+
+| ID    | Item                                                | Prioridade | Status |
+| ----- | --------------------------------------------------- | ---------- | ------ |
+| FF-01 | ✨ Publish target s3 para reports HTML              | P3         | 📌     |
+| FF-02 | ✨ Publish target gh-pages para dashboard público   | P3         | 📌     |
+| FF-03 | ✨ Publish target slack para notificação automática | P3         | 📌     |
+| FF-04 | ✨ Multi-projeto: wizard gerencia N projetos        | P2         | 📌     |
+
+### Métricas Alvo
+
+| Métrica                                                  | Alvo             |
+| -------------------------------------------------------- | ---------------- |
+| `tsc --noEmit`                                           | **0 erros**      |
+| `vitest run`                                             | **100% pass**    |
+| `npm run lint`                                           | **0 erros**      |
+| `shared/pr-report-entry.ts`                              | **deletado**     |
+| `setup/templates/gitlab-ci.ts` sem --batch loop          | **corrigido**    |
+| `setup/context.ts` + `SetupContext` com prReport feature | **adicionado**   |
+| `shared/feature-config.ts` com 100% cobertura            | **implementado** |
+| `config/features.json` schema                            | **criado**       |
+| git_triggers menu com "Configurar PR Report"             | **adicionado**   |
+| Auditoria de conformidade                                | **realizada**    |
+| Débitos registrados no backlog                           | **registrados**  |
+| Novos workarounds/debt                                   | **0**            |
+
+---
+
 ## 🛡️ Sprint Baseline Zero — Eliminação de Todos os Mecanismos de Supressão (Jun/2026)
 
 **Data:** 2026-06-12
@@ -2197,3 +2313,537 @@ Nenhuma. O projeto já possui `shared/vitest-ctrf-reporter.ts` próprio — zero
 **Resultado:** `Unhandled Rejection: Error: Something removed the coverage directory` — race condition determinística entre o test fixture cleanup e o coverage provider.
 
 **Correção:** `TEST_DIR` alterado para `path.resolve('coverage-test-fixtures')` e todos os calls de `readIstanbulCoverage()` no test file passam `TEST_PATH` explicitamente. Produção (`coverage-source.ts`) mantém o default `coverage/coverage-summary.json`.
+
+---
+
+## 🚫 Sprint ZERO SCRIPTS — Eliminar Diretório `scripts/` (Jun/2026)
+
+### Invariante
+
+O diretório `scripts/` é **terminantemente proibido** para qualquer nova implementação.
+
+Todo entry point executável deve viver em `shared/` com guard de auto-execução (`if (!process.env.VITEST && process.argv[1]?.includes(...))`). Nenhum workflow CI pode referenciar `scripts/`. Nenhum npm script em `package.json` pode apontar para `scripts/`.
+
+### Motivação
+
+`scripts/` é um acidente arquitetural: CLI wrappers que deveriam ser entry points dentro de `shared/`. Cada script em `scripts/` é um workaround que contorna a interface direta dos módulos `shared/`, criando duplicação de lógica, dependência externa não instalável, e impedindo que as funcionalidades rodem de forma autônoma.
+
+### Plano de Fases
+
+| Fase | Descrição                                                                      | Resultado                           |
+| ---- | ------------------------------------------------------------------------------ | ----------------------------------- |
+| 1    | Mover entry point de `pr-report` para `shared/pr-report-entry.ts`              | `scripts/pr-report.ts` deletado     |
+| 2    | Mover testes de `scripts/__tests__/pr-report.test.ts` para `shared/__tests__/` | Testes migrados, coverage 100%      |
+| 3    | Atualizar CI (`qa.yml`) para chamar `shared/pr-report-entry.ts`                | Zero referência a `scripts/` no CI  |
+| 4    | Atualizar wizard (`github-ci.ts`) para path `shared/`                          | Wizard gera workflow sem `scripts/` |
+| 5    | Mover entry point de `quality-check.ts` para `shared/`                         | `scripts/quality-check.ts` deletado |
+| 6    | Documentar proibição em `AGENTS.md` + `FORBIDDEN.md`                           | Regra imutável registrada           |
+| 7    | Cleanup final: remover `scripts/` obsoleto, verificar tsc+lint+tests           | Sistema consistente, zero débito    |
+
+### Files Impacted
+
+| Arquivo                               | Ação                                                     |
+| ------------------------------------- | -------------------------------------------------------- |
+| `scripts/pr-report.ts`                | DELETAR (lógica → `shared/pr-report-entry.ts`)           |
+| `scripts/__tests__/pr-report.test.ts` | MOVER para `shared/__tests__/pr-report.test.ts`          |
+| `shared/pr-report-entry.ts`           | CRIAR (CLI args + main() + self-exec guard)              |
+| `shared/pr-report-core.ts`            | Nada (já tem `generatePrReport()`)                       |
+| `shared/quality-check-entry.ts`       | CRIAR (entry point movido de `scripts/quality-check.ts`) |
+| `scripts/quality-check.ts`            | DELETAR                                                  |
+| `.github/workflows/qa.yml`            | EDITAR: `scripts/` → `shared/`                           |
+| `setup/templates/github-ci.ts`        | EDITAR: path `scripts/` → `shared/`                      |
+| `AGENTS.md`                           | ADICIONAR regra 19: scripts proibido                     |
+| `scripts/FORBIDDEN.md`                | CRIAR: advertência do diretório                          |
+
+---
+
+## 🔴 Sessão 2026-06-13 — Correção de Rota: PR-Report Core Autocontido + CI Unificado
+
+### Motivação
+
+Sessão anterior (2026-06-13, ZERO SCRIPTS Sprint) implementou `shared/pr-report-entry.ts` como entry point separado. Isso é o **MESMO ANTI-PADRÃO** que se pretendia eliminar — um wrapper externo que deveria ser inline no core.
+
+#### Por que autocontenção é necessária (fundamentos arquiteturais)
+
+1. **Autonomia do módulo**: `shared/pr-report-core.ts` sabe gerar relatório, calcular health score, postar comentário, criar check run, gerar HTML. A única coisa que "não sabia" era ler `process.argv`. Isso é artificial — o módulo deveria saber tudo sobre si mesmo, inclusive como ser invocado.
+
+2. **Eliminar duplicação arquitetural**: `scripts/pr-report.ts` (e depois `shared/pr-report-entry.ts`) existia **apenas** para fazer CLI parsing e chamar o core. É uma camada que só existe porque a separação "scripts vs shared" foi desenhada errada. O core não pode ser usado sem ela. Isso é acoplamento disfarçado de separação.
+
+3. **Carga cognitiva do consumidor**: Com entry point separado, qualquer pessoa que queira entender ou executar o PR report precisa saber de 2 arquivos e como eles se relacionam. Com autocontenção, precisa de 1 — `shared/pr-report-core.ts`. `npx tsx shared/pr-report-core.ts` funciona e ponto.
+
+4. **A falsa dicotomia scripts/shared**: A pasta `scripts/` foi concebida para "scripts de desenvolvimento". Mas `pr-report.ts` rodava em produção (CI, pós-teste, comentários em PR). Não era script de desenvolvimento — era código de produção disfarçado. Mover para `shared/` sem fundir seria só trocar a gaveta, não resolver o problema.
+
+5. **Integridade do pipeline**: `ci.yml` + `qa.yml` separados é fragmentação. O PR report é um **step** pós-teste, não um **workflow** separado. Unificar no `ci.yml` elimina a complexidade de coordenar dois workflows, simplifica o wizard, e reduz pontos de falha.
+
+### O que foi feito (ERRADO — precisa reverter)
+
+| Ação       | Arquivo                               | Problema                                                         |
+| ---------- | ------------------------------------- | ---------------------------------------------------------------- |
+| CRIADO     | `shared/pr-report-entry.ts`           | Wrapper separado = anti-padrão. Core deveria ser autocontido     |
+| CRIADO     | `shared/quality-check.ts`             | Fora do escopo, lixo                                             |
+| MODIFICADO | `.github/workflows/qa.yml`            | Path `shared/pr-report-entry.ts` (será deletado)                 |
+| MODIFICADO | `setup/templates/github-ci.ts`        | Path `shared/pr-report-entry.ts` (será revertido)                |
+| MODIFICADO | `setup/templates/github-ci.test.ts`   | Assert `shared/pr-report-entry.ts` (será revertido)              |
+| CRIADO     | `shared/__tests__/pr-report.test.ts`  | Testes movidos de `scripts/__tests__/` — OK, mas imports errados |
+| DELETADO   | `scripts/__tests__/pr-report.test.ts` | OK — movido para `shared/__tests__/`                             |
+| DELETADO   | `scripts/pr-report.ts`                | OK — era o wrapper antigo                                        |
+
+### O que está CERTO (manter)
+
+- `scripts/pr-report.ts` deletado ✅
+- `shared/pr-report-core.ts` com `generatePrReport()` + `computeDiffComparison()` intacto ✅
+- `shared/__tests__/pr-report.test.ts` existe com 23 testes (precisa corrigir imports) ✅
+- `shared/quality-check.ts` NÃO (deve ser deletado)
+- `scripts/quality-check.ts` intacto (script de validação dev, fica em `scripts/`)
+
+---
+
+### PLANO CORRETO — PR-Report Core Autocontido + CI Unificado
+
+#### Objetivo
+
+`shared/pr-report-core.ts` deve ser o **ÚNICO** arquivo — autocontido, com CLI parsing, `main()`, self-exec guard, exportando `generatePrReport()`, `computeDiffComparison()`, `PrReportCoreOptions`, `DiffComparison`, `main`. Nenhum wrapper separado. CI unificado em um único workflow.
+
+#### Arquitetura
+
+```
+shared/pr-report-core.ts          → Único arquivo. CLI args + main() + self-exec guard inline.
+                                  → npx tsx shared/pr-report-core.ts --ctrf reports/ctrf-report.json
+                                  → Também importável via { generatePrReport } para testes/batch
+
+scripts/pr-report.ts              → DELETADO (já feito)
+shared/pr-report-entry.ts         → DELETAR (wrapper desnecessário)
+shared/quality-check.ts           → DELETAR (lixo)
+```
+
+#### Pipeline CI
+
+```
+ci.yml (único workflow):
+  1. checkout + setup-node + npm ci
+  2. vitest run --coverage (CTRF reporter via config)
+  3. upload ctrf-report artifact
+  4. QA Tools Post-Processing: npx tsx shared/pr-report-core.ts --ctrf reports/ctrf-report.json
+
+qa.yml → DELETAR (unificado no ci.yml)
+```
+
+#### Wizard
+
+Template `setup/templates/github-ci.ts` deve gerar CI editando `ci.yml` diretamente (não gerar `qa.yml` separado).
+
+---
+
+### Procedimento de Execução (ordem obrigatória)
+
+#### Passo 1 — Tornar `shared/pr-report-core.ts` autocontido
+
+Adicionar ao final de `shared/pr-report-core.ts` (após linha `export function computeDiffComparison...`):
+
+1. Função `parseArgs(args: string[]): CliOptions` — extrai `--ctrf`, `--no-ai`, `--no-quality`, `--no-flaky`
+2. Função `export async function main(): Promise<void>` — lê CTRF, calcula diff, chama `generatePrReport()`, loga resultado
+3. Self-exec guard:
+
+```ts
+const runningEntry = process.argv[1]?.replace(/\\/g, '/');
+if (!process.env['VITEST'] && runningEntry?.includes('pr-report-core')) {
+    main().catch((err: unknown) => {
+        rootLogger.error(`pr-report failed: ${err instanceof Error ? err.message : String(err)}`);
+        process.exit(1);
+    });
+}
+```
+
+Atualizar comment block do header (linha 5): remover referência a `shared/pr-report-entry.ts`.
+
+#### Passo 2 — Deletar `shared/pr-report-entry.ts`
+
+#### Passo 3 — Deletar `shared/quality-check.ts`
+
+#### Passo 4 — Editar `.github/workflows/ci.yml`
+
+Adicionar steps:
+
+- `Upload CTRF report`: `actions/upload-artifact@v4`, path `reports/ctrf-report.json`
+- `QA Tools Post-Processing`: `npx tsx shared/pr-report-core.ts --ctrf reports/ctrf-report.json`, env `GITHUB_TOKEN`, `if: always()`
+- `Upload HTML report`: `actions/upload-artifact@v4`, path `reports/pr-report.html`, `if: always()`
+
+#### Passo 5 — Deletar `.github/workflows/qa.yml`
+
+#### Passo 6 — Atualizar `shared/__tests__/pr-report.test.ts`
+
+Todos os `await import('../pr-report-entry.js')` → `await import('../pr-report-core.js')` (15 ocorrências).
+
+#### Passo 7 — Atualizar `setup/templates/github-ci.ts`
+
+- Comentários: `shared/pr-report-entry.ts` → `shared/pr-report-core.ts`
+- String `'npx tsx shared/pr-report-entry.ts'` → `'npx tsx shared/pr-report-core.ts'`
+- Alterar geração para editar `ci.yml` em vez de criar `qa.yml`
+
+#### Passo 8 — Atualizar `setup/templates/github-ci.test.ts`
+
+Assert `shared/pr-report-entry.ts` → `shared/pr-report-core.ts`
+
+#### Passo 9 — Verificar
+
+```bash
+npx tsc --noEmit
+npx vitest run
+npx tsx shared/pr-report-core.ts --ctrf reports/ctrf-report.json
+```
+
+---
+
+### Decisões do Usuário (válidas, imutáveis)
+
+1. **Scripts de validação dev** (`scripts/quality-check.ts`, `.githooks/pre-push`, `scripts/opencode-guard.sh`) **NÃO** fazem parte do pacote de produção. Ficam em `scripts/` — não são wrappers de funcionalidade, são ferramentas de desenvolvimento externas.
+
+2. **ZERO SCRIPTS** (eliminar `scripts/`) é uma tarefa **posterior** — não fazer agora.
+
+3. **O problema** são wrappers que só existem para delegar a uma funcionalidade. A funcionalidade deve ser **autocontida** — entry point + lógica no mesmo arquivo.
+
+4. **CI deve ser um workflow único** — wizard edita `ci.yml` diretamente, não gera `qa.yml` separado.
+
+### Erros Cometidos (não repetir)
+
+1. Criar `shared/pr-report-entry.ts` — wrapper separado, mesmo anti-padrão que se pretendia eliminar. SOLUÇÃO: fundir inline no core.
+2. Mover `scripts/quality-check.ts` para `shared/` — fora do escopo, sem autorização. SOLUÇÃO: deletar lixo, manter original em `scripts/`.
+3. Ignorar instrução expressa do usuário ("o plano de eliminação de scripts é posterior"). SOLUÇÃO: seguir escopo definido, não extrapolar.
+4. Implementar antes de confirmar plano com usuário. SOLUÇÃO: apresentar plano completo, aguardar confirmação explícita.
+
+---
+
+## 🏗️ Sprint PR Report Audit — Correção de 17 Gaps Pós-Implantação (Jun/2026)
+
+**Data:** 2026-06-13
+**Origem:** Auditoria adversarial completa do ecossistema PR Report — 17 gaps identificados (1 bug, 6 críticos, 6 altos, 3 médios, 1 documentação).
+**Estratégia:** 6 fases sequenciais — fundação → nova arquitetura CI (composite action) → config-first runtime → UX → documentação → verificação.
+**Regra absoluta:** zero workarounds, 100% teste para código novo, deletar código obsoleto, nenhum débito deixado. Tempo não é variável.
+
+### Plano de Fases
+
+| Fase | Descrição                                      | Itens               | Status |
+| ---- | ---------------------------------------------- | ------------------- | ------ |
+| 1    | Fundação — bugs, rename, CLI help, dead code   | G1, G6, G9, G17     | ✅     |
+| 2    | Nova arquitetura CI — composite action + unify | G14 (A+B), G16      | ✅     |
+| 3    | Config-first runtime — core lê features.json   | G2, G8, G3, G7, G13 | ✅     |
+| 4    | UX — reconfig handler extendido + testes       | G5, G10             | ✅     |
+| 5    | Documentação — TECHDOC.md                      | G11, G12            | ✅     |
+| 6    | Verificação — tsc + vitest + lint              | —                   | ✅     |
+
+---
+
+### Fase 1 — Fundação
+
+| ID     | Gap | Ação                                                                     | Arquivo(s)                                                         | Status |
+| ------ | --- | ------------------------------------------------------------------------ | ------------------------------------------------------------------ | ------ |
+| AR-01  | G1  | Fix guard `\|\|` → `prReport` only em github-ci.ts e gitlab-ci.ts        | `setup/templates/github-ci.ts`, `gitlab-ci.ts`                     | ✅     |
+| AR-02  | G6  | Renomear `jiraIntegration` → `qualityGate`. Wizard pergunta Quality Gate | `setup/context.ts`, `setup/main.ts`                                | ✅     |
+| AR-03  | G9  | Adicionar `--help` + unknown flag warn em `parseArgs()`                  | `shared/pr-report-core.ts`                                         | ✅     |
+| AR-04  | G17 | Deletar `shared/quality-check.ts` (código morto)                         | `shared/quality-check.ts`                                          | ✅     |
+| AR-T1  | 📋  | Tests para G1, G6, G9                                                    | `github-ci.test.ts`, `gitlab-ci.test.ts`, `pr-report-core.test.ts` | ✅     |
+| AR-T1a | 📋  | Tests para `generateQaPostProcessAction` + `generateCIWorkflow`          | `github-ci.test.ts`                                                | ✅     |
+| AR-T1b | 📋  | Tests para `qualityGate` no gitlab-ci + main.test.ts                     | `gitlab-ci.test.ts`, `main.test.ts`                                | ✅     |
+
+---
+
+### Fase 2 — Composite Action + CI Unificado
+
+**Decisão técnica:** Gerar `.github/actions/qa-post-process/action.yml` (composite action) em vez de `qa.yml`. Injetar `uses:` step em `ci.yml` via `js-yaml`.
+
+| ID    | Gap  | Ação                                                                                           | Arquivo(s)                     | Status |
+| ----- | ---- | ---------------------------------------------------------------------------------------------- | ------------------------------ | ------ |
+| AR-05 | G14A | Criar `setup/templates/github-ci.ts` — `generateQaPostProcessAction()`                         | `setup/templates/github-ci.ts` | ✅     |
+| AR-06 | G14B | Renomear `generateGitHubActions()` → `generateCIWorkflow()`. Output `ci.yml`.                  | `setup/templates/github-ci.ts` | ✅     |
+| AR-07 | G16  | Deletar `.github/workflows/qa.yml`                                                             | `.github/workflows/qa.yml`     | ✅     |
+| AR-08 | G14C | `generateConfigFiles()` injeta step via `injectQaStepIntoWorkflow()` em `ci.yml` existente     | `setup/main.ts`                | ✅     |
+| AR-09 | G14D | Adicionar steps de PR Report no `ci.yml` do qa_tools (upload-artifact + composite action call) | `.github/workflows/ci.yml`     | ✅     |
+| AR-T2 | 📋   | Tests para generateQaPostProcessAction + generateCIWorkflow                                    | `github-ci.test.ts`            | ✅     |
+
+---
+
+### Fase 3 — Config-First Runtime
+
+| ID    | Gap | Ação                                                                                                        | Arquivo(s)                                               | Status |
+| ----- | --- | ----------------------------------------------------------------------------------------------------------- | -------------------------------------------------------- | ------ |
+| AR-10 | G2  | `parseArgs()` add `--project`. `main()` lê `getPrReportConfig()`. Remove `process.exit()`. CI sem `--no-*`. | `shared/pr-report-core.ts`, `templates/`                 | ✅     |
+| AR-11 | G8  | Extrair `GITHUB_*` para `getCiEnv()` helper. `GITHUB_REPOSITORY` vira fallback de `--project`.              | `shared/pr-report-core.ts`                               | ✅     |
+| AR-12 | G3  | Aninhar `skipAi`, `skipQuality`, `skipFlaky` sob `prReport` no schema Zod.                                  | `shared/types/feature-config.ts`                         | ✅     |
+| AR-13 | G7  | `main()` valida publishTarget. Handler reconfig valida compatibilidade.                                     | `shared/pr-report-core.ts`, `pr-report-setup-handler.ts` | ✅     |
+| AR-14 | G13 | `batch-mode.ts` lê config via `isPrReportEnabled()` + skip\* flags.                                         | `git_triggers/batch-mode.ts`                             | ✅     |
+| AR-T3 | 📋  | Tests: config-first paths + batch-mode + schema updates                                                     | múltiplos                                                | ✅     |
+
+---
+
+### Fase 4 — UX + Testes
+
+| ID    | Gap | Ação                                                                                  | Arquivo(s)                        | Status |
+| ----- | --- | ------------------------------------------------------------------------------------- | --------------------------------- | ------ |
+| AR-15 | G5  | Estender `pr-report-setup-handler.ts`: sub-features toggles quando PR Report enabled. | `pr-report-setup-handler.ts`      | ✅     |
+| AR-16 | G10 | 📋 Tests 100% para handler estendido                                                  | `pr-report-setup-handler.test.ts` | ✅     |
+
+---
+
+### Fase 5 — Documentação
+
+| ID    | Gap | Ação                                                                    | Arquivo(s)        | Status |
+| ----- | --- | ----------------------------------------------------------------------- | ----------------- | ------ |
+| AR-17 | G11 | TECHDOC: `feature-config.ts` é PR-Report-specific até segundo consumer. | `docs/TECHDOC.md` | ✅     |
+| AR-18 | G12 | TECHDOC: `prePushHook` é setup-only (sem ciclo Config → Runtime).       | `docs/TECHDOC.md` | ✅     |
+
+---
+
+### Fase 6 — Verificação
+
+| ID    | Ação                                                        | Critério  |
+| ----- | ----------------------------------------------------------- | --------- |
+| AR-V1 | `npx tsc --noEmit`                                          | 0 erros   |
+| AR-V2 | `npx vitest run`                                            | 100% pass |
+| AR-V3 | Verificar: `qa.yml` deletado, action criado, ci.yml íntegro | —         |
+
+### Métricas Alvo
+
+| Métrica                            | Alvo                                |
+| ---------------------------------- | ----------------------------------- |
+| `tsc --noEmit`                     | **0 erros**                         |
+| `vitest run`                       | **100% pass**                       |
+| Gaps corrigidos                    | **20/20** (17 PR + 3 CC)            |
+| `shared/quality-check.ts`          | **deletado**                        |
+| `.github/workflows/qa.yml`         | **deletado** (unificado)            |
+| `.github/actions/qa-post-process/` | **regenerado** (project-name input) |
+| Cobertura novos módulos            | **100% statements**                 |
+| Débitos novos                      | **0**                               |
+| Workarounds                        | **0**                               |
+
+---
+
+## 🧩 Post-Sprint: Wizard CTRF Dependency Detection (Jun/2026)
+
+**Data:** 2026-06-13
+**Origem:** Discussão durante Fase 3 — detector.ts detecta framework (cypress/playwright/jest/vitest/generic) mas não verifica se o pacote CTRF reporter está instalado no `package.json`. O wizard não sugere instalação.
+**Estratégia:** Adicionar campo `ctrfPackage` em `DetectionResult`, verificar presença no `package.json`, e sugerir `npm install <pacote> --save-dev` quando ausente. Sem auto-instalação em CI — isso seria workaround.
+**Regra:** causa raiz é dependência faltando no projeto do usuário. Corrigir na origem = dev instala localmente. CI não deve compensar dependência ausente.
+
+### Tasks
+
+| ID    | Ação                                                                                                                                                                                                              | Arquivo(s)                         | Status |
+| ----- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------- | ------ |
+| CD-01 | Adicionar campo `ctrfPackage?: string` + campo `CtrfPackageMap` em `detector.ts`                                                                                                                                  | `setup/detector.ts`                | 📌     |
+| CD-02 | Mapear pacote CTRF por framework (cypress → `ctrf-ctrf-json-reporter`, playwright → `@d2t/playwright-ctrf-json-reporter`, jest → `ctrf-json-reporter`, vitest → `undefined` (usa interno), generic → `undefined`) | `setup/detector.ts`                | 📌     |
+| CD-03 | Em `detectFramework()`, verificar se o pacote mapeado está em `dependencies` ou `devDependencies` do `package.json`. Se não estiver: `ctrfSource = 'missing'`, `ctrfPackage = nome`                               | `setup/detector.ts`                | 📌     |
+| CD-04 | Em `setup/main.ts`, quando `ctrfSource === 'missing'` e `detection.ctrfPackage` existir: exibir warning + `npm install <pacote> --save-dev`                                                                       | `setup/main.ts`                    | 📌     |
+| CD-05 | 📋 Testes: detector.ts retorna `ctrfPackage` correto por framework, `ctrfSource === 'missing'` quando pacote ausente, `main.ts` exibe warning                                                                     | `detector.test.ts`, `main.test.ts` | 📌     |
+| CD-06 | 🔧 ✓ tsc --noEmit + vitest run                                                                                                                                                                                    | —                                  | 📌     |
+
+---
+
+## 📐 Feature Audit Framework — Metodologia Consolidada de Auditoria por Feature (Jun/2026)
+
+**Data:** 2026-06-13
+**Origem:** A auditoria adversarial do PR Report (17 gaps) revelou que a mesma abordagem deve ser aplicada a CADA feature existente no sistema. Paralelamente, a auditoria de wizards/workflows (discutida mas não executada) cobre sobreposições — ambas devem ser fundidas em um único framework reutilizável.
+**Regra absoluta:** toda feature deve passar pela auditoria antes de ser considerada estável. Feature = qualquer capability do sistema com entry point, contrato, runtime e (potencialmente) wizard.
+
+---
+
+### 1. O QUE FOI FEITO NA AUDITORIA DO PR REPORT (template metodológico)
+
+A auditoria adversarial do PR Report seguiu este fluxo:
+
+```
+1. MApear TODOS os arquivos que tocam a feature
+   └── shared/pr-report-core.ts         (runtime)
+   └── shared/feature-config.ts          (config accessor)
+   └── shared/types/feature-config.ts    (schema)
+   └── setup/main.ts                     (wizard entry)
+   └── setup/context.ts                  (wizard context)
+   └── setup/config-writer.ts            (wizard output)
+   └── setup/detector.ts                 (wizard detection)
+   └── setup/templates/github-ci.ts      (CI template)
+   └── setup/templates/gitlab-ci.ts      (CI template)
+   └── git_triggers/interactive-mode.ts  (reconfig menu)
+   └── git_triggers/pr-report-setup-handler.ts (reconfig handler)
+   └── git_triggers/batch-mode.ts        (batch trigger)
+   └── .github/workflows/ci.yml          (CI workflow)
+
+2. Para cada arquivo, responder:
+   └── Esse arquivo DEVERIA existir para esta feature? (se não: GAP)
+   └── Esse arquivo existe de fato? (se não: GAP)
+   └── Se existe: o código está correto? (se não: GAP — bug/lógica)
+   └── Se existe: está seguindo o padrão Wizard → Config → Runtime? (se não: GAP — arquitetura)
+   └── Se existe: tem testes? (se não: GAP — cobertura)
+   └── Se existe: tem safety mechanisms? (se não: GAP — segurança)
+   └── Este arquivo contém código morto/dead da feature? (se sim: GAP — débito)
+
+3. Classificar cada GAP:
+   └── Bug: comportamento errado em produção
+   └── Crítico: segurança, integridade de dados, quebra de invariante
+   └── Alto: funcionalidade faltando, arquitetura incorreta
+   └── Médio: falta de testes, dead code, UX incompleta
+   └── Documentação: TECHDOC desatualizado
+
+4. Agrupar GAPs em fases de correção:
+   └── Fundação (bugs + dead code + renomeios)
+   └── Arquitetura (mudanças estruturais)
+   └── Runtime (config-first, comportamentos)
+   └── UX (wizard + reconfig handlers)
+   └── Documentação
+   └── Verificação
+
+5. Registrar no BACKLOG.md com ID, gap, ação, arquivo(s), status
+```
+
+---
+
+### 2. CATEGORIAS DE AUDITORIA (fundidas: técnica + UX + wizard)
+
+Cada feature deve ser verificada contra TODAS as categorias abaixo:
+
+| #   | Categoria                     | O que procurar                                                                                                                    | Exemplo PR Report                                                                                                                  |
+| --- | ----------------------------- | --------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------- | --- | ------------------------------------------- |
+| T1  | **Entry point**               | A feature tem um entry point claro? Está acessível por CLI, trigger, ou CI?                                                       | `pr-report-core.ts` main() existia mas era pr-report-entry.ts separado                                                             |
+| T2  | **Config model**              | A feature tem schema de config? O schema é validado por Zod? As interfaces espelham o schema?                                     | `feature-config.ts` não tinha skipAi/skipQuality/skipFlaky aninhados                                                               |
+| T3  | **Config accessor**           | Existe módulo de acesso a config com getters tipados e defaults sensíveis?                                                        | `feature-config.ts` existia mas sem getters para sub-features                                                                      |
+| T4  | **Runtime lê config**         | O runtime lê a config em vez de depender exclusivamente de CLI flags/env vars?                                                    | `main()` usava só flags, não lia `features.json`                                                                                   |
+| T5  | **Wizard entry**              | O wizard tem entrada para configurar esta feature? O menu do git_triggers tem?                                                    | PR Report não tinha entrada no wizard (criado PR-3f)                                                                               |
+| T6  | **Wizard detection**          | O wizard detecta automaticamente o contexto relevante para a feature?                                                             | `detector.ts` detecta framework mas não pacote CTRF instalado                                                                      |
+| T7  | **Wizard output**             | O wizard gera/configura os arquivos necessários (CI, config, actions)?                                                            | `setup/main.ts` não gerava features.json (criado PR-3b)                                                                            |
+| T8  | **Wizard prompts**            | As perguntas ao usuário são claras e completas? Cobrem sub-opções?                                                                | `context.ts` tinha `jiraIntegration` → renomeado para `qualityGate`                                                                |
+| T9  | **Reconfig handler**          | Existe handler para reconfigurar a feature via `git_triggers`? Ele lê e escreve config corretamente?                              | `pr-report-setup-handler.ts` foi criado mas sem sub-features toggles (G5)                                                          |
+| T10 | **CI integration**            | A feature está integrada nos templates CI (github-ci.ts, gitlab-ci.ts)? Os workflows gerados estão corretos?                      | Guard `                                                                                                                            |     | ` em templates gerava PR Report sempre (G1) |
+| T11 | **CI safety**                 | O CI tem safety mechanisms ativos? Fallbacks seguros?                                                                             | `qa.yml` duplicava `ci.yml` (G16) — deletado, unificado via composite action                                                       |
+| T12 | **Test coverage**             | Cada módulo novo tem testes? Testes existentes cobrem os novos caminhos?                                                          | Vários gaps sem testes (G10, AR-T3)                                                                                                |
+| T13 | **Dead code**                 | Código da feature que foi substituído mas não deletado?                                                                           | `shared/quality-check.ts` (G17), `.github/workflows/qa.yml` (G16)                                                                  |
+| T14 | **Suppression**               | `as any`, `!`, `@ts-ignore`, `eslint-disable`, `process.exit()`, catch vazio, baseline?                                           | `process.exit(0)` em main() removido                                                                                               |
+| T15 | **Bidirectional consistency** | Se A → B e B → A existem: os dois caminhos fazem a mesma coisa? Contratos idênticos?                                              | Wizard escreve features.json, runtime lê — verificar sync                                                                          |
+| T16 | **CLI interface**             | A feature tem CLI? `--help` funciona? Unknown flags são reportadas? Valores default são documentados?                             | `parseArgs()` não tinha `--help` (G9)                                                                                              |
+| T17 | **Env var dependency**        | A feature depende de env vars? Elas estão em `.env.example` e no schema?                                                          | `GITHUB_*` vars usadas sem helper (G8)                                                                                             |
+| T18 | **Error handling**            | Erros são logados com contexto? Fallbacks são explícitos e documentados?                                                          | `main()` fazia `process.exit(0)` sem log em certos caminhos                                                                        |
+| T19 | **TECHDOC**                   | A feature está documentada no TECHDOC? Tipo, interface, entry point, flags?                                                       | `feature-config.ts` e `prePushHook` ausentes (G11, G12)                                                                            |
+| T20 | **CI/Config Contract**        | O CI passa parâmetros corretos pro runtime? Runtime resolve config? Contrato Action inputs → CLI args → config key é consistente? | `action.yml` sem `project-name` → runtime usa `GITHUB_REPOSITORY` (owner/repo) → features.json key mismatch → PR Report nunca roda |
+
+---
+
+### 3. COMO EXECUTAR A AUDITORIA (checklist operacional)
+
+Para cada feature F:
+
+```
+Passo 1 — Mapa de arquivos
+  1a. rg -l <FeatureKeyword> --include='*.ts' para achar todos os tocantes
+  1b. Verificar se algum tocante esperado NÃO aparece (ex: config schema, wizard entry)
+  1c. Lista final com path + papel de cada arquivo
+
+Passo 2 — Contra o checklist T1-T19
+  2a. Para cada categoria T1-T19: aplicar à feature
+  2b. Se categoria não se aplica: marcar N/A com justificativa
+  2c. Se categoria se aplica e está correta: marcar ✅
+  2d. Se categoria se aplica e tem problema: marcar ❌ + descrever gap
+
+Passo 3 — Classificação
+  3a. Cada ❌ vira GAP com ID (G1, G2, ...)
+  3b. Classificar severidade conforme PR Report: Bug > Crítico > Alto > Médio > Doc
+
+Passo 4 — Plano de correção
+  4a. Agrupar GAPs em fases lógicas
+  4b. Estimar interdependências
+  4c. Registrar no BACKLOG.md
+
+Passo 5 — Execução
+  5a. Implementar fase por fase
+  5b. tsc --noEmit + vitest run após cada fase
+  5c. Nenhum workaround, nenhum débito novo
+```
+
+---
+
+### 4. FEATURES A AUDITAR (fila)
+
+| #   | Feature                        | Prioridade | Auditada? | Artefato                       |
+| --- | ------------------------------ | ---------- | --------- | ------------------------------ |
+| F1  | PR Report (já auditada)        | P0         | ✅        | 17 gaps, 6 fases, sprint ativo |
+| F2  | Quality Gate                   | P0         | 📌        | —                              |
+| F3  | AI Failure Analysis            | P0         | 📌        | —                              |
+| F4  | Flaky Dashboard                | P1         | 📌        | —                              |
+| F5  | Jira Integration               | P1         | 📌        | —                              |
+| F6  | Pre-Push Hook                  | P2         | 📌        | —                              |
+| F7  | Schedule Handler               | P2         | 📌        | —                              |
+| F8  | Publish Targets (s3, gh-pages) | P3         | 📌        | —                              |
+
+---
+
+### 5. FERRAMENTAS DISPONÍVEIS PARA AUTOMAÇÃO
+
+- **senior-auditor agent**: `.opencode/agents/senior-auditor.md` — 24 categorias (MICRO/MESO/MACRO/SEC/TEST)
+- **suppression-auditor agent**: `.opencode/agents/suppression-auditor.md` — 18 categorias de supressão
+- **duplication-auditor agent**: `.opencode/agents/duplication-auditor.md` — 8 categorias de duplicação
+- **Feature Audit Framework (este documento)**: T1-T19 checklist manual + fluxo adversarial
+
+A auditoria ideal combina:
+
+1. suppression-auditor na base toda (pré-requisito)
+2. senior-auditor na base toda (pré-requisito)
+3. Feature Audit Framework T1-T20 na feature específica (manual, adversarial)
+4. duplication-auditor na base toda (pós-correção)
+
+---
+
+### 6. MÉTRICAS ALVO
+
+| Métrica                      | Alvo                         |
+| ---------------------------- | ---------------------------- |
+| Features auditadas           | **8/8**                      |
+| Gaps por feature             | **0** (target após correção) |
+| Workarounds por feature      | **0**                        |
+| TECHDOC coverage por feature | **100%**                     |
+| Wizard coverage por feature  | **100%** (se aplicável)      |
+| Reconfig handler por feature | **100%** (se aplicável)      |
+| Dead code por feature        | **0**                        |
+| Suppressions por feature     | **0**                        |
+
+---
+
+## 🏗️ Sprint CI/Config Contract — Correção de 3 Gaps no Contrato entre CI e Config (Jun/2026)
+
+**Data:** 2026-06-13
+**Origem:** A auditoria adversarial do PR Report (17 gaps) deixou passar 3 gaps de **boundary** — a ligação entre CI (composite action) e config (features.json) nunca foi especificada nem testada. O runtime usa `GITHUB_REPOSITORY` (owner/repo) como fallback de `--project`, mas o features.json é chaveado por `projectName` (e.g. "qa_tools"). Resultado: lookup falha, `enabled: false`, PR Report nunca roda.
+**Estratégia:** Adicionar `project-name` input na composite action, propagar para o runtime via `--project`, e alinhar a chave do features.json com o valor passado.
+**Regra absoluta:** zero workarounds, 100% teste, zero débito.
+
+### Plano de Correção
+
+| ID    | Gap                                               | Ação                                                                                    | Arquivos                                                       | Status |
+| ----- | ------------------------------------------------- | --------------------------------------------------------------------------------------- | -------------------------------------------------------------- | ------ |
+| CC-01 | Composite action sem `project-name` input         | Adicionar input required `project-name` + `--project ${{ inputs.project-name }}` no run | `setup/templates/github-ci.ts`                                 | ✅     |
+| CC-02 | Template CI não passa project-name                | Adicionar `with: { project-name: ctx.projectName }` no step da action                   | `setup/templates/github-ci.ts`                                 | ✅     |
+| CC-03 | `injectQaStepIntoWorkflow` não recebe projectName | Adicionar parâmetro, injetar `with: { project-name }` no snippet YAML                   | `setup/main.ts`                                                | ✅     |
+| CC-04 | features.json nunca criado para qa_tools          | Já resolvido em config-writer.ts — verificar e testar                                   | `setup/config-writer.ts`                                       | ✅     |
+| CC-05 | Action atual obsoleta                             | Deletar `.github/actions/qa-post-process/` atual + step no ci.yml                       | `.github/actions/qa-post-process/`, `.github/workflows/ci.yml` | ✅     |
+
+### Testes
+
+| ID    | O que testar                                                                                | Arquivo                                       | Status |
+| ----- | ------------------------------------------------------------------------------------------- | --------------------------------------------- | ------ |
+| CT-01 | `generateQaPostProcessActionYaml()` gera YAML com `project-name` input + `--project` no run | `github-ci.test.ts`                           | ✅     |
+| CT-02 | `generateCIWorkflow()` gera step com `with: { project-name }`                               | `github-ci.test.ts`                           | ✅     |
+| CT-03 | `injectQaStepIntoWorkflow()` injeta step com `with: { project-name }`                       | `main.test.ts`                                | ✅     |
+| CT-04 | E2E: wizard → features.json → action.yml → ci.yml → runtime resolve config                  | `main.test.ts`                                | ✅     |
+| CT-05 | `features.json` com chave = projectName funciona no runtime                                 | `pr-report.test.ts`, `feature-config.test.ts` | ✅     |
+
+### Atualização do Feature Audit Framework
+
+Adicionar categoria **T20 — CI/Config Contract**:
+
+| #   | Categoria              | O que procurar                                                                                                                                                                        | Exemplo PR Report                                                                                                                                  |
+| --- | ---------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------- |
+| T20 | **CI/Config Contract** | O CI passa os parâmetros corretos para o runtime? O runtime consegue resolver a config? O contrato de deploy (Composite Action inputs → CLI args → feature config key) é consistente? | `action.yml` não recebia `project-name`; runtime usava `GITHUB_REPOSITORY` (owner/repo); features.json chaveado por projectName simples — mismatch |
+
+### Métricas Alvo
+
+| Métrica                 | Alvo                                          |
+| ----------------------- | --------------------------------------------- |
+| `tsc --noEmit`          | **0 erros**                                   |
+| `vitest run`            | **100% pass**                                 |
+| Gaps corrigidos         | **3/3** (CC-01, CC-02, CC-03) + 1 audit (T20) |
+| Cobertura novos módulos | **100% statements**                           |
+| Débitos novos           | **0**                                         |
+| Workarounds             | **0**                                         |

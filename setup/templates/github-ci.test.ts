@@ -1,4 +1,4 @@
-import { generateGitHubActions } from './github-ci.js';
+import { generateCIWorkflow, generateQaPostProcessAction } from './github-ci.js';
 import type { SetupContext } from '../context.js';
 
 const MOCK_CTX_BASIC: SetupContext = {
@@ -14,82 +14,115 @@ const MOCK_CTX_BASIC: SetupContext = {
     repoName: 'test-proj',
     workflowDir: '.github/workflows',
     features: {
-        jiraIntegration: false,
+        qualityGate: false,
         flakinessDashboard: false,
         aiFailureAnalysis: false,
         prePushHook: false,
+        prReport: false,
+        prReportPublishTarget: 'github-actions',
     },
 };
 
 const MOCK_CTX_FULL: SetupContext = {
     ...MOCK_CTX_BASIC,
     features: {
-        jiraIntegration: true,
+        qualityGate: true,
         flakinessDashboard: true,
         aiFailureAnalysis: true,
         prePushHook: true,
+        prReport: true,
+        prReportPublishTarget: 'github-actions',
     },
 };
 
-describe('generateGitHubActions', () => {
+describe('generateCIWorkflow', () => {
     it('returns YAML string with workflow name', () => {
-        const yaml = generateGitHubActions(MOCK_CTX_BASIC);
-        expect(yaml).toContain('QA Pipeline');
+        const yaml = generateCIWorkflow(MOCK_CTX_BASIC);
+        expect(yaml).toContain('name: CI');
         expect(yaml).toContain('push');
         expect(yaml).toContain('pull_request');
     });
 
     it('includes test steps', () => {
-        const yaml = generateGitHubActions(MOCK_CTX_BASIC);
+        const yaml = generateCIWorkflow(MOCK_CTX_BASIC);
         expect(yaml).toContain('npm ci');
         expect(yaml).toContain('npx cypress run');
     });
 
-    it('adds post-processing step when features enabled', () => {
-        const yaml = generateGitHubActions(MOCK_CTX_FULL);
+    it('adds post-processing step when prReport enabled', () => {
+        const yaml = generateCIWorkflow(MOCK_CTX_FULL);
         expect(yaml).toContain('QA Tools Post-Processing');
-        expect(yaml).toContain('scripts/pr-report.ts');
-        expect(yaml).not.toContain('git_triggers/main.ts');
+        expect(yaml).toContain('./.github/actions/qa-post-process');
     });
 
-    it('post-processing includes --ctrf flag', () => {
-        const yaml = generateGitHubActions(MOCK_CTX_FULL);
-        expect(yaml).toContain('--ctrf');
-        expect(yaml).toContain('cypress/reports/ctrf-report.json');
-    });
-
-    it('post-processing skips --no-ai when aiFailureAnalysis enabled', () => {
-        const yaml = generateGitHubActions(MOCK_CTX_FULL);
-        expect(yaml).not.toContain('--no-ai');
-    });
-
-    it('post-processing includes --no-ai when aiFailureAnalysis disabled', () => {
-        const ctx: SetupContext = {
-            ...MOCK_CTX_BASIC,
-            features: {
-                jiraIntegration: true,
-                flakinessDashboard: true,
-                aiFailureAnalysis: false,
-                prePushHook: false,
-            },
-        };
-        const yaml = generateGitHubActions(ctx);
-        expect(yaml).toContain('--no-ai');
-    });
-
-    it('does not add post-processing when no features', () => {
-        const yaml = generateGitHubActions(MOCK_CTX_BASIC);
+    it('does not add post-processing when prReport disabled', () => {
+        const yaml = generateCIWorkflow(MOCK_CTX_BASIC);
         expect(yaml).not.toContain('QA Tools Post-Processing');
     });
 
     it('includes upload-artifact step', () => {
-        const yaml = generateGitHubActions(MOCK_CTX_BASIC);
+        const yaml = generateCIWorkflow(MOCK_CTX_BASIC);
         expect(yaml).toContain('actions/upload-artifact@v4');
         expect(yaml).toContain('cypress/reports/ctrf-report.json');
     });
 
     it('includes setup-node with correct version', () => {
-        const yaml = generateGitHubActions(MOCK_CTX_BASIC);
+        const yaml = generateCIWorkflow(MOCK_CTX_BASIC);
         expect(yaml).toContain('node-version: "20"');
+    });
+
+    it('generates minimal workflow when prReport enabled but all sub-features disabled', () => {
+        const ctx: SetupContext = {
+            ...MOCK_CTX_BASIC,
+            features: {
+                ...MOCK_CTX_BASIC.features,
+                prReport: true,
+            },
+        };
+        const yaml = generateCIWorkflow(ctx);
+        expect(yaml).toContain('QA Tools Post-Processing');
+        expect(yaml).toContain('./.github/actions/qa-post-process');
+        // Sub-features are consumed by the runtime (pr-report-core), not by the template
+        expect(yaml).not.toContain('--no-ai');
+        expect(yaml).not.toContain('--no-quality');
+    });
+});
+
+describe('generateQaPostProcessAction', () => {
+    it('returns composite action YAML', () => {
+        const yaml = generateQaPostProcessAction();
+        expect(yaml).toContain('name: QA Tools Post-Process');
+        expect(yaml).toContain('using: composite');
+        expect(yaml).toContain('shared/pr-report-core.ts');
+        expect(yaml).toContain('GITHUB_TOKEN');
+    });
+
+    it('includes ctrf-path input with default', () => {
+        const yaml = generateQaPostProcessAction();
+        expect(yaml).toContain('ctrf-path');
+        expect(yaml).toContain('reports/ctrf-report.json');
+    });
+
+    it('includes project-name input (required)', () => {
+        const yaml = generateQaPostProcessAction();
+        expect(yaml).toContain('project-name');
+        expect(yaml).toContain('required: true');
+    });
+
+    it('passes --project ${{ inputs.project-name }} in run command', () => {
+        const yaml = generateQaPostProcessAction();
+        expect(yaml).toContain('--project ${{ inputs.project-name }}');
+    });
+});
+
+describe('generateCIWorkflow — with: project-name', () => {
+    it('includes with: block with project-name when prReport enabled', () => {
+        const yaml = generateCIWorkflow(MOCK_CTX_FULL);
+        expect(yaml).toContain('project-name: test-proj');
+    });
+
+    it('does not include project-name when prReport disabled', () => {
+        const yaml = generateCIWorkflow(MOCK_CTX_BASIC);
+        expect(yaml).not.toContain('project-name:');
     });
 });

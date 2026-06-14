@@ -246,6 +246,7 @@ export function buildActionChoices(): JsonObject[] {
         { name: '      Git Metrics Adapter (doc)', value: 'e' },
         { name: '      Bug Report Interativo', value: 'g' },
         { name: '      AI PR Description', value: 'i' },
+        { name: '      Configurar PR Report', value: 'f' },
         { name: '      Pipeline health (HTML)', value: 'p' },
         { name: '      Quality Gate (HTML)', value: 'q' },
         { name: '      Relatório completo de qualidade', value: 'r' },

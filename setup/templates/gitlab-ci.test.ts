@@ -14,20 +14,24 @@ const MOCK_CTX_BASIC: SetupContext = {
     repoName: 'test-proj',
     workflowDir: '.gitlab-ci.yml',
     features: {
-        jiraIntegration: false,
+        qualityGate: false,
         flakinessDashboard: false,
         aiFailureAnalysis: false,
         prePushHook: false,
+        prReport: false,
+        prReportPublishTarget: 'github-actions',
     },
 };
 
 const MOCK_CTX_WITH_FEATURES: SetupContext = {
     ...MOCK_CTX_BASIC,
     features: {
-        jiraIntegration: true,
+        qualityGate: true,
         flakinessDashboard: true,
         aiFailureAnalysis: true,
         prePushHook: false,
+        prReport: true,
+        prReportPublishTarget: 'github-actions',
     },
 };
 
@@ -53,13 +57,61 @@ describe('generateGitLabCI', () => {
         expect(yaml).toContain('reports/ctrf-report.json');
     });
 
-    it('adds post-processing step when features enabled', () => {
+    it('adds post-processing step when prReport enabled', () => {
         const yaml = generateGitLabCI(MOCK_CTX_WITH_FEATURES);
-        expect(yaml).toContain('git_triggers/main.ts');
+        expect(yaml).toContain('shared/pr-report-core.ts');
     });
 
-    it('does not add post-processing when no features', () => {
+    it('does not add post-processing when prReport disabled', () => {
         const yaml = generateGitLabCI(MOCK_CTX_BASIC);
-        expect(yaml).not.toContain('git_triggers/main.ts');
+        expect(yaml).not.toContain('shared/pr-report-core.ts');
+    });
+
+    it('includes --no-ai flag when aiFailureAnalysis disabled', () => {
+        const ctx = {
+            ...MOCK_CTX_WITH_FEATURES,
+            features: { ...MOCK_CTX_WITH_FEATURES.features, aiFailureAnalysis: false },
+        };
+        const yaml = generateGitLabCI(ctx);
+        expect(yaml).toContain('--no-ai');
+    });
+
+    it('includes --no-flaky flag when flakinessDashboard disabled', () => {
+        const ctx = {
+            ...MOCK_CTX_WITH_FEATURES,
+            features: { ...MOCK_CTX_WITH_FEATURES.features, flakinessDashboard: false },
+        };
+        const yaml = generateGitLabCI(ctx);
+        expect(yaml).toContain('--no-flaky');
+    });
+
+    it('includes --no-quality flag when qualityGate disabled', () => {
+        const ctx = {
+            ...MOCK_CTX_WITH_FEATURES,
+            features: { ...MOCK_CTX_WITH_FEATURES.features, qualityGate: false },
+        };
+        const yaml = generateGitLabCI(ctx);
+        expect(yaml).toContain('--no-quality');
+    });
+
+    it('includes --ctrf flag with correct path', () => {
+        const yaml = generateGitLabCI(MOCK_CTX_WITH_FEATURES);
+        expect(yaml).toContain('--ctrf');
+        expect(yaml).toContain('reports/ctrf-report.json');
+    });
+
+    it('omits --no-ai when aiFailureAnalysis enabled', () => {
+        const yaml = generateGitLabCI(MOCK_CTX_WITH_FEATURES);
+        expect(yaml).not.toContain('--no-ai');
+    });
+
+    it('omits --no-flaky when flakinessDashboard enabled', () => {
+        const yaml = generateGitLabCI(MOCK_CTX_WITH_FEATURES);
+        expect(yaml).not.toContain('--no-flaky');
+    });
+
+    it('omits --no-quality when qualityGate enabled', () => {
+        const yaml = generateGitLabCI(MOCK_CTX_WITH_FEATURES);
+        expect(yaml).not.toContain('--no-quality');
     });
 });
