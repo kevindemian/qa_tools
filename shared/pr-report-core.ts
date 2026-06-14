@@ -38,12 +38,14 @@ import { getPrReportConfig } from './feature-config.js';
  * Read CI-injected environment variables with typed fallbacks.
  * These are GitHub Actions runtime vars, not user configuration.
  */
-function getCiEnv(): { serverUrl: string; repo: string; runId: string; refName: string } {
+function getCiEnv(): { serverUrl: string; repo: string; runId: string; refName: string; isCI: boolean } {
     return {
         serverUrl: process.env['GITHUB_SERVER_URL'] ?? 'https://github.com',
         repo: process.env['GITHUB_REPOSITORY'] ?? 'unknown',
         runId: process.env['GITHUB_RUN_ID'] ?? '0',
         refName: process.env['GITHUB_REF_NAME'] ?? '',
+        /** True when running inside GitHub Actions or GitLab CI. */
+        isCI: !!(process.env['GITHUB_ACTIONS'] || process.env['CI']),
     };
 }
 
@@ -71,6 +73,8 @@ export interface PrReportCoreOptions {
     skipFlaky?: boolean;
     htmlOutputPath?: string;
     diffComparison?: DiffComparison;
+    /** CI environment context — used to render CI Context section in PR comment. */
+    ciEnv?: { isCI: boolean; repo: string; runId: string; refName: string; serverUrl: string };
 }
 
 export interface PrReportResult {
@@ -218,6 +222,52 @@ function buildAiAnalysisSection(): string {
 }
 
 /**
+ * D2 FIX: Build CI context section for the PR comment.
+ *
+ * When running inside CI (GitHub Actions), the post-processing step may run
+ * via `if: always()` — meaning it executes even when previous steps fail.
+ * In this case, "0 test failures" is technically accurate but can be misleading
+ * because the CI pipeline itself may have failed in a post-test step.
+ *
+ * This section makes the CI context explicit so reviewers understand that
+ * test results and CI status may differ.
+ */
+function buildCiContextSection(
+    ciEnv: { isCI: boolean; repo: string; runId: string; refName: string; serverUrl: string },
+    stats: PrReportStats,
+): string {
+    if (!ciEnv.isCI) return '';
+
+    const workflowUrl =
+        ciEnv.repo !== 'unknown' && ciEnv.runId !== '0'
+            ? `${ciEnv.serverUrl}/${ciEnv.repo}/actions/runs/${ciEnv.runId}`
+            : undefined;
+
+    const lines: string[] = ['', '### 🔧 CI Context', ''];
+
+    if (workflowUrl) {
+        lines.push(`- **Workflow:** [Run #${ciEnv.runId}](${workflowUrl})`);
+    }
+    if (ciEnv.refName) {
+        lines.push(`- **Branch:** \`${ciEnv.refName}\``);
+    }
+    if (ciEnv.repo !== 'unknown') {
+        lines.push(`- **Repository:** ${ciEnv.repo}`);
+    }
+
+    lines.push(`- **Test Results:** ${stats.passed} passed, ${stats.failed} failed, ${stats.skipped} skipped`);
+
+    lines.push(
+        '',
+        '> ℹ️ This report reflects **test execution results** only.',
+        '> CI pipeline status may differ if post-test steps (upload, quality gate, etc.) failed.',
+        '',
+    );
+
+    return lines.join('\n');
+}
+
+/**
  * Generate and post a PR report from parsed test data.
  *
  * @returns Result summary with HTML path, check run ID, and comment URL (when applicable).
@@ -257,6 +307,10 @@ export async function generatePrReport(options: PrReportCoreOptions): Promise<Pr
     const artifactUrl = workflowUrl ? `${workflowUrl}?pr=1#artifacts` : undefined;
 
     const sections: string[] = [];
+
+    // 0. CI context (D2 FIX — makes CI environment explicit when running in CI)
+    const ciEnvForSection = options.ciEnv ?? getCiEnv();
+    sections.push(buildCiContextSection(ciEnvForSection, stats));
 
     // 1. Summary table
     sections.push(buildSummaryTable(stats));
@@ -551,6 +605,7 @@ export async function main(): Promise<void> {
         skipAi,
         skipQuality,
         skipFlaky,
+        ciEnv,
         ...(opts.htmlOutputPath ? { htmlOutputPath: opts.htmlOutputPath } : {}),
         ...(diffComparison ? { diffComparison } : {}),
     });

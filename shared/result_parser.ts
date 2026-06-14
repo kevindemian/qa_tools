@@ -90,6 +90,10 @@ export interface CtrfSummary {
     stop: number;
     /** Total duration in ms. */
     duration?: number;
+    /** Number of flaky tests (passed after retry). */
+    flaky?: number;
+    /** Number of tests that were retried (regardless of final outcome). */
+    retried?: number;
 }
 
 /** Environment metadata for a CTRF test run. */
