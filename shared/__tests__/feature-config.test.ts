@@ -1,8 +1,18 @@
+/**
+ * Tests for feature-config.ts — feature configuration loader and accessor.
+ *
+ * CRITICAL: These tests MUST use a temporary directory to avoid affecting
+ * the real project's config/features.json. We mock process.cwd() to redirect
+ * path.resolve('config', 'features.json') to a temp directory, and use
+ * vi.resetModules() to force module re-evaluation with the mocked cwd.
+ */
 import fs from 'node:fs';
+import os from 'node:os';
 import path from 'node:path';
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-const TEST_FEATURES_PATH = path.resolve('config', 'features.json');
+/** Temporary directory for test isolation — prevents real project file mutation. */
+let TEST_DIR: string;
 
 const VALID_CONFIG = {
     'my-project': {
@@ -35,10 +45,20 @@ const VALID_CONFIG_WITH_JIRA = {
 describe('feature-config', () => {
     beforeEach(() => {
         vi.restoreAllMocks();
+        vi.resetModules();
+        // Create isolated temp directory for each test
+        TEST_DIR = fs.mkdtempSync(path.join(os.tmpdir(), 'feature-config-test-'));
+        // Mock process.cwd() so path.resolve('config', 'features.json')
+        // resolves to TEST_DIR/config/features.json instead of project root
+        vi.spyOn(process, 'cwd').mockReturnValue(TEST_DIR);
+    });
+
+    afterEach(() => {
+        // Clean up temporary directory — no real project files are affected
         try {
-            fs.unlinkSync(TEST_FEATURES_PATH);
+            fs.rmSync(TEST_DIR, { recursive: true, force: true });
         } catch {
-            /* ok */
+            /* best effort */
         }
     });
 
@@ -50,8 +70,9 @@ describe('feature-config', () => {
         });
 
         it('returns parsed config when file exists with valid schema', async () => {
-            fs.mkdirSync(path.dirname(TEST_FEATURES_PATH), { recursive: true });
-            fs.writeFileSync(TEST_FEATURES_PATH, JSON.stringify(VALID_CONFIG), 'utf8');
+            const configPath = path.join(TEST_DIR, 'config', 'features.json');
+            fs.mkdirSync(path.dirname(configPath), { recursive: true });
+            fs.writeFileSync(configPath, JSON.stringify(VALID_CONFIG), 'utf8');
 
             const { loadFeatureConfig } = await import('../feature-config.js');
             const result = loadFeatureConfig();
@@ -59,8 +80,9 @@ describe('feature-config', () => {
         });
 
         it('returns empty object when file has invalid JSON', async () => {
-            fs.mkdirSync(path.dirname(TEST_FEATURES_PATH), { recursive: true });
-            fs.writeFileSync(TEST_FEATURES_PATH, 'not valid json', 'utf8');
+            const configPath = path.join(TEST_DIR, 'config', 'features.json');
+            fs.mkdirSync(path.dirname(configPath), { recursive: true });
+            fs.writeFileSync(configPath, 'not valid json', 'utf8');
 
             const { loadFeatureConfig } = await import('../feature-config.js');
             const result = loadFeatureConfig();
@@ -68,8 +90,9 @@ describe('feature-config', () => {
         });
 
         it('returns empty object when file has invalid schema', async () => {
-            fs.mkdirSync(path.dirname(TEST_FEATURES_PATH), { recursive: true });
-            fs.writeFileSync(TEST_FEATURES_PATH, JSON.stringify({ 'my-project': { invalid: true } }), 'utf8');
+            const configPath = path.join(TEST_DIR, 'config', 'features.json');
+            fs.mkdirSync(path.dirname(configPath), { recursive: true });
+            fs.writeFileSync(configPath, JSON.stringify({ 'my-project': { invalid: true } }), 'utf8');
 
             const { loadFeatureConfig } = await import('../feature-config.js');
             const result = loadFeatureConfig();
@@ -90,7 +113,8 @@ describe('feature-config', () => {
             const { saveFeatureConfig, loadFeatureConfig } = await import('../feature-config.js');
             saveFeatureConfig(VALID_CONFIG);
 
-            expect(fs.existsSync(path.dirname(TEST_FEATURES_PATH))).toBe(true);
+            const configPath = path.join(TEST_DIR, 'config', 'features.json');
+            expect(fs.existsSync(path.dirname(configPath))).toBe(true);
             const saved = loadFeatureConfig();
             expect(saved).toEqual(VALID_CONFIG);
         });
@@ -225,6 +249,99 @@ describe('feature-config', () => {
             const { resolvePublishTarget } = await import('../feature-config.js');
             const result = resolvePublishTarget('unknown-project', 'gitlab');
             expect(result).toBe('gitlab-ci');
+        });
+    });
+
+    describe('isAiSkipped', () => {
+        it('returns false when skipAi is not configured', async () => {
+            const { isAiSkipped } = await import('../feature-config.js');
+            expect(isAiSkipped('unknown-project')).toBe(false);
+        });
+
+        it('returns true when skipAi is explicitly true', async () => {
+            const { saveFeatureConfig, isAiSkipped } = await import('../feature-config.js');
+            const configWithSkip = {
+                'my-project': {
+                    gitProvider: 'github' as const,
+                    features: {
+                        prReport: {
+                            enabled: true,
+                            publishTarget: 'github-actions' as const,
+                            skipAi: true,
+                        },
+                    },
+                },
+            };
+            saveFeatureConfig(configWithSkip);
+            expect(isAiSkipped('my-project')).toBe(true);
+        });
+
+        it('returns false when skipAi is explicitly false', async () => {
+            const { saveFeatureConfig, isAiSkipped } = await import('../feature-config.js');
+            saveFeatureConfig(VALID_CONFIG);
+            expect(isAiSkipped('my-project')).toBe(false);
+        });
+    });
+
+    describe('isQualitySkipped', () => {
+        it('returns false when skipQuality is not configured', async () => {
+            const { isQualitySkipped } = await import('../feature-config.js');
+            expect(isQualitySkipped('unknown-project')).toBe(false);
+        });
+
+        it('returns true when skipQuality is explicitly true', async () => {
+            const { saveFeatureConfig, isQualitySkipped } = await import('../feature-config.js');
+            const configWithSkip = {
+                'my-project': {
+                    gitProvider: 'github' as const,
+                    features: {
+                        prReport: {
+                            enabled: true,
+                            publishTarget: 'github-actions' as const,
+                            skipQuality: true,
+                        },
+                    },
+                },
+            };
+            saveFeatureConfig(configWithSkip);
+            expect(isQualitySkipped('my-project')).toBe(true);
+        });
+
+        it('returns false when skipQuality is explicitly false', async () => {
+            const { saveFeatureConfig, isQualitySkipped } = await import('../feature-config.js');
+            saveFeatureConfig(VALID_CONFIG);
+            expect(isQualitySkipped('my-project')).toBe(false);
+        });
+    });
+
+    describe('isFlakySkipped', () => {
+        it('returns false when skipFlaky is not configured', async () => {
+            const { isFlakySkipped } = await import('../feature-config.js');
+            expect(isFlakySkipped('unknown-project')).toBe(false);
+        });
+
+        it('returns true when skipFlaky is explicitly true', async () => {
+            const { saveFeatureConfig, isFlakySkipped } = await import('../feature-config.js');
+            const configWithSkip = {
+                'my-project': {
+                    gitProvider: 'github' as const,
+                    features: {
+                        prReport: {
+                            enabled: true,
+                            publishTarget: 'github-actions' as const,
+                            skipFlaky: true,
+                        },
+                    },
+                },
+            };
+            saveFeatureConfig(configWithSkip);
+            expect(isFlakySkipped('my-project')).toBe(true);
+        });
+
+        it('returns false when skipFlaky is explicitly false', async () => {
+            const { saveFeatureConfig, isFlakySkipped } = await import('../feature-config.js');
+            saveFeatureConfig(VALID_CONFIG);
+            expect(isFlakySkipped('my-project')).toBe(false);
         });
     });
 });
