@@ -204,6 +204,21 @@ export function calculateFlakiness(store: MetricsStore, minRuns = 2): FlakinessE
     return result;
 }
 
+export function calculateFlakyRate(store: MetricsStore, minRuns = 2): number {
+    const entries = calculateFlakiness(store, minRuns);
+    if (entries.length === 0) return 0;
+    const flakyCount = entries.filter((e) => e.rate > 0).length;
+    const testMap = new Map<string, boolean>();
+    for (const run of store.runs) {
+        for (const t of run.tests) {
+            if (!testMap.has(t.title)) testMap.set(t.title, true);
+        }
+    }
+    const totalTests = testMap.size;
+    if (totalTests === 0) return 0;
+    return (flakyCount / totalTests) * 100;
+}
+
 export function saveCoverageSnapshot(snapshot: CoverageSnapshot, config?: Config): void {
     const store = loadMetrics(config);
     if (!store.coverageHistory) store.coverageHistory = [];
@@ -215,7 +230,7 @@ export function getTrends(store: MetricsStore, window = 10): TrendPoint[] {
     const runs = store.runs.slice(-window);
     return runs.map((r) => ({
         label: r.timestamp.slice(0, 10),
-        passRate: r.total > 0 ? (r.passed / r.total) * 100 : 0,
+        passRate: r.passed + r.failed > 0 ? (r.passed / (r.passed + r.failed)) * 100 : 0,
         total: r.total,
         failed: r.failed,
     }));

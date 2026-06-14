@@ -353,14 +353,14 @@ describe('calculateHealthScore', () => {
             expect(result.dimensions.suiteSpeed.score).toBe(0);
         });
 
-        it('linearly interpolates between target and 10s', () => {
+        it('linearly interpolates between target and gate', () => {
             const store = makeStore({
                 runs: [
                     run({
                         total: 10,
                         passed: 10,
                         duration: 60000,
-                        tests: Array.from({ length: 10 }, (_, i) => testT(`T${i}`, 'passed', 5500)),
+                        tests: Array.from({ length: 10 }, (_, i) => testT(`T${i}`, 'passed', 2000)),
                     }),
                 ],
                 coverageHistory: [

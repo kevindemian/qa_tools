@@ -1,0 +1,307 @@
+import { describe, it, expect, vi, beforeEach } from 'vitest';
+
+vi.mock('../../shared/prompt.js', () => ({
+    prompt: vi.fn(),
+    confirm: vi.fn(),
+    print: vi.fn(),
+    success: vi.fn(),
+    warn: vi.fn(),
+    info: vi.fn(),
+    title: vi.fn(),
+    error: vi.fn(),
+    printError: vi.fn(),
+    withSpinner: vi.fn((_msg: string, fn: () => unknown) => fn()),
+    divider: vi.fn(),
+    showSelect: vi.fn(),
+}));
+vi.mock('../../shared/logger.js', () => ({
+    rootLogger: { error: vi.fn(), warn: vi.fn(), info: vi.fn(), debug: vi.fn(), writeFileOnly: vi.fn() },
+    Logger: vi.fn().mockImplementation(() => ({
+        info: vi.fn(),
+        warn: vi.fn(),
+        error: vi.fn(),
+        debug: vi.fn(),
+        child: vi.fn().mockReturnThis(),
+    })),
+}));
+vi.mock('../session-state.js', () => ({
+    currentProvider: 'gitlab',
+    currentProjectName: 'TEST',
+    pushHistory: vi.fn(),
+    setIsBusy: vi.fn(),
+    displayProjects: vi.fn(),
+    displayRecentPipelines: vi.fn(),
+    createManagerForProject: vi.fn(),
+    getProviderForProject: vi.fn(),
+    setCurrentProjectName: vi.fn(),
+    setProjectId: vi.fn(),
+    setManager: vi.fn(),
+    getProjects: vi.fn(() => ['TEST', 'OTHER']),
+    MSG_OPERATION_CANCELED: 'Operação cancelada.',
+}));
+vi.mock('../../shared/state.js', () => ({
+    update: vi.fn(),
+    loadState: vi.fn(() => ({})),
+}));
+vi.mock('../../shared/metrics.js', () => ({
+    loadMetrics: vi.fn(),
+    calculateFlakiness: vi.fn(),
+}));
+vi.mock('../ai-pr-desc.js', () => ({
+    generatePrDescription: vi.fn(),
+}));
+vi.mock('../ai-test-impact.js', () => ({
+    assessTestImpact: vi.fn(),
+}));
+vi.mock('../nivelar.js', () => ({
+    nivelarBranches: vi.fn(),
+}));
+vi.mock('../../shared/temp-dir.js', () => ({
+    writeReport: vi.fn(() => '/tmp/report.html'),
+    reportsDir: vi.fn(() => '/tmp/reports'),
+    writeEphemeral: vi.fn(),
+}));
+vi.mock('../../shared/open.js', () => ({
+    openWithFallback: vi.fn(),
+}));
+vi.mock('../../shared/flakiness-dashboard.js', () => ({
+    generateFlakinessHtml: vi.fn(() => '<html/>'),
+}));
+vi.mock('../pipeline-health.js', () => ({
+    aggregatePipelineHealth: vi.fn(),
+    renderPipelineHealthHtml: vi.fn(() => '<html/>'),
+}));
+vi.mock('../../shared/quarantine.js', () => ({
+    expireQuarantine: vi.fn(),
+    listQuarantined: vi.fn(),
+    quarantineRatio: vi.fn(),
+    generatePipelineQuarantine: vi.fn(),
+}));
+vi.mock('../../shared/git-metrics-adapter.js', () => ({
+    generateGitMetricsRuns: vi.fn(() => []),
+    generateGitFailureClassifications: vi.fn(() => []),
+}));
+vi.mock('../../shared/report-export.js', () => ({
+    exportTestsCsv: vi.fn(),
+    exportTestsJson: vi.fn(),
+}));
+vi.mock('../test-results.js', () => ({
+    collectTestResults: vi.fn(),
+    createTestExecution: vi.fn(),
+    downloadTestArtifacts: vi.fn(),
+    parseTestResults: vi.fn(),
+}));
+vi.mock('../llm-pipeline.js', () => ({
+    offerPipelineFailureAnalysis: vi.fn(),
+}));
+vi.mock('../pipeline-jira.js', () => ({
+    handleBugCreation: vi.fn(),
+}));
+vi.mock('../../shared/http-client.js', () => ({
+    sleep: vi.fn(),
+}));
+vi.mock('../../shared/git-sha.js', () => ({
+    getHeadSha: vi.fn(() => 'abc123'),
+}));
+vi.mock('../../shared/store.js', () => ({
+    Store: vi.fn().mockImplementation(() => ({
+        put: vi.fn(),
+        lookup: vi.fn(),
+        runs: [],
+    })),
+    detectStoreBackend: vi.fn(),
+}));
+vi.mock('../../shared/cli_base.js', () => ({
+    confirmDestructiveAction: vi.fn(),
+}));
+vi.mock('../cli-args.js', () => ({
+    parseCliArgs: vi.fn(() => ({})),
+}));
+
+function makeMockGitProvider() {
+    return {
+        getSchedules: vi.fn().mockResolvedValue([
+            { id: '1', description: 'Nightly build', next_run_at: '2026-06-15T02:00:00Z' },
+            { id: '2', description: 'Weekly deploy', next_run_at: '2026-06-20T08:00:00Z' },
+        ]),
+        runSchedule: vi.fn().mockResolvedValue(undefined),
+        getPipeline: vi.fn().mockResolvedValue({ status: 'success', web_url: 'https://gitlab.com/test' }),
+        triggerPipeline: vi.fn().mockResolvedValue({ id: 1, web_url: 'https://gitlab.com/test' }),
+        getBranch: vi.fn().mockResolvedValue({ name: 'main' }),
+        getCICDVariables: vi.fn().mockResolvedValue([
+            { key: 'TOKEN', value: 'secret', protected: true },
+            { key: 'API_URL', value: 'https://api.test.com', protected: false },
+        ]),
+        createMergeRequest: vi.fn().mockResolvedValue({ web_url: 'https://gitlab.com/mr/1', iid: 1 }),
+        searchMergeRequests: vi.fn().mockResolvedValue([
+            { iid: 1, title: 'Fix bug', number: 1 },
+            { iid: 2, title: 'Add feature', number: 2 },
+        ]),
+        isApproved: vi.fn().mockResolvedValue(true),
+        acceptMergeRequest: vi.fn().mockResolvedValue({ web_url: 'https://gitlab.com/mr/1' }),
+        getRecentPipelines: vi
+            .fn()
+            .mockResolvedValue([{ id: 1, status: 'success', created_at: '2026-06-14T10:00:00Z', ref: 'main' }]),
+        getPipelineJobs: vi.fn().mockResolvedValue([{ name: 'test', status: 'success', duration: 120 }]),
+    };
+}
+
+describe('handleListSchedules', () => {
+    beforeEach(() => vi.clearAllMocks());
+
+    it('lists schedules for gitlab provider', async () => {
+        const m = makeMockGitProvider();
+        const { handleListSchedules } = await import('../schedule-handler.js');
+        const { pushHistory } = await import('../session-state.js');
+        const sessionState = await import('../session-state.js');
+        (sessionState as { currentProvider: string }).currentProvider = 'gitlab';
+        await handleListSchedules(m as never);
+        expect(m.getSchedules).toHaveBeenCalled();
+        expect(vi.mocked(pushHistory)).toHaveBeenCalledWith('list-schedules', '2 schedules', 'ok');
+    });
+
+    it('warns for github provider', async () => {
+        const m = makeMockGitProvider();
+        const { handleListSchedules } = await import('../schedule-handler.js');
+        const sessionState = await import('../session-state.js');
+        (sessionState as { currentProvider: string }).currentProvider = 'github';
+        const { warn } = await import('../../shared/prompt.js');
+        await handleListSchedules(m as never);
+        expect(vi.mocked(warn)).toHaveBeenCalledWith('Opção não disponivel para GitHub.');
+        expect(m.getSchedules).not.toHaveBeenCalled();
+        (sessionState as { currentProvider: string }).currentProvider = 'gitlab';
+    });
+
+    it('warns when no schedules found', async () => {
+        const m = makeMockGitProvider();
+        m.getSchedules.mockResolvedValue([]);
+        const { handleListSchedules } = await import('../schedule-handler.js');
+        const { pushHistory } = await import('../session-state.js');
+        const sessionState = await import('../session-state.js');
+        (sessionState as { currentProvider: string }).currentProvider = 'gitlab';
+        await handleListSchedules(m as never);
+        expect(vi.mocked(pushHistory)).toHaveBeenCalledWith('list-schedules', 'vazio', 'ok');
+    });
+});
+
+describe('handleRunSchedule', () => {
+    beforeEach(() => vi.clearAllMocks());
+
+    it('runs schedule by ID', async () => {
+        const m = makeMockGitProvider();
+        const { prompt } = await import('../../shared/prompt.js');
+        vi.mocked(prompt).mockReturnValue('42');
+        const { handleRunSchedule } = await import('../schedule-handler.js');
+        const { pushHistory } = await import('../session-state.js');
+        const sessionState = await import('../session-state.js');
+        (sessionState as { currentProvider: string }).currentProvider = 'gitlab';
+        await handleRunSchedule(m as never);
+        expect(m.runSchedule).toHaveBeenCalledWith('42');
+        expect(vi.mocked(pushHistory)).toHaveBeenCalledWith('schedule-run', '42', 'ok');
+    });
+
+    it('warns for github provider', async () => {
+        const m = makeMockGitProvider();
+        const { handleRunSchedule } = await import('../schedule-handler.js');
+        const sessionState = await import('../session-state.js');
+        (sessionState as { currentProvider: string }).currentProvider = 'github';
+        const { warn } = await import('../../shared/prompt.js');
+        await handleRunSchedule(m as never);
+        expect(vi.mocked(warn)).toHaveBeenCalledWith('Opção não disponivel para GitHub.');
+        expect(m.runSchedule).not.toHaveBeenCalled();
+        (sessionState as { currentProvider: string }).currentProvider = 'gitlab';
+    });
+});
+
+describe('handleCreateMR', () => {
+    beforeEach(() => vi.clearAllMocks());
+
+    it('creates MR with provided inputs', async () => {
+        const m = makeMockGitProvider();
+        const { prompt, confirm } = await import('../../shared/prompt.js');
+        vi.mocked(prompt)
+            .mockReturnValueOnce('feature-x')
+            .mockReturnValueOnce('main')
+            .mockReturnValueOnce('Fix stuff')
+            .mockReturnValueOnce('Description');
+        vi.mocked(confirm).mockReturnValue(false);
+        const { handleCreateMR } = await import('../mr-handler.js');
+        const { pushHistory } = await import('../session-state.js');
+        const sessionState = await import('../session-state.js');
+        (sessionState as { currentProvider: string }).currentProvider = 'gitlab';
+        await handleCreateMR(m as never);
+        expect(m.createMergeRequest).toHaveBeenCalledWith('feature-x', 'main', 'Fix stuff', 'Description');
+        expect(vi.mocked(pushHistory)).toHaveBeenCalledWith('pr-create', 'feature-x->main', 'ok');
+    });
+
+    it('generates AI description when confirmed', async () => {
+        const m = makeMockGitProvider();
+        const { prompt, confirm } = await import('../../shared/prompt.js');
+        vi.mocked(prompt)
+            .mockReturnValueOnce('feature-x')
+            .mockReturnValueOnce('main')
+            .mockReturnValueOnce('Title')
+            .mockReturnValueOnce('Manual desc');
+        vi.mocked(confirm).mockReturnValueOnce(true).mockReturnValueOnce(false);
+        const { generatePrDescription } = await import('../ai-pr-desc.js');
+        vi.mocked(generatePrDescription).mockResolvedValue('AI generated description');
+        const { handleCreateMR } = await import('../mr-handler.js');
+        await handleCreateMR(m as never);
+        expect(m.createMergeRequest).toHaveBeenCalledWith('feature-x', 'main', 'Title', 'AI generated description');
+    });
+});
+
+describe('handleListApprovedMRs', () => {
+    beforeEach(() => vi.clearAllMocks());
+
+    it('lists approved MRs', async () => {
+        const m = makeMockGitProvider();
+        const { prompt } = await import('../../shared/prompt.js');
+        vi.mocked(prompt).mockReturnValue('opened');
+        const { handleListApprovedMRs } = await import('../mr-handler.js');
+        const { pushHistory } = await import('../session-state.js');
+        await handleListApprovedMRs(m as never);
+        expect(m.searchMergeRequests).toHaveBeenCalled();
+        expect(vi.mocked(pushHistory)).toHaveBeenCalledWith('prs-approved', '2 MRs', 'ok');
+    });
+
+    it('warns when no approved MRs found', async () => {
+        const m = makeMockGitProvider();
+        m.searchMergeRequests.mockResolvedValue([]);
+        const { prompt } = await import('../../shared/prompt.js');
+        vi.mocked(prompt).mockReturnValue('opened');
+        const { handleListApprovedMRs } = await import('../mr-handler.js');
+        const { pushHistory } = await import('../session-state.js');
+        await handleListApprovedMRs(m as never);
+        expect(vi.mocked(pushHistory)).toHaveBeenCalledWith('prs-approved', 'vazio', 'ok');
+    });
+});
+
+describe('handleMergeMR', () => {
+    beforeEach(() => vi.clearAllMocks());
+
+    it('merges MR by IID', async () => {
+        const m = makeMockGitProvider();
+        const { prompt } = await import('../../shared/prompt.js');
+        vi.mocked(prompt).mockReturnValue('42');
+        const { handleMergeMR } = await import('../mr-handler.js');
+        const { pushHistory } = await import('../session-state.js');
+        await handleMergeMR(m as never);
+        expect(m.acceptMergeRequest).toHaveBeenCalledWith('42');
+        expect(vi.mocked(pushHistory)).toHaveBeenCalledWith('pr-merge', '42', 'ok');
+    });
+});
+
+describe('handleFlakinessDashboard', () => {
+    beforeEach(() => vi.clearAllMocks());
+
+    it('warns when no project selected', async () => {
+        const sessionState = await import('../session-state.js');
+        (sessionState as { currentProjectName: string }).currentProjectName = '';
+        const { handleFlakinessDashboard } = await import('../schedule-handler.js');
+        const { warn } = await import('../../shared/prompt.js');
+        await handleFlakinessDashboard();
+        expect(vi.mocked(warn)).toHaveBeenCalled();
+        (sessionState as { currentProjectName: string }).currentProjectName = 'TEST';
+    });
+});

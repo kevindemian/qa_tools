@@ -1,5 +1,8 @@
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { createMockContext } from '../shared/test-utils/factories/context-factory.js';
+import type { MetricsStore } from '../shared/metrics.js';
+import type { TraceabilityResult } from '../shared/traceability-matrix.js';
+import type { ReleaseScoreResult } from '../shared/release-score.js';
 
 vi.mock('../shared/prompt.js', () => ({
     showSelect: vi.fn(),
@@ -7,35 +10,147 @@ vi.mock('../shared/prompt.js', () => ({
     info: vi.fn(),
     title: vi.fn(),
     printError: vi.fn(),
-    withSpinner: vi.fn((_msg, fn: () => unknown) => fn()),
+    withSpinner: vi.fn((_msg: string, fn: () => unknown) => fn()),
 }));
 vi.mock('../shared/metrics.js', () => ({
     loadMetrics: vi.fn(),
     calculateFlakiness: vi.fn(),
 }));
-vi.mock('../shared/temp-dir.js');
+vi.mock('../shared/temp-dir.js', () => ({
+    writeReport: vi.fn(),
+}));
 vi.mock('../shared/traceability-matrix.js', () => ({
-    buildTraceabilityMatrix: vi.fn(() => []),
-    generateTraceabilityHtml: vi.fn(() => '<html/>'),
+    buildTraceabilityMatrix: vi.fn(),
+    generateTraceabilityHtml: vi.fn(),
 }));
 vi.mock('../shared/health-score.js', () => ({
-    calculateHealthScore: vi.fn(() => ({ overall: 80, automationRatio: 0.6, passRate: 0.9 })),
+    calculateHealthScore: vi.fn(),
 }));
 vi.mock('../shared/release-score.js', () => ({
-    calculateReleaseScore: vi.fn(() => ({ score: 85 })),
-    generateReleaseScoreHtml: vi.fn(() => '<html/>'),
+    calculateReleaseScore: vi.fn(),
+    generateReleaseScoreHtml: vi.fn(),
 }));
 vi.mock('../shared/coverage-gap.js', () => ({
-    analyzeCoverageGaps: vi.fn(() => ({ totals: { rawCoveragePct: 75, gap: 5 } })),
+    analyzeCoverageGaps: vi.fn(),
 }));
 vi.mock('../shared/generate-coverage-gap-html.js', () => ({
-    generateCoverageGapHtml: vi.fn(() => '<html/>'),
+    generateCoverageGapHtml: vi.fn(),
 }));
 vi.mock('../shared/open.js', () => ({
     openWithFallback: vi.fn(),
 }));
 
+function makeRun(
+    project: string,
+    overrides?: Partial<{
+        total: number;
+        passed: number;
+        failed: number;
+        skipped: number;
+        duration: number;
+        tests: Array<{ title: string; state: 'passed' | 'failed' | 'skipped'; duration: number }>;
+    }>,
+) {
+    const tests = overrides?.tests ?? [
+        { title: 'test-alpha', state: 'passed' as const, duration: 120 },
+        { title: 'test-beta', state: 'failed' as const, duration: 340 },
+    ];
+    return {
+        timestamp: '2026-06-14T10:00:00Z',
+        project,
+        total: overrides?.total ?? tests.length,
+        passed: overrides?.passed ?? tests.filter((t) => t.state === 'passed').length,
+        failed: overrides?.failed ?? tests.filter((t) => t.state === 'failed').length,
+        skipped: overrides?.skipped ?? 0,
+        duration: overrides?.duration ?? tests.reduce((s, t) => s + t.duration, 0),
+        tests,
+    };
+}
+
+function makeTraceabilityResult(overrides?: Partial<TraceabilityResult>): TraceabilityResult {
+    return {
+        nodes: [{ epic: 'EPIC-1', coverage: 85, health: 90, flakiness: 5, stories: [] }],
+        totalEpics: 1,
+        totalTests: 10,
+        overallCoverage: 85,
+        timestamp: '2026-06-14T10:00:00Z',
+        ...overrides,
+    };
+}
+
+const MOCK_DIMENSIONS = {
+    passRate: { score: 90, threshold: 80, status: 'pass' as const },
+    flakyRate: { score: 95, threshold: 80, status: 'pass' as const },
+    coverage: { score: 85, threshold: 70, status: 'pass' as const },
+    suiteSpeed: { score: 80, threshold: 70, status: 'pass' as const },
+    executionRate: { score: 90, threshold: 80, status: 'pass' as const },
+};
+
+function makeReleaseScoreResult(overrides?: Partial<ReleaseScoreResult>): ReleaseScoreResult {
+    return {
+        score: 82,
+        grade: 'good',
+        breakdown: [
+            { label: 'Tasks', score: 80, status: 'pass' },
+            { label: 'Health', score: 85, status: 'pass' },
+            { label: 'Coverage', score: 75, status: 'pass' },
+            { label: 'Flakiness', score: 90, status: 'pass' },
+        ],
+        recommendation: 'All dimensions meet the release threshold. Ready for release.',
+        timestamp: '2026-06-14T10:00:00Z',
+        ...overrides,
+    };
+}
+
+function makeCoverageResult() {
+    return {
+        items: [
+            {
+                issueKey: 'TEST-1',
+                summary: 'Test 1',
+                type: 'Story' as const,
+                status: 'Done',
+                epicKey: 'EPIC-1',
+                hasTest: true,
+                linkedTestKeys: ['TEST-100'],
+                priority: 'High',
+                coverageWeight: 1,
+            },
+            {
+                issueKey: 'TEST-2',
+                summary: 'Test 2',
+                type: 'Task' as const,
+                status: 'To Do',
+                epicKey: 'EPIC-1',
+                hasTest: false,
+                linkedTestKeys: [],
+                priority: 'Medium',
+                coverageWeight: 1,
+            },
+        ],
+        totals: { totalIssues: 10, covered: 8, gap: 2, weightedCoveragePct: 80, rawCoveragePct: 75 },
+        byEpic: {
+            'EPIC-1': {
+                epicSummary: 'Epic 1',
+                total: 10,
+                covered: 8,
+                weightedPct: 80,
+                rawPct: 80,
+                gatePass: true,
+                issues: [],
+            },
+        },
+        gateConfig: { minCoveragePct: 70, failingEpics: [] },
+        hierarchy: [],
+        trends: [],
+    };
+}
+
+const HTML_WITH_DOCTYPE = '<!DOCTYPE html><html><head><title>Test</title></head><body>content</body></html>';
+
 describe('case-d — dashboard menu', () => {
+    beforeEach(() => vi.clearAllMocks());
+
     it('returns early if no project name', async () => {
         const ctx = createMockContext();
         ctx.ctx.project_name = '';
@@ -44,32 +159,7 @@ describe('case-d — dashboard menu', () => {
         expect(result).toBeUndefined();
     });
 
-    it('executes selected case26 dashboard handler', async () => {
-        const { showSelect } = await import('../shared/prompt.js');
-        vi.mocked(showSelect).mockResolvedValue('26');
-        const ctx = createMockContext();
-        const { writeReport } = await import('../shared/temp-dir.js');
-        vi.mocked(writeReport).mockReturnValue('/tmp/report.html');
-        const { loadMetrics, calculateFlakiness } = await import('../shared/metrics.js');
-        vi.mocked(loadMetrics).mockReturnValue({ runs: [{ project: 'TEST' }] } as never);
-        vi.mocked(calculateFlakiness).mockReturnValue([{ test: 't1', rate: 0.5 }] as never);
-        const { default: caseD } = await import('./commands/case-d.js');
-        await caseD.handler(ctx);
-        expect(ctx.pushHistory).toHaveBeenCalledWith('release-score', 'TEST', 'ok');
-    });
-
-    it('executes selected case27 dashboard handler', async () => {
-        const { showSelect } = await import('../shared/prompt.js');
-        vi.mocked(showSelect).mockResolvedValue('27');
-        const ctx = createMockContext();
-        const { writeReport } = await import('../shared/temp-dir.js');
-        vi.mocked(writeReport).mockReturnValue('/tmp/report.html');
-        const { default: caseD } = await import('./commands/case-d.js');
-        await caseD.handler(ctx);
-        expect(ctx.pushHistory).toHaveBeenCalledWith('coverage-dashboard', '75% coverage, 5 gaps', 'ok');
-    });
-
-    it('calls showDashboardMenu when project name is set', async () => {
+    it('shows dashboard menu when project is set', async () => {
         const { showSelect } = await import('../shared/prompt.js');
         vi.mocked(showSelect).mockResolvedValue('0');
         const ctx = createMockContext();
@@ -78,66 +168,182 @@ describe('case-d — dashboard menu', () => {
         expect(showSelect).toHaveBeenCalled();
     });
 
-    it('executes selected dashboard handler', async () => {
+    it('executes case25 when user selects traceability', async () => {
         const { showSelect } = await import('../shared/prompt.js');
         vi.mocked(showSelect).mockResolvedValue('25');
-        const ctx = createMockContext();
-        const { writeReport } = await import('../shared/temp-dir.js');
-        vi.mocked(writeReport).mockReturnValue('/tmp/report.html');
         const { loadMetrics } = await import('../shared/metrics.js');
+        const { writeReport } = await import('../shared/temp-dir.js');
         vi.mocked(loadMetrics).mockReturnValue({ runs: [] });
+        vi.mocked(writeReport).mockReturnValue('/tmp/report.html');
+        const ctx = createMockContext();
         const { default: caseD } = await import('./commands/case-d.js');
         await caseD.handler(ctx);
-        expect(showSelect).toHaveBeenCalled();
         expect(ctx.pushHistory).toHaveBeenCalledWith('traceability-matrix', 'TEST', 'ok');
+    });
+
+    it('executes case26 when user selects release score', async () => {
+        const { showSelect } = await import('../shared/prompt.js');
+        vi.mocked(showSelect).mockResolvedValue('26');
+        const { loadMetrics, calculateFlakiness } = await import('../shared/metrics.js');
+        const { calculateHealthScore } = await import('../shared/health-score.js');
+        const { calculateReleaseScore, generateReleaseScoreHtml } = await import('../shared/release-score.js');
+        const { writeReport } = await import('../shared/temp-dir.js');
+        vi.mocked(loadMetrics).mockReturnValue({ runs: [{ project: 'TEST' }] } as MetricsStore);
+        vi.mocked(calculateFlakiness).mockReturnValue([
+            { title: 't1', passCount: 1, failCount: 1, skipCount: 0, totalRuns: 2, rate: 0.5 },
+        ]);
+        vi.mocked(calculateHealthScore).mockReturnValue({
+            overall: 80,
+            grade: 'good',
+            qualityGate: 'pass',
+            dimensions: MOCK_DIMENSIONS,
+            runCount: 10,
+            timestamp: '2026-06-14T10:00:00Z',
+        });
+        vi.mocked(calculateReleaseScore).mockReturnValue(makeReleaseScoreResult());
+        vi.mocked(generateReleaseScoreHtml).mockReturnValue(HTML_WITH_DOCTYPE);
+        vi.mocked(writeReport).mockReturnValue('/tmp/report.html');
+        const ctx = createMockContext();
+        const { default: caseD } = await import('./commands/case-d.js');
+        await caseD.handler(ctx);
+        expect(ctx.pushHistory).toHaveBeenCalledWith('release-score', 'TEST', 'ok');
+    });
+
+    it('executes case27 when user selects coverage dashboard', async () => {
+        const { showSelect } = await import('../shared/prompt.js');
+        vi.mocked(showSelect).mockResolvedValue('27');
+        const { analyzeCoverageGaps } = await import('../shared/coverage-gap.js');
+        const { generateCoverageGapHtml } = await import('../shared/generate-coverage-gap-html.js');
+        const { writeReport } = await import('../shared/temp-dir.js');
+        vi.mocked(analyzeCoverageGaps).mockResolvedValue(makeCoverageResult());
+        vi.mocked(generateCoverageGapHtml).mockReturnValue(HTML_WITH_DOCTYPE);
+        vi.mocked(writeReport).mockReturnValue('/tmp/report.html');
+        const ctx = createMockContext();
+        const { default: caseD } = await import('./commands/case-d.js');
+        await caseD.handler(ctx);
+        expect(ctx.pushHistory).toHaveBeenCalledWith('coverage-dashboard', '75% coverage, 2 gaps', 'ok');
     });
 });
 
 describe('case25 — Traceability Matrix', () => {
-    it('generates report and pushes history', async () => {
-        const { loadMetrics } = await import('../shared/metrics.js');
-        const { writeReport } = await import('../shared/temp-dir.js');
-        vi.mocked(loadMetrics).mockReturnValue({ runs: [] });
-        vi.mocked(writeReport).mockReturnValue('/tmp/report.html');
-        const ctx = createMockContext();
-        const { default: case25 } = await import('./commands/case25.js');
-        await case25.handler(ctx);
-        expect(ctx.pushHistory).toHaveBeenCalledWith('traceability-matrix', 'TEST', 'ok');
-    });
+    beforeEach(() => vi.clearAllMocks());
 
-    it('warns if no project selected', async () => {
+    it('warns and returns early if no project name', async () => {
         const ctx = createMockContext();
         ctx.ctx.project_name = '';
         const { default: case25 } = await import('./commands/case25.js');
         await case25.handler(ctx);
         expect(ctx.pushHistory).not.toHaveBeenCalled();
+        const { warn } = await import('../shared/prompt.js');
+        expect(vi.mocked(warn)).toHaveBeenCalledWith('Nenhum projeto Jira selecionado.');
     });
 
-    it('handles error in loadMetrics gracefully', async () => {
+    it('loads metrics from store', async () => {
+        const { loadMetrics } = await import('../shared/metrics.js');
+        const { buildTraceabilityMatrix, generateTraceabilityHtml } = await import('../shared/traceability-matrix.js');
+        const { writeReport } = await import('../shared/temp-dir.js');
+        const store: MetricsStore = { runs: [makeRun('TEST')] };
+        vi.mocked(loadMetrics).mockReturnValue(store);
+        vi.mocked(buildTraceabilityMatrix).mockReturnValue(makeTraceabilityResult());
+        vi.mocked(generateTraceabilityHtml).mockReturnValue(HTML_WITH_DOCTYPE);
+        vi.mocked(writeReport).mockReturnValue('/tmp/traceability-matrix-TEST.html');
+        const ctx = createMockContext();
+        const { default: case25 } = await import('./commands/case25.js');
+        await case25.handler(ctx);
+        expect(loadMetrics).toHaveBeenCalled();
+        expect(buildTraceabilityMatrix).toHaveBeenCalledWith(store);
+    });
+
+    it('generates HTML with project name in title', async () => {
+        const { buildTraceabilityMatrix, generateTraceabilityHtml } = await import('../shared/traceability-matrix.js');
+        const { writeReport } = await import('../shared/temp-dir.js');
+        vi.mocked(buildTraceabilityMatrix).mockReturnValue(makeTraceabilityResult());
+        vi.mocked(generateTraceabilityHtml).mockReturnValue(HTML_WITH_DOCTYPE);
+        vi.mocked(writeReport).mockReturnValue('/tmp/report.html');
+        const ctx = createMockContext();
+        ctx.ctx.project_name = 'MY_PROJECT';
+        const { default: case25 } = await import('./commands/case25.js');
+        await case25.handler(ctx);
+        expect(generateTraceabilityHtml).toHaveBeenCalledWith(expect.anything(), 'Traceability Matrix — MY_PROJECT');
+    });
+
+    it('writes report with correct filename pattern', async () => {
+        const { writeReport } = await import('../shared/temp-dir.js');
+        vi.mocked(writeReport).mockReturnValue('/tmp/report.html');
+        const ctx = createMockContext();
+        ctx.ctx.project_name = 'PROJ-XYZ';
+        const { default: case25 } = await import('./commands/case25.js');
+        await case25.handler(ctx);
+        expect(writeReport).toHaveBeenCalledWith('traceability-matrix-PROJ-XYZ.html', HTML_WITH_DOCTYPE);
+    });
+
+    it('opens report in browser', async () => {
+        const { writeReport } = await import('../shared/temp-dir.js');
+        const { openWithFallback } = await import('../shared/open.js');
+        vi.mocked(writeReport).mockReturnValue('/tmp/traceability-matrix-TEST.html');
+        vi.mocked(openWithFallback).mockResolvedValue(undefined);
+        const ctx = createMockContext();
+        const { default: case25 } = await import('./commands/case25.js');
+        await case25.handler(ctx);
+        expect(openWithFallback).toHaveBeenCalledWith(
+            '/tmp/traceability-matrix-TEST.html',
+            'Traceability Matrix',
+            expect.any(Function),
+        );
+    });
+
+    it('pushes history with project name on success', async () => {
+        const { writeReport } = await import('../shared/temp-dir.js');
+        vi.mocked(writeReport).mockReturnValue('/tmp/report.html');
+        const ctx = createMockContext();
+        ctx.ctx.project_name = 'AUDIT-PROJ';
+        const { default: case25 } = await import('./commands/case25.js');
+        await case25.handler(ctx);
+        expect(ctx.pushHistory).toHaveBeenCalledWith('traceability-matrix', 'AUDIT-PROJ', 'ok');
+    });
+
+    it('handles empty metrics store gracefully', async () => {
+        const { loadMetrics } = await import('../shared/metrics.js');
+        const { buildTraceabilityMatrix } = await import('../shared/traceability-matrix.js');
+        const { writeReport } = await import('../shared/temp-dir.js');
+        vi.mocked(loadMetrics).mockReturnValue({ runs: [] });
+        vi.mocked(buildTraceabilityMatrix).mockReturnValue(
+            makeTraceabilityResult({ nodes: [], totalEpics: 0, totalTests: 0, overallCoverage: 0 }),
+        );
+        vi.mocked(writeReport).mockReturnValue('/tmp/report.html');
+        const ctx = createMockContext();
+        const { default: case25 } = await import('./commands/case25.js');
+        await expect(case25.handler(ctx)).resolves.not.toThrow();
+        expect(ctx.pushHistory).toHaveBeenCalledWith('traceability-matrix', 'TEST', 'ok');
+    });
+
+    it('handles loadMetrics error gracefully', async () => {
         const { loadMetrics } = await import('../shared/metrics.js');
         vi.mocked(loadMetrics).mockImplementation(() => {
-            throw new Error('failed');
+            throw new Error('disk error');
         });
         const ctx = createMockContext();
         const { default: case25 } = await import('./commands/case25.js');
         await expect(case25.handler(ctx)).resolves.not.toThrow();
+        const { printError } = await import('../shared/prompt.js');
+        expect(vi.mocked(printError)).toHaveBeenCalled();
+    });
+
+    it('calls title with correct label', async () => {
+        const { writeReport } = await import('../shared/temp-dir.js');
+        vi.mocked(writeReport).mockReturnValue('/tmp/report.html');
+        const ctx = createMockContext();
+        const { default: case25 } = await import('./commands/case25.js');
+        await case25.handler(ctx);
+        const { title } = await import('../shared/prompt.js');
+        expect(vi.mocked(title)).toHaveBeenCalledWith('Traceability Matrix');
     });
 });
 
 describe('case26 — Release Score', () => {
-    it('generates report and pushes history', async () => {
-        const { loadMetrics, calculateFlakiness } = await import('../shared/metrics.js');
-        const { writeReport } = await import('../shared/temp-dir.js');
-        vi.mocked(loadMetrics).mockReturnValue({ runs: [{ project: 'TEST' }] } as never);
-        vi.mocked(calculateFlakiness).mockReturnValue([{ test: 't1', rate: 0.5 }] as never);
-        vi.mocked(writeReport).mockReturnValue('/tmp/report.html');
-        const ctx = createMockContext();
-        const { default: case26 } = await import('./commands/case26.js');
-        await case26.handler(ctx);
-        expect(ctx.pushHistory).toHaveBeenCalledWith('release-score', 'TEST', 'ok');
-    });
+    beforeEach(() => vi.clearAllMocks());
 
-    it('warns if no project selected', async () => {
+    it('warns and returns early if no project name', async () => {
         const ctx = createMockContext();
         ctx.ctx.project_name = '';
         const { default: case26 } = await import('./commands/case26.js');
@@ -145,28 +351,188 @@ describe('case26 — Release Score', () => {
         expect(ctx.pushHistory).not.toHaveBeenCalled();
     });
 
-    it('handles error in loadMetrics gracefully', async () => {
+    it('filters runs by project name', async () => {
+        const { loadMetrics, calculateFlakiness } = await import('../shared/metrics.js');
+        const { calculateHealthScore } = await import('../shared/health-score.js');
+        const { calculateReleaseScore, generateReleaseScoreHtml } = await import('../shared/release-score.js');
+        const { writeReport } = await import('../shared/temp-dir.js');
+        const store: MetricsStore = {
+            runs: [makeRun('OTHER'), makeRun('TEST'), makeRun('OTHER'), makeRun('TEST')],
+        };
+        vi.mocked(loadMetrics).mockReturnValue(store);
+        vi.mocked(calculateHealthScore).mockReturnValue({
+            overall: 80,
+            grade: 'good',
+            qualityGate: 'pass',
+            dimensions: MOCK_DIMENSIONS,
+            runCount: 10,
+            timestamp: '2026-06-14T10:00:00Z',
+        });
+        vi.mocked(calculateFlakiness).mockReturnValue([]);
+        vi.mocked(calculateReleaseScore).mockReturnValue(makeReleaseScoreResult());
+        vi.mocked(generateReleaseScoreHtml).mockReturnValue(HTML_WITH_DOCTYPE);
+        vi.mocked(writeReport).mockReturnValue('/tmp/report.html');
+        const ctx = createMockContext();
+        const { default: case26 } = await import('./commands/case26.js');
+        await case26.handler(ctx);
+        const receivedStore = vi.mocked(calculateFlakiness).mock.calls[0]?.[0] as MetricsStore;
+        expect(receivedStore.runs).toHaveLength(2);
+        expect(receivedStore.runs[0]?.project).toBe('TEST');
+        expect(receivedStore.runs[1]?.project).toBe('TEST');
+    });
+
+    it('passes correct parameters to calculateReleaseScore', async () => {
+        const { calculateHealthScore } = await import('../shared/health-score.js');
+        const { calculateReleaseScore, generateReleaseScoreHtml } = await import('../shared/release-score.js');
+        const { writeReport } = await import('../shared/temp-dir.js');
+        vi.mocked(calculateHealthScore).mockReturnValue({
+            overall: 85,
+            grade: 'good',
+            qualityGate: 'pass',
+            dimensions: MOCK_DIMENSIONS,
+            runCount: 10,
+            timestamp: '2026-06-14T10:00:00Z',
+        });
+        vi.mocked(calculateReleaseScore).mockReturnValue(makeReleaseScoreResult());
+        vi.mocked(generateReleaseScoreHtml).mockReturnValue(HTML_WITH_DOCTYPE);
+        vi.mocked(writeReport).mockReturnValue('/tmp/report.html');
+        const ctx = createMockContext();
+        const { default: case26 } = await import('./commands/case26.js');
+        await case26.handler(ctx);
+        expect(calculateReleaseScore).toHaveBeenCalledWith(80, 85, 'pass', 70, expect.any(Number));
+    });
+
+    it('generates HTML with correct title', async () => {
+        const { generateReleaseScoreHtml } = await import('../shared/release-score.js');
+        const { writeReport } = await import('../shared/temp-dir.js');
+        vi.mocked(generateReleaseScoreHtml).mockReturnValue(HTML_WITH_DOCTYPE);
+        vi.mocked(writeReport).mockReturnValue('/tmp/report.html');
+        const ctx = createMockContext();
+        const { default: case26 } = await import('./commands/case26.js');
+        await case26.handler(ctx);
+        const receivedData = vi.mocked(generateReleaseScoreHtml).mock.calls[0]?.[0] as { score: number; grade: string };
+        expect(typeof receivedData.score).toBe('number');
+        expect(typeof receivedData.grade).toBe('string');
+    });
+
+    it('writes report with correct filename pattern', async () => {
+        const { generateReleaseScoreHtml } = await import('../shared/release-score.js');
+        const { writeReport } = await import('../shared/temp-dir.js');
+        vi.mocked(generateReleaseScoreHtml).mockReturnValue(HTML_WITH_DOCTYPE);
+        vi.mocked(writeReport).mockReturnValue('/tmp/report.html');
+        const ctx = createMockContext();
+        ctx.ctx.project_name = 'RELEASE-PROJ';
+        const { default: case26 } = await import('./commands/case26.js');
+        await case26.handler(ctx);
+        expect(writeReport).toHaveBeenCalledWith('release-score-RELEASE-PROJ.html', HTML_WITH_DOCTYPE);
+    });
+
+    it('opens report in browser', async () => {
+        const { generateReleaseScoreHtml } = await import('../shared/release-score.js');
+        const { writeReport } = await import('../shared/temp-dir.js');
+        const { openWithFallback } = await import('../shared/open.js');
+        vi.mocked(generateReleaseScoreHtml).mockReturnValue(HTML_WITH_DOCTYPE);
+        vi.mocked(writeReport).mockReturnValue('/tmp/release-score-TEST.html');
+        vi.mocked(openWithFallback).mockResolvedValue(undefined);
+        const ctx = createMockContext();
+        const { default: case26 } = await import('./commands/case26.js');
+        await case26.handler(ctx);
+        expect(openWithFallback).toHaveBeenCalledWith(
+            '/tmp/release-score-TEST.html',
+            'Release Score',
+            expect.any(Function),
+        );
+    });
+
+    it('pushes history with project name on success', async () => {
+        const { generateReleaseScoreHtml } = await import('../shared/release-score.js');
+        const { writeReport } = await import('../shared/temp-dir.js');
+        vi.mocked(generateReleaseScoreHtml).mockReturnValue(HTML_WITH_DOCTYPE);
+        vi.mocked(writeReport).mockReturnValue('/tmp/report.html');
+        const ctx = createMockContext();
+        ctx.ctx.project_name = 'QA-PROJECT';
+        const { default: case26 } = await import('./commands/case26.js');
+        await case26.handler(ctx);
+        expect(ctx.pushHistory).toHaveBeenCalledWith('release-score', 'QA-PROJECT', 'ok');
+    });
+
+    it('handles loadMetrics error gracefully', async () => {
         const { loadMetrics } = await import('../shared/metrics.js');
         vi.mocked(loadMetrics).mockImplementation(() => {
-            throw new Error('failed');
+            throw new Error('IO error');
         });
         const ctx = createMockContext();
         const { default: case26 } = await import('./commands/case26.js');
         await expect(case26.handler(ctx)).resolves.not.toThrow();
+        const { printError } = await import('../shared/prompt.js');
+        expect(vi.mocked(printError)).toHaveBeenCalled();
+    });
+
+    it('calls title with correct label', async () => {
+        const { generateReleaseScoreHtml } = await import('../shared/release-score.js');
+        const { writeReport } = await import('../shared/temp-dir.js');
+        vi.mocked(generateReleaseScoreHtml).mockReturnValue(HTML_WITH_DOCTYPE);
+        vi.mocked(writeReport).mockReturnValue('/tmp/report.html');
+        const ctx = createMockContext();
+        const { default: case26 } = await import('./commands/case26.js');
+        await case26.handler(ctx);
+        const { title } = await import('../shared/prompt.js');
+        expect(vi.mocked(title)).toHaveBeenCalledWith('Release Score');
+    });
+
+    it('uses health gate pass when health >= 70', async () => {
+        const { loadMetrics, calculateFlakiness } = await import('../shared/metrics.js');
+        const { calculateHealthScore } = await import('../shared/health-score.js');
+        const { calculateReleaseScore, generateReleaseScoreHtml } = await import('../shared/release-score.js');
+        const { writeReport } = await import('../shared/temp-dir.js');
+        vi.mocked(loadMetrics).mockReturnValue({ runs: [makeRun('TEST')] });
+        vi.mocked(calculateFlakiness).mockReturnValue([]);
+        vi.mocked(calculateHealthScore).mockReturnValue({
+            overall: 75,
+            grade: 'good',
+            qualityGate: 'pass',
+            dimensions: MOCK_DIMENSIONS,
+            runCount: 10,
+            timestamp: '2026-06-14T10:00:00Z',
+        });
+        vi.mocked(calculateReleaseScore).mockReturnValue(makeReleaseScoreResult());
+        vi.mocked(generateReleaseScoreHtml).mockReturnValue(HTML_WITH_DOCTYPE);
+        vi.mocked(writeReport).mockReturnValue('/tmp/report.html');
+        const ctx = createMockContext();
+        const { default: case26 } = await import('./commands/case26.js');
+        await case26.handler(ctx);
+        expect(calculateReleaseScore).toHaveBeenCalledWith(80, 75, 'pass', 70, expect.any(Number));
+    });
+
+    it('uses health gate fail when health < 70', async () => {
+        const { loadMetrics, calculateFlakiness } = await import('../shared/metrics.js');
+        const { calculateHealthScore } = await import('../shared/health-score.js');
+        const { calculateReleaseScore, generateReleaseScoreHtml } = await import('../shared/release-score.js');
+        const { writeReport } = await import('../shared/temp-dir.js');
+        vi.mocked(loadMetrics).mockReturnValue({ runs: [makeRun('TEST')] });
+        vi.mocked(calculateFlakiness).mockReturnValue([]);
+        vi.mocked(calculateHealthScore).mockReturnValue({
+            overall: 55,
+            grade: 'needs_attention',
+            qualityGate: 'fail',
+            dimensions: MOCK_DIMENSIONS,
+            runCount: 10,
+            timestamp: '2026-06-14T10:00:00Z',
+        });
+        vi.mocked(calculateReleaseScore).mockReturnValue(makeReleaseScoreResult({ grade: 'needs_attention' }));
+        vi.mocked(generateReleaseScoreHtml).mockReturnValue(HTML_WITH_DOCTYPE);
+        vi.mocked(writeReport).mockReturnValue('/tmp/report.html');
+        const ctx = createMockContext();
+        const { default: case26 } = await import('./commands/case26.js');
+        await case26.handler(ctx);
+        expect(calculateReleaseScore).toHaveBeenCalledWith(80, 55, 'fail', 70, expect.any(Number));
     });
 });
 
 describe('case27 — Coverage Dashboard', () => {
-    it('generates report and pushes history', async () => {
-        const { writeReport } = await import('../shared/temp-dir.js');
-        vi.mocked(writeReport).mockReturnValue('/tmp/report.html');
-        const ctx = createMockContext();
-        const { default: case27 } = await import('./commands/case27.js');
-        await case27.handler(ctx);
-        expect(ctx.pushHistory).toHaveBeenCalledWith('coverage-dashboard', '75% coverage, 5 gaps', 'ok');
-    });
+    beforeEach(() => vi.clearAllMocks());
 
-    it('warns if no project selected', async () => {
+    it('warns and returns early if no project name', async () => {
         const ctx = createMockContext();
         ctx.ctx.project_name = '';
         const { default: case27 } = await import('./commands/case27.js');
@@ -174,22 +540,139 @@ describe('case27 — Coverage Dashboard', () => {
         expect(ctx.pushHistory).not.toHaveBeenCalled();
     });
 
-    it('handles error in analyzeCoverageGaps gracefully', async () => {
+    it('calls analyzeCoverageGaps with jiraResource and project name', async () => {
         const { analyzeCoverageGaps } = await import('../shared/coverage-gap.js');
-        vi.mocked(analyzeCoverageGaps).mockRejectedValue(new Error('API error'));
+        const { generateCoverageGapHtml } = await import('../shared/generate-coverage-gap-html.js');
+        const { writeReport } = await import('../shared/temp-dir.js');
+        vi.mocked(analyzeCoverageGaps).mockResolvedValue(makeCoverageResult());
+        vi.mocked(generateCoverageGapHtml).mockReturnValue(HTML_WITH_DOCTYPE);
+        vi.mocked(writeReport).mockReturnValue('/tmp/report.html');
+        const ctx = createMockContext();
+        const { default: case27 } = await import('./commands/case27.js');
+        await case27.handler(ctx);
+        expect(analyzeCoverageGaps).toHaveBeenCalledWith(ctx.jiraResource, 'TEST');
+    });
+
+    it('generates HTML with project name in title', async () => {
+        const { analyzeCoverageGaps } = await import('../shared/coverage-gap.js');
+        const { generateCoverageGapHtml } = await import('../shared/generate-coverage-gap-html.js');
+        const { writeReport } = await import('../shared/temp-dir.js');
+        vi.mocked(analyzeCoverageGaps).mockResolvedValue(makeCoverageResult());
+        vi.mocked(generateCoverageGapHtml).mockReturnValue(HTML_WITH_DOCTYPE);
+        vi.mocked(writeReport).mockReturnValue('/tmp/report.html');
+        const ctx = createMockContext();
+        ctx.ctx.project_name = 'COV-PROJ';
+        const { default: case27 } = await import('./commands/case27.js');
+        await case27.handler(ctx);
+        expect(generateCoverageGapHtml).toHaveBeenCalledWith(expect.anything(), 'Coverage Dashboard — COV-PROJ');
+    });
+
+    it('writes report with correct filename pattern', async () => {
+        const { analyzeCoverageGaps } = await import('../shared/coverage-gap.js');
+        const { generateCoverageGapHtml } = await import('../shared/generate-coverage-gap-html.js');
+        const { writeReport } = await import('../shared/temp-dir.js');
+        vi.mocked(analyzeCoverageGaps).mockResolvedValue(makeCoverageResult());
+        vi.mocked(generateCoverageGapHtml).mockReturnValue(HTML_WITH_DOCTYPE);
+        vi.mocked(writeReport).mockReturnValue('/tmp/report.html');
+        const ctx = createMockContext();
+        ctx.ctx.project_name = 'DASH-XYZ';
+        const { default: case27 } = await import('./commands/case27.js');
+        await case27.handler(ctx);
+        expect(writeReport).toHaveBeenCalledWith('coverage-dashboard-DASH-XYZ.html', HTML_WITH_DOCTYPE);
+    });
+
+    it('opens report in browser', async () => {
+        const { analyzeCoverageGaps } = await import('../shared/coverage-gap.js');
+        const { generateCoverageGapHtml } = await import('../shared/generate-coverage-gap-html.js');
+        const { writeReport } = await import('../shared/temp-dir.js');
+        const { openWithFallback } = await import('../shared/open.js');
+        vi.mocked(analyzeCoverageGaps).mockResolvedValue(makeCoverageResult());
+        vi.mocked(generateCoverageGapHtml).mockReturnValue(HTML_WITH_DOCTYPE);
+        vi.mocked(writeReport).mockReturnValue('/tmp/coverage-dashboard-TEST.html');
+        vi.mocked(openWithFallback).mockResolvedValue(undefined);
+        const ctx = createMockContext();
+        const { default: case27 } = await import('./commands/case27.js');
+        await case27.handler(ctx);
+        expect(openWithFallback).toHaveBeenCalledWith(
+            '/tmp/coverage-dashboard-TEST.html',
+            'Coverage Dashboard',
+            expect.any(Function),
+        );
+    });
+
+    it('pushes history with coverage summary on success', async () => {
+        const { analyzeCoverageGaps } = await import('../shared/coverage-gap.js');
+        const { generateCoverageGapHtml } = await import('../shared/generate-coverage-gap-html.js');
+        const { writeReport } = await import('../shared/temp-dir.js');
+        vi.mocked(analyzeCoverageGaps).mockResolvedValue(makeCoverageResult());
+        vi.mocked(generateCoverageGapHtml).mockReturnValue(HTML_WITH_DOCTYPE);
+        vi.mocked(writeReport).mockReturnValue('/tmp/report.html');
+        const ctx = createMockContext();
+        const { default: case27 } = await import('./commands/case27.js');
+        await case27.handler(ctx);
+        expect(ctx.pushHistory).toHaveBeenCalledWith('coverage-dashboard', '75% coverage, 2 gaps', 'ok');
+    });
+
+    it('returns false when analysis fails', async () => {
+        const { analyzeCoverageGaps } = await import('../shared/coverage-gap.js');
+        vi.mocked(analyzeCoverageGaps).mockRejectedValue(new Error('Jira API down'));
         const ctx = createMockContext();
         const { default: case27 } = await import('./commands/case27.js');
         const result = await case27.handler(ctx);
         expect(result).toBe(false);
+        const { printError } = await import('../shared/prompt.js');
+        expect(vi.mocked(printError)).toHaveBeenCalled();
+    });
+
+    it('does not call writeReport when analysis fails', async () => {
+        const { analyzeCoverageGaps } = await import('../shared/coverage-gap.js');
+        const { writeReport } = await import('../shared/temp-dir.js');
+        vi.mocked(analyzeCoverageGaps).mockRejectedValue(new Error('timeout'));
+        const ctx = createMockContext();
+        const { default: case27 } = await import('./commands/case27.js');
+        await case27.handler(ctx);
+        expect(writeReport).not.toHaveBeenCalled();
     });
 
     it('handles openWithFallback error gracefully', async () => {
+        const { analyzeCoverageGaps } = await import('../shared/coverage-gap.js');
+        const { generateCoverageGapHtml } = await import('../shared/generate-coverage-gap-html.js');
         const { writeReport } = await import('../shared/temp-dir.js');
-        vi.mocked(writeReport).mockReturnValue('/tmp/r.html');
         const { openWithFallback } = await import('../shared/open.js');
-        vi.mocked(openWithFallback).mockRejectedValue(new Error('open failed'));
+        vi.mocked(analyzeCoverageGaps).mockResolvedValue(makeCoverageResult());
+        vi.mocked(generateCoverageGapHtml).mockReturnValue(HTML_WITH_DOCTYPE);
+        vi.mocked(writeReport).mockReturnValue('/tmp/r.html');
+        vi.mocked(openWithFallback).mockRejectedValue(new Error('no browser'));
         const ctx = createMockContext();
         const { default: case27 } = await import('./commands/case27.js');
         await expect(case27.handler(ctx)).resolves.not.toThrow();
+    });
+
+    it('calls title with correct label', async () => {
+        const { analyzeCoverageGaps } = await import('../shared/coverage-gap.js');
+        const { generateCoverageGapHtml } = await import('../shared/generate-coverage-gap-html.js');
+        const { writeReport } = await import('../shared/temp-dir.js');
+        vi.mocked(analyzeCoverageGaps).mockResolvedValue(makeCoverageResult());
+        vi.mocked(generateCoverageGapHtml).mockReturnValue(HTML_WITH_DOCTYPE);
+        vi.mocked(writeReport).mockReturnValue('/tmp/report.html');
+        const ctx = createMockContext();
+        const { default: case27 } = await import('./commands/case27.js');
+        await case27.handler(ctx);
+        const { title } = await import('../shared/prompt.js');
+        expect(vi.mocked(title)).toHaveBeenCalledWith('Coverage Dashboard');
+    });
+
+    it('uses withSpinner during analysis', async () => {
+        const { analyzeCoverageGaps } = await import('../shared/coverage-gap.js');
+        const { generateCoverageGapHtml } = await import('../shared/generate-coverage-gap-html.js');
+        const { writeReport } = await import('../shared/temp-dir.js');
+        vi.mocked(analyzeCoverageGaps).mockResolvedValue(makeCoverageResult());
+        vi.mocked(generateCoverageGapHtml).mockReturnValue(HTML_WITH_DOCTYPE);
+        vi.mocked(writeReport).mockReturnValue('/tmp/report.html');
+        const ctx = createMockContext();
+        const { default: case27 } = await import('./commands/case27.js');
+        await case27.handler(ctx);
+        const { withSpinner } = await import('../shared/prompt.js');
+        expect(vi.mocked(withSpinner)).toHaveBeenCalledWith('Analisando cobertura...', expect.any(Function));
     });
 });
