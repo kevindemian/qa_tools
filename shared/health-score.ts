@@ -54,7 +54,7 @@ const DEFAULTS: HealthScoreConfig = {
     minPassRateGate: 80,
     minExecutionRateGate: 80,
     maxFlakyGate: 5,
-    maxSuiteSpeedGate: 10000,
+    maxSuiteSpeedGate: 3000,
 };
 
 const DEFAULT_GRADE_BOUNDARIES: Record<HealthScoreGrade, number> = {
