@@ -207,6 +207,10 @@ describe('isCtrfFormat', () => {
     it('rejects plain object without results.tests', () => {
         expect(isCtrfFormat({})).toBe(false);
     });
+
+    it('rejects results.summary === null (typeof null === object)', () => {
+        expect(isCtrfFormat({ results: { tests: [], summary: null } })).toBe(false);
+    });
 });
 
 describe('parseCtrfResults', () => {

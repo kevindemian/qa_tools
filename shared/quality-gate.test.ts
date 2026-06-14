@@ -118,6 +118,112 @@ describe('runQualityGate', () => {
         expect(result.checks.length).toBeGreaterThanOrEqual(1);
     });
 
+    it('fails when flaky rate exceeds threshold', () => {
+        mockLoadMetrics.mockReturnValue({
+            runs: [
+                {
+                    timestamp: '2025-01-01T00:00:00.000Z',
+                    project: 'test',
+                    total: 10,
+                    passed: 8,
+                    failed: 1,
+                    skipped: 1,
+                    duration: 5000,
+                    tests: [
+                        { title: 'flaky-test-1', state: 'failed', duration: 100 },
+                        { title: 'flaky-test-1', state: 'passed', duration: 100 },
+                        { title: 'stable-test', state: 'passed', duration: 50 },
+                        { title: 'stable-test', state: 'passed', duration: 50 },
+                    ],
+                },
+                {
+                    timestamp: '2025-01-01T01:00:00.000Z',
+                    project: 'test',
+                    total: 10,
+                    passed: 7,
+                    failed: 2,
+                    skipped: 1,
+                    duration: 5000,
+                    tests: [
+                        { title: 'flaky-test-1', state: 'failed', duration: 100 },
+                        { title: 'flaky-test-1', state: 'passed', duration: 100 },
+                        { title: 'stable-test', state: 'passed', duration: 50 },
+                        { title: 'stable-test', state: 'passed', duration: 50 },
+                    ],
+                },
+            ],
+            coverageHistory: [
+                {
+                    timestamp: '2025-01-01T00:00:00.000Z',
+                    project: 'test',
+                    totalIssues: 10,
+                    mappedIssues: 8,
+                    coveragePct: 80,
+                },
+            ],
+        });
+        mockCalcFlakiness.mockReturnValue([
+            { title: 'flaky-test-1', rate: 1, passCount: 1, failCount: 1, skipCount: 0, totalRuns: 2 },
+        ]);
+        const result = runQualityGate();
+        const flakyCheck = result.checks.find((c) => c.name === 'flaky-rate');
+        expect(flakyCheck).toBeDefined();
+        // 1 flaky test out of 2 considered (both appear in 2+ runs) = 50% flaky
+        expect(flakyCheck?.status).toBe('fail');
+        expect(flakyCheck?.score).toBe(50);
+    });
+
+    it('passes flaky rate when no flaky tests exist', () => {
+        mockLoadMetrics.mockReturnValue({
+            runs: [
+                {
+                    timestamp: '2025-01-01T00:00:00.000Z',
+                    project: 'test',
+                    total: 10,
+                    passed: 9,
+                    failed: 0,
+                    skipped: 1,
+                    duration: 5000,
+                    tests: [
+                        { title: 't1', state: 'passed', duration: 100 },
+                        { title: 't1', state: 'passed', duration: 100 },
+                        { title: 't2', state: 'passed', duration: 50 },
+                        { title: 't2', state: 'passed', duration: 50 },
+                    ],
+                },
+                {
+                    timestamp: '2025-01-01T01:00:00.000Z',
+                    project: 'test',
+                    total: 10,
+                    passed: 9,
+                    failed: 0,
+                    skipped: 1,
+                    duration: 5000,
+                    tests: [
+                        { title: 't1', state: 'passed', duration: 100 },
+                        { title: 't1', state: 'passed', duration: 100 },
+                        { title: 't2', state: 'passed', duration: 50 },
+                        { title: 't2', state: 'passed', duration: 50 },
+                    ],
+                },
+            ],
+            coverageHistory: [
+                {
+                    timestamp: '2025-01-01T00:00:00.000Z',
+                    project: 'test',
+                    totalIssues: 10,
+                    mappedIssues: 8,
+                    coveragePct: 80,
+                },
+            ],
+        });
+        mockCalcFlakiness.mockReturnValue([]);
+        const result = runQualityGate();
+        const flakyCheck = result.checks.find((c) => c.name === 'flaky-rate');
+        expect(flakyCheck).toBeDefined();
+        expect(flakyCheck?.status).toBe('pass');
+    });
+
     it('handles errors gracefully', () => {
         mockLoadMetrics.mockImplementation(() => {
             throw new Error('simulated error');

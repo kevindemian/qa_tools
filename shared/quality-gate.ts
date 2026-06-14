@@ -67,7 +67,21 @@ function _passRateCheck(health: HealthScoreResult): GateCheck {
 
 function _flakyCheck(runs: MetricsRun[]): GateCheck {
     const flakyEntries = calculateFlakiness({ runs }, 2);
-    const flakyPct = runs.length > 0 ? (flakyEntries.length / Math.max(runs.length, 1)) * 100 : 0;
+
+    // Compute total unique tests that appear in at least 2 runs (same minRuns as calculateFlakiness).
+    // This is the correct denominator: flaky rate = flaky tests / total stable tests with enough data.
+    const testRunCount = new Map<string, number>();
+    for (const run of runs) {
+        for (const t of run.tests) {
+            testRunCount.set(t.title, (testRunCount.get(t.title) ?? 0) + 1);
+        }
+    }
+    let totalConsidered = 0;
+    for (const count of testRunCount.values()) {
+        if (count >= 2) totalConsidered++;
+    }
+
+    const flakyPct = totalConsidered > 0 ? (flakyEntries.length / totalConsidered) * 100 : 0;
     const status = flakyPct <= THRESHOLDS.maxFlakyPct ? 'pass' : 'fail';
     return {
         name: 'flaky-rate',
@@ -77,6 +91,8 @@ function _flakyCheck(runs: MetricsRun[]): GateCheck {
         details:
             'Flaky: ' +
             flakyEntries.length +
+            ' of ' +
+            totalConsidered +
             ' tests (' +
             Math.round(flakyPct) +
             '%, threshold: ' +
