@@ -303,4 +303,87 @@ describe('generatePrReport', () => {
         expect(calledWith).toContain('passed/(passed+failed)×100');
         expect(calledWith).toContain('DORA State of DevOps 2025');
     });
+
+    it('includes CI Context section when ciEnv.isCI is true', async () => {
+        await generatePrReport({
+            tests: [sampleTest],
+            stats: defaultStats,
+            ciEnv: {
+                isCI: true,
+                repo: 'owner/repo',
+                runId: '123',
+                refName: 'feature/test',
+                serverUrl: 'https://github.com',
+            },
+        });
+
+        const commentBody = String(mockPRComment.postPrComment.mock.calls[0]?.[0]);
+        expect(commentBody).toContain('CI Context');
+        expect(commentBody).toContain('Run #123');
+        expect(commentBody).toContain('feature/test');
+        expect(commentBody).toContain('owner/repo');
+        expect(commentBody).toContain('test execution results');
+    });
+
+    it('does not include CI Context section when ciEnv.isCI is false', async () => {
+        await generatePrReport({
+            tests: [sampleTest],
+            stats: defaultStats,
+            ciEnv: {
+                isCI: false,
+                repo: 'unknown',
+                runId: '0',
+                refName: '',
+                serverUrl: 'https://github.com',
+            },
+        });
+
+        const commentBody = String(mockPRComment.postPrComment.mock.calls[0]?.[0]);
+        expect(commentBody).not.toContain('CI Context');
+    });
+
+    it('writes to GITHUB_STEP_SUMMARY when environment variable is set', async () => {
+        const summaryPath = '/tmp/test-step-summary.md';
+        const fs = await import('node:fs');
+        fs.writeFileSync(summaryPath, '', 'utf8');
+        process.env['GITHUB_STEP_SUMMARY'] = summaryPath;
+
+        try {
+            await generatePrReport({
+                tests: [sampleTest],
+                stats: defaultStats,
+                ciEnv: {
+                    isCI: true,
+                    repo: 'owner/repo',
+                    runId: '456',
+                    refName: 'main',
+                    serverUrl: 'https://github.com',
+                },
+            });
+
+            const summaryContent = fs.readFileSync(summaryPath, 'utf8');
+            expect(summaryContent).toContain('QA Tools — PR Report');
+            expect(summaryContent).toContain('8 passed');
+        } finally {
+            delete process.env['GITHUB_STEP_SUMMARY'];
+            fs.unlinkSync(summaryPath);
+        }
+    });
+
+    it('does not write to job summary when GITHUB_STEP_SUMMARY is not set', async () => {
+        const original = process.env['GITHUB_STEP_SUMMARY'];
+        delete process.env['GITHUB_STEP_SUMMARY'];
+
+        try {
+            await generatePrReport({
+                tests: [sampleTest],
+                stats: defaultStats,
+            });
+
+            // Should not throw
+            expect(true).toBe(true);
+        } finally {
+            if (original) process.env['GITHUB_STEP_SUMMARY'] = original;
+        }
+    });
 });

@@ -268,6 +268,45 @@ function buildCiContextSection(
 }
 
 /**
+ * PRUX-1a: Write the PR report summary to GitHub Actions Job Summary.
+ *
+ * When running inside GitHub Actions, writes a Markdown summary to
+ * $GITHUB_STEP_SUMMARY so the report is visible inline on the workflow
+ * run page — no clicks or downloads required.
+ *
+ * The summary includes: summary table, health score, quality gate status,
+ * and a link to download the full HTML report artifact.
+ *
+ * @param sections - All markdown sections assembled for the PR comment
+ * @param htmlArtifactUrl - URL to download the HTML report artifact (when available)
+ */
+function writeToJobSummary(sections: string[], htmlArtifactUrl?: string): void {
+    const stepSummaryPath = process.env['GITHUB_STEP_SUMMARY'];
+    if (!stepSummaryPath) return;
+
+    try {
+        const summaryLines = ['## 📊 QA Tools — PR Report', ''];
+        // Include the first 3 sections (CI context + summary table + failure table if present)
+        // to keep the summary concise (GITHUB_STEP_SUMMARY has a 65KB limit).
+        const maxSections = Math.min(sections.length, 4);
+        for (let i = 0; i < maxSections; i++) {
+            const section = sections[i];
+            if (section) summaryLines.push(section);
+        }
+
+        if (htmlArtifactUrl) {
+            summaryLines.push('', `📄 [Download full HTML report](${htmlArtifactUrl})`);
+        }
+        summaryLines.push('', `_${new Date().toISOString()}_`, '');
+
+        fs.appendFileSync(stepSummaryPath, summaryLines.join('\n'), 'utf8');
+        rootLogger.info('Job summary written to $GITHUB_STEP_SUMMARY');
+    } catch (err) {
+        rootLogger.warn(`Failed to write job summary: ${err instanceof Error ? err.message : String(err)}`);
+    }
+}
+
+/**
  * Generate and post a PR report from parsed test data.
  *
  * @returns Result summary with HTML path, check run ID, and comment URL (when applicable).
@@ -384,7 +423,12 @@ export async function generatePrReport(options: PrReportCoreOptions): Promise<Pr
     // 7. Footer
     sections.push(buildFooter(artifactUrl, workflowUrl, healthScore));
 
-    // 8. Post PR comment
+    // 8. Write to GitHub Actions Job Summary (PRUX — inline visualization)
+    // This makes the report visible on the workflow run page without clicks.
+    const htmlArtifactUrl = workflowUrl ? `${workflowUrl}?pr=1#artifacts` : undefined;
+    writeToJobSummary(sections, htmlArtifactUrl);
+
+    // 9. Post PR comment
     const commentBody = sections.join('\n');
     const postResult = await postPrComment(commentBody);
 

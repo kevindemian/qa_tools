@@ -126,3 +126,23 @@ describe('generateCIWorkflow — with: project-name', () => {
         expect(yaml).not.toContain('project-name:');
     });
 });
+
+describe('generateQaPostProcessAction — HTML upload', () => {
+    it('includes upload-artifact step for HTML report', () => {
+        const yaml = generateQaPostProcessAction();
+        expect(yaml).toContain('Upload PR Report HTML');
+        expect(yaml).toContain('actions/upload-artifact@v4');
+        expect(yaml).toContain('pr-report-html');
+        expect(yaml).toContain('reports/pr-report.html');
+    });
+
+    it('sets if-no-files-found: warn for HTML upload', () => {
+        const yaml = generateQaPostProcessAction();
+        expect(yaml).toContain('if-no-files-found: warn');
+    });
+
+    it('runs upload even when post-processing fails (if: always)', () => {
+        const yaml = generateQaPostProcessAction();
+        expect(yaml).toContain('if: always()');
+    });
+});

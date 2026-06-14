@@ -67,6 +67,79 @@
 | `npm run lint`                           | **0 erros**   |
 | Cobertura feature-config.test.ts         | **100%**      |
 
+### E2E Validation — 2026-06-14
+
+| Check               | Resultado | Detalhe                                                                              |
+| ------------------- | --------- | ------------------------------------------------------------------------------------ |
+| Feature config lida | ✅        | `qa_tools.prReport.enabled: true` — report não foi pulado                            |
+| CTRF parse          | ✅        | 4862 passed, 0 failed, 9 skipped                                                     |
+| HTML report gerado  | ✅        | `reports/pr-report.html` — 12MB                                                      |
+| PR comment postado  | ✅        | [#8 comment](https://github.com/kevindemian/qa_tools/pull/8#issuecomment-4701633988) |
+| Health score        | ✅        | Score 60, Grade B                                                                    |
+| Quality gate        | ✅        | Executado — FAIL (52/100): coverage 0% abaixo do threshold                           |
+| Check Run           | ⚠️ 403    | PAT sem permissão `checks:write` — não é bug da ferramenta                           |
+| Branch + PR cleanup | ✅        | Branch deletada, PR #8 fechado                                                       |
+
+**Débito identificado:** `GITHUB_TOKEN` (PAT) não tem permissão `checks:write`. No CI (GitHub Actions `GITHUB_TOKEN`) isso funciona. Não é bug da ferramenta.
+
+---
+
+## 📊 Sprint PR Report UX — Visualização e Acessibilidade do Report (Jun/2026)
+
+**Data:** 2026-06-14
+**Origem:** Link "Download HTML report" no PR Comment leva à página de Artifacts mas o HTML não é uploaded. HTML é gerado no runner mas deletado com o job. Nenhuma visualização inline existe.
+**Estratégia:** Solução D — Upload artifact (download) + Job Summary (visualização inline).
+**Regra absoluta:** zero workarounds, 100% teste para código novo, nenhum débito deixado.
+
+| Fase | Descrição                                         | Itens        | Status |
+| ---- | ------------------------------------------------- | ------------ | ------ |
+| 1    | Adicionar Job Summary ao pr-report-core.ts        | PRUX-1a      | ✅     |
+| 2    | Adicionar upload step do HTML no composite action | PRUX-2a      | ✅     |
+| 3    | Atualizar template github-ci.ts para upload HTML  | PRUX-3a      | ✅     |
+| 4    | Criar/atualizar testes para cobertura 100%        | PRUX-4a a 4c | 🔜     |
+| 5    | Rodar tsc, vitest, lint e validar                 | PRUX-5a a 5c | 🔜     |
+| 6    | Auditoria completa                                | PRUX-6a      | 🔜     |
+
+### Fase 1 — Job Summary
+
+| ID      | Item                                                                               | Arquivo                    | Status |
+| ------- | ---------------------------------------------------------------------------------- | -------------------------- | ------ |
+| PRUX-1a | ✨ Escrever resumo do report no `$GITHUB_STEP_SUMMARY` via `core.summary.addRaw()` | `shared/pr-report-core.ts` | 🔜     |
+
+### Fase 2 — Upload HTML no composite action
+
+| ID      | Item                                                                  | Arquivo                                      | Status |
+| ------- | --------------------------------------------------------------------- | -------------------------------------------- | ------ |
+| PRUX-2a | ✨ Adicionar step de upload do `reports/pr-report.html` como artifact | `.github/actions/qa-post-process/action.yml` | 🔜     |
+
+### Fase 3 — Template github-ci.ts
+
+| ID      | Item                                                  | Arquivo                        | Status |
+| ------- | ----------------------------------------------------- | ------------------------------ | ------ |
+| PRUX-3a | ✨ Gerar step de upload do HTML report no template CI | `setup/templates/github-ci.ts` | 🔜     |
+
+### Fase 4 — Testes
+
+| ID      | Item                                                 | Arquivo                                   | Status |
+| ------- | ---------------------------------------------------- | ----------------------------------------- | ------ |
+| PRUX-4a | 🧪 Testar `buildJobSummary` (markdown generation)    | `shared/__tests__/pr-report-core.test.ts` | 🔜     |
+| PRUX-4b | 🧪 Testar upload step no composite action (snapshot) | `setup/__tests__/github-ci.test.ts`       | 🔜     |
+| PRUX-4c | 🧪 Testar template gera step de upload HTML          | `setup/__tests__/github-ci.test.ts`       | 🔜     |
+
+### Fase 5 — Validação
+
+| ID      | Item                  | Critério  | Status |
+| ------- | --------------------- | --------- | ------ |
+| PRUX-5a | 🔧 `npx tsc --noEmit` | 0 erros   | 🔜     |
+| PRUX-5b | 🔧 `npx vitest run`   | 100% pass | 🔜     |
+| PRUX-5c | 🔧 `npm run lint`     | 0 erros   | 🔜     |
+
+### Fase 6 — Auditoria
+
+| ID      | Item                                                                    | Status |
+| ------- | ----------------------------------------------------------------------- | ------ |
+| PRUX-6a | 🔧 Verificar: Job Summary + Artifact upload + PR Comment link funcional | 🔜     |
+
 ---
 
 ## 🔍 Sprint Auditoria Sistêmica — Verificação Completa de Implementação e Testes (Jun/2026)
