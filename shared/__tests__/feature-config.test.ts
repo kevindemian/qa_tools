@@ -36,7 +36,7 @@ describe('feature-config', () => {
     beforeEach(() => {
         vi.restoreAllMocks();
         try {
-            fs.rmSync(path.dirname(TEST_FEATURES_PATH), { recursive: true, force: true });
+            fs.unlinkSync(TEST_FEATURES_PATH);
         } catch {
             /* ok */
         }
