@@ -96,21 +96,21 @@
 | 1    | Adicionar Job Summary ao pr-report-core.ts        | PRUX-1a      | ✅     |
 | 2    | Adicionar upload step do HTML no composite action | PRUX-2a      | ✅     |
 | 3    | Atualizar template github-ci.ts para upload HTML  | PRUX-3a      | ✅     |
-| 4    | Criar/atualizar testes para cobertura 100%        | PRUX-4a a 4c | 🔜     |
-| 5    | Rodar tsc, vitest, lint e validar                 | PRUX-5a a 5c | 🔜     |
-| 6    | Auditoria completa                                | PRUX-6a      | 🔜     |
+| 4    | Criar/atualizar testes para cobertura 100%        | PRUX-4a a 4c | ✅     |
+| 5    | Rodar tsc, vitest, lint e validar                 | PRUX-5a a 5c | ✅     |
+| 6    | Auditoria completa                                | PRUX-6a      | ✅     |
 
 ### Fase 1 — Job Summary
 
 | ID      | Item                                                                               | Arquivo                    | Status |
 | ------- | ---------------------------------------------------------------------------------- | -------------------------- | ------ |
-| PRUX-1a | ✨ Escrever resumo do report no `$GITHUB_STEP_SUMMARY` via `core.summary.addRaw()` | `shared/pr-report-core.ts` | 🔜     |
+| PRUX-1a | ✨ Escrever resumo do report no `$GITHUB_STEP_SUMMARY` via `core.summary.addRaw()` | `shared/pr-report-core.ts` | ✅     |
 
 ### Fase 2 — Upload HTML no composite action
 
 | ID      | Item                                                                  | Arquivo                                      | Status |
 | ------- | --------------------------------------------------------------------- | -------------------------------------------- | ------ |
-| PRUX-2a | ✨ Adicionar step de upload do `reports/pr-report.html` como artifact | `.github/actions/qa-post-process/action.yml` | 🔜     |
+| PRUX-2a | ✨ Adicionar step de upload do `reports/pr-report.html` como artifact | `.github/actions/qa-post-process/action.yml` | ✅     |
 
 ### Fase 3 — Template github-ci.ts
 
@@ -122,23 +122,23 @@
 
 | ID      | Item                                                 | Arquivo                                   | Status |
 | ------- | ---------------------------------------------------- | ----------------------------------------- | ------ |
-| PRUX-4a | 🧪 Testar `buildJobSummary` (markdown generation)    | `shared/__tests__/pr-report-core.test.ts` | 🔜     |
-| PRUX-4b | 🧪 Testar upload step no composite action (snapshot) | `setup/__tests__/github-ci.test.ts`       | 🔜     |
-| PRUX-4c | 🧪 Testar template gera step de upload HTML          | `setup/__tests__/github-ci.test.ts`       | 🔜     |
+| PRUX-4a | 🧪 Testar `buildJobSummary` (markdown generation)    | `shared/__tests__/pr-report-core.test.ts` | ✅     |
+| PRUX-4b | 🧪 Testar upload step no composite action (snapshot) | `setup/__tests__/github-ci.test.ts`       | ✅     |
+| PRUX-4c | 🧪 Testar template gera step de upload HTML          | `setup/__tests__/github-ci.test.ts`       | ✅     |
 
 ### Fase 5 — Validação
 
 | ID      | Item                  | Critério  | Status |
 | ------- | --------------------- | --------- | ------ |
-| PRUX-5a | 🔧 `npx tsc --noEmit` | 0 erros   | 🔜     |
-| PRUX-5b | 🔧 `npx vitest run`   | 100% pass | 🔜     |
-| PRUX-5c | 🔧 `npm run lint`     | 0 erros   | 🔜     |
+| PRUX-5a | 🔧 `npx tsc --noEmit` | 0 erros   | ✅     |
+| PRUX-5b | 🔧 `npx vitest run`   | 100% pass | ✅     |
+| PRUX-5c | 🔧 `npm run lint`     | 0 erros   | ✅     |
 
 ### Fase 6 — Auditoria
 
 | ID      | Item                                                                    | Status |
 | ------- | ----------------------------------------------------------------------- | ------ |
-| PRUX-6a | 🔧 Verificar: Job Summary + Artifact upload + PR Comment link funcional | 🔜     |
+| PRUX-6a | 🔧 Verificar: Job Summary + Artifact upload + PR Comment link funcional | ✅     |
 
 ---
 
