@@ -2904,3 +2904,39 @@ A auditoria automatizada (senior-auditor) identificou 10 problemas. Após solici
 | CT-03 | `quality-gate.ts` flaky rate usa total de testes como denominador  | `shared/quality-gate.test.ts`                   |
 | CT-04 | `isCtrfFormat` rejeita `{ results: { tests: [], summary: null } }` | `shared/__tests__/result_parser.test.ts`        |
 | CT-05 | E2E: CI workflow injeta step com e2e CTRF separado                 | `setup/templates/github-ci.test.ts`             |
+
+---
+
+## 🔴 Débito Técnico: Logger System — 6 Vulnerabilidades Estruturais (Jun/2026)
+
+**Data:** 2026-06-14
+**Prioridade:** ALTA — investigação e correção
+**Origem:** Investigação de causa raiz do PR Report não gerado em CI. `loadFeatureConfig()` silenciou falha e o logger não produziu nenhuma evidência diagnosticável. Auditoria de robuteza do sistema de log revelou 6 problemas.
+
+| ID     | Problema                                                                                                                                                                                                                                              | Arquivo                       | Severidade |
+| ------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------- | ---------- |
+| LOG-01 | **`loadFeatureConfig` silencia `fs.existsSync` falso** — retorna `{}` sem warning quando `config/features.json` não existe. Fallback silencioso para `DEFAULT_PR_REPORT_CONFIG` (`enabled: false`) sem log. CAUSA RAIZ do PR Report não gerado em CI. | `shared/feature-config.ts:22` | CRITICAL   |
+| LOG-02 | **`_writeFile` não filtra por nível** — `_writeConsole` respeita `logLevel` mas `_writeFile` escreve DEBUG a ERROR incondicionalmente. Inconsistência arquitetural.                                                                                   | `shared/logger.ts:167`        | HIGH       |
+| LOG-03 | **`_ensureDir()` falha permanentemente** — seta `_fileError = true` na primeira falha e nunca mais tenta. Sem retry, sem recovery.                                                                                                                    | `shared/logger.ts:67`         | MEDIUM     |
+| LOG-04 | **`rootLogger` singleton criado sem config** — construtor recebe `_config = null`, delega para `Config.get()` estático. Se `Config` não foi inicializado, comportamento imprevisível.                                                                 | `shared/logger.ts:57`         | MEDIUM     |
+| LOG-05 | **`maskDeep` não é recursivo** — só mascara chaves top-level. Objetos aninhados com `token`/`secret` vazam.                                                                                                                                           | `shared/logger.ts:29`         | MEDIUM     |
+| LOG-06 | **Performance: `fs.existsSync` em todo log** — `_ensureDir` faz syscall a cada `_write` até o primeiro cache hit. Mínimo mas desnecessário.                                                                                                           | `shared/logger.ts:67`         | LOW        |
+
+### Evidência do Impacto (LOG-01)
+
+No CI run `27485916538` (push `b7d6021`), o post-processing logou:
+
+```
+i PR Report disabled in config. Skipping.
+```
+
+Sem warning, sem info adicional. A causa (`config/features.json` não encontrado) foi engolida por `loadFeatureConfig()` que retorna `{}` silenciosamente quando o arquivo não existe. O fallback para `DEFAULT_PR_REPORT_CONFIG` com `enabled: false` produziu um falso diagnóstico ("disabled in config") que ocultou a falha real de I/O.
+
+### Ação Requerida
+
+1. Corrigir LOG-01 (adição imediata de warning)
+2. Investigar por que `config/features.json` não é encontrado no CI (CWD vs checkout)
+3. Corrigir LOG-02 a LOG-06 em sequência de severidade
+4. Garantir que o sistema de log produza evidência rastreável para qualquer ponto de falha em produção
+
+---
