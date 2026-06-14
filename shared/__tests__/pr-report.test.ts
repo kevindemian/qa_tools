@@ -83,8 +83,9 @@ vi.mock('../feature-config.js', () => ({
 
 const { postPrComment } = await import('../github-pr-comment.js');
 
-const TEST_CTRF_DIR = path.resolve('reports');
+const TEST_CTRF_DIR = path.resolve('reports', 'shared-test');
 const TEST_CTRF_PATH = path.join(TEST_CTRF_DIR, 'ctrf-report.json');
+const TEST_HTML_PATH = path.join(TEST_CTRF_DIR, 'pr-report.html');
 
 function createCtrfFixture(
     tests: Array<{
@@ -218,6 +219,7 @@ describe('pr-report entry point — CTRF parsing', () => {
 
 describe('pr-report entry point — quality gate check run', () => {
     const originalEnv = { ...process.env };
+    const originalArgv = process.argv;
     let penv = process.env as Record<string, string | undefined>;
 
     beforeEach(() => {
@@ -227,11 +229,13 @@ describe('pr-report entry point — quality gate check run', () => {
         penv['GITHUB_PR_NUMBER'] = '42';
         penv['GITHUB_SERVER_URL'] = 'https://github.com';
         penv['GITHUB_RUN_ID'] = 'run-123';
+        process.argv = ['node', 'test', '--ctrf', TEST_CTRF_PATH, '--html-output', TEST_HTML_PATH];
         vi.clearAllMocks();
     });
 
     afterEach(() => {
         process.env = { ...originalEnv };
+        process.argv = originalArgv;
         fs.rmSync(TEST_CTRF_DIR, { recursive: true, force: true });
     });
 
@@ -289,6 +293,7 @@ describe('pr-report entry point — quality gate check run', () => {
 
 describe('pr-report entry point — flaky detection with quarantine', () => {
     const originalEnv = { ...process.env };
+    const originalArgv = process.argv;
     let penv = process.env as Record<string, string | undefined>;
 
     beforeEach(() => {
@@ -298,11 +303,13 @@ describe('pr-report entry point — flaky detection with quarantine', () => {
         penv['GITHUB_PR_NUMBER'] = '42';
         penv['GITHUB_SERVER_URL'] = 'https://github.com';
         penv['GITHUB_RUN_ID'] = 'run-123';
+        process.argv = ['node', 'test', '--ctrf', TEST_CTRF_PATH, '--html-output', TEST_HTML_PATH];
         vi.clearAllMocks();
     });
 
     afterEach(() => {
         process.env = { ...originalEnv };
+        process.argv = originalArgv;
         fs.rmSync(TEST_CTRF_DIR, { recursive: true, force: true });
     });
 
@@ -454,6 +461,7 @@ describe('pr-report entry point — flaky detection with quarantine', () => {
 
 describe('pr-report entry point — HTML report generation', () => {
     const originalEnv = { ...process.env };
+    const originalArgv = process.argv;
     let penv = process.env as Record<string, string | undefined>;
 
     beforeEach(() => {
@@ -464,11 +472,13 @@ describe('pr-report entry point — HTML report generation', () => {
         penv['GITHUB_SERVER_URL'] = 'https://github.com';
         penv['GITHUB_RUN_ID'] = 'run-123';
         penv['GITHUB_REF_NAME'] = 'feature-branch';
+        process.argv = ['node', 'test', '--ctrf', TEST_CTRF_PATH, '--html-output', TEST_HTML_PATH];
         vi.clearAllMocks();
     });
 
     afterEach(() => {
         process.env = { ...originalEnv };
+        process.argv = originalArgv;
         fs.rmSync(TEST_CTRF_DIR, { recursive: true, force: true });
     });
 
@@ -484,8 +494,8 @@ describe('pr-report entry point — HTML report generation', () => {
 
         await main();
 
-        expect(fs.existsSync('reports/pr-report.html')).toBe(true);
-        const content = fs.readFileSync('reports/pr-report.html', 'utf8');
+        expect(fs.existsSync(TEST_HTML_PATH)).toBe(true);
+        const content = fs.readFileSync(TEST_HTML_PATH, 'utf8');
         expect(content).toBe('<html><body>Mock HTML Report</body></html>');
 
         expect(mockGenerateHtmlReport).toHaveBeenCalledTimes(1);
