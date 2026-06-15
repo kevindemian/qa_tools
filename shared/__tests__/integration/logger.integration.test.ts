@@ -116,7 +116,7 @@ describe('Integration: Logger', () => {
 
             child.info('validating');
 
-            const content = fs.readFileSync(parent.filePath!, 'utf8');
+            const content = fs.readFileSync(parent.filePath as string, 'utf8');
             expect(content).toContain('test');
             expect(content).toContain('validation');
         });
