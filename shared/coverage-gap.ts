@@ -24,7 +24,8 @@ async function fetchTotalCount(jiraResource: JiraResourceLike, jql: string): Pro
         const response = await jiraResource.searchJiraIssues(jql, 1);
         return response.total;
     } catch (err) {
-        rootLogger.error('Failed to count issues: ' + (err as Error).message);
+        const msg = err instanceof Error ? err.message : String(err);
+        rootLogger.error('Failed to count issues: ' + msg);
         return 0;
     }
 }
@@ -50,7 +51,8 @@ async function collectAllPages(
 
         return allIssues;
     } catch (err) {
-        rootLogger.error('Failed to fetch issues: ' + (err as Error).message);
+        const msg = err instanceof Error ? err.message : String(err);
+        rootLogger.error('Failed to fetch issues: ' + msg);
         return [];
     }
 }
@@ -81,7 +83,8 @@ async function fetchLinkedTestsBatch(
             }
         }
     } catch (err) {
-        rootLogger.error('Failed to fetch linked tests: ' + (err as Error).message);
+        const msg = err instanceof Error ? err.message : String(err);
+        rootLogger.error('Failed to fetch linked tests: ' + msg);
     }
     return linkMap;
 }

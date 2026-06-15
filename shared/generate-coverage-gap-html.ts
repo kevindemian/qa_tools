@@ -144,8 +144,8 @@ function buildGapsTable(result: CoverageGapResult): string {
         html += '<tr class="gap-row" style="border-bottom:1px solid var(--color-border-subtle)">';
         html += '<td><strong>' + sanitizeHtml(item.issueKey) + '</strong></td>';
         html += '<td>' + sanitizeHtml(item.summary.slice(0, 80)) + '</td>';
-        html += '<td>' + item.type + '</td>';
-        html += '<td>' + item.priority + '</td>';
+        html += '<td>' + sanitizeHtml(item.type) + '</td>';
+        html += '<td>' + sanitizeHtml(item.priority) + '</td>';
         html += '<td>' + item.coverageWeight + '</td>';
         html += '<td>' + (item.epicKey ? sanitizeHtml(item.epicKey) : '—') + '</td>';
         html += '<td>' + Badge({ variant: 'fail', children: 'GAP' }) + '</td>';
@@ -202,7 +202,8 @@ export function generateCoverageGapHtml(result: CoverageGapResult, title?: strin
             bodyEnd: buildToggleScript(),
         });
     } catch (err) {
-        rootLogger.error('Failed to generate coverage gap HTML: ' + (err as Error).message);
+        const msg = err instanceof Error ? err.message : String(err);
+        rootLogger.error('Failed to generate coverage gap HTML: ' + msg);
         return buildErrorPage('Error generating coverage gap report', 'Error generating coverage gap report');
     }
 }
