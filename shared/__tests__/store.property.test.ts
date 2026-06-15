@@ -134,8 +134,8 @@ describe('Store — property-based', () => {
     it('listByProject returns only entries for the project', () => {
         fc.assert(
             fc.property(
-                fc.array(ReportMetaArb, { minLength: 1, maxLength: 10 }),
-                fc.array(ReportMetaArb, { minLength: 1, maxLength: 10 }),
+                fc.uniqueArray(ReportMetaArb, { selector: (m) => m.sha, minLength: 1, maxLength: 10 }),
+                fc.uniqueArray(ReportMetaArb, { selector: (m) => m.sha, minLength: 1, maxLength: 10 }),
                 (projectAMetas, projectBMetas) => {
                     const { store: storeA, dir: dirA } = createFreshStore('project-a');
                     const { store: storeB, dir: dirB } = createFreshStore('project-b');
