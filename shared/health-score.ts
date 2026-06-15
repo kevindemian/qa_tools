@@ -194,10 +194,11 @@ function scorePassRate(actual: number, config: HealthScoreConfig): number {
     return ((actual - 50) / (config.passRateTarget - 50)) * 100;
 }
 
-function scoreFlakyRate(actual: number): number {
+function scoreFlakyRate(actual: number, config: HealthScoreConfig): number {
+    const gate = config.maxFlakyGate;
     if (actual <= 0) return 100;
-    if (actual >= 15) return 0;
-    return 100 - (actual / 15) * 100;
+    if (actual >= gate) return 0;
+    return 100 - (actual / gate) * 100;
 }
 
 function scoreCoverage(actual: number, config: HealthScoreConfig): number {
@@ -311,7 +312,7 @@ export function calculateHealthScore(
     const actual = computeActualMetrics(metricsStore, config);
 
     const scPassRate = scorePassRate(actual.passRate, config);
-    const scFlakyRate = scoreFlakyRate(actual.flakyPct);
+    const scFlakyRate = scoreFlakyRate(actual.flakyPct, config);
     const scCoverage = scoreCoverage(actual.coverage, config);
     const scExecutionRate = scoreExecutionRate(actual.executionRate, config);
     const scSuiteSpeed = scoreSuiteSpeed(actual.suiteSpeed, config);
@@ -352,7 +353,7 @@ export function calculateHealthScore(
 
     return {
         overall: Math.round(overall),
-        grade: computeGrade(overall, config.gradeBoundaries),
+        grade: computeGrade(Math.round(overall), config.gradeBoundaries),
         qualityGate: evaluateQualityGate(
             actual.passRate,
             actual.flakyPct,

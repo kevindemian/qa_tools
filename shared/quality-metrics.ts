@@ -105,7 +105,7 @@ export class QualityMetricsCollector {
     layerPassRate(layer: 'layer1' | 'layer2' | 'layer3'): number {
         const attempts = this._layerAttempts[layer];
         if (attempts === 0) return 1;
-        return this._layerPasses[layer] / attempts;
+        return Math.min(this._layerPasses[layer] / attempts, 1);
     }
 
     /** Detect drift: if any invariant's fire rate is >2σ from baseline. */
@@ -115,27 +115,35 @@ export class QualityMetricsCollector {
         const alerts: string[] = [];
 
         for (const [invariantId, currentRate] of Object.entries(this._invariantFireCount)) {
-            const rates = baselineSnapshots.map((s) => s.invariantFireCount[invariantId] || 0).filter((r) => r > 0);
+            const baselineTotals = baselineSnapshots.map((s) =>
+                Object.values(s.invariantFireCount).reduce((a, b) => a + b, 0),
+            );
+            const ratios = baselineSnapshots
+                .map((s, i) => {
+                    const total = baselineTotals[i] ?? 0;
+                    const rate = s.invariantFireCount[invariantId] ?? 0;
+                    return total > 0 ? rate / total : 0;
+                })
+                .filter((r) => r > 0);
 
-            if (rates.length < 2) continue;
+            if (ratios.length < 2) continue;
 
             const totalCurrent = Object.values(this._invariantFireCount).reduce((a, b) => a + b, 0);
             const currentRatio = totalCurrent > 0 ? currentRate / totalCurrent : 0;
 
-            const mean = rates.reduce((a, b) => a + b, 0) / rates.length;
-            const variance = rates.reduce((sum, r) => sum + (r - mean) ** 2, 0) / rates.length;
+            const mean = ratios.reduce((a, b) => a + b, 0) / ratios.length;
+            const variance = ratios.reduce((sum, r) => sum + (r - mean) ** 2, 0) / ratios.length;
             const stdDev = Math.sqrt(variance);
 
             if (stdDev > 0 && currentRatio > mean + 2 * stdDev) {
-                const first = rates[0];
-                const baselineMeanPct = first ? ((mean / first) * 100).toFixed(1) : 'N/A';
+                const firstBaselinePct = ratios[0] !== undefined ? (ratios[0] * 100).toFixed(1) : 'N/A';
                 alerts.push(
                     'DRIFT: invariant "' +
                         invariantId +
                         '" fire rate ' +
                         (currentRatio * 100).toFixed(1) +
                         '% exceeds baseline (' +
-                        baselineMeanPct +
+                        firstBaselinePct +
                         '% +/- ' +
                         (stdDev * 100).toFixed(1) +
                         '%)',

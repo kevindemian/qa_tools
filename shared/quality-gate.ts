@@ -189,7 +189,8 @@ export function formatQualityGateText(result: QualityGateResult): string {
     output += 'Checks:\n';
     for (const check of result.checks) {
         const icon = check.status === 'pass' ? '✅' : '❌';
-        output += '  ' + icon + ' ' + check.name + ': ' + check.details + '\n';
+        output +=
+            '  ' + icon + ' ' + check.name + ' — ' + check.score + '/' + check.threshold + ' — ' + check.details + '\n';
     }
     output += '\n';
     return output;

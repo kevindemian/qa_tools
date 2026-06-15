@@ -54,10 +54,11 @@ export function readIstanbulCoverage(coveragePath?: string): CoverageResult | un
         const statements = total.statements;
         const pct = lines?.pct ?? statements?.pct;
         if (pct === undefined) return undefined;
+        const metric = lines ? 'lines' : 'statements';
         return {
             coveragePct: pct,
             source: 'istanbul',
-            detail: `lines ${pct.toFixed(1)}%` + (lines ? ` (${lines.covered}/${lines.total})` : ''),
+            detail: `${metric} ${pct.toFixed(1)}%` + (lines ? ` (${lines.covered}/${lines.total})` : ''),
         };
     } catch {
         return undefined;

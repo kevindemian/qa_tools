@@ -74,14 +74,15 @@ export class Store {
         this.ensure();
         const bi =
             readJson<Record<string, BranchEntry[]>>(this.backend, `reports/${this.project}/branch-index.json`) ?? {};
-        (bi[branch] ??= []).unshift(entry);
+        if (!Object.prototype.hasOwnProperty.call(bi, branch)) bi[branch] = [];
+        (bi[branch] as BranchEntry[]).unshift(entry);
         writeJson(this.backend, `reports/${this.project}/branch-index.json`, bi);
     }
 
     getBranch(branch: string): BranchEntry[] {
         const bi =
             readJson<Record<string, BranchEntry[]>>(this.backend, `reports/${this.project}/branch-index.json`) ?? {};
-        return bi[branch] ?? [];
+        return Object.prototype.hasOwnProperty.call(bi, branch) ? (bi[branch] as BranchEntry[]) : [];
     }
 
     saveReport(sha: string, data: FlatTest[]): void {
