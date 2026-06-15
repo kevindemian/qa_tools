@@ -2,6 +2,7 @@
  *  Testable with fixtures — no GitHub API needed for the logic layer. */
 import { sanitizeHtml } from '../shared/escape.js';
 import { buildHtmlPage } from '../shared/html-factory.js';
+import { buildCss } from '../shared/report-styles.js';
 
 const ERROR_LOG_PATTERN = /(?:Error|Failure|Timeout|Exception|FATAL|OOMKilled):?\s*(.+)$/gim;
 
@@ -212,12 +213,15 @@ export function aggregatePipelineHealth(
 /*  HTML report sub‑helpers                                            */
 /* ------------------------------------------------------------------ */
 
-const _STATUS_COLOR = (s: string): string => {
-    if (s === 'success' || s === 'completed') return 'green';
-    if (s === 'failure' || s === 'failed') return 'red';
-    if (s === 'cancelled' || s === 'canceled') return 'gray';
-    return 'orange';
-};
+const _PIPELINE_CSS = `
+.summary{display:flex;gap:1rem;margin:1rem 0;flex-wrap:wrap}
+.card{background:var(--color-surface-card);border:1px solid var(--color-border-default);border-radius:8px;padding:.75rem 1rem;flex:1;min-width:120px}
+.card .num{font-size:1.5rem;font-weight:700}
+.card .lbl{font-size:.75rem;color:var(--color-text-muted)}
+.ts{font-size:.8rem;color:var(--color-text-muted);margin-bottom:1.5rem}
+.failure-bar{font-family:monospace;font-size:0.8rem;color:var(--color-text-muted);white-space:nowrap}
+.error-msg{font-family:monospace;font-size:0.8rem}
+`;
 
 const _bar = (rate: number, maxWidth = 12): string => {
     const filled = Math.round((rate / 100) * maxWidth);
@@ -230,48 +234,37 @@ function _renderJobsSection(health: PipelineHealth): string {
         .map(
             (j) =>
                 `<tr><td><strong>${sanitizeHtml(j.name)}</strong></td><td>${j.failCount}</td><td>${j.totalCount}</td>` +
-                `<td><span style="color:${_STATUS_COLOR('failure')}">${j.rate}%</span></td>` +
-                `<td style="font-family:monospace;font-size:0.8rem;color:#6b7280">${_bar(j.rate)}</td></tr>`,
+                `<td><span style="color:var(--color-error)">${j.rate}%</span></td>` +
+                `<td><span class="failure-bar">${_bar(j.rate)}</span></td></tr>`,
         )
         .join('\n');
-    return (
-        '<table border="1" cellpadding="6" style="border-collapse:collapse;width:100%"><tr style="background:#f3f4f6"><th>Job</th><th>Failed</th><th>Total</th><th>Rate</th><th></th></tr>' +
-        rows +
-        '</table>'
-    );
+    return `<table><tr><th>Job</th><th>Failed</th><th>Total</th><th>Rate</th><th></th></tr>${rows}</table>`;
 }
 
 function _renderReasonsSection(health: PipelineHealth): string {
     if (health.failureReasons.length === 0) return '<p>No failure reasons captured</p>';
     const rows = health.failureReasons
-        .map(
-            (r) =>
-                `<tr><td>${r.count}x</td><td style="font-family:monospace;font-size:0.8rem">${sanitizeHtml(r.message)}</td></tr>`,
-        )
+        .map((r) => `<tr><td>${r.count}x</td><td><span class="error-msg">${sanitizeHtml(r.message)}</span></td></tr>`)
         .join('\n');
-    return (
-        '<table border="1" cellpadding="6" style="border-collapse:collapse;width:100%"><tr style="background:#f3f4f6"><th>Count</th><th>Error Message</th></tr>' +
-        rows +
-        '</table>'
-    );
+    return `<table><tr><th>Count</th><th>Error Message</th></tr>${rows}</table>`;
 }
 
 function _renderCategoriesSection(health: PipelineHealth): string {
     const catKeys = Object.keys(health.failureByCategory);
     if (catKeys.length === 0) return '<p>No categorized failures</p>';
     const catColors: Record<string, string> = {
-        infrastructure: '#ef4444',
-        code: '#f59e0b',
-        flaky: '#8b5cf6',
-        unknown: '#9ca3af',
+        infrastructure: 'var(--color-error)',
+        code: 'var(--color-warn)',
+        flaky: 'var(--color-info)',
+        unknown: 'var(--color-text-muted)',
     };
     const catEmoji: Record<string, string> = { infrastructure: '🏗️', code: '🧪', flaky: '🔄', unknown: '❓' };
     let html = '<div style="display:flex;flex-wrap:wrap;gap:0.75rem">';
     for (const key of catKeys) {
         html +=
-            `<div style="flex:1;min-width:140px;background:#f9fafb;border:1px solid #e5e7eb;border-radius:8px;padding:0.75rem">` +
+            `<div style="flex:1;min-width:140px;background:var(--color-surface-card);border:1px solid var(--color-border-default);border-radius:8px;padding:0.75rem">` +
             `<div style="font-size:1.2rem">${catEmoji[key] ?? '📋'} <strong>${key}</strong></div>` +
-            `<div style="font-size:1.5rem;font-weight:700;color:${catColors[key] ?? '#1f2937'}">${health.failureByCategory[key]}</div></div>`;
+            `<div style="font-size:1.5rem;font-weight:700;color:${catColors[key] ?? 'var(--color-text-primary)'}">${health.failureByCategory[key]}</div></div>`;
     }
     html += '</div>';
     return html;
@@ -283,14 +276,10 @@ function _renderBranchSection(health: PipelineHealth): string {
         .map(
             (b) =>
                 `<tr><td><strong>${sanitizeHtml(b.branch)}</strong></td><td>${b.count}</td>` +
-                `<td><span style="color:${_STATUS_COLOR(b.passRate >= 80 ? 'success' : 'failure')}">${b.passRate}%</span></td></tr>`,
+                `<td><span style="color:${b.passRate >= 80 ? 'var(--color-success)' : 'var(--color-error)'}">${b.passRate}%</span></td></tr>`,
         )
         .join('\n');
-    return (
-        '<table border="1" cellpadding="6" style="border-collapse:collapse;width:100%;margin-top:0.5rem"><tr style="background:#f3f4f6"><th>Branch</th><th>Runs</th><th>Pass Rate</th></tr>' +
-        rows +
-        '</table>'
-    );
+    return `<table><tr><th>Branch</th><th>Runs</th><th>Pass Rate</th></tr>${rows}</table>`;
 }
 
 function _renderIssuesSection(health: PipelineHealth): string {
@@ -301,37 +290,22 @@ function _renderIssuesSection(health: PipelineHealth): string {
             .sort((a, b) => b[1] - a[1])
             .map(([label, count]) => `<tr><td>${sanitizeHtml(label)}</td><td>${count}</td></tr>`)
             .join('\n');
-        html +=
-            '<table border="1" cellpadding="6" style="border-collapse:collapse;width:auto"><tr style="background:#f3f4f6"><th>Label</th><th>Count</th></tr>' +
-            rows +
-            '</table>';
+        html += `<table><tr><th>Label</th><th>Count</th></tr>${rows}</table>`;
     }
     return html;
 }
-
-const _REPORT_CSS = `body{font-family:system-ui,sans-serif;margin:2rem;color:#1f2937}
-h1{font-size:1.5rem;margin-bottom:.25rem}
-.ts{font-size:.8rem;color:#6b7280;margin-bottom:1.5rem}
-h2{font-size:1.2rem;margin:1.5rem 0 .5rem}
-table{font-size:.85rem}
-th{text-align:left;font-weight:600}
-td{vertical-align:top}
-.summary{display:flex;gap:1rem;margin:1rem 0;flex-wrap:wrap}
-.card{background:#f9fafb;border:1px solid #e5e7eb;border-radius:8px;padding:.75rem 1rem;flex:1;min-width:120px}
-.card .num{font-size:1.5rem;font-weight:700}
-.card .lbl{font-size:.75rem;color:#6b7280}`;
 
 /** Render a complete HTML report from a PipelineHealth object.
  *  Pure function — no I/O, no side effects. */
 export function renderPipelineHealthHtml(health: PipelineHealth, title = 'Pipeline Health Report'): string {
     const ts = new Date().toISOString();
-    const passRateColor = health.passRate >= 80 ? '#16a34a' : '#dc2626';
+    const passRateColor = health.passRate >= 80 ? 'var(--color-success)' : 'var(--color-error)';
     const bodyContent = `<h1>${sanitizeHtml(title)}</h1>
 <div class="ts">${ts} &mdash; ${health.period.from} to ${health.period.to}</div>
 <div class="summary">
-  <div class="card"><div class="num" style="color:#2563eb">${health.totalRuns}</div><div class="lbl">Total Runs</div></div>
-  <div class="card"><div class="num" style="color:#16a34a">${health.passedRuns}</div><div class="lbl">Passed</div></div>
-  <div class="card"><div class="num" style="color:#dc2626">${health.failedRuns}</div><div class="lbl">Failed</div></div>
+  <div class="card"><div class="num" style="color:var(--color-info)">${health.totalRuns}</div><div class="lbl">Total Runs</div></div>
+  <div class="card"><div class="num" style="color:var(--color-success)">${health.passedRuns}</div><div class="lbl">Passed</div></div>
+  <div class="card"><div class="num" style="color:var(--color-error)">${health.failedRuns}</div><div class="lbl">Failed</div></div>
   <div class="card"><div class="num" style="color:${passRateColor}">${health.passRate}%</div><div class="lbl">Pass Rate</div></div>
   <div class="card"><div class="num">${formatDuration(health.avgDurationSec)}</div><div class="lbl">Avg Duration</div></div>
 </div>
@@ -344,7 +318,13 @@ ${_renderReasonsSection(health)}
 ${_renderBranchSection(health)}
 <h2>🎯 Open Issues</h2>
 ${_renderIssuesSection(health)}`;
-    return buildHtmlPage({ title, styles: _REPORT_CSS, bodyContent });
+    return buildHtmlPage({
+        title,
+        styles: buildCss() + _PIPELINE_CSS,
+        theme: 'system',
+        bodyContent,
+        footer: 'Generated by QA Tools — Pipeline Health Dashboard',
+    });
 }
 
 /* ------------------------------------------------------------------ */

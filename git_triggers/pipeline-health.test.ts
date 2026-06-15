@@ -242,6 +242,36 @@ describe('renderPipelineHealthHtml', () => {
         expect(html).toContain('</html>');
     });
 
+    it('uses buildCss design tokens', () => {
+        expect(html).toContain('--color-surface-page');
+        expect(html).toContain('--color-text-primary');
+        expect(html).toContain('--color-text-muted');
+    });
+
+    it('includes theme toggle script', () => {
+        expect(html).toContain('qa-report-theme');
+        expect(html).toContain('prefers-color-scheme');
+    });
+
+    it('includes dark mode CSS', () => {
+        expect(html).toContain('html.dark');
+    });
+
+    it('includes footer', () => {
+        expect(html).toContain('Pipeline Health Dashboard');
+    });
+
+    it('uses design-token CSS variables for card borders', () => {
+        expect(html).toContain('var(--color-surface-card)');
+        expect(html).toContain('var(--color-border-default)');
+    });
+
+    it('uses TABLE_CSS without legacy border="1" / cellpadding', () => {
+        expect(html).not.toContain('border="1"');
+        expect(html).not.toContain('cellpadding="6"');
+        expect(html).not.toContain('background:#f3f4f6');
+    });
+
     it('renders empty state gracefully', () => {
         const emptyHtml = renderPipelineHealthHtml(aggregatePipelineHealth([], [], [], [], now), 'Empty Report');
         expect(emptyHtml).toContain('Empty Report');

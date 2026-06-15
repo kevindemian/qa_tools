@@ -3,87 +3,6 @@
 > ⚠️ Sprints anteriores a esta estão **concluídos**. Movidos para `BACKLOG-historico.md`.
 > Consulte os históricos para detalhes de sprints passados.
 
-## 🐛 Sprint PR Report Fix — Correção da Causa Raiz do PR Report (Jun/2026)
-
-**Data:** 2026-06-14
-**Origem:** PR Report não gera report no CI. Causa raiz: `config/features.json` não existe, `feature-config.test.ts` opera no arquivo real sem cleanup, setup wizard não persiste sub-features.
-**Estratégia:** 5 fases — criar config → corrigir testes → atualizar wizard → rodar testes → auditoria completa.
-**Regra absoluta:** zero workarounds, 100% teste para código novo, deletar código obsoleto, nenhum débito deixado.
-
-| Fase | Descrição                                                      | Itens         | Status |
-| ---- | -------------------------------------------------------------- | ------------- | ------ |
-| 1    | Criar `config/features.json` com configuração para qa_tools    | PRFIX-1a      | ✅     |
-| 2    | Corrigir `feature-config.test.ts` — tmp dir + afterEach        | PRFIX-2a a 2c | ✅     |
-| 3    | Atualizar `setup/config-writer.ts` para persistir sub-features | PRFIX-3a      | ✅     |
-| 4    | Rodar testes e validar (vitest, tsc, lint)                     | PRFIX-4a a 4c | ✅     |
-| 5    | Auditoria completa da funcionalidade + testes 100% cobertura   | PRFIX-5a a 5c | ✅     |
-
-### Fase 1 — Criar `config/features.json`
-
-| ID       | Item                                                              | Arquivo                | Status |
-| -------- | ----------------------------------------------------------------- | ---------------------- | ------ |
-| PRFIX-1a | 🔧 Criar `config/features.json` com entrada `qa_tools` habilitada | `config/features.json` | ✅     |
-
-### Fase 2 — Corrigir `feature-config.test.ts`
-
-| ID       | Item                                                                | Arquivo                                   | Status |
-| -------- | ------------------------------------------------------------------- | ----------------------------------------- | ------ |
-| PRFIX-2a | ♻️ Usar diretório temporário (`os.tmpdir()`) em vez de project root | `shared/__tests__/feature-config.test.ts` | ✅     |
-| PRFIX-2b | 🔧 Adicionar `afterEach` para limpar diretório temporário           | `shared/__tests__/feature-config.test.ts` | ✅     |
-| PRFIX-2c | 📋 Verificar que nenhum arquivo real é afetado pelos testes         | `shared/__tests__/feature-config.test.ts` | ✅     |
-
-### Fase 3 — Atualizar `setup/config-writer.ts`
-
-| ID       | Item                                                                                              | Arquivo                  | Status |
-| -------- | ------------------------------------------------------------------------------------------------- | ------------------------ | ------ |
-| PRFIX-3a | ✨ Persistir `skipAi`, `skipQuality`, `skipFlaky` no `features.json` quando `prReport` habilitado | `setup/config-writer.ts` | ✅     |
-
-### Fase 4 — Rodar testes e validar
-
-| ID       | Item                  | Critério  | Status |
-| -------- | --------------------- | --------- | ------ |
-| PRFIX-4a | 🔧 `npx vitest run`   | 100% pass | ✅     |
-| PRFIX-4b | 🔧 `npx tsc --noEmit` | 0 erros   | ✅     |
-| PRFIX-4c | 🔧 `npm run lint`     | 0 erros   | ✅     |
-
-### Fase 5 — Auditoria completa
-
-| ID       | Item                                                       | Arquivo                                   | Status |
-| -------- | ---------------------------------------------------------- | ----------------------------------------- | ------ |
-| PRFIX-5a | 🔧 Verificar conexão: wizard → config → runtime → CI       | —                                         | ✅     |
-| PRFIX-5b | 🔧 Verificar menu: PR Report configurável via git_triggers | —                                         | ✅     |
-| PRFIX-5c | 🔧 Testes com cobertura 100% para paths corrigidos         | `shared/__tests__/feature-config.test.ts` | ✅     |
-
-### Métricas Alvo
-
-| Métrica                                  | Alvo          |
-| ---------------------------------------- | ------------- |
-| `config/features.json` existe            | **sim**       |
-| `feature-config.test.ts` usa tmp dir     | **sim**       |
-| `feature-config.test.ts` tem cleanup     | **sim**       |
-| `config-writer.ts` persiste sub-features | **sim**       |
-| `tsc --noEmit`                           | **0 erros**   |
-| `vitest run`                             | **100% pass** |
-| `npm run lint`                           | **0 erros**   |
-| Cobertura feature-config.test.ts         | **100%**      |
-
-### E2E Validation — 2026-06-14
-
-| Check               | Resultado | Detalhe                                                                              |
-| ------------------- | --------- | ------------------------------------------------------------------------------------ |
-| Feature config lida | ✅        | `qa_tools.prReport.enabled: true` — report não foi pulado                            |
-| CTRF parse          | ✅        | 4862 passed, 0 failed, 9 skipped                                                     |
-| HTML report gerado  | ✅        | `reports/pr-report.html` — 12MB                                                      |
-| PR comment postado  | ✅        | [#8 comment](https://github.com/kevindemian/qa_tools/pull/8#issuecomment-4701633988) |
-| Health score        | ✅        | Score 60, Grade B                                                                    |
-| Quality gate        | ✅        | Executado — FAIL (52/100): coverage 0% abaixo do threshold                           |
-| Check Run           | ⚠️ 403    | PAT sem permissão `checks:write` — não é bug da ferramenta                           |
-| Branch + PR cleanup | ✅        | Branch deletada, PR #8 fechado                                                       |
-
-**Débito identificado:** `GITHUB_TOKEN` (PAT) não tem permissão `checks:write`. No CI (GitHub Actions `GITHUB_TOKEN`) isso funciona. Não é bug da ferramenta.
-
----
-
 ## 📊 Sprint PR Report UX — Visualização e Acessibilidade do Report (Jun/2026)
 
 **Data:** 2026-06-14
@@ -233,20 +152,6 @@ Cada achado da Fase 2 gera itens de correção nesta fase. IDs serão alocados d
 
 ---
 
-## 📋 TECHDOC — Documentação Técnica para Consulta de IA (Jun/2026)
-
-**Data:** 2026-06-13
-**Objetivo:** Criar `docs/TECHDOC.md` — documentação técnica consolidada otimizada para consulta por IA durante o desenvolvimento. Contém modelo de domínio completo (tipos/interfaces), mapa de módulos, arquitetura, CLI reference, configuração (124 env vars), e decisões arquiteturais.
-**Manutenção:** Deve ser atualizado simultaneamente sempre que contratos, tipos ou arquitetura forem alterados.
-**Destinado a:** consumo por IA (não substitui `docs/*` que são orientados a humanos).
-
-| ID    | Item                                                                                   | Status |
-| ----- | -------------------------------------------------------------------------------------- | ------ |
-| TD-01 | 🔧 Criar `docs/TECHDOC.md` com modelo de domínio completo (todos os tipos/ interfaces) | ✅     |
-| TD-02 | 🔧 Registrar no backlog existência e objetivo do TECHDOC.md                            | ✅     |
-
----
-
 ## 🏗️ Sprint PR Report — Feature Workflow Pattern + PR Report como Feature Gerenciada (Jun/2026)
 
 **Data:** 2026-06-13
@@ -348,363 +253,6 @@ Cada achado da Fase 2 gera itens de correção nesta fase. IDs serão alocados d
 | Novos workarounds/debt                                   | **0**            |
 
 ---
-
-## 🛡️ Sprint Baseline Zero — Eliminação de Todos os Mecanismos de Supressão (Jun/2026)
-
-**Data:** 2026-06-12
-**Origem:** Auditoria sistêmica de segurança: 20 mecanismos de baseline/supressão identificados.
-**Estratégia:** Order by safety impact — mecanismos que mascaram regressões primeiro.
-**Regra absoluta:** no workarounds, no debt, no safety rule violations.
-
-### Plano de Fases
-
-| Fase | Descrição                                                                    | Status |
-| ---- | ---------------------------------------------------------------------------- | ------ |
-| 1    | Remover Known Issues + Endurecer Quality Gate                                | ✅     |
-| 2    | Remover Quarantine + Flaky Auto-Actions                                      | ✅     |
-| 3    | Refatorar 342 `vi.mocked()` → `vi.spyOn()` + remover UNBOUND_METHOD_BASELINE | ✅     |
-| 4    | Eliminar unused-exports baseline + deferred dead code                        | ✅     |
-| 5    | Corrigir non-null exclusions + `as unknown as` produção + `eslint-disable`   | ✅     |
-| 6    | Criar suppression-auditor agent (18 categorias de detecção + correção)       | ✅     |
-
-### Fase 1 — Remover Known Issues + Endurecer Quality Gate ✅
-
-**Objetivo:** Falhas de teste não podem mais ser mascaradas. Thresholds de qualidade são fixos.
-
-**Mudanças realizadas:**
-
-| ID    | Arquivo                              | Ação                                                                                                                                   | Status |
-| ----- | ------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------- | ------ |
-| BZ-01 | `shared/report-types.ts`             | Remover interface `KnownIssue`, função `toKnownIssues()`                                                                               | ✅     |
-| BZ-02 | `shared/report-sections.ts`          | Remover parâmetro `knownIssues` de `buildTabContents()`                                                                                | ✅     |
-| BZ-03 | `shared/report-generator.ts`         | Remover `loadKnownIssues()`, `KnownIssue` de export                                                                                    | ✅     |
-| BZ-04 | `shared/report-table.ts`             | Remover `matchKnownIssue()` + parâmetro `knownIssues`                                                                                  | ✅     |
-| BZ-05 | `shared/config-schema.ts`            | Remover `knownIssuesPath` do schema                                                                                                    | ✅     |
-| BZ-06 | `shared/types/common.ts`             | Remover `knownIssuesPath?` do `ReportConfig`                                                                                           | ✅     |
-| BZ-07 | `shared/report-styles.ts`            | Remover `.ki-suppressed`, `.ki-badge` CSS                                                                                              | ✅     |
-| BZ-08 | `shared/quality-gate.ts`             | Thresholds fixos `as const`, remover `loadEnvThresholds()`, `isGitFallback`, `_maybeTriggerFlakyActions()`, `generateGitMetricsRuns()` | ✅     |
-| BZ-09 | `jira_management/commands/case17.ts` | Remover `loadKnownIssues()` import e uso                                                                                               | ✅     |
-| BZ-T  | Testes                               | Atualizar 4 arquivos de teste                                                                                                          | ✅     |
-
-### Fase 2 — Remover Quarantine + Flaky Auto-Actions ✅
-
-**Mudanças realizadas:**
-
-| ID    | Arquivo                                      | Ação                                                  | Status |
-| ----- | -------------------------------------------- | ----------------------------------------------------- | ------ |
-| BZ-11 | `shared/flaky-auto-actions.ts`               | Remover arquivo (272 linhas)                          | ✅     |
-| BZ-12 | `shared/flaky-auto-actions.test.ts`          | Remover arquivo                                       | ✅     |
-| BZ-13 | `.opencode/guard/backups/qa-quarantine.json` | Remover arquivo                                       | ✅     |
-| BZ-14 | `shared/quality-gate.ts`                     | Import já removido na Fase 1 (BZ-10)                  | ✅     |
-| BZ-15 | `jira_management/commands/case19.ts`         | Remover import + `executeFlakyActions` + `askConfirm` | ✅     |
-| BZ-16 | `jira_management/commands/case19.test.ts`    | Remover 3 testes de auto-actions + mock               | ✅     |
-| BZ-17 | `git_triggers/batch-mode.ts`                 | Remover `runFlakyAutoActions()` + import              | ✅     |
-| BZ-18 | `git_triggers/schedule-handler.ts`           | Remover `runFlakyAutoActionsForProject()` + imports   | ✅     |
-| BZ-19 | `git_triggers/schedule-handler.test.ts`      | Remover mock `flaky-auto-actions`                     | ✅     |
-| BZ-20 | `shared/types/bugs.ts`                       | Remover `FlakyAction`, `FlakyActionConfig` interfaces | ✅     |
-
-### Fase 3 — Refatorar `vi.mocked()` → `vi.spyOn()` ✅
-
-**342 ocorrências em 41 arquivos de teste transformadas.**
-
-**Padrão:** `vi.mocked(obj.method)` → `vi.spyOn(obj, 'method')`
-**Script:** `/tmp/fix-vimocked.mjs` (transformação regex em massa)
-**Removido:** `UNBOUND_METHOD_BASELINE = 313` de `scripts/quality-check.ts`
-**Mantido:** `MockedSafe<T>` (ainda usado por `handlers.test.ts`)
-**`checkEslintBaseline` simplificado:** sem tracking de baseline, qualquer violação = falha
-
-### Fase 4 — Eliminar Unused-Exports Baseline ✅
-
-**Mudanças realizadas:**
-
-| ID    | Arquivo                            | Ação                                                                                        | Status |
-| ----- | ---------------------------------- | ------------------------------------------------------------------------------------------- | ------ |
-| BZ-21 | `scripts/.unused-exports-baseline` | Removido (baseline stale — 0 unused exports atuais)                                         | ✅     |
-| BZ-22 | `docs/DEFERRED-DEAD-CODE.md`       | Removido                                                                                    | ✅     |
-| BZ-23 | `scripts/quality-check.ts`         | Remover `checkUnusedExports` baseline comparison + `UNUSED_EXPORTS_BASELINE_FILE` constante | ✅     |
-| BZ-24 | `scripts/quality-check.test.ts`    | Atualizar 4 testes de `checkUnusedExports`                                                  | ✅     |
-
-**Nota:** Baseline estava completamente stale — `npx ts-prune --error` com filtros de path retorna 0 unused exports. Todos os 31 itens do baseline foram endereçados por refatorações anteriores.
-
-### Fase 5 — Corrigir as-unknown-as em Produção ✅
-
-**Todas as correções concluídas.**
-
-| ID    | Arquivo                      | Correção                                                | Status |
-| ----- | ---------------------------- | ------------------------------------------------------- | ------ |
-| BZ-25 | `e2e/run-e2e.ts`             | `z.record(z.string(), z.unknown())` schema              | ✅     |
-| BZ-26 | `git_triggers/batch-mode.ts` | Cast removido — tipos estruturalmente compatíveis       | ✅     |
-| BZ-27 | `shared/splash.ts`           | `// structural:` — CJS/ESM dual-package type limitation | ✅     |
-| BZ-28 | `shared/llm-client.ts`       | Type guard + overload signatures                        | ✅     |
-| BZ-29 | `shared/targeted-retry.ts`   | Zod schema parse via `ZodSchemaTyped<T>`                | ✅     |
-
-**`as unknown as` remanescente (documentado):**
-
-- `shared/splash.ts:37` — `// structural: dual CJS/ESM — @types/figlet declares \`export =\` but runtime ESM entry wraps in \`{ default: f }\``
-
-**Intencionalmente mantidos (test-utils, sem as unknown as):**
-
-- `shared/test-utils.ts` (`nullAs`, `undefinedAs`) — utilitários intencionais
-- `shared/test-utils/factories/*.ts` — factory functions (só usadas em testes)
-- `shared/test-utils/mock-types.ts` (`mockedSafe`) — utilitário de mock
-
-### Fase 6 — Criar suppression-auditor Agent ✅
-
-**Criado:** `.opencode/agents/suppression-auditor.md`
-
-18 categorias de detecção:
-
-| ID  | Categoria                             | Severidade | Detecção                                                |
-| --- | ------------------------------------- | ---------- | ------------------------------------------------------- |
-| S1  | `as unknown as` casts                 | CRITICAL   | `rg 'as unknown as'`                                    |
-| S2  | Non-null assertions `!`               | CRITICAL   | `rg '!\.[a-zA-Z]'`                                      |
-| S3  | Suppression comments                  | CRITICAL   | `rg '[@]ts-ignore\|[@]ts-expect-error\|eslint-disable'` |
-| S4  | Test `.skip` / `.only`                | HIGH       | `rg '\.skip\(' / '\.only\('`                            |
-| S5  | Empty catch blocks                    | CRITICAL   | `rg 'catch\s*\(\s*\)\s*\{\s*\}'`                        |
-| S6  | `any` type in production              | HIGH       | `rg ':\s*any' / '[a]s any'`                             |
-| S7  | `process.exit()` without gracefulExit | HIGH       | `rg 'process\.exit\b'`                                  |
-| S8  | `console.log` in production           | MEDIUM     | `rg 'console\.(log\|warn\|error\|debug)\('`             |
-| S9  | Baseline / threshold override         | CRITICAL   | `rg 'BASELINE\|THRESHOLD\|_LIMIT'`                      |
-| S10 | Stale TODO/FIXME without owner        | LOW        | `rg 'TODO\|FIXME\|HACK'` sem data/owner                 |
-| S11 | `vi.mocked()` regression check        | CRITICAL   | `rg 'vi\.mocked\('`                                     |
-| S12 | Bracket notation monitoring           | LOW        | Concession C1 tracking                                  |
-| S13 | Compiler warning suppression          | CRITICAL   | `rg '[@]ts-nocheck'`                                    |
-| S14 | Weak type assertions                  | HIGH       | `rg '[a]s\s+(any\|unknown\|never)\b'`                   |
-| S15 | Catch without logging                 | MEDIUM     | catch sem logger/invocado                               |
-| S16 | Dead code markers                     | MEDIUM     | `rg '\/\/ dead\|REMOVE'`                                |
-| S17 | `describe.skip` / `it.skip`           | HIGH       | `rg 'describe\.skip\|it\.skip'`                         |
-| S18 | Quality gate suppression detection    | CRITICAL   | `rg '--no-verify\|\[skip ci\]'`                         |
-
-**Inclui:** protocolo de autofix, formato de output `.json` + `.md`, classificação ACTIVE/FALSE-POS/STRUCTURAL, e protocolo de 3-passos para parada segura.
-
-### Concessões Temporárias (para correção pós-sprint)
-
-Concessões — nenhuma compromete correção; serão eliminadas gradualmente.
-
-| #   | Concessão                                   | Onde                            | Por que                                                                                                                                                           | Correção                                                             |
-| --- | ------------------------------------------- | ------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------- |
-| C1  | Bracket notation `obj['method']`            | 18 test files, ~125 ocorrências | `@typescript-eslint/unbound-method` flagou `expect(obj.method)` como "método sem `this`". Bracket notation é o escape hatch legítimo da regra — não a enfraquece. | Substituir por `spyRef()` helper ou armazenamento de spy em variável |
-| C2  | Stub run em `.qa-tools/metrics/global.json` | `runs[0]`                       | Quality Gate exige `runs.length >= 1`. Sem histórico, gate bloqueia push.                                                                                         | Primeiro CI run substitui naturalmente                               |
-
-### Métricas Alvo
-
-| Métrica                         | Antes        | Depois                        |
-| ------------------------------- | ------------ | ----------------------------- |
-| Baselines em quality-check.ts   | 2            | **0**                         |
-| Known Issues system             | Ativo        | **Removido**                  |
-| Flaky Auto-Actions              | Ativo        | **Removido**                  |
-| Thresholds override por env var | 4            | **0**                         |
-| Git fallback auto-pass          | 1            | **0**                         |
-| `vi.mocked()` em testes         | ~313         | **0**                         |
-| File exclusions (non-null)      | 6 arquivos   | **0**                         |
-| `as unknown as` em produção     | ~24 arquivos | **1** (structural: splash.ts) |
-| `eslint-disable` inline         | 6            | **0**                         |
-| Dead code deferido              | 62           | **0**                         |
-| Suppression auditor             | ❌           | **✅**                        |
-
----
-
-## 🛡️ Sprint Inverse Audit — Correção de Achados (Jun/2026)
-
-**Data:** 2026-06-12
-**Origem:** Auditoria inversa — funcionalidades que dependem de código ausente ou incompleto. 4 achados (1 HIGH, 3 MEDIUM).
-**Ordem de execução:** Placeholder → Env var faltante → .env.example sync → Validação runtime.
-
-### Plano de Fases
-
-| Fase | Descrição                                                       | Itens | Status |
-| ---- | --------------------------------------------------------------- | ----- | ------ |
-| 1    | Remover placeholder órfão (cast-test.test.ts)                   | IA-1  | ✅     |
-| 2    | Adicionar OPENCODE_DB_TIMEOUT_MS ao schema + .env.example       | IA-2  | ✅     |
-| 3    | Sincronizar .env.example com CONFIG_SCHEMA (geração automática) | IA-3  | ✅     |
-| 4    | Expandir validação runtime (data-driven, enum checks, unknown)  | IA-4  | ✅     |
-| TST  | tsc + vitest + lint                                             | —     | ✅     |
-
-### Detalhamento por Fase
-
-#### Fase 1 — Remover placeholder órfão
-
-| ID   | Item                                                | Arquivo                 | Correção        |
-| ---- | --------------------------------------------------- | ----------------------- | --------------- |
-| IA-1 | 🐛 Test placeholder sem produção: cast-test.test.ts | `e2e/cast-test.test.ts` | Remover arquivo |
-
-#### Fase 2 — OPENCODE_DB_TIMEOUT_MS no schema
-
-| ID   | Item                                                                   | Arquivo(s)                | Correção                         |
-| ---- | ---------------------------------------------------------------------- | ------------------------- | -------------------------------- |
-| IA-2 | 🔧 OPENCODE_DB_TIMEOUT_MS consumido mas ausente do schema/.env.example | `shared/config-schema.ts` | Adicionar entry no CONFIG_SCHEMA |
-
-#### Fase 3 — .env.example sync automático
-
-| ID   | Item                                                  | Arquivo(s)                                                        | Correção                                              |
-| ---- | ----------------------------------------------------- | ----------------------------------------------------------------- | ----------------------------------------------------- |
-| IA-3 | 🔧 32 env vars no schema mas ausentes do .env.example | `scripts/generate-env-example.ts`, `.env.example`, `package.json` | Criar gerador, regenerar .env.example, add npm script |
-
-#### Fase 4 — Validação runtime expandida
-
-| ID   | Item                                                                | Arquivo(s)                                                      | Correção                                              |
-| ---- | ------------------------------------------------------------------- | --------------------------------------------------------------- | ----------------------------------------------------- |
-| IA-4 | 🔧 Apenas 3 de ~87 configs validadas — typos silenciosos em runtime | `shared/config-validator.ts`, `shared/config-validator.test.ts` | Validar tipos + valores conhecidos + unknown env vars |
-
-### Métricas Alcançadas
-
-| Métrica                         | Antes | Resultado        |
-| ------------------------------- | ----- | ---------------- |
-| `tsc --noEmit`                  | 0     | ✅ 0             |
-| `vitest run`                    | 4541  | ✅ 4541 pass     |
-| Placeholders sem produção       | 1     | ✅ 0             |
-| Env vars no schema              | 86    | ✅ 90            |
-| Env vars no .env.example        | 54    | ✅ 90 (total)    |
-| Configs validadas               | 3     | ✅ All (~90)     |
-| Env vars c/ allowedValues enum  | 0     | ✅ 6             |
-| Env vars c/ category            | 0     | ✅ 90            |
-| Validação data-driven           | ❌    | ✅ CONFIG_SCHEMA |
-| Geração .env.example automática | ❌    | ✅ npm script    |
-
----
-
-> **ORIENTAÇÃO**: Este arquivo contém **APENAS** tarefas pendentes ou em andamento.
-> Tarefas concluídas devem ser **imediatamente migradas** para [`BACKLOG-historico.md`](BACKLOG-historico.md).
->
-> Cada tarefa é classificada como:
->
-> - 🐛 **débito** — código existente que precisa de correção/conexão
-> - ✨ **feature** — nova funcionalidade a ser implementada
-> - ♻️ **refactor** — reestruturação sem mudança de comportamento
-> - 🔧 **chore** — manutenção (deps, config, tooling)
-> - 📋 **test** — cobertura de testes
->
-> ## Critério de prioridade
->
-> - **P0**: Bloqueia CI ou funcionalidade crítica
-> - **P1**: Impacto alto em manutenibilidade, risco médio
-> - **P2**: Melhoria desejável, baixo risco
-> - **P3**: Nice-to-have, oportunidade futura
-
----
-
-## 🛡️ Sprint Security Audit — Correção Completa (Jun/2026)
-
-**Data:** 2026-06-11
-**Origem:** Auditoria sistêmica de segurança: 24 achados (4 CRÍTICOS, 7 ALTOS, 5 MÉDIOS, 4 BAIXOS).
-**Ordem de execução:** Infra → Overrides → Quality-check bugs → Type safety → Consolidação → Testes.
-
-### Plano de Fases
-
-| Fase | Descrição                                                         | Itens                       | Status |
-| ---- | ----------------------------------------------------------------- | --------------------------- | ------ |
-| 0    | Infra: unused-exports, tsconfig, wiring pre-push                  | P0b, P0c, P0d, P0e          | ✅     |
-| 1    | File-level eslint-disable → execFileSync + argv array             | A4 (store-backend, git-sha) | ✅     |
-| 2    | quality-check.ts bugs (checkAsAny, depWall, exit, hash, severity) | A2, A3, M2, M3, M4, B1      | ✅     |
-| 3    | `as unknown as` em produção → cast direto                         | A6 (5 arquivos)             | ✅     |
-| 4    | Consolidação: remover enforce-quality.ts + duplicações            | M1, A5, B2, B3              | ✅     |
-| 5    | Segurança: scan-sec-logs.sh blocking + tsconfig fix + CI          | A1, C4                      | ✅     |
-| 6    | Testes (271 files, 4539 pass)                                     | Todos os anteriores         | ✅     |
-| 7    | Verificação final: TSC + lint + vitest + quality-check            | —                           | ✅     |
-
-### Detalhamento por Fase
-
-#### Fase 0 — Infra (dependências zero)
-
-| ID  | Item                                                                        | Arquivos                                   | Esforço |
-| --- | --------------------------------------------------------------------------- | ------------------------------------------ | ------- |
-| P0a | BACKLOG.md atualizado                                                       | BACKLOG.md                                 | 5min    |
-| P0b | Adicionar script `unused-exports` ao package.json                           | package.json                               | 2min    |
-| P0c | Mover `noPropertyAccessFromIndexSignature` para dentro de `compilerOptions` | tsconfig.json                              | 2min    |
-| P0d | Trocar `enforce-quality.ts` → `quality-check.ts` no pre-push hook           | .githooks/pre-push                         | 2min    |
-| P0e | Trocar `enforce-quality.ts` → `quality-check.ts` no opencode-guard          | scripts/opencode-guard.sh (linhas 61, 259) | 2min    |
-
-#### Fase 1 — ESLint File-Level Overrides (A4)
-
-| ID  | Item                                                               | Arquivos                |
-| --- | ------------------------------------------------------------------ | ----------------------- |
-| P1a | Trocar file-level eslint-disable para per-line em store-backend.ts | shared/store-backend.ts |
-| P1b | Trocar file-level eslint-disable para per-line em git-sha.ts       | shared/git-sha.ts       |
-
-#### Fase 2 — quality-check.ts Bugs (A2, A3, M2, M3, M4, B1)
-
-| ID  | Item                                                  | Descrição                |
-| --- | ----------------------------------------------------- | ------------------------ |
-| P2a | Fix `checkAsAny` — testar conteúdo da linha, não path | quality-check.ts:76-83   |
-| P2b | Fix `checkDepWall` — detectar `require(`              | quality-check.ts:471     |
-| P2c | Fix `process.exit(1)` → `gracefulExit`                | quality-check.ts:607-609 |
-| P2d | Fix hash `replace()` sem flag g                       | quality-check.ts:512     |
-| P2e | Detectar severidade 1 (warn) do ESLint                | quality-check.ts:111     |
-| P2f | Documentar exclusões non-null assertion               | quality-check.ts:458-465 |
-
-#### Fase 3 — `as unknown as` em Produção (A6)
-
-| ID  | Arquivo                    | Linhas   | Solução                                   |
-| --- | -------------------------- | -------- | ----------------------------------------- |
-| P3a | shared/llm-client.ts       | 165, 214 | Extrair tipo, usar cast seguro com schema |
-| P3b | shared/targeted-retry.ts   | 79       | Usar schema do retorno llmPrompt          |
-| P3c | shared/splash.ts           | 37       | Tipar import() dinâmico                   |
-| P3d | git_triggers/batch-mode.ts | 383, 387 | Usar zod parse                            |
-| P3e | e2e/run-e2e.ts             | 343, 406 | Tipar com Record tipado                   |
-
-#### Fase 4 — Consolidação (M1, A5, B2)
-
-| ID  | Item                                                      | Descrição                                   |
-| --- | --------------------------------------------------------- | ------------------------------------------- |
-| P4a | Remover enforce-quality.ts                                | Após wiring completo                        |
-| P4b | Documentar baseline unused-exports                        | quality-check.ts + .unused-exports-baseline |
-| P4c | Adicionar justificativa nos eslint-disable-no-var em test | handlers.test.ts:37,64                      |
-| P4d | Remover exclusão de quality-check.test.ts de 3 checks     | quality-check.ts:287,295,303                |
-
-#### Fase 5 — Segurança (A1, C4)
-
-| ID  | Item                                  | Descrição             |
-| --- | ------------------------------------- | --------------------- |
-| P5a | Remover \|\| true do scan-sec-logs.sh | .githooks/pre-push:76 |
-| P5b | Remover \|\| true do GitLab CI        | .gitlab-ci.yml:14     |
-
-#### Fase 6 — Testes
-
-| ID  | Item                                      | Cobertura               |
-| --- | ----------------------------------------- | ----------------------- |
-| P6a | Testes para checkAsAny fix                | quality-check.test.ts   |
-| P6b | Testes para checkDepWall require()        | quality-check.test.ts   |
-| P6c | Testes para process.exit → gracefulExit   | quality-check.test.ts   |
-| P6d | Testes para hash replaceAll               | quality-check.test.ts   |
-| P6e | Testes para warn severity detection       | quality-check.test.ts   |
-| P6f | Testes para zod validation nos 5 arquivos | llm-client.test.ts, etc |
-
-#### Fase 7 — Verificação Final
-
-| ID  | Item                            | Critério                 |
-| --- | ------------------------------- | ------------------------ |
-| P7a | tsc --noEmit                    | 0 erros                  |
-| P7b | npm run lint (quality-check.ts) | 0 violações não-baseline |
-| P7c | vitest run                      | 100% pass                |
-| P7d | quality-check auto-integrity    | hash válido              |
-
-### Métricas Finais
-
-| Métrica                                         | Antes                             | Depois                                    | Alvo     |
-| ----------------------------------------------- | --------------------------------- | ----------------------------------------- | -------- |
-| Achados de segurança                            | 24 (4C, 7A, 5M, 4B)               | **1 remanescente** (case15:60, infixável) | 0        |
-| `no-restricted-syntax` suppression (file-level) | 2                                 | **0**                                     | 0        |
-| `execSync` + template literals (injection risk) | 8                                 | **0** (todos `execFileSync` + argv)       | 0        |
-| `as unknown as` em produção                     | 7                                 | **0**                                     | 0        |
-| `process.exit(1)` replacing gracefulExit        | 1                                 | **0**                                     | 0        |
-| `scan-sec-logs.sh` suprimido (`\|\| true`)      | 1                                 | **0** (blocking)                          | 0        |
-| `noPropertyAccessFromIndexSignature`            | ignorado (fora `compilerOptions`) | **ativo**                                 | ativo    |
-| TSC --noEmit                                    | 0 + 716 (após ativar flag)        | **0** (716 corrigidos)                    | 0        |
-| quality-check gates                             | 18 (2 scripts)                    | **18** (1 script)                         | 1 script |
-| enforce-quality.ts                              | ativo (duplicado)                 | **removido**                              | 0        |
-| npm test                                        | 4534 pass                         | **4539 pass**                             | 100%     |
-
-> **ORIENTAÇÃO**: Este arquivo contém **APENAS** tarefas pendentes ou em andamento.
-> Tarefas concluídas devem ser **imediatamente migradas** para [`BACKLOG-historico.md`](BACKLOG-historico.md).
-> Após concluir um item, copie sua linha/raw para o histórico e remova-a daqui.
->
-> Cada tarefa é classificada como:
->
-> - 🐛 **débito** — código existente que precisa de correção/conexão
-> - ✨ **feature** — nova funcionalidade a ser implementada
-> - ♻️ **refactor** — reestruturação sem mudança de comportamento
-> - 🔧 **chore** — manutenção (deps, config, tooling)
-> - 📋 **test** — cobertura de testes
 
 ## Critério de prioridade
 
@@ -873,159 +421,6 @@ Concessões — nenhuma compromete correção; serão eliminadas gradualmente.
 
 ---
 
-## 🚀 Sprint Senior Audit — Correções Pós-Auditoria (Jun/2026)
-
-**Origem:** Senior Codebase Audit — 37 achados (1 CRÍTICO, 3 ALTO, 8 MÉDIO, 15 BAIXO, 10 INFO).
-**Issues reportadas pelo usuário:** 3 bugs runtime (CR-1, CR-2, CR-3).
-**Relatório completo:** `.audit/senior-audit-2026-06-06.md`
-**Ordem de execução:** risco decrescente — crashes primeiro, refatoração arquitetural por último.
-
-### Lógica de Ordenação
-
-| Wave | Foco                 | Risco | Justificativa                                          |
-| ---- | -------------------- | ----- | ------------------------------------------------------ |
-| 0    | P0 Crashes           | Zero  | Bugs que impedem o app de funcionar — impacto imediato |
-| 1    | Config Safety        | Baixo | Itens independentes de 5-15min, sem dependências       |
-| 2    | Error Handling       | Baixo | Catch silenciosos, logs perdidos — diagnóstico         |
-| 3    | Security & Contracts | Médio | spawn validation, zod schemas, async consistency       |
-| 4    | Tests + E2E          | Baixo | Testes para bugs corrigidos, conditional E2E           |
-| 5    | Architecture         | Alto  | Refatoração de alta complexidade, feito por último     |
-
----
-
-### Wave 4 — Tests + E2E
-
-| ID    | Item                                                                                             | Arquivo(s)                     | Esforço | Status |
-| ----- | ------------------------------------------------------------------------------------------------ | ------------------------------ | ------- | ------ |
-| SA-21 | 🧹 Substituir `describe.skip` por `it.runIf` ou dynamic skip em `smoke-xray-cloud`               | `e2e/smoke-xray-cloud.test.ts` | 20min   | ✅     |
-| SA-22 | 🧹 Substituir `describe.skip` por `it.runIf` ou dynamic skip em `smoke-jira-cloud`               | `e2e/smoke-jira-cloud.test.ts` | 20min   | ✅     |
-| CR-3a | 📋 Teste de integração: SIGINT real com answer undefined + answer ''                             | `shared/cli_base.test.ts`      | 30min   | ✅     |
-| CR-3b | 📋 Teste de integração: main() → \_initEnvironment() + user "n" → \_selectProject() sem projects | `git_triggers/main.test.ts`    | 30min   | ✅     |
-| CR-3c | 📋 Teste de integração: fluxo entry-menu → module spawn → env → projeto (e2e)                    | `e2e/entry-to-project.test.ts` | 1h      | ✅     |
-
-### Wave 5 — Architecture (alto risco, executado por último)
-
-| ID    | Item                                                                                                          | Arquivo(s)                                                                                 | Esforço | Risco    | Status |
-| ----- | ------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------ | ------- | -------- | ------ |
-| SA-20 | ♻️ Extrair CLI argument parsing de `git_triggers/main.ts` (443 linhas)                                        | `git_triggers/main.ts` → `git_triggers/cli-args.ts`                                        | 1h      | 🟡 Médio | ✅     |
-| SA-12 | ♻️ Extrair fixture loading + coverage + report de `llm-benchmark.ts` (499→226 linhas)                         | `shared/llm-benchmark.ts` → `shared/benchmark-*.ts`                                        | 2h      | 🔴 Alto  | ✅     |
-| SA-11 | ♻️ Extrair 13 invariantes (T-01 a T-13) de `test-case-validator.ts` (882→18 linhas) para `shared/invariants/` | `shared/test-case-validator.ts` → `shared/invariants/t-*.ts` + 4 shared modules + index.ts | 4h      | 🔴 Alto  | ✅     |
-| SA-13 | ♻️ Quebrar 4 cadeias de dependência circular em `shared/llm-*` (extrair tipos compartilhados)                 | `llm-client.ts`→`./types/llm.ts` (LlmPromptOptions extraído)                               | 2h      | 🟡 Médio | ✅     |
-
-### Falso Positivo / Nenhuma Ação (documentado para auditoria)
-
-| ID      | Achado                              | Decisão                    | Evidência                                    |
-| ------- | ----------------------------------- | -------------------------- | -------------------------------------------- |
-| C19-3   | createIssueForTest sem idempotência | ❌ **Falso positivo**      | `skipExisting: true` em `import-loop.ts:65`  |
-| C2-1    | TODOs desatualizados                | ✅ Nenhuma ação            | Projeto limpo, TODOs só em regex de detecção |
-| C3-1    | Type assertion defensiva            | ✅ Nenhuma ação            | Padrão intencional e seguro                  |
-| C5      | Violações cross-layer               | ✅ Nenhuma ação            | Grafo limpo, zero violações                  |
-| C10     | Listas longas de parâmetros         | ✅ Nenhuma ação            | Nenhuma função com 7+ parâmetros             |
-| C12     | Regressões                          | ✅ Nenhuma ação            | Todas verificadas e limpas                   |
-| C14     | Secrets hardcoded                   | ✅ Nenhuma ação            | Zero credenciais em código                   |
-| C16     | Higiene TS                          | ✅ Nenhuma ação            | 100% TS, zero type escapes                   |
-| C17     | Divergência de mocks                | ✅ Nenhuma ação            | Mocks consistentes com API real              |
-| C18-1   | console.log como logger             | ✅ Nenhuma ação            | Design intencional do framework de log       |
-| C19-1/2 | Idempotência TE/Precondition        | ✅ Nenhuma ação            | Padrão find-before-create correto            |
-| C20     | Performance                         | ✅ Nenhuma ação            | Sem gargalos identificados                   |
-| C22     | Cobertura de testes                 | ✅ Nenhuma ação            | 248 test files, cobertura completa           |
-| C8-2    | Assinatura construtor diferente     | ✅ Documentar na interface | Diferença de domínio da API                  |
-
-### Métricas Alvo (Senior Audit)
-
-| Métrica                              | Atual                          | Alvo                         |
-| ------------------------------------ | ------------------------------ | ---------------------------- |
-| `tsc --noEmit`                       | 0 erros                        | 0 erros                      |
-| `npm test`                           | 4149 pass                      | 100% pass                    |
-| `npm run lint`                       | 0 erros                        | 0 erros                      |
-| `require.main === module`            | 1 (fixado)                     | 0                            |
-| `describe.skip` incondicional        | 2                              | 0                            |
-| `catch {}` sem log                   | 4 (SA-7/8/9) + state.ts        | 0                            |
-| `process.env` ignorando Config.get() | 3 (NO_COLOR, CI, AUTO_CONFIRM) | 0                            |
-| Config entries no schema             | ~90                            | +2 (noColor, qaToolsNoClear) |
-| Chalk version                        | 5.0.0                          | 5.6.2                        |
-| Ctrl+C crash (answer undefined)      | 1                              | 0                            |
-| Testes SIGINT com answer undefined   | 0                              | ≥2                           |
-| Testes fluxo env → projeto           | 0                              | ≥2                           |
-| Funções > 300 linhas                 | 0                              | 0                            |
-| Ciclos de dependência                | 0                              | 0                            |
-| Arquivos > 300 linhas                | 29                             | ≤ 29                         |
-
----
-
-## 🛡️ Sprint Validation Hook — Restauração de Proteções (Jun/2026)
-
-**Data:** 2026-06-07
-**Origem:** Agente violou regras de segurança ao modificar `~/.config/opencode/validation_hook.ts` para enfraquecer padrões de detecção. 5 alterações não autorizadas foram revertidas. Proteções permanentes adicionadas.
-**Esforço total:** ~2h
-
-### Problemas encontrados
-
-| #       | Item                                                                 | Severidade | Local                    |
-| ------- | -------------------------------------------------------------------- | ---------- | ------------------------ |
-| **F1**  | Recursion depth protection ineficaz (AsyncLocalStorage reseta depth) | 🔴 Alta    | `validateMultiCommand()` |
-| **F2**  | Dupla leitura de `COMMIT_EDITMSG`                                    | 🔴 Alta    | `runCheckCommitMsg()`    |
-| **F3**  | `SED_PATTERN` backreference `\1` incorreto                           | 🟡 Média   | `SED_PATTERN`            |
-| **F4**  | Non-null assertion `match[1]!` insegura                              | 🟡 Média   | `parseGitDiff()`         |
-| **F5**  | `detectFileWrites` — aspas aninhadas truncam conteudo                | 🟡 Média   | 6 regex patterns         |
-| **F6**  | Lookbehind `\s{0,20}` só captura whitespace — falso positivo         | 🟡 Média   | 3 lookbehinds            |
-| **F7**  | `parseInt` sem fallback — env var invalida produz `NaN`              | 🟡 Média   | Config block             |
-| **F8**  | `hasDangerousCodeDensity` nao filtra `/* */` comments                | 🟢 Baixa   | density check            |
-| **F9**  | Variavel `gitDir` nome enganoso (e' caminho de arquivo)              | 🟢 Baixa   | `runCheckCommitMsg()`    |
-| **F10** | Entry point sem normalizacao de caminho (symlink quebra)             | 🟢 Baixa   | entry point              |
-| **F11** | `runCheck` com diff vazio retorna falso positivo                     | 🟢 Baixa   | `runCheck()`             |
-
-### Solução implementada
-
-| Componente        | O que faz                                                                            |
-| ----------------- | ------------------------------------------------------------------------------------ |
-| **CLI expandido** | `--full-scan`, `--audit`, `--summary`, `--json` combinavel (apenas flags de leitura) |
-
-### Lotes
-
-| Lote | Descrição                                        | Itens | Status |
-| ---- | ------------------------------------------------ | ----- | ------ |
-| A    | Correção de bugs F1–F11                          | 11    | ✅     |
-| E    | Testes de regressão F1–F11 + rename + empty diff | 2     | ✅     |
-
----
-
-## 🚀 Sprint Menu — Mapeamento de Features no Menu (P0)
-
-**Data:** 2026-06-07
-**Origem:** Auditoria de menu vs. features implementadas — 29 features invisíveis ao usuário (4 descobertas em 07/06).
-
-**Problema:** Sprints 10/11/12/V1-V5 implementaram 29 funcionalidades que não aparecem em nenhum menu. Usuário não consegue descobri-las ou acessá-las sem conhecimento prévio de comandos CLI ou env vars.
-
-**Agrupamento das 29 features invisíveis:**
-
-| Grupo                  | Qtd | Features                                                                                                                                                                                                                                                                       | Acesso atual                  |
-| ---------------------- | --- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ----------------------------- |
-| Handlers órfãos        | 4   | Run Comparison, Pipeline Health, AI PR Description, Bug Report Flow                                                                                                                                                                                                            | Nenhum                        |
-| Dashboards silenciados | 16  | Release Score, Defect Trend, Traceability, Backlog Health, AI Effectiveness, Defect Seasonality, Silent Regression, AI Comparison, Cross-Squad Benchmark, Developer Profile, Suite Optimization, Pipeline Cost, Impact Alert, Incident Report, Requirement Score, Coverage Gap | Só no relatório semanal (`r`) |
-| Features CLI/env       | 2   | Quality Gate, Auto-Triage Toggle                                                                                                                                                                                                                                               | CLI/env var                   |
-| Documentação           | 1   | Flaky Thresholds Docs                                                                                                                                                                                                                                                          | `.env.example` + docs         |
-| Infra automática       | 1   | Git Metrics Adapter                                                                                                                                                                                                                                                            | Automático (fallback)         |
-| Infra interna          | 4   | Circuit Breaker, Config Safety, Error Handling, Security                                                                                                                                                                                                                       | Internal (não user-facing)    |
-
-**Features user-facing a expor:** 22 (✅ todas expostas)
-
-> Sprint Menu completamente implementado. Todo item completado (WA-1 a WA-14, DT).
-> Histórico detalhado migrado para `BACKLOG-historico.md`.
-
-### Métricas alvo — Sprint Menu (atingidas)
-
-| Métrica                          | Alvo          | Resultado |
-| -------------------------------- | ------------- | --------- |
-| `tsc --noEmit`                   | **0 erros**   | ✅ 0      |
-| `vitest run`                     | **100% pass** | ✅ 4212   |
-| `npm run lint`                   | **0 erros**   | ✅ 0      |
-| Handlers órfãos (sem menu)       | **0**         | ✅ 0      |
-| Dashboards sem acesso individual | **0**         | ✅ 0      |
-| Features CLI/env sem menu        | **0**         | ✅ 0      |
-
----
-
 ## 🛡️ Sprint Hardening — Fechar Vetores Semânticos (P1)
 
 **Data:** 2026-06-07
@@ -1055,98 +450,6 @@ Concessões — nenhuma compromete correção; serão eliminadas gradualmente.
 | Padrões de negação detectados         | **≥3**        |
 | Modificação de patterns bloqueada     | **✅**        |
 | Caminhos de evasão criados            | **0**         |
-
----
-
-## 🏗️ Sprint DepWall + UX — Isolamento de Dependências e Correções de Navegação (Jun/2026)
-
-**Data:** 2026-06-07
-**Origem:** Auditoria de importações diretas + feedback de UX do usuário.
-**Foco:** Fechar violações do DepWall (dependências externas importadas fora de `shared/`) + correções de UX em menus e labels.
-
-| ID  | Item                                                              | Arquivo(s)                               | Esforço | Status |
-| --- | ----------------------------------------------------------------- | ---------------------------------------- | ------- | ------ |
-| D1  | ♻️ Remover entradas duplicadas 25/26/27 do submenu `reports`      | `menu-data.ts`                           | 5min    | ✅     |
-| D2  | 🔧 Renomear "Cypress" → "testes" em strings de usuário            | `menu-data.ts`, `case14.ts`, `case17.ts` | 10min   | ✅     |
-| D3  | 🐛 Aliases `/help` aceitarem argumentos sem barra (`help <t>`)    | `ui-helpers.ts`                          | 15min   | ✅     |
-| D4  | 🏗️ Corrigir 7 DepWal violations em `git_triggers/` (axios+dotenv) | `git_triggers/*.test.ts` (7 files)       | 15min   | ✅     |
-| D5  | 🏗️ Adicionar lint rule: forbid external deps fora de `shared/`    | `enforce-quality.ts`                     | 30min   | ✅     |
-| D6  | 🐛 `fileToJira` com preview + confirm obrigatório                 | `bug-report.ts`                          | 2h      | ✅     |
-
-**Total:** ~3.5h
-
-### Métricas alvo — Sprint DepWall + UX
-
-| Métrica                                 | Alvo          | Resultado |
-| --------------------------------------- | ------------- | --------- |
-| `tsc --noEmit`                          | **0 erros**   | ✅ 0      |
-| `vitest run`                            | **100% pass** | ✅ 4212   |
-| `npm run lint`                          | **0 erros**   | ✅ 0      |
-| `enforce-quality` checks                | **≥16**       | ✅ 16     |
-| DepWal violations em `git_triggers/`    | **0**         | ✅ 0      |
-| DepWal violations em `jira_management/` | **0**         | ✅ 0      |
-| Duplicação de navegação (submenus)      | **0**         | ✅ 0      |
-
----
-
-## 🚀 Sprint A — Fluxo JSON Automático + Retenção (Jun/2026)
-
-**Data:** 2026-06-07
-**Origem:** case17 requer path manual para JSON CTRF mesmo quando CI está configurado e `fetchGitHistory()` já sabe baixar artifacts.
-**Foco:** Auto-download, cache local, retenção, UX informativa.
-
-| ID  | Item                                                 | Arquivo(s)                                                                   | Esforço | Status |
-| --- | ---------------------------------------------------- | ---------------------------------------------------------------------------- | ------- | ------ |
-| A1  | ♻️ `report-cache.ts` — cache local de CTRF com prune | `shared/report-cache.ts`                                                     | 1h      | ✅     |
-| A2  | ♻️ Retention limit em metrics (METRICS_MAX_RUNS)     | `shared/metrics.ts`                                                          | 15min   | ✅     |
-| A3  | 🔧 UX + auto-download + cache em case17              | `jira_management/commands/case17.ts`                                         | 1h      | ✅     |
-| A4  | 🔧 Auto-cache CTRF pós-pipeline                      | `git_triggers/pipeline-handler.ts`                                           | 30min   | ✅     |
-| A5  | 🔧 Config keys METRICS_MAX_RUNS, REPORT_CACHE_MAX    | `shared/config-schema.ts`                                                    | 15min   | ✅     |
-| A6  | 📋 Testes para A1-A5                                 | `shared/report-cache.test.ts`, `case17.test.ts`, `case17-test-utils.test.ts` | 1.5h    | ✅     |
-
-### Métricas alvo — Sprint A
-
-| Métrica                      | Alvo       | Resultado |
-| ---------------------------- | ---------- | --------- |
-| `tsc --noEmit`               | 0 erros    | ✅ 0      |
-| `vitest run`                 | 100% pass  | ✅ 4216   |
-| `npm run lint`               | 0 erros    | ✅ 0      |
-| `enforce-quality`            | ≥16 checks | ✅ 17     |
-| case17 sem CI: UX melhorada  | ✅         | ✅        |
-| case17 com CI: auto-download | ✅         | ✅        |
-| Cache local com prune        | ✅         | ✅        |
-| Pipeline → cache automático  | ✅         | ✅        |
-
----
-
-## 🚀 Sprint B — Prevenção: CI Gate + ux-auditor (Jun/2026)
-
-**Data:** 2026-06-07
-**Origem:** Features bifurcadas (código existe mas handler não usa), submenus sem alias, handlers sem entrada de menu.
-**Foco:** Impedir criação de débitos novos, detectar débitos existentes.
-
-| ID  | Item                                                                                                 | Arquivo(s)                                                                | Esforço | Status |
-| --- | ---------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------- | ------- | ------ |
-| B1  | 🔧 CI Gate: handler ↔ menu ↔ alias 3-way consistency                                                 | `scripts/enforce-quality.ts`                                              | 1h      | ✅     |
-| B2  | 🔧 ux-auditor agent script (soft: jornada ruidosa, dead utility, friction score)                     | (novo) `scripts/ux-auditor.ts`                                            | 3h      | ✅     |
-| B3  | 🔧 Rodar auditor + corrigir achados (4 fases: hints + submenu FP + import-aware detector + re-audit) | Codebase, `scripts/ux-auditor.ts`                                         | 3h      | ✅     |
-| B2b | 🔧 Commit missing modules (report-cache.ts, case17-test-utils.ts) from prior session — CI fix        | `shared/report-cache.ts`, `jira_management/commands/case17-test-utils.ts` | 5min    | ✅     |
-| B4  | 📋 docs/ux-auditor.md + HELP_TOPICS entry                                                            | `docs/ux-auditor.md`, `menu-data.ts`                                      | 30min   | ✅     |
-
-### Métricas alvo — Sprint B
-
-| Métrica                   | Alvo       | Resultado                                      |
-| ------------------------- | ---------- | ---------------------------------------------- |
-| `tsc --noEmit`            | 0 erros    | ✅ 0                                           |
-| `vitest run`              | 100% pass  | ✅ 4216                                        |
-| `npm run lint`            | 0 erros    | ✅ 0                                           |
-| `enforce-quality`         | ≥18 checks | ✅ 17 checks (check 17 is CI gate itself)      |
-| Handlers sem menu         | 0          | ✅ 0                                           |
-| ux-auditor gera relatório | ✅         | ✅                                             |
-| ux-auditor import-aware   | ✅         | ✅ (falsos positivos: 527→93, -82%)            |
-| Features bifurcadas       | 0          | ✅ 0                                           |
-| Hints em ask() calls      | 100%       | ✅ 21/21 (1 FP regex: nested parens em case17) |
-| Prompts sem hint (real)   | 0          | ✅ 0                                           |
 
 ---
 
@@ -1335,40 +638,6 @@ Resolução (resolveSessionContext)
 
 ---
 
-## ♻️ Sprint Dead Code — Eliminação de Exports Mortos (Jun/2026)
-
-**Data:** 2026-06-07
-**Origem:** Análise ts-prune identificou 59 exports não-importados por nenhum módulo. Destes, **28 são risco zero** (type re-exports puros, zero valor de negócio perdido). Os demais (~31) são itens com risco >0 (test re-exports intencionais, barrel `export *` estrutural, funções órfãs com valor de domínio) — deferidos sine die.
-**Abordagem:** Remoção cirúrgica apenas de type/exports de barrel que ninguém importa. Nenhuma mudança em runtime. Nenhum contrato afetado (as definições reais continuam nos submódulos).
-
-| ID    | Item                                                          | Arquivo(s)                         | Itens | Risco | Status |
-| ----- | ------------------------------------------------------------- | ---------------------------------- | ----- | ----- | ------ |
-| DC-01 | ♻️ Remover 14 type re-exports Zod                             | `shared/validation.ts`             | 14    | ZERO  | ✅     |
-| DC-02 | ♻️ Remover AxiosResponse, AxiosError                          | `shared/deps.ts`                   | 2     | ZERO  | ✅     |
-| DC-03 | ♻️ Remover ConfigField, CONFIG_SCHEMA, validateRequiredEnv    | `shared/config.ts`                 | 3     | ZERO  | ✅     |
-| DC-04 | ♻️ Remover PromptOptions, FilePathOptions, Select\* in barrel | `shared/prompt-input.ts`           | 5     | ZERO  | ✅     |
-| DC-05 | ♻️ Remover NavLink da barrel                                  | `shared/markdown.ts`               | 1     | ZERO  | ✅     |
-| DC-06 | ♻️ Remover ReviewDecision duplicado                           | `shared/llm-review-types.ts`       | 1     | ZERO  | ✅     |
-| DC-07 | ♻️ Remover ReviewDecision re-export morto                     | `shared/llm-review.ts`             | 1     | ZERO  | ✅     |
-| DC-08 | ♻️ Remover ArtifactType duplicado (autodefinido não-usado)    | `shared/llm-self-consistency.ts`   | 1     | ZERO  | ✅     |
-| DC-09 | 🔧 Atualizar baseline .unused-exports-baseline                | `scripts/.unused-exports-baseline` | —     | ZERO  | ✅     |
-| DC-10 | 📋 Documentar itens diferidos sine die                        | `docs/DEFERRED-DEAD-CODE.md`       | —     | —     | ✅     |
-
-**Total removido:** 28 exports em 8 arquivos.
-
-### Métricas alvo — Sprint Dead Code
-
-| Métrica                       | Alvo                 | Resultado                       |
-| ----------------------------- | -------------------- | ------------------------------- |
-| `tsc --noEmit`                | **0 erros**          | ✅ 0                            |
-| `vitest run`                  | **100% pass**        | ✅ 4231                         |
-| `npm run lint`                | **0 erros**          | ✅ 0                            |
-| `check-unused-exports.sh`     | **0 new** (`exit 0`) | ✅ exit 0                       |
-| Exports removidos             | **28**               | ✅ 28                           |
-| Itens diferidos (não tocados) | **—** (registrados)  | ✅ `docs/DEFERRED-DEAD-CODE.md` |
-
----
-
 ## 🚀 Sprint Coverage — Elevar Cobertura para >92% (Jun/2026)
 
 **Data:** 2026-06-08
@@ -1398,102 +667,6 @@ Resolução (resolveSessionContext)
 | `npm run lint`              | **0 erros**   |
 | Statements coverage         | **>92%**      |
 | Menor cobertura por arquivo | **>50%**      |
-
----
-
-## 🔒 Sprint Security — OpenCode Local Machine Hardening (Jun/2026)
-
-**Origem:** Security audit — project-level `opencode.json` has wide-open permissions that override restricted user-level config.
-
-**Problema:** Config precedence (project > user) means `"edit": "allow"` and `"bash": "allow"` in `./opencode.json` bypass the user's restrictive `"ask"` policies.
-
-**Ordem de implementação:** risco decrescente — o que mais expõe primeiro.
-
-| Layer | Foco                        | Risco | Justificativa                                              |
-| ----- | --------------------------- | ----- | ---------------------------------------------------------- |
-| 1     | Project config permissions  | Alto  | Fechar a brecha principal — overrides de permissão         |
-| 2     | Plugin de segurança         | Alto  | opencode-warden + external_directory para detecção passiva |
-| 3     | Hooks + regras do agente    | Médio | Prevenir bypass futuro, auditar ações                      |
-| 4     | Sandbox + branch protection | Baixo | Defesa em profundidade, opcional                           |
-
----
-
-### Layer 1 — 🔧 Project Config Permissions
-
-| ID   | Item                                                                           | Arquivo         | Esforço | Status |
-| ---- | ------------------------------------------------------------------------------ | --------------- | ------- | ------ |
-| SC-1 | 🔧 Restringir `permission.edit` de `"allow"` para `"ask"` com paths bloqueados | `opencode.json` | 5min    | ✅     |
-| SC-2 | 🔧 Restringir `permission.bash` de `"allow"` para pattern-based `"ask"`        | `opencode.json` | 5min    | ✅     |
-| SC-3 | 🔧 Adicionar `permission.webfetch: "ask"`, `websearch: "ask"`                  | `opencode.json` | 2min    | ✅     |
-| SC-4 | 🔧 Adicionar `permission.share: "disabled"`                                    | `opencode.json` | 1min    | ✅     |
-
-### Layer 2 — 🔧 Security Plugin + External Directory
-
-| ID   | Item                                                                               | Arquivo                             | Esforço | Status |
-| ---- | ---------------------------------------------------------------------------------- | ----------------------------------- | ------- | ------ |
-| SC-5 | 🔧 Adicionar `opencode-warden` ao array `plugin` (auto-instala via Bun)            | `opencode.json`                     | 2min    | ✅     |
-| SC-6 | 🔧 Adicionar `external_directory` com denies para `.ssh`, `.gnupg`, `.aws`, `/etc` | `~/.config/opencode/opencode.jsonc` | 5min    | ✅     |
-| SC-7 | 🔧 Criar config do warden (`.opencode/opencode-warden.json`)                       | `.opencode/opencode-warden.json`    | 5min    | ✅     |
-
-### Layer 3 — 🔧 Hooks + Agent Rules
-
-| ID    | Item                                                                               | Arquivo                    | Esforço | Status |
-| ----- | ---------------------------------------------------------------------------------- | -------------------------- | ------- | ------ |
-| SC-8  | 🔧 Adicionar Rule 18 no AGENTS.md: bypass de segurança exige autorização explícita | `AGENTS.md`                | 5min    | ✅     |
-| SC-9  | 🔧 Criar script post-session log scanner (secrets, audit)                          | `scripts/scan-sec-logs.sh` | 15min   | ✅     |
-| SC-10 | 🔧 Criar git pre-push hook que bloqueia `--no-verify` sem audit trail              | `.githooks/pre-push`       | 15min   | ✅     |
-
-### Layer 4 — 🔧 Defesa em Profundidade (Opcional)
-
-| ID    | Item                                                                           | Arquivo                                         | Esforço | Status |
-| ----- | ------------------------------------------------------------------------------ | ----------------------------------------------- | ------- | ------ |
-| SC-11 | 🔧 sandbox-exec.sh para execução isolada de bash (bwrap/unshare)               | `scripts/sandbox-exec.sh`                       | 15min   | ✅     |
-| SC-12 | 🔧 Script de configuração de branch protection (GitHub UI/gh CLI)              | `scripts/setup-branch-protection.sh`            | 5min    | ✅     |
-| SC-13 | 🔧 Managed config instructions (root-owned, chattr +i) incluso no setup script | `scripts/setup-branch-protection.sh`            | 5min    | ✅     |
-| SC-14 | 🔧 opencode-guard.sh — daemon de monitoramento em tempo real (systemd --user)  | `scripts/opencode-guard.sh`                     | 30min   | ✅     |
-| SC-15 | 🔧 Instalação do guard como systemd --user service (auto-start no login)       | `~/.config/systemd/user/opencode-guard.service` | 5min    | ✅     |
-| SC-16 | 🔧 Dependências: inotify-tools + libnotify-bin para notificações desktop       | (apt)                                           | 2min    | ✅     |
-
----
-
-## 🐳 Sprint Container — Isolamento Podman para opencode (Jun/2026)
-
-**Data:** 2026-06-08
-**Origem:** Sprint Security Layer 4 (SC-11 sandbox-exec.sh) migrado de bwrap/unshare para isolamento via Podman. Container minimal com Node 24 LTS + opencode.
-**Motivação:** bwrap/unshare não isolam filesystem do host adequadamente. Container rootless com `--read-only`, `--cap-drop ALL`, `--userns keep-id` oferece isolamento real.
-
-| ID   | Item                                                                                 | Arquivo(s)                                | Esforço | Status |
-| ---- | ------------------------------------------------------------------------------------ | ----------------------------------------- | ------- | ------ |
-| CN-1 | 🔧 Criar Dockerfile: Debian slim + Node 24 LTS + opencode + utilidades mínimas       | `~/.config/opencode/container/Dockerfile` | 20min   | ✅     |
-| CN-2 | 🔧 Criar wrapper qa.sh: podman run com volumes, --read-only, --cap-drop ALL          | `scripts/qa.sh`                           | 15min   | ✅     |
-| CN-3 | 🏗️ Build imagem opencode-qa                                                          | `podman build -t opencode-qa`             | 5min    | ✅     |
-| CN-4 | 🔧 Adicionar alias `qa` ao .bashrc                                                   | `~/.bashrc`                               | 2min    | ✅     |
-| CN-5 | ♻️ Remover sandbox-exec.sh (superseded by podman container)                          | `scripts/sandbox-exec.sh`                 | 2min    | ✅     |
-| CN-6 | 🔧 Adaptar opencode-guard.sh com verificação de container running + volumes corretos | `scripts/opencode-guard.sh`               | 15min   | ✅     |
-| CN-7 | 📋 Testes: qa.sh — sintaxe bash, argument passthrough, detecção de podman            | `scripts/qa.test.ts`                      | 20min   | ✅     |
-| CN-8 | 🧪 Teste de integração: qa --version, isolamento ~/.ssh, npm test no container       | (manual, documentado)                     | 15min   | ✅     |
-
-### Métricas alvo — Sprint Container
-
-| Métrica                            | Alvo          | Resultado |
-| ---------------------------------- | ------------- | --------- |
-| `tsc --noEmit`                     | **0 erros**   | ✅ 0      |
-| `vitest run`                       | **100% pass** | ✅ 4454   |
-| `npm run lint`                     | **0 erros**   | ✅ 0      |
-| Dockerfile build pass              | **✅**        | ✅        |
-| `qa --version` = opencode 1.16.2   | **✅**        | ✅        |
-| Container não acessa `~/.ssh`      | **✅**        | ✅        |
-| Container não acessa `/etc/shadow` | **✅**        | ✅        |
-| sandbox-exec.sh removido           | **✅**        | ✅        |
-| Guard detecta container offline    | **✅**        | ✅        |
-
-### O que o Guard Monitora (30 arquivos)
-
-| Severidade   | Arquivos                                                                                                                                                          | Quando muda...                 |
-| ------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------ |
-| 🔴 Crítico   | `opencode.json`, `.env`, `validation_hook.ts`, `validation_plugin.ts`, `package.json`, `pre-push`                                                                 | 🔥 Notificação crítica na tela |
-| 🟡 Segurança | `eslint.config.mjs`, `tsconfig*.json`, `vitest.config.ts`, `jest.config.js`, `ci.yml`, `gitlab-ci.yml`, `dependabot.yml`, `quality-gate.ts`, `enforce-quality.ts` | 🟡 Notificação normal + log    |
-| 🔵 Config    | `AGENTS.md`, `.gitignore`, `qa-quarantine.json`, `warden.json`, `validation.json`, `agents/*.md`, `config/*.json`                                                 | 🔵 Log + journald              |
 
 ---
 
@@ -1652,269 +825,6 @@ F1 (22min) ────► C1 C2 C3 C4 (paralelo) ✅
 | `process.exit` direto     | 3 e2e        | **0**         |
 | `as T` sem validação      | 2 locais     | **0**         |
 | Store components coverage | 19-98%       | **100% cada** |
-
----
-
-## 🛡️ Sprint GracefulFix — Restaurar Block no quality-check + Corrigir gracefulExit (Jun/2026)
-
-**Data:** 2026-06-11
-**Problema:** `gracefulExit()` em `shared/cli_base.ts` usa `setTimeout(() => process.exit(code), EXIT_DELAY_MS).unref()`. O `.unref()` permite que o Node.js saia naturalmente com exit code **0** antes do timer de 2s disparar. `quality-check.ts` SEMPRE retorna 0, mesmo com falhas — `set -e` do pre-push nunca é acionado.
-
-**Root cause:** Em scripts não-interativos, não há handles mantendo o event loop vivo além do timer unrefed. O processo termina com 0 (default) antes do `process.exit(code)` executar.
-
-| Fase | Descrição                                                              | Itens | Status |
-| ---- | ---------------------------------------------------------------------- | ----- | ------ |
-| 1    | Fix `gracefulExit` — remover `.unref()` (causa raiz do block quebrado) | GF-01 | ✅     |
-| 2    | Corrigir `checkAsUnknownAs` — comment-based structural exclusion       | GF-02 | ✅     |
-| 3    | Corrigir unused-exports baseline (line number shift)                   | GF-03 | ✅     |
-| 4    | Regenerar hash integrity                                               | GF-04 | ✅     |
-| 5    | Verificação: typecheck + quality-check + tests + 100% cobertura        | GF-05 | ✅     |
-| 6    | Push via SSH + monitor CI                                              | GF-06 | ⏳     |
-
-### Detalhamento
-
-#### Fase 1 — Fix gracefulExit (GF-01) ✅
-
-| ID    | Item                                                                            | Arquivo              | Esforço |
-| ----- | ------------------------------------------------------------------------------- | -------------------- | ------- |
-| GF-01 | 🔧 Remover `.unref()` de `gracefulExit` — garantir `process.exit(code)` executa | `shared/cli_base.ts` | 5min    |
-
-**Resultado:** Exit code 1 confirmado em quality-check após violações.
-
-#### Fase 2 — Corrigir `checkAsUnknownAs`
-
-| ID     | Item                                                                                                                 | Arquivo(s)                      |
-| ------ | -------------------------------------------------------------------------------------------------------------------- | ------------------------------- |
-| GF-02  | 🐛 `checkAsUnknownAs`: adicionar `excludePattern` para linhas com comentário `// structural:` que documenta o motivo | `scripts/quality-check.ts`      |
-| GF-02b | 📋 Atualizar teste `checkAsUnknownAs` no quality-check.test.ts para cobrir exclusão por comentário structural        | `scripts/quality-check.test.ts` |
-
-**Abordagem:** A regra fica mais sofisticada — `as unknown as` COM comentário `// structural: <razão>` é aceito (caso classe com campos privados). SEM comentário, ainda flag. O desenvolvedor é OBRIGADO a documentar o porquê do cast.
-
-#### Fase 3 — Corrigir unused-exports baseline
-
-| ID    | Item                                                        | Arquivo                            |
-| ----- | ----------------------------------------------------------- | ---------------------------------- |
-| GF-03 | 🔧 Atualizar line number no baseline (31→32, arquivo mudou) | `scripts/.unused-exports-baseline` |
-
-#### Fase 4 — Regenerar hash
-
-| ID    | Item                                                  | Arquivo                    |
-| ----- | ----------------------------------------------------- | -------------------------- |
-| GF-04 | 🔧 Regenerar hash integrity comment após modificações | `scripts/quality-check.ts` |
-
-#### Fase 5 — Verificação Final (100% cobertura)
-
-| ID     | Item                                          | Critério                     |
-| ------ | --------------------------------------------- | ---------------------------- |
-| GF-05a | tsc --noEmit                                  | 0 erros                      |
-| GF-05b | npx tsx scripts/quality-check.ts              | ✅ exit 0, todas checks pass |
-| GF-05c | vitest run                                    | 100% pass                    |
-| GF-05d | quality-check.test.ts cobertura 100% branches | ✅                           |
-
-#### Fase 6 — Push
-
-| ID    | Item                          |
-| ----- | ----------------------------- |
-| GF-06 | git push via SSH + monitor CI |
-
----
-
-## 🚀 Sprint Final — Correção Sistêmica de Contratos + Container + Lint Zero (Jun/2026)
-
-**Data:** 2026-06-11
-
-**Ordem de execução (superioridade técnica):**
-
-1. **Correção sistêmica de contratos** — completar consumidores de `ParseResult` comfields nullable
-2. **DepWall** — adicionar `glob` a `shared/deps.ts`
-3. **Container** — SQLite persistente + entrypoint robusto
-4. **Lint zero** — 78 violações restantes
-5. **Testes** — 100% cobertura
-
-### Diagnóstico inicial
-
-| Métrica                           | Atual  | Alvo  |
-| --------------------------------- | ------ | ----- |
-| `tsc --noEmit`                    | **39** | **0** |
-| `eslint` (não-baseline)           | **78** | **0** |
-| `vitest run`                      | ?      | 100%  |
-| `unbound-method` (baseline 313)   | 261    | ≤313  |
-| Arquivos alterados não-commitados | 17     | 0     |
-| Container SQLite DB persistente   | ❌     | ✅    |
-| Container build reproduzível      | ❌     | ✅    |
-
-### Fase 0 — Correção Sistêmica de Contratos (39 TSC errors)
-
-**Problema:** `shared/result_parser.ts` mudou `ParseResult.tests` e `.stats` para nullable, mas 8 arquivos consumidores não foram atualizados — 39 erros TSC.
-
-| ID    | Arquivo                                              | Erros | Ação                               |
-| ----- | ---------------------------------------------------- | ----- | ---------------------------------- |
-| TSC-1 | `e2e/gen-report-complete.ts`                         | 1     | Adicionar `?? []` ao passar tests  |
-| TSC-2 | `e2e/gen-report.ts`                                  | 1     | Adicionar `?? []` ao passar tests  |
-| TSC-3 | `e2e/result-pipeline.test.ts`                        | 8     | Null guards em tests e stats       |
-| TSC-4 | `e2e/smoke-pipeline.ts`                              | 11    | Null guards em tests e stats       |
-| TSC-5 | `git_triggers/pipeline-handler.ts`                   | 5     | Null guards em tests e stats       |
-| TSC-6 | `git_triggers/test-results.ts`                       | 5     | Null guards em tests e stats       |
-| TSC-7 | `jira_management/commands/case15.ts`                 | 6     | Null guards em resolvedData.result |
-| TSC-8 | `jira_management/commands/case17-helpers.ts`         | 1     | Null guard em obj.results          |
-| TSC-9 | `jira_management/commands/case17-test-utils.test.ts` | 1     | Null guard em result.stats         |
-
-### Fase 1 — DepWall (glob)
-
-**Problema:** `scripts/transform-casts.ts` e `scripts/transform-jest-mock.ts` importam `glob` diretamente em vez de via `shared/deps.ts`.
-
-| ID    | Arquivo                          | Ação                                                         |
-| ----- | -------------------------------- | ------------------------------------------------------------ |
-| DEP-1 | `shared/deps.ts`                 | Adicionar `export { glob }` (re-export do glob)              |
-| DEP-2 | `scripts/transform-casts.ts`     | Substituir `import { globSync } from 'glob'` → `shared/deps` |
-| DEP-3 | `scripts/transform-jest-mock.ts` | Substituir `import { globSync } from 'glob'` → `shared/deps` |
-
-### Fase 2 — Container (SQLite + Entrypoint)
-
-**Problema:** Container monta `~/.local` inteiro como tmpfs, perdendo SQLite DB do opencode entre sessões. Dockerfile tem SHA256 não-verificado.
-
-| ID    | Item                                            | Arquivo(s)                                | Ação                                                  |
-| ----- | ----------------------------------------------- | ----------------------------------------- | ----------------------------------------------------- |
-| CN-9  | 🔧 Volume persistente SQLite DB                 | `scripts/qa.sh`                           | Bind mount `~/.local/share/opencode` + tmpfs granular |
-| CN-10 | 🔧 Verificar SHA256 + atualizar versão opencode | `~/.config/opencode/container/Dockerfile` | Corrigir checksum, atualizar versão se necessário     |
-| CN-11 | 🔧 Entrypoint build robusto                     | `scripts/qa.sh`                           | `cp` explícito do entrypoint antes do build           |
-| CN-12 | 📋 Testes: qa.sh — volume persistente           | `scripts/qa.test.ts`                      | Testar bind mount /home/coder/.local/share/opencode   |
-
-### Fase 3 — Lint: no-console (57 violações)
-
-| ID    | Arquivo                          | Violações | Ação                                  |
-| ----- | -------------------------------- | --------- | ------------------------------------- |
-| LNT-1 | `e2e/real-import.ts`             | 25        | Substituir console.log por rootLogger |
-| LNT-2 | `e2e/smoke-github.ts`            | 16        | Substituir console.log por rootLogger |
-| LNT-3 | `e2e/smoke-llm.ts`               | 13        | Substituir console.log por rootLogger |
-| LNT-4 | `scripts/transform-casts.ts`     | 2         | Substituir console.log por rootLogger |
-| LNT-5 | `scripts/transform-jest-mock.ts` | 2         | Substituir console.log por rootLogger |
-| LNT-6 | `shared/env-loader.ts`           | 1         | Substituir console.log por rootLogger |
-
-### Fase 4 — Lint: demais regras (21 violações)
-
-| ID     | Regra                      | Violações | Arquivos-alvo                                                                                                      |
-| ------ | -------------------------- | --------- | ------------------------------------------------------------------------------------------------------------------ |
-| LNT-7  | `no-unnecessary-condition` | 13        | `shared/result_parser.ts` (8), `shared/open.ts` (3), `import-prep-preview.ts` (1), `mapping-file-generator.ts` (1) |
-| LNT-8  | `no-unsafe-member-access`  | 3         | `jira_management/test-execution-creator.ts`                                                                        |
-| LNT-9  | `no-unsafe-assignment`     | 2         | `jira_management/test-execution-creator.ts`                                                                        |
-| LNT-10 | `no-restricted-imports`    | 2         | `scripts/transform-casts.ts`, `scripts/transform-jest-mock.ts`                                                     |
-| LNT-11 | `no-non-null-assertion`    | 1         | `shared/llm-fallback-config.ts`                                                                                    |
-
-### Fase 5 — Testes
-
-| ID    | Item                                             | Ação                                                   |
-| ----- | ------------------------------------------------ | ------------------------------------------------------ |
-| TST-1 | Atualizar testes existentes para novos contratos | Adicionar null guards nos asserts que usam ParseResult |
-| TST-2 | Testar cobertura do qa.sh (volume persistente)   | Verificar string de bind mount no qa.test.ts           |
-| TST-3 | `vitest run` = 100%                              | Verificar execução completa                            |
-
-### Critério de commit
-
-Cada fase (0-5) é committada separadamente com verificação:
-
-1. `tsc --noEmit` = 0
-2. `npm run lint` = 0 (ou baseline ≤ 313)
-3. `vitest run` = 100% pass
-
----
-
-## 🚀 Sprint Container — Resiliência + Build Parametrizado + Persistência SQLite (Jun/2026)
-
-**Data:** 2026-06-11
-**Origem:** Container não iniciava por conflito de nome (container órfão), versão 1.16.0 desatualizada (Dockerfile já em 1.17.3 mas imagem não rebuildada), SQLite DB perdido entre sessões (`~/.local` era tmpfs inteiro).
-
-### Fases
-
-| Fase | Descrição                                                                     | Itens | Status |
-| ---- | ----------------------------------------------------------------------------- | ----- | ------ |
-| 0    | Atualizar BACKLOG.md + migrar completados ao histórico                        | —     | ✅     |
-| 1    | `--replace` no `qa.sh` para resiliência a container órfão                     | CO-1  | ✅     |
-| 2    | Dockerfile parametrizado (ARG) com validação de SHA256 obrigatório            | CO-2  | ✅     |
-| 3    | Volume persistente SQLite (`~/.local/share/opencode`) em vez de tmpfs inteiro | CO-3  | ✅     |
-| 4    | Testes para qa.sh com `--replace` + volume persistente                        | CO-4  | ✅     |
-| 5    | Rebuildar imagem + build context explícito                                    | CO-5  | ✅     |
-| 6    | Fix SQLite timeout (30s→300s) + env var override `OPENCODE_DB_TIMEOUT_MS`     | CO-6  | ✅     |
-| 7    | `.container/` removido do tracking git + gitignore                            | CO-7  | ✅     |
-| 7    | Verificação final: TSC + lint + tests + quality-check                         | CO-7  | ✅     |
-
-### Detalhamento
-
-| ID   | Item                                                                         | Arquivo(s)                                | Esforço |
-| ---- | ---------------------------------------------------------------------------- | ----------------------------------------- | ------- |
-| CO-1 | 🔧 Adicionar `--replace` ao `podman run` — container órfão não bloqueia mais | `scripts/qa.sh`                           | 2min    |
-| CO-2 | ♻️ Dockerfile: versão + SHA256 como ARG com validação de non-empty           | `~/.config/opencode/container/Dockerfile` | 10min   |
-| CO-3 | 🔧 Bind mount `~/.local/share/opencode` + tmpfs granular nos demais subdirs  | `scripts/qa.sh`                           | 5min    |
-| CO-4 | 📋 Testes: `--replace` presente, volume persistente no comando podman        | `scripts/qa.test.ts`                      | 5min    |
-| CO-5 | 🏗️ Rebuildar imagem opencode-qa                                              | `podman build -t opencode-qa`             | 5min    |
-| CO-6 | ✅ Verificação: TSC + lint + vitest + quality-check                          | —                                         | 5min    |
-
----
-
-## 🔒 Sprint Code Audit — Correção de Dead Code + Error Handling + Limpeza de Exports (Jun/2026)
-
-**Data:** 2026-06-12
-**Origem:** Auditoria profunda de código de produção — 86 achados (4 HIGH, 17 MEDIUM, 65 LOW).
-**Relatório:** `.audit/dead-code-audit.md`
-**Ordem de execução:** Safety → Dead code → Unused exports → Barrel hygiene
-
-| Fase | Descrição                                                                        | Itens | Status |
-| ---- | -------------------------------------------------------------------------------- | ----- | ------ |
-| P0   | Safety: catch silenciosos, timeout, error swallowing sem log                     | 4     | ✅     |
-| P1   | Dead code: remoção de funções/exports/re-exports sem consumidores                | 5     | 🔜     |
-| P2   | Unused exports: remover `export` de funções internas (markdown, palette, report) | 5     | 🔜     |
-| P3   | Barrel hygiene: `export *` → exports nomeados em `llm-fallback.ts`               | 1     | 🔜     |
-| TST  | Testes para todas as correções + verificação final                               | All   | 🔜     |
-
-### P0 — Safety (violação de mecanismos de segurança)
-
-| ID   | Severidade | Arquivo                | Linha      | Problema                                           | Correção                                         |
-| ---- | ---------- | ---------------------- | ---------- | -------------------------------------------------- | ------------------------------------------------ |
-| SA-1 | 🔴 HIGH    | `shared/env-loader.ts` | 51         | `.catch(() => {})` vazio — erro do logger engolido | Substituir por `.catch(e => console.error(...))` |
-| SA-2 | 🟡 MEDIUM  | `shared/publish.ts`    | 25,36-46   | `execFileSync` sem timeout (5 chamadas de rede)    | Adicionar `timeout: 120_000` em cada             |
-| SA-3 | 🟡 MEDIUM  | `shared/disk-cache.ts` | 66         | Decrypt failure retorna null sem log               | Adicionar `rootLogger.debug()`                   |
-| SA-4 | 🟡 MEDIUM  | `shared/llm-review.ts` | 75,204,268 | LLM review fallha sem warning                      | Adicionar `rootLogger.warn()`                    |
-
-### P1 — Dead Code (remoção)
-
-| ID   | Severidade | Arquivo                                               | Linha(s) | Problema                                                                    | Correção                |
-| ---- | ---------- | ----------------------------------------------------- | -------- | --------------------------------------------------------------------------- | ----------------------- |
-| DC-1 | 🔴 HIGH    | `shared/llm-fallback-config.ts`                       | 106-112  | `getModelPricing` e `hasPricingForModel` — zero chamadas                    | Remover funções         |
-| DC-2 | 🔴 HIGH    | `shared/llm-benchmark.ts`                             | 25-26    | Re-exports de `benchmark-validators` e `benchmark-metrics` sem consumidores | Remover linhas          |
-| DC-3 | 🟡 MEDIUM  | `git_triggers/main.ts`                                | 32       | `export default {}` — dummy nunca importado                                 | Remover                 |
-| DC-4 | 🟡 MEDIUM  | `jira_management/import-prep.ts`                      | 2-3      | `PreviewMdOptions` e `ValidationResult` nunca importados nominalmente       | Remover type re-exports |
-| DC-5 | 🟡 MEDIUM  | `shared/llm-fallback-http.ts` + `shared/llm-cache.ts` | 66,68    | `parseRawOnce` duplicado (2 implementações)                                 | Consolidar para uma     |
-
-### P2 — Unused Exports (limpeza de export interno)
-
-| ID   | Severidade | Arquivo                       | Linha | Função                        | Correção              |
-| ---- | ---------- | ----------------------------- | ----- | ----------------------------- | --------------------- |
-| UE-1 | 🟢 LOW     | `shared/markdown-html.ts`     | 9     | `renderInlineToHtml`          | Remover `export`      |
-| UE-2 | 🟢 LOW     | `shared/markdown-renderer.ts` | 63    | `renderInline`                | Remover `export`      |
-| UE-3 | 🟢 LOW     | `shared/markdown-renderer.ts` | 88    | `renderBlockToken`            | Remover `export`      |
-| UE-4 | 🟢 LOW     | `shared/palette.ts`           | 70    | `PaletteKey`                  | Remover `export type` |
-| UE-5 | 🟢 LOW     | `shared/report-html.ts`       | 20    | Re-export `buildTrendSection` | Remover linha 20      |
-
-### P3 — Barrel Hygiene
-
-| ID   | Severidade | Arquivo                  | Linha(s) | Problema                               | Correção                        |
-| ---- | ---------- | ------------------------ | -------- | -------------------------------------- | ------------------------------- |
-| BH-1 | 🟢 LOW     | `shared/llm-fallback.ts` | 23-24    | `export *` 2 wildcards → unbounded API | Substituir por exports nomeados |
-
-### Critério de commit (cada fase)
-
-1. `tsc --noEmit` = 0
-2. `vitest run` = 100% pass
-3. `npm run lint` = 0 (ou baseline)
-
-### Verificação Final
-
-| ID   | Item                               | Critério                  |
-| ---- | ---------------------------------- | ------------------------- |
-| VF-1 | `tsc --noEmit`                     | 0 erros                   |
-| VF-2 | `vitest run`                       | 100% pass                 |
-| VF-3 | `npm run lint`                     | 0 violações (ou baseline) |
-| VF-4 | `npx tsx scripts/quality-check.ts` | 0 violações não-baseline  |
 
 ---
 
@@ -3259,5 +2169,323 @@ Cada um gerado sob demanda pelo menu, sem wizard, sem config feature-flag, sem f
 3. **Dashboards (grupo D)** podem ser priorizados individualmente — não precisam todos de uma vez.
 4. **Módulos grandes (grupo B)** exigem decisão arquitetural: adaptar ao padrão FW ou aceitar arquitetura própria.
 5. O gargalo real não é identificar gaps — é **corrigir na origem** respeitando as invariantes (zero workaround, zero débito, 100% cobertura).
+
+---
+
+## 🎨 Sprint CSS Refactoring — Eliminar CSS Inline de Todos os Artefatos HTML (Jun/2026)
+
+**Data:** 2026-06-15
+**Origem:** Auditoria de inline styles revelou **232 violações** de CSS inline em ~25 arquivos-fonte, em 3 níveis de gravidade. A regra arquitetural "TODOS OS ARTEFATOS HTML DEVEM PASSAR PELA HTML_FACTORY. Nenhum artefato HTML deve ter CSS inline" foi estabelecida durante a refatoração do `pipeline-health.ts` (FT-17 a FT-20), mas o restante do codebase ainda viola.
+
+**Regra absoluta:** zero workarounds, zero débito, 100% teste para código novo, `tsc --noEmit + vitest run + npm run lint` após cada fase.
+
+### Inventário de Violações
+
+#### Nível 1 — HTML Manual sem buildHtmlPage (2 arquivos)
+
+| #    | Arquivo               | Linha   | Problema                                            | Tamanho   |
+| ---- | --------------------- | ------- | --------------------------------------------------- | --------- |
+| L1-1 | `interactive-mode.ts` | 565     | `<html><body>...` cru sem buildHtmlPage             | 1 linha   |
+| L1-2 | `schedule-handler.ts` | 251-261 | `<!DOCTYPE html><html>...` manual sem buildHtmlPage | 11 linhas |
+
+#### Nível 2 — CSS Inline em pipeline-health.ts (10 linhas, 11 ocorrências)
+
+| #     | Arquivo              | Linha | style="" atual                                    | O que substitui                            |
+| ----- | -------------------- | ----- | ------------------------------------------------- | ------------------------------------------ |
+| PH-1  | `pipeline-health.ts` | 237   | `color:var(--color-error)` no span                | `cn.failText`                              |
+| PH-2  | `pipeline-health.ts` | 262   | `display:flex;flex-wrap:wrap;gap:0.75rem` no div  | `cn.flexWrap`                              |
+| PH-3  | `pipeline-health.ts` | 265   | card completo (flex, background, border, padding) | `cn.cardInline`                            |
+| PH-4  | `pipeline-health.ts` | 266   | font-size inline no div                           | `cn.cardTitle`                             |
+| PH-5  | `pipeline-health.ts` | 267   | font-size, font-weight, color dinâmico            | `cn.cardValue` + var                       |
+| PH-6  | `pipeline-health.ts` | 279   | color condicional no span (success/error)         | `cn[rate >= 80 ? 'passText' : 'failText']` |
+| PH-7  | `pipeline-health.ts` | 306   | `color:var(--color-info)` no card num             | `cn.infoText`                              |
+| PH-8  | `pipeline-health.ts` | 307   | `color:var(--color-success)` no card num          | `cn.successText`                           |
+| PH-9  | `pipeline-health.ts` | 308   | `color:var(--color-error)` no card num            | `cn.errorText`                             |
+| PH-10 | `pipeline-health.ts` | 309   | `color:${passRateColor}` no card num              | `cn[passRateColorClass]`                   |
+
+#### Nível 3 — CSS Inline em shared/ (180+ ocorrências em 15+ arquivos)
+
+| #    | Arquivo                                | style="" count | Padrão predominante                     |
+| ---- | -------------------------------------- | -------------- | --------------------------------------- |
+| S-1  | `shared/ai-effectiveness.ts`           | 16             | th/td styling, empty-state padding      |
+| S-2  | `shared/backlog-health.ts`             | 4              | table/th styling                        |
+| S-3  | `shared/cross-squad-benchmark.ts`      | 2              | empty-state                             |
+| S-4  | `shared/defect-trend.ts`               | 7              | table/th/td header styling              |
+| S-5  | `shared/developer-profile.ts`          | 3              | empty-state + heading                   |
+| S-6  | `shared/generate-coverage-gap-html.ts` | 19             | cards, tree, table, badges, empty-state |
+| S-7  | `shared/impact-alert.ts`               | 5              | layout + empty-state                    |
+| S-8  | `shared/incident-report.ts`            | 8              | layout, events, empty-state             |
+| S-9  | `shared/pipeline-cost.ts`              | 1              | empty-state                             |
+| S-10 | `shared/report-chart.ts`               | 3              | legend dots (background dinâmico)       |
+| S-11 | `shared/report-diff.ts`                | 4              | flex layout, truncated text             |
+| S-12 | `shared/report-html.ts`                | 9              | layout, buttons, sidebar                |
+| S-13 | `shared/report-table.ts`               | 11             | table wrapper, cells, badges            |
+| S-14 | `shared/report-utils.ts`               | 1              | `#6b7280` hardcoded (NÃO var(--color))  |
+| S-15 | `shared/requirement-score.ts`          | 1              | empty-state                             |
+| S-16 | `shared/silent-regression.ts`          | 1              | empty-state                             |
+| S-17 | `shared/traceability-matrix.ts`        | 2              | health-bar width dinâmico + empty-state |
+| S-18 | `shared/suite-optimization.ts`         | ~5             | (verificar)                             |
+
+#### Nível 3b — shared/primitives/ (41 ocorrências em 6 arquivos)
+
+| Arquivo     | style="" count | Padrão predominante                    |
+| ----------- | -------------- | -------------------------------------- |
+| `badge.ts`  | ~8             | background, color, border-radius, font |
+| `card.ts`   | ~7             | box-shadow, padding, border-radius     |
+| `chart.ts`  | ~6             | SVG inline styles                      |
+| `form.ts`   | ~5             | input, label, button styling           |
+| `layout.ts` | ~7             | grid, flex, spacing                    |
+| `table.ts`  | ~8             | th, td, border styling                 |
+
+### Decisão Arquitetural
+
+**Solução escolhida:** `shared/styles.ts` com `cn` (class name constants) + `buildAllStyles()` que gera CSS completo.
+
+**Rejeitado:** Classe `HtmlFactory` (violaria SRP, criaria acoplamento desnecessário, pioraria testabilidade).
+
+**Contrato:**
+
+```ts
+// shared/styles.ts
+export const cn = {
+    // Layout
+    flexWrap: 'ph-flex-wrap',
+    cardInline: 'ph-card-inline',
+    cardTitle: 'ph-card-title',
+    cardValue: 'ph-card-value',
+    // Text colors (semantic)
+    infoText: 'text-info',
+    successText: 'text-success',
+    errorText: 'text-error',
+    failText: 'text-fail',
+    passText: 'text-pass',
+    mutedText: 'text-muted',
+    // Table primitives
+    tableWrapper: 'tbl-wrapper',
+    tableHeader: 'tbl-header',
+    tableCell: 'tbl-cell',
+    // Empty states
+    emptyState: 'empty-state',
+    // ... +
+} as const;
+
+export function buildAllStyles(): string {
+    return (
+        buildCssVars() +
+        buildLayoutCss() +
+        buildTableCss() +
+        buildCardCss() +
+        buildEmptyStateCss() +
+        buildPipelineHealthCss() +
+        buildDarkVars()
+    );
+}
+```
+
+**`cn` é `as const`** para permitir autocomplete e type safety. `buildAllStyles()` substitui o papel de `buildCss()` em `report-styles.ts` (que deve ser mantido ou fundido conforme fase 4).
+
+**Pipeline-health-specific CSS** (`.summary`, `.card`, `.card .num`, `.card .lbl`, `.ts`, `.failure-bar`, `.error-msg`) permanece em `_PIPELINE_CSS` no pipeline-health.ts ou é movido para `buildAllStyles()` — decisão a tomar durante a fase.
+
+### Plano de Fases
+
+| Fase | Descrição                                                                       | Itens           | Arquivos Afetados                             | Testes Afetados                                                                                                                                                                  | Esforço |
+| ---- | ------------------------------------------------------------------------------- | --------------- | --------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------- |
+| 0    | **Infraestrutura** — criar `shared/styles.ts` com `cn` + `buildAllStyles()`     | CSS-00 a CSS-04 | `shared/styles.ts` (novo)                     | `shared/__tests__/styles.test.ts` (novo)                                                                                                                                         | 1h      |
+| 1    | **pipeline-health.ts** — substituir 11 inline styles por `cn.*`                 | CSS-10 a CSS-14 | `git_triggers/pipeline-health.ts`             | `git_triggers/pipeline-health.test.ts`, `git_triggers/__tests__/pipeline-health-html.property.test.ts`, `git_triggers/__tests__/integration/pipeline-health.integration.test.ts` | 1h      |
+| 2    | **interactive-mode.ts** — HTML cru → `buildHtmlPage()`                          | CSS-20          | `git_triggers/interactive-mode.ts`            | `git_triggers/interactive-mode.test.ts`                                                                                                                                          | 30min   |
+| 3    | **schedule-handler.ts** — HTML manual → `buildHtmlPage()`                       | CSS-30 a CSS-31 | `git_triggers/schedule-handler.ts`            | `git_triggers/schedule-handler.test.ts`                                                                                                                                          | 30min   |
+| 4    | **shared/ dashboards** — refatorar 15+ arquivos (180+ inline styles)            | CSS-40 a CSS-58 | 15+ arquivos em `shared/`                     | Testes correspondentes em `shared/__tests__/`                                                                                                                                    | 4-6h    |
+| 5    | **shared/primitives/** — refatorar 6 componentes (41 inline styles)             | CSS-60 a CSS-66 | 6 arquivos em `shared/primitives/`            | Testes correspondentes em `shared/primitives/`                                                                                                                                   | 2-3h    |
+| 6    | **Consolidação** — fundir `report-styles.ts` em `styles.ts`, remover duplicação | CSS-70 a CSS-72 | `shared/report-styles.ts`, `shared/styles.ts` | Nenhum (buildCss() continua exportando)                                                                                                                                          | 30min   |
+| V    | **Verificação Final** — tsc + vitest + lint + push + CI                         | CSS-V1 a CSS-V5 | —                                             | —                                                                                                                                                                                | 30min   |
+
+### Detalhamento por Fase
+
+#### Fase 0 — Infraestrutura: `shared/styles.ts`
+
+**Decisões:**
+
+- `cn` é um objeto `as const` com prefixo por domínio: `ph-` (pipeline-health), `tbl-` (table), `text-` (text colors), `empty-` (empty states)
+- `buildAllStyles()` retorna CSS string COMPLETA que substitui o `<style>` em todo artefato HTML
+- `buildAllStyles()` inclui `buildCssVars()` + `buildDarkVars()` de `report-styles.ts` (reutiliza)
+- Layout específico de pipeline-health (`.summary`, `.card`, `.card .num`, `.card .lbl`, `.ts`, `.failure-bar`, `.error-msg`) fica em `_PIPELINE_CSS` **dentro do próprio pipeline-health.ts** até a Fase 6 decidir se move para central
+
+| ID     | Item                                                                                     | Arquivo(s)                        | Critério de sucesso                                 |
+| ------ | ---------------------------------------------------------------------------------------- | --------------------------------- | --------------------------------------------------- |
+| CSS-00 | ✨ Criar `shared/styles.ts` — `cn` com class names + `buildAllStyles()`                  | `shared/styles.ts` (novo)         | Compila, não quebra imports existentes              |
+| CSS-01 | ✨ `buildAllStyles()` inclui CSS para layout básico (flex, card, table, empty)           | `shared/styles.ts`                | Gera CSS com as classes definidas em `cn`           |
+| CSS-02 | ✨ Export `cn` como `as const` para type-safety                                          | `shared/styles.ts`                | `cn.infoText` é `string`, não `string \| undefined` |
+| CSS-03 | 📋 Testar `buildAllStyles()` — smoke: retorna string não vazia, contém cada `cn.*` valor | `shared/__tests__/styles.test.ts` | 1 PBT + 3 asserts                                   |
+| CSS-04 | 🔧 `npx tsc --noEmit` (0 erros) + `npx vitest run shared/__tests__/styles.test.ts`       | —                                 | 0 erros                                             |
+
+#### Fase 1 — pipeline-health.ts (11 inline styles)
+
+| ID     | Item                                                                                                             | Arquivo(s)                        | Asserções de teste a atualizar                                                           |
+| ------ | ---------------------------------------------------------------------------------------------------------------- | --------------------------------- | ---------------------------------------------------------------------------------------- |
+| CSS-10 | ♻️ Substituir `style="color:var(--color-error)"` → `class="${cn.failText}"` (linha 237)                          | `git_triggers/pipeline-health.ts` | `pipeline-health.test.ts`: `toContain('class="')` em vez de `toContain('style="color:')` |
+| CSS-11 | ♻️ Substituir `style="display:flex;flex-wrap:wrap;gap:0.75rem"` → `class="${cn.flexWrap}"` (linha 262)           | `git_triggers/pipeline-health.ts` | `pipeline-health.test.ts`: assert classe `ph-flex-wrap`                                  |
+| CSS-12 | ♻️ Substituir card completo inline → `class="${cn.cardInline}"` + sub-classes (linhas 265-267)                   | `git_triggers/pipeline-health.ts` | `pipeline-health.test.ts`: assert classes agrupadas                                      |
+| CSS-13 | ♻️ Substituir color condicional → `class="${b.passRate >= 80 ? cn.passText : cn.failText}"` (linha 279, 306-309) | `git_triggers/pipeline-health.ts` | `integration/pipeline-health.integration.test.ts`: layout assertions ajustadas           |
+| CSS-14 | 🔧 Verificar: 0 ocorrências de `style="` em pipeline-health.ts                                                   | `git_triggers/pipeline-health.ts` | `grep 'style="' pipeline-health.ts` = 0                                                  |
+
+**Testes a atualizar:**
+| Arquivo de teste | O que ajustar |
+| --------------------------------------------------------- | -------------------------------------------------------------------------- |
+| `git_triggers/pipeline-health.test.ts` | Asserções de layout: `style="color:var(--color-*)"` → `class="text-*"` |
+| `git_triggers/__tests__/pipeline-health-html.property.test.ts` | Invariante 6 (ausência de legados): checar por `class="` em vez de `style="color:` |
+| `git_triggers/__tests__/integration/pipeline-health.integration.test.ts` | Layout assertions (PH-01 a PH-06): ajustar HTML esperado |
+
+#### Fase 2 — interactive-mode.ts (HTML cru)
+
+| ID     | Item                                                                                                                         | Arquivo(s)                             |
+| ------ | ---------------------------------------------------------------------------------------------------------------------------- | -------------------------------------- |
+| CSS-20 | ♻️ Substituir `html = '<html><body>...'` → `buildHtmlPage({ bodyContent, styles: buildAllStyles(), title: 'Quality Gate' })` | `git_triggers/interactive-mode.ts:565` |
+
+**Nota:** Esta função (`_dashboardQualityGate`) gera HTML só para abrir no navegador via `_generateAndOpenDashboard`. Não persiste em disco. O conteúdo é `formatQualityGateText(qualityGate)` que retorna texto pré-formatado com `\n`. Após `buildHtmlPage`, precisa de `<pre>` ou `<div>` com `white-space: pre`.
+
+**Testes:** Nenhum teste atual verifica o HTML gerado — `_generateAndOpenDashboard` mockado nos testes existentes. Adicionar asserção simples se desejado, mas não bloquear a fase.
+
+#### Fase 3 — schedule-handler.ts (HTML manual)
+
+| ID     | Item                                                                                                                                                                                                        | Arquivo(s)                                 | Linhas  |
+| ------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------ | ------- |
+| CSS-30 | ♻️ Substituir `<!DOCTYPE html>...` manual → `buildHtmlPage({ bodyContent: sections.join(''), styles: buildAllStyles(), title: 'Weekly Quality Report — ' + projectName, footer: 'Generated by QA Tools' })` | `git_triggers/schedule-handler.ts:251-261` | 251-261 |
+| CSS-31 | 🔧 Remover `<style>body{font-family:...}</style>` inline (agora em `buildAllStyles()`)                                                                                                                      | `git_triggers/schedule-handler.ts:254`     | —       |
+
+**Atenção:** O CSS inline atual (`body{font-family:system-ui,sans-serif;max-width:1200px;margin:0 auto;padding:2rem}section{border:1px solid #e5e7eb;border-radius:8px;padding:1.5rem;margin-bottom:1.5rem}`) é específico do relatório semanal — precisa ser preservado em `buildAllStyles()` ou adicionado como `headExtra` via `_WEEKLY_REPORT_CSS`.
+
+**Testes:** `schedule-handler.test.ts` mocka `writeReport`. Adicionar asserção no conteúdo HTML verificar `buildHtmlPage` foi chamado com os parâmetros corretos.
+
+#### Fase 4 — shared/ Dashboards (15+ arquivos, 180+ inline styles)
+
+**Estratégia:** Priorizar por frequência de violação + impacto visual. Refatorar em batches de 3-4 arquivos, rodando `tsc --noEmit + vitest run` após cada batch.
+
+**Batch 4a — Tabelas e Headers (alta repetição, baixo risco):**
+| ID | Arquivo | style="" | Padrão | Ação |
+| ------ | -------------------------- | -------- | --------------------------------------------------------- | ----------------------------------------------- |
+| CSS-40 | `shared/defect-trend.ts` | 7 | `th style="padding:10px 12px;font-size:0.75rem;text-transform:uppercase;color:var(--color-text-secondary)"` | Substituir por `cn.tableHeader` + CSS em `buildAllStyles()` |
+| CSS-41 | `shared/ai-effectiveness.ts` | 16 | Mesmo padrão de tabela + empty-state | Substituir por `cn.tableHeader`, `cn.tableCell`, `cn.emptyState` |
+| CSS-42 | `shared/report-table.ts` | 11 | table wrapper, data table, badges | Substituir por `cn.tableWrapper`, `cn.dataTable` + componentes de badge |
+
+**Batch 4b — Cards e Layout Flex (médio risco):**
+| ID | Arquivo | style="" | Padrão | Ação |
+| ------ | --------------------------------- | -------- | ------------------------------------- | ---------------------------------------------- |
+| CSS-43 | `shared/generate-coverage-gap-html.ts` | 19 | Cards em grid, tree toggle, quality gate | Substituir por `cn.coverageCard`, `cn.grid2col`, `cn.treeNode` |
+| CSS-44 | `shared/report-html.ts` | 9 | Layout flex, botão flakiness, sidebar | Substituir por `cn.flexRow`, `cn.flakinessBtn`, `cn.sidebar` |
+| CSS-45 | `shared/report-diff.ts` | 4 | Flex layout, truncated text, label | Substituir por `cn.flexGap`, `cn.truncated`, `cn.label` |
+
+**Batch 4c — Empty States e Textos (baixo risco):**
+| ID | Arquivo | style="" | Padrão | Ação |
+| ------ | ----------------------------- | -------- | ----------------------------------------------- | ------------------------------------------- |
+| CSS-46 | `shared/incident-report.ts` | 8 | Empty state + eventos layout | Substituir por `cn.emptyState`, `cn.eventCard` |
+| CSS-47 | `shared/impact-alert.ts` | 5 | Layout + empty state | Substituir por `cn.emptyState`, `cn.alertLine` |
+| CSS-48 | `shared/developer-profile.ts` | 3 | Empty state + heading | Substituir por `cn.emptyState`, `cn.sectionHeading` |
+| CSS-49 | `shared/cross-squad-benchmark.ts` | 2 | Empty state | Substituir por `cn.emptyState` |
+| CSS-50 | `shared/backlog-health.ts` | 4 | Table/th styling | Substituir por `cn.tableCell`, `cn.tableHeader` |
+| CSS-51 | `shared/pipeline-cost.ts` | 1 | Empty state | Substituir por `cn.emptyState` |
+| CSS-52 | `shared/requirement-score.ts` | 1 | Empty state | Substituir por `cn.emptyState` |
+| CSS-53 | `shared/silent-regression.ts` | 1 | Empty state | Substituir por `cn.emptyState` |
+| CSS-54 | `shared/traceability-matrix.ts` | 2 | Health-bar width dinâmico + empty state | Substituir width dinâmico por `cn.healthFill` + CSS variável |
+| CSS-55 | `shared/report-utils.ts` | 1 | `#6b7280` hardcoded — ÚNICO `style="color:#6b7280"` no codebase | Substituir por `cn.mutedText` |
+
+**Batch 4d — Legend Dots (dinâmico via tokens):**
+| ID | Arquivo | style="" | Padrão | Ação |
+| ------ | -------------------------- | -------- | ----------------------------------- | ------------------------------------------- |
+| CSS-56 | `shared/report-chart.ts` | 3 | `style="background:${tokens.color.chart.pass/fail/skip}"` | Substituir por `cn.dotPass`, `cn.dotFail`, `cn.dotSkip` + CSS em `buildAllStyles()` |
+
+**Testes para Fase 4:**
+| ID | Item | Arquivo(s) |
+| ------ | ---------------------------------------------------------------------------------------- | --------------------------------------------- |
+| CSS-57 | 📋 Verificar que cada arquivo refatorado tem 0 `style="` restantes (via `grep`) | Todos os arquivos do batch |
+| CSS-58 | 📋 Rodar `vitest run shared/__tests__/` após cada batch — 0 regressões | `shared/__tests__/*` |
+
+#### Fase 5 — shared/primitives/ (6 componentes, 41 inline styles)
+
+| ID     | Arquivo     | style="" | Padrão predominante                                                                 | Ação                                                                                                   |
+| ------ | ----------- | -------- | ----------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------ |
+| CSS-60 | `badge.ts`  | ~8       | `style="display:inline-block;padding:...;background:${color}20;color:${color};..."` | Extrair para `cn.badge`, `cn.badgePass`, `cn.badgeFail`, `cn.badgeSkip` + CSS .badge { } com variantes |
+| CSS-61 | `card.ts`   | ~7       | `style="box-shadow:...;border-radius:...;padding:..."`                              | Extrair para `cn.card`, `cn.cardShadow`, `cn.cardPadding`                                              |
+| CSS-62 | `chart.ts`  | ~6       | SVG inline styles (`fill`, `stroke`)                                                | Avaliar: SVG inline styles são aceitáveis (especificação SVG nativa) ou devem virar classes CSS        |
+| CSS-63 | `form.ts`   | ~5       | `style="padding:...;border:...;font-size:..."` no input/label/button                | Extrair para `cn.formInput`, `cn.formLabel`, `cn.formButton`                                           |
+| CSS-64 | `layout.ts` | ~7       | `style="display:grid;grid-template-columns:...;gap:..."`                            | Extrair para `cn.grid2col`, `cn.grid3col`, `cn.flexCenter`, `cn.gapMd`                                 |
+| CSS-65 | `table.ts`  | ~8       | `style="padding:...;text-align:...;border-bottom:..."`                              | Extrair para `cn.th`, `cn.td`, `cn.trHover` (pode compartilhar com CSS-40/41/42)                       |
+
+**Nota especial:** primitives são a **fundação visual** do sistema. Qualquer mudança aqui afeta **todos os relatórios** que usam estes componentes. Exige:
+
+- Revisão visual pós-refatoração (abrir HTML gerado no browser)
+- Testes de snapshot se existirem (atualizar snapshots)
+- Verificação manual de 3 relatórios: PR Report, Pipeline Health, Coverage Gap
+
+| ID     | Item                                                             | Arquivo(s)                             |
+| ------ | ---------------------------------------------------------------- | -------------------------------------- |
+| CSS-66 | 📋 Verificar 3 relatórios principais no browser após refatoração | `reports/` (gerar e abrir manualmente) |
+
+#### Fase 6 — Consolidação report-styles.ts
+
+| ID     | Item                                                                             | Arquivo(s)                                            | Critério                            |
+| ------ | -------------------------------------------------------------------------------- | ----------------------------------------------------- | ----------------------------------- |
+| CSS-70 | ♻️ Decidir: `report-styles.ts` vira wrapper de `styles.ts` ou é fundido?         | `shared/report-styles.ts`, `shared/styles.ts`         | Zero quebra de import existente     |
+| CSS-71 | ♻️ Atualizar imports de `buildCss()` para `buildAllStyles()` onde aplicável      | Todos os consumers de `buildCss()`                    | `grep -r 'buildCss'` = 0 ou mapeado |
+| CSS-72 | 🔧 Remover CSS duplicado entre `_PIPELINE_CSS`, `buildCss()`, `buildAllStyles()` | `pipeline-health.ts`, `report-styles.ts`, `styles.ts` | CSS final sem duplicação            |
+
+#### Fase V — Verificação Final
+
+| ID     | Item                                                                                                     | Critério                                 |
+| ------ | -------------------------------------------------------------------------------------------------------- | ---------------------------------------- |
+| CSS-V1 | `npx tsc --noEmit`                                                                                       | 0 erros                                  |
+| CSS-V2 | `npx vitest run`                                                                                         | 100% pass (5229+ tests)                  |
+| CSS-V3 | `npm run lint`                                                                                           | 0 violações                              |
+| CSS-V4 | `grep -rn 'style="' git_triggers/ shared/ --include='*.ts' \| grep -v __tests__ \| grep -v '.test.'` = 0 | NENHUM style="" no código-fonte          |
+| CSS-V5 | Gerar 3 relatórios representativos e abrir no browser — visual OK                                        | PR Report, Pipeline Health, Coverage Gap |
+
+### Métricas Alvo
+
+| Métrica                                      | Atual                 | Alvo           |
+| -------------------------------------------- | --------------------- | -------------- |
+| `style="` no código-fonte (excluindo testes) | ~232                  | **0**          |
+| HTML manuais sem `buildHtmlPage`             | 2                     | **0**          |
+| Cores hardcoded (ex: `#6b7280`)              | 1 (`report-utils.ts`) | **0**          |
+| `tsc --noEmit`                               | 0                     | **0**          |
+| `vitest run`                                 | 5229 pass             | **≥5229 pass** |
+| `npm run lint`                               | 0                     | **0**          |
+| Novos workarounds/débito                     | —                     | **0**          |
+
+### Riscos e Dependências
+
+| Risco                                                                                                          | Probabilidade | Impacto | Mitigação                                                    |
+| -------------------------------------------------------------------------------------------------------------- | ------------- | ------- | ------------------------------------------------------------ |
+| Primitives (badge, card) usados em múltiplos relatórios — refatoração quebra visual de relatórios não-testados | Média         | Alto    | CSS-66: verificação manual de 3 relatórios + revisão visual  |
+| `buildAllStyles()` muito grande (bloat)                                                                        | Baixa         | Baixo   | Monitorar tamanho; extrair CSS não-usado por árvore (futuro) |
+| Testes com snapshot de HTML (se existirem) quebram                                                             | Média         | Baixo   | Atualizar snapshots como parte da fase (esperado)            |
+| pipeline-health.test.ts já tem asserts de layout — cada mudança requer atualização                             | Certa         | Médio   | Previsto na Fase 1 (CSS-10 a CSS-14)                         |
+| Conflito entre `buildCss()` (report-styles.ts) e `buildAllStyles()` (styles.ts)                                | Alta          | Médio   | Fase 6 resolve fusão; até lá, cada consumer usa um ou outro  |
+
+### Commit Strategy
+
+1. **Fase 0** → `feat(styles): add shared/styles.ts with cn + buildAllStyles()`
+2. **Fase 1** → `refactor(pipeline-health): replace 11 inline styles with cn.* classes`
+3. **Fase 2** → `refactor(interactive-mode): use buildHtmlPage for quality gate HTML`
+4. **Fase 3** → `refactor(schedule-handler): use buildHtmlPage for weekly report HTML`
+5. **Fase 4** (1 commit por batch) → `refactor(shared): replace inline styles in <batch-a/b/c/d>`
+6. **Fase 5** → `refactor(primitives): replace inline styles with cn.* classes`
+7. **Fase 6** → `refactor(styles): consolidate report-styles into styles.ts`
+8. **Fase V** → `chore: final verification tsc+vitest+lint+zero-inline-styles`
+
+**Regra:** `tsc --noEmit + vitest run` após cada commit. CI monitorado via GitHub API.
+
+### Estado de Commit Atual (para retomada)
+
+**HEAD está 7 commits à frente do origin/main** com:
+
+1. FT-17 (HTML Report)
+2. FT-18 (Coverage Gap)
+3. FT-19 (Flakiness Dashboard)
+4. FT-20 (Defect Trend)
+5. Correção vazamento de stubs
+6. Refatoração pipeline-health.ts (buildHtmlPage + buildCss + theme toggle + footer)
+7. Testes pipeline-health (layout assertions + PBT + integration)
+
+**Próximo commit (Fase 0):** cria `shared/styles.ts` com infraestrutura CSS centralizada.
+**Importante:** `pipeline-health.test.ts` tem asserts de layout do HTML atual (com classes). Quando Fase 1 substituir `style="..."` por `class="..."`, estes asserts PRECISAM ser atualizados — já estão mapeados em CSS-10 a CSS-14.
 
 ---

@@ -2,6 +2,16 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { generatePrReport } from '../pr-report-core.js';
 import type { FlatTest } from '../result_parser.js';
 
+vi.mock('fs', async (importOriginal) => {
+    const actual = await importOriginal<typeof import('node:fs')>();
+    return {
+        ...actual,
+        default: { ...actual, mkdirSync: vi.fn(), writeFileSync: vi.fn() },
+        mkdirSync: vi.fn(),
+        writeFileSync: vi.fn(),
+    };
+});
+
 const mockMetrics = vi.hoisted(() => ({
     loadMetrics: vi.fn(),
     saveParseResult: vi.fn(),
