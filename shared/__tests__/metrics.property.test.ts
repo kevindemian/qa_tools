@@ -135,9 +135,10 @@ describe('calculateFlakyRate — property-based', () => {
 
                     // Create runs where each test alternates pass/fail across runs
                     for (let r = 0; r < numRuns; r++) {
+                        const state: 'passed' | 'failed' = r % 2 === 0 ? 'passed' : 'failed';
                         const tests = testNames.map((name) => ({
                             title: name,
-                            state: (r % 2 === 0 ? 'passed' : 'failed') as 'passed' | 'failed',
+                            state,
                             duration: 100,
                         }));
                         runs.push({
@@ -173,9 +174,10 @@ describe('calculateFlakyRate — property-based', () => {
                         // Create runs: sharedNames appear in all runs
                         const runs: MetricsRun[] = [];
                         for (let r = 0; r < numRuns; r++) {
+                            const s: 'passed' | 'failed' = r % 2 === 0 ? 'passed' : 'failed';
                             const tests = sharedNames.map((name) => ({
                                 title: name,
-                                state: (r % 2 === 0 ? 'passed' : 'failed') as 'passed' | 'failed',
+                                state: s,
                                 duration: 100,
                             }));
                             runs.push({

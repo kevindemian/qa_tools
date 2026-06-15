@@ -208,15 +208,9 @@ export function calculateFlakyRate(store: MetricsStore, minRuns = 2): number {
     const entries = calculateFlakiness(store, minRuns);
     if (entries.length === 0) return 0;
     const flakyCount = entries.filter((e) => e.rate > 0).length;
-    const testMap = new Map<string, boolean>();
-    for (const run of store.runs) {
-        for (const t of run.tests) {
-            if (!testMap.has(t.title)) testMap.set(t.title, true);
-        }
-    }
-    const totalTests = testMap.size;
-    if (totalTests === 0) return 0;
-    return (flakyCount / totalTests) * 100;
+    const totalConsidered = entries.length;
+    if (totalConsidered === 0) return 0;
+    return (flakyCount / totalConsidered) * 100;
 }
 
 export function saveCoverageSnapshot(snapshot: CoverageSnapshot, config?: Config): void {

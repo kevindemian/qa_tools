@@ -310,12 +310,13 @@ export function calculateHealthScore(
 ): HealthScoreResult {
     const config = pickConfig(options);
     const actual = computeActualMetrics(metricsStore, config);
+    const runsEmpty = metricsStore.runs.length === 0;
 
-    const scPassRate = scorePassRate(actual.passRate, config);
-    const scFlakyRate = scoreFlakyRate(actual.flakyPct, config);
+    const scPassRate = runsEmpty ? 0 : scorePassRate(actual.passRate, config);
+    const scFlakyRate = runsEmpty ? 0 : scoreFlakyRate(actual.flakyPct, config);
     const scCoverage = scoreCoverage(actual.coverage, config);
-    const scExecutionRate = scoreExecutionRate(actual.executionRate, config);
-    const scSuiteSpeed = scoreSuiteSpeed(actual.suiteSpeed, config);
+    const scExecutionRate = runsEmpty ? 0 : scoreExecutionRate(actual.executionRate, config);
+    const scSuiteSpeed = runsEmpty ? 0 : scoreSuiteSpeed(actual.suiteSpeed, config);
 
     const totalWeight =
         config.weights.passRate +

@@ -12,7 +12,7 @@
  * Pure function — no filesystem dependencies.
  */
 import { describe, expect, it } from 'vitest';
-import type { MetricsStore } from '../../metrics.js';
+import type { MetricsRun, MetricsStore } from '../../metrics.js';
 
 /** Helper to create a MetricsStore with controllable data. */
 function createStore(
@@ -24,6 +24,7 @@ function createStore(
         skipped: number;
         flakyTests: number;
         duration: number;
+        coveragePct: number;
     }> = {},
 ): MetricsStore {
     const {
@@ -34,11 +35,12 @@ function createStore(
         skipped = 2,
         flakyTests = 1,
         duration = 5000,
+        coveragePct,
     } = overrides;
     const testsPerRun = Math.floor(totalTests / totalRuns);
     const flakyPerRun = Math.min(flakyTests, testsPerRun);
 
-    const runs = Array.from({ length: totalRuns }, (_, i) => ({
+    const runs: MetricsRun[] = Array.from({ length: totalRuns }, (_, i) => ({
         timestamp: new Date(Date.now() + i * 60000).toISOString(),
         project: 'test-project',
         total: testsPerRun,
@@ -46,14 +48,25 @@ function createStore(
         failed: Math.floor((failed / totalTests) * testsPerRun),
         skipped: Math.floor((skipped / totalTests) * testsPerRun),
         duration,
-        tests: Array.from({ length: testsPerRun }, (_, j) => ({
-            title: `test-${j}`,
-            state: (j < flakyPerRun && i % 2 === 0 ? 'failed' : 'passed') as 'passed' | 'failed',
-            duration: Math.floor(duration / testsPerRun),
-        })),
+        tests: Array.from({ length: testsPerRun }, (_, j) => {
+            const state: 'passed' | 'failed' = j < flakyPerRun && i % 2 === 0 ? 'failed' : 'passed';
+            return { title: `test-${j}`, state, duration: Math.floor(duration / testsPerRun) };
+        }),
     }));
 
-    return { runs };
+    const store: MetricsStore = { runs };
+    if (coveragePct !== undefined) {
+        store.coverageHistory = [
+            {
+                timestamp: new Date().toISOString(),
+                project: 'test-project',
+                totalIssues: 100,
+                mappedIssues: Math.round((coveragePct / 100) * 100),
+                coveragePct,
+            },
+        ];
+    }
+    return store;
 }
 
 describe('Integration: Health Score', () => {
@@ -69,17 +82,19 @@ describe('Integration: Health Score', () => {
 
         it('assigns grade based on score', async () => {
             const { calculateHealthScore } = await import('../../health-score.js');
+            // excellent: near-perfect pass rate + good coverage
             const excellent = calculateHealthScore(
-                createStore({ passed: 99, failed: 1, skipped: 0, flakyTests: 0 }),
+                createStore({ passed: 99, failed: 1, skipped: 0, flakyTests: 0, coveragePct: 80 }),
                 {},
             );
-            const critical = calculateHealthScore(
-                createStore({ passed: 50, failed: 50, skipped: 0, flakyTests: 0 }),
+            // poor: balanced pass/fail + good coverage
+            const poor = calculateHealthScore(
+                createStore({ passed: 50, failed: 50, skipped: 0, flakyTests: 0, coveragePct: 80 }),
                 {},
             );
 
             expect(excellent.grade).toBe('excellent');
-            expect(critical.grade).toBe('poor');
+            expect(poor.grade).toBe('poor');
         });
     });
 
@@ -126,15 +141,18 @@ describe('Integration: Health Score', () => {
     });
 
     describe('FT-09d: qualityGate flag', () => {
-        it('returns "pass" when score >= 70', async () => {
+        it('returns "pass" when score >= 70 and all thresholds satisfied', async () => {
             const { calculateHealthScore } = await import('../../health-score.js');
-            const result = calculateHealthScore(createStore({ passed: 95, failed: 5, skipped: 0, flakyTests: 0 }), {});
+            const result = calculateHealthScore(
+                createStore({ passed: 95, failed: 5, skipped: 0, flakyTests: 0, coveragePct: 80 }),
+                {},
+            );
             expect(result.qualityGate).toBe('pass');
         });
 
-        it('returns "fail" when score < 70', async () => {
+        it('returns "fail" when coverage is below threshold', async () => {
             const { calculateHealthScore } = await import('../../health-score.js');
-            const result = calculateHealthScore(createStore({ passed: 50, failed: 50, skipped: 0 }), {});
+            const result = calculateHealthScore(createStore({ passed: 95, failed: 5, skipped: 0 }), {});
             expect(result.qualityGate).toBe('fail');
         });
     });

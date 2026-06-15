@@ -77,8 +77,8 @@ describe('Integration: Session State', () => {
             stateModule.save({ count: 1 }, config);
 
             const result = stateModule.update((s) => {
-                (s as Record<string, unknown>)['count'] = 5;
-                (s as Record<string, unknown>)['newKey'] = 'newValue';
+                s['count'] = 5;
+                s['newKey'] = 'newValue';
             }, config);
 
             expect(result['count']).toBe(5);
@@ -95,11 +95,11 @@ describe('Integration: Session State', () => {
 
             const original = stateModule.load(config);
             const updated = stateModule.update((s) => {
-                (s as Record<string, unknown>)['a'] = 99;
+                s['a'] = 99;
             }, config);
 
             expect(updated['a']).toBe(99);
-            expect((original as Record<string, unknown>)['a']).toBe(1);
+            expect(original['a']).toBe(1);
         });
     });
 

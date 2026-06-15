@@ -56,7 +56,7 @@ const BranchEntryArb = fc
         sha: fc.string({ minLength: 8, maxLength: 64 }).filter((s) => s !== '__proto__'),
         timestamp: fc.nat({ max: Date.now() + 86400000 }),
     })
-    .map((r) => r as BranchEntry);
+    .map((r) => r);
 
 /* ──────────────────────────────────────────────────────────────
  * Properties — Store
