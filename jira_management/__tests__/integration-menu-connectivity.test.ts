@@ -111,18 +111,27 @@ vi.mock('../../shared/dashboard-menu.js', () => ({
     showDashboardMenu: vi.fn(),
 }));
 
+async function getCommandsIndex(): Promise<{ getHandler: (id: string) => unknown }> {
+    return import('../commands/index.js');
+}
+
 describe('jira_management — getHandler registry', () => {
+    let getHandler: (id: string) => unknown;
+
+    beforeAll(async () => {
+        const mod = await getCommandsIndex();
+        getHandler = mod.getHandler;
+    });
+
     beforeEach(() => vi.clearAllMocks());
 
-    it('returns handler for case01', async () => {
-        const { getHandler } = await import('../commands/index.js');
+    it('returns handler for case01', () => {
         const handler = getHandler('1');
         expect(handler).toBeDefined();
         expect(typeof handler).toBe('function');
     });
 
-    it('returns handler for all 27 cases', async () => {
-        const { getHandler } = await import('../commands/index.js');
+    it('returns handler for all 27 cases', () => {
         const cases = [
             '1',
             '2',
@@ -158,20 +167,17 @@ describe('jira_management — getHandler registry', () => {
         }
     });
 
-    it('returns handler for caseD (dashboards)', async () => {
-        const { getHandler } = await import('../commands/index.js');
+    it('returns handler for caseD (dashboards)', () => {
         const handler = getHandler('d');
         expect(handler).toBeDefined();
     });
 
-    it('returns null for unknown case', async () => {
-        const { getHandler } = await import('../commands/index.js');
+    it('returns null for unknown case', () => {
         const handler = getHandler('99');
         expect(handler).toBeNull();
     });
 
     it('each handler is callable without throwing', async () => {
-        const { getHandler } = await import('../commands/index.js');
         const cases = ['3', '5', '7', '9', '11', '13', '25', '26', '27'];
         for (const c of cases) {
             const handler = getHandler(c);
@@ -184,17 +190,22 @@ describe('jira_management — getHandler registry', () => {
 });
 
 describe('jira_management — case handlers are connected', () => {
+    let getHandler: (id: string) => unknown;
+
+    beforeAll(async () => {
+        const mod = await getCommandsIndex();
+        getHandler = mod.getHandler;
+    });
+
     beforeEach(() => vi.clearAllMocks());
 
-    it('case01 is registered and returns a handler', async () => {
-        const { getHandler } = await import('../commands/index.js');
+    it('case01 is registered and returns a handler', () => {
         const handler = getHandler('1');
         expect(handler).toBeDefined();
         expect(typeof handler).toBe('function');
     });
 
     it('case09 updates project name', async () => {
-        const { getHandler } = await import('../commands/index.js');
         const handler = getHandler('9');
         expect(handler).not.toBeNull();
         const ctx = createMockContext();
@@ -205,7 +216,6 @@ describe('jira_management — case handlers are connected', () => {
     });
 
     it('case25 loads metrics and builds matrix', async () => {
-        const { getHandler } = await import('../commands/index.js');
         const handler = getHandler('25');
         expect(handler).not.toBeNull();
         const ctx = createMockContext();
@@ -216,7 +226,6 @@ describe('jira_management — case handlers are connected', () => {
     });
 
     it('case26 calculates release score', async () => {
-        const { getHandler } = await import('../commands/index.js');
         const handler = getHandler('26');
         expect(handler).not.toBeNull();
         const ctx = createMockContext();
@@ -227,7 +236,6 @@ describe('jira_management — case handlers are connected', () => {
     });
 
     it('case27 analyzes coverage gaps', async () => {
-        const { getHandler } = await import('../commands/index.js');
         const handler = getHandler('27');
         expect(handler).not.toBeNull();
         const ctx = createMockContext();
