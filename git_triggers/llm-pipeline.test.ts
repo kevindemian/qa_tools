@@ -12,6 +12,10 @@ import type {
 } from '../shared/prompt.js';
 import { offerPipelineFailureAnalysis } from './llm-pipeline.js';
 
+vi.mock('../shared/temp-dir.js', () => ({
+    writeReport: vi.fn(() => '/tmp/report.html'),
+}));
+
 vi.mock('../shared/failure-analysis', () => ({
     analyzeFailuresWithReport:
         vi.fn<(...args: Parameters<typeof AnalyzeFailuresFn>) => ReturnType<typeof AnalyzeFailuresFn>>(),
