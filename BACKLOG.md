@@ -2488,4 +2488,13 @@ export function buildAllStyles(): string {
 **Próximo commit (Fase 0):** cria `shared/styles.ts` com infraestrutura CSS centralizada.
 **Importante:** `pipeline-health.test.ts` tem asserts de layout do HTML atual (com classes). Quando Fase 1 substituir `style="..."` por `class="..."`, estes asserts PRECISAM ser atualizados — já estão mapeados em CSS-10 a CSS-14.
 
+## 🚧 CI Pipeline — Conflito de Artefato no Matrix (2026-06-15)
+
+**Data:** 2026-06-15
+**Sintoma:** Job `test (22)` falha com `##[error]Failed to CreateArtifact: (409) Conflict` — duas jobs da matrix `[22, 24]` tentam `upload-artifact` com mesmo nome `pr-report-html`.
+**Evidência:** Run `27581948837` (SHA `9ff6c45`). Job `test (24)` sobe artefato primeiro e passa; `test (22)` recebe 409 e falha. Quality Gate também falha por dependência.
+**Causa raiz:** Workflow CI (`.github/workflows/ci.yml`) — step `upload-artifact` sem nome único por variante de matrix.
+**Correção proposta:** Nome único (`pr-report-html-${{ matrix.node-version }}`) ou upload condicionado a um job (`if: matrix.node-version == 24`).
+**Nota:** Todos os 325 testes passaram, npm audit passou, cobertura OK. Falha é do pipeline CI, não do código.
+
 ---
