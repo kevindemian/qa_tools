@@ -141,7 +141,8 @@ function computeDiffComparison(current: FlatTest[], previous: FlatTest[]): DiffC
 
 function buildSummaryTable(result: ParseResult): string {
     const { stats } = result;
-    const passRate = stats.total > 0 ? ((stats.passed / stats.total) * 100).toFixed(1) : '0.0';
+    const executed = stats.passed + stats.failed;
+    const passRate = executed > 0 ? ((stats.passed / executed) * 100).toFixed(1) : '0.0';
     const durationSec = (stats.duration / 1000).toFixed(1);
 
     return [
@@ -389,7 +390,8 @@ export async function main(): Promise<void> {
 
     // 6. Generate full HTML report with health score, trends, diff, and flakiness
 
-    const passRate = result.stats.total > 0 ? (result.stats.passed / result.stats.total) * 100 : 0;
+    const executed = result.stats.passed + result.stats.failed;
+    const passRate = executed > 0 ? (result.stats.passed / executed) * 100 : 0;
 
     // Build flakiness map for the HTML report
     const flakyEntries = calculateFlakiness(store, 2);

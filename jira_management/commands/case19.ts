@@ -15,7 +15,7 @@ function _showRunHistory(store: ReturnType<typeof loadMetrics>): void {
         Total: r.total,
         Pass: r.passed,
         Fail: r.failed,
-        Rate: r.total > 0 ? `${Math.round((r.passed / r.total) * 100)}%` : '0%',
+        Rate: r.passed + r.failed > 0 ? `${Math.round((r.passed / (r.passed + r.failed)) * 100)}%` : '0%',
     }));
     tableView(rows, ['Data', 'Projeto', 'Total', 'Pass', 'Fail', 'Rate']);
 }

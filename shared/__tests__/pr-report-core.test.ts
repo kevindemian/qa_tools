@@ -4,10 +4,18 @@ import type { FlatTest } from '../result_parser.js';
 
 vi.mock('fs', async (importOriginal) => {
     const actual = await importOriginal<typeof import('node:fs')>();
+    const mockWriteFileSync = vi.fn((filePath: string, data: string, options?: import('node:fs').WriteFileOptions) => {
+        const p = String(filePath);
+        if (p === 'reports/pr-report.html' || p.endsWith('/pr-report.html')) {
+            return undefined;
+        }
+        return actual.writeFileSync(filePath, data, options);
+    });
     return {
         ...actual,
-        default: { ...actual, mkdirSync: vi.fn() },
+        default: { ...actual, mkdirSync: vi.fn(), writeFileSync: mockWriteFileSync },
         mkdirSync: vi.fn(),
+        writeFileSync: mockWriteFileSync,
     };
 });
 
@@ -121,7 +129,7 @@ describe('generatePrReport', () => {
         });
 
         expect(result.healthScore).toEqual(defaultHealthScore);
-        expect(result.passRate).toBe(80);
+        expect(result.passRate).toBeCloseTo(88.9, 1);
     });
 
     it('generates HTML report at default path when no htmlOutputPath given', async () => {
@@ -372,7 +380,8 @@ describe('generatePrReport', () => {
 
             const summaryContent = fs.readFileSync(summaryPath, 'utf8');
             expect(summaryContent).toContain('QA Tools — PR Report');
-            expect(summaryContent).toContain('8 passed');
+            expect(summaryContent).toContain('| ✅ Passed | ❌ Failed | ⏭ Skipped |');
+            expect(summaryContent).toContain('| 8 | 1 | 1 | 10 |');
         } finally {
             delete process.env['GITHUB_STEP_SUMMARY'];
             fs.unlinkSync(summaryPath);

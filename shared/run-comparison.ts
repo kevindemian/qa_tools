@@ -9,7 +9,8 @@ import { rootLogger } from './logger.js';
 
 function runSummary(run: MetricsRun): string {
     const date = run.timestamp.slice(0, 10);
-    const rate = run.total > 0 ? Math.round((run.passed / run.total) * 100) : 0;
+    const executed = run.passed + run.failed;
+    const rate = executed > 0 ? Math.round((run.passed / executed) * 100) : 0;
     return [
         `Date: ${date}`,
         `Project: ${run.project}`,
