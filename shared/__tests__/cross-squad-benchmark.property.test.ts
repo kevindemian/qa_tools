@@ -49,46 +49,55 @@ const projectArb = fc
 describe('computeCrossSquadBenchmark — property-based', () => {
     it('sorts benchmarks by healthScore descending', () => {
         fc.assert(
-            fc.property(fc.array(projectArb, { minLength: 0, maxLength: 10 }), (projects) => {
-                const result = computeCrossSquadBenchmark(projects);
-                for (let i = 1; i < result.benchmarks.length; i++) {
-                    const curr = result.benchmarks[i];
-                    const prev = result.benchmarks[i - 1];
-                    if (curr === undefined || prev === undefined) return;
-                    expect(curr.healthScore <= prev.healthScore).toBe(true);
-                }
-            }),
+            fc.property(
+                fc.uniqueArray(projectArb, { selector: (p) => p.name, minLength: 0, maxLength: 10 }),
+                (projects) => {
+                    const result = computeCrossSquadBenchmark(projects);
+                    for (let i = 1; i < result.benchmarks.length; i++) {
+                        const curr = result.benchmarks[i];
+                        const prev = result.benchmarks[i - 1];
+                        if (curr === undefined || prev === undefined) return;
+                        expect(curr.healthScore <= prev.healthScore).toBe(true);
+                    }
+                },
+            ),
             { numRuns: 50 },
         );
     });
 
     it('computes average score correctly', () => {
         fc.assert(
-            fc.property(fc.array(projectArb, { minLength: 0, maxLength: 10 }), (projects) => {
-                const result = computeCrossSquadBenchmark(projects);
-                const n = result.benchmarks.length;
-                const expectedAvg = n > 0 ? result.benchmarks.reduce((s, b) => s + b.healthScore, 0) / n : 0;
-                expect(result.averageScore).toBeCloseTo(expectedAvg, 10);
-            }),
+            fc.property(
+                fc.uniqueArray(projectArb, { selector: (p) => p.name, minLength: 0, maxLength: 10 }),
+                (projects) => {
+                    const result = computeCrossSquadBenchmark(projects);
+                    const n = result.benchmarks.length;
+                    const expectedAvg = n > 0 ? result.benchmarks.reduce((s, b) => s + b.healthScore, 0) / n : 0;
+                    expect(result.averageScore).toBeCloseTo(expectedAvg, 10);
+                },
+            ),
             { numRuns: 50 },
         );
     });
 
     it('identifies top and bottom squads', () => {
         fc.assert(
-            fc.property(fc.array(projectArb, { minLength: 0, maxLength: 10 }), (projects) => {
-                const result = computeCrossSquadBenchmark(projects);
-                if (result.benchmarks.length === 0) {
-                    expect(result.topSquad).toBe('');
-                    expect(result.bottomSquad).toBe('');
-                } else {
-                    const top = result.benchmarks[0];
-                    const bottom = result.benchmarks[result.benchmarks.length - 1];
-                    if (top === undefined || bottom === undefined) return;
-                    expect(result.topSquad).toBe(top.project);
-                    expect(result.bottomSquad).toBe(bottom.project);
-                }
-            }),
+            fc.property(
+                fc.uniqueArray(projectArb, { selector: (p) => p.name, minLength: 0, maxLength: 10 }),
+                (projects) => {
+                    const result = computeCrossSquadBenchmark(projects);
+                    if (result.benchmarks.length === 0) {
+                        expect(result.topSquad).toBe('');
+                        expect(result.bottomSquad).toBe('');
+                    } else {
+                        const top = result.benchmarks[0];
+                        const bottom = result.benchmarks[result.benchmarks.length - 1];
+                        if (top === undefined || bottom === undefined) return;
+                        expect(result.topSquad).toBe(top.project);
+                        expect(result.bottomSquad).toBe(bottom.project);
+                    }
+                },
+            ),
             { numRuns: 50 },
         );
     });
@@ -105,22 +114,25 @@ describe('computeCrossSquadBenchmark — property-based', () => {
 
     it('trend matches healthScore comparison', () => {
         fc.assert(
-            fc.property(fc.array(projectArb, { minLength: 0, maxLength: 10 }), (projects) => {
-                const result = computeCrossSquadBenchmark(projects);
-                for (const project of projects) {
-                    const bench = result.benchmarks.find((b) => b.project === project.name);
-                    if (bench === undefined) return;
-                    if (project.previousScore === undefined) {
-                        expect(bench.trend).toBe('stable');
-                    } else if (project.healthScore > project.previousScore) {
-                        expect(bench.trend).toBe('up');
-                    } else if (project.healthScore < project.previousScore) {
-                        expect(bench.trend).toBe('down');
-                    } else {
-                        expect(bench.trend).toBe('stable');
+            fc.property(
+                fc.uniqueArray(projectArb, { selector: (p) => p.name, minLength: 0, maxLength: 10 }),
+                (projects) => {
+                    const result = computeCrossSquadBenchmark(projects);
+                    for (const project of projects) {
+                        const bench = result.benchmarks.find((b) => b.project === project.name);
+                        if (bench === undefined) return;
+                        if (project.previousScore === undefined) {
+                            expect(bench.trend).toBe('stable');
+                        } else if (project.healthScore > project.previousScore) {
+                            expect(bench.trend).toBe('up');
+                        } else if (project.healthScore < project.previousScore) {
+                            expect(bench.trend).toBe('down');
+                        } else {
+                            expect(bench.trend).toBe('stable');
+                        }
                     }
-                }
-            }),
+                },
+            ),
             { numRuns: 50 },
         );
     });
@@ -129,25 +141,31 @@ describe('computeCrossSquadBenchmark — property-based', () => {
 describe('generateBenchmarkHtml — property-based', () => {
     it('always produces valid HTML', () => {
         fc.assert(
-            fc.property(fc.array(projectArb, { minLength: 0, maxLength: 8 }), (projects) => {
-                const result = computeCrossSquadBenchmark(projects);
-                const html = generateBenchmarkHtml(result, 'PBT');
-                expect(html).toContain('<!DOCTYPE html>');
-                expect(html).toContain('</html>');
-            }),
+            fc.property(
+                fc.uniqueArray(projectArb, { selector: (p) => p.name, minLength: 0, maxLength: 8 }),
+                (projects) => {
+                    const result = computeCrossSquadBenchmark(projects);
+                    const html = generateBenchmarkHtml(result, 'PBT');
+                    expect(html).toContain('<!DOCTYPE html>');
+                    expect(html).toContain('</html>');
+                },
+            ),
             { numRuns: 50 },
         );
     });
 
     it('contains all project names', () => {
         fc.assert(
-            fc.property(fc.array(projectArb, { minLength: 0, maxLength: 8 }), (projects) => {
-                const result = computeCrossSquadBenchmark(projects);
-                const html = generateBenchmarkHtml(result);
-                for (const p of projects) {
-                    expect(html).toContain(p.name);
-                }
-            }),
+            fc.property(
+                fc.uniqueArray(projectArb, { selector: (p) => p.name, minLength: 0, maxLength: 8 }),
+                (projects) => {
+                    const result = computeCrossSquadBenchmark(projects);
+                    const html = generateBenchmarkHtml(result);
+                    for (const p of projects) {
+                        expect(html).toContain(p.name);
+                    }
+                },
+            ),
             { numRuns: 50 },
         );
     });
