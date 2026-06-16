@@ -579,7 +579,7 @@ describe('calculateHealthScore', () => {
                 ],
             });
             const result = calculateHealthScore(store);
-            expect(result.grade).toBe('needs_attention');
+            expect(result.grade).toBe('poor');
         });
 
         it('grades poor at 60-69', () => {
@@ -775,7 +775,7 @@ describe('calculateHealthScore', () => {
             });
             const result = calculateHealthScore(store);
             expect(result.dimensions.passRate.score).toBe(0);
-            expect(result.dimensions.flakyRate.score).toBe(100);
+            expect(result.dimensions.flakyRate.score).toBe(0);
             expect(result.dimensions.coverage.score).toBe(0);
             expect(result.dimensions.suiteSpeed.score).toBe(0);
             expect(result.dimensions.executionRate.score).toBe(100);

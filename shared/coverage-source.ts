@@ -11,6 +11,7 @@
 
 import fs from 'node:fs';
 import path from 'node:path';
+import { rootLogger } from './logger.js';
 
 export type CoverageSourceType = 'istanbul' | 'ctrf' | 'none';
 
@@ -60,7 +61,8 @@ export function readIstanbulCoverage(coveragePath?: string): CoverageResult | un
             source: 'istanbul',
             detail: `${metric} ${pct.toFixed(1)}%` + (lines ? ` (${lines.covered}/${lines.total})` : ''),
         };
-    } catch {
+    } catch (err) {
+        rootLogger.warn(`Failed to read Istanbul coverage: ${err instanceof Error ? err.message : String(err)}`);
         return undefined;
     }
 }

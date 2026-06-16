@@ -299,7 +299,7 @@ function writeToJobSummary(sections: string[], htmlArtifactUrl?: string): void {
         }
         summaryLines.push('', `_${new Date().toISOString()}_`, '');
 
-        fs.appendFileSync(stepSummaryPath, summaryLines.join('\n'), 'utf8');
+        fs.writeFileSync(stepSummaryPath, summaryLines.join('\n'), 'utf8');
         rootLogger.info('Job summary written to $GITHUB_STEP_SUMMARY');
     } catch (err) {
         rootLogger.warn(`Failed to write job summary: ${err instanceof Error ? err.message : String(err)}`);
