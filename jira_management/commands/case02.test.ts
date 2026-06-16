@@ -4,15 +4,24 @@ vi.mock('../../shared/logger');
 import case02 from './case02.js';
 import { makeMockCommandContext } from '../../shared/test-utils.js';
 
-const mockJiraResource = {
-    getProjectId: vi.fn().mockResolvedValue('123'),
-    getProjectVersions: vi.fn().mockResolvedValue([]),
-};
+function createMockJiraResource() {
+    return {
+        getProjectId: vi.fn().mockResolvedValue('123'),
+        getProjectVersions: vi.fn().mockResolvedValue([]),
+    };
+}
 
-const mockContext = makeMockCommandContext({ jiraResource: mockJiraResource });
+function createContext(jiraResource?: ReturnType<typeof createMockJiraResource>) {
+    return makeMockCommandContext(jiraResource ? { jiraResource } : {});
+}
+
+let mockJiraResource: ReturnType<typeof createMockJiraResource>;
+let mockContext: ReturnType<typeof makeMockCommandContext>;
 
 beforeEach(() => {
     vi.clearAllMocks();
+    mockJiraResource = createMockJiraResource();
+    mockContext = createContext(mockJiraResource);
 });
 
 describe('case02 — list versions', () => {
@@ -21,7 +30,7 @@ describe('case02 — list versions', () => {
         expect(typeof case02.handler).toBe('function');
     });
 
-    it('executes without error with basic context', async () => {
+    it('runs full version list flow with mocked dependencies without throwing', async () => {
         const result = await case02.handler(mockContext);
         expect([undefined, true, false]).toContain(result);
     });
@@ -51,7 +60,7 @@ describe('case02 — list versions', () => {
         expect([undefined, true, false]).toContain(result);
     });
 
-    it('handles catch error block (lines 27-32)', async () => {
+    it('catches API failure and returns undefined without throwing', async () => {
         mockJiraResource.getProjectId.mockRejectedValueOnce(new Error('API failure'));
         const result = await case02.handler(mockContext);
         expect([undefined, true, false]).toContain(result);

@@ -3,6 +3,17 @@ import { info, error, divider, printError } from '../../shared/prompt.js';
 import { rootLogger } from '../../shared/logger.js';
 import type { CommandContext } from './context.js';
 
+function getErrorStatus(err: unknown): number | undefined {
+    if (err != null && typeof err === 'object' && 'response' in err) {
+        const resp = err.response;
+        if (resp != null && typeof resp === 'object' && 'status' in resp) {
+            const st = resp.status;
+            if (typeof st === 'number') return st;
+        }
+    }
+    return undefined;
+}
+
 async function handler(c: CommandContext): Promise<boolean | void> {
     try {
         const projectId = await c.jiraResource.getProjectId(c.ctx.project_name);
@@ -27,7 +38,7 @@ async function handler(c: CommandContext): Promise<boolean | void> {
         printError('Erro ao listar versões', err);
         rootLogger.error('Erro ao listar versões', {
             project: c.ctx.project_name,
-            status: (err as { response?: { status?: number } }).response?.status,
+            status: getErrorStatus(err),
         });
         c.pushHistory('listar-versoes', 'erro', 'error');
     }
