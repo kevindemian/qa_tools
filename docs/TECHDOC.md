@@ -676,6 +676,7 @@ import { globSync } from 'glob'; // file globbing
 | `store.ts`            | SHA-keyed git-backed report cache                     | `Store` class                                                                     |
 | `store-backend.ts`    | Git storage backend                                   | `StoreBackend` class                                                              |
 | `metrics.ts`          | Metrics collection & persistence                      | `loadMetrics()`, `saveMetrics()`                                                  |
+| `test-impact.ts`      | Three-tier test impact analysis                       | `analyzeTestImpact()`, `generateTestSelectionJson()`                              |
 | `health-score.ts`     | Health score calculator                               | `calculateHealthScore()`                                                          |
 | `validation.ts`       | Zod validation wrapper                                | `validate()`, `validateOrThrow()`                                                 |
 | `palette.ts`          | Chalk abstraction (color palette)                     | `palette` object                                                                  |
