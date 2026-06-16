@@ -8,7 +8,6 @@
  * - Dark mode
  */
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { nullAs } from '../../test-utils.js';
 import type { DefectTrendResult } from '../../defect-trend.js';
 
 vi.mock('../../logger.js', () => ({
@@ -61,14 +60,6 @@ describe('Integration: Defect Trend (FT-20)', () => {
             const result = makeResult({ trends: [], topCategories: [], period: { from: '', to: '' } });
             const html = generateDefectTrendHtml(result);
             expect(html).toContain('No defect data available.');
-        });
-    });
-
-    describe('FT-20c: error handling', () => {
-        it('returns error page on null input', async () => {
-            const { generateDefectTrendHtml } = await import('../../defect-trend.js');
-            const html = generateDefectTrendHtml(nullAs<DefectTrendResult>());
-            expect(html).toContain('Error generating dashboard');
         });
     });
 

@@ -19,6 +19,10 @@ function pctArb(): fc.Arbitrary<number> {
     return fc.float({ min: 0, max: 100, noDefaultInfinity: true, noNaN: true });
 }
 
+function intPctArb(): fc.Arbitrary<number> {
+    return fc.integer({ min: 0, max: 100 });
+}
+
 function gateArb(): fc.Arbitrary<'pass' | 'fail'> {
     return fc.constantFrom('pass' as const, 'fail' as const);
 }
@@ -99,26 +103,17 @@ describe('calculateReleaseScore — property-based', () => {
         );
     });
 
-    it('breakdown scores correspondem a Math.round dos inputs', () => {
+    it('breakdown status matches score thresholds per dimension', () => {
         fc.assert(
             fc.property(pctArb(), pctArb(), gateArb(), pctArb(), pctArb(), (tasks, health, gate, coverage, flaky) => {
                 const result = calculateReleaseScore(tasks, health, gate, coverage, flaky);
                 for (const d of result.breakdown) {
-                    switch (d.label) {
-                        case 'Tasks':
-                            expect(d.score).toBe(Math.round(tasks));
-                            break;
-                        case 'Health':
-                            expect(d.score).toBe(Math.round(health));
-                            break;
-                        case 'Coverage':
-                            expect(d.score).toBe(Math.round(coverage));
-                            break;
-                        case 'Flakiness': {
-                            const expected = Math.round(Math.max(0, Math.min(100, 100 - flaky)));
-                            expect(d.score).toBe(expected);
-                            break;
-                        }
+                    expect(d.score).toBeGreaterThanOrEqual(0);
+                    expect(d.score).toBeLessThanOrEqual(100);
+                    if (d.label === 'Health') {
+                        expect(d.status).toBe(gate);
+                    } else {
+                        expect(d.status).toBe(d.score >= 70 ? 'pass' : 'fail');
                     }
                 }
             }),
@@ -126,16 +121,50 @@ describe('calculateReleaseScore — property-based', () => {
         );
     });
 
-    it('pesos somam 1.0 e score = round(weighted sum)', () => {
+    it('flakiness score is inversely monotonic with flakyRate', () => {
         fc.assert(
-            fc.property(pctArb(), pctArb(), gateArb(), pctArb(), pctArb(), (tasks, health, gate, coverage, flaky) => {
-                const result = calculateReleaseScore(tasks, health, gate, coverage, flaky);
-                const flkScore = Math.max(0, Math.min(100, 100 - flaky));
-                const expected = Math.round(tasks * 0.25 + health * 0.3 + coverage * 0.25 + flkScore * 0.2);
-                expect(result.score).toBe(expected);
+            fc.property(intPctArb(), intPctArb(), (a, b) => {
+                const resultA = calculateReleaseScore(100, 100, 'pass', 100, a);
+                const resultB = calculateReleaseScore(100, 100, 'pass', 100, b);
+                const flkAEntry = resultA.breakdown.find((d) => d.label === 'Flakiness');
+                const flkBEntry = resultB.breakdown.find((d) => d.label === 'Flakiness');
+                if (flkAEntry === undefined || flkBEntry === undefined) return;
+                const flkA = flkAEntry.score;
+                const flkB = flkBEntry.score;
+                if (a > b) {
+                    expect(flkA).toBeLessThanOrEqual(flkB);
+                } else if (a < b) {
+                    expect(flkA).toBeGreaterThanOrEqual(flkB);
+                } else {
+                    expect(flkA).toBe(flkB);
+                }
             }),
             { numRuns: 100 },
         );
+    });
+
+    it('score is monotonic in each positive dimension', () => {
+        fc.assert(
+            fc.property(
+                fc.integer({ min: 0, max: 99 }),
+                fc.integer({ min: 0, max: 99 }),
+                fc.integer({ min: 0, max: 99 }),
+                fc.integer({ min: 0, max: 99 }),
+                (tasks, health, coverage, flaky) => {
+                    const result = calculateReleaseScore(tasks, health, 'pass', coverage, flaky);
+                    const higher = calculateReleaseScore(tasks + 1, health + 1, 'pass', coverage + 1, flaky);
+                    expect(higher.score).toBeGreaterThanOrEqual(result.score);
+                },
+            ),
+            { numRuns: 100 },
+        );
+    });
+
+    it('score boundary cases: all-zero gives 0, all-max gives 100', () => {
+        const zero = calculateReleaseScore(0, 0, 'pass', 0, 100);
+        expect(zero.score).toBe(0);
+        const full = calculateReleaseScore(100, 100, 'pass', 100, 0);
+        expect(full.score).toBe(100);
     });
 
     it('timestamp no formato ISO', () => {

@@ -131,7 +131,6 @@ describe('calculateHealthScore — quality gate unification', () => {
             ],
         };
         const result = calculateHealthScore(store);
-        // With good metrics, quality gate should pass
-        expect(result.qualityGate).toBeDefined();
+        expect(result.qualityGate).toMatch(/^(pass|fail)$/);
     });
 });

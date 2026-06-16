@@ -160,14 +160,15 @@ describe('Integration: Health Score', () => {
     describe('FT-09e: config overrides', () => {
         it('custom grade boundaries change grade assignment', async () => {
             const { calculateHealthScore } = await import('../../health-score.js');
-            // Default: excellent >= 90. With custom: excellent >= 95
-            const store = createStore({ passed: 95, failed: 5, skipped: 0 });
-            const customResult = calculateHealthScore(store, {
-                gradeBoundaries: { excellent: 95, good: 85, needs_attention: 70, poor: 60, critical: 0 },
+            const store = createStore({ passed: 95, failed: 5, skipped: 0, flakyTests: 0, coveragePct: 100 });
+            const low = calculateHealthScore(store, {
+                gradeBoundaries: { excellent: 0, good: 0, needs_attention: 0, poor: 0, critical: 0 },
             });
-
-            // Score should be ~95, but boundary is 95, so it might be "good" not "excellent"
-            expect(customResult.grade).toBeDefined();
+            const high = calculateHealthScore(store, {
+                gradeBoundaries: { excellent: 100, good: 100, needs_attention: 100, poor: 100, critical: 0 },
+            });
+            expect(low.grade).toBe('excellent');
+            expect(high.grade).toBe('critical');
         });
     });
 

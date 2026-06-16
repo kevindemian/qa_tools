@@ -234,6 +234,7 @@ Cada achado da Fase 2 gera itens de correção nesta fase. IDs serão alocados d
 | FF-02 | ✨ Publish target gh-pages para dashboard público   | P3         | 📌     |
 | FF-03 | ✨ Publish target slack para notificação automática | P3         | 📌     |
 | FF-04 | ✨ Multi-projeto: wizard gerencia N projetos        | P2         | 📌     |
+| FF-05 | 🔍 Log System Audit — robustez, eficiência, T14     | P1         | 📌     |
 
 ### Métricas Alvo
 
@@ -2487,6 +2488,49 @@ export function buildAllStyles(): string {
 
 **Próximo commit (Fase 0):** cria `shared/styles.ts` com infraestrutura CSS centralizada.
 **Importante:** `pipeline-health.test.ts` tem asserts de layout do HTML atual (com classes). Quando Fase 1 substituir `style="..."` por `class="..."`, estes asserts PRECISAM ser atualizados — já estão mapeados em CSS-10 a CSS-14.
+
+## 🔍 Log System Audit — Auditoria de Robustez e Eficiência do Sistema de Log
+
+**Data de registro:** 2026-06-16
+**Origem:** Decisão registrada em sessão de auditoria funcional — Dimensão 7 (Test Quality) vs auditoria separada.
+**Estratégia:** Auditoria separada da auditoria funcional corrente, a ser executada após conclusão do Grupo 3.
+**Regra absoluta:** zero workarounds, 100% teste para código novo/alterado.
+
+| Fase | Descrição                                                    | Itens | Status |
+| ---- | ------------------------------------------------------------ | ----- | ------ |
+| 1    | Auditar `Logger` class — error handling, masking, rotação    | LSA-1 | 📌     |
+| 2    | Corrigir T14 no logger — 3 ocorrências de `(err as Error)`   | LSA-2 | 📌     |
+| 3    | Auditar consumo — todos os catch blocks usam logger correto? | LSA-3 | 📌     |
+| 4    | Adicionar testes (unit + PBT) para o logger                  | LSA-4 | 📌     |
+| 5    | Validação: tsc + vitest + lint                               | LSA-5 | 📌     |
+
+### Fase 1 — Auditoria Logger Class
+
+| ID     | Item                                                                | Arquivo(s)         | Status |
+| ------ | ------------------------------------------------------------------- | ------------------ | ------ |
+| LSA-1a | 🔍 Error handling: catch blocks validam erro com `instanceof`?      | `shared/logger.ts` | 📌     |
+| LSA-1b | 🔍 `maskDeep` cobre todos os campos sensíveis (token, secret, key)? | `shared/logger.ts` | 📌     |
+| LSA-1c | 🔍 Rotação não corrompe logs?                                       | `shared/logger.ts` | 📌     |
+| LSA-1d | 🔍 File handles gerenciados corretamente?                           | `shared/logger.ts` | 📌     |
+| LSA-1e | 🔍 Level filtering funciona para todos os níveis?                   | `shared/logger.ts` | 📌     |
+
+### Fase 2 — Corrigir T14
+
+| ID     | Item                                                                | Arquivo(s)             | Status |
+| ------ | ------------------------------------------------------------------- | ---------------------- | ------ |
+| LSA-2a | 🐛 `_ensureDir` catch: `(err as Error).message` → `instanceof`      | `shared/logger.ts:90`  | 📌     |
+| LSA-2b | 🐛 `_rotateIfNeeded` catch: `(err as Error).message` → `instanceof` | `shared/logger.ts:109` | 📌     |
+| LSA-2c | 🐛 `_writeFile` catch: `(err as Error).message` → `instanceof`      | `shared/logger.ts:163` | 📌     |
+
+### Fase 3 — Auditoria de Consumo
+
+| ID     | Item                                                            | Arquivo(s) | Status |
+| ------ | --------------------------------------------------------------- | ---------- | ------ |
+| LSA-3a | 🔍 Todos os catch blocks da codebase usam `rootLogger.error()`? | todos      | 📌     |
+| LSA-3b | 🔍 Algum catch block tem `console.error` direto sem logger?     | todos      | 📌     |
+| LSA-3c | 🔍 Algum catch block engole erro silenciosamente?               | todos      | 📌     |
+
+---
 
 ## 🚧 CI Pipeline — Conflito de Artefato no Matrix (2026-06-15)
 

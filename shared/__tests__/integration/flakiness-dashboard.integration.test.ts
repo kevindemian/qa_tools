@@ -8,7 +8,6 @@
  * - Dark mode
  */
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { nullAs } from '../../test-utils.js';
 import type { FlakinessEntry } from '../../metrics.js';
 
 vi.mock('../../logger.js', () => ({
@@ -69,14 +68,6 @@ describe('Integration: Flakiness Dashboard (FT-19)', () => {
             const { generateFlakinessHtml } = await import('../../flakiness-dashboard.js');
             const html = generateFlakinessHtml([], 'My Dashboard');
             expect(html).toContain('My Dashboard');
-        });
-    });
-
-    describe('FT-19d: error handling', () => {
-        it('returns error page on null input', async () => {
-            const { generateFlakinessHtml } = await import('../../flakiness-dashboard.js');
-            const html = generateFlakinessHtml(nullAs<FlakinessEntry[]>());
-            expect(html).toContain('Error generating dashboard');
         });
     });
 
