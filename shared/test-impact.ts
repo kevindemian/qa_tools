@@ -4,8 +4,8 @@ import fs from 'fs';
 import path from 'path';
 import { z } from 'zod';
 import { rootLogger } from './logger.js';
-import { safeParseJson } from './safe-json.js';
-import type { TestImpactResult, ImpactedTest, FileTestMapping, TestSelectionJson } from './types.js';
+import { parseFileTestMappings } from './types/bugs.js';
+import type { TestImpactResult, ImpactedTest, TestSelectionJson } from './types.js';
 
 // ---- helpers ----
 
@@ -88,7 +88,7 @@ function explicitMapping(changedFiles: string[], mappingPath: string): ImpactedT
     try {
         if (!fs.existsSync(mappingPath)) return [];
         const content = fs.readFileSync(mappingPath, 'utf8');
-        const mappings = safeParseJson<FileTestMapping[]>(content, []);
+        const mappings = parseFileTestMappings(content);
         const impacted: ImpactedTest[] = [];
         for (const file of changedFiles) {
             for (const mapping of mappings) {

@@ -10,7 +10,10 @@ function _getGitDiff(range: string): string | null {
     try {
         return execFileSync('git', ['diff', '--name-only', range], { encoding: 'utf8' }).toString().trim();
     } catch (err: unknown) {
-        printError('Falha ao obter git diff', err);
+        printError(
+            'Não foi possível obter o git diff. Verifique se o repositório tem commits suficientes no branch atual ou forneça um range manual diferente.',
+            err,
+        );
         return null;
     }
 }

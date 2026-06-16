@@ -1,3 +1,4 @@
+import { z } from 'zod';
 import { LLMEnrichment } from './llm.js';
 import { HealthScoreGrade } from './common.js';
 
@@ -43,6 +44,26 @@ export interface FileTestMapping {
     testKeys: string[];
     testTitles: string[];
     testFiles: string[];
+}
+
+export const FileTestMappingSchema = z.object({
+    files: z.array(z.string()),
+    testKeys: z.array(z.string()),
+    testTitles: z.array(z.string()),
+    testFiles: z.array(z.string()),
+});
+
+export const FileTestMappingArraySchema = z.array(FileTestMappingSchema);
+
+/** Parse and validate a raw JSON string as an array of FileTestMapping.
+ *  Returns the parsed/validated array on success, or the empty fallback on failure. */
+export function parseFileTestMappings(raw: string): FileTestMapping[] {
+    try {
+        const parsed: unknown = JSON.parse(raw);
+        return FileTestMappingArraySchema.parse(parsed);
+    } catch {
+        return [];
+    }
 }
 
 /** Result for a single dimension within the health score. */

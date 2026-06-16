@@ -54,7 +54,7 @@
 |---|---|---|
 | 1. Isolamento Testes | ✅ | Tmp dir + cleanup em integration tests |
 | 2. Robustez | ✅ | Contratos tipados, Zod schemas, edge cases |
-| 3. Boas Práticas | ✅ | SRP, DIP, sem workarounds |
+| 3. Boas Práticas | ✅ | SRP, DIP, sem desvios |
 | 4. Implementação | ⚠️ | Código simplificado: removeu filter redundante |
 | 5. Métricas | ❌ | **Fórmula corrigida**: denominador de flakyRate agora exclui testes com < minRuns aparições (antes incluía) |
 
@@ -323,7 +323,7 @@
 **5 Dimensões:**
 | Dimensão | Status | Achados |
 |---|---|---|
-| 1-4 | ✅ | Módulo orquestrador, SRP, DIP (injeção via import), sem workarounds |
+| 1-4 | ✅ | Módulo orquestrador, SRP, DIP (injeção via import), sem desvios |
 | 5. Métricas | ✅ | Sinais de qualidade (drift, latência, falha, benchmark) |
 
 **Gaps:** Nenhum. 8 testes de boundary adicionados (latência/falha thresholds).
@@ -461,7 +461,7 @@
 |---|---|---|
 | 1. Isolamento Testes | ✅ | Mocks de logger/config; sem fs real |
 | 2. Robustez | ✅ | Tipos fortes, optional chaining |
-| 3. Boas Práticas | ✅ | SRP, DIP, sem workarounds |
+| 3. Boas Práticas | ✅ | SRP, DIP, sem desvios |
 | 4. Implementação | ✅ | 211L limpas, orquestração clara |
 | 5. Métricas | N/A | Orquestrador, não métricas |
 | 6. UX | ✅ | Footer informativo, fallbacks adequados |
@@ -497,7 +497,7 @@
 |---|---|---|
 | 1. Isolamento Testes | ✅ | Mocks de logger/config |
 | 2. Robustez | ✅ | `sanitizeHtml` em toda saída, tipos fortes |
-| 3. Boas Práticas | ✅ | SRP, funções pequenas, sem workarounds |
+| 3. Boas Práticas | ✅ | SRP, funções pequenas, sem desvios |
 | 4. Implementação | ✅ | 209L, separação clara de responsabilidades |
 | 5. Métricas | N/A | Orquestrador de relatório |
 | 6. UX | ✅ | Tabela com filtro, árvore colapsável, dark mode |
@@ -677,21 +677,24 @@
 **Conclusão D7 (Fases 1-4, 6):** 2026-06-16
 **Decisão:** Dimensão 7 adicionada ao plano integrado. Executada retroativamente em Grupos 0, 1, 2 antes de iniciar Grupo 3, para garantir baseline consistente.
 
-| Grupo | Features | D6 UX | D7 Test Quality | Status |
-| ----- | -------- | ----- | --------------- | ------ |
-| 0     | 8        | 🔄    | ✅              | 🔄     |
-| 1     | 7        | 🔄    | ✅              | 🔄     |
-| 2     | 16       | 🔄    | ✅              | 🔄     |
+| Grupo | Features | D6 UX    | D7 Test Quality | Status |
+| ----- | -------- | -------- | --------------- | ------ |
+| 0     | 8        | 🔄       | ✅              | 🔄     |
+| 1     | 7        | 🔄       | ✅              | 🔄     |
+| 2     | 16       | 🔄       | ✅              | 🔄     |
+| 3     | 6        | FT-35 ✅ | FT-35 ✅        | 🔄     |
+
+> **Nota:** Aplicação da D6 ao Grupo 3 (FT-35) revelou que documentação incorreta e mensagens não acionáveis são gaps de UX. Esta definição deve ser aplicada retroativamente aos Grupos 0-2 e prospectivamente aos Grupos 4-7.
 
 ### Anti-padrões — Resumo da correção
 
-| Padrão                                        | Detectado                                     | Corrigido | Restante | Detalhes                                                                                       |
-| --------------------------------------------- | --------------------------------------------- | --------- | -------- | ---------------------------------------------------------------------------------------------- |
-| `toBeDefined()` sem assert                    | ~140                                          | 3         | ~137     | 3 bad tests corrigidos; demais são precondition guards + assert real                           |
-| `toThrow()` sem argumento                     | ~80                                           | 2         | ~78      | 2 corrigidos (1 removido, 1 convertido p/ value asserts); demais são `.not.toThrow()` ou VALID |
-| `nullAs()` (type suppression)                 | 13                                            | 13        | 0        | Todos removidos: 11 tests deletados (já cobertos), 2 convertidos p/ `[]`                       |
-| `.skip` / `.only`                             | 0                                             | —         | —        | Nenhum encontrado                                                                              |
-| Type suppressions (`as unknown as`, `as any`) | Item 7.3 — reportado à auditoria de supressão | —         | —        | `nullAs()` resolved; `as` casts remanescentes serão tratados na suppression audit              |
+| Padrão                                                            | Detectado                                | Corrigido | Restante | Detalhes                                                                                       |
+| ----------------------------------------------------------------- | ---------------------------------------- | --------- | -------- | ---------------------------------------------------------------------------------------------- |
+| `toBeDefined()` sem assert                                        | ~140                                     | 3         | ~137     | 3 bad tests corrigidos; demais são precondition guards + assert real                           |
+| `toThrow()` sem argumento                                         | ~80                                      | 2         | ~78      | 2 corrigidos (1 removido, 1 convertido p/ value asserts); demais são `.not.toThrow()` ou VALID |
+| `nullAs()` (type suppression)                                     | 13                                       | 13        | 0        | Todos removidos: 11 tests deletados (já cobertos), 2 convertidos p/ `[]`                       |
+| `.skip` / `.only`                                                 | 0                                        | —         | —        | Nenhum encontrado                                                                              |
+| Type suppressions (casts via `unknown`, type assertions to `any`) | Item 7.3 — reportado à suppression audit | —         | —        | `nullAs()` removed; remaining `as` casts deferred to suppression audit                         |
 
 ### Fases
 
@@ -742,4 +745,120 @@ Todos os testes de null removidos (substituídos por casos vazios já existentes
 
 ---
 
-## Próximo: Grupo 3 — Test Impact (FT-35 a FT-40)
+---
+
+## Grupo 3 — Test Impact e Análise
+
+### FT-35: Test Impact (`shared/test-impact.ts`)
+
+**Início:** 2026-06-16
+**Conclusão:** 2026-06-16
+
+#### T1-T20 — Auditoria completa
+
+| #   | Categoria          | Status | Gap                                                                   |
+| --- | ------------------ | ------ | --------------------------------------------------------------------- |
+| T1  | Entry point        | ✅     | CLI (case22), batch-mode, tests públicos                              |
+| T2  | Config model       | ✅     | Zod schema `FileTestMappingArraySchema` adicionado em `types/bugs.ts` |
+| T3  | Config accessor    | ✅     | N/A — parâmetros inline, sem accessor                                 |
+| T4  | Runtime lê config  | ✅     | Lê mapping file se mappingPath fornecido                              |
+| T5  | Wizard entry       | ❌ N/A | Test impact é análise, sem wizard                                     |
+| T6  | Wizard detection   | ❌ N/A |                                                                       |
+| T7  | Wizard output      | ❌ N/A |                                                                       |
+| T8  | Wizard prompts     | ❌ N/A |                                                                       |
+| T9  | Reconfig handler   | ❌ N/A |                                                                       |
+| T10 | CI integration     | ✅     | `batch-mode.ts` + `mr-handler.ts` usam test-impact                    |
+| T11 | CI safety          | ✅     | try/catch em todas as funções de I/O, fallbacks em todos os caminhos  |
+| T12 | Test coverage      | ✅     | 31 testes (18 unit + 6 integration + 7 PBT)                           |
+| T13 | Dead code          | ✅     | Nenhum código morto                                                   |
+| T14 | Suppressions       | ✅     | Nenhum `as any`, `!`, `@ts-ignore`, eslint-disable                    |
+| T15 | Bidirectional      | ❌ N/A | Fluxo unidirecional (diff → analysis)                                 |
+| T16 | CLI interface      | ✅     | Case22 no menu, batch-mode com flag `--run-impacted-tests`            |
+| T17 | Env var dependency | ✅     | Nenhuma                                                               |
+| T18 | Error handling     | ✅     | Logging com contexto + fallback em todos os erros                     |
+| T19 | TECHDOC            | ✅     | `shared/test-impact.ts` adicionado à tabela `shared/`                 |
+| T20 | CI/Config Contract | ❌ N/A | Sem cadeia CI→Action→CLI para esta feature                            |
+
+#### Dimensão 1-7 — Auditoria completa
+
+| Dimensão               | Status | Achados                                                                                    |
+| ---------------------- | ------ | ------------------------------------------------------------------------------------------ |
+| 1. Isolamento Testes   | ✅     | Todos os testes usam `vi.mock('fs')` e `vi.mock('child_process')` — sem I/O real           |
+| 2. Robustez            | ✅     | Contratos tipados exportados; Zod para mapping; edge cases testados; try/catch em toda I/O |
+| 3. Boas Práticas       | ✅     | SRP, DIP (imports shared/), sem workarounds, padrão consistente                            |
+| 4. Implementação Ótima | ✅     | Funções coesas, sem duplicação, algoritmo three-tier adequado                              |
+| 5. Métricas            | ❌ N/A | Feature não produz métricas                                                                |
+| 6. UX                  | ✅     | 8 itens avaliados (ver detalhamento abaixo)                                                |
+| 7. Test Quality        | ✅     | 8 itens avaliados (ver detalhamento abaixo)                                                |
+
+#### Dimensão 6 — UX (itens 6.1 a 6.8)
+
+| Item | Descrição                | Evidência                                                                                   | Status |
+| ---- | ------------------------ | ------------------------------------------------------------------------------------------- | ------ |
+| 6.1  | Erros acionáveis         | `printError` atualizado com causa + ação sugerida                                           | ✅     |
+| 6.2  | CLI --help claro         | Menu + docs section 22 explicam fluxo; seção reescrita (estava incorreta)                   | ✅     |
+| 6.3  | Output legível           | `title()`, `tableView()`, `divider()`, `info()`, `warn()` — padrão consistente              | ✅     |
+| 6.4  | Feedback de progresso    | Operação síncrona rápida (<1s) — N/A                                                        | ❌ N/A |
+| 6.5  | Confirmação destrutiva   | Read-only analysis — N/A                                                                    | ❌ N/A |
+| 6.6  | Navegação consistente    | `pushHistory()`, menu flow padrão, idêntico às demais opções                                | ✅     |
+| 6.7  | Terminologia consistente | "test-impact" uniforme em código, docs, menu, batch-mode; docs corrigidas (descreviam Jira) | ✅     |
+| 6.8  | Silent/verbose mode      | Comando interativo — N/A                                                                    | ❌ N/A |
+
+#### Dimensão 7 — Test Quality (itens 7.1 a 7.8)
+
+| Item | Descrição                                  | Evidência                                                                                            | Status |
+| ---- | ------------------------------------------ | ---------------------------------------------------------------------------------------------------- | ------ |
+| 7.1  | `toBeDefined()` sem assert                 | Grep: 0 occurrences in test-impact test files                                                        | ✅     |
+| 7.2  | `toThrow()` sem argumento                  | Grep: 0 occurrences in test-impact test files                                                        | ✅     |
+| 7.3  | Oracle Problem (output copied as expected) | PBT invariantes independentes, não acoplados à implementação                                         | ✅     |
+| 7.4  | `.skip` / `.only`                          | Grep: 0 occurrences                                                                                  | ✅     |
+| 7.5  | Type suppressions (casts via unknown)      | Grep: 0 occurrences                                                                                  | ✅     |
+| 7.6  | Type suppressions (`as any`)               | Grep: 0 occurrences                                                                                  | ✅     |
+| 7.7  | Property-based testing                     | 7 PBTs: invariantes de confidence, dedup, serialization                                              | ✅     |
+| 7.8  | Nomes descritivos de teste                 | 100% tests with behavior-descriptive names (e.g., `deduplicates across tiers with correct priority`) | ✅     |
+
+#### Testes de integração (6 testes)
+
+| Teste                                                      | Resultado |
+| ---------------------------------------------------------- | --------- |
+| runs analyzeTestImpact with real diff                      | ✅        |
+| returns high confidence when jest finds related tests      | ✅        |
+| returns high confidence when mapping matches changed files | ✅        |
+| deduplicates across tiers with correct priority            | ✅        |
+| keyword match finds tests by file segment                  | ✅        |
+| generateTestSelectionJson produces valid output            | ✅        |
+
+#### Testes de propriedade (PBT — 7 testes)
+
+| Invariante                                             | Teste                                                         | Status |
+| ------------------------------------------------------ | ------------------------------------------------------------- | ------ |
+| Low confidence when nothing matches + jest unavailable | `confidence is low when nothing matches and jest unavailable` | ✅     |
+| Empty diff → empty result + low confidence             | `empty diff returns empty result with low confidence`         | ✅     |
+| No duplicate test keys in impactedTests                | `impactedTests has no duplicate test keys`                    | ✅     |
+| changedFiles preserves order and content               | `changedFiles preserves order and content of diff`            | ✅     |
+| Confidence is always valid (high/medium/low)           | `confidence is never undefined or invalid`                    | ✅     |
+| generateTestSelectionJson round-trips through JSON     | `round-trips through JSON serialization`                      | ✅     |
+| All ImpactedTest fields preserved in serialization     | `preserves all impactedTest fields through serialization`     | ✅     |
+
+#### Validação
+
+- ✅ `npx tsc --noEmit` = 0 erros
+- ✅ `npx vitest run` (test-impact) = 39 tests (unit 18 + integration 6 + PBT 7 + case22 8)
+- ✅ `npm run lint` = ✅ All quality checks passed
+
+#### Gaps encontrados e corrigidos
+
+| ID  | Item                         | Severidade | Antes                                                                   | Depois                                                                                                   |
+| --- | ---------------------------- | ---------- | ----------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------- |
+| G1  | T2 — FileTestMapping Zod     | Alto       | `safeParseJson` sem validação de shape                                  | `FileTestMappingArraySchema` + `parseFileTestMappings()` em `types/bugs.ts`                              |
+| G2  | T19 — TECHDOC ausente        | Médio      | `shared/test-impact.ts` não constava no doc                             | Adicionado à tabela `shared/` em `docs/TECHDOC.md`                                                       |
+| G3  | D6/6.7 — Documentação errada | Alto       | `docs/02-jira-management.md` descrevia fluxo de issues Jira (incorreto) | Reescrito com fluxo real: git diff → 3 tiers → output                                                    |
+| G4  | D6/6.1 — Erro não acionável  | Baixo      | `printError('Falha ao obter git diff', err)`                            | `printError('Não foi possível obter o git diff. Verifique se o repositório tem commits suficientes...')` |
+
+#### Nota sobre Dimensão 6 (UX) e documentação
+
+**Decisão registrada:** A Dimensão 6 (UX) inclui a documentação da feature como parte da experiência do usuário. Correções de documentação incorreta, mensagens de erro não acionáveis e inconsistências terminológicas são gaps de UX e devem ser tratados como tal, não como N/A. Esta decisão aplica-se retroativamente a todas as features já auditadas (Grupos 0, 1, 2) e deve ser considerada nas auditorias futuras (Grupos 4-7).
+
+---
+
+## Próximo: FT-36 a FT-40 (still pending)

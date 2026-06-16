@@ -54,3 +54,5 @@ nul
 .llm-cache/
 a.out
 qa-quarantine.json
+.mimocode/
+.qwen/

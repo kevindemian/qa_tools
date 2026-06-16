@@ -679,16 +679,32 @@ Analisa a cobertura de testes no projeto Jira, identificando issues sem testes a
 
 ### 22 — Impacto de mudanças (test impact)
 
-Analisa o impacto potencial de mudanças em issues Jira, identificando quais testes existentes podem ser afetados por alterações em requisitos ou código.
+Analisa o impacto potencial de alterações em código-fonte, identificando quais testes podem ser afetados com base em diff do git, matching por keyword e mapeamento explícito.
 
 **Fluxo:**
 
-1. Busca a issue alvo e suas linked issues
-2. Analisa relacionamentos de rastreabilidade (tests, blocks, relates to)
-3. Gera relatório com lista de testes potencialmente impactados
-4. Exibe resumo no terminal
+1. Solicita um range git (default: `HEAD~1`)
+2. Executa `git diff --name-only <range>` para listar arquivos alterados
+3. Analisa impacto em 3 tiers:
+    - **Tier 1 (jest):** `jest --findRelatedTests` descobre testes diretamente relacionados
+    - **Tier 2 (keyword):** Matching por segmento do path do arquivo contra títulos de teste
+    - **Tier 3 (mapping):** Mapeamento explícito via `config/test-mapping.json` (se existir)
+4. Deduplica resultados (prioridade: mapping > jest > keyword)
+5. Exibe tabela com testes impactados, modo de match e nível de confiança
+6. Pré-carrega test keys para criação rápida de Test Execution (opção 13)
+7. Alerta se houver testes flaky entre os impactados
 
-**Uso:** Execute após identificar uma issue que sofreu alteração significativa, para saber quais testes precisam ser revisados.
+**Níveis de confiança:**
+
+| Confiança | Critério                                   |
+| --------- | ------------------------------------------ |
+| `high`    | Mapping explícito ou jest encontrou testes |
+| `medium`  | Apenas keyword matching                    |
+| `low`     | Nenhum match encontrado                    |
+
+**Uso:** Execute ao preparar um deploy ou revisão de PR para saber quais testes precisam ser executados com base nas alterações reais de código.
+
+**Saída gerada (batch mode):** `reports/test-selection.json`
 
 | Alias         | Resolve para |
 | ------------- | ------------ |
