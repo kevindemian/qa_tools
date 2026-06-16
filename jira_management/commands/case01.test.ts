@@ -3,6 +3,7 @@ vi.mock('../../shared/logger');
 
 vi.mock('../../shared/state', () => ({
     load: vi.fn().mockReturnValue({}),
+    loadTypedState: vi.fn().mockReturnValue({}),
     update: vi.fn(),
 }));
 
@@ -39,12 +40,12 @@ beforeEach(() => {
 });
 
 describe('case01 — create tests from CSV', () => {
-    it('exports a handler function', () => {
+    it('exports a handler function for menu registration', () => {
         expect(case01).toBeDefined();
         expect(typeof case01.handler).toBe('function');
     });
 
-    it('executes without error with basic context', async () => {
+    it('runs full CSV import flow with mocked dependencies without throwing', async () => {
         const result = await case01.handler(mockContext);
         expect([undefined, true, false]).toContain(result);
     });

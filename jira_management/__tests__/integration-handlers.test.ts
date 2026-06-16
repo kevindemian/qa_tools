@@ -42,6 +42,7 @@ vi.mock('../../shared/jira-helper.js', () => ({
 vi.mock('../../shared/state.js', () => ({
     update: vi.fn(),
     load: vi.fn(() => ({ lastProject: 'TEST', lastCypressPath: '', lastJsonPath: '' })),
+    loadTypedState: vi.fn(() => ({ lastProject: 'TEST', lastCsvPath: '', lastLabels: '' })),
 }));
 vi.mock('../../shared/open.js', () => ({
     openWithFallback: vi.fn(),

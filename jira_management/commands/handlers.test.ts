@@ -793,6 +793,7 @@ describe('case01 — create tests from CSV', () => {
         mockSessionContext.inMemoryTasksText = ['Test 1', 'Test 2'];
         const state = vi.mocked(stateModule);
         state.load.mockReturnValue({ lastCsvPath: '/fake/test.csv' });
+        state.loadTypedState.mockReturnValue({ lastCsvPath: '/fake/test.csv' });
         mockCreateTests.createTestsFromCsv.mockResolvedValueOnce({
             inMemoryTasksId: ['TEST-1', 'TEST-2'],
             inMemoryTasksText: ['Test 1', 'Test 2'],
@@ -826,6 +827,7 @@ describe('case01 — create tests from CSV', () => {
         prompt.ask.mockResolvedValueOnce('');
         const state = vi.mocked(stateModule);
         state.load.mockReturnValue({});
+        state.loadTypedState.mockReturnValue({});
         const mod = case01;
         expect(await mod.handler(baseContext)).toBeUndefined();
         expect(mockSessionContext.inMemoryTasksId).toEqual([]);

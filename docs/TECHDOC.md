@@ -690,6 +690,7 @@ import { globSync } from 'glob'; // file globbing
 | `types/`                 | All shared type definitions                           | `common.ts`, `jira.ts`, `xray.ts`, `ci-cd.ts`, `coverage.ts`, `bugs.ts`, `llm.ts` |
 | `prompts/`               | LLM prompt templates (Markdown)                       | —                                                                                 |
 | `test-utils/`            | Test utilities (factories, mock types)                | `MockedSafe<T>`, `mockedSafe()`                                                   |
+| `run-comparison.ts`      | Compare two MetricsRun objects via LLM                | `compareRuns()`                                                                   |
 | `report-*.ts`            | Report generation (HTML, sections, tables, charts)    | `ReportGenerator`                                                                 |
 | `markdown-html.ts`       | Markdown-to-HTML converter                            | `markdownToHtml()`                                                                |
 
@@ -721,6 +722,8 @@ import { globSync } from 'glob'; // file globbing
 | `dashboard-handlers.ts`      | Dashboard generation                                                 |
 | `commands/context.ts`        | DI contract for handlers                                             |
 | `commands/index.ts`          | Command registry (case01–case27 + caseD)                             |
+| `commands/case01.ts`         | Import CSV → Create Test Cases                                       |
+| `commands/case02.ts`         | View project versions from Jira                                      |
 | `commands/case*.ts`          | Individual handlers (01–27)                                          |
 | `constants.ts`               | User-facing messages (Portuguese)                                    |
 
