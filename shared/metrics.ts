@@ -139,7 +139,7 @@ export function saveMetrics(store: MetricsStore, config?: Config): void {
     try {
         const backend = getBackend(config);
         backend.write(METRICS_FILE, Buffer.from(JSON.stringify(store, null, 2), 'utf8'));
-        backend.flush('qa-tools: update metrics run');
+        backend.flush('qa-tools: update metrics run [skip ci]');
     } catch (err) {
         rootLogger.error('Failed to save metrics: ' + (err as Error).message);
     }

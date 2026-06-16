@@ -10,6 +10,7 @@ import {
     writeFeaturesConfig,
 } from './config-writer.js';
 import { generateCIWorkflow, generateQaPostProcessAction } from './templates/github-ci.js';
+import { generateQaPostProcessWorkflow } from './templates/qa-post-process-workflow.js';
 import { generateGitLabCI } from './templates/gitlab-ci.js';
 import { generatePrePushHook } from './templates/pre-push-hook.js';
 import type { SetupContext, Framework, GitProvider } from './context.js';
@@ -22,7 +23,7 @@ function detectGitProvider(): GitProvider {
         if (gitConfig.includes('github.com')) return 'github';
         if (gitConfig.includes('gitlab.com')) return 'gitlab';
     } catch {
-        // not a git repo
+        /* not a git repo — default to github */
     }
     return 'github';
 }
@@ -114,57 +115,6 @@ async function gatherSetupContext(): Promise<SetupContext> {
     };
 }
 
-/**
- * Inject the QA Tools post-processing step into an existing workflow YAML.
- * Finds the last job's step (a line matching `\n<indent>- `), detects its
- * indentation, and appends the composite action call after the step block
- * (skipping over any continuation lines at deeper indent).
- */
-export function injectQaStepIntoWorkflow(yaml: string, projectName: string): string {
-    // Find the last step-level line and determine where its block ends
-    const stepPattern = /\n( +)- /g;
-    let lastIndent = '            '; // default 12-space indent
-    let lastBlockEnd = -1;
-    let match;
-    while ((match = stepPattern.exec(yaml)) !== null) {
-        lastIndent = match[1] as string;
-        const blockStart = match.index + 1; // skip leading \n
-        const rest = yaml.slice(match.index + 1 + match[0].length);
-        // Look for next line at same or shallower indent
-        const minIndent = Math.max(1, lastIndent.length - 1);
-        const nextStepRe = new RegExp('\\n {0,' + minIndent + '}\\S');
-        const nextMatch = rest.search(nextStepRe);
-        lastBlockEnd = nextMatch === -1 ? yaml.length : blockStart + match[0].length + nextMatch;
-    }
-
-    const stepSnippet = [
-        lastIndent + '- name: QA Tools Post-Processing',
-        lastIndent + '  if: always()',
-        lastIndent + '  uses: ./.github/actions/qa-post-process',
-        lastIndent + '  with:',
-        lastIndent + '    project-name: ' + projectName,
-    ].join('\n');
-
-    if (lastBlockEnd === -1) {
-        // No steps found — append before final newline
-        const jobEnd = Math.max(yaml.lastIndexOf('\n'), 0);
-        return (
-            yaml.slice(0, jobEnd) +
-            '\n' +
-            lastIndent.slice(0, -4) +
-            'steps:\n' +
-            stepSnippet +
-            '\n' +
-            yaml.slice(jobEnd)
-        );
-    }
-
-    const before = yaml.slice(0, lastBlockEnd);
-    const after = yaml.slice(lastBlockEnd);
-    const separator = after.startsWith('\n') ? '' : '\n';
-    return before + separator + stepSnippet + after;
-}
-
 async function generateConfigFiles(ctx: SetupContext): Promise<{ created: string[]; skipped: string[] }> {
     const created: string[] = [];
     const skipped: string[] = [];
@@ -173,33 +123,34 @@ async function generateConfigFiles(ctx: SetupContext): Promise<{ created: string
         const workflowDir = path.resolve(process.cwd(), '.github/workflows');
         fs.mkdirSync(workflowDir, { recursive: true });
         const wfPath = path.join(workflowDir, 'ci.yml');
+        const ppWfPath = path.join(workflowDir, 'qa-post-process.yml');
         const actionsDir = path.resolve(process.cwd(), '.github/actions/qa-post-process');
         fs.mkdirSync(actionsDir, { recursive: true });
         const actionPath = path.join(actionsDir, 'action.yml');
 
+        if (ctx.features.prReport) {
+            const ppYaml = generateQaPostProcessWorkflow(ctx);
+            fs.writeFileSync(ppWfPath, ppYaml, 'utf8');
+            if (!created.includes(ppWfPath)) created.push(ppWfPath);
+
+            const actionYaml = generateQaPostProcessAction();
+            fs.writeFileSync(actionPath, actionYaml, 'utf8');
+            if (!created.includes(actionPath)) created.push(actionPath);
+        }
+
         if (fs.existsSync(wfPath)) {
-            const shouldInject = await askConfirm('ci.yml já existe. Injetar step de post-processing?', true);
-            if (shouldInject) {
-                const existing = fs.readFileSync(wfPath, 'utf8');
-                const actionYaml = generateQaPostProcessAction();
-                fs.writeFileSync(actionPath, actionYaml, 'utf8');
-                if (!created.includes(actionPath)) created.push(actionPath);
-                const extended = injectQaStepIntoWorkflow(existing, ctx.projectName);
-                fs.writeFileSync(wfPath, extended, 'utf8');
+            const shouldReplace = await askConfirm('ci.yml já existe. Substituir pelo workflow desacoplado?', true);
+            if (shouldReplace) {
+                const yaml = generateCIWorkflow(ctx);
+                fs.writeFileSync(wfPath, yaml, 'utf8');
                 if (!created.includes(wfPath)) created.push(wfPath);
             } else {
                 skipped.push(wfPath);
-                skipped.push(actionPath);
             }
         } else {
             const yaml = generateCIWorkflow(ctx);
             fs.writeFileSync(wfPath, yaml, 'utf8');
-            created.push(wfPath);
-            if (ctx.features.prReport) {
-                const actionYaml = generateQaPostProcessAction();
-                fs.writeFileSync(actionPath, actionYaml, 'utf8');
-                if (!created.includes(actionPath)) created.push(actionPath);
-            }
+            if (!created.includes(wfPath)) created.push(wfPath);
         }
     } else {
         const wfPath = path.resolve(process.cwd(), '.gitlab-ci.yml');

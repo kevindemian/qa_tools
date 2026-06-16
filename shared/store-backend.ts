@@ -2,6 +2,7 @@ import fs from 'fs';
 import path from 'path';
 import os from 'os';
 import { execFileSync } from 'child_process';
+import { rootLogger } from './logger.js';
 
 export interface StoreBackend {
     init(): void;
@@ -145,8 +146,10 @@ export function detectStoreBackend(projectDir?: string): StoreBackend {
         if (fs.existsSync(gitDir) || canExecGit()) {
             return new GitStoreBackend(xdgDir, '.');
         }
-    } catch {
-        /* fall through */
+    } catch (err) {
+        const msg = err instanceof Error ? err.message : String(err);
+        /* GitStoreBackend init failed — fall back to FsStoreBackend */
+        rootLogger.warn('GitStoreBackend init failed, falling back to FsStoreBackend: ' + msg);
     }
 
     return new FsStoreBackend(xdgDir);
