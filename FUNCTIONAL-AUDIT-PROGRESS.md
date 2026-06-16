@@ -861,4 +861,118 @@ Todos os testes de null removidos (substituídos por casos vazios já existentes
 
 ---
 
-## Próximo: FT-36 a FT-40 (still pending)
+### FT-36: Quarantine (`shared/quarantine.ts`)
+
+**Início:** 2026-06-16
+**Conclusão:** 2026-06-16
+
+#### T1-T20
+
+| #   | Categoria          | Status | Gap                                                                             |
+| --- | ------------------ | ------ | ------------------------------------------------------------------------------- |
+| T1  | Entry point        | ✅     | Usado via batch-mode (`runQuarantineMaintenance()`) e programaticamente         |
+| T2  | Config model       | ✅     | Zod schemas: `QuarantineEntrySchema`, `QuarantineStoreSchema`                   |
+| T3  | Config accessor    | ✅     | `Config.get('xdgStateHome')` para diretório de dados                            |
+| T4  | Runtime lê config  | ✅     | Lê `xdgStateHome` do Config                                                     |
+| T5  | Wizard entry       | ❌ N/A | Sem wizard                                                                      |
+| T6  | Wizard detection   | ❌ N/A |                                                                                 |
+| T7  | Wizard output      | ❌ N/A |                                                                                 |
+| T8  | Wizard prompts     | ❌ N/A |                                                                                 |
+| T9  | Reconfig handler   | ❌ N/A |                                                                                 |
+| T10 | CI integration     | ✅     | `batch-mode.ts` + `pr-report.ts` usam quarantine                                |
+| T11 | CI safety          | ✅     | try/catch em todas as funções de I/O; `ensureDir` corrigido (tinha catch vazio) |
+| T12 | Test coverage      | ✅     | 39 testes (17 unit + 9 PBT + 8 integration)                                     |
+| T13 | Dead code          | ✅     | Nenhum código morto                                                             |
+| T14 | Suppressions       | ✅     | `ensureDir` catch vazio substituído por logging com contexto                    |
+| T15 | Bidirectional      | ❌ N/A | Fluxo unidirecional                                                             |
+| T16 | CLI interface      | ❌ N/A | Sem CLI própria; usado via batch-mode e programaticamente                       |
+| T17 | Env var dependency | ✅     | Nenhuma                                                                         |
+| T18 | Error handling     | ✅     | try/catch + logging em save/load/pipeline; `ensureDir` corrigido                |
+| T19 | TECHDOC            | ✅     | `shared/quarantine.ts` adicionado à tabela `shared/`                            |
+| T20 | CI/Config Contract | ❌ N/A | Sem cadeia CI→Action→CLI                                                        |
+
+#### Dimensão 1-7
+
+| Dimensão               | Status | Achados                                                                                                                                           |
+| ---------------------- | ------ | ------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1. Isolamento Testes   | ⚠️     | Testes usam `/tmp` para store, mas `qa-quarantine.json` é escrito no CWD (pode poluir)                                                            |
+| 2. Robustez            | ✅     | Zod schemas para store; edge cases testados (corrupt, missing); try/catch em toda I/O                                                             |
+| 3. Boas Práticas       | ✅     | SRP (CRUD separado de pipeline); `filterExpiredEntries` extraída como função pura separando lógica de I/O; DIP (imports shared/); sem workarounds |
+| 4. Implementação Ótima | ✅     | Funções coesas; atomic write pattern (write → rename); algoritmo de expiry correto                                                                |
+| 5. Métricas            | ❌ N/A | Feature não produz métricas                                                                                                                       |
+| 6. UX                  | ✅     | 8 itens avaliados (ver detalhamento)                                                                                                              |
+| 7. Test Quality        | ✅     | 8 itens avaliados (ver detalhamento)                                                                                                              |
+
+#### Dimensão 6 — UX (itens 6.1 a 6.8)
+
+| Item | Descrição                | Evidência                                                                          | Status |
+| ---- | ------------------------ | ---------------------------------------------------------------------------------- | ------ |
+| 6.1  | Erros acionáveis         | `ensureDir`, `saveQuarantine`, `generatePipelineQuarantine` com logging contextual | ✅     |
+| 6.2  | CLI --help claro         | Sem CLI própria; documentado em `docs/03-git-triggers.md` (batch-mode)             | ✅     |
+| 6.3  | Output legível           | `batch-mode.ts` usa `info()`, `success()` para feedback de quarantine              | ✅     |
+| 6.4  | Feedback de progresso    | `batch-mode.ts` loga número de entries expiradas                                   | ✅     |
+| 6.5  | Confirmação destrutiva   | N/A — operações são reversíveis (removeQuarantine)                                 | ❌ N/A |
+| 6.6  | Navegação consistente    | N/A — sem interação direta do usuário                                              | ❌ N/A |
+| 6.7  | Terminologia consistente | "quarantine" uniforme em código, docs, batch-mode                                  | ✅     |
+| 6.8  | Silent/verbose mode      | N/A — operações headless (batch-mode)                                              | ❌ N/A |
+
+#### Dimensão 7 — Test Quality (itens 7.1 a 7.8)
+
+| Item | Descrição                             | Evidência                                                                                       | Status |
+| ---- | ------------------------------------- | ----------------------------------------------------------------------------------------------- | ------ |
+| 7.1  | `toBeDefined()` sem assert            | 3 guards válidos (seguidos de `nonNull()` + field assert); 0 standalone (corrigido na iteração) | ✅     |
+| 7.2  | `toThrow()` sem argumento             | 0 ocorrências                                                                                   | ✅     |
+| 7.3  | Oracle Problem                        | PBT invariantes independentes; valores vêm de regras de domínio (ratio > 5%)                    | ✅     |
+| 7.4  | `.skip` / `.only`                     | 0 ocorrências                                                                                   | ✅     |
+| 7.5  | Type suppressions (casts via unknown) | 0 ocorrências                                                                                   | ✅     |
+| 7.6  | Type suppressions (`as any`)          | 0 ocorrências                                                                                   | ✅     |
+| 7.7  | Property-based testing                | 9 PBTs: 4 generatePipelineQuarantine + 5 filterExpiredEntries invariantes                       | ✅     |
+| 7.8  | Nomes descritivos de teste            | 100% tests com nomes descritivos de comportamento                                               | ✅     |
+
+#### Engenharia extraída — filterExpiredEntries
+
+Extraída função pura `filterExpiredEntries(store, now?)` para separar lógica de filtragem de I/O:
+
+```typescript
+// Sintaxe:
+filterExpiredEntries(store: QuarantineStore, now?: number)
+// Retorno:
+{ expired: number; remaining: QuarantineStore }
+```
+
+**Motivação:** SRP + PBT sem side effects. Antes, `expireQuarantine` fazia load + filter + save inline — lógica de expiry só testável via I/O. Agora o filtro é puro e testável com 5 PBT invariantes (count, preservation, permanent safeguard, malformed date, empty).
+
+**Contrato preservado:** `expireQuarantine` continua com comportamento idêntico (delega à função pura).
+
+#### Testes de integração (8 testes)
+
+| Teste                                                | Resultado |
+| ---------------------------------------------------- | --------- |
+| FT-36a: creates entry and persists to disk           | ✅        |
+| FT-36b: removes entry past TTL                       | ✅        |
+| FT-36c: keeps permanent entry after expiry runs      | ✅        |
+| FT-36d: pipeline JSON with correct ratio and warning | ✅        |
+| FT-36d: no warning when ratio within threshold       | ✅        |
+| FT-36e: corrupt store → empty store                  | ✅        |
+| FT-36e: missing file → empty store                   | ✅        |
+| quarantineRatio: count=0 ratio=0 when no entries     | ✅        |
+
+#### Gaps encontrados e corrigidos
+
+| ID  | Item                         | Severidade | Antes                                                                                    | Depois                                                                           |
+| --- | ---------------------------- | ---------- | ---------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------- |
+| G1  | Bug ratio pipeline           | Alto       | `total = entries.length + 1` → ratio sempre incorreto                                    | `totalTests` opcional; ratio correto quando fornecido; warning só com total real |
+| G2  | T14 — catch vazio ensureDir  | Baixo      | `catch { /* best effort */ }` — suprime erro silenciosamente                             | `catch (err) { rootLogger.warn(...) }` — erro logado com contexto                |
+| G3  | T19 — TECHDOC ausente        | Baixo      | `shared/quarantine.ts` não constava no doc                                               | Adicionado à tabela `shared/` em `docs/TECHDOC.md`                               |
+| G4  | D7.1 — `toBeDefined()` solo  | Baixo      | `expect(isQuarantined(...)).toBeDefined()` sem field assert (linha 131 integration test) | Substituído por `nonNull()` + `expect(...).permanent.toBe(true)`                 |
+| G5  | D7.7 — PBT de expire ausente | Baixo      | Nenhum PBT para lógica de expiry                                                         | Extraída `filterExpiredEntries` + 5 PBT invariantes                              |
+
+#### Validação
+
+- ✅ `npx tsc --noEmit` = 0 erros
+- ✅ `npx vitest run` (quarantine) = 39 tests (17 unit + 9 PBT + 8 integration + 5 expire PBT)
+- ✅ `npm run lint` = ✅ All quality checks passed
+
+---
+
+## Próximo: FT-37 a FT-40 (still pending)

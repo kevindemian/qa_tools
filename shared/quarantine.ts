@@ -157,16 +157,27 @@ export function removeQuarantine(testTitle: string): boolean {
     return true;
 }
 
+export function filterExpiredEntries(
+    store: QuarantineStore,
+    now?: number,
+): { expired: number; remaining: QuarantineStore } {
+    const cutoff = now ?? Date.now();
+    const remaining: QuarantineEntry[] = store.entries.filter(
+        (e) => e.permanent || new Date(e.expiresAt).getTime() > cutoff,
+    );
+    return {
+        expired: store.entries.length - remaining.length,
+        remaining: { entries: remaining },
+    };
+}
+
 export function expireQuarantine(): number {
     const store = loadQuarantine();
-    const now = Date.now();
-    const before = store.entries.length;
-    store.entries = store.entries.filter((e) => e.permanent || new Date(e.expiresAt).getTime() > now);
-    const expired = before - store.entries.length;
+    const { expired, remaining } = filterExpiredEntries(store);
     if (expired > 0) {
         rootLogger.info('Expired ' + expired + ' quarantine entries');
-        saveQuarantine(store);
-        generatePipelineQuarantine(store);
+        saveQuarantine(remaining);
+        generatePipelineQuarantine(remaining);
     }
     return expired;
 }
