@@ -49,7 +49,7 @@ describe('Integration: Config Accessor', () => {
 
         it('returns default logLevel when not set', () => {
             delete process.env['LOG_LEVEL'];
-            expect(Config.get('logLevel')).toBeDefined();
+            expect(Config.get('logLevel')).toBe('INFO');
         });
     });
 

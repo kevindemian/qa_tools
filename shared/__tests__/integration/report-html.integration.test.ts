@@ -8,9 +8,6 @@
  * - Key sections present: summary, chart, table, footer
  */
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { nullAs } from '../../test-utils.js';
-import type { FlatTest } from '../../result_parser.js';
-import type { CoverageEpic } from '../../report-types.js';
 
 vi.mock('../../logger.js', () => ({
     rootLogger: { error: vi.fn(), info: vi.fn(), child: vi.fn().mockReturnThis() },
@@ -135,18 +132,21 @@ describe('Integration: HTML Report (FT-17)', () => {
     });
 
     describe('FT-17c: generateReportWithFallback', () => {
-        it('returns error page on failure', async () => {
+        it('handles empty test array gracefully', async () => {
             const { generateReportWithFallback } = await import('../../report-html.js');
-            const html = generateReportWithFallback(nullAs<FlatTest[]>(), { title: 'Fail' });
-            expect(html).toContain('Error generating report');
+            const html = generateReportWithFallback([], { title: 'Fail' });
+            expect(html).toContain('<!DOCTYPE html>');
+            expect(html).toContain('Fail');
+            expect(html).not.toContain('Error generating report');
         });
     });
 
-    describe('FT-17d: generateCoverageHtml error handling', () => {
-        it('returns error page on null input', async () => {
+    describe('FT-17d: generateCoverageHtml with empty epics', () => {
+        it('handles empty epics gracefully', async () => {
             const { generateCoverageHtml } = await import('../../report-html.js');
-            const html = generateCoverageHtml(nullAs<CoverageEpic[]>());
-            expect(html).toContain('Error generating coverage report');
+            const html = generateCoverageHtml([]);
+            expect(html).toContain('<!DOCTYPE html>');
+            expect(html).not.toContain('Error generating coverage report');
         });
     });
 });

@@ -205,7 +205,8 @@ export function generateBenchmarkHtml(result: CrossSquadResult, title?: string):
             bodyContent,
         });
     } catch (err) {
-        rootLogger.error('Failed to generate benchmark HTML: ' + (err as Error).message);
+        const msg = err instanceof Error ? err.message : String(err);
+        rootLogger.error('Failed to generate benchmark HTML: ' + msg);
         return buildErrorPage('Error generating benchmark report', 'Error generating benchmark report');
     }
 }

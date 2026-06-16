@@ -1,0 +1,154 @@
+import fc from 'fast-check';
+import { describe, expect, it, vi } from 'vitest';
+import { computeCrossSquadBenchmark, generateBenchmarkHtml } from '../cross-squad-benchmark.js';
+
+vi.mock('../logger', () => ({
+    rootLogger: { error: vi.fn(), info: vi.fn(), child: vi.fn().mockReturnThis() },
+}));
+
+vi.mock('../config', () => ({
+    default: { get: vi.fn(() => '') },
+    get: vi.fn(() => ''),
+}));
+
+type ProjectInput = {
+    name: string;
+    healthScore: number;
+    grade: string;
+    passRate: number;
+    flakyRate: number;
+    coveragePct: number;
+    runCount: number;
+    previousScore?: number;
+};
+
+const projectArb = fc
+    .record({
+        name: fc.stringMatching(/^[a-zA-Z0-9 _-]{1,20}$/),
+        healthScore: fc.integer({ min: 0, max: 100 }),
+        grade: fc.constantFrom('A', 'B', 'C', 'D', 'F'),
+        passRate: fc.integer({ min: 0, max: 100 }),
+        flakyRate: fc.integer({ min: 0, max: 100 }),
+        coveragePct: fc.integer({ min: 0, max: 100 }),
+        runCount: fc.integer({ min: 0, max: 1000 }),
+        previousScore: fc.option(fc.integer({ min: 0, max: 100 }), { nil: undefined }),
+    })
+    .map(
+        (r): ProjectInput => ({
+            name: r.name,
+            healthScore: r.healthScore,
+            grade: r.grade,
+            passRate: r.passRate,
+            flakyRate: r.flakyRate,
+            coveragePct: r.coveragePct,
+            runCount: r.runCount,
+            ...(r.previousScore !== undefined ? { previousScore: r.previousScore } : {}),
+        }),
+    );
+
+describe('computeCrossSquadBenchmark — property-based', () => {
+    it('sorts benchmarks by healthScore descending', () => {
+        fc.assert(
+            fc.property(fc.array(projectArb, { minLength: 0, maxLength: 10 }), (projects) => {
+                const result = computeCrossSquadBenchmark(projects);
+                for (let i = 1; i < result.benchmarks.length; i++) {
+                    const curr = result.benchmarks[i];
+                    const prev = result.benchmarks[i - 1];
+                    if (curr === undefined || prev === undefined) return;
+                    expect(curr.healthScore <= prev.healthScore).toBe(true);
+                }
+            }),
+            { numRuns: 50 },
+        );
+    });
+
+    it('computes average score correctly', () => {
+        fc.assert(
+            fc.property(fc.array(projectArb, { minLength: 0, maxLength: 10 }), (projects) => {
+                const result = computeCrossSquadBenchmark(projects);
+                const n = result.benchmarks.length;
+                const expectedAvg = n > 0 ? result.benchmarks.reduce((s, b) => s + b.healthScore, 0) / n : 0;
+                expect(result.averageScore).toBeCloseTo(expectedAvg, 10);
+            }),
+            { numRuns: 50 },
+        );
+    });
+
+    it('identifies top and bottom squads', () => {
+        fc.assert(
+            fc.property(fc.array(projectArb, { minLength: 0, maxLength: 10 }), (projects) => {
+                const result = computeCrossSquadBenchmark(projects);
+                if (result.benchmarks.length === 0) {
+                    expect(result.topSquad).toBe('');
+                    expect(result.bottomSquad).toBe('');
+                } else {
+                    const top = result.benchmarks[0];
+                    const bottom = result.benchmarks[result.benchmarks.length - 1];
+                    if (top === undefined || bottom === undefined) return;
+                    expect(result.topSquad).toBe(top.project);
+                    expect(result.bottomSquad).toBe(bottom.project);
+                }
+            }),
+            { numRuns: 50 },
+        );
+    });
+
+    it('stdDev is 0 for single squad', () => {
+        fc.assert(
+            fc.property(projectArb, (project) => {
+                const result = computeCrossSquadBenchmark([project]);
+                expect(result.stdDev).toBe(0);
+            }),
+            { numRuns: 50 },
+        );
+    });
+
+    it('trend matches healthScore comparison', () => {
+        fc.assert(
+            fc.property(fc.array(projectArb, { minLength: 0, maxLength: 10 }), (projects) => {
+                const result = computeCrossSquadBenchmark(projects);
+                for (const project of projects) {
+                    const bench = result.benchmarks.find((b) => b.project === project.name);
+                    if (bench === undefined) return;
+                    if (project.previousScore === undefined) {
+                        expect(bench.trend).toBe('stable');
+                    } else if (project.healthScore > project.previousScore) {
+                        expect(bench.trend).toBe('up');
+                    } else if (project.healthScore < project.previousScore) {
+                        expect(bench.trend).toBe('down');
+                    } else {
+                        expect(bench.trend).toBe('stable');
+                    }
+                }
+            }),
+            { numRuns: 50 },
+        );
+    });
+});
+
+describe('generateBenchmarkHtml — property-based', () => {
+    it('always produces valid HTML', () => {
+        fc.assert(
+            fc.property(fc.array(projectArb, { minLength: 0, maxLength: 8 }), (projects) => {
+                const result = computeCrossSquadBenchmark(projects);
+                const html = generateBenchmarkHtml(result, 'PBT');
+                expect(html).toContain('<!DOCTYPE html>');
+                expect(html).toContain('</html>');
+            }),
+            { numRuns: 50 },
+        );
+    });
+
+    it('contains all project names', () => {
+        fc.assert(
+            fc.property(fc.array(projectArb, { minLength: 0, maxLength: 8 }), (projects) => {
+                const result = computeCrossSquadBenchmark(projects);
+                const html = generateBenchmarkHtml(result);
+                for (const p of projects) {
+                    expect(html).toContain(p.name);
+                }
+            }),
+            { numRuns: 50 },
+        );
+    });
+});

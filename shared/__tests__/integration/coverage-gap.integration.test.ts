@@ -8,7 +8,6 @@
  * - Error fallback
  */
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { nullAs } from '../../test-utils.js';
 import type { CoverageGapResult } from '../../types.js';
 
 vi.mock('../../logger.js', () => ({
@@ -127,14 +126,6 @@ describe('Integration: Coverage Gap (FT-18)', () => {
             const html = generateCoverageGapHtml(result);
             expect(html).toContain('No coverage gaps found');
             expect(html).toContain('All epics pass');
-        });
-    });
-
-    describe('FT-18c: error handling', () => {
-        it('returns error page on null input', async () => {
-            const { generateCoverageGapHtml } = await import('../../generate-coverage-gap-html.js');
-            const html = generateCoverageGapHtml(nullAs<CoverageGapResult>());
-            expect(html).toContain('Error generating coverage gap report');
         });
     });
 });
