@@ -79,8 +79,8 @@ function pipelinePath(): string {
 function ensureDir(dir: string): void {
     try {
         fs.mkdirSync(dir, { recursive: true });
-    } catch {
-        /* best effort */
+    } catch (err) {
+        rootLogger.warn('Failed to create directory: ' + (err instanceof Error ? err.message : String(err)));
     }
 }
 
@@ -213,26 +213,21 @@ export function quarantineRatio(totalTests: number): { count: number; ratio: num
     return { count, ratio, warning };
 }
 
-export function generatePipelineQuarantine(store?: QuarantineStore): PipelineQuarantine {
+export function generatePipelineQuarantine(store?: QuarantineStore, totalTests?: number): PipelineQuarantine {
     const resolved = store ?? loadQuarantine();
-    const total = resolved.entries.length + 1;
     const count = resolved.entries.length;
-    const ratio = total > 0 ? count / total : 0;
-    const meta = {
-        count,
-        totalTests: total,
-        ratio,
-        warning:
-            ratio > 0.05
-                ? '⚠️ Quarantine alert: ' +
-                  count +
-                  '/' +
-                  total +
-                  ' tests (' +
-                  (ratio * 100).toFixed(1) +
-                  '%) exceed 5% threshold'
-                : '',
-    };
+    const ratio = totalTests && totalTests > 0 ? count / totalTests : 0;
+    const warning =
+        totalTests && ratio > 0.05
+            ? '⚠️ Quarantine alert: ' +
+              count +
+              '/' +
+              totalTests +
+              ' tests (' +
+              (ratio * 100).toFixed(1) +
+              '%) exceed 5% threshold'
+            : '';
+    const meta = { count, totalTests: totalTests ?? 0, ratio, warning };
     const excluded: PipelineQuarantineItem[] = resolved.entries.map((e) => ({
         test: e.testTitle,
         reason: e.reason,
@@ -245,7 +240,7 @@ export function generatePipelineQuarantine(store?: QuarantineStore): PipelineQua
         excluded,
         metadata: {
             totalExcluded: excluded.length,
-            totalTests: excluded.length + 1,
+            totalTests: totalTests ?? 0,
             ratio: meta.ratio,
             warning: meta.warning,
         },
