@@ -58,7 +58,7 @@ function warnSecretsInFile(filePath: string, label: string): void {
             }
         }
     } catch {
-        /* ignore */
+        process.stderr.write('[env-loader] Could not read env file for secret scan (may not exist)\n');
     }
 }
 
@@ -73,13 +73,13 @@ export function ensureDotenv(): void {
     try {
         dotenv.config({ path: localPath });
     } catch {
-        /* .env.local optional */
+        process.stderr.write('[env-loader] Failed to load .env.local (optional)\n');
     }
 
     try {
         dotenv.config({ path: envPath });
     } catch {
-        /* .env optional */
+        process.stderr.write('[env-loader] Failed to load .env (optional)\n');
     }
 
     warnSecretsInFile(envPath, '.env');

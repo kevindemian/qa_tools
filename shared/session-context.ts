@@ -9,6 +9,7 @@ import { detectStoreBackend, detectProjectGitDir } from './store-backend.js';
 import { Store, type ReportMeta } from './store.js';
 import { fetchLatestTestRun } from './git-artifact-downloader.js';
 import type { ParseResult } from './result_parser.js';
+import { rootLogger } from './logger.js';
 
 interface SessionCountersItem {
     op: string;
@@ -135,7 +136,7 @@ export async function resolveTestDataSource(
                 };
             }
         } catch {
-            /* corrupted cache entry, fall through */
+            rootLogger.warn('resolveTestDataSource: corrupted cache entry, falling through');
         }
     }
 

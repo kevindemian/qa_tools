@@ -3,6 +3,7 @@ import { resolve, join } from 'path';
 import { mkdirSync, writeFileSync, existsSync, rmSync } from 'fs';
 import Config from './config.js';
 import { formatDateISO } from './date-utils.js';
+import { rootLogger } from './logger.js';
 
 const PROJECT_ROOT = resolve(import.meta.dirname, '..');
 
@@ -70,7 +71,7 @@ export function cleanupTempDirs(): void {
         try {
             if (existsSync(p)) rmSync(p, { recursive: true, force: true });
         } catch {
-            /* cleanup — temp dir pode não existir ainda */
+            rootLogger.debug('cleanupTempDirs: failed to remove ' + sub + ' (may not exist)');
         }
     }
 }

@@ -81,8 +81,11 @@ export function aggregateDefectTrends(classifications: FailureClassification[] |
         return { trends: [], topCategories: [], period: { from: '', to: '' } };
     }
 
-    const grouped: Record<string, Record<string, number>> = {};
-    const overallCounts: Record<string, number> = {};
+    const grouped: Record<string, Record<string, number>> = Object.create(null) as Record<
+        string,
+        Record<string, number>
+    >;
+    const overallCounts: Record<string, number> = Object.create(null) as Record<string, number>;
     let minDate = '';
     let maxDate = '';
 
@@ -90,7 +93,7 @@ export function aggregateDefectTrends(classifications: FailureClassification[] |
         const date = extractDate(fc.timestamp);
         const cat = fc.category;
 
-        if (!grouped[date]) grouped[date] = {};
+        if (!grouped[date]) grouped[date] = Object.create(null) as Record<string, number>;
         grouped[date][cat] = (grouped[date][cat] ?? 0) + 1;
 
         overallCounts[cat] = (overallCounts[cat] ?? 0) + 1;
