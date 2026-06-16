@@ -51,15 +51,16 @@ jobs:
               env:
                   CTRF_OUTPUT_FILE: ctrf-report-e2e.json
 
-            - name: QA Tools Post-Processing (Node 22 only — has coverage data)
-              if: always() && matrix.node-version == 22
-              uses: ./.github/actions/qa-post-process
-              with:
-                  project-name: qa_tools
-
-            - name: Upload PR Report HTML artifact
-              if: always() && matrix.node-version == 22
+            - name: Upload CTRF report for post-processing
+              if: matrix.node-version == 22
               uses: actions/upload-artifact@v4
               with:
-                  name: pr-report-html
-                  path: reports/pr-report.html
+                  name: ctrf-report
+                  path: reports/ctrf-report.json
+
+    post-process:
+        if: always()
+        needs: test
+        uses: ./.github/workflows/qa-post-process.yml
+        with:
+            project-name: qa_tools

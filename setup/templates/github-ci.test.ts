@@ -49,21 +49,21 @@ describe('generateCIWorkflow', () => {
         expect(yaml).toContain('npx cypress run');
     });
 
-    it('adds post-processing step when prReport enabled', () => {
+    it('adds post-processing job via reusable workflow when prReport enabled', () => {
         const yaml = generateCIWorkflow(MOCK_CTX_FULL);
-        expect(yaml).toContain('QA Tools Post-Processing');
-        expect(yaml).toContain('./.github/actions/qa-post-process');
+        expect(yaml).toContain('post-process:');
+        expect(yaml).toContain('./.github/workflows/qa-post-process.yml');
     });
 
     it('does not add post-processing when prReport disabled', () => {
         const yaml = generateCIWorkflow(MOCK_CTX_BASIC);
-        expect(yaml).not.toContain('QA Tools Post-Processing');
+        expect(yaml).not.toContain('post-process:');
     });
 
-    it('includes upload-artifact step', () => {
-        const yaml = generateCIWorkflow(MOCK_CTX_BASIC);
+    it('includes upload-artifact step when prReport enabled', () => {
+        const yaml = generateCIWorkflow(MOCK_CTX_FULL);
         expect(yaml).toContain('actions/upload-artifact@v4');
-        expect(yaml).toContain('cypress/reports/ctrf-report.json');
+        expect(yaml).toContain('ctrf-report');
     });
 
     it('includes setup-node with correct version', () => {
@@ -80,8 +80,8 @@ describe('generateCIWorkflow', () => {
             },
         };
         const yaml = generateCIWorkflow(ctx);
-        expect(yaml).toContain('QA Tools Post-Processing');
-        expect(yaml).toContain('./.github/actions/qa-post-process');
+        expect(yaml).toContain('post-process:');
+        expect(yaml).toContain('./.github/workflows/qa-post-process.yml');
         // Sub-features are consumed by the runtime (pr-report-core), not by the template
         expect(yaml).not.toContain('--no-ai');
         expect(yaml).not.toContain('--no-quality');

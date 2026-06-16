@@ -23,6 +23,9 @@ export interface JobConfig {
     if?: string;
     environment?: Record<string, string>;
     services?: Record<string, { image: string; env?: Record<string, string> }>;
+    uses?: string;
+    with?: Record<string, string>;
+    secrets?: Record<string, string>;
 }
 
 export class WorkflowBuilder {
@@ -165,6 +168,9 @@ export class WorkflowBuilder {
         if (config.if) job.set('if', config.if);
         if (config.environment) job.set('environment', this._toScalarMap(config.environment));
         if (config.services) this._addServices(job, config.services);
+        if (config.uses) job.set('uses', config.uses);
+        if (config.with) job.set('with', this._toScalarMap(config.with));
+        if (config.secrets) job.set('secrets', this._toScalarMap(config.secrets));
         if (config.steps) this._addSteps(job, config.steps);
     }
 

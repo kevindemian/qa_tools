@@ -1,19 +1,14 @@
 /**
  * GitHub Actions CI pipeline template generator.
  *
- * Generates a complete `.github/workflows/ci.yml` file that:
- * 1. Checks out code and installs dependencies
- * 2. Runs tests (with CTRF reporter if configured)
- * 3. Uploads the CTRF report as a CI artifact
- * 4. Runs QA Tools post-processing (PR report via pr-report-core.ts)
+ * Generates two files:
+ * - `.github/workflows/ci.yml` — the main CI workflow (test job only)
+ * - `.github/workflows/qa-post-process.yml` — reusable workflow for post-processing
  *
- * For within-CI post-processing on GitHub Actions, we use shared/pr-report-core.ts
- * directly (which reads CTRF from the filesystem in the same job) rather than
- * git_triggers/main.ts --batch (which is designed for local/interactive use and
- * would trigger a new workflow via API, causing an infinite loop).
- *
- * When the CI already exists (ci.yml), the wizard uses the composite action
- * (qa-action.ts) instead and injects a uses: step into the existing workflow.
+ * The post-processing job is extracted to a separate reusable workflow to:
+ * 1. Decouple CI from metrics collection (SRP)
+ * 2. Prevent the metrics bot commit from triggering CI auto-cancellation
+ * 3. Keep ci.yml focused on testing only
  */
 import { WorkflowBuilder, type JobConfig, type StepConfig } from '../builder/workflow-builder.js';
 import type { SetupContext } from '../context.js';
@@ -69,34 +64,38 @@ export function generateCIWorkflow(ctx: SetupContext): string {
     };
     const installStep: StepConfig = { name: 'Install dependencies', run: ctx.installCmd };
     const testStep: StepConfig = { name: 'Run tests', run: ctx.testCmd };
-    const uploadStep: StepConfig = {
-        name: 'Upload CTRF report',
-        uses: 'actions/upload-artifact@v4',
-        with: {
-            name: 'ctrf-report',
-            path: ctx.ctrfReportPath,
-            'if-no-files-found': 'warn',
-        },
-    };
-
-    const testSteps: StepConfig[] = [checkoutStep, setupNodeStep, installStep, testStep, uploadStep];
+    const testSteps: StepConfig[] = [checkoutStep, setupNodeStep, installStep, testStep];
 
     if (ctx.features.prReport) {
         testSteps.push({
-            name: 'QA Tools Post-Processing',
-            if: 'always()',
-            uses: './.github/actions/qa-post-process',
+            name: 'Upload CTRF report',
+            uses: 'actions/upload-artifact@v4',
             with: {
-                'project-name': ctx.projectName,
+                name: 'ctrf-report',
+                path: ctx.ctrfReportPath,
+                'if-no-files-found': 'warn',
             },
         });
     }
 
-    const job: JobConfig = {
+    const testJob: JobConfig = {
         runsOn: 'ubuntu-latest',
         steps: testSteps,
     };
 
-    builder.addJob('qa-tools', job);
+    builder.addJob('qa-tools', testJob);
+
+    if (ctx.features.prReport) {
+        const postProcessJob: JobConfig = {
+            if: 'always()',
+            needs: ['qa-tools'],
+            uses: './.github/workflows/qa-post-process.yml',
+            with: {
+                'project-name': ctx.projectName,
+            },
+        };
+        builder.addJob('post-process', postProcessJob);
+    }
+
     return builder.toString();
 }
