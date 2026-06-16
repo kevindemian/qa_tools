@@ -110,6 +110,9 @@ describe('FT-36b — Expire entry', () => {
         const expired = expireQuarantine();
         expect(expired).toBe(1);
         expect(isQuarantined('expirable.spec.ts')).toBeUndefined();
+
+        const store = loadQuarantine();
+        expect(store.entries).toHaveLength(0);
         vi.useRealTimers();
     });
 });
@@ -126,9 +129,15 @@ describe('FT-36c — Permanent entry survives expiry', () => {
 
         markPermanent('permanent.spec.ts');
 
+        vi.useFakeTimers();
+        vi.advanceTimersByTime(1000);
+
         const expired = expireQuarantine();
         expect(expired).toBe(0);
-        expect(isQuarantined('permanent.spec.ts')).toBeDefined();
+        const permanentEntry = isQuarantined('permanent.spec.ts');
+        expect(permanentEntry).toBeDefined();
+        expect(nonNull(permanentEntry).permanent).toBe(true);
+        vi.useRealTimers();
     });
 });
 
