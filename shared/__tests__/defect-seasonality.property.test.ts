@@ -14,15 +14,18 @@ vi.mock('../config.js', () => ({
 
 const safeCat = fc.string({ minLength: 1, maxLength: 10 }).map((s) => s.replace(/[^a-zA-Z0-9 _.-]/g, '_'));
 
-const dateArb = fc.date({ min: new Date('2020-01-01'), max: new Date('2026-12-31') }).map((d) => {
-    const y = d.getUTCFullYear();
-    const m = String(d.getUTCMonth() + 1).padStart(2, '0');
-    const day = String(d.getUTCDate()).padStart(2, '0');
-    const h = String(d.getUTCHours()).padStart(2, '0');
-    const min = String(d.getUTCMinutes()).padStart(2, '0');
-    const s = String(d.getUTCSeconds()).padStart(2, '0');
-    return `${y}-${m}-${day}T${h}:${min}:${s}Z`;
-});
+const dateArb = fc
+    .date({ min: new Date('2020-01-01'), max: new Date('2026-12-31') })
+    .filter((d) => !isNaN(d.getTime()))
+    .map((d) => {
+        const y = d.getUTCFullYear();
+        const m = String(d.getUTCMonth() + 1).padStart(2, '0');
+        const day = String(d.getUTCDate()).padStart(2, '0');
+        const h = String(d.getUTCHours()).padStart(2, '0');
+        const min = String(d.getUTCMinutes()).padStart(2, '0');
+        const s = String(d.getUTCSeconds()).padStart(2, '0');
+        return `${y}-${m}-${day}T${h}:${min}:${s}Z`;
+    });
 
 const classArb: fc.Arbitrary<FailureClassification> = fc
     .record({
