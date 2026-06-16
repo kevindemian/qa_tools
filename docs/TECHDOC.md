@@ -681,6 +681,7 @@ import { globSync } from 'glob'; // file globbing
 | `validation.ts`       | Zod validation wrapper                                | `validate()`, `validateOrThrow()`                                                 |
 | `palette.ts`          | Chalk abstraction (color palette)                     | `palette` object                                                                  |
 | `prompt.ts`           | Terminal input/output facade                          | `prompt()`, `info()`, `title()`                                                   |
+| `quarantine.ts`       | Quarantine management for flaky tests                 | `quarantineTest()`, `isQuarantined()`, `generatePipelineQuarantine()`             |
 | `markdown.ts`         | Markdown lexer/renderer                               | `tokenize()`, `renderToHtml()`                                                    |
 | `csrf/`               | CSV parsing/validation                                | `CsvResource`, schemas                                                            |
 | `invariants/`         | 13 domain + 5 structural invariant rules              | `createTestCaseValidator()`                                                       |

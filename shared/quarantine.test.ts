@@ -151,7 +151,7 @@ describe('quarantineRatio', () => {
 });
 
 describe('generatePipelineQuarantine', () => {
-    it('generates valid pipeline JSON file', () => {
+    it('generates valid pipeline JSON without totalTests — no warning', () => {
         quarantineTest({
             testTitle: TEST_TITLE,
             reason: 'flaky',
@@ -160,17 +160,29 @@ describe('generatePipelineQuarantine', () => {
             bugUrl: 'https://jira/bug-1',
         });
 
-        const raw = fs.readFileSync(pipelineFilePath(), 'utf8');
-        const parsed = JSON.parse(raw) as {
-            excluded: { test: string; bugUrl: string }[];
-            metadata: { totalExcluded: number; warning: string };
-        };
+        const store = loadQuarantine();
+        const pipeline = generatePipelineQuarantine(store);
 
-        expect(parsed.excluded).toHaveLength(1);
-        expect(parsed.excluded[0]?.test).toBe(TEST_TITLE);
-        expect(parsed.excluded[0]?.bugUrl).toBe('https://jira/bug-1');
-        expect(parsed.metadata.totalExcluded).toBe(1);
-        expect(parsed.metadata.warning).toContain('exceed 5%');
+        expect(pipeline.excluded).toHaveLength(1);
+        expect(pipeline.excluded[0]?.test).toBe(TEST_TITLE);
+        expect(pipeline.excluded[0]?.bugUrl).toBe('https://jira/bug-1');
+        expect(pipeline.metadata.totalExcluded).toBe(1);
+        expect(pipeline.metadata.warning).toBe('');
+    });
+
+    it('generates warning when totalTests is provided and ratio exceeds 5%', () => {
+        quarantineTest({
+            testTitle: TEST_TITLE,
+            reason: 'flaky',
+            quarantinedBy: 'detection',
+            flakyRate: 0.7,
+            bugUrl: 'https://jira/bug-1',
+        });
+
+        const pipeline = generatePipelineQuarantine(undefined, 10);
+        expect(pipeline.metadata.warning).toContain('exceed 5%');
+        expect(pipeline.metadata.totalExcluded).toBe(1);
+        expect(pipeline.metadata.totalTests).toBe(10);
     });
 
     it('generates empty list when no entries', () => {
