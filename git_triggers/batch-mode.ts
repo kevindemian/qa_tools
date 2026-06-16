@@ -14,7 +14,7 @@ import {
 import { aggregatePipelineHealth, renderPipelineHealthHtml } from './pipeline-health.js';
 import type { PipelineRunExtended, PipelineJobExtended } from './pipeline-health.js';
 import { exportTestsCsv, exportTestsJson } from '../shared/report-export.js';
-import { generateGitMetricsRuns } from '../shared/git-metrics-adapter.js';
+import { generateGitMetricsRuns, getLastGitLogError } from '../shared/git-metrics-adapter.js';
 import { analyzeTestImpact, generateTestSelectionJson } from '../shared/test-impact.js';
 import { offerPipelineFailureAnalysis } from './llm-pipeline.js';
 import { collectTestResults as _collectTestResults } from './test-results.js';
@@ -221,9 +221,13 @@ export function generateFlakinessDashboard(projectName: string, publishTarget?: 
     let projectRuns = store.runs.filter((r) => r.project === currentProjectName);
     if (projectRuns.length < 2) {
         const gitRuns = generateGitMetricsRuns({ projectName: currentProjectName });
+        const gitError = getLastGitLogError();
         if (gitRuns.length >= 2) {
             projectRuns = gitRuns;
             info('Fallback para git metrics — flakiness dashboard com dados do histórico de commits');
+        } else if (gitError) {
+            warn('Não foi possível obter o git history para flakiness dashboard. ' + gitError);
+            return;
         } else {
             return;
         }
@@ -359,9 +363,13 @@ function generateTestExport(projectName: string): void {
         let projectRuns = store.runs.filter((r) => r.project === projectName);
         if (projectRuns.length === 0) {
             const gitRuns = generateGitMetricsRuns({ projectName });
+            const gitError = getLastGitLogError();
             if (gitRuns.length > 0) {
                 projectRuns = gitRuns;
                 info('Fallback para git metrics — export com dados do histórico de commits');
+            } else if (gitError) {
+                warn('Não foi possível obter o git history para export. ' + gitError);
+                return;
             } else {
                 return;
             }

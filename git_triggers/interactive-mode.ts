@@ -107,7 +107,11 @@ import { runQualityGate, formatQualityGateText } from '../shared/quality-gate.js
 import { openWithFallback } from '../shared/open.js';
 import { generateCoverageGapHtml } from '../shared/generate-coverage-gap-html.js';
 import { analyzeCoverageGaps } from '../shared/coverage-gap.js';
-import { generateGitMetricsRuns, generateGitFailureClassifications } from '../shared/git-metrics-adapter.js';
+import {
+    generateGitMetricsRuns,
+    generateGitFailureClassifications,
+    getLastGitLogError,
+} from '../shared/git-metrics-adapter.js';
 import { handleHelp as _handleHelp, handleShowHistory as _handleShowHistory } from './ui-helpers.js';
 import { handleSetupWizard as _handleSetupWizard } from './case00-handler.js';
 import { handlePrReportReconfig } from './pr-report-setup-handler.js';
@@ -328,10 +332,14 @@ function _loadProjectRunsHelper(): {
     let usingGitFallback = false;
     if (projectRuns.length < 2) {
         const gitRuns = generateGitMetricsRuns({ projectName: currentProjectName });
+        const gitError = getLastGitLogError();
         if (gitRuns.length >= 2) {
             projectRuns = gitRuns;
             failureClassifications = generateGitFailureClassifications({ projectName: currentProjectName });
             usingGitFallback = true;
+        } else if (gitError) {
+            warn('Não foi possível obter o git history. ' + gitError + ' Execute pipelines para gerar dados primeiro.');
+            return null;
         } else {
             warn('Menos de 2 execuções registradas. Execute pipelines primeiro.');
             return null;

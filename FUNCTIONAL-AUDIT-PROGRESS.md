@@ -1,7 +1,7 @@
 # Functional Audit — Registro de Progresso
 
 **Início:** 2026-06-15
-**Metodologia:** FUNCTIONAL-AUDIT-INTEGRATED-PLAN.md (T1-T20 + 5 dimensões + testes FT-xx)
+**Metodologia:** FUNCTIONAL-AUDIT-INTEGRATED-PLAN.md (T1-T20 + 7 dimensões + testes FT-xx)
 
 ---
 
@@ -18,7 +18,7 @@
 
 ## Grupo 0 — Fundação
 
-| Ordem | ID    | Feature             | Audit T1-T20 | 5 Dimensões | Gaps | Testes  | Status |
+| Ordem | ID    | Feature             | Audit T1-T20 | 7 Dimensões | Gaps | Testes  | Status |
 | ----- | ----- | ------------------- | ------------ | ----------- | ---- | ------- | ------ |
 | P1    | FT-04 | Metrics             | ✅           | ✅          | 2    | +13 PBT | ✅     |
 | P2    | FT-07 | Store               | ✅           | ✅          | 0    | +6 PBT  | ✅     |
@@ -134,7 +134,7 @@
 
 **Features críticas para Dimensão 5 (conformidade normativa: ISO 25010, ISTQB, DORA).**
 
-| Ordem | ID    | Feature           | Audit T1-T20 | 5 Dimensões | Gaps | Testes   | Status |
+| Ordem | ID    | Feature           | Audit T1-T20 | 7 Dimensões | Gaps | Testes   | Status |
 | ----- | ----- | ----------------- | ------------ | ----------- | ---- | -------- | ------ |
 | 1.1   | FT-09 | Health Score      | ✅           | ✅          | 3    | +8 PBT   | ✅     |
 | 1.2   | FT-10 | Quality Gate      | ✅           | ✅          | 1    | +6 PBT   | ✅     |
@@ -413,7 +413,7 @@
 
 **Features:** FT-16 (PR Report), FT-17 (HTML Report), FT-18 (Coverage Gap), FT-19 (Flakiness Dashboard), FT-20 (Defect Trend), FT-21 a FT-33 (13 features).
 
-| Ordem | ID    | Feature             | Audit T1-T20 | 6 Dimensões | Gaps | Testes   | Status |
+| Ordem | ID    | Feature             | Audit T1-T20 | 7 Dimensões | Gaps | Testes   | Status |
 | ----- | ----- | ------------------- | ------------ | ----------- | ---- | -------- | ------ |
 | 2.1   | FT-17 | HTML Report         | ✅           | ✅          | 0    | 32 tests | ✅     |
 | 2.2   | FT-18 | Coverage Gap        | ✅           | ✅          | 0    | 59 tests | ✅     |
@@ -671,18 +671,18 @@
 
 ---
 
-## Cross-cutting: Dimensão 6 (UX) + Dimensão 7 (Test Quality) — Grupos 0, 1, 2
+## Cross-cutting: Dimensão 6 (UX) + Dimensão 7 (Deep Test Audit) — Grupos 0, 1, 2
 
 **Início:** 2026-06-16
 **Conclusão D7 (Fases 1-4, 6):** 2026-06-16
 **Decisão:** Dimensão 7 adicionada ao plano integrado. Executada retroativamente em Grupos 0, 1, 2 antes de iniciar Grupo 3, para garantir baseline consistente.
 
-| Grupo | Features | D6 UX    | D7 Test Quality | Status |
-| ----- | -------- | -------- | --------------- | ------ |
-| 0     | 8        | 🔄       | ✅              | 🔄     |
-| 1     | 7        | 🔄       | ✅              | 🔄     |
-| 2     | 16       | 🔄       | ✅              | 🔄     |
-| 3     | 6        | FT-35 ✅ | FT-35 ✅        | 🔄     |
+| Grupo | Features | D6 UX    | D7 Deep Test Audit | Status |
+| ----- | -------- | -------- | ------------------ | ------ |
+| 0     | 8        | 🔄       | ✅                 | 🔄     |
+| 1     | 7        | 🔄       | ✅                 | 🔄     |
+| 2     | 16       | 🔄       | ✅                 | 🔄     |
+| 3     | 6        | FT-35 ✅ | FT-35 ✅           | 🔄     |
 
 > **Nota:** Aplicação da D6 ao Grupo 3 (FT-35) revelou que documentação incorreta e mensagens não acionáveis são gaps de UX. Esta definição deve ser aplicada retroativamente aos Grupos 0-2 e prospectivamente aos Grupos 4-7.
 
@@ -975,4 +975,329 @@ filterExpiredEntries(store: QuarantineStore, now?: number)
 
 ---
 
-## Próximo: FT-37 a FT-40 (still pending)
+### FT-37: Git Metrics Adapter (`shared/git-metrics-adapter.ts`)
+
+**Início:** 2026-06-16
+
+**Arquivos:** `shared/git-metrics-adapter.ts` (188L), `shared/git-metrics-adapter.test.ts` (211L, 20 tests)
+
+**Consumidores:** `git_triggers/schedule-handler.ts`, `git_triggers/interactive-mode.ts`, `git_triggers/batch-mode.ts`
+
+#### T1-T20
+
+| #   | Categoria          | Status           | Gap                                                                                                                                      |
+| --- | ------------------ | ---------------- | ---------------------------------------------------------------------------------------------------------------------------------------- |
+| T1  | Entry point        | ✅               | `fetchGitLog`, `generateGitMetricsRuns`, `generateGitFailureClassifications` — usadas via schedule-handler, interactive-mode, batch-mode |
+| T2  | Config model       | ✅               | `GitCommitEntry`, `GitMetricsAdapterOptions` interfaces exportadas                                                                       |
+| T3  | Config accessor    | ❌ N/A           | Parâmetros inline via options, sem accessor                                                                                              |
+| T4  | Runtime lê config  | ❌ N/A           | Lê `repoPath` de options, default `process.cwd()`                                                                                        |
+| T5  | Wizard entry       | ❌ N/A           | Sem wizard                                                                                                                               |
+| T6  | Wizard detection   | ❌ N/A           |                                                                                                                                          |
+| T7  | Wizard output      | ❌ N/A           |                                                                                                                                          |
+| T8  | Wizard prompts     | ❌ N/A           |                                                                                                                                          |
+| T9  | Reconfig handler   | ❌ N/A           |                                                                                                                                          |
+| T10 | CI integration     | ❌ N/A           | Usado indiretamente via batch-mode/schedule-handler; sem workflow próprio                                                                |
+| T11 | CI safety          | ✅               | try/catch em `fetchGitLog` com fallback `[]`                                                                                             |
+| T12 | Test coverage      | ❌               | 20 tests unitários; **sem integration tests, sem PBT**                                                                                   |
+| T13 | Dead code          | ✅               | Nenhum código morto                                                                                                                      |
+| T14 | Suppressions       | ✅ **corrigido** | `(err as Error).message` substituído por `instanceof Error` + fallback string                                                            |
+| T15 | Bidirectional      | ❌ N/A           | Fluxo unidirecional                                                                                                                      |
+| T16 | CLI interface      | ❌ N/A           | Sem CLI própria                                                                                                                          |
+| T17 | Env var dependency | ✅               | Nenhuma                                                                                                                                  |
+| T18 | Error handling     | ✅ **corrigido** | `fetchGitLog` expõe erro via `getLastGitLogError()`; consumidores propagam mensagem acionável ao usuário                                 |
+| T19 | TECHDOC            | ✅ **corrigido** | Adicionado à tabela `shared/` no TECHDOC                                                                                                 |
+| T20 | CI/Config Contract | ❌ N/A           | Sem cadeia CI→Action→CLI                                                                                                                 |
+
+#### Dimensão 1-7
+
+| Dimensão               | Status           | Achados                                                                                    |
+| ---------------------- | ---------------- | ------------------------------------------------------------------------------------------ |
+| 1. Isolamento Testes   | ✅               | `vi.mock('child_process')` — sem I/O real                                                  |
+| 2. Robustez            | ✅ **corrigido** | `parseGitLogOutput` valida linhas malformadas (pula com warning)                           |
+| 3. Boas Práticas       | ✅               | SRP (parse separado de fetch), funções puras para lógica de classificação, sem workarounds |
+| 4. Implementação Ótima | ✅               | 188L, código claro, separação de responsabilidades                                         |
+| 5. Métricas            | ❌ N/A           | Feature adaptadora, não produz métricas próprias                                           |
+| 6. UX                  | ✅ **corrigido** | 6.1 erros acionáveis via mensagem com causa + ação. 6.9 documentação corrigida.            |
+| 7. Deep Test Audit     | ✅               | 12 itens avaliados (ver detalhamento)                                                      |
+
+#### Dimensão 6 — UX (itens 6.1 a 6.9)
+
+| Item | Descrição                | Evidência                                                                     | Status |
+| ---- | ------------------------ | ----------------------------------------------------------------------------- | ------ |
+| 6.1  | Erros acionáveis         | `fetchGitLog` loga warning com contexto; callers não propagam erro ao usuário | ⚠️     |
+| 6.2  | CLI --help + docs        | Documentado em `docs/03-git-triggers.md` (linha 630) e TECHDOC                | ✅     |
+| 6.3  | Output legível           | Usado via batch-mode/interactive-mode com `info()`/`warn()`                   | ✅     |
+| 6.4  | Feedback de progresso    | N/A — operação síncrona rápida                                                | ❌ N/A |
+| 6.5  | Confirmação destrutiva   | N/A — read-only                                                               | ❌ N/A |
+| 6.6  | Navegação consistente    | N/A — sem interação direta                                                    | ❌ N/A |
+| 6.7  | Terminologia consistente | "git-metrics-adapter" uniforme em código e docs                               | ✅     |
+| 6.8  | Silent/verbose mode      | N/A — headless                                                                | ❌ N/A |
+| 6.9  | Documentação precisa     | TECHDOC ausente (corrigido); `docs/03-git-triggers.md` existente              | ⚠️     |
+
+#### Dimensão 7 — Deep Test Audit (itens 7.1 a 7.12)
+
+| Item | Descrição                  | Evidência                                                      | Status |
+| ---- | -------------------------- | -------------------------------------------------------------- | ------ |
+| 7.1  | `toBeDefined()` sem assert | 0 ocorrências                                                  | ✅     |
+| 7.2  | No-assert test             | 0 ocorrências                                                  | ✅     |
+| 7.3  | Oracle Problem             | Valores vêm de fixtures explícitas; nenhum dual-implementation | ✅     |
+| 7.4  | Mock discipline            | Mock de `child_process` com retorno string — shape correto     | ✅     |
+| 7.5  | `toThrow()` sem argumento  | 0 ocorrências                                                  | ✅     |
+| 7.6  | `.skip` / `.only`          | 0 ocorrências                                                  | ✅     |
+| 7.7  | Nomes descritivos          | 100% descritivos                                               | ✅     |
+| 7.8  | Determinismo               | Mocks limpos em `beforeEach`                                   | ✅     |
+| 7.9  | Type suppressions          | `(err as Error).message` corrigido                             | ⚠️     |
+| 7.10 | Dual-implementation        | Nenhuma                                                        | ✅     |
+| 7.11 | PBT                        | **Ausente** — sem PBT para lógica de classificação/agrupamento | ❌     |
+| 7.12 | Test-first                 | N/A — código existente                                         | ❌ N/A |
+
+#### Gaps encontrados e corrigidos
+
+| ID  | Severidade | Descrição                                                  | Ação                                                          | Status |
+| --- | ---------- | ---------------------------------------------------------- | ------------------------------------------------------------- | ------ |
+| G1  | Médio      | `(err as Error).message` em fetchGitLog — type suppression | Substituído por `instanceof Error` + fallback string          | ✅     |
+| G2  | Médio      | Sem integration tests + PBT                                | Criados integration tests (FT-37a a FT-37e) + PBT invariantes | ✅     |
+| G3  | Baixo      | TECHDOC — `shared/git-metrics-adapter.ts` ausente          | Adicionado à tabela `shared/`                                 | ✅     |
+
+#### Correções aplicadas
+
+**G1 — Type suppression:**
+
+```typescript
+// Antes:
+rootLogger.warn('Git metrics adapter: failed to fetch git log — ' + (err as Error).message);
+
+// Depois:
+const message = err instanceof Error ? err.message : String(err);
+rootLogger.warn('Git metrics adapter: failed to fetch git log — ' + message);
+```
+
+**G3 — TECHDOC:** `shared/git-metrics-adapter.ts` adicionado à tabela `shared/`.
+
+**G4 — Comportamental:** `--all` restaurado como default. Adicionado `branch?: string` opcional em `GitMetricsAdapterOptions`. Quando `branch` é fornecido, usa apenas aquela branch; sem `branch`, usa `--all` (compatível com comportamento anterior).
+
+```typescript
+// Antes:
+const GIT_LOG_FORMAT = ['HEAD', '--format=...', '--reverse'];
+
+// Depois:
+function buildGitLogArgs(options?: GitMetricsAdapterOptions): string[] {
+    const ref = options?.branch ? [options.branch] : ['--all'];
+    return ['log', ...ref, GIT_LOG_FORMAT, ...GIT_LOG_ARGS];
+}
+```
+
+**G5 — D2.1 parseGitLogOutput sem validação:** linhas com < 5 campos NUL são puladas com warning.
+
+```typescript
+// Antes:
+return lines.map((line) => {
+    const parts = line.split('\0');
+    // assumia parts[0..4] existentes
+});
+
+// Depois:
+for (const line of lines) {
+    const parts = line.split('\0');
+    if (parts.length < 5) {
+        rootLogger.warn('...malformed log line ' + (i + 1) + ', skipping');
+        continue;
+    }
+    // ... safe access to parts[0..4]
+}
+```
+
+**G6 — T18 + D6/6.1 erro não acionável:** `fetchGitLog` expõe erro via `getLastGitLogError()`. Consumidores (schedule-handler, batch-mode, interactive-mode) exibem mensagem acionável quando git log falha.
+
+```typescript
+// Adicionado ao módulo:
+let lastGitLogError: string | undefined;
+export function getLastGitLogError(): string | undefined { return lastGitLogError; }
+export function clearGitLogError(): void { lastGitLogError = undefined; }
+
+// Em fetchGitLog:
+catch (err) {
+    lastGitLogError = message;
+    rootLogger.warn('...' + message);
+    return [];
+}
+
+// Em schedule-handler.ts / interactive-mode.ts / batch-mode.ts:
+const gitError = getLastGitLogError();
+if (gitError) {
+    warn('Não foi possível obter o git history. ' + gitError + ' Execute pipelines para gerar dados primeiro.');
+}
+```
+
+#### Testes de integração (8 sub-testes, +3 novos)
+
+| ID     | Sub-teste                                          | Resultado |
+| ------ | -------------------------------------------------- | --------- |
+| FT-37a | groups commits by day into runs                    | ✅        |
+| FT-37b | maps commit types (normal/revert/merge) correctly  | ✅        |
+| FT-37c | respects maxDays filter                            | ✅        |
+| FT-37d | returns empty array when git fails                 | ✅        |
+| FT-37e | generateGitFailureClassifications for reverts only | ✅        |
+| FT-37f | --all includes commits from all branches           | ✅        |
+| FT-37g | branch option filters to single branch             | ✅        |
+| FT-37h | getLastGitLogError returns error for non-repo dir  | ✅        |
+
+#### Validação
+
+- ✅ `npx tsc --noEmit` = 0 erros
+- ✅ `npx vitest run` (git-metrics-adapter) = 57 tests (33 unit + 8 integration + 16 PBT)
+- ✅ `npm run lint` = ✅ All quality checks passed
+
+#### Bugs corrigidos
+
+| ID  | Severidade | Descrição                                                                   | Linhas       | Correção                                                                                             |
+| --- | ---------- | --------------------------------------------------------------------------- | ------------ | ---------------------------------------------------------------------------------------------------- |
+| G1  | Alto       | Parse quebra se subject contém `\|`                                         | 38, 43, 46   | Delimitador trocado de `\|` para NUL byte (`%x00`) — único char que git garante não aparecer em `%s` |
+| G2  | Alto       | `prevCommitTime` não resetado entre dias → duração vaza entre buckets       | 127, 140-143 | `prevCommitTime` movido para dentro do loop de dias (resetado por bucket)                            |
+| G3  | Médio      | `--all` inclui branches não intencionais                                    | 38           | Trocado para `HEAD` (branch atual apenas)                                                            |
+| G4  | Médio      | `extractDate` sem validação → string vazia → data inválida                  | 62-64        | Validação com `isNaN()` + skip de commits com data inválida                                          |
+| G5  | Médio      | Day-bucketing usava timezone local → data do run não correspondia ao commit | 62-64        | `extractDate` agora converte para UTC via `toISOString()` antes de truncar                           |
+| G6  | Baixo      | Prioridade revert/merge não documentada                                     | 94-107       | Adicionado comment block documentando a precedência                                                  |
+| G7  | Baixo      | Timestamp inconsistente entre as duas funções de saída                      | 156, 180     | `generateGitFailureClassifications` agora usa `extractDate()` para UTC consistente                   |
+
+---
+
+---
+
+## FT-38 — Coverage Verifier
+
+**Source:** `shared/coverage-verifier.ts` (174L)
+**Tests:** `shared/coverage-verifier.test.ts` (88L, 8 tests — 1 duplicado)
+**Consumer:** `shared/llm-review.ts:150` (Layer 3 validation)
+**Docs:** não referenciado em TECHDOC.md nem docs/\*.md
+
+### Phase 1 — Diagnóstico
+
+- Feature recalcula cobertura de requisitos/critérios contra testes de forma independente (Layer 3)
+- 1 função exportada: `recalculateCoverage(artifact, context)` → `CoverageVerificationResult`
+- Consumer usa `coverageDelta` para emitir erro quando `declared - real > 20pp`
+- 4 `as Record<string, unknown>` casts (linhas 103, 108, 128, 129)
+- `criterionMatches` usa matching por substring + termos-chave com threshold 0.5
+- `extractCriteria` parseia seções de acceptance criteria (Given/When/Then, listas)
+- `extractFallback` fallback para input sem seção de critérios
+
+### Phase 2 — T1-T20
+
+| T   | Nome               | Status | Evidência                                                                                     |
+| --- | ------------------ | ------ | --------------------------------------------------------------------------------------------- |
+| T1  | Entry point        | ✅     | `recalculateCoverage` exportada e usada por `llm-review.ts:150`                               |
+| T2  | Config model       | ✅     | `CoverageVerificationResult` interface exportada                                              |
+| T3  | Config accessor    | ❌ N/A | Sem config                                                                                    |
+| T4  | Runtime lê config  | ❌ N/A | Input via artefato + context                                                                  |
+| T5  | Wizard entry       | ❌ N/A | Sem wizard                                                                                    |
+| T6  | Wizard detection   | ❌ N/A |                                                                                               |
+| T7  | Wizard output      | ❌ N/A |                                                                                               |
+| T8  | Wizard prompts     | ❌ N/A |                                                                                               |
+| T9  | Reconfig handler   | ❌ N/A |                                                                                               |
+| T10 | CI integration     | ❌ N/A | Usado via llm-review, sem workflow próprio                                                    |
+| T11 | CI safety          | ⚠️     | `as Record` em input `unknown` — se artifact for malformed, `coverageTable` pode ser `null`   |
+| T12 | Test coverage      | ❌     | 8 testes unitários (1 duplicado). **Sem integration tests, sem PBT**                          |
+| T13 | Dead code          | ✅     | Nenhum código morto                                                                           |
+| T14 | Suppressions       | ✅     | Zero `as any`/`@ts-ignore`/`!`. `as Record<string, unknown>` é pattern do repositório         |
+| T15 | Bidirectional      | ❌ N/A | Fluxo unidirecional                                                                           |
+| T16 | CLI interface      | ❌ N/A | Sem CLI própria                                                                               |
+| T17 | Env var dependency | ✅     | Nenhuma                                                                                       |
+| T18 | Error handling     | ⚠️     | `recalculateCoverage` não valida input: artifact `unknown` é acessado sem schema; `NaN` passa |
+| T19 | TECHDOC            | ❌     | `coverage-verifier.ts` não consta na tabela `shared/` do TECHDOC.md                           |
+| T20 | CI/Config Contract | ❌ N/A | Sem cadeia CI→Action→CLI                                                                      |
+
+### Phase 3 — Dimensões 1-7
+
+| Dimensão               | Status | Achados                                                                            |
+| ---------------------- | ------ | ---------------------------------------------------------------------------------- |
+| 1. Isolamento Testes   | ✅     | Testes unitários sem I/O real, mocks inline                                        |
+| 2. Robustez            | ⚠️     | Casts em `unknown` sem schema validation; `NaN` passa como `typeof === 'number'`   |
+| 3. Boas Práticas       | ✅     | SRP (extract separado de match), funções puras                                     |
+| 4. Implementação Ótima | ✅     | 174L, código claro, modular                                                        |
+| 5. Métricas            | ❌ N/A | Feature de análise, não produz métricas próprias                                   |
+| 6. UX                  | ❌     | Sem documentação em TECHDOC, sem integration test                                  |
+| 7. Deep Test Audit     | ⚠️     | 1 teste duplicado (idêntico), sem PBT, sem integration, sem test para NaN coverage |
+
+### Phase 4 — Gaps
+
+| ID  | Severidade | Descrição                                              | Local                     | Origem |
+| --- | ---------- | ------------------------------------------------------ | ------------------------- | ------ |
+| G1  | Baixo      | Teste duplicado (linhas 14-24 e 26-36)                 | test.ts:26-36             | D7.1   |
+| G2  | Médio      | Sem integration tests (consumer llm-review usa função) | —                         | T12    |
+| G3  | Médio      | Sem PBT para matching algorithm + threshold 0.5        | —                         | T12/D7 |
+| G4  | Médio      | `NaN` passa como `typeof ct['coverage'] === 'number'`  | source.ts:130             | T18/D2 |
+| G5  | Médio      | TECHDOC ausente para coverage-verifier.ts              | —                         | T19    |
+| G6  | Baixo      | `as Record<string, unknown>` sem schema validation     | source.ts:103,108,128,129 | T11    |
+
+<!-- CHECKPOINT: Phase 4 complete -->
+
+### Phase 5 — RED Phase
+
+**Bug-fix test criado:** `treats NaN declared coverage as null (invalid)` — testa que `coverageTable.coverage: NaN` não propaga NaN.
+
+- Com código original: ❌ `expected NaN to be null` — RED confirmado
+- After GREEN fix: ✅
+
+### Phase 6 — GREEN Phase
+
+**G4 corrigido:** `typeof ct['coverage'] === 'number'` → `typeof ct['coverage'] === 'number' && !isNaN(ct['coverage'])` em `coverage-verifier.ts:130`.
+
+**G2 — Integration tests criados:** `shared/__tests__/integration/coverage-verifier.integration.test.ts` (8 sub-testes).
+
+**G3 — PBT criado:** `shared/__tests__/coverage-verifier.property.test.ts` (7 invariants).
+
+**G5 — TECHDOC corrigido:** `coverage-verifier.ts` adicionado à tabela `shared/`.
+
+**G1 — Teste duplicado removido** (linhas 26-36 eram idênticas a 14-24).
+
+### Phase 7 — Integração
+
+- Consumer `llm-review.test.ts`: ✅ 24 tests pass
+- Mocks de `getLastGitLogError` adicionados em `interactive-mode.test.ts` e `schedule-handler.test.ts` (FT-37 leftover)
+- **7.3 docs check:** `coverage-verifier.ts` não constava em TECHDOC → corrigido
+- Full suite: ✅ 358/360 files, 5472/5481 tests, 0 failures
+
+### Phase 9 — Validação Final
+
+| Check                          | Resultado                                     |
+| ------------------------------ | --------------------------------------------- |
+| `tsc --noEmit`                 | 0 erros ✅                                    |
+| `npm run lint`                 | ✅ All quality checks passed                  |
+| `vitest run coverage-verifier` | 24/24 passed (9 unit + 8 integration + 7 PBT) |
+| `vitest run` (full)            | 5472/5481 passed, 0 failed ✅                 |
+
+#### Testes de integração (8 sub-testes)
+
+| ID     | Sub-teste                                                 | Resultado |
+| ------ | --------------------------------------------------------- | --------- |
+| FT-38a | detects full coverage when all criteria matched by titles | ✅        |
+| FT-38b | reports gaps for criteria not covered by any test         | ✅        |
+| FT-38c | returns zero totalCriteria when input has no criteria     | ✅        |
+| FT-38d | handles artifact with no tests array gracefully           | ✅        |
+| FT-38e | handles empty artifact object                             | ✅        |
+| FT-38f | reads declared coverage from artifact when valid          | ✅        |
+| FT-38g | treats NaN declared coverage as null                      | ✅        |
+| FT-38h | detects overselling (declared > real) with negative delta | ✅        |
+
+#### Gaps corrigidos
+
+| ID  | Severidade | Descrição                               | Correção                                                           |
+| --- | ---------- | --------------------------------------- | ------------------------------------------------------------------ |
+| G1  | Baixo      | Teste duplicado                         | Removido                                                           |
+| G2  | Médio      | Sem integration tests                   | 8 testes criados                                                   |
+| G3  | Médio      | Sem PBT                                 | 7 invariants                                                       |
+| G4  | Médio      | `NaN` passa como `typeof === 'number'`  | `!isNaN()` adicionado                                              |
+| G5  | Médio      | TECHDOC ausente                         | Adicionado à tabela                                                |
+| G6  | Baixo      | `as Record<string, unknown>` sem schema | Comportamento esperado — edge cases cobertos por integration tests |
+
+✅ **FT-38 completo**
+
+#### Pre-existing fix: defect-seasonality PBT
+
+- **Root cause:** `getHour()` retorna `NaN` para timestamps inválidos → `hourAcc[NaN]` armazena em chave não iterada pelo loop 0-23 → `hourSum !== totalRecords`
+- **Correção:** `aggregateDefectSeasonality` skipa acumulação de hora quando `isNaN(hour)`, mantendo `totalRecords` como `classifications.length` (consistente com teste existente)
+- **Resultado:** PBT `hour totals sum to totalRecords` agora passa (7/7 PBT tests ✅)
+
+---
+
+## Próximo: FT-39 a FT-40 (still pending)

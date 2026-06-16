@@ -571,3 +571,35 @@ If a test expects X but requirements specify Y:
 
 If requirements are ambiguous:
 → STOP. Seek clarification. Do not guess.
+
+## 21. SPEED IS NOT AUTHORITY
+
+Speed is never a justification.
+
+Arguments invalid by definition:
+
+- "it's faster this way"
+- "we need to move quickly"
+- "we will patch it post-release"
+- "this is good enough for now"
+
+Unacceptable trade-offs:
+
+- correctness sacrificed for speed
+- safety sacrificed for speed
+- completeness sacrificed for speed
+- auditability sacrificed for speed
+
+The fastest solution is the one that needs no correction.
+
+Every defect caused by speed requires:
+
+1. detection
+2. investigation
+3. correction
+4. revalidation
+5. redeployment
+
+Cost: always greater than doing it right once.
+
+**Correct first. Speed follows. Never the opposite.**

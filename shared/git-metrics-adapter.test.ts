@@ -7,7 +7,14 @@ vi.mock('child_process', () => ({
 }));
 
 import { execFileSync } from 'child_process';
-import { fetchGitLog, generateGitMetricsRuns, generateGitFailureClassifications } from './git-metrics-adapter.js';
+import {
+    fetchGitLog,
+    generateGitMetricsRuns,
+    generateGitFailureClassifications,
+    getLastGitLogError,
+    parseGitLogOutput,
+    clearGitLogError,
+} from './git-metrics-adapter.js';
 
 vi.mock('./logger', () => ({
     rootLogger: { error: vi.fn(), warn: vi.fn(), info: vi.fn(), child: vi.fn().mockReturnThis() },
@@ -19,14 +26,97 @@ function mockGitOutput(output: string): void {
     mockExecFileSync.mockImplementation(() => output);
 }
 
+// NUL-delimited format: hash\0date\0subject\0author\0parents
 const SAMPLE_GIT_LOG = [
-    'abc123|2026-06-01T10:00:00.000Z|Initial commit|kdemian|',
-    'def456|2026-06-01T11:30:00.000Z|Add feature X|kdemian|abc123',
-    'ghi789|2026-06-02T09:00:00.000Z|Revert "Add feature X"|kdemian|def456',
-    'jkl012|2026-06-02T10:00:00.000Z|Fix tests|OpenCode|ghi789',
-    'mno345|2026-06-02T11:00:00.000Z|Merge branch feat|Kevin Borges|jkl012 abc123',
-    'pqr678|2026-06-03T14:00:00.000Z|Refactor module|kevindemian|mno345',
+    'abc123\0' + new Date('2026-06-01T10:00:00Z').toISOString() + '\0Initial commit\0kdemian\0',
+    'def456\0' + new Date('2026-06-01T11:30:00Z').toISOString() + '\0Add feature X\0kdemian\0abc123',
+    'ghi789\0' + new Date('2026-06-02T09:00:00Z').toISOString() + '\0Revert "Add feature X"\0kdemian\0def456',
+    'jkl012\0' + new Date('2026-06-02T10:00:00Z').toISOString() + '\0Fix tests\0OpenCode\0ghi789',
+    'mno345\0' + new Date('2026-06-02T11:00:00Z').toISOString() + '\0Merge branch feat\0Kevin Borges\0jkl012 abc123',
+    'pqr678\0' + new Date('2026-06-03T14:00:00Z').toISOString() + '\0Refactor module\0kevindemian\0mno345',
 ].join('\n');
+
+describe('parseGitLogOutput', () => {
+    beforeEach(() => {
+        vi.clearAllMocks();
+    });
+
+    it('parses valid NUL-delimited lines', () => {
+        const result = parseGitLogOutput('hash1\0date1\0subj1\0author1\0parent1');
+        expect(result).toHaveLength(1);
+        expect(result[0]?.hash).toBe('hash1');
+        expect(result[0]?.date).toBe('date1');
+        expect(result[0]?.subject).toBe('subj1');
+        expect(result[0]?.author).toBe('author1');
+        expect(result[0]?.parents).toEqual(['parent1']);
+    });
+
+    it('skips malformed lines with fewer than 5 fields', () => {
+        const result = parseGitLogOutput('hash1\0date1\0subj1');
+        expect(result).toEqual([]);
+    });
+
+    it('skips only the malformed line, keeps valid ones', () => {
+        const input = 'hash1\0date1\0subj1\0author1\0\nhash2\0date2\0subj2\nhash3\0date3\0subj3\0author3\0parent3';
+        const result = parseGitLogOutput(input);
+        expect(result).toHaveLength(2);
+        expect(result[0]?.hash).toBe('hash1');
+        expect(result[1]?.hash).toBe('hash3');
+    });
+
+    it('handles empty input', () => {
+        expect(parseGitLogOutput('')).toEqual([]);
+    });
+
+    it('handles empty parents field', () => {
+        const result = parseGitLogOutput('hash1\0date1\0subj1\0author1\0');
+        expect(result).toHaveLength(1);
+        expect(result[0]?.parents).toEqual([]);
+    });
+
+    it('handles multiple parent hashes', () => {
+        const result = parseGitLogOutput('hash1\0date1\0subj1\0author1\0parent1 parent2 parent3');
+        expect(result[0]?.parents).toEqual(['parent1', 'parent2', 'parent3']);
+    });
+});
+
+describe('getLastGitLogError', () => {
+    beforeEach(() => {
+        vi.clearAllMocks();
+        clearGitLogError();
+    });
+
+    it('returns error message after git command failure', () => {
+        mockExecFileSync.mockImplementation(() => {
+            throw new Error('fatal: not a git repository');
+        });
+        fetchGitLog();
+        expect(getLastGitLogError()).toBe('fatal: not a git repository');
+    });
+
+    it('returns undefined after successful git command', () => {
+        mockGitOutput(SAMPLE_GIT_LOG);
+        fetchGitLog();
+        expect(getLastGitLogError()).toBeUndefined();
+    });
+
+    it('is cleared at start of each fetchGitLog call', () => {
+        mockExecFileSync.mockImplementation(() => {
+            throw new Error('first error');
+        });
+        fetchGitLog();
+        expect(getLastGitLogError()).toBe('first error');
+
+        mockGitOutput(SAMPLE_GIT_LOG);
+        fetchGitLog();
+        expect(getLastGitLogError()).toBeUndefined();
+    });
+
+    it('is undefined before any fetchGitLog call', () => {
+        clearGitLogError();
+        expect(getLastGitLogError()).toBeUndefined();
+    });
+});
 
 describe('fetchGitLog', () => {
     beforeEach(() => {
@@ -72,6 +162,22 @@ describe('fetchGitLog', () => {
             expect.any(Array),
             expect.objectContaining({ cwd: '/custom/path' }),
         );
+    });
+
+    it('uses --all by default (no branch option)', () => {
+        mockGitOutput(SAMPLE_GIT_LOG);
+        fetchGitLog();
+        const args = mockExecFileSync.mock.calls[0]?.[1] as string[];
+        expect(args).toContain('--all');
+        expect(args).not.toContain('HEAD');
+    });
+
+    it('uses branch option instead of --all', () => {
+        mockGitOutput(SAMPLE_GIT_LOG);
+        fetchGitLog({ branch: 'main' });
+        const args = mockExecFileSync.mock.calls[0]?.[1] as string[];
+        expect(args).toContain('main');
+        expect(args).not.toContain('--all');
     });
 });
 
@@ -166,7 +272,8 @@ describe('generateGitMetricsRuns', () => {
     });
 
     it('handles single commit correctly', () => {
-        mockGitOutput('abc123|2026-06-01T10:00:00.000Z|Only commit|kdemian|');
+        const line = 'abc123' + '\0' + '2026-06-01T10:00:00.000Z' + '\0' + 'Only commit' + '\0' + 'kdemian' + '\0';
+        mockGitOutput(line);
         const runs = generateGitMetricsRuns();
         expect(runs).toHaveLength(1);
         expect(runs[0]?.total).toBe(1);

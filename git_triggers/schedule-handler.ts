@@ -21,7 +21,11 @@ import { buildIncidentReport, generateIncidentReportHtml } from '../shared/incid
 import { analyzePipelineImpact, generateImpactAlertHtml } from '../shared/impact-alert.js';
 import { calculatePipelineCost, generatePipelineCostHtml } from '../shared/pipeline-cost.js';
 import { calculateRequirementScores, generateRequirementScoreHtml } from '../shared/requirement-score.js';
-import { generateGitMetricsRuns, generateGitFailureClassifications } from '../shared/git-metrics-adapter.js';
+import {
+    generateGitMetricsRuns,
+    generateGitFailureClassifications,
+    getLastGitLogError,
+} from '../shared/git-metrics-adapter.js';
 import { runQualityGate, formatQualityGateText } from '../shared/quality-gate.js';
 
 import { writeReport } from '../shared/temp-dir.js';
@@ -122,11 +126,19 @@ export function generateWeeklyQualityReport(): void {
         if (projectRuns.length < 2) {
             info('Sem dados de pipeline — tentando fallback para git history...');
             const gitRuns = generateGitMetricsRuns({ projectName: currentProjectName });
+            const gitError = getLastGitLogError();
             if (gitRuns.length >= 2) {
                 projectRuns = gitRuns;
                 failureClassifications = generateGitFailureClassifications({ projectName: currentProjectName });
                 usingGitFallback = true;
                 info('Usando ' + gitRuns.length + ' runs derivados do git history.');
+            } else if (gitError) {
+                warn(
+                    'Não foi possível obter o git history. ' +
+                        gitError +
+                        ' Execute pipelines para gerar dados primeiro.',
+                );
+                return;
             } else {
                 warn('Menos de 2 execuções registradas. Execute pipelines primeiro.');
                 return;
