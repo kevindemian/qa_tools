@@ -28,6 +28,10 @@ jobs:
               uses: actions/download-artifact@v4
               with:
                   name: ctrf-report
+                  path: .
+            - name: Verify CTRF report
+              if: always()
+              run: ls -la reports/
             - name: Run QA Tools Post-Processing
               if: always()
               run: npx tsx shared/pr-report-core.ts --ctrf ${{ inputs.ctrf-path }} --project ${{ inputs.project-name }}

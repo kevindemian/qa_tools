@@ -112,19 +112,24 @@ function _coverageCheck(health: HealthScoreResult): GateCheck {
     };
 }
 
-function _suiteSpeedCheck(health: HealthScoreResult): GateCheck {
-    const status = health.dimensions.suiteSpeed.score >= 100 - (THRESHOLDS.maxSuiteSpeed / 10) * 100 ? 'pass' : 'fail';
+function _suiteSpeedCheck(health: HealthScoreResult, runs: MetricsRun[]): GateCheck {
+    const allDurations: number[] = [];
+    for (const run of runs) {
+        for (const t of run.tests) {
+            allDurations.push(t.duration);
+        }
+    }
+    allDurations.sort((a, b) => a - b);
+    const idx = allDurations.length > 0 ? Math.max(0, Math.ceil(allDurations.length * 0.95) - 1) : -1;
+    const p95 = idx >= 0 ? (allDurations[idx] ?? 0) : 0;
+    const thresholdMs = THRESHOLDS.maxSuiteSpeed * 1000;
+    const status = p95 <= thresholdMs ? 'pass' : 'fail';
     return {
         name: 'suite-speed',
         status,
         score: health.dimensions.suiteSpeed.score,
         threshold: THRESHOLDS.maxSuiteSpeed,
-        details:
-            'Suite speed score: ' +
-            health.dimensions.suiteSpeed.score +
-            ' (threshold: ' +
-            THRESHOLDS.maxSuiteSpeed +
-            's/test)',
+        details: 'Suite speed p95: ' + p95 + 'ms (threshold: ' + THRESHOLDS.maxSuiteSpeed + 's)',
     };
 }
 
@@ -135,7 +140,7 @@ function _buildChecks(checks: GateCheck[], health: HealthScoreResult, runs: Metr
     checks.push(_passRateCheck(health));
     checks.push(_flakyCheck(runs));
     checks.push(_coverageCheck(health));
-    checks.push(_suiteSpeedCheck(health));
+    checks.push(_suiteSpeedCheck(health, runs));
 }
 
 function _aggregateResult(checks: GateCheck[]): QualityGateResult {

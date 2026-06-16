@@ -2542,3 +2542,98 @@ export function buildAllStyles(): string {
 **Nota:** Todos os 325 testes passaram, npm audit passou, cobertura OK. Falha é do pipeline CI, não do código.
 
 ---
+
+## 🏃 Score Fix — Correção de Bugs nos Cálculos de Score (2026-06-16)
+
+**Origem:** Auditoria de CI run 27627424033 + análise de código.
+**Sintomas:** CI não envia HTML artifact; summary duplicado em loop; scores de health score inconsistentes.
+**Regra:** Zero workarounds, todos os bugs corrigidos na raiz.
+
+| ID    | Severidade   | Descrição                                              | Arquivo(s)                                    | Causa Raiz                                                         | Correção                                               |
+| ----- | ------------ | ------------------------------------------------------ | --------------------------------------------- | ------------------------------------------------------------------ | ------------------------------------------------------ |
+| SF-01 | **CRITICAL** | CTRF não encontrado no post-process                    | `.github/workflows/qa-post-process.yml:27-33` | `download-artifact@v4` sem `path:` extrai sem diretório `reports/` | Adicionar `path: .` + step verificação                 |
+| SF-02 | **HIGH**     | Job summary duplicado em loop                          | `shared/pr-report-core.ts:302`                | `appendFileSync` acumula no `$GITHUB_STEP_SUMMARY`                 | Substituir por `writeFileSync`                         |
+| SF-03 | **HIGH**     | `_computePassRate` duplicado com `_computeExpWeighted` | `shared/health-score.ts:101-113`              | Função idêntica isolada, sem reuso                                 | Remover `_computePassRate`, usar `_computeExpWeighted` |
+| SF-04 | **HIGH**     | `scoreCoverage` com floor hardcoded 30                 | `shared/health-score.ts:206`                  | `30` não parametrizado                                             | Adicionar `coverageFloor` configurável                 |
+| SF-05 | **HIGH**     | `_suiteSpeedCheck` fórmula 100-(8/10)\*100=20          | `shared/quality-gate.ts:115-129`              | Converte threshold (8s) via fórmula errada                         | Comparar valor real (ms) contra threshold, não score   |
+| SF-06 | **MEDIUM**   | Flaky rate = 100 (perfect) com dados insuficientes     | `shared/health-score.ts:133`                  | `totalConsidered=0` retorna 0 → score 100                          | Retornar null quando insuficiente                      |
+| SF-07 | **HIGH**     | Empty catch em coverage-source.ts                      | `shared/coverage-source.ts:63-65`             | `catch` sem log de erro                                            | Adicionar `rootLogger.warn`                            |
+
+### Fase 0 — Backlog e Diagnóstico
+
+| ID    | Item                                        | Critério       |
+| ----- | ------------------------------------------- | -------------- |
+| SF-00 | 📋 Registrar Score Fix sprint no BACKLOG.md | Seção presente |
+
+### Fase 1 — CI Pipeline
+
+| ID    | Item                                                  | Critério                                        |
+| ----- | ----------------------------------------------------- | ----------------------------------------------- |
+| SF-10 | 🔧 Adicionar `path: .` ao `download-artifact@v4`      | CTRF é encontrado em `reports/ctrf-report.json` |
+| SF-11 | 🔧 Adicionar step `ls -la reports/` pós-download      | Log mostra arquivos esperados                   |
+| SF-12 | 🔧 Garantir que `upload-artifact` recebe path correto | PR report HTML é enviado                        |
+
+### Fase 2 — Job Summary Duplicado
+
+| ID    | Item                                                         | Critério                           |
+| ----- | ------------------------------------------------------------ | ---------------------------------- |
+| SF-20 | ♻️ `appendFileSync` → `writeFileSync` em `writeToJobSummary` | `$GITHUB_STEP_SUMMARY` não duplica |
+
+### Fase 3 — Score Duplicação
+
+| ID    | Item                                                                                 | Critério                |
+| ----- | ------------------------------------------------------------------------------------ | ----------------------- |
+| SF-30 | ♻️ Substituir `_computePassRate` por `_computeExpWeighted` em `computeActualMetrics` | Resultado idêntico      |
+| SF-31 | ♻️ Remover função `_computePassRate`                                                 | 0 referências restantes |
+| SF-32 | 📋 Teste comprova equivalência de output                                             | Teste existente passa   |
+
+### Fase 4 — scoreCoverage Floor
+
+| ID    | Item                                                                   | Critério                              |
+| ----- | ---------------------------------------------------------------------- | ------------------------------------- |
+| SF-40 | ✨ Adicionar `coverageFloor` a `HealthScoreConfig` + defaults          | `coverageFloor: 30` default           |
+| SF-41 | ♻️ `scoreCoverage` usa `config.coverageFloor` em vez de hardcoded `30` | Comportamento preservado para default |
+
+### Fase 5 — suiteSpeedCheck
+
+| ID    | Item                                                               | Critério                                       |
+| ----- | ------------------------------------------------------------------ | ---------------------------------------------- |
+| SF-50 | ♻️ `_suiteSpeedCheck` recebe `runs` e computa p95 real             | Comparação é contra valor real (ms), não score |
+| SF-51 | ♻️ Atualizar `_buildChecks` — passa `runs` para `_suiteSpeedCheck` | Checks continuam corretos                      |
+| SF-52 | 📋 Teste: suite speed > 8s falha, < 8s passa                       | Comportamento esperado                         |
+
+### Fase 6 — Flaky Rate Insuficiente
+
+| ID    | Item                                                                              | Critério                               |
+| ----- | --------------------------------------------------------------------------------- | -------------------------------------- |
+| SF-60 | ♻️ `_computeFlakyRate` retorna `number \| null` — null quando `totalConsidered=0` | Tipagem correta                        |
+| SF-61 | ♻️ `ActualMetrics.flakyPct` aceita `number \| null`                               | Interface atualizada                   |
+| SF-62 | ♻️ `calculateHealthScore` trata null → score 0                                    | Dados insuficientes não gera score 100 |
+| SF-63 | 📋 Teste: flaky rate sem dados → score 0                                          | Comportamento documentado              |
+
+### Fase 7 — Empty Catch
+
+| ID    | Item                                                              | Critério                 |
+| ----- | ----------------------------------------------------------------- | ------------------------ |
+| SF-70 | ♻️ Adicionar `rootLogger.warn` no catch de `readIstanbulCoverage` | Erro não ENOENT é logado |
+
+### Fase V — Verificação
+
+| ID    | Item                 | Critério    |
+| ----- | -------------------- | ----------- |
+| SF-V1 | `npx tsc --noEmit`   | 0 erros     |
+| SF-V2 | `npx vitest run`     | 100% pass   |
+| SF-V3 | `npm run lint`       | 0 violações |
+| SF-V4 | Push + CI monitorado | CI passa    |
+
+### Commit Strategy
+
+1. **Fase 1** → `fix(ci): add path . to download-artifact + verify step`
+2. **Fase 2** → `fix(pr-report): writeFileSync instead of appendFileSync for job summary`
+3. **Fase 3+4** → `fix(health-score): remove _computePassRate duplication, configurable coverageFloor`
+4. **Fase 5** → `fix(quality-gate): _suiteSpeedCheck compare actual ms against threshold`
+5. **Fase 6** → `fix(health-score): flaky rate returns null when insufficient data`
+6. **Fase 7** → `fix(coverage-source): log error in catch block`
+7. **Fase V** → `chore: tsc + vitest + lint + push + CI verify`
+
+**Regra:** Cada commit seguido de `tsc --noEmit + vitest run`. CI monitorado via GitHub API.

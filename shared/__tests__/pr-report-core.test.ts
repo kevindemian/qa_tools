@@ -6,9 +6,8 @@ vi.mock('fs', async (importOriginal) => {
     const actual = await importOriginal<typeof import('node:fs')>();
     return {
         ...actual,
-        default: { ...actual, mkdirSync: vi.fn(), writeFileSync: vi.fn() },
+        default: { ...actual, mkdirSync: vi.fn() },
         mkdirSync: vi.fn(),
-        writeFileSync: vi.fn(),
     };
 });
 

@@ -27,6 +27,8 @@ export interface HealthScoreConfig {
     minExecutionRateGate: number;
     maxFlakyGate: number;
     maxSuiteSpeedGate: number;
+    /** Floor below which coverage score is 0. Default 30. */
+    coverageFloor: number;
     /** If set, overrides coverage from MetricsStore. Used for layered coverage resolution. */
     coverageOverride?: number;
     /** Override grade boundaries: { excellent: 90, good: 80, needs_attention: 70, poor: 60 } */
@@ -35,7 +37,7 @@ export interface HealthScoreConfig {
 
 interface ActualMetrics {
     passRate: number;
-    flakyPct: number;
+    flakyPct: number | null;
     coverage: number;
     executionRate: number;
     suiteSpeed: number;
@@ -51,6 +53,7 @@ const DEFAULTS: HealthScoreConfig = {
     minRuns: 10,
     windowSize: 20,
     minCoverageGate: 70,
+    coverageFloor: 30,
     minPassRateGate: 80,
     minExecutionRateGate: 80,
     maxFlakyGate: 5,
@@ -98,21 +101,7 @@ export function evaluateQualityGate(
     return 'pass';
 }
 
-function _computePassRate(runs: MetricsRun[], n: number): number {
-    let weightedPassSum = 0;
-    let weightTotal = 0;
-    for (let i = 0; i < n; i++) {
-        const run = runs[i] as MetricsRun;
-        const executed = run.passed + run.failed;
-        const passRate = executed > 0 ? (run.passed / executed) * 100 : 0;
-        const weight = Math.exp((i - n + 1) / Math.max(n / 2, 1));
-        weightedPassSum += passRate * weight;
-        weightTotal += weight;
-    }
-    return weightTotal > 0 ? weightedPassSum / weightTotal : 0;
-}
-
-function _computeFlakyRate(runs: MetricsRun[], config: HealthScoreConfig): number {
+function _computeFlakyRate(runs: MetricsRun[], config: HealthScoreConfig): number | null {
     const testMap = new Map<string, { pass: number; fail: number }>();
     for (const run of runs) {
         for (const t of run.tests) {
@@ -130,7 +119,7 @@ function _computeFlakyRate(runs: MetricsRun[], config: HealthScoreConfig): numbe
         totalConsidered++;
         if (counts.fail > 0 && counts.pass > 0) flakyCount++;
     }
-    return totalConsidered > 0 ? (flakyCount / totalConsidered) * 100 : 0;
+    return totalConsidered > 0 ? (flakyCount / totalConsidered) * 100 : null;
 }
 
 function _computeExpWeighted(runs: MetricsRun[], n: number, getValue: (run: MetricsRun) => number): number {
@@ -163,7 +152,10 @@ function computeActualMetrics(store: MetricsStore, config: HealthScoreConfig): A
     const runs = store.runs.slice(-config.windowSize);
     const n = runs.length;
 
-    const actualPassRate = _computePassRate(runs, n);
+    const actualPassRate = _computeExpWeighted(runs, n, (run) => {
+        const executed = run.passed + run.failed;
+        return executed > 0 ? (run.passed / executed) * 100 : 0;
+    });
     const actualFlakyPct = _computeFlakyRate(runs, config);
 
     const actualExecutionRate = _computeExpWeighted(runs, n, (run) =>
@@ -203,8 +195,8 @@ function scoreFlakyRate(actual: number, config: HealthScoreConfig): number {
 
 function scoreCoverage(actual: number, config: HealthScoreConfig): number {
     if (actual >= config.coverageTarget) return 100;
-    if (actual <= 30) return 0;
-    return ((actual - 30) / (config.coverageTarget - 30)) * 100;
+    if (actual <= config.coverageFloor) return 0;
+    return ((actual - config.coverageFloor) / (config.coverageTarget - config.coverageFloor)) * 100;
 }
 
 function scoreExecutionRate(actual: number, config: HealthScoreConfig): number {
@@ -313,33 +305,37 @@ export function calculateHealthScore(
     const runsEmpty = metricsStore.runs.length === 0;
 
     const scPassRate = runsEmpty ? 0 : scorePassRate(actual.passRate, config);
-    const scFlakyRate = runsEmpty ? 0 : scoreFlakyRate(actual.flakyPct, config);
+    const scFlakyRate = runsEmpty || actual.flakyPct === null ? 0 : scoreFlakyRate(actual.flakyPct, config);
     const scCoverage = scoreCoverage(actual.coverage, config);
     const scExecutionRate = runsEmpty ? 0 : scoreExecutionRate(actual.executionRate, config);
     const scSuiteSpeed = runsEmpty ? 0 : scoreSuiteSpeed(actual.suiteSpeed, config);
 
-    const totalWeight =
-        config.weights.passRate +
-        config.weights.flakyRate +
-        config.weights.coverage +
-        config.weights.executionRate +
-        config.weights.suiteSpeed;
-    const effectiveTotal = totalWeight > 0 ? totalWeight : 100;
+    let overallWeight = 0;
+    let overallNum = 0;
 
-    let overall =
-        (scPassRate * config.weights.passRate +
-            scFlakyRate * config.weights.flakyRate +
-            scCoverage * config.weights.coverage +
-            scExecutionRate * config.weights.executionRate +
-            scSuiteSpeed * config.weights.suiteSpeed) /
-        effectiveTotal;
+    const addDim = (score: number, weight: number) => {
+        overallNum += score * weight;
+        overallWeight += weight;
+    };
 
-    if ([scPassRate, scFlakyRate, scCoverage, scExecutionRate, scSuiteSpeed].some((d) => d < 40)) {
+    addDim(scPassRate, config.weights.passRate);
+    if (actual.flakyPct !== null) addDim(scFlakyRate, config.weights.flakyRate);
+    addDim(scCoverage, config.weights.coverage);
+    addDim(scExecutionRate, config.weights.executionRate);
+    addDim(scSuiteSpeed, config.weights.suiteSpeed);
+
+    const effectiveTotal = overallWeight > 0 ? overallWeight : 100;
+    let overall = effectiveTotal > 0 ? overallNum / effectiveTotal : 0;
+
+    const dimCheck = [scPassRate, scCoverage, scExecutionRate, scSuiteSpeed];
+    if (actual.flakyPct !== null) dimCheck.push(scFlakyRate);
+    if (dimCheck.some((d) => d < 40)) {
         overall = Math.min(overall, 60);
     }
 
     const statusPassRate: 'pass' | 'fail' = actual.passRate >= config.minPassRateGate ? 'pass' : 'fail';
-    const statusFlaky: 'pass' | 'fail' = actual.flakyPct <= config.maxFlakyGate ? 'pass' : 'fail';
+    const statusFlaky: 'pass' | 'fail' =
+        actual.flakyPct !== null && actual.flakyPct <= config.maxFlakyGate ? 'pass' : 'fail';
     const statusCoverage: 'pass' | 'fail' = actual.coverage >= config.minCoverageGate ? 'pass' : 'fail';
     const statusSpeed: 'pass' | 'fail' = actual.suiteSpeed <= config.maxSuiteSpeedGate ? 'pass' : 'fail';
     const statusExecRate: 'pass' | 'fail' = actual.executionRate >= config.minExecutionRateGate ? 'pass' : 'fail';
@@ -357,7 +353,7 @@ export function calculateHealthScore(
         grade: computeGrade(Math.round(overall), config.gradeBoundaries),
         qualityGate: evaluateQualityGate(
             actual.passRate,
-            actual.flakyPct,
+            actual.flakyPct ?? 0,
             actual.coverage,
             actual.executionRate,
             actual.suiteSpeed,
