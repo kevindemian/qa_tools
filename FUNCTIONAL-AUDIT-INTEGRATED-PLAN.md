@@ -14,7 +14,7 @@
 
 Para cada feature do sistema, executar um ciclo completo de:
 
-1. **Auditoria** (T1-T20 + 5 Dimensões)
+1. **Auditoria** (T1-T20 + 7 Dimensões)
 2. **Correção de causa raiz** (zero workaround)
 3. **Testes de integração funcional** (padrão FT-xx)
 
@@ -67,9 +67,9 @@ Cada feature segue este pipeline, executado sequencialmente:
                               │
                               ▼
 ┌─────────────────────────────────────────────────────────────────┐
-│ PASSO 3 — Auditoria 5 Dimensões                                 │
+│ PASSO 3 — Auditoria 7 Dimensões                                 │
 │ Avaliar: Isolamento, Robustez, Boas Práticas,                   │
-│ Implementação Ótima, Métricas (conformidade normativa)          │
+│ Implementação Ótima, Métricas, UX, Auditoria Profunda de Testes │
 └─────────────────────────────────────────────────────────────────┘
                               │
                               ▼
@@ -111,7 +111,7 @@ Cada feature segue este pipeline, executado sequencialmente:
 
 ---
 
-## 4. As 5 Dimensões de Avaliação
+## 4. As 7 Dimensões de Avaliação
 
 ### Dimensão 1 — Isolamento de Testes
 
@@ -230,33 +230,59 @@ Avaliar alinhamento com normas, padrões e boas práticas reconhecidas:
 
 ### Dimensão 6 — Experiência do Usuário (UX)
 
-Avalia a qualidade da interação do usuário com a feature, tanto via CLI quanto via output gerado.
+Avalia a **experiência completa** do usuário com a feature, incluindo:
 
-| Item | O que verificar                                                            |
-| ---- | -------------------------------------------------------------------------- |
-| 6.1  | Mensagens de erro são acionáveis (dizem o que fazer, não só o que falhou)? |
-| 6.2  | CLI `--help` é claro, completo e consistente com outras features?          |
-| 6.3  | Output de relatórios é legível (formatação, cores, tabelas)?               |
-| 6.4  | Feedback de progresso para operações longas?                               |
-| 6.5  | Confirmação antes de ações destrutivas (sobrescrever, deletar)?            |
-| 6.6  | Navegação consistente (menus, sub-comandos seguem padrão)?                 |
-| 6.7  | Terminologia consistente com o resto do sistema?                           |
-| 6.8  | Silent mode / verbose mode disponíveis quando relevante?                   |
+- **Interface** — CLI, menus, flags, outputs, relatórios gerados
+- **Documentação** — arquivos de ajuda (--help), TECHDOCs, READMEs, guias de uso, mensagens de erro que orientam o usuário
+- **Comportamento** — feedback, confirmações, navegação, consistência terminológica
 
-### Dimensão 7 — Qualidade de Testes (Test Quality)
+Documentação **é parte da UX**: documentação incorreta, desatualizada, incompleta ou contraditória é um gap de UX, não N/A.
 
-Avalia se os testes da feature são **corretos por propósito** (não apenas por execução), seguindo a disciplina definida em `AGENTS.md` (Rule 19 — Testing Discipline).
+| Item | O que verificar                                                                                      |
+| ---- | ---------------------------------------------------------------------------------------------------- |
+| 6.1  | Mensagens de erro são acionáveis (dizem o que fazer, não só o que falhou)?                           |
+| 6.2  | CLI `--help` e documentação textual são claros, completos e consistentes?                            |
+| 6.3  | Output de relatórios é legível (formatação, cores, tabelas)?                                         |
+| 6.4  | Feedback de progresso para operações longas?                                                         |
+| 6.5  | Confirmação antes de ações destrutivas (sobrescrever, deletar)?                                      |
+| 6.6  | Navegação consistente (menus, sub-comandos seguem padrão)?                                           |
+| 6.7  | Terminologia consistente entre código, documentação, CLI e mensagens?                                |
+| 6.8  | Silent mode / verbose mode disponíveis quando relevante?                                             |
+| 6.9  | Documentação da feature (TECHDOC, README, guias) é precisa, completa e reflete o comportamento real? |
 
-| Item | O que verificar                                                                    |
-| ---- | ---------------------------------------------------------------------------------- |
-| 7.1  | Testes usam `toBeDefined()` / `toBeTruthy()` / `toBeNull()` sem assert real?       |
-| 7.2  | Testes têm zero `expect` calls (no-assert test)?                                   |
-| 7.3  | Expected values vêm de requisitos, não de output atual do código (Oracle Problem)? |
-| 7.4  | Mocks são estritos (shape idêntico ao real, sem campos omitidos)?                  |
-| 7.5  | Testes de erro validam mensagem/causa, não só `toThrow()` sem argumento?           |
-| 7.6  | `describe.skip` / `it.skip` / `test.skip` presentes sem documentação?              |
-| 7.7  | Test names descrevem comportamento, não implementação?                             |
-| 7.8  | Testes são determinísticos (sem dependência de estado global não resetado)?        |
+### Dimensão 7 — Auditoria Profunda de Testes (Deep Test Audit)
+
+Avalia a **qualidade intrínseca dos testes** da feature — não apenas se existem, mas se são
+corretos por propósito, rigorosos na detecção de defeitos e livres de anti-padrões que
+criam falsa confiança.
+
+Esta dimensão detecta seis categorias de problemas:
+
+| Categoria                         | Descrição                                                                                                                                                              |
+| --------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Bad testing patterns**          | Asserções vagas (`toBeDefined`, `toBeTruthy` sem alvo real), `toThrow()` sem validação de mensagem/causa, testes sem nenhum `expect`, `.skip`/`.only` não documentados |
+| **Oracle Problem**                | Valores esperados copiados do output do código atual em vez de derivados de requisitos; dual-implementation (teste reimplementa a mesma fórmula do código-fonte)       |
+| **Mock discipline**               | Mocks com shape diferente do real (campos omitidos, `{}` genérico onde dados estruturados são esperados), mocks lenientes que escondem bugs                            |
+| **Type/safety suppressions**      | `nullAs()`, `as any`, `as unknown as T`, `!`, `@ts-expect-error` / `@ts-ignore` em testes — contornam o sistema de tipos em vez de testar contratos reais              |
+| **Testing discipline compliance** | Violações de Red-Green-Refactor, código escrito sem teste correspondente, PBT ausente em lógica crítica sem justificativa documentada                                  |
+| **Determinismo**                  | Testes que dependem de estado global não resetado, ordem de execução, ou IO real sem mock (rede, filesystem)                                                           |
+
+Referência: `AGENTS.md` (Rule 19 — Testing Discipline) e FUNCTIONAL-AUDIT-PROGRESS.md (Cross-cutting D7 — Anti-padrões).
+
+| Item | O que verificar                                                                            |
+| ---- | ------------------------------------------------------------------------------------------ |
+| 7.1  | Testes usam `toBeDefined()` / `toBeTruthy()` / `toBeNull()` sem assert real?               |
+| 7.2  | Testes têm zero `expect` calls (no-assert test)?                                           |
+| 7.3  | Expected values vêm de requisitos, não de output atual do código (Oracle Problem)?         |
+| 7.4  | Mocks são estritos (shape idêntico ao real, sem campos omitidos)?                          |
+| 7.5  | Testes de erro validam mensagem/causa, não só `toThrow()` sem argumento?                   |
+| 7.6  | `describe.skip` / `it.skip` / `test.skip` presentes sem documentação?                      |
+| 7.7  | Test names descrevem comportamento, não implementação?                                     |
+| 7.8  | Testes são determinísticos (sem dependência de estado global não resetado)?                |
+| 7.9  | Type suppressions em testes (`as any`, `!`, `nullAs()`, `@ts-ignore`, `@ts-expect-error`)? |
+| 7.10 | Dual-implementation detectada (teste replica fórmula do source em vez de invariante)?      |
+| 7.11 | PBT obrigatório para lógica crítica foi omitido sem justificativa documentada?             |
+| 7.12 | Test-first violado (código de implementação escrito sem teste correspondente)?             |
 
 ---
 
@@ -304,7 +330,7 @@ Os grupos são processados **na ordem**, respeitando dependências. Dentro de ca
 | 0.7   | FT-07 | Store               | `shared/store.ts`                                     | ✅ 6 sub-testes              |
 | 0.8   | FT-08 | Integration Helpers | `shared/__tests__/integration/integration-helpers.ts` | — (infra)                    |
 
-**Trabalho:** Auditar (T1-T20 + 5 dim) → identificar gaps → corrigir → expandir testes se necessário.
+**Trabalho:** Auditar (T1-T20 + 7 dim) → identificar gaps → corrigir → expandir testes se necessário.
 
 ### Grupo 1 — Processamento (features já com testes, sem auditoria formal)
 
@@ -318,7 +344,7 @@ Os grupos são processados **na ordem**, respeitando dependências. Dentro de ca
 | 1.6   | FT-14 | Release Score     | `shared/release-score.ts`     | ✅ 5 sub-testes              |
 | 1.7   | FT-15 | Benchmark Metrics | `shared/benchmark-metrics.ts` | ✅ 1 sub-teste               |
 
-**Trabalho:** Auditar (T1-T20 + 5 dim, com ênfase na **Dimensão 5** pois são features de métricas) → gaps → correção → expandir testes se necessário.
+**Trabalho:** Auditar (T1-T20 + 7 dim, com ênfase na **Dimensão 5** pois são features de métricas) → gaps → correção → expandir testes se necessário.
 
 ### Grupo 2 — Relatórios HTML (features sem testes de integração)
 
@@ -344,7 +370,7 @@ Os grupos são processados **na ordem**, respeitando dependências. Dentro de ca
 | 2.18  | FT-33 | Traceability Matrix     | `shared/traceability-matrix.ts`        |
 | 2.19  | FT-34 | Release Score Rendering | `shared/release-score.ts`              |
 
-**Trabalho:** Auditar (T1-T20 + 5 dim) → gaps → correção → **criar testes de integração**.
+**Trabalho:** Auditar (T1-T20 + 7 dim) → gaps → correção → **criar testes de integração**.
 
 ### Grupo 3 — Test Impact e Análise
 
@@ -424,16 +450,17 @@ Cada feature auditada produz este registro no `BACKLOG.md`:
 | ... | ...                | ...           | ...               |
 | T20 | CI/Config Contract | ✅ / ❌ / N/A | ...               |
 
-#### 6 Dimensões
+#### 7 Dimensões
 
-| Dimensão               | Status             | Achados |
-| ---------------------- | ------------------ | ------- |
-| 1. Isolamento Testes   | ✅ / ❌            | ...     |
-| 2. Robustez            | ✅ / ⚠️ / ❌       | ...     |
-| 3. Boas Práticas       | ✅ / ⚠️ / ❌       | ...     |
-| 4. Implementação Ótima | ✅ / ⚠️ / ❌       | ...     |
-| 5. Métricas            | ✅ / ⚠️ / ❌ / N/A | ...     |
-| 6. UX                  | ✅ / ⚠️ / ❌ / N/A | ...     |
+| Dimensão                        | Status             | Achados |
+| ------------------------------- | ------------------ | ------- |
+| 1. Isolamento Testes            | ✅ / ❌            | ...     |
+| 2. Robustez                     | ✅ / ⚠️ / ❌       | ...     |
+| 3. Boas Práticas                | ✅ / ⚠️ / ❌       | ...     |
+| 4. Implementação Ótima          | ✅ / ⚠️ / ❌       | ...     |
+| 5. Métricas                     | ✅ / ⚠️ / ❌ / N/A | ...     |
+| 6. UX                           | ✅ / ⚠️ / ❌ / N/A | ...     |
+| 7. Auditoria Profunda de Testes | ✅ / ⚠️ / ❌ / N/A | ...     |
 
 #### Gaps
 
@@ -522,9 +549,11 @@ Se qualquer validação falhar: **parar, corrigir causa raiz, revalidar** antes 
 
 ---
 
-## 10. Priorização Interna (Dimensão 5)
+## 10. Priorização Interna (Dimensões 5 e 7)
 
-Para features que produzem métricas, a **Dimensão 5** tem precedência sobre as demais, pois erro em métrica corrompe a base de todo o sistema de qualidade.
+**Dimensão 5 (Métricas):** Para features que produzem métricas, a Dimensão 5 tem precedência sobre as demais, pois erro em métrica corrompe a base de todo o sistema de qualidade.
+
+**Dimensão 7 (Auditoria Profunda de Testes):** A Dimensão 7 aplica-se a **todas** as features, independentemente de tipo. Deve ser executada simultaneamente à auditoria T1-T20, pois anti-padrões de teste (Oracle Problem, mocks lenientes, suppressions) invalidam a confiança em toda a suíte de testes da feature.
 
 **Features críticas para Dimensão 5 (auditar primeiro dentro de cada grupo):**
 

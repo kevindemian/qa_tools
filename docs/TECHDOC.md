@@ -659,37 +659,39 @@ import { globSync } from 'glob'; // file globbing
 
 ### `shared/` (306 files) — Core Library
 
-| File                  | Purpose                                               | Key Exports                                                                       |
-| --------------------- | ----------------------------------------------------- | --------------------------------------------------------------------------------- |
-| `deps.ts`             | Dependency Wall — single import for all external deps | `chalk`, `axios`, `zod`, etc                                                      |
-| `config-accessor.ts`  | Config singleton (env > file > override)              | `Config` class                                                                    |
-| `logger.ts`           | Structured logger (console + file, rotation)          | `Logger`, `rootLogger`                                                            |
-| `http-client.ts`      | Axios wrapper (retry, backoff, circuit-breaker)       | `createHttpClient()`                                                              |
-| `jira-client.ts`      | Base Jira REST client                                 | `JiraClient` class                                                                |
-| `state.ts`            | Persisted JSON state file                             | `loadTypedState()`, `update()`                                                    |
-| `session-context.ts`  | Per-session context                                   | `SessionContext` class                                                            |
-| `llm-client.ts`       | Multi-tier LLM client (6 tiers)                       | `llmPrompt()`, `setModel()`                                                       |
-| `llm-cache.ts`        | LRU + disk cache for LLM responses                    | `LlmCache` class                                                                  |
-| `llm-rate-limiter.ts` | Per-tier rate limiting                                | `LlmRateLimiter` class                                                            |
-| `llm-fallback.ts`     | Fallback chain                                        | `LlmFallback` class                                                               |
-| `circuit-breaker.ts`  | Circuit breaker pattern                               | `CircuitBreaker` class                                                            |
-| `store.ts`            | SHA-keyed git-backed report cache                     | `Store` class                                                                     |
-| `store-backend.ts`    | Git storage backend                                   | `StoreBackend` class                                                              |
-| `metrics.ts`          | Metrics collection & persistence                      | `loadMetrics()`, `saveMetrics()`                                                  |
-| `test-impact.ts`      | Three-tier test impact analysis                       | `analyzeTestImpact()`, `generateTestSelectionJson()`                              |
-| `health-score.ts`     | Health score calculator                               | `calculateHealthScore()`                                                          |
-| `validation.ts`       | Zod validation wrapper                                | `validate()`, `validateOrThrow()`                                                 |
-| `palette.ts`          | Chalk abstraction (color palette)                     | `palette` object                                                                  |
-| `prompt.ts`           | Terminal input/output facade                          | `prompt()`, `info()`, `title()`                                                   |
-| `quarantine.ts`       | Quarantine management for flaky tests                 | `quarantineTest()`, `isQuarantined()`, `generatePipelineQuarantine()`             |
-| `markdown.ts`         | Markdown lexer/renderer                               | `tokenize()`, `renderToHtml()`                                                    |
-| `csrf/`               | CSV parsing/validation                                | `CsvResource`, schemas                                                            |
-| `invariants/`         | 13 domain + 5 structural invariant rules              | `createTestCaseValidator()`                                                       |
-| `types/`              | All shared type definitions                           | `common.ts`, `jira.ts`, `xray.ts`, `ci-cd.ts`, `coverage.ts`, `bugs.ts`, `llm.ts` |
-| `prompts/`            | LLM prompt templates (Markdown)                       | —                                                                                 |
-| `test-utils/`         | Test utilities (factories, mock types)                | `MockedSafe<T>`, `mockedSafe()`                                                   |
-| `report-*.ts`         | Report generation (HTML, sections, tables, charts)    | `ReportGenerator`                                                                 |
-| `markdown-html.ts`    | Markdown-to-HTML converter                            | `markdownToHtml()`                                                                |
+| File                     | Purpose                                               | Key Exports                                                                       |
+| ------------------------ | ----------------------------------------------------- | --------------------------------------------------------------------------------- |
+| `deps.ts`                | Dependency Wall — single import for all external deps | `chalk`, `axios`, `zod`, etc                                                      |
+| `config-accessor.ts`     | Config singleton (env > file > override)              | `Config` class                                                                    |
+| `logger.ts`              | Structured logger (console + file, rotation)          | `Logger`, `rootLogger`                                                            |
+| `http-client.ts`         | Axios wrapper (retry, backoff, circuit-breaker)       | `createHttpClient()`                                                              |
+| `jira-client.ts`         | Base Jira REST client                                 | `JiraClient` class                                                                |
+| `state.ts`               | Persisted JSON state file                             | `loadTypedState()`, `update()`                                                    |
+| `session-context.ts`     | Per-session context                                   | `SessionContext` class                                                            |
+| `llm-client.ts`          | Multi-tier LLM client (6 tiers)                       | `llmPrompt()`, `setModel()`                                                       |
+| `llm-cache.ts`           | LRU + disk cache for LLM responses                    | `LlmCache` class                                                                  |
+| `llm-rate-limiter.ts`    | Per-tier rate limiting                                | `LlmRateLimiter` class                                                            |
+| `llm-fallback.ts`        | Fallback chain                                        | `LlmFallback` class                                                               |
+| `circuit-breaker.ts`     | Circuit breaker pattern                               | `CircuitBreaker` class                                                            |
+| `store.ts`               | SHA-keyed git-backed report cache                     | `Store` class                                                                     |
+| `store-backend.ts`       | Git storage backend                                   | `StoreBackend` class                                                              |
+| `metrics.ts`             | Metrics collection & persistence                      | `loadMetrics()`, `saveMetrics()`                                                  |
+| `test-impact.ts`         | Three-tier test impact analysis                       | `analyzeTestImpact()`, `generateTestSelectionJson()`                              |
+| `git-metrics-adapter.ts` | Git history → MetricsRun[] adapter                    | `generateGitMetricsRuns()`, `generateGitFailureClassifications()`                 |
+| `coverage-verifier.ts`   | Coverage recalculation (Layer 3)                      | `recalculateCoverage()`                                                           |
+| `health-score.ts`        | Health score calculator                               | `calculateHealthScore()`                                                          |
+| `validation.ts`          | Zod validation wrapper                                | `validate()`, `validateOrThrow()`                                                 |
+| `palette.ts`             | Chalk abstraction (color palette)                     | `palette` object                                                                  |
+| `prompt.ts`              | Terminal input/output facade                          | `prompt()`, `info()`, `title()`                                                   |
+| `quarantine.ts`          | Quarantine management for flaky tests                 | `quarantineTest()`, `isQuarantined()`, `generatePipelineQuarantine()`             |
+| `markdown.ts`            | Markdown lexer/renderer                               | `tokenize()`, `renderToHtml()`                                                    |
+| `csrf/`                  | CSV parsing/validation                                | `CsvResource`, schemas                                                            |
+| `invariants/`            | 13 domain + 5 structural invariant rules              | `createTestCaseValidator()`                                                       |
+| `types/`                 | All shared type definitions                           | `common.ts`, `jira.ts`, `xray.ts`, `ci-cd.ts`, `coverage.ts`, `bugs.ts`, `llm.ts` |
+| `prompts/`               | LLM prompt templates (Markdown)                       | —                                                                                 |
+| `test-utils/`            | Test utilities (factories, mock types)                | `MockedSafe<T>`, `mockedSafe()`                                                   |
+| `report-*.ts`            | Report generation (HTML, sections, tables, charts)    | `ReportGenerator`                                                                 |
+| `markdown-html.ts`       | Markdown-to-HTML converter                            | `markdownToHtml()`                                                                |
 
 ### `jira_management/` (75 files) — Jira CLI App
 

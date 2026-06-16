@@ -23,16 +23,16 @@ describe('recalculateCoverage', () => {
         expect(result.coveredCriteria).toBe(2);
     });
 
-    it('returns full coverage when criteria matched by titles', () => {
+    it('treats NaN declared coverage as null (invalid)', () => {
         const result = recalculateCoverage(
             {
                 tests: [{ title: 'Test user can log in' }, { title: 'Test payment works' }],
-                coverageTable: { coverage: 100 },
+                coverageTable: { coverage: NaN },
             },
             makeCtx('Given user can log in\nWhen payment works'),
         );
-        expect(result.realCoverage).toBe(100);
-        expect(result.coveredCriteria).toBe(2);
+        expect(result.declaredCoverage).toBeNull();
+        expect(result.coverageDelta).toBe(0);
     });
 
     it('reports gaps for uncovered criteria', () => {

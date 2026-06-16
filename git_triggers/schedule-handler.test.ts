@@ -106,6 +106,8 @@ vi.mock('../shared/requirement-score', () => ({
 vi.mock('../shared/git-metrics-adapter', () => ({
     generateGitMetricsRuns: vi.fn(() => []),
     generateGitFailureClassifications: vi.fn(() => []),
+    getLastGitLogError: vi.fn(() => undefined),
+    clearGitLogError: vi.fn(),
 }));
 vi.mock('../shared/quality-gate', () => ({
     runQualityGate: vi.fn(() => ({ passed: true })),

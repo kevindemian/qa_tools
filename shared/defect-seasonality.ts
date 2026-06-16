@@ -148,9 +148,11 @@ export function aggregateDefectSeasonality(
         dayAcc[dayName].total++;
         dayAcc[dayName].categories[cat] = (dayAcc[dayName].categories[cat] ?? 0) + 1;
 
-        if (!hourAcc[hour]) hourAcc[hour] = { total: 0, categories: {} };
-        hourAcc[hour].total++;
-        hourAcc[hour].categories[cat] = (hourAcc[hour].categories[cat] ?? 0) + 1;
+        if (!isNaN(hour)) {
+            if (!hourAcc[hour]) hourAcc[hour] = { total: 0, categories: {} };
+            hourAcc[hour].total++;
+            hourAcc[hour].categories[cat] = (hourAcc[hour].categories[cat] ?? 0) + 1;
+        }
 
         const date = extractDate(fc.timestamp);
         if (!minDate || date < minDate) minDate = date;

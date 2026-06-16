@@ -127,7 +127,7 @@ export function recalculateCoverage(artifact: unknown, context: ValidationContex
     if (typeof artifact === 'object' && artifact !== null) {
         const obj = artifact as Record<string, unknown>;
         const ct = obj['coverageTable'] as Record<string, unknown> | undefined;
-        if (ct && typeof ct['coverage'] === 'number') {
+        if (ct && typeof ct['coverage'] === 'number' && !isNaN(ct['coverage'])) {
             declaredCoverage = ct['coverage'];
         }
     }

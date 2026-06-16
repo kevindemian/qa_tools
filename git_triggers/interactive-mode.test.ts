@@ -189,6 +189,8 @@ vi.mock('../shared/coverage-gap', () => ({ analyzeCoverageGaps: vi.fn(() => []) 
 vi.mock('../shared/git-metrics-adapter', () => ({
     generateGitMetricsRuns: vi.fn(() => []),
     generateGitFailureClassifications: vi.fn(() => []),
+    getLastGitLogError: vi.fn(() => undefined),
+    clearGitLogError: vi.fn(),
 }));
 vi.mock('./ui-helpers', () => ({ handleHelp: vi.fn(), handleShowHistory: vi.fn() }));
 vi.mock('./case00-handler', () => ({ handleSetupWizard: vi.fn() }));
