@@ -1,6 +1,7 @@
 import fs from 'fs';
 import path from 'path';
 import { execFileSync } from 'child_process';
+import { rootLogger } from './logger.js';
 
 export function detectGitDir(startDir?: string): string | null {
     let dir = startDir ? path.resolve(startDir) : process.cwd();
@@ -43,7 +44,7 @@ export function getHeadSha(env?: NodeJS.ProcessEnv): string | null {
                 return head;
             }
         } catch {
-            /* fall through */
+            rootLogger.debug('getHeadSha: filesystem HEAD resolution failed, returning null');
         }
         /* .git found but ref could not be resolved via filesystem —
          * do NOT fall back to git CLI: it may resolve in parent repo

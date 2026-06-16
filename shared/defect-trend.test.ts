@@ -13,6 +13,22 @@ describe('aggregateDefectTrends', () => {
         expect(result.period).toEqual({ from: '', to: '' });
     });
 
+    it('preserves prototype-polluting category name', () => {
+        const poison = String.fromCharCode(95, 95, 112, 114, 111, 116, 111, 95, 95);
+        const input: FailureClassification[] = [
+            { timestamp: '2026-06-01T10:00:00Z', testTitle: 't1', category: poison, project: 'p' },
+            { timestamp: '2026-06-01T11:00:00Z', testTitle: 't2', category: 'NORMAL', project: 'p' },
+        ];
+        const result = aggregateDefectTrends(input);
+        const topCats = result.topCategories.map((c) => c.category);
+        expect(topCats).toContain(poison);
+        expect(topCats).toContain('NORMAL');
+        expect(result.trends).toHaveLength(1);
+        const cats = (result.trends[0] as { categories: Record<string, number> }).categories;
+        expect(Object.keys(cats)).toContain(poison);
+        expect(Object.keys(cats)).toContain('NORMAL');
+    });
+
     it('returns empty result for null/undefined', () => {
         const r1 = aggregateDefectTrends(null);
         expect(r1.trends).toEqual([]);
