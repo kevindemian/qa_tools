@@ -132,7 +132,8 @@ export function computeDiffComparison(current: FlatTest[], previous: FlatTest[])
 }
 
 function buildSummaryTable(stats: PrReportStats): string {
-    const passRate = stats.total > 0 ? ((stats.passed / stats.total) * 100).toFixed(1) : '0.0';
+    const executed = stats.passed + stats.failed;
+    const passRate = executed > 0 ? ((stats.passed / executed) * 100).toFixed(1) : '0.0';
     const durationSec = (stats.duration / 1000).toFixed(1);
 
     return [
@@ -234,7 +235,7 @@ function buildAiAnalysisSection(): string {
  */
 function buildCiContextSection(
     ciEnv: { isCI: boolean; repo: string; runId: string; refName: string; serverUrl: string },
-    stats: PrReportStats,
+    _stats: PrReportStats,
 ): string {
     if (!ciEnv.isCI) return '';
 
@@ -254,8 +255,6 @@ function buildCiContextSection(
     if (ciEnv.repo !== 'unknown') {
         lines.push(`- **Repository:** ${ciEnv.repo}`);
     }
-
-    lines.push(`- **Test Results:** ${stats.passed} passed, ${stats.failed} failed, ${stats.skipped} skipped`);
 
     lines.push(
         '',
@@ -393,7 +392,8 @@ export async function generatePrReport(options: PrReportCoreOptions): Promise<Pr
     }
 
     // 6. Generate HTML report
-    const passRate = stats.total > 0 ? (stats.passed / stats.total) * 100 : 0;
+    const executed = stats.passed + stats.failed;
+    const passRate = executed > 0 ? (stats.passed / executed) * 100 : 0;
     const flakyEntries = calculateFlakiness(store, 2);
     const flakinessMap: Record<string, number> = {};
     for (const entry of flakyEntries) {

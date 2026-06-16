@@ -3,6 +3,64 @@
 > ⚠️ Sprints anteriores a esta estão **concluídos**. Movidos para `BACKLOG-historico.md`.
 > Consulte os históricos para detalhes de sprints passados.
 
+## 🚀 Sprint Score Fix — Correções de Score, CI Path e Pass Rate (Jun/2026) ✅
+
+**Data:** 2026-06-16
+**Origem:** 8 bugs de score/CI identificados em auditoria de código (SF-01 a SF-07). Após CI run #268, descobertos 3 bugs adicionais:
+
+- SF-08: `buildSummaryTable` usa `passed/total` (inclui skipped no pass rate) — inconsistente com health score que usa `passed/(passed+failed)`
+- SF-09: CI Context exibe texto redundante `Test Results: X passed, Y failed, Z skipped` — duplica informação da Summary Table
+- SF-10: Testes sobrescrevem `reports/pr-report.html` com mock HTML (mock `writeFileSync` removido expõe produção)
+  **Estratégia:** Push primeiro (SF-01 já commitado), implementar correções, validar com CI.
+  **Auditoria pós-correção:** Identificou 9 locais adicionais com `passed/total` — TODOS corrigidos sistemicamente.
+
+### Fase 1 — Push + CI Path Fix ✅
+
+| ID    | Item                                           | Arquivo(s)                              | Status |
+| ----- | ---------------------------------------------- | --------------------------------------- | ------ |
+| SF-01 | 🔧 `download-artifact@v4` com `path: reports/` | `.github/workflows/qa-post-process.yml` | ✅     |
+
+### Fase 2 — Pass Rate + Summary + Mock Safety ✅
+
+| ID     | Item                                                                      | Arquivo(s)                                | Status |
+| ------ | ------------------------------------------------------------------------- | ----------------------------------------- | ------ |
+| SF-08  | 🔧 `buildSummaryTable`: `passed/(passed+failed)` em vez de `passed/total` | `shared/pr-report-core.ts`                | ✅     |
+| SF-08b | 🔧 `generatePrReport` line 396: mesma correção do pass rate               | `shared/pr-report-core.ts`                | ✅     |
+| SF-08c | 🔧 `report-html.ts`: passRate local com `passed/(passed+failed)`          | `shared/report-html.ts`                   | ✅     |
+| SF-08d | 🔧 `report-sections.ts`: display usa `passRate` (não recalcula com total) | `shared/report-sections.ts`               | ✅     |
+| SF-08e | 🔧 `git-artifact-downloader.ts` (2x): `passed/(passed+failed)`            | `shared/git-artifact-downloader.ts`       | ✅     |
+| SF-08f | 🔧 `run-comparison.ts`: `passed/(passed+failed)` para `runSummary()`      | `shared/run-comparison.ts`                | ✅     |
+| SF-08g | 🔧 `scripts/pr-report.ts` (2x): `passed/(passed+failed)`                  | `scripts/pr-report.ts`                    | ✅     |
+| SF-08h | 🔧 `case17.ts` (3x): `passed/(passed+failed)`                             | `jira_management/commands/case17.ts`      | ✅     |
+| SF-08i | 🔧 `case19.ts`: `passed/(passed+failed)`                                  | `jira_management/commands/case19.ts`      | ✅     |
+| SF-09  | 🔧 Remover linha `Test Results:` do CI Context (redundante)               | `shared/pr-report-core.ts`                | ✅     |
+| SF-10  | 🔧 Mock `writeFileSync` condicional — bloqueia writes em `reports/`       | `shared/__tests__/pr-report-core.test.ts` | ✅     |
+| SF-11  | 📋 Atualizar expects dos testes para nova fórmula de pass rate            | `shared/__tests__/pr-report-core.test.ts` | ✅     |
+
+### Fase 3 — Validação ✅
+
+| ID    | Item                  | Critério          | Resultado |
+| ----- | --------------------- | ----------------- | --------- |
+| SF-V1 | 🔧 `npx tsc --noEmit` | 0 erros           | ✅ 0      |
+| SF-V2 | 🔧 `npx vitest run`   | 100% pass         | ✅ 5470   |
+| SF-V3 | 🔧 `npm run lint`     | 0 violações       | ✅ 0      |
+| SF-V4 | 🔧 Push + CI monitor  | GitHub Actions OK | 🔜        |
+
+### Métricas Alvo
+
+| Métrica                    | Alvo        | Resultado |
+| -------------------------- | ----------- | --------- |
+| `tsc --noEmit`             | **0 erros** | ✅ 0      |
+| `vitest run`               | **100%**    | ✅ 5470   |
+| `npm run lint`             | **0**       | ✅ 0      |
+| Pass rate formula          | DORA/ISTQB  | ✅ todos  |
+| CI Context sem stats texto | deduplicado | ✅        |
+| Testes corrompem produção  | **0**       | ✅        |
+| Summary table duplicado    | **não**     | ✅        |
+| Locais `passed/total`      | **0**       | ✅ 0/9    |
+
+---
+
 ## 📊 Sprint PR Report UX — Visualização e Acessibilidade do Report (Jun/2026)
 
 **Data:** 2026-06-14

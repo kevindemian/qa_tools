@@ -7,7 +7,7 @@
  * @module report-sections
  */
 
-import { escapeHtml, fmtDuration, pct, pctSub, pctClass } from './report-utils.js';
+import { escapeHtml, fmtDuration, pctSub, pctClass } from './report-utils.js';
 import { extractSuite } from './report-types.js';
 import type { FlatTest } from './result_parser.js';
 import type { HealthScoreResult, HealthScoreProvenance } from './types.js';
@@ -143,7 +143,7 @@ export function buildSummaryCards(stats: ReportStats, passRate: number): string 
             MetricCard({ label: 'Duration', value: fmtDuration(stats.duration) }) +
             MetricCard({
                 label: 'Pass Rate',
-                value: pct(stats.passed, stats.total) + '%',
+                value: passRate.toFixed(1) + '%',
                 severity: pctClass(passRate) === 'pass' ? 'success' : pctClass(passRate) === 'warn' ? 'warn' : 'error',
             }),
     });

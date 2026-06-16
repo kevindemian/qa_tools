@@ -94,7 +94,8 @@ export function generateReportWithFallback(tests: FlatTest[], options?: ReportOp
     try {
         const stats = statsFromTests(tests);
         const title = options?.title || DEFAULT_TITLE;
-        const passRate = stats.total > 0 ? (stats.passed / stats.total) * 100 : 0;
+        const executed = stats.passed + stats.failed;
+        const passRate = executed > 0 ? (stats.passed / executed) * 100 : 0;
         const categories = options?.testCategories || precomputeCategories(tests);
 
         let bodyContent = '<h1>' + title + '</h1>';

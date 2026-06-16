@@ -125,7 +125,8 @@ async function _postPrComment(stats: ParseResult['stats']): Promise<void> {
 
     if (!githubToken || !repo || !prNumber) return;
 
-    const passRate = stats.total > 0 ? ((stats.passed / stats.total) * 100).toFixed(1) : '0.0';
+    const executed = stats.passed + stats.failed;
+    const passRate = executed > 0 ? ((stats.passed / executed) * 100).toFixed(1) : '0.0';
     const body =
         `### 🤖 QA Tools — Test Report\n\n` +
         `**${stats.passed} ✅ passed** | **${stats.failed} ❌ failed** | **${stats.skipped} ⏭ skipped** | **${stats.total} total**\n\n` +
@@ -274,8 +275,8 @@ async function _handleQualityGateCheck(
 
     if (
         !isNaN(qualityGateThreshold) &&
-        result.stats.total > 0 &&
-        (result.stats.passed / result.stats.total) * 100 < qualityGateThreshold
+        result.stats.passed + result.stats.failed > 0 &&
+        (result.stats.passed / (result.stats.passed + result.stats.failed)) * 100 < qualityGateThreshold
     ) {
         printError('Quality Gate', new Error(`Pass rate below threshold (${qualityGateThreshold}%)`));
         return false;
@@ -368,7 +369,7 @@ async function handler(c: CommandContext): Promise<boolean | void> {
                 passed,
                 failed,
                 skipped,
-                passRate: result.tests.length > 0 ? ((passed / result.tests.length) * 100).toFixed(1) : '0.0',
+                passRate: passed + failed > 0 ? ((passed / (passed + failed)) * 100).toFixed(1) : '0.0',
             },
             null,
             2,

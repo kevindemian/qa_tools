@@ -43,7 +43,10 @@ async function processGitHubArtifacts(
                         failed: summary.failed || 0,
                         skipped: summary.skipped || 0,
                         total: summary.tests || 0,
-                        passRate: summary.tests > 0 ? (summary.passed / summary.tests) * 100 : 0,
+                        passRate:
+                            summary.passed + summary.failed > 0
+                                ? (summary.passed / (summary.passed + summary.failed)) * 100
+                                : 0,
                     });
                 }
                 for (const t of tests) {
@@ -139,7 +142,10 @@ async function processGitLabPipelineArtifacts(
                 failed: summary.failed || 0,
                 skipped: summary.skipped || 0,
                 total: summary.tests || 0,
-                passRate: summary.tests > 0 ? (summary.passed / summary.tests) * 100 : 0,
+                passRate:
+                    summary.passed + summary.failed > 0
+                        ? (summary.passed / (summary.passed + summary.failed)) * 100
+                        : 0,
             });
         }
     }
