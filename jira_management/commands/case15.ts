@@ -90,7 +90,7 @@ async function handler(c: CommandContext): Promise<boolean | void> {
             failed: resolvedData.result.stats.failed,
             skipped: resolvedData.result.stats.skipped,
         });
-        store.flush('qa-tools: case15 import ' + sha.slice(0, 7) + ' [skip ci]');
+        store.flush('qa-tools: case15 import ' + sha.slice(0, 7));
     }
 
     if (result) {

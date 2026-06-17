@@ -119,7 +119,7 @@ describe('GitStoreBackend', () => {
         const backend = new GitStoreBackend(dir, '.');
         backend.init();
         backend.write('data.json', Buffer.from('test'));
-        backend.flush('qa-tools: test commit [skip ci]');
+        backend.flush('qa-tools: test commit');
         const log = execFileSync('git', ['-C', dir, 'log', '--oneline'], { encoding: 'utf8' });
         expect(log).toContain('qa-tools: test commit');
     });
@@ -128,7 +128,7 @@ describe('GitStoreBackend', () => {
         const dir = path.join(tmpDir, 'git-test-empty');
         const backend = new GitStoreBackend(dir, '.');
         backend.init();
-        backend.flush('qa-tools: empty [skip ci]');
+        backend.flush('qa-tools: empty');
         const log = execFileSync('git', ['-C', dir, 'log', '--oneline'], { encoding: 'utf8' });
         expect(log).toContain('qa-tools: empty');
     });
@@ -196,7 +196,7 @@ describe('GitStoreBackend additional coverage', () => {
         /* Make .git read-only so git add/commit fails */
         fs.chmodSync(path.join(dir, '.git'), 0o444);
         try {
-            expect(() => backend.flush('test [skip ci]')).toThrow('GitStoreBackend: git add/commit falhou');
+            expect(() => backend.flush('test commit')).toThrow('GitStoreBackend: git add/commit falhou');
         } finally {
             fs.chmodSync(path.join(dir, '.git'), 0o755);
         }

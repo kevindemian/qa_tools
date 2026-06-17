@@ -102,24 +102,20 @@ export interface TrendPoint {
 
 const METRICS_FILE = 'metrics/global.json';
 
-let _backend: StoreBackend | null = null;
-
 function getBackend(config?: Config): StoreBackend {
-    if (_backend) return _backend;
-
     if (config) {
         const xdg = config.get('xdgStateHome');
         if (xdg) {
-            _backend = new FsStoreBackend(xdg);
-            _backend.init();
-            return _backend;
+            const backend = new FsStoreBackend(xdg);
+            backend.init();
+            return backend;
         }
     }
 
     const gitDir = detectProjectGitDir();
-    _backend = detectStoreBackend(gitDir ?? undefined);
-    _backend.init();
-    return _backend;
+    const backend = detectStoreBackend(gitDir ?? undefined);
+    backend.init();
+    return backend;
 }
 
 export function loadMetrics(config?: Config): MetricsStore {
@@ -139,7 +135,7 @@ export function saveMetrics(store: MetricsStore, config?: Config): void {
     try {
         const backend = getBackend(config);
         backend.write(METRICS_FILE, Buffer.from(JSON.stringify(store, null, 2), 'utf8'));
-        backend.flush('qa-tools: update metrics run [skip ci]');
+        backend.flush('qa-tools: update metrics run');
     } catch (err) {
         rootLogger.error('Failed to save metrics: ' + (err as Error).message);
     }

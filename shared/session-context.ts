@@ -156,7 +156,7 @@ export async function resolveTestDataSource(
                 skipped: downloaded.stats.skipped,
             };
             store.put(sha, meta);
-            store.flush(`qa-tools: auto-cache ${sha.slice(0, 7)} [skip ci]`);
+            store.flush(`qa-tools: auto-cache ${sha.slice(0, 7)}`);
         }
         return { result: downloaded, source: 'ci' };
     }
