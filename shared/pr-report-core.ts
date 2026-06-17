@@ -206,7 +206,8 @@ function buildFlakySection(): string {
             suggestion,
             '',
         ].join('\n');
-    } catch {
+    } catch (err) {
+        rootLogger.warn(`buildFlakySection error: ${err instanceof Error ? err.message : String(err)}`);
         return '';
     }
 }
@@ -273,32 +274,35 @@ function buildCiContextSection(
  * $GITHUB_STEP_SUMMARY so the report is visible inline on the workflow
  * run page — no clicks or downloads required.
  *
- * The summary includes: summary table, health score, quality gate status,
- * and a link to download the full HTML report artifact.
+ * The summary is generated INDEPENDENTLY from the PR comment sections array,
+ * preventing fragile index-based coupling. Uses raw stats data to build a
+ * compact single-table view.
  *
- * @param sections - All markdown sections assembled for the PR comment
+ * @param stats - Parsed test stats (passed, failed, skipped, total, duration)
  * @param htmlArtifactUrl - URL to download the HTML report artifact (when available)
  */
-function writeToJobSummary(sections: string[], htmlArtifactUrl?: string): void {
+function writeToJobSummary(stats: PrReportStats, htmlArtifactUrl?: string): void {
     const stepSummaryPath = process.env['GITHUB_STEP_SUMMARY'];
     if (!stepSummaryPath) return;
 
     try {
-        const summaryLines = ['## 📊 QA Tools — PR Report', ''];
-        // Include priority sections first: CI context, summary table, failure table,
-        // quality gate, and footer. GITHUB_STEP_SUMMARY has a 65KB limit.
-        const priorityOrder = [0, 1, 2, 4, 6];
-        for (const idx of priorityOrder) {
-            const section = sections[idx];
-            if (section && section.length > 0) summaryLines.push(section);
-        }
+        const executed = stats.passed + stats.failed;
+        const passRate = executed > 0 ? ((stats.passed / executed) * 100).toFixed(1) : '0.0';
+        const durationSec = (stats.duration / 1000).toFixed(1);
+        const lines: string[] = [
+            '## 📊 QA Tools — PR Report',
+            '',
+            '| ✅ Passed | ❌ Failed | ⏭ Skipped | 📦 Total | ⏱ Duration | 📈 Pass Rate |',
+            '|---|---|---|---|---|---|',
+            `| ${stats.passed} | ${stats.failed} | ${stats.skipped} | ${stats.total} | ${durationSec}s | ${passRate}% |`,
+        ];
 
         if (htmlArtifactUrl) {
-            summaryLines.push('', `📄 [Download full HTML report](${htmlArtifactUrl})`);
+            lines.push('', `📄 [Download full HTML report](${htmlArtifactUrl})`);
         }
-        summaryLines.push('', `_${new Date().toISOString()}_`, '');
+        lines.push('', `_${new Date().toISOString()}_`, '');
 
-        fs.writeFileSync(stepSummaryPath, summaryLines.join('\n'), 'utf8');
+        fs.writeFileSync(stepSummaryPath, lines.join('\n'), 'utf8');
         rootLogger.info('Job summary written to $GITHUB_STEP_SUMMARY');
     } catch (err) {
         rootLogger.warn(`Failed to write job summary: ${err instanceof Error ? err.message : String(err)}`);
@@ -310,8 +314,34 @@ function writeToJobSummary(sections: string[], htmlArtifactUrl?: string): void {
  *
  * @returns Result summary with HTML path, check run ID, and comment URL (when applicable).
  */
+function validatePrReportStats(tests: FlatTest[], stats: PrReportStats): void {
+    const computed = tests.reduce(
+        (acc, t) => {
+            if (t.state === 'passed') acc.passed++;
+            else if (t.state === 'failed') acc.failed++;
+            else acc.skipped++;
+            return acc;
+        },
+        { passed: 0, failed: 0, skipped: 0 },
+    );
+
+    if (computed.passed !== stats.passed) {
+        rootLogger.warn(`stats validation: passed ${stats.passed} != computed ${computed.passed}`);
+    }
+    if (computed.failed !== stats.failed) {
+        rootLogger.warn(`stats validation: failed ${stats.failed} != computed ${computed.failed}`);
+    }
+    if (computed.skipped !== stats.skipped) {
+        rootLogger.warn(`stats validation: skipped ${stats.skipped} != computed ${computed.skipped}`);
+    }
+    if (tests.length !== stats.total) {
+        rootLogger.warn(`stats validation: total ${stats.total} != tests.length ${tests.length}`);
+    }
+}
+
 export async function generatePrReport(options: PrReportCoreOptions): Promise<PrReportResult> {
     const { tests, stats } = options;
+    validatePrReportStats(tests, stats);
 
     // Persist current run to MetricsStore so health score includes it
     if (options.project) {
@@ -380,8 +410,8 @@ export async function generatePrReport(options: PrReportCoreOptions): Promise<Pr
                     summary: checkSummary,
                 },
             });
-        } catch {
-            /* quality gate errors are handled internally */
+        } catch (err) {
+            rootLogger.warn(`createCheckRun error: ${err instanceof Error ? err.message : String(err)}`);
         }
     }
 
@@ -394,46 +424,52 @@ export async function generatePrReport(options: PrReportCoreOptions): Promise<Pr
     // 6. Generate HTML report
     const executed = stats.passed + stats.failed;
     const passRate = executed > 0 ? (stats.passed / executed) * 100 : 0;
-    const flakyEntries = calculateFlakiness(store, 2);
-    const flakinessMap: Record<string, number> = {};
-    for (const entry of flakyEntries) {
-        flakinessMap[entry.title] = entry.rate;
+    let htmlPath: string | undefined;
+
+    try {
+        const flakyEntries = calculateFlakiness(store, 2);
+        const flakinessMap: Record<string, number> = {};
+        for (const entry of flakyEntries) {
+            flakinessMap[entry.title] = entry.rate;
+        }
+
+        const coverageSource = coverageResult?.source ?? 'none';
+        const htmlOptions: ReportOptions = {
+            title: `QA Tools — PR Report${ghBranch ? ` (${ghBranch})` : ''}`,
+            qualityGate: Math.round(passRate),
+            healthScore,
+            trends: getTrends(store),
+            includeChart: true,
+            coverageSource,
+            ...(workflowUrl ? { ciUrl: workflowUrl } : {}),
+            ...(ghBranch ? { branch: ghBranch } : {}),
+            ...(Object.keys(flakinessMap).length > 0 ? { flakinessMap } : {}),
+            ...(options.diffComparison ? { diffComparison: options.diffComparison } : {}),
+        };
+
+        const html = generateHtmlReport(tests, htmlOptions);
+        htmlPath = options.htmlOutputPath ?? 'reports/pr-report.html';
+        fs.mkdirSync('reports', { recursive: true });
+        fs.writeFileSync(htmlPath, html, 'utf8');
+        rootLogger.info(`HTML report generated: ${htmlPath} (${html.length} bytes)`);
+    } catch (err) {
+        rootLogger.error(`Failed to generate HTML report: ${err instanceof Error ? err.message : String(err)}`);
     }
-
-    const coverageSource = coverageResult?.source ?? 'none';
-    const htmlOptions: ReportOptions = {
-        title: `QA Tools — PR Report${ghBranch ? ` (${ghBranch})` : ''}`,
-        qualityGate: Math.round(passRate),
-        healthScore,
-        trends: getTrends(store),
-        includeChart: true,
-        coverageSource,
-        ...(workflowUrl ? { ciUrl: workflowUrl } : {}),
-        ...(ghBranch ? { branch: ghBranch } : {}),
-        ...(Object.keys(flakinessMap).length > 0 ? { flakinessMap } : {}),
-        ...(options.diffComparison ? { diffComparison: options.diffComparison } : {}),
-    };
-
-    const html = generateHtmlReport(tests, htmlOptions);
-    const htmlPath = options.htmlOutputPath ?? 'reports/pr-report.html';
-    fs.mkdirSync('reports', { recursive: true });
-    fs.writeFileSync(htmlPath, html, 'utf8');
-    rootLogger.info(`HTML report generated: ${htmlPath} (${html.length} bytes)`);
 
     // 7. Footer
     sections.push(buildFooter(artifactUrl, workflowUrl, healthScore));
 
     // 8. Write to GitHub Actions Job Summary (PRUX — inline visualization)
-    // This makes the report visible on the workflow run page without clicks.
+    // Uses stats directly — independent of the PR comment sections array.
     const htmlArtifactUrl = workflowUrl ? `${workflowUrl}?pr=1#artifacts` : undefined;
-    writeToJobSummary(sections, htmlArtifactUrl);
+    writeToJobSummary(stats, htmlArtifactUrl);
 
     // 9. Post PR comment
     const commentBody = sections.join('\n');
     const postResult = await postPrComment(commentBody);
 
     return {
-        htmlPath,
+        ...(htmlPath ? { htmlPath } : {}),
         healthScore,
         passRate,
         ...(postResult?.html_url ? { commentUrl: postResult.html_url } : {}),

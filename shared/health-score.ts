@@ -188,6 +188,9 @@ function scorePassRate(actual: number, config: HealthScoreConfig): number {
 }
 
 function scoreFlakyRate(actual: number, config: HealthScoreConfig): number {
+    if (config.maxFlakyGate === config.flakyThreshold) {
+        return actual <= config.flakyThreshold ? 100 : 0;
+    }
     if (actual <= config.flakyThreshold) return 100;
     if (actual >= config.maxFlakyGate) return 0;
     return 100 - ((actual - config.flakyThreshold) / (config.maxFlakyGate - config.flakyThreshold)) * 100;
@@ -206,6 +209,9 @@ function scoreExecutionRate(actual: number, config: HealthScoreConfig): number {
 }
 
 function scoreSuiteSpeed(actual: number, config: HealthScoreConfig): number {
+    if (config.maxSuiteSpeedGate === config.suiteSpeedTarget) {
+        return actual <= config.suiteSpeedTarget ? 100 : 0;
+    }
     if (actual <= config.suiteSpeedTarget) return 100;
     if (actual >= config.maxSuiteSpeedGate) return 0;
     return 100 - ((actual - config.suiteSpeedTarget) / (config.maxSuiteSpeedGate - config.suiteSpeedTarget)) * 100;

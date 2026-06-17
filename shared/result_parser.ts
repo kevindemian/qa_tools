@@ -4,7 +4,10 @@
 import fs from 'fs';
 import { rootLogger } from './logger.js';
 
-const EMPTY_PARSE_RESULT = { tests: [], stats: { passed: 0, failed: 0, skipped: 0, total: 0, duration: 0 } };
+const EMPTY_PARSE_RESULT: ParseResult = Object.freeze({
+    tests: [],
+    stats: { passed: 0, failed: 0, skipped: 0, total: 0, duration: 0 },
+});
 
 function readAndParse<T>(filePath: string, parser: (data: T) => ParseResult): ParseResultWithError {
     try {
@@ -273,18 +276,35 @@ export function parseCtrfResults(jsonData: CtrfData): ParseResult {
         { passed: 0, failed: 0, skipped: 0 },
     );
 
+    const wallDuration =
+        summary?.stop && summary.start ? summary.stop - summary.start : tests.reduce((s, t) => s + t.duration, 0);
+
     const stats = {
-        passed: typeof summary?.passed === 'number' ? summary.passed : testCounts.passed,
-        failed: typeof summary?.failed === 'number' ? summary.failed : testCounts.failed,
-        skipped: typeof summary?.skipped === 'number' ? summary.skipped : testCounts.skipped,
-        total: typeof summary?.tests === 'number' ? summary.tests : tests.length,
-        duration:
-            summary?.stop && summary.start
-                ? summary.stop - summary.start
-                : summary?.tests
-                  ? 0
-                  : tests.reduce((s, t) => s + t.duration, 0),
+        passed: testCounts.passed,
+        failed: testCounts.failed,
+        skipped: testCounts.skipped,
+        total: tests.length,
+        duration: wallDuration,
     };
+
+    if (typeof summary?.passed === 'number' && summary.passed !== testCounts.passed) {
+        rootLogger.warn(
+            `CTRF summary.passed (${summary.passed}) != computed (${testCounts.passed}). Using computed value.`,
+        );
+    }
+    if (typeof summary?.failed === 'number' && summary.failed !== testCounts.failed) {
+        rootLogger.warn(
+            `CTRF summary.failed (${summary.failed}) != computed (${testCounts.failed}). Using computed value.`,
+        );
+    }
+    if (typeof summary?.skipped === 'number' && summary.skipped !== testCounts.skipped) {
+        rootLogger.warn(
+            `CTRF summary.skipped (${summary.skipped}) != computed (${testCounts.skipped}). Using computed value.`,
+        );
+    }
+    if (typeof summary?.tests === 'number' && summary.tests !== tests.length) {
+        rootLogger.warn(`CTRF summary.tests (${summary.tests}) != computed (${tests.length}). Using computed value.`);
+    }
 
     return { tests, stats };
 }
