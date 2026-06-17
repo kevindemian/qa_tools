@@ -22,11 +22,12 @@ function readJson<T>(backend: StoreBackend, relPath: string): T | null {
     const buf = backend.read(relPath);
     if (!buf) return null;
     try {
-        const raw = JSON.parse(buf.toString('utf8'));
-        if (raw === null || typeof raw !== 'object' || Array.isArray(raw)) return raw as T;
-        const safe = Object.create(null) as Record<string, unknown>;
-        for (const key of Object.keys(raw)) {
-            safe[key] = (raw as Record<string, unknown>)[key];
+        const parsed: unknown = JSON.parse(buf.toString('utf8'));
+        if (parsed === null || typeof parsed !== 'object' || Array.isArray(parsed)) return parsed as T;
+        const source = parsed as { [key: string]: unknown };
+        const safe = Object.create(null) as { [key: string]: unknown };
+        for (const key of Object.keys(source)) {
+            safe[key] = source[key];
         }
         return safe as T;
     } catch {
@@ -106,7 +107,7 @@ export class Store {
         return readJson<{ tests: FlatTest[] }>(this.backend, `reports/${this.project}/${sha}.json`);
     }
 
-    loadMetrics<T = Record<string, unknown>>(): T | null {
+    loadMetrics<T = { [key: string]: unknown }>(): T | null {
         return readJson<T>(this.backend, `reports/${this.project}/metrics.json`);
     }
 

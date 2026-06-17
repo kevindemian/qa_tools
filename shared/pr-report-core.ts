@@ -285,12 +285,12 @@ function writeToJobSummary(sections: string[], htmlArtifactUrl?: string): void {
 
     try {
         const summaryLines = ['## 📊 QA Tools — PR Report', ''];
-        // Include the first 3 sections (CI context + summary table + failure table if present)
-        // to keep the summary concise (GITHUB_STEP_SUMMARY has a 65KB limit).
-        const maxSections = Math.min(sections.length, 4);
-        for (let i = 0; i < maxSections; i++) {
-            const section = sections[i];
-            if (section) summaryLines.push(section);
+        // Include priority sections first: CI context, summary table, failure table,
+        // quality gate, and footer. GITHUB_STEP_SUMMARY has a 65KB limit.
+        const priorityOrder = [0, 1, 2, 4, 6];
+        for (const idx of priorityOrder) {
+            const section = sections[idx];
+            if (section && section.length > 0) summaryLines.push(section);
         }
 
         if (htmlArtifactUrl) {
