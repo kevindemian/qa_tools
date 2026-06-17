@@ -47,7 +47,10 @@ export async function compareRuns(runA: MetricsRun | null, runB: MetricsRun | nu
         const user = sanitizeForLlm(buildData(runA, runB));
         return await llmPrompt({ tier: 'fast', system: COMPARE_SYSTEM, user, callerId: 'compare-runs' });
     } catch (err) {
-        rootLogger.error('Failed to compare runs: ' + (err as Error).message);
+        const message = err instanceof Error ? err.message : String(err);
+        rootLogger.error(
+            `Failed to compare runs: ${message}. Verify LLM API key (LLM_API_KEY or LLM_FAST_API_KEY) and network connectivity.`,
+        );
         return '';
     }
 }
