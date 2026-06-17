@@ -34,13 +34,6 @@ function generateQaPostProcessActionYaml(): string {
         '      run: npx tsx shared/pr-report-core.ts --ctrf ${{ inputs.ctrf-path }} --project ${{ inputs.project-name }}',
         '      env:',
         '        GITHUB_TOKEN: ${{ github.token }}',
-        '    - name: Upload PR Report HTML',
-        '      uses: actions/upload-artifact@v4',
-        '      if: always()',
-        '      with:',
-        '        name: pr-report-html',
-        '        path: reports/pr-report.html',
-        '        if-no-files-found: warn',
     ].join('\n');
 }
 

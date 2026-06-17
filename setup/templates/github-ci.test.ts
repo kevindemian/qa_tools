@@ -128,21 +128,15 @@ describe('generateCIWorkflow — with: project-name', () => {
 });
 
 describe('generateQaPostProcessAction — HTML upload', () => {
-    it('includes upload-artifact step for HTML report', () => {
+    it('does NOT include upload-artifact (invalid in composite action)', () => {
         const yaml = generateQaPostProcessAction();
-        expect(yaml).toContain('Upload PR Report HTML');
-        expect(yaml).toContain('actions/upload-artifact@v4');
-        expect(yaml).toContain('pr-report-html');
-        expect(yaml).toContain('reports/pr-report.html');
+        expect(yaml).not.toContain('actions/upload-artifact');
+        expect(yaml).not.toContain('Upload PR Report HTML');
+        expect(yaml).not.toContain('pr-report-html');
     });
 
-    it('sets if-no-files-found: warn for HTML upload', () => {
+    it('has no if: always in composite action (only run step)', () => {
         const yaml = generateQaPostProcessAction();
-        expect(yaml).toContain('if-no-files-found: warn');
-    });
-
-    it('runs upload even when post-processing fails (if: always)', () => {
-        const yaml = generateQaPostProcessAction();
-        expect(yaml).toContain('if: always()');
+        expect(yaml).not.toContain('if: always()');
     });
 });

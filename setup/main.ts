@@ -11,6 +11,7 @@ import {
 } from './config-writer.js';
 import { generateCIWorkflow, generateQaPostProcessAction } from './templates/github-ci.js';
 import { generateQaPostProcessWorkflow } from './templates/qa-post-process-workflow.js';
+import { injectPostProcessJob } from '../shared/ci-injector.js';
 import { generateGitLabCI } from './templates/gitlab-ci.js';
 import { generatePrePushHook } from './templates/pre-push-hook.js';
 import type { SetupContext, Framework, GitProvider } from './context.js';
@@ -139,12 +140,15 @@ async function generateConfigFiles(ctx: SetupContext): Promise<{ created: string
         }
 
         if (fs.existsSync(wfPath)) {
-            const shouldReplace = await askConfirm('ci.yml já existe. Substituir pelo workflow desacoplado?', true);
-            if (shouldReplace) {
-                const yaml = generateCIWorkflow(ctx);
-                fs.writeFileSync(wfPath, yaml, 'utf8');
+            // ci.yml exists → inject post-process job NON-destructively
+            const existing = fs.readFileSync(wfPath, 'utf8');
+            const updated = injectPostProcessJob(existing, ctx.projectName);
+            if (updated !== existing) {
+                fs.writeFileSync(wfPath, updated, 'utf8');
+                info('Job post-process adicionado ao ci.yml existente (conteúdo preservado).');
                 if (!created.includes(wfPath)) created.push(wfPath);
             } else {
+                info('ci.yml já contém post-process — sem alterações.');
                 skipped.push(wfPath);
             }
         } else {
