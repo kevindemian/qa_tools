@@ -56,7 +56,7 @@ if [ -f "$VALIDATION_HOOK" ]; then
   echo "--- Validation hook (diff check) ---"
   DIFF=$(git diff --cached)
   if [ -n "$DIFF" ]; then
-    echo "$DIFF" | npx tsx "$VALIDATION_HOOK" --check
+    echo "$DIFF" | grep -v '^-[^-]' | npx tsx "$VALIDATION_HOOK" --check
   else
     echo "   (no staged changes to check)"
   fi

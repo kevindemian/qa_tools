@@ -40,6 +40,7 @@ import { handleBugCreation } from './pipeline-jira.js';
 import type { ParseResult } from '../shared/result_parser.js';
 import type { AnalysisReport } from '../shared/failure-analysis.js';
 import type JiraClient from '../shared/jira-client.js';
+import { FsStoreBackend } from '../shared/store-backend.js';
 
 const mockParseResult: ParseResult = {
     tests: [
@@ -65,8 +66,12 @@ const mockBugReport = {
 
 const mockJiraResource = {} as JiraClient;
 
+let testBackend: FsStoreBackend;
+
 beforeEach(() => {
     vi.clearAllMocks();
+    testBackend = new FsStoreBackend('/tmp/qa-tools-test-jira');
+    testBackend.init();
 });
 
 describe('handleBugCreation', () => {
@@ -81,7 +86,7 @@ describe('handleBugCreation', () => {
         vi.mocked(collectAutomated).mockReturnValue(mockBugReport);
         vi.mocked(fileToJira).mockResolvedValue('ECSPOL-123');
 
-        await handleBugCreation(mockParseResult, 42, 'main', mockAnalysisReport, mockJiraResource);
+        await handleBugCreation(mockParseResult, 42, 'main', mockAnalysisReport, mockJiraResource, testBackend);
 
         expect(collectAutomated).toHaveBeenCalledWith(mockParseResult, {
             pipelineId: '42',
@@ -109,7 +114,7 @@ describe('handleBugCreation', () => {
         vi.mocked(fileToJira).mockRejectedValue(new Error('Project key is required'));
         Config.set('jiraProject', '');
 
-        await handleBugCreation(mockParseResult, '99', 'develop', mockAnalysisReport, mockJiraResource);
+        await handleBugCreation(mockParseResult, '99', 'develop', mockAnalysisReport, mockJiraResource, testBackend);
 
         expect(printError).toHaveBeenCalledWith('Falha ao criar bug no Jira', expect.any(Error));
         expect(pushHistory).toHaveBeenCalledWith('create-jira-issue', '99', 'error');
@@ -120,7 +125,7 @@ describe('handleBugCreation', () => {
     it('returns early when jira env is not configured', async () => {
         vi.mocked(_jiraEnv).mockReturnValue(null);
 
-        await handleBugCreation(mockParseResult, 42, 'main', mockAnalysisReport, mockJiraResource);
+        await handleBugCreation(mockParseResult, 42, 'main', mockAnalysisReport, mockJiraResource, testBackend);
 
         expect(confirm).not.toHaveBeenCalled();
         expect(collectAutomated).not.toHaveBeenCalled();
@@ -137,7 +142,7 @@ describe('handleBugCreation', () => {
         });
         vi.mocked(confirm).mockReturnValue(false);
 
-        await handleBugCreation(mockParseResult, 42, 'main', mockAnalysisReport, mockJiraResource);
+        await handleBugCreation(mockParseResult, 42, 'main', mockAnalysisReport, mockJiraResource, testBackend);
 
         expect(collectAutomated).not.toHaveBeenCalled();
         expect(fileToJira).not.toHaveBeenCalled();
@@ -156,7 +161,7 @@ describe('handleBugCreation', () => {
         const apiError = new Error('Network timeout');
         vi.mocked(fileToJira).mockRejectedValue(apiError);
 
-        await handleBugCreation(mockParseResult, 42, 'main', mockAnalysisReport, mockJiraResource);
+        await handleBugCreation(mockParseResult, 42, 'main', mockAnalysisReport, mockJiraResource, testBackend);
 
         expect(printError).toHaveBeenCalledWith('Falha ao criar bug no Jira', apiError);
         expect(pushHistory).toHaveBeenCalledWith('create-jira-issue', '42', 'error');
@@ -173,7 +178,7 @@ describe('handleBugCreation', () => {
         vi.mocked(collectAutomated).mockReturnValue({ ...mockBugReport, description: '' });
         vi.mocked(fileToJira).mockResolvedValue('ECSPOL-789');
 
-        await handleBugCreation(mockParseResult, 42, 'main', mockAnalysisReport, mockJiraResource);
+        await handleBugCreation(mockParseResult, 42, 'main', mockAnalysisReport, mockJiraResource, testBackend);
 
         expect(fileToJira).toHaveBeenCalledWith(
             mockJiraResource,
@@ -193,11 +198,11 @@ describe('handleBugCreation', () => {
         vi.mocked(collectAutomated).mockReturnValue(mockBugReport);
         vi.mocked(fileToJira).mockResolvedValue('ECSPOL-ABC');
 
-        await handleBugCreation(mockParseResult, 7, 'hotfix', mockAnalysisReport, mockJiraResource);
+        await handleBugCreation(mockParseResult, 7, 'bugfix', mockAnalysisReport, mockJiraResource, testBackend);
 
         expect(collectAutomated).toHaveBeenCalledWith(mockParseResult, {
             pipelineId: '7',
-            branch: 'hotfix',
+            branch: 'bugfix',
             provider: currentProvider,
         });
     });
