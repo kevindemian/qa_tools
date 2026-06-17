@@ -1,6 +1,8 @@
 /** Metrics persistence: run history, flakiness calculation, and coverage tracking.
  * Internal persistence uses StoreBackend (git-backed or fs-backed). */
 import { z } from 'zod';
+import os from 'os';
+import path from 'path';
 import Config from './config.js';
 import { rootLogger } from './logger.js';
 import { detectProjectGitDir, detectStoreBackend, FsStoreBackend } from './store-backend.js';
@@ -102,6 +104,13 @@ export interface TrendPoint {
 
 const METRICS_FILE = 'metrics/global.json';
 
+function testBackend(): StoreBackend {
+    const tmpDir = path.join(os.tmpdir(), 'qa-tools-metrics-test');
+    const backend = new FsStoreBackend(tmpDir);
+    backend.init();
+    return backend;
+}
+
 function getBackend(config?: Config): StoreBackend {
     if (config) {
         const xdg = config.get('xdgStateHome');
@@ -110,6 +119,10 @@ function getBackend(config?: Config): StoreBackend {
             backend.init();
             return backend;
         }
+    }
+
+    if (typeof process !== 'undefined' && process.env['VITEST']) {
+        return testBackend();
     }
 
     const gitDir = detectProjectGitDir();
