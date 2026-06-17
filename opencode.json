@@ -3,7 +3,7 @@
     "plugin": [
         "~/.config/opencode/plugin/validation_plugin.ts"
     ],
-    "model": "opencode/deepseek-v4-flash-free",
+    "model": "opencode/Big Pickle",
     "small_model": "google/gemini-2.0-flash",
     "instructions": [
         "AGENTS.md"

@@ -121,15 +121,15 @@ describe('buildTimeline', () => {
         expect(buildTimeline([])).toBe('');
     });
 
-    it('returns timeline chart for tests with durations', () => {
+    it('returns timeline chart aggregated by suite', () => {
         const html = buildTimeline(sampleTests);
         expect(html).toContain('Timeline');
         expect(html).toContain('timelineBody');
-        expect(html).toContain('TC01');
-        expect(html).toContain('TC02');
+        expect(html).toContain('(root)');
+        expect(html).toContain('data-component="badge"');
     });
 
-    it('includes state badges', () => {
+    it('includes suite summary badges', () => {
         const html = buildTimeline(sampleTests);
         expect(html).toContain('data-component="badge"');
     });
@@ -140,7 +140,7 @@ describe('buildTimeline', () => {
             { title: 'T2', state: 'passed', duration: 0 },
         ];
         const html = buildTimeline(tests);
-        expect(html).toContain('T1');
+        expect(html).toContain('2 tests');
         expect(html).not.toBe('');
     });
 

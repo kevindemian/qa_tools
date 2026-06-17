@@ -83,6 +83,12 @@ function toggleDetail(index) {
     var hidden = row.style.display === 'none' || row.style.display === '';
     row.style.display = hidden ? 'table-row' : 'none';
 }
+function showAllTests() {
+    var rows = document.querySelectorAll('[data-overflow="true"]');
+    var btn = document.getElementById('showAllBtn');
+    rows.forEach(function(r) { r.removeAttribute('data-overflow'); });
+    if (btn) btn.remove();
+}
 `;
 
 const SCROLL_JS = `function scrollToTest(title) {

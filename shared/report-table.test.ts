@@ -159,4 +159,55 @@ describe('buildTestTable', () => {
         const html = buildTestTable([]);
         expect(html).toContain('data-component="table-wrapper"');
     });
+
+    it('paginates passed tests beyond maxVisiblePassed', () => {
+        const tests: FlatTest[] = [];
+        for (let i = 0; i < 100; i++) {
+            tests.push({ title: 'Passed-' + i, state: 'passed', duration: 10 });
+        }
+        tests.push({ title: 'Failed-1', state: 'failed', duration: 50, error: 'err' });
+        const html = buildTestTable(tests, undefined, undefined, undefined, 10);
+        expect(html).toContain('Failed-1');
+        expect(html).toContain('Passed-0');
+        expect(html).toContain('Passed-9');
+        expect(html).toContain('Passed-10');
+        expect(html).toContain('data-overflow="true"');
+        expect(html).toContain('Show all 90 passed tests');
+    });
+
+    it('shows failures always regardless of pagination', () => {
+        const tests: FlatTest[] = [];
+        for (let i = 0; i < 100; i++) {
+            tests.push({ title: 'Passed-' + i, state: 'passed', duration: 10 });
+        }
+        for (let i = 0; i < 5; i++) {
+            tests.push({ title: 'Failed-' + i, state: 'failed', duration: 50, error: 'err' });
+        }
+        const html = buildTestTable(tests, undefined, undefined, undefined, 10);
+        expect(html).toContain('Failed-0');
+        expect(html).toContain('Failed-4');
+    });
+
+    it('does not add show-all button when under limit', () => {
+        const tests: FlatTest[] = [
+            { title: 'T1', state: 'passed', duration: 10 },
+            { title: 'T2', state: 'passed', duration: 10 },
+        ];
+        const html = buildTestTable(tests);
+        expect(html).not.toContain('data-overflow');
+        expect(html).not.toContain('Show all');
+    });
+
+    it('uses default maxVisiblePassed of 50', () => {
+        const tests: FlatTest[] = [];
+        for (let i = 0; i < 60; i++) {
+            tests.push({ title: 'T' + i, state: 'passed', duration: 10 });
+        }
+        const html = buildTestTable(tests);
+        expect(html).toContain('T0');
+        expect(html).toContain('T49');
+        expect(html).toContain('T50');
+        expect(html).toContain('data-overflow="true"');
+        expect(html).toContain('Show all 10 passed tests');
+    });
 });

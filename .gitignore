@@ -20,6 +20,7 @@ config/*.local.json
 # === Dev Tooling (OpenCode agents, commands, briefing) ===
 .opencode/
 PROJECT.md
+internal_docs/
 install-opencode.sh
 
 # === Docker Generated ===

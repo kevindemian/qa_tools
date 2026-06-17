@@ -18,10 +18,10 @@ class Config {
         Config.defaultInstance.setAutoConfirm(v);
     }
     setAutoConfirm(v: boolean): void {
-        this.overrides.autoConfirm = v;
+        this.overrides['autoConfirm'] = v;
     }
-    static set(key: string, value: unknown): void {
-        (Config.defaultInstance.overrides as Record<string, unknown>)[key] = value;
+    static set(key: string, value: string | boolean | number): void {
+        Config.defaultInstance.overrides[key] = value;
     }
     static validateRequiredEnv(): void {
         validateRequiredEnv();
@@ -58,8 +58,8 @@ class Config {
         return this._resolve<T>(key);
     }
 
-    set(key: string, value: unknown): void {
-        (this.overrides as Record<string, unknown>)[key] = value;
+    set(key: string, value: string | boolean | number): void {
+        this.overrides[key] = value;
     }
 
     getAllPrefixed(prefix: string): Record<string, string> {

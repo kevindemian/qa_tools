@@ -282,6 +282,7 @@ function buildCiContextSection(
  * @param htmlArtifactUrl - URL to download the HTML report artifact (when available)
  */
 function writeToJobSummary(stats: PrReportStats, htmlArtifactUrl?: string): void {
+    if (process.env['VITEST']) return;
     const stepSummaryPath = process.env['GITHUB_STEP_SUMMARY'];
     if (!stepSummaryPath) return;
 
