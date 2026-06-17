@@ -1,14 +1,27 @@
-export interface ConfigField {
+interface ConfigFieldBase {
     key: string;
     envVar: string;
-    type: 'string' | 'boolean' | 'number';
-    defaultVal?: string | number | boolean;
     description: string;
-    /** Optional category for .env.example grouping. */
     category?: string;
-    /** Optional list of allowed string values (enum). Used for runtime validation. */
     allowedValues?: string[];
 }
+
+export interface ConfigFieldString extends ConfigFieldBase {
+    type: 'string';
+    defaultVal?: string;
+}
+
+export interface ConfigFieldBoolean extends ConfigFieldBase {
+    type: 'boolean';
+    defaultVal?: boolean;
+}
+
+export interface ConfigFieldNumber extends ConfigFieldBase {
+    type: 'number';
+    defaultVal?: number;
+}
+
+export type ConfigField = ConfigFieldString | ConfigFieldBoolean | ConfigFieldNumber;
 
 export const CONFIG_SCHEMA: ConfigField[] = [
     { key: 'jiraBaseUrl', envVar: 'JIRA_BASE_URL', type: 'string', category: 'jira', description: 'Jira base URL' },

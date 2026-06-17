@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterAll } from 'vitest';
 import { generatePrReport } from '../pr-report-core.js';
 import type { FlatTest } from '../result_parser.js';
 
@@ -7,6 +7,9 @@ vi.mock('fs', async (importOriginal) => {
     const mockWriteFileSync = vi.fn((filePath: string, data: string, options?: import('node:fs').WriteFileOptions) => {
         const p = String(filePath);
         if (p === 'reports/pr-report.html' || p.endsWith('/pr-report.html')) {
+            return undefined;
+        }
+        if (process.env['GITHUB_STEP_SUMMARY'] && p === process.env['GITHUB_STEP_SUMMARY']) {
             return undefined;
         }
         return actual.writeFileSync(filePath, data, options);
@@ -110,6 +113,7 @@ const defaultHealthScore = {
 
 beforeEach(() => {
     vi.clearAllMocks();
+    delete process.env['GITHUB_STEP_SUMMARY'];
     mockMetrics.loadMetrics.mockReturnValue({ runs: [] });
     mockMetrics.calculateFlakiness.mockReturnValue([]);
     mockMetrics.getTrends.mockReturnValue({ direction: 'stable' as const, change: 0 });
@@ -119,6 +123,10 @@ beforeEach(() => {
     mockPRComment.postPrComment.mockResolvedValue(undefined);
     mockHtml.generateHtmlReport.mockReturnValue('<html>mock report</html>');
     mockCoverage.resolveCoverage.mockReturnValue(undefined);
+});
+
+afterAll(() => {
+    delete process.env['GITHUB_STEP_SUMMARY'];
 });
 
 describe('generatePrReport', () => {
@@ -359,8 +367,45 @@ describe('generatePrReport', () => {
         expect(commentBody).not.toContain('CI Context');
     });
 
-    it('writes to GITHUB_STEP_SUMMARY when environment variable is set', async () => {
+    it('writes to GITHUB_STEP_SUMMARY when env var is set (VITEST guard bypassed)', async () => {
         const summaryPath = '/tmp/test-step-summary.md';
+        const fs = await import('node:fs');
+        const prevVitest = process.env['VITEST'];
+        delete process.env['VITEST'];
+        process.env['GITHUB_STEP_SUMMARY'] = summaryPath;
+
+        try {
+            await generatePrReport({
+                tests: [sampleTest],
+                stats: defaultStats,
+                ciEnv: {
+                    isCI: true,
+                    repo: 'owner/repo',
+                    runId: '456',
+                    refName: 'main',
+                    serverUrl: 'https://github.com',
+                },
+            });
+
+            const writeCalls = (fs.writeFileSync as ReturnType<typeof vi.fn>).mock.calls;
+            const summaryCall = writeCalls.find((call: unknown[]) => String(call[0]) === summaryPath) as
+                | unknown[]
+                | undefined;
+            expect(summaryCall).toBeDefined();
+            const content = String((summaryCall as unknown[])[1]);
+            expect(content).toContain('QA Tools — PR Report');
+            expect(content).toContain('| ✅ Passed | ❌ Failed | ⏭ Skipped |');
+            expect(content).toContain('| 8 | 1 | 1 | 10 |');
+        } finally {
+            delete process.env['GITHUB_STEP_SUMMARY'];
+            if (prevVitest !== undefined) process.env['VITEST'] = prevVitest;
+            else delete process.env['VITEST'];
+        }
+    });
+
+    it('does not write to job summary when VITEST is set', async () => {
+        process.env['VITEST'] = 'true';
+        const summaryPath = '/tmp/test-step-summary-guard.md';
         const fs = await import('node:fs');
         fs.writeFileSync(summaryPath, '', 'utf8');
         process.env['GITHUB_STEP_SUMMARY'] = summaryPath;
@@ -379,11 +424,10 @@ describe('generatePrReport', () => {
             });
 
             const summaryContent = fs.readFileSync(summaryPath, 'utf8');
-            expect(summaryContent).toContain('QA Tools — PR Report');
-            expect(summaryContent).toContain('| ✅ Passed | ❌ Failed | ⏭ Skipped |');
-            expect(summaryContent).toContain('| 8 | 1 | 1 | 10 |');
+            expect(summaryContent).toBe('');
         } finally {
             delete process.env['GITHUB_STEP_SUMMARY'];
+            delete process.env['VITEST'];
             fs.unlinkSync(summaryPath);
         }
     });
@@ -398,7 +442,6 @@ describe('generatePrReport', () => {
                 stats: defaultStats,
             });
 
-            // Should not throw
             expect(true).toBe(true);
         } finally {
             if (original) process.env['GITHUB_STEP_SUMMARY'] = original;

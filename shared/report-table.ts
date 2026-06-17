@@ -135,12 +135,16 @@ export function buildFlakinessBadge(rate: number): string {
     return `<span style="display:inline-block;padding:1px 6px;border-radius:4px;background:${color}20;color:${color};font-size:0.7rem;font-weight:600;margin-left:4px" title="Flakiness: ${pct}%">🔄 ${label}</span>`;
 }
 
+const DEFAULT_MAX_VISIBLE_PASSED = 50;
+
 export function buildTestTable(
     tests: FlatTest[],
     categories?: Record<string, string>,
     history?: Record<string, TestHistoryRun[]>,
     flakinessMap?: Record<string, number>,
+    maxVisiblePassed?: number,
 ): string {
+    const maxPassed = maxVisiblePassed ?? DEFAULT_MAX_VISIBLE_PASSED;
     const hasPassed = tests.some((t) => t.state === 'passed');
     const hasError = tests.some((t) => t.state === 'failed' && t.error);
     const hasSuite = tests.some((t) => extractSuite(t));
@@ -180,8 +184,30 @@ export function buildTestTable(
     }
     thead += '</tr></thead>';
 
+    // Partition tests: failures always visible, passed tests limited by maxPassed
+    const failedTests: FlatTest[] = [];
+    const passedTests: FlatTest[] = [];
+    const skippedTests: FlatTest[] = [];
+    for (const t of tests) {
+        if (t.state === 'failed') failedTests.push(t);
+        else if (t.state === 'passed') passedTests.push(t);
+        else skippedTests.push(t);
+    }
+
+    const visiblePassed = passedTests.slice(0, maxPassed);
+    const overflowPassed = passedTests.slice(maxPassed);
+    const hasOverflow = overflowPassed.length > 0;
+
+    // Rebuild ordered list: failed first, then visible passed, then skipped, then overflow passed (hidden)
+    const visibleTests = [...failedTests, ...visiblePassed, ...skippedTests];
+    const totalVisible = visibleTests.length;
+    const allTests = [...visibleTests, ...overflowPassed];
+
     let tbody = '<tbody>';
-    for (const [i, t] of tests.entries()) {
+    for (const [i, t] of allTests.entries()) {
+        const isOverflow = i >= totalVisible;
+        const rowIndex = i;
+
         const cat = t.state === 'failed' && categories ? categories[t.title] : undefined;
         const hasStepsOrScreenshotsOrLogs =
             (t.steps?.length ?? 0) > 0 || (t.screenshots?.length ?? 0) > 0 || (t.logs?.length ?? 0) > 0;
@@ -189,7 +215,7 @@ export function buildTestTable(
         let testCell = escapeHtml(t.title);
         if (cat) testCell += buildCategoryBadge(cat);
         if (hasStepsOrScreenshotsOrLogs) {
-            testCell += '<span class="detail-toggle" onclick="toggleDetail(' + i + ')"> \u25BC</span>';
+            testCell += '<span class="detail-toggle" onclick="toggleDetail(' + rowIndex + ')"> \u25BC</span>';
         }
 
         const statusBadge = Badge({
@@ -206,6 +232,7 @@ export function buildTestTable(
         }
 
         const rowClass = t.state === 'passed' ? 'row-passed' : '';
+        const overflowAttr = isOverflow ? ' data-overflow="true"' : '';
         const hierarchyAttr = t.fullTitle ? ` data-hierarchy="${escapeHtml(t.fullTitle)}"` : '';
         const fullTitle = t.fullTitle;
 
@@ -222,7 +249,7 @@ export function buildTestTable(
         }
         if (hasFlakiness) cells += Td({ children: flakyCell });
 
-        tbody += Tr({ key: `test-${i}`, class: rowClass, attrs: hierarchyAttr, children: cells });
+        tbody += Tr({ key: `test-${i}`, class: rowClass, attrs: hierarchyAttr + overflowAttr, children: cells });
 
         const detail = buildDetailRow(t, i, columns.length);
         if (detail) tbody += detail;
@@ -238,5 +265,11 @@ export function buildTestTable(
         ? '<div class="control-bar"><button id="toggleBtn" onclick="togglePassed()">Toggle Passed</button></div>'
         : '';
 
-    return toggleBtn + tableHtml;
+    const showAllBtn = hasOverflow
+        ? '<div class="control-bar" style="margin-top:8px"><button id="showAllBtn" onclick="showAllTests()">Show all ' +
+          overflowPassed.length +
+          ' passed tests</button></div>'
+        : '';
+
+    return toggleBtn + tableHtml + showAllBtn;
 }

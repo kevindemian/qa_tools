@@ -79,11 +79,39 @@ export function buildHierarchySidebar(tests: FlatTest[]): string {
     return html;
 }
 
+interface SuiteAggregate {
+    suite: string;
+    passed: number;
+    failed: number;
+    skipped: number;
+    totalDuration: number;
+    tests: FlatTest[];
+}
+
+function aggregateBySuite(tests: FlatTest[]): SuiteAggregate[] {
+    const map = new Map<string, SuiteAggregate>();
+    for (const t of tests) {
+        const suite = extractSuite(t) || '(root)';
+        let agg = map.get(suite);
+        if (!agg) {
+            agg = { suite, passed: 0, failed: 0, skipped: 0, totalDuration: 0, tests: [] };
+            map.set(suite, agg);
+        }
+        if (t.state === 'passed') agg.passed++;
+        else if (t.state === 'failed') agg.failed++;
+        else agg.skipped++;
+        agg.totalDuration += t.duration;
+        agg.tests.push(t);
+    }
+    return Array.from(map.values());
+}
+
 export function buildTimeline(tests: FlatTest[]): string {
     if (tests.length === 0) return '';
+    const suites = aggregateBySuite(tests);
     let maxDur = 0;
-    for (const t of tests) {
-        if (t.duration > maxDur) maxDur = t.duration;
+    for (const s of suites) {
+        if (s.totalDuration > maxDur) maxDur = s.totalDuration;
     }
     if (maxDur === 0) maxDur = 1;
     let html = Card({
@@ -95,25 +123,29 @@ export function buildTimeline(tests: FlatTest[]): string {
         '<div class="label" style="margin-bottom:8px">Timeline <button id="timelineToggle" onclick="toggleTimeline()" style="font-size:0.75rem;margin-left:8px">Hide</button></div>';
     html = html.replace('<div data-part="body">', `<div data-part="body">${label}`);
     html += '<div id="timelineBody">';
-    for (const t of tests) {
-        const barW = Math.max(4, (t.duration / maxDur) * 300);
-        const color =
-            t.state === 'passed'
-                ? tokens.color.chart.pass
-                : t.state === 'failed'
-                  ? tokens.color.chart.fail
-                  : tokens.color.chart.skip;
-        html += '<div class="timeline-row" onclick="scrollToTest(\'' + escapeHtml(t.title) + '\')">';
-        const badgeVariant = t.state === 'passed' ? 'pass' : t.state === 'failed' ? 'fail' : 'skip';
-        html += Badge({ variant: badgeVariant, children: t.state });
+    for (const s of suites) {
+        const barW = Math.max(4, (s.totalDuration / maxDur) * 300);
+        const total = s.passed + s.failed + s.skipped;
+        const summary =
+            s.failed > 0
+                ? Badge({ variant: 'fail', children: String(s.failed) + ' failed' })
+                : Badge({ variant: 'pass', children: String(total) + ' tests' });
+        const suiteLabel = s.suite === '(root)' ? '(root)' : s.suite;
+        html += '<div class="timeline-row" onclick="scrollToTest(\'' + escapeHtml(s.suite) + '\')">';
+        html += summary;
         html +=
             '<span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' +
-            escapeHtml(t.title) +
+            escapeHtml(suiteLabel) +
             '</span>';
-        html += '<div class="timeline-bar" style="width:' + barW.toFixed(0) + 'px;background:' + color + '"></div>';
+        html +=
+            '<div class="timeline-bar" style="width:' +
+            barW.toFixed(0) +
+            'px;background:' +
+            tokens.color.chart.pass +
+            '"></div>';
         html +=
             '<span style="font-size:0.75rem;color:var(--color-text-muted);flex-shrink:0">' +
-            fmtDuration(t.duration) +
+            fmtDuration(s.totalDuration) +
             '</span>';
         html += '</div>';
     }

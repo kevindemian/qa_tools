@@ -9,6 +9,11 @@ describe('Config (accessor)', () => {
         Config.reset();
     });
 
+    afterEach(() => {
+        process.env = { ..._origEnv };
+        Config.reset();
+    });
+
     afterAll(() => {
         process.env = _origEnv;
     });
@@ -167,7 +172,7 @@ describe('Config (accessor)', () => {
             delete process.env['JIRA_BASE_URL'];
             delete process.env['JIRA_PERSONAL_TOKEN'];
             delete process.env['XRAY_BASE_URL'];
-            expect(() => Config.validateRequiredEnv()).toThrow();
+            expect(() => Config.validateRequiredEnv()).toThrow(/JIRA_BASE_URL/);
         });
 
         it('passes when required env vars are present', () => {

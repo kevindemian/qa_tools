@@ -150,6 +150,10 @@ const DETAIL_CSS = `
 .detail-logs .log-count{font-size:0.7rem;color:var(--color-text-muted);margin-top:4px}
 `;
 
+const OVERFLOW_CSS = `
+[data-overflow="true"]{display:none!important}
+`;
+
 const PRINT_CSS = `
 @media print{.control-bar,.detail-toggle,.sidebar,.tabs{display:none!important}body{padding:0}}
 `;
@@ -178,6 +182,7 @@ export function buildCss(): string {
         TABLE_CSS +
         ERROR_HISTORY_CSS +
         DETAIL_CSS +
+        OVERFLOW_CSS +
         PRINT_CSS +
         RESPONSIVE_CSS +
         buildDarkVars()

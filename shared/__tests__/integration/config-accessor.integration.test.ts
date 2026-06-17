@@ -20,6 +20,11 @@ describe('Integration: Config Accessor', () => {
         Config.reset();
     });
 
+    afterEach(() => {
+        process.env = { ..._origEnv };
+        Config.reset();
+    });
+
     afterAll(() => {
         process.env = _origEnv;
     });

@@ -102,8 +102,9 @@ export enum ExitCode {
 
 /** Runtime overrides for any config key. Keys map 1:1 to env var names (lowercase, camelCase).
  * When provided, overrides take precedence over env vars and `.env`.
- * @remarks Moved from `shared/config.ts` to `shared/types.ts` for SRP compliance (J3). */
+ * @remarks Index signature added for generic set() access without type assertions (T14). */
 export interface ConfigOverrides {
+    [key: string]: string | boolean | number | undefined;
     jiraBaseUrl?: string;
     jiraPersonalToken?: string;
     jiraMode?: string;
