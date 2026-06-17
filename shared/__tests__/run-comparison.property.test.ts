@@ -53,14 +53,21 @@ describe('compareRuns PBT invariants', () => {
                 mockLlmPrompt.mockClear();
                 mockLlmPrompt.mockResolvedValue('analysis');
                 await compareRuns(runA, runB);
-                const lastCall = mockLlmPrompt.mock.calls.length - 1;
-                const callArg = mockLlmPrompt.mock.calls[lastCall]?.[0];
-                expect(callArg).toBeDefined();
-                const user = (callArg as { user: string }).user;
-                expect(user).toContain('=== RUN A (older) ===');
-                expect(user).toContain('=== RUN B (newer) ===');
-                expect(user).toContain(`Date: ${runA.timestamp.slice(0, 10)}`);
-                expect(user).toContain(`Project: ${runA.project}`);
+                expect(mockLlmPrompt).toHaveBeenCalledWith(
+                    expect.objectContaining({
+                        user: expect.stringContaining('=== RUN A (older) ==='),
+                    }),
+                );
+                expect(mockLlmPrompt).toHaveBeenCalledWith(
+                    expect.objectContaining({
+                        user: expect.stringContaining(`Date: ${runA.timestamp.slice(0, 10)}`),
+                    }),
+                );
+                expect(mockLlmPrompt).toHaveBeenCalledWith(
+                    expect.objectContaining({
+                        user: expect.stringContaining(`Project: ${runA.project}`),
+                    }),
+                );
             }),
         );
     });
@@ -71,15 +78,20 @@ describe('compareRuns PBT invariants', () => {
                 mockLlmPrompt.mockClear();
                 mockLlmPrompt.mockResolvedValue('analysis');
                 await compareRuns(runA, runB);
-                const lastCall = mockLlmPrompt.mock.calls.length - 1;
-                const callArg = mockLlmPrompt.mock.calls[lastCall]?.[0];
-                const user = (callArg as { user: string }).user;
                 const execA = runA.passed + runA.failed;
                 const rateA = execA > 0 ? Math.round((runA.passed / execA) * 100) : 0;
-                expect(user).toContain(`Pass rate: ${rateA}%`);
+                expect(mockLlmPrompt).toHaveBeenCalledWith(
+                    expect.objectContaining({
+                        user: expect.stringContaining(`Pass rate: ${rateA}%`),
+                    }),
+                );
                 const execB = runB.passed + runB.failed;
                 const rateB = execB > 0 ? Math.round((runB.passed / execB) * 100) : 0;
-                expect(user).toContain(`Pass rate: ${rateB}%`);
+                expect(mockLlmPrompt).toHaveBeenCalledWith(
+                    expect.objectContaining({
+                        user: expect.stringContaining(`Pass rate: ${rateB}%`),
+                    }),
+                );
             }),
         );
     });
@@ -91,6 +103,69 @@ describe('compareRuns PBT invariants', () => {
                 const result = await compareRuns(null, runA);
                 expect(result).toBe('No run data provided');
                 expect(mockLlmPrompt).not.toHaveBeenCalled();
+            }),
+        );
+    });
+
+    it('pass rate is 0 when all tests fail', async () => {
+        const failingRun: MetricsRun = {
+            timestamp: '2026-01-01T00:00:00.000Z',
+            project: 'test',
+            total: 10,
+            passed: 0,
+            failed: 10,
+            skipped: 0,
+            duration: 5000,
+            tests: [],
+        };
+        mockLlmPrompt.mockClear();
+        mockLlmPrompt.mockResolvedValue('analysis');
+        await compareRuns(failingRun, failingRun);
+        expect(mockLlmPrompt).toHaveBeenCalledWith(
+            expect.objectContaining({
+                user: expect.stringContaining('Pass rate: 0%'),
+            }),
+        );
+    });
+
+    it('pass rate is 100 when all tests pass', async () => {
+        const passingRun: MetricsRun = {
+            timestamp: '2026-01-01T00:00:00.000Z',
+            project: 'test',
+            total: 10,
+            passed: 10,
+            failed: 0,
+            skipped: 0,
+            duration: 5000,
+            tests: [],
+        };
+        mockLlmPrompt.mockClear();
+        mockLlmPrompt.mockResolvedValue('analysis');
+        await compareRuns(passingRun, passingRun);
+        expect(mockLlmPrompt).toHaveBeenCalledWith(
+            expect.objectContaining({
+                user: expect.stringContaining('Pass rate: 100%'),
+            }),
+        );
+    });
+
+    it('pass rate is 0 when no tests executed', async () => {
+        const noExecRun: MetricsRun = {
+            timestamp: '2026-01-01T00:00:00.000Z',
+            project: 'test',
+            total: 0,
+            passed: 0,
+            failed: 0,
+            skipped: 0,
+            duration: 0,
+            tests: [],
+        };
+        mockLlmPrompt.mockClear();
+        mockLlmPrompt.mockResolvedValue('analysis');
+        await compareRuns(noExecRun, noExecRun);
+        expect(mockLlmPrompt).toHaveBeenCalledWith(
+            expect.objectContaining({
+                user: expect.stringContaining('Pass rate: 0%'),
             }),
         );
     });

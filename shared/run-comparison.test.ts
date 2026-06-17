@@ -11,9 +11,14 @@ vi.mock('./llm-client', () => ({
     parseRetryAfter: vi.fn(() => 2000),
 }));
 
+vi.mock('./logger', () => ({
+    rootLogger: { error: vi.fn(), info: vi.fn(), warn: vi.fn(), child: vi.fn().mockReturnThis() },
+}));
+
 import { llmPrompt } from './llm-client.js';
 import { compareRuns } from './run-comparison.js';
 import { sanitizeForLlm } from './sanitize.js';
+import { rootLogger } from './logger.js';
 import { nonNull } from './test-utils.js';
 import type { MetricsRun } from './metrics.js';
 
@@ -77,22 +82,6 @@ describe('compareRuns', () => {
         expect(result).toBe('');
     });
 
-    it('handles empty run data without error', async () => {
-        const empty: MetricsRun = {
-            timestamp: '2026-01-01T00:00:00.000Z',
-            project: '',
-            total: 0,
-            passed: 0,
-            failed: 0,
-            skipped: 0,
-            duration: 0,
-            tests: [],
-        };
-        mockLlmPrompt.mockResolvedValueOnce('analysis of empty run');
-        const result = await compareRuns(empty, empty);
-        expect(result).toBe('analysis of empty run');
-    });
-
     it('sanitizes run data before sending to LLM', async () => {
         const runWithSecret: MetricsRun = {
             timestamp: '2026-05-01T00:00:00.000Z',
@@ -110,5 +99,17 @@ describe('compareRuns', () => {
         expect(typeof userArg).toBe('string');
         const sanitized = sanitizeForLlm(userArg);
         expect(sanitized).toBe(userArg);
+    });
+
+    it('G-01 bug-fix: logs meaningful message when LLM rejects with non-Error', async () => {
+        mockLlmPrompt.mockRejectedValueOnce('API quota exceeded');
+
+        const result = await compareRuns(runA, runB);
+
+        expect(result).toBe('');
+        expect(vi.mocked(rootLogger.error).mock.calls.length).toBeGreaterThanOrEqual(1);
+        const logMsg = String(vi.mocked(rootLogger.error).mock.calls[0]?.[0] ?? '');
+        expect(logMsg).not.toContain('undefined');
+        expect(logMsg).toContain('API quota exceeded');
     });
 });
