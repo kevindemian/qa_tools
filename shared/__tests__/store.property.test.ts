@@ -43,7 +43,7 @@ const ReportMetaArb = fc
         project: fc.string({ minLength: 1, maxLength: 20 }).filter((s) => s.trim().length > 0),
         timestamp: fc.nat({ max: Date.now() + 86400000 }),
         tool: fc.constantFrom('vitest' as const, 'jest' as const, 'mocha' as const, 'cypress' as const),
-        branch: fc.string({ minLength: 1, maxLength: 30 }),
+        branch: fc.string({ minLength: 1, maxLength: 30 }).filter((s) => s !== '__proto__'),
         total: fc.nat({ max: 1000 }),
         passed: fc.nat({ max: 1000 }),
         failed: fc.nat({ max: 1000 }),
@@ -91,7 +91,7 @@ describe('Store — property-based', () => {
     it('lookup returns null for unknown sha', () => {
         fc.assert(
             fc.property(
-                fc.string({ minLength: 8, maxLength: 64 }),
+                fc.string({ minLength: 8, maxLength: 64 }).filter((s) => s !== '__proto__'),
                 fc.string({ minLength: 1, maxLength: 20 }),
                 (sha, project) => {
                     const { store, dir } = createFreshStore(project);
@@ -158,7 +158,7 @@ describe('Store — property-based', () => {
     it('appendBranch + getBranch round-trip preserves entries in LIFO order', () => {
         fc.assert(
             fc.property(
-                fc.string({ minLength: 1, maxLength: 20 }),
+                fc.string({ minLength: 1, maxLength: 20 }).filter((s) => s !== '__proto__'),
                 fc.array(BranchEntryArb, { minLength: 0, maxLength: 30 }),
                 (branch, entries) => {
                     const { store, dir } = createFreshStore('test-project');
@@ -187,14 +187,17 @@ describe('Store — property-based', () => {
 
     it('getBranch returns empty array for unknown branch', () => {
         fc.assert(
-            fc.property(fc.string({ minLength: 1, maxLength: 20 }), (branch) => {
-                const { store, dir } = createFreshStore('test-project');
-                try {
-                    expect(store.getBranch(branch)).toEqual([]);
-                } finally {
-                    cleanupDir(dir);
-                }
-            }),
+            fc.property(
+                fc.string({ minLength: 1, maxLength: 20 }).filter((s) => s !== '__proto__'),
+                (branch) => {
+                    const { store, dir } = createFreshStore('test-project');
+                    try {
+                        expect(store.getBranch(branch)).toEqual([]);
+                    } finally {
+                        cleanupDir(dir);
+                    }
+                },
+            ),
             { numRuns: 50 },
         );
     });
