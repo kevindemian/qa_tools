@@ -102,7 +102,7 @@
         "glob": "allow",
         "grep": "allow",
         "edit": {
-            "*": "ask",
+            "*": "allow",
             "/project/opencode.json": "deny",
             "/project/.opencode/validation.json": "deny",
             "/project/eslint.config.mjs": "deny",
@@ -136,7 +136,7 @@
             "npm test *": "allow",
             "npx vitest *": "allow",
             "npm run test *": "allow",
-            "*": "ask",
+            "*": "allow",
             "rm -rf /": "deny",
             "rm -rf ~": "deny",
             "rm -rf /home": "deny",

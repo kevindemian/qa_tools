@@ -3,7 +3,7 @@ import { describe, expect, it, vi } from 'vitest';
 import { computeCrossSquadBenchmark, generateBenchmarkHtml } from '../cross-squad-benchmark.js';
 
 vi.mock('../logger', () => ({
-    rootLogger: { error: vi.fn(), info: vi.fn(), child: vi.fn().mockReturnThis() },
+    rootLogger: { error: vi.fn(), info: vi.fn(), warn: vi.fn(), child: vi.fn().mockReturnThis() },
 }));
 
 vi.mock('../config', () => ({
@@ -108,6 +108,35 @@ describe('computeCrossSquadBenchmark — property-based', () => {
                 const result = computeCrossSquadBenchmark([project]);
                 expect(result.stdDev).toBe(0);
             }),
+            { numRuns: 50 },
+        );
+    });
+
+    it('stdDev is always >= 0 (G-03)', () => {
+        fc.assert(
+            fc.property(
+                fc.uniqueArray(projectArb, { selector: (p) => p.name, minLength: 2, maxLength: 10 }),
+                (projects) => {
+                    const result = computeCrossSquadBenchmark(projects);
+                    expect(result.stdDev).toBeGreaterThanOrEqual(0);
+                },
+            ),
+            { numRuns: 50 },
+        );
+    });
+
+    it('stdDev is 0 when all health scores are equal (G-03)', () => {
+        fc.assert(
+            fc.property(
+                fc.uniqueArray(
+                    projectArb.map((p) => ({ ...p, healthScore: 75 })),
+                    { selector: (p) => p.name, minLength: 2, maxLength: 10 },
+                ),
+                (projects) => {
+                    const result = computeCrossSquadBenchmark(projects);
+                    expect(result.stdDev).toBe(0);
+                },
+            ),
             { numRuns: 50 },
         );
     });

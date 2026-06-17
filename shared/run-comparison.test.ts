@@ -11,14 +11,14 @@ vi.mock('./llm-client', () => ({
     parseRetryAfter: vi.fn(() => 2000),
 }));
 
+const mockLoggerError = vi.hoisted(() => vi.fn());
 vi.mock('./logger', () => ({
-    rootLogger: { error: vi.fn(), info: vi.fn(), warn: vi.fn(), child: vi.fn().mockReturnThis() },
+    rootLogger: { error: mockLoggerError, info: vi.fn(), warn: vi.fn(), child: vi.fn().mockReturnThis() },
 }));
 
 import { llmPrompt } from './llm-client.js';
 import { compareRuns } from './run-comparison.js';
 import { sanitizeForLlm } from './sanitize.js';
-import { rootLogger } from './logger.js';
 import { nonNull } from './test-utils.js';
 import type { MetricsRun } from './metrics.js';
 
@@ -107,8 +107,8 @@ describe('compareRuns', () => {
         const result = await compareRuns(runA, runB);
 
         expect(result).toBe('');
-        expect(vi.mocked(rootLogger.error).mock.calls.length).toBeGreaterThanOrEqual(1);
-        const logMsg = String(vi.mocked(rootLogger.error).mock.calls[0]?.[0] ?? '');
+        expect(mockLoggerError).toHaveBeenCalled();
+        const logMsg = String(mockLoggerError.mock.calls[0]?.[0] ?? '');
         expect(logMsg).not.toContain('undefined');
         expect(logMsg).toContain('API quota exceeded');
     });

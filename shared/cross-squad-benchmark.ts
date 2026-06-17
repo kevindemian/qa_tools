@@ -37,7 +37,7 @@ export interface CrossSquadResult {
 }
 
 function _determineTrend(current: number, previous?: number): 'up' | 'down' | 'stable' {
-    if (previous === undefined) return 'stable';
+    if (previous === undefined || Number.isNaN(previous)) return 'stable';
     if (current > previous) return 'up';
     if (current < previous) return 'down';
     return 'stable';
@@ -55,7 +55,25 @@ export function computeCrossSquadBenchmark(
         previousScore?: number;
     }>,
 ): CrossSquadResult {
-    const sorted = [...projects].sort((a, b) => b.healthScore - a.healthScore);
+    const valid = projects.filter((p) => {
+        if (
+            Number.isNaN(p.healthScore) ||
+            Number.isNaN(p.passRate) ||
+            Number.isNaN(p.flakyRate) ||
+            Number.isNaN(p.coveragePct) ||
+            Number.isNaN(p.runCount) ||
+            p.passRate < 0 ||
+            p.flakyRate < 0 ||
+            p.coveragePct < 0 ||
+            p.runCount < 0
+        ) {
+            rootLogger.warn(`Cross-squad benchmark: excluding project "${p.name}" — invalid numeric fields`);
+            return false;
+        }
+        return true;
+    });
+
+    const sorted = [...valid].sort((a, b) => b.healthScore - a.healthScore);
 
     const benchmarks: SquadBenchmark[] = sorted.map((p) => ({
         project: p.name,
@@ -206,7 +224,11 @@ export function generateBenchmarkHtml(result: CrossSquadResult, title?: string):
         });
     } catch (err) {
         const msg = err instanceof Error ? err.message : String(err);
-        rootLogger.error('Failed to generate benchmark HTML: ' + msg);
+        rootLogger.error(
+            'Failed to generate benchmark HTML: ' +
+                msg +
+                '. Verify that all dependencies (html-factory, report-styles, date-utils) and input data are valid.',
+        );
         return buildErrorPage('Error generating benchmark report', 'Error generating benchmark report');
     }
 }

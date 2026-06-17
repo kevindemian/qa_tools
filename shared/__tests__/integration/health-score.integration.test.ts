@@ -132,7 +132,7 @@ describe('Integration: Health Score', () => {
             const { calculateHealthScore } = await import('../../health-score.js');
             const result = calculateHealthScore(createStore(), {});
 
-            for (const p of result.provenance as Array<{ source: string; formula: string; thresholdBasis: string }>) {
+            for (const p of result.provenance ?? []) {
                 expect(p.source).toBeTruthy();
                 expect(p.formula).toBeTruthy();
                 expect(p.thresholdBasis).toBeTruthy();

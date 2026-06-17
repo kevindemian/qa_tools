@@ -136,7 +136,7 @@
 
 | Ordem | ID    | Feature           | Audit T1-T20 | 7 Dimensões | Gaps | Testes   | Status |
 | ----- | ----- | ----------------- | ------------ | ----------- | ---- | -------- | ------ |
-| 1.1   | FT-09 | Health Score      | ✅           | ✅          | 3    | +8 PBT   | ✅     |
+| 1.1   | FT-09 | Health Score      | ✅           | ✅          | 5    | +2 tests | ✅ 🔄  |
 | 1.2   | FT-10 | Quality Gate      | ✅           | ✅          | 1    | +6 PBT   | ✅     |
 | 1.3   | FT-11 | Coverage Source   | ✅           | ✅          | 1    | +8 PBT   | ✅     |
 | 1.4   | FT-12 | Quality Metrics   | ✅           | ✅          | 2    | +8 PBT   | ✅     |
@@ -146,43 +146,72 @@
 
 ---
 
-**Resumo Grupo 1:** 7/7 features concluídas. **44 novos testes PBT/boundary**, 5 bugs corrigidos no código-fonte, TSC + vitest 100% verde.
+**Resumo Grupo 1:** 7/7 features concluídas. **44 novos testes PBT/boundary**, 5 bugs corrigidos (auditoria original). **Re-auditoria 2026-06-17:** FT-09 re-auditado, +2 testes, +5 gaps corrigidos, TSC + vitest + lint 100% verde.
 
 ---
 
-### FT-09 — Health Score (Concluído)
+### FT-09 — Health Score (Re-auditado 2026-06-17)
 
-**Arquivos:** `shared/health-score.ts` (396L), `shared/health-score.test.ts` (925L, 46 tests),
-`shared/__tests__/integration/health-score.integration.test.ts` (176L, 11 tests),
-`shared/__tests__/health-score.property.test.ts` (234L, 8 PBT — NOVO)
+**Arquivos:** `shared/health-score.ts` (367L), `shared/health-score.test.ts` (925L, 48 tests),
+`shared/__tests__/health-score.test.ts` (136L, 5 tests),
+`shared/__tests__/integration/health-score.integration.test.ts` (195L, 11 tests),
+`shared/__tests__/health-score.property.test.ts` (227L, 8 PBT),
+`shared/__tests__/integration-metrics.test.ts` (126L, 2 tests — cross-module)
 
 **T1-T20:**
 | # | Categoria | Status | Gap |
 |---|---|---|---|
-| T13 | Dead code | ✅ | `_computeFlakyRate` removida — duplicada de `calculateFlakyRate` |
-| T15 | Bidirectional consistency | ✅ | health-score agora usa `calculateFlakyRate` de metrics.ts |
+| T1 | Entry point | ✅ | `calculateHealthScore()` + `evaluateQualityGate()` exportados |
+| T2 | Config model | ✅ | `HealthScoreConfig` interface (16 campos) |
+| T3 | Config accessor | N/A | Opções inline, sem accessor |
+| T4 | Runtime lê config | ✅ | `pickConfig()` merge defaults + options |
+| T5-T11 | Wizard/CI | N/A | Módulo de função pura |
+| T12 | Test coverage | ✅ | 74 testes (48U+5U+8PBT+11I+2cross-module) |
+| T13 | Dead code | ⚠️ | `_computeFlakyRate` NÃO é duplicata — skip exclusion difere de `calculateFlakyRate` (metrics.ts). PROGRESS.md anterior registrou incorretamente como "removida". |
+| T14 | Suppression | ❌ **corrigido** | `as MetricsRun` (L129) e `as number` (L148) removidos — substituídos por `if(!run) continue` e `?? 0` |
+| T15 | Bidirectional | ✅ | `evaluateQualityGate` usado standalone e internamente |
+| T16-T17 | CLI/Env | N/A | — |
+| T18 | Error handling | ✅ | Função pura, guards contra divisão por zero |
+| T19 | TECHDOC | ✅ | `docs/TECHDOC.md` L682 |
+| T20 | CI/Config | N/A | — |
 
-**5 Dimensões — D5 Métricas:**
+**7 Dimensões:**
+| Dimensão | Status | Achados |
+|---|---|---|
+| 1. Isolamento Testes | ✅ | Função pura, sem I/O, sem fs, sem rede |
+| 2. Robustez | ✅ | Tipos fortes, edge cases testados, guards |
+| 3. Boas Práticas | ✅ | SRP, DIP (imports interfaces), sem workarounds |
+| 4. Implementação | ✅ | 367L, código claro, funções coesas |
+| 5. Métricas | ⚠️ | Ver detalhamento abaixo |
+| 6. UX | N/A | Módulo interno consumido por CLI/PR report |
+| 7. Test Quality | ⚠️ | 1 type assertion restante (`as Array<{...}>` em Object.values — narrow legítimo de unknown[]) |
+
+**D5 — Métricas (detalhamento):**
 | Sub-eixo | Status | Achados |
 |---|---|---|
 | 5a. Inventário | ✅ | 5 dimensões: passRate, flakyRate, coverage, executionRate, suiteSpeed |
-| 5b. Metodologia | ✅ | Média exponencial ponderada, proveniência por dimensão |
-| 5c. Fórmulas | ⚠️ | `scoreFlakyRate` usava `15` hardcoded — corrigido para `flakyScoreMaxGate` configurável |
-| 5d. Conformidade normativa | ✅ | ISO 25020 Annex D (interpolação linear), ISO 25023 (coverage), DORA (passRate), ISTQB (executionRate) |
-| 5e. Proveniência | ✅ | 5 entradas com source, standard, formula, thresholdBasis |
-| 5f. Validação empírica | ✅ | 8 PBT invariantes + 46 tests unitários + 11 integration |
+| 5b. Metodologia | ✅ | Média exponencial ponderada, per-test flaky, p95 speed |
+| 5c. Fórmulas | ✅ | ISO 25020 linear interpolation, clamped [0,100]. **G-05 corrigido:** `scoreFlakyRate` agora usa `flakyThreshold` (3%) como boundary score=100 (antes usava 0). Default `flakyThreshold` corrigido de 0.03 para 3 (escala percentual). |
+| 5d. Conformidade normativa | ✅ | ISO 25020 (interpolação), ISO 25023 (coverage), DORA (passRate), ISTQB (executionRate), Google SRE (suiteSpeed) |
+| 5e. Proveniência | ✅ | **G-03 corrigido:** suiteSpeed `thresholdBasis` mudou de "max 10000ms" para "max 3000ms" para refletir o default real. |
+| 5f. Validação empírica | ✅ | 8 PBT invariantes + 74 testes |
 
-**Gaps:**
-| ID | Severidade | Descrição | Ação | Status |
-|---|---|---|---|---|
-| G1 | Alto | `_computeFlakyRate` duplicado de metrics.ts | Substituído por `calculateFlakyRate` | ✅ |
-| G2 | Médio | `scoreFlakyRate` hardcoded 15 | Adicionado `flakyScoreMaxGate` configurável (ISO 25020) | ✅ |
-| G3 | Baixo | Proveniência flakyRate não era configurável | Adicionado `targetKey: 'flakyScoreMaxGate'` | ✅ |
+**Gaps encontrados e corrigidos na re-auditoria:**
+| ID | Severidade | Dimensão | Descrição | Ação | Status |
+|---|---|---|---|---|---|
+| G-02a | Médio | T14 | `as MetricsRun` (L129) — type assertion | Substituído por `if (!run) continue` | ✅ |
+| G-02b | Médio | T14 | `as number` (L148) — type assertion | Substituído por `?? 0` | ✅ |
+| G-03 | Alto | D5e | Proveniência suiteSpeed: `thresholdBasis` dizia "10000ms", default é 3000ms | Atualizado para "max 3000ms" | ✅ |
+| G-04 | Baixo | D7.9 | 3 type assertions em testes: `as HealthScoreProvenance`, `as HealthScoreProvenanceEntry`, `as Array<source;formula>` | Substituídos por `?? []` + `?.` — 1 cast legítimo mantido (Object.values) | ✅ |
+| G-05 | Alto | D5c/5e | `scoreFlakyRate` ignorava `flakyThreshold` (usava 0 hardcoded). Default `flakyThreshold: 0.03` estava em escala 0-1, inconsistente com `maxFlakyGate: 5` (escala 0-100). | `scoreFlakyRate` agora usa `flakyThreshold` como boundary score=100. Default corrigido para 3 (escala percentual). | ✅ |
 
-**Testes criados:** `shared/__tests__/health-score.property.test.ts` — 8 PBT invariantes:
+**Nota sobre G-01 (registro anterior):**
+O PROGRESS.md anterior registrou G1 como "`_computeFlakyRate` duplicado de metrics.ts → ✅". Na re-auditoria constatou-se que `_computeFlakyRate` NÃO é duplicata: ela exclui skipped tests do denominador de minRuns (diferente de `calculateFlakiness`) e retorna `null` vs `0` para exclusão de peso. As funções têm semântica diferente deliberada.
 
-- overall em [0,100], grade consistente, 5 dimensões, scores em [0,100]
-- proveniência completa, empty store→0-critical-fail, overrides, boundaries custom
+**Testes adicionados na re-auditoria:**
+
+- `health-score.test.ts` — G-03: "provenance thresholdBasis for suiteSpeed matches default maxSuiteSpeedGate"
+- `health-score.test.ts` — G-05: "flakyThreshold parameter affects flaky rate scoring"
 
 ---
 
@@ -1300,4 +1329,45 @@ if (gitError) {
 
 ---
 
-## Próximo: FT-39 a FT-40 (still pending)
+## Grupo 5 — Shared Modules (continuação)
+
+| Ordem | ID    | Feature        | Audit T1-T20 | 7 Dimensões | Gaps | Testes           | Status |
+| ----- | ----- | -------------- | ------------ | ----------- | ---- | ---------------- | ------ |
+| 5.4   | FT-39 | Run Comparison | ✅           | ✅          | 5    | 23 (6U+10I+7PBT) | ✅     |
+
+### Gaps FT-39
+
+| Gap  | Severidade | Problema                                                                 | Correção                                                                       |
+| ---- | ---------- | ------------------------------------------------------------------------ | ------------------------------------------------------------------------------ |
+| G-01 | Alto       | `(err as Error).message` pode expor `undefined` se `err` não for `Error` | `instanceof Error` guard com fallback `String(err)`                            |
+| G-02 | Médio      | `as` type casts nos testes para extrair argumentos do mock               | `nonNull(mock.calls[0])[0]` com acesso direto e tipado a propriedades          |
+| G-03 | Médio      | Dual-implementation em PBT (replicava fórmula de pass rate)              | Refatorado para testes de invariante (0%/100%/empty) + verificação de conteúdo |
+| G-04 | Baixo      | Teste de empty run duplicado em unit e integration                       | Removida duplicata da unit test file                                           |
+| G-05 | Baixo      | Timeout não configurável (cross-cutting, depende de llmPrompt)           | Deferido — fora do escopo da FT-39 (requer cambio em FT-LLM)                   |
+
+✅ **FT-39 completo**
+
+---
+
+## Grupo 5 — Shared Modules (continuação)
+
+| Ordem | ID    | Feature               | Audit T1-T20 | 7 Dimensões | Gaps | Testes           | Status |
+| ----- | ----- | --------------------- | ------------ | ----------- | ---- | ---------------- | ------ |
+| 5.4   | FT-39 | Run Comparison        | ✅           | ✅          | 5    | 23 (6U+10I+7PBT) | ✅     |
+| 5.5   | FT-40 | Cross-Squad Benchmark | ✅           | ✅          | 5    | 46 (34U+9PBT+3I) | ✅     |
+
+### Gaps FT-40
+
+| Gap  | Severidade | Problema                                                  | Correção                                                                    |
+| ---- | ---------- | --------------------------------------------------------- | --------------------------------------------------------------------------- |
+| G-01 | Alto       | `nullAs()` type suppression no teste                      | Substituído por mock de dependência (`mockBuildCss.mockImplementationOnce`) |
+| G-02 | Alto       | NaN/negativo em inputs corrompe output (averageScore=NaN) | Filtragem de projetos com NaN ou valores negativos + `rootLogger.warn()`    |
+| G-03 | Médio      | stdDev dual-implementation no teste unitário              | Adicionados PBT invariantes: stdDev >= 0, stdDev=0 p/ scores iguais         |
+| G-04 | Médio      | Sem TECHDOC                                               | Entidade adicionada em docs/TECHDOC.md (module map shared/)                 |
+| G-05 | Baixo      | Mensagem de erro não acionável em `generateBenchmarkHtml` | Log incluí orientação sobre dependências                                    |
+
+✅ **FT-40 completo**
+
+---
+
+## Próximo: FT-41 a FT-42 (still pending)
