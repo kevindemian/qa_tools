@@ -46,7 +46,7 @@ interface ActualMetrics {
 const DEFAULTS: HealthScoreConfig = {
     weights: { passRate: 30, flakyRate: 20, coverage: 25, executionRate: 15, suiteSpeed: 10 },
     passRateTarget: 95,
-    flakyThreshold: 0.03,
+    flakyThreshold: 3,
     coverageTarget: 80,
     executionRateTarget: 95,
     suiteSpeedTarget: 1000,
@@ -126,7 +126,8 @@ function _computeExpWeighted(runs: MetricsRun[], n: number, getValue: (run: Metr
     let weightedSum = 0;
     let weightTotal = 0;
     for (let i = 0; i < n; i++) {
-        const run = runs[i] as MetricsRun;
+        const run = runs[i];
+        if (!run) continue;
         const value = getValue(run);
         const weight = Math.exp((i - n + 1) / Math.max(n / 2, 1));
         weightedSum += value * weight;
@@ -145,7 +146,7 @@ function _computeSuiteSpeed(runs: MetricsRun[]): number {
     if (allDurations.length === 0) return 0;
     allDurations.sort((a, b) => a - b);
     const idx = Math.max(0, Math.ceil(allDurations.length * 0.95) - 1);
-    return allDurations[idx] as number;
+    return allDurations[idx] ?? 0;
 }
 
 function computeActualMetrics(store: MetricsStore, config: HealthScoreConfig): ActualMetrics {
@@ -187,10 +188,9 @@ function scorePassRate(actual: number, config: HealthScoreConfig): number {
 }
 
 function scoreFlakyRate(actual: number, config: HealthScoreConfig): number {
-    const gate = config.maxFlakyGate;
-    if (actual <= 0) return 100;
-    if (actual >= gate) return 0;
-    return 100 - (actual / gate) * 100;
+    if (actual <= config.flakyThreshold) return 100;
+    if (actual >= config.maxFlakyGate) return 0;
+    return 100 - ((actual - config.flakyThreshold) / (config.maxFlakyGate - config.flakyThreshold)) * 100;
 }
 
 function scoreCoverage(actual: number, config: HealthScoreConfig): number {
@@ -271,7 +271,7 @@ const PROVENANCE_DIMENSIONS: Array<{
         source: 'ThinkSys / Google SRE',
         standard: 'Google SRE Best Practice',
         formula: 'p95 individual test duration (ms)',
-        thresholdBasis: 'Target ≤1000ms, max 10000ms',
+        thresholdBasis: 'Target ≤1000ms, max 3000ms',
         targetKey: 'suiteSpeedTarget',
     },
 ];

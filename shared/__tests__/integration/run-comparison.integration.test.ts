@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { MetricsRun } from '../../metrics.js';
+import { nonNull } from '../../test-utils.js';
 
 vi.mock('../../llm-client.js', () => ({
     llmPrompt: vi.fn(),
@@ -54,14 +55,14 @@ describe('Integration: Run Comparison (FT-39)', () => {
 
             expect(result).toBe('Improved pass rate from 80% to 90%');
             expect(mockLlmPrompt).toHaveBeenCalledTimes(1);
-            expect(mockLlmPrompt).toHaveBeenCalledWith(
-                expect.objectContaining({
-                    tier: 'fast',
-                    callerId: 'compare-runs',
-                    system: expect.stringContaining('QA analyst'),
-                    user: expect.stringContaining('=== RUN A (older) ==='),
-                }),
-            );
+            const callArg = nonNull(mockLlmPrompt.mock.calls[0])[0];
+            expect(callArg.tier).toBe('fast');
+            expect(callArg.callerId).toBe('compare-runs');
+            expect(callArg.system).toContain('QA analyst');
+            expect(callArg.user).toContain('=== RUN A (older) ===');
+            expect(callArg.user).toContain('=== RUN B (newer) ===');
+            expect(callArg.user).toContain('Date: 2026-01-01');
+            expect(callArg.user).toContain('Date: 2026-01-02');
         });
 
         it('includes pass rate percentage in formatted data', async () => {
@@ -69,11 +70,10 @@ describe('Integration: Run Comparison (FT-39)', () => {
 
             await compareRuns(runA, runB);
 
-            expect(mockLlmPrompt).toHaveBeenCalledWith(
-                expect.objectContaining({
-                    user: expect.stringContaining('Pass rate: 80%'),
-                }),
-            );
+            expect(mockLlmPrompt).toHaveBeenCalledTimes(1);
+            const callArg = nonNull(mockLlmPrompt.mock.calls[0])[0];
+            expect(callArg.user).toContain('Pass rate: 80%');
+            expect(callArg.user).toContain('Pass rate: 90%');
         });
 
         it('includes detailed metrics in formatted data', async () => {
@@ -81,11 +81,9 @@ describe('Integration: Run Comparison (FT-39)', () => {
 
             await compareRuns(runA, runB);
 
-            expect(mockLlmPrompt).toHaveBeenCalledWith(
-                expect.objectContaining({
-                    user: expect.stringMatching(/Total: 10[\s\S]*Passed: 8[\s\S]*Failed: 2[\s\S]*Duration: 5000ms/),
-                }),
-            );
+            expect(mockLlmPrompt).toHaveBeenCalledTimes(1);
+            const callArg = nonNull(mockLlmPrompt.mock.calls[0])[0];
+            expect(callArg.user).toMatch(/Total: 10[\s\S]*Passed: 8[\s\S]*Failed: 2[\s\S]*Duration: 5000ms/);
         });
     });
 
@@ -144,11 +142,9 @@ describe('Integration: Run Comparison (FT-39)', () => {
 
             await compareRuns(runWithSecret, runB);
 
-            expect(mockLlmPrompt).toHaveBeenCalledWith(
-                expect.objectContaining({
-                    user: expect.not.stringContaining(secret),
-                }),
-            );
+            expect(mockLlmPrompt).toHaveBeenCalledTimes(1);
+            const callArg = nonNull(mockLlmPrompt.mock.calls[0])[0];
+            expect(callArg.user).not.toContain(secret);
         });
 
         it('passes sanitized string to LLM without modification', async () => {
@@ -156,19 +152,10 @@ describe('Integration: Run Comparison (FT-39)', () => {
             mockLlmPrompt.mockResolvedValue('sanitized analysis');
 
             await compareRuns(runA, runB);
-            expect(mockLlmPrompt).toHaveBeenCalledWith(
-                expect.objectContaining({
-                    user: expect.any(String),
-                }),
-            );
-            const calls = mockLlmPrompt.mock.calls;
-            expect(calls).toHaveLength(1);
-            const firstArg = calls[0]?.[0];
-            if (!firstArg || typeof firstArg !== 'object') throw new Error('expected object');
-            const userVal = 'user' in firstArg ? firstArg.user : undefined;
-            if (typeof userVal !== 'string') throw new Error('expected string user');
-            const sanitized = sanitizeForLlm(userVal);
-            expect(sanitized).toBe(userVal);
+            expect(mockLlmPrompt).toHaveBeenCalledTimes(1);
+            const callArg = nonNull(mockLlmPrompt.mock.calls[0])[0];
+            const sanitized = sanitizeForLlm(callArg.user);
+            expect(sanitized).toBe(callArg.user);
         });
     });
 });

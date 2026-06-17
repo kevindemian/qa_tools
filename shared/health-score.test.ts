@@ -921,5 +921,62 @@ describe('calculateHealthScore', () => {
             expect(flakyEntry?.source).toContain('Kualitatem');
             expect(flakyEntry?.configurable).toBe(false);
         });
+
+        it('provenance thresholdBasis for suiteSpeed matches default maxSuiteSpeedGate (G-03)', () => {
+            const store = makeStore({
+                runs: [PASSING_RUN],
+                coverageHistory: [
+                    {
+                        timestamp: '2026-01-01T00:00:00.000Z',
+                        project: 'test',
+                        totalIssues: 10,
+                        mappedIssues: 10,
+                        coveragePct: 100,
+                    },
+                ],
+            });
+            const result = calculateHealthScore(store);
+            const speedEntry = result.provenance?.find((p) => p.dimension === 'suiteSpeed');
+            expect(speedEntry?.thresholdBasis).toContain('max 3000ms');
+        });
+    });
+
+    describe('flakyThreshold config', () => {
+        it('flakyThreshold parameter affects flaky rate scoring (G-05)', () => {
+            const store = makeStore({
+                runs: [
+                    run({
+                        tests: Array.from({ length: 4 }, (_, i) => testT(`T${i}`, 'passed')),
+                        total: 4,
+                        passed: 4,
+                        failed: 0,
+                    }),
+                    run({
+                        tests: Array.from({ length: 4 }, (_, i) => testT(`T${i}`, i < 1 ? 'failed' : 'passed')),
+                        total: 4,
+                        passed: 3,
+                        failed: 1,
+                    }),
+                ],
+                coverageHistory: [
+                    {
+                        timestamp: '2026-01-01T00:00:00.000Z',
+                        project: 'test',
+                        totalIssues: 10,
+                        mappedIssues: 9,
+                        coveragePct: 90,
+                    },
+                ],
+            });
+            // 4 tests, 2 runs each. T0 is flaky (pass+fail). flakyRate = 25%.
+            // Current code ignores flakyThreshold: score = 100 - (25/50)*100 = 50
+            // After fix with flakyThreshold=30: 25 <= 30 → score 100
+            const resultWithThreshold = calculateHealthScore(store, {
+                minRuns: 2,
+                maxFlakyGate: 50,
+                flakyThreshold: 30,
+            });
+            expect(resultWithThreshold.dimensions.flakyRate.score).toBe(100);
+        });
     });
 });

@@ -13,7 +13,6 @@
  */
 import * as fc from 'fast-check';
 import { describe, expect, it } from 'vitest';
-import type { HealthScoreProvenance, HealthScoreProvenanceEntry } from '../types/bugs.js';
 import type { MetricsStore, MetricsRun } from '../metrics.js';
 import { calculateHealthScore } from '../health-score.js';
 
@@ -134,7 +133,8 @@ describe('calculateHealthScore — property-based', () => {
         fc.assert(
             fc.property(MetricsStoreArb, (store) => {
                 const result = calculateHealthScore(store);
-                for (const dim of Object.values(result.dimensions) as { score: number; status: string }[]) {
+                const dimValues = Object.values(result.dimensions) as Array<{ score: number; status: string }>;
+                for (const dim of dimValues) {
                     expect(dim.score).toBeGreaterThanOrEqual(0);
                     expect(dim.score).toBeLessThanOrEqual(100);
                 }
@@ -148,7 +148,7 @@ describe('calculateHealthScore — property-based', () => {
             fc.property(MetricsStoreArb, (store) => {
                 const result = calculateHealthScore(store);
                 expect(result.provenance).toHaveLength(5);
-                for (const p of result.provenance as HealthScoreProvenance) {
+                for (const p of result.provenance ?? []) {
                     expect(p.source).toBeTruthy();
                     expect(p.standard).toBeTruthy();
                     expect(p.formula).toBeTruthy();
@@ -173,12 +173,10 @@ describe('calculateHealthScore — property-based', () => {
             fc.property(MetricsStoreArb, PercentageArb, fc.boolean(), (store, passRateTarget, useOverride) => {
                 const options = useOverride ? { passRateTarget: Math.round(passRateTarget) } : {};
                 const result = calculateHealthScore(store, options);
-                const passRateProvenance = (result.provenance as HealthScoreProvenance).find(
-                    (p) => p.dimension === 'passRate',
-                );
+                const passRateProvenance = result.provenance?.find((p) => p.dimension === 'passRate');
                 expect(passRateProvenance).toBeDefined();
                 if (useOverride) {
-                    expect((passRateProvenance as HealthScoreProvenanceEntry).overridden).toBe(true);
+                    expect(passRateProvenance?.overridden).toBe(true);
                 }
             }),
             { numRuns: 50 },
