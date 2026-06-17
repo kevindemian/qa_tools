@@ -46,11 +46,15 @@ function buildBreakdown(
     flakyRate: number,
 ): Array<{ label: string; score: number; status: 'pass' | 'fail' }> {
     const flkScore = invertFlakiness(flakyRate);
+    const tasksRounded = Math.round(tasksPct);
+    const healthRounded = Math.round(healthScore);
+    const coverageRounded = Math.round(coveragePct);
+    const flkRounded = Math.round(flkScore);
     return [
-        { label: 'Tasks', score: Math.round(tasksPct), status: tasksPct >= THRESHOLD ? 'pass' : 'fail' },
-        { label: 'Health', score: Math.round(healthScore), status: healthGate },
-        { label: 'Coverage', score: Math.round(coveragePct), status: coveragePct >= THRESHOLD ? 'pass' : 'fail' },
-        { label: 'Flakiness', score: Math.round(flkScore), status: flkScore >= THRESHOLD ? 'pass' : 'fail' },
+        { label: 'Tasks', score: tasksRounded, status: tasksRounded >= THRESHOLD ? 'pass' : 'fail' },
+        { label: 'Health', score: healthRounded, status: healthGate },
+        { label: 'Coverage', score: coverageRounded, status: coverageRounded >= THRESHOLD ? 'pass' : 'fail' },
+        { label: 'Flakiness', score: flkRounded, status: flkRounded >= THRESHOLD ? 'pass' : 'fail' },
     ];
 }
 

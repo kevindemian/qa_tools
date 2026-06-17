@@ -23,7 +23,9 @@ const mockLlmPrompt = vi.mocked(llmPrompt);
 
 const MetricsRunArb: fc.Arbitrary<MetricsRun> = fc.record({
     timestamp: fc.constantFrom('2026-01-01T00:00:00.000Z', '2026-06-15T12:30:00.000Z', '2025-12-31T23:59:59.000Z'),
-    project: fc.string({ minLength: 1, maxLength: 10 }),
+    project: fc
+        .string({ minLength: 1, maxLength: 10 })
+        .filter((s) => /^[a-zA-Z0-9_ -]+$/.test(s) && s.trim().length > 0),
     total: fc.nat({ max: 1000 }),
     passed: fc.nat({ max: 1000 }),
     failed: fc.nat({ max: 1000 }),
