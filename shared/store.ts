@@ -22,7 +22,13 @@ function readJson<T>(backend: StoreBackend, relPath: string): T | null {
     const buf = backend.read(relPath);
     if (!buf) return null;
     try {
-        return JSON.parse(buf.toString('utf8')) as T;
+        const raw = JSON.parse(buf.toString('utf8'));
+        if (raw === null || typeof raw !== 'object' || Array.isArray(raw)) return raw as T;
+        const safe = Object.create(null) as Record<string, unknown>;
+        for (const key of Object.keys(raw)) {
+            safe[key] = (raw as Record<string, unknown>)[key];
+        }
+        return safe as T;
     } catch {
         return null;
     }
@@ -54,26 +60,31 @@ export class Store {
 
     put(sha: string, meta: ReportMeta): void {
         this.ensure();
-        const globalIndex = readJson<Record<string, ReportMeta>>(this.backend, 'reports/index.json') ?? {};
+        const globalIndex =
+            readJson<Record<string, ReportMeta>>(this.backend, 'reports/index.json') ??
+            (Object.create(null) as Record<string, ReportMeta>);
         globalIndex[sha] = meta;
         writeJson(this.backend, 'reports/index.json', globalIndex);
 
         const projIndex =
-            readJson<Record<string, ReportMeta>>(this.backend, `reports/${this.project}/index.json`) ?? {};
+            readJson<Record<string, ReportMeta>>(this.backend, `reports/${this.project}/index.json`) ??
+            (Object.create(null) as Record<string, ReportMeta>);
         projIndex[sha] = meta;
         writeJson(this.backend, `reports/${this.project}/index.json`, projIndex);
     }
 
     listByProject(): ReportMeta[] {
         const projIndex =
-            readJson<Record<string, ReportMeta>>(this.backend, `reports/${this.project}/index.json`) ?? {};
+            readJson<Record<string, ReportMeta>>(this.backend, `reports/${this.project}/index.json`) ??
+            (Object.create(null) as Record<string, ReportMeta>);
         return Object.values(projIndex).sort((a, b) => b.timestamp - a.timestamp);
     }
 
     appendBranch(branch: string, entry: BranchEntry): void {
         this.ensure();
         const bi =
-            readJson<Record<string, BranchEntry[]>>(this.backend, `reports/${this.project}/branch-index.json`) ?? {};
+            readJson<Record<string, BranchEntry[]>>(this.backend, `reports/${this.project}/branch-index.json`) ??
+            (Object.create(null) as Record<string, BranchEntry[]>);
         if (!Object.prototype.hasOwnProperty.call(bi, branch)) bi[branch] = [];
         (bi[branch] as BranchEntry[]).unshift(entry);
         writeJson(this.backend, `reports/${this.project}/branch-index.json`, bi);
@@ -81,7 +92,8 @@ export class Store {
 
     getBranch(branch: string): BranchEntry[] {
         const bi =
-            readJson<Record<string, BranchEntry[]>>(this.backend, `reports/${this.project}/branch-index.json`) ?? {};
+            readJson<Record<string, BranchEntry[]>>(this.backend, `reports/${this.project}/branch-index.json`) ??
+            (Object.create(null) as Record<string, BranchEntry[]>);
         return Object.prototype.hasOwnProperty.call(bi, branch) ? (bi[branch] as BranchEntry[]) : [];
     }
 
