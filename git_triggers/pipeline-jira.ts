@@ -10,14 +10,15 @@ import { loadMetrics, saveMetrics, type MetricsStore } from '../shared/metrics.j
 import { classifyFailure } from '../shared/failure-analysis.js';
 import type { ParseResult } from '../shared/result_parser.js';
 import type { AnalysisReport } from '../shared/failure-analysis.js';
+import type { StoreBackend } from '../shared/store-backend.js';
 
 function isAutoBugEnabled(): boolean {
     return Config.get('QA_AUTO_BUG') === 'true' || process.env['QA_AUTO_BUG'] === 'true';
 }
 
-async function persistFailureClassifications(parsed: ParseResult): Promise<void> {
+async function persistFailureClassifications(parsed: ParseResult, backend: StoreBackend): Promise<void> {
     try {
-        const store: MetricsStore = loadMetrics();
+        const store: MetricsStore = loadMetrics(undefined, backend);
         if (!store.failureClassifications) {
             store.failureClassifications = [];
         }
@@ -31,7 +32,7 @@ async function persistFailureClassifications(parsed: ParseResult): Promise<void>
                 project: Config.get('jiraProject') || 'unknown',
             });
         }
-        saveMetrics(store);
+        saveMetrics(store, undefined, backend);
     } catch {
         // Non-critical — do not fail the pipeline
     }
@@ -43,6 +44,7 @@ export async function handleBugCreation(
     branch: string,
     analysisReport: AnalysisReport,
     jiraResource: JiraClient,
+    backend: StoreBackend,
 ): Promise<void> {
     const jira = _jiraEnv();
     const autoBug = isAutoBugEnabled();
@@ -58,7 +60,7 @@ export async function handleBugCreation(
         const key = await fileToJira(jiraResource, bugReport, Config.get('jiraProject'));
         success('Bug criado: ' + jira.base + '/browse/' + key);
         pushHistory('create-jira-issue', key, 'ok');
-        await persistFailureClassifications(parsed);
+        await persistFailureClassifications(parsed, backend);
     } catch (err) {
         printError('Falha ao criar bug no Jira', err);
         pushHistory('create-jira-issue', pipelineId + '', 'error');

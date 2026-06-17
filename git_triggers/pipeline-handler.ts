@@ -173,7 +173,7 @@ async function _postPipeline(
         });
         store.flush(`cache: pipeline #${pipelineId}`);
         await offerPipelineFailureAnalysis(parsed, (analysisReport) => {
-            return handleBugCreation(parsed, pipelineId, branch, analysisReport, jiraResource);
+            return handleBugCreation(parsed, pipelineId, branch, analysisReport, jiraResource, backend);
         });
     }
     await handleQuickMerge(m, branch, pollStatus);

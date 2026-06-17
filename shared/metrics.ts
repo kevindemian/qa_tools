@@ -1,8 +1,6 @@
 /** Metrics persistence: run history, flakiness calculation, and coverage tracking.
  * Internal persistence uses StoreBackend (git-backed or fs-backed). */
 import { z } from 'zod';
-import os from 'os';
-import path from 'path';
 import Config from './config.js';
 import { rootLogger } from './logger.js';
 import { detectProjectGitDir, detectStoreBackend, FsStoreBackend } from './store-backend.js';
@@ -104,9 +102,9 @@ export interface TrendPoint {
 
 const METRICS_FILE = 'metrics/global.json';
 
-function testBackend(): StoreBackend {
-    const tmpDir = path.join(os.tmpdir(), 'qa-tools-metrics-test');
-    const backend = new FsStoreBackend(tmpDir);
+export function createDefaultBackend(): StoreBackend {
+    const gitDir = detectProjectGitDir();
+    const backend = detectStoreBackend(gitDir ?? undefined);
     backend.init();
     return backend;
 }
@@ -121,20 +119,13 @@ function getBackend(config?: Config): StoreBackend {
         }
     }
 
-    if (typeof process !== 'undefined' && process.env['VITEST']) {
-        return testBackend();
-    }
-
-    const gitDir = detectProjectGitDir();
-    const backend = detectStoreBackend(gitDir ?? undefined);
-    backend.init();
-    return backend;
+    return createDefaultBackend();
 }
 
-export function loadMetrics(config?: Config): MetricsStore {
+export function loadMetrics(config?: Config, backend?: StoreBackend): MetricsStore {
     try {
-        const backend = getBackend(config);
-        const raw = backend.read(METRICS_FILE);
+        const b = backend ?? getBackend(config);
+        const raw = b.read(METRICS_FILE);
         if (!raw) return { runs: [] };
         const parsed: unknown = JSON.parse(raw.toString('utf8'));
         return MetricsStoreSchema.parse(parsed) as MetricsStore;
@@ -144,11 +135,11 @@ export function loadMetrics(config?: Config): MetricsStore {
     }
 }
 
-export function saveMetrics(store: MetricsStore, config?: Config): void {
+export function saveMetrics(store: MetricsStore, config?: Config, backend?: StoreBackend): void {
     try {
-        const backend = getBackend(config);
-        backend.write(METRICS_FILE, Buffer.from(JSON.stringify(store, null, 2), 'utf8'));
-        backend.flush('qa-tools: update metrics run');
+        const b = backend ?? getBackend(config);
+        b.write(METRICS_FILE, Buffer.from(JSON.stringify(store, null, 2), 'utf8'));
+        b.flush('qa-tools: update metrics run');
     } catch (err) {
         rootLogger.error('Failed to save metrics: ' + (err as Error).message);
     }
