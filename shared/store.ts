@@ -1,3 +1,4 @@
+import { rootLogger } from './logger.js';
 import type { StoreBackend } from './store-backend.js';
 import type { FlatTest } from './result_parser.js';
 
@@ -36,7 +37,13 @@ function readJson<T>(backend: StoreBackend, relPath: string): T | null {
 }
 
 function writeJson<T>(backend: StoreBackend, relPath: string, data: T): void {
-    backend.write(relPath, Buffer.from(JSON.stringify(data, null, 2), 'utf8'));
+    try {
+        backend.write(relPath, Buffer.from(JSON.stringify(data, null, 2), 'utf8'));
+    } catch (err) {
+        const msg = err instanceof Error ? err.message : String(err);
+        rootLogger.warn(`store: falha ao escrever ${relPath} — ${msg}`);
+        throw err;
+    }
 }
 
 export class Store {
@@ -49,8 +56,14 @@ export class Store {
 
     private ensure(): void {
         if (!this.initialized) {
-            this.backend.init();
-            this.initialized = true;
+            try {
+                this.backend.init();
+                this.initialized = true;
+            } catch (err) {
+                const msg = err instanceof Error ? err.message : String(err);
+                rootLogger.warn(`store: falha ao inicializar backend — ${msg}`);
+                throw err;
+            }
         }
     }
 

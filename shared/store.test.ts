@@ -5,6 +5,9 @@ import { afterAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import { FsStoreBackend } from './store-backend.js';
 import { Store, type ReportMeta, type BranchEntry } from './store.js';
 
+vi.mock('./logger');
+import { rootLogger } from './logger.js';
+
 const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'qa-store-test-'));
 const backend = new FsStoreBackend(tmpDir);
 const project = 'test-proj';
@@ -191,6 +194,90 @@ describe('Store', () => {
             const s = new Store(mockBackend, project);
             s.flush('test message');
             expect(spy).toHaveBeenCalledWith('test message');
+        });
+    });
+
+    describe('error handling (G2 regression)', () => {
+        it('logs warning when backend write fails in put', () => {
+            const failBackend = {
+                init: () => {},
+                read: () => null,
+                write: () => {
+                    throw new Error('ENOSPC');
+                },
+                exists: () => false,
+                flush: () => {},
+            };
+            const store = new Store(failBackend, project);
+            const warnSpy = vi.spyOn(rootLogger, 'warn');
+            expect(() => store.put('sha1', makeMeta('sha1'))).toThrow('ENOSPC');
+            expect(warnSpy).toHaveBeenCalled();
+        });
+
+        it('logs warning when backend write fails in saveReport', () => {
+            const failBackend = {
+                init: () => {},
+                read: () => null,
+                write: () => {
+                    throw new Error('EACCES');
+                },
+                exists: () => false,
+                flush: () => {},
+            };
+            const store = new Store(failBackend, project);
+            const warnSpy = vi.spyOn(rootLogger, 'warn');
+            expect(() => store.saveReport('sha1', [{ title: 't', state: 'passed', duration: 1 }])).toThrow('EACCES');
+            expect(warnSpy).toHaveBeenCalled();
+        });
+
+        it('logs warning when backend write fails in appendBranch', () => {
+            const failBackend = {
+                init: () => {},
+                read: () => null,
+                write: () => {
+                    throw new Error('ENOSPC');
+                },
+                exists: () => false,
+                flush: () => {},
+            };
+            const store = new Store(failBackend, project);
+            const warnSpy = vi.spyOn(rootLogger, 'warn');
+            expect(() => store.appendBranch('main', { sha: 'abc', timestamp: 1 })).toThrow('ENOSPC');
+            expect(warnSpy).toHaveBeenCalled();
+        });
+
+        it('logs warning when backend write fails in saveMetrics', () => {
+            const failBackend = {
+                init: () => {},
+                read: () => null,
+                write: () => {
+                    throw new Error('ENOSPC');
+                },
+                exists: () => false,
+                flush: () => {},
+            };
+            const store = new Store(failBackend, project);
+            const warnSpy = vi.spyOn(rootLogger, 'warn');
+            expect(() => store.saveMetrics({ runs: [] })).toThrow('ENOSPC');
+            expect(warnSpy).toHaveBeenCalled();
+        });
+    });
+
+    describe('error handling (G3 regression)', () => {
+        it('logs warning when backend init fails', () => {
+            const failBackend = {
+                init: () => {
+                    throw new Error('EACCES');
+                },
+                read: () => null,
+                write: () => {},
+                exists: () => false,
+                flush: () => {},
+            };
+            const store = new Store(failBackend, project);
+            const warnSpy = vi.spyOn(rootLogger, 'warn');
+            expect(() => store.saveMetrics({ runs: [] })).toThrow('EACCES');
+            expect(warnSpy).toHaveBeenCalled();
         });
     });
 });

@@ -21,7 +21,7 @@
 | Ordem | ID    | Feature             | Audit T1-T20 | 7 Dimensões | Gaps | Testes | Status |
 | ----- | ----- | ------------------- | ------------ | ----------- | ---- | ------ | ------ |
 | P1    | FT-04 | Metrics             | ✅           | ✅          | 3    | 52     | ✅     |
-| P2    | FT-07 | Store               | 🔜           | 🔜          | —    | —      | 🔜     |
+| P2    | FT-07 | Store               | ✅           | ✅          | 3    | 76     | ✅     |
 | 0.1   | FT-01 | Config Accessor     | ✅           | ✅          | 0    | —      | ✅     |
 | 0.2   | FT-02 | Feature Config      | ✅           | ✅          | 4    | 60     | ✅     |
 | 0.3   | FT-03 | Session State       | ✅           | ✅          | 1    | 44     | ✅     |
@@ -386,6 +386,127 @@
 <!-- CHECKPOINT: Phase 9 complete for FT-04 -->
 
 ---
+
+### FT-07 — Store (Em andamento)
+
+**Arquivos:**
+
+- `shared/store.ts` (123L) — classe Store: CRUD de metadados, reports, branches
+- `shared/store-backend.ts` (165L) — GitStoreBackend, FsStoreBackend, detectProjectGitDir, detectStoreBackend
+
+**Testes:**
+
+- `shared/store.test.ts` (196L) — testes unitários Store
+- `shared/store-backend.test.ts` (417L) — testes unitários backends + detect functions
+- `shared/store-backend.fallback.test.ts` (31L) — fallback test detectStoreBackend
+- `shared/__tests__/store.property.test.ts` (237L, 7 invariantes) — PBT
+- `shared/__tests__/integration/store.integration.test.ts` (261L) — integration tests
+- **Total: ~260 testes estimados** (contar exato no Phase 2 T12)
+
+**Mocks:**
+
+- `shared/__mocks__/store.ts`
+- `shared/__mocks__/store-backend.ts`
+
+**Metadados FT-07:**
+
+- FEATURE_NAME: store-backend
+- SOURCE: shared/store.ts, shared/store-backend.ts
+- TEST_FILE_PREVIOUS: shared/store.test.ts, shared/store-backend.test.ts, shared/store-backend.fallback.test.ts
+- TEST_FILE_UNIT: shared/**tests**/store.property.test.ts (PBT)
+- TEST_FILE_INTEGRATION: shared/**tests**/integration/store.integration.test.ts
+- CONSUMERS: shared/session-context.ts, git_triggers/pipeline-handler.ts, shared/metrics.ts, git_triggers/pipeline-jira.ts, jira_management/commands/case15.test.ts
+- DOCS: docs/TECHDOC.md (reference)
+
+**Início:** 2026-06-18
+
+<!-- CHECKPOINT: Phase 0 complete for FT-07 -->
+
+#### T1-T20
+
+| #   | Categoria          | Status | Gap                                                                                                                                         |
+| --- | ------------------ | ------ | ------------------------------------------------------------------------------------------------------------------------------------------- |
+| T1  | Entry point        | ✅     | 8 exported symbols (Store, ReportMeta, BranchEntry, StoreBackend, GitStoreBackend, FsStoreBackend, detectProjectGitDir, detectStoreBackend) |
+| T2  | Config model       | N/A    | Store is data access, not config                                                                                                            |
+| T3  | Config accessor    | N/A    | No config accessor                                                                                                                          |
+| T4  | Runtime lê config  | N/A    | No config reading                                                                                                                           |
+| T5  | Wizard entry       | N/A    | No wizard entry                                                                                                                             |
+| T6  | Wizard detection   | N/A    | No wizard detection                                                                                                                         |
+| T7  | Wizard output      | N/A    | No wizard output                                                                                                                            |
+| T8  | Wizard prompts     | N/A    | No wizard prompts                                                                                                                           |
+| T9  | Reconfig handler   | N/A    | No reconfig handler                                                                                                                         |
+| T10 | CI integration     | N/A    | Data access layer, no CI-specific integration                                                                                               |
+| T11 | CI safety          | ⚠️     | writeJson sem try/catch (G2); ensure() sem try/catch (G3)                                                                                   |
+| T12 | Test coverage      | ✅     | 71 testes (5 files: 16+35+1+7+12)                                                                                                           |
+| T13 | Dead code          | ✅     | Zero dead code — todos exports referenciados por consumidores                                                                               |
+| T14 | Suppressions       | ⚠️     | `(err as Error).message` em 3 locais (G1)                                                                                                   |
+| T15 | Bidirectional      | N/A    | Unidirectional (write → read)                                                                                                               |
+| T16 | CLI interface      | N/A    | No CLI                                                                                                                                      |
+| T17 | Env var dependency | ✅     | XDG_STATE_HOME com fallback para os.homedir()                                                                                               |
+| T18 | Error handling     | ⚠️     | writeJson + ensure sem try/catch (G2, G3)                                                                                                   |
+| T19 | TECHDOC            | ✅     | Documentado em TECHDOC.md (lines 71, 676-677, 910)                                                                                          |
+| T20 | Tech debt          | ✅     | Zero TODO/FIXME/HACK/WORKAROUND                                                                                                             |
+
+<!-- CHECKPOINT: Phase 2 complete for FT-07 -->
+
+#### 7 Dimensões
+
+| Dimensão                 | Status | Observações                                                                             |
+| ------------------------ | ------ | --------------------------------------------------------------------------------------- |
+| D1 — Isolamento          | ✅     | Store acoplada a StoreBackend via interface; backends isolados por implementação        |
+| D2 — Robustez            | ✅     | Input validation, guard clauses, fallbacks presentes; timeout para git N/A (sync calls) |
+| D3 — Boas Práticas       | ✅     | SRP mantido; DIP respeitado (Node built-ins, não libs externas); zero workarounds       |
+| D4 — Implementação Ótima | ✅     | 1 loop em Object.keys + 1 loop de dir traversal; sem O(n²); sem constantes mágicas      |
+| D5 — Métricas            | ❌ N/A | Store não produz métricas próprias                                                      |
+| D6 — UX                  | ✅     | rootLogger.warn na falha de GitStoreBackend com fallback explicativo                    |
+| D7 — Deep Test Audit     | ✅     | Weak assertions seguidas de asserts reais; zero no-assert; mocks com shape idêntico     |
+
+<!-- CHECKPOINT: Phase 3 complete for FT-07 -->
+
+#### Gaps Registrados
+
+| ID  | Severidade | Descrição                                                              | Local                        | Origem (T/D) |
+| --- | ---------- | ---------------------------------------------------------------------- | ---------------------------- | ------------ |
+| G1  | Médio      | `(err as Error).message` type assertion — não valida tipo real do erro | store-backend.ts:60, 82, 111 | T14f         |
+| G2  | Alto       | `writeJson` sem try/catch — I/O failures propagam sem log              | store.ts:38-40               | T11 / T18    |
+| G3  | Médio      | `ensure()` sem try/catch — `backend.init()` propagando sem log         | store.ts:50-55               | T11 / T18    |
+
+**Total: 3 gaps** (1 Alto, 2 Médio)
+
+<!-- CHECKPOINT: Phase 4 complete for FT-07 -->
+
+#### Phase 5-6 — Correções Aplicadas
+
+| Gap | Severidade | Local                        | Correção                                                                      |
+| --- | ---------- | ---------------------------- | ----------------------------------------------------------------------------- |
+| G1  | Médio      | store-backend.ts:60, 82, 111 | `(err as Error).message` → `err instanceof Error ? err.message : String(err)` |
+| G2  | Alto       | store.ts:38-40               | `writeJson` com try/catch + rootLogger.warn + re-throw                        |
+| G3  | Médio      | store.ts:50-55               | `ensure()` com try/catch + rootLogger.warn + re-throw                         |
+
+#### Phase 7 — Consumidores
+
+| Consumidor                              | Status | Observações                      |
+| --------------------------------------- | ------ | -------------------------------- |
+| shared/session-context.ts               | ✅     | 252/252 tests pass               |
+| git_triggers/pipeline-handler.ts        | ✅     | Sem testes unitários próprios    |
+| shared/metrics.ts                       | ✅     | Coberto pela suite metrics       |
+| git_triggers/pipeline-jira.ts           | ✅     | Coberto pela suite pipeline-jira |
+| jira_management/commands/case15.test.ts | ✅     | 252/252 tests pass               |
+
+#### Phase 8 — Refatoração
+
+🟢 **Skip** — sem duplicação, nomes claros, complexidade baixa, I/O já separado por camada.
+
+#### Validação
+
+- ✅ `npx tsc --noEmit` — 0 erros
+- ✅ `npm run lint` — ✅ All quality checks passed
+- ✅ `npx vitest run store` — 76/76 passed
+- ✅ Consumidores — sem regressões (252 tests)
+- ✅ Git diff audit — 4 arquivos, todos esperados
+
+<!-- CHECKPOINT: Phase 9 complete for FT-07 -->
+<!-- CHECKPOINT: Phase 10 complete for FT-07 -->
 
 ## Próximos FTs — Pendentes
 
