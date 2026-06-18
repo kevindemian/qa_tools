@@ -24,7 +24,7 @@
 | P2    | FT-07 | Store               | ✅           | ✅          | 3    | 76     | ✅     |
 | 0.1   | FT-01 | Config Accessor     | ✅           | ✅          | 0    | —      | ✅     |
 | 0.2   | FT-02 | Feature Config      | ✅           | ✅          | 5    | 60     | ✅     |
-| 0.3   | FT-03 | Session State       | ✅           | ✅          | 1    | 44     | ✅     |
+| 0.3   | FT-03 | Session State       | ✅           | ✅          | 2    | 44     | ✅     |
 | 0.4   | FT-05 | Logger              | 🔜           | 🔜          | —    | —      | 🔜     |
 | 0.5   | FT-06 | Temp Dir            | 🔜           | 🔜          | —    | —      | 🔜     |
 | —     | FT-08 | Integration Helpers | 🔜           | 🔜          | —    | —      | 🔜     |
@@ -151,9 +151,9 @@
 
 ---
 
-### FT-03 — Session State (Concluído)
+### FT-03 — Session State (Re-auditoria concluída)
 
-**Arquivos:** `shared/state.ts` (155L)
+**Arquivos:** `shared/state.ts` (160L)
 **Testes:**
 
 - `shared/state.test.ts` (18 testes)
@@ -164,7 +164,7 @@
 **Metadados:**
 
 - FEATURE_NAME: state
-- SOURCE: shared/state.ts (155L)
+- SOURCE: shared/state.ts (160L)
 - TEST_FILE_UNIT: shared/state.test.ts
 - TEST_FILE_INTEGRATION: shared/**tests**/integration/state.integration.test.ts
 - TEST_FILE_PBT: shared/**tests**/state.property.test.ts
@@ -177,42 +177,42 @@
 
 #### T1-T20
 
-| #   | Categoria          | Status | Gap                                                         |
-| --- | ------------------ | ------ | ----------------------------------------------------------- |
-| T1  | Entry point        | ✅     | 7 exported functions                                        |
-| T2  | Config model       | ✅     | StateSchema em types/common.ts + typings                    |
-| T3  | Config accessor    | ✅     | Usa Config.get('xdgStateHome')                              |
-| T4  | Runtime lê config  | ✅     | Lê de ~/.local/state/qa-tools/state.json ou $XDG_STATE_HOME |
-| T5  | Wizard entry       | N/A    | Configurado indiretamente pelo setup                        |
-| T6  | Wizard detection   | N/A    | —                                                           |
-| T7  | Wizard output      | N/A    | —                                                           |
-| T8  | Wizard prompts     | N/A    | —                                                           |
-| T9  | Reconfig handler   | N/A    | —                                                           |
-| T10 | CI integration     | N/A    | —                                                           |
-| T11 | CI safety          | ✅     | Try/catch em todas as operações de I/O; backup recovery     |
-| T12 | Test coverage      | ✅     | 44 testes (unit + integration + PBT), 52 expects            |
-| T13 | Dead code          | ✅     | Zero dead code                                              |
-| T14 | Suppressions       | ⚠️     | G1: 3x `(err as Error).message` — corrigido para instanceof |
-| T15 | Bidirectional      | N/A    | Unidirecional                                               |
-| T16 | CLI interface      | N/A    | API programática                                            |
-| T17 | Env var dependency | ✅     | Nenhuma (usa Config.get)                                    |
-| T18 | Error handling     | ✅     | All I/O wrapped in try/catch; backup recovery em load       |
-| T19 | TECHDOC            | ✅     | Listed in TECHDOC.md                                        |
-| T20 | CI/Config contract | N/A    | No direct CI chain                                          |
+| #   | Categoria          | Status | Gap                                                                                                   |
+| --- | ------------------ | ------ | ----------------------------------------------------------------------------------------------------- |
+| T1  | Entry point        | ✅     | 7 exported functions (migrateOldState, getStatePath, loadTypedState, load, save, update, updateTyped) |
+| T2  | Config model       | ✅     | StateSchema em types/common.ts + typings                                                              |
+| T3  | Config accessor    | ✅     | Usa Config.get('xdgStateHome')                                                                        |
+| T4  | Runtime lê config  | ✅     | Lê de ~/.local/state/qa-tools/state.json ou $XDG_STATE_HOME                                           |
+| T5  | Wizard entry       | N/A    | Configurado indiretamente pelo setup                                                                  |
+| T6  | Wizard detection   | N/A    | —                                                                                                     |
+| T7  | Wizard output      | N/A    | —                                                                                                     |
+| T8  | Wizard prompts     | N/A    | —                                                                                                     |
+| T9  | Reconfig handler   | N/A    | —                                                                                                     |
+| T10 | CI integration     | N/A    | —                                                                                                     |
+| T11 | CI safety          | ✅     | Try/catch em todas as operações de I/O; backup recovery                                               |
+| T12 | Test coverage      | ✅     | 44 testes (unit + integration + PBT), 52 expects                                                      |
+| T13 | Dead code          | ✅     | Zero dead code                                                                                        |
+| T14 | Suppressions       | ✅     | Zero supressões (último `(err as Error).message` corrigido para instanceof)                           |
+| T15 | Bidirectional      | N/A    | Unidirecional                                                                                         |
+| T16 | CLI interface      | N/A    | API programática                                                                                      |
+| T17 | Env var dependency | ✅     | Nenhuma (usa Config.get)                                                                              |
+| T18 | Error handling     | ✅     | All I/O wrapped in try/catch; backup recovery em load                                                 |
+| T19 | TECHDOC            | ✅     | Listed in TECHDOC.md                                                                                  |
+| T20 | CI/Config contract | N/A    | No direct CI chain                                                                                    |
 
 <!-- CHECKPOINT: Phase 2 complete for FT-03 -->
 
 #### 7 Dimensões
 
-| Dimensão               | Status | Achados                                                                    |
-| ---------------------- | ------ | -------------------------------------------------------------------------- |
-| 1. Isolamento Testes   | ✅     | beforeEach + afterEach com temp dir + vi.restoreAllMocks + vi.resetModules |
-| 2. Robustez            | ✅     | Backup recovery em load; atomic write via tmp→rename; fallback para {}     |
-| 3. Boas Práticas       | ✅     | SRP, DIP, sem bypasses                                                     |
-| 4. Implementação Ótima | ✅     | 155L, zero loops, early returns, constantes nomeadas                       |
-| 5. Métricas            | N/A    | —                                                                          |
-| 6. UX                  | ✅     | Documentada; mensagens de erro em português via warn()                     |
-| 7. Deep Test Audit     | ✅     | Ver detalhamento abaixo                                                    |
+| Dimensão               | Status | Achados                                                                            |
+| ---------------------- | ------ | ---------------------------------------------------------------------------------- |
+| 1. Isolamento Testes   | ✅     | beforeEach + afterEach com temp dir + vi.restoreAllMocks + vi.resetModules         |
+| 2. Robustez            | ✅     | Backup recovery em load; atomic write via tmp→rename; fallback para {}             |
+| 3. Boas Práticas       | ✅     | SRP, DIP, sem bypasses                                                             |
+| 4. Implementação Ótima | ✅     | 155L, zero loops, early returns, constantes nomeadas                               |
+| 5. Métricas            | N/A    | —                                                                                  |
+| 6. UX                  | ✅     | Mensagens corrigidas para incluir orientação de ação (permissões, espaço em disco) |
+| 7. Deep Test Audit     | ✅     | Ver detalhamento abaixo                                                            |
 
 #### D7 — Deep Test Audit (detalhado)
 
@@ -235,11 +235,14 @@
 
 #### Gaps
 
-| ID  | Severidade | Descrição                                                                                   | Local               | Origem | Correção                                                           |
-| --- | ---------- | ------------------------------------------------------------------------------------------- | ------------------- | ------ | ------------------------------------------------------------------ |
-| G1  | Baixo      | Type assertion `(err as Error).message` em 3 locais — risco de crash se throw não for Error | state.ts:98,111,137 | T14    | Substituído por `err instanceof Error ? err.message : String(err)` |
+| ID  | Severidade | Descrição                                                                        | Local                      | Origem | Correção                                                              |
+| --- | ---------- | -------------------------------------------------------------------------------- | -------------------------- | ------ | --------------------------------------------------------------------- |
+| G1  | Baixo      | Type assertion `(err as Error).message` em 1 local remanescente — risco de crash | state.ts:124               | T14    | Substituído por `err instanceof Error ? err.message : String(err)`    |
+| G6  | Baixo      | Mensagens de erro não acionáveis — dizem o que falhou mas não o que fazer        | state.ts:25,67,114,124,144 | D6     | Adicionada orientação de ação (verificar permissões, espaço em disco) |
 
 <!-- CHECKPOINT: Phase 4 complete for FT-03 -->
+<!-- CHECKPOINT: Phase 5 complete for FT-03 (G1+G6: sem RED test — instanceof + mensagens) -->
+<!-- CHECKPOINT: Phase 6 complete for FT-03 -->
 
 #### Testes de Integração
 
@@ -254,14 +257,17 @@
 | PBT    | State persistence invariants | 5 propriedades via fast-check                         |
 
 <!-- CHECKPOINT: Phase 7 complete for FT-03 -->
+<!-- CHECKPOINT: Phase 8 complete for FT-03 (🟢 skip refactoring) -->
 
 #### Validação
 
 - ✅ `npx tsc --noEmit` — 0 erros
 - ✅ `npx vitest run state` — 44/44 passed
-- ✅ Consumidores — sem regressões
+- ✅ Consumidores — 112 files, 1777 tests, zero regressões
+- ✅ `npm run lint` — All quality checks passed
 
 <!-- CHECKPOINT: Phase 9 complete for FT-03 -->
+<!-- CHECKPOINT: Phase 10 complete for FT-03 -->
 
 ---
 

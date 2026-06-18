@@ -22,7 +22,10 @@ function ensureStateDir(config?: Config): boolean {
         fs.mkdirSync(dir, { recursive: true });
         return true;
     } catch (err) {
-        rootLogger.warn('Failed to ensure state dir: ' + (err instanceof Error ? err.message : String(err)));
+        rootLogger.warn(
+            'Failed to ensure state dir. Check write permissions and disk space: ' +
+                (err instanceof Error ? err.message : String(err)),
+        );
         return false;
     }
 }
@@ -64,7 +67,10 @@ export function migrateOldState(config?: Config): void {
             }
         }
     } catch (err: unknown) {
-        rootLogger.warn('Falha na migração de estado', err);
+        rootLogger.warn(
+            'Falha na migração de estado. Verifique se o arquivo ~/.qa_tools_state.json existe e pode ser lido.',
+            err,
+        );
     }
 }
 
@@ -112,7 +118,8 @@ export function load(config?: Config): Record<string, unknown> {
         } catch (err2) {
             warn('Falha ao recuperar backup de estado.');
             rootLogger.error(
-                'Falha ao recuperar backup de estado: ' + (err2 instanceof Error ? err2.message : String(err2)),
+                'Falha ao recuperar backup de estado. Verifique permissões de leitura do arquivo .bak: ' +
+                    (err2 instanceof Error ? err2.message : String(err2)),
             );
         }
         try {
@@ -121,7 +128,10 @@ export function load(config?: Config): Record<string, unknown> {
             rootLogger.warn('Backup salvo em ' + bp + '. Criando novo estado.');
         } catch (err3) {
             warn('Falha ao salvar backup de estado.');
-            rootLogger.error('Falha ao salvar backup de estado: ' + (err3 as Error).message);
+            rootLogger.error(
+                'Falha ao salvar backup de estado. Verifique permissões de escrita e espaço em disco: ' +
+                    (err3 instanceof Error ? err3.message : String(err3)),
+            );
         }
     }
     return {};
@@ -139,7 +149,10 @@ export function save(state: Record<string, unknown>, config?: Config): void {
         fs.writeFileSync(bp, JSON.stringify(state, null, 2), UTF8);
     } catch (err) {
         warn('Falha ao salvar estado. Alteracoes podem ser perdidas.');
-        rootLogger.error('Falha ao salvar estado: ' + (err instanceof Error ? err.message : String(err)));
+        rootLogger.error(
+            'Falha ao salvar estado. Verifique permissões de escrita e espaço em disco: ' +
+                (err instanceof Error ? err.message : String(err)),
+        );
     }
 }
 
