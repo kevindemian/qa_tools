@@ -23,7 +23,7 @@
 | P1    | FT-04 | Metrics             | ✅           | ✅          | 3    | 52     | ✅     |
 | P2    | FT-07 | Store               | ✅           | ✅          | 3    | 76     | ✅     |
 | 0.1   | FT-01 | Config Accessor     | ✅           | ✅          | 0    | —      | ✅     |
-| 0.2   | FT-02 | Feature Config      | ✅           | ✅          | 4    | 60     | ✅     |
+| 0.2   | FT-02 | Feature Config      | ✅           | ✅          | 5    | 60     | ✅     |
 | 0.3   | FT-03 | Session State       | ✅           | ✅          | 1    | 44     | ✅     |
 | 0.4   | FT-05 | Logger              | 🔜           | 🔜          | —    | —      | 🔜     |
 | 0.5   | FT-06 | Temp Dir            | 🔜           | 🔜          | —    | —      | 🔜     |
@@ -31,28 +31,24 @@
 
 <!-- CHECKPOINT: Phase 0 complete for FT-02 -->
 
-### FT-02 — Feature Config (Concluído)
+### FT-02 — Feature Config (Re-auditoria concluída)
 
-**Arquivos:** `shared/feature-config.ts` (111L), `shared/types/feature-config.ts` (59L)
-**Testes:**
+**Arquivos:** `shared/feature-config.ts` (111L), `shared/types/feature-config.ts` (59L), `shared/config/features.json` (runtime)
 
-- `shared/__tests__/feature-config.test.ts` (29 testes)
-- `shared/__tests__/integration/feature-config.integration.test.ts` (22 testes)
-- `shared/__tests__/feature-config.property.test.ts` (9 testes)
-- **Total: 60 testes**
-
-**Metadados:**
+**Metadados FT-02:**
 
 - FEATURE_NAME: feature-config
 - SOURCE: shared/feature-config.ts (111L)
+- TEST_FILE_PREVIOUS: N/A (nenhum na raiz do módulo)
 - TEST_FILE_UNIT: shared/**tests**/feature-config.test.ts
 - TEST_FILE_INTEGRATION: shared/**tests**/integration/feature-config.integration.test.ts
 - TEST_FILE_PBT: shared/**tests**/feature-config.property.test.ts
 - CONSUMERS: setup/config-writer.ts, git_triggers/pr-report-setup-handler.ts, git_triggers/batch-mode.ts, shared/pr-report-core.ts
 - DOCS: docs/TECHDOC.md (lines 73, 982, 983), docs/11-pr-report.md (line 273)
 
-**Início:** 2026-06-18
+**Início (re-auditoria):** 2026-06-18
 
+<!-- CHECKPOINT: Phase 0 complete for FT-02 -->
 <!-- CHECKPOINT: Phase 1 complete for FT-02 -->
 
 #### T1-T20
@@ -115,14 +111,17 @@
 
 #### Gaps
 
-| ID  | Severidade | Descrição                                                                                        | Local                                     | Origem | Correção                                                                         |
-| --- | ---------- | ------------------------------------------------------------------------------------------------ | ----------------------------------------- | ------ | -------------------------------------------------------------------------------- |
-| G1  | Baixo      | Catch vazio no afterChe da unit test e integration test (apenas comment, sem log)                | feature-config.test.ts:60, integration:33 | D7.9   | Substituído por catch(err) com rootLogger.warn                                   |
-| G2  | Médio      | resolvePublishTarget ignorava gitProvider armazenado do projeto ao fazer fallback                | feature-config.ts:91 (antes do fix)       | T18    | Adicionado lookup de getProjectFeatureConfig(projectName)?.gitProvider           |
-| G3  | Médio      | saveFeatureConfig/ensureDir sem try/catch — I/O failures propagavam sem log                      | feature-config.ts:14-16 (antes do fix)    | T18    | Wrapped em try/catch com rootLogger.warn + re-throw                              |
-| G4  | Médio      | Oracle Problem: integration test esperava 'github-actions' para gitlab project (co­dificava bug) | integration test (antes do fix)           | D7.3   | Corrigido expect para 'gitlab-ci' (business logic); código corrigido para lookup |
+| ID  | Severidade | Descrição                                                                                        | Local                                     | Origem | Correção                                                                            |
+| --- | ---------- | ------------------------------------------------------------------------------------------------ | ----------------------------------------- | ------ | ----------------------------------------------------------------------------------- |
+| G1  | Baixo      | Catch vazio no afterChe da unit test e integration test (apenas comment, sem log)                | feature-config.test.ts:60, integration:33 | D7.9   | Substituído por catch(err) com rootLogger.warn                                      |
+| G2  | Médio      | resolvePublishTarget ignorava gitProvider armazenado do projeto ao fazer fallback                | feature-config.ts:91 (antes do fix)       | T18    | Adicionado lookup de getProjectFeatureConfig(projectName)?.gitProvider              |
+| G3  | Médio      | saveFeatureConfig/ensureDir sem try/catch — I/O failures propagavam sem log                      | feature-config.ts:14-16 (antes do fix)    | T18    | Wrapped em try/catch com rootLogger.warn + re-throw                                 |
+| G4  | Médio      | Oracle Problem: integration test esperava 'github-actions' para gitlab project (co­dificava bug) | integration test (antes do fix)           | D7.3   | Corrigido expect para 'gitlab-ci' (business logic); código corrigido para lookup    |
+| G5  | Baixo      | Mensagens de erro não acionáveis — dizem o que falhou mas não o que fazer                        | feature-config.ts:18,33,38,49             | D6.1   | Adicionada orientação de ação em cada mensagem (verificar permissões, schema, etc.) |
 
 <!-- CHECKPOINT: Phase 4 complete for FT-02 -->
+<!-- CHECKPOINT: Phase 5 complete for FT-02 (G5: UX content change, sem RED test) -->
+<!-- CHECKPOINT: Phase 6 complete for FT-02 -->
 
 #### Testes de Integração
 
