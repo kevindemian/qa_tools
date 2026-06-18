@@ -17,6 +17,14 @@
    `<!-- CHECKPOINT: Phase N complete -->`
    Se a sessão for interrompida, o checkpoint indica de onde retomar.
 7. **Variáveis de estado:** os valores extraídos nos passos (SOURCE, TEST_FILES, CONSUMERS, FEATURE_NAME) devem ser escritos no PROGRESS.md como bloco de metadados, para consulta em passos posteriores sem depender de memória do agente.
+8. **Cabeçalho de comando obrigatório:** Antes de executar qualquer comando do SOP, o agente DEVE exibir o bloco literal do SOP e o comando exato no formato:
+    ```
+    [SOP <seção>]
+    Comando exato: <comando literal do SOP>
+    ```
+    Execução sem cabeçalho = **violação, sessão inválida**.
+9. **execução sequencial entre fases:** Dentro de uma fase, comandos independentes podem rodar em paralelo. Entre fases, execução é estritamente sequencial. O checkpoint de fase (`<!-- CHECKPOINT: Phase N complete -->`) DEVE ser escrito antes de iniciar a fase seguinte.
+10. **Proibição de otimização silenciosa:** É proibido substituir um comando do SOP por um "equivalente", pular comandos, combinar múltiplos passos em um, ou executar de memória. Cada comando DEVE ser executado exatamente como escrito.
 
 ---
 
