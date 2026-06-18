@@ -8,6 +8,7 @@ import {
     ensureDirs,
     registerCleanup,
 } from './temp-dir.js';
+import { rootLogger } from './logger.js';
 
 vi.mock(
     'fs',
@@ -78,6 +79,26 @@ describe('writeReport', () => {
         const result = writeReport('test.json', '{}');
         expect(result).toMatch(/\/tmp\/test-reports\/\d{4}-\d{2}-\d{2}\/test\.json$/);
     });
+
+    it('logs and re-throws when mkdirSync fails (G1 bug-fix)', () => {
+        const warnSpy = vi.spyOn(rootLogger, 'warn').mockImplementation(() => {});
+        process.env['QA_TOOLS_REPORTS_DIR'] = '/tmp/test-reports';
+        vi.mocked(fs.mkdirSync).mockImplementationOnce(() => {
+            throw new Error('EACCES: permission denied');
+        });
+        expect(() => writeReport('test.json', '{}')).toThrow('EACCES');
+        expect(warnSpy).toHaveBeenCalled();
+    });
+
+    it('logs and re-throws when writeFileSync fails (G1 bug-fix)', () => {
+        const warnSpy = vi.spyOn(rootLogger, 'warn').mockImplementation(() => {});
+        process.env['QA_TOOLS_REPORTS_DIR'] = '/tmp/test-reports';
+        vi.mocked(fs.writeFileSync).mockImplementationOnce(() => {
+            throw new Error('ENOSPC: no space left');
+        });
+        expect(() => writeReport('test.json', '{}')).toThrow('ENOSPC');
+        expect(warnSpy).toHaveBeenCalled();
+    });
 });
 
 describe('writeEphemeral', () => {
@@ -85,6 +106,26 @@ describe('writeEphemeral', () => {
         process.env['QA_TOOLS_TEMP_DIR'] = '/tmp/test-temp';
         const result = writeEphemeral('previews', 'snap.html', '<html/>');
         expect(result).toBe('/tmp/test-temp/previews/snap.html');
+    });
+
+    it('logs and re-throws when mkdirSync fails (G1 bug-fix)', () => {
+        const warnSpy = vi.spyOn(rootLogger, 'warn').mockImplementation(() => {});
+        process.env['QA_TOOLS_TEMP_DIR'] = '/tmp/test-temp';
+        vi.mocked(fs.mkdirSync).mockImplementationOnce(() => {
+            throw new Error('EACCES: permission denied');
+        });
+        expect(() => writeEphemeral('cache', 'data.json', '{}')).toThrow('EACCES');
+        expect(warnSpy).toHaveBeenCalled();
+    });
+
+    it('logs and re-throws when writeFileSync fails (G1 bug-fix)', () => {
+        const warnSpy = vi.spyOn(rootLogger, 'warn').mockImplementation(() => {});
+        process.env['QA_TOOLS_TEMP_DIR'] = '/tmp/test-temp';
+        vi.mocked(fs.writeFileSync).mockImplementationOnce(() => {
+            throw new Error('ENOSPC: no space left');
+        });
+        expect(() => writeEphemeral('cache', 'data.json', '{}')).toThrow('ENOSPC');
+        expect(warnSpy).toHaveBeenCalled();
     });
 });
 
@@ -94,12 +135,24 @@ describe('ensureDirs', () => {
         process.env['QA_TOOLS_LOGS_DIR'] = '/tmp/test-logs';
         process.env['QA_TOOLS_TEMP_DIR'] = '/tmp/test-temp';
         ensureDirs();
-        expect(fs.mkdirSync).toHaveBeenCalled();
+        expect(fs.mkdirSync).toHaveBeenCalledTimes(5);
+    });
+
+    it('logs and re-throws when mkdirSync fails (G1 bug-fix)', () => {
+        const warnSpy = vi.spyOn(rootLogger, 'warn').mockImplementation(() => {});
+        process.env['QA_TOOLS_REPORTS_DIR'] = '/tmp/test-reports';
+        process.env['QA_TOOLS_LOGS_DIR'] = '/tmp/test-logs';
+        process.env['QA_TOOLS_TEMP_DIR'] = '/tmp/test-temp';
+        vi.mocked(fs.mkdirSync).mockImplementation(() => {
+            throw new Error('EACCES: permission denied');
+        });
+        expect(() => ensureDirs()).toThrow('EACCES');
+        expect(warnSpy).toHaveBeenCalled();
     });
 });
 
 describe('registerCleanup', () => {
-    it('registers SIGINT, SIGTERM, and exit handlers', () => {
+    it('registers SIGTERM and exit handlers, NOT SIGINT', () => {
         const handlers: Array<string | symbol> = [];
         vi.spyOn(process, 'on').mockImplementation((event: string | symbol) => {
             handlers.push(event);
@@ -111,7 +164,21 @@ describe('registerCleanup', () => {
         expect(handlers).toContain('exit');
     });
 
-    it('catches error during cleanup gracefully', () => {
+    it('registers cleanupTempDirs as the callback handler', () => {
+        const registered: Array<{ event: string | symbol; fn: (...args: unknown[]) => void }> = [];
+        vi.spyOn(process, 'on').mockImplementation((event: string | symbol, listener: (...args: unknown[]) => void) => {
+            registered.push({ event, fn: listener });
+            return process;
+        });
+        registerCleanup();
+        expect(registered.length).toBeGreaterThanOrEqual(2);
+        for (const entry of registered) {
+            expect(entry.fn.name).toBe('cleanupTempDirs');
+        }
+    });
+
+    it('catches error during cleanup gracefully and logs via warn', () => {
+        const warnSpy = vi.spyOn(rootLogger, 'warn').mockImplementation(() => {});
         const handlerRef: { current?: () => void } = {};
         vi.spyOn(process, 'on').mockImplementation(
             (_event: string | symbol, listener: (...args: unknown[]) => void) => {
@@ -124,9 +191,10 @@ describe('registerCleanup', () => {
         });
         registerCleanup();
         expect(() => handlerRef.current?.()).not.toThrow();
+        expect(warnSpy).toHaveBeenCalled();
     });
 
-    it('removes subdirectories during cleanup when they exist', () => {
+    it('removes all 3 temp subdirectories during cleanup when they exist (G6)', () => {
         const handlerRef: { current?: () => void } = {};
         vi.spyOn(process, 'on').mockImplementation(
             (_event: string | symbol, listener: (...args: unknown[]) => void) => {
@@ -137,6 +205,22 @@ describe('registerCleanup', () => {
         vi.spyOn(fs, 'existsSync').mockReturnValue(true);
         registerCleanup();
         handlerRef.current?.();
-        expect(fs.rmSync).toHaveBeenCalled();
+        expect(fs.rmSync).toHaveBeenCalledTimes(3);
+    });
+
+    it('does not fail when temp subdirectories do not exist (G4 coverage)', () => {
+        const warnSpy = vi.spyOn(rootLogger, 'warn').mockImplementation(() => {});
+        const handlerRef: { current?: () => void } = {};
+        vi.spyOn(process, 'on').mockImplementation(
+            (_event: string | symbol, listener: (...args: unknown[]) => void) => {
+                handlerRef.current = listener;
+                return process;
+            },
+        );
+        vi.spyOn(fs, 'existsSync').mockReturnValue(false);
+        registerCleanup();
+        handlerRef.current?.();
+        expect(fs.rmSync).not.toHaveBeenCalled();
+        expect(warnSpy).not.toHaveBeenCalled();
     });
 });

@@ -1,7 +1,16 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { readFileSync, existsSync, readdirSync, type PathOrFileDescriptor } from 'fs';
 
-vi.mock('fs');
+vi.mock('fs', async () => {
+    const actual: typeof import('fs') = await vi.importActual<typeof import('fs')>('fs');
+    return {
+        ...actual,
+        readFileSync: vi.fn(),
+        existsSync: vi.fn(),
+        readdirSync: vi.fn(),
+    };
+});
+
 vi.mock('../shared/deps.js', () => ({
     globSync: vi.fn((_p: string) => [
         'test.ts',
@@ -29,9 +38,6 @@ vi.mock('eslint', () => ({
 describe('quality-check unit tests', () => {
     beforeEach(() => {
         vi.clearAllMocks();
-        vi.mocked(readFileSync).mockReset();
-        vi.mocked(existsSync).mockReset();
-        vi.mocked(readdirSync).mockReset();
     });
 
     describe('checkNoPattern', () => {

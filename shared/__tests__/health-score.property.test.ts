@@ -68,7 +68,11 @@ const MetricsStoreArb: fc.Arbitrary<MetricsStore> = fc
                 { nil: undefined },
             ),
         });
-        return withCoverage.map((r) => r as MetricsStore);
+        return withCoverage.map((r) => {
+            const result: MetricsStore = { runs: r.runs };
+            if (r.coverageHistory) result.coverageHistory = r.coverageHistory;
+            return result;
+        });
     });
 
 /* ──────────────────────────────────────────────────────────────
@@ -133,10 +137,17 @@ describe('calculateHealthScore — property-based', () => {
         fc.assert(
             fc.property(MetricsStoreArb, (store) => {
                 const result = calculateHealthScore(store);
-                const dimValues = Object.values(result.dimensions) as Array<{ score: number; status: string }>;
-                for (const dim of dimValues) {
-                    expect(dim.score).toBeGreaterThanOrEqual(0);
-                    expect(dim.score).toBeLessThanOrEqual(100);
+                const dims = result.dimensions;
+                const dimScores = [
+                    dims.passRate.score,
+                    dims.flakyRate.score,
+                    dims.coverage.score,
+                    dims.executionRate.score,
+                    dims.suiteSpeed.score,
+                ];
+                for (const score of dimScores) {
+                    expect(score).toBeGreaterThanOrEqual(0);
+                    expect(score).toBeLessThanOrEqual(100);
                 }
             }),
             { numRuns: 50 },
@@ -149,10 +160,10 @@ describe('calculateHealthScore — property-based', () => {
                 const result = calculateHealthScore(store);
                 expect(result.provenance).toHaveLength(5);
                 for (const p of result.provenance ?? []) {
-                    expect(p.source).toBeTruthy();
-                    expect(p.standard).toBeTruthy();
-                    expect(p.formula).toBeTruthy();
-                    expect(p.thresholdBasis).toBeTruthy();
+                    expect(p.source.length).toBeGreaterThan(0);
+                    expect(p.standard.length).toBeGreaterThan(0);
+                    expect(p.formula.length).toBeGreaterThan(0);
+                    expect(p.thresholdBasis.length).toBeGreaterThan(0);
                 }
             }),
             { numRuns: 50 },
@@ -194,10 +205,10 @@ describe('calculateHealthScore — property-based', () => {
                 (store, excellent, good, needs, poor) => {
                     const sorted = [excellent, good, needs, poor].sort((a, b) => b - a);
                     const boundaries = {
-                        excellent: Math.max(sorted[0] as number, 10),
-                        good: Math.max(sorted[1] as number, 10),
-                        needs_attention: Math.max(sorted[2] as number, 1),
-                        poor: Math.max(sorted[3] as number, 1),
+                        excellent: Math.max(sorted[0] ?? excellent, 10),
+                        good: Math.max(sorted[1] ?? good, 10),
+                        needs_attention: Math.max(sorted[2] ?? needs, 1),
+                        poor: Math.max(sorted[3] ?? poor, 1),
                         critical: 0,
                     };
                     const result = calculateHealthScore(store, { gradeBoundaries: boundaries });

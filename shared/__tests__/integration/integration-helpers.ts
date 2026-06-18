@@ -18,7 +18,14 @@ import type { FeatureConfigStore } from '../../types/feature-config.js';
  * @returns Absolute path to the created directory
  */
 export function createTestDir(prefix: string): string {
-    return fs.mkdtempSync(path.join(os.tmpdir(), `integration-${prefix}-`));
+    if (prefix.length === 0) {
+        throw new Error('createTestDir: prefix must not be empty');
+    }
+    try {
+        return fs.mkdtempSync(path.join(os.tmpdir(), `integration-${prefix}-`));
+    } catch (err: unknown) {
+        throw new Error(`createTestDir("${prefix}"): failed to create temp dir — ${String(err)}`, { cause: err });
+    }
 }
 
 /**
@@ -30,8 +37,11 @@ export function cleanupTestDir(dir: string): void {
         if (fs.existsSync(dir)) {
             fs.rmSync(dir, { recursive: true, force: true });
         }
-    } catch {
-        /* best effort cleanup — temp dirs are cleaned by OS anyway */
+    } catch (err: unknown) {
+        if (err instanceof Error && 'code' in err && err.code === 'ENOENT') return;
+        process.stderr.write(
+            `[integration-helpers] cleanupTestDir("${dir}"): ${String(err)}. Verifique permissões do diretório e espaço em disco.\n`,
+        );
     }
 }
 
@@ -43,10 +53,18 @@ export function cleanupTestDir(dir: string): void {
  * @returns Absolute path to the created file
  */
 export function createFile(baseDir: string, relPath: string, content: string): string {
-    const full = path.join(baseDir, relPath);
-    fs.mkdirSync(path.dirname(full), { recursive: true });
-    fs.writeFileSync(full, content, 'utf8');
-    return full;
+    const full = path.resolve(baseDir, relPath);
+    const baseResolved = path.resolve(baseDir) + path.sep;
+    if (!full.startsWith(baseResolved)) {
+        throw new Error(`createFile: path traversal detected — "${relPath}" resolves outside "${baseDir}"`);
+    }
+    try {
+        fs.mkdirSync(path.dirname(full), { recursive: true });
+        fs.writeFileSync(full, content, 'utf8');
+        return full;
+    } catch (err: unknown) {
+        throw new Error(`createFile("${baseDir}", "${relPath}"): failed — ${String(err)}`, { cause: err });
+    }
 }
 
 /**
@@ -57,7 +75,11 @@ export function readFile(baseDir: string, relPath: string): string | null {
     const full = path.join(baseDir, relPath);
     try {
         return fs.readFileSync(full, 'utf8');
-    } catch {
+    } catch (err: unknown) {
+        if (err instanceof Error && 'code' in err && err.code === 'ENOENT') return null;
+        process.stderr.write(
+            `[integration-helpers] readFile("${baseDir}", "${relPath}"): ${String(err)}. Verifique se o arquivo existe e as permissões de leitura.\n`,
+        );
         return null;
     }
 }
@@ -66,7 +88,11 @@ export function readFile(baseDir: string, relPath: string): string | null {
  * Check if a file exists.
  */
 export function fileExists(baseDir: string, relPath: string): boolean {
-    return fs.existsSync(path.join(baseDir, relPath));
+    try {
+        return fs.existsSync(path.join(baseDir, relPath));
+    } catch {
+        return false;
+    }
 }
 
 /**
@@ -77,8 +103,19 @@ export function readJsonFile<T = unknown>(baseDir: string, relPath: string): T |
     const content = readFile(baseDir, relPath);
     if (content === null) return null;
     try {
-        return JSON.parse(content) as T;
-    } catch {
+        const parsed: unknown = JSON.parse(content);
+        if (typeof parsed !== 'object' || parsed === null) {
+            process.stderr.write(
+                `[integration-helpers] readJsonFile("${baseDir}", "${relPath}"): expected object, got ${typeof parsed}. Verifique o formato do arquivo JSON.\n`,
+            );
+            return null;
+        }
+        return parsed as T;
+    } catch (err: unknown) {
+        if (err instanceof Error && 'code' in err && err.code === 'ENOENT') return null;
+        process.stderr.write(
+            `[integration-helpers] readJsonFile("${baseDir}", "${relPath}"): ${String(err)}. Verifique permissões e integridade do arquivo.\n`,
+        );
         return null;
     }
 }

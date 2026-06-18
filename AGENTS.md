@@ -612,17 +612,16 @@ The following rules bind this agent and any subagent or assistant executing FUNC
 
 ### 22.1 Command Header Requirement
 
-Before executing any command prescribed by SOP, the agent MUST display the exact SOP block text as a header, followed by the command and its output. Format:
+Before executing any phase prescribed by SOP, the agent MUST read the corresponding section from FUNCTIONAL-AUDIT-SOP.md (use line-range markers to read only the relevant section). Then execute the phase's commands, prefixing each with its SOP section reference:
 
 ```
-[SOP <section>]
-Comando exato: <literal command from SOP>
-Resultado:
-<output>
-Status: ✅ / ❌ / ⚠️ / N/A
+[SOP §X.Y] <ação descritiva>
 ```
 
-If a command is executed without this header → **violation, session invalid**.
+- O formato é livre — descreva a ação em linguagem natural
+- Proibido pular fases ou comandos
+- Se o comando exato do SOP falhar (ex: path mismatch), adapte e documente o desvio
+- O output e status podem ser inline, sem template fixo
 
 ### 22.2 Sequential Phase Execution
 
@@ -632,26 +631,34 @@ If a command is executed without this header → **violation, session invalid**.
 - Cycle: Phase N → checkpoint N → Phase N+1 → checkpoint N+1
 - If a checkpoint is missing → Phase is not considered complete. Resume from the last checkpoint.
 
-### 22.3 No Silent Optimization
+### 22.3 Proportionality
 
-Prohibited without exception:
+Violations are graded by substance, not form:
 
-- Replacing a SOP command with a "equivalent" command not listed in SOP
-- Skipping a command because "the result is obvious"
-- Combining multiple SOP steps into one consolidated action
-- Executing SOP steps from memory instead of reading and following the literal text
+| Category      | Examples                                                                                                                            | Action                                                              |
+| ------------- | ----------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------- |
+| **Substance** | Skipping a phase, not fixing high/medium gaps, weakening safety, ignoring quality gate, not reading the SOP section                 | Session invalid. STOP, report, await instruction.                   |
+| **Form**      | Command adapted for path mismatch, output format differs from template, header format non-standard, checkpoint numbering off by one | Report the deviation, document it, continue execution. Do NOT stop. |
 
-Each SOP command must be executed **exactly as written**. If the command would fail (e.g., file path mismatch), the agent must STOP and report, not adapt.
+**Proibido:**
+
+- Interromper sessão por violação de forma
+- Justificar parada com "eficiência" quando for substância
+- Reinterpretar violação de forma como violação de substância
+
+**Protocolo de leitura:** antes de cada Phase, ler a seção correspondente do SOP (line-range markers). Entender o objetivo da fase. Executar os comandos necessários para atingir o checkpoint. Se um comando literal falhar (path mismatch, arquivo ausente), adapte e documente o desvio — não pare.
 
 ### 22.4 Violation = Session Invalid
 
-Any violation of 22.1, 22.2, or 22.3 renders the entire session invalid. The agent must:
+Any violation of 22.1, 22.2, or 22.3 that is **substance** (per 22.3 table) renders the entire session invalid. The agent must:
 
 1. STOP immediately
-2. Report which violation occurred
+2. Report which violation occurred (substance category only)
 3. Await explicit user instruction before resuming
 
-No continuation, partial acceptance, or "let's proceed anyway" is permitted.
+No continuation, partial acceptance, or "let's proceed anyway" is permitted for substance violations.
+
+**Form violations** (per 22.3 table): report in PROGRESS.md, document the deviation, continue execution. Do NOT stop.
 
 ### 22.5 Audit Trail in Output
 
