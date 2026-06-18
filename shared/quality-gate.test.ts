@@ -1,11 +1,11 @@
 import { runQualityGate, formatQualityGateJson, formatQualityGateText } from './quality-gate.js';
 
-vi.mock('./metrics', () => ({
+vi.mock('./metrics.js', () => ({
     loadMetrics: vi.fn(),
     calculateFlakiness: vi.fn(),
 }));
 
-vi.mock('./logger', () => ({
+vi.mock('./logger.js', () => ({
     rootLogger: { error: vi.fn() },
 }));
 
@@ -275,9 +275,8 @@ describe('formatQualityGateJson', () => {
             score: 100,
         };
         const json = formatQualityGateJson(result);
-        const parsed = JSON.parse(json) as ReturnType<typeof runQualityGate>;
-        expect(parsed.overall).toBe('pass');
-        expect(parsed.score).toBe(100);
+        expect(JSON.parse(json)).toHaveProperty('overall', 'pass');
+        expect(JSON.parse(json)).toHaveProperty('score', 100);
     });
 });
 

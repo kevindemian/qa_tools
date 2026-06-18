@@ -18,7 +18,8 @@ vi.mock('../../metrics.js', async (importOriginal) => {
     return {
         ...actual,
         loadMetrics: vi.fn<() => MetricsStore>(),
-        calculateFlakiness: vi.fn<() => Array<{ title: string; rate: number }>>(),
+        calculateFlakiness:
+            vi.fn<(metrics: { runs: MetricsRun[] }, minRuns?: number) => Array<{ title: string; rate: number }>>(),
     };
 });
 
@@ -53,10 +54,7 @@ describe('Integration: Quality Gate', () => {
             expect(result.checks.length).toBe(1);
             const firstCheck = result.checks[0];
             expect(firstCheck).toBeDefined();
-            expect(
-                (firstCheck as { name: string; status: string; score: number; threshold: number; details: string })
-                    .name,
-            ).toBe('metrics-data');
+            expect(firstCheck?.name).toBe('metrics-data');
         });
     });
 
@@ -105,8 +103,7 @@ describe('Integration: Quality Gate', () => {
             const { formatQualityGateJson } = await loadMockedModules();
             const result = { overall: 'pass' as const, checks: [], score: 85 };
             const json = formatQualityGateJson(result);
-            const parsed = JSON.parse(json) as { overall: string };
-            expect(parsed.overall).toBe('pass');
+            expect(JSON.parse(json)).toHaveProperty('overall', 'pass');
         });
     });
 

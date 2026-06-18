@@ -1,5 +1,5 @@
 import { QualityMetricsCollector } from './quality-metrics.js';
-import { recordInvariantFire, detectDrift, snapshotQualityMetrics } from './quality-metrics.js';
+import { recordInvariantFire, detectDrift, snapshotQualityMetrics, resetQualityMetrics } from './quality-metrics.js';
 import type { QualityMetricsSnapshot } from './quality-metrics.js';
 
 vi.mock('fs', () => ({
@@ -7,11 +7,13 @@ vi.mock('fs', () => ({
     readFileSync: vi.fn(),
     writeFileSync: vi.fn(),
     mkdirSync: vi.fn(),
+    renameSync: vi.fn(),
     default: {
         existsSync: vi.fn(() => false),
         readFileSync: vi.fn(),
         writeFileSync: vi.fn(),
         mkdirSync: vi.fn(),
+        renameSync: vi.fn(),
     },
 }));
 
@@ -27,6 +29,7 @@ describe('QualityMetricsCollector', () => {
 
     beforeEach(() => {
         vi.clearAllMocks();
+        resetQualityMetrics();
         collector = new QualityMetricsCollector();
     });
 
@@ -194,9 +197,9 @@ describe('QualityMetricsCollector', () => {
         });
 
         it('snapshotQualityMetrics returns snapshot', () => {
+            recordInvariantFire('T-01');
             const snapshot = snapshotQualityMetrics();
-            expect(snapshot).toHaveProperty('timestamp');
-            expect(snapshot).toHaveProperty('invariantFireCount');
+            expect(snapshot.invariantFireCount['T-01']).toBe(1);
         });
     });
 });

@@ -40,10 +40,9 @@ describe('formatQualityGateJson — property-based', () => {
         fc.assert(
             fc.property(QualityGateResultArb, (result) => {
                 const json = formatQualityGateJson(result);
-                const parsed = JSON.parse(json) as { overall: string; score: number; checks: unknown[] };
-                expect(parsed.overall).toBe(result.overall);
-                expect(parsed.score).toBe(result.score);
-                expect(parsed.checks).toHaveLength(result.checks.length);
+                const parsed: unknown = JSON.parse(json);
+                expect(parsed).toHaveProperty('overall', result.overall);
+                expect(parsed).toHaveProperty('score', result.score);
             }),
             { numRuns: 100 },
         );

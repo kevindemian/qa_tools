@@ -21,8 +21,11 @@ export interface CoverageResult {
     detail?: string;
 }
 
-function parseIstanbul(raw: string): IstanbulSummary {
-    return JSON.parse(raw) as IstanbulSummary;
+function parseIstanbul(raw: string): IstanbulSummary | undefined {
+    const parsed: unknown = JSON.parse(raw);
+    if (typeof parsed !== 'object' || parsed === null) return undefined;
+    if (!('total' in parsed)) return undefined;
+    return parsed as IstanbulSummary;
 }
 
 interface IstanbulSummary {
@@ -49,6 +52,7 @@ export function readIstanbulCoverage(coveragePath?: string): CoverageResult | un
         }
         const raw = fs.readFileSync(resolvedPath, 'utf8');
         const json = parseIstanbul(raw);
+        if (!json) return undefined;
         const total = json.total;
         if (!total) return undefined;
         const lines = total.lines;
@@ -62,7 +66,9 @@ export function readIstanbulCoverage(coveragePath?: string): CoverageResult | un
             detail: `${metric} ${pct.toFixed(1)}%` + (lines ? ` (${lines.covered}/${lines.total})` : ''),
         };
     } catch (err) {
-        rootLogger.warn(`Failed to read Istanbul coverage: ${err instanceof Error ? err.message : String(err)}`);
+        rootLogger.warn(
+            `Failed to read Istanbul coverage: ${err instanceof Error ? err.message : String(err)}. Run test suite with --coverage flag to generate coverage data.`,
+        );
         return undefined;
     }
 }

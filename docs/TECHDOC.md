@@ -61,18 +61,21 @@ qa_tools/
 
 ### Key Patterns
 
-| Pattern                      | Where                                                         | Description                                                                            |
-| ---------------------------- | ------------------------------------------------------------- | -------------------------------------------------------------------------------------- |
-| **DI / Command**             | `jira_management/commands/`                                   | 27 handlers (`case01.ts`–`case27.ts`) recebem `CommandContext` com resources injetados |
-| **Provider Strategy**        | `git_triggers/`                                               | `GitProvider` interface → `GitLabManager` / `GitHubManager` estendem `GitProviderBase` |
-| **Dependency Wall**          | `shared/deps.ts`                                              | Todo import externo passa por este arquivo. ESLint `no-restricted-imports` enforced    |
-| **Resilience Stack**         | `shared/http-client.ts`, `shared/llm-*.ts`                    | Circuit breaker + rate limiter + cache (memória + disco) + fallback chain (6 tiers)    |
-| **State Persistence**        | `shared/state.ts`                                             | JSON file `~/.local/state/qa-tools/state.json` com backup recovery                     |
-| **Store (Git-backed Cache)** | `shared/store.ts`                                             | SHA-keyed report cache, commits com `[skip ci]`, cross-session/sync                    |
-| **Invariants**               | `shared/invariants/`                                          | 13 regras T-01 a T-13 + 5 I-01 a I-05 para validação de artefatos de teste             |
-| **Feature Config**           | `shared/feature-config.ts` + `shared/types/feature-config.ts` | Config store + Zod schema — **PR-Report-specific** até segundo consumer existir        |
-| **Temp Dir**                 | `shared/temp-dir.ts`                                          | Gerenciamento de diretórios temporários (reports, ephemeral, cache, logs, previews)    |
-| **Integration Helpers**      | `shared/__tests__/integration/integration-helpers.ts`         | Fixtures factories + I/O helpers para testes de integração                             |
+| Pattern                      | Where                                                         | Description                                                                             |
+| ---------------------------- | ------------------------------------------------------------- | --------------------------------------------------------------------------------------- |
+| **DI / Command**             | `jira_management/commands/`                                   | 27 handlers (`case01.ts`–`case27.ts`) recebem `CommandContext` com resources injetados  |
+| **Provider Strategy**        | `git_triggers/`                                               | `GitProvider` interface → `GitLabManager` / `GitHubManager` estendem `GitProviderBase`  |
+| **Dependency Wall**          | `shared/deps.ts`                                              | Todo import externo passa por este arquivo. ESLint `no-restricted-imports` enforced     |
+| **Resilience Stack**         | `shared/http-client.ts`, `shared/llm-*.ts`                    | Circuit breaker + rate limiter + cache (memória + disco) + fallback chain (6 tiers)     |
+| **State Persistence**        | `shared/state.ts`                                             | JSON file `~/.local/state/qa-tools/state.json` com backup recovery                      |
+| **Store (Git-backed Cache)** | `shared/store.ts`                                             | SHA-keyed report cache, commits com `[skip ci]`, cross-session/sync                     |
+| **Invariants**               | `shared/invariants/`                                          | 13 regras T-01 a T-13 + 5 I-01 a I-05 para validação de artefatos de teste              |
+| **Feature Config**           | `shared/feature-config.ts` + `shared/types/feature-config.ts` | Config store + Zod schema — **PR-Report-specific** até segundo consumer existir         |
+| **Temp Dir**                 | `shared/temp-dir.ts`                                          | Gerenciamento de diretórios temporários (reports, ephemeral, cache, logs, previews)     |
+| **Integration Helpers**      | `shared/__tests__/integration/integration-helpers.ts`         | Fixtures factories + I/O helpers para testes de integração                              |
+| **Quality Gate**             | `shared/quality-gate.ts`                                      | Orquestrador de quality gate — thresholds fixos, compõe health/coverage/flakiness       |
+| **Coverage Source**          | `shared/coverage-source.ts`                                   | Resolução de cobertura em camadas: Istanbul coverage-summary.json > CTRF > 0 padrão     |
+| **Quality Metrics**          | `shared/quality-metrics.ts`                                   | Coleta e persistência de métricas de qualidade: fire rates, pass rates, drift detection |
 
 ### Resilience Stack (LLM)
 
